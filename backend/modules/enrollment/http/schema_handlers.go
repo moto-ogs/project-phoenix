@@ -15,12 +15,13 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // FormSchemaResponse is the wire shape returned to admin UIs. The id is
 // stringified so the frontend can keep its int64-as-string convention.
 type FormSchemaResponse struct {
-	ID               string                      `json:"id"`
+	ID               ident.ID                    `json:"id"`
 	Name             string                      `json:"name"`
 	Version          int                         `json:"version"`
 	IsActive         bool                        `json:"is_active"`
@@ -33,7 +34,7 @@ type FormSchemaResponse struct {
 
 func toFormSchemaResponse(s *capability.FormSchema) FormSchemaResponse {
 	return FormSchemaResponse{
-		ID:               strconv.FormatInt(s.ID, 10),
+		ID:               ident.ID(s.ID),
 		Name:             s.Name,
 		Version:          s.Version,
 		IsActive:         s.IsActive,
@@ -121,7 +122,7 @@ func (req *RenameSchemaRequest) Bind(_ *http.Request) error {
 // don't need to render the form. The fields array carries everything the dynamic renderer
 // consumes (label, type, options, validation).
 type PublicFormSchemaResponse struct {
-	ID               string                      `json:"id"`
+	ID               ident.ID                    `json:"id"`
 	Version          int                         `json:"version"`
 	Fields           []capability.FormField      `json:"fields"`
 	CoreRequirements capability.CoreRequirements `json:"core_requirements"`

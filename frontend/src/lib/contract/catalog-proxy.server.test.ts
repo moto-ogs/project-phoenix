@@ -334,8 +334,8 @@ describe("makeCatalogProxy", () => {
 
   it("still loads an individual enrollment change request", async () => {
     const request = {
-      id: "change-1",
-      request_id: "request-1",
+      id: "11",
+      request_id: "12",
       origin: "parent",
       status: "pending",
       base_snapshot: null,
@@ -345,9 +345,7 @@ describe("makeCatalogProxy", () => {
       updated_at: TEST_CLOCK_INSTANT.toISOString(),
     };
     api.mockResolvedValueOnce({ status: "success", data: request });
-    const response = await callTenant(
-      "enrollment/admin/change-requests/change-1",
-    );
+    const response = await callTenant("enrollment/admin/change-requests/11");
     expect(await data(response)).toEqual(request);
   });
 
@@ -355,8 +353,8 @@ describe("makeCatalogProxy", () => {
     api.mockResolvedValueOnce({
       status: "success",
       data: {
-        id: "change-1",
-        request_id: "request-1",
+        id: "11",
+        request_id: "12",
         origin: "parent",
         status: "pending",
         base_snapshot: {
@@ -372,7 +370,7 @@ describe("makeCatalogProxy", () => {
         updated_at: TEST_CLOCK_INSTANT.toISOString(),
       },
     });
-    const reply = await callTenant("enrollment/admin/change-requests/change-1");
+    const reply = await callTenant("enrollment/admin/change-requests/11");
     expect(reply.status).toBe(200);
     expect(await data(reply)).toMatchObject({
       base_snapshot: {

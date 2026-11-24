@@ -23,7 +23,7 @@ func TestBuildActivitiesExposeStableStringIDs(t *testing.T) {
 		map[int64]string{7: "Raum 1"},
 	)
 	require.Len(t, running, 1)
-	assert.Equal(t, "101", running[0].ID)
+	assert.Equal(t, "101", running[0].ID.String())
 	assert.Equal(t, "Sport", running[0].Category)
 
 	now := time.Date(2026, time.July, 18, 12, 0, 0, 0, time.UTC)
@@ -38,7 +38,7 @@ func TestBuildActivitiesExposeStableStringIDs(t *testing.T) {
 		now,
 	)
 	require.Len(t, upcoming, 2)
-	assert.Equal(t, []string{"201", "202"}, []string{upcoming[0].ID, upcoming[1].ID})
+	assert.Equal(t, []string{"201", "202"}, []string{upcoming[0].ID.String(), upcoming[1].ID.String()})
 	assert.Equal(t, []string{"Sport", "Sport"}, []string{upcoming[0].Category, upcoming[1].Category})
 }
 
@@ -93,5 +93,5 @@ func TestBuildUpcomingActivitiesSkipsStartedInstances(t *testing.T) {
 		now,
 	)
 	require.Len(t, upcoming, 1)
-	assert.Equal(t, "202", upcoming[0].ID)
+	assert.Equal(t, "202", upcoming[0].ID.String())
 }

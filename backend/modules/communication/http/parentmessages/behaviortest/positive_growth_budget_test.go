@@ -82,8 +82,8 @@ func TestParentMessagePositiveGrowthQueryBudget(t *testing.T) {
 				Data messaging.ParentChatThreadDetailResponse
 			}
 			require.NoError(t, json.Unmarshal(opened.Body.Bytes(), &detail))
-			request("POST", "/threads/"+detail.Data.ThreadID, fmt.Sprintf(`{"body":"message-%02d"}`, created), false)
-			threadIDs = append(threadIDs, detail.Data.ThreadID)
+			request("POST", "/threads/"+detail.Data.ThreadID.String(), fmt.Sprintf(`{"body":"message-%02d"}`, created), false)
+			threadIDs = append(threadIDs, detail.Data.ThreadID.String())
 			guardianIDs = append(guardianIDs, fmt.Sprint(guardian.AccountID))
 			if created > 0 {
 				request("POST", "/threads/"+threadIDs[0], fmt.Sprintf(`{"body":"detail-%02d"}`, created), false)
@@ -99,7 +99,7 @@ func TestParentMessagePositiveGrowthQueryBudget(t *testing.T) {
 			Data messaging.GroupThreadDetailResponse
 		}
 		require.NoError(t, json.Unmarshal(groupRec.Body.Bytes(), &groupOut))
-		groupID = groupOut.Data.Thread.ID
+		groupID = groupOut.Data.Thread.ID.String()
 		for i := 1; i < n; i++ {
 			request("POST", "/group-threads/"+groupID+"/messages", fmt.Sprintf(`{"body":"group-%02d"}`, i), false)
 		}
@@ -114,7 +114,7 @@ func TestParentMessagePositiveGrowthQueryBudget(t *testing.T) {
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
 				require.Len(t, out.Data, n)
 				for _, row := range out.Data {
-					require.Contains(t, guardianIDs, row.AccountID)
+					require.Contains(t, guardianIDs, row.AccountID.String())
 				}
 			case "student_threads":
 				var out struct {
@@ -123,8 +123,8 @@ func TestParentMessagePositiveGrowthQueryBudget(t *testing.T) {
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
 				require.Len(t, out.Data, n)
 				for _, row := range out.Data {
-					require.Contains(t, threadIDs, row.ThreadID)
-					require.Equal(t, fmt.Sprint(chain.StudentID), row.StudentID)
+					require.Contains(t, threadIDs, row.ThreadID.String())
+					require.Equal(t, fmt.Sprint(chain.StudentID), row.StudentID.String())
 				}
 			case "thread":
 				var out struct {
@@ -132,7 +132,7 @@ func TestParentMessagePositiveGrowthQueryBudget(t *testing.T) {
 				}
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
 				require.Len(t, out.Data.Messages, n)
-				require.Equal(t, threadIDs[0], out.Data.ThreadID)
+				require.Equal(t, threadIDs[0], out.Data.ThreadID.String())
 				for i, row := range out.Data.Messages {
 					body := fmt.Sprintf("detail-%02d", i)
 					if i == 0 {

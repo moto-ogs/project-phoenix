@@ -35,7 +35,7 @@ type SchoolSettingsStore interface {
 // PayrollCategoryStatus is one Lohnart category with its configured values.
 type PayrollCategoryStatus struct {
 	// ID is the stable category identifier (e.g. "regelarbeit").
-	ID    string `json:"id"`
+	ID    string `json:"id" contract_text:"stable payroll category slug"`
 	Label string `json:"label"`
 	// Number is the tenant's Lohnartnummer, empty when not configured.
 	Number string `json:"number"`

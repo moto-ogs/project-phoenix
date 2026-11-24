@@ -3,13 +3,12 @@ package parent
 import (
 	"errors"
 	"net/http"
-	"strconv"
-	"strings"
 
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
@@ -27,8 +26,8 @@ type CoursesResponse struct {
 	// EffectiveFrom is the date a new request would take effect on.
 	EffectiveFrom string `json:"effective_from,omitempty"`
 	// PendingRequestID is the child's open course request, absent when none.
-	PendingRequestID       string `json:"pending_request_id,omitempty"`
-	PendingSubmittedBySelf bool   `json:"pending_submitted_by_self"`
+	PendingRequestID       ident.ID `json:"pending_request_id,omitempty"`
+	PendingSubmittedBySelf bool     `json:"pending_submitted_by_self"`
 	// OtherRequestPending marks an open request about care offerings, which
 	// blocks a course request until it is decided.
 	OtherRequestPending bool                 `json:"other_request_pending"`
@@ -37,8 +36,8 @@ type CoursesResponse struct {
 
 // CourseItemResponse is one course.
 type CourseItemResponse struct {
-	ID              string   `json:"id"`
-	ActivityGroupID string   `json:"activity_group_id"`
+	ID              ident.ID `json:"id"`
+	ActivityGroupID ident.ID `json:"activity_group_id"`
 	Name            string   `json:"name"`
 	Description     string   `json:"description,omitempty"`
 	AvailableDays   []string `json:"available_days"`
@@ -54,8 +53,8 @@ type CourseItemResponse struct {
 
 // CourseRequestBody is the wire shape for POST .../courses/requests.
 type CourseRequestBody struct {
-	CourseID string `json:"course_id"`
-	Note     string `json:"note"`
+	CourseID ident.ID `json:"course_id"`
+	Note     string   `json:"note"`
 }
 
 func toCoursesResponse(catalog *parentService.CourseCatalogSnapshot) CoursesResponse {
@@ -73,12 +72,12 @@ func toCoursesResponse(catalog *parentService.CourseCatalogSnapshot) CoursesResp
 		resp.EffectiveFrom = catalog.EffectiveFrom.String()
 	}
 	if catalog.PendingRequestID > 0 {
-		resp.PendingRequestID = strconv.FormatInt(catalog.PendingRequestID, 10)
+		resp.PendingRequestID = ident.ID(catalog.PendingRequestID)
 	}
 	for _, item := range catalog.Items {
 		resp.Items = append(resp.Items, CourseItemResponse{
-			ID:               strconv.FormatInt(item.OfferingID, 10),
-			ActivityGroupID:  strconv.FormatInt(item.ActivityGroupID, 10),
+			ID:               ident.ID(item.OfferingID),
+			ActivityGroupID:  ident.ID(item.ActivityGroupID),
 			Name:             item.Name,
 			Description:      item.Description,
 			AvailableDays:    stringsOrEmpty(item.AvailableDays),
@@ -91,6 +90,11 @@ func toCoursesResponse(catalog *parentService.CourseCatalogSnapshot) CoursesResp
 		})
 	}
 	return resp
+}
+
+func renderInvalidCourseID(w http.ResponseWriter, r *http.Request) {
+	common.RenderError(w, r, common.ErrorInvalidRequestWithCode(
+		errors.New("course_id must be a numeric id"), common.CodeCareCourseRequestInvalid))
 }
 
 // getChildCourses returns the courses the family can see for this child.
@@ -123,13 +127,16 @@ func (rs *Resource) createCourseRequest(w http.ResponseWriter, r *http.Request) 
 	}
 	var body CourseRequestBody
 	if err := wire.Decode(r.Body, &body); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
+		if wire.InvalidIDAt(err, "/course_id") {
+			renderInvalidCourseID(w, r)
+		} else {
+			common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
+		}
 		return
 	}
-	courseID, convErr := strconv.ParseInt(strings.TrimSpace(body.CourseID), 10, 64)
-	if convErr != nil || courseID <= 0 {
-		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(
-			errors.New("course_id must be a numeric id"), common.CodeCareCourseRequestInvalid))
+	courseID := body.CourseID.Int64()
+	if courseID <= 0 {
+		renderInvalidCourseID(w, r)
 		return
 	}
 	catalog, err := rs.ParentService.RequestChildCourse(r.Context(), accountID, studentID, courseID, body.Note)

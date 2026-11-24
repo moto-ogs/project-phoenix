@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -109,7 +108,7 @@ func (req *SubmitEnrollmentRequest) Bind(_ *http.Request) error {
 // email; we return it inline too so the confirmation page can show it
 // without waiting for the email.
 type SubmitEnrollmentResponse struct {
-	RequestID string              `json:"request_id"`
+	RequestID ident.ID            `json:"request_id"`
 	StatusURL string              `json:"status_url"`
 	Warnings  []SubmissionWarning `json:"warnings,omitempty"`
 }
@@ -142,7 +141,7 @@ func (rs *Resource) submitEnrollment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := SubmitEnrollmentResponse{
-		RequestID: strconv.FormatInt(result.Request.ID, 10),
+		RequestID: ident.ID(result.Request.ID),
 		StatusURL: result.StatusURL,
 		Warnings:  result.Warnings,
 	}

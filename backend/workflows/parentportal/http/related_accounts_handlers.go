@@ -3,19 +3,19 @@ package parent
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // relatedAccountResponse is the parent-facing projection of a linked guardian.
 type relatedAccountResponse struct {
-	GuardianProfileID string `json:"guardian_profile_id"`
-	FirstName         string `json:"first_name"`
-	LastName          string `json:"last_name"`
-	Email             string `json:"email,omitempty"`
-	RelationshipType  string `json:"relationship_type"`
+	GuardianProfileID ident.ID `json:"guardian_profile_id"`
+	FirstName         string   `json:"first_name"`
+	LastName          string   `json:"last_name"`
+	Email             string   `json:"email,omitempty"`
+	RelationshipType  string   `json:"relationship_type"`
 	// GuardianRole lets the panel hide the grant-access action for
 	// school-managed social-worker contacts (#2172).
 	GuardianRole string `json:"guardian_role,omitempty"`
@@ -39,8 +39,8 @@ type inviteRelatedAccountRequest struct {
 
 // inviteRelatedAccountResponse echoes the resolve outcome.
 type inviteRelatedAccountResponse struct {
-	Outcome           string `json:"outcome"`
-	GuardianProfileID string `json:"guardian_profile_id"`
+	Outcome           string   `json:"outcome"`
+	GuardianProfileID ident.ID `json:"guardian_profile_id"`
 	// ExistingRole carries the current guardian role for the
 	// existing_contact_restricted outcome.
 	ExistingRole string `json:"existing_role,omitempty"`
@@ -67,7 +67,7 @@ func (rs *Resource) listRelatedAccounts(w http.ResponseWriter, r *http.Request) 
 	out := make([]relatedAccountResponse, 0, len(accounts))
 	for _, a := range accounts {
 		out = append(out, relatedAccountResponse{
-			GuardianProfileID: strconv.FormatInt(a.GuardianProfileID, 10),
+			GuardianProfileID: ident.ID(a.GuardianProfileID),
 			FirstName:         a.FirstName,
 			LastName:          a.LastName,
 			Email:             a.Email,
@@ -106,7 +106,7 @@ func (rs *Resource) inviteRelatedAccount(w http.ResponseWriter, r *http.Request)
 
 	common.Respond(w, r, http.StatusCreated, inviteRelatedAccountResponse{
 		Outcome:           result.Outcome,
-		GuardianProfileID: strconv.FormatInt(result.GuardianProfileID, 10),
+		GuardianProfileID: ident.ID(result.GuardianProfileID),
 		ExistingRole:      result.ExistingRole,
 	}, "Guardian invited")
 }

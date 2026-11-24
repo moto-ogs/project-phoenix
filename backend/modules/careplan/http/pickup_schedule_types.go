@@ -4,7 +4,6 @@ import (
 	"context"
 	errors "errors"
 	http "net/http"
-	strconv "strconv"
 	time "time"
 
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -22,12 +21,12 @@ type PickupScheduleResponse struct {
 	Notes       *string  `json:"notes,omitempty"`
 	// Source marks the row's provenance: "staff" (manually maintained) or
 	// "care_offering" (booking-derived Angebots-Gehzeit).
-	Source           string   `json:"source"`
-	CareOfferingID   *string  `json:"care_offering_id,omitempty"`
-	CareOfferingName string   `json:"care_offering_name,omitempty"`
-	CreatedBy        ident.ID `json:"created_by"`
-	CreatedAt        string   `json:"created_at"`
-	UpdatedAt        string   `json:"updated_at"`
+	Source           string    `json:"source"`
+	CareOfferingID   *ident.ID `json:"care_offering_id,omitempty"`
+	CareOfferingName string    `json:"care_offering_name,omitempty"`
+	CreatedBy        ident.ID  `json:"created_by"`
+	CreatedAt        string    `json:"created_at"`
+	UpdatedAt        string    `json:"updated_at"`
 }
 
 // PickupExceptionResponse represents a pickup exception in API responses
@@ -316,7 +315,7 @@ func mapScheduleToResponse(s *careplan.PickupSchedule) PickupScheduleResponse {
 		resp.Source = careplan.ScheduleSourceStaff
 	}
 	if s.CareOfferingID != nil {
-		id := strconv.FormatInt(*s.CareOfferingID, 10)
+		id := ident.ID(*s.CareOfferingID)
 		resp.CareOfferingID = &id
 	}
 	return resp

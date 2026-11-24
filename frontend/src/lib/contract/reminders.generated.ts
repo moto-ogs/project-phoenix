@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  int64String,
   nullable,
   object,
   optional,
@@ -25,8 +26,8 @@ export interface StaffReminder {
 
 export const StaffReminderSchema: z.ZodType<StaffReminder, unknown> = object<StaffReminder>({
   type: str,
-  student_id: optional(str),
-  activity_instance_id: optional(str),
+  student_id: optional(int64String),
+  activity_instance_id: optional(int64String),
   title: str,
   subtitle: optional(str),
   due_time: str,

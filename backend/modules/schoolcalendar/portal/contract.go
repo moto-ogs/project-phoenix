@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	appointmentcap "github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 )
@@ -179,10 +181,10 @@ type SchoolCalendarView struct {
 // SchoolDays is a closing-day range or a holiday period of the school,
 // inclusive on both ends.
 type SchoolDays struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	StartDate string `json:"start_date"`
-	EndDate   string `json:"end_date"`
+	ID        ident.ID `json:"id"`
+	Name      string   `json:"name"`
+	StartDate string   `json:"start_date"`
+	EndDate   string   `json:"end_date"`
 }
 
 // SchoolAppointmentRequest is a Schultermin as a Lehrkraft enters it. The
@@ -277,29 +279,29 @@ type StaffCalDAVItem struct {
 }
 
 type Event struct {
-	ID             string  `json:"id"`
-	Source         string  `json:"source"`
-	AppointmentID  *string `json:"appointment_id,omitempty"`
-	OccurrenceDate *string `json:"occurrence_date,omitempty"`
-	TimetableID    *string `json:"timetable_id,omitempty"`
+	ID             string    `json:"id" contract_text:"composite calendar occurrence key"`
+	Source         string    `json:"source"`
+	AppointmentID  *ident.ID `json:"appointment_id,omitempty"`
+	OccurrenceDate *string   `json:"occurrence_date,omitempty"`
+	TimetableID    *ident.ID `json:"timetable_id,omitempty"`
 	// ActivityType is the block type of a timetable event; "duty" lets the
 	// calendar label a duty apart from Betreuung (#3822).
-	ActivityType string  `json:"activity_type,omitempty"`
-	StudentID    *string `json:"student_id,omitempty"`
-	StudentName  *string `json:"student_name,omitempty"`
-	TenantID     *string `json:"tenant_id,omitempty"`
-	SchoolName   *string `json:"school_name,omitempty"`
-	Title        string  `json:"title"`
-	Description  *string `json:"description,omitempty"`
-	Location     *string `json:"location,omitempty"`
-	StartDate    string  `json:"start_date"`
-	EndDate      string  `json:"end_date"`
-	StartTime    string  `json:"start_time"`
-	EndTime      string  `json:"end_time"`
-	AllDay       bool    `json:"all_day"`
-	Cancelled    bool    `json:"cancelled"`
-	Recurring    bool    `json:"recurring"`
-	DeliveryMode *string `json:"delivery_mode,omitempty"`
+	ActivityType string    `json:"activity_type,omitempty"`
+	StudentID    *ident.ID `json:"student_id,omitempty"`
+	StudentName  *string   `json:"student_name,omitempty"`
+	TenantID     *ident.ID `json:"tenant_id,omitempty"`
+	SchoolName   *string   `json:"school_name,omitempty"`
+	Title        string    `json:"title"`
+	Description  *string   `json:"description,omitempty"`
+	Location     *string   `json:"location,omitempty"`
+	StartDate    string    `json:"start_date"`
+	EndDate      string    `json:"end_date"`
+	StartTime    string    `json:"start_time"`
+	EndTime      string    `json:"end_time"`
+	AllDay       bool      `json:"all_day"`
+	Cancelled    bool      `json:"cancelled"`
+	Recurring    bool      `json:"recurring"`
+	DeliveryMode *string   `json:"delivery_mode,omitempty"`
 	// ResponseStatus is the answer for this date. SeriesResponseStatus is the
 	// answer for the whole series; it differs when the recipient answered
 	// this date on its own (#6987).
@@ -308,12 +310,12 @@ type Event struct {
 	// HasOccurrenceAnswers reports that the recipient answered at least one
 	// date of the series on its own, so a new series answer would replace
 	// those answers (#6987).
-	HasOccurrenceAnswers bool    `json:"has_occurrence_answers,omitempty"`
-	RecipientID          *string `json:"recipient_id,omitempty"`
-	OrganizerStaffID     *string `json:"organizer_staff_id,omitempty"`
-	CanRespond           bool    `json:"can_respond"`
-	CanEdit              bool    `json:"can_edit"`
-	CanViewOverview      bool    `json:"can_view_overview"`
+	HasOccurrenceAnswers bool      `json:"has_occurrence_answers,omitempty"`
+	RecipientID          *ident.ID `json:"recipient_id,omitempty"`
+	OrganizerStaffID     *ident.ID `json:"organizer_staff_id,omitempty"`
+	CanRespond           bool      `json:"can_respond"`
+	CanEdit              bool      `json:"can_edit"`
+	CanViewOverview      bool      `json:"can_view_overview"`
 	// SchoolEventType marks a Schultermin from moto schule (#4798).
 	SchoolEventType *string `json:"school_event_type,omitempty"`
 	// Version is the read-state token of the appointment behind an event
@@ -374,7 +376,7 @@ type UpdateAppointmentRequest struct {
 // because other parents' names and answers are not theirs to see (#6846).
 // Counts always cover every recipient, listed or not.
 type AppointmentOverview struct {
-	AppointmentID string `json:"appointment_id"`
+	AppointmentID ident.ID `json:"appointment_id"`
 	// OccurrenceDate names the date of a series whose answers the overview
 	// shows; it is empty for the answers to the whole appointment (#6987).
 	OccurrenceDate     Date                      `json:"occurrence_date,omitempty"`
@@ -401,7 +403,7 @@ type AppointmentResponseCounts struct {
 }
 
 type AppointmentAttendee struct {
-	RecipientID   string     `json:"recipient_id"`
+	RecipientID   ident.ID   `json:"recipient_id"`
 	RecipientType string     `json:"recipient_type"`
 	Name          string     `json:"name"`
 	Status        string     `json:"status"`
@@ -432,23 +434,23 @@ type RecipientOptions struct {
 }
 
 type StaffOption struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 type ParentOption struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 type GroupOption struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 type StudentOption struct {
-	ID          string  `json:"id"`
-	Name        string  `json:"name"`
-	SchoolClass string  `json:"school_class,omitempty"`
-	GroupID     *string `json:"group_id,omitempty"`
+	ID          ident.ID  `json:"id"`
+	Name        string    `json:"name"`
+	SchoolClass string    `json:"school_class,omitempty"`
+	GroupID     *ident.ID `json:"group_id,omitempty"`
 }

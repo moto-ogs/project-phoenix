@@ -3,6 +3,8 @@ package presenceprojectionhttp
 import (
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	"github.com/stretchr/testify/assert"
 )
@@ -42,7 +44,7 @@ func TestClassListEntryExportEligibleActiveFilterExcludesEntries(t *testing.T) {
 		{"day_status", studentExportFilters{DayStatus: DayPlanningStatusComesToday}},
 		{"group", studentExportFilters{GroupID: "5"}},
 		{"room", studentExportFilters{RoomID: "7"}},
-		{"selection", studentExportFilters{StudentIDs: []string{"3"}}},
+		{"selection", studentExportFilters{StudentIDs: []ident.ID{3}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

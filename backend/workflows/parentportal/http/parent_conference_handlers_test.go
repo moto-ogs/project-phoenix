@@ -57,7 +57,7 @@ func (f *fakeConferences) BookParentConference(_ context.Context, child calendar
 	if f.bookErr != nil {
 		return nil, f.bookErr
 	}
-	return &calendarService.ParentConferenceOffer{ID: "7", Booking: &calendarService.ParentConferenceWindow{StartTime: start, EndTime: "14:15"}}, nil
+	return &calendarService.ParentConferenceOffer{ID: 7, Booking: &calendarService.ParentConferenceWindow{StartTime: start, EndTime: "14:15"}}, nil
 }
 
 func (f *fakeConferences) CancelParentConferenceBooking(_ context.Context, child calendarService.ParentConferenceChild, id int64) error {

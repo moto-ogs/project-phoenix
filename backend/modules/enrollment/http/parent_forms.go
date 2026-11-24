@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
@@ -79,7 +79,7 @@ func (f ParentForms) submit(ctx context.Context, wireReq *SubmitEnrollmentReques
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp := SubmitEnrollmentResponse{
-			RequestID: strconv.FormatInt(result.Request.ID, 10),
+			RequestID: ident.ID(result.Request.ID),
 			StatusURL: result.StatusURL,
 			Warnings:  result.Warnings,
 		}

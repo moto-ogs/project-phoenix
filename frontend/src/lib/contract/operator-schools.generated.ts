@@ -124,7 +124,7 @@ export interface BookingAuthorityImpactChild {
 }
 
 export const BookingAuthorityImpactChildSchema: z.ZodType<BookingAuthorityImpactChild, unknown> = object<BookingAuthorityImpactChild>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,

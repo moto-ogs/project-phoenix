@@ -38,7 +38,7 @@ func publicAbsenceResponse(value *StaffAbsenceResponse) *workforce.StaffAbsenceR
 		return nil
 	}
 	return &workforce.StaffAbsenceResponse{
-		StaffAbsence: publicStaffAbsence(value.StaffAbsence), DurationDays: value.DurationDays, AbsenceTypeID: value.AbsenceTypeID,
+		StaffAbsence: publicStaffAbsence(value.StaffAbsence), DurationDays: value.DurationDays,
 	}
 }
 

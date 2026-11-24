@@ -130,7 +130,7 @@ func TestSummarizePasskeyCredentials(t *testing.T) {
 	account := SummarizeAccountPasskey(AccountPasskeyCredential{
 		ID: 44, CreatedAt: now, Name: "Laptop", LastUsedAt: &lastUsedAt,
 	})
-	assert.Equal(t, "44", account.ID)
+	assert.Equal(t, "44", account.ID.String())
 	assert.Equal(t, "Laptop", account.Name)
 	assert.Equal(t, now, account.CreatedAt)
 	assert.Equal(t, &lastUsedAt, account.LastUsedAt)
@@ -138,7 +138,7 @@ func TestSummarizePasskeyCredentials(t *testing.T) {
 	operator := SummarizeOperatorPasskey(OperatorPasskeyCredential{
 		ID: 7, CreatedAt: now, Name: "YubiKey",
 	})
-	assert.Equal(t, "7", operator.ID)
+	assert.Equal(t, "7", operator.ID.String())
 	assert.Equal(t, "YubiKey", operator.Name)
 	assert.Nil(t, operator.LastUsedAt)
 }

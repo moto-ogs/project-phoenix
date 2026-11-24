@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  int64String,
   nullable,
   object,
   optional,
@@ -55,7 +56,7 @@ export interface HolidayRegistrationContactResponse {
 }
 
 export const HolidayRegistrationContactResponseSchema: z.ZodType<HolidayRegistrationContactResponse, unknown> = object<HolidayRegistrationContactResponse>({
-  guardian_profile_id: str,
+  guardian_profile_id: int64String,
   first_name: str,
   last_name: str,
   email: optional(str),
@@ -79,8 +80,8 @@ export interface HolidayRegistrationChildResponse {
 }
 
 export const HolidayRegistrationChildResponseSchema: z.ZodType<HolidayRegistrationChildResponse, unknown> = object<HolidayRegistrationChildResponse>({
-  student_id: str,
-  school_id: str,
+  student_id: int64String,
+  school_id: int64String,
   first_name: str,
   last_name: str,
   birth_date: optional(calendarDate),

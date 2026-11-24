@@ -18,6 +18,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The files parents attach to an enrollment (#4783): the public upload of the
@@ -69,7 +70,7 @@ type UploadReceipt struct {
 
 // AdminRequestUpload is one live upload of a request in the staff detail.
 type AdminRequestUpload struct {
-	ID          string    `json:"id"`
+	ID          ident.ID  `json:"id"`
 	FieldKey    string    `json:"field_key"`
 	Filename    string    `json:"filename"`
 	SizeBytes   int64     `json:"size_bytes" contract:"number"`
@@ -338,7 +339,7 @@ func (rs *Resource) attachAdminUploads(ctx context.Context, detail *AdminRequest
 	}
 	for _, upload := range uploads {
 		detail.Uploads = append(detail.Uploads, AdminRequestUpload{
-			ID: strconv.FormatInt(upload.ID, 10), FieldKey: upload.FieldKey, Filename: upload.Filename,
+			ID: ident.ID(upload.ID), FieldKey: upload.FieldKey, Filename: upload.Filename,
 			SizeBytes: upload.SizeBytes, ContentType: upload.ContentType, UploadedAt: upload.CreatedAt,
 		})
 	}

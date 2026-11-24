@@ -12,10 +12,10 @@ import (
 	"log/slog"
 	"slices"
 	"sort"
-	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	reminder "github.com/moto-ogs/project-phoenix/workflows/reminderdelivery"
 	"github.com/moto-ogs/project-phoenix/workflows/reminderdelivery/ports"
 )
@@ -340,7 +340,7 @@ func buildPickupReminders(dues []duePickup, names map[int64]studentNameInfo) ([]
 		}
 		out = append(out, reminder.StaffReminder{
 			Type:        reminderType,
-			StudentID:   int64String(d.id),
+			StudentID:   new(ident.ID(d.id)),
 			Title:       info.name,
 			Subtitle:    info.class,
 			DueTime:     formatMinutes(d.pickupMin),
@@ -512,7 +512,7 @@ func buildActivityReminders(
 		case w.upcoming && diff >= 0 && diff <= w.lead:
 			out = append(out, reminder.StaffReminder{
 				Type:               reminder.TypeActivityStart,
-				ActivityInstanceID: int64String(inst.ID),
+				ActivityInstanceID: new(ident.ID(inst.ID)),
 				Title:              inst.Title,
 				DueTime:            formatMinutes(startMin),
 				MinutesAway:        diff,
@@ -522,7 +522,7 @@ func buildActivityReminders(
 		case w.overdue && diff < 0 && -diff >= w.overdueThreshold && w.nowMin < endMin:
 			out = append(out, reminder.StaffReminder{
 				Type:               reminder.TypeActivityOverdue,
-				ActivityInstanceID: int64String(inst.ID),
+				ActivityInstanceID: new(ident.ID(inst.ID)),
 				Title:              inst.Title,
 				DueTime:            formatMinutes(startMin),
 				MinutesAway:        diff,
@@ -624,11 +624,4 @@ func formatNextChangeAt(today string, m int) string {
 	}
 	target := day.AddDays(m / (24 * 60)).BerlinMidnight().Add(time.Duration(m%(24*60)) * time.Minute)
 	return target.Format(time.RFC3339)
-}
-
-// int64String renders an int64 ID as a *string for JSON, matching
-// the repo-wide int64→string API contract.
-func int64String(v int64) *string {
-	s := strconv.FormatInt(v, 10)
-	return &s
 }

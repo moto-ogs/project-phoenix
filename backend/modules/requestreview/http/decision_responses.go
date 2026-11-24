@@ -2,7 +2,6 @@ package requestreviewhttp
 
 import (
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -11,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	"github.com/moto-ogs/project-phoenix/modules/requestreview"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // CareRequestDetailResponse is one care-schedule request of any status, read
@@ -20,8 +20,8 @@ import (
 // never from today's weekly plan, so later corrections do not rewrite what
 // was asked for or decided.
 type CareRequestDetailResponse struct {
-	ID             string                                  `json:"id"`
-	StudentID      string                                  `json:"student_id"`
+	ID             ident.ID                                `json:"id"`
+	StudentID      ident.ID                                `json:"student_id"`
 	FirstName      string                                  `json:"first_name"`
 	LastName       string                                  `json:"last_name"`
 	Status         string                                  `json:"status"`
@@ -75,8 +75,8 @@ func toCareRequestDetailResponse(item *carerequests.HistoryItem) CareRequestDeta
 		decidedAt = &at
 	}
 	return CareRequestDetailResponse{
-		ID:             strconv.FormatInt(req.ID, 10),
-		StudentID:      strconv.FormatInt(req.StudentID, 10),
+		ID:             ident.ID(req.ID),
+		StudentID:      ident.ID(req.StudentID),
 		FirstName:      item.FirstName,
 		LastName:       item.LastName,
 		Status:         req.Status,

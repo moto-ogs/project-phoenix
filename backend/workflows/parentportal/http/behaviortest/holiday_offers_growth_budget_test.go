@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -115,7 +117,7 @@ func TestParentHolidayRegistrationOffers(t *testing.T) {
 	offers, small := list(chain)
 	require.Len(t, offers, 2, "the open and the coming period of the child's Träger")
 	firstDay, lastCareDay := calendar.NewDate(2029, time.October, 15), calendar.NewDate(2029, time.October, 19)
-	child := []parentHTTP.HolidayRegistrationOfferChildResponse{{StudentID: fmt.Sprint(chain.StudentID), FirstName: "Felix"}}
+	child := []parentHTTP.HolidayRegistrationOfferChildResponse{{StudentID: ident.ID(chain.StudentID), FirstName: "Felix"}}
 	assert.Equal(t, parentHTTP.HolidayRegistrationOfferResponse{
 		Token: lastDay, Name: "Herbstferien", TraegerName: offers[0].TraegerName,
 		RegistrationOpensOn: calendar.NewDate(2029, time.September, 1), RegistrationClosesOn: today,

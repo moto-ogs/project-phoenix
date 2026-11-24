@@ -3,11 +3,11 @@ package parent
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -17,8 +17,8 @@ import (
 
 // SharedDocumentResponse is one released document in the inbox.
 type SharedDocumentResponse struct {
-	ID             string    `json:"id"`
-	OrganizationID string    `json:"organization_id"`
+	ID             ident.ID  `json:"id"`
+	OrganizationID ident.ID  `json:"organization_id"`
 	TraegerName    string    `json:"traeger_name"`
 	Title          string    `json:"title"`
 	FileName       string    `json:"file_name"`
@@ -42,7 +42,7 @@ func (rs *Resource) listSharedDocuments(w http.ResponseWriter, r *http.Request) 
 	out := make([]SharedDocumentResponse, len(documents))
 	for i, document := range documents {
 		out[i] = SharedDocumentResponse{
-			ID: strconv.FormatInt(document.ID, 10), OrganizationID: strconv.FormatInt(document.OrganizationID, 10),
+			ID: ident.ID(document.ID), OrganizationID: ident.ID(document.OrganizationID),
 			TraegerName: document.TraegerName, Title: document.Title, FileName: document.FileName,
 			ContentType: document.ContentType, SizeBytes: document.SizeBytes, ReleasedAt: document.ReleasedAt,
 		}

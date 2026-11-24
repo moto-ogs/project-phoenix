@@ -3,25 +3,24 @@ package parent
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
-// AnnouncementResponse is one parent-news feed entry. IDs are stringified per
-// the int64 -> string frontend convention. read/acknowledged reflect THIS
+// AnnouncementResponse is one parent-news feed entry. read/acknowledged reflect THIS
 // guardian's state. requires_acknowledgement tells the app whether to show the
 // "gelesen und bestätigt" action.
 type AnnouncementResponse struct {
-	ID                      string  `json:"id"`
-	Title                   string  `json:"title"`
-	Body                    string  `json:"body"`
-	Priority                string  `json:"priority"`
-	LinkURL                 *string `json:"link_url,omitempty"`
-	RequiresAcknowledgement bool    `json:"requires_acknowledgement"`
+	ID                      ident.ID `json:"id"`
+	Title                   string   `json:"title"`
+	Body                    string   `json:"body"`
+	Priority                string   `json:"priority"`
+	LinkURL                 *string  `json:"link_url,omitempty"`
+	RequiresAcknowledgement bool     `json:"requires_acknowledgement"`
 	// DeliveryMode "letter" marks a binding Elternbrief (#2384) so the portal can
 	// say so, instead of leaving the parent to infer it from a confirmation
 	// button appearing.
@@ -67,15 +66,15 @@ type AnnouncementResponse struct {
 
 // AnnouncementLetterResponse is the letter one of the guardian's children got.
 type AnnouncementLetterResponse struct {
-	StudentID string `json:"student_id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Body      string `json:"body"`
+	StudentID ident.ID `json:"student_id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
+	Body      string   `json:"body"`
 }
 
 // AnnouncementSurveyResponse is the survey state on a feed entry.
 type AnnouncementSurveyResponse struct {
-	SurveyID     string    `json:"survey_id"`
+	SurveyID     ident.ID  `json:"survey_id"`
 	Anonymous    bool      `json:"anonymous"`
 	ClosesAt     time.Time `json:"closes_at"`
 	Participated bool      `json:"participated"`
@@ -83,35 +82,35 @@ type AnnouncementSurveyResponse struct {
 
 // AnnouncementOption is one answer choice of a poll.
 type AnnouncementOption struct {
-	ID    string `json:"id"`
-	Label string `json:"label"`
+	ID    ident.ID `json:"id"`
+	Label string   `json:"label"`
 }
 
 // AnnouncementPollChild is one of the guardian's children the poll reaches,
 // with the option ids currently selected for that child (empty = unanswered).
 type AnnouncementPollChild struct {
-	StudentID       string   `json:"student_id"`
-	FirstName       string   `json:"first_name"`
-	LastName        string   `json:"last_name"`
-	SelectedOptions []string `json:"selected_options"`
+	StudentID       ident.ID   `json:"student_id"`
+	FirstName       string     `json:"first_name"`
+	LastName        string     `json:"last_name"`
+	SelectedOptions []ident.ID `json:"selected_options"`
 }
 
 func toAnnouncementResponse(item *parentService.AnnouncementFeedItem) AnnouncementResponse {
 	options := make([]AnnouncementOption, 0, len(item.Options))
 	for _, o := range item.Options {
 		options = append(options, AnnouncementOption{
-			ID:    strconv.FormatInt(o.ID, 10),
+			ID:    ident.ID(o.ID),
 			Label: o.Label,
 		})
 	}
 	children := make([]AnnouncementPollChild, 0, len(item.Children))
 	for _, c := range item.Children {
-		selected := make([]string, 0, len(c.SelectedOptions))
+		selected := make([]ident.ID, 0, len(c.SelectedOptions))
 		for _, id := range c.SelectedOptions {
-			selected = append(selected, strconv.FormatInt(id, 10))
+			selected = append(selected, ident.ID(id))
 		}
 		children = append(children, AnnouncementPollChild{
-			StudentID:       strconv.FormatInt(c.StudentID, 10),
+			StudentID:       ident.ID(c.StudentID),
 			FirstName:       c.FirstName,
 			LastName:        c.LastName,
 			SelectedOptions: selected,
@@ -123,7 +122,7 @@ func toAnnouncementResponse(item *parentService.AnnouncementFeedItem) Announceme
 		ResponseDeadline:        item.ResponseDeadline,
 		Options:                 options,
 		Children:                children,
-		ID:                      strconv.FormatInt(item.ID, 10),
+		ID:                      ident.ID(item.ID),
 		Title:                   item.Title,
 		Body:                    item.Body,
 		Priority:                item.Priority,
@@ -152,7 +151,7 @@ func toAnnouncementLetters(letters []parentService.AnnouncementLetter) []Announc
 	out := make([]AnnouncementLetterResponse, 0, len(letters))
 	for _, letter := range letters {
 		out = append(out, AnnouncementLetterResponse{
-			StudentID: strconv.FormatInt(letter.StudentID, 10), FirstName: letter.FirstName, LastName: letter.LastName, Body: letter.Body,
+			StudentID: ident.ID(letter.StudentID), FirstName: letter.FirstName, LastName: letter.LastName, Body: letter.Body,
 		})
 	}
 	return out
@@ -163,7 +162,7 @@ func toAnnouncementSurveyResponse(s *parentService.SurveySummary) *AnnouncementS
 		return nil
 	}
 	return &AnnouncementSurveyResponse{
-		SurveyID: strconv.FormatInt(s.SurveyID, 10), Anonymous: s.Anonymous, ClosesAt: s.ClosesAt, Participated: s.Participated,
+		SurveyID: ident.ID(s.SurveyID), Anonymous: s.Anonymous, ClosesAt: s.ClosesAt, Participated: s.Participated,
 	}
 }
 
@@ -253,8 +252,8 @@ func (rs *Resource) markAnnouncementRead(w http.ResponseWriter, r *http.Request)
 // selected option ids (empty withdraws the answer), and the published_at version
 // token every write on the feed carries.
 type respondRequest struct {
-	StudentID   string     `json:"student_id"`
-	OptionIDs   []string   `json:"option_ids"`
+	StudentID   ident.ID   `json:"student_id"`
+	OptionIDs   []ident.ID `json:"option_ids"`
 	PublishedAt *time.Time `json:"published_at"`
 }
 
@@ -277,21 +276,19 @@ func (rs *Resource) respondToAnnouncement(w http.ResponseWriter, r *http.Request
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("published_at is required")))
 		return
 	}
-	studentID, err := strconv.ParseInt(req.StudentID, 10, 64)
-	if err != nil || studentID <= 0 {
+	if req.StudentID <= 0 {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid student_id")))
 		return
 	}
 	optionIDs := make([]int64, 0, len(req.OptionIDs))
-	for _, raw := range req.OptionIDs {
-		id, err := strconv.ParseInt(raw, 10, 64)
-		if err != nil || id <= 0 {
+	for _, id := range req.OptionIDs {
+		if id <= 0 {
 			common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid option id")))
 			return
 		}
-		optionIDs = append(optionIDs, id)
+		optionIDs = append(optionIDs, id.Int64())
 	}
-	if err := rs.ParentService.RespondToAnnouncement(r.Context(), accountID, announcementID, studentID, optionIDs, *req.PublishedAt); err != nil {
+	if err := rs.ParentService.RespondToAnnouncement(r.Context(), accountID, announcementID, req.StudentID.Int64(), optionIDs, *req.PublishedAt); err != nil {
 		renderParentWriteError(w, r, err)
 		return
 	}

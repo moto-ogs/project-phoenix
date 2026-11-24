@@ -71,7 +71,7 @@ func (rs *SEPAMandateResource) MandateRouter(protectedTraegerRoutes func(chi.Rou
 
 // SEPACreditorRequest is the body of PUT /traeger/sepa-creditor.
 type SEPACreditorRequest struct {
-	CreditorID          string `json:"creditor_id"`
+	CreditorID          string `json:"creditor_id" contract_text:"SEPA creditor identifier"`
 	PrenotificationDays int    `json:"prenotification_days"`
 	MissingMandate      string `json:"missing_mandate"`
 	// ExpectedVersion is the version of the creditor as it was read (ADR

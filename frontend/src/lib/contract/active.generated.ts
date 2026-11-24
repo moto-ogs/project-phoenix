@@ -44,7 +44,7 @@ export interface CurrentActivityItem {
 }
 
 export const CurrentActivityItemSchema: z.ZodType<CurrentActivityItem, unknown> = object<CurrentActivityItem>({
-  id: str,
+  id: int64String,
   name: str,
   category: str,
   participants: safeInt,
@@ -473,7 +473,7 @@ export const OpenRoomSchema: z.ZodType<OpenRoom, unknown> = object<OpenRoom>({
   room_id: int64String,
   name: str,
   is_user_supervising: bool,
-  active_group_ids: nullable(arr(str)),
+  active_group_ids: nullable(arr(int64String)),
   has_occupying_session: bool,
   student_count: safeInt,
   students: nullable(arr(OpenRoomStudentSchema)),

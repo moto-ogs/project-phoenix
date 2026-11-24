@@ -2,13 +2,11 @@ package studentpresencehttp
 
 import (
 	context "context"
-	json "encoding/json"
 	errors "errors"
 	fmt "fmt"
 	io "io"
 	slog "log/slog"
 	http "net/http"
-	strconv "strconv"
 	strings "strings"
 	time "time"
 
@@ -179,15 +177,9 @@ const maxSchoolCheckinBatchBytes = 64 << 10
 // POST /api/students/school-checkin/batch. The action applies to every listed
 // student; students already in the target state count as no-ops (Changed=false),
 // mirroring the single-student endpoint's idempotency.
-//
-// StudentIDs travel as strings: the frontend holds int64 IDs as strings
-// (CLAUDE.md §4), and converting them to JSON numbers client-side would
-// silently corrupt values above JavaScript's 2^53-1 safe-integer limit —
-// for a write endpoint that means toggling the WRONG student. The backend
-// parses them with full int64 range instead.
 type schoolCheckinBatchRequest struct {
-	Action     string   `json:"action"` // "in" | "out"
-	StudentIDs []string `json:"student_ids"`
+	Action     string     `json:"action"` // "in" | "out"
+	StudentIDs []ident.ID `json:"student_ids"`
 	// Reason is "class" for children going to class together (#5656).
 	Reason string `json:"reason,omitempty"`
 }
@@ -195,16 +187,14 @@ type schoolCheckinBatchRequest struct {
 // schoolCheckinBatchResult is the per-student outcome inside a batch response.
 // Error carries a machine-readable code ("not_found") — the frontend resolves
 // the student's name from its own list, so no PII travels here. StudentID is
-// a string for the same reason the request IDs are: the client matches these
-// values back against its selection set, which a lossy JSON-number round-trip
-// above 2^53-1 would silently break.
+// serialized by wire as a decimal string without loss of precision.
 type schoolCheckinBatchResult struct {
-	StudentID string `json:"student_id"`
-	OK        bool   `json:"ok"`
-	Changed   bool   `json:"changed"`
-	Status    string `json:"status,omitempty"`
-	Location  string `json:"location,omitempty"`
-	Error     string `json:"error,omitempty"`
+	StudentID ident.ID `json:"student_id"`
+	OK        bool     `json:"ok"`
+	Changed   bool     `json:"changed"`
+	Status    string   `json:"status,omitempty"`
+	Location  string   `json:"location,omitempty"`
+	Error     string   `json:"error,omitempty"`
 }
 
 type schoolCheckinBatchResponse struct {
@@ -266,10 +256,10 @@ func decodeSchoolCheckinBatch(w http.ResponseWriter, r *http.Request) (schoolChe
 	// payload is fully read and unmarshalled before any length check can
 	// reject it.
 	r.Body = http.MaxBytesReader(w, r.Body, maxSchoolCheckinBatchBytes)
-	dec := json.NewDecoder(r.Body)
+	dec := wire.NewDecoder(r.Body)
 	var req schoolCheckinBatchRequest
-	if err := dec.Decode(&req); err != nil {
-		return schoolCheckinBatchRequest{}, nil, common.ErrorInvalidRequest(err)
+	if err := dec.DecodeWithRequiredIDs(&req); err != nil {
+		return schoolCheckinBatchRequest{}, nil, common.ErrorInvalidRequest(fmt.Errorf("student_ids must be numeric id strings in a valid JSON body: %w", err))
 	}
 	// The decoder stops at the end of the first JSON value, so trailing bytes
 	// would otherwise stay unread — an oversized or malformed tail would slip
@@ -293,11 +283,7 @@ func decodeSchoolCheckinBatch(w http.ResponseWriter, r *http.Request) (schoolChe
 	if len(req.StudentIDs) > maxSchoolCheckinBatchSize {
 		return schoolCheckinBatchRequest{}, nil, common.ErrorInvalidRequest(errors.New("too many students in one batch"))
 	}
-	parsedIDs, parseErr := parseStudentIDStrings(req.StudentIDs)
-	if parseErr != nil {
-		return schoolCheckinBatchRequest{}, nil, common.ErrorInvalidRequest(parseErr)
-	}
-	studentIDs := dedupeStudentIDs(parsedIDs)
+	studentIDs := dedupeStudentIDs(ident.Int64s(req.StudentIDs))
 	if len(studentIDs) == 0 {
 		return schoolCheckinBatchRequest{}, nil, common.ErrorInvalidRequest(errors.New("student_ids must not be empty"))
 	}
@@ -318,13 +304,13 @@ func buildSchoolCheckinBatchResponse(action string, batch *studentpresence.Schoo
 	for _, item := range batch.Results {
 		if !item.OK {
 			resp.Results = append(resp.Results, schoolCheckinBatchResult{
-				StudentID: strconv.FormatInt(item.StudentID, 10),
+				StudentID: ident.ID(item.StudentID),
 				Error:     "not_found",
 			})
 			continue
 		}
 		resp.Results = append(resp.Results, schoolCheckinBatchResult{
-			StudentID: strconv.FormatInt(item.StudentID, 10),
+			StudentID: ident.ID(item.StudentID),
 			OK:        true,
 			Changed:   item.Changed,
 			Status:    item.Status,
@@ -332,22 +318,6 @@ func buildSchoolCheckinBatchResponse(action string, batch *studentpresence.Schoo
 		})
 	}
 	return resp
-}
-
-// parseStudentIDStrings converts the wire-format string IDs to int64. Any
-// malformed entry rejects the whole request: the frontend only ever sends IDs
-// it received from the backend, so a non-numeric value is a client bug, not a
-// per-student condition.
-func parseStudentIDStrings(ids []string) ([]int64, error) {
-	out := make([]int64, 0, len(ids))
-	for _, raw := range ids {
-		id, err := strconv.ParseInt(raw, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("student_ids must be numeric id strings: %q", raw)
-		}
-		out = append(out, id)
-	}
-	return out, nil
 }
 
 // dedupeStudentIDs drops duplicates while keeping first-seen order, so a

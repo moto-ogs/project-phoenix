@@ -20,6 +20,7 @@ import (
 	securityruntime "github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	studentpresence "github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const (
@@ -42,7 +43,7 @@ type dayLogResponse struct {
 }
 
 type dayLogGroup struct {
-	GroupID  string          `json:"group_id"`
+	GroupID  ident.ID        `json:"group_id"`
 	Name     string          `json:"name"`
 	Students []dayLogStudent `json:"students"`
 	Counters dayLogCounters  `json:"counters"`
@@ -54,12 +55,12 @@ type dayLogClassPeriod struct {
 }
 
 type dayLogStudent struct {
-	StudentID   string `json:"student_id"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	SchoolClass string `json:"school_class"`
-	Status      string `json:"status"`
-	Label       string `json:"label"`
+	StudentID   ident.ID `json:"student_id"`
+	FirstName   string   `json:"first_name"`
+	LastName    string   `json:"last_name"`
+	SchoolClass string   `json:"school_class"`
+	Status      string   `json:"status"`
+	Label       string   `json:"label"`
 	// CheckInTime/CheckOutTime carry the day's first arrival and last
 	// departure; a present child without CheckOutTime is still checked in.
 	CheckInTime  *time.Time `json:"check_in_time,omitempty"`
@@ -433,7 +434,7 @@ func buildDayLogResponse(date calendar.Date, groups []*SchoolGroup, data *dayLog
 	resp := dayLogResponse{Date: date.String(), Groups: make([]dayLogGroup, 0, len(groups))}
 	for _, group := range groups {
 		entry := dayLogGroup{
-			GroupID:  strconv.FormatInt(group.ID, 10),
+			GroupID:  ident.ID(group.ID),
 			Name:     group.Name,
 			Students: make([]dayLogStudent, 0, len(data.studentsByGroup[group.ID])),
 		}
@@ -493,7 +494,7 @@ func sortDayLogStudents(students []dayLogStudent) {
 
 func buildDayLogStudent(student *peopleModule.StudentState, data *dayLogData) dayLogStudent {
 	row := dayLogStudent{
-		StudentID:   strconv.FormatInt(student.ID, 10),
+		StudentID:   ident.ID(student.ID),
 		SchoolClass: student.SchoolClass,
 	}
 	if person := data.persons[student.PersonID]; person != nil {

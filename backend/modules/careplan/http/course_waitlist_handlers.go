@@ -3,19 +3,19 @@ package careplanhttp
 import (
 	errors "errors"
 	http "net/http"
-	strconv "strconv"
 	strings "strings"
 	time "time"
 
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // CourseWaitlistEntryResponse is one child waiting for an AG (#4767).
 type CourseWaitlistEntryResponse struct {
-	RequestID   string    `json:"request_id"`
-	StudentID   string    `json:"student_id"`
+	RequestID   ident.ID  `json:"request_id"`
+	StudentID   ident.ID  `json:"student_id"`
 	StudentName string    `json:"student_name"`
 	Rank        int       `json:"rank"`
 	SubmittedAt time.Time `json:"submitted_at"`
@@ -25,7 +25,7 @@ type CourseWaitlistEntryResponse struct {
 // ParticipantLimit and FreeSlots are null without an applicable capacity.
 // SlotFreeForNext marks the moment the team confirms the first child.
 type CourseWaitlistResponse struct {
-	ActivityGroupID  string                        `json:"activity_group_id"`
+	ActivityGroupID  ident.ID                      `json:"activity_group_id"`
 	Name             string                        `json:"name"`
 	ParticipantLimit *int                          `json:"participant_limit"`
 	Participants     int                           `json:"participants"`
@@ -86,12 +86,12 @@ func courseWaitlistResponses(waitlists []careplan.CourseWaitlist, names map[int6
 		entries := make([]CourseWaitlistEntryResponse, 0, len(waitlist.Entries))
 		for _, entry := range waitlist.Entries {
 			entries = append(entries, CourseWaitlistEntryResponse{
-				RequestID: strconv.FormatInt(entry.RequestID, 10), StudentID: strconv.FormatInt(entry.StudentID, 10),
+				RequestID: ident.ID(entry.RequestID), StudentID: ident.ID(entry.StudentID),
 				StudentName: names[entry.StudentID], Rank: entry.Rank, SubmittedAt: entry.SubmittedAt,
 			})
 		}
 		out = append(out, CourseWaitlistResponse{
-			ActivityGroupID: strconv.FormatInt(waitlist.ActivityGroupID, 10), Name: waitlist.Name,
+			ActivityGroupID: ident.ID(waitlist.ActivityGroupID), Name: waitlist.Name,
 			ParticipantLimit: waitlist.ParticipantLimit, Participants: waitlist.Participants, FreeSlots: waitlist.FreeSlots,
 			SlotFreeForNext: waitlist.HasFreeSlotForNext(), Entries: entries,
 		})

@@ -62,7 +62,7 @@ func (s *passkeyServiceStub) FinishAccountPasskeyRegistration(_ context.Context,
 	if s.finishRegistrationErr != nil {
 		return identityaccess.PasskeyCredentialSummary{}, s.finishRegistrationErr
 	}
-	return identityaccess.PasskeyCredentialSummary{ID: "7", Name: "Laptop", CreatedAt: time.Unix(1, 0).UTC()}, nil
+	return identityaccess.PasskeyCredentialSummary{ID: 7, Name: "Laptop", CreatedAt: time.Unix(1, 0).UTC()}, nil
 }
 
 func (s *passkeyServiceStub) BeginAccountPasskeyLogin(_ context.Context, req identityaccess.AccountPasskeyLoginStart) (identityaccess.PasskeyCeremonyOptions, error) {
@@ -86,7 +86,7 @@ func (s *passkeyServiceStub) ListAccountPasskeyCredentials(_ context.Context, ac
 	if s.listErr != nil {
 		return nil, s.listErr
 	}
-	return []identityaccess.PasskeyCredentialSummary{{ID: "8", Name: "Phone", CreatedAt: time.Unix(2, 0).UTC()}}, nil
+	return []identityaccess.PasskeyCredentialSummary{{ID: 8, Name: "Phone", CreatedAt: time.Unix(2, 0).UTC()}}, nil
 }
 
 func (s *passkeyServiceStub) RevokeAccountPasskeyCredential(_ context.Context, accountID, credentialID int64) error {

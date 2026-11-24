@@ -4,7 +4,6 @@ import (
 	context "context"
 	errors "errors"
 	"fmt"
-	strconv "strconv"
 
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -61,10 +60,7 @@ func (rs *Resource) GroupDayLogs(ctx context.Context, day calendar.Date, groupID
 	resp := buildDayLogResponse(day, groups, data)
 	result := make([]GroupDayLog, 0, len(resp.Groups))
 	for _, group := range resp.Groups {
-		entry, err := groupDayLogOf(group)
-		if err != nil {
-			return nil, err
-		}
+		entry := groupDayLogOf(group)
 		result = append(result, entry)
 	}
 	return result, nil
@@ -89,24 +85,17 @@ func (rs *Resource) SchoolDayLog(ctx context.Context, day calendar.Date) (GroupD
 		return GroupDayLog{}, err
 	}
 	resp := buildDayLogResponse(day, []*SchoolGroup{{ID: 0}}, data)
-	return groupDayLogOf(resp.Groups[0])
+	return groupDayLogOf(resp.Groups[0]), nil
 }
 
-func groupDayLogOf(group dayLogGroup) (GroupDayLog, error) {
-	groupID, err := strconv.ParseInt(group.GroupID, 10, 64)
-	if err != nil {
-		return GroupDayLog{}, fmt.Errorf("day log group id %q: %w", group.GroupID, err)
-	}
+func groupDayLogOf(group dayLogGroup) GroupDayLog {
 	entry := GroupDayLog{
-		GroupID: groupID, Present: group.Counters.Present, Sick: group.Counters.Sick,
+		GroupID: group.GroupID.Int64(), Present: group.Counters.Present, Sick: group.Counters.Sick,
 		ClassTrip: group.Counters.ClassTrip, Excused: group.Counters.Excused, Absent: group.Counters.Absent,
 		StudentIDs: make([]int64, 0, len(group.Students)), MissingChild: []GroupDayLogChild{},
 	}
 	for _, student := range group.Students {
-		studentID, err := strconv.ParseInt(student.StudentID, 10, 64)
-		if err != nil {
-			return GroupDayLog{}, fmt.Errorf("day log student id %q: %w", student.StudentID, err)
-		}
+		studentID := student.StudentID.Int64()
 		entry.StudentIDs = append(entry.StudentIDs, studentID)
 		switch student.Status {
 		case dayLogStatusSick, dayLogStatusExcused, dayLogStatusClassTrip, dayLogStatusAbsent:
@@ -116,5 +105,5 @@ func groupDayLogOf(group dayLogGroup) (GroupDayLog, error) {
 			})
 		}
 	}
-	return entry, nil
+	return entry
 }

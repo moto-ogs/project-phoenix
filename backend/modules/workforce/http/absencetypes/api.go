@@ -24,6 +24,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
@@ -143,11 +144,11 @@ func (req UpdateAbsenceTypeRequest) schoolLimit() (*workforce.SchoolLimitPatch, 
 // the client which standard type's calculation this art inherits, so the UI can
 // say so instead of leaving the school guessing.
 type AbsenceTypeResponse struct {
-	ID               string `json:"id"`
-	Name             string `json:"name"`
-	BaseType         string `json:"base_type"`
-	IsActive         bool   `json:"is_active"`
-	AllowanceEnabled bool   `json:"allowance_enabled"`
+	ID               ident.ID `json:"id"`
+	Name             string   `json:"name"`
+	BaseType         string   `json:"base_type"`
+	IsActive         bool     `json:"is_active"`
+	AllowanceEnabled bool     `json:"allowance_enabled"`
 	// CarryoverUntil is null when a rest expires on 31.12.
 	CarryoverUntil *string `json:"carryover_until"`
 	Requestable    bool    `json:"requestable"`
@@ -162,13 +163,13 @@ type AbsenceTypeResponse struct {
 // AllowanceSummaryResponse keeps database IDs as strings on the wire, matching
 // every other frontend-facing int64 ID in the application.
 type AllowanceSummaryResponse struct {
-	StaffID       string  `json:"staff_id"`
-	AbsenceTypeID string  `json:"absence_type_id"`
-	Year          int     `json:"year"`
-	EntitledDays  float64 `json:"entitled_days"`
-	TakenDays     float64 `json:"taken_days"`
-	ReservedDays  float64 `json:"reserved_days"`
-	RemainingDays float64 `json:"remaining_days"`
+	StaffID       ident.ID `json:"staff_id"`
+	AbsenceTypeID ident.ID `json:"absence_type_id"`
+	Year          int      `json:"year"`
+	EntitledDays  float64  `json:"entitled_days"`
+	TakenDays     float64  `json:"taken_days"`
+	ReservedDays  float64  `json:"reserved_days"`
+	RemainingDays float64  `json:"remaining_days"`
 	// ExpiresOn is the last day the rest can be booked; ExpiredDays is the
 	// rest that was left when that day passed.
 	ExpiresOn   string  `json:"expires_on"`
@@ -214,8 +215,8 @@ type SetAllowanceRequest struct {
 
 func toAllowanceSummaryResponse(summary workforce.AbsenceTypeAllowanceSummary) AllowanceSummaryResponse {
 	response := AllowanceSummaryResponse{
-		StaffID:       strconv.FormatInt(summary.StaffID, 10),
-		AbsenceTypeID: strconv.FormatInt(summary.AbsenceTypeID, 10),
+		StaffID:       ident.ID(summary.StaffID),
+		AbsenceTypeID: ident.ID(summary.AbsenceTypeID),
 		Year:          summary.Year,
 		EntitledDays:  summary.EntitledDays,
 		TakenDays:     summary.TakenDays,
@@ -258,7 +259,7 @@ func ToOwnAllowanceResponses(accounts []workforce.AbsenceTypeAllowanceAccount) [
 
 func toAbsenceTypeResponse(t workforce.StaffAbsenceType) AbsenceTypeResponse {
 	return AbsenceTypeResponse{
-		ID:               strconv.FormatInt(t.ID, 10),
+		ID:               ident.ID(t.ID),
 		Name:             t.Name,
 		BaseType:         t.BaseType,
 		IsActive:         t.IsActive,

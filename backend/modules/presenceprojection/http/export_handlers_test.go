@@ -28,7 +28,7 @@ func TestExportRequestToListParamsPreservesRoomFilter(t *testing.T) {
 			GroupID:     "17",
 			RoomID:      "42",
 			SchoolClass: "3a",
-			StudentIDs:  []string{"12", "7", "12"},
+			StudentIDs:  []ident.ID{12, 7, 12},
 		},
 	}, testExportDate)
 

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	appointmentcap "github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports"
 )
@@ -130,7 +132,7 @@ func (s *service) staffTimetableEventsWithCancelled(ctx context.Context, staffID
 	events := make([]Event, 0, len(assigned))
 	for _, entry := range assigned {
 		instance := entry.instance
-		id := formatID(instance.ID)
+		id := ident.ID(instance.ID)
 		modifiedAt := instance.UpdatedAt
 		if entry.assignment.UpdatedAt.After(modifiedAt) {
 			modifiedAt = entry.assignment.UpdatedAt

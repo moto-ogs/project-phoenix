@@ -65,3 +65,21 @@ func TestRequestIDsAreStringsButDeviceIDsAreNumbers(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(`{"contract_ids":[9223372036854775807]}`), &request))
 	assert.Equal(t, []ident.ID{math.MaxInt64}, request.ContractIDs)
 }
+
+func TestRequiredIDsDistinguishNullFromZero(t *testing.T) {
+	t.Parallel()
+
+	var request struct {
+		IDs        []ident.ID `json:"ids"`
+		OptionalID *ident.ID  `json:"optional_id"`
+	}
+	dec := wire.NewDecoder(strings.NewReader(`{"ids":["0"],"optional_id":null}`))
+	require.NoError(t, dec.DecodeWithRequiredIDs(&request))
+	assert.Equal(t, []ident.ID{0}, request.IDs)
+	assert.Nil(t, request.OptionalID)
+
+	dec = wire.NewDecoder(strings.NewReader(`{"ids":[null]}`))
+	err := dec.DecodeWithRequiredIDs(&request)
+	require.Error(t, err)
+	assert.True(t, wire.InvalidIDAt(err, "/ids"))
+}

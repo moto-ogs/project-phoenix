@@ -5,6 +5,7 @@ import {
   bool,
   fileAnswer,
   instant,
+  int64String,
   nullable,
   object,
   optional,
@@ -42,7 +43,7 @@ export interface studentLetterResponse {
 }
 
 export const studentLetterResponseSchema: z.ZodType<studentLetterResponse, unknown> = object<studentLetterResponse>({
-  announcement_id: str,
+  announcement_id: int64String,
   title: str,
   published_at: instant,
   can_confirm: bool,
@@ -62,7 +63,7 @@ export interface studentDeclarationResponse {
 }
 
 export const studentDeclarationResponseSchema: z.ZodType<studentDeclarationResponse, unknown> = object<studentDeclarationResponse>({
-  announcement_id: str,
+  announcement_id: int64String,
   title: str,
   published_at: instant,
   deadline: nullable(instant),
@@ -94,7 +95,7 @@ export interface pollChildResponse {
 }
 
 export const pollChildResponseSchema: z.ZodType<pollChildResponse, unknown> = object<pollChildResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
@@ -111,7 +112,7 @@ export interface pollOptionResultResponse {
 }
 
 export const pollOptionResultResponseSchema: z.ZodType<pollOptionResultResponse, unknown> = object<pollOptionResultResponse>({
-  option_id: str,
+  option_id: int64String,
   label: str,
   count: safeInt,
 });

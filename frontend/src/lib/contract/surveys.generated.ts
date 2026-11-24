@@ -5,6 +5,7 @@ import {
   bool,
   fileAnswer,
   instant,
+  int64String,
   nullable,
   num,
   object,
@@ -33,7 +34,7 @@ export interface surveyTargetWire {
 
 export const surveyTargetWireSchema: z.ZodType<surveyTargetWire, unknown> = object<surveyTargetWire>({
   target_type: str,
-  ref_id: optional(str),
+  ref_id: optional(int64String),
   ref_text: optional(str),
 });
 
@@ -44,7 +45,7 @@ export interface surveyOptionResponse {
 }
 
 export const surveyOptionResponseSchema: z.ZodType<surveyOptionResponse, unknown> = object<surveyOptionResponse>({
-  id: str,
+  id: int64String,
   label: str,
 });
 
@@ -59,7 +60,7 @@ export interface surveyQuestionResponse {
 }
 
 export const surveyQuestionResponseSchema: z.ZodType<surveyQuestionResponse, unknown> = object<surveyQuestionResponse>({
-  id: str,
+  id: int64String,
   position: safeInt,
   kind: str,
   prompt: str,
@@ -88,7 +89,7 @@ export interface surveyResponse {
 }
 
 export const surveyResponseSchema: z.ZodType<surveyResponse, unknown> = object<surveyResponse>({
-  id: str,
+  id: int64String,
   title: str,
   intro: str,
   audience: str,
@@ -117,7 +118,7 @@ export interface surveyToAnswerResponse {
 }
 
 export const surveyToAnswerResponseSchema: z.ZodType<surveyToAnswerResponse, unknown> = object<surveyToAnswerResponse>({
-  id: str,
+  id: int64String,
   title: str,
   intro: str,
   anonymous: bool,
@@ -136,7 +137,7 @@ export interface surveyFormSurvey {
 }
 
 export const surveyFormSurveySchema: z.ZodType<surveyFormSurvey, unknown> = object<surveyFormSurvey>({
-  id: str,
+  id: int64String,
   title: str,
   intro: str,
   anonymous: bool,
@@ -166,7 +167,7 @@ export interface surveyRespondentAnswerResponse {
 }
 
 export const surveyRespondentAnswerResponseSchema: z.ZodType<surveyRespondentAnswerResponse, unknown> = object<surveyRespondentAnswerResponse>({
-  question_id: str,
+  question_id: int64String,
   options: nullable(arr(str)),
   scale_value: optional(safeInt),
   text: optional(str),
@@ -191,7 +192,7 @@ export interface surveyOptionCountResponse {
 }
 
 export const surveyOptionCountResponseSchema: z.ZodType<surveyOptionCountResponse, unknown> = object<surveyOptionCountResponse>({
-  option_id: str,
+  option_id: int64String,
   label: str,
   count: safeInt,
 });
@@ -213,7 +214,7 @@ export interface surveyQuestionResultResponse {
 }
 
 export const surveyQuestionResultResponseSchema: z.ZodType<surveyQuestionResultResponse, unknown> = object<surveyQuestionResultResponse>({
-  question_id: str,
+  question_id: int64String,
   position: safeInt,
   kind: str,
   prompt: str,
@@ -235,7 +236,7 @@ export interface surveyHighlightResponse {
 }
 
 export const surveyHighlightResponseSchema: z.ZodType<surveyHighlightResponse, unknown> = object<surveyHighlightResponse>({
-  question_id: str,
+  question_id: int64String,
   prompt: str,
   average: num,
 });
@@ -255,7 +256,7 @@ export interface surveyResultsResponse {
 }
 
 export const surveyResultsResponseSchema: z.ZodType<surveyResultsResponse, unknown> = object<surveyResultsResponse>({
-  survey_id: str,
+  survey_id: int64String,
   title: str,
   anonymous: bool,
   status: str,

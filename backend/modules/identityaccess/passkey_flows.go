@@ -6,6 +6,8 @@ import (
 	"errors"
 	"net"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The passkey ceremonies (#3331). A registration is gated by an e-mail code,
@@ -38,7 +40,7 @@ type PasskeyEnrollmentChallenge struct {
 // PasskeyCeremonyOptions names one started ceremony and carries the options
 // the browser passes to the authenticator.
 type PasskeyCeremonyOptions struct {
-	SessionID string `json:"session_id"`
+	SessionID string `json:"session_id" contract_text:"opaque passkey ceremony key"`
 	Options   any    `json:"options" contract_json:"The WebAuthn library owns the ceremony-specific browser options"`
 }
 
@@ -51,7 +53,7 @@ type PasskeyLoginResult struct {
 // PasskeyCredentialSummary is one registered credential as the portals list
 // it.
 type PasskeyCredentialSummary struct {
-	ID         string     `json:"id"`
+	ID         ident.ID   `json:"id"`
 	Name       string     `json:"name"`
 	CreatedAt  time.Time  `json:"created_at"`
 	LastUsedAt *time.Time `json:"last_used_at,omitempty"`

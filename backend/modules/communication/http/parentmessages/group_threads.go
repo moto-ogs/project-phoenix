@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
@@ -33,30 +34,30 @@ func (rs *Resource) mountGroupThreadRoutes(r chi.Router, read, withTx func(http.
 // id, or the class name for a class.
 type GroupTargetBody struct {
 	TargetType  string `json:"target_type"`
-	TargetID    string `json:"target_id"`
+	TargetID    string `json:"target_id" contract_text:"group or activity ID, or a school class as text"`
 	TargetLabel string `json:"target_label"`
 }
 
 type CreateGroupThreadRequest struct {
-	ClientMessageID string `json:"client_message_id,omitempty"`
+	ClientMessageID string `json:"client_message_id,omitempty" contract_text:"client-supplied message deduplication key"`
 	GroupTargetBody
 	Title string `json:"title"`
 	Body  string `json:"body"`
 	// AttachmentIDs names the uploads the message carries (#6685).
-	AttachmentIDs []string `json:"attachment_ids,omitempty"`
+	AttachmentIDs []ident.ID `json:"attachment_ids,omitempty"`
 }
 
 type GroupMessageRequest struct {
-	ClientMessageID string `json:"client_message_id,omitempty"`
+	ClientMessageID string `json:"client_message_id,omitempty" contract_text:"client-supplied message deduplication key"`
 	Body            string `json:"body"`
 	// AttachmentIDs names the uploads the message carries (#6685).
-	AttachmentIDs []string `json:"attachment_ids,omitempty"`
+	AttachmentIDs []ident.ID `json:"attachment_ids,omitempty"`
 }
 
 type GroupThreadResponse struct {
-	ID            string     `json:"id"`
+	ID            ident.ID   `json:"id"`
 	TargetType    string     `json:"target_type"`
-	TargetID      string     `json:"target_id"`
+	TargetID      string     `json:"target_id" contract_text:"group or activity ID, or a school class as text"`
 	TargetLabel   string     `json:"target_label"`
 	Title         string     `json:"title"`
 	ClosedAt      *time.Time `json:"closed_at,omitempty"`
@@ -87,8 +88,8 @@ func toGroupReaders(thread communication.ParentGroupThread, familyCount int) Gro
 }
 
 type StaffGroupMessageResponse struct {
-	ClientMessageID string    `json:"client_message_id,omitempty"`
-	ID              string    `json:"id"`
+	ClientMessageID string    `json:"client_message_id,omitempty" contract_text:"client-supplied message deduplication key"`
+	ID              ident.ID  `json:"id"`
 	SenderName      string    `json:"sender_name"`
 	Body            string    `json:"body"`
 	CreatedAt       time.Time `json:"created_at"`
@@ -99,12 +100,12 @@ type StaffGroupMessageResponse struct {
 // ParentMessageAttachmentResponse is one file of a message: the stored snapshot
 // (communication.MessageAttachment) as the conversation shows it.
 type ParentMessageAttachmentResponse struct {
-	ID          string `json:"id"`
-	Filename    string `json:"filename"`
-	SizeBytes   int    `json:"size_bytes"`
-	ContentType string `json:"content_type"`
-	Width       int    `json:"width,omitempty"`
-	Height      int    `json:"height,omitempty"`
+	ID          ident.ID `json:"id"`
+	Filename    string   `json:"filename"`
+	SizeBytes   int      `json:"size_bytes"`
+	ContentType string   `json:"content_type"`
+	Width       int      `json:"width,omitempty"`
+	Height      int      `json:"height,omitempty"`
 }
 
 // toAttachmentResponses reads the snapshot a message stores. The store
@@ -121,12 +122,12 @@ func toAttachmentResponses(snapshot json.RawMessage) []ParentMessageAttachmentRe
 }
 
 type GroupChildResponse struct {
-	StudentID   string `json:"student_id"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	SchoolClass string `json:"school_class,omitempty"`
-	Reachable   bool   `json:"reachable"`
-	Read        bool   `json:"read"`
+	StudentID   ident.ID `json:"student_id"`
+	FirstName   string   `json:"first_name"`
+	LastName    string   `json:"last_name"`
+	SchoolClass string   `json:"school_class,omitempty"`
+	Reachable   bool     `json:"reachable"`
+	Read        bool     `json:"read"`
 }
 
 type GroupThreadDetailResponse struct {
@@ -301,7 +302,7 @@ func toGroupThreadResponse(thread communication.ParentGroupThread) GroupThreadRe
 		targetID = *thread.Target.RefText
 	}
 	return GroupThreadResponse{
-		ID: strconv.FormatInt(thread.ID, 10), TargetType: thread.Target.Type, TargetID: targetID,
+		ID: ident.ID(thread.ID), TargetType: thread.Target.Type, TargetID: targetID,
 		TargetLabel: thread.Target.Label, Title: thread.Title, ClosedAt: thread.ClosedAt,
 		LastMessageAt: thread.LastMessageAt, CreatedAt: thread.CreatedAt,
 	}
@@ -311,7 +312,7 @@ func toGroupChildResponses(children []communication.ParentGroupChild) []GroupChi
 	out := make([]GroupChildResponse, 0, len(children))
 	for _, child := range children {
 		out = append(out, GroupChildResponse{
-			StudentID: strconv.FormatInt(child.StudentID, 10), FirstName: child.FirstName, LastName: child.LastName,
+			StudentID: ident.ID(child.StudentID), FirstName: child.FirstName, LastName: child.LastName,
 			SchoolClass: child.SchoolClass, Reachable: child.Reachable, Read: child.Read,
 		})
 	}
@@ -322,7 +323,7 @@ func toGroupThreadDetail(detail *communication.ParentGroupThreadDetail, viewer .
 	messages := make([]StaffGroupMessageResponse, 0, len(detail.Messages))
 	for _, message := range detail.Messages {
 		messages = append(messages, StaffGroupMessageResponse{
-			ID: strconv.FormatInt(message.ID, 10), SenderName: message.SenderName,
+			ID: ident.ID(message.ID), SenderName: message.SenderName,
 			ClientMessageID: clientMessageIDForViewer(message.ClientMessageID, message.SenderAccountID, viewer), Body: message.Body, CreatedAt: message.CreatedAt,
 			Attachments: toAttachmentResponses(message.Attachments),
 		})

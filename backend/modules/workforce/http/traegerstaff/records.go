@@ -286,7 +286,7 @@ func (rs *RecordsResource) serveFinancial(w http.ResponseWriter, r *http.Request
 
 type StaffFinancialRequest struct {
 	IBAN                 *string `json:"iban"`
-	TaxID                *string `json:"tax_id"`
+	TaxID                *string `json:"tax_id" contract_text:"statutory tax identifier"`
 	SocialSecurityNumber *string `json:"social_security_number"`
 	// ExpectedVersion is the section's version the form showed; values
 	// changed since are refused with general.changed_since_read (ADR 0311).

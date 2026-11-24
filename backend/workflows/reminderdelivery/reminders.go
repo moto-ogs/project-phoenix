@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 var ErrNotLinkedToStaff = errors.New("not linked to staff")
@@ -59,12 +61,12 @@ type StaffReminder struct {
 	// Entity IDs are serialized as strings to honor the repo's int64→string API
 	// contract (JS loses precision on int64 as a JSON number). Exactly one is set
 	// according to Type and gives frontend lists a stable reconciliation key.
-	StudentID          *string `json:"student_id,omitempty"`
-	ActivityInstanceID *string `json:"activity_instance_id,omitempty"`
-	Title              string  `json:"title"`              // student name OR activity title
-	Subtitle           string  `json:"subtitle,omitempty"` // school class or room — optional
-	DueTime            string  `json:"due_time"`           // "HH:MM" of the relevant time
-	MinutesAway        int     `json:"minutes_away"`       // negative when overdue
+	StudentID          *ident.ID `json:"student_id,omitempty"`
+	ActivityInstanceID *ident.ID `json:"activity_instance_id,omitempty"`
+	Title              string    `json:"title"`              // student name OR activity title
+	Subtitle           string    `json:"subtitle,omitempty"` // school class or room — optional
+	DueTime            string    `json:"due_time"`           // "HH:MM" of the relevant time
+	MinutesAway        int       `json:"minutes_away"`       // negative when overdue
 	// PickupDueCount is set on activity_running_over only: how many children
 	// still in the block's room have reached their pickup time.
 	PickupDueCount *int `json:"pickup_due_count,omitempty"`
@@ -94,7 +96,7 @@ type Result struct {
 	// that addresses people individually does care — "an activity in the room
 	// you are watching" and "the slot you have to show up for" are two
 	// different messages, and a person may want to hear one and not the other.
-	AssignedActivityInstanceIDs map[string]struct{} `json:"-"`
+	AssignedActivityInstanceIDs map[ident.ID]struct{} `json:"-"`
 }
 
 // Scope describes whose reminders to compute. Admins see all present children

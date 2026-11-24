@@ -5,6 +5,7 @@ import {
   bool,
   fileAnswer,
   instant,
+  int64String,
   noData,
   nullable,
   object,
@@ -53,7 +54,7 @@ export interface InvitationResponse {
 }
 
 export const InvitationResponseSchema: z.ZodType<InvitationResponse, unknown> = object<InvitationResponse>({
-  id: str,
+  id: int64String,
   email: str,
   caterer_name: str,
   delivery_address: str,

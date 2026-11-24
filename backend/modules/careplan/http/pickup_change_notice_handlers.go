@@ -3,7 +3,6 @@ package careplanhttp
 import (
 	errors "errors"
 	http "net/http"
-	strconv "strconv"
 	time "time"
 
 	common "github.com/moto-ogs/project-phoenix/api/common"
@@ -16,8 +15,8 @@ import (
 // pickupChangeNoticeResponse is one unread marker of a changed pickup time
 // (#6855). It names the child by first name only; the link opens the child.
 type pickupChangeNoticeResponse struct {
-	RequestID        string    `json:"request_id"`
-	StudentID        string    `json:"student_id"`
+	RequestID        ident.ID  `json:"request_id"`
+	StudentID        ident.ID  `json:"student_id"`
 	StudentFirstName string    `json:"student_first_name"`
 	Date             string    `json:"date"`
 	PickupTime       string    `json:"pickup_time,omitempty"`
@@ -86,7 +85,7 @@ func renderPickupChangeNotices(notices []careplan.PickupChangeTeamNotice) []pick
 	out := make([]pickupChangeNoticeResponse, 0, len(notices))
 	for _, notice := range notices {
 		out = append(out, pickupChangeNoticeResponse{
-			RequestID: strconv.FormatInt(notice.RequestID, 10), StudentID: strconv.FormatInt(notice.StudentID, 10),
+			RequestID: ident.ID(notice.RequestID), StudentID: ident.ID(notice.StudentID),
 			StudentFirstName: notice.StudentFirstName, Date: notice.Date.String(), PickupTime: notice.PickupTime,
 			Withdrawn: notice.Withdrawn, InformedAt: notice.InformedAt,
 		})

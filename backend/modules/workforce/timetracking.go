@@ -287,13 +287,10 @@ type WorkSessions interface {
 	AdminWorkSessions
 }
 
-// StaffAbsenceResponse is an absence with its derived duration. AbsenceTypeID
-// shadows the record's field on the wire so the BIGINT arrives as a lossless
-// decimal string.
+// StaffAbsenceResponse is an absence with its derived duration.
 type StaffAbsenceResponse struct {
 	*StaffAbsence
-	DurationDays  int     `json:"duration_days"`
-	AbsenceTypeID *string `json:"absence_type_id,omitempty"`
+	DurationDays int `json:"duration_days"`
 }
 
 // StaffAbsenceRequestItem is one request of the Anfragen module: the absence

@@ -71,8 +71,8 @@ func TestSchoolCalendarListsEventsWithClosingDaysAndHolidays(t *testing.T) {
 	eventType := "ausflug"
 	service := &fakeCalendarService{school: schoolCalls{view: &calendarSvc.SchoolCalendarView{
 		Events:      []calendarSvc.Event{{ID: "appointment:1:2026-03-02", Title: "Zoo", SchoolEventType: &eventType}},
-		ClosingDays: []calendarSvc.SchoolDays{{ID: "4", Name: "Pädagogischer Tag", StartDate: "2026-03-04", EndDate: "2026-03-04"}},
-		Holidays:    []calendarSvc.SchoolDays{{ID: "5", Name: "Osterferien", StartDate: "2026-03-30", EndDate: "2026-04-10"}},
+		ClosingDays: []calendarSvc.SchoolDays{{ID: 4, Name: "Pädagogischer Tag", StartDate: "2026-03-04", EndDate: "2026-03-04"}},
+		Holidays:    []calendarSvc.SchoolDays{{ID: 5, Name: "Osterferien", StartDate: "2026-03-30", EndDate: "2026-04-10"}},
 		Classes:     []string{"3a"},
 	}}}
 	rs := &Resource{service: service}

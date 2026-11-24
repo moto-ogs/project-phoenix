@@ -164,7 +164,7 @@ type SEPAMandateImportColumns struct {
 	BIC           string `json:"bic"`
 	AccountHolder string `json:"account_holder"`
 	Payer         string `json:"payer"`
-	CreditorID    string `json:"creditor_id"`
+	CreditorID    string `json:"creditor_id" contract_text:"SEPA creditor identifier"`
 	Sequence      string `json:"sequence"`
 	LastCollected string `json:"last_collected_on"`
 	DebtorNumber  string `json:"debtor_number"`
@@ -181,7 +181,7 @@ type SEPAMandateImportMapping struct {
 	// ConfirmedCreditorID is the creditor identifier the office saw when it
 	// chose CreditorFromTraeger. The choice holds only while the Träger
 	// still has that identifier.
-	ConfirmedCreditorID string `json:"confirmed_creditor_id"`
+	ConfirmedCreditorID string `json:"confirmed_creditor_id" contract_text:"SEPA creditor identifier"`
 }
 
 // MaxImportFileNameLength bounds the file name the trail keeps.
@@ -279,7 +279,7 @@ type SEPAMandateImport struct {
 	// Unmapped names the required fields without a column; the rows are
 	// read once each has one.
 	Unmapped   []string `json:"unmapped"`
-	CreditorID string   `json:"creditor_id"`
+	CreditorID string   `json:"creditor_id" contract_text:"SEPA creditor identifier"`
 	// Fingerprint names the rows and what the import does with each; the
 	// import takes over only the preview it was given (#6198).
 	Fingerprint string                  `json:"fingerprint,omitempty"`

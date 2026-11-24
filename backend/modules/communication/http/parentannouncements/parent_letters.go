@@ -10,6 +10,7 @@ import (
 	announcementService "github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
@@ -64,15 +65,15 @@ func (rs *Resource) letterPlaceholders(w http.ResponseWriter, r *http.Request) {
 }
 
 type letterPreviewRequest struct {
-	Body      string `json:"body"`
-	StudentID string `json:"student_id"`
+	Body      string   `json:"body"`
+	StudentID ident.ID `json:"student_id"`
 }
 
 type letterPreviewChild struct {
-	StudentID   string `json:"student_id"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	SchoolClass string `json:"school_class"`
+	StudentID   ident.ID `json:"student_id"`
+	FirstName   string   `json:"first_name"`
+	LastName    string   `json:"last_name"`
+	SchoolClass string   `json:"school_class"`
 }
 
 type letterPreviewResponse struct {
@@ -86,8 +87,8 @@ func decodeLetterPreview(w http.ResponseWriter, r *http.Request) (string, int64,
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return "", 0, false
 	}
-	studentID, err := strconv.ParseInt(strings.TrimSpace(req.StudentID), 10, 64)
-	if err != nil || studentID <= 0 {
+	studentID := req.StudentID.Int64()
+	if studentID <= 0 {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid student_id")))
 		return "", 0, false
 	}
@@ -119,7 +120,7 @@ func (rs *Resource) respondLetterPreview(w http.ResponseWriter, r *http.Request,
 	common.Respond(w, r, http.StatusOK, letterPreviewResponse{
 		Body: preview.Body,
 		Child: letterPreviewChild{
-			StudentID: strconv.FormatInt(preview.Child.StudentID, 10), FirstName: preview.Child.FirstName,
+			StudentID: ident.ID(preview.Child.StudentID), FirstName: preview.Child.FirstName,
 			LastName: preview.Child.LastName, SchoolClass: preview.Child.SchoolClass,
 		},
 	}, "Letter preview rendered")

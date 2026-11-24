@@ -21,8 +21,8 @@ func TestContractChangeImpactPreservesTheSchoolsFollowUp(t *testing.T) {
 	})
 	assert.Equal(t, &carecontract.ChangeImpact{
 		EffectiveFrom:   day,
-		Adjusted:        []carecontract.ChangeAdjustedTemplate{{TemplateID: "12", Name: "Angebotsgruppe", RemovedWeekdays: []int{2}, AddedWeekdays: []int{3}}},
-		NotAdjusted:     []carecontract.ChangeManualTemplate{{TemplateID: "13", Name: "Handgruppe", Weekdays: []int{2}, ViaTarget: true, Until: &until}},
+		Adjusted:        []carecontract.ChangeAdjustedTemplate{{TemplateID: 12, Name: "Angebotsgruppe", RemovedWeekdays: []int{2}, AddedWeekdays: []int{3}}},
+		NotAdjusted:     []carecontract.ChangeManualTemplate{{TemplateID: 13, Name: "Handgruppe", Weekdays: []int{2}, ViaTarget: true, Until: &until}},
 		PickupOverrides: []carecontract.ChangePickupOverride{{Weekday: 3, Date: day.AddDays(2), StoredTime: "15:00", BookedTime: "16:00", ResetNow: false}},
 	}, result)
 }

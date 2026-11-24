@@ -227,3 +227,14 @@ Dieser Nachtrag beantwortet die offene Frage aus Punkt 2 des vorigen Nachtrags (
 3. Seeder und Simulation schreiben ihre HTTP-Körper mit `wire.Marshal`.
    Ihre Portal-Kennungen sind `ident.ID`; numerische Kiosk-Felder bleiben
    `int64`.
+
+## Text unter einem Kennungsnamen
+
+`id`, `*_id` und `*_ids` sind Hinweise, keine Typen. Eine Bigint-Kennung
+trägt `ident.ID`, keine von Hand formatierte Go-Zeichenkette. Ein Feld
+mit echtem Text unter einem Kennungsnamen nennt in
+`contract_text:"Begründung"` sein Format oder seine Herkunft, zum
+Beispiel ein RFID-Tag, eine SEPA-Gläubigerkennung oder ein
+Kalenderschlüssel aus mehreren Teilen. Der Vertrag führt die Begründung
+als `text_reason`. Der Ratchet lehnt neue unmarkierte String-Felder an der
+Client-Naht ab.

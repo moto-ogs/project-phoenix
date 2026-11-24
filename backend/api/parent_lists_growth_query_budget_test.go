@@ -179,7 +179,7 @@ func TestParentListsPositiveGrowthQueryBudget(t *testing.T) {
 				require.Len(t, rows, n)
 				ids := []string{}
 				for _, row := range rows {
-					ids = append(ids, row.StudentID)
+					ids = append(ids, row.StudentID.String())
 					require.NotEmpty(t, row.FirstName)
 					require.NotEmpty(t, row.LastName)
 				}
@@ -244,8 +244,8 @@ func TestParentListsPositiveGrowthQueryBudget(t *testing.T) {
 				if name == "master_data" {
 					var row parentHTTP.MasterDataResponse
 					require.NoError(t, json.Unmarshal(envelope.Data, &row))
-					require.Equal(t, fmt.Sprint(chain.StudentID), row.StudentID)
-					require.Equal(t, fmt.Sprint(chain.GuardianProfileID), row.GuardianProfileID)
+					require.Equal(t, fmt.Sprint(chain.StudentID), row.StudentID.String())
+					require.Equal(t, fmt.Sprint(chain.GuardianProfileID), row.GuardianProfileID.String())
 					require.Equal(t, chain.Email, *row.Email)
 					rows = row.PendingChanges
 					require.Len(t, rows, 3)
@@ -253,18 +253,18 @@ func TestParentListsPositiveGrowthQueryBudget(t *testing.T) {
 					require.NoError(t, json.Unmarshal(envelope.Data, &rows))
 					require.Len(t, rows, n+2)
 					for _, row := range rows {
-						require.NotEqual(t, pendingIDs[2], row.ID, "school-controlled class requests are not parent-visible")
+						require.NotEqual(t, pendingIDs[2], row.ID.String(), "school-controlled class requests are not parent-visible")
 					}
 				}
 				seen := map[string]bool{}
 				for _, row := range rows {
-					require.False(t, seen[row.ID])
-					seen[row.ID] = true
-					require.Contains(t, requestIDs, row.ID)
+					require.False(t, seen[row.ID.String()])
+					seen[row.ID.String()] = true
+					require.Contains(t, requestIDs, row.ID.String())
 					require.True(t, row.IsSelf)
 					require.NotEmpty(t, row.CreatedAt)
 					if row.Status == "pending" {
-						require.Contains(t, pendingIDs, row.ID)
+						require.Contains(t, pendingIDs, row.ID.String())
 						require.JSONEq(t, `"Pending"`, string(row.NewValue))
 					} else {
 						require.Equal(t, "approved", row.Status)
@@ -318,11 +318,11 @@ func TestParentListsPositiveGrowthQueryBudget(t *testing.T) {
 				require.Len(t, rows, n)
 				seen := map[string]bool{}
 				for _, row := range rows {
-					require.False(t, seen[row.ID])
-					seen[row.ID] = true
+					require.False(t, seen[row.ID.String()])
+					seen[row.ID.String()] = true
 					idx := -1
 					for i, id := range pickupIDs {
-						if row.ID == id {
+						if row.ID.String() == id {
 							idx = i
 						}
 					}
@@ -340,11 +340,11 @@ func TestParentListsPositiveGrowthQueryBudget(t *testing.T) {
 				require.Len(t, row.Offerings, n)
 				seen := map[string]bool{}
 				for _, offering := range row.Offerings {
-					require.False(t, seen[offering.ID])
-					seen[offering.ID] = true
+					require.False(t, seen[offering.ID.String()])
+					seen[offering.ID.String()] = true
 					idx := -1
 					for i, id := range offeringIDs {
-						if offering.ID == fmt.Sprint(id) {
+						if offering.ID.String() == fmt.Sprint(id) {
 							idx = i
 						}
 					}
@@ -360,7 +360,7 @@ func TestParentListsPositiveGrowthQueryBudget(t *testing.T) {
 				ids := []string{}
 				for _, offering := range row.Items {
 					names = append(names, offering.Name)
-					ids = append(ids, offering.ID)
+					ids = append(ids, offering.ID.String())
 					require.True(t, offering.Selected)
 					require.True(t, offering.IsActive)
 					require.Equal(t, []string{"mon", "tue", "wed", "thu", "fri"}, offering.AvailableDays)
@@ -401,16 +401,16 @@ func TestParentListsPositiveGrowthQueryBudget(t *testing.T) {
 				require.Len(t, rows, n)
 				seen := map[string]bool{}
 				for _, row := range rows {
-					require.False(t, seen[row.ID])
-					seen[row.ID] = true
+					require.False(t, seen[row.ID.String()])
+					seen[row.ID.String()] = true
 					idx := -1
 					for i, id := range absenceIDs {
-						if row.ID == id {
+						if row.ID.String() == id {
 							idx = i
 						}
 					}
 					require.GreaterOrEqual(t, idx, 0)
-					require.Equal(t, fmt.Sprint(chain.StudentID), row.StudentID)
+					require.Equal(t, fmt.Sprint(chain.StudentID), row.StudentID.String())
 					require.Equal(t, fmt.Sprintf("Absence%02d", idx), row.Note)
 					require.Equal(t, "pending", row.Status)
 					require.Equal(t, []string{calendar.NewDate(2026, 8, 3).AddDays(idx).String()}, row.Dates)

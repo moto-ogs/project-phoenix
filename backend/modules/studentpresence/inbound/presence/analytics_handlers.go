@@ -2,7 +2,8 @@ package presence
 
 import (
 	"net/http"
-	"strconv"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
@@ -58,7 +59,7 @@ func (rs *Resource) getDashboardAnalytics(w http.ResponseWriter, r *http.Request
 	// Map current activities
 	for _, activity := range analytics.CurrentActivities {
 		response.CurrentActivities = append(response.CurrentActivities, CurrentActivityItem{
-			ID:           strconv.FormatInt(activity.ID, 10),
+			ID:           ident.ID(activity.ID),
 			Name:         activity.Name,
 			Category:     activity.Category,
 			Participants: activity.Participants,
