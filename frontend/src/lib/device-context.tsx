@@ -18,8 +18,37 @@
  * schalten bis dahin per CSS (`DeviceSwitch`), damit Server- und Client-
  * Render gleich bleiben und der Desktop nie eine App-Variante sieht.
  */
-import type { ReactNode } from "react";
-import { useResolvedMediaQuery } from "~/lib/hooks/use-media-query";
+import { useCallback, useSyncExternalStore, type ReactNode } from "react";
+
+/*
+ * Eigene Abfrage statt `useResolvedMediaQuery`: Viele Tests ersetzen
+ * `~/lib/hooks/use-media-query` durch einen Mock ohne diese Funktion. Der
+ * Gerätekontext steckt in Kit-Bausteinen (Modal, Blatt), die diese Tests
+ * mitrendern; er darf deshalb nicht an jenem Modul hängen. Ohne `matchMedia`
+ * (jsdom) bleibt der Wert `null` = Desktop.
+ */
+const noSubscription = () => () => undefined;
+const unknownOnServer = () => null;
+
+function useResolvedMediaQuery(query: string): boolean | null {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (typeof window.matchMedia !== "function") return noSubscription();
+      const list = window.matchMedia(query);
+      list.addEventListener("change", onChange);
+      return () => list.removeEventListener("change", onChange);
+    },
+    [query],
+  );
+  const getSnapshot = useCallback(
+    () =>
+      typeof window.matchMedia === "function"
+        ? window.matchMedia(query).matches
+        : null,
+    [query],
+  );
+  return useSyncExternalStore(subscribe, getSnapshot, unknownOnServer);
+}
 
 export const APP_QUERY = "(width < 64rem), (pointer: coarse)";
 export const PHONE_QUERY = "(width < 40rem)";
