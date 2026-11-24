@@ -3,7 +3,6 @@
 import { differenceInCalendarDays } from "date-fns/differenceInCalendarDays";
 import { CalendarPlus, SquarePen, Thermometer } from "lucide-react";
 import {
-  Fragment,
   type ReactNode,
   useCallback,
   useEffect,
@@ -797,8 +796,8 @@ export function StaffSessionTable({
         : "Sonderarbeitszeit"
       : null;
 
-  // Die Zeile der Tageskarte am Handy (#7913): Kommen–Gehen · Pause · Ist ·
-  // Soll und darunter der Status, aus denselben Werten wie die Spalten
+  // Die Zeile der Tageskarte am Handy (#7913): Kommen–Gehen, Pause, Ist und
+  // Soll, jeweils benannt, und darunter der Status, aus denselben Werten wie die Spalten
   // Check-in bis Status. Diese Spalten stehen deshalb nicht noch einmal auf
   // der Karte (`stacked: "hidden"`).
   const phoneDayLine = (row: DayRow) => {
@@ -809,13 +808,17 @@ export function StaffSessionTable({
       ? formatTimeOnly(row.lastSession.check_out_time)
       : null;
     // Auf einem Mehrblock-Tag sind es Tagesgrenzen, kein durchgehender
-    // Zeitraum; die Blöcke stehen im aufgeklappten Detail.
+    // Zeitraum; die Blöcke stehen im aufgeklappten Detail. Ein laufender Tag
+    // hat noch kein Ende.
+    const end = !row.openSession && checkOut ? checkOut : null;
     const times =
       checkIn === null
         ? null
         : row.hasMultipleBlocks
-          ? `ab ${checkIn}${!row.openSession && checkOut ? ` bis ${checkOut}` : ""}`
-          : `${checkIn}${!row.openSession && checkOut ? `–${checkOut}` : ""}`;
+          ? `ab ${checkIn}${end ? ` bis ${end}` : ""}`
+          : end
+            ? `${checkIn}–${end}`
+            : `seit ${checkIn}`;
     const parts: { key: string; node: ReactNode }[] = [];
     if (times !== null) {
       parts.push({
@@ -856,16 +859,13 @@ export function StaffSessionTable({
     const note = overrideNote(row);
     return (
       <span className="flex flex-col items-start gap-1">
-        <span className="flex flex-wrap items-center gap-x-1.5 text-gray-700 tabular-nums">
-          {parts.map((part, index) => (
-            <Fragment key={part.key}>
-              {index > 0 ? (
-                <span aria-hidden="true" className="text-gray-500">
-                  ·
-                </span>
-              ) : null}
-              <span className="whitespace-nowrap">{part.node}</span>
-            </Fragment>
+        {/* Jede Angabe trägt ihren Namen und bricht als Ganzes um: neben den
+            Aktionen der Karte ist die Zeile schmal. */}
+        <span className="flex flex-wrap items-center gap-x-3 text-gray-700 tabular-nums">
+          {parts.map((part) => (
+            <span key={part.key} className="whitespace-nowrap">
+              {part.node}
+            </span>
           ))}
         </span>
         {note ? <span className="text-xs text-gray-500">{note}</span> : null}
