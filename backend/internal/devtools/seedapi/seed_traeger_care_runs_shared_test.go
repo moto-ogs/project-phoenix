@@ -289,10 +289,11 @@ func TestSeedCareNoticesLeaveARunWithSomethingToSettleOpen(t *testing.T) {
 
 // The contract-conclusion worker can conclude a contract between the read
 // of the notice run and its release (seed smoke, 409
-// parent_billing.billing_run_changed 70 s after the server start). The seed
-// reads the preview once more and releases that; a second refusal stays an
-// error.
-func TestSeedCareNoticesReadAChangedPreviewOnceMore(t *testing.T) {
+// parent_billing.billing_run_changed 70 s after the server start), and one
+// tick concludes every waiting contract in a transaction of its own. The
+// seed reads the preview again and releases that, at most
+// seedPreviewAttempts times; the last refusal stays an error.
+func TestSeedCareNoticesReadAChangedPreviewAgain(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -302,7 +303,8 @@ func TestSeedCareNoticesReadAChangedPreviewOnceMore(t *testing.T) {
 		wantError    bool
 	}{
 		{name: "worker concludes a contract", changes: 1, wantReleases: 2},
-		{name: "preview changes again", changes: 2, wantReleases: 2, wantError: true},
+		{name: "preview changes again", changes: 2, wantReleases: 3},
+		{name: "changes never settle", changes: 3, wantReleases: 3, wantError: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -342,7 +344,7 @@ func TestSeedCareNoticesReadAChangedPreviewOnceMore(t *testing.T) {
 			defer srv.Close()
 
 			issued, err := seedCareNotices(newTestClient(srv.URL, false), AuthRef{Kind: AuthBearer, Token: "traeger"}, 65, calendar.NewDate(2026, 10, 1))
-			assert.Equal(t, tc.wantReleases, releases, "one more read, never a loop")
+			assert.Equal(t, tc.wantReleases, releases, "a new read per attempt, never more than seedPreviewAttempts")
 			assert.Equal(t, tc.wantReleases, reads)
 			if tc.wantError {
 				require.Error(t, err)
@@ -351,7 +353,7 @@ func TestSeedCareNoticesReadAChangedPreviewOnceMore(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, 4, issued, "the notices of the preview read again")
+			assert.Equal(t, 2+reads, issued, "the notices of the preview read last")
 			assert.Equal(t, 2, letters)
 		})
 	}
