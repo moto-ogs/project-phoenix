@@ -35,37 +35,42 @@ func init() {
 // transaction holds instead of waiting for it: the statement already holds
 // its own, newer visit, and every other visit write locks in id order, so
 // waiting for an older one could deadlock. A skipped visit goes with the
-// next room change. The probe on
-// enrollment.holiday_guests keeps a statement for other children at one
-// index lookup per closed visit.
+// next room change. The open guests among the written children are found
+// first, by a join on enrollment.holiday_guests; only for them the function
+// asks the home school, once per guest and statement, and deletes. A
+// statement without a guest, the usual case, costs that one join.
 const repeatableActiveDiscardStoppedRoomHistorySQL = `
 CREATE OR REPLACE FUNCTION active.discard_stopped_room_history() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
+DECLARE
+	guest_visit RECORD;
 BEGIN
 	DELETE FROM active.visits AS v
 	USING visit_rows_new AS n, active.room_history_stops AS s
 	WHERE v.id = n.id AND v.tenant_id = n.tenant_id AND v.exit_time IS NOT NULL
 		AND s.tenant_id = n.tenant_id AND s.student_id = n.student_id;
 
-	DELETE FROM active.visits AS v
-	USING (
+	FOR guest_visit IN
 		SELECT DISTINCT n.tenant_id, n.student_id
 		FROM visit_rows_new AS n
+		JOIN enrollment.holiday_guests AS guest
+			ON guest.tenant_id = n.tenant_id AND guest.student_id = n.student_id AND guest.ended_on IS NULL
 		WHERE n.exit_time IS NOT NULL
-			AND EXISTS (
-				SELECT 1 FROM enrollment.holiday_guests AS guest
-				WHERE guest.tenant_id = n.tenant_id AND guest.student_id = n.student_id AND guest.ended_on IS NULL)
-			AND EXISTS (
-				SELECT 1
-				FROM enrollment.holiday_guest_home_children(n.tenant_id, n.student_id) AS home
-				JOIN active.room_history_stops AS s
-					ON s.tenant_id = home.home_school_id AND s.student_id = ANY (home.student_ids))
-	) AS stopped_guest
-	WHERE v.id IN (
-		SELECT older.id FROM active.visits AS older
-		WHERE older.tenant_id = stopped_guest.tenant_id AND older.student_id = stopped_guest.student_id
-			AND older.exit_time IS NOT NULL
-		FOR UPDATE SKIP LOCKED);
+	LOOP
+		IF EXISTS (
+			SELECT 1
+			FROM enrollment.holiday_guest_home_children(guest_visit.tenant_id, guest_visit.student_id) AS home
+			JOIN active.room_history_stops AS s
+				ON s.tenant_id = home.home_school_id AND s.student_id = ANY (home.student_ids))
+		THEN
+			DELETE FROM active.visits AS v
+			WHERE v.id IN (
+				SELECT older.id FROM active.visits AS older
+				WHERE older.tenant_id = guest_visit.tenant_id AND older.student_id = guest_visit.student_id
+					AND older.exit_time IS NOT NULL
+				FOR UPDATE SKIP LOCKED);
+		END IF;
+	END LOOP;
 	RETURN NULL;
 END;
 $$;
