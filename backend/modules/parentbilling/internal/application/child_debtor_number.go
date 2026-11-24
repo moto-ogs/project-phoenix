@@ -23,6 +23,10 @@ import (
 // Träger transaction.
 type ChildNumberStore interface {
 	ChildDebtorNumbers(ctx context.Context, organizationID int64) ([]parentbilling.ChildDebtorNumber, error)
+	// LockChildDebtorNumbers holds the numbers of the children of the
+	// families until the transaction ends; every write below takes it
+	// itself, a check of read numbers takes it before it reads them.
+	LockChildDebtorNumbers(ctx context.Context, organizationID int64, familyEmails []string) error
 	// SaveChildDebtorNumbers writes the numbers; with onlyNew a child that
 	// has a number keeps it.
 	SaveChildDebtorNumbers(ctx context.Context, organizationID, accountID int64, numbers []parentbilling.ChildDebtorNumber,

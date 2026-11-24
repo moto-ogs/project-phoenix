@@ -91,13 +91,18 @@ func (rs *HolidayResource) QuoteRouter() chi.Router {
 // Träger (#5621). family_debtor_number says which number applies when it
 // differs from the number the family has (#6692): "keep" or "replace".
 // child_debtor_numbers are the numbers of the children when the Träger keeps
-// one per child (#7007). An empty body confirms without any of them.
+// one per child (#7007). expected_fingerprint is the fingerprint of the
+// preview the Büro read, expected_child_debtor_numbers_version the version of
+// the children's numbers it read when it sends child_debtor_numbers (ADR
+// 0311); a changed or missing one is refused.
 type HolidayConfirmRequest struct {
-	BenefitsExemption  bool                                       `json:"benefits_exemption"`
-	CostBearerID       ident.ID                                   `json:"cost_bearer_id"`
-	DebtorNumber       string                                     `json:"debtor_number"`
-	FamilyDebtorNumber string                                     `json:"family_debtor_number"`
-	ChildDebtorNumbers []capability.HolidayChildDebtorNumberInput `json:"child_debtor_numbers"`
+	BenefitsExemption                 bool                                       `json:"benefits_exemption"`
+	CostBearerID                      ident.ID                                   `json:"cost_bearer_id"`
+	DebtorNumber                      string                                     `json:"debtor_number"`
+	FamilyDebtorNumber                string                                     `json:"family_debtor_number"`
+	ChildDebtorNumbers                []capability.HolidayChildDebtorNumberInput `json:"child_debtor_numbers"`
+	ExpectedFingerprint               string                                     `json:"expected_fingerprint"`
+	ExpectedChildDebtorNumbersVersion string                                     `json:"expected_child_debtor_numbers_version"`
 }
 
 // Bind checks the choice for the family; the owners check the number.
@@ -146,9 +151,11 @@ func (rs *HolidayResource) familyDebtorNumber(w http.ResponseWriter, r *http.Req
 // HolidayChildDebtorNumbersRequest is the body of PUT
 // /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/child-debtor-numbers
 // (#7007): the numbers of the children of a confirmed registration; an
-// empty one removes it.
+// empty one removes it. expected_version is the version of the numbers the
+// Büro read (ADR 0311); a changed or missing one is refused.
 type HolidayChildDebtorNumbersRequest struct {
-	Children []capability.HolidayChildDebtorNumberInput `json:"children"`
+	Children        []capability.HolidayChildDebtorNumberInput `json:"children"`
+	ExpectedVersion string                                     `json:"expected_version"`
 }
 
 // Bind needs the list; the owners check the children and the numbers.
@@ -172,7 +179,7 @@ func (rs *HolidayResource) setChildDebtorNumbers(w http.ResponseWriter, r *http.
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	numbers, err := rs.contributions.SetHolidayChildDebtorNumbers(r.Context(), reviewer, periodID, registrationID, req.Children)
+	numbers, err := rs.contributions.SetHolidayChildDebtorNumbers(r.Context(), reviewer, periodID, registrationID, req.Children, req.ExpectedVersion)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderHolidayError(w, r, err)
@@ -282,7 +289,8 @@ func (rs *HolidayResource) confirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	confirmation, err := rs.contributions.ConfirmHolidayRegistration(r.Context(), reviewer, periodID, registrationID,
-		req.BenefitsExemption, req.CostBearerID.Int64(), req.DebtorNumber, req.FamilyDebtorNumber, req.ChildDebtorNumbers)
+		req.BenefitsExemption, req.CostBearerID.Int64(), req.DebtorNumber, req.FamilyDebtorNumber, req.ChildDebtorNumbers,
+		capability.HolidayConfirmationRead{Fingerprint: req.ExpectedFingerprint, ChildNumbersVersion: req.ExpectedChildDebtorNumbersVersion})
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderHolidayError(w, r, err)

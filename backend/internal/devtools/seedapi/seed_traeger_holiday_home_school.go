@@ -64,8 +64,7 @@ func (seedTraegerHolidayHomeSchoolStep) Run(_ context.Context, rt *Runtime) erro
 	if err != nil || !ok {
 		return err
 	}
-	confirm := fmt.Sprintf("/traeger/holiday-contributions/%d/registrations/%d/confirm", periodID, registration)
-	if _, err := rt.Client.PostWithAuth(auth, confirm, map[string]any{"benefits_exemption": false, "debtor_number": "47030"}); err != nil {
+	if err := postReadHolidayConfirmation(rt, auth, periodID, registration, map[string]any{"benefits_exemption": false, "debtor_number": "47030"}); err != nil {
 		return fmt.Errorf("confirm the registration at another school: %w", err)
 	}
 	return seedHomeSchoolStudent(rt)

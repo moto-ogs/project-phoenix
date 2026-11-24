@@ -28,6 +28,7 @@ type holidayChildNumbersBody struct {
 		FirstName    string `json:"first_name"`
 		DebtorNumber string `json:"debtor_number"`
 	} `json:"children"`
+	Version string `json:"version"`
 }
 
 type perChildDocumentBody struct {
@@ -92,22 +93,21 @@ func TestHolidayInvoicePerChildCarriesTheNumberOfEachChild(t *testing.T) {
 	first, second := proposal.Children[0], proposal.Children[1]
 	assert.Empty(t, first.DebtorNumber)
 
-	confirm := holidayConfirmPath(int64(f.period.ID), f.siblings)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, confirm, map[string]any{"child_debtor_numbers": []map[string]any{
+	rec := confirmReadHoliday(t, f.traeger, f.office.token, int64(f.period.ID), f.siblings, map[string]any{"child_debtor_numbers": []map[string]any{
 		{"child_id": first.ChildID, "debtor_number": "60101"}, {"child_id": second.ChildID, "debtor_number": " "},
 	}})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	_, fields := registrationRefusalOf(t, rec)
 	assert.Equal(t, []string{fmt.Sprintf("child_debtor_number_%d", second.ChildID)}, fields, "the Träger asks for a number of every child")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, confirm, map[string]any{"child_debtor_numbers": []map[string]any{
+	rec = confirmReadHoliday(t, f.traeger, f.office.token, int64(f.period.ID), f.siblings, map[string]any{"child_debtor_numbers": []map[string]any{
 		{"child_id": first.ChildID, "debtor_number": "60101"}, {"child_id": first.ChildID + second.ChildID, "debtor_number": "1"},
 	}})
 	require.Equal(t, http.StatusNotFound, rec.Code, "a child of another registration: %s", rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, confirm, map[string]any{"child_debtor_numbers": []map[string]any{
+	rec = confirmReadHoliday(t, f.traeger, f.office.token, int64(f.period.ID), f.siblings, map[string]any{"child_debtor_numbers": []map[string]any{
 		{"child_id": first.ChildID, "debtor_number": "60101"}, {"child_id": second.ChildID, "debtor_number": "60102"},
 	}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), f.again),
+	require.Equal(t, http.StatusOK, confirmReadHoliday(t, f.traeger, f.office.token, int64(f.period.ID), f.again,
 		map[string]any{"debtor_number": "70001"}).Code, "a registration of one child keeps its single number")
 
 	stored := holidayChildNumbers(t, f, f.siblings)
@@ -115,7 +115,7 @@ func TestHolidayInvoicePerChildCarriesTheNumberOfEachChild(t *testing.T) {
 	assert.Equal(t, "60102", stored.Children[1].DebtorNumber)
 
 	// The office corrects a number after the confirmation.
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayContributionPath(int64(f.period.ID), f.siblings)+"/child-debtor-numbers",
+	rec = putReadChildNumbers(t, f.traeger, f.office.token, int64(f.period.ID), f.siblings,
 		map[string]any{"children": []map[string]any{{"child_id": second.ChildID, "debtor_number": "60103"}}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
@@ -213,13 +213,12 @@ func TestHolidayChildNumbersKeepUnchangedLegacyValues(t *testing.T) {
 	rec := f.confirmWith(t, f.siblings, map[string]any{"child_debtor_numbers": inputs})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	fiveDigits(t, f)
-	path := holidayContributionPath(int64(f.period.ID), f.siblings) + "/child-debtor-numbers"
 	inputs[1]["debtor_number"] = "60102"
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, map[string]any{"children": inputs})
+	rec = putReadChildNumbers(t, f.traeger, f.office.token, int64(f.period.ID), f.siblings, map[string]any{"children": inputs})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, "OLD-1", holidayChildNumbers(t, f, f.siblings).Children[0].DebtorNumber)
 	inputs[0]["debtor_number"] = "NEW-1"
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, map[string]any{"children": inputs})
+	rec = putReadChildNumbers(t, f.traeger, f.office.token, int64(f.period.ID), f.siblings, map[string]any{"children": inputs})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 
 	// A later registration of the same children submits the stored proposal too.
@@ -250,8 +249,7 @@ func TestHolidayChildNumberRemovalsAreBatched(t *testing.T) {
 	tracked := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		f.traeger.ServeHTTP(w, r.WithContext(counter.Context(r.Context())))
 	})
-	rec = traegerJSON(t, tracked, f.office.token, http.MethodPut,
-		holidayContributionPath(int64(f.period.ID), f.siblings)+"/child-debtor-numbers", map[string]any{"children": inputs})
+	rec = putReadChildNumbersVia(t, f.traeger, tracked, f.office.token, int64(f.period.ID), f.siblings, map[string]any{"children": inputs})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Len(t, counter.Matching(func(sql string) bool {
 		return strings.Contains(sql, "update parent_billing.child_debtor_numbers as child")

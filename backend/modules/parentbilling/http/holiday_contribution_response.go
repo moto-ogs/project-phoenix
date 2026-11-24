@@ -25,6 +25,9 @@ type HolidayContributionResponse struct {
 	SiblingDebtorNumber string                             `json:"sibling_debtor_number,omitempty"`
 	SiblingsInvoiced    bool                               `json:"siblings_invoiced,omitempty"`
 	CorrectionNeeded    bool                               `json:"correction_needed,omitempty"`
+	// Fingerprint is the token of a preview the confirmation sends back
+	// (ADR 0311); empty on a frozen contribution and on a quote.
+	Fingerprint string `json:"fingerprint,omitempty"`
 }
 
 // HolidayChildContributionResponse is one child of the contribution.
@@ -84,6 +87,7 @@ func holidayContributionResponse(c capability.HolidayContribution) HolidayContri
 		BenefitsExemption: c.BenefitsExemption, CostBearerID: c.CostBearerID, CostBearerName: c.CostBearerName,
 		Frozen: c.Frozen, ConfirmedAt: c.ConfirmedAt, Invoiced: c.Invoiced, Siblings: c.Siblings,
 		SiblingDebtorNumber: c.SiblingDebtorNumber, SiblingsInvoiced: c.SiblingsInvoiced, CorrectionNeeded: c.CorrectionNeeded,
+		Fingerprint: c.Fingerprint,
 	}
 }
 
