@@ -235,6 +235,7 @@ describe("inventory", () => {
     "src/components/ui/settings-return-path.tsx": "storageKey from the portal",
     "src/lib/sidebar-memory.ts": "SIDEBAR_MEMORY_ENTRIES, checked below",
     "src/lib/hooks/use-local-storage-value.ts": "key from the caller",
+    "src/lib/reload-once.ts": "markerKey from the caller",
     "src/lib/hooks/use-stored-open-groups.ts": "storageKey from the caller",
     "src/lib/shell-auth-context.tsx": "DELIBERATE_LOGOUT_KEY (session-cache)",
     "src/lib/login-session-notice.ts": "DELIBERATE_LOGOUT_KEY (session-cache)",

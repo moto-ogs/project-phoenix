@@ -9,6 +9,7 @@ import {
   tenantNoRetryRoutes,
 } from "./contract/browser-traits.generated";
 import { commits } from "./contract/commit";
+import { reloadForNewDeployment } from "./deployment-reload";
 import { DEPLOYMENT_ID_HEADER, deploymentId } from "./deployment-skew";
 import {
   ApiError,
@@ -388,6 +389,9 @@ async function send(
   const response = options.skipAuthRecovery
     ? await sendPlain(url, init)
     : await PORTALS[portal].send(url, init, options);
+  // The proxy refused a call of a tab older than the server; when nothing is
+  // lost, the tab reloads and the call never settles (deployment-reload.ts).
+  if (reloadForNewDeployment(response)) return new Promise<never>(() => {});
   if (!response.ok) {
     throw await apiErrorFromResponse(
       response,

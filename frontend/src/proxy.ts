@@ -3,7 +3,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { problemBody } from "~/lib/api-error";
 import { REQUEST_ID_HEADER } from "~/lib/request-id";
-import { isOtherDeployment } from "~/lib/deployment-skew";
+import {
+  DEPLOYMENT_ID_HEADER,
+  deploymentId,
+  isOtherDeployment,
+} from "~/lib/deployment-skew";
 import { RESERVED_SLUGS } from "~/lib/reserved-slugs";
 import { normalizeHostname, tenantSlugFromHost } from "~/lib/tenant-host";
 import { LOCALE_SCOPE_HEADER } from "~/i18n/locales";
@@ -464,7 +468,15 @@ function otherDeployment(): NextResponse {
       problemBody(412, "bundle of another deployment", {
         code: "general.route_not_found",
       }),
-      { status: 412, headers: { "Content-Type": "application/problem+json" } },
+      {
+        status: 412,
+        headers: {
+          "Content-Type": "application/problem+json",
+          // The tab tells this refusal apart and may reload by itself
+          // (deployment-reload.ts).
+          [DEPLOYMENT_ID_HEADER]: deploymentId() ?? "",
+        },
+      },
     ),
   );
 }

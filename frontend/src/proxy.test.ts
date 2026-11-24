@@ -503,6 +503,8 @@ describe("deployment skew", () => {
         status: 412,
         code: "general.route_not_found",
       });
+      // The tab compares it with its own and may reload by itself.
+      expect(res.headers.get("X-Moto-Deployment-ID")).toBe("release-b");
     } finally {
       vi.stubEnv("NEXT_DEPLOYMENT_ID", "");
     }

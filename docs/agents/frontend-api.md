@@ -112,6 +112,12 @@ slash is dropped and each parameter encoded.
   { params, query })`. It accepts only registered GET file keys with their
   typed path parameters and query. For other registered addresses use `bffPath(portal, key, { params, query })`.
   Do not assemble a registered BFF address separately.
+- **Deploy skew:** every call names its bundle's `NEXT_DEPLOYMENT_ID`, and
+  the proxy refuses a call from another deployment with 412
+  `general.route_not_found` before any route runs (`lib/deployment-skew.ts`).
+  The tab then reloads by itself unless a typed-in form is on screen, a
+  dialog is open or a navigation guard is active; only then the caller shows
+  the „neue Version“ message (`lib/deployment-reload.ts`).
 
 ## Environment & API URLs — Fail Fast, No Defaults
 
