@@ -8,6 +8,7 @@ import {
 } from "~/components/ui/navigation-progress";
 import { NavigationScrollPosition } from "~/components/ui/navigation-scroll-position";
 import { ButtonLink } from "~/components/ui/button";
+import { NavigationStackTracker } from "~/lib/mobile-navigation/use-navigation-stack";
 import {
   FIXED_LAYER_SHIFT,
   useFixedLayersFollowViewport,
@@ -68,6 +69,8 @@ export function PortalShell({
   return (
     <NavigationProgressProvider>
       <Suspense fallback={null}>
+        {/* Vor der Scroll-Hülle: sie liest den Schlüssel des Eintrags. */}
+        <NavigationStackTracker />
         <NavigationScrollPosition />
       </Suspense>
       {/*

@@ -2747,6 +2747,12 @@ const KIT_PURE_LIB_MODULES = new Set([
   // Infrastructure, not domain: frontend/CLAUDE.md requires createLogger for
   // every log line. It reads the portal only to pick its ingest path.
   "src/lib/logger",
+  // Navigationsmodell der App (#8070): Verlauf, Reiter-Stack, Übergänge.
+  // Kein Mandanten- oder Fachwissen, keine Daten.
+  "src/lib/device-context",
+  "src/lib/mobile-navigation/history-stack",
+  "src/lib/mobile-navigation/page-transition",
+  "src/lib/mobile-navigation/use-navigation-stack",
   "src/lib/search-fold",
   "src/lib/use-clipboard-copy",
   "src/lib/utils",
