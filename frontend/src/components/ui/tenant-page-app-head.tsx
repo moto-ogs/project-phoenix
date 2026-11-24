@@ -136,7 +136,10 @@ export function AppTenantHead({
           printHideHeader && "print:hidden",
         )}
       >
-        <div className="flex min-h-11 items-center gap-1">
+        {/* `gap-3`: Zwei 32-px-Symbole nebeneinander brauchen 12 px Abstand,
+            sonst überdecken sich ihre 44-px-Trefferflächen (gemessen: 36 px
+            für das erste). */}
+        <div className="flex min-h-11 items-center gap-3">
           {backLink ? <span className={ICON_BACK}>{backLink}</span> : null}
           {leading ? (
             <span className="flex shrink-0 items-center pl-1">{leading}</span>
