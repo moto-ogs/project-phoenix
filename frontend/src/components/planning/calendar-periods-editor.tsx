@@ -209,7 +209,7 @@ export function CalendarPeriodsEditor({
             },
           );
           return usage ? (
-            <span className="text-sm whitespace-nowrap text-gray-600">
+            <span className="text-sm text-gray-600 md:whitespace-nowrap">
               {usage}
             </span>
           ) : (

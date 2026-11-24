@@ -44,7 +44,7 @@ const columns: DataTableColumn<SchoolVacation>[] = [
     // im Wort um.
     sortValue: (vacation) => vacation.startDate,
     render: (vacation) => (
-      <span className="text-sm whitespace-nowrap text-gray-600 tabular-nums">
+      <span className="text-sm text-gray-600 tabular-nums md:whitespace-nowrap">
         {vacationRange(vacation)}
       </span>
     ),
