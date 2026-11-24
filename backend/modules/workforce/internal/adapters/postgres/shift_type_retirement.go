@@ -12,14 +12,17 @@ import (
 
 // LockShiftType takes the row lock a staff_shifts or staff_shift_series FK
 // check conflicts with, so the reference count read after it stays true
-// until the removal commits (#6845).
+// until the removal commits (#6845). An edit of the type writes under it
+// too and reads the type after it (ADR 0311).
 func (s *Store) LockShiftType(ctx context.Context, id int64) (bool, domain.OperationStats, error) {
 	db, scope, err := s.database(ctx)
 	if err != nil {
 		return false, domain.OperationStats{}, err
 	}
-	// The shift type is a leaf of the lock order: nothing is locked after it.
-	if err := tenant.OrderLock(ctx, tenant.LockLeaf, tableShiftTypes); err != nil {
+	// A catalogue row of the lock order: an edit of the type locks the
+	// categories it links (Timetable, also catalogue rows) after it, and
+	// neither a gate, a day nor a staff row.
+	if err := tenant.OrderLock(ctx, tenant.LockReference, tableShiftTypes); err != nil {
 		return false, domain.OperationStats{}, err
 	}
 	row := &shiftTypeRow{}

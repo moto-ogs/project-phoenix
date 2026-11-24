@@ -19,13 +19,19 @@ func TestSeedStaffQualificationsUsesStringQualificationTypeIDs(t *testing.T) {
 	const hygieneID = "9007199254740995"
 	var qualificationTypeIDs []string
 	var sentVersions []any
+	var kindVersion any
 
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 		w.Header().Set("Content-Type", "application/json")
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/api/staff/qualification-types":
-			_, _ = fmt.Fprint(w, `{"data":[{"id":"9007199254740993","standard_key":"first_aid_child","name":"Erste Hilfe am Kind","validity_months":24},{"id":"9007199254740994","standard_key":"extended_police_certificate","name":"Erweitertes Führungszeugnis","validity_months":60}]}`)
+			_, _ = fmt.Fprint(w, `{"data":[{"id":"9007199254740993","standard_key":"first_aid_child","name":"Erste Hilfe am Kind","validity_months":24},{"id":"9007199254740994","standard_key":"extended_police_certificate","name":"Erweitertes Führungszeugnis","validity_months":60,"version":"kind-read"}]}`)
 		case r.Method == http.MethodPut && r.URL.Path == "/api/staff/qualification-types/"+certificateID:
+			var body struct {
+				ExpectedVersion any `json:"expected_version"`
+			}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			kindVersion = body.ExpectedVersion
 			_, _ = fmt.Fprint(w, `{"data":{}}`)
 		case r.Method == http.MethodPost && r.URL.Path == "/api/staff/qualification-types":
 			_, _ = fmt.Fprintf(w, `{"data":{"id":"%s","name":"Hygieneschulung","validity_months":12}}`, hygieneID)
@@ -68,4 +74,5 @@ func TestSeedStaffQualificationsUsesStringQualificationTypeIDs(t *testing.T) {
 	// Each list carries the version of the staff member's read (ADR 0311):
 	// without it the route refuses the save and the demo seed stops.
 	assert.Equal(t, []any{"read-1", "read-2", "read-3", "read-4", "read-5", "read-6"}, sentVersions)
+	assert.Equal(t, "kind-read", kindVersion, "the kind is marked mandatory over the version the list answered (ADR 0311)")
 }

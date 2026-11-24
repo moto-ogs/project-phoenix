@@ -50,6 +50,7 @@ describe("QualifikationenFields", () => {
       reminderLeadWeeks: 8,
       mandatory: false,
       archived: false,
+      version: "v1",
     },
   ];
 

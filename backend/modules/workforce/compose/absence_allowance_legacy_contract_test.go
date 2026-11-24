@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/modules/workforce/workforcetest"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -24,7 +25,7 @@ func TestCustomAbsenceAllowanceSummarizesOnlyItsOwnType(t *testing.T) {
 	absenceType, err := svc.CreateAbsenceType(ctx, workforce.CreateAbsenceType{Name: "Regenerationstag"})
 	require.NoError(t, err)
 	enabled := true
-	_, err = svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: absenceType.ID, AllowanceEnabled: &enabled})
+	_, err = svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: absenceType.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, svc, absenceType.ID), AllowanceEnabled: &enabled})
 	require.NoError(t, err)
 
 	summary, err := svc.SetAllowance(ctx, workforce.SetAbsenceTypeAllowance{

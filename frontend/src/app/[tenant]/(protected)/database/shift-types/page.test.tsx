@@ -84,6 +84,7 @@ const SHIFT_TYPES = [
     color: "#83CD2D",
     description: "Zeit am Kind",
     isActive: true,
+    version: "v1",
   },
 ];
 
@@ -166,6 +167,56 @@ describe("Dienstarten — Kategorie-Zuordnung (#1837, #3114)", () => {
       expect(shiftTypeService.updateShiftType).toHaveBeenCalledWith(
         "10",
         expect.objectContaining({ categoryIds: ["1"] }),
+      ),
+    );
+  });
+
+  // ADR 0311: das Speichern schickt den Stand der Dienstart und die Stände
+  // der Kategorien aus der Lesung, mit der das Bearbeiten begann.
+  it("saves over the type and the category links it read when editing started", async () => {
+    swrState.current["database-shift-types"] = {
+      data: [{ ...SHIFT_TYPES[0], version: "type-read" }],
+      error: undefined,
+      isLoading: false,
+    };
+    setCategories({
+      data: [
+        { ...CATEGORIES[0], shiftTypeLinkVersion: "essen-read" },
+        { ...CATEGORIES[1], shiftTypeLinkVersion: "lernzeit-read" },
+      ],
+    });
+    const { rerender } = render(<ShiftTypesPage />);
+
+    fireEvent.change(screen.getByDisplayValue("Betreuung"), {
+      target: { value: "Betreuung am Kind" },
+    });
+    // A newer read arrives while the form is touched: the save still rests
+    // on what the form showed.
+    setCategories({
+      data: [
+        { ...CATEGORIES[0], shiftTypeLinkVersion: "essen-newer" },
+        {
+          ...CATEGORIES[1],
+          shiftTypeId: "10",
+          shiftTypeLinkVersion: "lernzeit-newer",
+        },
+      ],
+    });
+    rerender(<ShiftTypesPage />);
+    save();
+
+    await waitFor(() =>
+      expect(shiftTypeService.updateShiftType).toHaveBeenCalledWith(
+        "10",
+        expect.objectContaining({
+          name: "Betreuung am Kind",
+          categoryIds: ["1"],
+          expectedVersion: "type-read",
+          expectedCategoryLinkVersions: {
+            "1": "essen-read",
+            "2": "lernzeit-read",
+          },
+        }),
       ),
     );
   });
@@ -335,7 +386,8 @@ describe("Dienstarten — Kategorie-Zuordnung (#1837, #3114)", () => {
     );
     const payload = shiftTypeService.updateShiftType.mock.calls[0]?.[1] as
       Record<string, unknown> | undefined;
-    expect(payload).toMatchObject({ isActive: false });
+    // ADR 0311: über den Stand der Zeile, die die Liste zeigt.
+    expect(payload).toMatchObject({ isActive: false, expectedVersion: "v1" });
     expect(payload).not.toHaveProperty("categoryIds");
   });
 });

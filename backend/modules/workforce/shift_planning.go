@@ -310,14 +310,20 @@ type StaffShiftPlanning interface {
 // ShiftTypeInput is the writable part of a shift type on the administration
 // route. A nil IsActive keeps the stored flag on update and means active on
 // create. CategoryIDs, when non-nil, replaces the timetable categories mapped
-// to the type; nil leaves the mapping untouched.
+// to the type; nil leaves the mapping untouched. An update carries the
+// ShiftTypeVersion its editor read in ExpectedVersion and, with CategoryIDs,
+// the link token of every category it read in ExpectedCategoryLinks
+// (category id -> timetable.CategoryShiftTypeLinkVersion, ADR 0311); a
+// create ignores both.
 type ShiftTypeInput struct {
-	ID          int64
-	Name        string
-	Color       string
-	Description string
-	IsActive    *bool
-	CategoryIDs []int64
+	ID                    int64
+	Name                  string
+	Color                 string
+	Description           string
+	IsActive              *bool
+	CategoryIDs           []int64
+	ExpectedVersion       string
+	ExpectedCategoryLinks map[int64]string
 }
 
 // ShiftTypeAdministration is the capability the shift-type administration

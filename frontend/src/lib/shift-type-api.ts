@@ -29,6 +29,13 @@ interface ShiftTypePayload {
    * omitted leaves the mapping untouched (matches the backend's nil semantics).
    */
   categoryIds?: string[];
+  /** The stored state of the type an edit replaces (ADR 0311). */
+  expectedVersion?: string;
+  /**
+   * With `categoryIds`: the link token of every category the editor read,
+   * by category id (ADR 0311).
+   */
+  expectedCategoryLinkVersions?: Readonly<Record<string, string>>;
 }
 
 function toBackendBody(payload: ShiftTypePayload): ShiftTypeRequest {
@@ -42,6 +49,15 @@ function toBackendBody(payload: ShiftTypePayload): ShiftTypeRequest {
     ...(payload.categoryIds !== undefined && {
       category_ids: payload.categoryIds,
     }),
+    ...(payload.expectedVersion !== undefined && {
+      expected_version: payload.expectedVersion,
+    }),
+    ...(payload.categoryIds !== undefined &&
+      payload.expectedCategoryLinkVersions !== undefined && {
+        expected_category_link_versions: {
+          ...payload.expectedCategoryLinkVersions,
+        },
+      }),
   };
 }
 

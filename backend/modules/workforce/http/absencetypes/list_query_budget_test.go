@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/modules/workforce/workforcetest"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -55,15 +56,18 @@ func TestAbsenceTypesListQueryBudgetIsFlat(t *testing.T) {
 			})
 			require.NoError(t, createErr)
 			active := index != 0
+			stored := created
 			if !active {
-				_, updateErr := module.Catalog.UpdateAbsenceType(testpkg.Ctx(t), workforce.UpdateAbsenceType{ID: created.ID, IsActive: &active})
+				updated, updateErr := module.Catalog.UpdateAbsenceType(testpkg.Ctx(t), workforce.UpdateAbsenceType{ID: created.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, testpkg.Ctx(t), module.Catalog, created.ID), IsActive: &active})
 				require.NoError(t, updateErr)
+				stored = updated
 			}
 			expected = append([]map[string]any{{
 				"id": fmt.Sprint(created.ID), "name": name, "base_type": workforce.AbsenceTypeOther,
 				"is_active": active, "allowance_enabled": allowance, "carryover_until": carryoverDTO,
 				// A school's own type (#4710): not the Träger's, offered, no limit.
 				"requestable": false, "kept_by_traeger": false, "offered": true, "school_limit_days": nil,
+				"version": workforce.AbsenceTypeVersion(stored),
 			}}, expected...)
 		}
 		for _, suffix := range []string{"", "?include_usage=false", "?include_usage=true"} {

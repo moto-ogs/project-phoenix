@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // MaxSickAbsenceRangeDays bounds the synchronous sick-report plan cascade.
@@ -382,6 +383,17 @@ type UpdateAbsenceType struct {
 	// removes it.
 	Offered     *bool
 	SchoolLimit *SchoolLimitPatch
+	// ExpectedVersion is the AbsenceTypeVersion the edit was read from (ADR
+	// 0311); a type changed since, and an empty version, are refused with
+	// readstate.ErrChanged.
+	ExpectedVersion string
+}
+
+// AbsenceTypeVersion is the token of a stored absence type (ADR 0311): every
+// write of the row, the Träger's included, moves updated_at through its
+// trigger.
+func AbsenceTypeVersion(t StaffAbsenceType) string {
+	return readstate.Of(t.UpdatedAt)
 }
 
 // SchoolLimitPatch sets (Days) or removes (nil Days) the school's limit.

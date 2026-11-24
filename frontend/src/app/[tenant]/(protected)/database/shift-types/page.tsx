@@ -59,6 +59,16 @@ const CACHE_KEY = tenantAdminKeys.shiftTypes();
 const CATEGORY_CACHE_KEY = tenantAdminKeys.shiftTypeCategories();
 const DEFAULT_COLOR: string = LOCATION_COLORS.GROUP_ROOM;
 
+/**
+ * A type as its form reads it: with the categories that belong to it and
+ * the link token of every category of the same read (ADR 0311). Without
+ * loaded categories both are missing and a save leaves the links alone.
+ */
+interface EditableShiftType extends ShiftType {
+  readonly categoryIds?: readonly string[];
+  readonly categoryLinkVersions?: Readonly<Record<string, string>>;
+}
+
 /** „12 geplante Dienste“ / „1 Schichtserie“ für die Rückfrage (#6845). */
 function usageParts(usage: ShiftTypeUsage): string[] {
   const parts: string[] = [];
@@ -208,18 +218,32 @@ function ShiftTypesPageContent() {
     return stored;
   }, [list, tenantMutate]);
 
-  const items = useMemo(
-    () =>
-      data
-        ? [...data].sort((a, b) => a.name.localeCompare(b.name, "de"))
-        : undefined,
-    [data],
-  );
+  // Ein Eintrag trägt die Kategorien, die zu ihm gehören, und den Stand
+  // jeder gelesenen Kategorie: das Formular zeigt die Zuordnung aus genau
+  // dieser Lesung, und das Speichern schickt deren Stände mit (ADR 0311).
+  const items = useMemo(() => {
+    if (!data) return undefined;
+    const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name, "de"));
+    if (!categoriesReady || !categories) return sorted;
+    const linkVersions = Object.fromEntries(
+      categories.map((category) => [
+        category.id,
+        category.shiftTypeLinkVersion ?? "",
+      ]),
+    );
+    return sorted.map((type): EditableShiftType => ({
+      ...type,
+      categoryIds: categories
+        .filter((category) => category.shiftTypeId === type.id)
+        .map((category) => category.id),
+      categoryLinkVersions: linkVersions,
+    }));
+  }, [data, categories, categoriesReady]);
 
-  const config = useMemo<CatalogConfig<ShiftType>>(() => {
+  const config = useMemo<CatalogConfig<EditableShiftType>>(() => {
     const categoryList = categoriesReady ? (categories ?? []) : [];
 
-    const sections = (type: ShiftType | null): SectionConfig[] => [
+    const sections = (type: EditableShiftType | null): SectionConfig[] => [
       {
         title: "Dienstart",
         fields: [
@@ -291,7 +315,7 @@ function ShiftTypesPageContent() {
      *  Kategorien nicht sicher geladen sind (#1837). */
     const payloadOf = (
       values: Record<string, unknown>,
-      fallback: ShiftType | null,
+      fallback: EditableShiftType | null,
     ) => ({
       name: String(values.name ?? fallback?.name ?? "").trim(),
       color:
@@ -302,6 +326,14 @@ function ShiftTypesPageContent() {
       isActive: Boolean(values.isActive),
       ...(categoriesReady && Array.isArray(values.categoryIds)
         ? { categoryIds: values.categoryIds as string[] }
+        : {}),
+      // Ein Bearbeiten schickt den Stand, aus dem das Formular stammt, und
+      // die Stände der Kategorien, deren Zuordnung es zeigte (ADR 0311).
+      ...(fallback
+        ? {
+            expectedVersion: fallback.version,
+            expectedCategoryLinkVersions: fallback.categoryLinkVersions,
+          }
         : {}),
     });
 
@@ -328,9 +360,11 @@ function ShiftTypesPageContent() {
         color: type.color,
         description: type.description,
         isActive: type.isActive,
-        categoryIds: categoryList
-          .filter((category) => category.shiftTypeId === type.id)
-          .map((category) => category.id),
+        categoryIds: type.categoryIds
+          ? [...type.categoryIds]
+          : categoryList
+              .filter((category) => category.shiftTypeId === type.id)
+              .map((category) => category.id),
       }),
       createDefaults: {
         name: "",
@@ -356,6 +390,7 @@ function ShiftTypesPageContent() {
             color: type.color,
             description: type.description,
             isActive: false,
+            expectedVersion: type.version,
           }),
         toast: (type) =>
           `Die Dienstart „${type.name}“ wird nicht mehr angeboten.`,
@@ -368,6 +403,7 @@ function ShiftTypesPageContent() {
             color: type.color,
             description: type.description,
             isActive: true,
+            expectedVersion: type.version,
           }),
         toast: (type) => `Die Dienstart „${type.name}“ wird wieder angeboten.`,
       },

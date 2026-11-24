@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // --- staff absences ---
@@ -404,6 +405,11 @@ func (s *Service) UpdateAbsenceType(ctx context.Context, input workforce.UpdateA
 	}
 	if err != nil {
 		return absenceTypeToPublic(domain.StaffAbsenceType{}), MapError(fmt.Errorf("lock absence type: database error during lock staff absence type: %w", err))
+	}
+	// The row lock above returns the row as committed after it waited, and
+	// the update writes under it (ADR 0311).
+	if err := readstate.Check(input.ExpectedVersion, workforce.AbsenceTypeVersion(existing)); err != nil {
+		return absenceTypeToPublic(domain.StaffAbsenceType{}), err
 	}
 	if err := checkSchoolDeviation(existing, input); err != nil {
 		return absenceTypeToPublic(domain.StaffAbsenceType{}), err

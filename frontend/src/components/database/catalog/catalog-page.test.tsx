@@ -604,10 +604,34 @@ describe("CatalogPage", () => {
     await waitFor(() =>
       expect(showApiError).toHaveBeenCalledWith(failure, {
         object: "die Kategorie",
+        // Nur eine Ablehnung „seit dem Lesen geändert“ liest neu (ADR 0311).
+        reload: expect.any(Function),
       }),
     );
     expect(toastError).not.toHaveBeenCalled();
     expect(toastSuccess).not.toHaveBeenCalled();
+  });
+
+  // ADR 0311: eine Zeilenaktion über einen veralteten Stand zeigt die
+  // Meldung erst mit der neu gelesenen Liste; die nächste Aktion geht von
+  // ihr aus.
+  it("reads the entries again before it shows a row action refused as changed since reading", async () => {
+    const refusal = new ApiError("changed since it was read", 409, {
+      code: "general.changed_since_read",
+    });
+    const onChanged = vi.fn().mockResolvedValue(undefined);
+    const { restore } = renderPage({ selectedId: "3", onChanged });
+    restore.mockRejectedValueOnce(refusal);
+
+    fireEvent.click(screen.getByRole("button", { name: /Aktionen für Altes/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Wieder anbieten" }));
+
+    await waitFor(() => expect(showApiError).toHaveBeenCalled());
+    const [shown, options] = showApiError.mock.calls[0] ?? [];
+    expect(shown).toBe(refusal);
+    onChanged.mockClear();
+    await (options as { reload: () => Promise<unknown> }).reload();
+    expect(onChanged).toHaveBeenCalledTimes(1);
   });
 
   it("requires restoration before an archived read-only entry can be edited", async () => {

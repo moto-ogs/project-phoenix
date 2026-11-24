@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking"
+	"github.com/moto-ogs/project-phoenix/modules/workforce/workforcetest"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -17,7 +18,7 @@ func TestResolveForAbsenceRejectsDeactivatedArt(t *testing.T) {
 	typ, err := module.Catalog.CreateAbsenceType(ctx, workforce.CreateAbsenceType{Name: "Sonderurlaub"})
 	require.NoError(t, err)
 	inactive := false
-	_, err = module.Catalog.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: typ.ID, IsActive: &inactive})
+	_, err = module.Catalog.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: typ.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, module.Catalog, typ.ID), IsActive: &inactive})
 	require.NoError(t, err)
 	value, err := timetracking.AbsenceTypes(module.Catalog).ResolveForAbsence(ctx, typ.ID)
 	require.Nil(t, value)

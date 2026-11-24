@@ -125,6 +125,9 @@ type UpdateAbsenceTypeRequest struct {
 	// removes it.
 	Offered         *bool                         `json:"offered"`
 	SchoolLimitDays common.DeferredJSON[*float64] `json:"school_limit_days" contract_refines:"The absence type handler already requires a number or null"`
+	// ExpectedVersion is the version of the type the edit was read from
+	// (ADR 0311); an edit of a type changed since is refused.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // schoolLimit reads the optional limit: nil when omitted, a patch without
@@ -157,6 +160,9 @@ type AbsenceTypeResponse struct {
 	KeptByTraeger   bool     `json:"kept_by_traeger"`
 	Offered         bool     `json:"offered"`
 	SchoolLimitDays *float64 `json:"school_limit_days"`
+	// Version is the token an edit sends back as expected_version (ADR
+	// 0311).
+	Version string `json:"version"`
 }
 
 // AllowanceSummaryResponse keeps database IDs as strings on the wire, matching
@@ -268,6 +274,7 @@ func toAbsenceTypeResponse(t workforce.StaffAbsenceType) AbsenceTypeResponse {
 		KeptByTraeger:    t.TraegerAbsenceTypeID != nil,
 		Offered:          t.Offered,
 		SchoolLimitDays:  t.SchoolLimitDays,
+		Version:          workforce.AbsenceTypeVersion(t),
 	}
 }
 
@@ -363,6 +370,7 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 	saved, err := rs.types.UpdateAbsenceType(r.Context(), workforce.UpdateAbsenceType{
 		ID: id, Name: req.Name, IsActive: req.IsActive, AllowanceEnabled: req.AllowanceEnabled,
 		CarryoverUntil: req.CarryoverUntil, Requestable: req.Requestable, Offered: req.Offered, SchoolLimit: limit,
+		ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		rs.renderError(w, r, err)

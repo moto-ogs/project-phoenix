@@ -49,8 +49,10 @@ type ShiftTypeService interface {
 	GetShiftType(ctx context.Context, id int64) (*workforce.ShiftTypeRecord, error)
 	// CreateShiftType validates and persists a new shift type.
 	CreateShiftType(ctx context.Context, shiftType *workforce.ShiftTypeRecord) (*workforce.ShiftTypeRecord, error)
-	// UpdateShiftType validates and persists changes to an existing shift type.
-	UpdateShiftType(ctx context.Context, shiftType *workforce.ShiftTypeRecord) (*workforce.ShiftTypeRecord, error)
+	// UpdateShiftType validates and persists changes to an existing shift
+	// type; expectedVersion is the workforce.ShiftTypeVersion its editor
+	// read (ADR 0311).
+	UpdateShiftType(ctx context.Context, shiftType *workforce.ShiftTypeRecord, expectedVersion string) (*workforce.ShiftTypeRecord, error)
 	// DeleteShiftType removes a shift type that no planned shift or series
 	// carries. A referenced type is archived instead: it keeps labelling those
 	// shifts and series but leaves the choice (#6845).
@@ -160,7 +162,7 @@ func (s *shiftTypeService) CreateShiftType(ctx context.Context, shiftType *workf
 	return shiftType, nil
 }
 
-func (s *shiftTypeService) UpdateShiftType(ctx context.Context, shiftType *workforce.ShiftTypeRecord) (*workforce.ShiftTypeRecord, error) {
+func (s *shiftTypeService) UpdateShiftType(ctx context.Context, shiftType *workforce.ShiftTypeRecord, expectedVersion string) (*workforce.ShiftTypeRecord, error) {
 	if shiftType.ID <= 0 {
 		return nil, ErrShiftTypeNotFound
 	}
@@ -188,7 +190,7 @@ func (s *shiftTypeService) UpdateShiftType(ctx context.Context, shiftType *workf
 		return nil, ErrShiftTypeNameTaken
 	}
 	shiftType.TenantID = existing.TenantID
-	written, err := s.repo.UpdateShiftType(ctx, shiftTypeRowToCapability(shiftType))
+	written, err := s.repo.UpdateShiftType(ctx, shiftTypeRowToCapability(shiftType), expectedVersion)
 	if err != nil {
 		if errors.Is(err, workforce.ErrShiftTypeNotFound) {
 			err = shiftRowsAffectedError("update shift type")

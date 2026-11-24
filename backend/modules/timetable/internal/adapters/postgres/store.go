@@ -269,6 +269,47 @@ func (s *Store) SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64
 	return stats, setShiftTypeLinks(ctx, db, tenantID, shiftTypeID, ids, &stats)
 }
 
+func (s *Store) LockShiftTypeLinkCategories(ctx context.Context, shiftTypeID int64, categoryIDs []int64) ([]timetable.Category, domain.OperationStats, error) {
+	db, tenantID, err := s.database(ctx)
+	if err != nil {
+		return nil, domain.OperationStats{}, err
+	}
+	if err := tenant.OrderLock(ctx, tenant.LockReference, "activities.categories"); err != nil {
+		return nil, domain.OperationStats{}, err
+	}
+	scope := func(query *bun.SelectQuery) *bun.SelectQuery {
+		return query.Where(`"category".tenant_id = ?`, tenantID).WhereGroup(" AND ", func(group *bun.SelectQuery) *bun.SelectQuery {
+			group = group.Where(`"category".shift_type_id = ?`, shiftTypeID)
+			if ids := dedupe(categoryIDs); len(ids) > 0 {
+				group = group.WhereOr(`"category".id IN (?)`, bun.List(ids))
+			}
+			return group
+		})
+	}
+	var locked []int64
+	stats := domain.OperationStats{Queries: 1}
+	started := time.Now()
+	err = scope(db.NewSelect().TableExpr(`activities.categories AS "category"`).Column("category.id")).
+		OrderExpr(`"category".id ASC`).For("UPDATE").Scan(ctx, &locked)
+	stats.StatementDuration = time.Since(started)
+	if err != nil {
+		return nil, stats, fmt.Errorf("timetable postgres: lock shift type link categories: %w", err)
+	}
+	// A separate read after the lock sees every row committed before it,
+	// also one that came to match after the locking statement began.
+	rows := []categoryRow{}
+	readStats, err := scanAll(ctx, scope(categorySelect(db, &rows)).OrderExpr(`"category".id ASC`), "read shift type link categories")
+	stats.Add(readStats)
+	if err != nil {
+		return nil, stats, err
+	}
+	result := make([]timetable.Category, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, toDomain(row))
+	}
+	return result, stats, nil
+}
+
 func (s *Store) SetCategoryShiftTypeID(ctx context.Context, id int64, shiftTypeID *int64) (domain.OperationStats, error) {
 	db, tenantID, err := s.database(ctx)
 	if err != nil {

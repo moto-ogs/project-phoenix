@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Service implements the public Workforce capability.
@@ -148,6 +149,9 @@ func (s *Service) UpdateWorkTimeModel(ctx context.Context, input workforce.Updat
 	}
 	err = s.run(ctx, "update_work_time_model", func(ctx context.Context, stats *domain.OperationStats) error {
 		return s.transaction.RunWrite(ctx, func(txCtx context.Context) error {
+			if err := s.checkWorkTimeModelRead(txCtx, id, input.ExpectedVersion, stats); err != nil {
+				return err
+			}
 			var found bool
 			var writeStats domain.OperationStats
 			result, found, writeStats, err = s.store.UpdateWorkTimeModel(txCtx, id, fields)
@@ -162,6 +166,28 @@ func (s *Service) UpdateWorkTimeModel(ctx context.Context, input workforce.Updat
 		})
 	})
 	return modelToPublic(result), MapError(err)
+}
+
+// checkWorkTimeModelRead locks the template an edit replaces, reads it after
+// the lock and refuses the edit when its form read another state (ADR 0311).
+func (s *Service) checkWorkTimeModelRead(ctx context.Context, id int64, expected string, stats *domain.OperationStats) error {
+	locked, lockStats, err := s.store.LockWorkTimeModel(ctx, id)
+	stats.Add(lockStats)
+	if err != nil {
+		return err
+	}
+	if !locked {
+		return domain.ErrWorkTimeModelNotFound
+	}
+	current, found, readStats, err := s.store.FindWorkTimeModel(ctx, id)
+	stats.Add(readStats)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return domain.ErrWorkTimeModelNotFound
+	}
+	return readstate.Check(expected, workforce.WorkTimeModelVersion(modelToPublic(current)))
 }
 
 // DeleteWorkTimeModel removes a template that no live staff member is bound

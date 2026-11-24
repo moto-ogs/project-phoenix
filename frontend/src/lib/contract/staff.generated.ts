@@ -367,6 +367,7 @@ export interface QualificationTypeResponse {
   reminder_lead_weeks: number;
   mandatory: boolean;
   archived: boolean;
+  version: string;
 }
 
 export const QualificationTypeResponseSchema: z.ZodType<QualificationTypeResponse, unknown> = object<QualificationTypeResponse>({
@@ -377,6 +378,7 @@ export const QualificationTypeResponseSchema: z.ZodType<QualificationTypeRespons
   reminder_lead_weeks: safeInt,
   mandatory: bool,
   archived: bool,
+  version: str,
 });
 
 /** Go: timetracking.QualificationOverviewResponse */
@@ -1175,6 +1177,7 @@ export interface QualificationTypeRequest {
   reminder_lead_weeks?: number | null;
   mandatory?: boolean;
   archived?: boolean;
+  expected_version?: string;
 }
 
 /** Go: timetracking.TransferExportRequest */

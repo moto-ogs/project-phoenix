@@ -267,10 +267,10 @@ const config: CatalogConfig<AbsenceType> = {
   // Eine Art des Trägers ändert die Schule nur in ihrer Abweichung (#4710).
   update: (type, values) =>
     type.keptByTraeger
-      ? absenceTypeService.updateAbsenceType(type.id, {
+      ? absenceTypeService.updateAbsenceType(type.id, type.version, {
           schoolLimitDays: schoolLimitOf(values.schoolLimitDays),
         })
-      : absenceTypeService.updateAbsenceType(type.id, {
+      : absenceTypeService.updateAbsenceType(type.id, type.version, {
           name: String(values.name ?? type.name).trim(),
           allowanceEnabled: Boolean(values.allowanceEnabled),
           carryoverUntil: String(values.carryoverUntil ?? "") || null,
@@ -288,6 +288,7 @@ const config: CatalogConfig<AbsenceType> = {
     run: (type) =>
       absenceTypeService.updateAbsenceType(
         type.id,
+        type.version,
         type.keptByTraeger ? { offered: false } : { isActive: false },
       ),
     toast: (type) =>
@@ -298,6 +299,7 @@ const config: CatalogConfig<AbsenceType> = {
     run: (type) =>
       absenceTypeService.updateAbsenceType(
         type.id,
+        type.version,
         type.keptByTraeger ? { offered: true } : { isActive: true },
       ),
     toast: (type) =>

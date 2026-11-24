@@ -25,6 +25,8 @@ export interface ActivityCategoryResponse {
   is_system: boolean;
   archived_at?: string;
   usage_count?: number;
+  version?: string;
+  shift_type_link_version?: string;
   created_at: string;
   updated_at: string;
 }
@@ -38,6 +40,8 @@ export const ActivityCategoryResponseSchema: z.ZodType<ActivityCategoryResponse,
   is_system: bool,
   archived_at: optional(instant),
   usage_count: optional(safeInt),
+  version: optional(str),
+  shift_type_link_version: optional(str),
   created_at: instant,
   updated_at: instant,
 });
@@ -154,6 +158,7 @@ export interface ActivityCategoryRequest {
   name?: string;
   description?: string;
   color?: string;
+  expected_version?: string;
 }
 
 /** Go: httpadapter.QuickActivityRequest */

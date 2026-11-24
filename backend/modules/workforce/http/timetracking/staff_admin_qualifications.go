@@ -26,6 +26,9 @@ type QualificationTypeResponse struct {
 	ReminderLeadWeeks int    `json:"reminder_lead_weeks"`
 	Mandatory         bool   `json:"mandatory"`
 	Archived          bool   `json:"archived"`
+	// Version is the token an edit sends back as expected_version (ADR
+	// 0311).
+	Version string `json:"version"`
 }
 
 // QualificationTypeRequest binds the create and update of a kind. A missing
@@ -36,6 +39,10 @@ type QualificationTypeRequest struct {
 	ReminderLeadWeeks *int   `json:"reminder_lead_weeks"`
 	Mandatory         bool   `json:"mandatory"`
 	Archived          bool   `json:"archived"`
+	// ExpectedVersion is the version of the kind an update replaces (ADR
+	// 0311); an update of a kind changed since is refused. A create ignores
+	// it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind reports a blank name at its field.
@@ -53,7 +60,7 @@ func (r *QualificationTypeRequest) input() workforce.QualificationTypeInput {
 	}
 	return workforce.QualificationTypeInput{
 		Name: r.Name, ValidityMonths: r.ValidityMonths, ReminderLeadWeeks: lead,
-		Mandatory: r.Mandatory, Archived: r.Archived,
+		Mandatory: r.Mandatory, Archived: r.Archived, ExpectedVersion: r.ExpectedVersion,
 	}
 }
 
@@ -240,6 +247,7 @@ func toQualificationTypeResponse(kind workforce.QualificationType) Qualification
 	return QualificationTypeResponse{
 		ID: decimalID(kind.ID), StandardKey: kind.StandardKey, Name: kind.Name, ValidityMonths: kind.ValidityMonths,
 		ReminderLeadWeeks: kind.ReminderLeadWeeks, Mandatory: kind.Mandatory, Archived: kind.Archived,
+		Version: workforce.QualificationTypeVersion(kind),
 	}
 }
 

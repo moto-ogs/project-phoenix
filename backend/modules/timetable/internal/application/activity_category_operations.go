@@ -41,7 +41,7 @@ func (s *ActivityService) CategoryUsageCounts(ctx context.Context) (map[int64]in
 // stay untouchable; archived ones must be restored before they can be edited.
 func (s *ActivityService) UpdateCategory(ctx context.Context, id int64, input activityContract.CategoryInput) (*activityContract.Category, error) {
 	updated, err := s.timetable.UpdateCategory(ctx, timetable.UpdateCategory{
-		ID: id, Name: input.Name, Description: input.Description, Color: input.Color,
+		ID: id, Name: input.Name, Description: input.Description, Color: input.Color, ExpectedVersion: input.ExpectedVersion,
 	})
 	if err != nil {
 		return nil, categoryActivityError(opUpdateCategory, err)

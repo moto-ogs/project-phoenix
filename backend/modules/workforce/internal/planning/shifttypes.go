@@ -10,8 +10,10 @@ import (
 
 // CategoryLinker syncs the optional Kategorie↔Schichtart mapping. The FK
 // lives on activities.categories, so the write belongs to the Timetable
-// owner; a nil linker leaves every mapping untouched.
-type CategoryLinker func(ctx context.Context, shiftTypeID int64, categoryIDs []int64) error
+// owner; a nil linker leaves every mapping untouched. expected carries the
+// link token per category the editor read (ADR 0311); nil is a new type,
+// whose form read no links.
+type CategoryLinker func(ctx context.Context, shiftTypeID int64, categoryIDs []int64, expected map[int64]string) error
 
 type shiftTypeAdministration struct {
 	types  ShiftTypeService
@@ -44,7 +46,9 @@ func (a shiftTypeAdministration) CreateShiftType(ctx context.Context, input work
 	if err != nil {
 		return workforce.ShiftType{}, mapShiftTypeError(err)
 	}
-	if err := a.syncCategoryLinks(ctx, saved.ID, input.CategoryIDs); err != nil {
+	// A new type had no links to read: the chosen categories are an option
+	// list (ADR 0311, point 5).
+	if err := a.syncCategoryLinks(ctx, saved.ID, input.CategoryIDs, nil); err != nil {
 		return workforce.ShiftType{}, err
 	}
 	return shiftTypeToCapability(saved), nil
@@ -59,7 +63,10 @@ func (a shiftTypeAdministration) CreateDefaultShiftTypes(ctx context.Context) ([
 }
 
 // UpdateShiftType preserves the stored active flag when the client omitted
-// it, so a rename cannot silently reactivate a retired type.
+// it, so a rename cannot silently reactivate a retired type. The type and
+// the links it changes are written only over what its editor read (ADR
+// 0311): the type's version, and the link token of each category whose
+// link the write changes.
 func (a shiftTypeAdministration) UpdateShiftType(ctx context.Context, input workforce.ShiftTypeInput) (workforce.ShiftType, error) {
 	shiftType := shiftTypeInputToModel(input)
 	if input.IsActive == nil {
@@ -69,11 +76,15 @@ func (a shiftTypeAdministration) UpdateShiftType(ctx context.Context, input work
 		}
 		shiftType.IsActive = existing.IsActive
 	}
-	saved, err := a.types.UpdateShiftType(ctx, shiftType)
+	saved, err := a.types.UpdateShiftType(ctx, shiftType, input.ExpectedVersion)
 	if err != nil {
 		return workforce.ShiftType{}, mapShiftTypeError(err)
 	}
-	if err := a.syncCategoryLinks(ctx, saved.ID, input.CategoryIDs); err != nil {
+	expectedLinks := input.ExpectedCategoryLinks
+	if expectedLinks == nil {
+		expectedLinks = map[int64]string{}
+	}
+	if err := a.syncCategoryLinks(ctx, saved.ID, input.CategoryIDs, expectedLinks); err != nil {
 		return workforce.ShiftType{}, err
 	}
 	return shiftTypeToCapability(saved), nil
@@ -93,11 +104,11 @@ func (a shiftTypeAdministration) DeleteShiftType(ctx context.Context, id int64) 
 // empty one, replaces it. It runs in the same tenant transaction as the
 // shift-type write, so the caller must roll the request back when unknown
 // category ids reject it.
-func (a shiftTypeAdministration) syncCategoryLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64) error {
+func (a shiftTypeAdministration) syncCategoryLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64, expected map[int64]string) error {
 	if categoryIDs == nil || a.linker == nil {
 		return nil
 	}
-	if err := a.linker(ctx, shiftTypeID, categoryIDs); err != nil {
+	if err := a.linker(ctx, shiftTypeID, categoryIDs, expected); err != nil {
 		if errors.Is(err, timetable.ErrUnknownCategoryIDs) {
 			return &capabilityError{kind: workforce.ErrShiftTypeCategoryUnknown, cause: err}
 		}

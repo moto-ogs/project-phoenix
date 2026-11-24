@@ -29,6 +29,7 @@ export interface AbsenceTypeResponse {
   kept_by_traeger: boolean;
   offered: boolean;
   school_limit_days: number | null;
+  version: string;
 }
 
 export const AbsenceTypeResponseSchema: z.ZodType<AbsenceTypeResponse, unknown> = object<AbsenceTypeResponse>({
@@ -42,6 +43,7 @@ export const AbsenceTypeResponseSchema: z.ZodType<AbsenceTypeResponse, unknown> 
   kept_by_traeger: bool,
   offered: bool,
   school_limit_days: nullable(num),
+  version: str,
 });
 
 /** Go: absencetypes.AllowanceSummaryResponse */
@@ -107,6 +109,7 @@ export interface UpdateAbsenceTypeRequest {
   requestable?: boolean | null;
   offered?: boolean | null;
   school_limit_days?: number | null;
+  expected_version?: string;
 }
 
 /** Go: absencetypes.SetAllowanceRequest */

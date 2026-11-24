@@ -26,6 +26,8 @@ export interface QualificationType {
   readonly reminderLeadWeeks: number;
   readonly mandatory: boolean;
   readonly archived: boolean;
+  /** The stored state an edit sends back as `expected_version` (ADR 0311). */
+  readonly version: string;
 }
 
 export interface QualificationTypeInput {
@@ -86,6 +88,7 @@ function mapQualificationType(
     reminderLeadWeeks: data.reminder_lead_weeks,
     mandatory: data.mandatory,
     archived: data.archived,
+    version: data.version,
   };
 }
 
@@ -136,16 +139,18 @@ class StaffQualificationService {
     return mapQualificationType(type);
   }
 
+  /** `expectedVersion`: the version of the kind the form read (ADR 0311). */
   async updateType(
     id: string,
     input: QualificationTypeInput,
+    expectedVersion: string,
   ): Promise<QualificationType> {
     const type = await bffJson(
       "tenant",
       "PUT /api/staff/qualification-types/{typeId}",
       {
         params: { typeId: id },
-        body: typeBody(input),
+        body: { ...typeBody(input), expected_version: expectedVersion },
         errorMessage: "Nachweisart konnte nicht gespeichert werden",
       },
     );

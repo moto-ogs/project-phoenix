@@ -158,7 +158,9 @@ func TestStaffOwnersWorkOnContractedStorage(t *testing.T) {
 	require.NoError(t, err)
 	_, err = employment.AppendStaffNotes(ctx, created.ID, "Ergänzt")
 	require.NoError(t, err)
-	_, err = workTime.UpdateWorkTimeModel(ctx, workforce.UpdateWorkTimeModel{ID: model.ID, WorkTimeModelFields: workforce.WorkTimeModelFields{
+	read, err := workTime.FindWorkTimeModel(ctx, model.ID)
+	require.NoError(t, err)
+	_, err = workTime.UpdateWorkTimeModel(ctx, workforce.UpdateWorkTimeModel{ID: model.ID, ExpectedVersion: workforce.WorkTimeModelVersion(read), WorkTimeModelFields: workforce.WorkTimeModelFields{
 		Name: "Ohne View", RotationLength: 1, RotationAnchorDate: "2026-02-02",
 	}})
 	require.NoError(t, err)

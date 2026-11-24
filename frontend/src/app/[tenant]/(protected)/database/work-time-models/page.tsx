@@ -187,7 +187,11 @@ const config: CatalogConfig<WorkTimeModel> = {
   createDefaults: { name: "", pattern: patternValueOf(null) },
   create: (values) => workTimeModelService.create(inputOf(values, null)),
   update: (model, values) =>
-    workTimeModelService.update(model.id, inputOf(values, model)),
+    workTimeModelService.update(
+      model.id,
+      inputOf(values, model),
+      model.version,
+    ),
   retire: {
     menuLabel: "Nicht mehr anbieten",
     confirmTitle: "Vorlage nicht mehr anbieten?",

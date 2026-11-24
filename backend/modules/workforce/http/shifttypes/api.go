@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -93,6 +94,15 @@ type ShiftTypeRequest struct {
 	// replaces the current mapping for this shift type; omitted (nil) leaves it
 	// untouched.
 	CategoryIDs []ident.ID `json:"category_ids"`
+	// ExpectedVersion is the version of the type an update replaces (ADR
+	// 0311); an update of a type changed since is refused. A create ignores
+	// it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
+	// ExpectedCategoryLinkVersions holds, per category id, the
+	// shift_type_link_version of every category the editor read. An update
+	// with category_ids is refused when a category whose link it changes
+	// moved since. A create ignores it.
+	ExpectedCategoryLinkVersions map[string]string `json:"expected_category_link_versions,omitempty"`
 }
 
 // ShiftTypeResponse is the wire format returned to clients.
@@ -102,6 +112,8 @@ type ShiftTypeResponse struct {
 	Color       string   `json:"color"`
 	Description string   `json:"description,omitempty"`
 	IsActive    bool     `json:"is_active"`
+	// Version is the token an edit sends back as expected_version (ADR 0311).
+	Version string `json:"version"`
 	// ArchivedAt is present on a type the school removed while planned
 	// shifts or series still carried it (#6845); only a list requested with
 	// include_archived=true contains such types.
@@ -136,6 +148,7 @@ func toShiftTypeResponse(t workforce.ShiftType) ShiftTypeResponse {
 		Color:       t.Color,
 		Description: t.Description,
 		IsActive:    t.IsActive,
+		Version:     workforce.ShiftTypeVersion(t),
 		ArchivedAt:  archivedAt,
 	}
 }
@@ -177,7 +190,25 @@ func toShiftTypeInput(id int64, req ShiftTypeRequest) workforce.ShiftTypeInput {
 		Description: req.Description,
 		IsActive:    req.IsActive,
 		CategoryIDs: ident.Int64s(req.CategoryIDs),
+
+		ExpectedVersion: req.ExpectedVersion,
 	}
+}
+
+// categoryLinkVersions reads the link tokens keyed by category id. A key
+// that is no id leaves the category without a token: the write refuses it
+// if it changes that category's link.
+func categoryLinkVersions(versions map[string]string) map[int64]string {
+	if versions == nil {
+		return nil
+	}
+	result := make(map[int64]string, len(versions))
+	for key, version := range versions {
+		if id, err := strconv.ParseInt(key, 10, 64); err == nil {
+			result[id] = version
+		}
+	}
+	return result
 }
 
 // failureRule pairs a capability error with the failure kind the envelope
@@ -272,7 +303,9 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 	}
 	// A PUT that omits is_active must not silently flip the stored state; the
 	// capability preserves the current value when the field is nil.
-	saved, err := rs.types.UpdateShiftType(r.Context(), toShiftTypeInput(id, req))
+	input := toShiftTypeInput(id, req)
+	input.ExpectedCategoryLinks = categoryLinkVersions(req.ExpectedCategoryLinkVersions)
+	saved, err := rs.types.UpdateShiftType(r.Context(), input)
 	if err != nil {
 		rs.renderError(w, r, err)
 		return
