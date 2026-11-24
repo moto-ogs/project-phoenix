@@ -245,7 +245,8 @@ export function hasStandardLegalBlockOverride(
   standardBlock: FormLegalBlock,
 ): boolean {
   const label =
-    block.key === "photo" && block.label === PREVIOUS_STANDARD_PHOTO_LABEL
+    block.key === "photo" &&
+    block.label.trim() === PREVIOUS_STANDARD_PHOTO_LABEL
       ? standardBlock.label
       : block.label;
   return (
@@ -392,9 +393,16 @@ export function legalBlocksForTemplate(
   const savedByKey = new Map(
     savedBlocks.map((block) => [block.key, withDecidedLegalRules(block)]),
   );
-  const mergedStandardBlocks = standardBlocks.map(
-    (standard) => savedByKey.get(standard.key) ?? standard,
-  );
+  // #8039: Eine Vorlage mit dem Standardtext von vorher zeigt im Editor den
+  // Text, den Eltern im Formular sehen; das nächste Speichern schreibt ihn.
+  const mergedStandardBlocks = standardBlocks.map((standard) => {
+    const saved = savedByKey.get(standard.key);
+    if (!saved) return standard;
+    return saved.key === "photo" &&
+      saved.label.trim() === PREVIOUS_STANDARD_PHOTO_LABEL
+      ? { ...saved, label: standard.label }
+      : saved;
+  });
   const standardKeys = new Set(standardBlocks.map((block) => block.key));
   const customBlocks = savedBlocks
     .filter((block) => !isStandardLegalBlock(block, standardKeys))

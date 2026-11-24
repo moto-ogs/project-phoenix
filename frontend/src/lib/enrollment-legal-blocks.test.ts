@@ -205,4 +205,24 @@ describe("Standardtext der Foto-Einwilligung (#8039)", () => {
       ),
     ).toBe(true);
   });
+
+  it("zeigt im Editor den aktuellen Standardtext statt des gespeicherten von vorher", () => {
+    const saved = {
+      ...standard,
+      enabled: true,
+      label:
+        "Mein Kind darf bei Schulveranstaltungen fotografiert werden. Diese Einwilligung ist freiwillig und jederzeit mit Wirkung für die Zukunft widerrufbar. ",
+    };
+    const [block] = legalBlocksForTemplate([saved], [standard]);
+    expect(block?.label).toBe(standard.label);
+    expect(block?.enabled).toBe(true);
+  });
+
+  it("lässt im Editor einen eigenen Text der Schule stehen", () => {
+    const [block] = legalBlocksForTemplate(
+      [{ ...standard, label: "Fotos nur beim Sommerfest." }],
+      [standard],
+    );
+    expect(block?.label).toBe("Fotos nur beim Sommerfest.");
+  });
 });
