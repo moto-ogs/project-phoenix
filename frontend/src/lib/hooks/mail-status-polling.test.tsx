@@ -1,4 +1,4 @@
-import { act, render } from "@testing-library/react";
+import { act, render, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppointmentMailStatus } from "~/components/calendar/appointment-mail-status";
 import { useRequestMails } from "~/components/enrollment/request-mail-status";
@@ -6,6 +6,13 @@ import {
   useAbsenceDecisionMails,
   useOwnAbsenceRequestMails,
 } from "~/components/staff/absence-mail-status";
+import {
+  useThreadMails,
+  useGroupThreadMails,
+} from "~/lib/hooks/use-message-mails";
+import { useSwrPollingRecovery } from "~/lib/hooks/use-swr-polling-recovery";
+import * as backoff from "~/lib/rate-limit-backoff";
+import { ApiError } from "~/lib/api-error";
 import { SWRConfig } from "~/lib/swr/testing";
 import { releaseFakeTimers } from "~/test/clock";
 
@@ -24,6 +31,20 @@ vi.mock("~/lib/staff-api", () => ({
 vi.mock("~/lib/time-tracking-api", () => ({
   timeTrackingService: { getAbsenceRequestMails: read },
 }));
+
+vi.mock("~/lib/parent-group-threads-api", () => ({
+  fetchGroupThreadMails: read,
+}));
+vi.mock("~/lib/parent-messages-api", () => ({ fetchThreadMails: read }));
+
+function Thread() {
+  useThreadMails("1");
+  return null;
+}
+function GroupThread() {
+  useGroupThreadMails("1");
+  return null;
+}
 
 function Enrollment() {
   useRequestMails("1");
@@ -145,4 +166,64 @@ describe.each(views)("$name mail reader", ({ View, fast, result }) => {
     expect(read).toHaveBeenCalledTimes(1);
     view.unmount();
   });
+});
+
+describe.each([Thread, GroupThread])("%s chat mail reader", (View) => {
+  it("polls tracked sends, reconciles late feedback slowly, then stops", async () => {
+    vi.useFakeTimers();
+    const result = (outcome: string, awaitingFeedback: boolean) => ({
+      mails: { "1": View === Thread ? outcome : { [outcome]: 1 } },
+      awaitingFeedback,
+    });
+    read
+      .mockReset()
+      .mockResolvedValueOnce(result("accepted", true))
+      .mockResolvedValueOnce(result("accepted", false))
+      .mockResolvedValue(result("delivered", false));
+    const view = render(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <View />
+      </SWRConfig>,
+    );
+    try {
+      await tick(0);
+      await tick(15_000);
+      expect(read).toHaveBeenCalledTimes(2);
+      await tick(299_999);
+      expect(read).toHaveBeenCalledTimes(2);
+      await tick(1);
+      expect(read).toHaveBeenCalledTimes(3);
+      await tick(600_000);
+      expect(read).toHaveBeenCalledTimes(3);
+    } finally {
+      view.unmount();
+      releaseFakeTimers();
+    }
+  });
+});
+
+it("resumes recovery only when online and the GET backoff has expired", async () => {
+  vi.useFakeTimers();
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  const online = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+  const remaining = vi
+    .spyOn(backoff, "remainingRateLimitMs")
+    .mockReturnValue(15_000);
+  const reload = vi.fn().mockResolvedValue(undefined);
+  const failure = new ApiError("Rate limit", 429);
+  const view = renderHook(() => useSwrPollingRecovery(failure, reload, 15_000));
+  try {
+    await tick(15_000);
+    expect(reload).not.toHaveBeenCalled();
+    online.mockReturnValue(true);
+    await tick(15_000);
+    expect(remaining).toHaveBeenCalledWith("GET");
+    expect(reload).not.toHaveBeenCalled();
+    remaining.mockReturnValue(0);
+    await tick(15_000);
+    expect(reload).toHaveBeenCalledTimes(1);
+  } finally {
+    view.unmount();
+    releaseFakeTimers();
+  }
 });

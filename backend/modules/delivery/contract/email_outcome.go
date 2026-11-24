@@ -104,12 +104,12 @@ const EmailDelayLimit = 5 * 24 * time.Hour
 
 // AwaitingFeedback distinguishes a live delivery from a silent provider without
 // relabelling an accepted mail as delivered. Late events still update the outcome.
-func (o EmailOutcome) AwaitingFeedback(created time.Time, outcomeAt, stateAgeFrom *time.Time, now time.Time) bool {
+func (o EmailOutcome) AwaitingFeedback(created time.Time, outcomeAt, stateAgeFrom *time.Time, providerTracked bool, now time.Time) bool {
 	switch o {
 	case EmailQueued:
 		return now.Sub(created) < EmailFeedbackWindow
 	case EmailAccepted:
-		return outcomeAt != nil && now.Sub(*outcomeAt) < EmailFeedbackWindow
+		return providerTracked && outcomeAt != nil && now.Sub(*outcomeAt) < EmailFeedbackWindow
 	case EmailDelayed:
 		return stateAgeFrom != nil && now.Sub(*stateAgeFrom) <= EmailDelayLimit
 	default:

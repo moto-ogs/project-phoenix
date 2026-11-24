@@ -17,6 +17,7 @@ import {
   sumMailOutcomeCounts,
   type MailOutcomeCounts,
 } from "~/lib/email-delivery-status";
+import { useSwrPollingRecovery } from "~/lib/hooks/use-swr-polling-recovery";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
   getStaffAppointmentMails,
@@ -42,8 +43,8 @@ function useAppointmentMails(appointmentId: string) {
     tenantDailyKeys.appointmentMails(appointmentId),
     () => getStaffAppointmentMails(appointmentId),
     (mails) => (mails.awaitingFeedback ? 15_000 : MAIL_RECONCILE_MS),
-    15_000,
   );
+  useSwrPollingRecovery(error, mutate, 15_000);
   const loadError = useSwrLoadError(error, "der Stand der E-Mails", () =>
     mutate(),
   );

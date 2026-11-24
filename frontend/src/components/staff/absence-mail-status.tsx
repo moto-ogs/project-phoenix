@@ -56,7 +56,7 @@ export function useAbsenceDecisionMails(absenceIds: readonly string[]) {
     key,
     () => staffAbsenceService.decisionMails(absenceIds),
     (latest) => (latest.awaitingFeedback ? MAIL_REFRESH_MS : MAIL_RECONCILE_MS),
-    MAIL_REFRESH_MS,
+    false,
   );
   useLoggedLoadError(error, "absence_decision_mails_load_failed");
   const loadError = useSwrLoadError(error, "der Stand der E-Mails", () =>
@@ -77,7 +77,7 @@ export function useOwnAbsenceRequestMails(waitingIds: readonly string[]) {
     key,
     () => timeTrackingService.getAbsenceRequestMails(),
     (latest) => (latest.awaitingFeedback ? MAIL_REFRESH_MS : MAIL_RECONCILE_MS),
-    MAIL_REFRESH_MS,
+    false,
   );
   useLoggedLoadError(error, "own_absence_request_mails_load_failed");
   const loadError = useSwrLoadError(error, "der Stand der E-Mails", () =>

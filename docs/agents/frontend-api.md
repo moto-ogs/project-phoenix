@@ -518,13 +518,12 @@ Auth.js stores them in the encrypted httpOnly cookie. Server handlers forward
 the bearer to Go and renew it as needed. For password, MFA, and passkey
 steps, see [Login, refresh, and MFA](contracts.md#login-refresh-and-mfa). Invitation/password-reset token flows live at `app/invite/`, `app/[tenant]/(public)/invite/`, `app/reset-password/`, with API clients in `lib/invitation-api.ts` / `lib/invitation-helpers.ts` — use these instead of hitting backend routes directly.
 
-### Mailstatus nach einem Versand
+### Mail delivery polling
 
-Anmeldung, Termin und Abwesenheitsantrag gleichen leere oder abgeschlossene
-Mailstatus alle fünf Minuten sowie beim Fokus ab. Während einer laufenden
-Zustellung bleibt der Takt bei 15 Sekunden (Anmeldung, Termin, Chat) bzw.
-30 Sekunden (Abwesenheit). Maßgeblich ist Deliverys `awaiting_feedback`:
-`accepted` bleibt auch ohne Provider-Rückmeldung „versendet“, nicht
-„zugestellt“. Nach 24 Stunden ohne Rückmeldung wird langsam abgeglichen;
-für `delayed` gilt Deliverys Fünftagesfrist. Ein vollständig abgeschlossener
-Chat braucht keinen Timer: Neue Nachrichten laden den Mailstatus erneut.
+Enrollment, appointment and absence readers reconcile quiet results every five
+minutes and when the tab regains focus. Delivery's `awaiting_feedback` keeps
+the 15-second cadence (30 seconds for absences) only while a send is active.
+Plain SMTP or fallback acceptance stays **accepted**, not delivered, and uses
+the slow cadence. A tracked provider acceptance waits up to 24 hours; a
+provider-reported delay follows Delivery's five-day limit. Settled chats stop
+polling; new messages refresh their mail status.

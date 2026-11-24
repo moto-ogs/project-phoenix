@@ -39,7 +39,6 @@ export function useThreadMails(threadId: string | undefined) {
       latest.awaitingFeedback
         ? MAIL_STATUS_REFRESH_MS
         : reconcileLateFeedback(Object.values(latest.mails)),
-    MAIL_STATUS_REFRESH_MS,
   );
   const loadError = useSwrLoadError(error, MAIL_STATUS_OBJECT, mutate);
   return { mails: data?.mails ?? {}, loadError, refresh: mutate };
@@ -60,7 +59,6 @@ export function useGroupThreadMails(groupThreadId: string | undefined) {
               ),
             ),
           ),
-    MAIL_STATUS_REFRESH_MS,
   );
   const loadError = useSwrLoadError(error, MAIL_STATUS_OBJECT, mutate);
   return { mails: data?.mails ?? {}, loadError, refresh: mutate };

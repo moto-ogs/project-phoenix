@@ -14,6 +14,7 @@ import {
   getAdminRequestMails,
 } from "~/lib/enrollment-admin-api";
 import { formatBerlinDate, formatTime } from "~/lib/date-helpers";
+import { useSwrPollingRecovery } from "~/lib/hooks/use-swr-polling-recovery";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
   MAIL_RECONCILE_MS,
@@ -47,8 +48,8 @@ export function useRequestMails(requestId: string) {
     () => getAdminRequestMails(requestId),
     (mails) =>
       mails.some((mail) => mail.awaiting_feedback) ? 15_000 : MAIL_RECONCILE_MS,
-    15_000,
   );
+  useSwrPollingRecovery(error, mutate, 15_000);
   const loadError = useSwrLoadError(error, "der Stand der E-Mails", () =>
     mutate(),
   );
