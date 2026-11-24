@@ -11,6 +11,7 @@ import { Download, Printer, Upload } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 
+import { handedOverOnPaper } from "~/components/traeger/care-contract-format";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -84,38 +85,47 @@ export function CareContractSignatureCard({
     onChanged,
   );
   const signature = contract.signature;
-  // Handed over on paper (#8030): versendet, but no mail went out.
-  const onPaper =
-    contract.status === "versendet" && contract.mailings.length === 0;
+  const onPaper = handedOverOnPaper(contract);
 
-  // Freezes the PDF, then downloads exactly that PDF for printing. A failed
-  // download leaves the handover done; the PDF stays on the contract page.
-  const handOver = async () => {
-    setHandingOver(true);
-    try {
-      await handOverCareContractOnPaper(contract.id);
-    } catch (err) {
-      logger.error("traeger_care_contract_paper_handover_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      setHandingOver(false);
-      setConfirmHandover(false);
-      void actionError.show(err, { object: "der Vertrag" });
-      return;
-    }
-    setConfirmHandover(false);
-    success("Der Vertrag ist übergeben. Druck das PDF aus.");
+  // Downloads the PDF the handover froze. Success is reported only once the
+  // file is there; a failed download leaves the handover done, so its error
+  // names the way to the PDF and offers to try again.
+  const downloadHandedOver = async (): Promise<void> => {
     try {
       const file = await downloadCareContract(contract.id);
       downloadBlob(file.blob, file.filename);
+      success("Der Vertrag ist übergeben. Drucke das PDF aus.");
     } catch (err) {
       logger.error("traeger_care_contract_paper_handover_download_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      void actionError.show(err, { object: "das PDF" });
+      void actionError.show(err, {
+        object: "das PDF",
+        messageSuffix:
+          "Der Vertrag ist trotzdem übergeben. Du findest das PDF oben im Menü unter „PDF herunterladen“.",
+        retry: () => void downloadHandedOver(),
+      });
     }
+  };
+
+  // Freezes the PDF, then downloads exactly that PDF for printing. The
+  // dialog waits for both and closes once.
+  const handOver = async () => {
+    setHandingOver(true);
+    let handedOver = false;
+    try {
+      await handOverCareContractOnPaper(contract.id);
+      handedOver = true;
+    } catch (err) {
+      logger.error("traeger_care_contract_paper_handover_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      void actionError.show(err, { object: "der Vertrag" });
+    }
+    if (handedOver) await downloadHandedOver();
     setHandingOver(false);
-    await afterPaper.refresh();
+    setConfirmHandover(false);
+    if (handedOver) await afterPaper.refresh();
   };
 
   return (
@@ -181,6 +191,7 @@ export function CareContractSignatureCard({
         isOpen={confirmHandover}
         title="Vertrag auf Papier übergeben?"
         confirmText="Übergeben und PDF laden"
+        confirmVariant="warning"
         confirmTooltip="Speichert das PDF so, wie es jetzt ist, und lädt es herunter."
         isConfirmLoading={handingOver}
         loadingText="Wird übergeben …"
@@ -189,7 +200,7 @@ export function CareContractSignatureCard({
       >
         <div className="space-y-3 text-sm text-gray-700">
           <p>
-            moto speichert den Vertrag jetzt als PDF. Druck es aus und gib es
+            moto speichert den Vertrag jetzt als PDF. Drucke es aus und gib es
             den Eltern. Die Eltern bekommen keine Mail.
           </p>
           <p>
@@ -336,7 +347,7 @@ function WaitingDetails({
       </p>
     );
   }
-  if (contract.mailings.length === 0) {
+  if (handedOverOnPaper(contract)) {
     return (
       <p className="text-sm text-gray-600">
         Die Eltern haben den Vertrag auf Papier bekommen. Erinnerungen per Mail

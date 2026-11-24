@@ -568,6 +568,69 @@ describe("TraegerVertragPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("reports a handover whose PDF did not arrive once, with the way to it", async () => {
+    // The handover succeeded, the download failed (#8030): no success toast
+    // before the file is there, one error that says the contract is handed
+    // over and where its PDF is.
+    mockSearch = "tab=versand";
+    api.handOverCareContractOnPaper.mockResolvedValue(undefined);
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Auf Papier übergeben" }),
+    );
+    await waitFor(() => expect(api.downloadCareContract).toHaveBeenCalled());
+    const previews = api.downloadCareContract.mock.calls.length;
+    api.downloadCareContract.mockRejectedValueOnce(
+      new ApiError("Request failed (500)", 500, {}),
+    );
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "versendet",
+      sentAt: "2026-09-02T08:00:00Z",
+      documentFrozen: true,
+    });
+    fireEvent.click(
+      within(
+        await screen.findByRole("dialog", {
+          name: "Vertrag auf Papier übergeben?",
+        }),
+      ).getByRole("button", { name: "Übergeben und PDF laden" }),
+    );
+
+    expect(
+      await screen.findByText(/Der Vertrag ist trotzdem übergeben/),
+    ).toBeInTheDocument();
+    expect(api.downloadCareContract.mock.calls.length).toBeGreaterThan(
+      previews,
+    );
+    expect(
+      screen.queryByText(/Der Vertrag ist übergeben\./),
+    ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Vertrag auf Papier übergeben?" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(
+      await screen.findByRole("button", { name: "Papiervertrag erfassen" }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers a draft's PDF as a preview, a handed-over one as the PDF", async () => {
+    // Only the frozen PDF is for signing (#8030): the draft's menu names
+    // its download a preview.
+    renderPage();
+    await screen.findByRole("button", { name: "Vertrag senden" });
+    const [menu] = screen.getAllByRole("button", { name: "Weitere Aktionen" });
+    fireEvent.click(menu!);
+    expect(
+      screen.getByRole("menuitem", { name: /Vorschau herunterladen/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: /PDF herunterladen/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("waits for the paper signature of a contract handed over on paper", async () => {
     api.fetchCareContract.mockResolvedValue({
       ...DRAFT,

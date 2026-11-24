@@ -28,7 +28,7 @@
   "import_file_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "import_file_too_large": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "import_changed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
-  "letterhead_missing": "Brakuje nadawcy w nagłówku. Umowa nie zostanie wysłana bez nazwy i adresu organizatora. Dodaj je w „Nagłówek i szablony”.",
+  "letterhead_missing": "Brakuje nadawcy w nagłówku. Bez nazwy i adresu organizatora nie można wysłać umowy ani przekazać jej na papierze. Dodaj je w „Nagłówek i szablony”.",
   "child_link_changed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "child_link_not_imported": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "child_link_refused": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",

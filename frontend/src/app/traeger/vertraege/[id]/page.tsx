@@ -34,6 +34,7 @@ import {
   formatConclusion,
   formatService,
   knownConclusionAt,
+  handedOverOnPaper,
   serviceDays,
 } from "~/components/traeger/care-contract-format";
 import { CareContractChangeCard } from "~/components/traeger/care-contract-change-card";
@@ -455,7 +456,7 @@ function TraegerVertragView() {
   // its first mail is no second send.
   const firstMail =
     isDraft ||
-    (contract?.status === "versendet" && contract.mailings.length === 0);
+    (contract?.status === "versendet" && handedOverOnPaper(contract));
   const canSend =
     isDraft || contract?.status === "versendet" || contract?.status === "aktiv";
   const lastMail = contract?.mailings[0];
@@ -528,9 +529,13 @@ function TraegerVertragView() {
     });
   }
   if (contract && sendInHead) {
+    // A draft's PDF is a preview that says so on every page (#8030): the
+    // parents sign only the PDF a send or the handover on paper froze.
     headMenu.push({
-      label: "PDF herunterladen",
-      description: "Speichert den Vertrag als PDF auf deinem Gerät.",
+      label: isDraft ? "Vorschau herunterladen" : "PDF herunterladen",
+      description: isDraft
+        ? "Speichert die Vorschau als PDF. Sie ist nicht zum Unterschreiben."
+        : "Speichert den Vertrag als PDF auf deinem Gerät.",
       icon: <Download className="h-4 w-4" aria-hidden="true" />,
       onClick: () => void download(),
     });
@@ -1003,8 +1008,7 @@ function TraegerVertragView() {
                 description={
                   contract.mailings.length > 0
                     ? undefined
-                    : contract.signature?.method === "paper" ||
-                        contract.status === "versendet"
+                    : handedOverOnPaper(contract)
                       ? "Auf Papier übergeben, nicht per Mail."
                       : "Noch nicht gesendet."
                 }

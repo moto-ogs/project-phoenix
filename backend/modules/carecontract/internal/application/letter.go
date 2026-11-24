@@ -51,6 +51,28 @@ var weekdayNames = map[string]string{
 
 var weekdayOrder = []string{"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
 
+// previewNote marks every page of a draft's preview (#8030): the preview
+// changes with the letterhead and the template, so nobody signs it. A frozen
+// PDF never carries it.
+const previewNote = "Vorschau, nicht zum Unterschreiben"
+
+// draftPreview reports a rendering of a draft: until the send or the
+// handover on paper freezes it, its PDF is a preview (#8030). An active
+// contract without a frozen PDF, such as one concluded with the application,
+// prints as it is.
+func draftPreview(record ContractRecord) bool {
+	return record.Summary.Status == carecontract.StatusDraft && record.DocumentID == nil
+}
+
+// previewLetter puts the preview note above the letter and at the foot of
+// every page, so a printed preview is never taken for the contract.
+func previewLetter(letter Letter) Letter {
+	letter.Blocks = append([]LetterBlock{{Heading: previewNote, Bold: true,
+		Text: "Dieser Entwurf kann sich noch ändern. Unterschreibt nur den Vertrag, den ihr von uns bekommt."}}, letter.Blocks...)
+	letter.Footer = append([]string{previewNote}, letter.Footer...)
+	return letter
+}
+
 // feeByRules names the fee of a contract over several modules until the
 // tariffs per weekday and module (#4684) price it.
 const feeByRules = "laut Beitragsordnung für die gebuchten Module"

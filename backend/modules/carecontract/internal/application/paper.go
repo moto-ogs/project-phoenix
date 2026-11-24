@@ -24,7 +24,8 @@ var pdfMagic = []byte("%PDF-")
 // parents (#8030), in the caller's Träger transaction and under the
 // contract's row lock. A draft becomes versendet without a mail: no mailing
 // means no link and no reminder. A sent contract keeps its frozen PDF, which
-// the office prints again. The paper signature then binds this PDF, whatever
+// the office prints again; only the handover itself enters the trail. The
+// paper signature then binds this PDF, whatever
 // letterhead, template or master data change before the scan is uploaded.
 func (s *Signatures) HandOverOnPaper(ctx context.Context, reviewer carecontract.Reviewer, contractID int64) error {
 	if err := checkReviewer(reviewer); err != nil {
@@ -43,6 +44,11 @@ func (s *Signatures) HandOverOnPaper(ctx context.Context, reviewer carecontract.
 	documentID, err := s.contracts.paperDocument(ctx, reviewer, record)
 	if err != nil {
 		return err
+	}
+	// Printing a handed-over or mailed contract again changes nothing: the
+	// trail holds the handover once, the read of its PDF holds the print.
+	if record.Summary.Status != carecontract.StatusDraft && record.DocumentID != nil {
+		return nil
 	}
 	if record.Summary.Status == carecontract.StatusDraft {
 		if err := s.store.MarkSent(ctx, reviewer.OrganizationID, contractID, s.clock.now()); err != nil {

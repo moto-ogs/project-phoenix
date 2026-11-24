@@ -229,3 +229,56 @@ func TestSignatureStaysVisibleAfterAnApprovedChange(t *testing.T) {
 	assert.Equal(t, carecontract.SignaturePaper, detail.Signature.Method)
 	assert.True(t, detail.Signature.Intact, "checked against the version and PDF it signed")
 }
+
+// TestOnlyTheDraftPreviewSaysItIsNotForSigning pins the preview note of
+// #8030: the PDF of a draft is a preview that changes with the letterhead,
+// so it says on every page that it is not for signing. The PDF frozen at the
+// handover is the one the parents sign and never carries the note. It goes
+// red when the preview looks like the contract, or the note is frozen.
+func TestOnlyTheDraftPreviewSaysItIsNotForSigning(t *testing.T) {
+	t.Parallel()
+	f := newRaceFixture(t, "Träger Vorschau Vermerk")
+	preview, err := f.contracts.ContractDocument(f.ctx, f.reviewer, f.contract)
+	require.NoError(t, err)
+	assert.Contains(t, string(preview.Data), previewNote, "the draft's preview names itself")
+	version, err := f.contracts.VersionDocument(f.ctx, f.reviewer, f.contract, 1)
+	require.NoError(t, err)
+	assert.Contains(t, string(version.Data), previewNote, "the draft's version preview too")
+
+	f.handOver(t)
+	frozen, err := f.contracts.ContractDocument(f.ctx, f.reviewer, f.contract)
+	require.NoError(t, err)
+	assert.NotContains(t, string(frozen.Data), previewNote, "the frozen PDF is for signing")
+	var stored []byte
+	require.NoError(t, f.db.NewRaw(`SELECT pdf FROM care_contract.contract_documents WHERE contract_id = ?`, f.contract).
+		Scan(context.Background(), &stored))
+	assert.NotContains(t, string(stored), previewNote, "the stored PDF carries no note")
+}
+
+// TestPaperHandoverTrailsOnlyTheHandover pins the trail of #8030: handing a
+// draft over on paper is one send via the office. Printing the contract
+// again, or handing over a contract mailed before, changes nothing and adds
+// no send to the trail. It goes red when every call writes a send.
+func TestPaperHandoverTrailsOnlyTheHandover(t *testing.T) {
+	t.Parallel()
+	sends := func(f raceFixture) int {
+		t.Helper()
+		var n int
+		require.NoError(t, f.db.NewRaw(`SELECT COUNT(*) FROM care_contract.contract_events WHERE contract_id = ? AND action = 'send'`,
+			f.contract).Scan(context.Background(), &n))
+		return n
+	}
+
+	onPaper := newRaceFixture(t, "Träger Übergabe Spur")
+	onPaper.handOver(t)
+	onPaper.handOver(t)
+	assert.Equal(t, 1, sends(onPaper), "one handover, one send")
+
+	mailed := newRaceFixture(t, "Träger Übergabe nach Mail")
+	require.NoError(t, testpkg.WithinTraeger(mailed.ctx, mailed.org, func(txCtx context.Context) error {
+		_, err := mailed.contracts.SendContracts(txCtx, mailed.reviewer, []int64{mailed.contract})
+		return err
+	}))
+	mailed.handOver(t)
+	assert.Equal(t, 1, sends(mailed), "a mailed contract handed over again is no second send")
+}

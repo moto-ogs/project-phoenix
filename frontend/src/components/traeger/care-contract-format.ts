@@ -12,6 +12,7 @@ import {
   formatDate,
 } from "~/lib/date-helpers";
 import type {
+  CareContractDetail,
   CareContractStatus,
   ConclusionMethod,
   ConclusionMode,
@@ -54,6 +55,17 @@ export function contractStatusTone(
   }>,
 ): StatusBadgeTone {
   return labelOf(CONTRACT_STATUS_TONES, contract.status, "gray");
+}
+
+/**
+ * Tells that the contract went to the parents on paper (#8030): its PDF is
+ * frozen, but no mail went out. Only a send or the handover on paper
+ * freezes the PDF, so this is the one rule for every screen that asks.
+ */
+export function handedOverOnPaper(
+  contract: Pick<CareContractDetail, "documentFrozen" | "mailings">,
+): boolean {
+  return contract.documentFrozen && contract.mailings.length === 0;
 }
 
 /** The order of the status filter: what the office works on first. */
