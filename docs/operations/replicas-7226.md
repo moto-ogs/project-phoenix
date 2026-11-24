@@ -108,16 +108,17 @@ Compose file:
   environment before it copies anything to the server; a stack over budget
   fails there and the running release stays untouched.
 
-With `DB_MAX_OPEN_CONNS=40` today: one API and one worker use 82 of 97,
-plus the reserve 92. Two API replicas need 133 and fail the check. Before
-scaling the API to N replicas, pick one:
+Staging and production run PostgreSQL with `max_connections=200` (197
+usable). With `DB_MAX_OPEN_CONNS=40`: one API and one worker use 82, plus the
+reserve 92. Two API replicas need 133, three need 174; four need 215 and fail
+the check. With N API replicas and one worker,
+`(N + 1) × (DB_MAX_OPEN_CONNS + 1) + 10 ≤ 197`. For a fourth replica, pick one:
 
 - lower `DB_MAX_OPEN_CONNS` (and `DB_MAX_IDLE_CONNS`) in the environment's
-  SOPS file: with N API replicas and one worker,
-  `(N + 1) × (DB_MAX_OPEN_CONNS + 1) + 10 ≤ 97`; for N = 2: at most 25;
-- or raise `max_connections` in the `postgres` command of the Compose file
-  (`"-c", "max_connections=200"`); the next deploy recreates the database
-  container while the application is stopped.
+  SOPS file, for N = 4: at most 36;
+- or raise `max_connections` in the `postgres` command of the Compose file;
+  the next deploy recreates the database container while the application is
+  stopped.
 
 A maintenance job (`migrate`, `upload-seal`, `bank-data-rekey`) opens its own
 pool of `DB_MAX_OPEN_CONNS`. The release runs `migrate` while the application
@@ -152,8 +153,9 @@ Scale changes go through the repository, so the next deploy keeps them.
 
 ### Scale an app up
 
-1. Check the connection budget above; lower `DB_MAX_OPEN_CONNS` through SOPS
-   or raise `max_connections` first if the API grows.
+1. Check the connection budget above: it covers three API replicas. Beyond
+   that, lower `DB_MAX_OPEN_CONNS` through SOPS or raise `max_connections`
+   first.
 2. In `environments/<env>.compose.yml`, replace the fixed port of the service
    with its replica range and set the count, for example production API:
 
