@@ -177,6 +177,13 @@ import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { InsetPanel } from "~/components/ui/inset-panel";
+import { useDeviceContext } from "~/lib/device-context";
+import {
+  AppClockPanel,
+  AppDayList,
+  AppRangeBar,
+  AppTimeTrackingLayout,
+} from "~/components/time-tracking/time-tracking-app";
 
 const logger = createLogger({ component: "TimeTrackingPage" });
 
@@ -584,6 +591,7 @@ function ClockInCard({
   saving = false,
   laborDays,
   setTargetHref,
+  app = false,
 }: {
   readonly currentSession: WorkSession | null;
   readonly breaks: WorkSessionBreak[];
@@ -609,6 +617,8 @@ function ClockInCard({
   /** Führt zum eigenen Arbeitszeitmodell, wenn das Soll fehlt und die Person
    *  es selbst setzen darf (#6887). */
   readonly setTargetHref?: string;
+  /** App-Oberfläche (#8070): Zustand oben, Hauptaktion in der ActionBar. */
+  readonly app?: boolean;
 }) {
   // Null until the staff member explicitly picks Vor Ort / Homeoffice / Abwesend.
   // No pre-selection per Issue #1368 — silent defaults are unacceptable for an
@@ -936,6 +946,47 @@ function ClockInCard({
       </Button>
     </>
   );
+
+  if (app) {
+    let appState: "idle" | "working" | "break" | "done" = "idle";
+    if (isOnBreak) appState = "break";
+    else if (isCheckedIn) appState = "working";
+    else if (isCheckedOut) appState = "done";
+    return (
+      <AppClockPanel
+        state={appState}
+        saving={saving}
+        sessionStatus={currentSession?.status}
+        checkInTime={currentSession?.checkInTime ?? null}
+        checkOutTime={currentSession?.checkOutTime ?? null}
+        todayMinutes={isCheckedIn ? displayMinutes : completedTodayMinutes}
+        breakMinutes={isCheckedIn ? liveBreakMins : breakMins}
+        plannedShifts={plannedShifts ?? []}
+        laborHints={laborHints}
+        breakCountdownSecs={
+          plannedBreakDurationMins ? countdownRemainingSecs : null
+        }
+        breakEndsAt={activeBreak?.plannedEndTime ?? null}
+        breakElapsedSecs={activeBreakElapsedSecs}
+        disabled={stampingDisabled}
+        busy={actionLoading}
+        onCheckIn={(next) => {
+          if (stampingDisabled) return;
+          setActionLoading(true);
+          void onCheckIn(next).finally(() => setActionLoading(false));
+        }}
+        onCheckOut={() => void handleCheckOut()}
+        onStartBreak={() =>
+          void handleSelectBreakDuration(individualBreakMinutes)
+        }
+        onEndBreak={() => void handleEndBreakEarly()}
+        onAddAbsence={onAddAbsence}
+        breakStepper={breakDurationStepper}
+        breakSheetOpen={breakMenuOpen && !isOnBreak}
+        onBreakSheetOpenChange={setBreakMenuOpen}
+      />
+    );
+  }
 
   return (
     <SectionCard
@@ -1582,6 +1633,7 @@ function OwnZeiterfassungSection({
   weekAnchor,
   monthAnchor,
   setTargetHref,
+  app = false,
 }: {
   readonly ownStaffId: string | null;
   readonly schedule: import("~/lib/staff-api").StaffSchedule | null;
@@ -1603,6 +1655,8 @@ function OwnZeiterfassungSection({
   readonly monthAnchor: Date;
   /** Arbeitszeitmodell der eigenen Person, nur wenn sie das Soll setzen darf. */
   readonly setTargetHref?: string;
+  /** App-Oberfläche (#8070): Tagesliste statt Tabelle. */
+  readonly app?: boolean;
 }) {
   // The Berlin day, not the browser's, and re-rendered on the rollover: this
   // section stays mounted all day, and `new Date()` frozen at mount would keep
@@ -1908,6 +1962,58 @@ function OwnZeiterfassungSection({
       revalidateOrThrow(tableRead),
     );
   };
+
+  if (app) {
+    const loadErrors =
+      tableLoad.error || tableAbsencesLoad.error || shiftsLoad.error ? (
+        <div className="space-y-3">
+          <LoadErrorAlert error={tableLoad.error} />
+          <LoadErrorAlert error={tableAbsencesLoad.error} />
+          <LoadErrorAlert error={shiftsLoad.error} />
+        </div>
+      ) : null;
+    const loading =
+      (tableLoading && tableHistory.length === 0) || shiftsLoading;
+    return (
+      <div className="flex flex-col gap-4 [&>*]:shrink-0" data-app-time-days="">
+        {loadErrors}
+        {loading ? (
+          <SectionCard>
+            <SkeletonRegion label="Einträge werden geladen…">
+              <TableSkeleton rows={7} columns={2} />
+            </SkeletonRegion>
+          </SectionCard>
+        ) : tableError && tableData === undefined ? null : (
+          <AppDayList
+            from={visibleFrom}
+            to={visibleTo}
+            today={today}
+            sessions={tableHistory}
+            absences={tableAbsences}
+            shifts={tableShifts ?? []}
+            projection={dailyProjection}
+            holidays={tableHolidays}
+            closingDays={tableClosingDays}
+            onEdit={(date, session) =>
+              handleEdit(date, session ? { id: session.id } : null)
+            }
+          />
+        )}
+        {viewMode === "month" && (
+          <Monatskarte
+            summary={monthSummary ?? null}
+            isLoading={monthSummaryLoading}
+            error={monthLoad.error}
+            isCurrentMonth={isCurrentMonth}
+            isPreAccountMonth={isPreAccountMonth}
+            accountStartsInFuture={accountStartsInFuture}
+            accountStartDate={accountStartDate}
+            setTargetHref={setTargetHref}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <SectionCard title="Zeiterfassung">
@@ -3182,6 +3288,10 @@ function TimeTrackingContent() {
 
   const toast = useToast();
   const todayISO = useBerlinToday();
+  // App-Oberfläche (#8070): erst nach der Hydration bekannt; bis dahin und auf
+  // dem Desktop bleibt es beim heutigen Aufbau.
+  const device = useDeviceContext();
+  const app = device.resolved && device.isApp;
   // WeekChart shows trailing 10 workdays from today; no UI to navigate it
   // anymore (the table owns its own range state). Kept as a constant so the
   // chart's data window stays anchored at "now".
@@ -4068,19 +4178,41 @@ function TimeTrackingContent() {
       // Bauart 3, Regel 1: eine Zeitnavigation im Bedienband der Kopfkarte,
       // dieselbe wie in Dienstplan, Vertretung und Betreuungsplan.
       searchSlot={
-        <PlanningContextBar
-          withoutContextRow
-          dateLabel={rangeLabel}
-          onPrevious={goToPreviousRange}
-          onNext={goToNextRange}
-          previousLabel={
-            viewMode === "month" ? "Vorheriger Monat" : "Vorherige Woche"
-          }
-          nextLabel={viewMode === "month" ? "Nächster Monat" : "Nächste Woche"}
-          onToday={isOnCurrentRange ? undefined : goToCurrentRange}
-          todayLabel={viewMode === "month" ? "Dieser Monat" : "Diese Woche"}
-          viewSwitcher={<ViewToggle value={viewMode} onChange={setViewMode} />}
-        />
+        app ? (
+          <AppRangeBar
+            label={rangeLabel.replace(/\.(\d{4})$/, ".")}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            onPrevious={goToPreviousRange}
+            onNext={goToNextRange}
+            previousLabel={
+              viewMode === "month" ? "Vorheriger Monat" : "Vorherige Woche"
+            }
+            nextLabel={
+              viewMode === "month" ? "Nächster Monat" : "Nächste Woche"
+            }
+            onToday={isOnCurrentRange ? undefined : goToCurrentRange}
+            todayLabel={viewMode === "month" ? "Dieser Monat" : "Diese Woche"}
+          />
+        ) : (
+          <PlanningContextBar
+            withoutContextRow
+            dateLabel={rangeLabel}
+            onPrevious={goToPreviousRange}
+            onNext={goToNextRange}
+            previousLabel={
+              viewMode === "month" ? "Vorheriger Monat" : "Vorherige Woche"
+            }
+            nextLabel={
+              viewMode === "month" ? "Nächster Monat" : "Nächste Woche"
+            }
+            onToday={isOnCurrentRange ? undefined : goToCurrentRange}
+            todayLabel={viewMode === "month" ? "Dieser Monat" : "Diese Woche"}
+            viewSwitcher={
+              <ViewToggle value={viewMode} onChange={setViewMode} />
+            }
+          />
+        )
       }
       // Dialoge und Slide-overs gehören in den overlays-Slot des Gerüsts,
       // nicht in die Inhalte: sonst hängt TenantPage sie im Lade-, Leer- und
@@ -4263,80 +4395,147 @@ function TimeTrackingContent() {
         </>
       }
     >
-      {/* Action zone — Stempeluhr (mit integrierten Stats) und Wochenübersicht
-          50/50 nebeneinander. Drunter eine Placeholder-Section für den
-          Urlaubs-Workflow (kommt in eigenem Chat). */}
-      {currentLoad.error ||
-      breaksLoadError ||
-      absencesLoad.error ||
-      profileLoad.error ? (
-        <div className="space-y-3">
-          <LoadErrorAlert error={currentLoad.error} />
-          <LoadErrorAlert error={breaksLoadError} />
-          <LoadErrorAlert error={absencesLoad.error} />
-          <LoadErrorAlert error={profileLoad.error} />
-        </div>
-      ) : null}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-        <ClockInCard
-          currentSession={currentSession ?? null}
-          breaks={currentBreaks}
-          onCheckIn={handleCheckIn}
-          onCheckOut={handleCheckOut}
-          onStartBreak={handleStartBreak}
-          onEndBreak={handleEndBreak}
-          weeklyMinutes={weeklyCompletedMinutes}
-          completedTodayMinutes={completedToday.minutes}
-          laborDays={historyData?.laborDays ?? []}
-          onAddAbsence={() => setAbsenceModalOpen(true)}
-          metrics={ownMetrics}
-          plannedShifts={todayShifts}
-          cancelledShifts={todayCancelledShifts}
-          stampingDisabled={stampingDisabled || stampAction.pending}
-          saving={stampAction.pending}
-          setTargetHref={
-            canSetTarget && ownStaffId
-              ? tenantPath(workTimeModelPath(ownStaffId))
-              : undefined
+      {app ? (
+        <AppTimeTrackingLayout
+          split={device.isSplit}
+          errors={
+            currentLoad.error ||
+            breaksLoadError ||
+            absencesLoad.error ||
+            profileLoad.error ? (
+              <div className="space-y-3">
+                <LoadErrorAlert error={currentLoad.error} />
+                <LoadErrorAlert error={breaksLoadError} />
+                <LoadErrorAlert error={absencesLoad.error} />
+                <LoadErrorAlert error={profileLoad.error} />
+              </div>
+            ) : null
+          }
+          clock={
+            <ClockInCard
+              app
+              currentSession={currentSession ?? null}
+              breaks={currentBreaks}
+              onCheckIn={handleCheckIn}
+              onCheckOut={handleCheckOut}
+              onStartBreak={handleStartBreak}
+              onEndBreak={handleEndBreak}
+              weeklyMinutes={weeklyCompletedMinutes}
+              completedTodayMinutes={completedToday.minutes}
+              laborDays={historyData?.laborDays ?? []}
+              onAddAbsence={() => setAbsenceModalOpen(true)}
+              metrics={ownMetrics}
+              plannedShifts={todayShifts}
+              cancelledShifts={todayCancelledShifts}
+              stampingDisabled={stampingDisabled || stampAction.pending}
+              saving={stampAction.pending}
+            />
+          }
+          days={
+            <OwnZeiterfassungSection
+              app
+              ownStaffId={ownStaffId}
+              schedule={ownSchedule ?? null}
+              isSessionOpen={currentSession?.checkOutTime === null}
+              viewMode={viewMode}
+              weekAnchor={weekAnchor}
+              monthAnchor={monthAnchor}
+              setTargetHref={
+                canSetTarget && ownStaffId
+                  ? tenantPath(workTimeModelPath(ownStaffId))
+                  : undefined
+              }
+              onEditDay={(date, session, absence, laborDay, reloadDay) =>
+                setEditModal({ date, session, absence, laborDay, reloadDay })
+              }
+            />
+          }
+          more={
+            <>
+              <BetreuungsplanHeuteCard />
+              <LeaveRequestsCard />
+              <OwnAllowancesCard />
+            </>
           }
         />
-        <WeekChart
-          history={history}
-          weekOffset={weekOffset}
-          error={historyLoad.error}
-        />
-      </div>
+      ) : (
+        <>
+          {/* Action zone — Stempeluhr (mit integrierten Stats) und Wochenübersicht
+          50/50 nebeneinander. Drunter eine Placeholder-Section für den
+          Urlaubs-Workflow (kommt in eigenem Chat). */}
+          {currentLoad.error ||
+          breaksLoadError ||
+          absencesLoad.error ||
+          profileLoad.error ? (
+            <div className="space-y-3">
+              <LoadErrorAlert error={currentLoad.error} />
+              <LoadErrorAlert error={breaksLoadError} />
+              <LoadErrorAlert error={absencesLoad.error} />
+              <LoadErrorAlert error={profileLoad.error} />
+            </div>
+          ) : null}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
+            <ClockInCard
+              currentSession={currentSession ?? null}
+              breaks={currentBreaks}
+              onCheckIn={handleCheckIn}
+              onCheckOut={handleCheckOut}
+              onStartBreak={handleStartBreak}
+              onEndBreak={handleEndBreak}
+              weeklyMinutes={weeklyCompletedMinutes}
+              completedTodayMinutes={completedToday.minutes}
+              laborDays={historyData?.laborDays ?? []}
+              onAddAbsence={() => setAbsenceModalOpen(true)}
+              metrics={ownMetrics}
+              plannedShifts={todayShifts}
+              cancelledShifts={todayCancelledShifts}
+              stampingDisabled={stampingDisabled || stampAction.pending}
+              saving={stampAction.pending}
+              setTargetHref={
+                canSetTarget && ownStaffId
+                  ? tenantPath(workTimeModelPath(ownStaffId))
+                  : undefined
+              }
+            />
+            <WeekChart
+              history={history}
+              weekOffset={weekOffset}
+              error={historyLoad.error}
+            />
+          </div>
 
-      {/* Heute geplante Betreuungsplan-Einsätze (Ort/Aufgabe + Vertretungen,
+          {/* Heute geplante Betreuungsplan-Einsätze (Ort/Aufgabe + Vertretungen,
           #1844). Rendert nichts, wenn die Schule keinen Betreuungsplan pflegt. */}
-      <BetreuungsplanHeuteCard />
+          <BetreuungsplanHeuteCard />
 
-      <LeaveRequestsCard />
+          <LeaveRequestsCard />
 
-      {/* Eigene Kontingente der schuleigenen Abwesenheitsarten, nur lesend
+          {/* Eigene Kontingente der schuleigenen Abwesenheitsarten, nur lesend
           (#4971). Rendert nichts, wenn die Schule keine Art mit Kontingent hat. */}
-      <OwnAllowancesCard />
+          <OwnAllowancesCard />
 
-      {/* Zeiterfassung — gleiche Struktur wie auf /staff/[id], damit es
+          {/* Zeiterfassung — gleiche Struktur wie auf /staff/[id], damit es
           zwischen Admin-Sicht und MA-Sicht keinen Drift gibt. Die externe
           onEditDay-Logik bleibt aktiv, damit der existing EditSessionModal
           (inkl. Absence-Handling) genutzt werden kann. */}
-      <OwnZeiterfassungSection
-        ownStaffId={ownStaffId}
-        schedule={ownSchedule ?? null}
-        isSessionOpen={currentSession?.checkOutTime === null}
-        viewMode={viewMode}
-        weekAnchor={weekAnchor}
-        monthAnchor={monthAnchor}
-        setTargetHref={
-          canSetTarget && ownStaffId
-            ? tenantPath(workTimeModelPath(ownStaffId))
-            : undefined
-        }
-        onEditDay={(date, session, absence, laborDay, reloadDay) =>
-          setEditModal({ date, session, absence, laborDay, reloadDay })
-        }
-      />
+          <OwnZeiterfassungSection
+            ownStaffId={ownStaffId}
+            schedule={ownSchedule ?? null}
+            isSessionOpen={currentSession?.checkOutTime === null}
+            viewMode={viewMode}
+            weekAnchor={weekAnchor}
+            monthAnchor={monthAnchor}
+            setTargetHref={
+              canSetTarget && ownStaffId
+                ? tenantPath(workTimeModelPath(ownStaffId))
+                : undefined
+            }
+            onEditDay={(date, session, absence, laborDay, reloadDay) =>
+              setEditModal({ date, session, absence, laborDay, reloadDay })
+            }
+          />
+        </>
+      )}
     </TenantPage>
   );
 }
