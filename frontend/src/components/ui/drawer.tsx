@@ -6,6 +6,13 @@ import { Drawer as DrawerPrimitive } from "vaul";
 import { cn } from "~/lib/utils";
 import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
 import { useSheetAboveKeyboard } from "./hooks/useSheetAboveKeyboard";
+import { useIsApp } from "~/lib/device-context";
+import {
+  SheetSessionProvider,
+  useParentSheetId,
+  useSheetCovered,
+  useSheetSession,
+} from "./sheet-session";
 import {
   OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
@@ -29,26 +36,73 @@ type DrawerRootProps = OmitEach<
   "direction"
 > & { readonly direction?: DrawerDirection };
 
+/**
+ * In der App hängt jedes Blatt am Verlauf (Zurück schließt es) und es ist
+ * immer nur eins offen (`sheet-session.ts`, #8070). Dafür hält der Root den
+ * offenen Zustand auch ohne `open` des Aufrufers selbst. Auf dem Desktop
+ * bleibt die Sitzung aus.
+ */
+function useDrawerSession(
+  openProp: boolean | undefined,
+  defaultOpen: boolean | undefined,
+  onOpenChange: ((open: boolean) => void) | undefined,
+) {
+  const isApp = useIsApp();
+  const [innerOpen, setInnerOpen] = React.useState(defaultOpen ?? false);
+  const open = openProp ?? innerOpen;
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => {
+      setInnerOpen(next);
+      onOpenChange?.(next);
+    },
+    [onOpenChange],
+  );
+  const id = useSheetSession(open, () => handleOpenChange(false), isApp);
+  return { open, handleOpenChange, sessionId: isApp ? id : null };
+}
+
 const Drawer = ({
   shouldScaleBackground = true,
   direction = "bottom",
+  open: openProp,
+  defaultOpen,
+  onOpenChange,
   ...props
-}: DrawerRootProps) => (
-  <DrawerDirectionContext.Provider value={direction}>
-    <DrawerPrimitive.Root
-      shouldScaleBackground={shouldScaleBackground}
-      direction={direction}
-      {...props}
-    />
-  </DrawerDirectionContext.Provider>
-);
+}: DrawerRootProps) => {
+  const { open, handleOpenChange, sessionId } = useDrawerSession(
+    openProp,
+    defaultOpen,
+    onOpenChange,
+  );
+  return (
+    <DrawerDirectionContext.Provider value={direction}>
+      <SheetSessionProvider value={sessionId}>
+        <DrawerPrimitive.Root
+          shouldScaleBackground={shouldScaleBackground}
+          direction={direction}
+          open={open}
+          onOpenChange={handleOpenChange}
+          {...props}
+        />
+      </SheetSessionProvider>
+    </DrawerDirectionContext.Provider>
+  );
+};
 Drawer.displayName = "Drawer";
 
 /**
  * Ein Blatt, das über einem offenen Blatt aufgeht (vaul `NestedRoot`): Das
  * untere rückt etwas nach hinten und bleibt offen. Nur innerhalb von `Drawer`.
+ * In der App stapelt nichts (#8070): Das neue Blatt ersetzt das untere
+ * sichtbar, Zurück bringt es wieder (`useSheetCovered`).
  */
-const DrawerNested = ({
+const DrawerNested = (props: DrawerRootProps) => {
+  const isApp = useIsApp();
+  if (isApp) return <Drawer shouldScaleBackground={false} {...props} />;
+  return <DesktopDrawerNested {...props} />;
+};
+
+const DesktopDrawerNested = ({
   shouldScaleBackground = false,
   direction = "bottom",
   ...props
@@ -107,9 +161,13 @@ DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 // the rounded inner edge looked off against the page chrome, and the
 // outer edge is flush against the viewport so nothing's there to round.
 // Width caps live in className overrides at the call site.
+// iPad (`tablet:`, hoch und quer): Das Blatt schwebt als Karte unten in der
+// Mitte, höchstens 560 px breit, mit Rand zu allen Seiten (#8070).
+export const SHEET_TABLET_CARD_CLASSES =
+  "tablet:inset-x-4 tablet:mx-auto tablet:max-w-[35rem] tablet:bottom-[calc(1rem+env(safe-area-inset-bottom))] tablet:max-h-[85dvh] tablet:rounded-2xl tablet:shadow-xl tablet:after:hidden";
+
 const directionContentClasses: Record<DrawerDirection, string> = {
-  bottom:
-    "fixed inset-x-0 bottom-0 mt-24 flex h-auto max-h-[90vh] flex-col rounded-t-2xl",
+  bottom: `fixed inset-x-0 bottom-0 mt-24 flex h-auto max-h-[90vh] flex-col rounded-t-2xl ${SHEET_TABLET_CARD_CLASSES}`,
   left: "fixed inset-y-0 left-0 flex h-full w-full max-w-lg flex-col",
 };
 
@@ -153,9 +211,17 @@ const DrawerContent = React.forwardRef<
     const direction = React.useContext(DrawerDirectionContext);
     const sheetRef = React.useRef<HTMLDivElement | null>(null);
     useSheetAboveKeyboard(sheetRef, direction === "bottom");
+    // Ein Kind-Blatt ist offen: Dieses tritt zurück, bis Zurück es wieder
+    // zeigt. Nur in der App, sonst gibt es keine Sitzung.
+    const covered = useSheetCovered(useParentSheetId());
+    const coveredProps = covered ? { "data-sheet-covered": "true" } : {};
     return (
       <DrawerPortal>
-        <DrawerOverlay ref={overlayRef} layer={layer} />
+        <DrawerOverlay
+          ref={overlayRef}
+          layer={layer}
+          className={covered ? "app:opacity-0" : undefined}
+        />
         <DrawerPrimitive.Content
           ref={(node: HTMLDivElement | null) => {
             sheetRef.current = node;
@@ -167,8 +233,10 @@ const DrawerContent = React.forwardRef<
             fullScreen && direction === "bottom"
               ? FULL_SCREEN_BOTTOM_CLASSES
               : directionContentClasses[direction],
+            covered && "app:pointer-events-none app:invisible",
             className,
           )}
+          {...coveredProps}
           {...props}
         >
           {direction === "bottom" && (
