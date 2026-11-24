@@ -155,13 +155,13 @@ func (s *administration) GetDeviceByDeviceID(ctx context.Context, deviceID strin
 // UpdateDevice applies a school's edit to an existing IoT device. It writes
 // only the fields that edit owns (device_id, device_type, name,
 // registered_by_id, and status when the caller names one): the API key,
-// last_seen, room, archive and transfer columns belong to other flows, and a
-// key rotation, deactivation or transfer that commits after this unlocked
-// read must not be reverted. An empty status keeps the stored one. The
+// last_seen, room, archive and transfer columns belong to other flows, and
+// the edit must not revert a key rotation, deactivation or transfer. An empty status keeps the stored one. The
 // edit writes back what its editor read: a device whose edited fields
 // differ from expectedVersion is refused with readstate.ErrChanged (ADR
-// 0311). The caller holds the device's row lock, so the check and the write
-// see the same row.
+// 0311). The check reads the device under its row lock, so it and the
+// write see the same row whatever the caller locked before; a second lock
+// of the row in the same unit costs nothing.
 func (s *administration) UpdateDevice(ctx context.Context, device *Device, expectedVersion string) error {
 	if device == nil || device.ID <= 0 {
 		return &AdministrationError{Op: "UpdateDevice", Err: ErrAdministrationInvalidDeviceData}
@@ -172,9 +172,12 @@ func (s *administration) UpdateDevice(ctx context.Context, device *Device, expec
 		return &AdministrationError{Op: "UpdateDevice", Err: err}
 	}
 
-	existing, err := s.findDevice(ctx, "UpdateDevice", device.ID)
+	existing, err := s.devices.FindDeviceForUpdate(ctx, device.ID)
+	if errors.Is(err, ErrDeviceNotFound) {
+		return &AdministrationError{Op: "UpdateDevice", Err: ErrAdministrationDeviceNotFound}
+	}
 	if err != nil {
-		return err
+		return &AdministrationError{Op: "UpdateDevice", Err: err}
 	}
 	if existing.ID <= 0 {
 		return &AdministrationError{Op: "UpdateDevice", Err: ErrAdministrationDeviceNotFound}
