@@ -88,12 +88,13 @@ type careCancellationRow struct {
 	Reason             string        `bun:"reason"`
 	TotalCents         int64         `bun:"total_cents"`
 	CreatedByAccountID *int64        `bun:"created_by_account_id"`
+	IssuerKey          string        `bun:"issuer_key"`
 	Replaced           bool          `bun:"replaced,scanonly"`
 }
 
 func (r careCancellationRow) cancellation() parentbilling.CareCancellation {
 	return parentbilling.CareCancellation{ID: r.ID, InvoiceID: r.InvoiceID, Number: r.Number, IssuedOn: r.IssuedOn,
-		Reason: r.Reason, TotalCents: r.TotalCents, Replaced: r.Replaced}
+		Reason: r.Reason, TotalCents: r.TotalCents, Replaced: r.Replaced, IssuerKey: r.IssuerKey}
 }
 
 // CareRunLetters reads what the Abrechnung wrote for the letters of a run;
@@ -185,7 +186,7 @@ func (s *Store) CareRunCancellations(ctx context.Context, organizationID, runID 
 		return nil, err
 	}
 	var rows []careCancellationRow
-	if err := db.NewSelect().Model(&rows).Column("id", "invoice_id", "number", "issued_on", "reason", "total_cents").
+	if err := db.NewSelect().Model(&rows).Column("id", "invoice_id", "number", "issued_on", "reason", "total_cents", "issuer_key").
 		ColumnExpr(`EXISTS (SELECT 1 FROM parent_billing.care_invoices AS replacement
 			WHERE replacement.organization_id = care_cancellation_row.organization_id
 			AND replacement.replaces_invoice_id = care_cancellation_row.invoice_id) AS replaced`).
@@ -213,7 +214,7 @@ func (s *Store) InsertCareCancellation(ctx context.Context, organizationID, runI
 	}
 	numbers := []string{cancellation.Number}
 	for _, other := range []string{holidayNumbersTable, careNumbersTable} {
-		if err := claimInvoiceNumbers(ctx, db, organizationID, numbers, other); err != nil {
+		if err := claimInvoiceNumbers(ctx, db, organizationID, cancellation.IssuerKey, numbers, other); err != nil {
 			return parentbilling.CareCancellation{}, err
 		}
 	}
@@ -228,7 +229,7 @@ func (s *Store) InsertCareCancellation(ctx context.Context, organizationID, runI
 	row := &careCancellationRow{
 		OrganizationID: organizationID, RunID: runID, InvoiceID: cancellation.InvoiceID, Number: cancellation.Number,
 		NumberYear: year, NumberSequence: sequence, IssuedOn: cancellation.IssuedOn, Reason: cancellation.Reason,
-		TotalCents: cancellation.TotalCents, CreatedByAccountID: &accountID,
+		TotalCents: cancellation.TotalCents, CreatedByAccountID: &accountID, IssuerKey: cancellation.IssuerKey,
 	}
 	if _, err := db.NewInsert().Model(row).Returning("id").Exec(ctx); err != nil {
 		switch constraintOf(err) {

@@ -30,6 +30,7 @@ const CodeTraegerReportTemplateInvalid = "traeger.report_template_invalid"
 const CodeTraegerReportTemplateNameTaken = "traeger.report_template_name_taken"
 const CodeTraegerReportTemplateNotFound = "traeger.report_template_not_found"
 const CodeTraegerSchoolNotFound = "traeger.school_not_found"
+const CodeTraegerSchoolPartyCreditorAccountConflict = "traeger.school_party_creditor_account_conflict"
 const CodeTraegerSchoolRequiresCode = "traeger.school_requires_code"
 const CodeTraegerSchoolRoleNameTaken = "traeger.school_role_name_taken"
 const CodeTraegerSchoolRoleNameUsedAtSchool = "traeger.school_role_name_used_at_school"
@@ -67,6 +68,7 @@ var errorCodeClassesTraeger = []errorCodeClass{
 	{CodeTraegerReportTemplateNameTaken, "input"},
 	{CodeTraegerReportTemplateNotFound, "input"},
 	{CodeTraegerSchoolNotFound, "permission"},
+	{CodeTraegerSchoolPartyCreditorAccountConflict, "business_rejection"},
 	{CodeTraegerSchoolRequiresCode, "permission"},
 	{CodeTraegerSchoolRoleNameTaken, "business_rejection"},
 	{CodeTraegerSchoolRoleNameUsedAtSchool, "business_rejection"},

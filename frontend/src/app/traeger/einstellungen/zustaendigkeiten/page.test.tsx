@@ -27,6 +27,10 @@ vi.mock("~/lib/traeger-api", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   ...traegerApi,
 }));
+vi.mock("~/lib/traeger-billing-issuers-api", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  fetchBillingIssuerStatuses: vi.fn().mockResolvedValue([]),
+}));
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path.replace(/^\/traeger/, "") || "/",
 }));

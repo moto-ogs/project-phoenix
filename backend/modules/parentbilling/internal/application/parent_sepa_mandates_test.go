@@ -177,7 +177,7 @@ var mandateDay = calendar.NewDate(2026, 11, 9)
 func newParentMandatesForTest() (*ParentMandates, *fakeParentMandateStore, *fakeTerms) {
 	store := &fakeParentMandateStore{creditor: &parentbilling.SEPACreditor{CreditorID: "DE98ZZZ09999999999"}}
 	terms := &fakeTerms{terms: parentbilling.OnlineMandateTerms{Allowed: true, CreditorAddress: "Jugendring e.V.\nHauptstraße 1\n75175 Pforzheim"}}
-	return NewParentMandates(store, fakeParties{}, reversingCipher{}, terms, fnvFingerprints{}, func() calendar.Date { return mandateDay }), store, terms
+	return NewParentMandates(store, fakeParties{}, reversingCipher{}, terms, fnvFingerprints{}, fakeLetterheads{}, func() calendar.Date { return mandateDay }), store, terms
 }
 
 var mandateReader = parentbilling.ParentMandateReader{AccountID: 41, Email: " Eva@Example.org ", ContractID: 7, CreditorName: "Jugendring Muster"}
@@ -275,7 +275,7 @@ func TestParentMandateRefusesAnotherText(t *testing.T) {
 	} {
 		store := &fakeParentMandateStore{creditor: &parentbilling.SEPACreditor{CreditorID: "DE98ZZZ09999999999"}}
 		check := NewParentMandates(store, fakeParties{}, reversingCipher{}, &fakeTerms{terms: parentbilling.OnlineMandateTerms{
-			Allowed: true, CreditorAddress: "Jugendring e.V.\nHauptstraße 1\n75175 Pforzheim"}}, fnvFingerprints{}, func() calendar.Date { return mandateDay })
+			Allowed: true, CreditorAddress: "Jugendring e.V.\nHauptstraße 1\n75175 Pforzheim"}}, fnvFingerprints{}, fakeLetterheads{}, func() calendar.Date { return mandateDay })
 		_, err := check.GrantParentSEPAMandate(ctx, 3, mandateReader, input)
 		require.ErrorIs(t, err, parentbilling.ErrMandateTextChanged, name)
 		assert.Empty(t, store.mandates, name)

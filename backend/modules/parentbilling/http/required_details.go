@@ -11,7 +11,8 @@ import (
 )
 
 // RequiredDetailsResource serves the details the Träger still has to enter
-// (#7177) at /traeger/required-details. Every member of the Träger reads
+// (#7177) at /traeger/required-details, and at /issuers what each body that
+// bills one of its schools still needs (#8040). Every member of the Träger reads
 // it, without a right of its own: the answer names only which details are
 // missing, never their values, and tells whom to ask.
 type RequiredDetailsResource struct {
@@ -32,6 +33,7 @@ func (rs *RequiredDetailsResource) Router(protectedTraegerRoutes func(chi.Router
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 	protectedTraegerRoutes(r, func(r chi.Router, withTx common.Middleware) {
 		r.With(withTx).Get("/", rs.requiredDetails)
+		r.With(withTx).Get("/issuers", rs.issuers)
 	})
 	return r
 }
@@ -47,4 +49,19 @@ func (rs *RequiredDetailsResource) requiredDetails(w http.ResponseWriter, r *htt
 		return
 	}
 	common.Respond(w, r, http.StatusOK, details, "Required details retrieved successfully")
+}
+
+// issuers answers what each body that bills a school of the Träger still
+// needs (#8040): counts and settings, no person.
+func (rs *RequiredDetailsResource) issuers(w http.ResponseWriter, r *http.Request) {
+	reviewer, ok := reviewerOf(w, r)
+	if !ok {
+		return
+	}
+	overview, err := rs.check.BillingIssuerStatuses(r.Context(), reviewer.OrganizationID)
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInternalServer(err))
+		return
+	}
+	common.Respond(w, r, http.StatusOK, overview, "Billing issuers retrieved successfully")
 }

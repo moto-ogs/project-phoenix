@@ -11,6 +11,10 @@ import {
   str,
   success,
 } from "./runtime";
+import {
+  BillingIssuerSchema,
+  type BillingIssuer,
+} from "./shared.generated";
 
 /** Go: parentbilling.NumberRangeStart */
 export interface NumberRangeStart {
@@ -35,6 +39,7 @@ export const NumberRangeStartSchema: z.ZodType<NumberRangeStart, unknown> = obje
 
 /** Go: parentbilling.NumberRange */
 export interface NumberRange {
+  issuer: BillingIssuer;
   service: string;
   pattern: string;
   example: string;
@@ -46,6 +51,7 @@ export interface NumberRange {
 }
 
 export const NumberRangeSchema: z.ZodType<NumberRange, unknown> = object<NumberRange>({
+  issuer: BillingIssuerSchema,
   service: str,
   pattern: str,
   example: str,
@@ -59,11 +65,13 @@ export const NumberRangeSchema: z.ZodType<NumberRange, unknown> = object<NumberR
 /** Go: parentbillinghttp.NumberRangeRequest */
 export interface NumberRangeRequest {
   pattern?: string;
+  issuer_key?: string;
 }
 
 /** Go: parentbillinghttp.NumberRangeStartRequest */
 export interface NumberRangeStartRequest {
   next_number?: number;
+  issuer_key?: string;
 }
 
 export const routes = {

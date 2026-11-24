@@ -193,6 +193,9 @@ type CareCancellation struct {
 	TotalCents int64
 	// Replaced means a later released invoice names this invoice as its source.
 	Replaced bool
+	// IssuerKey is the issuer of the invoice, whose range numbers the Storno
+	// (#8040).
+	IssuerKey string
 }
 
 // CareCancellationInput is the reason of a Storno, at most 500 characters.

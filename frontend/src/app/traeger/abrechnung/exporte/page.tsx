@@ -70,7 +70,7 @@ import { traegerPath } from "~/lib/traeger-url";
 const logger = createLogger({ component: "TraegerFinanceExportsPage" });
 
 const INFO =
-  "Hier lädst du die Sollstellung für deine Kämmerei und die DATEV-Datei für dein Steuerbüro herunter. Welche Spalten die Sollstellung hat, legst du unter „Feldzuordnung“ fest. Jede Datei bekommt eine neue Nummer und steht im Protokoll.";
+  "Hier lädst du die Sollstellung für deine Kämmerei und die DATEV-Datei für dein Steuerbüro herunter. Welche Spalten die Sollstellung hat, legst du unter „Feldzuordnung“ fest. Jede Datei bekommt eine neue Nummer und steht im Protokoll. Rechnet ein Schulträger oder eine Gemeinde eine Schule selbst ab, fehlen deren Schreiben hier: Sie bucht sie in ihrem eigenen Haushalt.";
 
 /** What the page shows, once runs, protocol and settings are there. */
 function exportsData(

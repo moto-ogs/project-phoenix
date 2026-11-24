@@ -35,7 +35,7 @@ type handoverDebits struct {
 	parentbilling.SEPADebits
 }
 
-func (handoverDebits) SEPADebitFile(context.Context, parentbilling.HolidayReviewer, string, int64) (parentbilling.SEPADebitFile, error) {
+func (handoverDebits) SEPADebitFile(context.Context, parentbilling.HolidayReviewer, string, int64, string) (parentbilling.SEPADebitFile, error) {
 	return parentbilling.SEPADebitFile{Filename: "lastschrift-112-M1.xml", Data: []byte("<xml/>"), ExportFileID: 43}, nil
 }
 

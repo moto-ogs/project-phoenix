@@ -146,6 +146,8 @@ type careInvoiceRow struct {
 	SequenceType        *string        `bun:"sequence_type"`
 	DebitGap            *string        `bun:"debit_gap"`
 	DebtorNumber        *string        `bun:"debtor_number"`
+	IssuerKey           string         `bun:"issuer_key"`
+	Issuer              *issuerRow     `bun:"issuer,type:jsonb"`
 	// CostShares are the issued cost bearer shares (#4687), read in the same
 	// statement as the invoice.
 	CostShares []parentbilling.CareInvoiceCostShare `bun:"cost_shares,type:jsonb,scanonly"`
@@ -165,6 +167,7 @@ func (row careInvoiceRow) invoice(positions []parentbilling.CarePosition, reduct
 			Kind: textOf(row.RecipientKind), SecondName: textOf(row.RecipientSecondName)},
 		Positions: positions, Reductions: reductions, TotalCents: row.TotalCents, DocumentKind: row.DocumentKind,
 		FamilyEmail: textOf(row.FamilyEmail), Payment: row.snapshot().payment(), DebtorNumber: textOf(row.DebtorNumber),
+		Issuer: row.Issuer.issuer(),
 	}
 	if row.RecipientStreet != nil && row.RecipientPostalCode != nil && row.RecipientCity != nil {
 		invoice.Recipient.Address = &parentbilling.PostalAddress{Street: *row.RecipientStreet,
@@ -465,10 +468,10 @@ const (
 
 // claimInvoiceNumbers holds the invoice numbers of the Träger until the
 // transaction ends, so a holiday and a monthly issue run one after the
-// other, and reports a number otherTable or a Storno of a monthly invoice
-// already carries as ErrInvoiceNumberTaken (#4684). Every issue path calls
+// other, and reports a number of the issuer otherTable or a Storno of a
+// monthly invoice already carries as ErrInvoiceNumberTaken (#4684, #8040). Every issue path calls
 // it before it inserts; a Storno calls it for both other tables.
-func claimInvoiceNumbers(ctx context.Context, db bun.IDB, organizationID int64, numbers []string, otherTable string) error {
+func claimInvoiceNumbers(ctx context.Context, db bun.IDB, organizationID int64, issuerKey string, numbers []string, otherTable string) error {
 	if len(numbers) == 0 {
 		return nil
 	}
@@ -478,8 +481,8 @@ func claimInvoiceNumbers(ctx context.Context, db bun.IDB, organizationID int64, 
 	}
 	for _, table := range []string{otherTable, careCancellationNumbersTable, careNoticeNumbersTable} {
 		var taken bool
-		if err := db.NewRaw(`SELECT EXISTS (SELECT 1 FROM ? WHERE organization_id = ? AND number = ANY(?))`,
-			bun.Safe(table), organizationID, pgdialect.Array(numbers)).Scan(ctx, &taken); err != nil {
+		if err := db.NewRaw(`SELECT EXISTS (SELECT 1 FROM ? WHERE organization_id = ? AND issuer_key = ? AND number = ANY(?))`,
+			bun.Safe(table), organizationID, issuerKey, pgdialect.Array(numbers)).Scan(ctx, &taken); err != nil {
 			return fmt.Errorf("check invoice numbers: %w", err)
 		}
 		if taken {
@@ -489,9 +492,9 @@ func claimInvoiceNumbers(ctx context.Context, db bun.IDB, organizationID int64, 
 	return nil
 }
 
-// IssueCareInvoices stores the numbered invoices of a release with their
-// positions; the i-th invoice has the sequence first+i of the counter of
-// year. A number a holiday document or another monthly invoice carries is
+// IssueCareInvoices stores the numbered invoices of one issuer of a release
+// with their positions; the i-th invoice has the sequence first+i of the
+// counter of the issuer and year. A number a holiday document or another monthly invoice carries is
 // ErrInvoiceNumberTaken, a contract an invoice of the month already bills
 // ErrBillingRunChanged.
 func (s *Store) IssueCareInvoices(ctx context.Context, organizationID int64, run parentbilling.CareRun, rule string, year int, first int64, invoices []parentbilling.CareInvoice) error {
@@ -503,7 +506,8 @@ func (s *Store) IssueCareInvoices(ctx context.Context, organizationID int64, run
 	for i, invoice := range invoices {
 		numbers[i] = invoice.Number
 	}
-	if err := claimInvoiceNumbers(ctx, db, organizationID, numbers, holidayNumbersTable); err != nil {
+	issuerKey, issuer := issuerColumns(invoices[0].Issuer)
+	if err := claimInvoiceNumbers(ctx, db, organizationID, issuerKey, numbers, holidayNumbersTable); err != nil {
 		return err
 	}
 	replaced, err := cancelledInvoicesToReplace(ctx, db, organizationID, run.BillingMonth, invoices)
@@ -522,6 +526,7 @@ func (s *Store) IssueCareInvoices(ctx context.Context, organizationID int64, run
 			StudentID: invoice.StudentID, FamilyEmail: textRef(invoice.FamilyEmail), RecipientKind: textRef(invoice.Recipient.Kind),
 			RecipientSecondName: textRef(invoice.Recipient.SecondName),
 			DocumentKind:        careDocumentKind(invoice.DocumentKind), DebtorNumber: textRef(invoice.DebtorNumber),
+			IssuerKey: issuerKey, Issuer: issuer,
 		}
 		if address := invoice.Recipient.Address; address != nil {
 			rows[i].RecipientStreet, rows[i].RecipientPostalCode, rows[i].RecipientCity = &address.Street, &address.PostalCode, &address.City

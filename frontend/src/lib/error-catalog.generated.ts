@@ -1153,6 +1153,8 @@ export const ERROR_CATALOG = {
         "Diese Rechnung hat schon eine Gutschrift. Schreibe den Rest gut, statt zu stornieren.",
       "parent_billing.invoice_number_taken":
         "Diese Rechnungsnummer gibt es schon. Bitte ändere das Muster unter „Abrechnungsvorgaben“.",
+      "parent_billing.issuer_creditor_is_traegers":
+        "{issuer_name} trägt die Gläubiger-ID deines Trägers. Jede Stelle braucht ihre eigene: Trag sie bei der Schule unter „Zuständigkeiten“ ein.",
       "parent_billing.legal_remedy_missing":
         "Der Gebührenbescheid braucht eine Rechtsbehelfsbelehrung. Trage sie in der Vorlage „Bescheid“ ein. Das darf, wer das Recht „Einstellungen“ hat. Danach kannst du freigeben.",
       "parent_billing.letter_mail_block_unreadable":
@@ -1930,6 +1932,8 @@ export const ERROR_CATALOG = {
         "Diese Vorlage gibt es nicht mehr. Bitte lade die Seite neu.",
       "traeger.school_not_found":
         "Diese Schule gehört nicht zu deinem Träger. Bitte lade die Seite neu.",
+      "traeger.school_party_creditor_account_conflict":
+        "Diese Gläubiger-ID ist schon bei {school_name} mit einem anderen Konto eingetragen. Eine Gläubiger-ID gehört zu genau einem Konto: Trag dieselbe IBAN, dieselbe BIC und denselben Kontoinhaber ein oder prüfe die Gläubiger-ID.",
       "traeger.school_requires_code":
         "Diese Schule verlangt zum Öffnen einen Code aus deiner E-Mail.",
       "traeger.school_role_name_taken":
@@ -2997,6 +3001,8 @@ export const ERROR_CATALOG = {
         "This template no longer exists. Please reload the page.",
       "traeger.school_not_found":
         "This school does not belong to your Träger. Please reload the page.",
+      "traeger.school_party_creditor_account_conflict":
+        "This creditor identifier is already entered for {school_name} with another bank account. A creditor identifier belongs to exactly one account: enter the same account or check the creditor identifier.",
       "traeger.school_requires_code":
         "This school asks for a code from your e-mail before it opens.",
       "traeger.second_factor_required":
@@ -3652,6 +3658,8 @@ export const ERROR_CATALOG = {
         "Шаблон с таким названием уже есть. Выберите другое название.",
       "traeger.report_template_not_found":
         "Этого шаблона больше нет. Обновите страницу.",
+      "traeger.school_party_creditor_account_conflict":
+        "Этот идентификатор кредитора уже указан для {school_name} с другим счётом. Укажите тот же счёт или проверьте идентификатор.",
       "traeger.shared_document_not_found":
         "Организация больше не открывает доступ к этому документу. Обновите страницу.",
       "workforce.payroll_wage_type_name_taken":
@@ -4319,6 +4327,8 @@ export const ERROR_CATALOG = {
         "Një shabllon me këtë emër ekziston tashmë. Ju lutemi zgjidhni një emër tjetër.",
       "traeger.report_template_not_found":
         "Ky shabllon nuk ekziston më. Ju lutemi rifreskoni faqen.",
+      "traeger.school_party_creditor_account_conflict":
+        "Ky identifikues kreditori është regjistruar tashmë për {school_name} me një llogari tjetër. Vendosni të njëjtën llogari ose kontrolloni identifikuesin.",
       "traeger.shared_document_not_found":
         "Ofruesi nuk e ndan më këtë dokument. Ju lutemi rifreskoni faqen.",
       "workforce.payroll_wage_type_name_taken":
@@ -4971,6 +4981,8 @@ export const ERROR_CATALOG = {
         "Szablon o tej nazwie już istnieje. Wybierz inną nazwę.",
       "traeger.report_template_not_found":
         "Ten szablon już nie istnieje. Odśwież stronę.",
+      "traeger.school_party_creditor_account_conflict":
+        "Ten identyfikator wierzyciela jest już wpisany dla {school_name} z innym kontem. Wpisz to samo konto lub sprawdź identyfikator.",
       "traeger.shared_document_not_found":
         "Organizator nie udostępnia już tego dokumentu. Odśwież stronę.",
       "workforce.payroll_wage_type_name_taken":
@@ -5631,6 +5643,8 @@ export const ERROR_CATALOG = {
         "Bu adda bir şablon zaten var. Lütfen başka bir ad seçin.",
       "traeger.report_template_not_found":
         "Bu şablon artık yok. Lütfen sayfayı yenileyin.",
+      "traeger.school_party_creditor_account_conflict":
+        "Bu alacaklı kimliği {school_name} için başka bir hesapla zaten kayıtlı. Aynı hesabı girin veya alacaklı kimliğini kontrol edin.",
       "traeger.shared_document_not_found":
         "Kurum bu belgeyi artık paylaşmıyor. Lütfen sayfayı yenileyin.",
       "workforce.payroll_wage_type_name_taken":
@@ -6281,6 +6295,8 @@ export const ERROR_CATALOG = {
         "Шаблон із такою назвою вже є. Виберіть іншу назву.",
       "traeger.report_template_not_found":
         "Цього шаблону більше немає. Оновіть сторінку.",
+      "traeger.school_party_creditor_account_conflict":
+        "Цей ідентифікатор кредитора вже вказано для {school_name} з іншим рахунком. Укажіть той самий рахунок або перевірте ідентифікатор.",
       "traeger.shared_document_not_found":
         "Організація більше не відкриває доступ до цього документа. Оновіть сторінку.",
       "workforce.payroll_wage_type_name_taken":

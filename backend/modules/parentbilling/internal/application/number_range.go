@@ -73,20 +73,22 @@ func formatInvoiceNumber(pattern string, year int, sequence int64) string {
 
 // numberRangeStartStore keeps the counters and the start values of the
 // number ranges (#7358). NumberCounters names the state of every counter by
-// service and year; NumberRangeStarts lists every start value of the
+// issuer, service and year; NumberRangeStarts lists every start value of the
 // Träger, the newest first. SetNumberRangeStart checks and writes on the
 // counter row it holds until the transaction ends, so a release waits and
 // then counts from the start value: a value at or below the last issued
 // number writes nothing and answers that number with false.
 type numberRangeStartStore interface {
-	NumberCounters(ctx context.Context, organizationID int64) (map[string]map[int]parentbilling.NumberCounter, error)
+	NumberCounters(ctx context.Context, organizationID int64) (map[parentbilling.NumberCounterKey]parentbilling.NumberCounter, error)
 	NumberRangeStarts(ctx context.Context, organizationID int64) ([]parentbilling.NumberRangeStart, error)
 	SetNumberRangeStart(ctx context.Context, organizationID int64, start parentbilling.NumberRangeStart) (last int64, set bool, err error)
 }
 
-// ListNumberRanges lists the number range of every service with the number
-// the next invoice would get today and the start values the Abrechnung set
-// (#7358). A service without a pattern shows an empty one.
+// ListNumberRanges lists the number range of every service of the Träger
+// and every stored range of a body (#8040) with the number the next
+// invoice would get today and the start values the Abrechnung set (#7358).
+// A service of the Träger without a pattern shows an empty one; which body
+// still needs one, its state says (BillingIssuerStatuses).
 func (b *BillingRuns) ListNumberRanges(ctx context.Context, reviewer parentbilling.HolidayReviewer) ([]parentbilling.NumberRange, error) {
 	if reviewer.OrganizationID <= 0 {
 		return nil, errTraegerRequired
@@ -95,19 +97,39 @@ func (b *BillingRuns) ListNumberRanges(ctx context.Context, reviewer parentbilli
 	if err != nil {
 		return nil, fmt.Errorf("parent billing: list number ranges: %w", err)
 	}
-	// Every service shows its range, an empty one until it is set; the
-	// monthly care has its own (#4684).
+	// Every service of the Träger shows its range, an empty one until it is
+	// set; the monthly care has its own (#4684).
 	for _, service := range []string{parentbilling.ServiceHoliday, parentbilling.ServiceCare} {
-		if !slices.ContainsFunc(ranges, func(numberRange parentbilling.NumberRange) bool { return numberRange.Service == service }) {
+		if !slices.ContainsFunc(ranges, func(numberRange parentbilling.NumberRange) bool {
+			return numberRange.Issuer.Key == "" && numberRange.Service == service
+		}) {
 			ranges = append(ranges, parentbilling.NumberRange{Service: service})
+		}
+	}
+	for i := range ranges {
+		if ranges[i].Issuer.Key == "" {
+			ranges[i].Issuer = parentbilling.TraegerIssuer()
 		}
 	}
 	return b.withCounters(ctx, reviewer, ranges)
 }
 
-// SetNumberRange sets the pattern of a service. Issued invoices keep their
-// numbers; the counter goes on.
-func (b *BillingRuns) SetNumberRange(ctx context.Context, reviewer parentbilling.HolidayReviewer, service, pattern string) (parentbilling.NumberRange, error) {
+// issuer is the issuer with the key, which must be the Träger or a body
+// that bills a school of the Träger now.
+func (b *BillingRuns) issuer(ctx context.Context, organizationID int64, key string) (parentbilling.BillingIssuer, error) {
+	issuers, err := b.kinds.issuers(ctx, organizationID)
+	if err != nil {
+		return parentbilling.BillingIssuer{}, err
+	}
+	if i := slices.IndexFunc(issuers, func(issuer parentbilling.BillingIssuer) bool { return issuer.Key == key }); i >= 0 {
+		return issuers[i], nil
+	}
+	return parentbilling.BillingIssuer{}, validation.Errors{"issuer_key": errors.New("is no issuer of the Träger")}
+}
+
+// SetNumberRange sets the pattern of a service of an issuer. Issued
+// invoices keep their numbers; the counter goes on.
+func (b *BillingRuns) SetNumberRange(ctx context.Context, reviewer parentbilling.HolidayReviewer, issuerKey, service, pattern string) (parentbilling.NumberRange, error) {
 	if reviewer.OrganizationID <= 0 {
 		return parentbilling.NumberRange{}, errTraegerRequired
 	}
@@ -119,20 +141,25 @@ func (b *BillingRuns) SetNumberRange(ctx context.Context, reviewer parentbilling
 	if err != nil {
 		return parentbilling.NumberRange{}, err
 	}
-	numberRange, err := b.store.SetNumberRange(ctx, reviewer.OrganizationID, service, pattern)
+	issuer, err := b.issuer(ctx, reviewer.OrganizationID, strings.TrimSpace(issuerKey))
+	if err != nil {
+		return parentbilling.NumberRange{}, err
+	}
+	numberRange, err := b.store.SetNumberRange(ctx, reviewer.OrganizationID, issuer.Key, service, pattern)
 	if err != nil {
 		return parentbilling.NumberRange{}, fmt.Errorf("parent billing: set number range: %w", err)
 	}
+	numberRange.Issuer = issuer
 	return b.oneWithCounters(ctx, reviewer, numberRange)
 }
 
-// SetNumberRangeStart sets the number the next invoice of the service gets
-// (#7358), on the counter of today. The store checks and writes on the
-// counter row a release holds too, so neither passes the other; a value
-// that is not above the last issued number is refused: numbers stay unique
-// and never go back. The value is added to the history of the range with
-// the account.
-func (b *BillingRuns) SetNumberRangeStart(ctx context.Context, reviewer parentbilling.HolidayReviewer, service string, nextNumber int64) (parentbilling.NumberRange, error) {
+// SetNumberRangeStart sets the number the next invoice of the service of
+// the issuer gets (#7358), on the counter of today. The store checks and
+// writes on the counter row a release holds too, so neither passes the
+// other; a value that is not above the last issued number is refused:
+// numbers stay unique and never go back. The value is added to the history
+// of the range with the account.
+func (b *BillingRuns) SetNumberRangeStart(ctx context.Context, reviewer parentbilling.HolidayReviewer, issuerKey, service string, nextNumber int64) (parentbilling.NumberRange, error) {
 	if reviewer.OrganizationID <= 0 || reviewer.AccountID <= 0 {
 		return parentbilling.NumberRange{}, errTraegerRequired
 	}
@@ -143,14 +170,18 @@ func (b *BillingRuns) SetNumberRangeStart(ctx context.Context, reviewer parentbi
 	if nextNumber < 1 || nextNumber > parentbilling.MaxNumberRangeStart {
 		return parentbilling.NumberRange{}, validation.Errors{"next_number": fmt.Errorf("must be between 1 and %d", parentbilling.MaxNumberRangeStart)}
 	}
-	pattern, err := numberPatternOf(ctx, b.store, reviewer.OrganizationID, service)
+	issuer, err := b.issuer(ctx, reviewer.OrganizationID, strings.TrimSpace(issuerKey))
+	if err != nil {
+		return parentbilling.NumberRange{}, err
+	}
+	pattern, err := numberPatternOf(ctx, b.store, reviewer.OrganizationID, issuer, service)
 	if err != nil {
 		return parentbilling.NumberRange{}, err
 	}
 	issueYear := b.today().Year()
 	year := numberYear(pattern, issueYear)
 	account := reviewer.AccountID
-	start := parentbilling.NumberRangeStart{Service: service, Year: year, NextNumber: nextNumber, AccountID: &account}
+	start := parentbilling.NumberRangeStart{IssuerKey: issuer.Key, Service: service, Year: year, NextNumber: nextNumber, AccountID: &account}
 	last, set, err := b.store.SetNumberRangeStart(ctx, reviewer.OrganizationID, start)
 	if err != nil {
 		return parentbilling.NumberRange{}, fmt.Errorf("parent billing: set the start of the number range: %w", err)
@@ -160,7 +191,7 @@ func (b *BillingRuns) SetNumberRangeStart(ctx context.Context, reviewer parentbi
 			LastSequence: last, LastNumber: formatInvoiceNumber(pattern, issueYear, last),
 		}
 	}
-	return b.oneWithCounters(ctx, reviewer, parentbilling.NumberRange{Service: service, Pattern: pattern})
+	return b.oneWithCounters(ctx, reviewer, parentbilling.NumberRange{Issuer: issuer, Service: service, Pattern: pattern})
 }
 
 func numberedService(service string) bool {
@@ -199,10 +230,10 @@ func (b *BillingRuns) withCounters(ctx context.Context, reviewer parentbilling.H
 			continue
 		}
 		numberRange.Year = numberYear(numberRange.Pattern, issueYear)
-		counter := counters[numberRange.Service][numberRange.Year]
+		counter := counters[parentbilling.NumberCounterKey{IssuerKey: numberRange.Issuer.Key, Service: numberRange.Service, Year: numberRange.Year}]
 		numberRange.LastNumber, numberRange.NextNumber = counter.LastNumber, max(counter.NextNumber, 1)
 		for _, start := range starts {
-			if start.Service == numberRange.Service {
+			if start.IssuerKey == numberRange.Issuer.Key && start.Service == numberRange.Service {
 				numberRange.Starts = append(numberRange.Starts, namedStart(start, *numberRange, issueYear, reviewer, names))
 			}
 		}

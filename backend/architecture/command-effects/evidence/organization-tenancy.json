@@ -145,6 +145,14 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolResponsibilitySettings.SchoolResponsibilityChoices",
+      "binding_digest": "5cad96b2f74564803fc1823dc2bec888",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilitySettings.SchoolResponsibilityChoices",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.NewSettingsSnapshot",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/cmd.tenantExportAudit.BeginTenantExport",
       "binding_digest": "049a8f9d604254cde9914a713a57f233",
       "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TenantExportAudit.BeginTenantExport",

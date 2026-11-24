@@ -123,6 +123,7 @@ type sepaDebitRow struct {
 	MandateLastCollectedOn *calendar.Date `bun:"mandate_last_collected_on,type:date"`
 	MandateCreatedOn       calendar.Date  `bun:"mandate_created_on,type:date"`
 	CreditorNow            string         `bun:"creditor_now"`
+	Issuer                 *issuerRow     `bun:"issuer,type:jsonb"`
 	RecipientFirstName     string         `bun:"recipient_first_name"`
 	RecipientLastName      string         `bun:"recipient_last_name"`
 	IBANMasked             string         `bun:"iban_masked"`
@@ -163,7 +164,7 @@ func (r sepaDebitRow) sealed() parentbilling.SealedSEPADebit {
 		MandateKind: r.MandateKind, MandateSigned: r.MandateSigned, MandateSequence: r.MandateSequence,
 		MandateLastCollectedOn: r.MandateLastCollectedOn, MandateCreatedOn: r.MandateCreatedOn,
 		CreditorNow: r.CreditorNow, Cancelled: r.Cancelled, CreditedCents: r.CreditedCents, OneOffShared: r.OneOffShared,
-		Holder: r.HolderSealed, IBAN: r.IBANSealed,
+		Holder: r.HolderSealed, IBAN: r.IBANSealed, Issuer: r.Issuer.issuer(),
 	}
 }
 
@@ -179,8 +180,11 @@ const (
 	sepaDebitState          = `mandate.revoked_on IS NOT NULL AS mandate_revoked, mandate.kind AS mandate_kind,
 	mandate.signed_on AS mandate_signed, mandate.sequence AS mandate_sequence, mandate.last_collected_on AS mandate_last_collected_on,
 	(mandate.created_at AT TIME ZONE 'Europe/Berlin')::date AS mandate_created_on,
-	COALESCE((SELECT creditor.creditor_id FROM parent_billing.sepa_creditors AS creditor
-		WHERE creditor.organization_id = ?0), '') AS creditor_now,
+	(CASE WHEN COALESCE(care.issuer_key, holiday.issuer_key, notice.issuer_key, '') <> ''
+		THEN COALESCE(care.issuer_key, holiday.issuer_key, notice.issuer_key)
+		ELSE COALESCE((SELECT creditor.creditor_id FROM parent_billing.sepa_creditors AS creditor
+			WHERE creditor.organization_id = ?0), '') END) AS creditor_now,
+	COALESCE(care.issuer, holiday.issuer, notice.issuer) AS issuer,
 	COALESCE(care.recipient_first_name, holiday.recipient_first_name, notice.recipient->>'first_name', '') AS recipient_first_name,
 	COALESCE(care.recipient_last_name, holiday.recipient_last_name, notice.recipient->>'last_name', '') AS recipient_last_name,
 	COALESCE(care.debtor_iban_masked, holiday.debtor_iban_masked, mandate.iban_masked) AS iban_masked,
@@ -385,7 +389,8 @@ const (
 )
 
 // sepaNoticeRatesSQL reads per notice (?1) its recipient and the mandate
-// in force of its family with the creditor identifier now; ?2 adds the
+// in force of its family for the creditor of the notice's issuer with that
+// creditor identifier (#8040); ?2 adds the
 // sealed account. A one-off mandate another uncancelled debit already
 // claims is marked.
 const (
@@ -393,10 +398,9 @@ const (
 	COALESCE(notice.recipient->>'last_name', '') AS recipient_last_name, mandate.id AS mandate_id,
 	mandate.care_contract_id AS mandate_contract_id, mandate.reference, mandate.signed_on, mandate.kind, mandate.sequence,
 	mandate.creditor_id, mandate.last_collected_on, mandate.iban_masked, mandate.bic, mandate.updated_at,
-	(mandate.created_at AT TIME ZONE 'Europe/Berlin')::date AS mandate_created_on, `
+	(mandate.created_at AT TIME ZONE 'Europe/Berlin')::date AS mandate_created_on, notice.issuer, `
 	sepaNoticeRatesAccount = `mandate.account_holder_sealed, mandate.iban_sealed, `
-	sepaNoticeRatesTail    = `COALESCE((SELECT creditor.creditor_id FROM parent_billing.sepa_creditors AS creditor
-		WHERE creditor.organization_id = ?0), '') AS creditor_now,
+	sepaNoticeRatesTail    = sepaNoticeCreditor + ` AS creditor_now,
 	(mandate.kind = 'one_off' AND EXISTS (SELECT 1 FROM parent_billing.sepa_debits AS other
 		WHERE other.organization_id = ?0 AND other.mandate_id = mandate.id AND (other.status = 'submitted' OR NOT (
 			EXISTS (SELECT 1 FROM parent_billing.care_invoice_cancellations AS cancellation
@@ -405,10 +409,17 @@ const (
 				WHERE correction.organization_id = ?0 AND correction.reference_document_id = other.document_id
 					AND correction.kind = 'cancellation'))))) AS one_off_claimed
 FROM parent_billing.care_notices AS notice
-LEFT JOIN parent_billing.sepa_mandates AS mandate
-	ON mandate.organization_id = ?0 AND mandate.family_email = notice.family_email AND mandate.revoked_on IS NULL
+LEFT JOIN LATERAL (SELECT candidate.* FROM parent_billing.sepa_mandates AS candidate
+	WHERE candidate.organization_id = ?0 AND candidate.family_email = notice.family_email AND candidate.revoked_on IS NULL
+	ORDER BY candidate.creditor_id = ` + sepaNoticeCreditor + ` DESC, candidate.id LIMIT 1) AS mandate ON true
 WHERE notice.organization_id = ?0 AND notice.id = ANY(?1)
 ORDER BY notice.id`
+	// sepaNoticeCreditor is the creditor an installment is collected for:
+	// the issuer of its notice, the Träger's creditor identifier for the
+	// Träger (#8040). The family's mandate for it comes first; another
+	// mandate in force names why the installment stays out.
+	sepaNoticeCreditor = `(CASE WHEN notice.issuer_key <> '' THEN notice.issuer_key ELSE COALESCE((SELECT creditor.creditor_id
+		FROM parent_billing.sepa_creditors AS creditor WHERE creditor.organization_id = ?0), '') END)`
 	sepaNoticeRatesSQL       = sepaNoticeRatesHead + sepaNoticeRatesTail
 	sepaNoticeRatesSealedSQL = sepaNoticeRatesHead + sepaNoticeRatesAccount + sepaNoticeRatesTail
 )
@@ -433,6 +444,7 @@ type sepaNoticeRateRow struct {
 	IBANSealed         []byte         `bun:"iban_sealed"`
 	CreditorNow        string         `bun:"creditor_now"`
 	OneOffClaimed      bool           `bun:"one_off_claimed"`
+	Issuer             *issuerRow     `bun:"issuer,type:jsonb"`
 }
 
 // SEPANoticeRates reads the recipient and the family's mandate in force of
@@ -459,7 +471,8 @@ func (s *Store) SEPANoticeRates(ctx context.Context, organizationID int64, notic
 	}
 	for _, row := range rows {
 		rate := parentbilling.SEPANoticeRate{RecipientName: strings.TrimSpace(row.RecipientFirstName + " " + row.RecipientLastName),
-			CreditorNow: row.CreditorNow, OneOffClaimed: row.OneOffClaimed, Holder: row.HolderSealed, IBAN: row.IBANSealed}
+			CreditorNow: row.CreditorNow, OneOffClaimed: row.OneOffClaimed, Holder: row.HolderSealed, IBAN: row.IBANSealed,
+			Issuer: row.Issuer.issuer()}
 		if row.MandateID != nil {
 			rate.Mandate = &parentbilling.SEPAMandate{ID: ident.ID(*row.MandateID), ContractID: ident.ID(derefInt(row.MandateContractID)),
 				Reference: textOf(row.Reference), SignedOn: derefDate(row.SignedOn), Kind: textOf(row.Kind),

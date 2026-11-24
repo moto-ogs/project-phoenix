@@ -16,6 +16,7 @@ import {
   success,
 } from "./runtime";
 import {
+  BillingIssuerSchema,
   BillingLetterSeriesSchema,
   CareBilledChildSchema,
   CareDuplicateSchema,
@@ -26,6 +27,7 @@ import {
   InvoicePaymentSchema,
   PostalAddressSchema,
   RunDueDateSchema,
+  type BillingIssuer,
   type CareBilledChild,
   type CareDuplicate,
   type CareJoinedChild,
@@ -326,6 +328,7 @@ export interface CareInvoice {
   exclusion?: CareExclusion;
   recipient: CareRecipient;
   document_kind?: string;
+  issuer?: BillingIssuer;
   family_email: string;
   debtor_number?: string;
   payment: InvoicePayment | null;
@@ -350,6 +353,7 @@ export const CareInvoiceSchema: z.ZodType<CareInvoice, unknown> = object<CareInv
   exclusion: optional(CareExclusionSchema),
   recipient: CareRecipientSchema,
   document_kind: optional(str),
+  issuer: optional(BillingIssuerSchema),
   family_email: str,
   debtor_number: optional(str),
   payment: nullable(InvoicePaymentSchema),
@@ -522,6 +526,7 @@ export interface CareRunDetail {
   preview_cents: number;
   number_pattern: string;
   number_range_set: boolean;
+  number_range_missing_for?: BillingIssuer;
   meal_gaps: CareMealGap[] | null;
   meal_unbilled: CareMealUnbilled[] | null;
   meal_changed: CareMealChanged[] | null;
@@ -567,6 +572,7 @@ export const CareRunDetailSchema: z.ZodType<CareRunDetail, unknown> = object<Car
   preview_cents: safeInt,
   number_pattern: str,
   number_range_set: bool,
+  number_range_missing_for: optional(BillingIssuerSchema),
   meal_gaps: nullable(arr(CareMealGapSchema)),
   meal_unbilled: nullable(arr(CareMealUnbilledSchema)),
   meal_changed: nullable(arr(CareMealChangedSchema)),

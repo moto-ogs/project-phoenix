@@ -272,6 +272,9 @@ type CareRecipient struct {
 	// Träger-Büro joined the contract to (#7161, ADR 0319), zero when it
 	// leads or is alone; never on the wire.
 	FamilyContractID int64 `json:"-"`
+	// SchoolID is the place of care of the contract, whose issuer a
+	// mandate for the contract is given to (#8040); never on the wire.
+	SchoolID int64 `json:"-"`
 }
 
 // FamilyOf is the family of the contract contractID whose party r is
@@ -320,6 +323,10 @@ type CareInvoice struct {
 	// draft carries the kind its release would freeze now, so the
 	// fingerprint of the review covers it.
 	DocumentKind string `json:"document_kind,omitempty"`
+	// Issuer is the Schulträger or the Gemeinde that issues the invoice
+	// (#8040, ADR 0322), nil for the Träger; an issued invoice keeps the one
+	// its release froze.
+	Issuer *BillingIssuer `json:"issuer,omitempty"`
 	// FamilyEmail is the family of the invoice: the mail address of the
 	// contract party, whoever pays (#4689). The sibling rules count by it.
 	FamilyEmail string `json:"family_email"`
@@ -527,6 +534,9 @@ type CareRunDetail struct {
 	PreviewCents   int64               `json:"preview_cents" contract:"number"`
 	NumberPattern  string              `json:"number_pattern"`
 	NumberRangeSet bool                `json:"number_range_set"`
+	// NumberRangeMissingFor names the issuer without a pattern (#8040);
+	// the release refuses while it is set.
+	NumberRangeMissingFor *BillingIssuer `json:"number_range_missing_for,omitempty"`
 	// MealGaps and MealUnbilled are the Mensa of a calculated run (#4686):
 	// the ended months a school has not released and the released months
 	// of children the run does not bill.

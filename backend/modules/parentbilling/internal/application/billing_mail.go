@@ -136,7 +136,7 @@ func (m *BillingLetterMail) sendNextBillingLetter(ctx context.Context, reviewer 
 			return "", err
 		}
 	}
-	if _, err := m.send(ctx, reviewer, current, document, file, traeger); err != nil {
+	if _, err := m.send(ctx, reviewer, current, document, file, mailSenderOf(document.Issuer, traeger)); err != nil {
 		return "", err
 	}
 	return traeger, nil
@@ -188,7 +188,7 @@ func (m *BillingLetterMail) MailBillingLetter(ctx context.Context, reviewer pare
 	if err != nil {
 		return parentbilling.BillingLetterMailing{}, err
 	}
-	mailing, err := m.send(ctx, reviewer, current, document, file, traeger)
+	mailing, err := m.send(ctx, reviewer, current, document, file, mailSenderOf(document.Issuer, traeger))
 	if err != nil {
 		return parentbilling.BillingLetterMailing{}, err
 	}

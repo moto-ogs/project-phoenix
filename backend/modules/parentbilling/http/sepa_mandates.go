@@ -250,7 +250,12 @@ func mandateKey(w http.ResponseWriter, r *http.Request) (capability.HolidayRevie
 // names the field only, never the value: the request may carry an IBAN.
 func renderMandateError(w http.ResponseWriter, r *http.Request, err error, invalidCode string) {
 	var fields validation.Errors
+	var creditorConflict *capability.IssuerCreditorConflictError
 	switch {
+	case errors.As(err, &creditorConflict):
+		// A body bills with this creditor identifier (#8040).
+		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeParentBillingIssuerCreditorIsTraegers,
+			map[string]any{"issuer_key": creditorConflict.Issuer.Key, "issuer_name": creditorConflict.Issuer.Name}))
 	case errors.As(err, &fields):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, invalidCode))
 	case errors.Is(err, capability.ErrSEPAMandateNotFound):

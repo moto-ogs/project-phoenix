@@ -18,6 +18,10 @@ import (
 type fingerprintDocument struct {
 	Document    parentbilling.BillingDocument `json:"document"`
 	FamilyEmail string                        `json:"family_email"`
+	// Issuer is what the letter prints of a body that issues the document
+	// (#8040); absent for the Träger, so a run without a body keeps its
+	// fingerprint.
+	Issuer *issuerFingerprint `json:"issuer,omitempty"`
 }
 
 // holidayPreviewFingerprint names the content of the preview of a holiday
@@ -33,7 +37,7 @@ func holidayPreviewFingerprint(run parentbilling.BillingRun, current preview, do
 	documents := make([]fingerprintDocument, len(current.documents))
 	for i, document := range current.documents {
 		document.DocumentKind = ""
-		documents[i] = fingerprintDocument{Document: document, FamilyEmail: document.FamilyEmail}
+		documents[i] = fingerprintDocument{Document: document, FamilyEmail: document.FamilyEmail, Issuer: fingerprintIssuer(document.Issuer)}
 	}
 	return readstate.Fingerprint(struct {
 		Run          int64                      `json:"run"`

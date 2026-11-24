@@ -221,7 +221,7 @@ func noticeHead(drafts map[calendar.Date]parentbilling.CareInvoice, months []cal
 		notice.Amends = &parentbilling.CareNoticeReference{ID: previous.ID, Number: previous.Number, IssuedOn: previous.IssuedOn}
 		notice.ContractID, notice.SchoolID, notice.SchoolName = previous.ContractID, previous.SchoolID, previous.SchoolName
 		notice.ChildFirstName, notice.ChildLastName, notice.StudentID = previous.ChildFirstName, previous.ChildLastName, previous.StudentID
-		notice.Recipient, notice.FamilyEmail = previous.Recipient, previous.FamilyEmail
+		notice.Recipient, notice.FamilyEmail, notice.Issuer = previous.Recipient, previous.FamilyEmail, previous.Issuer
 	}
 	for i := len(months) - 1; i >= 0; i-- {
 		draft, ok := drafts[months[i]]
@@ -231,6 +231,12 @@ func noticeHead(drafts map[calendar.Date]parentbilling.CareInvoice, months []cal
 		notice.ContractID, notice.SchoolID, notice.SchoolName = draft.ContractID, draft.SchoolID, draft.SchoolName
 		notice.ChildFirstName, notice.ChildLastName, notice.StudentID = draft.ChildFirstName, draft.ChildLastName, draft.StudentID
 		notice.Recipient, notice.FamilyEmail = draft.Recipient, draft.FamilyEmail
+		// The issuer of the school issues the notice (#8040); a change
+		// notice keeps the issuer of the notice it amends, as a Storno
+		// keeps its invoice's.
+		if !amends {
+			notice.Issuer = draft.Issuer
+		}
 		break
 	}
 	return notice
