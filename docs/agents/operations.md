@@ -982,11 +982,9 @@ cd frontend && pnpm run test:screenshots        # pipeline test against the runn
   plus the same file as `product-screenshots.zip`: the newest images are always
   at `https://github.com/moto-ogs/project-phoenix/releases/latest/download/product-screenshots.zip`
   (PyrePortal does the same for the kiosk). A rerun of the same version replaces
-  both ZIPs. Pull requests into `main` that
-  touch the pipeline run the capture without the release asset; pull requests
-  into `development` do not run it. To test a pipeline change on a feature
-  branch, start it by hand (`gh workflow run product-screenshots.yml --ref
-  <branch>`).
+  both ZIPs. Pull requests do not trigger capture. To test a pipeline change
+  on a feature branch, start it by hand (`gh workflow run
+  product-screenshots.yml --ref <branch>`).
 - Only Berlin weekdays: on a weekend the run stops before seeding; start it by
   hand on the next weekday from the release tag.
 - A broken shot fails the capture job, and the release-asset job never starts,
