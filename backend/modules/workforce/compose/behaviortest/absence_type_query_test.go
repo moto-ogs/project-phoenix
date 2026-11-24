@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking"
+	"github.com/moto-ogs/project-phoenix/modules/workforce/workforcetest"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -35,7 +36,7 @@ func TestAbsenceTypeReaderUsesNativeOwner(t *testing.T) {
 	_, err = reader.ResolveForAbsence(ctx, typ.ID)
 	require.NoError(t, err)
 	inactive := false
-	_, err = module.Catalog.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: typ.ID, IsActive: &inactive})
+	_, err = module.Catalog.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: typ.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, module.Catalog, typ.ID), IsActive: &inactive})
 	require.NoError(t, err)
 	value, err = reader.ResolveForAbsence(ctx, typ.ID)
 	require.EqualError(t, err, "diese Abwesenheitsart ist deaktiviert")

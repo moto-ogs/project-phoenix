@@ -12,6 +12,7 @@ import (
 	directoryPorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -75,6 +76,7 @@ func TestModuleRunsCategoryLifecycle(t *testing.T) {
 
 	updated, err := module.UpdateCategory(ctx, timetable.UpdateCategory{
 		ID: created.ID, Name: "Holzwerken", Description: "Werkstatt", Color: "#123456",
+		ExpectedVersion: timetable.CategoryVersion(created),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "Holzwerken", updated.Name)
@@ -574,17 +576,95 @@ func TestCategoryShiftLinksValidateBeforeMutation(t *testing.T) {
 	category := createCategory(t, ctx, module, "Dienstplan")
 	shiftTypeID := insertShiftType(t, ctx, "Betreuung")
 
-	require.NoError(t, module.SetCategoryShiftTypeLinks(ctx, shiftTypeID, []int64{category.ID, category.ID}))
+	require.NoError(t, module.SetCategoryShiftTypeLinks(ctx, shiftTypeID, []int64{category.ID, category.ID},
+		map[int64]string{category.ID: timetable.CategoryShiftTypeLinkVersion(category)}))
 	linked, err := module.FindCategory(ctx, category.ID)
 	require.NoError(t, err)
 	require.NotNil(t, linked.ShiftTypeID)
 	assert.Equal(t, shiftTypeID, *linked.ShiftTypeID)
 
-	err = module.SetCategoryShiftTypeLinks(ctx, shiftTypeID, []int64{category.ID, 9_223_372_036_854_775_000})
+	err = module.SetCategoryShiftTypeLinks(ctx, shiftTypeID, []int64{category.ID, 9_223_372_036_854_775_000}, map[int64]string{})
 	require.ErrorIs(t, err, timetable.ErrUnknownCategoryIDs)
 	stillLinked, findErr := module.FindCategory(ctx, category.ID)
 	require.NoError(t, findErr)
 	require.NotNil(t, stillLinked.ShiftTypeID, "failed validation must not clear existing links")
+}
+
+// An edit carries the version of the category its form read (ADR 0311): a
+// colleague's edit in between, or no version, refuses it and writes
+// nothing. A new link to a shift type is no part of the form and refuses
+// nothing.
+func TestModuleRefusesACategoryChangedSinceRead(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module := buildModule(t, db)
+	ctx := testpkg.Ctx(t)
+	read := createCategory(t, ctx, module, "Werken")
+
+	colleague, err := module.UpdateCategory(ctx, timetable.UpdateCategory{
+		ID: read.ID, Name: "Holzwerken", Color: "#abc", ExpectedVersion: timetable.CategoryVersion(read),
+	})
+	require.NoError(t, err)
+	for name, version := range map[string]string{"outdated": timetable.CategoryVersion(read), "missing": ""} {
+		_, err = module.UpdateCategory(ctx, timetable.UpdateCategory{ID: read.ID, Name: "Überschrieben", Color: "#abc", ExpectedVersion: version})
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+	}
+	stored, err := module.FindCategory(ctx, read.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "Holzwerken", stored.Name, "a refused edit writes nothing")
+
+	shiftTypeID := insertShiftType(t, ctx, "Betreuung")
+	require.NoError(t, module.SetCategoryShiftTypeLinks(ctx, shiftTypeID, []int64{read.ID},
+		map[int64]string{read.ID: timetable.CategoryShiftTypeLinkVersion(stored)}))
+	updated, err := module.UpdateCategory(ctx, timetable.UpdateCategory{
+		ID: read.ID, Name: "Neu gelesen", Color: "#abc", ExpectedVersion: timetable.CategoryVersion(colleague),
+	})
+	require.NoError(t, err, "a link to a shift type leaves the version of the category's form")
+	assert.Equal(t, "Neu gelesen", updated.Name)
+}
+
+// A shift-type edit sends the link token of every category it read (ADR
+// 0311): a category whose link it changes and that a colleague linked or
+// unlinked since, or one without a token, refuses the whole write; the
+// current tokens save. A category whose link stays needs no token.
+func TestModuleRefusesShiftTypeLinksChangedSinceRead(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module := buildModule(t, db)
+	ctx := testpkg.Ctx(t)
+	first := createCategory(t, ctx, module, "Essen")
+	second := createCategory(t, ctx, module, "Lernzeit")
+	shiftTypeID := insertShiftType(t, ctx, "Betreuung")
+	read := linkTokens(t, ctx, module)
+
+	// A colleague links the second category to the type.
+	require.NoError(t, module.SetCategoryShiftTypeLinks(ctx, shiftTypeID, []int64{second.ID}, read))
+	err := module.SetCategoryShiftTypeLinks(ctx, shiftTypeID, []int64{first.ID}, read)
+	require.ErrorIs(t, err, readstate.ErrChanged, "the form never showed the colleague's link it would drop")
+	err = module.SetCategoryShiftTypeLinks(ctx, shiftTypeID, []int64{first.ID, second.ID}, map[int64]string{})
+	require.ErrorIs(t, err, readstate.ErrChanged, "a newly linked category needs its token")
+	storedFirst, err := module.FindCategory(ctx, first.ID)
+	require.NoError(t, err)
+	assert.Nil(t, storedFirst.ShiftTypeID, "a refused write links nothing")
+
+	current := linkTokens(t, ctx, module)
+	require.NoError(t, module.SetCategoryShiftTypeLinks(ctx, shiftTypeID, []int64{first.ID, second.ID},
+		map[int64]string{first.ID: current[first.ID]}), "the kept link needs no token")
+	storedFirst, err = module.FindCategory(ctx, first.ID)
+	require.NoError(t, err)
+	require.NotNil(t, storedFirst.ShiftTypeID)
+	assert.Equal(t, shiftTypeID, *storedFirst.ShiftTypeID)
+}
+
+func linkTokens(t *testing.T, ctx context.Context, module timetable.Owner) map[int64]string {
+	t.Helper()
+	categories, err := module.ListCategories(ctx)
+	require.NoError(t, err)
+	tokens := make(map[int64]string, len(categories))
+	for _, category := range categories {
+		tokens[category.ID] = timetable.CategoryShiftTypeLinkVersion(category)
+	}
+	return tokens
 }
 
 func insertShiftType(t *testing.T, ctx context.Context, name string) int64 {

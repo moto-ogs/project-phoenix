@@ -35,9 +35,15 @@ type ActivityCategoryResponse struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 	// UsageCount is how many Aktivitäten/Termin-Vorlagen reference the
 	// category. Only populated by the category list endpoint; nil elsewhere.
-	UsageCount *int      `json:"usage_count,omitempty"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	UsageCount *int `json:"usage_count,omitempty"`
+	// Version is the token an edit of the category sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version,omitempty"`
+	// ShiftTypeLinkVersion is the token of the category's link to a shift
+	// type; a shift-type edit sends it per category it read.
+	ShiftTypeLinkVersion string    `json:"shift_type_link_version,omitempty"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
 }
 
 // ActivitySupervisorResponse represents a supervisor in activity response

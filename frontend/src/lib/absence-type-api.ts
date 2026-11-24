@@ -45,6 +45,8 @@ export interface AbsenceType {
   readonly offered: boolean;
   /** Höchstens so viele Tage je Person und Jahr an dieser Schule. */
   readonly schoolLimitDays: number | null;
+  /** The stored state an edit sends back as `expected_version` (ADR 0311). */
+  readonly version: string;
 }
 
 function mapAbsenceType(data: AbsenceTypeResponse): AbsenceType {
@@ -59,6 +61,7 @@ function mapAbsenceType(data: AbsenceTypeResponse): AbsenceType {
     keptByTraeger: data.kept_by_traeger,
     offered: data.offered ?? true,
     schoolLimitDays: data.school_limit_days,
+    version: data.version,
   };
 }
 
@@ -95,10 +98,12 @@ class AbsenceTypeService {
   /**
    * Renames and/or (de)activates. Omitted fields stay as they are. A type of
    * the Träger takes only `offered` and `schoolLimitDays` (null removes the
-   * limit).
+   * limit). `expectedVersion` is the version of the type the change was read
+   * from (ADR 0311).
    */
   async updateAbsenceType(
     id: string,
+    expectedVersion: string,
     changes: {
       name?: string;
       isActive?: boolean;
@@ -113,6 +118,7 @@ class AbsenceTypeService {
       params: { id },
       errorMessage: "Abwesenheitsart konnte nicht gespeichert werden",
       body: {
+        expected_version: expectedVersion,
         ...(changes.name !== undefined ? { name: changes.name } : {}),
         ...(changes.isActive !== undefined
           ? { is_active: changes.isActive }

@@ -22,6 +22,9 @@ type Store interface {
 	PreviewStaffOffboarding(context.Context, int64, string) (domain.OffboardingSnapshot, domain.OperationStats, error)
 	ListWorkTimeModels(context.Context) ([]domain.WorkTimeModel, domain.OperationStats, error)
 	FindWorkTimeModel(context.Context, int64) (domain.WorkTimeModel, bool, domain.OperationStats, error)
+	// LockWorkTimeModel takes the row lock an edit of the template writes
+	// under; found=false for an unknown template.
+	LockWorkTimeModel(ctx context.Context, id int64) (bool, domain.OperationStats, error)
 	ListWorkTimeModelsByIDs(context.Context, []int64) ([]domain.WorkTimeModel, domain.OperationStats, error)
 	CreateWorkTimeModel(context.Context, domain.WorkTimeModelFields) (domain.WorkTimeModel, domain.OperationStats, error)
 	// UpdateWorkTimeModel replaces the template metadata and every entry.
@@ -180,6 +183,9 @@ type StaffRecordStore interface {
 	EnsureStandardQualificationTypes(context.Context, []domain.QualificationType) (domain.OperationStats, error)
 	InsertQualificationType(context.Context, domain.QualificationType) (domain.QualificationType, domain.OperationStats, error)
 	UpdateQualificationType(context.Context, domain.QualificationType) (domain.QualificationType, bool, domain.OperationStats, error)
+	// LockQualificationType takes the row lock an update of the kind writes
+	// under; found=false for an unknown kind.
+	LockQualificationType(ctx context.Context, id int64) (bool, domain.OperationStats, error)
 
 	FindStaffFinancialData(ctx context.Context, staffID int64) (domain.StaffFinancialData, bool, domain.OperationStats, error)
 	CreateStaffFinancialData(context.Context, domain.StaffFinancialData) (domain.StaffFinancialData, domain.OperationStats, error)
@@ -266,6 +272,10 @@ type ShiftTypeRetirementStore interface {
 	// concurrent shift or series write naming the type waits on its FK
 	// check. A missing type reports found=false.
 	LockShiftType(context.Context, int64) (bool, domain.OperationStats, error)
+	// LockShiftTypeForEdit holds the type row FOR NO KEY UPDATE until the
+	// transaction ends: concurrent edits wait, a shift or series naming the
+	// type does not. A missing type reports found=false.
+	LockShiftTypeForEdit(context.Context, int64) (bool, domain.OperationStats, error)
 	// ArchiveShiftType stamps archived_at once; a missing type reports
 	// found=false.
 	ArchiveShiftType(context.Context, int64) (domain.ShiftType, bool, domain.OperationStats, error)

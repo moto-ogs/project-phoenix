@@ -82,6 +82,7 @@ const sickLeave: AbsenceType = {
   keptByTraeger: false,
   offered: true,
   schoolLimitDays: null,
+  version: "v1",
 };
 
 function friday(id: string, day: string): StaffAbsenceRow {

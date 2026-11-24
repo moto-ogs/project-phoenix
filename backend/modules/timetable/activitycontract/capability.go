@@ -35,8 +35,10 @@ type CategoryOperations interface {
 	// RestoreCategory un-archives a category.
 	RestoreCategory(ctx context.Context, id int64) (*Category, error)
 	// SetCategoryShiftTypeLinks maps categories to a Dienstplan shift type and
-	// clears the mapping on de-selected ones (#1837 follow-up).
-	SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64) error
+	// clears the mapping on de-selected ones (#1837 follow-up). expected holds
+	// the link token per category the caller read (ADR 0311); see
+	// timetable.CategoryCommand.
+	SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64, expected map[int64]string) error
 }
 
 type GroupOperations interface {

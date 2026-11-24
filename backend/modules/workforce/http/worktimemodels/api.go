@@ -111,6 +111,10 @@ type ModelRequest struct {
 	RotationLength     int            `json:"rotation_length"`
 	RotationAnchorDate string         `json:"rotation_anchor_date"`
 	Entries            []EntryRequest `json:"entries"`
+	// ExpectedVersion is the version of the template an edit replaces (ADR
+	// 0311); an edit of a template changed since is refused. A create
+	// ignores it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // ModelResponse mirrors the model with its entries.
@@ -121,6 +125,9 @@ type ModelResponse struct {
 	RotationAnchorDate string          `json:"rotation_anchor_date"`
 	Entries            []EntryResponse `json:"entries"`
 	WeeklyTotals       []int           `json:"weekly_totals"`
+	// Version is the token an edit sends back as expected_version (ADR
+	// 0311).
+	Version string `json:"version"`
 	// ArchivedAt is present while the template is not offered for new
 	// assignments (#6891).
 	ArchivedAt *string `json:"archived_at,omitempty"`
@@ -258,7 +265,7 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 		rs.runtime.Failure(w, r, FailureInvalid, err)
 		return
 	}
-	saved, err := rs.models.UpdateWorkTimeModel(r.Context(), workforce.UpdateWorkTimeModel{ID: id, WorkTimeModelFields: fields})
+	saved, err := rs.models.UpdateWorkTimeModel(r.Context(), workforce.UpdateWorkTimeModel{ID: id, WorkTimeModelFields: fields, ExpectedVersion: req.ExpectedVersion})
 	if err != nil {
 		rs.renderCapabilityError(w, r, err)
 		return
@@ -412,6 +419,7 @@ func toResponse(m workforce.WorkTimeModel) (ModelResponse, error) {
 		RotationAnchorDate: rotationAnchor(m.RotationAnchorDate),
 		Entries:            entries,
 		WeeklyTotals:       totals,
+		Version:            workforce.WorkTimeModelVersion(m),
 		ArchivedAt:         archivedAt,
 	}, nil
 }

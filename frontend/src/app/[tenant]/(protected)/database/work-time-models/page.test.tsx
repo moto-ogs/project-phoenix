@@ -78,10 +78,12 @@ const FULL_TIME = {
   weeklyTotals: [2400],
   archivedAt: null,
   assignedStaffCount: 2,
+  version: "v7",
 };
 const OLD = {
   ...FULL_TIME,
   id: "8",
+  version: "v8",
   name: "Altvertrag",
   archivedAt: "2026-09-01T08:00:00Z",
   assignedStaffCount: 0,
@@ -154,6 +156,8 @@ describe("Arbeitszeitmodelle (#6891)", () => {
     ).toBeInTheDocument();
   });
 
+  // ADR 0311: das Speichern schickt den Stand der Vorlage, aus dem das
+  // Formular stammt.
   it("saves edited hours with the kept anchor", async () => {
     render(<WorkTimeModelsPage />);
 
@@ -163,19 +167,23 @@ describe("Arbeitszeitmodelle (#6891)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(workTimeModelService.update).toHaveBeenCalledWith("7", {
-        name: "Vollzeit",
-        rotationLength: 1,
-        rotationAnchorDate: "2026-09-07",
-        entries: [
-          ...[0, 1, 2, 3].map((dayOfWeek) => ({
-            weekIndex: 0,
-            dayOfWeek,
-            targetMinutes: 480,
-          })),
-          { weekIndex: 0, dayOfWeek: 4, targetMinutes: 240 },
-        ],
-      }),
+      expect(workTimeModelService.update).toHaveBeenCalledWith(
+        "7",
+        {
+          name: "Vollzeit",
+          rotationLength: 1,
+          rotationAnchorDate: "2026-09-07",
+          entries: [
+            ...[0, 1, 2, 3].map((dayOfWeek) => ({
+              weekIndex: 0,
+              dayOfWeek,
+              targetMinutes: 480,
+            })),
+            { weekIndex: 0, dayOfWeek: 4, targetMinutes: 240 },
+          ],
+        },
+        "v7",
+      ),
     );
   });
 

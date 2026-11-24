@@ -30,7 +30,7 @@ func (s *Service) StaffWorkTimeFacts(ctx context.Context) ([]workforce.StaffWork
 
 // AssignWorkTimeModel binds one offered template to several staff members at
 // once (#6921). Everything happens in one unit of work: the per-staff balance
-// gates and the staff rows are taken ascending, as refreshAssignedSchedules
+// gates and the staff rows are taken ascending, as lockAssignedStaff
 // and a single assignment take them, so concurrent writers cannot deadlock.
 // Members already on the template keep their schedule. Either every other
 // member gets the new version or none does.

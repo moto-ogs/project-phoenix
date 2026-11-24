@@ -171,6 +171,7 @@ const config: CatalogConfig<QualificationType> = {
     staffQualificationService.updateType(
       type.id,
       toInput(values, type.archived),
+      type.version,
     ),
   retire: {
     menuLabel: "Archivieren",
@@ -180,13 +181,21 @@ const config: CatalogConfig<QualificationType> = {
     describe: (type) =>
       `„${type.name}“ steht bei neuen Nachweisen nicht mehr zur Auswahl. Eingetragene Nachweise bleiben, und ihre Erinnerungen kommen weiter.`,
     run: (type) =>
-      staffQualificationService.updateType(type.id, inputOf(type, true)),
+      staffQualificationService.updateType(
+        type.id,
+        inputOf(type, true),
+        type.version,
+      ),
     toast: (type) => `Die Nachweisart „${type.name}“ ist archiviert.`,
   },
   restore: {
     menuLabel: "Wieder anbieten",
     run: (type) =>
-      staffQualificationService.updateType(type.id, inputOf(type, false)),
+      staffQualificationService.updateType(
+        type.id,
+        inputOf(type, false),
+        type.version,
+      ),
     toast: (type) => `Die Nachweisart „${type.name}“ wird wieder angeboten.`,
   },
 };

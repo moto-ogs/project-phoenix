@@ -41,6 +41,9 @@ type Store interface {
 	UpdateCategoryIfActive(context.Context, int64, timetable.CreateCategory) (timetable.Category, bool, domain.OperationStats, error)
 	SetCategoryArchivedAt(context.Context, int64, *time.Time) (timetable.Category, bool, domain.OperationStats, error)
 	SetCategoryShiftTypeLinks(context.Context, int64, []int64) (domain.OperationStats, error)
+	// LockShiftTypeLinkCategories locks the categories linked to the shift
+	// type and the given ones, ascending, and reads them after the lock.
+	LockShiftTypeLinkCategories(ctx context.Context, shiftTypeID int64, categoryIDs []int64) ([]timetable.Category, domain.OperationStats, error)
 	SetCategoryShiftTypeID(context.Context, int64, *int64) (domain.OperationStats, error)
 	DeleteCategory(context.Context, int64) (domain.OperationStats, error)
 	LockStudentEnrollmentsForCareExit(context.Context, []int64, string) (domain.OperationStats, error)

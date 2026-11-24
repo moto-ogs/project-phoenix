@@ -100,13 +100,18 @@ describe("absenceTypeService allowances", () => {
     );
 
     await expect(
-      absenceTypeService.updateAbsenceType("12", { carryoverUntil: null }),
+      absenceTypeService.updateAbsenceType("12", "v7", {
+        carryoverUntil: null,
+      }),
     ).resolves.toMatchObject({ carryoverUntil: "03-31" });
     expect(global.fetch).toHaveBeenCalledWith(
       "/api/absence-types/12",
       expect.objectContaining({
         method: "PUT",
-        body: JSON.stringify({ carryover_until: "" }),
+        body: JSON.stringify({
+          expected_version: "v7",
+          carryover_until: "",
+        }),
       }),
     );
   });

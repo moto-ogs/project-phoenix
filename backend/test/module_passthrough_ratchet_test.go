@@ -291,7 +291,9 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0230: the assignments of several staff members in a date
 	// range, one read for the absence plan gaps (+1).
 	// Lowered by #2353: the single-schedule read left with its route (-1).
-	"modules/timetable": 201,
+	// Lowered by #7997: the shift-type link write checks the links its
+	// editor read (-1).
+	"modules/timetable": 200,
 	// Raised by ADR 0141: the payroll dispatch overview (+1).
 	// Lowered by #6847: approving and withdrawing an absence return their
 	// plan cascade instead of forwarding the write (-2).
@@ -300,7 +302,9 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// reopen and the staff the school leaves out onto the public failures (+3).
 	// Raised by ADR 0289: the maintenance seal of the sick note and payslip
 	// files (+1).
-	"modules/workforce":      138,
+	// Lowered by #7997: the scan no longer counts
+	// shiftTypeAdministration.CreateShiftType (-1).
+	"modules/workforce":      137,
 	"workflows/openroommove": 1,
 	// Raised by ADR 0078: the week change of the meal plan adapter.
 	"workflows/parentportal": 18,

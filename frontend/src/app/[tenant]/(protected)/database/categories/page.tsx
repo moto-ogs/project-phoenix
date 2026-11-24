@@ -135,8 +135,12 @@ const config: CatalogConfig<ActivityCategory> = {
   }),
   createDefaults: { name: "", description: "", color: DEFAULT_COLOR },
   create: (values) => categoryService.createCategory(payloadOf(values)),
+  // Der Stand, aus dem das Formular stammt (ADR 0311).
   update: (item, values) =>
-    categoryService.updateCategory(item.id, payloadOf(values)),
+    categoryService.updateCategory(item.id, {
+      ...payloadOf(values),
+      expected_version: item.version,
+    }),
   retire: {
     menuLabel: "Archivieren",
     confirmTitle: "Terminkategorie archivieren?",

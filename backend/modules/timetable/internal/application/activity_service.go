@@ -104,11 +104,11 @@ func (s *ActivityService) ListCategories(ctx context.Context) ([]*activityContra
 // follow-up). Called from the shift-types admin flow; the FK lives on the
 // category side, so the write is owned here. Runs inside the caller's tenant
 // transaction (the shift-types router wires TenantTxMiddleware).
-func (s *ActivityService) SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64) error {
+func (s *ActivityService) SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64, expected map[int64]string) error {
 	if s.timetable == nil {
 		return &activityContract.ActivityError{Op: "set category shift type links", Err: errors.New("category capability is required")}
 	}
-	if err := s.timetable.SetCategoryShiftTypeLinks(ctx, shiftTypeID, categoryIDs); err != nil {
+	if err := s.timetable.SetCategoryShiftTypeLinks(ctx, shiftTypeID, categoryIDs, expected); err != nil {
 		return categoryActivityError("set category shift type links", err)
 	}
 	return nil

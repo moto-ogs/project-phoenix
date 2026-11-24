@@ -1213,13 +1213,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (a shiftTypeAdministration) CreateShiftType(ctx context.Context, input workforce.ShiftTypeInput) (workforce.ShiftType, error) {\n\tshiftType := shiftTypeInputToModel(input)\n\tif input.IsActive == nil {\n\t\tshiftType.IsActive = true\n\t}\n\tsaved, err := a.types.CreateShiftType(ctx, shiftType)\n\tif err != nil {\n\t\treturn workforce.ShiftType{}, mapShiftTypeError(err)\n\t}\n\tif err := a.syncCategoryLinks(ctx, saved.ID, input.CategoryIDs); err != nil {\n\t\treturn workforce.ShiftType{}, err\n\t}\n\treturn shiftTypeToCapability(saved), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/workforce/internal/planning/shiftTypeAdministration.CreateShiftType",
-      "owner": "modules/workforce"
-    },
-    {
-      "build": "production",
       "evidence": "func (a shiftTypeAdministration) DeleteShiftType(ctx context.Context, id int64) (workforce.ShiftTypeRemoval, error) {\n\tremoval, err := a.types.DeleteShiftType(ctx, id)\n\treturn removal, mapShiftTypeError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/planning/shiftTypeAdministration.DeleteShiftType",

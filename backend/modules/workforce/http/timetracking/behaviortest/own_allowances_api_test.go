@@ -133,7 +133,7 @@ func TestOwnAbsenceAllowances_ShowTheLeitungNumbersOfTheCaller(t *testing.T) {
 	route.claim(t, ctx, staff.ID, retired.ID, 2, admin.ID)
 	route.claim(t, ctx, colleague.ID, regeneration.ID, 9, admin.ID)
 	inactive := false
-	_, err := route.capability.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: retired.ID, IsActive: &inactive})
+	_, err := route.capability.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: retired.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, route.capability, retired.ID), IsActive: &inactive})
 	require.NoError(t, err)
 	route.book(t, ctx, staff.ID, regeneration.ID, "2026-03-02", workforce.AbsenceStatusApproved)
 	route.book(t, ctx, staff.ID, regeneration.ID, "2026-09-07", workforce.AbsenceStatusRequested)

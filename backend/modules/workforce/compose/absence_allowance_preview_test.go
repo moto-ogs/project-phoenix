@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/modules/workforce/workforcetest"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -88,7 +89,7 @@ func TestAllowancePreviewDisabledAndForeignTypes(t *testing.T) {
 	require.ErrorIs(t, err, workforce.ErrAbsenceTypeNotFound)
 	assert.Nil(t, preview)
 	enabled := true
-	_, err = svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: typ.ID, AllowanceEnabled: &enabled})
+	_, err = svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: typ.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, svc, typ.ID), AllowanceEnabled: &enabled})
 	require.NoError(t, err)
 	preview, err = svc.PreviewAllowanceBooking(ctx, staff.ID, typ.ID, "2026-12-31", "2027-01-01", false)
 	require.ErrorIs(t, err, workforce.ErrAbsenceTypeAllowanceExceeded)

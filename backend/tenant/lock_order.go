@@ -66,7 +66,8 @@ const (
 	// gate, taken after recurrence.
 	LockGradeTransitions
 	// LockReference is a Timetable row a writer validates and pins before it
-	// plans: catalogue rows (activities.categories, schedule.planning_tracks),
+	// plans: catalogue rows (activities.categories, schedule.planning_tracks,
+	// and Workforce's schedule.shift_types, whose edit links categories),
 	// the template or activity row it edits (activities.groups) and the
 	// spontaneous start's gates. Keys name the table or gate and are not
 	// ordered among themselves. Writers take them after the gates and before

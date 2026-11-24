@@ -676,6 +676,8 @@ export interface WorkTimeModel {
   archivedAt: string | null;
   /** Nur aus `listWithUsage`: so viele Personen erreicht eine Änderung. */
   assignedStaffCount?: number;
+  /** The stored state an edit sends back as `expected_version` (ADR 0311). */
+  version: string;
 }
 
 interface WorkTimeModelInput {
@@ -708,6 +710,7 @@ function mapWorkTimeModel(m: ModelResponse): WorkTimeModel {
     entries: mapScheduleEntries(m.entries),
     weeklyTotals: m.weekly_totals ?? [],
     archivedAt: m.archived_at ?? null,
+    version: m.version,
     ...(m.assigned_staff_count === undefined
       ? {}
       : { assignedStaffCount: m.assigned_staff_count }),
@@ -762,10 +765,15 @@ class WorkTimeModelService {
     return mapWorkTimeModel(model);
   }
 
-  async update(id: string, input: WorkTimeModelInput): Promise<WorkTimeModel> {
+  /** `expectedVersion`: the version of the template the form read (ADR 0311). */
+  async update(
+    id: string,
+    input: WorkTimeModelInput,
+    expectedVersion: string,
+  ): Promise<WorkTimeModel> {
     const model = await bffJson("tenant", "PUT /api/work-time-models/{id}", {
       params: { id },
-      body: workTimeModelBody(input),
+      body: { ...workTimeModelBody(input), expected_version: expectedVersion },
       errorMessage: "Vorlage konnte nicht gespeichert werden",
     });
     return mapWorkTimeModel(model);

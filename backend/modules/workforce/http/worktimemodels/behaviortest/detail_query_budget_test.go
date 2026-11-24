@@ -63,11 +63,14 @@ func TestWorkTimeModelDetailQueryBudgetIsFlat(t *testing.T) {
 			entries = append(entries, entry)
 			totals[index/5] += 60 + index*15
 		}
+		stored, findErr := models.FindWorkTimeModel(testpkg.Ctx(t), created.ID)
+		require.NoError(t, findErr)
 		want, encodeErr := json.Marshal(map[string]any{
 			"status": "success", "message": "Work time model retrieved",
 			"data": map[string]any{
 				"id": strconv.FormatInt(int64(created.ID), 10), "name": created.Name, "rotation_length": 2,
 				"rotation_anchor_date": "2026-10-26", "entries": entries, "weekly_totals": totals,
+				"version": workforce.WorkTimeModelVersion(stored),
 			},
 		})
 		require.NoError(t, encodeErr)
