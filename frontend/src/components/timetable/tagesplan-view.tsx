@@ -30,6 +30,12 @@ import {
   useState,
 } from "react";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  TagesplanApp,
+  TagesplanDayBar,
+  tagesplanAppTitle,
+} from "~/components/timetable/tagesplan-app";
+import { useDeviceContext } from "~/lib/device-context";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { Button } from "~/components/ui/button";
 import { errorAlertActions } from "~/components/ui/form-error-alert";
@@ -448,8 +454,14 @@ function ParallelGroup({
       >
         Gleichzeitig · {span}
       </p>
+      {/* `relative`: Der Scrollbereich ist Bezugsrahmen für absolut
+          positionierte Kinder (das „Mein Block“ für Vorleseprogramme). Ohne
+          ihn entkam der Text der dritten Spalte dem Scrollbereich und machte
+          das Dokument am Telefon breiter als den Bildschirm (#8070). */}
       <div
-        className={scrolls ? "overflow-x-auto overflow-y-hidden" : undefined}
+        className={
+          scrolls ? "relative overflow-x-auto overflow-y-hidden" : undefined
+        }
       >
         <ul
           aria-labelledby={captionId}
@@ -483,6 +495,8 @@ export function TagesplanView() {
   const overviewScope = useOperationalOverviewScope();
   const weekendOpen = useWeekendFollowsFriday();
   const now = useMinuteClock();
+  // App (Telefon, iPad): eigene Tagesliste, Desktop unverändert (#8070).
+  const { isApp } = useDeviceContext();
 
   const today = useBerlinToday();
   const dayParam = searchParams.get("d");
@@ -649,6 +663,62 @@ export function TagesplanView() {
           keepContent: true,
         }
       : listLoadError;
+
+  if (isApp) {
+    // Der Tag steht im Titel; die Statuszeile trägt nur die eingeschränkte
+    // Sicht. Der Tageswechsel klebt als Leiste unter dem Kopf.
+    return (
+      <TenantPage
+        title={tagesplanAppTitle(day, today)}
+        info={TAGESPLAN_INFO}
+        stats={
+          scopeHint ? (
+            <TenantPageStats items={[{ label: scopeHint }]} />
+          ) : undefined
+        }
+        searchSlot={
+          <TagesplanDayBar
+            day={day}
+            today={today}
+            onSelect={goToDay}
+            onPrevious={() =>
+              goToDay(previousCareDayISO(day, weekendOpen, today))
+            }
+            onNext={() => goToDay(nextCareDayISO(day, weekendOpen, today))}
+          />
+        }
+        searchSlotHeight="natural"
+        loading={showSkeleton}
+        error={pageError}
+        empty={
+          instances != null && listError == null && groups.length === 0
+            ? {
+                title: isToday
+                  ? "Heute ist keine Betreuung geplant"
+                  : "An diesem Tag ist keine Betreuung geplant",
+                description:
+                  overviewScope === "all_staff"
+                    ? "Sobald für diesen Tag Termine im Betreuungsplan stehen, siehst du sie hier."
+                    : "Für diesen Tag bist du im Betreuungsplan nicht eingeteilt. Die Einteilung machen die Admins deiner Schule.",
+              }
+            : null
+        }
+      >
+        <TagesplanApp
+          day={day}
+          today={today}
+          nowHHMM={nowHHMM}
+          now={now}
+          groups={groups}
+          nowIndex={nowIndex}
+          showMine={overviewScope === "all_staff"}
+          startBusyId={startBusyId}
+          onOpenSession={openSession}
+          onStart={(entry) => void handleStart(entry)}
+        />
+      </TenantPage>
+    );
+  }
 
   return (
     <TenantPage
