@@ -31,7 +31,11 @@ func init() {
 // home school with every closed visit of a guest. Then it deletes all
 // closed visits of that guest at the hosting school, not only the one just
 // written: visits stored before the parents set the stop at the home school
-// go with the guest's next room change. The probe on
+// go with the guest's next room change. It skips a visit another
+// transaction holds instead of waiting for it: the statement already holds
+// its own, newer visit, and every other visit write locks in id order, so
+// waiting for an older one could deadlock. A skipped visit goes with the
+// next room change. The probe on
 // enrollment.holiday_guests keeps a statement for other children at one
 // index lookup per closed visit.
 const repeatableActiveDiscardStoppedRoomHistorySQL = `
@@ -57,8 +61,11 @@ BEGIN
 				JOIN active.room_history_stops AS s
 					ON s.tenant_id = home.home_school_id AND s.student_id = ANY (home.student_ids))
 	) AS stopped_guest
-	WHERE v.tenant_id = stopped_guest.tenant_id AND v.student_id = stopped_guest.student_id
-		AND v.exit_time IS NOT NULL;
+	WHERE v.id IN (
+		SELECT older.id FROM active.visits AS older
+		WHERE older.tenant_id = stopped_guest.tenant_id AND older.student_id = stopped_guest.student_id
+			AND older.exit_time IS NOT NULL
+		FOR UPDATE SKIP LOCKED);
 	RETURN NULL;
 END;
 $$;

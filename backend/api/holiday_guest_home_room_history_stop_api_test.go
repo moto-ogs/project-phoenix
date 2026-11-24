@@ -92,6 +92,9 @@ func TestRoomHistoryStopOfTheHomeSchoolHoldsForTheHolidayGuestAtOnce(t *testing.
 		}
 		assert.True(t, *ask(f.nord))
 		assert.Nil(t, ask(family.TenantID), "the home school hosts nothing")
+		var unscoped *bool
+		require.NoError(t, f.db.NewRaw(`SELECT enrollment.holiday_guest_home_room_history_stopped(?)`, tom).Scan(t.Context(), &unscoped))
+		assert.Nil(t, unscoped, "without a school in the transaction nobody is told")
 		assert.Nil(t, ask(int64(f.offer.Schools[1].ID)), "another school of the Träger hosts nothing")
 	})
 
