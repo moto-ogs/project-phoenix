@@ -60,6 +60,8 @@ export const routes = {
     pattern: "/caterer/account/mfa/confirm",
     portals: ["caterer"],
     routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    browserPath: "/api/caterer/account/mfa/confirm",
+    browserOwnContract: true,
     plain: true,
     request: requestBody<confirmMFARequest>(),
     response: TokenResponseSchema,

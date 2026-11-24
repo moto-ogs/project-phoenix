@@ -47,7 +47,9 @@ func SecondFactorRouteContracts() []common.RouteContract {
 func SessionRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalCaterer}
 	step := func(pattern string, request, response any, plain bool) common.RouteContract {
+		browserPath := "/api/caterer" + pattern
 		return common.RouteContract{
+			BrowserPath: browserPath, BrowserOwnContract: browserPath != "",
 			Method: "POST", Pattern: pattern, Portals: portals, RouteFile: common.RouteFileSession,
 			Request: request, Response: response, Plain: plain,
 		}

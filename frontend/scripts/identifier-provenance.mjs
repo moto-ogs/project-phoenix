@@ -20,6 +20,8 @@ let project;
 let wireTypes;
 let wireContractText;
 let editorSnapshot;
+const projectsByChecker = new WeakMap();
+const argumentIndexes = new WeakMap();
 
 const inEditor = process.argv.includes("--lsp");
 const generatedContractPath =
@@ -394,19 +396,125 @@ function isArray(collection, checker) {
   );
 }
 
+// Index calls and array callbacks by the declaration they resolve to. The parameter's
+// name and its broad TypeScript string type do not erase the argument's origin.
+function argumentIndex(checker) {
+  let index = argumentIndexes.get(checker);
+  if (index) return index;
+  index = { calls: new Map(), callbacks: new Map() };
+  argumentIndexes.set(checker, index);
+  for (const source of projectsByChecker.get(checker)?.getSourceFiles() ?? []) {
+    if (
+      !source.fileName.startsWith(frontend) ||
+      source.fileName.includes("/node_modules/") ||
+      source.isDeclarationFile ||
+      generatedContractPath.test(source.fileName)
+    )
+      continue;
+    const visit = (node) => {
+      if (ts.isCallExpression(node) && node.arguments.length) {
+        const callee = node.expression;
+        const callable = calledDeclaration(callee, checker);
+        if (callable?.parameters) {
+          const calls = index.calls.get(callable) ?? [];
+          if (calls.length === 0) index.calls.set(callable, calls);
+          calls.push(node.arguments);
+        }
+        const name = methodName(callee);
+        if (
+          name === "from" ||
+          arrayCallbacks.has(name) ||
+          arrayComparators.has(name) ||
+          arrayReducers.has(name)
+        ) {
+          const value = node.arguments[name === "from" ? 1 : 0];
+          const callback = value && calledDeclaration(value, checker);
+          if (callback?.parameters) {
+            const calls = index.callbacks.get(callback) ?? [];
+            if (calls.length === 0) index.callbacks.set(callback, calls);
+            calls.push(node);
+          }
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+  }
+  return index;
+}
+
+function calledDeclaration(callee, checker, seen = new Set()) {
+  const name = ts.isPropertyAccessExpression(callee)
+    ? callee.name
+    : ts.isElementAccessExpression(callee)
+      ? callee.argumentExpression
+      : callee;
+  let symbol = checker.getSymbolAtLocation(name);
+  if (symbol?.flags & ts.SymbolFlags.Alias)
+    symbol = checker.getAliasedSymbol(symbol);
+  if (!symbol || seen.has(symbol)) return;
+  seen.add(symbol);
+  const declaration = symbol.valueDeclaration;
+  if (!declaration || !ts.isVariableDeclaration(declaration))
+    return declaration;
+  const initializer = declaration.initializer;
+  if (
+    !initializer ||
+    ts.isArrowFunction(initializer) ||
+    ts.isFunctionExpression(initializer)
+  )
+    return initializer;
+  if (declaration.parent.flags & ts.NodeFlags.Const)
+    return calledDeclaration(initializer, checker, seen);
+}
+
+function argumentKind(parameter, checker, seen) {
+  if (seen.has(parameter)) return;
+  const parent = parameter.parent;
+  if (!parent.parameters || parameter.dotDotDotToken) return;
+  const position = parent.parameters.indexOf(parameter);
+  const calls = argumentIndex(checker).calls.get(parent) ?? [];
+  const visiting = new Set(seen).add(parameter);
+  for (const args of calls) {
+    const value = args[position];
+    if (!value || args.slice(0, position + 1).some(ts.isSpreadElement))
+      continue;
+    const kind = expressionKind(value, checker, new Set(visiting));
+    if (kind === "id" || kind === "id-list") return kind;
+  }
+}
+
 function callbackElementKind(parameter, checker, seen) {
   const callback = parameter.parent;
-  if (!ts.isArrowFunction(callback) && !ts.isFunctionExpression(callback))
-    return;
-  const call = callback.parent;
-  if (!ts.isCallExpression(call)) return;
+  if (seen.has(parameter)) return;
+  const calls = [...(argumentIndex(checker).callbacks.get(callback) ?? [])];
+  if (ts.isCallExpression(callback.parent)) calls.push(callback.parent);
+  let result;
+  for (const call of calls) {
+    const kind = arrayCallbackElementKind(
+      call,
+      parameter,
+      checker,
+      new Set(seen).add(parameter),
+    );
+    if (kind === "id") return kind;
+    if (kind === "other") result = kind;
+  }
+  return result;
+}
+
+function arrayCallbackElementKind(call, parameter, checker, seen) {
+  const callback = parameter.parent;
+  const isCallback = (node) =>
+    node === callback ||
+    (node && calledDeclaration(node, checker) === callback);
   const method = call.expression;
   const name = methodName(method);
   if (!name) return;
   const receiver = method.expression;
   if (
     name === "from" &&
-    call.arguments[1] === callback &&
+    isCallback(call.arguments[1]) &&
     callback.parameters[0] === parameter &&
     ts.isIdentifier(receiver) &&
     receiver.text === "Array" &&
@@ -416,7 +524,7 @@ function callbackElementKind(parameter, checker, seen) {
     return collectionElementKind(call.arguments[0], checker, seen);
 
   if (
-    call.arguments[0] === callback &&
+    isCallback(call.arguments[0]) &&
     ((arrayCallbacks.has(name) && callback.parameters[0] === parameter) ||
       (arrayComparators.has(name) &&
         (callback.parameters[0] === parameter ||
@@ -510,6 +618,18 @@ function expressionKind(node, checker, seen = new Set()) {
       kinds.find(Boolean)
     );
   }
+  if (ts.isArrayLiteralExpression(node)) {
+    for (const entry of node.elements) {
+      if (ts.isOmittedExpression(entry)) continue;
+      const spread = ts.isSpreadElement(entry);
+      const value = spread ? entry.expression : entry;
+      if (
+        expressionKind(value, checker, new Set(seen)) ===
+        (spread ? "id-list" : "id")
+      )
+        return "id-list";
+    }
+  }
   if (
     ts.isElementAccessExpression(node) &&
     expressionKind(node.expression, checker, seen) === "id-list" &&
@@ -547,6 +667,8 @@ function expressionKind(node, checker, seen = new Set()) {
     if (declaration && ts.isParameter(declaration)) {
       const element = callbackElementKind(declaration, checker, seen);
       if (element) return element;
+      const argument = argumentKind(declaration, checker, seen);
+      if (argument) return argument;
     }
     if (
       declaration &&
@@ -631,8 +753,11 @@ export function numericIdentifiers(file, text, operands) {
   }
   config ??= lintConfig(editorInputs);
   const source = project?.getSourceFile(filename);
-  if (source?.text === text)
-    return findIdentifiers(source, project.getTypeChecker(), operands);
+  if (source?.text === text) {
+    const checker = project.getTypeChecker();
+    projectsByChecker.set(checker, project);
+    return findIdentifiers(source, checker, operands);
+  }
 
   // Preserve project-wide module augmentations for editor buffers. A
   // standalone test fixture needs only its own dependency graph.
@@ -644,11 +769,9 @@ export function numericIdentifiers(file, text, operands) {
     snapshot: editorInputs,
   });
   if (inProject) project = buffer;
-  return findIdentifiers(
-    buffer.getSourceFile(filename),
-    buffer.getTypeChecker(),
-    operands,
-  );
+  const checker = buffer.getTypeChecker();
+  projectsByChecker.set(checker, buffer);
+  return findIdentifiers(buffer.getSourceFile(filename), checker, operands);
 }
 
 function findIdentifiers(source, checker, operands) {

@@ -49,14 +49,14 @@ describe("TenantAuthWrapper analytics", () => {
     mocks.useTenant.mockReturnValue({
       tenantSlug: "school-b",
       routingMode: "path",
-      tenant: { tenantId: 2 },
+      tenant: { tenantId: "2" },
     });
   });
 
   it("registers school and role after the URL tenant matches the session tenant", () => {
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { tenantId: 2 } },
+      data: { user: { tenantId: "2" } },
     });
 
     renderWrapper();
@@ -71,11 +71,11 @@ describe("TenantAuthWrapper analytics", () => {
     mocks.useTenant.mockReturnValue({
       tenantSlug: "school-b",
       routingMode: "path",
-      tenant: { tenantId: 2, analyticsEnabled: true },
+      tenant: { tenantId: "2", analyticsEnabled: true },
     });
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { id: "7", tenantId: 2 } },
+      data: { user: { id: "7", tenantId: "2" } },
     });
 
     const view = renderWrapper();
@@ -98,7 +98,7 @@ describe("TenantAuthWrapper analytics", () => {
   it("never reads or answers consent in the read-only staff preview", () => {
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { id: "7", tenantId: 2, isPreview: true } },
+      data: { user: { id: "7", tenantId: "2", isPreview: true } },
     });
 
     renderWrapper();
@@ -112,7 +112,7 @@ describe("TenantAuthWrapper analytics", () => {
   it("sends the admin flag as role, never a school's role name", () => {
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { tenantId: 2, isAdmin: true, roles: ["OGS-Leitung"] } },
+      data: { user: { tenantId: "2", isAdmin: true, roles: ["OGS-Leitung"] } },
     });
 
     renderWrapper();
@@ -126,7 +126,7 @@ describe("TenantAuthWrapper analytics", () => {
   it("clears context while TenantGuard switches tenants", () => {
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { tenantId: 1 } },
+      data: { user: { tenantId: "1" } },
     });
 
     const view = renderWrapper();
@@ -136,7 +136,7 @@ describe("TenantAuthWrapper analytics", () => {
 
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { tenantId: 2 } },
+      data: { user: { tenantId: "2" } },
     });
     view.rerender(
       <TenantAuthWrapper>
@@ -157,7 +157,7 @@ describe("TenantAuthWrapper analytics", () => {
       tenantSlug: "school-b",
       routingMode: "path",
       tenant: {
-        tenantId: 42,
+        tenantId: "42",
         analyticsEnabled: true,
         analyticsFreigabe: true,
         analyticsRecordingSamplePercent: 30,
@@ -165,7 +165,7 @@ describe("TenantAuthWrapper analytics", () => {
     });
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { id: "7", tenantId: 42 } },
+      data: { user: { id: "7", tenantId: "42" } },
     });
 
     renderWrapper();
@@ -191,7 +191,7 @@ describe("TenantAuthWrapper analytics", () => {
       tenantSlug: "school-b",
       routingMode: "path",
       tenant: {
-        tenantId: 42,
+        tenantId: "42",
         analyticsEnabled: true,
         analyticsFreigabe: true,
         analyticsRecordingSamplePercent: 30,
@@ -199,7 +199,7 @@ describe("TenantAuthWrapper analytics", () => {
     });
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { id: "7", tenantId: 42, isPreview: true } },
+      data: { user: { id: "7", tenantId: "42", isPreview: true } },
     });
 
     renderWrapper();
@@ -231,11 +231,11 @@ describe("TenantAuthWrapper analytics", () => {
     mocks.useTenant.mockReturnValue({
       tenantSlug: "school-a",
       routingMode: "path",
-      tenant: { tenantId: 1 },
+      tenant: { tenantId: "1" },
     });
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { tenantId: 1 } },
+      data: { user: { tenantId: "1" } },
     });
 
     const view = renderWrapper();
@@ -248,11 +248,11 @@ describe("TenantAuthWrapper analytics", () => {
     mocks.useTenant.mockReturnValue({
       tenantSlug: "school-b",
       routingMode: "path",
-      tenant: { tenantId: 2 },
+      tenant: { tenantId: "2" },
     });
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { tenantId: 2 } },
+      data: { user: { tenantId: "2" } },
     });
     view.rerender(
       <TenantAuthWrapper>

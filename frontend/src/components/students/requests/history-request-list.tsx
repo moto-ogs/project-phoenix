@@ -12,10 +12,7 @@ import { EnrollmentRequestItem } from "~/components/students/enrollment-request-
 import { RequestHistoryItem } from "~/components/students/request-history-item";
 import { RequestRowHeader } from "~/components/students/request-review-card";
 import type { CareWithdrawalCompletion } from "~/lib/care-exit-api";
-import type {
-  AggregatedHistoryRequest,
-  ParentRequestKind,
-} from "~/lib/change-request-list-api";
+import type { AggregatedHistoryRequest } from "~/lib/change-request-list-api";
 import { itemKey, type AnyItem } from "./case-model";
 import {
   DecisionCorrectionDialog,
@@ -23,13 +20,6 @@ import {
 } from "./decision-correction-dialog";
 import { HistoryWithdrawalCard } from "./withdrawal-cards";
 import { SectionCard } from "~/components/ui/section-card";
-
-const CORRECTABLE_KINDS: readonly string[] = [
-  "master_data",
-  "care_schedule",
-  "offering",
-  "excused",
-];
 
 /**
  * Arten, bei denen die Schätzung unten KEINE Korrektur anbietet. Achtung: das
@@ -66,35 +56,33 @@ function mayCorrect(
 }
 
 function correctionTarget(item: AnyItem): CorrectionTarget | null {
-  const row = item as AggregatedHistoryRequest & {
-    can_correct?: boolean;
-    expected_version?: string;
-  };
-  if (!CORRECTABLE_KINDS.includes(item.request_type)) return null;
-  const data = item.data as {
-    id: string;
-    status?: string;
-    decided_at?: string;
-    decided_by_name?: string;
-    reason?: string;
-    decision_reason?: string;
-    review_reason?: string;
-    first_name?: string;
-    last_name?: string;
-    student_name?: string;
-  };
-  if (!mayCorrect(row.can_correct, item.request_type, data.status)) return null;
+  const { request_type: kind, data } = item;
+  if (
+    kind !== "master_data" &&
+    kind !== "care_schedule" &&
+    kind !== "offering" &&
+    kind !== "excused"
+  )
+    return null;
+  const canCorrect = "can_correct" in item ? item.can_correct : undefined;
+  if (!mayCorrect(canCorrect, item.request_type, data.status)) return null;
   return {
-    kind: item.request_type as ParentRequestKind,
+    kind,
     requestID: data.id,
-    expectedVersion: row.expected_version ?? "",
+    expectedVersion:
+      ("expected_version" in item ? item.expected_version : undefined) ?? "",
     childName:
-      data.student_name ??
-      `${data.first_name ?? ""} ${data.last_name ?? ""}`.trim(),
+      "student_name" in data
+        ? data.student_name
+        : `${data.first_name ?? ""} ${data.last_name ?? ""}`.trim(),
     priorStatus: data.status ?? "",
-    priorDecidedAt: data.decided_at,
-    priorDecidedBy: data.decided_by_name,
-    priorReason: data.reason ?? data.decision_reason ?? data.review_reason,
+    priorDecidedAt: "decided_at" in data ? data.decided_at : undefined,
+    priorDecidedBy:
+      "decided_by_name" in data ? data.decided_by_name : undefined,
+    priorReason:
+      ("reason" in data ? data.reason : undefined) ??
+      ("decision_reason" in data ? data.decision_reason : undefined) ??
+      ("review_reason" in data ? data.review_reason : undefined),
   };
 }
 

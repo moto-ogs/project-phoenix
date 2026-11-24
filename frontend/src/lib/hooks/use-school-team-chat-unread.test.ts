@@ -30,7 +30,7 @@ import { resetSWRScope, resumeSWRSession } from "~/lib/swr/scope";
 import { SWRScopeBoundary } from "~/lib/swr/scope-boundary";
 import { useSchoolTeamChatUnread } from "./use-school-team-chat-unread";
 
-function signIn(id = "7", tenantId = 3) {
+function signIn(id = "7", tenantId = "3") {
   identity.session = {
     user: { id, tenantId, scope: "school" },
     expires: "2099-01-01",

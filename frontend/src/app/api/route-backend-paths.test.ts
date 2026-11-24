@@ -210,7 +210,228 @@ const named = new Set(
   ),
 );
 
+/** Follow the exported handler's local references, not strings in its file. */
+function handlerContracts(file: string, text: string, method: string) {
+  const { source, binding, declaration } = sourceBindings(file, text);
+  const seen = new Set<ts.Node>();
+  const followed = new Set<ts.Node>();
+  const keys = new Set<string>();
+  const portalOwners = Object.entries(PORTALS).map(([name, { backend }]) => ({
+    modulePath: name === "tenant" ? "~/server/auth" : `~/server/auth/${name}`,
+    exportName: `${name}Portal`,
+    backend,
+  }));
+  const portalOwner = (value: ts.Expression) => {
+    const { from, names } = binding(value);
+    return portalOwners.find(
+      ({ modulePath, exportName }) =>
+        from === modulePath && names[0] === exportName,
+    );
+  };
+  const portalCallback = (callee: ts.Expression) => {
+    if (!ts.isPropertyAccessExpression(callee)) return false;
+    const { expression: receiver, name } = callee;
+    if (name.text === "withAuth") return Boolean(portalOwner(receiver));
+    if (
+      name.text !== "withSessionResponse" ||
+      !ts.isElementAccessExpression(receiver) ||
+      !ts.isIdentifier(receiver.expression)
+    )
+      return false;
+    const table = declaration(receiver.expression);
+    if (!table || !ts.isVariableDeclaration(table) || !table.initializer)
+      return false;
+    let initializer = table.initializer;
+    while (
+      ts.isParenthesizedExpression(initializer) ||
+      ts.isAsExpression(initializer) ||
+      ts.isSatisfiesExpression(initializer)
+    )
+      initializer = initializer.expression;
+    return (
+      ts.isObjectLiteralExpression(initializer) &&
+      initializer.properties.length > 0 &&
+      initializer.properties.every(
+        (entry) =>
+          ts.isPropertyAssignment(entry) &&
+          Boolean(portalOwner(entry.initializer)),
+      )
+    );
+  };
+  const record = (operand: ts.Expression | undefined) => {
+    if (!operand) return;
+    const { from, names } = binding(operand);
+    if (from?.startsWith("~/lib/contract/") && from.endsWith(".generated")) {
+      const [table, route] = names;
+      if (table === "routes" && route) keys.add(route);
+    }
+  };
+  const follow = (node: ts.Node | undefined) => {
+    if (!node || followed.has(node)) return;
+    followed.add(node);
+    if (ts.isIdentifier(node)) follow(declaration(node));
+    else if (ts.isVariableDeclaration(node)) follow(node.initializer);
+    else if (ts.isParenthesizedExpression(node)) follow(node.expression);
+    else if (ts.isFunctionLike(node) && "body" in node && node.body)
+      visit(node.body);
+    else visit(node);
+  };
+  const visit = (node: ts.Node) => {
+    if (seen.has(node) || ts.isFunctionLike(node)) return;
+    seen.add(node);
+    if (ts.isCallExpression(node)) {
+      const factory = binding(node.expression);
+      const [portal, step, explicitRoute] = node.arguments;
+      const imported = factory.names[0] ?? "";
+      follow(node.expression);
+      if (
+        (factory.from === "~/lib/private-no-store" &&
+          imported === "withPrivateNoStore") ||
+        (factory.from === "~/lib/route-wrapper.server" &&
+          [
+            "createGetHandler",
+            "createPutHandler",
+            "createDeleteHandler",
+          ].includes(imported)) ||
+        (factory.from === "~/lib/operator/route-wrapper.server" &&
+          ["createOperatorPutHandler", "createOperatorDeleteHandler"].includes(
+            imported,
+          )) ||
+        (factory.from === "~/lib/file-upload-wrapper.server" &&
+          imported === "createFileUploadHandler") ||
+        portalCallback(node.expression)
+      )
+        follow(portal);
+      if (
+        (factory.from === "~/lib/contract/client.server" &&
+          (imported === "contractGet" || imported === "contractWrite")) ||
+        (factory.from === "~/lib/auth-proxy.server" &&
+          imported === "authStepProxy")
+      )
+        record(portal);
+      if (
+        factory.from === "~/lib/login-route.server" &&
+        imported === "createPortalLoginRoute"
+      )
+        record(explicitRoute);
+      if (
+        factory.from?.startsWith(".") &&
+        path.posix.join(path.posix.dirname(file), factory.from) ===
+          "demo/access/forward" &&
+        imported === "forwardDemoToken"
+      )
+        record(step);
+      if (
+        factory.from === "~/lib/factor-routes.server" &&
+        imported === "createFactorConfirmRoute" &&
+        portal &&
+        ts.isObjectLiteralExpression(portal)
+      ) {
+        for (const property of portal.properties) {
+          if (
+            ts.isPropertyAssignment(property) &&
+            property.name.getText(source) === "route"
+          )
+            record(property.initializer);
+        }
+      }
+      const login =
+        factory.from === "~/lib/login-route.server" &&
+        factory.names[0] === "createPortalLoginRoute" &&
+        !explicitRoute &&
+        step &&
+        ts.isStringLiteral(step) &&
+        step.text === "login";
+      const logout =
+        factory.from === "~/lib/logout-route.server" &&
+        factory.names[0] === "createLogoutRoute";
+      if (portal && (login || logout)) {
+        const { backend } = portalOwner(portal) ?? {};
+        if (backend) {
+          const route = login ? backend.login : backend.logout.route;
+          keys.add(`${route.method} ${route.pattern}`);
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  for (const node of source.statements) {
+    if (
+      ts.isExportDeclaration(node) &&
+      node.exportClause &&
+      ts.isNamedExports(node.exportClause)
+    ) {
+      for (const { name, propertyName } of node.exportClause.elements) {
+        if (name.text === method && ts.isIdentifier(propertyName ?? name))
+          follow(propertyName ?? name);
+      }
+    }
+    if (
+      !ts.canHaveModifiers(node) ||
+      !ts
+        .getModifiers(node)
+        ?.some(({ kind }) => kind === ts.SyntaxKind.ExportKeyword)
+    )
+      continue;
+    if (ts.isFunctionDeclaration(node) && node.name?.text === method)
+      follow(node);
+    if (ts.isVariableStatement(node)) {
+      for (const entry of node.declarationList.declarations) {
+        if (ts.isIdentifier(entry.name) && entry.name.text === method)
+          follow(entry);
+      }
+    }
+  }
+  return keys;
+}
+
 describe("route served by a portal's own route file", () => {
+  it("binds each method to its own Go route, through aliases but not sibling handlers", () => {
+    const text = `
+      import { routes as table } from "~/lib/contract/operator-auth.generated";
+      import { contractWrite as send } from "~/lib/contract/client.server";
+      import { withPrivateNoStore as wrap } from "~/lib/private-no-store";
+      const accept = table["POST /operator/auth/invitations/accept"];
+      function validate() {
+        void accept;
+        return send(table["POST /operator/auth/invitations/validate"]);
+      }
+      export const POST = wrap(validate);
+      export function PUT() { return send(accept); }
+      export function PATCH() {
+        void validate;
+        return new Response(null, { status: 204 });
+      }
+    `;
+    expect(handlerContracts("probe.ts", text, "POST")).toEqual(
+      new Set(["POST /operator/auth/invitations/validate"]),
+    );
+    expect(handlerContracts("probe.ts", text, "PUT")).toEqual(
+      new Set(["POST /operator/auth/invitations/accept"]),
+    );
+    expect(handlerContracts("probe.ts", text, "PATCH")).toEqual(new Set());
+  });
+
+  for (const [portal, routes] of Object.entries(routeFileRoutes)) {
+    for (const route of routes) {
+      if (!("browserPath" in route)) continue;
+      const address = route.browserPath;
+      const method =
+        "browserMethod" in route ? route.browserMethod : route.method;
+      it(`${portal} ${route.method} ${route.pattern} serves ${method} ${address}`, () => {
+        const folder = address
+          .slice("/api/".length)
+          .replace(/\{([^}]+)\}/g, "[$1]");
+        const row = routeFiles.find(({ route }) => route === folder);
+        if (!row) throw new Error(`missing route file at ${address}`);
+        expect(
+          handlerContracts(row.file, row.source, method),
+          "the exported method at the browser address must use the registered Go route",
+        ).toContain(`${route.method} ${route.pattern}`);
+      });
+    }
+  }
+
   it.each(routeFileKeys)("%s has its route file", (routeKey) => {
     const pattern = routeKey.slice(routeKey.indexOf(" ") + 1);
     expect(
@@ -488,18 +709,13 @@ describe("RouteFile response decoding", () => {
   });
 });
 
-// These modules implement the transport, the contract boundary, or
-// unregistered streaming/demo routes. Each exception is scoped to an
-// existing call name.
+// The transports and the unregistered stream may call the backend directly.
+// Each exception must still name a call in its file.
 const serverTransportExceptions: Record<string, readonly string[]> = {
-  "lib/backend-client.server.ts": ["fetch", "sendBackend", "readBackendJson"],
+  "lib/backend-client.server.ts": ["fetch"],
   "lib/contract/catalog-proxy.server.ts": ["sendBackend", "backendFetch"],
   "lib/contract/client.server.ts": ["sendBackend", "readBackendJson"],
   "lib/sse-proxy.server.ts": ["sendBackend"],
-  "app/api/demo/access/forward.ts": ["sendBackend"],
-  "app/api/demo/access/handoff/route.ts": ["sendBackend"],
-  "app/api/demo/access/reset/route.ts": ["sendBackend"],
-  "app/api/demo/access/sessions/route.ts": ["sendBackend"],
 };
 
 function serverTransportBypasses(file: string, source: string): string[] {
@@ -511,6 +727,20 @@ function serverTransportBypasses(file: string, source: string): string[] {
 }
 
 describe("Server response decoding", () => {
+  it("removes exceptions once their transport call is gone", () => {
+    const src = path.resolve(apiDir, "../..");
+    const stale = Object.entries(serverTransportExceptions).flatMap(
+      ([file, calls]) => {
+        const source = readFileSync(path.join(src, file), "utf8");
+        const present = handlerCalls(file, source).bypasses;
+        return calls
+          .filter((name) => !present.has(name))
+          .map((name) => `${file}: ${name}`);
+      },
+    );
+    expect(stale).toEqual([]);
+  });
+
   it("does not call the backend outside the contract and transport boundaries", () => {
     const src = path.resolve(apiDir, "../..");
     const violations = readdirSync(src, { recursive: true, encoding: "utf8" })

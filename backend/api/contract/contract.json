@@ -378,7 +378,8 @@
         "tenant"
       ],
       "no_data": true,
-      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change"
+      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change",
+      "browser_path": "/api/settings/login-image"
     },
     {
       "method": "DELETE",
@@ -387,7 +388,8 @@
         "tenant"
       ],
       "no_data": true,
-      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change"
+      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change",
+      "browser_path": "/api/settings/values/{key}"
     },
     {
       "method": "DELETE",
@@ -1042,7 +1044,8 @@
         "kind": "ref",
         "ref": "schoolSettingMutationResponse"
       },
-      "route_file": "the operator's route file purges the school's cached tenant lookup"
+      "route_file": "the operator's route file purges the school's cached tenant lookup",
+      "browser_path": "/api/operator/schools/{id}/settings/values/{key}"
     },
     {
       "method": "DELETE",
@@ -2223,6 +2226,8 @@
         "ref": "DashboardResponse"
       },
       "route_file": "the wall display sends its display token in a header, no session; its route file forwards it",
+      "browser_path": "/api/display/dashboard",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -2555,7 +2560,9 @@
         "kind": "ref",
         "ref": "PublicEnrollmentFormBootstrapResponse"
       },
-      "route_file": "the route file adds the signed-in staff member's profile to the public form"
+      "route_file": "the route file adds the signed-in staff member's profile to the public form",
+      "browser_path": "/api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}",
+      "browser_own_contract": true
     },
     {
       "method": "GET",
@@ -4252,7 +4259,8 @@
         "kind": "ref",
         "ref": "loginImageResponse"
       },
-      "route_file": "served by the same route file as its writes"
+      "route_file": "served by the same route file as its writes",
+      "browser_path": "/api/settings/login-image"
     },
     {
       "method": "GET",
@@ -8186,6 +8194,9 @@
         "ref": "demoAccessStatus"
       },
       "route_file": "demo route files hold and forward the demo bearer",
+      "browser_path": "/api/demo/access/status",
+      "browser_method": "POST",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -14899,7 +14910,8 @@
       "max_body_bytes": 2098176,
       "multipart": true,
       "too_large_code": "files.file_too_large",
-      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change"
+      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change",
+      "browser_path": "/api/settings/login-image"
     },
     {
       "method": "POST",
@@ -16985,7 +16997,9 @@
         "kind": "ref",
         "ref": "AcceptInvitationResponse"
       },
-      "route_file": "the route file attaches the signed-in owner's session to the accept"
+      "route_file": "the route file attaches the signed-in owner's session to the accept",
+      "browser_path": "/api/invitations/accept",
+      "browser_own_contract": true
     },
     {
       "method": "POST",
@@ -17017,6 +17031,8 @@
         "ref": "LoginResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/auth/login",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17026,7 +17042,9 @@
         "tenant"
       ],
       "no_data": true,
-      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/auth/logout",
+      "browser_own_contract": true
     },
     {
       "method": "POST",
@@ -17043,6 +17061,8 @@
         "ref": "TokenResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/auth/mfa/enroll/confirm",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17056,6 +17076,8 @@
         "ref": "EnrollStartResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/auth/mfa/enroll/start",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17073,6 +17095,8 @@
         "ref": "MFAResendResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/auth/mfa/resend",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17090,6 +17114,8 @@
         "ref": "TokenResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/auth/mfa/verify",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17119,6 +17145,8 @@
         "ref": "PasskeyCeremonyOptions"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/auth/passkeys/login/options",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17136,6 +17164,8 @@
         "ref": "LoginResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/auth/passkeys/login/verify",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17283,6 +17313,8 @@
         "ref": "StaffPreviewStartResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/auth/staff-preview",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17296,7 +17328,9 @@
         "ref": "StaffPreviewEndRequest"
       },
       "no_data": true,
-      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/auth/staff-preview/end",
+      "browser_own_contract": true
     },
     {
       "method": "POST",
@@ -17313,6 +17347,8 @@
         "ref": "TokenResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/auth/switch-tenant",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17330,6 +17366,8 @@
         "ref": "TokenResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/caterer/account/mfa/confirm",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17384,7 +17422,9 @@
         "kind": "ref",
         "ref": "CatererLoginResponse"
       },
-      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/caterer/auth/login",
+      "browser_own_contract": true
     },
     {
       "method": "POST",
@@ -17401,6 +17441,8 @@
         "ref": "MFAResendResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/caterer/auth/mfa/resend",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17418,6 +17460,8 @@
         "ref": "TokenResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/caterer/auth/mfa/verify",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17443,6 +17487,8 @@
         "ref": "PasskeyCeremonyOptions"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/caterer/auth/passkeys/login/options",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17460,6 +17506,8 @@
         "ref": "CatererLoginResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/caterer/auth/passkeys/login/verify",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17579,6 +17627,8 @@
         "ref": "demoResetResponse"
       },
       "route_file": "the demo reset route reads the token cookie",
+      "browser_path": "/api/demo/access/reset",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17598,6 +17648,8 @@
         "ref": "demoSessionResponse"
       },
       "route_file": "the demo session route installs the portal's cookies",
+      "browser_path": "/api/demo/access/sessions",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17672,7 +17724,9 @@
         "kind": "ref",
         "ref": "OperatorResponse"
       },
-      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/operator/auth/invitations/accept",
+      "browser_own_contract": true
     },
     {
       "method": "POST",
@@ -17688,7 +17742,9 @@
         "kind": "ref",
         "ref": "OperatorInvitationValidationResponse"
       },
-      "route_file": "the route file reads the invitation token from the flow cookie, never from the URL"
+      "route_file": "the route file reads the invitation token from the flow cookie, never from the URL",
+      "browser_path": "/api/operator/auth/invitations/validate",
+      "browser_own_contract": true
     },
     {
       "method": "POST",
@@ -17704,7 +17760,9 @@
         "kind": "ref",
         "ref": "OperatorLoginResponse"
       },
-      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/operator/auth/login",
+      "browser_own_contract": true
     },
     {
       "method": "POST",
@@ -17713,7 +17771,9 @@
         "platform"
       ],
       "no_data": true,
-      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/operator/auth/logout",
+      "browser_own_contract": true
     },
     {
       "method": "POST",
@@ -17729,7 +17789,9 @@
         "kind": "ref",
         "ref": "TokenResponse"
       },
-      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/operator/auth/mfa/enroll/confirm",
+      "browser_own_contract": true
     },
     {
       "method": "POST",
@@ -17738,7 +17800,9 @@
         "platform"
       ],
       "no_data": true,
-      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/operator/auth/mfa/enroll/start",
+      "browser_own_contract": true
     },
     {
       "method": "POST",
@@ -17755,6 +17819,8 @@
         "ref": "MFAResendResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/operator/auth/mfa/resend",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17771,7 +17837,9 @@
         "kind": "ref",
         "ref": "TokenResponse"
       },
-      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/operator/auth/mfa/verify",
+      "browser_own_contract": true
     },
     {
       "method": "POST",
@@ -17796,6 +17864,8 @@
         "ref": "PasskeyCeremonyOptions"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/operator/auth/passkeys/login/options",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -17813,6 +17883,8 @@
         "ref": "LoginResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/operator/auth/passkeys/login/verify",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -18261,7 +18333,9 @@
         "kind": "ref",
         "ref": "LoginResponse"
       },
-      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/parent/auth/login",
+      "browser_own_contract": true
     },
     {
       "method": "POST",
@@ -18278,6 +18352,8 @@
         "ref": "MFAResendResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/parent/auth/mfa/resend",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -18295,6 +18371,8 @@
         "ref": "TokenResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/parent/auth/mfa/verify",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -18668,6 +18746,8 @@
         "ref": "TokenResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/parent/me/mfa/confirm",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -18867,6 +18947,8 @@
         "ref": "LoginResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/school/auth/login",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -18884,6 +18966,8 @@
         "ref": "TokenResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/school/auth/mfa/enroll/confirm",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -18897,6 +18981,8 @@
         "ref": "EnrollStartResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/school/auth/mfa/enroll/start",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -18914,6 +19000,8 @@
         "ref": "MFAResendResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/school/auth/mfa/resend",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -18931,6 +19019,8 @@
         "ref": "TokenResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/school/auth/mfa/verify",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -19305,6 +19395,8 @@
         "ref": "TraegerLoginResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/traeger/auth/login",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -19322,6 +19414,8 @@
         "ref": "TokenResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/traeger/auth/mfa/enroll/confirm",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -19335,6 +19429,8 @@
         "ref": "EnrollStartResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/traeger/auth/mfa/enroll/start",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -19352,6 +19448,8 @@
         "ref": "MFAResendResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/traeger/auth/mfa/resend",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -19381,6 +19479,8 @@
         "ref": "TokenResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/traeger/auth/mfa/step-up/verify",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -19398,6 +19498,8 @@
         "ref": "TokenResponse"
       },
       "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "browser_path": "/api/traeger/auth/mfa/verify",
+      "browser_own_contract": true,
       "plain": true
     },
     {
@@ -21577,7 +21679,8 @@
         "ref": "setValueRequest"
       },
       "no_data": true,
-      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change"
+      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change",
+      "browser_path": "/api/settings/values/{key}"
     },
     {
       "method": "PUT",
@@ -22736,7 +22839,8 @@
         "kind": "ref",
         "ref": "schoolSettingMutationResponse"
       },
-      "route_file": "the operator's route file purges the school's cached tenant lookup"
+      "route_file": "the operator's route file purges the school's cached tenant lookup",
+      "browser_path": "/api/operator/schools/{id}/settings/values/{key}"
     },
     {
       "method": "PUT",
@@ -42514,7 +42618,6 @@
           "optional": true,
           "schema": {
             "kind": "array",
-            "nullable": true,
             "elem": {
               "kind": "id"
             }
@@ -42525,7 +42628,6 @@
           "optional": true,
           "schema": {
             "kind": "array",
-            "nullable": true,
             "elem": {
               "kind": "ref",
               "ref": "ChangeRequestOfferingDays"
@@ -42543,7 +42645,6 @@
           "optional": true,
           "schema": {
             "kind": "array",
-            "nullable": true,
             "elem": {
               "kind": "string"
             }
@@ -43079,7 +43180,6 @@
           "json_reason": "Historical snapshots can contain a displayed guardian name instead of a structured row",
           "schema": {
             "kind": "array",
-            "nullable": true,
             "elem": {
               "kind": "ref",
               "legacy_json": true,
@@ -43093,7 +43193,6 @@
           "json_reason": "Historical snapshots can contain a displayed child name instead of a structured row",
           "schema": {
             "kind": "array",
-            "nullable": true,
             "elem": {
               "kind": "ref",
               "legacy_json": true,
@@ -93073,6 +93172,16 @@
           }
         },
         {
+          "name": "role_is_system",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
           "name": "permissions",
           "optional": true,
           "schema": {
@@ -93148,8 +93257,13 @@
           }
         },
         {
+          "name": "iat",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
           "name": "exp",
-          "optional": true,
           "schema": {
             "kind": "int"
           }

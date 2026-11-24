@@ -209,6 +209,7 @@ export const routes = {
     pattern: "/api/settings/login-image",
     portals: ["tenant"],
     routeFile: "the route file purges the cached tenant lookup after the write, so the login page shows the change",
+    browserPath: "/api/settings/login-image",
     response: noData,
   },
   "DELETE /api/settings/values/{key}": {
@@ -216,6 +217,7 @@ export const routes = {
     pattern: "/api/settings/values/{key}",
     portals: ["tenant"],
     routeFile: "the route file purges the cached tenant lookup after the write, so the login page shows the change",
+    browserPath: "/api/settings/values/{key}",
     response: noData,
   },
   "GET /api/settings/device-pin-status": {
@@ -235,6 +237,7 @@ export const routes = {
     pattern: "/api/settings/login-image",
     portals: ["tenant"],
     routeFile: "served by the same route file as its writes",
+    browserPath: "/api/settings/login-image",
     response: success(loginImageResponseSchema),
   },
   "GET /api/settings/payroll-status": {
@@ -277,6 +280,7 @@ export const routes = {
     maxBodyBytes: 2098176,
     tooLargeCode: "files.file_too_large",
     routeFile: "the route file purges the cached tenant lookup after the write, so the login page shows the change",
+    browserPath: "/api/settings/login-image",
     request: multipart,
     response: success(loginImageUploadResponseSchema),
   },
@@ -299,6 +303,7 @@ export const routes = {
     pattern: "/api/settings/values/{key}",
     portals: ["tenant"],
     routeFile: "the route file purges the cached tenant lookup after the write, so the login page shows the change",
+    browserPath: "/api/settings/values/{key}",
     request: requestBody<setValueRequest>(),
     response: noData,
   },

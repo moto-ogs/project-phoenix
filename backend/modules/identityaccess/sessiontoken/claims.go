@@ -95,7 +95,7 @@ func appClaimsOf(c tokenprimitives.AccessClaims) AppClaims {
 		Roles: c.Roles, Permissions: c.Permissions, IsAdmin: c.IsAdmin, Scope: c.Scope,
 		TenantID: c.TenantID, OrgID: c.OrgID, FamilyID: c.FamilyID,
 		ReadOnly: c.ReadOnly, ActingAdminID: c.ActingAdminID, PreviewID: c.PreviewID, ViaTraeger: c.ViaTraeger,
-		CommonClaims: CommonClaims{ExpiresAt: c.ExpiresAt},
+		CommonClaims: CommonClaims{IssuedAt: c.IssuedAt, ExpiresAt: c.ExpiresAt},
 	}
 }
 

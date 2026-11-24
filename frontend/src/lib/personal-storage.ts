@@ -149,8 +149,8 @@ export function personalStorageOwner(
   user:
     | {
         readonly id?: string | null;
-        readonly tenantId?: number | null;
-        readonly orgId?: number | null;
+        readonly tenantId?: string | null;
+        readonly orgId?: string | null;
       }
     | null
     | undefined,

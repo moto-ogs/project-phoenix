@@ -210,7 +210,7 @@ const TEMPLATE_REPORT: KeyDateReport = {
 
 function signIn(permissions: string[]) {
   mockUseSession.mockReturnValue({
-    data: { user: { id: "A", scope: "org", orgId: 7, permissions } },
+    data: { user: { id: "A", scope: "org", orgId: "7", permissions } },
     status: "authenticated",
   });
 }

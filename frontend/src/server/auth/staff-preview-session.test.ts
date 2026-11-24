@@ -76,7 +76,7 @@ function adminToken(): Record<string, unknown> {
     roles: ["admin"],
     permissions: ["admin:*"],
     isAdmin: true,
-    tenantId: 7,
+    tenantId: "7",
     tokenExpiry: Date.now() + 10 * 60 * 1000,
     refreshTokenExpiry: Date.now() + 60 * 60 * 1000,
   };

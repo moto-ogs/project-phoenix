@@ -43,7 +43,7 @@ function session(overrides: Partial<Session["user"]> = {}): Session {
       email: "admin@example.com",
       roles: ["admin"],
       permissions: ["admin:*"],
-      tenantId: 1,
+      tenantId: "1",
       ...overrides,
     },
     expires: "2099-01-01",

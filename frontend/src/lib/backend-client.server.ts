@@ -97,11 +97,9 @@ function assertNoDotSegments(path: string): void {
 /** The tenant, organization and scope of a call's token, for log and metric. */
 function bearerClaims(bearer: string | null | undefined) {
   const claims = bearer ? decodeJwtPayload(bearer) : null;
-  const number = (value: unknown) =>
-    typeof value === "number" ? value : undefined;
   return {
-    tenantId: number(claims?.tenant_id),
-    orgId: number(claims?.org_id),
+    tenantId: claims?.tenant_id,
+    orgId: claims?.org_id,
     scope: typeof claims?.scope === "string" ? claims.scope : undefined,
   };
 }

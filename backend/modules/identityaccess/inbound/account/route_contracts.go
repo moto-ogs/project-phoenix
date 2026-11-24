@@ -148,12 +148,18 @@ func PublicRouteContracts() []common.RouteContract {
 func SessionRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	step := func(pattern string, request, response any) common.RouteContract {
+		browserPath := "/api/auth" + pattern
+		if pattern == "/refresh" || pattern == "/session/validate" {
+			browserPath = ""
+		}
 		return common.RouteContract{
+			BrowserPath: browserPath, BrowserOwnContract: browserPath != "",
 			Method: "POST", Pattern: pattern, Portals: portals, RouteFile: common.RouteFileSession,
 			Request: request, Response: response, NoData: response == nil, Plain: response != nil,
 		}
 	}
 	accept := step("/invitations/{token}/accept", AcceptInvitationRequest{}, AcceptInvitationResponse{})
+	accept.BrowserPath = "/api/invitations/accept"
 	accept.Plain = false
 	accept.RouteFile = "the route file attaches the signed-in owner's session to the accept"
 	end := step("/staff-preview/end", StaffPreviewEndRequest{}, nil)

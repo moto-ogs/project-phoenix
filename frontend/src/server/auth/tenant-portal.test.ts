@@ -19,7 +19,7 @@ const { session } = vi.hoisted(() => ({
   session: {
     current: null as null | {
       expires: string;
-      user: { id: string; token: string; tenantId: number };
+      user: { id: string; token: string; tenantId: string };
     },
   },
 }));
@@ -49,7 +49,7 @@ const { tenantPortal } = await import("./index");
 
 const route = tenantPortal.withAuth(async () => Response.json({ ran: true }));
 
-function call(tenantId: number) {
+function call(tenantId: string) {
   session.current = {
     expires: "2099-01-01T00:00:00.000Z",
     user: { id: "1", token: "access-token", tenantId },
@@ -66,14 +66,14 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("tenantPortal", () => {
   it("runs a route for a session of the host's school", async () => {
-    const response = await call(1);
+    const response = await call("1");
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ran: true });
   });
 
   it("refuses a session of another school before the route runs", async () => {
-    const response = await call(2);
+    const response = await call("2");
 
     expect(response.status).toBe(409);
     expect(await response.json()).toMatchObject({

@@ -99,7 +99,7 @@ async function advance(ms = 0) {
 
 function changePermissions() {
   state.session = {
-    user: { id: "account-7", tenantId: 42, permissions: ["groups:read"] },
+    user: { id: "account-7", tenantId: "42", permissions: ["groups:read"] },
     expires: "2099-01-01",
   };
 }
@@ -109,7 +109,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   resetSWRScope({ revalidate: false });
   state.session = {
-    user: { id: "account-7", tenantId: 42 },
+    user: { id: "account-7", tenantId: "42" },
     expires: "2099-01-01",
   };
   api.tenantNotificationFeedApi.fetchPage.mockImplementation(

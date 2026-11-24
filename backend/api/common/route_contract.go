@@ -133,6 +133,13 @@ type RouteContract struct {
 	// cookie. The route is typed like any other, and no proxy allowlist
 	// names it, so the proxy never hands its answer to a browser.
 	RouteFile string
+	// BrowserPath is the exact same-origin address of a RouteFile route. An
+	// empty path leaves the Go entry available only to server callers.
+	BrowserPath   string
+	BrowserMethod string
+	// BrowserOwnContract marks a route file that changes the browser's
+	// request or answer. The address is typed, not the Go body or answer.
+	BrowserOwnContract bool
 	// Plain says the handler writes the data as the whole body
 	// (RenderJSON), without the envelope. Only a RouteFile route may.
 	Plain bool

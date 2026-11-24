@@ -75,7 +75,7 @@ beforeEach(() => {
   // A refusal holds per key for the whole tab; start every test clean.
   resetSWRScope({ revalidate: false });
   sessionState.data = {
-    user: { id: "A", orgId: 7, scope: "org" },
+    user: { id: "A", orgId: "7", scope: "org" },
     expires: "2099-01-01",
   } as Session;
 });

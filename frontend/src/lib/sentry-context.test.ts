@@ -14,13 +14,15 @@ describe("sentrySessionContext", () => {
         id: "42",
         sentryUserId: PSEUDONYM,
         scope: "",
-        tenantId: 12,
+        tenantId: "12",
       }),
     ).toEqual({ user: { id: PSEUDONYM }, role: "staff", schoolId: "12" });
   });
 
   it("never names the account ID, not even without a pseudonym", () => {
-    expect(sentrySessionContext("tenant", { id: "42", tenantId: 12 })).toEqual({
+    expect(
+      sentrySessionContext("tenant", { id: "42", tenantId: "12" }),
+    ).toEqual({
       user: null,
       role: "staff",
       schoolId: "12",
@@ -33,12 +35,12 @@ describe("sentrySessionContext", () => {
   });
 
   it("names leadership, the staff preview and carrier sessions coarsely", () => {
-    const admin = { id: "1", tenantId: 3, isAdmin: true };
-    const preview = { id: "1", tenantId: 3, isPreview: true };
+    const admin = { id: "1", tenantId: "3", isAdmin: true };
+    const preview = { id: "1", tenantId: "3", isPreview: true };
     const carrier = {
       id: "2",
       sentryUserId: PSEUDONYM,
-      tenantId: 3,
+      tenantId: "3",
       scope: "org",
     };
 
@@ -57,7 +59,7 @@ describe("sentrySessionContext", () => {
         id: "5",
         sentryUserId: PSEUDONYM,
         scope: "school",
-        tenantId: 8,
+        tenantId: "8",
       }),
     ).toEqual({ user: { id: PSEUDONYM }, role: "lehrkraft", schoolId: "8" });
   });
@@ -78,12 +80,15 @@ describe("sentrySessionContext", () => {
         id: "9",
         sentryUserId: PSEUDONYM,
         scope: "parent",
-        tenantId: 0,
+        tenantId: "0",
       }),
     ).toEqual({ user: { id: PSEUDONYM }, role: "guardian", schoolId: null });
     expect(
-      sentrySessionContext("parent", { id: "9", scope: "parent", tenantId: 4 })
-        .schoolId,
+      sentrySessionContext("parent", {
+        id: "9",
+        scope: "parent",
+        tenantId: "4",
+      }).schoolId,
     ).toBeNull();
   });
 

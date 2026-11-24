@@ -5,6 +5,5 @@
   "lib/enrollment-uploads.ts shape StoredUploadValue",
   "lib/error-log.ts shape ErrorLogFields",
   "lib/import-batch-result.ts shape ImportBatchResult",
-  "lib/sse-types.ts shape SSEEventData",
-  "server/auth/jwt-payload.ts shape JwtPayload"
+  "lib/sse-types.ts shape SSEEventData"
 ]

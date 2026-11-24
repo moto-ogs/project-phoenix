@@ -19,6 +19,8 @@ export const routes = {
     pattern: "/auth/login",
     portals: ["tenant"],
     routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    browserPath: "/api/auth/login",
+    browserOwnContract: true,
     plain: true,
     request: requestBody<LoginRequest>(),
     response: LoginResponseSchema,

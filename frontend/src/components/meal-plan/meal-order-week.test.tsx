@@ -21,7 +21,7 @@ vi.unmock("swr");
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    data: { user: { id: "account-1", tenantId: "1", scope: "tenant" } },
     status: "authenticated",
   }),
 }));

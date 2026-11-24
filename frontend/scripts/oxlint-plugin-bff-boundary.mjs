@@ -27,7 +27,9 @@ export const RAW_TRANSPORT = {
 // Named route files whose browser-facing response is not the Go contract.
 export const UNCONTRACTED = {
   // The Go contract covers only the tenant; new accounts may accept anonymously.
-  "lib/invitation-api.ts": ["public POST /api/invitations/accept"],
+  "lib/invitation-api.ts": [
+    "public POST tenant POST /auth/invitations/{token}/accept",
+  ],
   // The named handler adds the signed-in staff profile (#5018).
   "lib/enrollment-submission-api.ts": [
     "public GET tenant GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}",
@@ -56,7 +58,12 @@ const RETIRED_HELPERS = new Set([
 const GLOBAL_OBJECTS = new Set(["window", "self", "globalThis"]);
 const FRAME_WINDOWS = new Set(["top", "parent", "opener", "frames"]);
 const NAVIGATOR = "navigator";
-const RAW_GLOBALS = new Set(["fetch", "XMLHttpRequest"]);
+const RAW_GLOBALS = new Set([
+  "fetch",
+  "XMLHttpRequest",
+  "EventSource",
+  "WebSocket",
+]);
 const UNCONTRACTED_HELPER = "bffJsonUncontracted";
 
 function sourcePath(context) {
@@ -125,7 +132,7 @@ const noRawBrowserTransport = {
     // go through the AST, which decides what the names actually refer to.
     if (
       !allowed &&
-      !/\b(?:fetch|XMLHttpRequest|sendBeacon|sessionFetch|transportFetch|authFetch|fetchWithAuth|traegerRequest|operatorFetch)\b|\\/.test(
+      !/\b(?:fetch|XMLHttpRequest|EventSource|WebSocket|sendBeacon|sessionFetch|transportFetch|authFetch|fetchWithAuth|traegerRequest|operatorFetch)\b|\\/.test(
         sourceCode.text,
       )
     )
@@ -429,7 +436,9 @@ const noNumericIdentifier = {
     },
   },
   create(context) {
-    if (!isBrowser(sourcePath(context))) return {};
+    const file = sourcePath(context);
+    if (!file || isTest(file) || /\.(?:generated|d)\.[cm]?[jt]s$/.test(file))
+      return {};
     const { sourceCode } = context;
     const operands = new Map();
 
@@ -439,9 +448,56 @@ const noNumericIdentifier = {
       }
     }
 
-    function isConverter(callee) {
-      if (callee?.type === "Identifier") {
-        return COERCIONS.has(callee.name) && isGlobal(sourceCode, callee);
+    function isConverter(callee, seen = new Set()) {
+      if (!callee || seen.has(callee)) return false;
+      seen.add(callee);
+      if (
+        [
+          "TSAsExpression",
+          "TSTypeAssertion",
+          "TSNonNullExpression",
+          "ChainExpression",
+        ].includes(callee.type)
+      ) {
+        return isConverter(callee.expression, seen);
+      }
+      if (callee.type === "Identifier") {
+        if (COERCIONS.has(callee.name) && isGlobal(sourceCode, callee))
+          return true;
+        for (
+          let scope = sourceCode.getScope(callee);
+          scope;
+          scope = scope.upper
+        ) {
+          const variable = scope.set.get(callee.name);
+          if (!variable) continue;
+          const binding = variable.defs[0]?.node;
+          if (
+            binding?.type !== "VariableDeclarator" ||
+            !binding.init ||
+            variable.references.some((ref) => ref.isWrite() && !ref.init)
+          )
+            return false;
+          if (binding.id.type === "Identifier")
+            return isConverter(binding.init, seen);
+          if (
+            binding.id.type === "ObjectPattern" &&
+            isGlobal(sourceCode, binding.init)
+          ) {
+            const property = binding.id.properties.find(
+              (part) =>
+                part.type === "Property" &&
+                part.value === variable.identifiers[0],
+            );
+            const key = property && staticName(property.key, property.computed);
+            return (
+              (GLOBAL_OBJECTS.has(binding.init.name) && COERCIONS.has(key)) ||
+              (binding.init.name === "Number" && NUMBER_METHODS.has(key))
+            );
+          }
+          return false;
+        }
+        return false;
       }
       if (callee?.type !== "MemberExpression") return false;
       const { object } = callee;

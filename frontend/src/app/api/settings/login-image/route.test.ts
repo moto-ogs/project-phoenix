@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 
 const {
@@ -7,12 +7,14 @@ const {
   mockFetch,
   mockGetServerApiUrl,
   mockRevalidateTag,
+  mockRevalidatePath,
 } = vi.hoisted(() => ({
   mockAuth: vi.fn(),
   mockUncachedAuth: vi.fn(),
   mockFetch: vi.fn(),
   mockGetServerApiUrl: vi.fn(() => "http://localhost:8080"),
   mockRevalidateTag: vi.fn(),
+  mockRevalidatePath: vi.fn(),
 }));
 
 vi.mock("~/server/auth", async () =>
@@ -28,12 +30,15 @@ vi.mock("~/lib/server-api-url", () => ({
 
 vi.mock("next/cache", () => ({
   revalidateTag: mockRevalidateTag,
+  revalidatePath: mockRevalidatePath,
 }));
 
 global.fetch = mockFetch as unknown as typeof fetch;
 
 import { POST, DELETE, GET } from "./route";
 import { createMockContext } from "~/test/route-test-helpers";
+
+afterEach(() => vi.unstubAllEnvs());
 
 const defaultSession = {
   user: { id: "1", token: "test-token", name: "Test User" },
@@ -53,6 +58,7 @@ function createMockImageFile(): File {
 
 describe("POST /api/settings/login-image", () => {
   beforeEach(() => {
+    vi.stubEnv("TENANT_DOMAIN", "localhost");
     vi.clearAllMocks();
     mockAuth.mockResolvedValue(defaultSession);
     mockUncachedAuth.mockResolvedValue(defaultSession);
@@ -99,12 +105,12 @@ describe("POST /api/settings/login-image", () => {
       const formData = new FormData();
       formData.append("login_image", createMockImageFile());
       const request = new NextRequest(
-        "http://localhost:3000/api/settings/login-image",
+        "http://school-a.localhost:3000/api/settings/login-image",
         {
           method: "POST",
           body: formData,
           signal: controller.signal,
-          headers: { referer: "http://localhost:3000/school-a/settings" },
+          headers: { host: "school-a.localhost:3000" },
         },
       );
 
@@ -115,6 +121,7 @@ describe("POST /api/settings/login-image", () => {
       expect(mockRevalidateTag).toHaveBeenCalledWith("tenant-school-a", {
         expire: 0,
       });
+      expect(mockRevalidatePath).toHaveBeenCalledWith("/school-a", "layout");
     },
   );
 
@@ -122,7 +129,7 @@ describe("POST /api/settings/login-image", () => {
     const formData = new FormData();
 
     const request = new NextRequest(
-      "http://localhost:3000/api/settings/login-image",
+      "http://school-a.localhost:3000/api/settings/login-image",
       { method: "POST", body: formData },
     );
     const response = await POST(request, createMockContext());
@@ -144,7 +151,7 @@ describe("POST /api/settings/login-image", () => {
     formData.append("login_image", createMockImageFile());
 
     const request = new NextRequest(
-      "http://localhost:3000/api/settings/login-image",
+      "http://school-a.localhost:3000/api/settings/login-image",
       { method: "POST", body: formData },
     );
     const response = await POST(request, createMockContext());
@@ -166,10 +173,10 @@ describe("POST /api/settings/login-image", () => {
     formData.append("login_image", createMockImageFile());
 
     const request = new NextRequest(
-      "http://localhost:3000/api/settings/login-image",
+      "http://school-a.localhost:3000/api/settings/login-image",
       { method: "POST", body: formData },
     );
-    request.headers.set("referer", "http://localhost:3000/school-a/settings");
+    request.headers.set("host", "school-a.localhost:3000");
     const response = await POST(request, createMockContext());
 
     expect(response.status).toBe(200);
@@ -203,11 +210,11 @@ describe("POST /api/settings/login-image", () => {
     formData.append("login_image", createMockImageFile());
 
     const request = new NextRequest(
-      "http://localhost:3000/api/settings/login-image",
+      "http://school-a.localhost:3000/api/settings/login-image",
       {
         method: "POST",
         body: formData,
-        headers: { referer: "http://localhost:3000/school-a/settings" },
+        headers: { host: "school-a.localhost:3000" },
       },
     );
     const response = await POST(request, createMockContext());
@@ -235,6 +242,7 @@ describe("POST /api/settings/login-image", () => {
 
 describe("DELETE /api/settings/login-image", () => {
   beforeEach(() => {
+    vi.stubEnv("TENANT_DOMAIN", "localhost");
     vi.clearAllMocks();
     mockAuth.mockResolvedValue(defaultSession);
     mockUncachedAuth.mockResolvedValue(defaultSession);
@@ -245,10 +253,10 @@ describe("DELETE /api/settings/login-image", () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     const request = new NextRequest(
-      "http://localhost:3000/api/settings/login-image",
+      "http://school-a.localhost:3000/api/settings/login-image",
       {
         method: "DELETE",
-        headers: { referer: "http://localhost:3000/school-a/settings" },
+        headers: { host: "school-a.localhost:3000" },
       },
     );
     const response = await DELETE(request, createMockContext());
@@ -265,7 +273,7 @@ describe("DELETE /api/settings/login-image", () => {
     });
 
     const request = new NextRequest(
-      "http://localhost:3000/api/settings/login-image",
+      "http://school-a.localhost:3000/api/settings/login-image",
       { method: "DELETE" },
     );
     const response = await DELETE(request, createMockContext());
@@ -278,10 +286,10 @@ describe("DELETE /api/settings/login-image", () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     const request = new NextRequest(
-      "http://localhost:3000/api/settings/login-image",
+      "http://school-a.localhost:3000/api/settings/login-image",
       { method: "DELETE" },
     );
-    request.headers.set("referer", "http://localhost:3000/school-a/settings");
+    request.headers.set("host", "school-a.localhost:3000");
     await DELETE(request, createMockContext());
 
     expect(mockRevalidateTag).toHaveBeenCalledWith("tenant-school-a", {
@@ -308,7 +316,7 @@ describe("GET /api/settings/login-image", () => {
     });
 
     const request = new NextRequest(
-      "http://localhost:3000/api/settings/login-image",
+      "http://school-a.localhost:3000/api/settings/login-image",
       { method: "GET" },
     );
     const response = await GET(request, createMockContext());
@@ -330,7 +338,7 @@ describe("GET /api/settings/login-image", () => {
     });
 
     const request = new NextRequest(
-      "http://localhost:3000/api/settings/login-image",
+      "http://school-a.localhost:3000/api/settings/login-image",
       { method: "GET" },
     );
     const response = await GET(request, createMockContext());
@@ -363,7 +371,7 @@ describe("GET /api/settings/login-image", () => {
       });
 
     const request = new NextRequest(
-      "http://localhost:3000/api/settings/login-image",
+      "http://school-a.localhost:3000/api/settings/login-image",
       { method: "GET" },
     );
     const response = await GET(request, createMockContext());

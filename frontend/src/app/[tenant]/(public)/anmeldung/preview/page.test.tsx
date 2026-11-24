@@ -86,7 +86,7 @@ vi.mock("~/components/enrollment/public-enrollment-shell", () => ({
 import EnrollmentPreviewPage from "./page";
 
 const staffSession: Session = {
-  user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+  user: { id: "staff-7", scope: "tenant", tenantId: "42" },
   expires: "2099-01-01",
 };
 function Providers({

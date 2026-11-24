@@ -1,3 +1,4 @@
+import { sessionClaims } from "~/test/helpers/session-claims";
 import {
   afterAll,
   beforeAll,
@@ -31,7 +32,7 @@ const SESSION = {
 const backend = vi.fn<typeof fetch>();
 /** The answer of Identity & Access on the session's family. */
 let familyStatus = 200;
-let familyBody: Record<string, unknown> = { id: "7" };
+let familyBody: Record<string, unknown> = { ...sessionClaims() };
 const NOT_BOOKED = { status: 403, code: "module.not_booked" };
 
 function familyChecks() {
@@ -56,7 +57,7 @@ afterAll(() => {
 });
 beforeEach(() => {
   familyStatus = 200;
-  familyBody = { id: "7" };
+  familyBody = { ...sessionClaims() };
   backend.mockReset();
   backend.mockImplementation(async (url) => {
     const target = String(url);

@@ -119,7 +119,10 @@ type Route struct {
 	PrivateCache bool `json:"private_cache,omitempty"`
 	// RouteFile says why the portal's own route file, not the catalog
 	// proxy, serves the route. No proxy allowlist names it.
-	RouteFile string `json:"route_file,omitempty"`
+	RouteFile          string `json:"route_file,omitempty"`
+	BrowserPath        string `json:"browser_path,omitempty"`
+	BrowserMethod      string `json:"browser_method,omitempty"`
+	BrowserOwnContract bool   `json:"browser_own_contract,omitempty"`
 	// Plain says the route answers its data as the whole body, without the
 	// envelope. Only a route file reads such an answer.
 	Plain bool `json:"plain,omitempty"`

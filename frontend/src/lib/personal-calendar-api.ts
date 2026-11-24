@@ -397,14 +397,11 @@ export interface CalendarAppointmentDetail {
     sharedContract.Appointment,
     "title" | "description" | "location" | "all_day" | "notify_guardians"
   > & {
-    // Persisted SERIES base dates ("YYYY-MM-DD"): for a recurring
-    // appointment the anchor, not the clicked occurrence, so an edit does
-    // not re-anchor the series.
-    readonly start_date: string;
-    readonly end_date: string;
-    /** Wall clock "HH:MM" of the series. */
-    readonly start_time: string;
-    readonly end_time: string;
+    // The persisted series anchor, not the clicked occurrence.
+    readonly [
+      K in "start_date" | "end_date" | "start_time" | "end_time"
+    ]-?: NonNullable<sharedContract.Appointment[K]>;
+  } & {
     readonly overview_visibility: CalendarOverviewVisibility;
     readonly delivery_mode: CalendarDeliveryMode;
   };

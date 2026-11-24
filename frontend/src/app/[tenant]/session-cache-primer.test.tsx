@@ -123,10 +123,10 @@ describe("SessionCachePrimer with the real SessionProvider", () => {
   });
 
   it("never serves the previous account after another tab signed in", async () => {
-    renderTab(mockSessionData({ user: { id: "a", tenantId: 1 } }));
+    renderTab(mockSessionData({ user: { id: "a", tenantId: "1" } }));
     expect((await getCachedSession())?.user?.id).toBe("a");
 
-    sessionAnswer = mockSessionData({ user: { id: "b", tenantId: 2 } });
+    sessionAnswer = mockSessionData({ user: { id: "b", tenantId: "2" } });
     act(() => otherTabChangesSession());
 
     await waitFor(async () =>
@@ -144,10 +144,12 @@ describe("SessionCachePrimer with the real SessionProvider", () => {
   // school's cookie, and that refusal must drop the old school from the
   // cache and the provider at once.
   it("drops the old school with the first request refused after a switch on another subdomain", async () => {
-    const view = renderTab(mockSessionData({ user: { id: "a", tenantId: 1 } }));
-    expect((await getCachedSession())?.user?.tenantId).toBe(1);
+    const view = renderTab(
+      mockSessionData({ user: { id: "a", tenantId: "1" } }),
+    );
+    expect((await getCachedSession())?.user?.tenantId).toBe("1");
 
-    sessionAnswer = mockSessionData({ user: { id: "a", tenantId: 2 } });
+    sessionAnswer = mockSessionData({ user: { id: "a", tenantId: "2" } });
     apiAnswer = () =>
       Response.json(
         { status: 409, code: "identity.session_tenant_mismatch" },
@@ -158,7 +160,7 @@ describe("SessionCachePrimer with the real SessionProvider", () => {
     });
     expect(apiRequests()).toBe(1);
 
-    expect((await getCachedSession())?.user?.tenantId).toBe(2);
+    expect((await getCachedSession())?.user?.tenantId).toBe("2");
     await waitFor(() =>
       expect(view.getByRole("status")).toHaveTextContent("2"),
     );
@@ -168,12 +170,14 @@ describe("SessionCachePrimer with the real SessionProvider", () => {
   // it TenantGuard follow the school switch on the next page change, not
   // only at the provider's next poll.
   it("tells the provider about a school switch on another subdomain", async () => {
-    const view = renderTab(mockSessionData({ user: { id: "a", tenantId: 1 } }));
+    const view = renderTab(
+      mockSessionData({ user: { id: "a", tenantId: "1" } }),
+    );
     expect(view.getByRole("status")).toHaveTextContent("1");
 
-    sessionAnswer = mockSessionData({ user: { id: "a", tenantId: 2 } });
+    sessionAnswer = mockSessionData({ user: { id: "a", tenantId: "2" } });
     setTestClock(new Date(TEST_CLOCK_INSTANT.getTime() + 270_001));
-    expect((await getCachedSession())?.user?.tenantId).toBe(2);
+    expect((await getCachedSession())?.user?.tenantId).toBe("2");
 
     await waitFor(() =>
       expect(view.getByRole("status")).toHaveTextContent("2"),
@@ -185,12 +189,12 @@ describe("SessionCachePrimer with the real SessionProvider", () => {
   // #5130: getSession() broadcasts by default, and this tab's provider
   // answered every lookup after the window with a second request.
   it("asks the session route once when the session did not change", async () => {
-    renderTab(mockSessionData({ user: { id: "a", tenantId: 1 } }));
-    expect((await getCachedSession())?.user?.tenantId).toBe(1);
+    renderTab(mockSessionData({ user: { id: "a", tenantId: "1" } }));
+    expect((await getCachedSession())?.user?.tenantId).toBe("1");
 
-    sessionAnswer = mockSessionData({ user: { id: "a", tenantId: 1 } });
+    sessionAnswer = mockSessionData({ user: { id: "a", tenantId: "1" } });
     setTestClock(new Date(TEST_CLOCK_INSTANT.getTime() + 270_001));
-    expect((await getCachedSession())?.user?.tenantId).toBe(1);
+    expect((await getCachedSession())?.user?.tenantId).toBe("1");
     expect(sessionRequests()).toBe(1);
 
     // Anker: a later broadcast reaches the provider, which asks once. An echo

@@ -614,7 +614,7 @@ describe("ProfileContext", () => {
     it("should reset debounce when tenantId changes, allowing immediate refresh", async () => {
       const sessionWithTenant = {
         ...mockSession,
-        user: { ...mockSession.user, tenantId: 1 },
+        user: { ...mockSession.user, tenantId: "1" },
       };
 
       vi.mocked(nextAuthReact.useSession).mockReturnValue({
@@ -645,7 +645,7 @@ describe("ProfileContext", () => {
         ...mockSession,
         user: {
           ...mockSession.user,
-          tenantId: 2,
+          tenantId: "2",
         },
       };
 
@@ -666,7 +666,7 @@ describe("ProfileContext", () => {
     it("should not reset debounce when tenantId is undefined", async () => {
       const sessionWithTenant = {
         ...mockSession,
-        user: { ...mockSession.user, tenantId: 1 },
+        user: { ...mockSession.user, tenantId: "1" },
       };
 
       vi.mocked(nextAuthReact.useSession).mockReturnValue({
@@ -714,7 +714,7 @@ describe("ProfileContext", () => {
     it("should reset debounce on re-login to same tenant after logout", async () => {
       const sessionWithTenant = {
         ...mockSession,
-        user: { ...mockSession.user, tenantId: 1 },
+        user: { ...mockSession.user, tenantId: "1" },
       };
 
       vi.mocked(nextAuthReact.useSession).mockReturnValue({
@@ -757,7 +757,7 @@ describe("ProfileContext", () => {
           ...mockSession,
           user: {
             ...mockSession.user,
-            tenantId: 1,
+            tenantId: "1",
           },
         },
         status: "authenticated",

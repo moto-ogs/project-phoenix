@@ -27,7 +27,7 @@ export interface SentrySessionUser {
   readonly id?: string;
   readonly sentryUserId?: string;
   readonly scope?: string;
-  readonly tenantId?: number;
+  readonly tenantId?: string;
   readonly isAdmin?: boolean;
   readonly isPreview?: boolean;
 }
@@ -84,7 +84,9 @@ function boundSchoolId(
   if (portal !== "tenant" && portal !== "school") return null;
   if (user.scope === "parent" || user.scope === "platform") return null;
   const tenantId = user.tenantId;
-  return typeof tenantId === "number" && tenantId > 0 ? String(tenantId) : null;
+  return typeof tenantId === "string" && /^[1-9]\d*$/.test(tenantId)
+    ? tenantId
+    : null;
 }
 
 export function sentrySessionContext(

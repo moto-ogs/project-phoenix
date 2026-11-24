@@ -154,7 +154,7 @@ import {
 function SWRTestProvider({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <SessionProvider
-      session={{ user: { id: "1", tenantId: 1 }, expires: "2099-01-01" }}
+      session={{ user: { id: "1", tenantId: "1" }, expires: "2099-01-01" }}
       refetchOnWindowFocus={false}
     >
       <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>

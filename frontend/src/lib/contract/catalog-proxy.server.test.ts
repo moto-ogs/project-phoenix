@@ -188,6 +188,18 @@ describe("makeCatalogProxy", () => {
     usedOptions = undefined;
   });
 
+  it("keeps the backend's 201 on a decoded JSON creation", async () => {
+    api.mockResolvedValueOnce(
+      Response.json(
+        { status: "success", data: { name: "Ada" } },
+        { status: 201 },
+      ),
+    );
+    const response = await call("POST", ["rows"]);
+    expect(response.status).toBe(201);
+    expect(await data(response)).toEqual({ name: "Ada" });
+  });
+
   it("forwards a registered read and answers its decoded data", async () => {
     api.mockResolvedValueOnce({
       status: "success",
@@ -445,7 +457,9 @@ describe("makeCatalogProxy", () => {
 
   it("answers a DELETE without a body with nothing", async () => {
     api.mockResolvedValueOnce(undefined);
-    expect(await data(await call("DELETE", ["rows", "1", "seen"]))).toBeNull();
+    const response = await call("DELETE", ["rows", "1", "seen"]);
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
     expect(sessionReads).toBe(1);
     expect(api.mock.calls[0]?.[3]).toBeUndefined();
   });
@@ -477,10 +491,16 @@ describe("makeCatalogProxy", () => {
   it.each([
     ["a 204", undefined],
     ["the envelope without data", { status: "success", message: "done" }],
-  ])("answers a write without data for %s", async (_name, answer) => {
+  ])("answers a write without data for %s", async (name, answer) => {
     api.mockResolvedValueOnce(answer);
     const response = await call("PUT", ["rows", "1", "seen"], "", { on: true });
-    expect(await data(response)).toBeNull();
+    if (name === "a 204") {
+      expect(response.status).toBe(204);
+      expect(await response.text()).toBe("");
+    } else {
+      expect(response.status).toBe(200);
+      expect(await data(response)).toBeNull();
+    }
     expect(api.mock.calls[0]?.[3]).toEqual({ on: true });
   });
 

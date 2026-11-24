@@ -50,7 +50,7 @@ vi.mock("next-auth/react", () => ({
       user: {
         id: "1",
         scope: "org",
-        orgId: 7,
+        orgId: "7",
         email: "leitung@traeger.example",
       },
     },
@@ -297,7 +297,7 @@ describe("TraegerAccountsPage", () => {
 
     const [kasse] = await screen.findAllByText("kasse@traeger.example");
     expect(kasse).toBeInTheDocument();
-    expect(screen.getAllByText("Abrechnung")[0]).toBeInTheDocument();
+    expect((await screen.findAllByText("Abrechnung"))[0]).toBeInTheDocument();
     expect(screen.getAllByText("(Du)")[0]).toBeInTheDocument();
     expect(screen.getByText("Offene Einladungen")).toBeInTheDocument();
     expect(screen.getAllByText("neu@traeger.example")[0]).toBeInTheDocument();

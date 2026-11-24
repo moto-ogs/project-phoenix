@@ -354,10 +354,14 @@ describe("bffJson", () => {
   it("refuses a success without data as an unreadable answer", async () => {
     mockFetch
       .mockResolvedValueOnce(Response.json({ id: "7" }))
+      .mockResolvedValueOnce(Response.json({ status: "success" }))
       .mockResolvedValueOnce(Response.json({ status: "success" }));
 
     await expect(
       bffJson("tenant", "GET /api/activities/categories"),
+    ).rejects.toMatchObject({ status: 502, code: "general.unavailable" });
+    await expect(
+      bffJson("tenant", "POST /api/search/", { body: { query: "Ada" } }),
     ).rejects.toMatchObject({ status: 502, code: "general.unavailable" });
     await expect(
       bffJson("tenant", "PUT /api/activities/categories/{categoryId}", {
@@ -700,6 +704,20 @@ describe("bffJson", () => {
       void bffJson("tenant", "GET /api/settings/login-image");
       // @ts-expect-error: a session step answers the BFF's own shape
       void bffJson("tenant", "POST /auth/login", { body: {} });
+      // @ts-expect-error: the Go session check is server-only
+      void bffJson("tenant", "POST /auth/session/validate", { body: {} });
+      // @ts-expect-error: the invitation BFF takes the token through its own route
+      void bffJson("tenant", "POST /auth/invitations/{token}/accept", {
+        body: {},
+      });
+      // @ts-expect-error: profile is a backend read of the bootstrap route, not a BFF path
+      void bffPath("tenant", "GET /api/enrollment/me/profile");
+      // @ts-expect-error: the operator route gets its token from its flow cookie
+      void bffJson("platform", "POST /operator/auth/invitations/validate", {
+        body: {},
+      });
+      // @ts-expect-error: parent demo calls use the BFF's own envelope and address
+      void bffJson("parent", "POST /demo/access/sessions", { body: {} });
       // @ts-expect-error: the wall display answers without the envelope
       void bffJson("tenant", "GET /api/display/dashboard");
       // @ts-expect-error: the path parameter is missing

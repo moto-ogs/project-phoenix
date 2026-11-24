@@ -17,7 +17,9 @@ func AuthRouteContracts() []common.RouteContract {
 func SessionRouteContracts() []common.RouteContract {
 	school := []common.PortalScope{common.PortalSchool}
 	step := func(pattern string, request, response any) common.RouteContract {
+		browserPath := "/api/school/auth" + pattern
 		return common.RouteContract{
+			BrowserPath: browserPath, BrowserOwnContract: browserPath != "",
 			Method: "POST", Pattern: pattern, Portals: school, RouteFile: common.RouteFileSession,
 			Request: request, Response: response, Plain: true,
 		}

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/jwx/v3/jwt"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -15,7 +16,7 @@ import (
 // numbers become float64.
 func jsonWire(t *testing.T, claims any) map[string]any {
 	t.Helper()
-	encoded, err := json.Marshal(claims)
+	encoded, err := wire.Marshal(claims)
 	require.NoError(t, err)
 	var wire map[string]any
 	require.NoError(t, json.Unmarshal(encoded, &wire))
@@ -26,10 +27,10 @@ func TestAccessWireRoundTrip(t *testing.T) {
 	t.Parallel()
 	now := time.Unix(1_800_000_000, 0)
 	claims := AccessClaims{
-		AccountID: 42, Email: "a@example.com", Username: "anna", FirstName: "Anna", LastName: "Muster",
+		AccountID: 9007199254740993, Email: "a@example.com", Username: "anna", FirstName: "Anna", LastName: "Muster",
 		Roles: []string{"admin"}, RoleIsSystem: []bool{true}, Permissions: []string{"users:read"},
-		IsAdmin: true, Scope: "school", TenantID: 7, OrgID: 3, FamilyID: "fam", ReadOnly: true,
-		ActingAdminID: 9, PreviewID: "prev", ViaTraeger: true, ExpiresAt: now.Add(time.Hour).Unix(),
+		IsAdmin: true, Scope: "school", TenantID: 9007199254740995, OrgID: 9007199254740997, FamilyID: "fam", ReadOnly: true,
+		ActingAdminID: 9007199254740999, PreviewID: "prev", ViaTraeger: true, IssuedAt: now.Unix(), ExpiresAt: now.Add(time.Hour).Unix(),
 	}
 	got, err := decodeAccess(jsonWire(t, EncodeAccess(claims, now, now.Add(time.Hour))))
 	require.NoError(t, err)
@@ -48,6 +49,23 @@ func TestRefreshWireRoundTripAndDefaultExpiry(t *testing.T) {
 	got, err = decodeRefresh(jsonWire(t, EncodeRefresh(claims, now, now.Add(time.Hour))))
 	require.NoError(t, err)
 	assert.Equal(t, now.Add(time.Hour).Unix(), got.ExpiresAt)
+}
+
+func TestDecodeRefreshDistinguishesAbsentAndInvalidBinding(t *testing.T) {
+	t.Parallel()
+	for _, key := range []string{"tenant_id", "org_id"} {
+		t.Run(key, func(t *testing.T) {
+			t.Parallel()
+			token := jwt.New()
+			require.NoError(t, token.Set("id", 42))
+			require.NoError(t, token.Set("token", "refresh"))
+			_, err := DecodeRefresh(token)
+			require.NoError(t, err)
+			require.NoError(t, token.Set(key, int64(9007199254740993)))
+			_, err = DecodeRefresh(token)
+			require.ErrorContains(t, err, key)
+		})
+	}
 }
 
 func TestMFAWireRoundTrips(t *testing.T) {
@@ -111,7 +129,8 @@ func TestDecodersRefuseForeignAndMalformedTokens(t *testing.T) {
 		"access: challenge":           {accessErr(access(map[string]any{"mfa_pending": true})), "token is a pending-MFA challenge, not a session token"},
 		"access: enrollment":          {accessErr(access(map[string]any{"mfa_enrollment_pending": true})), "token is a pending-MFA-enrollment token, not a session token"},
 		"access: no id":               {accessErr(map[string]any{"sub": "a", "roles": []any{}}), "missing required claim: id"},
-		"access: id not a number":     {accessErr(access(map[string]any{"id": "42"})), "claim id is not a number"},
+		"access: malformed id":        {accessErr(access(map[string]any{"id": "not-an-id"})), "claim id is not a valid identifier"},
+		"access: unsafe legacy id":    {accessErr(access(map[string]any{"id": float64(1 << 53)})), "claim id is not a valid identifier"},
 		"access: no sub":              {accessErr(map[string]any{"id": float64(1), "roles": []any{}}), "missing required claim: sub"},
 		"access: sub not a string":    {accessErr(access(map[string]any{"sub": float64(1)})), "claim sub is not a string"},
 		"access: no roles":            {accessErr(map[string]any{"id": float64(1), "sub": "a"}), "missing required claim: roles"},

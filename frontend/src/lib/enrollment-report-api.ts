@@ -56,18 +56,25 @@ export type CareUsageReport = Omit<
   "totals" | "by_offering" | "filter_options" | "rows"
 > & {
   totals: {
-    children: number;
-    by_day_count: Record<string, number>;
-    by_weekday_pickup_time: Record<string, Record<string, number>>;
+    [
+      K in keyof enrollmentContract.CareUsageTotals
+    ]: K extends "by_weekday_pickup_time"
+      ? Record<
+          string,
+          NonNullable<
+            NonNullable<enrollmentContract.CareUsageTotals[K]>[string]
+          >
+        >
+      : NonNullable<enrollmentContract.CareUsageTotals[K]>;
   };
   by_offering: (Omit<
     enrollmentContract.careUsageOfferingStatResponse,
     "by_day_count"
   > & { by_day_count: Record<string, number> })[];
   filter_options: {
-    offerings: enrollmentContract.careUsageOfferingOptionResponse[];
-    grade_levels: number[];
-    pickup_times: string[];
+    [
+      K in keyof enrollmentContract.careUsageFilterOptionsResponse
+    ]-?: NonNullable<enrollmentContract.careUsageFilterOptionsResponse[K]>;
   };
   rows: CareUsageRow[];
 };

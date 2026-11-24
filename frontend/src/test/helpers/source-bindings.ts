@@ -77,5 +77,10 @@ export function sourceBindings(file: string, text: string) {
     return { names: [] };
   }
 
-  return { source, binding };
+  return {
+    source,
+    binding,
+    declaration: (node: ts.Identifier) =>
+      checker.getSymbolAtLocation(node)?.valueDeclaration,
+  };
 }

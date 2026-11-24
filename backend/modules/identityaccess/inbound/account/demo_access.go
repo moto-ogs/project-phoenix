@@ -99,11 +99,11 @@ func DemoRouteContracts() []common.RouteContract {
 		{Method: http.MethodPost, Pattern: "/access-requests", Outside: &common.Outside{
 			Reason: common.OutsidePublicAPI, Why: "the separate moto website requests demo links directly; no portal route file calls it",
 		}},
-		{Method: http.MethodGet, Pattern: "/access/status", RouteFile: "demo route files hold and forward the demo bearer",
+		{Method: http.MethodGet, Pattern: "/access/status", BrowserPath: "/api/demo/access/status", BrowserMethod: http.MethodPost, BrowserOwnContract: true, RouteFile: "demo route files hold and forward the demo bearer",
 			Portals: portals, Plain: true, Response: demoAccessStatus{}},
-		{Method: http.MethodPost, Pattern: "/access/sessions", RouteFile: "the demo session route installs the portal's cookies",
+		{Method: http.MethodPost, Pattern: "/access/sessions", BrowserPath: "/api/demo/access/sessions", BrowserOwnContract: true, RouteFile: "the demo session route installs the portal's cookies",
 			Portals: portals, Plain: true, Request: demoSessionRequest{}, Response: demoSessionResponse{}},
-		{Method: http.MethodPost, Pattern: "/access/reset", RouteFile: "the demo reset route reads the token cookie",
+		{Method: http.MethodPost, Pattern: "/access/reset", BrowserPath: "/api/demo/access/reset", BrowserOwnContract: true, RouteFile: "the demo reset route reads the token cookie",
 			Portals: portals, Plain: true, Request: demoResetRequest{}, Response: demoResetResponse{}},
 	}
 }

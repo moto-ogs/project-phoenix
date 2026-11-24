@@ -4,6 +4,7 @@ import type * as linkToTenantContract from "~/lib/contract/auth-link-to-tenant.g
 import { bffJson } from "./bff-fetch";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import type { SchoolIdentityResponse } from "./contract/shared.generated";
+import type { DirectoryPersonRequest } from "./contract/users.generated";
 import type { StaffRequest } from "./contract/staff.generated";
 import { createLogger } from "~/lib/logger";
 import { mapTeacherResponse } from "./teacher-helpers";
@@ -21,15 +22,6 @@ type PersonIdentityFields = Required<
   Pick<linkToTenantContract.LinkToTenantRequest, "first_name" | "last_name">
 > &
   Pick<linkToTenantContract.LinkToTenantRequest, "tag_id">;
-
-/**
- * What the backend provisioned alongside the account (#2222).
- *
- * The ids arrive as strings and stay strings on the way through: they are
- * PostgreSQL bigints, and a JSON number past 2^53 is already truncated by the
- * time it reaches us. They are converted exactly once, at the request boundary
- * that needs a number.
- */
 
 /**
  * Builds the POST /api/staff body, carrying person_id as a decimal string.
@@ -343,16 +335,13 @@ class TeacherService {
   }
 
   /** Builds person update payload from teacher data */
-  private buildPersonUpdateData(teacherData: Partial<Teacher>): {
-    first_name?: string;
-    last_name?: string;
-    tag_id?: string;
-  } {
-    const personData: {
-      first_name?: string;
-      last_name?: string;
-      tag_id?: string;
-    } = {};
+  private buildPersonUpdateData(
+    teacherData: Partial<Teacher>,
+  ): Pick<DirectoryPersonRequest, "first_name" | "last_name" | "tag_id"> {
+    const personData: Pick<
+      DirectoryPersonRequest,
+      "first_name" | "last_name" | "tag_id"
+    > = {};
 
     if (teacherData.first_name !== undefined) {
       personData.first_name = teacherData.first_name;
@@ -372,17 +361,7 @@ class TeacherService {
   private buildStaffUpdateData(
     currentTeacher: Teacher,
     teacherData: Partial<Teacher>,
-  ): {
-    // Decimal string, exactly as it was loaded — the update route forwards it
-    // verbatim and the backend accepts the string (#2222).
-    person_id: string | undefined;
-    is_teacher: boolean;
-    staff_notes: string;
-    specialization: string;
-    role: string;
-    qualifications: string;
-    expected_version: string;
-  } {
+  ): StaffRequest {
     return {
       // The record as the form read it (ADR 0311): the unchanged fields
       // below come from that read, so the save rests on it.

@@ -33,7 +33,7 @@ vi.mock("next-auth/react", () => ({
       user: {
         id: "A",
         scope: "org",
-        orgId: 7,
+        orgId: "7",
         permissions: ["traeger_overview:read", "traeger_settings:manage"],
       },
     },
@@ -741,7 +741,7 @@ function render(ui: React.ReactElement) {
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "A", scope: "org", orgId: 7 } },
+    data: { user: { id: "A", scope: "org", orgId: "7" } },
     status: "authenticated",
   }),
 }));

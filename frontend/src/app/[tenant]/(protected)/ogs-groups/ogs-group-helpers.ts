@@ -1,3 +1,4 @@
+import type { RoomStatus } from "~/lib/contract/students.generated";
 import type { Student } from "~/lib/student-helpers";
 import {
   isCheckedInLocation,
@@ -93,10 +94,7 @@ export function matchesSearchFilter(
 export function matchesAttendanceFilter(
   student: Student,
   attendanceFilter: string,
-  roomStatus: Record<
-    string,
-    { in_group_room?: boolean; current_room_id?: string | number }
-  >,
+  roomStatus: Record<string, Partial<RoomStatus>>,
 ): boolean {
   if (attendanceFilter === "all") return true;
 
@@ -122,10 +120,9 @@ export function matchesAttendanceFilter(
   }
 }
 
-export function matchesForeignRoomFilter(studentRoomStatus?: {
-  in_group_room?: boolean;
-  current_room_id?: string | number;
-}): boolean {
+export function matchesForeignRoomFilter(
+  studentRoomStatus?: Partial<RoomStatus>,
+): boolean {
   return (
     !!studentRoomStatus?.current_room_id &&
     studentRoomStatus.in_group_room === false

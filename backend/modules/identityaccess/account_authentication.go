@@ -124,6 +124,7 @@ type SessionClaims struct {
 	// Absprung (ADR 0084 section 5, #4654): the person holds no mapping at
 	// the school and acts with the school's admin role through the Träger.
 	ViaTraeger bool
+	IssuedAt   int64
 	ExpiresAt  int64
 }
 

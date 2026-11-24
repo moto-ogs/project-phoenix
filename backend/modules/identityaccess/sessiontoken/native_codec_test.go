@@ -81,7 +81,7 @@ func TestNativeSessionCodecPreservesTokenWire(t *testing.T) {
 			require.Equal(t, claims.Permissions, oldClaims.Permissions)
 			decoded, err := native.ParseAccessToken(accessToken)
 			require.NoError(t, err)
-			claims.ExpiresAt = decoded.ExpiresAt
+			claims.IssuedAt, claims.ExpiresAt = decoded.IssuedAt, decoded.ExpiresAt
 			require.Equal(t, claims, decoded)
 			decodedRefresh, err := native.ParseRefreshToken(refreshToken)
 			require.NoError(t, err)
@@ -90,7 +90,7 @@ func TestNativeSessionCodecPreservesTokenWire(t *testing.T) {
 			require.NoError(t, err)
 			decodedOld, err := native.ParseAccessToken(oldToken)
 			require.NoError(t, err)
-			decodedOld.ExpiresAt = decoded.ExpiresAt
+			decodedOld.IssuedAt, decodedOld.ExpiresAt = decoded.IssuedAt, decoded.ExpiresAt
 			// The request projection carries no display-only role origin.
 			decoded.RoleIsSystem = nil
 			require.Equal(t, decoded, decodedOld)

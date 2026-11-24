@@ -39,7 +39,7 @@ describe("POST /api/logs", () => {
     vi.mocked(validateSessionToken).mockResolvedValue({
       id: "account-42",
       exp: 4102444800,
-      tenant_id: 7,
+      tenant_id: "7",
     });
     mockAuth.mockResolvedValue({
       user: { id: "account-42", name: "Test User", token: "verified-access" },

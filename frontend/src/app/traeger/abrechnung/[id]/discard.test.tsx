@@ -25,7 +25,7 @@ vi.mock("next-auth/react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next-auth/react")>()),
   useSession: () => ({
     data: {
-      user: { id: "traeger-test", scope: "org", orgId: 7, permissions: [] },
+      user: { id: "traeger-test", scope: "org", orgId: "7", permissions: [] },
     },
     status: "authenticated",
   }),

@@ -18,8 +18,9 @@ import {
   type RouteContext,
 } from "~/lib/route-wrapper-utils.server";
 import { underOutsideHead } from "./catalog-outside-mounts";
-import { commits, decodeContract, readContractJson } from "./client.server";
-import { fileAnswer, multipart, noData } from "./runtime";
+import { decodeContract, readContractJson } from "./client.server";
+import { commits } from "./commit";
+import { fileAnswer, multipart } from "./runtime";
 
 /** A generated route entry, as `portalRoutes` lists it. */
 export interface CatalogRoute {
@@ -89,7 +90,7 @@ const segmentsOf = (path: string) => path.split("/").filter(Boolean);
  * value when it keeps the file in the browser alone, else none at all. A
  * shared cache never stores a session's file.
  */
-export function privateCacheControl(value: string | null): string {
+function privateCacheControl(value: string | null): string {
   const directives = (value ?? "")
     .toLowerCase()
     .split(",")
@@ -338,7 +339,7 @@ function literalFirst(a: readonly string[], b: readonly string[]) {
 }
 
 /** The routes a request reaches without a session (#2352). */
-export interface PublicCatalog {
+interface PublicCatalog {
   /** `portalRoutes.public`; the proxy serves those under its mount. */
   readonly routes: readonly CatalogRoute[];
   /** Backend prefixes beside the mount that public routes reach. */
@@ -473,6 +474,21 @@ export function makeCatalogProxy(
     };
   }
 
+  async function jsonReply(
+    route: ServedRoute,
+    request: NextRequest,
+    response: Response,
+  ): Promise<Response> {
+    const envelope = decoded(
+      route,
+      request,
+      await readContractJson(response, route, { request }),
+    );
+    return response.status === 204
+      ? new NextResponse(null, { status: 204 })
+      : NextResponse.json(envelope, { status: response.status });
+  }
+
   async function jsonAnswer(
     route: ServedRoute,
     request: NextRequest,
@@ -488,11 +504,7 @@ export function makeCatalogProxy(
       idempotencyKey,
       request,
     });
-    return decoded(
-      route,
-      request,
-      await readContractJson(response, route, { request }),
-    );
+    return jsonReply(route, request, response);
   }
 
   const read = async (
@@ -501,7 +513,7 @@ export function makeCatalogProxy(
     params: Record<string, unknown>,
   ) => {
     const { route, endpoint } = target(request, params.path);
-    return NextResponse.json(await jsonAnswer(route, request, endpoint, token));
+    return jsonAnswer(route, request, endpoint, token);
   };
 
   /** A DELETE forwards a JSON body, such as a reason, when it carries one. */
@@ -514,16 +526,7 @@ export function makeCatalogProxy(
     const { route, endpoint } = target(request, params.path);
     const sent =
       typeof body === "object" && body !== null && Object.keys(body).length > 0;
-    const envelope = await jsonAnswer(
-      route,
-      request,
-      endpoint,
-      token,
-      sent ? body : undefined,
-    );
-    return decoderOf(route, request) === noData
-      ? null
-      : NextResponse.json(envelope);
+    return jsonAnswer(route, request, endpoint, token, sent ? body : undefined);
   };
 
   const write = async (
@@ -533,15 +536,13 @@ export function makeCatalogProxy(
     params: Record<string, unknown>,
   ) => {
     const { route, endpoint } = target(request, params.path);
-    return NextResponse.json(
-      await jsonAnswer(
-        route,
-        request,
-        endpoint,
-        token,
-        body,
-        request.headers.get("Idempotency-Key"),
-      ),
+    return jsonAnswer(
+      route,
+      request,
+      endpoint,
+      token,
+      body,
+      request.headers.get("Idempotency-Key"),
     );
   };
 
@@ -594,10 +595,7 @@ export function makeCatalogProxy(
       throw error;
     }
     if (counted.exceeded()) throw tooLarge();
-    const answer = await readContractJson(response, route, { request });
-    return NextResponse.json(decoded(route as ServedRoute, request, answer), {
-      status: response.status === 204 ? 200 : response.status,
-    });
+    return jsonReply(route as ServedRoute, request, response);
   }
 
   /**
@@ -727,15 +725,13 @@ export function makeCatalogProxy(
       method === "GET"
         ? undefined
         : await parseRequestBody(request, route.maxBodyBytes ?? 0);
-    return NextResponse.json(
-      await jsonAnswer(
-        route,
-        request,
-        endpoint,
-        null,
-        json,
-        request.headers.get("Idempotency-Key"),
-      ),
+    return jsonAnswer(
+      route,
+      request,
+      endpoint,
+      null,
+      json,
+      request.headers.get("Idempotency-Key"),
     );
   }
 

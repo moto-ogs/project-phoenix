@@ -108,7 +108,7 @@ const PORTALS: readonly Portal[] = [
     layout: SchoolLayout,
     providers: SchoolProviders,
     sessionPath: "/api/school/auth/session",
-    snapshot: { expires, user: { id: "41", scope: "school", tenantId: 3 } },
+    snapshot: { expires, user: { id: "41", scope: "school", tenantId: "3" } },
   },
   {
     name: "caterer",
@@ -129,7 +129,7 @@ const PORTALS: readonly Portal[] = [
     layout: TraegerLayout,
     providers: TraegerProviders,
     sessionPath: "/api/traeger/auth/session",
-    snapshot: { expires, user: { id: "41", scope: "org", orgId: 7 } },
+    snapshot: { expires, user: { id: "41", scope: "org", orgId: "7" } },
   },
 ];
 

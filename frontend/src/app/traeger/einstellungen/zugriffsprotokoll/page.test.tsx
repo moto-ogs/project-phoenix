@@ -379,7 +379,7 @@ function render(ui: React.ReactElement) {
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "A", scope: "org", orgId: 7 } },
+    data: { user: { id: "A", scope: "org", orgId: "7" } },
     status: "authenticated",
   }),
 }));

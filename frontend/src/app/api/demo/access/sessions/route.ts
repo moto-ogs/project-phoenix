@@ -3,13 +3,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { contractWrite } from "~/lib/contract/client.server";
 import { routes } from "~/lib/contract/demo-access.generated";
+import { contractError } from "~/lib/contract/route-response.server";
 import { frontendOrigin } from "~/lib/client-headers.server";
 import { createLogger } from "~/lib/logger";
-import {
-  DEMO_TOKEN_COOKIE,
-  DEMO_TOKEN_COOKIE_OPTIONS,
-  forwardDemoFailure,
-} from "../forward";
+import { DEMO_TOKEN_COOKIE, DEMO_TOKEN_COOKIE_OPTIONS } from "../forward";
 import { problemResponse } from "~/lib/api-response-error.server";
 import { withPrivateNoStore } from "~/lib/private-no-store";
 import { successResponse } from "~/lib/route-wrapper-utils.server";
@@ -107,7 +104,7 @@ async function redeem(request: NextRequest, portal: DemoPortal) {
           rollbackUnreadableSession(request, payload),
       },
     );
-    if (!reply.ok) return forwardDemoFailure(reply, request);
+    if (!reply.ok) return contractError(reply, request);
     const payload = reply.value;
     const demo = payload.demo;
     const mintedRole = demoSessionRole.safeParse(demo.role);

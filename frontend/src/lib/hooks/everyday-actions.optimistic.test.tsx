@@ -106,7 +106,7 @@ const meals: MealParticipation = {
 function signedIn(id = "A") {
   return {
     data: {
-      user: { id, tenantId: 1 },
+      user: { id, tenantId: "1" },
       expires: "2099-01-01",
     } satisfies Session,
     status: "authenticated",

@@ -85,7 +85,7 @@ const PORTALS: readonly Portal[] = [
     // An Absprung out of the Träger portal opens a tenant session.
     alsoAccepts: ["tenant", "org"],
     validation: "tenant",
-    bound: { tenantId: 3 },
+    bound: { tenantId: "3" },
   },
   {
     name: "parent",
@@ -99,7 +99,7 @@ const PORTALS: readonly Portal[] = [
     read: readSchoolSessionSnapshot,
     cookie: "school.session-token",
     scope: "school",
-    bound: { tenantId: 3 },
+    bound: { tenantId: "3" },
   },
   {
     name: "caterer",
@@ -120,7 +120,7 @@ const PORTALS: readonly Portal[] = [
     read: readTraegerSessionSnapshot,
     cookie: "traeger.session-token",
     scope: "org",
-    bound: { orgId: 7 },
+    bound: { orgId: "7" },
   },
 ];
 
@@ -429,7 +429,7 @@ describe("portal-specific claims", () => {
     await sendPortalCookie(school, { tenantId: undefined });
     await expect(readSchoolSessionSnapshot()).resolves.toBeNull();
 
-    await sendPortalCookie(school, { tenantId: 0 });
+    await sendPortalCookie(school, { tenantId: "0" });
     await expect(readSchoolSessionSnapshot()).resolves.toBeNull();
   });
 
@@ -454,10 +454,10 @@ describe("portal-specific claims", () => {
     await sendPortalCookie(traeger, { orgId: undefined });
     await expect(readTraegerSessionSnapshot()).resolves.toBeNull();
 
-    await sendPortalCookie(traeger, { orgId: 0 });
+    await sendPortalCookie(traeger, { orgId: "0" });
     await expect(readTraegerSessionSnapshot()).resolves.toBeNull();
 
-    await sendPortalCookie(traeger, { tenantId: 3 });
+    await sendPortalCookie(traeger, { tenantId: "3" });
     await expect(readTraegerSessionSnapshot()).resolves.toBeNull();
   });
 });

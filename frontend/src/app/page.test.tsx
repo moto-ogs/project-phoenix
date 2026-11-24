@@ -54,7 +54,7 @@ describe("RootPage", () => {
       status: "ok",
       tenants: [
         {
-          tenantId: 0,
+          tenantId: "0",
           slug: "school-a",
           name: "Testschule A",
           subdomain: "school-a",
@@ -63,7 +63,7 @@ describe("RootPage", () => {
           settings: {},
         },
         {
-          tenantId: 0,
+          tenantId: "0",
           slug: "school-b",
           name: "Testschule B",
           subdomain: "school-b",
@@ -94,7 +94,7 @@ describe("RootPage", () => {
       status: "ok",
       tenants: [
         {
-          tenantId: 0,
+          tenantId: "0",
           slug: "school-a",
           name: "School A",
           subdomain: "school-a",
@@ -121,7 +121,7 @@ describe("RootPage", () => {
       status: "ok",
       tenants: [
         {
-          tenantId: 0,
+          tenantId: "0",
           slug: "school-a",
           name: "School A",
           subdomain: "school-a",
@@ -152,7 +152,7 @@ describe("RootPage", () => {
       status: "ok",
       tenants: [
         {
-          tenantId: 0,
+          tenantId: "0",
           slug: "school-a",
           name: "School A",
           subdomain: "school-a",
@@ -192,7 +192,7 @@ describe("RootPage", () => {
       status: "ok",
       tenants: [
         {
-          tenantId: 0,
+          tenantId: "0",
           slug: "school-a",
           name: "School A",
           subdomain: "school-a",

@@ -1,3 +1,4 @@
+import { sessionClaims } from "~/test/helpers/session-claims";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { RequestCookies } from "next/dist/server/web/spec-extension/cookies";
@@ -37,13 +38,14 @@ const { POST: enroll } = await import("./mfa/enroll/confirm/route");
 const { POST: passkey } = await import("./passkeys/login/verify/route");
 const { handlers } = (await import("~/server/auth")).tenantPortal;
 const backend = vi.fn();
-const claims = () => ({
-  id: "42",
-  sub: "local@example.test",
-  tenant_id: "7",
-  scope: "",
-  exp: Math.floor(Date.now() / 1000) + 900,
-});
+const claims = () =>
+  sessionClaims({
+    id: "42",
+    sub: "local@example.test",
+    tenant_id: "7",
+    scope: "",
+    exp: Math.floor(Date.now() / 1000) + 900,
+  });
 const access = () =>
   `e30.${Buffer.from(JSON.stringify(claims())).toString("base64url")}.synthetic`;
 const pair = () => ({
@@ -160,7 +162,7 @@ describe.each(paths)(
         }),
       );
       const metadata = await session.json();
-      expect(metadata.user).toMatchObject({ id: "42", tenantId: 7 });
+      expect(metadata.user).toMatchObject({ id: "42", tenantId: "7" });
       // This is the raw server Auth.js view, not a browser route. The session
       // routes' separate allowlist is protected by session-tokens.test.ts.
       expect(cookie).not.toContain(pair().access_token);

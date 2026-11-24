@@ -41,7 +41,7 @@ vi.mock("vaul", () => import("~/test/mocks/vaul"));
 vi.unmock("swr");
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "1", tenantId: 1, scope: "tenant" } },
+    data: { user: { id: "1", tenantId: "1", scope: "tenant" } },
     status: "authenticated",
   }),
 }));

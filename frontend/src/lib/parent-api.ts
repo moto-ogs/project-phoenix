@@ -1,3 +1,4 @@
+import type { OfferingChangeInput } from "~/lib/offering-change-input";
 import {
   mapParentConferenceOffer,
   type ParentConferenceOffer,
@@ -1724,12 +1725,7 @@ export async function getChildOfferingCatalog(
  */
 export async function submitOfferingChangeRequest(
   studentId: string,
-  input: {
-    offerings: parentMeContract.OfferingSelectionBody[];
-    effective_from: string;
-    note?: string;
-    complete_withdrawal_confirmed?: boolean;
-  },
+  input: OfferingChangeInput,
   recipientGuardianProfileIds: string[] = [],
 ): Promise<parentMeContract.CareOfferingsResponse> {
   return parentCall(
@@ -1755,13 +1751,7 @@ export async function submitOfferingChangeRequest(
 export async function updateOfferingChangeRequest(
   studentId: string,
   requestId: string,
-  input: {
-    offerings: parentMeContract.OfferingSelectionBody[];
-    effective_from: string;
-    note?: string;
-    complete_withdrawal_confirmed?: boolean;
-    expectedVersion: string;
-  },
+  input: OfferingChangeInput & { expectedVersion: string },
 ): Promise<parentMeContract.CareOfferingsResponse> {
   const { expectedVersion, ...body } = input;
   return parentCall(

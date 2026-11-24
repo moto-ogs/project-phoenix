@@ -11,7 +11,7 @@ import { StudentNotizenTab } from "./student-notizen-tab";
 vi.unmock("swr");
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "A", tenantId: 1 }, expires: "2099-01-01" },
+    data: { user: { id: "A", tenantId: "1" }, expires: "2099-01-01" },
     status: "authenticated",
   }),
 }));

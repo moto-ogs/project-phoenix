@@ -14,7 +14,7 @@ vi.mock(
 const owner = vi.hoisted(() => ({ account: "7", school: "schule" }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: owner.account, tenantId: 1 } },
+    data: { user: { id: owner.account, tenantId: "1" } },
     status: "authenticated",
   }),
 }));

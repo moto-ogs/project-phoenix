@@ -184,6 +184,8 @@ export const routes = {
     pattern: "/api/display/dashboard",
     portals: ["tenant"],
     routeFile: "the wall display sends its display token in a header, no session; its route file forwards it",
+    browserPath: "/api/display/dashboard",
+    browserOwnContract: true,
     plain: true,
     response: DashboardResponseSchema,
   },

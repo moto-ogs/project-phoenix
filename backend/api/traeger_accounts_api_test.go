@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"slices"
+	"strconv"
 	"testing"
 	"time"
 
@@ -205,7 +206,7 @@ func TestTraegerInvitationCreatesAnAccountWithTheInvitedRole(t *testing.T) {
 	code, answer := traegerSignIn(t, router, address, password, 0)
 	require.Equal(t, http.StatusOK, code, "the acceptance created the membership")
 	claims := traegerTokenClaims(t, answer.AccessToken)
-	assert.Equal(t, float64(organizationID), claims["org_id"])
+	assert.Equal(t, strconv.FormatInt(organizationID, 10), claims["org_id"])
 	assert.ElementsMatch(t, []any{identityaccess.TraegerRightOverviewRead, identityaccess.TraegerRightBillingManage,
 		identityaccess.TraegerRightFinanceExport, identityaccess.TraegerRightReportsRead}, claims["permissions"], "the role bundles the rights of the ADR")
 

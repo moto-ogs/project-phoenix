@@ -9,7 +9,6 @@ import { makePortalHandlers } from "~/lib/portal-handlers.server";
 import { testPortalBinding } from "~/test/portal-binding";
 import {
   makeCatalogProxy,
-  privateCacheControl,
   type CatalogMethod,
   type CatalogRoute,
 } from "./catalog-proxy.server";
@@ -343,14 +342,16 @@ describe("catalog file cache", () => {
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
   });
 
-  it("reads private and public as directives, not as text", () => {
-    expect(privateCacheControl("Private, Max-Age=60")).toBe(
-      "Private, Max-Age=60",
+  it.each([
+    ["Private, Max-Age=60", "Private, Max-Age=60"],
+    ["private, public", "private, no-store"],
+    ["max-age=60, x-private", "private, no-store"],
+  ])("reads %s as directives, not text", async (upstream, expected) => {
+    mockFetch.mockResolvedValue(
+      new Response("image", { headers: { "Cache-Control": upstream } }),
     );
-    expect(privateCacheControl("private, public")).toBe("private, no-store");
-    expect(privateCacheControl("max-age=60, x-private")).toBe(
-      "private, no-store",
-    );
+    const response = await call("GET", ["rows", "7", "logo"]);
+    expect(response.headers.get("Cache-Control")).toBe(expected);
   });
 });
 
@@ -518,7 +519,7 @@ describe("catalog file route with its own cache (#2352)", () => {
 });
 
 describe("catalog multipart upload", () => {
-  it("normalizes a successful 204 to a 200 no-data envelope", async () => {
+  it("preserves a successful 204 without a body", async () => {
     mockFetch.mockResolvedValue(new Response(null, { status: 204 }));
 
     const response = await call("POST", ["rows", "7", "proofs", "complete"], {
@@ -526,11 +527,8 @@ describe("catalog multipart upload", () => {
       headers: uploadHeaders(4),
     });
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
-      status: "success",
-      data: null,
-    });
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });

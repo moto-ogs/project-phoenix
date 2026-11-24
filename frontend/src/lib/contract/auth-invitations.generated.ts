@@ -211,6 +211,8 @@ export const routes = {
     pattern: "/auth/invitations/{token}/accept",
     portals: ["tenant"],
     routeFile: "the route file attaches the signed-in owner's session to the accept",
+    browserPath: "/api/invitations/accept",
+    browserOwnContract: true,
     request: requestBody<AcceptInvitationRequest>(),
     response: success(AcceptInvitationResponseSchema),
   },

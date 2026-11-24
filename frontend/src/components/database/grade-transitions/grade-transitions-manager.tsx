@@ -150,8 +150,7 @@ function describeMappings(transition: GradeTransition): string {
 // above; a plain lexical compare would order "9" above "10". For non-negative
 // digit strings, longer means larger and equal lengths compare lexically —
 // exact over the whole int64 range and, unlike `BigInt()`, unable to throw on a
-// malformed id mid-render. Anything not digits-only falls back to a numeric
-// compare rather than crashing the manager.
+// malformed id mid-render. Malformed values retain a deterministic text order.
 function compareTransitionIDs(a: string, b: string): number {
   if (/^\d+$/.test(a) && /^\d+$/.test(b)) {
     const trimmedA = a.replace(/^0+(?=\d)/, "");
@@ -161,7 +160,7 @@ function compareTransitionIDs(a: string, b: string): number {
     }
     return trimmedA < trimmedB ? -1 : trimmedA > trimmedB ? 1 : 0;
   }
-  return Number(a) - Number(b);
+  return a.localeCompare(b);
 }
 
 function isMoreRecentlyApplied(

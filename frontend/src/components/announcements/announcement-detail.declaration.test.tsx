@@ -6,7 +6,7 @@ import { AnnouncementDetail } from "./announcement-detail";
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    data: { user: { id: "account-1", tenantId: "1", scope: "tenant" } },
     status: "authenticated",
   }),
 }));

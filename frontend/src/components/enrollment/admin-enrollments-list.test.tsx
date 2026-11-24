@@ -25,7 +25,7 @@ function Providers({ children }: Readonly<{ children: ReactNode }>) {
         user: {
           id: "staff-7",
           scope: "tenant",
-          tenantId: 42,
+          tenantId: "42",
           permissions: ["config:update", "config:manage"],
         },
         expires: "2099-01-01",

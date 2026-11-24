@@ -54,6 +54,56 @@ function declaredMembers(node) {
   return [];
 }
 
+function declaredBranch(node) {
+  let parent = node.parent;
+  while (ts.isParenthesizedTypeNode(parent) || ts.isUnionTypeNode(parent)) {
+    parent = parent.parent;
+  }
+  return ts.isTypeAliasDeclaration(parent);
+}
+
+// A named projection with an intersection transforms a base type; it is not
+// an independently declared wire shape. Inline casts and other use sites do
+// not get this exemption, even when their type is an intersection.
+function namedProjection(node, generated) {
+  const parent = node.parent;
+  if (!ts.isIntersectionTypeNode(parent)) return false;
+  let owner = parent.parent;
+  while (ts.isParenthesizedTypeNode(owner) || ts.isUnionTypeNode(owner)) {
+    owner = owner.parent;
+  }
+  if (!ts.isTypeAliasDeclaration(owner) && !(ts.isPropertySignature(owner) && ts.isInterfaceDeclaration(owner.parent))) return false;
+  return parent.types.some((part) =>
+    derivedType(part, node.getSourceFile(), generated),
+  );
+}
+
+function derivedType(type, source, generated, seen = new Set()) {
+  if (ts.isParenthesizedTypeNode(type))
+    return derivedType(type.type, source, generated, seen);
+  if (ts.isUnionTypeNode(type) || ts.isIntersectionTypeNode(type)) {
+    return type.types.some((part) =>
+      derivedType(part, source, generated, seen),
+    );
+  }
+  if (!ts.isTypeReferenceNode(type)) return false;
+  if (isGeneratedReference(type, generated)) return true;
+  if (!ts.isIdentifier(type.typeName)) return false;
+  const name = type.typeName.text;
+  if (["Omit", "Pick", "Partial", "Required", "Readonly"].includes(name)) {
+    return Boolean(type.typeArguments?.length);
+  }
+  if (seen.has(name)) return false;
+  seen.add(name);
+  const alias = source.statements.find(
+    (statement) =>
+      ts.isTypeAliasDeclaration(statement) && statement.name.text === name,
+  );
+  return (
+    alias !== undefined && derivedType(alias.type, source, generated, seen)
+  );
+}
+
 /** Names bound to the generated contract in one file: types and namespaces. */
 function generatedBindings(source) {
   const names = new Set();
@@ -135,6 +185,20 @@ export function findBackendWireTypes(fileName, text) {
           kind: "shape",
           name: node.name.text,
           line: lineOf(node.name),
+          fields,
+        });
+      }
+    } else if (
+      ts.isTypeLiteralNode(node) &&
+      !declaredBranch(node) &&
+      !namedProjection(node, generated)
+    ) {
+      const fields = ownSnakeCaseFields(node.members);
+      if (fields.length >= 2) {
+        findings.push({
+          kind: "shape",
+          name: `inline:${fields.join(",")}`,
+          line: lineOf(node),
           fields,
         });
       }

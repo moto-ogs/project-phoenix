@@ -577,7 +577,7 @@ describe("TenantLayout", () => {
   it("passes the read-only session snapshot to the client provider", async () => {
     const session = {
       expires: "2026-09-04T12:00:00.000Z",
-      user: { id: "7", tenantId: 1 },
+      user: { id: "7", tenantId: "1" },
     };
     readPortalSessionSnapshotMock.mockResolvedValue({
       session,

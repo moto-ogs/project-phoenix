@@ -1,3 +1,4 @@
+import { sessionClaims } from "~/test/helpers/session-claims";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import NextAuth from "next-auth";
 import { NextRequest } from "next/server";
@@ -126,12 +127,14 @@ describe.each([
       "refuses public token seeding even with valid CSRF, valid tokens and extra credentials %j",
       async (extra) => {
         backend.mockImplementation(async () =>
-          Response.json({
-            id: "42",
-            exp: Math.floor(Date.now() / 1000) + 900,
-            scope: portal === "tenant" ? "" : portal,
-            tenant_id: "7",
-          }),
+          Response.json(
+            sessionClaims({
+              id: "42",
+              exp: Math.floor(Date.now() / 1000) + 900,
+              scope: portal === "tenant" ? "" : portal,
+              tenant_id: "7",
+            }),
+          ),
         );
         const response = await submit("valid-access", "valid-refresh", extra);
         expect(response.headers.get("location")).toContain(
@@ -198,13 +201,15 @@ describe.each([
 
     it("keeps backend validation mandatory inside the trusted server context", async () => {
       backend.mockResolvedValue(
-        Response.json({
-          id: "42",
-          exp: Math.floor(Date.now() / 1000) + 900,
-          scope: portal === "tenant" ? "" : portal,
-          tenant_id: "7",
-          sub: "local@example.test",
-        }),
+        Response.json(
+          sessionClaims({
+            id: "42",
+            exp: Math.floor(Date.now() / 1000) + 900,
+            scope: portal === "tenant" ? "" : portal,
+            tenant_id: "7",
+            sub: "local@example.test",
+          }),
+        ),
       );
       const response = await withServerSessionMutation(() =>
         submit("valid-access"),

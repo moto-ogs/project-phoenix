@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -90,15 +91,15 @@ func TestTraegerSchoolSessionOpensTheSchoolAsItsAdmin(t *testing.T) {
 	code, answer := startTraegerSchoolSession(t, router, traeger.AccessToken, school)
 	require.Equal(t, http.StatusCreated, code, answer.Code)
 	handoff := traegerTokenClaims(t, answer.Data.HandoffToken)
-	assert.Equal(t, float64(school), handoff["tenant_id"], "the hand-off names exactly one school")
-	assert.Equal(t, float64(organization), handoff["org_id"], "and the Träger it came through")
+	assert.Equal(t, strconv.FormatInt(school, 10), handoff["tenant_id"], "the hand-off names exactly one school")
+	assert.Equal(t, strconv.FormatInt(organization, 10), handoff["org_id"], "and the Träger it came through")
 	assert.LessOrEqual(t, handoff["exp"].(float64), float64(time.Now().Add(3*time.Minute).Unix()), "the hand-off token is short-lived")
 
 	ctx := tenant.WithUnitOfWork(context.Background(), unit)
 	access, refresh, err := identity.RefreshTokenWithAudit(ctx, answer.Data.HandoffToken, "proof-of-the-school-host", "192.0.2.10", "test")
 	require.NoError(t, err, "the school's host redeems the hand-off")
 	claims := traegerTokenClaims(t, access)
-	assert.Equal(t, float64(school), claims["tenant_id"])
+	assert.Equal(t, strconv.FormatInt(school, 10), claims["tenant_id"])
 	assert.NotContains(t, claims, "scope", "an OGS session, not a Träger session")
 	assert.Equal(t, true, claims["via_traeger"], "the token says the access comes through the Träger")
 	assert.Equal(t, []any{"admin"}, claims["roles"], "the Träger role Schulzugang acts as the school's admin")
@@ -291,7 +292,7 @@ func TestTraegerSchoolSessionsInTwoTabsStaySignedIn(t *testing.T) {
 	require.NoError(t, err)
 	firstAccess, _, err = identity.RefreshTokenWithAudit(ctx, firstRefresh, "tab-1", "", "")
 	require.NoError(t, err)
-	assert.Equal(t, float64(first), traegerTokenClaims(t, firstAccess)["tenant_id"], "each session refreshes in its own school")
+	assert.Equal(t, strconv.FormatInt(first, 10), traegerTokenClaims(t, firstAccess)["tenant_id"], "each session refreshes in its own school")
 	_, _, err = identity.RefreshTokenWithAudit(ctx, secondRefresh, "tab-2", "", "")
 	require.NoError(t, err)
 
@@ -301,7 +302,7 @@ func TestTraegerSchoolSessionsInTwoTabsStaySignedIn(t *testing.T) {
 	switched, _, err := identity.SwitchTenant(ctx, account.ID, schoolSubdomain(t, db, second), family, "192.0.2.10", "test")
 	require.NoError(t, err)
 	switchedClaims := traegerTokenClaims(t, switched)
-	assert.Equal(t, float64(second), switchedClaims["tenant_id"])
+	assert.Equal(t, strconv.FormatInt(second, 10), switchedClaims["tenant_id"])
 	assert.Equal(t, true, switchedClaims["via_traeger"])
 
 	_, _, err = identity.SwitchTenant(ctx, account.ID, schoolSubdomain(t, db, foreignSchool), switchedClaims["family_id"].(string), "192.0.2.10", "test")
@@ -319,7 +320,9 @@ func TestTraegerSchoolSessionsInTwoTabsStaySignedIn(t *testing.T) {
 func traegerAccessSession(t *testing.T, accessToken string) identityaccess.AccessSession {
 	t.Helper()
 	claims := traegerTokenClaims(t, accessToken)
-	session := identityaccess.AccessSession{AccountID: int64(claims["id"].(float64))}
+	id, err := strconv.ParseInt(claims["id"].(string), 10, 64)
+	require.NoError(t, err)
+	session := identityaccess.AccessSession{AccountID: id}
 	session.FamilyID, _ = claims["family_id"].(string)
 	session.Scope, _ = claims["scope"].(string)
 	return session
@@ -472,7 +475,7 @@ func TestTraegerSchoolSessionSurvivesAFullSessionCap(t *testing.T) {
 	ctx := tenant.WithUnitOfWork(context.Background(), unit)
 	access, _, err := identity.RefreshTokenWithAudit(ctx, answer.Data.HandoffToken, "full-cap-school-host", "192.0.2.20", "test")
 	require.NoError(t, err, "the school's host redeems the hand-off although the cap was full")
-	assert.Equal(t, float64(school), traegerTokenClaims(t, access)["tenant_id"])
+	assert.Equal(t, strconv.FormatInt(school, 10), traegerTokenClaims(t, access)["tenant_id"])
 
 	var live int
 	require.NoError(t, db.NewRaw(`SELECT COUNT(*) FROM auth.tokens WHERE account_id = ? AND portal_scope = 'tenant'

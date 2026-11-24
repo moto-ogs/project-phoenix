@@ -30,7 +30,7 @@ vi.mock("next-auth/react", () => ({
   SessionProvider: ({ children }: { children: React.ReactNode }) => children,
   useSession: () => ({
     data: {
-      user: { id: "A", scope: "org", orgId: 7, permissions: ["admin:*"] },
+      user: { id: "A", scope: "org", orgId: "7", permissions: ["admin:*"] },
     },
     status: "authenticated",
   }),

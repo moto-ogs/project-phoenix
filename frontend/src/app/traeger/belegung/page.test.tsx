@@ -145,7 +145,7 @@ describe("TraegerOccupancyPage", () => {
         user: {
           id: "A",
           scope: "org",
-          orgId: 7,
+          orgId: "7",
           permissions: ["traeger_overview:read"],
         },
       },

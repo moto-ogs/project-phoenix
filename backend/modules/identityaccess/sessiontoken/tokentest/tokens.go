@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/tokenprimitives"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // MFA challenge scopes, the portal names of the portals with a challenge.
@@ -172,8 +173,8 @@ func sign(a *sessiontoken.TokenAuth, wire any) (string, error) {
 }
 
 // claimMap is the JSON object of a wire value.
-func claimMap(wire any) map[string]any {
-	encoded, err := json.Marshal(wire)
+func claimMap(payload any) map[string]any {
+	encoded, err := wire.Marshal(payload)
 	if err != nil {
 		panic(err)
 	}

@@ -358,7 +358,7 @@ func TestTraegerPortalLoginShowsOnlyTheSchoolsOfTheTraeger(t *testing.T) {
 	require.NotEmpty(t, answer.RefreshToken)
 	claims := traegerTokenClaims(t, answer.AccessToken)
 	assert.Equal(t, "org", claims["scope"], "the Träger session has its own scope")
-	assert.Equal(t, float64(own), claims["org_id"])
+	assert.Equal(t, strconv.FormatInt(own, 10), claims["org_id"])
 	assert.NotContains(t, claims, "tenant_id", "a Träger token never names a school")
 	assert.ElementsMatch(t, []any{identityaccess.TraegerRightOverviewRead, identityaccess.TraegerRightReportsRead}, claims["permissions"])
 
@@ -424,7 +424,7 @@ func TestTraegerPortalLoginAsksAMemberOfSeveralTraegerToChoose(t *testing.T) {
 
 	code, answer = traegerSignIn(t, router, account.Email, password, second)
 	require.Equal(t, http.StatusOK, code)
-	assert.Equal(t, float64(second), traegerTokenClaims(t, answer.AccessToken)["org_id"], "one session belongs to exactly one Träger")
+	assert.Equal(t, strconv.FormatInt(second, 10), traegerTokenClaims(t, answer.AccessToken)["org_id"], "one session belongs to exactly one Träger")
 
 	code, answer = traegerLogin(t, router, account.Email, password, unrelated)
 	assert.Equal(t, http.StatusForbidden, code, "a choice outside the memberships is refused")
@@ -492,7 +492,7 @@ func TestTraegerSessionRefreshesAndEndsWithTheMembership(t *testing.T) {
 	require.NoError(t, err)
 	refreshed := traegerTokenClaims(t, access)
 	assert.Equal(t, "org", refreshed["scope"], "refresh keeps the Träger portal")
-	assert.Equal(t, float64(organization), refreshed["org_id"])
+	assert.Equal(t, strconv.FormatInt(organization, 10), refreshed["org_id"])
 	assert.NotContains(t, refreshed, "tenant_id")
 
 	_, err = db.ExecContext(context.Background(), `UPDATE platform.organization_accounts SET status = 'inactive', deactivated_at = NOW() WHERE account_id = ?`, account.ID)
@@ -639,7 +639,7 @@ func TestTraegerSessionRefreshesWithAClientAddress(t *testing.T) {
 
 	access, _, err := identity.RefreshTokenWithAudit(ctx, answer.RefreshToken, "", "192.0.2.10", "tests")
 	require.NoError(t, err)
-	assert.Equal(t, float64(organization), traegerTokenClaims(t, access)["org_id"])
+	assert.Equal(t, strconv.FormatInt(organization, 10), traegerTokenClaims(t, access)["org_id"])
 
 	var filed []int64
 	require.NoError(t, db.NewRaw(`SELECT tenant_id FROM audit.auth_events WHERE account_id = ? AND event_type = 'token_refresh'`,

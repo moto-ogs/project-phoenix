@@ -37,6 +37,9 @@ func outside(rc Registration) (Outside, error) {
 // on it; an answer without the envelope has no place elsewhere.
 func routeFileTraits(rc Registration, where string) error {
 	if rc.RouteFile == "" {
+		if rc.BrowserPath != "" || rc.BrowserOwnContract || rc.BrowserMethod != "" {
+			return fmt.Errorf("%s: browser route-file traits require RouteFile", where)
+		}
 		if rc.Plain {
 			return fmt.Errorf("%s: only a route file reads an answer without the envelope; name RouteFile or answer the envelope", where)
 		}
@@ -51,6 +54,19 @@ func routeFileTraits(rc Registration, where string) error {
 		return fmt.Errorf("%s: the catalog proxy never serves a route file route; drop its proxy traits", where)
 	case rc.Plain && (rc.Response == nil || rc.Paginated || rc.Variants != nil):
 		return fmt.Errorf("%s: a plain answer is one registered response", where)
+	}
+	return browserRouteTraits(rc, where)
+}
+
+func browserRouteTraits(rc Registration, where string) error {
+	switch {
+	case (rc.BrowserOwnContract || rc.BrowserMethod != "") && rc.BrowserPath == "":
+		return fmt.Errorf("%s: browser traits require BrowserPath", where)
+	case rc.BrowserMethod != "" && (!rc.BrowserOwnContract || !slices.Contains([]string{"GET", "POST", "PUT", "PATCH", "DELETE"}, rc.BrowserMethod)):
+		return fmt.Errorf("%s: an overridden browser method needs its own contract and a known HTTP method", where)
+	case rc.BrowserPath != "" && (!strings.HasPrefix(rc.BrowserPath, "/api/") ||
+		strings.ContainsAny(rc.BrowserPath, "?#") || strings.HasSuffix(rc.BrowserPath, "/")):
+		return fmt.Errorf("%s: BrowserPath must be the /api/ address without query or trailing slash", where)
 	}
 	return nil
 }

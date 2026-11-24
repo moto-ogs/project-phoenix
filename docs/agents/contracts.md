@@ -14,14 +14,20 @@ repetition. `bffJson`, `bffFile`, `bffFileHref`, `bffPath`,
 booleans are booleans. The helpers serialize values to the URL; the catalog
 proxy filters names only and forwards every occurrence of each registered
 key to Go, which validates the values. Server calls build the Go address
-from the same route entry; browser paths use the portal’s BFF prefix.
-For a GET with response variants, both clients select the answer from
-the variant query or the route's default. See the
+from the same route entry. Catalog paths use the portal's BFF prefix;
+a named route file must register its exact `BrowserPath` to expose its
+address. Only legacy `GET /api/students/` selects its response shape by query;
+both clients use the selected variant or the registered default. See the
 [students example](frontend-api.md#generated-contract-adr-0270).
 
 Bigint identifiers in portal JSON use Go `ident.ID` and travel as decimal
 strings. Identically named text fields carry a `contract_text` reason.
 Stored JSON and the numeric kiosk contract are separate from this boundary.
+New session JWTs also carry identifiers as decimal strings, including in
+login, refresh, and school switch. Auth.js keeps them as text through the
+host and browser comparisons. Legacy numeric claims are read only in the
+exactly representable range. Session validation carries role origin flags
+from the access token, so a school role called `user` is not a system role.
 
 Generated JSON body field types remain optional. The Go handler validates
 required fields and field combinations, as recorded in [ADR 0270](../adr/0270-der-vertrag-zwischen-go-und-frontend-entsteht-aus-der-go-registrierung.md).
@@ -886,7 +892,7 @@ Backend paths in this section are relative to `backend/`:
   nowhere, and redeeming it again leaves an existing password unchanged.
 - School login requires a school-portal role (currently `lehrkraft`) on an
   active mapping and pins that school's `tenant_id`. `SchoolScopeMiddleware`
-  accepts only `scope=school`; `common.ProtectedSchoolGroup` includes tenant
+  accepts only `scope=school`; `common.ProtectedSchoolRoutes` includes tenant
   transactions. Unlike parent scope, school scope is tenant-bound.
 - Caterer login requires a caterer account (`auth.caterer_accounts`) that
   supplies at least one school; any other account answers like a wrong
@@ -1028,7 +1034,8 @@ Backend paths in this section are relative to `backend/`:
   portals it names and answers every other scope, including one no portal
   issues, with 401 `general.permission`. Tenant routes accept the tenant
   portal (empty or legacy `tenant` claim) and `platform`. The portal facts
-  live in `tokenprimitives.AllPortalClaims()` and `internal/domain/portal.go`,
+  live in `modules/identityaccess/tokenprimitives/portal.go` and
+  `modules/identityaccess/internal/domain/portal.go`,
   pinned to each other by `TestPortalTableMatchesTheTokenGates`.
   `TestFullProductionRouterGolden/contracts/school_scope_matrix` checks school-token rejection under `/api`.
 - Every account portal answers a refused sign-in, MFA step, exchange, switch,
@@ -1482,7 +1489,7 @@ ends no parent session either. `TenantGuard` leaves the entry page alone
 
 The parents portal serves `/parents/anmeldung/{slug}/{phaseId}` with the same
 `EnrollmentForm` used by `{slug}.TENANT_DOMAIN/anmeldung/{phaseId}`, injecting
-`profileFetcher`, `submitter`, and `skipCaptcha`. Authenticated parent submissions
+its authenticated bootstrap and `submitter`, with `skipCaptcha`. Authenticated parent submissions
 stamp `enrollment.requests.guardian_account_id`; decisions prefer attachment by
 that ID over email matching.
 

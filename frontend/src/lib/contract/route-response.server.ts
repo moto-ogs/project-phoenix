@@ -6,7 +6,7 @@ import type { ContractReply } from "./client.server";
 
 /** Error answers keep the old forwarding policy, including Retry-After. */
 export function contractError(
-  reply: ContractReply<never> & { ok: false },
+  reply: Extract<ContractReply<unknown>, { ok: false }>,
   request: Request,
 ): NextResponse {
   const { backend, error } = reply;

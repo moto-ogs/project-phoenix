@@ -3,11 +3,11 @@ package behavior_test
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
-	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken/tokentest"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,12 +21,16 @@ func legacyRefreshToken(t *testing.T, refresh string) string {
 	claims := decodePreviewTokenPayload(t, refresh)
 	auth, err := sessiontoken.NewTokenAuthWithDurations(authSigningSecret, 15*time.Minute, 24*time.Hour)
 	require.NoError(t, err)
-	legacy := tokentest.RefreshClaims{ID: int(claims["id"].(float64)), Token: claims["token"].(string)}
-	if tenantID, ok := claims["tenant_id"].(float64); ok {
-		legacy.TenantID = int64(tenantID)
+	delete(claims, "family_id")
+	delete(claims, "lineage_id")
+	for _, key := range []string{"id", "tenant_id", "org_id"} {
+		if value, ok := claims[key].(string); ok {
+			id, err := strconv.ParseInt(value, 10, 64)
+			require.NoError(t, err)
+			claims[key] = id
+		}
 	}
-	legacy.ExpiresAt = int64(claims["exp"].(float64))
-	token, err := tokentest.CreateRefreshJWT(auth, legacy)
+	_, token, err := auth.JwtAuth.Encode(claims)
 	require.NoError(t, err)
 	_, hasFamily := decodePreviewTokenPayload(t, token)["family_id"]
 	require.False(t, hasFamily, "the legacy token carries no lineage claims")

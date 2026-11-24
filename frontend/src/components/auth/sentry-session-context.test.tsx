@@ -32,7 +32,7 @@ describe("SentrySessionContext", () => {
           name: "Mia Muster",
           email: "mia@example.com",
           scope: "",
-          tenantId: 12,
+          tenantId: "12",
         },
       },
     });
@@ -64,7 +64,7 @@ describe("SentrySessionContext", () => {
   it("clears the account at logout", () => {
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { id: "42", sentryUserId: PSEUDONYM, tenantId: 12 } },
+      data: { user: { id: "42", sentryUserId: PSEUDONYM, tenantId: "12" } },
     });
     const { rerender } = render(<SentrySessionContext portal="tenant" />);
 

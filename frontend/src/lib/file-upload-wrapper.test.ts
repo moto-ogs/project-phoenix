@@ -398,12 +398,11 @@ describe("createFileUploadHandler", () => {
       expect(handler).toHaveBeenCalled();
     });
 
-    it("rejects files with path traversal in filename (..)", async () => {
+    it("accepts image names with adjacent dots", async () => {
       const handler = vi.fn();
       const wrappedHandler = createFileUploadHandler(handler);
 
-      // Single dot in name so it passes double-extension check, but has path traversal
-      const file = new File([new ArrayBuffer(100)], "..%2Fevil.jpg", {
+      const file = new File([new ArrayBuffer(100)], "Sommer..jpg", {
         type: "image/jpeg",
       });
 
@@ -418,9 +417,8 @@ describe("createFileUploadHandler", () => {
 
       const response = await wrappedHandler(request, context);
 
-      // The file either fails extension check (415) or traversal check (422)
-      expect([415, 422]).toContain(response.status);
-      expect(handler).not.toHaveBeenCalled();
+      expect(response.status).toBe(200);
+      expect(handler).toHaveBeenCalled();
     });
 
     it("rejects files with forward slash in filename", async () => {

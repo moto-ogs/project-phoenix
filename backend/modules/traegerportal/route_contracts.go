@@ -73,7 +73,9 @@ func InvitationRouteContracts() []common.RouteContract {
 // names the route.
 func SessionRouteContracts() []common.RouteContract {
 	step := func(pattern string, request, response any) common.RouteContract {
+		browserPath := "/api/traeger/auth" + pattern
 		return common.RouteContract{
+			BrowserPath: browserPath, BrowserOwnContract: browserPath != "",
 			Method: "POST", Pattern: pattern, Portals: traegerPortal, RouteFile: common.RouteFileSession,
 			Request: request, Response: response, Plain: true,
 		}

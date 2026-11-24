@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"strconv"
 	"testing"
 	"time"
 
@@ -46,14 +47,10 @@ func decodeTokenClaimsWith(t *testing.T, tokenAuth *sessiontoken.TokenAuth, toke
 	decoded, err := tokenAuth.JwtAuth.Decode(token)
 	require.NoError(t, err, "minted token must decode")
 	_ = decoded.Get("scope", &scope)
-	var rawTenant float64
+	var rawTenant string
 	if getErr := decoded.Get("tenant_id", &rawTenant); getErr == nil {
-		tenantID = int64(rawTenant)
-	} else {
-		var intTenant int64
-		if getErr := decoded.Get("tenant_id", &intTenant); getErr == nil {
-			tenantID = intTenant
-		}
+		tenantID, err = strconv.ParseInt(rawTenant, 10, 64)
+		require.NoError(t, err)
 	}
 	return scope, tenantID
 }
