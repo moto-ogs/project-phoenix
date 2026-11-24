@@ -107,6 +107,10 @@ func (s *Store) LockWorkTimeModel(ctx context.Context, id int64) (bool, domain.O
 	return scanOne(ctx, query, "lock work-time model")
 }
 
+// NewTemplateLocks serves ShareLockWorkTimeModel on the school transaction
+// the caller already runs in: the schedule save of time tracking.
+func NewTemplateLocks() *Store { return New(RetentionDatabase) }
+
 // ShareLockWorkTimeModel conflicts with the row lock an edit of the
 // template takes. Taken before the staff locks, it orders an assignment and
 // an edit the same way: template first, then the people.

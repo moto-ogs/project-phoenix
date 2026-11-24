@@ -116,10 +116,12 @@ type StaffDay struct {
 }
 
 // TimeTrackingRows binds the rows of the Workforce capability; traeger names
-// the staff the Träger closes (#4711).
-func TimeTrackingRows(capability workforce.Capability, traeger TraegerMonthStaff) Rows {
+// the staff the Träger closes (#4711), templates locks the template a
+// schedule save binds.
+func TimeTrackingRows(capability workforce.Capability, traeger TraegerMonthStaff, templates WorkTimeTemplateLocks) Rows {
 	return Rows{
 		TraegerMonths:    traeger,
+		TemplateLocks:    templates,
 		TargetOverrides:  capability,
 		MonthSnapshots:   MonthSnapshotCapability(capability),
 		AbsenceTypes:     AbsenceTypes(capability),
