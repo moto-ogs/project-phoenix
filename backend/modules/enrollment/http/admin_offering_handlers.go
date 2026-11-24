@@ -23,6 +23,9 @@ type AdminUpdateOfferingsRequest struct {
 	Reason                      string                         `json:"reason"`
 	EffectiveFrom               string                         `json:"effective_from,omitempty"`
 	CompleteWithdrawalConfirmed bool                           `json:"complete_withdrawal_confirmed"`
+	// ExpectedVersion is the child's offerings_version the office corrects;
+	// a correction over bookings changed since is refused (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 type AdminUpdateOfferingSelection struct {
@@ -121,6 +124,7 @@ func (rs *Resource) applyAdminOfferingUpdate(
 			RequestID: requestID, ChildID: childID, Offerings: selections, Reason: body.Reason,
 			ActorAccountID: int64(claims.ID), ActorRole: actorRoleFromClaims(claims.Roles),
 			EffectiveFrom: effectiveFrom, CompleteWithdrawalConfirmed: body.CompleteWithdrawalConfirmed,
+			ExpectedVersion: body.ExpectedVersion,
 		})
 		updated = update
 		return updateErr
@@ -170,6 +174,7 @@ func (rs *Resource) enrichUpdatedAdminOfferings(
 		set := rowsByChild[childID]
 		out.Offerings = toAdminChildOfferings(set.Current)
 		out.UpcomingOfferings = toAdminChildOfferings(set.Upcoming)
+		out.OfferingsVersion = set.Version
 		return nil
 	}); err != nil {
 		out.OfferingsUnavailable = true

@@ -1287,7 +1287,7 @@ func TestUpdateChildOfferings_UndatedCorrectionKeepsPhaseStartOnMultiSource(t *t
 
 	// Undated correction: the selection was wrong from the start, switch the
 	// child from offering A to B (both feed the same template).
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      child.RequestID,
 		ChildID:        childID,
 		ActorAccountID: env.creatorID,
@@ -1778,7 +1778,7 @@ func TestUpdateChildOfferings_DatedSwitchReconcilesMaterializedOccurrences(t *te
 	})
 	testpkg.CreateTestInstanceStudent(t, env.db, planned.ID, studentID, "expected")
 
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      child.RequestID,
 		ChildID:        childID,
 		ActorAccountID: env.creatorID,
@@ -1826,7 +1826,7 @@ func TestUpdateChildOfferings_DatedKeepRespectsSegmentEnd(t *testing.T) {
 	// The switch keeps the same offering with unchanged days, so the existing
 	// row is retained rather than capped and re-seeded.
 	switchDate := calendar.Date(env.sourcePhase.ServiceStartDate).AddDays(30)
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      child.RequestID,
 		ChildID:        childID,
 		ActorAccountID: env.creatorID,

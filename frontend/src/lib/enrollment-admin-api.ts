@@ -670,10 +670,16 @@ export type AdminChildOfferingsUpdate = AdminRequestChild & {
   roster_impact?: studentsContract.rosterImpactResponse;
 };
 
+/**
+ * Corrects the child's bookings over the `offerings_version` the office
+ * read (ADR 0311); the server refuses another one with
+ * `general.changed_since_read`.
+ */
 export async function updateAdminChildOfferings(
   requestId: string,
   childId: string,
   input: UpdateAdminChildOfferingsInput,
+  version: string,
 ): Promise<AdminChildOfferingsUpdate> {
   const { roster_impact: rosterImpact, ...child } = await bffJson(
     "tenant",
@@ -685,6 +691,7 @@ export async function updateAdminChildOfferings(
         reason: input.reason,
         complete_withdrawal_confirmed:
           input.completeWithdrawalConfirmed === true,
+        expected_version: version,
       },
       errorMessage: "Betreuungsangebote konnten nicht gespeichert werden",
     },

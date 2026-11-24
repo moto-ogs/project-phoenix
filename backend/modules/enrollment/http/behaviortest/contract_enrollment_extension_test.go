@@ -140,7 +140,7 @@ func TestADatedSwitchRefusesAnExtension(t *testing.T) {
 	t.Parallel()
 	c := setupCorrection(t)
 	from := calendar.NewDate(2027, 2, 1)
-	_, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), c.db, c.owner.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), c.db, correctOverRead(c.owner), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID: c.requestID, ChildID: c.childID, ActorAccountID: c.creatorID, ActorRole: "admin",
 		Reason: "Korrektur", Offerings: []enrollmentAPI.OfferingAdjustmentSelection{c.extend("mon")}, EffectiveFrom: &from,
 	})

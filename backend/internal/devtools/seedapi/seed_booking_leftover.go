@@ -37,8 +37,7 @@ func (s seedBookingLeftoverStep) Run(_ context.Context, rt *Runtime) error {
 		return fmt.Errorf("booking leftover: offerings ogs-ganztag, mittagessen and ag-theater not seeded")
 	}
 	days := []string{"mon", "tue", "fri"}
-	path := fmt.Sprintf("/api/enrollment/admin/requests/%d/children/%d/offerings", request.RequestID, request.ChildIDs[0])
-	if _, err := rt.Client.PutWithAuth(rt.TenantAuth, path, map[string]any{
+	if _, err := putReadChildOfferings(rt, rt.TenantAuth, request.RequestID, request.ChildIDs[0], map[string]any{
 		"offerings": []map[string]any{
 			{"offering_id": fmt.Sprint(ganztag), "selected_days": days},
 			{"offering_id": fmt.Sprint(lunch), "selected_days": days},

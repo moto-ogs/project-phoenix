@@ -75,6 +75,8 @@ func TestAnUndatedCorrectionOfABoundContract(t *testing.T) {
 					RequestID: requestID, ChildID: miaChild, ActorAccountID: actor.ID, ActorRole: "admin", Reason: "Korrektur",
 					Offerings:     []enrollmentOwner.OfferingAdjustmentSelection{{OfferingID: f.offering}, {OfferingID: late.ID, ExtendToPhaseEnd: extend}},
 					EffectiveFrom: c.effectiveFrom,
+					// The office corrects the bookings it read (ADR 0311).
+					ExpectedVersion: readOfferingsVersion(ctx, decisions, requestID, miaChild),
 				})
 				return err
 			}))

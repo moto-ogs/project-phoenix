@@ -817,7 +817,7 @@ func TestChangeRequestService_Approve_AppliesPinnedOfferingChangeToApprovedChild
 
 	careOfferingsEnabled = false
 	env.settings.boolValues[settingKeyCareOfferingsEnabled] = false
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID:      result.Request.ID,
 		ChildID:        result.Children[0].ID,
 		ActorAccountID: env.creatorID,

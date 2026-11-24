@@ -77,7 +77,7 @@ func setupRestoreFixture(t *testing.T, email string, lateSource bool) restoreFix
 	requestID, childID, studentID := submitApprovedAdjustmentChild(t, env, email, "Storno", booked)
 	if lateSource {
 		from := lateSourceFrom
-		_, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+		_, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 			RequestID: requestID, ChildID: childID, ActorAccountID: env.creatorID, ActorRole: "admin",
 			Reason: "Mittagessen ab Oktober", EffectiveFrom: &from,
 			Offerings: []enrollmentTest.OfferingAdjustmentSelection{

@@ -48,6 +48,10 @@ type CareOfferingResponse struct {
 	Translations capability.Translations `json:"translations,omitempty"`
 	CreatedAt    time.Time               `json:"created_at"`
 	UpdatedAt    time.Time               `json:"updated_at"`
+	// Version is the token of the offering as the school edits it; an
+	// update sends it back as expected_version (ADR 0311). Only the staff
+	// catalog answers it.
+	Version string `json:"version,omitempty"`
 }
 
 var careOfferingWriteErrorRenderer = common.RulesRenderer(
@@ -118,6 +122,7 @@ func toCareOfferingResponse(o *CareOffering) CareOfferingResponse {
 		PickupTimes:         o.PickupTimes,
 		CreatedAt:           o.CreatedAt,
 		UpdatedAt:           o.UpdatedAt,
+		Version:             o.Version,
 	}
 	if o.ActivityGroupID != nil {
 		s := strconv.FormatInt(*o.ActivityGroupID, 10)
@@ -216,6 +221,10 @@ type CareOfferingRequest struct {
 	// Translations of Name and Description (#3377). The editor always sends
 	// the full document; the service validates it.
 	Translations common.DeferredJSON[capability.Translations] `json:"translations,omitzero" contract_refines:"The catalog already rejects values that are not translation documents"`
+	// ExpectedVersion is the version of the offering the school edits; an
+	// update over an offering changed since is refused (ADR 0311). A new
+	// offering sends none.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind satisfies render.Binder. Field-level validation runs in the
@@ -500,7 +509,7 @@ func (rs *Resource) updateCareOffering(w http.ResponseWriter, r *http.Request) {
 				}
 				model.Translations = existing.Translations
 			}
-			return rs.CareOfferingService.Update(ctx, model)
+			return rs.CareOfferingService.Update(ctx, model, req.ExpectedVersion)
 		},
 		func(ctx context.Context, id int64) (*CareOffering, error) {
 			return rs.CareOfferingService.GetByID(ctx, id)

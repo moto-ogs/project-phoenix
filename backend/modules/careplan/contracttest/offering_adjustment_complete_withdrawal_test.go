@@ -100,6 +100,7 @@ func withdrawalSelection(offeringID int64) []enrollmentTest.OfferingAdjustmentSe
 
 func (f *completeWithdrawalFixture) apply(decision enrollmentTest.PublicDecisions, input enrollmentTest.UpdateChildOfferingsInput) error {
 	return testpkg.WithTenantTx(f.t, f.ctx, f.env.db, testpkg.Tenant(f.t), func(txCtx context.Context, _ bun.Tx) error {
+		input.ExpectedVersion = readOfferingsVersion(txCtx, decision, input.RequestID, input.ChildID)
 		_, err := decision.UpdateChildOfferings(txCtx, input)
 		return err
 	})
@@ -252,6 +253,7 @@ func (f *nonAuthoritativeWithdrawalFixture) applyInput(
 			RequestID: f.requestID, ChildID: f.childID, Offerings: offerings,
 			ActorAccountID: f.env.creatorID, ActorRole: "admin", Reason: "Betreuung geändert",
 			CompleteWithdrawalConfirmed: confirmed,
+			ExpectedVersion:             readOfferingsVersion(ctx, f.env.decision, f.requestID, f.childID),
 		})
 		return err
 	})
@@ -321,6 +323,7 @@ func (f *withdrawalRaceFixture) seedRaceStudent() {
 }
 
 func (f *withdrawalRaceFixture) apply(ctx context.Context) error {
+	f.input.ExpectedVersion = readOfferingsVersion(ctx, f.decision, f.input.RequestID, f.input.ChildID)
 	_, err := f.decision.UpdateChildOfferings(ctx, f.input)
 	return err
 }

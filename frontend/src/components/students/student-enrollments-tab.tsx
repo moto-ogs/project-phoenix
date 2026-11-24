@@ -11,11 +11,13 @@ import {
   useState,
 } from "react";
 import {
+  type AdminChildOfferingsUpdate,
+  type AdminRequestChild,
   type AdminRequestSummary,
   exportStudentEnrollmentRequests,
   listStudentEnrollmentRequests,
 } from "~/lib/enrollment-admin-api";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import {
   useApiErrorDisplay,
   useApiLoadError,
@@ -24,7 +26,10 @@ import {
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ExportMenu, exportFormatOptions } from "~/components/ui/export-menu";
 import { SectionCard } from "~/components/ui/section-card";
-import { ChildOfferingAdjustment } from "~/components/enrollment/child-offering-adjustment";
+import {
+  ChildOfferingAdjustment,
+  withSavedOfferings,
+} from "~/components/enrollment/child-offering-adjustment";
 import {
   ChildExtraFields,
   ChildOfferings,
@@ -62,14 +67,30 @@ export function StudentEnrollmentsTab({
     null,
   );
 
-  const {
-    data: requests = [],
-    error,
-    isLoading,
-    mutate,
-  } = useSWRAuth(studentKeys.enrollments(studentId), () =>
+  const enrollmentsRead = useSWRAuth(studentKeys.enrollments(studentId), () =>
     listStudentEnrollmentRequests(studentId),
   );
+  const { data: requests = [], error, isLoading, mutate } = enrollmentsRead;
+  // A correction of a child's bookings: its answer carries their new
+  // offerings_version into the cache, then the list is read again.
+  const handleOfferingsSaved = (saved: AdminChildOfferingsUpdate) => {
+    void mutate(
+      (current) =>
+        current?.map((request) => ({
+          ...request,
+          children: request.children.map((child) =>
+            child.id === saved.id ? withSavedOfferings(child, saved) : child,
+          ),
+        })),
+      { revalidate: false },
+    );
+    void mutate();
+  };
+  // The stored child after a refused correction; a failure rejects.
+  const readChild = async (childId: string) =>
+    (await revalidateOrThrow(enrollmentsRead))
+      .flatMap((request) => request.children)
+      .find((child) => child.id === childId);
 
   useEffect(() => {
     if (error) {
@@ -147,7 +168,8 @@ export function StudentEnrollmentsTab({
             <EnrollmentRequestCard
               key={request.id}
               request={request}
-              onChanged={() => void mutate()}
+              onOfferingsSaved={handleOfferingsSaved}
+              readChild={readChild}
             />
           ))}
         </div>
@@ -157,9 +179,15 @@ export function StudentEnrollmentsTab({
 }
 
 function EnrollmentRequestCard({
-  onChanged,
+  onOfferingsSaved,
+  readChild,
   request,
-}: Readonly<{ request: AdminRequestSummary; onChanged: () => void }>) {
+}: Readonly<{
+  request: AdminRequestSummary;
+  onOfferingsSaved: (saved: AdminChildOfferingsUpdate) => void;
+  /** Reads the child again as stored; rejects when the read fails. */
+  readChild: (childId: string) => Promise<AdminRequestChild | undefined>;
+}>) {
   const submittedAt = formatDateTime(request.submitted_at, {
     day: "2-digit",
     month: "2-digit",
@@ -226,7 +254,8 @@ function EnrollmentRequestCard({
                 requestId={request.id}
                 phaseId={request.phase_id}
                 child={child}
-                onSaved={onChanged}
+                onSaved={onOfferingsSaved}
+                reload={() => readChild(child.id)}
               />
             ) : null}
             <ChildExtraFields
