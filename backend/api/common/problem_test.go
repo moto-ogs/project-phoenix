@@ -89,7 +89,7 @@ func TestProblemTypeUsesRegisteredClassRatherThanStatusOnly(t *testing.T) {
 	require.Equal(t, "https://moto-app.de/help/fehlermeldungen#anleitung-eingabe-pruefen", body["type"])
 }
 
-func TestProblemResponsePreservesLargeLegacyNumbers(t *testing.T) {
+func TestProblemResponseDoesNotReinterpretNumbersByMemberName(t *testing.T) {
 	t.Parallel()
 
 	recorder := httptest.NewRecorder()
@@ -103,7 +103,7 @@ func TestProblemResponsePreservesLargeLegacyNumbers(t *testing.T) {
 	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &body))
 	var details map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(body["details"], &details))
-	require.Equal(t, `"9007199254740993"`, string(details["id"]))
+	require.Equal(t, "9007199254740993", string(details["id"]))
 	require.Equal(t, "9007199254740993", string(details["count"]))
 }
 

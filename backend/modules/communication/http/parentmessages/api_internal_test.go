@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"

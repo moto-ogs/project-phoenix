@@ -7,7 +7,14 @@ import (
 
 // Shared refusal values used by more than one HTTP adapter.
 type SizeLimitDetails struct {
-	MaxMB int64 `json:"max_mb" contract:"number"`
+	MaxMB    int64 `json:"max_mb" contract:"number"`
+	MaxBytes int   `json:"max_bytes,omitempty"`
+}
+
+// BodyLimitDetails describes a body the BFF rejected before calling Go.
+type BodyLimitDetails struct {
+	MaxBytes int  `json:"max_bytes"`
+	MaxMB    *int `json:"max_mb,omitempty"`
 }
 
 type PermissionDetails struct {

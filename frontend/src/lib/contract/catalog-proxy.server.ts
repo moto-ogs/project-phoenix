@@ -28,6 +28,7 @@ import { decodeContract, readContractJson } from "./client.server";
 import { registeredRouteSearch } from "./address";
 import { commits } from "./commit";
 import { fileAnswer, multipart } from "./runtime";
+import type { BodyLimitDetails } from "./problem-details.generated";
 import {
   purgeRequestTenantSettingsCache,
   purgeTenantSettingsCache,
@@ -587,7 +588,10 @@ export function makeCatalogProxy(
     const tooLarge = () =>
       bffError(413, `request body exceeds ${limit} bytes`, {
         code: route.tooLargeCode,
-        details: { max_bytes: limit, max_mb: Math.floor(limit / MIB) },
+        details: {
+          max_bytes: limit,
+          max_mb: Math.floor(limit / MIB),
+        } satisfies BodyLimitDetails,
       });
     const declared = request.headers.get("content-length");
     if (declared === null) {

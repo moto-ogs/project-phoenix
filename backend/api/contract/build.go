@@ -479,16 +479,16 @@ func (b *builder) timeSchema(t reflect.Type) (Schema, bool) {
 // instants, days, identifiers and enums. It also stops at a type that writes
 // or reads itself without an entry.
 func (b *builder) named(t reflect.Type, where string, request bool) (Schema, bool, error) {
-	if t == rawJSONType {
+	switch t {
+	case rawJSONType:
 		// A raw value is any JSON the owner stores and hands on; nil is null
 		// or, with omitempty, no key.
 		return Schema{Kind: KindJSON, Nullable: true}, true, nil
+	case reflect.TypeFor[ident.IDOrNone]():
+		return Schema{Kind: KindID, NoID: true}, true, nil
 	}
 	if schema, ok := b.timeSchema(t); ok {
 		return schema, true, nil
-	}
-	if t == reflect.TypeFor[ident.IDOrNone]() {
-		return Schema{Kind: KindID, NoID: true}, true, nil
 	}
 	if kind, ok := b.identifiers[t]; ok {
 		return Schema{Kind: kind}, true, nil

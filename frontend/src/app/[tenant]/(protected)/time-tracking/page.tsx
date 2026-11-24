@@ -3679,7 +3679,10 @@ function TimeTrackingContent() {
         status,
         plannedTime: details?.planned_time,
         actualTime: details?.actual_time,
-        deviationMinutes: details?.deviation_minutes,
+        deviationMinutes:
+          details.deviation_minutes === undefined
+            ? undefined
+            : String(details.deviation_minutes),
       });
       return true;
     },

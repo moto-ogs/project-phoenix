@@ -448,8 +448,8 @@ func (ix *queryReadIndex) analyze(pkg *queryReadPackage, decl *ast.FuncDecl, nod
 	return result
 }
 
-func paramIndexes(fnType *ast.FuncType) map[string]int {
-	indexes := map[string]int{}
+func paramIndexes(fnType *ast.FuncType) map[token.Pos]int {
+	indexes := map[token.Pos]int{}
 	position := 0
 	for _, field := range fnType.Params.List {
 		if len(field.Names) == 0 {
@@ -457,7 +457,7 @@ func paramIndexes(fnType *ast.FuncType) map[string]int {
 			continue
 		}
 		for _, name := range field.Names {
-			indexes[name.Name] = position
+			indexes[queryBinding(name)] = position
 			position++
 		}
 	}
@@ -465,8 +465,8 @@ func paramIndexes(fnType *ast.FuncType) map[string]int {
 }
 
 // valuesParams are the parameters of type url.Values.
-func valuesParams(fnType *ast.FuncType, imports map[string]string) map[*ast.Object]bool {
-	values := map[*ast.Object]bool{}
+func valuesParams(fnType *ast.FuncType, imports map[string]string) map[token.Pos]bool {
+	values := map[token.Pos]bool{}
 	for _, field := range fnType.Params.List {
 		sel, ok := field.Type.(*ast.SelectorExpr)
 		if !ok || sel.Sel.Name != "Values" {
@@ -477,15 +477,18 @@ func valuesParams(fnType *ast.FuncType, imports map[string]string) map[*ast.Obje
 			continue
 		}
 		for _, name := range field.Names {
-			values[name.Obj] = true
+			values[queryBinding(name)] = true
 		}
 	}
 	return values
 }
 
-func isIdent(expr ast.Expr, name string) bool {
-	ident, ok := expr.(*ast.Ident)
-	return ok && ident.Name == name
+// queryBinding identifies a local by its declaration, not by its spelling.
+func queryBinding(id *ast.Ident) token.Pos {
+	if id.Obj == nil {
+		return token.NoPos
+	}
+	return id.Obj.Pos()
 }
 
 type queryReadScan struct {
@@ -493,18 +496,20 @@ type queryReadScan struct {
 	pkg         *queryReadPackage
 	imports     map[string]string
 	result      *queryReadResult
-	params      map[string]int
-	values      map[*ast.Object]bool // parameters holding url.Values
-	assignments map[*ast.Object][]ast.Expr
+	params      map[token.Pos]int
+	values      map[token.Pos]bool // parameters holding url.Values
+	assignments map[token.Pos][]ast.Expr
 	recvType    string
 	recvName    string
 }
 
-func queryAssignments(body *ast.BlockStmt) map[*ast.Object][]ast.Expr {
-	values := map[*ast.Object][]ast.Expr{}
+func queryAssignments(body *ast.BlockStmt) map[token.Pos][]ast.Expr {
+	values := map[token.Pos][]ast.Expr{}
 	remember := func(left ast.Expr, right ast.Expr) {
-		if id, ok := left.(*ast.Ident); ok && id.Obj != nil {
-			values[id.Obj] = append(values[id.Obj], right)
+		if id, ok := left.(*ast.Ident); ok {
+			if origin := queryBinding(id); origin.IsValid() {
+				values[origin] = append(values[origin], right)
+			}
 		}
 	}
 	ast.Inspect(body, func(node ast.Node) bool {
@@ -558,22 +563,23 @@ func isQueryCall(expr ast.Expr) bool {
 }
 
 func (s *queryReadScan) isValues(expr ast.Expr) bool {
-	return s.isValuesOrigin(ast.Unparen(expr), map[*ast.Object]bool{})
+	return s.isValuesOrigin(ast.Unparen(expr), map[token.Pos]bool{})
 }
 
-func (s *queryReadScan) isValuesOrigin(expr ast.Expr, visited map[*ast.Object]bool) bool {
+func (s *queryReadScan) isValuesOrigin(expr ast.Expr, visited map[token.Pos]bool) bool {
 	ident, ok := expr.(*ast.Ident)
 	if !ok {
 		return isQueryCall(expr)
 	}
-	if ident.Obj == nil || visited[ident.Obj] {
+	origin := queryBinding(ident)
+	if !origin.IsValid() || visited[origin] {
 		return false
 	}
-	visited[ident.Obj] = true
-	if s.values[ident.Obj] {
+	visited[origin] = true
+	if s.values[origin] {
 		return true
 	}
-	for _, value := range s.assignments[ident.Obj] {
+	for _, value := range s.assignments[origin] {
 		if s.isValuesOrigin(ast.Unparen(value), visited) {
 			return true
 		}
@@ -661,10 +667,11 @@ func (s *queryReadScan) idSource(expr ast.Expr, seen map[ast.Expr]bool) {
 	seen[expr] = true
 	switch found := expr.(type) {
 	case *ast.Ident:
-		if position, parameter := s.params[found.Name]; parameter {
+		origin := queryBinding(found)
+		if position, parameter := s.params[origin]; parameter {
 			s.result.parsed[position] = true
 		}
-		for _, value := range s.assignments[found.Obj] {
+		for _, value := range s.assignments[origin] {
 			s.idSource(value, seen)
 		}
 	case *ast.IndexExpr:
@@ -694,26 +701,27 @@ func (s *queryReadScan) readKey(expr ast.Expr, form bool) {
 }
 
 func (s *queryReadScan) recordKey(expr ast.Expr, keys map[string]bool, params map[int]bool) {
-	s.recordKeyOrigin(ast.Unparen(expr), keys, params, map[*ast.Object]bool{})
+	s.recordKeyOrigin(ast.Unparen(expr), keys, params, map[token.Pos]bool{})
 }
 
-func (s *queryReadScan) recordKeyOrigin(expr ast.Expr, keys map[string]bool, params map[int]bool, visited map[*ast.Object]bool) {
+func (s *queryReadScan) recordKeyOrigin(expr ast.Expr, keys map[string]bool, params map[int]bool, visited map[token.Pos]bool) {
 	switch key := expr.(type) {
 	case *ast.BasicLit:
 		if value, err := strconv.Unquote(key.Value); err == nil && key.Kind == token.STRING {
 			keys[value] = true
 		}
 	case *ast.Ident:
-		if key.Obj != nil && visited[key.Obj] {
+		origin := queryBinding(key)
+		if origin.IsValid() && visited[origin] {
 			return
 		}
-		visited[key.Obj] = true
-		if position, isParam := s.params[key.Name]; isParam {
+		visited[origin] = true
+		if position, isParam := s.params[origin]; isParam {
 			params[position] = true
 		} else if value, isConst := s.pkg.consts[key.Name]; isConst {
 			keys[value] = true
 		}
-		for _, assigned := range s.assignments[key.Obj] {
+		for _, assigned := range s.assignments[origin] {
 			s.recordKeyOrigin(ast.Unparen(assigned), keys, params, visited)
 		}
 	case *ast.SelectorExpr:

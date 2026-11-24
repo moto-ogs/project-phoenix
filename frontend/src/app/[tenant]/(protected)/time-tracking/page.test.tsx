@@ -5674,13 +5674,13 @@ describe("deviation-reason gate (F9)", () => {
               action,
               planned_time: "08:00",
               actual_time: "07:30",
-              deviation_minutes: "30",
+              deviation_minutes: 30,
             }
           : {
               action,
               planned_time: "16:00",
               actual_time: "16:30",
-              deviation_minutes: "30",
+              deviation_minutes: 30,
             },
     });
   }

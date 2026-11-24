@@ -32,6 +32,14 @@ import (
 // Route-specific partial imports register their result on the route itself.
 var problemDetailContracts = map[string]any{
 	common.CodeGeneralInput:                                     common.InputLimitDetails{},
+	common.CodeGeneralRequestTooLarge:                           common.BodyLimitDetails{},
+	common.CodeCareContractImportFileTooLarge:                   common.BodyLimitDetails{},
+	common.CodeCareContractPaperDocumentInvalid:                 common.BodyLimitDetails{},
+	common.CodeImportFileTooLarge:                               common.BodyLimitDetails{},
+	common.CodeParentBillingFamilyChildrenImportFileTooLarge:    common.BodyLimitDetails{},
+	common.CodeParentBillingSepaImportFileTooLarge:              common.BodyLimitDetails{},
+	common.CodeTraegerLogoTooLarge:                              common.BodyLimitDetails{},
+	common.CodeWorkforceTraegerStaffImportFileTooLarge:          common.BodyLimitDetails{},
 	common.CodeFilesFileTooLarge:                                common.SizeLimitDetails{},
 	common.CodeIdentityRolePlatformPermission:                   common.PermissionDetails{},
 	common.CodeCommunicationLetterPlaceholderUnknown:            common.PlaceholderDetails{},
@@ -61,6 +69,7 @@ var problemDetailContracts = map[string]any{
 	common.CodeCommunicationStaffGroupTooLarge:                  staffMessagingAPI.StaffGroupSizeLimitDetails{},
 	common.CodeEnrollmentCompleteWithdrawalConfirmationRequired: parentPortalHTTP.WithdrawalConfirmationDetails{},
 	common.CodeTimetableWindowTooLarge:                          timetableModule.RefusalValues{},
+	common.CodeTimetableTemplateStartOutsidePeriod:              timetableModule.RefusalValues{},
 	common.CodeTimetableExportRangeTooLarge:                     timetableModule.RefusalValues{},
 	common.CodeTimetableSeriesEndBeforeStart:                    timetableModule.RefusalValues{},
 	common.CodeTimetableSeriesEndOutsidePeriod:                  timetableModule.RefusalValues{},

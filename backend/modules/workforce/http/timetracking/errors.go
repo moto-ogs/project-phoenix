@@ -2,7 +2,6 @@ package timetracking
 
 import (
 	"errors"
-	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 
@@ -150,7 +149,7 @@ func renderDeviationReasonRequired(err error) render.Renderer {
 		Action:           deviation.Action,
 		PlannedTime:      deviation.PlannedTime,
 		ActualTime:       deviation.ActualTime,
-		DeviationMinutes: strconv.Itoa(deviation.DeviationMinutes),
+		DeviationMinutes: deviation.DeviationMinutes,
 	})
 }
 
@@ -163,7 +162,7 @@ type DeviationReasonDetails struct {
 	Action           string `json:"action"`
 	PlannedTime      string `json:"planned_time"`
 	ActualTime       string `json:"actual_time"`
-	DeviationMinutes string `json:"deviation_minutes"`
+	DeviationMinutes int    `json:"deviation_minutes"`
 }
 
 func isAny(targets ...error) func(error) bool {

@@ -97,7 +97,7 @@ func TestProvisioningErrorRendererCarriesSchoolCount(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, http.StatusConflict, resp.HTTPStatusCode)
 	assert.Equal(t, common.CodeProvisioningOrganizationHasSchools, resp.Code)
-	assert.Equal(t, map[string]any{"school_count": 3}, resp.Details)
+	assert.Equal(t, OrganizationHasSchoolsDetails{SchoolCount: 3}, resp.Details)
 }
 
 // The adapter text of invalid data stays out of the answer; its field

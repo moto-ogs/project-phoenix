@@ -284,14 +284,14 @@ export interface DeviationReasonDetails {
   action: string;
   planned_time: string;
   actual_time: string;
-  deviation_minutes: string;
+  deviation_minutes: number;
 }
 
 export const DeviationReasonDetailsSchema: Decoder<DeviationReasonDetails> = /*#__PURE__*/ object<DeviationReasonDetails>({
   action: str,
   planned_time: str,
   actual_time: str,
-  deviation_minutes: str,
+  deviation_minutes: safeInt,
 });
 
 /** Go: devices.DeviceInActiveSessionDetails */
@@ -1052,6 +1052,7 @@ export const problemDetails = {
   "timetable.series_end_outside_period": RefusalValuesSchema,
   "timetable.substitute_absent_on_date": RefusalValuesSchema,
   "timetable.template_grade_above_max": RefusalValuesSchema,
+  "timetable.template_start_outside_period": RefusalValuesSchema,
   "timetable.too_many_dates": RefusalValuesSchema,
   "timetable.window_too_large": RefusalValuesSchema,
   "traeger.access_log_export_too_large": AccessLogLimitDetailsSchema,

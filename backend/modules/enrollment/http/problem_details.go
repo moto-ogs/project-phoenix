@@ -8,6 +8,7 @@ type UploadContentDetails struct {
 
 type UploadRefusalDetails struct {
 	MaxMB        int       `json:"max_mb"`
+	MaxBytes     int       `json:"max_bytes,omitempty"`
 	AllowedTypes *[]string `json:"allowed_types,omitempty"`
 }
 

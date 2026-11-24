@@ -166,7 +166,7 @@ func (rs *Resource) mountPublicRoutes(r chi.Router) {
 	r.Get("/legal/{tenantSlug}", rs.publicLegalTexts)
 	r.Post("/{tenantSlug}/submit", rs.submitEnrollment)
 	r.Post("/{tenantSlug}/uploads", rs.uploadEnrollmentFile)
-	r.Get("/requests/{statusToken}", rs.getStatus)
+	r.Get("/requests/{statusToken}", rs.getStatusResponse)
 	r.Get("/requests/{statusToken}/signature-proof", rs.getStatusSignatureProof)
 	r.Get("/requests/{statusToken}/edit-bootstrap", rs.getEditBootstrap)
 	r.Patch("/requests/{statusToken}", rs.patchStatus)

@@ -164,18 +164,18 @@ type EditDraftOfferingDayResponse struct {
 // the proof of the parent's signature on a path of its own, which the
 // frontend's catalog proxy serves as a public file (#2352).
 func (rs *Resource) getStatusSignatureProof(w http.ResponseWriter, r *http.Request) {
-	rs.readStatus(w, r, true)
+	rs.getStatus(w, r, true)
 }
 
 // getStatus returns the per-child status for a token-bearing parent.
 // Public route — caller must wrap in admin-tx because there's no JWT.
 // With ?format=pdf it answers the proof of the parent's signature (#4786)
 // instead, for the request the same token names.
-func (rs *Resource) getStatus(w http.ResponseWriter, r *http.Request) {
-	rs.readStatus(w, r, wantsStatusProofPDF(r))
+func (rs *Resource) getStatusResponse(w http.ResponseWriter, r *http.Request) {
+	rs.getStatus(w, r, wantsStatusProofPDF(r))
 }
 
-func (rs *Resource) readStatus(w http.ResponseWriter, r *http.Request, proof bool) {
+func (rs *Resource) getStatus(w http.ResponseWriter, r *http.Request, proof bool) {
 	if rs.RequestService == nil {
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("enrollment request service not configured")))
 		return
