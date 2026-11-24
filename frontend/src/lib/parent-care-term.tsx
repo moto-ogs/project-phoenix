@@ -36,6 +36,11 @@ interface ParentCareTerms {
   readonly account: string | undefined;
   /** The term of one child's school, else the account's term. */
   readonly forChild: (studentId: string | undefined) => string | undefined;
+  /**
+   * The term of the account's children at one school, else the account's
+   * term: for a text that names a school, not a child (a parent letter).
+   */
+  readonly forSchool: (schoolName: string | undefined) => string | undefined;
   /** The `{careTerm}` value for one child's row in a list of children. */
   readonly termOf: (studentId: string | undefined) => string;
   /**
@@ -49,6 +54,7 @@ interface ParentCareTerms {
 const NO_TERMS: ParentCareTerms = {
   account: undefined,
   forChild: () => undefined,
+  forSchool: () => undefined,
   termOf: () => normalizeCareFacilityTerm(undefined),
   termOfSchool: () => normalizeCareFacilityTerm(undefined),
 };
@@ -74,15 +80,16 @@ function useLoadedParentCareTerms(enabled: boolean): ParentCareTerms {
     const account = accountCareTerm([...byChild.values()]);
     const forChild = (studentId: string | undefined) =>
       (studentId === undefined ? undefined : byChild.get(studentId)) ?? account;
+    const forSchool = (schoolName: string | undefined) =>
+      (schoolName === undefined ? undefined : bySchool.get(schoolName)) ??
+      account;
     return {
       account,
       forChild,
+      forSchool,
       termOf: (studentId) => normalizeCareFacilityTerm(forChild(studentId)),
       termOfSchool: (schoolName) =>
-        normalizeCareFacilityTerm(
-          (schoolName === undefined ? undefined : bySchool.get(schoolName)) ??
-            account,
-        ),
+        normalizeCareFacilityTerm(forSchool(schoolName)),
     };
   }, [children, features]);
 }
@@ -127,5 +134,22 @@ export function ParentChildCareTermScope({
 }) {
   const inherited = useCareFacilityTerm();
   const term = useParentCareTerms().forChild(studentId) ?? inherited;
+  return <CareFacilityTermScope term={term}>{children}</CareFacilityTermScope>;
+}
+
+/**
+ * Gives every text inside the care term of one school, for a part that
+ * belongs to a school rather than a child: a parent letter and the refusals
+ * of its answer (#6258). Until the term loaded it keeps the inherited one.
+ */
+export function ParentSchoolCareTermScope({
+  schoolName,
+  children,
+}: {
+  readonly schoolName: string | undefined;
+  readonly children: ReactNode;
+}) {
+  const inherited = useCareFacilityTerm();
+  const term = useParentCareTerms().forSchool(schoolName) ?? inherited;
   return <CareFacilityTermScope term={term}>{children}</CareFacilityTermScope>;
 }
