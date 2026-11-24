@@ -81,6 +81,7 @@ func TestViolationsKnowsEveryEnvelope(t *testing.T) {
 
 	noData := Route{Method: "DELETE", Pattern: "/api/rows/{id}", NoData: true}
 	assert.Empty(t, doc.Violations(noData, Answer{Status: 204}))
+	assert.NotEmpty(t, doc.Violations(noData, Answer{Status: 200}), "an empty 200 is not a JSON envelope")
 	assert.Empty(t, doc.Violations(noData, Answer{Status: 200, Body: []byte(`{"status":"success","message":"ok"}`)}))
 	assert.Empty(t, doc.Violations(noData, Answer{Status: 200, Body: []byte(`{"status":"success","data":null}`)}))
 	assert.NotEmpty(t, doc.Violations(noData, Answer{Status: 200, Body: []byte(`{"status":"success","data":{}}`)}))

@@ -1246,6 +1246,11 @@ The routes below are mounted only when `APP_ENV=demo`
 (`authAPI.MountDemoRoutes`); elsewhere they answer 404 and the capability is
 not composed. The backend routes are public, take no cookies, and rely on
 `CORS_ALLOWED_ORIGINS` naming the website origins in the demo environment.
+The route catalog walks the demo router without composing it, so the contract
+check includes these routes even when the server does not mount them.
+The portal calls use plain `RouteFile` contracts, not the generic catalog
+proxy. The separate moto website calls the demo-link request directly
+([ADR 0316](../adr/0316-demo-link-anfrage-bleibt-ein-website-vertrag.md)).
 
 | Route | Contract |
 |---|---|

@@ -83,16 +83,35 @@ func renderHireError(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 	if duplicate, ok := errors.AsType[*workforce.TraegerStaffHireDuplicateError](err); ok {
-		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeWorkforceTraegerStaffHireDuplicate, map[string]any{"matches": duplicate.Matches}))
+		matches := make([]hireMatchResponse, 0, len(duplicate.Matches))
+		for _, match := range duplicate.Matches {
+			matches = append(matches, hireMatchResponse{
+				Kind: match.Kind, RecordID: ident.ID(match.RecordID),
+				SchoolID: ident.ID(match.SchoolID), SchoolName: match.SchoolName, StaffID: ident.ID(match.StaffID),
+				FirstName: match.FirstName, LastName: match.LastName, Reasons: match.Reasons,
+			})
+		}
+		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeWorkforceTraegerStaffHireDuplicate, map[string]any{"matches": matches}))
 		return
 	}
 	if incomplete, ok := errors.AsType[*workforce.TraegerStaffHireIncompleteError](err); ok {
 		details := map[string]any{"schools": incomplete.Schools}
 		if incomplete.RecordID > 0 {
-			details["staff_record_id"] = incomplete.RecordID
+			details["staff_record_id"] = ident.ID(incomplete.RecordID)
 		}
 		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeWorkforceTraegerStaffHireIncomplete, details))
 		return
 	}
 	renderContractError(w, r, err)
+}
+
+type hireMatchResponse struct {
+	Kind       string   `json:"kind"`
+	RecordID   ident.ID `json:"staff_record_id,omitzero"`
+	SchoolID   ident.ID `json:"school_id,omitzero"`
+	SchoolName string   `json:"school_name,omitempty"`
+	StaffID    ident.ID `json:"staff_id,omitzero"`
+	FirstName  string   `json:"first_name"`
+	LastName   string   `json:"last_name"`
+	Reasons    []string `json:"reasons"`
 }

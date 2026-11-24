@@ -51,10 +51,10 @@ func calendarPeriodOverlapRenderer(err error) render.Renderer {
 		return common.ErrorConflictWithCode(errCalendarPeriodOverlapConflict, common.CodeTimetableCalendarPeriodOverlapConflict)
 	}
 	first := overlapErr.Overlaps[0]
-	ids := make([]int64, 0, len(overlapErr.Overlaps))
+	ids := make([]ident.ID, 0, len(overlapErr.Overlaps))
 	names := make([]string, 0, len(overlapErr.Overlaps))
 	for _, o := range overlapErr.Overlaps {
-		ids = append(ids, o.ID)
+		ids = append(ids, ident.ID(o.ID))
 		names = append(names, o.Name)
 	}
 	message := fmt.Errorf(

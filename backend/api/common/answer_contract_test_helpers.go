@@ -3,6 +3,7 @@
 package common
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -32,6 +33,19 @@ import (
 func init() {
 	answerObserver = observeAnswerContract
 	refusalObserver = observeRefusal
+	numericProblemDetailsObserver = func(r *http.Request) {
+		if observe, ok := r.Context().Value(numericProblemDetailsKey{}).(func()); ok {
+			observe()
+		}
+	}
+}
+
+type numericProblemDetailsKey struct{}
+
+// ObserveNumericProblemDetails flags a wire violation even when the final
+// problem middleware repaired the response before sending it.
+func ObserveNumericProblemDetails(r *http.Request, observe func()) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), numericProblemDetailsKey{}, observe))
 }
 
 // answersFileEnv names a file that collects the key of every registered

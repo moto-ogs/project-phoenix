@@ -25,10 +25,6 @@ export const instant = z.iso.datetime({ offset: true });
  */
 export type OpenEnum<T extends string> = T | (string & {});
 
-export function openEnum<T extends string>() {
-  return z.string() as unknown as z.ZodType<OpenEnum<T>, unknown>;
-}
-
 export { knownEnum } from "./known-enum";
 
 /**

@@ -232,7 +232,7 @@ func TestAssignTransitStudentsParticipantLimitWire(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
 	assert.Equal(t, studentpresence.ActivityParticipantLimitCode, body["code"])
 	assert.Equal(t, map[string]any{
-		"activity_id":       float64(7),
+		"activity_id":       "7",
 		"activity_name":     "Fußball",
 		"current_occupancy": float64(63),
 		"max_participants":  float64(45),
@@ -272,7 +272,7 @@ func TestAssignTransitStudentsRoomCapacityWire(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
 	assert.Equal(t, studentpresence.RoomCapacityCode, body["code"])
 	assert.Equal(t, map[string]any{
-		"room_id":           float64(12),
+		"room_id":           "12",
 		"room_name":         "Turnhalle",
 		"current_occupancy": float64(29),
 		"max_capacity":      float64(30),

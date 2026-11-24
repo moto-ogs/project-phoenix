@@ -107,7 +107,7 @@ type RouteContract struct {
 	// the file. The proxy sends no session, no bearer and no body, and the
 	// backend's limiter of the link keys the request by client IP. Only a
 	// File route of the portal public names it; a public file without it is
-	// refused, as is a public upload.
+	// refused. Public multipart uploads use PublicUpload instead.
 	PublicFile string
 	// PublicUpload opens a multipart upload to the portal public, route by
 	// route (#2352, ADR 0270): it says why a link or a public form may send

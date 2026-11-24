@@ -64,6 +64,7 @@ describe("demo handoff route", () => {
       Response.json({
         status: "ready",
         school_url: "https://ogs-beispiel.demo.example",
+        school_name: "OGS Beispiel",
       }),
     );
 
@@ -81,6 +82,7 @@ describe("demo handoff route", () => {
       Response.json({
         status: "ready",
         school_url: "https://ogs-beispiel.demo.example",
+        school_name: "OGS Beispiel",
       }),
     );
 

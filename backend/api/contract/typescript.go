@@ -578,7 +578,7 @@ func (w *tsWriter) zod(s Schema) string {
 	case KindClock:
 		z = helper("clockTime")
 	case KindEnum:
-		z = helper("openEnum") + "<" + s.Ref + ">()"
+		z = "z.string()"
 	case KindArray:
 		z = "z.array(" + w.zod(*s.Elem) + ")"
 	case KindMap:

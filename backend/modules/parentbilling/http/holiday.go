@@ -512,7 +512,7 @@ func renderHolidayError(w http.ResponseWriter, r *http.Request, err error) {
 			map[string]any{"limit": dayLimit.Limit, "days": dayLimit.Days, "elsewhere": dayLimit.Elsewhere, "child": 1}))
 	case errors.As(err, &noCareDay):
 		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeEnrollmentHolidayWeekNoCareDay, map[string]any{
-			"week": noCareDay.Week, "week_id": noCareDay.WeekID, "date": noCareDay.Date.Format("02.01.2006"),
+			"week": noCareDay.Week, "week_id": ident.ID(noCareDay.WeekID), "date": noCareDay.Date.Format("02.01.2006"),
 			"iso_date": noCareDay.Date.String(), "kind": noCareDay.Kind, "name": noCareDay.Name,
 		}))
 	case errors.Is(err, capability.ErrInvalidHolidayPlaces):

@@ -133,16 +133,16 @@ func (e *RoomCapacityError) ErrorCode() string { return RoomCapacityCode }
 
 // RoomCapacityDetails are the values a room refusal names, in wire form.
 type RoomCapacityDetails struct {
-	RoomID           int64  `json:"room_id"`
-	RoomName         string `json:"room_name"`
-	CurrentOccupancy int    `json:"current_occupancy"`
-	MaxCapacity      int    `json:"max_capacity"`
-	IncomingStudents int    `json:"incoming_students"`
+	RoomID           ident.ID `json:"room_id"`
+	RoomName         string   `json:"room_name"`
+	CurrentOccupancy int      `json:"current_occupancy"`
+	MaxCapacity      int      `json:"max_capacity"`
+	IncomingStudents int      `json:"incoming_students"`
 }
 
 func (e *RoomCapacityError) ErrorDetails() any {
 	return RoomCapacityDetails{
-		RoomID: e.RoomID, RoomName: e.RoomName,
+		RoomID: ident.ID(e.RoomID), RoomName: e.RoomName,
 		CurrentOccupancy: e.CurrentOccupancy, MaxCapacity: e.MaxCapacity, IncomingStudents: e.Incoming,
 	}
 }
@@ -180,16 +180,16 @@ func (e *ActivityParticipantLimitError) ErrorCode() string { return ActivityPart
 
 // ActivityParticipantLimitDetails are the values a refusal names, in wire form.
 type ActivityParticipantLimitDetails struct {
-	ActivityID       int64  `json:"activity_id"`
-	ActivityName     string `json:"activity_name"`
-	CurrentOccupancy int    `json:"current_occupancy"`
-	MaxParticipants  int    `json:"max_participants"`
-	IncomingStudents int    `json:"incoming_students"`
+	ActivityID       ident.ID `json:"activity_id"`
+	ActivityName     string   `json:"activity_name"`
+	CurrentOccupancy int      `json:"current_occupancy"`
+	MaxParticipants  int      `json:"max_participants"`
+	IncomingStudents int      `json:"incoming_students"`
 }
 
 func (e *ActivityParticipantLimitError) ErrorDetails() any {
 	return ActivityParticipantLimitDetails{
-		ActivityID: e.ActivityID, ActivityName: e.ActivityName,
+		ActivityID: ident.ID(e.ActivityID), ActivityName: e.ActivityName,
 		CurrentOccupancy: e.CurrentOccupancy, MaxParticipants: e.MaxParticipants, IncomingStudents: e.Incoming,
 	}
 }

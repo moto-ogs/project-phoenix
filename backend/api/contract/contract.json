@@ -8175,6 +8175,21 @@
     },
     {
       "method": "GET",
+      "pattern": "/demo/access/status",
+      "portals": [
+        "org",
+        "parent",
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "demoAccessStatus"
+      },
+      "route_file": "demo route files hold and forward the demo bearer",
+      "plain": true
+    },
+    {
+      "method": "GET",
       "pattern": "/operator/accounts",
       "portals": [
         "platform"
@@ -17549,6 +17564,44 @@
     },
     {
       "method": "POST",
+      "pattern": "/demo/access/reset",
+      "portals": [
+        "org",
+        "parent",
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "demoResetRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "demoResetResponse"
+      },
+      "route_file": "the demo reset route reads the token cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/demo/access/sessions",
+      "portals": [
+        "org",
+        "parent",
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "demoSessionRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "demoSessionResponse"
+      },
+      "route_file": "the demo session route installs the portal's cookies",
+      "plain": true
+    },
+    {
+      "method": "POST",
       "pattern": "/operator/accounts/{accountId}/tenants",
       "portals": [
         "platform"
@@ -24358,6 +24411,12 @@
       "pattern": "/api/students/{id}/rfid",
       "reason": "device",
       "why": "PyrePortal assigns and removes a tag with the device key and reads numeric IDs"
+    },
+    {
+      "method": "POST",
+      "pattern": "/demo/access-requests",
+      "reason": "public-api",
+      "why": "the separate moto website requests demo links directly; no portal route file calls it"
     },
     {
       "method": "POST",
@@ -118221,6 +118280,148 @@
           "name": "deleted",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "demoAccessStatus",
+      "go_type": "account.demoAccessStatus",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_url",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "demoResetRequest",
+      "go_type": "account.demoResetRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "demoResetResponse",
+      "go_type": "account.demoResetResponse",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "entry_url",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "demoSessionFacts",
+      "go_type": "account.demoSessionFacts",
+      "fields": [
+        {
+          "name": "access_id",
+          "text_reason": "opaque demo-session access key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "src",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "fixed_role",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "traeger",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "demoSessionRequest",
+      "go_type": "account.demoSessionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "demoSessionResponse",
+      "go_type": "account.demoSessionResponse",
+      "fields": [
+        {
+          "name": "access_token",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "refresh_token",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "demo",
+          "schema": {
+            "kind": "ref",
+            "ref": "demoSessionFacts"
           }
         }
       ]

@@ -41,7 +41,7 @@ func (d Document) Violations(route Route, answer Answer) []string {
 		return []string{"the route registers a file, not the envelope"}
 	}
 	body := bytes.TrimSpace(answer.Body)
-	if route.NoData && len(body) == 0 {
+	if route.NoData && answer.Status == 204 && len(body) == 0 {
 		return nil
 	}
 	if route.Plain {

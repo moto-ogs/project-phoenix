@@ -159,6 +159,8 @@ interface TransportOptions extends Pick<
   token?: string | null;
   /** Use the portal's session client when the route owns renewal policy. */
   send?: (path: string, call: BackendCall) => Promise<Response>;
+  /** Undo a committed side effect whose JSON was readable but failed decoding. */
+  onInvalidSuccess?: (payload: unknown) => Promise<void>;
 }
 
 type ContractAddress<R, V> = ParamsOf<R> & QueryOf<R, V>;
@@ -181,7 +183,8 @@ async function callContract<T>(
   options: TransportOptions & CallAddress,
   body?: unknown,
 ): Promise<ContractReply<T>> {
-  const { params, query, token, send, ...transport } = options;
+  const { params, query, token, send, onInvalidSuccess, ...transport } =
+    options;
   const endpoint = fillRoutePath(route.pattern, params) + routeSearch(query);
   const call: BackendCall = {
     ...transport,
@@ -200,15 +203,14 @@ async function callContract<T>(
     };
     const write = commits(route);
     const payload = await readContractJson(response, route, options);
-    return {
-      ...decodeContract(
-        `${route.method} ${route.pattern}`,
-        route.response,
-        payload,
-        write,
-      ),
-      backend,
-    };
+    const decoded = decodeContract(
+      `${route.method} ${route.pattern}`,
+      route.response,
+      payload,
+      write,
+    );
+    if (!decoded.ok) await onInvalidSuccess?.(payload);
+    return { ...decoded, backend };
   } catch (error) {
     if (isApiResponseError(error)) return { ...failure(error), backend };
     throw error;

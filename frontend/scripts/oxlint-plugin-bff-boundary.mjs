@@ -32,11 +32,12 @@ export const UNCONTRACTED = {
   "lib/enrollment-submission-api.ts": [
     "public GET tenant GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}",
   ],
-  // Demo-only routes own the cookie and have no Go contract.
+  // Demo routes project the backend result; the BFF status POST carries
+  // the demo proof in its body, not in the browser URL or a session.
   "lib/demo-access.ts": [
-    "public POST /api/demo/access/reset",
-    "public POST /api/demo/access/status",
-    "public POST /api/demo/access/sessions",
+    "public POST tenant POST /demo/access/reset",
+    "public POST tenant GET /demo/access/status",
+    "public POST tenant POST /demo/access/sessions",
   ],
   // Purges the BFF lookup and ISR caches without calling Go.
   "lib/operator/provisioning-api.ts": [

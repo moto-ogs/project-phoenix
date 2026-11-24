@@ -818,7 +818,7 @@ func TestCreatePeriod(t *testing.T) {
 		assert.Contains(t, w.Body.String(), "aktiver Zeitraum desselben Typs")
 		assert.Contains(t, w.Body.String(), "Schuljahr 2025/2026")
 		assert.Contains(t, w.Body.String(), "01.08.2025 – 31.07.2026")
-		assert.Contains(t, w.Body.String(), `"overlapping_period_ids":[42]`)
+		assert.Contains(t, w.Body.String(), `"overlapping_period_ids":["42"]`)
 		assert.Contains(t, w.Body.String(), `"overlapping_period_names":["Schuljahr 2025/2026"]`)
 	})
 

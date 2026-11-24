@@ -366,8 +366,10 @@ Pre-session steps that forward a limited proof use `authStepProxy`: it calls
 `contractWrite` with the generated entry and wraps its decoded answer in
 `successResponse`. A 204 stays bodyless. A `RouteFile` JSON answer must
 pass through the generated decoder; `route-backend-paths.test.ts` rejects
-a raw call. The demo access routes have no Go contract and wrap plain
-success with `envelopedBackendSuccess`. Do not move a route across
+a raw call. The demo access route files decode their conditional backend
+`RouteFile` contracts with `contractGet` or `contractWrite` before wrapping
+plain successes. Browser calls build their addresses with `bffPath` but
+keep the route file's browser-facing payload and method. Do not move a route across
 portal auth boundaries to share code. Streaming SSE uses its documented
 exception in [the SSE contract](realtime.md).
 
