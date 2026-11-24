@@ -397,7 +397,8 @@ durch die Datenbank-Dienste verlor die Seite des Backends.
 2. **Ohne Daten.** Eine `NoData`-Route antwortet `{ status: "success",
    data: null }` mit der Nachricht des Backends; ein DELETE ohne Daten
    antwortet 204. Auch ein 204 aus Go wird geprüft. Verspricht der Vertrag
-   Daten, ist die leere Antwort ein Vertragsfehler.
+   Daten, ist die leere Antwort ein Vertragsfehler. Eine leere 200 ist
+   auch für `NoData` ein Vertragsfehler.
 3. **Kein nacktes Payload.** Gegen eine Antwort nur aus `data` spricht, dass
    rund 130 Client-Dateien `.data` lesen und alle mitziehen müssten, ohne
    dass ein Leser etwas gewinnt; für sie spräche nur ein kürzerer Body. Die
@@ -504,3 +505,8 @@ Fehler wiederholbar. Ein 204 ersetzt keine zugesagten Daten.
    Oberfläche bleibt eine Projektion des dekodierten Backend-Ergebnisses:
    Sitzungstokens verlassen den Server nicht. Der Wächter für
    handgeschriebene Wire-Typen prüft auch Objektzweige von Unions.
+3. **Auch bedingt gemountete Portalrouten haben einen Vertrag.** Das
+   Routengolden ergänzt den Demo-Router ohne Laufzeitabhängigkeiten. Die
+   Demo-Route-Dateien lesen Status, Sitzung und Neustart über erzeugte
+   Decoder. Die separate Website fordert den Link direkt an
+   ([ADR 0316](0316-demo-link-anfrage-bleibt-ein-website-vertrag.md)).

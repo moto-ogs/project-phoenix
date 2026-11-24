@@ -87,7 +87,7 @@ func TestParentBillingRebookingPreservesCalendarRefusal(t *testing.T) {
 			assert.Equal(t, http.StatusConflict, refusal.Status)
 			assert.Equal(t, "enrollment.holiday_week_no_care_day", refusal.Code)
 			assert.Equal(t, map[string]any{
-				"week": float64(0), "week_id": float64(second.ID), "date": "11.01.2027",
+				"week": float64(0), "week_id": fmt.Sprint(second.ID), "date": "11.01.2027",
 				"iso_date": "2027-01-11", "kind": day.Kind, "name": day.Name,
 			}, refusal.Details)
 			after := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(registration.ID), ""), nil))

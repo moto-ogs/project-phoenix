@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"math"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"golang.org/x/time/rate"
 )
 
@@ -227,13 +227,19 @@ func (rl *RateLimiter) reject(w http.ResponseWriter, r *http.Request, bucket str
 	if rl.logger != nil {
 		rl.logger.LogRateLimitExceeded(r)
 	}
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(http.StatusTooManyRequests)
-	_ = json.NewEncoder(w).Encode(rateLimitProblem{
+	writeRateLimitProblem(w, rateLimitProblem{
 		Status: http.StatusTooManyRequests,
 		Detail: "Rate limit exceeded. Please try again later.",
 		Code:   codeGeneralUnavailable,
 	})
+}
+
+func writeRateLimitProblem(w http.ResponseWriter, problem rateLimitProblem) {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(problem.Status)
+	// rateLimitProblem contains only an int and strings and cannot fail to encode.
+	body, _ := wire.Marshal(problem)
+	_, _ = w.Write(append(body, '\n'))
 }
 
 // codeGeneralUnavailable is the registered class code (error-registry/)
@@ -352,9 +358,7 @@ func (rl *RateLimiter) Middleware() func(http.Handler) http.Handler {
 			switch {
 			case err != nil:
 				slog.ErrorContext(r.Context(), "check request rate limit", "error", err.Error())
-				w.Header().Set("Content-Type", "application/problem+json")
-				w.WriteHeader(http.StatusServiceUnavailable)
-				_ = json.NewEncoder(w).Encode(rateLimitProblem{
+				writeRateLimitProblem(w, rateLimitProblem{
 					Status: http.StatusServiceUnavailable, Code: codeGeneralUnavailable,
 					Detail: "Rate limit temporarily unavailable.",
 				})

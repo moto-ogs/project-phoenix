@@ -11,7 +11,6 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/moto-ogs/project-phoenix/analytics"
-	authAPI "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	organizationModule "github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
@@ -105,11 +104,8 @@ func requireCoreActionClassification(router chi.Routes) error {
 // gone. The demo routes exist under APP_ENV=demo only, so the guard adds them
 // from the demo resource itself, mounted where MountDemoRoutes mounts it.
 func coreActionRouteGaps(router chi.Routes) (unclassified, stale []string, err error) {
-	demo := chi.NewRouter()
-	demo.Mount("/demo", (&authAPI.DemoResource{}).Router())
-
 	routes := map[analytics.RouteKey]bool{}
-	for _, source := range []chi.Routes{router, demo} {
+	for _, source := range []chi.Routes{router, demoRouteCatalog()} {
 		if err := collectWritingPortalRoutes(source, routes); err != nil {
 			return nil, nil, err
 		}

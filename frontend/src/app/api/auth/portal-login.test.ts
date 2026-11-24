@@ -390,6 +390,7 @@ describe.each([
             role,
             src: "fair",
             fixed_role: true,
+            traeger: false,
             secret: "must-not-leak",
           },
         }),
@@ -433,7 +434,12 @@ describe.each([
       .mockResolvedValueOnce(
         Response.json({
           ...pair(),
-          demo: { access_id: "4711", role: otherRole, fixed_role: true },
+          demo: {
+            access_id: "4711",
+            role: otherRole,
+            fixed_role: true,
+            traeger: false,
+          },
         }),
       )
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
@@ -483,7 +489,15 @@ it.each(["operator", "schule", "caterer"])(
 it("selects the parent demo cookie using the proxy-owned original host", async () => {
   backend
     .mockResolvedValueOnce(
-      Response.json({ ...pair(), demo: { access_id: "4711", role: "parent" } }),
+      Response.json({
+        ...pair(),
+        demo: {
+          access_id: "4711",
+          role: "parent",
+          fixed_role: false,
+          traeger: false,
+        },
+      }),
     )
     .mockResolvedValueOnce(Response.json(claims("parent")));
   const req = request("parents", { token: "demo-link-proof", role: "lead" });
@@ -495,7 +509,12 @@ it("selects the parent demo cookie using the proxy-owned original host", async (
     status: "success",
     data: {
       session_created: true,
-      demo: { access_id: "4711", role: "parent", traeger: false },
+      demo: {
+        access_id: "4711",
+        role: "parent",
+        fixed_role: false,
+        traeger: false,
+      },
     },
   });
   expect(response.headers.getSetCookie()).toContainEqual(
@@ -505,7 +524,15 @@ it("selects the parent demo cookie using the proxy-owned original host", async (
 it("keeps demo session validation and rollback failures token-free", async () => {
   backend
     .mockResolvedValueOnce(
-      Response.json({ ...pair(), demo: { access_id: "4711", role: "parent" } }),
+      Response.json({
+        ...pair(),
+        demo: {
+          access_id: "4711",
+          role: "parent",
+          fixed_role: false,
+          traeger: false,
+        },
+      }),
     )
     .mockResolvedValueOnce(new Response(null, { status: 401 }))
     .mockRejectedValueOnce(new Error("offline"));

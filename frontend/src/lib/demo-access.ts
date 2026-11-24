@@ -3,7 +3,7 @@
 // log records it.
 
 import { ApiError } from "~/lib/api-error";
-import { bffJsonUncontracted } from "~/lib/bff-fetch";
+import { bffJsonUncontracted, bffPath } from "~/lib/bff-fetch";
 import { parentsPortalUrl } from "~/lib/parent-url";
 import { requiredPortalHostname } from "~/lib/portal-paths";
 
@@ -313,7 +313,7 @@ export async function restartDemo(
     bffJsonUncontracted<{ entry_url?: string }>(
       "public",
       "POST",
-      "/api/demo/access/reset",
+      bffPath("tenant", "POST /demo/access/reset"),
       {
         body: { role },
         errorMessage: "demo restart failed",
@@ -398,7 +398,7 @@ async function fetchDemoAccessProgress(
       status?: string;
       school_url?: string;
       school_name?: string;
-    }>("public", "POST", "/api/demo/access/status", {
+    }>("public", "POST", bffPath("tenant", "GET /demo/access/status"), {
       body: { token },
       errorMessage: "demo status failed",
     }),
@@ -491,7 +491,7 @@ async function postSession(body: {
         fixed_role?: boolean;
         traeger?: boolean;
       };
-    }>("public", "POST", "/api/demo/access/sessions", {
+    }>("public", "POST", bffPath("tenant", "POST /demo/access/sessions"), {
       body,
       errorMessage: "demo redeem failed",
     }),

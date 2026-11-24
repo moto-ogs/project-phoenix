@@ -80,12 +80,14 @@ func TestTraegerStaffHireCreatesRecordContractAndEmployments(t *testing.T) {
 	})
 	staffRelease(t, db, office.organization)
 
+	var hiredRecordID string
 	t.Run("one request creates the record, the contract and the employment at every Einsatzort", func(t *testing.T) {
 		body := hireBody("Brandt", hireSite(north, 300, 300, 300, 300, 0), hireSite(south, 0, 0, 0, 0, 240))
 		body["personnel_number"], body["email"], body["phone"] = "81001", " lena.brandt@example.org ", "0231 555 01"
 		rec := traegerJSON(t, router, office.token, http.MethodPost, staffHirePath, body)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		record := decode[staffRecordBody](t, rec)
+		hiredRecordID = strconv.FormatInt(int64(record.ID), 10)
 		assert.Equal(t, "Lena", record.FirstName)
 		assert.Equal(t, "Brandt", record.LastName)
 		require.NotNil(t, record.PersonnelNumber)
@@ -192,6 +194,10 @@ func TestTraegerStaffHireCreatesRecordContractAndEmployments(t *testing.T) {
 		rec := traegerJSON(t, router, office.token, http.MethodPost, staffHirePath, again)
 		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.traeger_staff_hire_duplicate")
 		assert.Contains(t, rec.Body.String(), `"record"`)
+		var refusal contractRefusal
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &refusal))
+		require.NotEmpty(t, hiredRecordID)
+		assert.Equal(t, hiredRecordID, refusal.Details["matches"].([]any)[0].(map[string]any)["staff_record_id"])
 		assert.Len(t, hiredPeople(t, db, north, "Brandt"), 1, "nobody is created before the answer")
 
 		// A person of a school without a record, with the same name and birthday.
@@ -208,6 +214,8 @@ func TestTraegerStaffHireCreatesRecordContractAndEmployments(t *testing.T) {
 		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.traeger_staff_hire_duplicate")
 		assert.Contains(t, rec.Body.String(), `"school"`)
 		assert.Contains(t, rec.Body.String(), "Träger Personal OGS Süd")
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &refusal))
+		assert.Equal(t, fmt.Sprint(south), refusal.Details["matches"].([]any)[0].(map[string]any)["school_id"])
 		assert.Equal(t, 1, checks(), "the school's access log names the person the check showed")
 
 		// The Personalverwaltung confirms: these are two people.
@@ -238,26 +246,30 @@ func TestTraegerStaffHireCreatesRecordContractAndEmployments(t *testing.T) {
 			b["first_name"], b["email"] = "Mira", email
 			return b
 		}
-		refusalOf := func(email string) map[int64][]any {
+		refusalOf := func(email string) map[string][]any {
 			rec := traegerJSON(t, router, office.token, http.MethodPost, staffHirePath, body(email))
 			assertStaffRefusal(t, rec, http.StatusConflict, "workforce.traeger_staff_hire_duplicate")
 			var refusal contractRefusal
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &refusal), rec.Body.String())
-			reasons := map[int64][]any{}
+			// The route-sized router does not repair error details. These
+			// assertions check the real hire adapter before the root fallback.
+			reasons := map[string][]any{}
 			for _, raw := range refusal.Details["matches"].([]any) {
 				match := raw.(map[string]any)
 				if match["kind"] == "school" {
-					reasons[int64(match["staff_id"].(float64))] = match["reasons"].([]any)
+					id, ok := match["staff_id"].(string)
+					require.True(t, ok, "staff_id must be a string: %s", rec.Body)
+					reasons[id] = match["reasons"].([]any)
 				}
 			}
 			return reasons
 		}
 
-		assert.Equal(t, map[int64][]any{nameOnly.ID: {"name"}, byMasterData.ID: {"email"}}, refusalOf(" MIRA.y@example.org "),
+		assert.Equal(t, map[string][]any{fmt.Sprint(nameOnly.ID): {"name"}, fmt.Sprint(byMasterData.ID): {"email"}}, refusalOf(" MIRA.y@example.org "),
 			"the same name without a birthday, and the address in the school's master data, are asked about")
-		assert.Equal(t, map[int64][]any{nameOnly.ID: {"name"}, byAccount.ID: {"email"}}, refusalOf(account.Email),
+		assert.Equal(t, map[string][]any{fmt.Sprint(nameOnly.ID): {"name"}, fmt.Sprint(byAccount.ID): {"email"}}, refusalOf(account.Email),
 			"the address a person signs in with is asked about")
-		assert.Equal(t, map[int64][]any{nameOnly.ID: {"name"}, byInvitation.ID: {"email"}}, refusalOf("invited."+account.Email),
+		assert.Equal(t, map[string][]any{fmt.Sprint(nameOnly.ID): {"name"}, fmt.Sprint(byInvitation.ID): {"email"}}, refusalOf("invited."+account.Email),
 			"the address a person is invited at is asked about")
 
 		// A person with a record whose Einsatzort reaches the address is the

@@ -38,13 +38,15 @@ beforeEach(() => {
 
 describe("demo access routes", () => {
   it("asks the backend for the status with the token in a header, not the URL", async () => {
-    fetchMock.mockResolvedValue(Response.json({ status: "ready" }));
+    fetchMock.mockResolvedValue(
+      Response.json({ status: "ready", school_name: "OGS Demo" }),
+    );
 
     const response = await status(request({ token: "secret-token" }));
 
     expect(await response.json()).toEqual({
       status: "success",
-      data: { status: "ready" },
+      data: { status: "ready", school_name: "OGS Demo" },
     });
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("http://server:8080/demo/access/status");
@@ -74,7 +76,12 @@ describe("demo access routes", () => {
       Response.json({
         access_token: "access",
         refresh_token: "refresh",
-        demo: { access_id: "4711", role: "lead", traeger: true },
+        demo: {
+          access_id: "4711",
+          role: "lead",
+          fixed_role: false,
+          traeger: true,
+        },
       }),
     );
 
@@ -102,7 +109,12 @@ describe("demo access routes", () => {
       status: "success",
       data: {
         session_created: true,
-        demo: { access_id: "4711", role: "lead", traeger: true },
+        demo: {
+          access_id: "4711",
+          role: "lead",
+          fixed_role: false,
+          traeger: true,
+        },
       },
     });
     // Tokens and access IDs must not stay in a shared device's cache (#4999).
@@ -114,7 +126,12 @@ describe("demo access routes", () => {
       Response.json({
         access_token: "access",
         refresh_token: "refresh",
-        demo: { access_id: "4711", role: "caregiver" },
+        demo: {
+          access_id: "4711",
+          role: "caregiver",
+          fixed_role: false,
+          traeger: false,
+        },
       }),
     );
     const switchRequest = request({ role: "caregiver" });
@@ -128,6 +145,31 @@ describe("demo access routes", () => {
       JSON.stringify({ token: "secret-token", role: "caregiver" }),
     );
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
+  it("revokes a minted session when the banner payload cannot be decoded", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        Response.json({
+          access_token: "minted-access",
+          refresh_token: "minted-refresh",
+          demo: { access_id: "4711", role: "parent", traeger: false },
+        }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    const response = await sessions(request({ token: "secret-token" }));
+
+    expect(response.status).toBe(502);
+    expect(response.headers.getSetCookie()).toEqual([]);
+    const error = await response.text();
+    expect(error).toContain("general.write_answer_unreadable");
+    expect(error).not.toContain("minted-");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("http://server:8080/auth/logout");
+    expect(fetchMock.mock.calls[1]?.[1]?.headers.Authorization).toBe(
+      "Bearer minted-refresh",
+    );
   });
 
   it("sets no cookie when the backend refuses the token", async () => {

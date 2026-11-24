@@ -73,7 +73,7 @@ func checkRouteTableGolden(t *testing.T, apiInstance *goldenRuntime) {
 		return nil
 	})
 	require.NoError(t, walkErr)
-	sort.Strings(routes)
+	routes = appendDemoCatalogRoutes(t, routes)
 	sort.Strings(middlewareRoutes)
 	if !*updateGoldens {
 		catalog, err := RouteCatalog()
@@ -82,7 +82,7 @@ func checkRouteTableGolden(t *testing.T, apiInstance *goldenRuntime) {
 		for _, route := range catalog {
 			embedded = append(embedded, route.Method+" "+route.Pattern)
 		}
-		require.Equal(t, routes, embedded, "embedded route catalog must match the complete production router")
+		require.Equal(t, routes, embedded, "embedded route catalog must match the production and conditional demo routes")
 	}
 
 	// The root mounts the only session verifier. An Authenticator without a
@@ -528,4 +528,16 @@ func checkEmailWebhookIsNotBehindASession(t *testing.T, apiInstance *goldenRunti
 
 	require.Equal(t, http.StatusNoContent, post(lettermint, emailWebhookTestSecret, `{"id":7,"event":"message.something_new","data":"text"}`, time.Now()))
 	require.Equal(t, http.StatusBadRequest, post(lettermint, emailWebhookTestSecret, `not json`, time.Now()))
+}
+
+// The route catalog includes conditional demo routes. Only the live
+// production mount contributes to the middleware and auth goldens.
+func appendDemoCatalogRoutes(t *testing.T, routes []string) []string {
+	t.Helper()
+	require.NoError(t, chi.Walk(demoRouteCatalog(), func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
+		routes = append(routes, method+" "+route)
+		return nil
+	}))
+	sort.Strings(routes)
+	return routes
 }

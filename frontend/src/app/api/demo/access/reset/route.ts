@@ -1,9 +1,9 @@
 import { captureBffException } from "~/lib/sentry-bff.server";
 import { type NextRequest, NextResponse } from "next/server";
-import { sendBackend } from "~/lib/backend-client.server";
+import { contractWrite } from "~/lib/contract/client.server";
+import { routes } from "~/lib/contract/demo-access.generated";
 import { createLogger } from "~/lib/logger";
-import { DEMO_TOKEN_COOKIE, demoBackendPath } from "../forward";
-import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
+import { DEMO_TOKEN_COOKIE, forwardDemoFailure } from "../forward";
 import { problemResponse } from "~/lib/api-response-error.server";
 import { withPrivateNoStore } from "~/lib/private-no-store";
 import { successResponse } from "~/lib/route-wrapper-utils.server";
@@ -35,27 +35,22 @@ async function POSTHandler(request: NextRequest) {
       ? body.role
       : undefined;
   try {
-    const backend = await sendBackend(demoBackendPath("reset"), null, {
-      method: "POST",
-      json: { token },
-      request,
-    });
-    if (!backend.ok) return forwardBackendResponse(backend, request);
-    const payload = (await backend.json().catch(() => ({}))) as {
-      entry_url?: unknown;
-    };
-    if (typeof payload.entry_url !== "string") {
-      return NextResponse.json(successResponse(payload), {
-        status: backend.status,
-      });
-    }
+    const reply = await contractWrite(
+      routes["POST /demo/access/reset"],
+      { token },
+      { request },
+    );
+    if (!reply.ok) return forwardDemoFailure(reply, request);
     const fragment = new URLSearchParams({ restarted: "1" });
     if (role) fragment.set("role", role);
     return NextResponse.json(
       successResponse({
-        entry_url: `${payload.entry_url}&${fragment.toString()}`,
+        entry_url: `${reply.value.entry_url}&${fragment.toString()}`,
       }),
-      { status: backend.status, headers: { "Cache-Control": "no-store" } },
+      {
+        status: reply.backend?.status,
+        headers: { "Cache-Control": "no-store" },
+      },
     );
   } catch (error) {
     captureBffException(error, request);

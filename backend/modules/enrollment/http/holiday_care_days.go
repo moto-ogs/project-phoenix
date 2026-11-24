@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // renderHolidayWeekWithoutCare answers a week that contains a day without
@@ -18,7 +19,7 @@ func renderHolidayWeekWithoutCare(w http.ResponseWriter, r *http.Request, err er
 		return false
 	}
 	common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeEnrollmentHolidayWeekNoCareDay, map[string]any{
-		"week": refusal.Week, "week_id": refusal.WeekID, "date": refusal.Day.Date.Format("02.01.2006"),
+		"week": refusal.Week, "week_id": ident.ID(refusal.WeekID), "date": refusal.Day.Date.Format("02.01.2006"),
 		"iso_date": refusal.Day.Date.String(), "kind": refusal.Day.Kind, "name": refusal.Day.Name,
 	}))
 	return true

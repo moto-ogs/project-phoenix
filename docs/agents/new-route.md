@@ -172,7 +172,9 @@ Same steps; the contract names the body type, and the client sends it typed
   rests on this rule and review.
   A Go type that a body and an answer both carry is generated twice: the
   answer keeps its name, the body is `<Name>Input` with optional fields.
-- A route without an answer body registers `NoData: true`.
+- A route without data registers `NoData: true` and answers either 204
+  without a body or the success envelope without data. An empty 200 is
+  not a success envelope.
 - A route whose body carries a password or a code names why it must not be
   sent twice in `NoRetryAfterRenewal`.
 - A POST that commits nothing its caller asked for (a preview, a search)

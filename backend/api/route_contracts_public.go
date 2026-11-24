@@ -19,6 +19,7 @@ import (
 // mount on a path that reads no session.
 func publicContractMounts() []contractMount {
 	return []contractMount{
+		{"/demo", accountHTTP.DemoRouteContracts()},
 		{"/api/enrollment", enrollmentHTTP.PublicRouteContracts()},
 		{"/api/enrollment", enrollmentHTTP.RouteFileContracts()},
 		{"/caterer", catererPortalHTTP.PublicRouteContracts()},

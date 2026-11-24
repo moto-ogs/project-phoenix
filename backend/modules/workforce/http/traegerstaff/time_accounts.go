@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Stundenkonto of a record over all schools and its Monatsabschluss
@@ -124,7 +125,7 @@ func renderTimeAccountError(w http.ResponseWriter, r *http.Request, err error) {
 	details := map[string]any{}
 	var school *workforce.TraegerSchoolMonthError
 	if errors.As(err, &school) {
-		details["school"], details["school_id"] = school.SchoolName, school.SchoolID
+		details["school"], details["school_id"] = school.SchoolName, ident.ID(school.SchoolID)
 	}
 	switch {
 	case errors.Is(err, workforce.ErrLaterMonthClosed) && school != nil:

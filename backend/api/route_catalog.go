@@ -7,6 +7,9 @@ import (
 	"path"
 	"sort"
 	"strings"
+
+	"github.com/go-chi/chi/v5"
+	accountHTTP "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account"
 )
 
 // Route describes one public HTTP route without carrying runtime services.
@@ -21,6 +24,12 @@ var routeCatalogFiles embed.FS
 // RouteCatalog returns the checked route contract without constructing the
 // database-backed Serve runtime. Every resource contributes to the same catalog.
 func RouteCatalog() ([]Route, error) { return readRouteCatalog(routeCatalogFiles) }
+
+func demoRouteCatalog() chi.Routes {
+	router := chi.NewRouter()
+	(&accountHTTP.DemoResource{}).Mount(router)
+	return router
+}
 
 func readRouteCatalog(source fs.FS) ([]Route, error) {
 	var routes []Route

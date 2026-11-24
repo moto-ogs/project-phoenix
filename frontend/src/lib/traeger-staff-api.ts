@@ -795,8 +795,7 @@ function hireMatchReasons(raw: unknown): StaffHireMatchReason[] {
 
 /**
  * One entry of `details.matches` of the hire refusal. It travels in the error
- * envelope, which no contract decoder reads; Go writes its IDs as JSON
- * numbers (`workforce.HireMatch`, #7808).
+ * envelope. Identifiers are decimal strings, just as in success responses.
  */
 function hireMatch(
   match: Readonly<Record<string, unknown>>,
@@ -806,25 +805,25 @@ function hireMatch(
     lastName: typeof match.last_name === "string" ? match.last_name : "",
     reasons: hireMatchReasons(match.reasons),
   };
-  if (match.kind === "record" && match.staff_record_id != null) {
+  if (match.kind === "record" && typeof match.staff_record_id === "string") {
     return {
       ...common,
       kind: "record",
-      recordId: String(match.staff_record_id),
+      recordId: match.staff_record_id,
     };
   }
   if (
     match.kind === "school" &&
     typeof match.school_name === "string" &&
-    match.school_id != null &&
-    match.staff_id != null
+    typeof match.school_id === "string" &&
+    typeof match.staff_id === "string"
   ) {
     return {
       ...common,
       kind: "school",
-      schoolId: String(match.school_id),
+      schoolId: match.school_id,
       schoolName: match.school_name,
-      staffId: String(match.staff_id),
+      staffId: match.staff_id,
     };
   }
   return null;
@@ -869,10 +868,7 @@ export function staffHireIncomplete(
     schools: schools.filter(
       (school): school is string => typeof school === "string",
     ),
-    recordId:
-      typeof recordId === "number" || typeof recordId === "string"
-        ? String(recordId)
-        : null,
+    recordId: typeof recordId === "string" ? recordId : null,
   };
 }
 

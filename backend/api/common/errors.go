@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/render"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -443,12 +445,14 @@ func detailsObject(value any) (map[string]any, error) {
 	if value == nil {
 		return nil, nil
 	}
-	encoded, err := json.Marshal(value)
+	encoded, err := wire.Marshal(value)
 	if err != nil {
 		return nil, err
 	}
 	details := map[string]any{}
-	if err := json.Unmarshal(encoded, &details); err != nil {
+	decoder := json.NewDecoder(bytes.NewReader(encoded))
+	decoder.UseNumber()
+	if err := decoder.Decode(&details); err != nil {
 		return nil, err
 	}
 	return details, nil

@@ -223,7 +223,7 @@ func renderContractError(w http.ResponseWriter, r *http.Request, err error) {
 		renderError(w, r, err)
 		return
 	}
-	details := map[string]any{"field": contractErr.Field, "school": contractErr.SchoolName, "school_id": contractErr.SchoolID}
+	details := map[string]any{"field": contractErr.Field, "school": contractErr.SchoolName, "school_id": ident.ID(contractErr.SchoolID)}
 	if !contractErr.Day.IsZero() {
 		details["day"] = contractErr.Day.Format("02.01.2006")
 		details["date"] = contractErr.Day.String()

@@ -39,6 +39,7 @@ import { routes as catererSchools } from "./caterer-schools.generated";
 import { routes as classListEntries } from "./class-list-entries.generated";
 import { routes as database } from "./database.generated";
 import { routes as dayChanges } from "./day-changes.generated";
+import { routes as demoAccess } from "./demo-access.generated";
 import { routes as display } from "./display.generated";
 import { routes as emergency } from "./emergency.generated";
 import { routes as enrollment } from "./enrollment.generated";
@@ -1796,6 +1797,9 @@ export const routeFileRoutes = {
     catererAuth["POST /caterer/auth/passkeys/login/verify"],
   ],
   org: [
+    demoAccess["GET /demo/access/status"],
+    demoAccess["POST /demo/access/reset"],
+    demoAccess["POST /demo/access/sessions"],
     traegerAuth["POST /traeger/auth/login"],
     traegerAuth["POST /traeger/auth/mfa/enroll/confirm"],
     traegerAuth["POST /traeger/auth/mfa/enroll/start"],
@@ -1804,6 +1808,9 @@ export const routeFileRoutes = {
     traegerAuth["POST /traeger/auth/mfa/verify"],
   ],
   parent: [
+    demoAccess["GET /demo/access/status"],
+    demoAccess["POST /demo/access/reset"],
+    demoAccess["POST /demo/access/sessions"],
     parentAuth["POST /parent/auth/login"],
     parentAuth["POST /parent/auth/mfa/resend"],
     parentAuth["POST /parent/auth/mfa/verify"],
@@ -1846,6 +1853,9 @@ export const routeFileRoutes = {
     authStaffPreview["POST /auth/staff-preview"],
     authStaffPreview["POST /auth/staff-preview/end"],
     authSwitchTenant["POST /auth/switch-tenant"],
+    demoAccess["GET /demo/access/status"],
+    demoAccess["POST /demo/access/reset"],
+    demoAccess["POST /demo/access/sessions"],
     display["GET /api/display/dashboard"],
     enrollment["GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}"],
     enrollment["GET /api/enrollment/me/profile"],

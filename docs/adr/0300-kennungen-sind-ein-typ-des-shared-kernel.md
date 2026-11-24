@@ -237,6 +237,15 @@ Dieser Nachtrag beantwortet die offene Frage aus Punkt 2 des vorigen Nachtrags (
 
 ## Text unter einem Kennungsnamen
 
+Auch Kennungen in RFC-9457-`details` sind auf der HTTP-Naht
+Dezimalstrings. Strukturierte Fehlerwerte verwenden `ident.ID` und
+denselben `wire`-Encoder wie Erfolgsantworten. Die gemeinsame
+Fehler-Middleware erkennt auch in Maps und verschachtelten Objekten
+Zahlen unter `id`, `*_id` und `*_ids`. Sie meldet den Vertragsverstoß
+und schreibt den ursprünglichen Zahlenwert als Text, ohne den Umweg über
+`float64`. Clients lesen die Kennung direkt als String. Die Kiosk-API
+`/api/iot/*` behält numerische Kennungen auch in ihren Fehlerdetails.
+
 `id`, `*_id` und `*_ids` sind Hinweise, keine Typen. Eine Bigint-Kennung
 trägt `ident.ID`, keine von Hand formatierte Go-Zeichenkette. Ein Feld
 mit echtem Text unter einem Kennungsnamen nennt in

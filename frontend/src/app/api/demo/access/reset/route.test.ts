@@ -65,7 +65,10 @@ describe("demo reset route", () => {
   it("leaves an unknown role out of the fragment", async () => {
     fetchMock.mockResolvedValue(
       Response.json(
-        { entry_url: "https://demo.example/demo#token=secret-token" },
+        {
+          status: "preparing",
+          entry_url: "https://demo.example/demo#token=secret-token",
+        },
         { status: 202 },
       ),
     );
