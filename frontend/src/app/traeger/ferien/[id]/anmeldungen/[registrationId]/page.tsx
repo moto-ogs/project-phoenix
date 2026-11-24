@@ -139,6 +139,7 @@ const PDF_LABELS: AttachmentLabels = {
 const NO_FAMILY_DEBTOR_NUMBERS: HolidayFamilyDebtorNumbers = {
   debtorNumber: "",
   children: [],
+  version: "",
 };
 
 const logger = createLogger({ component: "TraegerHolidayRegistrationPage" });
@@ -876,6 +877,7 @@ function HolidayRegistrationContent() {
       debtorNumberFormat={confirmation?.debtorNumberFormat}
       familyDebtorNumber={familyDebtorNumbers.debtorNumber}
       childDebtorNumbers={familyDebtorNumbers.children}
+      childNumbersVersion={familyDebtorNumbers.version}
       exemption={exemption}
       onExemptionChange={changeExemption}
       costBearers={confirmation?.costBearers}
@@ -884,6 +886,10 @@ function HolidayRegistrationContent() {
       onChanged={changed}
       onReload={afterWrite.refresh}
       onDebtorNumberChanged={afterWrite.refresh}
+      onRead={fetchRegistration}
+      onFamilyNumbersSaved={(stored) =>
+        mutateFamily(stored, { revalidate: false })
+      }
       canManageBillingSettings={canManageBillingSettings}
       billingHref={billingHref}
       onReveal={() => changeTab("uebersicht")}

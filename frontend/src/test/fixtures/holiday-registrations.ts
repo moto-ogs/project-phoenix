@@ -222,6 +222,7 @@ export const HOLIDAY_CONTRIBUTION: HolidayContribution = {
   benefitsExemption: false,
   frozen: false,
   confirmedAt: null,
+  fingerprint: "vorschau-1",
 };
 
 /** The health information of HOLIDAY_REGISTRATION, read apart (#4722). */

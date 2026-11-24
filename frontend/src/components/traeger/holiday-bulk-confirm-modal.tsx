@@ -24,7 +24,10 @@ import { ProgressBar } from "~/components/ui/progress-bar";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { presentError } from "~/lib/error-presentation";
 import { createLogger } from "~/lib/logger";
-import { confirmHolidayRegistration } from "~/lib/traeger-contributions-api";
+import {
+  confirmHolidayRegistration,
+  fetchHolidayContribution,
+} from "~/lib/traeger-contributions-api";
 import type { HolidayRegistrationSummary } from "~/lib/traeger-holiday-registrations-api";
 import { traegerPath } from "~/lib/traeger-url";
 
@@ -243,7 +246,20 @@ export function HolidayBulkConfirmModal({
       const registration = plan.confirmable[next]!;
       next += 1;
       try {
-        await confirmHolidayRegistration(periodId, registration.id, false);
+        // The dialog shows no amounts: each confirmation freezes the
+        // preview of the family paying it reads right before (ADR 0311),
+        // and a change in between leaves the registration open as changed.
+        const preview = await fetchHolidayContribution(
+          periodId,
+          registration.id,
+          false,
+        );
+        await confirmHolidayRegistration(
+          periodId,
+          registration.id,
+          { fingerprint: preview.fingerprint ?? "" },
+          false,
+        );
         confirmed.push(registration);
       } catch (err) {
         logger.warn("holiday_bulk_confirm_registration_failed", {

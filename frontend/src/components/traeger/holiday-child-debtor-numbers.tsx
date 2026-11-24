@@ -6,13 +6,18 @@
 // hat, und merkt sich, was das Büro einträgt. Danach ändert das Büro die
 // Nummern hier; ausgestellte Rechnungen behalten ihre Nummer.
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { FormFieldset } from "~/components/ui/form-fieldset";
 import { Input } from "~/components/ui/input";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import {
   DEBTOR_NUMBER_MAX_LENGTH,
@@ -24,6 +29,8 @@ import { createLogger } from "~/lib/logger";
 import {
   type HolidayChildDebtorNumber,
   type HolidayChildDebtorNumberInput,
+  type HolidayFamilyDebtorNumbers,
+  type SavedHolidayChildDebtorNumbers,
   setHolidayChildDebtorNumbers,
 } from "~/lib/traeger-contributions-api";
 import { DEBTOR_NUMBER_TEXT_CLASS } from "./family-debtor-number";
@@ -134,71 +141,128 @@ export function ChildDebtorNumberInputs({
 }
 
 /**
+ * The children's numbers as a save answers them, on the numbers the draft
+ * rests on (ADR 0311, rule 5): a child the save did not name keeps its
+ * number, the version is the one the save answered.
+ */
+export function savedChildNumbers(
+  base: HolidayFamilyDebtorNumbers,
+  saved: SavedHolidayChildDebtorNumbers,
+): HolidayFamilyDebtorNumbers {
+  const children = base.children.map(
+    (child) =>
+      saved.children.find((named) => named.childId === child.childId) ?? child,
+  );
+  return {
+    debtorNumber: children[0]?.debtorNumber ?? base.debtorNumber,
+    children,
+    version: saved.version,
+  };
+}
+
+const OBJECT = "die Debitorennummern";
+
+/**
  * The numbers of the children of a confirmed registration: shown, and
  * edited in place. `editing` belongs to the card, which hides its own button
- * while the fields are open.
+ * while the fields are open. The fields rest on the numbers read when
+ * editing starts and send their version (ADR 0311); after a refusal they
+ * show the stored numbers again.
  */
 export function ChildDebtorNumbersField({
   periodId,
   registrationId,
-  childNumbers: children,
+  numbers,
   required,
   format,
   invoiced,
   editing,
   onEditingChange,
+  onRead,
+  onSaved,
   onChanged,
 }: Readonly<{
   periodId: string;
   registrationId: string;
-  childNumbers: readonly HolidayChildDebtorNumber[];
+  /** The children with their numbers and the version of them. */
+  numbers: HolidayFamilyDebtorNumbers;
   required: boolean;
   format: DebtorNumberFormat;
   invoiced: boolean;
   editing: boolean;
   onEditingChange: (editing: boolean) => void;
+  /** Reads the numbers again; rejects when the read fails. */
+  onRead: () => Promise<unknown>;
+  /** Hands the numbers a save answered to the page's read. */
+  onSaved: (stored: HolidayFamilyDebtorNumbers) => Promise<unknown>;
   /** Reloads the registration; never rejects (#6652). */
   onChanged: RefreshAfterWrite;
 }>) {
-  const [values, setValues] = useState<ChildNumberValues>(() =>
-    storedChildNumbers(children),
+  const children = numbers.children;
+  const edit = useDraftOn<
+    HolidayFamilyDebtorNumbers,
+    ChildNumberValues,
+    string,
+    SavedHolidayChildDebtorNumbers
+  >(
+    {
+      opening: editing ? registrationId : null,
+      data: numbers,
+      reload: async () => {
+        await onRead();
+        return undefined;
+      },
+      write: onSaved,
+    },
+    {
+      token: (read) => read.version,
+      toDraft: (read) => storedChildNumbers(read.children),
+      answer: (saved, base) => savedChildNumbers(base, saved),
+    },
   );
+  const base = edit.base ?? numbers;
+  const values = edit.draft ?? storedChildNumbers(children);
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
-  const { clear: clearErrors } = formErrors;
+  const form = useReadDraftForm(edit, formErrors, OBJECT);
   const { success } = useToast();
 
-  useEffect(() => {
-    if (!editing) return;
-    setValues(storedChildNumbers(children));
-    clearErrors();
-  }, [editing, children, clearErrors]);
-
   const submit = async () => {
-    if (saving) return;
-    formErrors.clear();
-    const hints = childNumberHints(children, values, required, format);
+    if (saving || !form.begin()) return;
+    const hints = childNumberHints(base.children, values, required, format);
     if (hints) {
       formErrors.invalid("Bitte prüfe deine Angaben.", hints);
       return;
     }
     setSaving(true);
-    try {
-      await setHolidayChildDebtorNumbers(
+    const result = await edit.submit((version, draft) =>
+      setHolidayChildDebtorNumbers(
         periodId,
         registrationId,
-        childNumberInputs(children, values),
-      );
-    } catch (err) {
+        childNumberInputs(base.children, draft),
+        version,
+      ),
+    );
+    setSaving(false);
+    if (!result.ok) {
+      if (result.skipped) return;
       logger.error("holiday_child_debtor_numbers_change_failed", {
-        error: err instanceof Error ? err.message : String(err),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      void formErrors.show(err, { object: "die Debitorennummern" });
-      setSaving(false);
+      // Inzwischen geändert: `reload` zeigt die gespeicherten Nummern, ohne
+      // „Wiederholen“ (ADR 0311).
+      void formErrors.show(
+        result.error,
+        result.refused
+          ? { object: OBJECT, reload: result.reload }
+          : { object: OBJECT },
+      );
       return;
     }
-    setSaving(false);
     success("Die Debitorennummern sind gespeichert.");
     onEditingChange(false);
     await onChanged();
@@ -215,23 +279,27 @@ export function ChildDebtorNumbersField({
           void submit();
         }}
       >
+        <LoadErrorAlert error={form.loadError} />
         <FormErrorAlert message={formErrors.error} />
         <ChildDebtorNumberInputs
           idPrefix="holiday-child-debtor-number"
-          childNumbers={children}
+          childNumbers={base.children}
           values={values}
           required={required}
           format={format}
           fieldError={formErrors.fieldError}
           onChange={(childId, value) => {
-            // A refusal belongs to the value it refused.
-            formErrors.clear();
-            setValues((current) => ({ ...current, [childId]: value }));
+            // A field error belongs to the value it refused; a refusal of
+            // the read state stays until the stored numbers are shown.
+            if (edit.canSubmit) formErrors.clear();
+            edit.setDraft((current) => ({ ...current, [childId]: value }));
           }}
         />
         <EditActions
           onCancel={() => onEditingChange(false)}
           saving={saving}
+          disabled={!edit.canSubmit}
+          disabledReason={form.waitReason}
           saveType="submit"
         />
       </form>

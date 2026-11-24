@@ -57,7 +57,14 @@ describe("traeger-contributions-api", () => {
         }),
       );
 
-      await confirmHolidayRegistration("5", "7", false, "", costBearerId);
+      await confirmHolidayRegistration(
+        "5",
+        "7",
+        { fingerprint: "vorschau-1" },
+        false,
+        "",
+        costBearerId,
+      );
 
       const [url, init] = fetchMock.mock.calls[0]!;
       expect(url).toBe(
@@ -67,6 +74,8 @@ describe("traeger-contributions-api", () => {
         benefits_exemption: false,
         debtor_number: "",
         ...(costBearerId ? { cost_bearer_id: costBearerId } : {}),
+        // The preview the office read (ADR 0311).
+        expected_fingerprint: "vorschau-1",
       });
     },
   );
