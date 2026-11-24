@@ -200,6 +200,16 @@
       "ref": "FamilyDebtorNumberDetails",
       "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
     },
+    "parent_billing.issuer_creditor_is_traegers": {
+      "kind": "ref",
+      "ref": "BillingIssuerDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.number_range_missing": {
+      "kind": "ref",
+      "ref": "NumberRangeMissingDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
     "parent_billing.number_range_start_taken": {
       "kind": "ref",
       "ref": "NumberRangeTakenDetails",
@@ -379,6 +389,11 @@
       "kind": "ref",
       "ref": "BodyLimitDetails",
       "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "traeger.school_party_creditor_account_conflict": {
+      "kind": "ref",
+      "ref": "SchoolPartyCreditorDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
     },
     "traeger.school_role_name_used_at_school": {
       "kind": "ref",
@@ -34375,6 +34390,24 @@
         },
         {
           "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BillingIssuerDetails",
+      "go_type": "parentbillinghttp.BillingIssuerDetails",
+      "fields": [
+        {
+          "name": "issuer_key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "issuer_name",
           "schema": {
             "kind": "string"
           }
@@ -73834,6 +73867,30 @@
       ]
     },
     {
+      "name": "NumberRangeMissingDetails",
+      "go_type": "parentbillinghttp.NumberRangeMissingDetails",
+      "fields": [
+        {
+          "name": "issuer_key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "issuer_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "service",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "NumberRangeRequest",
       "go_type": "parentbillinghttp.NumberRangeRequest",
       "request": true,
@@ -93847,6 +93904,18 @@
         },
         {
           "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolPartyCreditorDetails",
+      "go_type": "traeger.SchoolPartyCreditorDetails",
+      "fields": [
+        {
+          "name": "school_name",
           "schema": {
             "kind": "string"
           }

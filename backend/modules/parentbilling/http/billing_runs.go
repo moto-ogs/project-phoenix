@@ -427,13 +427,16 @@ func renderBillingConflict(w http.ResponseWriter, r *http.Request, err error) {
 	// The missing range of a body names the body (#8040).
 	if rangeMissing := (*capability.NumberRangeMissingError)(nil); errors.As(err, &rangeMissing) {
 		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeParentBillingNumberRangeMissing,
-			map[string]any{"issuer_key": rangeMissing.Issuer.Key, "issuer_name": rangeMissing.Issuer.Name, "service": rangeMissing.Service}))
+			NumberRangeMissingDetails{
+				BillingIssuerDetails: BillingIssuerDetails{IssuerKey: rangeMissing.Issuer.Key, IssuerName: rangeMissing.Issuer.Name},
+				Service:              rangeMissing.Service,
+			}))
 		return
 	}
 	// A body with the Träger's creditor identifier names the body (#8040).
 	if creditorConflict := (*capability.IssuerCreditorConflictError)(nil); errors.As(err, &creditorConflict) {
 		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeParentBillingIssuerCreditorIsTraegers,
-			map[string]any{"issuer_key": creditorConflict.Issuer.Key, "issuer_name": creditorConflict.Issuer.Name}))
+			BillingIssuerDetails{IssuerKey: creditorConflict.Issuer.Key, IssuerName: creditorConflict.Issuer.Name}))
 		return
 	}
 	for _, conflict := range []struct {

@@ -436,6 +436,30 @@ export const FamilyDebtorNumberDetailsSchema: Decoder<FamilyDebtorNumberDetails>
   families: /*#__PURE__*/ optional(/*#__PURE__*/ arr(FamilyDebtorNumberEntrySchema)),
 });
 
+/** Go: parentbillinghttp.BillingIssuerDetails */
+export interface BillingIssuerDetails {
+  issuer_key: string;
+  issuer_name: string;
+}
+
+export const BillingIssuerDetailsSchema: Decoder<BillingIssuerDetails> = /*#__PURE__*/ object<BillingIssuerDetails>({
+  issuer_key: str,
+  issuer_name: str,
+});
+
+/** Go: parentbillinghttp.NumberRangeMissingDetails */
+export interface NumberRangeMissingDetails {
+  issuer_key: string;
+  issuer_name: string;
+  service: string;
+}
+
+export const NumberRangeMissingDetailsSchema: Decoder<NumberRangeMissingDetails> = /*#__PURE__*/ object<NumberRangeMissingDetails>({
+  issuer_key: str,
+  issuer_name: str,
+  service: str,
+});
+
 /** Go: parentbillinghttp.NumberRangeTakenDetails */
 export interface NumberRangeTakenDetails {
   last_number: string;
@@ -758,6 +782,15 @@ export interface AccessLogLimitDetails {
 
 export const AccessLogLimitDetailsSchema: Decoder<AccessLogLimitDetails> = /*#__PURE__*/ object<AccessLogLimitDetails>({
   limit: safeInt,
+});
+
+/** Go: traeger.SchoolPartyCreditorDetails */
+export interface SchoolPartyCreditorDetails {
+  school_name: string;
+}
+
+export const SchoolPartyCreditorDetailsSchema: Decoder<SchoolPartyCreditorDetails> = /*#__PURE__*/ object<SchoolPartyCreditorDetails>({
+  school_name: str,
 });
 
 /** Go: traegerportal.SchoolRoleNameDetails */
@@ -1134,6 +1167,8 @@ export const problemDetails = {
   "parent_billing.debtor_number_digits": DebtorNumberDigitsDetailsSchema,
   "parent_billing.family_children_import_file_too_large": BodyLimitDetailsSchema,
   "parent_billing.family_debtor_number_conflict": FamilyDebtorNumberDetailsSchema,
+  "parent_billing.issuer_creditor_is_traegers": BillingIssuerDetailsSchema,
+  "parent_billing.number_range_missing": NumberRangeMissingDetailsSchema,
   "parent_billing.number_range_start_taken": NumberRangeTakenDetailsSchema,
   "parent_billing.payment_text_debtor_number_missing": PaymentTextDebtorDetailsSchema,
   "parent_billing.sepa_import_file_too_large": BodyLimitDetailsSchema,
@@ -1170,6 +1205,7 @@ export const problemDetails = {
   "traeger.access_log_export_too_large": AccessLogLimitDetailsSchema,
   "traeger.document_template_unknown_placeholder": PlaceholderDetailsSchema,
   "traeger.logo_too_large": BodyLimitDetailsSchema,
+  "traeger.school_party_creditor_account_conflict": SchoolPartyCreditorDetailsSchema,
   "traeger.school_role_name_used_at_school": SchoolRoleNameDetailsSchema,
   "workforce.month_closed": RebookingValuesSchema,
   "workforce.rebooking_before_vacation_opening": RebookingValuesSchema,

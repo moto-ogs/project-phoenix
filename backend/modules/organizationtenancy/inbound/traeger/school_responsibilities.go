@@ -115,6 +115,10 @@ func (rs *MasterDataResource) removeSchoolParty(w http.ResponseWriter, r *http.R
 	common.RespondNoContent(w, r)
 }
 
+type SchoolPartyCreditorDetails struct {
+	SchoolName string `json:"school_name"`
+}
+
 // renderSchoolPartyError answers a refused operation on a body. Every
 // refusal is decided before the first write.
 func renderSchoolPartyError(w http.ResponseWriter, r *http.Request, err error) {
@@ -125,7 +129,7 @@ func renderSchoolPartyError(w http.ResponseWriter, r *http.Request, err error) {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeTraegerMasterDataInvalid))
 	case errors.As(err, &creditor):
 		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeTraegerSchoolPartyCreditorAccountConflict,
-			map[string]any{"school_name": creditor.SchoolName}))
+			SchoolPartyCreditorDetails{SchoolName: creditor.SchoolName}))
 	case errors.Is(err, organizationtenancy.ErrSchoolPartySchoolNotFound),
 		errors.Is(err, organizationtenancy.ErrSchoolPartyNotFound),
 		errors.Is(err, organizationtenancy.ErrSchoolPartyKindUnknown):

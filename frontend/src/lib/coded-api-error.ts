@@ -4,6 +4,7 @@
  */
 export interface CodedApiError {
   code: string;
+  /** @rawProblemDetails Read business fields through a generated decoder. */
   details: Record<string, unknown>;
 }
 

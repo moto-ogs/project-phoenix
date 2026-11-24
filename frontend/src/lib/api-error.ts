@@ -36,6 +36,7 @@ export class ApiError extends Error {
   code?: ErrorCode;
   /** Backend diagnostic detail. It is for logs, never for user-facing copy. */
   detail?: string;
+  /** @rawProblemDetails Read business fields through a generated decoder. */
   details?: Record<string, unknown>;
   errors?: { field: string; reason: string }[];
   instance?: string;
@@ -43,7 +44,7 @@ export class ApiError extends Error {
   retryAfterSeconds?: number;
   /** No HTTP response arrived; the status is a stand-in (unavailableApiError). */
   noResponse?: boolean;
-  /** Parsed envelope, for passing to a generated refusal decoder. */
+  /** @rawProblemEnvelope Parsed envelope, for passing to a generated refusal decoder. */
   declare readonly problem?: Readonly<Record<string, unknown>>;
 
   constructor(
@@ -174,8 +175,6 @@ export interface ProblemBody {
   code: ErrorCode;
   errors?: { field: string; reason: string }[];
   details?: Record<string, unknown>;
-  /** Companion-plan 409 of the student PUT (CompanionPlanConflictError). */
-  conflicts?: unknown[];
 }
 
 /**

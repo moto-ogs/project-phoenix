@@ -565,30 +565,22 @@ describe("handleApiError", () => {
     });
   });
 
-  // The companion-plan 409 of the student PUT carries its confirmable
-  // conflicts as a TOP-LEVEL `conflicts` array, not under `details`. The
-  // browser's CompanionPlanConflictError parses exactly that field to build
-  // the confirmation it re-sends — dropping it here leaves the confirmation
-  // empty and "Ergänzen und speichern" loops on the same 409 forever.
-  it("forwards the top-level conflicts array of a companion-plan 409", async () => {
+  it("forwards the contracted details of a companion-plan 409", async () => {
+    const conflicts = [{ student_id: "42", weekdays: ["mon", "tue"] }];
     const response = handleApiError(
       backendError(409, {
         status: 409,
         detail: "companion departure plan does not allow these days",
         code: "students.companion_plan_conflict",
-        conflicts: [{ student_id: 42, weekdays: ["mon", "tue"] }],
+        details: { conflicts },
       }),
     );
-    const body = (await response.json()) as {
-      code?: string;
-      conflicts?: unknown[];
-    };
 
     expect(response.status).toBe(409);
-    expect(body.code).toBe("students.companion_plan_conflict");
-    expect(body.conflicts).toEqual([
-      { student_id: 42, weekdays: ["mon", "tue"] },
-    ]);
+    expect(await response.json()).toMatchObject({
+      code: "students.companion_plan_conflict",
+      details: { conflicts },
+    });
   });
 });
 

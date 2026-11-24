@@ -5,12 +5,20 @@ import { test } from "node:test";
 import ts from "typescript";
 
 const frontend = new URL("../", import.meta.url).pathname;
-const declarations = new Map([
-  [join(frontend, "src/lib/api-error.ts"), new Set(["problem", "details"])],
-  [join(frontend, "src/lib/api-response-error.server.ts"), new Set(["body"])],
-]);
 
-function castsOfErrorBodies(program, files, sources = declarations) {
+// Mark the source declaration, then follow its symbol through the compiler.
+// Moving or renaming a raw wire value must not disable this check.
+function declaredOrigin(symbol) {
+  for (const declaration of symbol?.declarations ?? []) {
+    for (const tag of ts.getJSDocTags(declaration)) {
+      if (tag.tagName.text === "rawProblemEnvelope") return "envelope";
+      if (tag.tagName.text === "rawProblemDetails") return "details";
+    }
+  }
+  return undefined;
+}
+
+function castsOfErrorBodies(program, files) {
   const checker = program.getTypeChecker();
   const envelopeFields = new Set(["type", "title", "status", "detail", "instance", "code", "errors", "details"]);
   function memberName(node) {
@@ -46,10 +54,8 @@ function castsOfErrorBodies(program, files, sources = declarations) {
     if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
       const name = memberName(node);
       const symbol = name && checker.getTypeAtLocation(node.expression).getProperty(name);
-      if (symbol && symbol.declarations?.some((decl) =>
-        (ts.isPropertyDeclaration(decl) || ts.isMethodDeclaration(decl)) &&
-        sources.get(decl.getSourceFile().fileName)?.has(symbol.name),
-      )) return name === "details" ? "details" : "envelope";
+      const declared = declaredOrigin(symbol);
+      if (declared) return declared;
       const source = origin(node.expression, seen);
       if (source === "envelope" && name === "details") return "details";
       return source === "envelope" && envelopeFields.has(name) ? undefined : source;
@@ -66,10 +72,8 @@ function castsOfErrorBodies(program, files, sources = declarations) {
         const type = checker.getTypeAtLocation(owner.initializer ?? owner);
         const key = decl.propertyName ?? decl.name;
         if (ts.isIdentifier(key) || ts.isStringLiteral(key)) {
-          const property = type.getProperty(key.text);
-          if (property?.declarations?.some((member) =>
-            sources.get(member.getSourceFile().fileName)?.has(property.name),
-          )) return key.text === "details" ? "details" : "envelope";
+          const declared = declaredOrigin(type.getProperty(key.text));
+          if (declared) return declared;
           const source = origin(owner.initializer, seen);
           if (source === "envelope" && key.text === "details") return "details";
           return source === "envelope" && envelopeFields.has(key.text) ? undefined : source;
@@ -121,17 +125,20 @@ test("rejects casts and members of aliased error payloads, not local values", ()
   const host = ts.createCompilerHost(options);
   host.getSourceFile = (name) => name === fileName
     ? ts.createSourceFile(name, [
-        "class ApiError { declare details: unknown; declare problem: unknown; }",
-        "const e = new ApiError();",
-        "const raw = e['details'];",
+        "class Failure {",
+        "  /** @rawProblemDetails */ declare data: unknown;",
+        "  /** @rawProblemEnvelope */ declare response: unknown;",
+        "}",
+        "const e = new Failure();",
+        "const raw = e['data'];",
         "const copy = raw;",
         "const invalid = copy as { changed: boolean };",
         "const local = { details: 4 };",
         "const valid = local.details as number;",
-        "const { details: payload } = e;",
+        "const { data: payload } = e;",
         "const key = 'matches';",
         "const invalidRead = payload[key];",
-        "const envelope = e.problem;",
+        "const envelope = e.response;",
         "const misplaced = envelope.blockers;",
         "const { warnings } = envelope;",
         "const { matches: list } = copy;",
@@ -140,8 +147,8 @@ test("rejects casts and members of aliased error payloads, not local values", ()
     : undefined;
   const program = ts.createProgram([fileName], options, host);
   assert.deepEqual(
-    castsOfErrorBodies(program, program.getSourceFiles(), new Map([[fileName, new Set(["details", "problem"])]])),
-    [5, 10, 12, 13, 14, 15].map((line) => `${fileName}:${line}`),
+    castsOfErrorBodies(program, program.getSourceFiles()),
+    [8, 13, 15, 16, 17, 18].map((line) => `${fileName}:${line}`),
   );
 });
 

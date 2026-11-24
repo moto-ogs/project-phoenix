@@ -53,7 +53,7 @@ export class ApiResponseError extends Error {
     this.bodyInterrupted = options?.bodyInterrupted ?? false;
   }
 
-  /** Returns the parsed JSON body, or `null` if the body isn't valid JSON. */
+  /** @rawProblemEnvelope Returns the parsed JSON body, or `null` if it isn't valid JSON. */
   body(): unknown {
     if (!this.parseAttempted) {
       this.parseAttempted = true;

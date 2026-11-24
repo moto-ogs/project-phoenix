@@ -12,6 +12,7 @@ import (
 	enrollmentHTTP "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	roomsHTTP "github.com/moto-ogs/project-phoenix/modules/facilities/http"
 	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
+	organizationTraegerAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
 	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
@@ -82,6 +83,9 @@ var problemDetailContracts = map[string]any{
 	common.CodeTimetableCalendarPeriodShiftSeriesConflict:       timetableHTTP.CalendarPeriodShiftSeriesDetails{},
 	common.CodeRoomsStillPlanned:                                roomsHTTP.RoomStillPlannedDetails{},
 	common.CodeTraegerAccessLogExportTooLarge:                   traegerViewHTTP.AccessLogLimitDetails{},
+	common.CodeTraegerSchoolPartyCreditorAccountConflict:        organizationTraegerAPI.SchoolPartyCreditorDetails{},
+	common.CodeParentBillingNumberRangeMissing:                  parentBillingHTTP.NumberRangeMissingDetails{},
+	common.CodeParentBillingIssuerCreditorIsTraegers:            parentBillingHTTP.BillingIssuerDetails{},
 	common.CodeParentBillingNumberRangeStartTaken:               parentBillingHTTP.NumberRangeTakenDetails{},
 	common.CodeParentBillingPaymentTextDebtorNumberMissing:      parentBillingHTTP.PaymentTextDebtorDetails{},
 	common.CodeCareContractFamilyRefused:                        carecontract.FamilyRefusalDetails{},
