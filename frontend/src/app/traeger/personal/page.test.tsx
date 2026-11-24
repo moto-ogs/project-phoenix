@@ -117,6 +117,7 @@ const RECORD = {
   id: "5",
   firstName: "Mira",
   lastName: "Sommer-Berg",
+  heldBankSchools: [] as readonly string[],
 } as StaffRecordDetail;
 
 function renderPage() {
@@ -596,4 +597,40 @@ it("requires a successful fresh link preview on each opening", async () => {
     "aria-disabled",
     "true",
   );
+});
+
+// ADR 0311: a school that saved new bank values after the preview keeps
+// them; the link is saved and names the school, so the office checks the
+// bank section instead of trusting the values it saw.
+it("names the schools whose new bank values the link did not take", async () => {
+  api.previewStaffLink.mockReset().mockResolvedValue({
+    ...PREVIEW,
+    fields: PREVIEW.fields.map((f) => ({ ...f, conflict: false })),
+  });
+  api.linkStaff
+    .mockReset()
+    .mockResolvedValue({ ...RECORD, heldBankSchools: ["OGS Süd"] });
+  const onLinked = vi.fn();
+  render(
+    <StaffLinkModal
+      onClose={vi.fn()}
+      onLinked={onLinked}
+      request={{
+        recordId: null,
+        members: [
+          { schoolId: "1", staffId: "11" },
+          { schoolId: "2", staffId: "22" },
+        ],
+      }}
+    />,
+    { wrapper: TraegerResourceTestProvider },
+  );
+  expect(await screen.findByText("•••• 3000")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Akte anlegen" }));
+  expect(
+    await screen.findByText(
+      "Die Akte hat die neuen Bankdaten von OGS Süd nicht übernommen. Prüfe Bank und Steuer.",
+    ),
+  ).toBeVisible();
+  expect(onLinked).toHaveBeenCalledTimes(1);
 });

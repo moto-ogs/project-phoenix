@@ -136,10 +136,16 @@ export interface StaffOverview {
   readonly suggestions: readonly StaffSuggestion[];
 }
 
-export interface StaffFinancial {
+/** Die Werte von „Bank und Steuer“, wie ein Speichern sie schickt. */
+export interface StaffFinancialValues {
   readonly iban: string | null;
   readonly taxId: string | null;
   readonly socialSecurityNumber: string | null;
+}
+
+export interface StaffFinancial extends StaffFinancialValues {
+  /** Stand des Abschnitts; ein Speichern schickt ihn zurück (ADR 0311). */
+  readonly version: string;
 }
 
 export interface StaffChange {
@@ -201,9 +207,15 @@ export interface StaffContract {
   readonly pool: boolean;
   readonly sites: readonly StaffContractSite[];
   readonly holidayWeeks: readonly StaffContractHolidayWeek[];
+  /** Stand des Vertrags mit jedem Soll und jeder Ferienwoche; „Vertrag
+   *  ändern“ und „Soll ändern“ schicken ihn zurück (ADR 0311). */
+  readonly version: string;
 }
 
 export interface StaffRecordDetail extends StaffRecordSummary {
+  /** Stand von Name und Geburtstag; die Karte „Person“ schickt ihn zurück
+   *  (ADR 0311). */
+  readonly personVersion: string;
   readonly financial: StaffFinancial;
   readonly changes: readonly StaffChange[];
   /** Der Stand jeder Nachweisart des Trägers an der Akte (#4707). */
@@ -211,6 +223,9 @@ export interface StaffRecordDetail extends StaffRecordSummary {
   readonly contracts: readonly StaffContract[];
   /** Schulen, die eine gespeicherte Änderung noch nicht erreicht hat. */
   readonly unsyncedSchools: readonly string[];
+  /** Schulen, deren neue Bankdaten ein Verknüpfen nicht übernommen hat:
+   *  Sie kamen nach der Vorschau (ADR 0311). */
+  readonly heldBankSchools: readonly string[];
 }
 
 /** Das Soll eines Einsatzorts in einer Eingabe. */
@@ -313,6 +328,7 @@ function mapFinancial(
     iban: financial.iban,
     taxId: financial.tax_id,
     socialSecurityNumber: financial.social_security_number,
+    version: financial.version,
   };
 }
 
@@ -321,6 +337,7 @@ function mapDetail(
 ): StaffRecordDetail {
   return {
     ...mapSummary(record),
+    personVersion: record.person_version,
     financial: mapFinancial(record.financial),
     changes: (record.changes ?? []).map((change) => ({
       kind: knownEnum(STAFF_CHANGE_KIND_VALUES, change.kind),
@@ -332,6 +349,7 @@ function mapDetail(
     proofs: (record.proofs ?? []).map(mapStaffProof),
     contracts: (record.contracts ?? []).map(mapContract),
     unsyncedSchools: record.unsynced_schools ?? [],
+    heldBankSchools: record.held_bank_schools ?? [],
   };
 }
 
@@ -370,6 +388,7 @@ function mapContract(
       ),
       weekdayMinutes: week.weekday_minutes ?? [],
     })),
+    version: contract.version,
   };
 }
 
@@ -511,16 +530,19 @@ export interface StaffPersonInput {
  * Korrigiert Vorname, Nachname und Geburtstag der Akte (#7379). Jeder
  * geänderte Wert steht danach mit seinem alten Wert im Verlauf; die
  * Angaben an den Schulen bleiben unverändert. Die Antwort trägt keine Akte:
- * Wer sie zeigt, lädt sie neu.
+ * Wer sie zeigt, lädt sie neu. `expectedVersion` ist der `personVersion`
+ * der Akte, auf der die Bearbeitung begann (ADR 0311).
  */
 export async function updateStaffPerson(
   id: string,
   input: StaffPersonInput,
+  expectedVersion: string,
 ): Promise<void> {
   const body: traegerStaffRecordsContract.PersonRequest = {
     first_name: input.firstName,
     last_name: input.lastName,
     birthday: input.birthday === "" ? null : input.birthday,
+    expected_version: expectedVersion,
   };
   await bffJson("org", "PUT /traeger/staff-records/{id}/person", {
     params: { id },
@@ -538,9 +560,11 @@ export async function revealStaffFinancial(
   );
 }
 
+/** Speichert „Bank und Steuer“ auf dem Stand `expectedVersion` (ADR 0311). */
 export async function updateStaffFinancial(
   id: string,
-  values: StaffFinancial,
+  values: StaffFinancialValues,
+  expectedVersion: string,
 ): Promise<void> {
   await bffJson("org", "PUT /traeger/staff-records/{id}/financial", {
     params: { id },
@@ -548,6 +572,7 @@ export async function updateStaffFinancial(
       iban: values.iban,
       tax_id: values.taxId,
       social_security_number: values.socialSecurityNumber,
+      expected_version: expectedVersion,
     } satisfies traegerStaffRecordsContract.StaffFinancialRequest,
   });
 }
@@ -571,7 +596,7 @@ export async function createStaffContract(
   );
 }
 
-/** Ändert Art und letzten Tag eines Vertrags. */
+/** Ändert Art und letzten Tag eines Vertrags auf dem Stand `expectedVersion`. */
 export async function updateStaffContract(
   recordId: string,
   contractId: string,
@@ -580,6 +605,7 @@ export async function updateStaffContract(
     readonly endsOn: string | null;
     readonly pool: boolean;
   },
+  expectedVersion: string,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
     await bffJson(
@@ -591,18 +617,23 @@ export async function updateStaffContract(
           kind: input.kind,
           ends_on: input.endsOn,
           pool: input.pool,
+          expected_version: expectedVersion,
         } satisfies traegerStaffRecordsContract.UpdateContractRequest,
       },
     ),
   );
 }
 
-/** Setzt ein neues Soll ab einem Tag für die genannten Einsatzorte. */
+/**
+ * Setzt ein neues Soll ab einem Tag für die genannten Einsatzorte, auf dem
+ * Stand `expectedVersion` des Vertrags (ADR 0311).
+ */
 export async function changeStaffContractSoll(
   recordId: string,
   contractId: string,
   validFrom: string,
   sites: readonly StaffContractSiteInput[],
+  expectedVersion: string,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
     await bffJson(
@@ -613,6 +644,7 @@ export async function changeStaffContractSoll(
         body: {
           valid_from: validFrom,
           sites: sites.map(siteBody),
+          expected_version: expectedVersion,
         } satisfies traegerStaffRecordsContract.ContractSollRequest,
       },
     ),

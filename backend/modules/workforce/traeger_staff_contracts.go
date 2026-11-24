@@ -113,6 +113,9 @@ type TraegerStaffContract struct {
 	Pool         bool                         `json:"pool"`
 	Sites        []TraegerContractSiteDetail  `json:"sites"`
 	HolidayWeeks []TraegerContractHolidayWeek `json:"holiday_weeks"`
+	// Version is the token of the contract with every Soll and holiday week
+	// (ADR 0311): a change of its terms or its Soll sends it back.
+	Version string `json:"version"`
 }
 
 // TraegerContractSiteSoll is the Soll of one Einsatzort in a write.
@@ -137,6 +140,9 @@ type TraegerContractTermsInput struct {
 	Kind   string
 	EndsOn *calendar.Date
 	Pool   bool
+	// ExpectedVersion is the contract's Version the dialog opened on; a
+	// contract changed since is refused (readstate.ErrChanged).
+	ExpectedVersion string
 }
 
 // TraegerContractSollInput changes the Soll of the named Einsatzorte from
@@ -144,6 +150,9 @@ type TraegerContractTermsInput struct {
 type TraegerContractSollInput struct {
 	ValidFrom calendar.Date
 	Sites     []TraegerContractSiteSoll
+	// ExpectedVersion is the contract's Version the dialog opened on; a
+	// contract changed since is refused (readstate.ErrChanged).
+	ExpectedVersion string
 }
 
 // TraegerHolidayWeeksInput sets the Ferien-Soll of every week from FromWeek

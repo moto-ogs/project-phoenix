@@ -29,6 +29,7 @@ import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { FramedList } from "~/components/ui/framed-list";
 import { Input } from "~/components/ui/input";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
@@ -46,7 +47,9 @@ import { schoolsConcept } from "~/lib/concepts/schools";
 import { staffConcept } from "~/lib/concepts/staff";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { useInvalidateFamily } from "~/lib/swr";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
   dissolveStaffRecord,
@@ -56,6 +59,7 @@ import {
   updateStaffFinancial,
   updateStaffPersonnelNumber,
   type StaffFinancial,
+  type StaffFinancialValues,
   type StaffRecordDetail,
 } from "~/lib/traeger-staff-api";
 
@@ -222,19 +226,51 @@ function PersonnelNumberCard({
   );
 }
 
+const valuesOf = (financial: StaffFinancial): StaffFinancialValues => ({
+  iban: financial.iban,
+  taxId: financial.taxId,
+  socialSecurityNumber: financial.socialSecurityNumber,
+});
+
 function FinancialCard({
   record,
   onSaved,
 }: Readonly<{ record: StaffRecordDetail; onSaved: () => void }>) {
   const [revealed, setRevealed] = useState<StaffFinancial | null>(null);
   const [revealing, setRevealing] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<StaffFinancial>(record.financial);
+  // The values the edit opened on, with their version (ADR 0311). Every
+  // read of them stands in the schools' access log, so the draft rests on
+  // this read and reads again only after a refusal.
+  const [opened, setOpened] = useState<StaffFinancial | null>(null);
   const [saving, setSaving] = useState(false);
   const errors = useApiFormError();
   const actionErrors = useApiErrorDisplay();
   const { success } = useToast();
   const shown = revealed ?? record.financial;
+  const editing = opened !== null;
+  const edit = useDraftOn<StaffFinancial, StaffFinancialValues, string, void>(
+    {
+      opening: editing ? record.id : null,
+      data: opened ?? undefined,
+      reload: async () => {
+        const read = await revealStaffFinancial(record.id);
+        setOpened(read);
+        return read;
+      },
+    },
+    {
+      token: (read) => read.version,
+      toDraft: valuesOf,
+      // The card closes after a save; the page reads the record again.
+      answer: (_saved, base) => base,
+    },
+  );
+  const form = useReadDraftForm(
+    editing ? edit : null,
+    errors,
+    "die Bank- und Steuerdaten",
+  );
+  const draft = edit.draft ?? (opened ? valuesOf(opened) : null);
 
   const reveal = async () => {
     setRevealing(true);
@@ -265,32 +301,43 @@ function FinancialCard({
         return;
       }
     }
-    setDraft(values ?? { iban: null, taxId: null, socialSecurityNumber: null });
-    setEditing(true);
+    // Without values nothing is opened: the empty section with its version.
+    setOpened(values ?? record.financial);
   };
 
+  const close = () => setOpened(null);
+
   const save = async () => {
+    if (!draft || !form.begin()) return;
+    const clean = (value: string | null) =>
+      value && value.trim() !== "" ? value.trim() : null;
+    const values = {
+      iban: clean(draft.iban),
+      taxId: clean(draft.taxId),
+      socialSecurityNumber: clean(draft.socialSecurityNumber),
+    };
     setSaving(true);
-    try {
-      const clean = (value: string | null) =>
-        value && value.trim() !== "" ? value.trim() : null;
-      await updateStaffFinancial(record.id, {
-        iban: clean(draft.iban),
-        taxId: clean(draft.taxId),
-        socialSecurityNumber: clean(draft.socialSecurityNumber),
-      });
-      setEditing(false);
+    const result = await edit.submit((version) =>
+      updateStaffFinancial(record.id, values, version),
+    );
+    setSaving(false);
+    if (result.ok) {
+      close();
       setRevealed(null);
       success("Die Bank- und Steuerdaten sind gespeichert.");
       onSaved();
-    } catch (err) {
-      logger.error("traeger_staff_financial_save_failed", {
-        error: errorMessage(err),
-      });
-      void errors.show(err, { object: "die Bank- und Steuerdaten" });
-    } finally {
-      setSaving(false);
+      return;
     }
+    if (result.skipped) return;
+    logger.error("traeger_staff_financial_save_failed", {
+      error: errorMessage(result.error),
+    });
+    // Changed since editing began: the fields show the stored values with
+    // the message, without a retry (ADR 0311).
+    void errors.show(result.error, {
+      object: "die Bank- und Steuerdaten",
+      reload: result.reload,
+    });
   };
 
   return (
@@ -333,15 +380,18 @@ function FinancialCard({
       footer={
         editing ? (
           <EditActions
-            onCancel={() => setEditing(false)}
+            onCancel={close}
             onSave={() => void save()}
             saving={saving}
+            disabled={!edit.canSubmit}
+            disabledReason={form.waitReason}
           />
         ) : undefined
       }
     >
-      {editing ? (
+      {editing && draft ? (
         <div className="grid gap-4 sm:grid-cols-3">
+          <LoadErrorAlert error={form.loadError} className="sm:col-span-3" />
           {FINANCIAL_FIELDS.map(([key, label, placeholder]) => (
             <Input
               key={key}
@@ -353,7 +403,7 @@ function FinancialCard({
               value={draft[key] ?? ""}
               error={key === "iban" ? errors.error?.message : undefined}
               onChange={(event) =>
-                setDraft((current) => ({
+                edit.setDraft((current) => ({
                   ...current,
                   [key]: event.target.value,
                 }))
@@ -428,6 +478,7 @@ function StaffRecordContent() {
     error,
     mutate,
     reload,
+    reloadOrThrow,
   } = useTraegerResource(
     recordId ? traegerStaffKeys.record(recordId) : null,
     () => fetchStaffRecord(recordId),
@@ -548,6 +599,7 @@ function StaffRecordContent() {
             <>
               <StaffPersonCard
                 record={record}
+                reload={reloadOrThrow}
                 onSaved={() => {
                   refreshOverview();
                   return mutate();
@@ -599,7 +651,11 @@ function StaffRecordContent() {
 
           {activeTab === "vertraege" ? (
             <>
-              <StaffContractsCard record={record} onChanged={replace} />
+              <StaffContractsCard
+                record={record}
+                reload={reloadOrThrow}
+                onChanged={replace}
+              />
               <StaffTimeAccountCard recordId={record.id} />
               <StaffAbsenceAccountsCard recordId={record.id} />
             </>

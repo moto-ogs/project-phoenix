@@ -259,6 +259,7 @@ func (t *TraegerStaff) Record(ctx context.Context, actor workforce.TraegerStaffA
 	names := schoolNames(schools)
 	detail := workforce.TraegerStaffRecordDetail{
 		TraegerStaffRecordSummary: summarize(record, names, reads),
+		PersonVersion:             personVersion(record),
 		Financial:                 maskedRecordFinancial(record),
 		Changes:                   make([]workforce.TraegerStaffChange, 0, len(changes)),
 		Proofs:                    proofs,
@@ -425,5 +426,8 @@ func maskedRecordFinancial(record domain.TraegerStaffRecord) workforce.TraegerSt
 		IBANMasked: record.IBANMasked, IBANSealed: record.IBANSealed,
 		TaxIDSealed: record.TaxIDSealed, SocialSecurityNumberSealed: record.SocialSecurityNumberSealed,
 	})
-	return workforce.TraegerStaffFinancial{IBAN: masked.IBANMasked, TaxID: masked.TaxIDMasked, SocialSecurityNumber: masked.SocialSecurityNumberMasked}
+	return workforce.TraegerStaffFinancial{
+		IBAN: masked.IBANMasked, TaxID: masked.TaxIDMasked, SocialSecurityNumber: masked.SocialSecurityNumberMasked,
+		Version: financialVersion(record),
+	}
 }

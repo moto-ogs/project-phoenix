@@ -255,6 +255,9 @@ type TraegerStaffFinancial struct {
 	IBAN                 *string `json:"iban"`
 	TaxID                *string `json:"tax_id"`
 	SocialSecurityNumber *string `json:"social_security_number"`
+	// Version is the section's token over its sealed values (ADR 0311);
+	// a save of the section sends it back.
+	Version string `json:"version"`
 }
 
 // TraegerStaffChange is one entry of a record's trail. Value is the value
@@ -272,8 +275,11 @@ type TraegerStaffChange struct {
 // section, its trail and its proofs.
 type TraegerStaffRecordDetail struct {
 	TraegerStaffRecordSummary
-	Financial TraegerStaffFinancial `json:"financial"`
-	Changes   []TraegerStaffChange  `json:"changes"`
+	// PersonVersion is the token of name and birthday (ADR 0311); a
+	// correction of the person sends it back.
+	PersonVersion string                `json:"person_version"`
+	Financial     TraegerStaffFinancial `json:"financial"`
+	Changes       []TraegerStaffChange  `json:"changes"`
 	// Proofs is the state of every live kind of the Träger at the record
 	// (#4707).
 	Proofs []TraegerStaffProof `json:"proofs"`
@@ -283,6 +289,11 @@ type TraegerStaffRecordDetail struct {
 	// but could not reach yet; the next change of the record brings them up
 	// to date (ADR 0237 section 4). Empty after every complete write.
 	UnsyncedSchools []string `json:"unsynced_schools,omitempty"`
+	// HeldBankSchools names the schools whose bank values changed between a
+	// link's read and its hand-over: the record keeps the values the link
+	// read, the school keeps its new row, and the Personalverwaltung checks
+	// the bank section (ADR 0311). Only a link answers it.
+	HeldBankSchools []string `json:"held_bank_schools,omitempty"`
 }
 
 // TraegerStaffPerson is the person of a record as the Personalverwaltung
@@ -292,6 +303,9 @@ type TraegerStaffPerson struct {
 	FirstName string
 	LastName  string
 	Birthday  *string
+	// ExpectedVersion is the PersonVersion the form opened on; a person
+	// changed since is refused (readstate.ErrChanged).
+	ExpectedVersion string
 }
 
 // TraegerStaffPersonError names the refused field of a person correction;
