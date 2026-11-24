@@ -123,7 +123,7 @@ export function PortalShell({
           <main
             id={MAIN_CONTENT_ID}
             tabIndex={-1}
-            className="compact:p-5 compact:max-lg:pb-[calc(7rem+env(safe-area-inset-bottom))] flex min-w-0 flex-1 flex-col p-8 focus:outline-none max-md:p-4 max-md:pb-[calc(7rem+env(safe-area-inset-bottom))]"
+            className="compact:p-5 compact:max-lg:pb-[calc(7rem+env(safe-area-inset-bottom))] split:pb-[calc(7rem+env(safe-area-inset-bottom))] flex min-w-0 flex-1 flex-col p-8 focus:outline-none max-md:p-4 max-md:pb-[calc(7rem+env(safe-area-inset-bottom))]"
           >
             <div className={`relative ${Z_LAYER.raised} ${contentClassName}`}>
               {children}

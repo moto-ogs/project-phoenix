@@ -25,7 +25,9 @@ interface AppShellProps {
  * The frame itself lives in the shared `PortalShell`; this file only names
  * the staff portal's own navigation.
  *
- * Unter lg gibt es KEINE Kopfzeile — dieselbe Entscheidung wie in der
+ * In der App (unter lg und auf dem iPad quer, `split:`-Schalter, #8070)
+ * gibt es KEINE Kopfzeile und keine Seitenleiste, sondern die Pill. Unter
+ * lg gibt es KEINE Kopfzeile — dieselbe Entscheidung wie in der
  * Eltern-App: die „Bereich › Seite"-Zeile dort war eine zweite Überschrift
  * über der Kopfkarte, die den Seitennamen ohnehin trägt. Statt ihrer bleibt
  * nur ein transparenter Safe-Area-Streifen; Profil und Abmelden wohnen im
@@ -52,10 +54,10 @@ export function AppShell({ children }: AppShellProps) {
           header={<Header notificationBell={<RemindersBell />} />}
           headerClassName={
             eveningRow
-              ? "sticky top-20 z-40 hidden lg:block"
+              ? "sticky top-20 z-40 hidden lg:block split:hidden"
               : stripActive
-                ? "sticky top-12 z-40 hidden lg:block"
-                : "sticky top-0 z-40 hidden lg:block"
+                ? "sticky top-12 z-40 hidden lg:block split:hidden"
+                : "sticky top-0 z-40 hidden lg:block split:hidden"
           }
           backgroundClassName="moto-dotted-background--full"
           // Flex-Spalte, damit `TenantPage` bis zur Unterkante wächst und
@@ -68,7 +70,7 @@ export function AppShell({ children }: AppShellProps) {
               {demoBannerShown ? <DemoBanner /> : null}
               <div
                 data-staff-safe-area-top
-                className="relative z-10 h-[env(safe-area-inset-top)] bg-transparent lg:hidden"
+                className="split:block relative z-10 h-[env(safe-area-inset-top)] bg-transparent lg:hidden"
                 aria-hidden="true"
               />
             </>
@@ -78,7 +80,9 @@ export function AppShell({ children }: AppShellProps) {
           // schob das jede Seite um die Höhe der Kopfzeile (65 px) unter den
           // Bildschirmrand -- die wachsende letzte Fläche endete dann unter der
           // Kante statt an ihr. Die Zeile bestimmt die Höhe, nicht die Leiste.
-          sidebar={<Sidebar className="hidden min-h-0! lg:block" />}
+          sidebar={
+            <Sidebar className="split:hidden hidden min-h-0! lg:block" />
+          }
           bottomNav={<MobileBottomNav />}
         >
           <Suspense fallback={null}>

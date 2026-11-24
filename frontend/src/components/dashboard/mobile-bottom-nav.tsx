@@ -1028,7 +1028,8 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
   return (
     <>
       {/* Spacer to prevent content from being hidden behind fixed nav */}
-      <div className="h-16 lg:hidden" />
+      {/* `split:block`: das iPad quer bekommt die Pill der App (#8070). */}
+      <div className="split:block h-16 lg:hidden" />
 
       <LogoutModal
         isOpen={logoutModalOpen}
@@ -1048,7 +1049,8 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
         barClassName="px-2"
         fade={false}
         indicator={indicator}
-        className={className}
+        // Auf dem iPad quer so breit wie auf dem iPad hoch, mittig.
+        className={`split:block split:px-[calc(50vw-22rem)] ${className}`}
         open={isOverflowMenuOpen}
         onOpenChange={setIsOverflowMenuOpen}
         // In der App ist „Mehr“ eine eigene Seite (#8070, Vorschlag); im

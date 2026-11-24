@@ -184,6 +184,8 @@ export function StaffSettingsBottomNav() {
       items={[back, ...items]}
       moreConcept={moreConcept}
       navItemAttribute="data-staff-settings-nav-item"
+      // Das iPad quer bekommt die Pill der App statt der Seitenleiste (#8070).
+      className="split:block split:px-[calc(50vw-22rem)]"
     />
   );
 }
