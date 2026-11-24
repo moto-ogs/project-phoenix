@@ -533,9 +533,7 @@ export const portalRoutes = {
     traegerSepaMandates["POST /traeger/sepa-mandates/imports"],
     traegerSepaMandates["POST /traeger/sepa-mandates/imports/preview"],
     traegerSepaMandates["POST /traeger/sepa-mandates/{id}/revoke"],
-    traegerSettings["DELETE /traeger/settings/values/{key}"],
     traegerSettings["GET /traeger/settings/schema"],
-    traegerSettings["PUT /traeger/settings/values/{key}"],
     traegerStaffExports["GET /traeger/staff-exports/payroll"],
     traegerStaffExports["GET /traeger/staff-exports/payroll/export"],
     traegerStaffExports["GET /traeger/staff-exports/times"],
@@ -1806,6 +1804,8 @@ export const routeFileRoutes = {
     traegerAuth["POST /traeger/auth/mfa/resend"],
     traegerAuth["POST /traeger/auth/mfa/step-up/verify"],
     traegerAuth["POST /traeger/auth/mfa/verify"],
+    traegerSettings["DELETE /traeger/settings/values/{key}"],
+    traegerSettings["PUT /traeger/settings/values/{key}"],
   ],
   parent: [
     demoAccess["GET /demo/access/status"],

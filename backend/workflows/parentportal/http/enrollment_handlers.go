@@ -68,7 +68,7 @@ func (rs *Resource) getEnrollmentProfile(w http.ResponseWriter, r *http.Request)
 
 	school, err := rs.resolveEnrollmentSchool(r.Context(), slug)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorNotFound(err))
+		renderEnrollmentSchoolError(w, r, err)
 		return
 	}
 	schoolID := school.ID
@@ -143,7 +143,7 @@ func (rs *Resource) getEnrollmentBootstrap(w http.ResponseWriter, r *http.Reques
 
 	school, err := rs.resolveEnrollmentSchool(r.Context(), slug)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorNotFound(err))
+		renderEnrollmentSchoolError(w, r, err)
 		return
 	}
 	schoolID := school.ID
@@ -178,6 +178,8 @@ func withinTenant(ctx context.Context, schoolID int64, fn func(context.Context) 
 	return tenant.WithinTenant(ctx, id, fn)
 }
 
+var errEnrollmentSchoolNotFound = errors.New("tenant not found")
+
 // resolveEnrollmentSchool resolves the {tenantSlug} path segment to a school
 // inside WithAdminTx so the cross-tenant lookup is allowed. Returns an error
 // when the identifier doesn't resolve, the school is soft-deleted, or the
@@ -196,8 +198,11 @@ func (rs *Resource) resolveEnrollmentSchool(ctx context.Context, slug string) (*
 	var out *EnrollmentSchool
 	err := tenant.WithinAdmin(ctx, func(adminCtx context.Context) error {
 		school, findErr := rs.SchoolService.GetSchoolBySubdomain(adminCtx, slug)
-		if findErr != nil || !enrollmentSchoolActive(school) {
-			return errors.New("tenant not found")
+		if findErr != nil {
+			return findErr
+		}
+		if !enrollmentSchoolActive(school) {
+			return errEnrollmentSchoolNotFound
 		}
 		out = school
 		return nil
@@ -206,6 +211,18 @@ func (rs *Resource) resolveEnrollmentSchool(ctx context.Context, slug string) (*
 		return nil, err
 	}
 	return out, nil
+}
+
+func renderEnrollmentSchoolError(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, ErrInvalidSchoolSubdomain) {
+		common.RenderError(w, r, common.ErrorInvalidRequest(ErrInvalidSchoolSubdomain))
+		return
+	}
+	if errors.Is(err, errEnrollmentSchoolNotFound) {
+		common.RenderError(w, r, common.ErrorNotFound(errEnrollmentSchoolNotFound))
+		return
+	}
+	common.RenderError(w, r, common.ErrorInternalServerWrap(http.StatusText(http.StatusInternalServerError), err))
 }
 
 // enrollmentSchoolActive is the account-independent half of the reachability
@@ -321,7 +338,7 @@ func (rs *Resource) uploadParentEnrollment(w http.ResponseWriter, r *http.Reques
 	}
 	school, err := rs.resolveEnrollmentSchool(r.Context(), slug)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorNotFound(err))
+		renderEnrollmentSchoolError(w, r, err)
 		return
 	}
 	linkedParents, existingStudents, ok := rs.enrollmentBootstrapAudience(w, r, int64(claims.ID), school.ID, school)
@@ -343,7 +360,7 @@ type parentSubmitOutcome struct {
 	// resolveErr rendered an outage as a 404 and told the client its school
 	// was gone instead of letting it retry.
 	statusErr error
-	// resolveErr is the tenant (subdomain) resolution failure → 404.
+	// resolveErr is the school lookup or the tenant transaction failure.
 	resolveErr error
 }
 
@@ -369,9 +386,7 @@ func (rs *Resource) runParentEnrollmentSubmit(r *http.Request, accountID int64, 
 		status, stErr := rs.ParentService.GetEnrollmentSubmitStatus(tenantCtx, accountID, school.ID)
 		if stErr != nil {
 			// Recorded in its own field so respondParentEnrollment can render a
-			// 500: a repository failure here is an outage, and the resolveErr
-			// path would have masked it as "tenant not found" (404), which a
-			// client cannot tell from a genuinely dead link and will not retry.
+			// 500 with the cause of the guardian lookup failure.
 			out.statusErr = fmt.Errorf("resolve enrollment submit status: %w", stErr)
 			return out.statusErr
 		}
@@ -381,7 +396,7 @@ func (rs *Resource) runParentEnrollmentSubmit(r *http.Request, accountID int64, 
 		// either. Rendered as the resolve 404 on purpose — the caller learns
 		// nothing about the phase or the school (#1663).
 		if !enrollmentSchoolReachable(school, status) {
-			return errors.New("tenant not found")
+			return errEnrollmentSchoolNotFound
 		}
 
 		// The owner binds the wire request for the resolved tenant, stamps the
@@ -417,7 +432,7 @@ func (rs *Resource) respondParentEnrollment(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if out.resolveErr != nil {
-		common.RenderError(w, r, common.ErrorNotFound(out.resolveErr))
+		renderEnrollmentSchoolError(w, r, out.resolveErr)
 		return
 	}
 

@@ -14,6 +14,8 @@ export const routes = {
     method: "DELETE",
     pattern: "/traeger/settings/values/{key}",
     portals: ["org"],
+    routeFile: "invalidate the tenant lookup after inherited settings change",
+    browserPath: "/api/traeger/settings/values/{key}",
     response: noData,
   },
   "GET /traeger/settings/schema": {
@@ -26,6 +28,8 @@ export const routes = {
     method: "PUT",
     pattern: "/traeger/settings/values/{key}",
     portals: ["org"],
+    routeFile: "invalidate the tenant lookup after inherited settings change",
+    browserPath: "/api/traeger/settings/values/{key}",
     request: requestBody<setValueRequest>(),
     response: noData,
   },

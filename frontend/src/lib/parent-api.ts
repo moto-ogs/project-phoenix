@@ -10,6 +10,7 @@ import {
 import type * as parentMeContract from "./contract/parent-me.generated";
 import type * as sharedContract from "./contract/shared.generated";
 import { knownEnum } from "./contract/known-enum";
+import { compareIds } from "./compare-ids";
 import { requiredDay } from "./contract/required-day";
 import { bffFileHref, bffFile, bffJson } from "./bff-fetch";
 import { ApiError } from "./api-error";
@@ -1949,10 +1950,7 @@ export async function listMyDocuments(): Promise<ParentDocumentInbox> {
     }))
     .sort(
       (a, b) =>
-        Date.parse(b.sent_at) - Date.parse(a.sent_at) ||
-        // Newer ID first; decimal strings compare exactly by length, then text.
-        b.id.length - a.id.length ||
-        (b.id > a.id ? 1 : b.id < a.id ? -1 : 0),
+        Date.parse(b.sent_at) - Date.parse(a.sent_at) || compareIds(b.id, a.id),
     );
   const failed = [
     ["letters", letters],

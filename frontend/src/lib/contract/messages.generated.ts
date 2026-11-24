@@ -327,7 +327,7 @@ export const ParentChatMessageResponseSchema: z.ZodType<ParentChatMessageRespons
   ref_table: optional(str),
   ref_id: optional(int64String),
   applied_at: optional(instant),
-  applied_by: optional(str),
+  applied_by: optional(int64String),
   decision_reason: optional(str),
   read_by_staff: optional(bool),
   read_by_guardian: optional(bool),

@@ -1,9 +1,9 @@
 "use client";
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import {
   attachmentIdArgs,
   PARENT_MESSAGE_ATTACHMENTS,
-  type MessageAttachment,
 } from "~/lib/message-attachments";
 import { useMessageSendAttempt } from "~/lib/swr/optimistic";
 
@@ -387,10 +387,14 @@ function MessageThreadContent() {
 
   const attempt = useMessageSendAttempt(messageKeys.messageThread(threadId));
   // Die Dateien des letzten Versuchs: „Wiederholen“ sendet sie erneut.
-  const sentFiles = useRef<readonly MessageAttachment[]>([]);
+  const sentFiles = useRef<readonly Readonly<sharedContract.UploadResponse>[]>(
+    [],
+  );
   // Ob der letzte Versuch ankam: sonst behält das Eingabefeld die Dateien.
   const sendArrived = useRef(true);
-  const handleSend = async (picked?: readonly MessageAttachment[]) => {
+  const handleSend = async (
+    picked?: readonly Readonly<sharedContract.UploadResponse>[],
+  ) => {
     const attachments = picked ?? sentFiles.current;
     const body = draft.trim();
     if ((!body && attachments.length === 0) || isSending || !messagingEnabled)

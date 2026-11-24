@@ -1,3 +1,4 @@
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { useState } from "react";
 import {
   act,
@@ -12,7 +13,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   PARENT_MESSAGE_ATTACHMENTS,
-  type MessageAttachment,
   type MessageAttachmentRoutes,
 } from "~/lib/message-attachments";
 import { AttachmentViewer } from "~/components/ui/attachment-viewer";
@@ -26,7 +26,7 @@ vi.mock(
 
 const upload = vi.fn<MessageAttachmentRoutes["upload"]>();
 
-const PHOTO: MessageAttachment = {
+const PHOTO: Readonly<sharedContract.UploadResponse> = {
   id: "11",
   filename: "ausflug.png",
   size_bytes: 2048,
@@ -34,7 +34,7 @@ const PHOTO: MessageAttachment = {
   width: 800,
   height: 600,
 };
-const LIST: MessageAttachment = {
+const LIST: Readonly<sharedContract.UploadResponse> = {
   id: "12",
   filename: "bastelliste.pdf",
   size_bytes: 300 * 1024,
@@ -43,7 +43,9 @@ const LIST: MessageAttachment = {
 
 function Composer({
   onSend,
-}: Readonly<{ onSend: (files: readonly MessageAttachment[]) => void }>) {
+}: Readonly<{
+  onSend: (files: readonly Readonly<sharedContract.UploadResponse>[]) => void;
+}>) {
   const [value, setValue] = useState("");
   return (
     <MessageComposer

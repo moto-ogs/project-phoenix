@@ -489,8 +489,10 @@ und schreiben über `contractWrite`. Der erzeugte Eintrag bestimmt den Pfad
 und die Typen von `params` und `query`; es gibt keine freie Zieladresse.
 Die Staff-Shell lässt nicht lesbare
 optionale Startdaten aus; der Browser lädt sie auf dem normalen Weg.
-Der Schul-Lookup prüft den öffentlichen Routeneintrag und cached nur
-dekodierte Treffer mit geprüften Branding-Feldern. Schulbezogene
+Der Schul-Lookup prüft den öffentlichen Routeneintrag und speichert
+dekodierte Treffer mit geprüften Branding-Feldern sowie 404, aber keine
+anderen Fehler. Die Invalidierung gilt für Treffer und 404; der Generator
+übernimmt die betroffenen Einstellungsschlüssel aus Go. Schulbezogene
 Zusatzschlüssel bleiben offen. Der Wächter in `route-backend-paths.test.ts` prüft
 auch Server-Module, nicht nur benannte BFF-Routen.
 

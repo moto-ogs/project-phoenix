@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
@@ -203,9 +204,9 @@ type demoSessionResponse struct {
 }
 
 type demoSessionFacts struct {
-	AccessID string `json:"access_id" contract_text:"opaque demo-session access key"`
-	Role     string `json:"role,omitempty"`
-	Source   string `json:"src,omitempty"`
+	AccessID ident.ID `json:"access_id"`
+	Role     string   `json:"role,omitempty"`
+	Source   string   `json:"src,omitempty"`
 	// FixedRole: the standing school's session keeps all functions; the
 	// banner shows its role without a switch.
 	FixedRole bool `json:"fixed_role"`
@@ -230,7 +231,7 @@ func (rs *DemoResource) createSession(w http.ResponseWriter, r *http.Request) {
 	}
 	common.RenderJSON(w, r, demoSessionResponse{
 		TokenResponse: portalauth.TokenResponse{AccessToken: entry.AccessToken, RefreshToken: entry.RefreshToken},
-		Demo:          demoSessionFacts{AccessID: strconv.FormatInt(entry.AccessID, 10), Role: entry.Role, Source: entry.Source, FixedRole: entry.FixedRole, Traeger: entry.Traeger},
+		Demo:          demoSessionFacts{AccessID: ident.ID(entry.AccessID), Role: entry.Role, Source: entry.Source, FixedRole: entry.FixedRole, Traeger: entry.Traeger},
 	})
 }
 

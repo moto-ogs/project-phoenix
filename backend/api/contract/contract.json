@@ -1531,7 +1531,9 @@
       "portals": [
         "org"
       ],
-      "no_data": true
+      "no_data": true,
+      "route_file": "invalidate the tenant lookup after inherited settings change",
+      "browser_path": "/api/traeger/settings/values/{key}"
     },
     {
       "method": "DELETE",
@@ -24008,7 +24010,9 @@
         "kind": "ref",
         "ref": "setValueRequest"
       },
-      "no_data": true
+      "no_data": true,
+      "route_file": "invalidate the tenant lookup after inherited settings change",
+      "browser_path": "/api/traeger/settings/values/{key}"
     },
     {
       "method": "PUT",
@@ -27392,7 +27396,7 @@
         {
           "name": "created_by",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -57531,7 +57535,7 @@
         {
           "name": "created_by",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -76579,7 +76583,7 @@
           "name": "applied_by",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -118461,9 +118465,8 @@
       "fields": [
         {
           "name": "access_id",
-          "text_reason": "opaque demo-session access key",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {

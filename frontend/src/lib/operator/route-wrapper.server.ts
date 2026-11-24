@@ -1,4 +1,3 @@
-import type { NextRequest } from "next/server";
 import type { NextResponse } from "next/server";
 import { operatorPortal } from "~/server/auth/operator";
 import type { ErrorCode } from "~/lib/error-codes.generated";
@@ -30,22 +29,10 @@ export function operatorErrorResponse(
 export const operator = makePortalHandlers(operatorPortal);
 
 export const {
-  get: createOperatorGetHandler,
   post: createOperatorPostHandler,
   put: createOperatorPutHandler,
   del: createOperatorDeleteHandler,
 } = operator;
-
-/** The operator's code for a body it cannot read. */
-export const operatorJsonErrors = {
-  invalidJsonResponse: (request: NextRequest) =>
-    operatorErrorResponse(
-      400,
-      "general.input",
-      "Invalid JSON request body",
-      request,
-    ),
-};
 
 /**
  * The operator portal's proxy: forwards `/api/operator/…` to the backend's `/operator/…`

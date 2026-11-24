@@ -9,6 +9,7 @@
  * decides which side a bubble sits on, not the component.
  */
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import type { ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 import { ChecksIcon } from "@phosphor-icons/react/ssr";
@@ -20,10 +21,7 @@ import {
   MessageAttachments,
   type MessageAttachmentLabels,
 } from "~/components/ui/message-attachments";
-import type {
-  MessageAttachment,
-  MessageAttachmentRoutes,
-} from "~/lib/message-attachments";
+import type { MessageAttachmentRoutes } from "~/lib/message-attachments";
 
 /** One chat message bubble. */
 export function ChatBubble({
@@ -80,7 +78,7 @@ export function ChatBubble({
    * Fotos und Dateien der Nachricht (#6685). Sie stehen über dem Text; eine
    * Nachricht nur mit Anhängen hat keine Sprechblase.
    */
-  attachments?: readonly MessageAttachment[];
+  attachments?: readonly Readonly<sharedContract.UploadResponse>[];
   /**
    * Wo die Anhänge gespeichert und für die Ansicht geladen werden. Ohne
    * bleiben Anhänge aus.

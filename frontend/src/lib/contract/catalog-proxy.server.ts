@@ -18,6 +18,7 @@ import {
   type RouteContext,
 } from "~/lib/route-wrapper-utils.server";
 import { underOutsideHead } from "./catalog-outside-mounts";
+import { fileCacheValues, publicAssetCache } from "./browser-traits.generated";
 import { decodeContract, readContractJson } from "./client.server";
 import { commits } from "./commit";
 import { fileAnswer, multipart } from "./runtime";
@@ -172,24 +173,12 @@ const isPublicUpload = (route: CatalogRoute) =>
 const PRIVATE_NO_STORE = "private, no-store";
 
 /**
- * The Cache-Control values a file route may keep (contractmodel's
- * FileCacheValues). The list is closed here as well: a value an entry
- * carried that Go never reviewed leaves the file uncached.
- */
-const PUBLIC_ASSET_CACHE = "public, max-age=86400";
-const FILE_CACHE_VALUES = new Set([
-  PUBLIC_ASSET_CACHE,
-  "private, max-age=3600",
-  "private, max-age=86400, immutable",
-]);
-
-/**
  * The cache a route's file answer keeps: a reviewed value, and a public one
  * only for a file its contract opens to the portal public.
  */
 function cacheOf(route: CatalogRoute): string | null {
   const value = route.fileCache;
-  if (value === undefined || !FILE_CACHE_VALUES.has(value)) return null;
+  if (value === undefined || !fileCacheValues.has(value)) return null;
   if (value.startsWith("public") && !isPublicFile(route)) return null;
   return value;
 }
@@ -686,7 +675,7 @@ export function makeCatalogProxy(
       method,
       request,
       headers: conditionalHeaders(route, request),
-      ...(cacheOf(route) === PUBLIC_ASSET_CACHE && {
+      ...(cacheOf(route) === publicAssetCache && {
         timeout: "publicAsset" as const,
       }),
     });

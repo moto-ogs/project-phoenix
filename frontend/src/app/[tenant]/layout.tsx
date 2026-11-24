@@ -11,52 +11,16 @@ import {
   readPortalSessionSnapshot,
   type PortalSessionSnapshot,
 } from "~/lib/portal-session-snapshot.server";
-import type { TenantInfo } from "~/lib/tenant-api";
-import {
-  bookedModuleFields,
-  normalizeAttendanceEditScope,
-  normalizeReasonPolicy,
-  normalizeEarlyCheckoutTolerance,
-  normalizeOverviewScope,
-  normalizePresenceMode,
-  normalizeRecordingSamplePercent,
-} from "~/lib/tenant-api";
+import { projectTenantResolve, type TenantInfo } from "~/lib/tenant-api";
 import { RESERVED_SLUGS } from "~/lib/reserved-slugs";
 import { isValidTenantSlug } from "~/lib/tenant-slug";
-import { normalizeCareFacilityTerm } from "~/lib/care-facility-term-value";
 import { env } from "~/env";
 import { TenantBusyPage } from "~/components/tenant/tenant-busy-page";
 import { incomingClientForwardHeaders } from "~/lib/client-headers.server";
 import {
   resolveTenantCached,
   TenantResolveStatusError,
-  type TenantResolveResponse,
 } from "~/lib/tenant-resolve.server";
-
-// The tenant lookup caches only successful responses. Before the 404 cache, every scanner request for a made-up subdomain reached the
-// backend. Its anonymous rate limit counted all of them under this server's
-// IP, so a scan burst answered real tenant lookups with 429 (FRONTEND-1B); the
-// lookup now forwards the visitor's IP as well. Unknown slugs are remembered
-// briefly; a school created meanwhile resolves after at most this TTL.
-const UNKNOWN_TENANT_TTL_MS = 60_000;
-const UNKNOWN_TENANT_LIMIT = 1_000;
-const unknownTenantUntil = new Map<string, number>();
-
-function isRememberedUnknownTenant(slug: string): boolean {
-  const until = unknownTenantUntil.get(slug);
-  if (until === undefined) return false;
-  if (until > Date.now()) return true;
-  unknownTenantUntil.delete(slug);
-  return false;
-}
-
-function rememberUnknownTenant(slug: string): void {
-  if (unknownTenantUntil.size >= UNKNOWN_TENANT_LIMIT) {
-    const oldest = unknownTenantUntil.keys().next().value;
-    if (oldest !== undefined) unknownTenantUntil.delete(oldest);
-  }
-  unknownTenantUntil.set(slug, Date.now() + UNKNOWN_TENANT_TTL_MS);
-}
 
 /**
  * The backend rate limit rejected the lookup (HTTP 429). Scanner bursts cause
@@ -74,81 +38,18 @@ const TENANT_RATE_LIMITED = "rate-limited";
 async function fetchTenantInfo(
   slug: string,
 ): Promise<TenantInfo | typeof TENANT_RATE_LIMITED | null> {
-  if (isRememberedUnknownTenant(slug)) return null;
-
-  let data: TenantResolveResponse;
   try {
-    data = await resolveTenantCached(
+    const data = await resolveTenantCached(
       slug,
       await incomingClientForwardHeaders(),
     );
+    return projectTenantResolve(data, data.settings);
   } catch (error) {
     if (!(error instanceof TenantResolveStatusError)) throw error;
-    if (error.status === 404) {
-      rememberUnknownTenant(slug);
-      return null;
-    }
+    if (error.status === 404) return null;
     if (error.status === 429) return TENANT_RATE_LIMITED;
     throw error;
   }
-
-  return {
-    tenantId: data.tenant_id,
-    slug: data.slug,
-    name: data.name,
-    subdomain: data.subdomain,
-    organizationId: data.organization_id,
-    organizationName: data.organization_name,
-    traegerName: data.traeger_name,
-    hidden: data.hidden === true,
-    settings: data.settings ?? {},
-    presenceMode: normalizePresenceMode(data.presence_mode),
-    studentPhotosEnabled: data.student_photos_enabled === true,
-    ...bookedModuleFields(data.booked_modules),
-    messagingEnabled: data.parent_messaging_enabled === true,
-    parentMessageCardBadgeEnabled:
-      data.parent_message_card_badge_enabled === true,
-    staffMessagingEnabled: data.staff_messaging_enabled === true,
-    displayEnabled: data.display_enabled === true,
-    caldavEnabled: data.caldav_enabled === true,
-    careOfferingsEnabled: data.care_offerings_enabled !== false,
-    attendanceWebEnabled: data.attendance_web_enabled === true,
-    attendanceLogEnabled: data.attendance_log_enabled === true,
-    groupMode: data.group_mode === "open_care" ? "open_care" : "fixed_groups",
-    operationalOverviewScope: normalizeOverviewScope(
-      data.operational_overview_scope,
-    ),
-    attendanceEditScope: normalizeAttendanceEditScope(
-      data.attendance_edit_scope,
-    ),
-    // „Anfragen“ reads it on the first render; without it the strict
-    // fallback asked for a reason on every approval (#5024).
-    parentRequestReasonPolicy: normalizeReasonPolicy(
-      data.parent_request_reason_policy,
-    ),
-    timetableEnabled: data.timetable_enabled !== false,
-    showTimetableCounts: data.show_timetable_counts !== false,
-    // The meal plan pages read both from the tenant context on the first
-    // render; the client resolve only refreshes them later (#3873).
-    mealPlanEnabled: data.meal_plan_enabled === true,
-    mealRegistrationEnabled: data.meal_registration_enabled === true,
-    waitlistEnabled: data.waitlist_enabled !== false,
-    gradeLevelMax: data.grade_level_max,
-    analyticsEnabled: data.analytics_enabled === true,
-    analyticsFreigabe: data.analytics_freigabe === true,
-    analyticsRecordingSamplePercent: normalizeRecordingSamplePercent(
-      data.analytics_recording_sample_percent,
-    ),
-    earlyCheckoutNoteToleranceMinutes: normalizeEarlyCheckoutTolerance(
-      data.early_checkout_note_enabled,
-      data.early_checkout_note_tolerance_minutes,
-    ),
-    weekendFollowsFriday: data.weekend_follows_friday === true,
-    childrenWithoutCarePlace: data.children_without_care_place === true,
-    childSearchOnlyNavigation: data.child_search_only_navigation === true,
-    simpleStaffNavigation: data.simple_staff_navigation === true,
-    careFacilityTerm: normalizeCareFacilityTerm(data.care_facility_term),
-  };
 }
 
 export function bareTenantHost(currentHost: string): string {

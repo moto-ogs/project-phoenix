@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ProvisioningErrorRenderer maps provisioning errors to HTTP responses. Each
@@ -170,7 +170,7 @@ func deviceErrorRenderer(err error) (render.Renderer, bool) {
 // end before the removal.
 func deviceRemovalBlockedDetails(blocked *organizationtenancy.DeviceRemovalBlockedError) map[string]any {
 	details := map[string]any{
-		"session_id": strconv.FormatInt(blocked.SessionID, 10),
+		"session_id": ident.ID(blocked.SessionID),
 		"started_at": blocked.StartedAt.Format(time.RFC3339),
 	}
 	if blocked.ActivityName != nil {

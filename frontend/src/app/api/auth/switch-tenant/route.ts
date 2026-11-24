@@ -1,9 +1,7 @@
+import { invalidJsonResponse } from "~/lib/route-wrapper-utils.server";
 import { tenantPortal } from "~/server/auth";
 import { sessionMutationOriginError } from "~/server/auth/same-origin";
-import {
-  handleApiError,
-  problemResponse,
-} from "~/lib/api-response-error.server";
+import { handleApiError } from "~/lib/api-response-error.server";
 import { contractWrite } from "~/lib/contract/client.server";
 import { contractError } from "~/lib/contract/route-response.server";
 import {
@@ -21,7 +19,7 @@ export const POST = tenantPortal.withAuth(async (request) => {
   try {
     body = await request.json();
   } catch {
-    return problemResponse(400, "Invalid JSON", request);
+    return invalidJsonResponse(request);
   }
   try {
     const reply = await contractWrite(

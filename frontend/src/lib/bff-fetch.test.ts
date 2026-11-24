@@ -13,6 +13,23 @@ vi.mock("./session-cache", () => ({
   renewTenantSession: mockRenewSession,
 }));
 
+vi.mock("./contract/browser-traits.generated", async (importOriginal) => {
+  const traits =
+    await importOriginal<
+      typeof import("./contract/browser-traits.generated")
+    >();
+  return {
+    ...traits,
+    browserRoutePaths: {
+      ...traits.browserRoutePaths,
+      tenant: {
+        ...traits.browserRoutePaths.tenant,
+        "GET /api/meal-plan/orders/month/export": "/api/meal-plan/file",
+      },
+    },
+  };
+});
+
 import { ApiError } from "./api-error";
 import { bffFile, bffFileHref, bffJson, bffPath } from "./bff-fetch";
 
@@ -149,22 +166,19 @@ it("types session requests independently of the BFF's answer", () => {
 });
 
 describe("bffFile", () => {
-  it("hands the file answer to the caller", async () => {
+  it("fetches at the same registered browser path as the file link", async () => {
     mockFetch.mockResolvedValueOnce(
       new Response("pdf", { headers: { "Content-Disposition": "x.pdf" } }),
     );
 
-    const response = await bffFile(
-      "tenant",
-      "GET /api/meal-plan/orders/month/export",
-      { query: { month: "2026-09", format: "pdf" } },
-    );
+    const route = "GET /api/meal-plan/orders/month/export";
+    const options = { query: { month: "2026-09", format: "pdf" } } as const;
+    const response = await bffFile("tenant", route, options);
 
     await expect(response.text()).resolves.toBe("pdf");
-    expect(mockFetch).toHaveBeenCalledWith(
-      "/api/meal-plan/orders/month/export?month=2026-09&format=pdf",
-      { method: "GET" },
-    );
+    const href = bffFileHref("tenant", route, options);
+    expect(href).toBe("/api/meal-plan/file?month=2026-09&format=pdf");
+    expect(mockFetch).toHaveBeenCalledWith(href, { method: "GET" });
   });
 
   it("sends the body of a file route that takes one", async () => {

@@ -137,7 +137,7 @@ was eine Antwort-Kennung als Zahl zuließ:
    `tenant_id` und `organization_id` reisen als String; das Frontend ruft
    sie im Browser über `/api/auth/tenant/resolve` und den Katalog-Proxy
    auf, im Server über denselben Routeneintrag mit `contractGet`.
-   Der Server-Cache speichert nur dekodierte Treffer und prüft bekannte
+   Der Server-Cache speichert dekodierte Treffer und 404 und prüft bekannte
    Branding-Felder. `contractGet` nimmt den Slug im getypten `query` entgegen.
    Bei Varianten-Reads gilt dieselbe Kennungsprüfung im jeweils ausgewählten
    Decoder (siehe [ADR 0270](0270-der-vertrag-zwischen-go-und-frontend-entsteht-aus-der-go-registrierung.md)).
@@ -252,8 +252,9 @@ mit echtem Text unter einem Kennungsnamen nennt in
 `contract_text:"Begründung"` sein Format oder seine Herkunft, zum
 Beispiel ein RFID-Tag, eine SEPA-Gläubigerkennung oder ein
 Kalenderschlüssel aus mehreren Teilen. Der Vertrag führt die Begründung
-als `text_reason`. Der Ratchet lehnt neue unmarkierte String-Felder an der
-Client-Naht ab.
+als `text_reason`. Der Ratchet lehnt unmarkierten Text unter einem
+Kennungsnamen ab. Er verfolgt auch direkt oder über lokale Bindungen
+formatierte Ganzzahlen in JSON-Struct-Feldern, unabhängig vom Feldnamen.
 
 ## Nachtrag vom 2026-11-24: Sitzungen
 

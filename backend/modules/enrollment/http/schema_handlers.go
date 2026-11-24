@@ -28,7 +28,7 @@ type FormSchemaResponse struct {
 	Fields           []capability.FormField      `json:"fields"`
 	CoreRequirements capability.CoreRequirements `json:"core_requirements"`
 	LegalBlocks      []capability.FormLegalBlock `json:"legal_blocks"`
-	CreatedBy        string                      `json:"created_by"`
+	CreatedBy        ident.ID                    `json:"created_by"`
 	CreatedAt        time.Time                   `json:"created_at"`
 }
 
@@ -41,7 +41,7 @@ func toFormSchemaResponse(s *capability.FormSchema) FormSchemaResponse {
 		Fields:           s.Fields,
 		CoreRequirements: coreRequirementsValue(s.CoreRequirements),
 		LegalBlocks:      legalBlocksValue(s.LegalBlocks),
-		CreatedBy:        strconv.FormatInt(s.CreatedBy, 10),
+		CreatedBy:        ident.ID(s.CreatedBy),
 		CreatedAt:        s.CreatedAt,
 	}
 }

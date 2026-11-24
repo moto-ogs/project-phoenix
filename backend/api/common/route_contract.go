@@ -83,7 +83,8 @@ type RouteContract struct {
 	NoCommit string
 	// File replaces Response on a route that answers a file: its bytes with
 	// Content-Type and Content-Disposition instead of the envelope. The proxy
-	// streams them through and never caches them; an error keeps the envelope.
+	// streams them through; FileCache and PrivateCache govern caching.
+	// An error keeps the problem envelope.
 	File bool
 	// Multipart replaces Request on a route that takes a multipart/form-data
 	// upload. The proxy streams the body to the backend without reading it,
@@ -135,7 +136,8 @@ type RouteContract struct {
 	RouteFile string
 	// BrowserPath is the exact same-origin address of a RouteFile route. An
 	// empty path leaves the Go entry available only to server callers.
-	BrowserPath   string
+	BrowserPath string
+	// BrowserMethod overrides the Go method at BrowserPath; empty uses Method.
 	BrowserMethod string
 	// BrowserOwnContract marks a route file that changes the browser's
 	// request or answer. The address is typed, not the Go body or answer.

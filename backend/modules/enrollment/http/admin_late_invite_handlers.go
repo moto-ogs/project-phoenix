@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -35,7 +34,7 @@ type AdminCreateLateInviteResponse struct {
 	GuardianFirstName *string   `json:"guardian_first_name,omitempty"`
 	GuardianLastName  *string   `json:"guardian_last_name,omitempty"`
 	ExpiresAt         time.Time `json:"expires_at"`
-	CreatedBy         string    `json:"created_by"`
+	CreatedBy         ident.ID  `json:"created_by"`
 	Reason            *string   `json:"reason,omitempty"`
 	Token             string    `json:"token"`
 }
@@ -91,7 +90,7 @@ func (rs *Resource) createLateInvite(w http.ResponseWriter, r *http.Request) {
 		GuardianFirstName: invite.GuardianFirstName,
 		GuardianLastName:  invite.GuardianLastName,
 		ExpiresAt:         invite.ExpiresAt,
-		CreatedBy:         strconv.FormatInt(invite.CreatedBy, 10),
+		CreatedBy:         ident.ID(invite.CreatedBy),
 		Reason:            invite.Reason,
 		Token:             result.Token,
 	}, "Late invite created")

@@ -10,13 +10,13 @@
  * compile until both are updated.
  */
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import type {
   ParentMessageResponse,
   ThreadSummaryResponse,
 } from "~/lib/contract/parent-me.generated";
 import type * as messagesContract from "~/lib/contract/messages.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
-import type { MessageAttachment } from "~/lib/message-attachments";
 import { formatDate } from "~/lib/date-helpers";
 
 /** Who sent a message: the guardian, the OGS staff, or a system event. */
@@ -70,7 +70,7 @@ export type ChatMessage = Omit<
   readonly request_status?: RequestStatus;
   readonly payload?: Record<string, unknown>;
   /** Fotos und Dateien der Nachricht (#6685). */
-  readonly attachments?: readonly MessageAttachment[];
+  readonly attachments?: readonly Readonly<sharedContract.UploadResponse>[];
 };
 
 /** The fields chatMessageFieldsOf reads out of a wire message. */

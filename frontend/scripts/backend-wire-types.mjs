@@ -72,7 +72,11 @@ function namedProjection(node, generated) {
   while (ts.isParenthesizedTypeNode(owner) || ts.isUnionTypeNode(owner)) {
     owner = owner.parent;
   }
-  if (!ts.isTypeAliasDeclaration(owner) && !(ts.isPropertySignature(owner) && ts.isInterfaceDeclaration(owner.parent))) return false;
+  if (
+    !ts.isTypeAliasDeclaration(owner) &&
+    !(ts.isPropertySignature(owner) && ts.isInterfaceDeclaration(owner.parent))
+  )
+    return false;
   return parent.types.some((part) =>
     derivedType(part, node.getSourceFile(), generated),
   );
@@ -126,8 +130,20 @@ function generatedBindings(source) {
 }
 
 /** True when a type only names a generated type, without changing it. */
-function isGeneratedReference(type, { names, namespaces }) {
+function isGeneratedReference(type, generated) {
+  if (ts.isParenthesizedTypeNode(type)) {
+    return isGeneratedReference(type.type, generated);
+  }
+  if (
+    ts.isTypeReferenceNode(type) &&
+    ts.isIdentifier(type.typeName) &&
+    type.typeName.text === "Readonly" &&
+    type.typeArguments?.length === 1
+  ) {
+    return isGeneratedReference(type.typeArguments[0], generated);
+  }
   if (!ts.isTypeReferenceNode(type) || type.typeArguments) return false;
+  const { names, namespaces } = generated;
   const name = type.typeName;
   if (ts.isIdentifier(name)) return names.has(name.text);
   return ts.isIdentifier(name.left) && namespaces.has(name.left.text);

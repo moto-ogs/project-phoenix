@@ -16,6 +16,7 @@ import {
 } from "./date-helpers";
 import { LOCATION_COLORS } from "./location-helper";
 import { knownEnum } from "./contract/known-enum";
+import { compareIds } from "./compare-ids";
 import type {
   applyDeviationsRequest,
   bulkSubstitutionRequest,
@@ -1508,7 +1509,7 @@ export function comparePlanningInstances(
   const aOrder = a.planningTrackSortOrder ?? Number.MAX_SAFE_INTEGER;
   const bOrder = b.planningTrackSortOrder ?? Number.MAX_SAFE_INTEGER;
   if (aOrder !== bOrder) return aOrder - bOrder;
-  return a.id.localeCompare(b.id, "de", { numeric: true });
+  return compareIds(a.id, b.id);
 }
 
 /**

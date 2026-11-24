@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { NextRequest } from "next/server";
 import { fireEvent, render as renderUi, screen } from "@testing-library/react";
 import type { PortalSessionSnapshot } from "~/lib/portal-session-snapshot.server";
 import { deferred } from "~/test/helpers/form-modal-pending";
@@ -31,11 +32,19 @@ vi.mock("next/headers", () => ({
 }));
 
 const revalidateTagMock = vi.hoisted(() => vi.fn());
-vi.mock("next/cache", () => ({ revalidateTag: revalidateTagMock }));
+vi.mock("next/cache", () => ({
+  revalidateTag: revalidateTagMock,
+  revalidatePath: vi.fn(),
+}));
 
 vi.mock("~/server/auth", async () =>
   (await import("~/test/portal-binding")).mockPortalModule("tenant", {
     auth: authMock,
+  }),
+);
+vi.mock("~/server/auth/operator", async () =>
+  (await import("~/test/portal-binding")).mockPortalModule("operator", {
+    auth: async () => ({ user: { token: "operator-token" } }),
   }),
 );
 
@@ -59,10 +68,13 @@ const { bareTenantHost, default: TenantLayout } = await import("./layout");
 const {
   invalidateTenantResolve,
   resolveTenantCached,
+  tenantResolvesInOrganization,
   TenantResolveStatusError,
 } = await import("~/lib/tenant-resolve.server");
 const { setTestClock, TEST_CLOCK_INSTANT } = await import("~/test/clock");
 const navigation = await import("next/navigation");
+const { POST: revalidateTenant } =
+  await import("~/app/api/operator/provisioning/revalidate-tenant/route");
 
 beforeEach(() => {
   authMock.mockClear();
@@ -309,6 +321,103 @@ describe("TenantLayout", () => {
     });
     expect((await resolveTenantCached("school-a", {})).name).toBe("School A");
     expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries a transient server failure on the next lookup", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, { status: 500 }))
+      .mockResolvedValueOnce(tenantResponse());
+
+    await expect(resolveTenantCached("school-a", {})).rejects.toMatchObject({
+      status: 500,
+    });
+    expect((await resolveTenantCached("school-a", {})).name).toBe("School A");
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("rechecks a missing slug immediately after invalidation", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, { status: 404 }))
+      .mockResolvedValueOnce(tenantResponse());
+
+    await expect(resolveTenantCached("school-a", {})).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(resolveTenantCached("school-a", {})).rejects.toMatchObject({
+      status: 404,
+    });
+    expect(fetchSpy).toHaveBeenCalledOnce();
+
+    const response = await revalidateTenant(
+      new NextRequest(
+        "http://operator.localhost:3000/api/operator/provisioning/revalidate-tenant",
+        {
+          method: "POST",
+          body: JSON.stringify({ slugs: ["school-a"] }),
+        },
+      ),
+      { params: Promise.resolve({}) },
+    );
+    expect(response.status).toBe(200);
+    expect((await resolveTenantCached("school-a", {})).name).toBe("School A");
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("selects the affected schools and pending reads on a Träger settings write", async () => {
+    const pending = deferred<Response>();
+    const original = await tenantResponse().json();
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(tenantResponse())
+      .mockResolvedValueOnce(
+        Response.json({
+          ...original,
+          data: { ...original.data, organization_id: "8028" },
+        }),
+      )
+      .mockReturnValueOnce(pending.promise);
+
+    const first = await resolveTenantCached("school-a", {});
+    await resolveTenantCached("unaffected-school-8028", {});
+    const read = resolveTenantCached("pending-school-8028", {});
+    const affected = tenantResolvesInOrganization(first.organization_id);
+    expect(affected).toContain("school-a");
+    expect(affected).toContain("pending-school-8028");
+    expect(affected).not.toContain("unaffected-school-8028");
+
+    invalidateTenantResolve("pending-school-8028");
+    pending.resolve(tenantResponse());
+    await read;
+    fetchSpy.mockResolvedValueOnce(tenantResponse());
+    await resolveTenantCached("pending-school-8028", {});
+    expect(fetchSpy).toHaveBeenCalledTimes(4);
+    invalidateTenantResolve("pending-school-8028");
+    invalidateTenantResolve("unaffected-school-8028");
+  });
+
+  it("keeps cached schools even when a lookup starts at the hit limit", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => tenantResponse());
+    await resolveTenantCached("school-a", {});
+    const slugs = Array.from(
+      { length: 999 },
+      (_, index) => `cached-school-${index}`,
+    );
+    for (const slug of slugs) await resolveTenantCached(slug, {});
+    fetchSpy.mockResolvedValueOnce(new Response(null, { status: 404 }));
+
+    await expect(
+      resolveTenantCached("scanner-probe-at-limit", {}),
+    ).rejects.toMatchObject({
+      status: 404,
+    });
+    expect((await resolveTenantCached("school-a", {})).name).toBe("School A");
+    expect(fetchSpy).toHaveBeenCalledTimes(1001);
+    for (const slug of slugs) invalidateTenantResolve(slug);
+    invalidateTenantResolve("scanner-probe-at-limit");
   });
 
   it("ignores invalid branding fields without losing valid settings or the school", async () => {

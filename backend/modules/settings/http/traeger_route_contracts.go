@@ -7,9 +7,11 @@ import "github.com/moto-ogs/project-phoenix/api/common"
 // the Settings Platform's records, which this role may not import; the root
 // names it in schema.
 func TraegerRouteContracts(schema any) []common.RouteContract {
+	const browserPath = "/api/traeger/settings/values/{key}"
+	const routeFile = "invalidate the tenant lookup after inherited settings change"
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/schema", Portals: []common.PortalScope{common.PortalTraeger}, Response: schema},
-		{Method: "PUT", Pattern: "/values/{key}", Portals: []common.PortalScope{common.PortalTraeger}, Request: setValueRequest{}, NoData: true},
-		{Method: "DELETE", Pattern: "/values/{key}", Portals: []common.PortalScope{common.PortalTraeger}, NoData: true},
+		{Method: "PUT", Pattern: "/values/{key}", Portals: []common.PortalScope{common.PortalTraeger}, Request: setValueRequest{}, NoData: true, BrowserPath: browserPath, RouteFile: routeFile},
+		{Method: "DELETE", Pattern: "/values/{key}", Portals: []common.PortalScope{common.PortalTraeger}, NoData: true, BrowserPath: browserPath, RouteFile: routeFile},
 	}
 }

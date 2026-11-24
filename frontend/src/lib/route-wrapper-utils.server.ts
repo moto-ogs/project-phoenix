@@ -55,8 +55,19 @@ export async function parseRequestBody<B>(
   try {
     return JSON.parse(text) as B;
   } catch {
-    throw bffError(400, "request body is not valid JSON");
+    throw bffError(400, "Invalid JSON", { code: "general.input" });
   }
+}
+
+export function invalidJsonResponse(
+  request: Request,
+): NextResponse<ProblemBody> {
+  return problemResponse(
+    400,
+    "Invalid JSON",
+    { code: "general.input" },
+    request,
+  );
 }
 
 /**

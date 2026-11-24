@@ -1,11 +1,10 @@
 // Handwritten helpers of the generated contract (ADR 0270). The files
 // `*.generated.ts` next to this one hold only shapes and import from here.
 import { z } from "zod";
-
-const INT64 = /^(0|-?[1-9]\d{0,18})$/;
+import { INT64_DECIMAL } from "../compare-ids";
 
 /** An int64 identifier sent as a JSON string. Kept verbatim, never a number. */
-export const int64String = z.string().regex(INT64);
+export const int64String = z.string().regex(INT64_DECIMAL);
 
 export const safeInt = z.number().refine(Number.isSafeInteger);
 
@@ -24,8 +23,6 @@ export const instant = z.iso.datetime({ offset: true });
  * that is one release behind.
  */
 export type OpenEnum<T extends string> = T | (string & {});
-
-export { knownEnum } from "./known-enum";
 
 /**
  * The body a registered route binds. It carries no value: the route entry

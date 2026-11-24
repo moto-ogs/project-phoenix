@@ -1,6 +1,9 @@
 import { type NextRequest } from "next/server";
 import { sendBackend } from "~/lib/backend-client.server";
-import { BackendUnavailableError } from "~/lib/api-response-error.server";
+import {
+  BackendUnavailableError,
+  problemResponse,
+} from "~/lib/api-response-error.server";
 import { type Logger } from "~/lib/logger";
 import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
 import { captureBffException } from "~/lib/sentry-bff.server";
@@ -30,7 +33,7 @@ export interface SSEProxyOptions {
  * The caller authenticates, extracts the token, and delegates here:
  *
  *   const session = await auth();
- *   if (!session?.user?.token) return new Response("Unauthorized", { status: 401 });
+ *   if (!session?.user?.token) return problemResponse(401, "Unauthorized", request);
  *   return proxySSEStream(request, { token: session.user.token, upstreamPath, logger });
  */
 export async function proxySSEStream(
@@ -77,7 +80,7 @@ export async function proxySSEStream(
 
     if (!backendResponse.body) {
       cleanup();
-      return new Response("No response body from backend", { status: 502 });
+      return problemResponse(502, "No response body from backend", request);
     }
 
     const reader = backendResponse.body.getReader();
@@ -167,6 +170,6 @@ export async function proxySSEStream(
     logger.error("SSE proxy error", {
       error: failure instanceof Error ? failure.message : String(failure),
     });
-    return new Response("Internal server error", { status: 500 });
+    return problemResponse(500, "Internal server error", request);
   }
 }

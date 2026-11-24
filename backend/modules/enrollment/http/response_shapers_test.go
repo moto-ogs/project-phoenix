@@ -234,7 +234,7 @@ func TestToFormSchemaResponse_StringifiesIDs(t *testing.T) {
 	}
 	out := toFormSchemaResponse(s)
 	assert.Equal(t, "1234", out.ID.String(), "int64 ID stringified")
-	assert.Equal(t, "4321", out.CreatedBy, "created_by also stringified — frontend treats as opaque string")
+	assert.Equal(t, "4321", out.CreatedBy.String(), "created_by has the same wire representation")
 	assert.Equal(t, "Schuljahr", out.Name)
 	assert.Equal(t, 2, out.Version)
 	assert.True(t, out.IsActive)

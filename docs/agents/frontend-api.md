@@ -84,7 +84,8 @@ slash is dropped and each parameter encoded.
   copy the answer into a hand-written type.
 - **One transport:** use `bffJson` for JSON and `bffFile` for files.
   `bff-boundary/no-raw-browser-transport` rejects access to global `fetch`,
-  `XMLHttpRequest` and `navigator.sendBeacon` outside the same plugin's
+  `XMLHttpRequest`, `navigator.sendBeacon`, `EventSource` and `WebSocket`
+  outside the same plugin's
   shrink-only infrastructure list. It also rejects names of retired fetch
   helpers. `bff-boundary/no-numeric-identifier` rejects coercions such as
   `Number(room.id)`, `+room.id`, arithmetic and `BigInt(id)`. For generated
@@ -120,7 +121,6 @@ checklist. Local values belong in `.env.local` using `.env.example` as the templ
 
 | Variable                           | Scope           | Purpose                                                       |
 | ---------------------------------- | --------------- | ------------------------------------------------------------- |
-| `NEXT_PUBLIC_API_URL`              | Client + Server | Public backend URL; validated, read by no frontend code       |
 | `API_URL`                          | Server only     | Backend URL for route handlers (Docker: `http://server:8080`) |
 | `NEXTAUTH_URL` / `NEXTAUTH_SECRET` | Server          | NextAuth base URL + JWT secret                                |
 | `SKIP_ENV_VALIDATION`              | Build           | `true` skips env validation (Docker builds)                   |
@@ -265,8 +265,9 @@ The key is the scope claim of the portal's session token
   session or calls the backend.
 - Only the registered query parameters are forwarded, every path segment is
   encoded again, and the answer is checked against the route's decoder.
-  Session, the single 401 renewal, body limit and `Idempotency-Key` come
-  from the portal's handlers (`makePortalHandlers`). The answer is the
+  The portal's handlers (`makePortalHandlers`) supply the session and
+  the single 401 renewal. The catalog proxy forwards `Idempotency-Key`
+  for POST, PUT and PATCH. The answer is the
   backend's envelope with the decoded data: `{ status, data, message }`, a
   paginated list also `pagination`, as `common.Response` writes them.
   The proxy retains the backend's success status for every method. A
@@ -276,9 +277,9 @@ The key is the scope claim of the portal's session token
   answers (including truncated JSON) are 502. After a write that may
   have committed, they carry `general.write_answer_unreadable`; reads
   and routes marked `NoCommit` keep the retryable error.
-- The BFF path must equal the backend path below the portal's prefix. A
-  route whose BFF path differs (`/api/operator/provisioning/schools` for
-  `/operator/schools`) moves its callers to the backend's path first.
+- The catalog proxy uses the backend path below the portal's prefix. A
+  named `RouteFile` can instead register an exact `BrowserPath`. Both the
+  file link and the browser transport use that path.
 - Next prefers an existing route file over the proxy. Keep a file only for
   what is specific to the browser: portal policy, session handling, a file
   or upload with behavior the contract cannot name, login/MFA, or the SSE
@@ -287,7 +288,7 @@ The key is the scope claim of the portal's session token
 - A file answer registers `File: true`, a multipart upload `Multipart: true`
   with `MaxBodyBytes` and `TooLargeCode` (ADR 0270, addendum 2026-11-19).
   The proxy streams both unread: the file with the headers of
-  `fileResponse`, every answer `private, no-store`; the upload once, without
+  `fileResponse`, with `private, no-store` by default; the upload once, without
   a retry after a renewal, and 413 with `TooLargeCode` above the limit. Such
   a route needs no BFF route file. The backend
   names the file's `Content-Type` and `Content-Disposition` itself; the proxy
@@ -445,8 +446,8 @@ The Staff shell reads its startup data through the generated decoders;
 a failed optional read is left out so the browser can load it normally.
 `tenant-resolve.server.ts` uses the public `GET /auth/tenant/resolve`
 entry without a session. Its own per-replica cache coalesces concurrent
-lookups, keeps only decoded successes for 60 seconds and retains its
-explicit invalidation. The unregistered SSE stream uses `sendBackend`
+lookups and keeps decoded successes and 404s for 60 seconds. Explicit
+invalidation clears both; other failures are not cached. The unregistered SSE stream uses `sendBackend`
 directly and keeps its connection open past the header timeout. A route
 param in a backend path is encoded by `fillRoutePath` for a contract call;
 encode it with `encodeURIComponent` when building an unregistered path.

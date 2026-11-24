@@ -1,3 +1,4 @@
+import { invalidJsonResponse } from "~/lib/route-wrapper-utils.server";
 import "server-only";
 import type { z } from "zod";
 import {
@@ -56,7 +57,7 @@ export function createFactorConfirmRoute<R extends FactorRoute>({
     try {
       body = await request.json();
     } catch {
-      return problemResponse(400, "Invalid JSON", request);
+      return invalidJsonResponse(request);
     }
     try {
       const reply = await contractWrite<R>(

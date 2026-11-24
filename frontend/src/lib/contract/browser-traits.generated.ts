@@ -10,6 +10,7 @@ export const browserRoutePaths = {
     "POST /caterer/auth/passkeys/login/verify": "/api/caterer/auth/passkeys/login/verify",
   },
   org: {
+    "DELETE /traeger/settings/values/{key}": "/api/traeger/settings/values/{key}",
     "GET /demo/access/status": "/api/demo/access/status",
     "POST /demo/access/reset": "/api/demo/access/reset",
     "POST /demo/access/sessions": "/api/demo/access/sessions",
@@ -19,6 +20,7 @@ export const browserRoutePaths = {
     "POST /traeger/auth/mfa/resend": "/api/traeger/auth/mfa/resend",
     "POST /traeger/auth/mfa/step-up/verify": "/api/traeger/auth/mfa/step-up/verify",
     "POST /traeger/auth/mfa/verify": "/api/traeger/auth/mfa/verify",
+    "PUT /traeger/settings/values/{key}": "/api/traeger/settings/values/{key}",
   },
   parent: {
     "GET /demo/access/status": "/api/demo/access/status",
@@ -104,4 +106,18 @@ export const noCommitRoutes = new Set<string>([
   "POST /traeger/sepa-mandates/imports/preview",
   "POST /traeger/staff-record-imports/preview",
   "POST /traeger/staff-records/link-preview",
+]);
+
+export const tenantNoRetryRoutes = new Set<string>([
+  "POST /auth/passkeys/enrollment/challenge",
+  "POST /auth/passkeys/register/options",
+  "POST /auth/password",
+]);
+
+export const publicAssetCache = "public, max-age=86400";
+
+export const fileCacheValues = new Set<string>([
+  "public, max-age=86400",
+  "private, max-age=3600",
+  "private, max-age=86400, immutable",
 ]);
