@@ -238,6 +238,7 @@ export function PortalBottomNav({
   fade = true,
   indicator,
   className = "",
+  hidden = false,
 }: {
   /** Die Felder (`PortalBottomNavLink`, `PortalBottomNavButton`), jedes in einem `<li>`. */
   readonly children: ReactNode;
@@ -252,7 +253,13 @@ export function PortalBottomNav({
   /** Die gleitende Fläche aus `usePortalBottomNavIndicator`. */
   readonly indicator?: PortalBottomNavIndicator;
   readonly className?: string;
+  /**
+   * Blendet die Leiste auf dieser Seite aus (#8070, Register `hidesPill`):
+   * etwa im Chat-Verlauf, wo das Schreibfeld unten klebt.
+   */
+  readonly hidden?: boolean;
 }) {
+  if (hidden) return null;
   return (
     <nav
       aria-label={label}

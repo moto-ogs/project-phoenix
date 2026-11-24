@@ -125,6 +125,7 @@ import {
 import { supervisionConcept } from "~/lib/concepts/supervision";
 import { usePillTabs } from "~/lib/mobile-navigation/use-pill-tabs";
 import { MORE_PAGE_HREF, MORE_TAB } from "~/lib/mobile-navigation/tab-registry";
+import { usePillHidden } from "~/lib/mobile-navigation/use-pill-hidden";
 import { useIsApp } from "~/lib/device-context";
 
 // Das Vollbild-Blatt der Benachrichtigungen (#7148) lädt erst im Staff-Portal
@@ -997,6 +998,8 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
   // Eintrag bekannt ist, gilt die bisherige Pfad-Regel.
   const pillTabs = usePillTabs(displayMainItems);
   const isApp = useIsApp();
+  // Im Chat-Verlauf ohne Pill (#8070, Register `hidesPill`).
+  const pillHidden = usePillHidden();
   const isMainItemActive = (item: NavItem) =>
     pillTabs.activeHref === null
       ? isActiveRoute(item.href, item.activePaths)
@@ -1029,7 +1032,7 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
     <>
       {/* Spacer to prevent content from being hidden behind fixed nav */}
       {/* `split:block`: das iPad quer bekommt die Pill der App (#8070). */}
-      <div className="split:block h-16 lg:hidden" />
+      {pillHidden ? null : <div className="split:block h-16 lg:hidden" />}
 
       <LogoutModal
         isOpen={logoutModalOpen}
@@ -1049,6 +1052,7 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
         barClassName="px-2"
         fade={false}
         indicator={indicator}
+        hidden={pillHidden}
         // Auf dem iPad quer so breit wie auf dem iPad hoch, mittig.
         className={`split:block split:px-[calc(50vw-22rem)] ${className}`}
         open={isOverflowMenuOpen}
