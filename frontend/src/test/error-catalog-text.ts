@@ -11,13 +11,12 @@ import {
  * the code's own text, or its class text when the catalog has none. German
  * unless a `locale` is given (#2518, parents portal). Tests assert against it
  * instead of copying catalog text, so a reworded catalog entry does not break
- * them. `careTerm` is the school's care term (#6258), „OGS“ without one.
+ * them. `{careTerm}` reads „OGS“, the text without a school (#6258).
  */
 export function catalogText(
   code: ErrorCode,
   object: string,
   locale: AppLocale = "de",
-  careTerm?: string,
 ): string {
   const catalog = ERROR_CATALOG[locale] as {
     classes: Record<string, string>;
@@ -27,6 +26,6 @@ export function catalogText(
     catalog.codes[code] ?? catalog.classes[ERROR_CODE_CLASSES[code]]!;
   const text = template
     .replaceAll("{object}", object)
-    .replaceAll("{careTerm}", normalizeCareFacilityTerm(careTerm));
+    .replaceAll("{careTerm}", normalizeCareFacilityTerm(undefined));
   return text.charAt(0).toUpperCase() + text.slice(1);
 }

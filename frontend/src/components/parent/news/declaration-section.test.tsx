@@ -26,6 +26,10 @@ import {
 } from "./declaration-section";
 import { catalogText } from "~/test/error-catalog-text";
 import { CareFacilityTermScope } from "~/lib/care-facility-term";
+import {
+  ParentCareTermScope,
+  useParentCareTerms,
+} from "~/lib/parent-care-term";
 import * as parentApi from "~/lib/parent-api";
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
@@ -535,6 +539,53 @@ describe("Einverständnis in the detail view", () => {
       ).toBeInTheDocument();
     },
   );
+
+  it("names the letter's own school, not the account's terms (#6258)", async () => {
+    // Two children at two schools: the account reads „GTS/OGS“, the letter
+    // of „OGS Am Berg“ names that school's term.
+    vi.spyOn(parentApi, "listMyChildren").mockResolvedValue([
+      { student_id: "5", school_name: "OGS Am Berg" },
+      { student_id: "6", school_name: "Sonnenschule" },
+    ] as Awaited<ReturnType<typeof parentApi.listMyChildren>>);
+    const features = vi.spyOn(parentApi, "getChildFeatures").mockImplementation(
+      async (studentId) =>
+        ({
+          care_facility_term: studentId === "5" ? "GTS" : "OGS",
+        }) as Awaited<ReturnType<typeof parentApi.getChildFeatures>>,
+    );
+    vi.spyOn(parentApi, "submitDeclaration").mockRejectedValue(
+      new ApiError("closed", 409, { code: "care.declaration_closed" }),
+    );
+    function Terms() {
+      return <p>Konto: {useParentCareTerms().account}</p>;
+    }
+
+    render(
+      <ParentCareTermScope enabled>
+        <Terms />
+        <NewsDetailModal
+          item={item()}
+          onClose={vi.fn()}
+          onUpdated={vi.fn()}
+          onStale={vi.fn()}
+        />
+      </ParentCareTermScope>,
+    );
+    expect(await screen.findByText("Konto: GTS/OGS")).toBeInTheDocument();
+    expect(features).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "Zustimmen" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "Deine Antwort prüfen",
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Zustimmen" }));
+
+    expect(
+      await screen.findByText(
+        "Die Frist ist abgelaufen. Du kannst nicht mehr antworten. Bei Fragen wende dich bitte an die GTS.",
+      ),
+    ).toBeInTheDocument();
+  });
 
   it("closes the confirmation, tells the parent and reloads when the text changed", async () => {
     vi.spyOn(parentApi, "submitDeclaration").mockRejectedValue(

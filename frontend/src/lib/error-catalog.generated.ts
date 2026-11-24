@@ -2677,7 +2677,7 @@ export const ERROR_CATALOG = {
       "enrollment.withdraw_not_allowed":
         "This enrollment can no longer be withdrawn. Please contact the school.",
       "enrollment.without_care_place_school_year_only":
-        "A child without an {careTerm} place gets its place through an enrollment for the school year.",
+        "A child without a place in the {careTerm} gets its place through an enrollment for the school year.",
       "files.file_name_invalid":
         "This file name is not allowed. Please choose the file again.",
       "general.changed_since_read":
