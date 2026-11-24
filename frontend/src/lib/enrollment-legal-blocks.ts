@@ -111,7 +111,7 @@ export const STANDARD_LEGAL_BLOCKS: FormLegalBlock[] = [
     kind: "consent",
     title: "Fotoeinwilligung",
     label:
-      "Mein Kind darf bei Schulveranstaltungen fotografiert werden. Diese Einwilligung ist freiwillig und jederzeit mit Wirkung für die Zukunft widerrufbar.",
+      "Mein Kind darf in der Betreuung fotografiert werden. Ein Foto von meinem Kind darf in moto gespeichert werden. Diese Einwilligung ist freiwillig und jederzeit mit Wirkung für die Zukunft widerrufbar.",
     text: "",
     required: false,
     enabled: false,

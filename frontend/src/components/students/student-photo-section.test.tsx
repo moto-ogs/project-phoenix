@@ -63,6 +63,12 @@ describe("StudentPhotoSection (controlled)", () => {
     expect(
       screen.getByRole("checkbox", { name: /Einwilligung der Eltern/i }),
     ).not.toBeChecked();
+    // #8039: Am Haken steht der Wortlaut, den das Team bestätigt.
+    expect(
+      screen.getByText(
+        "Die Eltern erlauben: Die OGS darf das Kind fotografieren und ein Foto in moto speichern.",
+      ),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /Foto auswählen/i }),
     ).toBeNull();

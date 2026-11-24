@@ -67,6 +67,7 @@ export function parentChildDataTopic(): HelpTopic {
     notes: [
       "Gesundheitshinweise gehen sofort an das Team, ohne Prüfung.",
       "Du möchtest eine offene Anfrage ändern? Tippe unter `Beantragte Änderung` auf `Anfrage bearbeiten`.",
+      "Mit der Foto-Einwilligung darf die OGS dein Kind fotografieren und ein Foto von deinem Kind in moto speichern.",
       "Nach dem Widerruf löscht moto ein gespeichertes Foto deines Kindes.",
       "Der Widerruf gilt sofort. Er gilt auch, wenn dein Kind in den Ferien an einer anderen Schule betreut wird. Das Team dort sieht dann sofort, dass keine Einwilligung vorliegt.",
       "Nach dem letzten Betreuungstag löscht moto das Foto und die Foto-Einwilligung in der Nacht danach von selbst. Bis dahin kannst du weiter widerrufen. Neu geben kannst du die Einwilligung dann nicht mehr.",

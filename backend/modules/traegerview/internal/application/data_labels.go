@@ -40,7 +40,7 @@ var dataLabels = map[string]string{
 	"holiday_participants":                "Teilnehmerliste einer Ferienwoche",
 	"holiday_participants_export":         "Teilnehmerliste einer Ferienwoche (Export)",
 	"holiday_guest_transfer":              "Feriengäste in die Feriengruppe übernommen",
-	"holiday_guest_sheet":                 "Betreuung, Notfall, Abholung, Gesundheit und Foto-Einwilligung eines Feriengasts",
+	"holiday_guest_sheet":                 "Betreuung, Notfall, Abholung, Gesundheit, Foto-Einwilligung und Stopp des Raumverlaufs eines Feriengasts",
 	"holiday_student_health":              "Gesundheitsangaben aus der Ferienanmeldung eines Kindes",
 	"holiday_home_school_bookings":        "Ferienbuchungen eigener Kinder an anderen OGS",
 	"guardian_email_stop":                 "Mails an einen Elternteil gestoppt oder wieder freigegeben",

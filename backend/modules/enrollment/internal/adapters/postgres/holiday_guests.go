@@ -71,6 +71,8 @@ type holidayGuestRow struct {
 	Lunch           bool            `bun:"lunch"`
 	// HomePhotoConsent is read only with the sheet of one guest (#4721).
 	HomePhotoConsent *bool `bun:"home_photo_consent,scanonly"`
+	// HomeRoomHistoryStopped is read with it (#8037).
+	HomeRoomHistoryStopped *bool `bun:"home_room_history_stopped,scanonly"`
 }
 
 func (r *holidayGuestRow) guest() (enrollment.HolidayGuest, error) {
@@ -518,13 +520,15 @@ func (s *HolidayGuestStore) ReadGuest(ctx context.Context, schoolID, studentID i
 		return enrollment.HolidayGuest{}, false, err
 	}
 	var rows []holidayGuestRow
-	// The home school's photo consent comes with the same statement, from the
-	// database's narrow function (#4721): it checks the hosting school, the
-	// Träger, the confirmed booking and the end of the week itself and
-	// answers NULL when the question does not apply. Nothing is stored, so a
-	// withdrawal at the home school counts with the next read.
+	// The home school's photo consent and its stop of room history and mood
+	// come with the same statement, from the database's narrow functions
+	// (#4721, #8037): they check the hosting school, the Träger, the
+	// confirmed booking and the end of the week themselves and answer NULL
+	// when the question does not apply. Nothing is stored, so a change at the
+	// home school counts with the next read.
 	if err := db.NewSelect().TableExpr("enrollment.holiday_guests").ColumnExpr(holidayGuestColumns).
 		ColumnExpr("enrollment.holiday_guest_home_photo_consent(student_id) AS home_photo_consent").
+		ColumnExpr("enrollment.holiday_guest_home_room_history_stopped(student_id) AS home_room_history_stopped").
 		Where("tenant_id = ?", schoolID).Where("student_id = ?", studentID).
 		Where("ended_on IS NULL").Where("ends_on >= ?", lastReadableEnd).Scan(ctx, &rows); err != nil {
 		return enrollment.HolidayGuest{}, false, fmt.Errorf("enrollment postgres: read holiday guest: %w", err)
@@ -537,6 +541,7 @@ func (s *HolidayGuestStore) ReadGuest(ctx context.Context, schoolID, studentID i
 		return enrollment.HolidayGuest{}, false, err
 	}
 	guest.HomePhotoConsent = rows[0].HomePhotoConsent
+	guest.HomeRoomHistoryStopped = rows[0].HomeRoomHistoryStopped
 	var contacts []holidayGuestContactRow
 	if err := db.NewRaw(guestContactsQuery, schoolID, bun.List([]int64{guest.ID})).Scan(ctx, &contacts); err != nil {
 		return enrollment.HolidayGuest{}, false, fmt.Errorf("enrollment postgres: read holiday guest contacts: %w", err)

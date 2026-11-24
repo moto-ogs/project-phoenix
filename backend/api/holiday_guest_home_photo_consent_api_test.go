@@ -19,8 +19,65 @@ import (
 )
 
 type holidayGuestPhotoConsentBody struct {
-	HomePhotoConsent *bool `json:"home_photo_consent"`
-	ReadOnly         bool  `json:"read_only"`
+	HomePhotoConsent       *bool `json:"home_photo_consent"`
+	HomeRoomHistoryStopped *bool `json:"home_room_history_stopped"`
+	ReadOnly               bool  `json:"read_only"`
+}
+
+// hostedHolidayGuests is a holiday week the OGS Nord hosts with two guests:
+// Tom, whose registration names the OGS Süd as his home school, and Ben
+// without a school of the Träger.
+type hostedHolidayGuests struct {
+	f               holidayGuestFixture
+	lead            string
+	tom, ben        int64
+	tomRegistration int64
+}
+
+func newHostedHolidayGuests(t *testing.T, traeger string) hostedHolidayGuests {
+	t.Helper()
+	f := newHolidayGuestFixture(t, traeger)
+	g := hostedHolidayGuests{f: f, lead: f.staffOf(t, f.nord, permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead)}
+	require.NoError(t, f.db.NewRaw(`SELECT id FROM enrollment.holiday_registrations WHERE id <> ? AND organization_id =
+		(SELECT organization_id FROM enrollment.holiday_registrations WHERE id = ?)`, f.siblings, f.siblings).Scan(t.Context(), &g.tomRegistration))
+	f.confirm(t, f.siblings, "confirm")
+	f.confirm(t, g.tomRegistration, "confirm")
+	f.today.Store(calendar.NewDate(2099, 7, 6))
+	require.Equal(t, http.StatusOK, f.assign(t, g.lead, int64(f.offer.Weeks[0].ID), f.group).Code)
+	guests := f.roster(t, calendar.NewDate(2099, 7, 8))
+	g.tom, g.ben = guests["Tom Beispiel"], guests["Ben Muster"]
+	require.NotZero(t, g.tom)
+	require.NotZero(t, g.ben)
+	return g
+}
+
+func (g hostedHolidayGuests) exec(t *testing.T) func(query string, args ...any) {
+	return func(query string, args ...any) {
+		t.Helper()
+		_, err := g.f.db.NewRaw(query, args...).Exec(t.Context())
+		require.NoError(t, err, query)
+	}
+}
+
+func (g hostedHolidayGuests) sheet(t *testing.T, student int64) holidayGuestPhotoConsentBody {
+	t.Helper()
+	rec := g.f.sheet(t, g.lead, student)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	return decodeSchoolPortalData[holidayGuestPhotoConsentBody](t, rec.Body.Bytes())
+}
+
+// homeFamily gives Tom a family at his home school, with a parents portal
+// account. The family fixture lives in its own school; that school joins the
+// Träger and becomes the home school the registration names.
+func (g hostedHolidayGuests) homeFamily(t *testing.T) (*guardRig, childReadFamily) {
+	t.Helper()
+	rig := newGuardRig(t, g.f.db)
+	family := rig.family(t)
+	exec := g.exec(t)
+	exec(`UPDATE platform.schools SET organization_id = (SELECT organization_id FROM platform.schools WHERE id = ?) WHERE id = ?`, g.f.nord, family.TenantID)
+	exec(`UPDATE users.persons SET first_name = ' tom', last_name = 'BEISPIEL', birthday = '2017-05-20' WHERE id = ?`, family.PersonID)
+	exec(`UPDATE enrollment.holiday_registration_children SET home_school_id = ? WHERE holiday_registration_id = ?`, family.TenantID, g.tomRegistration)
+	return rig, family
 }
 
 // homeConsentAs asks the database function as the tenant school, the way a
@@ -36,22 +93,8 @@ func homeConsentAs(t *testing.T, f holidayGuestFixture, school, student int64) *
 
 func TestPhotoConsentWithdrawnAtTheHomeSchoolCountsAtTheHostingSchoolAtOnce(t *testing.T) {
 	t.Parallel()
-	f := newHolidayGuestFixture(t, "Träger Foto-Einwilligung")
-	week := int64(f.offer.Weeks[0].ID)
-	lead := f.staffOf(t, f.nord, permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead)
-
-	// Tom (OGS Süd) and Ben (no school of the Träger) are guests of the OGS Nord.
-	var tomRegistration int64
-	require.NoError(t, f.db.NewRaw(`SELECT id FROM enrollment.holiday_registrations WHERE id <> ? AND organization_id =
-		(SELECT organization_id FROM enrollment.holiday_registrations WHERE id = ?)`, f.siblings, f.siblings).Scan(t.Context(), &tomRegistration))
-	f.confirm(t, f.siblings, "confirm")
-	f.confirm(t, tomRegistration, "confirm")
-	f.today.Store(calendar.NewDate(2099, 7, 6))
-	require.Equal(t, http.StatusOK, f.assign(t, lead, week, f.group).Code)
-	guests := f.roster(t, calendar.NewDate(2099, 7, 8))
-	tom, ben := guests["Tom Beispiel"], guests["Ben Muster"]
-	require.NotZero(t, tom)
-	require.NotZero(t, ben)
+	g := newHostedHolidayGuests(t, "Träger Foto-Einwilligung")
+	f, lead, tom, ben := g.f, g.lead, g.tom, g.ben
 	sheet := func(token string, student int64) holidayGuestPhotoConsentBody {
 		t.Helper()
 		rec := f.sheet(t, token, student)
@@ -64,19 +107,8 @@ func TestPhotoConsentWithdrawnAtTheHomeSchoolCountsAtTheHostingSchoolAtOnce(t *t
 	require.NotNil(t, consent, "a guest of a school of the Träger has an answer")
 	assert.False(t, *consent, "the home school knows no child of that name yet")
 
-	// Tom's family at his home school, with a parents portal account. The
-	// family fixture lives in its own school; that school joins the Träger
-	// and becomes the home school the registration names.
-	rig := newGuardRig(t, f.db)
-	family := rig.family(t)
-	exec := func(query string, args ...any) {
-		t.Helper()
-		_, err := f.db.NewRaw(query, args...).Exec(t.Context())
-		require.NoError(t, err, query)
-	}
-	exec(`UPDATE platform.schools SET organization_id = (SELECT organization_id FROM platform.schools WHERE id = ?) WHERE id = ?`, f.nord, family.TenantID)
-	exec(`UPDATE users.persons SET first_name = ' tom', last_name = 'BEISPIEL', birthday = '2017-05-20' WHERE id = ?`, family.PersonID)
-	exec(`UPDATE enrollment.holiday_registration_children SET home_school_id = ? WHERE holiday_registration_id = ?`, family.TenantID, tomRegistration)
+	rig, family := g.homeFamily(t)
+	exec := g.exec(t)
 
 	assert.False(t, *sheet(lead, tom).HomePhotoConsent, "the child of the home school has no photo consent")
 	rig.givePhoto(t, family)

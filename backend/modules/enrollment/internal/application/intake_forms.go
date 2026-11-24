@@ -260,7 +260,7 @@ func buildLegalBlocks(texts enrollmentNative.LegalTexts) []enrollmentNative.Lega
 	if texts.PhotoEnabled && texts.Photo != "" {
 		blocks = append(blocks, enrollmentNative.LegalBlock{
 			Key: enrollmentNative.ConsentKeyPhoto, Kind: "consent", Title: "Fotoeinwilligung",
-			Label: "Mein Kind darf bei Schulveranstaltungen fotografiert werden. Diese Einwilligung ist freiwillig und jederzeit mit Wirkung für die Zukunft widerrufbar.",
+			Label: "Mein Kind darf in der Betreuung fotografiert werden. Ein Foto von meinem Kind darf in moto gespeichert werden. Diese Einwilligung ist freiwillig und jederzeit mit Wirkung für die Zukunft widerrufbar.",
 			Text:  texts.Photo, Required: false, SortOrder: 30, Source: enrollmentNative.LegalBlockSourceStandard,
 		})
 	}

@@ -71,7 +71,13 @@ func seedHomePhotoConsent(client *Client, auth AuthRef) error {
 	if _, err := client.PutWithAuth(auth, path, map[string]any{"photo_consent_given": true, "expected_version": version}); err != nil {
 		return fmt.Errorf("record the photo consent at the home school: %w", err)
 	}
-	fmt.Printf("  Foto-Einwilligung: %s %s has a photo consent at her home school\n", seedHomePhotoChild.first, seedHomePhotoChild.last)
+	// Her home school also stops room history and mood (#8037): the hosting
+	// school reads that stop for its guest. Stopping a stopped child changes
+	// nothing, so a repeated seed is safe.
+	if _, err := client.PutWithAuth(auth, path+"/room-history-stop", map[string]any{}); err != nil {
+		return fmt.Errorf("stop the room history at the home school: %w", err)
+	}
+	fmt.Printf("  Foto-Einwilligung: %s %s has a photo consent and a room history stop at her home school\n", seedHomePhotoChild.first, seedHomePhotoChild.last)
 	return nil
 }
 

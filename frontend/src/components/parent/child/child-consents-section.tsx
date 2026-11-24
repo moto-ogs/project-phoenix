@@ -243,6 +243,13 @@ export function ChildConsentsSection({
                 <p className="text-sm font-semibold text-gray-900">
                   {t(`items.${consent.key}`)}
                 </p>
+                {/* #8039: Ein Wortlaut für die Foto-Einwilligung. Er steht,
+                    solange sie gilt; beim erneuten Geben steht er im Dialog. */}
+                {consent.key === "photo" && consent.state === "granted" ? (
+                  <p className="mt-1 text-sm text-gray-600">
+                    {t("photoMeaning")}
+                  </p>
+                ) : null}
                 {consent.changed_at ? (
                   <p className="mt-1 text-sm text-gray-600">
                     {t(`dates.${consent.state}`, {

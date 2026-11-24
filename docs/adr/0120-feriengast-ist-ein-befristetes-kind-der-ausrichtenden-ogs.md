@@ -610,7 +610,12 @@ Foto-Einwilligung:
   Funktionen `enrollment.holiday_host_*`. Die Architekturprüfung sieht
   einen Funktionsaufruf nicht als Lesezugriff auf fremde Tabellen; dieser
   Nachtrag ist deshalb der Ort, an dem der Zugriff benannt ist. Eine weitere
-  Angabe der Heimatschule braucht einen eigenen Nachtrag.
+  Angabe der Heimatschule braucht einen eigenen Nachtrag. Wer eine Antwort
+  bekommt und welche Kinder der Heimatschule zum Gast passen, entscheidet
+  an einer Stelle `enrollment.holiday_guest_home_children(host, student)`.
+  Diese Funktion nimmt die ausrichtende Schule als Parameter und ist deshalb
+  für keine Tenant-Rolle ausführbar; nur die Funktionen dieses Nachtrags
+  rufen sie auf.
 - **Blatt.** `GET /api/holiday-guests/{studentId}` trägt `home_photo_consent`
   (fehlt ohne Antwort). Die Kindakte zeigt unter „Fotos“ „Foto-Einwilligung
   liegt vor“ oder „Keine Foto-Einwilligung“ mit der Bitte, das Kind nicht zu
@@ -643,3 +648,44 @@ Nicht Teil dieses Nachtrags, jeweils mit eigenem Ticket:
 - Die Foto-Einwilligung trägt keine Textversion in
   `audit.student_consent_changes`
   ([#8039](https://github.com/moto-ogs/project-phoenix/issues/8039)).
+
+### Stopp von Raumverlauf und Stimmung (#8037)
+
+**Status: Vorgeschlagen mit PR zu #4721; gilt mit dessen Merge.** Der Stopp
+je Kind (#3844) galt bisher nur für den Datensatz der Heimatschule; die
+ausrichtende OGS speicherte für ihre Kopie weiter Raumbesuche und Stimmung,
+und Eltern hatten dort keinen Weg, ihn zu setzen.
+
+- **Auch hier wird nichts kopiert.** Die ausrichtende OGS bekommt keine
+  Zeile in `active.room_history_stops`. Ein gespiegelter Stopp ließe sich
+  dort vom Team aufheben und könnte veralten.
+- **Raumbesuche.** Die Triggerfunktion `active.discard_stopped_room_history()`
+  ist jetzt eine wiederholbare Definition (ADR 0223). Schließt ein
+  Raumbesuch eines offenen Feriengasts, liest sie über
+  `enrollment.holiday_guest_home_children` den Stopp der Heimatschule und
+  löscht dann alle abgeschlossenen Raumbesuche dieses Gasts an der
+  ausrichtenden Schule. Der aktuelle Raum bleibt wie beim eigenen Stopp
+  sichtbar. Für alle anderen Kinder kostet das je geschlossenem Besuch
+  einen Indexzugriff auf `enrollment.holiday_guests`.
+- **Besuche von vor dem Stopp.** Setzen Eltern den Stopp, während das Kind
+  schon Feriengast ist, löscht die Transaktion der Heimatschule nichts an
+  der ausrichtenden Schule: Eine Schule schreibt nicht in den Bestand einer
+  anderen. Die schon gespeicherten Besuche des Gasts gehen mit seinem
+  nächsten Raumwechsel dort, spätestens mit der Löschung der Kopie nach
+  der Ferienwoche.
+- **Stimmung.** `MoodCaptureStopped` von Student Presence fragt zusätzlich
+  `enrollment.holiday_guest_home_room_history_stopped(student_id)`. Das
+  Tablet bekommt für den Gast `feedback_enabled: false`, ein dennoch
+  gesendeter Eintrag wird nicht gespeichert.
+- **Mehrere passende Kinder.** Anders als bei der Foto-Einwilligung zählt
+  der Stopp jedes passenden Kindes der Heimatschule: Im Zweifel speichert
+  moto weniger. Passt kein Kind, gilt kein Stopp.
+- **Blatt.** `GET /api/holiday-guests/{studentId}` trägt
+  `home_room_history_stopped` (fehlt ohne Antwort). Die Kindakte zeigt bei
+  einem Stopp „Raumverlauf und Stimmung: An der Heimatschule gestoppt“. Der
+  eigene Stopp der ausrichtenden Schule bleibt daneben möglich.
+- **Lesezugriff über Owner-Grenzen.** Die Funktion in Enrollment liest
+  `active.room_history_stops` (Student Presence) der Heimatschule und
+  liefert einen Wahrheitswert. Student Presence ruft für die Stimmung eine
+  Funktion aus dem Schema `enrollment` auf. Beides ist hier benannt, weil
+  die Architekturprüfung es nicht sieht.

@@ -91,6 +91,30 @@ function HolidayGuestPhotoConsent({
 }
 
 /**
+ * Stopp von Raumverlauf und Stimmung an der Heimatschule (#8037). Die
+ * ausrichtende OGS hält keinen eigenen Stopp: moto liest ihn bei jedem Abruf
+ * von dort und speichert für den Gast dann keinen Raumverlauf und keine
+ * Stimmung. Die Zeile erscheint nur bei einem Stopp und ist reine Anzeige.
+ */
+function HolidayGuestRoomHistoryStop({
+  schoolName,
+}: Readonly<{ schoolName: string }>) {
+  const home = schoolName ? `Heimatschule (${schoolName})` : "Heimatschule";
+  return (
+    <InfoSection title="Raumverlauf und Stimmung">
+      <div className="flex flex-col items-start gap-2">
+        <StatusBadge label="An der Heimatschule gestoppt" tone="warning" />
+        <InfoText>
+          moto speichert für dieses Kind keinen Raumverlauf und fragt keine
+          Stimmung ab. Du siehst weiter, in welchem Raum das Kind gerade ist.
+        </InfoText>
+        <InfoText>{`Den Stopp setzen und beenden die Eltern an der ${home}. Er gilt sofort auch hier.`}</InfoText>
+      </div>
+    </InfoSection>
+  );
+}
+
+/**
  * Feriengast in der Kindakte (#4666): Für ein Kind, das als Feriengast in die
  * ausrichtende OGS kam, zeigt die Akte nur Betreuung, Notfall und Abholung,
  * dazu die Antworten, die der Träger freigibt (#5202), und die
@@ -195,6 +219,9 @@ export function HolidayGuestSection({
                 granted={data.homePhotoConsent}
                 schoolName={data.schoolName}
               />
+            )}
+            {data.homeRoomHistoryStopped === true && (
+              <HolidayGuestRoomHistoryStop schoolName={data.schoolName} />
             )}
             {data.answers.length > 0 && (
               <InfoSection title="Angaben aus der Ferienanmeldung">

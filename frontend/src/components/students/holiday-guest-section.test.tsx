@@ -71,6 +71,7 @@ const sheet: HolidayGuestSheet = {
   answers: [],
   health: null,
   homePhotoConsent: null,
+  homeRoomHistoryStopped: null,
   readOnly: false,
 };
 
@@ -342,7 +343,9 @@ describe("Foto-Einwilligung des Feriengasts (#4721)", () => {
     sheetMock.mockResolvedValue({ ...fromSued, homePhotoConsent: false });
     renderSection(<HolidayGuestSection studentId="91" canRead />);
 
-    expect(await screen.findByText("Keine Foto-Einwilligung")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Keine Foto-Einwilligung"),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(
         "Mach bitte keine Fotos von diesem Kind. In moto liegt keine Foto-Einwilligung der Eltern vor.",
@@ -364,6 +367,30 @@ describe("Foto-Einwilligung des Feriengasts (#4721)", () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByText(/Mach bitte keine Fotos/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt den Stopp der Heimatschule für Raumverlauf und Stimmung (#8037)", async () => {
+    sheetMock.mockResolvedValue({ ...fromSued, homeRoomHistoryStopped: true });
+    renderSection(<HolidayGuestSection studentId="91" canRead />);
+
+    expect(
+      await screen.findByText("An der Heimatschule gestoppt"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Den Stopp setzen und beenden die Eltern an der Heimatschule (OGS Süd). Er gilt sofort auch hier.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt ohne Stopp an der Heimatschule keine Zeile dazu", async () => {
+    sheetMock.mockResolvedValue({ ...fromSued, homeRoomHistoryStopped: false });
+    renderSection(<HolidayGuestSection studentId="91" canRead />);
+
+    expect(await screen.findByText("Notfall")).toBeInTheDocument();
+    expect(
+      screen.queryByText("An der Heimatschule gestoppt"),
     ).not.toBeInTheDocument();
   });
 

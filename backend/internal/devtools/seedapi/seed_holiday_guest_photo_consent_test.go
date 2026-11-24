@@ -21,6 +21,7 @@ func TestSeedHomePhotoConsentCreatesTheChildOnce(t *testing.T) {
 	} {
 		var created, consents []map[string]any
 		var photosOn bool
+		var stops int
 		srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 			w.Header().Set("Content-Type", "application/json")
 			var body map[string]any
@@ -42,6 +43,9 @@ func TestSeedHomePhotoConsentCreatesTheChildOnce(t *testing.T) {
 				assert.True(t, photosOn, "a consent needs child photos switched on")
 				consents = append(consents, body)
 				_, _ = fmt.Fprint(w, `{"data":{"id":"9"}}`)
+			case r.URL.Path == "/api/students/9/room-history-stop" && r.Method == http.MethodPut:
+				stops++
+				_, _ = fmt.Fprint(w, `{"data":{"student_id":"9","stopped":true}}`)
 			default:
 				t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 			}
@@ -54,6 +58,7 @@ func TestSeedHomePhotoConsentCreatesTheChildOnce(t *testing.T) {
 		require.Len(t, consents, 1, name)
 		assert.Equal(t, true, consents[0]["photo_consent_given"])
 		assert.Equal(t, "v1", consents[0]["expected_version"])
+		assert.Equal(t, 1, stops, name)
 		if name == "repeated seed" {
 			assert.Empty(t, created, name)
 			continue

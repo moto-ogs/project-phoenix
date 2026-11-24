@@ -330,6 +330,12 @@ export interface HolidayGuestSheet {
    * deshalb sofort. `null` ohne Heimatschule beim Träger und nach der Woche.
    */
   readonly homePhotoConsent: boolean | null;
+  /**
+   * Ob Raumverlauf und Stimmung an der Heimatschule gerade gestoppt sind
+   * (#8037), live gelesen wie die Foto-Einwilligung. `null` in denselben
+   * Fällen.
+   */
+  readonly homeRoomHistoryStopped: boolean | null;
   /** Nach dem letzten Tag der Woche: nur noch sieben Tage zum Nachlesen. */
   readonly readOnly: boolean;
 }
@@ -510,6 +516,7 @@ export async function fetchHolidayGuestSheet(
     answers: mapAnswers(sheet.answers),
     health: mapHealth(sheet.health),
     homePhotoConsent: sheet.home_photo_consent ?? null,
+    homeRoomHistoryStopped: sheet.home_room_history_stopped ?? null,
     readOnly: sheet.read_only,
   };
 }

@@ -39,6 +39,7 @@ export function holidayGuestsTopic(): HelpTopic {
       "Unter `Notfall` stehen die Eltern und weitere Kontakte. Unter `Abholung` steht, wer das Kind außer den Eltern abholen darf.",
       "Unter `Gesundheit` stehen Allergien, Medikamente und weitere Hinweise der Eltern.",
       "Unter `Fotos` steht, ob die Eltern eine Foto-Einwilligung gegeben haben. Steht dort `Keine Foto-Einwilligung`, mach bitte keine Fotos von dem Kind.",
+      "Steht auf der Karte `Raumverlauf und Stimmung` mit `An der Heimatschule gestoppt`? Dann speichert moto für dieses Kind keinen Raumverlauf und fragt keine Stimmung ab. Den Raum, in dem das Kind gerade ist, siehst du weiter.",
       "Unter `Angaben aus der Ferienanmeldung` steht zum Beispiel, ob das Kind allein nach Hause gehen darf.",
     ],
     result: "Du weißt, wann das Kind gehen darf und wen du im Notfall anrufst.",

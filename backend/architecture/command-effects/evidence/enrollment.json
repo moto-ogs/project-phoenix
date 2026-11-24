@@ -6466,7 +6466,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentStudentConsents.RecordEnrollmentConsentTransitions",
-      "binding_digest": "1c77d3322c4e4f26e58c71c5a4a5b396",
+      "binding_digest": "e220447f6bef4ad87f17d7f547071fbc",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.StudentConsents.RecordEnrollmentConsentTransitions",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.Create",
@@ -6474,7 +6474,15 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentStudentConsents.RecordEnrollmentConsentTransitions",
-      "binding_digest": "99f518d464cde3f0b835d2bba0ccf8ca",
+      "binding_digest": "1c163bacfc8a07957326105eeff8de74",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.StudentConsents.RecordEnrollmentConsentTransitions",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentConsentTextVersion",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentStudentConsents.RecordEnrollmentConsentTransitions",
+      "binding_digest": "a88aa5ebb0701c982398aef408510378",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.StudentConsents.RecordEnrollmentConsentTransitions",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentConsentTransitions",

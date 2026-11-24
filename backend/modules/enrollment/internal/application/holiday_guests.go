@@ -608,9 +608,11 @@ func (h *HolidayGuests) HolidayGuestSheet(ctx context.Context, host enrollment.H
 		if sheet.Health, err = h.guestHealth(host.SchoolID, guest); err != nil {
 			return enrollment.HolidayGuestSheet{}, err
 		}
-		// The home school's photo consent is never copied: each read of the
-		// guest asks anew, so a withdrawal there holds here at once (#4721).
+		// The home school's photo consent and its stop of room history and
+		// mood are never copied: each read of the guest asks anew, so a
+		// change there holds here at once (#4721, #8037).
 		sheet.HomePhotoConsent = guest.HomePhotoConsent
+		sheet.HomeRoomHistoryStopped = guest.HomeRoomHistoryStopped
 	}
 	return sheet, nil
 }

@@ -172,16 +172,18 @@ func TestUpdateStudent_PhotoConsentWithdrawalWhilePhotosAreOff(t *testing.T) {
 	assert.False(t, readConsentTimestamp(t, tc, student.ID),
 		"the withdrawal must end the consent although photos are off")
 	var trail []struct {
-		Action string `bun:"action"`
-		Source string `bun:"source"`
-		Actor  *int64 `bun:"actor_account_id"`
+		Action      string  `bun:"action"`
+		Source      string  `bun:"source"`
+		Actor       *int64  `bun:"actor_account_id"`
+		TextVersion *string `bun:"text_version"`
 	}
-	require.NoError(t, tc.db.NewRaw(`SELECT action, source, actor_account_id FROM audit.student_consent_changes
+	require.NoError(t, tc.db.NewRaw(`SELECT action, source, actor_account_id, text_version FROM audit.student_consent_changes
 		WHERE student_id = ? AND consent_key = 'photo' ORDER BY id`, student.ID).Scan(ctx, &trail))
 	require.Len(t, trail, 1, "one effective withdrawal")
 	assert.Equal(t, "withdrawn", trail[0].Action)
 	assert.Equal(t, "tenant_portal", trail[0].Source)
 	assert.NotNil(t, trail[0].Actor, "the trail names the staff account that entered it")
+	assert.Nil(t, trail[0].TextVersion, "a withdrawal confirms no wording (#8039)")
 }
 
 // TestUpdateStudent_PhotoConsentGrantWhilePhotosAreOff pins the grant gate of
@@ -247,6 +249,13 @@ func TestUpdateStudent_PhotoConsentGrant_StampsAuditFields(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotZero(t, byActor,
 		"grant transition must stamp photo_consent_given_by from JWT acting account")
+
+	// #8039: the staff member confirmed moto's photo wording; the trail
+	// names its version.
+	var versions []string
+	require.NoError(t, tc.db.NewRaw(`SELECT source || ':' || COALESCE(text_version, 'NULL') FROM audit.student_consent_changes
+		WHERE student_id = ? AND consent_key = 'photo' AND action = 'granted' ORDER BY id`, student.ID).Scan(ctx, &versions))
+	assert.Equal(t, []string{"tenant_portal:photo-1"}, versions)
 }
 
 // TestUpdateStudent_PhotoConsentNoChange_NoOp pins the omitted-field

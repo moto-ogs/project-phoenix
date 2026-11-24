@@ -67,6 +67,7 @@ export interface HolidayGuestSheet {
   answers: HolidayHostAnswer[] | null;
   health: HolidayHostHealth | null;
   home_photo_consent?: boolean;
+  home_room_history_stopped?: boolean;
   read_only: boolean;
 }
 
@@ -87,6 +88,7 @@ export const HolidayGuestSheetSchema: z.ZodType<HolidayGuestSheet, unknown> = ob
   answers: nullable(arr(HolidayHostAnswerSchema)),
   health: nullable(HolidayHostHealthSchema),
   home_photo_consent: optional(bool),
+  home_room_history_stopped: optional(bool),
   read_only: bool,
 });
 
