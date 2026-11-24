@@ -178,7 +178,6 @@ export function PayrollEmployersCard({
           columns={columns}
           rows={[...employers]}
           getRowKey={(employer) => `${employer.schoolId}-${employer.body}`}
-          stackedOnMobile
           stackedLayout="form"
         />
       ) : null}
