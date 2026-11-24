@@ -53,6 +53,8 @@ import { labelOf } from "~/lib/label-of";
 interface SchoolGroup {
   readonly schoolId: string;
   readonly schoolName: string;
+  /** Who issues the invoices of the school (#8040); empty for the Träger. */
+  readonly issuerName: string;
   readonly invoices: CareInvoice[];
   readonly totalCents: number;
 }
@@ -64,6 +66,7 @@ function bySchool(invoices: readonly CareInvoice[]): SchoolGroup[] {
     const group = groups.get(invoice.schoolId) ?? {
       schoolId: invoice.schoolId,
       schoolName: invoice.schoolName,
+      issuerName: invoice.issuerName ?? "",
       invoices: [],
       totalCents: 0,
     };
@@ -483,13 +486,13 @@ export function CareRunInvoices({
           key={group.schoolId}
           title={group.schoolName}
           overflow={interactive ? "visible" : undefined}
-          description={
+          description={`${group.issuerName ? `${group.issuerName} stellt diese Schreiben aus. ` : ""}${
             !released
               ? "Vorschau. Jede Rechnung bekommt ihre Nummer erst bei der Freigabe."
               : letterColumns
                 ? "Ausgestellte Rechnungen. Sie ändern sich nicht mehr. „An die Familie“ zeigt, ob das Schreiben schon gesendet ist."
                 : "Ausgestellte Rechnungen. Sie ändern sich nicht mehr."
-          }
+          }`}
           titleBadge={
             <span className="text-sm font-normal text-gray-600 tabular-nums">
               {invoiceCountLabel(group.invoices.length)} ·{" "}

@@ -74,20 +74,24 @@ type SEPAMandates struct {
 	contracts parentbilling.CareContracts
 	cipher    parentbilling.BankDataCipher
 	formats   parentbilling.DebtorNumberFormats
-	today     func() calendar.Date
+	// issuers names the issuer of a contract's school, whose creditor
+	// identifier a mandate is given to (#8040).
+	issuers parentbilling.BillingIssuers
+	today   func() calendar.Date
 }
 
 var _ parentbilling.SEPAMandates = (*SEPAMandates)(nil)
 
 // NewSEPAMandates builds the mandates; their import checks a debtor number
-// in the format of the Träger (#6675).
+// in the format of the Träger (#6675); issuers names the creditor of the
+// school of a contract (#8040).
 func NewSEPAMandates(store MandateStore, contracts parentbilling.CareContracts, cipher parentbilling.BankDataCipher,
-	formats parentbilling.DebtorNumberFormats, today func() calendar.Date,
+	formats parentbilling.DebtorNumberFormats, issuers parentbilling.BillingIssuers, today func() calendar.Date,
 ) *SEPAMandates {
-	if store == nil || contracts == nil || cipher == nil || formats == nil || today == nil {
-		panic("parent billing: the store, the care contracts, the cipher, the debtor number format and the clock are required")
+	if store == nil || contracts == nil || cipher == nil || formats == nil || issuers == nil || today == nil {
+		panic("parent billing: the store, the care contracts, the cipher, the debtor number format, the issuers and the clock are required")
 	}
-	return &SEPAMandates{store: store, contracts: contracts, cipher: cipher, formats: formats, today: today}
+	return &SEPAMandates{store: store, contracts: contracts, cipher: cipher, formats: formats, issuers: issuers, today: today}
 }
 
 // ibanContext binds a sealed IBAN to its Träger and mandate reference, so a
@@ -179,6 +183,9 @@ func (m *SEPAMandates) SaveSEPACreditor(ctx context.Context, reviewer parentbill
 	if err := m.store.LockBillingSetting(ctx, reviewer.OrganizationID, settingSEPACreditor); err != nil {
 		return parentbilling.SEPACreditor{}, fmt.Errorf("parent billing: hold the SEPA creditor: %w", err)
 	}
+	if err := m.creditorFree(ctx, reviewer.OrganizationID, normalized.CreditorID); err != nil {
+		return parentbilling.SEPACreditor{}, err
+	}
 	before, err := creditorOf(ctx, m.store, reviewer.OrganizationID)
 	if err != nil {
 		return parentbilling.SEPACreditor{}, err
@@ -198,13 +205,13 @@ func (m *SEPAMandates) ListSEPAMandates(ctx context.Context, reviewer parentbill
 	if err := validReviewer(reviewer); err != nil {
 		return nil, err
 	}
-	family := ""
+	family, schoolID := "", int64(0)
 	if contractID > 0 {
-		key, _, err := m.familyOf(ctx, reviewer.OrganizationID, contractID)
+		key, party, err := m.familyOf(ctx, reviewer.OrganizationID, contractID)
 		if err != nil {
 			return nil, err
 		}
-		family = key
+		family, schoolID = key, party.SchoolID
 	}
 	mandates, err := m.store.SEPAMandates(ctx, reviewer.OrganizationID, family)
 	if err != nil {
@@ -215,6 +222,14 @@ func (m *SEPAMandates) ListSEPAMandates(ctx context.Context, reviewer parentbill
 	}
 	if err := m.nameParties(ctx, reviewer.OrganizationID, mandates); err != nil {
 		return nil, err
+	}
+	if err := m.nameIssuers(ctx, reviewer.OrganizationID, mandates); err != nil {
+		return nil, err
+	}
+	if contractID > 0 {
+		if err := m.forContract(ctx, reviewer.OrganizationID, schoolID, mandates); err != nil {
+			return nil, err
+		}
 	}
 	if err := m.store.InsertSEPAMandateEvents(ctx, reviewer.OrganizationID, reviewer.AccountID, mandateRead,
 		parentbilling.MandateFromOffice, nil, mandates); err != nil {
@@ -245,23 +260,43 @@ func (m *SEPAMandates) nameParties(ctx context.Context, organizationID int64, ma
 	return nil
 }
 
-// familyOf is the family of a contract of the Träger.
-func (m *SEPAMandates) familyOf(ctx context.Context, organizationID, contractID int64) (string, bool, error) {
+// familyOf is the family of a contract of the Träger, with the contract's
+// party.
+func (m *SEPAMandates) familyOf(ctx context.Context, organizationID, contractID int64) (string, parentbilling.CareRecipient, error) {
 	if contractID <= 0 {
-		return "", false, parentbilling.ErrFamilyUnknown
+		return "", parentbilling.CareRecipient{}, parentbilling.ErrFamilyUnknown
 	}
 	recipients, err := m.contracts.Recipients(ctx, organizationID, []int64{contractID})
 	if err != nil {
-		return "", false, fmt.Errorf("parent billing: read the contract party: %w", err)
+		return "", parentbilling.CareRecipient{}, fmt.Errorf("parent billing: read the contract party: %w", err)
 	}
 	// A contract of another Träger is not among the recipients and names
 	// no family.
 	recipient, known := recipients[contractID]
 	key := recipient.FamilyOf(contractID)
 	if !known || key == "" {
-		return "", false, parentbilling.ErrFamilyUnknown
+		return "", parentbilling.CareRecipient{}, parentbilling.ErrFamilyUnknown
 	}
-	return key, recipient.ContractDraft, nil
+	return key, recipient, nil
+}
+
+// contractCreditor is the creditor a mandate for a contract is given to
+// (#8040, ADR 0321 point 7): the creditor identifier of the body that bills
+// the contract's school, else the Träger's. A mandate binds it for good.
+func (m *SEPAMandates) contractCreditor(ctx context.Context, organizationID, schoolID int64) (parentbilling.SEPACreditor, *parentbilling.BillingIssuer, error) {
+	creditor, err := creditorOf(ctx, m.store, organizationID)
+	if err != nil {
+		return parentbilling.SEPACreditor{}, nil, err
+	}
+	issuers, err := m.issuers.SchoolBillingIssuers(ctx, organizationID, []int64{schoolID})
+	if err != nil {
+		return parentbilling.SEPACreditor{}, nil, fmt.Errorf("parent billing: read the issuer of the school: %w", err)
+	}
+	issuer := parentbilling.IssuerOf(issuers, schoolID)
+	if issuer != nil {
+		creditor.CreditorID = issuer.Key
+	}
+	return creditor, issuer, nil
 }
 
 // CreateSEPAMandate validates the mandate, seals its IBAN and stores it for
@@ -274,19 +309,20 @@ func (m *SEPAMandates) CreateSEPAMandate(ctx context.Context, reviewer parentbil
 	if err != nil {
 		return parentbilling.SEPAMandate{}, err
 	}
-	family, draft, err := m.familyOf(ctx, reviewer.OrganizationID, input.ContractID)
+	family, party, err := m.familyOf(ctx, reviewer.OrganizationID, input.ContractID)
 	if err != nil {
 		return parentbilling.SEPAMandate{}, err
 	}
 	// A mandate hangs on its contract; a draft can be discarded and would
 	// take the signed mandate with it (#7862).
-	if draft {
+	if party.ContractDraft {
 		return parentbilling.SEPAMandate{}, parentbilling.ErrSEPAMandateContractDraft
 	}
 	mandate.FamilyEmail, mandate.ContractID = family, ident.ID(input.ContractID)
-	// A mandate is given to the Träger's creditor identifier and stays bound
-	// to it; a later change of the identifier needs a new mandate (ADR 0171).
-	creditor, err := creditorOf(ctx, m.store, reviewer.OrganizationID)
+	// A mandate is given to the creditor identifier of the issuer of the
+	// contract's school and stays bound to it; a later change of the
+	// identifier or of the issuer needs a new mandate (ADR 0171, ADR 0321).
+	creditor, _, err := m.contractCreditor(ctx, reviewer.OrganizationID, party.SchoolID)
 	if err != nil {
 		return parentbilling.SEPAMandate{}, err
 	}
@@ -294,7 +330,7 @@ func (m *SEPAMandates) CreateSEPAMandate(ctx context.Context, reviewer parentbil
 		return parentbilling.SEPAMandate{}, parentbilling.ErrSEPACreditorMissing
 	}
 	if given := sepa.Compact(input.CreditorID); given != "" && given != creditor.CreditorID {
-		return parentbilling.SEPAMandate{}, validation.Errors{"creditor_id": errors.New("must be the creditor identifier of the Träger")}
+		return parentbilling.SEPAMandate{}, validation.Errors{"creditor_id": errors.New("must be the creditor identifier of the issuer of the contract")}
 	}
 	mandate.CreditorID = creditor.CreditorID
 	sealed, err := m.cipher.Seal([]byte(iban), ibanContext(reviewer.OrganizationID, mandate.Reference))
@@ -317,7 +353,7 @@ func (m *SEPAMandates) CreateSEPAMandate(ctx context.Context, reviewer parentbil
 }
 
 // named opens the account holder of a mandate a write answered, names its
-// contract party and tells whether it is bound to the creditor now.
+// contract party and tells whether it is bound to a creditor now.
 func (m *SEPAMandates) named(ctx context.Context, organizationID int64, mandate parentbilling.SEPAMandate) (parentbilling.SEPAMandate, error) {
 	creditor, err := creditorOf(ctx, m.store, organizationID)
 	if err != nil {
@@ -331,7 +367,59 @@ func (m *SEPAMandates) named(ctx context.Context, organizationID int64, mandate 
 	if err := m.nameParties(ctx, organizationID, list); err != nil {
 		return parentbilling.SEPAMandate{}, err
 	}
+	if err := m.nameIssuers(ctx, organizationID, list); err != nil {
+		return parentbilling.SEPAMandate{}, err
+	}
 	return list[0], nil
+}
+
+// forContract judges the mandates of the family for one contract (#8040):
+// only a mandate for the creditor of the contract's issuer collects its
+// invoices, and it comes first, the family's other mandates after it.
+func (m *SEPAMandates) forContract(ctx context.Context, organizationID, schoolID int64, mandates []parentbilling.SEPAMandate) error {
+	creditor, _, err := m.contractCreditor(ctx, organizationID, schoolID)
+	if err != nil {
+		return err
+	}
+	for i := range mandates {
+		mandates[i].CreditorCurrent = creditor.CreditorID != "" && mandates[i].CreditorID == creditor.CreditorID
+	}
+	slices.SortStableFunc(mandates, func(a, b parentbilling.SEPAMandate) int {
+		switch {
+		case a.CreditorCurrent == b.CreditorCurrent:
+			return 0
+		case a.CreditorCurrent:
+			return -1
+		}
+		return 1
+	})
+	return nil
+}
+
+// nameIssuers names the body each mandate is given to (#8040): a mandate
+// for the creditor identifier of a body that bills a school of the Träger
+// now is current, as one for the Träger's own.
+func (m *SEPAMandates) nameIssuers(ctx context.Context, organizationID int64, mandates []parentbilling.SEPAMandate) error {
+	// A mandate for the Träger's creditor identifier now needs no issuer.
+	if !slices.ContainsFunc(mandates, func(mandate parentbilling.SEPAMandate) bool { return !mandate.CreditorCurrent }) {
+		return nil
+	}
+	issuers, err := schoolIssuers(ctx, m.issuers, organizationID)
+	if err != nil {
+		return err
+	}
+	bodies := map[string]parentbilling.BillingIssuer{}
+	for _, issuer := range parentbilling.DistinctIssuers(issuers) {
+		if !issuer.IsTraeger() {
+			bodies[issuer.Key] = issuer
+		}
+	}
+	for i := range mandates {
+		if issuer, ok := bodies[mandates[i].CreditorID]; ok {
+			mandates[i].Issuer, mandates[i].CreditorCurrent = &issuer, true
+		}
+	}
+	return nil
 }
 
 // normalizeMandate trims and checks a new mandate and answers it with its
@@ -553,6 +641,25 @@ func (m *SEPAMandates) record(ctx context.Context, reviewer parentbilling.Holida
 	if err := m.store.InsertSEPAMandateEvents(ctx, reviewer.OrganizationID, reviewer.AccountID, action, source, fields,
 		[]parentbilling.SEPAMandate{mandate}); err != nil {
 		return fmt.Errorf("parent billing: record the SEPA mandate: %w", err)
+	}
+	return nil
+}
+
+// creditorFree refuses the creditor identifier of a body that bills a
+// school itself as the Träger's (#8040, ADR 0321 point 10): the Träger and
+// the body would collect under one identifier into two accounts.
+func (m *SEPAMandates) creditorFree(ctx context.Context, organizationID int64, creditorID string) error {
+	if creditorID == "" {
+		return nil
+	}
+	issuers, err := schoolIssuers(ctx, m.issuers, organizationID)
+	if err != nil {
+		return err
+	}
+	for _, issuer := range parentbilling.DistinctIssuers(issuers) {
+		if !issuer.IsTraeger() && issuer.Key == creditorID {
+			return &parentbilling.IssuerCreditorConflictError{Issuer: issuer}
+		}
 	}
 	return nil
 }

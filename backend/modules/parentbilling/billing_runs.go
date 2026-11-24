@@ -76,6 +76,37 @@ var (
 	ErrInvoiceNumberTaken = errors.New("an invoice of the Träger already carries this number")
 )
 
+// NumberRangeMissingError names the issuer and the service a release has no
+// pattern for (#8040, ADR 0321): a body numbers its documents in a range of
+// its own, never in the Träger's. It is ErrNumberRangeMissing.
+type NumberRangeMissingError struct {
+	Issuer  BillingIssuer
+	Service string
+}
+
+func (e *NumberRangeMissingError) Error() string {
+	return fmt.Sprintf("%s: issuer %q, service %s", ErrNumberRangeMissing, e.Issuer.Key, e.Service)
+}
+
+func (e *NumberRangeMissingError) Unwrap() error { return ErrNumberRangeMissing }
+
+// ErrIssuerUsesTraegerCreditor refuses a release while a body bills with the
+// creditor identifier of the Träger (#8040, ADR 0321 point 10): both would
+// collect under one identifier into two accounts and count two ranges.
+var ErrIssuerUsesTraegerCreditor = errors.New("parent billing: a body bills with the creditor identifier of the Träger")
+
+// IssuerCreditorConflictError names the body. It is
+// ErrIssuerUsesTraegerCreditor.
+type IssuerCreditorConflictError struct {
+	Issuer BillingIssuer
+}
+
+func (e *IssuerCreditorConflictError) Error() string {
+	return fmt.Sprintf("%s: issuer %q", ErrIssuerUsesTraegerCreditor, e.Issuer.Key)
+}
+
+func (e *IssuerCreditorConflictError) Unwrap() error { return ErrIssuerUsesTraegerCreditor }
+
 // BillingRun is a run as the list shows it. DocumentCount and TotalCents are
 // set once the run is released.
 type BillingRun struct {
@@ -200,7 +231,11 @@ type BillingDocument struct {
 	Kind  string   `json:"kind"`
 	// DocumentKind is the kind of document the release froze (#4688); a
 	// draft carries the kind its release would freeze now.
-	DocumentKind        string                `json:"document_kind,omitempty"`
+	DocumentKind string `json:"document_kind,omitempty"`
+	// Issuer is the Schulträger or the Gemeinde that issues the document
+	// (#8040, ADR 0321), nil for the Träger; an issued document keeps the one
+	// its release froze.
+	Issuer              *BillingIssuer        `json:"issuer,omitempty"`
 	ReferenceDocumentID *ident.ID             `json:"reference_document_id"`
 	ReferenceNumber     string                `json:"reference_number"`
 	Reason              string                `json:"reason"`
@@ -249,8 +284,11 @@ type BillingRunDetail struct {
 	PaymentTextMissingDebtorNumbers int               `json:"payment_text_missing_debtor_numbers"`
 	NumberPattern                   string            `json:"number_pattern"`
 	NumberRangeSet                  bool              `json:"number_range_set"`
-	BilledInAdvance                 bool              `json:"billed_in_advance"`
-	Letters                         *BillingLetters   `json:"letters"`
+	// NumberRangeMissingFor names the issuer without a pattern (#8040);
+	// the release refuses while it is set.
+	NumberRangeMissingFor *BillingIssuer  `json:"number_range_missing_for,omitempty"`
+	BilledInAdvance       bool            `json:"billed_in_advance"`
+	Letters               *BillingLetters `json:"letters"`
 	// DueDates are the due dates of the run per payment method (#4689).
 	DueDates []RunDueDate `json:"due_dates"`
 	// DueDatesVersion is the read-state token of DueDates (ADR 0311): a
@@ -291,8 +329,11 @@ type BillingRelease struct {
 // NextNumber its running number and LastNumber the last one issued (0
 // before the first). Year is the year the counter belongs to, 0 for a
 // pattern without a year. Starts lists the start values set for this
-// counter, the newest first (#7358).
+// counter, the newest first (#7358). Issuer names whose numbers they are
+// (#8040, ADR 0321): every issuer of the Träger has its own range per
+// service.
 type NumberRange struct {
+	Issuer     BillingIssuer      `json:"issuer"`
 	Service    string             `json:"service"`
 	Pattern    string             `json:"pattern"`
 	Example    string             `json:"example"`
@@ -317,9 +358,18 @@ type NumberRangeStart struct {
 	SetByName  string    `json:"set_by_name"`
 	// SetByAccount is false once the account that set the value is deleted.
 	SetByAccount bool `json:"set_by_account"`
-	// Service and AccountID are the owner's own keys of the row.
+	// IssuerKey, Service and AccountID are the owner's own keys of the row.
+	IssuerKey string `json:"-"`
 	Service   string `json:"-"`
 	AccountID *int64 `json:"-"`
+}
+
+// NumberCounterKey names a counter: the issuer, the service and the year (0
+// for a pattern without a year).
+type NumberCounterKey struct {
+	IssuerKey string
+	Service   string
+	Year      int
 }
 
 // NumberCounter is the state of the counter of a service and year: the
@@ -355,7 +405,7 @@ func (e *NumberRangeStartTakenError) Unwrap() error { return ErrNumberRangeStart
 // ErrNumberRangeMissing. Every change stays in the history of the range
 // with the account.
 type NumberRangeStarts interface {
-	SetNumberRangeStart(ctx context.Context, reviewer HolidayReviewer, service string, nextNumber int64) (NumberRange, error)
+	SetNumberRangeStart(ctx context.Context, reviewer HolidayReviewer, issuerKey, service string, nextNumber int64) (NumberRange, error)
 }
 
 // HolidayBillingPeriod is a holiday period as a run needs it: its name and
@@ -376,6 +426,9 @@ type HolidayBillingChild struct {
 	LastName  string
 	// BirthDate tells the child apart for its own debtor number (#7007).
 	BirthDate calendar.Date
+	// HomeSchoolID is the school of the Träger the child attends, nil for a
+	// holiday guest; its issuer bills the child's weeks (#8040).
+	HomeSchoolID *int64
 }
 
 // HolidayBillingRegistration is a confirmed registration with the parent
@@ -461,5 +514,5 @@ type BillingRuns interface {
 	// ListNumberRanges lists the number range of every service with its
 	// counter and start values; the reviewer is the reader the history names.
 	ListNumberRanges(ctx context.Context, reviewer HolidayReviewer) ([]NumberRange, error)
-	SetNumberRange(ctx context.Context, reviewer HolidayReviewer, service, pattern string) (NumberRange, error)
+	SetNumberRange(ctx context.Context, reviewer HolidayReviewer, issuerKey, service, pattern string) (NumberRange, error)
 }

@@ -140,22 +140,26 @@ func DefaultSEPACreditor() SEPACreditor {
 // SEPAMandate is a mandate as the Abrechnung sees it: the IBAN only as its
 // mask. PartyFirstName and PartyLastName name the contract party of the
 // family. CreditorID is the creditor identifier the mandate was given to;
-// CreditorCurrent tells whether it is still the Träger's. LastCollectedOn is
+// CreditorCurrent tells whether it is still the Träger's or the one of a
+// body that bills a school of the Träger (#8040). LastCollectedOn is
 // the day of the last collection (#4697 sets it; FRST becomes RCUR, and 36
 // months without one end the mandate).
 type SEPAMandate struct {
-	ID              ident.ID       `json:"id"`
-	ContractID      ident.ID       `json:"contract_id"`
-	FamilyEmail     string         `json:"family_email"`
-	PartyFirstName  string         `json:"party_first_name"`
-	PartyLastName   string         `json:"party_last_name"`
-	Reference       string         `json:"reference"`
-	SignedOn        calendar.Date  `json:"signed_on"`
-	Kind            string         `json:"kind"`
-	Sequence        string         `json:"sequence"`
-	AccountHolder   string         `json:"account_holder"`
-	CreditorID      string         `json:"creditor_id" contract_text:"SEPA creditor identifier"`
-	CreditorCurrent bool           `json:"creditor_current"`
+	ID              ident.ID      `json:"id"`
+	ContractID      ident.ID      `json:"contract_id"`
+	FamilyEmail     string        `json:"family_email"`
+	PartyFirstName  string        `json:"party_first_name"`
+	PartyLastName   string        `json:"party_last_name"`
+	Reference       string        `json:"reference"`
+	SignedOn        calendar.Date `json:"signed_on"`
+	Kind            string        `json:"kind"`
+	Sequence        string        `json:"sequence"`
+	AccountHolder   string        `json:"account_holder"`
+	CreditorID      string        `json:"creditor_id" contract_text:"SEPA creditor identifier"`
+	CreditorCurrent bool          `json:"creditor_current"`
+	// Issuer names the Schulträger or the Gemeinde the mandate is given to
+	// (#8040), nil for the Träger.
+	Issuer          *BillingIssuer `json:"issuer,omitempty"`
 	LastCollectedOn *calendar.Date `json:"last_collected_on"`
 	// ExpiresOn is the first day the mandate no longer holds without a
 	// further collection (#4697, 36 months).

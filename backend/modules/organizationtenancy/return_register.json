@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "af2414cd61674dcca0f891e0676dde9d9962a0d8d37fc1f1a3ee24b77eacaf1e",
+  "catalogSHA256": "3123ba7fabecada844c811ae34ea7b1379a7b9e27d465086979984273d27720f",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -19282,6 +19282,12 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "issuer_key",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -19327,6 +19333,12 @@
           "name": "updated_at",
           "type": "timestamp with time zone",
           "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "issuer_key",
+          "type": "character varying",
+          "udt": "varchar",
           "nullable": false
         }
       ],
@@ -19386,6 +19398,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "issuer_key",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -19442,6 +19460,12 @@
           "name": "updated_at",
           "type": "timestamp with time zone",
           "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "issuer_key",
+          "type": "character varying",
+          "udt": "varchar",
           "nullable": false
         }
       ],
@@ -20124,6 +20148,18 @@
           "name": "holiday_registration_child_id",
           "type": "bigint",
           "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "issuer_key",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "issuer",
+          "type": "jsonb",
+          "udt": "jsonb",
           "nullable": true
         },
         {
@@ -21209,6 +21245,18 @@
           "type": "text",
           "udt": "text",
           "nullable": false
+        },
+        {
+          "name": "issuer_key",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "issuer",
+          "type": "jsonb",
+          "udt": "jsonb",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -22917,6 +22965,18 @@
           "nullable": true
         },
         {
+          "name": "issuer_key",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "issuer",
+          "type": "jsonb",
+          "udt": "jsonb",
+          "nullable": true
+        },
+        {
           "name": "account_holder",
           "type": "text",
           "udt": "text",
@@ -23669,6 +23729,12 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "issuer_key",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
         }
       ],
       "relationships": [

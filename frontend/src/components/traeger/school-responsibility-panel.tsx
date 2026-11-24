@@ -27,5 +27,11 @@ export function SchoolResponsibilityPanel({
       />
     );
   }
-  return <SchoolResponsibilityTab school={school} reload={reloadOrThrow} />;
+  return (
+    <SchoolResponsibilityTab
+      school={school}
+      schools={data}
+      reload={reloadOrThrow}
+    />
+  );
 }

@@ -34,6 +34,9 @@ type previewInput struct {
 	// perChild bills each child of a registration without an invoice on
 	// an invoice of its own (#7007).
 	perChild bool
+	// issuers names the issuer of each child of a registration, by child
+	// (#8040); a child without one is the Träger's.
+	issuers map[int64]*parentbilling.BillingIssuer
 }
 
 // invoiceShapes says for each registration with an invoice, issued or
@@ -54,7 +57,9 @@ func (in previewInput) invoiceShapes() map[int64]bool {
 func (in previewInput) invoiceKeys(registration parentbilling.HolidayBillingRegistration, shapes map[int64]bool) []parentbilling.HolidayInvoiceKey {
 	perChild, known := shapes[registration.ID]
 	if !known {
-		perChild = in.perChild
+		// Children of different issuers never share a document (#8040,
+		// ADR 0321 point 3).
+		perChild = in.perChild || in.mixedIssuers(registration)
 	}
 	if !perChild {
 		return []parentbilling.HolidayInvoiceKey{{RegistrationID: registration.ID}}
@@ -64,6 +69,28 @@ func (in previewInput) invoiceKeys(registration parentbilling.HolidayBillingRegi
 		keys[i] = parentbilling.HolidayInvoiceKey{RegistrationID: registration.ID, ChildID: child.ID}
 	}
 	return keys
+}
+
+// mixedIssuers tells whether the children of a registration have different
+// issuers.
+func (in previewInput) mixedIssuers(registration parentbilling.HolidayBillingRegistration) bool {
+	for _, child := range registration.Children {
+		if parentbilling.IssuerKeyOf(in.issuers[child.ID]) != parentbilling.IssuerKeyOf(in.issuers[registration.Children[0].ID]) {
+			return true
+		}
+	}
+	return false
+}
+
+// issuerOf is the issuer of the document of a registration: the issuer of
+// the child it bills, or of the first child of an invoice of the whole
+// registration. A registration that kept the shape of its first invoice
+// takes its first child's (ADR 0321 point 3).
+func (in previewInput) issuerOf(registration parentbilling.HolidayBillingRegistration, childID int64) *parentbilling.BillingIssuer {
+	if childID == 0 && len(registration.Children) > 0 {
+		childID = registration.Children[0].ID
+	}
+	return in.issuers[childID]
 }
 
 // preview is the draft invoices of a run and the confirmed registrations it
@@ -144,6 +171,7 @@ func (in previewInput) draft(registration parentbilling.HolidayBillingRegistrati
 	key parentbilling.HolidayInvoiceKey, byChild map[int64][]parentbilling.BillingCorrection,
 ) parentbilling.BillingDocument {
 	document := draftDocument(in.run, registration, contribution, key.ChildID, in.replaced.corrections[key], byChild)
+	document.Issuer = in.issuerOf(registration, key.ChildID)
 	if cancelled, ok := in.replaces[key]; ok {
 		document.ReferenceDocumentID, document.ReferenceNumber = &cancelled.ID, cancelled.Number
 		document.ReplacedCredits = in.replaced.credits[key]

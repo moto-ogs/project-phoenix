@@ -49,6 +49,11 @@ export const traegerKeys = {
   schoolsAlerts: () => "traeger-schools-alerts",
   // Pflichtangaben für Verträge und Abrechnung auf der Startseite (#7177).
   requiredDetails: () => "traeger-required-details",
+  // Was jede Stelle, die eine Schule selbst abrechnet, noch braucht
+  // (#8040): Zählwerte und Einstellungen, keine Personendaten.
+  billingIssuers: () => "traeger-billing-issuers",
+  // Nummernkreise dieser Stellen (#8040).
+  issuerNumberRanges: () => "traeger-number-range-issuers",
   occupancy: () => "traeger-occupancy",
   // Ankunft und Abholung eines Zeitraums (#4714): Durchschnitte, keine Kinder.
   arrivalPickupTimes: (from: string, to: string) =>

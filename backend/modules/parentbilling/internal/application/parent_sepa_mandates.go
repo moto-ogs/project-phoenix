@@ -43,19 +43,22 @@ type ParentMandates struct {
 	cipher    parentbilling.BankDataCipher
 	terms     parentbilling.OnlineMandateSettings
 	sums      parentbilling.ContentFingerprints
-	today     func() calendar.Date
+	// issuers names the body that bills the contract's school, to whose
+	// creditor identifier the parents give the mandate (#8040).
+	issuers parentbilling.BillingIssuers
+	today   func() calendar.Date
 }
 
 var _ parentbilling.ParentSEPAMandates = (*ParentMandates)(nil)
 
 // NewParentMandates builds the parents' mandates.
 func NewParentMandates(store ParentMandateStore, contracts parentbilling.ContractParties, cipher parentbilling.BankDataCipher,
-	terms parentbilling.OnlineMandateSettings, sums parentbilling.ContentFingerprints, today func() calendar.Date,
+	terms parentbilling.OnlineMandateSettings, sums parentbilling.ContentFingerprints, issuers parentbilling.BillingIssuers, today func() calendar.Date,
 ) *ParentMandates {
-	if store == nil || contracts == nil || cipher == nil || terms == nil || sums == nil || today == nil {
-		panic("parent billing: the store, the care contracts, the cipher, the settings, the fingerprints and the clock are required")
+	if store == nil || contracts == nil || cipher == nil || terms == nil || sums == nil || issuers == nil || today == nil {
+		panic("parent billing: the store, the care contracts, the cipher, the settings, the fingerprints, the issuers and the clock are required")
 	}
-	return &ParentMandates{store: store, contracts: contracts, cipher: cipher, terms: terms, sums: sums, today: today}
+	return &ParentMandates{store: store, contracts: contracts, cipher: cipher, terms: terms, sums: sums, issuers: issuers, today: today}
 }
 
 // textChecksum is the lower-case hex SHA-256 of the text in UTF-8.
@@ -64,10 +67,28 @@ func (p *ParentMandates) textChecksum(text string) string { return p.sums.Conten
 var errParentMandateReader = errors.New("parent billing: the mandate needs a Träger, an account, a contract and the family")
 
 // parentMandateContext is what the Träger set and the family of the reader.
+// A contract at a school a body bills takes the body's name, address and
+// creditor identifier (#8040); creditorName is empty for the Träger, whose
+// name the reader carries.
 type parentMandateContext struct {
-	terms    parentbilling.OnlineMandateTerms
-	creditor parentbilling.SEPACreditor
-	family   string
+	terms        parentbilling.OnlineMandateTerms
+	creditor     parentbilling.SEPACreditor
+	creditorName string
+	family       string
+	// bodies are the creditor identifiers of the bodies that bill a school
+	// of the Träger now; traeger and traegerAddress keep the Träger's own
+	// creditor and address for another contract of the reader.
+	bodies         map[string]bool
+	traeger        parentbilling.SEPACreditor
+	traegerAddress string
+}
+
+// name is the creditor the mandate text and the portal name.
+func (c parentMandateContext) name(reader parentbilling.ParentMandateReader) string {
+	if c.creditorName != "" {
+		return c.creditorName
+	}
+	return strings.TrimSpace(reader.CreditorName)
 }
 
 // ready tells whether the Träger can take a mandate: a creditor identifier
@@ -95,7 +116,41 @@ func (p *ParentMandates) open(ctx context.Context, organizationID int64, reader 
 	if err != nil {
 		return parentMandateContext{}, err
 	}
-	return parentMandateContext{terms: terms, creditor: creditor, family: family}, nil
+	mc := parentMandateContext{terms: terms, creditor: creditor, family: family, traeger: creditor, traegerAddress: terms.CreditorAddress}
+	issuers, err := schoolIssuers(ctx, p.issuers, organizationID)
+	if err != nil {
+		return parentMandateContext{}, err
+	}
+	if len(issuers) == 0 {
+		return mc, nil
+	}
+	recipients, err := p.contracts.Recipients(ctx, organizationID, []int64{reader.ContractID})
+	if err != nil {
+		return parentMandateContext{}, fmt.Errorf("parent billing: read the contract party: %w", err)
+	}
+	return mc.forSchool(issuers, recipients[reader.ContractID].SchoolID), nil
+}
+
+// forSchool puts the body that bills the school of the contract in place of
+// the Träger as the creditor (#8040, ADR 0321 point 7): its name, the
+// address of its master data and its creditor identifier. It names the
+// creditor identifiers of every body, whose mandates are none of the
+// Träger.
+func (c parentMandateContext) forSchool(issuers map[int64]parentbilling.BillingIssuer, schoolID int64) parentMandateContext {
+	c.bodies = map[string]bool{}
+	for _, issuer := range issuers {
+		c.bodies[issuer.Key] = true
+	}
+	c.creditor, c.creditorName, c.terms.CreditorAddress = c.traeger, "", c.traegerAddress
+	issuer := parentbilling.IssuerOf(issuers, schoolID)
+	if issuer == nil {
+		return c
+	}
+	c.creditor.CreditorID, c.creditorName, c.terms.CreditorAddress = issuer.Key, issuer.Name, ""
+	if lines := textLines(issuer.SenderText); len(lines) > 1 {
+		c.terms.CreditorAddress = strings.Join(lines[1:], ", ")
+	}
+	return c
 }
 
 // ParentSEPAMandate answers the family's mandate in force with its proof,
@@ -108,7 +163,7 @@ func (p *ParentMandates) ParentSEPAMandate(ctx context.Context, organizationID i
 	if err != nil {
 		return parentbilling.ParentMandate{}, err
 	}
-	inForce, err := p.mandateInForce(ctx, organizationID, mc.family)
+	inForce, err := p.mandateInForce(ctx, organizationID, mc)
 	if err != nil {
 		return parentbilling.ParentMandate{}, err
 	}
@@ -122,18 +177,34 @@ func (p *ParentMandates) ParentSEPAMandate(ctx context.Context, organizationID i
 	return p.withMandate(ctx, organizationID, reader, mc, *inForce)
 }
 
-// mandateInForce reads the family's mandate in force, nil without one.
-func (p *ParentMandates) mandateInForce(ctx context.Context, organizationID int64, family string) (*parentbilling.SEPAMandate, error) {
-	mandates, err := p.store.SEPAMandates(ctx, organizationID, family)
+// mandateInForce reads the family's mandate in force for the creditor of
+// the contract (#8040), nil without one.
+func (p *ParentMandates) mandateInForce(ctx context.Context, organizationID int64, mc parentMandateContext) (*parentbilling.SEPAMandate, error) {
+	mandates, err := p.store.SEPAMandates(ctx, organizationID, mc.family)
 	if err != nil {
 		return nil, err
 	}
+	return mc.inForce(mandates), nil
+}
+
+// inForce picks the family's mandate in force for the creditor. For a
+// contract the Träger bills, a mandate given to an earlier creditor
+// identifier of the Träger stands in: it shows why it no longer collects. A
+// mandate given to a body is no mandate of the Träger.
+func (c parentMandateContext) inForce(mandates []parentbilling.SEPAMandate) *parentbilling.SEPAMandate {
+	var earlier *parentbilling.SEPAMandate
 	for i := range mandates {
-		if mandates[i].InForce() && mandates[i].FamilyEmail == family {
-			return &mandates[i], nil
+		if !mandates[i].InForce() || mandates[i].FamilyEmail != c.family {
+			continue
+		}
+		if mandates[i].CreditorID == c.creditor.CreditorID {
+			return &mandates[i]
+		}
+		if earlier == nil && c.creditorName == "" && !c.bodies[mandates[i].CreditorID] {
+			earlier = &mandates[i]
 		}
 	}
-	return nil, nil
+	return earlier
 }
 
 // withoutMandate answers the creditor and the proposal of the contract
@@ -156,7 +227,7 @@ func (p *ParentMandates) withoutMandate(ctx context.Context, organizationID int6
 }
 
 func creditorView(reader parentbilling.ParentMandateReader, mc parentMandateContext) *parentbilling.ParentMandateCreditor {
-	return &parentbilling.ParentMandateCreditor{Name: strings.TrimSpace(reader.CreditorName),
+	return &parentbilling.ParentMandateCreditor{Name: mc.name(reader),
 		Address: oneLine(mc.terms.CreditorAddress), CreditorID: mc.creditor.CreditorID}
 }
 
@@ -220,7 +291,7 @@ func (p *ParentMandates) draft(reader parentbilling.ParentMandateReader, mc pare
 		return parentMandateDraft{}, errs
 	}
 	return parentMandateDraft{account: account, iban: iban, fields: mandateTextFields{
-		CreditorName: strings.TrimSpace(reader.CreditorName), CreditorAddress: oneLine(mc.terms.CreditorAddress),
+		CreditorName: mc.name(reader), CreditorAddress: oneLine(mc.terms.CreditorAddress),
 		CreditorID: mc.creditor.CreditorID, Reference: reference, Holder: account.AccountHolder, Street: street,
 		PostalCode: postalCode, City: city, IBANMasked: sepa.MaskIBAN(iban), IBAN: iban, BIC: account.BIC, SignedOn: p.today(),
 	}}, nil
@@ -394,7 +465,7 @@ func (p *ParentMandates) RevokeParentSEPAMandate(ctx context.Context, organizati
 	if err != nil {
 		return parentbilling.ParentMandate{}, err
 	}
-	inForce, err := p.mandateInForce(ctx, organizationID, mc.family)
+	inForce, err := p.mandateInForce(ctx, organizationID, mc)
 	if err != nil {
 		return parentbilling.ParentMandate{}, err
 	}
@@ -460,16 +531,25 @@ func (p *ParentMandates) ParentSEPAMandateStatuses(ctx context.Context, organiza
 	if err != nil {
 		return nil, fmt.Errorf("parent billing: read the contract parties for mandate status: %w", err)
 	}
-	mandate, err := p.mandateInForce(ctx, organizationID, mc.family)
+	mandates, err := p.store.SEPAMandates(ctx, organizationID, mc.family)
 	if err != nil {
 		return nil, err
 	}
-	status := parentbilling.ParentMandateStatus{Enabled: true,
-		CollectionEligible: parentbilling.MandateCollectionGap(mc.creditor, mandate, p.today()) == ""}
+	issuers, err := schoolIssuers(ctx, p.issuers, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	// Each contract is collected for the creditor of its school (#8040).
 	for _, id := range contractIDs {
-		if parentbilling.FamilyKey(parties[id].Email) == mc.family {
-			out[id] = status
+		if parentbilling.FamilyKey(parties[id].Email) != mc.family {
+			continue
 		}
+		own := mc
+		if len(issuers) > 0 {
+			own = mc.forSchool(issuers, parties[id].SchoolID)
+		}
+		out[id] = parentbilling.ParentMandateStatus{Enabled: true,
+			CollectionEligible: parentbilling.MandateCollectionGap(own.creditor, own.inForce(mandates), p.today()) == ""}
 	}
 	return out, nil
 }

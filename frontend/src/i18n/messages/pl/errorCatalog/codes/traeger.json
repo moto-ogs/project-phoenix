@@ -22,6 +22,7 @@
   "logo_not_found": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "logo_too_large": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "master_data_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
+  "school_party_creditor_account_conflict": "Ten identyfikator wierzyciela jest już wpisany dla {school_name} z innym kontem. Wpisz to samo konto lub sprawdź identyfikator.",
   "member_not_found": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "no_membership": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
   "report_template_invalid": "Sprawdź dane szablonu.",

@@ -4,6 +4,8 @@ import (
 	"context"
 	"slices"
 
+	careContractCompose "github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
+
 	organizationTenancyCompose "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/compose"
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
@@ -20,6 +22,7 @@ func requiredDetailSources(organizations HolidayOrganizations, settings TraegerB
 	return parentbilling.RequiredDetailSources{
 		Schools: parentBillingCareSchools{organizations: organizations}, Modules: schoolModuleSwitches{settings: schoolSettings},
 		Sender: parentBillingLetterPost{settings: settings}, Accounts: organizationTenancyCompose.NewTraegerMasterData(),
+		Issuers: newParentBillingLetterheads(settings, schoolSettings), Contracts: parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()},
 	}
 }
 

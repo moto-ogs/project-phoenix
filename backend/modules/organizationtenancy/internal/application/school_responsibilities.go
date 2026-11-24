@@ -103,35 +103,28 @@ func (s *SchoolResponsibilities) ResponsibleParties(ctx context.Context, organiz
 	if organizationID <= 0 {
 		return nil, errTraegerRequired
 	}
-	result := map[int64]organizationtenancy.SchoolParty{}
-	if len(schoolIDs) == 0 {
-		return result, nil
-	}
-	// A school without a stored Schulträger or Gemeinde has the Träger
-	// responsible whatever its settings say (EffectiveBody), so the bodies
-	// come first and only schools with one go on: the common Träger without
-	// any body costs one statement (#8041).
-	stored, err := s.store.SchoolParties(ctx, organizationID, schoolIDs)
-	if err != nil || len(stored) == 0 {
-		return result, err
-	}
-	// Only schools of the Träger: the settings are read outside its
-	// transaction, so a foreign school must not reach that read.
-	own, err := s.store.TraegerSchoolNames(ctx, organizationID)
+	// Only schools of the Träger with a stored body: without master data
+	// the Träger is responsible (EffectiveBody), so no setting needs to be
+	// read; the settings are read outside its transaction, so a foreign
+	// school must not reach that read (#8040).
+	stored, err := s.store.OwnSchoolParties(ctx, organizationID, schoolIDs)
 	if err != nil {
 		return nil, err
 	}
-	asked := make([]int64, 0, len(stored))
-	for _, school := range own {
-		if slices.ContainsFunc(stored, func(party organizationtenancy.SchoolParty) bool { return party.SchoolID.Int64() == school.ID }) &&
-			slices.Contains(schoolIDs, school.ID) {
-			asked = append(asked, school.ID)
-		}
-	}
-	if len(asked) == 0 {
+	result := map[int64]organizationtenancy.SchoolParty{}
+	if len(stored) == 0 {
 		return result, nil
 	}
-	parties, choices, err := s.choices(ctx, stored, asked)
+	parties := map[int64]map[organizationtenancy.ResponsibleBody]organizationtenancy.SchoolParty{}
+	asked := []int64{}
+	for _, row := range stored {
+		if parties[row.SchoolID.Int64()] == nil {
+			parties[row.SchoolID.Int64()] = map[organizationtenancy.ResponsibleBody]organizationtenancy.SchoolParty{}
+			asked = append(asked, row.SchoolID.Int64())
+		}
+		parties[row.SchoolID.Int64()][row.Kind] = row
+	}
+	choices, err := s.choices(ctx, asked)
 	if err != nil {
 		return nil, err
 	}
@@ -142,35 +135,6 @@ func (s *SchoolResponsibilities) ResponsibleParties(ctx context.Context, organiz
 		}
 	}
 	return result, nil
-}
-
-// choices groups the stored bodies of the asked schools and reads their
-// settings.
-func (s *SchoolResponsibilities) choices(ctx context.Context, stored []organizationtenancy.SchoolParty, schoolIDs []int64,
-) (map[int64]map[organizationtenancy.ResponsibleBody]organizationtenancy.SchoolParty,
-	map[int64]map[organizationtenancy.ResponsibilityArea]organizationtenancy.SchoolResponsibilityChoice, error) {
-	parties := map[int64]map[organizationtenancy.ResponsibleBody]organizationtenancy.SchoolParty{}
-	for _, row := range stored {
-		if !slices.Contains(schoolIDs, row.SchoolID.Int64()) {
-			continue
-		}
-		if parties[row.SchoolID.Int64()] == nil {
-			parties[row.SchoolID.Int64()] = map[organizationtenancy.ResponsibleBody]organizationtenancy.SchoolParty{}
-		}
-		parties[row.SchoolID.Int64()][row.Kind] = row
-	}
-	choices, err := s.settings.SchoolResponsibilityChoices(ctx, schoolIDs)
-	if err != nil {
-		return nil, nil, fmt.Errorf("organization tenancy: read the responsibilities of the schools: %w", err)
-	}
-	for _, schoolID := range schoolIDs {
-		for _, area := range organizationtenancy.ResponsibilityAreas() {
-			if choices[schoolID][area].Body == "" {
-				return nil, nil, fmt.Errorf("organization tenancy: no responsibility %s for school %d", area, schoolID)
-			}
-		}
-	}
-	return parties, choices, nil
 }
 
 // read loads the stored bodies and the settings of the schools. A school
@@ -192,18 +156,29 @@ func (s *SchoolResponsibilities) read(ctx context.Context, organizationID int64,
 		}
 		parties[row.SchoolID.Int64()][row.Kind] = row
 	}
+	choices, err := s.choices(ctx, schoolIDs)
+	if err != nil {
+		return nil, nil, err
+	}
+	return parties, choices, nil
+}
+
+// choices reads the settings of the schools. A school the settings do not
+// answer for is an error, never the default.
+func (s *SchoolResponsibilities) choices(ctx context.Context, schoolIDs []int64,
+) (map[int64]map[organizationtenancy.ResponsibilityArea]organizationtenancy.SchoolResponsibilityChoice, error) {
 	choices, err := s.settings.SchoolResponsibilityChoices(ctx, schoolIDs)
 	if err != nil {
-		return nil, nil, fmt.Errorf("organization tenancy: read the responsibilities of the schools: %w", err)
+		return nil, fmt.Errorf("organization tenancy: read the responsibilities of the schools: %w", err)
 	}
 	for _, schoolID := range schoolIDs {
 		for _, area := range organizationtenancy.ResponsibilityAreas() {
 			if choices[schoolID][area].Body == "" {
-				return nil, nil, fmt.Errorf("organization tenancy: no responsibility %s for school %d", area, schoolID)
+				return nil, fmt.Errorf("organization tenancy: no responsibility %s for school %d", area, schoolID)
 			}
 		}
 	}
-	return parties, choices, nil
+	return choices, nil
 }
 
 // SaveParty stores the master data of the school's Schulträger or Gemeinde.
@@ -215,6 +190,9 @@ func (s *SchoolResponsibilities) SaveParty(ctx context.Context, organizationID, 
 	}
 	input, err = normalizeSchoolParty(input)
 	if err != nil {
+		return organizationtenancy.SchoolParty{}, err
+	}
+	if err := s.creditorAccountFree(ctx, organizationID, schoolID, kind, input); err != nil {
 		return organizationtenancy.SchoolParty{}, err
 	}
 	// The body as its author read it, under the profile lock (ADR 0311): a
@@ -238,6 +216,49 @@ func (s *SchoolResponsibilities) SaveParty(ctx context.Context, organizationID, 
 		return organizationtenancy.SchoolParty{}, err
 	}
 	return saved, nil
+}
+
+// creditorAccountFree refuses a creditor identifier another body of the
+// Träger holds with another bank account, account holder or BIC (#8040,
+// ADR 0321 point 2): the
+// schools of one creditor share its number range, its mandates and its
+// debit file, which names one account. It runs under the lock of the
+// Träger's profile row, so two saves cannot both pass.
+func (s *SchoolResponsibilities) creditorAccountFree(ctx context.Context, organizationID, schoolID int64, kind organizationtenancy.ResponsibleBody,
+	input organizationtenancy.SchoolPartyInput) error {
+	if input.CreditorID == "" || input.IBAN == "" {
+		return nil
+	}
+	parties, err := s.store.OwnSchoolParties(ctx, organizationID, nil)
+	if err != nil {
+		return err
+	}
+	for _, party := range parties {
+		if (party.SchoolID.Int64() == schoolID && party.Kind == kind) || party.CreditorID != input.CreditorID || party.IBAN == "" ||
+			sameAccount(party, input) {
+			continue
+		}
+		schools, err := s.store.TraegerSchoolNames(ctx, organizationID)
+		if err != nil {
+			return err
+		}
+		name := ""
+		for _, school := range schools {
+			if school.ID == party.SchoolID.Int64() {
+				name = school.Name
+			}
+		}
+		return &organizationtenancy.SchoolPartyCreditorConflictError{SchoolName: name}
+	}
+	return nil
+}
+
+// sameAccount tells whether the body names the account of input: IBAN,
+// account holder and BIC, which the debit file of the creditor prints.
+func sameAccount(party organizationtenancy.SchoolParty, input organizationtenancy.SchoolPartyInput) bool {
+	compact := func(value string) string { return strings.ToUpper(strings.Join(strings.Fields(value), "")) }
+	return compact(party.IBAN) == compact(input.IBAN) && compact(party.BIC) == compact(input.BIC) &&
+		strings.TrimSpace(party.AccountHolder) == strings.TrimSpace(input.AccountHolder)
 }
 
 // RemoveParty deletes the master data of the body.

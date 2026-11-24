@@ -13,6 +13,7 @@ import { BillingTermsCard } from "~/components/traeger/billing-terms-card";
 import { ContributionRulesCard } from "~/components/traeger/contribution-rules-card";
 import { CostBearersCard } from "~/components/traeger/cost-bearers-card";
 import { metadataLoadError } from "~/components/traeger/metadata-load-error";
+import { IssuerNumberRangeCards } from "~/components/traeger/issuer-number-range-cards";
 import { NumberRangeCard } from "~/components/traeger/number-range-card";
 import { SepaCreditorCard } from "~/components/traeger/sepa-creditor-card";
 import { TraegerBankAccountsCard } from "~/components/traeger/traeger-bank-accounts-card";
@@ -315,6 +316,7 @@ export default function TraegerAbrechnungsvorgabenPage() {
             numberRange={billing.data.careNumberRange}
             onChanged={afterRequiredDetailsBillingWrite}
           />
+          <IssuerNumberRangeCards />
           <ContributionRulesCard
             kind="sibling"
             rules={billing.data.rules.filter((rule) => rule.kind === "sibling")}

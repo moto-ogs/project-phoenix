@@ -42,7 +42,7 @@ var responsibilityDefinitions = []config.Definition{
 		Key:             config.KeyResponsibilityBilling,
 		Levels:          config.LevelBoth,
 		Label:           "Wer rechnet mit den Eltern ab?",
-		Description:     "Diese Stelle ist für Rechnungen, Bescheide und Lastschriften vorgesehen. Noch stellt moto alle Schreiben mit den Angaben des Trägers aus.",
+		Description:     "Diese Stelle stellt neue Rechnungen und Bescheide aus und zieht Lastschriften mit ihrer eigenen Gläubiger-ID ein. Dafür braucht sie zusätzlich Gläubiger-ID und Konto. Solange etwas fehlt, rechnet der Träger ab. Schon ausgestellte Schreiben bleiben, wie sie sind.",
 		Type:            config.FieldSelect,
 		Default:         config.ResponsibleBodyTraeger,
 		ReadPermission:  "config:read",

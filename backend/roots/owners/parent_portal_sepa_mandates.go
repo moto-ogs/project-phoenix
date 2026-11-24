@@ -64,7 +64,7 @@ func (p parentMandateParties) Recipients(ctx context.Context, organizationID int
 	recipients := make(map[int64]parentbilling.CareRecipient, len(parties))
 	for contractID, party := range parties {
 		recipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email,
-			ContractDraft: party.ContractDraft}
+			ContractDraft: party.ContractDraft, SchoolID: party.ContractSchoolID}
 	}
 	return recipients, nil
 }
@@ -74,10 +74,11 @@ type parentSEPAMandates struct {
 }
 
 // NewParentSEPAMandates binds the parents' mandates to the Elternabrechnung
-// on the root's clocks.
-func NewParentSEPAMandates(settings ParentMandateSettings, cipher BankDataCipher, today func() calendar.Date, now func() time.Time) parentportal.SEPAMandatesPort {
+// on the root's clocks; schoolSettings names who bills each school (#8040).
+func NewParentSEPAMandates(settings ParentMandateSettings, schoolSettings ResponsibilitySchoolSettings, cipher BankDataCipher, today func() calendar.Date, now func() time.Time) parentportal.SEPAMandatesPort {
 	return parentSEPAMandates{mandates: parentBillingCompose.NewParentSEPAMandates(
-		parentMandateParties{billing: careContractCompose.NewContractVersions()}, cipher, parentOnlineMandateSettings{settings: settings}, SecurityFingerprints{}, today, now)}
+		parentMandateParties{billing: careContractCompose.NewContractVersions()}, cipher, parentOnlineMandateSettings{settings: settings}, SecurityFingerprints{},
+		BillingIssuers{Responsible: NewSchoolResponsibilities(schoolSettings)}, today, now)}
 }
 
 func (m parentSEPAMandates) SEPAMandate(ctx context.Context, organizationID int64, reader parentportal.SEPAMandateReader) (parentportal.SEPAMandateView, error) {

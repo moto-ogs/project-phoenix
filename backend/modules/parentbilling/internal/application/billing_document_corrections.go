@@ -134,13 +134,20 @@ func (b *BillingLetters) issueCorrection(ctx context.Context, reviewer parentbil
 	document parentbilling.BillingDocument, action string,
 ) (parentbilling.BillingDocument, error) {
 	organizationID, run := reviewer.OrganizationID, target.run
-	pattern, err := numberPatternOf(ctx, b.store, organizationID, run.Service)
+	// A cancellation or a credit takes the issuer and the number range of
+	// its invoice (#8040, ADR 0321 point 4).
+	issuer := parentbilling.TraegerIssuer()
+	if target.invoice.Issuer != nil {
+		issuer = *target.invoice.Issuer
+	}
+	document.Issuer = target.invoice.Issuer
+	pattern, err := numberPatternOf(ctx, b.store, organizationID, issuer, run.Service)
 	if err != nil {
 		return parentbilling.BillingDocument{}, err
 	}
 	issuedOn := b.today()
 	year := numberYear(pattern, issuedOn.Year())
-	sequence, err := b.store.ReserveNumbers(ctx, organizationID, run.Service, year, 1)
+	sequence, err := b.store.ReserveNumbers(ctx, organizationID, issuer.Key, run.Service, year, 1)
 	if err != nil {
 		return parentbilling.BillingDocument{}, fmt.Errorf("parent billing: reserve a number: %w", err)
 	}
@@ -184,6 +191,7 @@ func (b *BillingLetters) correctionLetter(ctx context.Context, reviewer parentbi
 	if head, err = withNoticeTemplate(ctx, b.letterheads, reviewer.OrganizationID, head, document.DocumentKind, false); err != nil {
 		return err
 	}
+	head = issuerLetterhead(head, document.Issuer)
 	file, err := b.render(reviewer.OrganizationID, letterContent{
 		run: target.run, document: document, letterhead: head, invoice: &target.invoice,
 		leftCents: leftOf(target.invoice, append(append([]parentbilling.BillingDocument{}, target.history...), document)),

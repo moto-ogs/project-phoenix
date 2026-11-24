@@ -1,6 +1,10 @@
 package parentbilling
 
-import "context"
+import (
+	"context"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+)
 
 // RequiredDetail names a detail a Träger has to enter before its letters,
 // notices and contracts go out (#7177). Each is required only while a
@@ -55,17 +59,55 @@ type TraegerBankAccounts interface {
 
 // RequiredDetailSources are the reads the root binds, each to one owner:
 // the schools of the Träger, their module switches, the letterhead text
-// and whether the Träger has a bank account. None of them reads personal
-// data.
+// and whether the Träger has a bank account; the issuers of the schools
+// with the template of the fee notice and the contracts in force, which the
+// state of each issuer counts (#8040). None of them hands out personal data.
 type RequiredDetailSources struct {
-	Schools  CareSchools
-	Modules  SchoolModules
-	Sender   TraegerSenderText
-	Accounts TraegerBankAccounts
+	Schools   CareSchools
+	Modules   SchoolModules
+	Sender    TraegerSenderText
+	Accounts  TraegerBankAccounts
+	Issuers   BillingDocumentTemplates
+	Contracts CareContracts
+}
+
+// BillingIssuerStatus is what a Schulträger or a Gemeinde that bills a
+// school of the Träger needs before its documents go out (#8040, ADR 0321
+// point 11): its number range per service, the kind of document per
+// service and whether a fee notice lacks its legal remedy, and how many
+// families pay by direct debit at its schools and how many of them have no
+// mandate for its creditor identifier yet, counted for the monthly care.
+// It names no person.
+type BillingIssuerStatus struct {
+	Issuer                 BillingIssuer         `json:"issuer"`
+	SchoolIDs              []ident.ID            `json:"school_ids"`
+	NumberRanges           []IssuerNumberRange   `json:"number_ranges"`
+	DocumentKinds          []ServiceDocumentKind `json:"document_kinds"`
+	LegalRemedyMissing     bool                  `json:"legal_remedy_missing"`
+	DirectDebitFamilies    int                   `json:"direct_debit_families"`
+	FamiliesWithoutMandate int                   `json:"families_without_mandate"`
+	// CreditorIsTraegers: the body names the Träger's own creditor
+	// identifier; no release goes out until it has its own (ADR 0321
+	// point 10).
+	CreditorIsTraegers bool `json:"creditor_is_traegers"`
+}
+
+// IssuerNumberRange is the pattern of a service of an issuer, empty while
+// none is set.
+type IssuerNumberRange struct {
+	Service string `json:"service"`
+	Pattern string `json:"pattern"`
+}
+
+// BillingIssuerOverview lists every body that bills a school of the Träger.
+type BillingIssuerOverview struct {
+	Issuers []BillingIssuerStatus `json:"issuers"`
 }
 
 // RequiredDetailsCheck names the details the Träger of the caller's Träger
-// transaction still has to enter (#7177).
+// transaction still has to enter (#7177), and what each body that bills
+// one of its schools still needs (#8040).
 type RequiredDetailsCheck interface {
 	RequiredDetails(ctx context.Context, organizationID int64) (RequiredDetails, error)
+	BillingIssuerStatuses(ctx context.Context, organizationID int64) (BillingIssuerOverview, error)
 }

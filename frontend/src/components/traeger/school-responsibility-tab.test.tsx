@@ -25,6 +25,10 @@ vi.mock("~/lib/traeger-responsibilities-api", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   ...api,
 }));
+vi.mock("~/lib/traeger-billing-issuers-api", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  fetchBillingIssuerStatuses: vi.fn().mockResolvedValue([]),
+}));
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path.replace(/^\/traeger/, "") || "/",
 }));
@@ -92,7 +96,11 @@ function renderTab(
 ) {
   render(
     <ToastProvider>
-      <SchoolResponsibilityTab school={value} reload={reload} />
+      <SchoolResponsibilityTab
+        school={value}
+        schools={[value]}
+        reload={reload}
+      />
     </ToastProvider>,
   );
   return reload;

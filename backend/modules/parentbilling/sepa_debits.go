@@ -168,6 +168,11 @@ type SEPADebitRun struct {
 	Submitted      []SEPADebit      `json:"submitted"`
 	Left           []SEPADebit      `json:"left"`
 	SubmittedAt    *time.Time       `json:"submitted_at"`
+	// Issuer is the body whose file this is (#8040, ADR 0321), nil for the
+	// Träger's file. Issuers names every body with debits in the run: each
+	// one has a file of its own, with its creditor identifier and account.
+	Issuer  *BillingIssuer  `json:"issuer,omitempty"`
+	Issuers []BillingIssuer `json:"issuers"`
 }
 
 // SEPADebitFile is the PAIN.008 file of a run.
@@ -183,15 +188,19 @@ type SEPADebitFile struct {
 // an issued run and confirm its submission to the bank. Every operation runs
 // in the Träger transaction of the reviewer's Träger, which the caller
 // opens; the download records the reveal of each mandate's account.
+//
+// A run has one file per issuer (#8040, ADR 0321 point 8): issuerKey names
+// it, empty for the Träger's file, else the creditor identifier of the body
+// whose invoices and notices it collects.
 type SEPADebits interface {
 	// SEPADebitRun answers the debit file of a run without bank data.
-	SEPADebitRun(ctx context.Context, reviewer HolidayReviewer, runKind string, runID int64) (SEPADebitRun, error)
+	SEPADebitRun(ctx context.Context, reviewer HolidayReviewer, runKind string, runID int64, issuerKey string) (SEPADebitRun, error)
 	// SEPADebitFile renders the PAIN.008 file of the pending debits of a
 	// run. It changes no debit.
-	SEPADebitFile(ctx context.Context, reviewer HolidayReviewer, runKind string, runID int64) (SEPADebitFile, error)
+	SEPADebitFile(ctx context.Context, reviewer HolidayReviewer, runKind string, runID int64, issuerKey string) (SEPADebitFile, error)
 	// SubmitSEPADebits confirms that the file messageID was submitted to the
 	// bank: its debits become submitted and their mandates collected.
-	SubmitSEPADebits(ctx context.Context, reviewer HolidayReviewer, runKind string, runID int64, messageID string) (SEPADebitRun, error)
+	SubmitSEPADebits(ctx context.Context, reviewer HolidayReviewer, runKind string, runID int64, issuerKey, messageID string) (SEPADebitRun, error)
 }
 
 // SealedSEPADebit is a debit as the store of the owner reads it: with the
@@ -211,8 +220,12 @@ type SealedSEPADebit struct {
 	MandateSequence        string
 	MandateLastCollectedOn *calendar.Date
 	MandateCreatedOn       calendar.Date
-	// CreditorNow is the Träger's creditor identifier now, empty without one.
+	// CreditorNow is the creditor identifier the debit is collected for
+	// now: its issuer's, the Träger's for the Träger, empty without one.
 	CreditorNow string
+	// Issuer is the body that issued the invoice or notice (#8040, ADR
+	// 0321), nil for the Träger. Its debits go into a file of its own.
+	Issuer *BillingIssuer
 	// Cancelled is an invoice cancelled since; CreditedCents the credits
 	// (negative) a holiday invoice got since.
 	Cancelled     bool
@@ -238,6 +251,8 @@ type SEPANoticeRate struct {
 	Mandate       *SEPAMandate
 	CreditorNow   string
 	OneOffClaimed bool
-	Holder        []byte
-	IBAN          []byte
+	// Issuer is the body that issued the notice, nil for the Träger.
+	Issuer *BillingIssuer
+	Holder []byte
+	IBAN   []byte
 }

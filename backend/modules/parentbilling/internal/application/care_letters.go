@@ -56,7 +56,7 @@ type CareLetterStore interface {
 	InsertCareMailing(ctx context.Context, organizationID, runID, accountID int64, send parentbilling.CareLetterSend) (parentbilling.CareLetterSend, error)
 	InsertCareRunEvent(ctx context.Context, organizationID, runID, accountID int64, action string, details map[string]any) error
 	ListNumberRanges(ctx context.Context, organizationID int64) ([]parentbilling.NumberRange, error)
-	ReserveNumbers(ctx context.Context, organizationID int64, service string, year, count int) (int64, error)
+	ReserveNumbers(ctx context.Context, organizationID int64, issuerKey, service string, year, count int) (int64, error)
 }
 
 // CareLetterRecipients reads the party an invoice of a contract goes to now.
@@ -154,7 +154,7 @@ func (l *CareLetters) CreateCareLetters(ctx context.Context, reviewer parentbill
 	if len(invoices) == 0 {
 		return parentbilling.CareLetters{}, parentbilling.ErrBillingRunEmpty
 	}
-	head, err := l.letterhead(ctx, reviewer)
+	head, err := l.letterhead(ctx, reviewer, invoices)
 	if err != nil {
 		return parentbilling.CareLetters{}, err
 	}
@@ -198,7 +198,7 @@ func (l *CareLetters) PreviewCareLetter(ctx context.Context, reviewer parentbill
 	if len(invoices) == 0 {
 		return parentbilling.BillingLetterFile{}, parentbilling.ErrBillingRunEmpty
 	}
-	head, err := l.letterhead(ctx, reviewer)
+	head, err := l.letterhead(ctx, reviewer, invoices[:1])
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
@@ -342,13 +342,14 @@ func (l *CareLetters) cancellationLetter(ctx context.Context, reviewer parentbil
 	if (!sent && !printed) || current.letters == nil {
 		return sent, printed, nil
 	}
-	head, err := l.letterhead(ctx, reviewer)
+	head, err := l.letterhead(ctx, reviewer, []parentbilling.CareInvoice{invoice})
 	if err != nil {
 		return sent, printed, err
 	}
 	if head, err = withNoticeTemplate(ctx, l.letterheads, reviewer.OrganizationID, head, invoice.DocumentKind, false); err != nil {
 		return sent, printed, err
 	}
+	head = issuerLetterhead(head, invoice.Issuer)
 	content := careLetterContent{run: current.run, invoice: invoice, cancellation: &cancellation,
 		input: parentbilling.CareLetterInput{PaymentDueOn: current.letters.PaymentDueOn, Notes: current.letters.Notes}, letterhead: head}
 	return sent, printed, l.storeLetter(ctx, reviewer, current, content)
@@ -359,20 +360,26 @@ func (l *CareLetters) cancellationLetter(ctx context.Context, reviewer parentbil
 func (l *CareLetters) issueCancellation(ctx context.Context, reviewer parentbilling.HolidayReviewer, run parentbilling.CareRun,
 	invoice parentbilling.CareInvoice, reason string,
 ) (parentbilling.CareCancellation, error) {
-	pattern, err := numberPatternOf(ctx, l.store, reviewer.OrganizationID, parentbilling.ServiceCare)
+	// The Storno takes the issuer and the number range of its invoice
+	// (#8040, ADR 0321 point 4).
+	issuer := parentbilling.TraegerIssuer()
+	if invoice.Issuer != nil {
+		issuer = *invoice.Issuer
+	}
+	pattern, err := numberPatternOf(ctx, l.store, reviewer.OrganizationID, issuer, parentbilling.ServiceCare)
 	if err != nil {
 		return parentbilling.CareCancellation{}, err
 	}
 	issuedOn := l.today()
 	year := numberYear(pattern, issuedOn.Year())
-	sequence, err := l.store.ReserveNumbers(ctx, reviewer.OrganizationID, parentbilling.ServiceCare, year, 1)
+	sequence, err := l.store.ReserveNumbers(ctx, reviewer.OrganizationID, issuer.Key, parentbilling.ServiceCare, year, 1)
 	if err != nil {
 		return parentbilling.CareCancellation{}, fmt.Errorf("parent billing: reserve the number of the Storno: %w", err)
 	}
 	return l.store.InsertCareCancellation(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, year, sequence,
 		parentbilling.CareCancellation{
 			InvoiceID: invoice.ID.Int64(), Number: formatInvoiceNumber(pattern, issuedOn.Year(), sequence), IssuedOn: issuedOn,
-			Reason: reason, TotalCents: -invoice.TotalCents,
+			Reason: reason, TotalCents: -invoice.TotalCents, IssuerKey: issuer.Key,
 		})
 }
 
@@ -453,19 +460,25 @@ func careLetterContents(ctx context.Context, templates parentbilling.BillingDocu
 			}
 			heads[invoice.DocumentKind] = own
 		}
+		// A body prints its own sender, contact and account (#8040).
+		own = issuerLetterhead(own, invoice.Issuer)
+		if own.BankAccount == nil {
+			return nil, parentbilling.ErrBankAccountMissing
+		}
 		contents = append(contents, careLetterContent{run: run, invoice: invoice, input: input, letterhead: own})
 	}
 	return contents, nil
 }
 
-// letterhead reads the layout of the Träger; a letter asks for payment, so
-// the Träger needs a bank account.
-func (l *CareLetters) letterhead(ctx context.Context, reviewer parentbilling.HolidayReviewer) (parentbilling.Letterhead, error) {
+// letterhead reads the layout of the Träger. A letter asks for payment, so
+// its issuer needs a bank account: the Träger for its own invoices, a body
+// prints its own (#8040).
+func (l *CareLetters) letterhead(ctx context.Context, reviewer parentbilling.HolidayReviewer, invoices []parentbilling.CareInvoice) (parentbilling.Letterhead, error) {
 	head, err := l.letterheads.Letterhead(ctx, reviewer)
 	if err != nil {
 		return parentbilling.Letterhead{}, fmt.Errorf("parent billing: read letterhead: %w", err)
 	}
-	if head.BankAccount == nil {
+	if head.BankAccount == nil && traegerIssues(careIssuers(invoices)) {
 		return parentbilling.Letterhead{}, parentbilling.ErrBankAccountMissing
 	}
 	if missingSender(head) {

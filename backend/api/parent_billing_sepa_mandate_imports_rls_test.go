@@ -35,7 +35,7 @@ func TestSEPAMandateImportPayersStayWithTheirTraegerBelowRLS(t *testing.T) {
 	cipher, err := securityRuntimeCompose.NewBankDataCipher(testpkg.NewTestHealthDataKeys(), "")
 	require.NoError(t, err)
 	mandates := parentBillingCompose.NewSEPAMandates(
-		parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}, cipher, noDebtorNumberFormat{}, sepaImportDay,
+		parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}, cipher, noDebtorNumberFormat{}, traegerBillsEverySchool{}, sepaImportDay,
 		func() time.Time { return sepaImportDay().BerlinMidnight() })
 	csv := fmt.Sprintf("Mandatsreferenz;Mandatsdatum;IBAN;Kontoinhaber;Zahler\n"+
 		"OGS-R-1;01.09.2026;%[1]s;Eva Beispiel;%[2]d\nOGS-R-2;01.09.2026;%[1]s;Eva Beispiel;%[3]d\n", sepaIBAN, own, other)
@@ -75,4 +75,12 @@ func (noDebtorNumberFormat) DebtorNumberFormat(context.Context, int64) (parentbi
 // DebtorNumberScope keeps the number per payer, the default (#7007).
 func (noDebtorNumberFormat) DebtorNumberScope(context.Context, int64) (string, error) {
 	return parentbilling.DebtorNumberScopePayer, nil
+}
+
+// traegerBillsEverySchool names no body as issuer: the Träger bills every
+// school (#8040).
+type traegerBillsEverySchool struct{}
+
+func (traegerBillsEverySchool) SchoolBillingIssuers(context.Context, int64, []int64) (map[int64]parentbilling.BillingIssuer, error) {
+	return map[int64]parentbilling.BillingIssuer{}, nil
 }

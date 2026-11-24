@@ -73,7 +73,27 @@ var (
 	// ErrSchoolPartyKindUnknown reports a body that keeps no master data
 	// per school.
 	ErrSchoolPartyKindUnknown = errors.New("organization tenancy: only a Schulträger or a Gemeinde has master data of a school")
+	// ErrSchoolPartyCreditorAccountConflict reports a creditor identifier
+	// another body of the Träger already holds with another bank account: a
+	// creditor identifier names one creditor and one account (#8040, ADR
+	// 0321 point 2).
+	ErrSchoolPartyCreditorAccountConflict = errors.New("organization tenancy: the creditor identifier belongs to another bank account")
 )
+
+// SchoolPartyCreditorConflictError names the school whose body holds the
+// creditor identifier with another account. It is
+// ErrSchoolPartyCreditorAccountConflict.
+type SchoolPartyCreditorConflictError struct {
+	SchoolName string
+}
+
+func (e *SchoolPartyCreditorConflictError) Error() string {
+	return ErrSchoolPartyCreditorAccountConflict.Error() + ": " + e.SchoolName
+}
+
+func (e *SchoolPartyCreditorConflictError) Unwrap() error {
+	return ErrSchoolPartyCreditorAccountConflict
+}
 
 // SchoolPartyInput are the master data of a Schulträger or a Gemeinde as
 // the Träger-Büro writes them. Name and address are required; the contact
@@ -221,6 +241,6 @@ type ResponsibleParties interface {
 	// ResponsibleParties returns per school the Schulträger or the
 	// Gemeinde responsible for area. A school the Träger itself is
 	// responsible for has no entry, and neither has a school that is none
-	// of the Träger.
+	// of the Träger. Nil schoolIDs asks for every school of the Träger.
 	ResponsibleParties(ctx context.Context, organizationID int64, area ResponsibilityArea, schoolIDs []int64) (map[int64]SchoolParty, error)
 }

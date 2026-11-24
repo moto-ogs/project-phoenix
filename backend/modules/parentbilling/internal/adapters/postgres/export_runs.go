@@ -262,7 +262,7 @@ FROM (
 		invoice.payment_method, invoice.mandate_reference, ` + exportCostSharesColumn + ` AS cost_shares, invoice.number_year, invoice.number_sequence
 	FROM parent_billing.care_invoices AS invoice
 	CROSS JOIN LATERAL (` + careInvoicePeriod + `) AS period
-	WHERE invoice.organization_id = ?0 AND invoice.run_id = ?1
+	WHERE invoice.organization_id = ?0 AND invoice.run_id = ?1 AND invoice.issuer_key = ''
 	UNION ALL
 	SELECT invoice.id, cancellation.id, NULL::bigint, NULL::bigint, ` + datevBookedCareCancellation + `,
 		cancellation.number, 'cancellation', cancellation.issued_on, NULL::date,
@@ -276,7 +276,7 @@ FROM (
 	JOIN parent_billing.care_invoices AS invoice
 		ON invoice.organization_id = cancellation.organization_id AND invoice.id = cancellation.invoice_id
 	CROSS JOIN LATERAL (` + careInvoicePeriod + `) AS period
-	WHERE cancellation.organization_id = ?0 AND invoice.organization_id = ?0 AND invoice.run_id = ?1
+	WHERE cancellation.organization_id = ?0 AND invoice.organization_id = ?0 AND invoice.run_id = ?1 AND invoice.issuer_key = ''
 ) AS lines
 ORDER BY number_year, number_sequence, kind DESC`
 
@@ -295,11 +295,12 @@ const holidayExportInvoicesQuery = `SELECT NULL::bigint AS care_invoice_id, NULL
 	NULL::text AS school_name, document.service_from, document.service_until, document.payment_method,
 	document.mandate_reference
 FROM parent_billing.documents AS document
-WHERE document.organization_id = ?0 AND document.run_id = ?1
+WHERE document.organization_id = ?0 AND document.run_id = ?1 AND document.issuer_key = ''
 ORDER BY document.number_year, document.number_sequence`
 
 // ExportRunContent reads a released run and the invoices a Sollstellung of
-// it writes; a run of another Träger, none or an open one is
+// it writes: the Träger's own (#8040, ADR 0321 point 9). A body that bills a
+// school itself books in its own budget, not in the Träger's; a run of another Träger, none or an open one is
 // ErrExportRunNotFound.
 func (s *Store) ExportRunContent(ctx context.Context, organizationID int64, runKind string, runID int64) (parentbilling.ExportRunContent, error) {
 	db, err := traegerDB(ctx, organizationID)
@@ -438,19 +439,19 @@ const datevRunBookingsQuery = `SELECT 'care' AS run_kind, invoice.run_id, invoic
 	'invoice' AS kind, invoice.issued_on, invoice.total_cents, invoice.debtor_number,
 	` + datevBookedCareInvoice + ` AS datev_booked
 FROM parent_billing.care_invoices AS invoice
-WHERE invoice.organization_id = ?0 AND invoice.run_id = ANY(?1)
+WHERE invoice.organization_id = ?0 AND invoice.run_id = ANY(?1) AND invoice.issuer_key = ''
 UNION ALL
 SELECT 'care', invoice.run_id, invoice.id, cancellation.id, NULL::bigint, NULL::bigint, 'cancellation', cancellation.issued_on,
 	cancellation.total_cents, invoice.debtor_number, ` + datevBookedCareCancellation + `
 FROM parent_billing.care_invoice_cancellations AS cancellation
 JOIN parent_billing.care_invoices AS invoice
 	ON invoice.organization_id = cancellation.organization_id AND invoice.id = cancellation.invoice_id
-WHERE cancellation.organization_id = ?0 AND invoice.organization_id = ?0 AND invoice.run_id = ANY(?1)
+WHERE cancellation.organization_id = ?0 AND invoice.organization_id = ?0 AND invoice.run_id = ANY(?1) AND invoice.issuer_key = ''
 UNION ALL
 SELECT 'holiday', document.run_id, NULL::bigint, NULL::bigint, document.id, document.reference_document_id, document.kind,
 	document.issued_on, document.total_cents, document.debtor_number, ` + datevBookedDocument + `
 FROM parent_billing.documents AS document
-WHERE document.organization_id = ?0 AND document.run_id = ANY(?2)`
+WHERE document.organization_id = ?0 AND document.run_id = ANY(?2) AND document.issuer_key = ''`
 
 type datevRunBookingRow struct {
 	exportInvoiceRow `bun:",extend"`

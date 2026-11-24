@@ -42,8 +42,11 @@ func (rs *DocumentKindResource) Router(protectedTraegerRoutes func(chi.Router, f
 }
 
 // DocumentKindRequest is the body of PUT /traeger/billing-document-kinds/{service}.
+// IssuerKey names the issuer whose kind it is (#8040): empty for the Träger,
+// else the creditor identifier of the body.
 type DocumentKindRequest struct {
 	DocumentKind string `json:"document_kind"`
+	IssuerKey    string `json:"issuer_key,omitempty"`
 }
 
 // Bind accepts the body; the Owner validates the kind.
@@ -72,7 +75,7 @@ func (rs *DocumentKindResource) set(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	overview, err := rs.kinds.SetDocumentKind(r.Context(), organizationID, chi.URLParam(r, "service"), req.DocumentKind)
+	overview, err := rs.kinds.SetDocumentKind(r.Context(), organizationID, req.IssuerKey, chi.URLParam(r, "service"), req.DocumentKind)
 	if err != nil {
 		renderDocumentKindError(w, r, err)
 		return

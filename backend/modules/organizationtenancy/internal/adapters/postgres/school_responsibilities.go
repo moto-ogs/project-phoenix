@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/pgdialect"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -60,6 +61,12 @@ const (
 	listSchoolPartiesQuery = `SELECT ` + schoolPartyColumns + ` FROM platform.school_responsible_parties
 		WHERE organization_id = ? AND school_id IN (?)
 		ORDER BY school_id, kind`
+	// ownSchoolPartiesQuery reads the bodies of the undeleted schools of
+	// the Träger, of the schools ?1 names unless ?2 asks for all (#8040).
+	ownSchoolPartiesQuery = `SELECT ` + schoolPartyColumns + ` FROM platform.school_responsible_parties
+		WHERE organization_id = ?0 AND (?2 OR school_id = ANY(?1)) AND school_id IN (
+			SELECT id FROM platform.schools WHERE organization_id = ?0 AND deleted_at IS NULL)
+		ORDER BY school_id, kind`
 	// saveSchoolPartyQuery inserts the body of the school or overwrites
 	// it; the row's trigger stamps updated_at on the update.
 	saveSchoolPartyQuery = `INSERT INTO platform.school_responsible_parties
@@ -107,6 +114,24 @@ func (s *TraegerMasterDataStore) SchoolParties(ctx context.Context, organization
 	if err := db.NewRaw(listSchoolPartiesQuery, organizationID, bun.List(schoolIDs)).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("organization tenancy postgres: list school parties: %w", err)
 	}
+	for _, row := range rows {
+		parties = append(parties, row.toDomain())
+	}
+	return parties, nil
+}
+
+// OwnSchoolParties reads the bodies of the undeleted schools of the Träger
+// in one statement; nil schoolIDs asks for every school.
+func (s *TraegerMasterDataStore) OwnSchoolParties(ctx context.Context, organizationID int64, schoolIDs []int64) ([]organizationtenancy.SchoolParty, error) {
+	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	var rows []schoolPartyRow
+	if err := db.NewRaw(ownSchoolPartiesQuery, organizationID, pgdialect.Array(schoolIDs), schoolIDs == nil).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("organization tenancy postgres: list own school parties: %w", err)
+	}
+	parties := make([]organizationtenancy.SchoolParty, 0, len(rows))
 	for _, row := range rows {
 		parties = append(parties, row.toDomain())
 	}
