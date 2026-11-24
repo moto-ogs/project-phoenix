@@ -736,9 +736,11 @@ function RowStackedRow<T>({
       </div>
       {/* The controls stand under the meta value, on the level of the
           detail line: beside it they would narrow the title and the detail
-          that a phone line has room for (#7911). */}
+          that a phone line has room for (#7911). Beside a detail of several
+          lines the meta value stays at the title and the controls at the
+          last line, instead of both floating in the middle (#7913). */}
       {meta && end ? (
-        <div className="flex max-w-[9.5rem] min-w-0 flex-col items-end gap-0.5">
+        <div className="flex max-w-[9.5rem] min-w-0 flex-col items-end justify-between gap-0.5 self-stretch">
           {metaValue}
           {end}
         </div>
