@@ -135,7 +135,6 @@ function Changes({
       columns={CHANGE_COLUMNS}
       rows={shown}
       getRowKey={(change) => `${label}-${change.field}`}
-      stackedOnMobile
       dense
     />
   );
@@ -257,7 +256,6 @@ export function RolloutResultCard({
         columns={columns}
         rows={[...rollout.schools]}
         getRowKey={(row) => row.schoolId}
-        stackedOnMobile
       />
     </SectionCard>
   );

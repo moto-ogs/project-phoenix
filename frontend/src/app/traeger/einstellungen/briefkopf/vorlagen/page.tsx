@@ -140,7 +140,6 @@ export default function TraegerVorlagenPage() {
           columns={COLUMNS}
           rows={templates}
           getRowKey={(template) => template.kind}
-          stackedOnMobile
           // Name and state in the head line, the purpose below them across
           // the full width: beside the state it took four to six lines.
           stackedLayout="lines"

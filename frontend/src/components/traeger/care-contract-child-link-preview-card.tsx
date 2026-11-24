@@ -344,7 +344,6 @@ export function CareContractChildLinkPreviewCard({
         columns={COLUMNS}
         rows={[...shown]}
         getRowKey={(row) => row.line}
-        stackedOnMobile
         stackedLayout="lines"
         dense
         // A file may hold thousands of rows: show them in pages; the counts

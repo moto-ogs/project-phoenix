@@ -208,7 +208,6 @@ export function TraegerAccountHistory({
       getRowKey={(entry) => entry.id}
       isLoading={loading}
       loadingRowCount={3}
-      stackedOnMobile
       // Older entries load inside the list's surface, like every list.
       moreAction={
         hasMore

@@ -461,7 +461,6 @@ export default function TraegerAccountsPage() {
         isLoading={reader.loading}
         loadingRowCount={3}
         defaultSortKey="name"
-        stackedOnMobile
         emptyState={
           <EmptyState
             icon={<Users className="h-12 w-12" aria-hidden="true" />}
@@ -480,7 +479,6 @@ export default function TraegerAccountsPage() {
             getRowKey={(invitation) => invitation.id}
             rowHasInteractiveControls
             defaultSortKey="email"
-            stackedOnMobile
           />
         </SectionCard>
       ) : null}

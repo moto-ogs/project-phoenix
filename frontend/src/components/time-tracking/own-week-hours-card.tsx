@@ -74,6 +74,8 @@ export function OwnWeekHoursCard({
       {
         key: "hours",
         header: "Stunden",
+        stacked: "meta",
+        stackedTone: "figure",
         align: "right",
         className: "tabular-nums",
         render: (row) => (

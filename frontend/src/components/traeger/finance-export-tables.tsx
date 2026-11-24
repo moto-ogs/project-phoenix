@@ -338,7 +338,6 @@ export function ExportRunsTable({
       rows={[...runs]}
       moreAction={moreAction}
       getRowKey={(run) => `${run.pathKind}/${run.runId}`}
-      stackedOnMobile
       emptyState={
         <EmptyState
           title="Noch kein ausgestellter Lauf."
@@ -562,7 +561,6 @@ export function ExportProtocolTable({
       getRowKey={(entry) => entry.id}
       defaultSortKey="number"
       defaultSortDirection="desc"
-      stackedOnMobile
       emptyState={
         <EmptyState
           title="Noch keine Datei heruntergeladen."

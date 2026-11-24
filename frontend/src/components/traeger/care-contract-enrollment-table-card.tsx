@@ -319,7 +319,6 @@ export function CareContractEnrollmentTableCard({
         columns={COLUMNS}
         rows={[...shown]}
         getRowKey={(row) => row.contractId}
-        stackedOnMobile
         stackedLayout="lines"
         dense
         pageSize={PAGE_SIZE}

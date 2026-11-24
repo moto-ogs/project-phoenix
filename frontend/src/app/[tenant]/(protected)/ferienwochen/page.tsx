@@ -591,7 +591,6 @@ function ParticipantList({
           rows={list.participants}
           getRowKey={(child) => child.childId}
           defaultSortKey="name"
-          stackedOnMobile
           emptyState={
             <EmptyState
               title="Noch kein Kind bestätigt"

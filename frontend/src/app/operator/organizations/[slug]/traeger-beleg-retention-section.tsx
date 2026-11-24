@@ -118,7 +118,6 @@ export function TraegerBelegRetentionSection({
           getRowKey={(row) => `${row.belegType}-${row.reason}`}
           isLoading={loading}
           rowHasInteractiveControls
-          stackedOnMobile
           emptyState={
             <EmptyState
               variant="compact"
@@ -155,7 +154,6 @@ export function TraegerBelegRetentionSection({
           rows={[...(data?.instructions ?? [])]}
           getRowKey={(row) => row.id}
           isLoading={loading}
-          stackedOnMobile
           emptyState={
             <EmptyState
               variant="compact"
@@ -186,7 +184,6 @@ export function TraegerBelegRetentionSection({
           rows={[...(data?.summary ?? [])]}
           getRowKey={(row) => row.belegType}
           isLoading={loading}
-          stackedOnMobile
           emptyState={
             <EmptyState variant="compact" title="Noch keine Belege bewertet" />
           }
@@ -202,7 +199,6 @@ export function TraegerBelegRetentionSection({
           rows={[...(data?.deletions ?? [])]}
           getRowKey={(row) => `${row.belegType}-${row.deletedOn}`}
           isLoading={loading}
-          stackedOnMobile
           emptyState={
             <EmptyState variant="compact" title="Noch nichts gelöscht" />
           }
@@ -502,7 +498,6 @@ function SuspensionsCard({
           getRowKey={(row) => row.id}
           isLoading={loading}
           rowHasInteractiveControls
-          stackedOnMobile
           emptyState={<EmptyState variant="compact" title="Keine Aussetzung" />}
         />
       </SectionCard>
