@@ -216,7 +216,8 @@ test("the parents portal loading head matches ParentPageHeader", async ({
     for (const mobileHelp of viewport.width < 1024 ? [false, true] : [false]) {
       const name = `${viewport.name}${mobileHelp ? ", mobile help" : ""}`;
       await headHeight(page, skeletonMarkup, { mobileHelp });
-      const skeleton = await titleBox(page, ".h-lh");
+      // Die Zeile um den Titelbalken steht an der Stelle der Überschrift.
+      const skeleton = await titleBox(page, ".animate-pulse >> xpath=..");
       await headHeight(page, loadedMarkup, { mobileHelp });
       const loaded = await titleBox(page, "h1");
       expect.soft(skeleton, name).toEqual(loaded);
