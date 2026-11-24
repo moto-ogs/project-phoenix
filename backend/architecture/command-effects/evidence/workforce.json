@@ -12322,7 +12322,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.exportTransferPort.Transfer",
-      "binding_digest": "e36635c19229ae18d227aaf2e23cc698",
+      "binding_digest": "4416d7dee59fc9e80133897264f89556",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.ExportTransfer.Transfer",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.RendererService.Render",
@@ -12330,7 +12330,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.exportTransferPort.Transfer",
-      "binding_digest": "595cfe41d6ffe6e82aac2cf9e3dc7886",
+      "binding_digest": "58fb86a89ad9746ddd53cb93a6cdcc5e",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.ExportTransfer.Transfer",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.RenderWorkbook",
