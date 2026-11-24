@@ -34,7 +34,7 @@ import type {
   OperatorResponse,
   PasskeyCeremonyOptions,
 } from "./contract/shared.generated";
-import { portalAuthPath, type PortalKey } from "./portal-paths";
+import type { PortalKey } from "./portal-paths";
 import { sessionPost as post, type SessionBffRoute } from "./session-bff-route";
 
 export type SessionAuthenticated = { status: "authenticated" };
@@ -138,17 +138,15 @@ const enrollmentStarts = {
   school: bffPath("school", "POST /school/auth/mfa/enroll/start"),
   traeger: bffPath("org", "POST /traeger/auth/mfa/enroll/start"),
   operator: bffPath("platform", "POST /operator/auth/mfa/enroll/start"),
-  parent: portalAuthPath("parent", "mfa/enroll/start"),
-  caterer: portalAuthPath("caterer", "mfa/enroll/start"),
 };
+export type EnrollmentScope = keyof typeof enrollmentStarts;
+
 const enrollmentConfirms = {
   tenant: bffPath("tenant", "POST /auth/mfa/enroll/confirm"),
   school: bffPath("school", "POST /school/auth/mfa/enroll/confirm"),
   traeger: bffPath("org", "POST /traeger/auth/mfa/enroll/confirm"),
   operator: bffPath("platform", "POST /operator/auth/mfa/enroll/confirm"),
-  parent: portalAuthPath("parent", "mfa/enroll/confirm"),
-  caterer: portalAuthPath("caterer", "mfa/enroll/confirm"),
-};
+} satisfies Record<EnrollmentScope, SessionPath>;
 const passkeyOptions = {
   tenant: bffPath("tenant", "POST /auth/passkeys/login/options"),
   operator: bffPath("platform", "POST /operator/auth/passkeys/login/options"),
@@ -160,13 +158,29 @@ const passkeyVerifies = {
   caterer: bffPath("caterer", "POST /caterer/auth/passkeys/login/verify"),
 };
 
-// The other portals' logout only clears the BFF session and has no Go route.
-function logoutPath(portal: PortalKey): SessionPath {
-  if (portal === "tenant") return bffPath("tenant", "POST /auth/logout");
-  if (portal === "operator")
-    return bffPath("platform", "POST /operator/auth/logout");
-  return portalAuthPath(portal, "logout");
+// These route files own the BFF session and do not have a Go route.
+export const localSessionKeys = {
+  parent: "POST /api/parent/auth/logout",
+  school: "POST /api/school/auth/logout",
+  traeger: "POST /api/traeger/auth/logout",
+  caterer: "POST /api/caterer/auth/logout",
+  operatorInvite: "POST /api/operator/auth/invitations/session",
+} as const;
+
+function localPath(
+  key: (typeof localSessionKeys)[keyof typeof localSessionKeys],
+): SessionPath {
+  return key.replace(/^POST /, "") as SessionPath;
 }
+
+const logoutPaths = {
+  tenant: bffPath("tenant", "POST /auth/logout"),
+  operator: bffPath("platform", "POST /operator/auth/logout"),
+  parent: localPath(localSessionKeys.parent),
+  school: localPath(localSessionKeys.school),
+  traeger: localPath(localSessionKeys.traeger),
+  caterer: localPath(localSessionKeys.caterer),
+} satisfies Record<PortalKey, SessionPath>;
 
 export const sessionBff = {
   login: <P extends PortalKey>(portal: P) =>
@@ -183,7 +197,7 @@ export const sessionBff = {
     post<PasskeyCeremonyOptions, PasskeyOptionsBody[P]>(passkeyOptions[portal]),
   verifyPasskey: (portal: keyof typeof passkeyVerifies) =>
     post<SessionAuthenticated, PasskeyVerifyRequest>(passkeyVerifies[portal]),
-  logout: (portal: PortalKey) => post<null>(logoutPath(portal)),
+  logout: (portal: PortalKey) => post<null>(logoutPaths[portal]),
   switchTenant: post<null, SwitchTenantRequest>(
     bffPath("tenant", "POST /auth/switch-tenant"),
   ),
@@ -205,7 +219,7 @@ export const sessionBff = {
   startOperatorInvite: post<
     OperatorInvitationFlow,
     Pick<ValidateInvitationRequest, "token">
-  >("/api/operator/auth/invitations/session"),
+  >(localPath(localSessionKeys.operatorInvite)),
   validateOperatorInvite: post<
     OperatorInvitationValidationResponse,
     ValidateInvitationRequest

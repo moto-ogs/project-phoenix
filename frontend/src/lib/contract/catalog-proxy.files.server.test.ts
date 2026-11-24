@@ -432,6 +432,45 @@ describe("catalog file route with its own cache (#2352)", () => {
     expect(response.headers.get("Last-Modified")).toBe(lastModified);
   });
 
+  it("revalidates a public file without reading the portal session", async () => {
+    mockFetch.mockResolvedValue(
+      new Response(null, {
+        status: 304,
+        headers: { ETag: 'W/"abc123"', "Last-Modified": lastModified },
+      }),
+    );
+    const handler = makeCatalogProxy(portal, "/traeger", [], "GET", [], {
+      routes: [
+        {
+          method: "GET",
+          pattern: "/traeger/public-image",
+          response: fileAnswer,
+          publicFile: "a published image",
+          fileCache: "public, max-age=86400",
+          conditionalGet: true,
+        },
+      ],
+    });
+    const response = await handler(
+      new NextRequest("http://localhost:3000/api/traeger/public-image", {
+        headers: {
+          "If-None-Match": 'W/"abc123"',
+          "If-Modified-Since": lastModified,
+        },
+      }),
+      { params: Promise.resolve({ path: ["public-image"] }) },
+    );
+    expect(mockAuth).not.toHaveBeenCalled();
+    expect(sent()).not.toHaveProperty("Authorization");
+    expect(sent()["If-None-Match"]).toBe('W/"abc123"');
+    expect(sent()["If-Modified-Since"]).toBe(lastModified);
+    expect(response.status).toBe(304);
+    expect(response.body).toBeNull();
+    expect(response.headers.get("ETag")).toBe('W/"abc123"');
+    expect(response.headers.get("Last-Modified")).toBe(lastModified);
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=86400");
+  });
+
   it("repeats the conditional GET once with the renewed session", async () => {
     mockAuth
       .mockResolvedValueOnce({ user: { token: "stale-token" } })

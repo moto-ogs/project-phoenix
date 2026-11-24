@@ -416,6 +416,7 @@ describe("push-api", () => {
 
     await vi.advanceTimersByTimeAsync(4999);
     expect(fetchMock).toHaveBeenCalledOnce();
+    expect(unsubscribeBrowser).toHaveBeenCalledOnce();
     expect(finished).toBe(false);
     const init = fetchMock.mock.calls[0]![1] as RequestInit;
     expect(init.signal).toBeInstanceOf(AbortSignal);
@@ -427,7 +428,7 @@ describe("push-api", () => {
     // A response after the deadline must not touch a newer subscription.
     finishDelete(response(null, 204));
     await vi.advanceTimersByTimeAsync(0);
-    expect(unsubscribeBrowser).not.toHaveBeenCalled();
+    expect(unsubscribeBrowser).toHaveBeenCalledOnce();
     expect(vi.getTimerCount()).toBe(0);
   });
 

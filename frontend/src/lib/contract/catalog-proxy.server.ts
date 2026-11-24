@@ -674,8 +674,8 @@ export function makeCatalogProxy(
    * A public file (#2352): the link in the path is the only credential, so
    * the request carries no session, no bearer, no body and no idempotency
    * key; `sendBackend` adds the client IP the backend's limiter of the link
-   * keys on. The bytes stream through with their file headers, and every
-   * answer, a refusal included, is private and uncached.
+   * keys on. The bytes and validators follow the usual file policy: only
+   * a successful response or 304 can keep the route's declared cache.
    */
   async function servePublicFile(
     request: NextRequest,
@@ -687,6 +687,7 @@ export function makeCatalogProxy(
     const backend = await sendBackend(endpoint, null, {
       method,
       request,
+      headers: conditionalHeaders(route, request),
       ...(cacheOf(route) === PUBLIC_ASSET_CACHE && {
         timeout: "publicAsset" as const,
       }),

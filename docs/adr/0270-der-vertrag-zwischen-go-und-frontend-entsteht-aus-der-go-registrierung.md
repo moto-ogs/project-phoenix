@@ -352,7 +352,8 @@ diese Fälle nicht mehr.
    GET-Datei mit `FileCache`) reicht `If-None-Match` und
    `If-Modified-Since` durch und gibt ein 304 mit `ETag`, `Last-Modified`
    und dem Cache der Route zurück; auf 200 gehen beide Validatoren mit.
-   Andere Routen erhalten keinen bedingten Header.
+   Das gilt für Dateien mit und ohne Sitzung. Andere Routen erhalten
+   keinen bedingten Header.
 3. **Prüfungen des BFF liegen im Backend.** Die öffentlichen
    Upload-Ordner liefern über `common.ServePublicAsset` nur ihre Art aus:
    der Typ folgt der Endung, PDF für die Rechtstexte (inline mit Namen),
@@ -457,6 +458,8 @@ Für [#7945](https://github.com/moto-ogs/project-phoenix/issues/7945).
    Ein Datum ist ein Text im Format `YYYY-MM-DD`; TypeScript prüft den
    Texttyp, Go das Format und den Kalendertag. Der Proxy filtert weiterhin
    nur Namen und reicht jeden Wert unverändert zur Prüfung an Go weiter.
+   `contractGet` wählt wie der Katalog-Proxy bei `GET /api/students/`
+   den Decoder nach `view`; ohne Angabe gilt die Standardvariante.
 2. **Alle Felder im erzeugten JSON-Body bleiben freiwillig.** Das ist
    keine Aussage darüber, ob der Handler eine Anfrage annimmt. Go bindet
    fehlende Felder als Nullwerte; erst die Prüfung im Handler entscheidet,

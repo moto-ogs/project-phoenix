@@ -35,7 +35,11 @@ function createRawAuth(
     return async (request: NextRequest, context?: unknown) => {
       const session = nextSession();
       const currentInvocation = invocation;
-      const authRequest = request as NextAuthRequest;
+      // Auth.js reconstructs the request when AUTH_URL is configured.
+      const authRequest = new NextRequest(
+        request.url,
+        request,
+      ) as NextAuthRequest;
       authRequest.auth = session;
       const response = await (
         handler as (
@@ -107,7 +111,7 @@ describe("createResponseAwareAuth", () => {
     expect(vi.mocked(rawAuth)).toHaveBeenCalledTimes(2);
   });
 
-  it("retries a backend 401 with a freshly read Auth.js session", async () => {
+  it("retries a backend 401 after the write body has been consumed", async () => {
     const expiredSession = {
       ...tenantSession,
       user: { ...tenantSession.user, token: "expired-access" },
@@ -133,7 +137,8 @@ describe("createResponseAwareAuth", () => {
             { status: 401 },
           ),
     );
-    const route = helpers.withAuthResponse(async () => {
+    const route = helpers.withAuthResponse(async (request) => {
+      expect(await request.json()).toEqual({ name: "Ada" });
       const initial = await helpers.auth();
       let response = await backend(initial?.user?.token);
 
@@ -146,7 +151,10 @@ describe("createResponseAwareAuth", () => {
     });
 
     const response = await route(
-      new NextRequest("https://school.moto-app.de/api/students"),
+      new NextRequest("http://localhost/api/students", {
+        method: "POST",
+        body: JSON.stringify({ name: "Ada" }),
+      }),
     );
 
     expect(response.status).toBe(200);

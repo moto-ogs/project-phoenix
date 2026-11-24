@@ -180,7 +180,22 @@ interface CallOptions {
    * without a browser session lookup or renewal; the BFF authenticates it.
    */
   keepalive?: boolean;
+  /** During logout, send credentials but skip browser session handling. */
+  skipAuthRecovery?: boolean;
 }
+
+type SendOptions = CallOptions & { noRetryAfterRenewal?: boolean };
+
+// Keep this browser policy exhaustive without shipping the server's Zod
+// catalog. The other portal rows do not replay requests after a 401.
+const TENANT_NO_RETRY: Record<
+  KeyOf<Extract<AnyRoute<"tenant">, { noRetryAfterRenewal: string }>>,
+  true
+> = {
+  "POST /auth/password": true,
+  "POST /auth/passkeys/enrollment/challenge": true,
+  "POST /auth/passkeys/register/options": true,
+};
 
 type BffOptions<R, V> = CallOptions & BodyOf<R> & ParamsOf<R> & QueryOf<R, V>;
 
@@ -198,7 +213,7 @@ interface PortalRow {
   send: (
     url: string,
     init: RequestInit,
-    options: CallOptions,
+    options: SendOptions,
   ) => Promise<Response>;
 }
 
@@ -252,12 +267,17 @@ const sendPlain = (url: string, init: RequestInit) =>
 async function sendTenant(
   url: string,
   init: RequestInit,
-  { authRefusals }: CallOptions,
+  { authRefusals, noRetryAfterRenewal }: SendOptions,
 ): Promise<Response> {
   if (init.keepalive) return transport(url, init);
   await requireTenantSession();
   const response = await transport(url, init);
-  if (response.status !== 401) return response;
+  if (
+    response.status !== 401 ||
+    noRetryAfterRenewal ||
+    init.body instanceof FormData
+  )
+    return response;
   if (await isAuthRefusal(response, authRefusals)) return response;
   await renewTenantSession();
   return transport(url, init);
@@ -373,9 +393,11 @@ async function send(
   method: Method,
   url: string,
   init: RequestInit,
-  options: CallOptions,
+  options: SendOptions,
 ): Promise<Response> {
-  const response = await PORTALS[portal].send(url, init, options);
+  const response = options.skipAuthRecovery
+    ? await sendPlain(url, init)
+    : await PORTALS[portal].send(url, init, options);
   if (!response.ok) {
     throw await apiErrorFromResponse(
       response,
@@ -409,7 +431,7 @@ async function call<T>(
   portal: Portal,
   method: Method,
   url: string,
-  options: CallOptions & { body?: unknown },
+  options: SendOptions & { body?: unknown },
 ): Promise<T> {
   const { errorMessage } = options;
   const init = requestInit(method, options);
@@ -495,7 +517,11 @@ export function bffJson(
     opts.params,
     opts.query,
   );
-  return call(portal, method, url, opts);
+  return call(portal, method, url, {
+    ...opts,
+    noRetryAfterRenewal:
+      portal === "tenant" && Object.hasOwn(TENANT_NO_RETRY, route),
+  });
 }
 
 type FileHrefOptions<R> = ParamsOf<R> & QueryOf<R, never>;
@@ -543,7 +569,11 @@ export async function bffFile<P extends Portal, K extends FileRouteKey<P>>(
     opts.params,
     opts.query,
   );
-  return send(portal, method, url, requestInit(method, opts), opts);
+  return send(portal, method, url, requestInit(method, opts), {
+    ...opts,
+    noRetryAfterRenewal:
+      portal === "tenant" && Object.hasOwn(TENANT_NO_RETRY, route),
+  });
 }
 
 /**

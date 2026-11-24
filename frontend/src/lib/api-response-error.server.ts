@@ -203,8 +203,9 @@ function isRequest(value: unknown): value is Request {
 }
 
 /**
- * Answers a failed API route with the error envelope. A backend failure is
- * forwarded unchanged; a frontend failure gets an envelope of its own.
+ * Answers a failed API route with Problem Details. Valid backend problems
+ * below 500 keep their fields and may gain a request ID. Invalid bodies,
+ * backend 5xx and frontend errors get a safe problem instead.
  * @param error Error object
  * @returns Response with the error envelope and status
  */

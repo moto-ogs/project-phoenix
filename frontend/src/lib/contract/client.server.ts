@@ -33,7 +33,7 @@ interface ContractFailure {
   code: ErrorCode | undefined;
   /** The request ID the backend named in `instance`. */
   requestId: string | undefined;
-  /** The error to rethrow: the handler boundary forwards it unchanged. */
+  /** Rethrow this at the handler boundary to preserve the status and apply its error policy. */
   cause: ApiResponseError;
 }
 
@@ -128,6 +128,23 @@ interface JsonRoute {
   readonly response: z.ZodType;
 }
 
+interface VariantRoute extends Omit<JsonRoute, "response"> {
+  readonly variantParam: string;
+  readonly defaultVariant: string;
+  readonly response: Readonly<Record<string, z.ZodType>>;
+}
+
+type VariantOf<R> = R extends VariantRoute
+  ? keyof R["response"] & string
+  : never;
+type ReadAnswer<R, V> = R extends VariantRoute
+  ? z.output<
+      R["response"][[V] extends [never] ? R["defaultVariant"] : V & string]
+    >
+  : R extends JsonRoute
+    ? z.output<R["response"]>
+    : never;
+
 export type ContractBody<R> = R extends { request: RequestBody<infer B> }
   ? B
   : R extends { request: { kind: "multipart" } }
@@ -144,15 +161,15 @@ interface TransportOptions extends Pick<
   send?: (path: string, call: BackendCall) => Promise<Response>;
 }
 
-type ContractAddress<R> = ParamsOf<R> & QueryOf<R, never>;
+type ContractAddress<R, V> = ParamsOf<R> & QueryOf<R, V>;
 type CallAddress = {
   params?: Readonly<Record<string, string>>;
   query?: Readonly<Record<string, QueryValue>>;
 };
-export type ContractOptions<R> =
-  object extends ContractAddress<R>
-    ? [options?: TransportOptions & ContractAddress<R>]
-    : [options: TransportOptions & ContractAddress<R>];
+export type ContractOptions<R, V = never> =
+  object extends ContractAddress<R, V>
+    ? [options?: TransportOptions & ContractAddress<R, V>]
+    : [options: TransportOptions & ContractAddress<R, V>];
 
 export type ContractReply<T> = ContractResult<T> & {
   /** The HTTP result even when the answer body cannot be decoded. */
@@ -199,12 +216,30 @@ async function callContract<T>(
 }
 
 /** GET of a registered JSON route, with or without a session. */
-export function contractGet<const R extends JsonRoute & { method: "GET" }>(
+export function contractGet<
+  const R extends (JsonRoute | VariantRoute) & { method: "GET" },
+  V extends VariantOf<R> = never,
+>(
   route: R,
-  ...[options]: ContractOptions<NoInfer<R>>
-): Promise<ContractReply<z.output<R["response"]>>> {
-  return callContract(route, options ?? {}) as Promise<
-    ContractReply<z.output<R["response"]>>
+  ...[options]: ContractOptions<NoInfer<R>, V>
+): Promise<ContractReply<ReadAnswer<R, V>>> {
+  const address: TransportOptions & CallAddress = options ?? {};
+  let decoded: JsonRoute;
+  if ("variantParam" in route) {
+    const search = new URLSearchParams(routeSearch(address.query));
+    const asked = search.get(route.variantParam);
+    const selected =
+      asked !== null && Object.hasOwn(route.response, asked)
+        ? asked
+        : route.defaultVariant;
+    const response = route.response[selected];
+    if (!response) throw new Error(`missing decoder for ${route.pattern}`);
+    decoded = { ...route, response };
+  } else {
+    decoded = route;
+  }
+  return callContract(decoded, address) as Promise<
+    ContractReply<ReadAnswer<R, V>>
   >;
 }
 

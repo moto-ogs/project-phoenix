@@ -1,4 +1,5 @@
 import { routes as roomsRoutes } from "./rooms.generated";
+import { routes as studentRoutes } from "./students.generated";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { ApiError } from "~/lib/api-error";
@@ -48,6 +49,10 @@ it("types the Staff bootstrap query and does not accept an address override", ()
     void contractGet(rooms, { query: { isOpenRoom: true } });
     // @ts-expect-error: the route itself owns the address
     void contractGet(rooms, { endpoint: "/api/students" });
+    void contractGet(studentRoutes["GET /api/students/"], {
+      // @ts-expect-error: the route does not register this variant
+      query: { view: "compact" },
+    });
   };
   expect(checks).toBeTypeOf("function");
 });
@@ -57,6 +62,57 @@ describe("contractGet", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("decodes the students names variant selected by the query", async () => {
+    const student = {
+      id: "9007199254740993",
+      first_name: "Ada",
+      last_name: "Lovelace",
+    };
+    mockApiGet.mockResolvedValueOnce({
+      status: "success",
+      data: [student],
+      pagination: {
+        current_page: 1,
+        page_size: 20,
+        total_pages: 1,
+        total_records: 1,
+      },
+    });
+    const result = await contractGet(studentRoutes["GET /api/students/"], {
+      token: "token",
+      query: { view: "names" },
+    });
+    expect(mockApiGet).toHaveBeenCalledWith(
+      "/api/students/?view=names",
+      "token",
+    );
+    expect(result).toMatchObject({ ok: true, value: { data: [student] } });
+    if (result.ok) {
+      const checkType = () => {
+        // @ts-expect-error: the names variant does not return a school class
+        return result.value.data[0]?.school_class;
+      };
+      expect(checkType).toBeTypeOf("function");
+    }
+  });
+
+  it("does not accept the names payload when the default students variant was requested", async () => {
+    mockApiGet.mockResolvedValueOnce({
+      status: "success",
+      data: [{ id: "1", first_name: "Ada", last_name: "Lovelace" }],
+      pagination: {
+        current_page: 1,
+        page_size: 20,
+        total_pages: 1,
+        total_records: 1,
+      },
+    });
+    await expect(
+      contractGet(studentRoutes["GET /api/students/"], { token: "token" }),
+    ).resolves.toMatchObject({ ok: false, error: { status: 502 } });
+    expect(mockApiGet).toHaveBeenCalledWith("/api/students/", "token");
   });
 
   it("hands out the decoded answer", async () => {

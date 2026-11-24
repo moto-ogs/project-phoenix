@@ -50,9 +50,9 @@ slash is dropped and each parameter encoded.
   invitations) go without gate and renewal; a pattern names its portal
   (`/caterer/…` → `/api/caterer/…`), one under `/api` stays as it is.
 - **401:** one table in `bff-fetch.ts` holds where the portals differ. Staff:
-  the session gate before the request and one renewal with a retry
+  the session gate before the request and, for replayable calls, one renewal with a retry
   (`requireTenantSession`, `renewTenantSession` in `lib/session-cache.ts`),
-  then sign-out; `authRefusals` names codes that refuse
+  or sign-out if renewal fails; `authRefusals` names codes that refuse
   only the operation. Operator: to `/operator/login`. Parents: to
   `/parents/login`, except for the call's explicit `authRefusals` (e.g. a
   wrong MFA confirmation code or current password). Träger, moto schule and
@@ -70,6 +70,8 @@ slash is dropped and each parameter encoded.
   Each entry permits exactly one call for a file, portal, method and address.
   A second call or an unused entry fails lint. The enrollment bootstrap adds
   the Staff profile in its named route until #5018.
+  Only `session-bff.ts` can import the session route constructor. Routes
+  that live only in the BFF use keys checked against their route files.
 - **Wait:** a refusal with `Retry-After` (429, 503) carries the wait as
   `retryAfterSeconds` on the `ApiError` (`apiErrorFromResponse`).
 - **Keepalive cleanup:** `keepalive: true` starts the request immediately.
@@ -90,7 +92,8 @@ slash is dropped and each parameter encoded.
   has no contract provenance, ID-shaped names are a fallback. Keep IDs as
   text and use `compareIds` for ordering decimal IDs without rounding.
   All three rules run in `pnpm run check`.
-  `scripts/backend-wire-types.mjs`
+  `frontend/scripts/backend-wire-types.mjs` (run by
+  `frontend/scripts/backend-wire-types.node-test.mjs`)
   finds hand-written wire types by their form (two `snake_case` fields of
   their own in an interface, object alias or union branch, a generated type
   imported under another name, a type that only
@@ -166,6 +169,19 @@ or write a `Backend*` interface for a registered route.
   full answer, with or without an envelope. A malformed answer is a 502,
   never an empty value. A request type has optional fields because Go
   reads absent keys as zero values; Go's `Bind` still validates the body.
+  A read with response variants selects its decoder and answer type from the
+  query, or uses the registered default when the variant is omitted:
+
+  ```ts
+  import { contractGet } from "~/lib/contract/client.server";
+  import { routes } from "~/lib/contract/students.generated";
+
+  const reply = await contractGet(routes["GET /api/students/"], {
+    token,
+    query: { view: "names" },
+  });
+  ```
+
 - Pass `token` when the caller holds the bearer, or omit it for a public
   or pre-session step. Pass typed `params` and `query`; the entry supplies
   the backend path. There is no endpoint override. For a session-bound route that
@@ -187,15 +203,15 @@ or write a `Backend*` interface for a registered route.
   that determines its shape. Narrow such values at the point of use.
   A typed response may also carry a documented `LegacyJSON` alternative
   when recorded data predates the typed shape.
-- A registered enum is typed as its
-  known values but decodes any string; narrow it with `knownEnum`.
+- An open enum names the values this build knows but accepts any string;
+  narrow it with `knownEnum`.
 - A day is a `calendar.Date`, an instant a `time.Time`. A string field that
   carries a day or a wall-clock time says so in its tag: `contract:"date"`
   (`YYYY-MM-DD`) or `contract:"clock"` (`HH:MM`); the decoder then rejects
   another form. Closed value sets are registered in `Enums`.
 - An identifier is an `ident.ID` in every role, a count an `int`; the
-  generator rejects a bare `int64` and a response shape that
-  depends on a query parameter. Registered bigint identifiers travel as decimal strings and decode with
+  generator rejects a bare `int64`; a response shape that depends on the
+  query must register its variants. Registered bigint identifiers travel as decimal strings and decode with
   `int64String` (ADR 0300). An identifier-shaped field that carries genuine
   text instead stays a string, with a Go `contract_text` reason.
   A sign-in step or another route its portal's route file serves is typed
@@ -276,16 +292,22 @@ The key is the scope claim of the portal's session token
   when it says `private` and not `public`. Every refusal stays
   `private, no-store`.
 - A file of the portal `public` (a token link) needs `PublicFile`, the reason
-  its link alone may open it; the generator refuses an unmarked public file,
-  a public upload, and a marker on any other route. The proxy fetches it
+  its link alone may open it; the generator refuses an unmarked public file
+  and a marker on any other route. A public multipart upload needs its own
+  `PublicUpload` reason as well as the usual size limit and error code.
+  The two enrollment uploads register this in
+  `backend/modules/enrollment/http/public_route_contracts.go`. The proxy
+  sends them without a session or bearer. The proxy fetches a public file
   without session, bearer, body and `Idempotency-Key`, `sendBackend` adds the
   client IP for the backend's limiter of the link, and every answer is
-  `private, no-store` (ADR 0270, addendum "Öffentliche Datei-Routen"). The
+  `private, no-store` unless the route declares `FileCache` (ADR 0270,
+  addendum "Öffentliche Datei-Routen"). The
   link's path prefix needs log redaction in `lib/log-redaction.ts` and
   `backend/middleware/log_redaction.go`.
 - A file the browser may keep names its Cache-Control in `FileCache`, one
   of the reviewed `FileCache*` values; a public value needs `PublicFile`.
-  `ConditionalGet` forwards `If-None-Match`/`If-Modified-Since` and hands a
+  `ConditionalGet` on a public or session GET file with `FileCache`
+  forwards `If-None-Match`/`If-Modified-Since` and hands a
   304 back with `ETag` and `Last-Modified`. Only the served file keeps the
   value; refusals stay `private, no-store` (ADR 0270, addendum of
   2026-11-20). `FileCache` takes precedence over `PrivateCache` when both
@@ -296,12 +318,11 @@ The key is the scope claim of the portal's session token
   every method it exports is registered. `TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal`
   (`backend/api`) fails when the route does not run behind that portal's
   scope middleware.
-- A route file with a dynamic segment wins over the proxy too:
-  `billing-families/[id]` answers `billing-families/debtor-number-format`.
-  No route file may stand in front of a path on the catalog proxy allowlist;
-  only the hand-off files below `/api/auth` that pass the request to
-  `catalogProxyUnder` do. `app/api/catalog-route-selection.test.ts` fails
-  otherwise.
+- A route file with a dynamic segment can shadow the proxy too. No route
+  file may stand in front of a path on the catalog proxy allowlist except
+  an Auth.js hand-off that uses `catalogProxyUnder`. Hand-offs live under
+  the relevant portal's `auth` path, not just `/api/auth`.
+  `app/api/catalog-route-selection.test.ts` checks the route selection.
 - A route file that calls the backend itself must name at least one backend
   path outside the catalog proxy allowlists, such as a `RouteFile` sign-in
   step or an `Outside` stream. `app/api/route-backend-paths.test.ts` fails a
@@ -372,8 +393,11 @@ only what they need to assemble that request:
 Use `problemResponse` directly from `lib/api-response-error.server.ts`.
 
 Read the affected portal's route wrapper before changing a handler; retain the
-affected endpoint's error contract. Logout forwards backend errors unchanged
-even though the browser always clears its local session.
+affected endpoint's error contract. Logout uses the same error policy. If the
+request gets no answer, the browser keeps the session and offers a retry. A
+401 means there is no active session to revoke. Other failures that get an
+HTTP answer end the local session and show that server revocation could not be
+confirmed.
 
 Context params are async in Next.js 16: `params: Promise<...>` — always `await`.
 
@@ -403,6 +427,10 @@ sets `NoRetryAfterRenewal` for a catalog route or passes
 `src/app/api/credential-retry.test.ts` proves the credential goes out once
 after a 401. `contractGet` and `contractWrite` send once by default. Only a
 portal's session transport or wrapper can renew and repeat the call.
+In the browser, the staff client does not renew or replay a multipart call
+or a route marked `NoRetryAfterRenewal` after a 401. A logout cleanup can
+pass `skipAuthRecovery: true` to send the usual typed call with cookies but
+without the browser's session gate, renewal or login redirect.
 The Staff shell reads its startup data through the generated decoders;
 a failed optional read is left out so the browser can load it normally.
 `tenant-resolve.server.ts` uses the public `GET /auth/tenant/resolve`
@@ -410,8 +438,9 @@ entry without a session. Its own per-replica cache coalesces concurrent
 lookups, keeps only decoded successes for 60 seconds and retains its
 explicit invalidation. The unregistered SSE stream uses `sendBackend`
 directly and keeps its connection open past the header timeout. A route
-param in a backend path is encoded (`requirePathSegmentParam`,
-`encodeURIComponent`); a query key never replaces a route param. Why and
+param in a backend path is encoded by `fillRoutePath` for a contract call;
+encode it with `encodeURIComponent` when building an unregistered path.
+A query key never replaces a route param. Why and
 the full chain:
 [Client IP and rate limits](contracts.md#client-ip-and-rate-limits).
 
@@ -420,10 +449,12 @@ the full chain:
 Backend error responses have one wire contract: the portal handlers
 (`makePortalHandlers`, under the catalog proxy and every named route)
 propagate `ApiResponseError` through `handleApiError`; the public JSON
-proxies and file responses use `forwardBackendResponse`. These paths retain the
-backend status, body bytes, `Content-Type`, and `Retry-After`. Do not parse and
-rebuild an error body, infer status from an error string, or substitute a
-message when the backend returned an empty body. Locally generated errors
+proxies and file responses use `forwardBackendResponse`. Both retain status
+and `Retry-After` and replace 5xx bodies with safe Problem Details. The
+forwarder streams other error bodies with their content type; the handler
+instead replaces invalid or empty bodies and adds the BFF request ID to a
+valid problem when it is missing. Use these helpers rather than
+rebuilding errors in each route. Locally generated errors
 (validation, missing session, network failure) are separate from backend
 responses.
 

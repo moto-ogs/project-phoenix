@@ -5,6 +5,7 @@ import type * as sharedContract from "./contract/shared.generated";
 import type { PortalKey } from "./portal-paths";
 import {
   sessionBff,
+  type EnrollmentScope,
   type SessionAuthenticated,
   type SessionLoginBody,
 } from "./session-bff";
@@ -123,7 +124,7 @@ export async function resendChallenge(
  * that challenge; the operator answers 204 and returns null.
  */
 export async function enrollStart(
-  scope: LoginScope,
+  scope: EnrollmentScope,
   bearerToken: string,
 ): Promise<string | null> {
   const answer = await postSignInStep(
@@ -143,7 +144,7 @@ export async function enrollStart(
  * backend mints and answers with its status only.
  */
 export async function enrollConfirm(
-  scope: LoginScope,
+  scope: EnrollmentScope,
   bearerToken: string,
   code: string,
   challengeToken: string | null,

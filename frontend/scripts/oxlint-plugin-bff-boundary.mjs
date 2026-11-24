@@ -38,12 +38,6 @@ export const UNCONTRACTED = {
     "public POST /api/demo/access/status",
     "public POST /api/demo/access/sessions",
   ],
-  // Logout must not renew the revoked session or replace the sign-out cookie.
-  "lib/push-api.ts": [
-    "public DELETE parent DELETE /parent/me/push/subscriptions",
-    "public DELETE school DELETE /school/notifications/push/subscriptions",
-    "public DELETE tenant DELETE /api/notifications/push/subscriptions",
-  ],
   // Purges the BFF lookup and ISR caches without calling Go.
   "lib/operator/provisioning-api.ts": [
     "platform POST /api/operator/provisioning/revalidate-tenant",
@@ -274,13 +268,13 @@ const onlyListedUncontracted = {
       helper:
         "Use bffJson with a contract. Only the listed callers may use bffJsonUncontracted, and they must not forward it.",
       unused: "Remove the unused bffJsonUncontracted exception: {{route}}.",
+      session: "Only session-bff.ts may construct a session BFF route.",
     },
   },
   create(context) {
     const file = sourcePath(context);
     if (!file || isTest(file) || file === "lib/bff-fetch.ts") return {};
     const allowed = Object.hasOwn(UNCONTRACTED, file);
-    if (!allowed && !/bff-fetch|\\/.test(context.sourceCode.text)) return {};
     const remaining = new Set(UNCONTRACTED[file]);
     const report = (node) => context.report({ node, messageId: "helper" });
 
@@ -308,19 +302,38 @@ const onlyListedUncontracted = {
       }
     }
 
-    function isBffModule(node) {
+    function isModule(node, module) {
       const path = node && staticName(node, true);
       if (typeof path !== "string") return false;
       const target = path.startsWith(".")
         ? posix.join(posix.dirname(file), path)
         : path.replace(/^[@~]\//, "");
-      return (
-        posix.normalize(target).replace(/\.[jt]sx?$/, "") === "lib/bff-fetch"
-      );
+      return posix.normalize(target).replace(/\.[jt]sx?$/, "") === module;
+    }
+    const isBffModule = (node) => isModule(node, "lib/bff-fetch");
+    function restrictedSessionModule(source, node) {
+      if (
+        file === "lib/session-bff.ts" ||
+        !isModule(source, "lib/session-bff-route")
+      )
+        return false;
+      if (node.importKind === "type" || node.exportKind === "type")
+        return false;
+      if (
+        node.specifiers?.length &&
+        node.specifiers.every(
+          (specifier) =>
+            specifier.importKind === "type" || specifier.exportKind === "type",
+        )
+      )
+        return false;
+      context.report({ node, messageId: "session" });
+      return true;
     }
 
     return {
       ImportDeclaration(node) {
+        if (restrictedSessionModule(node.source, node)) return;
         if (!isBffModule(node.source)) return;
         for (const specifier of node.specifiers) {
           if (specifier.type === "ImportNamespaceSpecifier") report(specifier);
@@ -353,6 +366,7 @@ const onlyListedUncontracted = {
         }
       },
       ExportNamedDeclaration(node) {
+        if (restrictedSessionModule(node.source, node)) return;
         if (!isBffModule(node.source)) return;
         for (const specifier of node.specifiers) {
           if (staticName(specifier.local, false) === UNCONTRACTED_HELPER)
@@ -360,20 +374,24 @@ const onlyListedUncontracted = {
         }
       },
       ExportAllDeclaration(node) {
+        if (restrictedSessionModule(node.source, node)) return;
         if (isBffModule(node.source)) report(node);
       },
       ImportExpression(node) {
+        if (restrictedSessionModule(node.source, node)) return;
         if (isBffModule(node.source)) report(node);
       },
       CallExpression(node) {
         if (
           node.callee.name === "require" &&
-          isBffModule(node.arguments[0]) &&
           isGlobal(context.sourceCode, node.callee)
-        )
-          report(node);
+        ) {
+          if (restrictedSessionModule(node.arguments[0], node)) return;
+          if (isBffModule(node.arguments[0])) report(node);
+        }
       },
       TSExternalModuleReference(node) {
+        if (restrictedSessionModule(node.expression, node)) return;
         if (isBffModule(node.expression)) report(node);
       },
       "Program:exit"(node) {

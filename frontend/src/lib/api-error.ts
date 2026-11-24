@@ -300,7 +300,7 @@ export function apiErrorFromBody(
  * takes code, field errors and request ID from the envelope when the text is
  * JSON.
  */
-export function apiErrorFromText(
+function apiErrorFromText(
   message: string,
   status: number,
   text: string,

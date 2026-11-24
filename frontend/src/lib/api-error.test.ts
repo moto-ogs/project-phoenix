@@ -3,7 +3,6 @@ import {
   ApiError,
   apiErrorFromBody,
   apiErrorFromResponse,
-  apiErrorFromText,
   errorClassCode,
 } from "./api-error";
 
@@ -51,16 +50,18 @@ describe("ApiError", () => {
   });
 });
 
-describe("apiErrorFromText", () => {
-  it("keeps the caller's message and reads the envelope from the raw body", () => {
-    const error = apiErrorFromText(
+describe("apiErrorFromResponse", () => {
+  it("keeps the caller's message and reads the envelope from the raw body", async () => {
+    const error = await apiErrorFromResponse(
+      Response.json(
+        {
+          code: "general.input",
+          errors: [{ field: "first_name", reason: "is required" }],
+          instance: "req-7",
+        },
+        { status: 400 },
+      ),
       "Failed to update person: raw",
-      400,
-      JSON.stringify({
-        code: "general.input",
-        errors: [{ field: "first_name", reason: "is required" }],
-        instance: "req-7",
-      }),
     );
 
     expect(error).toBeInstanceOf(ApiError);
@@ -72,15 +73,15 @@ describe("apiErrorFromText", () => {
     expect(error.requestId).toBe("req-7");
   });
 
-  it("falls back to the status class when the body is not JSON", () => {
-    const error = apiErrorFromText("Bad gateway", 502, "<html>");
+  it("falls back to the status class when the body is not JSON", async () => {
+    const error = await apiErrorFromResponse(
+      new Response("<html>", { status: 502 }),
+      "Bad gateway",
+    );
 
     expect(error.code).toBe("general.unavailable");
     expect(error.errors).toBeUndefined();
   });
-});
-
-describe("apiErrorFromResponse", () => {
   it("reads code, fields and request ID from the response body", async () => {
     const error = await apiErrorFromResponse(
       new Response(

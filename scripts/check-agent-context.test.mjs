@@ -56,6 +56,18 @@ test('reports missing links and inline pointers with line numbers', t => {
   assert.match(errors[1], /^CLAUDE\.md:2:.*missing target/);
 });
 
+test('checks repository source paths in all three API seam guides', t => {
+  const root = fixture(t, {
+    'docs/agents/contracts.md': '`backend/api/missing.go`',
+    'docs/agents/frontend-api.md': '`frontend/src/lib/missing.server.ts`',
+    'docs/agents/new-route.md': '`scripts/missing.node-test.mjs`\n`frontend/src/lib/<resource>.generated.ts`',
+    'docs/agents/other.md': '`scripts/example.mjs`',
+  });
+  const { errors } = checkContext(root);
+  assert.equal(errors.length, 3);
+  assert.ok(errors.every(error => error.includes(':1:') && error.includes('missing target')));
+});
+
 test('detects wrong-case paths independently of filesystem case sensitivity', t => {
   const root = fixture(t, {
     'CLAUDE.md': '[Case](.Codex/rules/example.md)\n`.Codex/rules/example.md`',
