@@ -90,8 +90,9 @@ func TestQualificationsAPI_AssignKindAndReadStatus(t *testing.T) {
 	base := fmt.Sprintf("/staff/%d", target.ID)
 	rec = ctx.putRead(t, base+"/stammdaten/qualifikationen", fmt.Sprintf(`{"qualifikationen":[{"type_id":%q,"name":"","expires_on":"2020-03-01"}],"note":"Test"}`, firstAid), "staff:stammdaten")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = ctx.putRead(t, base+"/stammdaten/qualifikationen", `{"qualifikationen":[{"type_id":999999999,"name":""}],"note":"Test"}`, "staff:stammdaten")
+	rec = ctx.putRead(t, base+"/stammdaten/qualifikationen", `{"qualifikationen":[{"type_id":"999999999","name":""}],"note":"Test"}`, "staff:stammdaten")
 	require.Equal(t, http.StatusBadRequest, rec.Code, "an unknown kind is refused: "+rec.Body.String())
+	assert.Contains(t, rec.Body.String(), `"code":"workforce.stammdaten_invalid"`)
 
 	rec = ctx.get(base+"/stammdaten", "staff:stammdaten")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

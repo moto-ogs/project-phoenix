@@ -94,17 +94,17 @@ func TestHolidayInvoicePerChildCarriesTheNumberOfEachChild(t *testing.T) {
 	assert.Empty(t, first.DebtorNumber)
 
 	rec := confirmReadHoliday(t, f.traeger, f.office.token, int64(f.period.ID), f.siblings, map[string]any{"child_debtor_numbers": []map[string]any{
-		{"child_id": first.ChildID, "debtor_number": "60101"}, {"child_id": second.ChildID, "debtor_number": " "},
+		{"child_id": fmt.Sprint(first.ChildID), "debtor_number": "60101"}, {"child_id": fmt.Sprint(second.ChildID), "debtor_number": " "},
 	}})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	_, fields := registrationRefusalOf(t, rec)
 	assert.Equal(t, []string{fmt.Sprintf("child_debtor_number_%d", second.ChildID)}, fields, "the Träger asks for a number of every child")
 	rec = confirmReadHoliday(t, f.traeger, f.office.token, int64(f.period.ID), f.siblings, map[string]any{"child_debtor_numbers": []map[string]any{
-		{"child_id": first.ChildID, "debtor_number": "60101"}, {"child_id": first.ChildID + second.ChildID, "debtor_number": "1"},
+		{"child_id": fmt.Sprint(first.ChildID), "debtor_number": "60101"}, {"child_id": fmt.Sprint(first.ChildID + second.ChildID), "debtor_number": "1"},
 	}})
 	require.Equal(t, http.StatusNotFound, rec.Code, "a child of another registration: %s", rec.Body.String())
 	rec = confirmReadHoliday(t, f.traeger, f.office.token, int64(f.period.ID), f.siblings, map[string]any{"child_debtor_numbers": []map[string]any{
-		{"child_id": first.ChildID, "debtor_number": "60101"}, {"child_id": second.ChildID, "debtor_number": "60102"},
+		{"child_id": fmt.Sprint(first.ChildID), "debtor_number": "60101"}, {"child_id": fmt.Sprint(second.ChildID), "debtor_number": "60102"},
 	}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	require.Equal(t, http.StatusOK, confirmReadHoliday(t, f.traeger, f.office.token, int64(f.period.ID), f.again,
@@ -116,7 +116,7 @@ func TestHolidayInvoicePerChildCarriesTheNumberOfEachChild(t *testing.T) {
 
 	// The office corrects a number after the confirmation.
 	rec = putReadChildNumbers(t, f.traeger, f.office.token, int64(f.period.ID), f.siblings,
-		map[string]any{"children": []map[string]any{{"child_id": second.ChildID, "debtor_number": "60103"}}})
+		map[string]any{"children": []map[string]any{{"child_id": fmt.Sprint(second.ChildID), "debtor_number": "60103"}}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	setNumberRange(t, f, billing, "FE-{NNNN}")
@@ -209,7 +209,7 @@ func TestHolidayChildNumbersKeepUnchangedLegacyValues(t *testing.T) {
 	setTraegerSetting(t, f, configModels.KeyParentBillingDebtorNumberScope, "child")
 	proposal := holidayChildNumbers(t, f, f.siblings)
 	first, second := proposal.Children[0], proposal.Children[1]
-	inputs := []map[string]any{{"child_id": first.ChildID, "debtor_number": "OLD-1"}, {"child_id": second.ChildID, "debtor_number": "OLD-2"}}
+	inputs := []map[string]any{{"child_id": fmt.Sprint(first.ChildID), "debtor_number": "OLD-1"}, {"child_id": fmt.Sprint(second.ChildID), "debtor_number": "OLD-2"}}
 	rec := f.confirmWith(t, f.siblings, map[string]any{"child_debtor_numbers": inputs})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	fiveDigits(t, f)
@@ -226,7 +226,7 @@ func TestHolidayChildNumbersKeepUnchangedLegacyValues(t *testing.T) {
 	children := holidayChildNumbers(t, f, repeated)
 	require.Len(t, children.Children, 1)
 	rec = f.confirmWith(t, repeated, map[string]any{"child_debtor_numbers": []map[string]any{
-		{"child_id": children.Children[0].ChildID, "debtor_number": "OLD-1"},
+		{"child_id": fmt.Sprint(children.Children[0].ChildID), "debtor_number": "OLD-1"},
 	}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }
@@ -238,7 +238,7 @@ func TestHolidayChildNumberRemovalsAreBatched(t *testing.T) {
 	proposal := holidayChildNumbers(t, f, f.siblings)
 	var inputs []map[string]any
 	for i, child := range proposal.Children {
-		inputs = append(inputs, map[string]any{"child_id": child.ChildID, "debtor_number": fmt.Sprint(60101 + i)})
+		inputs = append(inputs, map[string]any{"child_id": fmt.Sprint(child.ChildID), "debtor_number": fmt.Sprint(60101 + i)})
 	}
 	rec := f.confirmWith(t, f.siblings, map[string]any{"child_debtor_numbers": inputs})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

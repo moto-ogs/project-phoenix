@@ -188,7 +188,7 @@ func seedMapSchoolProofKinds(client *Client, auth AuthRef, police int64) error {
 				continue
 			}
 			if _, err := client.PutWithAuth(auth, "/traeger/staff-proofs/school-kinds", map[string]any{
-				"school_id": school.SchoolID, "school_type_id": kind.SchoolTypeID, "proof_type_id": police,
+				"school_id": school.SchoolID, "school_type_id": kind.SchoolTypeID, "proof_type_id": ident.ID(police),
 			}); err != nil {
 				return fmt.Errorf("map a school proof kind: %w", err)
 			}

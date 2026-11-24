@@ -9,6 +9,7 @@ import (
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 const (
@@ -159,7 +160,7 @@ func (o *OptionalRoomID) UnmarshalJSON(b []byte) error {
 		o.Value = nil
 		return nil
 	}
-	return json.Unmarshal(b, &o.Value)
+	return wire.Unmarshal(b, &o.Value)
 }
 
 // Bind validates the update the way ActivityRequest validates a write.

@@ -102,10 +102,11 @@ func (rs *Resource) feed(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(feed.XML))
 }
 
-// Registered class codes (error-registry/) of the feed's refusals. This
+// Registered codes (error-registry/) of the feed's refusals. This
 // package may not import api/common, so it names them once here.
 const (
-	codeGeneralInput             = "general.input"
+	codeRequestFeedNotFound      = "care.request_feed_not_found"
+	codeGeneralPermission        = "general.permission"
 	codeGeneralBusinessRejection = "general.business_rejection"
 	codeGeneralServer            = "general.server"
 )
@@ -124,7 +125,9 @@ func (rs *Resource) failure(w http.ResponseWriter, err error) {
 	status, code := http.StatusInternalServerError, codeGeneralServer
 	switch {
 	case errors.Is(err, requestfeed.ErrNotFound):
-		status, code = http.StatusNotFound, codeGeneralInput
+		status, code = http.StatusNotFound, codeRequestFeedNotFound
+	case errors.Is(err, requestfeed.ErrNoAccess):
+		status, code = http.StatusForbidden, codeGeneralPermission
 	case errors.Is(err, requestfeed.ErrAlreadyActive):
 		status, code = http.StatusConflict, codeGeneralBusinessRejection
 	default:

@@ -65,10 +65,10 @@ func seedCareCostShares(client *Client, auth AuthRef, school int64, month calend
 	}
 	today := calendar.TodayDate()
 	shares := []map[string]any{
-		{"contract_id": set.Contracts[2].ContractID, "kind": "youth_office", "cost_bearer_id": youthOffice,
+		{"contract_id": set.Contracts[2].ContractID, "kind": "youth_office", "cost_bearer_id": ident.ID(youthOffice),
 			"share_basis_points": 10000, "valid_until": calendar.NewDate(month.Year()+1, 7, 31).String(),
 			"reference": "Bescheid FJ 51-2027-0042"},
-		{"contract_id": set.Contracts[3].ContractID, "kind": "education_participation", "cost_bearer_id": jobcenter,
+		{"contract_id": set.Contracts[3].ContractID, "kind": "education_participation", "cost_bearer_id": ident.ID(jobcenter),
 			"share_cents": 2500, "valid_until": today.AddDays(20).String(), "reference": "BuT-Bescheid Az. 2026-117"},
 	}
 	for _, share := range shares {

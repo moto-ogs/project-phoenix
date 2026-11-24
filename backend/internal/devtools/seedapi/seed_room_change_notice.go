@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sort"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedRoomChangeNoticeStep moves a coming block of the first parent
@@ -40,7 +42,7 @@ func (seedRoomChangeNoticeStep) Run(_ context.Context, rt *Runtime) error {
 	date := nextSeedSchoolDay(todaySeedDate().AddDays(1))
 	body := map[string]any{
 		"date": date.String(), "start_time": "15:00", "end_time": "16:00",
-		"title": name, "room_id": from, "student_ids": studentIDs, "staff_ids": staffIDs,
+		"title": name, "room_id": ident.ID(from), "student_ids": ident.IDs(studentIDs), "staff_ids": ident.IDs(staffIDs),
 	}
 	raw, err := rt.Client.Post("/api/timetable/instances", body)
 	if err != nil {
@@ -59,7 +61,7 @@ func (seedRoomChangeNoticeStep) Run(_ context.Context, rt *Runtime) error {
 	if err != nil || instanceID == 0 {
 		return fmt.Errorf("%s response carries no id", name)
 	}
-	body["room_id"] = to
+	body["room_id"] = ident.ID(to)
 	// The create answers the block's version; the move saves back that
 	// block (ADR 0311).
 	body["expected_version"] = created.Data.Version

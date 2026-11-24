@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
@@ -185,7 +186,7 @@ func toCareExceptionResponse(c *parentService.CareException) CareExceptionRespon
 func decodePickupChangeSubmission(w http.ResponseWriter, r *http.Request) (parentService.PickupChangeSubmission, bool) {
 	var none parentService.PickupChangeSubmission
 	var req SubmitCareExceptionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return none, false
 	}

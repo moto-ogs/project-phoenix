@@ -11,11 +11,12 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	appointmentcap "github.com/moto-ogs/project-phoenix/modules/appointments"
 	calendarSvc "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type fakeCalendarService struct {
@@ -345,7 +346,7 @@ func TestCreateAppointmentParsesPayload(t *testing.T) {
 		"end_time":"10:30",
 		"delivery_mode":"rsvp_required",
 		"recurrence":{"frequency":"weekly","interval_count":2,"weekdays":["monday"]},
-		"targets":[{"type":"staff","id":42}]
+		"targets":[{"type":"staff","id":"42"}]
 	}`
 	req := httptest.NewRequest(http.MethodPost, "/appointments", strings.NewReader(body))
 	w := httptest.NewRecorder()

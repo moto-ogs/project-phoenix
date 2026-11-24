@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	testpkg "github.com/moto-ogs/project-phoenix/test"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -306,11 +308,11 @@ func TestFixedSeeder_SeedGroups(t *testing.T) {
 func TestFixedSeeder_SeedGroupsAssignsWiesengruppeTeacher(t *testing.T) {
 	t.Parallel()
 
-	var wiesengruppeTeacherIDs []int64
+	var wiesengruppeTeacherIDs []testpkg.ID
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 		var body struct {
-			Name       string  `json:"name"`
-			TeacherIDs []int64 `json:"teacher_ids"`
+			Name       string       `json:"name"`
+			TeacherIDs []testpkg.ID `json:"teacher_ids"`
 		}
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 		if body.Name == "Wiesengruppe" {
@@ -325,7 +327,7 @@ func TestFixedSeeder_SeedGroupsAssignsWiesengruppeTeacher(t *testing.T) {
 	fs.teacherIDs["Anna Müller"] = 42
 
 	require.NoError(t, fs.seedGroups(context.Background(), &FixedResult{}))
-	assert.Equal(t, []int64{42}, wiesengruppeTeacherIDs)
+	assert.Equal(t, []testpkg.ID{42}, wiesengruppeTeacherIDs)
 }
 
 func TestFixedSeeder_SeedStudents(t *testing.T) {

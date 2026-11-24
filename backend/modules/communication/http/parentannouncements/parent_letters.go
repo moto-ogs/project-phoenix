@@ -1,7 +1,6 @@
 package announcement
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 	announcementService "github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -82,7 +82,7 @@ type letterPreviewResponse struct {
 
 func decodeLetterPreview(w http.ResponseWriter, r *http.Request) (string, int64, bool) {
 	var req letterPreviewRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return "", 0, false
 	}

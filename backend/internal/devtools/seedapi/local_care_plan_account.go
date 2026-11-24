@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const localCarePlanAccountKey = "nachbearbeitung-ohne-planung"
@@ -60,7 +62,7 @@ func (s seedLocalCarePlanAccountStep) Run(ctx context.Context, rt *Runtime) erro
 		"email": email, "username": username,
 		"password": password, "confirm_password": password,
 		"first_name": "Testkonto", "last_name": "Nachbearbeitung",
-		"role_id": fs.roleIDs[definition.Name],
+		"role_id": ident.ID(fs.roleIDs[definition.Name]),
 	})
 	if err != nil {
 		return fmt.Errorf("register local care-plan account: %w", err)

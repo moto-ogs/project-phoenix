@@ -22,6 +22,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -279,12 +280,11 @@ func assignmentResponseOf(requested workforce.SubstitutionTargetType, created *w
 
 func decodeAssignment(body io.Reader) (assignmentRequest, error) {
 	var request assignmentRequest
-	decoder := json.NewDecoder(body)
-	decoder.DisallowUnknownFields()
+	decoder := wire.NewObjectDecoder(body)
 	if err := decoder.Decode(&request); err != nil {
 		return assignmentRequest{}, err
 	}
-	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
 		return assignmentRequest{}, errors.New("request body must contain one JSON object")
 	}
 	return request, nil
@@ -312,7 +312,7 @@ func RouteContractTypes() ContractTypes {
 
 func (rs *Resource) end(w http.ResponseWriter, r *http.Request) {
 	var request endRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := wire.Decode(r.Body, &request); err != nil {
 		rs.runtime.Failure(w, r, invalidRequest("Die Anfrage ist ungültig.", codeInvalidTarget))
 		return
 	}

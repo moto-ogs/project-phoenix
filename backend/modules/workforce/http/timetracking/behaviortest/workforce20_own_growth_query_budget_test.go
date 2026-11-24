@@ -8,10 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/modules/workforce/workforcetest"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
-	"github.com/stretchr/testify/require"
 )
 
 func TestWorkforce20OwnGrowth(t *testing.T) {
@@ -33,12 +34,12 @@ func TestWorkforce20OwnGrowth(t *testing.T) {
 			session := func(tenant, staff int64, i int) int64 {
 				date := fmt.Sprintf("2026-01-%02d", i+1)
 				at := time.Date(2026, 1, i+1, 8, 0, 0, 0, time.UTC)
-				return insert("active.work_sessions", map[string]any{"tenant_id": tenant, "staff_id": staff, "date": date, "status": "present", "source": "app", "check_in_time": at, "check_out_time": at.Add(8 * time.Hour), "created_by": staff})
+				return insert("active.work_sessions", map[string]any{"tenant_id": fmt.Sprint(tenant), "staff_id": fmt.Sprint(staff), "date": date, "status": "present", "source": "app", "check_in_time": at, "check_out_time": at.Add(8 * time.Hour), "created_by": fmt.Sprint(staff)})
 			}
 			foreignSession := session(foreign.TenantID, foreignStaff.ID, 0)
-			insert("audit.work_session_edits", map[string]any{"tenant_id": foreign.TenantID, "session_id": foreignSession, "staff_id": foreignStaff.ID, "edited_by": foreignStaff.ID, "field_name": "reason", "new_value": "Foreign"})
-			insert("active.work_session_breaks", map[string]any{"tenant_id": foreign.TenantID, "session_id": foreignSession, "started_at": time.Date(2026, 1, 1, 9, 0, 0, 0, time.UTC), "ended_at": time.Date(2026, 1, 1, 9, 1, 0, 0, time.UTC), "duration_minutes": 1})
-			insert("active.staff_absences", map[string]any{"tenant_id": foreign.TenantID, "staff_id": foreignStaff.ID, "created_by": foreignStaff.ID, "absence_type": "vacation", "status": "requested", "date_start": "2026-02-01", "date_end": "2026-02-01", "requested_at": time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)})
+			insert("audit.work_session_edits", map[string]any{"tenant_id": fmt.Sprint(foreign.TenantID), "session_id": fmt.Sprint(foreignSession), "staff_id": fmt.Sprint(foreignStaff.ID), "edited_by": fmt.Sprint(foreignStaff.ID), "field_name": "reason", "new_value": "Foreign"})
+			insert("active.work_session_breaks", map[string]any{"tenant_id": fmt.Sprint(foreign.TenantID), "session_id": fmt.Sprint(foreignSession), "started_at": time.Date(2026, 1, 1, 9, 0, 0, 0, time.UTC), "ended_at": time.Date(2026, 1, 1, 9, 1, 0, 0, time.UTC), "duration_minutes": 1})
+			insert("active.staff_absences", map[string]any{"tenant_id": fmt.Sprint(foreign.TenantID), "staff_id": fmt.Sprint(foreignStaff.ID), "created_by": fmt.Sprint(foreignStaff.ID), "absence_type": "vacation", "status": "requested", "date_start": "2026-02-01", "date_end": "2026-02-01", "requested_at": time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)})
 
 			var sessions, edits, breaks, absences []int64
 			counts := []int{}
@@ -47,9 +48,9 @@ func TestWorkforce20OwnGrowth(t *testing.T) {
 					i := len(sessions)
 					sid := staff.ID
 					sessions = append(sessions, session(testpkg.Tenant(t), sid, i))
-					edits = append(edits, insert("audit.work_session_edits", map[string]any{"tenant_id": testpkg.Tenant(t), "session_id": sessions[0], "staff_id": staff.ID, "edited_by": staff.ID, "field_name": "reason", "new_value": fmt.Sprintf("Edit %02d", i), "created_at": time.Date(2026, 1, i+1, 12, 0, 0, 0, time.UTC)}))
-					breaks = append(breaks, insert("active.work_session_breaks", map[string]any{"tenant_id": testpkg.Tenant(t), "session_id": sessions[0], "started_at": time.Date(2026, 1, 1, 9, i*2, 0, 0, time.UTC), "ended_at": time.Date(2026, 1, 1, 9, i*2+1, 0, 0, time.UTC), "duration_minutes": 1}))
-					absences = append(absences, insert("active.staff_absences", map[string]any{"tenant_id": testpkg.Tenant(t), "staff_id": staff.ID, "created_by": staff.ID, "absence_type": "vacation", "status": "requested", "date_start": fmt.Sprintf("2026-02-%02d", i+1), "date_end": fmt.Sprintf("2026-02-%02d", i+1), "requested_at": time.Date(2026, 1, i+1, 12, 0, 0, 0, time.UTC)}))
+					edits = append(edits, insert("audit.work_session_edits", map[string]any{"tenant_id": fmt.Sprint(testpkg.Tenant(t)), "session_id": fmt.Sprint(sessions[0]), "staff_id": fmt.Sprint(staff.ID), "edited_by": fmt.Sprint(staff.ID), "field_name": "reason", "new_value": fmt.Sprintf("Edit %02d", i), "created_at": time.Date(2026, 1, i+1, 12, 0, 0, 0, time.UTC)}))
+					breaks = append(breaks, insert("active.work_session_breaks", map[string]any{"tenant_id": fmt.Sprint(testpkg.Tenant(t)), "session_id": fmt.Sprint(sessions[0]), "started_at": time.Date(2026, 1, 1, 9, i*2, 0, 0, time.UTC), "ended_at": time.Date(2026, 1, 1, 9, i*2+1, 0, 0, time.UTC), "duration_minutes": 1}))
+					absences = append(absences, insert("active.staff_absences", map[string]any{"tenant_id": fmt.Sprint(testpkg.Tenant(t)), "staff_id": fmt.Sprint(staff.ID), "created_by": fmt.Sprint(staff.ID), "absence_type": "vacation", "status": "requested", "date_start": fmt.Sprintf("2026-02-%02d", i+1), "date_end": fmt.Sprintf("2026-02-%02d", i+1), "requested_at": time.Date(2026, 1, i+1, 12, 0, 0, 0, time.UTC)}))
 				}
 				path := "/time-tracking/" + route + "?from=2026-01-01&to=2026-01-31&format=csv&year=2026&month=1"
 				if route == "edits" {

@@ -1,7 +1,6 @@
 package carecontracthttp
 
 import (
-	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // The import of existing contracts in the Träger-Portal (#4723). The
@@ -114,7 +114,7 @@ func importRequestOf(w http.ResponseWriter, r *http.Request) (carecontract.Contr
 		Delimiter: r.FormValue("delimiter"), Fingerprint: r.FormValue("fingerprint")}
 	if raw := r.FormValue("mapping"); raw != "" {
 		var mapping carecontract.ContractImportMapping
-		if err := json.Unmarshal([]byte(raw), &mapping); err != nil {
+		if err := wire.Unmarshal([]byte(raw), &mapping); err != nil {
 			return carecontract.ContractImportRequest{}, &carecontract.ValidationError{Fields: map[string]string{"mapping": "invalid"}}
 		}
 		request.Mapping = &mapping

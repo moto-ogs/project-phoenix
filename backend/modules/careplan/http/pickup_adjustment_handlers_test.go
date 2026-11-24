@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -15,8 +18,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type failAfterOfferingWriteCoordinator struct {
@@ -422,7 +423,7 @@ func TestBulkPickupAdjustmentRequiresAndAuditsExplicitExceptions(t *testing.T) {
 		testpkg.Ctx(t), settings.KeyRequirePickupOfferingReview, true, nil, nil,
 	))
 	body := map[string]any{
-		"student_ids": []int64{first.ID, second.ID},
+		"student_ids": []string{fmt.Sprint(first.ID), fmt.Sprint(second.ID)},
 		"schedules":   []map[string]any{{"weekday": 1, "pickup_time": "16:20"}},
 	}
 

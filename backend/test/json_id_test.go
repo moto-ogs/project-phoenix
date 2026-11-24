@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestIDReadsOnlyADecimalStringAndWritesANumber(t *testing.T) {
+func TestIDReadsAndWritesADecimalString(t *testing.T) {
 	t.Parallel()
 
 	var got struct {
@@ -23,7 +23,7 @@ func TestIDReadsOnlyADecimalStringAndWritesANumber(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(raw) != `{"a":5,"b":9007199254740993,"c":[1,2]}` {
+	if string(raw) != `{"a":"5","b":"9007199254740993","c":["1","2"]}` {
 		t.Errorf("got %s", raw)
 	}
 	for _, input := range []string{`{"a":"x"}`, `{"a":""}`, `{"a":1.5}`, `{"a":5}`, `{"c":[1]}`} {

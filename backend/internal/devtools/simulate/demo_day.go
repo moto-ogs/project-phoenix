@@ -526,7 +526,7 @@ func (day *demoDay) settlePickupTasks(client Client, moved map[int64]string) {
 			continue
 		}
 		path := fmt.Sprintf("/api/timetable/pickup-extensions/%d/resolve", task.ID)
-		if _, err := client.Post(path, map[string]any{"block_ids": []int64{}}); err != nil {
+		if _, err := client.Post(path, map[string]any{"block_ids": []ident.ID{}}); err != nil {
 			slog.Info("demo day: pickup task not closed",
 				"task_id", task.ID,
 				"error", err,
@@ -587,8 +587,8 @@ func (day *demoDay) planActivities(client Client, activities []demoActivity, stu
 		}
 		_, err := client.Post("/api/timetable/instances", map[string]any{
 			"date": day.date, "start_time": clockOf(start), "end_time": clockOf(end),
-			"title": activity.name, "room_id": activity.roomID, "activity_group_id": activity.id,
-			"staff_ids": []int64{activity.staffID}, "student_ids": roster,
+			"title": activity.name, "room_id": ident.ID(activity.roomID), "activity_group_id": ident.ID(activity.id),
+			"staff_ids": []ident.ID{ident.ID(activity.staffID)}, "student_ids": ident.IDs(roster),
 		})
 		if err != nil {
 			return created, fmt.Errorf("plan demo activity %d: %w", activity.id, err)
@@ -621,11 +621,11 @@ func (block demoBlock) updateBody(start, end int) map[string]any {
 	body := map[string]any{
 		"date": block.Date, "start_time": clockOf(start), "end_time": clockOf(end),
 		"title":     block.Title,
-		"staff_ids": staffIDs, "student_ids": block.StudentIDs,
+		"staff_ids": ident.IDs(staffIDs), "student_ids": block.StudentIDs,
 		"expected_version": block.Version,
 	}
 	if block.RoomID != 0 {
-		body["room_id"] = block.RoomID
+		body["room_id"] = ident.ID(block.RoomID)
 	}
 	if block.Description != nil {
 		body["description"] = *block.Description
@@ -634,7 +634,7 @@ func (block demoBlock) updateBody(start, end int) map[string]any {
 		body["notes"] = *block.Notes
 	}
 	if block.ActivityGroupID != nil {
-		body["activity_group_id"] = *block.ActivityGroupID
+		body["activity_group_id"] = ident.ID(*block.ActivityGroupID)
 	}
 	if block.ListKind != nil {
 		body["list_kind"] = *block.ListKind
@@ -732,7 +732,7 @@ func (day *demoDay) hold(client Client, block demoBlock) error {
 	var checkInErr error
 	if len(expected) > 0 {
 		path := fmt.Sprintf("/api/timetable/operations/instances/%d/students/check-in", block.ID)
-		_, checkInErr = client.Post(path, map[string]any{"student_ids": expected})
+		_, checkInErr = client.Post(path, map[string]any{"student_ids": ident.IDs(expected)})
 	}
 	// Close it even after a failed check-in: a past block must not keep running.
 	return errors.Join(checkInErr, completeBlock(client, int64(block.ID)))

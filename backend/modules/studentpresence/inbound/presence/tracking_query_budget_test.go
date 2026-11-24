@@ -82,7 +82,7 @@ func TestTrackingIndicatorsIssuesOneSettingValuesQuery(t *testing.T) {
 			student := testpkg.CreateTestStudentForTenant(t, db, tenantID, "Budget", fmt.Sprintf("Test%d", len(studentIDs)), "1a")
 			studentIDs = append(studentIDs, student.ID)
 		}
-		body, err := json.Marshal(map[string]any{"student_ids": studentIDs})
+		body, err := json.Marshal(map[string]any{"student_ids": testpkg.IDsOf[testpkg.ID](studentIDs)})
 		require.NoError(t, err)
 		req := httptest.NewRequest("POST", "/tracking-indicators", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")

@@ -185,8 +185,8 @@ func TestHolidayChildDayLimitWithRepeatedIdentityEditKeys(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeSchoolPortalData[editedRegistration](t, rec.Body.Bytes())
 	edit := map[string]any{"children": []map[string]any{
-		{"id": detail.Children[0].ID, "first_name": "Ole", "last_name": "Tag", "birth_date": "2017-05-04", "home_school_id": d.offer.Schools[0].ID},
-		{"id": detail.Children[1].ID, "first_name": "ole", "last_name": "Tag", "birth_date": "2017-05-04", "home_school_id": d.offer.Schools[0].ID},
+		{"id": detail.Children[0].ID, "first_name": "Ole", "last_name": "Tag", "birth_date": "2017-05-04", "home_school_id": fmt.Sprint(d.offer.Schools[0].ID)},
+		{"id": detail.Children[1].ID, "first_name": "ole", "last_name": "Tag", "birth_date": "2017-05-04", "home_school_id": fmt.Sprint(d.offer.Schools[0].ID)},
 	}}
 	rec = putReadRegistration(t, d.traeger, d.office.token, path+"/details", edit)
 	assert.Equal(t, map[string]any{"limit": float64(3), "days": float64(4), "elsewhere": float64(2), "child": float64(1)},
@@ -214,8 +214,8 @@ func TestHolidayWeekChangeCountsTheChildsOtherRegistrations(t *testing.T) {
 		"name": "Winterferien 2027", "registration_opens_on": "2020-01-01", "registration_closes_on": "2099-12-31",
 		"binding": true, "notes": "", "max_days_per_child": 2,
 		"weeks": []map[string]any{
-			{"starts_on": "2027-01-11", "ends_on": "2027-01-11", "host_school_id": office.schools[0], "time_models": model},
-			{"starts_on": "2027-01-18", "ends_on": "2027-01-18", "host_school_id": office.schools[0], "time_models": model},
+			{"starts_on": "2027-01-11", "ends_on": "2027-01-11", "host_school_id": fmt.Sprint(office.schools[0]), "time_models": model},
+			{"starts_on": "2027-01-18", "ends_on": "2027-01-18", "host_school_id": fmt.Sprint(office.schools[0]), "time_models": model},
 		},
 	}
 	rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, "/traeger/holiday-periods/", body)
@@ -227,7 +227,7 @@ func TestHolidayWeekChangeCountsTheChildsOtherRegistrations(t *testing.T) {
 	d.offer = d.readOffer(t)
 	for _, week := range d.offer.Weeks {
 		d.submit(t, d.registration("eva.wochen@example.org", "Ole",
-			map[string]any{"week_id": week.ID, "time_model_id": week.TimeModels[0].ID}))
+			map[string]any{"week_id": fmt.Sprint(week.ID), "time_model_id": fmt.Sprint(week.TimeModels[0].ID)}))
 	}
 
 	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayPeriodPath(int64(created.ID)), nil)
@@ -271,7 +271,7 @@ func TestHolidayIdentityEditsKeepTheChildDayLimit(t *testing.T) {
 				guardian["email"] = email
 				edit["guardian"] = guardian
 			} else {
-				edit["children"] = []map[string]any{{"id": child, "first_name": "Ole", "last_name": "Tag", "birth_date": "2017-05-04", "home_school_id": d.offer.Schools[0].ID}}
+				edit["children"] = []map[string]any{{"id": fmt.Sprint(child), "first_name": "Ole", "last_name": "Tag", "birth_date": "2017-05-04", "home_school_id": fmt.Sprint(d.offer.Schools[0].ID)}}
 			}
 			rec := putReadRegistration(t, d.traeger, d.office.token, path, edit)
 			assert.Equal(t, map[string]any{"limit": float64(3), "days": float64(4), "elsewhere": float64(2), "child": float64(1)}, dayLimitRefusal(t, rec.Code, rec.Body.Bytes()))
@@ -313,7 +313,7 @@ func TestHolidayIdentityEditsCountTheFinalIdentitiesOfAllSiblings(t *testing.T) 
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeSchoolPortalData[editedRegistration](t, rec.Body.Bytes())
 	editChild := func(index int, name string) map[string]any {
-		return map[string]any{"id": detail.Children[index].ID, "first_name": name, "last_name": "Tag", "birth_date": "2017-05-04", "home_school_id": d.offer.Schools[0].ID}
+		return map[string]any{"id": detail.Children[index].ID, "first_name": name, "last_name": "Tag", "birth_date": "2017-05-04", "home_school_id": fmt.Sprint(d.offer.Schools[0].ID)}
 	}
 	// Neither child has this name yet: the count must include both edits.
 	rec = putReadRegistration(t, d.traeger, d.office.token, path+"/details", map[string]any{

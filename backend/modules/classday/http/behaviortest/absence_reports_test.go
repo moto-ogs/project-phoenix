@@ -57,11 +57,11 @@ func (f *morningAttendanceFixture) report4791(t *testing.T, method, date string,
 // markAbsent marks the child without a report and the sick child "fehlt".
 func (f *morningAttendanceFixture) markAbsent(t *testing.T) {
 	t.Helper()
-	rec := f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":%d,"status":"absent"},{"student_id":%d,"status":"absent"},{"student_id":%d,"status":"present"}]}`,
+	rec := f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":"%d","status":"absent"},{"student_id":"%d","status":"absent"},{"student_id":"%d","status":"present"}]}`,
 		f.present, f.sick, f.other), morningAttendancePermission)
 	if rec.Code == http.StatusConflict {
 		// The child of the other class is not on this roster.
-		rec = f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":%d,"status":"absent"},{"student_id":%d,"status":"absent"}]}`,
+		rec = f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":"%d","status":"absent"},{"student_id":"%d","status":"absent"}]}`,
 			f.present, f.sick), morningAttendancePermission)
 	}
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
@@ -167,7 +167,7 @@ func TestAbsenceReportGates(t *testing.T) {
 	rec = f.report4791(t, http.MethodPut, morningMonday, f.other, `{"status":"sick"}`, absenceReportPermission)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "classday.absence_report_unknown_child")
-	rec = f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":%d,"status":"present"}]}`, f.present), morningAttendancePermission)
+	rec = f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":"%d","status":"present"}]}`, f.present), morningAttendancePermission)
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
 	rec = f.report4791(t, http.MethodPut, morningMonday, f.present, `{"status":"sick"}`, absenceReportPermission)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
@@ -179,7 +179,7 @@ func TestMorningAttendanceTellsTheSchoolWhoMissesWithoutReport(t *testing.T) {
 	f := setupMorningAttendanceFixture(t, morningMonday)
 
 	// A mark without a missing child tells nobody.
-	rec := f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":%d,"status":"present"},{"student_id":%d,"status":"absent"}]}`,
+	rec := f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":"%d","status":"present"},{"student_id":"%d","status":"absent"}]}`,
 		f.present, f.sick), morningAttendancePermission)
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
 	assert.Empty(t, f.module.Unreported.Reports, "the sick child has a report")

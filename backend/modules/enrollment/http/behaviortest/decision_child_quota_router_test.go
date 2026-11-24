@@ -32,6 +32,7 @@ import (
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -271,7 +272,7 @@ func (m manualEnrollmentRouter) postManualEnrollmentForm(t *testing.T, formSchem
 	if terms == "" {
 		terms = phaseTerms(t, m.requests, m.phase.ID)
 	}
-	payload, err := json.Marshal(enrollmentAPI.AdminManualApprovedEnrollmentRequest{
+	payload, err := wire.Marshal(enrollmentAPI.AdminManualApprovedEnrollmentRequest{
 		ExistingStudentID:       existingStudentID,
 		CreateNewStudent:        createNewStudent,
 		ShownExistingStudentIDs: shownStudentIDs,

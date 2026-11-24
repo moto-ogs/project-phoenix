@@ -1,7 +1,6 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -82,7 +82,7 @@ func (rs *Resource) setRequestSharing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body requestSharingBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeCareRequestSharingInvalid))
 		return
 	}

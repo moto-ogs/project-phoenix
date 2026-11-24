@@ -260,7 +260,7 @@ func seedCarePriceLists(client *Client, auth AuthRef, month calendar.Date, freeM
 			free = []int{freeMonth}
 		}
 		if _, err := client.PutWithAuth(auth, "/traeger/care-tariffs/", map[string]any{
-			"school_id": schoolID, "valid_from": month.String(), "free_months": free, "prices": bySchool[schoolID],
+			"school_id": ident.ID(schoolID), "valid_from": month.String(), "free_months": free, "prices": bySchool[schoolID],
 			"expected_version": envelope.Data.Versions[strconv.FormatInt(schoolID, 10)],
 		}); err != nil {
 			return 0, fmt.Errorf("set the prices of school %d: %w", schoolID, err)
@@ -433,7 +433,7 @@ func seedStartCareRun(client *Client, auth AuthRef, school int64, month calendar
 		return runID, err
 	}
 	raw, err := client.PostWithAuth(auth, "/traeger/care-billing-runs/", map[string]any{
-		"billing_month": month.String(), "school_ids": []int64{school},
+		"billing_month": month.String(), "school_ids": []ident.ID{ident.ID(school)},
 	})
 	if seedConflictCode(err, seedCareRunOpen) {
 		runID, open, err = seedOpenCareRun(client, auth, school, month)

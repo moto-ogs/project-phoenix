@@ -16,9 +16,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type mockCareOfferingService struct {
@@ -139,7 +140,7 @@ func makeOfferingModel(id, phaseID int64, name string) *CareOffering {
 
 func validOfferingBody(phaseID int64, name string) map[string]any {
 	return map[string]any{
-		"phase_id":              phaseID,
+		"phase_id":              fmt.Sprint(phaseID),
 		"name":                  name,
 		"days_of_week_mode":     "fixed",
 		"available_days":        []string{"mon", "tue"},
@@ -482,7 +483,7 @@ func TestCloneCareOfferingHandler_NilServiceReturns500(t *testing.T) {
 
 	router := buildCareOfferingRouter(nil)
 	w := executeCareJSON(t, router, http.MethodPost, "/enrollment/care-offerings/1234/clone",
-		map[string]any{"target_phase_id": 5678})
+		map[string]any{"target_phase_id": "5678"})
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
@@ -491,7 +492,7 @@ func TestCloneCareOfferingHandler_InvalidIDRejected(t *testing.T) {
 
 	router := buildCareOfferingRouter(&mockCareOfferingService{})
 	w := executeCareJSON(t, router, http.MethodPost, "/enrollment/care-offerings/notanumber/clone",
-		map[string]any{"target_phase_id": 5678})
+		map[string]any{"target_phase_id": "5678"})
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
@@ -501,7 +502,7 @@ func TestCloneCareOfferingHandler_HappyPath(t *testing.T) {
 	mock := &mockCareOfferingService{cloneResult: makeOfferingModel(9999, 5678, "Clone")}
 	router := buildCareOfferingRouter(mock)
 	w := executeCareJSON(t, router, http.MethodPost, "/enrollment/care-offerings/1234/clone",
-		map[string]any{"target_phase_id": 5678})
+		map[string]any{"target_phase_id": "5678"})
 	require.Equal(t, http.StatusCreated, w.Code)
 	assert.Equal(t, int64(1234), mock.cloneSource, "source id from URL must be forwarded")
 	assert.Equal(t, int64(5678), mock.cloneTarget, "target phase from body must be forwarded")
@@ -513,7 +514,7 @@ func TestCloneCareOfferingHandler_ServiceErrorReturnsGeneric500(t *testing.T) {
 	mock := &mockCareOfferingService{cloneErr: errors.New("synthetic boom")}
 	router := buildCareOfferingRouter(mock)
 	w := executeCareJSON(t, router, http.MethodPost, "/enrollment/care-offerings/1234/clone",
-		map[string]any{"target_phase_id": 5678})
+		map[string]any{"target_phase_id": "5678"})
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	assert.NotContains(t, w.Body.String(), "synthetic boom")
 }

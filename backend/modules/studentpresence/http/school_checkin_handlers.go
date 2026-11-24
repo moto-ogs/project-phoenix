@@ -13,10 +13,12 @@ import (
 	time "time"
 
 	render "github.com/go-chi/render"
+
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	studentpresence "github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // schoolCheckinRequest is the payload for POST /api/students/{id}/school-checkin.
@@ -75,7 +77,7 @@ func (rs *Resource) schoolCheckinHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req schoolCheckinRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

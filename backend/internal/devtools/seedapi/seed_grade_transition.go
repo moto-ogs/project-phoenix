@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type seedGradeTransitionStep struct{}
@@ -18,7 +20,7 @@ func (seedGradeTransitionStep) Run(_ context.Context, rt *Runtime) error {
 	}
 	if _, err := rt.Client.Post("/api/students", map[string]any{
 		"first_name": "Jonas", "last_name": "Engel", "school_class": "Klasse 4c",
-		"group_id": groupID, "birthday": "2015-06-01", "pickup_status": "self",
+		"group_id": ident.ID(groupID), "birthday": "2015-06-01", "pickup_status": "self",
 	}); err != nil {
 		return fmt.Errorf("create graduation demo student: %w", err)
 	}

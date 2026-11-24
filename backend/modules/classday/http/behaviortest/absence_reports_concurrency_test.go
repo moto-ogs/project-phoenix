@@ -8,13 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 func TestMorningCorrectionInvalidatesSchoolAfterCommit(t *testing.T) {
@@ -40,7 +41,7 @@ func TestMorningCorrectionInvalidatesSchoolAfterCommit(t *testing.T) {
 	require.ErrorIs(t, err, rollback)
 	require.Empty(t, listener.Channel, "rollback must emit nothing")
 	notices := len(f.module.Unreported.Reports)
-	rec := f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":%d,"status":"present"}]}`, f.present), morningAttendancePermission)
+	rec := f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":"%d","status":"present"}]}`, f.present), morningAttendancePermission)
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
 	require.Len(t, f.module.Unreported.Reports, notices, "a correction sends no absence notification")
 	require.Len(t, listener.Channel, 1, "the school must refresh even without a notification")

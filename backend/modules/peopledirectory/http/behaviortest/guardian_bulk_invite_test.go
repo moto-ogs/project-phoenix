@@ -2,13 +2,17 @@ package users_test
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
-	usersHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	usersHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
 )
 
 func bulkInviteDirectory() *fakeGuardianDirectory {
@@ -21,7 +25,7 @@ func bulkInviteDirectory() *fakeGuardianDirectory {
 func TestBulkInviteIsGatedLikeTheSingleInvite(t *testing.T) {
 	t.Parallel()
 	h := newGuardianHarness(t, bulkInviteDirectory())
-	body := map[string]any{"student_ids": []int64{3}}
+	body := map[string]any{"student_ids": []string{fmt.Sprint(3)}}
 
 	assert.Equal(t, http.StatusForbidden, h.do(t, http.MethodPost, "/guardians/bulk-invite", body).Code, "users:create is required")
 
@@ -45,7 +49,7 @@ func TestBulkInviteOnlyPassesActiveChildrenOfTheSchool(t *testing.T) {
 	}
 
 	recorder := h.do(t, http.MethodPost, "/guardians/bulk-invite", map[string]any{
-		"student_ids": []int64{3, 4, 99}, "resend_open": true, "dry_run": true, "notify_active": true,
+		"student_ids": []string{fmt.Sprint(3), fmt.Sprint(4), fmt.Sprint(99)}, "resend_open": true, "dry_run": true, "notify_active": true,
 	})
 
 	require.Equal(t, http.StatusOK, recorder.Code)
@@ -69,7 +73,7 @@ func TestBulkInvitePassesThePreviewFingerprintToTheRun(t *testing.T) {
 	h.permitted["users:create"] = true
 
 	recorder := h.do(t, http.MethodPost, "/guardians/bulk-invite", map[string]any{
-		"student_ids": []int64{3}, "expected_fingerprint": "preview-token",
+		"student_ids": []string{fmt.Sprint(3)}, "expected_fingerprint": "preview-token",
 	})
 
 	require.Equal(t, http.StatusOK, recorder.Code)
@@ -82,8 +86,8 @@ func TestBulkInviteRejectsSelectionsWithoutAnActiveChild(t *testing.T) {
 	h := newGuardianHarness(t, bulkInviteDirectory())
 	h.permitted["users:create"] = true
 
-	assert.Equal(t, http.StatusBadRequest, h.do(t, http.MethodPost, "/guardians/bulk-invite", map[string]any{"student_ids": []int64{}}).Code)
-	assert.Equal(t, http.StatusNotFound, h.do(t, http.MethodPost, "/guardians/bulk-invite", map[string]any{"student_ids": []int64{4, 99}}).Code)
+	assert.Equal(t, http.StatusBadRequest, h.do(t, http.MethodPost, "/guardians/bulk-invite", map[string]any{"student_ids": []string{}}).Code)
+	assert.Equal(t, http.StatusNotFound, h.do(t, http.MethodPost, "/guardians/bulk-invite", map[string]any{"student_ids": []string{fmt.Sprint(4), fmt.Sprint(99)}}).Code)
 	assert.Empty(t, h.bulkInvites)
 }
 
@@ -94,7 +98,7 @@ func TestBulkInviteRejectsOversizedSelectionsBeforeReadingStudents(t *testing.T)
 	h.permitted["users:create"] = true
 
 	studentIDs := make([]int64, 2001)
-	assert.Equal(t, http.StatusBadRequest, h.do(t, http.MethodPost, "/guardians/bulk-invite", map[string]any{"student_ids": studentIDs}).Code)
+	assert.Equal(t, http.StatusBadRequest, h.do(t, http.MethodPost, "/guardians/bulk-invite", map[string]any{"student_ids": testpkg.IDsOf[testpkg.ID](studentIDs)}).Code)
 	assert.Zero(t, directory.studentLookups)
 	assert.Empty(t, h.bulkInvites)
 }
@@ -105,5 +109,5 @@ func TestBulkInviteFailureUsesTheInviteClassification(t *testing.T) {
 	h.permitted["users:create"] = true
 	h.bulkErr = errors.New("boom")
 
-	assert.Equal(t, http.StatusForbidden, h.do(t, http.MethodPost, "/guardians/bulk-invite", map[string]any{"student_ids": []int64{3}}).Code)
+	assert.Equal(t, http.StatusForbidden, h.do(t, http.MethodPost, "/guardians/bulk-invite", map[string]any{"student_ids": []string{fmt.Sprint(3)}}).Code)
 }

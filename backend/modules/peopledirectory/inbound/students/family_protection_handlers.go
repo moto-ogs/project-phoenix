@@ -1,7 +1,6 @@
 package students
 
 import (
-	json "encoding/json"
 	errors "errors"
 	http "net/http"
 	strconv "strconv"
@@ -12,6 +11,7 @@ import (
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	securityruntime "github.com/moto-ogs/project-phoenix/modules/securityruntime"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 type setFamilyProtectionBody struct {
@@ -57,7 +57,7 @@ func (rs *Resource) setFamilyProtection(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	var body setFamilyProtectionBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Enabled == nil || strings.TrimSpace(body.Reason) == "" {
+	if err := wire.Decode(r.Body, &body); err != nil || body.Enabled == nil || strings.TrimSpace(body.Reason) == "" {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("enabled and reason are required")))
 		return
 	}

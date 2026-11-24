@@ -1,12 +1,12 @@
 package presence
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 type assignTransitStudentsRequest struct {
@@ -16,7 +16,7 @@ type assignTransitStudentsRequest struct {
 
 func (rs *Resource) assignTransitStudents(w http.ResponseWriter, r *http.Request) {
 	var req assignTransitStudentsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

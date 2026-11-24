@@ -8,7 +8,6 @@ package parentauth
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -22,6 +21,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Resource serves the parents' sign-in and second factor.
@@ -86,7 +86,7 @@ type parentLoginRequest struct {
 // parents portal remembered.
 func (rs *Resource) login(w http.ResponseWriter, r *http.Request, after func(context.Context, string)) {
 	var request parentLoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := wire.Decode(r.Body, &request); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

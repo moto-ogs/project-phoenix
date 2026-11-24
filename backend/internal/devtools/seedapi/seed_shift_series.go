@@ -114,8 +114,8 @@ func (seedShiftSeriesStep) Run(_ context.Context, rt *Runtime) error {
 func dutySeries(fs *FixedSeeder, staffIDs []int64, types seedDutyTypes) []map[string]any {
 	early := func(staffID int64) map[string]any {
 		return map[string]any{
-			"staff_id": staffID, "start_time": earlyDutyStart, "end_time": earlyDutyEnd,
-			"break_minutes": regularDutyBreakMinutes, "shift_type_id": types.early, "include_school_breaks": true,
+			"staff_id": ident.ID(staffID), "start_time": earlyDutyStart, "end_time": earlyDutyEnd,
+			"break_minutes": regularDutyBreakMinutes, "shift_type_id": ident.ID(types.early), "include_school_breaks": true,
 		}
 	}
 	noFerien := early(staffIDs[2])
@@ -123,8 +123,8 @@ func dutySeries(fs *FixedSeeder, staffIDs []int64, types seedDutyTypes) []map[st
 	series := []map[string]any{
 		noFerien,
 		{
-			"staff_id": staffIDs[3], "start_time": lateDutyStart, "end_time": lateDutyEnd,
-			"break_minutes": regularDutyBreakMinutes, "shift_type_id": types.late,
+			"staff_id": ident.ID(staffIDs[3]), "start_time": lateDutyStart, "end_time": lateDutyEnd,
+			"break_minutes": regularDutyBreakMinutes, "shift_type_id": ident.ID(types.late),
 			"notes": "Arbeitet auch in den Ferien", "include_school_breaks": true,
 		},
 		early(staffIDs[1]),
@@ -139,8 +139,8 @@ func dutySeries(fs *FixedSeeder, staffIDs []int64, types seedDutyTypes) []map[st
 			continue
 		}
 		series = append(series, map[string]any{
-			"staff_id": staffID, "start_time": regularDutyStart, "end_time": regularDutyEnd,
-			"break_minutes": regularDutyBreakMinutes, "shift_type_id": types.care, "include_school_breaks": true,
+			"staff_id": ident.ID(staffID), "start_time": regularDutyStart, "end_time": regularDutyEnd,
+			"break_minutes": regularDutyBreakMinutes, "shift_type_id": ident.ID(types.care), "include_school_breaks": true,
 		})
 	}
 	return series
@@ -200,8 +200,8 @@ func timeTrackingSeedStaffIDs(fs *FixedSeeder) []int64 {
 // them as absent. On a weekend they fill the week that just ended.
 func currentWeekShifts(today seedDate, staffIDs []int64, series []map[string]any, types seedDutyTypes) []map[string]any {
 	plan := append([]map[string]any{{
-		"staff_id": staffIDs[0], "start_time": lateDutyStart, "end_time": lateDutyEnd,
-		"break_minutes": regularDutyBreakMinutes, "shift_type_id": types.late,
+		"staff_id": ident.ID(staffIDs[0]), "start_time": lateDutyStart, "end_time": lateDutyEnd,
+		"break_minutes": regularDutyBreakMinutes, "shift_type_id": ident.ID(types.late),
 	}}, series...)
 	monday := seedDate{Time: mostRecentWeekday(today.UTCMidnight(), time.Monday)}
 	onLeave := map[int64]bool{}
@@ -213,8 +213,8 @@ func currentWeekShifts(today seedDate, staffIDs []int64, series []map[string]any
 	var shifts []map[string]any
 	for day := monday; !day.After(today.UTCMidnight()) && day.Weekday() != time.Saturday; day = day.AddDays(1) {
 		for _, shift := range plan {
-			staffID, isStaffID := shift["staff_id"].(int64)
-			if day.String() != today.String() || !isStaffID || !onLeave[staffID] {
+			staffID, isStaffID := shift["staff_id"].(ident.ID)
+			if day.String() != today.String() || !isStaffID || !onLeave[staffID.Int64()] {
 				shifts = append(shifts, singleShiftBody(day, shift))
 			}
 		}

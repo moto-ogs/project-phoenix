@@ -1,7 +1,6 @@
 package presenceprojectionhttp
 
 import (
-	json "encoding/json"
 	errors "errors"
 	fmt "fmt"
 	http "net/http"
@@ -11,10 +10,12 @@ import (
 	time "time"
 
 	render "github.com/go-chi/render"
+
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	lists "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -193,7 +194,7 @@ func (rs *Resource) prepareDatedExportResponses(r *http.Request, responses []Stu
 
 func decodeStudentExportRequest(r *http.Request) (studentExportRequest, error) {
 	var req studentExportRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		return req, err
 	}
 	if req.Format == "" {

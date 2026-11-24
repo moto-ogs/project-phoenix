@@ -14,12 +14,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 func init() { testutil.SeedTestJWTConfig() }
@@ -83,13 +84,13 @@ func TestStaffAbsencePositiveGrowthQueryBudget(t *testing.T) {
 			f := newStaffGrowthFixture(t)
 			foreign := testpkg.NewTenantScope(t, f.db)
 			foreignStaff := testpkg.CreateTestStaffForTenant(t, f.db, foreign.TenantID, "Foreign", "Absence")
-			foreignID := staffGrowthInsert(t, f.db, "active.staff_absences", map[string]any{"tenant_id": foreign.TenantID, "staff_id": foreignStaff.ID, "created_by": foreignStaff.ID, "absence_type": "vacation", "status": "requested", "date_start": "2026-01-01", "date_end": "2026-01-01", "requested_at": time.Date(2026, 1, 1, 1, 0, 0, 0, time.UTC)})
+			foreignID := staffGrowthInsert(t, f.db, "active.staff_absences", map[string]any{"tenant_id": fmt.Sprint(foreign.TenantID), "staff_id": fmt.Sprint(foreignStaff.ID), "created_by": fmt.Sprint(foreignStaff.ID), "absence_type": "vacation", "status": "requested", "date_start": "2026-01-01", "date_end": "2026-01-01", "requested_at": time.Date(2026, 1, 1, 1, 0, 0, 0, time.UTC)})
 			ids := []int64{}
 			counts := []int{}
 			for _, n := range []int{3, 8} {
 				for len(ids) < n {
 					i := len(ids)
-					ids = append(ids, staffGrowthInsert(t, f.db, "active.staff_absences", map[string]any{"tenant_id": testpkg.Tenant(t), "staff_id": f.staff, "created_by": f.staff, "absence_type": "vacation", "status": "requested", "date_start": fmt.Sprintf("2026-01-%02d", i+1), "date_end": fmt.Sprintf("2026-01-%02d", i+1), "requested_at": time.Date(2026, 1, i+1, 12, 0, 0, 0, time.UTC)}))
+					ids = append(ids, staffGrowthInsert(t, f.db, "active.staff_absences", map[string]any{"tenant_id": fmt.Sprint(testpkg.Tenant(t)), "staff_id": fmt.Sprint(f.staff), "created_by": fmt.Sprint(f.staff), "absence_type": "vacation", "status": "requested", "date_start": fmt.Sprintf("2026-01-%02d", i+1), "date_end": fmt.Sprintf("2026-01-%02d", i+1), "requested_at": time.Date(2026, 1, i+1, 12, 0, 0, 0, time.UTC)}))
 				}
 				path := "/staff/absences/" + route
 				if route == "subject" {
@@ -142,7 +143,7 @@ func TestStaffQualificationPositiveGrowthQueryBudget(t *testing.T) {
 			f := newStaffGrowthFixture(t)
 			foreign := testpkg.NewTenantScope(t, f.db)
 			foreignStaff := testpkg.CreateTestStaffForTenant(t, f.db, foreign.TenantID, "Foreign", "Qualification")
-			staffGrowthInsert(t, f.db, "users.staff_qualifications", map[string]any{"tenant_id": foreign.TenantID, "staff_id": foreignStaff.ID, "name": "Foreign qualification"})
+			staffGrowthInsert(t, f.db, "users.staff_qualifications", map[string]any{"tenant_id": fmt.Sprint(foreign.TenantID), "staff_id": fmt.Sprint(foreignStaff.ID), "name": "Foreign qualification"})
 			counts := []int{}
 			for _, n := range []int{3, 8} {
 				start := 0
@@ -150,7 +151,7 @@ func TestStaffQualificationPositiveGrowthQueryBudget(t *testing.T) {
 					start = 3
 				}
 				for i := start; i < n; i++ {
-					staffGrowthInsert(t, f.db, "users.staff_qualifications", map[string]any{"tenant_id": testpkg.Tenant(t), "staff_id": f.staff, "name": fmt.Sprintf("Growth %02d", i), "acquired_on": "2025-01-01", "expires_on": "2027-01-01"})
+					staffGrowthInsert(t, f.db, "users.staff_qualifications", map[string]any{"tenant_id": fmt.Sprint(testpkg.Tenant(t)), "staff_id": fmt.Sprint(f.staff), "name": fmt.Sprintf("Growth %02d", i), "acquired_on": "2025-01-01", "expires_on": "2027-01-01"})
 				}
 				path := fmt.Sprintf("/staff/%d/%s", f.staff, route)
 				if strings.HasPrefix(route, "me/") {
@@ -209,11 +210,11 @@ func TestStaffRecordPositiveGrowthQueryBudget(t *testing.T) {
 			add := func(tenant, staff int64, i int) {
 				switch route {
 				case "schedule":
-					staffGrowthInsert(t, f.db, "config.staff_work_schedules", map[string]any{"tenant_id": tenant, "staff_id": staff, "day_of_week": i % 7, "week_index": i / 7, "rotation_length": 2, "target_minutes": 300 + i, "valid_from": "2025-01-01"})
+					staffGrowthInsert(t, f.db, "config.staff_work_schedules", map[string]any{"tenant_id": fmt.Sprint(tenant), "staff_id": fmt.Sprint(staff), "day_of_week": i % 7, "week_index": i / 7, "rotation_length": 2, "target_minutes": 300 + i, "valid_from": "2025-01-01"})
 				case "adjustments":
-					staffGrowthInsert(t, f.db, "active.staff_balance_adjustments", map[string]any{"tenant_id": tenant, "staff_id": staff, "type": "payout", "minutes_delta": -10 - i, "effective_date": fmt.Sprintf("2026-01-%02d", i+1), "note": fmt.Sprintf("Growth %02d", i), "decided_by": staff})
+					staffGrowthInsert(t, f.db, "active.staff_balance_adjustments", map[string]any{"tenant_id": fmt.Sprint(tenant), "staff_id": fmt.Sprint(staff), "type": "payout", "minutes_delta": -10 - i, "effective_date": fmt.Sprintf("2026-01-%02d", i+1), "note": fmt.Sprintf("Growth %02d", i), "decided_by": fmt.Sprint(staff)})
 				default:
-					staffGrowthInsert(t, f.db, "users.staff_documents", map[string]any{"tenant_id": tenant, "staff_id": staff, "category": "zeugnis", "filename_display": fmt.Sprintf("Growth %02d.pdf", i), "filename_stored": fmt.Sprintf("growth-%d-%d-%02d.pdf", tenant, staff, i), "size_bytes": 100 + i, "content_type": "application/pdf", "uploaded_by": f.account, "created_at": time.Date(2026, 1, i+1, 12, 0, 0, 0, time.UTC)})
+					staffGrowthInsert(t, f.db, "users.staff_documents", map[string]any{"tenant_id": fmt.Sprint(tenant), "staff_id": fmt.Sprint(staff), "category": "zeugnis", "filename_display": fmt.Sprintf("Growth %02d.pdf", i), "filename_stored": fmt.Sprintf("growth-%d-%d-%02d.pdf", tenant, staff, i), "size_bytes": 100 + i, "content_type": "application/pdf", "uploaded_by": f.account, "created_at": time.Date(2026, 1, i+1, 12, 0, 0, 0, time.UTC)})
 				}
 			}
 			add(foreign.TenantID, foreignStaff.ID, 0)
@@ -305,14 +306,14 @@ func TestStaffReportingPositiveGrowthQueryBudget(t *testing.T) {
 			}
 			add := func(tenant, staff int64, i int) {
 				if route == "month-close" {
-					staffGrowthInsert(t, f.db, "active.staff_month_balance_snapshots", map[string]any{"tenant_id": tenant, "staff_id": staff, "year": 2026, "month": 1, "closing_balance_minutes": 60 + i, "closed_by": staff, "close_reason": fmt.Sprintf("Growth %02d", i)})
+					staffGrowthInsert(t, f.db, "active.staff_month_balance_snapshots", map[string]any{"tenant_id": fmt.Sprint(tenant), "staff_id": fmt.Sprint(staff), "year": 2026, "month": 1, "closing_balance_minutes": 60 + i, "closed_by": fmt.Sprint(staff), "close_reason": fmt.Sprintf("Growth %02d", i)})
 					return
 				}
 				if route == "audit-log" {
-					staffGrowthInsert(t, f.db, "active.staff_balance_adjustments", map[string]any{"tenant_id": tenant, "staff_id": staff, "type": "payout", "minutes_delta": -10 - i, "effective_date": testpkg.TodayDate().String(), "note": fmt.Sprintf("Growth %02d", i), "decided_by": staff, "decided_at": time.Now().Add(time.Duration(i) * time.Second)})
+					staffGrowthInsert(t, f.db, "active.staff_balance_adjustments", map[string]any{"tenant_id": fmt.Sprint(tenant), "staff_id": fmt.Sprint(staff), "type": "payout", "minutes_delta": -10 - i, "effective_date": testpkg.TodayDate().String(), "note": fmt.Sprintf("Growth %02d", i), "decided_by": fmt.Sprint(staff), "decided_at": time.Now().Add(time.Duration(i) * time.Second)})
 					return
 				}
-				staffGrowthInsert(t, f.db, "active.work_sessions", map[string]any{"tenant_id": tenant, "staff_id": staff, "date": "2026-01-05", "status": "present", "source": "app", "check_in_time": time.Date(2026, 1, 5, 8, 0, 0, 0, time.UTC), "check_out_time": time.Date(2026, 1, 5, 16, 0, 0, 0, time.UTC), "created_by": staff})
+				staffGrowthInsert(t, f.db, "active.work_sessions", map[string]any{"tenant_id": fmt.Sprint(tenant), "staff_id": fmt.Sprint(staff), "date": "2026-01-05", "status": "present", "source": "app", "check_in_time": time.Date(2026, 1, 5, 8, 0, 0, 0, time.UTC), "check_out_time": time.Date(2026, 1, 5, 16, 0, 0, 0, time.UTC), "created_by": fmt.Sprint(staff)})
 			}
 			add(foreign.TenantID, foreignStaff.ID, 99)
 			ids := []int64{f.staff}

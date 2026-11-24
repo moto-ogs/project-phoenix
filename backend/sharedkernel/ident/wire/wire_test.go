@@ -6,10 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 func TestIDAnswersAStringStoresANumberAndReadsBothForms(t *testing.T) {
@@ -47,4 +48,20 @@ func TestIDAnswersAStringStoresANumberAndReadsBothForms(t *testing.T) {
 
 	assert.Error(t, json.Unmarshal([]byte(`{"id":"7a"}`), &read))
 	assert.Error(t, json.Unmarshal([]byte(`{"id":""}`), &read))
+}
+
+func TestRequestIDsAreStringsButDeviceIDsAreNumbers(t *testing.T) {
+	t.Parallel()
+
+	var request struct {
+		ContractIDs []ident.ID `json:"contract_ids"`
+		RoomID      int64      `json:"room_id" contract:"number"`
+	}
+	require.NoError(t, wire.Decode(strings.NewReader(`{"contract_ids":["9223372036854775807"],"room_id":3}`), &request))
+	assert.Equal(t, []ident.ID{math.MaxInt64}, request.ContractIDs)
+	assert.EqualValues(t, 3, request.RoomID)
+
+	require.ErrorContains(t, wire.Decode(strings.NewReader(`{"contract_ids":[9223372036854775807]}`), &request), "identifier must be a decimal string")
+	require.NoError(t, json.Unmarshal([]byte(`{"contract_ids":[9223372036854775807]}`), &request))
+	assert.Equal(t, []ident.ID{math.MaxInt64}, request.ContractIDs)
 }

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/url"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedSchoolTeacherStep drives moto schule with its own school-scoped session.
@@ -42,7 +44,7 @@ func (s seedSchoolTeacherStep) runOn(rt *Runtime, today seedDate) error {
 	}
 	account, err := registerSeedStaffAccount(rt, map[string]any{
 		"email": email, "username": username, "password": password, "confirm_password": password,
-		"first_name": "Lena", "last_name": "Weber", "role_id": roleID,
+		"first_name": "Lena", "last_name": "Weber", "role_id": ident.ID(roleID),
 	})
 	if err != nil {
 		return fmt.Errorf("register school teacher: %w", err)
@@ -111,7 +113,7 @@ func (s seedSchoolTeacherStep) seedClassDay(rt *Runtime, auth AuthRef, class str
 		{"arrival-exceptions/" + dayPath, map[string]any{"arrival_time": "12:00", "reason": "Der Unterricht endet heute früher."}},
 		{"day-hints/" + dayPath, map[string]any{"body": "Die Klasse hat heute viel gearbeitet. Bitte starten Sie ruhig in den Nachmittag."}},
 		{"day-hints/" + dayPath + fmt.Sprintf("/students/%d", studentID), map[string]any{"body": "Bitte erinnern Sie das Kind heute ans Trinken."}},
-		{"morning-attendance/" + dayPath, map[string]any{"marks": []map[string]any{{"student_id": studentID, "status": "present"}}}},
+		{"morning-attendance/" + dayPath, map[string]any{"marks": []map[string]any{{"student_id": ident.ID(studentID), "status": "present"}}}},
 	} {
 		if _, err := rt.Client.PutWithAuth(auth, "/school/class-day/"+entry.path, entry.body); err != nil {
 			return fmt.Errorf("seed school class day %s: %w", entry.path, err)

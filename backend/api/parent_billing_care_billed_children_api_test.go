@@ -135,7 +135,7 @@ func TestCareMonthlyRunHoldsAChildAJahresbescheidOfItsOldSchoolBills(t *testing.
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunsPath,
-		map[string]any{"billing_month": "2030-10-01", "school_ids": []int64{next}})
+		map[string]any{"billing_month": "2030-10-01", "school_ids": []string{fmt.Sprint(next)}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
 		careRunPath(int64(decodeSchoolPortalData[careRunBody](t, rec.Body.Bytes()).ID), ""), nil)

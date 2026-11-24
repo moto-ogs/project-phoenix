@@ -16,7 +16,7 @@ func TestSeedSendContractsToParentsReadsTheDraftsOfTheSeededSchool(t *testing.T)
 	t.Parallel()
 
 	var query string
-	var sent map[string][]int64
+	var sent map[string][]string
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method + " " + r.URL.Path {
@@ -38,7 +38,7 @@ func TestSeedSendContractsToParentsReadsTheDraftsOfTheSeededSchool(t *testing.T)
 
 	require.NoError(t, seedSendContractsToParents(rt, AuthRef{Kind: AuthBearer, Token: "traeger"}))
 	assert.Equal(t, "status=entwurf&school_id=65&limit=100", query)
-	assert.Equal(t, map[string][]int64{"contract_ids": {4}}, sent)
+	assert.Equal(t, map[string][]string{"contract_ids": {"4"}}, sent)
 }
 
 // The paper contract is a draft of the seeded school, and a school that has

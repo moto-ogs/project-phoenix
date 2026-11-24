@@ -1,12 +1,12 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // parentPushSubscriptionRequest mirrors the browser's PushSubscription JSON.
@@ -41,7 +41,7 @@ func (rs *Resource) subscribePush(w http.ResponseWriter, r *http.Request) {
 
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<10)
 	req := parentPushSubscriptionRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

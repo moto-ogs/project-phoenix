@@ -1,12 +1,12 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // relatedAccountResponse is the parent-facing projection of a linked guardian.
@@ -93,7 +93,7 @@ func (rs *Resource) inviteRelatedAccount(w http.ResponseWriter, r *http.Request)
 	}
 
 	var body inviteRelatedAccountRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

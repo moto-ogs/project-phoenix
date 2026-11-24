@@ -246,18 +246,18 @@ func TestTraegerDocumentsReachOnlyTheReleasedSchool(t *testing.T) {
 		}
 	}
 
-	forNord := f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools", "school_id": nord})
-	rec = f.release(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools", "school_id": nord})
+	forNord := f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools", "school_id": fmt.Sprint(nord)})
+	rec = f.release(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools", "school_id": fmt.Sprint(nord)})
 	assert.Equal(t, http.StatusConflict, rec.Code, "one active release per audience")
 	assert.Equal(t, "traeger.document_already_released", refusalOf(t, rec).Code)
-	forGroup := f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "parents", "school_id": nord, "group_id": sonnen})
+	forGroup := f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "parents", "school_id": fmt.Sprint(nord), "group_id": fmt.Sprint(sonnen)})
 	assert.Equal(t, sonnen, int64(*forGroup.GroupID))
 	assert.Contains(t, forGroup.GroupName, "Sonnenblumen", "the release keeps the group's name")
 
-	rec = f.release(t, f.office.token, int64(document.ID), map[string]any{"audience": "parents", "school_id": nord, "group_id": mond})
+	rec = f.release(t, f.office.token, int64(document.ID), map[string]any{"audience": "parents", "school_id": fmt.Sprint(nord), "group_id": fmt.Sprint(mond)})
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "a group of another school is refused")
 	assert.Equal(t, "traeger.document_audience_invalid", refusalOf(t, rec).Code)
-	rec = f.release(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools", "group_id": sonnen})
+	rec = f.release(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools", "group_id": fmt.Sprint(sonnen)})
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "a school release names no group")
 
 	nordLead, suedLead := f.staff(t, nord, permissions.FilesManage), f.staff(t, sued, permissions.FilesManage)
@@ -293,7 +293,7 @@ func TestTraegerDocumentsReachOnlyTheReleasedSchool(t *testing.T) {
 	assert.Len(t, f.schoolDocuments(t, suedLead), 1)
 
 	// The list as a file, with whom each document is released for (#4718).
-	f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools", "school_id": sued})
+	f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools", "school_id": fmt.Sprint(sued)})
 	export := traegerJSON(t, f.router, f.office.token, http.MethodGet, "/traeger/documents/export", nil)
 	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
 	assert.Contains(t, export.Body.String(), "Hausordnung 2026/27;hausordnung.pdf;")
@@ -334,7 +334,7 @@ func TestTraegerDocumentsNeedTheirRights(t *testing.T) {
 	assert.Equal(t, "traeger.document_not_found", refusalOf(t, rec).Code)
 	assert.Equal(t, http.StatusNotFound, f.release(t, other.token, int64(document.ID), map[string]any{"audience": "parents"}).Code)
 	assert.Equal(t, http.StatusNotFound, f.revoke(t, other.token, int64(document.ID), int64(release.ID)).Code)
-	rec = f.release(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools", "school_id": other.schools[0]})
+	rec = f.release(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools", "school_id": fmt.Sprint(other.schools[0])})
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "a school of another Träger is refused")
 	foreignLead := f.staff(t, other.schools[0], permissions.FilesManage)
 	assert.Empty(t, f.schoolDocuments(t, foreignLead), "a school of another Träger sees nothing")
@@ -439,7 +439,7 @@ func TestTraegerDocumentReleaseKeepsAnyGroupName(t *testing.T) {
 	name := strings.Repeat("Sonnenblumen ", 20)
 	group := f.group(t, school, name)
 	document := f.uploaded(t, f.office.token, "Elternbrief")
-	release := f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "parents", "school_id": school, "group_id": group})
+	release := f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "parents", "school_id": fmt.Sprint(school), "group_id": fmt.Sprint(group)})
 	assert.Equal(t, strings.TrimSpace(name), strings.TrimSpace(release.GroupName))
 }
 
@@ -478,7 +478,7 @@ func TestTraegerDocumentDownloadsAreLoggedAtTheTraegerAndTheReachedSchools(t *te
 	assert.Equal(t, 1, ledger, "the Träger's ledger records the download")
 	assert.Empty(t, schools, "an unreleased document reaches no school, so no school logs it")
 
-	f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools", "school_id": f.office.schools[0]})
+	f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools", "school_id": fmt.Sprint(f.office.schools[0])})
 	f.download(t, f.office.token, int64(document.ID))
 	ledger, schools = f.downloadEntries(t, f.office.organization, int64(document.ID))
 	assert.Equal(t, 2, ledger)
@@ -512,7 +512,7 @@ func TestTraegerDocumentDownloadLogNeverReachesAMovedSchool(t *testing.T) {
 	f := newTraegerDocumentsFixture(t)
 	moved := f.office.schools[0]
 	document := f.uploaded(t, f.office.token, "Elternliste")
-	f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools", "school_id": moved})
+	f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools", "school_id": fmt.Sprint(moved)})
 	other := testpkg.CreateTestOrganization(t, f.db, &testpkg.Organization{
 		Name: "Neuer Träger", Slug: fmt.Sprintf("neuer-traeger-%d", testpkg.UniqueTestTenantID(t)),
 	})

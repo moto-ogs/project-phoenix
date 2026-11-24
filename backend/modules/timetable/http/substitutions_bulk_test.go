@@ -13,6 +13,8 @@
 package timetablehttp
 
 import (
+	"fmt"
+
 	"github.com/uptrace/bun"
 
 	"bytes"
@@ -24,11 +26,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func bulkRouter(parentCtx context.Context, res *Resource, db *bun.DB) chi.Router {
@@ -91,8 +94,8 @@ func TestBulkSubstitution_MultiDayWithSubstitute(t *testing.T) {
 	testpkg.CreateTestInstanceStaff(t, s.db, inst3.ID, s.staffA, testpkg.InstanceStaffOpts{})
 
 	w := doBulk(t, router, map[string]any{
-		"absent_staff_id":     s.staffA,
-		"substitute_staff_id": s.staffY,
+		"absent_staff_id":     fmt.Sprint(s.staffA),
+		"substitute_staff_id": fmt.Sprint(s.staffY),
 		"dates":               []string{d1Str, d2Str},
 		"reason":              "krank",
 	})
@@ -136,7 +139,7 @@ func TestBulkSubstitution_AbsenceOnly(t *testing.T) {
 	testpkg.CreateTestInstanceStaff(t, s.db, inst2.ID, s.staffA, testpkg.InstanceStaffOpts{})
 
 	w := doBulk(t, router, map[string]any{
-		"absent_staff_id": s.staffA,
+		"absent_staff_id": fmt.Sprint(s.staffA),
 		"dates":           []string{d1Str, d2Str},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
@@ -168,8 +171,8 @@ func TestBulkSubstitution_AtomicRejectAcrossDays(t *testing.T) {
 	testpkg.CreateTestInstanceStaff(t, s.db, inst2.ID, s.staffY, testpkg.InstanceStaffOpts{IsAbsent: true})
 
 	w := doBulk(t, router, map[string]any{
-		"absent_staff_id":     s.staffA,
-		"substitute_staff_id": s.staffY,
+		"absent_staff_id":     fmt.Sprint(s.staffA),
+		"substitute_staff_id": fmt.Sprint(s.staffY),
 		"dates":               []string{d1Str, d2Str},
 	})
 	require.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
@@ -191,16 +194,16 @@ func TestBulkSubstitution_RejectsPastAndInvalidInput(t *testing.T) {
 	past := futureSubDateOffset(-1)
 
 	w := doBulk(t, router, map[string]any{
-		"absent_staff_id":     s.staffA,
-		"substitute_staff_id": s.staffY,
+		"absent_staff_id":     fmt.Sprint(s.staffA),
+		"substitute_staff_id": fmt.Sprint(s.staffY),
 		"dates":               []string{past},
 	})
 	require.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
 
 	// Empty dates.
 	w = doBulk(t, router, map[string]any{
-		"absent_staff_id":     s.staffA,
-		"substitute_staff_id": s.staffY,
+		"absent_staff_id":     fmt.Sprint(s.staffA),
+		"substitute_staff_id": fmt.Sprint(s.staffY),
 		"dates":               []string{},
 	})
 	require.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
@@ -208,24 +211,24 @@ func TestBulkSubstitution_RejectsPastAndInvalidInput(t *testing.T) {
 	// Self-substitution.
 	d1Str, _ := futureSubDate(1)
 	w = doBulk(t, router, map[string]any{
-		"absent_staff_id":     s.staffA,
-		"substitute_staff_id": s.staffA,
+		"absent_staff_id":     fmt.Sprint(s.staffA),
+		"substitute_staff_id": fmt.Sprint(s.staffA),
 		"dates":               []string{d1Str},
 	})
 	require.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
 
 	// Malformed date.
 	w = doBulk(t, router, map[string]any{
-		"absent_staff_id":     s.staffA,
-		"substitute_staff_id": s.staffY,
+		"absent_staff_id":     fmt.Sprint(s.staffA),
+		"substitute_staff_id": fmt.Sprint(s.staffY),
 		"dates":               []string{"31.08.2026"},
 	})
 	require.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
 
 	// Unknown substitute staff id → 404.
 	w = doBulk(t, router, map[string]any{
-		"absent_staff_id":     s.staffA,
-		"substitute_staff_id": int64(999999999),
+		"absent_staff_id":     fmt.Sprint(s.staffA),
+		"substitute_staff_id": fmt.Sprint(int64(999999999)),
 		"dates":               []string{d1Str},
 	})
 	require.Equal(t, http.StatusNotFound, w.Code, "body=%s", w.Body.String())

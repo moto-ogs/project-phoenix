@@ -22,6 +22,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Middleware is the HTTP middleware shape the composition root supplies.
@@ -166,7 +167,7 @@ func (o *OptionalID) UnmarshalJSON(data []byte) error {
 		o.Value = nil
 		return nil
 	}
-	return json.Unmarshal(data, &o.Value)
+	return wire.Unmarshal(data, &o.Value)
 }
 
 // OptionalBool captures whether a bool field was present in the JSON payload so
@@ -460,7 +461,7 @@ func (rs *Resource) list(w http.ResponseWriter, r *http.Request) {
 
 func (rs *Resource) create(w http.ResponseWriter, r *http.Request) {
 	var req ShiftRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.invalid(w, r, err)
 		return
 	}
@@ -492,7 +493,7 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req ShiftRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.invalid(w, r, err)
 		return
 	}
@@ -544,7 +545,7 @@ func (rs *Resource) move(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req MoveShiftRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.invalid(w, r, err)
 		return
 	}
@@ -656,7 +657,7 @@ func (rs *Resource) cancellation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req CancellationRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.invalid(w, r, err)
 		return
 	}

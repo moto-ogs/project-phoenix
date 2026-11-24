@@ -10,6 +10,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"testing"
@@ -62,7 +63,7 @@ func hireBody(lastName string, sites ...map[string]any) map[string]any {
 }
 
 func hireSite(schoolID int64, minutes ...int) map[string]any {
-	return map[string]any{"school_id": schoolID, "weekday_minutes": minutes}
+	return map[string]any{"school_id": fmt.Sprint(schoolID), "weekday_minutes": minutes}
 }
 
 func TestTraegerStaffHireCreatesRecordContractAndEmployments(t *testing.T) {

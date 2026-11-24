@@ -1,13 +1,13 @@
 package announcement
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
 	announcementService "github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Wire shapes of the surveys (#4781). Ids travel as strings.
@@ -177,7 +177,7 @@ type surveyAnswersRequest struct {
 // them against the questions.
 func decodeSurveyAnswers(r *http.Request) ([]announcementService.SurveyAnswerInput, error) {
 	var req surveyAnswersRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		return nil, errors.New("invalid request body")
 	}
 	out := make([]announcementService.SurveyAnswerInput, 0, len(req.Answers))

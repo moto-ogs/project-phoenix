@@ -77,6 +77,7 @@
   "primary_guardian_protected": "Für {object} fehlt dir die Berechtigung. Bitte frage die Schule.",
   "remove_disabled": "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
   "request_not_found": "{object} wurde nicht gefunden. Bitte lade die Seite neu.",
+  "request_feed_not_found": "Es gibt keinen RSS-Link mehr. Bitte lade die Seite neu und erstelle einen neuen Link.",
   "request_not_open": "{object} ist nicht mehr geöffnet. Bitte frage deine Ansprechperson.",
   "request_sharing_invalid": "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
   "room_history_stop_disabled": "{object} kannst du hier zurzeit nicht ändern. Bitte frage deine Ansprechperson.",

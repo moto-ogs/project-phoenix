@@ -24,6 +24,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Middleware is the HTTP middleware shape the composition root supplies.
@@ -329,7 +330,7 @@ func (rs *Resource) list(w http.ResponseWriter, r *http.Request) {
 
 func (rs *Resource) create(w http.ResponseWriter, r *http.Request) {
 	var req CreateAbsenceTypeRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.runtime.Failure(w, r, FailureInvalid, err)
 		return
 	}
@@ -350,7 +351,7 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req UpdateAbsenceTypeRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.runtime.Failure(w, r, FailureInvalid, err)
 		return
 	}
@@ -430,7 +431,7 @@ func (rs *Resource) setAllowance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req SetAllowanceRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.runtime.Failure(w, r, FailureInvalid, err)
 		return
 	}

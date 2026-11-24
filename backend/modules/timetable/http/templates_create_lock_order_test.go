@@ -3,21 +3,23 @@ package timetablehttp
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/modules/timetable"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/tenant"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
+
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+	"github.com/moto-ogs/project-phoenix/tenant"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // gateTakingMaterialization takes the recurrence and grade-transition gates
@@ -90,15 +92,15 @@ func TestTemplateCreateLocksCompleteRosterInAscendingOrder(t *testing.T) {
 			require.NoError(t, err)
 
 			body := createTemplateBody(s, "Ascending template roster")
-			body["staff_ids"] = []int64{s.staffB, s.staffA}
+			body["staff_ids"] = []string{fmt.Sprint(s.staffB), fmt.Sprint(s.staffA)}
 			if weekdayRoster {
-				body["staff_ids"] = []int64{s.staffB}
+				body["staff_ids"] = []string{fmt.Sprint(s.staffB)}
 				body["weekday_assignments"] = []map[string]any{{
-					"weekday": timetable.WeekdayWednesday, "staff_ids": []int64{s.staffA}, "primary_staff_id": s.staffA,
+					"weekday": timetable.WeekdayWednesday, "staff_ids": []string{fmt.Sprint(s.staffA)}, "primary_staff_id": fmt.Sprint(s.staffA),
 				}}
 			}
 			router := templateRouter(ctx, s.res, s.db)
-			payload, err := json.Marshal(body)
+			payload, err := wire.Marshal(body)
 			require.NoError(t, err)
 			req := httptest.NewRequest(http.MethodPost, "/templates", bytes.NewReader(payload)).WithContext(ctx)
 			req.Header.Set("Content-Type", "application/json")
@@ -164,13 +166,13 @@ func TestTemplateCreateLocksTheWindowPeopleWithItsRoster(t *testing.T) {
 
 	earlier := createTemplateBody(s, "Window people earlier")
 	earlier["week_pattern"] = 0
-	earlier["staff_ids"], earlier["primary_staff_id"] = []int64{s.staffA}, s.staffA
+	earlier["staff_ids"], earlier["primary_staff_id"] = []string{fmt.Sprint(s.staffA)}, fmt.Sprint(s.staffA)
 	w := doTemplateJSON(t, router, http.MethodPost, "/templates", earlier)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 
 	created := createTemplateBody(s, "Window people created")
 	created["week_pattern"] = 0
-	created["staff_ids"], created["primary_staff_id"] = []int64{s.staffB}, s.staffB
+	created["staff_ids"], created["primary_staff_id"] = []string{fmt.Sprint(s.staffB)}, fmt.Sprint(s.staffB)
 	created["materialize_from"], created["materialize_to"] = "2026-08-31", "2026-09-04"
 	w = doTemplateJSON(t, router, http.MethodPost, "/templates", created)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())

@@ -212,6 +212,27 @@ describe("RequestFeedDialog", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("nennt beim Ersetzen ohne Link den nächsten Schritt (#7688)", async () => {
+    status.mockResolvedValue({ active: true });
+    rotate.mockRejectedValueOnce(
+      new ApiError("Not Found", 404, { code: "care.request_feed_not_found" }),
+    );
+
+    renderDialog();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Neuen Link erstellen" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Alten Link ersetzen" }),
+    );
+
+    expect(
+      await within(screen.getByRole("dialog")).findByText(
+        "Es gibt keinen RSS-Link mehr. Bitte lade die Seite neu und erstelle einen neuen Link.",
+      ),
+    ).toBeVisible();
+  });
+
   it("nennt den Weg von Hand, wenn das Kopieren scheitert", async () => {
     status.mockResolvedValue({ active: false });
     create.mockResolvedValue({ url: "https://schule.test/feed" });

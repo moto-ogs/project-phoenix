@@ -175,7 +175,7 @@ func TestCareContractIsConcludedAtTheAcceptanceWhereTheSchoolSaysSo(t *testing.T
 
 	// An active contract cannot be discarded; a pending mailing still
 	// prevents duplicate sends.
-	rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{id}})
+	rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []string{fmt.Sprint(id)}})
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "mail_pending")
 	// A terminal failure can be corrected without changing the conclusion or PDF.
@@ -186,7 +186,7 @@ func TestCareContractIsConcludedAtTheAcceptanceWhereTheSchoolSaysSo(t *testing.T
 	_, err = f.db.ExecContext(context.Background(), `UPDATE platform.email_outbox SET status = 'dead_letter', dead_letter_at = NOW(), last_error = 'recipient rejected'
   WHERE organization_id = ? AND kind = 'care_contract' AND related_entity_id = ?`, f.office.organization, id)
 	require.NoError(t, err)
-	rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{id}, "recipient_email": "korrigiert@example.org"})
+	rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []string{fmt.Sprint(id)}, "recipient_email": "korrigiert@example.org"})
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), fmt.Sprintf(`"sent":["%d"]`, id))
 	afterPDF := traegerJSON(t, f.traeger, token, http.MethodGet, contractPath(id, "/document"), nil).Body.Bytes()

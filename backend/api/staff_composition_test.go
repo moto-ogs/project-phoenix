@@ -15,12 +15,13 @@ import (
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // The tests below exercise the composed /staff router (#2667): membership
@@ -181,7 +182,7 @@ func TestBetreuerRoleCannotReachColleaguePersonnelData(t *testing.T) {
 		body   map[string]interface{}
 	}{
 		{http.MethodPut, fmt.Sprintf("/staff/%d", colleagueID),
-			map[string]interface{}{"person_id": colleaguePersonID, "staff_notes": "Fremde Notiz"}},
+			map[string]interface{}{"person_id": fmt.Sprint(colleaguePersonID), "staff_notes": "Fremde Notiz"}},
 		{http.MethodPut, fmt.Sprintf("/staff/%d/stammdaten/person", colleagueID),
 			map[string]interface{}{"first_name": "Neu", "last_name": "Name"}},
 		{http.MethodPut, fmt.Sprintf("/staff/%d/stammdaten/kontakt", colleagueID),
@@ -214,7 +215,7 @@ func TestBetreuerRoleSeesOnlyTheMinimalColleagueView(t *testing.T) {
 	colleagueID, colleaguePersonID := ctx.createStaff("Sichtbare", "Kollegin")
 
 	body := map[string]interface{}{
-		"person_id":        colleaguePersonID,
+		"person_id":        fmt.Sprint(colleaguePersonID),
 		"staff_notes":      "Geheime Personalnotiz",
 		"expected_version": staffRecordVersion(t, ctx.router, colleagueID),
 	}
@@ -271,7 +272,7 @@ func TestStaffPersonConflictIsHTTPConflict(t *testing.T) {
 	_, conflictingPersonID := ctx.createStaff("Doppelte", "Zuordnung")
 
 	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/staff/%d", staffID),
-		map[string]interface{}{"person_id": conflictingPersonID, "expected_version": staffRecordVersion(t, ctx.router, staffID)},
+		map[string]interface{}{"person_id": fmt.Sprint(conflictingPersonID), "expected_version": staffRecordVersion(t, ctx.router, staffID)},
 		testutil.WithJWTBearer(staffCompositionToken(t, "staff:manage", "users:manage")))
 	rr := testutil.ExecuteRequest(ctx.router, req)
 
@@ -293,7 +294,7 @@ func TestStaffRecordUpdateRefusesAStaleRead(t *testing.T) {
 	put := func(notes, version string) *httptest.ResponseRecorder {
 		t.Helper()
 		return testutil.ExecuteRequest(ctx.router, testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/staff/%d", staffID),
-			map[string]interface{}{"person_id": personID, "staff_notes": notes, "expected_version": version}, manage))
+			map[string]interface{}{"person_id": fmt.Sprint(personID), "staff_notes": notes, "expected_version": version}, manage))
 	}
 	notes := func() string {
 		t.Helper()

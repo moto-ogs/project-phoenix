@@ -9,6 +9,8 @@ import (
 	"sync"
 	"testing"
 
+	testpkg "github.com/moto-ogs/project-phoenix/test"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -174,14 +176,14 @@ func TestSeedStartNoticeRunSkipsTheOpenRunOfOtherSchools(t *testing.T) {
 	runID, err := seedStartNoticeRun(newTestClient(srv.URL, false), AuthRef{Kind: AuthBearer, Token: "traeger"}, 65, calendar.NewDate(2026, 12, 1))
 	require.NoError(t, err)
 	assert.Zero(t, runID)
-	assert.Equal(t, []any{float64(65)}, started["school_ids"])
+	assert.Equal(t, []any{"65"}, started["school_ids"])
 }
 
 // Cost bearer shares go onto contracts of the seeded school only.
 func TestSeedCareCostSharesLeaveTheContractsOfOtherSchools(t *testing.T) {
 	t.Parallel()
 
-	var shared []float64
+	var shared []int64
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method + " " + r.URL.Path {
@@ -196,7 +198,7 @@ func TestSeedCareCostSharesLeaveTheContractsOfOtherSchools(t *testing.T) {
 		case "POST /traeger/care-cost-shares/":
 			var share map[string]any
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&share))
-			shared = append(shared, share["contract_id"].(float64))
+			shared = append(shared, testpkg.JSONID(t, share["contract_id"]))
 			_, _ = fmt.Fprint(w, `{"data":{}}`)
 		default:
 			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
@@ -205,7 +207,7 @@ func TestSeedCareCostSharesLeaveTheContractsOfOtherSchools(t *testing.T) {
 	defer srv.Close()
 
 	require.NoError(t, seedCareCostShares(newTestClient(srv.URL, false), AuthRef{Kind: AuthBearer, Token: "traeger"}, 65, calendar.NewDate(2026, 10, 1)))
-	assert.Equal(t, []float64{13, 14}, shared)
+	assert.Equal(t, []int64{13, 14}, shared)
 }
 
 // A notice run the seed cannot release would hold the year for every demo
