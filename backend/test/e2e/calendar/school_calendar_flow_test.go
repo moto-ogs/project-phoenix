@@ -151,6 +151,7 @@ func TestSchoolParentConferenceHTTPFlow(t *testing.T) {
 		ID          string `json:"id"`
 		SlotMinutes int    `json:"slot_minutes"`
 		Slots       []any  `json:"slots"`
+		Version     string `json:"version"`
 	}
 	created := decodeE2E[struct {
 		Data conferenceWire `json:"data"`
@@ -170,8 +171,10 @@ func TestSchoolParentConferenceHTTPFlow(t *testing.T) {
 	assert.Equal(t, created.Data.ID, listed.Data.Conferences[0].ID)
 	assert.Equal(t, []string{"2b"}, listed.Data.Classes)
 
+	// The change rests on the day as listed (ADR 0311).
 	conference["slot_minutes"] = 20
 	conference["breaks"] = []any{}
+	conference["expected_version"] = listed.Data.Conferences[0].Version
 	updateRR := doJSON(t, router, http.MethodPut, base+"/"+created.Data.ID, token, conference)
 	require.Equal(t, http.StatusOK, updateRR.Code, updateRR.Body.String())
 	updated := decodeE2E[struct {
@@ -179,6 +182,11 @@ func TestSchoolParentConferenceHTTPFlow(t *testing.T) {
 	}](t, updateRR.Body.Bytes())
 	assert.Equal(t, 20, updated.Data.SlotMinutes)
 	assert.Len(t, updated.Data.Slots, 6)
+	// The listed version is outdated now.
+	conference["slot_minutes"] = 30
+	staleRR := doJSON(t, router, http.MethodPut, base+"/"+created.Data.ID, token, conference)
+	require.Equal(t, http.StatusConflict, staleRR.Code, staleRR.Body.String())
+	assert.Contains(t, staleRR.Body.String(), `"code":"general.changed_since_read"`)
 
 	deleteRR := doJSON(t, router, http.MethodDelete, base+"/"+created.Data.ID, token, nil)
 	require.Equal(t, http.StatusOK, deleteRR.Code, deleteRR.Body.String())

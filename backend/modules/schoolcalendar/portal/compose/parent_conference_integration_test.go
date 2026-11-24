@@ -15,6 +15,7 @@ import (
 	calendarSvc "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -70,6 +71,17 @@ func createConference(t *testing.T, db *bun.DB, service calendarSvc.FullService,
 	view, err := testpkg.TenantQuery1(t, calendarContext(t, accountID), db, service.CreateSchoolParentConference, req)
 	require.NoError(t, err)
 	return view
+}
+
+// readConference reads a day the way the Lehrkraft's page does and returns
+// the change req on the version of that read (ADR 0311).
+func readConference(t *testing.T, db *bun.DB, service calendarSvc.FullService, accountID, id int64, req calendarSvc.ParentConferenceRequest) calendarSvc.ParentConferenceRequest {
+	t.Helper()
+	view, err := testpkg.TenantQuery1(t, calendarContext(t, accountID), db, service.GetSchoolParentConference, id)
+	require.NoError(t, err)
+	require.NotEmpty(t, view.Version)
+	req.ExpectedVersion = view.Version
+	return req
 }
 
 func conferenceID(t *testing.T, view *calendarSvc.ParentConferenceView) int64 {
@@ -328,11 +340,11 @@ func TestParentConferenceIntegration_ClassChangeCancelsExistingBookings(t *testi
 	require.NoError(t, err)
 
 	// Equivalent spelling keeps the class and its booking.
-	unchanged, err := testpkg.TenantQuery2(t, calendarContext(t, account.ID), db, service.UpdateSchoolParentConference, id, conferenceDay(" 1A "))
+	unchanged, err := testpkg.TenantQuery2(t, calendarContext(t, account.ID), db, service.UpdateSchoolParentConference, id, readConference(t, db, service, account.ID, id, conferenceDay(" 1A ")))
 	require.NoError(t, err)
 	assert.Equal(t, 1, unchanged.BookedCount)
 
-	changed, err := testpkg.TenantQuery2(t, calendarContext(t, account.ID), db, service.UpdateSchoolParentConference, id, conferenceDay("2b"))
+	changed, err := testpkg.TenantQuery2(t, calendarContext(t, account.ID), db, service.UpdateSchoolParentConference, id, readConference(t, db, service, account.ID, id, conferenceDay("2b")))
 	require.NoError(t, err)
 	assert.Equal(t, "2b", changed.SchoolClass)
 	assert.Zero(t, changed.BookedCount)
@@ -387,7 +399,7 @@ func TestParentConferenceIntegration_ChangedOrDeletedDayFollowsItsBookings(t *te
 	room := "Aula"
 	shorter.Location = &room
 	shorter.Breaks = nil
-	view, err := testpkg.TenantQuery2(t, calendarContext(t, account.ID), db, service.UpdateSchoolParentConference, id, shorter)
+	view, err := testpkg.TenantQuery2(t, calendarContext(t, account.ID), db, service.UpdateSchoolParentConference, id, readConference(t, db, service, account.ID, id, shorter))
 	require.NoError(t, err)
 	assert.Equal(t, 1, view.BookedCount, "the 14:45 slot is gone and so is its booking")
 
@@ -412,6 +424,39 @@ func TestParentConferenceIntegration_ChangedOrDeletedDayFollowsItsBookings(t *te
 	var stored int
 	require.NoError(t, db.NewRaw(`SELECT COUNT(*) FROM calendar.parent_conference_bookings WHERE conference_id = ?`, id).Scan(context.Background(), &stored))
 	assert.Zero(t, stored)
+}
+
+// A change of the day rests on the day as the Lehrkraft read it (ADR 0311):
+// a family that booked after that read keeps its booking, because the
+// change from the older read is refused instead of cancelling it unseen.
+func TestParentConferenceIntegration_AChangeOfAnOlderReadKeepsALaterBooking(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	service := setupParentConferenceService(t, db, time.Time{})
+	lehrkraft, account := createTestLehrkraft(t, db, "Spaet", "Buchung")
+	testpkg.CreateTestClassTeacher(t, db, lehrkraft.ID, "1a")
+	id := conferenceID(t, createConference(t, db, service, account.ID, conferenceDay("1a")))
+	shorter := conferenceDay("1a")
+	shorter.EndTime = "14:30"
+	shorter.Breaks = nil
+	read := readConference(t, db, service, account.ID, id, shorter)
+
+	family := testpkg.CreateTestParentGuardianChain(t, db)
+	_, err := testpkg.TenantQuery3(t, testpkg.Ctx(t), db, service.BookParentConference, conferenceChild(family), id, "14:45")
+	require.NoError(t, err)
+
+	for name, req := range map[string]calendarSvc.ParentConferenceRequest{"older read": read, "no read": shorter} {
+		_, err = testpkg.TenantQuery2(t, calendarContext(t, account.ID), db, service.UpdateSchoolParentConference, id, req)
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+	}
+	var stored int
+	require.NoError(t, db.NewRaw(`SELECT COUNT(*) FROM calendar.parent_conference_bookings WHERE conference_id = ?`, id).Scan(context.Background(), &stored))
+	assert.Equal(t, 1, stored, "the later booking stays")
+
+	view, err := testpkg.TenantQuery2(t, calendarContext(t, account.ID), db, service.UpdateSchoolParentConference, id, readConference(t, db, service, account.ID, id, shorter))
+	require.NoError(t, err)
+	assert.Zero(t, view.BookedCount, "on the current read the change cancels the booking the Lehrkraft saw")
+	assert.NotEqual(t, read.ExpectedVersion, view.Version, "the answer carries the new version")
 }
 
 func TestParentConferenceIntegration_SchoolYearEndDeletesDaysBookingsAndAppointments(t *testing.T) {

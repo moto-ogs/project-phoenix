@@ -63,6 +63,7 @@ const created: ParentConference = {
   slot_minutes: 15,
   breaks: [],
   location: "",
+  version: "v1",
   booked_count: 0,
   slots: [],
 };

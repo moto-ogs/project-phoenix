@@ -52,7 +52,12 @@ import { BELOW_MD, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useDeleteConfirmation } from "~/hooks/useDeleteConfirmation";
 import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { createLogger } from "~/lib/logger";
-import { useInvalidateFamily, useSWRAuth, useTenantMutate } from "~/lib/swr";
+import {
+  revalidateOrThrow,
+  useInvalidateFamily,
+  useSWRAuth,
+  useTenantMutate,
+} from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { ModuleRouteGuard } from "~/components/tenant/module-route-guard";
 import { devicesConcept } from "~/lib/concepts/devices";
@@ -157,15 +162,27 @@ function DevicesPageContent() {
     ]);
   }, [tenantMutate, invalidateFamily]);
 
+  const devicesRead = useSWRAuth(tenantAdminKeys.devices(), async () => {
+    const data = await service.getList();
+    return Array.isArray(data.data) ? data.data : [];
+  });
   const {
     data: devicesData,
     isLoading: swrLoading,
     error: devicesError,
     mutate: mutateDevices,
-  } = useSWRAuth(tenantAdminKeys.devices(), async () => {
-    const data = await service.getList();
-    return Array.isArray(data.data) ? data.data : [];
-  });
+  } = devicesRead;
+  // Reads the device list again for an edit form; rejects when the read
+  // fails or the device is gone (ADR 0311, rule 6).
+  const reloadDevice = useCallback(
+    async (id: string) => {
+      const devices = await revalidateOrThrow(devicesRead);
+      const device = devices.find((candidate) => candidate.id === id);
+      if (!device) throw new Error("device is no longer listed");
+      return device;
+    },
+    [devicesRead],
+  );
 
   // Geräteplätze der Schule (#2312). Ein Fehler blendet nur die Zeile aus;
   // das Backend prüft die Grenze beim Anlegen ohnehin selbst.
@@ -340,14 +357,31 @@ function DevicesPageContent() {
   );
 
   const handleUpdateDevice = useCallback(
-    async (data: Partial<Device>) => {
-      if (!selectedDevice) return;
+    async (data: Partial<Device>, version: string | undefined) => {
+      if (!selectedDevice) throw new Error("device is not selected");
       // Ein Fehler bleibt im Formular (errorPath im Stammdaten-Reiter).
       const payload = devicesConfig.form.transformBeforeSubmit
         ? devicesConfig.form.transformBeforeSubmit(data)
         : data;
-      const updatedDevice =
-        (await service.update(selectedDevice.id, payload)) ?? selectedDevice;
+      // The save carries the version the form was filled from (ADR 0311);
+      // after a refusal the form reads the list again (reloadDevice).
+      const saved = await service.update(selectedDevice.id, {
+        ...payload,
+        version,
+      });
+      const updatedDevice = saved ?? selectedDevice;
+      // The answer carries the new version: a second save sends it even
+      // when the refresh below fails.
+      if (saved) {
+        const stored = saved;
+        await mutateDevices(
+          (devices) =>
+            devices?.map((device) =>
+              device.id === stored.id ? { ...device, ...stored } : device,
+            ),
+          { revalidate: false },
+        );
+      }
       // Editing closes the api_key flash — the snapshot would otherwise
       // overlay the freshly-edited list values on the next render.
       setCreatedDevice(null);
@@ -355,8 +389,9 @@ function DevicesPageContent() {
         `Das Gerät „${updatedDevice.name ?? updatedDevice.device_id}“ ist gespeichert.`,
       );
       await refreshDevices();
+      return updatedDevice;
     },
-    [selectedDevice, service, refreshDevices, toastSuccess],
+    [selectedDevice, service, refreshDevices, toastSuccess, mutateDevices],
   );
 
   // Gerätesperre (#2317): sofort wirksam und sofort umkehrbar, darum ohne
@@ -586,6 +621,7 @@ function DevicesPageContent() {
             selectedDevice={selectedDevice}
             onSelect={handleSelectDevice}
             onSaveDevice={handleUpdateDevice}
+            reloadDevice={reloadDevice}
             onDeleteClick={handleDeleteClick}
             onSetBlocked={(blocked) => {
               if (selectedDevice)

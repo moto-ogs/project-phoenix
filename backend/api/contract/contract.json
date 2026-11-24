@@ -21116,7 +21116,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "ClassListEntryRequest"
+        "ref": "ClassListEntryUpdateRequest"
       },
       "response": {
         "kind": "ref",
@@ -21375,7 +21375,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "DeviceRequest"
+        "ref": "DeviceUpdateRequest"
       },
       "response": {
         "kind": "ref",
@@ -23045,7 +23045,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "ParentConferenceRequest"
+        "ref": "ParentConferenceUpdateRequest"
       },
       "response": {
         "kind": "ref",
@@ -44523,6 +44523,47 @@
               "kind": "string"
             }
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassListEntryUpdateRequest",
+      "go_type": "classlistentries.ClassListEntryUpdateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -51869,6 +51910,12 @@
           }
         },
         {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "api_key",
           "schema": {
             "kind": "string"
@@ -52012,6 +52059,12 @@
           "schema": {
             "kind": "instant"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -52122,6 +52175,57 @@
           "schema": {
             "kind": "ref",
             "ref": "DeviceTransferSession"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DeviceUpdateRequest",
+      "go_type": "devices.DeviceUpdateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "device_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "device_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "registered_by_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -76606,6 +76710,76 @@
       ]
     },
     {
+      "name": "ParentConferenceUpdateRequest",
+      "go_type": "staffcalendarhttp.ParentConferenceUpdateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slot_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "breaks",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ParentConferenceBreak"
+            }
+          }
+        },
+        {
+          "name": "location",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "ParentConferenceView",
       "go_type": "portal.ParentConferenceView",
       "fields": [
@@ -76679,6 +76853,12 @@
               "kind": "ref",
               "ref": "ParentConferenceSlot"
             }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

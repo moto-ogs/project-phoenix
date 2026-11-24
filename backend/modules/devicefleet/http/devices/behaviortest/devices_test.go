@@ -308,9 +308,10 @@ func TestUpdateDevice_Success(t *testing.T) {
 	router.Mount("/devices", ctx.resource.Router())
 
 	body := map[string]interface{}{
-		"device_id":   uniqueID,
-		"device_type": "terminal",
-		"name":        "Updated Device Name",
+		"device_id":        uniqueID,
+		"device_type":      "terminal",
+		"name":             "Updated Device Name",
+		"expected_version": deviceVersion(t, router, fmt.Sprintf("/devices/%d", device.ID)),
 	}
 
 	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/devices/%d", device.ID), body,
@@ -344,9 +345,10 @@ func TestUpdateDevice_PreservesSessionDerivedRoom(t *testing.T) {
 
 	// Update only the name — room_id is not in the request (auto-derived, not manual)
 	body := map[string]interface{}{
-		"device_id":   device.DeviceID,
-		"device_type": device.DeviceType,
-		"name":        "Updated Device Name",
+		"device_id":        device.DeviceID,
+		"device_type":      device.DeviceType,
+		"name":             "Updated Device Name",
+		"expected_version": deviceVersion(t, router, fmt.Sprintf("/devices/%d", device.ID)),
 	}
 
 	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/devices/%d", device.ID), body,
