@@ -3645,7 +3645,7 @@ export const holidayGuestsTopic = function holidayGuestsTopic(): HelpTopic {
     icon: "SunHorizon",
     image: "/help/screens/feriengast-angaben-aus-der-anmeldung.webp",
     imageAlt:
-      "Notfall, Abholung, Gesundheit, Fotos und Angaben aus der Ferienanmeldung bei einem Feriengast.",
+      "Notfall, Abholung, Gesundheit, Fotos, Raumverlauf und Stimmung und Angaben aus der Ferienanmeldung bei einem Feriengast.",
     requirements: [
       "Deine OGS richtet eine Ferienwoche für den Träger aus.",
       "Die Leitung hat unter `Ferienwochen` eine Feriengruppe gewählt.",
