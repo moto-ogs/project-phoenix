@@ -3472,6 +3472,8 @@ function SearchPageContent() {
                 type="button"
                 variant="ghost"
                 size="icon"
+                // Abstand zum „…“: Die Trefferflächen (44 px) überlappen sonst.
+                className="mr-2"
                 aria-label="Kinder an- und abmelden"
                 tooltip="Zeigt bei jedem Kind einen Knopf zum An- und Abmelden."
                 onClick={schoolCheckin.toggleActive}
