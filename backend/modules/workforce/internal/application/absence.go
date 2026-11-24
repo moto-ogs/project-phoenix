@@ -399,16 +399,8 @@ func (s *Service) UpdateAbsenceType(ctx context.Context, input workforce.UpdateA
 	if id <= 0 {
 		return absenceTypeToPublic(domain.StaffAbsenceType{}), MapError(domain.ErrAbsenceTypeNotFound)
 	}
-	existing, err := s.LockStaffAbsenceType(ctx, id)
-	if errors.Is(err, workforce.ErrAbsenceTypeNotFound) {
-		return absenceTypeToPublic(domain.StaffAbsenceType{}), MapError(domain.ErrAbsenceTypeNotFound)
-	}
+	existing, err := s.lockAbsenceTypeRead(ctx, id, input.ExpectedVersion)
 	if err != nil {
-		return absenceTypeToPublic(domain.StaffAbsenceType{}), MapError(fmt.Errorf("lock absence type: database error during lock staff absence type: %w", err))
-	}
-	// The row lock above returns the row as committed after it waited, and
-	// the update writes under it (ADR 0311).
-	if err := readstate.Check(input.ExpectedVersion, workforce.AbsenceTypeVersion(existing)); err != nil {
 		return absenceTypeToPublic(domain.StaffAbsenceType{}), err
 	}
 	if err := checkSchoolDeviation(existing, input); err != nil {
@@ -448,6 +440,24 @@ func (s *Service) UpdateAbsenceType(ctx context.Context, input workforce.UpdateA
 		return absenceTypeToPublic(domain.StaffAbsenceType{}), MapError(fmt.Errorf("database error during update staff absence type: %w", err))
 	}
 	return updated, nil
+}
+
+// lockAbsenceTypeRead locks the type an update replaces and refuses the
+// update when its editor read another version (ADR 0311). The row lock
+// returns the row as committed after it waited, and the update writes under
+// it.
+func (s *Service) lockAbsenceTypeRead(ctx context.Context, id int64, expected string) (workforce.StaffAbsenceType, error) {
+	existing, err := s.LockStaffAbsenceType(ctx, id)
+	if errors.Is(err, workforce.ErrAbsenceTypeNotFound) {
+		return workforce.StaffAbsenceType{}, MapError(domain.ErrAbsenceTypeNotFound)
+	}
+	if err != nil {
+		return workforce.StaffAbsenceType{}, MapError(fmt.Errorf("lock absence type: database error during lock staff absence type: %w", err))
+	}
+	if err := readstate.Check(expected, workforce.AbsenceTypeVersion(existing)); err != nil {
+		return workforce.StaffAbsenceType{}, err
+	}
+	return existing, nil
 }
 
 // checkSchoolDeviation keeps what the Träger keeps of its types (#4710): a

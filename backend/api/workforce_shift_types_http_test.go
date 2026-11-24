@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -63,6 +65,59 @@ func (s *shiftTypeRoute) shiftTypeIDOf(t *testing.T, categoryID int64) *int64 {
 	return shiftTypeID
 }
 
+// linkVersions are the link tokens the category list answers for the stored
+// categories (ADR 0311), keyed as the form sends them.
+func (s *shiftTypeRoute) linkVersions(t *testing.T, categoryIDs ...int64) map[string]string {
+	t.Helper()
+	versions := make(map[string]string, len(categoryIDs))
+	for _, id := range categoryIDs {
+		versions[strconv.FormatInt(id, 10)] = timetable.CategoryShiftTypeLinkVersion(timetable.Category{ID: id, ShiftTypeID: s.shiftTypeIDOf(t, id)})
+	}
+	return versions
+}
+
+func (s *shiftTypeRoute) typeName(t *testing.T, typeID int64) string {
+	t.Helper()
+	listed := s.do(t, http.MethodGet, "/", nil)
+	defer func() { _ = listed.Body.Close() }()
+	var envelope struct {
+		Data []struct {
+			ID   wireID `json:"id"`
+			Name string `json:"name"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.NewDecoder(listed.Body).Decode(&envelope))
+	for _, row := range envelope.Data {
+		if int64(row.ID) == typeID {
+			return row.Name
+		}
+	}
+	return ""
+}
+
+// typeVersion reads the type's version from the list, as the catalog page
+// does.
+func (s *shiftTypeRoute) typeVersion(t *testing.T, typeID int64) string {
+	t.Helper()
+	listed := s.do(t, http.MethodGet, "/", nil)
+	defer func() { _ = listed.Body.Close() }()
+	require.Equal(t, http.StatusOK, listed.StatusCode)
+	var envelope struct {
+		Data []struct {
+			ID      wireID `json:"id"`
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.NewDecoder(listed.Body).Decode(&envelope))
+	for _, row := range envelope.Data {
+		if int64(row.ID) == typeID {
+			return row.Version
+		}
+	}
+	t.Fatalf("shift type %d is not listed", typeID)
+	return ""
+}
+
 func decodeShiftTypeID(t *testing.T, response *http.Response) int64 {
 	t.Helper()
 	defer func() { _ = response.Body.Close() }()
@@ -110,17 +165,29 @@ func TestShiftTypesRouteUpdateSyncsAndOmittedLeavesUntouched(t *testing.T) {
 	typeID := decodeShiftTypeID(t, created)
 
 	// Narrowing the set to the first category unlinks the second.
+	read := route.linkVersions(t, first.ID, second.ID)
 	updated := route.do(t, http.MethodPut, fmt.Sprintf("/%d", typeID), map[string]any{
 		"name": name, "color": "#5080D8", "is_active": true, "category_ids": []string{fmt.Sprint(first.ID)},
+		"expected_version": route.typeVersion(t, typeID), "expected_category_link_versions": read,
 	})
 	require.Equal(t, http.StatusOK, updated.StatusCode)
 	require.NotNil(t, route.shiftTypeIDOf(t, first.ID))
 	assert.Equal(t, typeID, *route.shiftTypeIDOf(t, first.ID))
 	assert.Nil(t, route.shiftTypeIDOf(t, second.ID), "the de-selected category is unlinked on update")
 
+	// ADR 0311: a form read before that save would link the second category
+	// again; its link moved since, so the save is refused and writes nothing.
+	stale := route.do(t, http.MethodPut, fmt.Sprintf("/%d", typeID), map[string]any{
+		"name": name + " überschrieben", "color": "#5080D8", "is_active": true, "category_ids": []string{fmt.Sprint(first.ID), fmt.Sprint(second.ID)},
+		"expected_version": route.typeVersion(t, typeID), "expected_category_link_versions": read,
+	})
+	require.Equal(t, http.StatusConflict, stale.StatusCode)
+	assert.Nil(t, route.shiftTypeIDOf(t, second.ID), "a refused save links nothing")
+	assert.Equal(t, name, route.typeName(t, typeID), "a refused link write rolls the type's write back too")
+
 	// An update without category_ids leaves the mapping untouched, and an
 	// omitted is_active keeps the stored flag.
-	untouched := route.do(t, http.MethodPut, fmt.Sprintf("/%d", typeID), map[string]any{"name": name, "color": "#5080D8"})
+	untouched := route.do(t, http.MethodPut, fmt.Sprintf("/%d", typeID), map[string]any{"name": name, "color": "#5080D8", "expected_version": route.typeVersion(t, typeID)})
 	require.Equal(t, http.StatusOK, untouched.StatusCode)
 	require.NotNil(t, route.shiftTypeIDOf(t, first.ID), "omitted category_ids must not clear the mapping")
 	var envelope struct {
@@ -149,6 +216,7 @@ func TestShiftTypesRouteRejectsUnknownCategoryIDsAndRollsBack(t *testing.T) {
 	// the existing mapping nor persist the renamed type.
 	rejected := route.do(t, http.MethodPut, fmt.Sprintf("/%d", typeID), map[string]any{
 		"name": name + " neu", "color": "#83CD2D", "is_active": true, "category_ids": []string{fmt.Sprint(first.ID), fmt.Sprint(999999999)},
+		"expected_version": route.typeVersion(t, typeID),
 	})
 	require.Equal(t, http.StatusBadRequest, rejected.StatusCode)
 	require.NotNil(t, route.shiftTypeIDOf(t, first.ID), "existing mapping must survive a rejected update")
