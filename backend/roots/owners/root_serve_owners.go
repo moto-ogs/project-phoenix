@@ -210,19 +210,47 @@ func BuildServeMealPlan(db transactionruntime.Database, settings *mealplanCompos
 	if calendarRecords == nil {
 		return nil, errors.New("meal plan: the school calendar is required")
 	}
+	lockStudent, err := mealPlanStudentLock(names)
+	if err != nil {
+		return nil, err
+	}
 	return mealplanCompose.New(mealplanCompose.Dependencies{
 		DB:       db.Pool(),
 		Settings: settings,
 		Observe: func(observation mealplanCompose.Observation) {
-			observability.ObserveMealPlanOperation(observation.Operation, observation.Duration, observation.Stats.Queries, observation.Stats.Rows, observation.Stats.StatementDuration, observation.Err)
+			observability.ObserveMealPlanOperation(observation.Operation, observation.Duration, observation.Stats.Queries, observation.Stats.Rows, observation.Stats.StatementDuration, mealplanModule.ErrorCode(observation.Err), observation.Err)
 		},
 		Now:             time.Now,
 		Participants:    mealPlanParticipantFinder(students, time.Now),
 		ParticipantDays: mealPlanParticipantDaysFinder(names, time.Now),
 		StudentNames:    mealPlanStudentNames(names),
+		LockStudent:     lockStudent,
 		Calendar:        mealPlanCalendar(calendarRecords),
 		Notices:         notices,
 	})
+}
+
+// mealPlanStudentLock binds the Meal Plan's first lock to the People
+// Directory's student row lock FOR NO KEY UPDATE, the one the parent
+// portal's child guard takes for a meal write: it serializes the writes of
+// one child, and the holder of the school's order lock may still insert
+// order lines of the child meanwhile.
+func mealPlanStudentLock(names peopledirectory.Capability) (mealplanModule.StudentLock, error) {
+	directory, ok := names.(*peopleCompose.Directory)
+	var students peopledirectory.StudentKeyShareLock
+	if ok {
+		students, ok = directory.Owner.(peopledirectory.StudentKeyShareLock)
+	}
+	if !ok {
+		return nil, errors.New("meal plan: the People Directory's student lock without key share is required")
+	}
+	return func(ctx context.Context, studentID int64) (bool, error) {
+		err := students.LockStudentNoKeyUpdate(ctx, studentID)
+		if errors.Is(err, peopledirectory.ErrStudentNotFound) {
+			return false, nil
+		}
+		return err == nil, err
+	}, nil
 }
 
 // studentNames is the People Directory's lookup of children by ID.

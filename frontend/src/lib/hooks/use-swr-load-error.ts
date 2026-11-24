@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { createLogger } from "~/lib/logger";
+import type { ReadDraftStatus } from "~/lib/swr/read-draft";
 
 import { useApiLoadError } from "~/contexts/ToastContext";
 
@@ -85,4 +86,85 @@ export function useSwrResourceLoadError(
   const error = useSwrLoadError(failure, object, retry);
   // Hide a previous presentation synchronously, even before its effect clears.
   return { error: failure ? error : null, failure };
+}
+
+/**
+ * The load failure of a draft or an action of `~/lib/swr/read-draft`
+ * (status `loadFailed`): the opening read, the read after a refusal or
+ * after a save failed. Shown also while a draft is on screen, because nothing can
+ * be sent until a read of the stored state succeeded (ADR 0311, rule 6);
+ * its retry reads again (`retryLoad`). Render it in `LoadErrorAlert`.
+ */
+export function useReadDraftLoadError(
+  draft: { readonly error: unknown; readonly retryLoad: () => void },
+  object: string,
+) {
+  return useSwrLoadError(draft.error, object, draft.retryLoad);
+}
+
+/**
+ * Why nothing on a read state can be sent yet (ADR 0311, rules 4 and 6),
+ * for `disabledReason`: the stored state is still being read, or that read
+ * failed and its load error, shown on the surface, offers „Wiederholen“.
+ * Undefined while the state is ready to send or a save is on its way.
+ */
+export function readStateWaitReason(
+  status: ReadDraftStatus,
+): string | undefined {
+  switch (status) {
+    case "loading":
+    case "refused":
+    case "reloading":
+      return "Die gespeicherten Angaben werden noch geladen.";
+    case "loadFailed":
+      return "Die gespeicherten Angaben konnten nicht geladen werden. Tippe in der Fehlermeldung auf „Wiederholen“.";
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * The error path of a form on a draft of `~/lib/swr/read-draft` (ADR 0311,
+ * rules 4 and 6), so that no form orders it wrong:
+ *
+ * - `begin()` starts a save: while nothing can be sent (`canSubmit`) it
+ *   returns false and leaves the shown error in place, a failed read with
+ *   its retry included; otherwise it clears the form's error.
+ * - `loadError` is the draft's failed read for `LoadErrorAlert`, null while
+ *   the form's own alert shows an error (it already names that read).
+ * - `waitReason` says why saving waits (`readStateWaitReason`), for the
+ *   save button's `disabledReason`.
+ *
+ * `draft` null: the form creates, no stored state is read, `begin` only
+ * clears. Also takes an action of `useActionOn`.
+ */
+export function useReadDraftForm(
+  draft: {
+    readonly error: unknown;
+    readonly retryLoad: () => void;
+    readonly canSubmit: boolean;
+    readonly status: ReadDraftStatus;
+  } | null,
+  formErrors: { readonly error: unknown; readonly clear: () => void },
+  object: string,
+) {
+  const shown = useSwrLoadError(
+    draft?.error,
+    object,
+    draft?.retryLoad ?? noRetry,
+  );
+  const begin = () => {
+    if (draft !== null && !draft.canSubmit) return false;
+    formErrors.clear();
+    return true;
+  };
+  return {
+    begin,
+    loadError: draft?.error && !formErrors.error ? shown : null,
+    waitReason: draft === null ? undefined : readStateWaitReason(draft.status),
+  };
+}
+
+function noRetry() {
+  // A creating form reads nothing: there is no read to retry.
 }

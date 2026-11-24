@@ -1,6 +1,8 @@
 import { bffJson } from "~/lib/bff-fetch";
 import {
+  billedChildrenFromBackend,
   joinedChildrenFromBackend,
+  type CareBilledChild,
   type CareJoinedChild,
 } from "~/lib/traeger-care-billing-api";
 /**
@@ -131,6 +133,11 @@ export interface CareNoticeRunDetail extends CareNoticeRun {
   readonly duplicateCount: number;
   /** Children the months join by their name across schools (#7874). */
   readonly joinedChildren: readonly CareJoinedChild[];
+  /**
+   * Children a month of the run holds back because an issued invoice of
+   * another of their contracts already bills it (#7892).
+   */
+  readonly billedChildren?: readonly CareBilledChild[];
   readonly previewCount: number;
   readonly previewCents: number;
   readonly previewDeltaCents: number;
@@ -265,6 +272,7 @@ function detailFromBackend(
     unpricedCount: (detail.unpriced ?? []).length,
     duplicateCount: (detail.duplicates ?? []).length,
     joinedChildren: joinedChildrenFromBackend(detail.joined_children),
+    billedChildren: billedChildrenFromBackend(detail.billed_children),
     previewCount: detail.preview_count,
     previewCents: detail.preview_cents,
     previewDeltaCents: detail.preview_delta_cents,

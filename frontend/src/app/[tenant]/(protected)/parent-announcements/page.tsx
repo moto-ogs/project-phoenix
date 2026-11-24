@@ -32,6 +32,7 @@ import { DataTable } from "~/components/ui/data-table";
 import { StatusBadge } from "~/components/ui/status-badge";
 import type { DataTableColumn } from "~/components/ui/data-table";
 import { Button } from "~/components/ui/button";
+import { Alert } from "~/components/ui/alert";
 import {
   SlideOver,
   SlideOverBody,
@@ -55,7 +56,6 @@ import { DatePicker } from "~/components/ui/date-picker";
 import { FieldLabel } from "~/components/ui/field-label";
 import { TimeField } from "~/components/ui/time-field";
 import {
-  DEFAULT_REMINDER_TIME,
   MAX_REMINDER_TEXT_LENGTH,
   reminderError,
   reminderTimeError,
@@ -102,18 +102,24 @@ import { FileTypeIcon } from "~/components/ui/file-type-icon";
 import { Textarea } from "~/components/ui/textarea";
 import { formatBytes } from "~/lib/file-format";
 import {
-  berlinClockFromISO,
   berlinDateTimeISO,
-  berlinDayFromISO,
   endOfBerlinDayISO,
   formatBerlinDate,
   formatDate,
 } from "~/lib/date-helpers";
-import { useApiFormError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import {
+  announcementDraftOf,
+  newAnnouncementDraft,
+  type AnnouncementDraft,
+} from "~/components/announcements/announcement-draft";
+import {
+  useReadDraftForm,
   useSwrLoadError,
   useSwrResourceLoadError,
 } from "~/lib/hooks/use-swr-load-error";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   STALE_DATA_SUFFIX,
   useRefreshAfterWrite,
@@ -126,7 +132,7 @@ import {
   MIN_POLL_OPTIONS,
   insertPastedOptions,
 } from "~/lib/announcement-poll-options";
-import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
 import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
 import { type Group } from "~/lib/api";
@@ -154,7 +160,6 @@ import type {
   AnnouncementInput,
   AnnouncementPriority,
   AnnouncementStatus,
-  AnnouncementTarget,
   DeclarationSigners,
 } from "~/lib/parent-announcements-api";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -318,16 +323,12 @@ function ParentAnnouncementsContent() {
     null,
   );
 
-  const {
-    data: announcements,
-    isLoading,
-    error: loadError,
-    mutate,
-  } = useSWRAuth<Announcement[]>(
+  const listRead = useSWRAuth<Announcement[]>(
     parentAnnouncementKeys.list(),
     () => fetchAnnouncements(true),
     { keepPreviousData: true, revalidateOnFocus: false },
   );
+  const { data: announcements, isLoading, error: loadError, mutate } = listRead;
 
   // Targeting data sources — fetched while the form is open (pickers).
   const shownLoadError = useSwrLoadError(
@@ -796,6 +797,10 @@ function ParentAnnouncementsContent() {
               lookupLoadError={lookupLoadError}
               onClose={closeForm}
               onRefresh={formAfterWrite.refresh}
+              storedRows={announcements}
+              reloadStored={async (id) =>
+                (await revalidateOrThrow(listRead)).find((row) => row.id === id)
+              }
               onSaved={async () => {
                 const refreshed = await formAfterWrite.refresh();
                 closeForm();
@@ -806,7 +811,13 @@ function ParentAnnouncementsContent() {
 
           {publishTarget && (
             <PublishAnnouncementDialog
-              announcement={publishTarget}
+              // The row as the list reads it now: after a refusal the
+              // reloaded draft with its new version (ADR 0311).
+              announcement={
+                announcements?.find((row) => row.id === publishTarget.id) ??
+                publishTarget
+              }
+              reload={() => revalidateOrThrow(listRead)}
               onClose={() => setPublishTarget(null)}
               onDone={async () => {
                 await formAfterWrite.refresh();
@@ -881,6 +892,14 @@ interface AnnouncementFormModalProps {
    * (#6652).
    */
   readonly onRefresh: RefreshAfterWrite;
+  /** The announcements as the list reads them now (ADR 0311). */
+  readonly storedRows: readonly Announcement[] | undefined;
+  /**
+   * Reads the stored announcement again (the list), after the server refused
+   * a save of a draft changed meanwhile; rejects on failure (ADR 0311).
+   * Undefined: the announcement is gone.
+   */
+  readonly reloadStored: (id: string) => Promise<Announcement | undefined>;
 }
 
 const WIZARD_STEPS = ["Inhalt", "Empfänger"] as const;
@@ -895,6 +914,23 @@ const NO_PREFILL_STUDENTS: readonly AnnouncementPrefillStudent[] = [];
  * upload arrives too late to help.
  */
 const MAX_ATTACHMENTS = 5;
+
+/**
+ * The attachment list of a draft with the draft version the form rested on
+ * when the read went out (ADR 0311): a read on the form's version that
+ * answers another one says the stored draft moved on.
+ */
+type DraftAttachments = AnnouncementAttachmentList & {
+  readonly readOn?: string;
+};
+
+/** Picked files a refusal held back: not uploaded, they wait for a save. */
+function pendingHeldNotice(files: readonly File[]): string {
+  const [only] = files;
+  return files.length === 1 && only
+    ? `„${only.name}“ ist noch nicht hochgeladen. Prüfe zuerst den gespeicherten Stand. Beim nächsten Speichern lädt moto die Datei hoch.`
+    : `${files.length} Dateien sind noch nicht hochgeladen. Prüfe zuerst den gespeicherten Stand. Beim nächsten Speichern lädt moto sie hoch.`;
+}
 // Als runde Zahl geschrieben, nicht über formatBytes: „25 MB" ist die Grenze,
 // die jemand im Kopf behält, „25.0 MB" liest sich wie eine Messung.
 const MAX_ATTACHMENT_MB = 25;
@@ -958,6 +994,8 @@ function AnnouncementFormModal({
   onClose,
   onSaved,
   onRefresh,
+  storedRows,
+  reloadStored,
 }: AnnouncementFormModalProps) {
   const isEdit = announcement !== null;
   const isPollForm = kind === "poll";
@@ -972,13 +1010,93 @@ function AnnouncementFormModal({
   const attachmentsFrozen =
     isDeclarationForm && announcement?.declaration_locked_attachments === true;
   const [step, setStep] = useState(0);
-  // Tracks the id of the draft once it exists in the backend. Seeded from an
-  // existing draft when editing; set after a create so that a publish-retry
-  // (the modal stays open when publishing fails) updates that same draft
-  // instead of creating a duplicate.
-  const [persistedId, setPersistedId] = useState<string | null>(
-    announcement?.id ?? null,
+  // The draft once it exists in the backend. Seeded from an existing draft
+  // when editing; set by a create so that a publish-retry (the modal stays
+  // open when publishing fails) updates that same draft instead of creating
+  // a duplicate.
+  // The stored state this panel's own writes answered: the create, each
+  // save and each attachment change (whose answer names the new version).
+  const [persisted, setPersisted] = useState<Announcement | null>(announcement);
+  const persistedId = persisted?.id ?? null;
+  // Versions this panel's own writes replaced: a list row still carrying one
+  // is older than `persisted`, not a change by someone else.
+  const [replaced, setReplaced] = useState<readonly string[]>([]);
+  const listRow = persistedId
+    ? storedRows?.find((row) => row.id === persistedId)
+    : undefined;
+  const newestStored =
+    listRow && !replaced.includes(listRow.version)
+      ? listRow
+      : (persisted ?? undefined);
+  const { showMessage } = useApiErrorDisplay();
+  // The form is the draft of the stored announcement (ADR 0311): an
+  // untouched draft follows a newer read, a touched one keeps its input and
+  // the version it rests on, and after a refusal the stored state read
+  // again replaces all of it. A new announcement is a draft of its own until
+  // the create answers.
+  const stored = useDraftOn<
+    Announcement,
+    AnnouncementDraft,
+    string,
+    Announcement
+  >(
+    {
+      opening: persistedId,
+      data: newestStored,
+      reload: async () => {
+        if (!persistedId) return undefined;
+        const read = await reloadStored(persistedId);
+        if (read !== undefined) {
+          // The stored state read again is the newest: a list row that has
+          // not caught up with it yet is older, not a change to follow.
+          const older = [stored.base?.version, listRow?.version].filter(
+            (version): version is string =>
+              version !== undefined && version !== read.version,
+          );
+          setReplaced((prev) => [...prev, ...older]);
+          setPersisted(read);
+        } else {
+          // Deleted since the panel opened: there is no stored draft to
+          // show, so the panel closes and says so instead of keeping the
+          // refused input.
+          onClose();
+          showMessage(
+            "Diese Mitteilung gibt es nicht mehr. Deine Änderungen sind nicht gespeichert.",
+          );
+        }
+        return read;
+      },
+    },
+    {
+      token: (read) => read.version,
+      toDraft: announcementDraftOf,
+      answer: (saved) => saved,
+    },
   );
+  const [createDraft, setCreateDraft] = useState<AnnouncementDraft>(() =>
+    newAnnouncementDraft(
+      isPollForm,
+      initialStudents.map((student) => ({
+        target_type: "student" as const,
+        ref_id: student.id,
+      })),
+    ),
+  );
+  const draft = persisted
+    ? (stored.draft ?? announcementDraftOf(persisted))
+    : createDraft;
+  const setDraft = persisted ? stored.setDraft : setCreateDraft;
+  const edit =
+    <K extends keyof AnnouncementDraft>(field: K) =>
+    (value: AnnouncementDraft[K]) =>
+      setDraft((current) => ({ ...current, [field]: value }));
+  // An own write moved the stored draft to `next`: the list's older row is
+  // no longer news, and the form keeps its input on the new version.
+  const ownWrite = (from: Announcement, next: Announcement) => {
+    setReplaced((prev) => [...prev, from.version]);
+    setPersisted(next);
+    stored.adopt(next);
+  };
 
   // Anhänge (#2890). Eine schon hochgeladene Datei liegt beim Backend
   // (existingAttachments), eine gerade ausgewählte noch nicht (pendingFiles):
@@ -986,6 +1104,9 @@ function AnnouncementFormModal({
   // Listen stehen untereinander, damit die schreibende Person nicht zwischen
   // "schon da" und "kommt noch" unterscheiden muss.
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  // A refusal left picked files unsent: the stored draft shows first, the
+  // files go up only with the next save, and the panel says so.
+  const [pendingHeld, setPendingHeld] = useState(false);
   // Fehler im Anhangsbereich stehen dort, wo die Dateien stehen (#2517):
   // Prüfungen vor dem Hochladen und das Entfernen über den Formularweg, das
   // Nachladen der vorhandenen Dateien als Ladefehler.
@@ -1008,9 +1129,24 @@ function AnnouncementFormModal({
   // Scheitert das, sagt der Anhangsbereich das auch: eine leere Liste liest
   // sich sonst als „es hängt nichts dran", und die schreibende Person hängt
   // eine Datei ein zweites Mal an oder hält eine vorhandene für gelöscht.
+  //
+  // The files are part of what a publication confirms (ADR 0311): the list
+  // answers the draft version it belongs to, and each read notes the
+  // version the form rested on when it went out (`readOn`).
+  const baseVersion = persistedId ? stored.base?.version : undefined;
+  const attachmentsReadOn = useRef(baseVersion);
+  useLayoutEffect(() => {
+    attachmentsReadOn.current = baseVersion;
+  });
   const attachments = useSWRAuth(
     persistedId ? tenantListKeys.announcementAttachments(persistedId) : null,
-    () => fetchAnnouncementAttachments(persistedId ?? ""),
+    async (): Promise<DraftAttachments> => {
+      const readOn = attachmentsReadOn.current;
+      return {
+        ...(await fetchAnnouncementAttachments(persistedId ?? "")),
+        readOn,
+      };
+    },
     // Another draft's files never stand in for this one's.
     { keepPreviousData: false },
   );
@@ -1020,6 +1156,37 @@ function AnnouncementFormModal({
     () => attachments.mutate(),
   );
   const existingAttachments = attachments.data?.attachments ?? [];
+  // The shown files belong to another version than the draft's, and no
+  // read went out since the draft rests on its version: the files on
+  // screen may not be the ones a publication would confirm. Read again.
+  // A read sent on the draft's version that answers another one says the
+  // stored draft moved on: a save on that version is refused anyway.
+  const attachmentsBehind =
+    baseVersion !== undefined &&
+    attachments.data?.announcement_version !== baseVersion &&
+    attachments.data?.readOn !== baseVersion;
+  const revalidateAttachments = attachments.mutate;
+  const attachmentsFailed = attachments.error !== undefined;
+  const attachmentsReading = attachments.isValidating;
+  useEffect(() => {
+    // A failed read waits for „Wiederholen“ in its load error.
+    if (!attachmentsBehind || attachmentsReading || attachmentsFailed) return;
+    void revalidateAttachments();
+  }, [
+    attachmentsBehind,
+    baseVersion,
+    attachmentsReading,
+    attachmentsFailed,
+    revalidateAttachments,
+  ]);
+  // Why „Veröffentlichen“ waits for the files: a publication confirms the
+  // files on screen. Saving a draft confirms none, so „Weiter“ and „Als
+  // Entwurf speichern“ do not wait.
+  const attachmentsWait = !attachmentsBehind
+    ? undefined
+    : attachmentsFailed
+      ? "Die Anhänge konnten nicht geladen werden. Tippe in der Fehlermeldung auf „Wiederholen“."
+      : "Die Anhänge werden noch geladen.";
   // Ob die Anhänge dieser Mitteilung noch änderbar sind. Die Antwort der
   // Liste sagt es: ein Entwurf, der zwischenzeitlich anderswo veröffentlicht
   // wurde, ist es nicht mehr. Ohne diesen Zustand bietet der Assistent weiter
@@ -1029,20 +1196,33 @@ function AnnouncementFormModal({
   // A draft created by this save has no reader yet; its first uploads go to
   // its key directly. Every other change goes through the reader.
   const tenantMutate = useTenantMutate();
+  // An own write moved the draft from version `from` to `to` (ADR 0311):
+  // the list of `from` becomes the list of `to`. A list of another version
+  // stays as it is; the draft's new version reads it again.
   const writeAttachments = (
     announcementId: string,
+    from: string,
+    to: string,
     change: (
       list: sharedContract.AnnouncementAttachmentResponse[],
     ) => sharedContract.AnnouncementAttachmentResponse[],
   ) => {
-    // A draft saved a moment ago: its attachments are still editable.
-    const update = (current?: AnnouncementAttachmentList) => ({
-      max_count: 0,
-      max_bytes: 0,
-      editable: true,
-      ...current,
-      attachments: change(current?.attachments ?? []),
-    });
+    const update = (
+      current?: DraftAttachments,
+    ): DraftAttachments | undefined =>
+      current !== undefined && current.announcement_version !== from
+        ? current
+        : {
+            // A draft saved a moment ago: its attachments are still
+            // editable.
+            max_count: 0,
+            max_bytes: 0,
+            editable: true,
+            ...current,
+            attachments: change(current?.attachments ?? []),
+            announcement_version: to,
+            readOn: to,
+          };
     return announcementId === persistedId
       ? attachments.mutate(update, { revalidate: false })
       : tenantMutate(
@@ -1052,51 +1232,48 @@ function AnnouncementFormModal({
         );
   };
 
-  const [title, setTitle] = useState(announcement?.title ?? "");
-  const [body, setBody] = useState(announcement?.body ?? "");
-  const [linkUrl, setLinkUrl] = useState(announcement?.link_url ?? "");
-  const [priority, setPriority] = useState<AnnouncementPriority>(
-    announcement?.priority ?? "info",
-  );
-  const [requiresAck, setRequiresAck] = useState(
-    announcement?.requires_acknowledgement ?? false,
-  );
-  const [sendEmail, setSendEmail] = useState(announcement?.send_email ?? false);
-  // Who gets the mail — a separate question from who sees the announcement in
-  // the portal. The narrow option is the default so an oversight never
-  // discloses the text to someone deliberately kept out of the portal.
-  const [emailAudience, setEmailAudience] = useState<AnnouncementEmailAudience>(
-    announcement?.email_audience ?? "portal_only",
-  );
-  // Both cut-offs were written as the END of a Berlin day, so they have to be
-  // read back as that Berlin day — a plain `new Date(...)` shows the following
-  // day east of Berlin and re-saving would move the date by one day.
-  const [expiresAt, setExpiresAt] = useState<Date | null>(
-    announcement?.expires_at ? berlinDayFromISO(announcement.expires_at) : null,
-  );
-  // Scheduled reminder (#3162): a Berlin day plus a clock time, both read back
-  // from the stored instant so re-saving an untouched draft keeps the moment.
-  const [reminderDay, setReminderDay] = useState<Date | null>(
-    announcement?.reminder_at
-      ? berlinDayFromISO(announcement.reminder_at)
-      : null,
-  );
-  const [reminderTime, setReminderTime] = useState(
-    announcement?.reminder_at
-      ? berlinClockFromISO(announcement.reminder_at)
-      : DEFAULT_REMINDER_TIME,
-  );
-  const [reminderText, setReminderText] = useState(
-    announcement?.reminder_text ?? "",
-  );
-  const [targets, setTargets] = useState<AnnouncementTarget[]>(
-    () =>
-      announcement?.targets ??
-      initialStudents.map((student) => ({
-        target_type: "student" as const,
-        ref_id: student.id,
-      })),
-  );
+  const {
+    title,
+    body,
+    linkUrl,
+    priority,
+    requiresAck,
+    sendEmail,
+    emailAudience,
+    expiresAt,
+    reminderDay,
+    reminderTime,
+    reminderText,
+    targets,
+    multiChoice,
+    optionRows,
+    declarationSigners,
+    declarationRequiresPassword,
+    declarationRequiresSignature,
+    deadline,
+  } = draft;
+  const setTitle = edit("title");
+  const setBody = edit("body");
+  const setLinkUrl = edit("linkUrl");
+  const setPriority = edit("priority");
+  const setRequiresAck = edit("requiresAck");
+  const setSendEmail = edit("sendEmail");
+  const setEmailAudience = edit("emailAudience");
+  const setExpiresAt = edit("expiresAt");
+  const setReminderDay = edit("reminderDay");
+  const setReminderTime = edit("reminderTime");
+  const setReminderText = edit("reminderText");
+  const setTargets = edit("targets");
+  const setMultiChoice = edit("multiChoice");
+  const setDeclarationSigners = edit("declarationSigners");
+  const setDeclarationRequiresPassword = edit("declarationRequiresPassword");
+  const setDeclarationRequiresSignature = edit("declarationRequiresSignature");
+  const setDeadline = edit("deadline");
+  const setOptionRows = (next: (rows: string[]) => string[]) =>
+    setDraft((current) => ({
+      ...current,
+      optionRows: next(current.optionRows),
+    }));
   const [studentNames, setStudentNames] = useState<Record<string, string>>(
     () =>
       announcement
@@ -1105,36 +1282,10 @@ function AnnouncementFormModal({
             initialStudents.map((student) => [student.id, student.name]),
           ),
   );
-
-  // Poll state. A fresh poll starts as the question schools ask most often, so
-  // the common case is two clicks away instead of two text fields.
-  const [multiChoice, setMultiChoice] = useState(
-    announcement?.response_type === "multi_choice",
-  );
-  // Each answer is its own row, mirroring the "Feste Auswahlzeiten" editor in
-  // the enrollment form builder: an input plus a remove button, added through
-  // an explicit button. Answers are a fixed set the parents pick from, so they
-  // have to look like a set — not like free text.
-  const [optionRows, setOptionRows] = useState<string[]>(() => {
-    const existing = announcement?.options?.map((o) => o.label) ?? [];
-    if (existing.length > 0) return existing;
-    return isPollForm ? ["Ja", "Nein"] : [];
-  });
+  // Whether a fresh poll still shows its two default answers: a paste then
+  // replaces them instead of adding to them.
   const [defaultOptionsUntouched, setDefaultOptionsUntouched] = useState(
     () => isPollForm && announcement === null,
-  );
-  // Einverständnis settings (#3430). There is only one kind, consent; parents
-  // can always withdraw it (#6303).
-  const [declarationSigners, setDeclarationSigners] =
-    useState<DeclarationSigners>(announcement?.declaration_signers ?? "any");
-  const [declarationRequiresPassword, setDeclarationRequiresPassword] =
-    useState(announcement?.declaration_requires_password ?? false);
-  const [declarationRequiresSignature, setDeclarationRequiresSignature] =
-    useState(announcement?.declaration_requires_signature ?? false);
-  const [deadline, setDeadline] = useState<Date | null>(
-    announcement?.response_deadline
-      ? berlinDayFromISO(announcement.response_deadline)
-      : null,
   );
 
   // The persisted set: trimmed, blanks dropped. Rows stay editable as typed.
@@ -1161,6 +1312,12 @@ function AnnouncementFormModal({
   );
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
+  // A failed read of the stored draft after a refusal (ADR 0311, rule 6).
+  const storedForm = useReadDraftForm(
+    persistedId ? stored : null,
+    formErrors,
+    "die gespeicherte Mitteilung",
+  );
   const setFormError = formErrors.invalid;
   const clearFormError = formErrors.clear;
   // „Wiederholen“ speichert bzw. veröffentlicht den dann aktuellen Stand.
@@ -1183,7 +1340,7 @@ function AnnouncementFormModal({
     event.preventDefault();
     if (!replaceDefaultOptions || result.rows.length > 0) {
       setDefaultOptionsUntouched(false);
-      setOptionRows(result.rows);
+      setOptionRows(() => result.rows);
     }
     const errors = [
       result.tooLong > 0 &&
@@ -1258,12 +1415,15 @@ function AnnouncementFormModal({
         return false;
       }
     }
-    clearFormError();
     return true;
   };
 
   const goNext = () => {
-    if (validateContent(false)) setStep(1);
+    if (!validateContent(false)) return;
+    // Clears a shown error, unless a refusal still waits for the stored
+    // draft: its message and load error stay (ADR 0311).
+    storedForm.begin();
+    setStep(1);
   };
 
   const attachmentCount = existingAttachments.length + pendingFiles.length;
@@ -1308,12 +1468,27 @@ function AnnouncementFormModal({
       setAttachmentHint(lockedHint);
       return;
     }
+    // The removal names the draft's version (ADR 0311): nothing goes out
+    // while the stored draft is still read after a refusal.
+    const base = stored.base;
+    if (!stored.canSubmit || base === undefined) {
+      setAttachmentHint(
+        storedForm.waitReason ??
+          "Die gespeicherten Angaben werden noch geladen.",
+      );
+      return;
+    }
     const announcementId = persistedId;
     await save.run(async (op) => {
       clearAttachmentErrors();
       try {
-        await deleteAnnouncementAttachment(announcementId, attachmentId);
-        await writeAttachments(announcementId, (list) =>
+        const version = await deleteAnnouncementAttachment(
+          announcementId,
+          attachmentId,
+          base.version,
+        );
+        ownWrite(base, { ...base, version });
+        await writeAttachments(announcementId, base.version, version, (list) =>
           list.filter((a) => a.id !== attachmentId),
         );
       } catch (err) {
@@ -1322,10 +1497,20 @@ function AnnouncementFormModal({
         });
         // Protokolliert; eine späte Ablehnung zeigt kein neuerer Vorgang.
         if (!op.isCurrent()) return;
-        await attachmentErrors.show(err, {
-          object: "das Entfernen des Anhangs",
-          retry: () => latestRemoveAttachmentRef.current(attachmentId),
-        });
+        await attachmentErrors.show(
+          err,
+          isChangedSinceRead(err)
+            ? // Changed meanwhile: as after a refused save, the form shows
+              // the stored draft instead of the input.
+              {
+                object: "das Entfernen des Anhangs",
+                reload: stored.refuse(),
+              }
+            : {
+                object: "das Entfernen des Anhangs",
+                retry: () => latestRemoveAttachmentRef.current(attachmentId),
+              },
+        );
       }
     });
   };
@@ -1335,6 +1520,12 @@ function AnnouncementFormModal({
   });
 
   const handleSubmit = async (publish: boolean) => {
+    // Nothing goes out before the stored draft is read after a refusal; the
+    // shown error stays. Otherwise the form's error clears here, before the
+    // checks show their own.
+    if (!storedForm.begin()) return;
+    // A publication confirms the files on screen: they must be the draft's.
+    if (publish && attachmentsWait !== undefined) return;
     if (!validateContent(publish)) {
       setStep(0);
       return;
@@ -1404,14 +1595,59 @@ function AnnouncementFormModal({
     await save.run(async (op) => {
       setSubmitting(publish ? "publish" : "draft");
       clearFormError();
+      setPendingHeld(false);
       // Speichert, lädt Anhänge hoch und veröffentlicht. Ein Fehler nach dem
       // Speichern des Entwurfs zeigt das Formular selbst und meldet „refresh“:
       // die Liste lädt nach, das Panel bleibt offen.
-      const persist = async (): Promise<"saved" | "refresh"> => {
-        const saved = persistedId
-          ? await updateAnnouncement(persistedId, input)
-          : await createAnnouncement(input);
-        setPersistedId(saved.id);
+      const persist = async (): Promise<"saved" | "refresh" | "refused"> => {
+        let saved: Announcement;
+        const opened = stored.base;
+        if (persistedId) {
+          // The draft as read when it opened, or as the last save answered:
+          // a change by someone else since then is refused (ADR 0311).
+          const result = await stored.submit((version) =>
+            updateAnnouncement(persistedId, input, version),
+          );
+          if (!result.ok) {
+            if ("skipped" in result && result.skipped) return "refused";
+            if (!result.refused) throw result.error;
+            logger.error("announcement_save_failed", {
+              mode: "update",
+              error:
+                result.error instanceof Error
+                  ? result.error.message
+                  : String(result.error),
+            });
+            // No retry: the stored draft is read again and shown instead of
+            // the input; a failed read stays as the form's load error.
+            if (pendingFiles.length > 0) setPendingHeld(true);
+            if (op.isCurrent()) {
+              await formErrors.show(result.error, {
+                object: "das Speichern der Mitteilung",
+                reload: result.reload,
+              });
+            }
+            return "refused";
+          }
+          saved = result.saved;
+          if (opened) setReplaced((prev) => [...prev, opened.version]);
+          // The save changed no file: the list of the opened version is the
+          // saved version's. A closed panel has no list to keep.
+          if (opened && op.isCurrent()) {
+            await writeAttachments(
+              persistedId,
+              opened.version,
+              saved.version,
+              (list) => list,
+            );
+          }
+        } else {
+          saved = await createAnnouncement(input);
+        }
+        setPersisted(saved);
+        // The version the next write sends: each upload stamps the draft
+        // and answers its new version (ADR 0311).
+        let current = saved;
 
         // Anhänge vor dem Veröffentlichen hochladen: danach ist die Mitteilung
         // unveränderlich und das Backend lehnt jeden weiteren Anhang ab. Der
@@ -1422,17 +1658,28 @@ function AnnouncementFormModal({
         if (pendingFiles.length > 0) {
           try {
             for (const file of pendingFiles) {
-              const uploaded = await uploadAnnouncementAttachment(
-                saved.id,
-                file,
-              );
+              const { announcement_version: version, ...uploaded } =
+                await uploadAnnouncementAttachment(
+                  saved.id,
+                  file,
+                  current.version,
+                );
+              const before = current.version;
+              const next = { ...current, version };
+              ownWrite(current, next);
+              current = next;
               // Jede Datei verlässt die Warteliste sofort nach ihrem Upload,
               // nicht erst am Ende der Schleife: scheitert eine spätere, lädt der
               // zweite Versuch sonst die schon übertragenen erneut hoch — der
               // Anhang läge doppelt an, und die Höchstzahl wäre schneller
               // erreicht als die Person Dateien ausgewählt hat.
               setPendingFiles((prev) => prev.filter((entry) => entry !== file));
-              await writeAttachments(saved.id, (list) => [...list, uploaded]);
+              if (op.isCurrent()) {
+                await writeAttachments(saved.id, before, version, (list) => [
+                  ...list,
+                  uploaded,
+                ]);
+              }
             }
           } catch (err) {
             logger.error("announcement_attachment_upload_failed", {
@@ -1440,12 +1687,27 @@ function AnnouncementFormModal({
             });
             // Der Entwurf ist gespeichert; das Objekt sagt es mit. Die noch
             // offenen Dateien stehen weiter in der Warteliste, „Wiederholen“
-            // lädt nur sie hoch.
+            // lädt nur sie hoch. Hat jemand den Entwurf inzwischen geändert,
+            // zeigt das Formular den gespeicherten Stand, ohne „Wiederholen“,
+            // wie nach einem abgelehnten Speichern; die übrigen Dateien
+            // warten, und der Anhangsbereich sagt das.
+            const changed = isChangedSinceRead(err);
+            if (changed) setPendingHeld(true);
             if (op.isCurrent()) {
-              await formErrors.show(err, {
-                object: "das Hochladen eines Anhangs zum gespeicherten Entwurf",
-                retry,
-              });
+              await formErrors.show(
+                err,
+                changed
+                  ? {
+                      object:
+                        "das Hochladen eines Anhangs zum gespeicherten Entwurf",
+                      reload: stored.refuse(),
+                    }
+                  : {
+                      object:
+                        "das Hochladen eines Anhangs zum gespeicherten Entwurf",
+                      retry,
+                    },
+              );
             }
             return "refresh";
           }
@@ -1453,7 +1715,9 @@ function AnnouncementFormModal({
 
         if (publish) {
           try {
-            await publishAnnouncement(saved.id);
+            // The version of the draft just written, with its attachments:
+            // the last answer of the save and the uploads.
+            await publishAnnouncement(saved.id, current.version);
           } catch (err) {
             // The draft is saved — surface only the publish failure so nothing is
             // lost. Refresh the list so the draft appears, but keep THIS modal
@@ -1472,7 +1736,7 @@ function AnnouncementFormModal({
         }
         return "saved";
       };
-      let outcome: "saved" | "refresh";
+      let outcome: "saved" | "refresh" | "refused";
       try {
         outcome = await persist();
       } catch (err) {
@@ -1565,7 +1829,8 @@ function AnnouncementFormModal({
           onClick={() => void handleSubmit(true)}
           isLoading={submitting === "publish"}
           loadingText="Wird veröffentlicht…"
-          disabled={submitting === "draft"}
+          disabled={submitting === "draft" || attachmentsWait !== undefined}
+          disabledReason={attachmentsWait}
           tooltip={publishHint}
           className="grow gap-1.5 sm:grow-0"
         >
@@ -1606,6 +1871,7 @@ function AnnouncementFormModal({
         {/* Der Fehler des Formulars steht oben im Rumpf, nicht unten über
             dem Footer (Bauart 2 Regel 5, #3113). */}
         <SlideOverBody error={formErrors.error} className="space-y-4">
+          <LoadErrorAlert error={storedForm.loadError} />
           <div ref={formRef} className="space-y-4">
             <WizardStepper steps={WIZARD_STEPS} current={step} />
 
@@ -2072,10 +2338,11 @@ function AnnouncementFormModal({
                   {existingAttachments.length > 0 && (
                     <AttachmentList
                       attachments={existingAttachments}
-                      downloadUrl={(attachmentId) =>
+                      downloadUrl={(attachmentId, inline) =>
                         announcementAttachmentDownloadUrl(
                           persistedId ?? "",
                           attachmentId,
+                          inline,
                         )
                       }
                       onRemove={
@@ -2119,9 +2386,19 @@ function AnnouncementFormModal({
                           </Button>
                         </InsetPanel>
                       ))}
-                      <li className="text-xs text-gray-500">
-                        Diese Dateien werden mit dem Speichern hochgeladen.
-                      </li>
+                      {pendingHeld ? (
+                        <li>
+                          <Alert
+                            type="warning"
+                            size="compact"
+                            message={pendingHeldNotice(pendingFiles)}
+                          />
+                        </li>
+                      ) : (
+                        <li className="text-xs text-gray-500">
+                          Diese Dateien werden mit dem Speichern hochgeladen.
+                        </li>
+                      )}
                     </ul>
                   )}
 

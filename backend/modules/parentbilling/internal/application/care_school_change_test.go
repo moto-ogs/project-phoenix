@@ -296,12 +296,15 @@ func TestCarePreviewsRankAnIssuedChildOutsideTheMonthByBirthDate(t *testing.T) {
 
 // A child ranks by the birth date any of its entries knows (#7863): Ben's
 // draft has none, his issued contract outside the month has one, so the
-// older Ben comes first and the younger Mia is the second child.
+// older Ben comes first and the younger Mia is the second child. That
+// invoice carries only Ben's Mensa: one that bills his care would hold him
+// back (#7892, TestCareMonthHoldsAChildAWithdrawnContractAlreadyBilled).
+// Both book 80,00 €, so only the birth date decides.
 func TestCarePreviewsRankAChildByTheBirthDateOfAnyEntry(t *testing.T) {
 	t.Parallel()
 	mia := sjrVersion(t, contractMia, schoolIspringen, 1, billingMonth, "2027-01-31", mon1400, tue1400)
 	mia.ChildBirthDate = ptr(day(t, "2019-05-01"))
-	ben := sjrVersion(t, contractNoah, schoolIspringen, 2, billingMonth, "2027-01-31", mon1400)
+	ben := sjrVersion(t, contractNoah, schoolIspringen, 2, billingMonth, "2027-01-31", mon1400, tue1400)
 	ben.ChildFirstName, ben.ChildBirthDate = "Ben", nil
 	const issuedContract = contractLea + 1
 	in := careMonthInput{
@@ -312,7 +315,6 @@ func TestCarePreviewsRankAChildByTheBirthDateOfAnyEntry(t *testing.T) {
 			FirstName: "Ben", LastName: "Beispiel", BirthDate: ptr(day(t, "2016-03-01"))}},
 		invoiced: map[int64]parentbilling.CareInvoice{issuedContract: {
 			ContractID: ident.ID(issuedContract), SchoolID: ident.ID(schoolIspringen), FamilyEmail: familyEva,
-			Positions: []parentbilling.CarePosition{{CareOfferingID: ident.ID(moduleUntil1630), AmountCents: 4000, PayableCents: 4000}},
 		}},
 	}
 	schools := []int64{schoolIspringen}
@@ -325,14 +327,16 @@ func TestCarePreviewsRankAChildByTheBirthDateOfAnyEntry(t *testing.T) {
 		for _, invoice := range preview.invoices {
 			totals[invoice.ContractID] = invoice.TotalCents
 		}
-		assert.Equal(t, map[ident.ID]int64{ident.ID(contractMia): 4000, ident.ID(contractNoah): 4000}, totals, name)
+		assert.Equal(t, map[ident.ID]int64{ident.ID(contractMia): 4000, ident.ID(contractNoah): 8000}, totals, name)
+		assert.Empty(t, preview.billedChildren, name)
 	}
 }
 
 // A child ranks by the birth date an entry at any school knows (#7863):
 // Ben's issued invoice is at Birkenfeld, which the rule does not count, and
-// still tells that Ben is older. Both pay 40,00 € at Ispringen; Mia, the
-// younger, is the second child and pays half.
+// still tells that Ben is older. It carries only his Mensa there (#7892).
+// Both pay 40,00 € at Ispringen; Mia, the younger, is the second child and
+// pays half.
 func TestCarePreviewsRankByABirthDateFromAnotherSchool(t *testing.T) {
 	t.Parallel()
 	mia := sjrVersion(t, contractMia, schoolIspringen, 1, billingMonth, "2027-01-31", mon1400)
@@ -348,7 +352,6 @@ func TestCarePreviewsRankByABirthDateFromAnotherSchool(t *testing.T) {
 			FirstName: "Ben", LastName: "Beispiel", BirthDate: ptr(day(t, "2016-03-01"))}},
 		invoiced: map[int64]parentbilling.CareInvoice{issuedContract: {
 			ContractID: ident.ID(issuedContract), SchoolID: ident.ID(schoolBirkenfeld), FamilyEmail: familyEva,
-			Positions: []parentbilling.CarePosition{{CareOfferingID: ident.ID(moduleUntil1630), AmountCents: 4500, PayableCents: 4500}},
 		}},
 	}
 	schools := []int64{schoolIspringen}
@@ -420,7 +423,8 @@ func TestCarePreviewsKeepAnUnlinkedChildApartFromAnIssuedRecord(t *testing.T) {
 
 // With name and birth date an issued contract's record does claim the
 // unlinked draft of the same child (ADR 0158 E1, #7863): one child, no
-// discount under a rule from two children.
+// discount under a rule from two children. The issued invoice carries only
+// the Mensa; one that bills the care would hold the child back (#7892).
 func TestCarePreviewsJoinAnUnlinkedChildToAnIssuedRecordByNameAndBirthDate(t *testing.T) {
 	t.Parallel()
 	draft := sjrVersion(t, contractMia, schoolIspringen, 1, billingMonth, "2027-01-31", mon1400, tue1400)
@@ -434,7 +438,6 @@ func TestCarePreviewsJoinAnUnlinkedChildToAnIssuedRecordByNameAndBirthDate(t *te
 			FirstName: draft.ChildFirstName, LastName: draft.ChildLastName, BirthDate: draft.ChildBirthDate}},
 		invoiced: map[int64]parentbilling.CareInvoice{issuedContract: {
 			ContractID: ident.ID(issuedContract), SchoolID: ident.ID(schoolIspringen), FamilyEmail: familyEva,
-			Positions: []parentbilling.CarePosition{{CareOfferingID: ident.ID(moduleUntil1630), AmountCents: 4000, PayableCents: 4000}},
 		}},
 	}
 	month, err := buildCareMonth(in)

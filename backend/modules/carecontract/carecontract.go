@@ -21,6 +21,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The states of a contract (ADR 0088 section 2). The Träger-Büro reaches
@@ -164,6 +165,11 @@ type OfferingTemplate struct {
 	PriceCents   *int              `json:"price_cents"`
 	Active       bool              `json:"active"`
 	Template     *ContractTemplate `json:"template"`
+	// IssuerName names the Schulträger or the Gemeinde that concludes the
+	// contracts of the school in place of the Träger (#4811); empty for
+	// the Träger. A contract partner the conditions name wins over it, so
+	// the form warns where both differ.
+	IssuerName string `json:"issuer_name"`
 	// AcceptanceText is the complete saved conditions text for the enrollment
 	// form. It is empty without a template or an explicit contract partner.
 	AcceptanceText string `json:"acceptance_text"`
@@ -176,6 +182,19 @@ type OfferingTemplate struct {
 	// contract PDF prints them; empty without a template.
 	TermText   string `json:"term_text"`
 	NoticeText string `json:"notice_text"`
+	// Version is the read state of the offering's template (ADR 0311): a
+	// save sends it back and is refused once the template changed.
+	Version string `json:"version"`
+}
+
+// TemplateVersion is the read-state token of an offering's template: the
+// row's updated_at, which its trigger bumps on every update; an offering
+// without a template has readstate.Absent, so a first save is bound too.
+func TemplateVersion(template *ContractTemplate) string {
+	if template == nil {
+		return readstate.Absent
+	}
+	return readstate.Of(template.UpdatedAt)
 }
 
 // CandidateKey names one accepted application child.
@@ -362,6 +381,10 @@ type Party struct {
 	// billing reads (ContractBilling) fill it: a draft can be discarded, so
 	// nothing of the billing may hang on it (#7770).
 	ContractDraft bool `json:"-"`
+	// FamilyContractID is the leading contract of the family the office
+	// joined the contract to (#7161, ADR 0319), zero when it leads or is
+	// alone. Only the billing reads fill it.
+	FamilyContractID int64 `json:"-"`
 }
 
 // Mailing is one send of the contract with the state of its mail.
@@ -400,8 +423,8 @@ type ContractDetail struct {
 	Version  Version   `json:"version"`
 	Parties  []Party   `json:"parties"`
 	Mailings []Mailing `json:"mailings"`
-	// DocumentFrozen tells that the PDF was rendered at the first send and
-	// no longer follows the template.
+	// DocumentFrozen tells that the PDF was rendered at the first send or
+	// the handover on paper (#8030) and no longer follows the template.
 	DocumentFrozen bool `json:"document_frozen"`
 	// Signature is the signature of the current version, nil until signed;
 	// Reminders the reminder mails while it waits (#4679, signature.go).
@@ -481,6 +504,16 @@ type Contracts interface {
 	// when it was sent, else a rendering with the current template that
 	// stores nothing.
 	VersionDocument(ctx context.Context, reviewer Reviewer, contractID int64, number int) (File, error)
+	// ContractFamilies lists the contracts without a mail address with their
+	// families and the newest changes of the families (#7161, ADR 0319).
+	ContractFamilies(ctx context.Context, reviewer Reviewer) (ContractFamilySet, error)
+	// JoinContractFamily joins the contracts to one family. A contract of
+	// another Träger is ErrContractNotFound, one that may not join a
+	// FamilyRefusal, another version than the stored one readstate.ErrChanged.
+	JoinContractFamily(ctx context.Context, reviewer Reviewer, input FamilyJoinInput) (ContractFamilySet, error)
+	// LeaveContractFamily gives a contract led by another its own family
+	// back, with the same refusals.
+	LeaveContractFamily(ctx context.Context, reviewer Reviewer, contractID int64, expectedVersion string) (ContractFamilySet, error)
 }
 
 // ContractExportLimit is the most contracts one export holds; a filter with
@@ -507,8 +540,10 @@ type Intake interface {
 	// Templates lists every offering of the Träger's schools with its
 	// template.
 	Templates(ctx context.Context, reviewer Reviewer) ([]OfferingTemplate, error)
-	// SaveTemplate creates or replaces the template of one offering.
-	SaveTemplate(ctx context.Context, reviewer Reviewer, schoolID, offeringID int64, input TemplateInput) (OfferingTemplate, error)
+	// SaveTemplate creates or replaces the template of one offering; it
+	// refuses with readstate.ErrChanged once the template differs from the
+	// version its author read (expectedVersion, TemplateVersion).
+	SaveTemplate(ctx context.Context, reviewer Reviewer, schoolID, offeringID int64, input TemplateInput, expectedVersion string) (OfferingTemplate, error)
 	// ConclusionModes tells for every school of the Träger how its contracts
 	// come about: ModeSendLater (Weg a) or ModeOnAcceptance (Weg b).
 	ConclusionModes(ctx context.Context, reviewer Reviewer) ([]SchoolConclusion, error)

@@ -212,8 +212,9 @@ jobs:
             frontend:
               - 'frontend/**'
               - '!frontend/**/*.md'
-            # External inputs read by the frontend error-catalog validator.
+            # Catalogs read by frontend validators and the identifier lint rule.
             frontend-catalog-inputs:
+              - 'backend/api/contract/contract.json'
               - 'error-registry/**'
               - 'scripts/error-registry.mjs'
               - 'backend/modules/delivery/internal/adapters/localization/locales.json'
@@ -585,7 +586,7 @@ jobs:
       # change runs the ratchets here instead of the full backend suite.
       - name: Setup Go with cache
         if: matrix.suite == 'ratchets' || matrix.suite == 'selection'
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: backend/go.mod
           cache: true
@@ -691,7 +692,7 @@ jobs:
       # cache loaded a second build cache of 1.2 GB beside it (#6962).
       - name: Setup Go
         id: go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: backend/go.mod
           cache: false

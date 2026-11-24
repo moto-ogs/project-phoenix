@@ -86,7 +86,9 @@ func TestRequestSharingIsNamedAndFamilyProtectionDoesNotReviveOldShares(t *testi
 	require.NoError(t, err)
 	assert.Empty(t, recipientMasterData.PendingChanges, "the main child view must not bypass request privacy")
 
-	state, err := sharing.SetRequestSharing(ctx, author.AccountID, author.StudentID, parentService.RequestShareMasterData, request.ID, []int64{recipient.GuardianProfileID})
+	read, err := sharing.GetRequestSharing(ctx, author.AccountID, author.StudentID, parentService.RequestShareMasterData, request.ID)
+	require.NoError(t, err)
+	state, err := sharing.SetRequestSharing(ctx, author.AccountID, author.StudentID, parentService.RequestShareMasterData, request.ID, []int64{recipient.GuardianProfileID}, read.Version)
 	require.NoError(t, err)
 	require.Len(t, state.Recipients, 1)
 	assert.True(t, state.Recipients[0].Selected)
@@ -118,7 +120,9 @@ func TestRequestSharingIsNamedAndFamilyProtectionDoesNotReviveOldShares(t *testi
 	require.NoError(t, err)
 	assert.Empty(t, recipientRows, "disabling protection must not revive an old share")
 
-	_, err = sharing.SetRequestSharing(ctx, author.AccountID, author.StudentID, parentService.RequestShareMasterData, request.ID, []int64{recipient.GuardianProfileID})
+	read, err = sharing.GetRequestSharing(ctx, author.AccountID, author.StudentID, parentService.RequestShareMasterData, request.ID)
+	require.NoError(t, err)
+	_, err = sharing.SetRequestSharing(ctx, author.AccountID, author.StudentID, parentService.RequestShareMasterData, request.ID, []int64{recipient.GuardianProfileID}, read.Version)
 	require.NoError(t, err)
 	recipientRows, err = svc.ListMyMasterDataRequests(ctx, recipient.AccountID, author.StudentID)
 	require.NoError(t, err)

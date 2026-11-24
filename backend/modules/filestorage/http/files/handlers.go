@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/filestorage"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // --- wire types ------------------------------------------------------------
@@ -20,18 +20,30 @@ type FolderRequest struct {
 	Visibility string     `json:"visibility"`
 	RoleIDs    []ident.ID `json:"role_ids"`
 	AccountIDs []ident.ID `json:"account_ids"`
+	// ExpectedVersion is the version of the folder an update was made on
+	// (ADR 0311); a new folder sends none.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
-// FolderResponse is one folder on the wire. Ids are decimal strings; see
-// idString.
+// FolderRemovalRequest confirms the delete dialog whose fingerprint it
+// carries: the files it named.
+type FolderRemovalRequest struct {
+	ExpectedFingerprint string `json:"expected_fingerprint"`
+}
+
+// FolderResponse is one folder on the wire.
 type FolderResponse struct {
-	ID         string    `json:"id"`
-	Name       string    `json:"name"`
-	Visibility string    `json:"visibility"`
-	FileCount  int       `json:"file_count"`
-	RoleIDs    []string  `json:"role_ids"`
-	AccountIDs []string  `json:"account_ids"`
-	CreatedAt  time.Time `json:"created_at"`
+	ID         ident.ID   `json:"id"`
+	Name       string     `json:"name"`
+	Visibility string     `json:"visibility"`
+	FileCount  int        `json:"file_count"`
+	RoleIDs    []ident.ID `json:"role_ids"`
+	AccountIDs []ident.ID `json:"account_ids"`
+	CreatedAt  time.Time  `json:"created_at"`
+	// Version is the token an update sends back; Fingerprint the one a
+	// delete confirms with, over the files it removes (ADR 0311).
+	Version     string `json:"version"`
+	Fingerprint string `json:"fingerprint"`
 }
 
 // FolderListResponse is the folder overview: what the caller sees plus what
@@ -47,13 +59,13 @@ type FolderListResponse struct {
 
 // FileResponse is one file on the wire.
 type FileResponse struct {
-	ID          string    `json:"id"`
-	FolderID    string    `json:"folder_id"`
+	ID          ident.ID  `json:"id"`
+	FolderID    ident.ID  `json:"folder_id"`
 	Filename    string    `json:"filename"`
 	SizeBytes   int64     `json:"size_bytes" contract:"number"`
 	ContentType string    `json:"content_type"`
 	UploadedAt  time.Time `json:"uploaded_at"`
-	UploadedBy  string    `json:"uploaded_by"`
+	UploadedBy  ident.ID  `json:"uploaded_by"`
 	CanDelete   bool      `json:"can_delete"`
 }
 
@@ -71,48 +83,50 @@ type AudienceResponse struct {
 
 // AudienceRoleResponse is one shareable role.
 type AudienceRoleResponse struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // AudienceAccountResponse is one shareable person.
 type AudienceAccountResponse struct {
-	AccountID string `json:"account_id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	AccountID ident.ID `json:"account_id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
 }
 
 func newFolderResponse(folder filestorage.Folder) FolderResponse {
 	return FolderResponse{
-		ID:         idString(folder.ID),
+		ID:         ident.ID(folder.ID),
 		Name:       folder.Name,
 		Visibility: folder.Visibility,
 		FileCount:  int(folder.FileCount),
-		RoleIDs:    idStrings(folder.RoleIDs),
-		AccountIDs: idStrings(folder.AccountIDs),
+		RoleIDs:    shareIDs(folder.RoleIDs),
+		AccountIDs: shareIDs(folder.AccountIDs),
 		CreatedAt:  folder.CreatedAt,
+		Version:    folder.Version, Fingerprint: folder.DeleteFingerprint,
 	}
 }
 
 func newFileResponse(file filestorage.File) FileResponse {
 	return FileResponse{
-		ID:          idString(file.ID),
-		FolderID:    idString(file.FolderID),
+		ID:          ident.ID(file.ID),
+		FolderID:    ident.ID(file.FolderID),
 		Filename:    file.Filename,
 		SizeBytes:   file.SizeBytes,
 		ContentType: file.ContentType,
 		UploadedAt:  file.UploadedAt,
-		UploadedBy:  idString(file.UploadedBy),
+		UploadedBy:  ident.ID(file.UploadedBy),
 		CanDelete:   file.CanDelete,
 	}
 }
 
 func folderInput(req FolderRequest) filestorage.FolderInput {
 	return filestorage.FolderInput{
-		Name:       req.Name,
-		Visibility: req.Visibility,
-		RoleIDs:    int64IDs(req.RoleIDs),
-		AccountIDs: int64IDs(req.AccountIDs),
+		Name:            req.Name,
+		Visibility:      req.Visibility,
+		RoleIDs:         int64IDs(req.RoleIDs),
+		AccountIDs:      int64IDs(req.AccountIDs),
+		ExpectedVersion: req.ExpectedVersion,
 	}
 }
 
@@ -152,7 +166,7 @@ func (rs *Resource) createFolder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req FolderRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
@@ -177,7 +191,7 @@ func (rs *Resource) updateFolder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req FolderRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
@@ -203,11 +217,17 @@ func (rs *Resource) deleteFolder(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorUnauthorized(err))
 		return
 	}
-	if err := rs.files.DeleteFolder(r.Context(), folderID, actor); err != nil {
+	// A DELETE without a body confirms no dialog; the owner refuses it.
+	var req FolderRemovalRequest
+	if err := common.DecodeReadStateBody(r, &req); err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
+	if err := rs.files.DeleteFolder(r.Context(), folderID, req.ExpectedFingerprint, actor); err != nil {
 		renderError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, FolderRemovedResponse{FolderID: idString(folderID)}, "Folder deleted successfully")
+	common.Respond(w, r, http.StatusOK, FolderRemovedResponse{FolderID: ident.ID(folderID)}, "Folder deleted successfully")
 }
 
 // listAudience serves GET /audience: the roles and persons a folder can be
@@ -228,11 +248,11 @@ func (rs *Resource) listAudience(w http.ResponseWriter, r *http.Request) {
 		Accounts: make([]AudienceAccountResponse, 0, len(options.Accounts)),
 	}
 	for _, role := range options.Roles {
-		resp.Roles = append(resp.Roles, AudienceRoleResponse{ID: idString(role.ID), Name: role.Name})
+		resp.Roles = append(resp.Roles, AudienceRoleResponse{ID: ident.ID(role.ID), Name: role.Name})
 	}
 	for _, account := range options.Accounts {
 		resp.Accounts = append(resp.Accounts, AudienceAccountResponse{
-			AccountID: idString(account.AccountID),
+			AccountID: ident.ID(account.AccountID),
 			FirstName: account.FirstName,
 			LastName:  account.LastName,
 		})
@@ -339,5 +359,5 @@ func (rs *Resource) deleteFile(w http.ResponseWriter, r *http.Request) {
 		renderError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, FolderRemovedResponse{FolderID: idString(folderID)}, "File deleted successfully")
+	common.Respond(w, r, http.StatusOK, FolderRemovedResponse{FolderID: ident.ID(folderID)}, "File deleted successfully")
 }

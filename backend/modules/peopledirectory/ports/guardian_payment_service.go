@@ -35,6 +35,9 @@ var ErrGuardianNotLinkedToStudent = errors.New("guardian is not linked to this s
 type GuardianPaymentInput struct {
 	IBAN          *string
 	AccountHolder *string
+	// ExpectedVersion is the version of the bank section the form read
+	// (GuardianPaymentVersion, ADR 0311).
+	ExpectedVersion string
 }
 
 // GuardianPaymentMasked is the default (masked) read: the IBAN shows its last
@@ -44,6 +47,7 @@ type GuardianPaymentMasked struct {
 	GuardianProfileID int64
 	IBANMasked        *string
 	AccountHolder     *string
+	Version           string
 }
 
 // GuardianPaymentPlain carries the unmasked values after an audited reveal.
@@ -51,6 +55,7 @@ type GuardianPaymentPlain struct {
 	GuardianProfileID int64
 	IBAN              *string
 	AccountHolder     *string
+	Version           string
 }
 
 // GuardianPaymentRow is one line of the Bankverbindungen list: a child, the

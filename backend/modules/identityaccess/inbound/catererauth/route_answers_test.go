@@ -43,7 +43,7 @@ func (s *secondFactorStub) BeginCatererPasskeyRegistration(_ context.Context, re
 
 func (s *secondFactorStub) FinishCatererPasskeyRegistration(_ context.Context, request identityaccess.AccountPasskeyRegistrationFinish) (identityaccess.PasskeyCredentialSummary, error) {
 	s.sessionID = request.SessionID
-	return identityaccess.PasskeyCredentialSummary{ID: "12", Name: request.Name, CreatedAt: time.Unix(1, 0).UTC()}, nil
+	return identityaccess.PasskeyCredentialSummary{ID: 12, Name: request.Name, CreatedAt: time.Unix(1, 0).UTC()}, nil
 }
 
 func (s *secondFactorStub) RevokeCatererPasskey(_ context.Context, _, passkeyID int64) error {

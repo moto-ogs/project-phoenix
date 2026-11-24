@@ -13,11 +13,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	education "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -82,6 +84,10 @@ type GroupResponse struct {
 	StudentCount     int               `json:"student_count"`
 	CreatedAt        time.Time         `json:"created_at"`
 	UpdatedAt        time.Time         `json:"updated_at"`
+	// Version is the read-state token of the group (ADR 0311): the list,
+	// the detail read and the answers of a create and an update carry it,
+	// an update sends it back as expected_version.
+	Version string `json:"version,omitempty"`
 }
 
 // TeacherResponse represents a teacher in API responses
@@ -114,6 +120,55 @@ func (req *GroupRequest) Bind(_ *http.Request) error {
 		return errors.New("group name is required")
 	}
 	return nil
+}
+
+// GroupUpdateRequest is the body of PUT /api/groups/{id}. The name is
+// always written; room_id and teacher_ids only when the body carries them,
+// so resolving a caregiver blocker by changing the teachers keeps the
+// group's room. room_id null clears the room. expected_version is the
+// version the editor read (ADR 0311).
+type GroupUpdateRequest struct {
+	Name            string         `json:"name"`
+	RoomID          OptionalRoomID `json:"room_id"`
+	TeacherIDs      *[]ident.ID    `json:"teacher_ids,omitempty"`
+	ExpectedVersion string         `json:"expected_version"`
+}
+
+// OptionalRoomID tells an omitted room_id (keep the room) apart from null
+// (clear it) and an ID (set it).
+type OptionalRoomID struct {
+	Set   bool
+	Value *ident.ID
+}
+
+// UnmarshalJSON notes that the key was present and reads its value.
+func (o *OptionalRoomID) UnmarshalJSON(b []byte) error {
+	o.Set = true
+	if string(b) == "null" {
+		o.Value = nil
+		return nil
+	}
+	return wire.Unmarshal(b, &o.Value)
+}
+
+// Bind validates the group update.
+func (req *GroupUpdateRequest) Bind(_ *http.Request) error {
+	if req.Name == "" {
+		return errors.New("group name is required")
+	}
+	return nil
+}
+
+// edit is the edit the request asks for on group id.
+func (req *GroupUpdateRequest) edit(id int64) education.GroupEdit {
+	edit := education.GroupEdit{
+		ID: id, Name: req.Name, SetRoom: req.RoomID.Set, RoomID: (*int64)(req.RoomID.Value),
+		ExpectedVersion: req.ExpectedVersion,
+	}
+	if req.TeacherIDs != nil {
+		edit.ReplaceTeachers, edit.TeacherIDs = true, ident.Int64s(*req.TeacherIDs)
+	}
+	return edit
 }
 
 // newGroupResponse converts a group model to a response object
@@ -292,36 +347,16 @@ func (rs *Resource) updateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse request
-	req := &GroupRequest{}
+	req := &GroupUpdateRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
 
-	// Get existing group
-	group, err := rs.EducationService.GetGroup(r.Context(), id)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorNotFound(errors.New(common.MsgGroupNotFound)))
-		return
-	}
-
-	// Update fields
-	group.Name = req.Name
-	group.RoomID = (*int64)(req.RoomID)
-
-	// Update group
+	// The owner locks the group, checks the version and writes the name,
+	// the room and the teachers in one transaction.
 	if err := tenant.WithinCurrentTenant(r.Context(), func(ctx context.Context) error {
-		if err := rs.EducationService.UpdateGroup(ctx, group); err != nil {
-			return err
-		}
-		// Update teacher assignments if provided
-		if req.TeacherIDs != nil {
-			if err := rs.EducationService.UpdateGroupTeachers(ctx, group.ID, ident.Int64s(req.TeacherIDs)); err != nil {
-				return err
-			}
-		}
-		return nil
+		return rs.EducationService.UpdateGroup(ctx, req.edit(id))
 	}); err != nil {
 		// ErrorRenderer maps validation failures to 4xx; explicitly request a
 		// rollback so a partial teacher-set mutation cannot commit with that
@@ -331,7 +366,7 @@ func (rs *Resource) updateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := rs.storedGroupResponse(r.Context(), group.ID)
+	response, err := rs.storedGroupResponse(r.Context(), id)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("load updated group", err))
 		return
@@ -358,7 +393,9 @@ func (rs *Resource) groupResponses(ctx context.Context, groups []*education.Grou
 	}
 	responses := make([]GroupResponse, 0, len(groups))
 	for _, group := range groups {
-		responses = append(responses, newGroupResponse(group, teachersByGroup[group.ID], studentCounts[group.ID]))
+		response := newGroupResponse(group, teachersByGroup[group.ID], studentCounts[group.ID])
+		response.Version = education.GroupVersion(group, teacherIDs(teachersByGroup[group.ID]))
+		responses = append(responses, response)
 	}
 	return responses, nil
 }
@@ -385,7 +422,20 @@ func (rs *Resource) groupResponse(ctx context.Context, group *education.Group) (
 	if err != nil {
 		return GroupResponse{}, fmt.Errorf("count group students: %w", err)
 	}
-	return newGroupResponse(group, teachers, len(students)), nil
+	response := newGroupResponse(group, teachers, len(students))
+	response.Version = education.GroupVersion(group, teacherIDs(teachers))
+	return response, nil
+}
+
+// teacherIDs are the IDs of the teachers.
+func teacherIDs(teachers []*education.Teacher) []int64 {
+	ids := make([]int64, 0, len(teachers))
+	for _, teacher := range teachers {
+		if teacher != nil {
+			ids = append(ids, teacher.ID)
+		}
+	}
+	return ids
 }
 
 // deleteGroup handles deleting a group

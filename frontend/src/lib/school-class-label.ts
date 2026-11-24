@@ -1,3 +1,4 @@
+import type { SubmitChildRequest } from "~/lib/contract/shared.generated";
 import { gradeLevelLabel } from "~/lib/grade-level";
 
 /**
@@ -65,10 +66,9 @@ export function schoolClassesLabel(
  * The class a child is enrolled for: the named class when the school assigned
  * one, otherwise the grade level, otherwise "".
  */
-export function enrolledClassLabel(child: {
-  target_school_class?: string | null;
-  target_grade_level?: number | null;
-}): string {
+export function enrolledClassLabel(
+  child: Pick<SubmitChildRequest, "target_school_class" | "target_grade_level">,
+): string {
   if (child.target_school_class) {
     return schoolClassLabel(child.target_school_class);
   }

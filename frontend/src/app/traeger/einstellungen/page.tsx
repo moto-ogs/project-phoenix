@@ -40,6 +40,7 @@ import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import { useTraegerMasterData } from "~/components/traeger/use-traeger-master-data";
 import { TRAEGER_BRANDING_TAB } from "~/lib/traeger-branding";
 import { PAYROLL_SETTINGS_TAB } from "~/lib/traeger-staff-exports-api";
+import { RESPONSIBILITY_SETTINGS_TAB } from "~/lib/traeger-responsibility-tab";
 import { metadataLoadError } from "~/components/traeger/metadata-load-error";
 import { TraegerContactSection } from "~/components/traeger/traeger-contact-section";
 import { FutureShiftsList } from "~/components/traeger/planning/future-shifts-list";
@@ -169,10 +170,13 @@ function TraegerSettingsContent() {
   );
 
   // The branding has its own page with the preview (#4653); the Lohnarten
-  // are a table on the Lohnexport page (#4712).
+  // are a table on the Lohnexport page (#4712); the responsibilities have
+  // their own page with the schools (#4811).
   const tabs = (schema?.tabs ?? []).filter(
     (tab) =>
-      tab.key !== TRAEGER_BRANDING_TAB && tab.key !== PAYROLL_SETTINGS_TAB,
+      tab.key !== TRAEGER_BRANDING_TAB &&
+      tab.key !== PAYROLL_SETTINGS_TAB &&
+      tab.key !== RESPONSIBILITY_SETTINGS_TAB,
   );
 
   const contactOpen = selectedTab === CONTACT_TAB;
@@ -264,6 +268,8 @@ function TraegerSettingsContent() {
           <TraegerContactSection
             masterData={contact.masterData}
             letterheadText={letterheadText(schema)}
+            reload={contact.reload}
+            write={contact.write}
             onSaved={afterContactWrite.refresh}
           />
         </div>

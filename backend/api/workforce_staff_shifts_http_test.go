@@ -10,12 +10,13 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // The staff-shift route is composed here, so the permission gates, the actor
@@ -170,7 +171,7 @@ func TestStaffShiftsRouteCreateKeepsLargeOriginIDs(t *testing.T) {
 	}}
 	route := setupStaffShiftsRoute(t, fake)
 
-	response := route.do(t, http.MethodPost, "/", `{"staff_id":7,"date":"2026-07-07","start_time":"09:00","end_time":"15:00","break_minutes":20,"shift_type_id":null,"origin_shift_id":"9223372036854775807"}`)
+	response := route.do(t, http.MethodPost, "/", `{"staff_id":"7","date":"2026-07-07","start_time":"09:00","end_time":"15:00","break_minutes":20,"shift_type_id":null,"origin_shift_id":"9223372036854775807"}`)
 	body := responseBody(t, response)
 	require.Equal(t, http.StatusCreated, response.StatusCode, body)
 	require.NotNil(t, got.OriginShiftID)
@@ -180,10 +181,9 @@ func TestStaffShiftsRouteCreateKeepsLargeOriginIDs(t *testing.T) {
 	assert.Contains(t, body, `"id":"9223372036854775806"`, "bigint identifiers stay strings on the wire")
 	assert.Contains(t, body, `"start_time":"09:00"`)
 
-	response = route.do(t, http.MethodPost, "/", `{"staff_id":7,"date":"2026-07-07","start_time":"09:00","end_time":"15:00","origin_shift_id":42}`)
-	require.Equal(t, http.StatusCreated, response.StatusCode, responseBody(t, response))
-	require.NotNil(t, got.OriginShiftID)
-	assert.Equal(t, int64(42), *got.OriginShiftID, "legacy numeric ids are still accepted")
+	response = route.do(t, http.MethodPost, "/", `{"staff_id":"7","date":"2026-07-07","start_time":"09:00","end_time":"15:00","origin_shift_id":42}`)
+	require.Equal(t, http.StatusBadRequest, response.StatusCode, responseBody(t, response))
+	assert.Equal(t, int64(9223372036854775807), *got.OriginShiftID, "a refusal must not reach the planner")
 }
 
 func TestStaffShiftsRouteMoveMapsPayloadAndRequiresType(t *testing.T) {
@@ -197,7 +197,7 @@ func TestStaffShiftsRouteMoveMapsPayloadAndRequiresType(t *testing.T) {
 	}}
 	route := setupStaffShiftsRoute(t, fake)
 
-	response := route.do(t, http.MethodPut, "/9/move", `{"source_staff_id":7,"target_staff_id":8,"date":"2026-07-07","start_time":"09:00","end_time":"15:00","break_minutes":20,"shift_type_id":5}`)
+	response := route.do(t, http.MethodPut, "/9/move", `{"source_staff_id":"7","target_staff_id":"8","date":"2026-07-07","start_time":"09:00","end_time":"15:00","break_minutes":20,"shift_type_id":"5"}`)
 	require.Equal(t, http.StatusOK, response.StatusCode, responseBody(t, response))
 	assert.EqualValues(t, 9, got.ShiftID)
 	assert.EqualValues(t, 7, got.SourceStaffID)
@@ -211,7 +211,7 @@ func TestStaffShiftsRouteMoveMapsPayloadAndRequiresType(t *testing.T) {
 	require.NotNil(t, got.ActorAccountID)
 	assert.EqualValues(t, 7, *got.ActorAccountID)
 
-	response = route.do(t, http.MethodPut, "/9/move", `{"source_staff_id":7,"target_staff_id":8,"date":"2026-07-07","start_time":"09:00","end_time":"15:00","break_minutes":20}`)
+	response = route.do(t, http.MethodPut, "/9/move", `{"source_staff_id":"7","target_staff_id":"8","date":"2026-07-07","start_time":"09:00","end_time":"15:00","break_minutes":20}`)
 	assert.Equal(t, http.StatusBadRequest, response.StatusCode, responseBody(t, response))
 	assert.Equal(t, 1, called, "a move without an explicit shift type never reaches the capability")
 }
@@ -228,7 +228,7 @@ func TestStaffShiftsRouteCancellationPayloads(t *testing.T) {
 	route := setupStaffShiftsRoute(t, fake)
 
 	// A full origin payload maps every field onto ApplyOriginEdits without loss.
-	response := route.do(t, http.MethodPut, "/5/cancellation", `{"cancelled": true, "change_reason": "krank", "start_time": "09:00", "end_time": "14:00", "break_minutes": 30, "shift_type_id": 7}`)
+	response := route.do(t, http.MethodPut, "/5/cancellation", `{"cancelled": true, "change_reason": "krank", "start_time": "09:00", "end_time": "14:00", "break_minutes": 30, "shift_type_id": "7"}`)
 	body := responseBody(t, response)
 	require.Equal(t, http.StatusOK, response.StatusCode, body)
 	assert.True(t, got.ApplyOriginEdits)
@@ -254,12 +254,12 @@ func TestStaffShiftsRouteCancellationPayloads(t *testing.T) {
 	// A partial origin payload is rejected rather than silently zeroing the
 	// omitted fields (#1841); so is an omitted cancelled flag.
 	for name, payload := range map[string]string{
-		"missing break_minutes": `{"cancelled": true, "start_time": "09:00", "end_time": "14:00", "shift_type_id": 7}`,
+		"missing break_minutes": `{"cancelled": true, "start_time": "09:00", "end_time": "14:00", "shift_type_id": "7"}`,
 		"missing shift_type_id": `{"cancelled": true, "start_time": "09:00", "end_time": "14:00", "break_minutes": 30}`,
-		"missing end_time":      `{"cancelled": true, "start_time": "09:00", "break_minutes": 30, "shift_type_id": 7}`,
+		"missing end_time":      `{"cancelled": true, "start_time": "09:00", "break_minutes": 30, "shift_type_id": "7"}`,
 		"only break_minutes":    `{"cancelled": true, "break_minutes": 30}`,
-		"only shift_type_id":    `{"cancelled": true, "shift_type_id": 7}`,
-		"null break_minutes":    `{"cancelled": true, "start_time": "09:00", "end_time": "14:00", "break_minutes": null, "shift_type_id": 7}`,
+		"only shift_type_id":    `{"cancelled": true, "shift_type_id": "7"}`,
+		"null break_minutes":    `{"cancelled": true, "start_time": "09:00", "end_time": "14:00", "break_minutes": null, "shift_type_id": "7"}`,
 		"omitted cancelled":     `{"change_reason": "krank"}`,
 		"null cancelled":        `{"cancelled": null}`,
 	} {
@@ -380,7 +380,7 @@ func TestStaffShiftsRouteSeriesHandlers(t *testing.T) {
 	}
 	route := setupStaffShiftsRoute(t, fake)
 
-	response := route.do(t, http.MethodPost, "/series", `{"staff_id": 5, "weekdays": [1, 3], "start_time": "09:00", "end_time": "12:00", "break_minutes": 15, "shift_type_id": null, "calendar_period_id": 8, "week_pattern": 1, "valid_from": "2026-09-01", "valid_until": "2026-12-01"}`)
+	response := route.do(t, http.MethodPost, "/series", `{"staff_id": "5", "weekdays": [1, 3], "start_time": "09:00", "end_time": "12:00", "break_minutes": 15, "shift_type_id": null, "calendar_period_id": "8", "week_pattern": 1, "valid_from": "2026-09-01", "valid_until": "2026-12-01"}`)
 	body := responseBody(t, response)
 	require.Equal(t, http.StatusCreated, response.StatusCode, body)
 	assert.Equal(t, []int{1, 3}, created.Weekdays)
@@ -392,19 +392,20 @@ func TestStaffShiftsRouteSeriesHandlers(t *testing.T) {
 	assert.Contains(t, body, `"skipped_dates":["2026-09-02"]`)
 
 	for name, payload := range map[string]string{
-		"bad valid_from":       `{"staff_id": 5, "weekdays": [1], "start_time": "09:00", "end_time": "12:00", "calendar_period_id": 8, "valid_from": "September"}`,
-		"bad time":             `{"staff_id": 5, "weekdays": [1], "start_time": "9", "end_time": "12:00", "calendar_period_id": 8, "valid_from": "2026-09-01"}`,
-		"out-of-range weekday": `{"staff_id": 5, "weekdays": [65538], "start_time": "09:00", "end_time": "12:00", "calendar_period_id": 8, "valid_from": "2026-09-01"}`,
+		"bad valid_from":       `{"staff_id": "5", "weekdays": [1], "start_time": "09:00", "end_time": "12:00", "calendar_period_id": "8", "valid_from": "September"}`,
+		"bad time":             `{"staff_id": "5", "weekdays": [1], "start_time": "9", "end_time": "12:00", "calendar_period_id": "8", "valid_from": "2026-09-01"}`,
+		"out-of-range weekday": `{"staff_id": "5", "weekdays": [65538], "start_time": "09:00", "end_time": "12:00", "calendar_period_id": "8", "valid_from": "2026-09-01"}`,
 	} {
 		response := route.do(t, http.MethodPost, "/series", payload)
 		assert.Equal(t, http.StatusBadRequest, response.StatusCode, name+": "+responseBody(t, response))
 	}
 
 	// A split inherits every omitted field and keeps the lossless occurrence id.
-	response = route.do(t, http.MethodPut, "/series/11/split", `{"effective_date": "2026-10-05", "start_time": "10:00", "end_time": "13:00", "break_minutes": 20, "occurrence_shift_id": "9007199254740993"}`)
+	response = route.do(t, http.MethodPut, "/series/11/split", `{"effective_date": "2026-10-05", "start_time": "10:00", "end_time": "13:00", "break_minutes": 20, "occurrence_shift_id": "9007199254740993", "expected_version": "read-version"}`)
 	body = responseBody(t, response)
 	require.Equal(t, http.StatusOK, response.StatusCode, body)
 	assert.Equal(t, int64(11), split.SeriesID)
+	assert.Equal(t, "read-version", split.ExpectedVersion, "the version the planner read reaches the owner's check")
 	assert.Equal(t, "2026-10-05", split.EffectiveDate)
 	assert.Equal(t, int64(9007199254740993), split.OccurrenceShiftID)
 	assert.Nil(t, split.Weekdays, "omitted weekdays keep the predecessor's")

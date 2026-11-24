@@ -1,5 +1,5 @@
 import { ApiError } from "./api-error";
-import { bffJson, bffJsonUncontracted, bffPath } from "./bff-fetch";
+import { bffJson } from "./bff-fetch";
 import type * as sharedContract from "./contract/shared.generated";
 /**
  * Web Push client (#2003): service worker registration, permission +
@@ -222,19 +222,12 @@ async function syncSubscription(
   }
 }
 
-/** The DELETE pattern of the portal's push subscriptions. */
-const SUBSCRIPTIONS: Readonly<Record<PushPortal, string>> = {
-  parent: "/parent/me/push/subscriptions",
-  school: "/school/notifications/push/subscriptions",
-  tenant: "/api/notifications/push/subscriptions",
-};
-
 /**
  * Removes this device's server-side registration. With a live session it is
  * the portal's call, its 401 handling included. During a logout the session
  * family is already revoked and the sign-out must stay the last cookie
  * change, so the call goes out plain: no session gate, no renewal, no login
- * redirect (bff-fetch-uncontracted.test.ts).
+ * redirect.
  */
 async function deleteServerSubscription(
   portal: PushPortal,
@@ -243,35 +236,27 @@ async function deleteServerSubscription(
   duringLogout: boolean,
 ): Promise<void> {
   const options = {
+    query: { endpoint },
     ...(signal ? { signal } : {}),
     errorMessage: PUSH_FAILED,
+    skipAuthRecovery: duringLogout,
   };
-  if (duringLogout) {
-    await bffJsonUncontracted<null>(
-      "public",
-      "DELETE",
-      bffPath(portal, SUBSCRIPTIONS[portal], {}, { endpoint }),
-      options,
-    );
-    return;
-  }
-  const query = { query: { endpoint }, ...options };
   switch (portal) {
     case "parent":
-      await bffJson("parent", "DELETE /parent/me/push/subscriptions", query);
+      await bffJson("parent", "DELETE /parent/me/push/subscriptions", options);
       return;
     case "school":
       await bffJson(
         "school",
         "DELETE /school/notifications/push/subscriptions",
-        query,
+        options,
       );
       return;
-    default:
+    case "tenant":
       await bffJson(
         "tenant",
         "DELETE /api/notifications/push/subscriptions",
-        query,
+        options,
       );
   }
 }
@@ -309,16 +294,23 @@ export async function unsubscribePush(
   const subscription = await getExistingSubscription();
   signal?.throwIfAborted();
   if (!subscription) return;
+  if (duringLogout) {
+    // Revocation already removed the server registration. Start device
+    // cleanup now: sign-out can cancel the DELETE while waiting for headers.
+    await Promise.all([
+      deleteServerSubscription(portal, subscription.endpoint, signal, true),
+      subscription.unsubscribe(),
+    ]);
+    return;
+  }
   try {
     await deleteServerSubscription(
       portal,
       subscription.endpoint,
       signal,
-      duringLogout,
+      false,
     );
   } finally {
-    // Neither a late lookup nor a late response may start device cleanup
-    // after this logout attempt has ended.
     if (!signal?.aborted) await subscription.unsubscribe();
   }
 }

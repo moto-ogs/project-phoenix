@@ -2,7 +2,6 @@ package studentpresencehttp
 
 import (
 	"context"
-	json "encoding/json"
 	errors "errors"
 	fmt "fmt"
 	io "io"
@@ -13,6 +12,7 @@ import (
 	studentpresence "github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	ident "github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -148,8 +148,7 @@ func demoClockMinutes(clock *calendar.WallClock) *int {
 
 func decodeDemoPresenceHistory(w http.ResponseWriter, r *http.Request) ([]studentpresence.PastPresenceDay, error) {
 	var body *DemoPresenceHistoryRequest
-	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxDemoPresenceHistoryBytes))
-	decoder.DisallowUnknownFields()
+	decoder := wire.NewObjectDecoder(http.MaxBytesReader(w, r.Body, maxDemoPresenceHistoryBytes))
 	if err := decoder.Decode(&body); err != nil {
 		return nil, fmt.Errorf("invalid presence history: %w", err)
 	}

@@ -569,7 +569,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p *parentAnnouncements) AnnouncementExists(ctx context.Context, id int64) (bool, error) {\n\texists, err := p.service.AnnouncementExists(ctx, id)\n\treturn exists, mapParentAnnouncementError(err)\n}",
+      "evidence": "func (p *parentAnnouncements) AnnouncementExists(ctx context.Context, id int64) (string, bool, error) {\n\tversion, exists, err := p.service.AnnouncementExists(ctx, id)\n\treturn version, exists, mapParentAnnouncementError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/communication/internal/application/parentAnnouncements.AnnouncementExists",
       "owner": "modules/communication"
@@ -604,7 +604,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p *parentAnnouncements) LockAnnouncementForAttachmentChange(ctx context.Context, id int64) (bool, bool, error) {\n\texists, editable, err := p.service.LockAnnouncementForAttachmentChange(ctx, id)\n\treturn exists, editable, mapParentAnnouncementError(err)\n}",
+      "evidence": "func (p *parentAnnouncements) LockAnnouncementForAttachmentChange(ctx context.Context, id int64, expectedVersion string) (bool, bool, error) {\n\texists, editable, err := p.service.LockAnnouncementForAttachmentChange(ctx, id, expectedVersion)\n\treturn exists, editable, mapParentAnnouncementError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/communication/internal/application/parentAnnouncements.LockAnnouncementForAttachmentChange",
       "owner": "modules/communication"
@@ -639,7 +639,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p *parentAnnouncements) PublishParentAnnouncement(ctx context.Context, id int64) (*communication.ParentAnnouncement, error) {\n\trow, err := p.service.Publish(ctx, id)\n\treturn mapParentAnnouncement(row), mapParentAnnouncementError(err)\n}",
+      "evidence": "func (p *parentAnnouncements) PublishParentAnnouncement(ctx context.Context, id int64, expectedVersion string) (*communication.ParentAnnouncement, error) {\n\trow, err := p.service.Publish(ctx, id, expectedVersion)\n\treturn mapParentAnnouncement(row), mapParentAnnouncementError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/communication/internal/application/parentAnnouncements.PublishParentAnnouncement",
       "owner": "modules/communication"
@@ -660,7 +660,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p *parentAnnouncements) ResetAnnouncementEngagement(ctx context.Context, id int64) error {\n\treturn mapParentAnnouncementError(p.service.ResetAnnouncementEngagement(ctx, id))\n}",
+      "evidence": "func (p *parentAnnouncements) ResetAnnouncementEngagement(ctx context.Context, id int64) (string, error) {\n\tversion, err := p.service.ResetAnnouncementEngagement(ctx, id)\n\treturn version, mapParentAnnouncementError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/communication/internal/application/parentAnnouncements.ResetAnnouncementEngagement",
       "owner": "modules/communication"
@@ -688,7 +688,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p *parentAnnouncements) UpdateParentAnnouncementReminder(ctx context.Context, id int64, input communication.ParentAnnouncementReminderInput) (*communication.ParentAnnouncement, error) {\n\trow, err := p.service.UpdateReminder(ctx, id, ReminderInput{ReminderAt: input.ReminderAt, ReminderText: input.ReminderText})\n\treturn mapParentAnnouncement(row), mapParentAnnouncementError(err)\n}",
+      "evidence": "func (p *parentAnnouncements) UpdateParentAnnouncementReminder(ctx context.Context, id int64, input communication.ParentAnnouncementReminderInput) (*communication.ParentAnnouncement, error) {\n\trow, err := p.service.UpdateReminder(ctx, id, ReminderInput{ReminderAt: input.ReminderAt, ReminderText: input.ReminderText, ExpectedVersion: input.ExpectedVersion})\n\treturn mapParentAnnouncement(row), mapParentAnnouncementError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/communication/internal/application/parentAnnouncements.UpdateParentAnnouncementReminder",
       "owner": "modules/communication"
@@ -800,7 +800,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *service) AnnouncementExists(ctx context.Context, announcementID int64) (bool, error) {\n\ta, err := s.repo.FindByID(ctx, announcementID)\n\tif err != nil {\n\t\treturn false, fmt.Errorf(\"announcement: load for attachment check: %w\", err)\n\t}\n\treturn a != nil, nil\n}",
+      "evidence": "func (s *service) AnnouncementExists(ctx context.Context, announcementID int64) (string, bool, error) {\n\ta, err := s.repo.FindByID(ctx, announcementID)\n\tif err != nil {\n\t\treturn \"\", false, fmt.Errorf(\"announcement: load for attachment check: %w\", err)\n\t}\n\tif a == nil {\n\t\treturn \"\", false, nil\n\t}\n\treturn readstate.Of(a.UpdatedAt), true, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/communication/internal/application/service.AnnouncementExists",
       "owner": "modules/communication"
@@ -814,7 +814,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *service) LockAnnouncementForAttachmentChange(ctx context.Context, announcementID int64) (bool, bool, error) {\n\ta, err := s.repo.FindByIDForUpdate(ctx, announcementID)\n\tif err != nil {\n\t\treturn false, false, fmt.Errorf(\"announcement: lock for attachment change: %w\", err)\n\t}\n\tif a == nil {\n\t\treturn false, false, nil\n\t}\n\teditable, err := s.attachmentsEditable(ctx, a)\n\treturn true, editable, err\n}",
+      "evidence": "func (s *service) LockAnnouncementForAttachmentChange(ctx context.Context, announcementID int64, expectedVersion string) (bool, bool, error) {\n\ta, err := s.repo.FindByIDForUpdate(ctx, announcementID)\n\tif err != nil {\n\t\treturn false, false, fmt.Errorf(\"announcement: lock for attachment change: %w\", err)\n\t}\n\tif a == nil {\n\t\treturn false, false, nil\n\t}\n\teditable, err := s.attachmentsEditable(ctx, a)\n\tif err != nil || !editable {\n\t\treturn true, editable, err\n\t}\n\treturn true, true, readstate.Check(expectedVersion, readstate.Of(a.UpdatedAt))\n}",
       "form": "unclassified-evidence",
       "id": "modules/communication/internal/application/service.LockAnnouncementForAttachmentChange",
       "owner": "modules/communication"
@@ -831,13 +831,6 @@
       "evidence": "func (s *service) PollResults(ctx context.Context, id int64) (*StaffAnnouncementPollResults, error) {\n\ta, err := s.loadPoll(ctx, id)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresults, err := s.repo.PollResults(ctx, a.GetTenantID(), id)\n\tif err != nil {\n\t\treturn nil, fmt.Errorf(\"announcement: poll results: %w\", err)\n\t}\n\treturn results, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/communication/internal/application/service.PollResults",
-      "owner": "modules/communication"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *service) ResetAnnouncementEngagement(ctx context.Context, announcementID int64) error {\n\tif err := s.repo.ClearEngagement(ctx, announcementID); err != nil {\n\t\treturn fmt.Errorf(\"announcement: clear engagement after attachment change: %w\", err)\n\t}\n\treturn nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/communication/internal/application/service.ResetAnnouncementEngagement",
       "owner": "modules/communication"
     },
     {

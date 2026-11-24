@@ -3,6 +3,7 @@ import { knownEnum } from "~/lib/contract/known-enum";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { ApiError } from "./api-error";
 import { bffJson } from "./bff-fetch";
+import { compareIds } from "./compare-ids";
 // grade-transition-api.ts
 // Client for the Jahrgangsstufenwechsel (grade transition) admin flow (#405).
 // Calls the registered routes under /api/admin/grade-transitions through the
@@ -41,6 +42,8 @@ export interface GradeTransition {
   canModify: boolean;
   canApply: boolean;
   canRevert: boolean;
+  /** Stand des Entwurfs; eine Änderung schickt ihn mit (ADR 0311). */
+  version: string;
 }
 
 interface MappingPreview {
@@ -123,6 +126,8 @@ export interface CreateTransitionInput {
 }
 
 export interface UpdateTransitionInput {
+  /** Der gelesene Stand; ein seither geänderter Entwurf wird abgelehnt. */
+  expectedVersion: string;
   academicYear?: string;
   notes?: string;
   /** undefined = Mappings unverändert lassen; [] = alle entfernen */
@@ -171,6 +176,7 @@ export function mapTransition(
     canModify: data.can_modify,
     canApply: data.can_apply,
     canRevert: data.can_revert,
+    version: data.version,
   };
 }
 
@@ -194,8 +200,7 @@ export function mapPreview(
       studentCount: u.student_count,
     })),
     warnings: data.warnings ?? [],
-    // An older backend sent no digest; apply then sends no expected_fingerprint.
-    fingerprint: data.fingerprint ?? "",
+    fingerprint: data.fingerprint,
   };
 }
 
@@ -303,18 +308,12 @@ const LIST_PAGE_SIZE = 100;
 // produce, so it never truncates in practice.
 const LIST_PAGE_LIMIT = 100;
 
-// Newest-first, the order the offset endpoint used to return. Compared as
-// BigInt of the exact string id — creation order for an autoincrement key —
-// never as a number, so ids above 2^53 cannot collapse through float rounding
-// (#405 review).
+// Newest-first by autoincrement key, without rounding ids above 2^53.
 function compareByIdDesc(
   a: adminContract.TransitionResponse,
   b: adminContract.TransitionResponse,
 ): number {
-  const aID = BigInt(a.id);
-  const bID = BigInt(b.id);
-  if (aID === bID) return 0;
-  return aID > bID ? -1 : 1;
+  return compareIds(b.id, a.id);
 }
 
 // Fetches every transition, not just the first page. The list feeds both the
@@ -385,6 +384,7 @@ export async function updateGradeTransition(
         mappings: input.mappings
           ? toBackendMappings(input.mappings)
           : undefined,
+        expected_version: input.expectedVersion,
       },
     }).catch(statusMessage),
   );
@@ -407,20 +407,19 @@ export async function previewGradeTransition(
 }
 
 /**
- * Applies a transition. `expectedFingerprint` binds the call to the preview the
+ * Applies a transition. `expectedFingerprint` is the token of the preview the
  * admin confirmed: the backend refuses with {@link PREVIEW_STALE_CODE} when the
- * affected children or mappings have changed since (#405).
+ * affected children or mappings have changed since (#405), and an apply
+ * without it as well (ADR 0311).
  */
 export async function applyGradeTransition(
   id: string,
-  expectedFingerprint?: string,
+  expectedFingerprint: string,
 ): Promise<TransitionResult> {
   return mapResult(
     await bffJson("tenant", "POST /api/admin/grade-transitions/{id}/apply", {
       params: { id },
-      body: expectedFingerprint
-        ? { expected_fingerprint: expectedFingerprint }
-        : {},
+      body: { expected_fingerprint: expectedFingerprint },
     }).catch(statusMessage),
   );
 }

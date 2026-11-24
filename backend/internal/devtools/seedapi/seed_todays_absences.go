@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"slices"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The staff members of today's absences, as indices into DemoStaff: the third
@@ -80,8 +82,8 @@ func seedTodaysAbsences(rt *Runtime, today seedDate) error {
 	}
 	if _, err := rt.Client.Post(fmt.Sprintf("/api/timetable/instances/%d/deviations", covered[0]), map[string]any{
 		"substitutions": []map[string]any{{
-			"absent_staff_id": sickID, "substitute_staff_id": staffIDs[substituteTodayStaffIndex],
-			"reason": "Vertretung wegen Krankheit", "instance_ids": covered,
+			"absent_staff_id": ident.ID(sickID), "substitute_staff_id": ident.ID(staffIDs[substituteTodayStaffIndex]),
+			"reason": "Vertretung wegen Krankheit", "instance_ids": ident.IDs(covered),
 		}},
 	}); err != nil {
 		return fmt.Errorf("seed today's substitution: %w", err)

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	reviewbindings "github.com/moto-ogs/project-phoenix/roots/requestreviewbinding"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -227,7 +228,7 @@ func TestOpenRowsCarryTheOwnerRules(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, master, 1)
 	assert.Equal(t, requestreview.TypeMasterData, master[0].Type)
-	assert.Equal(t, excusedrequests.ParentRequestVersion(created.Add(time.Minute)), master[0].Version)
+	assert.Equal(t, readstate.Of(created.Add(time.Minute)), master[0].Version)
 	assert.Equal(t, created, master[0].SortTime)
 	assert.Equal(t, "Anna Adler", master[0].StudentName)
 	assert.True(t, master[0].BulkEligible)
@@ -292,7 +293,7 @@ func TestHistoryRowsCarryDecisionFactsAndCorrectability(t *testing.T) {
 		{Request: &careplan.OfferingChangeRequest{ID: 5, UpdatedAt: updated, StudentID: 3, Status: "withdrawn"}, StudentName: "Cara Cruz"},
 	}
 	f.offering.corrections = []requestreview.Row{{Type: requestreview.TypeDirectCorrection, ID: 6, StudentID: 3, StudentName: "Cara Cruz", SortTime: decided, DecidedAt: decided,
-		Payload: requestreview.Payload{DirectCorrection: &requestreview.DirectCorrectionResponse{ID: "6", StudentID: "3", StudentName: "Cara Cruz", ChangedAt: decided, Reason: "Tippfehler", ChangedByName: "Olga Office", Diff: []requestreview.OfferingRequestDiffResponse{}}},
+		Payload: requestreview.Payload{DirectCorrection: &requestreview.DirectCorrectionResponse{ID: 6, StudentID: 3, StudentName: "Cara Cruz", ChangedAt: decided, Reason: "Tippfehler", ChangedByName: "Olga Office", Diff: []requestreview.OfferingRequestDiffResponse{}}},
 	}}
 	f.excused.history = []*excusedrequests.HistoryItem{
 		{Request: &excusedrequests.Request{ID: 7, UpdatedAt: updated, StudentID: 4, Status: "done"}, FirstName: "Dora", LastName: "Dahl"},
@@ -491,7 +492,7 @@ func TestRequestReviewEnforcesRLS(t *testing.T) {
 				types := make([]string, 0, 4)
 				for _, item := range page.Items {
 					types = append(types, item.RequestType)
-					assert.Equal(t, fmt.Sprint(side.StudentID), item.StudentID)
+					assert.Equal(t, fmt.Sprint(side.StudentID), item.StudentID.String())
 					assert.Equal(t, side.GroupName, item.GroupName)
 					assert.Equal(t, "Filer "+map[int64]string{schools[0].TenantID: "own", schools[1].TenantID: "foreign"}[side.TenantID], item.SubmittedByName,
 						"%s names its own school's filer", item.RequestType)

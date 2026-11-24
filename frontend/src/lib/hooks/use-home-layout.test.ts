@@ -109,7 +109,7 @@ describe("useHomeLayout", () => {
           ? () => result.current.save({}, [])
           : operation === "reset"
             ? result.current.reset
-            : () => result.current.savePolicies({ news: "required" });
+            : () => result.current.savePolicies({ news: "required" }, "v1");
       await expect(save()).rejects.toMatchObject({
         status: 503,
         code: "general.unavailable",

@@ -330,9 +330,10 @@ function mutationOptions(options: unknown): unknown {
 const logger = createLogger({ component: "useSWRAuth" });
 
 /**
- * Safari reports `undefined is not a function` when SWR's mutate finds no
- * state for the cache it is bound to (#2459). Not reproduced locally; this
- * records whether the hook's cache was registered at that moment. The
+ * Safari 26 reported `undefined is not a function` from SWR's mutate, where
+ * it destructured its rest parameter, with the cache registered (#2459,
+ * #8031). Not reproduced locally; patches/swr@2.5.1.patch removes that
+ * destructuring. This stays as the proof: the event must not come back. The
  * error still reaches the caller.
  */
 function reportMutateTypeError<V>(cache: Cache, result: Promise<V>): void {
@@ -632,112 +633,373 @@ export function useSWRAuth<T, E = Error>(
   return useScopedSWR<T, E>(key, fetcher, options);
 }
 
+/** What `useOpeningRead` takes besides key and fetcher. */
+export interface OpeningReadOptions<T> {
+  /**
+   * `true` for a form's snapshot: the cached answer shows at once and this
+   * opening's read replaces it. `false` for a read the server logs or
+   * authorizes on every opening: nothing shows until this opening's own
+   * read answered.
+   */
+  readonly showCached: boolean;
+  /** Holds the opening's read back while it returns true. */
+  readonly isPaused?: () => boolean;
+  /** Called with the answer of each read of this hook. */
+  readonly onSuccess?: (data: T) => void;
+  /** Called with the failure of each read of this hook. */
+  readonly onError?: (error: unknown) => void;
+}
+
+/** One opening of a surface and the read it is filled on (ADR 0311). */
+export interface OpeningRead<T> {
+  /**
+   * The opening: the key under the session's scope and the key's data
+   * generation; null while closed. State that belongs to one opening (a
+   * draft) keys on it, so a scope or generation bump drops it.
+   */
+  readonly opening: string | null;
+  /**
+   * With `showCached`: this opening's answer, held; a later read of the
+   * key (another view's, an invalidation's) does not replace it and shows
+   * in `latest`. Before the answer: the cache. Without `showCached`:
+   * nothing until this opening's own read answered, then the newest read
+   * of the key: an invalidation's read replaces it. Undefined after a
+   * failed first read and while the server refuses the read (401, 403).
+   */
+  readonly data: T | undefined;
+  /**
+   * The shared cache as it is now, possibly newer than `data` (another
+   * view read the key since). Only for refilling an untouched form; never
+   * decide or save against it. Undefined until the opening settled when
+   * `showCached` is false.
+   */
+  readonly latest: T | undefined;
+  /** This opening's own read answered, with data or a failure. */
+  readonly settled: boolean;
+  /** `key` is set and the opening has not settled. */
+  readonly isLoading: boolean;
+  /** The newest read of the key is under way (this hook's or an invalidation's). */
+  readonly isValidating: boolean;
+  /** The failure to show: a refusal in force or this opening's last failed read. */
+  readonly error: unknown;
+  /** Reads again; a failure shows in `error`, held data stays. */
+  readonly retry: () => void;
+  /**
+   * Reads again and holds the answer (after a refused save). Rejects on
+   * failure and leaves the opening as it was: SWR's own revalidation would
+   * resolve with the old data instead.
+   */
+  readonly reload: () => Promise<T>;
+  /**
+   * SWR-shaped writer for callers that hand on a save's answer:
+   * `mutate(answer, { revalidate: false })` writes the cache and holds the
+   * answer, `mutate()` reads again like `retry`, `mutate(undefined, …)`
+   * clears the cache entry.
+   */
+  readonly mutate: SWRResponse<T>["mutate"];
+}
+
 /**
- * A read that has to be fresh each time its surface opens: the preview of a
- * deletion, the version an edit is saved against, a form's template. `data`
- * stays undefined until this opening's own request has answered, so nothing
- * decides or types against the cached answer of an earlier opening; `fresh`
- * says that it has. A `null` key closes the opening, the next key starts a
- * new one. Focus and reconnect do not replace what the person is looking at.
+ * The wrapper read of an opening. Focus, reconnect, mount and error retries
+ * start nothing; an invalidation of the key reads again only while the
+ * opening has started its own read (`isPaused` below).
  */
-export function useFreshSWR<T, E = Error>(
+const OPENING_READER = {
+  keepPreviousData: false,
+  revalidateOnFocus: false,
+  revalidateOnReconnect: false,
+  revalidateOnMount: false,
+  revalidateIfStale: false,
+  shouldRetryOnError: false,
+  dedupingInterval: 0,
+} as const;
+
+type OpeningFlight<T> =
+  | { readonly ok: true; readonly flight: number; readonly data: T | undefined }
+  | { readonly ok: false; readonly flight: number; readonly error: unknown };
+
+interface OpeningSource<T> {
+  readonly fullKey: string;
+  readonly fetcher: () => Promise<T>;
+  readonly mutate: SWRResponse<T>["mutate"];
+  readonly shown: T | undefined;
+  readonly onSuccess?: (data: T) => void;
+  readonly onError?: (error: unknown) => void;
+}
+
+/**
+ * One read of an opening through the shared cache and the generation lock,
+ * with the refusal rules of a fetch: a 401/403 marks the key refused, a
+ * success lifts it. An invalidation while the read runs ends its request
+ * generation; that answer may predate a write, so it reads once more.
+ */
+async function readThrough<T>(
+  current: OpeningSource<T>,
+  flight: number,
+): Promise<OpeningFlight<T>> {
+  for (let tries = 0; ; tries += 1) {
+    try {
+      const data = await current.mutate(
+        lockFetcher(current.fullKey, current.fetcher)(),
+        { revalidate: false },
+      );
+      // Undefined: a scope or data bump dropped the run; the bump
+      // started a new opening.
+      if (data !== undefined) {
+        liftRefusal(current.fullKey);
+        current.onSuccess?.(data);
+      }
+      return { ok: true, flight, data };
+    } catch (error) {
+      if (isDiscardedAnswer(error) && tries < 2) continue;
+      if (!isDiscardedAnswer(error)) {
+        if (isAccessRefusal(error) && current.shown !== undefined) {
+          noteShownDataRefusal();
+        }
+        if (isReadRefusal(error)) markRefused(current.fullKey, error);
+        current.onError?.(error);
+      }
+      return { ok: false, flight, error };
+    }
+  }
+}
+
+/**
+ * The one per-opening read (ADR 0311): a surface reads anew each time it
+ * opens and holds that answer. An opening is the key under the session's
+ * scope and the key's data generation; a `null` key closes it, the next
+ * key or a bump starts a new one, also A → B → A. Every read goes through
+ * the shared cache and the generation lock and keeps its refusal rules:
+ * a 401/403 withdraws the data for every reader until a read succeeds.
+ * Focus, reconnect, key changes and error retries start no read; an
+ * invalidation of the key (a write, a live event) reads again once the
+ * opening has started. With `showCached: false` the shown data follows
+ * those reads; a form (`showCached: true`) keeps its answer and finds the
+ * newer one in `latest`.
+ *
+ * Use it for a read the server logs or authorizes on every opening
+ * (`showCached: false`). Edits and previews take `useReadDraft`
+ * (`~/lib/swr/read-draft`), which is built on it.
+ */
+export function useOpeningRead<T>(
   key: string | null,
   fetcher: () => Promise<T>,
-  options?: ReaderOptions<T, E>,
-): ScopedSWRResponse<T, E> & { fresh: boolean } {
+  options: OpeningReadOptions<T>,
+): OpeningRead<T> {
   const { prefix, generation } = useSWRScope();
+  const fullKey =
+    key !== null && prefix !== null ? scopedSWRKey(prefix, key) : null;
+  // Renders again when a scope or data bump ends the opening.
+  useSyncExternalStore(
+    subscribeSWRDataGeneration,
+    currentSWRDataGeneration,
+    currentSWRDataGeneration,
+  );
   const opening =
-    key === null || prefix === null
+    fullKey === null
       ? null
-      : JSON.stringify([prefix, generation, key]);
-  const paused = options?.isPaused?.() === true;
-  const requestReady = useRef(false);
-  const requestOwner = useRef<SWRResponse<T, E>["mutate"] | null>(null);
-  const [openingKey, setOpeningKey] = useState(opening);
-  const [flightKey, setFlightKey] = useState<string | null>(null);
-  const [confirmation, setConfirmation] = useState<{
-    opening: string | null;
-    owner: SWRResponse<T, E>["mutate"];
-  } | null>(null);
-  const sameOpening = openingKey === opening;
-  if (!sameOpening) {
-    setOpeningKey(opening);
-    setFlightKey(null);
-    setConfirmation(null);
-  }
-  // Reset only committed openings, before SWR's own layout effects can read.
-  // An abandoned render must not pause the still-visible opening's requests.
+      : JSON.stringify([fullKey, generation, dataGenerationOf(fullKey)]);
+  // SWR starts automatic reads on a key change even with mount
+  // revalidation off. Until this opening started its own read, none runs;
+  // reset before SWR's own layout effects of the new key can read.
+  const ready = useRef(false);
   useLayoutEffect(() => {
-    requestReady.current = false;
-    requestOwner.current = null;
+    ready.current = false;
   }, [opening]);
-  const read = useScopedSWR<T, E>(
+  const read = useScopedSWR<T, unknown>(
     key,
     fetcher,
     {
-      keepPreviousData: false,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      ...options,
-      // SWR also starts automatic reads on key changes, even with mount
-      // revalidation disabled. Only this opening's explicit read may start it.
-      isPaused: () => !requestReady.current || options?.isPaused?.() === true,
-      revalidateOnMount: false,
-      dedupingInterval: 0,
+      ...OPENING_READER,
+      isPaused: () => !ready.current,
+      ...(options.onSuccess ? { onSuccess: options.onSuccess } : {}),
+      ...(options.onError ? { onError: options.onError } : {}),
     },
     swrConfig,
     false,
   );
-  const { mutate } = read;
-  useEffect(() => {
-    if (opening === null || paused) return;
-    requestReady.current = true;
-    requestOwner.current = mutate;
-    // mutate() removes the pending FETCH marker. A zero deduping interval
-    // alone still borrows a request that has not settled.
-    void mutate();
-    setFlightKey(opening);
-    return () => {
-      requestReady.current = false;
-      requestOwner.current = null;
-    };
-  }, [opening, mutate, paused]);
-  // A later explicit reload can overtake this opening's first request. Its
-  // confirmed answer counts too; never wait for the superseded flight.
-  const currentOpening =
-    !paused &&
-    sameOpening &&
-    opening !== null &&
-    flightKey === opening &&
-    requestOwner.current === mutate;
-  const confirmedHere =
-    confirmation !== null &&
-    confirmation.opening === opening &&
-    confirmation.owner === mutate;
-  const accessRefused = isAccessRefusal(read.error);
-  if (currentOpening && confirmedHere && accessRefused) setConfirmation(null);
-  if (
-    currentOpening &&
-    !confirmedHere &&
-    !read.isValidating &&
-    read.error === undefined &&
-    read.data !== undefined
-  ) {
-    setConfirmation({ opening, owner: mutate });
+
+  // A new serial per opening: A → B → A must not find A's first answer.
+  const [track, setTrack] = useState({ opening, serial: 0 });
+  let serial = track.serial;
+  if (track.opening !== opening) {
+    serial = track.serial + 1;
+    setTrack({ opening, serial });
   }
-  // Confirmation survives refreshes, not a new opening or data generation.
-  // The reader still owns the value, so a scope/access discard stays empty.
-  const fresh = currentOpening && (confirmedHere || !read.isValidating);
+  const [attempt, setAttempt] = useState({ serial, count: 0 });
+  const count = attempt.serial === serial ? attempt.count : 0;
+  const [held, setHeld] = useState<{
+    serial: number;
+    flight: number;
+    data: T;
+  }>();
+  const [failed, setFailed] = useState<{
+    serial: number;
+    flight: number;
+    error: unknown;
+  }>();
+
+  const flights = useRef(0);
+  // The newest read of this hook while it runs; an older one it overtook
+  // does not count.
+  const [pending, setPending] = useState<number | null>(null);
+  const latest = useRef({
+    fullKey,
+    fetcher,
+    mutate: read.mutate,
+    shown: read.data,
+    serial,
+    onSuccess: options.onSuccess,
+    onError: options.onError,
+  });
+  // Committed renders only: an abandoned render must not steer the
+  // still-visible opening's reads.
+  useLayoutEffect(() => {
+    latest.current = {
+      fullKey,
+      fetcher,
+      mutate: read.mutate,
+      shown: read.data,
+      serial,
+      onSuccess: options.onSuccess,
+      onError: options.onError,
+    };
+  });
+
+  const readOnce = useCallback(async (): Promise<OpeningFlight<T>> => {
+    const current = latest.current;
+    const flight = ++flights.current;
+    const { fullKey: readKey } = current;
+    if (readKey === null) {
+      return { ok: false, flight, error: new DiscardedAnswer() };
+    }
+    setPending(flight);
+    try {
+      return await readThrough({ ...current, fullKey: readKey }, flight);
+    } finally {
+      setPending((newest) => (newest === flight ? null : newest));
+    }
+  }, []);
+
+  const paused = options.isPaused?.() === true;
+  const open = opening !== null;
+  useEffect(() => {
+    if (!open || paused) return;
+    let current = true;
+    ready.current = true;
+    void readOnce().then((result) => {
+      if (!current) return;
+      if (!result.ok) {
+        setFailed({ serial, flight: result.flight, error: result.error });
+      } else if (result.data !== undefined) {
+        setHeld({ serial, flight: result.flight, data: result.data });
+      }
+    });
+    return () => {
+      current = false;
+      ready.current = false;
+    };
+  }, [serial, open, count, paused, readOnce]);
+
+  const own = held?.serial === serial ? held : undefined;
+  const failure =
+    failed?.serial === serial &&
+    (own === undefined || failed.flight > own.flight)
+      ? failed
+      : undefined;
+  const refusal =
+    read.error !== undefined && isReadRefusal(read.error)
+      ? read.error
+      : undefined;
+  const settled = own !== undefined || failure !== undefined;
+  const visible = options.showCached || settled;
+
+  const retry = useCallback(() => {
+    setAttempt({ serial: latest.current.serial, count: count + 1 });
+  }, [count]);
+  const reload = useCallback(async () => {
+    const forSerial = latest.current.serial;
+    const result = await readOnce();
+    if (!result.ok) throw result.error;
+    if (result.data === undefined) throw new DiscardedAnswer();
+    const data = result.data;
+    setHeld({ serial: forSerial, flight: result.flight, data });
+    return data;
+  }, [readOnce]);
+  const mutate = useCallback(
+    ((...args: unknown[]) => {
+      const current = latest.current;
+      if (args.length === 0) {
+        return readOnce().then((result) => {
+          if (!result.ok) {
+            setFailed({
+              serial: current.serial,
+              flight: result.flight,
+              error: result.error,
+            });
+            return undefined;
+          }
+          if (result.data !== undefined) {
+            const data = result.data;
+            setHeld({ serial: current.serial, flight: result.flight, data });
+          }
+          return result.data;
+        });
+      }
+      const flight = ++flights.current;
+      const written = (
+        current.mutate as (...values: unknown[]) => Promise<T | undefined>
+      )(...args);
+      if (args[0] === undefined) return written;
+      return written.then((data) => {
+        if (data !== undefined) {
+          setHeld({ serial: current.serial, flight, data });
+        }
+        return data;
+      });
+    }) as SWRResponse<T>["mutate"],
+    [readOnce],
+  );
+
   return {
-    ...read,
+    opening,
     data:
-      fresh && !accessRefused && (confirmedHere || read.error === undefined)
-        ? read.data
-        : undefined,
-    error: fresh ? read.error : undefined,
-    isLoading: key !== null && !fresh,
-    fresh,
+      refusal !== undefined
+        ? undefined
+        : own
+          ? options.showCached
+            ? own.data
+            : (read.data ?? own.data)
+          : failure || !options.showCached
+            ? undefined
+            : read.data,
+    latest: refusal !== undefined || !visible ? undefined : read.data,
+    settled,
+    isLoading: key !== null && !settled,
+    isValidating: pending !== null || read.isValidating,
+    error: refusal ?? failure?.error,
+    retry,
+    reload,
+    mutate,
   };
+}
+
+/**
+ * Reads a `useSWRAuth` key again and rejects when that read fails. SWR's
+ * `mutate()` resolves with the old data instead, so a reload after a
+ * refused write would claim the new state shows (ADR 0311, rule 6). For
+ * `show(error, { reload })` and `useDraftOn`.
+ */
+export async function revalidateOrThrow<T>(
+  read: Pick<ScopedSWRResponse<T, unknown>, "mutate" | "readCurrent">,
+): Promise<T> {
+  const answered = await read.mutate();
+  const current = read.readCurrent?.();
+  if (current?.error !== undefined) throw current.error;
+  const data = current ? current.data : answered;
+  // A scope or data bump dropped the read: nothing confirmed to show.
+  if (data === undefined) throw new DiscardedAnswer();
+  return data;
 }
 
 /**

@@ -65,6 +65,8 @@ function FamilyPaymentContent() {
   const debtorNumberFormat = useDebtorNumberFormat();
   const invalidateFamily = useInvalidateFamily();
   const object = "die Angabe zu Empfänger und Zahlung";
+  // Read on every opening: the backend records each read of a deviation
+  // in its trail. The save sends its version back (ADR 0311).
   const familyRead = useFreshTraegerResource(
     contractId ? traegerBillingRunKeys.contractFamilyBilling(contractId) : null,
     () => fetchContractFamilyBilling(contractId),
@@ -114,13 +116,18 @@ function FamilyPaymentContent() {
             }}
             format={debtorNumberFormat}
             existing={loaded.family}
+            version={loaded.version}
+            // The stored state arrives through `familyRead`.
+            reload={async () => {
+              await familyRead.reloadOrThrow();
+              return undefined;
+            }}
             termsText={terms.data ? termsPaymentText(terms.data) : null}
             mandateInForce={mandate.collectable}
             onCancel={() => router.push(backHref)}
             onSaved={() => {
               // The list of families names the payment method, the runs
               // take it for their next invoices.
-              void invalidateFamily(traegerBillingRunKeys.familyBillings());
               void invalidateFamily(
                 traegerBillingRunKeys.contractFamilyBillingFamily,
               );

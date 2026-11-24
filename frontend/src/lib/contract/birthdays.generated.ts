@@ -85,17 +85,14 @@ export interface optOutRequest {
   opt_out?: boolean | null;
 }
 
-/** Query of GET /api/birthdays/ */
-export interface GetBirthdaysQuery {
-  week_start?: string;
-}
-
 export const routes = {
   "GET /api/birthdays/": {
     method: "GET",
     pattern: "/api/birthdays/",
     portals: ["tenant"],
-    query: ["week_start"],
+    query: {
+      "week_start": { kind: "date" },
+    },
     response: success(overviewResponseSchema),
   },
   "GET /api/birthdays/opt-out": {

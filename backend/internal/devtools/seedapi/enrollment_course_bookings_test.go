@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -74,7 +76,7 @@ func TestEnrollmentSubmissionAnswersTheQuestionsAboutTheChild(t *testing.T) {
 		"allergies":           "Laktoseintoleranz. Bitte keine Milchprodukte beim Mittagessen.",
 		"swimming_permission": true,
 	}, children[0]["custom_data"])
-	assert.Equal(t, []int64{3, 1, 2}, children[0]["offering_ids"])
+	assert.Equal(t, []ident.ID{3, 1, 2}, children[0]["offering_ids"])
 
 	assert.Equal(t, map[string]any{"allergies": "keine", "swimming_permission": false}, seedEnrollmentChildAnswers("Emma", "Klein"))
 	assert.Equal(t, map[string]any{"allergies": "keine", "swimming_permission": true}, seedEnrollmentChildAnswers("Oskar", "Wolf"))

@@ -6,10 +6,10 @@ import (
 	"slices"
 	"time"
 
-	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // AdminSessionResponse is a work session as the admin session writes answer
@@ -69,6 +69,7 @@ func newExportTransferResponse(outcome ExportTransferOutcome) ExportTransferResp
 // or null to clear the number.
 type PayrollNumberBody struct {
 	PersonnelNumber *string `json:"personnel_number"`
+	ExpectedVersion string  `json:"expected_version"`
 	Note            string  `json:"note"`
 }
 
@@ -80,13 +81,16 @@ type RebookAbsencesBody struct {
 	AbsenceTypeID *ident.ID  `json:"absence_type_id"`
 	Reason        string     `json:"reason"`
 	DryRun        bool       `json:"dry_run"`
+	// ExpectedFingerprint is the dry run's fingerprint; the write refuses
+	// another effect with general.changed_since_read (ADR 0311).
+	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
 // decodeRebookAbsences reads a rebooking body. Every listed absence names
 // its id.
 func decodeRebookAbsences(r *http.Request) (workforce.RebookAbsencesRequest, error) {
 	var body RebookAbsencesBody
-	if err := render.DecodeJSON(r.Body, &body); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &body); err != nil {
 		return workforce.RebookAbsencesRequest{}, err
 	}
 	if slices.Contains(body.AbsenceIDs, 0) {
@@ -95,6 +99,7 @@ func decodeRebookAbsences(r *http.Request) (workforce.RebookAbsencesRequest, err
 	return workforce.RebookAbsencesRequest{
 		AbsenceIDs: ident.Int64s(body.AbsenceIDs), AbsenceType: body.AbsenceType,
 		AbsenceTypeID: (*int64)(body.AbsenceTypeID), Reason: body.Reason, DryRun: body.DryRun,
+		ExpectedFingerprint: body.ExpectedFingerprint,
 	}, nil
 }
 
@@ -157,12 +162,12 @@ type contractRoute func(method, pattern string, request, response any, query ...
 func staffAdminPersonnelContracts(route contractRoute) []common.RouteContract {
 	return []common.RouteContract{
 		route("GET", "/{id}/stammdaten", nil, StammdatenResponse{}),
-		route("PUT", "/{id}/stammdaten/person", StammdatenPersonRequest{}, StammdatenAck{}),
-		route("PUT", "/{id}/stammdaten/kontakt", StammdatenKontaktRequest{}, StammdatenAck{}),
-		route("PUT", "/{id}/stammdaten/arbeitsvertrag", StammdatenArbeitsvertragRequest{}, StammdatenAck{}),
-		route("PUT", "/{id}/stammdaten/qualifikationen", StammdatenQualifikationenRequest{}, StammdatenAck{}),
+		route("PUT", "/{id}/stammdaten/person", StammdatenPersonRequest{}, StammdatenSectionAck{}),
+		route("PUT", "/{id}/stammdaten/kontakt", StammdatenKontaktRequest{}, StammdatenSectionAck{}),
+		route("PUT", "/{id}/stammdaten/arbeitsvertrag", StammdatenArbeitsvertragRequest{}, StammdatenSectionAck{}),
+		route("PUT", "/{id}/stammdaten/qualifikationen", StammdatenQualifikationenRequest{}, StammdatenSectionAck{}),
 		route("GET", "/{id}/stammdaten/bank-steuer", nil, StammdatenFinancialMaskedResponse{}),
-		route("PUT", "/{id}/stammdaten/bank-steuer", StammdatenFinancialRequest{}, StammdatenAck{}),
+		route("PUT", "/{id}/stammdaten/bank-steuer", StammdatenFinancialRequest{}, StammdatenSectionAck{}),
 		route("POST", "/{id}/stammdaten/bank-steuer/reveal", nil, StammdatenFinancialRevealResponse{}),
 		route("GET", "/qualification-types", nil, []QualificationTypeResponse{}),
 		route("POST", "/qualification-types", QualificationTypeRequest{}, QualificationTypeResponse{}),

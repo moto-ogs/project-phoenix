@@ -25,6 +25,8 @@ export interface ActivityCategoryResponse {
   is_system: boolean;
   archived_at?: string;
   usage_count?: number;
+  version?: string;
+  shift_type_link_version?: string;
   created_at: string;
   updated_at: string;
 }
@@ -38,6 +40,8 @@ export const ActivityCategoryResponseSchema: z.ZodType<ActivityCategoryResponse,
   is_system: bool,
   archived_at: optional(instant),
   usage_count: optional(safeInt),
+  version: optional(str),
+  shift_type_link_version: optional(str),
   created_at: instant,
   updated_at: instant,
 });
@@ -96,6 +100,7 @@ export interface ActivityResponse {
   enrollment_count?: number;
   created_at: string;
   updated_at: string;
+  version?: string;
 }
 
 export const ActivityResponseSchema: z.ZodType<ActivityResponse, unknown> = object<ActivityResponse>({
@@ -115,6 +120,7 @@ export const ActivityResponseSchema: z.ZodType<ActivityResponse, unknown> = obje
   enrollment_count: optional(safeInt),
   created_at: instant,
   updated_at: instant,
+  version: optional(str),
 });
 
 /** Go: httpadapter.EnrolledStudentResponse */
@@ -152,6 +158,7 @@ export interface ActivityCategoryRequest {
   name?: string;
   description?: string;
   color?: string;
+  expected_version?: string;
 }
 
 /** Go: httpadapter.QuickActivityRequest */
@@ -185,6 +192,18 @@ export const QuickActivityResponseSchema: z.ZodType<QuickActivityResponse, unkno
   created_at: instant,
 });
 
+/** Go: httpadapter.ActivityUpdateRequest */
+export interface ActivityUpdateRequest {
+  name?: string;
+  max_participants?: number | null;
+  is_open?: boolean;
+  category_id?: string;
+  planned_room_id?: string | null;
+  schedules?: ScheduleRequest[] | null;
+  supervisor_ids?: string[] | null;
+  expected_version?: string;
+}
+
 /** Go: httpadapter.BatchEnrollmentRequest */
 export interface BatchEnrollmentRequest {
   student_ids?: string[] | null;
@@ -206,29 +225,6 @@ export const EnrollmentUpdateResponseSchema: z.ZodType<EnrollmentUpdateResponse,
   max_participants: nullable(safeInt),
   students_enrolled: nullable(arr(int64String)),
 });
-
-/** Query of DELETE /api/activities/{id}/supervisors/{supervisorId} */
-export interface DeleteActivitiesIdSupervisorsSupervisorIdQuery {
-  replacement_staff_id?: string;
-}
-
-/** Query of GET /api/activities/ */
-export interface GetActivitiesQuery {
-  category_id?: string;
-  include_system?: boolean;
-}
-
-/** Query of GET /api/activities/categories */
-export interface GetActivitiesCategoriesQuery {
-  include_archived?: boolean;
-  include_system?: boolean;
-  with_usage?: boolean;
-}
-
-/** Query of GET /api/activities/supervisors/available */
-export interface GetActivitiesSupervisorsAvailableQuery {
-  specialization?: string;
-}
 
 export const routes = {
   "DELETE /api/activities/categories/{categoryId}": {
@@ -253,28 +249,39 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/activities/{id}/supervisors/{supervisorId}",
     portals: ["tenant"],
-    query: ["replacement_staff_id"],
+    query: {
+      "replacement_staff_id": { kind: "id" },
+    },
     response: noData,
   },
   "GET /api/activities/": {
     method: "GET",
     pattern: "/api/activities/",
     portals: ["tenant"],
-    query: ["category_id", "include_system"],
+    query: {
+      "category_id": { kind: "id" },
+      "include_system": { kind: "bool" },
+    },
     response: success(z.array(ActivityResponseSchema)),
   },
   "GET /api/activities/categories": {
     method: "GET",
     pattern: "/api/activities/categories",
     portals: ["tenant"],
-    query: ["include_archived", "include_system", "with_usage"],
+    query: {
+      "include_archived": { kind: "bool" },
+      "include_system": { kind: "bool" },
+      "with_usage": { kind: "bool" },
+    },
     response: success(z.array(ActivityCategoryResponseSchema)),
   },
   "GET /api/activities/supervisors/available": {
     method: "GET",
     pattern: "/api/activities/supervisors/available",
     portals: ["tenant"],
-    query: ["specialization"],
+    query: {
+      "specialization": { kind: "string" },
+    },
     response: success(z.array(ActivitySupervisorResponseSchema)),
   },
   "GET /api/activities/{id}": {
@@ -327,7 +334,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/activities/{id}",
     portals: ["tenant"],
-    request: requestBody<ActivityRequest>(),
+    request: requestBody<ActivityUpdateRequest>(),
     response: success(ActivityResponseSchema),
   },
   "PUT /api/activities/{id}/students": {

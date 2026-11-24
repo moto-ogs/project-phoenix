@@ -167,7 +167,7 @@ func (m *weeklyProfileAPIMock) serve(t *testing.T, w seedHTTPResponseWriter, r *
 		data = []any{}
 	case path == "/traeger/holiday-periods/criteria":
 		// The criteria of the allocation as stored (#4700).
-		data = map[string]any{"criteria": []map[string]any{{"id": 71}, {"id": 72}, {"id": 73}, {"id": 74}}, "periods": []any{}}
+		data = map[string]any{"criteria": []map[string]any{{"id": 71}, {"id": 72}, {"id": 73}, {"id": 74}}, "periods": []any{}, "version": "criteria-read"}
 	case strings.HasPrefix(path, "/traeger/holiday-periods/") && strings.HasSuffix(path, "/allocation"):
 		// The allocation list with its first pending child (#4700).
 		data = map[string]any{"weeks": []map[string]any{{"pending": []map[string]any{{"booking_id": 81, "proposal": "placed"}}}}}
@@ -298,6 +298,9 @@ func (m *weeklyProfileAPIMock) serve(t *testing.T, w seedHTTPResponseWriter, r *
 		data = []any{}
 	case path == "/api/enrollment/phases":
 		m.phase = body
+	case strings.HasSuffix(path, "/manual-bootstrap") && r.Method == "GET":
+		// The form the seeder fills, with its read-state token (ADR 0311).
+		data = map[string]any{"schema": nil, "terms_fingerprint": "weekly-form"}
 	case strings.HasPrefix(path, "/api/enrollment/phases/"):
 		data = m.phase
 	case strings.HasSuffix(path, "/submit"):
@@ -326,6 +329,8 @@ func (m *weeklyProfileAPIMock) serve(t *testing.T, w seedHTTPResponseWriter, r *
 		data = map[string]any{"account_id": fmt.Sprintf("%d", m.nextID)}
 	case path == "/parent/auth/login":
 		data = map[string]any{"access_token": "weekly-parent", "refresh_token": "refresh"}
+	case r.Method == "GET" && strings.HasSuffix(path, "/pickup-schedules"):
+		data = map[string]any{"weekly_plan_version": "weekly-plan"}
 	case strings.HasSuffix(path, "/arrival-schedules") || strings.HasSuffix(path, "/pickup-schedules"):
 		rows := []map[string]any{}
 		for _, row := range body["schedules"].([]any) {

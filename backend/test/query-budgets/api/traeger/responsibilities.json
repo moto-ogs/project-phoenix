@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.responsibilities",
+  "max": 6,
+  "exact": true,
+  "description": "modules/organizationtenancy — GET /traeger/master-data/responsibilities (#4811):\nthe Träger binding of the Träger transaction, the schools of the Träger, their\nstored Schulträger and Gemeinde in one statement, and the settings\nresponsibility.* of all schools in one batch read of the Settings Platform\n(schools, school overrides, Träger values). Flat in the number of schools,\nbodies and overrides.",
+  "route": "GET /traeger/master-data/responsibilities"
+}

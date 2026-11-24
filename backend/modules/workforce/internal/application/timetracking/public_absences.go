@@ -38,7 +38,7 @@ func publicAbsenceResponse(value *StaffAbsenceResponse) *workforce.StaffAbsenceR
 		return nil
 	}
 	return &workforce.StaffAbsenceResponse{
-		StaffAbsence: publicStaffAbsence(value.StaffAbsence), DurationDays: value.DurationDays, AbsenceTypeID: value.AbsenceTypeID,
+		StaffAbsence: publicStaffAbsence(value.StaffAbsence), DurationDays: value.DurationDays,
 	}
 }
 
@@ -116,7 +116,9 @@ func (c staffAbsenceCapability) CreateAbsenceFor(ctx context.Context, subjectSta
 	if err != nil {
 		return nil, nil, err
 	}
-	return plannedAbsence(plan)(c.absence(absences.CreateAbsenceFor(ctx, subjectStaffID, createdByStaffID, actorAccountID, legacyCreateAbsence(request))))
+	booking := legacyCreateAbsence(request)
+	booking.OverdraftFingerprint = &request.ExpectedFingerprint
+	return plannedAbsence(plan)(c.absence(absences.CreateAbsenceFor(ctx, subjectStaffID, createdByStaffID, actorAccountID, booking)))
 }
 
 func (c staffAbsenceCapability) UpdateAbsence(ctx context.Context, staffID int64, actorAccountID *int64, absenceID int64, request workforce.UpdateAbsenceRequest) (*workforce.StaffAbsenceResponse, workforce.SickCascadePlan, error) {
@@ -198,7 +200,7 @@ func (c staffAbsenceCapability) RebookAbsences(ctx context.Context, staffID, act
 	value, err := c.absences.RebookAbsences(ctx, RebookAbsencesRequest{
 		StaffID: staffID, ActorAccountID: actorAccountID, AbsenceIDs: request.AbsenceIDs,
 		AbsenceType: request.AbsenceType, AbsenceTypeID: request.AbsenceTypeID,
-		Reason: request.Reason, DryRun: request.DryRun,
+		Reason: request.Reason, DryRun: request.DryRun, ExpectedFingerprint: request.ExpectedFingerprint,
 	})
 	if err != nil {
 		return nil, mapTimeTrackingFailure(err)
@@ -206,7 +208,7 @@ func (c staffAbsenceCapability) RebookAbsences(ctx context.Context, staffID, act
 	result := &workforce.AbsenceRebookingResult{
 		Absences: publicAbsenceResponses(value.Absences), Days: value.Days,
 		BalanceDeltaMinutes: value.BalanceDeltaMinutes, AllowanceExceeded: value.AllowanceExceeded,
-		VacationExceeded: value.VacationExceeded, Applied: value.Applied,
+		VacationExceeded: value.VacationExceeded, Applied: value.Applied, Fingerprint: value.Fingerprint,
 	}
 	for _, allowance := range value.Allowances {
 		result.Allowances = append(result.Allowances, workforce.RebookingAllowanceYear{
@@ -296,7 +298,7 @@ func (c staffAbsenceCapability) VacationQuotaSummary(ctx context.Context, staffI
 	return &workforce.VacationQuotaSummary{
 		StaffID: ident.ID(summary.StaffID), Year: summary.Year, EntitledDays: summary.EntitledDays, CarryoverDays: summary.CarryoverDays,
 		TakenBeforeDays: summary.TakenBeforeDays, TakenDays: summary.TakenDays, ReservedDays: summary.ReservedDays,
-		RemainingDays: summary.RemainingDays, Opening: publicVacationOpening(summary.Opening),
+		RemainingDays: summary.RemainingDays, Opening: publicVacationOpening(summary.Opening), Version: summary.Version,
 	}, nil
 }
 

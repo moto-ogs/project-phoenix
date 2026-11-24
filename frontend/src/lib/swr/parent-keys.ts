@@ -105,6 +105,8 @@ export const parentKeys = {
     `parent-child-${encodeURIComponent(studentId)}-status-care-exceptions-${day}`,
   pickupChangeRequests: (studentId: string, day: string) =>
     `parent-child-${encodeURIComponent(studentId)}-status-pickup-change-requests-${day}`,
+  pickupChangeRequestsFamily: (studentId: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-status-pickup-change-requests-`,
   careSchedule: (studentId: string, day: string) =>
     `parent-child-${encodeURIComponent(studentId)}-status-care-schedule-${day}`,
   careOfferings: (studentId: string) =>
@@ -137,7 +139,7 @@ export const parentKeys = {
     `parent-child-${encodeURIComponent(studentId)}-sharing-options`,
   requestSharing: (studentId: string, requestType: string, requestId: string) =>
     `parent-child-${encodeURIComponent(studentId)}-request-sharing-${encodeURIComponent(requestType)}-${encodeURIComponent(requestId)}`,
-  /** The change history of one request; its last entry is the version. */
+  /** The change history of one request ("Geändert am …"). */
   requestEventsFamily: (studentId: string) =>
     `parent-child-${encodeURIComponent(studentId)}-request-events-`,
   requestEvents: (studentId: string, requestType: string, requestId: string) =>

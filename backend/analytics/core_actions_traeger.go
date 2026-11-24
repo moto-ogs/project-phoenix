@@ -27,6 +27,10 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/traeger/accounts/invitations"}:                  notCaptured,
 	{http.MethodDelete, "/traeger/accounts/invitations/{invitationId}"}: notCaptured,
 	{http.MethodPut, "/traeger/accounts/{accountId}/roles"}:             notCaptured,
+	// The roles the Träger gives the staff of all its schools (#4810).
+	{http.MethodPost, "/traeger/school-roles/"}:             notCaptured,
+	{http.MethodPut, "/traeger/school-roles/{id}"}:          notCaptured,
+	{http.MethodPost, "/traeger/school-roles/{id}/removal"}: notCaptured,
 	// The name of a person of the Träger-Büro (#4693) belongs to the Träger,
 	// not to a school: no school to count it for.
 	{http.MethodPut, "/traeger/accounts/{accountId}/name"}:     notCaptured,
@@ -73,6 +77,10 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/traeger/master-data/bank-accounts"}:            notCaptured,
 	{http.MethodPut, "/traeger/master-data/bank-accounts/{id}"}:        notCaptured,
 	{http.MethodDelete, "/traeger/master-data/bank-accounts/{id}"}:     notCaptured,
+	// The Schulträger and the Gemeinde of a school (#4811) are master
+	// data like the bank accounts.
+	{http.MethodPut, "/traeger/master-data/responsibilities/schools/{schoolId}/parties/{kind}"}:    notCaptured,
+	{http.MethodDelete, "/traeger/master-data/responsibilities/schools/{schoolId}/parties/{kind}"}: notCaptured,
 	// The document templates (#4677) belong to the Träger: no school to
 	// count them for. The preview stores nothing.
 	{http.MethodPost, "/traeger/master-data/document-templates/{kind}/versions"}: notCaptured,
@@ -230,7 +238,9 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/traeger/contracts/"}:       notCaptured,
 	{http.MethodPost, "/traeger/contracts/send"}:   notCaptured,
 	{http.MethodDelete, "/traeger/contracts/{id}"}: notCaptured,
-	// The paper contract (#4679) is recorded by the office, no core action.
+	// The paper contract (#4679) is handed over and recorded by the office
+	// (#8030), no core action.
+	{http.MethodPost, "/traeger/contracts/{id}/paper-handover"}:             notCaptured,
 	{http.MethodPost, "/traeger/contracts/{id}/paper-signature"}:            notCaptured,
 	{http.MethodPut, "/traeger/contract-templates/{schoolId}/{offeringId}"}: notCaptured,
 	// The import of existing contracts (#4723) belongs to the Träger, not
@@ -253,6 +263,10 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/traeger/contract-child-links/{contractId}/preview"}: notCaptured,
 	{http.MethodPut, "/traeger/contract-child-links/{contractId}"}:          notCaptured,
 	{http.MethodDelete, "/traeger/contract-child-links/{contractId}"}:       notCaptured,
+	// The families of contracts without a mail address (#7161) belong to
+	// the Träger: no school to count them for.
+	{http.MethodPost, "/traeger/contract-families/"}:                   notCaptured,
+	{http.MethodPost, "/traeger/contract-families/{contractId}/leave"}: notCaptured,
 	// The enrollment of the children of imported contracts (#7760, ADR
 	// 0309): a run that enrolled a child or bound a contract is the core
 	// action. A run that found everything done answers changed=false and

@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, rmSync, mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -236,6 +236,23 @@ try {
     await ts.close();
   }
 
+  const editorKeyName = `lsp-key-${process.pid}`;
+  const editorKeyPath = fixture(
+    join(root, `frontend/src/${editorKeyName}.ts`),
+    "export type Key = number;",
+  );
+  const editorConsumer = [
+    `import type { Key } from "./${editorKeyName}";`,
+    "export const send = fetch;",
+    "export const asNumber = (value: Key) => Number(value);",
+  ].join("\n");
+  const editorConsumers = ["first", "second"].map((name) =>
+    fixture(
+      join(root, `frontend/src/${editorKeyName}-${name}.ts`),
+      editorConsumer,
+    ),
+  );
+
   const ox = new Lsp("oxlint", ["--lsp"]);
   await ox.initialize(root);
   const lintText =
@@ -252,6 +269,76 @@ try {
       JSON.stringify(m.params.diagnostics).includes("no-utc-date-extraction"),
   );
   console.log("PASS Oxlint: repository custom date-safety diagnostic");
+
+  // Do not write this file: new editor buffers must still resolve wire types.
+  const unsavedPath = join(root, `frontend/src/lsp-unsaved-${process.pid}.ts`);
+  const unsavedText = [
+    'import type { StudentResponse } from "~/lib/contract/students.generated";',
+    `import type { SelfID as LocalID } from "./${basename(unsavedPath, ".ts")}";`,
+    'import { useSession } from "next-auth/react";',
+    'export type SelfID = StudentResponse["id"];',
+    "export const asNumber = (student: LocalID) => Number(student);",
+    "export function useTenantNumber() { return Number(useSession().data?.user.tenantId); }",
+    "export const send = fetch;",
+    'export { bffJsonUncontracted as uncontracted } from "~/lib/bff-fetch";',
+  ].join("\n");
+  ox.open(unsavedPath, "typescript", unsavedText);
+  const unsavedDiagnostics = await ox.notification(
+    (m) =>
+      m.method === "textDocument/publishDiagnostics" &&
+      m.params.uri === uri(unsavedPath) &&
+      [
+        "no-numeric-identifier",
+        "no-raw-browser-transport",
+        "only-listed-uncontracted",
+      ].every((rule) =>
+        m.params.diagnostics.some((diagnostic) =>
+          String(diagnostic.code).includes(rule),
+        ),
+      ),
+  );
+  const numericLines = unsavedDiagnostics.params.diagnostics
+    .filter((diagnostic) =>
+      String(diagnostic.code).includes("no-numeric-identifier"),
+    )
+    .map((diagnostic) => diagnostic.range.start.line);
+  assert.deepEqual(numericLines, [
+    unsavedText
+      .split("\n")
+      .findIndex((line) => line.includes("Number(student)")),
+  ]);
+  console.log(
+    "PASS Oxlint: unsaved BFF diagnostics resolve local aliases and project types",
+  );
+  const hasDiagnostic = (messages, rule) =>
+    messages.params.diagnostics.some((diagnostic) =>
+      String(diagnostic.code).includes(rule),
+    );
+  for (const [index, consumer] of editorConsumers.entries()) {
+    if (index === 1) {
+      writeFileSync(
+        editorKeyPath,
+        [
+          'import type { StudentResponse } from "~/lib/contract/students.generated";',
+          'export type Key = StudentResponse["id"];',
+        ].join("\n"),
+      );
+    }
+    ox.open(consumer, "typescript", editorConsumer);
+    const diagnostics = await ox.notification(
+      (m) =>
+        m.method === "textDocument/publishDiagnostics" &&
+        m.params.uri === uri(consumer) &&
+        hasDiagnostic(m, "no-raw-browser-transport"),
+    );
+    assert.equal(
+      hasDiagnostic(diagnostics, "no-numeric-identifier"),
+      index === 1,
+    );
+  }
+  console.log(
+    "PASS Oxlint: a saved dependency refreshes another file's identifier diagnostics",
+  );
   await ox.close();
 
   const prettier = spawnSync(

@@ -18,13 +18,8 @@ import {
   statsResponseSchema,
   type announcementRequest,
   type letterPreviewRequest,
+  type versionRequest,
 } from "./shared.generated";
-
-/** Query of GET /school/parent-letters/{announcementId}/declaration-export */
-export interface GetSchoolParentLettersAnnouncementIdDeclarationExportQuery {
-  format?: "csv" | "pdf";
-  student_id?: string;
-}
 
 export const routes = {
   "DELETE /school/parent-letters/{announcementId}": {
@@ -55,7 +50,10 @@ export const routes = {
     method: "GET",
     pattern: "/school/parent-letters/{announcementId}/declaration-export",
     portals: ["school"],
-    query: ["format", "student_id"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf"] },
+      "student_id": { kind: "id" },
+    },
     response: fileAnswer,
   },
   "GET /school/parent-letters/{announcementId}/declaration-status": {
@@ -107,6 +105,7 @@ export const routes = {
     method: "POST",
     pattern: "/school/parent-letters/{announcementId}/publish",
     portals: ["school"],
+    request: requestBody<versionRequest>(),
     response: success(announcementResponseSchema),
   },
   "POST /school/parent-letters/{announcementId}/remind": {

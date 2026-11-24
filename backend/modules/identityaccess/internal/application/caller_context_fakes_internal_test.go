@@ -68,7 +68,7 @@ func (p *callerTestPeople) FindPersonByAccount(context.Context, int64) (domain.C
 	return p.person, p.found, p.err
 }
 func (p *callerTestPeople) CreatePerson(context.Context, int64, string, string) error { return nil }
-func (p *callerTestPeople) RenamePerson(context.Context, int64, *string, *string) error {
+func (p *callerTestPeople) RenamePerson(context.Context, int64, *string, *string, string) error {
 	return nil
 }
 

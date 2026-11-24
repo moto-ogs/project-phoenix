@@ -24,7 +24,7 @@ func (rs *ProvisioningResource) RecordBelegRetentionChange(w http.ResponseWriter
 		return false
 	}
 	if rs.belegRetentionAudit == nil {
-		common.RenderError(w, r, common.OperatorInternal("the Beleg retention audit is not configured"))
+		common.RenderError(w, r, common.OperatorInternal(nil, "the Beleg retention audit is not configured"))
 		return false
 	}
 	err := rs.belegRetentionAudit.RecordBelegRetentionChange(r.Context(), organizationtenancy.BelegRetentionChange{

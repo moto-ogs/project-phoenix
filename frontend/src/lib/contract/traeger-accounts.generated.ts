@@ -24,6 +24,7 @@ export interface TraegerMemberResponse {
   name: string;
   roles: string[] | null;
   activated_at: string | null;
+  version: string;
 }
 
 export const TraegerMemberResponseSchema: z.ZodType<TraegerMemberResponse, unknown> = object<TraegerMemberResponse>({
@@ -32,6 +33,7 @@ export const TraegerMemberResponseSchema: z.ZodType<TraegerMemberResponse, unkno
   name: str,
   roles: nullable(arr(str)),
   activated_at: nullable(instant),
+  version: str,
 });
 
 /** Go: traegerportal.TraegerInvitationResponse */
@@ -105,21 +107,7 @@ export interface TraegerInviteRequest {
 /** Go: traegerportal.TraegerRolesRequest */
 export interface TraegerRolesRequest {
   roles?: string[] | null;
-}
-
-/** Query of GET /traeger/accounts/export */
-export interface GetTraegerAccountsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/accounts/history */
-export interface GetTraegerAccountsHistoryQuery {
-  before?: string;
-}
-
-/** Query of GET /traeger/accounts/history/export */
-export interface GetTraegerAccountsHistoryExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
+  expected_version?: string;
 }
 
 export const routes = {
@@ -145,21 +133,27 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/accounts/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/accounts/history": {
     method: "GET",
     pattern: "/traeger/accounts/history",
     portals: ["org"],
-    query: ["before"],
+    query: {
+      "before": { kind: "id" },
+    },
     response: success(TraegerHistoryResponseSchema),
   },
   "GET /traeger/accounts/history/export": {
     method: "GET",
     pattern: "/traeger/accounts/history/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "POST /traeger/accounts/invitations": {

@@ -27,18 +27,19 @@ type managedRoleRow struct {
 	IsSystem      bool      `bun:"is_system"`
 	BaseRole      *string   `bun:"base_role"`
 	SchoolPortal  bool      `bun:"school_portal"`
+	TraegerRoleID *int64    `bun:"traeger_role_id"`
 	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
 	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 func managedRoleRecord(role domain.ManagedRole) managedRoleRow {
 	return managedRoleRow{ID: role.ID, TenantID: role.TenantID, Name: role.Name, Description: role.Description,
-		IsSystem: role.IsSystem, BaseRole: role.BaseRole, SchoolPortal: role.SchoolPortal, CreatedAt: role.CreatedAt, UpdatedAt: role.UpdatedAt}
+		IsSystem: role.IsSystem, BaseRole: role.BaseRole, SchoolPortal: role.SchoolPortal, TraegerRoleID: role.TraegerRoleID, CreatedAt: role.CreatedAt, UpdatedAt: role.UpdatedAt}
 }
 
 func (role managedRoleRow) domain() domain.ManagedRole {
 	return domain.ManagedRole{ID: role.ID, TenantID: role.TenantID, Name: role.Name, Description: role.Description,
-		IsSystem: role.IsSystem, BaseRole: role.BaseRole, SchoolPortal: role.SchoolPortal, CreatedAt: role.CreatedAt, UpdatedAt: role.UpdatedAt}
+		IsSystem: role.IsSystem, BaseRole: role.BaseRole, SchoolPortal: role.SchoolPortal, TraegerRoleID: role.TraegerRoleID, CreatedAt: role.CreatedAt, UpdatedAt: role.UpdatedAt}
 }
 
 func (s *RoleStore) CreateRole(ctx context.Context, role domain.ManagedRole) (domain.ManagedRole, error) {
@@ -114,20 +115,32 @@ func (s *RoleStore) FindSystemRoleByName(ctx context.Context, name string) (doma
 	return row.domain(), true, nil
 }
 
-func (s *RoleStore) UpdateRole(ctx context.Context, role domain.ManagedRole) error {
+func (s *RoleStore) UpdateRole(ctx context.Context, role domain.ManagedRole) (domain.ManagedRole, error) {
 	if err := role.Validate(); err != nil {
-		return err
+		return domain.ManagedRole{}, err
 	}
 	db, err := s.database(ctx)
 	if err != nil {
-		return err
+		return domain.ManagedRole{}, err
 	}
 	row := managedRoleRecord(role)
-	// The template sets school_portal once at creation (#4574); an edit keeps it.
-	query := db.NewUpdate().Model(&row).ModelTableExpr("auth.roles AS role").ExcludeColumn("school_portal").Where("role.id = ?", role.ID)
+	// An edit writes the master data only: the template sets school_portal
+	// once at creation (#4574), and updated_at is the trigger's
+	// (update_roles_updated_at), which the answer returns as the role's
+	// read-state token (ADR 0311).
+	query := db.NewUpdate().Model(&row).ModelTableExpr("auth.roles AS role").
+		Column("name", "description", "base_role").Where("role.id = ?", role.ID).
+		Returning("id, tenant_id, name, description, is_system, base_role, school_portal, created_at, updated_at")
 	query = scopeTenantQuery(s.scope(ctx), query, "role.tenant_id = ?")
 	result, err := query.Exec(ctx)
-	return roleMutationResult(result, roleNameConflict(err))
+	if errors.Is(err, sql.ErrNoRows) {
+		// No row of the tenant matched: a returning update scans none.
+		return domain.ManagedRole{}, domain.ErrRoleNotFound
+	}
+	if err := roleMutationResult(result, roleNameConflict(err)); err != nil {
+		return domain.ManagedRole{}, err
+	}
+	return row.domain(), nil
 }
 
 // roleNameIndexes are the unique indexes on a role's name: per school for a

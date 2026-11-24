@@ -67,7 +67,7 @@ async function refetch(reload: () => void) {
 
 beforeEach(() => {
   sessionState.data = {
-    user: { id: "A", orgId: 7, scope: "org" },
+    user: { id: "A", orgId: "7", scope: "org" },
     expires: "2099-01-01",
   } as Session;
   fetchFigures.mockReset().mockResolvedValue(CONFIRMED);
@@ -280,7 +280,7 @@ describe("a refusal per key, for every reader (invariant 4)", () => {
     // Another account signs in; its first read fails without a refusal.
     fetchFigures.mockRejectedValue(new ApiError("unavailable", 503));
     sessionState.data = {
-      user: { id: "B", orgId: 7, scope: "org" },
+      user: { id: "B", orgId: "7", scope: "org" },
       expires: "2099-01-01",
     } as Session;
     view.rerender();

@@ -1,5 +1,6 @@
 "use client";
 
+import type { PublicPhase } from "~/lib/contract/shared.generated";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 
@@ -10,7 +11,9 @@ import { Button } from "~/components/ui/button";
  * Anschlussphase. Ohne begonnene Phase gibt es keine betreuten Kinder.
  */
 export function extendsRunningPhase(
-  saved: Readonly<{ service_start_date: string; service_end_date: string }>,
+  saved: Readonly<
+    Required<Pick<PublicPhase, "service_start_date" | "service_end_date">>
+  >,
   draftEnd: string,
   today: string,
 ): boolean {

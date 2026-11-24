@@ -64,26 +64,6 @@ func (s *service) CreateRoom(ctx context.Context, room *facilitiesModule.Room) e
 	return nil
 }
 
-func (s *service) UpdateRoom(ctx context.Context, room *facilitiesModule.Room) error {
-	if room == nil {
-		return wrap("update room", errors.New("room cannot be nil"))
-	}
-	updated, err := s.config.Rooms.UpdateRoom(ctx, facilitiesModule.UpdateRoom{
-		ID: room.ID, Name: room.Name, Building: room.Building, Floor: room.Floor,
-		Capacity: room.Capacity, Category: room.Category, Color: room.Color,
-		// Callers of this legacy bridge hand over a whole room they loaded
-		// first, so the value they hold is passed back explicitly. Sending nil
-		// would make every save through this path skip the column instead of
-		// preserving what the caller actually has.
-		IsOpenRoom: &room.IsOpenRoom,
-	})
-	if err != nil {
-		return wrap("update room", err)
-	}
-	*room = updated
-	return nil
-}
-
 func (s *service) ListRooms(ctx context.Context) ([]RoomWithOccupancy, error) {
 	rooms, err := s.config.Rooms.ListRooms(ctx, facilitiesModule.RoomFilter{})
 	if err != nil {

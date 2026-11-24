@@ -45,10 +45,25 @@ func TestSettingsStartPageRoutesStoreWhatTheyAnswer(t *testing.T) {
 	require.Equal(t, http.StatusOK, response.StatusCode)
 	assert.Equal(t, map[string]any{"section.birthdays": false}, read()["overrides"])
 
+	read0 := read()["policies_version"]
+	require.NotEmpty(t, read0, "the layout read carries the prescription's version")
 	response = send(http.MethodPut, "/api/settings/home-layout/policies", map[string]any{
-		"policies": map[string]string{"section.staff_notices": "required"},
+		"policies":         map[string]string{"section.staff_notices": "required"},
+		"expected_version": read0,
 	})
 	require.Equal(t, http.StatusOK, response.StatusCode)
+	// That read is outdated now (ADR 0311): the school's prescription stays.
+	response = send(http.MethodPut, "/api/settings/home-layout/policies", map[string]any{
+		"policies":         map[string]string{"section.staff_notices": "disabled"},
+		"expected_version": read0,
+	})
+	require.Equal(t, http.StatusConflict, response.StatusCode)
+	var refusal struct {
+		Code string `json:"code"`
+	}
+	require.NoError(t, json.NewDecoder(response.Body).Decode(&refusal))
+	_ = response.Body.Close()
+	assert.Equal(t, "general.changed_since_read", refusal.Code)
 	response = send(http.MethodDelete, "/api/settings/home-layout", nil)
 	require.Equal(t, http.StatusNoContent, response.StatusCode)
 	layout := read()

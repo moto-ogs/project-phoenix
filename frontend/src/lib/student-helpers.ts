@@ -3,6 +3,7 @@
 // the Heimweg plan in departure-plan.ts.
 
 import { schoolClassLabel } from "./school-class-label";
+import type { Pagination } from "~/lib/contract/runtime";
 import type { AttendanceActor } from "~/lib/attendance-actor";
 import type {
   CompanionExtensionConfirmation,
@@ -45,6 +46,8 @@ export type StudentConsent = ConsentRecord;
 export interface PrivacyConsent {
   accepted: boolean;
   dataRetentionDays: number;
+  /** The version of a child's stored consent read; defaults carry none. */
+  version?: string;
 }
 
 /** Die Zeile, mit der eine OGS-Ansicht einen Hinweis der Lehrkraft zeigt. */
@@ -139,7 +142,7 @@ type StudentWireFields = Partial<
       "departure_label" | "departure_is_exception"
     >
   > &
-  // Write-only claims of a departure-plan save (409 `students.companions_changed`).
+  // Write-only claims of a departure-plan save (409 `general.changed_since_read`).
   Pick<
     studentsContract.UpdateStudentRequest,
     "companions_fingerprint" | "extend_companion_plans"
@@ -175,6 +178,12 @@ export type Student = StudentCore &
     // The detail read's privacy_consent, flattened for form handling.
     privacy_consent_accepted?: boolean;
     data_retention_days?: number | null;
+    /** Write-only: the version of the consent read the form shows; a save of
+     *  the consent sends it back (ADR 0311). */
+    privacy_consent_version?: string;
+    /** The version of the master data the detail read showed (write access
+     *  only); a form save sends it back as expected_version (ADR 0311). */
+    version?: string;
     /** Answer of the create only: false when the child was created but the
      *  consent the form changed could not be saved (#5970). */
     privacy_consent_saved?: false;
@@ -193,12 +202,7 @@ export type Student = StudentCore &
 /** One page of a student list. */
 export interface StudentPage {
   data: Student[];
-  pagination: {
-    current_page: number;
-    page_size: number;
-    total_pages: number;
-    total_records: number;
-  };
+  pagination: Pagination;
 }
 
 /**
@@ -226,6 +230,12 @@ export interface EnrollmentAnswerFilter {
   readonly options: ReadonlyArray<{
     readonly value: string;
     readonly label: string;
+    /** Children the unfiltered list shows for the day with this answer. */
     readonly count: number;
+    /**
+     * The same children by ID, so the list counts the answer against its
+     * other filters (#7645).
+     */
+    readonly studentIds: readonly string[];
   }>;
 }

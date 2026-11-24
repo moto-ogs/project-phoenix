@@ -21,7 +21,7 @@ func TestGuardianPaymentAccessAuditSurvivesCallerRollback(t *testing.T) {
 	profile := testpkg.CreateTestGuardianProfile(t, db, "audited-failure")
 	actor := testpkg.CreateTestAccount(t, db, fmt.Sprintf("bank-audit-%d@example.test", testpkg.Tenant(t)))
 	require.NoError(t, testpkg.TenantCommand4(t, ctx, db, service.UpdateGuardianPayment, profile.ID,
-		peoplePorts.GuardianPaymentInput{IBAN: strPtr("DE89370400440532013000")}, actor.ID, ""))
+		peoplePorts.GuardianPaymentInput{ExpectedVersion: paymentVersion(t, ctx, db, service, profile.ID), IBAN: strPtr("DE89370400440532013000")}, actor.ID, ""))
 	_, err := db.NewRaw(`UPDATE users.guardian_financial_data SET iban_sealed = ? WHERE guardian_profile_id = ?`,
 		[]byte("damaged IBAN"), profile.ID).Exec(ctx)
 	require.NoError(t, err)
@@ -64,7 +64,7 @@ func TestGuardianPaymentIsStoredSealedAndOpensOnlyInItsOwnRow(t *testing.T) {
 	write := func(t *testing.T, profileID int64, value, name string) {
 		t.Helper()
 		require.NoError(t, testpkg.TenantCommand4(t, ctx, db, service.UpdateGuardianPayment, profileID,
-			peoplePorts.GuardianPaymentInput{IBAN: strPtr(value), AccountHolder: strPtr(name)}, 1, ""))
+			peoplePorts.GuardianPaymentInput{ExpectedVersion: paymentVersion(t, ctx, db, service, profileID), IBAN: strPtr(value), AccountHolder: strPtr(name)}, 1, ""))
 	}
 
 	owner := testpkg.CreateTestGuardianProfile(t, db, "sealed-owner")
@@ -133,7 +133,7 @@ func TestGuardianPaymentIsStoredSealedAndOpensOnlyInItsOwnRow(t *testing.T) {
 		scope := testpkg.NewTenantScope(t, db)
 		foreign := testpkg.CreateTestGuardianProfileForTenant(t, db, scope.TenantID, "Sealed", "Foreign", "sealed-foreign@example.invalid")
 		require.NoError(t, testpkg.TenantCommand4(t, scope.Context(), db, service.UpdateGuardianPayment, foreign.ID,
-			peoplePorts.GuardianPaymentInput{IBAN: strPtr("DE84120300000000203000")}, 1, ""))
+			peoplePorts.GuardianPaymentInput{ExpectedVersion: paymentVersion(t, scope.Context(), db, service, foreign.ID), IBAN: strPtr("DE84120300000000203000")}, 1, ""))
 		copyInto(t, foreign.ID, "iban_sealed", row.IBANSealed)
 		_, err := testpkg.TenantQuery3(t, scope.Context(), db, service.RevealGuardianPayment, foreign.ID, int64(1), "admin")
 		assertNoValue(t, err)
@@ -154,7 +154,7 @@ func TestGuardianPaymentWriteLogsNoBankValue(t *testing.T) {
 	testpkg.NewDatabase(t, db).LogQueries(slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelDebug})))
 	const holder = "Quirin Kontoinhaberlog"
 	require.NoError(t, testpkg.TenantCommand4(t, scope.Context(), db, service.UpdateGuardianPayment, profile.ID,
-		peoplePorts.GuardianPaymentInput{IBAN: strPtr("DE89370400440532013000"), AccountHolder: strPtr(holder)}, 1, ""))
+		peoplePorts.GuardianPaymentInput{ExpectedVersion: paymentVersion(t, scope.Context(), db, service, profile.ID), IBAN: strPtr("DE89370400440532013000"), AccountHolder: strPtr(holder)}, 1, ""))
 	plain, err := testpkg.TenantQuery3(t, scope.Context(), db, service.RevealGuardianPayment, profile.ID, int64(1), "admin")
 	require.NoError(t, err)
 	require.Equal(t, holder, *plain.AccountHolder)

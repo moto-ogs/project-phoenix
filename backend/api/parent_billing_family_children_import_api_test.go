@@ -66,12 +66,12 @@ func TestFamilyChildrenImportAddsTheNumbersOfAFile(t *testing.T) {
 	// Ida and Max are siblings with one address.
 	_, err = f.db.ExecContext(ctx, `UPDATE care_contract.contract_parties SET email = 'ida.max@example.org' WHERE contract_id IN (?, ?)`, ida, max)
 	require.NoError(t, err)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	f.saveRule(t, careRule("sibling", "Geschwister mit Familie", []int64{school},
 		map[string]any{"sibling_from_child": 2, "discount_basis_points": 5000, "counts_family_children": true}))
 	for contractID, children := range map[int64]int{noah: 2, lia: 3} {
-		rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(contractID, children, "2026-09-01"))
+		rec = confirmFamily(t, f.traeger, f.office.token, familyChildren(contractID, children, "2026-09-01"))
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
 
@@ -104,7 +104,7 @@ func TestFamilyChildrenImportAddsTheNumbersOfAFile(t *testing.T) {
 	// distinct from the first day of the contracts.
 	const provenFrom = "2027-07-01"
 	fields := map[string]string{"mapping": fmt.Sprintf(`{"columns":{"child_first_name":"Vorname","child_last_name":"Nachname",
-		"children":"Anzahl der Kinder in der Familie unter 18 Jahren"},"school_id":%d,"valid_from":%q}`, school, provenFrom)}
+		"children":"Anzahl der Kinder in der Familie unter 18 Jahren"},"school_id":"%d","valid_from":%q}`, school, provenFrom)}
 	rec = importForm(t, f.traeger, f.office.token, familyImportPreviewPath, "kinderzahl.csv", content, fields)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	preview := decodeSchoolPortalData[familyImportBody](t, rec.Body.Bytes())
@@ -197,12 +197,12 @@ func TestFamilyChildrenImportIsCheckedAndNeedsTheRight(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), "parent_billing.family_children_import_mapping_invalid")
 	// A mistyped year is no day the numbers count from.
 	rec = importForm(t, f.traeger, f.office.token, familyImportPreviewPath, "kinderzahl.csv", file, map[string]string{"mapping": fmt.Sprintf(
-		`{"columns":{"child_first_name":"Vorname","child_last_name":"Nachname","children":"Kinderzahl"},"school_id":%d,"valid_from":"0026-12-01"}`, school)})
+		`{"columns":{"child_first_name":"Vorname","child_last_name":"Nachname","children":"Kinderzahl"},"school_id":"%d","valid_from":"0026-12-01"}`, school)})
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.family_children_import_mapping_invalid")
 	// A school of another Träger is no school of the file.
 	rec = importForm(t, f.traeger, f.office.token, familyImportPreviewPath, "kinderzahl.csv", file,
-		map[string]string{"mapping": `{"columns":{"child_first_name":"Vorname","child_last_name":"Nachname","children":"Kinderzahl"},"school_id":999999999}`})
+		map[string]string{"mapping": `{"columns":{"child_first_name":"Vorname","child_last_name":"Nachname","children":"Kinderzahl"},"school_id":"999999999"}`})
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 
 	// A file without a column for the number names the gap and reads no row;
@@ -219,7 +219,7 @@ func TestFamilyChildrenImportIsCheckedAndNeedsTheRight(t *testing.T) {
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Kinderzahl Datei Fremd", identityaccess.TraegerRoleBilling)
 	testpkg.OwnTraegerCareContracts(t, f.db, foreign.organization)
 	rec = importForm(t, f.traeger, foreign.token, familyImportPreviewPath, "kinderzahl.csv", file, map[string]string{"mapping": fmt.Sprintf(
-		`{"columns":{"child_first_name":"Vorname","child_last_name":"Nachname","children":"Kinderzahl"},"school_id":%d}`, foreign.schools[0])})
+		`{"columns":{"child_first_name":"Vorname","child_last_name":"Nachname","children":"Kinderzahl"},"school_id":"%d"}`, foreign.schools[0])})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	other := decodeSchoolPortalData[familyImportBody](t, rec.Body.Bytes())
 	require.Len(t, other.Rows, 1)

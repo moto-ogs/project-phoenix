@@ -31,8 +31,8 @@ func TestSEPAMandateImportTakesOverDebtorNumbersPerFamily(t *testing.T) {
 	lia := careContract(t, f.db, f.office.organization, school, "Lia", careMonth, sjrServices()...)
 	ben := careContract(t, f.db, f.office.organization, school, "Ben", careMonth, sjrServices()...)
 	saveCreditor(t, f, map[string]any{"creditor_id": sepaCreditorID, "prenotification_days": 14, "missing_mandate": "transfer"})
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath,
-		map[string]any{"contract_id": lia, "recipient_kind": "applicant", "debtor_number": "30 0001"})
+	rec := putFamilyBilling(t, f.traeger, f.office.token,
+		map[string]any{"contract_id": fmt.Sprint(lia), "recipient_kind": "applicant", "debtor_number": "30 0001"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	csv := strings.Join([]string{

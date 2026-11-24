@@ -7,10 +7,13 @@
 import { HolidayCriteriaEditor } from "~/components/traeger/holiday-criteria-editor";
 import { useTraegerHolidayCriteria } from "~/components/traeger/use-traeger-resources";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { revalidateOrThrow } from "~/lib/swr";
 import { traegerPath } from "~/lib/traeger-url";
 
 export default function TraegerHolidayCriteriaPage() {
-  const { data: criteria, loadError, mutate } = useTraegerHolidayCriteria();
+  const read = useTraegerHolidayCriteria();
+  const { data, loadError, mutate } = read;
+  const criteria = data?.criteria;
   const active = criteria?.filter((criterion) => criterion.active).length ?? 0;
 
   return (
@@ -45,10 +48,15 @@ export default function TraegerHolidayCriteriaPage() {
       error={loadError}
       loading={!loadError && !criteria}
     >
-      {criteria ? (
+      {data ? (
         <HolidayCriteriaEditor
-          criteria={criteria}
-          onSaved={(saved) => void mutate(saved, { revalidate: false })}
+          source={{
+            opening: "criteria",
+            data,
+            // Reads the criteria again and rejects when that fails.
+            reload: () => revalidateOrThrow(read),
+            write: (stored) => mutate(stored, { revalidate: false }),
+          }}
         />
       ) : null}
     </TenantPage>

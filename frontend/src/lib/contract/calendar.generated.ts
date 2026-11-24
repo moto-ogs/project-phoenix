@@ -4,6 +4,7 @@ import {
   arr,
   calendarDate,
   fileAnswer,
+  int64String,
   nullable,
   object,
   optional,
@@ -79,7 +80,7 @@ export interface StaffOption {
 }
 
 export const StaffOptionSchema: z.ZodType<StaffOption, unknown> = object<StaffOption>({
-  id: str,
+  id: int64String,
   name: str,
 });
 
@@ -90,7 +91,7 @@ export interface ParentOption {
 }
 
 export const ParentOptionSchema: z.ZodType<ParentOption, unknown> = object<ParentOption>({
-  id: str,
+  id: int64String,
   name: str,
 });
 
@@ -101,7 +102,7 @@ export interface GroupOption {
 }
 
 export const GroupOptionSchema: z.ZodType<GroupOption, unknown> = object<GroupOption>({
-  id: str,
+  id: int64String,
   name: str,
 });
 
@@ -114,10 +115,10 @@ export interface StudentOption {
 }
 
 export const StudentOptionSchema: z.ZodType<StudentOption, unknown> = object<StudentOption>({
-  id: str,
+  id: int64String,
   name: str,
   school_class: optional(str),
-  group_id: optional(str),
+  group_id: optional(int64String),
 });
 
 /** Go: portal.RecipientOptions */
@@ -184,23 +185,7 @@ export interface updateAppointmentRequest {
   overview_visibility?: string;
   recurrence?: RecurrenceRequest | null;
   send_email?: boolean | null;
-}
-
-/** Query of GET /api/calendar/appointments/{appointmentId}/overview */
-export interface GetCalendarAppointmentsAppointmentIdOverviewQuery {
-  occurrence_date?: string;
-}
-
-/** Query of GET /api/calendar/my */
-export interface GetCalendarMyQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/calendar/recipient-options */
-export interface GetCalendarRecipientOptionsQuery {
-  limit?: number;
-  q?: string;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -232,7 +217,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/calendar/appointments/{appointmentId}/overview",
     portals: ["tenant"],
-    query: ["occurrence_date"],
+    query: {
+      "occurrence_date": { kind: "date" },
+    },
     response: success(AppointmentOverviewSchema),
   },
   "GET /api/calendar/feed": {
@@ -245,14 +232,20 @@ export const routes = {
     method: "GET",
     pattern: "/api/calendar/my",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(StaffCalendarResponseSchema),
   },
   "GET /api/calendar/recipient-options": {
     method: "GET",
     pattern: "/api/calendar/recipient-options",
     portals: ["tenant"],
-    query: ["limit", "q"],
+    query: {
+      "limit": { kind: "int" },
+      "q": { kind: "string" },
+    },
     response: success(RecipientOptionsSchema),
   },
   "POST /api/calendar/appointments": {

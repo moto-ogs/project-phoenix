@@ -26,13 +26,16 @@ import {
 import { useApiFormError } from "~/contexts/ToastContext";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR } from "~/lib/swr";
+import { ApiError, isReadStateRefusal } from "~/lib/api-error";
+import { useSWRAuth } from "~/lib/swr";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import {
   createGradeTransition,
   fetchSuggestedMappings,
   fetchTransitionClasses,
+  NOT_DRAFT_CODE,
   updateGradeTransition,
   type GradeTransition,
   type MappingInput,
@@ -94,30 +97,105 @@ interface TransitionEditorProps {
   readonly existingDraft: GradeTransition | null;
   readonly onClose: () => void;
   readonly onReadyForPreview: (transition: GradeTransition) => void;
+  /**
+   * Reads the saved draft again after a save refused as changed since it was
+   * read (ADR 0311); rejects when the read fails. A draft still open comes
+   * back as `existingDraft` too.
+   */
+  readonly reload?: () => Promise<GradeTransition>;
+  /**
+   * A colleague applied the draft meanwhile (`grade_transition.not_draft`):
+   * the caller closes the editor and shows `error` with the stored state.
+   */
+  readonly onNoLongerDraft?: (error: unknown) => void;
 }
+
+/** What the editor edits. */
+interface EditorDraft {
+  readonly academicYear: string;
+  readonly notes: string;
+  readonly rows: EditorRow[];
+}
+
+function draftOf(transition: GradeTransition): EditorDraft {
+  return {
+    academicYear: transition.academicYear,
+    notes: transition.notes ?? "",
+    rows: rowsFromTransition(transition),
+  };
+}
+
+const isNotDraft = (error: unknown) =>
+  error instanceof ApiError && error.code === NOT_DRAFT_CODE;
 
 export function TransitionEditor({
   existingDraft,
   onClose,
   onReadyForPreview,
+  reload,
+  onNoLongerDraft,
 }: TransitionEditorProps) {
-  const [academicYear, setAcademicYear] = useState(
-    existingDraft?.academicYear ??
-      suggestAcademicYear(parseISODate(berlinTodayISO())),
+  // A saved draft rests on its version (ADR 0311): a newer read refills it
+  // only while untouched, after a refusal the stored draft shows, and
+  // nothing is sent until it is read.
+  const saved = useDraftOn<
+    GradeTransition,
+    EditorDraft,
+    string,
+    GradeTransition
+  >(
+    {
+      opening: existingDraft?.id ?? null,
+      data: existingDraft ?? undefined,
+      reload: () =>
+        reload
+          ? reload()
+          : Promise.reject(new Error("draft cannot be read again")),
+    },
+    {
+      token: (transition) => transition.version,
+      toDraft: draftOf,
+      isRefusal: (error) => isReadStateRefusal(error) || isNotDraft(error),
+      answer: (transition) => transition,
+    },
   );
-  const [notes, setNotes] = useState(existingDraft?.notes ?? "");
-  // The draft is local state and never written into the cache. Until the
-  // first change it waits for this opening’s fresh suggestions; the first
-  // change copies them, so a later refresh never replaces an edit.
-  // A saved draft starts from its own mappings and reads no suggestions.
-  const [draftRows, setDraftRows] = useState<EditorRow[] | null>(
-    existingDraft ? rowsFromTransition(existingDraft) : null,
+  // A new transition: local state, never written into the cache. Until the
+  // first change it follows the suggestions (cached, read again on
+  // opening); the first change copies them, so a later refresh never
+  // replaces an edit. A saved draft reads no suggestions.
+  const [newYear, setNewYear] = useState(() =>
+    suggestAcademicYear(parseISODate(berlinTodayISO())),
   );
+  const [newNotes, setNewNotes] = useState("");
+  const [newRows, setNewRows] = useState<EditorRow[] | null>(null);
+  const savedDraft = existingDraft
+    ? (saved.draft ?? draftOf(existingDraft))
+    : null;
+  const academicYear = savedDraft?.academicYear ?? newYear;
+  const notes = savedDraft?.notes ?? newNotes;
+  const draftRows = savedDraft ? savedDraft.rows : newRows;
+  const setAcademicYear = (value: string) =>
+    existingDraft
+      ? saved.setDraft((current) => ({ ...current, academicYear: value }))
+      : setNewYear(value);
+  const setNotes = (value: string) =>
+    existingDraft
+      ? saved.setDraft((current) => ({ ...current, notes: value }))
+      : setNewNotes(value);
+  const setDraftRows = (
+    update: (current: EditorRow[] | null) => EditorRow[],
+  ) =>
+    existingDraft
+      ? saved.setDraft((current) => ({
+          ...current,
+          rows: update(current.rows),
+        }))
+      : setNewRows(update);
   const {
     data: suggestions,
     error: suggestionsError,
     mutate: reloadSuggestions,
-  } = useFreshSWR(
+  } = useSWRAuth(
     existingDraft ? null : tenantAdminKeys.gradeTransitionSuggestions(),
     fetchSuggestedMappings,
   );
@@ -147,7 +225,7 @@ export function TransitionEditor({
   // added back (the suggestions are only the initial proposal). Bewusst still
   // bei einem Fehler: die Liste dient nur dem Wieder-Hinzufügen einer
   // entfernten Zeile. Die Vorschläge und das Speichern gehen ohne sie.
-  const { data: allClasses = NO_CLASSES } = useFreshSWR(
+  const { data: allClasses = NO_CLASSES } = useSWRAuth(
     tenantAdminKeys.gradeTransitionClasses(),
     fetchTransitionClasses,
   );
@@ -209,6 +287,7 @@ export function TransitionEditor({
 
   const handleContinue = async () => {
     if (validationError || !rows) return;
+    if (existingDraft && !saved.canSubmit) return;
     await save.run(async (op) => {
       clearSaveError();
 
@@ -217,36 +296,58 @@ export function TransitionEditor({
         toClass: row.mode === "graduate" ? null : row.toClass.trim(),
       }));
 
-      try {
-        const transition = existingDraft
-          ? await updateGradeTransition(existingDraft.id, {
+      const result = existingDraft
+        ? await saved.submit((version) =>
+            updateGradeTransition(existingDraft.id, {
+              expectedVersion: version,
               academicYear,
-              // Send the raw value (including "") so clearing the field actually
-              // removes the stored note instead of leaving the old one in place.
+              // Send the raw value (including "") so clearing the field
+              // actually removes the stored note instead of leaving the old
+              // one in place.
               notes,
               mappings,
-            })
-          : await createGradeTransition({
-              academicYear,
-              notes: notes || undefined,
-              mappings,
-            });
+            }),
+          )
+        : await createGradeTransition({
+            academicYear,
+            notes: notes || undefined,
+            mappings,
+          }).then(
+            (transition) => ({ ok: true, saved: transition }) as const,
+            (error: unknown) =>
+              ({
+                ok: false,
+                error,
+                refused: false,
+                reload: undefined,
+              }) as const,
+          );
+      if (result.ok) {
         // A late answer must not switch a closed editor to the preview.
-        if (op.isCurrent()) onReadyForPreview(transition);
-      } catch (error) {
-        logger.error("draft_save_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-        // Protokolliert; eine späte Ablehnung zeigt kein neuerer Vorgang.
-        if (!op.isCurrent()) return;
-        // grade_transition.not_draft (jemand hat den Entwurf inzwischen
-        // angewendet) erklärt der Katalog; Wiederholen bietet er nur bei
-        // Server- und Verbindungsfehlern an (#405 review).
-        void showSaveError(error, {
-          object: "das Speichern des Entwurfs",
-          retry: () => latestContinueRef.current(),
-        });
+        if (op.isCurrent()) onReadyForPreview(result.saved);
+        return;
       }
+      const error = result.error;
+      logger.error("draft_save_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Protokolliert; eine späte Ablehnung zeigt kein neuerer Vorgang.
+      if (!op.isCurrent()) return;
+      // Jemand hat den Entwurf inzwischen angewendet: kein Entwurf mehr zum
+      // Bearbeiten, der Aufrufer schließt den Editor.
+      if (isNotDraft(error) && onNoLongerDraft) {
+        onNoLongerDraft(error);
+        return;
+      }
+      // Hat jemand den Entwurf seit dem Öffnen gespeichert, zeigt `reload`
+      // dessen Stand; gespeichert wird erst eine neue Bearbeitung
+      // (ADR 0311). Wiederholen bietet der Fehlerweg nur bei Server- und
+      // Verbindungsfehlern an.
+      void showSaveError(error, {
+        object: "das Speichern des Entwurfs",
+        retry: () => latestContinueRef.current(),
+        reload: result.reload,
+      });
     });
   };
 
@@ -420,10 +521,22 @@ export function TransitionEditor({
             type="button"
             size="md"
             onClick={handleContinue}
-            disabled={Boolean(validationError) || save.pending || !rows}
+            disabled={
+              Boolean(validationError) ||
+              save.pending ||
+              !rows ||
+              (existingDraft !== null && !saved.canSubmit)
+            }
             tooltip="Speichert den Entwurf und zeigt, welche Kinder wohin wechseln."
             disabledReason={
-              save.pending || !rows ? undefined : (validationError ?? undefined)
+              save.pending || !rows
+                ? undefined
+                : (validationError ??
+                  (existingDraft !== null && !saved.canSubmit
+                    ? saved.status === "loadFailed"
+                      ? "Lade zuerst den gespeicherten Entwurf neu."
+                      : "Der gespeicherte Entwurf wird geladen."
+                    : undefined))
             }
           >
             {save.pending ? "Speichern …" : "Weiter zur Vorschau"}

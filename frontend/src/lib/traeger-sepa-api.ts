@@ -50,6 +50,8 @@ export interface SepaCreditor {
   /** undefined: a choice this build does not know. */
   readonly missingMandate: MissingMandate | undefined;
   readonly updatedAt: string | null;
+  /** The read-state token a change sends back (ADR 0311). */
+  readonly version: string;
 }
 
 export interface SepaMandate {
@@ -115,6 +117,7 @@ function creditorFromBackend(
     prenotificationDays: creditor.prenotification_days,
     missingMandate: knownEnum(MISSING_MANDATE_VALUES, creditor.missing_mandate),
     updatedAt: creditor.updated_at,
+    version: creditor.version,
   };
 }
 
@@ -151,15 +154,20 @@ export async function fetchSepaCreditor(): Promise<SepaCreditor> {
   );
 }
 
-export async function saveSepaCreditor(creditor: {
-  readonly creditorId: string;
-  readonly prenotificationDays: number;
-  readonly missingMandate: MissingMandate;
-}): Promise<SepaCreditor> {
+/** Stores the creditor from the `version` it was read at (ADR 0311). */
+export async function saveSepaCreditor(
+  creditor: {
+    readonly creditorId: string;
+    readonly prenotificationDays: number;
+    readonly missingMandate: MissingMandate;
+  },
+  version: string,
+): Promise<SepaCreditor> {
   const body: traegerSepaCreditorContract.SEPACreditorRequest = {
     creditor_id: creditor.creditorId.trim(),
     prenotification_days: creditor.prenotificationDays,
     missing_mandate: creditor.missingMandate,
+    expected_version: version,
   };
   return creditorFromBackend(
     await bffJson("org", "PUT /traeger/sepa-creditor/", { body }),

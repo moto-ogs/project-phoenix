@@ -27,6 +27,7 @@ export interface TraegerStaffProofType {
   mandatory: boolean;
   archived: boolean;
   police_certificate: boolean;
+  version: string;
 }
 
 export const TraegerStaffProofTypeSchema: z.ZodType<TraegerStaffProofType, unknown> = object<TraegerStaffProofType>({
@@ -38,6 +39,7 @@ export const TraegerStaffProofTypeSchema: z.ZodType<TraegerStaffProofType, unkno
   mandatory: bool,
   archived: bool,
   police_certificate: bool,
+  version: str,
 });
 
 /** Go: workforce.TraegerStaffProofEntry */
@@ -130,6 +132,7 @@ export interface ProofTypeRequest {
   reminder_lead_weeks?: number | null;
   mandatory?: boolean;
   archived?: boolean;
+  expected_version?: string;
 }
 
 /** Go: traegerstaff.ProofRequest */
@@ -145,11 +148,6 @@ export interface ProofMappingRequest {
   school_id?: string;
   school_type_id?: string;
   proof_type_id?: string | null;
-}
-
-/** Query of GET /traeger/staff-proofs/export */
-export interface GetTraegerStaffProofsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
 }
 
 export const routes = {
@@ -169,7 +167,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/staff-proofs/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/staff-proofs/school-kinds": {

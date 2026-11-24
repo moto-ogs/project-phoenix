@@ -208,8 +208,10 @@ func TestWorkTimeModelRefreshAssignedStaffSchedules_UpdatesCurrentSnapshots(t *t
 
 	// One capability call: the template edit and the assigned-staff refresh
 	// are the same unit of work.
+	read, err := adapterWorkforce(t, db).FindWorkTimeModel(ctx, model.ID)
+	require.NoError(t, err)
 	_, err = adapterWorkforce(t, db).UpdateWorkTimeModel(ctx, workforce.UpdateWorkTimeModel{
-		ID: model.ID,
+		ID: model.ID, ExpectedVersion: workforce.WorkTimeModelVersion(read),
 		WorkTimeModelFields: workforce.WorkTimeModelFields{
 			Name:               model.Name,
 			RotationLength:     1,

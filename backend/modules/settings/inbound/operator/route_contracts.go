@@ -13,9 +13,9 @@ func SchoolRouteContracts(schema any) []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/schema", Portals: operator, Response: schema},
 		{Method: "GET", Pattern: "/values/{key}/reveal", Portals: operator, Response: revealedSettingValue{}},
-		{Method: "PUT", Pattern: "/values/{key}", Portals: operator, RouteFile: purge, Request: setSchoolSettingRequest{}, Response: schoolSettingMutationResponse{},
+		{Method: "PUT", Pattern: "/values/{key}", BrowserPath: "/api/operator/schools/{id}/settings/values/{key}", Portals: operator, RouteFile: purge, Request: setSchoolSettingRequest{}, Response: schoolSettingMutationResponse{},
 			Query: []common.QueryParam{{Name: "force", Kind: common.QueryString, Values: []string{"true"}}}},
-		{Method: "DELETE", Pattern: "/values/{key}", Portals: operator, RouteFile: purge, Response: schoolSettingMutationResponse{}},
+		{Method: "DELETE", Pattern: "/values/{key}", BrowserPath: "/api/operator/schools/{id}/settings/values/{key}", Portals: operator, RouteFile: purge, Response: schoolSettingMutationResponse{}},
 	}
 }
 

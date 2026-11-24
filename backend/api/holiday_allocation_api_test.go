@@ -9,6 +9,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -82,7 +83,7 @@ func newAllocationFixture(t *testing.T, name string) allocationFixture {
 	t.Helper()
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, name, identityaccess.TraegerRoleAdministration)
-	rec := traegerJSON(t, f.traeger, office.token, http.MethodPut, "/traeger/holiday-periods/criteria", map[string]any{"criteria": []map[string]any{
+	rec := saveHolidayCriteria(t, f.traeger, office.token, criteriaVersion(t, f.traeger, office.token), map[string]any{"criteria": []map[string]any{
 		{"name": "Berufstätig", "question": "Sind Sie berufstätig?", "scope": "family", "active": true},
 		{"name": "Geschwister", "question": "Ist ein Geschwisterkind schon in der OGS?", "scope": "child", "active": true},
 		{"name": "Alt", "question": "Nicht mehr gefragt?", "scope": "family", "active": false},
@@ -146,7 +147,7 @@ func (a allocationFixture) decide(t *testing.T, decisions ...map[string]any) *ht
 }
 
 func decision(candidate allocationCandidateBody, placement, reason string) map[string]any {
-	return map[string]any{"booking_id": candidate.BookingID, "placement": placement, "proposal": candidate.Proposal, "reason": reason}
+	return map[string]any{"booking_id": fmt.Sprint(candidate.BookingID), "placement": placement, "proposal": candidate.Proposal, "reason": reason}
 }
 
 func (a allocationFixture) errorCode(t *testing.T, rec *httptest.ResponseRecorder) string {
@@ -299,7 +300,7 @@ func TestHolidayAllocationHoldsFreePlacesForThePendingBookings(t *testing.T) {
 
 	// The existing waiting child has priority over the last pending child.
 	rec = traegerJSON(t, a.traeger, a.office.token, http.MethodPut, a.registrationPath(int64(second.ID), "/criteria"),
-		map[string]any{"checks": []map[string]any{{"criterion_id": a.working, "checked": "yes"}}})
+		map[string]any{"checks": []map[string]any{{"criterion_id": fmt.Sprint(a.working), "checked": "yes"}}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	// A billing failure after promotion must roll back the decision, the
 	// placement, both mails and the contribution in the same transaction.
@@ -338,7 +339,7 @@ func TestHolidayAllocationOfficeCheckCountsBeforeTheStatement(t *testing.T) {
 	assert.Equal(t, late.ID, a.board(t).Weeks[0].Pending[0].RegistrationID)
 
 	rec := traegerJSON(t, a.traeger, a.office.token, http.MethodPut, a.registrationPath(int64(late.ID), "/criteria"),
-		map[string]any{"checks": []map[string]any{{"criterion_id": a.working, "child_id": nil, "checked": "no"}}})
+		map[string]any{"checks": []map[string]any{{"criterion_id": fmt.Sprint(a.working), "child_id": nil, "checked": "no"}}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"checked":"no"`)
 	pending := a.board(t).Weeks[0].Pending
@@ -346,7 +347,7 @@ func TestHolidayAllocationOfficeCheckCountsBeforeTheStatement(t *testing.T) {
 	assert.Equal(t, "office", pending[1].Criteria[0].Source)
 
 	rec = traegerJSON(t, a.traeger, a.office.token, http.MethodPut, a.registrationPath(int64(late.ID), "/criteria"),
-		map[string]any{"checks": []map[string]any{{"criterion_id": a.working, "child_id": nil, "checked": nil}}})
+		map[string]any{"checks": []map[string]any{{"criterion_id": fmt.Sprint(a.working), "child_id": nil, "checked": nil}}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, late.ID, a.board(t).Weeks[0].Pending[0].RegistrationID, "taking the check back restores the statement")
 }
@@ -365,11 +366,11 @@ func TestHolidayAllocationModeAndRights(t *testing.T) {
 	a.submitCriteria(t, "sperre@example.org", true, true)
 
 	body.AllocationMode = "arrival"
-	rec := traegerJSON(t, a.traeger, a.office.token, http.MethodPut, holidayPeriodPath(int64(a.period.ID)), body)
+	rec := putHolidayPeriod(t, a.traeger, a.office.token, holidayPeriodPath(int64(a.period.ID)), body)
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Equal(t, "enrollment.holiday_allocation_mode_locked", a.errorCode(t, rec))
 	body.AllocationMode = "criteria"
-	rec = traegerJSON(t, a.traeger, a.office.token, http.MethodPut, holidayPeriodPath(int64(a.period.ID)), body)
+	rec = putHolidayPeriod(t, a.traeger, a.office.token, holidayPeriodPath(int64(a.period.ID)), body)
 	assert.Equal(t, http.StatusOK, rec.Code, rec.Body.String(), "keeping the mode is no change")
 	assert.True(t, strings.Contains(rec.Body.String(), `"allocation_mode_locked":true`))
 
@@ -503,4 +504,23 @@ func TestHolidayAllocationMailNamesTheTraegerAndTheHostSchool(t *testing.T) {
 	require.Len(t, mail.Children[0].Weeks, 1)
 	assert.Equal(t, "04.01.2027 bis 08.01.2027: "+week.HostSchoolName+", bis 13 Uhr (08:00 bis 13:00 Uhr)", mail.Children[0].Weeks[0],
 		"the week names its host school")
+}
+
+// criteriaVersion reads the version of the criteria the Büro edits.
+func criteriaVersion(t *testing.T, router http.Handler, token string) string {
+	t.Helper()
+	rec := traegerJSON(t, router, token, http.MethodGet, "/traeger/holiday-periods/criteria", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	return decodeSchoolPortalData[struct {
+		Version string `json:"version"`
+	}](t, rec.Body.Bytes()).Version
+}
+
+// saveHolidayCriteria saves the criteria over the version read before, as
+// the criteria page does (ADR 0311).
+func saveHolidayCriteria(t *testing.T, router http.Handler, token, version string, body map[string]any) *httptest.ResponseRecorder {
+	t.Helper()
+	sent := maps.Clone(body)
+	sent["expected_version"] = version
+	return traegerJSON(t, router, token, http.MethodPut, "/traeger/holiday-periods/criteria", sent)
 }

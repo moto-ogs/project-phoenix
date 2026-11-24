@@ -225,6 +225,10 @@ type OperationRosterRow struct {
 	Homework []OperationRosterHomework `json:"homework,omitempty"`
 	// HomeworkFeedback is the child's OGS feedback of that date, if any.
 	HomeworkFeedback *OperationHomeworkFeedback `json:"homework_feedback,omitempty"`
+	// HomeworkFeedbackVersion is the read-state token of that feedback (ADR
+	// 0311), set on a Lernzeit roster also before the first feedback; the
+	// feedback write sends it back as expected_version.
+	HomeworkFeedbackVersion string `json:"homework_feedback_version,omitempty"`
 }
 
 // OperationTeacherHint is a Lehrkraft's hint for the OGS for one day (#4795),

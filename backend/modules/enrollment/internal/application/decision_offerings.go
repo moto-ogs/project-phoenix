@@ -65,7 +65,12 @@ func (d *Decisions) ListChildOfferings(ctx context.Context, requestID int64) (pu
 	linksByChild := offeringLinksByChild(links)
 	out := make(map[int64]enrollmentNative.ChildOfferingSet, len(children))
 	for _, child := range children {
-		out[child.ID] = sets.build(linksByChild[child.ID])
+		set := sets.build(linksByChild[child.ID])
+		set.Version = careplan.BookingsVersion(bookedOfferingsOf(linksByChild[child.ID]))
+		out[child.ID] = set
+	}
+	if err := d.markExtendableBookings(ctx, phase, selectionDate, children, linksByChild, out); err != nil {
+		return nil, err
 	}
 	return out, nil
 }
@@ -112,6 +117,21 @@ func offeringSelectionDateOn(phase *enrollmentNative.Phase, today calendar.Date)
 		return calendar.Date(phase.ServiceEndDate)
 	}
 	return today
+}
+
+// bookedOfferingsOf hands a child's stored selections to Care Plan's
+// bookings token, as Care Plan reads them for its check.
+func bookedOfferingsOf(links []*enrollmentNative.RequestChildOfferingRecord) []careplan.BookedOffering {
+	bookings := make([]careplan.BookedOffering, 0, len(links))
+	for _, link := range links {
+		bookings = append(bookings, careplan.BookedOffering{
+			RequestChildID: link.RequestChildID, CareOfferingID: link.CareOfferingID,
+			SelectedDays: link.SelectedDays, ManualSelectedDays: link.ManualSelectedDays,
+			AutomaticSelectedDays: link.AutomaticSelectedDays,
+			ValidFrom:             link.ValidFrom, ValidUntil: link.ValidUntil,
+		})
+	}
+	return bookings
 }
 
 func offeringLinksByChild(links []*enrollmentNative.RequestChildOfferingRecord) map[int64][]*enrollmentNative.RequestChildOfferingRecord {

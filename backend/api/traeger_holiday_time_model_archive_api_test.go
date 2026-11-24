@@ -5,6 +5,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -52,11 +53,11 @@ func TestArchivingATimeModelNeedsTheRightAndTheTraeger(t *testing.T) {
 	testpkg.CreateTestTraegerMember(t, f.db, f.office.organization, reader.ID, identityaccess.TraegerRoleReadOnly)
 	code, answer := traegerSignIn(t, f.traeger, reader.Email, password, 0)
 	require.Equal(t, http.StatusOK, code)
-	rec := traegerJSON(t, f.traeger, answer.AccessToken, http.MethodPut, holidayPeriodPath(int64(f.period.ID)), archive)
+	rec := putHolidayPeriod(t, f.traeger, answer.AccessToken, holidayPeriodPath(int64(f.period.ID)), archive)
 	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 
 	other := newTraegerOffice(t, f.db, f.traeger, "Träger Archiv Fremd", identityaccess.TraegerRoleAdministration)
-	rec = traegerJSON(t, f.traeger, other.token, http.MethodPut, holidayPeriodPath(int64(f.period.ID)), archive)
+	rec = putHolidayPeriod(t, f.traeger, other.token, holidayPeriodPath(int64(f.period.ID)), archive)
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	code2, _ := registrationRefusalOf(t, rec)
 	assert.Equal(t, "enrollment.holiday_period_not_found", code2)
@@ -64,7 +65,7 @@ func TestArchivingATimeModelNeedsTheRightAndTheTraeger(t *testing.T) {
 	archived, _, _, _ := archivedTimeModel(t, f, int64(booked))
 	assert.False(t, archived, "neither the reading member nor another Träger archived the time model")
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayPeriodPath(int64(f.period.ID)), archive)
+	rec = putHolidayPeriod(t, f.traeger, f.office.token, holidayPeriodPath(int64(f.period.ID)), archive)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	archived, _, _, _ = archivedTimeModel(t, f, int64(booked))
 	assert.True(t, archived, "the Träger-Büro with the right archives it")
@@ -93,7 +94,7 @@ func TestArchivedTimeModelIsNoLongerBookable(t *testing.T) {
 	archive := f.periodWith(t, int64(booked), func(model *holidayTimeModelBody) {
 		model.Archived, model.Name, model.EndsAt = true, "Umbenannt", "11:00"
 	})
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayPeriodPath(int64(f.period.ID)), archive)
+	rec = putHolidayPeriod(t, f.traeger, f.office.token, holidayPeriodPath(int64(f.period.ID)), archive)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	stored := decodeSchoolPortalData[holidayPeriodBody](t, rec.Body.Bytes())
 	require.Equal(t, booked, stored.Weeks[0].TimeModels[0].ID, "the archived time model stays in the period")
@@ -114,14 +115,14 @@ func TestArchivedTimeModelIsNoLongerBookable(t *testing.T) {
 	rec = publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), body)
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "a new registration cannot book the archived time model: %s", rec.Body.String())
 
-	onto := map[string]any{"bookings": []map[string]any{{"week_id": week.ID, "time_model_id": booked}}}
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut,
+	onto := map[string]any{"bookings": []map[string]any{{"week_id": fmt.Sprint(week.ID), "time_model_id": fmt.Sprint(booked)}}}
+	rec = putReadRegistration(t, f.traeger, f.office.token,
 		holidayRebookPath(int64(f.period.ID), f.siblings, int64(lia.ID)), onto)
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "nor does a rebooking onto it: %s", rec.Body.String())
 
 	// Ben keeps his booking on it and gives up the second week.
-	keep := map[string]any{"bookings": []map[string]any{{"week_id": week.ID, "time_model_id": booked}}}
-	f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodPut,
+	keep := map[string]any{"bookings": []map[string]any{{"week_id": fmt.Sprint(week.ID), "time_model_id": fmt.Sprint(booked)}}}
+	f.detail(t, putReadRegistration(t, f.traeger, f.office.token,
 		holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)), keep))
 
 	// A period written without it, or with it no longer archived, keeps it
@@ -134,10 +135,10 @@ func TestArchivedTimeModelIsNoLongerBookable(t *testing.T) {
 		}
 	}
 	without.Weeks[0].TimeModels = rest
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayPeriodPath(int64(f.period.ID)), without)
+	rec = putHolidayPeriod(t, f.traeger, f.office.token, holidayPeriodPath(int64(f.period.ID)), without)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	restore := f.periodWith(t, int64(booked), func(model *holidayTimeModelBody) { model.Archived = false })
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayPeriodPath(int64(f.period.ID)), restore)
+	rec = putHolidayPeriod(t, f.traeger, f.office.token, holidayPeriodPath(int64(f.period.ID)), restore)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	archived, _, _, _ = archivedTimeModel(t, f, int64(booked))
 	assert.True(t, archived, "the archived time model is neither removed nor restored")

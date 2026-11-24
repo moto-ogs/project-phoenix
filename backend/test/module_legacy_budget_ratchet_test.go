@@ -245,7 +245,8 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0203: the data return retrieval and release constructors (+18).
 	// ADR 0246: the report templates and their projection read (+5).
 	// ADR 0268: the clock fields and their imports (+10).
-	"modules/organizationtenancy/compose": 380,
+	// ADR 0318: the constructor of the responsibilities at the schools (+5).
+	"modules/organizationtenancy/compose": 385,
 	// Added by ADR 0115: the Elternabrechnung's construction only.
 	// Raised by ADR 0119: the billing run constructor (+7).
 	// Raised by ADR 0121: the confirmation letter constructor (+8).
@@ -321,7 +322,9 @@ var moduleComposeBudgets = map[string]int{
 	"modules/securityruntime/compose": 13,
 	// ADR 0154: the group names constructor (+13).
 	// ADR 0268: the clock fields of the group service and the retention (+8).
-	"modules/schoolstructure/compose": 581,
+	// Lowered by #7956: the retained group update moved its read-state
+	// edit into the groups package (-4).
+	"modules/schoolstructure/compose": 577,
 	// Raised by ADR 0107 and ADR 0175: the Träger settings and school-read context guard.
 	// ADR 0193: the export projection of setting values (+3).
 	// ADR 0268: the clock of the operator presence-mode guard (+3).

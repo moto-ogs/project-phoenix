@@ -13,6 +13,7 @@ import (
 	planning "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning"
 	api "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -64,7 +65,7 @@ func TestShiftTypeService_UpdateAndDelete(t *testing.T) {
 
 	created.Name = uniqueName("Pause-neu")
 	created.IsActive = false
-	updated, err := svc.UpdateShiftType(ctx, created)
+	updated, err := svc.UpdateShiftType(ctx, created, readstate.Of(created.UpdatedAt))
 	require.NoError(t, err)
 	assert.False(t, updated.IsActive)
 
@@ -172,7 +173,7 @@ func TestShiftTypeService_DeleteArchivesReferencedType(t *testing.T) {
 	archived, err := svc.GetShiftType(ctx, st.ID)
 	require.NoError(t, err, "planned shifts still resolve the archived type")
 	require.NotNil(t, archived.ArchivedAt)
-	_, err = svc.UpdateShiftType(ctx, archived)
+	_, err = svc.UpdateShiftType(ctx, archived, readstate.Of(archived.UpdatedAt))
 	require.ErrorIs(t, err, planning.ErrShiftTypeNotFound, "an archived type is not edited")
 
 	successor, err := svc.CreateShiftType(ctx, &workforce.ShiftTypeRecord{Name: name, Color: "#5080D8", IsActive: true})

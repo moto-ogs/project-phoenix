@@ -33,7 +33,6 @@ type ActivityRecoveryRecords interface {
 type CalendarPeriodRecords interface {
 	Create(context.Context, *schedulerecords.CalendarPeriod) error
 	FindByID(context.Context, int64) (*schedulerecords.CalendarPeriod, error)
-	Update(context.Context, *schedulerecords.CalendarPeriod) error
 	Delete(context.Context, int64) error
 
 	// FindByTenantID finds all calendar periods for a tenant

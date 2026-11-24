@@ -48,9 +48,12 @@ type PrivacyConsentResponse struct {
 	DurationDays      *int                   `json:"duration_days,omitempty"`
 	RenewalRequired   bool                   `json:"renewal_required"`
 	DataRetentionDays int                    `json:"data_retention_days"`
-	Details           map[string]interface{} `json:"details,omitempty"`
+	Details           map[string]interface{} `json:"details,omitempty" contract_json:"Consent metadata uses keys and value types specific to the consent type"`
 	CreatedAt         time.Time              `json:"created_at"`
 	UpdatedAt         time.Time              `json:"updated_at"`
+	// Version is the state of the child's recorded consents, also when none
+	// is recorded yet; a save sends it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // PrivacyConsentDefaultsResponse is the consent a new child starts from.
@@ -66,7 +69,9 @@ type PrivacyConsentRequest struct {
 	Accepted          bool                   `json:"accepted"`
 	DurationDays      *int                   `json:"duration_days,omitempty"`
 	DataRetentionDays int                    `json:"data_retention_days"`
-	Details           map[string]interface{} `json:"details,omitempty"`
+	Details           map[string]interface{} `json:"details,omitempty" contract_json:"Consent metadata uses keys and value types specific to the consent type"`
+	// ExpectedVersion is the version of the consent read the form shows.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 func (req *CreateStudentStatusDaysRequest) Bind(_ *http.Request) error {

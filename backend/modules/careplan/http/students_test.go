@@ -6,11 +6,12 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCreateStudent_WithGroupID(t *testing.T) {
@@ -25,7 +26,7 @@ func TestCreateStudent_WithGroupID(t *testing.T) {
 			"first_name":   "WithGroup",
 			"last_name":    "Student",
 			"school_class": "3a",
-			"group_id":     group.ID,
+			"group_id":     fmt.Sprint(group.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "POST", "/", body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
@@ -47,7 +48,7 @@ func TestCreateStudent_WithAllOptionalFields(t *testing.T) {
 			"last_name":     "Create",
 			"school_class":  "FC1",
 			"birthday":      "2015-03-25",
-			"group_id":      group.ID,
+			"group_id":      fmt.Sprint(group.ID),
 			"health_info":   "No allergies",
 			"extra_info":    "Extra notes",
 			"pickup_status": "bus",
@@ -72,7 +73,7 @@ func TestUpdateStudent(t *testing.T) {
 		body := map[string]interface{}{
 			"first_name": "Updated",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 		assert.Equal(t, http.StatusOK, rr.Code)
@@ -85,7 +86,7 @@ func TestUpdateStudent(t *testing.T) {
 			"last_name":    "Update",
 			"school_class": "4a",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 		assert.Equal(t, http.StatusOK, rr.Code)
@@ -105,7 +106,7 @@ func TestUpdateStudent(t *testing.T) {
 		body := map[string]interface{}{
 			"first_name": "",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 		testutil.AssertBadRequest(t, rr)
@@ -123,7 +124,7 @@ func TestUpdateStudent_WithExcusedStatus(t *testing.T) {
 		eventCount := len(tc.broadcaster.Events())
 
 		body := map[string]interface{}{"excused": true}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 		assert.Equal(t, http.StatusOK, rr.Code)
@@ -137,13 +138,11 @@ func TestUpdateStudent_WithExcusedStatus(t *testing.T) {
 	t.Run("clear_excused_clears_excused_since", func(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, tc.db, "ClearExcused", "Student", "EC1")
 
-		setReq := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID),
-			map[string]interface{}{"excused": true})
+		setReq := studentUpdateRequest(t, tc, student.ID, map[string]interface{}{"excused": true})
 		setRR := authExec(t, tc, setReq, testutil.AdminTestClaims(1), []string{"admin:*"})
 		assert.Equal(t, http.StatusOK, setRR.Code)
 
-		clearReq := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID),
-			map[string]interface{}{"excused": false})
+		clearReq := studentUpdateRequest(t, tc, student.ID, map[string]interface{}{"excused": false})
 		clearRR := authExec(t, tc, clearReq, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 		assert.Equal(t, http.StatusOK, clearRR.Code)
@@ -172,7 +171,7 @@ func TestUpdateStudent_PersonFields(t *testing.T) {
 		body := map[string]interface{}{
 			"last_name": "Updated",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
@@ -186,7 +185,7 @@ func TestUpdateStudent_PersonFields(t *testing.T) {
 		body := map[string]interface{}{
 			"birthday": "2015-06-15",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
@@ -228,7 +227,7 @@ func TestUpdateStudent_AllPersonFields(t *testing.T) {
 			"city":        "New City",
 			"postal_code": "54321",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
@@ -248,7 +247,7 @@ func TestUpdateStudent_AllPersonFields(t *testing.T) {
 			"responsible_person":  "Ms. Smith",
 			"responsible_phone":   "+49987654321",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
@@ -263,7 +262,7 @@ func TestUpdateStudent_AllPersonFields(t *testing.T) {
 			"sick_since": "2024-01-15",
 			"sick_until": "2024-01-20",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
@@ -281,7 +280,7 @@ func TestUpdateStudent_AllPersonFields(t *testing.T) {
 		body := map[string]interface{}{
 			"sick": false,
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 

@@ -2,7 +2,6 @@ package account
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -15,6 +14,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // DemoAccesses is the Identity & Access capability behind the public demo
@@ -83,8 +84,29 @@ func MountDemoRoutes(router chi.Router, demoEnvironment bool, compose func() (De
 	if err != nil {
 		return err
 	}
-	router.Mount("/demo", resource.Router())
+	resource.Mount(router)
 	return nil
+}
+
+// Mount also lets the catalog walk the conditional demo routes without
+// composing capabilities or enabling the demo environment.
+func (rs *DemoResource) Mount(router chi.Router) {
+	router.Mount("/demo", rs.Router())
+}
+
+func DemoRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalTenant, common.PortalParent, common.PortalTraeger}
+	return []common.RouteContract{
+		{Method: http.MethodPost, Pattern: "/access-requests", Outside: &common.Outside{
+			Reason: common.OutsidePublicAPI, Why: "the separate moto website requests demo links directly; no portal route file calls it",
+		}},
+		{Method: http.MethodGet, Pattern: "/access/status", BrowserPath: "/api/demo/access/status", BrowserMethod: http.MethodPost, BrowserOwnContract: true, RouteFile: "demo route files hold and forward the demo bearer",
+			Portals: portals, Plain: true, Response: demoAccessStatus{}},
+		{Method: http.MethodPost, Pattern: "/access/sessions", BrowserPath: "/api/demo/access/sessions", BrowserOwnContract: true, RouteFile: "the demo session route installs the portal's cookies",
+			Portals: portals, Plain: true, Request: demoSessionRequest{}, Response: demoSessionResponse{}},
+		{Method: http.MethodPost, Pattern: "/access/reset", BrowserPath: "/api/demo/access/reset", BrowserOwnContract: true, RouteFile: "the demo reset route reads the token cookie",
+			Portals: portals, Plain: true, Request: demoResetRequest{}, Response: demoResetResponse{}},
+	}
 }
 
 func (rs *DemoResource) Router() chi.Router {
@@ -108,9 +130,33 @@ type demoAccessRequestBody struct {
 	Role string `json:"role"`
 }
 
+type demoAccessRequested struct {
+	LinkSent bool `json:"link_sent"`
+}
+
+type demoAccessStatus struct {
+	Status     string `json:"status"`
+	SchoolName string `json:"school_name"`
+	SchoolURL  string `json:"school_url,omitempty"`
+}
+
+type demoSessionRequest struct {
+	Token string `json:"token"`
+	Role  string `json:"role,omitempty"`
+}
+
+type demoResetRequest struct {
+	Token string `json:"token"`
+}
+
+type demoResetResponse struct {
+	Status   string `json:"status"`
+	EntryURL string `json:"entry_url"`
+}
+
 func (rs *DemoResource) requestAccess(w http.ResponseWriter, r *http.Request) {
 	var body demoAccessRequestBody
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<14)).Decode(&body); err != nil {
+	if err := wire.Decode(http.MaxBytesReader(w, r.Body, 1<<14), &body); err != nil {
 		rs.renderError(w, r, identityaccess.ErrDemoAccessInvalid)
 		return
 	}
@@ -130,7 +176,7 @@ func (rs *DemoResource) requestAccess(w http.ResponseWriter, r *http.Request) {
 	// the address belongs to, and one answer for every address tells nothing
 	// about who asked for a demo before.
 	render.Status(r, http.StatusAccepted)
-	common.RenderJSON(w, r, map[string]bool{"link_sent": true})
+	common.RenderJSON(w, r, demoAccessRequested{LinkSent: true})
 }
 
 func (rs *DemoResource) accessStatus(w http.ResponseWriter, r *http.Request) {
@@ -142,10 +188,10 @@ func (rs *DemoResource) accessStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	// The waiting room names the OGS being set up (#3464); only the token's
 	// holder asks, and the name is the one they gave.
-	response := map[string]string{"status": progress.Status, "school_name": progress.SchoolName}
+	response := demoAccessStatus{Status: progress.Status, SchoolName: progress.SchoolName}
 	if progress.Status == identityaccess.DemoSchoolReady {
 		// Only now the school's subdomain resolves.
-		response["school_url"] = strings.TrimRight(rs.origins.School(progress.SchoolSlug), "/")
+		response.SchoolURL = strings.TrimRight(rs.origins.School(progress.SchoolSlug), "/")
 	}
 	common.RenderJSON(w, r, response)
 }
@@ -158,9 +204,9 @@ type demoSessionResponse struct {
 }
 
 type demoSessionFacts struct {
-	AccessID string `json:"access_id"`
-	Role     string `json:"role,omitempty"`
-	Source   string `json:"src,omitempty"`
+	AccessID ident.ID `json:"access_id"`
+	Role     string   `json:"role,omitempty"`
+	Source   string   `json:"src,omitempty"`
 	// FixedRole: the standing school's session keeps all functions; the
 	// banner shows its role without a switch.
 	FixedRole bool `json:"fixed_role"`
@@ -173,11 +219,8 @@ type demoSessionFacts struct {
 // visitor's account to that role (#3467), so the banner's role switch is the
 // same call as the entry.
 func (rs *DemoResource) createSession(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Token string `json:"token"`
-		Role  string `json:"role"`
-	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<12)).Decode(&body); err != nil {
+	var body demoSessionRequest
+	if err := wire.Decode(http.MaxBytesReader(w, r.Body, 1<<12), &body); err != nil {
 		rs.renderError(w, r, identityaccess.ErrDemoAccessUnknown)
 		return
 	}
@@ -188,7 +231,7 @@ func (rs *DemoResource) createSession(w http.ResponseWriter, r *http.Request) {
 	}
 	common.RenderJSON(w, r, demoSessionResponse{
 		TokenResponse: portalauth.TokenResponse{AccessToken: entry.AccessToken, RefreshToken: entry.RefreshToken},
-		Demo:          demoSessionFacts{AccessID: strconv.FormatInt(entry.AccessID, 10), Role: entry.Role, Source: entry.Source, FixedRole: entry.FixedRole, Traeger: entry.Traeger},
+		Demo:          demoSessionFacts{AccessID: ident.ID(entry.AccessID), Role: entry.Role, Source: entry.Source, FixedRole: entry.FixedRole, Traeger: entry.Traeger},
 	})
 }
 
@@ -197,10 +240,8 @@ func (rs *DemoResource) createSession(w http.ResponseWriter, r *http.Request) {
 // sends the visitor to, with the token in the fragment as in the mailed
 // link, so the new school's setup screen is the same as on the first entry.
 func (rs *DemoResource) resetAccess(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Token string `json:"token"`
-	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<12)).Decode(&body); err != nil {
+	var body demoResetRequest
+	if err := wire.Decode(http.MaxBytesReader(w, r.Body, 1<<12), &body); err != nil {
 		rs.renderError(w, r, identityaccess.ErrDemoAccessUnknown)
 		return
 	}
@@ -209,9 +250,9 @@ func (rs *DemoResource) resetAccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	render.Status(r, http.StatusAccepted)
-	common.RenderJSON(w, r, map[string]string{
-		"status":    identityaccess.DemoSchoolPreparing,
-		"entry_url": rs.origins.Waiting + "/demo#token=" + body.Token,
+	common.RenderJSON(w, r, demoResetResponse{
+		Status:   identityaccess.DemoSchoolPreparing,
+		EntryURL: rs.origins.Waiting + "/demo#token=" + body.Token,
 	})
 }
 

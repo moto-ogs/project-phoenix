@@ -13,10 +13,9 @@
  * Sentry. Without sessionStorage there is no loop guard, so no reload.
  */
 
-const RELOAD_MARKER_KEY = "moto:chunk-load-reload-at";
+import { reloadOnce } from "./reload-once";
 
-/** A second failure within this window counts as unrecovered. */
-const RELOAD_GUARD_MS = 60_000;
+const RELOAD_MARKER_KEY = "moto:chunk-load-reload-at";
 
 /** Turbopack and webpack name the error; the message is the fallback. */
 const CHUNK_LOAD_MESSAGE =
@@ -36,15 +35,5 @@ export function isChunkLoadError(error: unknown): boolean {
  * was started; the caller then neither reports nor logs the error.
  */
 export function reloadAfterChunkLoadError(error: unknown): boolean {
-  if (!isChunkLoadError(error)) return false;
-  try {
-    const now = Date.now();
-    const lastReload = Number(sessionStorage.getItem(RELOAD_MARKER_KEY));
-    if (lastReload > 0 && now - lastReload < RELOAD_GUARD_MS) return false;
-    sessionStorage.setItem(RELOAD_MARKER_KEY, String(now));
-  } catch {
-    return false;
-  }
-  window.location.reload();
-  return true;
+  return isChunkLoadError(error) && reloadOnce(RELOAD_MARKER_KEY);
 }

@@ -7,6 +7,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	reminder "github.com/moto-ogs/project-phoenix/workflows/reminderdelivery"
 	"github.com/moto-ogs/project-phoenix/workflows/reminderdelivery/ports"
 	"github.com/stretchr/testify/assert"
@@ -479,7 +481,7 @@ func TestComputeBatchMatchesCompute(t *testing.T) {
 		require.NoError(t, err)
 		var found bool
 		for _, r := range batch[7].Reminders {
-			if r.StudentID != nil && *r.StudentID == "4" {
+			if r.StudentID != nil && r.StudentID.String() == "4" {
 				found = true
 			}
 		}
@@ -516,7 +518,7 @@ func TestComputeBatchMatchesCompute(t *testing.T) {
 
 		hasInstance := func(rs []reminder.StaffReminder, id string) bool {
 			for _, r := range rs {
-				if r.ActivityInstanceID != nil && *r.ActivityInstanceID == id {
+				if r.ActivityInstanceID != nil && r.ActivityInstanceID.String() == id {
 					return true
 				}
 			}
@@ -544,7 +546,7 @@ func TestComputeBatchMatchesCompute(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, batch[7].Reminders, 1)
 		require.NotNil(t, batch[7].Reminders[0].ActivityInstanceID)
-		assert.Equal(t, "101", *batch[7].Reminders[0].ActivityInstanceID)
+		assert.Equal(t, "101", batch[7].Reminders[0].ActivityInstanceID.String())
 		assert.Equal(t, reminder.TypeActivityStart, batch[7].Reminders[0].Type)
 	})
 
@@ -559,7 +561,7 @@ func TestComputeBatchMatchesCompute(t *testing.T) {
 
 		for _, r := range batch[7].Reminders {
 			if r.ActivityInstanceID != nil {
-				assert.NotEqual(t, "102", *r.ActivityInstanceID)
+				assert.NotEqual(t, "102", r.ActivityInstanceID.String())
 			}
 		}
 	})
@@ -770,11 +772,11 @@ func TestBatchReportsPersonalAssignments(t *testing.T) {
 	batch, err := w.service().ComputeBatch(context.Background(), []reminder.BatchScope{personalCaregiver(7), caregiver(8), admin(1)})
 	require.NoError(t, err)
 
-	assert.Equal(t, map[string]struct{}{"202": {}}, batch[7].AssignedActivityInstanceIDs,
+	assert.Equal(t, map[ident.ID]struct{}{202: {}}, batch[7].AssignedActivityInstanceIDs,
 		"only the slot this person is planned on, not the room they supervise")
 	assert.Nil(t, batch[8].AssignedActivityInstanceIDs,
 		"no assignment means nil, which reads as 'nothing of mine' rather than an empty restriction")
-	assert.Equal(t, map[string]struct{}{"201": {}}, batch[1].AssignedActivityInstanceIDs,
+	assert.Equal(t, map[ident.ID]struct{}{201: {}}, batch[1].AssignedActivityInstanceIDs,
 		"an admin's personal assignment must remain distinguishable from room-wide activities")
 
 	// The field describes the list, so it has to be usable as a key into it.
@@ -809,7 +811,7 @@ func TestAssignedActivitiesExpandOnlyUpcomingScope(t *testing.T) {
 	var reminderIDs []string
 	for _, reminder := range batch[7].Reminders {
 		if reminder.ActivityInstanceID != nil {
-			reminderIDs = append(reminderIDs, *reminder.ActivityInstanceID)
+			reminderIDs = append(reminderIDs, reminder.ActivityInstanceID.String())
 		}
 	}
 	assert.Contains(t, reminderIDs, "202", "an upcoming personal assignment must be included")

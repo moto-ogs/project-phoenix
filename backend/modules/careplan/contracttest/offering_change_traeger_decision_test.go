@@ -36,6 +36,8 @@ type traegerDecisionFixture struct {
 	svc     careplan.OfferingChangeCapability
 	office  owners.CareContractChangeRequests
 	request int64
+	// version is the request's version as both deciders read it.
+	version string
 	fx      *offeringChangeFixture
 }
 
@@ -52,13 +54,13 @@ func newTraegerDecisionFixture(t *testing.T, env *decisionTestEnv, svc careplan.
 	})
 	require.NoError(t, err)
 	return traegerDecisionFixture{env: env, svc: svc, office: owners.CareContractChangeRequests{Changes: svc, Settings: env.settings},
-		request: row.ID, fx: fx}
+		request: row.ID, version: testpkg.OfferingRequestVersion(t, row.ID), fx: fx}
 }
 
 // school decides as the school's review route does.
 func (f traegerDecisionFixture) school(ctx context.Context) error {
 	day := f.fx.switchDate
-	_, err := f.svc.Decide(ctx, careplan.OfferingChangeDecisionInput{RequestID: f.request, Approve: true, ReviewedBy: f.env.creatorID, EffectiveFrom: &day})
+	_, err := f.svc.Decide(ctx, careplan.OfferingChangeDecisionInput{ExpectedVersion: f.version, RequestID: f.request, Approve: true, ReviewedBy: f.env.creatorID, EffectiveFrom: &day})
 	return err
 }
 
@@ -66,7 +68,7 @@ func (f traegerDecisionFixture) school(ctx context.Context) error {
 func (f traegerDecisionFixture) traeger(ctx context.Context, studentID int64) error {
 	day := f.fx.switchDate
 	_, err := f.office.DecideChange(ctx, api.ContractChangeDecisionForTest{
-		ChangeDecisionInput: api.ContractChangeDecisionInputForTest{Approve: true, EffectiveFrom: &day},
+		ChangeDecisionInput: api.ContractChangeDecisionInputForTest{Approve: true, EffectiveFrom: &day, ExpectedVersion: f.version},
 		StudentID:           studentID, RequestChildID: f.fx.childID, RequestID: f.request, AccountID: f.env.creatorID,
 	})
 	return err
@@ -241,7 +243,7 @@ func TestTraegerChangeRequiresTheContractsEnrollment(t *testing.T) {
 	}))
 	err = inTraegerDecisionTx(t, testpkg.Ctx(t), env.db, func(ctx context.Context) error {
 		_, err := f.office.DecideChange(ctx, api.ContractChangeDecisionForTest{
-			ChangeDecisionInput: api.ContractChangeDecisionInputForTest{Approve: true, EffectiveFrom: &f.fx.switchDate},
+			ChangeDecisionInput: api.ContractChangeDecisionInputForTest{Approve: true, EffectiveFrom: &f.fx.switchDate, ExpectedVersion: f.version},
 			StudentID:           f.fx.studentID, RequestChildID: other.childID, RequestID: f.request, AccountID: env.creatorID,
 		})
 		return err

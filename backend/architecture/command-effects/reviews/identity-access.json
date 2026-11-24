@@ -2832,7 +2832,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerProfiles.UpdateProfile",
-      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.AccountLifecycleCommand.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerEngine.UpdateProfile. Participates in the caller unit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.AccountLifecycleCommand.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerEngine.UpdateProfile. Participates in the caller unit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.AccountLifecycleCommand.RenamePerson",
       "target_owner": "people-directory"
@@ -2854,7 +2854,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerProfiles.UpdateProfile",
-      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.Capability.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerEngine.UpdateProfile. Participates in the caller unit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.Capability.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerEngine.UpdateProfile. Participates in the caller unit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
       "target_owner": "people-directory"
@@ -2876,7 +2876,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerProfiles.UpdateProfile",
-      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.Owner.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerEngine.UpdateProfile. Participates in the caller unit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.Owner.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerEngine.UpdateProfile. Participates in the caller unit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
       "target_owner": "people-directory"
@@ -4290,6 +4290,17 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.GuardianRelativeAccess.BulkInviteToStudents",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/compose.EmailOutbox.Enqueue (delivery-platform) through modules/identityaccess.Owner.BulkInviteToStudents. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Added for #7760 (ADR 0309 section 5): with NotifyActive the bulk invitation queues one care notice per account holder, naming every child it covers, in that guardian's savepoint, beside the stamp care_notice_sent_at on Identity \u0026 Access's own access row; an outbox refusal rolls back both for that guardian (#4602). The mail is sent after commit.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.Enqueue",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
       "classification": "query",
       "effect": "query",
@@ -4298,6 +4309,26 @@
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/contract.ProviderBlockBudget.Attempt",
       "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.GuardianRelativeAccess.BulkInviteToStudents",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates: the Care Plan bookings in force on a day for many request children in one statement. Added for #7760 (ADR 0309 section 5): the care notice of the bulk invitation names a child only with a booking in force today, as the parents portal lists it under Betreuung \u0026 Wochenplan. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates",
+      "target_owner": "enrollment"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.GuardianRelativeAccess.BulkInviteToStudents",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs (Enrollment's approved care periods of many children in one statement). Added for #7760 (ADR 0309 section 5): the parent step of the bulk invitation names only children whose care the parents portal shows as running today. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs",
+      "target_owner": "enrollment"
     },
     {
       "adr": "0098",
@@ -6525,6 +6556,17 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.BulkInviteToStudents",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/compose.EmailOutbox.Enqueue (delivery-platform) through modules/identityaccess/internal/application.engine.BulkInviteToStudents. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Added for #7760 (ADR 0309 section 5): with NotifyActive the bulk invitation queues one care notice per account holder, naming every child it covers, in that guardian's savepoint, beside the stamp care_notice_sent_at on Identity \u0026 Access's own access row; an outbox refusal rolls back both for that guardian (#4602). The mail is sent after commit.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.Enqueue",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.BulkInviteToStudents",
       "classification": "query",
       "effect": "query",
@@ -6533,6 +6575,26 @@
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/contract.ProviderBlockBudget.Attempt",
       "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.BulkInviteToStudents",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates: the Care Plan bookings in force on a day for many request children in one statement. Added for #7760 (ADR 0309 section 5): the care notice of the bulk invitation names a child only with a booking in force today, as the parents portal lists it under Betreuung \u0026 Wochenplan. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates",
+      "target_owner": "enrollment"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.BulkInviteToStudents",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs (Enrollment's approved care periods of many children in one statement). Added for #7760 (ADR 0309 section 5): the parent step of the bulk invitation names only children whose care the parents portal shows as running today. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs",
+      "target_owner": "enrollment"
     },
     {
       "adr": "0098",
@@ -15512,6 +15574,188 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRolePeople.AccountNames",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRolePeople.AccountNames",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target *modules/peopledirectory/compose.Directory.ListPersonsByAccount: the Träger roles read the schools of the Träger, the school ID of a tenant transaction and the names behind a school's accounts (ADR 0317). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsByAccount",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleRuntime.WithinExclusive",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinExclusive",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinExclusive (tenant-runtime) through api.traegerRoleRuntime.WithinExclusive. The Träger roles open the Träger transaction and one tenant transaction per school one after the other, never both at once, under one exclusive key per Träger (ADR 0105, ADR 0317). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinExclusive",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleRuntime.WithinSchool",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinSchool",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target tenant.NewTenantID: the Träger roles read the school ID of a tenant transaction (ADR 0317). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.NewTenantID",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleRuntime.WithinSchool",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinSchool",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinTenant (tenant-runtime) through api.traegerRoleRuntime.WithinSchool. The Träger roles open the Träger transaction and one tenant transaction per school one after the other, never both at once, under one exclusive key per Träger (ADR 0105, ADR 0317). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleRuntime.WithinTraeger",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinTraeger",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinTraeger (tenant-runtime) through api.traegerRoleRuntime.WithinTraeger. The Träger roles open the Träger transaction and one tenant transaction per school one after the other, never both at once, under one exclusive key per Träger (ADR 0105, ADR 0317). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTraeger",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleSchools.TraegerSchools",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleSchools.TraegerSchools",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByOrganization: the Träger roles read the schools of the Träger, the school ID of a tenant transaction and the names behind a school's accounts (ADR 0317). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleSchools.TraegerSchools",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleSchools.TraegerSchools",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByOrganization: the Träger roles read the schools of the Träger, the school ID of a tenant transaction and the names behind a school's accounts (ADR 0317). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleSchools.TraegerSchools",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleSchools.TraegerSchools",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted: the Träger roles read the schools of the Träger, the school ID of a tenant transaction and the names behind a school's accounts (ADR 0317). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.RegisterAfterCommit (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.RegisterAfterCommit (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.RegisterAfterCommit (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/api.TraegerPortalIdentity.StartTraegerSchoolSession",
       "classification": "platform",
@@ -19451,7 +19695,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Capability.FindSchool (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Capability.FindSchool (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. #8028: Invalid subdomains are reported as invalid input, and inactive or deleted schools return before organization reads. Valid schools still use the same read-only calls; no write, lock or scope change.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchool",
       "target_owner": "organization-tenancy"
@@ -19461,7 +19705,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Capability.FindSchoolBySlug (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Capability.FindSchoolBySlug (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. #8028: Invalid subdomains are reported as invalid input, and inactive or deleted schools return before organization reads. Valid schools still use the same read-only calls; no write, lock or scope change.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchoolBySlug",
       "target_owner": "organization-tenancy"
@@ -19471,7 +19715,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.FindSchoolBySubdomain; modules/organizationtenancy.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.FindSchoolBySubdomain; modules/organizationtenancy.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. #8028: Invalid subdomains are reported as invalid input, and inactive or deleted schools return before organization reads. Valid schools still use the same read-only calls; no write, lock or scope change.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchoolBySubdomain",
       "target_owner": "organization-tenancy"
@@ -19481,7 +19725,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Reviewed read: identity-access reaches modules/organizationtenancy.Capability.FindVisibleTraegerName (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain for the tenant shell (#4656). One read transaction counts the organization's operational schools and reads its name; no owned-row mutation, lock or scope effect. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Reviewed read: identity-access reaches modules/organizationtenancy.Capability.FindVisibleTraegerName (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain for the tenant shell (#4656). One read transaction counts the organization's operational schools and reads its name; no owned-row mutation, lock or scope effect. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. #8028: Invalid subdomains are reported as invalid input, and inactive or deleted schools return before organization reads. Valid schools still use the same read-only calls; no write, lock or scope change.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindVisibleTraegerName",
       "target_owner": "organization-tenancy"
@@ -19491,7 +19735,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Capability.ListOrganizationsByID (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Capability.ListOrganizationsByID (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. #8028: Invalid subdomains are reported as invalid input, and inactive or deleted schools return before organization reads. Valid schools still use the same read-only calls; no write, lock or scope change.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListOrganizationsByID",
       "target_owner": "organization-tenancy"
@@ -19501,7 +19745,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Query.FindSchool (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Query.FindSchool (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. #8028: Invalid subdomains are reported as invalid input, and inactive or deleted schools return before organization reads. Valid schools still use the same read-only calls; no write, lock or scope change.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchool",
       "target_owner": "organization-tenancy"
@@ -19511,7 +19755,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Query.FindSchoolBySlug (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Query.FindSchoolBySlug (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. #8028: Invalid subdomains are reported as invalid input, and inactive or deleted schools return before organization reads. Valid schools still use the same read-only calls; no write, lock or scope change.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchoolBySlug",
       "target_owner": "organization-tenancy"
@@ -19521,7 +19765,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.FindSchoolBySubdomain; modules/organizationtenancy.Query (supplied contract method). May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.FindSchoolBySubdomain; modules/organizationtenancy.Query (supplied contract method). May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. #8028: Invalid subdomains are reported as invalid input, and inactive or deleted schools return before organization reads. Valid schools still use the same read-only calls; no write, lock or scope change.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchoolBySubdomain",
       "target_owner": "organization-tenancy"
@@ -19531,7 +19775,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Reviewed read: identity-access reaches modules/organizationtenancy.Query.FindVisibleTraegerName (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain for the tenant shell (#4656). One read transaction counts the organization's operational schools and reads its name; no owned-row mutation, lock or scope effect. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Reviewed read: identity-access reaches modules/organizationtenancy.Query.FindVisibleTraegerName (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain for the tenant shell (#4656). One read transaction counts the organization's operational schools and reads its name; no owned-row mutation, lock or scope effect. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. #8028: Invalid subdomains are reported as invalid input, and inactive or deleted schools return before organization reads. Valid schools still use the same read-only calls; no write, lock or scope change.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindVisibleTraegerName",
       "target_owner": "organization-tenancy"
@@ -19541,7 +19785,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Query.ListOrganizationsByID (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Query.ListOrganizationsByID (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. #8028: Invalid subdomains are reported as invalid input, and inactive or deleted schools return before organization reads. Valid schools still use the same read-only calls; no write, lock or scope change.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListOrganizationsByID",
       "target_owner": "organization-tenancy"
@@ -19551,7 +19795,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.School.IsDeleted (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.School.IsDeleted (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. #8028: Invalid subdomains are reported as invalid input, and inactive or deleted schools return before organization reads. Valid schools still use the same read-only calls; no write, lock or scope change.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -21582,7 +21826,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerPeople.RenamePerson",
-      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.AccountLifecycleCommand.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerPeople.RenamePerson. Participates in the caller unit; newly visible through #4836 callable resolution (ADR 0098).",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.AccountLifecycleCommand.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerPeople.RenamePerson. Participates in the caller unit; newly visible through #4836 callable resolution (ADR 0098).",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.AccountLifecycleCommand.RenamePerson",
       "target_owner": "people-directory"
@@ -21593,7 +21837,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerPeople.RenamePerson",
-      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.Capability.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerPeople.RenamePerson. Participates in the caller unit; newly visible through #4836 callable resolution (ADR 0098).",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.Capability.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerPeople.RenamePerson. Participates in the caller unit; newly visible through #4836 callable resolution (ADR 0098).",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
       "target_owner": "people-directory"
@@ -21604,7 +21848,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerPeople.RenamePerson",
-      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.Owner.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerPeople.RenamePerson. Participates in the caller unit; newly visible through #4836 callable resolution (ADR 0098).",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.Owner.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerPeople.RenamePerson. Participates in the caller unit; newly visible through #4836 callable resolution (ADR 0098).",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
       "target_owner": "people-directory"
@@ -22020,6 +22264,26 @@
       "target_owner": "audit-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.GuardianDirectory.ApprovedCarePeriods",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.GuardianDirectory.ApprovedCarePeriods",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs (Enrollment's approved care periods of many children in one statement). Added for #7760 (ADR 0309 section 5): the parent step of the bulk invitation names only children whose care the parents portal shows as running today. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs",
+      "target_owner": "enrollment"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.GuardianDirectory.CareBookingsInForce",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.GuardianDirectory.CareBookingsInForce",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates: the Care Plan bookings in force on a day for many request children in one statement. Added for #7760 (ADR 0309 section 5): the care notice of the bulk invitation names a child only with a booking in force today, as the parents portal lists it under Betreuung \u0026 Wochenplan. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates",
+      "target_owner": "enrollment"
+    },
+    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.GuardianDirectory.DeleteGuardianProfile",
       "classification": "leaf",
@@ -22117,6 +22381,17 @@
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.PromoteGuardianLinkToLegalGuardian",
       "target_owner": "people-directory"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.GuardianInvitationDelivery.EnqueueCareVisibleEmail",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.GuardianInvitationDelivery.EnqueueCareVisibleEmail",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/compose.EmailOutbox.Enqueue (delivery-platform) through modules/identityaccess/internal/application.GuardianInvitationDelivery.EnqueueCareVisibleEmail. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Added for #7760 (ADR 0309 section 5): with NotifyActive the bulk invitation queues one care notice per account holder, naming every child it covers, in that guardian's savepoint, beside the stamp care_notice_sent_at on Identity \u0026 Access's own access row; an outbox refusal rolls back both for that guardian (#4602). The mail is sent after commit.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.Enqueue",
+      "target_owner": "delivery-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.GuardianInvitationDelivery.GuardianMailBlocks",
@@ -25642,7 +25917,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerPeople.RenamePerson",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.AccountLifecycleCommand.RenamePerson; modules/peopledirectory/account_lifecycle_commands.go:58. ",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.AccountLifecycleCommand.RenamePerson; modules/peopledirectory/account_lifecycle_commands.go:58. ",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.AccountLifecycleCommand.RenamePerson",
       "target_owner": "people-directory"
@@ -25653,7 +25928,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerPeople.RenamePerson",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Capability.RenamePerson; modules/peopledirectory.Capability (supplied contract method). ",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Capability.RenamePerson; modules/peopledirectory.Capability (supplied contract method). ",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
       "target_owner": "people-directory"
@@ -25664,7 +25939,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerPeople.RenamePerson",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.RenamePerson; modules/peopledirectory.Owner (supplied contract method). ",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.RenamePerson; modules/peopledirectory.Owner (supplied contract method). ",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
       "target_owner": "people-directory"
@@ -25867,6 +26142,26 @@
       "target_owner": "people-directory"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianDirectory.ApprovedCarePeriods",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianDirectory.ApprovedCarePeriods",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs (Enrollment's approved care periods of many children in one statement). Added for #7760 (ADR 0309 section 5): the parent step of the bulk invitation names only children whose care the parents portal shows as running today. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs",
+      "target_owner": "enrollment"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianDirectory.CareBookingsInForce",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianDirectory.CareBookingsInForce",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates: the Care Plan bookings in force on a day for many request children in one statement. Added for #7760 (ADR 0309 section 5): the care notice of the bulk invitation names a child only with a booking in force today, as the parents portal lists it under Betreuung \u0026 Wochenplan. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates",
+      "target_owner": "enrollment"
+    },
+    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianDirectory.CreateGuardianProfile",
       "classification": "leaf",
@@ -26019,7 +26314,17 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianDirectory.FindStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StudentRepository.FindByIDs; modules/peopledirectory/ports/repository_contracts.go:87. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed pure value method; no query, mutation or lock. Target modules/peopledirectory.StudentState.IsAlumnus derives the graduated state from the read row. Added for #7760: the care notice names no alumnus. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianDirectory.FindStudents",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianDirectory.FindStudents",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StudentRepository.FindByIDs; modules/peopledirectory/ports/repository_contracts.go:87. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7760: the binding also passes the child's OGS place and last care day on to the parent step of the bulk invitation; still one read, no lock, no write.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -26156,6 +26461,17 @@
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/rows.EnrollmentRequestRepository.BackfillGuardianAccountID",
       "target_owner": "care-plan"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianInvitationDelivery.EnqueueCareVisibleEmail",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianInvitationDelivery.EnqueueCareVisibleEmail",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/compose.EmailOutbox.Enqueue (delivery-platform) through roots/owners.guardianInvitationDelivery.EnqueueCareVisibleEmail. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Added for #7760 (ADR 0309 section 5): with NotifyActive the bulk invitation queues one care notice per account holder, naming every child it covers, in that guardian's savepoint, beside the stamp care_notice_sent_at on Identity \u0026 Access's own access row; an outbox refusal rolls back both for that guardian (#4602). The mail is sent after commit.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.Enqueue",
+      "target_owner": "delivery-platform"
     },
     {
       "adr": "0098",

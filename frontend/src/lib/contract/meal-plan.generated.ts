@@ -6,6 +6,7 @@ import {
   calendarDate,
   fileAnswer,
   instant,
+  int64String,
   noData,
   nullable,
   object,
@@ -31,6 +32,32 @@ export const MealPlanWeekEntryResponseSchema: z.ZodType<MealPlanWeekEntryRespons
   dish: str,
   note: optional(str),
   allergens: nullable(arr(str)),
+});
+
+/** Go: mealplan.MealPlanDishResponse */
+export interface MealPlanDishResponse {
+  dish: string;
+  note?: string;
+  allergens: string[] | null;
+}
+
+export const MealPlanDishResponseSchema: z.ZodType<MealPlanDishResponse, unknown> = object<MealPlanDishResponse>({
+  dish: str,
+  note: optional(str),
+  allergens: nullable(arr(str)),
+});
+
+/** Go: mealplan.MealPlanDayResponse */
+export interface MealPlanDayResponse {
+  date: string;
+  version: string;
+  dishes: MealPlanDishResponse[] | null;
+}
+
+export const MealPlanDayResponseSchema: z.ZodType<MealPlanDayResponse, unknown> = object<MealPlanDayResponse>({
+  date: calendarDate,
+  version: str,
+  dishes: nullable(arr(MealPlanDishResponseSchema)),
 });
 
 /** Go: mealplan.OrderClassCountResponse */
@@ -77,7 +104,7 @@ export const OrderDayResponseSchema: z.ZodType<OrderDayResponse, unknown> = obje
   closed: bool,
   deadline: instant,
   status: str,
-  order_id: optional(str),
+  order_id: optional(int64String),
   confirmed_at: optional(instant),
   total: safeInt,
   classes: nullable(arr(OrderClassCountResponseSchema)),
@@ -108,7 +135,7 @@ export interface DailyParticipantResponse {
 }
 
 export const DailyParticipantResponseSchema: z.ZodType<DailyParticipantResponse, unknown> = object<DailyParticipantResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
@@ -181,13 +208,28 @@ export interface ChildParticipationResponse {
   weekdays: number[] | null;
   effective_from?: string;
   days: ChildDayResponse[] | null;
+  version: string;
 }
 
 export const ChildParticipationResponseSchema: z.ZodType<ChildParticipationResponse, unknown> = object<ChildParticipationResponse>({
   weekdays: nullable(arr(safeInt)),
   effective_from: optional(calendarDate),
   days: nullable(arr(ChildDayResponseSchema)),
+  version: str,
 });
+
+/** Go: mealplan.DishRequest */
+export interface DishRequest {
+  dish?: string;
+  note?: string | null;
+  allergens?: string[] | null;
+}
+
+/** Go: mealplan.SaveDayRequest */
+export interface SaveDayRequest {
+  dishes?: DishRequest[] | null;
+  expected_version?: string;
+}
 
 /** Go: mealplan.ChildDayRequest */
 export interface ChildDayRequest {
@@ -198,6 +240,7 @@ export interface ChildDayRequest {
 export interface ChildScheduleRequest {
   weekdays?: number[] | null;
   effective_from?: string;
+  expected_version?: string;
 }
 
 /** Go: mealplan.ScheduleChangedResponse */
@@ -209,63 +252,10 @@ export const ScheduleChangedResponseSchema: z.ZodType<ScheduleChangedResponse, u
   effective_from: calendarDate,
 });
 
-/** Go: mealplan.DishRequest */
-export interface DishRequest {
-  dish?: string;
-  note?: string | null;
-  allergens?: string[] | null;
-}
-
 /** Go: mealplan.SetDayRequest */
 export interface SetDayRequest {
   dishes?: DishRequest[] | null;
-}
-
-/** Query of GET /api/meal-plan/ */
-export interface GetMealPlanQuery {
-  week_start?: string;
-}
-
-/** Query of GET /api/meal-plan/orders */
-export interface GetMealPlanOrdersQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/meal-plan/orders/month/export */
-export interface GetMealPlanOrdersMonthExportQuery {
-  format?: "pdf" | "xlsx";
-  month?: string;
-}
-
-/** Query of GET /api/meal-plan/participants */
-export interface GetMealPlanParticipantsQuery {
-  date?: string;
-  include?: string;
-}
-
-/** Query of GET /api/meal-plan/participants/export */
-export interface GetMealPlanParticipantsExportQuery {
-  date?: string;
-  format?: "pdf" | "xlsx";
-  include?: string;
-}
-
-/** Query of GET /api/meal-plan/participants/week */
-export interface GetMealPlanParticipantsWeekQuery {
-  week_start?: string;
-}
-
-/** Query of GET /api/meal-plan/participants/week/export */
-export interface GetMealPlanParticipantsWeekExportQuery {
-  format?: "pdf" | "xlsx";
-  week_start?: string;
-}
-
-/** Query of GET /api/meal-plan/participation/{studentId} */
-export interface GetMealPlanParticipationStudentIdQuery {
-  from?: string;
-  to?: string;
+  expected?: DishRequest[] | null;
 }
 
 export const routes = {
@@ -279,63 +269,107 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/meal-plan/{date}",
     portals: ["tenant"],
+    deprecated: true,
+    query: {
+      "expected_version": { kind: "string" },
+    },
     response: noData,
   },
   "GET /api/meal-plan/": {
     method: "GET",
     pattern: "/api/meal-plan/",
     portals: ["tenant"],
-    query: ["week_start"],
+    deprecated: true,
+    query: {
+      "week_start": { kind: "date" },
+    },
     response: success(z.array(MealPlanWeekEntryResponseSchema)),
+  },
+  "GET /api/meal-plan/days": {
+    method: "GET",
+    pattern: "/api/meal-plan/days",
+    portals: ["tenant"],
+    query: {
+      "week_start": { kind: "date" },
+    },
+    response: success(z.array(MealPlanDayResponseSchema)),
   },
   "GET /api/meal-plan/orders": {
     method: "GET",
     pattern: "/api/meal-plan/orders",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(OrdersResponseSchema),
   },
   "GET /api/meal-plan/orders/month/export": {
     method: "GET",
     pattern: "/api/meal-plan/orders/month/export",
     portals: ["tenant"],
-    query: ["format", "month"],
+    query: {
+      "format": { kind: "string", values: ["pdf", "xlsx"] },
+      "month": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /api/meal-plan/participants": {
     method: "GET",
     pattern: "/api/meal-plan/participants",
     portals: ["tenant"],
-    query: ["date", "include"],
+    query: {
+      "date": { kind: "date" },
+      "include": { kind: "string" },
+    },
     response: success(DailyListResponseSchema),
   },
   "GET /api/meal-plan/participants/export": {
     method: "GET",
     pattern: "/api/meal-plan/participants/export",
     portals: ["tenant"],
-    query: ["date", "format", "include"],
+    query: {
+      "date": { kind: "date" },
+      "format": { kind: "string", values: ["pdf", "xlsx"] },
+      "include": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /api/meal-plan/participants/week": {
     method: "GET",
     pattern: "/api/meal-plan/participants/week",
     portals: ["tenant"],
-    query: ["week_start"],
+    query: {
+      "week_start": { kind: "date" },
+    },
     response: success(WeeklyListResponseSchema),
   },
   "GET /api/meal-plan/participants/week/export": {
     method: "GET",
     pattern: "/api/meal-plan/participants/week/export",
     portals: ["tenant"],
-    query: ["format", "week_start"],
+    query: {
+      "format": { kind: "string", values: ["pdf", "xlsx"] },
+      "week_start": { kind: "date" },
+    },
     response: fileAnswer,
   },
   "GET /api/meal-plan/participation/{studentId}": {
     method: "GET",
     pattern: "/api/meal-plan/participation/{studentId}",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(ChildParticipationResponseSchema),
+  },
+  "PUT /api/meal-plan/days/{date}": {
+    method: "PUT",
+    pattern: "/api/meal-plan/days/{date}",
+    portals: ["tenant"],
+    request: requestBody<SaveDayRequest>(),
+    response: success(MealPlanDayResponseSchema),
   },
   "PUT /api/meal-plan/participation/{studentId}/days/{date}": {
     method: "PUT",
@@ -355,6 +389,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/meal-plan/{date}",
     portals: ["tenant"],
+    deprecated: true,
     request: requestBody<SetDayRequest>(),
     response: noData,
   },

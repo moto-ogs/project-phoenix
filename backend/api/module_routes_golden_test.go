@@ -69,6 +69,17 @@ func checkModuleRouteMap(t *testing.T, api *goldenRuntime) {
 		}
 	})
 
+	t.Run("only an offered module owns routes", func(t *testing.T) {
+		for _, rule := range moduleRouteRules {
+			if rule.module == moduleRouteBasis {
+				continue
+			}
+			definition, ok := settings.LookupModule(rule.module)
+			require.Truef(t, ok, "%s names the unknown module %s", rule.prefix, rule.module)
+			require.Truef(t, definition.Available, "%s belongs to %s, which moto does not offer yet: nothing locks a route of such a module (#6052)", rule.prefix, rule.module)
+		}
+	})
+
 	t.Run("a request path resolves like its route pattern", func(t *testing.T) {
 		for _, route := range routes {
 			_, pattern, _ := strings.Cut(route.route, " ")
@@ -90,13 +101,15 @@ func checkModuleRouteMap(t *testing.T, api *goldenRuntime) {
 			// passes the same lock in SchoolScopeMiddleware (#4895).
 			// Kiosk routes carry no session; their device authenticator
 			// passes the lock in gateDeviceAuthentication (#4896).
+			// The Träger portal binds a Träger and passes the lock of its
+			// schools in TraegerScopeMiddleware (#6052).
 			if !slices.Contains(route.chain, "api.TenantScopeMiddleware") && !slices.Contains(route.chain, "api.SchoolScopeMiddleware") &&
-				!slices.ContainsFunc(route.chain, isDeviceModuleGate) {
+				!slices.Contains(route.chain, "api.TraegerScopeMiddleware") && !slices.ContainsFunc(route.chain, isDeviceModuleGate) {
 				unlocked = append(unlocked, route.route)
 			}
 		}
 		require.Emptyf(t, unlocked,
-			"these routes of an additional module pass neither api.TenantScopeMiddleware, api.SchoolScopeMiddleware nor a device authenticator behind gateDeviceAuthentication, so a school without the module still reaches them. Mount them in a tenant chain or name the issue that locks their surface in moduleRoutesLockedElsewhere:\n%s",
+			"these routes of an additional module pass neither api.TenantScopeMiddleware, api.SchoolScopeMiddleware, api.TraegerScopeMiddleware nor a device authenticator behind gateDeviceAuthentication, so a school without the module still reaches them. Mount them in a tenant or Träger chain or name the issue that locks their surface in moduleRoutesLockedElsewhere:\n%s",
 			strings.Join(unlocked, "\n"))
 	})
 

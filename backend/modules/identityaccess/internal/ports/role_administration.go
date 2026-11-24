@@ -29,7 +29,9 @@ type RoleStore interface {
 	FindSystemRoleByName(ctx context.Context, name string) (domain.ManagedRole, bool, error)
 	// FindRoleForUpdate locks the role row with the visibility FindRole has.
 	FindRoleForUpdate(ctx context.Context, id int64) (domain.ManagedRole, bool, error)
-	UpdateRole(ctx context.Context, role domain.ManagedRole) error
+	// UpdateRole writes name, description and base role of the role row and
+	// answers the stored row, its trigger-set change time included.
+	UpdateRole(ctx context.Context, role domain.ManagedRole) (domain.ManagedRole, error)
 	DeleteRole(ctx context.Context, id int64) error
 	ListRoles(ctx context.Context, filter domain.RoleFilter) ([]domain.ManagedRole, error)
 	// ListAccountRoles returns the roles the account holds at the tenant in

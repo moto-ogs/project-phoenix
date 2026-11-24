@@ -98,6 +98,26 @@ func (f traegerFixture) add(t *testing.T, org int64, input exporttransfer.Traege
 	return recipient.ID.Int64()
 }
 
+// version is the read state of a recipient as the form reads it (ADR
+// 0311); empty for one the Träger does not have.
+func (f traegerFixture) version(t *testing.T, org, id int64) string {
+	t.Helper()
+	page, err := f.transfers.Recipient(f.ctx, org, id, 1)
+	if errors.Is(err, exporttransfer.ErrRecipientNotFound) {
+		return ""
+	}
+	require.NoError(t, err)
+	return page.Recipient.Version
+}
+
+// assignmentsVersion is the read state of the format assignments of org.
+func (f traegerFixture) assignmentsVersion(t *testing.T, org int64) string {
+	t.Helper()
+	page, err := f.transfers.Recipients(f.ctx, org, 1)
+	require.NoError(t, err)
+	return page.AssignmentsVersion
+}
+
 // assign sends each format to its recipient, 0 for the download.
 func (f traegerFixture) assign(t *testing.T, org int64, recipients map[string]int64) exporttransfer.TraegerRecipientsPage {
 	t.Helper()
@@ -109,7 +129,7 @@ func (f traegerFixture) assign(t *testing.T, org int64, recipients map[string]in
 		}
 		assignments = append(assignments, assignment)
 	}
-	page, err := f.transfers.AssignFormats(f.ctx, org, 0, assignments)
+	page, err := f.transfers.AssignFormats(f.ctx, org, 0, assignments, f.assignmentsVersion(t, org))
 	require.NoError(t, err)
 	return page
 }
@@ -305,7 +325,7 @@ func TestTraegerRecipientPasswordNeverFollowsAChangedDestination(t *testing.T) {
 		input := f.readyInput()
 		input.Password = nil
 		change(&input)
-		_, err := f.transfers.SaveRecipient(f.ctx, f.org, 0, id, input)
+		_, err := f.transfers.SaveRecipient(f.ctx, f.org, 0, id, input, f.version(t, f.org, id))
 		var invalid *exporttransfer.RecipientError
 		require.ErrorAs(t, err, &invalid, name)
 		assert.Equal(t, []string{exporttransfer.RecipientFieldPassword}, invalid.Fields, name)
@@ -314,7 +334,7 @@ func TestTraegerRecipientPasswordNeverFollowsAChangedDestination(t *testing.T) {
 	input := f.readyInput()
 	input.Password = nil
 	input.RemoteDirectory = f.dir + "/"
-	recipient, err := f.transfers.SaveRecipient(f.ctx, f.org, 0, id, input)
+	recipient, err := f.transfers.SaveRecipient(f.ctx, f.org, 0, id, input, f.version(t, f.org, id))
 	require.NoError(t, err)
 	assert.True(t, recipient.PasswordSet)
 	page, err := f.transfers.Recipient(f.ctx, f.org, id, 10)

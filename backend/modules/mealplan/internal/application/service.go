@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/mealplan"
 	"github.com/moto-ogs/project-phoenix/modules/mealplan/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 var ErrDisabled = errors.New("meal plan is disabled")
@@ -89,18 +90,40 @@ func (s *Service) participationPlan(ctx context.Context, studentID int64, from, 
 // replaceSchedule replaces the regular days. A parent's change
 // takes effect on the first day whose order is not fixed yet; the school's
 // (schoolFrom set) on the day it names, from today up to a year ahead
-// (#3873).
-func (s *Service) replaceSchedule(ctx context.Context, studentID, accountID int64, weekdays []domain.Weekday, schoolFrom domain.Date) (effectiveFrom domain.Date, err error) {
+// (#3873). The child's student row is locked first, as by every care-day
+// writer and the parent portal's child guard, then the child's regular days,
+// before the orders' lock any path takes. The save is refused with
+// readstate.ErrChanged unless the regular days are still stored as their
+// saver read them (expected, ADR 0311).
+func (s *Service) replaceSchedule(ctx context.Context, studentID, accountID int64, weekdays []domain.Weekday, schoolFrom domain.Date, expected string) (effectiveFrom domain.Date, err error) {
 	err = s.run(ctx, "replace_participation_schedule", func(txCtx context.Context) (domain.OperationStats, error) {
+		lockStats, lockErr := s.directory.LockStudent(txCtx, studentID)
+		if lockErr != nil {
+			return lockStats, lockErr
+		}
 		rules, rulesErr := s.requireRegistration(txCtx)
 		if rulesErr != nil {
-			return domain.OperationStats{}, rulesErr
+			return lockStats, rulesErr
 		}
-		var stats domain.OperationStats
+		scheduleStats, lockErr := s.store.LockSchedule(txCtx, studentID)
+		stats := addStats(lockStats, scheduleStats)
+		if lockErr != nil {
+			return stats, lockErr
+		}
+		var startStats domain.OperationStats
 		var fromErr error
-		effectiveFrom, stats, fromErr = s.scheduleStart(txCtx, rules, studentID, schoolFrom)
+		effectiveFrom, startStats, fromErr = s.scheduleStart(txCtx, rules, studentID, schoolFrom)
+		stats = addStats(stats, startStats)
 		if fromErr != nil {
 			return stats, fromErr
+		}
+		stored, readStats, readErr := s.store.FindSchedules(txCtx, studentID)
+		stats = addStats(stats, readStats)
+		if readErr != nil {
+			return stats, readErr
+		}
+		if err := readstate.Check(expected, scheduleVersion(stored)); err != nil {
+			return stats, err
 		}
 		// A new pattern can change every day it reaches.
 		today := domain.DateFromInstant(s.now())
@@ -200,9 +223,13 @@ func mayChangeDay(rules domain.OrderingRules, now time.Time, date domain.Date, p
 // parent each until its own deadline, for the school at any time.
 func (s *Service) setParticipationDay(ctx context.Context, studentID, accountID int64, date domain.Date, participating, bySchool bool) error {
 	return s.run(ctx, "set_participation_day", func(txCtx context.Context) (domain.OperationStats, error) {
+		lockStats, lockErr := s.directory.LockStudent(txCtx, studentID)
+		if lockErr != nil {
+			return lockStats, lockErr
+		}
 		rules, rulesErr := s.requireRegistration(txCtx)
 		if rulesErr != nil {
-			return domain.OperationStats{}, rulesErr
+			return lockStats, rulesErr
 		}
 		if err := mayChangeDay(rules, s.now(), date, participating, bySchool); err != nil {
 			return domain.OperationStats{}, err
@@ -220,7 +247,7 @@ func (s *Service) setParticipationDay(ctx context.Context, studentID, accountID 
 			logStats, logErr := s.store.InsertRegistrationChanges(txCtx, []domain.RegistrationChange{change})
 			return addStats(saveStats, logStats), logErr
 		})
-		return addStats(stats, writeStats), err
+		return addStats(lockStats, addStats(stats, writeStats)), err
 	})
 }
 
@@ -231,9 +258,13 @@ func (s *Service) setParticipationDay(ctx context.Context, studentID, accountID 
 // is a passed deadline; nothing to change at all is no error.
 func (s *Service) setParticipationWeek(ctx context.Context, studentID, accountID int64, monday domain.Date, participating bool) (changed, locked []domain.Date, err error) {
 	err = s.run(ctx, "set_participation_week", func(txCtx context.Context) (domain.OperationStats, error) {
+		lockStats, lockErr := s.directory.LockStudent(txCtx, studentID)
+		if lockErr != nil {
+			return lockStats, lockErr
+		}
 		rules, rulesErr := s.requireRegistration(txCtx)
 		if rulesErr != nil {
-			return domain.OperationStats{}, rulesErr
+			return lockStats, rulesErr
 		}
 		plan, stats, readErr := s.readParticipation(txCtx, studentID, monday, monday.AddDays(4), rules, "")
 		if readErr != nil {
@@ -255,7 +286,7 @@ func (s *Service) setParticipationWeek(ctx context.Context, studentID, accountID
 			logStats, logErr := s.store.InsertRegistrationChanges(txCtx, entries)
 			return addStats(saveStats, logStats), logErr
 		})
-		return addStats(stats, writeStats), err
+		return addStats(lockStats, addStats(stats, writeStats)), err
 	})
 	return changed, locked, err
 }
@@ -293,7 +324,9 @@ func (s *Service) readParticipation(ctx context.Context, studentID int64, from, 
 	if err != nil {
 		return domain.ParticipationPlan{}, stats, err
 	}
-	return s.resolveParticipation(data, from, to, rules, days, scheduleDate), stats, nil
+	plan := s.resolveParticipation(data, from, to, rules, days, scheduleDate)
+	plan.Version = scheduleVersion(data.Schedules)
+	return plan, stats, nil
 }
 
 // clearParticipationDay drops the day's exception, so the weekly pattern
@@ -302,9 +335,13 @@ func (s *Service) readParticipation(ctx context.Context, studentID int64, from, 
 // day the school is closed, and the school no day already over.
 func (s *Service) clearParticipationDay(ctx context.Context, studentID, accountID int64, date domain.Date, bySchool bool) error {
 	return s.run(ctx, "clear_participation_day", func(txCtx context.Context) (domain.OperationStats, error) {
+		lockStats, lockErr := s.directory.LockStudent(txCtx, studentID)
+		if lockErr != nil {
+			return lockStats, lockErr
+		}
 		rules, rulesErr := s.requireRegistration(txCtx)
 		if rulesErr != nil {
-			return domain.OperationStats{}, rulesErr
+			return lockStats, rulesErr
 		}
 		stats, err := s.requireClearableDay(txCtx, rules, studentID, date, bySchool)
 		if err != nil {
@@ -319,7 +356,7 @@ func (s *Service) clearParticipationDay(ctx context.Context, studentID, accountI
 			logStats, logErr := s.store.InsertRegistrationChanges(txCtx, []domain.RegistrationChange{change})
 			return addStats(deleteStats, logStats), logErr
 		})
-		return addStats(stats, writeStats), err
+		return addStats(lockStats, addStats(stats, writeStats)), err
 	})
 }
 
@@ -432,20 +469,43 @@ func (s *Service) weekEntries(ctx context.Context, monday domain.Date) (entries 
 	return entries, err
 }
 
-// replace sets the dishes of a day; no dishes clear it. A change of a day
-// that already had a menu tells the families with a meal booked on it in the
-// same unit of work (#7145) and marks the day as changed for the staff
-// (#7666); saving the same menu again keeps the mark it had.
-func (s *Service) replace(ctx context.Context, date domain.Date, dishes []mealplan.Dish, actorAccountID int64) error {
+// weekDays reads Monday to Friday of the week with each day's version; an
+// empty day has one too.
+func (s *Service) weekDays(ctx context.Context, monday domain.Date) ([]mealplan.Day, error) {
+	entries, err := s.weekEntries(ctx, monday)
+	if err != nil {
+		return nil, err
+	}
+	byDate := make(map[domain.Date][]domain.Entry, 5)
+	for _, entry := range entries {
+		byDate[entry.Date] = append(byDate[entry.Date], entry)
+	}
+	days := make([]mealplan.Day, 0, 5)
+	for offset := range 5 {
+		date := monday.AddDays(offset)
+		dishes := storedDishes(byDate[date])
+		days = append(days, mealplan.Day{Date: mealplan.Date(date.String()), Version: dayVersion(dishes), Dishes: dishes})
+	}
+	return days, nil
+}
+
+// replace sets the dishes of a day; no dishes clear it. The day is locked
+// and refused with readstate.ErrChanged unless its stored version is the
+// expected one, so no other save slips in between check and write. A change
+// of a day that already had a menu tells the families with a meal booked on
+// it in the same unit of work (#7145) and marks the day as changed for the
+// staff (#7666); saving the same menu again keeps the mark it had. The
+// answer is the version of the dishes as written.
+func (s *Service) replace(ctx context.Context, date domain.Date, dishes []mealplan.Dish, expected string, actorAccountID int64) (string, error) {
 	operation := "replace_day"
 	if len(dishes) == 0 {
 		operation = "clear_day"
 	}
-	return s.run(ctx, operation, func(txCtx context.Context) (domain.OperationStats, error) {
+	err := s.run(ctx, operation, func(txCtx context.Context) (domain.OperationStats, error) {
 		if err := s.requireEnabled(txCtx); err != nil {
 			return domain.OperationStats{}, err
 		}
-		before, stats, err := s.store.FindWeek(txCtx, date, date)
+		before, stats, err := s.storedDay(txCtx, date, expected)
 		if err != nil {
 			return stats, err
 		}
@@ -462,6 +522,28 @@ func (s *Service) replace(ctx context.Context, date domain.Date, dishes []mealpl
 		noticed, err := s.noticeMenuChange(txCtx, date, before, dishes, actorAccountID)
 		return addStats(stats, noticed), err
 	})
+	if err != nil {
+		return "", err
+	}
+	return dayVersion(dishes), nil
+}
+
+// storedDay locks the day until commit, reads it and checks it against the
+// version its saver read (ADR 0311).
+func (s *Service) storedDay(txCtx context.Context, date domain.Date, expected string) ([]domain.Entry, domain.OperationStats, error) {
+	stats, err := s.store.LockDay(txCtx, date)
+	if err != nil {
+		return nil, stats, err
+	}
+	before, read, err := s.store.FindWeek(txCtx, date, date)
+	stats = addStats(stats, read)
+	if err != nil {
+		return nil, stats, err
+	}
+	if err := readstate.Check(expected, dayVersion(storedDishes(before))); err != nil {
+		return nil, stats, err
+	}
+	return before, stats, nil
 }
 
 func (s *Service) requireEnabled(ctx context.Context) error {

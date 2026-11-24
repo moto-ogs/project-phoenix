@@ -291,6 +291,7 @@ func newDecisionsForTestWithBookings(
 		StudentAudit:           owners.EnrollmentDecisionStudentAudit(api.NewEnrollmentFlowStudentAudit(testpkg.MustDatabase(env.db), testpkg.RequestAuditActor)),
 		StudentConsents:        owners.EnrollmentDecisionStudentConsents(studentConsents),
 		CareWithdrawal:         careWithdrawal,
+		CareStudents:           owners.NewEnrollmentPhaseCareStudents(owners.MustNewPeopleDirectory(testpkg.MustDatabase(env.db))),
 		ParentsURL:             owners.EnrollmentDecisionParentsURL("http://parents.localhost:3000", "http://localhost:3000"),
 		LockTemplateRecurrence: lockTemplateRecurrence,
 		FollowClassChanges:     api.MustEnrollmentTestClassFollowUp(testpkg.MustDatabase(env.db)),
@@ -416,7 +417,7 @@ func assertOfferingAdjustmentWaitsForRecurrenceGate(
 	adjustmentDone := make(chan error, 1)
 	go func() {
 		adjustmentDone <- testpkg.WithTenantTx(t, testpkg.Ctx(t), env.db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
-			_, err := testpkg.TenantQuery1(t, txCtx, testpkg.SetupTestDB(t), decision.UpdateChildOfferings, input)
+			_, err := testpkg.TenantQuery1(t, txCtx, testpkg.SetupTestDB(t), correctOverRead(decision), input)
 			return err
 		})
 	}()
@@ -3601,7 +3602,7 @@ func TestDecisionService_UpdateChildOfferings_RebuildsEverySplitSeriesSegment(t 
 	}
 	assertSeriesRoster()
 
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID: submitted.Request.ID, ChildID: childID,
 		ActorAccountID: env.creatorID, ActorRole: "admin",
 		Reason: "Serienzuordnung erneut speichern",
@@ -3825,7 +3826,7 @@ func TestDecisionService_Decide_RolloverApprovalMaterializesClonedOffering(t *te
 	assert.Equal(t, 1, int(count),
 		"rollover approval must materialize the copied source-phase offering for the target phase window")
 
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID:      rolled.RequestID,
 		ChildID:        rolled.ID,
 		ActorAccountID: env.creatorID,
@@ -4195,7 +4196,7 @@ func TestDecisionService_UpdateChildOfferings_RejectsNonApprovedChild(t *testing
 	reqID, childID := submitOneChild(t, env, "adjust-pending@example.com", "Lina", "Pending")
 	offering := createAdjustmentCareOffering(t, env, "Randstunde Pending")
 
-	_, err := testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID:      reqID,
 		ChildID:        childID,
 		ActorAccountID: env.creatorID,
@@ -4225,7 +4226,7 @@ func TestDecisionService_UpdateChildOfferings_ReplacesLinksAndWritesAudit(t *tes
 	require.NoError(t, err)
 	require.NotNil(t, outcome.Child.CreatedStudentID)
 
-	updated, err := testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	updated, err := testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID:      reqID,
 		ChildID:        childID,
 		ActorAccountID: env.creatorID,
@@ -4282,7 +4283,7 @@ func TestDecisionService_UpdateChildOfferings_RejectsGroupRuleViolation(t *testi
 	require.NoError(t, err)
 	require.NotNil(t, outcome.Child.CreatedStudentID)
 
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID:      reqID,
 		ChildID:        childID,
 		ActorAccountID: env.creatorID,
@@ -4325,7 +4326,7 @@ func TestDecisionService_UpdateChildOfferings_RematerializesRequiredAutomaticLun
 	require.NoError(t, err)
 	require.NotNil(t, outcome.Child.CreatedStudentID)
 
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID:      reqID,
 		ChildID:        childID,
 		ActorAccountID: env.creatorID,
@@ -4379,7 +4380,7 @@ func TestDecisionService_UpdateChildOfferings_IgnoresInactiveOfferingsDuringVali
 	require.NoError(t, err)
 	require.NotNil(t, outcome.Child.CreatedStudentID)
 
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID:      reqID,
 		ChildID:        childID,
 		ActorAccountID: env.creatorID,
@@ -4470,7 +4471,7 @@ func TestDecisionService_UpdateChildOfferings_RemovesSourcedEnrollmentAfterOffer
 	offering.ActivityGroupID = &newGroup.ID
 	require.NoError(t, newCareOfferingFixtures(env.reposCare.CarePlan).Update(ctx, offering))
 
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID:      submitted.Request.ID,
 		ChildID:        submitted.Children[0].ID,
 		ActorAccountID: env.creatorID,
@@ -4575,7 +4576,7 @@ func TestDecisionService_UpdateChildOfferings_RemovesLegacyUnsourcedEnrollmentAf
 	offering.ActivityGroupID = &newGroup.ID
 	require.NoError(t, newCareOfferingFixtures(env.reposCare.CarePlan).Update(ctx, offering))
 
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID:      submitted.Request.ID,
 		ChildID:        submitted.Children[0].ID,
 		ActorAccountID: env.creatorID,
@@ -4662,6 +4663,15 @@ func TestDecisionService_UpdateChildOfferings_RemovesSourcedEnrollmentAfterPhase
 	env.sourcePhase.ServiceStartDate = enrollmentNative.Date(calendar.NewDate(2026, 10, 1))
 	env.sourcePhase.ServiceEndDate = enrollmentNative.Date(calendar.NewDate(2027, 8, 15))
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, env.repos.Enrollment().UpdatePhase, OwnerPhaseForTest(env.sourcePhase)))
+	// The phase edit carries the bounds the phase set on the child's booking
+	// (FollowPhaseBookingBounds, #6597); the raw update above does not, so the
+	// booking follows here. A booking that kept the old end would be a
+	// booking ending before the phase, and its row ends with it (#7908).
+	_, err = env.db.NewRaw(`UPDATE enrollment.care_offering_bookings SET valid_from = ?, valid_until = ?
+		WHERE tenant_id = ? AND request_child_id = ?`,
+		calendar.Date(env.sourcePhase.ServiceStartDate), calendar.Date(env.sourcePhase.ServiceEndDate).AddDays(1),
+		testpkg.Tenant(t), submitted.Children[0].ID).Exec(ctx)
+	require.NoError(t, err)
 	// This test isolates a phase-window correction, not a planned individual
 	// care end. Keep the student's master interval aligned with the corrected
 	// phase; otherwise enrolled_until must win and cap every rematerialization.
@@ -4672,7 +4682,7 @@ func TestDecisionService_UpdateChildOfferings_RemovesSourcedEnrollmentAfterPhase
 		Exec(ctx)
 	require.NoError(t, err)
 
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID:      submitted.Request.ID,
 		ChildID:        submitted.Children[0].ID,
 		ActorAccountID: env.creatorID,

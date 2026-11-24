@@ -1,4 +1,4 @@
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isReadStateRefusal } from "~/lib/api-error";
 import { bffJson } from "~/lib/bff-fetch";
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { knownEnum, requiredEnum } from "~/lib/contract/known-enum";
@@ -99,11 +99,7 @@ export type BulkIneligibleReason =
  */
 export type RequestReviewMetadata = Omit<
   studentsContract.Item,
-  | "request_type"
-  | "data"
-  | "occurred_at"
-  | "bulk_ineligible_reason"
-  | ParentRequestKind
+  "request_type" | "occurred_at" | "bulk_ineligible_reason" | ParentRequestKind
 > & { readonly bulk_ineligible_reason?: BulkIneligibleReason };
 
 /** Eine Anmeldungsänderung als Zeile der gemeinsamen Liste. */
@@ -131,10 +127,10 @@ export type AggregatedOpenRequest =
  * nicht überschreiben.
  */
 type HistoryDecisionMeta = Pick<
-  studentsContract.Item,
+  studentsContract.HistoryItem,
   "can_correct" | "submitted_by_name" | "submitted_by_relationship"
 > &
-  Partial<Pick<studentsContract.Item, "expected_version">>;
+  Partial<Pick<studentsContract.HistoryItem, "expected_version">>;
 
 export type AggregatedHistoryRequest =
   | (Occurred &
@@ -186,17 +182,28 @@ export interface AggregatedRequestParams {
   readonly cursor?: string;
 }
 
+const joined = (values?: readonly string[]) =>
+  values && values.length > 0 ? values.join(",") : undefined;
+
+/** Die Filter der offenen Liste. */
 function listQuery(params: AggregatedRequestParams) {
-  const join = (values?: readonly string[]) =>
-    values && values.length > 0 ? values.join(",") : undefined;
   return {
     search: params.search?.trim() || undefined,
     student_id: params.studentId || undefined,
-    types: join(params.types),
-    status: join(params.statuses),
+    types: joined(params.types),
+    cursor: params.cursor || undefined,
+  };
+}
+
+/** Die Historie filtert zusätzlich nach Entscheidung und Zeitraum. */
+function historyQuery(params: AggregatedRequestParams) {
+  const { cursor, ...filters } = listQuery(params);
+  return {
+    ...filters,
+    status: joined(params.statuses),
     from: params.from || undefined,
     to: params.to || undefined,
-    cursor: params.cursor || undefined,
+    cursor,
   };
 }
 
@@ -221,7 +228,6 @@ function projection<T>(value: T | undefined, kind: string): T {
 function openRequest(item: studentsContract.Item): AggregatedOpenRequest {
   const {
     request_type,
-    data: _data,
     master_data,
     care_schedule,
     offering,
@@ -338,7 +344,7 @@ export async function listAggregatedOpenRequests(
 ): Promise<AggregatedRequestPage<AggregatedOpenRequest>> {
   try {
     const page = await bffJson("tenant", "GET /api/students/change-requests", {
-      query: { view: "open", ...listQuery(params) },
+      query: listQuery(params),
       errorMessage: "change request list load failed",
     });
     return {
@@ -360,7 +366,7 @@ export async function listAggregatedRequestHistory(
       "tenant",
       "GET /api/students/change-requests/history",
       {
-        query: listQuery(params),
+        query: historyQuery(params),
         errorMessage: "change request list load failed",
       },
     );
@@ -389,14 +395,24 @@ export interface BulkApproveRequestRef {
 }
 
 /**
- * Meldet eine abgelehnte schreibende Anfrage (#2513). Eine veraltete Version
- * (409 `students.change_request_stale`, #2267) erkennt die Oberfläche am
- * Code und lädt neu, statt die Person eine verlorene Entscheidung
- * wiederholen zu lassen; sie ist kein Fehler zum Protokollieren.
+ * Eine Entscheidung, die auf einem veralteten Stand beruht: ein anderer
+ * Name für `isReadStateRefusal`, also `general.changed_since_read` (ADR
+ * 0311) und jeder ältere Modulcode derselben Bedeutung (ADR 0311 §6). Bei
+ * den Anfragen sind das die seit dem Lesen geänderte Anfrage und ein nicht
+ * mehr stimmender bisheriger Wert einer Stammdaten-Anfrage
+ * (`students.change_request_stale`).
+ */
+export const isOutdatedDecision = isReadStateRefusal;
+
+/**
+ * Meldet eine abgelehnte schreibende Anfrage (#2513). Eine veraltete
+ * Entscheidung (`isOutdatedDecision`) erkennt die Oberfläche am Code und lädt
+ * neu, statt die Person eine verlorene Entscheidung wiederholen zu lassen;
+ * sie ist kein Fehler zum Protokollieren.
  */
 function logWriteError(error: unknown): void {
   if (!(error instanceof ApiError)) return;
-  if (error.code === "students.change_request_stale") return;
+  if (isOutdatedDecision(error)) return;
   logger.warn("change_request_write_failed", {
     status: error.status,
     ...(error.code ? { code: error.code } : {}),
@@ -607,7 +623,7 @@ export async function listEnrollmentChangeRequests(
       "tenant",
       "GET /api/enrollment/admin/change-requests/list",
       {
-        query: { view, ...listQuery(rest) },
+        query: { view, ...historyQuery(rest) },
         errorMessage: "enrollment change request list load failed",
       },
     );

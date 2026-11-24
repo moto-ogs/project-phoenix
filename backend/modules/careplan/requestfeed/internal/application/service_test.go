@@ -87,6 +87,17 @@ func TestCreateRejectsGroupScopedAccess(t *testing.T) {
 	t.Parallel()
 	service := newTestService(t, &fakeStore{}, domain.Access{Active: true}, time.Now())
 	_, err := service.Provision(context.Background(), 7, 9)
+	assert.ErrorIs(t, err, requestfeed.ErrNoAccess)
+	_, err = service.Status(context.Background(), 7, 9)
+	assert.ErrorIs(t, err, requestfeed.ErrNoAccess)
+	_, err = service.Rotate(context.Background(), 7, 9)
+	assert.ErrorIs(t, err, requestfeed.ErrNoAccess)
+}
+
+func TestRotateWithoutFeedIsNotFound(t *testing.T) {
+	t.Parallel()
+	service := newTestService(t, &fakeStore{}, domain.Access{Active: true, GeneralRequests: true}, time.Now())
+	_, err := service.Rotate(context.Background(), 7, 9)
 	assert.ErrorIs(t, err, requestfeed.ErrNotFound)
 }
 

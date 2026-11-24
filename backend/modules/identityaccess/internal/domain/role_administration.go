@@ -31,8 +31,12 @@ type ManagedRole struct {
 	// SchoolPortal marks a school role made from the Lehrkraft template: it
 	// opens moto schule like the system role lehrkraft (#4574).
 	SchoolPortal bool
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	// TraegerRoleID names the Träger role this school role is the copy of
+	// (#4810, ADR 0317); nil for a role of the school's own. The school
+	// assigns a copy but does not change or delete it.
+	TraegerRoleID *int64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // Facts projects the role onto its classification facts.

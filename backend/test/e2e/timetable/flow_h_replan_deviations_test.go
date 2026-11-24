@@ -52,7 +52,7 @@ func TestFlowH_ReplanReappliesAbsenceAndAckAcrossTemplateEdit(t *testing.T) {
 	// Mark staffA absent and acknowledge the block as deliberately unstaffed —
 	// present(1) < planned(2), so the ack is valid.
 	devReq := map[string]any{
-		"absences":          []map[string]any{{"staff_id": staffA.ID, "reason": "Krank"}},
+		"absences":          []map[string]any{{"staff_id": testpkg.ID(staffA.ID), "reason": "Krank"}},
 		"understaffed_ack":  true,
 		"understaffed_note": "Kein Ersatz verfügbar",
 	}
@@ -137,7 +137,7 @@ func TestFlowH_ReplanReappliesSubstitute(t *testing.T) {
 	// Konsolidierung (#1886): Vertretung über den atomaren Deviations-Save.
 	subReq := map[string]any{
 		"substitutions": []map[string]any{
-			{"absent_staff_id": staffA.ID, "substitute_staff_id": subC.ID},
+			{"absent_staff_id": testpkg.ID(staffA.ID), "substitute_staff_id": testpkg.ID(subC.ID)},
 		},
 	}
 	rr = s.do("POST", fmt.Sprintf("/instances/%d/deviations", inst.ID), subReq, s.primaryAdminClaims())
@@ -192,7 +192,7 @@ func TestFlowH_ClearPersistedAbsence(t *testing.T) {
 
 	// Mark staffA absent, then reopen and clear it.
 	rr = s.do("POST", fmt.Sprintf("/instances/%d/deviations", inst.ID),
-		map[string]any{"absences": []map[string]any{{"staff_id": staffA.ID}}}, s.primaryAdminClaims())
+		map[string]any{"absences": []map[string]any{{"staff_id": testpkg.ID(staffA.ID)}}}, s.primaryAdminClaims())
 	require.Equal(t, http.StatusOK, rr.Code, "mark absent body=%s", rr.Body.String())
 	for _, r := range fetchInstanceStaff(t, s, inst.ID) {
 		if r.StaffID == staffA.ID {
@@ -201,7 +201,7 @@ func TestFlowH_ClearPersistedAbsence(t *testing.T) {
 	}
 
 	rr = s.do("POST", fmt.Sprintf("/instances/%d/deviations", inst.ID),
-		map[string]any{"presences": []int64{staffA.ID}}, s.primaryAdminClaims())
+		map[string]any{"presences": []map[string]any{{"staff_id": testpkg.ID(staffA.ID)}}}, s.primaryAdminClaims())
 	require.Equal(t, http.StatusOK, rr.Code, "clear absence body=%s", rr.Body.String())
 
 	var staffARow *testpkg.InstanceStaff
@@ -218,8 +218,8 @@ func TestFlowH_ClearPersistedAbsence(t *testing.T) {
 	// Contradiction guard: present + absent for the same staff in one save → 400.
 	rr = s.do("POST", fmt.Sprintf("/instances/%d/deviations", inst.ID),
 		map[string]any{
-			"absences":  []map[string]any{{"staff_id": staffA.ID}},
-			"presences": []int64{staffA.ID},
+			"absences":  []map[string]any{{"staff_id": testpkg.ID(staffA.ID)}},
+			"presences": []map[string]any{{"staff_id": testpkg.ID(staffA.ID)}},
 		}, s.primaryAdminClaims())
 	assert.Equal(t, http.StatusBadRequest, rr.Code, "present+absent contradiction rejected")
 }

@@ -404,7 +404,7 @@ erreicht.
   Der Plan hält solche Zeilen selbst zurück (Abschnitt 1); die Anmeldung
   lehnt sie zusätzlich ab.
 - **Eine befristete Buchung auf einem direkt verknüpften Roster bleibt
-  zurück** (`roster_bound`). Benennt ein Angebot sein Roster über die
+  zurück** (`roster_bound`; aufgehoben durch ADR 0312, #7908). Benennt ein Angebot sein Roster über die
   direkte Verknüpfung `ActivityGroupID`, schreibt Care Plan die Roster-Zeile
   des Kindes bis zum Ende der Phase, auch wenn die Buchung früher endet
   (Modul mit letztem Tag, Vertrag mit Ende). Das Kind bliebe auf dem Roster
@@ -865,13 +865,175 @@ nächsten PR. Bis dahin sind die Routen nur über die API erreichbar.
 
 ### 5. Der Schritt für die Eltern
 
-Der Auslöser bleibt die bestehende Sammeleinladung der Schule
-(`POST /guardians/bulk-invite`). Sie lädt wie bisher alle
-Erziehungsberechtigten ohne Konto ins Elternportal ein. Neu ist eine Mail an
-Erziehungsberechtigte, die schon ein Konto haben
-(`guardian-care-visible.html`, Schalter `NotifyActive` der Sammeleinladung):
-Die Betreuung ihres Kindes ist jetzt im Elternportal sichtbar. Der Lauf aus
-Abschnitt 4 löst diesen Schritt nie selbst aus.
+Nachtrag vom 23.11.2026 (#7760, Teil 3), nach der ersten Prüfrunde
+berichtigt. Der Lauf aus Abschnitt 4 löst diesen Schritt nie selbst aus.
+
+- **Wo der Auslöser sitzt.** In der bestehenden Sammeleinladung der Schule
+  (`POST /guardians/bulk-invite`, „Eltern einladen“ in der Kinderliste der
+  Datenverwaltung, Auswahl oder Klasse). Dort liegen die Angaben der
+  Erziehungsberechtigten; das Träger-Büro sieht sie nicht und schickt
+  deshalb nichts. Die Seite „Anmeldungen nachtragen“ und die Hilfe des
+  Trägers verweisen auf diesen Weg. Ein eigener Lauf für Kinder der Herkunft
+  `contract_import` ist nicht gebaut: Die Schule wählt die Kinder wie bei
+  jeder Einladung. Die Mail ist auch für andere Kinder wahr, weil der Code
+  nur Kinder nennt, die das Elternportal heute mit einer Buchung zeigt
+  (siehe „Welche Kinder“).
+- **Wer was bekommt.** Ohne Schalter bleibt alles, wie es war: Eltern ohne
+  Konto bekommen die Einladung, Eltern mit Konto werden nur gezählt
+  (`skipped_active`), ihr Zugang zur Schule wird wie bisher wiederhergestellt.
+  Mit dem Schalter `notify_active` (`NotifyActive`, Standard aus) bekommt ein
+  Erziehungsberechtigter mit Konto **eine** Mail
+  (`guardian_care_visible`, Vorlage `guardian-care-visible.html`), die jedes
+  seiner ausgewählten Kinder nennt, für das alles gilt: volle Rolle (wie bei
+  der Einladung), `parent_portal.access` in den gespeicherten Rechten der
+  Beziehung (gelesen wie die Elternmitteilungen: `permissions @>
+  '{"parent_portal.access": true}'`), eine Buchung, die heute gilt (unten) und noch
+  keine Mail für diese Beziehung. Das Konto, an das der Zugang gebunden ist,
+  muss aktiv und nicht gelöscht sein und **schon vor dem Lauf** zum
+  Elternportal der Schule gehören (aktive Zuordnung und Rolle `guardian`,
+  dieselbe Bedingung wie die Anmeldung im Elternportal). Stellt erst dieser
+  Lauf die Zuordnung wieder her, ist das kein Beleg für einen bestehenden
+  Zugang: keine Mail in diesem Lauf, die Wiederherstellung selbst bleibt.
+  Eine Mail je Elternteil statt je Kind: Geschwister bekommen keine zwei
+  gleichen Mails, und je Elternteil gibt es genau einen Outbox-Eintrag und
+  einen Merker-Schreibvorgang.
+- **Welche Kinder.** Genannt wird ein Kind nur mit einer Buchung, die
+  heute gilt, so wie das Elternportal sie unter „Betreuung & Wochenplan“
+  listet. Das Portal liest dort `GetChildCareOfferings`: `RequireCarePlace`
+  (Kind mit OGS-Platz), dann `currentCarePeriod` über die genehmigten
+  Betreuungszeiträume (`enrollment.request_children` mit `status =
+  approved` und `created_student_id`, neueste zuerst), dann die Buchungen
+  dieses Anmeldekinds (`carePeriodOfferings`, eine Zeile je Buchung mit
+  `valid_until` nach dem Tag). Die Bedingung, je Kind, am Berliner Tag der
+  Identity-&-Access-Uhr: kein Abgänger, OGS-Platz, Betreuungsende
+  (`enrolled_until`) nicht vorbei, der erste genehmigte Zeitraum in dieser
+  Reihenfolge, der heute einschließt, und für sein Anmeldekind mindestens
+  eine Buchung in Care Plan mit `valid_from` leer oder höchstens heute und
+  `valid_until` leer oder nach heute. Strenger als das Portal, mit Absicht:
+  Ein Zeitraum oder eine Buchung, die erst später beginnt, zeigt das Portal
+  schon, ein vergangener Zeitraum ebenso; beides ist keine Betreuung, die
+  heute läuft, und die Mail verspräche Tage, an denen niemand betreut wird.
+  Ein Wochenplan allein (das Portal zeigt dann „Betreuungszeiten“ ohne
+  gebuchtes Modul) zählt nicht. Eine optionale Phase, die ohne Buchung
+  genehmigt wurde, und eine importierte Buchung, die vor ihrer Phase endet,
+  nennen das Kind also nicht. Gelöschte Module können nicht vorkommen: Eine
+  Buchung hält ihr Modul (`ON DELETE RESTRICT`). Solche Kinder bekommen
+  weder Mail noch Merker; ein späterer Lauf nennt sie, sobald eine Buchung
+  gilt. Vorschau und Ergebnis zählen sie (`without_visible_care`, „Kinder
+  ohne gebuchte Betreuung: keine Nachricht“). Gelesen wird über die Ports
+  `ApprovedCarePeriods` und `CareBookingsInForce` von Identity & Access, an
+  der Wurzel an Enrollments `StudentCarePeriodsByStudentIDs` und
+  `EffectiveOfferingSelectionsAtDates` (Buchungen von Care Plan) gebunden:
+  je eine Abfrage für alle Kinder. Eine einzige Abfrage gibt es nicht, weil
+  Zeitraum und Buchung zwei Ownern gehören. OGS-Platz, Betreuungsende und
+  Abgang kommen aus derselben Abfrage der Kinderakten, die auch die Vornamen
+  liest.
+- **An welche Adresse.** An die Anmeldeadresse des Kontos, das den Zugang
+  hält (`auth.accounts.email`), wie die übrigen Mails an Elternkonten
+  (Anmeldecode, gemerktes Gerät). Nie an die Kontaktadresse des Profils: Die
+  Schule kann sie ändern, ohne dass sich die Bindung an das Konto ändert, und
+  ein Tippfehler schickte Vornamen und Schule an Fremde. Ist die
+  Anmeldeadresse leer oder falsch, oder hält Delivery Mails an sie zurück
+  (Sperrliste, Stopp der Schule, verzögerter Versand, Sperre beim Anbieter),
+  steht das Elternteil mit den bestehenden Problemcodes in der Liste; es
+  gibt keinen Rückgriff auf die Kontaktadresse. Grenze: Der Hinweis „Den
+  Grund siehst du beim Kind“ zeigt dort den Stand der Kontaktadresse.
+- **Was nicht gesendet wird.** Die Mail nennt die Vornamen der Kinder, die
+  Schule und den Weg ins Elternportal. Keine Kontodaten, keine
+  Gesundheitsdaten, keine Beträge oder Inhalte des Vertrags. Die Sprache ist
+  die des Elternportals des Kontos (`portal_locale`), in allen sieben
+  Sprachen der Elterncodes; sonst Deutsch. Eine Schule ohne das Modul
+  Eltern-App erreicht die Route nicht (Modul `eltern_app`), und Delivery
+  hält die Mail beim Versand zurück, wenn die Schule es nicht gebucht hat.
+  Sie ist eine Elternmail (Sperrliste und Stopp der Schule) und eine
+  Verteilermail (sie endet, wenn kein Kind der Familie mehr betreut wird).
+  Eine Abwahl je Elternteil gibt es für Mails der Schule an Eltern nicht; die
+  Mitteilungseinstellungen des Elternportals gelten Push-Nachrichten.
+- **Entschieden unter Sperren.** Rollen und Rechte der Beziehungen liest der
+  Lauf zuerst ohne Sperre, um die Elternteile zu finden. Entschieden wird
+  danach, unter den Sperren der Profile, aus Zeilen, die bis zum Commit
+  gehalten werden (Vorschau ohne Sperre). Die Reihenfolge ist: Kontozeilen
+  aller Konten, denen der Lauf Zugang geben kann (die der Profile und die,
+  deren Adresse ein Profil im Moment der Sperre trägt, auch ein seit dem
+  Lesen der Adressen angelegtes), dazu das Konto der einladenden Person (jede
+  neue Einladung verweist darauf, und die Einladung eines Elternteils durch
+  ein anderes sperrt beide Konten aufsteigend), in einer Abfrage aufsteigend
+  nach Kennung mit `FOR NO KEY UPDATE`; dann die aktive Zuordnung zur Schule und die
+  Zeilen der Rolle `guardian` (`FOR SHARE OF at, ar`); dann die
+  Zugangszeilen (`FOR SHARE OF gsa`). Das Konto erst teilend zu sperren
+  reicht nicht: Die Wiederherstellung einer inaktiven Zuordnung später im
+  selben Lauf (`EnsureActiveTenantMapping`) verlangt `FOR NO KEY UPDATE`, und
+  zwei Läufe zweier Schulen mit demselben Elternteil warteten beim Aufwerten
+  aufeinander (40P01, der Lauf einer Schule rollte ganz zurück). Mit der
+  stärkeren Sperre von Anfang an fragt jede spätere Anweisung des Laufs nur,
+  was er schon hält (`FOR KEY SHARE`, `FOR NO KEY UPDATE`), und ein zweiter
+  Lauf wartet. Die Sammeleinladung ohne Schalter sperrt die Konten auf
+  dieselbe Weise; vorher nahm sie sie einzeln in der Reihenfolge der Profile
+  und konnte mit einem Lauf mit Schalter einen Zyklus bilden. Zuordnung und
+  Rolle schreibt der Lauf nicht, wo er sie hält: Eine aktive Zuordnung hält
+  die Gewährung nur mit `FOR SHARE`, eine vorhandene Rolle lässt sie stehen;
+  eine inaktive Zuordnung hält die Abfrage nicht. Gleiche Reihenfolge wie
+  Gewähren und Entziehen durch den Operator, Anmeldung und Erneuerung, die
+  alle zuerst die Kontozeile sperren; Löschen und Bearbeiten einer Beziehung
+  sowie der Trigger der Kontobindung nehmen am Konto nur `FOR KEY SHARE`,
+  das die Sperre zulässt. Aus den gehaltenen Zeilen liest die Abfrage des
+  Merkers Merker, gespeichertes `parent_portal.access`, ob das Konto aktiv
+  ist, die Mitgliedschaft im Elternportal, Anmeldeadresse und Sprache; ein
+  Konto ohne Zuordnung oder Rolle ist nicht berechtigt. Wer in dieser Zeit
+  herabgestuft wird, `parent_portal.access` verliert, deaktiviert wird oder
+  seinen Zugang zur Schule verliert, bekommt nichts; eine solche Änderung,
+  die danach kommt, wartet auf das Ende des Laufs. Eine Zuordnung, die erst
+  dieser Lauf wiederherstellt, macht das Konto nicht berechtigt: Gelesen
+  wird vor der Wiederherstellung. **Folge für die Anmeldung:** Anmeldung und
+  Erneuerung des Tokens sperren die Kontozeile exklusiv; ein ausgewähltes
+  Elternteil wartet daher, bis der Lauf abgeschlossen ist. Gemessen auf der
+  lokalen Testdatenbank: 0,2 s für einen Lauf mit Schalter über 30 Kinder mit
+  je zwei Elternteilen mit Konto, alle 60 benachrichtigt (0,14 s ohne
+  Schalter). Das ist die obere Grenze dieser Wartezeit in dieser Größe; die
+  Einladung ohne Schalter hielt schon vorher dieselbe Sperre auf Konten,
+  deren Zugang sie wiederherstellt, und `FOR KEY SHARE` auf allen anderen,
+  das die Anmeldung ebenso warten lässt. Ein Konto, das erst während des
+  Laufs für eine der Adressen entsteht, sperrt die Einladung wie bisher in
+  der Schleife; zwei solche Konten in umgekehrter Reihenfolge an zwei Schulen
+  in derselben Zehntelsekunde können einen Lauf abbrechen lassen (40P01),
+  ohne Mail und ohne Merker, die Schule startet ihn neu. **Bekannte Grenze:** Eine
+  eingeplante Mail wird verschickt, auch wenn der Zugang nach dem Commit
+  entzogen wird, wie jede eingeplante Mail an Eltern. Sie enthält dann die
+  Vornamen, die Schule und den Link zur Anmeldung, nichts, was der Zugang
+  zeigt. Eine zweite Prüfung beim Versand gibt es nicht.
+- **Kein zweites Mal.** Der Zugang der Beziehung (Identity & Access,
+  `auth.guardian_student_access`) merkt sich die Mail in
+  `care_notice_sent_at` (Migration `20261123160000`), gesetzt, wenn die Mail
+  in die Outbox geht. Ein weiterer Lauf mit dem Schalter schreibt diesem
+  Elternteil für dieses Kind keine Mail mehr; die Vorschau zählt es als
+  „Nachricht schon verschickt“. Die Idempotenz der Outbox reicht dafür nicht:
+  Die Vorschau muss vor dem Schreiben zählen, und die Outbox bietet der Schule
+  kein Lesen über Schlüssel. **Grenze wie bei jeder Mail der Outbox:** Scheitert
+  der Versand endgültig, wird die Mail nicht wiederholt, und die Schule sieht
+  das an dieser Stelle nicht. Sagt ein Elternteil, nichts sei angekommen,
+  bittet die Schule es, im Spam-Ordner nachzusehen, oder sagt ihm selbst, wo
+  die Betreuung steht („Betreuung & Wochenplan“). Wird die Beziehung gelöscht
+  und neu angelegt, gilt sie als neu.
+- **Ablauf und Statements.** In der Tenant-Transaktion der Sammeleinladung,
+  nach den Sperren der Profile, sperrt ein echter Lauf in einer Abfrage die
+  Konten (auch ohne Schalter) und mit Schalter in einer weiteren die
+  Mitgliedschaften und liest dann in je einer Abfrage die
+  Zugangszeilen, die Kinderakten, die Betreuungszeiträume und die Buchungen
+  von heute, dazu die Vornamen und den Schulnamen; die Vorschau sperrt nicht
+  und liest keine Vornamen. Die Zahl dieser Abfragen hängt nicht von der
+  Zahl der Kinder ab (Budget
+  `api.guardians.bulk_invite_notify.http_positive_growth`, exakt 15 für die
+  Vorschau mit 3 und 8 Kindern, 11 ohne Schalter). Die Sperrlisten der
+  Anmeldeadressen liest dieselbe Abfrage wie die der Kontaktadressen. Je
+  Elternteil gehen in dessen Sicherungspunkt eine Mail in die Outbox und ein
+  Schreibvorgang für die Merker aller genannten Kinder. Nimmt die Outbox die
+  Mail nicht, rollen Mail und Merker dieses Elternteils zurück, es steht mit
+  `email_not_queued` in der Liste, die anderen laufen weiter (#4602).
+  Versandt wird nach dem Commit. Die Wiederherstellung des Zugangs je
+  Elternteil bleibt, wie sie war; sie ist Teil der Einladung, nicht dieses
+  Schritts.
+- **Nutzungsanalyse.** Die Route bleibt `notCaptured`: Vorschau und Lauf
+  teilen sie, und die Einladung zählt schon heute nicht als Kernaktion.
 
 ### 6. Die Verlängerung ins nächste Schuljahr
 
@@ -910,8 +1072,8 @@ Einwilligung gilt dort als widerrufen). Was das für eine Anmeldung ohne
 Erziehungsberechtigte und ohne Angaben bewirkt, ist nicht festgelegt und in
 diesem PR nicht geändert. Seit dem Lauf aus Abschnitt 4 gibt es Kinder
 dieser Herkunft; die Verlängerung trifft sie erst mit der Phase des nächsten
-Schuljahrs. Die Regel dafür, der Schritt für die Eltern (Abschnitt 5) und die
-Bindung des Folgevertrags gehören zu den Folge-PRs und müssen vor der ersten
+Schuljahrs. Die Regel dafür und die Bindung des Folgevertrags gehören zu den
+Folge-PRs und müssen vor der ersten
 Verlängerung einer Schule mit solchen Kindern entschieden sein.
 
 ## Register
@@ -991,6 +1153,23 @@ Mit dem Workflow (Abschnitt 4) kommen dazu:
   nicht auf, und Care Contract öffnet für Plan, Bindung und Lösen keine
   Transaktion selbst.
 
+Mit dem Schritt für die Eltern (Abschnitt 5) kommen dazu:
+
+- **Spalte**: `auth.guardian_student_access.care_notice_sent_at`
+  (Migration `20261123160000`), im Register der Rückgabe der Schule.
+- **Mail**: Art `guardian_care_visible` (Vorlage
+  `guardian-care-visible.html`), Elternmail und Verteilermail
+  (`deliveryContract`), Modul `eltern_app` im Versand.
+- **Route**: `POST /guardians/bulk-invite` nimmt `notify_active` und
+  antwortet `notified`, `already_notified` und `without_visible_care`;
+  Einstufung unverändert `notCaptured`.
+- **Ports**: `GuardianDirectory.ApprovedCarePeriods` und
+  `GuardianDirectory.CareBookingsInForce` von Identity & Access, gebunden an
+  `enrollment.BookingProjection.StudentCarePeriodsByStudentIDs` und
+  `EffectiveOfferingSelectionsAtDates` (Abfragen, Kommando-Effekte geprüft).
+- **Query-Budget**: neu `api.guardians.bulk_invite_notify.http_positive_growth`,
+  exakt 15.
+
 ## Was sich für bestehende Schulen jetzt ändert
 
 Ohne einen Lauf nichts. Plan, stille Anmeldung und Bindung ruft nur der
@@ -1003,10 +1182,11 @@ Kinder unverändert ab.
 
 ## Bekannte Grenze: befristete Buchungen und späte erste Buchungen in Care Plan
 
-Drei Fehler in Care Plan bestehen vor diesem PR und bleiben bestehen. Die
-ersten beiden gehören in das Folge-Issue
-[#7908](https://github.com/moto-ogs/project-phoenix/issues/7908), der dritte
-in [#7909](https://github.com/moto-ogs/project-phoenix/issues/7909).
+Drei Fehler in Care Plan bestanden vor diesem PR. Die ersten beiden gehören
+in das Folge-Issue
+[#7908](https://github.com/moto-ogs/project-phoenix/issues/7908); der dritte
+ist mit [#7909](https://github.com/moto-ogs/project-phoenix/issues/7909)
+behoben.
 
 1. **Die Roster-Zeile eines direkt verknüpften Angebots endet nicht mit der
    Buchung.** `booking_drafts.go` verwirft für Angebote mit
@@ -1022,17 +1202,48 @@ in [#7909](https://github.com/moto-ogs/project-phoenix/issues/7909).
    Wege, die es speisen, und damit einen Umbau der Roster-Entwürfe, der
    jede Genehmigung bestehender Schulen ändert. Die stille Anmeldung meidet
    den Fehler, statt ihn zu beheben: `roster_bound` (Abschnitt 2).
+   Behoben durch [ADR 0312](0312-gruppenliste-folgt-jeder-buchung-mit-ihrem-ende.md)
+   (#7908); `roster_bound` entfällt seitdem.
 2. **Eine Korrektur ohne Datum bucht ab dem Betreuungsbeginn der Phase**,
    auch wenn die erste Buchung des Kindes später begann (Stichtagsänderung
    für ein Kind ohne Buchung). Für die Herkunft `contract_import` ist das
-   behoben (Abschnitt 2), für alle anderen nicht.
-3. **Eine Korrektur ohne Datum verwirft das Ende einer Buchung.** Bleibt
-   ein Angebot bei der Korrektur gewählt, schreibt sie seine Buchung ohne
-   das gespeicherte Ende neu (`buildOfferingAdjustmentReplacement`,
-   `changeCareBookings`): Das Kind ist bis zum Ende der Phase gebucht und
-   auf dem Roster, bei jedem Kind, auch ohne diesen PR. Nach der Bindung
-   folgt der Vertrag dieser Buchung wie jeder genehmigten Änderung: Er
-   bekommt eine neue Version.
+   behoben (Abschnitt 2), für alle anderen nicht. Dasselbe gilt für ein
+   einzelnes Angebot, das später als die übrigen begann: Die Korrektur
+   bucht es ab dem ersten Tag des Kindes.
+3. **Behoben (#7909, #7928): Eine Korrektur ohne Datum und eine Änderung
+   mit Stichtag behalten das Ende einer Buchung.** Bleibt ein Angebot
+   gewählt, behält seine Buchung ihr
+   gespeichertes Ende (`keepBookingEnds`); eine Mitbuchung endet mit ihrem
+   letzten Auslöser. Ein neu gewähltes Angebot endet mit der Phase oder dem
+   früheren Betreuungsende der Kinderakte. Ein Ende, an dem eine andere
+   gespeicherte Buchung des Kindes beginnt, ist der Beginn einer geplanten
+   Änderung; die Korrektur plant sie neu ein, und sie schließt die Buchung
+   dort. Die Änderung mit Stichtag (Korrektur mit `effective_from`,
+   Genehmigung einer Änderungsanfrage der Eltern, direkte Anpassung der
+   Abholzeit) ersetzt geplante spätere Änderungen; ein solches Ende gilt
+   auch hier als ihr Beginn, und die Buchung läuft mit der Phase weiter
+   (Entscheidung des Product Owners vom 23.11.2026,
+   [#7928](https://github.com/moto-ogs/project-phoenix/issues/7928)). Aus
+   den gespeicherten Buchungen lässt sich ein echtes Ende an diesem Tag
+   nicht davon unterscheiden; es wird dann wie vor #7928 verlängert.
+   Kapazitätsprüfung und Vorschau der Änderung mit Stichtag lesen dasselbe
+   Fenster, das die Änderung schreibt (`selectionBookingEnds`): Ein
+   gehaltenes Angebot, das sein Ende behält, braucht keinen Platz danach,
+   und die Warnung zu manueller Planung zählt die Tage danach als ungedeckt.
+   Eine Änderung, die die Betreuung nicht ändert, erzeugt für einen
+   gebundenen Vertrag keine Version, mit oder ohne Datum.
+   **Nachtrag (#7929):** Das Büro verlängert ein Ende ausdrücklich. In der
+   Korrektur steht unter einem Angebot, dessen Buchung vor der Betreuung des
+   Kindes endet, „Gebucht bis …“ und „Bis … verlängern“
+   (`extend_to_phase_end`). Die Korrektur ohne Datum bucht das Angebot dann
+   wie ein neues bis zum Ende der Phase oder bis zum früheren Betreuungsende;
+   Mitbuchungen folgen, Roster und Termine laufen mit, und ein gebundener
+   Vertrag bekommt ab dem alten Ende eine Version. Den Tag nennt die
+   Detailansicht (`extends_until`); an einem Ende, an dem eine geplante
+   Änderung beginnt, gibt es nichts zu verlängern. Eine spätere geplante
+   Änderung bleibt und begrenzt die Verlängerung auf den Tag davor. Eine Änderung mit
+   Stichtag lehnt die Verlängerung ab. Ein freies Enddatum gibt es nicht:
+   Kürzen ist die Änderung mit Stichtag oder das Betreuungsende.
 
 ## Verworfene Optionen
 
@@ -1128,7 +1339,8 @@ in [#7909](https://github.com/moto-ogs/project-phoenix/issues/7909).
   Vertragsänderung behandelt.
 - Eine Schule mit ausgeschalteten Betreuungsangeboten bekommt keine stille
   Anmeldung.
-- Kinder mit einer befristeten Buchung auf einem direkt verknüpften Roster,
+- Kinder mit einer befristeten Buchung auf einem direkt verknüpften Roster
+  (bis ADR 0312, #7908),
   mit einem Betreuungsende vor dem Ende ihrer Buchungen oder mit einem
   Zeitraum ohne einen gebuchten Wochentag bleiben zurück, bis das Büro
   Vertrag, Kinderakte oder Angebot berichtigt oder Care Plan befristete

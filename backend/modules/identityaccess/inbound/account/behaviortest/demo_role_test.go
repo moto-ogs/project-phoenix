@@ -2,7 +2,6 @@ package account_test
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -34,13 +33,9 @@ type demoSession struct {
 
 func (s demoSession) claims(t *testing.T) testutil.Claims {
 	t.Helper()
-	segments := strings.Split(s.AccessToken, ".")
-	require.Len(t, segments, 3)
-	payload, err := base64.RawURLEncoding.DecodeString(segments[1])
+	claims, err := testpkg.GetTestTokenAuth(t).ParseAccessJWT(s.AccessToken)
 	require.NoError(t, err)
-	var claims testutil.Claims
-	require.NoError(t, json.Unmarshal(payload, &claims))
-	return claims
+	return *claims
 }
 
 func (e demoEnv) enterAs(t *testing.T, token, role string) demoSession {
@@ -318,21 +313,10 @@ func TestDemoRoleTraegerSignsTheVisitorInToTheSchoolsOwnTraeger(t *testing.T) {
 	traeger := env.enterAs(t, token, "traeger")
 	assert.Equal(t, "traeger", traeger.Demo.Role)
 	assert.True(t, traeger.Demo.Traeger)
-	segments := strings.Split(traeger.AccessToken, ".")
-	require.Len(t, segments, 3)
-	payload, err := base64.RawURLEncoding.DecodeString(segments[1])
-	require.NoError(t, err)
-	var claims struct {
-		// Token claims are no route answer; they keep numbers.
-		ID       int64  `json:"id"`
-		Scope    string `json:"scope"`
-		OrgID    int64  `json:"org_id"`
-		TenantID int64  `json:"tenant_id"`
-	}
-	require.NoError(t, json.Unmarshal(payload, &claims))
+	claims := traeger.claims(t)
 	assert.Equal(t, visitor.ID, int64(claims.ID), "the Träger-Büro is the visitor's own account")
 	assert.Equal(t, "org", claims.Scope)
-	assert.Equal(t, traegerID, int64(claims.OrgID))
+	assert.Equal(t, traegerID, claims.OrgID)
 	assert.Zero(t, claims.TenantID)
 	assert.Equal(t, []string{"ogs-leitung"}, env.schoolRoles(t, visitor.ID), "the school role of the last switch stays")
 }

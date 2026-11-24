@@ -54,6 +54,8 @@ type Rows struct {
 	// TraegerMonths names the staff a contract of the Träger covers in a
 	// month (#4711): the Träger closes and pays them, not the school.
 	TraegerMonths TraegerMonthStaff
+	// TemplateLocks holds the template a schedule save binds a person to.
+	TemplateLocks WorkTimeTemplateLocks
 }
 
 // Ports are the consumer-owned readers and writers the composition root
@@ -200,6 +202,7 @@ func (deps Dependencies) sessionsAndMonths(absenceTypes AbsenceTypeReader, snaps
 		deps.Staff, deps.Schedules, deps.TimeModels, deps.Settings, logger, deps.DB, deps.RenderPDF, deps.RenderWorkbook,
 		// Planned-shift lookups for the auto-checkout job (#1798).
 		WithWorkSessionShifts(deps.Shifts),
+		WithWorkSessionTemplateLocks(deps.TemplateLocks),
 		WithWorkSessionEvents(deps.Events),
 		WithWorkSessionHolidays(deps.Holidays),
 		WithWorkSessionExternalCaregivers(deps.ExternalCaregivers),
@@ -287,6 +290,8 @@ func (deps Dependencies) validate() error {
 	switch {
 	case deps.TargetOverrides == nil || deps.MonthSnapshots == nil || deps.AbsenceTypes == nil || deps.TraegerMonths == nil:
 		return errors.New("time tracking: the target overrides, month snapshots, absence types and Träger months are required")
+	case deps.TemplateLocks == nil:
+		return errors.New("time tracking: the template locks of the schedule save are required")
 	case deps.Sessions == nil || deps.Breaks == nil || deps.Adjustments == nil || deps.VacationQuotas == nil ||
 		deps.VacationOpenings == nil || deps.Absences == nil || deps.AbsenceAudits == nil:
 		return errors.New("time tracking: the work session, break, ledger, vacation and absence rows are required")

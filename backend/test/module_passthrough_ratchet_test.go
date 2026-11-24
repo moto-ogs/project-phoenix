@@ -239,7 +239,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0073: the composition forwards the parent announcement
 	// retention to its service.
 	// Raised by ADR 0079: the facade observes the reachable-children read.
-	"modules/communication": 51, // #2352: dead unread count removed (-1); #7808: dead thread start removed (-1)
+	"modules/communication": 50, // #2352: dead unread count removed (-1); #7808: dead thread start removed (-1); #7986: attachment reset answers the draft version (-1)
 	"modules/dataimport":    1,
 	"modules/delivery":      4,
 	"modules/devicefleet":   24, // #2352: dead device-management routes removed (-8)
@@ -271,15 +271,15 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// retention, which validate and evaluate the Träger again (+2).
 	// Raised by ADR 0209: the billing lock B of the holiday allocation
 	// workflow, which validates the Träger and maps the lock error (+1).
-	"modules/parentbilling":    12,
-	"modules/peopledirectory":  195, // #6840: DeletePerson checks live profiles (-1); #7104: the rosters and the retention read the owner's clock (-2); #2352: dead guardian lists removed (-2); #7808: the group routes read no persons (-2); Lowered by #7808: the test-only cross-tenant visitor reads left (-3)
+	"modules/parentbilling":    11,
+	"modules/peopledirectory":  192, // #7904: the single phone edits fold into one guardian entry save (-3); #6840: DeletePerson checks live profiles (-1); #7104: the rosters and the retention read the owner's clock (-2); #2352: dead guardian lists removed (-2); #7808: the group routes read no persons (-2); Lowered by #7808: the test-only cross-tenant visitor reads left (-3)
 	"modules/requestreview":    15,
 	"modules/schedulerruntime": 4,
 	// Raised by ADR 0073: the feed cleanup keeps only the staff feed tombstones.
 	"modules/schoolcalendar":   13,
-	"modules/schoolmembership": 15,
+	"modules/schoolmembership": 14,
 	"modules/schoolsetup":      1,
-	"modules/schoolstructure":  42,
+	"modules/schoolstructure":  41, // Lowered by #7956: the retained test group update reads the version itself (-1)
 	"modules/settings":         16,
 	// Raised by ADR 0131: the kiosk count revision read (+1).
 	// Raised by ADR 0133: the kiosk room count revision read (+1).
@@ -291,7 +291,9 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0230: the assignments of several staff members in a date
 	// range, one read for the absence plan gaps (+1).
 	// Lowered by #2353: the single-schedule read left with its route (-1).
-	"modules/timetable": 202,
+	// Lowered by #7997: the shift-type link write checks the links its
+	// editor read (-1).
+	"modules/timetable": 200,
 	// Raised by ADR 0141: the payroll dispatch overview (+1).
 	// Lowered by #6847: approving and withdrawing an absence return their
 	// plan cascade instead of forwarding the write (-2).
@@ -300,7 +302,9 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// reopen and the staff the school leaves out onto the public failures (+3).
 	// Raised by ADR 0289: the maintenance seal of the sick note and payslip
 	// files (+1).
-	"modules/workforce":      138,
+	// Lowered by #7997: the scan no longer counts
+	// shiftTypeAdministration.CreateShiftType (-1).
+	"modules/workforce":      137,
 	"workflows/openroommove": 1,
 	// Raised by ADR 0078: the week change of the meal plan adapter.
 	"workflows/parentportal": 18,

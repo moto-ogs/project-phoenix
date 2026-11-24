@@ -93,7 +93,7 @@ func TestTraegerSessionWritesTheDienstplan(t *testing.T) {
 
 	t.Run("the Träger-Büro plans a shift without a staff author", func(t *testing.T) {
 		rec := d.send(traeger, http.MethodPost, "/", map[string]any{
-			"staff_id": ben.ID, "date": "2098-09-01", "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
+			"staff_id": fmt.Sprint(ben.ID), "date": "2098-09-01", "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		assert.Equal(t, "true|", d.author("schedule.staff_shifts", idOf(rec)))
@@ -102,10 +102,27 @@ func TestTraegerSessionWritesTheDienstplan(t *testing.T) {
 	// staffShiftOn plans a shift of Ben on date as the staff member Lea.
 	staffShiftOn := func(t *testing.T, date string) int64 {
 		rec := d.send(staffInTraegerSession, http.MethodPost, "/", map[string]any{
-			"staff_id": ben.ID, "date": date, "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
+			"staff_id": fmt.Sprint(ben.ID), "date": date, "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		return idOf(rec)
+	}
+
+	// versionOf reads the shift's version from its day as the Dienstplan
+	// lists it (ADR 0311).
+	versionOf := func(t *testing.T, id int64, date string) string {
+		rec := d.send(traeger, http.MethodGet, fmt.Sprintf("/?from=%s&to=%s&staff_id=%d", date, date, ben.ID), nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		for _, row := range decode[[]struct {
+			ID      wireID `json:"id"`
+			Version string `json:"version"`
+		}](t, rec) {
+			if int64(row.ID) == id {
+				return row.Version
+			}
+		}
+		t.Fatalf("shift %d is not listed on %s", id, date)
+		return ""
 	}
 
 	t.Run("a person with a staff record writes as staff in a session of the Träger", func(t *testing.T) {
@@ -116,6 +133,7 @@ func TestTraegerSessionWritesTheDienstplan(t *testing.T) {
 		changed := staffShiftOn(t, "2098-09-03")
 		rec := d.send(traeger, http.MethodPut, fmt.Sprintf("/%d", changed), map[string]any{
 			"date": "2098-09-03", "start_time": "08:00", "end_time": "13:00", "break_minutes": 0,
+			"expected_version": versionOf(t, changed, "2098-09-03"),
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Equal(t, markedStaff, d.author("schedule.staff_shifts", changed))
@@ -124,6 +142,7 @@ func TestTraegerSessionWritesTheDienstplan(t *testing.T) {
 		// A later change by staff names the staff member and keeps the mark.
 		rec = d.send(staffInTraegerSession, http.MethodPut, fmt.Sprintf("/%d", changed), map[string]any{
 			"date": "2098-09-03", "start_time": "08:00", "end_time": "14:00", "break_minutes": 0,
+			"expected_version": versionOf(t, changed, "2098-09-03"),
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Equal(t, markedStaff, d.author("schedule.staff_shifts", changed))
@@ -133,8 +152,9 @@ func TestTraegerSessionWritesTheDienstplan(t *testing.T) {
 	t.Run("a move of the Träger-Büro marks the shift and keeps its author", func(t *testing.T) {
 		moved := staffShiftOn(t, "2098-09-04")
 		rec := d.send(traeger, http.MethodPut, fmt.Sprintf("/%d/move", moved), map[string]any{
-			"source_staff_id": ben.ID, "target_staff_id": ben.ID, "date": "2098-09-05",
+			"source_staff_id": fmt.Sprint(ben.ID), "target_staff_id": fmt.Sprint(ben.ID), "date": "2098-09-05",
 			"start_time": "08:00", "end_time": "13:00", "break_minutes": 0, "shift_type_id": nil,
+			"expected_version": versionOf(t, moved, "2098-09-04"),
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Equal(t, markedStaff, d.author("schedule.staff_shifts", moved))
@@ -145,7 +165,8 @@ func TestTraegerSessionWritesTheDienstplan(t *testing.T) {
 		origin := staffShiftOn(t, "2098-09-09")
 		rec := d.send(traeger, http.MethodPut, fmt.Sprintf("/%d/cancellation", origin), map[string]any{
 			"cancelled": true, "change_reason": "krank",
-			"replacements": []map[string]any{{"staff_id": jonas.ID, "start_time": "08:00", "end_time": "12:00", "break_minutes": 0}},
+			"replacements":     []map[string]any{{"staff_id": fmt.Sprint(jonas.ID), "start_time": "08:00", "end_time": "12:00", "break_minutes": 0}},
+			"expected_version": versionOf(t, origin, "2098-09-09"), "expected_replacement_versions": map[string]string{},
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Equal(t, markedStaff, d.author("schedule.staff_shifts", origin))
@@ -156,8 +177,8 @@ func TestTraegerSessionWritesTheDienstplan(t *testing.T) {
 	var traegerSeries int64
 	t.Run("a series of the Träger-Büro and its occurrences carry the mark", func(t *testing.T) {
 		rec := d.send(traeger, http.MethodPost, "/series", map[string]any{
-			"staff_id": mira.ID, "weekdays": []int{1}, "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
-			"calendar_period_id": period.ID, "valid_from": "2098-09-01", "valid_until": "2098-09-29",
+			"staff_id": fmt.Sprint(mira.ID), "weekdays": []int{1}, "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
+			"calendar_period_id": fmt.Sprint(period.ID), "valid_from": "2098-09-01", "valid_until": "2098-09-29",
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		traegerSeries = seriesOf(rec)
@@ -176,15 +197,24 @@ func TestTraegerSessionWritesTheDienstplan(t *testing.T) {
 
 	t.Run("the successor of a split by the Träger-Büro carries the mark", func(t *testing.T) {
 		rec := d.send(staffInTraegerSession, http.MethodPost, "/series", map[string]any{
-			"staff_id": jonas.ID, "weekdays": []int{1}, "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
-			"calendar_period_id": period.ID, "valid_from": "2098-09-01", "valid_until": "2098-09-29",
+			"staff_id": fmt.Sprint(jonas.ID), "weekdays": []int{1}, "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
+			"calendar_period_id": fmt.Sprint(period.ID), "valid_from": "2098-09-01", "valid_until": "2098-09-29",
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		staffSeries := seriesOf(rec)
 		assert.Equal(t, expectStaff, d.author("schedule.staff_shift_series", staffSeries))
 
+		rec = d.send(traeger, http.MethodGet, fmt.Sprintf("/series/%d", staffSeries), nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		var read struct {
+			Data struct {
+				Version string `json:"version"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &read))
 		rec = d.send(traeger, http.MethodPut, fmt.Sprintf("/series/%d/split", staffSeries), map[string]any{
 			"effective_date": "2098-09-15", "start_time": "09:00", "end_time": "12:00", "break_minutes": 0,
+			"expected_version": read.Data.Version,
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		successor := seriesOf(rec)
@@ -206,7 +236,7 @@ func TestDienstplanRefusesAStafflessAccountOutsideATraegerSession(t *testing.T) 
 	claims := d.session(testpkg.CreateTestAccount(t, d.db, "ohne-personal").ID, false)
 
 	rec := d.send(claims, http.MethodPost, "/", map[string]any{
-		"staff_id": ben.ID, "date": "2098-09-01", "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
+		"staff_id": fmt.Sprint(ben.ID), "date": "2098-09-01", "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
 	})
 	require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 	assert.Equal(t, "workforce.no_staff_profile", planningRefusalOf(t, rec).Code)

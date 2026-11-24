@@ -39,7 +39,7 @@ vi.mock("next-auth/react", () => ({
 vi.mock("~/lib/tenant-context", () => ({ useTenantSlugSafe: () => null }));
 vi.mock("~/lib/session-cache", () => ({ announceSessionChange: announce }));
 const schema = { tabs: [] };
-function signIn(id = "A", orgId: number | undefined = 7, scope = "org") {
+function signIn(id = "A", orgId: string | undefined = "7", scope = "org") {
   identity.session = {
     user: { id, scope, orgId },
     expires: "2099-01-01",
@@ -167,7 +167,7 @@ describe.each(resources)("Träger $name", (resource) => {
         expect(resource.fetcher).toHaveBeenCalledTimes(2);
         if (change === "other-tab-organization") {
           // A fresh lookup of the old organization is not confirmation.
-          signIn("A", 7);
+          signIn("A", "7");
           view.rerender();
           expect(view.result.current.data ?? null).toBeNull();
           expect(resource.fetcher).toHaveBeenCalledTimes(2);
@@ -177,7 +177,7 @@ describe.each(resources)("Träger $name", (resource) => {
         else
           signIn(
             change === "account" ? "B" : "A",
-            change === "organization" ? 8 : 7,
+            change === "organization" ? "8" : "7",
           );
         view.rerender();
       }
@@ -189,7 +189,7 @@ describe.each(resources)("Träger $name", (resource) => {
       expect(shown.every((data) => data == null)).toBe(true);
       if (change.startsWith("other-tab")) {
         if (change.endsWith("logout")) identity.session = null;
-        else if (change === "other-tab-organization") signIn("A", 8);
+        else if (change === "other-tab-organization") signIn("A", "8");
         else signIn("B");
         view.rerender();
         expect(view.result.current.data ?? null).toBeNull();
@@ -203,7 +203,7 @@ describe.each(resources)("Träger $name", (resource) => {
   it.each(["tenant", "parent", "school", "platform", "caterer"])(
     "never fetches metadata under a %s session",
     async (scope) => {
-      signIn("A", 7, scope);
+      signIn("A", "7", scope);
       const view = renderHook(() => resource.read(), setup());
       await act(async () => undefined);
       expect(view.result.current.data ?? null).toBeNull();

@@ -32,6 +32,7 @@ vi.mock("next-auth/react", () => ({
 }));
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "2" }),
+  useSearchParams: () => new URLSearchParams(),
   usePathname: () => "/schulen/2",
   useRouter: () => ({ push: vi.fn() }),
 }));
@@ -74,7 +75,7 @@ const SCHOOL = {
 
 function sessionWith(permissions: string[]) {
   return {
-    data: { user: { id: "A", scope: "org", orgId: 7, permissions } },
+    data: { user: { id: "A", scope: "org", orgId: "7", permissions } },
     status: "authenticated",
   };
 }

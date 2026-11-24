@@ -9,6 +9,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // errTraegerRequired reports a call without the Träger of the session.
@@ -26,6 +27,10 @@ type Store interface {
 	InsertContributionRule(ctx context.Context, organizationID int64, input parentbilling.ContributionRuleInput) (parentbilling.ContributionRule, error)
 	UpdateContributionRule(ctx context.Context, organizationID, ruleID int64, input parentbilling.ContributionRuleInput) (parentbilling.ContributionRule, error)
 	DeleteContributionRule(ctx context.Context, organizationID, ruleID int64) error
+	// LockContributionRule reads a rule of one service under a row lock
+	// until the transaction ends; a missing one is
+	// ErrContributionRuleNotFound.
+	LockContributionRule(ctx context.Context, organizationID, ruleID int64, service string) (parentbilling.ContributionRule, error)
 	// HolidayContributions reads the frozen contributions of a registration;
 	// found is false when there are none.
 	HolidayContributions(ctx context.Context, organizationID, registrationID int64) (contribution parentbilling.HolidayContribution, found bool, err error)
@@ -71,9 +76,13 @@ func (s *Rules) CreateContributionRule(ctx context.Context, organizationID int64
 	return s.store.InsertContributionRule(ctx, organizationID, input)
 }
 
-// UpdateContributionRule validates and changes a rule. A frozen contribution
-// keeps what it froze.
-func (s *Rules) UpdateContributionRule(ctx context.Context, organizationID, ruleID int64, input parentbilling.ContributionRuleInput) (parentbilling.ContributionRule, error) {
+// UpdateContributionRule validates and changes a rule as the Abrechnung read
+// it: under the row lock, a rule changed since expectedVersion is refused
+// with readstate.ErrChanged (ADR 0311). A frozen contribution keeps what it
+// froze.
+func (s *Rules) UpdateContributionRule(ctx context.Context, organizationID, ruleID int64, input parentbilling.ContributionRuleInput,
+	expectedVersion string,
+) (parentbilling.ContributionRule, error) {
 	if organizationID <= 0 {
 		return parentbilling.ContributionRule{}, errTraegerRequired
 	}
@@ -82,6 +91,13 @@ func (s *Rules) UpdateContributionRule(ctx context.Context, organizationID, rule
 	}
 	input, err := normalizeRule(input)
 	if err != nil {
+		return parentbilling.ContributionRule{}, err
+	}
+	stored, err := s.store.LockContributionRule(ctx, organizationID, ruleID, parentbilling.ServiceHoliday)
+	if err != nil {
+		return parentbilling.ContributionRule{}, err
+	}
+	if err := readstate.Check(expectedVersion, stored.Version); err != nil {
 		return parentbilling.ContributionRule{}, err
 	}
 	return s.store.UpdateContributionRule(ctx, organizationID, ruleID, input)

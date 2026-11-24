@@ -44,16 +44,16 @@ func seedConclusionEnrollment(rt *Runtime) error {
 		submission := enrollmentSubmission{
 			source: "public", key: key, path: "/api/enrollment/" + rt.Bootstrap.TenantSlug + "/submit",
 			body: map[string]any{
-				"phase_id":            rt.Enrollment.PhaseID,
+				"phase_id":            ident.ID(rt.Enrollment.PhaseID),
 				"guardian_first_name": "Miriam", "guardian_last_name": "Berger",
 				"guardian_email": scopedEmail("miriam.berger@example.test", rt.FixedSeeder.accountScope),
 				"consent_flags":  map[string]bool{"data_processing": true, "care_contract": true},
 				// The page reports the form version it showed.
-				"form_schema_id": schemaID,
+				"form_schema_id": ident.ID(schemaID),
 				"children": []map[string]any{{
 					"first_name": "Tilda", "last_name": "Berger", "date_of_birth": "2019-05-14", "target_grade_level": 1,
-					"offering_ids":  []int64{offeringID},
-					"offering_days": []map[string]any{{"offering_id": offeringID, "selected_days": []string{"mon", "wed", "fri"}}},
+					"offering_ids":  []ident.ID{ident.ID(offeringID)},
+					"offering_days": []map[string]any{{"offering_id": ident.ID(offeringID), "selected_days": []string{"mon", "wed", "fri"}}},
 				}},
 			},
 		}
@@ -109,11 +109,11 @@ func withContractEnrollmentForm(rt *Runtime, schemaID int64, submit func() error
 	path := fmt.Sprintf("/api/enrollment/phases/%d", rt.Enrollment.PhaseID)
 	body := maps.Clone(original)
 	body["form_schema_id"] = strconv.FormatInt(schemaID, 10)
-	if _, err := rt.Client.PutWithAuth(rt.TenantAuth, path, body); err != nil {
+	if err := putReadPhase(rt, rt.TenantAuth, path, body); err != nil {
 		return err
 	}
 	defer func() {
-		if _, restoreErr := rt.Client.PutWithAuth(rt.TenantAuth, path, original); restoreErr != nil {
+		if restoreErr := putReadPhase(rt, rt.TenantAuth, path, original); restoreErr != nil {
 			err = errors.Join(err, fmt.Errorf("restore the enrollment form: %w", restoreErr))
 		}
 	}()

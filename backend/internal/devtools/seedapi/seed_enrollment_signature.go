@@ -11,6 +11,8 @@ import (
 	"math"
 	"strconv"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedEnrollmentSignatureStep seeds an enrollment with the parent's
@@ -47,6 +49,9 @@ func (seedEnrollmentSignatureStep) Run(_ context.Context, rt *Runtime) error {
 		return err
 	}
 	body := seedSignedEnrollmentSubmission(phaseID, signature)
+	if err := showFormVersion(staffGet(rt, auth), body); err != nil {
+		return err
+	}
 	rt.Client.BindAuth(rt.TenantAuth)
 	if _, err := rt.Client.PostPublicWithHeaders("/api/enrollment/"+rt.Bootstrap.TenantSlug+"/submit", body, publicEnrollmentSeedHeaders(91)); err != nil {
 		return fmt.Errorf("submit signed enrollment: %w", err)
@@ -68,7 +73,7 @@ func seedSignedEnrollmentFormFields() []map[string]any {
 // seedSignedEnrollmentSubmission is the signed request of the Mensah family.
 func seedSignedEnrollmentSubmission(phaseID int64, signature string) map[string]any {
 	return map[string]any{
-		"phase_id":            phaseID,
+		"phase_id":            ident.ID(phaseID),
 		"guardian_first_name": "Abena",
 		"guardian_last_name":  "Mensah",
 		"guardian_email":      "abena.mensah@example.test",

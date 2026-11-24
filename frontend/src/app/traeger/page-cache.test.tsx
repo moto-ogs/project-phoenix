@@ -99,7 +99,7 @@ vi.mock("~/components/traeger/holiday-form-editor", () => ({
   },
 }));
 
-function signIn(id = "A", orgId = 7) {
+function signIn(id = "A", orgId = "7") {
   identity.session = {
     user: { id, scope: "org", orgId },
     expires: "2099-01-01",
@@ -366,7 +366,7 @@ describe("Träger list-to-detail cache", () => {
       else
         signIn(
           change === "account" ? "B" : "A",
-          change === "organization" ? 8 : 7,
+          change === "organization" ? "8" : "7",
         );
       view.rerender(<Route detail />);
     }

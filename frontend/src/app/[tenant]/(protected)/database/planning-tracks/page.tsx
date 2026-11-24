@@ -28,7 +28,7 @@ import {
 } from "~/lib/planning-track-api";
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
-import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useTimetableEnabled } from "~/lib/tenant-context";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
@@ -87,18 +87,14 @@ function planningTrackStats(tracks: readonly PlanningTrack[]) {
 
 function PlanningTracksPageContent() {
   const searchParams = useSearchParams();
-  const tenantMutate = useTenantMutate();
   const timetableEnabled = useTimetableEnabled();
 
   const discardRefused = useDiscardRefusedEntity();
-  const {
-    data: cachedData,
-    isLoading,
-    error: swrError,
-    mutate,
-  } = useSWRAuth<PlanningTrack[]>(timetableEnabled ? CACHE_KEY : null, () =>
-    planningTrackService.list(),
+  const list = useSWRAuth<PlanningTrack[]>(
+    timetableEnabled ? CACHE_KEY : null,
+    () => planningTrackService.list(),
   );
+  const { data: cachedData, isLoading, error: swrError, mutate } = list;
   const accessRefused =
     swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
@@ -118,7 +114,9 @@ function PlanningTracksPageContent() {
     data === undefined ? undefined : STALE_DATA_SUFFIX,
   );
 
-  const onChanged = useCallback(() => tenantMutate(CACHE_KEY), [tenantMutate]);
+  // Lehnt ab, wenn das Lesen scheitert (ADR 0311), mit der Liste als
+  // Antwort.
+  const onChanged = useCallback(() => revalidateOrThrow(list), [list]);
 
   // Die Liste kommt bereits in Sortierreihenfolge; die Pfeile in der Sammlung
   // schreiben genau diese Folge zurück.
@@ -171,6 +169,7 @@ function PlanningTracksPageContent() {
           color:
             typeof values.color === "string" ? values.color : DEFAULT_COLOR,
           sort_order: track.sortOrder,
+          expected_version: track.version,
         }),
       reorder: (orderedIds) => planningTrackService.reorder(orderedIds),
       retire: {

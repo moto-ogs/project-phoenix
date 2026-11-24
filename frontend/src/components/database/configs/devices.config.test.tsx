@@ -15,10 +15,6 @@ describe("devicesConfig", () => {
     });
   });
 
-  it("has correct API configuration", () => {
-    expect(devicesConfig.api.routes.list).toBe("GET /api/iot/");
-  });
-
   it("has form sections configured", () => {
     expect(devicesConfig.form.sections).toHaveLength(1);
     expect(devicesConfig.form.sections[0]?.title).toBe("Geräteinformationen");
@@ -70,6 +66,7 @@ describe("devicesConfig", () => {
       is_online: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      version: "v1",
     };
 
     expect(devicesConfig.detail.header?.title(mockDevice)).toBe(
@@ -86,6 +83,7 @@ describe("devicesConfig", () => {
       is_online: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      version: "v1",
     };
 
     expect(devicesConfig.detail.header?.title(mockDevice)).toBe("RFID-001");
@@ -115,6 +113,7 @@ describe("devicesConfig", () => {
       is_online: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      version: "v1",
     };
 
     const title = devicesConfig.list.item.title(mockDevice);

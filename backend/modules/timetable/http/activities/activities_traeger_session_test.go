@@ -47,7 +47,7 @@ func TestTraegerSchoolSessionQuickCreatesActivityWithoutSupervisor(t *testing.T)
 	t.Parallel()
 	tc := setupActivitiesRoute(t)
 	category := testpkg.CreateTestActivityCategory(t, tc.db, fmt.Sprintf("TraegerQuick-%d", testpkg.UniqueSuffix()))
-	body := map[string]any{"name": fmt.Sprintf("TraegerQuick-%d", testpkg.UniqueSuffix()), "category_id": category.ID, "max_participants": 10}
+	body := map[string]any{"name": fmt.Sprintf("TraegerQuick-%d", testpkg.UniqueSuffix()), "category_id": fmt.Sprint(category.ID), "max_participants": 10}
 
 	rr := testutil.ExecuteWithAuth(t, tc.router, testutil.NewAuthenticatedRequest(t, http.MethodPost, "/activities/quick-create", body),
 		traegerActivityClaims(t, tc))
@@ -70,7 +70,7 @@ func TestTraegerSchoolSessionCreatesActivityWithChosenSupervisors(t *testing.T) 
 	category := testpkg.CreateTestActivityCategory(t, tc.db, fmt.Sprintf("TraegerCreate-%d", testpkg.UniqueSuffix()))
 	body := map[string]any{
 		"name": fmt.Sprintf("TraegerCreate-%d", testpkg.UniqueSuffix()), "max_participants": 15, "is_open": true,
-		"category_id": category.ID, "supervisor_ids": []string{strconv.FormatInt(staff.ID, 10)},
+		"category_id": fmt.Sprint(category.ID), "supervisor_ids": []string{strconv.FormatInt(staff.ID, 10)},
 	}
 
 	rr := testutil.ExecuteWithAuth(t, tc.router, testutil.NewAuthenticatedRequest(t, http.MethodPost, "/activities", body),
@@ -92,8 +92,8 @@ func TestCreateActivityRefusesAccountWithoutStaffProfile(t *testing.T) {
 	account := testpkg.CreateTestAccount(t, tc.db, fmt.Sprintf("no-staff-activity-%d@example.com", testpkg.UniqueSuffix()))
 	category := testpkg.CreateTestActivityCategory(t, tc.db, fmt.Sprintf("NoStaff-%d", testpkg.UniqueSuffix()))
 	for path, body := range map[string]map[string]any{
-		"/activities":              {"name": "NoStaff", "max_participants": 15, "is_open": true, "category_id": category.ID},
-		"/activities/quick-create": {"name": "NoStaffQuick", "category_id": category.ID, "max_participants": 10},
+		"/activities":              {"name": "NoStaff", "max_participants": 15, "is_open": true, "category_id": fmt.Sprint(category.ID)},
+		"/activities/quick-create": {"name": "NoStaffQuick", "category_id": fmt.Sprint(category.ID), "max_participants": 10},
 	} {
 		rr := testutil.ExecuteWithAuth(t, tc.router, testutil.NewAuthenticatedRequest(t, http.MethodPost, path, body),
 			testutil.AdminTestClaims(int(account.ID)))

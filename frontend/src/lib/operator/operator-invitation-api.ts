@@ -1,7 +1,7 @@
-import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import { sessionBff } from "~/lib/session-bff";
+import { bffJson } from "~/lib/bff-fetch";
 import type * as operatorInvitationsContract from "~/lib/contract/operator-invitations.generated";
 import type {
-  InvitationValidationBody,
   CreateOperatorInvitationRequest,
   AcceptOperatorInvitationRequest,
   PendingOperatorInvitation,
@@ -84,12 +84,10 @@ export async function reactivateOperator(id: string): Promise<void> {
 export async function establishOperatorInvitationSession(
   token: string,
 ): Promise<string> {
-  const { flow_id } = await bffJsonUncontracted<{ flow_id: string }>(
-    "public",
-    "POST",
-    "/api/operator/auth/invitations/session",
-    { body: { token }, errorMessage: "Invitation session failed" },
-  );
+  const { flow_id } = await bffJson("public", sessionBff.startOperatorInvite, {
+    body: { token },
+    errorMessage: "Invitation session failed",
+  });
   return flow_id;
 }
 
@@ -98,16 +96,11 @@ export async function validateOperatorInvitation(
 ): Promise<OperatorInvitationValidation> {
   // The operator backend answers in the shared error envelope (#2507).
   return mapInvitationValidation(
-    await bffJsonUncontracted<InvitationValidationBody>(
-      "public",
-      "POST",
-      "/api/operator/auth/invitations/validate",
-      {
-        body: {},
-        headers: { [OPERATOR_INVITATION_FLOW_HEADER]: flowID },
-        errorMessage: "Invitation validation failed",
-      },
-    ),
+    await bffJson("public", sessionBff.validateOperatorInvite, {
+      body: {},
+      headers: { [OPERATOR_INVITATION_FLOW_HEADER]: flowID },
+      errorMessage: "Invitation validation failed",
+    }),
   );
 }
 
@@ -117,20 +110,15 @@ export async function acceptOperatorInvitation(
 ): Promise<void> {
   try {
     // Convert camelCase frontend shape to the snake_case the backend expects.
-    await bffJsonUncontracted<unknown>(
-      "public",
-      "POST",
-      "/api/operator/auth/invitations/accept",
-      {
-        body: {
-          display_name: data.displayName,
-          password: data.password,
-          confirm_password: data.confirmPassword,
-        },
-        headers: { [OPERATOR_INVITATION_FLOW_HEADER]: flowID },
-        errorMessage: "Invitation accept failed",
+    await bffJson("public", sessionBff.acceptOperatorInvite, {
+      body: {
+        display_name: data.displayName,
+        password: data.password,
+        confirm_password: data.confirmPassword,
       },
-    );
+      headers: { [OPERATOR_INVITATION_FLOW_HEADER]: flowID },
+      errorMessage: "Invitation accept failed",
+    });
   } catch (error) {
     if (error instanceof ApiError) {
       logger.warn("accept_invitation_failed", {

@@ -73,8 +73,8 @@ func TestTraegerStaffTimeAccountSumsAndClosesEverySchool(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
-		"members": []map[string]int64{{"school_id": north, "staff_id": miraNorth.ID}, {"school_id": south, "staff_id": miraSouth.ID}},
+	rec := traegerLink(t, router, office.token, map[string]any{
+		"members": []map[string]string{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID)}, {"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(miraSouth.ID)}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	recordID := decode[staffRecordBody](t, rec).ID
@@ -86,15 +86,15 @@ func TestTraegerStaffTimeAccountSumsAndClosesEverySchool(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		body := decode[timeAccountBody](t, rec)
 		assert.Equal(t, workforce.TraegerMonthSchool, body.State)
-		rec = traegerJSON(t, router, office.token, http.MethodPost, path+"/close", map[string]any{"year": 2026, "month": 10, "reason": "Abrechnung"})
+		rec = traegerCloseMonth(t, router, office.token, path, map[string]any{"year": 2026, "month": 10, "reason": "Abrechnung"})
 		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.traeger_month_not_kept")
 	})
 
 	rec = traegerJSON(t, router, office.token, http.MethodPost, fmt.Sprintf("/traeger/staff-records/%d/contracts", recordID), map[string]any{
 		"kind": "part_time", "starts_on": "2026-08-01",
 		"sites": []map[string]any{
-			{"school_id": north, "staff_id": miraNorth.ID, "weekday_minutes": []int{300, 300, 300, 300, 0}},
-			{"school_id": south, "staff_id": miraSouth.ID, "weekday_minutes": []int{0, 0, 0, 0, 240}},
+			{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID), "weekday_minutes": []int{300, 300, 300, 300, 0}},
+			{"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(miraSouth.ID), "weekday_minutes": []int{0, 0, 0, 0, 240}},
 		},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -153,14 +153,30 @@ func TestTraegerStaffTimeAccountSumsAndClosesEverySchool(t *testing.T) {
 	})
 
 	t.Run("the month is closed only once it is over and with a reason", func(t *testing.T) {
-		rec := traegerJSON(t, router, office.token, http.MethodPost, path+"/close", map[string]any{"year": 2026, "month": 11, "reason": "Abrechnung"})
+		rec := traegerCloseMonth(t, router, office.token, path, map[string]any{"year": 2026, "month": 11, "reason": "Abrechnung"})
 		assertStaffRefusal(t, rec, http.StatusBadRequest, "workforce.month_not_closable")
-		rec = traegerJSON(t, router, office.token, http.MethodPost, path+"/close", map[string]any{"year": 2026, "month": 10, "reason": " "})
+		rec = traegerCloseMonth(t, router, office.token, path, map[string]any{"year": 2026, "month": 10, "reason": " "})
 		assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	})
 
+	t.Run("the Träger closes only the month it confirmed", func(t *testing.T) {
+		read := traegerJSON(t, router, office.token, http.MethodGet, october, nil)
+		stale, ok := readToken(t, read, "fingerprint")
+		require.True(t, ok)
+		// A school books a worked Friday after the read: the balance moves.
+		_, err := db.ExecContext(ctx, `INSERT INTO active.work_sessions (tenant_id, staff_id, date, check_in_time, check_out_time, created_by)
+			VALUES (?, ?, '2026-10-09', '2026-10-09T06:00:00Z', '2026-10-09T08:00:00Z', ?)`, south, miraSouth.ID, miraSouth.ID)
+		require.NoError(t, err)
+		for _, fingerprint := range []string{stale, ""} {
+			rec := traegerJSON(t, router, office.token, http.MethodPost, path+"/close",
+				map[string]any{"year": 2026, "month": 10, "reason": "Abrechnung Oktober", "expected_fingerprint": fingerprint})
+			assertStaffRefusal(t, rec, http.StatusConflict, "general.changed_since_read")
+		}
+		assert.Zero(t, staffSchoolValue(t, db, `SELECT COUNT(*) FROM active.staff_month_balance_snapshots WHERE source = 'traeger'`), "no school was closed")
+	})
+
 	t.Run("the Träger closes the month in every school", func(t *testing.T) {
-		rec := traegerJSON(t, router, office.token, http.MethodPost, path+"/close", map[string]any{"year": 2026, "month": 10, "reason": "Abrechnung Oktober"})
+		rec := traegerCloseMonth(t, router, office.token, path, map[string]any{"year": 2026, "month": 10, "reason": "Abrechnung Oktober"})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		body := decode[timeAccountBody](t, rec)
 		assert.Equal(t, workforce.TraegerMonthClosed, body.State)
@@ -171,7 +187,7 @@ func TestTraegerStaffTimeAccountSumsAndClosesEverySchool(t *testing.T) {
 		assert.Equal(t, 2, staffSchoolValue(t, db, `SELECT COUNT(*) FROM active.staff_month_balance_snapshots
 			WHERE source = 'traeger' AND closed_by IS NULL AND closed_by_account_id IS NOT NULL AND year = 2026 AND month = 10 AND reopened_at IS NULL`))
 		// A second click changes nothing.
-		rec = traegerJSON(t, router, office.token, http.MethodPost, path+"/close", map[string]any{"year": 2026, "month": 10, "reason": "noch einmal"})
+		rec = traegerCloseMonth(t, router, office.token, path, map[string]any{"year": 2026, "month": 10, "reason": "noch einmal"})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Equal(t, 2, staffSchoolValue(t, db, `SELECT COUNT(*) FROM active.staff_month_balance_snapshots WHERE source = 'traeger'`))
 	})
@@ -202,13 +218,11 @@ func TestTraegerStaffTimeAccountSumsAndClosesEverySchool(t *testing.T) {
 	t.Run("no role without the right and no other Träger reaches the account", func(t *testing.T) {
 		readOnly := newTraegerOffice(t, db, portal, "Träger Lesen", identityaccess.TraegerRoleReadOnly)
 		assert.Equal(t, http.StatusForbidden, traegerJSON(t, router, readOnly.token, http.MethodGet, october, nil).Code)
-		assert.Equal(t, http.StatusForbidden, traegerJSON(t, router, readOnly.token, http.MethodPost, path+"/close",
-			map[string]any{"year": 2026, "month": 10, "reason": "x"}).Code)
+		assert.Equal(t, http.StatusForbidden, traegerCloseMonth(t, router, readOnly.token, path, map[string]any{"year": 2026, "month": 10, "reason": "x"}).Code)
 		other := newTraegerOffice(t, db, portal, "Träger Anders", identityaccess.TraegerRolePersonnel)
 		staffRelease(t, db, other.organization)
 		assertStaffRefusal(t, traegerJSON(t, router, other.token, http.MethodGet, october, nil), http.StatusNotFound, "workforce.traeger_staff_record_not_found")
-		assertStaffRefusal(t, traegerJSON(t, router, other.token, http.MethodPost, path+"/close",
-			map[string]any{"year": 2026, "month": 10, "reason": "x"}), http.StatusNotFound, "workforce.traeger_staff_record_not_found")
+		assertStaffRefusal(t, traegerCloseMonth(t, router, other.token, path, map[string]any{"year": 2026, "month": 10, "reason": "x"}), http.StatusNotFound, "workforce.traeger_staff_record_not_found")
 	})
 
 	t.Run("every read is in the access log of each school", func(t *testing.T) {

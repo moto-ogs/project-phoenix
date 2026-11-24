@@ -41,7 +41,7 @@ func (d Document) Violations(route Route, answer Answer) []string {
 		return []string{"the route registers a file, not the envelope"}
 	}
 	body := bytes.TrimSpace(answer.Body)
-	if route.NoData && len(body) == 0 {
+	if route.NoData && answer.Status == 204 && len(body) == 0 {
 		return nil
 	}
 	if route.Plain {
@@ -104,6 +104,9 @@ func (c *checker) pagination(raw json.RawMessage) {
 }
 
 func (c *checker) value(at string, s Schema, raw json.RawMessage) {
+	if s.LegacyJSON && json.Valid(raw) {
+		return
+	}
 	if string(raw) == "null" {
 		if !s.Nullable {
 			c.failf(at, "null where the contract names no null")
@@ -112,14 +115,7 @@ func (c *checker) value(at string, s Schema, raw json.RawMessage) {
 	}
 	switch s.Kind {
 	case KindArray:
-		var items []json.RawMessage
-		if err := json.Unmarshal(raw, &items); err != nil {
-			c.failf(at, "want an array, found %s", shown(raw))
-			return
-		}
-		for i, item := range items {
-			c.value(fmt.Sprintf("%s[%d]", at, i), *s.Elem, item)
-		}
+		c.array(at, *s.Elem, raw)
 	case KindMap:
 		var members map[string]json.RawMessage
 		if err := json.Unmarshal(raw, &members); err != nil {
@@ -137,6 +133,17 @@ func (c *checker) value(at string, s Schema, raw json.RawMessage) {
 		if reason := scalar(s.Kind, raw); reason != "" {
 			c.failf(at, "want %s, found %s", reason, shown(raw))
 		}
+	}
+}
+
+func (c *checker) array(at string, elem Schema, raw json.RawMessage) {
+	var items []json.RawMessage
+	if err := json.Unmarshal(raw, &items); err != nil {
+		c.failf(at, "want an array, found %s", shown(raw))
+		return
+	}
+	for i, item := range items {
+		c.value(fmt.Sprintf("%s[%d]", at, i), elem, item)
 	}
 }
 

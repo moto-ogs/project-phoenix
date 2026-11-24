@@ -21,7 +21,7 @@ vi.unmock("swr");
 vi.mock("next-auth/react", () => ({
   SessionProvider: ({ children }: { children: ReactNode }) => children,
   useSession: () => ({
-    data: { user: { id: "A", scope: "org", orgId: 7 } },
+    data: { user: { id: "A", scope: "org", orgId: "7" } },
   }),
 }));
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));

@@ -1,12 +1,13 @@
 import "server-only";
 import type { JWT } from "next-auth/jwt";
-import { sendBackend } from "~/lib/backend-client.server";
+import { contractWrite } from "~/lib/contract/client.server";
+import { routes } from "~/lib/contract/auth-staff-preview.generated";
 import {
   authLogger,
   parseJwtPayload,
   syncTokenFromPayload,
 } from "./jwt-claims";
-import type { BackendEndpoint } from "./portals";
+import type { RefreshRoute } from "./portals";
 import { accessTokenExpiresAt } from "./session-lifetime";
 import {
   applyRotation,
@@ -140,14 +141,14 @@ async function recordPreviewEnd(
 ): Promise<void> {
   if (!previewToken) return;
   try {
-    const response = await sendBackend("/auth/staff-preview/end", null, {
-      method: "POST",
-      json: { preview_token: previewToken },
-      timeout: "session",
-    });
-    if (!response.ok) {
+    const reply = await contractWrite(
+      routes["POST /auth/staff-preview/end"],
+      { preview_token: previewToken },
+      { timeout: "session" },
+    );
+    if (!reply.ok) {
       authLogger.warn("staff_preview_auto_end_not_recorded", {
-        status: response.status,
+        status: reply.error.status,
       });
     }
   } catch (err) {
@@ -180,7 +181,7 @@ export async function endPreviewOnSessionLoss(token: JWT): Promise<void> {
  */
 export async function maintainPreviewSession(
   token: JWT,
-  refresh: BackendEndpoint,
+  refresh: RefreshRoute,
   now: number,
 ): Promise<boolean> {
   const previewExpiry = token.tokenExpiry ?? 0;
@@ -214,28 +215,18 @@ export async function maintainPreviewSession(
   // Re-mint the preview token as the admin. The mint rotates nothing, so a
   // concurrent double-mint is harmless.
   try {
-    const response = await sendBackend(
-      "/auth/staff-preview",
-      adminAccessToken,
+    const reply = await contractWrite(
+      routes["POST /auth/staff-preview"],
       {
-        method: "POST",
-        // The expiring token comes along as previous_token: it proves this is
-        // the SAME preview instance, so the backend renews it instead of
-        // recording a second "preview started" in the audit trail.
-        json: {
-          account_id: token.previewTargetAccountId,
-          previous_token: token.token,
-        },
-        timeout: "session",
+        // Renew the same preview instance, not a second "preview started" audit entry.
+        account_id: token.previewTargetAccountId,
+        previous_token: token.token,
       },
+      { token: adminAccessToken, timeout: "session" },
     );
 
-    if (response.ok) {
-      const data = (await response.json()) as {
-        access_token: string;
-        expires_in: number;
-        target_name: string;
-      };
+    if (reply.ok) {
+      const data = reply.value;
       token.token = data.access_token;
       token.tokenExpiry = Date.now() + data.expires_in * 1000;
       token.previewTargetName = data.target_name;
@@ -244,7 +235,13 @@ export async function maintainPreviewSession(
       return true;
     }
 
-    if (response.status === 401) {
+    // An unreadable or unavailable answer does not prove eligibility ended.
+    if (
+      reply.error.status >= 500 &&
+      (!reply.backend || reply.backend.status < 400)
+    )
+      return true;
+    if (reply.error.status === 401) {
       // Stale admin access token — drop it so the next callback refreshes.
       token.previewAdminToken = undefined;
       token.previewAdminTokenExpiry = undefined;
@@ -256,7 +253,7 @@ export async function maintainPreviewSession(
     // clicks, so it gets the same audit entry, recorded while the preview
     // token is still in hand — it proves which preview is being closed.
     authLogger.warn("staff_preview_remint_rejected", {
-      status: response.status,
+      status: reply.error.status,
     });
     await recordPreviewEnd(token.token);
     restoreAdminFromPreview(token);

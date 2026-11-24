@@ -111,7 +111,10 @@ vi.mock("~/lib/breadcrumb-context", () => ({
   useSetBreadcrumb: vi.fn(),
 }));
 
-vi.mock("~/lib/swr", () => ({
+vi.mock("~/lib/swr", async () => ({
+  revalidateOrThrow: (
+    await vi.importActual<typeof import("~/lib/swr")>("~/lib/swr")
+  ).revalidateOrThrow,
   useSWRAuth: mockUseSWR,
   useInvalidateMatching: () => vi.fn(async () => []),
   useSWRConfig: () => ({ mutate: vi.fn() }),
@@ -229,12 +232,26 @@ const mockSchool = {
   childQuotaBundleSize: 50,
   childQuotaCount: 37,
   deviceSlots: null as number | null,
+  version: "v-1",
 };
+
+// Like SWR 2.x: an explicit `undefined` writes the cache empty and resolves to
+// undefined; only an argument-free call revalidates. A failed read still
+// resolves with the old list, so the failure shows only in readCurrent.
+function swrMutate(list: unknown[]) {
+  return (...args: unknown[]) =>
+    Promise.resolve(
+      args.length > 0 && args[0] === undefined ? undefined : list,
+    );
+}
 
 interface SetupOpts {
   orgs?: (typeof mockOrg)[];
   schools?: (typeof mockSchool)[];
   schoolsError?: Error;
+  /** What a fresh read of the school list finds; defaults to `schools`. */
+  freshSchools?: (typeof mockSchool)[];
+  schoolsReadError?: Error;
   accountsError?: Error;
   devicesError?: Error;
   personsError?: Error;
@@ -255,6 +272,8 @@ function setupSWR(opts: SetupOpts = {}) {
     orgs = [mockOrg],
     schools = [mockSchool],
     schoolsError,
+    freshSchools = schools,
+    schoolsReadError,
     accountsError,
     devicesError,
     personsError,
@@ -275,6 +294,10 @@ function setupSWR(opts: SetupOpts = {}) {
           error: schoolsError,
           isLoading: false,
           mutate: mockMutateSchools,
+          readCurrent: () => ({
+            data: schoolsReadError ? undefined : freshSchools,
+            error: schoolsReadError,
+          }),
         };
       case operatorProvisioningKeys.schoolRequiredDetails():
         return {
@@ -335,7 +358,7 @@ describe("OperatorSchoolDetailPage", () => {
       status: "authenticated",
     });
     mockMutateOrgs.mockResolvedValue(undefined);
-    mockMutateSchools.mockResolvedValue([mockSchool]);
+    mockMutateSchools.mockImplementation(swrMutate([mockSchool]));
     mockMutateRequiredDetails.mockResolvedValue([]);
     await schoolPageProps.params;
   });
@@ -504,6 +527,58 @@ describe("OperatorSchoolDetailPage", () => {
     });
   });
 
+  // ADR 0311 (replaces the fresh read before toggling, #7780): the toggle
+  // sends the school as shown with its version; a school changed since is
+  // refused, never switched back, and the page reads it again.
+  it("toggles the shown school with its version and reads it again after a refusal", async () => {
+    setupSWR();
+    mockUpdateSchool.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+
+    await renderPage();
+    fireEvent.click(await screen.findByLabelText("Deaktivieren"));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Änderung des Status"),
+      ),
+    ).toBeInTheDocument();
+    expect(mockUpdateSchool).toHaveBeenCalledWith(
+      "10",
+      expect.objectContaining({
+        name: "Test School",
+        active: false,
+        expected_version: "v-1",
+      }),
+    );
+    expect(mockMutateSchools).toHaveBeenCalledWith();
+  });
+
+  // ADR 0311, rule 4: from the refusal until the school is read again the
+  // badge sends nothing; a failed read keeps it locked.
+  it("locks the status toggle while the read after a refusal failed", async () => {
+    setupSWR({ schoolsReadError: new ApiError("unavailable", 503) });
+    mockUpdateSchool.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+
+    await renderPage();
+    fireEvent.click(await screen.findByLabelText("Deaktivieren"));
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden\./),
+    ).toBeInTheDocument();
+    const toggle = screen.getByLabelText("Deaktivieren");
+    expect(toggle).toBeDisabled();
+    expect(toggle).toHaveAttribute(
+      "title",
+      "Die gespeicherten Angaben konnten nicht geladen werden. Tippe in der Fehlermeldung auf „Wiederholen“.",
+    );
+    fireEvent.click(toggle);
+    expect(mockUpdateSchool).toHaveBeenCalledTimes(1);
+  });
+
   // #6652: the status change holds once the write is through; a failed reload
   // of the portal cache is a load error above the page, never a failed change.
   it("keeps a status change successful when the portal cache reload fails", async () => {
@@ -580,7 +655,7 @@ describe("OperatorSchoolDetailPage", () => {
     expect(headerStatValue("Kontingentzahl")).toBe("37");
   });
 
-  it("sets the Kinderkontingent from the school view and refreshes it", async () => {
+  it("saves an unlimited school as 1 x 75 with the version it opened with and closes", async () => {
     setupSWR();
     mockUpdateSchool.mockResolvedValue(mockSchool);
 
@@ -592,6 +667,9 @@ describe("OperatorSchoolDetailPage", () => {
     fireEvent.change(screen.getByLabelText("Anzahl Bundles"), {
       target: { value: "1" },
     });
+    fireEvent.change(screen.getByLabelText("Kinder pro Bundle"), {
+      target: { value: "75" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
@@ -600,18 +678,50 @@ describe("OperatorSchoolDetailPage", () => {
         expect.objectContaining({
           name: "Test School",
           active: true,
-          child_quota: { bundles: 1, bundle_size: 50 },
+          expected_version: "v-1",
+          child_quota: { bundles: 1, bundle_size: 75 },
         }),
       ),
     );
     await waitFor(() => expect(mockMutateSchools).toHaveBeenCalled());
-    expect(mockMutateSchools).toHaveBeenCalledWith(undefined, {
-      throwOnError: true,
-    });
     expect(mockMutateOrgs).toHaveBeenCalled();
     await waitFor(() =>
       expect(screen.queryByLabelText("Anzahl Bundles")).not.toBeInTheDocument(),
     );
+  });
+
+  // ADR 0311, rule 6: after a refusal whose read fails, the dialog keeps the
+  // input and its load error, and nothing more goes out.
+  it("keeps the Kinderkontingent dialog and inputs when the read after a refusal fails", async () => {
+    setupSWR({
+      schoolsReadError: new ApiError("down", 503, {
+        code: "general.unavailable",
+      }),
+    });
+    mockUpdateSchool.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+
+    await renderPage();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Kinderkontingent" }),
+    );
+    fireEvent.change(screen.getByLabelText("Anzahl Bundles"), {
+      target: { value: "1" },
+    });
+    fireEvent.change(screen.getByLabelText("Kinder pro Bundle"), {
+      target: { value: "75" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden\./),
+    ).toBeInTheDocument();
+    expect(mockUpdateSchool).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText("Anzahl Bundles")).toHaveValue("1");
+    expect(screen.getByLabelText("Kinder pro Bundle")).toHaveValue("75");
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
   });
 
   it("opens edit school modal when Bearbeiten is clicked", async () => {

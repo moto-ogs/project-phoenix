@@ -31,6 +31,7 @@ const REGENERATIONSTAG: AbsenceType = {
   keptByTraeger: false,
   offered: true,
   schoolLimitDays: null,
+  version: "v1",
 };
 
 const SONDERURLAUB: AbsenceType = {
@@ -44,6 +45,7 @@ const SONDERURLAUB: AbsenceType = {
   keptByTraeger: false,
   offered: true,
   schoolLimitDays: null,
+  version: "v1",
 };
 
 describe("useAbsenceTypeOptions", () => {

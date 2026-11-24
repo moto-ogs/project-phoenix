@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
@@ -96,7 +97,7 @@ func testFutureSplitAndBulkCancellation(t *testing.T, offset int) {
 	splitDone := make(chan error, 1)
 	running.Go(func() {
 		splitDone <- testpkg.WithTenantTx(t, ctx, f.s.db, f.s.tenantID, func(splitCtx context.Context, _ bun.Tx) error {
-			_, err := module.Templates.SplitTemplate(splitCtx, in)
+			_, err := editorTemplates{TemplateAdministration: module.Templates, reads: module.Data}.SplitTemplate(splitCtx, in)
 			return err
 		})
 	})
@@ -116,10 +117,14 @@ func testFutureSplitAndBulkCancellation(t *testing.T, offset int) {
 	require.True(t, deleted, "the real predecessor resync must delete the participant in the uncommitted split")
 	var splitPID int
 	require.NoError(t, tx.NewRaw("SELECT pg_backend_pid()").Scan(splitCtx, &splitPID))
+	// The dialog confirmed the occurrences before the split; the split's
+	// successor changes the selection under the locks.
+	preview, err := f.s.instance.BulkCancelPlanned(f.s.ctx, from, to, timetable.BulkCancelOptions{DryRun: true}, nil)
+	require.NoError(t, err)
 	bulkDone := make(chan error, 1)
 	running.Go(func() {
 		bulkDone <- testpkg.WithTenantTx(t, ctx, f.s.db, f.s.tenantID, func(bulkCtx context.Context, _ bun.Tx) error {
-			_, err := f.s.instance.BulkCancelPlanned(bulkCtx, from, to, timetable.BulkCancelOptions{}, nil)
+			_, err := f.s.instance.BulkCancelPlanned(bulkCtx, from, to, timetable.BulkCancelOptions{ExpectedFingerprint: preview.Fingerprint}, nil)
 			return err
 		})
 	})
@@ -129,7 +134,9 @@ func testFutureSplitAndBulkCancellation(t *testing.T, offset int) {
 	splitErr := awaitSplitCancel(t, ctx, splitDone)
 	bulkErr := awaitSplitCancel(t, ctx, bulkDone)
 	require.NoError(t, splitErr, "split must commit without 40P01")
-	require.NoError(t, bulkErr, "bulk cancellation must commit without 40P01")
+	require.ErrorIs(t, bulkErr, readstate.ErrChanged,
+		"bulk cancellation must finish without 40P01 and see the committed successor, which its dry run did not name (ADR 0311)")
+	confirmBulkCancel(t, f.s, from, to, false)
 	require.Empty(t, testpkg.ActivityInstancesWhere(t, f.s.ctx, f.s.db,
 		`"activity_instance".activity_group_id = ? AND "activity_instance".date = ?`, f.update.TemplateID, day))
 	var remaining int

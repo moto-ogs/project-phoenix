@@ -5,6 +5,7 @@ import {
   bool,
   fileAnswer,
   instant,
+  int64String,
   nullable,
   object,
   optional,
@@ -28,6 +29,7 @@ import {
   type announcementRequest,
   type declarationSignerResponse,
   type letterPreviewRequest,
+  type versionRequest,
 } from "./shared.generated";
 
 /** Go: announcement.studentLetterResponse */
@@ -41,7 +43,7 @@ export interface studentLetterResponse {
 }
 
 export const studentLetterResponseSchema: z.ZodType<studentLetterResponse, unknown> = object<studentLetterResponse>({
-  announcement_id: str,
+  announcement_id: int64String,
   title: str,
   published_at: instant,
   can_confirm: bool,
@@ -61,7 +63,7 @@ export interface studentDeclarationResponse {
 }
 
 export const studentDeclarationResponseSchema: z.ZodType<studentDeclarationResponse, unknown> = object<studentDeclarationResponse>({
-  announcement_id: str,
+  announcement_id: int64String,
   title: str,
   published_at: instant,
   deadline: nullable(instant),
@@ -93,7 +95,7 @@ export interface pollChildResponse {
 }
 
 export const pollChildResponseSchema: z.ZodType<pollChildResponse, unknown> = object<pollChildResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
@@ -110,7 +112,7 @@ export interface pollOptionResultResponse {
 }
 
 export const pollOptionResultResponseSchema: z.ZodType<pollOptionResultResponse, unknown> = object<pollOptionResultResponse>({
-  option_id: str,
+  option_id: int64String,
   label: str,
   count: safeInt,
 });
@@ -132,19 +134,9 @@ export const pollResultsResponseSchema: z.ZodType<pollResultsResponse, unknown> 
 
 /** Go: announcement.reminderRequest */
 export interface reminderRequest {
-  reminder_at?: unknown | null;
+  reminder_at?: string | null;
   reminder_text?: string | null;
-}
-
-/** Query of GET /api/parent-announcements/ */
-export interface GetParentAnnouncementsQuery {
-  include_inactive?: boolean;
-}
-
-/** Query of GET /api/parent-announcements/{announcementId}/declaration-export */
-export interface GetParentAnnouncementsAnnouncementIdDeclarationExportQuery {
-  format?: "csv" | "pdf";
-  student_id?: string;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -158,7 +150,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/parent-announcements/",
     portals: ["tenant"],
-    query: ["include_inactive"],
+    query: {
+      "include_inactive": { kind: "bool" },
+    },
     response: success(z.array(announcementResponseSchema)),
   },
   "GET /api/parent-announcements/letter-placeholders": {
@@ -183,7 +177,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/parent-announcements/{announcementId}/declaration-export",
     portals: ["tenant"],
-    query: ["format", "student_id"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf"] },
+      "student_id": { kind: "id" },
+    },
     response: fileAnswer,
   },
   "GET /api/parent-announcements/{announcementId}/declaration-status": {
@@ -247,6 +244,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/parent-announcements/{announcementId}/publish",
     portals: ["tenant"],
+    request: requestBody<versionRequest>(),
     response: success(announcementResponseSchema),
   },
   "POST /api/parent-announcements/{announcementId}/remind": {

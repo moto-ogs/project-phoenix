@@ -75,6 +75,7 @@ export interface TraegerPhase {
   withdrawn_at?: string;
   schools: TraegerCatalogSchool[] | null;
   updated_at: string;
+  version: string;
 }
 
 export const TraegerPhaseSchema: z.ZodType<TraegerPhase, unknown> = object<TraegerPhase>({
@@ -87,6 +88,7 @@ export const TraegerPhaseSchema: z.ZodType<TraegerPhase, unknown> = object<Traeg
   withdrawn_at: optional(instant),
   schools: nullable(arr(TraegerCatalogSchoolSchema)),
   updated_at: instant,
+  version: str,
 });
 
 /** Go: careplan.TraegerOfferingFields */
@@ -211,6 +213,7 @@ export interface TraegerOffering {
   withdrawn_at?: string;
   schools: TraegerOfferingSchool[] | null;
   updated_at: string;
+  version: string;
 }
 
 export const TraegerOfferingSchema: z.ZodType<TraegerOffering, unknown> = object<TraegerOffering>({
@@ -223,6 +226,7 @@ export const TraegerOfferingSchema: z.ZodType<TraegerOffering, unknown> = object
   withdrawn_at: optional(instant),
   schools: nullable(arr(TraegerOfferingSchoolSchema)),
   updated_at: instant,
+  version: str,
 });
 
 /** Go: traegercataloghttp.PhaseDetail */
@@ -236,6 +240,7 @@ export interface PhaseDetail {
   withdrawn_at?: string;
   schools: TraegerCatalogSchool[] | null;
   updated_at: string;
+  version: string;
   offerings: TraegerOffering[] | null;
 }
 
@@ -249,6 +254,7 @@ export const PhaseDetailSchema: z.ZodType<PhaseDetail, unknown> = object<PhaseDe
   withdrawn_at: optional(instant),
   schools: nullable(arr(TraegerCatalogSchoolSchema)),
   updated_at: instant,
+  version: str,
   offerings: nullable(arr(TraegerOfferingSchema)),
 });
 
@@ -266,6 +272,7 @@ export interface PhaseRequest {
   care_offering_selection_mode?: string;
   all_schools?: boolean;
   school_ids?: string[] | null;
+  expected_version?: string;
 }
 
 /** Go: traegercataloghttp.OfferingFieldsRequest */
@@ -315,6 +322,7 @@ export interface OfferingRequest {
   fields?: OfferingFieldsRequest;
   prices?: OfferingPriceRequest[] | null;
   contract_template?: OfferingContractTemplateRequest | null;
+  expected_version?: string;
 }
 
 /** Go: enrollment.TraegerFieldChange */
@@ -435,11 +443,6 @@ export const RolloutSchema: z.ZodType<Rollout, unknown> = object<Rollout>({
   schools: nullable(arr(SchoolResultSchema)),
 });
 
-/** Query of GET /traeger/catalog/phases/export */
-export interface GetTraegerCatalogPhasesExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
 export const routes = {
   "GET /traeger/catalog/phases": {
     method: "GET",
@@ -451,7 +454,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/catalog/phases/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/catalog/phases/{id}": {

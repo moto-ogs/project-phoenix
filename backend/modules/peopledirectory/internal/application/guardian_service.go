@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain/userscontract"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 const (
@@ -325,8 +326,10 @@ func (s *RetainedGuardianService) deleteGuardianWithLinks(ctx context.Context, i
 	for _, link := range links {
 		currentLinkIDs = append(currentLinkIDs, link.ID)
 	}
+	// The previewed link set is the read state of the delete (ADR 0311): a
+	// link added or removed since refuses it, and the dialog reloads.
 	if !sameInt64Set(currentLinkIDs, expectedLinkIDs) {
-		return peoplePorts.ErrGuardianDeletePreviewChanged
+		return readstate.ErrChanged
 	}
 	if err := s.deleteGuardianLinks(ctx, links, changedByAccountID); err != nil {
 		return err

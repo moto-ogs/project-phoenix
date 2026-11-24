@@ -4,7 +4,7 @@
  * subject). Sending is get-or-create — there is at most one conversation per
  * (child, guardian).
  *
- * Talks to the Next.js proxy routes under /api/messages, which forward to the
+ * Talks to the catalog BFF under /api/messages, which forward to the
  * Go backend with the staff JWT. Backend int64 ids arrive already stringified.
  */
 
@@ -16,6 +16,7 @@ import {
   type ChatMessage,
   type MessageAudience,
   type SchoolReaders,
+  chatMessageFieldsOf,
   endSentence,
   leadershipNameList,
 } from "~/lib/messaging-status";
@@ -32,13 +33,10 @@ export function isParentMessagingDisabled(error: unknown): boolean {
 /** Leadership accounts without a person name (#5200), as staff read them. */
 const UNNAMED_LEADER_LABEL = "Schulverwaltung";
 
-// The wire message shape is shared with the parent client; see ChatMessage.
-// A guardian's answer to a Gruppennachricht (#4784) names that thread.
-export type Message = ChatMessage &
-  Pick<
-    messagesContract.ParentChatMessageResponse,
-    "group_thread_id" | "group_thread_title"
-  >;
+// The message view is shared with the parent client; see ChatMessage. A
+// guardian's answer to a Gruppennachricht (#4784) names that thread in
+// group_thread_id and group_thread_title.
+export type Message = ChatMessage;
 
 /**
  * Which conversation of a guardian about a child (#5200). Staff without the
@@ -109,14 +107,17 @@ function toInboxThread(
 }
 
 /**
- * The contract carries a message's `attachments` and `payload` as `unknown`
- * (#7808); the conversation reads them in the shape ChatMessage names, as the
- * parent client does.
+ * The contract types a message's enums as plain strings and its `payload` as
+ * `unknown` (#7808); the conversation reads them in the shape ChatMessage
+ * names, through the same reader as the parent client.
  */
 function toMessages(
   messages: readonly messagesContract.ParentChatMessageResponse[] | null,
 ): Message[] {
-  return (messages ?? []) as unknown as Message[];
+  return (messages ?? []).flatMap((message) => {
+    const fields = chatMessageFieldsOf(message);
+    return fields ? [{ ...message, ...fields }] : [];
+  });
 }
 
 function toThreadDetail(

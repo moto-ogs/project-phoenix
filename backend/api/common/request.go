@@ -2,10 +2,13 @@ package common
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // DefaultPage is the default page number for pagination
@@ -97,4 +100,15 @@ func ParsePositiveInt64IDWithError(w http.ResponseWriter, r *http.Request, param
 		return 0, false
 	}
 	return id, true
+}
+
+// DecodeReadStateBody reads the token body of a command on a read state
+// (ADR 0311): an expected version or fingerprint. A request without a body
+// decodes to the empty token, which the owner refuses as a changed state;
+// only a body that is not JSON is an error.
+func DecodeReadStateBody(r *http.Request, dst any) error {
+	if err := wire.Decode(r.Body, dst); err != nil && !errors.Is(err, io.EOF) {
+		return err
+	}
+	return nil
 }

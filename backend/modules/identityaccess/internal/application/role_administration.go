@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // RoleAdministration runs role and permission management (#3314): role and
@@ -144,27 +145,49 @@ func (r *RoleAdministration) resolveAssignableSchoolRole(ctx context.Context, ro
 	return role, names, nil
 }
 
-func (r *RoleAdministration) UpdateRole(ctx context.Context, role identityaccess.Role) (err error) {
+// UpdateRole writes name, description and base role of a custom role and
+// answers the stored role. The role row is locked before it is read, so the
+// check of expectedVersion and the write see the same state; a role changed
+// since the caller read it is refused with readstate.ErrChanged (ADR 0311).
+// The row lock is the only lock the edit takes, so it cannot deadlock with
+// the permission mutations, which lock the role's holders before the row.
+func (r *RoleAdministration) UpdateRole(ctx context.Context, id int64, change identityaccess.RoleChange, expectedVersion string) (updated identityaccess.Role, err error) {
 	if r == nil {
-		return errRoleAdministrationUnavailable
+		return identityaccess.Role{}, errRoleAdministrationUnavailable
 	}
-	operation := func(ctx context.Context, role domain.ManagedRole) error {
-		existing, found, err := r.store.FindRole(ctx, role.ID)
+	const op = "update role"
+	operation := func(ctx context.Context) (domain.ManagedRole, error) {
+		// A failed lookup answers not found, as before the lock.
+		existing, found, err := r.store.FindRoleForUpdate(ctx, id)
 		if err != nil || !found {
-			return failed("update role", domain.ErrRoleNotFound)
+			return domain.ManagedRole{}, failed(op, domain.ErrRoleNotFound)
 		}
 		if existing.IsSystem {
-			return failed("update role", identityaccess.ErrSystemRoleImmutable)
+			return domain.ManagedRole{}, failed(op, identityaccess.ErrSystemRoleImmutable)
 		}
-		if err := r.store.UpdateRole(ctx, role); err != nil {
-			return failed("update role", err)
+		if existing.TraegerRoleID != nil {
+			return domain.ManagedRole{}, failed(op, identityaccess.ErrTraegerRoleImmutable)
 		}
-		return nil
+		if err := readstate.Check(expectedVersion, identityaccess.RoleVersion(identityaccess.Role(existing))); err != nil {
+			return domain.ManagedRole{}, failed(op, err)
+		}
+		existing.Name = change.Name
+		existing.Description = change.Description
+		if change.BaseRole != nil {
+			existing.BaseRole = change.BaseRole
+		}
+		stored, err := r.store.UpdateRole(ctx, existing)
+		if err != nil {
+			return domain.ManagedRole{}, failed(op, err)
+		}
+		return stored, nil
 	}
 	err = r.runtime.RunInTx(ctx, func(txCtx context.Context) error {
-		return roleError(operation(bindRuntime(r.attach, txCtx), domain.ManagedRole(role)))
+		stored, err := operation(bindRuntime(r.attach, txCtx))
+		updated = identityaccess.Role(stored)
+		return roleError(err)
 	})
-	return
+	return updated, err
 }
 
 // DeleteRole deletes a custom role with its account and permission mappings.
@@ -258,23 +281,34 @@ func (r *RoleAdministration) AssignRoleToAccount(ctx context.Context, accountID,
 // may revoke.
 //
 // The target is assigned first so the account never temporarily loses its
-// staff role; a later failure rolls back the complete exchange.
-func (r *RoleAdministration) ReplaceAccountRole(ctx context.Context, accountID, roleID int64) error {
+// staff role; a later failure rolls back the complete exchange. Roles
+// changed since the caller read expectedVersion are refused with
+// readstate.ErrChanged (ADR 0311): the exchange would otherwise remove a
+// role a colleague assigned meanwhile.
+func (r *RoleAdministration) ReplaceAccountRole(ctx context.Context, accountID, roleID int64, expectedVersion string) error {
 	return runFlowErr(ctx, r.flow(), func(ctx context.Context) error {
 		return r.runtime.RunInTx(ctx, func(txCtx context.Context) error {
-			return r.replaceAccountRoleInTx(txCtx, accountID, roleID)
+			return r.replaceAccountRoleInTx(txCtx, accountID, roleID, expectedVersion)
 		})
 	})
 }
 
 // replaceAccountRoleInTx assigns the role and removes the account's other
 // school roles inside the caller's transaction.
-func (r *RoleAdministration) replaceAccountRoleInTx(txCtx context.Context, accountID, roleID int64) error {
+func (r *RoleAdministration) replaceAccountRoleInTx(txCtx context.Context, accountID, roleID int64, expectedVersion string) error {
+	const op = "replace account role"
 	// Take the same account lock as single-role mutations before changing
 	// an assignment. This serializes replacements with individual
 	// assignments and removals for the same account.
-	if err := r.lockManageableAccount(txCtx, accountID, "replace account role"); err != nil {
+	if err := r.lockManageableAccount(txCtx, accountID, op); err != nil {
 		return err
+	}
+	read, err := r.store.ListAccountRoles(txCtx, accountID)
+	if err != nil {
+		return failed(op, err)
+	}
+	if err := readstate.Check(expectedVersion, identityaccess.AccountRolesVersion(publicRoles(read))); err != nil {
+		return failed(op, err)
 	}
 
 	if err := r.AssignRoleToAccount(txCtx, accountID, roleID); err != nil {
@@ -285,7 +319,7 @@ func (r *RoleAdministration) replaceAccountRoleInTx(txCtx context.Context, accou
 	// schools are never in it and never removed here.
 	current, err := r.store.ListAccountRoles(txCtx, accountID)
 	if err != nil {
-		return failed("replace account role", err)
+		return failed(op, err)
 	}
 	others := make([]int64, 0, len(current))
 	for _, role := range current {

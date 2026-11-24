@@ -74,6 +74,7 @@ describe("POST /api/auth/login", () => {
   it("forwards credentials and returns only a session confirmation", async () => {
     const loginPayload = { email: "test@example.com", password: "Test1234!" };
     const backendResponse = {
+      status: "authenticated",
       access_token: "jwt-token",
       refresh_token: "refresh-token",
     };
@@ -180,8 +181,28 @@ describe("POST /api/auth/login", () => {
     });
     const response = await POST(request);
 
-    expect(response.status).toBe(500);
-    expect(await response.json()).toMatchObject({ code: "general.server" });
+    expect(response.status).toBe(502);
+    expect(await response.json()).toMatchObject({
+      code: "general.write_answer_unreadable",
+    });
+    expect(setTenantSession).not.toHaveBeenCalled();
+  });
+
+  it("does not remember a device when the backend's successful answer is invalid", async () => {
+    vi.mocked(global.fetch).mockResolvedValueOnce(
+      Response.json(
+        { status: "authenticated", access_token: "access", refresh_token: 42 },
+        { headers: { "Set-Cookie": "mfa_trust_device=proof; HttpOnly" } },
+      ),
+    );
+
+    const response = await POST(
+      createMockRequest("/api/auth/login", {
+        body: { email: "test@example.test", password: "synthetic" },
+      }),
+    );
+    expect(response.status).toBe(502);
+    expect(response.headers.getSetCookie()).toEqual([]);
     expect(setTenantSession).not.toHaveBeenCalled();
   });
 
@@ -200,8 +221,10 @@ describe("POST /api/auth/login", () => {
     });
     const response = await POST(request);
 
-    expect(response.status).toBe(500);
-    expect(await response.json()).toMatchObject({ code: "general.server" });
+    expect(response.status).toBe(502);
+    expect(await response.json()).toMatchObject({
+      code: "general.write_answer_unreadable",
+    });
     expect(setTenantSession).not.toHaveBeenCalled();
   });
 

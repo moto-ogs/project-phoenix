@@ -6,7 +6,7 @@ import { AnnouncementDetail } from "./announcement-detail";
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    data: { user: { id: "account-1", tenantId: "1", scope: "tenant" } },
     status: "authenticated",
   }),
 }));
@@ -25,6 +25,7 @@ vi.mock("~/lib/parent-announcements-api", async (importOriginal) => ({
 
 const consent: Announcement = {
   id: "42",
+  version: "2026-09-01T08:00:00Z",
   title: "Ausflug in den Zoo",
   body: "Wir fahren am Freitag in den Zoo.",
   priority: "info",

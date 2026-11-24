@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -67,7 +68,7 @@ func (f careBillingFixture) costBearer(t *testing.T, name string) int64 {
 }
 
 func careCostShare(contractID int64, kind string, bearerID int64, share map[string]any) map[string]any {
-	body := map[string]any{"contract_id": contractID, "kind": kind, "cost_bearer_id": bearerID, "valid_from": careReductionStart,
+	body := map[string]any{"contract_id": fmt.Sprint(contractID), "kind": kind, "cost_bearer_id": fmt.Sprint(bearerID), "valid_from": careReductionStart,
 		"valid_until": "2030-07-31", "reference": "Bescheid 51-2030-17", "checked_on": "2026-10-01"}
 	for key, value := range share {
 		body[key] = value
@@ -148,7 +149,7 @@ func TestCareCostSharesSplitTheContributionAndStayOnTheIssuedInvoice(t *testing.
 	// A later change of the share and of the cost bearer's name never
 	// reaches the issued invoice.
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, "/traeger/cost-bearers/"+strconv.FormatInt(youthOffice, 10),
-		map[string]any{"name": "Jugendamt neu", "active": true})
+		withVersion(map[string]any{"name": "Jugendamt neu", "active": true}, costBearerVersion(t, f.traeger, f.office.token, youthOffice)))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	shareID := set.Contracts[0].Shares[0].ID
 	for _, contract := range set.Contracts {
@@ -157,7 +158,8 @@ func TestCareCostSharesSplitTheContributionAndStayOnTheIssuedInvoice(t *testing.
 		}
 	}
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careCostSharesPath+"/"+strconv.FormatInt(int64(shareID), 10),
-		careCostShare(mia, "youth_office", youthOffice, map[string]any{"share_basis_points": 1000}))
+		withVersion(careCostShare(mia, "youth_office", youthOffice, map[string]any{"share_basis_points": 1000}),
+			costShareVersion(t, f.traeger, f.office.token, int64(shareID))))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	again := f.costShareRun(t, int64(run.ID))
 	for _, invoice := range again.Invoices {

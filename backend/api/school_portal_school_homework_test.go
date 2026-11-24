@@ -30,6 +30,7 @@ type homeworkRosterRow struct {
 		Status string  `json:"status"`
 		Note   *string `json:"note"`
 	} `json:"homework_feedback"`
+	FeedbackVersion string `json:"homework_feedback_version"`
 }
 
 type homeworkRoster struct {
@@ -109,10 +110,20 @@ func TestHomeworkFeedbackIsBoundToTheLernzeitRoster(t *testing.T) {
 	assert.Equal(t, "Seite 12", roster.row(child.ID).Homework[0].Description)
 	assert.Empty(t, roster.row(withoutHomework.ID).Homework)
 
-	code, body := feedback(lernzeit, child.ID, `{"status":"difficult","note":" Aufgabe 3 war schwer "}`)
+	read := roster.row(child.ID).FeedbackVersion
+	code, body := feedback(lernzeit, child.ID, `{"status":"difficult","note":" Aufgabe 3 war schwer ","expected_version":"`+read+`"}`)
 	require.Equal(t, http.StatusOK, code, body)
-	code, body = feedback(lernzeit, child.ID, `{"status":"done"}`)
+	var first struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(body), &first), body)
+	code, body = feedback(lernzeit, child.ID, `{"status":"done","expected_version":"`+first.Data.Version+`"}`)
 	require.Equal(t, http.StatusOK, code, body, "a second feedback of the day replaces the first")
+	code, body = feedback(lernzeit, child.ID, `{"status":"not_done","expected_version":"`+read+`"}`)
+	assert.Equal(t, http.StatusConflict, code, body, "a feedback over one given after the read is refused")
+	assert.Contains(t, body, "general.changed_since_read")
 	rec = schoolSupervisionRequest(t, router, claims, http.MethodGet, fmt.Sprintf("/supervisions/%d/roster", lernzeit), nil)
 	roster = decodeHomeworkRoster(t, rec.Body.Bytes())
 	require.NotNil(t, roster.row(child.ID).Feedback)

@@ -520,7 +520,9 @@ describe("PersonalCalendar", () => {
         events={[cancelled]}
         weekStart={new Date(2026, 0, 5)}
         onRespond={onRespond}
-        icsHrefBase="/api/parent/me/calendar/appointments"
+        icsHref={(id) =>
+          `/api/parent/me/calendar/appointments/${encodeURIComponent(id)}/ics`
+        }
       />,
     );
 
@@ -538,7 +540,9 @@ describe("PersonalCalendar", () => {
       <PersonalCalendar
         events={[appointment]}
         weekStart={new Date(2026, 0, 5)}
-        icsHrefBase="/api/parent/me/calendar/appointments"
+        icsHref={(id) =>
+          `/api/parent/me/calendar/appointments/${encodeURIComponent(id)}/ics`
+        }
       />,
     );
 

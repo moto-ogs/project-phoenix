@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Accident reports (Unfallanzeige, #4771) are child documents of the
@@ -66,7 +67,7 @@ func (s *StudentDocuments) createAccidentReport(ctx context.Context, studentID i
 	return created, nil
 }
 
-func (s *StudentDocuments) UpdateStudentAccidentReport(ctx context.Context, studentID, documentID int64, report careplan.AccidentReport, actor careplan.StudentDocumentActor) (careplan.CareDocument, error) {
+func (s *StudentDocuments) UpdateStudentAccidentReport(ctx context.Context, studentID, documentID int64, report careplan.AccidentReport, expectedVersion string, actor careplan.StudentDocumentActor) (careplan.CareDocument, error) {
 	if err := s.requireAccidentManage(actor); err != nil {
 		return careplan.CareDocument{}, err
 	}
@@ -76,7 +77,7 @@ func (s *StudentDocuments) UpdateStudentAccidentReport(ctx context.Context, stud
 	}
 	var updated careplan.CareDocument
 	err = s.transaction(ctx, func(txCtx context.Context) error {
-		document, err := s.findOpenAccidentReport(txCtx, studentID, documentID, actor)
+		document, err := s.findReadAccidentReport(txCtx, studentID, documentID, expectedVersion, actor)
 		if err != nil {
 			return err
 		}
@@ -94,7 +95,7 @@ func (s *StudentDocuments) UpdateStudentAccidentReport(ctx context.Context, stud
 	return updated, nil
 }
 
-func (s *StudentDocuments) SignStudentAccidentReport(ctx context.Context, studentID, documentID int64, signature careplan.AccidentSignatureInput, actor careplan.StudentDocumentActor) (careplan.CareDocument, error) {
+func (s *StudentDocuments) SignStudentAccidentReport(ctx context.Context, studentID, documentID int64, signature careplan.AccidentSignatureInput, expectedVersion string, actor careplan.StudentDocumentActor) (careplan.CareDocument, error) {
 	if err := s.requireAccidentManage(actor); err != nil {
 		return careplan.CareDocument{}, err
 	}
@@ -104,7 +105,7 @@ func (s *StudentDocuments) SignStudentAccidentReport(ctx context.Context, studen
 	}
 	var signed careplan.CareDocument
 	err := s.transaction(ctx, func(txCtx context.Context) error {
-		document, err := s.findOpenAccidentReport(txCtx, studentID, documentID, actor)
+		document, err := s.findReadAccidentReport(txCtx, studentID, documentID, expectedVersion, actor)
 		if err != nil {
 			return err
 		}
@@ -162,12 +163,12 @@ func (s *StudentDocuments) CorrectStudentAccidentReport(ctx context.Context, stu
 	return corrected, nil
 }
 
-func (s *StudentDocuments) AuthorizeAccidentPaperCopy(ctx context.Context, studentID, documentID int64, actor careplan.StudentDocumentActor) error {
+func (s *StudentDocuments) AuthorizeAccidentPaperCopy(ctx context.Context, studentID, documentID int64, expectedVersion string, actor careplan.StudentDocumentActor) error {
 	if err := s.requireAccidentManage(actor); err != nil {
 		return err
 	}
 	return s.transaction(ctx, func(txCtx context.Context) error {
-		_, err := s.findOpenAccidentReport(txCtx, studentID, documentID, actor)
+		_, err := s.findReadAccidentReport(txCtx, studentID, documentID, expectedVersion, actor)
 		return err
 	})
 }
@@ -182,7 +183,7 @@ func (s *StudentDocuments) AttachAccidentPaperCopy(ctx context.Context, input ca
 	}
 	var signed careplan.CareDocument
 	err := s.transaction(ctx, func(txCtx context.Context) error {
-		document, err := s.findOpenAccidentReport(txCtx, input.StudentID, input.DocumentID, actor)
+		document, err := s.findReadAccidentReport(txCtx, input.StudentID, input.DocumentID, input.ExpectedVersion, actor)
 		if err != nil {
 			return err
 		}
@@ -254,11 +255,19 @@ func (s *StudentDocuments) findAccidentReport(ctx context.Context, studentID, do
 	return document, nil
 }
 
-// findOpenAccidentReport is findAccidentReport for a report that may still
-// change.
-func (s *StudentDocuments) findOpenAccidentReport(ctx context.Context, studentID, documentID int64, actor careplan.StudentDocumentActor) (careplan.CareDocument, error) {
+// findReadAccidentReport is findAccidentReport for a write on an open report
+// that acts on what the caller read: the report must still be the one read at
+// expectedVersion. The token is compared before the signed state, so a report
+// someone signed after the caller read it is a changed read (the caller gets
+// the stored, signed report), while a caller who read it signed is told it is
+// signed. The store's update repeats the comparison on the row, so a change
+// committed between this read and the write is refused as well.
+func (s *StudentDocuments) findReadAccidentReport(ctx context.Context, studentID, documentID int64, expectedVersion string, actor careplan.StudentDocumentActor) (careplan.CareDocument, error) {
 	document, err := s.findAccidentReport(ctx, studentID, documentID, actor)
 	if err != nil {
+		return careplan.CareDocument{}, err
+	}
+	if err := readstate.Check(expectedVersion, careplan.AccidentReportVersion(document)); err != nil {
 		return careplan.CareDocument{}, err
 	}
 	if document.AccidentSignedAt != nil {

@@ -1,11 +1,10 @@
 // Handwritten helpers of the generated contract (ADR 0270). The files
 // `*.generated.ts` next to this one hold only shapes and import from here.
 import { z } from "zod";
-
-const INT64 = /^(0|-?[1-9]\d{0,18})$/;
+import { INT64_DECIMAL } from "../compare-ids";
 
 /** An int64 identifier sent as a JSON string. Kept verbatim, never a number. */
-export const int64String = z.string().regex(INT64);
+export const int64String = z.string().regex(INT64_DECIMAL);
 
 export const safeInt = z.number().refine(Number.isSafeInteger);
 
@@ -24,12 +23,6 @@ export const instant = z.iso.datetime({ offset: true });
  * that is one release behind.
  */
 export type OpenEnum<T extends string> = T | (string & {});
-
-export function openEnum<T extends string>() {
-  return z.string() as unknown as z.ZodType<OpenEnum<T>, unknown>;
-}
-
-export { knownEnum } from "./known-enum";
 
 /**
  * The body a registered route binds. It carries no value: the route entry
@@ -77,6 +70,17 @@ export const str: Field = z.string();
 export const bool: Field = z.boolean();
 export const num: Field = z.number();
 export const json: Field = z.unknown();
+// The Go field names the typed form and documents why historical values
+// must still travel. An open fallback is JSON, not an unchecked JS value.
+const historicalJSON = z.json();
+export type LegacyJSON = z.output<typeof historicalJSON>;
+export const legacyJSON = (current: Field): Field =>
+  // Keep the original value: a current object decoder can accept a
+  // historical row but strip keys the review screen still displays.
+  z.custom(
+    (raw) =>
+      current.safeParse(raw).success || historicalJSON.safeParse(raw).success,
+  );
 export const arr = (item: Field): Field => z.array(item);
 export const rec = (value: Field): Field => z.record(z.string(), value);
 export const nullable = (value: Field): Field => value.nullable();
@@ -94,14 +98,14 @@ export function success<T>(
 /**
  * A route that answers no data: a 204, which the backend client reads as
  * undefined, or the envelope without a data member. The catalog proxy
- * answers it as `{ status: "success", data: null }`, a DELETE as 204.
+ * preserves the status: a 204 stays bodyless, other successes get a null-data envelope.
  */
 export const noData = z
   .union([
     z.undefined(),
     z.object({ status: z.literal("success"), data: z.null().optional() }),
   ])
-  .transform(() => ({ data: null }));
+  .transform(() => ({ status: "success" as const, data: null }));
 
 /**
  * A route that answers a file (`File` in the Go registration): the proxy

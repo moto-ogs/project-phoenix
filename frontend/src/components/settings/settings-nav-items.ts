@@ -9,6 +9,7 @@ import { dashboardConcept } from "~/lib/concepts/dashboard";
 import { devicesConcept } from "~/lib/concepts/devices";
 import { documentsConcept } from "~/lib/concepts/documents";
 import { enrollmentsConcept } from "~/lib/concepts/enrollments";
+import { organizationsConcept } from "~/lib/concepts/organizations";
 import { listsConcept } from "~/lib/concepts/lists";
 import { mealPlanConcept } from "~/lib/concepts/mealPlan";
 import { notificationsConcept } from "~/lib/concepts/notifications";
@@ -65,6 +66,8 @@ const TAB_CONCEPTS: Record<string, MotoConcept> = {
   security: permissionsConcept,
   modules: listsConcept,
   branding: documentsConcept,
+  // Wer Verträge schließt, abrechnet und Personal anstellt (#4811).
+  zustaendigkeiten: organizationsConcept,
 };
 
 // A tab whose settings are all hidden (DependsOn, access) would open onto the

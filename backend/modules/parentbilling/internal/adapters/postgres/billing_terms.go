@@ -3,14 +3,18 @@ package postgres
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/pgdialect"
+	"github.com/uptrace/bun/driver/pgdriver"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The terms of the services, the deviations of the families and the due
@@ -151,6 +155,20 @@ func (s *Store) SaveServiceTerms(ctx context.Context, organizationID, accountID 
 	return nil
 }
 
+// LockBillingSetting holds one setting of the Abrechnung of the Träger (the
+// terms, the creditor, the Sollstellung mapping) until the transaction
+// ends, so a change checks the stored setting it replaces (ADR 0311). The
+// setting may have no row yet: the lock names it, not a row.
+func (s *Store) LockBillingSetting(ctx context.Context, organizationID int64, setting string) error {
+	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return err
+	}
+	_, err = db.NewRaw(`SELECT pg_advisory_xact_lock(hashtextextended('parent_billing.setting:' || ? || ':' || ?::text, 0))`,
+		setting, organizationID).Exec(ctx)
+	return err
+}
+
 // FamilyBillings reads the deviations of the families, by family.
 func (s *Store) FamilyBillings(ctx context.Context, organizationID int64) ([]parentbilling.FamilyBilling, error) {
 	db, err := traegerDB(ctx, organizationID)
@@ -198,9 +216,25 @@ func (s *Store) SaveFamilyBilling(ctx context.Context, organizationID, accountID
 		Set("debtor_number = EXCLUDED.debtor_number").
 		Set("updated_by_account_id = EXCLUDED.updated_by_account_id").Set("updated_at = EXCLUDED.updated_at").
 		Returning("*").Scan(ctx); err != nil {
+		if contractGone(err) {
+			return parentbilling.FamilyBilling{}, fmt.Errorf("save family billing: the contract was deleted: %w", readstate.ErrChanged)
+		}
 		return parentbilling.FamilyBilling{}, fmt.Errorf("save family billing: %w", err)
 	}
 	return row.family(), nil
+}
+
+// contractGone tells whether a write of a deviation named a contract that
+// is gone: the hourly retention deleted it after the office read it (#7964).
+// The write waited for the retention's lock on the contract and then failed
+// its foreign key; what the office read has changed.
+func contractGone(err error) bool {
+	var pgErr pgdriver.Error
+	if !errors.As(err, &pgErr) || pgErr.Field('C') != "23503" {
+		return false
+	}
+	constraint := pgErr.Field('n')
+	return constraint == "fk_family_billing_contract" || constraint == "fk_family_billing_contract_cascade"
 }
 
 // DeleteFamilyBilling removes a deviation by its ID or, with id zero, by its
@@ -228,7 +262,16 @@ func (s *Store) DeleteFamilyBilling(ctx context.Context, organizationID, id int6
 }
 
 // InsertFamilyBillingEvents records one action of the trail for each
-// deviation in one statement.
+// deviation in one statement. An entry names the contract its deviation
+// hangs on when it is written, read under a share lock of the row, not the
+// one a caller read before: the hourly retention moves a deviation off a
+// contract it deletes (#7862), and an entry naming that contract would fail
+// its foreign key once the retention commits (#7964). The lock waits for a
+// retention that moved the row and holds the row against one that has not
+// yet, which then gives up after its lock_timeout and retries next hour. A
+// deviation the retention deleted with its family's last contract gets no
+// entry; its trail went with it. A removed deviation has no row left: its
+// entry names the contract its removal returned.
 func (s *Store) InsertFamilyBillingEvents(ctx context.Context, organizationID, accountID int64, action string, families []parentbilling.FamilyBilling) error {
 	if len(families) == 0 {
 		return nil
@@ -237,12 +280,29 @@ func (s *Store) InsertFamilyBillingEvents(ctx context.Context, organizationID, a
 	if err != nil {
 		return err
 	}
-	rows, now := make([]familyBillingEventRow, len(families)), s.now()
-	for i, family := range families {
-		rows[i] = familyBillingEventRow{OrganizationID: organizationID, FamilyBillingID: family.ID.Int64(), CareContractID: idRef(family.ContractID.Int64()),
-			Action: action, ActorAccountID: accountRef(accountID), OccurredAt: now}
+	now := s.now()
+	if action == "delete" {
+		rows := make([]familyBillingEventRow, len(families))
+		for i, family := range families {
+			rows[i] = familyBillingEventRow{OrganizationID: organizationID, FamilyBillingID: family.ID.Int64(), CareContractID: idRef(family.ContractID.Int64()),
+				Action: action, ActorAccountID: accountRef(accountID), OccurredAt: now}
+		}
+		if _, err := db.NewInsert().Model(&rows).Exec(ctx); err != nil {
+			return fmt.Errorf("record family billing: %w", err)
+		}
+		return nil
 	}
-	if _, err := db.NewInsert().Model(&rows).Exec(ctx); err != nil {
+	ids := make([]int64, len(families))
+	for i, family := range families {
+		ids[i] = family.ID.Int64()
+	}
+	if _, err := db.NewRaw(`INSERT INTO parent_billing.family_billing_events
+			(organization_id, family_billing_id, care_contract_id, action, actor_account_id, occurred_at)
+		SELECT family.organization_id, family.id, family.care_contract_id, ?2, ?3, ?4
+		FROM (SELECT f.organization_id, f.id, f.care_contract_id FROM parent_billing.family_billing f
+			WHERE f.organization_id = ?0 AND f.id = ANY(?1::bigint[]) ORDER BY f.id FOR SHARE) AS family
+		CROSS JOIN unnest(?1::bigint[]) AS entry(id) WHERE entry.id = family.id`,
+		organizationID, pgdialect.Array(ids), action, accountRef(accountID), now).Exec(ctx); err != nil {
 		return fmt.Errorf("record family billing: %w", err)
 	}
 	return nil

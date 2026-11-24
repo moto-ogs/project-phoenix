@@ -162,7 +162,7 @@ func TestMorningAttendanceRoundTrip(t *testing.T) {
 	assert.Empty(t, statuses[present])
 	assert.Empty(t, statuses[entry])
 
-	body := fmt.Sprintf(`{"marks":[{"student_id":%d,"status":"present"},{"list_entry_id":"%d","status":"absent"},{"student_id":%d,"status":"present"}]}`,
+	body := fmt.Sprintf(`{"marks":[{"student_id":"%d","status":"present"},{"list_entry_id":"%d","status":"absent"},{"student_id":"%d","status":"present"}]}`,
 		f.present, f.listEntry, f.sick)
 	rec := f.put(t, morningMonday, body, morningAttendancePermission)
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
@@ -174,7 +174,7 @@ func TestMorningAttendanceRoundTrip(t *testing.T) {
 
 	// A correction on the same day replaces the mark, attributed to the
 	// Lehrkraft's staff row.
-	rec = f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":%d,"status":"absent"}]}`, f.present), morningAttendancePermission)
+	rec = f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":"%d","status":"absent"}]}`, f.present), morningAttendancePermission)
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
 	_, statuses = f.report(t, morningMonday, classDayReadPermission)
 	assert.Equal(t, "absent/teacher", statuses[present])
@@ -201,7 +201,7 @@ func TestMorningAttendanceLeavesOGSAttendanceUntouched(t *testing.T) {
 	}
 	before := snapshot()
 
-	rec := f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":%d,"status":"absent"}]}`, f.present), morningAttendancePermission)
+	rec := f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":"%d","status":"absent"}]}`, f.present), morningAttendancePermission)
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
 
 	assert.Equal(t, before, snapshot(), "a morning mark never changes the OGS check-in")
@@ -213,7 +213,7 @@ func TestMorningAttendanceLeavesOGSAttendanceUntouched(t *testing.T) {
 func TestMorningAttendanceGates(t *testing.T) {
 	t.Parallel()
 	f := setupMorningAttendanceFixture(t, morningMonday)
-	mark := fmt.Sprintf(`{"marks":[{"student_id":%d,"status":"present"}]}`, f.present)
+	mark := fmt.Sprintf(`{"marks":[{"student_id":"%d","status":"present"}]}`, f.present)
 
 	// The permission gate answers before anything else.
 	rec := f.put(t, morningMonday, mark, classDayReadPermission)
@@ -229,7 +229,7 @@ func TestMorningAttendanceGates(t *testing.T) {
 	assert.False(t, canRecord, "another day is read-only")
 
 	// Only children on the class roster.
-	rec = f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":%d,"status":"present"}]}`, f.other), morningAttendancePermission)
+	rec = f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":"%d","status":"present"}]}`, f.other), morningAttendancePermission)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "classday.morning_attendance_unknown_child")
 
@@ -238,7 +238,7 @@ func TestMorningAttendanceGates(t *testing.T) {
 	require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 
 	// A malformed mark.
-	rec = f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":%d,"status":"late"}]}`, f.present), morningAttendancePermission)
+	rec = f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":"%d","status":"late"}]}`, f.present), morningAttendancePermission)
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 
 	// The school switched it off.
@@ -259,7 +259,7 @@ func TestMorningAttendanceRefusesADayWithoutSchool(t *testing.T) {
 	t.Parallel()
 	f := setupMorningAttendanceFixture(t, morningSaturday)
 
-	rec := f.put(t, morningSaturday, fmt.Sprintf(`{"marks":[{"student_id":%d,"status":"present"}]}`, f.present), morningAttendancePermission)
+	rec := f.put(t, morningSaturday, fmt.Sprintf(`{"marks":[{"student_id":"%d","status":"present"}]}`, f.present), morningAttendancePermission)
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "classday.morning_attendance_no_school_day")
 	canRecord, statuses := f.report(t, morningSaturday, classDayReadPermission, morningAttendancePermission)

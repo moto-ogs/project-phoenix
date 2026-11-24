@@ -60,7 +60,7 @@ func TestOfferingChangeRequestService_Decide_ReportsOnlyRegeltermineWithoutCarry
 		Selections: []careplan.OfferingChangeSelection{{OfferingID: randstunde.ID, SelectedDays: []string{"mon"}}},
 	})
 	require.NoError(t, err)
-	impact, err := testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), svc.Decide, careplan.OfferingChangeDecisionInput{
+	impact, err := testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), svc.Decide, careplan.OfferingChangeDecisionInput{ExpectedVersion: testpkg.OfferingRequestVersion(t, row.ID),
 		RequestID: row.ID, Approve: true, ReviewedBy: env.creatorID,
 	})
 	require.NoError(t, err)

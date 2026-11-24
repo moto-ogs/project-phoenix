@@ -20,7 +20,6 @@ func (transaction) Run(ctx context.Context, callback func(context.Context) error
 }
 
 type Observation = ports.Observation
-
 type OrderingSettings = ports.OrderingSettings // the school's meal ordering settings as stored
 
 type Dependencies struct {
@@ -35,15 +34,16 @@ type Dependencies struct {
 	Participants    mealplan.ParticipantFinder
 	ParticipantDays mealplan.ParticipantDaysFinder
 	StudentNames    mealplan.StudentNameFinder
+	LockStudent     mealplan.StudentLock
 	Calendar        mealplan.CalendarFinder
 	Notices         mealplan.MenuChangeNotices // changed menu to the families (#7145); nil in the worker, which never changes it
 }
 
 func New(dependencies Dependencies) (mealplan.Capability, error) {
-	if dependencies.DB == nil || dependencies.Settings == nil || dependencies.Observe == nil || dependencies.Now == nil || dependencies.Participants == nil || dependencies.ParticipantDays == nil || dependencies.StudentNames == nil || dependencies.Calendar == nil {
+	if dependencies.DB == nil || dependencies.Settings == nil || dependencies.Observe == nil || dependencies.Now == nil || dependencies.Participants == nil || dependencies.ParticipantDays == nil || dependencies.StudentNames == nil || dependencies.LockStudent == nil || dependencies.Calendar == nil {
 		return nil, errors.New("meal plan compose: all dependencies are required")
 	}
-	return application.New(postgres.New(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext)), application.NewParticipantDirectory(dependencies.Participants, dependencies.StudentNames, dependencies.ParticipantDays), application.NewSchoolCalendar(dependencies.Calendar), dependencies.Settings, transaction{}, dependencies.Observe, dependencies.Now, dependencies.Notices), nil
+	return application.New(postgres.New(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext)), application.NewParticipantDirectory(dependencies.Participants, dependencies.StudentNames, dependencies.ParticipantDays, dependencies.LockStudent), application.NewSchoolCalendar(dependencies.Calendar), dependencies.Settings, transaction{}, dependencies.Observe, dependencies.Now, dependencies.Notices), nil
 }
 
 type Settings = application.Settings // the application-owned bound resolvers

@@ -35,6 +35,11 @@ export interface CareMealTariffs {
   readonly tariffs: readonly CareMealTariff[];
   /** Per school the last Mensa month an issued invoice bills. */
   readonly billedUntil: Readonly<Record<string, string>>;
+  /**
+   * Per school the read-state token of its Mensa prices, which a change
+   * or a removal sends back (ADR 0311).
+   */
+  readonly versions: Readonly<Record<string, string>>;
 }
 
 /** One Mensa month of a child on an invoice. */
@@ -174,6 +179,7 @@ function mealTariffsFromBackend(
         month ? [[school, month]] : [],
       ),
     ),
+    versions: { ...body.versions },
   };
 }
 
@@ -183,13 +189,19 @@ export async function fetchCareMealTariffs(): Promise<CareMealTariffs> {
   );
 }
 
-/** Sets how the Mensa of a school is billed from `validFrom` on. */
-export async function saveCareMealTariff(input: {
-  readonly schoolId: string;
-  readonly validFrom: string;
-  readonly mode: CareMealMode;
-  readonly amountCents: number;
-}): Promise<CareMealTariffs> {
+/**
+ * Sets how the Mensa of a school is billed from `validFrom` on, on the
+ * school's prices read at `version` (ADR 0311).
+ */
+export async function saveCareMealTariff(
+  input: {
+    readonly schoolId: string;
+    readonly validFrom: string;
+    readonly mode: CareMealMode;
+    readonly amountCents: number;
+  },
+  version: string,
+): Promise<CareMealTariffs> {
   return mealTariffsFromBackend(
     await bffJson("org", "PUT /traeger/care-meal-tariffs/", {
       body: {
@@ -197,21 +209,29 @@ export async function saveCareMealTariff(input: {
         valid_from: input.validFrom,
         mode: input.mode,
         amount_cents: input.amountCents,
+        expected_version: version,
       } satisfies traegerCareMealTariffsContract.CareMealPriceRequest,
     }),
   );
 }
 
-/** Removes the Mensa price of a school that starts on `validFrom`. */
+/**
+ * Removes the Mensa price of a school that starts on `validFrom`, from the
+ * school's prices read at `version` (ADR 0311).
+ */
 export async function deleteCareMealTariff(
   schoolId: string,
   validFrom: string,
+  version: string,
 ): Promise<CareMealTariffs> {
   return mealTariffsFromBackend(
     await bffJson(
       "org",
       "DELETE /traeger/care-meal-tariffs/{schoolID}/{validFrom}",
-      { params: { schoolID: schoolId, validFrom } },
+      {
+        params: { schoolID: schoolId, validFrom },
+        query: { expected_version: version },
+      },
     ),
   );
 }

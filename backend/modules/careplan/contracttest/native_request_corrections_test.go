@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/careplantest"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -91,9 +92,10 @@ func TestNativeCorrectionReauthorizesAndRollsBackExactExceptionDeletion(t *testi
 			return service.Correct(txCtx, request.ID, false, version, "  Korrektur  ", reviewer.ID)
 		})
 	}
-	require.ErrorIs(t, correct("stale"), careplan.ErrParentRequestStale)
+	require.ErrorIs(t, correct("stale"), readstate.ErrChanged)
+	require.ErrorIs(t, correct(""), readstate.ErrChanged, "a correction without a read is refused")
 	require.Empty(t, b.calls)
-	version := careplan.ParentRequestVersion(request.UpdatedAt)
+	version := readstate.Of(request.UpdatedAt)
 	require.ErrorIs(t, correct(version), carerequests.ErrCareRequestForbidden)
 	require.Equal(t, []string{"lock_student", "authorize"}, b.calls)
 	b.allowed = true

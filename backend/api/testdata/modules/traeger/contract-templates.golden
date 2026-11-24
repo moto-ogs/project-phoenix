@@ -1,2 +1,2 @@
-GET /traeger/contract-templates/ -> basis
-PUT /traeger/contract-templates/{schoolId}/{offeringId} -> basis
+GET /traeger/contract-templates/ -> vertraege
+PUT /traeger/contract-templates/{schoolId}/{offeringId} -> vertraege

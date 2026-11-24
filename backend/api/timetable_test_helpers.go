@@ -181,7 +181,7 @@ func NewTimetableTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 		return TimetableTestModule{}, nil, nil, err
 	}
 	templateDeps, err := TimetableTemplateDependencies(rows, arrivalTimetable.NewPlanningTrackAdministration(r.Timetable, db.Pool(), now),
-		materialization, instance.SeriesDeviations(), offerings, nil, recurrenceLock, hub, logger, today)
+		materialization, instance.SeriesDeviations(), offerings, nil, recurrenceLock, timetableData, hub, logger, today)
 	if err != nil {
 		return TimetableTestModule{}, nil, nil, err
 	}

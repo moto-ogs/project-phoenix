@@ -139,6 +139,7 @@ const PDF_LABELS: AttachmentLabels = {
 const NO_FAMILY_DEBTOR_NUMBERS: HolidayFamilyDebtorNumbers = {
   debtorNumber: "",
   children: [],
+  version: "",
 };
 
 const logger = createLogger({ component: "TraegerHolidayRegistrationPage" });
@@ -346,8 +347,10 @@ function HolidayRegistrationContent() {
   // must freeze the amount the card shows.
   const [previewPending, setPreviewPending] = useState(false);
   const latestContribution = useRef(0);
-  // The card in its edit state: "guardians", "contacts", "answers" or
-  // "child:<id>"; one at a time.
+  // The open draft of the registration: an edit state "guardians",
+  // "contacts", "answers" or "child:<id>", or the rebooking "rebook:<id>".
+  // One at a time: each draft opens on the answer of the save before it,
+  // so a second save is never refused for the first one (ADR 0311).
   const [editing, setEditing] = useState<string | null>(null);
   const {
     schools,
@@ -370,7 +373,7 @@ function HolidayRegistrationContent() {
     ids ? traegerKeys.holidayRegistration(periodId, registrationId) : null,
   );
   const beginRegistrationRead = useSWRRequestGuard();
-  const fetchRegistration = useCallback(async () => {
+  const readRegistration = useCallback(async () => {
     const complete = beginRegistrationRead(
       ids ? traegerKeys.holidayRegistration(periodId, registrationId) : null,
     );
@@ -403,6 +406,10 @@ function HolidayRegistrationContent() {
         mutateConfirmation(loadedConfirmation, fresh),
         mutateFamily(loadedFamilyDebtorNumber, fresh),
       ]);
+      return {
+        registration: loadedRegistration,
+        familyNumbers: loadedFamilyDebtorNumber,
+      };
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
         complete(() => {
@@ -428,6 +435,16 @@ function HolidayRegistrationContent() {
     mutateConfirmation,
     mutateFamily,
   ]);
+  const fetchRegistration = useCallback(
+    async () => (await readRegistration()).registration,
+    [readRegistration],
+  );
+  // The status card settles the children's numbers on the read a refusal
+  // started (ADR 0311).
+  const readFamilyNumbers = useCallback(
+    async () => (await readRegistration()).familyNumbers,
+    [readRegistration],
+  );
 
   // A change of the bookings or of the exemption changes what a confirmation
   // would freeze, so the contribution is read again; only the newest answer
@@ -576,6 +593,7 @@ function HolidayRegistrationContent() {
         registration,
         onSaved: saved,
         onCancel: () => setEditing(null),
+        reload: fetchRegistration,
       }
     : null;
 
@@ -637,6 +655,11 @@ function HolidayRegistrationContent() {
             names={names}
             knownSchoolId={known.get(child.id)}
             onChanged={changed}
+            reload={fetchRegistration}
+            rebookBlocked={editing !== null && editing !== `rebook:${child.id}`}
+            onRebookingChange={(open) =>
+              setEditing(open ? `rebook:${child.id}` : null)
+            }
             onEdit={
               cancelled || editing
                 ? undefined
@@ -867,6 +890,7 @@ function HolidayRegistrationContent() {
       debtorNumberFormat={confirmation?.debtorNumberFormat}
       familyDebtorNumber={familyDebtorNumbers.debtorNumber}
       childDebtorNumbers={familyDebtorNumbers.children}
+      childNumbersVersion={familyDebtorNumbers.version}
       exemption={exemption}
       onExemptionChange={changeExemption}
       costBearers={confirmation?.costBearers}
@@ -875,6 +899,10 @@ function HolidayRegistrationContent() {
       onChanged={changed}
       onReload={afterWrite.refresh}
       onDebtorNumberChanged={afterWrite.refresh}
+      onRead={readFamilyNumbers}
+      onFamilyNumbersSaved={(stored) =>
+        mutateFamily(stored, { revalidate: false })
+      }
       canManageBillingSettings={canManageBillingSettings}
       billingHref={billingHref}
       onReveal={() => changeTab("uebersicht")}

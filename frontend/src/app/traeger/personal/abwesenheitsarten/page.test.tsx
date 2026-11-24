@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   TraegerAbsenceType,
@@ -31,6 +33,7 @@ const REGENERATION: TraegerAbsenceType = {
   carryoverUntil: null,
   requestable: true,
   isActive: true,
+  version: "regeneration-v1",
   schools: [
     {
       schoolId: "1",
@@ -172,5 +175,84 @@ describe("TraegerAbsenceTypesPage", () => {
     const grid = cards[0]?.parentElement;
     expect(grid).toHaveClass("grid");
     for (const card of cards) expect(card?.parentElement).toBe(grid);
+  });
+
+  // ADR 0311: an edit and the switch rest on the type as the card read it.
+  // A colleague's change since is refused; the card shows the stored type.
+  const changed = () =>
+    new ApiError("changed", 409, { code: "general.changed_since_read" });
+  const storedList: TraegerAbsenceTypeList = {
+    ...LIST,
+    types: [{ ...REGENERATION, standardDays: 4, version: "regeneration-v2" }],
+  };
+  const typeCard = async () => {
+    const card = (
+      await screen.findByText("Regenerationstag", { selector: "h2" })
+    ).closest("section");
+    if (!card) throw new Error("card missing");
+    return card;
+  };
+
+  it("keeps the form open on the stored type after a refusal", async () => {
+    api.updateTraegerAbsenceType.mockRejectedValueOnce(changed());
+    renderPage();
+    const card = await typeCard();
+    fireEvent.click(within(card).getByRole("button", { name: /Bearbeiten/ }));
+    fireEvent.change(within(card).getByLabelText(/^Tage je Jahr/), {
+      target: { value: "3" },
+    });
+    api.fetchTraegerAbsenceTypes.mockResolvedValue(storedList);
+    fireEvent.click(within(card).getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await within(card).findByText(
+        catalogText("general.changed_since_read", "die Abwesenheitsart"),
+      ),
+    ).toBeInTheDocument();
+    expect(api.updateTraegerAbsenceType.mock.calls.at(-1)?.[2]).toBe(
+      "regeneration-v1",
+    );
+    await vi.waitFor(() =>
+      expect(within(card).getByLabelText(/^Tage je Jahr/)).toHaveValue(4),
+    );
+
+    api.updateTraegerAbsenceType.mockResolvedValue(storedList.types[0]);
+    fireEvent.change(within(card).getByLabelText(/^Tage je Jahr/), {
+      target: { value: "5" },
+    });
+    fireEvent.click(within(card).getByRole("button", { name: "Speichern" }));
+    await vi.waitFor(() =>
+      expect(api.updateTraegerAbsenceType.mock.calls.at(-1)?.[2]).toBe(
+        "regeneration-v2",
+      ),
+    );
+  });
+
+  it("switches a type off over the version the card shows and reads it after a refusal", async () => {
+    api.updateTraegerAbsenceType.mockRejectedValueOnce(changed());
+    renderPage();
+    const card = await typeCard();
+    api.fetchTraegerAbsenceTypes.mockResolvedValue(storedList);
+    fireEvent.click(
+      within(card).getByRole("button", {
+        name: "Weitere Aktionen zu Regenerationstag",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /Ausschalten/ }),
+    );
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Abwesenheitsart"),
+      ),
+    ).toBeInTheDocument();
+    expect(api.updateTraegerAbsenceType).toHaveBeenLastCalledWith(
+      "7",
+      expect.objectContaining({ isActive: false, standardDays: 2 }),
+      "regeneration-v1",
+    );
+    expect(
+      await within(card).findByText(/4 Tage je Person und Jahr/),
+    ).toBeInTheDocument();
   });
 });

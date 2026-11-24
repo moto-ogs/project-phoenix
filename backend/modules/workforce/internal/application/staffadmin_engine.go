@@ -78,8 +78,8 @@ type StaffAdminEngine struct {
 	records *Service
 }
 
-func (e StaffAdminEngine) UpdatePersonnelNumber(ctx context.Context, staffID int64, value *string, changedByStaffID int64, note string) (*workforce.StaffProfile, error) {
-	subject, err := e.admin.UpdatePersonnelNumber(ctx, staffID, value, changedByStaffID, note)
+func (e StaffAdminEngine) UpdatePersonnelNumber(ctx context.Context, staffID int64, value, expectedVersion *string, changedByStaffID int64, note string) (*workforce.StaffProfile, error) {
+	subject, err := e.admin.UpdatePersonnelNumber(ctx, staffID, value, expectedVersion, changedByStaffID, note)
 	if err != nil {
 		return nil, MapStaffAdminError(err)
 	}
@@ -91,7 +91,7 @@ func (e StaffAdminEngine) StaffStammdaten(ctx context.Context, staffID int64) (*
 	if err != nil {
 		return nil, MapStaffAdminError(err)
 	}
-	result := &workforce.StaffStammdaten{Staff: workforce.StaffProfile(data.Staff), Qualifications: []workforce.StaffQualification{}}
+	result := &workforce.StaffStammdaten{Staff: workforce.StaffProfile(data.Staff), Qualifications: []workforce.StaffQualification{}, Versions: workforce.StammdatenVersions(data.Versions)}
 	if data.MasterData != nil {
 		result.MasterData = new(masterDataToPublic(*data.MasterData))
 	}
@@ -99,24 +99,28 @@ func (e StaffAdminEngine) StaffStammdaten(ctx context.Context, staffID int64) (*
 	return result, nil
 }
 
-func (e StaffAdminEngine) UpdateStaffStammdatenPerson(ctx context.Context, staffID int64, input workforce.StammdatenPersonInput, changedByStaffID int64, note string) error {
-	return MapStaffAdminError(e.admin.UpdateStaffStammdatenPerson(ctx, staffID, domain.PersonSection(input), changedByStaffID, note))
+func (e StaffAdminEngine) UpdateStaffStammdatenPerson(ctx context.Context, staffID int64, input workforce.StammdatenPersonInput, changedByStaffID int64, note string) (string, error) {
+	version, err := e.admin.UpdateStaffStammdatenPerson(ctx, staffID, domain.PersonSection(input), changedByStaffID, note)
+	return version, MapStaffAdminError(err)
 }
 
-func (e StaffAdminEngine) UpdateStaffStammdatenKontakt(ctx context.Context, staffID int64, input workforce.StammdatenKontaktInput, changedByStaffID int64, note string) error {
-	return MapStaffAdminError(e.admin.UpdateStaffStammdatenKontakt(ctx, staffID, domain.ContactSection(input), changedByStaffID, note))
+func (e StaffAdminEngine) UpdateStaffStammdatenKontakt(ctx context.Context, staffID int64, input workforce.StammdatenKontaktInput, changedByStaffID int64, note string) (string, error) {
+	version, err := e.admin.UpdateStaffStammdatenKontakt(ctx, staffID, domain.ContactSection(input), changedByStaffID, note)
+	return version, MapStaffAdminError(err)
 }
 
-func (e StaffAdminEngine) UpdateStaffStammdatenArbeitsvertrag(ctx context.Context, staffID int64, input workforce.StammdatenArbeitsvertragInput, changedByStaffID int64, note string) error {
-	return MapStaffAdminError(e.admin.UpdateStaffStammdatenArbeitsvertrag(ctx, staffID, domain.ContractSection(input), changedByStaffID, note))
+func (e StaffAdminEngine) UpdateStaffStammdatenArbeitsvertrag(ctx context.Context, staffID int64, input workforce.StammdatenArbeitsvertragInput, changedByStaffID int64, note string) (string, error) {
+	version, err := e.admin.UpdateStaffStammdatenArbeitsvertrag(ctx, staffID, domain.ContractSection(input), changedByStaffID, note)
+	return version, MapStaffAdminError(err)
 }
 
-func (e StaffAdminEngine) ReplaceStaffQualificationList(ctx context.Context, staffID int64, inputs []workforce.StammdatenQualificationInput, changedByStaffID int64, note string) error {
+func (e StaffAdminEngine) ReplaceStaffQualificationList(ctx context.Context, staffID int64, inputs []workforce.StammdatenQualificationInput, expectedVersion *string, changedByStaffID int64, note string) (string, error) {
 	rows := make([]domain.QualificationInput, 0, len(inputs))
 	for _, input := range inputs {
 		rows = append(rows, domain.QualificationInput(input))
 	}
-	return MapStaffAdminError(e.admin.ReplaceStaffQualifications(ctx, staffID, rows, changedByStaffID, note))
+	version, err := e.admin.ReplaceStaffQualifications(ctx, staffID, rows, expectedVersion, changedByStaffID, note)
+	return version, MapStaffAdminError(err)
 }
 
 func (e StaffAdminEngine) StaffFinancialMasked(ctx context.Context, staffID, actorAccountID int64, actorRole string) (*workforce.StaffFinancialMasked, error) {
@@ -132,11 +136,12 @@ func (e StaffAdminEngine) RevealStaffFinancial(ctx context.Context, staffID, act
 	if err != nil {
 		return nil, MapStaffAdminError(err)
 	}
-	return &workforce.StaffFinancialPlain{StaffID: staffID, IBAN: data.IBAN, TaxID: data.TaxID, SocialSecurityNumber: data.SocialSecurityNumber}, nil
+	return &workforce.StaffFinancialPlain{StaffID: staffID, IBAN: data.IBAN, TaxID: data.TaxID, SocialSecurityNumber: data.SocialSecurityNumber, Version: financialSectionVersion(&data)}, nil
 }
 
-func (e StaffAdminEngine) UpdateStaffFinancial(ctx context.Context, staffID int64, input workforce.StammdatenFinancialInput, changedByAccountID int64, note string) error {
-	return MapStaffAdminError(e.admin.UpdateStaffFinancial(ctx, staffID, domain.FinancialSection(input), changedByAccountID, note))
+func (e StaffAdminEngine) UpdateStaffFinancial(ctx context.Context, staffID int64, input workforce.StammdatenFinancialInput, changedByAccountID int64, note string) (string, error) {
+	version, err := e.admin.UpdateStaffFinancial(ctx, staffID, domain.FinancialSection(input), changedByAccountID, note)
+	return version, MapStaffAdminError(err)
 }
 
 func (e StaffAdminEngine) ListStaffDocuments(ctx context.Context, staffID int64, category string, actor workforce.StaffDocumentActor) ([]workforce.StaffDocumentInfo, []string, error) {

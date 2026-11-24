@@ -107,7 +107,7 @@ func TestUpdateChildOfferings_ReportsHandMaintainedRegelterminAndRemovesFridays(
 	testpkg.CreateTestInstanceStudent(t, env.db, checkedIn.ID, studentID, "", testpkg.InstanceStudentOpts{CheckedInAt: &checkInAt})
 
 	stichtag := calendar.NewDate(2027, 5, 31)
-	update, err := testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	update, err := testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID: submitted.Request.ID, ChildID: childID,
 		ActorAccountID: env.creatorID, ActorRole: "admin",
 		Reason: "Randstunde freitags abgemeldet", EffectiveFrom: &stichtag,

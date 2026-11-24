@@ -207,14 +207,14 @@ describe("mayWritePersonalStorage", () => {
 
 describe("personalStorageOwner", () => {
   it("names school and account of the session", () => {
-    expect(personalStorageOwner({ id: "7", tenantId: 1 })).toBe("1:7");
-    expect(personalStorageOwner({ id: "7", orgId: 3 })).toBe("3:7");
+    expect(personalStorageOwner({ id: "7", tenantId: "1" })).toBe("1:7");
+    expect(personalStorageOwner({ id: "7", orgId: "3" })).toBe("3:7");
     expect(personalStorageOwner({ id: "7" })).toBe("-:7");
   });
 
   it("knows no owner without an account", () => {
     expect(personalStorageOwner(null)).toBeNull();
-    expect(personalStorageOwner({ id: "", tenantId: 1 })).toBeNull();
+    expect(personalStorageOwner({ id: "", tenantId: "1" })).toBeNull();
   });
 });
 
@@ -235,6 +235,7 @@ describe("inventory", () => {
     "src/components/ui/settings-return-path.tsx": "storageKey from the portal",
     "src/lib/sidebar-memory.ts": "SIDEBAR_MEMORY_ENTRIES, checked below",
     "src/lib/hooks/use-local-storage-value.ts": "key from the caller",
+    "src/lib/reload-once.ts": "markerKey from the caller",
     "src/lib/hooks/use-stored-open-groups.ts": "storageKey from the caller",
     "src/lib/shell-auth-context.tsx": "DELIBERATE_LOGOUT_KEY (session-cache)",
     "src/lib/login-session-notice.ts": "DELIBERATE_LOGOUT_KEY (session-cache)",

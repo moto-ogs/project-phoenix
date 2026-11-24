@@ -9,7 +9,6 @@ import { makePortalHandlers } from "~/lib/portal-handlers.server";
 import { testPortalBinding } from "~/test/portal-binding";
 import {
   makeCatalogProxy,
-  privateCacheControl,
   type CatalogMethod,
   type CatalogRoute,
 } from "./catalog-proxy.server";
@@ -54,13 +53,13 @@ const routes: CatalogRoute[] = [
   {
     method: "GET",
     pattern: "/traeger/rows/export",
-    query: ["format", "from"],
+    query: { format: { kind: "string" }, from: { kind: "date" } },
     response: fileAnswer,
   },
   {
     method: "GET",
     pattern: "/traeger/rows/{id}/logo",
-    query: ["v"],
+    query: { v: { kind: "string" } },
     privateCache: true,
     response: fileAnswer,
   },
@@ -343,14 +342,16 @@ describe("catalog file cache", () => {
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
   });
 
-  it("reads private and public as directives, not as text", () => {
-    expect(privateCacheControl("Private, Max-Age=60")).toBe(
-      "Private, Max-Age=60",
+  it.each([
+    ["Private, Max-Age=60", "Private, Max-Age=60"],
+    ["private, public", "private, no-store"],
+    ["max-age=60, x-private", "private, no-store"],
+  ])("reads %s as directives, not text", async (upstream, expected) => {
+    mockFetch.mockResolvedValue(
+      new Response("image", { headers: { "Cache-Control": upstream } }),
     );
-    expect(privateCacheControl("private, public")).toBe("private, no-store");
-    expect(privateCacheControl("max-age=60, x-private")).toBe(
-      "private, no-store",
-    );
+    const response = await call("GET", ["rows", "7", "logo"]);
+    expect(response.headers.get("Cache-Control")).toBe(expected);
   });
 });
 
@@ -432,6 +433,45 @@ describe("catalog file route with its own cache (#2352)", () => {
     expect(response.headers.get("Last-Modified")).toBe(lastModified);
   });
 
+  it("revalidates a public file without reading the portal session", async () => {
+    mockFetch.mockResolvedValue(
+      new Response(null, {
+        status: 304,
+        headers: { ETag: 'W/"abc123"', "Last-Modified": lastModified },
+      }),
+    );
+    const handler = makeCatalogProxy(portal, "/traeger", [], "GET", [], {
+      routes: [
+        {
+          method: "GET",
+          pattern: "/traeger/public-image",
+          response: fileAnswer,
+          publicFile: "a published image",
+          fileCache: "public, max-age=86400",
+          conditionalGet: true,
+        },
+      ],
+    });
+    const response = await handler(
+      new NextRequest("http://localhost:3000/api/traeger/public-image", {
+        headers: {
+          "If-None-Match": 'W/"abc123"',
+          "If-Modified-Since": lastModified,
+        },
+      }),
+      { params: Promise.resolve({ path: ["public-image"] }) },
+    );
+    expect(mockAuth).not.toHaveBeenCalled();
+    expect(sent()).not.toHaveProperty("Authorization");
+    expect(sent()["If-None-Match"]).toBe('W/"abc123"');
+    expect(sent()["If-Modified-Since"]).toBe(lastModified);
+    expect(response.status).toBe(304);
+    expect(response.body).toBeNull();
+    expect(response.headers.get("ETag")).toBe('W/"abc123"');
+    expect(response.headers.get("Last-Modified")).toBe(lastModified);
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=86400");
+  });
+
   it("repeats the conditional GET once with the renewed session", async () => {
     mockAuth
       .mockResolvedValueOnce({ user: { token: "stale-token" } })
@@ -479,7 +519,7 @@ describe("catalog file route with its own cache (#2352)", () => {
 });
 
 describe("catalog multipart upload", () => {
-  it("normalizes a successful 204 to a 200 no-data envelope", async () => {
+  it("preserves a successful 204 without a body", async () => {
     mockFetch.mockResolvedValue(new Response(null, { status: 204 }));
 
     const response = await call("POST", ["rows", "7", "proofs", "complete"], {
@@ -487,11 +527,8 @@ describe("catalog multipart upload", () => {
       headers: uploadHeaders(4),
     });
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
-      status: "success",
-      data: null,
-    });
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });

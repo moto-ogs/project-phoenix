@@ -34,7 +34,7 @@ import { useToast } from "~/contexts/ToastContext";
 import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { hasPermission } from "~/lib/auth-utils";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import {
   fetchSurveys,
@@ -118,6 +118,10 @@ function SurveysContent() {
   );
   const pendingCount = openToAnswer.filter((s) => !s.participated).length;
   const list = surveys.data ?? [];
+  // A dialog shows the survey as the list reads it now: after a refusal the
+  // reloaded row with its new answers and token (ADR 0311).
+  const shownSurvey = (opened: Survey) =>
+    list.find((entry) => entry.id === opened.id) ?? opened;
 
   const objectPath = (survey: Survey) =>
     `/umfragen/${encodeURIComponent(survey.id)}`;
@@ -315,7 +319,8 @@ function SurveysContent() {
           )}
           {action?.kind === "publish" && (
             <PublishSurveyDialog
-              survey={action.survey}
+              survey={shownSurvey(action.survey)}
+              reload={() => revalidateOrThrow(surveys)}
               onClose={() => setAction(null)}
               onDone={refreshAll}
             />
@@ -336,7 +341,8 @@ function SurveysContent() {
           )}
           {action?.kind === "delete" && (
             <DeleteSurveyDialog
-              survey={action.survey}
+              survey={shownSurvey(action.survey)}
+              reload={() => revalidateOrThrow(surveys)}
               onClose={() => setAction(null)}
               onDone={refreshAll}
             />

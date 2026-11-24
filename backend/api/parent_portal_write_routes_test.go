@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -102,7 +101,7 @@ func TestParentPortalSurveyAnswersThroughTheParentMount(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		survey, err = surveys.PublishSurvey(ctx, author.ID, draft.ID)
+		survey, err = surveys.PublishSurvey(ctx, author.ID, draft.ID, communication.SurveyVersion(*draft))
 		return err
 	}))
 	require.NotNil(t, survey.AnnouncementID, "the published survey has its news item")
@@ -120,7 +119,7 @@ func TestParentPortalSurveyAnswersThroughTheParentMount(t *testing.T) {
 	question := form.Survey.Questions[0]
 	var submitted parentHTTP.SurveySubmittedResponse
 	r.call(t, http.MethodPost, path, f.token, map[string]any{"answers": []map[string]any{
-		{"question_id": question.ID, "option_ids": []string{question.Options[0].ID}},
+		{"question_id": question.ID, "option_ids": []string{question.Options[0].ID.String()}},
 	}}, &submitted)
 	assert.True(t, submitted.Submitted)
 	form = parentHTTP.SurveyFormResponse{}
@@ -158,9 +157,7 @@ func TestParentPortalOfferingChangeIsRequestedAndEditedThroughTheParentMount(t *
 	require.Equal(t, fmt.Sprint(request), requested.PendingRequest.ID)
 
 	edit := change("Bitte erst ab Januar")
-	var updatedAt time.Time
-	require.NoError(t, r.db.NewRaw(`SELECT updated_at FROM enrollment.offering_change_requests WHERE id = ?`, request).Scan(context.Background(), &updatedAt))
-	edit["expected_version"] = careplan.ParentRequestVersion(updatedAt)
+	edit["expected_version"] = testpkg.ParentRequestVersionIn(t, r.db, "enrollment.offering_change_requests", request)
 	var edited pending
 	r.call(t, http.MethodPut, childPath(f, fmt.Sprintf("/care-offerings/requests/%d", request)), f.token, edit, &edited)
 	require.NotNil(t, edited.PendingRequest)

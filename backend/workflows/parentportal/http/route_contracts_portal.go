@@ -95,7 +95,7 @@ func documentRouteContracts(signing any) []common.RouteContract {
 		{Method: "GET", Pattern: contract + "/signing", Portals: portals, Response: signing},
 		{Method: "POST", Pattern: contract + "/sign", Portals: portals, Request: ContractSignRequest{}, Response: signing},
 		{Method: "POST", Pattern: contract + "/sepa-mandate/preview", Portals: portals, NoCommit: "renders the mandate text and grants no mandate", Request: parentService.SEPAMandateInput{}, Response: parentService.SEPAMandateText{}},
-		{Method: "POST", Pattern: contract + "/sepa-mandate/revoke", Portals: portals, Response: parentService.SEPAMandateView{}},
+		{Method: "POST", Pattern: contract + "/sepa-mandate/revoke", Portals: portals, Request: ParentSEPAMandateRevokeRequest{}, Response: parentService.SEPAMandateView{}},
 		// The stored PDFs and the shared files of the inbox (#4671, #4678,
 		// #4692); the handlers refuse a non-numeric ID with 400.
 		{Method: "GET", Pattern: "/me/documents/{organizationId}/{documentId}/pdf", Portals: portals, File: true},
@@ -168,8 +168,8 @@ func childStatusRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: child + "/excused-requests", Portals: portals, Response: []ParentExcusedRequestResponse{}},
 		{Method: "PUT", Pattern: child + "/excused-requests/{requestId}", Portals: portals, Request: EditExcusedRequestBody{}, Response: ParentExcusedRequestResponse{}},
 		{Method: "GET", Pattern: child + "/requests/{requestType}/{requestId}/events", Portals: portals, Response: []ParentRequestEventResponse{}},
-		{Method: "GET", Pattern: sharing, Portals: portals, Response: requestSharingResponse{}},
-		{Method: "PUT", Pattern: sharing, Portals: portals, Request: requestSharingBody{}, Response: requestSharingResponse{}},
+		{Method: "GET", Pattern: sharing, Portals: portals, Response: requestSharingStateResponse{}},
+		{Method: "PUT", Pattern: sharing, Portals: portals, Request: requestSharingBody{}, Response: requestSharingStateResponse{}},
 		{Method: "GET", Pattern: child + "/request-sharing-options", Portals: portals, Response: requestSharingResponse{}},
 		{Method: "GET", Pattern: child + "/parent-conferences", Portals: portals, Response: []calendarService.ParentConferenceOffer{}},
 	}

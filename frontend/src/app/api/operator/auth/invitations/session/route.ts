@@ -7,7 +7,11 @@ import {
 } from "~/lib/operator/operator-invitation-session.server";
 import { operatorErrorResponse } from "~/lib/operator/route-wrapper.server";
 import { withPrivateNoStore } from "~/lib/private-no-store";
-import { successResponse } from "~/lib/route-wrapper-utils.server";
+import type { OperatorInvitationFlow } from "~/lib/session-bff";
+import {
+  invalidJsonResponse,
+  successResponse,
+} from "~/lib/route-wrapper-utils.server";
 
 const MAX_TOKEN_LENGTH = 4096;
 
@@ -16,11 +20,7 @@ async function POSTHandler(request: NextRequest): Promise<NextResponse> {
   try {
     body = await request.json();
   } catch {
-    return operatorErrorResponse(
-      400,
-      "general.input",
-      "Invalid JSON request body",
-    );
+    return invalidJsonResponse(request);
   }
 
   const token =
@@ -35,13 +35,17 @@ async function POSTHandler(request: NextRequest): Promise<NextResponse> {
       400,
       "general.input",
       "Missing or oversized invitation token",
+      request,
     );
   }
 
   const flowID = createOperatorInvitationFlowID();
-  const response = NextResponse.json(successResponse({ flow_id: flowID }), {
-    status: 201,
-  });
+  const response = NextResponse.json(
+    successResponse<OperatorInvitationFlow>({ flow_id: flowID }),
+    {
+      status: 201,
+    },
+  );
   response.cookies.set(
     operatorInvitationCookieName(flowID),
     token,

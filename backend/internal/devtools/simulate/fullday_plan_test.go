@@ -9,9 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // runClockedDay runs the mocked Tuesday from 07:20 with the clock setter and
@@ -236,7 +237,7 @@ func TestRunFullDay_SupervisorsHaveAShiftAndNoParallelBlock(t *testing.T) {
 		}
 	}
 	require.NotNil(t, block)
-	assert.Equal(t, []any{10.0}, block.Body["staff_ids"], "the 14:00 block goes to a caregiver on shift without a session or block then")
+	assert.Equal(t, []any{"10"}, block.Body["staff_ids"], "the 14:00 block goes to a caregiver on shift without a session or block then")
 }
 
 // Children follow today's plan: a full room passes them on, the early class

@@ -10,17 +10,22 @@ import type { Student } from "./student-helpers";
 
 const logger = createLogger({ component: "StudentPrivacyConsent" });
 
-/** A form sends the pair only when the person changed it. */
+/**
+ * A form sends the pair only when the person changed it, with the version of
+ * the consent read it shows (`privacy_consent_version`, ADR 0311).
+ */
 export type ConsentPairInput = Pick<
   Student,
-  "privacy_consent_accepted" | "data_retention_days"
+  "privacy_consent_accepted" | "data_retention_days" | "privacy_consent_version"
 >;
 
 /**
  * The two consent fields a student form edits. `data_retention_days` is null
  * only as the form holds an emptied field; the backend refuses it.
  */
-export type ConsentPair = Required<ConsentPairInput>;
+export type ConsentPair = Required<
+  Pick<ConsentPairInput, "privacy_consent_accepted" | "data_retention_days">
+>;
 
 // The policy version the backend states as its default
 // (studentpresence defaultPrivacyPolicyVersion).
@@ -48,19 +53,41 @@ export function sentConsentPair(body: ConsentPairInput): ConsentPair | null {
   return { privacy_consent_accepted, data_retention_days };
 }
 
+/**
+ * Writes the pair against the consent read the form shows: `expectedVersion`
+ * is that read's version, and the backend refuses the write with
+ * `general.changed_since_read` when the stored consent changed since.
+ */
 export async function writeStudentConsent(
   studentId: string,
   pair: ConsentPair,
+  expectedVersion: string | undefined,
 ): Promise<void> {
   await bffJson("tenant", "PUT /api/students/{id}/privacy-consent", {
     params: { id: studentId },
     body: {
+      expected_version: expectedVersion,
       policy_version: POLICY_VERSION,
       accepted: pair.privacy_consent_accepted,
       // Go reads null and an absent key alike and refuses the empty value.
       data_retention_days: pair.data_retention_days ?? undefined,
     },
   });
+}
+
+/**
+ * The version of a child's consent as stored now. A new child has none
+ * recorded yet; its first consent is written against that state.
+ */
+export async function readStudentConsentVersion(
+  studentId: string,
+): Promise<string> {
+  const consent = await bffJson(
+    "tenant",
+    "GET /api/students/{id}/privacy-consent",
+    { params: { id: studentId } },
+  );
+  return consent.version;
 }
 
 /**

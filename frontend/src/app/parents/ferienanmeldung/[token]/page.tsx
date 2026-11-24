@@ -82,16 +82,10 @@ export default function HolidayRegistrationPage({ params }: PageProps) {
   }, [clear, parentSession, show, t, token]);
 
   // The Träger changed the form while the parent filled it in (#5198): read
-  // the current questions again. A failure leaves the old offer; the next
-  // submit names the change once more.
+  // the current questions again. A failure leaves the old offer and rejects,
+  // so the form says it could not load them (ADR 0311).
   const reloadOffer = useCallback(async () => {
-    try {
-      setOffer(await fetchHolidayRegistrationOffer(token));
-    } catch (err) {
-      logger.warn("holiday_registration_offer_reload_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
+    setOffer(await fetchHolidayRegistrationOffer(token));
   }, [token]);
 
   // oxlint-disable-next-line swr/no-effect-load -- holiday registration token page, open without a session (a parent session only prefills); the shared cache reads only with a session, by design

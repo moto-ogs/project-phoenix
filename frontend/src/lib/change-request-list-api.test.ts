@@ -178,7 +178,7 @@ describe("change request list API", () => {
     ).resolves.toEqual({ items: [] });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/students/change-requests?view=open&search=Emma&types=master_data%2Cexcused",
+      "/api/students/change-requests?search=Emma&types=master_data%2Cexcused",
       { method: "GET" },
     );
   });
@@ -270,7 +270,7 @@ describe("change request list API", () => {
 
   it("keeps the stale code of a write that lost the race", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ code: "students.change_request_stale" }), {
+      new Response(JSON.stringify({ code: "general.changed_since_read" }), {
         status: 409,
       }),
     );
@@ -279,7 +279,7 @@ describe("change request list API", () => {
       (err: unknown) => err,
     )) as ApiError;
     expect(error).toBeInstanceOf(ApiError);
-    expect(error.code).toBe("students.change_request_stale");
+    expect(error.code).toBe("general.changed_since_read");
   });
 
   it("keeps the code of any other failed write", async () => {

@@ -22,6 +22,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Middleware is the HTTP middleware shape the composition root supplies.
@@ -148,6 +149,10 @@ type ShiftRequest struct {
 	// OriginShiftID marks this shift as a replacement covering another shift
 	// (#1841). Only honoured on create; a plain edit never re-points it.
 	OriginShiftID OptionalID `json:"origin_shift_id"`
+	// ExpectedVersion is the version of the shift an edit replaces (ADR
+	// 0311); an edit of a shift changed since is refused. A create ignores
+	// it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // OptionalID captures whether a nullable ID field was present in the JSON
@@ -166,7 +171,7 @@ func (o *OptionalID) UnmarshalJSON(data []byte) error {
 		o.Value = nil
 		return nil
 	}
-	return json.Unmarshal(data, &o.Value)
+	return wire.Unmarshal(data, &o.Value)
 }
 
 // OptionalBool captures whether a bool field was present in the JSON payload so
@@ -264,6 +269,9 @@ type ShiftResponse struct {
 	// PlannedByTraeger marks a shift the Personalverwaltung of the Träger
 	// planned (#4708).
 	PlannedByTraeger bool `json:"planned_by_traeger,omitempty"`
+	// Version is the token an edit, a move or a cancellation sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version,omitempty"`
 }
 
 // ToShiftResponse maps a shift onto the wire format. Exported for the
@@ -284,6 +292,7 @@ func ToShiftResponse(s workforce.PlannedShift) ShiftResponse {
 		ChangeReason:     s.ChangeReason,
 		OriginShiftID:    (*ident.ID)(s.OriginShiftID),
 		PlannedByTraeger: s.PlannedByTraeger,
+		Version:          workforce.ShiftVersion(s.UpdatedAt),
 	}
 	if s.SeriesOccurrenceDate != "" {
 		occurrenceDate := s.SeriesOccurrenceDate
@@ -460,7 +469,7 @@ func (rs *Resource) list(w http.ResponseWriter, r *http.Request) {
 
 func (rs *Resource) create(w http.ResponseWriter, r *http.Request) {
 	var req ShiftRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.invalid(w, r, err)
 		return
 	}
@@ -492,7 +501,7 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req ShiftRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.invalid(w, r, err)
 		return
 	}
@@ -515,6 +524,7 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 		PreserveExistingNotes:        req.Notes == nil,
 		PreserveExistingShiftType:    !req.ShiftTypeID.Present,
 		PreserveExistingChangeReason: !req.ChangeReason.Present,
+		Read:                         &workforce.ShiftReadState{Version: req.ExpectedVersion},
 	})
 	if err != nil {
 		rs.renderError(w, r, err)
@@ -535,6 +545,9 @@ type MoveShiftRequest struct {
 	EndTime       string     `json:"end_time" contract:"clock"`
 	BreakMinutes  int        `json:"break_minutes"`
 	ShiftTypeID   OptionalID `json:"shift_type_id"`
+	// ExpectedVersion is the version of the shift the planner moved (ADR
+	// 0311); a move of a shift changed since is refused.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func (rs *Resource) move(w http.ResponseWriter, r *http.Request) {
@@ -544,7 +557,7 @@ func (rs *Resource) move(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req MoveShiftRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.invalid(w, r, err)
 		return
 	}
@@ -594,6 +607,7 @@ func buildMove(id int64, req MoveShiftRequest) (workforce.MoveStaffShift, error)
 		EndTime:       end,
 		BreakMinutes:  req.BreakMinutes,
 		ShiftTypeID:   (*int64)(req.ShiftTypeID.Value),
+		Read:          &workforce.ShiftReadState{Version: req.ExpectedVersion},
 	}, nil
 }
 
@@ -622,6 +636,12 @@ type CancellationRequest struct {
 	BreakMinutes OptionalInt          `json:"break_minutes"`
 	ShiftTypeID  OptionalID           `json:"shift_type_id"`
 	Replacements []ReplacementRequest `json:"replacements"`
+	// ExpectedVersion is the version of the shift the planner read, and
+	// ExpectedReplacementVersions the version of every cover it showed, by
+	// shift id (ADR 0311): the covers are rebuilt from the request, so a
+	// shift or a cover set changed since is refused.
+	ExpectedVersion             string            `json:"expected_version"`
+	ExpectedReplacementVersions map[string]string `json:"expected_replacement_versions"`
 }
 
 // ReplacementRequest is one person covering part of a cancelled shift's gap.
@@ -656,7 +676,7 @@ func (rs *Resource) cancellation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req CancellationRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.invalid(w, r, err)
 		return
 	}
@@ -702,6 +722,7 @@ func buildCancellation(id int64, req CancellationRequest) (workforce.CancelStaff
 		ShiftID:      id,
 		Cancelled:    req.Cancelled.Value,
 		ChangeReason: req.ChangeReason,
+		Read:         &workforce.ShiftReadState{Version: req.ExpectedVersion, Replacements: replacementVersions(req.ExpectedReplacementVersions)},
 	}
 	// Apply the origin's own edited window/type when the client supplies it (the
 	// admin modal always sends the full set), so a time/type change made alongside
@@ -741,6 +762,20 @@ func buildCancellation(id int64, req CancellationRequest) (workforce.CancelStaff
 		})
 	}
 	return input, nil
+}
+
+// replacementVersions reads the cover versions keyed by shift id. A key that
+// is no id is a cover the store does not hold, so the check refuses it.
+func replacementVersions(versions map[string]string) map[int64]string {
+	result := make(map[int64]string, len(versions))
+	for key, version := range versions {
+		id, err := strconv.ParseInt(key, 10, 64)
+		if err != nil {
+			id = -1 - int64(len(result))
+		}
+		result[id] = version
+	}
+	return result
 }
 
 func (rs *Resource) delete(w http.ResponseWriter, r *http.Request) {

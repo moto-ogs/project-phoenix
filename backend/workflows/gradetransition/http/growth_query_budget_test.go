@@ -73,17 +73,6 @@ func TestGradeTransitionGrowthQueryBudget(t *testing.T) {
 		for i, class := range classes {
 			require.Equal(t, fmt.Sprintf("1%c", 'a'+i), class)
 		}
-		var detail gradehttp.TransitionResponse
-		detailQ := get(fmt.Sprintf("/%d/", transition.ID), &detail)
-		require.Equal(t, transition.ID, detail.ID.Int64())
-		require.Equal(t, "2030-2031", detail.AcademicYear)
-		require.Len(t, detail.Mappings, n)
-		for i, mapping := range detail.Mappings {
-			require.Equal(t, fmt.Sprintf("1%c", 'a'+i), mapping.FromClass)
-			require.NotNil(t, mapping.ToClass)
-			require.Equal(t, fmt.Sprintf("2%c", 'a'+i), *mapping.ToClass)
-			require.Equal(t, "promoted", mapping.Action)
-		}
 		var history []gradehttp.TransitionHistoryResponse
 		historyQ := get(fmt.Sprintf("/%d/history", transition.ID), &history)
 		require.Len(t, history, n)
@@ -109,7 +98,7 @@ func TestGradeTransitionGrowthQueryBudget(t *testing.T) {
 			require.Equal(t, 1, mapping.StudentCount)
 			require.Equal(t, "promote", mapping.Action)
 		}
-		return []testpkg.QueryMeasurement{list, classQ, detailQ, historyQ, previewQ}
+		return []testpkg.QueryMeasurement{list, classQ, historyQ, previewQ}
 	}
 	add(3)
 	small := run(3)
@@ -120,7 +109,6 @@ func TestGradeTransitionGrowthQueryBudget(t *testing.T) {
 	}
 	querybudgets.AssertQueryBudget(t, "api.grade_transitions.growth.list", large[0])
 	querybudgets.AssertQueryBudget(t, "api.grade_transitions.growth.classes", large[1])
-	querybudgets.AssertQueryBudget(t, "api.grade_transitions.growth.detail", large[2])
-	querybudgets.AssertQueryBudget(t, "api.grade_transitions.growth.history", large[3])
-	querybudgets.AssertQueryBudget(t, "api.grade_transitions.growth.preview", large[4])
+	querybudgets.AssertQueryBudget(t, "api.grade_transitions.growth.history", large[2])
+	querybudgets.AssertQueryBudget(t, "api.grade_transitions.growth.preview", large[3])
 }

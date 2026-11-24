@@ -319,6 +319,9 @@ type offeringPreviewResponse struct {
 	// OtherOfferings name the offerings of the same phase that book dropped
 	// children on the day they drop.
 	OtherOfferings []offeringPreviewAlternativeResponse `json:"other_offerings"`
+	// Fingerprint names who joins and leaves from which segment on; the
+	// connection sends it back as expected_fingerprint (ADR 0311).
+	Fingerprint string `json:"fingerprint"`
 }
 
 func offeringPreviewAlternatives(kind timetable.RosterOfferingKind, filter timetable.OfferingSourceFilter, bookings []timetable.OfferingWeekdayBooking, changes []timetable.OfferingSourceWeekdayChange) []offeringPreviewAlternativeResponse {
@@ -383,36 +386,66 @@ func (rs *Resource) offeringPreviewFrom(r *http.Request, templateID int64) (cale
 	return *next, nil
 }
 
-func (rs *Resource) offeringSourcePreview(ctx context.Context, templateID int64, filter timetable.OfferingSourceFilter, from calendar.Date) (offeringPreviewResponse, error) {
+// offeringSourceOutcome is what connecting the offerings from a day on
+// changes: the series segments it switches and, per weekday, who joins and
+// who leaves.
+type offeringSourceOutcome struct {
+	from     calendar.Date
+	segments []timetable.TemplateSeriesSegment
+	bookings []timetable.OfferingWeekdayBooking
+	changes  []timetable.OfferingSourceWeekdayChange
+}
+
+// fingerprint is the owner's token of the outcome (ADR 0311): the preview
+// answers it, the connection computes and compares it under the recurrence
+// gate.
+func (o offeringSourceOutcome) fingerprint() string {
+	return timetable.OfferingSourcePreviewFingerprint(o.from, o.segments, o.changes)
+}
+
+func (rs *Resource) offeringSourceOutcome(ctx context.Context, templateID int64, filter timetable.OfferingSourceFilter, from calendar.Date) (offeringSourceOutcome, error) {
 	segments, err := rs.RosterReview.SeriesSegments(ctx, templateID, from)
 	if err != nil {
-		return offeringPreviewResponse{}, err
+		return offeringSourceOutcome{}, err
 	}
 	if len(segments) == 0 {
-		return offeringPreviewResponse{}, timetable.ErrTemplateSegmentNotEditable
+		return offeringSourceOutcome{}, timetable.ErrTemplateSegmentNotEditable
 	}
 	living := segments[len(segments)-1]
 	if _, err := rs.OfferingSourceOptions.CombinedOfferingSourceCounts(ctx, filter.OfferingIDs, living.CalendarPeriodID); err != nil {
-		return offeringPreviewResponse{}, err
+		return offeringSourceOutcome{}, err
 	}
 	bookings, err := rs.OfferingSourceOptions.OfferingWeekdayBookings(ctx, living.CalendarPeriodID, from)
 	if err != nil {
-		return offeringPreviewResponse{}, err
+		return offeringSourceOutcome{}, err
 	}
 	rosters, err := rs.RosterReview.FutureRosters(ctx, []int64{living.TemplateID}, from)
 	if err != nil {
+		return offeringSourceOutcome{}, err
+	}
+	return offeringSourceOutcome{
+		from: from, segments: segments, bookings: bookings,
+		changes: timetable.PreviewOfferingSource(rosters[living.TemplateID], filter, bookings),
+	}, nil
+}
+
+func (rs *Resource) offeringSourcePreview(ctx context.Context, templateID int64, filter timetable.OfferingSourceFilter, from calendar.Date) (offeringPreviewResponse, error) {
+	outcome, err := rs.offeringSourceOutcome(ctx, templateID, filter, from)
+	if err != nil {
 		return offeringPreviewResponse{}, err
 	}
-	changes := timetable.PreviewOfferingSource(rosters[living.TemplateID], filter, bookings)
+	changes, bookings := outcome.changes, outcome.bookings
 	names, err := rs.studentNames(ctx, changedStudentIDs(changes), from)
 	if err != nil {
 		return offeringPreviewResponse{}, err
 	}
+	living := outcome.segments[len(outcome.segments)-1]
 	return offeringPreviewResponse{
 		From:           from.String(),
 		Weekdays:       offeringPreviewWeekdays(changes, names, timetable.DroppedChildrenBookings(filter, bookings, changes)),
-		Segments:       offeringPreviewSegments(segments),
+		Segments:       offeringPreviewSegments(outcome.segments),
 		OtherOfferings: offeringPreviewAlternatives(living.OfferingKind, filter, bookings, changes),
+		Fingerprint:    outcome.fingerprint(),
 	}, nil
 }
 
@@ -564,6 +597,9 @@ type offeringConnectionRequest struct {
 	GradeLevels   []int      `json:"grade_levels"`
 	SchoolClasses []string   `json:"school_classes"`
 	EffectiveDate string     `json:"effective_date"`
+	// ExpectedFingerprint is the fingerprint of the preview the school
+	// confirmed for these offerings from effective_date on (ADR 0311).
+	ExpectedFingerprint string `json:"expected_fingerprint,omitempty"`
 }
 
 func (*offeringConnectionRequest) Bind(*http.Request) error { return nil }
@@ -595,10 +631,11 @@ func (rs *Resource) connectTemplateOfferingSource(w http.ResponseWriter, r *http
 		common.RenderError(w, r, common.ErrorInvalidOnField(errors.New("effective_date must be YYYY-MM-DD"), common.CodeTimetableTemplateInvalid, "effective_date"))
 		return
 	}
-	result, err := rs.RosterReview.ConnectOfferingSource(r.Context(), timetable.ConnectOfferingSourceCommand{
+	cmd := timetable.ConnectOfferingSourceCommand{
 		TemplateID: id, OfferingIDs: ident.Int64s(req.OfferingIDs), GradeLevels: req.GradeLevels,
-		SchoolClasses: req.SchoolClasses, EffectiveDate: effectiveDate,
-	})
+		SchoolClasses: req.SchoolClasses, EffectiveDate: effectiveDate, ExpectedFingerprint: req.ExpectedFingerprint,
+	}
+	result, err := rs.RosterReview.ConnectOfferingSource(r.Context(), cmd)
 	if err != nil {
 		renderRosterReviewError(w, r, err)
 		return

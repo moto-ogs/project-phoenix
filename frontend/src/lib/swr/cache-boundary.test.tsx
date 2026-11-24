@@ -23,7 +23,7 @@ import {
 
 vi.unmock("swr");
 const { owner } = vi.hoisted(() => ({
-  owner: { id: "account-7", scope: "tenant", tenantId: 42 },
+  owner: { id: "account-7", scope: "tenant", tenantId: "42" },
 }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
@@ -53,6 +53,7 @@ const PUBLIC_SURFACE: Record<string, () => Promise<object>> = {
   mutate: () => import("./mutate"),
   "config-boundaries": () => import("./config-boundaries"),
   "scope-boundary": () => import("./scope-boundary"),
+  "read-draft": () => import("./read-draft"),
   "course-waitlist-keys": () => import("./course-waitlist-keys"),
   "portal-keys": () => import("./portal-keys"),
   "traeger-keys": () => import("./traeger-keys"),
@@ -95,15 +96,16 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
     // A session boundary listener; it hands out neither cache nor mutate
     // (#4675: the tab-wide refusals of use-traeger-confirmed-resource).
     "onSWRScopeReset",
+    "revalidateOrThrow",
     "scopedSWRKey",
     "stampSWRSeeds",
     "tenantSWRScope",
-    "useFreshSWR",
     "useImmutableSWR",
     "useInvalidateFamily",
     "useInvalidateMatching",
     "useLiveEventScope",
     "useLiveRefreshInterval",
+    "useOpeningRead",
     "usePublishLiveChannel",
     "useSWRAuth",
     "useSWRCacheKey",
@@ -117,11 +119,12 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
   hooks: [
     "MUTATION_OPTION_KEYS",
     "READER_OPTION_KEYS",
+    "revalidateOrThrow",
     "useDiscardRefusedEntity",
-    "useFreshSWR",
     "useImmutableSWR",
     "useInvalidateFamily",
     "useInvalidateMatching",
+    "useOpeningRead",
     "useSWRAuth",
     "useSWRCacheKey",
     "useSWRPreload",
@@ -133,6 +136,7 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
   mutate: ["mutate"],
   "config-boundaries": ["IsolatedSWRCache", "SWRSeedBoundary"],
   "scope-boundary": ["SWRScopeBoundary"],
+  "read-draft": ["useActionOn", "useDraftOn", "useReadDraft"],
   "course-waitlist-keys": ["activityWaitlistKeys", "courseWaitlistKeys"],
   "portal-keys": [
     "STUDENT_KEY_FAMILIES",

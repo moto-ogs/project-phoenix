@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Administration holds the collaborators of the administrative period write
@@ -39,17 +40,12 @@ type Administration struct {
 // already overlaps (legacy data from before the rule) stay possible; the
 // advisory overlap listing keeps surfacing those.
 
-// ensureChangeAllowed runs the rules a change must pass in order: the name
-// stays unique, the linked care offerings accept the proposed row, the
-// period exists, and a scheduling-relevant change keeps the same-type
-// overlap invariant.
-func (s *Service) ensureChangeAllowed(ctx context.Context, id int64, fields schoolcalendar.CalendarPeriodFields, stats *domain.OperationStats) error {
-	if err := s.ensureUniqueName(ctx, fields.Name, id, stats); err != nil {
-		return err
-	}
-	if err := s.guardCareOfferings(ctx, id, &fields); err != nil {
-		return err
-	}
+// ensureChangeAllowed runs the rules a change must pass in order: the period
+// exists and is the one its editor read (ADR 0311), the name stays unique,
+// the linked care offerings accept the proposed row, and a
+// scheduling-relevant change keeps the same-type overlap invariant. The
+// caller holds the recurrence gate every period write takes.
+func (s *Service) ensureChangeAllowed(ctx context.Context, id int64, fields schoolcalendar.CalendarPeriodFields, expectedVersion string, stats *domain.OperationStats) error {
 	current, found, findStats, err := s.store.FindCalendarPeriod(ctx, id)
 	stats.Add(findStats)
 	if err != nil {
@@ -57,6 +53,15 @@ func (s *Service) ensureChangeAllowed(ctx context.Context, id int64, fields scho
 	}
 	if !found {
 		return schoolcalendar.ErrCalendarPeriodNotFound
+	}
+	if err := readstate.Check(expectedVersion, schoolcalendar.CalendarPeriodVersion(current)); err != nil {
+		return err
+	}
+	if err := s.ensureUniqueName(ctx, fields.Name, id, stats); err != nil {
+		return err
+	}
+	if err := s.guardCareOfferings(ctx, id, &fields); err != nil {
+		return err
 	}
 	if !schedulingFieldsChanged(current, fields) {
 		return nil

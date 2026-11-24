@@ -2,40 +2,24 @@ import "server-only";
 import type { NextRequest } from "next/server";
 import type { PortalDescriptor } from "~/server/auth/portals";
 import { problemResponse } from "./api-response-error.server";
-import { sendBackend } from "./backend-client.server";
+import { contractWrite } from "./contract/client.server";
+import type { TokenResponse } from "./contract/shared.generated";
 import { createLogger } from "./logger";
 import { captureBffException } from "./sentry-bff.server";
 
 const logger = createLogger({ component: "SessionTransition" });
 
-/** The backend call that revokes a freshly minted session. */
-export interface Rollback {
-  path: string;
-  bearer?: string;
-  json?: unknown;
-}
-
 /** A failed handoff never leaves its freshly minted family alive. */
 export async function revokeMintedSession(
-  request: NextRequest,
-  rollback: Rollback,
+  revoke: () => ReturnType<typeof contractWrite>,
 ): Promise<void> {
   try {
-    const response = await sendBackend(rollback.path, rollback.bearer, {
-      method: "POST",
-      json: rollback.json,
-      request,
-      timeout: "session",
-    });
-    if (!response.ok) {
-      logger.error("session_rollback_failed", {
-        path: rollback.path,
-        status: response.status,
-      });
+    const reply = await revoke();
+    if (!reply.ok) {
+      logger.error("session_rollback_failed", { status: reply.error.status });
     }
   } catch (error) {
     logger.error("session_rollback_failed", {
-      path: rollback.path,
       error: error instanceof Error ? error.message : String(error),
     });
   }
@@ -51,7 +35,7 @@ export async function revokeMintedSession(
 export async function installMintedSession(
   request: NextRequest,
   install: () => Promise<void>,
-  rollback: Rollback,
+  rollback: () => ReturnType<typeof contractWrite>,
 ): Promise<Response | null> {
   try {
     await install();
@@ -61,28 +45,27 @@ export async function installMintedSession(
       error: error instanceof Error ? error.message : String(error),
     });
     captureBffException(error, request);
-    await revokeMintedSession(request, rollback);
+    await revokeMintedSession(rollback);
     return problemResponse(500, "Session creation failed", request);
   }
 }
 
 /** The revocation of a minted pair: the token kind the portal's logout takes. */
 export function logoutRollback(
+  request: NextRequest,
   logout: PortalDescriptor["backend"]["logout"],
-  pair: { access_token: string; refresh_token: string },
-): Rollback {
-  const { path, token } = logout;
-  return {
-    path,
-    bearer: token === "access" ? pair.access_token : pair.refresh_token,
-  };
+  pair: TokenResponse,
+) {
+  return () =>
+    contractWrite(logout.route, undefined, {
+      token: logout.token === "access" ? pair.access_token : pair.refresh_token,
+      request,
+      timeout: "session",
+    });
 }
 
 /** A backend answer's token pair; anything else is an invalid answer. */
-export function mintedPair(data: Record<string, unknown>): {
-  access_token: string;
-  refresh_token: string;
-} {
+export function mintedPair(data: Partial<TokenResponse>): TokenResponse {
   const { access_token, refresh_token } = data;
   if (
     typeof access_token !== "string" ||

@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -85,8 +87,8 @@ func TestGetHolidayRegistrationFamily_AnswersTheLinkedTraegersChildren(t *testin
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
 	assert.Equal(t, HolidayRegistrationGuardianResponse{FirstName: "Sabine", LastName: "Schneider", Email: "eltern@example.org", Phone: "0151 1"}, body.Data.Guardian)
 	require.Len(t, body.Data.Children, 1)
-	assert.Equal(t, "11", body.Data.Children[0].StudentID)
-	assert.Equal(t, "21", body.Data.Children[0].SchoolID)
+	assert.Equal(t, "11", body.Data.Children[0].StudentID.String())
+	assert.Equal(t, "21", body.Data.Children[0].SchoolID.String())
 	require.NotNil(t, body.Data.Children[0].BirthDate)
 	assert.Equal(t, birthDate, *body.Data.Children[0].BirthDate)
 }
@@ -104,7 +106,7 @@ func TestHolidayRegistrationFamilyResponse_CarriesAddressAndContacts(t *testing.
 			{GuardianProfileID: 32, FirstName: "Lena", LastName: "Vogt", RelationshipType: "parent", FullGuardian: true},
 		}}},
 	})
-	raw, err := json.Marshal(response)
+	raw, err := wire.Marshal(response)
 	require.NoError(t, err)
 	assert.JSONEq(t, `{
 		"guardian": {"first_name": "Sabine", "last_name": "", "email": "eltern@example.org", "phone": "",

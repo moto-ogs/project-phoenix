@@ -5,11 +5,12 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // Access-control goldens of the guardian surface: which permission unlocks
@@ -17,19 +18,21 @@ import (
 
 func relationshipBody(guardianID int64, role string) map[string]any {
 	return map[string]any{
-		"guardian_profile_id": guardianID,
+		"guardian_profile_id": fmt.Sprint(guardianID),
 		"relationship_type":   "parent",
 		"guardian_role":       role,
 		"emergency_priority":  1,
 	}
 }
 
+// relationshipUpdateBody is a staff form save that changes only the link of
+// the child's guardian (ADR 0311).
 func relationshipUpdateBody(role string, enabled bool) map[string]any {
-	return map[string]any{
+	return map[string]any{"relationship": map[string]any{
 		"guardian_role":        role,
 		"can_pickup":           enabled,
 		"is_emergency_contact": enabled,
-	}
+	}}
 }
 
 func batchBody(email string) map[string]any {
@@ -101,8 +104,7 @@ func TestGuardianComposition_RelationshipRoutesRejectStaffWithoutPermissions(t *
 	})
 
 	t.Run("grant parent rights and pickup authority", func(t *testing.T) {
-		require.Equal(t, http.StatusForbidden, ctx.status(t, claims, http.MethodPut,
-			fmt.Sprintf("/relationships/%d", linkID), relationshipUpdateBody("primary_guardian", true)))
+		require.Equal(t, http.StatusForbidden, ctx.saveEntry(t, claims, studentID, guardianID, relationshipUpdateBody("primary_guardian", true)).Code)
 		ctx.requireLinkState(t, linkID, "pickup_only", false, false, false)
 	})
 
@@ -135,8 +137,7 @@ func TestGuardianComposition_WriteRoutesAllowStaffWithRequiredPermissions(t *tes
 	require.Len(t, linked, 1)
 	linkID := linked[0].RelationshipID
 
-	require.Equal(t, http.StatusOK, ctx.status(t, updateClaims, http.MethodPut,
-		fmt.Sprintf("/relationships/%d", linkID), relationshipUpdateBody("primary_guardian", true)))
+	require.Equal(t, http.StatusOK, ctx.saveEntry(t, updateClaims, studentID, guardianID, relationshipUpdateBody("primary_guardian", true)).Code)
 	ctx.requireLinkState(t, int64(linkID), "primary_guardian", true, true, true)
 
 	require.Equal(t, http.StatusOK, ctx.status(t, updateClaims, http.MethodDelete,
@@ -147,7 +148,7 @@ func TestGuardianComposition_WriteRoutesAllowStaffWithRequiredPermissions(t *tes
 	existingBatchGuardianID, _ := ctx.createGuardian("allowed-batch-existing")
 	require.Equal(t, http.StatusCreated, ctx.status(t, updateClaims, http.MethodPost,
 		fmt.Sprintf("/students/%d/guardians/batch", existingBatchStudentID), map[string]any{"guardians": []map[string]any{{
-			"guardian_profile_id": existingBatchGuardianID,
+			"guardian_profile_id": fmt.Sprint(existingBatchGuardianID),
 			"relationship_type":   "parent",
 			"guardian_role":       "pickup_only",
 			"emergency_priority":  1,
@@ -174,8 +175,7 @@ func TestGuardianComposition_RelationshipWritesAllowAdmin(t *testing.T) {
 	linked := ctx.studentGuardians(t, studentID)
 	require.Len(t, linked, 1)
 
-	require.Equal(t, http.StatusOK, ctx.status(t, claims, http.MethodPut,
-		fmt.Sprintf("/relationships/%d", linked[0].RelationshipID), relationshipUpdateBody("primary_guardian", true)))
+	require.Equal(t, http.StatusOK, ctx.saveEntry(t, claims, studentID, guardianID, relationshipUpdateBody("primary_guardian", true)).Code)
 	require.Equal(t, http.StatusOK, ctx.status(t, claims, http.MethodDelete,
 		fmt.Sprintf("/students/%d/guardians/%d", studentID, guardianID), nil))
 	assert.Empty(t, ctx.studentGuardians(t, studentID))
@@ -187,8 +187,10 @@ func TestGuardianComposition_RelationshipWritesRejectForeignTenant(t *testing.T)
 	studentID, guardianID, linkID := ctx.foreignTenant()
 	claims := testutil.AdminTestClaims(int(ctx.account("guardian-foreign-admin")))
 
-	require.Equal(t, http.StatusNotFound, ctx.status(t, claims, http.MethodPut,
-		fmt.Sprintf("/relationships/%d", linkID), relationshipUpdateBody("pickup_only", false)))
+	foreignSave := relationshipUpdateBody("pickup_only", false)
+	foreignSave["expected_version"] = "any"
+	require.Equal(t, http.StatusForbidden, ctx.status(t, claims, http.MethodPut,
+		fmt.Sprintf("/students/%d/guardians/%d", studentID, guardianID), foreignSave))
 	require.Equal(t, http.StatusForbidden, ctx.status(t, claims, http.MethodDelete,
 		fmt.Sprintf("/students/%d/guardians/%d", studentID, guardianID), nil))
 

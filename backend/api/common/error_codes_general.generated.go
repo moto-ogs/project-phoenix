@@ -2,6 +2,7 @@
 package common
 
 const CodeGeneralBusinessRejection = "general.business_rejection"
+const CodeGeneralChangedSinceRead = "general.changed_since_read"
 const CodeGeneralInput = "general.input"
 const CodeGeneralPermission = "general.permission"
 const CodeGeneralRequestTooLarge = "general.request_too_large"
@@ -12,6 +13,7 @@ const CodeGeneralWriteAnswerUnreadable = "general.write_answer_unreadable"
 
 var errorCodeClassesGeneral = []errorCodeClass{
 	{CodeGeneralBusinessRejection, "business_rejection"},
+	{CodeGeneralChangedSinceRead, "business_rejection"},
 	{CodeGeneralInput, "input"},
 	{CodeGeneralPermission, "permission"},
 	{CodeGeneralRequestTooLarge, "input"},

@@ -8,9 +8,10 @@ import (
 	"math/rand/v2"
 	"sort"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTimeTrackingHistoryStep populates Soll/Ist data for the demo tenant
@@ -475,9 +476,16 @@ func seedHistorySession(admin *Client, rng *rand.Rand, staffID int64, day time.T
 
 func seedTimeTrackingCoverage(rt *Runtime, staffID int64, year int) error {
 	rt.Client.BindAuth(rt.TenantAuth)
-	if _, err := rt.Client.Put(fmt.Sprintf("/api/staff/%d/vacation/quota", staffID), map[string]any{
+	// The change carries the version of the claim it replaces (ADR 0311).
+	quotaPath := fmt.Sprintf("/api/staff/%d/vacation/quota", staffID)
+	raw, err := rt.Client.Get(fmt.Sprintf("%s?year=%d", quotaPath, year))
+	version, readErr := seedReadToken(raw, "version")
+	if err = errors.Join(err, readErr); err != nil {
+		return fmt.Errorf("read vacation quota for staff %d: %w", staffID, err)
+	}
+	if _, err := rt.Client.Put(quotaPath, map[string]any{
 		"year": year, "entitled_days": 30, "carryover_days": 2,
-		"reason": "Tariflicher Jahresurlaub",
+		"reason": "Tariflicher Jahresurlaub", "expected_version": version,
 	}); err != nil {
 		return fmt.Errorf("seed vacation quota for staff %d: %w", staffID, err)
 	}
@@ -545,74 +553,6 @@ func seedOneWorkSessionBreak(client *Client) error {
 	return nil
 }
 
-// seedCustomAbsenceType adds the school's own Abwesenheitsart as the admin and
-// returns its id. The base type is not sent: the server derives it from the
-// art, which is the whole point of the split (#2403).
-func seedCustomAbsenceType(rt *Runtime, name string) (int64, error) {
-	currentAuth := rt.Client.auth
-	defer rt.Client.BindAuth(currentAuth)
-	rt.Client.BindAuth(rt.TenantAuth)
-
-	resp, err := rt.Client.Post("/api/absence-types", map[string]any{
-		"name": name,
-	})
-	if err != nil {
-		return 0, fmt.Errorf("post absence type: %w", err)
-	}
-	var payload struct {
-		Data struct {
-			ID json.RawMessage `json:"id"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(resp, &payload); err != nil {
-		return 0, fmt.Errorf("parse absence type response: %w", err)
-	}
-	// The endpoint sends the id as a decimal STRING — JavaScript cannot
-	// represent every BIGINT as a number — so unquote before parsing, and
-	// accept a bare number too rather than tying the seeder to that detail.
-	raw := strings.Trim(string(payload.Data.ID), `"`)
-	id, err := strconv.ParseInt(raw, 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("parse absence type id %q: %w", raw, err)
-	}
-	return id, nil
-}
-
-func seedAbsenceTypeCarryover(rt *Runtime, absenceTypeID int64, until string) error {
-	currentAuth := rt.Client.auth
-	defer rt.Client.BindAuth(currentAuth)
-	rt.Client.BindAuth(rt.TenantAuth)
-	if _, err := rt.Client.Put(
-		fmt.Sprintf("/api/absence-types/%d", absenceTypeID),
-		map[string]any{"allowance_enabled": true, "carryover_until": until},
-	); err != nil {
-		return fmt.Errorf("seed absence type carryover: %w", err)
-	}
-	return nil
-}
-
-func seedCustomAbsenceTypeAllowance(rt *Runtime, absenceTypeID, staffID int64, year int, days float64, reason string) error {
-	currentAuth := rt.Client.auth
-	defer rt.Client.BindAuth(currentAuth)
-	rt.Client.BindAuth(rt.TenantAuth)
-	if _, err := rt.Client.Put(
-		fmt.Sprintf("/api/absence-types/%d", absenceTypeID),
-		map[string]any{"allowance_enabled": true},
-	); err != nil {
-		return fmt.Errorf("enable custom absence type allowance: %w", err)
-	}
-	if _, err := rt.Client.Put(
-		fmt.Sprintf("/api/absence-types/%d/allowances/%d", absenceTypeID, staffID),
-		map[string]any{
-			"year": year, "entitled_days": days,
-			"reason": reason,
-		},
-	); err != nil {
-		return fmt.Errorf("seed custom absence type allowance for staff %d: %w", staffID, err)
-	}
-	return nil
-}
-
 func postAbsence(client *Client, dateStart, dateEnd time.Time, absenceType, note string, absenceTypeID *int64) error {
 	body := map[string]any{
 		"absence_type": absenceType,
@@ -621,7 +561,7 @@ func postAbsence(client *Client, dateStart, dateEnd time.Time, absenceType, note
 		"note":         note,
 	}
 	if absenceTypeID != nil {
-		body["absence_type_id"] = *absenceTypeID
+		body["absence_type_id"] = ident.ID(*absenceTypeID)
 	}
 	if _, err := client.Post("/api/time-tracking/absences", body); err != nil {
 		return err
@@ -642,7 +582,7 @@ func postStaffAbsence(rt *Runtime, staffID int64, day time.Time, absenceType, no
 		"note":         note,
 	}
 	if absenceTypeID != nil {
-		body["absence_type_id"] = *absenceTypeID
+		body["absence_type_id"] = ident.ID(*absenceTypeID)
 	}
 	_, err := rt.Client.Post(fmt.Sprintf("/api/staff/%d/absences", staffID), body)
 	return err
@@ -661,11 +601,20 @@ func seedCompTimeFridays(rt *Runtime, staffID int64, fridays []time.Time, sickLe
 	}
 	ids := make([]string, 0, len(fridays))
 	for _, friday := range fridays {
+		// The demo books the Fridays even where the Stundenkonto goes below
+		// zero, as the Leitung confirms the dialog's preview (#2873, ADR 0311).
+		day := toDateKey(friday)
+		preview, err := rt.Client.Get(fmt.Sprintf("/api/staff/%d/time-tracking/comp-time-preview?date_start=%s&date_end=%s&half_day=false", staffID, day, day))
+		fingerprint, readErr := seedReadToken(preview, "fingerprint")
+		if err = errors.Join(err, readErr); err != nil {
+			return 0, fmt.Errorf("seed comp_time preview for staff %d: %w", staffID, err)
+		}
 		resp, err := rt.Client.Post(fmt.Sprintf("/api/staff/%d/absences", staffID), map[string]any{
-			"absence_type": "comp_time",
-			"date_start":   toDateKey(friday),
-			"date_end":     toDateKey(friday),
-			"note":         "Freitag frei",
+			"absence_type":         "comp_time",
+			"date_start":           day,
+			"date_end":             day,
+			"note":                 "Freitag frei",
+			"expected_fingerprint": fingerprint,
 		})
 		if err != nil {
 			return 0, fmt.Errorf("seed comp_time Friday for staff %d: %w", staffID, err)
@@ -676,12 +625,22 @@ func seedCompTimeFridays(rt *Runtime, staffID int64, fridays []time.Time, sickLe
 		}
 		ids = append(ids, strconv.FormatInt(id, 10))
 	}
-	if _, err := rt.Client.Post(fmt.Sprintf("/api/staff/%d/absences/rebook", staffID), map[string]any{
+	rebooking := map[string]any{
 		"absence_ids":     ids[:1],
 		"absence_type":    "other",
 		"absence_type_id": strconv.FormatInt(sickLeaveTypeID, 10),
 		"reason":          "Kontingent angelegt, der Freitag war ein Krank-Urlaubstag",
-	}); err != nil {
+	}
+	// The write carries the fingerprint of the dry run it confirms (ADR 0311).
+	path := fmt.Sprintf("/api/staff/%d/absences/rebook", staffID)
+	rebooking["dry_run"] = true
+	preview, err := rt.Client.Post(path, rebooking)
+	fingerprint, readErr := seedReadToken(preview, "fingerprint")
+	if err = errors.Join(err, readErr); err != nil {
+		return 0, fmt.Errorf("seed absence rebooking preview for staff %d: %w", staffID, err)
+	}
+	rebooking["dry_run"], rebooking["expected_fingerprint"] = false, fingerprint
+	if _, err := rt.Client.Post(path, rebooking); err != nil {
 		return 0, fmt.Errorf("seed absence rebooking for staff %d: %w", staffID, err)
 	}
 	return len(ids), nil

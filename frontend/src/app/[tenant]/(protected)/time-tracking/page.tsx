@@ -113,6 +113,7 @@ import {
   type PeriodMetrics,
 } from "~/lib/hooks/use-period-metrics";
 import {
+  revalidateOrThrow,
   useLiveRefreshInterval,
   useSWRAuth,
   useTenantMutate,
@@ -136,7 +137,9 @@ import {
   PLANNED_START_NOT_REACHED_CODE,
   timeTrackingService,
 } from "~/lib/time-tracking-api";
-import { ApiError } from "~/lib/api-error";
+import type { CreateAbsenceRequest } from "~/lib/time-tracking-api";
+import type { UpdateAbsenceRequest } from "~/lib/contract/time-tracking.generated";
+import { ApiError, isReadStateRefusal } from "~/lib/api-error";
 import {
   type MonthSummary,
   type StaffAbsence,
@@ -1586,7 +1589,10 @@ function OwnZeiterfassungSection({
     date: Date,
     session: WorkSessionHistory | null,
     absence: StaffAbsence | null,
-    laborDay?: WorkDayLaborHint,
+    laborDay: WorkDayLaborHint | undefined,
+    /** Liest die Tabelle neu, aus der der Block stammt; scheitert das
+     *  Lesen, lehnt es ab (ADR 0311, Regel 6). */
+    reloadDay: () => Promise<unknown>,
   ) => void;
   /** Ein offener Block verändert Tages- und Wochensummen fortlaufend. */
   readonly isSessionOpen: boolean;
@@ -1653,12 +1659,7 @@ function OwnZeiterfassungSection({
   // Dedicated table-range fetches. Independent from the WeekChart's
   // 10-workday history fetch, so navigating the table (especially in
   // month mode) does not enlarge the chart's data window.
-  const {
-    data: tableData,
-    isLoading: tableLoading,
-    error: tableError,
-    mutate: mutateTable,
-  } = useSWRAuth<HistoryResult>(
+  const tableRead = useSWRAuth<HistoryResult>(
     timeTrackingKeys.table(tableHistoryFromKey, tableHistoryToKey),
     () =>
       timeTrackingService.getHistory(tableHistoryFromKey, tableHistoryToKey),
@@ -1668,6 +1669,12 @@ function OwnZeiterfassungSection({
       refreshInterval: isSessionOpen ? openMonthRefreshMs : 0,
     },
   );
+  const {
+    data: tableData,
+    isLoading: tableLoading,
+    error: tableError,
+    mutate: mutateTable,
+  } = tableRead;
   const tableHistory = useMemo(() => tableData?.sessions ?? [], [tableData]);
 
   const {
@@ -1897,7 +1904,9 @@ function OwnZeiterfassungSection({
     const laborDay = (tableData?.laborDays ?? []).find(
       (day) => day.date === workday,
     );
-    onEditDay(date, session, absence, laborDay);
+    onEditDay(date, session, absence, laborDay, () =>
+      revalidateOrThrow(tableRead),
+    );
   };
 
   return (
@@ -1937,6 +1946,7 @@ function OwnZeiterfassungSection({
               from={visibleFrom}
               to={visibleTo}
               sessions={adaptedSessions}
+              reloadSessions={() => revalidateOrThrow(tableRead)}
               absences={adaptedAbsences}
               absencesUnresolved={
                 tableAbsencesLoading ||
@@ -2171,6 +2181,7 @@ function EditSessionModal({
   session,
   date,
   onSave,
+  onReload,
   absence,
   onUpdateAbsence,
   onDeleteAbsence,
@@ -2197,19 +2208,15 @@ function EditSessionModal({
       status?: SessionStatus;
       notes?: string;
       breaks?: Array<{ id: string; durationMinutes: number }>;
+      expectedVersion: string;
     },
   ) => Promise<void>;
+  /** Reads the history again; rejects when that fails. */
+  readonly onReload: () => Promise<unknown>;
   readonly absence: StaffAbsence | null;
   readonly onUpdateAbsence: (
     id: string,
-    req: {
-      absence_type?: string;
-      absence_type_id?: string | null;
-      date_start?: string;
-      date_end?: string;
-      half_day?: boolean;
-      note?: string;
-    },
+    req: UpdateAbsenceRequest,
   ) => Promise<void>;
   readonly onDeleteAbsence: (id: string) => Promise<void>;
 }) {
@@ -2222,6 +2229,10 @@ function EditSessionModal({
   );
   const [status, setStatus] = useState<SessionStatus>("present");
   const [notes, setNotes] = useState("");
+  // Der Stand des Blocks, den der Dialog zeigt (ADR 0311): gesetzt mit den
+  // Feldern beim Öffnen, gesendet mit der Korrektur.
+  const [readVersion, setReadVersion] = useState("");
+  const refusals = useApiErrorDisplay();
   const [saving, setSaving] = useState(false);
 
   // Absence state. absType is an option value, not an AbsenceType: it also
@@ -2281,6 +2292,7 @@ function EditSessionModal({
       setBreakMins(session.breakMinutes.toString());
       setStatus(session.status);
       setNotes("");
+      setReadVersion(session.version);
 
       // Initialize per-break durations
       if (session.breaks.length > 0) {
@@ -2441,6 +2453,7 @@ function EditSessionModal({
             status,
             notes: notes || undefined,
             breaks: changedBreaks.length > 0 ? changedBreaks : undefined,
+            expectedVersion: readVersion,
           });
         } else {
           await onSave(session.id, {
@@ -2449,6 +2462,7 @@ function EditSessionModal({
             breakMinutes: editedBreak,
             status,
             notes: notes || undefined,
+            expectedVersion: readVersion,
           });
         }
         if (op.isCurrent()) onClose();
@@ -2459,6 +2473,16 @@ function EditSessionModal({
         });
         // Protokolliert; eine späte Ablehnung zeigt kein neuerer Vorgang.
         if (!op.isCurrent()) return;
+        if (isReadStateRefusal(err)) {
+          // Der Block hat sich inzwischen geändert: Der Dialog schließt,
+          // die Ansicht zeigt den gespeicherten Stand mit der Meldung.
+          onClose();
+          await refusals.show(err, {
+            object: "die Arbeitszeit",
+            reload: onReload,
+          });
+          return;
+        }
         // No retry link: the handlers live below the early returns, so a
         // latest-ref is not possible; „Speichern“ resends the current draft.
         await formErrors.show(err, { object: "die Arbeitszeit" });
@@ -2931,14 +2955,7 @@ function CreateAbsenceModal({
 }: {
   readonly isOpen: boolean;
   readonly onClose: () => void;
-  readonly onSave: (req: {
-    absence_type: string;
-    absence_type_id: string | null;
-    date_start: string;
-    date_end: string;
-    half_day?: boolean;
-    note?: string;
-  }) => Promise<void>;
+  readonly onSave: (req: CreateAbsenceRequest) => Promise<void>;
   /** Gates the "Name hinzufügen" affordance on time_tracking:manage (#2403). */
   readonly canManageAbsenceTypes: boolean;
 }) {
@@ -3262,6 +3279,8 @@ function TimeTrackingContent() {
     session: WorkSessionHistory | null;
     absence: StaffAbsence | null;
     laborDay?: WorkDayLaborHint;
+    /** Die Lesung, aus der der Block stammt (ADR 0311, Regel 6). */
+    reloadDay: () => Promise<unknown>;
   } | null>(null);
   const [absenceModalOpen, setAbsenceModalOpen] = useState(false);
   const handleCloseEditModal = useCallback(() => setEditModal(null), []);
@@ -3900,9 +3919,11 @@ function TimeTrackingContent() {
         status?: SessionStatus;
         notes?: string;
         breaks?: Array<{ id: string; durationMinutes: number }>;
+        expectedVersion: string;
       },
     ) => {
       await timeTrackingService.updateSession(id, {
+        expectedVersion: updates.expectedVersion,
         checkInTime: updates.checkInTime,
         checkOutTime: updates.checkOutTime,
         breakMinutes: updates.breakMinutes,
@@ -3921,14 +3942,7 @@ function TimeTrackingContent() {
   );
 
   const handleCreateAbsence = useCallback(
-    async (req: {
-      absence_type: string;
-      absence_type_id: string | null;
-      date_start: string;
-      date_end: string;
-      half_day?: boolean;
-      note?: string;
-    }) => {
+    async (req: CreateAbsenceRequest) => {
       const created = await timeTrackingService.createAbsence({
         absence_type: req.absence_type,
         absence_type_id: req.absence_type_id,
@@ -3963,17 +3977,7 @@ function TimeTrackingContent() {
   );
 
   const handleUpdateAbsence = useCallback(
-    async (
-      id: string,
-      req: {
-        absence_type?: string;
-        absence_type_id?: string | null;
-        date_start?: string;
-        date_end?: string;
-        half_day?: boolean;
-        note?: string;
-      },
-    ) => {
+    async (id: string, req: UpdateAbsenceRequest) => {
       await timeTrackingService.updateAbsence(id, req);
       await Promise.all([mutateAbsences(), refreshTableData()]);
       // Eine eigene Art mit Kontingent ändert die Kontingente (#4971).
@@ -4090,6 +4094,17 @@ function TimeTrackingContent() {
             session={editModal?.session ?? null}
             date={editModal?.date ?? null}
             onSave={handleEditSave}
+            // Nach einer Ablehnung: die Tabelle, aus der der Block stammt,
+            // lehnt ab, wenn sie nicht neu lädt; die übrigen Ansichten
+            // laden mit.
+            onReload={() =>
+              Promise.all([
+                editModal?.reloadDay(),
+                mutateCurrentSession(),
+                mutateHistory(),
+                refreshTableData(),
+              ])
+            }
             absence={editModal?.absence ?? null}
             onUpdateAbsence={handleUpdateAbsence}
             onDeleteAbsence={handleDeleteAbsence}
@@ -4318,8 +4333,8 @@ function TimeTrackingContent() {
             ? tenantPath(workTimeModelPath(ownStaffId))
             : undefined
         }
-        onEditDay={(date, session, absence, laborDay) =>
-          setEditModal({ date, session, absence, laborDay })
+        onEditDay={(date, session, absence, laborDay, reloadDay) =>
+          setEditModal({ date, session, absence, laborDay, reloadDay })
         }
       />
     </TenantPage>

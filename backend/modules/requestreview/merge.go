@@ -2,7 +2,8 @@ package requestreview
 
 import (
 	"context"
-	"strconv"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const (
@@ -39,8 +40,7 @@ func newItem(row *Row) Item {
 	item := Item{
 		RequestType:              row.Type,
 		OccurredAt:               row.SortTime,
-		StudentID:                strconv.FormatInt(row.StudentID, 10),
-		studentID:                row.StudentID,
+		StudentID:                ident.ID(row.StudentID),
 		submittedBy:              row.SubmittedBy,
 		StudentName:              row.StudentName,
 		ExpectedVersion:          row.Version,
@@ -53,8 +53,7 @@ func newItem(row *Row) Item {
 		CurrentValueChanged:      row.CurrentValueChanged,
 		CurrentStatusByDate:      row.CurrentStatusByDate,
 		PartialAbsenceFromByDate: row.PartialAbsenceFromByDate,
-		CanCorrect:               row.CanCorrect,
-		Data:                     row.Payload.value(),
+		canCorrect:               row.CanCorrect,
 		MasterData:               row.Payload.MasterData,
 		CareSchedule:             row.Payload.CareSchedule,
 		Offering:                 row.Payload.Offering,

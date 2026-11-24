@@ -4,7 +4,7 @@ import { defineEntityConfig } from "@/lib/database/types";
 import { CatalogColorField } from "@/components/database/catalog-color-field";
 import { mapRoomResponse, prepareRoomForBackend } from "@/lib/room-helpers";
 import type { Room } from "@/lib/room-helpers";
-import type { RoomResponse } from "~/lib/contract/rooms.generated";
+import { bffJson } from "~/lib/bff-fetch";
 import { roomsConcept } from "~/lib/concepts/rooms";
 
 export const roomsConfig = defineEntityConfig<Room>({
@@ -18,16 +18,36 @@ export const roomsConfig = defineEntityConfig<Room>({
   backUrl: "/database",
 
   api: {
-    routes: {
-      list: "GET /api/rooms/",
-      get: "GET /api/rooms/{id}",
-      create: "POST /api/rooms/",
-      update: "PUT /api/rooms/{id}",
-      delete: "DELETE /api/rooms/{id}",
+    list: async () => {
+      // Admin view keeps showing system rooms (Schulhof, WC) — they are
+      // rendered greyed-out via isSystemRoom instead of hidden.
+      const page = await bffJson("tenant", "GET /api/rooms/", {
+        query: { include_system: true },
+      });
+      return {
+        data: page.data.map(mapRoomResponse),
+        pagination: page.pagination,
+      };
     },
-    // Admin view keeps showing system rooms (Schulhof, WC) — they are
-    // rendered greyed-out via isSystemRoom instead of hidden.
-    listParams: { include_system: "true" },
+    get: async (id) =>
+      mapRoomResponse(
+        await bffJson("tenant", "GET /api/rooms/{id}", { params: { id } }),
+      ),
+    create: async (data) =>
+      mapRoomResponse(
+        await bffJson("tenant", "POST /api/rooms/", {
+          body: prepareRoomForBackend(data),
+        }),
+      ),
+    update: async (id, data) =>
+      mapRoomResponse(
+        await bffJson("tenant", "PUT /api/rooms/{id}", {
+          params: { id },
+          body: prepareRoomForBackend(data),
+        }),
+      ),
+    // Kein `delete`: ein Raum wird nur über RoomRemovalModal entfernt, das
+    // den Fingerabdruck seiner Vorschau mitschickt (ADR 0311).
   },
 
   form: {
@@ -231,12 +251,6 @@ export const roomsConfig = defineEntityConfig<Room>({
         },
       },
     },
-  },
-
-  service: {
-    mapResponse: (data: unknown) => mapRoomResponse(data as RoomResponse),
-    mapRequest: (data: Partial<Room>) =>
-      prepareRoomForBackend(data) as Record<string, unknown>,
   },
 
   labels: {

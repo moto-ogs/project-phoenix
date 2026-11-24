@@ -42,6 +42,12 @@ export const tenantDailyKeys = {
       from,
       template,
     }),
+  /**
+   * Ein eigener Termin, wie ihn das Ändern-Formular liest und speichert
+   * (ADR 0311): mit seiner Version.
+   */
+  staffAppointmentDetail: (appointmentId: string) =>
+    `staff-appointment-detail-${encodeURIComponent(appointmentId)}`,
   /** Was aus den E-Mails eines Termins an die Eltern wurde (#7058). */
   appointmentMails: (appointmentId: string) =>
     `calendar-appointment-mails-${encodeURIComponent(appointmentId)}`,

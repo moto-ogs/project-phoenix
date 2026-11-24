@@ -64,7 +64,7 @@ func TestTraegerOfferingStatementsKeepTheirTraegerBeneathRLS(t *testing.T) {
 		assert.Empty(t, offerings, "A lists no offering of B")
 		_, err = store.TraegerOffering(ctx, own, foreignOffering)
 		assert.ErrorIs(t, err, careplan.ErrTraegerOfferingNotFound, "A reads no offering of B")
-		_, err = store.UpdateTraegerOffering(ctx, own, foreignOffering, traegerOfferingDraft("Übernommen", 10))
+		_, err = store.UpdateTraegerOffering(ctx, own, foreignOffering, "any", traegerOfferingDraft("Übernommen", 10))
 		assert.ErrorIs(t, err, careplan.ErrTraegerOfferingNotFound, "A changes no offering of B")
 		_, err = store.WithdrawTraegerOffering(ctx, own, foreignOffering)
 		assert.ErrorIs(t, err, careplan.ErrTraegerOfferingNotFound, "A withdraws no offering of B")
@@ -138,9 +138,9 @@ func TestTraegerOfferingDraftFollowsTheCatalogRules(t *testing.T) {
 		released, err = offerings.ReleaseTraegerOfferings(ctx, own, phase, 0)
 		require.NoError(t, err)
 		assert.Equal(t, 1, *released[0].ReleasedVersion, "an unchanged draft writes no version")
-		_, err = offerings.WithdrawTraegerOffering(ctx, own, created.ID.Int64())
+		withdrawn, err := offerings.WithdrawTraegerOffering(ctx, own, created.ID.Int64())
 		require.NoError(t, err)
-		_, err = offerings.UpdateTraegerOffering(ctx, own, created.ID.Int64(), traegerOfferingDraft("Neu", 20))
+		_, err = offerings.UpdateTraegerOffering(ctx, own, created.ID.Int64(), withdrawn.Version, traegerOfferingDraft("Neu", 20))
 		assert.ErrorIs(t, err, careplan.ErrTraegerOfferingWithdrawn)
 		return nil
 	}))
@@ -181,7 +181,7 @@ func TestTraegerOfferingCopyKeepsTheSchoolsChanges(t *testing.T) {
 		capacity := 25
 		offering.Capacity = &capacity
 		offering.IsActive = false
-		_, err = catalog.UpdateOffering(ctx, offering)
+		_, err = catalog.UpdateOffering(ctx, offering, offering.Version)
 		return err
 	})
 
@@ -305,7 +305,9 @@ func TestTraegerOfferingOutcomesAreBatchedAndKeepAppliedTerms(t *testing.T) {
 			require.NoError(t, offerings.RecordTraegerOfferingOutcomes(ctx, own, map[int64][]careplan.TraegerOfferingOutcome{id: {{SchoolID: school, Outcome: "rejected"}}}), "a financial refusal keeps the prior baseline")
 			changed := traegerOfferingDraft("New terms", 30)
 			changed.Prices[0].MonthlyCents = 1800
-			_, err = offerings.UpdateTraegerOffering(ctx, own, id, changed)
+			stored, err := offerings.TraegerOffering(ctx, own, id)
+			require.NoError(t, err)
+			_, err = offerings.UpdateTraegerOffering(ctx, own, id, stored.Version, changed)
 			require.NoError(t, err)
 		}
 		_, err := offerings.ReleaseTraegerOfferings(ctx, own, phase, 0)
@@ -366,7 +368,7 @@ func TestTraegerOfferingBatchKeepsDeviationsAndBookedWithdrawals(t *testing.T) {
 		}
 		capacity := 25
 		row.Capacity, row.IsActive = &capacity, false
-		_, err = catalog.UpdateOffering(ctx, row)
+		_, err = catalog.UpdateOffering(ctx, row, row.Version)
 		return err
 	}))
 	for index := range inputs {
@@ -430,7 +432,7 @@ func TestTraegerOfferingBatchPrunesWithdrawnAutomaticTriggers(t *testing.T) {
 			return err
 		}
 		row.AutoAddTriggerOfferingIDs = []int64{copies[first]}
-		_, err = catalog.UpdateOffering(ctx, row)
+		_, err = catalog.UpdateOffering(ctx, row, row.Version)
 		return err
 	}))
 	require.NoError(t, fixtureEnrollmentCommand(ctx, func(ctx context.Context) error {
@@ -463,13 +465,17 @@ func TestTraegerOfferingRefusesRemovalOfReleasedFinancialTerms(t *testing.T) {
 		if err != nil {
 			return err
 		}
+		released, err := offerings.TraegerOffering(ctx, own, created.ID.Int64())
+		if err != nil {
+			return err
+		}
 		withoutPrices := draft
 		withoutPrices.Prices = nil
-		_, err = offerings.UpdateTraegerOffering(ctx, own, created.ID.Int64(), withoutPrices)
+		_, err = offerings.UpdateTraegerOffering(ctx, own, created.ID.Int64(), released.Version, withoutPrices)
 		assert.ErrorIs(t, err, careplan.ErrCareOfferingConfigInvalid, "released prices cannot disappear silently")
 		withoutTemplate := draft
 		withoutTemplate.ContractTemplate = nil
-		_, err = offerings.UpdateTraegerOffering(ctx, own, created.ID.Int64(), withoutTemplate)
+		_, err = offerings.UpdateTraegerOffering(ctx, own, created.ID.Int64(), released.Version, withoutTemplate)
 		assert.ErrorIs(t, err, careplan.ErrCareOfferingConfigInvalid, "released templates cannot disappear silently")
 		return nil
 	}))

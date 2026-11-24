@@ -1,6 +1,6 @@
 // lib/meal-plan-api.ts
-// API client for the meal plan (Essensplan). Staff read a week, upsert a day,
-// and delete a day; the feature is gated per tenant by the backend.
+// API client for the meal plan (Essensplan). Staff read a week and replace a
+// day; the feature is gated per tenant by the backend.
 
 import type * as wire from "~/lib/contract/meal-plan.generated";
 import { ApiError } from "./api-error";
@@ -17,13 +17,22 @@ import {
 const logger = createLogger({ component: "MealPlanAPI" });
 
 /** One dish on a day of the meal plan as used by the UI. */
-export interface MealPlanEntry {
-  date: string; // YYYY-MM-DD
-  position: number;
+export interface MealPlanDish {
   dish: string;
   note: string | null;
   /** Codes of the main allergens, in legend order; empty when unmarked. */
   allergens: MealAllergen[];
+}
+
+/**
+ * One weekday of the meal plan as stored. `version` is the server's token of
+ * the day's dishes (ADR 0311); a save of the day sends it back. An empty day
+ * has one too.
+ */
+export interface MealPlanDay {
+  date: string; // YYYY-MM-DD
+  version: string;
+  dishes: MealPlanDish[];
 }
 
 /** One dish in a day submission. */
@@ -63,35 +72,48 @@ export interface WeeklyMealList {
   }>;
 }
 
-function mapEntry(entry: wire.MealPlanWeekEntryResponse): MealPlanEntry {
+function mapDay(day: wire.MealPlanDayResponse): MealPlanDay {
   return {
-    date: entry.date,
-    position: entry.position,
-    dish: entry.dish,
-    note: entry.note?.trim() ? entry.note : null,
-    allergens: normalizeMealAllergens(entry.allergens),
+    date: day.date,
+    version: day.version,
+    dishes: (day.dishes ?? []).map((dish) => ({
+      dish: dish.dish,
+      note: dish.note?.trim() ? dish.note : null,
+      allergens: normalizeMealAllergens(dish.allergens),
+    })),
   };
 }
 
-/** Fetch the Monday-Friday entries for the week containing weekStart (ISO). */
+/** Fetch Monday to Friday of the week containing weekStart (ISO). */
 export async function getMealPlanWeek(
   weekStart: string,
-): Promise<MealPlanEntry[]> {
-  const entries = await bffJson("tenant", "GET /api/meal-plan/", {
+): Promise<MealPlanDay[]> {
+  const days = await bffJson("tenant", "GET /api/meal-plan/days", {
     query: { week_start: weekStart },
     errorMessage: "meal plan load failed",
   });
-  return entries.map(mapEntry);
+  return days.map(mapDay);
 }
 
-/** Replace all dishes for one day (empty list clears the day). */
-export async function setDay(date: string, dishes: DishInput[]): Promise<void> {
+/**
+ * Replace all dishes for one day (empty list clears the day) and answer the
+ * day as stored, with its new version. `expectedVersion` is the version of
+ * the day as this page read it: when someone stored it differently since,
+ * the backend refuses the save with `general.changed_since_read` instead of
+ * overwriting their change.
+ */
+export async function setDay(
+  date: string,
+  dishes: DishInput[],
+  expectedVersion: string,
+): Promise<MealPlanDay> {
   try {
-    await bffJson("tenant", "PUT /api/meal-plan/{date}", {
+    const day = await bffJson("tenant", "PUT /api/meal-plan/days/{date}", {
       params: { date },
-      body: { dishes },
+      body: { dishes, expected_version: expectedVersion },
       errorMessage: "meal plan day save failed",
     });
+    return mapDay(day);
   } catch (error) {
     logger.error("meal_set_day_failed", {
       status: error instanceof ApiError ? error.status : undefined,
@@ -131,10 +153,15 @@ export async function getDailyMealParticipants(
   };
 }
 
-/** A child's regular meal days as the school sees them (#3873). */
+/**
+ * A child's regular meal days as the school sees them (#3873). `version` is
+ * the server's token of the stored regular days (ADR 0311); a change of them
+ * sends it back.
+ */
 export interface ChildMealSchedule {
   weekdays: number[];
   effectiveFrom: string | null;
+  version: string;
 }
 
 export async function getChildMealSchedule(
@@ -153,6 +180,7 @@ export async function getChildMealSchedule(
   return {
     weekdays: schedule.weekdays ?? [],
     effectiveFrom: schedule.effective_from ?? null,
+    version: schedule.version,
   };
 }
 
@@ -185,18 +213,26 @@ export async function clearChildMealDay(
   );
 }
 
-/** The school sets a child's regular days from a day on. */
+/**
+ * The school sets a child's regular days from a day on, against the
+ * `version` of the regular days it read.
+ */
 export async function replaceChildMealSchedule(
   studentId: string,
   weekdays: number[],
   effectiveFrom: string,
+  expectedVersion: string,
 ): Promise<void> {
   await bffJson(
     "tenant",
     "PUT /api/meal-plan/participation/{studentId}/schedule",
     {
       params: { studentId },
-      body: { weekdays, effective_from: effectiveFrom },
+      body: {
+        weekdays,
+        effective_from: effectiveFrom,
+        expected_version: expectedVersion,
+      },
       errorMessage: "meal schedule change failed",
     },
   );

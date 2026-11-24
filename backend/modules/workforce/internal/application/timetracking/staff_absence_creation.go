@@ -124,6 +124,9 @@ func (s *staffAbsenceService) CreateAbsenceFor(ctx context.Context, subjectStaff
 	if err != nil {
 		return nil, err
 	}
+	if err := s.confirmCompTimeOverdraft(ctx, subjectStaffID, dateStart, dateEnd, req); err != nil {
+		return nil, err
+	}
 	resp, err := s.storeAbsence(ctx, subjectStaffID, createdByStaffID, selectedType, dateStart, dateEnd, req)
 	if err != nil {
 		return nil, err

@@ -13,13 +13,16 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FieldLabel } from "~/components/ui/field-label";
 import { FormModal } from "~/components/ui/form-modal";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   type BillingService,
   type BillingTerms,
@@ -65,20 +68,37 @@ export function parseDueDays(value: string): number | null {
   return days <= MAX_DUE_DAYS ? days : null;
 }
 
+interface TermsDraft {
+  /** null: the stored method is one this build does not know. */
+  readonly method: PaymentMethod | null;
+  readonly days: string;
+  readonly bundleWith: string;
+}
+
+function termsDraft(terms: ServiceTerms): TermsDraft {
+  return {
+    method: terms.paymentMethod ?? null,
+    days: String(terms.dueDays),
+    bundleWith: terms.bundleWith,
+  };
+}
+
 function ServiceTermsModal({
   row,
+  data,
+  reload,
   onClose,
   onSaved,
 }: Readonly<{
   /** The service to change; null keeps the dialog closed. */
   row: TermsRow | null;
+  /** The stored terms as the card shows them. */
+  data: BillingTerms;
+  /** Reads the terms again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<BillingTerms>;
   onClose: () => void;
   onSaved: (data: BillingTerms) => void;
 }>) {
-  // null: the stored method is one this build does not know.
-  const [method, setMethod] = useState<PaymentMethod | null>("transfer");
-  const [days, setDays] = useState("14");
-  const [bundleWith, setBundleWith] = useState("");
   const save = useFormModalPending(row !== null);
   const saving = save.pending;
   const formRef = useRef<HTMLFormElement>(null);
@@ -87,19 +107,49 @@ function ServiceTermsModal({
   const { success } = useToast();
 
   useEffect(() => {
-    if (!row) return;
-    setMethod(row.terms.paymentMethod ?? null);
-    setDays(String(row.terms.dueDays));
-    setBundleWith(row.terms.bundleWith);
-    clearErrors();
+    if (row) clearErrors();
   }, [row, clearErrors]);
 
   const service: BillingService = row?.terms.service ?? "care";
   const label = BILLING_SERVICE_LABELS[service];
+  const termsOf = (read: BillingTerms) =>
+    read.terms.find((entry) => entry.service === service);
+
+  // The terms rest on the ones read (ADR 0311): a newer read refills the
+  // form only while untouched, the save sends their version, and after a
+  // refusal the stored terms show.
+  const edit = useDraftOn<ServiceTerms, TermsDraft, string, ServiceTerms>(
+    {
+      opening: row ? service : null,
+      data: termsOf(data),
+      reload: async () => {
+        const found = termsOf(await reload());
+        if (!found) throw new Error("service terms are gone");
+        return found;
+      },
+    },
+    {
+      token: (terms) => terms.version,
+      toDraft: termsDraft,
+      answer: (saved) => saved,
+    },
+  );
+  const form = useReadDraftForm(edit, formErrors, "die Zahlung");
+  const draft = edit.draft ?? (row ? termsDraft(row.terms) : null);
+  const method = draft?.method ?? null;
+  const days = draft?.days ?? "";
+  const bundleWith = draft?.bundleWith ?? "";
+  const setMethod = (next: PaymentMethod | null) =>
+    edit.setDraft((current) => ({ ...current, method: next }));
+  const setDays = (next: string) =>
+    edit.setDraft((current) => ({ ...current, days: next }));
+  const setBundleWith = (next: string) =>
+    edit.setDraft((current) => ({ ...current, bundleWith: next }));
 
   const submit = async () => {
-    if (!row) return;
-    formErrors.clear();
+    // Enter submits too: nothing goes out before the stored terms are
+    // read, and the shown error stays.
+    if (!row || !form.begin()) return;
     const dueDays = parseDueDays(days);
     if (dueDays === null) {
       formErrors.invalid("Bitte prüfe deine Angaben.", {
@@ -112,21 +162,38 @@ function ServiceTermsModal({
       return;
     }
     await save.run(async (op) => {
-      try {
-        const saved = await saveServiceTerms(service, {
-          paymentMethod: method,
-          dueDays,
-          bundleWith: row.options.length > 0 ? bundleWith : "",
-        });
+      let saved: BillingTerms | undefined;
+      const result = await edit.submit(async (version) => {
+        saved = await saveServiceTerms(
+          service,
+          {
+            paymentMethod: method,
+            dueDays,
+            bundleWith: row.options.length > 0 ? bundleWith : "",
+          },
+          version,
+        );
+        return termsOf(saved) ?? row.terms;
+      });
+      if (result.ok && saved) {
         success(`Die Zahlung für „${label}“ ist gespeichert.`);
         if (op.isCurrent()) onSaved(saved);
-      } catch (err) {
-        logger.error("billing_terms_save_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!op.isCurrent()) return;
-        void formErrors.show(err, { object: "die Zahlung" });
+        return;
       }
+      if (result.ok) return;
+      logger.error("billing_terms_save_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      if (!op.isCurrent()) return;
+      // Changed since it was read: `reload` shows the stored terms instead
+      // of the draft, without a retry (ADR 0311).
+      void formErrors.show(result.error, {
+        object: "die Zahlung",
+        reload: result.reload,
+      });
     });
   };
 
@@ -156,6 +223,7 @@ function ServiceTermsModal({
           void submit();
         }}
       >
+        <LoadErrorAlert error={form.loadError} />
         <div className="space-y-2">
           <FieldLabel>Zahlungsweg</FieldLabel>
           <SegmentedControl
@@ -232,9 +300,18 @@ function ServiceTermsModal({
 export function BillingTermsCard({
   data,
   onChanged,
+  reload,
+  write,
 }: Readonly<{
   data: BillingTerms;
   onChanged: () => Promise<unknown>;
+  /** Reads the terms again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<BillingTerms>;
+  /**
+   * Hands the terms a save answered to the read (ADR 0311, rule 5): the
+   * next change sends their version even when reading all defaults fails.
+   */
+  write: (terms: BillingTerms) => Promise<unknown>;
 }>) {
   const [editing, setEditing] = useState<TermsRow | null>(null);
   const rows = rowsOf(data);
@@ -309,9 +386,12 @@ export function BillingTermsCard({
       />
       <ServiceTermsModal
         row={editing}
+        data={data}
+        reload={reload}
         onClose={() => setEditing(null)}
-        onSaved={() => {
+        onSaved={(saved) => {
           setEditing(null);
+          void write(saved);
           void onChanged();
         }}
       />

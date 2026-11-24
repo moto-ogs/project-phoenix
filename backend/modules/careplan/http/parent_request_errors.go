@@ -18,14 +18,8 @@ import (
 // Per-route tables prepend their own domain sentinels and then append these,
 // so one sentinel can never render two different codes on two routes.
 var parentRequestSharedRules = []common.ErrorRule{
-	{Target: parentrequests.ErrStale, Render: func(err error) render.Renderer {
-		return common.ErrorConflictWithCode(err, common.CodeStudentsChangeRequestStale)
-	}},
 	// The Care Plan excused-absence workflow (#3093) answers with its own
 	// lifecycle sentinels; they render the same wire codes as the shared ones.
-	{Target: excusedrequests.ErrParentRequestStale, Render: func(err error) render.Renderer {
-		return common.ErrorConflictWithCode(err, common.CodeStudentsChangeRequestStale)
-	}},
 	{Target: excusedrequests.ErrParentRequestReasonRequired, Render: func(error) render.Renderer {
 		return common.ErrorInvalidRequestMessageWithCode(
 			"Bitte trage eine Begründung ein.",

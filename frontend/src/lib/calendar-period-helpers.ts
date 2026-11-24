@@ -53,6 +53,8 @@ export interface CalendarPeriod {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  /** Stored state an edit sends back as `expected_version` (ADR 0311). */
+  version?: string;
   /**
    * How many Anmeldephasen reference this period (advisory). Optional so
    * fixtures and older callers stay valid; mapPeriod always sets it.
@@ -89,6 +91,7 @@ export function mapPeriod(raw: CalendarPeriodResponse): CalendarPeriod {
     isActive: raw.is_active,
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
+    version: raw.version,
     enrollmentPhaseCount: raw.enrollment_phase_count,
     activityGroupCount: raw.activity_group_count,
     scheduleCount: raw.schedule_count,

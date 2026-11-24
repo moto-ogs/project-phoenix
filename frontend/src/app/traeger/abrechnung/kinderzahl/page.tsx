@@ -177,6 +177,7 @@ export default function TraegerKinderzahlPage() {
     loading,
     error: loadError,
     mutate,
+    reloadOrThrow,
   } = useTraegerResource(
     traegerBillingKeys.childCounts(),
     fetchFamilyChildren,
@@ -391,6 +392,8 @@ export default function TraegerKinderzahlPage() {
         <>
           <FamilyChildrenModal
             family={checking}
+            data={data}
+            reload={reloadOrThrow}
             onClose={() => setChecking(null)}
             onSaved={(next) => {
               void mutate(next, { revalidate: false });

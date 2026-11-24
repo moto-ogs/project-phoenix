@@ -1,14 +1,15 @@
 package careplanhttp
 
 import (
-	json "encoding/json"
 	errors "errors"
 	http "net/http"
 
 	render "github.com/go-chi/render"
+
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	excusedrequests "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -18,7 +19,7 @@ type DecideExcusedRequestBody struct {
 	Approve *bool  `json:"approve"`
 	Reason  string `json:"reason"`
 	// ExpectedVersion is the expected_version the list emitted for this row.
-	// Empty is accepted (old clients) and skips the check.
+	// An empty or different one is refused with readstate.ErrChanged.
 	ExpectedVersion string `json:"expected_version"`
 	// ReplacePartialAbsences confirms replacing the partial absences on the
 	// requested days with the approved full-day status (#5698).
@@ -53,7 +54,7 @@ func (rs *Resource) decideExcusedAbsenceRequest(w http.ResponseWriter, r *http.R
 		return
 	}
 	var body DecideExcusedRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

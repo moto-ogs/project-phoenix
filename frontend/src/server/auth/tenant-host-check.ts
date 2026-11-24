@@ -48,7 +48,7 @@ export async function sessionTenantMismatchResponse(
   session: ServerSession | null,
 ): Promise<Response | null> {
   const sessionTenantId = session?.user?.tenantId;
-  if (typeof sessionTenantId !== "number") return null;
+  if (sessionTenantId === undefined) return null;
   if (MISMATCH_EXEMPT_PATHS.has(request.nextUrl.pathname)) return null;
 
   const host = getOriginalRequestHost(request);
@@ -88,8 +88,7 @@ export async function sessionTenantMismatchResponse(
     );
   }
 
-  // The session claim is a number, the resolved school a string (#2342).
-  if (hostTenantId === String(sessionTenantId)) return null;
+  if (hostTenantId === sessionTenantId) return null;
 
   return mismatchResponse(request, {
     session_tenant_id: sessionTenantId,

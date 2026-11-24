@@ -69,6 +69,7 @@ func TestAbsenceTypesRouteManagesCustomTypeAllowance(t *testing.T) {
 
 	set := testutil.NewAuthenticatedRequest(t, "PUT", path, map[string]any{
 		"year": 2026, "entitled_days": 2.5, "reason": "Tariflicher Anspruch",
+		"expected_version": readAllowanceVersion(t, router, token, path, 2026),
 	}, testutil.WithJWTBearer(token))
 	saved := testutil.ExecuteRequest(router, set)
 	require.Equal(t, http.StatusOK, saved.Code, saved.Body.String())
@@ -109,6 +110,7 @@ func TestAbsenceTypesRouteCarryoverAndPreview(t *testing.T) {
 	type typeData struct {
 		ID             string  `json:"id"`
 		CarryoverUntil *string `json:"carryover_until"`
+		Version        string  `json:"version"`
 	}
 	decodeType := func(body []byte) typeData {
 		var envelope struct {
@@ -126,7 +128,7 @@ func TestAbsenceTypesRouteCarryoverAndPreview(t *testing.T) {
 	assert.Equal(t, "03-31", *typ.CarryoverUntil)
 
 	invalid := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "PUT", "/"+typ.ID, map[string]any{
-		"carryover_until": "02-29",
+		"carryover_until": "02-29", "expected_version": typ.Version,
 	}, testutil.WithJWTBearer(token)))
 	assert.Equal(t, http.StatusBadRequest, invalid.Code, invalid.Body.String())
 
@@ -134,6 +136,7 @@ func TestAbsenceTypesRouteCarryoverAndPreview(t *testing.T) {
 	for year, days := range map[int]float64{2030: 1, 2031: 1} {
 		saved := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "PUT", path, map[string]any{
 			"year": year, "entitled_days": days, "reason": "Anspruch",
+			"expected_version": readAllowanceVersion(t, router, token, path, year),
 		}, testutil.WithJWTBearer(token)))
 		require.Equal(t, http.StatusOK, saved.Code, saved.Body.String())
 	}
@@ -254,4 +257,20 @@ func setupAbsenceTypesRoute(t *testing.T, clocks ...func() time.Time) (*testpkg.
 	require.NoError(t, err)
 	resource := newAbsenceTypesResource(svc.Administration, userContext.Caller().StaffID)
 	return db, resource.Router()
+}
+
+// readAllowanceVersion reads the claim's token the way the form does: from
+// the summary it shows (ADR 0311).
+func readAllowanceVersion(t *testing.T, router chi.Router, token, path string, year int) string {
+	t.Helper()
+	read := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("%s?year=%d", path, year), nil, testutil.WithJWTBearer(token)))
+	require.Equal(t, http.StatusOK, read.Code, read.Body.String())
+	var envelope struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(read.Body.Bytes(), &envelope))
+	require.NotEmpty(t, envelope.Data.Version)
+	return envelope.Data.Version
 }

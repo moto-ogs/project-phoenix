@@ -1,7 +1,6 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -9,20 +8,21 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
 // GroupThreadChildResponse is one of the guardian's own children a group
 // thread reached. Other families never appear.
 type GroupThreadChildResponse struct {
-	StudentID string `json:"student_id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	StudentID ident.ID `json:"student_id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
 }
 
 // GroupThreadSummaryResponse is one row of the guardian's group thread list.
 type GroupThreadSummaryResponse struct {
-	ID              string                     `json:"id"`
+	ID              ident.ID                   `json:"id"`
 	Title           string                     `json:"title"`
 	TargetLabel     string                     `json:"target_label"`
 	SchoolName      string                     `json:"school_name"`
@@ -41,11 +41,11 @@ type GroupThreadSummaryResponse struct {
 // GroupMessageResponse is one OGS message of a group thread. The sender is
 // always the OGS.
 type GroupMessageResponse struct {
-	ID        string    `json:"id"`
+	ID        ident.ID  `json:"id"`
 	Body      string    `json:"body"`
 	CreatedAt time.Time `json:"created_at"`
 	// Attachments are the photos and files of the message (#6685).
-	Attachments json.RawMessage `json:"attachments,omitempty"`
+	Attachments []messageAttachmentResponse `json:"attachments,omitempty"`
 }
 
 // GroupThreadViewResponse is an opened group thread.
@@ -92,7 +92,7 @@ func (rs *Resource) getGroupThread(w http.ResponseWriter, r *http.Request) {
 		Messages:                   make([]GroupMessageResponse, 0, len(detail.Messages)),
 	}
 	for _, m := range detail.Messages {
-		out.Messages = append(out.Messages, GroupMessageResponse{ID: strconv.FormatInt(m.ID, 10), Body: m.Body, CreatedAt: m.CreatedAt, Attachments: m.Attachments})
+		out.Messages = append(out.Messages, GroupMessageResponse{ID: ident.ID(m.ID), Body: m.Body, CreatedAt: m.CreatedAt, Attachments: toMessageAttachmentResponses(m.Attachments)})
 	}
 	if n := len(detail.Messages); n > 0 {
 		last := detail.Messages[n-1]
@@ -103,14 +103,14 @@ func (rs *Resource) getGroupThread(w http.ResponseWriter, r *http.Request) {
 
 func toGroupThreadSummary(thread parentService.GroupThread, school string, children []*parentService.ChildSummary) GroupThreadSummaryResponse {
 	out := GroupThreadSummaryResponse{
-		ID: strconv.FormatInt(thread.ID, 10), Title: thread.Title, TargetLabel: thread.TargetLabel,
+		ID: ident.ID(thread.ID), Title: thread.Title, TargetLabel: thread.TargetLabel,
 		SchoolName: school, CounterpartName: ogsLabel(school), Closed: thread.ClosedAt != nil,
 		Children: make([]GroupThreadChildResponse, 0, len(children)),
 		Readers:  ParentReadersResponse{School: schoolReaders(parentService.MessageAudienceTeam, nil)},
 	}
 	for _, child := range children {
 		out.Children = append(out.Children, GroupThreadChildResponse{
-			StudentID: strconv.FormatInt(child.StudentID, 10), FirstName: child.FirstName, LastName: child.LastName,
+			StudentID: ident.ID(child.StudentID), FirstName: child.FirstName, LastName: child.LastName,
 		})
 	}
 	return out
@@ -126,11 +126,4 @@ func parseOptionalGroupThreadID(raw string) (int64, error) {
 		return 0, errors.New("invalid group thread ID")
 	}
 	return id, nil
-}
-
-func groupThreadIDString(id *int64) string {
-	if id == nil {
-		return ""
-	}
-	return strconv.FormatInt(*id, 10)
 }

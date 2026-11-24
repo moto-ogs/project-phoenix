@@ -31,6 +31,7 @@ type builder struct {
 	deprecated   map[string]bool
 	identifiers  map[reflect.Type]string
 	readers      map[reflect.Type]string
+	values       map[reflect.Type]string
 	dates        map[reflect.Type]bool
 	instants     map[reflect.Type]bool
 	used         map[string]bool
@@ -43,7 +44,7 @@ func Build(routes []Registration, options Options) (Document, error) {
 		types: map[string]Object{}, names: map[reflect.Type]string{}, requestNames: map[reflect.Type]string{}, enums: map[string]Enum{},
 		enumByType: map[reflect.Type]string{}, enumByField: map[string]string{},
 		deprecated: map[string]bool{}, used: map[string]bool{},
-		identifiers: options.Identifiers, readers: options.Readers,
+		identifiers: options.Identifiers, readers: options.Readers, values: options.Values,
 		dates: map[reflect.Type]bool{dateType: true}, instants: map[reflect.Type]bool{timeType: true},
 	}
 	for _, t := range options.Dates {
@@ -180,6 +181,7 @@ func (b *builder) route(rc Registration, options Options) (Route, error) {
 		File: rc.File, Multipart: rc.Multipart, TooLargeCode: rc.TooLargeCode, PublicFile: rc.PublicFile, PublicUpload: rc.PublicUpload,
 		FileCache: rc.FileCache, ConditionalGet: rc.ConditionalGet,
 		PrivateCache: rc.PrivateCache, RouteFile: rc.RouteFile, Plain: rc.Plain,
+		BrowserPath: rc.BrowserPath, BrowserMethod: rc.BrowserMethod, BrowserOwnContract: rc.BrowserOwnContract,
 	}
 	where := route.Key()
 	if rc.Method == "" || !strings.HasPrefix(rc.Pattern, "/") {
@@ -233,6 +235,9 @@ func queryParams(params []QueryParam, where string) ([]QueryParam, error) {
 // retryTraits checks the traits that decide what the proxy may repeat or
 // keep: NoCommit on a POST only, PrivateCache on a file of a session portal.
 func retryTraits(rc Registration, where string) error {
+	if rc.Refuses != "" && !rc.Deprecated {
+		return fmt.Errorf("%s: only a Deprecated route names Refuses; a route that stays must answer", where)
+	}
 	if rc.NoCommit != "" && rc.Method != "POST" {
 		return fmt.Errorf("%s: only a POST names NoCommit; a GET commits nothing anyway and a PUT, PATCH or DELETE changes", where)
 	}
@@ -317,6 +322,9 @@ func (b *builder) unused(options Options) error {
 		"variants:": options.QueryVariants,
 		"enum:":     sortedKeys(b.enumByField), "deprecated:": sortedKeys(b.deprecated),
 	}
+	for t := range options.Values {
+		registers["value:"] = append(registers["value:"], t.String())
+	}
 	for t := range options.Readers {
 		registers["reader:"] = append(registers["reader:"], t.String())
 	}
@@ -326,7 +334,7 @@ func (b *builder) unused(options Options) error {
 	for _, t := range options.Instants {
 		registers["instant:"] = append(registers["instant:"], t.String())
 	}
-	labels := map[string]string{"date:": "day type ", "instant:": "instant type ", "variants:": "query variant ", "enum:": "enum field ", "deprecated:": "deprecated field ", "reader:": "reader "}
+	labels := map[string]string{"date:": "day type ", "instant:": "instant type ", "variants:": "query variant ", "enum:": "enum field ", "deprecated:": "deprecated field ", "reader:": "reader ", "value:": "value wrapper "}
 	var stale []string
 	for prefix, keys := range registers {
 		for _, key := range keys {
@@ -348,6 +356,9 @@ func (b *builder) unused(options Options) error {
 func (b *builder) top(zero any, where string, request bool) (Schema, error) {
 	t := reflect.TypeOf(zero)
 	s, err := b.schema(t, where, request)
+	if err == nil {
+		err = checkFreeJSON(s, "", where)
+	}
 	// A registered pointer says the route may answer null: there is no such
 	// object now.
 	s.Nullable = !request && t != nil && t.Kind() == reflect.Pointer
@@ -445,9 +456,18 @@ func (b *builder) named(t reflect.Type, where string, request bool) (Schema, boo
 	if name, ok := b.enumByType[t]; ok {
 		return Schema{Kind: KindEnum, Ref: name}, true, nil
 	}
+	if mode, ok := b.values[t]; ok {
+		b.used["value:"+t.String()] = true
+		if mode == TypedFields {
+			return Schema{}, false, nil
+		}
+		s, err := b.wrapped(t, where, request)
+		s.LegacyJSON = mode == LegacyValue
+		return s, true, err
+	}
 	if request && b.readers[t] == ReadsValue {
 		b.used["reader:"+t.String()] = true
-		s, err := b.wrapped(t, where)
+		s, err := b.wrapped(t, where, request)
 		return s, true, err
 	}
 	if t.Implements(marshalerType) || reflect.PointerTo(t).Implements(marshalerType) {
@@ -464,15 +484,14 @@ func (b *builder) named(t reflect.Type, where string, request bool) (Schema, boo
 	return Schema{}, false, nil
 }
 
-// wrapped is the request value a ReadsValue wrapper reads into its field
-// Value. The wrapper itself tells an absent key from null.
-func (b *builder) wrapped(t reflect.Type, where string) (Schema, error) {
+// wrapped describes the Value of a transparent wrapper.
+func (b *builder) wrapped(t reflect.Type, where string, request bool) (Schema, error) {
 	sf, ok := t.FieldByName("Value")
 	if !ok || t.Kind() != reflect.Struct {
 		return Schema{}, fmt.Errorf("%s: %s reads a value but has no field Value", where, t)
 	}
 	at := where + "." + t.Name() + ".Value"
-	s, err := b.schema(sf.Type, at, true)
+	s, err := b.schema(sf.Type, at, request)
 	if errors.Is(err, errBareInt64) {
 		err = bareInt64(at)
 	}

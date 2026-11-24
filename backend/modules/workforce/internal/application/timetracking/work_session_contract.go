@@ -27,6 +27,10 @@ type SessionUpdateRequest struct {
 	Status       *string               `json:"status"`
 	Notes        *string               `json:"notes"`
 	Breaks       []BreakDurationUpdate `json:"breaks"`
+	// ExpectedVersion is the version of the history row the form showed
+	// (ADR 0311). The routes refuse an omitted one; nil is a write that
+	// showed no row.
+	ExpectedVersion *string `json:"expected_version"`
 }
 
 // AdminCreateSessionRequest is the body for the admin nachtragen flow:
@@ -70,6 +74,8 @@ type SessionResponse struct {
 	// change the rounding made. Both are 0 for an open block.
 	PackUpMinutes   int `json:"pack_up_minutes"`
 	RoundingMinutes int `json:"rounding_minutes"`
+	// Version is the token of the block and its breaks (sessionVersion).
+	Version string `json:"version"`
 }
 
 // MarshalJSON emits the session id as a decimal STRING instead of the model's

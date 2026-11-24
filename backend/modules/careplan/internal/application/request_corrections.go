@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type RequestCorrections struct {
@@ -241,8 +242,8 @@ func validateCareCorrection(request carerequests.Request, version string) error 
 	if request.Status != "approved" && request.Status != "rejected" {
 		return careplan.ErrParentRequestNotDecided
 	}
-	if version != "" && careplan.ParentRequestVersion(request.UpdatedAt) != version {
-		return careplan.ErrParentRequestStale
+	if err := readstate.Check(version, readstate.Of(request.UpdatedAt)); err != nil {
+		return err
 	}
 	if request.RequestKind != "pickup_change" && request.RequestKind != carerequests.KindPickupPermission {
 		return fmt.Errorf("%w: Betreuungszeiten speichern keinen Stand von vor der Entscheidung. Bitte ändere den Wochenplan des Kindes direkt", careplan.ErrParentRequestCorrectionUnsupported)

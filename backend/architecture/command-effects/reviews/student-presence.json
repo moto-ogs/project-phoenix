@@ -1206,50 +1206,6 @@
     },
     {
       "adr": "0067",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.DeleteGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory/compose.Directory.DeleteGuardianPhone; modules/peopledirectory/internal/application/capability_guardians.go:259.  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.DeleteGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Capability.DeleteGuardianPhone; modules/peopledirectory.Capability (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.DeleteGuardianPhone; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.DeleteGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.DeleteGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.DeleteGuardianPhone; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.DeleteGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.DeleteGuardianPhoneRecord",
       "classification": "leaf",
       "effect": "mutation",
@@ -1714,46 +1670,6 @@
       "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.FindGuardianLink; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianLink",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.FindGuardianPhone",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/compose.Directory.FindGuardianPhone; modules/peopledirectory/internal/application/capability_guardians.go:78. May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.FindGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.FindGuardianPhone; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.FindGuardianPhone; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianPhone",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.FindGuardianPhone; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianPhone",
       "target_owner": "people-directory"
     },
     {
@@ -4582,7 +4498,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory/compose.Directory.RenamePerson; modules/peopledirectory/internal/application/capability_account_lifecycle_commands.go:55.  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory/compose.Directory.RenamePerson; modules/peopledirectory/internal/application/capability_account_lifecycle_commands.go:55.  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
       "source_owner": "student-presence",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.RenamePerson",
       "target_owner": "people-directory"
@@ -4593,7 +4509,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Capability.RenamePerson; modules/peopledirectory.Capability (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Capability.RenamePerson; modules/peopledirectory.Capability (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
       "target_owner": "people-directory"
@@ -4604,7 +4520,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.RenamePerson; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.RenamePerson; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
       "target_owner": "people-directory"
@@ -4615,7 +4531,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.RenamePerson; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.RenamePerson; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
       "target_owner": "people-directory"
@@ -5138,50 +5054,6 @@
     },
     {
       "adr": "0067",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetPrimaryGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory/compose.Directory.SetPrimaryGuardianPhone; modules/peopledirectory/internal/application/capability_guardians.go:266.  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetPrimaryGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Capability.SetPrimaryGuardianPhone; modules/peopledirectory.Capability (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.SetPrimaryGuardianPhone; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPrimaryGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPrimaryGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.SetPrimaryGuardianPhone; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPrimaryGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetSchoolDayHint",
       "classification": "leaf",
       "effect": "mutation",
@@ -5530,6 +5402,50 @@
     },
     {
       "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianEntry",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory/compose.Directory.UpdateGuardianEntry; modules/peopledirectory/internal/application/capability_guardians.go.  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Reviewed for #7904: UpdateGuardianEntry saves profile, link and phone list of the staff form in one owner command in the caller's unit against the read version (ADR 0311); it runs the same guarded contact edit, link update and phone writes as the former single routes.",
+      "source_owner": "student-presence",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianEntry",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Capability.UpdateGuardianEntry; modules/peopledirectory.Capability (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Reviewed for #7904: UpdateGuardianEntry saves profile, link and phone list of the staff form in one owner command in the caller's unit against the read version (ADR 0311); it runs the same guarded contact edit, link update and phone writes as the former single routes.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.UpdateGuardianEntry; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Reviewed for #7904: UpdateGuardianEntry saves profile, link and phone list of the staff form in one owner command in the caller's unit against the read version (ADR 0311); it runs the same guarded contact edit, link update and phone writes as the former single routes.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianEntry",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianEntry",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.UpdateGuardianEntry; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Reviewed for #7904: UpdateGuardianEntry saves profile, link and phone list of the staff form in one owner command in the caller's unit against the read version (ADR 0311); it runs the same guarded contact edit, link update and phone writes as the former single routes.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianEntry",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianLink",
       "classification": "leaf",
       "effect": "mutation",
@@ -5614,50 +5530,6 @@
       "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.UpdateGuardianPayment; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPayment",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory/compose.Directory.UpdateGuardianPhone; modules/peopledirectory/internal/application/capability_guardians.go:252.  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Capability.UpdateGuardianPhone; modules/peopledirectory.Capability (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.UpdateGuardianPhone; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.UpdateGuardianPhone; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPhone",
       "target_owner": "people-directory"
     },
     {
@@ -9837,6 +9709,16 @@
       "source_owner": "student-presence",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ChangeClassHandover",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ChangeClassHandover",
+      "reason": "Read-only newly exposed target (#7956, ADR 0311, ADR 0313 Nachtrag): student-presence calls the HandoverChildren function of the class handover command, which Class Day binds to modules/classday/internal/application.classHandover.dialogChildren. It reads Class Day's day projection (Enrollment's day roster, the standing status days, Care Plan's care days and effective pickups) to name the children the handover dialog lists. No write, lock or scope of its own; it runs in the handover's tenant transaction under Student Presence's class and day advisory lock, which it does not take or release.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/classday/internal/application.classHandover.dialogChildren",
+      "target_owner": "class-day-view"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ChangeClassHandover",
@@ -17331,28 +17213,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/http.PrivacyConsentCapability.ListPrivacyConsents",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordPrivacyConsent",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/http.PrivacyConsentCapability.RecordPrivacyConsent",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.RecordPrivacyConsent. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordPrivacyConsent",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/http.PrivacyConsentCapability.RecordPrivacyConsent",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
@@ -25602,6 +25462,16 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.LockClassHandover",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.LockClassHandover",
+      "reason": "Read-only target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.LockClassHandover to run its own advisory lock of the class and day in the caller's tenant transaction. The lock moved out of DeleteClassHandover so the handover's read-state check reads under it (ADR 0311, #7904); no persistent or scope effect.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.LockGroup",
       "classification": "query",
       "effect": "query",
@@ -25657,6 +25527,16 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.LockOpenVisits",
       "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.LockOpenVisits. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.LockPrivacyConsents",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.LockPrivacyConsents",
+      "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.LockPrivacyConsents. It only reads the ambient tenant transaction; the advisory lock it then takes is transaction-scoped and serializes the consent edits of one student (#7904, ADR 0311).",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"

@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   fileAnswer,
+  int64String,
   nullable,
   num,
   object,
@@ -47,7 +48,7 @@ export interface careTimeOverrunRowResponse {
 }
 
 export const careTimeOverrunRowResponseSchema: z.ZodType<careTimeOverrunRowResponse, unknown> = object<careTimeOverrunRowResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
@@ -100,7 +101,7 @@ export interface groupResponse {
 }
 
 export const groupResponseSchema: z.ZodType<groupResponse, unknown> = object<groupResponse>({
-  group_id: str,
+  group_id: int64String,
   name: str,
   student_count: safeInt,
   present_days: safeInt,
@@ -126,11 +127,11 @@ export interface studentResponse {
 }
 
 export const studentResponseSchema: z.ZodType<studentResponse, unknown> = object<studentResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
-  group_id: optional(str),
+  group_id: optional(int64String),
   group_name: str,
   present_days: safeInt,
   sick_days: safeInt,
@@ -152,7 +153,7 @@ export interface roomResponse {
 }
 
 export const roomResponseSchema: z.ZodType<roomResponse, unknown> = object<roomResponse>({
-  room_id: str,
+  room_id: int64String,
   name: str,
   capacity: optional(safeInt),
   days_used: safeInt,
@@ -179,7 +180,7 @@ export interface courseResponse {
 }
 
 export const courseResponseSchema: z.ZodType<courseResponse, unknown> = object<courseResponse>({
-  course_id: str,
+  course_id: int64String,
   name: str,
   category_name: str,
   max_participants: safeInt,
@@ -209,12 +210,12 @@ export interface courseStudentResponse {
 }
 
 export const courseStudentResponseSchema: z.ZodType<courseStudentResponse, unknown> = object<courseStudentResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
   group_name: str,
-  course_id: str,
+  course_id: int64String,
   course_name: str,
   present_days: safeInt,
   absent_days: safeInt,
@@ -376,7 +377,7 @@ export interface studentCareTimesResponse {
 }
 
 export const studentCareTimesResponseSchema: z.ZodType<studentCareTimesResponse, unknown> = object<studentCareTimesResponse>({
-  student_id: str,
+  student_id: int64String,
   from: str,
   to: str,
   data_from: str,
@@ -385,87 +386,72 @@ export const studentCareTimesResponseSchema: z.ZodType<studentCareTimesResponse,
   days: nullable(arr(careTimeDayResponseSchema)),
 });
 
-/** Query of GET /api/statistics/care-time-overruns */
-export interface GetStatisticsCareTimeOverrunsQuery {
-  from?: string;
-  group_id?: string[];
-  school_class?: string[];
-  section?: string[];
-  to?: string;
-}
-
-/** Query of GET /api/statistics/care-time-overruns/export */
-export interface GetStatisticsCareTimeOverrunsExportQuery {
-  format?: "pdf" | "xlsx";
-  from?: string;
-  group_id?: string[];
-  school_class?: string[];
-  section?: string[];
-  to?: string;
-}
-
-/** Query of GET /api/statistics/export */
-export interface GetStatisticsExportQuery {
-  format?: "docx" | "pdf" | "xlsx";
-  from?: string;
-  group_id?: string[];
-  school_class?: string[];
-  section?: string[];
-  to?: string;
-}
-
-/** Query of GET /api/statistics/report */
-export interface GetStatisticsReportQuery {
-  from?: string;
-  group_id?: string[];
-  school_class?: string[];
-  section?: string[];
-  to?: string;
-}
-
-/** Query of GET /api/statistics/students/{id}/care-times */
-export interface GetStatisticsStudentsIdCareTimesQuery {
-  from?: string;
-  group_id?: string[];
-  school_class?: string[];
-  section?: string[];
-  to?: string;
-}
-
 export const routes = {
   "GET /api/statistics/care-time-overruns": {
     method: "GET",
     pattern: "/api/statistics/care-time-overruns",
     portals: ["tenant"],
-    query: ["from", "group_id", "school_class", "section", "to"],
+    query: {
+      "from": { kind: "date" },
+      "group_id": { kind: "string", repeated: true },
+      "school_class": { kind: "string", repeated: true },
+      "section": { kind: "string", repeated: true },
+      "to": { kind: "date" },
+    },
     response: success(careTimeOverrunsResponseSchema),
   },
   "GET /api/statistics/care-time-overruns/export": {
     method: "GET",
     pattern: "/api/statistics/care-time-overruns/export",
     portals: ["tenant"],
-    query: ["format", "from", "group_id", "school_class", "section", "to"],
+    query: {
+      "format": { kind: "string", values: ["pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "group_id": { kind: "string", repeated: true },
+      "school_class": { kind: "string", repeated: true },
+      "section": { kind: "string", repeated: true },
+      "to": { kind: "date" },
+    },
     response: fileAnswer,
   },
   "GET /api/statistics/export": {
     method: "GET",
     pattern: "/api/statistics/export",
     portals: ["tenant"],
-    query: ["format", "from", "group_id", "school_class", "section", "to"],
+    query: {
+      "format": { kind: "string", values: ["docx", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "group_id": { kind: "string", repeated: true },
+      "school_class": { kind: "string", repeated: true },
+      "section": { kind: "string", repeated: true },
+      "to": { kind: "date" },
+    },
     response: fileAnswer,
   },
   "GET /api/statistics/report": {
     method: "GET",
     pattern: "/api/statistics/report",
     portals: ["tenant"],
-    query: ["from", "group_id", "school_class", "section", "to"],
+    query: {
+      "from": { kind: "date" },
+      "group_id": { kind: "string", repeated: true },
+      "school_class": { kind: "string", repeated: true },
+      "section": { kind: "string", repeated: true },
+      "to": { kind: "date" },
+    },
     response: success(reportResponseSchema),
   },
   "GET /api/statistics/students/{id}/care-times": {
     method: "GET",
     pattern: "/api/statistics/students/{id}/care-times",
     portals: ["tenant"],
-    query: ["from", "group_id", "school_class", "section", "to"],
+    query: {
+      "from": { kind: "date" },
+      "group_id": { kind: "string", repeated: true },
+      "school_class": { kind: "string", repeated: true },
+      "section": { kind: "string", repeated: true },
+      "to": { kind: "date" },
+    },
     response: success(studentCareTimesResponseSchema),
   },
 } as const;

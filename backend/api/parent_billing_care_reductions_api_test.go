@@ -72,7 +72,7 @@ type careReductionRunBody struct {
 }
 
 func careRule(kind, name string, schools []int64, extra map[string]any) map[string]any {
-	body := map[string]any{"kind": kind, "name": name, "valid_from": "2029-09-01", "school_ids": schools}
+	body := map[string]any{"kind": kind, "name": name, "valid_from": "2029-09-01", "school_ids": testpkg.IDsOf[testpkg.ID](schools)}
 	for key, value := range extra {
 		body[key] = value
 	}
@@ -98,7 +98,7 @@ func ruleNamed(t *testing.T, set careRuleSetBody, name string) int64 {
 }
 
 func careEvidence(contractID int64, kind string, ruleID *int64) map[string]any {
-	return map[string]any{"contract_id": contractID, "kind": kind, "rule_id": ruleID, "valid_from": careReductionStart,
+	return map[string]any{"contract_id": fmt.Sprint(contractID), "kind": kind, "rule_id": (*wireID)(ruleID), "valid_from": careReductionStart,
 		"evidence": "Einkommensteuerbescheid 2025", "checked_on": "2026-10-01"}
 }
 
@@ -124,7 +124,7 @@ func TestCareReductionsRunTheWholeChainThroughTheRoutes(t *testing.T) {
 	mia := careContract(t, f.db, f.office.organization, school, "Mia", careReductionStart, sjrServices()...)
 	noah := careContract(t, f.db, f.office.organization, school, "Noah", careReductionStart, sjrServices()[0])
 	sameFamily(t, f, noah, mia)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	set := f.saveRule(t, careRule("income_level", "Stufe 2", []int64{school}, map[string]any{"discount_basis_points": 2000}))
@@ -176,7 +176,8 @@ func TestCareReductionsRunTheWholeChainThroughTheRoutes(t *testing.T) {
 	}
 	// A later change of a rule never reaches the issued invoice.
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careRulesPath+"/"+strconv.FormatInt(level, 10),
-		careRule("income_level", "Stufe 2 neu", []int64{school}, map[string]any{"discount_basis_points": 9000}))
+		withVersion(careRule("income_level", "Stufe 2 neu", []int64{school}, map[string]any{"discount_basis_points": 9000}),
+			careRuleVersion(t, f.traeger, f.office.token, level)))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	again := decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
 		careRunPath(int64(run.ID), ""), nil).Body.Bytes())
@@ -209,7 +210,7 @@ func TestCareSiblingRulesPriceScopeAndCount(t *testing.T) {
 	sameFamily(t, f, noah, mia)
 	sameFamily(t, f, lea, mia)
 	for _, school := range []int64{ispringen, birkenfeld} {
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+		rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
 	// Ispringen: the second child pays a fixed 25,00 €. Birkenfeld: 10,00 €
@@ -241,10 +242,10 @@ func TestCareReductionsAreCheckedBeforeTheyAreSaved(t *testing.T) {
 		careRule("sibling", "Zwei", []int64{school}, map[string]any{"sibling_from_child": 2, "discount_basis_points": 5000, "price_cents": 1}),
 		careRule("sibling", "Fremd", []int64{foreign.schools[0]}, map[string]any{"sibling_from_child": 2, "discount_cents": 1}),
 		careRule("sibling", "Zählt fremd", []int64{school}, map[string]any{"sibling_from_child": 2, "discount_cents": 1,
-			"count_school_ids": []int64{foreign.schools[0]}}),
+			"count_school_ids": []string{fmt.Sprint(foreign.schools[0])}}),
 		careRule("single_parent", "Preis", []int64{school}, map[string]any{"price_cents": 100}),
 		careRule("cap", "Ohne Betrag", []int64{school}, nil),
-		{"kind": "sibling", "name": "Mitte", "valid_from": "2029-09-15", "school_ids": []int64{school},
+		{"kind": "sibling", "name": "Mitte", "valid_from": "2029-09-15", "school_ids": []string{fmt.Sprint(school)},
 			"sibling_from_child": 2, "discount_cents": 1},
 	} {
 		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRulesPath, body)
@@ -271,8 +272,8 @@ func TestCareReductionsAreCheckedBeforeTheyAreSaved(t *testing.T) {
 		careEvidence(foreignContract, "single_parent", nil),
 		careEvidence(contract, "income_level", nil),
 		careEvidence(contract, "income_level", &sibling),
-		{"contract_id": contract, "kind": "single_parent", "valid_from": careReductionStart, "evidence": "", "checked_on": "2026-10-01"},
-		{"contract_id": contract, "kind": "single_parent", "valid_from": careReductionStart, "evidence": "Erklärung", "checked_on": "2099-01-01"},
+		{"contract_id": fmt.Sprint(contract), "kind": "single_parent", "valid_from": careReductionStart, "evidence": "", "checked_on": "2026-10-01"},
+		{"contract_id": fmt.Sprint(contract), "kind": "single_parent", "valid_from": careReductionStart, "evidence": "Erklärung", "checked_on": "2099-01-01"},
 	} {
 		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careEvidencesPath, body)
 		assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
@@ -294,14 +295,17 @@ func TestCareReductionsAreCheckedBeforeTheyAreSaved(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.care_rule_in_use")
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careRulesPath+"/"+strconv.FormatInt(level, 10),
-		careRule("single_parent", "Stufe 1", []int64{school}, map[string]any{"discount_cents": 100}))
+		withVersion(careRule("single_parent", "Stufe 1", []int64{school}, map[string]any{"discount_cents": 100}),
+			careRuleVersion(t, f.traeger, f.office.token, level)))
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.care_rule_in_use")
 
 	// The evidence is changed in place and deleted; then its level goes too.
 	evidencePath := careEvidencesPath + "/" + strconv.FormatInt(evidenceOf(t, decodeSchoolPortalData[careEvidenceSetBody](t, created.Body.Bytes()), contract), 10)
 	changed := careEvidence(contract, "single_parent", nil)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, evidencePath, changed)
+	evidenceID := evidenceOf(t, decodeSchoolPortalData[careEvidenceSetBody](t, created.Body.Bytes()), contract)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, evidencePath,
+		withVersion(changed, evidenceVersion(t, f.traeger, f.office.token, evidenceID)))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, []string{"single_parent"}, evidenceKinds(decodeSchoolPortalData[careEvidenceSetBody](t, rec.Body.Bytes()), contract))
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, evidencePath, nil)

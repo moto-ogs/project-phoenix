@@ -26,6 +26,7 @@ type accidentReportAnswer struct {
 	ID             testpkg.ID `json:"id"`
 	StudentID      testpkg.ID `json:"student_id"`
 	Category       string     `json:"category"`
+	Version        string     `json:"version"`
 	AccidentReport struct {
 		Status       string  `json:"status"`
 		SupersedesID *string `json:"supersedes_id"`
@@ -89,12 +90,20 @@ func TestAccidentReportIsRecordedSignedCorrectedAndDeletedThroughTheRoutes(t *te
 	require.Equal(t, http.StatusBadRequest, paper.Code, paper.Body.String())
 	assert.Contains(t, paper.Body.String(), `"code":"files.file_type_not_allowed"`)
 
-	updated := send(http.MethodPut, fmt.Sprintf("%s/%d", base, created.ID), report("Verstauchung"), http.StatusOK)
+	stale := report("Verstauchung")
+	stale["expected_version"] = "2026-01-01T00:00:00Z"
+	rr := authExec(t, tc, testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("%s/%d", base, created.ID), stale), claims, perms)
+	require.Equal(t, http.StatusConflict, rr.Code, "a change on an outdated read is refused. Body: %s", rr.Body.String())
+	assert.Contains(t, rr.Body.String(), `"code":"general.changed_since_read"`)
+	changed := report("Verstauchung")
+	changed["expected_version"] = created.Version
+	updated := send(http.MethodPut, fmt.Sprintf("%s/%d", base, created.ID), changed, http.StatusOK)
+	assert.NotEqual(t, created.Version, updated.Version, "the change answers the new version")
 	assert.Equal(t, created.ID, updated.ID)
 	assert.Equal(t, "Verstauchung", updated.AccidentReport.InjuryKind)
 
 	signed := send(http.MethodPost, fmt.Sprintf("%s/%d/signature", base, created.ID),
-		map[string]any{"method": "drawn", "image_png": accidentSignaturePNG(t)}, http.StatusOK)
+		map[string]any{"method": "drawn", "image_png": accidentSignaturePNG(t), "expected_version": updated.Version}, http.StatusOK)
 	assert.Equal(t, "signed", signed.AccidentReport.Status)
 
 	correction := send(http.MethodPost, fmt.Sprintf("%s/%d/corrections", base, created.ID), report("Prellung"), http.StatusCreated)
@@ -102,7 +111,7 @@ func TestAccidentReportIsRecordedSignedCorrectedAndDeletedThroughTheRoutes(t *te
 	assert.Equal(t, fmt.Sprint(created.ID), *correction.AccidentReport.SupersedesID)
 	assert.Equal(t, "open", correction.AccidentReport.Status)
 
-	rr := authExec(t, tc, testutil.NewRequest(http.MethodDelete, fmt.Sprintf("/%d/documents/%d", child.ID, correction.ID), nil), claims, perms)
+	rr = authExec(t, tc, testutil.NewRequest(http.MethodDelete, fmt.Sprintf("/%d/documents/%d", child.ID, correction.ID), nil), claims, perms)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	var deleted struct {
 		Data struct {
@@ -129,6 +138,7 @@ func TestAccidentReportIsRecordedSignedCorrectedAndDeletedThroughTheRoutes(t *te
 	require.NoError(t, err)
 	_, err = scanPart.Write(imageBytes)
 	require.NoError(t, err)
+	require.NoError(t, scanForm.WriteField("expected_version", paperReport.Version))
 	require.NoError(t, scanForm.Close())
 	scanRequest := testutil.NewRequest(http.MethodPost, fmt.Sprintf("%s/%d/paper-copy", base, paperReport.ID), &scan)
 	scanRequest.Header.Set("Content-Type", scanForm.FormDataContentType())

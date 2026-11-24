@@ -51,6 +51,9 @@ func (s *workSessionService) UpdateSession(ctx context.Context, staffID int64, s
 	if session.StaffID != staffID {
 		return nil, workforce.ErrSessionUpdateNotOwned
 	}
+	if err := s.checkSessionVersion(ctx, session, updates.ExpectedVersion); err != nil {
+		return nil, err
+	}
 
 	if err := s.ensureSelfEditJustified(ctx, session, updates); err != nil {
 		return nil, err
@@ -141,6 +144,9 @@ func (s *workSessionService) UpdateSessionAsAdmin(ctx context.Context, editorSta
 
 	if updates.Notes == nil || strings.TrimSpace(*updates.Notes) == "" {
 		return nil, workforce.ErrAdminSessionNoteRequired
+	}
+	if err := s.checkSessionVersion(ctx, session, updates.ExpectedVersion); err != nil {
+		return nil, err
 	}
 
 	return s.applySessionUpdate(ctx, editorStaffID, session, updates)

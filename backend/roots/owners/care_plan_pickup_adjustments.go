@@ -16,20 +16,25 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// NewPickupAdjustments composes Care Plan's pickup adjustment (#3561) over
-// its owners.
+// NewPickupAdjustments composes Care Plan's pickup adjustment (#3561) and the
+// weekly plan it changes (ADR 0311) over its owners.
 func NewPickupAdjustments(
 	carePlan careplan.Capability, pickupSchedules careplan.PickupScheduleService, arrivalSchedules careplan.ArrivalScheduleService,
 	baselines careplan.PickupBaselineReader, offerings careplan.DirectOfferingAdjustments, settings OfferingChangeSettingsReads,
 	audit peoplePorts.StudentPickupPlanRecorder, students PickupAdjustmentStudentRows, today func() calendar.Date,
-) (careplan.PickupAdjustments, error) {
-	return carePlanCompose.NewPickupAdjustments(carePlanCompose.PickupAdjustmentDependencies{
+) (careplan.PickupAdjustments, careplan.WeeklyPlans, error) {
+	deps := carePlanCompose.PickupAdjustmentDependencies{
 		PickupSchedules: pickupSchedules, ArrivalSchedules: arrivalSchedules, Records: carePlan,
 		Baselines: baselines, Offerings: offerings,
 		Settings: offeringChangeSettings{settingsModule.NewCareBookingValues(settings), settings},
 		Audit:    audit, Students: pickupAdjustmentStudents{students: students},
 		Fingerprint: securityruntime.Fingerprint, Today: today,
-	})
+	}
+	adjustments, err := carePlanCompose.NewPickupAdjustments(deps)
+	if err != nil {
+		return nil, nil, err
+	}
+	return adjustments, adjustments, nil
 }
 
 // pickupAdjustmentStudents locks the People Directory students a pickup

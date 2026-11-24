@@ -32,6 +32,7 @@ import {
 } from "~/lib/hooks/use-swr-load-error";
 import { useDeleteConfirmation } from "~/hooks/useDeleteConfirmation";
 import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
@@ -106,7 +107,7 @@ function ActivitiesPageContent() {
     error: activitiesError,
     mutate: mutateActivities,
   } = useSWRAuth(tenantAdminKeys.activities(), async () => {
-    const data = await service.getList({ page: 1, pageSize: 500 });
+    const data = await service.getList();
     return Array.isArray(data.data) ? data.data : [];
   });
 
@@ -259,13 +260,22 @@ function ActivitiesPageContent() {
       const payload = activitiesConfig.form.transformBeforeSubmit
         ? activitiesConfig.form.transformBeforeSubmit(data)
         : data;
-      await service.update(selectedActivity.id, payload);
+      let saved: Activity | null;
+      try {
+        saved = await service.update(selectedActivity.id, payload);
+      } catch (err) {
+        // Jemand hat die Aktivität seit dem Lesen geändert: das Formular
+        // zeigt den gespeicherten Stand, sobald er gelesen ist (ADR 0311).
+        if (isChangedSinceRead(err)) void reloadDetail();
+        throw err;
+      }
       toastSuccess(
         `Die Aktivität „${data.name ?? selectedActivity.name}“ ist gespeichert.`,
       );
-      // Das Speichern ist gelungen; ein Fehler beim Nachladen des Details
-      // gehört nicht ins Formular.
-      void reloadDetail();
+      // Die Antwort trägt den gespeicherten Stand: ein zweites Speichern
+      // schickt ihn, auch wenn das Nachladen fehlschlägt. Ein Fehler beim
+      // Nachladen gehört nicht ins Formular.
+      void reloadDetail(saved ?? undefined, { revalidate: true });
       setFormResetCounter((current) => current + 1);
       await tenantMutate(tenantAdminKeys.activities());
     },

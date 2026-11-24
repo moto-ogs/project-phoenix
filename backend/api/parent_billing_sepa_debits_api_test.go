@@ -77,7 +77,7 @@ func sepaDebitFixture(t *testing.T, name string) careBillingFixture {
 		(organization_id, label, account_holder, iban, bic, is_default) VALUES (?, 'Beiträge', 'Stadtjugendring Pforzheim e. V.', ?, 'SOLADES1PFO', true)`,
 		f.office.organization, sepaTraegerIBAN)
 	require.NoError(t, err)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(f.office.schools[0], sepaDebitMonth, 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(f.office.schools[0], sepaDebitMonth, 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	setTerms(t, f.traeger, f.office.token, "care", map[string]any{"payment_method": "direct_debit", "due_days": 10})
 	saveCreditor(t, f, map[string]any{"creditor_id": sepaCreditorID, "prenotification_days": 3, "missing_mandate": "transfer"})
@@ -88,7 +88,7 @@ func sepaDebitFixture(t *testing.T, name string) careBillingFixture {
 func releaseDebitRun(t *testing.T, f careBillingFixture, month string) int64 {
 	t.Helper()
 	run := f.startRun(t, month)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, runDueDatesPathOf("care", int64(run.ID)),
+	rec := putRunDueDates(t, f.traeger, f.office.token, "care", int64(run.ID),
 		dueDates(month[:8]+"02", month[:8]+"04"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	preview := f.run(t, int64(run.ID))

@@ -227,11 +227,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/timetable/fixturetest/fromCalendarPeriodRecords.Update",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/timetable/fixturetest/fromCalendarPeriodRecords.UsageCounts",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -907,11 +902,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/timetable/fixturetest/intoCalendarPeriodRecords.Update",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/timetable/fixturetest/intoCalendarPeriodRecords.UsageCounts",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -1058,12 +1048,12 @@
     {
       "decision": "0090",
       "id": "modules/timetable/internal/application/ActivityService.SetCategoryShiftTypeLinks",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending. Re-reviewed with #7997: the method passes the read-state token on unchanged (ADR 0311)."
     },
     {
       "decision": "0090",
       "id": "modules/timetable/internal/application/ActivityService.UpdateCategory",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending. Re-reviewed with #7997: the method passes the read-state token on unchanged (ADR 0311)."
     },
     {
       "decision": "0090",
@@ -1547,11 +1537,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/timetable/internal/application/Service.SetCategoryShiftTypeLinks",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/timetable/internal/application/Service.SetPlanningTrackArchivedAt",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -1748,11 +1733,6 @@
     {
       "decision": "0090",
       "id": "modules/timetable/internal/application/closingDayCalendarRepository.FindByTenantID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/timetable/internal/application/closingDayCalendarRepository.Update",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

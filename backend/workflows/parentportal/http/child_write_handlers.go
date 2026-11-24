@@ -1,17 +1,19 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -36,7 +38,7 @@ type SubmitSickNoteRequest struct {
 	// RecipientGuardianProfileIDs are the co-guardians the family picked for
 	// this request. They travel WITH the creation so the share is written in
 	// the same transaction (#2267); empty shares with nobody.
-	RecipientGuardianProfileIDs []string `json:"recipient_guardian_profile_ids"`
+	RecipientGuardianProfileIDs []ident.ID `json:"recipient_guardian_profile_ids"`
 }
 
 // SickNoteEnvelopeResponse is the answer of the sick-note create: the status
@@ -61,8 +63,8 @@ func pendingSickNoteRequest(result *parentService.SickNoteResult, accountID int6
 // StatusDayResponse mirrors the staff status-day shape but is the
 // parent-facing projection: stringified ids, date as YYYY-MM-DD.
 type StatusDayResponse struct {
-	ID         string    `json:"id"`
-	StudentID  string    `json:"student_id"`
+	ID         ident.ID  `json:"id"`
+	StudentID  ident.ID  `json:"student_id"`
 	Date       string    `json:"date"`
 	Status     string    `json:"status"`
 	ReportedAt time.Time `json:"reported_at"`
@@ -72,8 +74,8 @@ type StatusDayResponse struct {
 
 func toStatusDayResponse(d *parentService.StudentStatusDaySnapshot) StatusDayResponse {
 	return StatusDayResponse{
-		ID:         strconv.FormatInt(d.ID, 10),
-		StudentID:  strconv.FormatInt(d.StudentID, 10),
+		ID:         ident.ID(d.ID),
+		StudentID:  ident.ID(d.StudentID),
 		Date:       d.Date.String(),
 		Status:     d.Status,
 		ReportedAt: d.ReportedAt,
@@ -85,8 +87,8 @@ func toStatusDayResponse(d *parentService.StudentStatusDaySnapshot) StatusDayRes
 // ParentExcusedRequestResponse is the legacy-named parent projection of a
 // pending or recently decided absence approval request.
 type ParentExcusedRequestResponse struct {
-	ID             string     `json:"id"`
-	StudentID      string     `json:"student_id"`
+	ID             ident.ID   `json:"id"`
+	StudentID      ident.ID   `json:"student_id"`
 	AbsenceStatus  string     `json:"absence_status"`
 	Status         string     `json:"status"`
 	Dates          []string   `json:"dates"`
@@ -99,6 +101,9 @@ type ParentExcusedRequestResponse struct {
 	// a non-submitter as not-found), so the UI shows the edit action only for
 	// own requests.
 	IsSelf bool `json:"is_self"`
+	// Version is what an edit of this request sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 func toParentExcusedRequestResponse(req *parentService.ExcusedAbsenceRequestSnapshot, accountID int64) ParentExcusedRequestResponse {
@@ -107,8 +112,8 @@ func toParentExcusedRequestResponse(req *parentService.ExcusedAbsenceRequestSnap
 		dates = append(dates, d.String())
 	}
 	return ParentExcusedRequestResponse{
-		ID:             strconv.FormatInt(req.ID, 10),
-		StudentID:      strconv.FormatInt(req.StudentID, 10),
+		ID:             ident.ID(req.ID),
+		StudentID:      ident.ID(req.StudentID),
 		AbsenceStatus:  req.AbsenceStatus,
 		Status:         req.Status,
 		Dates:          dates,
@@ -117,6 +122,7 @@ func toParentExcusedRequestResponse(req *parentService.ExcusedAbsenceRequestSnap
 		CreatedAt:      req.CreatedAt,
 		ReviewedAt:     req.ReviewedAt,
 		IsSelf:         req.SubmittedBy == accountID,
+		Version:        readstate.Of(req.UpdatedAt),
 	}
 }
 
@@ -134,8 +140,7 @@ func (rs *Resource) submitSickNote(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req SubmitSickNoteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
+	if !decodeCreateBody(w, r, &req) {
 		return
 	}
 
@@ -385,15 +390,26 @@ type MealParticipationResponse struct {
 	ScheduleChangeable bool                           `json:"schedule_changeable"`
 	SickCancels        bool                           `json:"sick_cancels_after_deadline"`
 	Days               []MealParticipationDayResponse `json:"days"`
+	// Version is the read-state token of the child's regular days (ADR
+	// 0311); a change of them sends it back as expected_version.
+	Version string `json:"version"`
 }
 
+// ReplaceMealParticipationRequest replaces the child's regular days.
+// ExpectedVersion is the version of the regular days as read: days changed
+// since, and a change without one, are refused with
+// general.changed_since_read.
 type ReplaceMealParticipationRequest struct {
-	Weekdays []parentService.MealWeekday `json:"weekdays"`
+	Weekdays        []parentService.MealWeekday `json:"weekdays"`
+	ExpectedVersion string                      `json:"expected_version"`
 }
 
-// MealPlanSavedResponse names the day the regular meal plan applies from.
+// MealPlanSavedResponse names the day the regular meal plan applies from
+// and the version of the regular days stored: the next save sends it back
+// as expected_version (ADR 0311).
 type MealPlanSavedResponse struct {
 	EffectiveFrom string `json:"effective_from"`
+	Version       string `json:"version"`
 }
 
 type SetMealParticipationDayRequest struct {
@@ -472,16 +488,16 @@ func (rs *Resource) replaceMealParticipation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	var request ReplaceMealParticipationRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := wire.Decode(r.Body, &request); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid JSON body")))
 		return
 	}
-	effectiveFrom, err := rs.ParentService.ReplaceMealParticipationSchedule(r.Context(), accountID, studentID, request.Weekdays)
+	saved, err := rs.ParentService.ReplaceMealParticipationSchedule(r.Context(), accountID, studentID, request.Weekdays, request.ExpectedVersion)
 	if err != nil {
 		renderParentWriteError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, MealPlanSavedResponse{EffectiveFrom: string(effectiveFrom)}, "Regular meal participation saved")
+	common.Respond(w, r, http.StatusOK, MealPlanSavedResponse{EffectiveFrom: saved.EffectiveFrom, Version: saved.Version}, "Regular meal participation saved")
 }
 
 func (rs *Resource) setMealParticipationDay(w http.ResponseWriter, r *http.Request) {
@@ -499,7 +515,7 @@ func (rs *Resource) setMealParticipationDay(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	var request SetMealParticipationDayRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.Participating == nil {
+	if err := wire.Decode(r.Body, &request); err != nil || request.Participating == nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("participating is required")))
 		return
 	}
@@ -532,7 +548,7 @@ func (rs *Resource) setMealParticipationWeek(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	var request SetMealParticipationDayRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.Participating == nil {
+	if err := wire.Decode(r.Body, &request); err != nil || request.Participating == nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("participating is required")))
 		return
 	}
@@ -573,7 +589,7 @@ func mealParticipationResponse(plan parentService.MealParticipationPlan) MealPar
 			CanRegister: day.CanRegister, CanCancel: day.CanCancel, RegisterUntil: day.RegisterUntil, CancelUntil: day.CancelUntil,
 		})
 	}
-	return MealParticipationResponse{Weekdays: plan.Weekdays, EffectiveFrom: string(plan.EffectiveFrom), CutoffTime: plan.CutoffTime, Model: plan.Model, ScheduleChangeable: plan.ScheduleChangeable, SickCancels: plan.SickCancels, Days: days}
+	return MealParticipationResponse{Weekdays: plan.Weekdays, EffectiveFrom: string(plan.EffectiveFrom), CutoffTime: plan.CutoffTime, Model: plan.Model, ScheduleChangeable: plan.ScheduleChangeable, SickCancels: plan.SickCancels, Days: days, Version: plan.Version}
 }
 
 // --- shared helpers ---

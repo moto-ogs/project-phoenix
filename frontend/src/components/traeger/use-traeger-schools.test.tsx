@@ -20,7 +20,7 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 
-function signIn(id = "A", orgId = 7, scope = "org") {
+function signIn(id = "A", orgId = "7", scope = "org") {
   sessionState.data = {
     user: { id, orgId, scope },
     expires: "2099-01-01",
@@ -81,7 +81,7 @@ describe("shared Träger schools", () => {
       else
         signIn(
           change === "account" ? "B" : "A",
-          change === "organization" ? 8 : 7,
+          change === "organization" ? "8" : "7",
         );
       view.rerender();
       expect(view.result.current.schools).toBeNull();
@@ -91,7 +91,7 @@ describe("shared Träger schools", () => {
   it.each(["tenant", "parent", "school", "platform"])(
     "does not fetch with a %s session",
     async (scope) => {
-      signIn("A", 7, scope);
+      signIn("A", "7", scope);
       const view = renderHook(() => useTraegerSchools(), setup());
       await act(async () => undefined);
       expect(view.result.current.schools).toBeNull();

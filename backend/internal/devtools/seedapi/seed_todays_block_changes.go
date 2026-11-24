@@ -45,6 +45,9 @@ type seedChangeableBlock struct {
 		IsSubstitute bool     `json:"is_substitute"`
 	} `json:"staff"`
 	StudentIDs []ident.ID `json:"student_ids"`
+	// Version is the block's read-state token; the edit sends it back (ADR
+	// 0311).
+	Version string `json:"version"`
 }
 
 func seedTodaysBlockChanges(rt *Runtime, today seedDate, now time.Time) error {
@@ -151,8 +154,8 @@ func moveBlockToday(rt *Runtime, today seedDate, block seedChangeableBlock) erro
 	}
 	body := map[string]any{
 		"date": today.String(), "start_time": clockOf(block.StartTime), "end_time": clockOf(block.EndTime),
-		"title": block.Title, "room_id": to, "activity_group_id": block.ActivityGroupID,
-		"staff_ids": staffIDs, "student_ids": block.StudentIDs,
+		"title": block.Title, "room_id": ident.ID(to), "activity_group_id": block.ActivityGroupID,
+		"staff_ids": ident.IDs(staffIDs), "student_ids": block.StudentIDs, "expected_version": block.Version,
 	}
 	if _, err := rt.Client.Put(fmt.Sprintf("/api/timetable/instances/%d", block.ID), body); err != nil {
 		return fmt.Errorf("move %s today: %w", block.Title, err)

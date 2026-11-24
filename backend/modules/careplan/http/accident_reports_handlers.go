@@ -14,6 +14,8 @@ import (
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	permissions "github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	readstate "github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -53,6 +55,9 @@ type AccidentReportRequest struct {
 	ParentsNotified   string     `json:"parents_notified"`
 	ParentsNotifiedAt *time.Time `json:"parents_notified_at"`
 	Supervisor        string     `json:"supervisor"`
+	// ExpectedVersion is the version of the report the change was made on;
+	// only the change of an open report reads it (ADR 0311).
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind leaves the field rules to Care Plan; only a missing time is refused
@@ -79,6 +84,8 @@ type AccidentSignatureRequest struct {
 	Method    string `json:"method"`
 	ImagePNG  string `json:"image_png"`
 	TypedName string `json:"typed_name"`
+	// ExpectedVersion is the version of the report the signer read.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func (req *AccidentSignatureRequest) Bind(_ *http.Request) error {
@@ -93,8 +100,8 @@ func (req *AccidentSignatureRequest) Bind(_ *http.Request) error {
 type AccidentReportResponse struct {
 	Status            string     `json:"status"`
 	Version           int        `json:"version,omitempty"`
-	SupersedesID      *string    `json:"supersedes_id,omitempty"`
-	SupersededByID    *string    `json:"superseded_by_id,omitempty"`
+	SupersedesID      *ident.ID  `json:"supersedes_id,omitempty"`
+	SupersededByID    *ident.ID  `json:"superseded_by_id,omitempty"`
 	SignedAt          *time.Time `json:"signed_at,omitempty"`
 	SignedDigitally   bool       `json:"signed_digitally"`
 	OccurredAt        time.Time  `json:"occurred_at"`
@@ -118,21 +125,13 @@ func newAccidentReportResponse(doc careplan.CareDocument, version int, supersede
 	}
 	return &AccidentReportResponse{
 		Status: careplan.AccidentReportStatus(doc), Version: version,
-		SupersedesID: idString(doc.AccidentSupersedesID), SupersededByID: idString(supersededBy),
+		SupersedesID: (*ident.ID)(doc.AccidentSupersedesID), SupersededByID: (*ident.ID)(supersededBy),
 		SignedAt: doc.AccidentSignedAt, SignedDigitally: doc.AccidentSignatureID != nil,
 		OccurredAt: report.OccurredAt, Location: report.Location, Description: report.Description,
 		InjuredBodyParts: report.InjuredBodyParts, InjuryKind: report.InjuryKind, Witnesses: report.Witnesses,
 		FirstAid: report.FirstAid, DoctorVisited: report.DoctorVisited, Doctor: report.Doctor,
 		ParentsNotified: report.ParentsNotified, ParentsNotifiedAt: report.ParentsNotifiedAt, Supervisor: report.Supervisor,
 	}
-}
-
-func idString(id *int64) *string {
-	if id == nil {
-		return nil
-	}
-	value := strconv.FormatInt(*id, 10)
-	return &value
 }
 
 // accidentReportVersions numbers each report of the list by its chain of
@@ -242,7 +241,7 @@ func (rs *Resource) updateAccidentReport(w http.ResponseWriter, r *http.Request)
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeStudentsAccidentReportInvalid))
 		return
 	}
-	doc, err := rs.StudentAccidentReports.UpdateStudentAccidentReport(r.Context(), studentID, documentID, req.report(), actor)
+	doc, err := rs.StudentAccidentReports.UpdateStudentAccidentReport(r.Context(), studentID, documentID, req.report(), req.ExpectedVersion, actor)
 	rs.respondAccidentReport(w, r, http.StatusOK, doc, err, "Unfallanzeige aktualisiert")
 }
 
@@ -274,7 +273,7 @@ func (rs *Resource) signAccidentReport(w http.ResponseWriter, r *http.Request) {
 	}
 	doc, err := rs.StudentAccidentReports.SignStudentAccidentReport(r.Context(), studentID, documentID, careplan.AccidentSignatureInput{
 		Method: req.Method, ImagePNG: req.ImagePNG, TypedName: req.TypedName,
-	}, actor)
+	}, req.ExpectedVersion, actor)
 	rs.respondAccidentReport(w, r, http.StatusOK, doc, err, "Unfallanzeige unterschrieben")
 }
 
@@ -293,7 +292,9 @@ func (rs *Resource) uploadAccidentPaperCopy(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	defer common.CloseFile(upload.uploaded.File)
-	if err := rs.StudentAccidentReports.AuthorizeAccidentPaperCopy(r.Context(), upload.studentID, documentID, upload.actor); err != nil {
+	// The multipart form carries the version of the report the uploader read.
+	expectedVersion := r.FormValue("expected_version")
+	if err := rs.StudentAccidentReports.AuthorizeAccidentPaperCopy(r.Context(), upload.studentID, documentID, expectedVersion, upload.actor); err != nil {
 		common.RenderError(w, r, accidentReportErrorRenderer(err))
 		return
 	}
@@ -302,12 +303,12 @@ func (rs *Resource) uploadAccidentPaperCopy(w http.ResponseWriter, r *http.Reque
 	}
 	rs.storeStudentDocumentObject(w, r, upload, func(ctx context.Context, size int64) (careplan.CareDocument, error) {
 		return rs.StudentAccidentReports.AttachAccidentPaperCopy(ctx, careplan.AccidentPaperCopyInput{
-			StudentID: upload.studentID, DocumentID: documentID, FilenameDisplay: upload.uploaded.Filename,
+			StudentID: upload.studentID, DocumentID: documentID, ExpectedVersion: expectedVersion, FilenameDisplay: upload.uploaded.Filename,
 			FilenameStored: upload.storedName, SizeBytes: size, ContentType: upload.uploaded.ContentType,
 		}, upload.actor)
 	}, func(err error) bool {
 		return errors.Is(err, careplan.ErrStudentDocumentInvalid) || errors.Is(err, careplan.ErrStudentDocumentForbidden) ||
-			errors.Is(err, careplan.ErrAccidentReportSigned)
+			errors.Is(err, careplan.ErrAccidentReportSigned) || errors.Is(err, readstate.ErrChanged)
 	}, accidentReportErrorRenderer)
 }
 

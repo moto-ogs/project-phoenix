@@ -1,6 +1,5 @@
 import type { NextRequest } from "next/server";
 import { problemResponse } from "~/lib/api-response-error.server";
-import { NextResponse } from "next/server";
 import { configuredPortalOfHost } from "~/lib/portal-paths";
 import {
   frontendOrigin,
@@ -29,9 +28,11 @@ export async function withInvitationOwnerSession(
   }) => {
     const token = authRequest.auth?.user?.token;
     if (!token) {
-      return NextResponse.json(
+      return problemResponse(
+        401,
+        "Authentication required",
         { code: "identity.invitation_account_login_required" },
-        { status: 401 },
+        request,
       );
     }
     return accept(token);

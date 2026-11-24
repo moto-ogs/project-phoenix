@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The "läuft mit" graph (#3350, #3427): which children walk home together, on
@@ -61,11 +63,6 @@ var (
 	// edit that this transaction may not wait for without risking a deadlock.
 	// Transient: the same request succeeds on retry.
 	ErrCompanionLockBusy = errors.New("ein verknüpftes Kind wird gerade an anderer Stelle bearbeitet. Bitte in einem Moment erneut speichern")
-	// ErrCompanionsChanged indicates the submitted list was built on a
-	// snapshot that is no longer the stored one. The list REPLACES the stored
-	// one, so without this check two staff members editing the same child
-	// would silently delete each other's links. Retriable after a reload.
-	ErrCompanionsChanged = errors.New("die Laufgemeinschaft dieses Kindes wurde zwischenzeitlich geändert. Bitte neu laden und noch einmal speichern")
 	// ErrCompanionExtensionNotAuthorized indicates the write path was asked to
 	// widen a companion's departure plan the caller was never authorized for.
 	// Not user-facing: it can only fire if the authorization pass and the
@@ -78,10 +75,12 @@ type CompanionUpdate struct {
 	// Links is the child's complete companion list. Empty clears every link.
 	Links []CompanionLink
 	// ExpectedFingerprint is the CompanionLinksFingerprint of the list the
-	// client built Links from. The write is refused with ErrCompanionsChanged
-	// when the stored links no longer match. nil means "no expectation" and is
-	// for system callers that derive the list from the stored state.
-	ExpectedFingerprint *string
+	// client built Links from. The list REPLACES the stored one, so a
+	// different or empty fingerprint is refused with readstate.ErrChanged
+	// (ADR 0311): two staff members editing the same child would otherwise
+	// silently delete each other's links. A system caller that derives the
+	// links from the stored state trims them (TrimCompanionsToDays) instead.
+	ExpectedFingerprint string
 	// AccompaniedDays are the weekday keys on which the SUBJECT may leave with
 	// another child. A caller that changes the departure plan in the same
 	// request passes the NEW plan's days; nil means "read the stored plan".
@@ -147,8 +146,8 @@ type CompanionCommands interface {
 	CheckCompanionTrim(ctx context.Context, studentID int64, allowedDays map[string]bool) error
 	// CheckCompanionTrimForPlan is CheckCompanionTrim for a trim a submitted
 	// departure plan drives; it also verifies the caller knew which links the
-	// plan is about to delete.
-	CheckCompanionTrimForPlan(ctx context.Context, studentID int64, allowedDays map[string]bool, expectedFingerprint *string) error
+	// plan is about to delete (readstate.Check over CompanionLinksFingerprint).
+	CheckCompanionTrimForPlan(ctx context.Context, studentID int64, allowedDays map[string]bool, expectedFingerprint string) error
 	// CheckCompanionConflicts reports the same conflicts as ReplaceCompanions
 	// without writing anything.
 	CheckCompanionConflicts(ctx context.Context, studentID int64, update CompanionUpdate) ([]CompanionConflict, error)
@@ -167,11 +166,9 @@ type StudentCompanions interface {
 }
 
 // CompanionLinksFingerprint is an order-independent fingerprint of a
-// companion list: the state a client read, in one comparable string. The
-// format is MIRRORED by companionsFingerprint() in
-// frontend/src/lib/student-companion-api.ts: "<id>:<mon,tue,…>" per link,
-// weekdays in Mon..Fri order, links sorted as strings and joined with "|".
-// Change one and you must change the other.
+// companion list: the state a client read, in one comparable string (ADR
+// 0311). The companion read hands it out beside the list and a write that
+// replaces or trims the links sends it back; the client never builds it.
 func CompanionLinksFingerprint(links []CompanionLink) string {
 	entries := make([]string, 0, len(links))
 	for _, link := range links {
@@ -188,5 +185,5 @@ func CompanionLinksFingerprint(links []CompanionLink) string {
 		entries = append(entries, strconv.FormatInt(link.CompanionStudentID, 10)+":"+strings.Join(days, ","))
 	}
 	sort.Strings(entries)
-	return strings.Join(entries, "|")
+	return readstate.Fingerprint(entries)
 }

@@ -47,8 +47,9 @@ import {
   accompaniedWeekdayKeys,
 } from "~/lib/departure-plan";
 import {
-  companionsFingerprint,
+  companionListKey,
   fetchStudentCompanions,
+  type StudentCompanionList,
   mergeCompanionConfirmations,
   type CompanionExtensionConfirmation,
   type StudentCompanion,
@@ -72,7 +73,8 @@ import {
 } from "~/lib/parent-visible-fields";
 import { createLogger } from "~/lib/logger";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useFreshSWR } from "~/lib/swr";
+import { isChangedSinceRead } from "~/lib/api-error";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 
 const logger = createLogger({ component: "PersonalInfoEditPanel" });
@@ -118,6 +120,12 @@ interface PersonalInfoEditPanelProps {
    */
   readonly onStudentRefresh?: () => void | Promise<void>;
   /**
+   * Liest die Akte nach einer Ablehnung neu und lehnt ab, wenn das Lesen
+   * scheitert (ADR 0311): die Meldung nennt dann den Ladefehler statt
+   * „Du siehst jetzt den neuen Stand“.
+   */
+  readonly onStudentReload?: () => Promise<unknown>;
+  /**
    * Die Gruppen der Schule für das Auswahlfeld „Gruppe". Die Seite lädt sie
    * (sie kennt die Sitzung); ohne Liste bleibt nur „Keine Gruppe".
    */
@@ -136,10 +144,32 @@ export function PersonalInfoEditPanel({
   student,
   onSave,
   onStudentRefresh,
+  onStudentReload,
   groups = EMPTY_GROUP_OPTIONS,
   onCancel,
 }: PersonalInfoEditPanelProps) {
   const [editedStudent, setEditedStudent] = useState<Student>(student);
+  // Whether someone changed the draft since it was filled (ADR 0311): a
+  // newer read of the same child (a check-in, a live event) refills only an
+  // untouched draft. A touched one keeps the version it was edited on; the
+  // server refuses the save if the child changed since.
+  const [touched, setTouched] = useState(false);
+  const touchedRef = useRef(touched);
+  const editedIdRef = useRef(editedStudent.id);
+  useLayoutEffect(() => {
+    touchedRef.current = touched;
+    editedIdRef.current = editedStudent.id;
+  });
+  // From a refusal until a read of the stored state succeeded, nothing is
+  // sent: the draft still carries the refused version (ADR 0311, rule 4).
+  // "failed": that read failed; the error's retry reads again.
+  const [storedRead, setStoredRead] = useState<
+    "current" | "reloading" | "failed"
+  >("current");
+  const storedReadRef = useRef(storedRead);
+  useLayoutEffect(() => {
+    storedReadRef.current = storedRead;
+  });
   const [isSaving, setIsSaving] = useState(false);
   // Foto (#3115): bis zum Speichern nur im Browser. Eine Datei zu wählen oder
   // „Foto entfernen" zu klicken ist wie jedes andere Feld ein Entwurf; erst
@@ -151,8 +181,10 @@ export function PersonalInfoEditPanel({
   // Tabelle, nicht am Kind: erst nach dem Laden darf das Formular sie
   // anzeigen, sonst würde ein Speichern die echte Einwilligung mit dem
   // leeren Vorgabewert überschreiben.
-  // The draft starts from this panel's own answer, never a cached one.
-  const consentRead = useFreshSWR(
+  // Read through the shared cache (ADR 0311): a save sends the version of
+  // the consent read the draft holds, and the backend refuses it when the
+  // stored consent changed since.
+  const consentRead = useSWRAuth(
     student.id ? tenantStudentKeys.privacyConsent(student.id) : null,
     () => fetchStudentPrivacyConsent(student.id),
   );
@@ -163,10 +195,21 @@ export function PersonalInfoEditPanel({
     "die Einwilligung",
     () => consentRead.mutate(),
   );
-  // The child whose stored consent is in the draft; null = not yet.
-  const [consentSeededFor, setConsentSeededFor] = useState<string | null>(null);
+  // The child and consent version in the draft; null = not yet.
+  const [consentSeed, setConsentSeed] = useState<{
+    readonly studentId: string;
+    readonly version: string | undefined;
+    readonly accepted: boolean;
+    readonly dataRetentionDays: number;
+  } | null>(null);
+  // The reset below runs on every new student object and must not depend on
+  // the consent read; it takes the seeded consent from here.
+  const consentSeedRef = useRef(consentSeed);
+  useLayoutEffect(() => {
+    consentSeedRef.current = consentSeed;
+  });
   const privacyConsentStatus: "loading" | "ready" | "error" =
-    consentSeededFor === student.id
+    consentSeed?.studentId === student.id
       ? "ready"
       : consentLoad.failure !== undefined
         ? "error"
@@ -179,6 +222,10 @@ export function PersonalInfoEditPanel({
   const formRef = useRef<HTMLDivElement>(null);
   const errors = useApiFormError(formRef);
   const clearErrors = errors.clear;
+  // The student a changed-since-read refusal was shown for. The refresh the
+  // refusal starts hands in a new object, and its reset keeps the
+  // explanation: it is the stored state the message announces.
+  const refusedStudentRef = useRef<Student | null>(null);
   // „Wiederholen“ speichert den aktuellen Entwurf, nicht den vom Fehler.
   const latestSaveRef = useRef<() => Promise<void>>(async () => undefined);
   // Scheitert nach gespeicherten Angaben nur das Foto, versucht
@@ -209,10 +256,12 @@ export function PersonalInfoEditPanel({
   // stored links are known: an empty list from a pending or failed load would
   // silently delete the child's Laufgemeinschaft.
   //
-  // The shared read (also behind the Stammdaten card) only fills the draft on
-  // this panel's own loads: the first answer read after opening, a remote
-  // refresh and a retry. A refresh the card starts never replaces the draft.
-  const companionsRead = useFreshSWR(
+  // The shared read (also behind the Stammdaten card) fills the draft with
+  // its newest answer while neither the list nor the departure plan is
+  // edited: a cached first answer is followed by the background read, and
+  // the save must carry the token of the list it shows. An edited draft keeps
+  // its baseline; a remote refresh, a retry and a refused save read again.
+  const companionsRead = useSWRAuth(
     student.id ? tenantStudentKeys.companions(student.id) : null,
     () => fetchStudentCompanions(student.id),
   );
@@ -229,10 +278,13 @@ export function PersonalInfoEditPanel({
     firstCompanionsLoad.error ?? companionsReloadLoad.error;
   // The list as it was loaded, so an untouched one can be left out of the save
   // instead of overwriting whatever someone else changed in the meantime.
+  // fingerprint is the state the loaded list came with; a save that
+  // replaces or trims the links sends it back (ADR 0311).
   const [companionsSeed, setCompanionsSeed] = useState<{
     readonly studentId: string;
     readonly status: "first" | "reloading" | "ready" | "error";
     readonly loaded: StudentCompanion[];
+    readonly fingerprint?: string;
   }>(() => ({ studentId: student.id, status: "first", loaded: [] }));
   if (companionsSeed.studentId !== student.id) {
     setCompanionsSeed({ studentId: student.id, status: "first", loaded: [] });
@@ -259,15 +311,35 @@ export function PersonalInfoEditPanel({
     // would delete the child's whole Laufgemeinschaft. Carry the loaded links
     // through a same-child reset; a different child starts from nothing and
     // the fetch below refills them.
+    // The consent comes from its own read in the same way: a reset shows
+    // the consent as read, with the version a consent save sends back.
+    // A touched draft of the same child stays as it is, version included.
+    if (touchedRef.current && editedIdRef.current === student.id) return;
+    const seeded = consentSeedRef.current;
     setEditedStudent((prev) =>
       prev.id === student.id
-        ? { ...student, companions: prev.companions }
+        ? {
+            ...student,
+            companions: prev.companions,
+            ...(seeded?.studentId === student.id && {
+              privacy_consent_accepted: seeded.accepted,
+              data_retention_days: seeded.dataRetentionDays,
+              privacy_consent_version: seeded.version,
+            }),
+          }
         : student,
     );
     setPlanConflict(false);
     setConfirmedExtensions([]);
     setPendingExtensions([]);
-    clearErrors();
+    const refused = refusedStudentRef.current;
+    refusedStudentRef.current = null;
+    // A child handed in after the refusal's read failed is a successful read
+    // of the stored state (a live update): saving is free again, and the
+    // load error with its retry no longer holds.
+    const readFailed = storedReadRef.current === "failed";
+    if (readFailed) setStoredRead("current");
+    if (readFailed || refused === null || refused === student) clearErrors();
     setPrivacyConsentChanged(false);
   }, [student, clearErrors]);
 
@@ -279,42 +351,46 @@ export function PersonalInfoEditPanel({
   }, [student.id]);
 
   // Einwilligung und Frist des Kindes in den Entwurf holen (siehe oben):
-  // einmal je Kind, aus einer Antwort, die nach dem Öffnen gelesen wurde.
+  // einmal je Kind, und wieder, wenn ein neuerer Stand ankommt (Lesen im
+  // Hintergrund, Neuladen nach einer Ablehnung), solange niemand die
+  // Einwilligung geändert hat.
   useEffect(() => {
-    if (!student.id || consentSeededFor === student.id || !consentData) return;
+    if (!student.id || !consentData) return;
+    if (
+      consentSeed?.studentId === student.id &&
+      (consentSeed.version === consentData.version || privacyConsentChanged)
+    )
+      return;
     setEditedStudent((prev) => ({
       ...prev,
       privacy_consent_accepted: consentData.accepted,
       data_retention_days: consentData.dataRetentionDays,
+      privacy_consent_version: consentData.version,
     }));
     setPrivacyConsentChanged(false);
-    setConsentSeededFor(student.id);
-  }, [student.id, consentSeededFor, consentData]);
+    setConsentSeed({
+      studentId: student.id,
+      version: consentData.version,
+      accepted: consentData.accepted,
+      dataRetentionDays: consentData.dataRetentionDays,
+    });
+  }, [student.id, consentSeed, consentData, privacyConsentChanged]);
 
   // The Laufgemeinschaft lives in its own table, so it is read when the panel
   // opens and submitted together with the departure plan it belongs to.
   const seedCompanions = useCallback(
-    (studentId: string, companions: StudentCompanion[]) => {
+    (studentId: string, { companions, fingerprint }: StudentCompanionList) => {
       setEditedStudent((prev) =>
         prev.id === studentId ? { ...prev, companions } : prev,
       );
       setCompanionsSeed((prev) =>
         prev.studentId === studentId
-          ? { studentId, status: "ready", loaded: companions }
+          ? { studentId, status: "ready", loaded: companions, fingerprint }
           : prev,
       );
     },
     [],
   );
-  useEffect(() => {
-    if (
-      companionsSeed.status !== "first" ||
-      companionsSeed.studentId !== student.id ||
-      !companionsData
-    )
-      return;
-    seedCompanions(student.id, companionsData);
-  }, [companionsSeed, student.id, companionsData, seedCompanions]);
 
   // A remote refresh or a retry: read again and fill the draft with exactly
   // that answer.
@@ -326,11 +402,10 @@ export function PersonalInfoEditPanel({
     setCompanionsSeed({ studentId, status: "reloading", loaded: [] });
     clearCompanionsReloadError();
     try {
-      const companions = await mutateCompanions(
-        fetchStudentCompanions(studentId),
-        { revalidate: false },
-      );
-      if (companions) seedCompanions(studentId, companions);
+      const list = await mutateCompanions(fetchStudentCompanions(studentId), {
+        revalidate: false,
+      });
+      if (list) seedCompanions(studentId, list);
     } catch (err: unknown) {
       logger.error("failed to load companions", {
         error: err instanceof Error ? err.message : String(err),
@@ -357,8 +432,8 @@ export function PersonalInfoEditPanel({
 
   const companionsDirty =
     companionsStatus === "ready" &&
-    companionsFingerprint(loadedCompanions) !==
-      companionsFingerprint(editedStudent.companions ?? []);
+    companionListKey(loadedCompanions) !==
+      companionListKey(editedStudent.companions ?? []);
 
   // A departure plan the USER changed is a companion-conflicting edit too, even
   // while the picker itself is untouched: the backend TRIMS the stored links to
@@ -385,6 +460,23 @@ export function PersonalInfoEditPanel({
     [student, editedStudent],
   );
 
+  const companionsUntouched = !companionsDirty && !departurePlanDirty;
+  useEffect(() => {
+    if (companionsSeed.studentId !== student.id || !companionsData) return;
+    const fill =
+      companionsSeed.status === "first" ||
+      (companionsSeed.status === "ready" &&
+        companionsUntouched &&
+        companionsSeed.fingerprint !== companionsData.fingerprint);
+    if (fill) seedCompanions(student.id, companionsData);
+  }, [
+    companionsSeed,
+    student.id,
+    companionsData,
+    companionsUntouched,
+    seedCompanions,
+  ]);
+
   // The modal can stay open while someone else edits the same child's links,
   // and the list it submits REPLACES the stored one. Reacting to companion
   // writes is what keeps an edit from saving on top of a snapshot that no
@@ -393,7 +485,7 @@ export function PersonalInfoEditPanel({
     () => void reloadCompanionsRef.current(),
     [],
   );
-  const { companionsStale, refreshFromRemote, withOwnWrite, markStale } =
+  const { companionsStale, refreshFromRemote, withOwnWrite } =
     useCompanionRemoteRefresh({
       // Listening for the whole time the panel is mounted, including while
       // the first load is still in flight — that request can have been
@@ -408,7 +500,7 @@ export function PersonalInfoEditPanel({
       // itself and the plan the backend trims it to. The picker stays usable
       // while a save runs (only the button is disabled), so this is what tells
       // the hook that the draft has moved on from the one that was submitted.
-      companionDraftKey: `${companionsFingerprint(editedStudent.companions ?? [])}#${allowedDepartureModesFingerprint(editedStudent.allowed_departure_modes)}`,
+      companionDraftKey: `${companionListKey(editedStudent.companions ?? [])}#${allowedDepartureModesFingerprint(editedStudent.allowed_departure_modes)}`,
       onRefresh: reloadCompanionsFromRemote,
     });
 
@@ -416,6 +508,7 @@ export function PersonalInfoEditPanel({
     field: K,
     value: Student[K],
   ) => {
+    setTouched(true);
     if (
       field === "privacy_consent_accepted" ||
       field === "data_retention_days"
@@ -439,6 +532,7 @@ export function PersonalInfoEditPanel({
   // Ein Foto ohne Einwilligung gibt es nicht: nimmt jemand die Einwilligung
   // zurück, fällt ein gewählter, noch nicht gespeicherter Entwurf weg.
   const handlePhotoConsentChange = useCallback((value: boolean) => {
+    setTouched(true);
     setEditedStudent((prev) => ({ ...prev, photo_consent_given: value }));
     if (!value) setPendingPhotoBlob(null);
   }, []);
@@ -496,6 +590,7 @@ export function PersonalInfoEditPanel({
       return;
     }
     errors.clear();
+    refusedStudentRef.current = null;
     const allowedDepartureModes = departureModesOf(editedStudent);
     // "Mit anderem Kind" needs to say with whom (#1694) — either a linked
     // child (better: structured, symmetric) or the free-text note for someone
@@ -595,7 +690,7 @@ export function PersonalInfoEditPanel({
             // no claim — it has none to make.
             companions_fingerprint:
               companionsStatus === "ready" && (companionsDirty || planEdited)
-                ? companionsFingerprint(loadedCompanions)
+                ? companionsSeed.fingerprint
                 : undefined,
             extend_companion_plans: extendCompanionPlans,
             confirmed_companion_extensions: confirmed,
@@ -611,6 +706,9 @@ export function PersonalInfoEditPanel({
           }),
         mayAnnounceCompanions,
       );
+      // Saved: the next read refills the draft with the new version, so a
+      // second save is not refused for this one.
+      setTouched(false);
       // The next edit session reads the stored consent again.
       if (privacyConsentChanged) void consentRead.mutate();
       setPlanConflict(false);
@@ -654,13 +752,49 @@ export function PersonalInfoEditPanel({
       // gespeichert“.
       if (isPrivacyConsentSaved(err)) {
         toastSuccess("Die Einwilligung ist gespeichert.");
+        // Saved already: a retry must not send it again against the read
+        // it replaced.
+        setPrivacyConsentChanged(false);
+        void consentRead.mutate();
       }
-      // The backend saw what the announcement bus could not: another browser
-      // replaced the links this list was built on. Nothing was written — flag
-      // the modal stale so the user reloads and redoes the edit instead of
-      // retrying the same save, which is exactly the write that was refused.
+      // Someone changed the child, its consent or its Laufgemeinschaft since
+      // this form was filled: show the stored state again. The same save
+      // would be refused again, so the error offers no retry (ADR 0311).
+      if (isChangedSinceRead(err)) {
+        refusedStudentRef.current = student;
+        setPrivacyConsentChanged(false);
+        setTouched(false);
+        setStoredRead("reloading");
+        // The Laufgemeinschaft shows its own load error with a retry.
+        void reloadCompanionsRef.current();
+        await errors.show(err, {
+          object: "das Kind",
+          // Also the read of the error's retry: only a successful one frees
+          // the save again.
+          reload: async () => {
+            setStoredRead("reloading");
+            try {
+              await Promise.all([
+                revalidateOrThrow(consentRead),
+                onStudentReload ? onStudentReload() : onStudentRefresh?.(),
+              ]);
+            } catch (readError) {
+              setStoredRead("failed");
+              throw readError;
+            }
+            setStoredRead("current");
+          },
+        });
+        return;
+      }
+      // The code an older backend refused a stale Laufgemeinschaft with; the
+      // current one answers general.changed_since_read above. The backend saw
+      // what the announcement bus could not: another browser replaced the
+      // links this list was built on. Nothing was written. Show the stored
+      // list instead of the refused draft (ADR 0311); the same save would be
+      // refused again, so the error offers no retry.
       if (isCompanionsChanged(err)) {
-        markStale();
+        void reloadCompanionsRef.current();
         await errors.show(err, { object: "die Laufgemeinschaft" });
         return;
       }
@@ -709,6 +843,7 @@ export function PersonalInfoEditPanel({
   });
 
   const handleCancel = () => {
+    setTouched(false);
     setEditedStudent(student);
     errors.clear();
     onCancel();
@@ -731,12 +866,18 @@ export function PersonalInfoEditPanel({
         variant="primary"
         size="md"
         onClick={() => void handleSave()}
-        disabled={isSaving || privacyConsentStatus !== "ready"}
+        disabled={
+          isSaving ||
+          storedRead !== "current" ||
+          privacyConsentStatus !== "ready"
+        }
         tooltip="Speichert die geänderten Angaben des Kindes."
         disabledReason={
-          privacyConsentStatus === "error"
-            ? "Lade zuerst die Einwilligung neu."
-            : undefined
+          storedRead === "failed"
+            ? "Lade zuerst den gespeicherten Stand neu."
+            : privacyConsentStatus === "error"
+              ? "Lade zuerst die Einwilligung neu."
+              : undefined
         }
       >
         {isSaving ? "Wird gespeichert…" : "Speichern"}
@@ -966,6 +1107,7 @@ export function PersonalInfoEditPanel({
             const departure = allowedDepartureToDepartureDays(allowed);
             const busDays = allowedDepartureToBusDays(allowed);
             const pickupDays = allowedDepartureToPickupDays(allowed);
+            setTouched(true);
             setEditedStudent((prev) => ({
               ...prev,
               allowed_departure_modes: allowed,

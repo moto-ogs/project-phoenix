@@ -75,14 +75,14 @@ func TestSeedParentEngagementStepUsesParentFacingFlows(t *testing.T) {
 			_, _ = fmt.Fprint(w, `{"status":"success","data":[{"id":"95","guardian_profile_id":"93","status":"pending"}]}`)
 		case r.URL.Path == "/api/students/change-requests":
 			_, _ = fmt.Fprint(w, `{"status":"success","data":{"items":[`+
-				`{"request_type":"care_schedule","expected_version":"v95","data":{"id":"95","impact_token":""}},`+
-				`{"request_type":"care_schedule","expected_version":"v96","data":{"id":"96","impact_token":""}}]}}`)
+				`{"request_type":"care_schedule","expected_version":"v95","care_schedule":{"id":"95","impact_token":""}},`+
+				`{"request_type":"care_schedule","expected_version":"v96","care_schedule":{"id":"96","impact_token":""}}]}}`)
 		case r.URL.Path == "/parent/me/children/44/care-exception":
 			request := decode()
 			pickupSignatures = append(pickupSignatures, request["signature"].(map[string]any))
 			_, _ = fmt.Fprint(w, `{"status":"success","data":{"id":"96"}}`)
 		case r.URL.Path == "/parent/me/children/44/guardians" && r.Method == seedHTTPMethodGet:
-			_, _ = fmt.Fprint(w, `{"status":"success","data":[{"guardian_profile_id":"93","first_name":"Gisela","last_name":"Hahn","is_self":false},{"guardian_profile_id":"90","first_name":"Karin","last_name":"Klein","email":"karin@example.test","phones":[{"phone_number":"0151 1","phone_type":"mobile","is_primary":true}],"is_self":true}]}`)
+			_, _ = fmt.Fprint(w, `{"status":"success","data":[{"guardian_profile_id":"93","first_name":"Gisela","last_name":"Hahn","is_self":false},{"guardian_profile_id":"90","first_name":"Karin","last_name":"Klein","email":"karin@example.test","phones":[{"phone_number":"0151 1","phone_type":"mobile","is_primary":true}],"is_self":true,"version":"c90"}]}`)
 		case r.URL.Path == "/parent/me/children/44/guardians/90/contact":
 			ownContact = decode()
 			_, _ = fmt.Fprint(w, `{"status":"success","data":null}`)
@@ -150,6 +150,7 @@ func TestSeedParentEngagementStepUsesParentFacingFlows(t *testing.T) {
 		// A new photo consent needs child photos switched on (#7208): on for
 		// the grant, the parent withdraws, back to the default.
 		"/api/settings/values/operations.student_photos_enabled",
+		"/api/students/44", // reads the version the photo consent save sends (ADR 0311)
 		"/api/students/44",
 		"/parent/me/children/44/consents/photo",
 		"/api/settings/values/operations.student_photos_enabled",
@@ -213,6 +214,7 @@ func TestSeedParentEngagementStepUsesParentFacingFlows(t *testing.T) {
 	assert.Equal(t, "ms", ownContact["salutation"], "the parent chooses a form of address for their own profile (#7362)")
 	assert.Equal(t, "Klein", ownContact["last_name"], "the contact write sends back what the profile holds")
 	assert.Len(t, ownContact["phones"], 1)
+	assert.Equal(t, "c90", ownContact["expected_version"], "the contact write sends the version it read (ADR 0311)")
 	assert.Equal(t, []any{map[string]any{"phone_number": "+49 172 5550778", "phone_type": "mobile", "is_primary": true}}, contact["phones"],
 		"a mobile number without a second label")
 	assert.Equal(t, []any{map[string]any{
@@ -231,7 +233,7 @@ func TestSeedParentEngagementStepUsesParentFacingFlows(t *testing.T) {
 		"Anmeldeschluss für die Ferienbetreuung", "Pädagogischer Tag: OGS geschlossen", "Laternenfest",
 	}, titles)
 	assert.Equal(t, []any{
-		map[string]any{"type": "parents_by_group", "id": float64(7)},
+		map[string]any{"type": "parents_by_group", "id": "7"},
 		map[string]any{"type": "all_staff"},
 	}, appointments[0]["targets"])
 	cafe := appointments[8]

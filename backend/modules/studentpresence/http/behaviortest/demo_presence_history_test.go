@@ -12,13 +12,14 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil/routetest"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	studentpresencehttp "github.com/moto-ogs/project-phoenix/modules/studentpresence/http"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // recordingPresenceHistory captures what the route hands the owner and the
@@ -64,10 +65,10 @@ func TestDemoPresenceHistoryWritesTheDaysInTheSchoolOfThePath(t *testing.T) {
 	history := &recordingPresenceHistory{}
 	checkIn := calendar.NewDate(2026, time.October, 20).BerlinMidnight().Add(8 * time.Hour)
 	rr := demoPresenceHistoryRequest(t, history, "42", demoPresenceHistoryBody(t, map[string]any{
-		"student_id": 7, "date": "2026-10-20", "device_id": 3,
+		"student_id": "7", "date": "2026-10-20", "device_id": "3",
 		"check_in": checkIn, "check_out": checkIn.Add(7 * time.Hour),
 		"visit": map[string]any{
-			"activity_group_id": 50, "room_id": 90,
+			"activity_group_id": "50", "room_id": "90",
 			"session_start": checkIn, "session_end": checkIn.Add(2 * time.Hour),
 			"entry": checkIn.Add(time.Hour), "exit": checkIn.Add(90 * time.Minute),
 		},
@@ -132,23 +133,23 @@ func TestDemoPresenceHistoryRejectsInvalidInput(t *testing.T) {
 	t.Parallel()
 	tooMany := make([]map[string]any, 1001)
 	for i := range tooMany {
-		tooMany[i] = map[string]any{"student_id": i + 1, "date": "2026-10-20", "device_id": 3}
+		tooMany[i] = map[string]any{"student_id": fmt.Sprint(i + 1), "date": "2026-10-20", "device_id": "3"}
 	}
 	cases := map[string]struct {
 		school string
 		body   []byte
 		reject error
 	}{
-		"owner rejects the day": {school: "42", body: demoPresenceHistoryBody(t, map[string]any{"student_id": 7, "date": "2026-10-20", "device_id": 3}),
+		"owner rejects the day": {school: "42", body: demoPresenceHistoryBody(t, map[string]any{"student_id": "7", "date": "2026-10-20", "device_id": "3"}),
 			reject: fmt.Errorf("%w: student 7 leaves before arriving", studentpresence.ErrPresenceHistoryInvalid)},
-		"invalid date":      {school: "42", body: demoPresenceHistoryBody(t, map[string]any{"student_id": 7, "date": "20.10.2026", "device_id": 3})},
+		"invalid date":      {school: "42", body: demoPresenceHistoryBody(t, map[string]any{"student_id": "7", "date": "20.10.2026", "device_id": "3"})},
 		"unknown field":     {school: "42", body: []byte(`{"days":[],"tenant_id":1}`)},
 		"top-level null":    {school: "42", body: []byte(`null`)},
 		"second JSON value": {school: "42", body: []byte(`{"days":[]}{"days":[]}`)},
 		"trailing bytes":    {school: "42", body: []byte(`{"days":[]}not-json`)},
 		"duplicate day": {school: "42", body: demoPresenceHistoryBody(t,
-			map[string]any{"student_id": 7, "date": "2026-10-20", "device_id": 3},
-			map[string]any{"student_id": 7, "date": "2026-10-20", "device_id": 3},
+			map[string]any{"student_id": "7", "date": "2026-10-20", "device_id": "3"},
+			map[string]any{"student_id": "7", "date": "2026-10-20", "device_id": "3"},
 		)},
 		"too many days":  {school: "42", body: demoPresenceHistoryBody(t, tooMany...)},
 		"body too large": {school: "42", body: []byte(`{"days":[` + strings.Repeat(" ", 1<<20) + `]}`)},

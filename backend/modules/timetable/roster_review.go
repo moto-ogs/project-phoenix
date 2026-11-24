@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Roster review (#5103): a Regeltermin whose children are kept by hand or
@@ -129,10 +130,44 @@ type ConnectOfferingSourceCommand struct {
 	GradeLevels   []int
 	SchoolClasses []string
 	EffectiveDate calendar.Date
+	// ExpectedFingerprint is the OfferingSourcePreviewFingerprint of the
+	// preview the school confirmed (ADR 0311). The connection computes the
+	// preview of the stored state under its recurrence gate, before any
+	// write, and refuses a different or empty one with readstate.ErrChanged.
+	ExpectedFingerprint string
 }
 
 // ConnectOfferingSourceResult names the segments that were switched.
 type ConnectOfferingSourceResult struct {
 	TemplateIDs   []int64
 	EffectiveDate calendar.Date
+}
+
+// OfferingSourcePreviewFingerprint is the read-state token of an offering
+// preview (ADR 0311): the day the offerings take over, the series segments it
+// switches and, per weekday, who joins and who leaves. The offering names and
+// the other offerings only explain the preview and stay out. The preview read
+// hands it out and ConnectOfferingSource compares it under the recurrence
+// gate.
+func OfferingSourcePreviewFingerprint(from calendar.Date, segments []TemplateSeriesSegment, changes []OfferingSourceWeekdayChange) string {
+	type segmentState struct {
+		TemplateID int64   `json:"template_id"`
+		ValidFrom  *string `json:"valid_from"`
+		ValidUntil *string `json:"valid_until"`
+	}
+	states := make([]segmentState, 0, len(segments))
+	for _, segment := range segments {
+		states = append(states, segmentState{
+			TemplateID: segment.TemplateID, ValidFrom: optionalDateText(segment.ValidFrom), ValidUntil: optionalDateText(segment.ValidUntil),
+		})
+	}
+	return readstate.Fingerprint([]any{from, states, changes})
+}
+
+func optionalDateText(date *calendar.Date) *string {
+	if date == nil {
+		return nil
+	}
+	value := date.String()
+	return &value
 }

@@ -33,8 +33,7 @@ func TestUpdateStudent_KeepsTheSourceOfAStandingStatus(t *testing.T) {
 		WHERE membership_id IN (SELECT id FROM users.student_school_memberships WHERE student_profile_id = ?)`, reported, student.ID)
 	require.NoError(t, err)
 
-	rr := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID),
-		map[string]any{"last_name": "Umbenannt"}), testutil.AdminTestClaims(1), []string{"admin:*"})
+	rr := authExec(t, tc, studentUpdateRequest(t, tc, student.ID, map[string]any{"last_name": "Umbenannt"}), testutil.AdminTestClaims(1), []string{"admin:*"})
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 
 	var day struct {
@@ -89,12 +88,12 @@ func TestUpdateStudent_WithdrawsAnArchivedStatus(t *testing.T) {
 				assert.Equal(t, want, displayed, "displayed %s", status)
 			}
 			assertDisplayed(true)
-			rr := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "PUT", path,
+			rr := authExec(t, tc, studentUpdateRequest(t, tc, student.ID,
 				map[string]any{"last_name": "Umbenannt"}), claims, perms)
 			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 			assertDisplayed(true)
 
-			rr = authExec(t, tc, testutil.NewAuthenticatedRequest(t, "PUT", path,
+			rr = authExec(t, tc, studentUpdateRequest(t, tc, student.ID,
 				map[string]any{status: false}), claims, perms)
 			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 			assertDisplayed(false)
@@ -103,7 +102,7 @@ func TestUpdateStudent_WithdrawsAnArchivedStatus(t *testing.T) {
 			assert.Nil(t, released.StudentStatusDayID)
 			clearedAt := now
 			now = now.Add(time.Minute)
-			rr = authExec(t, tc, testutil.NewAuthenticatedRequest(t, "PUT", path,
+			rr = authExec(t, tc, studentUpdateRequest(t, tc, student.ID,
 				map[string]any{status: false}), claims, perms)
 			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 			var row struct {

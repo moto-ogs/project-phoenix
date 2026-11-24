@@ -111,6 +111,9 @@ type ContractRecord struct {
 	Version    carecontract.Version
 	Parties    []carecontract.Party
 	DocumentID *int64
+	// Issuer is the body that issued the stored PDF of the version in place
+	// of the Träger (#4811); nil for the Träger and without a stored PDF.
+	Issuer *carecontract.Issuer
 	// Concluded is how and when the contract was concluded; nil before. The
 	// conclusion at acceptance sets it before the PDF is rendered, so the
 	// frozen PDF and the mail say that the contract is concluded.
@@ -128,6 +131,8 @@ type ContractRecord struct {
 type SentDocument struct {
 	ID        int64
 	VersionID int64
+	// Issuer is the body that issued this PDF, nil for the Träger.
+	Issuer *carecontract.Issuer
 }
 
 type StoredMailing struct {
@@ -178,7 +183,12 @@ type Store interface {
 	UpsertTemplates(ctx context.Context, organizationID, accountID, schoolID int64, inputs []carecontract.ModuleTemplateInput) ([]TemplateRow, error)
 	MarkWithdrawalInformed(ctx context.Context, organizationID, contractID int64, at time.Time) error
 	Templates(ctx context.Context, organizationID int64) ([]TemplateRow, error)
-	UpsertTemplate(ctx context.Context, organizationID, accountID, schoolID, offeringID int64, input carecontract.TemplateInput) (carecontract.ContractTemplate, error)
+	// UpsertTemplate replaces the offering's template; with replace false it
+	// only inserts one and answers readstate.ErrChanged when one exists.
+	UpsertTemplate(ctx context.Context, organizationID, accountID, schoolID, offeringID int64, input carecontract.TemplateInput, replace bool) (carecontract.ContractTemplate, error)
+	// LockTemplate takes the lock of one offering's template for the rest of
+	// the transaction, also while it has none, and reads it: nil without one.
+	LockTemplate(ctx context.Context, organizationID, schoolID, offeringID int64) (*carecontract.ContractTemplate, error)
 	// ContractChildren reads the child of every contract at the schools as
 	// its newest version names it, with the time the contract holds and the
 	// application child of a contract from an application.
@@ -193,7 +203,7 @@ type Store interface {
 	CountContracts(ctx context.Context, organizationID int64) (map[string]int, error)
 	Contract(ctx context.Context, organizationID, contractID int64, forUpdate bool) (ContractRecord, error)
 	Mailings(ctx context.Context, organizationID, contractID int64) ([]StoredMailing, error)
-	InsertDocument(ctx context.Context, organizationID, accountID int64, record ContractRecord, templateVersion int, file carecontract.File) (int64, error)
+	InsertDocument(ctx context.Context, organizationID, accountID int64, record ContractRecord, templateVersion int, file carecontract.File, issuer *carecontract.Issuer) (int64, error)
 	Document(ctx context.Context, organizationID, contractID int64) (carecontract.File, error)
 	// InsertMailing records a send at the owner clock's instant at; the
 	// reminders compare it with that clock (ADR 0281).

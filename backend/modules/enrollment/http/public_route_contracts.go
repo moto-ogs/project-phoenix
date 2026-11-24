@@ -79,7 +79,7 @@ func PublicHolidayRegistrationRouteContracts() []common.RouteContract {
 func RouteFileContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	return []common.RouteContract{
-		{Method: "GET", Pattern: "/form-bootstrap/public/{tenantSlug}/{phaseId}", Portals: portals,
+		{Method: "GET", Pattern: "/form-bootstrap/public/{tenantSlug}/{phaseId}", BrowserPath: "/api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}", BrowserOwnContract: true, Portals: portals,
 			RouteFile: "the route file adds the signed-in staff member's profile to the public form",
 			Query:     []common.QueryParam{{Name: "late_invite", Kind: common.QueryString}}, Response: PublicEnrollmentFormBootstrapResponse{}},
 		{Method: "GET", Pattern: "/me/profile", Portals: portals,

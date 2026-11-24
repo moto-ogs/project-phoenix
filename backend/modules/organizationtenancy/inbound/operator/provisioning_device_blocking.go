@@ -25,7 +25,7 @@ func (rs *ProvisioningResource) setDeviceBlocked(w http.ResponseWriter, r *http.
 		return
 	}
 	if rs.deviceBlocking == nil {
-		common.RenderError(w, r, common.OperatorInternal(internalErrorMessage))
+		common.RenderError(w, r, common.OperatorInternal(nil, internalErrorMessage))
 		return
 	}
 	operatorID := int64(sessiontoken.ClaimsFromCtx(r.Context()).ID)

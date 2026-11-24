@@ -9,13 +9,18 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// directSelectionFacts is an immutable bulk input, local to one alternatives
-// projection, including Apply's revalidation under its existing locks. It is
-// never persisted or attached to the request context.
+// directSelectionFacts is a bulk input, local to one alternatives
+// projection, including Apply's revalidation under its existing locks. Only
+// the stored bookings fill in on first use. It is never persisted or
+// attached to the request context.
 type directSelectionFacts struct {
 	allowed map[int64]*careplan.CareOffering
 	current []*careplan.BookedOffering
 	child   ports.OfferingChangeChild
+	// stored are the child's stored bookings, read once on first use
+	// (storedBookingsAt).
+	stored       []*careplan.BookedOffering
+	storedLoaded bool
 }
 
 // PreviewDirectOfferingAlternatives evaluates replacements for the same

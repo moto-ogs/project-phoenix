@@ -89,6 +89,10 @@ type SessionUpdateRequest struct {
 	Status       *string               `json:"status"`
 	Notes        *string               `json:"notes"`
 	Breaks       []BreakDurationUpdate `json:"breaks"`
+	// ExpectedVersion is the version of the history row the form showed
+	// (ADR 0311). The routes refuse an omitted one; nil is a write that
+	// showed no row.
+	ExpectedVersion *string `json:"expected_version"`
 }
 
 // AdminCreateSessionRequest is the body of the admin nachtragen flow. Date
@@ -121,6 +125,9 @@ type SessionResponse struct {
 	// change the rounding made. Both are 0 for an open block.
 	PackUpMinutes   int `json:"pack_up_minutes"`
 	RoundingMinutes int `json:"rounding_minutes"`
+	// Version is the token of the block and its breaks; a correction sends
+	// it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // MarshalJSON preserves exact history IDs and the calculated break-minute field.
@@ -231,6 +238,9 @@ type ScheduleUpdateInput struct {
 	RotationAnchorDate, ValidFrom string
 	Entries                       []ScheduleEntry
 	SaveAsTemplateName            string
+	// ExpectedVersion is the ScheduleVersion of the schedule the form
+	// showed (ADR 0311); another one, also an empty one, is refused.
+	ExpectedVersion string
 }
 
 // WorkSessionHistory reads and exports session history for both staff and administrators.
@@ -277,13 +287,10 @@ type WorkSessions interface {
 	AdminWorkSessions
 }
 
-// StaffAbsenceResponse is an absence with its derived duration. AbsenceTypeID
-// shadows the record's field on the wire so the BIGINT arrives as a lossless
-// decimal string.
+// StaffAbsenceResponse is an absence with its derived duration.
 type StaffAbsenceResponse struct {
 	*StaffAbsence
-	DurationDays  int     `json:"duration_days"`
-	AbsenceTypeID *string `json:"absence_type_id,omitempty"`
+	DurationDays int `json:"duration_days"`
 }
 
 // StaffAbsenceRequestItem is one request of the Anfragen module: the absence
@@ -302,6 +309,13 @@ type CreateAbsenceRequest struct {
 	DateEnd       string    `json:"date_end"`
 	HalfDay       bool      `json:"half_day"`
 	Note          string    `json:"note"`
+	// ExpectedFingerprint confirms a Freizeitausgleich that takes the
+	// Stundenkonto below zero (#2873): the Fingerprint of the preview the
+	// Leitung confirmed. The Leitung's booking refuses an overdraft whose
+	// projection differs with general.changed_since_read (ADR 0311). A staff
+	// member's own absence confirms nothing; its route takes the
+	// OwnAbsenceRequest of the HTTP adapter, which has no such field.
+	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
 // UpdateAbsenceRequest edits an absence; nil leaves a field untouched.
@@ -325,7 +339,7 @@ func (r *UpdateAbsenceRequest) UnmarshalJSON(data []byte) error {
 	var presence struct {
 		AbsenceTypeID json.RawMessage `json:"absence_type_id"`
 	}
-	if err := json.Unmarshal(data, (*plain)(r)); err != nil {
+	if err := wire.Unmarshal(data, (*plain)(r)); err != nil {
 		return err
 	}
 	if err := json.Unmarshal(data, &presence); err != nil {
@@ -379,6 +393,9 @@ type VacationQuotaSummary struct {
 	ReservedDays    float64               `json:"reserved_days"`
 	RemainingDays   float64               `json:"remaining_days"`
 	Opening         *StaffVacationOpening `json:"opening,omitempty"`
+	// Version is the token of the stored claim (entitled and carryover
+	// days); the change sends it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // SetVacationOpeningRequest carries the vacation takeover: the Resturlaub as
@@ -398,6 +415,9 @@ type CompTimeBalancePreview struct {
 	FutureCommitmentMinutes  int `json:"future_commitment_minutes"`
 	FutureAdjustmentMinutes  int `json:"future_adjustment_minutes"`
 	ProjectedBalanceMinutes  int `json:"projected_balance_minutes"`
+	// Fingerprint is the token of this projection (ADR 0311): a booking that
+	// confirms an overdraft sends it back as expected_fingerprint.
+	Fingerprint string `json:"fingerprint"`
 }
 
 // RebookAbsencesRequest moves stored absences of one staff member to another
@@ -408,6 +428,9 @@ type RebookAbsencesRequest struct {
 	AbsenceTypeID *int64
 	Reason        string
 	DryRun        bool
+	// ExpectedFingerprint is the dry run's Fingerprint the write was
+	// confirmed against (ADR 0311).
+	ExpectedFingerprint string
 }
 
 // AbsenceRebookingResult is what a rebooking does: the entries with their new
@@ -421,6 +444,9 @@ type AbsenceRebookingResult struct {
 	Vacation            []RebookingVacationYear  `json:"vacation,omitempty"`
 	VacationExceeded    bool                     `json:"vacation_exceeded"`
 	Applied             bool                     `json:"applied"`
+	// Fingerprint is the token of the effect (ADR 0311): the write sends
+	// the dry run's back as expected_fingerprint.
+	Fingerprint string `json:"fingerprint"`
 }
 
 // RebookingAllowanceYear is the target allowance of one year after the
@@ -674,6 +700,9 @@ type VacationQuotaChange struct {
 	CarryoverDays float64
 	Reason        string
 	ChangedBy     int64
+	// ExpectedVersion is the Version of the summary the form was read from
+	// (ADR 0311); a claim changed since is not overwritten.
+	ExpectedVersion string
 }
 
 // MonthCloseStaff is one staff member a school-wide month close may cover.

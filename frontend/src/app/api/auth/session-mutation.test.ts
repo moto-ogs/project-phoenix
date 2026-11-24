@@ -1,3 +1,4 @@
+import { sessionClaims } from "~/test/helpers/session-claims";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import NextAuth, { type NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
@@ -216,8 +217,19 @@ describe("real Auth.js server actions under the response wrapper", () => {
           const access = (
             JSON.parse(init!.body as string) as { access_token: string }
           ).access_token;
-          if (access === freshAccess) return Response.json(claims);
-          if (access === previewAccess) return Response.json(previewClaims);
+          if (access === freshAccess)
+            return Response.json(
+              sessionClaims({ ...claims, id: "1", tenant_id: "7" }),
+            );
+          if (access === previewAccess)
+            return Response.json(
+              sessionClaims({
+                ...previewClaims,
+                id: "42",
+                tenant_id: "7",
+                acting_admin_id: "1",
+              }),
+            );
         }
         return new Response(null, { status: 401 });
       });

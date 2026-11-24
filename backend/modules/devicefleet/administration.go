@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Error message constants to avoid string duplication
@@ -153,10 +155,14 @@ func (s *administration) GetDeviceByDeviceID(ctx context.Context, deviceID strin
 // UpdateDevice applies a school's edit to an existing IoT device. It writes
 // only the fields that edit owns (device_id, device_type, name,
 // registered_by_id, and status when the caller names one): the API key,
-// last_seen, room, archive and transfer columns belong to other flows, and a
-// key rotation, deactivation or transfer that commits after this unlocked
-// read must not be reverted. An empty status keeps the stored one.
-func (s *administration) UpdateDevice(ctx context.Context, device *Device) error {
+// last_seen, room, archive and transfer columns belong to other flows, and
+// the edit must not revert a key rotation, deactivation or transfer. An empty status keeps the stored one. The
+// edit writes back what its editor read: a device whose edited fields
+// differ from expectedVersion is refused with readstate.ErrChanged (ADR
+// 0311). The check reads the device under its row lock, so it and the
+// write see the same row whatever the caller locked before; a second lock
+// of the row in the same unit costs nothing.
+func (s *administration) UpdateDevice(ctx context.Context, device *Device, expectedVersion string) error {
 	if device == nil || device.ID <= 0 {
 		return &AdministrationError{Op: "UpdateDevice", Err: ErrAdministrationInvalidDeviceData}
 	}
@@ -166,15 +172,21 @@ func (s *administration) UpdateDevice(ctx context.Context, device *Device) error
 		return &AdministrationError{Op: "UpdateDevice", Err: err}
 	}
 
-	existing, err := s.findDevice(ctx, "UpdateDevice", device.ID)
+	existing, err := s.devices.FindDeviceForUpdate(ctx, device.ID)
+	if errors.Is(err, ErrDeviceNotFound) {
+		return &AdministrationError{Op: "UpdateDevice", Err: ErrAdministrationDeviceNotFound}
+	}
 	if err != nil {
-		return err
+		return &AdministrationError{Op: "UpdateDevice", Err: err}
 	}
 	if existing.ID <= 0 {
 		return &AdministrationError{Op: "UpdateDevice", Err: ErrAdministrationDeviceNotFound}
 	}
 	if isProtectedSystemDevice(administrationDevicePointer(existing)) {
 		return &AdministrationError{Op: "UpdateDevice", Err: ErrAdministrationDeviceProtected}
+	}
+	if err := readstate.Check(expectedVersion, DeviceVersion(&existing)); err != nil {
+		return err
 	}
 
 	if existing.DeviceID != device.DeviceID {
@@ -212,19 +224,6 @@ func (s *administration) writeDeviceEdit(ctx context.Context, device *Device, ed
 		return Device{}, &AdministrationError{Op: "UpdateDevice", Err: err}
 	}
 	return updated, nil
-}
-
-// findDevice loads one device by primary key for op and reports a missing
-// row as ErrAdministrationDeviceNotFound.
-func (s *administration) findDevice(ctx context.Context, op string, id int64) (Device, error) {
-	device, err := s.devices.FindDevice(ctx, id)
-	if errors.Is(err, ErrDeviceNotFound) {
-		return Device{}, &AdministrationError{Op: op, Err: ErrAdministrationDeviceNotFound}
-	}
-	if err != nil {
-		return Device{}, &AdministrationError{Op: op, Err: err}
-	}
-	return device, nil
 }
 
 // DeleteDevice deletes an IoT device by its ID.
@@ -314,7 +313,7 @@ type DeviceAdministration interface {
 	CreateDevice(ctx context.Context, device *Device) error
 	GetDeviceByID(ctx context.Context, id int64) (*Device, error)
 	GetDeviceByDeviceID(ctx context.Context, deviceID string) (*Device, error)
-	UpdateDevice(ctx context.Context, device *Device) error
+	UpdateDevice(ctx context.Context, device *Device, expectedVersion string) error
 	DeleteDevice(ctx context.Context, id int64) error
 	ListDevices(ctx context.Context, filter DeviceFilter) ([]*Device, error)
 	// Status operations

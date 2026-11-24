@@ -40,7 +40,7 @@ function flush(config: string) {
     }[];
   };
   for (const probe of batch) {
-    const own = diagnostics.filter((d) => d.filename === probe.path);
+    const own = diagnostics.filter((d) => resolve(d.filename) === probe.path);
     const lines = probe.source.split("\n");
     // Mirror the default reporter: code, message and the flagged source lines.
     const output = own
@@ -61,8 +61,9 @@ export function lintSource(
   source: string,
   relativePath = "src/components/probe.tsx",
   config = resolve(".oxlintrc.json"),
+  temporaryRoot = tmpdir(),
 ): Promise<LintResult> {
-  const directory = mkdtempSync(join(tmpdir(), "bauart-"));
+  const directory = mkdtempSync(join(temporaryRoot, "bauart-"));
   temporaryDirectories.push(directory);
   const sourcePath = join(directory, relativePath);
   mkdirSync(dirname(sourcePath), { recursive: true });

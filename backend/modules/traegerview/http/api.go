@@ -5,6 +5,7 @@
 package traegerviewhttp
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -21,17 +22,25 @@ type Resource struct {
 	overview traegerview.Overview
 	reports  traegerview.Reports
 	lists    common.ListRenderer
+	modules  BookedModules
 }
+
+// BookedModules names the keys of the moto modules that count as booked for
+// a Träger, in catalog order (#6052). The root binds it to the module
+// switches of the Träger's schools: a module counts once one of them books
+// it.
+type BookedModules func(ctx context.Context, organizationID int64) ([]string, error)
 
 // NewResource builds the resource. reports answers the heatmap of arrival
 // and pickup times (#4714), the comparison of schools (#4715) and the daily
 // attendance report of Mecklenburg-Vorpommern (#4717); lists renders the
-// exports as PDF, Excel or CSV (#4718).
-func NewResource(overview traegerview.Overview, reports traegerview.Reports, lists common.ListRenderer) *Resource {
-	if overview == nil || reports == nil || lists == nil {
-		panic("traeger view http: the overview, the reports and the list renderer are required")
+// exports as PDF, Excel or CSV (#4718); modules names the booked modules the
+// frame of the portal locks its navigation with (#6052).
+func NewResource(overview traegerview.Overview, reports traegerview.Reports, lists common.ListRenderer, modules BookedModules) *Resource {
+	if overview == nil || reports == nil || lists == nil || modules == nil {
+		panic("traeger view http: the overview, the reports, the list renderer and the booked modules are required")
 	}
-	return &Resource{overview: overview, reports: reports, lists: lists}
+	return &Resource{overview: overview, reports: reports, lists: lists, modules: modules}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/schools inside the
@@ -73,7 +82,9 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 // inside the Träger route group: the Träger of the session, which the portal
 // frame names and marks as a test system (#4658), with the federal states of
 // its schools, so the frame offers the daily attendance report of
-// Mecklenburg-Vorpommern only there (#4717). It needs the overview right
+// Mecklenburg-Vorpommern only there (#4717), and with the moto modules that
+// count as booked for the Träger, so the frame locks the pages of the others
+// (#6052). It needs the overview right
 // every Träger role holds; the Träger name and its test mark are no personal
 // data, so the read is not written to the access log.
 func (rs *Resource) TraegerOrganizationRouter(protectedTraegerRoutes func(chi.Router, func(chi.Router, common.Middleware))) chi.Router {
@@ -96,6 +107,10 @@ func (rs *Resource) getTraeger(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		states, err = rs.reports.FederalStates(r.Context(), principal.OrganizationID())
 	}
+	var modules []string
+	if err == nil {
+		modules, err = rs.modules(r.Context(), principal.OrganizationID())
+	}
 	if errors.Is(err, traegerview.ErrTraegerUnavailable) {
 		common.RenderError(w, r, common.ErrorUnauthorized(common.ErrUnauthorized))
 		return
@@ -104,13 +119,16 @@ func (rs *Resource) getTraeger(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, TraegerFrame{Traeger: traeger, FederalStates: states}, "Träger retrieved successfully")
+	common.Respond(w, r, http.StatusOK, TraegerFrame{Traeger: traeger, FederalStates: states, BookedModules: modules}, "Träger retrieved successfully")
 }
 
 // TraegerFrame is the Träger of the session as the portal frame reads it.
 type TraegerFrame struct {
 	traegerview.Traeger
 	FederalStates []string `json:"federal_states"`
+	// BookedModules are the keys of the moto modules that count as booked
+	// for the Träger: at least one of its schools books them (#6052).
+	BookedModules []string `json:"booked_modules"`
 }
 
 // listSchools answers GET /traeger/schools: every school of the Träger of the

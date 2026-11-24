@@ -19,7 +19,7 @@ import (
 // foreign key, so an operator revocation (account FOR UPDATE, then the
 // mapping) and the answer waited for each other until PostgreSQL aborted one
 // of them. With the shared guard the answer waits for the revocation and is
-// then refused, and nothing of the family changes.
+// then refused with 404, and nothing of the family changes.
 func TestParentPollAnswerWaitsForAccountAccessRevocation(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
@@ -86,7 +86,9 @@ func TestParentPollAnswerWaitsForAccountAccessRevocation(t *testing.T) {
 		t.Fatal("the revocation did not commit")
 	}
 	rec := awaitAnswer(t, done, answer.path)
-	require.Equal(t, http.StatusConflict, rec.Code, "the guard refuses the answer as stale after the revocation: %s", rec.Body.String())
-	require.Contains(t, rec.Body.String(), "care.announcement_stale")
+	// A revoked access collapses to 404 like the check before the guard: a
+	// 409 would confirm the poll to a guardian who may no longer answer.
+	require.Equal(t, http.StatusNotFound, rec.Code, "the guard refuses the answer after the revocation: %s", rec.Body.String())
+	require.NotContains(t, rec.Body.String(), `"code":"general.changed_since_read"`)
 	require.Empty(t, withoutWithdrawalRows(changedTables(before, rig.fingerprint(t, f))), "a refused answer changes nothing of the family")
 }

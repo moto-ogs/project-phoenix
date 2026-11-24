@@ -47,7 +47,11 @@ import {
   HOMEWORK_DESCRIPTION_MAX_LENGTH,
   HOMEWORK_SUBJECT_MAX_LENGTH,
 } from "~/lib/homework-feedback";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useReadDraftForm,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import {
@@ -60,7 +64,7 @@ import {
 } from "~/lib/school-class-day-api";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import { schoolPath } from "~/lib/school-url";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 import { normalizeSchoolClass } from "~/lib/timetable-helpers";
 import { ClassTripBulkStatusModal } from "~/components/students/class-trip-bulk-status-modal";
@@ -85,6 +89,13 @@ import { type ClassHomeworkApi, useClassHomework } from "./use-class-homework";
 const logger = createLogger({ component: "ClassDayClass" });
 
 const REPORT_FOCUS_THROTTLE_MS = 60 * 1000;
+
+const NO_IDS: ReadonlySet<string> = new Set();
+
+/** Two sets of children are the same handover choice. */
+function sameIds(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  return a.size === b.size && [...a].every((id) => b.has(id));
+}
 
 /** Höchstlänge eines Hinweises an die OGS (#4795) in Zeichen, wie im Backend. */
 const DAY_HINT_MAX_LENGTH = 500;
@@ -293,12 +304,7 @@ export function ClassDayClass({
   const weekend = weekendDay && !weekendOpen;
 
   const classReportKey = schoolPortalKeys.classDayReport(schoolClass, dateISO);
-  const {
-    data: report,
-    error,
-    isLoading,
-    mutate: refetchReport,
-  } = useSWRAuth(
+  const reportRead = useSWRAuth(
     schoolClass && !weekend ? classReportKey : null,
     async () => {
       try {
@@ -317,6 +323,7 @@ export function ClassDayClass({
       keepPreviousData: false,
     },
   );
+  const { data: report, error, isLoading, mutate: refetchReport } = reportRead;
 
   const discardRefusedReport = useSchoolReportRefusal(error, classReportKey);
 
@@ -600,6 +607,8 @@ export function ClassDayClass({
     schoolClass,
     dateISO,
     onChanged: reportAfterWrite.refresh,
+    reloadAfterRefusal: async () =>
+      (await revalidateOrThrow(reportRead)).homework ?? [],
   });
   // Übergabe an die OGS (#4794): bestätigt wird je Klasse, Ausnahmen je Kind.
   const canHandOver =
@@ -608,22 +617,49 @@ export function ClassDayClass({
     !weekend;
   const ogsRows = useMemo(() => handoverRows(rows), [rows]);
   const [handoverOpen, setHandoverOpen] = useState(false);
-  const [handoverAbsent, setHandoverAbsent] = useState<ReadonlySet<string>>(
-    () => new Set(),
+  // The handover the dialog edits (ADR 0311): a newer read fills it again
+  // only while no child was changed in it, and the save sends the version
+  // it was filled from. After a refusal it shows the stored handover once
+  // it is read; nothing is sent until then.
+  const handover = useDraftOn<
+    schoolClassDayContract.DayReport,
+    ReadonlySet<string>,
+    string
+  >(
+    {
+      opening: handoverOpen ? classReportKey : null,
+      data: report,
+      error: report === undefined ? error : undefined,
+      reload: () => revalidateOrThrow(reportRead),
+    },
+    {
+      token: (read) => read.handover_version ?? "",
+      toDraft: (read) =>
+        initialAbsentIds(read.rows ?? [], Boolean(read.handover), draft),
+      same: sameIds,
+      // The dialog closes after the save; the next opening fills from the
+      // read refreshed then.
+      answer: (_saved, shown) => shown,
+    },
   );
+  const handoverAbsent = handover.draft ?? NO_IDS;
   const handoverSave = useFormModalPending(handoverOpen);
   const savingHandover = handoverSave.pending;
   const handoverErrors = useApiFormError();
+  const handoverForm = useReadDraftForm(
+    handover,
+    handoverErrors,
+    "die Übergabe",
+  );
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
   const withdrawErrors = useApiFormError();
   const openHandover = () => {
     handoverErrors.clear();
-    setHandoverAbsent(initialAbsentIds(rows, Boolean(report?.handover), draft));
     setHandoverOpen(true);
   };
   const markHandover = (studentId: string, choice: HandoverChoice) => {
-    setHandoverAbsent((current) => {
+    handover.setDraft((current) => {
       const next = new Set(current);
       if (choice === "absent") next.add(studentId);
       else next.delete(studentId);
@@ -632,29 +668,38 @@ export function ClassDayClass({
   };
   const saveHandover = async () => {
     if (!handOverClass) return;
-    handoverErrors.clear();
+    if (!handoverForm.begin()) return;
     await handoverSave.run(async (op) => {
-      try {
-        await handOverClass(schoolClass, dateISO, {
+      const result = await handover.submit((expectedVersion, absent) =>
+        handOverClass(schoolClass, dateISO, {
           present: ogsRows
-            .filter((row) => !handoverAbsent.has(row.student_id))
+            .filter((row) => !absent.has(row.student_id))
             .map((row) => row.student_id),
           absent: ogsRows
-            .filter((row) => handoverAbsent.has(row.student_id))
+            .filter((row) => absent.has(row.student_id))
             .map((row) => row.student_id),
-        });
+          expectedVersion,
+        }),
+      );
+      if (result.ok) {
         await reportAfterWrite.refresh();
         if (op.isCurrent()) setHandoverOpen(false);
-      } catch (cause) {
-        logger.error("class_day_handover_save_failed", {
-          error: cause instanceof Error ? cause.message : String(cause),
-        });
-        if (!op.isCurrent()) return;
-        void handoverErrors.show(cause, {
-          object: "die Übergabe",
-          retry: () => void retrySaveRef.current.handover(),
-        });
+        return;
       }
+      if (result.skipped) return;
+      const cause = result.error;
+      logger.error("class_day_handover_save_failed", {
+        error: cause instanceof Error ? cause.message : String(cause),
+      });
+      if (!op.isCurrent()) return;
+      // Another handover of the class was stored since the view was read:
+      // the message waits for the stored one, which the dialog then shows;
+      // the same save would be refused again (ADR 0311).
+      void handoverErrors.show(cause, {
+        object: "die Übergabe",
+        retry: () => void retrySaveRef.current.handover(),
+        reload: result.reload,
+      });
     });
   };
   useLayoutEffect(() => {
@@ -728,6 +773,12 @@ export function ClassDayClass({
                   onCancel={homeworkForm.close}
                   onSave={() => void homeworkForm.save()}
                   saving={homeworkForm.saving}
+                  disabled={homeworkForm.draft?.gone === true}
+                  disabledReason={
+                    homeworkForm.draft?.gone === true
+                      ? "Die Hausaufgabe gibt es nicht mehr."
+                      : undefined
+                  }
                 />
               }
             >
@@ -799,6 +850,8 @@ export function ClassDayClass({
                   onCancel={() => setHandoverOpen(false)}
                   onSave={() => void saveHandover()}
                   saving={savingHandover}
+                  disabled={!handover.canSubmit}
+                  disabledReason={handoverForm.waitReason}
                   saveLabel="Übergeben"
                   savingLabel="Übergibt…"
                   saveTooltip="Übergibt die Klasse, die OGS sieht sofort, wer nicht da ist."
@@ -806,6 +859,7 @@ export function ClassDayClass({
               }
             >
               <div className="space-y-3 p-4">
+                <LoadErrorAlert error={handoverForm.loadError} />
                 <p className="text-sm text-gray-600">
                   {ogsRows.length > 0
                     ? "Diese Kinder gehen jetzt in die OGS. Tippe bei jedem Kind, das nicht da ist, auf „Nicht da“."

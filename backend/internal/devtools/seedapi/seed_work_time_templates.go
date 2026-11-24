@@ -80,7 +80,7 @@ func assignSeedWorkTimeTemplate(rt *Runtime, staff []StaffCredentials, staffIDBy
 		staffIDs = append(staffIDs, staffIDByEmail[cred.Email])
 	}
 	if _, err := rt.Client.Post(fmt.Sprintf("/api/work-time-models/%d/assignments", modelID), map[string]any{
-		"staff_ids": staffIDs,
+		"staff_ids": ident.IDs(staffIDs),
 	}); err != nil {
 		return fmt.Errorf("assign work time template to staff %v: %w", staffIDs, err)
 	}

@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Decide approves (and applies) or rejects a pending request. Staleness is
@@ -56,17 +57,29 @@ func validateDecisionInput(input careplan.OfferingChangeDecisionInput) (string, 
 	return reason, nil
 }
 
-// lockPendingRow follows care end's class -> recurrence -> child -> request
+// lockPendingRow locks the pending request the caller decided on, refusing it
+// unless expectedVersion is its version (ADR 0311).
+func (s *OfferingChanges) lockPendingRow(ctx context.Context, requestID int64, expectedVersion string) (careplan.OfferingChangeRequest, error) {
+	return s.lockOpenRow(ctx, requestID, func(row careplan.OfferingChangeRequest) error {
+		return readstate.Check(expectedVersion, readstate.Of(row.UpdatedAt))
+	})
+}
+
+// lockOpenRow follows care end's class -> recurrence -> child -> request
 // order, including rejection, completion and conflict resolution. The unlocked
 // snapshot only locates the immutable student ID. Terminal/version checks are
-// repeated under the request lock before authorization or any mutation.
-func (s *OfferingChanges) lockPendingRow(ctx context.Context, requestID int64, expectedVersion string) (careplan.OfferingChangeRequest, error) {
+// repeated under the request lock before authorization or any mutation; a nil
+// check skips the version.
+func (s *OfferingChanges) lockOpenRow(ctx context.Context, requestID int64, check func(careplan.OfferingChangeRequest) error) (careplan.OfferingChangeRequest, error) {
+	if check == nil {
+		check = func(careplan.OfferingChangeRequest) error { return nil }
+	}
 	snapshot, err := s.pendingRow(ctx, requestID)
 	if err != nil {
 		return careplan.OfferingChangeRequest{}, err
 	}
-	if expectedVersion != "" && careplan.ParentRequestVersion(snapshot.UpdatedAt) != expectedVersion {
-		return careplan.OfferingChangeRequest{}, careplan.ErrParentRequestStale
+	if err := check(snapshot); err != nil {
+		return careplan.OfferingChangeRequest{}, err
 	}
 	if err := s.lockOfferingDerivedWrites(ctx); err != nil {
 		return careplan.OfferingChangeRequest{}, err
@@ -81,8 +94,8 @@ func (s *OfferingChanges) lockPendingRow(ctx context.Context, requestID int64, e
 	if offeringChangeTerminal(row) {
 		return careplan.OfferingChangeRequest{}, careplan.ErrOfferingChangeNotPending
 	}
-	if expectedVersion != "" && careplan.ParentRequestVersion(row.UpdatedAt) != expectedVersion {
-		return careplan.OfferingChangeRequest{}, careplan.ErrParentRequestStale
+	if err := check(row); err != nil {
+		return careplan.OfferingChangeRequest{}, err
 	}
 	return row, nil
 }

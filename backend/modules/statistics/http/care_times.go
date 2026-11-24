@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -158,7 +159,7 @@ type careTimeClassTimeResponse struct {
 }
 
 type studentCareTimesResponse struct {
-	StudentID        string                  `json:"student_id"`
+	StudentID        ident.ID                `json:"student_id"`
 	From             string                  `json:"from"`
 	To               string                  `json:"to"`
 	DataFrom         string                  `json:"data_from"`
@@ -168,7 +169,7 @@ type studentCareTimesResponse struct {
 }
 
 type careTimeOverrunRowResponse struct {
-	StudentID   string                  `json:"student_id"`
+	StudentID   ident.ID                `json:"student_id"`
 	FirstName   string                  `json:"first_name"`
 	LastName    string                  `json:"last_name"`
 	SchoolClass string                  `json:"school_class"`
@@ -220,7 +221,7 @@ func toStudentCareTimesResponse(result *studentpresence.StudentCareTimes) studen
 		})
 	}
 	return studentCareTimesResponse{
-		StudentID: strconv.FormatInt(result.StudentID, 10), From: result.From.String(), To: result.To.String(),
+		StudentID: ident.ID(result.StudentID), From: result.From.String(), To: result.To.String(),
 		DataFrom:         result.DataFrom.String(),
 		ToleranceMinutes: result.ToleranceMinutes, Summary: toCareTimeSummaryResponse(result.Summary), Days: days,
 	}
@@ -230,7 +231,7 @@ func toCareTimeOverrunsResponse(result *studentpresence.CareTimeOverruns) careTi
 	students := make([]careTimeOverrunRowResponse, 0, len(result.Students))
 	for _, row := range result.Students {
 		students = append(students, careTimeOverrunRowResponse{
-			StudentID: strconv.FormatInt(row.StudentID, 10), FirstName: row.FirstName, LastName: row.LastName,
+			StudentID: ident.ID(row.StudentID), FirstName: row.FirstName, LastName: row.LastName,
 			SchoolClass: row.SchoolClass, GroupName: row.GroupName, Summary: toCareTimeSummaryResponse(row.Summary),
 		})
 	}

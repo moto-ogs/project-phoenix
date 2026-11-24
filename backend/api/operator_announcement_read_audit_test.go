@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/communication"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/modules/communication/http/operatorannouncements"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
@@ -27,7 +29,7 @@ func TestOperatorAuditAnnouncementViews(t *testing.T) {
 	module := buildCommunication(t, db, &auditRecorder{})
 	announcement := newAnnouncement("Audit view fixture", testpkg.Tenant(t))
 	require.NoError(t, module.CreateAnnouncement(ctx, announcement, operatorID, nil))
-	require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, operatorID, nil))
+	require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, communication.AnnouncementEditVersion(*announcement), operatorID, nil))
 	require.NoError(t, module.MarkSeen(ctx, announcementViewer(account.ID, testpkg.Tenant(t), tenantOrganizationID(t, db, testpkg.Tenant(t))), announcement.ID))
 	resource := provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: buildOperatorProvisioning(t, db)})
 	router := chi.NewRouter()

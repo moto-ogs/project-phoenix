@@ -218,7 +218,7 @@ func TestSickReport_SeriesSplitPlansNewSickOccurrenceCancelled(t *testing.T) {
 	var successorID int64
 	e.inTx(t, func(ctx context.Context) error {
 		result, err := e.Planning.SplitSeries(ctx, workforce.SplitStaffShiftSeries{
-			SeriesID: seriesID, EffectiveDate: stampWeekOne.String(), Weekdays: []int{1, 2},
+			SeriesID: seriesID, ExpectedVersion: e.mustSeriesVersion(ctx, t, seriesID), EffectiveDate: stampWeekOne.String(), Weekdays: []int{1, 2},
 			StartTime: clock("08:00"), EndTime: clock("12:00"), ActorStaffID: e.admin.ID,
 		})
 		successorID = result.SeriesID
@@ -284,7 +284,7 @@ func TestSickReport_DeletingReportDoesNotReviveEndedSeriesShift(t *testing.T) {
 					return err
 				}
 				result, err := e.Planning.SplitSeries(ctx, workforce.SplitStaffShiftSeries{
-					SeriesID: seriesID, EffectiveDate: from.String(), ValidUntilSet: true, ValidUntil: endedFrom.String(),
+					SeriesID: seriesID, ExpectedVersion: e.mustSeriesVersion(ctx, t, seriesID), EffectiveDate: from.String(), ValidUntilSet: true, ValidUntil: endedFrom.String(),
 					StartTime: clock("08:00"), EndTime: clock("12:00"), ActorStaffID: e.admin.ID,
 				})
 				seriesID = result.SeriesID
@@ -302,7 +302,7 @@ func TestSickReport_DeletingReportDoesNotReviveEndedSeriesShift(t *testing.T) {
 			// removal. Extending the series later may plan the date again.
 			e.inTx(t, func(ctx context.Context) error {
 				result, err := e.Planning.SplitSeries(ctx, workforce.SplitStaffShiftSeries{
-					SeriesID: seriesID, EffectiveDate: from.String(), ValidUntilSet: true, ValidUntil: from.AddDays(22).String(),
+					SeriesID: seriesID, ExpectedVersion: e.mustSeriesVersion(ctx, t, seriesID), EffectiveDate: from.String(), ValidUntilSet: true, ValidUntil: from.AddDays(22).String(),
 					StartTime: clock("08:00"), EndTime: clock("12:00"), ActorStaffID: e.admin.ID,
 				})
 				seriesID = result.SeriesID
@@ -380,10 +380,13 @@ func TestSickReport_DeletingReportPreservesTodayAfterSeriesSplit(t *testing.T) {
 			if sickBeforeSplit {
 				absenceID = e.createSickAbsence(t, today, today)
 			}
+			// The planner opened today's occurrence as the week shows it now.
+			opened := workforce.ShiftVersion(e.seriesShift(t, seriesID, today).UpdatedAt)
 			e.inTx(t, func(ctx context.Context) error {
 				result, err := e.Planning.SplitSeries(ctx, workforce.SplitStaffShiftSeries{
-					SeriesID: seriesID, EffectiveDate: today.String(), OccurrenceShiftID: shift.ID,
-					StartTime: clock("09:00"), EndTime: clock("13:00"), ActorStaffID: e.admin.ID,
+					SeriesID: seriesID, ExpectedVersion: e.mustSeriesVersion(ctx, t, seriesID), EffectiveDate: today.String(), OccurrenceShiftID: shift.ID,
+					ExpectedOccurrenceVersion: opened,
+					StartTime:                 clock("09:00"), EndTime: clock("13:00"), ActorStaffID: e.admin.ID,
 				})
 				seriesID = result.SeriesID
 				return err

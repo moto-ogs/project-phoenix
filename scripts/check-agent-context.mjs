@@ -17,6 +17,11 @@ const codexCap = 32768;
 const ignored = new Set(['worktrees', 'node_modules', '.git']);
 const placeholders = /[<>*{}$]|\.{3}|\[[^\]]*\]/;
 const rootPrefix = /^(?:\.agents|\.claude|\.codex|backend|frontend|docs|scripts)\//i;
+const seamGuides = new Set([
+  'docs/agents/contracts.md',
+  'docs/agents/frontend-api.md',
+  'docs/agents/new-route.md',
+]);
 
 function exactPath(target, links = new Set()) {
   let current = path.parse(target).root;
@@ -73,7 +78,7 @@ function visibleLines(text) {
   });
 }
 
-function pointers(line) {
+function pointers(line, checkSourcePaths) {
   const result = [];
   for (const match of line.matchAll(/\]\(\s*(<[^>]+>|[^\s)]+)(?:\s+"[^"]*")?\s*\)/g)) {
     result.push({ value: match[1].replace(/^<|>$/g, ''), end: match.index + match[0].length });
@@ -83,7 +88,10 @@ function pointers(line) {
   const imported = line.match(/^\s*@([^\s]+)\s*$/);
   if (imported) result.push({ value: imported[1] });
   for (const match of line.matchAll(/`([^`\n]+)`/g)) {
-    if (/^(?:[\w./-]+\/)?[\w.-]+\.md(?::\d+)?(?:#[\w-]+)?$/.test(match[1])) {
+    const value = match[1];
+    const rootSourcePath = checkSourcePaths && rootPrefix.test(value) &&
+      /^[\w./%-]+\.(?:go|[cm]?[jt]sx?|json)(?::\d+)?$/.test(value);
+    if (rootSourcePath || /^(?:[\w./-]+\/)?[\w.-]+\.md(?::\d+)?(?:#[\w-]+)?$/.test(value)) {
       result.push({ value: match[1], inline: true, end: match.index + match[0].length });
     }
   }
@@ -139,8 +147,9 @@ function anchorIssue(pointer, target, state) {
 }
 
 function checkDocument(document, state) {
+  const checkSourcePaths = seamGuides.has(path.relative(state.root, document));
   visibleLines(fs.readFileSync(document, 'utf8')).forEach((line, index) => {
-    for (const pointer of pointers(line)) {
+    for (const pointer of pointers(line, checkSourcePaths)) {
       let issue;
       try {
         const target = pointerTarget(pointer, document, state.root, line);

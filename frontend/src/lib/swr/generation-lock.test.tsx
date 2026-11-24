@@ -88,7 +88,7 @@ function answers(first: string, later: string) {
 
 function signedIn(user: Partial<Session["user"]> = {}) {
   return {
-    data: { user: { id: "A", tenantId: 1, ...user }, expires: "2099-01-01" },
+    data: { user: { id: "A", tenantId: "1", ...user }, expires: "2099-01-01" },
     status: "authenticated" as const,
   };
 }
@@ -159,7 +159,7 @@ const OPERATIONS: [string, Operation][] = [
     // names the school the shared cookie now holds.
     "school mismatch (provider names another school)",
     (rerender) => {
-      mockUseSession.mockReturnValue(signedIn({ tenantId: 2 }));
+      mockUseSession.mockReturnValue(signedIn({ tenantId: "2" }));
       rerender();
     },
   ],

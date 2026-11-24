@@ -21,7 +21,7 @@ func RouteContractTypes() ContractTypes {
 // RevealedValueResponse is the plain value of a secret setting
 // (GET /api/settings/values/{key}/reveal); its form depends on the setting.
 type RevealedValueResponse struct {
-	Value any `json:"value"`
+	Value any `json:"value" contract_json:"The revealed setting's registered kind determines its value type"`
 }
 
 // LegalAGBDocumentRouteContracts registers the upload and the removal of the
@@ -45,11 +45,11 @@ const tenantCacheRouteFile = "the route file purges the cached tenant lookup aft
 func RouteFileContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	return []common.RouteContract{
-		{Method: "PUT", Pattern: "/values/{key}", Portals: portals, RouteFile: tenantCacheRouteFile, Request: setValueRequest{}, NoData: true},
-		{Method: "DELETE", Pattern: "/values/{key}", Portals: portals, RouteFile: tenantCacheRouteFile, NoData: true},
-		{Method: "GET", Pattern: "/login-image", Portals: portals, RouteFile: "served by the same route file as its writes", Response: loginImageResponse{}},
-		{Method: "POST", Pattern: "/login-image", Portals: portals, RouteFile: tenantCacheRouteFile, Multipart: true,
+		{Method: "PUT", Pattern: "/values/{key}", BrowserPath: "/api/settings/values/{key}", Portals: portals, RouteFile: tenantCacheRouteFile, Request: setValueRequest{}, NoData: true},
+		{Method: "DELETE", Pattern: "/values/{key}", BrowserPath: "/api/settings/values/{key}", Portals: portals, RouteFile: tenantCacheRouteFile, NoData: true},
+		{Method: "GET", Pattern: "/login-image", BrowserPath: "/api/settings/login-image", Portals: portals, RouteFile: "served by the same route file as its writes", Response: loginImageResponse{}},
+		{Method: "POST", Pattern: "/login-image", BrowserPath: "/api/settings/login-image", Portals: portals, RouteFile: tenantCacheRouteFile, Multipart: true,
 			MaxBodyBytes: maxLoginImageBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: loginImageUploadResponse{}},
-		{Method: "DELETE", Pattern: "/login-image", Portals: portals, RouteFile: tenantCacheRouteFile, NoData: true},
+		{Method: "DELETE", Pattern: "/login-image", BrowserPath: "/api/settings/login-image", Portals: portals, RouteFile: tenantCacheRouteFile, NoData: true},
 	}
 }

@@ -5,12 +5,14 @@ import { HELP_TOPICS } from "~/lib/help-topics";
  * `/traeger/vertraege` (#4678, #4679, #4680, #4681): festlegen, wann der
  * Vertrag gilt, Vertragsbedingungen je Angebot festlegen, Entwürfe aus
  * angenommenen Anmeldungen erstellen, prüfen und senden; die Unterschrift
- * der Eltern und den Papiervertrag erfassen; Versionen nach einer Änderung;
+ * der Eltern, die Übergabe auf Papier (#8030) und den Papiervertrag
+ * erfassen; Versionen nach einer Änderung;
  * Kündigung und Widerruf (#4682); Änderungswünsche der Eltern freigeben (#5979);
  * Kinder und bestehende Verträge aus einer Datei importieren (#4723), auch
  * ohne Mail-Adresse der Eltern (#7360), ihre Vertragsangaben aus den
  * Originalunterlagen nachpflegen (#7767), importierte Verträge mit der
- * Kinderakte verknüpfen und ihre Anmeldungen nachtragen (#7760).
+ * Kinderakte verknüpfen und ihre Anmeldungen nachtragen (#7760) und
+ * Geschwister ohne Mail-Adresse zu einer Familie zusammenführen (#7161).
  */
 export function traegerCareContractsTopic(): HelpTopic {
   return {
@@ -92,15 +94,18 @@ export function traegerCareContractsTopic(): HelpTopic {
         ],
       },
       {
-        title: "Papiervertrag erfassen",
+        title: "Auf Papier übergeben und erfassen",
         description:
           "Für Familien ohne Internet oder einen Vertrag, den es nur auf Papier gibt.",
         steps: [
-          "Wähle oben `PDF herunterladen` und drucke den Vertrag.",
-          "Die Eltern unterschreiben ihn. Scanne den unterschriebenen Vertrag als PDF.",
-          "Wähle auf der Vertragsseite im Reiter `Unterschrift und Versand` in der Karte `Unterschrift` den Knopf `Papiervertrag erfassen`.",
+          "Öffne den Entwurf und den Reiter `Unterschrift und Versand`. Wähle in der Karte `Unterschrift` den Knopf `Auf Papier übergeben`.",
+          "Bestätige mit `Übergeben und PDF laden`. moto speichert den Vertrag so, wie er jetzt ist, und lädt das PDF herunter. Ein neuer Briefkopf ändert dieses PDF nicht mehr. Kam kein PDF an? Dann hol es oben im Menü mit `PDF herunterladen`.",
+          "Der Vertrag ist dann `Versendet`. Die Eltern bekommen keine Mail und keine Erinnerung.",
+          "Drucke das PDF und gib es den Eltern. Sie unterschreiben es. Scanne den unterschriebenen Vertrag als PDF.",
+          "Wähle in der Karte `Unterschrift` den Knopf `Papiervertrag erfassen`.",
           "Prüfe `Unterschrieben von` und `Unterschrieben am`. Wähle mit `PDF wählen` die Datei.",
           "Wähle `Vertrag abschließen`. Der Vertrag ist dann `Aktiv`. Mit `Papiervertrag laden` holst du das PDF später wieder.",
+          "Ging der Vertrag schon per Mail? Dann drucke ihn mit `PDF herunterladen` und erfasse ihn wie oben.",
         ],
       },
       {
@@ -126,13 +131,31 @@ export function traegerCareContractsTopic(): HelpTopic {
           "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Pflicht sind Vorname und Nachname des Kindes.",
           "Hat deine Datei keine Spalte für die Schule, das Modul oder den Vertragsbeginn? Dann wählst du `Schule für alle Zeilen`, `Modul für alle Zeilen` und `Vertragsbeginn für alle Zeilen`.",
           "Nennt eine Zeile keine Eltern? moto übernimmt den Vertrag trotzdem. Er hat dann keinen Vertragspartner.",
-          "Steht eine Zeile auf `Bereit` und nennt die Eltern, aber keine Mail-Adresse? moto übernimmt den Vertrag trotzdem. Die Vorschau zählt diese Verträge. Unter `Ohne Mail` siehst du nur diese Zeilen. Die Familien bekommen keine Mail von moto und haben keinen Zugang zur Eltern-App. Rechnungen gibt es für sie nur auf Papier. Geschwister bleiben getrennte Familien. Hast du die Adressen? Dann trage sie in die Datei ein. Lade die Datei danach noch einmal.",
-          "Steht die `Debitorennummer` in der Datei? Ordne die Spalte zu. moto trägt die Nummer beim Zahler oder beim Kind ein, je nach deiner Einstellung. Fehlt die `E-Mail der Eltern`, gehört die Nummer zu diesem einen Vertrag. Geschwister erkennt moto nur über dieselbe E-Mail.",
+          "Steht eine Zeile auf `Bereit` und nennt die Eltern, aber keine Mail-Adresse? moto übernimmt den Vertrag trotzdem. Die Vorschau zählt diese Verträge. Unter `Ohne Mail` siehst du nur diese Zeilen. Die Familien bekommen keine Mail von moto und haben keinen Zugang zur Eltern-App. Rechnungen gibt es für sie nur auf Papier. Geschwister sind zuerst getrennte Familien. Du führst sie danach unter `Geschwister zusammenführen` zusammen. Hast du die Adressen? Dann trage sie in die Datei ein. Lade die Datei danach noch einmal.",
+          "Steht die `Debitorennummer` in der Datei? Ordne die Spalte zu. moto trägt die Nummer beim Zahler oder beim Kind ein, je nach deiner Einstellung. Fehlt die `E-Mail der Eltern`, gehört die Nummer zu diesem einen Vertrag. Geschwister erkennt moto von selbst nur über dieselbe E-Mail.",
           "Zählt deine Geschwisterregel alle Kinder der Familie? Ordne die Spalte `Kinder in der Familie` zu. Die Zahl gilt dann als bestätigt ab Vertragsbeginn. Das Feld siehst du nur mit dem Recht `Abrechnung`. Ohne das Recht trägt die Abrechnung die Zahlen später unter `Kinderzahl` nach.",
           "Prüfe die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. `Schon vorhanden` heißt: Das Kind hat an der Schule schon einen Vertrag. Bei `Fehlerhaft` steht der Grund in der Spalte `Hinweis`.",
           "Wähle unten `übernehmen`. Die Verträge stehen danach in der Liste mit dem Status `Aktiv`.",
           "Fehler in der Datei? Korrigiere die Datei und lade sie noch einmal. moto legt kein Kind doppelt an.",
-          "Danach verknüpfst du die Verträge mit der Kinderakte. Wie das geht, steht im nächsten Abschnitt.",
+          "Hat die Datei keine Mail-Adressen? Dann führe Geschwister zuerst zusammen, siehe nächster Abschnitt. Sonst zahlt jedes Kind den Preis des ersten Kindes.",
+          "Danach verknüpfst du die Verträge mit der Kinderakte. Wie das geht, steht weiter unten.",
+        ],
+      },
+      {
+        title: "Geschwister ohne Mail-Adresse zusammenführen",
+        description:
+          "Ohne Mail-Adresse kennt moto jeden Vertrag nur einzeln. Jeder ist eine eigene Familie. Dann gilt kein Geschwisterpreis, und ein Mandat für zwei Geschwister zeigt der Mandatsimport als Konflikt. Hier legst du fest, welche Kinder Geschwister sind. moto führt nichts von selbst zusammen. Das darf, wer das Recht `Verträge verwalten` oder `Abrechnung` hat.",
+        steps: [
+          "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Geschwister zusammenführen`. Nach einem Import führt dich auch `Geschwister zusammenführen` dorthin.",
+          "Die Liste zeigt jede Familie ohne Mail-Adresse, nach Nachnamen. Geschwister mit demselben Nachnamen stehen untereinander. Mit der Suche findest du Kind, Eltern oder Vertragsnummer.",
+          "Kreuze die Familien an, die zusammengehören. Unten erscheint eine Leiste. Wähle dort `Zusammenführen`.",
+          "Wähle im Fenster, welcher Vertrag die Familie führt. Von ihm kommen Debitorennummer, Zahlungsweg und SEPA-Mandat der Familie. Eine Debitorennummer je Kind bleibt beim Kind.",
+          "Wähle `Zusammenführen`. Die Spalte `Familie` zeigt jetzt zum Beispiel `2 Kinder zusammen`. Im nächsten Monatslauf zählen die Kinder als Geschwister.",
+          "Kommt danach der Mandatsimport, gilt ein Mandat mit derselben Referenz für beide Kinder.",
+          "Falsch zusammengeführt? Wähle bei der Familie das Menü mit den drei Punkten und dann zum Beispiel `Mila Schulz lösen`. Bestätige mit `Lösen`. Danach gilt für das Kind wieder, was bei seinem Vertrag gespeichert war.",
+          "Unter `Verlauf` siehst du, wer wann welche Kinder zusammengeführt oder gelöst hat.",
+          "Die Liste als Datei? Wähle oben rechts das Menü mit den drei Punkten und dann PDF, Excel oder CSV.",
+          "Ausgestellte Rechnungen ändern sich nicht. Das Zusammenführen gilt für Monatsläufe, die danach rechnen.",
         ],
       },
       {
@@ -179,6 +202,7 @@ export function traegerCareContractsTopic(): HelpTopic {
           "Wähle unten zum Beispiel `Für 12 Verträge nachtragen`. moto fragt vorher nach. Bestätige mit `Jetzt nachtragen`.",
           "Danach zeigt moto, wie viele Anmeldungen nachgetragen und wie viele Verträge nur gebunden sind. Die offenen Zeilen bleiben als Arbeitsliste stehen.",
           "Mit `Neue Vorschau` holst du den neuen Stand. Erledigtes steht dann auf `Erledigt`. Es entsteht nichts doppelt.",
+          "Danach sind die Eltern dran. Das macht die Schule in ihrer Kinderliste mit `Eltern einladen`. Eltern ohne Konto bekommen die Einladung ins Elternportal. Mit `Eltern mit Konto benachrichtigen` bekommen Eltern mit Konto eine kurze Nachricht, für Kinder, die heute Betreuung gebucht haben. Jedes Elternteil bekommt sie pro Kind nur einmal.",
         ],
       },
       {
@@ -280,12 +304,12 @@ export function traegerCareContractsTopic(): HelpTopic {
       "Ein importierter Vertrag beginnt frühestens mit dem Schuljahr seines Moduls. Er endet auch mit diesem Schuljahr, wenn das Modul ein Ende hat und die Datei kein früheres nennt. Lief der Vertrag schon vorher, steht der frühere Tag unter `Abgeschlossen`. Der Vertrag ist mit keiner Kinderakte der Schule verknüpft, bis du ihn verknüpfst: moto gleicht Kinder nicht über den Namen ab. Im Reiter `Versionen` steht bei ihm `Aus einer Datei importiert`.",
       "Hat ein Kind einen laufenden importierten Vertrag, bekommt es aus einer Anmeldung keinen zweiten Vertrag für dieselbe Zeit. Das gilt auch, solange der Vertrag noch nicht verknüpft ist: Dann zählen Name und Geburtsdatum. Das Kind steht in `Verträge erstellen` mit `Hat schon einen importierten Vertrag` und der Nummer des Vertrags. Stimmt das nicht, prüfe dort die Kinderakte und das Vertragsende. Endet der importierte Vertrag vor der gebuchten Betreuung, bekommt das Kind seinen neuen Vertrag wie sonst.",
       "Die Suche und die Filter gelten für alle Verträge. Mit `Weitere Verträge laden` zeigst du ältere Treffer an.",
-      "Beim ersten Senden hält moto das PDF fest. Änderst du danach Bedingungen oder Brieftext, bleibt der versendete Vertrag gleich.",
+      "Beim ersten Senden oder mit `Auf Papier übergeben` hält moto das PDF fest. Änderst du danach Bedingungen oder Brieftext, bleibt der versendete Vertrag gleich.",
       "Im Reiter `Unterschrift und Versand` siehst du in der Karte `Versand`, ob die Mail gesendet wurde. Mit `Versand aktualisieren` prüfst du den neuen Stand. Mit `Erneut senden` geht dasselbe PDF noch einmal an die Eltern; moto fragt vorher. Bei einem aktiven Vertrag steht `Erneut senden` im Menü mit den drei Punkten oben rechts. Eine zweite Nachricht aufs Handy gibt es dabei nicht. Nur eine korrigierte Mail-Adresse bekommt eine eigene Nachricht.",
       "Neben jedem Versand steht, was aus der Mail geworden ist: wie bei der Abrechnung. Der Hinweis oben nennt den Grund und den nächsten Schritt. Bei `Verzögert` wartest du. Hat die Schule die Mails gestoppt, kläre das mit der Schule. Bei `Gesperrt` klärt das der moto-Support. Solange das gilt, ist `Erneut senden` aus.",
       "Den Brieftext des Vertrags änderst du unter `Einstellungen` → `Briefkopf und Vorlagen` bei der Vorlage `Vertrag`.",
-      "Mit `PDF herunterladen` bekommst du den Vertrag zum Drucken, etwa für Familien ohne Mail.",
-      "Wartet ein versendeter Vertrag auf die Unterschrift, bekommen die Eltern Erinnerungen per Mail. Es gibt höchstens drei. Bereits abgeschlossene Verträge bekommen keine Erinnerung. Nach wie vielen Tagen, lege unter `Einstellungen` → `Allgemein` im Bereich `Betreuungsverträge` fest. Bei 0 gibt es keine Erinnerung.",
+      "Mit `PDF herunterladen` bekommst du den versendeten Vertrag zum Drucken. Bei einem Entwurf heißt der Eintrag `Vorschau herunterladen`. Auf jeder Seite der Vorschau steht `Vorschau, nicht zum Unterschreiben`. Für Familien ohne Mail wähle `Auf Papier übergeben`.",
+      "Wartet ein per Mail versendeter Vertrag auf die Unterschrift, bekommen die Eltern Erinnerungen per Mail. Es gibt höchstens drei. Abgeschlossene und auf Papier übergebene Verträge bekommen keine Erinnerung. Nach wie vielen Tagen, lege unter `Einstellungen` → `Allgemein` im Bereich `Betreuungsverträge` fest. Bei 0 gibt es keine Erinnerung.",
       "Der Link in der Mail gilt einmal und 30 Tage. Jede Erinnerung bringt einen neuen Link.",
       "Frühere Versionen bleiben unter `Versionen` lesbar. `Gilt jetzt` zeigt die Version von heute. Die Abrechnung nimmt für jeden Tag die Version, die an diesem Tag gilt.",
       "Bei einer außerordentlichen Kündigung steht in `Vertrag beenden` der Grund der Eltern und `Ende noch offen`. Prüfe den Grund. Bis zu deiner Entscheidung gilt der Vertrag weiter.",
@@ -308,7 +332,7 @@ export function traegerCareContractsTopic(): HelpTopic {
     troubleshootingDetails: [
       "Beim Nachtragen steht `Seit deiner Vorschau hat sich etwas geändert`? Ein Vertrag, die Schule oder der Tag ist neu. moto hat nichts eingetragen. Prüfe die neue Vorschau und trag noch einmal nach.",
       "Beim Nachtragen steht `Das Nachtragen ist nicht ganz durchgelaufen`? Manche Kinder können schon angemeldet sein. Trag noch einmal nach. moto bindet dann die Verträge, es entsteht nichts doppelt.",
-      "Die Schule fragt, warum ein Kind ohne Eltern angemeldet ist? Die Anmeldung kommt aus dem importierten Vertrag. Die Schule lädt die Eltern in ihrer Kinderliste mit `Eltern einladen` ins Elternportal ein. Eine Nachricht an Eltern, die schon ein Konto haben, gibt es noch nicht.",
+      "Die Schule fragt, warum ein Kind ohne Eltern angemeldet ist? Die Anmeldung kommt aus dem importierten Vertrag. Die Schule lädt die Eltern in ihrer Kinderliste mit `Eltern einladen` ins Elternportal ein. Setzt sie dort den Haken bei `Eltern mit Konto benachrichtigen`, bekommen Eltern mit Konto eine kurze Nachricht: Die Betreuung ist jetzt im Elternportal sichtbar.",
       "Beim Import steht `Für das Modul fehlen die Vertragsbedingungen`? Trage unter `Vertragsbedingungen` Laufzeit und Frist für das Modul ein. Wähle danach im Import `Erneut prüfen` oder lade die Datei noch einmal.",
       "Beim Import steht `Dieses Modul gibt es an der Schule nicht`? Der Name in der Datei muss so heißen wie das Angebot der Schule. Ändere den Namen in der Datei, oder wähle `Modul für alle Zeilen`.",
       "Beim Import steht `„Kinder in der Familie“ ist keine ganze Zahl von 1 bis 20`? moto übernimmt die Zeile nicht. Korrigiere die Zahl in der Datei und lade die Datei noch einmal.",

@@ -75,8 +75,8 @@ func TestToAdminRequestSummary_StringifiesIDsAndFormatsDOB(t *testing.T) {
 		Children: []*capability.RequestChild{child},
 	}
 	out := toAdminRequestSummary(in)
-	assert.Equal(t, "1234", out.ID, "int64 ID stringified per CLAUDE rule 4")
-	assert.Equal(t, "5678", out.PhaseID)
+	assert.Equal(t, "1234", out.ID.String(), "int64 ID stringified per CLAUDE rule 4")
+	assert.Equal(t, "5678", out.PhaseID.String())
 	assert.Equal(t, "Schuljahr 2026/27", out.PhaseName)
 	assert.Equal(t, capability.PhaseCareOfferingSelectionOptional, out.CareOfferingSelectionMode)
 	assert.Equal(t, "anna@example.test", out.GuardianEmail)
@@ -85,7 +85,7 @@ func TestToAdminRequestSummary_StringifiesIDsAndFormatsDOB(t *testing.T) {
 	require.NotNil(t, out.WithdrawnAt)
 	assert.Equal(t, withdrawn, *out.WithdrawnAt)
 	require.Len(t, out.Children, 1)
-	assert.Equal(t, "999", out.Children[0].ID)
+	assert.Equal(t, "999", out.Children[0].ID.String())
 	assert.Equal(t, "2018-03-04", out.Children[0].DateOfBirth, "DOB rendered as YYYY-MM-DD")
 	assert.Equal(t, "submitted", out.Children[0].Status)
 	assert.Equal(t, "auto", out.Children[0].ActivationMode)
@@ -120,7 +120,7 @@ func TestToAdminRequestSummary_NilPhaseLeavesPhaseNameEmpty(t *testing.T) {
 	}
 	out := toAdminRequestSummary(in)
 	assert.Equal(t, "", out.PhaseName, "nil phase → empty PhaseName (no panic)")
-	assert.Equal(t, "5678", out.PhaseID, "PhaseID still copied from Request, not Phase")
+	assert.Equal(t, "5678", out.PhaseID.String(), "PhaseID still copied from Request, not Phase")
 }
 
 func TestToAdminRequestSummary_EmptyChildrenSliceNotNil(t *testing.T) {
@@ -210,5 +210,5 @@ func TestToAdminRequestSummary_PreservesCustomDataMap(t *testing.T) {
 	}
 	out := toAdminRequestSummary(in)
 	require.Len(t, out.Children, 1)
-	assert.Equal(t, "Nüsse", formValue(out.Children[0].CustomData, "allergies"))
+	assert.Equal(t, "Nüsse", out.Children[0].CustomData["allergies"])
 }

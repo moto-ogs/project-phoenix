@@ -12,6 +12,7 @@ import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Modal } from "~/components/ui/modal";
 import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "MonthCloseReasonModal" });
@@ -25,6 +26,7 @@ export function MonthCloseReasonModal({
   destructive = false,
   errorObject = "das Abschließen des Monats",
   onSubmit,
+  onChangedSinceRead,
   onClose,
 }: {
   readonly title: string;
@@ -40,6 +42,10 @@ export function MonthCloseReasonModal({
   /** Was im Fehlertext genannt wird, mit Artikel, feminin oder neutral. */
   readonly errorObject?: string;
   readonly onSubmit: (reason: string) => Promise<void>;
+  /** Der gelesene Stand hat sich geändert (ADR 0311): Der Dialog schließt,
+   *  damit kein zweiter Klick einen Stand festschreibt, den die Person nicht
+   *  gesehen hat; der Aufrufer zeigt die Ablehnung beim neu gelesenen Stand. */
+  readonly onChangedSinceRead?: (err: unknown) => void;
   readonly onClose: () => void;
 }) {
   const [reason, setReason] = useState("");
@@ -62,6 +68,13 @@ export function MonthCloseReasonModal({
         error: err instanceof Error ? err.message : String(err),
       });
       setSubmitting(false);
+      if (onChangedSinceRead && isReadStateRefusal(err)) {
+        onClose();
+        onChangedSinceRead(err);
+        return;
+      }
+      // The error path offers no retry for a month changed since it was
+      // read: the same request would be refused again (ADR 0311).
       await formErrors.show(err, {
         object: errorObject,
         retry: () => void latestSubmit.current(),

@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/facilities/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/facilities/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/stretchr/testify/require"
 )
 
@@ -95,7 +96,7 @@ func TestDeleteTakesRecurrenceLockBeforeRoomLock(t *testing.T) {
 		func(ports.Observation) {},
 	)
 
-	_, err := service.DeleteRoom(testpkg.TenantContext(42), time.Now().UnixNano())
+	_, err := service.DeleteRoom(testpkg.TenantContext(42), time.Now().UnixNano(), confirmedRemoval(facilities.RoomReferences{}))
 
 	require.NoError(t, err)
 	require.Equal(t, []string{"recurrence", "room", "sessions", "offerings", "references", "delete"}, steps)
@@ -109,7 +110,8 @@ func TestDeleteArchivesARoomHistoryStillNames(t *testing.T) {
 	service := newDeletionService(deletionStore{steps: &steps, referenced: true}, func(context.Context) error { return nil },
 		roomUsage{steps: &steps, references: facilities.RoomReferences{PastBlocks: 3, HasSessionHistory: true}}, func(ports.Observation) {})
 
-	removal, err := service.DeleteRoom(testpkg.TenantContext(42), time.Now().UnixNano())
+	removal, err := service.DeleteRoom(testpkg.TenantContext(42), time.Now().UnixNano(),
+		confirmedRemoval(facilities.RoomReferences{PastBlocks: 3, HasSessionHistory: true}))
 
 	require.NoError(t, err)
 	require.Equal(t, facilities.RoomRemovalArchive, removal.Outcome)
@@ -132,7 +134,7 @@ func TestDeleteRefusesARoomThatIsStillPlanned(t *testing.T) {
 			service := newDeletionService(deletionStore{steps: &steps}, func(context.Context) error { return nil },
 				roomUsage{steps: &steps, references: references}, func(ports.Observation) {})
 
-			_, err := service.DeleteRoom(testpkg.TenantContext(42), time.Now().UnixNano())
+			_, err := service.DeleteRoom(testpkg.TenantContext(42), time.Now().UnixNano(), "")
 
 			var planned *facilities.RoomStillPlannedError
 			require.ErrorAs(t, err, &planned)
@@ -150,10 +152,65 @@ func TestDeleteProtectsSystemRoomsByFlag(t *testing.T) {
 	service := newDeletionService(deletionStore{steps: &steps, room: facilities.Room{Name: "Pausenhof", IsSystem: true}},
 		func(context.Context) error { return nil }, roomUsage{steps: &steps}, func(ports.Observation) {})
 
-	_, err := service.DeleteRoom(testpkg.TenantContext(42), time.Now().UnixNano())
+	_, err := service.DeleteRoom(testpkg.TenantContext(42), time.Now().UnixNano(), "")
 
 	require.ErrorIs(t, err, facilities.ErrSystemRoomProtected)
 	require.Equal(t, []string{"room"}, steps)
+}
+
+// confirmedRemoval is the fingerprint of a preview that found references and
+// nothing else holding the room.
+func confirmedRemoval(references facilities.RoomReferences) string {
+	return facilities.NewRoomRemovalImpact(false, false, references).Fingerprint()
+}
+
+// A removal runs only as its preview promised (ADR 0311): a preview read
+// before the room's history changed, or none at all, is refused before
+// anything is written, and the database deleting a room the preview said
+// it archives rolls the delete back.
+func TestDeleteRefusesAnOutcomeOtherThanTheConfirmedPreview(t *testing.T) {
+	t.Parallel()
+	history := facilities.RoomReferences{PastBlocks: 2}
+	cases := map[string]struct {
+		usage    roomUsage
+		expected string
+		steps    []string
+	}{
+		"archive confirmed, room is now unused": {
+			usage: roomUsage{}, expected: confirmedRemoval(history),
+			steps: []string{"room", "sessions", "offerings", "references"},
+		},
+		"archive confirmed, history changed since": {
+			usage: roomUsage{references: facilities.RoomReferences{PastBlocks: 3}}, expected: confirmedRemoval(history),
+			steps: []string{"room", "sessions", "offerings", "references"},
+		},
+		"delete confirmed, room now has history": {
+			usage: roomUsage{references: history}, expected: confirmedRemoval(facilities.RoomReferences{}),
+			steps: []string{"room", "sessions", "offerings", "references"},
+		},
+		"no preview": {
+			usage: roomUsage{}, expected: "",
+			steps: []string{"room", "sessions", "offerings", "references"},
+		},
+		"archive confirmed, database deletes": {
+			usage: roomUsage{references: history}, expected: confirmedRemoval(history),
+			steps: []string{"room", "sessions", "offerings", "references", "delete"},
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			steps := []string{}
+			usage := tc.usage
+			usage.steps = &steps
+			service := newDeletionService(deletionStore{steps: &steps}, func(context.Context) error { return nil }, usage, func(ports.Observation) {})
+
+			_, err := service.DeleteRoom(testpkg.TenantContext(42), 7, tc.expected)
+
+			require.ErrorIs(t, err, readstate.ErrChanged)
+			require.Equal(t, tc.steps, steps)
+		})
+	}
 }
 
 func TestRoomRemovalImpactNamesTheOutcome(t *testing.T) {
@@ -207,7 +264,7 @@ func TestDeleteKeepsARoomSomeoneStillNeeds(t *testing.T) {
 			usage.steps = &steps
 			service := newDeletionService(deletionStore{steps: &steps}, func(context.Context) error { return nil }, usage, func(ports.Observation) {})
 
-			_, err := service.DeleteRoom(testpkg.TenantContext(42), time.Now().UnixNano())
+			_, err := service.DeleteRoom(testpkg.TenantContext(42), time.Now().UnixNano(), "")
 
 			require.ErrorIs(t, err, tc.err)
 			require.Equal(t, tc.steps, steps, "the room is not deleted")

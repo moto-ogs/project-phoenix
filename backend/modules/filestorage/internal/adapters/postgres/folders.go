@@ -32,7 +32,8 @@ func (r folderRow) folder() domain.Folder {
 
 type folderListRow struct {
 	folderRow
-	FileCount int64 `bun:"file_count,scanonly"`
+	FileCount int64   `bun:"file_count,scanonly"`
+	FileIDs   []int64 `bun:"file_ids,array,scanonly"`
 }
 
 type folderRoleRow struct {
@@ -127,17 +128,28 @@ func (s *FolderStore) Delete(ctx context.Context, folderID int64) (domain.Operat
 }
 
 func (s *FolderStore) FindByID(ctx context.Context, folderID int64) (domain.Folder, bool, domain.OperationStats, error) {
+	return s.find(ctx, folderID, false)
+}
+
+func (s *FolderStore) FindByIDForUpdate(ctx context.Context, folderID int64) (domain.Folder, bool, domain.OperationStats, error) {
+	return s.find(ctx, folderID, true)
+}
+
+func (s *FolderStore) find(ctx context.Context, folderID int64, forUpdate bool) (domain.Folder, bool, domain.OperationStats, error) {
 	db, tenantID, err := requireTenant(s.database, ctx)
 	if err != nil {
 		return domain.Folder{}, false, domain.OperationStats{}, err
 	}
 	row := folderRow{}
 	started := time.Now()
-	err = db.NewSelect().Model(&row).
+	query := db.NewSelect().Model(&row).
 		ModelTableExpr(`documents.folders AS "folder"`).
 		Where(`"folder".id = ?`, folderID).
-		Where(`"folder".tenant_id = ?`, tenantID).
-		Scan(ctx)
+		Where(`"folder".tenant_id = ?`, tenantID)
+	if forUpdate {
+		query = query.For("UPDATE")
+	}
+	err = query.Scan(ctx)
 	stats := measure(time.Since(started), 1)
 	if errors.Is(err, sql.ErrNoRows) {
 		stats.Rows = 0
@@ -193,10 +205,18 @@ func (s *FolderStore) ListVisible(ctx context.Context, viewer domain.Viewer) ([]
 		Where(`"document".tenant_id = "folder".tenant_id`).
 		Where(`"document".folder_id = "folder".id`).
 		Where(`"document".deleted_at IS NULL`)
+	// The same live files by id, for the fingerprint of the delete dialog.
+	fileIDs := db.NewSelect().Model((*fileRow)(nil)).
+		ModelTableExpr(`documents.files AS "document"`).
+		ColumnExpr(`COALESCE(array_agg("document".id ORDER BY "document".id), '{}')`).
+		Where(`"document".tenant_id = "folder".tenant_id`).
+		Where(`"document".folder_id = "folder".id`).
+		Where(`"document".deleted_at IS NULL`)
 	query := db.NewSelect().Model(&rows).
 		ModelTableExpr(`documents.folders AS "folder"`).
 		ColumnExpr(`"folder".*`).
 		ColumnExpr(`(?) AS file_count`, fileCount).
+		ColumnExpr(`(?) AS file_ids`, fileIDs).
 		Where(`"folder".tenant_id = ?`, tenantID).
 		OrderExpr(`lower("folder".name) ASC, "folder".id ASC`)
 	query = visibleFolders(db, query, tenantID, viewer)
@@ -208,7 +228,7 @@ func (s *FolderStore) ListVisible(ctx context.Context, viewer domain.Viewer) ([]
 	}
 	result := make([]domain.FolderListItem, 0, len(rows))
 	for _, row := range rows {
-		result = append(result, domain.FolderListItem{Folder: row.folder(), FileCount: row.FileCount})
+		result = append(result, domain.FolderListItem{Folder: row.folder(), FileCount: row.FileCount, FileIDs: row.FileIDs})
 	}
 	return result, stats, nil
 }

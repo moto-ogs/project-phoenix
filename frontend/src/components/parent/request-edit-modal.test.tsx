@@ -58,6 +58,7 @@ describe("RequestEditModal", () => {
       },
     ]);
     updateExcused.mockResolvedValue({
+      version: "row-2",
       id: "req-1",
       student_id: "1",
       absence_status: "excused",
@@ -77,11 +78,12 @@ describe("RequestEditModal", () => {
         request={{
           type: "excused",
           id: "req-1",
+          version: "row-1",
           dates: ["2026-09-01"],
           note: "Zahnarzt",
         }}
         onClose={vi.fn()}
-        onSaved={vi.fn()}
+        onReload={vi.fn()}
       />,
     );
 
@@ -94,8 +96,10 @@ describe("RequestEditModal", () => {
     ).toBeInTheDocument();
   });
 
-  it("sends the changed request with the version it was loaded at", async () => {
-    const onSaved = vi.fn();
+  // ADR 0311: the version comes from the list row the values came from, not
+  // from the separate history read.
+  it("sends the version of the row its values came from", async () => {
+    const onReload = vi.fn();
     const onClose = vi.fn();
     renderParent(
       <RequestEditModal
@@ -103,11 +107,12 @@ describe("RequestEditModal", () => {
         request={{
           type: "excused",
           id: "req-1",
+          version: "row-1",
           dates: ["2026-09-01"],
           note: "Zahnarzt",
         }}
         onClose={onClose}
-        onSaved={onSaved}
+        onReload={onReload}
       />,
     );
 
@@ -121,60 +126,16 @@ describe("RequestEditModal", () => {
       expect(updateExcused).toHaveBeenCalledWith("1", "req-1", {
         dates: ["2026-09-01"],
         note: "Doch Kinderarzt",
-        expectedVersion: "v2",
+        expectedVersion: "row-1",
       }),
     );
-    expect(onSaved).toHaveBeenCalledTimes(1);
+    expect(onReload).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it("reads the version anew when the dialog opens again", async () => {
-    const request = {
-      type: "excused" as const,
-      id: "req-1",
-      dates: ["2026-09-01"],
-      note: "Zahnarzt",
-    };
-    function Dialog({ open }: Readonly<{ open: boolean }>) {
-      return (
-        <ParentResourceTestProvider>
-          {open ? (
-            <RequestEditModal
-              studentId="1"
-              request={request}
-              onClose={vi.fn()}
-              onSaved={vi.fn()}
-            />
-          ) : null}
-        </ParentResourceTestProvider>
-      );
-    }
-    const view = render(<Dialog open />);
-    await screen.findByText("Geändert am 24.08.2026");
-    view.rerender(<Dialog open={false} />);
-    // Another guardian edited the request meanwhile.
-    events.mockResolvedValue([
-      {
-        event_type: "guardian_edited",
-        version: "v3",
-        created_at: "2026-08-25T10:00:00Z",
-      },
-    ]);
-    view.rerender(<Dialog open />);
-
-    await screen.findByText("Geändert am 25.08.2026");
-    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
-    await waitFor(() =>
-      expect(updateExcused).toHaveBeenCalledWith("1", "req-1", {
-        dates: ["2026-09-01"],
-        note: "Zahnarzt",
-        expectedVersion: "v3",
-      }),
-    );
   });
 
   it("changes a Stammdaten request through the same dialog", async () => {
     updateMasterData.mockResolvedValue({
+      version: "row-2",
       is_self: false,
       id: "md-1",
       target: "person",
@@ -189,11 +150,12 @@ describe("RequestEditModal", () => {
         request={{
           type: "master_data",
           id: "md-1",
+          version: "row-1",
           label: "Vorname",
           value: "Lena",
         }}
         onClose={vi.fn()}
-        onSaved={vi.fn()}
+        onReload={vi.fn()}
       />,
     );
 
@@ -206,13 +168,13 @@ describe("RequestEditModal", () => {
     await waitFor(() =>
       expect(updateMasterData).toHaveBeenCalledWith("1", "md-1", {
         newValue: "Lea",
-        expectedVersion: "v2",
+        expectedVersion: "row-1",
       }),
     );
   });
 
-  // Ohne Änderungsgeschichte bleibt das Bearbeiten möglich; die Fassung geht
-  // dann leer raus, das Backend prüft sie nicht.
+  // Die Änderungsgeschichte ist nur eine Anzeige: ohne sie bleibt das
+  // Bearbeiten mit der Fassung der Listenzeile möglich.
   it("still saves when the history cannot be loaded", async () => {
     events.mockRejectedValue(new Error("offline"));
     renderParent(
@@ -221,11 +183,12 @@ describe("RequestEditModal", () => {
         request={{
           type: "excused",
           id: "req-1",
+          version: "row-1",
           dates: ["2026-09-01"],
           note: "Zahnarzt",
         }}
         onClose={vi.fn()}
-        onSaved={vi.fn()}
+        onReload={vi.fn()}
       />,
     );
 
@@ -236,18 +199,26 @@ describe("RequestEditModal", () => {
       expect(updateExcused).toHaveBeenCalledWith(
         "1",
         "req-1",
-        expect.objectContaining({ expectedVersion: "" }),
+        expect.objectContaining({ expectedVersion: "row-1" }),
       ),
     );
   });
 
-  // #2518: a stale version comes back as a code; the dialog shows its catalog
-  // text and never the backend sentence.
-  it("shows a failed save inside the dialog from the shared catalog", async () => {
-    const onClose = vi.fn();
+  // ADR 0311: a request stored differently since the list was read is
+  // refused. The dialog shows the catalog text without a retry (the same
+  // version would be refused again), reloads the list and then shows the
+  // stored values of the new version.
+  // ADR 0311, rule 6: a list that cannot be read again after the refusal
+  // ends the wait with its load error instead of a spinner without end.
+  it("names a failed reload after a refusal instead of waiting forever", async () => {
+    const onReload = vi.fn(() =>
+      Promise.reject(
+        new ApiError("offline", 503, { code: "general.unavailable" }),
+      ),
+    );
     updateMasterData.mockRejectedValue(
-      new ApiError("request was changed by someone else", 409, {
-        code: "students.change_request_stale",
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
       }),
     );
     renderParent(
@@ -256,25 +227,215 @@ describe("RequestEditModal", () => {
         request={{
           type: "master_data",
           id: "md-1",
+          version: "row-1",
           label: "Vorname",
           value: "Lena",
         }}
-        onClose={onClose}
-        onSaved={vi.fn()}
+        onClose={vi.fn()}
+        onReload={onReload}
       />,
     );
 
     await screen.findByText("Geändert am 24.08.2026");
+    fireEvent.change(screen.getByLabelText("Vorname"), {
+      target: { value: "Lea" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
 
     const dialog = screen.getByRole("dialog");
     expect(
       await within(dialog).findByText(
-        catalogText("students.change_request_stale", "die Anfrage"),
+        /Der neue Stand konnte nicht geladen werden/,
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/someone else/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Lädt den gespeicherten Stand/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Änderung speichern" }),
+    ).toBeDisabled();
+  });
+
+  it("reloads a request changed since it was read and shows its stored values", async () => {
+    const onClose = vi.fn();
+    const onReload = vi.fn();
+    updateMasterData.mockRejectedValue(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    const request = {
+      type: "master_data" as const,
+      id: "md-1",
+      version: "row-1",
+      label: "Vorname",
+      value: "Lena",
+    };
+    const view = renderParent(
+      <RequestEditModal
+        studentId="1"
+        request={request}
+        onClose={onClose}
+        onReload={onReload}
+      />,
+    );
+
+    await screen.findByText("Geändert am 24.08.2026");
+    fireEvent.change(screen.getByLabelText("Vorname"), {
+      target: { value: "Lea" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(
+      await within(dialog).findByText(
+        catalogText("general.changed_since_read", "die Anfrage"),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/since it was read/)).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", { name: "Erneut versuchen" }),
+    ).not.toBeInTheDocument();
+    expect(onReload).toHaveBeenCalledTimes(1);
     expect(onClose).not.toHaveBeenCalled();
+    // Until the stored request arrives, saving would resend the refused
+    // version: the button is locked.
+    expect(
+      screen.getByRole("button", { name: /Lädt den gespeicherten Stand/ }),
+    ).toBeDisabled();
+
+    // The reloaded list brings the stored request with its new version.
+    view.rerender(
+      <RequestEditModal
+        studentId="1"
+        request={{ ...request, version: "row-2", value: "Lina" }}
+        onClose={onClose}
+        onReload={onReload}
+      />,
+    );
+    expect(screen.getByLabelText("Vorname")).toHaveValue("Lina");
+    expect(
+      within(dialog).getByText(
+        catalogText("general.changed_since_read", "die Anfrage"),
+      ),
+    ).toBeInTheDocument();
+    updateMasterData.mockResolvedValueOnce({
+      version: "row-3",
+      is_self: true,
+      id: "md-1",
+      target: "person",
+      field_key: "first_name",
+      new_value: "Lina",
+      status: "pending",
+      created_at: "2026-08-20T08:00:00Z",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+    await waitFor(() =>
+      expect(updateMasterData).toHaveBeenLastCalledWith("1", "md-1", {
+        newValue: "Lina",
+        expectedVersion: "row-2",
+      }),
+    );
+  });
+
+  // ADR 0311: a background revalidation must not replace what the parent
+  // typed. The draft keeps the version it was filled from; only the refusal
+  // of that version shows the stored state.
+  it("keeps typed input when a newer version arrives and sends the version it started from", async () => {
+    const onReload = vi.fn();
+    updateMasterData.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    const request = {
+      type: "master_data" as const,
+      id: "md-1",
+      version: "row-1",
+      label: "Vorname",
+      value: "Lena",
+    };
+    const view = renderParent(
+      <RequestEditModal
+        studentId="1"
+        request={request}
+        onClose={vi.fn()}
+        onReload={onReload}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Vorname"), {
+      target: { value: "Lea" },
+    });
+    view.rerender(
+      <RequestEditModal
+        studentId="1"
+        request={{ ...request, version: "row-2", value: "Lina" }}
+        onClose={vi.fn()}
+        onReload={onReload}
+      />,
+    );
+    expect(screen.getByLabelText("Vorname")).toHaveValue("Lea");
+
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+    await waitFor(() =>
+      expect(updateMasterData).toHaveBeenCalledWith("1", "md-1", {
+        newValue: "Lea",
+        expectedVersion: "row-1",
+      }),
+    );
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Anfrage"),
+      ),
+    ).toBeInTheDocument();
+    expect(onReload).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText("Vorname")).toHaveValue("Lina");
+  });
+
+  it("refills an untouched draft from a newer read and sends that version", async () => {
+    const request = {
+      type: "master_data" as const,
+      id: "md-1",
+      version: "row-1",
+      label: "Vorname",
+      value: "Lena",
+    };
+    updateMasterData.mockResolvedValue({
+      version: "row-3",
+      is_self: true,
+      id: "md-1",
+      target: "person",
+      field_key: "first_name",
+      new_value: "Lina",
+      status: "pending",
+      created_at: "2026-08-20T08:00:00Z",
+    });
+    const view = renderParent(
+      <RequestEditModal
+        studentId="1"
+        request={request}
+        onClose={vi.fn()}
+        onReload={vi.fn()}
+      />,
+    );
+    view.rerender(
+      <RequestEditModal
+        studentId="1"
+        request={{ ...request, version: "row-2", value: "Lina" }}
+        onClose={vi.fn()}
+        onReload={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText("Vorname")).toHaveValue("Lina");
+
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+    await waitFor(() =>
+      expect(updateMasterData).toHaveBeenCalledWith("1", "md-1", {
+        newValue: "Lina",
+        expectedVersion: "row-2",
+      }),
+    );
   });
 
   it("checks an empty value before sending and marks the field", async () => {
@@ -284,11 +445,12 @@ describe("RequestEditModal", () => {
         request={{
           type: "master_data",
           id: "md-1",
+          version: "row-1",
           label: "Vorname",
           value: "Lena",
         }}
         onClose={vi.fn()}
-        onSaved={vi.fn()}
+        onReload={vi.fn()}
       />,
     );
 

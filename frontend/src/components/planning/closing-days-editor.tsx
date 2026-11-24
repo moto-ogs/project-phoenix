@@ -48,7 +48,7 @@ import { hasPermission } from "~/lib/auth-utils";
 import { useInvalidateClosingDays } from "~/lib/hooks/use-closing-days";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { closingDayKeys } from "~/lib/swr/staff-keys";
 import { formatDate } from "~/lib/date-helpers";
 import { closingDaysConcept } from "~/lib/concepts/closingDays";
@@ -64,11 +64,10 @@ export function ClosingDaysEditor({
   /** Nach „Termine absagen“: die Verwendung der Zeiträume neu laden. */
   readonly onAppointmentsCancelled?: () => void;
 } = {}) {
-  const {
-    data,
-    error: listError,
-    mutate,
-  } = useSWRAuth(closingDayKeys.list(), () => closingDayService.list());
+  const list = useSWRAuth(closingDayKeys.list(), () =>
+    closingDayService.list(),
+  );
+  const { data, error: listError, mutate } = list;
   const closingDays = data ?? EMPTY;
   const loadError = useSwrResourceLoadError(
     [{ data, error: listError }],
@@ -119,6 +118,18 @@ export function ClosingDaysEditor({
     void mutate();
     setNoticesVersion((value) => value + 1);
   }, [invalidateClosingDays, mutate]);
+
+  // Nach einer Ablehnung „inzwischen geändert“ zeigt der Dialog den
+  // gespeicherten Schließtag (ADR 0311).
+  // Lehnt ab, wenn das Lesen scheitert oder der Schließtag weg ist.
+  const showStoredClosingDay = useCallback(async () => {
+    const stored = (await revalidateOrThrow(list)).find(
+      (day) => day.id === editing?.id,
+    );
+    if (!stored) throw new Error("closing day is gone");
+    setEditing(stored);
+    return stored;
+  }, [editing?.id, list]);
 
   const beginCreate = () => {
     setEditing(null);
@@ -340,6 +351,7 @@ export function ClosingDaysEditor({
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onSaved={refreshAfterMutation}
+        reload={showStoredClosingDay}
         initial={editing}
         onDraftChange={setDraft}
         consequences={

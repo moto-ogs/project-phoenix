@@ -35,7 +35,7 @@ func TestRoomsServeTheCatalogBeforeTheDeletionGuard(t *testing.T) {
 
 	created, err := rooms.CreateRoom(ctx, facilities.CreateRoom{Name: "Igelraum"})
 	require.NoError(t, err)
-	updated, err := rooms.UpdateRoom(ctx, facilities.UpdateRoom{ID: created.ID, Name: "Fuchsbau"})
+	updated, err := rooms.UpdateRoom(ctx, facilities.UpdateRoom{ID: created.ID, Name: "Fuchsbau", ExpectedVersion: facilities.RoomVersion(created)})
 	require.NoError(t, err)
 	assert.Equal(t, "Fuchsbau", updated.Name)
 

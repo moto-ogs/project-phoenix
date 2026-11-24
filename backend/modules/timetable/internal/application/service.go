@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain"
 	internalports "github.com/moto-ogs/project-phoenix/modules/timetable/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type Service struct {
@@ -602,6 +603,10 @@ func (s *Service) UpdateCategory(ctx context.Context, input timetable.UpdateCate
 		if existing.IsArchived() {
 			return timetable.ErrCategoryArchived
 		}
+		// The row lock above is the one the update writes under (ADR 0311).
+		if err := readstate.Check(input.ExpectedVersion, timetable.CategoryVersion(existing)); err != nil {
+			return err
+		}
 		value, updated, queryStats, updateErr := s.store.UpdateCategoryIfActive(txCtx, id, fields)
 		stats.Add(queryStats)
 		if updateErr != nil {
@@ -653,30 +658,6 @@ func (s *Service) RestoreCategory(ctx context.Context, id int64) (result timetab
 		return s.setArchivedAt(txCtx, id, nil, stats, &result)
 	})
 	return result, err
-}
-
-func (s *Service) SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64) error {
-	if shiftTypeID <= 0 || hasInvalidID(categoryIDs) {
-		return s.reject("set_category_shift_type_links", timetable.ErrInvalidCategory)
-	}
-
-	return s.runWrite(ctx, "set_category_shift_type_links", true, func(txCtx context.Context, stats *domain.OperationStats) error {
-		queryStats, err := s.store.SetCategoryShiftTypeLinks(txCtx, shiftTypeID, categoryIDs)
-		stats.Add(queryStats)
-		return err
-	})
-}
-
-func (s *Service) SetCategoryShiftTypeID(ctx context.Context, id int64, shiftTypeID *int64) error {
-	if id <= 0 || (shiftTypeID != nil && *shiftTypeID <= 0) {
-		return s.reject("set_category_shift_type_id", timetable.ErrInvalidCategory)
-	}
-
-	return s.runWrite(ctx, "set_category_shift_type_id", true, func(txCtx context.Context, stats *domain.OperationStats) error {
-		queryStats, err := s.store.SetCategoryShiftTypeID(txCtx, id, shiftTypeID)
-		stats.Add(queryStats)
-		return err
-	})
 }
 
 func (s *Service) DeleteCategory(ctx context.Context, id int64) error {

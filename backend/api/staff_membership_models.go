@@ -34,3 +34,13 @@ func legacyTeacherToMembership(teacher *peopleValues.Teacher) *schoolmembership.
 		Qualifications: teacher.Qualifications, DeletedAt: teacher.DeletedAt,
 	}
 }
+
+// staffRecordToken is peopledirectory.StaffRecordVersion over the record
+// School Membership reads: the token UpdateStaffWithTeacher compares.
+func staffRecordToken(staff schoolmembership.Staff, teacher *schoolmembership.Teacher) string {
+	var profile *peopleValues.StaffRecordProfile
+	if teacher != nil && teacher.DeletedAt == nil {
+		profile = &peopleValues.StaffRecordProfile{Specialization: teacher.Specialization, Role: teacher.Role, Qualifications: teacher.Qualifications}
+	}
+	return peopleValues.StaffRecordVersion(staff.PersonID, staff.StaffNotes, profile)
+}

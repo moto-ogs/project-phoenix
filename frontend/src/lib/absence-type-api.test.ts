@@ -100,13 +100,18 @@ describe("absenceTypeService allowances", () => {
     );
 
     await expect(
-      absenceTypeService.updateAbsenceType("12", { carryoverUntil: null }),
+      absenceTypeService.updateAbsenceType("12", "v7", {
+        carryoverUntil: null,
+      }),
     ).resolves.toMatchObject({ carryoverUntil: "03-31" });
     expect(global.fetch).toHaveBeenCalledWith(
       "/api/absence-types/12",
       expect.objectContaining({
         method: "PUT",
-        body: JSON.stringify({ carryover_until: "" }),
+        body: JSON.stringify({
+          expected_version: "v7",
+          carryover_until: "",
+        }),
       }),
     );
   });
@@ -220,6 +225,7 @@ describe("absenceTypeService allowances", () => {
       year: 2026,
       entitledDays: 2.5,
       reason: "Tariflicher Anspruch",
+      expectedVersion: "v-claim",
     });
 
     expect(result).toEqual(
@@ -237,6 +243,7 @@ describe("absenceTypeService allowances", () => {
           year: 2026,
           entitled_days: 2.5,
           reason: "Tariflicher Anspruch",
+          expected_version: "v-claim",
         }),
       }),
     );

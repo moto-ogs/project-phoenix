@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Profile returns the caller's own profile: the account, the linked person
@@ -18,8 +19,14 @@ func (c *CallerContext) Profile(ctx context.Context) (domain.CallerProfile, erro
 		return domain.CallerProfile{}, &domain.CallerError{Op: "get current profile", Err: err}
 	}
 	profile := domain.CallerProfile{Account: account}
-	if person, err := c.Person(ctx); err == nil {
+	// Only a clean "not linked" reads as no person; a failed lookup would
+	// otherwise answer readstate.Absent and refuse the next save.
+	person, err := c.Person(ctx)
+	switch {
+	case err == nil:
 		profile.Person = &person
+	case !errors.Is(err, domain.ErrCallerNotLinkedToPerson):
+		return domain.CallerProfile{}, &domain.CallerError{Op: "get current profile", Err: err}
 	}
 	if account.ID > 0 {
 		fields, found, err := c.deps.Accounts.FindAccountProfile(ctx, account.ID.Int64())
@@ -66,23 +73,30 @@ func (c *CallerContext) UpdateProfile(ctx context.Context, update domain.CallerP
 
 // updatePersonNames renames the linked person, or creates one when the
 // account has none; creating requires both names. An empty name leaves the
-// stored one.
+// stored one. Every edit, also one of username or bio alone, saves only over
+// the profile it was made from (ADR 0311): the People Directory checks the
+// person's version under the row lock it renames under; an account without
+// a person was read as readstate.Absent.
 func (c *CallerContext) updatePersonNames(ctx context.Context, accountID int64, person domain.CallerPerson, personErr error, update domain.CallerProfileUpdate) error {
-	if update.FirstName == nil && update.LastName == nil {
-		return nil
-	}
 	if personErr != nil {
+		// A failed lookup is no missing person: it fails the save instead of
+		// refusing it as changed since it was read.
+		if !errors.Is(personErr, domain.ErrCallerNotLinkedToPerson) {
+			return personErr
+		}
+		if err := readstate.Check(update.ExpectedVersion, readstate.Absent); err != nil {
+			return err
+		}
+		if update.FirstName == nil && update.LastName == nil {
+			return nil
+		}
 		firstName, lastName := valueOf(update.FirstName), valueOf(update.LastName)
 		if firstName == "" || lastName == "" {
 			return errors.New("first name and last name are required to create profile")
 		}
 		return c.deps.People.CreatePerson(ctx, accountID, firstName, lastName)
 	}
-	firstName, lastName := nonEmpty(update.FirstName), nonEmpty(update.LastName)
-	if firstName == nil && lastName == nil {
-		return nil
-	}
-	return c.deps.People.RenamePerson(ctx, person.ID, firstName, lastName)
+	return c.deps.People.RenamePerson(ctx, person.ID, nonEmpty(update.FirstName), nonEmpty(update.LastName), update.ExpectedVersion)
 }
 
 func valueOf(value *string) string {

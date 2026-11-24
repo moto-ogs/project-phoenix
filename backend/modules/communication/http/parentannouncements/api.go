@@ -5,7 +5,6 @@
 package announcement
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -18,6 +17,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	announcementService "github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Resource is the staff parent-announcement HTTP resource.
@@ -106,7 +107,7 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 
 type targetRequest struct {
 	TargetType string  `json:"target_type"`
-	RefID      *string `json:"ref_id,omitempty"`
+	RefID      *string `json:"ref_id,omitempty" contract_text:"empty string means no numeric target"`
 	RefText    *string `json:"ref_text,omitempty"`
 }
 
@@ -135,30 +136,25 @@ type announcementRequest struct {
 	ReminderText *string    `json:"reminder_text,omitempty"`
 	// Erklärung settings (#3430), used with delivery_mode "declaration".
 	declarationSettingsRequest
-}
-
-// reminderRequest is the post-publish reminder edit. The raw value preserves
-// the distinction between an omitted reminder_at (invalid PUT body) and an
-// explicit null (remove the reminder).
-type reminderRequest struct {
-	ReminderAt   json.RawMessage `json:"reminder_at"`
-	ReminderText *string         `json:"reminder_text,omitempty"`
+	// ExpectedVersion is the version of the draft an update was made on
+	// (ADR 0311); a new announcement sends none.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // optionResponse is one answer option of a poll.
 type optionResponse struct {
-	ID    string `json:"id"`
-	Label string `json:"label"`
+	ID    ident.ID `json:"id"`
+	Label string   `json:"label"`
 }
 
 type targetResponse struct {
-	TargetType string  `json:"target_type"`
-	RefID      *string `json:"ref_id,omitempty"`
-	RefText    *string `json:"ref_text,omitempty"`
+	TargetType string    `json:"target_type"`
+	RefID      *ident.ID `json:"ref_id,omitempty"`
+	RefText    *string   `json:"ref_text,omitempty"`
 }
 
 type announcementResponse struct {
-	ID                      string           `json:"id"`
+	ID                      ident.ID         `json:"id"`
 	Title                   string           `json:"title"`
 	Body                    string           `json:"body"`
 	Priority                string           `json:"priority"`
@@ -189,6 +185,9 @@ type announcementResponse struct {
 	ReminderText   *string    `json:"reminder_text,omitempty"`
 	ReminderSentAt *time.Time `json:"reminder_sent_at,omitempty"`
 	declarationSettingsResponse
+	// Version is the token an update, the reminder edit and the publication
+	// send back (ADR 0311).
+	Version string `json:"version"`
 }
 
 type statsResponse struct {
@@ -215,7 +214,7 @@ func toTargetResponses(targets []announcementService.ParentAnnouncementTarget) [
 	for _, t := range targets {
 		resp := targetResponse{TargetType: t.TargetType, RefText: t.RefText}
 		if t.RefID != nil {
-			id := strconv.FormatInt(*t.RefID, 10)
+			id := ident.ID(*t.RefID)
 			resp.RefID = &id
 		}
 		out = append(out, resp)
@@ -227,7 +226,7 @@ func toOptionResponses(options []announcementService.ParentAnnouncementOption) [
 	out := make([]optionResponse, 0, len(options))
 	for _, o := range options {
 		out = append(out, optionResponse{
-			ID:    strconv.FormatInt(o.ID, 10),
+			ID:    ident.ID(o.ID),
 			Label: o.Label,
 		})
 	}
@@ -236,7 +235,7 @@ func toOptionResponses(options []announcementService.ParentAnnouncementOption) [
 
 func toAnnouncementResponse(a *announcementService.ParentAnnouncement, now time.Time) announcementResponse {
 	resp := announcementResponse{
-		ID:                          strconv.FormatInt(a.ID, 10),
+		ID:                          ident.ID(a.ID),
 		Title:                       a.Title,
 		Body:                        a.Body,
 		Priority:                    a.Priority,
@@ -252,6 +251,7 @@ func toAnnouncementResponse(a *announcementService.ParentAnnouncement, now time.
 		Active:                      a.Active,
 		CreatedAt:                   a.CreatedAt,
 		UpdatedAt:                   a.UpdatedAt,
+		Version:                     announcementService.ParentAnnouncementVersion(*a),
 		Targets:                     toTargetResponses(a.Targets),
 		ResponseType:                a.ResponseType,
 		ResponseDeadline:            a.ResponseDeadline,
@@ -287,6 +287,7 @@ func toInput(req announcementRequest) (announcementService.ParentAnnouncementInp
 		ReminderAt:              req.ReminderAt,
 		ReminderText:            req.ReminderText,
 		Declaration:             req.settings(),
+		ExpectedVersion:         req.ExpectedVersion,
 		Targets:                 make([]announcementService.ParentAnnouncementTargetInput, 0, len(req.Targets)),
 	}
 	for _, t := range req.Targets {
@@ -396,38 +397,6 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, toAnnouncementResponse(a, rs.now()), "Announcement updated")
 }
 
-// updateReminder moves, rewords or removes the scheduled reminder of an
-// announcement — the one edit that stays open after publishing, until the
-// reminder has been sent.
-func (rs *Resource) updateReminder(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseAnnouncementID(w, r)
-	if !ok {
-		return
-	}
-	var req reminderRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
-		return
-	}
-	if len(req.ReminderAt) == 0 {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("reminder_at is required")))
-		return
-	}
-	var reminderAt *time.Time
-	if err := json.Unmarshal(req.ReminderAt, &reminderAt); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid reminder_at")))
-		return
-	}
-	a, err := rs.Service.UpdateParentAnnouncementReminder(r.Context(), id, announcementService.ParentAnnouncementReminderInput{
-		ReminderAt: reminderAt, ReminderText: req.ReminderText,
-	})
-	if err != nil {
-		renderAnnouncementError(w, r, err)
-		return
-	}
-	common.Respond(w, r, http.StatusOK, toAnnouncementResponse(a, rs.now()), "Announcement reminder updated")
-}
-
 func (rs *Resource) delete(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseAnnouncementID(w, r)
 	if !ok {
@@ -445,7 +414,11 @@ func (rs *Resource) publish(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	a, err := rs.Service.PublishParentAnnouncement(r.Context(), id)
+	var req versionRequest
+	if !decodeReadState(w, r, &req) {
+		return
+	}
+	a, err := rs.Service.PublishParentAnnouncement(r.Context(), id, req.ExpectedVersion)
 	if err != nil {
 		renderAnnouncementError(w, r, err)
 		return
@@ -488,7 +461,7 @@ func (rs *Resource) stats(w http.ResponseWriter, r *http.Request) {
 // read/ack state. status is derived server-side so the client never has to
 // re-implement the precedence (acknowledged > read > pending).
 type recipientResponse struct {
-	AccountID      string     `json:"account_id"`
+	AccountID      ident.ID   `json:"account_id"`
 	FirstName      string     `json:"first_name"`
 	LastName       string     `json:"last_name"`
 	Status         string     `json:"status"`
@@ -516,7 +489,7 @@ func (rs *Resource) recipients(w http.ResponseWriter, r *http.Request) {
 			status = "read"
 		}
 		out = append(out, recipientResponse{
-			AccountID:      strconv.FormatInt(rcpt.AccountID, 10),
+			AccountID:      ident.ID(rcpt.AccountID),
 			FirstName:      rcpt.FirstName,
 			LastName:       rcpt.LastName,
 			Status:         status,
@@ -530,9 +503,9 @@ func (rs *Resource) recipients(w http.ResponseWriter, r *http.Request) {
 // --- poll (Umfrage) ---
 
 type pollOptionResultResponse struct {
-	OptionID string `json:"option_id"`
-	Label    string `json:"label"`
-	Count    int    `json:"count"`
+	OptionID ident.ID `json:"option_id"`
+	Label    string   `json:"label"`
+	Count    int      `json:"count"`
 }
 
 type pollResultsResponse struct {
@@ -546,7 +519,7 @@ type pollResultsResponse struct {
 // whether any guardian may currently respond. answer_labels is empty while an
 // answer is still open.
 type pollChildResponse struct {
-	StudentID    string     `json:"student_id"`
+	StudentID    ident.ID   `json:"student_id"`
 	FirstName    string     `json:"first_name"`
 	LastName     string     `json:"last_name"`
 	SchoolClass  string     `json:"school_class"`
@@ -581,7 +554,7 @@ type letterRecipientResponse struct {
 
 // letterChildResponse is one reached child with the derived fulfilment.
 type letterChildResponse struct {
-	StudentID      string     `json:"student_id"`
+	StudentID      ident.ID   `json:"student_id"`
 	FirstName      string     `json:"first_name"`
 	LastName       string     `json:"last_name"`
 	SchoolClass    string     `json:"school_class"`
@@ -632,7 +605,7 @@ func (rs *Resource) letterStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, child := range status.Children {
 		item := letterChildResponse{
-			StudentID:      strconv.FormatInt(child.StudentID, 10),
+			StudentID:      ident.ID(child.StudentID),
 			FirstName:      child.FirstName,
 			LastName:       child.LastName,
 			SchoolClass:    child.SchoolClass,
@@ -666,7 +639,7 @@ func (rs *Resource) pollResults(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, o := range results.Options {
 		out.Options = append(out.Options, pollOptionResultResponse{
-			OptionID: strconv.FormatInt(o.OptionID, 10),
+			OptionID: ident.ID(o.OptionID),
 			Label:    o.Label,
 			Count:    o.Count,
 		})
@@ -691,7 +664,7 @@ func (rs *Resource) pollChildren(w http.ResponseWriter, r *http.Request) {
 			labels = []string{}
 		}
 		out = append(out, pollChildResponse{
-			StudentID:    strconv.FormatInt(c.StudentID, 10),
+			StudentID:    ident.ID(c.StudentID),
 			FirstName:    c.FirstName,
 			LastName:     c.LastName,
 			SchoolClass:  c.SchoolClass,
@@ -735,7 +708,7 @@ func (rs *Resource) resendFailed(w http.ResponseWriter, r *http.Request) {
 
 func decodeInput(w http.ResponseWriter, r *http.Request) (announcementService.ParentAnnouncementInput, bool) {
 	var req announcementRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return announcementService.ParentAnnouncementInput{}, false
 	}

@@ -51,7 +51,7 @@ func TestReplacementConfirmationResolvesBlockedPredecessor(t *testing.T) {
 				})
 			}
 			require.ErrorContains(t, resolve(), "only takes up a failed", "a school cannot resolve work without a confirmed replacement")
-			_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID,
+			_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID),
 				ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: "2030-07-12", EndDate: "2030-07-12", Reason: "Verschoben"}})
 			require.NoError(t, err)
 			require.ErrorContains(t, resolve(), "only takes up a failed", "an unconfirmed edit cannot resolve work either")

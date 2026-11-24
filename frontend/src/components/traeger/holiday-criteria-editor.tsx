@@ -14,7 +14,10 @@ import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { FieldLabel } from "~/components/ui/field-label";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { IconTile } from "~/components/ui/icon-tile";
 import { Input } from "~/components/ui/input";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -26,8 +29,11 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { SwitchRow } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { type DraftSource, useDraftOn } from "~/lib/swr/read-draft";
 import {
+  type HolidayCriteriaRead,
   type HolidayCriterion,
   type HolidayCriterionScope,
   MAX_CRITERION_NAME,
@@ -248,18 +254,34 @@ function CriterionRow({
 }
 
 export function HolidayCriteriaEditor({
-  criteria,
-  onSaved,
+  source,
 }: Readonly<{
-  criteria: readonly HolidayCriterion[];
-  onSaved: (criteria: HolidayCriterion[]) => void;
+  /**
+   * The read of the criteria; the list rests on the version read when
+   * editing starts, and a save hands its answer back (ADR 0311).
+   */
+  source: DraftSource<HolidayCriteriaRead>;
 }>) {
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const toast = useToast();
-  const [drafts, setDrafts] = useState<CriterionDraft[]>(() =>
-    draftsFromCriteria(criteria),
-  );
+  // A newer read refills the list only while untouched; after a refusal
+  // the stored criteria show, and nothing is sent until they were read.
+  const editor = useDraftOn<
+    HolidayCriteriaRead,
+    CriterionDraft[],
+    string,
+    HolidayCriteriaRead
+  >(source, {
+    token: (stored) => stored.version,
+    toDraft: (stored) => draftsFromCriteria(stored.criteria),
+    answer: (saved) => saved,
+  });
+  const criteria: readonly HolidayCriterion[] =
+    (editor.base ?? source.data)?.criteria ?? [];
+  const drafts = editor.draft ?? draftsFromCriteria(criteria);
+  const setDrafts = editor.setDraft;
+  const loadError = useReadDraftLoadError(editor, "die Kriterien");
   const [saving, setSaving] = useState(false);
   const changed = criteriaChanged(drafts, criteria);
   const full = drafts.length >= MAX_HOLIDAY_CRITERIA;
@@ -280,20 +302,28 @@ export function HolidayCriteriaEditor({
       return;
     }
     formErrors.clear();
+    if (!editor.canSubmit) return;
     setSaving(true);
-    try {
-      const saved = await saveHolidayCriteria(inputsFromDrafts(drafts));
-      setDrafts(draftsFromCriteria(saved));
+    const result = await editor.submit((version, edited) =>
+      saveHolidayCriteria(inputsFromDrafts(edited), version),
+    );
+    setSaving(false);
+    if (result.ok) {
       toast.success("Die Kriterien sind gespeichert.");
-      onSaved(saved);
-    } catch (err) {
-      logger.error("holiday_criteria_save_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void formErrors.show(err, { object: "die Kriterien" });
-    } finally {
-      setSaving(false);
+      return;
     }
+    logger.error("holiday_criteria_save_failed", {
+      error:
+        result.error instanceof Error
+          ? result.error.message
+          : String(result.error),
+    });
+    // Changed since it was read: the stored criteria show once they are
+    // read again, without offering the same save once more.
+    void formErrors.show(result.error, {
+      object: "die Kriterien",
+      ...(result.refused ? { reload: result.reload } : {}),
+    });
   };
 
   return (
@@ -316,12 +346,20 @@ export function HolidayCriteriaEditor({
           <EditActions
             onCancel={() => {
               formErrors.clear();
-              setDrafts(draftsFromCriteria(criteria));
+              editor.discard();
             }}
             cancelDisabled={saving || !changed}
             cancelLabel="Verwerfen"
             saving={saving}
-            disabled={!changed}
+            disabled={!changed || !editor.canSubmit}
+            {...(changed && !editor.canSubmit
+              ? {
+                  disabledReason:
+                    editor.status === "loadFailed"
+                      ? "Lade zuerst die gespeicherten Kriterien neu."
+                      : "Die gespeicherten Kriterien werden geladen.",
+                }
+              : {})}
             saveType="submit"
             saveLabel="Kriterien speichern"
             stretchOnPhone
@@ -329,6 +367,7 @@ export function HolidayCriteriaEditor({
         }
       >
         <div className="space-y-4">
+          {loadError ? <LoadErrorAlert error={loadError} /> : null}
           <FormErrorAlert message={formErrors.error} />
           <Alert
             type="info"

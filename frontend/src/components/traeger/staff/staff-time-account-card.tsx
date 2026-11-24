@@ -6,11 +6,12 @@
 // ab, in jeder Schule, die der Vertrag abdeckt, und nur sie öffnet ihn
 // wieder. Jedes Laden steht im Zugriffsprotokoll jeder Schule der Person.
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Lock, LockOpen } from "lucide-react";
 
 import { MonthCloseReasonModal } from "~/components/staff/month-close-modal";
 import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -18,6 +19,7 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
 import { StatusBadge } from "~/components/ui/status-badge";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
@@ -143,12 +145,38 @@ export function StaffTimeAccountCard({
     error,
     mutate,
     reload,
+    reloadOrThrow,
   } = useFreshTraegerResource(
     traegerStaffKeys.timeAccount(recordId, shown.year, shown.month),
     () => fetchTraegerTimeAccount(recordId, shown.year, shown.month),
     "das Stundenkonto",
   );
   const [dialog, setDialog] = useState<"close" | "reopen" | null>(null);
+  // The close confirms the month as the dialog opened on it (ADR 0311);
+  // after a refusal the month is read again (one access-log entry).
+  const closing = useDraftOn<
+    TraegerTimeAccount,
+    TraegerTimeAccount,
+    string,
+    TraegerTimeAccount
+  >(
+    {
+      opening:
+        dialog === "close"
+          ? traegerStaffKeys.timeAccount(recordId, shown.year, shown.month)
+          : null,
+      data: account ?? undefined,
+      reload: reloadOrThrow,
+    },
+    {
+      token: (month) => month.fingerprint,
+      follow: false,
+      answer: (saved) => saved,
+    },
+  );
+  // The read a refusal started, for the message beside the card.
+  const refusalReload = useRef<(() => Promise<unknown>) | undefined>(undefined);
+  const actionErrors = useApiErrorDisplay();
 
   const isThisMonth =
     shown.year === thisMonth.year && shown.month === thisMonth.month;
@@ -406,20 +434,31 @@ export function StaffTimeAccountCard({
           submitTooltip="Schreibt den Monat an allen Schulen mit deinem Vertrag fest."
           successMessage={`${shownLabel} ist abgeschlossen.`}
           onSubmit={async (reason) => {
-            try {
-              await mutate(
-                await closeTraegerTimeAccountMonth(recordId, {
-                  ...shown,
-                  reason,
-                }),
-                { revalidate: false },
-              );
-            } catch (err) {
-              // Schulen vor dem Fehler sind schon abgeschlossen: neu laden.
-              reload();
-              throw err;
+            const result = await closing.submit((fingerprint) =>
+              closeTraegerTimeAccountMonth(recordId, {
+                ...shown,
+                reason,
+                expectedFingerprint: fingerprint,
+              }),
+            );
+            if (result.ok) {
+              await mutate(result.saved, { revalidate: false });
+              return;
             }
+            // Schulen vor dem Fehler sind schon abgeschlossen: neu laden.
+            // Nach einer Ablehnung liest `result.reload` den Monat.
+            if (result.refused) refusalReload.current = result.reload;
+            else reload();
+            throw result.error;
           }}
+          // Die neuen Salden stehen nur auf der Karte: der Dialog schließt,
+          // die Person sieht sie, bevor sie erneut abschließt.
+          onChangedSinceRead={(err) =>
+            void actionErrors.show(err, {
+              object: "das Abschließen des Monats",
+              reload: refusalReload.current,
+            })
+          }
           onClose={() => setDialog(null)}
         />
       ) : null}

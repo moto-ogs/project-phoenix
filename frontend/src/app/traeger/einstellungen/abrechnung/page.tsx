@@ -17,6 +17,7 @@ import { NumberRangeCard } from "~/components/traeger/number-range-card";
 import { SepaCreditorCard } from "~/components/traeger/sepa-creditor-card";
 import { TraegerBankAccountsCard } from "~/components/traeger/traeger-bank-accounts-card";
 import { useTraegerMasterData } from "~/components/traeger/use-traeger-master-data";
+import { useTraegerModuleBooked } from "~/lib/traeger-booked-modules";
 import { useTraegerSettingsSchema } from "~/components/traeger/use-traeger-resources";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
@@ -25,6 +26,10 @@ import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { hasPermission } from "~/lib/auth-utils";
 import { useInvalidateFamily } from "~/lib/swr";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
+import {
+  seesLockedTraegerModules,
+  traegerModuleNotBookedExplanation,
+} from "~/lib/traeger-modules";
 import {
   fetchCareNumberRange,
   fetchHolidayNumberRange,
@@ -62,6 +67,14 @@ interface BillingDefaults {
 }
 
 const BILLING_OBJECT = "die Übersicht der Abrechnungsvorgaben";
+
+const FRESH = { revalidate: false } as const;
+
+/** The list with `saved` in place of its stored entry. */
+function withSaved<T extends { readonly id: string }>(saved: T) {
+  return (list: T[] | undefined) =>
+    list?.map((entry) => (entry.id === saved.id ? saved : entry));
+}
 
 /** Only read with the right „Abrechnung“; without it nothing shows. */
 function useBillingDefaults(enabled: boolean) {
@@ -126,14 +139,13 @@ function useBillingDefaults(enabled: boolean) {
         fetchSepaCreditor(),
       ]);
     if (request !== latestRead.current) return;
-    const fresh = { revalidate: false } as const;
     await Promise.all([
-      mutateRules(rules, fresh),
-      mutateBearers(bearers, fresh),
-      mutateNumberRange(numberRange, fresh),
-      mutateCareNumberRange(careNumberRange, fresh),
-      mutateTerms(terms, fresh),
-      mutateCreditor(creditor, fresh),
+      mutateRules(rules, FRESH),
+      mutateBearers(bearers, FRESH),
+      mutateNumberRange(numberRange, FRESH),
+      mutateCareNumberRange(careNumberRange, FRESH),
+      mutateTerms(terms, FRESH),
+      mutateCreditor(creditor, FRESH),
     ]);
   }, [
     enabled,
@@ -166,12 +178,38 @@ function useBillingDefaults(enabled: boolean) {
     failure: readers.find((reader) => reader.failure)?.failure,
     error: readers.find((reader) => reader.error)?.error ?? null,
     read,
+    /**
+     * Read one default again and reject when the read fails, for a save
+     * the server refused as changed since it was read (ADR 0311).
+     */
+    reload: {
+      rules: rules.reloadOrThrow,
+      bearers: bearers.reloadOrThrow,
+      terms: terms.reloadOrThrow,
+      creditor: creditor.reloadOrThrow,
+    },
+    /**
+     * Hand a save's answer to its read (ADR 0311, rule 5): `read` changes
+     * nothing when one of the six reads fails, and the next change of the
+     * same entry would send the version the save replaced.
+     */
+    write: {
+      rule: (saved: ContributionRule) => mutateRules(withSaved(saved), FRESH),
+      bearer: (saved: CostBearer) => mutateBearers(withSaved(saved), FRESH),
+      terms: (saved: BillingTerms) => mutateTerms(saved, FRESH),
+      creditor: (saved: SepaCreditor) => mutateCreditor(saved, FRESH),
+    },
   };
 }
 
 export default function TraegerAbrechnungsvorgabenPage() {
   const { data: session } = useSession();
-  const canBill = hasPermission(session ?? null, BILLING_RIGHT);
+  const hasBillingRight = hasPermission(session ?? null, BILLING_RIGHT);
+  // Zahlung, Rechnungsnummern, Regeln und Kostenträger gehören zum moto-Modul
+  // „Elternbeiträge und Abrechnung“ (#6052); die Bankverbindungen sind moto
+  // Basis und bleiben. Solange die Module laden, liest die Seite sie nicht.
+  const billingBooked = useTraegerModuleBooked("elternbeitraege");
+  const canBill = hasBillingRight && billingBooked === true;
   const canEditBank = hasPermission(session ?? null, SETTINGS_RIGHT);
   const invalidateFamily = useInvalidateFamily();
   const master = useTraegerMasterData("die Liste der Bankverbindungen");
@@ -227,16 +265,27 @@ export default function TraegerAbrechnungsvorgabenPage() {
               message="Die Bankverbindungen kannst du nur ansehen. Ändern kann, wer im Träger-Büro die Rolle „Verwaltung“ hat."
             />
           )}
-          {canBill ? null : (
+          {hasBillingRight ? null : (
             <Alert
               type="info"
               message="Zahlung, Rechnungsnummern, Ermäßigungen und Kostenträger pflegt die Rolle „Abrechnung“."
             />
           )}
+          {hasBillingRight && billingBooked === false ? (
+            <Alert
+              type="info"
+              message={`Zahlung, Rechnungsnummern, Ermäßigungen und Kostenträger fehlen hier. ${traegerModuleNotBookedExplanation(
+                "elternbeitraege",
+                seesLockedTraegerModules(session ?? null),
+                "named-before",
+              )}`}
+            />
+          ) : null}
           <TraegerBankAccountsCard
             accounts={master.masterData.bankAccounts}
             canEdit={canEditBank}
             onChanged={afterBankWrite.refresh}
+            reload={async () => (await master.reload()).bankAccounts}
           />
         </>
       ) : null}
@@ -245,9 +294,13 @@ export default function TraegerAbrechnungsvorgabenPage() {
           <BillingTermsCard
             data={billing.data.terms}
             onChanged={afterBillingWrite.refresh}
+            reload={billing.reload.terms}
+            write={billing.write.terms}
           />
           <SepaCreditorCard
             creditor={billing.data.creditor}
+            reload={billing.reload.creditor}
+            write={billing.write.creditor}
             onlineMandate={
               typeof onlineMandate === "boolean" ? onlineMandate : null
             }
@@ -266,6 +319,8 @@ export default function TraegerAbrechnungsvorgabenPage() {
             kind="sibling"
             rules={billing.data.rules.filter((rule) => rule.kind === "sibling")}
             onChanged={afterBillingWrite.refresh}
+            reload={billing.reload.rules}
+            write={billing.write.rule}
           />
           <ContributionRulesCard
             kind="benefits_exemption"
@@ -273,10 +328,14 @@ export default function TraegerAbrechnungsvorgabenPage() {
               (rule) => rule.kind === "benefits_exemption",
             )}
             onChanged={afterBillingWrite.refresh}
+            reload={billing.reload.rules}
+            write={billing.write.rule}
           />
           <CostBearersCard
             bearers={billing.data.bearers}
             onChanged={afterBillingWrite.refresh}
+            reload={billing.reload.bearers}
+            write={billing.write.bearer}
           />
         </>
       ) : null}

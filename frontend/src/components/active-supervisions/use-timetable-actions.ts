@@ -61,12 +61,7 @@ function noStaffProfileError(): ApiError {
 // strings while building the request: Number() would silently change an ID
 // past 2^53 before the API can validate it.
 function normalizePositiveStaffID(value: string): string | null {
-  try {
-    const id = BigInt(value);
-    return id > 0n ? id.toString() : null;
-  } catch {
-    return null;
-  }
+  return /^[1-9]\d{0,18}$/.test(value) ? value : null;
 }
 
 interface TimetableActionsOptions {
@@ -134,6 +129,8 @@ export interface TimetableActions {
     row: TimetableRosterRow,
     body: HomeworkFeedbackBody,
   ) => Promise<void>;
+  /** Reads the roster again after a refused feedback; rejects on failure. */
+  readonly reloadRosterAfterRefusal: () => Promise<TimetableRoster | null>;
   readonly confirmCompleteTimetableInstance: () => Promise<void>;
   readonly handleCompleteTimetableInstance: () => Promise<void>;
   /**
@@ -532,6 +529,17 @@ export function useTimetableActions(
     },
     [activeTimetableInstanceId, mutateRoster],
   );
+  // After a refused feedback (ADR 0311): the block's roster read anew,
+  // rejecting when that read fails (SWR's own mutate would resolve with the
+  // old roster).
+  const reloadRosterAfterRefusal = useCallback(async () => {
+    if (!activeTimetableInstanceId) return null;
+    const fresh = await timetableOperationsApi.roster(
+      activeTimetableInstanceId,
+    );
+    await mutateRoster(fresh, { revalidate: false });
+    return fresh;
+  }, [activeTimetableInstanceId, mutateRoster]);
 
   // „Rest des Tages“ (#3166): this block by hand, every later block of the day
   // through a partial absence from this block's start.
@@ -626,10 +634,13 @@ export function useTimetableActions(
         status: errorStatus(err),
       });
       reloadAfterDenial(err);
-      // Der Fehler bleibt im offenen Bestätigungsdialog.
+      // Der Fehler bleibt im offenen Bestätigungsdialog. Haben sich die
+      // eingecheckten Kinder seit dem Lesen geändert, wartet er auf die neu
+      // gelesene Liste (ADR 0311).
       void showCompleteError(err, {
         object: "das Beenden der Aktivität",
         retry: () => retryRef.current.complete(),
+        reload: reloadRosterAfterRefusal,
       });
     } finally {
       setIsCompletingInstance(false);
@@ -642,6 +653,7 @@ export function useTimetableActions(
     rememberReopenable,
     reloadAfterDenial,
     reloadAfterLifecycleChange,
+    reloadRosterAfterRefusal,
     setSelectedTimetableInstanceId,
     showCompleteError,
   ]);
@@ -920,6 +932,7 @@ export function useTimetableActions(
     handleRosterAction,
     handleExcuseRestOfDay,
     handleSaveHomeworkFeedback,
+    reloadRosterAfterRefusal,
     confirmCompleteTimetableInstance,
     handleCompleteTimetableInstance,
     handleReopenTimetableInstance,

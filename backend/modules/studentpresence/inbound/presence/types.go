@@ -145,12 +145,12 @@ type RecentActivityItem struct {
 
 // CurrentActivityItem represents current activity status
 type CurrentActivityItem struct {
-	ID           string `json:"id"`
-	Name         string `json:"name"`
-	Category     string `json:"category"`
-	Participants int    `json:"participants"`
-	MaxCapacity  *int   `json:"max_capacity"`
-	Status       string `json:"status"`
+	ID           ident.ID `json:"id"`
+	Name         string   `json:"name"`
+	Category     string   `json:"category"`
+	Participants int      `json:"participants"`
+	MaxCapacity  *int     `json:"max_capacity"`
+	Status       string   `json:"status"`
 }
 
 // ActiveGroupSummary represents active group summary

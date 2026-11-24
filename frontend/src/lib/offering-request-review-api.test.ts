@@ -46,14 +46,26 @@ describe("decideOfferingChangeRequest", () => {
     globalThis.fetch = fetchMock;
 
     await expect(
-      decideOfferingChangeRequest("request/77", true),
+      decideOfferingChangeRequest(
+        "request/77",
+        true,
+        undefined,
+        undefined,
+        undefined,
+        false,
+        "v1",
+      ),
     ).resolves.toBeUndefined();
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/students/offering-change-requests/request%2F77/decide",
       expect.objectContaining({
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ approve: true, reason: "" }),
+        body: JSON.stringify({
+          approve: true,
+          reason: "",
+          expected_version: "v1",
+        }),
       }),
     );
   });
@@ -70,7 +82,15 @@ describe("decideOfferingChangeRequest", () => {
     );
 
     await expect(
-      decideOfferingChangeRequest("77", false, "Zu spät"),
+      decideOfferingChangeRequest(
+        "77",
+        false,
+        "Zu spät",
+        undefined,
+        undefined,
+        false,
+        "v1",
+      ),
     ).rejects.toMatchObject({
       name: "ApiError",
       message: "Entscheidung konnte nicht gespeichert werden",
@@ -92,6 +112,7 @@ describe("decideOfferingChangeRequest", () => {
       [],
       "2026-09-01",
       true,
+      "v1",
     );
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -103,6 +124,7 @@ describe("decideOfferingChangeRequest", () => {
           excluded_offering_ids: [],
           effective_from: "2026-09-01",
           complete_withdrawal_confirmed: true,
+          expected_version: "v1",
         }),
       }),
     );

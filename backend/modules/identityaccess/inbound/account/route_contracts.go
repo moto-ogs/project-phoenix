@@ -36,6 +36,22 @@ func AdminRouteContracts(caregiverState any) []common.RouteContract {
 		return common.RouteContract{Method: method, Pattern: pattern, Portals: portals, Request: request, Response: response, NoData: response == nil}
 	}
 	listRoles := route("GET", "/roles/", nil, []RoleResponse{})
+	// The list without a version goes after one release (ADR 0270); the
+	// permission selection carries the version a replacement sends back.
+	deprecatedRolePermissions := route("GET", "/roles/{roleId}/permissions/", nil, []PermissionResponse{})
+	deprecatedRolePermissions.Deprecated = true
+	// Deprecated for one release (ADR 0270): the selection's PUT answers the
+	// version of the stored selection.
+	deprecatedReplaceRolePermissions := route("PUT", "/roles/{roleId}/permissions/", ReplaceRolePermissionsRequest{}, nil)
+	deprecatedReplaceRolePermissions.Deprecated = true
+	// Deprecated for one release (ADR 0270): the role selection carries the
+	// version a role change sends back.
+	deprecatedAccountRoles := route("GET", "/accounts/{accountId}/roles/", nil, []RoleResponse{})
+	deprecatedAccountRoles.Deprecated = true
+	// Deprecated for one release (ADR 0270): the master-data PUT answers the
+	// stored role with its version.
+	deprecatedUpdateRole := route("PUT", "/roles/{id}/", UpdateRoleRequest{}, nil)
+	deprecatedUpdateRole.Deprecated = true
 	listRoles.Query = []common.QueryParam{{Name: "name", Kind: common.QueryString}}
 	listPermissions := route("GET", "/permissions/", nil, []PermissionResponse{})
 	listPermissions.Query = []common.QueryParam{
@@ -46,12 +62,16 @@ func AdminRouteContracts(caregiverState any) []common.RouteContract {
 		listRoles,
 		route("POST", "/roles/", CreateRoleRequest{}, RoleResponse{}),
 		route("GET", "/roles/{id}/", nil, RoleResponse{}),
-		route("PUT", "/roles/{id}/", UpdateRoleRequest{}, nil),
+		deprecatedUpdateRole,
+		route("PUT", "/roles/{id}/master-data/", UpdateRoleRequest{}, RoleResponse{}),
 		route("DELETE", "/roles/{id}/", nil, nil),
-		route("GET", "/roles/{roleId}/permissions/", nil, []PermissionResponse{}),
-		route("PUT", "/roles/{roleId}/permissions/", ReplaceRolePermissionsRequest{}, nil),
+		deprecatedRolePermissions,
+		route("GET", "/roles/{roleId}/permission-selection/", nil, RolePermissionsResponse{}),
+		deprecatedReplaceRolePermissions,
+		route("PUT", "/roles/{roleId}/permission-selection/", ReplaceRolePermissionsRequest{}, ReplaceRolePermissionsResponse{}),
 		listPermissions,
-		route("GET", "/accounts/{accountId}/roles/", nil, []RoleResponse{}),
+		deprecatedAccountRoles,
+		route("GET", "/accounts/{accountId}/role-selection/", nil, AccountRolesResponse{}),
 		route("PUT", "/accounts/{accountId}/roles/", ReplaceAccountRoleRequest{}, nil),
 		route("GET", "/accounts/{accountId}/mfa/", nil, AccountMFAAdminStateResponse{}),
 		route("DELETE", "/accounts/{accountId}/mfa/", MFAAdminOverrideRequest{}, nil),
@@ -128,12 +148,18 @@ func PublicRouteContracts() []common.RouteContract {
 func SessionRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	step := func(pattern string, request, response any) common.RouteContract {
+		browserPath := "/api/auth" + pattern
+		if pattern == "/refresh" || pattern == "/session/validate" {
+			browserPath = ""
+		}
 		return common.RouteContract{
+			BrowserPath: browserPath, BrowserOwnContract: browserPath != "",
 			Method: "POST", Pattern: pattern, Portals: portals, RouteFile: common.RouteFileSession,
 			Request: request, Response: response, NoData: response == nil, Plain: response != nil,
 		}
 	}
 	accept := step("/invitations/{token}/accept", AcceptInvitationRequest{}, AcceptInvitationResponse{})
+	accept.BrowserPath = "/api/invitations/accept"
 	accept.Plain = false
 	accept.RouteFile = "the route file attaches the signed-in owner's session to the accept"
 	end := step("/staff-preview/end", StaffPreviewEndRequest{}, nil)

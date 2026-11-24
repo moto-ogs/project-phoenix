@@ -541,12 +541,8 @@ func TestMapAttendanceToResponse_WithoutCheckedInAt(t *testing.T) {
 func TestParseAttendancePatchRequest_AllFields(t *testing.T) {
 	t.Parallel()
 
-	status := timetable.SlotAttendanceAbsent
-	req := &PatchAttendanceRequest{
-		Status:    &status,
-		Substatus: json.RawMessage(`"sick"`),
-		Note:      json.RawMessage(`"note text"`),
-	}
+	req := &PatchAttendanceRequest{}
+	require.NoError(t, json.Unmarshal([]byte(`{"status":"absent","substatus":"sick","note":"note text"}`), req))
 	patch, errs := parseAttendancePatchRequest(req)
 	require.Empty(t, errs)
 	require.NotNil(t, patch.Status)
@@ -562,10 +558,8 @@ func TestParseAttendancePatchRequest_AllFields(t *testing.T) {
 func TestParseAttendancePatchRequest_ClearsViaNull(t *testing.T) {
 	t.Parallel()
 
-	req := &PatchAttendanceRequest{
-		Substatus: json.RawMessage(`null`),
-		Note:      json.RawMessage(`null`),
-	}
+	req := &PatchAttendanceRequest{}
+	require.NoError(t, json.Unmarshal([]byte(`{"substatus":null,"note":null}`), req))
 	patch, errs := parseAttendancePatchRequest(req)
 	require.Empty(t, errs)
 	assert.True(t, patch.SubstatusClear)
@@ -577,10 +571,8 @@ func TestParseAttendancePatchRequest_ClearsViaNull(t *testing.T) {
 func TestParseAttendancePatchRequest_TypeErrorsOnBothFields(t *testing.T) {
 	t.Parallel()
 
-	req := &PatchAttendanceRequest{
-		Substatus: json.RawMessage(`5`),
-		Note:      json.RawMessage(`{"x":1}`),
-	}
+	req := &PatchAttendanceRequest{}
+	require.NoError(t, json.Unmarshal([]byte(`{"substatus":5,"note":{"x":1}}`), req))
 	_, errs := parseAttendancePatchRequest(req)
 	require.Len(t, errs, 2)
 	// The order mirrors the parse order — substatus first, then note.

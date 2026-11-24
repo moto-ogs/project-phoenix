@@ -1,5 +1,6 @@
 {
   "business_rejection": "{object} could not be changed. Please check its current status.",
+  "changed_since_read": "{object} has been changed in the meantime. You now see the current state. Check it, then try again.",
   "input": "{object} could not be saved. Please check your entries.",
   "permission": "You cannot access {object}. Please contact the school.",
   "request_too_large": "{object} could not be processed. Please delete the cookies of this site in your browser. Then sign in again.",

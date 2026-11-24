@@ -45,29 +45,29 @@ func TestStammdatenAPI_PermissionSplit(t *testing.T) {
 
 	// Section writes need staff:stammdaten.
 	personBody := `{"first_name":"Stammdaten","last_name":"Neu","birthday":"1991-06-02","gender":"diverse","note":"Test"}`
-	rec = ctx.put(base+"/person", personBody, "users:read")
+	rec = ctx.putRead(t, base+"/person", personBody, "users:read")
 	require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
-	rec = ctx.put(base+"/person", personBody, "users:read", "users:update")
+	rec = ctx.putRead(t, base+"/person", personBody, "users:read", "users:update")
 	require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
-	rec = ctx.put(base+"/person", personBody, "staff:stammdaten")
+	rec = ctx.putRead(t, base+"/person", personBody, "staff:stammdaten")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	// Every section write is closed to the Betreuer tier (#2906).
 	for _, section := range []string{"kontakt", "arbeitsvertrag", "qualifikationen"} {
-		rec = ctx.put(base+"/"+section, `{"note":"Test"}`, "users:read", "users:update")
+		rec = ctx.putRead(t, base+"/"+section, `{"note":"Test"}`, "users:read", "users:update")
 		require.Equal(t, http.StatusForbidden, rec.Code, section+": "+rec.Body.String())
 	}
 
 	// The financial section never opens for the directory or personnel tiers.
 	rec = ctx.get(base+"/bank-steuer", "users:read", "staff:stammdaten", "time_tracking:manage")
 	require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
-	rec = ctx.put(base+"/bank-steuer", `{"iban":"DE89370400440532013000"}`, "staff:stammdaten")
+	rec = ctx.putRead(t, base+"/bank-steuer", `{"iban":"DE89370400440532013000"}`, "staff:stammdaten")
 	require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 	rec = ctx.post(base+"/bank-steuer/reveal", `{}`, "time_tracking:manage")
 	require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 
 	// staff:financial reads and writes it.
-	rec = ctx.put(base+"/bank-steuer", `{"iban":"DE89 3704 0044 0532 0130 00","tax_id":"12345678911","social_security_number":"65170839J003","note":"Lohnbüro"}`, "staff:financial")
+	rec = ctx.putRead(t, base+"/bank-steuer", `{"iban":"DE89 3704 0044 0532 0130 00","tax_id":"12345678911","social_security_number":"65170839J003","note":"Lohnbüro"}`, "staff:financial")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	rec = ctx.get(base+"/bank-steuer", "staff:financial")
@@ -89,7 +89,7 @@ func TestStammdatenAPI_FinancialAccessAuditSurvivesDecryptionFailure(t *testing.
 	ctx := testpkg.Ctx(t)
 	target := testpkg.CreateTestStaff(t, db, "Financial", "Unreadable")
 	base := fmt.Sprintf("/staff/%d/stammdaten/bank-steuer", target.ID)
-	rec := c.put(base, `{"iban":"DE89370400440532013000","tax_id":"12345678911","social_security_number":"65170839J003"}`, "staff:financial")
+	rec := c.putRead(t, base, `{"iban":"DE89370400440532013000","tax_id":"12345678911","social_security_number":"65170839J003"}`, "staff:financial")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	for _, field := range []string{"iban_sealed", "tax_id_sealed", "social_security_number_sealed"} {
@@ -124,8 +124,21 @@ func TestStammdatenAPI_FinancialWriteAllowsAccountWithoutStaffMapping(t *testing
 	claims := testutil.DefaultTestClaims()
 	claims.ID = int(account.ID)
 	claims.Permissions = []string{"staff:financial"}
-	req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/staff/%d/stammdaten/bank-steuer", target.ID), bytes.NewBufferString(`{"iban":"DE89370400440532013000"}`))
-	req.Header.Set("Authorization", "Bearer "+testutil.MintTestJWT(t, claims))
+	path := fmt.Sprintf("/staff/%d/stammdaten/bank-steuer", target.ID)
+	bearer := "Bearer " + testutil.MintTestJWT(t, claims)
+	read := httptest.NewRequest(http.MethodGet, path, nil)
+	read.Header.Set("Authorization", bearer)
+	readRec := httptest.NewRecorder()
+	ctx.tc.router.ServeHTTP(readRec, read)
+	require.Equal(t, http.StatusOK, readRec.Code, readRec.Body.String())
+	var masked struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(readRec.Body.Bytes(), &masked))
+	req := httptest.NewRequest(http.MethodPut, path, bytes.NewBufferString(withExpectedVersion(t, `{"iban":"DE89370400440532013000"}`, masked.Data.Version)))
+	req.Header.Set("Authorization", bearer)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	ctx.tc.router.ServeHTTP(rec, req)
@@ -140,13 +153,13 @@ func TestStammdatenAPI_WireShapeAndValidation(t *testing.T) {
 	target := testpkg.CreateTestStaff(t, ctx.tc.db, "Stammdaten", fmt.Sprintf("Wire-%d", time.Now().UnixNano()))
 	base := fmt.Sprintf("/staff/%d/stammdaten", target.ID)
 
-	rec := ctx.put(base+"/kontakt", `{"address_street":"Musterweg 1","address_postal_code":"48143","address_city":"Münster","phone":"+49 251 1","email":"k@example.com","emergency_contact_name":"Erika Muster","emergency_contact_phone":"+49 170 1","note":"Erstpflege"}`, "staff:stammdaten")
+	rec := ctx.putRead(t, base+"/kontakt", `{"address_street":"Musterweg 1","address_postal_code":"48143","address_city":"Münster","phone":"+49 251 1","email":"k@example.com","emergency_contact_name":"Erika Muster","emergency_contact_phone":"+49 170 1","note":"Erstpflege"}`, "staff:stammdaten")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	rec = ctx.put(base+"/arbeitsvertrag", `{"entry_date":"2024-08-01","contract_end_date":null,"probation_end_date":"2025-01-31","weekly_hours":29.5,"employment_type":"part_time","note":"Vertrag"}`, "staff:stammdaten")
+	rec = ctx.putRead(t, base+"/arbeitsvertrag", `{"entry_date":"2024-08-01","contract_end_date":null,"probation_end_date":"2025-01-31","weekly_hours":29.5,"employment_type":"part_time","note":"Vertrag"}`, "staff:stammdaten")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	rec = ctx.put(base+"/qualifikationen", `{"qualifikationen":[{"name":"Erste-Hilfe-Kurs","acquired_on":"2023-03-10","expires_on":"2026-03-10"},{"name":"Schwimmschein","acquired_on":null,"expires_on":null}],"note":"Nachweise"}`, "staff:stammdaten")
+	rec = ctx.putRead(t, base+"/qualifikationen", `{"qualifikationen":[{"name":"Erste-Hilfe-Kurs","acquired_on":"2023-03-10","expires_on":"2026-03-10"},{"name":"Schwimmschein","acquired_on":null,"expires_on":null}],"note":"Nachweise"}`, "staff:stammdaten")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	rec = ctx.get(base, "staff:stammdaten")
@@ -166,12 +179,12 @@ func TestStammdatenAPI_WireShapeAndValidation(t *testing.T) {
 	assert.NotContains(t, body, `"iban"`, "the aggregate GET must not expose financial fields")
 
 	// Validation → 400 with the stable code.
-	rec = ctx.put(base+"/person", `{"first_name":"","last_name":"X"}`, "staff:stammdaten")
+	rec = ctx.putRead(t, base+"/person", `{"first_name":"","last_name":"X"}`, "staff:stammdaten")
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
-	rec = ctx.put(base+"/arbeitsvertrag", `{"weekly_hours":95}`, "staff:stammdaten")
+	rec = ctx.putRead(t, base+"/arbeitsvertrag", `{"weekly_hours":95}`, "staff:stammdaten")
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"workforce.stammdaten_invalid"`)
-	rec = ctx.put(base+"/bank-steuer", `{"iban":"DE00123"}`, "staff:financial")
+	rec = ctx.putRead(t, base+"/bank-steuer", `{"iban":"DE00123"}`, "staff:financial")
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"workforce.stammdaten_invalid"`)
 }
@@ -183,7 +196,7 @@ func TestStammdatenAPI_RejectsDuplicateQualificationIDs(t *testing.T) {
 	target := testpkg.CreateTestStaff(t, ctx.tc.db, "Stammdaten", fmt.Sprintf("Duplicate-%d", time.Now().UnixNano()))
 	base := fmt.Sprintf("/staff/%d/stammdaten", target.ID)
 
-	rec := ctx.put(base+"/qualifikationen", `{"qualifikationen":[{"name":"Erste Hilfe"}],"note":"Nachweis"}`, "staff:stammdaten")
+	rec := ctx.putRead(t, base+"/qualifikationen", `{"qualifikationen":[{"name":"Erste Hilfe"}],"note":"Nachweis"}`, "staff:stammdaten")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var listed struct {
 		Data struct {
@@ -197,7 +210,7 @@ func TestStammdatenAPI_RejectsDuplicateQualificationIDs(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &listed))
 	require.Len(t, listed.Data.Qualifikationen, 1)
 
-	rec = ctx.put(base+"/qualifikationen", fmt.Sprintf(`{"qualifikationen":[{"id":%q,"name":"Erste Hilfe"},{"id":%q,"name":"Erste Hilfe"}],"note":"Nachweis"}`, listed.Data.Qualifikationen[0].ID, listed.Data.Qualifikationen[0].ID), "staff:stammdaten")
+	rec = ctx.putRead(t, base+"/qualifikationen", fmt.Sprintf(`{"qualifikationen":[{"id":%q,"name":"Erste Hilfe"},{"id":%q,"name":"Erste Hilfe"}],"note":"Nachweis"}`, listed.Data.Qualifikationen[0].ID, listed.Data.Qualifikationen[0].ID), "staff:stammdaten")
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "workforce.stammdaten_invalid")
 }
@@ -215,11 +228,12 @@ func TestStammdatenAPIUsesTheCurrentQualificationTypeName(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &listed))
 	require.NotEmpty(t, listed.Data)
 	typeID := listed.Data[0].ID
+	typeVersion := listed.Data[0].Version
 
-	rec = ctx.put(base+"/qualifikationen", fmt.Sprintf(`{"qualifikationen":[{"type_id":%q,"name":"Alte Erste Hilfe"}],"note":"Nachweis"}`, typeID), "staff:stammdaten")
+	rec = ctx.putRead(t, base+"/qualifikationen", fmt.Sprintf(`{"qualifikationen":[{"type_id":%q,"name":"Alte Erste Hilfe"}],"note":"Nachweis"}`, typeID), "staff:stammdaten")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	rec = ctx.put("/staff/qualification-types/"+typeID, `{"name":"Erste Hilfe neu","validity_months":24,"reminder_lead_weeks":8,"mandatory":true,"archived":false}`, "staff:stammdaten")
+	rec = ctx.put("/staff/qualification-types/"+typeID.String(), fmt.Sprintf(`{"name":"Erste Hilfe neu","validity_months":24,"reminder_lead_weeks":8,"mandatory":true,"archived":false,"expected_version":%q}`, typeVersion), "staff:stammdaten")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	rec = ctx.get(base, "staff:stammdaten")
@@ -234,9 +248,9 @@ func TestFormerEmploymentPersonnelAndTimesAreReadOnly(t *testing.T) {
 	ctx := setupOverviewAPI(t)
 	target := testpkg.CreateTestStaff(t, ctx.tc.db, "Former", "Employment")
 	base := fmt.Sprintf("/staff/%d", target.ID)
-	rec := ctx.put(base+"/stammdaten/kontakt", `{"phone":"0123456789","note":"Kontakt"}`, "staff:stammdaten")
+	rec := ctx.putRead(t, base+"/stammdaten/kontakt", `{"phone":"0123456789","note":"Kontakt"}`, "staff:stammdaten")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = ctx.put(base+"/stammdaten/qualifikationen", `{"qualifikationen":[{"name":"Erste Hilfe"}],"note":"Nachweis"}`, "staff:stammdaten")
+	rec = ctx.putRead(t, base+"/stammdaten/qualifikationen", `{"qualifikationen":[{"name":"Erste Hilfe"}],"note":"Nachweis"}`, "staff:stammdaten")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	day := testpkg.Date(2026, time.July, 1)
 	insertWorkSession(t, ctx.tc, target.ID, day.String(), day.BerlinMidnight().Add(8*time.Hour), day.BerlinMidnight().Add(12*time.Hour))
@@ -260,12 +274,12 @@ func TestFormerEmploymentPersonnelAndTimesAreReadOnly(t *testing.T) {
 	require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 
 	for _, section := range []string{"kontakt", "arbeitsvertrag", "qualifikationen"} {
-		rec = ctx.put(base+"/stammdaten/"+section, `{"note":"Änderung"}`, "staff:stammdaten")
+		rec = ctx.putRead(t, base+"/stammdaten/"+section, `{"note":"Änderung"}`, "staff:stammdaten")
 		require.Equal(t, http.StatusNotFound, rec.Code, section+": "+rec.Body.String())
 	}
-	rec = ctx.put(base+"/stammdaten/person", `{"first_name":"Changed","last_name":"Person","note":"Änderung"}`, "staff:stammdaten")
+	rec = ctx.putRead(t, base+"/stammdaten/person", `{"first_name":"Changed","last_name":"Person","note":"Änderung"}`, "staff:stammdaten")
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
-	rec = ctx.put(base+"/stammdaten/bank-steuer", `{"note":"Änderung"}`, "staff:financial")
+	rec = ctx.putRead(t, base+"/stammdaten/bank-steuer", `{"note":"Änderung"}`, "staff:financial")
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	for _, suffix := range []string{"time-tracking/sessions", "time-tracking/adjustments", "time-tracking/reset", "time-tracking/opening", "time-tracking/month-close/reopen", "absences"} {
 		rec = ctx.post(base+"/"+suffix, `{}`, "time_tracking:manage")

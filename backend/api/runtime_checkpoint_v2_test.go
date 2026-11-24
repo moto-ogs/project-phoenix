@@ -15,10 +15,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken/tokentest"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/require"
 )
 
 // Workload versions of the default checkpoint. checkpoint-1-v1 is the #3019
@@ -174,7 +176,7 @@ func (w *targetRiskWorkload) bookedStudent(t *testing.T, name string) int64 {
 	}
 	for _, activityID := range w.bookedActivities {
 		w.bookedRosters[activityID] = append(w.bookedRosters[activityID], id)
-		body, err := json.Marshal(map[string][]int64{"student_ids": w.bookedRosters[activityID]})
+		body, err := json.Marshal(map[string][]testpkg.ID{"student_ids": testpkg.IDsOf[testpkg.ID](w.bookedRosters[activityID])})
 		require.NoError(t, err)
 		enrolled := checkpointRequest(w.handler, checkpointScenario{Method: http.MethodPut, Path: fmt.Sprintf("/api/activities/%d/students", activityID), Body: string(body), Authenticated: true}, w.token)
 		require.Equal(t, http.StatusOK, enrolled.Code, "prepare activity booking: %s", enrolled.Body.String())
@@ -253,13 +255,24 @@ func (w *targetRiskWorkload) link(t *testing.T, subjectID int64, companionIDs ..
 	t.Helper()
 	links := make([]string, 0, len(companionIDs))
 	for _, companionID := range companionIDs {
-		links = append(links, fmt.Sprintf(`{"companion_student_id":%d,"weekdays":["mon"]}`, companionID))
+		links = append(links, fmt.Sprintf(`{"companion_student_id":"%d","weekdays":["mon"]}`, companionID))
 	}
-	w.putStudent(t, subjectID, "{"+accompaniedPlan+`,"companions":[`+strings.Join(links, ",")+`],"companions_fingerprint":""}`)
+	w.putStudent(t, subjectID, "{"+accompaniedPlan+`,"companions":[`+strings.Join(links, ",")+`],"companions_fingerprint":"`+careplan.CompanionLinksFingerprint(nil)+`"}`)
 }
 
 func (w *targetRiskWorkload) putStudent(t *testing.T, studentID int64, body string) {
 	t.Helper()
+	// The form saves against the master data the child's page read (ADR 0311).
+	read := checkpointRequest(w.handler, checkpointScenario{Method: http.MethodGet, Path: fmt.Sprintf("/api/students/%d", studentID), Authenticated: true}, w.token)
+	require.Equal(t, http.StatusOK, read.Code, "read student: %s", read.Body.String())
+	var detail struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(read.Body.Bytes(), &detail))
+	require.NotEmpty(t, detail.Data.Version)
+	body = fmt.Sprintf(`{"expected_version":%q,`, detail.Data.Version) + strings.TrimPrefix(body, "{")
 	response := checkpointRequest(w.handler, checkpointScenario{Method: http.MethodPut, Path: fmt.Sprintf("/api/students/%d", studentID), Authenticated: true, Body: body}, w.token)
 	require.Equal(t, http.StatusOK, response.Code, "prepare student plan: %s", response.Body.String())
 }
@@ -342,7 +355,7 @@ func (w *targetRiskWorkload) scenarios() []checkpointScenario {
 		{"people-directory.students", "GET", "/api/students/", 200, true, ""},
 		{"people-directory.students-invalid-view", "GET", "/api/students/?view=bogus", 400, true, ""},
 		{"request-review.queue", "GET", "/api/students/change-requests", 200, true, ""},
-		{"request-review.queue-invalid-view", "GET", "/api/students/change-requests?view=bogus", 400, true, ""},
+		{"request-review.queue-invalid-type", "GET", "/api/students/change-requests?types=bogus", 400, true, ""},
 		{"request-review.care-schedule-decide", "POST", "/api/students/care-schedule-change-requests/" + checkpointRequestPlaceholder + "/decide", 200, true, `{"approve":true,"reason":"Checkpoint"}`},
 		{"request-review.care-schedule-decide-not-found", "POST", fmt.Sprintf("/api/students/care-schedule-change-requests/%d/decide", w.missingRequestID), 404, true, `{"approve":true,"reason":"Checkpoint"}`},
 		{"care-plan.withdrawals", "GET", "/api/students/care-withdrawals", 200, true, ""},
@@ -466,11 +479,11 @@ func (w *targetRiskWorkload) prepare(t *testing.T, scenario checkpointScenario) 
 			scenario.Body = fmt.Sprintf(`{"rfid_tag":%q,"action":"checkin","status":"present"}`, w.staffTag)
 		}
 	case "request-review.care-schedule-decide":
-		requestID := w.pendingCareRequest(t)
+		requestID, version := w.pendingCareRequest(t)
 		scenario.Path = strings.Replace(scenario.Path, checkpointRequestPlaceholder, strconv.FormatInt(requestID, 10), 1)
 		// #6843: the approval names the diff the open queue shows.
 		impact := careScheduleImpactToken(t, w.handler, w.token, w.parentStudentID, requestID)
-		scenario.Body = fmt.Sprintf(`{"approve":true,"reason":"Checkpoint","impact_token":%q}`, impact)
+		scenario.Body = fmt.Sprintf(`{"approve":true,"reason":"Checkpoint","impact_token":%q,"expected_version":%q}`, impact, version)
 	case "care-plan.care-end":
 		scenario.Body = w.prepareCareEnd(t, false)
 	case "care-plan.care-end-replan":
@@ -523,7 +536,7 @@ func (w *targetRiskWorkload) mfaChallenge(t *testing.T, code, submitted string) 
 // pendingCareRequest files one parent care-schedule request for the chain's
 // child. The pickup time alternates so an approved plan never equals the
 // next proposal.
-func (w *targetRiskWorkload) pendingCareRequest(t *testing.T) int64 {
+func (w *targetRiskWorkload) pendingCareRequest(t *testing.T) (int64, string) {
 	t.Helper()
 	pickup := "15:30"
 	if w.decided%2 == 1 {
@@ -535,7 +548,7 @@ func (w *targetRiskWorkload) pendingCareRequest(t *testing.T) int64 {
 	path := "/parent/me/children/" + strconv.FormatInt(w.parentStudentID, 10) + "/care-schedule/requests"
 	created := doCareScheduleJSON(t, w.handler, http.MethodPost, path, w.parentToken, body)
 	require.Equal(t, http.StatusCreated, created.Code, "prepare care-schedule request: %s", created.Body.String())
-	return careSchedulePendingRequestID(t, created)
+	return careSchedulePendingRequestID(t, created), careSchedulePendingRequestVersion(t, created)
 }
 
 // observe carries state from a response into the next preparation.

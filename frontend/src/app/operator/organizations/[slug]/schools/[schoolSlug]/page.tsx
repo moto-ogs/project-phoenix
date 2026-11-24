@@ -2,6 +2,7 @@
 
 import { useAccessControlledData } from "~/lib/hooks/use-access-controlled-data";
 import { operatorProvisioningKeys } from "~/lib/swr/portal-keys";
+import { useActionOn } from "~/lib/swr/read-draft";
 
 import {
   Suspense,
@@ -12,7 +13,11 @@ import {
   useState,
 } from "react";
 // eslint-disable-next-line no-restricted-imports -- operator pages are not tenant-scoped
-import { useSWRAuth, useInvalidateMatching } from "~/lib/swr";
+import {
+  revalidateOrThrow,
+  useSWRAuth,
+  useInvalidateMatching,
+} from "~/lib/swr";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -52,7 +57,11 @@ import { MFAAdminOverrideModal } from "~/components/auth/mfa-admin-override-moda
 import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  readStateWaitReason,
+  useReadDraftLoadError,
+  useSwrLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import {
   STALE_DATA_SUFFIX,
   useRefreshAfterWrite,
@@ -190,12 +199,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
     [organizations],
   );
 
-  const {
-    data: cachedSchools,
-    error: schoolsError,
-    isLoading: schoolsLoading,
-    mutate: mutateSchools,
-  } = useSWRAuth(
+  const schoolsRead = useSWRAuth(
     isAuthenticated ? operatorProvisioningKeys.schoolSummaries() : null,
     () => operatorProvisioningService.listSchoolSummaries(),
     {
@@ -203,6 +207,24 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
       revalidateOnFocus: false,
       dedupingInterval: 5000,
     },
+  );
+  const {
+    data: cachedSchools,
+    error: schoolsError,
+    isLoading: schoolsLoading,
+    mutate: mutateSchools,
+  } = schoolsRead;
+  // A write starts from the school as stored now. revalidateOrThrow, not
+  // mutate: `mutate()` resolves with the old list when the read fails, and
+  // `mutate(undefined, …)` empties the cache and resolves to undefined (#7780).
+  const readCurrentSchool = useCallback(
+    async (id: string): Promise<SchoolSummary> => {
+      const fresh = await revalidateOrThrow(schoolsRead);
+      const current = fresh.find((item) => item.id === id);
+      if (!current) throw new Error("school not found after refresh");
+      return current;
+    },
+    [schoolsRead],
   );
   const { data: schools, accessRefused: schoolsAccessRefused } =
     useAccessControlledData(
@@ -478,38 +500,62 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
     [],
   );
 
+  // From a refusal until the stored school is read, the badge sends
+  // nothing: it still carries the refused version (ADR 0311, rule 4). Any
+  // read of another version lifts that, also after a failed read.
+  const toggle = useActionOn(
+    {
+      opening: school?.id ?? null,
+      data: school,
+      reload: () => readCurrentSchool(school?.id ?? ""),
+    },
+    { token: (read) => read.version },
+  );
+  const toggleLoadError = useReadDraftLoadError(
+    toggle,
+    "die Anzeige der Schule",
+  );
+  const toggleWait = readStateWaitReason(toggle.status);
+  const { submit: submitToggle } = toggle;
   const handleToggleSchoolActive = useCallback(async () => {
     if (!school) return;
-    let subdomain: string;
-    try {
-      const fresh = await mutateSchools();
-      const current = fresh?.find((item) => item.id === school.id) ?? school;
-
-      await operatorProvisioningService.updateSchool(current.id, {
-        organization_id: current.organizationId,
-        name: current.name,
-        slug: current.slug,
-        subdomain: current.subdomain,
-        address: current.address,
-        city: current.city,
-        zip: current.zip,
-        phone: current.phone,
-        email: current.email,
-        active: !current.active,
-        hidden: current.hidden,
-      });
-      subdomain = current.subdomain;
-    } catch (error) {
+    // The route replaces every field: the toggle sends the school as shown
+    // with its version (ADR 0311), so a change since is refused, never
+    // undone, and the refusal shows the stored school.
+    const result = await submitToggle(() =>
+      operatorProvisioningService.updateSchool(school.id, {
+        organization_id: school.organizationId,
+        name: school.name,
+        slug: school.slug,
+        subdomain: school.subdomain,
+        address: school.address,
+        city: school.city,
+        zip: school.zip,
+        phone: school.phone,
+        email: school.email,
+        active: !school.active,
+        hidden: school.hidden,
+        expected_version: school.version,
+      }),
+    );
+    if (!result.ok) {
+      if (result.skipped) return;
       logger.warn("school_toggle_active_failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      // No retry: the toggle reads the current state again, so a repeat
-      // after an unknown outcome could switch the school back.
-      void showToggleError(error, { object: "die Änderung des Status" });
+      // No retry: a repeat after an unknown outcome could switch the school
+      // back.
+      void showToggleError(result.error, {
+        object: "die Änderung des Status",
+        reload: result.reload,
+      });
       return;
     }
-    await statusAfterWrite.refresh(subdomain);
-  }, [mutateSchools, school, showToggleError, statusAfterWrite]);
+    await statusAfterWrite.refresh(school.subdomain);
+  }, [school, submitToggle, showToggleError, statusAfterWrite]);
 
   const schoolDelete = useSoftDeletable<SchoolSummary>({
     softDeleteFn: operatorProvisioningService.softDeleteSchool,
@@ -605,8 +651,9 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
         <button
           type="button"
           onClick={() => void handleToggleSchoolActive()}
-          className="cursor-pointer"
-          title={school?.active ? "Deaktivieren" : "Aktivieren"}
+          disabled={!toggle.canSubmit}
+          className="cursor-pointer disabled:cursor-not-allowed"
+          title={toggleWait ?? (school?.active ? "Deaktivieren" : "Aktivieren")}
           aria-label={school?.active ? "Deaktivieren" : "Aktivieren"}
         >
           <DataTableStatusBadge active={school?.active ?? false} />
@@ -659,6 +706,8 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
       handleToggleSchoolActive,
       school,
       schoolDelete,
+      toggle.canSubmit,
+      toggleWait,
       schoolSlug,
       slug,
     ],
@@ -894,16 +943,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
             isOpen={childQuotaOpen}
             onClose={() => setChildQuotaOpen(false)}
             school={school}
-            loadCurrentSchool={async () => {
-              const fresh = await mutateSchools(undefined, {
-                throwOnError: true,
-              });
-              const current = fresh?.find((item) => item.id === school.id);
-              if (!current) {
-                throw new Error("school not found after refresh");
-              }
-              return current;
-            }}
+            loadCurrentSchool={() => readCurrentSchool(school.id)}
             onUpdated={refreshSchoolDetail}
           />
 
@@ -918,6 +958,9 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
             isOpen={editSchoolOpen}
             onClose={() => setEditSchoolOpen(false)}
             school={summaryToSchool(school)}
+            reload={async () =>
+              summaryToSchool(await readCurrentSchool(school.id))
+            }
             requiredDetails={schoolRequiredDetails}
             organizations={activeOrganizations}
             onUpdated={editAfterWrite.refresh}
@@ -983,6 +1026,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
       <LoadErrorAlert error={requiredDetailsLoadError} />
       <LoadErrorAlert error={schoolDelete.reloadError} />
       <LoadErrorAlert error={statusAfterWrite.error} />
+      <LoadErrorAlert error={toggleLoadError} />
       <LoadErrorAlert error={editAfterWrite.error} />
 
       {activeTab === "uebersicht" ? (

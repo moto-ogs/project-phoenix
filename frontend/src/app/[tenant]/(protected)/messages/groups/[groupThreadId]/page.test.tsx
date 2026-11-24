@@ -45,7 +45,7 @@ vi.mock("~/lib/swr", async (importOriginal) => ({
 // The send overlay (#5011) is bound to the signed-in session's scope.
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "1", tenantId: 1 }, expires: "2099-01-01" },
+    data: { user: { id: "1", tenantId: "1" }, expires: "2099-01-01" },
     status: "authenticated",
   }),
 }));

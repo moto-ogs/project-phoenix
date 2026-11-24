@@ -723,6 +723,11 @@ func (r *guardRig) do(t *testing.T, w childWrite, token string) *httptest.Respon
 	return rec
 }
 
+// rowVersion is the version the parent lists emit for one request row.
+func (r *guardRig) rowVersion(t *testing.T, table string, id int64) string {
+	return testpkg.ParentRequestVersionIn(t, r.db, table, id)
+}
+
 func (r *guardRig) scalar(t *testing.T, query string, args ...any) int64 {
 	t.Helper()
 	var id int64
@@ -781,7 +786,7 @@ func guardedWrites() []guardedWrite {
 				r.set(t, map[string]any{"operations.parent_sick_note_enabled": true, "operations.parent_excused_reports_enabled": true, "operations.parent_excused_requires_approval": true})
 				r.do(t, childWrite{http.MethodPost, childPath(f, "/sick-note"), map[string]any{"dates": []string{"2026-09-03"}, "status": "excused", "reason": "Termin"}}, f.token)
 				id := r.scalar(t, `SELECT id FROM active.excused_absence_requests WHERE student_id = ? ORDER BY id DESC LIMIT 1`, f.StudentID)
-				return childWrite{http.MethodPut, childPath(f, fmt.Sprintf("/excused-requests/%d", id)), map[string]any{"dates": []string{"2026-09-04"}, "note": "Termin verschoben"}}
+				return childWrite{http.MethodPut, childPath(f, fmt.Sprintf("/excused-requests/%d", id)), map[string]any{"dates": []string{"2026-09-04"}, "note": "Termin verschoben", "expected_version": r.rowVersion(t, "active.excused_absence_requests", id)}}
 			},
 		},
 		{
@@ -795,8 +800,8 @@ func guardedWrites() []guardedWrite {
 		{
 			name:        "Stammdatenantrag bearbeiten",
 			permissions: []string{permMasterRequest},
-			prepare: func(t *testing.T, _ *guardRig, f childReadFamily) childWrite {
-				return masterDataEdit(f.StudentID, f.requestID, "Maxi", "")
+			prepare: func(t *testing.T, r *guardRig, f childReadFamily) childWrite {
+				return masterDataEdit(f.StudentID, f.requestID, "Maxi", r.masterDataVersion(t, f))
 			},
 		},
 		{
@@ -829,8 +834,8 @@ func guardedWrites() []guardedWrite {
 		{
 			name:        "Anfrage teilen",
 			permissions: []string{permMasterRequest},
-			prepare: func(t *testing.T, _ *guardRig, f childReadFamily) childWrite {
-				return sharingWrite(f.StudentID, f.requestID)
+			prepare: func(t *testing.T, r *guardRig, f childReadFamily) childWrite {
+				return sharingWrite(f.StudentID, f.requestID, r.sharingVersion(t, f))
 			},
 		},
 		{
@@ -846,7 +851,9 @@ func guardedWrites() []guardedWrite {
 			permissions: []string{permGuardianEdit},
 			prepare: func(t *testing.T, r *guardRig, f childReadFamily) childWrite {
 				r.set(t, map[string]any{"operations.parent_guardian_management_enabled": true})
-				return childWrite{http.MethodPut, childPath(f, fmt.Sprintf("/guardians/%d/contact", f.GuardianProfileID)), map[string]any{"first_name": "Sabine", "last_name": "Geändert", "phones": []any{}}}
+				return childWrite{http.MethodPut, childPath(f, fmt.Sprintf("/guardians/%d/contact", f.GuardianProfileID)), map[string]any{
+					"first_name": "Sabine", "last_name": "Geändert", "phones": []any{}, "expected_version": r.contactVersion(t, f),
+				}}
 			},
 		},
 		{
@@ -872,7 +879,7 @@ func guardedWrites() []guardedWrite {
 				r.enableCareScheduleRequests(t)
 				r.do(t, careScheduleRequest(f), f.token)
 				id := r.scalar(t, `SELECT id FROM schedule.care_schedule_change_requests WHERE student_id = ? ORDER BY id DESC LIMIT 1`, f.StudentID)
-				return childWrite{http.MethodPut, childPath(f, fmt.Sprintf("/care-schedule/requests/%d", id)), map[string]any{"payload": map[string]any{"weekdays": []any{map[string]any{"weekday": 2, "pickup": "16:00"}}}}}
+				return childWrite{http.MethodPut, childPath(f, fmt.Sprintf("/care-schedule/requests/%d", id)), map[string]any{"payload": map[string]any{"weekdays": []any{map[string]any{"weekday": 2, "pickup": "16:00"}}}, "expected_version": r.rowVersion(t, "schedule.care_schedule_change_requests", id)}}
 			},
 		},
 		{
@@ -944,7 +951,7 @@ func guardedWrites() []guardedWrite {
 				r.set(t, map[string]any{"operations.parent_pickup_change_enabled": true})
 				r.do(t, pickupChange(f), f.token)
 				id := r.scalar(t, `SELECT id FROM schedule.care_schedule_change_requests WHERE student_id = ? ORDER BY id DESC LIMIT 1`, f.StudentID)
-				return childWrite{http.MethodPut, childPath(f, fmt.Sprintf("/pickup-change-requests/%d", id)), map[string]any{"date": "2026-09-02", "pickup_time": "14:30", "reason": "Arzttermin"}}
+				return childWrite{http.MethodPut, childPath(f, fmt.Sprintf("/pickup-change-requests/%d", id)), map[string]any{"date": "2026-09-02", "pickup_time": "14:30", "reason": "Arzttermin", "expected_version": r.rowVersion(t, "schedule.care_schedule_change_requests", id)}}
 			},
 		},
 		{
@@ -1067,8 +1074,17 @@ func guardedWrites() []guardedWrite {
 		{
 			name:        "Essensplan der Woche",
 			permissions: []string{permMealManage},
-			prepare: func(t *testing.T, _ *guardRig, f childReadFamily) childWrite {
-				return childWrite{http.MethodPut, childPath(f, "/meal-participation"), map[string]any{"weekdays": []int{1, 3}}}
+			prepare: func(t *testing.T, r *guardRig, f childReadFamily) childWrite {
+				// The change carries the version of the regular days a read
+				// gives first (ADR 0311).
+				read := r.do(t, childWrite{http.MethodGet, childPath(f, fmt.Sprintf("/meal-participation?from=%s&to=%s", childReadToday, childReadToday)), nil}, f.token)
+				var plan struct {
+					Data struct {
+						Version string `json:"version"`
+					} `json:"data"`
+				}
+				require.NoError(t, json.Unmarshal(read.Body.Bytes(), &plan))
+				return childWrite{http.MethodPut, childPath(f, "/meal-participation"), map[string]any{"weekdays": []int{1, 3}, "expected_version": plan.Data.Version}}
 			},
 		},
 		{

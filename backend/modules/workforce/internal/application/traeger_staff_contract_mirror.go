@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // contractScene is what a contract write checks against: the record, its
@@ -97,6 +98,17 @@ func (s contractScene) contract(id int64) (domain.TraegerStaffContract, error) {
 	return domain.TraegerStaffContract{}, domain.ErrContractMissing
 }
 
+// readContract returns the contract a dialog changes, refused when it
+// differs from the read the dialog opened on (ADR 0311). writeContract
+// calls the plan with the contracts read again under the record lock.
+func (s contractScene) readContract(id int64, expectedVersion string) (domain.TraegerStaffContract, error) {
+	contract, err := s.contract(id)
+	if err != nil {
+		return domain.TraegerStaffContract{}, err
+	}
+	return contract, readstate.Check(expectedVersion, contractVersion(contract))
+}
+
 // mirror brings every Einsatzort of the record up to date in its own tenant
 // transaction: the Soll of all contracts from the first open day on into
 // the school's schedule, the holiday weeks into its Sonderarbeitszeiten. It
@@ -173,6 +185,7 @@ func publicContracts(contracts []domain.TraegerStaffContract, names map[int64]st
 		public := workforce.TraegerStaffContract{
 			ID: ident.ID(contract.ID), Kind: contract.Kind, StartsOn: contract.StartsOn, Pool: contract.Pool,
 			Sites: []workforce.TraegerContractSiteDetail{}, HolidayWeeks: make([]workforce.TraegerContractHolidayWeek, 0, len(contract.HolidayWeeks)),
+			Version: contractVersion(contract),
 		}
 		if !contract.EndsOn.IsZero() {
 			public.EndsOn = new(contract.EndsOn)

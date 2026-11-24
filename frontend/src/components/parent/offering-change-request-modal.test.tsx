@@ -18,12 +18,19 @@ import {
   updateOfferingChangeRequest,
   type OfferingCatalog,
 } from "~/lib/parent-api";
+import { ToastProvider } from "~/contexts/ToastContext";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 
 vi.unmock("swr");
 
 function renderParent(ui: Parameters<typeof render>[0]) {
-  return render(ui, { wrapper: ParentResourceTestProvider });
+  return render(ui, {
+    wrapper: ({ children }) => (
+      <ParentResourceTestProvider>
+        <ToastProvider>{children}</ToastProvider>
+      </ParentResourceTestProvider>
+    ),
+  });
 }
 
 vi.mock("~/lib/parent-api", async (importOriginal) => {
@@ -121,7 +128,7 @@ describe("OfferingChangeRequestModal", () => {
     mockEvents.mockResolvedValue([
       {
         event_type: "submitted",
-        version: "v7",
+        version: "history-v",
         created_at: "2026-08-10T08:00:00Z",
       },
     ]);
@@ -182,7 +189,7 @@ describe("OfferingChangeRequestModal", () => {
         onClose={vi.fn()}
         onSubmit={vi.fn()}
         reasonRequired={false}
-        editRequestId="req-9"
+        editRequest={{ id: "req-9", version: "v7" }}
         onEdited={onEdited}
       />,
     );
@@ -205,6 +212,39 @@ describe("OfferingChangeRequestModal", () => {
         expectedVersion: "v7",
       }),
     );
+    expect(onEdited).toHaveBeenCalled();
+  });
+
+  // ADR 0311 rule 6: after a refusal the page reads the request again; a
+  // failed read says so instead of claiming the new state shows.
+  it("names a failed read of the request after a refusal", async () => {
+    mockUpdateOffering.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const onEdited = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+    renderParent(
+      <OfferingChangeRequestModal
+        studentId="42"
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        reasonRequired={false}
+        editRequest={{ id: "req-9", version: "v7" }}
+        onEdited={onEdited}
+      />,
+    );
+    const save = await screen.findByRole("button", {
+      name: "Änderung speichern",
+    });
+    await waitFor(() => expect(save).toBeEnabled());
+    fireEvent.click(save);
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
     expect(onEdited).toHaveBeenCalled();
   });
 

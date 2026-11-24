@@ -15,6 +15,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
@@ -105,10 +107,10 @@ func TestStaffMessageCarriesUploadedPhotoForParticipantsOnly(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, f.do(t, ben, http.MethodGet, download, "").Code)
 
 	// A message may consist of the photo alone.
-	sent := f.do(t, anna, http.MethodPost, "/threads/"+thread.ThreadID, fmt.Sprintf(`{"body":"","attachment_ids":[%q]}`, attachment.ID))
+	sent := f.do(t, anna, http.MethodPost, "/threads/"+thread.ThreadID.String(), fmt.Sprintf(`{"body":"","attachment_ids":[%q]}`, attachment.ID))
 	require.Equal(t, http.StatusOK, sent.Code, sent.Body.String())
 	message := decodeData[staffmessaging.MessageResponse](t, sent.Body.Bytes())
-	sentFiles, err := json.Marshal(message.Attachments)
+	sentFiles, err := wire.Marshal(message.Attachments)
 	require.NoError(t, err)
 	var carried []attachmentWire
 	require.NoError(t, json.Unmarshal(sentFiles, &carried))
@@ -121,22 +123,22 @@ func TestStaffMessageCarriesUploadedPhotoForParticipantsOnly(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, f.do(t, clara, http.MethodGet, download, "").Code)
 
 	// The conversation and the inbox show it.
-	read := f.do(t, ben, http.MethodGet, "/threads/"+thread.ThreadID, "")
+	read := f.do(t, ben, http.MethodGet, "/threads/"+thread.ThreadID.String(), "")
 	require.Equal(t, http.StatusOK, read.Code, read.Body.String())
 	messages := decodeData[staffmessaging.ThreadDetailResponse](t, read.Body.Bytes()).Messages
 	require.Len(t, messages, 1)
 	require.Equal(t, message.Attachments, messages[0].Attachments)
-	require.Equal(t, "📎 ausflug.png", f.inboxRow(t, ben, thread.ThreadID).LastMessageBody)
+	require.Equal(t, "📎 ausflug.png", f.inboxRow(t, ben, thread.ThreadID.String()).LastMessageBody)
 
 	// A sent upload cannot ride on a second message, nor a foreign one on any.
-	again := f.do(t, anna, http.MethodPost, "/threads/"+thread.ThreadID, fmt.Sprintf(`{"body":"nochmal","attachment_ids":[%q]}`, attachment.ID))
+	again := f.do(t, anna, http.MethodPost, "/threads/"+thread.ThreadID.String(), fmt.Sprintf(`{"body":"nochmal","attachment_ids":[%q]}`, attachment.ID))
 	require.Equal(t, http.StatusBadRequest, again.Code, again.Body.String())
 	foreign := decodeData[attachmentWire](t, f.upload(t, clara, "fremd.png", photo).Body.Bytes())
-	stolen := f.do(t, anna, http.MethodPost, "/threads/"+thread.ThreadID, fmt.Sprintf(`{"body":"x","attachment_ids":[%q]}`, foreign.ID))
+	stolen := f.do(t, anna, http.MethodPost, "/threads/"+thread.ThreadID.String(), fmt.Sprintf(`{"body":"x","attachment_ids":[%q]}`, foreign.ID))
 	require.Equal(t, http.StatusBadRequest, stolen.Code, stolen.Body.String())
 
 	// A message without text and without a file stays refused.
-	require.Equal(t, http.StatusBadRequest, f.do(t, anna, http.MethodPost, "/threads/"+thread.ThreadID, `{"body":" "}`).Code)
+	require.Equal(t, http.StatusBadRequest, f.do(t, anna, http.MethodPost, "/threads/"+thread.ThreadID.String(), `{"body":" "}`).Code)
 }
 
 func TestStaffMessageAttachmentUploadRefusesDisguisedContent(t *testing.T) {

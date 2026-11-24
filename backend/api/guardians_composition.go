@@ -10,6 +10,7 @@ import (
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
 	apiCommon "github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
@@ -60,10 +61,19 @@ func renderPeopleDirectoryFailure(w http.ResponseWriter, r *http.Request, kind u
 	case usersAPI.FailureNotFound:
 		apiCommon.RenderError(w, r, apiCommon.ErrorNotFound(err))
 	case usersAPI.FailureConflict:
-		apiCommon.RenderError(w, r, apiCommon.ErrorConflict(err))
+		apiCommon.RenderError(w, r, guardianConflict(err))
 	default:
 		apiCommon.RenderError(w, r, apiCommon.ErrorInternalServer(err))
 	}
+}
+
+// guardianConflict renders a conflict; a business rejection keeps its own
+// code (general.changed_since_read for a stale bulk preview, ADR 0311).
+func guardianConflict(err error) render.Renderer {
+	if apiCommon.IsBusinessRejection(err) {
+		return apiCommon.ErrorBusinessRejection(err)
+	}
+	return apiCommon.ErrorConflict(err)
 }
 
 // guardianInputCodes gives the guardian input refusals the form can explain
@@ -215,6 +225,7 @@ func bulkInviteGuardians(runtime GuardianDirectoryRuntime) func(context.Context,
 	return func(ctx context.Context, input usersAPI.GuardianBulkInvite) (usersAPI.GuardianBulkInviteResult, error) {
 		result, err := runtime.BulkInviteGuardians(ctx, GuardianBulkInviteRequest{
 			StudentIDs: input.StudentIDs, CreatedBy: input.ActorAccountID, ResendOpen: input.ResendOpen, DryRun: input.DryRun,
+			NotifyActive: input.NotifyActive, ExpectedFingerprint: input.ExpectedFingerprint,
 		})
 		if err != nil {
 			return usersAPI.GuardianBulkInviteResult{}, err
@@ -226,7 +237,9 @@ func bulkInviteGuardians(runtime GuardianDirectoryRuntime) func(context.Context,
 		return usersAPI.GuardianBulkInviteResult{
 			Invited: result.Invited, LinkedExistingAccount: result.LinkedExistingAccount, Resent: result.Resent,
 			SkippedActive: result.SkippedActive, SkippedOpen: result.SkippedOpen,
-			SkippedRestricted: result.SkippedRestricted, Problems: problems,
+			SkippedRestricted: result.SkippedRestricted, Notified: result.Notified,
+			AlreadyNotified: result.AlreadyNotified, WithoutVisibleCare: result.WithoutVisibleCare, Problems: problems,
+			Fingerprint: result.Fingerprint,
 		}, nil
 	}
 }

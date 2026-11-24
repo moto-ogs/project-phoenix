@@ -33,7 +33,11 @@ import {
   useToast,
 } from "~/contexts/ToastContext";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
+import {
+  revalidateOrThrow,
+  useInvalidateMatching,
+  useSWRAuth,
+} from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
@@ -146,8 +150,7 @@ function describeMappings(transition: GradeTransition): string {
 // above; a plain lexical compare would order "9" above "10". For non-negative
 // digit strings, longer means larger and equal lengths compare lexically —
 // exact over the whole int64 range and, unlike `BigInt()`, unable to throw on a
-// malformed id mid-render. Anything not digits-only falls back to a numeric
-// compare rather than crashing the manager.
+// malformed id mid-render. Malformed values retain a deterministic text order.
 function compareTransitionIDs(a: string, b: string): number {
   if (/^\d+$/.test(a) && /^\d+$/.test(b)) {
     const trimmedA = a.replace(/^0+(?=\d)/, "");
@@ -157,7 +160,7 @@ function compareTransitionIDs(a: string, b: string): number {
     }
     return trimmedA < trimmedB ? -1 : trimmedA > trimmedB ? 1 : 0;
   }
-  return Number(a) - Number(b);
+  return a.localeCompare(b);
 }
 
 function isMoreRecentlyApplied(
@@ -220,11 +223,11 @@ export function GradeTransitionsManager({
   ) => void;
 }) {
   const toast = useToast();
-  const {
-    data,
-    error: transitionsError,
-    mutate,
-  } = useSWRAuth(tenantAdminKeys.gradeTransitions(), listGradeTransitions);
+  const list = useSWRAuth(
+    tenantAdminKeys.gradeTransitions(),
+    listGradeTransitions,
+  );
+  const { data, error: transitionsError, mutate } = list;
   const transitions = data ?? null;
   // Ladefehler vor Ort, Fehler in offenen Dialogen im Dialog, sonst als
   // Toast (#2517). Codes steuern nur, was danach passiert; den Text liefert
@@ -591,6 +594,26 @@ export function GradeTransitionsManager({
             setEditorOpen(false);
             setEditorDraft(null);
             setPreviewFor(transition);
+          }}
+          reload={async () => {
+            // Der gespeicherte Entwurf (ADR 0311); scheitert das Lesen oder
+            // ist er kein Entwurf mehr, lehnt es ab.
+            const stored = (await revalidateOrThrow(list)).find(
+              (item) => item.id === editorDraft?.id,
+            );
+            if (!stored?.canModify) throw new Error("draft is gone");
+            setEditorDraft(stored);
+            return stored;
+          }}
+          onNoLongerDraft={(error) => {
+            // Angewendet: kein Entwurf mehr zum Bearbeiten. Die Liste zeigt
+            // den gespeicherten Stand, die Meldung sagt warum.
+            setEditorOpen(false);
+            setEditorDraft(null);
+            void refresh();
+            void showActionError(error, {
+              object: "das Speichern des Entwurfs",
+            });
           }}
         />
       )}

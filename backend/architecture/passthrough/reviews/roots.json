@@ -1631,6 +1631,11 @@
       "reason": "Consumer-port adapter of the Betreuungsvertrag (#6335): it stores the parents' number of a checked contract's family at the Elternabrechnung in the caller's Träger transaction and maps channel, validation and missing-family refusals into the Betreuungsvertrag's errors."
     },
     {
+      "decision": "0318",
+      "id": "roots/owners/CareContractIssuers.SchoolIssuers",
+      "reason": "ADR 0318 (#4811): Consumer-port adapter that asks Organisation \u0026 Tenancy for the body that concludes the contracts of each school and translates its master data into the Betreuungsvertrag's issuer: sender text of name and address, and the contact person."
+    },
+    {
       "decision": "0090",
       "id": "roots/owners/CareContractPost.ContractMailStates",
       "reason": "#5934: Consumer-port adapter of the contract's post; it names Delivery's outcome of each mail in the contract's words."
@@ -2499,6 +2504,11 @@
       "decision": "0090",
       "id": "roots/owners/SessionActivities.ListSessionActivities",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0318",
+      "id": "roots/owners/StaffEmployers.SchoolEmployers",
+      "reason": "ADR 0318 (#4811): Consumer-port adapter that asks Organisation \u0026 Tenancy for the body that employs the staff of each Einsatzort and translates it into the employer name the Personalakte shows."
     },
     {
       "decision": "0090",
@@ -4367,11 +4377,6 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/guardianDirectory.FindStudents",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "roots/owners/guardianDirectory.LinkGuardianProfileToAccount",
       "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
     },
@@ -4563,6 +4568,11 @@
     {
       "decision": "0090",
       "id": "roots/owners/offeringChangeEnrollment.Request",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0090",
+      "id": "roots/owners/offeringChangeEnrollment.SelectionHistory",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

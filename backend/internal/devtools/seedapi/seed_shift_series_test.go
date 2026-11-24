@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -76,22 +78,22 @@ func TestSeedShiftSeriesStepPlansAroundTheFerien(t *testing.T) {
 	assert.Equal(t, start.AddDate(0, 0, 11).Format(seedDateLayout), ferien["end_date"], "two weeks of Herbstferien, Monday to Friday")
 
 	require.Len(t, series, 3)
-	assert.EqualValues(t, 33, series[0]["staff_id"])
+	assert.Equal(t, "33", series[0]["staff_id"])
 	assert.Equal(t, false, series[0]["include_school_breaks"], "no holiday care: the series leaves the Ferien out")
-	assert.EqualValues(t, 91, series[0]["shift_type_id"], "the Frühbetreuung is led from the Frühdienst")
+	assert.Equal(t, "91", series[0]["shift_type_id"], "the Frühbetreuung is led from the Frühdienst")
 	assert.Equal(t, earlyDutyStart, series[0]["start_time"])
-	assert.EqualValues(t, 34, series[1]["staff_id"])
+	assert.Equal(t, "34", series[1]["staff_id"])
 	assert.Equal(t, true, series[1]["include_school_breaks"], "this person also works in the Ferien")
-	assert.EqualValues(t, 92, series[1]["shift_type_id"], "the Spätdienst covers the Busaufsicht")
+	assert.Equal(t, "92", series[1]["shift_type_id"], "the Spätdienst covers the Busaufsicht")
 	assert.Equal(t, lateDutyEnd, series[1]["end_time"])
 	// The second staff member leads the Frühbetreuung too. The first has
 	// single shifts next week and is left out of the series.
-	assert.EqualValues(t, 32, series[2]["staff_id"])
+	assert.Equal(t, "32", series[2]["staff_id"])
 	assert.Equal(t, earlyDutyStart, series[2]["start_time"])
 	assert.Equal(t, earlyDutyEnd, series[2]["end_time"])
 	assert.EqualValues(t, regularDutyBreakMinutes, series[2]["break_minutes"])
 	for _, payload := range series {
-		assert.EqualValues(t, 6, payload["calendar_period_id"], "the school year, not the Ferien period")
+		assert.Equal(t, "6", payload["calendar_period_id"], "the school year, not the Ferien period")
 		validFrom, err := time.Parse(seedDateLayout, payload["valid_from"].(string))
 		require.NoError(t, err)
 		validUntil, err := time.Parse(seedDateLayout, payload["valid_until"].(string))
@@ -132,20 +134,20 @@ func TestCurrentWeekShiftsFillTheWeekUpToToday(t *testing.T) {
 
 	types := seedDutyTypes{care: 81, early: 91, late: 92}
 	series := []map[string]any{{
-		"staff_id": int64(33), "start_time": earlyDutyStart, "end_time": earlyDutyEnd, "break_minutes": 30,
-		"shift_type_id": int64(91), "notes": "Keine Ferienbetreuung", "include_school_breaks": false, "weekdays": []int{1},
+		"staff_id": ident.ID(33), "start_time": earlyDutyStart, "end_time": earlyDutyEnd, "break_minutes": 30,
+		"shift_type_id": ident.ID(91), "notes": "Keine Ferienbetreuung", "include_school_breaks": false, "weekdays": []int{1},
 	}}
 
 	thursday := seedDate{Time: time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC)}
 	shifts := currentWeekShifts(thursday, []int64{31}, series, types)
 	require.Len(t, shifts, 8, "Monday to Thursday, two people")
 	assert.Equal(t, map[string]any{
-		"staff_id": int64(31), "date": "2026-10-05",
-		"start_time": lateDutyStart, "end_time": lateDutyEnd, "break_minutes": regularDutyBreakMinutes, "shift_type_id": int64(92),
+		"staff_id": ident.ID(31), "date": "2026-10-05",
+		"start_time": lateDutyStart, "end_time": lateDutyEnd, "break_minutes": regularDutyBreakMinutes, "shift_type_id": ident.ID(92),
 	}, shifts[0], "the first staff member's Freies Spiel runs until 17:00")
 	assert.Equal(t, map[string]any{
-		"staff_id": int64(33), "date": "2026-10-05",
-		"start_time": earlyDutyStart, "end_time": earlyDutyEnd, "break_minutes": 30, "shift_type_id": int64(91),
+		"staff_id": ident.ID(33), "date": "2026-10-05",
+		"start_time": earlyDutyStart, "end_time": earlyDutyEnd, "break_minutes": 30, "shift_type_id": ident.ID(91),
 		"notes": "Keine Ferienbetreuung",
 	}, shifts[1], "a series person works the series' hours, without series-only fields")
 	assert.Equal(t, "2026-10-08", shifts[7]["date"])
@@ -159,11 +161,11 @@ func TestCurrentWeekShiftsFillTheWeekUpToToday(t *testing.T) {
 	// Colleagues on vacation or training today keep the days before, but not
 	// today: the full-day simulation must not count either as absent.
 	staffIDs := []int64{31, 32, 33, 34, 35, 36, 37, 38}
-	onVacation := append(series, map[string]any{"staff_id": int64(37), "start_time": regularDutyStart, "end_time": regularDutyEnd})
-	onLeave := append(onVacation, map[string]any{"staff_id": int64(38), "start_time": regularDutyStart, "end_time": regularDutyEnd})
+	onVacation := append(series, map[string]any{"staff_id": ident.ID(37), "start_time": regularDutyStart, "end_time": regularDutyEnd})
+	onLeave := append(onVacation, map[string]any{"staff_id": ident.ID(38), "start_time": regularDutyStart, "end_time": regularDutyEnd})
 	planned := map[string]bool{}
 	for _, shift := range currentWeekShifts(thursday, staffIDs, onLeave, types) {
-		if shift["staff_id"] == int64(37) || shift["staff_id"] == int64(38) {
+		if shift["staff_id"] == ident.ID(37) || shift["staff_id"] == ident.ID(38) {
 			planned[shift["date"].(string)] = true
 		}
 	}

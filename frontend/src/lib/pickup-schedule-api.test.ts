@@ -12,7 +12,6 @@ import {
   createStudentPickupNote,
   updateStudentPickupNote,
   deleteStudentPickupNote,
-  replaceStudentWeekdayPickupNotes,
   bulkUpsertPickupSchedules,
   resetStudentPickupToOffering,
   previewStudentPickupAdjustment,
@@ -669,6 +668,7 @@ describe("pickup-schedule-api", () => {
     content: "Doctor appointment pickup",
     created_by: "1",
     created_at: "2024-01-22T08:00:00Z",
+    version: "note-read",
     updated_at: "2024-01-22T08:00:00Z",
   };
 
@@ -758,7 +758,7 @@ describe("pickup-schedule-api", () => {
         }),
       );
 
-      const result = await updateStudentPickupNote("123", "10", noteData);
+      const result = await updateStudentPickupNote("123", "10", noteData, "note-read");
 
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/students/123/pickup-notes/10",
@@ -768,6 +768,7 @@ describe("pickup-schedule-api", () => {
           body: JSON.stringify({
             note_date: "2024-01-22",
             content: "Updated note content",
+            expected_version: "note-read",
           }),
         },
       );
@@ -782,7 +783,7 @@ describe("pickup-schedule-api", () => {
         );
 
       await expect(
-        updateStudentPickupNote("999", "10", noteData),
+        updateStudentPickupNote("999", "10", noteData, "note-read"),
       ).rejects.toMatchObject({
         status: 404,
         code: "general.input",
@@ -795,7 +796,7 @@ describe("pickup-schedule-api", () => {
         .mockResolvedValue(createMockResponse(false, 500, undefined, true));
 
       await expect(
-        updateStudentPickupNote("123", "10", noteData),
+        updateStudentPickupNote("123", "10", noteData, "note-read"),
       ).rejects.toThrow();
     });
 
@@ -807,7 +808,7 @@ describe("pickup-schedule-api", () => {
       );
 
       await expect(
-        updateStudentPickupNote("123", "10", noteData),
+        updateStudentPickupNote("123", "10", noteData, "note-read"),
       ).rejects.toMatchObject({
         status: 502,
         code: "general.write_answer_unreadable",
@@ -860,38 +861,6 @@ describe("pickup-schedule-api", () => {
         .mockResolvedValue(createMockResponse(false, 500, undefined, true));
 
       await expect(deleteStudentPickupNote("123", "10")).rejects.toThrow();
-    });
-  });
-
-  describe("replaceStudentWeekdayPickupNotes", () => {
-    it("replaces all recurring notes in one request", async () => {
-      global.fetch = vi
-        .fn()
-        .mockResolvedValue(
-          createMockResponse(true, 200, { status: "success", data: null }),
-        );
-
-      await expect(
-        replaceStudentWeekdayPickupNotes("123", [
-          { weekday: 2, content: "Dienstags zu Hause" },
-          { weekday: 5, content: "Freitags bei Oma" },
-        ]),
-      ).resolves.toBeUndefined();
-
-      expect(global.fetch).toHaveBeenCalledTimes(1);
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/students/123/pickup-notes",
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            notes: [
-              { weekday: 2, content: "Dienstags zu Hause" },
-              { weekday: 5, content: "Freitags bei Oma" },
-            ],
-          }),
-        },
-      );
     });
   });
 });

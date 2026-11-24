@@ -3,7 +3,6 @@
 package gradetransitionhttp
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,9 +11,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/workflows/gradetransition"
 )
@@ -75,8 +76,6 @@ func (rs *GradeTransitionResource) Router(protectedTenantRoutes func(chi.Router,
 		// Individual transition routes
 		r.Route("/{id}", func(r chi.Router) {
 			r.With(common.RequiresPermission(permissions.GradeTransitionsRead), withTx).
-				Get("/", rs.getByID)
-			r.With(common.RequiresPermission(permissions.GradeTransitionsRead), withTx).
 				Get("/preview", rs.preview)
 			r.With(common.RequiresPermission(permissions.GradeTransitionsRead), withTx).
 				Get("/history", rs.getHistory)
@@ -105,6 +104,9 @@ type TransitionRequest struct {
 	AcademicYear string                     `json:"academic_year"`
 	Notes        *string                    `json:"notes,omitempty"`
 	Mappings     []TransitionMappingRequest `json:"mappings,omitempty"`
+	// ExpectedVersion is the version of the draft an update edits; an update
+	// of a draft changed since is refused (ADR 0311). A create ignores it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind performs basic binding validation for the transition request.
@@ -113,12 +115,13 @@ func (req *TransitionRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
-// TransitionApplyRequest carries the fingerprint of the preview the admin confirmed. It is
-// optional (a caller without a preview omits it), but when present the apply is
-// refused with 409 preview_stale unless the current cohort still matches — the
-// confirmation must bind to the children that were actually shown (#405 review).
+// TransitionApplyRequest carries the fingerprint of the preview the admin
+// confirmed. The apply is refused with 409 grade_transition.preview_stale
+// unless the current cohort still matches it, and without it too: the
+// confirmation must bind to the children that were actually shown (#405
+// review, ADR 0311).
 type TransitionApplyRequest struct {
-	ExpectedFingerprint string `json:"expected_fingerprint,omitempty"`
+	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
 // TransitionMappingRequest represents a class mapping in a request
@@ -150,6 +153,9 @@ type TransitionResponse struct {
 	CanModify    bool                        `json:"can_modify"`
 	CanApply     bool                        `json:"can_apply"`
 	CanRevert    bool                        `json:"can_revert"`
+	// Version is the token an update of this draft sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // TransitionMappingResponse represents a mapping in API responses. Ids are strings for the
@@ -274,6 +280,7 @@ func toTransitionResponse(t gradetransition.Transition) TransitionResponse {
 		CanRevert:    t.IsApplied(),
 		AppliedBy:    (*ident.ID)(t.AppliedBy),
 		RevertedBy:   (*ident.ID)(t.RevertedBy),
+		Version:      gradetransition.Version(t),
 	}
 	if t.AppliedAt != nil {
 		formatted := t.AppliedAt.UTC().Format(timeFormatISO8601)
@@ -428,22 +435,6 @@ func (rs *GradeTransitionResource) create(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, http.StatusCreated, toTransitionResponse(transition), "Grade transition created successfully")
 }
 
-// getByID returns a single grade transition
-func (rs *GradeTransitionResource) getByID(w http.ResponseWriter, r *http.Request) {
-	id, ok := common.ParseInt64IDWithError(w, r, "id", errMsgInvalidTransition)
-	if !ok {
-		return
-	}
-
-	transition, err := rs.workflow.FindTransition(r.Context(), id)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorNotFound(errors.New(errMsgTransitionNotFound)))
-		return
-	}
-
-	common.Respond(w, r, http.StatusOK, toTransitionResponse(transition), "Grade transition retrieved successfully")
-}
-
 // update updates a grade transition
 func (rs *GradeTransitionResource) update(w http.ResponseWriter, r *http.Request) {
 	id, ok := common.ParseInt64IDWithError(w, r, "id", errMsgInvalidTransition)
@@ -457,7 +448,7 @@ func (rs *GradeTransitionResource) update(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	patch := gradetransition.DraftPatch{Notes: req.Notes}
+	patch := gradetransition.DraftPatch{Notes: req.Notes, ExpectedVersion: req.ExpectedVersion}
 	if req.AcademicYear != "" {
 		patch.AcademicYear = &req.AcademicYear
 	}
@@ -555,15 +546,12 @@ func (rs *GradeTransitionResource) apply(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// The body is optional: an absent or EMPTY one (io.EOF) means "no preview to
-	// check". Anything else must be rejected. A truncated or malformed payload
-	// used to be swallowed, leaving ExpectedFingerprint empty — which the
-	// workflow reads as "caller opted out of the stale-preview check", so a
-	// destructive transition ran unguarded on a cohort that may have changed
-	// since the admin confirmed it (#405 review).
+	// An absent or EMPTY body (io.EOF) carries no fingerprint, which the
+	// workflow refuses as a stale preview. A truncated or malformed payload is
+	// rejected as such instead of being read as an empty one (#405 review).
 	var req TransitionApplyRequest
 	if r.Body != nil {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		if err := wire.Decode(r.Body, &req); err != nil && !errors.Is(err, io.EOF) {
 			common.RenderError(w, r, common.ErrorInvalidRequest(fmt.Errorf("invalid request body: %w", err)))
 			return
 		}

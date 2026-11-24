@@ -7,7 +7,6 @@ import (
 	slog "log/slog"
 	http "net/http"
 	sort "sort"
-	strconv "strconv"
 	strings "strings"
 	time "time"
 
@@ -27,7 +26,7 @@ import (
 // It groups attendance records by date and optionally includes a per-day room
 // movement timeline (subject to a second, independent visibility cap).
 type attendanceHistoryResponse struct {
-	StudentID string                 `json:"student_id"`
+	StudentID ident.ID               `json:"student_id"`
 	Days      []attendanceHistoryDay `json:"days"`
 	Range     attendanceHistoryRange `json:"range"`
 	Clamped   bool                   `json:"clamped"`
@@ -83,13 +82,13 @@ type attendanceSessionRecord struct {
 // negative decimal instance_id sentinel unique within the day — consumers must not
 // treat it as a real schedule.activity_instances ID.
 type attendanceSlotEntry struct {
-	InstanceID     string  `json:"instance_id"`
-	InstanceStatus string  `json:"instance_status,omitempty"`
-	Title          string  `json:"title"`
-	StartTime      string  `json:"start_time"`
-	EndTime        string  `json:"end_time"`
-	Status         string  `json:"status"`
-	Substatus      *string `json:"substatus,omitempty"`
+	InstanceID     ident.ID `json:"instance_id"`
+	InstanceStatus string   `json:"instance_status,omitempty"`
+	Title          string   `json:"title"`
+	StartTime      string   `json:"start_time"`
+	EndTime        string   `json:"end_time"`
+	Status         string   `json:"status"`
+	Substatus      *string  `json:"substatus,omitempty"`
 	// Note is the free remark a supervisor recorded for this child in this
 	// block. Carrying it here is what makes the entry readable after the day
 	// is over (#2898): it is written in the live roster, and this history is
@@ -225,7 +224,7 @@ func (rs *Resource) buildAttendanceHistory(ctx context.Context, logger *slog.Log
 	}
 
 	resp := attendanceHistoryResponse{
-		StudentID: strconv.FormatInt(studentID, 10),
+		StudentID: ident.ID(studentID),
 		Days:      days,
 		Range:     attendanceHistoryRange{Start: start, End: end},
 		Clamped:   clamped,
@@ -631,7 +630,7 @@ func attachSlotAttendance(
 			index[date] = i
 		}
 		days[i].Slots = append(days[i].Slots, attendanceSlotEntry{
-			InstanceID:     strconv.FormatInt(row.Instance.ID, 10),
+			InstanceID:     ident.ID(row.Instance.ID),
 			InstanceStatus: row.Instance.Status,
 			Title:          row.Instance.Title,
 			StartTime:      row.Instance.StartTime.Format("15:04"),
@@ -733,7 +732,7 @@ func unassignedSlotEntry(index int, session attendanceSessionRecord) attendanceS
 	// (zero or several candidate slots) — the title alone marks the row as
 	// unassigned. Persisted walk-in slot rows carry is_unplanned instead.
 	entry := attendanceSlotEntry{
-		InstanceID: strconv.FormatInt(-int64(index+1), 10), Title: "Ohne Zuordnung",
+		InstanceID: ident.ID(-int64(index + 1)), Title: "Ohne Zuordnung",
 		StartTime: session.CheckInTime.In(calendar.Berlin).Format("15:04"),
 		Status:    "present", CheckedInAt: &session.CheckInTime,
 		CheckedOutAt: session.CheckOutTime,

@@ -56,9 +56,7 @@ func (seedParentEngagementStep) Run(ctx context.Context, rt *Runtime) error {
 // the first day still open for changes; the portal opens that day's week.
 func seedParentMealParticipation(rt *Runtime, auth AuthRef, studentID int64) error {
 	basePath := fmt.Sprintf("/parent/me/children/%d/meal-participation", studentID)
-	raw, err := rt.Client.PutWithAuth(auth, basePath, map[string]any{
-		"weekdays": []int{1, 2, 3, 4},
-	})
+	raw, err := parentMealSchedule(rt, auth, studentID, []int{1, 2, 3, 4})
 	if err != nil {
 		return fmt.Errorf("seed regular meal participation: %w", err)
 	}
@@ -147,7 +145,7 @@ func seedGroupAppointments(today seedDate, groupID int64) []map[string]any {
 			"description": "Wir stellen den Tagesablauf vor und planen die Wochen bis zu den Ferien.",
 			"start_date":  parentsEvening, "end_date": parentsEvening, "start_time": "19:00", "end_time": "20:30", "all_day": false,
 			"delivery_mode": "rsvp_required", "overview_visibility": "all",
-			"targets":    []map[string]any{{"type": "parents_by_group", "id": groupID}, {"type": "all_staff"}},
+			"targets":    []map[string]any{{"type": "parents_by_group", "id": ident.ID(groupID)}, {"type": "all_staff"}},
 			"send_email": false,
 		},
 		{
@@ -338,8 +336,14 @@ func seedParentPhotoConsentHistory(rt *Runtime, auth AuthRef, studentID int64) e
 	if _, err := rt.Client.PutWithAuth(rt.TenantAuth, photosSetting, map[string]any{"value": true}); err != nil {
 		return fmt.Errorf("switch child photos on for the photo consent: %w", err)
 	}
+	version, err := readDataVersion(func(path string) ([]byte, error) {
+		return rt.Client.GetWithAuth(rt.TenantAuth, path)
+	}, fmt.Sprintf("/api/students/%d", studentID))
+	if err != nil {
+		return err
+	}
 	if _, err := rt.Client.PutWithAuth(rt.TenantAuth, fmt.Sprintf("/api/students/%d", studentID), map[string]any{
-		"photo_consent_given": true,
+		"photo_consent_given": true, "expected_version": version,
 	}); err != nil {
 		return fmt.Errorf("seed granted photo consent: %w", err)
 	}

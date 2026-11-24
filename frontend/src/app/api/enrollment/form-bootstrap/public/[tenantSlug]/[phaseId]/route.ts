@@ -1,15 +1,15 @@
 import { captureBffException } from "~/lib/sentry-bff.server";
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { tenantPortal } from "~/server/auth";
-import { sendBackend } from "~/lib/backend-client.server";
-import { createLogger } from "~/lib/logger";
-import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
-import { problemResponse } from "~/lib/api-helpers.server";
+import { contractGet } from "~/lib/contract/client.server";
 import {
-  LATE_INVITE_QUERY_PARAM,
-  withLateInviteQuery,
-} from "~/lib/enrollment-http";
+  contractResponse,
+  contractError,
+} from "~/lib/contract/route-response.server";
+import { routes } from "~/lib/contract/enrollment.generated";
+import { createLogger } from "~/lib/logger";
+import { problemResponse } from "~/lib/api-response-error.server";
+import { LATE_INVITE_QUERY_PARAM } from "~/lib/enrollment-http";
 
 const logger = createLogger({ component: "EnrollmentFormBootstrapRoute" });
 
@@ -19,21 +19,21 @@ interface RouteContext {
 
 async function GETHandler(request: NextRequest, context: RouteContext) {
   const { tenantSlug, phaseId } = await context.params;
+  const lateInvite = request.nextUrl.searchParams
+    .get(LATE_INVITE_QUERY_PARAM)
+    ?.trim();
   try {
-    const response = await sendBackend(
-      withLateInviteQuery(
-        `/api/enrollment/form-bootstrap/public/${encodeURIComponent(
-          tenantSlug,
-        )}/${encodeURIComponent(phaseId)}`,
-        request.nextUrl.searchParams.get(LATE_INVITE_QUERY_PARAM),
-      ),
-      null,
-      { request },
+    const reply = await contractGet(
+      routes[
+        "GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}"
+      ],
+      {
+        params: { tenantSlug, phaseId },
+        query: lateInvite ? { late_invite: lateInvite } : {},
+        request,
+      },
     );
-    if (!response.ok) {
-      return forwardBackendResponse(response, request);
-    }
-    const payload = await response.json().catch(() => ({}));
+    if (!reply.ok) return contractError(reply, request);
 
     // The parents host never reaches this route (proxy allow-list), so the
     // tenant session's profile only enriches the tenant's own public form.
@@ -44,44 +44,21 @@ async function GETHandler(request: NextRequest, context: RouteContext) {
       return null;
     });
     const token = session?.user?.token;
-    if (!token) {
-      return NextResponse.json(payload, { status: response.status });
-    }
-
-    const profileResponse = await sendBackend(
-      "/api/enrollment/me/profile",
-      token,
-      { request },
+    if (!token) return contractResponse(reply, request);
+    const profile = await contractGet(
+      routes["GET /api/enrollment/me/profile"],
+      { token, request },
     ).catch((error: unknown) => {
       logger.warn("profile_prefetch_failed", {
         error: error instanceof Error ? error.message : String(error),
       });
       return null;
     });
-    if (!profileResponse?.ok) {
-      return NextResponse.json(payload, { status: response.status });
-    }
-
-    const profilePayload = await profileResponse.json().catch(() => null);
-    const data =
-      payload && typeof payload === "object" && "data" in payload
-        ? (payload.data as Record<string, unknown>)
-        : (payload as Record<string, unknown>);
-    return NextResponse.json(
-      {
-        ...payload,
-        data: {
-          ...data,
-          profile:
-            profilePayload &&
-            typeof profilePayload === "object" &&
-            "data" in profilePayload
-              ? profilePayload.data
-              : profilePayload,
-        },
-      },
-      { status: response.status },
-    );
+    if (!profile?.ok) return contractResponse(reply, request);
+    return contractResponse(reply, request, (answer) => ({
+      ...answer,
+      data: { ...answer.data, profile: profile.value.data },
+    }));
   } catch (error) {
     captureBffException(error, request);
     logger.error("form_bootstrap_failed", {

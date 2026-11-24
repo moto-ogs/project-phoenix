@@ -1177,14 +1177,6 @@
       "target_owner": "settings-platform"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.Service.UpdateCalendarPeriod",
-      "binding_digest": "ccdb5090f51638bccde36008714caee2",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.UpdateCalendarPeriod",
-      "source_owner": "school-calendar",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.Service.UpdateClosingDay",
       "binding_digest": "ccdb5090f51638bccde36008714caee2",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.UpdateClosingDay",
@@ -1404,22 +1396,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListDateframes",
       "binding_digest": "ccdb5090f51638bccde36008714caee2",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Capability.ListDateframes",
-      "source_owner": "school-calendar",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.UpdateCalendarPeriod",
-      "binding_digest": "ccdb5090f51638bccde36008714caee2",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Capability.UpdateCalendarPeriod",
-      "source_owner": "school-calendar",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.UpdateCalendarPeriod",
-      "binding_digest": "ccdb5090f51638bccde36008714caee2",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Capability.UpdateCalendarPeriod",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
@@ -1727,14 +1703,6 @@
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveString",
       "target_owner": "settings-platform"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.Service.UpdateCalendarPeriod",
-      "binding_digest": "ccdb5090f51638bccde36008714caee2",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.UpdateCalendarPeriod",
-      "source_owner": "school-calendar",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.Service.UpdateClosingDay",

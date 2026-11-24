@@ -38,8 +38,6 @@ var handlerQueryReadsOutsideContract = map[string][]string{
 	"GET /api/staff/time-tracking/target-coverage": {"employment_type", "order", "sort"},
 	// no client asks for target_only
 	"GET /api/staff/{id}/time-tracking/schedule-targets": {"target_only"},
-	// the child list's filters; the client sends none, so the counts cover every child in care
-	"GET /api/students/enrollment-answer-filters": {"bus", "date", "day_status", "first_name", "grade_level", "group_id", "include_arrival_times", "include_companions", "include_pending_withdrawals", "include_pickup_times", "last_name", "location", "location_state", "page", "page_size", "photo_consent", "pickup_status", "room_id", "school_class", "search"},
 	// no client sends kind; the invoice letter is the default
 	"POST /traeger/care-billing-runs/{id}/invoices/{invoiceID}/cancellation": {"kind"},
 }

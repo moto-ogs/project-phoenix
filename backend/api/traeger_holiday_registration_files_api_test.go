@@ -67,8 +67,8 @@ func TestHolidayRegistrationFilesKeepAnsweredInactiveAndArchivedCriteria(t *test
 	f := newAllocationFixture(t, "Träger PDF alte Kriterien")
 	first := f.submitCriteria(t, "alte.kriterien@example.org", true, false)
 	// Keep the family criterion disabled and archive the child criterion.
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, "/traeger/holiday-periods/criteria", map[string]any{"criteria": []map[string]any{
-		{"id": f.working, "name": "Berufstätig", "question": "Sind Sie berufstätig?", "scope": "family", "active": false},
+	rec := saveHolidayCriteria(t, f.traeger, f.office.token, criteriaVersion(t, f.traeger, f.office.token), map[string]any{"criteria": []map[string]any{
+		{"id": fmt.Sprint(f.working), "name": "Berufstätig", "question": "Sind Sie berufstätig?", "scope": "family", "active": false},
 	}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, f.publicOffer(t).Criteria, "new registrations no longer see the old questions")

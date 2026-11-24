@@ -28,6 +28,7 @@ export interface CareEvidence {
   evidence: string;
   checked_on: string | null;
   updated_at: string;
+  version: string;
 }
 
 export const CareEvidenceSchema: z.ZodType<CareEvidence, unknown> = object<CareEvidence>({
@@ -40,6 +41,7 @@ export const CareEvidenceSchema: z.ZodType<CareEvidence, unknown> = object<CareE
   evidence: str,
   checked_on: nullable(calendarDate),
   updated_at: instant,
+  version: str,
 });
 
 /** Go: parentbilling.CareEvidenceContract */
@@ -81,11 +83,7 @@ export interface CareEvidenceRequest {
   valid_until?: string | null;
   evidence?: string;
   checked_on?: string | null;
-}
-
-/** Query of GET /traeger/care-evidences/export */
-export interface GetTraegerCareEvidencesExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
+  expected_version?: string;
 }
 
 export const routes = {
@@ -105,7 +103,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/care-evidences/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "POST /traeger/care-evidences/": {

@@ -18,6 +18,10 @@ func TestSeedVisitorDayStepFillsTheVisitorsDay(t *testing.T) {
 	var personPath string
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 		w.Header().Set("Content-Type", "application/json")
+		if r.Method == seedHTTPMethodGet {
+			_, _ = fmt.Fprint(w, `{"status":"success","data":{"versions":{"person":"read-person"}}}`)
+			return
+		}
 		var body map[string]any
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 		switch r.URL.Path {
@@ -52,8 +56,8 @@ func TestSeedVisitorDayStepFillsTheVisitorsDay(t *testing.T) {
 	perWeekday := map[int]int{1: 2, 2: 1, 3: 2, 4: 1, 5: 2}
 	require.Len(t, templates, 4)
 	for _, template := range templates {
-		assert.Equal(t, []any{float64(70)}, template["staff_ids"], template["name"])
-		assert.EqualValues(t, 70, template["primary_staff_id"])
+		assert.Equal(t, []any{"70"}, template["staff_ids"], template["name"])
+		assert.Equal(t, "70", template["primary_staff_id"])
 		assert.NotZero(t, template["room_id"], template["name"])
 		assert.NotZero(t, template["category_id"], template["name"])
 		for _, weekday := range template["weekdays"].([]any) {
@@ -63,8 +67,8 @@ func TestSeedVisitorDayStepFillsTheVisitorsDay(t *testing.T) {
 	for weekday := 1; weekday <= 5; weekday++ {
 		assert.Equal(t, 4, perWeekday[weekday], "weekday %d", weekday)
 	}
-	assert.EqualValues(t, 10, templates[0]["category_id"], "Lernzeit in the Hausaufgaben category")
-	assert.EqualValues(t, 9, templates[1]["category_id"], "a missing category falls back to Gruppenraum")
+	assert.Equal(t, "10", templates[0]["category_id"], "Lernzeit in the Hausaufgaben category")
+	assert.Equal(t, "9", templates[1]["category_id"], "a missing category falls back to Gruppenraum")
 
 	// The appointments fall into the Monday-to-Friday week of the seed day.
 	monday := mostRecentWeekday(todaySeedDate().Time, time.Monday)

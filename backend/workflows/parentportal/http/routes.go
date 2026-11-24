@@ -155,7 +155,7 @@ func (rs *Resource) mountChildStatusRoutes(r chi.Router) {
 	// own pending request instead of withdrawing and refiling it, so the
 	// request keeps its id and the co-guardians it was shared with. Every
 	// body carries expected_version; a mismatch is 409
-	// change_request_stale.
+	// general.changed_since_read.
 	r.Put("/me/children/{studentId}/excused-requests/{requestId}", rs.editExcusedRequest)
 	r.Get("/me/children/{studentId}/requests/{requestType}/{requestId}/events", rs.listRequestEvents)
 	r.Get("/me/children/{studentId}/request-sharing/{requestType}/{requestId}", rs.getRequestSharing)

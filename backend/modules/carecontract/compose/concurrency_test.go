@@ -99,7 +99,7 @@ func TestConcurrentSendsOfOneDraftLetExactlyOneTransitionWin(t *testing.T) {
 		Runtime: runtimeDouble{}, Modes: school, Mail: noMailBlocks{}, Letterheads: letterheadDouble{}, Families: familyNumbersDouble{}}, calendar.TodayDate)
 	terms := carecontract.TemplateInput{TermKind: carecontract.TermOpenEnded, NoticeMonths: 1, NoticeTo: carecontract.NoticeMonthEnd}
 	for _, offering := range []int64{school.offering, school.offering + 1, school.offering + 2} {
-		_, err := intake.SaveTemplate(ctx, reviewer, school.school.ID, offering, terms)
+		_, err := intake.SaveTemplate(ctx, reviewer, school.school.ID, offering, terms, templateVersion(t, ctx, intake, reviewer, school.school.ID, offering))
 		require.NoError(t, err)
 	}
 	created, err := intake.CreateContracts(ctx, reviewer, []carecontract.CandidateKey{{SchoolID: ident.ID(school.school.ID), RequestChildID: ident.ID(school.child)}})

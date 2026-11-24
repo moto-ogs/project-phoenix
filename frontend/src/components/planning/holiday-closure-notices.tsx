@@ -48,7 +48,7 @@ import {
   sendingRefreshInterval,
 } from "~/lib/holiday-closure-notices";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { timetableKeys } from "~/lib/swr/portal-keys";
 
 export function HolidayClosureNotices({
@@ -69,7 +69,7 @@ export function HolidayClosureNotices({
   );
   const { isSending, notify } = useNoticeNotify(
     notifyHolidayClosureNotice,
-    mutate,
+    () => revalidateOrThrow(response),
   );
 
   const seen = useRef(version);

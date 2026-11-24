@@ -34,23 +34,44 @@ export interface BulkInviteResult {
   skippedActive: number;
   skippedOpen: number;
   skippedRestricted: number;
+  /** Eltern mit Konto, die die Nachricht bekommen (#7760); nur mit
+   *  `notifyActive`, in der Vorschau: bekämen. */
+  notified: number;
+  /** Eltern mit Konto, an die die Nachricht für jedes Kind schon verschickt
+   *  wurde (eingeplant, nicht unbedingt angekommen). */
+  alreadyNotified: number;
+  /** Ausgewählte Kinder von Eltern mit Konto ohne heute gebuchte Betreuung: keine
+   *  Nachricht nennt sie. */
+  withoutVisibleCare: number;
   problems: BulkInviteProblem[];
+  /** Set on a dry run: the run that confirms it sends it back (ADR 0311). */
+  fingerprint: string;
 }
 
 /**
  * Invite the guardians of many children to the parents portal in one run
  * (#3378). `dryRun` only counts and mails nobody; `resendOpen` also mails
  * guardians whose invitation is still open and restarts its expiry.
+ * `notifyActive` also tells parents who already use the parents portal,
+ * once per child, that the child's care is visible there (#7760).
  */
 export async function bulkInviteGuardians(
   studentIds: string[],
-  options: { dryRun: boolean; resendOpen: boolean },
+  options: {
+    dryRun: boolean;
+    resendOpen: boolean;
+    notifyActive: boolean;
+    /** The fingerprint of the dry run a real run confirms. */
+    expectedFingerprint?: string;
+  },
 ): Promise<BulkInviteResult> {
   const data = await bffJson("tenant", "POST /api/guardians/bulk-invite", {
     body: {
       student_ids: studentIds,
       dry_run: options.dryRun,
       resend_open: options.resendOpen,
+      notify_active: options.notifyActive,
+      expected_fingerprint: options.expectedFingerprint,
     },
     errorMessage: "Failed to bulk invite guardians",
   }).catch((error: unknown) => {
@@ -67,6 +88,9 @@ export async function bulkInviteGuardians(
     skippedActive: data.skipped_active,
     skippedOpen: data.skipped_open,
     skippedRestricted: data.skipped_restricted,
+    notified: data.notified,
+    alreadyNotified: data.already_notified,
+    withoutVisibleCare: data.without_visible_care,
     problems: (data.problems ?? []).map((problem) => ({
       guardianProfileId: problem.guardian_profile_id,
       guardianName: problem.guardian_name,
@@ -74,5 +98,6 @@ export async function bulkInviteGuardians(
       // A reason this build does not know reads as "not sent".
       reason: knownEnum(PROBLEM_REASONS, problem.reason) ?? "email_not_queued",
     })),
+    fingerprint: data.fingerprint,
   };
 }

@@ -9,7 +9,7 @@
 // „Wieder wie im Vertrag“ lässt sie stehen (#6692), und sie hat das Format
 // des Trägers (#6675).
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { ChoiceTile } from "~/components/ui/choice-tile";
@@ -28,6 +28,7 @@ import {
   debtorNumberFormatHint,
 } from "~/lib/debtor-number-format";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   type FamilyBilling,
   type FamilyBillingInput,
@@ -228,10 +229,18 @@ const DUE_DAY_OPTIONS = [
   })),
 ];
 
+/** The stored deviation the form rests on, with its read-state token. */
+interface StoredFamily {
+  readonly existing: FamilyBilling | null;
+  readonly version: string;
+}
+
 /** The form of a family's recipient and payment, on its own page. */
 export function FamilyBillingForm({
   target,
   existing,
+  version,
+  reload,
   runDueText,
   termsText,
   mandateInForce,
@@ -245,6 +254,14 @@ export function FamilyBillingForm({
   format?: DebtorNumberFormat;
   /** The family's deviation as stored, null without one. */
   existing: FamilyBilling | null;
+  /** Read-state token of `existing`; the save sends it back (ADR 0311). */
+  version: string;
+  /**
+   * Reads the family again after a save was refused because its deviation
+   * changed since; rejects when the read fails (ADR 0311). The stored state
+   * arrives as `existing` and `version`, and the form shows it.
+   */
+  reload: () => Promise<undefined>;
   /**
    * The run's due dates as the run page names them („Überweisung am …“),
    * so „Wie im Lauf“ says which dates it takes. Missing outside a run.
@@ -264,9 +281,29 @@ export function FamilyBillingForm({
   onCancel: () => void;
   onSaved: (family: FamilyBilling | null) => void;
 }>) {
-  const [draft, setDraft] = useState<FamilyBillingDraft>(() =>
-    draftOf(existing),
+  // The draft starts from the state the form read and saves over its
+  // version (ADR 0311): a newer read refills it only while untouched; after
+  // a refused save the stored state shows, and nothing is sent until it is
+  // read.
+  // One object per read: a fresh one each render would count as a new read
+  // and end a failed read after a refusal with the state read before it.
+  const opened = useMemo(() => ({ existing, version }), [existing, version]);
+  const edit = useDraftOn<StoredFamily, FamilyBillingDraft, string, unknown>(
+    {
+      opening: target.contractId,
+      data: opened,
+      reload,
+    },
+    {
+      token: (stored) => stored.version,
+      toDraft: (stored) => draftOf(stored.existing),
+      // The page leaves after a save.
+      answer: (_saved, shown) => shown,
+    },
   );
+  const base = edit.base ?? opened;
+  const draft = edit.draft ?? draftOf(existing);
+  const setDraft = edit.setDraft;
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
@@ -277,33 +314,44 @@ export function FamilyBillingForm({
   const fieldError = (name: string) => formErrors.fieldError(name) ?? undefined;
 
   const submit = async () => {
+    if (!edit.canSubmit) return;
     formErrors.clear();
-    const errors = familyBillingErrors(draft, format, existing?.debtorNumber);
+    const errors = familyBillingErrors(
+      draft,
+      format,
+      base.existing?.debtorNumber,
+    );
     if (Object.keys(errors).length > 0) {
       formErrors.invalid("Bitte prüfe die markierten Felder.", errors);
       return;
     }
     setSaving(true);
-    try {
-      const saved = await saveFamilyBilling(
-        familyBillingInput(target.contractId, draft),
-      );
-      success(
-        saved
-          ? "Empfänger und Zahlung sind gespeichert."
-          : "Die Familie hat wieder die Angaben aus dem Vertrag.",
-      );
-      onSaved(saved);
-    } catch (err) {
+    const result = await edit.submit((token, sent) =>
+      saveFamilyBilling(familyBillingInput(target.contractId, sent), token),
+    );
+    setSaving(false);
+    if (!result.ok) {
       logger.error("family_billing_save_failed", {
-        error: err instanceof Error ? err.message : String(err),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      void formErrors.show(err, {
+      // Changed since the read: `reload` shows the stored state, without a
+      // retry of the refused version.
+      void formErrors.show(result.error, {
         object: "die Angabe zu Empfänger und Zahlung",
+        reload: result.reload,
       });
-    } finally {
-      setSaving(false);
+      return;
     }
+    const saved = result.saved as FamilyBilling | null;
+    success(
+      saved
+        ? "Empfänger und Zahlung sind gespeichert."
+        : "Die Familie hat wieder die Angaben aus dem Vertrag.",
+    );
+    onSaved(saved);
   };
 
   const id = (field: string) => `family-billing-${field}`;
@@ -549,7 +597,16 @@ export function FamilyBillingForm({
         </Button>
       ) : null}
       <FormErrorAlert message={formErrors.error} />
-      <EditActions onCancel={onCancel} saving={saving} />
+      <EditActions
+        onCancel={onCancel}
+        saving={saving}
+        disabled={!edit.canSubmit}
+        disabledReason={
+          edit.status === "loadFailed"
+            ? "Lade zuerst den gespeicherten Stand neu."
+            : "Der gespeicherte Stand wird geladen."
+        }
+      />
     </form>
   );
 }

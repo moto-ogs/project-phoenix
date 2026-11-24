@@ -26,6 +26,7 @@ export const ERROR_CATALOG = {
       crash:
         "{object} konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       fieldCheck: "Bitte prüfe dieses Feld.",
+      reloadFailed: "Der neue Stand konnte nicht geladen werden.",
     },
     codes: {
       "attendance.checkin_staff_profile_required":
@@ -74,6 +75,8 @@ export const ERROR_CATALOG = {
         "Der Vertrag ist nicht mehr an diese Anmeldung gebunden. Lade die Seite neu und prüfe den Stand.",
       "care_contract.enrollment_preview_changed":
         "Die Verträge oder die Schule haben sich seit der Vorschau geändert. Lade die Vorschau neu und prüfe sie noch einmal.",
+      "care_contract.family_refused":
+        "Diese Familie lässt sich so nicht ändern. Lade die Seite neu und prüfe die Auswahl.",
       "care_contract.field_invalid":
         "Einige Angaben stimmen nicht. Bitte prüfe deine Eingaben.",
       "care_contract.import_changed":
@@ -83,7 +86,7 @@ export const ERROR_CATALOG = {
       "care_contract.import_file_too_large":
         "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
       "care_contract.letterhead_missing":
-        "Der Absender im Briefkopf fehlt. Ohne Name und Anschrift des Trägers wird kein Vertrag verschickt. Bitte trage ihn unter „Briefkopf und Vorlagen“ ein.",
+        "Der Absender im Briefkopf fehlt. Ohne Name und Anschrift des Trägers kann moto keinen Vertrag senden oder auf Papier übergeben. Bitte trage ihn unter „Briefkopf und Vorlagen“ ein.",
       "care_contract.letterhead_too_long":
         "Absender oder Fußzeile sind zu lang für den Vertrag. Bitte kürze sie unter „Briefkopf und Vorlagen“. Das darf, wer das Recht „Einstellungen“ hat.",
       "care_contract.notice_end_not_open":
@@ -224,6 +227,8 @@ export const ERROR_CATALOG = {
         "{object} ist nicht mehr geöffnet. Bitte frage deine Ansprechperson.",
       "care.remove_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
+      "care.request_feed_not_found":
+        "Es gibt keinen RSS-Link mehr. Bitte lade die Seite neu und erstelle einen neuen Link.",
       "care.request_not_found":
         "{object} wurde nicht gefunden. Bitte lade die Seite neu.",
       "care.request_not_open":
@@ -727,6 +732,8 @@ export const ERROR_CATALOG = {
         "Es gibt schon einen Ordner mit diesem Namen. Bitte wähle einen anderen Namen.",
       "files.quota_exceeded":
         "Der Speicherplatz der Dateiablage ist voll. Bitte lösche Dateien, die du nicht mehr brauchst.",
+      "general.changed_since_read":
+        "{object} wurde inzwischen geändert. Du siehst jetzt den neuen Stand. Prüfe ihn und versuche es dann noch einmal.",
       "general.request_too_large":
         "{object} konnte nicht bearbeitet werden. Bitte lösche im Browser die Cookies dieser Seite. Melde dich danach neu an.",
       "general.route_not_found":
@@ -843,6 +850,8 @@ export const ERROR_CATALOG = {
         "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
       "identity.read_only_preview":
         "In der Vorschau kannst du nur lesen. Bitte beende die Vorschau, um etwas zu ändern.",
+      "identity.role_from_traeger":
+        "Diese Rolle gibt dein Träger vor. Ändern und löschen kann sie nur das Träger-Büro.",
       "identity.role_name_taken":
         "Eine Rolle mit diesem Namen gibt es schon. Bitte wähle einen anderen Namen.",
       "identity.role_platform_permission":
@@ -916,6 +925,8 @@ export const ERROR_CATALOG = {
         "Der Monat ist noch nicht vorbei. Du kannst ihn ab dem 1. des nächsten Monats freigeben.",
       "meals.child_not_enrolled":
         "{object} geht nicht. Das Kind ist an diesem Tag nicht in der Betreuung.",
+      "meals.day_changed":
+        "Jemand anderes hat diesen Tag im Speiseplan inzwischen geändert. Du siehst jetzt den neuen Stand. Prüfe ihn und speichere dann noch einmal.",
       "meals.day_closed":
         "{object} geht nicht. An diesem Tag ist die Schule geschlossen.",
       "meals.day_past": "{object} geht nicht mehr. Der Tag ist schon vorbei.",
@@ -1467,7 +1478,7 @@ export const ERROR_CATALOG = {
       "students.companion_would_lose_departure":
         "Ein verknüpftes Kind hätte dann keinen Heimweg mehr. Bitte passe zuerst dessen Heimweg an.",
       "students.companions_changed":
-        "Die Laufgemeinschaft wurde inzwischen geändert. Bitte lade die Seite neu.",
+        "Die Laufgemeinschaft wurde inzwischen geändert. Du siehst jetzt die gespeicherte Liste. Prüfe sie und versuche es dann noch einmal.",
       "students.conflict_kind_unsupported":
         "Diese Anfragen lassen sich nicht gemeinsam entscheiden. Bitte entscheide sie einzeln.",
       "students.correction_unsupported":
@@ -1921,6 +1932,12 @@ export const ERROR_CATALOG = {
         "Diese Schule gehört nicht zu deinem Träger. Bitte lade die Seite neu.",
       "traeger.school_requires_code":
         "Diese Schule verlangt zum Öffnen einen Code aus deiner E-Mail.",
+      "traeger.school_role_name_taken":
+        "Eine Rolle mit diesem Namen gibt es schon. Bitte wähle einen anderen Namen.",
+      "traeger.school_role_name_used_at_school":
+        "Den Namen gibt es schon als eigene Rolle an: {schools}. Bitte wähle einen anderen Namen.",
+      "traeger.school_role_not_found":
+        "Diese Rolle gibt es nicht mehr. Bitte lade die Seite neu.",
       "traeger.second_factor_required":
         "Zum Öffnen einer Schule brauchst du einen zweiten Anmeldenachweis. Bitte melde dich im Träger-Portal neu an.",
       "traeger.shared_document_not_found":
@@ -2202,6 +2219,7 @@ export const ERROR_CATALOG = {
       requestId: "Request ID: {requestId}",
       crash: "{object} could not be processed. Please try again later.",
       fieldCheck: "Please check this field.",
+      reloadFailed: "The current version could not be loaded.",
     },
     codes: {
       "attendance.checkin_staff_profile_required":
@@ -2242,10 +2260,12 @@ export const ERROR_CATALOG = {
         "The contract is no longer bound to this enrollment. Reload the page and check the current state.",
       "care_contract.enrollment_preview_changed":
         "The contracts or the school have changed since the preview. Reload the preview and check it again.",
+      "care_contract.family_refused":
+        "This family cannot be changed like this. Reload the page and check your selection.",
       "care_contract.field_invalid":
         "Some details are not valid. Please check your entries.",
       "care_contract.letterhead_missing":
-        "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”.",
+        "The sender in the letterhead is missing. Without the provider's name and address, no contract can be sent or handed over on paper. Please add it under “Letterhead and templates”.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -2385,6 +2405,8 @@ export const ERROR_CATALOG = {
         "{object} is no longer open. Please ask your contact person.",
       "care.remove_disabled":
         "{object} is not available here at the moment. Please ask your contact person.",
+      "care.request_feed_not_found":
+        "There is no RSS link any more. Please reload the page and create a new link.",
       "care.request_not_found":
         "{object} was not found. Please reload the page.",
       "care.request_not_open":
@@ -2658,6 +2680,8 @@ export const ERROR_CATALOG = {
         "A child without an OGS place gets its place through an enrollment for the school year.",
       "files.file_name_invalid":
         "This file name is not allowed. Please choose the file again.",
+      "general.changed_since_read":
+        "{object} has been changed in the meantime. You now see the current state. Check it, then try again.",
       "general.request_too_large":
         "{object} could not be processed. Please delete the cookies of this site in your browser. Then sign in again.",
       "general.route_not_found":
@@ -2726,6 +2750,8 @@ export const ERROR_CATALOG = {
         "You have requested a link too often. Please wait a while and then try again.",
       "identity.password_too_weak":
         "The password is too weak. It needs at least 8 characters, upper and lower case letters, a number and a special character.",
+      "identity.role_from_traeger":
+        "Your Träger provides this role. Only the Träger office can change or delete it.",
       "identity.session_account_inactive":
         "Your account is switched off. Please contact your school's management.",
       "identity.session_account_mismatch":
@@ -2738,6 +2764,8 @@ export const ERROR_CATALOG = {
         "Attendance records for this month may already have been deleted. The month can no longer be released reliably. Please contact your provider.",
       "meals.child_not_enrolled":
         "{object} is not possible. The child is not in care on this day.",
+      "meals.day_changed":
+        "Someone else has changed this day of the meal plan in the meantime. You now see the current state. Check it, then save again.",
       "meals.day_closed":
         "{object} is not possible. The school is closed on this day.",
       "meals.day_past":
@@ -2996,6 +3024,7 @@ export const ERROR_CATALOG = {
       requestId: "Номер запроса: {requestId}",
       crash: "Не удалось обработать: {object}. Повторите попытку позже.",
       fieldCheck: "Проверьте это поле.",
+      reloadFailed: "Не удалось загрузить актуальное состояние.",
     },
     codes: {
       "attendance.checkin_staff_profile_required":
@@ -3027,7 +3056,7 @@ export const ERROR_CATALOG = {
       "care_contract.field_invalid":
         "Некоторые данные указаны неверно. Проверьте введённые данные.",
       "care_contract.letterhead_missing":
-        "В шапке отсутствуют данные отправителя. Договор не будет отправлен без названия и адреса организации. Добавьте их в разделе «Шапка и шаблоны».",
+        "В шапке отсутствуют данные отправителя. Без названия и адреса организации договор нельзя отправить или передать на бумаге. Добавьте их в разделе «Шапка и шаблоны».",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -3167,6 +3196,8 @@ export const ERROR_CATALOG = {
         "Больше не открыто: {object}. Обратитесь к контактному лицу.",
       "care.remove_disabled":
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
+      "care.request_feed_not_found":
+        "RSS-ссылки больше нет. Обновите страницу и создайте новую ссылку.",
       "care.request_not_found": "Не найдено: {object}. Обновите страницу.",
       "care.request_not_open":
         "Больше не открыто: {object}. Обратитесь к контактному лицу.",
@@ -3383,6 +3414,8 @@ export const ERROR_CATALOG = {
         "Ребёнок без места в OGS получает место через запись на учебный год.",
       "files.file_name_invalid":
         "Имя файла недопустимо. Выберите файл ещё раз.",
+      "general.changed_since_read":
+        "Данные изменились: {object}. Сейчас показано текущее состояние. Проверьте его и попробуйте снова.",
       "general.request_too_large":
         "Не удалось обработать: {object}. Удалите в браузере файлы cookie этого сайта. Затем войдите снова.",
       "general.route_not_found":
@@ -3463,6 +3496,8 @@ export const ERROR_CATALOG = {
         "Данные о посещаемости за этот месяц могли быть удалены. Надёжно подтвердить месяц больше нельзя. Обратитесь к организации, управляющей продлёнкой.",
       "meals.child_not_enrolled":
         "Невозможно: {object}. В этот день ребёнок не находится под присмотром.",
+      "meals.day_changed":
+        "Кто-то другой уже изменил этот день в меню. Сейчас показано текущее состояние. Проверьте его и сохраните снова.",
       "meals.day_closed": "Невозможно: {object}. В этот день школа закрыта.",
       "meals.day_past": "Уже невозможно: {object}. Этот день уже прошёл.",
       "meals.delivery_range_too_long":
@@ -3640,6 +3675,7 @@ export const ERROR_CATALOG = {
       requestId: "Numri i kërkesës: {requestId}",
       crash: "Nuk u përpunua: {object}. Provoni përsëri më vonë.",
       fieldCheck: "Kontrolloni këtë fushë.",
+      reloadFailed: "Gjendja e re nuk u ngarkua dot.",
     },
     codes: {
       "attendance.checkin_staff_profile_required":
@@ -3671,7 +3707,7 @@ export const ERROR_CATALOG = {
       "care_contract.field_invalid":
         "Disa të dhëna nuk janë të sakta. Kontrolloni të dhënat.",
       "care_contract.letterhead_missing":
-        "Në kokën e letrës mungojnë të dhënat e dërguesit. Kontrata nuk dërgohet pa emrin dhe adresën e ofruesit. Shtojini te „Koka e letrës dhe shabllonet”.",
+        "Në kokën e letrës mungojnë të dhënat e dërguesit. Pa emrin dhe adresën e ofruesit, kontrata nuk mund të dërgohet ose të dorëzohet në letër. Shtojini te „Koka e letrës dhe shabllonet”.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -3812,6 +3848,8 @@ export const ERROR_CATALOG = {
         "Nuk është më i hapur: {object}. Pyetni personin tuaj të kontaktit.",
       "care.remove_disabled":
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
+      "care.request_feed_not_found":
+        "Lidhja RSS nuk ekziston më. Ju lutemi ringarkoni faqen dhe krijoni një lidhje të re.",
       "care.request_not_found":
         "Nuk u gjet: {object}. Ju lutemi ringarkoni faqen.",
       "care.request_not_open":
@@ -4040,6 +4078,8 @@ export const ERROR_CATALOG = {
         "Një fëmijë pa vend në OGS e merr vendin me një regjistrim për vitin shkollor.",
       "files.file_name_invalid":
         "Emri i skedarit nuk lejohet. Ju lutemi zgjidhni skedarin përsëri.",
+      "general.changed_since_read":
+        "Ndërkohë është ndryshuar: {object}. Tani shihni gjendjen aktuale. Kontrollojeni dhe provoni përsëri.",
       "general.request_too_large":
         "Nuk u përpunua: {object}. Fshini në shfletues cookies e kësaj faqeje. Pastaj hyni përsëri.",
       "general.route_not_found":
@@ -4120,6 +4160,8 @@ export const ERROR_CATALOG = {
         "Të dhënat e pranisë për këtë muaj mund të jenë fshirë. Muaji nuk mund të miratohet më me siguri. Ju lutemi kontaktoni ofruesin tuaj.",
       "meals.child_not_enrolled":
         "Nuk është e mundur: {object}. Fëmija nuk është në kujdes në këtë ditë.",
+      "meals.day_changed":
+        "Dikush tjetër e ka ndryshuar ndërkohë këtë ditë të planit të ushqimit. Tani shihni gjendjen aktuale. Kontrollojeni dhe ruajeni përsëri.",
       "meals.day_closed":
         "Nuk është e mundur: {object}. Shkolla është e mbyllur në këtë ditë.",
       "meals.day_past": "Nuk është më e mundur: {object}. Dita ka kaluar.",
@@ -4300,6 +4342,7 @@ export const ERROR_CATALOG = {
       requestId: "Numer zgłoszenia: {requestId}",
       crash: "Nie udało się przetworzyć: {object}. Spróbuj ponownie później.",
       fieldCheck: "Sprawdź to pole.",
+      reloadFailed: "Nie udało się wczytać aktualnego stanu.",
     },
     codes: {
       "attendance.checkin_staff_profile_required":
@@ -4331,7 +4374,7 @@ export const ERROR_CATALOG = {
       "care_contract.field_invalid":
         "Niektóre dane są nieprawidłowe. Sprawdź wpisane dane.",
       "care_contract.letterhead_missing":
-        "Brakuje nadawcy w nagłówku. Umowa nie zostanie wysłana bez nazwy i adresu organizatora. Dodaj je w „Nagłówek i szablony”.",
+        "Brakuje nadawcy w nagłówku. Bez nazwy i adresu organizatora nie można wysłać umowy ani przekazać jej na papierze. Dodaj je w „Nagłówek i szablony”.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -4472,6 +4515,8 @@ export const ERROR_CATALOG = {
         "Już nie jest otwarte: {object}. Zapytaj swoją osobę kontaktową.",
       "care.remove_disabled":
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
+      "care.request_feed_not_found":
+        "Link RSS już nie istnieje. Odśwież stronę i utwórz nowy link.",
       "care.request_not_found": "Nie znaleziono: {object}. Odśwież stronę.",
       "care.request_not_open":
         "Już nie jest otwarte: {object}. Zapytaj swoją osobę kontaktową.",
@@ -4687,6 +4732,8 @@ export const ERROR_CATALOG = {
         "Dziecko bez miejsca w OGS otrzymuje miejsce poprzez zapis na rok szkolny.",
       "files.file_name_invalid":
         "Nazwa pliku jest niedozwolona. Wybierz plik ponownie.",
+      "general.changed_since_read":
+        "W międzyczasie zmieniono: {object}. Teraz widzisz aktualny stan. Sprawdź go i spróbuj ponownie.",
       "general.request_too_large":
         "Nie udało się przetworzyć: {object}. Usuń w przeglądarce pliki cookie tej strony. Następnie zaloguj się ponownie.",
       "general.route_not_found":
@@ -4767,6 +4814,8 @@ export const ERROR_CATALOG = {
         "Dane o obecności z tego miesiąca mogły już zostać usunięte. Nie można bezpiecznie zatwierdzić miesiąca. Prosimy skontaktować się z organem prowadzącym.",
       "meals.child_not_enrolled":
         "Nie można: {object}. Dziecko nie jest tego dnia pod opieką.",
+      "meals.day_changed":
+        "Ktoś inny zmienił w międzyczasie ten dzień jadłospisu. Teraz widzisz aktualny stan. Sprawdź go i zapisz ponownie.",
       "meals.day_closed":
         "Nie można: {object}. Tego dnia szkoła jest zamknięta.",
       "meals.day_past": "Już nie można: {object}. Ten dzień już minął.",
@@ -4945,6 +4994,7 @@ export const ERROR_CATALOG = {
       requestId: "İstek numarası: {requestId}",
       crash: "{object} işlenemedi. Daha sonra yeniden deneyin.",
       fieldCheck: "Bu alanı kontrol edin.",
+      reloadFailed: "Güncel durum yüklenemedi.",
     },
     codes: {
       "attendance.checkin_staff_profile_required":
@@ -4976,7 +5026,7 @@ export const ERROR_CATALOG = {
       "care_contract.field_invalid":
         "Bazı bilgiler doğru değil. Girdiğiniz bilgileri kontrol edin.",
       "care_contract.letterhead_missing":
-        "Antette gönderen bilgileri eksik. Kurumun adı ve adresi olmadan sözleşme gönderilmez. Bunları „Antet ve şablonlar” bölümüne ekleyin.",
+        "Antette gönderen bilgileri eksik. Kurumun adı ve adresi olmadan sözleşme gönderilemez veya kağıt üzerinde teslim edilemez. Bunları „Antet ve şablonlar” bölümüne ekleyin.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -5117,6 +5167,8 @@ export const ERROR_CATALOG = {
         "{object} artık açık değil. Lütfen ilgili kişinize danışın.",
       "care.remove_disabled":
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
+      "care.request_feed_not_found":
+        "RSS bağlantısı artık yok. Lütfen sayfayı yenileyin ve yeni bir bağlantı oluşturun.",
       "care.request_not_found":
         "{object} bulunamadı. Lütfen sayfayı yenileyin.",
       "care.request_not_open":
@@ -5339,6 +5391,8 @@ export const ERROR_CATALOG = {
         "OGS yeri olmayan bir çocuk, yerini okul yılı kaydıyla alır.",
       "files.file_name_invalid":
         "Dosya adı kabul edilmiyor. Lütfen dosyayı yeniden seçin.",
+      "general.changed_since_read":
+        "{object} bu arada değiştirildi. Şimdi güncel durumu görüyorsunuz. Kontrol edin ve tekrar deneyin.",
       "general.request_too_large":
         "{object} işlenemedi. Lütfen tarayıcınızda bu sitenin çerezlerini silin. Ardından yeniden giriş yapın.",
       "general.route_not_found":
@@ -5419,6 +5473,8 @@ export const ERROR_CATALOG = {
         "Bu aya ait devam kayıtları silinmiş olabilir. Ay artık güvenilir biçimde onaylanamaz. Lütfen hizmet sağlayıcınızla iletişime geçin.",
       "meals.child_not_enrolled":
         "{object} mümkün değil. Çocuk bu gün bakımda değil.",
+      "meals.day_changed":
+        "Başka biri yemek planının bu gününü bu arada değiştirdi. Şimdi güncel durumu görüyorsunuz. Kontrol edin ve tekrar kaydedin.",
       "meals.day_closed": "{object} mümkün değil. Okul bu gün kapalı.",
       "meals.day_past": "{object} artık mümkün değil. Bu gün geçti.",
       "meals.delivery_range_too_long":
@@ -5598,6 +5654,7 @@ export const ERROR_CATALOG = {
       requestId: "Номер запиту: {requestId}",
       crash: "Не вдалося обробити: {object}. Спробуйте пізніше.",
       fieldCheck: "Перевірте це поле.",
+      reloadFailed: "Не вдалося завантажити актуальний стан.",
     },
     codes: {
       "attendance.checkin_staff_profile_required":
@@ -5629,7 +5686,7 @@ export const ERROR_CATALOG = {
       "care_contract.field_invalid":
         "Деякі дані вказано неправильно. Перевірте введені дані.",
       "care_contract.letterhead_missing":
-        "У шапці бракує даних відправника. Договір не буде надіслано без назви й адреси організації. Додайте їх у розділі «Шапка та шаблони».",
+        "У шапці бракує даних відправника. Без назви й адреси організації договір не можна надіслати або передати на папері. Додайте їх у розділі «Шапка та шаблони».",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -5768,6 +5825,8 @@ export const ERROR_CATALOG = {
         "Уже не відкрито: {object}. Зверніться до контактної особи.",
       "care.remove_disabled":
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
+      "care.request_feed_not_found":
+        "RSS-посилання більше немає. Оновіть сторінку та створіть нове посилання.",
       "care.request_not_found": "Не знайдено: {object}. Оновіть сторінку.",
       "care.request_not_open":
         "Уже не відкрито: {object}. Зверніться до контактної особи.",
@@ -5984,6 +6043,8 @@ export const ERROR_CATALOG = {
         "Дитина без місця в OGS отримує місце через запис на навчальний рік.",
       "files.file_name_invalid":
         "Назва файлу не дозволена. Виберіть файл ще раз.",
+      "general.changed_since_read":
+        "Дані змінилися: {object}. Зараз показано поточний стан. Перевірте його і спробуйте знову.",
       "general.request_too_large":
         "Не вдалося обробити: {object}. Видаліть у браузері файли cookie цього сайту. Потім увійдіть знову.",
       "general.route_not_found":
@@ -6064,6 +6125,8 @@ export const ERROR_CATALOG = {
         "Дані про відвідування за цей місяць могли бути видалені. Надійно підтвердити місяць уже неможливо. Зверніться до організації, що керує групою продовженого дня.",
       "meals.child_not_enrolled":
         "Неможливо: {object}. Цього дня дитина не перебуває під доглядом.",
+      "meals.day_changed":
+        "Хтось інший уже змінив цей день у меню. Зараз показано поточний стан. Перевірте його і збережіть знову.",
       "meals.day_closed": "Неможливо: {object}. Цього дня школа зачинена.",
       "meals.day_past": "Уже неможливо: {object}. Цей день уже минув.",
       "meals.delivery_range_too_long":

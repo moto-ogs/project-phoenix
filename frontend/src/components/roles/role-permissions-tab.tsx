@@ -1,31 +1,26 @@
 "use client";
 
-import { EmptyState } from "~/components/ui/empty-state";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Button } from "~/components/ui/button";
-import { Checkbox } from "~/components/ui/checkbox";
+import {
+  PermissionGroupsView,
+  PermissionPicker,
+} from "~/components/roles/permission-picker";
 import { EditActions } from "~/components/ui/edit-actions";
 import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
-import { Input } from "~/components/ui/input";
-import { ListGroupHeader } from "~/components/ui/list-group-header";
-import { SectionCard } from "~/components/ui/section-card";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { authService } from "~/lib/auth-service";
 import type { Permission, Role } from "~/lib/auth-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { useSWRAuth } from "~/lib/swr";
 import { staffAccessKeys } from "~/lib/swr/staff-keys";
 import {
-  formatPermissionDisplay,
   isReservedPermission,
-  localizeAction,
-  localizeDescription,
-  localizeResource,
   riskyPermissionHint,
 } from "~/lib/permission-labels";
 import { Loading } from "~/components/ui/loading";
@@ -43,23 +38,17 @@ interface RolePermissionsTabProps {
 
 type AssignedMap = Record<string, boolean>;
 
+/**
+ * Die Auswahl im Bearbeiten und die Version des Stands, auf dem sie beruht:
+ * Speichern schickt diese Version mit, auch wenn der Reiter inzwischen einen
+ * neueren Stand zeigt (ADR 0311).
+ */
+interface Draft {
+  readonly map: AssignedMap;
+  readonly version: string;
+}
+
 const NO_PERMISSIONS: readonly Permission[] = [];
-
-function groupByResource(
-  permissions: readonly Permission[],
-): Array<[string, Permission[]]> {
-  const groups: Record<string, Permission[]> = {};
-  for (const permission of permissions) {
-    (groups[permission.resource] ??= []).push(permission);
-  }
-  return Object.entries(groups).sort(([a], [b]) =>
-    localizeResource(a).localeCompare(localizeResource(b), "de"),
-  );
-}
-
-function permissionLabel(permission: Permission): string {
-  return formatPermissionDisplay(permission.resource, permission.action);
-}
 
 function isReserved(permission: Permission): boolean {
   return isReservedPermission(permission.resource, permission.action);
@@ -97,8 +86,11 @@ export function RolePermissionsTab({
 }: RolePermissionsTabProps) {
   const { success: toastSuccess } = useToast();
   const wasEditing = useRef(editing);
-  const enteringEdit = editing && !wasEditing.current;
-  const assignedRead = useFreshSWR(
+  // Der Reiter zeigt den Stand aus dem gemeinsamen Cache. Speichern schickt
+  // dessen Version mit; hat jemand die Rechte inzwischen geändert, lehnt das
+  // Backend ab (general.changed_since_read) und der Reiter zeigt den
+  // gespeicherten Stand wieder.
+  const assignedRead = useSWRAuth(
     staffAccessKeys.rolePermissions(role.id),
     () => authService.getRolePermissions(role.id),
     {
@@ -111,7 +103,8 @@ export function RolePermissionsTab({
     editing ? staffAccessKeys.permissionCatalog() : null,
     () => authService.getPermissions(),
   );
-  const assigned = assignedRead.data;
+  const assigned = assignedRead.data?.permissions;
+  const storedVersion = assignedRead.data?.version ?? "";
   const mutateAssigned = assignedRead.mutate;
   const mutateCatalog = catalogRead.mutate;
   const allPermissions = useMemo(
@@ -129,13 +122,7 @@ export function RolePermissionsTab({
   // Ladezustand.
   const { error: loadError, failure } = useSwrResourceLoadError(
     [
-      {
-        data: assigned,
-        error: assignedRead.error,
-        // Im Bearbeiten zählt nur der Stand dieses Abrufs: Schlägt er fehl,
-        // zeigt der Reiter den Ladefehler statt Kästchen auf älterem Stand.
-        ...(editing ? { hasConfirmedData: false } : {}),
-      },
+      { data: assigned, error: assignedRead.error },
       ...(editing
         ? [{ data: catalogRead.data, error: catalogRead.error }]
         : []),
@@ -145,17 +132,12 @@ export function RolePermissionsTab({
   );
   const loadFailed = failure !== undefined;
   const loading =
-    !loadFailed &&
-    (enteringEdit ||
-      // Im Bearbeiten beginnt kein Entwurf, solange ein Abruf läuft: Er
-      // überschriebe sonst die Änderung einer Kollegin.
-      (editing && assignedRead.isValidating) ||
-      !assigned ||
-      (editing && catalogRead.data === undefined));
+    !loadFailed && (!assigned || (editing && catalogRead.data === undefined));
   // Der Entwurf: null heißt unverändert, also der gespeicherte Stand. Ein
-  // Klick setzt ihn auf Grundlage des gerade gezeigten Stands (#3346).
-  const [draft, setDraft] = useState<AssignedMap | null>(null);
-  const draftMap = draft ?? assignedMap;
+  // Klick setzt ihn auf Grundlage des gerade gezeigten Stands (#3346) und
+  // merkt sich dessen Version.
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const draftMap = draft?.map ?? assignedMap;
   const [completingSave, setSaving] = useState(false);
   const [reloading, setReloading] = useState(false);
   const saving = completingSave || reloading;
@@ -166,8 +148,6 @@ export function RolePermissionsTab({
     clear: clearSaveError,
   } = useApiFormError(formRef);
   const latestSaveRef = useRef<() => void>(() => undefined);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const clearReloadError = useRef<() => void>(() => undefined);
 
   // Nachladen nach dem Speichern: ein Fehler dabei ist ein Ladefehler, kein
@@ -196,18 +176,15 @@ export function RolePermissionsTab({
     clearReloadError.current = afterSave.clear;
   });
 
-  // Beim Umschalten zwischen Ansicht und Bearbeiten liest der Reiter den
-  // gespeicherten Stand neu; der Entwurf beginnt dort, ein Abbruch wirft die
-  // Kästchen zurück.
+  // Beim Umschalten zwischen Ansicht und Bearbeiten beginnt der Entwurf beim
+  // gezeigten Stand; ein Abbruch wirft die Kästchen zurück.
   useEffect(() => {
     if (wasEditing.current === editing) return;
     wasEditing.current = editing;
     setDraft(null);
-    void mutateAssigned();
     if (!editing) return;
-    setSearchTerm("");
     clearSaveError();
-  }, [editing, mutateAssigned, clearSaveError]);
+  }, [editing, clearSaveError]);
 
   const assignedCount = useMemo(
     () => allPermissions.filter((p) => assignedMap[p.id] === true).length,
@@ -224,36 +201,11 @@ export function RolePermissionsTab({
     [allPermissions, assignedMap],
   );
 
-  const filteredPermissions = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-    if (!query) return selectablePermissions;
-    return selectablePermissions.filter(
-      (permission) =>
-        permission.name.toLowerCase().includes(query) ||
-        permission.description.toLowerCase().includes(query) ||
-        permission.resource.toLowerCase().includes(query) ||
-        permission.action.toLowerCase().includes(query) ||
-        localizeResource(permission.resource).toLowerCase().includes(query) ||
-        localizeAction(permission.action, permission.resource)
-          .toLowerCase()
-          .includes(query),
-    );
-  }, [selectablePermissions, searchTerm]);
-
-  const editGroups = useMemo(
-    () => groupByResource(filteredPermissions),
-    [filteredPermissions],
-  );
-  const viewGroups = useMemo(
-    () =>
-      groupByResource(allPermissions.filter((p) => assignedMap[p.id] === true)),
+  const assignedPermissions = useMemo(
+    () => allPermissions.filter((p) => assignedMap[p.id] === true),
     [allPermissions, assignedMap],
   );
 
-  const draftCount = useMemo(
-    () => allPermissions.filter((p) => draftMap[p.id] === true).length,
-    [allPermissions, draftMap],
-  );
   const hasChanges = useMemo(
     () =>
       allPermissions.some(
@@ -261,24 +213,23 @@ export function RolePermissionsTab({
       ),
     [allPermissions, assignedMap, draftMap],
   );
-  const allFilteredChecked =
-    filteredPermissions.length > 0 &&
-    filteredPermissions.every((p) => draftMap[p.id] === true);
-
   const toggleOne = (permissionId: string) => {
     setDraft((previous) => {
-      const current = previous ?? assignedMap;
-      return { ...current, [permissionId]: !current[permissionId] };
+      const current = previous ?? { map: assignedMap, version: storedVersion };
+      return {
+        ...current,
+        map: { ...current.map, [permissionId]: !current.map[permissionId] },
+      };
     });
   };
 
   const toggleMany = (permissions: readonly Permission[]) => {
     setDraft((previous) => {
-      const current = previous ?? assignedMap;
-      const allChecked = permissions.every((p) => current[p.id] === true);
-      const next = { ...current };
+      const current = previous ?? { map: assignedMap, version: storedVersion };
+      const allChecked = permissions.every((p) => current.map[p.id] === true);
+      const next = { ...current.map };
       for (const p of permissions) next[p.id] = !allChecked;
-      return next;
+      return { ...current, map: next };
     });
   };
 
@@ -288,25 +239,48 @@ export function RolePermissionsTab({
       .map((permission) => permission.id);
     setSaving(true);
     clearSaveError();
+    let storedSelectionVersion: string;
     try {
-      await authService.replaceRolePermissions(role.id, permissionIds);
+      storedSelectionVersion = await authService.replaceRolePermissions(
+        role.id,
+        permissionIds,
+        draft?.version ?? storedVersion,
+      );
       toastSuccess("Die Berechtigungen der Rolle sind gespeichert.");
     } catch (error) {
       logger.error("role_permissions_save_failed", {
         role_id: role.id,
         error: error instanceof Error ? error.message : String(error),
       });
-      void showSaveError(error, {
-        object: "das Speichern der Berechtigungen",
-        retry: () => latestSaveRef.current(),
-      });
+      // Jemand hat die Rechte seit dem Lesen geändert: Der Reiter zeigt den
+      // gespeicherten Stand, ein erneutes Senden würde wieder abgelehnt.
+      const changed = isChangedSinceRead(error);
+      void showSaveError(
+        error,
+        changed
+          ? { object: "das Speichern der Berechtigungen" }
+          : {
+              object: "das Speichern der Berechtigungen",
+              retry: () => latestSaveRef.current(),
+            },
+      );
+      if (changed) {
+        setDraft(null);
+        void mutateAssigned();
+      }
       setSaving(false);
       return;
     }
-    // The write confirms this selection even if the following reads fail.
+    // The write confirms this selection and answers its version, so the
+    // next save holds a real token even if the following reads fail.
     setDraft(null);
     await mutateAssigned(
-      allPermissions.filter((permission) => draftMap[permission.id] === true),
+      {
+        permissions: allPermissions.filter(
+          (permission) => draftMap[permission.id] === true,
+        ),
+        version: storedSelectionVersion,
+      },
       { revalidate: false },
     );
     try {
@@ -344,32 +318,14 @@ export function RolePermissionsTab({
             ? `${assignedCount} von ${allPermissions.length} Berechtigungen zugewiesen.`
             : `${assignedCount} ${assignedCount === 1 ? "Berechtigung" : "Berechtigungen"} zugewiesen.`}
         </p>
-        {viewGroups.length === 0 ? (
+        {assignedPermissions.length === 0 ? (
           <p className="text-sm text-gray-500">
-            {role.isSystem
+            {role.isSystem || role.fromTraeger
               ? "Diese Rolle trägt keine Berechtigungen."
               : "Noch keine Berechtigungen zugewiesen. Mit „Bearbeiten“ oben rechts wählst du aus, was diese Rolle darf."}
           </p>
         ) : (
-          <SectionCard padding="none">
-            {viewGroups.map(([resource, permissions]) => (
-              <section key={resource} className="px-4 py-3">
-                <h4 className="text-sm font-semibold text-gray-900">
-                  {localizeResource(resource)}
-                  <span className="ml-2 text-xs font-normal text-gray-500">
-                    {permissions.length}
-                  </span>
-                </h4>
-                <ul className="mt-1.5 space-y-1">
-                  {permissions.map((permission) => (
-                    <li key={permission.id} className="text-sm text-gray-700">
-                      {permissionLabel(permission)}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </SectionCard>
+          <PermissionGroupsView permissions={assignedPermissions} />
         )}
       </div>
     );
@@ -388,150 +344,15 @@ export function RolePermissionsTab({
       <LoadErrorAlert error={afterSave.error} />
       <FormErrorAlert message={saveError} />
 
-      <p className="text-sm text-gray-600">
-        {draftCount} von {selectablePermissions.length} Berechtigungen
-        ausgewählt.
-      </p>
-
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="min-w-0 flex-1">
-          <Input
-            controlSize="compact"
-            name="role-permissions-search"
-            aria-label="Berechtigungen suchen"
-            placeholder="Berechtigungen suchen…"
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            disabled={saving}
-          />
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="md"
-          disabled={saving || filteredPermissions.length === 0}
-          disabledReason={
-            saving
-              ? undefined
-              : searchTerm.trim()
-                ? "Keine Berechtigung passt zu deiner Suche."
-                : "Es gibt keine Berechtigung zum Auswählen."
-          }
-          onClick={() => toggleMany(filteredPermissions)}
-          tooltip={
-            allFilteredChecked
-              ? "Wählt alle angezeigten Berechtigungen ab, noch ohne zu speichern."
-              : "Wählt alle angezeigten Berechtigungen aus, noch ohne zu speichern."
-          }
-        >
-          {allFilteredChecked ? "Alle abwählen" : "Alle auswählen"}
-        </Button>
-      </div>
-
-      <SectionCard padding="none">
-        {editGroups.length === 0 ? (
-          <EmptyState title="Keine Berechtigungen gefunden." className="py-8" />
-        ) : (
-          editGroups.map(([resource, permissions]) => {
-            const groupChecked = permissions.filter(
-              (p) => draftMap[p.id] === true,
-            ).length;
-            const allGroupChecked = groupChecked === permissions.length;
-            const isCollapsed = collapsed[resource] === true;
-            const groupLabel = localizeResource(resource);
-            return (
-              <section
-                key={resource}
-                className="border-b border-gray-100 last:border-b-0"
-              >
-                <ListGroupHeader
-                  title={groupLabel}
-                  addon={
-                    <span className="text-xs text-gray-500">
-                      {groupChecked}/{permissions.length}
-                    </span>
-                  }
-                  collapsible={{
-                    expanded: !isCollapsed,
-                    onToggle: () =>
-                      setCollapsed((current) => ({
-                        ...current,
-                        [resource]: !isCollapsed,
-                      })),
-                  }}
-                  meta={
-                    <label
-                      htmlFor={`role-permission-group-${resource}`}
-                      className="flex cursor-pointer items-center gap-2 text-xs text-gray-600"
-                    >
-                      <Checkbox
-                        id={`role-permission-group-${resource}`}
-                        checked={allGroupChecked}
-                        disabled={saving}
-                        onChange={() => toggleMany(permissions)}
-                        aria-label={`Alle Berechtigungen für ${groupLabel} auswählen`}
-                      />
-                      Alle
-                    </label>
-                  }
-                />
-                {isCollapsed
-                  ? null
-                  : permissions.map((permission) => {
-                      const description = localizeDescription(
-                        permission.resource,
-                        permission.action,
-                        permission.description,
-                      );
-                      const hint = permissionHint(permission);
-
-                      return (
-                        <label
-                          key={permission.id}
-                          htmlFor={`role-permission-${permission.id}`}
-                          className="flex cursor-pointer items-start gap-3 px-3 py-2.5 hover:bg-gray-50"
-                        >
-                          <Checkbox
-                            id={`role-permission-${permission.id}`}
-                            checked={draftMap[permission.id] === true}
-                            disabled={saving}
-                            onChange={() => toggleOne(permission.id)}
-                            aria-label={permissionLabel(permission)}
-                            aria-describedby={
-                              hint
-                                ? `role-permission-hint-${permission.id}`
-                                : undefined
-                            }
-                            className="mt-0.5"
-                          />
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-medium text-gray-900">
-                              {permissionLabel(permission)}
-                            </span>
-                            <span className="block text-xs text-gray-500">
-                              {localizeAction(
-                                permission.action,
-                                permission.resource,
-                              )}
-                              {description ? ` · ${description}` : ""}
-                            </span>
-                            {hint ? (
-                              <span
-                                id={`role-permission-hint-${permission.id}`}
-                                className="text-moto-amber-strong mt-0.5 block text-xs font-medium"
-                              >
-                                {hint}
-                              </span>
-                            ) : null}
-                          </span>
-                        </label>
-                      );
-                    })}
-              </section>
-            );
-          })
-        )}
-      </SectionCard>
+      <PermissionPicker
+        permissions={selectablePermissions}
+        selected={draftMap}
+        onToggleOne={toggleOne}
+        onToggleMany={toggleMany}
+        disabled={saving}
+        idPrefix="role-permission"
+        hint={permissionHint}
+      />
 
       <EditActions
         onCancel={onCancelEdit}

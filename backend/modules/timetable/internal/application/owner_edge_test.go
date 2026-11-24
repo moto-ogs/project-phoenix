@@ -196,7 +196,7 @@ func TestModuleNormalizesCategoryWrites(t *testing.T) {
 	assert.Equal(t, store.create.Name, created.Name)
 
 	updated, err := service.UpdateCategory(context.Background(), timetable.UpdateCategory{
-		ID: 17, Name: "  Sport  ", Color: "#123456",
+		ID: 17, Name: "  Sport  ", Color: "#123456", ExpectedVersion: timetable.CategoryVersion(timetable.Category{ID: 17}),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, int64(17), updated.ID)
@@ -359,7 +359,7 @@ func TestModuleRejectsInvalidAndReservedCategoryWrites(t *testing.T) {
 	require.ErrorIs(t, err, timetable.ErrSystemCategoryName)
 	_, err = service.UpdateCategory(ctx, timetable.UpdateCategory{ID: 0, Name: "Sport", Color: "#abc"})
 	require.ErrorIs(t, err, timetable.ErrInvalidCategory)
-	require.ErrorIs(t, service.SetCategoryShiftTypeLinks(ctx, 4, []int64{2, 0}), timetable.ErrInvalidCategory)
+	require.ErrorIs(t, service.SetCategoryShiftTypeLinks(ctx, 4, []int64{2, 0}, nil), timetable.ErrInvalidCategory)
 	require.ErrorIs(t, service.LockStudentEnrollmentsForCareExit(ctx, nil, "2026-09-04"), timetable.ErrInvalidCareExitEnrollment)
 	_, err = service.EndStudentEnrollmentsForCareExit(ctx, []int64{1}, "04.09.2026")
 	require.ErrorIs(t, err, timetable.ErrInvalidCareExitEnrollment)

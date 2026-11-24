@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"slices"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedVisitorDayStep gives the caregiver whose place the visitor of a public
@@ -79,27 +81,27 @@ func seedVisitorBlocks(rt *Runtime, today seedDate, staffID int64) error {
 	blocks := []map[string]any{
 		{
 			"name": "Lernzeit Sternengruppe", "type": "care", "list_kind": "learning_time",
-			"target_group_type": "gruppe", "education_group_id": groupID,
-			"targets":  []map[string]any{{"type": "gruppe", "education_group_id": groupID}},
+			"target_group_type": "gruppe", "education_group_id": ident.ID(groupID),
+			"targets":  []map[string]any{{"type": "gruppe", "education_group_id": ident.ID(groupID)}},
 			"weekdays": []int{2, 4}, "start_time": "13:00", "end_time": "14:00",
-			"room": "OGS-Raum 2", "category": "Hausaufgaben", "student_ids": group,
+			"room": "OGS-Raum 2", "category": "Hausaufgaben", "student_ids": ident.IDs(group),
 		},
 		{
 			"name": "Lese-AG", "type": "activity", "list_kind": "activity", "target_group_type": "none",
 			"weekdays": []int{1, 3, 5}, "start_time": "14:00", "end_time": "15:00",
-			"room": "Leseecke", "category": "Lernen", "student_ids": studentIDs[30:38],
+			"room": "Leseecke", "category": "Lernen", "student_ids": ident.IDs(studentIDs[30:38]),
 		},
 		{
 			"name": "Kunst-AG", "type": "activity", "list_kind": "activity", "target_group_type": "none",
 			"weekdays": []int{2, 4}, "start_time": "14:00", "end_time": "15:00",
-			"room": "Kreativraum", "category": "Kreativ", "student_ids": studentIDs[20:30],
+			"room": "Kreativraum", "category": "Kreativ", "student_ids": ident.IDs(studentIDs[20:30]),
 		},
 		{
 			"name": "Spielen und Abholen", "type": "care",
-			"target_group_type": "gruppe", "education_group_id": groupID,
-			"targets":  []map[string]any{{"type": "gruppe", "education_group_id": groupID}},
+			"target_group_type": "gruppe", "education_group_id": ident.ID(groupID),
+			"targets":  []map[string]any{{"type": "gruppe", "education_group_id": ident.ID(groupID)}},
 			"weekdays": []int{1, 2, 3, 4, 5}, "start_time": "15:00", "end_time": "16:30",
-			"room": "OGS-Raum 2", "category": "Gruppenraum", "student_ids": group,
+			"room": "OGS-Raum 2", "category": "Gruppenraum", "student_ids": ident.IDs(group),
 		},
 	}
 	for _, body := range blocks {
@@ -113,8 +115,8 @@ func seedVisitorBlocks(rt *Runtime, today seedDate, staffID int64) error {
 		}
 		delete(body, "room")
 		delete(body, "category")
-		body["room_id"], body["category_id"], body["week_pattern"] = roomID, categoryID, 0
-		body["staff_ids"], body["primary_staff_id"] = []int64{staffID}, staffID
+		body["room_id"], body["category_id"], body["week_pattern"] = ident.ID(roomID), ident.ID(categoryID), 0
+		body["staff_ids"], body["primary_staff_id"] = []ident.ID{ident.ID(staffID)}, ident.ID(staffID)
 		// Two weeks, like the other demo blocks; the weekly materialization
 		// carries them on.
 		body["materialize_from"], body["materialize_to"] = today.String(), today.AddDays(13).String()
@@ -139,7 +141,7 @@ func seedVisitorAppointments(rt *Runtime, today seedDate, staffID int64) error {
 			"title": "Elterngespräch", "location": "OGS-Raum 2",
 			"description": "Gespräch über die Eingewöhnung in der Sternengruppe.",
 			"start_date":  monday.String(), "end_date": monday.String(), "start_time": "10:00", "end_time": "10:30", "all_day": false,
-			"delivery_mode": "informational", "targets": []map[string]any{{"type": "staff", "id": staffID}}, "send_email": false,
+			"delivery_mode": "informational", "targets": []map[string]any{{"type": "staff", "id": ident.ID(staffID)}}, "send_email": false,
 		},
 		{
 			"title": "Teambesprechung", "location": "Lehrerzimmer",
@@ -154,7 +156,7 @@ func seedVisitorAppointments(rt *Runtime, today seedDate, staffID int64) error {
 			"title": "Erste-Hilfe-Auffrischung", "location": "Aula",
 			"description": "Pflichtfortbildung für das Team: Erste Hilfe am Kind.",
 			"start_date":  thursday, "end_date": thursday, "start_time": "08:30", "end_time": "11:30", "all_day": false,
-			"delivery_mode": "informational", "targets": []map[string]any{{"type": "staff", "id": staffID}}, "send_email": false,
+			"delivery_mode": "informational", "targets": []map[string]any{{"type": "staff", "id": ident.ID(staffID)}}, "send_email": false,
 		},
 	}
 	for _, appointment := range appointments {
@@ -179,7 +181,7 @@ func seedColleagueBirthday(rt *Runtime, today seedDate) error {
 	visitor := DemoStaff[visitorStaffIndex]
 	first, last := visitorDisplayName(fs.visitor, false, staff.FirstName, staff.LastName, visitor.FirstName, visitor.LastName)
 	birthday := fmt.Sprintf("1988-%02d-%02d", int(today.Month()), today.Day())
-	if _, err := rt.Client.Put(fmt.Sprintf("/api/staff/%d/stammdaten/person", staffID), map[string]any{
+	if err := putStammdatenSection(rt.Client, staffID, "person", map[string]any{
 		// The person form is saved whole: the seeded gender goes along, or
 		// the birthday would clear it.
 		"first_name": first, "last_name": last, "birthday": birthday, "gender": optionalGender(staff.Gender), "note": "Geburtsdatum ergänzt",

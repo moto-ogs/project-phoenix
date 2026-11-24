@@ -13,8 +13,27 @@ vi.mock("./session-cache", () => ({
   renewTenantSession: mockRenewSession,
 }));
 
+vi.mock("./contract/browser-traits.generated", async (importOriginal) => {
+  const traits =
+    await importOriginal<
+      typeof import("./contract/browser-traits.generated")
+    >();
+  return {
+    ...traits,
+    browserRoutePaths: {
+      ...traits.browserRoutePaths,
+      tenant: {
+        ...traits.browserRoutePaths.tenant,
+        "GET /api/meal-plan/orders/month/export": "/api/meal-plan/file",
+      },
+    },
+  };
+});
+
 import { ApiError } from "./api-error";
-import { bffFile, bffJson, bffPath } from "./bff-fetch";
+import { bffFile, bffFileHref, bffJson, bffPath } from "./bff-fetch";
+
+import { sessionBff } from "./session-bff";
 
 const ok = (data: unknown, extra: object = {}) =>
   Response.json({ status: "success", data, ...extra });
@@ -32,78 +51,134 @@ afterEach(() => {
 
 describe("bffPath", () => {
   it("puts the pattern below the portal's BFF prefix", () => {
-    expect(bffPath("tenant", "/api/activities/categories")).toBe(
+    expect(bffPath("tenant", "GET /api/activities/categories")).toBe(
       "/api/activities/categories",
     );
-    expect(bffPath("org", "/traeger/absence-types/")).toBe(
+    expect(bffPath("org", "GET /traeger/absence-types/")).toBe(
       "/api/traeger/absence-types",
     );
-    expect(bffPath("platform", "/operator/stats")).toBe("/api/operator/stats");
+    expect(bffPath("platform", "GET /operator/stats")).toBe(
+      "/api/operator/stats",
+    );
   });
 
   it("puts a route outside the portal's mount below the prefix as a whole", () => {
-    expect(bffPath("parent", "/analytics-policy")).toBe(
+    expect(bffPath("parent", "GET /analytics-policy")).toBe(
       "/api/parent/analytics-policy",
     );
-    expect(bffPath("tenant", "/analytics-consent")).toBe(
+    expect(bffPath("tenant", "GET /analytics-consent/")).toBe(
       "/api/analytics-consent",
     );
   });
 
   it("puts a public pattern below /api unless it is there already", () => {
     expect(
-      bffPath("public", "/caterer/invitations/{schoolId}/{token}", {
-        schoolId: "3",
-        token: "t",
+      bffPath("public", "GET /caterer/invitations/{schoolId}/{token}", {
+        params: { schoolId: "3", token: "t" },
       }),
     ).toBe("/api/caterer/invitations/3/t");
-    expect(bffPath("public", "/auth/password-reset")).toBe(
+    expect(bffPath("public", "POST /auth/password-reset")).toBe(
       "/api/auth/password-reset",
     );
     expect(
-      bffPath("public", "/api/enrollment/phases/public/{tenantSlug}", {
-        tenantSlug: "ogs",
+      bffPath("public", "GET /api/enrollment/phases/public/{tenantSlug}", {
+        params: { tenantSlug: "ogs" },
       }),
     ).toBe("/api/enrollment/phases/public/ogs");
   });
 
-  it("encodes parameters and drops empty query values", () => {
+  it("encodes parameters", () => {
     expect(
-      bffPath(
-        "tenant",
-        "/api/activities/categories/{categoryId}",
-        { categoryId: "a/b" },
-        { include_archived: true, empty: undefined, ids: ["1", "2"] },
-      ),
-    ).toBe(
-      "/api/activities/categories/a%2Fb?include_archived=true&ids=1&ids=2",
-    );
+      bffPath("tenant", "DELETE /api/activities/categories/{categoryId}", {
+        params: { categoryId: "a/b" },
+      }),
+    ).toBe("/api/activities/categories/a%2Fb");
+  });
+
+  it("uses the query registered on the selected route", () => {
+    expect(
+      bffPath("tenant", "GET /api/rooms/", {
+        query: {
+          is_open_room: true,
+        },
+      }),
+    ).toBe("/api/rooms?is_open_room=true");
   });
 
   it("refuses a missing parameter instead of calling another path", () => {
-    expect(() => bffPath("tenant", "/api/activities/{id}", {})).toThrow(
-      "missing path parameter id",
-    );
+    expect(() =>
+      bffPath("tenant", "DELETE /api/activities/{id}", { params: { id: "" } }),
+    ).toThrow("missing path parameter id");
   });
 });
 
+describe("bffFileHref", () => {
+  it("encodes path parameters and uses the registered file query", () => {
+    expect(
+      bffFileHref(
+        "parent",
+        "GET /parent-news-attachments/{announcementId}/{attachmentId}/download",
+        {
+          params: { announcementId: "12/34", attachmentId: "5?6" },
+          query: { student_id: "7" },
+        },
+      ),
+    ).toBe(
+      "/api/parent/parent-news-attachments/12%2F34/5%3F6/download?student_id=7",
+    );
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("requires a GET file key, its path parameters and a registered query", () => {
+    const checks = () => {
+      // @ts-expect-error: a browser link is not a POST request
+      bffFileHref("tenant", "POST /api/students/export");
+      // @ts-expect-error: an address needs its path parameters
+      bffFileHref("tenant", "GET /api/week-protocols/{protocolId}/pdf");
+      const route = "GET /api/staff/time-tracking/export";
+      // @ts-expect-error: the route does not register this query key
+      bffFileHref("tenant", route, { query: { staff_id: "7" } });
+    };
+    expect(checks).toBeTypeOf("function");
+  });
+});
+
+it("types session requests independently of the BFF's answer", () => {
+  const checks = () => {
+    const login = sessionBff.login("tenant");
+    void bffJson("public", login, {
+      body: { email: "a@example.test", password: "password" },
+    });
+    // @ts-expect-error: the generated login body has password, not passwort
+    void bffJson("public", login, {
+      body: { email: "a@example.test", passwort: "password" },
+    });
+    // @ts-expect-error: only the Träger login accepts an organization_id
+    void bffJson("public", login, {
+      body: { email: "a@example.test", organization_id: "7" },
+    });
+    // @ts-expect-error: the generated MFA body has challenge_token, not challengeToken
+    void bffJson("public", sessionBff.verifyMfa("tenant"), {
+      body: { challengeToken: "proof", code: "000000" },
+    });
+  };
+  expect(checks).toBeTypeOf("function");
+});
+
 describe("bffFile", () => {
-  it("hands the file answer to the caller", async () => {
+  it("fetches at the same registered browser path as the file link", async () => {
     mockFetch.mockResolvedValueOnce(
       new Response("pdf", { headers: { "Content-Disposition": "x.pdf" } }),
     );
 
-    const response = await bffFile(
-      "tenant",
-      "GET /api/meal-plan/orders/month/export",
-      { query: { month: "2026-09", format: "pdf" } },
-    );
+    const route = "GET /api/meal-plan/orders/month/export";
+    const options = { query: { month: "2026-09", format: "pdf" } } as const;
+    const response = await bffFile("tenant", route, options);
 
     await expect(response.text()).resolves.toBe("pdf");
-    expect(mockFetch).toHaveBeenCalledWith(
-      "/api/meal-plan/orders/month/export?month=2026-09&format=pdf",
-      { method: "GET" },
-    );
+    const href = bffFileHref("tenant", route, options);
+    expect(href).toBe("/api/meal-plan/file?month=2026-09&format=pdf");
+    expect(mockFetch).toHaveBeenCalledWith(href, { method: "GET" });
   });
 
   it("sends the body of a file route that takes one", async () => {
@@ -140,6 +215,11 @@ describe("bffFile", () => {
     const checks = () => {
       // @ts-expect-error: a JSON route goes through bffJson
       void bffFile("tenant", "GET /api/activities/categories");
+      const exportOrders = "GET /api/meal-plan/orders/month/export";
+      // @ts-expect-error: month is a string, not a number
+      void bffFile("tenant", exportOrders, { query: { month: 202609 } });
+      // @ts-expect-error: the route registers only pdf and xlsx
+      void bffFile("tenant", exportOrders, { query: { format: "csv" } });
     };
     expect(checks).toBeTypeOf("function");
   });
@@ -186,6 +266,31 @@ describe("bffJson", () => {
     expect(url).toBe("/api/students/4/photo");
     expect(multipart?.body).toBe(form);
     expect(multipart?.headers).toBeUndefined();
+  });
+
+  it("names the deployment of its bundle on every call", async () => {
+    vi.stubEnv("NEXT_DEPLOYMENT_ID", "release-a");
+    try {
+      mockFetch
+        .mockResolvedValueOnce(ok([]))
+        .mockResolvedValueOnce(ok({ id: "1", name: "A" }));
+
+      await bffJson("tenant", "GET /api/activities/categories");
+      await bffJson("tenant", "PUT /api/activities/categories/{categoryId}", {
+        params: { categoryId: "1" },
+        body: { name: "A" },
+      });
+
+      expect(mockFetch.mock.calls[0]?.[1]?.headers).toEqual({
+        "X-Moto-Deployment-ID": "release-a",
+      });
+      expect(mockFetch.mock.calls[1]?.[1]?.headers).toEqual({
+        "Content-Type": "application/json",
+        "X-Moto-Deployment-ID": "release-a",
+      });
+    } finally {
+      vi.stubEnv("NEXT_DEPLOYMENT_ID", "");
+    }
   });
 
   it("resolves a 204 and an answer without data to null", async () => {
@@ -288,10 +393,14 @@ describe("bffJson", () => {
   it("refuses a success without data as an unreadable answer", async () => {
     mockFetch
       .mockResolvedValueOnce(Response.json({ id: "7" }))
+      .mockResolvedValueOnce(Response.json({ status: "success" }))
       .mockResolvedValueOnce(Response.json({ status: "success" }));
 
     await expect(
       bffJson("tenant", "GET /api/activities/categories"),
+    ).rejects.toMatchObject({ status: 502, code: "general.unavailable" });
+    await expect(
+      bffJson("tenant", "POST /api/search/", { body: { query: "Ada" } }),
     ).rejects.toMatchObject({ status: 502, code: "general.unavailable" });
     await expect(
       bffJson("tenant", "PUT /api/activities/categories/{categoryId}", {
@@ -394,6 +503,29 @@ describe("bffJson", () => {
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(mockRequireSession).not.toHaveBeenCalled();
+    expect(mockRenewSession).not.toHaveBeenCalled();
+  });
+
+  it("does not replay a student photo upload after a 401", async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(ok({ id: "4" }));
+    await expect(
+      bffJson("tenant", "POST /api/students/{id}/photo", {
+        params: { id: "4" },
+        body: new FormData(),
+      }),
+    ).rejects.toMatchObject({ status: 401 });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockRenewSession).not.toHaveBeenCalled();
+  });
+
+  it("does not replay a credential route marked NoRetryAfterRenewal", async () => {
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 401 }));
+    await expect(
+      bffJson("tenant", "POST /auth/passkeys/enrollment/challenge"),
+    ).rejects.toMatchObject({ status: 401 });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(mockRenewSession).not.toHaveBeenCalled();
   });
 
@@ -603,29 +735,62 @@ describe("bffJson", () => {
         query: { from: "2026-09-01", to: "2026-09-30" },
       });
       void bffJson("platform", "GET /operator/stats");
-      void bffJson("tenant", "GET /api/students/", {
-        // @ts-expect-error: the route has no such variant
-        query: { view: "wide" },
-      });
+      // @ts-expect-error: the route has no such variant
+      void bffJson("tenant", "GET /api/students/", { query: { view: "wide" } });
       // @ts-expect-error: the route belongs to the Träger portal
       void bffJson("tenant", "GET /traeger/absence-types/");
       // A route its own route.ts serves, with the backend's answer.
       void bffJson("tenant", "GET /api/settings/login-image");
       // @ts-expect-error: a session step answers the BFF's own shape
       void bffJson("tenant", "POST /auth/login", { body: {} });
+      // @ts-expect-error: the Go session check is server-only
+      void bffJson("tenant", "POST /auth/session/validate", { body: {} });
+      // @ts-expect-error: the invitation BFF takes the token through its own route
+      void bffJson("tenant", "POST /auth/invitations/{token}/accept", {
+        body: {},
+      });
+      // @ts-expect-error: profile is a backend read of the bootstrap route, not a BFF path
+      void bffPath("tenant", "GET /api/enrollment/me/profile");
+      // @ts-expect-error: the operator route gets its token from its flow cookie
+      void bffJson("platform", "POST /operator/auth/invitations/validate", {
+        body: {},
+      });
+      // @ts-expect-error: parent demo calls use the BFF's own envelope and address
+      void bffJson("parent", "POST /demo/access/sessions", { body: {} });
       // @ts-expect-error: the wall display answers without the envelope
       void bffJson("tenant", "GET /api/display/dashboard");
       // @ts-expect-error: the path parameter is missing
       void bffJson("tenant", "DELETE /api/activities/{id}");
-      void bffJson("tenant", "GET /api/activities/categories", {
-        // @ts-expect-error: the route reads no such query parameter
-        query: { name: "x" },
+      const partialAbsences = "GET /api/students/{id}/partial-absences";
+      const student = { id: "7" };
+      void bffJson("tenant", partialAbsences, {
+        params: student,
+        query: { from: "2026-09-01", to: "2026-09-30" },
       });
-      void bffJson("tenant", "PUT /api/activities/categories/{categoryId}", {
-        params: { categoryId: "1" },
-        // @ts-expect-error: the request type has no such field
-        body: { title: "x" },
+      const wrongDate = { params: student, query: { from: 5 } };
+      // @ts-expect-error: from is a date string, not a number
+      void bffJson("tenant", partialAbsences, wrongDate);
+      const groups = "GET /api/groups/";
+      // @ts-expect-error: page is a number, not pre-serialized text
+      void bffJson("tenant", groups, { query: { page: "1" } });
+      const rooms = "GET /api/rooms/";
+      // @ts-expect-error: is_open_room is a boolean, not pre-serialized text
+      void bffJson("tenant", rooms, { query: { is_open_room: "true" } });
+      const careUsage = "GET /api/enrollment/admin/reports/care-usage";
+      void bffJson("tenant", careUsage, {
+        query: { phase_id: "7", care_offering_ids: ["1", "2"] },
       });
+      // @ts-expect-error: IDs are strings
+      void bffJson("tenant", careUsage, { query: { phase_id: 7 } });
+      // @ts-expect-error: a repeated parameter takes an array
+      void bffJson("tenant", careUsage, { query: { care_offering_ids: "1" } });
+      const getCategories = "GET /api/activities/categories";
+      // @ts-expect-error: the route reads no such query parameter
+      void bffJson("tenant", getCategories, { query: { name: "x" } });
+      const putCategory = "PUT /api/activities/categories/{categoryId}";
+      const params = { categoryId: "1" };
+      // @ts-expect-error: the request type has no such field
+      void bffJson("tenant", putCategory, { params, body: { title: "x" } });
     };
     expect(checks).toBeTypeOf("function");
   });

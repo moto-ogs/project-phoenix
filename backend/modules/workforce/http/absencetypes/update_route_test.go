@@ -34,6 +34,7 @@ func TestAbsenceTypeUpdateRenamesAndRetiresTheType(t *testing.T) {
 		ID       string `json:"id"`
 		Name     string `json:"name"`
 		IsActive bool   `json:"is_active"`
+		Version  string `json:"version"`
 	}
 	send := func(method, path string, body any, status int) []byte {
 		t.Helper()
@@ -52,8 +53,15 @@ func TestAbsenceTypeUpdateRenamesAndRetiresTheType(t *testing.T) {
 	var created absenceType
 	decode(send(http.MethodPost, "/api/absence-types/", map[string]any{"name": "Hospitation"}, http.StatusCreated), &created)
 	var updated absenceType
-	decode(send(http.MethodPut, "/api/absence-types/"+created.ID, map[string]any{"name": "Hospitation extern", "is_active": false}, http.StatusOK), &updated)
-	assert.Equal(t, absenceType{ID: created.ID, Name: "Hospitation extern", IsActive: false}, updated)
+	decode(send(http.MethodPut, "/api/absence-types/"+created.ID, map[string]any{"name": "Hospitation extern", "is_active": false, "expected_version": created.Version}, http.StatusOK), &updated)
+	assert.Equal(t, absenceType{ID: created.ID, Name: "Hospitation extern", IsActive: false, Version: updated.Version}, updated)
+
+	// ADR 0311: a save over the version read before that edit, or without
+	// one, is refused and writes nothing.
+	for name, version := range map[string]string{"outdated": created.Version, "missing": ""} {
+		refused := send(http.MethodPut, "/api/absence-types/"+created.ID, map[string]any{"name": "Überschrieben", "expected_version": version}, http.StatusConflict)
+		assert.Contains(t, string(refused), `"code":"general.changed_since_read"`, name)
+	}
 
 	var listed []absenceType
 	decode(send(http.MethodGet, "/api/absence-types/", nil, http.StatusOK), &listed)

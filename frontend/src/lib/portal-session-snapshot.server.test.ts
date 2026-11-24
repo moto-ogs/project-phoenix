@@ -24,7 +24,8 @@ vi.mock("~/server/auth/token-validation", async (importOriginal) => ({
 const { backendStatus } = vi.hoisted(() => ({
   backendStatus: { current: 401 },
 }));
-vi.mock("~/lib/backend-client.server", () => ({
+vi.mock("~/lib/backend-client.server", async (original) => ({
+  ...(await original<typeof import("~/lib/backend-client.server")>()),
   sendBackend: vi.fn(
     async () =>
       new Response(JSON.stringify({ code: "auth.invalid_token" }), {
@@ -84,7 +85,7 @@ const PORTALS: readonly Portal[] = [
     // An Absprung out of the Träger portal opens a tenant session.
     alsoAccepts: ["tenant", "org"],
     validation: "tenant",
-    bound: { tenantId: 3 },
+    bound: { tenantId: "3" },
   },
   {
     name: "parent",
@@ -98,7 +99,7 @@ const PORTALS: readonly Portal[] = [
     read: readSchoolSessionSnapshot,
     cookie: "school.session-token",
     scope: "school",
-    bound: { tenantId: 3 },
+    bound: { tenantId: "3" },
   },
   {
     name: "caterer",
@@ -119,7 +120,7 @@ const PORTALS: readonly Portal[] = [
     read: readTraegerSessionSnapshot,
     cookie: "traeger.session-token",
     scope: "org",
-    bound: { orgId: 7 },
+    bound: { orgId: "7" },
   },
 ];
 
@@ -352,6 +353,19 @@ describe.each(PORTALS)("$name session snapshot", (portal) => {
   });
 });
 
+it.each([
+  ["tenant", { tenantId: 3 }, { tenantId: "3" }],
+  ["school", { tenantId: 3 }, { tenantId: "3" }],
+  ["traeger", { orgId: 7 }, { orgId: "7" }],
+] as const)(
+  "hydrates a legacy %s cookie with a numeric binding",
+  async (name, legacy, binding) => {
+    const portal = PORTALS.find((entry) => entry.name === name)!;
+    await sendPortalCookie(portal, legacy);
+    await expect(portal.read()).resolves.toMatchObject({ user: binding });
+  },
+);
+
 const [tenant, , school, caterer, operator, traeger] = PORTALS as [
   Portal,
   Portal,
@@ -428,7 +442,7 @@ describe("portal-specific claims", () => {
     await sendPortalCookie(school, { tenantId: undefined });
     await expect(readSchoolSessionSnapshot()).resolves.toBeNull();
 
-    await sendPortalCookie(school, { tenantId: 0 });
+    await sendPortalCookie(school, { tenantId: "0" });
     await expect(readSchoolSessionSnapshot()).resolves.toBeNull();
   });
 
@@ -453,10 +467,10 @@ describe("portal-specific claims", () => {
     await sendPortalCookie(traeger, { orgId: undefined });
     await expect(readTraegerSessionSnapshot()).resolves.toBeNull();
 
-    await sendPortalCookie(traeger, { orgId: 0 });
+    await sendPortalCookie(traeger, { orgId: "0" });
     await expect(readTraegerSessionSnapshot()).resolves.toBeNull();
 
-    await sendPortalCookie(traeger, { tenantId: 3 });
+    await sendPortalCookie(traeger, { tenantId: "3" });
     await expect(readTraegerSessionSnapshot()).resolves.toBeNull();
   });
 });

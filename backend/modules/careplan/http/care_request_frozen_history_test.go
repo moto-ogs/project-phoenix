@@ -52,7 +52,7 @@ func TestCareRequestHistory_ServesFrozenDecisionDiff(t *testing.T) {
 	impact, _ := openWeeklyImpact(t, tc, testutil.AdminTestClaims(int(staffAccount.ID)), chain.StudentID, pending.ID)
 	decideReq, err := http.NewRequest(http.MethodPost,
 		fmt.Sprintf("/care-schedule-change-requests/%d/decide", pending.ID),
-		strings.NewReader(fmt.Sprintf(`{"approve":true,"reason":"Passt so","impact_token":%q}`, impact)))
+		strings.NewReader(fmt.Sprintf(`{"approve":true,"reason":"Passt so","impact_token":%q,"expected_version":%q}`, impact, testpkg.CareRequestVersion(t, pending.ID))))
 	require.NoError(t, err)
 	decideReq.Header.Set("Content-Type", "application/json")
 	rr := authExec(t, tc, decideReq, testutil.AdminTestClaims(int(staffAccount.ID)), []string{"admin:*"})
@@ -62,7 +62,7 @@ func TestCareRequestHistory_ServesFrozenDecisionDiff(t *testing.T) {
 	upsertPickup(17, 0)
 
 	// The history must still replay the frozen decision-time comparison.
-	histReq, err := http.NewRequest(http.MethodGet, "/change-requests?view=history&types=care_schedule", nil)
+	histReq, err := http.NewRequest(http.MethodGet, "/change-requests/history?types=care_schedule", nil)
 	require.NoError(t, err)
 	rr = authExec(t, tc, histReq, testutil.AdminTestClaims(int(staffAccount.ID)), []string{"admin:*"})
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
@@ -83,7 +83,7 @@ func TestCareRequestHistory_ServesFrozenDecisionDiff(t *testing.T) {
 						Old   string `json:"old"`
 						New   string `json:"new"`
 					} `json:"diff"`
-				} `json:"data"`
+				} `json:"care_schedule"`
 			} `json:"items"`
 		} `json:"data"`
 	}

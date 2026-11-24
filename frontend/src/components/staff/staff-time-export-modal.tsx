@@ -1,5 +1,6 @@
 "use client";
 
+import { bffFileHref } from "~/lib/bff-fetch";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { Alert } from "~/components/ui/alert";
@@ -308,17 +309,20 @@ export function StaffTimeExportModal({
     ) {
       return;
     }
-    const params = new URLSearchParams({ year: String(year), format });
-    if (scope === "month" || datev) {
-      params.set("month", String(month));
-    }
-    if (!datev) {
-      params.set("granularity", granularity);
-      if (granularity === "month") {
-        params.set("time_format", timeFormat);
-      }
-    }
-    globalThis.location.href = `/api/staff/time-tracking/export?${params.toString()}`;
+    globalThis.location.href = bffFileHref(
+      "tenant",
+      "GET /api/staff/time-tracking/export",
+      {
+        query: {
+          year,
+          format,
+          month: scope === "month" || datev ? month : undefined,
+          granularity: datev ? undefined : granularity,
+          time_format:
+            !datev && granularity === "month" ? timeFormat : undefined,
+        },
+      },
+    );
     onClose();
   };
 

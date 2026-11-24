@@ -278,7 +278,7 @@ func (env *takeoverLockEnv) postChangeRequest(t *testing.T, body string) *httpte
 	req := httptest.NewRequest(
 		http.MethodPost,
 		fmt.Sprintf("/requests/%s/change-requests", env.token),
-		strings.NewReader(body),
+		strings.NewReader(withShownTerms(t, env.router, "/requests/"+env.token+"/edit-bootstrap", body)),
 	)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -290,7 +290,7 @@ func (env *takeoverLockEnv) postChangeRequest(t *testing.T, body string) *httpte
 // children travel, gradeLina/gradeTimo decide which one the parent changed.
 func (env *takeoverLockEnv) changeRequestBody(gradeLina, gradeTimo int) string {
 	return fmt.Sprintf(`{
-		"phase_id": %d,
+		"phase_id": "%d",
 		"guardian_first_name": "Anna",
 		"guardian_last_name": "Beispiel",
 		"guardian_email": "takeover-lock@example.com",

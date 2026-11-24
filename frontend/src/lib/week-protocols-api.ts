@@ -3,7 +3,7 @@
 // Woche ab Freitagabend zum Entwurf und schließt ihn nach der Folgewoche
 // selbst ab. Wer welches Protokoll sieht, entscheidet das Backend.
 
-import { bffJson } from "./bff-fetch";
+import { bffFileHref, bffJson } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
 import type {
   weekProtocolDayResponse,
@@ -68,6 +68,11 @@ export interface WeekProtocol {
   closedAutomatically: boolean;
   /** Monday to Friday, and a weekend day only when it was recorded. */
   days: WeekProtocolDay[];
+  /**
+   * Read-state token of the detail read (ADR 0311); notes and closing send
+   * it back. The list carries none.
+   */
+  version: string;
 }
 
 const DAY_KINDS: readonly WeekProtocolDayKind[] = [
@@ -130,13 +135,18 @@ function mapWeekProtocol(data: weekProtocolResponse): WeekProtocol {
     closedByName: data.closed_by_name ?? "",
     closedAutomatically: data.closed_automatically,
     days: (data.days ?? []).map(mapDay),
+    version: data.version ?? "",
   };
 }
 
-/** The notes of a draft: the week, and per day YYYY-MM-DD → text. */
+/**
+ * The notes of a draft: the week, and per day YYYY-MM-DD → text, with the
+ * version of the protocol they were written on (ADR 0311).
+ */
 export interface WeekProtocolNotes {
   weekNote: string;
   days: Record<string, string>;
+  expectedVersion: string;
 }
 
 /** The page of the weekly protocols, optionally of one group. */
@@ -182,16 +192,22 @@ class WeekProtocolsService {
             date,
             note,
           })),
+          expected_version: notes.expectedVersion,
         },
         errorMessage: "Die Ergänzungen konnten nicht gespeichert werden.",
       }),
     );
   }
 
-  async close(protocolId: string): Promise<WeekProtocol> {
+  /** Closes the protocol the person read; `expectedVersion` is its version. */
+  async close(
+    protocolId: string,
+    expectedVersion: string,
+  ): Promise<WeekProtocol> {
     return mapWeekProtocol(
       await bffJson("tenant", "POST /api/week-protocols/{protocolId}/close", {
         params: { protocolId },
+        body: { expected_version: expectedVersion },
         errorMessage: "Das Wochenprotokoll konnte nicht abgeschlossen werden.",
       }),
     );
@@ -199,7 +215,9 @@ class WeekProtocolsService {
 
   /** Same-origin proxy URL of the closed protocol as PDF. */
   pdfUrl(protocolId: string): string {
-    return `/api/week-protocols/${protocolId}/pdf`;
+    return bffFileHref("tenant", "GET /api/week-protocols/{protocolId}/pdf", {
+      params: { protocolId },
+    });
   }
 }
 

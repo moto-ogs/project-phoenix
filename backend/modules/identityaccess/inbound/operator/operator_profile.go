@@ -132,7 +132,7 @@ func confirmEmailChangeErrorRenderer(err error) render.Renderer {
 	case errors.Is(err, identityaccess.ErrOperatorAuditUnavailable):
 		return operatorAuditUnavailable()
 	default:
-		return common.OperatorInternal("Ein Serverfehler ist aufgetreten")
+		return common.OperatorInternal(err, "Ein Serverfehler ist aufgetreten")
 	}
 }
 
@@ -164,6 +164,6 @@ func ProfileErrorRenderer(err error) render.Renderer {
 	case errors.Is(err, identityaccess.ErrOperatorAuditUnavailable):
 		return operatorAuditUnavailable()
 	default:
-		return common.OperatorInternal("An error occurred")
+		return common.OperatorInternal(err, "An error occurred")
 	}
 }

@@ -17,6 +17,8 @@ export const routes = {
     pattern: "/auth/switch-tenant",
     portals: ["tenant"],
     routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    browserPath: "/api/auth/switch-tenant",
+    browserOwnContract: true,
     plain: true,
     request: requestBody<SwitchTenantRequest>(),
     response: TokenResponseSchema,

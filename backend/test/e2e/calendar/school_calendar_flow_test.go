@@ -8,13 +8,14 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	calendarHTTP "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type schoolCalendarE2EResponse struct {
@@ -24,6 +25,7 @@ type schoolCalendarE2EResponse struct {
 		Events []struct {
 			Title         string  `json:"title"`
 			AppointmentID *string `json:"appointment_id"`
+			Version       string  `json:"version"`
 		} `json:"events"`
 		Classes []string `json:"classes"`
 	} `json:"data"`
@@ -86,9 +88,17 @@ func TestSchoolCalendarHTTPFlow(t *testing.T) {
 	assert.Equal(t, []string{"Zoobesuch"}, eventTitles(listed))
 	assert.Equal(t, []string{"1a"}, listed.Data.Classes)
 
+	// The change rests on the Schultermin as the calendar listed it.
+	require.Len(t, listed.Data.Events, 1)
+	require.NotEmpty(t, listed.Data.Events[0].Version)
 	appointment["title"] = "Zoobesuch mit Picknick"
+	appointment["expected_version"] = listed.Data.Events[0].Version
 	updateRR := doJSON(t, router, http.MethodPut, "/school/calendar/appointments/"+appointmentID, token, appointment)
 	require.Equal(t, http.StatusOK, updateRR.Code, updateRR.Body.String())
+	appointment["title"] = "Zoobesuch ohne Picknick"
+	staleRR := doJSON(t, router, http.MethodPut, "/school/calendar/appointments/"+appointmentID, token, appointment)
+	require.Equal(t, http.StatusConflict, staleRR.Code, staleRR.Body.String())
+	assert.Contains(t, staleRR.Body.String(), `"code":"general.changed_since_read"`)
 
 	// The OGS invites the Lehrkraft; she answers in moto schule.
 	_, organizerAccount := testpkg.CreateTestCalendarStaff(t, db, "School", "FlowOrganizer")
@@ -96,7 +106,7 @@ func TestSchoolCalendarHTTPFlow(t *testing.T) {
 	inviteRR := doJSON(t, router, http.MethodPost, "/calendar/appointments", manageToken, map[string]any{
 		"title": "Teamsitzung", "start_date": "2026-05-05", "end_date": "2026-05-05",
 		"start_time": "14:00", "end_time": "15:00", "delivery_mode": "rsvp_required",
-		"targets": []map[string]any{{"type": "staff", "id": teacher.ID}},
+		"targets": []map[string]any{{"type": "staff", "id": testpkg.ID(teacher.ID)}},
 	})
 	require.Equal(t, http.StatusCreated, inviteRR.Code, inviteRR.Body.String())
 	invited := decodeE2E[createAppointmentE2EResponse](t, inviteRR.Body.Bytes())
@@ -151,6 +161,7 @@ func TestSchoolParentConferenceHTTPFlow(t *testing.T) {
 		ID          string `json:"id"`
 		SlotMinutes int    `json:"slot_minutes"`
 		Slots       []any  `json:"slots"`
+		Version     string `json:"version"`
 	}
 	created := decodeE2E[struct {
 		Data conferenceWire `json:"data"`
@@ -170,8 +181,10 @@ func TestSchoolParentConferenceHTTPFlow(t *testing.T) {
 	assert.Equal(t, created.Data.ID, listed.Data.Conferences[0].ID)
 	assert.Equal(t, []string{"2b"}, listed.Data.Classes)
 
+	// The change rests on the day as listed (ADR 0311).
 	conference["slot_minutes"] = 20
 	conference["breaks"] = []any{}
+	conference["expected_version"] = listed.Data.Conferences[0].Version
 	updateRR := doJSON(t, router, http.MethodPut, base+"/"+created.Data.ID, token, conference)
 	require.Equal(t, http.StatusOK, updateRR.Code, updateRR.Body.String())
 	updated := decodeE2E[struct {
@@ -179,6 +192,11 @@ func TestSchoolParentConferenceHTTPFlow(t *testing.T) {
 	}](t, updateRR.Body.Bytes())
 	assert.Equal(t, 20, updated.Data.SlotMinutes)
 	assert.Len(t, updated.Data.Slots, 6)
+	// The listed version is outdated now.
+	conference["slot_minutes"] = 30
+	staleRR := doJSON(t, router, http.MethodPut, base+"/"+created.Data.ID, token, conference)
+	require.Equal(t, http.StatusConflict, staleRR.Code, staleRR.Body.String())
+	assert.Contains(t, staleRR.Body.String(), `"code":"general.changed_since_read"`)
 
 	deleteRR := doJSON(t, router, http.MethodDelete, base+"/"+created.Data.ID, token, nil)
 	require.Equal(t, http.StatusOK, deleteRR.Code, deleteRR.Body.String())

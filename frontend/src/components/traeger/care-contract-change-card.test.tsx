@@ -30,7 +30,7 @@ vi.mock("next-auth/react", () => ({
   SessionProvider: ({ children }: { children: React.ReactNode }) => children,
   useSession: () => ({
     data: {
-      user: { id: "A", scope: "org", orgId: 7, permissions: ["admin:*"] },
+      user: { id: "A", scope: "org", orgId: "7", permissions: ["admin:*"] },
     },
     status: "authenticated",
   }),
@@ -361,7 +361,7 @@ describe("CareContractChangeCard (#5979)", () => {
   });
 
   it.each([
-    "students.change_request_stale",
+    "general.changed_since_read",
     "students.change_request_not_pending",
   ])("refreshes and dismisses an obsolete form on %s", async (code) => {
     mocks.fetchContractChanges.mockResolvedValue(pending);

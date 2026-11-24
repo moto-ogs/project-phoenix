@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"testing"
@@ -23,8 +24,16 @@ func TestSeedWeekProtocolStepUsesTheWorkerThenTheNormalCloseRoute(t *testing.T) 
 		case "/api/week-protocols":
 			require.Equal(t, http.MethodGet, r.Method)
 			_, _ = fmt.Fprint(w, `{"data":[{"id":"4711"}]}`)
+		case "/api/week-protocols/4711":
+			require.Equal(t, http.MethodGet, r.Method)
+			_, _ = fmt.Fprint(w, `{"data":{"id":"4711","status":"draft","version":"v1"}}`)
 		case "/api/week-protocols/4711/close":
 			require.Equal(t, http.MethodPost, r.Method)
+			var body struct {
+				ExpectedVersion string `json:"expected_version"`
+			}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			assert.Equal(t, "v1", body.ExpectedVersion, "the closing sends the version the detail answered")
 			_, _ = fmt.Fprint(w, `{"data":{"id":"4711","status":"closed"}}`)
 		default:
 			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
@@ -38,6 +47,7 @@ func TestSeedWeekProtocolStepUsesTheWorkerThenTheNormalCloseRoute(t *testing.T) 
 	assert.Equal(t, []string{
 		"POST /api/week-protocols/seed",
 		"GET /api/week-protocols",
+		"GET /api/week-protocols/4711",
 		"POST /api/week-protocols/4711/close",
 	}, requests)
 }

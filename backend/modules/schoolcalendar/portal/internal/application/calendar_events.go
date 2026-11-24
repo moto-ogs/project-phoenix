@@ -214,17 +214,22 @@ func answeredAppointmentEvent(appointment *appointmentcap.Appointment, occurrenc
 }
 
 func appointmentEvent(appointment *appointmentcap.Appointment, occurrenceDate appointmentcap.Date, responseStatus *string, recipientID *int64, staffID int64) Event {
-	appointmentID := formatID(appointment.ID.Int64())
+	appointmentID := ident.ID(appointment.ID.Int64())
 	deliveryMode := appointment.DeliveryMode
 	occurrence := occurrenceDate.String()
 	endDate := occurrenceDate.AddDays(appointment.StartDate.DaysUntil(appointment.EndDate))
 	isStaffRecipient := recipientID != nil
-	var recipientIDString *string
+	var recipientIDValue *ident.ID
 	if recipientID != nil {
-		value := formatID(*recipientID)
-		recipientIDString = &value
+		value := ident.ID(*recipientID)
+		recipientIDValue = &value
 	}
-	organizerStaffID := formatID(appointment.OrganizerStaffID.Int64())
+	organizerStaffID := ident.ID(appointment.OrganizerStaffID.Int64())
+	canEdit := appointment.OrganizerStaffID == ident.ID(staffID) && !isParentConferenceAppointment(appointment)
+	var version string
+	if canEdit {
+		version = appointmentVersion(appointment)
+	}
 	return Event{
 		ID:               fmt.Sprintf("appointment:%d:%s", appointment.ID, occurrence),
 		Source:           EventSourceAppointment,
@@ -241,7 +246,7 @@ func appointmentEvent(appointment *appointmentcap.Appointment, occurrenceDate ap
 		Cancelled:        appointment.CancelledAt != nil,
 		DeliveryMode:     &deliveryMode,
 		ResponseStatus:   responseStatus,
-		RecipientID:      recipientIDString,
+		RecipientID:      recipientIDValue,
 		OrganizerStaffID: &organizerStaffID,
 		// Stay respondable for any real (non-informational) recipient, including
 		// already accepted/declined ones — the respond endpoints allow changing
@@ -250,9 +255,10 @@ func appointmentEvent(appointment *appointmentcap.Appointment, occurrenceDate ap
 		// cancelled appointment freezes RSVP entirely (matching the server-side
 		// rejection in RespondTo*Invitation).
 		CanRespond:      appointment.CancelledAt == nil && recipientID != nil && responseStatus != nil && *responseStatus != appointmentcap.ResponseStatusInfo,
-		CanEdit:         appointment.OrganizerStaffID == ident.ID(staffID) && !isParentConferenceAppointment(appointment),
+		CanEdit:         canEdit,
 		CanViewOverview: canStaffViewOverview(appointment, staffID, isStaffRecipient),
 		SchoolEventType: appointment.SchoolEventType,
+		Version:         version,
 	}
 }
 

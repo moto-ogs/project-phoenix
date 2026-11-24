@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
-	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	"github.com/moto-ogs/project-phoenix/modules/requestreview"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
@@ -20,14 +19,46 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// aggItem reads one item of the open list or of the history: both carry the
+// projection in the member named like request_type.
+type aggItem struct {
+	RequestType             string          `json:"request_type"`
+	GroupName               string          `json:"group_name"`
+	UrgentToday             bool            `json:"urgent_today"`
+	ExpectedVersion         string          `json:"expected_version"`
+	SubmittedByName         string          `json:"submitted_by_name"`
+	SubmittedByRelationship string          `json:"submitted_by_relationship"`
+	MasterData              json.RawMessage `json:"master_data"`
+	CareSchedule            json.RawMessage `json:"care_schedule"`
+	Offering                json.RawMessage `json:"offering"`
+	Excused                 json.RawMessage `json:"excused"`
+	DirectCorrection        json.RawMessage `json:"direct_correction"`
+}
+
+// projection is the member named like the item's request_type.
+func (item aggItem) projection() json.RawMessage {
+	return map[string]json.RawMessage{
+		requestreview.TypeMasterData: item.MasterData, requestreview.TypeCareSchedule: item.CareSchedule,
+		requestreview.TypeOffering: item.Offering, requestreview.TypeExcused: item.Excused,
+		requestreview.TypeDirectCorrection: item.DirectCorrection,
+	}[item.RequestType]
+}
+
+// requestID is the id of the request the item projects.
+func (item aggItem) requestID(t *testing.T) string {
+	t.Helper()
+	var payload struct {
+		ID string `json:"id"`
+	}
+	require.NoError(t, json.Unmarshal(item.projection(), &payload), "item of type %q carries no projection", item.RequestType)
+	require.NotEmpty(t, payload.ID)
+	return payload.ID
+}
+
 type aggListEnvelope struct {
 	Data struct {
-		Items []struct {
-			RequestType string          `json:"request_type"`
-			GroupName   string          `json:"group_name"`
-			Data        json.RawMessage `json:"data"`
-		} `json:"items"`
-		NextCursor string `json:"next_cursor"`
+		Items      []aggItem `json:"items"`
+		NextCursor string    `json:"next_cursor"`
 	} `json:"data"`
 }
 
@@ -74,45 +105,12 @@ func TestAggregatedChangeRequests_RouterHistoryCursor(t *testing.T) {
 	claims := testutil.AdminTestClaims(int(account.ID))
 	perms := []string{"users:read", "users:update"}
 
-	fetch := func(t *testing.T, query string) aggListEnvelope {
-		t.Helper()
-		rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?"+query, nil), claims, perms)
-		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-		var env aggListEnvelope
-		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &env))
-		return env
-	}
-
-	requestIDs := func(env aggListEnvelope) []string {
-		ids := make([]string, 0, len(env.Data.Items))
-		for _, item := range env.Data.Items {
-			var payload struct {
-				ID string `json:"id"`
-			}
-			require.NoError(t, json.Unmarshal(item.Data, &payload))
-			ids = append(ids, payload.ID)
-		}
-		return ids
-	}
 	idOf := func(request *masterdatarequests.Request) string {
 		return strconv.FormatInt(request.ID, 10)
 	}
 
-	pageOne := fetch(t, "view=history&types=master_data&search=Zaggreg&limit=2")
-	require.Len(t, pageOne.Data.Items, 2)
-	assert.Equal(t, []string{idOf(newest), idOf(middle)}, requestIDs(pageOne))
-	require.NotEmpty(t, pageOne.Data.NextCursor)
-
-	pageTwo := fetch(t, "view=history&types=master_data&search=Zaggreg&limit=2&cursor="+url.QueryEscape(pageOne.Data.NextCursor))
-	assert.Equal(t, []string{idOf(oldest)}, requestIDs(pageTwo))
-	assert.Empty(t, pageTwo.Data.NextCursor)
-
-	// The history status filter runs server-side.
-	rejectedOnly := fetch(t, "view=history&types=master_data&search=Zaggreg&status=rejected")
-	assert.Equal(t, []string{idOf(middle)}, requestIDs(rejectedOnly))
-
-	// The dedicated history path carries the same decisions and cursor in
-	// typed members, without the legacy view parameter or data projection.
+	// The history path carries the decisions and the cursor in typed members;
+	// the status filter runs server-side.
 	fetchHistory := func(query string) ([]string, string) {
 		t.Helper()
 		rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests/history?"+query, nil), claims, perms)
@@ -125,7 +123,7 @@ func TestAggregatedChangeRequests_RouterHistoryCursor(t *testing.T) {
 		for _, item := range env.Data.Items {
 			assert.Equal(t, requestreview.TypeMasterData, item.RequestType)
 			require.NotNil(t, item.MasterData)
-			ids = append(ids, item.MasterData.ID)
+			ids = append(ids, item.MasterData.ID.String())
 		}
 		return ids, env.Data.NextCursor
 	}
@@ -226,7 +224,7 @@ func TestAggregatedChangeRequests_GroupLeaderPolicyAtRouterAndBulkSeam(t *testin
 	bulkBody := func(rows ...*masterdatarequests.Request) *strings.Reader {
 		refs := make([]string, 0, len(rows))
 		for _, row := range rows {
-			refs = append(refs, fmt.Sprintf(`{"kind":"master_data","id":"%d","expected_version":"%s"}`, row.ID, careplan.ParentRequestVersion(row.UpdatedAt)))
+			refs = append(refs, fmt.Sprintf(`{"kind":"master_data","id":"%d","expected_version":"%s"}`, row.ID, queueVersion(t, tc, requestreview.TypeMasterData, row.ID)))
 		}
 		return strings.NewReader(`{"requests":[` + strings.Join(refs, ",") + `],"reason":"Geprüft"}`)
 	}
@@ -260,7 +258,7 @@ func TestAggregatedChangeRequests_RouterSearchMatchesFullNameAndEscapesWildcards
 	perms := []string{"users:read", "users:update"}
 	fetch := func(t *testing.T, query string) aggListEnvelope {
 		t.Helper()
-		rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?"+query, nil), claims, perms)
+		rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests/history?"+query, nil), claims, perms)
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 		var env aggListEnvelope
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &env))
@@ -268,21 +266,17 @@ func TestAggregatedChangeRequests_RouterSearchMatchesFullNameAndEscapesWildcards
 	}
 
 	// "kind Nach" spans the space the query builds between first and last name.
-	spanning := fetch(t, "view=history&types=master_data&search="+url.QueryEscape("kind Nach"))
+	spanning := fetch(t, "types=master_data&search="+url.QueryEscape("kind Nach"))
 	require.Len(t, spanning.Data.Items, 1)
-	var payload struct {
-		ID string `json:"id"`
-	}
-	require.NoError(t, json.Unmarshal(spanning.Data.Items[0].Data, &payload))
-	assert.Equal(t, strconv.FormatInt(decided.ID, 10), payload.ID)
+	assert.Equal(t, strconv.FormatInt(decided.ID, 10), spanning.Data.Items[0].requestID(t))
 
 	// Case folds.
-	assert.Len(t, fetch(t, "view=history&types=master_data&search=zSUCHkind").Data.Items, 1)
+	assert.Len(t, fetch(t, "types=master_data&search=zSUCHkind").Data.Items, 1)
 
 	// A typed "%" is a literal percent, not "match everything".
-	assert.Empty(t, fetch(t, "view=history&types=master_data&search="+url.QueryEscape("%")).Data.Items,
+	assert.Empty(t, fetch(t, "types=master_data&search="+url.QueryEscape("%")).Data.Items,
 		"a wildcard must not defeat the search")
-	assert.Empty(t, fetch(t, "view=history&types=master_data&search="+url.QueryEscape("Zsuchkind_Nachname")).Data.Items,
+	assert.Empty(t, fetch(t, "types=master_data&search="+url.QueryEscape("Zsuchkind_Nachname")).Data.Items,
 		"a typed underscore must not act as a single-character wildcard")
 }
 
@@ -312,7 +306,7 @@ func TestAggregatedChangeRequests_RouterStudentFilter(t *testing.T) {
 
 	fetch := func(t *testing.T, query string) aggListEnvelope {
 		t.Helper()
-		rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?"+query, nil), claims, perms)
+		rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests/history?"+query, nil), claims, perms)
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 		var env aggListEnvelope
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &env))
@@ -321,26 +315,22 @@ func TestAggregatedChangeRequests_RouterStudentFilter(t *testing.T) {
 	requestIDs := func(env aggListEnvelope) []string {
 		ids := make([]string, 0, len(env.Data.Items))
 		for _, item := range env.Data.Items {
-			var payload struct {
-				ID string `json:"id"`
-			}
-			require.NoError(t, json.Unmarshal(item.Data, &payload))
-			ids = append(ids, payload.ID)
+			ids = append(ids, item.requestID(t))
 		}
 		return ids
 	}
 
 	// Both children share the search name; only the filtered child remains.
-	both := requestIDs(fetch(t, "view=history&types=master_data&search=Zprotokoll"))
+	both := requestIDs(fetch(t, "types=master_data&search=Zprotokoll"))
 	assert.Contains(t, both, strconv.FormatInt(own.ID, 10))
 	assert.Contains(t, both, strconv.FormatInt(foreign.ID, 10))
 
-	filtered := requestIDs(fetch(t, "view=history&student_id="+strconv.FormatInt(child.ID, 10)))
+	filtered := requestIDs(fetch(t, "student_id="+strconv.FormatInt(child.ID, 10)))
 	assert.Equal(t, []string{strconv.FormatInt(own.ID, 10)}, filtered)
 
 	// A malformed child id is a client bug, not an unfiltered list.
 	for _, bad := range []string{"student_id=0", "student_id=-1", "student_id=abc"} {
-		rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?view=history&"+bad, nil), claims, perms)
+		rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests/history?"+bad, nil), claims, perms)
 		assert.Equal(t, http.StatusBadRequest, rr.Code, bad)
 	}
 }
@@ -375,23 +365,11 @@ func TestAggregatedChangeRequests_RouterNamesWhoFiled(t *testing.T) {
 		rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?types=master_data&"+query, nil),
 			testutil.AdminTestClaims(int(reviewer.ID)), []string{"users:read", "users:update"})
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-		var env struct {
-			Data struct {
-				Items []struct {
-					SubmittedByName         string          `json:"submitted_by_name"`
-					SubmittedByRelationship string          `json:"submitted_by_relationship"`
-					Data                    json.RawMessage `json:"data"`
-				} `json:"items"`
-			} `json:"data"`
-		}
+		var env aggListEnvelope
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &env))
 		result := map[string]filed{}
 		for _, item := range env.Data.Items {
-			var payload struct {
-				ID string `json:"id"`
-			}
-			require.NoError(t, json.Unmarshal(item.Data, &payload))
-			result[payload.ID] = filed{item.SubmittedByName, item.SubmittedByRelationship}
+			result[item.requestID(t)] = filed{item.SubmittedByName, item.SubmittedByRelationship}
 		}
 		return result
 	}

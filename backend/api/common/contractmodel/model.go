@@ -23,19 +23,23 @@ const (
 
 // Schema is one value on the wire.
 type Schema struct {
-	Kind     string  `json:"kind"`
-	Nullable bool    `json:"nullable,omitempty"`
-	Elem     *Schema `json:"elem,omitempty"`
+	Kind       string  `json:"kind"`
+	Nullable   bool    `json:"nullable,omitempty"`
+	LegacyJSON bool    `json:"legacy_json,omitempty"`
+	Elem       *Schema `json:"elem,omitempty"`
 	// Ref names the object of a KindRef or the enum of a KindEnum.
 	Ref string `json:"ref,omitempty"`
 }
 
 // Field is one member of an object. Optional means the key may be absent.
 type Field struct {
-	Name       string `json:"name"`
-	Optional   bool   `json:"optional,omitempty"`
-	Deprecated bool   `json:"deprecated,omitempty"`
-	Schema     Schema `json:"schema"`
+	Name        string `json:"name"`
+	Optional    bool   `json:"optional,omitempty"`
+	Deprecated  bool   `json:"deprecated,omitempty"`
+	JSONReason  string `json:"json_reason,omitempty"`
+	RefinesJSON string `json:"refines_json,omitempty"`
+	TextReason  string `json:"text_reason,omitempty"`
+	Schema      Schema `json:"schema"`
 }
 
 // Object is one Go struct as it renders.
@@ -115,7 +119,10 @@ type Route struct {
 	PrivateCache bool `json:"private_cache,omitempty"`
 	// RouteFile says why the portal's own route file, not the catalog
 	// proxy, serves the route. No proxy allowlist names it.
-	RouteFile string `json:"route_file,omitempty"`
+	RouteFile          string `json:"route_file,omitempty"`
+	BrowserPath        string `json:"browser_path,omitempty"`
+	BrowserMethod      string `json:"browser_method,omitempty"`
+	BrowserOwnContract bool   `json:"browser_own_contract,omitempty"`
 	// Plain says the route answers its data as the whole body, without the
 	// envelope. Only a route file reads such an answer.
 	Plain bool `json:"plain,omitempty"`

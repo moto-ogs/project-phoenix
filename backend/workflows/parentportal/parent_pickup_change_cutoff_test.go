@@ -242,11 +242,11 @@ func TestEditPickupChangeRequestHonoursSameDayCutoff(t *testing.T) {
 
 	later := d.service(t, settings, berlinClock(11, 1))
 	_, err = later.EditPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, created.ID,
-		cutoffToday, cutoffPickupTime().Add(time.Hour), "", "Termin verschoben", "")
+		cutoffToday, cutoffPickupTime().Add(time.Hour), "", "Termin verschoben", testpkg.CareRequestVersion(t, created.ID))
 	require.ErrorIs(t, err, parentService.ErrPickupChangeCutoffPassed)
 
 	_, err = later.EditPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, created.ID,
-		cutoffToday.AddDays(1), cutoffPickupTime(), "", "Termin verschoben", "")
+		cutoffToday.AddDays(1), cutoffPickupTime(), "", "Termin verschoben", testpkg.CareRequestVersion(t, created.ID))
 	require.ErrorIs(t, err, parentService.ErrPickupChangeCutoffPassed, "moving today's request away is closed too")
 }
 
@@ -268,11 +268,11 @@ func TestPickupChangeRequestClosesTodayAtCareDayEnd(t *testing.T) {
 
 	later := d.service(t, settings, berlinClock(16, 0))
 	_, err = later.EditPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, created.ID,
-		cutoffToday, cutoffPickupTime().Add(time.Hour), "", "Termin verschoben", "")
+		cutoffToday, cutoffPickupTime().Add(time.Hour), "", "Termin verschoben", testpkg.CareRequestVersion(t, created.ID))
 	require.ErrorIs(t, err, parentService.ErrPickupChangeCareDayEnded)
 
 	_, err = later.EditPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, created.ID,
-		cutoffToday.AddDays(1), cutoffPickupTime(), "", "Termin verschoben", "")
+		cutoffToday.AddDays(1), cutoffPickupTime(), "", "Termin verschoben", testpkg.CareRequestVersion(t, created.ID))
 	require.NoError(t, err, "moving a pending request to a later day stays open without a cutoff")
 
 	other := testpkg.CreateTestParentGuardianChain(t, d.db)
@@ -331,7 +331,7 @@ func TestPickupWritesRecheckCareDayEndAfterPolicyLock(t *testing.T) {
 				_, err = svc.SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, cutoffToday, cutoffPickupTime(), "", "Arzttermin", nil)
 			case "edit request":
 				_, err = svc.EditPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, requestID,
-					cutoffToday, cutoffPickupTime().Add(time.Hour), "", "Termin verschoben", "")
+					cutoffToday, cutoffPickupTime().Add(time.Hour), "", "Termin verschoben", testpkg.CareRequestVersion(t, requestID))
 			}
 			require.True(t, lockTaken)
 			require.ErrorIs(t, err, parentService.ErrPickupChangeCareDayEnded)

@@ -54,6 +54,70 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * The server refused a write because what it depends on changed since it was
+ * read (`general.changed_since_read`, ADR 0311). The caller shows the stored
+ * state again, never offers to resend the same request: that would be
+ * refused again.
+ */
+export function isChangedSinceRead(error: unknown): boolean {
+  return (
+    error instanceof ApiError && error.code === "general.changed_since_read"
+  );
+}
+
+/**
+ * Older refusals of the same kind with a code of their module (ADR 0311 §6):
+ * a preview, import, baseline or form the write was confirmed against has
+ * changed since it was read. New ones use `general.changed_since_read`.
+ */
+const LEGACY_READ_STATE_CODES: ReadonlySet<ErrorCode> = new Set<ErrorCode>([
+  "care_contract.child_link_changed",
+  "care_contract.enrollment_preview_changed",
+  "care_contract.import_changed",
+  "enrollment.holiday_allocation_changed",
+  "enrollment.holiday_registration_form_changed",
+  "enrollment.renewal_terms_changed",
+  "enrollment.traeger_preview_stale",
+  "grade_transition.preview_stale",
+  "meals.billing_month_changed",
+  "meals.day_changed",
+  "parent_billing.billing_run_changed",
+  "parent_billing.family_children_import_changed",
+  "parent_billing.sepa_debits_changed",
+  "parent_billing.sepa_import_changed",
+  "parent_billing.sepa_mandate_text_changed",
+  "pickup.preview_stale",
+  "students.care_exit_preview_changed",
+  "students.care_request_plan_changed",
+  "students.change_request_stale",
+  "students.companions_changed",
+  "students.deletion_constraints_changed",
+  "students.deletion_preview_changed",
+  "students.pickup_change_impact_changed",
+  "timetable.closing_day_notice_changed",
+  "timetable.completion_confirmation_stale",
+  "timetable.template_booking_gap_stale",
+  "traeger.closing_day_bookings_changed",
+  "workforce.traeger_staff_import_changed",
+]);
+
+/**
+ * The server refused a write because the state it was confirmed against is
+ * no longer the stored one: `general.changed_since_read` or one of the older
+ * module codes of the same meaning. The same request would be refused
+ * again; the surface shows the stored state, never a retry
+ * (`show(error, { reload })` of the error path does both).
+ */
+export function isReadStateRefusal(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    error.code !== undefined &&
+    (error.code === "general.changed_since_read" ||
+      LEGACY_READ_STATE_CODES.has(error.code))
+  );
+}
+
 /** Mirrors backend/api/common.ErrorClassCode until generated contracts include it. */
 export function errorClassCode(status: number): ErrorCode {
   if (status === 401 || status === 403) return "general.permission";
@@ -125,6 +189,7 @@ export function problemTitle(status: number): string {
     404: "Not Found",
     405: "Method Not Allowed",
     409: "Conflict",
+    412: "Precondition Failed",
     413: "Content Too Large",
     422: "Unprocessable Content",
     429: "Too Many Requests",
@@ -236,7 +301,7 @@ export function apiErrorFromBody(
  * takes code, field errors and request ID from the envelope when the text is
  * JSON.
  */
-export function apiErrorFromText(
+function apiErrorFromText(
   message: string,
   status: number,
   text: string,

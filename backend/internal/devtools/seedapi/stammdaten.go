@@ -268,12 +268,8 @@ func (s *FixedSeeder) seedClassArrivalTimes(_ context.Context, result *FixedResu
 		{"weekday": 5, "expected_arrival": "11:45"},
 	}
 	for _, class := range classNames {
-		_, err := s.client.Post("/api/students/arrival-schedules/bulk", map[string]any{
-			"school_class": class,
-			"schedules":    schedules,
-		})
-		if err != nil {
-			return fmt.Errorf("seed class arrival times for %s: %w", class, err)
+		if err := s.saveClassArrivalTimes(class, schedules); err != nil {
+			return err
 		}
 		result.ClassArrivalTimeCount++
 	}
@@ -465,7 +461,7 @@ func (s *FixedSeeder) seedStaff(_ context.Context, result *FixedResult) error {
 		}
 
 		body := map[string]any{
-			"person_id":   personID,
+			"person_id":   ident.ID(personID),
 			"is_teacher":  staff.IsTeacher,
 			"staff_notes": fmt.Sprintf("Position: %s", staff.Position),
 			"role":        displayRole, // Display role for badge (Admin/Betreuer/Extern)
@@ -521,7 +517,7 @@ func (s *FixedSeeder) retireFormerStaff() error {
 		"kontakt":         {"address_city": "Köln", "phone": "+49 221 4605318", "note": "Frühere Kontaktdaten für die Wiederaufnahme"},
 		"qualifikationen": {"qualifikationen": []map[string]any{{"name": "Erste Hilfe"}}, "note": "Frühere Qualifikation für die Wiederaufnahme"},
 	} {
-		if _, err := s.client.Put(fmt.Sprintf("/api/staff/%d/stammdaten/%s", formerStaffID, section), data); err != nil {
+		if err := putStammdatenSection(s.client, formerStaffID, section, data); err != nil {
 			return fmt.Errorf("seed former staff %s: %w", section, err)
 		}
 	}
@@ -567,11 +563,11 @@ func (s *FixedSeeder) seedGroups(_ context.Context, result *FixedResult) error {
 
 		body := map[string]any{
 			"name":        class.name,
-			"teacher_ids": teacherIDsForGroup,
+			"teacher_ids": ident.IDs(teacherIDsForGroup),
 		}
 		roomNames := []string{"OGS-Raum 1", "OGS-Raum 2", "OGS-Raum 3", "Kreativraum"}
 		if roomID := s.roomIDs[roomNames[index%len(roomNames)]]; roomID > 0 {
-			body["room_id"] = roomID
+			body["room_id"] = ident.ID(roomID)
 		}
 
 		respBody, err := s.client.Post("/api/groups", body)
@@ -656,7 +652,7 @@ func (s *FixedSeeder) seedStudents(_ context.Context, result *FixedResult) error
 			"first_name":   student.FirstName,
 			"last_name":    student.LastName,
 			"school_class": student.Class,
-			"group_id":     groupID,
+			"group_id":     ident.ID(groupID),
 			"birthday":     birthday,
 		}
 		if i%3 == 0 {
@@ -945,26 +941,6 @@ func (s *FixedSeeder) seedGuardianPayments(_ context.Context, result *FixedResul
 	return nil
 }
 
-// storeDemoBankDetails stores the IBAN of the payer DemoGuardians[index]. A
-// guardian of several children stores it with the first child only.
-func (s *FixedSeeder) storeDemoBankDetails(index int, guardian DemoGuardian, guardianID int64, ibanIndex int) (bool, error) {
-	if guardian.StudentIndex%4 == 3 || demoGuardianFirstIndex(guardian) != index {
-		// Payer known, bank details still missing.
-		return false, nil
-	}
-	body := map[string]any{"iban": demoIBAN(ibanIndex)}
-	if guardian.StudentIndex%5 == 2 {
-		// A Kontoinhaber that differs from the guardian: the account runs
-		// on the partner's name.
-		body["account_holder"] = fmt.Sprintf("%s %s", guardian.FirstName, guardian.LastName+"-Berger")
-	}
-	paymentPath := fmt.Sprintf("/api/guardians/%d/payment", guardianID)
-	if _, err := s.client.Put(paymentPath, body); err != nil {
-		return false, fmt.Errorf("store bank details for guardian %s: %w", demoGuardianKey(guardian), err)
-	}
-	return true, nil
-}
-
 // seedPickupSchedules creates the weekly Gehzeiten. Children with "Wird abgeholt"
 // status get a varied but deterministic pickup pattern: different times per weekday
 // to simulate realistic family schedules (e.g. earlier on Tuesdays due to
@@ -1076,12 +1052,7 @@ func (s *FixedSeeder) seedPickupSchedules(_ context.Context, result *FixedResult
 			schedules = append(schedules, entry)
 		}
 
-		path := fmt.Sprintf("/api/students/%d/pickup-schedules", studentID)
-		body := map[string]any{
-			"schedules": schedules,
-		}
-
-		_, err := s.client.Put(path, body)
+		err := putWeeklyPickupSchedules(s.client, studentID, schedules)
 		if err != nil {
 			return fmt.Errorf("seed pickup schedule for student %s %s: %w", student.FirstName, student.LastName, err)
 		}
@@ -1172,9 +1143,9 @@ func (s *FixedSeeder) seedActivities(_ context.Context, result *FixedResult) err
 			"name":             activity.Name,
 			"max_participants": 20,
 			"is_open":          true,
-			"category_id":      categoryID,
-			"planned_room_id":  roomID,
-			"supervisor_ids":   []int64{supervisorID},
+			"category_id":      ident.ID(categoryID),
+			"planned_room_id":  ident.ID(roomID),
+			"supervisor_ids":   []ident.ID{ident.ID(supervisorID)},
 		}
 
 		activityID, err := s.postDemoActivity(activity.Name, body)
@@ -1245,7 +1216,7 @@ func (s *FixedSeeder) enrollStudents(_ context.Context) error {
 		}
 
 		path := fmt.Sprintf("/api/activities/%d/students", activityID)
-		if _, err := s.client.Put(path, map[string]any{"student_ids": studentIDs}); err != nil {
+		if _, err := s.client.Put(path, map[string]any{"student_ids": ident.IDs(studentIDs)}); err != nil {
 			return fmt.Errorf("enroll students in %s: %w", activityName, err)
 		}
 		studentCount += len(studentIDs)
@@ -1367,7 +1338,7 @@ func (s *FixedSeeder) seedStaffAccounts(ctx context.Context, result *FixedResult
 			"username":         username,
 			"password":         password,
 			"confirm_password": password,
-			"role_id":          roleID,
+			"role_id":          ident.ID(roleID),
 		}
 		registerBody["first_name"], registerBody["last_name"] = visitorDisplayName(s.visitor, i == visitorStaffIndex,
 			staff.FirstName, staff.LastName, DemoStaff[visitorStaffIndex].FirstName, DemoStaff[visitorStaffIndex].LastName)
@@ -1375,7 +1346,7 @@ func (s *FixedSeeder) seedStaffAccounts(ctx context.Context, result *FixedResult
 			// The visitor enters with every function; the demo role chosen on
 			// the entry page replaces it with a reduced role of the school
 			// (#3469), so the seed itself needs no role for the visitor.
-			registerBody["role_id"] = adminRoleID
+			registerBody["role_id"] = ident.ID(adminRoleID)
 		}
 
 		registerResp, err := s.client.Post("/auth/register", registerBody)

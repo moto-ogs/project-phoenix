@@ -306,11 +306,12 @@ func TestInstance_UpdatePlannedRejectsDateOutsideActiveCalendarPeriod(t *testing
 	s := buildLifecycle(t)
 	instance := seedInstance(t, s, false, false)
 	_, err := s.svc.UpdatePlanned(s.ctx, instance.ID, timetable.UpdateInstanceInput{
-		Date:      calendar.NewDate(2101, 4, 21),
-		StartTime: instance.StartTime,
-		EndTime:   instance.EndTime,
-		Title:     "Außerhalb des Zeitraums",
-		RoomID:    s.roomID,
+		ExpectedVersion: plannerVersion(t, s.ctx, s.timetableData.Data, instance.ID),
+		Date:            calendar.NewDate(2101, 4, 21),
+		StartTime:       instance.StartTime,
+		EndTime:         instance.EndTime,
+		Title:           "Außerhalb des Zeitraums",
+		RoomID:          s.roomID,
 	}, nil)
 
 	require.ErrorIs(t, err, timetable.ErrInstanceOutsideActiveCalendarPeriod)
@@ -327,11 +328,12 @@ func TestInstance_UpdatePlannedKeepsDateAfterPeriodDeactivation(t *testing.T) {
 	testpkg.SetCalendarPeriodActive(t, s.db, s.period, false)
 
 	updated, err := s.svc.UpdatePlanned(s.ctx, instance.ID, timetable.UpdateInstanceInput{
-		Date:      calendar.Date(instance.Date),
-		StartTime: instance.StartTime,
-		EndTime:   instance.EndTime,
-		Title:     "Bearbeitet nach Deaktivierung",
-		RoomID:    s.roomID,
+		ExpectedVersion: plannerVersion(t, s.ctx, s.timetableData.Data, instance.ID),
+		Date:            calendar.Date(instance.Date),
+		StartTime:       instance.StartTime,
+		EndTime:         instance.EndTime,
+		Title:           "Bearbeitet nach Deaktivierung",
+		RoomID:          s.roomID,
 	}, nil)
 
 	require.NoError(t, err)
@@ -346,11 +348,12 @@ func TestInstance_UpdatePlannedMovesSpontaneousOutsideActiveCalendarPeriod(t *te
 	targetDate := calendar.NewDate(2101, 4, 21)
 
 	updated, err := s.svc.UpdatePlanned(s.ctx, instance.ID, timetable.UpdateInstanceInput{
-		Date:      targetDate,
-		StartTime: instance.StartTime,
-		EndTime:   instance.EndTime,
-		Title:     "Spontan verschoben",
-		RoomID:    s.roomID,
+		ExpectedVersion: plannerVersion(t, s.ctx, s.timetableData.Data, instance.ID),
+		Date:            targetDate,
+		StartTime:       instance.StartTime,
+		EndTime:         instance.EndTime,
+		Title:           "Spontan verschoben",
+		RoomID:          s.roomID,
 	}, nil)
 
 	require.NoError(t, err)
@@ -365,6 +368,7 @@ func TestInstance_UpdatePlannedConvertsSpontaneousRejectsOutsideActiveCalendarPe
 	instance := seedSpontaneousInstance(t, s, false)
 	periodID := s.period.ID
 	_, err := s.svc.UpdatePlanned(s.ctx, instance.ID, timetable.UpdateInstanceInput{
+		ExpectedVersion:  plannerVersion(t, s.ctx, s.timetableData.Data, instance.ID),
 		Date:             calendar.NewDate(2101, 4, 21),
 		StartTime:        instance.StartTime,
 		EndTime:          instance.EndTime,
@@ -386,6 +390,7 @@ func TestInstance_UpdatePlannedConvertsSpontaneousSameDateRejectsInactiveCalenda
 	testpkg.SetCalendarPeriodActive(t, s.db, s.period, false)
 
 	_, err := s.svc.UpdatePlanned(s.ctx, instance.ID, timetable.UpdateInstanceInput{
+		ExpectedVersion:  plannerVersion(t, s.ctx, s.timetableData.Data, instance.ID),
 		Date:             calendar.Date(instance.Date),
 		StartTime:        instance.StartTime,
 		EndTime:          instance.EndTime,
@@ -457,12 +462,13 @@ func TestInstance_PlannedCRUD_BroadcastsStaffingDeviationChanged(t *testing.T) {
 	assert.Equal(t, []string{"instance_create"}, deviationSources())
 
 	_, err = svc.UpdatePlanned(s.ctx, inst.ID, timetable.UpdateInstanceInput{
-		Date:      calendar.Date(inst.Date),
-		StartTime: inst.StartTime,
-		EndTime:   inst.EndTime,
-		Title:     "CRUD-Broadcast-Test (edited)",
-		RoomID:    s.roomID,
-		StaffIDs:  []int64{s.staffID},
+		ExpectedVersion: plannerVersion(t, s.ctx, s.timetableData.Data, inst.ID),
+		Date:            calendar.Date(inst.Date),
+		StartTime:       inst.StartTime,
+		EndTime:         inst.EndTime,
+		Title:           "CRUD-Broadcast-Test (edited)",
+		RoomID:          s.roomID,
+		StaffIDs:        []int64{s.staffID},
 	}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"instance_create", "instance_update"}, deviationSources())
@@ -1881,7 +1887,8 @@ func TestInstance_CreateAndUpdatePlanned_ReapplyActiveStatusDays(t *testing.T) {
 	assert.Equal(t, sick.ID, *createdRow.StudentStatusDayID)
 
 	updated, err := s.svc.UpdatePlanned(s.ctx, inst.ID, timetable.UpdateInstanceInput{
-		Date: updatedDate, StartTime: time.Date(1, 1, 1, 11, 0, 0, 0, time.UTC),
+		ExpectedVersion: plannerVersion(t, s.ctx, s.timetableData.Data, inst.ID),
+		Date:            updatedDate, StartTime: time.Date(1, 1, 1, 11, 0, 0, 0, time.UTC),
 		EndTime: time.Date(1, 1, 1, 12, 0, 0, 0, time.UTC), Title: "Status provenance update",
 		RoomID: s.roomID, ActivityGroupID: &s.tmplID, StudentIDs: []int64{s.student2},
 	}, nil)
@@ -1998,13 +2005,14 @@ func TestInstance_UpdatePlanned_ReplacesAssignmentsAndFields(t *testing.T) {
 	ai := seedInstance(t, s, true, true)
 
 	updated, err := s.svc.UpdatePlanned(s.ctx, ai.ID, timetable.UpdateInstanceInput{
-		Date:       calendar.NewDate(2026, 5, 7),
-		StartTime:  time.Date(1, 1, 1, 16, 0, 0, 0, time.UTC),
-		EndTime:    time.Date(1, 1, 1, 17, 30, 0, 0, time.UTC),
-		Title:      "Updated planned instance",
-		RoomID:     s.roomID,
-		StaffIDs:   []int64{s.staffID, s.staffID},
-		StudentIDs: []int64{s.student2},
+		ExpectedVersion: plannerVersion(t, s.ctx, s.timetableData.Data, ai.ID),
+		Date:            calendar.NewDate(2026, 5, 7),
+		StartTime:       time.Date(1, 1, 1, 16, 0, 0, 0, time.UTC),
+		EndTime:         time.Date(1, 1, 1, 17, 30, 0, 0, time.UTC),
+		Title:           "Updated planned instance",
+		RoomID:          s.roomID,
+		StaffIDs:        []int64{s.staffID, s.staffID},
+		StudentIDs:      []int64{s.student2},
 	}, nil)
 	require.NoError(t, err)
 
@@ -2095,6 +2103,7 @@ func TestInstance_UpdatePlanned_KeepsSpontaneousOriginWhenLinkingOffering(t *tes
 	ai := seedSpontaneousInstance(t, s, false)
 
 	updated, err := s.svc.UpdatePlanned(s.ctx, ai.ID, timetable.UpdateInstanceInput{
+		ExpectedVersion: plannerVersion(t, s.ctx, s.timetableData.Data, ai.ID),
 		Date:            calendar.Date(ai.Date),
 		StartTime:       ai.StartTime,
 		EndTime:         ai.EndTime,
@@ -2169,11 +2178,12 @@ func TestInstance_UpdatePlanned_RejectsNonPlanned(t *testing.T) {
 			forceSetInstanceStatus(t, s, ai.ID, status)
 
 			_, err := s.svc.UpdatePlanned(s.ctx, ai.ID, timetable.UpdateInstanceInput{
-				Date:      calendar.NewDate(2026, 5, 8),
-				StartTime: time.Date(1, 1, 1, 9, 0, 0, 0, time.UTC),
-				EndTime:   time.Date(1, 1, 1, 10, 0, 0, 0, time.UTC),
-				Title:     "Should fail",
-				RoomID:    s.roomID,
+				ExpectedVersion: plannerVersion(t, s.ctx, s.timetableData.Data, ai.ID),
+				Date:            calendar.NewDate(2026, 5, 8),
+				StartTime:       time.Date(1, 1, 1, 9, 0, 0, 0, time.UTC),
+				EndTime:         time.Date(1, 1, 1, 10, 0, 0, 0, time.UTC),
+				Title:           "Should fail",
+				RoomID:          s.roomID,
 			}, nil)
 			require.Error(t, err)
 			assert.ErrorIs(t, err, timetable.ErrInvalidInstanceTransition)

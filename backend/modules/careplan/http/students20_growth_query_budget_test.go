@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -21,7 +23,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
-	"github.com/stretchr/testify/require"
 )
 
 // These are resource HTTP tests with real owner bindings. The test router
@@ -67,6 +68,11 @@ func TestStudents20ArrivalGrowthQueryBudget(t *testing.T) {
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
 		require.Equal(t, expectedExceptions, body.Data.Exceptions)
+		for i := range body.Data.Notes {
+			// The read-state token is opaque (ADR 0311): present, not rebuilt.
+			require.NotEmpty(t, body.Data.Notes[i].Version)
+			body.Data.Notes[i].Version = ""
+		}
 		require.Equal(t, expectedNotes, body.Data.Notes)
 		require.Equal(t, expectedSchedules, body.Data.Schedules)
 		require.Zero(t, counter.WriteRows())
@@ -161,26 +167,44 @@ func TestStudents20CompanionsGrowthQueryBudget(t *testing.T) {
 		}
 		entries := make([]map[string]any, 0, n)
 		for _, id := range ids {
-			entries = append(entries, map[string]any{"companion_student_id": id, "weekdays": []string{"mon"}})
+			entries = append(entries, map[string]any{"companion_student_id": fmt.Sprint(id), "weekdays": []string{"mon"}})
 		}
 		putStudent(t, tc, child.ID, accompaniedPlanBody(map[string]any{"companions": entries, "companions_fingerprint": mondayLinkFingerprint(previous...)}))
 		counter.Reset()
-		req := testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/companions", child.ID), nil)
+		req := testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/companion-links", child.ID), nil)
 		req = req.WithContext(counter.Context(req.Context()))
 		rr := students20Exec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 		var body struct {
-			Data []companion `json:"data"`
+			Data struct {
+				Companions  []companion `json:"companions"`
+				Fingerprint string      `json:"fingerprint"`
+			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
-		require.Equal(t, expected, body.Data)
+		require.Equal(t, expected, body.Data.Companions)
+		require.Equal(t, mondayLinkFingerprint(ids...), body.Data.Fingerprint)
 		require.NotContains(t, rr.Body.String(), "Unrelated")
 		require.Zero(t, counter.WriteRows())
+		assertStudents20CareplanBudget(t, "companion-links", n, counter.Measurement(counter.Queries()))
+		t.Logf("students20 companion-links N%d SQL=%d", n, counter.Total())
+
+		// The deprecated list route stays for one release and keeps its budget.
+		counter.Reset()
+		req = testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/companions", child.ID), nil)
+		req = req.WithContext(counter.Context(req.Context()))
+		rr = students20Exec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
+		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+		var list struct {
+			Data []companion `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &list))
+		require.Equal(t, expected, list.Data)
+		require.Zero(t, counter.WriteRows())
 		assertStudents20CareplanBudget(t, "companions", n, counter.Measurement(counter.Queries()))
-		t.Logf("students20 companions N%d SQL=%d", n, counter.Total())
 	}
 	guest := testpkg.CreateTestAccount(t, tc.db, "s20-companion-guest@example.com")
-	rr := students20Exec(t, tc, testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/companions", child.ID), nil), testutil.TeacherTestClaims(int(guest.ID)), []string{"users:read"})
+	rr := students20Exec(t, tc, testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/companion-links", child.ID), nil), testutil.TeacherTestClaims(int(guest.ID)), []string{"users:read"})
 	require.Equal(t, http.StatusForbidden, rr.Code, rr.Body.String())
 }
 
@@ -475,6 +499,10 @@ func assertStudents20CareplanBudget(t *testing.T, route string, n int, queries q
 		querybudgets.AssertQueryBudget(t, "api.students.students20.class_exceptions.n3", queries)
 	case "class_exceptions.n8":
 		querybudgets.AssertQueryBudget(t, "api.students.students20.class_exceptions.n8", queries)
+	case "companion-links.n3":
+		querybudgets.AssertQueryBudget(t, "api.students.students20.companion-links.n3", queries)
+	case "companion-links.n8":
+		querybudgets.AssertQueryBudget(t, "api.students.students20.companion-links.n8", queries)
 	case "companions.n3":
 		querybudgets.AssertQueryBudget(t, "api.students.students20.companions.n3", queries)
 	case "companions.n8":

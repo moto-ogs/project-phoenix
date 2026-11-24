@@ -149,6 +149,9 @@ type CareTariffs struct {
 	Tariffs     []CareTariff            `json:"tariffs"`
 	Lists       []CarePriceListHead     `json:"lists"`
 	BilledUntil map[int64]calendar.Date `json:"billed_until"`
+	// Versions is per school the read-state token of its price lists: a
+	// save or removal of one of them sends it back (ADR 0311).
+	Versions map[int64]string `json:"versions"`
 }
 
 // CareBilledPrice is a weekday of a module an issued invoice of a school
@@ -182,6 +185,9 @@ type CarePriceList struct {
 	ValidFrom  calendar.Date
 	FreeMonths []int
 	Prices     []CarePrice
+	// ExpectedVersion is the version of the school's price lists the
+	// office read (CareTariffs.Versions).
+	ExpectedVersion string
 }
 
 // CareRun is a monthly run as the list shows it. DocumentCount, TotalCents
@@ -262,6 +268,30 @@ type CareRecipient struct {
 	// ContractDraft tells that the contract is still a draft, which can be
 	// discarded with everything that hangs on it (#7862); never on the wire.
 	ContractDraft bool `json:"-"`
+	// FamilyContractID is the leading contract of the family the
+	// Träger-Büro joined the contract to (#7161, ADR 0319), zero when it
+	// leads or is alone; never on the wire.
+	FamilyContractID int64 `json:"-"`
+}
+
+// FamilyOf is the family of the contract contractID whose party r is
+// (ContractFamilyKey): the mail address of the party, else the leading
+// contract of its family, else the contract itself.
+func (r CareRecipient) FamilyOf(contractID int64) string {
+	if r.FamilyContractID > 0 {
+		contractID = r.FamilyContractID
+	}
+	return ContractFamilyKey(r.Email, contractID)
+}
+
+// OwnContractFamily is the family a contract had before the office joined
+// it to the family of another contract (#7161, ADR 0319 point 6): what is
+// stored under that key rests, and a child's own debtor number is still
+// found there. ok is false when family is the contract's own family, an
+// address, or contractID names no contract.
+func OwnContractFamily(family string, contractID int64) (string, bool) {
+	own := ContractFamilyKey("", contractID)
+	return own, contractID > 0 && IsContractFamily(family) && own != family
 }
 
 // CareInvoice is the invoice of one contract and month: a draft without a
@@ -317,6 +347,10 @@ type CareInvoice struct {
 	// correction lines of the applied ones.
 	Amendments []CareAmendment `json:"amendments,omitempty"`
 	TotalCents int64           `json:"total_cents" contract:"number"`
+	// BilledBy names the issued documents behind an entry of
+	// InvoicedContracts: the monthly invoice and the Jahresbescheid that
+	// bill the contract's month (#7892). Never on the wire.
+	BilledBy []CareBilledInvoice `json:"-"`
 }
 
 // CareUnpriced is a booked weekday of a module the price list has no price
@@ -383,6 +417,55 @@ type CareUncountedContract struct {
 // its contracts bill the same module on the same day (ADR 0158 E3).
 const HoldReasonDuplicateContract = "duplicate_contract"
 
+// Why a run holds a child back for an invoice of the month that is issued
+// already (ADR 0158, Nachtrag #7892). HoldReasonAlreadyBilled: an issued
+// invoice or Jahresbescheid of another contract of the child bills days the
+// run would bill again. HoldReasonMealOnlyInvoice: the issued invoice of
+// the contract itself carries only its Mensa, so its care cannot be billed
+// until that invoice is cancelled. HoldReasonUnpricedNotice, only in a run of
+// Jahresbescheide: another contract of the child has no price, so it keeps
+// its assessment, which bills days the run would assess again (#7952).
+const (
+	HoldReasonAlreadyBilled   = "already_billed"
+	HoldReasonMealOnlyInvoice = "meal_only_invoice"
+	HoldReasonUnpricedNotice  = "unpriced_notice"
+)
+
+// Where an issued document that bills a month comes from: a monthly run or
+// a run of Jahresbescheide.
+const (
+	BilledByCareRun   = "care_run"
+	BilledByNoticeRun = "care_notice_run"
+)
+
+// CareBilledInvoice is an issued monthly invoice or a month of a
+// Jahresbescheid that already bills a child's month (#7892): its number,
+// the kind of document, its contract and school, and the run that issued
+// it (Source says of which kind), which is where the office opens and
+// cancels it.
+type CareBilledInvoice struct {
+	Source       string   `json:"source"`
+	RunID        ident.ID `json:"run_id"`
+	ContractID   ident.ID `json:"contract_id"`
+	SchoolID     ident.ID `json:"school_id"`
+	SchoolName   string   `json:"school_name"`
+	Number       string   `json:"number"`
+	DocumentKind string   `json:"document_kind"`
+}
+
+// CareBilledChild is a child the run holds back because an issued invoice
+// of the month already bills it (ADR 0158, Nachtrag #7892). Contracts are
+// the contracts of the child the run issues no invoice for, Invoices the
+// issued documents in their way. The run bills the child again once the
+// office cancelled them.
+type CareBilledChild struct {
+	ChildFirstName string                  `json:"child_first_name"`
+	ChildLastName  string                  `json:"child_last_name"`
+	Reason         string                  `json:"reason"`
+	Contracts      []CareDuplicateContract `json:"contracts"`
+	Invoices       []CareBilledInvoice     `json:"invoices"`
+}
+
 // CareHeldSlot is a module and weekday two contracts of a held child bill
 // on the same day.
 type CareHeldSlot struct {
@@ -400,6 +483,9 @@ type CareRunHold struct {
 	ChildLastName  string
 	Contracts      []CareDuplicateContract
 	Slots          []CareHeldSlot
+	// Invoices are the issued documents a child held for one of them was
+	// held for (#7892); empty for a duplicate contract.
+	Invoices []CareBilledInvoice
 }
 
 // CareRunDetail is a run with its invoices. A calculated run shows the
@@ -416,6 +502,10 @@ type CareRunDetail struct {
 	// each of several schools the run bills as one (ADR 0158, Nachtrag
 	// Schulwechsel): the office sees where the name joined them.
 	JoinedChildren []CareJoinedChild `json:"joined_children"`
+	// BilledChildren are the children the run holds back because an issued
+	// invoice of the month already bills them (ADR 0158, Nachtrag #7892);
+	// a released run shows those its release stored.
+	BilledChildren []CareBilledChild `json:"billed_children"`
 	// DuplicateChildren counts the children of Duplicates: the run, and its
 	// release, bills none of them.
 	DuplicateChildren int `json:"duplicate_children"`
@@ -447,6 +537,9 @@ type CareRunDetail struct {
 	MealChanged []CareMealChanged `json:"meal_changed"`
 	// DueDates are the due dates of the run per payment method (#4689).
 	DueDates []RunDueDate `json:"due_dates"`
+	// DueDatesVersion is the read-state token of DueDates (ADR 0311): a
+	// change of the dates sends it back as expected_version.
+	DueDatesVersion string `json:"due_dates_version"`
 	// CostBearers are what each cost bearer pays of the invoices (#4687).
 	CostBearers []CareCostBearerTotal `json:"cost_bearers"`
 	// CareRunReviewState is the review of a calculated run (#5916).
@@ -566,7 +659,7 @@ type CareModulePrices interface {
 type CareBilling interface {
 	CareTariffs(ctx context.Context, reviewer HolidayReviewer) (CareTariffs, error)
 	SaveCarePriceList(ctx context.Context, reviewer HolidayReviewer, list CarePriceList) (CareTariffs, error)
-	DeleteCarePriceList(ctx context.Context, reviewer HolidayReviewer, schoolID int64, validFrom calendar.Date) (CareTariffs, error)
+	DeleteCarePriceList(ctx context.Context, reviewer HolidayReviewer, schoolID int64, validFrom calendar.Date, expectedVersion string) (CareTariffs, error)
 	ListCareRuns(ctx context.Context, organizationID int64) (CareRunList, error)
 	StartCareRun(ctx context.Context, reviewer HolidayReviewer, start CareRunStart) (CareRun, error)
 	CareRun(ctx context.Context, reviewer HolidayReviewer, runID int64) (CareRunDetail, error)

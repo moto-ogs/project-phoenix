@@ -17,8 +17,8 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useLocalizedDatePicker } from "~/lib/hooks/use-localized-date-picker";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useFreshSWR } from "~/lib/swr";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useReadDraft } from "~/lib/swr/read-draft";
 import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { createLogger } from "~/lib/logger";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
@@ -105,45 +105,41 @@ export function MealRegistrationChangeModal({
 
   // Die festen Tage des gewählten Kindes vorbelegen. Bis sie da sind, bleiben
   // die Tage leer und Speichern gesperrt, damit nie die Tage eines anderen
-  // Kindes gespeichert werden.
+  // Kindes gespeichert werden. Ein Wiederöffnen zeigt den gemerkten Stand und
+  // liest beim Öffnen nach. Die Tage, die jemand ändert, behalten die
+  // Version, auf der er sie geändert hat; das Speichern schickt genau diese,
+  // und der Server lehnt veraltete Tage ab (ADR 0311).
   const scheduleKey =
     isOpen && studentId
       ? tenantContactKeys.childMealSchedule(studentId, effectiveFrom)
       : null;
-  const schedule = useFreshSWR(
-    scheduleKey,
-    () => getChildMealSchedule(studentId, effectiveFrom),
-    { keepPreviousData: false },
+  const schedule = useReadDraft({
+    key: scheduleKey,
+    fetcher: () => getChildMealSchedule(studentId, effectiveFrom),
+    token: (read) => read.version,
+    toDraft: (read): readonly number[] => read.weekdays,
+  });
+  // Auch über gemerkten Tagen: bis ein Lesen gelingt, geht nichts raus.
+  const scheduleError = useReadDraftLoadError(
+    schedule,
+    t("errorObjectSchedule"),
   );
-  const { error: scheduleError, failure: scheduleFailure } =
-    useSwrResourceLoadError([schedule], t("errorObjectSchedule"), () =>
-      schedule.mutate(),
-    );
   const scheduleState: ScheduleState =
     scheduleKey === null
       ? "idle"
-      : schedule.data
-        ? "loaded"
-        : scheduleFailure !== undefined
-          ? "failed"
+      : schedule.status === "loadFailed"
+        ? "failed"
+        : schedule.base && schedule.canSubmit
+          ? "loaded"
           : "loading";
-  // The edited days belong to the child and date they were loaded for.
-  const [draft, setDraft] = useState<{
-    key: string;
-    weekdays: readonly number[];
-  } | null>(null);
-  const weekdays =
-    draft !== null && draft.key === scheduleKey
-      ? draft.weekdays
-      : (schedule.data?.weekdays ?? NO_WEEKDAYS);
+  const weekdays = schedule.draft ?? NO_WEEKDAYS;
   const toggleWeekday = (weekday: number) => {
     if (scheduleKey === null || scheduleState !== "loaded") return;
-    setDraft({
-      key: scheduleKey,
-      weekdays: weekdays.includes(weekday)
-        ? weekdays.filter((value) => value !== weekday)
-        : [...weekdays, weekday].sort((a, b) => a - b),
-    });
+    schedule.setDraft((current) =>
+      current.includes(weekday)
+        ? current.filter((value) => value !== weekday)
+        : [...current, weekday].sort((a, b) => a - b),
+    );
   };
 
   // Die Vorbelegung liest, wer an dem Tag isst, ohne das Fenster bei jedem
@@ -159,7 +155,6 @@ export function MealRegistrationChangeModal({
     setScope("day");
     setEffectiveFrom(start);
     clearError();
-    setDraft(null);
     if (initialStudentId) {
       setStudentId(initialStudentId);
       setChoice(eatingRef.current.has(initialStudentId) ? "skips" : "eats");
@@ -170,7 +165,6 @@ export function MealRegistrationChangeModal({
   }, [clearError, date, initialStudentId, isOpen, today]);
 
   function chooseChild(child: string) {
-    if (child !== studentId) setDraft(null);
     setStudentId(child);
     setChoice(eating.has(child) ? "skips" : "eats");
   }
@@ -195,29 +189,42 @@ export function MealRegistrationChangeModal({
     return child ? `${child.firstName} ${child.lastName}` : "";
   }, [others, participants, studentId]);
 
+  async function sendChange(): Promise<
+    | { ok: true }
+    | { ok: false; error: unknown; reload?: () => Promise<unknown> }
+  > {
+    if (scope === "regular") {
+      return schedule.submit((version, days) =>
+        replaceChildMealSchedule(studentId, [...days], effectiveFrom, version),
+      );
+    }
+    try {
+      if (choice === "regular") await clearChildMealDay(studentId, date);
+      else await setChildMealDay(studentId, date, choice === "eats");
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error };
+    }
+  }
+
   async function save() {
     if (!ready) return;
     clearError();
     await submission.run(async (op) => {
-      try {
-        if (scope === "day" && choice === "regular") {
-          await clearChildMealDay(studentId, date);
-        } else if (scope === "day") {
-          await setChildMealDay(studentId, date, choice === "eats");
-        } else {
-          await replaceChildMealSchedule(
-            studentId,
-            [...weekdays],
-            effectiveFrom,
-          );
-        }
-      } catch (cause) {
+      const sent = await sendChange();
+      if (!sent.ok) {
+        const cause = sent.error;
         logger.error("meal_registration_change_failed", {
           error: cause instanceof Error ? cause.message : String(cause),
         });
-        if (op.isCurrent()) {
-          void showError(cause, { object: t("errorObjectChange") });
-        }
+        if (!op.isCurrent()) return;
+        // Someone changed the regular days since they were read: the
+        // stored days show again, the message waits for them and offers
+        // no retry of the same request.
+        void showError(cause, {
+          object: t("errorObjectChange"),
+          reload: sent.reload,
+        });
         return;
       }
       success(t("changeSaved", { name: childName }));
@@ -281,7 +288,11 @@ export function MealRegistrationChangeModal({
           />
         ) : (
           <div className="space-y-3">
-            {scheduleError ? <LoadErrorAlert error={scheduleError} /> : null}
+            {/* Nach einer Ablehnung nennt die Meldung oben das gescheiterte
+                Lesen schon, mit „Wiederholen“. */}
+            {scheduleError && !(scope === "regular" && error) ? (
+              <LoadErrorAlert error={scheduleError} />
+            ) : null}
             <fieldset disabled={scheduleState !== "loaded"}>
               <legend className="text-sm font-medium text-gray-700">
                 {t("regularDays")}
@@ -323,10 +334,7 @@ export function MealRegistrationChangeModal({
             <ISODatePicker
               label={t("effectiveFrom")}
               value={effectiveFrom}
-              onChange={(value) => {
-                if (value !== effectiveFrom) setDraft(null);
-                setEffectiveFrom(value);
-              }}
+              onChange={setEffectiveFrom}
               min={today}
               max={latestStart}
               hideClearButton

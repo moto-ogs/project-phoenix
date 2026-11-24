@@ -35,7 +35,7 @@ vi.mock("next-auth", () => ({
             id: "1",
             token: `access-${state.issued}`,
             refreshToken: "r",
-            tenantId: 7,
+            tenantId: "7",
           },
         };
         return handler(request, context);
@@ -55,6 +55,8 @@ const backend = vi.fn<typeof fetch>();
 type RoutePost = (request: NextRequest, context: unknown) => Promise<Response>;
 
 const ROUTES: Record<string, () => Promise<{ POST: unknown }>> = {
+  "traeger/auth/mfa/step-up/verify": () =>
+    import("./traeger/auth/mfa/step-up/verify/route"),
   "caterer/account/mfa/confirm": () =>
     import("./caterer/account/mfa/confirm/route"),
   "parent/me/mfa/confirm": () => import("./parent/me/mfa/confirm/route"),
@@ -195,6 +197,11 @@ describe("routes that carry the current password or a code", () => {
       { current_password: SECRET },
     ],
     ["parent/me/mfa/confirm", "parents.localhost:3000", { code: SECRET }],
+    [
+      "traeger/auth/mfa/step-up/verify",
+      "traeger.localhost:3000",
+      { code: SECRET },
+    ],
   ])("%s sends it once after a 401", async (route, host, body) => {
     const response = await post(route, host, body);
 

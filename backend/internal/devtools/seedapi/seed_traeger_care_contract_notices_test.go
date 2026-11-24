@@ -47,6 +47,12 @@ func TestSeedCareContractNoticesFillsMissingCasesOnce(t *testing.T) {
 					respond(map[string]any{"contracts": contracts})
 					return
 				}
+				if strings.HasSuffix(r.URL.Path, "/paper-handover") {
+					assert.Equal(t, "POST", r.Method)
+					writes = append(writes, r.Method+" "+r.URL.Path)
+					respond(map[string]any{})
+					return
+				}
 				if strings.HasSuffix(r.URL.Path, "/paper-signature") {
 					assert.Equal(t, "POST", r.Method)
 					assert.Contains(t, r.Header.Get("Content-Type"), "multipart/form-data")
@@ -63,7 +69,7 @@ func TestSeedCareContractNoticesFillsMissingCasesOnce(t *testing.T) {
 				parts := strings.Split(strings.TrimPrefix(r.URL.Path, prefix), "/")
 				id := parts[0]
 				if r.Method == "GET" {
-					respond(map[string]any{"notice": notices[id]})
+					respond(map[string]any{"notice": notices[id], "ordinary_ends_on": "2026-12-31"})
 					return
 				}
 				var body map[string]any
@@ -74,6 +80,8 @@ func TestSeedCareContractNoticesFillsMissingCasesOnce(t *testing.T) {
 					assert.NotEmpty(t, body["received_on"])
 					if body["termination_kind"] == "ausserordentlich" {
 						assert.NotEmpty(t, body["reason"])
+					} else {
+						assert.Equal(t, "2026-12-31", body["expected_ends_on"], "the end the options read showed")
 					}
 					notices[id] = map[string]any{"termination_kind": body["termination_kind"]}
 					respond(map[string]any{"notice": notices[id], "reinterpreted_ends_on": "2026-12-31"})

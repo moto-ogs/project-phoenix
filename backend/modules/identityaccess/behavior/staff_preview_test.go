@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -97,10 +98,10 @@ func TestAuthService_StartStaffPreview(t *testing.T) {
 		assert.Positive(t, session.ExpiresIn)
 
 		claims := decodePreviewTokenPayload(t, session.AccessToken)
-		assert.EqualValues(t, target.ID, claims["id"])
+		assert.Equal(t, strconv.FormatInt(target.ID, 10), claims["id"])
 		assert.Equal(t, true, claims["read_only"])
-		assert.EqualValues(t, admin.ID, claims["acting_admin_id"])
-		assert.EqualValues(t, tenantID, claims["tenant_id"])
+		assert.Equal(t, strconv.FormatInt(admin.ID, 10), claims["acting_admin_id"])
+		assert.Equal(t, strconv.FormatInt(tenantID, 10), claims["tenant_id"])
 		assert.Equal(t, target.Email, claims["sub"])
 		// access-only: a preview token must never carry a refresh-token family
 		_, hasFamily := claims["family_id"]

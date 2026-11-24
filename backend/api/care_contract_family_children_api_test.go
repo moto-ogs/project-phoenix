@@ -54,7 +54,7 @@ func familyEventChannels(t *testing.T, f careContractFixture, contract int64) []
 func TestFamilyChildrenThroughTheMailLinkStayInItsContractsFamily(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Kinderzahl Link")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	contract, link := sentCareContract(t, f, f.child)
 	other := careContractApplication(t, f.db, f.school, f.phase, f.offering, "Ole", "olga.andere@example.org")
 	otherContract, otherLink := sentCareContract(t, f, other)
@@ -128,7 +128,7 @@ func TestFamilyChildrenThroughTheMailLinkStayInItsContractsFamily(t *testing.T) 
 func TestFamilyChildrenOfTheRegistrationComeWithTheContract(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Kinderzahl Anmeldung")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	stateOnRegistration := func(child int64, children int, ago string) {
 		_, err := f.db.ExecContext(context.Background(), `UPDATE enrollment.requests SET family_children = ?,
 			family_children_stated_at = NOW() - ?::interval
@@ -201,7 +201,7 @@ func TestRegistrationAsksWhereTheTraegersRuleCountsTheFamily(t *testing.T) {
 func TestFamilyChildrenOnTheLinkDoNotDeadlockWithTheAbrechnung(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Kinderzahl Link parallel")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	contract, link := sentCareContract(t, f, f.child)
 	ctx := context.Background()
 

@@ -125,12 +125,14 @@ export interface SollstellungSettings {
   mapping: SollstellungMapping;
   custom: boolean;
   updated_at: string | null;
+  version: string;
 }
 
 export const SollstellungSettingsSchema: z.ZodType<SollstellungSettings, unknown> = object<SollstellungSettings>({
   mapping: SollstellungMappingSchema,
   custom: bool,
   updated_at: nullable(instant),
+  version: str,
 });
 
 /** Go: parentbilling.ExportFileNumbers */
@@ -410,42 +412,7 @@ export interface SollstellungMappingRequest {
   encoding?: string;
   header_row?: boolean;
   file_name_pattern?: string;
-}
-
-/** Query of GET /traeger/finance-exports/datev-runs */
-export interface GetTraegerFinanceExportsDatevRunsQuery {
-  care?: string;
-  holiday?: string;
-}
-
-/** Query of GET /traeger/finance-exports/files */
-export interface GetTraegerFinanceExportsFilesQuery {
-  offset?: number;
-  run_id?: string;
-  run_kind?: string;
-}
-
-/** Query of GET /traeger/finance-exports/files/export */
-export interface GetTraegerFinanceExportsFilesExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  run_id?: string;
-  run_kind?: string;
-}
-
-/** Query of GET /traeger/finance-exports/runs */
-export interface GetTraegerFinanceExportsRunsQuery {
-  offset?: number;
-}
-
-/** Query of GET /traeger/finance-exports/runs/export */
-export interface GetTraegerFinanceExportsRunsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/finance-exports/runs/{kind}/{id}/datev */
-export interface GetTraegerFinanceExportsRunsKindIdDatevQuery {
-  fiscal_year?: string;
-  mode?: "all" | "new";
+  expected_version?: string;
 }
 
 export const routes = {
@@ -471,21 +438,32 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/finance-exports/datev-runs",
     portals: ["org"],
-    query: ["care", "holiday"],
+    query: {
+      "care": { kind: "string" },
+      "holiday": { kind: "string" },
+    },
     response: success(DatevRunOverviewsSchema),
   },
   "GET /traeger/finance-exports/files": {
     method: "GET",
     pattern: "/traeger/finance-exports/files",
     portals: ["org"],
-    query: ["offset", "run_id", "run_kind"],
+    query: {
+      "offset": { kind: "int" },
+      "run_id": { kind: "id" },
+      "run_kind": { kind: "string" },
+    },
     response: success(ExportProtocolPageSchema),
   },
   "GET /traeger/finance-exports/files/export": {
     method: "GET",
     pattern: "/traeger/finance-exports/files/export",
     portals: ["org"],
-    query: ["format", "run_id", "run_kind"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "run_id": { kind: "id" },
+      "run_kind": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /traeger/finance-exports/invoice-history/{kind}/{id}": {
@@ -498,21 +476,28 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/finance-exports/runs",
     portals: ["org"],
-    query: ["offset"],
+    query: {
+      "offset": { kind: "int" },
+    },
     response: success(ExportRunPageSchema),
   },
   "GET /traeger/finance-exports/runs/export": {
     method: "GET",
     pattern: "/traeger/finance-exports/runs/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/finance-exports/runs/{kind}/{id}/datev": {
     method: "GET",
     pattern: "/traeger/finance-exports/runs/{kind}/{id}/datev",
     portals: ["org"],
-    query: ["fiscal_year", "mode"],
+    query: {
+      "fiscal_year": { kind: "date" },
+      "mode": { kind: "string", values: ["all", "new"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/finance-exports/runs/{kind}/{id}/sollstellung": {

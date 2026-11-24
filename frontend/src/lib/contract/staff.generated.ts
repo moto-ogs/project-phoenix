@@ -29,7 +29,6 @@ import {
   StaffVacationOpeningSchema,
   VacationQuotaSummarySchema,
   WorkSessionEditViewSchema,
-  type CreateAbsenceRequest,
   type SessionUpdateRequest,
   type StaffAbsenceResponse,
 } from "./shared.generated";
@@ -60,6 +59,7 @@ export interface StaffPersonResponse {
   account_id?: string;
   created_at: string;
   updated_at: string;
+  version: string;
 }
 
 export const StaffPersonResponseSchema: z.ZodType<StaffPersonResponse, unknown> = object<StaffPersonResponse>({
@@ -72,6 +72,7 @@ export const StaffPersonResponseSchema: z.ZodType<StaffPersonResponse, unknown> 
   account_id: optional(int64String),
   created_at: instant,
   updated_at: instant,
+  version: str,
 });
 
 /** Go: staff.StaffRecordResponse */
@@ -100,6 +101,7 @@ export interface StaffRecordResponse {
   role?: string;
   role_form?: OpenEnum<RoleForm>;
   qualifications?: string;
+  version?: string;
 }
 
 export const StaffRecordResponseSchema: z.ZodType<StaffRecordResponse, unknown> = object<StaffRecordResponse>({
@@ -127,6 +129,7 @@ export const StaffRecordResponseSchema: z.ZodType<StaffRecordResponse, unknown> 
   role: optional(str),
   role_form: optional(str),
   qualifications: optional(str),
+  version: optional(str),
 });
 
 /** Go: timetracking.AbsenceDecisionMailsResponse */
@@ -161,8 +164,11 @@ export const AbsencePlanGapSchema: z.ZodType<AbsencePlanGap, unknown> = object<A
 
 /** Go: timetracking.absenceRequestResponse */
 export interface absenceRequestResponse {
+  id: string;
   tenant_id: string;
+  staff_id: string;
   absence_type: string;
+  absence_type_id?: string;
   absence_type_label?: string;
   date_start: string;
   date_end: string;
@@ -171,6 +177,7 @@ export interface absenceRequestResponse {
   end_half_day: boolean;
   note?: string;
   status: string;
+  approved_by?: string;
   approved_at?: string;
   created_by: string;
   working_days?: number;
@@ -180,17 +187,16 @@ export interface absenceRequestResponse {
   created_at: string;
   updated_at: string;
   duration_days: number;
-  absence_type_id?: string;
   staff_name: string;
   decided_by_name?: string;
-  id: string;
-  staff_id: string;
-  approved_by?: string;
 }
 
 export const absenceRequestResponseSchema: z.ZodType<absenceRequestResponse, unknown> = object<absenceRequestResponse>({
+  id: int64String,
   tenant_id: int64String,
+  staff_id: int64String,
   absence_type: str,
+  absence_type_id: optional(int64String),
   absence_type_label: optional(str),
   date_start: str,
   date_end: str,
@@ -199,6 +205,7 @@ export const absenceRequestResponseSchema: z.ZodType<absenceRequestResponse, unk
   end_half_day: bool,
   note: optional(str),
   status: str,
+  approved_by: optional(int64String),
   approved_at: optional(instant),
   created_by: int64String,
   working_days: optional(num),
@@ -208,12 +215,8 @@ export const absenceRequestResponseSchema: z.ZodType<absenceRequestResponse, unk
   created_at: instant,
   updated_at: instant,
   duration_days: safeInt,
-  absence_type_id: optional(str),
   staff_name: str,
   decided_by_name: optional(str),
-  id: str,
-  staff_id: str,
-  approved_by: optional(str),
 });
 
 /** Go: staff.StaffWithRoleResponse */
@@ -345,9 +348,9 @@ export interface QualificationEntryResponse {
 }
 
 export const QualificationEntryResponseSchema: z.ZodType<QualificationEntryResponse, unknown> = object<QualificationEntryResponse>({
-  staff_id: str,
-  qualification_id: nullable(str),
-  type_id: nullable(str),
+  staff_id: int64String,
+  qualification_id: nullable(int64String),
+  type_id: nullable(int64String),
   name: str,
   acquired_on: nullable(calendarDate),
   expires_on: nullable(calendarDate),
@@ -364,16 +367,18 @@ export interface QualificationTypeResponse {
   reminder_lead_weeks: number;
   mandatory: boolean;
   archived: boolean;
+  version: string;
 }
 
 export const QualificationTypeResponseSchema: z.ZodType<QualificationTypeResponse, unknown> = object<QualificationTypeResponse>({
-  id: str,
+  id: int64String,
   standard_key: optional(str),
   name: str,
   validity_months: nullable(safeInt),
   reminder_lead_weeks: safeInt,
   mandatory: bool,
   archived: bool,
+  version: str,
 });
 
 /** Go: timetracking.QualificationOverviewResponse */
@@ -391,9 +396,9 @@ export interface QualificationOverviewResponse {
 }
 
 export const QualificationOverviewResponseSchema: z.ZodType<QualificationOverviewResponse, unknown> = object<QualificationOverviewResponse>({
-  staff_id: str,
-  qualification_id: nullable(str),
-  type_id: nullable(str),
+  staff_id: int64String,
+  qualification_id: nullable(int64String),
+  type_id: nullable(int64String),
   name: str,
   acquired_on: nullable(calendarDate),
   expires_on: nullable(calendarDate),
@@ -437,7 +442,7 @@ export interface AuditLogEvent {
   staff?: AuditLogPerson;
   actor: AuditLogActor;
   reason: string;
-  detail: unknown | null;
+  detail: Record<string, unknown | null> | null;
 }
 
 export const AuditLogEventSchema: z.ZodType<AuditLogEvent, unknown> = object<AuditLogEvent>({
@@ -447,7 +452,7 @@ export const AuditLogEventSchema: z.ZodType<AuditLogEvent, unknown> = object<Aud
   staff: optional(AuditLogPersonSchema),
   actor: AuditLogActorSchema,
   reason: str,
-  detail: nullable(json),
+  detail: nullable(rec(nullable(json))),
 });
 
 /** Go: workforce.AuditLogPage */
@@ -677,7 +682,7 @@ export interface PayrollWageTypeResponse {
 }
 
 export const PayrollWageTypeResponseSchema: z.ZodType<PayrollWageTypeResponse, unknown> = object<PayrollWageTypeResponse>({
-  id: str,
+  id: int64String,
   name: str,
   number: str,
   unit: str,
@@ -695,13 +700,13 @@ export interface PayrollSurchargeRuleResponse {
 }
 
 export const PayrollSurchargeRuleResponseSchema: z.ZodType<PayrollSurchargeRuleResponse, unknown> = object<PayrollSurchargeRuleResponse>({
-  id: str,
+  id: int64String,
   kind: str,
   window_start_minute: nullable(safeInt),
   window_end_minute: nullable(safeInt),
   rate_type: str,
   rate_hundredths: safeInt,
-  wage_type_id: str,
+  wage_type_id: int64String,
 });
 
 /** Go: timetracking.PayrollAbsenceTypeResponse */
@@ -713,10 +718,10 @@ export interface PayrollAbsenceTypeResponse {
 }
 
 export const PayrollAbsenceTypeResponseSchema: z.ZodType<PayrollAbsenceTypeResponse, unknown> = object<PayrollAbsenceTypeResponse>({
-  id: str,
+  id: int64String,
   name: str,
   is_active: bool,
-  wage_type_id: nullable(str),
+  wage_type_id: nullable(int64String),
 });
 
 /** Go: timetracking.PayrollRulesResponse */
@@ -790,12 +795,14 @@ export interface PayrollNumberResponse {
   staff_id: string;
   personnel_number: string | null;
   kept_by_traeger: boolean;
+  version: string;
 }
 
 export const PayrollNumberResponseSchema: z.ZodType<PayrollNumberResponse, unknown> = object<PayrollNumberResponse>({
   staff_id: int64String,
   personnel_number: nullable(str),
   kept_by_traeger: bool,
+  version: str,
 });
 
 /** Go: timetracking.ScheduleModelInfo */
@@ -838,6 +845,7 @@ export interface ScheduleResponse {
   weekly_totals: number[] | null;
   valid_from?: string;
   kept_by_traeger: boolean;
+  version: string;
 }
 
 export const ScheduleResponseSchema: z.ZodType<ScheduleResponse, unknown> = object<ScheduleResponse>({
@@ -849,17 +857,20 @@ export const ScheduleResponseSchema: z.ZodType<ScheduleResponse, unknown> = obje
   weekly_totals: nullable(arr(safeInt)),
   valid_from: optional(str),
   kept_by_traeger: bool,
+  version: str,
 });
 
 /** Go: staff.SchoolClassesResponse */
 export interface SchoolClassesResponse {
   staff_id: string;
   school_classes: string[] | null;
+  version: string;
 }
 
 export const SchoolClassesResponseSchema: z.ZodType<SchoolClassesResponse, unknown> = object<SchoolClassesResponse>({
   staff_id: int64String,
   school_classes: nullable(arr(str)),
+  version: str,
 });
 
 /** Go: timetracking.StammdatenPersonPayload */
@@ -925,11 +936,26 @@ export interface StammdatenQualificationResponse {
 }
 
 export const StammdatenQualificationResponseSchema: z.ZodType<StammdatenQualificationResponse, unknown> = object<StammdatenQualificationResponse>({
-  id: optional(str),
-  type_id: nullable(str),
+  id: optional(int64String),
+  type_id: nullable(int64String),
   name: str,
   acquired_on: nullable(calendarDate),
   expires_on: nullable(calendarDate),
+});
+
+/** Go: timetracking.StammdatenVersionsResponse */
+export interface StammdatenVersionsResponse {
+  person: string;
+  kontakt: string;
+  arbeitsvertrag: string;
+  qualifikationen: string;
+}
+
+export const StammdatenVersionsResponseSchema: z.ZodType<StammdatenVersionsResponse, unknown> = object<StammdatenVersionsResponse>({
+  person: str,
+  kontakt: str,
+  arbeitsvertrag: str,
+  qualifikationen: str,
 });
 
 /** Go: timetracking.StammdatenResponse */
@@ -939,6 +965,7 @@ export interface StammdatenResponse {
   kontakt: StammdatenKontaktPayload;
   arbeitsvertrag: StammdatenArbeitsvertragPayload;
   qualifikationen: StammdatenQualificationResponse[] | null;
+  versions: StammdatenVersionsResponse;
 }
 
 export const StammdatenResponseSchema: z.ZodType<StammdatenResponse, unknown> = object<StammdatenResponse>({
@@ -947,6 +974,7 @@ export const StammdatenResponseSchema: z.ZodType<StammdatenResponse, unknown> = 
   kontakt: StammdatenKontaktPayloadSchema,
   arbeitsvertrag: StammdatenArbeitsvertragPayloadSchema,
   qualifikationen: nullable(arr(StammdatenQualificationResponseSchema)),
+  versions: StammdatenVersionsResponseSchema,
 });
 
 /** Go: timetracking.StammdatenFinancialMaskedResponse */
@@ -956,6 +984,7 @@ export interface StammdatenFinancialMaskedResponse {
   tax_id_masked: string | null;
   social_security_number_masked: string | null;
   kept_by_traeger: boolean;
+  version: string;
 }
 
 export const StammdatenFinancialMaskedResponseSchema: z.ZodType<StammdatenFinancialMaskedResponse, unknown> = object<StammdatenFinancialMaskedResponse>({
@@ -964,6 +993,7 @@ export const StammdatenFinancialMaskedResponseSchema: z.ZodType<StammdatenFinanc
   tax_id_masked: nullable(str),
   social_security_number_masked: nullable(str),
   kept_by_traeger: bool,
+  version: str,
 });
 
 /** Go: workforce.StaffTargetOverride */
@@ -1026,6 +1056,7 @@ export interface CompTimeBalancePreview {
   future_commitment_minutes: number;
   future_adjustment_minutes: number;
   projected_balance_minutes: number;
+  fingerprint: string;
 }
 
 export const CompTimeBalancePreviewSchema: z.ZodType<CompTimeBalancePreview, unknown> = object<CompTimeBalancePreview>({
@@ -1035,6 +1066,7 @@ export const CompTimeBalancePreviewSchema: z.ZodType<CompTimeBalancePreview, unk
   future_commitment_minutes: safeInt,
   future_adjustment_minutes: safeInt,
   projected_balance_minutes: safeInt,
+  fingerprint: str,
 });
 
 /** Go: timetracking.TraegerProofResponse */
@@ -1058,6 +1090,7 @@ export interface StaffRequest {
   specialization?: string;
   role?: string;
   qualifications?: string;
+  expected_version?: string;
 }
 
 /** Go: workforce.VacationDecisionRequest */
@@ -1144,6 +1177,7 @@ export interface QualificationTypeRequest {
   reminder_lead_weeks?: number | null;
   mandatory?: boolean;
   archived?: boolean;
+  expected_version?: string;
 }
 
 /** Go: timetracking.TransferExportRequest */
@@ -1215,6 +1249,17 @@ export interface PayrollWageTypeRequest {
   unit?: string;
 }
 
+/** Go: workforce.CreateAbsenceRequest */
+export interface CreateAbsenceRequest {
+  absence_type?: string;
+  absence_type_id?: string | null;
+  date_start?: string;
+  date_end?: string;
+  half_day?: boolean;
+  note?: string;
+  expected_fingerprint?: string;
+}
+
 /** Go: timetracking.RebookAbsencesBody */
 export interface RebookAbsencesBody {
   absence_ids?: string[] | null;
@@ -1222,6 +1267,7 @@ export interface RebookAbsencesBody {
   absence_type_id?: string | null;
   reason?: string;
   dry_run?: boolean;
+  expected_fingerprint?: string;
 }
 
 /** Go: workforce.RebookingAllowanceYear */
@@ -1266,6 +1312,7 @@ export interface AbsenceRebookingResult {
   vacation?: RebookingVacationYear[];
   vacation_exceeded: boolean;
   applied: boolean;
+  fingerprint: string;
 }
 
 export const AbsenceRebookingResultSchema: z.ZodType<AbsenceRebookingResult, unknown> = object<AbsenceRebookingResult>({
@@ -1277,6 +1324,7 @@ export const AbsenceRebookingResultSchema: z.ZodType<AbsenceRebookingResult, unk
   vacation: optional(arr(RebookingVacationYearSchema)),
   vacation_exceeded: bool,
   applied: bool,
+  fingerprint: str,
 });
 
 /** Go: timetracking.StammdatenFinancialRevealResponse */
@@ -1285,6 +1333,7 @@ export interface StammdatenFinancialRevealResponse {
   iban: string | null;
   tax_id: string | null;
   social_security_number: string | null;
+  version: string;
 }
 
 export const StammdatenFinancialRevealResponseSchema: z.ZodType<StammdatenFinancialRevealResponse, unknown> = object<StammdatenFinancialRevealResponse>({
@@ -1292,6 +1341,7 @@ export const StammdatenFinancialRevealResponseSchema: z.ZodType<StammdatenFinanc
   iban: nullable(str),
   tax_id: nullable(str),
   social_security_number: nullable(str),
+  version: str,
 });
 
 /** Go: timetracking.targetOverrideRequest */
@@ -1386,6 +1436,7 @@ export interface PayrollAbsenceTypeRequest {
 /** Go: timetracking.PayrollNumberBody */
 export interface PayrollNumberBody {
   personnel_number?: string | null;
+  expected_version?: string;
   note?: string;
 }
 
@@ -1420,11 +1471,13 @@ export interface ScheduleUpdateRequest {
   entries?: ScheduleEntryRequest[] | null;
   save_as_template?: string;
   valid_from?: string;
+  expected_version?: string;
 }
 
 /** Go: staff.SchoolClassesRequest */
 export interface SchoolClassesRequest {
   school_classes?: string[] | null;
+  expected_version?: string;
 }
 
 /** Go: timetracking.StammdatenArbeitsvertragRequest */
@@ -1434,14 +1487,27 @@ export interface StammdatenArbeitsvertragRequest {
   probation_end_date?: string | null;
   weekly_hours?: number | null;
   employment_type?: string | null;
+  expected_version?: string;
   note?: string;
 }
+
+/** Go: timetracking.StammdatenSectionAck */
+export interface StammdatenSectionAck {
+  staff_id: string;
+  version: string;
+}
+
+export const StammdatenSectionAckSchema: z.ZodType<StammdatenSectionAck, unknown> = object<StammdatenSectionAck>({
+  staff_id: int64String,
+  version: str,
+});
 
 /** Go: timetracking.StammdatenFinancialRequest */
 export interface StammdatenFinancialRequest {
   iban?: string | null;
   tax_id?: string | null;
   social_security_number?: string | null;
+  expected_version?: string;
   note?: string;
 }
 
@@ -1454,6 +1520,7 @@ export interface StammdatenKontaktRequest {
   email?: string | null;
   emergency_contact_name?: string | null;
   emergency_contact_phone?: string | null;
+  expected_version?: string;
   note?: string;
 }
 
@@ -1463,6 +1530,7 @@ export interface StammdatenPersonRequest {
   last_name?: string;
   birthday?: string | null;
   gender?: string | null;
+  expected_version?: string;
   note?: string;
 }
 
@@ -1478,6 +1546,7 @@ export interface StammdatenQualificationPayload {
 /** Go: timetracking.StammdatenQualifikationenRequest */
 export interface StammdatenQualifikationenRequest {
   qualifikationen?: StammdatenQualificationPayload[] | null;
+  expected_version?: string;
   note?: string;
 }
 
@@ -1487,167 +1556,7 @@ export interface VacationQuotaRequest {
   entitled_days?: number;
   carryover_days?: number;
   reason?: string;
-}
-
-/** Query of DELETE /api/staff/{id}/vacation/opening */
-export interface DeleteStaffIdVacationOpeningQuery {
-  year?: number;
-}
-
-/** Query of GET /api/staff/ */
-export interface GetStaffQuery {
-  first_name?: string;
-  last_name?: string;
-  role?: string;
-  teachers_only?: boolean;
-}
-
-/** Query of GET /api/staff/absences/mails */
-export interface GetStaffAbsencesMailsQuery {
-  ids?: string;
-}
-
-/** Query of GET /api/staff/absences/requests */
-export interface GetStaffAbsencesRequestsQuery {
-  search?: string;
-  types?: string;
-  view?: string;
-}
-
-/** Query of GET /api/staff/by-role */
-export interface GetStaffByRoleQuery {
-  role?: string;
-  roles?: string;
-}
-
-/** Query of GET /api/staff/dashboard-summary */
-export interface GetStaffDashboardSummaryQuery {
-  period?: string;
-}
-
-/** Query of GET /api/staff/former */
-export interface GetStaffFormerQuery {
-  first_name?: string;
-  last_name?: string;
-  role?: string;
-  teachers_only?: boolean;
-}
-
-/** Query of GET /api/staff/time-tracking/audit-log */
-export interface GetStaffTimeTrackingAuditLogQuery {
-  actor_id?: string;
-  cursor?: string;
-  from?: string;
-  limit?: number;
-  sources?: string;
-  staff_id?: string;
-  to?: string;
-}
-
-/** Query of GET /api/staff/time-tracking/export */
-export interface GetStaffTimeTrackingExportQuery {
-  format?: string;
-  granularity?: string;
-  month?: number;
-  time_format?: string;
-  year?: number;
-}
-
-/** Query of GET /api/staff/time-tracking/export/datev-report */
-export interface GetStaffTimeTrackingExportDatevReportQuery {
-  format?: string;
-  granularity?: string;
-  month?: number;
-  time_format?: string;
-  year?: number;
-}
-
-/** Query of GET /api/staff/time-tracking/month-close */
-export interface GetStaffTimeTrackingMonthCloseQuery {
-  month?: number;
-  year?: number;
-}
-
-/** Query of GET /api/staff/time-tracking/month-close/traeger-staff */
-export interface GetStaffTimeTrackingMonthCloseTraegerStaffQuery {
-  month?: number;
-  year?: number;
-}
-
-/** Query of GET /api/staff/time-tracking/overview */
-export interface GetStaffTimeTrackingOverviewQuery {
-  employment_type?: string;
-  month?: number;
-  order?: string;
-  saldo_max?: number;
-  saldo_min?: number;
-  sort?: string;
-  year?: number;
-}
-
-/** Query of GET /api/staff/time-tracking/target-coverage */
-export interface GetStaffTimeTrackingTargetCoverageQuery {
-  month?: number;
-  year?: number;
-}
-
-/** Query of GET /api/staff/{id}/absences */
-export interface GetStaffIdAbsencesQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/staff/{id}/avatar */
-export interface GetStaffIdAvatarQuery {
-  v?: string;
-}
-
-/** Query of GET /api/staff/{id}/documents */
-export interface GetStaffIdDocumentsQuery {
-  category?: string;
-}
-
-/** Query of GET /api/staff/{id}/time-tracking/adjustments */
-export interface GetStaffIdTimeTrackingAdjustmentsQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/staff/{id}/time-tracking/comp-time-preview */
-export interface GetStaffIdTimeTrackingCompTimePreviewQuery {
-  date_end?: string;
-  date_start?: string;
-  half_day?: boolean;
-}
-
-/** Query of GET /api/staff/{id}/time-tracking/export */
-export interface GetStaffIdTimeTrackingExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/staff/{id}/time-tracking/history */
-export interface GetStaffIdTimeTrackingHistoryQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/staff/{id}/time-tracking/month-summary */
-export interface GetStaffIdTimeTrackingMonthSummaryQuery {
-  month?: number;
-  year?: number;
-}
-
-/** Query of GET /api/staff/{id}/time-tracking/schedule-targets */
-export interface GetStaffIdTimeTrackingScheduleTargetsQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/staff/{id}/vacation/quota */
-export interface GetStaffIdVacationQuotaQuery {
-  year?: number;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -1703,21 +1612,30 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/staff/{id}/vacation/opening",
     portals: ["tenant"],
-    query: ["year"],
+    query: {
+      "year": { kind: "int" },
+    },
     response: noData,
   },
   "GET /api/staff/": {
     method: "GET",
     pattern: "/api/staff/",
     portals: ["tenant"],
-    query: ["first_name", "last_name", "role", "teachers_only"],
+    query: {
+      "first_name": { kind: "string" },
+      "last_name": { kind: "string" },
+      "role": { kind: "string" },
+      "teachers_only": { kind: "bool" },
+    },
     response: success(z.array(StaffRecordResponseSchema)),
   },
   "GET /api/staff/absences/mails": {
     method: "GET",
     pattern: "/api/staff/absences/mails",
     portals: ["tenant"],
-    query: ["ids"],
+    query: {
+      "ids": { kind: "string" },
+    },
     response: success(AbsenceDecisionMailsResponseSchema),
   },
   "GET /api/staff/absences/pending": {
@@ -1736,21 +1654,30 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff/absences/requests",
     portals: ["tenant"],
-    query: ["search", "types", "view"],
+    query: {
+      "search": { kind: "string" },
+      "types": { kind: "string" },
+      "view": { kind: "string" },
+    },
     response: success(z.array(absenceRequestResponseSchema)),
   },
   "GET /api/staff/by-role": {
     method: "GET",
     pattern: "/api/staff/by-role",
     portals: ["tenant"],
-    query: ["role", "roles"],
+    query: {
+      "role": { kind: "string" },
+      "roles": { kind: "string" },
+    },
     response: success(z.array(StaffWithRoleResponseSchema).nullable()),
   },
   "GET /api/staff/dashboard-summary": {
     method: "GET",
     pattern: "/api/staff/dashboard-summary",
     portals: ["tenant"],
-    query: ["period"],
+    query: {
+      "period": { kind: "string" },
+    },
     response: success(DashboardSummarySchema),
   },
   "GET /api/staff/documents-directory": {
@@ -1775,7 +1702,12 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff/former",
     portals: ["tenant"],
-    query: ["first_name", "last_name", "role", "teachers_only"],
+    query: {
+      "first_name": { kind: "string" },
+      "last_name": { kind: "string" },
+      "role": { kind: "string" },
+      "teachers_only": { kind: "bool" },
+    },
     response: success(z.array(FormerStaffResponseSchema)),
   },
   "GET /api/staff/me/qualifications": {
@@ -1800,21 +1732,41 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff/time-tracking/audit-log",
     portals: ["tenant"],
-    query: ["actor_id", "cursor", "from", "limit", "sources", "staff_id", "to"],
+    query: {
+      "actor_id": { kind: "id" },
+      "cursor": { kind: "string" },
+      "from": { kind: "date" },
+      "limit": { kind: "int" },
+      "sources": { kind: "string" },
+      "staff_id": { kind: "id" },
+      "to": { kind: "date" },
+    },
     response: success(AuditLogPageSchema),
   },
   "GET /api/staff/time-tracking/export": {
     method: "GET",
     pattern: "/api/staff/time-tracking/export",
     portals: ["tenant"],
-    query: ["format", "granularity", "month", "time_format", "year"],
+    query: {
+      "format": { kind: "string" },
+      "granularity": { kind: "string" },
+      "month": { kind: "int" },
+      "time_format": { kind: "string" },
+      "year": { kind: "int" },
+    },
     response: fileAnswer,
   },
   "GET /api/staff/time-tracking/export/datev-report": {
     method: "GET",
     pattern: "/api/staff/time-tracking/export/datev-report",
     portals: ["tenant"],
-    query: ["format", "granularity", "month", "time_format", "year"],
+    query: {
+      "format": { kind: "string" },
+      "granularity": { kind: "string" },
+      "month": { kind: "int" },
+      "time_format": { kind: "string" },
+      "year": { kind: "int" },
+    },
     response: success(DatevExportReportSchema),
   },
   "GET /api/staff/time-tracking/export/sftp-status": {
@@ -1827,21 +1779,35 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff/time-tracking/month-close",
     portals: ["tenant"],
-    query: ["month", "year"],
+    query: {
+      "month": { kind: "int" },
+      "year": { kind: "int" },
+    },
     response: success(z.array(StaffMonthBalanceSnapshotSchema).nullable()),
   },
   "GET /api/staff/time-tracking/month-close/traeger-staff": {
     method: "GET",
     pattern: "/api/staff/time-tracking/month-close/traeger-staff",
     portals: ["tenant"],
-    query: ["month", "year"],
+    query: {
+      "month": { kind: "int" },
+      "year": { kind: "int" },
+    },
     response: success(TraegerMonthStaffSchema),
   },
   "GET /api/staff/time-tracking/overview": {
     method: "GET",
     pattern: "/api/staff/time-tracking/overview",
     portals: ["tenant"],
-    query: ["employment_type", "month", "order", "saldo_max", "saldo_min", "sort", "year"],
+    query: {
+      "employment_type": { kind: "string" },
+      "month": { kind: "int" },
+      "order": { kind: "string" },
+      "saldo_max": { kind: "int" },
+      "saldo_min": { kind: "int" },
+      "sort": { kind: "string" },
+      "year": { kind: "int" },
+    },
     response: success(TimeTrackingOverviewSchema),
   },
   "GET /api/staff/time-tracking/payroll-dispatch": {
@@ -1860,7 +1826,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff/time-tracking/target-coverage",
     portals: ["tenant"],
-    query: ["month", "year"],
+    query: {
+      "month": { kind: "int" },
+      "year": { kind: "int" },
+    },
     response: success(TargetCoverageSchema),
   },
   "GET /api/staff/{id}": {
@@ -1873,7 +1842,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff/{id}/absences",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(StaffAbsenceResponseSchema).nullable()),
   },
   "GET /api/staff/{id}/avatar": {
@@ -1881,14 +1853,18 @@ export const routes = {
     pattern: "/api/staff/{id}/avatar",
     portals: ["tenant"],
     privateCache: true,
-    query: ["v"],
+    query: {
+      "v": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /api/staff/{id}/documents": {
     method: "GET",
     pattern: "/api/staff/{id}/documents",
     portals: ["tenant"],
-    query: ["category"],
+    query: {
+      "category": { kind: "string" },
+    },
     response: success(StaffDocumentListResponseSchema),
   },
   "GET /api/staff/{id}/documents/{documentId}/download": {
@@ -1943,42 +1919,62 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff/{id}/time-tracking/adjustments",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(StaffBalanceAdjustmentSchema).nullable()),
   },
   "GET /api/staff/{id}/time-tracking/comp-time-preview": {
     method: "GET",
     pattern: "/api/staff/{id}/time-tracking/comp-time-preview",
     portals: ["tenant"],
-    query: ["date_end", "date_start", "half_day"],
+    query: {
+      "date_end": { kind: "date" },
+      "date_start": { kind: "date" },
+      "half_day": { kind: "bool" },
+    },
     response: success(CompTimeBalancePreviewSchema),
   },
   "GET /api/staff/{id}/time-tracking/export": {
     method: "GET",
     pattern: "/api/staff/{id}/time-tracking/export",
     portals: ["tenant"],
-    query: ["format", "from", "to"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: fileAnswer,
   },
   "GET /api/staff/{id}/time-tracking/history": {
     method: "GET",
     pattern: "/api/staff/{id}/time-tracking/history",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(HistoryResponseSchema),
   },
   "GET /api/staff/{id}/time-tracking/month-summary": {
     method: "GET",
     pattern: "/api/staff/{id}/time-tracking/month-summary",
     portals: ["tenant"],
-    query: ["month", "year"],
+    query: {
+      "month": { kind: "int" },
+      "year": { kind: "int" },
+    },
     response: success(MonthSummarySchema),
   },
   "GET /api/staff/{id}/time-tracking/schedule-targets": {
     method: "GET",
     pattern: "/api/staff/{id}/time-tracking/schedule-targets",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(DailyProjectionSchema)),
   },
   "GET /api/staff/{id}/time-tracking/sessions/{sessionId}/edits": {
@@ -1997,7 +1993,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff/{id}/vacation/quota",
     portals: ["tenant"],
-    query: ["year"],
+    query: {
+      "year": { kind: "int" },
+    },
     response: success(VacationQuotaSummarySchema),
   },
   "POST /api/staff/": {
@@ -2229,35 +2227,35 @@ export const routes = {
     pattern: "/api/staff/{id}/stammdaten/arbeitsvertrag",
     portals: ["tenant"],
     request: requestBody<StammdatenArbeitsvertragRequest>(),
-    response: success(StammdatenAckSchema),
+    response: success(StammdatenSectionAckSchema),
   },
   "PUT /api/staff/{id}/stammdaten/bank-steuer": {
     method: "PUT",
     pattern: "/api/staff/{id}/stammdaten/bank-steuer",
     portals: ["tenant"],
     request: requestBody<StammdatenFinancialRequest>(),
-    response: success(StammdatenAckSchema),
+    response: success(StammdatenSectionAckSchema),
   },
   "PUT /api/staff/{id}/stammdaten/kontakt": {
     method: "PUT",
     pattern: "/api/staff/{id}/stammdaten/kontakt",
     portals: ["tenant"],
     request: requestBody<StammdatenKontaktRequest>(),
-    response: success(StammdatenAckSchema),
+    response: success(StammdatenSectionAckSchema),
   },
   "PUT /api/staff/{id}/stammdaten/person": {
     method: "PUT",
     pattern: "/api/staff/{id}/stammdaten/person",
     portals: ["tenant"],
     request: requestBody<StammdatenPersonRequest>(),
-    response: success(StammdatenAckSchema),
+    response: success(StammdatenSectionAckSchema),
   },
   "PUT /api/staff/{id}/stammdaten/qualifikationen": {
     method: "PUT",
     pattern: "/api/staff/{id}/stammdaten/qualifikationen",
     portals: ["tenant"],
     request: requestBody<StammdatenQualifikationenRequest>(),
-    response: success(StammdatenAckSchema),
+    response: success(StammdatenSectionAckSchema),
   },
   "PUT /api/staff/{id}/time-tracking/sessions/{sessionId}": {
     method: "PUT",

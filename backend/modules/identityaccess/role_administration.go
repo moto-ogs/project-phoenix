@@ -3,8 +3,11 @@ package identityaccess
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Role and permission administration (#3314): role and permission CRUD,
@@ -101,8 +104,29 @@ type Role struct {
 	// SchoolPortal marks a school role made from the Lehrkraft template: it
 	// opens moto schule like the system role lehrkraft (#4574).
 	SchoolPortal bool
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	// TraegerRoleID names the Träger role this school role is the copy of
+	// (#4810, ADR 0317); nil for a role of the school's own. The school
+	// assigns a copy but does not change or delete it.
+	TraegerRoleID *int64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+// RoleChange is the master data an edit of a custom role writes. A nil
+// BaseRole keeps the stored one.
+type RoleChange struct {
+	Name        string
+	Description string
+	BaseRole    *string
+}
+
+// RoleVersion is the read-state token of a role's master data (ADR 0311):
+// its change time. The BEFORE UPDATE trigger update_roles_updated_at sets
+// updated_at on every write of the row; the permission selection lives in
+// other rows and carries its own token (IDSetVersion), so saving one never
+// refuses a following save of the other.
+func RoleVersion(role Role) string {
+	return readstate.Of(role.UpdatedAt)
 }
 
 // AssignableSchoolRole is a role the policy allows for a school, with the
@@ -180,15 +204,20 @@ type RoleCommand interface {
 	// permissions. The copy is taken once; later changes to the template do
 	// not reach the role.
 	CreateRole(ctx context.Context, name, description string, baseRole *string, template ...RoleTemplate) (Role, error)
-	// UpdateRole writes name, description and base role of a custom role.
-	UpdateRole(ctx context.Context, role Role) error
+	// UpdateRole writes name, description and base role of a custom role
+	// and answers the stored role. expectedVersion is the RoleVersion of the
+	// role the change was made from; a role changed since is refused with
+	// readstate.ErrChanged (ADR 0311).
+	UpdateRole(ctx context.Context, id int64, change RoleChange, expectedVersion string) (Role, error)
 	DeleteRole(ctx context.Context, id int64) error
 	// AssignRoleToAccount assigns the role and completes the school identity
 	// a staff-tier role owes, in one transaction.
 	AssignRoleToAccount(ctx context.Context, accountID, roleID int64) error
 	// ReplaceAccountRole makes roleID the account's only staff role at the
-	// school; guardian-tier roles stay.
-	ReplaceAccountRole(ctx context.Context, accountID, roleID int64) error
+	// school; guardian-tier roles stay. expectedVersion is the
+	// AccountRolesVersion of the roles the caller read; roles changed since
+	// are refused with readstate.ErrChanged (ADR 0311).
+	ReplaceAccountRole(ctx context.Context, accountID, roleID int64, expectedVersion string) error
 	RemoveRoleFromAccount(ctx context.Context, accountID, roleID int64) error
 }
 
@@ -196,7 +225,17 @@ type RoleCommand interface {
 type PermissionQuery interface {
 	GetPermissionByName(ctx context.Context, name string) (Permission, error)
 	ListPermissions(ctx context.Context, filter PermissionFilter) ([]Permission, error)
-	GetRolePermissions(ctx context.Context, roleID int64) ([]Permission, error)
+	// GetRolePermissions reads a role's selection with its version, the
+	// token ReplaceRolePermissions expects back (ADR 0311).
+	GetRolePermissions(ctx context.Context, roleID int64) (RolePermissions, error)
+}
+
+// RolePermissions is a role's permission selection as one read saw it.
+// Version is the read-state token of the selection (ADR 0311): opaque to
+// the client, which sends it back as the expected version of a replacement.
+type RolePermissions struct {
+	Permissions []Permission
+	Version     string
 }
 
 // PermissionCommand changes permissions and role selections. Role selections of system roles are immutable.
@@ -206,7 +245,11 @@ type PermissionCommand interface {
 	// invalid request leaves the current selection untouched. A reserved
 	// permission the role does not hold yet is refused with
 	// ErrReservedPermissionNotAllowed; one it already holds may stay or go.
-	ReplaceRolePermissions(ctx context.Context, roleID int64, permissionIDs []int64) error
+	// expectedVersion is the Version of the selection the replacement was
+	// made from; a selection changed since is refused with
+	// readstate.ErrChanged, so nobody reverts a colleague's change unseen.
+	// It answers the Version of the selection it stored.
+	ReplaceRolePermissions(ctx context.Context, roleID int64, permissionIDs []int64, expectedVersion string) (string, error)
 	RemovePermissionFromRole(ctx context.Context, roleID, permissionID int64) error
 }
 
@@ -240,4 +283,27 @@ func PlatformSystemRole(roles []Role, name string) (Role, bool) {
 		}
 	}
 	return Role{}, false
+}
+
+// IDSetVersion is the read-state token of a set of IDs (ADR 0311): the
+// fingerprint of the IDs in ascending order, so the order a store returns
+// them in does not change it. A role's permission selection and the roles
+// an account holds at one school both use it.
+func IDSetVersion(ids []int64) string {
+	// Never nil, so no IDs and an empty read give one token.
+	sorted := append(make([]int64, 0, len(ids)), ids...)
+	slices.Sort(sorted)
+	return readstate.Fingerprint(sorted)
+}
+
+// AccountRolesVersion is the read-state token of the roles an account holds
+// at one school, guardian-tier roles included. The school's role read and
+// ReplaceAccountRole's check, the operator's access listing and its role
+// change derive it from the same assignments.
+func AccountRolesVersion(roles []Role) string {
+	ids := make([]int64, 0, len(roles))
+	for _, role := range roles {
+		ids = append(ids, role.ID)
+	}
+	return IDSetVersion(ids)
 }

@@ -124,7 +124,7 @@ func TestUpdateStudent_PhotoConsentWithdrawal_DeletesFile(t *testing.T) {
 	eventCount := len(tc.broadcaster.Events())
 
 	body := map[string]interface{}{"photo_consent_given": false}
-	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+	req := studentUpdateRequest(t, tc, student.ID, body)
 	rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
@@ -165,7 +165,7 @@ func TestUpdateStudent_PhotoConsentWithdrawalWhilePhotosAreOff(t *testing.T) {
 	require.NoError(t, err, "set a standing consent")
 
 	body := map[string]interface{}{"photo_consent_given": false}
-	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+	req := studentUpdateRequest(t, tc, student.ID, body)
 	rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
@@ -195,7 +195,7 @@ func TestUpdateStudent_PhotoConsentGrantWhilePhotosAreOff(t *testing.T) {
 	student := testpkg.CreateTestStudent(t, tc.db, "PhotoOffGrant", "Student", "PO2")
 
 	body := map[string]interface{}{"photo_consent_given": true}
-	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+	req := studentUpdateRequest(t, tc, student.ID, body)
 	rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 	require.Equal(t, http.StatusForbidden, rr.Code, "Body: %s", rr.Body.String())
@@ -226,7 +226,7 @@ func TestUpdateStudent_PhotoConsentGrant_StampsAuditFields(t *testing.T) {
 		"precondition: student should not have consent stamped yet")
 
 	body := map[string]interface{}{"photo_consent_given": true}
-	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+	req := studentUpdateRequest(t, tc, student.ID, body)
 	rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
@@ -276,7 +276,7 @@ func TestUpdateStudent_PhotoConsentNoChange_NoOp(t *testing.T) {
 
 	// Update an unrelated field. photo_consent_given is not present.
 	body := map[string]interface{}{"first_name": "RenamedNoOp"}
-	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+	req := studentUpdateRequest(t, tc, student.ID, body)
 	rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
 
@@ -359,7 +359,7 @@ func TestUpdateStudent_PhotoEnabled_ResponseIncludesPhotoURL(t *testing.T) {
 	_, _ = seedPhotoFile(t, tc, student.ID)
 
 	body := map[string]interface{}{"first_name": "RenamedResp"}
-	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+	req := studentUpdateRequest(t, tc, student.ID, body)
 	rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
@@ -387,7 +387,7 @@ func TestUpdateStudent_PhotoDisabled_ResponseOmitsPhotoURL(t *testing.T) {
 	_, _ = seedPhotoFile(t, tc, student.ID)
 
 	body := map[string]interface{}{"first_name": "RenamedDisabled"}
-	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+	req := studentUpdateRequest(t, tc, student.ID, body)
 	rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())

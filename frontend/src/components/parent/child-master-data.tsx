@@ -450,20 +450,19 @@ function IdentitySection({
   const locale = useLocale();
   const [modalOpen, setModalOpen] = useState(false);
 
-  const refresh = useCallback(() => {
-    void (async () => {
-      try {
-        onApplied(await getChildMasterData(studentId));
-      } catch (err) {
-        // Deliberately silent: the edit itself was saved and the dialog has
-        // confirmed it. This refresh only pulls the newest version in the
-        // background; the next page load shows it anyway.
-        logger.warn("master_data_refresh_failed", {
-          error: err instanceof Error ? err.message : String(err),
-          student_id: studentId,
-        });
-      }
-    })();
+  // Rejects on failure: after a refused edit the dialog shows it as the
+  // load error (ADR 0311); after a saved one the dialog has confirmed the
+  // save and ignores it, the next page load shows the newest version.
+  const refresh = useCallback(async () => {
+    try {
+      onApplied(await getChildMasterData(studentId));
+    } catch (err) {
+      logger.warn("master_data_refresh_failed", {
+        error: err instanceof Error ? err.message : String(err),
+        student_id: studentId,
+      });
+      throw err;
+    }
   }, [onApplied, studentId]);
 
   const requestable = features.master_data_request_enabled;
@@ -597,7 +596,7 @@ function IdentityFact({
   pending?: parentMeContract.MasterDataChangeResponse;
   /** Zeigt den beantragten Rohwert so an wie den gültigen Wert. */
   formatRequested?: (raw: string) => string;
-  onEdited?: () => void;
+  onEdited?: () => Promise<unknown>;
 }>) {
   const t = useCareTermTranslations("parentMasterData");
   const requestTitleId = useId();
@@ -661,11 +660,12 @@ function IdentityFact({
           request={{
             type: "master_data",
             id: pending.id,
+            version: pending.version,
             label,
             value: editableValue,
           }}
           onClose={() => setEditing(false)}
-          onSaved={() => onEdited?.()}
+          onReload={() => onEdited?.()}
         />
       )}
     </DataField>

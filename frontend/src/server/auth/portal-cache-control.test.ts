@@ -1,3 +1,4 @@
+import { readBackendJson, sendBackend } from "~/lib/backend-client.server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextAuthRequest, Session } from "next-auth";
 import { NextRequest } from "next/server";
@@ -9,7 +10,7 @@ const { mockFetch } = vi.hoisted(() => ({ mockFetch: vi.fn() }));
 
 vi.mock("next-auth", () => {
   const session = {
-    user: { id: "1", token: "access-token", tenantId: 7 },
+    user: { id: "1", token: "access-token", tenantId: "7" },
     expires: "2099-01-01T00:00:00.000Z",
   } as unknown as Session;
   type RouteHandler = (
@@ -45,6 +46,16 @@ vi.mock("~/lib/tenant-resolve.server", async (importOriginal) => ({
 
 const PRIVATE_NO_STORE = "private, no-store";
 
+async function sending(
+  method: "GET" | "POST",
+  request: NextRequest,
+  token: string,
+) {
+  await readBackendJson(
+    await sendBackend("/api/x", token, { method, request }),
+  );
+}
+
 type Route = (
   request: NextRequest,
   context: { params: Promise<Record<string, string | string[]>> },
@@ -61,7 +72,7 @@ function call(route: Route, params: Record<string, string | string[]> = {}) {
   );
 }
 
-function backendJson(status: number, body: unknown): Response {
+function jsonAnswer(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
@@ -74,47 +85,63 @@ function backendJson(status: number, body: unknown): Response {
 const routes: Array<[string, () => Promise<Route>]> = [
   [
     "tenant",
-    async () => (await import("~/lib/route-wrapper.server")).proxyGet("/api/x"),
-  ],
-  [
-    "tenant pass-through",
     async () =>
-      (await import("~/lib/route-wrapper.server")).createTenantJsonProxy({
-        method: "GET",
-        path: "/api/x",
-      }),
+      (await import("~/lib/route-wrapper.server")).tenant.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
   ],
   [
     "operator",
     async () =>
-      (await import("~/lib/operator/route-wrapper.server")).proxyGet("/api/x"),
-  ],
-  [
-    "operator pass-through",
-    async () =>
-      (
-        await import("~/lib/operator/route-wrapper.server")
-      ).createOperatorJsonProxy({ method: "GET", path: "/api/x" }),
+      (await import("~/lib/operator/route-wrapper.server")).operator.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
   ],
   [
     "parent",
     async () =>
-      (await import("~/lib/parent/route-wrapper.server")).proxyGet("/api/x"),
+      (await import("~/lib/parent/route-wrapper.server")).parent.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
   ],
   [
     "school",
     async () =>
-      (await import("~/lib/school/route-wrapper.server")).proxyGet("/api/x"),
+      (await import("~/lib/school/route-wrapper.server")).school.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
   ],
   [
     "caterer",
     async () =>
-      (await import("~/lib/caterer/route-wrapper.server")).proxyGet("/api/x"),
+      (await import("~/lib/caterer/route-wrapper.server")).caterer.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
   ],
   [
     "traeger",
     async () =>
-      (await import("~/lib/traeger/route-wrapper.server")).proxyGet("/api/x"),
+      (await import("~/lib/traeger/route-wrapper.server")).traeger.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
   ],
   [
     // A removal that answers its result (export recipient, ADR 0218).
@@ -122,24 +149,19 @@ const routes: Array<[string, () => Promise<Route>]> = [
     async () => {
       const { traeger } = await import("~/lib/traeger/route-wrapper.server");
       return traeger.del(async (request, token) =>
-        traeger.api("DELETE", "/api/x", token, undefined, { request }),
+        sendBackend("/api/x", token, { method: "DELETE", request }).then(
+          readBackendJson,
+        ),
       ) as Route;
     },
-  ],
-  [
-    "public pass-through (token routes)",
-    async () =>
-      (await import("~/lib/backend-proxy-route.server")).createPublicJsonProxy({
-        method: "GET",
-        path: "/api/x",
-      }),
   ],
   [
     "public login step",
     async () =>
       (await import("~/lib/auth-proxy.server")).authStepProxy(
-        "/api/x",
-        "optional-json",
+        (await import("~/lib/contract/auth-mfa.generated")).routes[
+          "POST /auth/mfa/resend"
+        ],
       ) as Route,
   ],
 ];
@@ -156,9 +178,14 @@ afterEach(() => {
 });
 
 describe("portal route wrappers send private, no-store", () => {
-  it.each(routes)("%s: JSON success", async (_portal, load) => {
+  it.each(routes)("%s: JSON success", async (portal, load) => {
     mockFetch.mockResolvedValue(
-      backendJson(200, { status: "success", data: { id: 1 } }),
+      jsonAnswer(
+        200,
+        portal === "public login step"
+          ? { challenge_token: "challenge" }
+          : { status: "success", data: { id: 1 } },
+      ),
     );
 
     const response = await call(await load());
@@ -169,7 +196,7 @@ describe("portal route wrappers send private, no-store", () => {
 
   it.each(routes)("%s: JSON error", async (_portal, load) => {
     mockFetch.mockResolvedValue(
-      backendJson(404, {
+      jsonAnswer(404, {
         status: 404,
         title: "Not Found",
         code: "general.not_found",
@@ -189,7 +216,7 @@ describe("the Träger portal's catalog proxy sends private, no-store", () => {
     // traeger/billing-families/debtor-number-format, which wrapped itself;
     // the catch-all serves the path now (#2352).
     mockFetch.mockResolvedValue(
-      backendJson(200, {
+      jsonAnswer(200, {
         status: "success",
         data: {
           digits_only: true,
@@ -264,7 +291,7 @@ describe("tenant routes on a school subdomain (#5130)", () => {
     "%s: answers a session of the host's school",
     async (_portal, load) => {
       mockFetch.mockResolvedValue(
-        backendJson(200, { status: "success", data: { id: 1 } }),
+        jsonAnswer(200, { status: "success", data: { id: 1 } }),
       );
 
       const response = await callOnHost(

@@ -18,7 +18,7 @@ import { ButtonLink } from "~/components/ui/button";
 
 vi.unmock("swr");
 const { owner } = vi.hoisted(() => ({
-  owner: { id: "account-1", scope: "tenant", tenantId: 1, slug: "school-a" },
+  owner: { id: "account-1", scope: "tenant", tenantId: "1", slug: "school-a" },
 }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({

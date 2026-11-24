@@ -124,6 +124,9 @@ type updateOrganizationRequest struct {
 	Name   string `json:"name"`
 	Slug   string `json:"slug"`
 	Active bool   `json:"active"`
+	// ExpectedVersion is the organisation's version the form was read with
+	// (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func (req *updateOrganizationRequest) Bind(_ *http.Request) error {
@@ -295,9 +298,10 @@ func (rs *ProvisioningResource) UpdateOrganization(w http.ResponseWriter, r *htt
 	}
 	operatorID := int64(sessiontoken.ClaimsFromCtx(r.Context()).ID)
 	svcReq := organizationtenancy.OrganizationChanges{
-		Name:   req.Name,
-		Slug:   req.Slug,
-		Active: req.Active,
+		Name:            req.Name,
+		Slug:            req.Slug,
+		Active:          req.Active,
+		ExpectedVersion: req.ExpectedVersion,
 	}
 	updated, err := rs.service.UpdateOrganization(r.Context(), orgID, svcReq, operatorID, common.ParseClientIP(r))
 	if err != nil {
@@ -331,6 +335,8 @@ func (rs *ProvisioningResource) UpdateSchool(w http.ResponseWriter, r *http.Requ
 		Active:         req.Active,
 		Hidden:         req.Hidden,
 		ChildQuota:     req.ChildQuota.change(),
+		// The school as the form read it (ADR 0311).
+		ExpectedVersion: req.ExpectedVersion,
 	}
 	updated, err := rs.service.UpdateSchool(r.Context(), schoolID, svcReq, operatorID, common.ParseClientIP(r))
 	if err != nil {
@@ -498,7 +504,7 @@ func (rs *ProvisioningResource) ListSchoolAccounts(w http.ResponseWriter, r *htt
 
 func (rs *ProvisioningResource) GetSchoolAccountCaregiverCapability(w http.ResponseWriter, r *http.Request) {
 	if rs.CaregiverCapabilityService == nil {
-		common.RenderError(w, r, common.OperatorInternal("Caregiver capability service is not configured"))
+		common.RenderError(w, r, common.OperatorInternal(nil, "Caregiver capability service is not configured"))
 		return
 	}
 
@@ -522,7 +528,7 @@ func (rs *ProvisioningResource) GetSchoolAccountCaregiverCapability(w http.Respo
 
 func (rs *ProvisioningResource) EnableSchoolAccountCaregiverCapability(w http.ResponseWriter, r *http.Request) {
 	if rs.CaregiverCapabilityService == nil {
-		common.RenderError(w, r, common.OperatorInternal("Caregiver capability service is not configured"))
+		common.RenderError(w, r, common.OperatorInternal(nil, "Caregiver capability service is not configured"))
 		return
 	}
 
@@ -559,7 +565,7 @@ func (rs *ProvisioningResource) EnableSchoolAccountCaregiverCapability(w http.Re
 
 func (rs *ProvisioningResource) DisableSchoolAccountCaregiverCapability(w http.ResponseWriter, r *http.Request) {
 	if rs.CaregiverCapabilityService == nil {
-		common.RenderError(w, r, common.OperatorInternal("Caregiver capability service is not configured"))
+		common.RenderError(w, r, common.OperatorInternal(nil, "Caregiver capability service is not configured"))
 		return
 	}
 
@@ -630,7 +636,7 @@ func (rs *ProvisioningResource) ListOrganizationDevices(w http.ResponseWriter, r
 
 type createDeviceRequest struct {
 	SchoolID   ident.ID `json:"school_id"`
-	DeviceID   string   `json:"device_id"`
+	DeviceID   string   `json:"device_id" contract_text:"device provisioning key, not the numeric device row ID"`
 	DeviceType string   `json:"device_type"`
 	Name       string   `json:"name,omitempty"`
 	APIKey     string   `json:"api_key,omitempty"`

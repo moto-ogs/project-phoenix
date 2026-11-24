@@ -43,6 +43,7 @@ function regeneration(): OwnAbsenceAllowance {
         expiresOn: "2026-03-31",
       },
       keptByTraeger: false,
+      version: "v-claim",
     },
   };
 }
@@ -141,7 +142,7 @@ function TenantSWR({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider
       session={{
-        user: { id: "staff-test", tenantId: 1 },
+        user: { id: "staff-test", tenantId: "1" },
         expires: "2099-01-01",
       }}
       refetchOnWindowFocus={false}

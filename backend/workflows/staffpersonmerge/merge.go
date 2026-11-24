@@ -37,7 +37,7 @@ type PersonSnapshot struct {
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
 	Birthday  string    `json:"birthday,omitempty"`
-	TagID     *string   `json:"tag_id,omitempty"`
+	TagID     *string   `json:"tag_id,omitempty" contract_text:"RFID tag code"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

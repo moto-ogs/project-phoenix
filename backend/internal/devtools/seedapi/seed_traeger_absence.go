@@ -35,6 +35,34 @@ type seedSchoolAbsenceType struct {
 	ID            string `json:"id"`
 	Name          string `json:"name"`
 	KeptByTraeger bool   `json:"kept_by_traeger"`
+	// Version is what an edit of the type sends back (ADR 0311).
+	Version string `json:"version"`
+}
+
+// seedTraegerAllowanceVersion reads the version of the account the change of
+// its days sends back (ADR 0311).
+func seedTraegerAllowanceVersion(client *Client, auth AuthRef, recordID ident.ID, typeID int64, year int) (string, error) {
+	raw, err := client.GetWithAuth(auth, fmt.Sprintf("/traeger/staff-records/%d/absence-accounts?year=%d", recordID, year))
+	if err != nil {
+		return "", fmt.Errorf("read the Kontingente of a Träger staff record: %w", err)
+	}
+	var read struct {
+		Data struct {
+			Accounts []struct {
+				AbsenceTypeID string `json:"absence_type_id"`
+				Version       string `json:"version"`
+			} `json:"accounts"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &read); err != nil {
+		return "", fmt.Errorf("decode the Kontingente of a Träger staff record: %w", err)
+	}
+	for _, account := range read.Data.Accounts {
+		if account.AbsenceTypeID == strconv.FormatInt(typeID, 10) {
+			return account.Version, nil
+		}
+	}
+	return "", fmt.Errorf("the Kontingente of record %d name no type %d", recordID, typeID)
 }
 
 // seedTraegerAbsences seeds the types, one Kontingent, the school's
@@ -49,8 +77,13 @@ func seedTraegerAbsences(ctx context.Context, rt *Runtime, auth AuthRef) error {
 		return err
 	}
 	if len(records) > 0 {
+		year := time.Now().Year()
+		version, err := seedTraegerAllowanceVersion(rt.Client, auth, records[0].ID, types[seedTraegerRegeneration], year)
+		if err != nil {
+			return err
+		}
 		path := fmt.Sprintf("/traeger/staff-records/%d/absence-accounts/%d", records[0].ID, types[seedTraegerRegeneration])
-		body := map[string]any{"year": time.Now().Year(), "entitled_days": 3, "reason": "Ein Tag mehr laut Vereinbarung"}
+		body := map[string]any{"year": year, "entitled_days": 3, "reason": "Ein Tag mehr laut Vereinbarung", "expected_version": version}
 		if _, err := rt.Client.PutWithAuth(auth, path, body); err != nil {
 			return fmt.Errorf("set a Kontingent of a Träger staff record: %w", err)
 		}
@@ -60,14 +93,15 @@ func seedTraegerAbsences(ctx context.Context, rt *Runtime, auth AuthRef) error {
 		return err
 	}
 	if conversion, ok := schoolTypes[seedTraegerConversion]; ok {
-		if _, err := rt.Client.PutWithAuth(rt.TenantAuth, "/api/absence-types/"+conversion, map[string]any{"school_limit_days": 2}); err != nil {
+		body := map[string]any{"school_limit_days": 2, "expected_version": conversion.Version}
+		if _, err := rt.Client.PutWithAuth(rt.TenantAuth, "/api/absence-types/"+conversion.ID, body); err != nil {
 			return fmt.Errorf("deviate from a type of the Träger: %w", err)
 		}
 	}
-	if err := seedTraegerConversionBooking(rt, records, schoolTypes[seedTraegerConversion]); err != nil {
+	if err := seedTraegerConversionBooking(rt, records, schoolTypes[seedTraegerConversion].ID); err != nil {
 		return err
 	}
-	requested, err := seedTraegerAbsenceRequest(ctx, rt, records, schoolTypes[seedTraegerRegeneration])
+	requested, err := seedTraegerAbsenceRequest(ctx, rt, records, schoolTypes[seedTraegerRegeneration].ID)
 	if err != nil {
 		return err
 	}
@@ -153,7 +187,7 @@ func seedTraegerStaffRecordsOf(client *Client, auth AuthRef, schoolID int64) ([]
 
 // seedSchoolAbsenceTypes returns the school's rows of the Träger's types by
 // name, as its Leitung reads them.
-func seedSchoolAbsenceTypes(rt *Runtime) (map[string]string, error) {
+func seedSchoolAbsenceTypes(rt *Runtime) (map[string]seedSchoolAbsenceType, error) {
 	raw, err := rt.Client.GetWithAuth(rt.TenantAuth, "/api/absence-types")
 	if err != nil {
 		return nil, fmt.Errorf("read the absence types of the school: %w", err)
@@ -164,13 +198,13 @@ func seedSchoolAbsenceTypes(rt *Runtime) (map[string]string, error) {
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		return nil, fmt.Errorf("decode the absence types of the school: %w", err)
 	}
-	ids := map[string]string{}
+	types := map[string]seedSchoolAbsenceType{}
 	for _, value := range envelope.Data {
 		if value.KeptByTraeger {
-			ids[value.Name] = value.ID
+			types[value.Name] = value
 		}
 	}
-	return ids, nil
+	return types, nil
 }
 
 // seedTraegerAbsenceRequest signs in a caregiver of the school who has a

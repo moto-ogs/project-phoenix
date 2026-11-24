@@ -177,9 +177,9 @@ func TestBookingAuthorityImpactAndActivationUseTheSameEvaluation(t *testing.T) {
 	impact, err := svc.PreviewBookingAuthorityImpact(ctx, today)
 	require.NoError(t, err)
 	require.Len(t, impact.BlockingChildren, 1)
-	assert.Equal(t, fmt.Sprintf("%d", blocker.ID), impact.BlockingChildren[0].StudentID)
+	assert.Equal(t, blocker.ID, impact.BlockingChildren[0].StudentID.Int64())
 	require.Len(t, impact.PlannedCompletions, 1)
-	assert.Equal(t, fmt.Sprintf("%d", planned.ID), impact.PlannedCompletions[0].StudentID)
+	assert.Equal(t, planned.ID, impact.PlannedCompletions[0].StudentID.Int64())
 
 	_, err = svc.ApplyBookingAuthoritySetting(ctx, today, true)
 	require.ErrorIs(t, err, careplan.ErrBookingAuthorityBlocked)
@@ -214,7 +214,7 @@ func TestBookingAuthorityIncludesImmediatelyActivatedStudents(t *testing.T) {
 	impact, err := bookingAuthorityService(t, db, true).PreviewBookingAuthorityImpact(scope.Context(), decisionTestToday)
 	require.NoError(t, err)
 	require.Len(t, impact.BlockingChildren, 1)
-	assert.Equal(t, fmt.Sprintf("%d", student.ID), impact.BlockingChildren[0].StudentID)
+	assert.Equal(t, student.ID, impact.BlockingChildren[0].StudentID.Int64())
 }
 
 func TestBookingAuthorityExcludesLegacyInactiveStudentWithoutEnrollmentBounds(t *testing.T) {
@@ -251,7 +251,7 @@ func TestBookingAuthorityIncludesBookingsFromExistingStudentApproval(t *testing.
 	impact, err := bookingAuthorityService(t, db, true).PreviewBookingAuthorityImpact(scope.Context(), decisionTestToday)
 	require.NoError(t, err)
 	require.Len(t, impact.PlannedCompletions, 1)
-	assert.Equal(t, fmt.Sprintf("%d", student.ID), impact.PlannedCompletions[0].StudentID)
+	assert.Equal(t, student.ID, impact.PlannedCompletions[0].StudentID.Int64())
 }
 
 func TestBookingAuthorityExcludesUnapprovedBookingForExistingStudent(t *testing.T) {
@@ -273,7 +273,7 @@ func TestBookingAuthorityExcludesUnapprovedBookingForExistingStudent(t *testing.
 	require.NoError(t, err)
 	assert.Empty(t, impact.PlannedCompletions)
 	require.Len(t, impact.BlockingChildren, 1)
-	assert.Equal(t, fmt.Sprintf("%d", student.ID), impact.BlockingChildren[0].StudentID)
+	assert.Equal(t, student.ID, impact.BlockingChildren[0].StudentID.Int64())
 }
 
 func TestBookingParticipationBoundaryKeepsActualPresenceVisible(t *testing.T) {

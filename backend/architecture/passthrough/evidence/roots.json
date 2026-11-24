@@ -23,7 +23,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (b ClassDayHomework) ChangeHomework(ctx context.Context, in classday.HomeworkChange) (classdayCompose.HomeworkEntry, error) {\n\tentry, err := b.Book.ChangeHomework(ctx, timetable.HomeworkChange{ID: in.ID, SchoolClass: in.SchoolClass, Subject: in.Subject, Description: in.Description})\n\tif err != nil {\n\t\treturn classdayCompose.HomeworkEntry{}, classDayHomeworkError(err)\n\t}\n\treturn classDayHomeworkEntry(entry), nil\n}",
+      "evidence": "func (b ClassDayHomework) ChangeHomework(ctx context.Context, in classday.HomeworkChange) (classdayCompose.HomeworkEntry, error) {\n\tentry, err := b.Book.ChangeHomework(ctx, timetable.HomeworkChange{ID: in.ID, SchoolClass: in.SchoolClass, Subject: in.Subject, Description: in.Description, ExpectedVersion: in.ExpectedVersion})\n\tif err != nil {\n\t\treturn classdayCompose.HomeworkEntry{}, classDayHomeworkError(err)\n\t}\n\treturn classDayHomeworkEntry(entry), nil\n}",
       "form": "unclassified-evidence",
       "id": "api/ClassDayHomework.ChangeHomework",
       "owner": "roots"
@@ -1234,7 +1234,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (c parentBillingCareContracts) Recipients(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]parentbilling.CareRecipient, error) {\n\tparties, err := c.contracts.BillingRecipients(ctx, organizationID, contractIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\trecipients := make(map[int64]parentbilling.CareRecipient, len(parties))\n\tfor contractID, party := range parties {\n\t\trecipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email, ContractDraft: party.ContractDraft}\n\t}\n\treturn recipients, nil\n}",
+      "evidence": "func (c parentBillingCareContracts) Recipients(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]parentbilling.CareRecipient, error) {\n\tparties, err := c.contracts.BillingRecipients(ctx, organizationID, contractIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\trecipients := make(map[int64]parentbilling.CareRecipient, len(parties))\n\tfor contractID, party := range parties {\n\t\trecipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email, ContractDraft: party.ContractDraft, FamilyContractID: party.FamilyContractID}\n\t}\n\treturn recipients, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/parentBillingCareContracts.Recipients",
       "owner": "roots"
@@ -1311,7 +1311,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (c parentBillingPlaceChanges) RebookHolidayChild(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID, childID int64, bookings []parentbilling.HolidayBookingChoice) (parentbilling.HolidayPlaceChange, error) {\n\tchoices := make([]enrollmentOwner.HolidayBookingInput, len(bookings))\n\tfor i, booking := range bookings {\n\t\tchoices[i] = enrollmentOwner.HolidayBookingInput{WeekID: booking.WeekID, TimeModelID: booking.TimeModelID, Days: booking.Days, Lunch: booking.Lunch}\n\t}\n\tdetail, err := c.workflow.RebookHolidayChild(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, registrationID, childID, choices)\n\tif err != nil {\n\t\treturn parentbilling.HolidayPlaceChange{}, parentBillingPlacesError(err)\n\t}\n\treturn parentbilling.HolidayPlaceChange{Registration: detail, RegistrationID: detail.ID, MovedUp: ident.IDs(sortedMovedUp(detail.Promotions))}, nil\n}",
+      "evidence": "func (c parentBillingPlaceChanges) RebookHolidayChild(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID, childID int64, expectedVersion string, bookings []parentbilling.HolidayBookingChoice) (parentbilling.HolidayPlaceChange, error) {\n\tchoices := make([]enrollmentOwner.HolidayBookingInput, len(bookings))\n\tfor i, booking := range bookings {\n\t\tchoices[i] = enrollmentOwner.HolidayBookingInput{WeekID: booking.WeekID, TimeModelID: booking.TimeModelID, Days: booking.Days, Lunch: booking.Lunch}\n\t}\n\tdetail, err := c.workflow.RebookHolidayChild(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, registrationID, childID, expectedVersion, choices)\n\tif err != nil {\n\t\treturn parentbilling.HolidayPlaceChange{}, parentBillingPlacesError(err)\n\t}\n\treturn parentbilling.HolidayPlaceChange{Registration: detail, RegistrationID: detail.ID, MovedUp: ident.IDs(sortedMovedUp(detail.Promotions))}, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/parentBillingPlaceChanges.RebookHolidayChild",
       "owner": "roots"
@@ -2280,6 +2280,13 @@
       "evidence": "func (n CareContractFamilyNumbers) StateFamilyChildren(ctx context.Context, organizationID int64, family carecontract.FamilyContract, children int, statedAt *time.Time) (carecontract.FamilyChildren, error) {\n\tstated, err := n.Numbers.StateContractFamilyChildren(ctx, organizationID, contractFamily(family), children, statedAt)\n\treturn careContractFamilyChildren(stated), careContractFamilyError(err)\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/CareContractFamilyNumbers.StateFamilyChildren",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (b CareContractIssuers) SchoolIssuers(ctx context.Context, organizationID int64, schoolIDs []int64) (map[int64]carecontract.Issuer, error) {\n\tparties, err := b.Responsible.ResponsibleParties(ctx, organizationID, organizationtenancy.ResponsibilityContracts, schoolIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tissuers := make(map[int64]carecontract.Issuer, len(parties))\n\tfor schoolID, party := range parties {\n\t\tissuers[schoolID] = carecontract.Issuer{SenderText: party.SenderText(), ContactName: party.ContactName, ContactPhone: party.ContactPhone, ContactEmail: party.ContactEmail}\n\t}\n\treturn issuers, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/CareContractIssuers.SchoolIssuers",
       "owner": "roots"
     },
     {
@@ -3502,6 +3509,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (b StaffEmployers) SchoolEmployers(ctx context.Context, organizationID int64, schoolIDs []int64) (map[int64]string, error) {\n\tparties, err := b.Responsible.ResponsibleParties(ctx, organizationID, organizationtenancy.ResponsibilityStaff, schoolIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\temployers := make(map[int64]string, len(parties))\n\tfor schoolID, party := range parties {\n\t\temployers[schoolID] = party.Name\n\t}\n\treturn employers, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/StaffEmployers.SchoolEmployers",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (r StaffMembershipRepository) Create(ctx context.Context, entity *peopleValues.Staff) error {\n\tif entity == nil {\n\t\treturn repositoryError(\"create staff\", errors.New(\"staff cannot be nil\"))\n\t}\n\tcreated, err := r.Membership.CreateStaff(ctx, schoolmembership.CreateStaff{StaffFields: staffFieldsFromLegacy(entity)})\n\tif err != nil {\n\t\treturn membershipError(\"create staff\", err)\n\t}\n\tapplyStaffToLegacy(entity, created)\n\treturn nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/StaffMembershipRepository.Create",
@@ -4552,7 +4566,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p callerPeople) RenamePerson(ctx context.Context, personID int64, firstName, lastName *string) error {\n\treturn p.persons.People.RenamePerson(ctx, personID, firstName, lastName)\n}",
+      "evidence": "func (p callerPeople) RenamePerson(ctx context.Context, personID int64, firstName, lastName *string, expectedVersion string) error {\n\treturn p.persons.People.RenamePerson(ctx, personID, firstName, lastName, expectedVersion)\n}",
       "form": "forward-debt",
       "id": "roots/owners/callerPeople.RenamePerson",
       "owner": "roots"
@@ -6113,13 +6127,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (d guardianDirectory) FindStudents(ctx context.Context, ids []int64) (map[int64]identityPorts.Student, error) {\n\tstudents, err := d.repos.Students.FindByIDs(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]identityPorts.Student, len(students))\n\tfor id, student := range students {\n\t\tif student != nil {\n\t\t\tresult[id] = identityPorts.Student{ID: student.ID, PersonID: student.PersonID}\n\t\t}\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/guardianDirectory.FindStudents",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (d guardianDirectory) LinkGuardianProfileToAccount(ctx context.Context, profileID, accountID int64) error {\n\treturn d.repos.People.LinkGuardianProfileToAccount(ctx, profileID, accountID)\n}",
       "form": "forward-debt",
       "id": "roots/owners/guardianDirectory.LinkGuardianProfileToAccount",
@@ -6389,6 +6396,13 @@
       "evidence": "func (e offeringChangeEnrollment) Request(ctx context.Context, id int64) (*carePlanCompose.BookingRequest, error) {\n\trequest, err := e.owner.RequestByID(ctx, id, false)\n\tif err != nil || request == nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026carePlanCompose.BookingRequest{ID: request.ID, PhaseID: request.PhaseID}, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/offeringChangeEnrollment.Request",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (e offeringChangeEnrollment) SelectionHistory(ctx context.Context, childID int64) ([]careplan.BookedOffering, error) {\n\tvalues, err := e.owner.RequestChildOfferingHistory(ctx, childID)\n\treturn BookedOfferings(values), err\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/offeringChangeEnrollment.SelectionHistory",
       "owner": "roots"
     },
     {
@@ -6883,7 +6897,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (m parentSEPAMandates) RevokeSEPAMandate(ctx context.Context, organizationID int64, reader parentportal.SEPAMandateReader) (parentportal.SEPAMandateView, error) {\n\tview, err := m.mandates.RevokeParentSEPAMandate(ctx, organizationID, parentbilling.ParentMandateReader(reader))\n\treturn parentMandateView(view), parentMandateError(err)\n}",
+      "evidence": "func (m parentSEPAMandates) RevokeSEPAMandate(ctx context.Context, organizationID int64, reader parentportal.SEPAMandateReader, expectedVersion string) (parentportal.SEPAMandateView, error) {\n\tview, err := m.mandates.RevokeParentSEPAMandate(ctx, organizationID, parentbilling.ParentMandateReader(reader), expectedVersion)\n\treturn parentMandateView(view), parentMandateError(err)\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/parentSEPAMandates.RevokeSEPAMandate",
       "owner": "roots"

@@ -17,6 +17,9 @@ type convertInstanceToSeriesRequest struct {
 	// InstanceNotes remains the Tagesnotiz of the existing seed occurrence;
 	// Notes is the durable Wochennotiz of the new template.
 	InstanceNotes *string `json:"instance_notes,omitempty"`
+	// ExpectedVersion is the version of the one-off block its editor read
+	// (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func (req *convertInstanceToSeriesRequest) Bind(r *http.Request) error {
@@ -77,8 +80,9 @@ func (rs *Resource) convertInstanceToSeries(w http.ResponseWriter, r *http.Reque
 			Template: buildCreateTemplateInput(
 				parsed, tenantID, gradeLevelMax, rosterValidFrom, rs.resolveStartedByStaffID(r.Context()),
 			),
-			InstanceNotes:  normalizeNotes(req.InstanceNotes),
-			ActorAccountID: sessiontoken.ActorAccountIDFromCtx(r.Context()),
+			InstanceNotes:   normalizeNotes(req.InstanceNotes),
+			ActorAccountID:  sessiontoken.ActorAccountIDFromCtx(r.Context()),
+			ExpectedVersion: req.ExpectedVersion,
 		},
 	)
 	if err != nil {

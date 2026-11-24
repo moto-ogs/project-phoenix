@@ -14,13 +14,16 @@ export const MODEL_PATH = "backend/api/contract/contract.json";
 const describe = (schema) => schema.elem ? `${schema.kind}<${describe(schema.elem)}>`
   : schema.kind === "ref" ? "object" : schema.kind;
 
-// Naming the form of a string narrows the type, not the wire. In a request,
-// Go reads an id as a decimal string or a number, so a string identifier may
-// become an id; so may a lax_id, the request kind a base from before #7808
-// still names (ADR 0300).
+// The legacy_id decoder on a released base already accepted a decimal
+// string in answers, and Go reads a request identifier as a decimal string,
+// so a string of the base may become an id there.
+// Naming the form of a string narrows the type, not the wire. Typing a JSON
+// answer or an open object does not break a reader of the older schema.
+const openObject = (schema) => schema.kind === "map" && schema.elem.kind === "json";
 const sameKind = (before, after, request) => before.kind === after.kind
-  || (before.kind === "string" && ["enum", "date", "clock"].includes(after.kind))
-  || (request && after.kind === "id" && ["string", "lax_id"].includes(before.kind));
+  || (before.kind === "string" && ["enum", "date", "clock", "id"].includes(after.kind))
+  || (!request && (before.kind === "json" || (openObject(before) && after.kind === "ref")))
+  || (before.kind === "legacy_id" && after.kind === "id");
 
 export function breakingChanges(base, head) {
   const breaking = [];
@@ -31,13 +34,20 @@ export function breakingChanges(base, head) {
   // A response may gain fields and may turn optional into required. A reader
   // breaks when a field disappears, changes its kind, or starts to be null
   // or absent. Types are compared by shape, so renaming a Go type is free.
-  function compare(where, before, after, request = false) {
-    if (!sameKind(before, after, request)) {
+  function compare(where, before, after, request = false, refinesJSON = false) {
+    // A documented refinement of existing validation does not narrow what
+    // a previously successful caller could send.
+    const alreadyValidated = request && refinesJSON
+      && (before.kind === "json" || (openObject(before) && after.kind === "ref"));
+    if (!sameKind(before, after, request) && !alreadyValidated) {
       breaking.push(`${where}: ${describe(before)} became ${describe(after)}`);
       return;
     }
-    if (!before.nullable && after.nullable) breaking.push(`${where}: may now be null`);
-    if (before.elem) compare(`${where}[]`, before.elem, after.elem, request);
+    if (!request && !before.legacy_json && before.kind !== "json" && after.legacy_json) {
+      breaking.push(`${where}: may now return other JSON shapes`);
+    }
+    if (!request && !before.nullable && after.nullable) breaking.push(`${where}: may now be null`);
+    if (before.elem && after.elem) compare(`${where}[]`, before.elem, after.elem, request, refinesJSON);
     if (before.kind !== "ref") return;
     const pair = `${before.ref}>${after.ref}`;
     if (seen.has(pair)) return;
@@ -54,7 +64,7 @@ export function breakingChanges(base, head) {
         continue;
       }
       if (!beforeType.request && !field.optional && next.optional) breaking.push(`${at}: may now be absent`);
-      compare(at, field.schema, next.schema, Boolean(beforeType.request));
+      compare(at, field.schema, next.schema, Boolean(beforeType.request), Boolean(next.refines_json?.trim()));
     }
   }
 

@@ -27,8 +27,18 @@ export interface Role {
   baseRole?: string;
   /** Made from the template „Wie Lehrkraft“: works in moto schule (#4574). */
   schoolPortal?: boolean;
+  /**
+   * Vom Träger der Schule vorgegeben (#4810): Die Schule weist die Rolle zu,
+   * ändert und löscht sie aber nicht.
+   */
+  fromTraeger?: boolean;
   createdAt: string;
   updatedAt: string;
+  /**
+   * The read-state token of the master data (ADR 0311): an edit sends it
+   * back. The permission selection carries its own.
+   */
+  version?: string;
   /** The names of the role's permissions; the role list sends names only. */
   permissionNames?: readonly string[];
 }
@@ -51,8 +61,10 @@ export function mapRoleResponse(role: sharedContract.RoleResponse): Role {
     isSystem: role.is_system,
     baseRole: role.base_role,
     schoolPortal: role.school_portal,
+    fromTraeger: role.from_traeger,
     createdAt: role.created_at,
     updatedAt: role.updated_at,
+    version: role.version,
     permissionNames: role.permissions ?? [],
   };
 }
@@ -78,6 +90,8 @@ export function mapPermissionResponse(
 const SCHOOL_ROLE_LABELS: ReadonlyMap<string, string> = new Map([
   ["ogs-leitung", "OGS-Leitung"],
   ["betreuungskraft", "Betreuungskraft"],
+  // Die Rolle des Demo-Trägers für alle seine Schulen (#4810).
+  ["springerkraft", "Springerkraft"],
 ]);
 
 /**

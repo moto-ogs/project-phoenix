@@ -51,13 +51,13 @@ vi.mock("~/lib/auth-utils", () => ({
 // Mock next-auth/react
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
-    data: { user: { token: "test-token", id: "7", tenantId: 1 } },
+    data: { user: { token: "test-token", id: "7", tenantId: "1" } },
     status: "authenticated",
   })),
   // The staff session gate of bffJson reads the same session.
   getSession: vi.fn(() =>
     Promise.resolve({
-      user: { token: "test-token", id: "7", tenantId: 1 },
+      user: { token: "test-token", id: "7", tenantId: "1" },
       expires: "2099-01-01",
     }),
   ),
@@ -483,7 +483,7 @@ beforeEach(() => {
   vi.mocked(useSession)
     .mockReset()
     .mockReturnValue({
-      data: { user: { token: "test-token", id: "7", tenantId: 1 } },
+      data: { user: { token: "test-token", id: "7", tenantId: "1" } },
       status: "authenticated",
     } as never);
   vi.mocked(useOptionalSupervision)

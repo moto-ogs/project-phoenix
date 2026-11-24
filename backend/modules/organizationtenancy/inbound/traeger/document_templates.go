@@ -33,6 +33,9 @@ type TemplateRequest struct {
 	// LegalRemedy is the Rechtsbehelfsbelehrung of a fee notice (#4688);
 	// every other kind refuses one.
 	LegalRemedy string `json:"legal_remedy"`
+	// ExpectedVersion is the version of the detail the editor started from
+	// (ADR 0311); only a save reads it, the preview stores nothing.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind accepts the body; the Owner validates it.
@@ -141,7 +144,7 @@ func (rs *MasterDataResource) saveTemplate(w http.ResponseWriter, r *http.Reques
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	saved, err := rs.templates.AddVersion(r.Context(), organizationID, accountID, templateKind(r), req.template())
+	saved, err := rs.templates.AddVersion(r.Context(), organizationID, accountID, templateKind(r), req.template(), req.ExpectedVersion)
 	if err != nil {
 		renderTemplateError(w, r, err)
 		return

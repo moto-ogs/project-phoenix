@@ -57,12 +57,15 @@ describe("confirmFamilyChildren", () => {
   // parent_billing.family_children_invalid (#2353).
   it("hands the body over as an object, not as JSON text", async () => {
     bffJson.mockResolvedValueOnce({ families: null, rules: null });
-    await confirmFamilyChildren({
-      contractId: "77",
-      children: 3,
-      validFrom: "2026-09-01",
-      validUntil: null,
-    });
+    await confirmFamilyChildren(
+      {
+        contractId: "77",
+        children: 3,
+        validFrom: "2026-09-01",
+        validUntil: null,
+      },
+      "v1",
+    );
     expect(bffJson).toHaveBeenCalledWith(
       "org",
       "PUT /traeger/family-children/",
@@ -72,6 +75,7 @@ describe("confirmFamilyChildren", () => {
           children: 3,
           valid_from: "2026-09-01",
           valid_until: null,
+          expected_version: "v1",
         },
       },
     );

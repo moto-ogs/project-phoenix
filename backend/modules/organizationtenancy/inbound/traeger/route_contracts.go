@@ -26,16 +26,21 @@ func MasterDataRouteContracts() []common.RouteContract {
 			MaxBodyBytes: maxLogoBody, TooLargeCode: common.CodeTraegerLogoTooLarge, Response: organizationtenancy.TraegerLogo{},
 		},
 		{Method: "DELETE", Pattern: "/logo", Portals: traegerPortal, NoData: true},
-		{Method: "PUT", Pattern: "/contact", Portals: traegerPortal, Request: ContactRequest{}, Response: organizationtenancy.TraegerContact{}},
-		{Method: "PUT", Pattern: "/withdrawal-contact", Portals: traegerPortal, Request: WithdrawalContactRequest{}, Response: organizationtenancy.TraegerWithdrawalContact{}},
+		{Method: "PUT", Pattern: "/contact", Portals: traegerPortal, Request: ContactRequest{}, Response: organizationtenancy.TraegerSavedContact{}},
+		{Method: "PUT", Pattern: "/withdrawal-contact", Portals: traegerPortal, Request: WithdrawalContactRequest{}, Response: organizationtenancy.TraegerSavedWithdrawalContact{}},
 		{Method: "POST", Pattern: "/bank-accounts", Portals: traegerPortal, Request: BankAccountRequest{}, Response: organizationtenancy.TraegerBankAccount{}},
-		{Method: "PUT", Pattern: "/bank-accounts/{id}", Portals: traegerPortal, Request: BankAccountRequest{}, Response: organizationtenancy.TraegerBankAccount{}},
+		{Method: "PUT", Pattern: "/bank-accounts/{id}", Portals: traegerPortal, Request: BankAccountUpdateRequest{}, Response: organizationtenancy.TraegerBankAccount{}},
 		{Method: "DELETE", Pattern: "/bank-accounts/{id}", Portals: traegerPortal, NoData: true},
 		{Method: "GET", Pattern: "/document-templates", Portals: traegerPortal, Response: []organizationtenancy.TraegerDocumentTemplateSummary{}},
 		{Method: "GET", Pattern: "/document-templates/export", Portals: traegerPortal, Query: []common.QueryParam{common.ListFormatQuery}, File: true},
 		{Method: "GET", Pattern: "/document-templates/{kind}", Portals: traegerPortal, Response: organizationtenancy.TraegerDocumentTemplateDetail{}},
 		{Method: "POST", Pattern: "/document-templates/{kind}/versions", Portals: traegerPortal, Request: TemplateRequest{}, Response: organizationtenancy.TraegerDocumentTemplate{}},
 		{Method: "POST", Pattern: "/document-templates/{kind}/preview", Portals: traegerPortal, NoCommit: "renders a sample letter and saves no template", Request: TemplateRequest{}, Response: templates.SampleLetter{}},
+		// Who is responsible at the schools, and their Schulträger and
+		// Gemeinde (#4811).
+		{Method: "GET", Pattern: "/responsibilities", Portals: traegerPortal, Response: organizationtenancy.ResponsibilityOverview{}, Enums: responsibilityEnums()},
+		{Method: "PUT", Pattern: "/responsibilities/schools/{schoolId}/parties/{kind}", Portals: traegerPortal, Request: SchoolPartyRequest{}, Response: organizationtenancy.SchoolParty{}, Enums: responsibilityEnums()},
+		{Method: "DELETE", Pattern: "/responsibilities/schools/{schoolId}/parties/{kind}", Portals: traegerPortal, NoData: true},
 	}
 }
 
@@ -63,7 +68,7 @@ func ReportTemplateRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []organizationtenancy.TraegerReportTemplate{}},
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: ReportTemplateRequest{}, Response: organizationtenancy.TraegerReportTemplate{}},
-		{Method: "PUT", Pattern: "/{id}", Portals: traegerPortal, Request: ReportTemplateRequest{}, Response: organizationtenancy.TraegerReportTemplate{}},
+		{Method: "PUT", Pattern: "/{id}", Portals: traegerPortal, Request: ReportTemplateReplaceRequest{}, Response: organizationtenancy.TraegerReportTemplate{}},
 		{Method: "DELETE", Pattern: "/{id}", Portals: traegerPortal, NoData: true},
 	}
 }
@@ -75,5 +80,19 @@ func SchoolDocumentRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: []common.PortalScope{common.PortalTenant}, Response: []organizationtenancy.SharedDocument{}},
 		{Method: "GET", Pattern: "/{id}/file", Portals: []common.PortalScope{common.PortalTenant}, File: true},
+	}
+}
+
+// responsibilityEnums are the closed value sets of the responsibilities
+// (#4811): the bodies, the areas and where a school's value comes from.
+func responsibilityEnums() []common.EnumContract {
+	bodies := []string{string(organizationtenancy.BodyTraeger), string(organizationtenancy.BodySchultraeger), string(organizationtenancy.BodyGemeinde)}
+	return []common.EnumContract{
+		{Name: "ResponsibleBody", Fields: []string{"AreaResponsibility.body", "AreaResponsibility.effective"}, Values: bodies},
+		{Name: "SchoolPartyKind", Fields: []string{"SchoolParty.kind"}, Values: bodies[1:]},
+		{Name: "ResponsibilityArea", Fields: []string{"AreaResponsibility.area"}, Values: []string{
+			string(organizationtenancy.ResponsibilityContracts), string(organizationtenancy.ResponsibilityBilling), string(organizationtenancy.ResponsibilityStaff)}},
+		{Name: "ResponsibilitySource", Fields: []string{"AreaResponsibility.source"}, Values: []string{
+			string(organizationtenancy.ResponsibilityFromDefault), string(organizationtenancy.ResponsibilityFromTraeger), string(organizationtenancy.ResponsibilityFromSchool)}},
 	}
 }

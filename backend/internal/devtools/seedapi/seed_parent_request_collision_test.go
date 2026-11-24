@@ -47,9 +47,9 @@ func TestSeedParentPickupRequestsDoNotCollide(t *testing.T) {
 				case strings.HasSuffix(path, "/pickup-permission-requests"):
 					_, _ = fmt.Fprint(w, `{"data":[{"id":"95","guardian_profile_id":"93","status":"pending"}]}`)
 				case path == "/api/students/change-requests":
-					items := []map[string]any{{"request_type": "care_schedule", "expected_version": "v95", "data": map[string]any{"id": "95"}}}
+					items := []map[string]any{{"request_type": "care_schedule", "expected_version": "v95", "care_schedule": map[string]any{"id": "95"}}}
 					for id := range requests {
-						items = append(items, map[string]any{"request_type": "care_schedule", "expected_version": "v" + id, "data": map[string]any{"id": id}})
+						items = append(items, map[string]any{"request_type": "care_schedule", "expected_version": "v" + id, "care_schedule": map[string]any{"id": id}})
 					}
 					require.NoError(t, json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"items": items}}))
 				case strings.HasSuffix(path, "/decide"):

@@ -76,6 +76,15 @@ type SplitSeriesInput struct {
 	// WorkingTime confirms the working-time warnings of the occurrences
 	// (#4708).
 	WorkingTime workforce.WorkingTimeConfirmation
+	// ExpectedVersion is the version of the series the planner read (ADR
+	// 0311), checked under the staff's shift lock.
+	ExpectedVersion string
+	// ExpectedOccurrenceVersion is the ShiftVersion of the occurrence the
+	// planner opened. The in-place update of today's occurrence checks it
+	// under the same lock: a same-day split keeps that row, and a later
+	// "nur diese Woche" edit of it must not be overwritten by a form read
+	// before it.
+	ExpectedOccurrenceVersion string
 }
 
 // StaffShiftSeriesService manages recurring shift series (#1889). Series
@@ -253,6 +262,10 @@ func (s *staffShiftSeriesService) updateTodayOccurrence(
 	}
 	if _, err := s.shiftService.UpdateShiftWithOptions(ctx, &updated, StaffShiftUpdateOptions{
 		SuppressTimeTrackingBroadcast: true,
+		// The planner read this occurrence: the update refuses a row
+		// changed since, checked after the staff's shift lock the split
+		// already holds (ADR 0311).
+		Read: &workforce.ShiftReadState{Version: input.ExpectedOccurrenceVersion},
 	}); err != nil {
 		return false, fmt.Errorf("update current series occurrence: %w", err)
 	}

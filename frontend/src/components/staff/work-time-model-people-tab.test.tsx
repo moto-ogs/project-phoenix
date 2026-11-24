@@ -75,6 +75,7 @@ function model(extra: Partial<WorkTimeModel> = {}): WorkTimeModel {
     weeklyTotals: [2400],
     archivedAt: null,
     assignedStaffCount: 1,
+    version: "v1",
     ...extra,
   };
 }

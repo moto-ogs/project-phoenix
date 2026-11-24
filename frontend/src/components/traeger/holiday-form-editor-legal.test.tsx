@@ -66,6 +66,7 @@ describe("Holiday form legal blocks", () => {
     render(
       <ToastProvider>
         <HolidayFormEditor
+          reload={vi.fn()}
           periodId="5"
           form={{ ...form, legalBlocks: [savedBlock] }}
           onSaved={vi.fn()}
@@ -109,13 +110,23 @@ describe("Holiday form legal blocks", () => {
   it("saves two required PDF notices and a voluntary text consent through the Träger upload adapter", async () => {
     upload.mockResolvedValueOnce("81").mockResolvedValueOnce("82");
     save.mockImplementation(
-      (_period: string, fields: HolidayFormField[], blocks: FormLegalBlock[]) =>
+      (
+        _period: string,
+        _version: number,
+        fields: HolidayFormField[],
+        blocks: FormLegalBlock[],
+      ) =>
         Promise.resolve({ ...form, version: 2, fields, legalBlocks: blocks }),
     );
     const onSaved = vi.fn();
     render(
       <ToastProvider>
-        <HolidayFormEditor periodId="5" form={form} onSaved={onSaved} />
+        <HolidayFormEditor
+          reload={vi.fn()}
+          periodId="5"
+          form={form}
+          onSaved={onSaved}
+        />
       </ToastProvider>,
     );
     for (let i = 0; i < 2; i++) {
@@ -158,6 +169,8 @@ describe("Holiday form legal blocks", () => {
     await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
     expect(save).toHaveBeenCalledWith(
       "5",
+      // The version the editor read goes with the save (ADR 0311).
+      1,
       [],
       expect.arrayContaining([
         expect.objectContaining({
@@ -197,7 +210,12 @@ describe("Holiday form legal blocks", () => {
     );
     render(
       <ToastProvider>
-        <HolidayFormEditor periodId="5" form={form} onSaved={vi.fn()} />
+        <HolidayFormEditor
+          reload={vi.fn()}
+          periodId="5"
+          form={form}
+          onSaved={vi.fn()}
+        />
       </ToastProvider>,
     );
     fireEvent.click(

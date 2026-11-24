@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // careMealHorizon is how many months back a run looks for released Mensa
@@ -56,7 +57,30 @@ func (c *CareBilling) CareMealTariffs(ctx context.Context, reviewer parentbillin
 	if err != nil {
 		return parentbilling.CareMealTariffs{}, err
 	}
-	return parentbilling.CareMealTariffs{Schools: schools, Tariffs: mealTariffValidity(tariffs), BilledUntil: billed}, nil
+	versions := make(map[int64]string, len(schools))
+	for _, school := range schools {
+		versions[school.ID.Int64()] = mealTariffsVersion(school.ID.Int64(), tariffs)
+	}
+	return parentbilling.CareMealTariffs{Schools: schools, Tariffs: mealTariffValidity(tariffs), BilledUntil: billed, Versions: versions}, nil
+}
+
+// mealTariffsVersion is the read-state token of the Mensa prices of a school
+// (ADR 0311): every price with its start, in order of the start. It covers
+// all prices of the school: a new price ends the one before it.
+func mealTariffsVersion(schoolID int64, tariffs []parentbilling.CareMealTariff) string {
+	type price struct {
+		ValidFrom   calendar.Date `json:"valid_from"`
+		Mode        string        `json:"mode"`
+		AmountCents int64         `json:"amount_cents"`
+	}
+	prices := []price{}
+	for _, tariff := range tariffs {
+		if tariff.SchoolID == ident.ID(schoolID) {
+			prices = append(prices, price{ValidFrom: tariff.ValidFrom, Mode: tariff.Mode, AmountCents: tariff.AmountCents})
+		}
+	}
+	slices.SortFunc(prices, func(a, b price) int { return a.ValidFrom.Compare(b.ValidFrom) })
+	return readstate.Fingerprint(prices)
 }
 
 // SaveCareMealTariff sets the Mensa of a school from a month on that no
@@ -75,7 +99,7 @@ func (c *CareBilling) SaveCareMealTariff(ctx context.Context, reviewer parentbil
 		}
 		return parentbilling.CareMealTariffs{}, parentbilling.ErrCareMealTariffInvalid
 	}
-	if err := c.keepBilledMeals(ctx, reviewer.OrganizationID, price.SchoolID.Int64(), price.ValidFrom); err != nil {
+	if err := c.keepBilledMeals(ctx, reviewer.OrganizationID, price.SchoolID.Int64(), price.ValidFrom, price.ExpectedVersion, false); err != nil {
 		return parentbilling.CareMealTariffs{}, err
 	}
 	if err := c.mealStore.ReplaceCareMealTariff(ctx, reviewer.OrganizationID, reviewer.AccountID, price); err != nil {
@@ -84,15 +108,18 @@ func (c *CareBilling) SaveCareMealTariff(ctx context.Context, reviewer parentbil
 	return c.CareMealTariffs(ctx, reviewer)
 }
 
-// DeleteCareMealTariff removes a Mensa price of a month no invoice bills.
-func (c *CareBilling) DeleteCareMealTariff(ctx context.Context, reviewer parentbilling.HolidayReviewer, schoolID int64, validFrom calendar.Date) (parentbilling.CareMealTariffs, error) {
+// DeleteCareMealTariff removes a Mensa price of a month no invoice bills,
+// from the prices of the school as the Abrechnung read them.
+func (c *CareBilling) DeleteCareMealTariff(ctx context.Context, reviewer parentbilling.HolidayReviewer, schoolID int64, validFrom calendar.Date,
+	expectedVersion string,
+) (parentbilling.CareMealTariffs, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return parentbilling.CareMealTariffs{}, err
 	}
 	if schoolID <= 0 || !isMonthStart(validFrom) {
 		return parentbilling.CareMealTariffs{}, parentbilling.ErrCareMealTariffNotFound
 	}
-	if err := c.keepBilledMeals(ctx, reviewer.OrganizationID, schoolID, validFrom); err != nil {
+	if err := c.keepBilledMeals(ctx, reviewer.OrganizationID, schoolID, validFrom, expectedVersion, true); err != nil {
 		return parentbilling.CareMealTariffs{}, err
 	}
 	deleted, err := c.mealStore.DeleteCareMealTariff(ctx, reviewer.OrganizationID, schoolID, validFrom)
@@ -107,10 +134,29 @@ func (c *CareBilling) DeleteCareMealTariff(ctx context.Context, reviewer parentb
 
 // keepBilledMeals holds the monthly billing and refuses a change of the
 // Mensa of a school from validFrom on when an issued invoice bills a Mensa
-// month of the school from then on: the price it used stays.
-func (c *CareBilling) keepBilledMeals(ctx context.Context, organizationID, schoolID int64, validFrom calendar.Date) error {
+// month of the school from then on: the price it used stays. The change
+// rests on the prices of the school as the office read them: prices
+// changed since expectedVersion are refused with readstate.ErrChanged (ADR
+// 0311); a removal (removes) of a price the school does not have is
+// ErrCareMealTariffNotFound first. Every writer of the Mensa prices holds
+// this lock.
+func (c *CareBilling) keepBilledMeals(ctx context.Context, organizationID, schoolID int64, validFrom calendar.Date, expectedVersion string,
+	removes bool,
+) error {
 	if err := c.store.LockCareBilling(ctx, organizationID); err != nil {
 		return fmt.Errorf("parent billing: hold the monthly billing: %w", err)
+	}
+	tariffs, err := c.mealStore.CareMealTariffs(ctx, organizationID)
+	if err != nil {
+		return err
+	}
+	if removes && !slices.ContainsFunc(tariffs, func(tariff parentbilling.CareMealTariff) bool {
+		return tariff.SchoolID == ident.ID(schoolID) && tariff.ValidFrom == validFrom
+	}) {
+		return parentbilling.ErrCareMealTariffNotFound
+	}
+	if err := readstate.Check(expectedVersion, mealTariffsVersion(schoolID, tariffs)); err != nil {
+		return err
 	}
 	billed, err := c.mealStore.MealBilledUntil(ctx, organizationID)
 	if err != nil {
@@ -464,9 +510,11 @@ func placeMeal(month *careMonth, in careMealInput, position parentbilling.CareMe
 			}
 		}
 	}
-	skipped := heldOrUnpriced(month)
+	// A child held for an issued invoice waits as a whole (month.held, S4);
+	// an invoice with only the Mensa (S5) holds no Mensa back.
+	skipped := unpricedOrDuplicate(month)
 	for _, contractID := range contracts {
-		if skipped[contractID] {
+		if skipped[contractID] || month.held[contractID] {
 			return
 		}
 	}
@@ -476,7 +524,7 @@ func placeMeal(month *careMonth, in careMealInput, position parentbilling.CareMe
 	month.invoices = append(month.invoices, parentbilling.CareInvoice{
 		ContractID: ident.ID(head.ContractID), Service: parentbilling.ServiceCare, SchoolID: ident.ID(head.SchoolID), SchoolName: head.SchoolName,
 		ChildFirstName: head.ChildFirstName, ChildLastName: head.ChildLastName, StudentID: studentOf(versions), Recipient: recipient,
-		FamilyEmail: parentbilling.ContractFamilyKey(recipient.Email, head.ContractID), Reductions: []parentbilling.CareReduction{},
+		FamilyEmail: recipient.FamilyOf(head.ContractID), Reductions: []parentbilling.CareReduction{},
 		Positions: []parentbilling.CarePosition{}, MealPositions: []parentbilling.CareMealPosition{position}, TotalCents: position.AmountCents,
 	})
 }
@@ -527,9 +575,22 @@ func mealChildName(first, last string) string {
 	return normalizedName(first + " " + last)
 }
 
-// heldOrUnpriced names the contracts the preview holds back or leaves out
-// for a missing price.
+// heldOrUnpriced names the contracts the preview holds back, for a
+// duplicate contract or an invoice that already bills their child (#7892),
+// or leaves out for a missing price.
 func heldOrUnpriced(month *careMonth) map[int64]bool {
+	skipped := unpricedOrDuplicate(month)
+	for _, child := range month.billedChildren {
+		for _, contract := range child.Contracts {
+			skipped[contract.ContractID.Int64()] = true
+		}
+	}
+	return skipped
+}
+
+// unpricedOrDuplicate names the contracts left out for a missing price or
+// held for a duplicate contract.
+func unpricedOrDuplicate(month *careMonth) map[int64]bool {
 	skipped := map[int64]bool{}
 	for _, unpriced := range month.unpriced {
 		skipped[unpriced.ContractID.Int64()] = true

@@ -49,7 +49,10 @@ const {
   mockShowActionError,
   mockShowMessage,
   mockAcknowledgeConflict,
+  mockGetTemplate,
 } = vi.hoisted(() => ({
+  // The series editor opens from the series' editing read (ADR 0311).
+  mockGetTemplate: vi.fn(),
   mockUseSession: vi.fn(),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
@@ -201,6 +204,7 @@ vi.mock("~/lib/timetable-api", () => ({
   timetableService: {
     getWeek: vi.fn(),
     getTemplates: vi.fn(),
+    getTemplate: mockGetTemplate,
     getGaps: vi.fn(),
     materialize: mockMaterialize,
     replanWeek: vi.fn(),
@@ -2867,6 +2871,7 @@ describe("BetreuungsplanView", () => {
 
   it("handles series create, edit, apply, delete and archive", async () => {
     setUrl("view=serien");
+    mockGetTemplate.mockResolvedValue({ ...template, version: "v7" });
     render(<BetreuungsplanView />);
 
     expect(screen.getByText("create-template")).toBeVisible();
@@ -2875,7 +2880,8 @@ describe("BetreuungsplanView", () => {
     fireEvent.click(screen.getByText("event-close"));
 
     fireEvent.click(screen.getByText("edit-template"));
-    expect(screen.getByText("event-close")).toBeInTheDocument();
+    expect(await screen.findByText("event-close")).toBeInTheDocument();
+    expect(mockGetTemplate).toHaveBeenCalledWith("7", "5");
     fireEvent.click(screen.getByText("event-delete-series"));
     await stateChange.waitFor(() =>
       expect(mockEndTemplate).toHaveBeenCalledWith("7", {
@@ -2888,7 +2894,7 @@ describe("BetreuungsplanView", () => {
     expect(mockTenantMutate).toHaveBeenCalledWith("timetable-templates-5");
 
     fireEvent.click(screen.getByText("edit-template"));
-    fireEvent.click(screen.getByText("event-close"));
+    fireEvent.click(await screen.findByText("event-close"));
 
     fireEvent.click(screen.getByText("apply-template"));
     await stateChange.waitFor(() => expect(mockMaterialize).toHaveBeenCalled());

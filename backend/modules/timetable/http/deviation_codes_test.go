@@ -2,12 +2,14 @@ package timetablehttp
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // TestApplyDeviations_RefusalCodes drives the Vertretungsplan save through
@@ -31,22 +33,22 @@ func TestApplyDeviations_RefusalCodes(t *testing.T) {
 		{
 			name: "self substitution",
 			body: map[string]any{"substitutions": []map[string]any{
-				{"absent_staff_id": s.staffA, "substitute_staff_id": s.staffA},
+				{"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffA)},
 			}},
 			wantCode: "timetable.substitute_self", wantField: "substitute_staff_id",
 		},
 		{
 			name: "two substitutes for one absence",
 			body: map[string]any{"substitutions": []map[string]any{
-				{"absent_staff_id": s.staffA, "substitute_staff_id": s.staffX},
-				{"absent_staff_id": s.staffA, "substitute_staff_id": s.staffY},
+				{"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffX)},
+				{"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffY)},
 			}},
 			wantCode: "timetable.substitute_single_only", wantField: "substitutions",
 		},
 		{
 			name: "empty appointment scope",
 			body: map[string]any{"absences": []map[string]any{
-				{"staff_id": s.staffA, "instance_ids": []int64{}},
+				{"staff_id": fmt.Sprint(s.staffA), "instance_ids": []string{}},
 			}},
 			wantCode: "timetable.instances_required", wantField: "instance_ids",
 		},
@@ -100,7 +102,7 @@ func TestBulkSubstitution_RefusalCodes(t *testing.T) {
 	}
 
 	w := doBulk(t, router, map[string]any{
-		"absent_staff_id": s.staffA, "substitute_staff_id": s.staffY, "dates": []string{d1Str, d2Str},
+		"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffY), "dates": []string{d1Str, d2Str},
 	})
 	require.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
 	body := decode(t, w.Body.Bytes())
@@ -110,13 +112,13 @@ func TestBulkSubstitution_RefusalCodes(t *testing.T) {
 	assert.Equal(t, "substitute_staff_id", body.Errors[0].Field)
 
 	w = doBulk(t, router, map[string]any{
-		"absent_staff_id": s.staffA, "substitute_staff_id": s.staffA, "dates": []string{d1Str},
+		"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffA), "dates": []string{d1Str},
 	})
 	require.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
 	assert.Equal(t, "timetable.substitute_self", decode(t, w.Body.Bytes()).Code)
 
 	w = doBulk(t, router, map[string]any{
-		"absent_staff_id": s.staffA, "substitute_staff_id": s.staffY, "dates": []string{},
+		"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffY), "dates": []string{},
 	})
 	require.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
 	assert.Equal(t, "timetable.dates_required", decode(t, w.Body.Bytes()).Code)

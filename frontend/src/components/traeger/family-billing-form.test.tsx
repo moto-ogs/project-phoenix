@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 import {
   type FamilyBilling,
   familyBillingBody,
@@ -35,6 +37,8 @@ function renderModal(existing: FamilyBilling | null = null) {
       <FamilyBillingForm
         target={target}
         existing={existing}
+        version="v-1"
+        reload={() => Promise.resolve(undefined)}
         onCancel={vi.fn()}
         onSaved={onSaved}
       />
@@ -89,19 +93,22 @@ describe("FamilyBillingForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(saveFamilyBilling).toHaveBeenCalledWith({
-        contractId: "42",
-        recipientKind: "both",
-        secondFirstName: " Ben ",
-        secondLastName: "Muster",
-        payerFirstName: "",
-        payerLastName: "",
-        payerEmail: "",
-        payerAddress: null,
-        paymentMethod: "direct_debit",
-        dueDay: null,
-        debtorNumber: "",
-      }),
+      expect(saveFamilyBilling).toHaveBeenCalledWith(
+        {
+          contractId: "42",
+          recipientKind: "both",
+          secondFirstName: " Ben ",
+          secondLastName: "Muster",
+          payerFirstName: "",
+          payerLastName: "",
+          payerEmail: "",
+          payerAddress: null,
+          paymentMethod: "direct_debit",
+          dueDay: null,
+          debtorNumber: "",
+        },
+        "v-1",
+      ),
     );
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(null));
   });
@@ -119,6 +126,7 @@ describe("FamilyBillingForm", () => {
           recipientKind: "applicant",
           debtorNumber: "10 4711",
         }),
+        "v-1",
       ),
     );
   });
@@ -189,6 +197,7 @@ describe("FamilyBillingForm and the family's debtor number", () => {
           paymentMethod: "",
           debtorNumber: "40300",
         }),
+        "v-1",
       ),
     );
   });
@@ -200,6 +209,8 @@ describe("FamilyBillingForm and the family's debtor number", () => {
         <FamilyBillingForm
           target={target}
           existing={{ ...STORED, debtorNumber: "LEGACY 1" }}
+          version="v-1"
+          reload={() => Promise.resolve(undefined)}
           format={{ digitsOnly: true, minDigits: 5, maxDigits: 5 }}
           onCancel={vi.fn()}
           onSaved={vi.fn()}
@@ -214,6 +225,7 @@ describe("FamilyBillingForm and the family's debtor number", () => {
           paymentMethod: "transfer",
           debtorNumber: "LEGACY 1",
         }),
+        "v-1",
       ),
     );
     saveFamilyBilling.mockClear();
@@ -229,12 +241,153 @@ describe("FamilyBillingForm and the family's debtor number", () => {
     expect(saveFamilyBilling).not.toHaveBeenCalled();
   });
 
+  // ADR 0311: a save over a deviation a colleague changed since is refused;
+  // the form shows the stored state it reads again and saves over that one.
+  it("shows the state a colleague saved since instead of overwriting it", async () => {
+    saveFamilyBilling.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    // The page reads the family again; the stored state arrives as props.
+    const reload = vi.fn(() => Promise.resolve(undefined));
+    const form = (existing: FamilyBilling, version: string) => (
+      <ToastProvider>
+        <FamilyBillingForm
+          target={target}
+          existing={existing}
+          version={version}
+          reload={reload}
+          onCancel={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>
+    );
+    const view = render(form(STORED, "v-1"));
+    fireEvent.click(screen.getByRole("radio", { name: "Überweisung" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        catalogText(
+          "general.changed_since_read",
+          "die Angabe zu Empfänger und Zahlung",
+        ),
+      ),
+    ).toBeInTheDocument();
+    expect(saveFamilyBilling).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentMethod: "transfer" }),
+      "v-1",
+    );
+    expect(reload).toHaveBeenCalledTimes(1);
+
+    view.rerender(form({ ...STORED, debtorNumber: "40301" }, "v-2"));
+    expect(await screen.findByLabelText(/Debitorennummer/)).toHaveValue(
+      "40301",
+    );
+    expect(screen.getByRole("radio", { name: "Lastschrift" })).toBeChecked();
+    expect(
+      screen.getByText(
+        catalogText(
+          "general.changed_since_read",
+          "die Angabe zu Empfänger und Zahlung",
+        ),
+      ),
+    ).toBeInTheDocument();
+
+    saveFamilyBilling.mockResolvedValueOnce(STORED);
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(saveFamilyBilling).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          paymentMethod: "direct_debit",
+          debtorNumber: "40301",
+        }),
+        "v-2",
+      ),
+    );
+  });
+
+  // ADR 0311 rule 6: a failed read of the stored state after a refusal is
+  // a load error, and the refused version is not sent again.
+  it("names a failed read of the stored state after a refusal", async () => {
+    saveFamilyBilling.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    render(
+      <ToastProvider>
+        <FamilyBillingForm
+          target={target}
+          existing={STORED}
+          version="v-1"
+          reload={() =>
+            Promise.reject(
+              new ApiError("down", 503, { code: "general.unavailable" }),
+            )
+          }
+          onCancel={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "Überweisung" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(saveFamilyBilling).toHaveBeenCalledTimes(1);
+  });
+
+  // ADR 0311 rule 6: a state read before the refusal does not end the
+  // failed read, also when typing renders the form again.
+  it("keeps a failed read after a refusal while the form is edited further", async () => {
+    saveFamilyBilling.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const form = (version: string) => (
+      <ToastProvider>
+        <FamilyBillingForm
+          target={target}
+          existing={STORED}
+          version={version}
+          reload={() =>
+            Promise.reject(
+              new ApiError("down", 503, { code: "general.unavailable" }),
+            )
+          }
+          onCancel={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>
+    );
+    const view = render(form("v-1"));
+    fireEvent.click(screen.getByRole("radio", { name: "Überweisung" }));
+    // A newer read arrives under the touched draft.
+    view.rerender(form("v-2"));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Lastschrift" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(
+      screen.getByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(saveFamilyBilling).toHaveBeenCalledTimes(1);
+  });
+
   it("refuses a number in another format of the Träger (#6675)", async () => {
     render(
       <ToastProvider>
         <FamilyBillingForm
           target={target}
           existing={null}
+          version="v-1"
+          reload={() => Promise.resolve(undefined)}
           format={{ digitsOnly: true, minDigits: 5, maxDigits: 5 }}
           onCancel={vi.fn()}
           onSaved={vi.fn()}
@@ -322,6 +475,8 @@ describe("FamilyBillingForm without a run (#7770)", () => {
         <FamilyBillingForm
           target={{ ...target, withoutRun: true }}
           existing={null}
+          version="v-1"
+          reload={() => Promise.resolve(undefined)}
           onCancel={vi.fn()}
           onSaved={onSaved}
           {...props}
@@ -388,19 +543,22 @@ describe("FamilyBillingForm without a run (#7770)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() => expect(saveFamilyBilling).toHaveBeenCalledTimes(1));
-    expect(saveFamilyBilling).toHaveBeenCalledWith({
-      contractId: "42",
-      recipientKind: "payer",
-      secondFirstName: "",
-      secondLastName: "",
-      payerFirstName: "Carla",
-      payerLastName: "Muster",
-      payerEmail: "carla@example.org",
-      payerAddress: { street: "Weg 1", postalCode: "12345", city: "Ort" },
-      paymentMethod: "direct_debit",
-      dueDay: 15,
-      debtorNumber: "10 4711",
-    });
+    expect(saveFamilyBilling).toHaveBeenCalledWith(
+      {
+        contractId: "42",
+        recipientKind: "payer",
+        secondFirstName: "",
+        secondLastName: "",
+        payerFirstName: "Carla",
+        payerLastName: "Muster",
+        payerEmail: "carla@example.org",
+        payerAddress: { street: "Weg 1", postalCode: "12345", city: "Ort" },
+        paymentMethod: "direct_debit",
+        dueDay: 15,
+        debtorNumber: "10 4711",
+      },
+      "v-1",
+    );
     await waitFor(() =>
       expect(onSaved).toHaveBeenCalledWith(
         expect.objectContaining({ paymentMethod: "direct_debit" }),

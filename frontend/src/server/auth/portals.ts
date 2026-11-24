@@ -1,4 +1,13 @@
 import "server-only";
+import * as refreshRoutes from "~/lib/contract/auth-refresh.generated";
+import * as logoutRoutes from "~/lib/contract/auth-logout.generated";
+import * as operatorRoutes from "~/lib/contract/operator-auth.generated";
+import * as tenantLoginRoutes from "~/lib/contract/auth-login.generated";
+import * as parentRoutes from "~/lib/contract/parent-auth.generated";
+import * as schoolRoutes from "~/lib/contract/school-auth.generated";
+import * as catererRoutes from "~/lib/contract/caterer-auth.generated";
+import * as traegerRoutes from "~/lib/contract/traeger-auth.generated";
+
 import { env } from "~/env";
 import {
   PORTAL_SESSION_COOKIE_NAMES,
@@ -8,7 +17,6 @@ import type { LoginRefusalCode } from "~/lib/login-refusal";
 import {
   PORTAL_ROUTES,
   portalSignInPage,
-  type EnvelopableAuthStep,
   type PortalKey,
 } from "~/lib/portal-paths";
 import {
@@ -35,20 +43,27 @@ export type ValidationPortal =
 /** "operator": email is the username, the session carries role "operator". */
 export type PortalIdentity = "account" | "operator";
 
-/** A backend auth step a BFF route forwards; its envelope: `PORTAL_ROUTES`. */
-export type BackendAuthStep = Exclude<
-  EnvelopableAuthStep,
-  "mfa/resend" | "mfa/trusted-devices"
->;
+/** Go's login decoder for each portal, independent of the browser's reply. */
+const LOGIN_ROUTES = {
+  tenant: tenantLoginRoutes.routes["POST /auth/login"],
+  operator: operatorRoutes.routes["POST /operator/auth/login"],
+  parent: parentRoutes.routes["POST /parent/auth/login"],
+  school: schoolRoutes.routes["POST /school/auth/login"],
+  caterer: catererRoutes.routes["POST /caterer/auth/login"],
+  traeger: traegerRoutes.routes["POST /traeger/auth/login"],
+};
+const ACCOUNT_REFRESH = refreshRoutes.routes["POST /auth/refresh"];
+const OPERATOR_REFRESH = operatorRoutes.routes["POST /operator/auth/refresh"];
+export type RefreshRoute = typeof ACCOUNT_REFRESH | typeof OPERATOR_REFRESH;
 
-export interface BackendEndpoint {
-  path: string;
-  /** The answer wraps its body in `{ data }`. */
-  enveloped: boolean;
-}
-
-/** The token a backend logout authenticates and revokes the family of. */
-export type LogoutTokenKind = "refresh" | "access";
+const ACCOUNT_LOGOUT = {
+  route: logoutRoutes.routes["POST /auth/logout"],
+  token: "refresh",
+} as const;
+const OPERATOR_LOGOUT = {
+  route: operatorRoutes.routes["POST /operator/auth/logout"],
+  token: "access",
+} as const;
 
 export interface PasswordLogin {
   /** Backend codes and login steps the login page may read from the refusal;
@@ -88,10 +103,9 @@ export interface PortalDescriptor {
   } | null;
   redirect: RedirectPolicy;
   backend: {
-    /** Prefix of the portal's own auth steps (`login`, `mfa/verify`, …). */
-    authPrefix: string;
-    refresh: BackendEndpoint;
-    logout: { path: string; token: LogoutTokenKind };
+    login: (typeof LOGIN_ROUTES)[PortalKey];
+    refresh: RefreshRoute;
+    logout: typeof ACCOUNT_LOGOUT | typeof OPERATOR_LOGOUT;
     /** The password step may ask which organization to sign in to. */
     organizationSelection?: true;
   };
@@ -106,12 +120,6 @@ export interface PortalDescriptor {
   /** School slug login, Träger hand-off and the staff preview. */
   tenantFeatures?: true;
 }
-
-const ACCOUNT_REFRESH: BackendEndpoint = {
-  path: "/auth/refresh",
-  enveloped: false,
-};
-const ACCOUNT_LOGOUT = { path: "/auth/logout", token: "refresh" } as const;
 
 /**
  * Host-only cookies (no domain) for every portal but the tenant: the browser
@@ -160,11 +168,12 @@ export const PORTALS = {
     cookieNames: tenantCookies(),
     redirect: parentDomainRedirect,
     backend: {
-      authPrefix: "/auth",
+      login: LOGIN_ROUTES.tenant,
       refresh: ACCOUNT_REFRESH,
       logout: ACCOUNT_LOGOUT,
     },
-    snapshotClaims: ({ tenantId }) => typeof tenantId === "number",
+    snapshotClaims: ({ tenantId }) =>
+      typeof tenantId === "string" && /^[1-9]\d*$/.test(tenantId),
     tenantFeatures: true,
   },
   operator: {
@@ -180,13 +189,10 @@ export const PORTALS = {
     cookieNames: hostOnlyCookies(PORTAL_SESSION_COOKIE_NAMES.operator, "lax"),
     redirect: subdomainRedirect,
     backend: {
-      authPrefix: "/operator/auth",
-      refresh: {
-        path: "/operator/auth/refresh",
-        enveloped: PORTAL_ROUTES.operator.enveloped.includes("refresh"),
-      },
+      login: LOGIN_ROUTES.operator,
+      refresh: OPERATOR_REFRESH,
       // The operator session chain authenticates the access token.
-      logout: { path: "/operator/auth/logout", token: "access" },
+      logout: OPERATOR_LOGOUT,
     },
   },
   parent: {
@@ -204,7 +210,7 @@ export const PORTALS = {
     cookieNames: hostOnlyCookies(PORTAL_SESSION_COOKIE_NAMES.parent, "strict"),
     redirect: exactOriginRedirect,
     backend: {
-      authPrefix: "/parent/auth",
+      login: LOGIN_ROUTES.parent,
       refresh: ACCOUNT_REFRESH,
       logout: ACCOUNT_LOGOUT,
     },
@@ -232,13 +238,13 @@ export const PORTALS = {
     cookieNames: hostOnlyCookies(PORTAL_SESSION_COOKIE_NAMES.school, "strict"),
     redirect: exactOriginRedirect,
     backend: {
-      authPrefix: "/school/auth",
+      login: LOGIN_ROUTES.school,
       refresh: ACCOUNT_REFRESH,
       logout: ACCOUNT_LOGOUT,
     },
     // School tokens are tenant-bound; the portal keys its data cache on it.
     snapshotClaims: ({ tenantId }) =>
-      typeof tenantId === "number" && tenantId > 0,
+      typeof tenantId === "string" && /^[1-9]\d*$/.test(tenantId),
   },
   caterer: {
     key: "caterer",
@@ -253,7 +259,7 @@ export const PORTALS = {
     cookieNames: hostOnlyCookies(PORTAL_SESSION_COOKIE_NAMES.caterer, "strict"),
     redirect: exactOriginRedirect,
     backend: {
-      authPrefix: "/caterer/auth",
+      login: LOGIN_ROUTES.caterer,
       refresh: ACCOUNT_REFRESH,
       logout: ACCOUNT_LOGOUT,
     },
@@ -271,7 +277,7 @@ export const PORTALS = {
     cookieNames: hostOnlyCookies(PORTAL_SESSION_COOKIE_NAMES.traeger, "strict"),
     redirect: exactOriginRedirect,
     backend: {
-      authPrefix: "/traeger/auth",
+      login: LOGIN_ROUTES.traeger,
       refresh: ACCOUNT_REFRESH,
       logout: ACCOUNT_LOGOUT,
       organizationSelection: true,
@@ -279,7 +285,7 @@ export const PORTALS = {
     // A Träger session never names a school (ADR 0084): a school session of
     // the Absprung lives in the tenant cookie.
     snapshotClaims: ({ tenantId, orgId }) =>
-      typeof orgId === "number" && orgId > 0 && tenantId == null,
+      typeof orgId === "string" && /^[1-9]\d*$/.test(orgId) && tenantId == null,
   },
 } as const satisfies Record<PortalKey, PortalDescriptor>;
 

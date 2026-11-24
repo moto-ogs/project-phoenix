@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 
-	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -51,8 +51,8 @@ func (f bulkReadFixture) refs() []parentrequests.Ref {
 	refs := make([]parentrequests.Ref, 0, 2*len(f.children))
 	for _, child := range f.children {
 		refs = append(refs,
-			parentrequests.Ref{Kind: parentrequests.KindMasterData, ID: child.masterRow.ID, ExpectedVersion: careplan.ParentRequestVersion(child.masterRow.UpdatedAt)},
-			parentrequests.Ref{Kind: parentrequests.KindExcused, ID: child.excusedRow.ID, ExpectedVersion: careplan.ParentRequestVersion(child.excusedRow.UpdatedAt)},
+			parentrequests.Ref{Kind: parentrequests.KindMasterData, ID: child.masterRow.ID, ExpectedVersion: readstate.Of(child.masterRow.UpdatedAt)},
+			parentrequests.Ref{Kind: parentrequests.KindExcused, ID: child.excusedRow.ID, ExpectedVersion: readstate.Of(child.excusedRow.UpdatedAt)},
 		)
 	}
 	return refs
@@ -140,7 +140,7 @@ func TestBulkApprovalRefusesBeforeLockingAnyRow(t *testing.T) {
 		{"last request stale", func(refs []parentrequests.Ref) []parentrequests.Ref {
 			refs[len(refs)-1].ExpectedVersion = "stale"
 			return refs
-		}, parentrequests.ErrStale},
+		}, readstate.ErrChanged},
 		{"last absence gone", func(refs []parentrequests.Ref) []parentrequests.Ref {
 			refs[len(refs)-1].ID = refs[len(refs)-1].ID + 1_000_000
 			return refs
@@ -174,7 +174,7 @@ func TestBulkApprovalReportsAMissingRequestBeforeAStaleOne(t *testing.T) {
 	refs[2].ID = refs[2].ID + 1_000_000 // Stammdaten of child 2
 	err := f.approve(t, ctx, refs)
 	require.ErrorIs(t, err, parentrequests.ErrNotFound)
-	require.NotErrorIs(t, err, parentrequests.ErrStale)
+	require.NotErrorIs(t, err, readstate.ErrChanged)
 }
 
 // A read that fails in the database fails the approval: no 4xx refusal, no
@@ -207,7 +207,7 @@ func TestBulkApprovalFailedReadFailsTheApproval(t *testing.T) {
 			require.NoError(t, err)
 			approveErr := awaitRequestWriter(t, ctx, done)
 			require.Error(t, approveErr)
-			for _, refusal := range []error{parentrequests.ErrStale, parentrequests.ErrNotFound, parentrequests.ErrBulkIneligible} {
+			for _, refusal := range []error{readstate.ErrChanged, parentrequests.ErrNotFound, parentrequests.ErrBulkIneligible} {
 				require.NotErrorIs(t, approveErr, refusal)
 			}
 			require.NoError(t, holder.Rollback())
@@ -237,7 +237,7 @@ func TestBulkApprovalRefusesAMissingRequestBeforeReadingLaterFacts(t *testing.T)
 	refs := make([]parentrequests.Ref, 0, len(f.children))
 	first := f.children[0].masterRow.ID
 	for _, child := range f.children {
-		refs = append(refs, parentrequests.Ref{Kind: parentrequests.KindMasterData, ID: child.masterRow.ID, ExpectedVersion: careplan.ParentRequestVersion(child.masterRow.UpdatedAt)})
+		refs = append(refs, parentrequests.Ref{Kind: parentrequests.KindMasterData, ID: child.masterRow.ID, ExpectedVersion: readstate.Of(child.masterRow.UpdatedAt)})
 		first = min(first, child.masterRow.ID)
 	}
 	_, err := db.NewUpdate().TableExpr("users.student_data_change_requests").Set("status = 'rejected'").Where("id = ?", first).Exec(ctx)

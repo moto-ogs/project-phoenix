@@ -17,9 +17,9 @@ package application
 
 import (
 	"context"
-	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	reminder "github.com/moto-ogs/project-phoenix/workflows/reminderdelivery"
 	"github.com/moto-ogs/project-phoenix/workflows/reminderdelivery/ports"
 )
@@ -119,17 +119,17 @@ func (s *service) ComputeBatch(ctx context.Context, scopes []reminder.BatchScope
 	return results, nil
 }
 
-// assignedIDStrings renders an instance-ID set in the same string form the
+// assignedIDs renders an instance-ID set in the same string form the
 // reminders themselves carry, so a consumer can match the two without knowing
 // how IDs are formatted. Nil for a person with no assignment, which reads as
 // "nothing of mine" rather than as an empty restriction.
-func assignedIDStrings(instanceIDs map[int64]struct{}) map[string]struct{} {
+func assignedIDs(instanceIDs map[int64]struct{}) map[ident.ID]struct{} {
 	if len(instanceIDs) == 0 {
 		return nil
 	}
-	out := make(map[string]struct{}, len(instanceIDs))
+	out := make(map[ident.ID]struct{}, len(instanceIDs))
 	for id := range instanceIDs {
-		out[strconv.FormatInt(id, 10)] = struct{}{}
+		out[ident.ID(id)] = struct{}{}
 	}
 	return out
 }
@@ -475,7 +475,7 @@ func (s *service) renderBatchResults(recipients []reminder.BatchScope, pickupsBy
 
 		activityPart, nextChange := batchActivityResult(sc, cfg, in, nextChange)
 		result := assembleResult(pickupPart, activityPart, in.today, nextChange)
-		result.AssignedActivityInstanceIDs = assignedIDStrings(in.assignedInstances[sc.StaffID])
+		result.AssignedActivityInstanceIDs = assignedIDs(in.assignedInstances[sc.StaffID])
 		results[resultKey(sc)] = result
 	}
 

@@ -6,7 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SWRConfig } from "~/lib/swr/testing";
 vi.unmock("swr");
 
@@ -77,6 +77,19 @@ const { billingApi, termsApi, masterApi, session, api } = vi.hoisted(() => ({
   },
 }));
 
+// The booked moto modules of the Träger of the session (#6052).
+const mockBookedModules = vi.hoisted(() => ({
+  current: [
+    "traeger_uebersicht",
+    "ferienbetreuung",
+    "vertraege",
+    "elternbeitraege",
+  ] as string[],
+}));
+vi.mock("~/lib/traeger-booked-modules", () => ({
+  useTraegerModuleBooked: (module: string) =>
+    mockBookedModules.current.includes(module),
+}));
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
 vi.mock("~/lib/traeger-contributions-api", () => api);
 vi.mock("~/lib/traeger-billing-api", () => billingApi);
@@ -102,7 +115,7 @@ vi.mock("next-auth/react", () => ({
       user: {
         id: "A",
         scope: "org",
-        orgId: 7,
+        orgId: "7",
         permissions: session.permissions,
       },
     },
@@ -113,6 +126,7 @@ vi.mock("next-auth/react", () => ({
 import TraegerAbrechnungsvorgabenPage from "./page";
 
 const SIBLING: ContributionRule = {
+  version: "v1",
   id: "3",
   kind: "sibling",
   validFrom: "2026-08-01",
@@ -124,6 +138,7 @@ const SIBLING: ContributionRule = {
 };
 
 const YOUTH_OFFICE: CostBearer = {
+  version: "v1",
   id: "4",
   name: "Fachdienst Jugend des Landkreises Musterstadt",
   address: "Am Kreishaus 1\n12345 Musterstadt",
@@ -375,10 +390,11 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "Ausschalten" }));
 
     await waitFor(() =>
-      expect(api.saveCostBearer).toHaveBeenCalledWith("4", {
-        ...YOUTH_OFFICE,
-        active: false,
-      }),
+      expect(api.saveCostBearer).toHaveBeenCalledWith(
+        "4",
+        { ...YOUTH_OFFICE, active: false },
+        "v1",
+      ),
     );
   });
 
@@ -386,6 +402,7 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
   // card, filled with the row's values, each opening with its own.
   it("changes a cost bearer in the dialog of adding one, filled with its values", async () => {
     const social: CostBearer = {
+      version: "v1",
       id: "5",
       name: "Sozialamt Musterstadt",
       address: "",
@@ -442,6 +459,7 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
           fileReference: "FJ 51-2027",
           active: true,
         }),
+        "v1",
       ),
     );
     await waitFor(() => expect(api.fetchCostBearers).toHaveBeenCalledTimes(2));
@@ -449,6 +467,101 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
       expect(
         screen.queryByRole("dialog", { name: "Kostenträger ändern" }),
       ).toBeNull(),
+    );
+  });
+
+  // ADR 0311, rule 5: the save's answer reaches the read even when reading
+  // all defaults again fails, so the next change sends the new version.
+  it("changes a cost bearer twice when reading the defaults after the first save fails", async () => {
+    api.fetchCostBearers.mockResolvedValue([YOUTH_OFFICE]);
+    api.saveCostBearer
+      .mockResolvedValueOnce({
+        ...YOUTH_OFFICE,
+        name: "Jugendamt",
+        version: "v2",
+      })
+      .mockResolvedValueOnce({
+        ...YOUTH_OFFICE,
+        name: "Jugendamt Nord",
+        version: "v3",
+      });
+    renderPage();
+    await screen.findAllByText(YOUTH_OFFICE.name);
+    billingApi.fetchHolidayNumberRange.mockRejectedValueOnce(
+      new ApiError("down", 503),
+    );
+
+    const change = async (name: string) => {
+      fireEvent.click(
+        screen.getAllByRole("button", { name: /^Aktionen für / }).at(-1)!,
+      );
+      fireEvent.click(
+        await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+      );
+      const dialog = await screen.findByRole("dialog", {
+        name: "Kostenträger ändern",
+      });
+      fireEvent.change(within(dialog).getByLabelText(/^Name/), {
+        target: { value: name },
+      });
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Speichern" }),
+      );
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("dialog", { name: "Kostenträger ändern" }),
+        ).toBeNull(),
+      );
+    };
+
+    await change("Jugendamt");
+    expect(
+      (await screen.findAllByText(new RegExp(SAVED_BUT_STALE_SUFFIX)))[0],
+    ).toBeInTheDocument();
+    await change("Jugendamt Nord");
+    expect(api.saveCostBearer).toHaveBeenLastCalledWith(
+      "4",
+      expect.objectContaining({ name: "Jugendamt Nord" }),
+      "v2",
+    );
+  });
+
+  // ADR 0311, rule 4: after a refused switch the row carries the refused
+  // version until the stored cost bearer is read.
+  it("locks the switch of a cost bearer until the read after its refusal settled", async () => {
+    api.fetchCostBearers.mockResolvedValue([YOUTH_OFFICE]);
+    renderPage();
+    await screen.findAllByText(YOUTH_OFFICE.name);
+    const read = deferred<CostBearer[]>();
+    api.fetchCostBearers.mockReturnValueOnce(read.promise);
+    api.saveCostBearer.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const openMenu = async () => {
+      fireEvent.click(
+        screen.getAllByRole("button", {
+          name: `Aktionen für ${YOUTH_OFFICE.name}`,
+        })[0]!,
+      );
+      return screen.findByRole("menuitem", { name: "Ausschalten" });
+    };
+
+    fireEvent.click(await openMenu());
+    await waitFor(() => expect(api.saveCostBearer).toHaveBeenCalledTimes(1));
+    const locked = await openMenu();
+    expect(locked).toBeDisabled();
+    fireEvent.click(locked);
+    expect(api.saveCostBearer).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      read.resolve([{ ...YOUTH_OFFICE, version: "v2" }]);
+      await read.promise;
+    });
+    // The menu stayed open: the same entry unlocks.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("menuitem", { name: "Ausschalten" }),
+      ).toBeEnabled(),
     );
   });
 
@@ -897,5 +1010,37 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
         "true",
       ),
     );
+  });
+
+  // #6052: the billing rules belong to Elternbeiträge und Abrechnung; the
+  // bank accounts are moto Basis and stay.
+  describe("without the module Elternbeiträge und Abrechnung", () => {
+    beforeEach(() => {
+      mockBookedModules.current = ["vertraege"];
+    });
+    afterEach(() => {
+      mockBookedModules.current = [
+        "traeger_uebersicht",
+        "ferienbetreuung",
+        "vertraege",
+        "elternbeitraege",
+      ];
+    });
+
+    it("keeps the bank accounts, reads no billing rule and says who acts next", async () => {
+      renderPage();
+
+      expect(
+        await screen.findByText(
+          "Zahlung, Rechnungsnummern, Ermäßigungen und Kostenträger fehlen hier. Sie gehören zum moto-Modul „Elternbeiträge und Abrechnung“. Dein Träger nutzt es nicht. Wenn du es brauchst, sprich mit der Leitung deines Träger-Büros.",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "Bankverbindungen" }),
+      ).toBeInTheDocument();
+      expect(api.fetchContributionRules).not.toHaveBeenCalled();
+      expect(api.fetchCostBearers).not.toHaveBeenCalled();
+      expect(billingApi.fetchHolidayNumberRange).not.toHaveBeenCalled();
+    });
   });
 });

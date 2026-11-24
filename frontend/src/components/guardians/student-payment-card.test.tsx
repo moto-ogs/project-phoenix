@@ -29,7 +29,7 @@ vi.unmock("swr");
 
 const sessionUser = vi.hoisted(() => ({
   id: "account-1",
-  tenantId: 1,
+  tenantId: "1",
   scope: "tenant",
 }));
 
@@ -336,6 +336,7 @@ describe("StudentPaymentCard", () => {
       guardianId: "10",
       iban: FULL_IBAN,
       accountHolder: null,
+      version: "v-read",
     });
     mockUpdatePayment.mockResolvedValue(undefined);
 
@@ -368,9 +369,80 @@ describe("StudentPaymentCard", () => {
       expect(mockUpdatePayment).toHaveBeenCalledWith("10", {
         iban: FULL_IBAN,
         accountHolder: "Sabine Schneider-Kern",
+        // The version of the revealed state the edit started from (ADR 0311).
+        expectedVersion: "v-read",
       }),
     );
     expect(mockSetPayer).not.toHaveBeenCalled();
+  });
+
+  // ADR 0311: a bank section changed since the edit opened is refused; the
+  // form shows the stored state with the refusal and no retry, and the next
+  // save sends the new version.
+  it("shows the stored bank section after a save refused as changed", async () => {
+    mockRevealPayment
+      .mockResolvedValueOnce({
+        guardianId: "10",
+        iban: FULL_IBAN,
+        accountHolder: null,
+        version: "v-read",
+      })
+      .mockResolvedValueOnce({
+        guardianId: "10",
+        iban: FULL_IBAN,
+        accountHolder: "Kollegin Kern",
+        version: "v-stored",
+      });
+    mockUpdatePayment
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValueOnce(undefined);
+
+    render(
+      <StudentPaymentCard
+        studentId="7"
+        guardians={[guardian("10", "Sabine", true)]}
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Bearbeiten" })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await screen.findByLabelText("IBAN");
+    fireEvent.change(screen.getByLabelText("Anderer Kontoinhaber"), {
+      target: { value: "Alt" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        catalogText(
+          "general.changed_since_read",
+          "das Speichern der Bankverbindung",
+        ),
+      ),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByLabelText("Anderer Kontoinhaber")).toHaveValue(
+        "Kollegin Kern",
+      ),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Anderer Kontoinhaber"), {
+      target: { value: "Neu" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mockUpdatePayment).toHaveBeenLastCalledWith("10", {
+        iban: FULL_IBAN,
+        accountHolder: "Neu",
+        expectedVersion: "v-stored",
+      }),
+    );
   });
 
   // Bauart 2 Regel 5 (#3113): der Fehler steht als Alert oben in der Karte,

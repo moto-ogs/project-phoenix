@@ -42,6 +42,8 @@ type CareOffering struct {
 	PickupTimes               map[string]string
 	Translations              json.RawMessage
 	AutoAddTriggerOfferingIDs []int64
+	// Version is the catalog's token of the offering (ADR 0311).
+	Version string
 }
 
 // CareOfferingAvailabilityRule limits an offering to the children whose
@@ -88,6 +90,7 @@ func careOfferingValue(o *capability.CareOffering) (*CareOffering, error) {
 		CountsAsCare: o.CountsAsCare, AutoAddGradeLevels: o.AutoAddGradeLevels,
 		SortOrder: o.SortOrder, SelectionGroup: o.SelectionGroup, SelectionRule: o.SelectionRule,
 		PickupTimes: o.PickupTimes, Translations: o.Translations, AutoAddTriggerOfferingIDs: o.AutoAddTriggerOfferingIDs,
+		Version: o.Version,
 	}
 	if len(o.AvailabilityRule) > 0 && string(o.AvailabilityRule) != "null" {
 		if err := json.Unmarshal(o.AvailabilityRule, &row.AvailabilityRule); err != nil {
@@ -121,6 +124,7 @@ func careOfferingInput(o *CareOffering) (*capability.CareOffering, error) {
 		CountsAsCare: o.CountsAsCare, AutoAddGradeLevels: o.AutoAddGradeLevels,
 		SortOrder: o.SortOrder, SelectionGroup: o.SelectionGroup, SelectionRule: o.SelectionRule,
 		PickupTimes: o.PickupTimes, Translations: o.Translations, AutoAddTriggerOfferingIDs: o.AutoAddTriggerOfferingIDs,
+		Version: o.Version,
 	}
 	if o.AvailabilityRule != nil {
 		rule, err := json.Marshal(o.AvailabilityRule)
@@ -134,6 +138,10 @@ func careOfferingInput(o *CareOffering) (*capability.CareOffering, error) {
 
 // formValues copies the answers a wire request decoded into the owner's
 // values.
+func formAnswerMap(values capability.FormValues) map[string]any {
+	return maps.Collect(values.All())
+}
+
 func formValues(values map[string]any) capability.FormValues {
 	return capability.CollectFormValues(maps.All(values))
 }

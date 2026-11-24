@@ -33,6 +33,10 @@ import {
 } from "./grade-transition-api";
 
 const BASE = "/api/admin/grade-transitions";
+// Read-state tokens as the backend mints them (readstate.Fingerprint, ADR
+// 0311): opaque hex digests the client carries back unchanged.
+const FINGERPRINT = "3f2a9c41d07e8b6a5c19e4f0b27d6a83";
+const OLDER_FINGERPRINT = "a81b44e09c3d27f6b5e01c9d8f2a7b64";
 
 interface FetchCall {
   url: string;
@@ -99,6 +103,7 @@ const transitionRow: adminContract.TransitionResponse = {
   can_modify: true,
   can_apply: true,
   can_revert: false,
+  version: "v1",
 };
 
 const resultRow: adminContract.TransitionResultResponse = {
@@ -186,20 +191,24 @@ describe("updateGradeTransition", () => {
   it("PUTs to the escaped id and omits mappings when undefined", async () => {
     stubOnce(okData(transitionRow));
 
-    await updateGradeTransition("7", { notes: "neu" });
+    await updateGradeTransition("7", { expectedVersion: "v1", notes: "neu" });
 
     const call = calls[0];
     expect(call?.url).toBe(`${BASE}/7`);
     expect(call?.init?.method).toBe("PUT");
     // `mappings: undefined` must not appear in the payload at all — the backend
     // treats an explicit [] as "remove every mapping".
-    expect(parseBody(call?.init)).toEqual({ notes: "neu" });
+    expect(parseBody(call?.init)).toEqual({
+      notes: "neu",
+      expected_version: "v1",
+    });
   });
 
   it("sends an explicit empty list when mappings are cleared", async () => {
     stubOnce(okData(transitionRow));
 
     await updateGradeTransition("7", {
+      expectedVersion: "v1",
       academicYear: "2027-2028",
       mappings: [],
     });
@@ -207,13 +216,14 @@ describe("updateGradeTransition", () => {
     expect(parseBody(calls[0]?.init)).toEqual({
       academic_year: "2027-2028",
       mappings: [],
+      expected_version: "v1",
     });
   });
 
   it("escapes the id in the URL", async () => {
     stubOnce(okData(transitionRow));
 
-    await updateGradeTransition("a b/c", { notes: "x" });
+    await updateGradeTransition("a b/c", { expectedVersion: "v1", notes: "x" });
 
     expect(calls[0]?.url).toBe(`${BASE}/a%20b%2Fc`);
   });
@@ -227,7 +237,7 @@ describe("updateGradeTransition", () => {
     );
 
     await expect(
-      updateGradeTransition("7", { notes: "x" }),
+      updateGradeTransition("7", { expectedVersion: "v1", notes: "x" }),
     ).rejects.toMatchObject({
       name: "ApiError",
       code: NOT_DRAFT_CODE,
@@ -281,7 +291,7 @@ describe("previewGradeTransition", () => {
     ],
     unmapped_classes: null,
     warnings: null,
-    fingerprint: "sha256:abc",
+    fingerprint: FINGERPRINT,
   };
 
   it("GETs the preview uncached and carries the fingerprint through", async () => {
@@ -293,17 +303,9 @@ describe("previewGradeTransition", () => {
     // Uncached: the catalog proxy answers `private, no-store`
     // (catalog-proxy.server.test.ts).
     expect(calls[0]?.init?.method).toBe("GET");
-    expect(p.fingerprint).toBe("sha256:abc");
+    expect(p.fingerprint).toBe(FINGERPRINT);
     expect(p.unmappedClasses).toEqual([]);
     expect(p.warnings).toEqual([]);
-  });
-
-  it("degrades a fingerprint-less response to an empty string", async () => {
-    // An older backend answers without the digest. Apply then sends no
-    // expected_fingerprint rather than a bogus one.
-    stubOnce(okData({ ...preview, fingerprint: undefined }));
-
-    expect((await previewGradeTransition("7")).fingerprint).toBe("");
   });
 
   it("refuses a bare payload without the { data } envelope", async () => {
@@ -326,12 +328,12 @@ describe("applyGradeTransition", () => {
   it("binds the call to the confirmed preview via expected_fingerprint", async () => {
     stubOnce(okData(resultRow));
 
-    const r = await applyGradeTransition("7", "sha256:abc");
+    const r = await applyGradeTransition("7", FINGERPRINT);
 
     expect(calls[0]?.url).toBe(`${BASE}/7/apply`);
     expect(calls[0]?.init?.method).toBe("POST");
     expect(parseBody(calls[0]?.init)).toEqual({
-      expected_fingerprint: "sha256:abc",
+      expected_fingerprint: FINGERPRINT,
     });
     expect(r.studentsPromoted).toBe(40);
     expect(r.studentsGraduated).toBe(10);
@@ -339,29 +341,11 @@ describe("applyGradeTransition", () => {
     expect(r.warnings).toEqual([]);
   });
 
-  it("sends an empty body when no fingerprint is known", async () => {
-    stubOnce(okData(resultRow));
-
-    await applyGradeTransition("7");
-
-    expect(parseBody(calls[0]?.init)).toEqual({});
-  });
-
-  it("sends an empty body for an empty-string fingerprint", async () => {
-    // previewGradeTransition degrades a missing digest to "", and an empty
-    // expected_fingerprint would be a claim the backend cannot match.
-    stubOnce(okData(resultRow));
-
-    await applyGradeTransition("7", "");
-
-    expect(parseBody(calls[0]?.init)).toEqual({});
-  });
-
   it("refuses a result sent without the { data } envelope", async () => {
     stubOnce(okBare(resultRow));
 
     // A write may have happened: the person reloads before trying again.
-    await expect(applyGradeTransition("7")).rejects.toMatchObject({
+    await expect(applyGradeTransition("7", FINGERPRINT)).rejects.toMatchObject({
       status: 502,
       code: "general.write_answer_unreadable",
     });
@@ -375,7 +359,9 @@ describe("applyGradeTransition", () => {
       }),
     );
 
-    const err = await applyGradeTransition("7").catch((e: unknown) => e);
+    const err = await applyGradeTransition("7", FINGERPRINT).catch(
+      (e: unknown) => e,
+    );
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).code).toBe(
       "grade_transition.graduates_checked_in",
@@ -387,7 +373,7 @@ describe("applyGradeTransition", () => {
       fail(409, { detail: "preview is stale", code: PREVIEW_STALE_CODE }),
     );
 
-    const err = await applyGradeTransition("7", "sha256:old").catch(
+    const err = await applyGradeTransition("7", OLDER_FINGERPRINT).catch(
       (e: unknown) => e,
     );
     expect((err as ApiError).code).toBe(PREVIEW_STALE_CODE);
@@ -396,7 +382,9 @@ describe("applyGradeTransition", () => {
   it("falls back to the status line when the error body is unreadable", async () => {
     stubOnce(failUnparseable(500));
 
-    const err = await applyGradeTransition("7").catch((e: unknown) => e);
+    const err = await applyGradeTransition("7", FINGERPRINT).catch(
+      (e: unknown) => e,
+    );
     expect((err as ApiError).message).toBe("HTTP 500");
     expect((err as ApiError).code).toBe("general.server");
   });

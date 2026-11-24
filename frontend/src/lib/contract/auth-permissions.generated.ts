@@ -7,18 +7,15 @@ import {
   PermissionResponseSchema,
 } from "./shared.generated";
 
-/** Query of GET /auth/permissions/ */
-export interface GetAuthPermissionsQuery {
-  action?: string;
-  resource?: string;
-}
-
 export const routes = {
   "GET /auth/permissions/": {
     method: "GET",
     pattern: "/auth/permissions/",
     portals: ["tenant"],
-    query: ["action", "resource"],
+    query: {
+      "action": { kind: "string" },
+      "resource": { kind: "string" },
+    },
     response: success(z.array(PermissionResponseSchema)),
   },
 } as const;

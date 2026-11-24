@@ -86,9 +86,18 @@ var demoMeals = [10][]map[string]any{
 // just ended; that is the week the meal plan opens on.
 func seedMealPlan(rt *Runtime, today seedDate) error {
 	monday := seedDate{Time: mostRecentWeekday(today.Time, time.Monday)}
+	var versions map[string]string
 	for index, dishes := range demoMeals {
-		day := monday.AddDays(index + 2*(index/5)).String()
-		if _, err := rt.Client.Put("/api/meal-plan/"+day, map[string]any{"dishes": dishes}); err != nil {
+		date := monday.AddDays(index + 2*(index/5))
+		if index%5 == 0 {
+			read, err := mealPlanVersions(rt, date)
+			if err != nil {
+				return err
+			}
+			versions = read
+		}
+		day := date.String()
+		if err := saveMealPlanDay(rt, day, versions[day], dishes); err != nil {
 			return fmt.Errorf("seed meal plan %s: %w", day, err)
 		}
 	}
@@ -102,7 +111,7 @@ func seedStaffShift(rt *Runtime, today seedDate, staffID int64) error {
 	}
 	shiftDate := nextWeekday(today.UTCMidnight().AddDate(0, 0, 1), time.Monday)
 	if _, err := rt.Client.Post("/api/staff-shifts", map[string]any{
-		"staff_id":      staffID,
+		"staff_id":      ident.ID(staffID),
 		"date":          shiftDate.Format(seedDateLayout),
 		"start_time":    lateDutyStart,
 		"end_time":      lateDutyEnd,
@@ -125,12 +134,12 @@ func seedStaffShift(rt *Runtime, today seedDate, staffID int64) error {
 		return nil
 	}
 	if _, err := rt.Client.Post("/api/staff-shifts", map[string]any{
-		"staff_id":      staffID,
+		"staff_id":      ident.ID(staffID),
 		"date":          shiftDate.AddDate(0, 0, 1).Format(seedDateLayout),
 		"start_time":    "13:00",
 		"end_time":      "15:00",
 		"break_minutes": 0,
-		"shift_type_id": preparationID,
+		"shift_type_id": ident.ID(preparationID),
 		"notes":         "Vorbereitung und Dienstversammlung",
 	}); err != nil {
 		return fmt.Errorf("seed second staff shift: %w", err)

@@ -100,6 +100,8 @@ export interface ExportRecipient {
   /** Its newest handover: its error state until the next one. */
   readonly lastHandover: ExportHandover | null;
   readonly updatedAt: string;
+  /** The read state a save sends back (ADR 0311). */
+  readonly version: string;
 }
 
 /** The recipient of one format; null leaves it to the download. */
@@ -113,6 +115,8 @@ export interface ExportRecipientsPage {
   readonly recipients: readonly ExportRecipient[];
   readonly assignments: readonly ExportFormatAssignment[];
   readonly handovers: readonly ExportHandover[];
+  /** The read state of the assignments a change sends back (ADR 0311). */
+  readonly assignmentsVersion: string;
 }
 
 /** One recipient with its own newest handovers. */
@@ -189,6 +193,7 @@ function recipientFromBackend(
       ? handoverFromBackend(recipient.last_handover)
       : null,
     updatedAt: recipient.updated_at,
+    version: recipient.version,
   };
 }
 
@@ -203,6 +208,7 @@ function recipientsPageFromBackend(
       return format ? [{ format, recipientId: assignment.recipient_id }] : [];
     }),
     handovers: (page.handovers ?? []).map(handoverFromBackend),
+    assignmentsVersion: page.assignments_version,
   };
 }
 
@@ -252,15 +258,19 @@ export async function createExportRecipient(
   );
 }
 
-/** Saves a recipient; the backend names each wrong field. */
+/**
+ * Saves a recipient over the version it was read with (ADR 0311); the
+ * backend names each wrong field.
+ */
 export async function saveExportRecipient(
   id: string,
   draft: ExportRecipientDraft,
+  expectedVersion: string,
 ): Promise<ExportRecipient> {
   return recipientFromBackend(
     await bffJson("org", "PUT /traeger/export-recipient/{id}", {
       params: { id },
-      body: recipientBody(draft),
+      body: { ...recipientBody(draft), expected_version: expectedVersion },
     }),
   );
 }
@@ -279,6 +289,7 @@ export async function deleteExportRecipient(
 /** Sends each format to its recipient, or to the download for null. */
 export async function assignExportFormats(
   assignments: readonly ExportFormatAssignment[],
+  expectedVersion: string,
 ): Promise<ExportRecipientsPage> {
   return recipientsPageFromBackend(
     await bffJson("org", "PUT /traeger/export-recipient/formats", {
@@ -287,6 +298,7 @@ export async function assignExportFormats(
           format: assignment.format,
           recipient_id: assignment.recipientId,
         })),
+        expected_version: expectedVersion,
       } satisfies traegerExportRecipientContract.FormatsRequest,
     }),
   );

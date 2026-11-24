@@ -11,7 +11,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -33,6 +32,7 @@ type FailureKind = schoolmembership.ClassListEntryFailure
 const (
 	FailureInvalidRequest = schoolmembership.ClassListEntryFailureInvalidRequest
 	FailureNotFound       = schoolmembership.ClassListEntryFailureNotFound
+	FailureChanged        = schoolmembership.ClassListEntryFailureChanged
 	FailureInternal       = schoolmembership.ClassListEntryFailureInternal
 )
 
@@ -107,6 +107,14 @@ func (req *ClassListEntryRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
+// ClassListEntryUpdateRequest is the body of PUT /api/class-list-entries/{id}:
+// the entry as edited and the version of the entry the editor read
+// (ADR 0311).
+type ClassListEntryUpdateRequest struct {
+	ClassListEntryRequest
+	ExpectedVersion string `json:"expected_version"`
+}
+
 func (req *ClassListEntryRequest) fields() schoolmembership.ClassListEntryFields {
 	return schoolmembership.ClassListEntryFields{
 		FirstName: req.FirstName, LastName: req.LastName, SchoolClass: req.SchoolClass,
@@ -134,18 +142,21 @@ func (req *ClassListAssignRequest) Bind(_ *http.Request) error {
 // "Zuordnen" resolution, never an automatic merge. All IDs are serialized as
 // JSON strings for the same reason ClassListAssignRequest binds with `,string`.
 type ClassListEntryResponse struct {
-	ID                 ident.ID  `json:"id"`
-	FirstName          string    `json:"first_name"`
-	LastName           string    `json:"last_name"`
-	SchoolClass        string    `json:"school_class"`
-	CreatedAt          time.Time `json:"created_at"`
-	MatchingStudentIDs []string  `json:"matching_student_ids"`
+	ID                 ident.ID   `json:"id"`
+	FirstName          string     `json:"first_name"`
+	LastName           string     `json:"last_name"`
+	SchoolClass        string     `json:"school_class"`
+	CreatedAt          time.Time  `json:"created_at"`
+	MatchingStudentIDs []ident.ID `json:"matching_student_ids"`
+	// Version is the read-state token of the entry (ADR 0311): a revision
+	// sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 func classListEntryResponse(entry schoolmembership.ClassListEntry, matches []int64) ClassListEntryResponse {
-	matchIDs := make([]string, 0, len(matches))
+	matchIDs := make([]ident.ID, 0, len(matches))
 	for _, id := range matches {
-		matchIDs = append(matchIDs, strconv.FormatInt(id, 10))
+		matchIDs = append(matchIDs, ident.ID(id))
 	}
 	return ClassListEntryResponse{
 		ID:                 ident.ID(entry.ID),
@@ -154,6 +165,7 @@ func classListEntryResponse(entry schoolmembership.ClassListEntry, matches []int
 		SchoolClass:        entry.SchoolClass,
 		CreatedAt:          entry.CreatedAt,
 		MatchingStudentIDs: matchIDs,
+		Version:            schoolmembership.ClassListEntryVersion(entry),
 	}
 }
 
@@ -205,13 +217,14 @@ func (rs *Resource) updateEntry(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	req := &ClassListEntryRequest{}
+	req := &ClassListEntryUpdateRequest{}
 	if err := render.Bind(r, req); err != nil {
 		rs.failure(w, r, FailureInvalidRequest, err, "invalid_request")
 		return
 	}
 	entry, err := rs.entries.ReviseClassListEntry(r.Context(), schoolmembership.ReviseClassListEntry{
 		ID: id, ClassListEntryFields: req.fields(), ChangedBy: rs.runtime.CurrentAccountID(r.Context()),
+		ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		rs.writeFailure(w, r, err)
@@ -270,7 +283,8 @@ func (rs *Resource) respond(w http.ResponseWriter, r *http.Request, status int, 
 }
 
 // writeFailure renders the outcome of an administration command: unknown
-// entry -> 404, a refused name, class or resolve target -> 400, else 500.
+// entry -> 404, a refused name, class or resolve target -> 400, an entry
+// changed since it was read -> 409, else 500.
 // Only the 500 is logged; the others are the documented answers of the
 // screen, not incidents.
 func (rs *Resource) writeFailure(w http.ResponseWriter, r *http.Request, err error) {
@@ -293,6 +307,8 @@ func StatusOf(kind FailureKind) int {
 		return http.StatusBadRequest
 	case FailureNotFound:
 		return http.StatusNotFound
+	case FailureChanged:
+		return http.StatusConflict
 	default:
 		return http.StatusInternalServerError
 	}

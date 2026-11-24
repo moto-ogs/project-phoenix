@@ -31,6 +31,9 @@ func TestUpdateDevice_KeepsConcurrentKeyRotationAndStatus(t *testing.T) {
 		"device_id":   device.DeviceID,
 		"device_type": device.DeviceType,
 		"name":        "Renamed during rotation",
+		// The rotation and the status change are not part of the edit's
+		// read state: the edit from the read before them still saves.
+		"expected_version": deviceVersion(t, router, fmt.Sprintf("/devices/%d", device.ID)),
 	},
 		testutil.WithClaims(t, testutil.DefaultTestClaims()),
 		testutil.WithPermissions("devices:manage"),

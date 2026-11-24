@@ -10,11 +10,13 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/moto-ogs/project-phoenix/api/testutil"
-	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // The tests in the guardians_composition_* files drive the composed
@@ -323,8 +325,17 @@ func dataArray(t *testing.T, body []byte) []any {
 // studentGuardianRow is one entry of GET /students/{id}/guardians.
 type studentGuardianRow struct {
 	Guardian struct {
-		ID        wireID `json:"id"`
-		FirstName string `json:"first_name"`
+		ID           wireID  `json:"id"`
+		FirstName    string  `json:"first_name"`
+		LastName     string  `json:"last_name"`
+		Email        *string `json:"email"`
+		PhoneNumbers []struct {
+			ID          wireID  `json:"id"`
+			PhoneNumber string  `json:"phone_number"`
+			PhoneType   string  `json:"phone_type"`
+			Label       *string `json:"label"`
+			IsPrimary   bool    `json:"is_primary"`
+		} `json:"phone_numbers"`
 	} `json:"guardian"`
 	RelationshipID     wireID `json:"relationship_id"`
 	GuardianRole       string `json:"guardian_role"`
@@ -332,6 +343,7 @@ type studentGuardianRow struct {
 	IsEmergencyContact bool   `json:"is_emergency_contact"`
 	IsPayer            bool   `json:"is_payer"`
 	AccountStatus      string `json:"account_status"`
+	Version            string `json:"version"`
 }
 
 // studentGuardians reads a child's guardians as an admin holding the
@@ -347,6 +359,31 @@ func (c *guardianCompositionContext) studentGuardians(t *testing.T, studentID in
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
 	return response.Data
+}
+
+// entryRow reads the child's row of one guardian as the staff form opens it.
+func (c *guardianCompositionContext) entryRow(t *testing.T, studentID, guardianID int64) studentGuardianRow {
+	t.Helper()
+	for _, row := range c.studentGuardians(t, studentID) {
+		if int64(row.Guardian.ID) == guardianID {
+			return row
+		}
+	}
+	t.Fatalf("guardian %d is not linked to child %d", guardianID, studentID)
+	return studentGuardianRow{}
+}
+
+// entryPath is the staff form save of a child's guardian.
+func entryPath(studentID, guardianID int64) string {
+	return fmt.Sprintf("/students/%d/guardians/%d", studentID, guardianID)
+}
+
+// saveEntry saves the staff form of a child's guardian against the version
+// the list hands out (ADR 0311).
+func (c *guardianCompositionContext) saveEntry(t *testing.T, claims sessiontoken.AppClaims, studentID, guardianID int64, body map[string]any) *httptest.ResponseRecorder {
+	t.Helper()
+	body["expected_version"] = c.entryRow(t, studentID, guardianID).Version
+	return c.do(t, claims, http.MethodPut, entryPath(studentID, guardianID), body)
 }
 
 // guardianExists reports whether GET /{id} still finds the guardian.
@@ -435,18 +472,111 @@ func TestGuardianComposition_CreateGuardianDuplicateEmailIsBadRequest(t *testing
 func TestGuardianComposition_UpdateGuardian(t *testing.T) {
 	t.Parallel()
 	ctx := setupGuardiansCompositionRoute(t)
-	body := map[string]any{"first_name": "Updated"}
+	admin := testutil.AdminTestClaims(999)
+	body := func() map[string]any { return map[string]any{"guardian": map[string]any{"first_name": "Updated"}} }
+	guardianID, studentID, _ := ctx.createLinkedGuardian(t, "update-me")
 
-	testutil.AssertForbidden(t, ctx.do(t, nonStaffClaims(t, "users:update"), http.MethodPut, "/99999", body))
-	testutil.AssertNotFound(t, ctx.do(t, testutil.AdminTestClaims(999), http.MethodPut, "/99999", body))
-	testutil.AssertBadRequest(t, ctx.do(t, testutil.DefaultTestClaims(), http.MethodPut, "/invalid", body))
+	testutil.AssertForbidden(t, ctx.do(t, nonStaffClaims(t, "users:update"), http.MethodPut, entryPath(studentID, guardianID), body()))
+	missing := body()
+	missing["expected_version"] = "any"
+	testutil.AssertNotFound(t, ctx.do(t, admin, http.MethodPut, entryPath(studentID, 99999), missing))
+	testutil.AssertBadRequest(t, ctx.do(t, testutil.DefaultTestClaims(), http.MethodPut, fmt.Sprintf("/students/%d/guardians/invalid", studentID), body()))
 
-	guardianID, _ := ctx.createGuardian("update-me")
-	rr := ctx.do(t, testutil.AdminTestClaims(999), http.MethodPut, fmt.Sprintf("/%d", guardianID), body)
+	read := ctx.entryRow(t, studentID, guardianID).Version
+	rr := ctx.saveEntry(t, admin, studentID, guardianID, body())
 	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
 	data := dataObject(t, rr.Body.Bytes())
-	assert.Equal(t, "Updated", data["first_name"])
-	assert.Equal(t, "Test", data["last_name"], "fields left out of the partial update keep their value")
+	guardian := data["guardian"].(map[string]any)
+	assert.Equal(t, "Updated", guardian["first_name"])
+	assert.Equal(t, "Test", guardian["last_name"], "fields left out of the partial update keep their value")
+	assert.NotEqual(t, read, data["version"], "the save answers the version of the stored row")
+	assert.Equal(t, ctx.entryRow(t, studentID, guardianID).Version, data["version"], "the answered version is the one the list hands out")
+}
+
+// A staff form opened before a colleague's save is refused with the read-state
+// code and writes nothing: no profile, link or phone change (ADR 0311). An
+// empty version is refused too.
+func TestGuardianComposition_EntryRefusesAStaleVersion(t *testing.T) {
+	t.Parallel()
+	ctx := setupGuardiansCompositionRoute(t)
+	admin := testutil.AdminTestClaims(999)
+	guardianID, studentID, _ := ctx.createLinkedGuardian(t, "stale-entry")
+	openedRow := ctx.entryRow(t, studentID, guardianID)
+	opened := openedRow.Version
+
+	// A colleague adds a phone number meanwhile.
+	rr := ctx.do(t, admin, http.MethodPost, fmt.Sprintf("/%d/phone-numbers", guardianID), map[string]any{"phone_number": "+49 30 1234567"})
+	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
+
+	stale := map[string]any{
+		"guardian":         map[string]any{"first_name": "Alt"},
+		"relationship":     map[string]any{"is_emergency_contact": !openedRow.IsEmergencyContact},
+		"phone_numbers":    []map[string]any{{"phone_number": "+49 40 7654321", "is_primary": true}},
+		"expected_version": opened,
+	}
+	rr = ctx.do(t, admin, http.MethodPut, entryPath(studentID, guardianID), stale)
+	require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), `"code":"`+readstate.ChangedCode+`"`)
+	stored := ctx.entryRow(t, studentID, guardianID)
+	assert.Equal(t, "Guardian", stored.Guardian.FirstName, "a refused save writes no profile field")
+	assert.Equal(t, openedRow.IsEmergencyContact, stored.IsEmergencyContact, "a refused save writes no link field")
+	require.Len(t, stored.Guardian.PhoneNumbers, 1, "a refused save leaves the colleague's phone list")
+	assert.Equal(t, "+49 30 1234567", stored.Guardian.PhoneNumbers[0].PhoneNumber)
+
+	delete(stale, "expected_version")
+	rr = ctx.do(t, admin, http.MethodPut, entryPath(studentID, guardianID), stale)
+	require.Equal(t, http.StatusConflict, rr.Code, "a save without a read version is refused")
+
+	stale["expected_version"] = stored.Version
+	testutil.AssertSuccessResponse(t, ctx.do(t, admin, http.MethodPut, entryPath(studentID, guardianID), stale), http.StatusOK)
+	saved := ctx.entryRow(t, studentID, guardianID)
+	assert.Equal(t, "Alt", saved.Guardian.FirstName)
+	assert.Equal(t, !openedRow.IsEmergencyContact, saved.IsEmergencyContact)
+	require.Len(t, saved.Guardian.PhoneNumbers, 1, "the saved list replaces the stored one")
+	assert.Equal(t, "+49 40 7654321", saved.Guardian.PhoneNumbers[0].PhoneNumber)
+}
+
+// Profile, link and phones are one unit of work: a phone the save may not
+// touch refuses the whole save, including the profile field written first.
+func TestGuardianComposition_EntryWritesNothingOnARefusedPhone(t *testing.T) {
+	t.Parallel()
+	ctx := setupGuardiansCompositionRoute(t)
+	admin := testutil.AdminTestClaims(999)
+	guardianID, studentID, _ := ctx.createLinkedGuardian(t, "entry-atomic")
+	_, foreignPhoneID, _ := ctx.createGuardianWithPhones(t)
+
+	rr := ctx.saveEntry(t, admin, studentID, guardianID, map[string]any{
+		"guardian":      map[string]any{"first_name": "Halb"},
+		"phone_numbers": []map[string]any{{"id": fmt.Sprint(foreignPhoneID), "phone_number": "+49 30 999999"}},
+	})
+	testutil.AssertBadRequest(t, rr)
+	assert.Equal(t, "Guardian", ctx.entryRow(t, studentID, guardianID).Guardian.FirstName, "the profile write rolls back with the refused phone")
+}
+
+// The single-field edits the staff form used before ADR 0311 carry no read
+// state: they answer the read-state refusal and write nothing, so a tab from
+// before the release reloads (#7953 removes them).
+func TestGuardianComposition_DeprecatedSingleEditsAreRefused(t *testing.T) {
+	t.Parallel()
+	ctx := setupGuardiansCompositionRoute(t)
+	admin := testutil.AdminTestClaims(999)
+	guardianID, phoneID, _ := ctx.createGuardianWithPhones(t)
+	studentID, _ := ctx.createStudent("Deprecated", "Edits", "1a")
+	linkID := ctx.link(studentID, guardianID, "pickup_only")
+	before := ctx.entryRow(t, studentID, guardianID)
+
+	for _, tc := range []struct{ method, path string }{
+		{http.MethodPut, fmt.Sprintf("/%d", guardianID)},
+		{http.MethodPut, fmt.Sprintf("/relationships/%d", linkID)},
+		{http.MethodPut, fmt.Sprintf("/%d/phone-numbers/%d", guardianID, phoneID)},
+		{http.MethodDelete, fmt.Sprintf("/%d/phone-numbers/%d", guardianID, phoneID)},
+		{http.MethodPost, fmt.Sprintf("/%d/phone-numbers/%d/set-primary", guardianID, phoneID)},
+	} {
+		rr := ctx.do(t, admin, tc.method, tc.path, map[string]any{"first_name": "Alt", "guardian_role": "primary_guardian", "phone_number": "+49 1 2345"})
+		require.Equal(t, http.StatusConflict, rr.Code, "%s %s: %s", tc.method, tc.path, rr.Body.String())
+		assert.Contains(t, rr.Body.String(), `"code":"`+readstate.ChangedCode+`"`)
+	}
+	assert.Equal(t, before.Version, ctx.entryRow(t, studentID, guardianID).Version, "no refused edit wrote anything")
 }
 
 // Staff remove a wrong address by emptying the field (#7770): the profile
@@ -458,10 +588,10 @@ func TestGuardianComposition_UpdateGuardianClearsEmail(t *testing.T) {
 	admin := testutil.AdminTestClaims(999)
 
 	for _, seed := range []string{"clear-first", "clear-second"} {
-		guardianID, _ := ctx.createGuardian(seed)
-		rr := ctx.do(t, admin, http.MethodPut, fmt.Sprintf("/%d", guardianID), map[string]any{"email": ""})
+		guardianID, studentID, _ := ctx.createLinkedGuardian(t, seed)
+		rr := ctx.saveEntry(t, admin, studentID, guardianID, map[string]any{"guardian": map[string]any{"email": ""}})
 		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-		assert.Nil(t, dataObject(t, rr.Body.Bytes())["email"])
+		assert.Nil(t, dataObject(t, rr.Body.Bytes())["guardian"].(map[string]any)["email"])
 		assert.Equal(t, 1, ctx.count(`SELECT COUNT(*) FROM users.guardian_profiles WHERE id = ? AND email IS NULL`, guardianID))
 	}
 }
@@ -473,22 +603,33 @@ func TestGuardianComposition_InvalidContactIsBadRequest(t *testing.T) {
 	ctx := setupGuardiansCompositionRoute(t)
 	admin := testutil.AdminTestClaims(999)
 	guardianID, phoneID, _ := ctx.createGuardianWithPhones(t)
+	studentID, _ := ctx.createStudent("Invalid", "Contact", "1a")
+	ctx.link(studentID, guardianID, "custom")
+	phone := func(number string) map[string]any {
+		return map[string]any{"phone_numbers": []map[string]any{{"id": fmt.Sprint(phoneID), "phone_number": number}}}
+	}
 
 	for _, tc := range []struct {
 		name, method, path string
 		body               map[string]any
 		reason             string
 	}{
-		{"update with invalid email", http.MethodPut, fmt.Sprintf("/%d", guardianID), map[string]any{"email": "not-an-email"}, "ungültiges E-Mail-Format"},
-		{"update with invalid contact method", http.MethodPut, fmt.Sprintf("/%d", guardianID), map[string]any{"preferred_contact_method": "fax"}, "ungültige bevorzugte Kontaktmethode"},
+		{"update with invalid email", http.MethodPut, "", map[string]any{"guardian": map[string]any{"email": "not-an-email"}}, "ungültiges E-Mail-Format"},
+		{"update with invalid contact method", http.MethodPut, "", map[string]any{"guardian": map[string]any{"preferred_contact_method": "fax"}}, "ungültige bevorzugte Kontaktmethode"},
 		{"create with invalid email", http.MethodPost, "/", map[string]any{"first_name": "Invalid", "last_name": "Email", "email": "not-an-email"}, "ungültiges E-Mail-Format"},
 		{"add phone with invalid format", http.MethodPost, fmt.Sprintf("/%d/phone-numbers", guardianID), map[string]any{"phone_number": "abc"}, "ungültiges Telefonnummer-Format"},
 		{"add blank phone", http.MethodPost, fmt.Sprintf("/%d/phone-numbers", guardianID), map[string]any{"phone_number": "   "}, "Telefonnummer ist erforderlich"},
-		{"update phone with invalid format", http.MethodPut, fmt.Sprintf("/%d/phone-numbers/%d", guardianID, phoneID), map[string]any{"phone_number": "abc"}, "ungültiges Telefonnummer-Format"},
-		{"update phone with too few digits", http.MethodPut, fmt.Sprintf("/%d/phone-numbers/%d", guardianID, phoneID), map[string]any{"phone_number": "12"}, "Telefonnummer muss mindestens 3 Ziffern enthalten"},
+		{"update phone with invalid format", http.MethodPut, "", phone("abc"), "ungültiges Telefonnummer-Format"},
+		{"update phone with too few digits", http.MethodPut, "", phone("12"), "Telefonnummer muss mindestens 3 Ziffern enthalten"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			rr := ctx.do(t, admin, tc.method, tc.path, tc.body)
+			var rr *httptest.ResponseRecorder
+			if tc.path == "" {
+				// The staff form saves the guardian as one entry (ADR 0311).
+				rr = ctx.saveEntry(t, admin, studentID, guardianID, tc.body)
+			} else {
+				rr = ctx.do(t, admin, tc.method, tc.path, tc.body)
+			}
 			testutil.AssertBadRequest(t, rr)
 			assert.Equal(t, tc.reason, errorText(t, rr.Body.String()))
 		})
@@ -578,7 +719,8 @@ func TestGuardianComposition_ForceDeleteRejectsStalePreview(t *testing.T) {
 
 	rr := ctx.do(t, testutil.AdminTestClaims(999), http.MethodDelete, fmt.Sprintf("/%d?force=true&expected_link_ids=999999", guardianID), nil)
 	testutil.AssertErrorResponse(t, rr, http.StatusConflict)
-	assert.Contains(t, errorText(t, rr.Body.String()), "Vorschau")
+	// The read-state code lets the dialog read the new link set (ADR 0311).
+	assert.Contains(t, rr.Body.String(), `"code":"`+readstate.ChangedCode+`"`)
 	assert.True(t, ctx.guardianExists(t, guardianID))
 
 	t.Run("malformed expected ids are a bad request", func(t *testing.T) {
@@ -704,18 +846,18 @@ func TestGuardianComposition_LinkGuardianValidation(t *testing.T) {
 	admin := testutil.AdminTestClaims(999)
 
 	testutil.AssertForbidden(t, ctx.do(t, nonStaffClaims(t, "users:update"), http.MethodPost, "/students/1/guardians", map[string]any{
-		"guardian_profile_id": 1, "relationship_type": "parent", "is_primary": true,
+		"guardian_profile_id": "1", "relationship_type": "parent", "is_primary": true,
 		"is_emergency_contact": true, "can_pickup": true, "emergency_priority": 1,
 	}))
 	testutil.AssertBadRequest(t, ctx.do(t, testutil.DefaultTestClaims(), http.MethodPost, "/students/invalid/guardians", map[string]any{
-		"guardian_profile_id": 1, "relationship_type": "parent", "emergency_priority": 1,
+		"guardian_profile_id": "1", "relationship_type": "parent", "emergency_priority": 1,
 	}))
 
 	studentID, _ := ctx.createStudent("Link", "TestStudent", "1a")
 	for name, body := range map[string]map[string]any{
 		"missing guardian id":        {"relationship_type": "parent", "emergency_priority": 1},
-		"missing relationship type":  {"guardian_profile_id": 1, "emergency_priority": 1},
-		"invalid emergency priority": {"guardian_profile_id": 1, "relationship_type": "parent", "emergency_priority": 0},
+		"missing relationship type":  {"guardian_profile_id": "1", "emergency_priority": 1},
+		"invalid emergency priority": {"guardian_profile_id": "1", "relationship_type": "parent", "emergency_priority": 0},
 	} {
 		t.Run(name, func(t *testing.T) {
 			testutil.AssertBadRequest(t, ctx.do(t, admin, http.MethodPost, fmt.Sprintf("/students/%d/guardians", studentID), body))
@@ -730,7 +872,7 @@ func TestGuardianComposition_LinkGuardianEchoesTheStoredLink(t *testing.T) {
 	studentID, _ := ctx.createStudent("Link", "Echo", "1a")
 
 	rr := ctx.do(t, testutil.AdminTestClaims(999), http.MethodPost, fmt.Sprintf("/students/%d/guardians", studentID), map[string]any{
-		"guardian_profile_id": guardianID, "relationship_type": "parent", "guardian_role": "primary_guardian",
+		"guardian_profile_id": fmt.Sprint(guardianID), "relationship_type": "parent", "guardian_role": "primary_guardian",
 		"is_primary": true, "can_pickup": true, "emergency_priority": 1,
 	})
 	testutil.AssertSuccessResponse(t, rr, http.StatusCreated)
@@ -745,7 +887,7 @@ func TestGuardianComposition_LinkGuardianEchoesTheStoredLink(t *testing.T) {
 
 	// Re-linking is idempotent and returns the existing link unchanged.
 	rr = ctx.do(t, testutil.AdminTestClaims(999), http.MethodPost, fmt.Sprintf("/students/%d/guardians", studentID), map[string]any{
-		"guardian_profile_id": guardianID, "relationship_type": "parent", "guardian_role": "pickup_only", "emergency_priority": 1,
+		"guardian_profile_id": fmt.Sprint(guardianID), "relationship_type": "parent", "guardian_role": "pickup_only", "emergency_priority": 1,
 	})
 	testutil.AssertSuccessResponse(t, rr, http.StatusCreated)
 	assert.Equal(t, "primary_guardian", dataObject(t, rr.Body.Bytes())["guardian_role"])
@@ -754,10 +896,13 @@ func TestGuardianComposition_LinkGuardianEchoesTheStoredLink(t *testing.T) {
 func TestGuardianComposition_RelationshipUpdateGates(t *testing.T) {
 	t.Parallel()
 	ctx := setupGuardiansCompositionRoute(t)
-	body := map[string]any{"is_primary": true}
+	body := map[string]any{"relationship": map[string]any{"is_primary": true}, "expected_version": "any"}
+	studentID, _ := ctx.createStudent("Gate", "Child", "1a")
+	unlinkedID, _ := ctx.createGuardian("unlinked-entry")
 
-	testutil.AssertBadRequest(t, ctx.do(t, testutil.DefaultTestClaims(), http.MethodPut, "/relationships/invalid", body))
-	testutil.AssertNotFound(t, ctx.do(t, testutil.DefaultTestClaims(), http.MethodPut, "/relationships/99999", body))
+	testutil.AssertBadRequest(t, ctx.do(t, testutil.DefaultTestClaims(), http.MethodPut, "/students/invalid/guardians/1", body))
+	// A guardian not linked to the child has no entry to save.
+	testutil.AssertNotFound(t, ctx.do(t, testutil.AdminTestClaims(999), http.MethodPut, entryPath(studentID, unlinkedID), body))
 }
 
 func TestGuardianComposition_RemoveGuardianGates(t *testing.T) {
@@ -850,68 +995,98 @@ func TestGuardianComposition_AddPhoneNumber(t *testing.T) {
 	testutil.AssertBadRequest(t, ctx.do(t, admin, http.MethodPost, fmt.Sprintf("/%d/phone-numbers", guardianID), map[string]any{"phone_number": "+49 1", "phone_type": "invalid_type"}))
 }
 
+// phoneEntry is one number of a saved phone list.
+func phoneEntry(id int64, number, kind string, primary bool) map[string]any {
+	entry := map[string]any{"phone_number": number, "phone_type": kind, "is_primary": primary}
+	if id != 0 {
+		entry["id"] = fmt.Sprint(id)
+	}
+	return entry
+}
+
+// linkedGuardianWithPhones is createGuardianWithPhones linked to a fresh child.
+func (c *guardianCompositionContext) linkedGuardianWithPhones(t *testing.T) (guardianID, studentID, phone1ID, phone2ID int64) {
+	t.Helper()
+	guardianID, phone1ID, phone2ID = c.createGuardianWithPhones(t)
+	studentID, _ = c.createStudent("Phone", "Child", "1a")
+	c.link(studentID, guardianID, "custom")
+	return guardianID, studentID, phone1ID, phone2ID
+}
+
+// The staff form changes a stored number through the saved list.
 func TestGuardianComposition_UpdatePhoneNumber(t *testing.T) {
 	t.Parallel()
 	ctx := setupGuardiansCompositionRoute(t)
 	admin := testutil.AdminTestClaims(999)
-	guardianID, phone1ID, _ := ctx.createGuardianWithPhones(t)
+	guardianID, studentID, phone1ID, phone2ID := ctx.linkedGuardianWithPhones(t)
+	list := func(phone1 map[string]any) map[string]any {
+		return map[string]any{"phone_numbers": []map[string]any{phone1, phoneEntry(phone2ID, "+49 987 654321", "work", false)}}
+	}
 
-	rr := ctx.do(t, admin, http.MethodPut, fmt.Sprintf("/%d/phone-numbers/%d", guardianID, phone1ID), map[string]any{
-		"phone_number": "+49 111 222333", "phone_type": "home", "label": "Updated Label",
-	})
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-	data := dataObject(t, rr.Body.Bytes())
-	assert.Equal(t, "+49 111 222333", data["phone_number"])
-	assert.Equal(t, "home", data["phone_type"])
-	assert.Equal(t, "Updated Label", data["label"])
+	updated := phoneEntry(phone1ID, "+49 111 222333", "home", true)
+	updated["label"] = "Updated Label"
+	testutil.AssertSuccessResponse(t, ctx.saveEntry(t, admin, studentID, guardianID, list(updated)), http.StatusOK)
+	phones := ctx.entryRow(t, studentID, guardianID).Guardian.PhoneNumbers
+	require.Len(t, phones, 2)
+	assert.Equal(t, wireID(phone1ID), phones[0].ID)
+	assert.Equal(t, "+49 111 222333", phones[0].PhoneNumber)
+	assert.Equal(t, "home", phones[0].PhoneType)
+	require.NotNil(t, phones[0].Label)
+	assert.Equal(t, "Updated Label", *phones[0].Label)
+	assert.True(t, phones[0].IsPrimary, "a number keeps its primary mark")
 
-	update := map[string]any{"phone_number": "+49 111 222333"}
-	testutil.AssertBadRequest(t, ctx.do(t, admin, http.MethodPut, "/invalid/phone-numbers/1", update))
-	testutil.AssertBadRequest(t, ctx.do(t, admin, http.MethodPut, fmt.Sprintf("/%d/phone-numbers/invalid", guardianID), update))
-	testutil.AssertNotFound(t, ctx.do(t, admin, http.MethodPut, fmt.Sprintf("/%d/phone-numbers/99999", guardianID), update))
-	testutil.AssertForbidden(t, ctx.do(t, nonStaffClaims(t, "users:update"), http.MethodPut, "/1/phone-numbers/1", update))
-	testutil.AssertBadRequest(t, ctx.do(t, admin, http.MethodPut, fmt.Sprintf("/%d/phone-numbers/%d", guardianID, phone1ID), map[string]any{"phone_number": ""}))
-	testutil.AssertBadRequest(t, ctx.do(t, admin, http.MethodPut, fmt.Sprintf("/%d/phone-numbers/%d", guardianID, phone1ID), map[string]any{"phone_type": "invalid_type"}))
+	testutil.AssertBadRequest(t, ctx.saveEntry(t, admin, studentID, guardianID, list(phoneEntry(phone1ID, "", "mobile", true))))
+	testutil.AssertBadRequest(t, ctx.saveEntry(t, admin, studentID, guardianID, list(phoneEntry(phone1ID, "+49 111 222333", "invalid_type", true))))
+	// A number that is not stored for this guardian is no part of its list.
+	testutil.AssertBadRequest(t, ctx.saveEntry(t, admin, studentID, guardianID, list(phoneEntry(99999, "+49 111 222333", "mobile", true))))
+	testutil.AssertForbidden(t, ctx.saveEntry(t, nonStaffClaims(t, "users:update"), studentID, guardianID, list(updated)))
 
-	t.Run("a phone of another guardian is forbidden", func(t *testing.T) {
-		otherID, _ := ctx.createGuardian("other-phone-owner")
-		testutil.AssertForbidden(t, ctx.do(t, admin, http.MethodPut, fmt.Sprintf("/%d/phone-numbers/%d", otherID, phone1ID), update))
+	t.Run("a phone of another guardian is refused", func(t *testing.T) {
+		_, _, otherPhoneID, _ := ctx.linkedGuardianWithPhones(t)
+		testutil.AssertBadRequest(t, ctx.saveEntry(t, admin, studentID, guardianID, list(phoneEntry(otherPhoneID, "+49 111 222333", "mobile", true))))
 	})
 }
 
+// A number missing from the saved list is deleted; deleting the primary
+// number moves the mark to the next one.
 func TestGuardianComposition_DeletePhoneNumber(t *testing.T) {
 	t.Parallel()
 	ctx := setupGuardiansCompositionRoute(t)
 	admin := testutil.AdminTestClaims(999)
-	guardianID, phone1ID, phone2ID := ctx.createGuardianWithPhones(t)
+	guardianID, studentID, _, phone2ID := ctx.linkedGuardianWithPhones(t)
 
-	testutil.AssertSuccessResponse(t, ctx.do(t, admin, http.MethodDelete, fmt.Sprintf("/%d/phone-numbers/%d", guardianID, phone2ID), nil), http.StatusOK)
-	testutil.AssertBadRequest(t, ctx.do(t, admin, http.MethodDelete, "/invalid/phone-numbers/1", nil))
-	testutil.AssertBadRequest(t, ctx.do(t, admin, http.MethodDelete, fmt.Sprintf("/%d/phone-numbers/invalid", guardianID), nil))
-	testutil.AssertNotFound(t, ctx.do(t, admin, http.MethodDelete, fmt.Sprintf("/%d/phone-numbers/99999", guardianID), nil))
-	testutil.AssertForbidden(t, ctx.do(t, nonStaffClaims(t, "users:update"), http.MethodDelete, "/1/phone-numbers/1", nil))
+	testutil.AssertSuccessResponse(t, ctx.saveEntry(t, admin, studentID, guardianID, map[string]any{
+		"phone_numbers": []map[string]any{phoneEntry(phone2ID, "+49 987 654321", "work", false)},
+	}), http.StatusOK)
+	phones := ctx.entryRow(t, studentID, guardianID).Guardian.PhoneNumbers
+	require.Len(t, phones, 1)
+	assert.Equal(t, wireID(phone2ID), phones[0].ID)
+	assert.True(t, phones[0].IsPrimary, "the remaining number becomes primary")
 
-	otherID, _ := ctx.createGuardian("other-phone-delete")
-	testutil.AssertForbidden(t, ctx.do(t, admin, http.MethodDelete, fmt.Sprintf("/%d/phone-numbers/%d", otherID, phone1ID), nil))
+	testutil.AssertSuccessResponse(t, ctx.saveEntry(t, admin, studentID, guardianID, map[string]any{"phone_numbers": []map[string]any{}}), http.StatusOK)
+	assert.Empty(t, ctx.entryRow(t, studentID, guardianID).Guardian.PhoneNumbers)
 }
 
+// The saved list moves the primary mark and adds new numbers.
 func TestGuardianComposition_SetPrimaryPhone(t *testing.T) {
 	t.Parallel()
 	ctx := setupGuardiansCompositionRoute(t)
 	admin := testutil.AdminTestClaims(999)
-	guardianID, phone1ID, phone2ID := ctx.createGuardianWithPhones(t)
+	guardianID, studentID, phone1ID, phone2ID := ctx.linkedGuardianWithPhones(t)
 
-	rr := ctx.do(t, admin, http.MethodPost, fmt.Sprintf("/%d/phone-numbers/%d/set-primary", guardianID, phone2ID), nil)
+	rr := ctx.saveEntry(t, admin, studentID, guardianID, map[string]any{"phone_numbers": []map[string]any{
+		phoneEntry(phone1ID, "+49 123 456789", "mobile", false),
+		phoneEntry(phone2ID, "+49 987 654321", "work", true),
+		phoneEntry(0, "+49 555 444333", "home", false),
+	}})
 	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-	assert.Equal(t, true, dataObject(t, rr.Body.Bytes())["is_primary"])
-
-	testutil.AssertBadRequest(t, ctx.do(t, admin, http.MethodPost, "/invalid/phone-numbers/1/set-primary", nil))
-	testutil.AssertBadRequest(t, ctx.do(t, admin, http.MethodPost, fmt.Sprintf("/%d/phone-numbers/invalid/set-primary", guardianID), nil))
-	testutil.AssertNotFound(t, ctx.do(t, admin, http.MethodPost, fmt.Sprintf("/%d/phone-numbers/99999/set-primary", guardianID), nil))
-	testutil.AssertForbidden(t, ctx.do(t, nonStaffClaims(t, "users:update"), http.MethodPost, "/1/phone-numbers/1/set-primary", nil))
-
-	otherID, _ := ctx.createGuardian("other-phone-primary")
-	testutil.AssertForbidden(t, ctx.do(t, admin, http.MethodPost, fmt.Sprintf("/%d/phone-numbers/%d/set-primary", otherID, phone1ID), nil))
+	primary := map[wireID]bool{}
+	for _, phone := range ctx.entryRow(t, studentID, guardianID).Guardian.PhoneNumbers {
+		primary[phone.ID] = phone.IsPrimary
+	}
+	assert.Len(t, primary, 3, "the new number is added")
+	assert.True(t, primary[wireID(phone2ID)])
+	assert.False(t, primary[wireID(phone1ID)])
 }
 
 // ===========================================================================
@@ -1032,4 +1207,24 @@ func TestGuardianComposition_BatchValidationIsBadRequestAndWritesNothing(t *test
 	assert.Contains(t, errorText(t, rr.Body.String()), "Notfall-Priorität")
 	assert.Equal(t, 0, ctx.guardianEmailCount(email))
 	assert.Empty(t, ctx.studentGuardians(t, studentID))
+}
+
+// A bulk invitation whose facts changed since its preview is a 409 business
+// rejection (ADR 0311): the composition renders general.changed_since_read
+// and observes a 4xx conflict, never a server error.
+func TestGuardianComposition_BulkInviteRefusesAStalePreviewAsConflict(t *testing.T) {
+	t.Parallel()
+	ctx := setupGuardiansCompositionRoute(t)
+	studentID, _ := ctx.createStudent("Stale", "Preview", "3a")
+	guardianID, _ := ctx.createGuardian("stale-preview")
+	ctx.link(studentID, guardianID, "primary_guardian")
+
+	rr := ctx.do(t, withPerms(testutil.DefaultTestClaims(), "admin:*"), http.MethodPost, "/bulk-invite", map[string]any{
+		"student_ids": []string{fmt.Sprint(studentID)}, "expected_fingerprint": "a-preview-of-another-state",
+	})
+
+	require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
+	assert.Equal(t, readstate.ChangedCode, testutil.ParseJSONResponse(t, rr.Body.Bytes())["code"])
+	// The response metric counts the rendered 409: the adapter classifies
+	// every business rejection (TestGuardianReadStateRefusalsCountAsConflicts).
 }

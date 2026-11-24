@@ -43,7 +43,7 @@ func submitApprovedAdjustmentChild(
 		})
 	}
 
-	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, env.requestSvc.Submit, enrollmentTest.SubmitRequest{
+	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, submitShown(env.requestSvc), enrollmentTest.SubmitRequest{
 		TenantID:          testpkg.Tenant(t),
 		PhaseID:           env.sourcePhase.ID,
 		GuardianFirstName: "Eltern",
@@ -126,7 +126,7 @@ func TestDecisionService_UpdateChildOfferings_DatedSwitchCapsOldAndStartsNewGrou
 	// after the materialized valid_from and not in the past.
 	switchDate := calendar.Date(env.sourcePhase.ServiceStartDate).AddDays(150)
 
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      requestID,
 		ChildID:        childID,
 		ActorAccountID: env.creatorID,
@@ -206,7 +206,7 @@ func TestDecisionService_UpdateChildOfferings_DatedSwitchKeepsUnchangedOffering(
 
 	switchDate := calendar.Date(env.sourcePhase.ServiceStartDate).AddDays(150)
 
-	_, err := testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      requestID,
 		ChildID:        childID,
 		ActorAccountID: env.creatorID,
@@ -260,14 +260,14 @@ func TestDecisionService_UpdateChildOfferings_CurrentCorrectionPreservesSchedule
 		t, env, "current-correction@example.com", "CurrentCorrection", []*offeringContract.CareOfferingRecord{oldOffering},
 	)
 	switchDate := calendar.Date(env.sourcePhase.ServiceStartDate).AddDays(150)
-	_, err := testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID: requestID, ChildID: childID, ActorAccountID: env.creatorID, ActorRole: "admin",
 		Reason: "Geplante Änderung", EffectiveFrom: &switchDate,
 		Offerings: []enrollmentTest.OfferingAdjustmentSelection{{OfferingID: scheduledOffering.ID, SelectedDays: []string{"mon"}}},
 	})
 	require.NoError(t, err)
 
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID: requestID, ChildID: childID, ActorAccountID: env.creatorID, ActorRole: "admin",
 		Reason:    "Korrektur für heute",
 		Offerings: []enrollmentTest.OfferingAdjustmentSelection{{OfferingID: correctedOffering.ID, SelectedDays: []string{"mon"}}},
@@ -310,7 +310,7 @@ func TestDecisionService_UpdateChildOfferings_DatedSwitchExtendsRetainedOffering
 		[]*offeringContract.CareOfferingRecord{keptOffering},
 	)
 	firstSwitch := calendar.Date(env.sourcePhase.ServiceStartDate).AddDays(150)
-	_, err := testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID: requestID, ChildID: childID, ActorAccountID: env.creatorID, ActorRole: "admin",
 		Reason: "Erste geplante Änderung", EffectiveFrom: &firstSwitch,
 		Offerings: []enrollmentTest.OfferingAdjustmentSelection{
@@ -321,7 +321,7 @@ func TestDecisionService_UpdateChildOfferings_DatedSwitchExtendsRetainedOffering
 	require.NoError(t, err)
 
 	secondSwitch := calendar.Date(env.sourcePhase.ServiceStartDate).AddDays(80)
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID: requestID, ChildID: childID, ActorAccountID: env.creatorID, ActorRole: "admin",
 		Reason: "Erste Planung ersetzt", EffectiveFrom: &secondSwitch,
 		Offerings: []enrollmentTest.OfferingAdjustmentSelection{
@@ -370,7 +370,7 @@ func TestDecisionService_UpdateChildOfferings_DatedSwitchBeforePhaseStartDropsUn
 	require.True(t, switchDate.Before(calendar.Date(env.sourcePhase.ServiceStartDate)),
 		"fixture phase must still lie in the future for this case")
 
-	_, err := testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      requestID,
 		ChildID:        childID,
 		ActorAccountID: env.creatorID,
@@ -414,7 +414,7 @@ func TestDecisionService_UpdateChildOfferings_RejectsEffectiveFromOutsideWindow(
 	for name, switchDate := range cases {
 		t.Run(name, func(t *testing.T) {
 			effectiveFrom := switchDate
-			_, err := testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+			_, err := testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 				RequestID:      requestID,
 				ChildID:        childID,
 				ActorAccountID: env.creatorID,
@@ -470,7 +470,7 @@ func TestChangeRequestService_ApproveKeepsAppliedOfferingSwitch(t *testing.T) {
 	)
 
 	switchDate := decisionTestToday
-	_, err := testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      requestID,
 		ChildID:        childID,
 		ActorAccountID: env.creatorID,
@@ -522,6 +522,7 @@ func TestChangeRequestService_ApproveKeepsAppliedOfferingSwitch(t *testing.T) {
 		},
 	}
 
+	require.NoError(t, enrollmentTest.ShowEditForm(ctx, env.requestSvc, requestRow.StatusToken, &proposed))
 	changeRequests := newChangeRequestServiceWithDecisionForTest(t, env)
 	created, err := changeRequests.Propose(ctx, requestRow.StatusToken, enrollmentTest.CreateChangeRequestInput{
 		Submission: proposed,

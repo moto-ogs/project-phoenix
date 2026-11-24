@@ -31,6 +31,19 @@ type careMonthInput struct {
 	// computations decide a school change alike (#7874); nil reads them from
 	// invoiced.
 	frozenFamilies map[int64]string
+	// recomputed are the contracts whose notice a notice preview computes
+	// again, in both of its computations of a month: their frozen family
+	// still decides a school change, but they count as not issued there, so
+	// a child an issued invoice bills is found among them too (#7892).
+	recomputed map[int64]bool
+	// assessed are the notice months of those contracts: the first
+	// computation holds a child whose contract without a price keeps an
+	// assessment that bills days another contract would assess (#7952).
+	assessed map[int64]parentbilling.CareInvoice
+	// keepHeld are the contracts the first computation of a notice month
+	// held back for an issued invoice: the second one keeps the whole child
+	// held (#7892, S4).
+	keepHeld map[int64]bool
 	// rules and evidences feed the rule chain (#4685); without them every
 	// invoice is its base price.
 	rules     []parentbilling.ContributionRule
@@ -61,7 +74,13 @@ type careMonth struct {
 	duplicates   []parentbilling.CareDuplicate
 	// joined are the children with a record at each of several schools
 	// the month bills as one (ADR 0158, Nachtrag Schulwechsel).
-	joined         []parentbilling.CareJoinedChild
+	joined []parentbilling.CareJoinedChild
+	// billedChildren are the children held back because an issued invoice
+	// of the month already bills them (ADR 0158, Nachtrag #7892).
+	billedChildren []parentbilling.CareBilledChild
+	// held are the contracts held for a duplicate (E4) or an issued invoice
+	// (S4), issued ones of a held child included: none gets its Mensa.
+	held           map[int64]bool
 	billed         int
 	billedBySchool map[int64]int
 	// feeNoticesBySchool names per school the Jahresbescheide that assess
@@ -130,9 +149,11 @@ func feeNoticeHolds(invoiced map[int64]parentbilling.CareInvoice,
 
 // buildCareMonth bills every contract of the month by the rule of the
 // Träger. A contract an issued invoice of the month bills stays out; so
-// does one with a booked weekday without a price, which Unpriced names, and
-// one of a child whose contracts book a weekday of a module twice, which
-// Duplicates names. Two versions of one contract on one day are
+// does one with a booked weekday without a price, which Unpriced names, one
+// of a child whose contracts book a weekday of a module twice, which
+// Duplicates names, and one of a child an issued invoice of another of its
+// contracts already bills, which billedChildren names (#7892). Two versions
+// of one contract on one day are
 // ErrCareVersionsOverlap: the run would otherwise bill a day twice.
 func buildCareMonth(in careMonthInput) (careMonth, error) {
 	byContract, order := versionsByContract(in.versions)
@@ -141,14 +162,19 @@ func buildCareMonth(in careMonthInput) (careMonth, error) {
 	}
 	// One grouping of the children for the billed days (E2), the
 	// duplicates (E3), the sibling chain and the review (ADR 0158 E1).
-	grouping := groupCare(byContract, order, contractFamilies(byContract, in.recipients), in.issuedChildIdentities(), in.issuedFamilies())
+	chain := newCareChain(byContract, order, in.issuedChildIdentities(), contractFamilies(byContract, in.recipients), in.issuedFamilies())
+	chain.recomputed = in.recomputed
+	source := chain.schoolChangeSource(in.issuedPlaces())
+	grouping := chain.group(order, source)
 	children := grouping.children
 	entries := monthEntries(in.month, byContract, children)
 	duplicates, held := childMonthHolds(in.month, in.rule, byContract, children, entries)
 	prices := newPriceBook(in.tariffs)
 	free := newFreeMonths(in.lists)
+	billedChildren := billedChildHolds(billedHoldInput{careMonthInput: in, byContract: byContract, order: order, childOf: grouping.keys,
+		entries: entries, prices: prices, free: free}, held)
 	result := careMonth{invoices: []parentbilling.CareInvoice{}, unpriced: []parentbilling.CareUnpriced{}, duplicates: duplicates,
-		joined: joinedChildren(children, grouping.joined, byContract), freeBySchool: map[int64]int{}}
+		joined: joinedChildren(grouping, source), billedChildren: billedChildren, held: held, freeBySchool: map[int64]int{}}
 	var chained []*careChainEntry
 	var unbilled []careContractPlace
 	childOf := grouping.keys
@@ -178,7 +204,7 @@ func buildCareMonth(in careMonthInput) (careMonth, error) {
 			continue
 		}
 		invoice.Recipient = in.recipients[contractID]
-		invoice.FamilyEmail = parentbilling.ContractFamilyKey(invoice.Recipient.Email, contractID)
+		invoice.FamilyEmail = invoice.Recipient.FamilyOf(contractID)
 		invoice.Service = parentbilling.ServiceCare
 		result.invoices = append(result.invoices, invoice)
 		chained = append(chained, &careChainEntry{child: childOf[contractID], birthDate: byContract[contractID][0].ChildBirthDate})
@@ -267,7 +293,7 @@ func appendInForce(places []careContractPlace, in careMonthInput, versions []par
 		return places
 	}
 	head := versions[0]
-	family := parentbilling.ContractFamilyKey(in.recipients[head.ContractID].Email, head.ContractID)
+	family := in.recipients[head.ContractID].FamilyOf(head.ContractID)
 	return append(places, careContractPlace{family: family, child: child, school: head.SchoolID})
 }
 

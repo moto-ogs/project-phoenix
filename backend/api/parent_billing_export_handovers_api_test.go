@@ -9,6 +9,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -45,6 +47,7 @@ type recipientBody struct {
 	Name    string   `json:"name"`
 	Ready   bool     `json:"ready"`
 	Formats []string `json:"formats"`
+	Version string   `json:"version"`
 }
 
 type recipientsPageBody struct {
@@ -53,6 +56,7 @@ type recipientsPageBody struct {
 		Format      string  `json:"format"`
 		RecipientID *wireID `json:"recipient_id"`
 	} `json:"assignments"`
+	AssignmentsVersion string `json:"assignments_version"`
 }
 
 // addRecipient enters a recipient and answers the response and its id.
@@ -72,11 +76,26 @@ func assignFormats(t *testing.T, f careBillingFixture, recipients map[string]int
 	for format, id := range recipients {
 		assignment := map[string]any{"format": format, "recipient_id": nil}
 		if id > 0 {
-			assignment["recipient_id"] = id
+			assignment["recipient_id"] = fmt.Sprint(id)
 		}
 		assignments = append(assignments, assignment)
 	}
-	return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, exportRecipientsPath+"/formats", map[string]any{"assignments": assignments})
+	// The assignments go over the version the page read (ADR 0311).
+	read := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, exportRecipientPath, nil)
+	require.Equal(t, http.StatusOK, read.Code, read.Body.String())
+	version := decodeSchoolPortalData[recipientsPageBody](t, read.Body.Bytes()).AssignmentsVersion
+	return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, exportRecipientsPath+"/formats",
+		map[string]any{"assignments": assignments, "expected_version": version})
+}
+
+// recipientVersion is the version the recipient's page reads.
+func recipientVersion(t *testing.T, f careBillingFixture, id int64) string {
+	t.Helper()
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, recipientPath(id), nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	return decodeSchoolPortalData[struct {
+		Recipient recipientBody `json:"recipient"`
+	}](t, rec.Body.Bytes()).Recipient.Version
 }
 
 // saveRecipient enters the ready recipient that receives every format.
@@ -174,9 +193,15 @@ func TestFinanceExportHandoverOfARun(t *testing.T) {
 	assert.Equal(t, 5, strings.Count(page.Body.String(), `"state":"failed"`), "every attempt is in the journal of its recipient, and the last one on it")
 
 	renamed := readyRecipient()
-	renamed["name"] = "Kämmerei Nord"
+	renamed["name"], renamed["expected_version"] = "Kämmerei Nord", recipientVersion(t, f, recipient)
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, recipientPath(recipient), renamed)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	// A second save on the version before the first is refused (ADR 0311).
+	stale := maps.Clone(renamed)
+	stale["name"] = "Kämmerei Süd"
+	refused := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, recipientPath(recipient), stale)
+	require.Equal(t, http.StatusConflict, refused.Code, refused.Body.String())
+	assert.Contains(t, refused.Body.String(), readstate.ChangedCode)
 	saved := decodeSchoolPortalData[recipientBody](t, rec.Body.Bytes())
 	assert.Equal(t, recipient, int64(saved.ID))
 	assert.Equal(t, "Kämmerei Nord", saved.Name)
@@ -303,7 +328,7 @@ func TestFinanceExportHandoverIgnoresARequestedOrganization(t *testing.T) {
 	createMandate(t, f, mandateBody(contract, "SJR-H-MIA"))
 	run := releaseDebitRun(t, f, sepaDebitMonth)
 	saveRecipient(t, other, readyRecipient())
-	rec = handOver(t, other, run, "pain008", map[string]any{"organization_id": f.office.organization})
+	rec = handOver(t, other, run, "pain008", map[string]any{"organization_id": fmt.Sprint(f.office.organization)})
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 }
 
@@ -316,7 +341,7 @@ func TestNumberedSollstellungRepeatsTheSameContent(t *testing.T) {
 	contract := careContract(t, f.db, f.office.organization, f.office.schools[0], "Ben", sepaDebitMonth, sjrServices()...)
 	createMandate(t, f, mandateBody(contract, "SJR-H-BEN"))
 	run := releaseDebitRun(t, f, sepaDebitMonth)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, financeExportsPath+"/settings/sollstellung", map[string]any{
+	rec := putSollstellung(t, f.traeger, f.office.token, map[string]any{
 		"columns":   []map[string]any{{"field": "invoice_number", "header": "Nr"}, {"field": "file_number", "header": "Datei"}},
 		"delimiter": ";", "decimal_separator": ",", "date_format": "dd.mm.yyyy", "encoding": "utf-8", "header_row": true,
 		"file_name_pattern": "soll-{NR}.csv",

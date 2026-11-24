@@ -70,6 +70,7 @@ const HIRED = {
     { schoolId: "1", schoolName: "OGS Nord", staffId: "41", active: true },
   ],
   unsyncedSchools: [],
+  heldBankSchools: [],
 } as unknown as StaffRecordDetail;
 
 function renderPage() {
@@ -224,16 +225,16 @@ describe("TraegerStaffHirePage", () => {
           matches: [
             {
               kind: "record",
-              staff_record_id: 4,
+              staff_record_id: "9007199254740993",
               first_name: "Lena",
               last_name: "Brandt",
               reasons: ["name_birthday"],
             },
             {
               kind: "school",
-              school_id: 2,
+              school_id: "2",
               school_name: "OGS Süd",
-              staff_id: 17,
+              staff_id: "17",
               first_name: "Lena",
               last_name: "Brandt-Ok",
               reasons: ["name", "email"],
@@ -273,7 +274,7 @@ describe("TraegerStaffHirePage", () => {
       within(dialog).getByRole("link", {
         name: "Akte von Lena Brandt öffnen, neuer Tab",
       }),
-    ).toHaveAttribute("href", "/traeger/personal/4");
+    ).toHaveAttribute("href", "/traeger/personal/9007199254740993");
     // #7378: the person at the school gets its record under „Ohne Akte“.
     expect(
       within(dialog).getByRole("link", {

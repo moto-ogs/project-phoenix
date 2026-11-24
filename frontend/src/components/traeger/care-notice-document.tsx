@@ -222,6 +222,7 @@ export function CareNoticeDocument({
               id: "",
               label: "",
               isDefault: true,
+              version: "",
               accountHolder: account.accountHolder,
               iban: account.iban,
               bic: account.bic,

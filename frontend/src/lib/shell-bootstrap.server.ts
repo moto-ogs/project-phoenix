@@ -1,6 +1,11 @@
+import * as staffNoticesContract from "~/lib/contract/staff-notices.generated";
+import * as staffMessagesContract from "~/lib/contract/staff-messages.generated";
+import * as staffContract from "~/lib/contract/staff.generated";
+import * as roomsContract from "~/lib/contract/rooms.generated";
+import * as remindersContract from "~/lib/contract/reminders.generated";
+import * as activeContract from "~/lib/contract/active.generated";
 import type { Session } from "next-auth";
 import { mapAccountTenant } from "~/lib/account-tenants";
-import { apiGet } from "~/lib/api-helpers.server";
 import {
   hasEffectiveAdminScope,
   hasPermission,
@@ -14,22 +19,23 @@ import {
 } from "~/lib/change-request-access";
 import { createLogger } from "~/lib/logger";
 import { mapProfileResponse } from "~/lib/profile-helpers";
-import { contractGet } from "~/lib/contract/client.server";
-import type { ApiResponse } from "~/lib/api-envelope";
-import type * as authAccountContract from "~/lib/contract/auth-account.generated";
-import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
+import {
+  contractGet,
+  type ContractOptions,
+} from "~/lib/contract/client.server";
+import type { z } from "zod";
+import * as authAccountContract from "~/lib/contract/auth-account.generated";
+import * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import * as meContract from "~/lib/contract/me.generated";
-import type * as messagesContract from "~/lib/contract/messages.generated";
-import type * as sharedContract from "~/lib/contract/shared.generated";
-import type * as studentsContract from "~/lib/contract/students.generated";
-import type * as platformContract from "~/lib/contract/platform.generated";
-import type { RemindersResult } from "~/lib/reminders-api";
+import * as messagesContract from "~/lib/contract/messages.generated";
+import * as studentsContract from "~/lib/contract/students.generated";
+import * as platformContract from "~/lib/contract/platform.generated";
+import { toRemindersResult } from "~/lib/reminders-api";
+import { toStaffNotice } from "~/lib/staff-notices-api";
 import type { ShellBootstrap, ShellCounts } from "~/lib/shell-seed";
-import type { StaffNotice } from "~/lib/staff-notices-api";
 import type {
   SupervisedGroupPayload,
   SupervisionSnapshot,
-  OpenRoomPayload,
 } from "~/lib/supervision-derive";
 import type { TenantInfo } from "~/lib/tenant-api";
 import { loadUserContext } from "~/lib/user-context.server";
@@ -74,6 +80,17 @@ async function optional<T>(
   }
 }
 
+async function readShell<
+  R extends { method: "GET"; pattern: string; response: z.ZodType },
+>(
+  route: R,
+  ...options: ContractOptions<NoInfer<R>>
+): Promise<z.output<R["response"]>> {
+  const result = await contractGet(route, ...options);
+  if (!result.ok) throw result.error.cause;
+  return result.value;
+}
+
 async function loadSupervision(
   session: Session,
   tenant: TenantInfo,
@@ -97,18 +114,16 @@ async function loadSupervision(
     overviewOk: boolean;
   }> => {
     const loadOwn = () =>
-      apiGet<ApiResponse<SupervisedGroupPayload[] | null>>(
-        "/api/me/groups/supervised",
+      readShell(meContract.routes["GET /api/me/groups/supervised"], {
         token,
-        { signal },
-      );
+        signal,
+      });
     if (canReadGroups && mayHaveOverview) {
       const [overview, own] = await Promise.allSettled([
-        apiGet<ApiResponse<SupervisedGroupPayload[] | null>>(
-          "/api/active/supervisors/all",
+        readShell(activeContract.routes["GET /api/active/supervisors/all"], {
           token,
-          { signal },
-        ),
+          signal,
+        }),
         loadOwn(),
       ]);
       if (overview.status === "fulfilled") {
@@ -139,9 +154,10 @@ async function loadSupervision(
 
   const [groups, supervision, openRooms] = await Promise.all([
     optional("groups", async (signal) => {
-      const response = await apiGet<
-        ApiResponse<studentsContract.NavigationGroup[]>
-      >("/api/students/ogs-group-navigation", token, { signal });
+      const response = await readShell(
+        studentsContract.routes["GET /api/students/ogs-group-navigation"],
+        { token, signal },
+      );
       return response.data;
     }),
     optional("supervised", loadSupervised),
@@ -149,10 +165,9 @@ async function loadSupervision(
     // rooms:read is the same permission every caregiver already holds for the
     // rest of the navigation, so no extra gate is needed here.
     optional("openRooms", async (signal) => {
-      const response = await apiGet<ApiResponse<OpenRoomPayload[] | null>>(
-        "/api/rooms?is_open_room=true",
-        token,
-        { signal },
+      const response = await readShell(
+        roomsContract.routes["GET /api/rooms/"],
+        { token, signal, query: { is_open_room: true } },
       );
       return response.data ?? [];
     }),
@@ -213,18 +228,20 @@ async function loadCounts(
     careWithdrawalsPending,
   ] = await Promise.all([
     loadCount("staffAbsencesPending", canReviewAbsences, async (signal) => {
-      const response = await apiGet<
-        ApiResponse<sharedContract.StaffAbsenceResponse[] | null>
-      >("/api/staff/absences/pending", token, { signal });
+      const response = await readShell(
+        staffContract.routes["GET /api/staff/absences/pending"],
+        { token, signal },
+      );
       return (response.data ?? []).length;
     }),
     loadCount(
       "messagesUnread",
       tenant.messagingEnabled && hasPermission(session, "users:read"),
       async (signal) => {
-        const response = await apiGet<
-          ApiResponse<messagesContract.ParentChatUnreadCountResponse>
-        >("/api/messages/unread-count", token, { signal });
+        const response = await readShell(
+          messagesContract.routes["GET /api/messages/unread-count"],
+          { token, signal },
+        );
         return response.data?.unread_count ?? 0;
       },
     ),
@@ -232,9 +249,10 @@ async function loadCounts(
       "teamChatUnread",
       tenant.staffMessagingEnabled,
       async (signal) => {
-        const response = await apiGet<
-          ApiResponse<sharedContract.unreadCountResponse>
-        >("/api/staff-messages/unread-count", token, { signal });
+        const response = await readShell(
+          staffMessagesContract.routes["GET /api/staff-messages/unread-count"],
+          { token, signal },
+        );
         return response.data?.unread_count ?? 0;
       },
     ),
@@ -242,9 +260,12 @@ async function loadCounts(
       "changeRequestsPending",
       canReviewParentRequests,
       async (signal) => {
-        const response = await apiGet<
-          ApiResponse<studentsContract.ChangeRequestPendingCountResponse>
-        >("/api/students/change-requests/pending-count", token, { signal });
+        const response = await readShell(
+          studentsContract.routes[
+            "GET /api/students/change-requests/pending-count"
+          ],
+          { token, signal },
+        );
         return response.data?.pending_count ?? 0;
       },
     ),
@@ -252,11 +273,12 @@ async function loadCounts(
       "enrollmentRequestsPending",
       canReviewEnrollmentChangeRequests(session),
       async (signal) => {
-        const response = await apiGet<
-          ApiResponse<enrollmentContract.EnrollmentChangeRequestPendingCountResponse>
-        >("/api/enrollment/admin/change-requests/pending-count", token, {
-          signal,
-        });
+        const response = await readShell(
+          enrollmentContract.routes[
+            "GET /api/enrollment/admin/change-requests/pending-count"
+          ],
+          { token, signal },
+        );
         return response.data?.pending_count ?? 0;
       },
     ),
@@ -264,9 +286,10 @@ async function loadCounts(
       "careWithdrawalsPending",
       canReviewCareWithdrawals(session),
       async (signal) => {
-        const response = await apiGet<
-          ApiResponse<studentsContract.careWithdrawalPageResponse>
-        >("/api/students/care-withdrawals?page_size=1", token, { signal });
+        const response = await readShell(
+          studentsContract.routes["GET /api/students/care-withdrawals"],
+          { token, signal, query: { page_size: 1 } },
+        );
         return response.data?.total ?? 0;
       },
     ),
@@ -315,32 +338,27 @@ export async function loadShellBootstrap(
     // Through the decoder like the browser's profile read: the generated
     // type holds at runtime, IDs arrive as strings (#2353).
     optional("profile", async (signal) => {
-      const route = meContract.routes["GET /api/me/profile"];
-      const result = await contractGet(
-        `${route.method} ${route.pattern}`,
-        route.response,
-        "/api/me/profile",
-        token,
-        { signal },
+      const response = await readShell(
+        meContract.routes["GET /api/me/profile"],
+        { token, signal },
       );
-      if (!result.ok) throw result.error.cause;
-      return mapProfileResponse(result.value.data);
+      return mapProfileResponse(response.data);
     }),
     optional("accountTenants", async (signal) => {
-      const response = await apiGet<
-        ApiResponse<authAccountContract.AccountTenantResponse[] | null>
-      >("/auth/account/tenants", token, { signal });
+      const response = await readShell(
+        authAccountContract.routes["GET /auth/account/tenants"],
+        { token, signal },
+      );
       return (response.data ?? []).map(mapAccountTenant);
     }),
     // Same gate as useReminders: the route needs users:read (#4573).
     hasPermission(session, "users:read")
       ? optional("reminders", async (signal) => {
-          const response = await apiGet<ApiResponse<RemindersResult>>(
-            "/api/reminders",
-            token,
-            { signal },
+          const response = await readShell(
+            remindersContract.routes["GET /api/reminders/"],
+            { token, signal },
           );
-          return response.data;
+          return toRemindersResult(response.data);
         })
       : Promise.resolve(undefined),
     // The list itself, not only its count: the sidebar badge, the home block
@@ -348,18 +366,18 @@ export async function loadShellBootstrap(
     // as useStaffNoticesPending: the route needs users:read.
     hasPermission(session, "users:read")
       ? optional("staffNoticesToday", async (signal) => {
-          const response = await apiGet<ApiResponse<StaffNotice[] | null>>(
-            "/api/staff-notices/today",
-            token,
-            { signal },
+          const response = await readShell(
+            staffNoticesContract.routes["GET /api/staff-notices/today"],
+            { token, signal },
           );
-          return response.data ?? [];
+          return response.data.map(toStaffNotice);
         })
       : Promise.resolve(undefined),
     optional("announcements", async (signal) => {
-      const response = await apiGet<
-        ApiResponse<platformContract.PlatformAnnouncementResponse[] | null>
-      >("/api/platform/announcements/unread", token, { signal });
+      const response = await readShell(
+        platformContract.routes["GET /api/platform/announcements/unread"],
+        { token, signal },
+      );
       return response.data ?? [];
     }),
     loadSupervision(session, tenant, token),

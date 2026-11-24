@@ -65,6 +65,8 @@ type Organization struct {
 	// TestSystem marks a test Träger with test schools and invented sample
 	// data (#4658). It is set at creation and never changes.
 	TestSystem bool `json:"test_system"`
+	// Version is the read state an edit sends back (OrganizationVersion).
+	Version string `json:"version"`
 }
 
 func (o Organization) IsDeleted() bool { return o.DeletedAt != nil }

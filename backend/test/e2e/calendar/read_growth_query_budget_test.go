@@ -7,10 +7,11 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
-	"github.com/stretchr/testify/require"
 )
 
 // These captures include the resource, session/permission middleware and all
@@ -24,12 +25,12 @@ func TestCalendarReadPositiveGrowthQueryBudget(t *testing.T) {
 			db, router := setupParentCalendarRoute(t)
 			_, organizer := testpkg.CreateTestCalendarStaff(t, db, "Read", "Organizer")
 			family := testpkg.CreateTestParentGuardianChain(t, db)
-			targets := []map[string]any{{"type": "guardian_profile", "id": family.GuardianProfileID}}
+			targets := []map[string]any{{"type": "guardian_profile", "id": testpkg.ID(family.GuardianProfileID)}}
 			for i := 1; i < n; i++ {
 				student := testpkg.CreateTestStudent(t, db, "Child", fmt.Sprintf("Read%d", i), "1a")
 				testpkg.CreateTestStudentGuardianLink(t, db, student.ID, family.GuardianProfileID, "primary_guardian")
 				other := testpkg.CreateTestParentGuardianChain(t, db)
-				targets = append(targets, map[string]any{"type": "guardian_profile", "id": other.GuardianProfileID})
+				targets = append(targets, map[string]any{"type": "guardian_profile", "id": testpkg.ID(other.GuardianProfileID)})
 			}
 			staffToken := calendarToken(t, organizer.ID, permissions.CalendarOwn, permissions.CalendarManage)
 			parentToken := parentCalendarToken(t, family.AccountID)

@@ -24,7 +24,10 @@ import { ProgressBar } from "~/components/ui/progress-bar";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { presentError } from "~/lib/error-presentation";
 import { createLogger } from "~/lib/logger";
-import { confirmHolidayRegistration } from "~/lib/traeger-contributions-api";
+import {
+  confirmHolidayRegistration,
+  fetchHolidayContribution,
+} from "~/lib/traeger-contributions-api";
 import type { HolidayRegistrationSummary } from "~/lib/traeger-holiday-registrations-api";
 import { traegerPath } from "~/lib/traeger-url";
 
@@ -243,7 +246,24 @@ export function HolidayBulkConfirmModal({
       const registration = plan.confirmable[next]!;
       next += 1;
       try {
-        await confirmHolidayRegistration(periodId, registration.id, false);
+        // Deliberately read right before: the dialog shows no amounts and
+        // confirms the current ones. The token only keeps the route's
+        // contract uniform, where an empty token is refused (ADR 0311); a
+        // change between this read and the confirmation leaves the
+        // registration open as changed. The preview carries more than the
+        // fingerprint (siblings, lines); the route has no narrower read,
+        // and the run uses nothing else of it.
+        const preview = await fetchHolidayContribution(
+          periodId,
+          registration.id,
+          false,
+        );
+        await confirmHolidayRegistration(
+          periodId,
+          registration.id,
+          { fingerprint: preview.fingerprint ?? "" },
+          false,
+        );
         confirmed.push(registration);
       } catch (err) {
         logger.warn("holiday_bulk_confirm_registration_failed", {

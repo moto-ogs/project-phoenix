@@ -187,8 +187,8 @@ func TestTraegerStaffImportTakesOverStaffWithoutDuplicates(t *testing.T) {
 			}
 		}
 		assert.True(t, proposed, "the import links nobody by itself; the office confirms the proposal")
-		rec = traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
-			"staff_record_id": mira, "members": []map[string]int64{{"school_id": north, "staff_id": person.ID}},
+		rec = traegerLink(t, router, office.token, map[string]any{
+			"staff_record_id": fmt.Sprint(mira), "members": []map[string]string{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(person.ID)}},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		before := staffAccessEntries(t, db, office.organization, "traeger_staff_records")[north]

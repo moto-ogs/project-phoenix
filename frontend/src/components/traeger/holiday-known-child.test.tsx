@@ -41,6 +41,7 @@ function renderCard(
   render(
     <ToastProvider>
       <HolidayRegistrationChildCard
+        reload={vi.fn()}
         period={HOLIDAY_PERIOD}
         registration={registration}
         child={HOLIDAY_REGISTRATION.children[childIndex]!}

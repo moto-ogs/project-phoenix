@@ -14,6 +14,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Tagesinformationen (#2180) — HTTP-Fläche der Hinweise fürs Team:
@@ -111,20 +113,30 @@ type noticeRequest struct {
 	Active                  *bool   `json:"active,omitempty"`
 }
 
+// noticeUpdateRequest is the body of a change: the notice as edited and the
+// version its editor read (ADR 0311).
+type noticeUpdateRequest struct {
+	noticeRequest
+	ExpectedVersion string `json:"expected_version"`
+}
+
 type noticeResponse struct {
-	ID                      string  `json:"id"`
-	Title                   string  `json:"title"`
-	Body                    string  `json:"body"`
-	Priority                string  `json:"priority"`
-	Audience                string  `json:"audience"`
-	ValidFrom               string  `json:"valid_from"`
-	ValidUntil              *string `json:"valid_until,omitempty"`
-	Weekdays                []int16 `json:"weekdays"`
-	WeekPattern             int     `json:"week_pattern"`
-	RequiresAcknowledgement bool    `json:"requires_acknowledgement"`
-	Active                  bool    `json:"active"`
-	AcknowledgedAt          *string `json:"acknowledged_at,omitempty"`
-	AcknowledgedCount       *int    `json:"acknowledged_count,omitempty"`
+	ID                      ident.ID `json:"id"`
+	Title                   string   `json:"title"`
+	Body                    string   `json:"body"`
+	Priority                string   `json:"priority"`
+	Audience                string   `json:"audience"`
+	ValidFrom               string   `json:"valid_from"`
+	ValidUntil              *string  `json:"valid_until,omitempty"`
+	Weekdays                []int16  `json:"weekdays"`
+	WeekPattern             int      `json:"week_pattern"`
+	RequiresAcknowledgement bool     `json:"requires_acknowledgement"`
+	Active                  bool     `json:"active"`
+	AcknowledgedAt          *string  `json:"acknowledged_at,omitempty"`
+	AcknowledgedCount       *int     `json:"acknowledged_count,omitempty"`
+	// Version is the notice's read-state token (ADR 0311); a change sends it
+	// back as expected_version.
+	Version string `json:"version"`
 }
 
 // noticeFields is the wire-relevant projection of a Tagesinformation plus
@@ -145,6 +157,7 @@ type noticeFields struct {
 	Active                  bool
 	AcknowledgedAt          *time.Time
 	AcknowledgedCount       int
+	Version                 string
 }
 
 // noticeFieldsOf projects a notice of the public contract onto the wire
@@ -162,6 +175,7 @@ func noticeFieldsOf(notice timetable.StaffNotice) noticeFields {
 		WeekPattern:             notice.WeekPattern,
 		RequiresAcknowledgement: notice.RequiresAcknowledgement,
 		Active:                  notice.Active,
+		Version:                 timetable.StaffNoticeVersion(notice),
 	}
 }
 
@@ -176,7 +190,7 @@ func noticeViewFields(view timetable.StaffNoticeView) noticeFields {
 
 func toNoticeResponse(view noticeFields, includeAcknowledgedCount bool) noticeResponse {
 	out := noticeResponse{
-		ID:                      strconv.FormatInt(view.ID, 10),
+		ID:                      ident.ID(view.ID),
 		Title:                   view.Title,
 		Body:                    view.Body,
 		Priority:                view.Priority,
@@ -186,6 +200,7 @@ func toNoticeResponse(view noticeFields, includeAcknowledgedCount bool) noticeRe
 		WeekPattern:             view.WeekPattern,
 		RequiresAcknowledgement: view.RequiresAcknowledgement,
 		Active:                  view.Active,
+		Version:                 view.Version,
 	}
 	if includeAcknowledgedCount {
 		count := view.AcknowledgedCount
@@ -330,9 +345,9 @@ func (rs *StaffNoticeResource) acknowledgeFor(reader string) http.HandlerFunc {
 
 // acknowledgerResponse ist eine Zeile der Bestätigungsliste (#2208).
 type acknowledgerResponse struct {
-	AccountID      string `json:"account_id"`
-	Name           string `json:"name"`
-	AcknowledgedAt string `json:"acknowledged_at"`
+	AccountID      ident.ID `json:"account_id"`
+	Name           string   `json:"name"`
+	AcknowledgedAt string   `json:"acknowledged_at"`
 }
 
 // acknowledgements gibt der Leitung, wer den Hinweis bestätigt hat — Namen,
@@ -352,7 +367,7 @@ func (rs *StaffNoticeResource) acknowledgements(w http.ResponseWriter, r *http.R
 	out := make([]acknowledgerResponse, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, acknowledgerResponse{
-			AccountID:      strconv.FormatInt(row.AccountID, 10),
+			AccountID:      ident.ID(row.AccountID),
 			Name:           row.Name,
 			AcknowledgedAt: row.AcknowledgedAt.Format(time.RFC3339),
 		})
@@ -376,8 +391,9 @@ func noticeIDFromURL(r *http.Request) (int64, error) {
 }
 
 func decodeNoticeInput(r *http.Request) (timetable.StaffNoticeInput, error) {
-	var req noticeRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	// A new notice has no read state: its expected_version stays unused.
+	var req noticeUpdateRequest
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		return timetable.StaffNoticeInput{}, errors.New("invalid request body")
 	}
 
@@ -396,6 +412,7 @@ func decodeNoticeInput(r *http.Request) (timetable.StaffNoticeInput, error) {
 		WeekPattern:             req.WeekPattern,
 		RequiresAcknowledgement: req.RequiresAcknowledgement,
 		Active:                  true,
+		ExpectedVersion:         req.ExpectedVersion,
 	}
 	if req.Active != nil {
 		in.Active = *req.Active

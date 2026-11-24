@@ -126,11 +126,17 @@ func (d *Decisions) adjustChildOfferings(ctx context.Context, input enrollment.U
 	if d.deps.Bookings == nil || d.deps.Children == nil {
 		return nil, errors.New("decision: offering adjustment dependencies are not configured")
 	}
+	var expectedVersion *string
+	if source == careplan.OfferingAdjustmentSourceDirect {
+		// The office saves back the bookings it read (ADR 0311).
+		expectedVersion = &input.ExpectedVersion
+	}
 	result, err := d.deps.Bookings.AdjustOfferings(ctx, careplan.OfferingAdjustment{
 		RequestID: input.RequestID, ChildID: input.ChildID, Offerings: adjustmentChoices(input.Offerings),
 		ExcludedAutoAddTargetIDs: input.ExcludedAutoAddTargetIDs, Reason: input.Reason,
 		ActorAccountID: input.ActorAccountID, ActorRole: input.ActorRole, EffectiveFrom: input.EffectiveFrom,
 		CompleteWithdrawalConfirmed: input.CompleteWithdrawalConfirmed, Source: source,
+		ExpectedVersion: expectedVersion,
 	})
 	if err != nil {
 		return nil, err
@@ -173,7 +179,9 @@ func offeringPhaseOf(phase *enrollment.Phase) careplan.OfferingPhase {
 func adjustmentChoices(rows []enrollment.OfferingAdjustmentSelection) []careplan.OfferingAdjustmentChoice {
 	choices := make([]careplan.OfferingAdjustmentChoice, 0, len(rows))
 	for _, row := range rows {
-		choices = append(choices, careplan.OfferingAdjustmentChoice{OfferingID: row.OfferingID, SelectedDays: row.SelectedDays})
+		choices = append(choices, careplan.OfferingAdjustmentChoice{
+			OfferingID: row.OfferingID, SelectedDays: row.SelectedDays, ExtendToPhaseEnd: row.ExtendToPhaseEnd,
+		})
 	}
 	return choices
 }

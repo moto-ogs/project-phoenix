@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ProvisioningErrorRenderer maps provisioning errors to HTTP responses. Each
@@ -68,8 +68,15 @@ func ProvisioningErrorRenderer(err error) render.Renderer {
 	case errors.As(err, &schoolNotDeleted):
 		return common.OperatorRejection(http.StatusConflict, common.CodeProvisioningSchoolNotDeleted, "School is not deleted")
 	default:
-		return common.OperatorInternal(internalErrorMessage)
+		return unclassifiedRenderer(err)
 	}
+}
+
+// unclassifiedRenderer answers an error no rule names as an internal error;
+// RenderError lifts a refusal with its own registered code, such as an edit
+// on a changed state (readstate.ErrChanged, ADR 0311), to its 409.
+func unclassifiedRenderer(err error) render.Renderer {
+	return common.OperatorInternal(err, internalErrorMessage)
 }
 
 // personErrorRenderer maps the outcomes of a person deletion; ok is false for
@@ -106,7 +113,7 @@ func provisioningIdentityRenderer(identityErr *organizationtenancy.ProvisioningI
 		identityErr.Op == organizationtenancy.OpCreateInvitation && !errors.Is(identityErr.Err, organizationtenancy.ErrIdentityStoreFailed):
 		return common.OperatorInvalidRequest(identityErr.Err)
 	default:
-		return common.OperatorInternal(internalErrorMessage)
+		return common.OperatorInternal(identityErr, internalErrorMessage)
 	}
 }
 
@@ -142,7 +149,7 @@ func deviceErrorRenderer(err error) (render.Renderer, bool) {
 		case organizationtenancy.DeviceTransferBlockedActiveSession:
 			return common.OperatorRejection(http.StatusConflict, common.CodeProvisioningDeviceActiveSession, "Device has an active session and cannot be transferred"), true
 		default:
-			return common.OperatorInternal(internalErrorMessage), true
+			return common.OperatorInternal(err, internalErrorMessage), true
 		}
 	case errors.As(err, &deviceTransferOrganizationMismatch):
 		return common.OperatorRejection(http.StatusForbidden, common.CodeProvisioningDeviceOtherOrganization, "Device can only be transferred within its organization"), true
@@ -163,7 +170,7 @@ func deviceErrorRenderer(err error) (render.Renderer, bool) {
 // end before the removal.
 func deviceRemovalBlockedDetails(blocked *organizationtenancy.DeviceRemovalBlockedError) map[string]any {
 	details := map[string]any{
-		"session_id": strconv.FormatInt(blocked.SessionID, 10),
+		"session_id": ident.ID(blocked.SessionID),
 		"started_at": blocked.StartedAt.Format(time.RFC3339),
 	}
 	if blocked.ActivityName != nil {

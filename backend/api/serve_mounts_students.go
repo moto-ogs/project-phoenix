@@ -246,7 +246,7 @@ func mountStudentRoutes(
 			StudentDocumentService: requests.Documents,
 			StudentPhotos:          persons,
 			UserContextService:     caller,
-			WeekdayPickupNotes:     carePlan,
+			WeeklyPlans:            requests.WeeklyPlans,
 		},
 		projectionStudentsHTTP.ResourceConfig{
 			EnrollmentAnswers: newStudentEnrollmentAnswerFilters(answers), PrivacyConsents: presence,

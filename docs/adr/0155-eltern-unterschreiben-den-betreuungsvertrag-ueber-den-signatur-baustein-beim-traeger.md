@@ -87,3 +87,37 @@ und ADR 0088 §3 auf.
   Version bleibt.
 - Eine kundenspezifische Schriftform ersetzt die einfache Signatur nicht; das
   prüft das Onboarding.
+
+## Nachtrag 2026-11-24: Einfrieren bei der Übergabe auf Papier (#8030)
+
+Ersetzt den zweiten Satz von §5. Entschieden in
+[#8030](https://github.com/moto-ogs/project-phoenix/issues/8030), entstanden
+aus #7904 und #7934.
+
+- **Problem.** Das PDF wurde erst beim Hochladen des Scans eingefroren und
+  dafür neu gerendert, mit Briefkopf, Brieftext, Branding und Stammdaten
+  dieses Tages. Änderte jemand sie zwischen Druck und Hochladen, belegten das
+  gespeicherte PDF und `document_sha256` einen Text, den die Familie nie
+  unterschrieben hat. Die Vorschau speichert nichts; einen alten Ausdruck
+  kann niemand nachbauen.
+- **Entscheidung.** Die Papierunterschrift bindet die Fassung, die das Büro
+  übergeben hat. `POST /traeger/contracts/{id}/paper-handover`
+  (`HandOverOnPaper`) sperrt die Zeile, friert das PDF ein wie ein Versand
+  (mit Briefkopf-Pflicht nach #7177) und markiert einen Entwurf als
+  `versendet`, ohne Mail, Link und Eintrag in `contract_mailings`. Damit
+  löst die Übergabe keine Erinnerung aus. Die Spur hält `send` mit
+  `via: office`, nur bei der Übergabe selbst; ein erneuter Aufruf für einen
+  schon versendeten Vertrag mit PDF ändert nichts und schreibt keinen Eintrag.
+  Das Büro lädt danach genau dieses PDF über `GET /{id}/document`. Ein schon
+  versendeter Vertrag behält sein PDF.
+- **Vorschau.** Solange ein Entwurf kein eingefrorenes PDF hat, trägt seine
+  Vorschau (Vertrag und Version) oben und in der Fußzeile jeder Seite den
+  Vermerk „Vorschau, nicht zum Unterschreiben“, und das Menü heißt
+  „Vorschau herunterladen“. Das eingefrorene PDF trägt den Vermerk nie. So
+  unterschreibt keine Familie eine Vorschau, die später anders eingefroren
+  würde.
+- **Hochladen.** `RecordPaperSignature` nimmt nur einen versendeten Vertrag
+  mit eingefrorenem PDF der aktuellen Version und rendert nichts. Ein
+  Entwurf antwortet mit dem bestehenden `care_contract.contract_not_signable`.
+- **Verworfen.** Ein Lesestand-Token nach ADR 0311 beim Hochladen: er belegt
+  nur den Stand beim Hochladen, nicht den Ausdruck.

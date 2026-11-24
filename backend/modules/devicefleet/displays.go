@@ -2,6 +2,8 @@ package devicefleet
 
 import (
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Dashboard is the public info-point aggregate. GDPR contract: it carries
@@ -36,7 +38,7 @@ type RoomOccupancy struct {
 
 // RunningActivity is one currently running activity session.
 type RunningActivity struct {
-	ID           string
+	ID           ident.ID
 	Name         string
 	Category     string
 	RoomName     string
@@ -46,7 +48,7 @@ type RunningActivity struct {
 
 // UpcomingActivity is one planned activity instance later today.
 type UpcomingActivity struct {
-	ID        string
+	ID        ident.ID
 	Name      string
 	Category  string
 	StartTime string

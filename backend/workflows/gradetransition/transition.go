@@ -20,6 +20,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Operations the workflow authorizes. The composition maps each one to the
@@ -118,6 +119,15 @@ type DraftPatch struct {
 	AcademicYear *string
 	Notes        *string
 	Mappings     []Mapping
+	// ExpectedVersion is the Version of the draft the editor started from
+	// (ADR 0311); a draft changed since is refused with readstate.ErrChanged.
+	ExpectedVersion string
+}
+
+// Version is the token of a stored transition (ADR 0311): every write of a
+// draft updates its row, and the row's trigger moves updated_at.
+func Version(t schoolstructure.Transition) string {
+	return readstate.Of(t.UpdatedAt)
 }
 
 // ListFilter narrows a listing. A non-nil AfterID (including 0) switches to
@@ -340,7 +350,8 @@ func (w *Workflow) CreateDraft(ctx context.Context, draft Draft) (result schools
 	return result, nil
 }
 
-// UpdateDraft edits a draft. It takes the tenant transition gate BEFORE
+// UpdateDraft edits a draft the editor read at patch.ExpectedVersion. It
+// takes the tenant transition gate BEFORE
 // reading the row: an apply validates the confirmed fingerprint against the
 // mappings and then writes history from that same set without locking the
 // mapping rows, so a concurrent mapping replacement must wait for it (or be
@@ -359,9 +370,16 @@ func (w *Workflow) UpdateDraft(ctx context.Context, id int64, patch DraftPatch) 
 		if !current.IsDraft() {
 			return fmt.Errorf("cannot modify transition: %w", ErrTransitionNotDraft)
 		}
-		updated, err := w.deps.Structure.UpdateTransition(txCtx, schoolstructure.TransitionUpdate{
+		if err := readstate.Check(patch.ExpectedVersion, Version(current)); err != nil {
+			return err
+		}
+		if _, err := w.deps.Structure.UpdateTransition(txCtx, schoolstructure.TransitionUpdate{
 			ID: id, AcademicYear: patch.AcademicYear, Notes: patch.Notes, Mappings: mappingInputs(patch.Mappings),
-		})
+		}); err != nil {
+			return translateStructureError(err)
+		}
+		// Read back: the answer carries the version the write stored.
+		updated, err := w.deps.Structure.FindTransition(txCtx, id)
 		if err != nil {
 			return translateStructureError(err)
 		}
@@ -390,22 +408,6 @@ func (w *Workflow) DeleteDraft(ctx context.Context, id int64) error {
 		}
 		return translateStructureError(w.deps.Structure.DeleteTransition(txCtx, id))
 	})
-}
-
-// FindTransition returns one transition with its mappings.
-func (w *Workflow) FindTransition(ctx context.Context, id int64) (result schoolstructure.Transition, err error) {
-	err = w.run(ctx, "find", OperationRead, id, func(txCtx context.Context, _ Actor) error {
-		found, err := w.deps.Structure.FindTransition(txCtx, id)
-		if err != nil {
-			return translateStructureError(err)
-		}
-		result = found
-		return nil
-	})
-	if err != nil {
-		return schoolstructure.Transition{}, err
-	}
-	return result, nil
 }
 
 // ListTransitions returns a page of transitions with their mappings and the

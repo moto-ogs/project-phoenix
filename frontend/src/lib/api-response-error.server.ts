@@ -27,6 +27,8 @@ export class ApiResponseError extends Error {
   readonly bodyText: string;
   readonly retryAfter: string | null;
   readonly contentType: string | null;
+  /** Headers arrived, but the response stream did not finish. */
+  readonly bodyInterrupted: boolean;
   // Memoized parse result — `null` means "not JSON". Lazy so callers that
   // only check status never pay the JSON.parse cost.
   private parsedBody: JsonBody | null = null;
@@ -38,6 +40,7 @@ export class ApiResponseError extends Error {
     options?: ErrorOptions & {
       retryAfter?: string | null;
       contentType?: string | null;
+      bodyInterrupted?: boolean;
     },
   ) {
     super(`API error (${status}): ${bodyText}`, options);
@@ -46,6 +49,7 @@ export class ApiResponseError extends Error {
     this.bodyText = bodyText;
     this.retryAfter = options?.retryAfter ?? null;
     this.contentType = options?.contentType ?? null;
+    this.bodyInterrupted = options?.bodyInterrupted ?? false;
   }
 
   /** Returns the parsed JSON body, or `null` if the body isn't valid JSON. */
@@ -199,8 +203,9 @@ function isRequest(value: unknown): value is Request {
 }
 
 /**
- * Answers a failed API route with the error envelope. A backend failure is
- * forwarded unchanged; a frontend failure gets an envelope of its own.
+ * Answers a failed API route with Problem Details. Valid backend problems
+ * below 500 keep their fields and may gain a request ID. Invalid bodies,
+ * backend 5xx and frontend errors get a safe problem instead.
  * @param error Error object
  * @returns Response with the error envelope and status
  */

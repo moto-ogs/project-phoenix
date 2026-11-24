@@ -744,14 +744,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) RequireCareRunningForUpdate(ctx context.Context, studentID int64) error {\n\tstudent, err := s.StudentRepo.FindByIDForUpdate(ctx, studentID)\n\tif err != nil {\n\t\treturn err\n\t}\n\tif student.CareEndedOn(s.todayDate()) {\n\t\treturn ErrChildCareEnded\n\t}\n\treturn nil\n}",
-      "form": "unclassified-evidence",
-      "id": "workflows/parentportal/internal/care/Service.RequireCareRunningForUpdate",
-      "owner": "workflows/parentportal"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *Service) RevokeSEPAMandate(ctx context.Context, accountID, organizationID, contractID int64) (SEPAMandateView, error) {\n\tvar view SEPAMandateView\n\terr := s.sepaMandate(ctx, accountID, organizationID, contractID, GuardianPermissionEnrollmentSubmit, func(txCtx context.Context, reader SEPAMandateReader, _ bool) error {\n\t\tvar err error\n\t\tview, err = s.SEPAMandates.RevokeSEPAMandate(txCtx, organizationID, reader)\n\t\tview.CanManage = view.Enabled\n\t\treturn err\n\t})\n\treturn view, err\n}",
+      "evidence": "func (s *Service) RevokeSEPAMandate(ctx context.Context, accountID, organizationID, contractID int64, expectedVersion string) (SEPAMandateView, error) {\n\tvar view SEPAMandateView\n\terr := s.sepaMandate(ctx, accountID, organizationID, contractID, GuardianPermissionEnrollmentSubmit, func(txCtx context.Context, reader SEPAMandateReader, _ bool) error {\n\t\tvar err error\n\t\tview, err = s.SEPAMandates.RevokeSEPAMandate(txCtx, organizationID, reader, expectedVersion)\n\t\tview.CanManage = view.Enabled\n\t\treturn err\n\t})\n\treturn view, err\n}",
       "form": "unclassified-evidence",
       "id": "workflows/parentportal/internal/care/Service.RevokeSEPAMandate",
       "owner": "workflows/parentportal"
@@ -1076,6 +1069,13 @@
       "evidence": "func (r portalStudentReads) FindByID(ctx context.Context, id int64) (*care.PortalStudent, error) {\n\tvalue, err := r.callbacks.Find(ctx, id)\n\treturn (*care.PortalStudent)(value), err\n}",
       "form": "unclassified-evidence",
       "id": "workflows/parentportal/portalStudentReads.FindByID",
+      "owner": "workflows/parentportal"
+    },
+    {
+      "build": "production",
+      "evidence": "func (r portalStudentReads) FindByIDForNoKeyUpdate(ctx context.Context, id int64) (*care.PortalStudent, error) {\n\tvalue, err := r.callbacks.LockNoKeyUpdate(ctx, id)\n\treturn (*care.PortalStudent)(value), err\n}",
+      "form": "unclassified-evidence",
+      "id": "workflows/parentportal/portalStudentReads.FindByIDForNoKeyUpdate",
       "owner": "workflows/parentportal"
     },
     {

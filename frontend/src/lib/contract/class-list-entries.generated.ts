@@ -20,6 +20,7 @@ export interface ClassListEntryResponse {
   school_class: string;
   created_at: string;
   matching_student_ids: string[] | null;
+  version: string;
 }
 
 export const ClassListEntryResponseSchema: z.ZodType<ClassListEntryResponse, unknown> = object<ClassListEntryResponse>({
@@ -28,7 +29,8 @@ export const ClassListEntryResponseSchema: z.ZodType<ClassListEntryResponse, unk
   last_name: str,
   school_class: str,
   created_at: instant,
-  matching_student_ids: nullable(arr(str)),
+  matching_student_ids: nullable(arr(int64String)),
+  version: str,
 });
 
 /** Go: classlistentries.ClassListEntryRequest */
@@ -41,6 +43,14 @@ export interface ClassListEntryRequest {
 /** Go: classlistentries.ClassListAssignRequest */
 export interface ClassListAssignRequest {
   student_id?: string;
+}
+
+/** Go: classlistentries.ClassListEntryUpdateRequest */
+export interface ClassListEntryUpdateRequest {
+  first_name?: string;
+  last_name?: string;
+  school_class?: string;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -74,7 +84,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/class-list-entries/{id}",
     portals: ["tenant"],
-    request: requestBody<ClassListEntryRequest>(),
+    request: requestBody<ClassListEntryUpdateRequest>(),
     response: success(ClassListEntryResponseSchema),
   },
 } as const;

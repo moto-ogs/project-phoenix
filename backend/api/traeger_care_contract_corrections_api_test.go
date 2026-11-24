@@ -59,7 +59,7 @@ func contractCorrectionFile(rows ...string) []byte {
 // their contracts.
 func importedContracts(t *testing.T, f careContractFixture) (int64, int64) {
 	t.Helper()
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	file := contractImportFile(contractImportSchoolName(t, f),
 		"Mia;Beispiel;03.05.2019;{school};Offene Ganztagsschule;01.08.2027;Eva Beispiel;eva.beispiel@example.org;70001",
 		"Ben;Beispiel;11.11.2020;{school};Offene Ganztagsschule;01.09.2027;Eva Beispiel;eva.beispiel@example.org;70001")

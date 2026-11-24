@@ -44,7 +44,7 @@ vi.mock("next-auth/react", async (importOriginal) => ({
       user: {
         id: "traeger-test",
         scope: "org",
-        orgId: 7,
+        orgId: "7",
         permissions: session.permissions,
       },
     },

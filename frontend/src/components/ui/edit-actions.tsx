@@ -75,6 +75,10 @@ export function EditActions({
   const buttonWidth = stretchOnPhone ? "flex-1 sm:flex-none" : undefined;
   return (
     <div
+      // An open edit state holds a draft, also in controls without input
+      // events: a tab of an earlier release does not reload over it
+      // (lib/deployment-reload.ts).
+      data-edit-state=""
       className={cn(
         "flex flex-wrap justify-end gap-2",
         stretchOnPhone && "w-full flex-nowrap sm:w-auto sm:flex-wrap",

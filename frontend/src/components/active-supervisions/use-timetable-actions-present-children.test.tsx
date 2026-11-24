@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // (#5000), so the hooks read the session.
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "7", tenantId: 1 } },
+    data: { user: { id: "7", tenantId: "1" } },
     status: "authenticated",
   }),
 }));

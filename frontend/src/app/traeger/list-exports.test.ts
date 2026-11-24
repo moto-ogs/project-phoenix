@@ -63,6 +63,7 @@ const LIST_EXPORTS: Readonly<Record<string, string>> = {
   "/tagesmeldung": "page",
   "/uebersicht": "page",
   "/vertraege": "page",
+  "/vertraege/geschwister": "page",
   "/zeitvergleich": "page",
 };
 
@@ -105,6 +106,9 @@ const NOT_A_LIST: Readonly<Record<string, string>> = {
   "/einstellungen/briefkopf": "Einstellungen",
   "/einstellungen/briefkopf/vorlagen/[kind]": "Einstellungen",
   "/einstellungen/dokumentarten": "Einstellungen",
+  "/einstellungen/module": "Einstellungen",
+  "/einstellungen/schulrollen": "Einstellungen",
+  "/einstellungen/zustaendigkeiten": "Einstellungen",
   "/ferien/[id]": "Einzelansicht",
   "/ferien/[id]/anmeldungen/[registrationId]": "Einzelansicht mit eigener PDF",
   "/ferien/[id]/formular": "Formular",

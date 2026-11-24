@@ -31,7 +31,7 @@ vi.mock("vaul", () => import("~/test/mocks/vaul"));
 vi.unmock("swr");
 
 const session = {
-  data: { user: { id: "1", tenantId: 1, scope: "tenant" } },
+  data: { user: { id: "1", tenantId: "1", scope: "tenant" } },
   status: "authenticated",
 };
 vi.mock("next-auth/react", () => ({ useSession: () => session }));
@@ -78,6 +78,7 @@ const transition: GradeTransition = {
   canModify: true,
   canApply: true,
   canRevert: false,
+  version: "v1",
 };
 
 const preview: TransitionPreview = {

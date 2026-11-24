@@ -45,6 +45,8 @@ export interface AbsenceType {
   readonly offered: boolean;
   /** Höchstens so viele Tage je Person und Jahr an dieser Schule. */
   readonly schoolLimitDays: number | null;
+  /** The stored state an edit sends back as `expected_version` (ADR 0311). */
+  readonly version: string;
 }
 
 function mapAbsenceType(data: AbsenceTypeResponse): AbsenceType {
@@ -59,6 +61,7 @@ function mapAbsenceType(data: AbsenceTypeResponse): AbsenceType {
     keptByTraeger: data.kept_by_traeger,
     offered: data.offered ?? true,
     schoolLimitDays: data.school_limit_days,
+    version: data.version,
   };
 }
 
@@ -95,10 +98,12 @@ class AbsenceTypeService {
   /**
    * Renames and/or (de)activates. Omitted fields stay as they are. A type of
    * the Träger takes only `offered` and `schoolLimitDays` (null removes the
-   * limit).
+   * limit). `expectedVersion` is the version of the type the change was read
+   * from (ADR 0311).
    */
   async updateAbsenceType(
     id: string,
+    expectedVersion: string,
     changes: {
       name?: string;
       isActive?: boolean;
@@ -113,6 +118,7 @@ class AbsenceTypeService {
       params: { id },
       errorMessage: "Abwesenheitsart konnte nicht gespeichert werden",
       body: {
+        expected_version: expectedVersion,
         ...(changes.name !== undefined ? { name: changes.name } : {}),
         ...(changes.isActive !== undefined
           ? { is_active: changes.isActive }
@@ -186,7 +192,13 @@ class AbsenceTypeService {
   async setAllowance(
     absenceTypeId: string,
     staffId: string,
-    payload: { year: number; entitledDays: number; reason: string },
+    payload: {
+      year: number;
+      entitledDays: number;
+      reason: string;
+      /** The version of the summary the form showed (ADR 0311). */
+      expectedVersion: string;
+    },
   ): Promise<AbsenceTypeAllowanceSummary> {
     const allowance = await bffJson(
       "tenant",
@@ -197,6 +209,7 @@ class AbsenceTypeService {
           year: payload.year,
           entitled_days: payload.entitledDays,
           reason: payload.reason,
+          expected_version: payload.expectedVersion,
         },
         errorMessage: "Kontingent konnte nicht gespeichert werden",
       },
@@ -245,6 +258,8 @@ export interface AbsenceTypeAllowanceSummary {
    * Schule liest es nur.
    */
   readonly keptByTraeger: boolean;
+  /** Der gespeicherte Anspruch; seine Änderung schickt ihn zurück. */
+  readonly version: string;
 }
 
 export function mapAllowance(
@@ -270,6 +285,7 @@ export function mapAllowance(
         }
       : null,
     keptByTraeger: data.kept_by_traeger,
+    version: data.version,
   };
 }
 

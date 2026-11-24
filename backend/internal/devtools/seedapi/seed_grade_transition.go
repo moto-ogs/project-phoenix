@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type seedGradeTransitionStep struct{}
@@ -18,7 +20,7 @@ func (seedGradeTransitionStep) Run(_ context.Context, rt *Runtime) error {
 	}
 	if _, err := rt.Client.Post("/api/students", map[string]any{
 		"first_name": "Jonas", "last_name": "Engel", "school_class": "Klasse 4c",
-		"group_id": groupID, "birthday": "2015-06-01", "pickup_status": "self",
+		"group_id": ident.ID(groupID), "birthday": "2015-06-01", "pickup_status": "self",
 	}); err != nil {
 		return fmt.Errorf("create graduation demo student: %w", err)
 	}
@@ -37,7 +39,22 @@ func (seedGradeTransitionStep) Run(_ context.Context, rt *Runtime) error {
 	if err != nil {
 		return fmt.Errorf("parse grade transition: %w", err)
 	}
-	if _, err := rt.Client.Post(fmt.Sprintf("/api/admin/grade-transitions/%d/apply", id), map[string]any{}); err != nil {
+	// The apply confirms the preview it was shown (ADR 0311).
+	raw, err = rt.Client.Get(fmt.Sprintf("/api/admin/grade-transitions/%d/preview", id))
+	if err != nil {
+		return fmt.Errorf("preview grade transition: %w", err)
+	}
+	var preview struct {
+		Data struct {
+			Fingerprint string `json:"fingerprint"`
+		} `json:"data"`
+	}
+	if err := parseJSON(raw, &preview); err != nil || preview.Data.Fingerprint == "" {
+		return fmt.Errorf("grade transition preview returned no fingerprint")
+	}
+	if _, err := rt.Client.Post(fmt.Sprintf("/api/admin/grade-transitions/%d/apply", id), map[string]any{
+		"expected_fingerprint": preview.Data.Fingerprint,
+	}); err != nil {
 		return fmt.Errorf("apply grade transition: %w", err)
 	}
 	fmt.Println("  1 grade transition with history created")

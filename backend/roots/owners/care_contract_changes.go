@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // careContractChangeSettingReasonPolicy is the school's rule whether a
@@ -121,7 +121,7 @@ func careContractChangeRequest(request careplan.OfferingChangeRequest, diff, unc
 		return carecontract.ChangeRequest{}, fmt.Errorf("care contract changes: effective day of request %d: %w", request.ID, err)
 	}
 	result := carecontract.ChangeRequest{
-		ID: ident.ID(request.ID), Version: careplan.ParentRequestVersion(request.UpdatedAt), SubmittedAt: request.CreatedAt,
+		ID: ident.ID(request.ID), Version: readstate.Of(request.UpdatedAt), SubmittedAt: request.CreatedAt,
 		EffectiveFrom: effectiveFrom, EndsAllCare: request.CompleteWithdrawalConfirmed, Lines: []carecontract.ChangeLine{},
 	}
 	if request.ParentNote != nil {
@@ -177,7 +177,6 @@ var careContractChangeErrors = []struct {
 }{
 	{[]error{careplan.ErrOfferingChangeNotFound, careplan.ErrOfferingChangeForbidden}, carecontract.ErrChangeNotFound},
 	{[]error{careplan.ErrOfferingChangeNotPending}, carecontract.ErrChangeDecided},
-	{[]error{parentrequests.ErrStale, careplan.ErrParentRequestStale}, carecontract.ErrChangeStale},
 	{[]error{parentrequests.ErrPast, careplan.ErrParentRequestPast}, carecontract.ErrChangePast},
 	{[]error{parentrequests.ErrReasonRequired, careplan.ErrParentRequestReasonRequired}, carecontract.ErrChangeReasonRequired},
 	{[]error{careplan.ErrCompleteWithdrawalConfirmationRequired}, carecontract.ErrChangeEndsCare},
@@ -222,13 +221,13 @@ func careContractChangeImpact(impact careplan.RosterImpact) *carecontract.Change
 	result := &carecontract.ChangeImpact{EffectiveFrom: impact.EffectiveFrom}
 	for _, template := range impact.Adjusted {
 		result.Adjusted = append(result.Adjusted, carecontract.ChangeAdjustedTemplate{
-			TemplateID: strconv.FormatInt(template.TemplateID, 10), Name: template.Name,
+			TemplateID: ident.ID(template.TemplateID), Name: template.Name,
 			RemovedWeekdays: template.RemovedWeekdays, AddedWeekdays: template.AddedWeekdays,
 		})
 	}
 	for _, template := range impact.NotAdjusted {
 		result.NotAdjusted = append(result.NotAdjusted, carecontract.ChangeManualTemplate{
-			TemplateID: strconv.FormatInt(template.TemplateID, 10), Name: template.Name,
+			TemplateID: ident.ID(template.TemplateID), Name: template.Name,
 			Weekdays: template.Weekdays, ViaTarget: template.ViaTarget, Until: template.Until,
 		})
 	}

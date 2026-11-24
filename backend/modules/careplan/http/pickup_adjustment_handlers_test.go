@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -15,8 +18,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type failAfterOfferingWriteCoordinator struct {
@@ -90,6 +91,7 @@ func TestPickupAdjustmentProtectedRouterRequiresExplicitExceptionAndAuditsApply(
 
 	withoutDecision := cloneMap(body)
 	withoutDecision["preview_token"] = previewEnvelope.Data.PreviewToken
+	withoutDecision["expected_version"] = weeklyPlanVersion(t, tc, student.ID)
 	applyReq := testutil.NewAuthenticatedRequest(
 		t, http.MethodPost, fmt.Sprintf("/%d/pickup-schedules/apply", student.ID), withoutDecision,
 	)
@@ -111,6 +113,7 @@ func TestPickupAdjustmentProtectedRouterRequiresExplicitExceptionAndAuditsApply(
 
 	withDecision := cloneMap(withoutDecision)
 	withDecision["resolution"] = "exception"
+	withDecision["expected_version"] = weeklyPlanVersion(t, tc, student.ID)
 	staleReq := testutil.NewAuthenticatedRequest(
 		t, http.MethodPost, fmt.Sprintf("/%d/pickup-schedules/apply", student.ID), withDecision,
 	)
@@ -131,6 +134,7 @@ func TestPickupAdjustmentProtectedRouterRequiresExplicitExceptionAndAuditsApply(
 
 	freshPreview := postPickupAdjustmentPreview(t, tc, student.ID, account.ID, body)
 	withDecision["preview_token"] = freshPreview.PreviewToken
+	withDecision["expected_version"] = weeklyPlanVersion(t, tc, student.ID)
 	confirmedReq := testutil.NewAuthenticatedRequest(
 		t, http.MethodPost, fmt.Sprintf("/%d/pickup-schedules/apply", student.ID), withDecision,
 	)
@@ -214,6 +218,7 @@ func TestPickupAdjustmentProtectedRouterChangesMatchingOfferingThroughSharedPath
 	exceptionBody := cloneMap(baseBody)
 	exceptionBody["preview_token"] = preview.PreviewToken
 	exceptionBody["resolution"] = "exception"
+	exceptionBody["expected_version"] = weeklyPlanVersion(t, tc, student.ID)
 	exceptionReq := testutil.NewAuthenticatedRequest(
 		t, http.MethodPost, fmt.Sprintf("/%d/pickup-schedules/apply", student.ID), exceptionBody,
 	)
@@ -247,6 +252,7 @@ func TestPickupAdjustmentProtectedRouterChangesMatchingOfferingThroughSharedPath
 	futureApplyBody := cloneMap(futureBody)
 	futureApplyBody["preview_token"] = confirmedPreview.PreviewToken
 	futureApplyBody["resolution"] = "offering"
+	futureApplyBody["expected_version"] = weeklyPlanVersion(t, tc, student.ID)
 	futureReq := testutil.NewAuthenticatedRequest(
 		t, http.MethodPost, fmt.Sprintf("/%d/pickup-schedules/apply", student.ID), futureApplyBody,
 	)
@@ -270,6 +276,7 @@ func TestPickupAdjustmentProtectedRouterChangesMatchingOfferingThroughSharedPath
 	fullBody := cloneMap(offeringBody)
 	fullBody["preview_token"] = confirmedPreview.PreviewToken
 	fullBody["resolution"] = "offering"
+	fullBody["expected_version"] = weeklyPlanVersion(t, tc, student.ID)
 	fullReq := testutil.NewAuthenticatedRequest(
 		t, http.MethodPost, fmt.Sprintf("/%d/pickup-schedules/apply", student.ID), fullBody,
 	)
@@ -302,6 +309,7 @@ func TestPickupAdjustmentProtectedRouterChangesMatchingOfferingThroughSharedPath
 	staleArrivalBody := cloneMap(offeringBody)
 	staleArrivalBody["preview_token"] = confirmedPreview.PreviewToken
 	staleArrivalBody["resolution"] = "offering"
+	staleArrivalBody["expected_version"] = weeklyPlanVersion(t, tc, student.ID)
 	staleArrivalReq := testutil.NewAuthenticatedRequest(
 		t, http.MethodPost, fmt.Sprintf("/%d/pickup-schedules/apply", student.ID), staleArrivalBody,
 	)
@@ -319,6 +327,7 @@ func TestPickupAdjustmentProtectedRouterChangesMatchingOfferingThroughSharedPath
 	applyBody := cloneMap(offeringBody)
 	applyBody["preview_token"] = confirmedPreview.PreviewToken
 	applyBody["resolution"] = "offering"
+	applyBody["expected_version"] = weeklyPlanVersion(t, tc, student.ID)
 	applyReq := testutil.NewAuthenticatedRequest(
 		t, http.MethodPost, fmt.Sprintf("/%d/pickup-schedules/apply", student.ID), applyBody,
 	)
@@ -381,10 +390,11 @@ func TestPickupAdjustmentProtectedRouterRollsBackKnownErrorAfterOfferingWrite(t 
 	body["resolution"] = "offering"
 	realCoordinator, ok := tc.resource.OfferingChangeService.(careplan.DirectOfferingAdjustments)
 	require.True(t, ok)
-	failing, err := tc.newPickupAdjustments(failAfterOfferingWriteCoordinator{realCoordinator})
+	failing, _, err := tc.newPickupAdjustments(failAfterOfferingWriteCoordinator{realCoordinator})
 	require.NoError(t, err)
 	tc.resource.PickupAdjustmentService = failing
 
+	body["expected_version"] = weeklyPlanVersion(t, tc, student.ID)
 	req := testutil.NewAuthenticatedRequest(
 		t, http.MethodPost, fmt.Sprintf("/%d/pickup-schedules/apply", student.ID), body,
 	)
@@ -413,7 +423,7 @@ func TestBulkPickupAdjustmentRequiresAndAuditsExplicitExceptions(t *testing.T) {
 		testpkg.Ctx(t), settings.KeyRequirePickupOfferingReview, true, nil, nil,
 	))
 	body := map[string]any{
-		"student_ids": []int64{first.ID, second.ID},
+		"student_ids": []string{fmt.Sprint(first.ID), fmt.Sprint(second.ID)},
 		"schedules":   []map[string]any{{"weekday": 1, "pickup_time": "16:20"}},
 	}
 

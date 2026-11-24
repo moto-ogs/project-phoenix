@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	careplanhttp "github.com/moto-ogs/project-phoenix/modules/careplan/http"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type bulkServiceStub struct {
@@ -53,7 +54,7 @@ func TestBulkApproveParentRequestsForwardsCompleteSelection(t *testing.T) {
 
 func TestBulkApproveParentRequestsReturnsConflictAndMarksRollback(t *testing.T) {
 	t.Parallel()
-	svc := &bulkServiceStub{err: parentrequests.ErrStale}
+	svc := &bulkServiceStub{err: readstate.ErrChanged}
 	rs := testResource(careplanhttp.ResourceConfig{
 		ParentRequestBulkService: svc})
 	ctx := tenant.WithRollbackMarker(context.WithValue(t.Context(), sessiontoken.CtxClaims, sessiontoken.AppClaims{ID: 55}))

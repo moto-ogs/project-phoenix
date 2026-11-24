@@ -55,6 +55,8 @@ export interface UpdateSessionRequest {
   breakMinutes?: number;
   notes?: string;
   breaks?: Array<{ id: string; durationMinutes: number }>;
+  /** The version of the history row the dialog showed (ADR 0311). */
+  expectedVersion: string;
 }
 
 /**
@@ -63,12 +65,9 @@ export interface UpdateSessionRequest {
  * Abwesenheitsart, #2403) the backend takes the canonical absence_type from
  * the art itself, so the pair can never disagree.
  */
-export type CreateAbsenceRequest = shared.CreateAbsenceRequest &
+export type CreateAbsenceRequest = tt.OwnAbsenceRequest &
   Required<
-    Pick<
-      shared.CreateAbsenceRequest,
-      "absence_type" | "date_start" | "date_end"
-    >
+    Pick<tt.OwnAbsenceRequest, "absence_type" | "date_start" | "date_end">
   >;
 
 /** Body of POST /api/time-tracking/vacation/request. */
@@ -205,6 +204,7 @@ class TimeTrackingService {
         break_minutes: updates.breakMinutes,
         status: updates.status,
         notes: updates.notes,
+        expected_version: updates.expectedVersion,
         ...(updates.breaks && updates.breaks.length > 0
           ? {
               breaks: updates.breaks.map((b) => ({

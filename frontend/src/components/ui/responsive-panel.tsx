@@ -8,7 +8,11 @@ import {
   type RefObject,
 } from "react";
 
-import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
+import {
+  BELOW_SM,
+  useMediaQuery,
+  useResolvedMediaQuery,
+} from "~/lib/hooks/use-media-query";
 import { ResponsivePanelSheet } from "./responsive-panel-sheet";
 
 /**
@@ -78,20 +82,25 @@ export function ResponsivePanel({
   initialFocus,
   children,
 }: ResponsivePanelProps) {
-  const asSheet = useResponsivePanelSheet();
+  // `null`, solange die Breite unbekannt ist (Server, Hydration).
+  const sheetState = useResolvedMediaQuery(BELOW_SM);
+  const asSheet = sheetState === true;
   const generatedSheetId = useId();
   const dialogId = sheetId ?? generatedSheetId;
   const sheetOpen = open && asSheet;
 
   // Wechselt die Breite über `sm` (Telefon drehen), passt die offene
   // Darstellung nicht mehr: Das Panel schließt, wie ein Popover beim
-  // Ändern der Fenstergröße.
-  const shownAsSheet = useRef(asSheet);
+  // Ändern der Fenstergröße. Die erste bekannte Darstellung ist der
+  // Ausgangswert, kein Wechsel (#8013): Nach der Hydration erfährt ein
+  // Telefon erst, dass es ein Blatt zeigt, und das Panel bleibt offen.
+  const shownAsSheet = useRef(sheetState);
   useEffect(() => {
-    if (shownAsSheet.current === asSheet) return;
-    shownAsSheet.current = asSheet;
-    if (open) onOpenChange(false);
-  }, [asSheet, open, onOpenChange]);
+    if (sheetState === null || shownAsSheet.current === sheetState) return;
+    const rotated = shownAsSheet.current !== null;
+    shownAsSheet.current = sheetState;
+    if (rotated && open) onOpenChange(false);
+  }, [sheetState, open, onOpenChange]);
 
   return (
     <>

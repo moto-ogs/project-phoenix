@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	devicefleet "github.com/moto-ogs/project-phoenix/modules/devicefleet"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const (
@@ -142,7 +143,7 @@ func (rs *Resource) updateDevice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request
-	req := &DeviceRequest{}
+	req := &DeviceUpdateRequest{}
 	if err := render.Bind(r, req); err != nil {
 		rs.runtime.Failure(w, r, http.StatusBadRequest, err, "")
 		return
@@ -168,7 +169,7 @@ func (rs *Resource) updateDevice(w http.ResponseWriter, r *http.Request) {
 
 	// Update device
 	// The edit records its material changes in the device's history (#2321).
-	if err := rs.IoTService.UpdateDevice(rs.recordingContext(r), device); err != nil {
+	if err := rs.IoTService.UpdateDevice(rs.recordingContext(r), device, req.ExpectedVersion); err != nil {
 		rs.renderError(w, r, err)
 		return
 	}
@@ -213,8 +214,8 @@ func (rs *Resource) deleteDevice(w http.ResponseWriter, r *http.Request) {
 	if session != nil {
 		rs.runtime.AuditRemoval(r, RemovalAudit{DeviceRowID: device.ID, DeviceID: device.DeviceID, Outcome: RemovalOutcomeActiveSession, SessionID: &session.ID})
 		rs.runtime.ConflictWithDetails(w, r, errors.New("device has an active session and cannot be removed"), codeDeviceInActiveSession, map[string]any{
-			"session_id": strconv.FormatInt(session.ID, 10),
-			"room_id":    strconv.FormatInt(session.RoomID, 10),
+			"session_id": ident.ID(session.ID),
+			"room_id":    ident.ID(session.RoomID),
 			"started_at": session.StartedAt.Format(time.RFC3339),
 		})
 		return
@@ -327,7 +328,9 @@ func (rs *Resource) lockDeviceByDeviceID(r *http.Request, deviceID string) (devi
 // deviceForEdit reads the device an edit changes and locks its live row in
 // the same statement. A block committed meanwhile is not overwritten
 // unnoticed (#2317), and a removal committed while the edit waited answers
-// 404 without a history entry from the snapshot before it (#2321).
+// 404 without a history entry from the snapshot before it (#2321). The
+// owner's UpdateDevice refuses an edit of an older read under this lock
+// (ADR 0311).
 func (rs *Resource) deviceForEdit(r *http.Request, id int64) (*devicefleet.Device, error) {
 	device, err := rs.lockLiveDevice(r, "UpdateDevice", id)
 	if err != nil {

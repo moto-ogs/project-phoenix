@@ -12,6 +12,7 @@ const family = (
   validFrom: string,
   validUntil: string | null,
 ): FamilyChildren => ({
+  version: "v1",
   contractId: "31",
   recipientFirstName: "Eva",
   recipientLastName: "Beispiel",
@@ -56,6 +57,7 @@ describe("checkReason", () => {
 
 describe("a family without a mail address (#7356)", () => {
   const imported: FamilyChildren = {
+    version: "v1",
     contractId: "77",
     recipientFirstName: "",
     recipientLastName: "",

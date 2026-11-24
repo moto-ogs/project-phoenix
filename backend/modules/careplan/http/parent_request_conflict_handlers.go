@@ -8,6 +8,7 @@ import (
 	strings "strings"
 
 	render "github.com/go-chi/render"
+
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	carerequests "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
@@ -15,6 +16,8 @@ import (
 	masterdatarequests "github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	parentrequests "github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -28,10 +31,10 @@ type resolveConflictBody struct {
 	Kind string `json:"kind"`
 	// RequestIDs and ExpectedVersions are positional pairs, echoed back from
 	// the list. Ids travel as strings like every other int64 on this API.
-	RequestIDs       []string       `json:"request_ids"`
+	RequestIDs       []ident.ID     `json:"request_ids"`
 	ExpectedVersions []string       `json:"expected_versions"`
-	ChosenRequestID  string         `json:"chosen_request_id"`
-	StaffValue       map[string]any `json:"staff_value"`
+	ChosenRequestID  string         `json:"chosen_request_id" contract_text:"empty string means no selected request"`
+	StaffValue       map[string]any `json:"staff_value" contract_json:"The conflict kind selects the staff value shape"`
 	None             bool           `json:"none"`
 	// ConflictKey is the group's key from the list. It pins WHICH part of a
 	// multi-key request (a weekly plan touching several weekdays) a staff
@@ -47,7 +50,7 @@ func (rs *Resource) resolveRequestConflict(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	var body resolveConflictBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -102,11 +105,11 @@ func (b *resolveConflictBody) toInput() (parentrequests.ResolveConflictInput, er
 	}, nil
 }
 
-func parseConflictIDs(raw []string) ([]int64, error) {
+func parseConflictIDs(raw []ident.ID) ([]int64, error) {
 	ids := make([]int64, 0, len(raw))
 	for _, value := range raw {
-		id, err := strconv.ParseInt(value, 10, 64)
-		if err != nil || id <= 0 {
+		id := value.Int64()
+		if id <= 0 {
 			return nil, errors.New("invalid request id")
 		}
 		ids = append(ids, id)

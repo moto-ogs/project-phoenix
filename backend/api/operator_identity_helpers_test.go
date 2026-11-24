@@ -38,7 +38,7 @@ func (m *mockOperatorAuthService) GrantAccountTenantAccess(context.Context, iden
 	return nil, nil
 }
 
-func (m *mockOperatorAuthService) UpdateAccountTenantRole(context.Context, int64, int64, int64, int64, string) ([]identityaccess.AccountTenantAccess, error) {
+func (m *mockOperatorAuthService) UpdateAccountTenantRole(context.Context, int64, int64, int64, int64, string, string) ([]identityaccess.AccountTenantAccess, error) {
 	return nil, nil
 }
 

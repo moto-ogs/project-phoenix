@@ -13,6 +13,7 @@ import type {
   SchoolRequiredDetails,
 } from "~/lib/operator/provisioning-helpers";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { CustomSelect } from "~/components/ui/custom-select";
 import {
   FormField,
@@ -24,6 +25,35 @@ import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 
 const logger = createLogger({ component: "EditSchoolModal" });
 
+/** The fields the operator edits; every save sends all of them back. */
+interface SchoolDraft {
+  readonly organizationId: string;
+  readonly name: string;
+  readonly slug: string;
+  readonly subdomain: string;
+  readonly address: string;
+  readonly city: string;
+  readonly zip: string;
+  readonly phone: string;
+  readonly email: string;
+  readonly hidden: boolean;
+}
+
+function schoolDraftOf(school: School): SchoolDraft {
+  return {
+    organizationId: school.organizationId,
+    name: school.name,
+    slug: school.slug,
+    subdomain: school.subdomain,
+    address: school.address ?? "",
+    city: school.city ?? "",
+    zip: school.zip ?? "",
+    phone: school.phone ?? "",
+    email: school.email ?? "",
+    hidden: school.hidden,
+  };
+}
+
 export function EditSchoolModal({
   isOpen,
   onClose,
@@ -31,10 +61,13 @@ export function EditSchoolModal({
   organizations,
   onUpdated,
   requiredDetails,
+  reload,
 }: {
   readonly isOpen: boolean;
   readonly onClose: () => void;
   readonly school: School | null;
+  /** Reads the school again after a refused save; rejects on failure. */
+  readonly reload: () => Promise<School>;
   readonly organizations: Organization[] | undefined;
   /** Reloads the school and the portal caches of the given subdomains;
    *  never rejects (#6652). */
@@ -42,36 +75,55 @@ export function EditSchoolModal({
   /** Marks a school whose parent replies have no address (#7174). */
   readonly requiredDetails?: SchoolRequiredDetails;
 }) {
-  const [schoolOrgId, setSchoolOrgId] = useState("");
-  const [schoolName, setSchoolName] = useState("");
-  const [schoolSlug, setSchoolSlug] = useState("");
-  const [schoolSubdomain, setSchoolSubdomain] = useState("");
-  const [schoolAddress, setSchoolAddress] = useState("");
-  const [schoolCity, setSchoolCity] = useState("");
-  const [schoolZip, setSchoolZip] = useState("");
-  const [schoolPhone, setSchoolPhone] = useState("");
-  const [schoolEmail, setSchoolEmail] = useState("");
-  const [schoolHidden, setSchoolHidden] = useState(false);
+  // The fields rest on the school as the modal opened it (ADR 0311): a newer
+  // read refills them only while untouched, a refused save shows the stored
+  // school, and nothing goes out until it was read.
+  const edit = useDraftOn<School, SchoolDraft, string, School>(
+    {
+      opening: isOpen && school ? `school:${school.id}` : null,
+      data: school ?? undefined,
+      reload,
+    },
+    {
+      token: (read) => read.version,
+      toDraft: schoolDraftOf,
+      // The modal closes; the page reads the school again itself.
+      answer: (saved) => saved,
+    },
+  );
+  const draft = edit.draft ?? (school ? schoolDraftOf(school) : undefined);
+  const field =
+    <K extends keyof SchoolDraft>(key: K) =>
+    (value: SchoolDraft[K]) =>
+      edit.setDraft((current) => ({ ...current, [key]: value }));
+  const schoolOrgId = draft?.organizationId ?? "";
+  const schoolName = draft?.name ?? "";
+  const schoolSlug = draft?.slug ?? "";
+  const schoolSubdomain = draft?.subdomain ?? "";
+  const schoolAddress = draft?.address ?? "";
+  const schoolCity = draft?.city ?? "";
+  const schoolZip = draft?.zip ?? "";
+  const schoolPhone = draft?.phone ?? "";
+  const schoolEmail = draft?.email ?? "";
+  const schoolHidden = draft?.hidden ?? false;
+  const setSchoolOrgId = field("organizationId");
+  const setSchoolName = field("name");
+  const setSchoolSlug = field("slug");
+  const setSchoolSubdomain = field("subdomain");
+  const setSchoolAddress = field("address");
+  const setSchoolCity = field("city");
+  const setSchoolZip = field("zip");
+  const setSchoolPhone = field("phone");
+  const setSchoolEmail = field("email");
+  const setSchoolHidden = field("hidden");
   const [schoolSaving, setSchoolSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { show: showError, invalid, clear: clearError } = formErrors;
 
   useEffect(() => {
-    if (isOpen && school) {
-      setSchoolOrgId(school.organizationId);
-      setSchoolName(school.name);
-      setSchoolSlug(school.slug);
-      setSchoolSubdomain(school.subdomain);
-      setSchoolAddress(school.address ?? "");
-      setSchoolCity(school.city ?? "");
-      setSchoolZip(school.zip ?? "");
-      setSchoolPhone(school.phone ?? "");
-      setSchoolEmail(school.email ?? "");
-      setSchoolHidden(school.hidden);
-      clearError();
-    }
-  }, [isOpen, school, clearError]);
+    if (isOpen) clearError();
+  }, [isOpen, clearError]);
 
   // The warning holds while the stored address is unchanged: a stored but
   // unusable address bounces as much as a missing one.
@@ -106,29 +158,40 @@ export function EditSchoolModal({
         invalid("Bitte prüfe die markierten Felder.", { subdomain: hint });
         return;
       }
+      const opened = edit.base;
+      if (!opened || !edit.canSubmit) return;
       setSchoolSaving(true);
       clearError();
-      const oldSubdomain = school.subdomain;
+      const oldSubdomain = opened.subdomain;
       const newSubdomain = schoolSubdomain.trim();
-      try {
-        await operatorProvisioningService.updateSchool(school.id, {
+      const result = await edit.submit((version) =>
+        operatorProvisioningService.updateSchool(opened.id, {
           organization_id: schoolOrgId,
           name: schoolName.trim(),
           slug: schoolSlug.trim(),
           subdomain: newSubdomain,
-          address: schoolAddress?.trim() ?? "",
-          city: schoolCity?.trim() ?? "",
-          zip: schoolZip?.trim() ?? "",
-          phone: schoolPhone?.trim() ?? "",
+          address: schoolAddress.trim(),
+          city: schoolCity.trim(),
+          zip: schoolZip.trim(),
+          phone: schoolPhone.trim(),
           email: schoolEmail.trim(),
-          active: school.active,
+          active: opened.active,
           hidden: schoolHidden,
-        });
-      } catch (error) {
+          expected_version: version,
+        }),
+      );
+      if (!result.ok) {
         logger.error("school_update_failed", {
-          error: error instanceof Error ? error.message : String(error),
+          error:
+            result.error instanceof Error
+              ? result.error.message
+              : String(result.error),
         });
-        void showError(error, { object: "die Änderung an der Schule" });
+        // Someone changed the school since: `reload` shows it here.
+        void showError(result.error, {
+          object: "die Änderung an der Schule",
+          reload: result.reload,
+        });
         setSchoolSaving(false);
         return;
       }
@@ -137,13 +200,14 @@ export function EditSchoolModal({
       // The portal cache reloads with the page: its failure is a load error,
       // the change itself is saved (#6652).
       await onUpdated(
-        oldSubdomain !== newSubdomain || school.hidden !== schoolHidden
+        oldSubdomain !== newSubdomain || opened.hidden !== schoolHidden
           ? [oldSubdomain, newSubdomain]
           : [],
       );
     },
     [
       school,
+      edit,
       schoolOrgId,
       schoolName,
       schoolSlug,
@@ -183,6 +247,7 @@ export function EditSchoolModal({
             onClick={(e) => void handleUpdate(e)}
             disabled={
               schoolSaving ||
+              !edit.canSubmit ||
               !schoolOrgId ||
               !schoolName.trim() ||
               !schoolSlug.trim() ||

@@ -175,6 +175,7 @@ export interface SeriesDetailResponse {
   valid_from: string;
   valid_until: string | null;
   include_school_breaks: boolean;
+  version: string;
 }
 
 export const SeriesDetailResponseSchema: z.ZodType<SeriesDetailResponse, unknown> = object<SeriesDetailResponse>({
@@ -191,6 +192,7 @@ export const SeriesDetailResponseSchema: z.ZodType<SeriesDetailResponse, unknown
   valid_from: str,
   valid_until: nullable(str),
   include_school_breaks: bool,
+  version: str,
 });
 
 /** Go: staffshifts.ShiftRequest */
@@ -207,6 +209,7 @@ export interface ShiftRequest {
   cancelled?: boolean;
   change_reason?: string | null;
   origin_shift_id?: string | null;
+  expected_version?: string;
 }
 
 /** Go: staffshifts.PlanExportRequest */
@@ -238,6 +241,28 @@ export interface SeriesRequest {
   include_school_breaks?: boolean | null;
 }
 
+/** Go: staffshifts.SeriesSplitRequest */
+export interface SeriesSplitRequest {
+  working_time_confirmed?: boolean;
+  working_time_reason?: string;
+  staff_id?: string;
+  weekdays?: number[] | null;
+  start_time?: string;
+  end_time?: string;
+  break_minutes?: number;
+  shift_type_id?: string | null;
+  notes?: string | null;
+  calendar_period_id?: string;
+  week_pattern?: number | null;
+  valid_from?: string;
+  valid_until?: string | null;
+  effective_date?: string;
+  occurrence_shift_id?: string;
+  include_school_breaks?: boolean | null;
+  expected_version?: string;
+  expected_occurrence_version?: string;
+}
+
 /** Go: staffshifts.ReplacementRequest */
 export interface ReplacementRequest {
   staff_id?: string;
@@ -258,6 +283,8 @@ export interface CancellationRequest {
   break_minutes?: number;
   shift_type_id?: string | null;
   replacements?: ReplacementRequest[] | null;
+  expected_version?: string;
+  expected_replacement_versions?: Record<string, string> | null;
 }
 
 /** Go: staffshifts.CancellationResponse */
@@ -282,24 +309,7 @@ export interface MoveShiftRequest {
   end_time?: string;
   break_minutes?: number;
   shift_type_id?: string | null;
-}
-
-/** Query of DELETE /api/staff-shifts/series/{id} */
-export interface DeleteStaffShiftsSeriesIdQuery {
-  from?: string;
-}
-
-/** Query of GET /api/staff-shifts/ */
-export interface GetStaffShiftsQuery {
-  from?: string;
-  staff_id?: string;
-  to?: string;
-}
-
-/** Query of GET /api/staff-shifts/overview */
-export interface GetStaffShiftsOverviewQuery {
-  from?: string;
-  to?: string;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -307,7 +317,9 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/staff-shifts/series/{id}",
     portals: ["tenant"],
-    query: ["from"],
+    query: {
+      "from": { kind: "date" },
+    },
     response: success(SeriesResponseSchema),
   },
   "DELETE /api/staff-shifts/{id}": {
@@ -320,14 +332,21 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff-shifts/",
     portals: ["tenant"],
-    query: ["from", "staff_id", "to"],
+    query: {
+      "from": { kind: "date" },
+      "staff_id": { kind: "id" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(ShiftResponseSchema)),
   },
   "GET /api/staff-shifts/overview": {
     method: "GET",
     pattern: "/api/staff-shifts/overview",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(OverviewResponseSchema),
   },
   "GET /api/staff-shifts/series/{id}": {
@@ -361,7 +380,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/staff-shifts/series/{id}/split",
     portals: ["tenant"],
-    request: requestBody<SeriesRequest>(),
+    request: requestBody<SeriesSplitRequest>(),
     response: success(SeriesResponseSchema),
   },
   "PUT /api/staff-shifts/{id}": {

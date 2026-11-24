@@ -17,7 +17,6 @@
 package timetablehttp
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -27,6 +26,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // bulkSubstitutionRequest is the POST body. substitute_staff_id omitted/null
@@ -61,7 +61,7 @@ func (rs *Resource) applyBulkSubstitution(w http.ResponseWriter, r *http.Request
 	}
 
 	var req bulkSubstitutionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid JSON body")))
 		return
 	}

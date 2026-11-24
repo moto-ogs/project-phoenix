@@ -65,14 +65,30 @@ func TestAbsenceTypeAllowanceIsSetAndReadThroughTheRoutes(t *testing.T) {
 
 	var created struct {
 		Data struct {
-			ID string `json:"id"`
+			ID      string `json:"id"`
+			Version string `json:"version"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(send(http.MethodPost, "/api/absence-types/", map[string]any{"name": "Bildungsurlaub"}, http.StatusCreated), &created))
-	send(http.MethodPut, "/api/absence-types/"+created.Data.ID, map[string]any{"allowance_enabled": true}, http.StatusOK)
+	send(http.MethodPut, "/api/absence-types/"+created.Data.ID, map[string]any{"allowance_enabled": true, "expected_version": created.Data.Version}, http.StatusOK)
 	path := fmt.Sprintf("/api/absence-types/%s/allowances/%d", created.Data.ID, staff.ID)
 
-	saved := decode(send(http.MethodPut, path, map[string]any{"year": 2026, "entitled_days": 5, "reason": "Vertrag"}, http.StatusOK))
+	readVersion := func() string {
+		t.Helper()
+		var envelope struct {
+			Data struct {
+				Version string `json:"version"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(send(http.MethodGet, path+"?year=2026", nil, http.StatusOK), &envelope))
+		return envelope.Data.Version
+	}
+	read := readVersion()
+	saved := decode(send(http.MethodPut, path, map[string]any{"year": 2026, "entitled_days": 5, "reason": "Vertrag", "expected_version": read}, http.StatusOK))
+	// A second save from the same read is refused: the claim changed since
+	// (ADR 0311).
+	stale := send(http.MethodPut, path, map[string]any{"year": 2026, "entitled_days": 6, "reason": "Vertrag", "expected_version": read}, http.StatusConflict)
+	assert.Contains(t, string(stale), "general.changed_since_read")
 	want := summary{StaffID: fmt.Sprint(staff.ID), AbsenceTypeID: created.Data.ID, Year: 2026, EntitledDays: 5, RemainingDays: 5}
 	assert.Equal(t, want, saved)
 	assert.Equal(t, want, decode(send(http.MethodGet, path+"?year=2026", nil, http.StatusOK)))

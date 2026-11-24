@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The rule chain of the monthly contribution (#4685, 1.15.807): the care
@@ -141,10 +142,15 @@ type careEvidenceRow struct {
 }
 
 func (r careEvidenceRow) evidence() parentbilling.CareEvidence {
-	return parentbilling.CareEvidence{
+	evidence := parentbilling.CareEvidence{
 		ID: ident.ID(r.ID), ContractID: ident.ID(r.CareContractID), Kind: r.Kind, RuleID: (*ident.ID)(r.RuleID), ValidFrom: r.ValidFrom,
 		ValidUntil: r.ValidUntil, Evidence: r.Evidence, CheckedOn: r.CheckedOn, UpdatedAt: r.UpdatedAt,
 	}
+	// The stored evidence as the form shows it: updated_at has no trigger
+	// and takes the clock of the writer (ADR 0311).
+	evidence.Version = readstate.Fingerprint(parentbilling.CareEvidenceInput{ContractID: evidence.ContractID, Kind: r.Kind,
+		RuleID: evidence.RuleID, ValidFrom: r.ValidFrom, ValidUntil: r.ValidUntil, Evidence: r.Evidence, CheckedOn: r.CheckedOn})
+	return evidence
 }
 
 func newCareEvidenceRow(organizationID, accountID int64, input parentbilling.CareEvidenceInput) *careEvidenceRow {

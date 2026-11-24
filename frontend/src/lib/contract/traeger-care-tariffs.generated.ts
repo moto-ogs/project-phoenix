@@ -72,6 +72,7 @@ export interface CareTariffs {
   tariffs: CareTariff[] | null;
   lists: CarePriceListHead[] | null;
   billed_until: Record<string, string | null> | null;
+  versions: Record<string, string> | null;
 }
 
 export const CareTariffsSchema: z.ZodType<CareTariffs, unknown> = object<CareTariffs>({
@@ -80,6 +81,7 @@ export const CareTariffsSchema: z.ZodType<CareTariffs, unknown> = object<CareTar
   tariffs: nullable(arr(CareTariffSchema)),
   lists: nullable(arr(CarePriceListHeadSchema)),
   billed_until: nullable(rec(nullable(calendarDate))),
+  versions: nullable(rec(str)),
 });
 
 /** Go: parentbillinghttp.CarePriceRequest */
@@ -99,6 +101,7 @@ export interface CarePriceListRequest {
   valid_from?: string | null;
   free_months?: number[] | null;
   prices?: CarePriceRequest[] | null;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -106,6 +109,9 @@ export const routes = {
     method: "DELETE",
     pattern: "/traeger/care-tariffs/{schoolID}/{validFrom}",
     portals: ["org"],
+    query: {
+      "expected_version": { kind: "string" },
+    },
     response: success(CareTariffsSchema),
   },
   "GET /traeger/care-tariffs/": {

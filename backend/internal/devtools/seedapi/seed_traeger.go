@@ -186,7 +186,7 @@ func seedHolidayParticipantList(rt *Runtime) (int64, error) {
 // emergency contact and its pickup person. The sibling of the hosting school
 // stays in its own group. The step fails when no guest joins.
 func seedHolidayGuests(rt *Runtime, weekID int64) error {
-	raw, err := rt.Client.PostWithAuth(rt.TenantAuth, "/api/groups", map[string]any{"name": seedHolidayGroupName, "teacher_ids": []int64{}})
+	raw, err := rt.Client.PostWithAuth(rt.TenantAuth, "/api/groups", map[string]any{"name": seedHolidayGroupName, "teacher_ids": []ident.ID{}})
 	if err != nil {
 		return fmt.Errorf("create the holiday group: %w", err)
 	}
@@ -226,6 +226,7 @@ func seedHolidayAddressForm(client *Client, auth AuthRef, periodID int64) error 
 	}
 	var form struct {
 		Data struct {
+			Version     int             `json:"version"`
 			Fields      json.RawMessage `json:"fields"`
 			LegalBlocks json.RawMessage `json:"legal_blocks"`
 		} `json:"data"`
@@ -237,7 +238,8 @@ func seedHolidayAddressForm(client *Client, auth AuthRef, periodID int64) error 
 	if len(fields) == 0 {
 		fields = json.RawMessage(`[]`)
 	}
-	body := map[string]any{"fields": fields, "address_requirement": "optional"}
+	// The save carries the version it replaces (ADR 0311).
+	body := map[string]any{"fields": fields, "address_requirement": "optional", "expected_version": form.Data.Version}
 	if len(form.Data.LegalBlocks) > 0 {
 		body["legal_blocks"] = form.Data.LegalBlocks
 	}
@@ -304,8 +306,7 @@ func seedHolidayRegistrations(ctx context.Context, rt *Runtime, auth AuthRef, pe
 	if _, err := rt.Client.PutWithAuth(auth, "/traeger/settings/values/"+seedPaymentTextSettingKey, map[string]any{"value": seedPaymentText}); err != nil {
 		return "", fmt.Errorf("write the payment text of the letters: %w", err)
 	}
-	confirm := fmt.Sprintf("/traeger/holiday-contributions/%d/registrations/%d/confirm", periodID, siblings)
-	if _, err := rt.Client.PostWithAuth(auth, confirm, seedSiblingsConfirmation); err != nil {
+	if err := postReadHolidayConfirmation(rt, auth, periodID, siblings, seedSiblingsConfirmation); err != nil {
 		return "", fmt.Errorf("confirm the holiday registration: %w", err)
 	}
 	fmt.Println("  Träger-Büro: siblings confirmed with their contribution and debtor number")
@@ -348,7 +349,7 @@ func seedHolidaySiblingGroup(rt *Runtime, auth AuthRef, token string, periodID i
 		return fmt.Errorf("read the third sibling's registration: %w", err)
 	}
 	merge := fmt.Sprintf("/traeger/holiday-contributions/%d/sibling-groups", periodID)
-	if _, err := rt.Client.PostWithAuth(auth, merge, map[string]any{"registration_ids": []int64{siblings, third}}); err != nil {
+	if _, err := rt.Client.PostWithAuth(auth, merge, map[string]any{"registration_ids": []ident.ID{ident.ID(siblings), ident.ID(third)}}); err != nil {
 		return fmt.Errorf("merge the siblings of two registrations: %w", err)
 	}
 	fmt.Println("  Träger-Büro: the third sibling's registration merged with the siblings")
@@ -387,8 +388,14 @@ func seedHolidayRegistrationEdit(rt *Runtime, auth AuthRef, periodID, registrati
 		maps.Copy(guardian, registered)
 	}
 	guardian["phone"] = "0151 0000009"
-	path := fmt.Sprintf("/traeger/holiday-periods/%d/registrations/%d/details", periodID, registrationID)
-	if _, err := rt.Client.PutWithAuth(auth, path, map[string]any{
+	// The edit carries the version of the registration it read (ADR 0311).
+	read := fmt.Sprintf("/traeger/holiday-periods/%d/registrations/%d", periodID, registrationID)
+	version, err := readSeedVersion(rt, auth, read, "the holiday registration")
+	if err != nil {
+		return err
+	}
+	if _, err := rt.Client.PutWithAuth(auth, read+"/details", map[string]any{
+		"expected_version": version,
 		"guardian":         guardian,
 		"guardian_address": registration["guardian_address"],
 		"second_guardian":  registration["second_guardian"],
@@ -425,9 +432,8 @@ func seedHolidayCostTakeover(rt *Runtime, auth AuthRef, periodID, registrationID
 		return fmt.Errorf("read the cost bearer: %w", err)
 	}
 	rt.Values[seedCostBearerKey] = costBearerID
-	confirm := fmt.Sprintf("/traeger/holiday-contributions/%d/registrations/%d/confirm", periodID, registrationID)
-	if _, err := rt.Client.PostWithAuth(auth, confirm, map[string]any{
-		"benefits_exemption": false, "cost_bearer_id": costBearerID, "debtor_number": seedCostTakeoverDebtorNumber,
+	if err := postReadHolidayConfirmation(rt, auth, periodID, registrationID, map[string]any{
+		"benefits_exemption": false, "cost_bearer_id": ident.ID(costBearerID), "debtor_number": seedCostTakeoverDebtorNumber,
 	}); err != nil {
 		return fmt.Errorf("confirm the holiday registration with the cost takeover: %w", err)
 	}
@@ -622,7 +628,7 @@ func seedHolidayRegistration(published []byte, homeSchool int64) (string, map[st
 		return "", nil, fmt.Errorf("the published holiday period has no link or no bookable weeks")
 	}
 	booking := func(week, model int) map[string]any {
-		return map[string]any{"week_id": int64(period.Weeks[week].ID), "time_model_id": int64(period.Weeks[week].TimeModels[model].ID)}
+		return map[string]any{"week_id": ident.ID(int64(period.Weeks[week].ID)), "time_model_id": ident.ID(int64(period.Weeks[week].TimeModels[model].ID))}
 	}
 	withLunch := func(booking map[string]any) map[string]any {
 		booking["lunch"] = true
@@ -633,11 +639,11 @@ func seedHolidayRegistration(published []byte, homeSchool int64) (string, map[st
 		"guardian":         map[string]any{"first_name": "Sabine", "last_name": "Ferienkind", "email": "sabine.ferienkind@example.org", "phone": "0151 0000001"},
 		"guardian_address": map[string]any{"street": "Sonnenweg 7", "postal_code": "49143", "city": "Bissendorf"},
 		"children": []map[string]any{
-			{"first_name": "Lotta", "last_name": "Ferienkind", "birth_date": "2018-04-12", "home_school_id": homeSchool,
+			{"first_name": "Lotta", "last_name": "Ferienkind", "birth_date": "2018-04-12", "home_school_id": ident.ID(homeSchool),
 				"allergies": "Erdnüsse", "bookings": []map[string]any{withLunch(booking(0, 1))},
 				"custom_data": map[string]any{"lebensmittelunvertraeglichkeiten": "Laktose", "tetanus_impfschutz": "ja",
 					"darf_allein_nach_hause": false, "darf_an_ausfluegen_teilnehmen": true}},
-			{"first_name": "Jonas", "last_name": "Ferienkind", "birth_date": "2016-09-03", "home_school_id": 0,
+			{"first_name": "Jonas", "last_name": "Ferienkind", "birth_date": "2016-09-03", "home_school_id": "0",
 				"guest_school_name": "Grundschule am See", "medication": "Asthmaspray bei Bedarf",
 				"bookings": []map[string]any{withLunch(booking(0, 0)), booking(1, 0)},
 				"custom_data": map[string]any{"tetanus_impfschutz": "weiss_nicht", "darf_allein_nach_hause": true,
@@ -733,7 +739,7 @@ func seedHolidayPeriodShifted(today calendar.Date, host int64, shift int) map[st
 	for i := range 2 {
 		monday := firstMonday.AddDays(7 * i)
 		weeks = append(weeks, map[string]any{
-			"starts_on": monday.String(), "ends_on": monday.AddDays(4).String(), "host_school_id": host,
+			"starts_on": monday.String(), "ends_on": monday.AddDays(4).String(), "host_school_id": ident.ID(host),
 			"lunch_price_cents": 430,
 			"time_models": []map[string]any{
 				{"name": "bis 13 Uhr", "starts_at": "08:00", "ends_at": "13:00", "price_cents": 4500},

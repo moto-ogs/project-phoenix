@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -21,6 +22,8 @@ const connectOfferingSourceOp = "connect offering source"
 // the template writes.
 type templateRosterReview struct {
 	templates *TemplateService
+	// offerings serve the preview the connection compares under its gate.
+	offerings ports.OfferingPreviewSources
 }
 
 var _ timetable.TemplateRosterReview = (*templateRosterReview)(nil)
@@ -351,6 +354,10 @@ func (r *templateRosterReview) ConnectOfferingSource(ctx context.Context, cmd ti
 	if err := s.lockRecurrence(ctx, connectOfferingSourceOp); err != nil {
 		return timetable.ConnectOfferingSourceResult{}, err
 	}
+	// The preview the school confirmed is computed again under the gate.
+	if err := r.confirmPreview(ctx, cmd); err != nil {
+		return timetable.ConnectOfferingSourceResult{}, err
+	}
 	segments, err := r.futureSegments(ctx, cmd.TemplateID, cmd.EffectiveDate)
 	if err != nil {
 		return timetable.ConnectOfferingSourceResult{}, err
@@ -384,6 +391,38 @@ func validateConnectOfferingSource(cmd timetable.ConnectOfferingSourceCommand, t
 		return &ports.ScheduleError{Op: connectOfferingSourceOp, Err: fmt.Errorf("%w: effective date must not lie in the past", timetable.ErrRosterReviewInvalid)}
 	}
 	return nil
+}
+
+// confirmPreview computes the preview of the stored state as the preview
+// read does and compares its fingerprint with the confirmed one (ADR 0311):
+// the segments from the effective date on, the selection checked against the
+// living segment's planning period, and per weekday who joins and who leaves.
+func (r *templateRosterReview) confirmPreview(ctx context.Context, cmd timetable.ConnectOfferingSourceCommand) error {
+	if r.offerings == nil {
+		return &ports.ScheduleError{Op: connectOfferingSourceOp, Err: errors.New("offering sources are not configured")}
+	}
+	segments, err := r.SeriesSegments(ctx, cmd.TemplateID, cmd.EffectiveDate)
+	if err != nil {
+		return err
+	}
+	if len(segments) == 0 {
+		return &ports.ScheduleError{Op: connectOfferingSourceOp, Err: timetable.ErrTemplateSegmentNotEditable}
+	}
+	living := segments[len(segments)-1]
+	if _, err := r.offerings.CombinedOfferingSourceCounts(ctx, cmd.OfferingIDs, living.CalendarPeriodID); err != nil {
+		return err
+	}
+	bookings, err := r.offerings.OfferingWeekdayBookings(ctx, living.CalendarPeriodID, cmd.EffectiveDate)
+	if err != nil {
+		return err
+	}
+	rosters, err := r.FutureRosters(ctx, []int64{living.TemplateID}, cmd.EffectiveDate)
+	if err != nil {
+		return err
+	}
+	filter := timetable.OfferingSourceFilter{OfferingIDs: cmd.OfferingIDs, GradeLevels: cmd.GradeLevels, SchoolClasses: cmd.SchoolClasses}
+	changes := timetable.PreviewOfferingSource(rosters[living.TemplateID], filter, bookings)
+	return readstate.Check(cmd.ExpectedFingerprint, timetable.OfferingSourcePreviewFingerprint(cmd.EffectiveDate, segments, changes))
 }
 
 // connectSegment converts one segment from the boundary max(effective date,

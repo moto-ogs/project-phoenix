@@ -34,7 +34,7 @@ beforeEach(() => {
   listener.mockReset();
   getSessionMock.mockReset();
   getSessionMock.mockResolvedValue({
-    user: { id: "7", tenantId: 1 },
+    user: { id: "7", tenantId: "1" },
     expires: "2099-01-01T00:00:00.000Z",
   });
   // The provider's answer re-arms the session cache's one report per

@@ -18,7 +18,7 @@ function Providers({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <SessionProvider
       session={{
-        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        user: { id: "staff-7", scope: "tenant", tenantId: "42" },
         expires: "2099-01-01",
       }}
       refetchOnWindowFocus={false}
@@ -84,6 +84,7 @@ function makeSourcePhase(overrides: Partial<Phase> = {}): Phase {
     id: "42",
     name: "Schuljahr 2026",
     kind: "school_year",
+    version: "phase-read",
     service_start_date: "2026-09-01",
     service_end_date: "2027-07-31",
     enrollment_open_at: undefined,

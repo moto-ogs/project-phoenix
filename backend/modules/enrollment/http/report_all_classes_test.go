@@ -19,7 +19,7 @@ func TestParseClassRosterExportRequestAllClasses(t *testing.T) {
 	t.Run("accepts all_classes without school_class", func(t *testing.T) {
 		req := httptest.NewRequest("POST", "/enrollment/admin/reports/class-roster/export", strings.NewReader(`{
 			"format":"pdf",
-			"filters":{"phase_id":42,"all_classes":true}
+			"filters":{"phase_id":"42","all_classes":true}
 		}`))
 
 		format, filters, err := parseClassRosterExportRequest(req)
@@ -33,7 +33,7 @@ func TestParseClassRosterExportRequestAllClasses(t *testing.T) {
 	t.Run("rejects all_classes combined with school_class", func(t *testing.T) {
 		req := httptest.NewRequest("POST", "/enrollment/admin/reports/class-roster/export", strings.NewReader(`{
 			"format":"pdf",
-			"filters":{"phase_id":42,"school_class":"1a","all_classes":true}
+			"filters":{"phase_id":"42","school_class":"1a","all_classes":true}
 		}`))
 
 		_, _, err := parseClassRosterExportRequest(req)
@@ -45,7 +45,7 @@ func TestParseClassRosterExportRequestAllClasses(t *testing.T) {
 	t.Run("still rejects neither", func(t *testing.T) {
 		req := httptest.NewRequest("POST", "/enrollment/admin/reports/class-roster/export", strings.NewReader(`{
 			"format":"pdf",
-			"filters":{"phase_id":42}
+			"filters":{"phase_id":"42"}
 		}`))
 
 		_, _, err := parseClassRosterExportRequest(req)

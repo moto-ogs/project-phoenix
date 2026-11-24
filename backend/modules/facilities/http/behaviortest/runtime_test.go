@@ -23,9 +23,7 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-// init seeds JWT viper defaults before any test (and before setupRoomsRoute
-// constructs a Resource via sessiontoken.MustNewTokenAuth). CI runs without a .env so
-// AUTH_JWT_SECRET is unset; without a secret jwx refuses HMAC signing.
+// CI runs without a .env; the route fixtures need an explicit signing key.
 func init() {
 	testutil.SeedTestJWTConfig()
 }
@@ -290,9 +288,11 @@ func TestUpdateRoom(t *testing.T) {
 
 	t.Run("success_updates_room", func(t *testing.T) {
 		uniqueName := fmt.Sprintf("Updated Room %d", time.Now().UnixNano())
+		read := storedRoomVersion(t, tc.db, room.ID)
 		body := map[string]interface{}{
-			"name":     uniqueName,
-			"capacity": 40,
+			"name":             uniqueName,
+			"capacity":         40,
+			"expected_version": read,
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", room.ID), body)
 
@@ -300,6 +300,20 @@ func TestUpdateRoom(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
 		assert.Contains(t, rr.Body.String(), "Updated Room", "Response should contain updated name")
+		assert.Contains(t, rr.Body.String(), fmt.Sprintf(`"version":%q`, storedRoomVersion(t, tc.db, room.ID)))
+
+		// A second editor still holding the first read is refused and
+		// writes nothing (ADR 0311).
+		for _, stale := range []string{read, ""} {
+			body["name"], body["expected_version"] = "Überschrieben", stale
+			req = testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", room.ID), body)
+			rr = testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
+			require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
+			assert.Contains(t, rr.Body.String(), `"code":"general.changed_since_read"`)
+		}
+		var stored string
+		require.NoError(t, tc.db.NewRaw(`SELECT name FROM facilities.rooms WHERE id = ?`, room.ID).Scan(context.Background(), &stored))
+		assert.Equal(t, uniqueName, stored)
 	})
 
 	t.Run("not_found_for_nonexistent_room", func(t *testing.T) {
@@ -338,9 +352,7 @@ func TestDeleteRoom(t *testing.T) {
 		// Create room specifically for deletion
 		room := testpkg.CreateTestRoom(t, tc.db, "Delete Room Test")
 
-		req := testutil.NewRequest("DELETE", fmt.Sprintf("/%d", room.ID), nil)
-
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
+		rr := removeRoom(t, tc, room.ID, readImpact(t, tc, room.ID).Data.Fingerprint)
 
 		// The answer names the outcome: an unused room is deleted (#6845).
 		assert.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
@@ -370,32 +382,6 @@ func TestDeleteRoom(t *testing.T) {
 
 	t.Run("bad_request_for_invalid_id", func(t *testing.T) {
 		req := testutil.NewRequest("DELETE", "/invalid", nil)
-
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
-
-		testutil.AssertBadRequest(t, rr)
-	})
-}
-
-// =============================================================================
-// Get Rooms by Category Tests
-// =============================================================================
-
-func TestGetRoomsByCategory(t *testing.T) {
-	t.Parallel()
-
-	tc := setupRoomsRoute(t)
-
-	t.Run("success_gets_rooms_by_category", func(t *testing.T) {
-		req := testutil.NewRequest("GET", "/by-category?category=classroom", nil)
-
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
-
-		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
-	})
-
-	t.Run("bad_request_missing_category", func(t *testing.T) {
-		req := testutil.NewRequest("GET", "/by-category", nil)
 
 		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
 

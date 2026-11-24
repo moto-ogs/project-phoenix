@@ -35,18 +35,25 @@ import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { materializeCareSelection } from "~/lib/care-offering-selection";
 import { announceChangeRequestsChanged } from "~/lib/change-requests-refresh";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
+import { formatDate } from "~/lib/date-helpers";
 import {
+  type AdminChildOfferingsUpdate,
   type AdminOfferingAdjustment,
+  type AdminOfferingChoice,
   type AdminRequestChild,
   type AdminRequestChildOffering,
   listAdminChildOfferingAdjustments,
   updateAdminChildOfferings,
 } from "~/lib/enrollment-admin-api";
 import { supportedGradeLevelMax } from "~/lib/grade-level";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useReadDraftForm,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { describeOfferingAdjustmentChanges } from "~/lib/offering-adjustment-history";
 import { mapRosterImpact, type RosterImpact } from "~/lib/roster-impact";
 import { useCareOfferingsEnabled, useTenant } from "~/lib/tenant-context";
@@ -84,6 +91,7 @@ function BlockedOfferingRow({
   automaticDays,
   stats,
   onRemove,
+  extension,
 }: Readonly<{
   offering: CareOffering;
   gradeLevel: number | null | undefined;
@@ -92,6 +100,12 @@ function BlockedOfferingRow({
   automaticDays: readonly string[];
   stats: enrollmentContract.CareOfferingBookingStatsResponse | undefined;
   onRemove: () => void;
+  /** The end the office can extend (#7929); shown while the row stays booked. */
+  extension?: Readonly<{
+    end: { validUntil: string; extendsUntil: string };
+    extended: boolean;
+    onToggle: () => void;
+  }>;
 }>) {
   const reason = careOfferingAvailabilityReason(
     offering,
@@ -144,20 +158,80 @@ function BlockedOfferingRow({
           <OfferingOccupancyLine stats={stats} />
         </div>
       </label>
+      {booked && extension ? (
+        <BookingEnd inputId={`${inputId}-extend`} {...extension} />
+      ) : null}
     </OfferingRowShell>
   );
+}
+
+/**
+ * The child as a correction's answer stores it: its bookings and their
+ * offerings_version (ADR 0311), the rest of the child as read. A field the
+ * answer leaves out is gone, not kept from the older read.
+ */
+export function withSavedOfferings(
+  child: AdminRequestChild,
+  saved: AdminChildOfferingsUpdate,
+): AdminRequestChild {
+  const {
+    offerings: _offerings,
+    upcoming_offerings: _upcoming,
+    offerings_unavailable: _unavailable,
+    offerings_version: _version,
+    ...rest
+  } = child;
+  return {
+    ...rest,
+    ...(saved.offerings && { offerings: saved.offerings }),
+    ...(saved.upcoming_offerings && {
+      upcoming_offerings: saved.upcoming_offerings,
+    }),
+    ...(saved.offerings_unavailable && { offerings_unavailable: true }),
+    ...(saved.offerings_version && {
+      offerings_version: saved.offerings_version,
+    }),
+  };
+}
+
+/**
+ * The correction the office edits: the offerings it ticks, their days, the
+ * limited bookings it extends and the required offerings it removes with
+ * „Alle Betreuungstage entfernen“. Lists, so a draft compares as JSON.
+ */
+interface AdjustmentDraft {
+  readonly selected: readonly string[];
+  readonly days: Readonly<Record<string, string[]>>;
+  readonly extended: readonly string[];
+  readonly droppedRequired: readonly string[];
+}
+
+function adjustmentDraftOf(child: AdminRequestChild): AdjustmentDraft {
+  return {
+    selected: [...initialManualOfferingIDs(child.offerings)].sort(),
+    days: initialManualOfferingDays(child.offerings),
+    extended: [],
+    droppedRequired: [],
+  };
 }
 
 export function ChildOfferingAdjustment({
   child,
   onSaved,
   phaseId,
+  reload,
   requestId,
 }: Readonly<{
   child: AdminRequestChild;
   requestId: string;
   phaseId: string;
-  onSaved: () => void;
+  /** Takes the save's answer, which carries the new offerings_version. */
+  onSaved: (saved: AdminChildOfferingsUpdate) => void;
+  /**
+   * Reads the child again as stored; rejects on failure, undefined when
+   * the child is gone (ADR 0311).
+   */
+  reload: () => Promise<AdminRequestChild | undefined>;
 }>) {
   const careOfferingsEnabled = useCareOfferingsEnabled();
   // The tenant's configured ceiling, so a blocked-offering reason names only
@@ -213,16 +287,50 @@ export function ChildOfferingAdjustment({
   const { mutate: mutateHistory } = historyRead;
   const history = historyRead.data ?? NO_ADJUSTMENTS;
   const invalidateFamily = useInvalidateFamily();
-  const [selected, setSelected] = useState<Set<string>>(() =>
-    initialManualOfferingIDs(child.offerings),
+  // The correction rests on the bookings as read when editing starts (ADR
+  // 0311): a newer read refills it only while untouched, the save sends
+  // their offerings_version, and after a refusal nothing is sent until the
+  // stored bookings were read. One draft per opening of this child.
+  const editor = useDraftOn<
+    AdminRequestChild,
+    AdjustmentDraft,
+    string,
+    AdminChildOfferingsUpdate
+  >(
+    { opening: editing ? child.id : null, data: child, reload },
+    {
+      token: (read) => read.offerings_version ?? "",
+      toDraft: adjustmentDraftOf,
+      answer: (saved) => saved,
+    },
   );
-  const [days, setDays] = useState<Record<string, string[]>>(() =>
-    initialManualOfferingDays(child.offerings),
+  // The bookings the draft rests on: what a save replaces.
+  const base = editor.base ?? child;
+  const draft = editor.draft ?? adjustmentDraftOf(base);
+  const { setDraft } = editor;
+  // Befristete Angebote, die das Büro bis zum Ende der Phase verlängert
+  // (#7929).
+  const extended = useMemo(() => new Set(draft.extended), [draft.extended]);
+  const days = draft.days;
+  const bookingEnds = useMemo(
+    () => currentBookingEnds(base.offerings),
+    [base.offerings],
   );
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   // Fehler stehen oben im Bearbeiten-Bereich (Bauart 2 Regel 5).
   const errors = useApiFormError();
+  const form = useReadDraftForm(
+    editing ? editor : null,
+    errors,
+    "die gebuchten Angebote",
+  );
+  const draftBlocked =
+    editing && !editor.canSubmit && editor.status !== "saving"
+      ? editor.status === "loadFailed"
+        ? "Lade zuerst die gebuchten Angebote neu."
+        : "Die gebuchten Angebote werden geladen."
+      : undefined;
   const catalogError = useSwrResourceLoadError(
     [{ data: catalogRead.data, error: catalogRead.error }],
     "die Angebotsliste",
@@ -246,7 +354,7 @@ export function ChildOfferingAdjustment({
     useState(false);
   const [pendingWithdrawalInput, setPendingWithdrawalInput] = useState<{
     reason: string;
-    offerings: Array<{ offering_id: string; selected_days?: string[] }>;
+    offerings: AdminOfferingChoice[];
   } | null>(null);
   const [withdrawalCreated, setWithdrawalCreated] = useState(false);
   // Was die letzte Korrektur im Betreuungsplan bewirkt hat (#5102).
@@ -255,33 +363,58 @@ export function ChildOfferingAdjustment({
     if (!careOfferingsEnabled) setEditing(false);
   }, [careOfferingsEnabled]);
 
-  // The selection is a draft: it starts once per opening from the child's
-  // bookings and the catalog, and a revalidated catalog leaves it alone.
-  const [selectionStarted, setSelectionStarted] = useState(false);
-  useEffect(() => {
-    if (!editing || selectionStarted || !catalogLoaded) return;
-    setSelectionStarted(true);
-    // Bestandsschutz: a booking the child already holds survives a rule that
-    // was tightened after the fact. Dropping it here would silently delete
-    // the booking on the next save — the exact failure mode #2186 reports,
-    // in the flow meant to fix it. adjustmentPayloadOfferings carries such
-    // ids through via the child's existing offerings.
-    const nextSelected = new Set(initialManualOfferingIDs(child.offerings));
+  // The selection: the draft's ticks plus every active required offering
+  // of the catalog the person did not remove. Bestandsschutz: a booking the
+  // child already holds survives a rule that was tightened after the fact
+  // (#2186); adjustmentPayloadOfferings carries such ids through via the
+  // child's existing offerings.
+  const selected = useMemo(() => {
+    const ids = new Set(draft.selected);
+    const dropped = new Set(draft.droppedRequired);
     for (const offering of catalog) {
-      if (offering.is_active && offering.is_required) {
-        nextSelected.add(offering.id);
+      if (
+        offering.is_active &&
+        offering.is_required &&
+        !dropped.has(offering.id)
+      ) {
+        ids.add(offering.id);
       }
     }
-    setSelected(nextSelected);
-  }, [editing, selectionStarted, catalogLoaded, catalog, child.offerings]);
+    return ids;
+  }, [catalog, draft.selected, draft.droppedRequired]);
+  const setSelected = (next: Set<string>) =>
+    setDraft((current) => ({
+      ...current,
+      selected: [...next].sort(),
+      droppedRequired: catalog
+        .filter(
+          (offering) =>
+            offering.is_active &&
+            offering.is_required &&
+            !next.has(offering.id),
+        )
+        .map((offering) => offering.id)
+        .sort(),
+    }));
+  const setDays = (
+    update: (current: Record<string, string[]>) => Record<string, string[]>,
+  ) =>
+    setDraft((current) => ({ ...current, days: update({ ...current.days }) }));
 
   const openEditor = () => {
     if (!careOfferingsEnabled) return;
     setEditing(true);
-    setSelectionStarted(false);
     setRosterImpact(null);
     errors.clear();
-    setDays(initialManualOfferingDays(child.offerings));
+  };
+
+  const toggleExtended = (offeringID: string) => {
+    setDraft((current) => ({
+      ...current,
+      extended: current.extended.includes(offeringID)
+        ? current.extended.filter((id) => id !== offeringID)
+        : [...current.extended, offeringID].sort(),
+    }));
   };
 
   const preview = useMemo(() => {
@@ -307,8 +440,8 @@ export function ChildOfferingAdjustment({
   // what is on file — otherwise a booking the backend keeps re-deriving reads
   // as unbooked in the editor (#2186 review).
   const automaticDaysOnFile = useMemo(
-    () => automaticOfferingDays(child.offerings),
-    [child.offerings],
+    () => automaticOfferingDays(base.offerings),
+    [base.offerings],
   );
 
   const handleToggle = (offering: CareOffering) => {
@@ -356,7 +489,7 @@ export function ChildOfferingAdjustment({
     (offering) => offering.counts_as_care && selected.has(offering.id),
   );
 
-  const finishSave = async () => {
+  const finishSave = async (saved: AdminChildOfferingsUpdate) => {
     setWithdrawalConfirmationOpen(false);
     setPendingWithdrawalInput(null);
     setEditing(false);
@@ -364,26 +497,64 @@ export function ChildOfferingAdjustment({
     // The adjustment changed the phase's occupancy.
     void invalidateFamily(enrollmentKeys.bookingStatsFamily);
     await mutateHistory();
-    onSaved();
+    onSaved(saved);
   };
 
+  // Sends the correction over the version it read; a refusal over changed
+  // bookings throws after the stored ones are read again (`refusal`).
   const saveAdjustment = async (
     input: {
       reason: string;
-      offerings: Array<{ offering_id: string; selected_days?: string[] }>;
+      offerings: AdminOfferingChoice[];
     },
     completeWithdrawalConfirmed: boolean,
   ) => {
-    const updated = await updateAdminChildOfferings(requestId, child.id, {
-      ...input,
-      completeWithdrawalConfirmed,
-    });
+    const result = await editor.submit((version) =>
+      updateAdminChildOfferings(
+        requestId,
+        child.id,
+        { ...input, completeWithdrawalConfirmed },
+        version,
+      ),
+    );
+    if (!result.ok) {
+      throw new RefusedCorrection(result.error, result.refused, result.reload);
+    }
+    const updated = result.saved;
     setRosterImpact(mapRosterImpact(updated?.roster_impact));
     setWithdrawalCreated(completeWithdrawalConfirmed);
-    if (completeWithdrawalConfirmed) {
+    // Eine Verlängerung kann eine offene Abmeldung erledigen (#7929).
+    if (
+      completeWithdrawalConfirmed ||
+      input.offerings.some((offering) => offering.extend_to_phase_end)
+    ) {
       announceChangeRequestsChanged();
     }
-    await finishSave();
+    await finishSave(updated);
+  };
+
+  // A failed correction: over changed bookings the editor shows the stored
+  // ones once read, without offering the same save again; a child gone
+  // meanwhile closes it. Any other failure offers the save again.
+  const showSaveError = async (err: unknown) => {
+    const failure = err instanceof RefusedCorrection ? err : null;
+    const error = failure ? failure.error : err;
+    const reread = failure?.reload;
+    if (failure?.refused && reread) {
+      await errors.show(error, {
+        object: "die Angebotsänderung",
+        reload: async () => {
+          const stored = await reread();
+          if (stored === undefined) setEditing(false);
+          return stored;
+        },
+      });
+      return;
+    }
+    await errors.show(error, {
+      object: "die Angebotsänderung",
+      retry: () => void latestSaveRef.current(),
+    });
   };
 
   const handleSave = async () => {
@@ -394,36 +565,36 @@ export function ChildOfferingAdjustment({
       });
       return;
     }
-    if (!catalogLoaded) return;
+    // Nothing goes out before the stored bookings are read; the shown
+    // error stays.
+    if (!catalogLoaded || !form.begin()) return;
     setSaving(true);
-    errors.clear();
     const input = {
       reason: trimmedReason,
       offerings: adjustmentPayloadOfferings(
         catalog,
         selected,
         days,
-        child.offerings,
+        base.offerings,
+        extended,
       ),
     };
     try {
       await saveAdjustment(input, false);
     } catch (err) {
+      const error = err instanceof RefusedCorrection ? err.error : err;
       if (
-        err instanceof ApiError &&
-        err.code === "enrollment.complete_withdrawal_confirmation_required"
+        error instanceof ApiError &&
+        error.code === "enrollment.complete_withdrawal_confirmation_required"
       ) {
         setPendingWithdrawalInput(input);
         setWithdrawalConfirmationOpen(true);
       } else {
         logger.warn("offering_adjustment_save_failed", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
           child_id: child.id,
         });
-        await errors.show(err, {
-          object: "die Angebotsänderung",
-          retry: () => void latestSaveRef.current(),
-        });
+        await showSaveError(err);
       }
     } finally {
       setSaving(false);
@@ -434,9 +605,8 @@ export function ChildOfferingAdjustment({
   });
 
   const confirmCompleteWithdrawal = async () => {
-    if (!pendingWithdrawalInput) return;
+    if (!pendingWithdrawalInput || !form.begin()) return;
     setSaving(true);
-    errors.clear();
     try {
       await saveAdjustment(pendingWithdrawalInput, true);
     } catch (err) {
@@ -447,10 +617,7 @@ export function ChildOfferingAdjustment({
       });
       // Der Dialog ist zu, der Entwurf steht noch im Bearbeiten-Bereich:
       // „Wiederholen“ dort fragt wieder nach.
-      await errors.show(err, {
-        object: "die Angebotsänderung",
-        retry: () => void latestSaveRef.current(),
-      });
+      await showSaveError(err);
     } finally {
       setSaving(false);
     }
@@ -510,6 +677,7 @@ export function ChildOfferingAdjustment({
       {careOfferingsEnabled && editing ? (
         <div className="mt-3 space-y-4 border-t border-gray-100 pt-3">
           <FormErrorAlert message={errors.error} />
+          <LoadErrorAlert error={form.loadError} />
           <LoadErrorAlert error={catalogError.error} />
           {loading ? (
             <p className="text-sm text-gray-500">Angebote werden geladen…</p>
@@ -519,6 +687,7 @@ export function ChildOfferingAdjustment({
                 const checked = selected.has(offering.id);
                 const autoDays = preview.automaticDays[offering.id] ?? [];
                 const inputId = `offering-adjustment-${child.id}-${offering.id}`;
+                const bookingEnd = bookingEnds[offering.id];
                 return (
                   <OfferingRowShell
                     key={offering.id}
@@ -587,6 +756,14 @@ export function ChildOfferingAdjustment({
                         ))}
                       </div>
                     ) : null}
+                    {checked && bookingEnd ? (
+                      <BookingEnd
+                        inputId={`${inputId}-extend`}
+                        end={bookingEnd}
+                        extended={extended.has(offering.id)}
+                        onToggle={() => toggleExtended(offering.id)}
+                      />
+                    ) : null}
                   </OfferingRowShell>
                 );
               })}
@@ -595,24 +772,32 @@ export function ChildOfferingAdjustment({
                   <SectionLabel as="p">
                     Für dieses Kind nicht wählbar
                   </SectionLabel>
-                  {blockedCatalog.map((offering) => (
-                    <BlockedOfferingRow
-                      key={offering.id}
-                      offering={offering}
-                      gradeLevel={child.target_grade_level}
-                      gradeLevelMax={gradeLevelMax}
-                      booked={selected.has(offering.id)}
-                      automaticDays={automaticDaysOnFile[offering.id] ?? []}
-                      stats={bookingStats[offering.id]}
-                      onRemove={() =>
-                        setSelected((prev) => {
-                          const next = new Set(prev);
+                  {blockedCatalog.map((offering) => {
+                    const end = bookingEnds[offering.id];
+                    return (
+                      <BlockedOfferingRow
+                        key={offering.id}
+                        offering={offering}
+                        gradeLevel={child.target_grade_level}
+                        gradeLevelMax={gradeLevelMax}
+                        booked={selected.has(offering.id)}
+                        automaticDays={automaticDaysOnFile[offering.id] ?? []}
+                        stats={bookingStats[offering.id]}
+                        {...(end && {
+                          extension: {
+                            end,
+                            extended: extended.has(offering.id),
+                            onToggle: () => toggleExtended(offering.id),
+                          },
+                        })}
+                        onRemove={() => {
+                          const next = new Set(selected);
                           next.delete(offering.id);
-                          return next;
-                        })
-                      }
-                    />
-                  ))}
+                          setSelected(next);
+                        }}
+                      />
+                    );
+                  })}
                 </div>
               ) : null}
               {hasSelectedCareDays ? (
@@ -642,7 +827,8 @@ export function ChildOfferingAdjustment({
             onCancel={cancelEditing}
             onSave={() => void handleSave()}
             saving={saving}
-            disabled={loading || !catalogLoaded}
+            disabled={loading || !catalogLoaded || draftBlocked !== undefined}
+            {...(draftBlocked && { disabledReason: draftBlocked })}
           />
         </div>
       ) : null}
@@ -729,6 +915,63 @@ export function ChildOfferingAdjustment({
   );
 }
 
+/**
+ * A limited booking the office can extend (#7929): its last booked day and
+ * the choice to book the offering to `extends_until`, the end of the phase
+ * or the earlier care end. An end the backend offers no extension for stays
+ * in the booking display above; here it would read as a choice that is not
+ * there.
+ */
+function BookingEnd({
+  inputId,
+  end,
+  extended,
+  onToggle,
+}: Readonly<{
+  inputId: string;
+  end: { validUntil: string; extendsUntil: string };
+  extended: boolean;
+  onToggle: () => void;
+}>) {
+  return (
+    <div className="mt-3 space-y-2 pl-8">
+      <p className="text-xs text-gray-600">
+        Gebucht bis {formatDate(end.validUntil)}
+      </p>
+      <label
+        htmlFor={inputId}
+        className="flex cursor-pointer items-start gap-2 text-sm text-gray-900"
+      >
+        <Checkbox
+          id={inputId}
+          className="mt-0.5"
+          checked={extended}
+          onChange={onToggle}
+        />
+        Bis {formatDate(end.extendsUntil)} verlängern
+      </label>
+    </div>
+  );
+}
+
+/**
+ * The current bookings the office can extend, keyed by offering: the last
+ * booked day and the day an extension books to (`extends_until`).
+ */
+function currentBookingEnds(
+  offerings?: AdminRequestChildOffering[],
+): Record<string, { validUntil: string; extendsUntil: string }> {
+  const out: Record<string, { validUntil: string; extendsUntil: string }> = {};
+  for (const offering of offerings ?? []) {
+    if (!offering.valid_until || !offering.extends_until) continue;
+    out[offering.offering_id] = {
+      validUntil: offering.valid_until,
+      extendsUntil: offering.extends_until,
+    };
+  }
+  return out;
+}
+
 function initialManualOfferingIDs(
   offerings?: AdminRequestChildOffering[],
 ): Set<string> {
@@ -779,7 +1022,8 @@ function adjustmentPayloadOfferings(
   selected: Set<string>,
   days: Record<string, string[]>,
   existingOfferings?: AdminRequestChildOffering[],
-): Array<{ offering_id: string; selected_days?: string[] }> {
+  extended: ReadonlySet<string> = new Set(),
+): AdminOfferingChoice[] {
   const payload = catalog
     .filter((offering) => selected.has(offering.id))
     .map((offering) => ({
@@ -788,6 +1032,7 @@ function adjustmentPayloadOfferings(
         offering.days_of_week_mode === "parent_choice"
           ? (days[offering.id] ?? [])
           : undefined,
+      ...(extended.has(offering.id) && { extend_to_phase_end: true }),
     }));
   const catalogIDs = new Set(catalog.map((offering) => offering.id));
   for (const offering of existingOfferings ?? []) {
@@ -803,7 +1048,22 @@ function adjustmentPayloadOfferings(
         offering.days_of_week_mode === "parent_choice"
           ? (days[offering.offering_id] ?? offering.selected_days ?? [])
           : undefined,
+      ...(extended.has(offering.offering_id) && { extend_to_phase_end: true }),
     });
   }
   return payload;
+}
+
+/**
+ * A correction the server did not take, with the read of the stored
+ * bookings a refusal over changed ones started (ADR 0311).
+ */
+class RefusedCorrection extends Error {
+  constructor(
+    readonly error: unknown,
+    readonly refused: boolean,
+    readonly reload?: () => Promise<unknown>,
+  ) {
+    super(error instanceof Error ? error.message : String(error));
+  }
 }

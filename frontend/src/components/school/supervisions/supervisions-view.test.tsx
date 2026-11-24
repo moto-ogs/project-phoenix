@@ -11,6 +11,7 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { catalogText } from "~/test/error-catalog-text";
+import { schoolSupervisionsApi } from "~/lib/school-supervisions-api";
 import { SchoolSupervisionsView } from "./supervisions-view";
 
 // Aktionen melden Fehler als Toast (#2517); der Provider zeigt ihn echt an.
@@ -72,23 +73,30 @@ vi.mock("~/components/active-supervisions/timetable-roster", () => ({
   TimetableRosterContent: ({
     roster,
     onRosterAction,
+    onComplete,
     canAddUnplanned,
     onAddPresentStudents,
   }: {
     roster: TimetableRoster;
     onRosterAction: (action: string, row: TimetableRosterRow) => unknown;
+    onComplete: () => unknown;
     canAddUnplanned?: boolean;
     onAddPresentStudents?: unknown;
   }) => {
     mocks.canAddUnplanned = canAddUnplanned;
     mocks.onAddPresentStudents = onAddPresentStudents;
     return (
-      <button
-        type="button"
-        onClick={() => void onRosterAction("check-in", roster.rows[0]!)}
-      >
-        Einchecken
-      </button>
+      <>
+        <button
+          type="button"
+          onClick={() => void onRosterAction("check-in", roster.rows[0]!)}
+        >
+          Einchecken
+        </button>
+        <button type="button" onClick={() => void onComplete()}>
+          Beenden
+        </button>
+      </>
     );
   },
 }));
@@ -258,5 +266,36 @@ describe("SchoolSupervisionsView: Fehler beim Einchecken (#3633)", () => {
     mocks.checkIn.mockResolvedValueOnce(undefined);
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     await vi.waitFor(() => expect(mocks.checkIn).toHaveBeenCalledTimes(2));
+  });
+});
+
+describe("SchoolSupervisionsView: Beenden nach geänderter Kinderliste (ADR 0311)", () => {
+  beforeEach(() => {
+    mocks.instances = [runningInstance];
+    mocks.roster = {
+      instance: { id: runningInstance.id },
+      rows: [row],
+      pickupTimesLoaded: true,
+    };
+  });
+
+  it("names a failed read of the list instead of claiming it shows", async () => {
+    vi.mocked(schoolSupervisionsApi.complete).mockRejectedValueOnce(
+      new ApiError("stale", 409, {
+        code: "timetable.completion_confirmation_stale",
+      }),
+    );
+    vi.mocked(schoolSupervisionsApi.roster).mockRejectedValueOnce(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    render(<SchoolSupervisionsView />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Beenden" }));
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden\./),
+    ).toBeInTheDocument();
+    expect(schoolSupervisionsApi.roster).toHaveBeenCalledOnce();
+    expect(schoolSupervisionsApi.complete).toHaveBeenCalledOnce();
   });
 });

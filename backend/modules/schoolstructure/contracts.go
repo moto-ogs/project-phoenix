@@ -4,6 +4,7 @@ import "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract"
 
 type GroupManagement = contract.GroupManagement
 type GroupRoom = contract.GroupRoom
+type GroupEdit = contract.GroupEdit
 type GroupListQuery = contract.GroupListQuery
 type Teacher = contract.Teacher
 type TeacherPerson = contract.TeacherPerson

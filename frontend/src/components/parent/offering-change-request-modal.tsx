@@ -1,5 +1,6 @@
 "use client";
 
+import type { OfferingChangeInput } from "~/lib/offering-change-input";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 
@@ -14,10 +15,10 @@ import {
 } from "~/components/ui/form-error-alert";
 import { Skeleton } from "~/components/ui/skeleton";
 import { RequestSharingSelector } from "~/components/parent/request-sharing-control";
-import { useRequestVersion } from "~/components/parent/request-edit-modal";
+import { useRequestEditedAt } from "~/components/parent/request-edit-modal";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { Textarea } from "~/components/ui/textarea";
-import { useApiFormError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
@@ -27,7 +28,7 @@ import {
   type OfferingCatalog,
   type OfferingCatalogItem,
 } from "~/lib/parent-api";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isReadStateRefusal } from "~/lib/api-error";
 import {
   type CareOfferingDayConflict,
   careOfferingDayConflicts,
@@ -126,28 +127,27 @@ export function OfferingChangeRequestModal({
   onClose,
   onSubmit,
   onEdited,
-  editRequestId,
+  editRequest,
   reasonRequired = true,
 }: Readonly<{
   studentId: string;
   childName?: string;
   onClose: () => void;
   onSubmit?: (
-    input: {
-      offerings: parentMeContract.OfferingSelectionBody[];
-      effective_from: string;
-      note?: string;
-      complete_withdrawal_confirmed?: boolean;
-    },
+    input: OfferingChangeInput,
     recipientGuardianProfileIds: string[],
   ) => Promise<void | string>;
-  /** Nach dem Ändern einer offenen Anfrage: die Ansicht neu laden. */
-  onEdited?: () => void;
+  /**
+   * Nach dem Ändern einer offenen Anfrage oder seiner Ablehnung: die Ansicht
+   * neu laden. Lehnt ab, wenn das Lesen scheitert (ADR 0311).
+   */
+  onEdited?: () => Promise<unknown>;
   /**
    * Gesetzt, wenn eine noch offene Anfrage geändert wird. Die Auswahl ersetzt
-   * dann die bisherige Anfrage, statt eine neue zu senden.
+   * dann die bisherige Anfrage, statt eine neue zu senden. `version` ist die
+   * der Anfrage, die die Familie gesehen hat (ADR 0311).
    */
-  editRequestId?: string;
+  editRequest?: { readonly id: string; readonly version: string };
   /** Ob die OGS einen Grund verlangt (requiresGuardianReason). */
   reasonRequired?: boolean;
 }>) {
@@ -159,6 +159,8 @@ export function OfferingChangeRequestModal({
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const form = useApiFormError();
+  const errorDisplay = useApiErrorDisplay();
+  const editRequestId = editRequest?.id;
   const latestSubmitRef = useRef<(confirmed: boolean) => void>(() => undefined);
   const [recipientIds, setRecipientIds] = useState<string[]>([]);
   const [confirmCompleteWithdrawal, setConfirmCompleteWithdrawal] =
@@ -168,7 +170,7 @@ export function OfferingChangeRequestModal({
   // earliest possible date.
   const [requestedDate, setRequestedDate] = useState<string | undefined>();
   const invalidateFamily = useInvalidateFamily();
-  const { version, editedAt } = useRequestVersion(
+  const editedAt = useRequestEditedAt(
     studentId,
     "offering",
     editRequestId ?? "",
@@ -304,20 +306,21 @@ export function OfferingChangeRequestModal({
     setSubmitting(true);
     form.clear();
     try {
-      if (editRequestId) {
+      if (editRequest) {
         // Gleiche Form wie beim Anlegen: dieselbe Auswahl, nur an eine
         // bestehende Anfrage geschickt.
-        await updateOfferingChangeRequest(studentId, editRequestId, {
+        await updateOfferingChangeRequest(studentId, editRequest.id, {
           offerings,
           effective_from: effectiveFrom,
           note: note.trim() === "" ? undefined : note.trim(),
           ...(completeWithdrawalConfirmed
             ? { complete_withdrawal_confirmed: true }
             : {}),
-          expectedVersion: version,
+          expectedVersion: editRequest.version,
         });
         void invalidateFamily(parentKeys.requestEventsFamily(studentId));
-        onEdited?.();
+        // The page shows its own load error when this read fails.
+        void Promise.resolve(onEdited?.()).catch(() => undefined);
         onClose();
         return;
       }
@@ -341,11 +344,16 @@ export function OfferingChangeRequestModal({
         setConfirmCompleteWithdrawal(true);
         return;
       }
-      if (
-        err instanceof ApiError &&
-        err.code === "students.change_request_stale"
-      ) {
-        form.invalid(t("careOfferingsModal.staleError"));
+      if (isReadStateRefusal(err)) {
+        // The request was stored differently since the family opened it.
+        // `reload` shows the stored request again, or says it could not;
+        // the dialog closes, since sending the same version again would be
+        // refused again.
+        void errorDisplay.show(err, {
+          object: t("careOfferingsModal.errorObjectRequest"),
+          reload: onEdited,
+        });
+        onClose();
         return;
       }
       // Der Katalogtext zu diesem Code spricht das Team an ("lehnen Sie ab").

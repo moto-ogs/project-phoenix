@@ -36,7 +36,7 @@ func TestPickupQueriesPreserveResolvedClockAndDisplayIdentity(t *testing.T) {
 		require.Len(t, single.Reminders, 1)
 		actual := single.Reminders[0]
 		require.NotNil(t, actual.StudentID)
-		assert.Equal(t, strconv.FormatInt(student.ID, 10), *actual.StudentID)
+		assert.Equal(t, strconv.FormatInt(student.ID, 10), actual.StudentID.String())
 		assert.Equal(t, "Anna Müller", actual.Title)
 		assert.Equal(t, "3b", actual.Subtitle)
 		assert.Equal(t, "00:00", actual.DueTime)

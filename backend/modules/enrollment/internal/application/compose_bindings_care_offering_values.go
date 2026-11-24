@@ -55,13 +55,14 @@ func (v *CareOfferingValues) Create(ctx context.Context, offering *enrollment.Ca
 	return PublicCareOffering(stored), nil
 }
 
-// Update saves the offering and refreshes it with the stored state.
-func (v *CareOfferingValues) Update(ctx context.Context, offering *enrollment.CareOffering) error {
+// Update saves the offering over the version its author read (ADR 0311)
+// and refreshes it with the stored state.
+func (v *CareOfferingValues) Update(ctx context.Context, offering *enrollment.CareOffering, expectedVersion string) error {
 	row, err := CareOfferingRowOf(offering)
 	if err != nil {
 		return err
 	}
-	if err := v.CareOfferingRows.Update(ctx, row); err != nil {
+	if err := v.CareOfferingRows.Update(ctx, row, expectedVersion); err != nil {
 		return err
 	}
 	*offering = *PublicCareOffering(row)

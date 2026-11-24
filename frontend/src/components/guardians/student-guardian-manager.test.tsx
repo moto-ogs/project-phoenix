@@ -19,16 +19,11 @@ import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 // Mock all guardian API functions with proper typing
 const mockFetchStudentGuardians = vi.fn();
 const mockCreateStudentGuardians = vi.fn();
-const mockUpdateGuardian = vi.fn();
+const mockSaveStudentGuardian = vi.fn();
 const mockLinkGuardianToStudent = vi.fn();
-const mockUpdateStudentGuardianRelationship = vi.fn();
 const mockRemoveGuardianFromStudent = vi.fn();
 const mockDeleteGuardian = vi.fn();
 const mockFetchGuardianDeletePreview = vi.fn();
-const mockAddGuardianPhoneNumber = vi.fn();
-const mockUpdateGuardianPhoneNumber = vi.fn();
-const mockDeleteGuardianPhoneNumber = vi.fn();
-const mockSetGuardianPrimaryPhone = vi.fn();
 const mockInviteGuardianToStudent = vi.fn();
 
 // Real subclass exported from the guardian-api mock so any code path that
@@ -54,11 +49,14 @@ vi.mock("@/lib/guardian-api", () => ({
   resumeGuardianEmails: () => Promise.resolve(),
   createStudentGuardians: (studentId: string, guardians: unknown) =>
     mockCreateStudentGuardians(studentId, guardians),
-  updateGuardian: (id: string, data: unknown) => mockUpdateGuardian(id, data),
+  saveStudentGuardian: (
+    studentId: string,
+    guardianId: string,
+    entry: unknown,
+    expectedVersion: string,
+  ) => mockSaveStudentGuardian(studentId, guardianId, entry, expectedVersion),
   linkGuardianToStudent: (studentId: string, data: unknown) =>
     mockLinkGuardianToStudent(studentId, data),
-  updateStudentGuardianRelationship: (relationshipId: string, data: unknown) =>
-    mockUpdateStudentGuardianRelationship(relationshipId, data),
   removeGuardianFromStudent: (studentId: string, guardianId: string) =>
     mockRemoveGuardianFromStudent(studentId, guardianId),
   deleteGuardian: (
@@ -68,17 +66,6 @@ vi.mock("@/lib/guardian-api", () => ({
   fetchGuardianDeletePreview: (guardianId: string) =>
     mockFetchGuardianDeletePreview(guardianId),
   GuardianApiError: mockGuardianApiError,
-  addGuardianPhoneNumber: (guardianId: string, data: unknown) =>
-    mockAddGuardianPhoneNumber(guardianId, data),
-  updateGuardianPhoneNumber: (
-    guardianId: string,
-    phoneId: string,
-    data: unknown,
-  ) => mockUpdateGuardianPhoneNumber(guardianId, phoneId, data),
-  deleteGuardianPhoneNumber: (guardianId: string, phoneId: string) =>
-    mockDeleteGuardianPhoneNumber(guardianId, phoneId),
-  setGuardianPrimaryPhone: (guardianId: string, phoneId: string) =>
-    mockSetGuardianPrimaryPhone(guardianId, phoneId),
   inviteGuardianToStudent: (
     studentId: string,
     email: string,
@@ -108,7 +95,7 @@ vi.mock("next-auth/react", () => ({
     data: {
       user: {
         id: "account-1",
-        tenantId: 1,
+        tenantId: "1",
         scope: "tenant",
         permissions: mockPermissions,
       },
@@ -119,13 +106,17 @@ vi.mock("next-auth/react", () => ({
 
 // Mock toast context. Load and dialog errors run through the real hooks;
 // action errors (link, invite) are spied at useApiErrorDisplay (#2517).
-const { mockToastSuccess, mockToastError, mockShowActionError } = vi.hoisted(
-  () => ({
-    mockToastSuccess: vi.fn(),
-    mockToastError: vi.fn(),
-    mockShowActionError: vi.fn(),
-  }),
-);
+const {
+  mockToastSuccess,
+  mockToastError,
+  mockShowActionError,
+  mockShowActionMessage,
+} = vi.hoisted(() => ({
+  mockToastSuccess: vi.fn(),
+  mockToastError: vi.fn(),
+  mockShowActionError: vi.fn(),
+  mockShowActionMessage: vi.fn(),
+}));
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
   useToast: () => ({
@@ -133,7 +124,10 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
     error: mockToastError,
     info: vi.fn(),
   }),
-  useApiErrorDisplay: () => ({ show: mockShowActionError }),
+  useApiErrorDisplay: () => ({
+    show: mockShowActionError,
+    showMessage: mockShowActionMessage,
+  }),
 }));
 
 // Mock child components
@@ -184,10 +178,14 @@ vi.mock("./guardian-form-modal", () => ({
     onClose,
     onSubmit,
     onDelete,
+    initialData,
+    onReload,
     mode,
   }: {
     isOpen: boolean;
     onClose: () => void;
+    initialData?: { firstName: string; version?: string };
+    onReload?: () => Promise<unknown>;
     onSubmit: (
       data: Array<{
         id: string;
@@ -203,6 +201,20 @@ vi.mock("./guardian-form-modal", () => ({
     isOpen ? (
       <div data-testid="guardian-form-modal">
         <h2>{mode === "create" ? "Create Guardian" : "Edit Guardian"}</h2>
+        {initialData && (
+          <p data-testid="modal-shown">
+            {initialData.firstName} {initialData.version}
+          </p>
+        )}
+        {onReload && (
+          <button
+            type="button"
+            onClick={() => void onReload()}
+            data-testid="modal-reload"
+          >
+            Reload
+          </button>
+        )}
         <button type="button" onClick={onClose} data-testid="close-modal">
           Close Modal
         </button>
@@ -449,6 +461,7 @@ const mockGuardians: GuardianWithRelationship[] = [
     isEmergencyContact: true,
     canPickup: true,
     emergencyPriority: 1,
+    version: "v-guardian-1",
   },
   {
     id: "guardian-2",
@@ -473,10 +486,9 @@ describe("StudentGuardianManager", () => {
     vi.clearAllMocks();
     mockFetchStudentGuardians.mockResolvedValue(mockGuardians);
     mockCreateStudentGuardians.mockResolvedValue(undefined);
-    // Deterministic default: phone adds (used by the edit flow) resolve to a row
-    // with an id. clearAllMocks() clears call records but NOT implementations, so
-    // setting this here avoids depending on another test's leaked mockResolvedValue.
-    mockAddGuardianPhoneNumber.mockResolvedValue({ id: "new-phone-1" });
+    // clearAllMocks() clears call records but NOT implementations, so the
+    // save's default is set here.
+    mockSaveStudentGuardian.mockResolvedValue(null);
     mockPermissions = [];
   });
 
@@ -686,7 +698,7 @@ describe("StudentGuardianManager", () => {
 
       // No per-step orchestration any more.
       expect(mockLinkGuardianToStudent).not.toHaveBeenCalled();
-      expect(mockAddGuardianPhoneNumber).not.toHaveBeenCalled();
+      expect(mockSaveStudentGuardian).not.toHaveBeenCalled();
 
       await waitFor(() => {
         expect(mockToastSuccess).toHaveBeenCalledWith(
@@ -740,10 +752,7 @@ describe("StudentGuardianManager", () => {
       expect(screen.getByText("Edit Guardian")).toBeInTheDocument();
     });
 
-    it("updates guardian and shows success toast", async () => {
-      mockUpdateGuardian.mockResolvedValue(undefined);
-      mockUpdateStudentGuardianRelationship.mockResolvedValue(undefined);
-
+    it("saves profile, link and phones in one request with the read version", async () => {
       render(<StudentGuardianManager studentId="student-123" />);
 
       await waitFor(() => {
@@ -754,23 +763,32 @@ describe("StudentGuardianManager", () => {
       fireEvent.click(screen.getByTestId("submit-form"));
 
       await waitFor(() => {
-        expect(mockUpdateGuardian).toHaveBeenCalledWith("guardian-1", {
-          firstName: "Test",
-          lastName: "Guardian",
-        });
+        expect(mockSaveStudentGuardian).toHaveBeenCalledWith(
+          "student-123",
+          "guardian-1",
+          {
+            guardian: { firstName: "Test", lastName: "Guardian" },
+            relationship: {
+              relationshipType: "parent",
+              guardianRole: "legal_guardian",
+              isPrimary: false,
+              isEmergencyContact: false,
+              canPickup: false,
+              emergencyPriority: 1,
+            },
+            phoneNumbers: [
+              {
+                id: undefined,
+                phoneNumber: "+49 123 456",
+                phoneType: "mobile",
+                isPrimary: true,
+              },
+            ],
+          },
+          "v-guardian-1",
+        );
       });
-
-      expect(mockUpdateStudentGuardianRelationship).toHaveBeenCalledWith(
-        "rel-1",
-        {
-          relationshipType: "parent",
-          guardianRole: "legal_guardian",
-          isPrimary: false,
-          isEmergencyContact: false,
-          canPickup: false,
-          emergencyPriority: 1,
-        },
-      );
+      expect(mockSaveStudentGuardian).toHaveBeenCalledTimes(1);
 
       await waitFor(() => {
         expect(mockToastSuccess).toHaveBeenCalledWith(
@@ -779,21 +797,47 @@ describe("StudentGuardianManager", () => {
       });
     });
 
-    it("keeps the e-mail address when the new phone number is refused", async () => {
-      mockAddGuardianPhoneNumber.mockRejectedValue(new Error("refused"));
-
+    // After a refused save (ADR 0311) the form shows the stored guardian
+    // with the version the next save sends.
+    it("shows the stored guardian in the form after a refusal reload", async () => {
       render(<StudentGuardianManager studentId="student-123" />);
       fireEvent.click(await screen.findByTestId("edit-guardian-1"));
-      fireEvent.click(screen.getByTestId("submit-cleared-email"));
+      expect(screen.getByTestId("modal-shown")).toHaveTextContent(
+        "Anna v-guardian-1",
+      );
+
+      mockFetchStudentGuardians.mockResolvedValue([
+        { ...mockGuardians[0], firstName: "Annette", version: "v-stored" },
+        ...mockGuardians.slice(1),
+      ]);
+      fireEvent.click(screen.getByTestId("modal-reload"));
 
       await waitFor(() => {
-        expect(mockAddGuardianPhoneNumber).toHaveBeenCalledWith(
-          "guardian-1",
-          expect.objectContaining({ phoneNumber: "+49 123 456" }),
+        expect(screen.getByTestId("modal-shown")).toHaveTextContent(
+          "Annette v-stored",
         );
       });
-      // The address goes only after the number is saved (#7770).
-      expect(mockUpdateGuardian).not.toHaveBeenCalled();
+    });
+
+    // Unlinked since the form opened: there is no stored row to show, so
+    // the form closes and says so instead of keeping the refused input.
+    it("closes the form after a refusal when the guardian was unlinked meanwhile", async () => {
+      render(<StudentGuardianManager studentId="student-123" />);
+      fireEvent.click(await screen.findByTestId("edit-guardian-1"));
+      expect(screen.getByTestId("guardian-form-modal")).toBeInTheDocument();
+
+      mockFetchStudentGuardians.mockResolvedValue(mockGuardians.slice(1));
+      fireEvent.click(screen.getByTestId("modal-reload"));
+
+      await waitFor(() => {
+        expect(mockShowActionMessage).toHaveBeenCalledWith(
+          "Diese Person ist nicht mehr mit dem Kind verknüpft. Deine Änderungen sind nicht gespeichert.",
+        );
+      });
+      expect(
+        screen.queryByTestId("guardian-form-modal"),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("edit-guardian-2")).toBeInTheDocument();
     });
 
     it("does not show edit buttons when readOnly", async () => {
@@ -1079,6 +1123,63 @@ describe("StudentGuardianManager", () => {
       });
     });
 
+    // ADR 0311: links changed since the preview refuse the delete; the
+    // dialog reads the new set, shows it with the refusal and no retry, and
+    // the next confirm sends that set.
+    it("reads the new link set after a full delete refused as changed", async () => {
+      mockPermissions = ["admin:*"];
+      mockFetchGuardianDeletePreview
+        .mockResolvedValueOnce({
+          linkedCount: 2,
+          affectedNames: ["Anna Müller", "Ben Müller"],
+          affectedLinkIds: ["10", "20"],
+          warning: "Die Person ist mit 2 Kindern verknüpft.",
+        })
+        .mockResolvedValueOnce({
+          linkedCount: 3,
+          affectedNames: ["Anna Müller", "Ben Müller", "Cem Müller"],
+          affectedLinkIds: ["10", "20", "30"],
+          warning: "Die Person ist mit 3 Kindern verknüpft.",
+        });
+      mockDeleteGuardian
+        .mockRejectedValueOnce(
+          new ApiError("changed", 409, { code: "general.changed_since_read" }),
+        )
+        .mockResolvedValueOnce(undefined);
+
+      render(<StudentGuardianManager studentId="student-123" />);
+      await openDeleteModal();
+      fireEvent.click(screen.getByTestId("select-full-delete"));
+      await waitFor(() => {
+        expect(screen.getByTestId("full-delete-warning")).toHaveTextContent(
+          "mit 2 Kindern",
+        );
+      });
+      fireEvent.click(screen.getByTestId("confirm-full-delete"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("full-delete-warning")).toHaveTextContent(
+          "mit 3 Kindern",
+        );
+      });
+      expect(
+        await screen.findByText(
+          catalogText("general.changed_since_read", "das Löschen der Person"),
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Wiederholen" }),
+      ).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId("confirm-full-delete"));
+      await waitFor(() => {
+        expect(mockDeleteGuardian).toHaveBeenLastCalledWith("guardian-1", {
+          force: true,
+          expectedAffectedLinkIds: ["10", "20", "30"],
+        });
+      });
+    });
+
     it("discards the warning when the scope leaves the full delete", async () => {
       mockPermissions = ["admin:*"];
       mockFetchGuardianDeletePreview.mockResolvedValue({
@@ -1304,7 +1405,7 @@ describe("StudentGuardianManager", () => {
         });
       });
       // Never creates a profile or writes phone numbers on the existing path.
-      expect(mockAddGuardianPhoneNumber).not.toHaveBeenCalled();
+      expect(mockSaveStudentGuardian).not.toHaveBeenCalled();
 
       await waitFor(() => {
         expect(mockToastSuccess).toHaveBeenCalledWith(

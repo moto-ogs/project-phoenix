@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  int64String,
   nullable,
   num,
   object,
@@ -29,10 +30,11 @@ export interface AbsenceTypeResponse {
   kept_by_traeger: boolean;
   offered: boolean;
   school_limit_days: number | null;
+  version: string;
 }
 
 export const AbsenceTypeResponseSchema: z.ZodType<AbsenceTypeResponse, unknown> = object<AbsenceTypeResponse>({
-  id: str,
+  id: int64String,
   name: str,
   base_type: str,
   is_active: bool,
@@ -42,6 +44,7 @@ export const AbsenceTypeResponseSchema: z.ZodType<AbsenceTypeResponse, unknown> 
   kept_by_traeger: bool,
   offered: bool,
   school_limit_days: nullable(num),
+  version: str,
 });
 
 /** Go: absencetypes.AllowanceSummaryResponse */
@@ -58,11 +61,12 @@ export interface AllowanceSummaryResponse {
   booking_days: number;
   carried_in: AllowanceCarryResponse | null;
   kept_by_traeger: boolean;
+  version: string;
 }
 
 export const AllowanceSummaryResponseSchema: z.ZodType<AllowanceSummaryResponse, unknown> = object<AllowanceSummaryResponse>({
-  staff_id: str,
-  absence_type_id: str,
+  staff_id: int64String,
+  absence_type_id: int64String,
   year: safeInt,
   entitled_days: num,
   taken_days: num,
@@ -73,6 +77,7 @@ export const AllowanceSummaryResponseSchema: z.ZodType<AllowanceSummaryResponse,
   booking_days: num,
   carried_in: nullable(AllowanceCarryResponseSchema),
   kept_by_traeger: bool,
+  version: str,
 });
 
 /** Go: absencetypes.AllowancePreviewResponse */
@@ -104,7 +109,8 @@ export interface UpdateAbsenceTypeRequest {
   carryover_until?: string | null;
   requestable?: boolean | null;
   offered?: boolean | null;
-  school_limit_days?: unknown | null;
+  school_limit_days?: number | null;
+  expected_version?: string;
 }
 
 /** Go: absencetypes.SetAllowanceRequest */
@@ -112,18 +118,7 @@ export interface SetAllowanceRequest {
   year?: number;
   entitled_days?: number;
   reason?: string;
-}
-
-/** Query of GET /api/absence-types/{id}/allowances/{staffId} */
-export interface GetAbsenceTypesIdAllowancesStaffIdQuery {
-  year?: number;
-}
-
-/** Query of GET /api/absence-types/{id}/allowances/{staffId}/preview */
-export interface GetAbsenceTypesIdAllowancesStaffIdPreviewQuery {
-  date_end?: string;
-  date_start?: string;
-  half_day?: boolean;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -137,14 +132,20 @@ export const routes = {
     method: "GET",
     pattern: "/api/absence-types/{id}/allowances/{staffId}",
     portals: ["tenant"],
-    query: ["year"],
+    query: {
+      "year": { kind: "int" },
+    },
     response: success(AllowanceSummaryResponseSchema),
   },
   "GET /api/absence-types/{id}/allowances/{staffId}/preview": {
     method: "GET",
     pattern: "/api/absence-types/{id}/allowances/{staffId}/preview",
     portals: ["tenant"],
-    query: ["date_end", "date_start", "half_day"],
+    query: {
+      "date_end": { kind: "date" },
+      "date_start": { kind: "date" },
+      "half_day": { kind: "bool" },
+    },
     response: success(AllowancePreviewResponseSchema),
   },
   "POST /api/absence-types/": {

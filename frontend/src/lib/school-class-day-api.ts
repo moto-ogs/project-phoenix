@@ -253,16 +253,23 @@ export async function addHomeworkSchool(
   });
 }
 
-/** Ändert einen eigenen Hausaufgaben-Eintrag. */
+/**
+ * Ändert einen Hausaufgaben-Eintrag der Klasse, wie er mit
+ * `expectedVersion` gelesen wurde (ADR 0311).
+ */
 export async function changeHomeworkSchool(
   schoolClass: string,
   homeworkId: string,
   input: HomeworkInput,
+  expectedVersion: string,
 ): Promise<void> {
   await bffJson(
     "school",
     "PUT /school/class-day/homework/{schoolClass}/{homeworkId}",
-    { params: { schoolClass, homeworkId }, body: input },
+    {
+      params: { schoolClass, homeworkId },
+      body: { ...input, expected_version: expectedVersion },
+    },
   );
 }
 
@@ -278,10 +285,15 @@ export async function deleteHomeworkSchool(
   );
 }
 
-/** Die übergebenen Kinder, die in die OGS gehen: „da“ und „nicht da“. */
+/**
+ * Die übergebenen Kinder, die in die OGS gehen: „da“ und „nicht da“, und der
+ * `handover_version` der Klassenansicht, aus der sie gewählt wurden (ADR
+ * 0311): eine inzwischen gespeicherte andere Übergabe weist die Übergabe ab.
+ */
 export interface ClassHandoverChildren {
   readonly present: readonly string[];
   readonly absent: readonly string[];
+  readonly expectedVersion: string;
 }
 
 /** Übergibt eine zugewiesene Klasse heute an die OGS (#4794). */
@@ -298,6 +310,7 @@ export async function handOverClassSchool(
       body: {
         present_student_ids: [...children.present],
         absent_student_ids: [...children.absent],
+        expected_version: children.expectedVersion,
       },
     },
   );

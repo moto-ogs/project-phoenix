@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   act,
   fireEvent,
@@ -8,8 +8,16 @@ import {
   waitFor,
 } from "@testing-library/react";
 
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
+
 import { releaseFakeTimers } from "~/test/clock";
-import { usePhoneViewport } from "~/test/helpers/viewport";
+import {
+  DESKTOP_WIDTH,
+  PHONE_WIDTH,
+  setViewportWidth,
+  usePhoneViewport,
+} from "~/test/helpers/viewport";
 import { Modal } from "./modal";
 import { MODAL_CLOSE_DELAY_MS } from "./motion";
 import { ResponsivePanel } from "./responsive-panel";
@@ -278,6 +286,94 @@ describe("ResponsivePanel unter sm", () => {
     expect(screen.getByRole("dialog", { name: "Filter" })).toBe(outer);
     expect(outer.style.transform).toBe("");
     expect(trigger).toHaveFocus();
+  });
+});
+
+/** Ein Panel, das schon offen eingehängt wird, wie ein Menü in einer Zeile, die erst der Tipp einhängt. */
+function OpenPanel({
+  onOpenChange,
+}: {
+  readonly onOpenChange: (open: boolean) => void;
+}) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  return (
+    <ResponsivePanel
+      open
+      onOpenChange={onOpenChange}
+      label="Weitere Aktionen"
+      returnFocusRef={triggerRef}
+      trigger={
+        <button ref={triggerRef} type="button">
+          Menü
+        </button>
+      }
+    >
+      {(asSheet) => (
+        <div role="menu" aria-label="Aktionen" data-as-sheet={String(asSheet)}>
+          <button type="button" role="menuitem">
+            Bearbeiten
+          </button>
+        </div>
+      )}
+    </ResponsivePanel>
+  );
+}
+
+describe("ResponsivePanel: erste Darstellung und Wechsel über sm (#8013)", () => {
+  afterEach(() => setViewportWidth(DESKTOP_WIDTH));
+
+  it("bleibt offen, wenn es am Telefon schon offen eingehängt wird", async () => {
+    setViewportWidth(PHONE_WIDTH);
+    const onOpenChange = vi.fn();
+    render(<OpenPanel onOpenChange={onOpenChange} />);
+
+    // Anker: das Blatt steht offen da.
+    await screen.findByRole("dialog", { name: "Weitere Aktionen" });
+    expect(screen.getByRole("menu", { name: "Aktionen" })).toHaveAttribute(
+      "data-as-sheet",
+      "true",
+    );
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it("bleibt offen, wenn die Seite am Telefon mit offenem Panel hydriert", async () => {
+    setViewportWidth(PHONE_WIDTH);
+    const onOpenChange = vi.fn();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    // Der Server kennt die Breite nicht und rendert das Popover.
+    container.innerHTML = renderToString(
+      <OpenPanel onOpenChange={onOpenChange} />,
+    );
+    expect(container.innerHTML).toContain('data-as-sheet="false"');
+
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+    await act(async () => {
+      root = hydrateRoot(container, <OpenPanel onOpenChange={onOpenChange} />);
+    });
+    try {
+      // Anker: nach der Hydration steht das Blatt offen da.
+      await screen.findByRole("dialog", { name: "Weitere Aktionen" });
+      expect(onOpenChange).not.toHaveBeenCalled();
+    } finally {
+      act(() => root?.unmount());
+      container.remove();
+    }
+  });
+
+  it("schließt, wenn die Breite nach dem Einhängen unter sm fällt", () => {
+    const onOpenChange = vi.fn();
+    render(<OpenPanel onOpenChange={onOpenChange} />);
+    // Anker: ab sm steht das Popover offen da.
+    expect(screen.getByRole("menu", { name: "Aktionen" })).toHaveAttribute(
+      "data-as-sheet",
+      "false",
+    );
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    setViewportWidth(PHONE_WIDTH);
+
+    expect(onOpenChange).toHaveBeenCalledExactlyOnceWith(false);
   });
 });
 

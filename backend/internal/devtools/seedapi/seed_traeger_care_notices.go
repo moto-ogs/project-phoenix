@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"slices"
 
@@ -63,39 +62,63 @@ func seedCareNotices(client *Client, auth AuthRef, school int64, current calenda
 	if err != nil || runID == 0 {
 		return 0, err
 	}
+	issued, err := seedReleaseNoticeRun(client, auth, runID)
+	if err != nil || issued == 0 {
+		return 0, err
+	}
+	if err := seedCareNoticeLetters(client, auth, runID); err != nil {
+		return 0, err
+	}
+	return issued, nil
+}
+
+// seedReleaseNoticeRun releases the notice run with the preview it read.
+// The contract-conclusion worker concludes contracts on its own tick, 70 s
+// after the server starts, and a contract it concludes between the read and
+// the release changes the preview (#6438); seedOnCurrentPreview reads it
+// again. A run another seed released or one with nothing to issue gives 0
+// without an error. It returns the number of issued notices.
+func seedReleaseNoticeRun(client *Client, auth AuthRef, runID int64) (int, error) {
+	issued := 0
+	err := seedOnCurrentPreview(func() (seedCareNoticeRun, error) {
+		return seedReadNoticeRun(client, auth, runID)
+	}, func(run seedCareNoticeRun) error {
+		issued = 0
+		if run.Status != "calculated" {
+			return nil
+		}
+		if run.PreviewCount == 0 {
+			return seedDiscardNoticeRun(client, auth, runID)
+		}
+		_, err := client.PostWithAuth(auth, fmt.Sprintf("/traeger/care-notice-runs/%d/release", runID), map[string]any{
+			"document_count": run.PreviewCount, "total_cents": run.PreviewCents, "fingerprint": run.Fingerprint,
+		})
+		switch {
+		case seedConflictCode(err, seedCareRunReleased):
+			return nil
+		case seedConflictCode(err, seedBillingRunEmpty):
+			return seedDiscardNoticeRun(client, auth, runID)
+		case err != nil:
+			return fmt.Errorf("release the notice run: %w", err)
+		}
+		issued = run.PreviewCount
+		return nil
+	})
+	return issued, err
+}
+
+func seedReadNoticeRun(client *Client, auth AuthRef, runID int64) (seedCareNoticeRun, error) {
 	raw, err := client.GetWithAuth(auth, fmt.Sprintf("/traeger/care-notice-runs/%d", runID))
 	if err != nil {
-		return 0, fmt.Errorf("check the notice run: %w", err)
+		return seedCareNoticeRun{}, fmt.Errorf("check the notice run: %w", err)
 	}
 	var envelope struct {
 		Data seedCareNoticeRun `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
-		return 0, fmt.Errorf("check the notice run: %w", err)
+		return seedCareNoticeRun{}, fmt.Errorf("check the notice run: %w", err)
 	}
-	run := envelope.Data
-	if run.Status != "calculated" {
-		return 0, nil
-	}
-	if run.PreviewCount == 0 {
-		return 0, seedDiscardNoticeRun(client, auth, runID)
-	}
-	_, err = client.PostWithAuth(auth, fmt.Sprintf("/traeger/care-notice-runs/%d/release", runID), map[string]any{
-		"document_count": run.PreviewCount, "total_cents": run.PreviewCents, "fingerprint": run.Fingerprint,
-	})
-	if seedConflictCode(err, seedCareRunReleased) {
-		return 0, nil
-	}
-	if seedConflictCode(err, seedBillingRunEmpty) {
-		return 0, seedDiscardNoticeRun(client, auth, runID)
-	}
-	if err != nil {
-		return 0, fmt.Errorf("release the notice run: %w", err)
-	}
-	if err := seedCareNoticeLetters(client, auth, runID); err != nil {
-		return 0, err
-	}
-	return run.PreviewCount, nil
+	return envelope.Data, nil
 }
 
 // seedDiscardNoticeRun discards the seed's notice run that has nothing to
@@ -136,32 +159,7 @@ func monthAfter(month calendar.Date) calendar.Date {
 // seedNoticeTemplateOnce saves the template of the fee notice while the
 // Träger still writes with the standard one.
 func seedNoticeTemplateOnce(client *Client, auth AuthRef) error {
-	raw, err := client.GetWithAuth(auth, "/traeger/master-data/document-templates/bescheid")
-	if err != nil {
-		return fmt.Errorf("read the Träger template of the fee notice: %w", err)
-	}
-	var envelope struct {
-		Data struct {
-			Current struct {
-				Standard bool `json:"standard"`
-			} `json:"current"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(raw, &envelope); err != nil {
-		return fmt.Errorf("read the Träger template of the fee notice: %w", err)
-	}
-	if !envelope.Data.Current.Standard {
-		return nil
-	}
-	_, err = client.PostWithAuth(auth, "/traeger/master-data/document-templates/bescheid/versions", seedTraegerNoticeTemplate)
-	var refused *APIError
-	if errors.As(err, &refused) && refused.Code == seedTraegerTemplateUnchanged {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("save the Träger template of the fee notice: %w", err)
-	}
-	return nil
+	return seedTraegerTemplateOnce(client, auth, "bescheid", seedTraegerNoticeTemplate, "the fee notice")
 }
 
 // seedStartNoticeRun starts the notice run of the year for the school
@@ -170,7 +168,7 @@ func seedNoticeTemplateOnce(client *Client, auth AuthRef) error {
 // gets no notices from this seed (0 without an error).
 func seedStartNoticeRun(client *Client, auth AuthRef, school int64, from calendar.Date) (int64, error) {
 	raw, err := client.PostWithAuth(auth, "/traeger/care-notice-runs/", map[string]any{
-		"year": from.Year(), "from_month": from.String(), "school_ids": []int64{school},
+		"year": from.Year(), "from_month": from.String(), "school_ids": []ident.ID{ident.ID(school)},
 	})
 	if seedConflictCode(err, seedCareNoticeRunOpen) {
 		return seedOpenNoticeRun(client, auth, school, from.Year())

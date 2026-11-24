@@ -110,7 +110,7 @@ func billingRunPath(id int64, suffix string) string {
 
 func startBillingRun(t *testing.T, f reviewFixture, token string, periodID int64) billingRunBody {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, token, http.MethodPost, billingRunsPath, map[string]any{"holiday_period_id": periodID})
+	rec := traegerJSON(t, f.traeger, token, http.MethodPost, billingRunsPath, map[string]any{"holiday_period_id": fmt.Sprint(periodID)})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[billingRunBody](t, rec.Body.Bytes())
 }
@@ -163,7 +163,7 @@ func TestHolidayBillingRunPreviewsCorrectsAndIssuesNumberedInvoices(t *testing.T
 	assert.Equal(t, "calculated", run.Status)
 	assert.Equal(t, "Winterferien 2027", run.PeriodName)
 	assert.Equal(t, "2027-01-04", run.ServiceFrom)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunsPath, map[string]any{"holiday_period_id": f.period.ID})
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunsPath, map[string]any{"holiday_period_id": fmt.Sprint(f.period.ID)})
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, _ := registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.billing_run_open", code, "a period has one run in preview at a time")
@@ -202,17 +202,17 @@ func TestHolidayBillingRunPreviewsCorrectsAndIssuesNumberedInvoices(t *testing.T
 	}](t, rec.Body.Bytes()).Example)
 
 	// A correction needs a reason and a child the run bills.
-	correction := map[string]any{"registration_id": f.siblings, "child_id": lia.ChildID, "total_cents": 3000, "reason": " "}
+	correction := map[string]any{"registration_id": fmt.Sprint(f.siblings), "child_id": fmt.Sprint(lia.ChildID), "total_cents": 3000, "reason": " "}
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), correction)
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	code, fields = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.billing_correction_invalid", code)
 	assert.Equal(t, []string{"reason"}, fields)
 	correction["reason"] = "Erste Woche krank, halber Beitrag"
-	correction["registration_id"] = f.again
+	correction["registration_id"] = fmt.Sprint(f.again)
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), correction)
 	require.Equal(t, http.StatusNotFound, rec.Code, "a registration the run does not bill: %s", rec.Body.String())
-	correction["registration_id"] = f.siblings
+	correction["registration_id"] = fmt.Sprint(f.siblings)
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), correction)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	corrected := decodeSchoolPortalData[billingRunBody](t, rec.Body.Bytes()).Documents[0].Children[0]
@@ -308,7 +308,7 @@ func TestHolidayBillingRunNeedsTheBillingRightAndStaysWithItsTraeger(t *testing.
 	setNumberRange(t, f, billing, "FE-{NNNN}")
 	preview := billingRun(t, f, billing, int64(run.ID))
 	child := preview.Documents[0].Children[0]
-	correction := map[string]any{"registration_id": f.siblings, "child_id": child.ChildID, "total_cents": 0, "reason": "Härtefall"}
+	correction := map[string]any{"registration_id": fmt.Sprint(f.siblings), "child_id": fmt.Sprint(child.ChildID), "total_cents": 0, "reason": "Härtefall"}
 
 	for _, request := range []struct {
 		method, path string
@@ -317,7 +317,7 @@ func TestHolidayBillingRunNeedsTheBillingRightAndStaysWithItsTraeger(t *testing.
 		{http.MethodGet, billingRunsPath, nil},
 		{http.MethodGet, billingRunsPath + "/periods", nil},
 		{http.MethodGet, billingRunsPath + "/export", nil},
-		{http.MethodPost, billingRunsPath, map[string]any{"holiday_period_id": f.period.ID}},
+		{http.MethodPost, billingRunsPath, map[string]any{"holiday_period_id": fmt.Sprint(f.period.ID)}},
 		{http.MethodGet, billingRunPath(int64(run.ID), ""), nil},
 		{http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), correction},
 		{http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(preview)},
@@ -341,7 +341,7 @@ func TestHolidayBillingRunNeedsTheBillingRightAndStaysWithItsTraeger(t *testing.
 		method, path string
 		body         any
 	}{
-		{http.MethodPost, billingRunsPath, map[string]any{"holiday_period_id": f.period.ID}},
+		{http.MethodPost, billingRunsPath, map[string]any{"holiday_period_id": fmt.Sprint(f.period.ID)}},
 		{http.MethodGet, billingRunPath(int64(run.ID), ""), nil},
 		{http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), correction},
 		{http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(preview)},
@@ -391,7 +391,7 @@ func TestParallelReleasesNumberInvoicesWithoutAGap(t *testing.T) {
 		require.Equal(t, http.StatusOK, f.act(t, id, "confirm").Code)
 	}
 	for _, id := range registrations {
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(second.ID), id), nil)
+		rec := confirmReadHoliday(t, f.traeger, f.office.token, int64(second.ID), id, nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
 	setNumberRange(t, f, billing, "FE-{NNNN}")

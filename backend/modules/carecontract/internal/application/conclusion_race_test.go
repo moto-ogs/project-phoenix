@@ -87,11 +87,16 @@ func (raceLetterhead) Letterhead(context.Context, carecontract.Reviewer) (careco
 }
 
 // raceRenderer lays out a fixed PDF; the races are about the rows, not the
-// layout.
+// layout. It prints the footer lines, so a test sees the preview note
+// (#8030) a draft's preview carries on every page.
 type raceRenderer struct{}
 
-func (raceRenderer) RenderContract(_ Letter, filenameBase string) (carecontract.File, error) {
-	return carecontract.File{Filename: filenameBase + ".pdf", ContentType: "application/pdf", Data: []byte("%PDF-1.4 Vertrag")}, nil
+func (raceRenderer) RenderContract(letter Letter, filenameBase string) (carecontract.File, error) {
+	data := "%PDF-1.4 Vertrag"
+	for _, line := range letter.Footer {
+		data += "\n" + line
+	}
+	return carecontract.File{Filename: filenameBase + ".pdf", ContentType: "application/pdf", Data: []byte(data)}, nil
 }
 
 type raceAccess struct{}

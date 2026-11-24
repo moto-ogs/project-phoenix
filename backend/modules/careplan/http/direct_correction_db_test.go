@@ -99,13 +99,21 @@ func TestAggregatedChangeRequests_RouterDirectCorrections(t *testing.T) {
 	claims := testutil.AdminTestClaims(int(account.ID))
 	perms := []string{"users:read", "users:update"}
 
-	fetch := func(t *testing.T, query string) aggListEnvelope {
+	fetchAt := func(t *testing.T, path, query string) aggListEnvelope {
 		t.Helper()
-		rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?"+query, nil), claims, perms)
+		rr := authExec(t, tc, testutil.NewRequest("GET", path+"?"+query, nil), claims, perms)
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 		var env aggListEnvelope
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &env))
 		return env
+	}
+	fetch := func(t *testing.T, query string) aggListEnvelope {
+		t.Helper()
+		return fetchAt(t, "/change-requests", query)
+	}
+	fetchHistory := func(t *testing.T, query string) aggListEnvelope {
+		t.Helper()
+		return fetchAt(t, "/change-requests/history", query)
 	}
 
 	// ARRANGE 1 — the office corrects the booking itself, through the very
@@ -119,13 +127,15 @@ func TestAggregatedChangeRequests_RouterDirectCorrections(t *testing.T) {
 			Reason:         "Telefonisch gemeldet",
 			ActorAccountID: account.ID,
 			ActorRole:      "admin",
+			// The office corrects the bookings it read (ADR 0311).
+			ExpectedVersion: readOfferingsVersion(ctx, tc.enrollmentDecision, fixture.child.RequestID, fixture.child.ID),
 		})
 		return updateErr
 	})
 	require.NoError(t, err)
 
 	// ASSERT 1 — the correction is in the history, as its own row kind.
-	history := fetch(t, "view=history&search=Zkorrektur")
+	history := fetchHistory(t, "search=Zkorrektur")
 	require.Len(t, history.Data.Items, 1)
 	assert.Equal(t, "direct_correction", history.Data.Items[0].RequestType)
 
@@ -140,7 +150,7 @@ func TestAggregatedChangeRequests_RouterDirectCorrections(t *testing.T) {
 			New   string `json:"new"`
 		} `json:"diff"`
 	}
-	require.NoError(t, json.Unmarshal(history.Data.Items[0].Data, &row))
+	require.NoError(t, json.Unmarshal(history.Data.Items[0].DirectCorrection, &row))
 	assert.Equal(t, "Zkorrektur Kindlein", row.StudentName)
 	assert.Equal(t, "Agg CorrectionReviewer", row.ChangedByName)
 	assert.Equal(t, "Telefonisch gemeldet", row.Reason)
@@ -160,7 +170,7 @@ func TestAggregatedChangeRequests_RouterDirectCorrections(t *testing.T) {
 	// Eine Freigabe trägt seit #2484 immer das Datum, das die OGS bestätigt —
 	// hier das der Anfrage.
 	body := strings.NewReader(fmt.Sprintf(
-		`{"approve":true,"reason":"Passt","effective_from":%q}`, pending.EffectiveFrom))
+		`{"approve":true,"reason":"Passt","effective_from":%q,"expected_version":%q}`, pending.EffectiveFrom, testpkg.OfferingRequestVersion(t, pending.ID)))
 	rr := authExec(t, tc,
 		testutil.NewRequest("POST", fmt.Sprintf("/offering-change-requests/%d/decide", pending.ID), body),
 		claims, perms)
@@ -168,7 +178,7 @@ func TestAggregatedChangeRequests_RouterDirectCorrections(t *testing.T) {
 
 	// ASSERT 2 — the approval appears exactly once, as the decided request; its
 	// side effect on the booking log stays out of the correction feed.
-	after := fetch(t, "view=history&search=Zkorrektur")
+	after := fetchHistory(t, "search=Zkorrektur")
 	types := make([]string, 0, len(after.Data.Items))
 	for _, item := range after.Data.Items {
 		types = append(types, item.RequestType)
@@ -221,22 +231,23 @@ func TestAggregatedChangeRequests_HistoryOrdersSourcesOnOneClock(t *testing.T) {
 		Payload: json.RawMessage(`{"weekdays":[{"weekday":1,"pickup":"14:00"}]}`),
 	})
 	require.NoError(t, err)
-	decide(fmt.Sprintf("/care-schedule-change-requests/%d/decide", care.ID), `{"approve":false,"reason":"Passt nicht"}`)
+	decide(fmt.Sprintf("/care-schedule-change-requests/%d/decide", care.ID), fmt.Sprintf(`{"approve":false,"reason":"Passt nicht","expected_version":%q}`, testpkg.CareRequestVersion(t, care.ID)))
 
 	require.NoError(t, testpkg.WithTenantTx(t, t.Context(), tc.db, student.TenantID, func(ctx context.Context, _ bun.Tx) error {
 		_, updateErr := tc.enrollmentDecision.UpdateChildOfferings(ctx, capability.UpdateChildOfferingsInput{
 			RequestID: fixture.child.RequestID, ChildID: fixture.child.ID,
 			Offerings: []capability.OfferingAdjustmentSelection{{OfferingID: fixture.ganztag.ID}},
 			Reason:    "Telefonisch gemeldet", ActorAccountID: account.ID, ActorRole: "admin",
+			ExpectedVersion: readOfferingsVersion(ctx, tc.enrollmentDecision, fixture.child.RequestID, fixture.child.ID),
 		})
 		return updateErr
 	}))
 
 	offering := insertPendingOfferingChangeRequest(t, tc, fixture, student.ID, account.ID)
 	decide(fmt.Sprintf("/offering-change-requests/%d/decide", offering.ID),
-		fmt.Sprintf(`{"approve":true,"reason":"Passt","effective_from":%q}`, offering.EffectiveFrom))
+		fmt.Sprintf(`{"approve":true,"reason":"Passt","effective_from":%q,"expected_version":%q}`, offering.EffectiveFrom, testpkg.OfferingRequestVersion(t, offering.ID)))
 
-	rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?view=history&search=Zuhrzeit", nil), claims, perms)
+	rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests/history?search=Zuhrzeit", nil), claims, perms)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	var history aggListEnvelope
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &history))
@@ -276,8 +287,8 @@ func TestOfferingWithdrawalApprovalRequiresUpdateButNotDeletePermission(t *testi
 
 	// #2267: reason policy defaults to "both"
 	body := strings.NewReader(fmt.Sprintf(
-		`{"approve":true,"reason":"Passt so","effective_from":%q,"complete_withdrawal_confirmed":true}`,
-		pending.EffectiveFrom,
+		`{"approve":true,"reason":"Passt so","effective_from":%q,"complete_withdrawal_confirmed":true,"expected_version":%q}`,
+		pending.EffectiveFrom, testpkg.OfferingRequestVersion(t, pending.ID),
 	))
 	response := authExec(t, tc,
 		testutil.NewRequest("POST", fmt.Sprintf("/offering-change-requests/%d/decide", pending.ID), body),

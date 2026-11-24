@@ -19,7 +19,7 @@ import { bffFile } from "~/lib/bff-fetch";
 // vor ihrer ersten Rechnung: die Spalte „Zahlung“ nennt ihn, das Zeilenmenü
 // öffnet die Seite dazu, und ein Filter zeigt die Familien ohne Angabe.
 
-import { CreditCard, Pencil, Plus } from "lucide-react";
+import { CreditCard, Pencil, Plus, UsersRound } from "lucide-react";
 import { familyKeyLabel } from "~/lib/family-key";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useMemo, useState } from "react";
@@ -769,7 +769,20 @@ function BillingFamiliesContent() {
         ) : null
       }
       statsLoading={!families && !loadError}
-      overflowMenu={exportItems}
+      overflowMenu={[
+        ...exportItems,
+        { kind: "separator" },
+        {
+          // Geschwister ohne Mail-Adresse sind getrennte Familien, bis das
+          // Büro sie zusammenführt (#7161).
+          label: "Geschwister zusammenführen",
+          description:
+            "Öffnet die Familien ohne Mail-Adresse, um Geschwister zu einer Familie zusammenzuführen.",
+          icon: <UsersRound className="h-4 w-4" aria-hidden />,
+          href: traegerPath("/traeger/vertraege/geschwister"),
+          onClick: () => undefined,
+        },
+      ]}
       search={{
         value: search,
         onChange: setSearch,

@@ -14,6 +14,11 @@ import {
   success,
 } from "./runtime";
 
+/** Go: httpadapter.RoomRemovalRequest */
+export interface RoomRemovalRequest {
+  expected_fingerprint?: string;
+}
+
 /** Go: httpadapter.RoomRemovalResponse */
 export interface RoomRemovalResponse {
   outcome: string;
@@ -42,6 +47,7 @@ export interface RoomResponse {
   archived_at?: string;
   created_at: string;
   updated_at: string;
+  version: string;
 }
 
 export const RoomResponseSchema: z.ZodType<RoomResponse, unknown> = object<RoomResponse>({
@@ -62,6 +68,7 @@ export const RoomResponseSchema: z.ZodType<RoomResponse, unknown> = object<RoomR
   archived_at: optional(instant),
   created_at: instant,
   updated_at: instant,
+  version: str,
 });
 
 /** Go: httpadapter.RoomSessionEntry */
@@ -112,6 +119,7 @@ export interface RoomRemovalImpactResponse {
   active_session: boolean;
   care_offering: boolean;
   references: RoomReferencesResponse;
+  fingerprint: string;
 }
 
 export const RoomRemovalImpactResponseSchema: z.ZodType<RoomRemovalImpactResponse, unknown> = object<RoomRemovalImpactResponse>({
@@ -119,6 +127,7 @@ export const RoomRemovalImpactResponseSchema: z.ZodType<RoomRemovalImpactRespons
   active_session: bool,
   care_offering: bool,
   references: RoomReferencesResponseSchema,
+  fingerprint: str,
 });
 
 /** Go: httpadapter.RoomRequest */
@@ -130,6 +139,7 @@ export interface RoomRequest {
   category?: string | null;
   color?: string | null;
   is_open_room?: boolean | null;
+  expected_version?: string;
 }
 
 /** Go: httpadapter.roomSnapshotExportRequest */
@@ -140,48 +150,27 @@ export interface roomSnapshotExportRequest {
   include_transit?: boolean;
 }
 
-/** Query of GET /api/rooms/ */
-export interface GetRoomsQuery {
-  building?: string;
-  category?: string;
-  include_system?: string;
-  is_open_room?: string;
-  page?: number;
-  page_size?: number;
-}
-
-/** Query of GET /api/rooms/by-category */
-export interface GetRoomsByCategoryQuery {
-  category?: string;
-}
-
-/** Query of GET /api/rooms/{id}/history */
-export interface GetRoomsIdHistoryQuery {
-  end?: string;
-  start?: string;
-}
-
 export const routes = {
   "DELETE /api/rooms/{id}": {
     method: "DELETE",
     pattern: "/api/rooms/{id}",
     portals: ["tenant"],
+    request: requestBody<RoomRemovalRequest>(),
     response: success(RoomRemovalResponseSchema),
   },
   "GET /api/rooms/": {
     method: "GET",
     pattern: "/api/rooms/",
     portals: ["tenant"],
-    query: ["building", "category", "include_system", "is_open_room", "page", "page_size"],
+    query: {
+      "building": { kind: "string" },
+      "category": { kind: "string" },
+      "include_system": { kind: "bool" },
+      "is_open_room": { kind: "bool" },
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+    },
     response: paginated(z.array(RoomResponseSchema)),
-  },
-  "GET /api/rooms/by-category": {
-    method: "GET",
-    pattern: "/api/rooms/by-category",
-    portals: ["tenant"],
-    deprecated: true,
-    query: ["category"],
-    response: success(z.array(RoomResponseSchema)),
   },
   "GET /api/rooms/{id}": {
     method: "GET",
@@ -193,7 +182,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/rooms/{id}/history",
     portals: ["tenant"],
-    query: ["end", "start"],
+    query: {
+      "end": { kind: "string" },
+      "start": { kind: "string" },
+    },
     response: success(z.array(RoomSessionEntrySchema)),
   },
   "GET /api/rooms/{id}/removal-impact": {

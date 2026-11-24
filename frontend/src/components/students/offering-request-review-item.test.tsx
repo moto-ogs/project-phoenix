@@ -115,8 +115,16 @@ function request(
 function renderItem(
   row: StaffOfferingRequest = request(),
   onDecided: (notice: string) => void = vi.fn(),
+  onStale: () => Promise<unknown> = vi.fn(async () => undefined),
 ) {
-  render(<OfferingRequestReviewItem row={row} onDecided={onDecided} />);
+  render(
+    <OfferingRequestReviewItem
+      row={row}
+      onDecided={onDecided}
+      expectedVersion="v1"
+      onStale={onStale}
+    />,
+  );
   fireEvent.click(screen.getByRole("button", { name: /Lara Beispiel/ }));
   return onDecided;
 }
@@ -157,7 +165,12 @@ describe("OfferingRequestReviewItem", () => {
         refresh={vi.fn()}
         openRequestId={row.id}
       >
-        <OfferingRequestReviewItem row={row} onDecided={vi.fn()} />
+        <OfferingRequestReviewItem
+          row={row}
+          onDecided={vi.fn()}
+          expectedVersion="v1"
+          onStale={vi.fn()}
+        />
       </CourseWaitlistProvider>,
     );
 
@@ -210,6 +223,8 @@ describe("OfferingRequestReviewItem", () => {
         undefined,
         [],
         "2027-02-01",
+        false,
+        "v1",
       ),
     );
     expect(onDecided).toHaveBeenCalledWith(
@@ -346,6 +361,8 @@ describe("OfferingRequestReviewItem", () => {
         "Kein Bedarf",
         [],
         undefined,
+        false,
+        "v1",
       ),
     );
     expect(onDecided).toHaveBeenCalledWith(
@@ -584,6 +601,8 @@ describe("OfferingRequestReviewItem", () => {
         undefined,
         ["9"],
         "2027-02-01",
+        false,
+        "v1",
       ),
     );
   });
@@ -618,6 +637,8 @@ describe("OfferingRequestReviewItem", () => {
         "Kein Bedarf",
         [],
         undefined,
+        false,
+        "v1",
       ),
     );
   });
@@ -816,13 +837,19 @@ describe("OfferingRequestReviewItem", () => {
           [],
           "2027-02-01",
           true,
+          "v1",
         ),
       );
     });
 
     it("flags the full withdrawal before the card is expanded", () => {
       render(
-        <OfferingRequestReviewItem row={withdrawal()} onDecided={vi.fn()} />,
+        <OfferingRequestReviewItem
+          row={withdrawal()}
+          onDecided={vi.fn()}
+          expectedVersion="v1"
+          onStale={vi.fn()}
+        />,
       );
 
       expect(screen.getByText("Komplett-Abmeldung")).toBeInTheDocument();
@@ -1024,6 +1051,8 @@ describe("OfferingRequestReviewItem — Gültig ab", () => {
         undefined,
         [],
         "2027-02-01",
+        false,
+        "v1",
       ),
     );
   });
@@ -1053,6 +1082,8 @@ describe("OfferingRequestReviewItem — Gültig ab", () => {
         undefined,
         [],
         "2027-03-01",
+        false,
+        "v1",
       ),
     );
     expect(onDecided).toHaveBeenCalledWith(
@@ -1178,5 +1209,175 @@ describe("OfferingRequestReviewItem — Gültig ab", () => {
     // Liste kommen können.
     expect(screen.getByRole("button", { name: /Ablehnen/ })).toBeEnabled();
     expect(mockDecide).not.toHaveBeenCalled();
+  });
+});
+
+// ADR 0311: a request stored differently since the list was read is refused.
+// The card names it without a retry and the list reloads.
+describe("OfferingRequestReviewItem on an outdated read", () => {
+  it("reloads instead of retrying the decision", async () => {
+    mockDecide.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    const onStale = vi.fn();
+    renderItem(request(), vi.fn(), onStale);
+
+    fireEvent.change(
+      screen.getByPlaceholderText("Begründung (Pflicht bei Ablehnung)"),
+      { target: { value: "Kein Bedarf" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Ablehnen/ }));
+
+    await expectErrorToast(/wurde inzwischen geändert/);
+    expect(onStale).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByRole("button", { name: /Wiederholen/ }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+// ADR 0311: the card decides on the version it shows. A parent's edit
+// refills an untouched card; an edited card keeps its version, so the
+// server refuses instead of approving a date nobody saw.
+describe("OfferingRequestReviewItem on a newer version of the request", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPreview.mockResolvedValue(previewResult());
+    mockDecide.mockResolvedValue(undefined);
+  });
+
+  function renderVersioned(row: StaffOfferingRequest, version: string) {
+    const view = render(
+      <OfferingRequestReviewItem
+        row={row}
+        onDecided={vi.fn()}
+        expectedVersion={version}
+        onStale={vi.fn(async () => undefined)}
+      />,
+    );
+    return (next: StaffOfferingRequest, nextVersion: string) =>
+      view.rerender(
+        <OfferingRequestReviewItem
+          row={next}
+          onDecided={vi.fn()}
+          expectedVersion={nextVersion}
+          onStale={vi.fn(async () => undefined)}
+        />,
+      );
+  }
+
+  it("approves the parents' new date with its version when the card is untouched", async () => {
+    const rerender = renderVersioned(request(), "v1");
+    fireEvent.click(screen.getByRole("button", { name: /Lara Beispiel/ }));
+    rerender(request({ effective_from: "2027-03-01" }), "v2");
+
+    await confirmApproval();
+    await waitFor(() =>
+      expect(mockDecide).toHaveBeenCalledWith(
+        "77",
+        true,
+        undefined,
+        [],
+        "2027-03-01",
+        false,
+        "v2",
+      ),
+    );
+  });
+
+  it("keeps the version it was edited on", async () => {
+    const rerender = renderVersioned(request(), "v1");
+    fireEvent.click(screen.getByRole("button", { name: /Lara Beispiel/ }));
+    fireEvent.click(screen.getByLabelText("Anderes Datum wählen"));
+    fireEvent.change(screen.getByLabelText("Gültig ab"), {
+      target: { value: "2027-04-01" },
+    });
+    await waitFor(() =>
+      expect(mockPreview).toHaveBeenCalledWith("77", [], "2027-04-01"),
+    );
+    rerender(request({ effective_from: "2027-03-01" }), "v2");
+
+    await confirmApproval();
+    await waitFor(() =>
+      expect(mockDecide).toHaveBeenCalledWith(
+        "77",
+        true,
+        undefined,
+        [],
+        "2027-04-01",
+        false,
+        "v1",
+      ),
+    );
+  });
+
+  it("closes the confirmation after a refusal instead of offering it again", async () => {
+    mockDecide.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    renderItem(request());
+    await confirmApproval();
+
+    await expectErrorToast(/wurde inzwischen geändert/);
+    expect(
+      screen.queryByRole("button", { name: "Änderung freigeben" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("names a failed list reload after a refusal and recovers with the next list", async () => {
+    mockDecide.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const onStale = vi.fn(async () => {
+      throw networkError();
+    });
+    const props = { onDecided: vi.fn(), onStale };
+    const view = render(
+      <OfferingRequestReviewItem
+        row={request()}
+        expectedVersion="v1"
+        {...props}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Lara Beispiel/ }));
+    await confirmApproval();
+    await expectErrorToast(/Der neue Stand konnte nicht geladen werden/);
+
+    // The card says why it cannot be decided and offers the read again.
+    expect(
+      await screen.findByText(
+        "Lade zuerst den neuen Stand der Anfrage, dann kannst du entscheiden.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Freigeben$/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getAllByText(catalogText("general.unavailable", "die Anfrage"))
+        .length,
+    ).toBeGreaterThan(0);
+
+    // A later successful list reload hands in the stored version.
+    view.rerender(
+      <OfferingRequestReviewItem
+        row={request({ effective_from: "2027-03-01" })}
+        expectedVersion="v2"
+        {...props}
+      />,
+    );
+    await confirmApproval();
+    await waitFor(() =>
+      expect(mockDecide).toHaveBeenLastCalledWith(
+        "77",
+        true,
+        undefined,
+        [],
+        "2027-03-01",
+        false,
+        "v2",
+      ),
+    );
   });
 });

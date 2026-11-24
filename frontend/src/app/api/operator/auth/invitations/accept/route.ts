@@ -1,6 +1,13 @@
-import { createPublicJsonProxy } from "~/lib/backend-proxy-route.server";
-import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
-import { operatorJsonErrors } from "~/lib/operator/route-wrapper.server";
+import { contractWrite } from "~/lib/contract/client.server";
+import { contractResponse } from "~/lib/contract/route-response.server";
+import {
+  routes,
+  type OperatorAcceptInvitationRequest,
+} from "~/lib/contract/operator-auth.generated";
+import { withPrivateNoStore } from "~/lib/private-no-store";
+import { handleApiError } from "~/lib/api-response-error.server";
+import type { NextRequest } from "next/server";
+import { invalidJsonResponse } from "~/lib/route-wrapper-utils.server";
 import {
   operatorInvitationCookieName,
   operatorInvitationCookieOptions,
@@ -13,21 +20,32 @@ import {
  * invitation flow's cookie, never in the URL. An accepted invitation ends
  * that cookie.
  */
-export const POST = createPublicJsonProxy({
-  method: "POST",
-  path: "/operator/auth/invitations/accept",
-  ...operatorJsonErrors,
-  mapJsonBody: (body, request) => ({
-    ...(typeof body === "object" && body !== null ? body : {}),
-    token: operatorInvitationToken(request),
-  }),
-  onSuccess: (backend, request) => {
-    const response = forwardBackendResponse(backend, request);
-    response.cookies.set(
-      operatorInvitationCookieName(operatorInvitationFlowID(request)),
-      "",
-      { ...operatorInvitationCookieOptions, maxAge: 0 },
+export const POST = withPrivateNoStore(async (request: NextRequest) => {
+  let body: OperatorAcceptInvitationRequest;
+  try {
+    body = {
+      ...(await request.json()),
+      token: operatorInvitationToken(request),
+    };
+  } catch {
+    return invalidJsonResponse(request);
+  }
+  try {
+    const reply = await contractWrite(
+      routes["POST /operator/auth/invitations/accept"],
+      body,
+      { request },
     );
+    const response = contractResponse(reply, request);
+    if (reply.backend?.ok) {
+      response.cookies.set(
+        operatorInvitationCookieName(operatorInvitationFlowID(request)),
+        "",
+        { ...operatorInvitationCookieOptions, maxAge: 0 },
+      );
+    }
     return response;
-  },
+  } catch (error) {
+    return handleApiError(error, request);
+  }
 });

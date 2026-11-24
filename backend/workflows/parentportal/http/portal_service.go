@@ -79,7 +79,7 @@ type PortalService interface {
 	SEPAMandate(ctx context.Context, accountID, organizationID, contractID int64) (parentService.SEPAMandateView, error)
 	PreviewSEPAMandate(ctx context.Context, accountID, organizationID, contractID int64, input parentService.SEPAMandateInput) (parentService.SEPAMandateText, error)
 	GrantSEPAMandate(ctx context.Context, accountID, organizationID, contractID int64, input parentService.SEPAMandateInput) (parentService.SEPAMandateView, error)
-	RevokeSEPAMandate(ctx context.Context, accountID, organizationID, contractID int64) (parentService.SEPAMandateView, error)
+	RevokeSEPAMandate(ctx context.Context, accountID, organizationID, contractID int64, expectedVersion string) (parentService.SEPAMandateView, error)
 	DeclareContractNotice(ctx context.Context, accountID, organizationID, contractID int64, input parentService.ContractNoticeInput) (parentService.ContractNoticeOptions, error)
 	// ContractSigningView and SignContract read and sign a care contract
 	// of the inbox (#4679).
@@ -180,7 +180,7 @@ type PortalService interface {
 	MealParticipation(ctx context.Context, accountID, studentID int64, from, to timezone.Date) (parentService.MealParticipationPlan, error)
 	// Meal-participation writes require the relationship-scoped
 	// parent_portal.meal_participation.manage permission.
-	ReplaceMealParticipationSchedule(ctx context.Context, accountID, studentID int64, weekdays []parentService.MealWeekday) (string, error)
+	ReplaceMealParticipationSchedule(ctx context.Context, accountID, studentID int64, weekdays []parentService.MealWeekday, expectedVersion string) (parentService.MealScheduleSaved, error)
 	SetMealParticipationDay(ctx context.Context, accountID, studentID int64, date timezone.Date, participating bool) error
 	SetMealParticipationWeek(ctx context.Context, accountID, studentID int64, date timezone.Date, participating bool) (parentService.MealWeekChange, error)
 	ClearMealParticipationDay(ctx context.Context, accountID, studentID int64, date timezone.Date) error
@@ -374,7 +374,7 @@ type PortalService interface {
 	// MarkAnnouncementRead records that the guardian opened an announcement.
 	// Refuses one that is not live or outside the guardian's audience, and
 	// rejects a stale request whose expectedPublishedAt no longer matches the
-	// live announcement (ErrAnnouncementStale) so a corrected announcement is
+	// live announcement (readstate.ErrChanged, 409 general.changed_since_read) so a corrected announcement is
 	// not marked read against the retracted wording.
 	MarkAnnouncementRead(ctx context.Context, accountID, announcementID int64, expectedPublishedAt time.Time) error
 

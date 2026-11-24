@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // sseConnection holds all state for an active SSE connection
@@ -202,7 +204,9 @@ func writeSSEProblem(w http.ResponseWriter, status int, code, detail string) {
 	w.Header().Del("Connection")
 	w.Header().Del("X-Accel-Buffering")
 	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(sseProblem{Status: status, Detail: detail, Code: code}); err != nil {
+	// sseProblem contains only an int and strings and cannot fail to encode.
+	body, _ := wire.Marshal(sseProblem{Status: status, Detail: detail, Code: code})
+	if _, err := w.Write(append(body, '\n')); err != nil {
 		slog.Default().Error("failed to write SSE refusal", slog.String("error", err.Error()))
 	}
 }

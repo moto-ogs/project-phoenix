@@ -10,6 +10,7 @@ beforeEach(() => {
 
 import { ApiError } from "./api-error";
 import { buildBackendStudent } from "~/test/fixtures/students";
+import { testClockDay } from "~/test/clock-instant";
 import type { StudentDetailResponse } from "./contract/students.generated";
 import { subscribeStudentCompanionsChanged } from "./student-companion-api";
 import {
@@ -258,7 +259,15 @@ describe("child list filter options", () => {
           key: "bus",
           label: "Fährt mit dem Bus",
           type: "boolean",
-          options: [{ value: "true", label: "Ja", count: 3 }],
+          options: [
+            {
+              value: "true",
+              label: "Ja",
+              count: 2,
+              student_ids: ["11", "12"],
+            },
+            { value: "false", label: "Nein", count: 0, student_ids: null },
+          ],
         },
         { key: "lunch", label: "Mittagessen", type: "choice", options: null },
       ]),
@@ -268,12 +277,25 @@ describe("child list filter options", () => {
       {
         key: "bus",
         label: "Fährt mit dem Bus",
-        options: [{ value: "true", label: "Ja", count: 3 }],
+        options: [
+          { value: "true", label: "Ja", count: 2, studentIds: ["11", "12"] },
+          { value: "false", label: "Nein", count: 0, studentIds: [] },
+        ],
       },
       { key: "lunch", label: "Mittagessen", options: [] },
     ]);
     expect(fetchMock.mock.calls[0]![0]).toBe(
       "/api/students/enrollment-answer-filters",
+    );
+  });
+
+  it("asks for the children of the list's planning day (#7645)", async () => {
+    fetchMock.mockResolvedValueOnce(answer([]));
+
+    const day = testClockDay(5);
+    await fetchEnrollmentAnswerFilters(day);
+    expect(fetchMock.mock.calls[0]![0]).toBe(
+      `/api/students/enrollment-answer-filters?date=${day}`,
     );
   });
 });
@@ -322,8 +344,12 @@ describe("single reads", () => {
 });
 
 /** The stored consent the backend answers after a write. */
-function consentAnswer(accepted: boolean, days: number): Response {
-  return ok({ accepted, data_retention_days: days });
+function consentAnswer(
+  accepted: boolean,
+  days: number,
+  version = "v",
+): Response {
+  return ok({ accepted, data_retention_days: days, version });
 }
 
 describe("createStudent", () => {
@@ -359,9 +385,31 @@ describe("createStudent", () => {
     expect(student).not.toHaveProperty("privacy_consent_saved");
   });
 
+  // The create modal's whole Heimweg plan has to reach the BFF: a former
+  // mapRequest dropped departure_days from the body.
+  it("sends the departure plan of the create modal", async () => {
+    fetchMock
+      .mockResolvedValueOnce(ok(created, 201))
+      .mockResolvedValueOnce(consentAnswer(false, 30));
+
+    await createStudent({
+      first_name: "Mia",
+      second_name: "Muster",
+      school_class: "2b",
+      departure_days: { mon: "pickup", tue: "bus" },
+      allowed_departure_modes: { mon: ["pickup"], tue: ["bus", "alone"] },
+    });
+
+    expect(JSON.parse(String(calledInit(0).body))).toMatchObject({
+      departure_days: { mon: "pickup", tue: "bus" },
+      allowed_departure_modes: { mon: ["pickup"], tue: ["alone", "bus"] },
+    });
+  });
+
   it("writes the changed consent after the child and carries no marker", async () => {
     fetchMock
       .mockResolvedValueOnce(ok(created, 201))
+      .mockResolvedValueOnce(consentAnswer(false, 30, "nothing-recorded"))
       .mockResolvedValueOnce(ok(null))
       .mockResolvedValueOnce(consentAnswer(true, 14));
 
@@ -373,9 +421,14 @@ describe("createStudent", () => {
       data_retention_days: 14,
     });
 
+    // The new child's consent is written against the state read right after
+    // creating it (ADR 0311).
     expect(calledUrl(1)).toBe("/api/students/55/privacy-consent");
-    expect(calledInit(1)).toMatchObject({ method: "PUT" });
-    expect(JSON.parse(String(calledInit(1).body))).toEqual({
+    expect(calledInit(1).method ?? "GET").toBe("GET");
+    expect(calledUrl(2)).toBe("/api/students/55/privacy-consent");
+    expect(calledInit(2)).toMatchObject({ method: "PUT" });
+    expect(JSON.parse(String(calledInit(2).body))).toEqual({
+      expected_version: "nothing-recorded",
       policy_version: "1.0",
       accepted: true,
       data_retention_days: 14,
@@ -390,6 +443,7 @@ describe("createStudent", () => {
   it("answers the child with the stored consent when the consent write fails", async () => {
     fetchMock
       .mockResolvedValueOnce(ok(created, 201))
+      .mockResolvedValueOnce(consentAnswer(false, 30))
       .mockResolvedValueOnce(
         problem(500, { status: 500, code: "general.internal" }),
       )
@@ -476,14 +530,21 @@ describe("updateStudent", () => {
       first_name: "Max",
       privacy_consent_accepted: true,
       data_retention_days: 21,
+      privacy_consent_version: "consent-read",
+      version: "record-read",
     });
 
+    // Each write carries the version of the read it was built on (ADR 0311).
     expect(calledUrl(0)).toBe("/api/students/1/privacy-consent");
     expect(calledInit(0)).toMatchObject({ method: "PUT" });
+    expect(JSON.parse(String(calledInit(0).body))).toMatchObject({
+      expected_version: "consent-read",
+    });
     expect(calledUrl(1)).toBe("/api/students/1");
     // The consent pair does not travel with the child.
     expect(JSON.parse(String(calledInit(1).body))).toEqual({
       first_name: "Max",
+      expected_version: "record-read",
     });
     expect(result).toMatchObject({
       privacy_consent_accepted: true,
@@ -630,6 +691,7 @@ describe("updateStudent", () => {
     expect(isCompanionDepartureRefusal(otherBadRequest)).toBe(false);
     expect(stale).not.toBeInstanceOf(CompanionPlanConflictError);
     expect(isCompanionsChanged(stale)).toBe(true);
+    expect(isCompanionsChanged(otherBadRequest)).toBe(false);
   });
 
   // A refused child write on top of a committed consent write says which

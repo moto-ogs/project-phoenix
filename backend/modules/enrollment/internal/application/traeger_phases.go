@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // TraegerPhaseReads read the Träger phases; the administration serves them
@@ -74,7 +75,8 @@ func (s *TraegerPhases) CreateTraegerPhase(ctx context.Context, organizationID i
 }
 
 // UpdateTraegerPhase replaces the draft and the schools of a phase that is
-// not withdrawn. No school notices before the next release.
+// not withdrawn, under the row lock and only over the version its author
+// read (ADR 0311). No school notices before the next release.
 func (s *TraegerPhases) UpdateTraegerPhase(ctx context.Context, organizationID, id int64, input enrollment.TraegerPhaseInput) (enrollment.TraegerPhase, error) {
 	draft, schools, err := normalizeTraegerPhaseInput(input)
 	if err != nil {
@@ -82,6 +84,9 @@ func (s *TraegerPhases) UpdateTraegerPhase(ctx context.Context, organizationID, 
 	}
 	current, err := s.store.LockTraegerPhase(ctx, organizationID, id)
 	if err != nil {
+		return enrollment.TraegerPhase{}, err
+	}
+	if err := readstate.Check(input.ExpectedVersion, current.Version); err != nil {
 		return enrollment.TraegerPhase{}, err
 	}
 	if current.WithdrawnAt != nil {

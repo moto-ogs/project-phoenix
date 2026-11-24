@@ -48,7 +48,7 @@ vi.mock("next-auth/react", () => ({
         id: "1",
         permissions: careExit.permissions,
         scope: "tenant",
-        tenantId: 42,
+        tenantId: "42",
       },
       expires: "2099-01-01",
     },
@@ -1032,6 +1032,151 @@ describe("PhasesEditor", () => {
     );
   });
 
+  // ADR 0311: a phase changed since the edit opened is refused, and the
+  // stored phase is read. While that read failed, Save stays blocked with its
+  // reason instead of ignoring a click; a successful read shows the stored
+  // phase and the next save sends its version.
+  it("blocks saving until the stored phase is read after a refused save", async () => {
+    const stored = phase({ name: "Von der Kollegin", version: "colleague" });
+    mocks.listPhases
+      .mockResolvedValueOnce([phase()])
+      .mockRejectedValueOnce(new ApiError("unavailable", 503, {}))
+      .mockResolvedValue([stored]);
+    mocks.listSchemas.mockResolvedValue([schema()]);
+    mocks.updatePhase
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValue(stored);
+
+    render(<PhasesEditor />);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Schuljahr 2026/27",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
+    fireEvent.change(await waitForInputByName("name"), {
+      target: { value: "Mein Name" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      (await screen.findAllByText(/Der neue Stand konnte nicht geladen werden/))
+        .length,
+    ).toBeGreaterThan(0);
+    // Blocked with its reason (the kit keeps the reason reachable).
+    const save = screen.getByRole("button", { name: "Speichern" });
+    expect(save).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(save);
+    expect(mocks.updatePhase).toHaveBeenCalledTimes(1);
+    expect(mocks.updatePhase.mock.calls[0]?.[2]).toBe("phase-read");
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: /Wiederholen|Erneut/ })[0]!,
+    );
+    await waitFor(() =>
+      expect(inputByName("name")).toHaveValue("Von der Kollegin"),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Speichern" }),
+      ).not.toHaveAttribute("aria-disabled"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(mocks.updatePhase).toHaveBeenCalledTimes(2));
+    expect(mocks.updatePhase.mock.calls[1]?.[2]).toBe("colleague");
+  });
+
+  // ADR 0311: after a refusal the form shows the stored template choice; a
+  // second save never sends the choice the person read before.
+  it("shows the colleague's form template after a refused save", async () => {
+    const stored = phase({ version: "colleague" });
+    mocks.listPhases
+      .mockResolvedValueOnce([phase({ form_schema_id: undefined })])
+      .mockResolvedValue([stored]);
+    mocks.listSchemas.mockResolvedValue([schema()]);
+    mocks.updatePhase
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValue(stored);
+
+    render(<PhasesEditor />);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Schuljahr 2026/27",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
+    fireEvent.change(await waitForInputByName("name"), {
+      target: { value: "Mein Name" },
+    });
+    expect(
+      document.querySelector("#schema-source-base") as HTMLInputElement,
+    ).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(
+        document.querySelector("#schema-source-reuse") as HTMLInputElement,
+      ).toBeChecked(),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Speichern" }),
+      ).not.toHaveAttribute("aria-disabled"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(mocks.updatePhase).toHaveBeenCalledTimes(2));
+    expect(mocks.updatePhase.mock.calls[1]?.[1]).toMatchObject({
+      form_schema_id: "schema-1",
+    });
+    expect(mocks.updatePhase.mock.calls[1]?.[2]).toBe("colleague");
+  });
+
+  // ADR 0311: the switch acts on the phase as the list shows it; a refusal
+  // reads the list again instead of offering the same switch once more.
+  it("reads the phases again after a refused status change", async () => {
+    const refused = new ApiError("changed", 409, {
+      code: "general.changed_since_read",
+    });
+    mocks.listPhases.mockResolvedValue([phase()]);
+    mocks.listSchemas.mockResolvedValue([schema()]);
+    mocks.updatePhase.mockRejectedValue(refused);
+
+    render(<PhasesEditor />);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Schuljahr 2026/27",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Deaktivieren" }),
+    );
+
+    await waitFor(() =>
+      expect(mocks.showActionError).toHaveBeenCalledWith(
+        refused,
+        expect.objectContaining({ object: "die Anmeldephase" }),
+      ),
+    );
+    expect(mocks.updatePhase.mock.calls[0]?.[2]).toBe("phase-read");
+    const options = mocks.showActionError.mock.lastCall?.[1] as {
+      retry?: unknown;
+      reload?: () => Promise<unknown>;
+    };
+    expect(options.retry).toBeUndefined();
+    const reads = mocks.listPhases.mock.calls.length;
+    await options.reload?.();
+    expect(mocks.listPhases.mock.calls.length).toBe(reads + 1);
+    expect(mocks.updatePhase).toHaveBeenCalledTimes(1);
+  });
+
   it("shows the reload error instead of the empty state after creating the first phase", async () => {
     mocks.listPhases
       .mockReset()
@@ -1505,6 +1650,8 @@ describe("PhasesEditor", () => {
           eligible_school_classes: ["3b"],
           require_school_class: true,
         }),
+        // The save sends the version it read (ADR 0311).
+        "phase-read",
       );
     });
   });
@@ -1541,6 +1688,8 @@ describe("PhasesEditor", () => {
           eligible_school_classes: [],
           require_school_class: false,
         }),
+        // The save sends the version it read (ADR 0311).
+        "phase-read",
       );
     });
   });
@@ -1624,6 +1773,8 @@ describe("PhasesEditor", () => {
           eligible_school_classes: ["3b"],
           require_school_class: true,
         }),
+        // The save sends the version it read (ADR 0311).
+        "phase-read",
       );
     });
   });
@@ -1662,6 +1813,8 @@ describe("PhasesEditor", () => {
           audience: "open",
           eligible_school_classes: [],
         }),
+        // The save sends the version it read (ADR 0311).
+        "phase-read",
       );
     });
   });

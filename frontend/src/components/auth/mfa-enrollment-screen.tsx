@@ -16,12 +16,8 @@ import { useApiFormError } from "~/contexts/ToastContext";
 import { WizardStepper } from "~/components/ui/wizard-stepper";
 import { createLogger } from "~/lib/logger";
 import { credentialError, MFA_STEP_REFUSALS } from "./credential-error";
-import {
-  enrollConfirm,
-  enrollStart,
-  type LoginScope,
-  type MFAResult,
-} from "~/lib/mfa-api";
+import { enrollConfirm, enrollStart, type MFAResult } from "~/lib/mfa-api";
+import type { EnrollmentScope } from "~/lib/session-bff";
 import { OTPInputGrid, type OTPInputGridHandle } from "./otp-input-grid";
 
 const logger = createLogger({ component: "MFAEnrollmentScreen" });
@@ -38,7 +34,7 @@ const STEP_INDEX: Record<Step, number> = {
 };
 
 interface MFAEnrollmentScreenProps {
-  readonly scope: LoginScope;
+  readonly scope: EnrollmentScope;
   /**
    * Enrollment-scoped JWT issued at login for accounts on an mfa-required
    * tenant with no credential yet. Only authorizes /auth/mfa/enroll/*.

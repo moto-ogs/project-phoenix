@@ -168,6 +168,7 @@ func TestOperatorRoutesManageTheSchoolsAndSecondFactorsOfAccounts(t *testing.T) 
 		Roles    []struct {
 			ID string `json:"id"`
 		} `json:"roles"`
+		Version string `json:"version"`
 	}
 	find := func(entries []access) access {
 		for _, entry := range entries {
@@ -180,10 +181,10 @@ func TestOperatorRoutesManageTheSchoolsAndSecondFactorsOfAccounts(t *testing.T) 
 	}
 
 	var granted []access
-	assert.Equal(t, http.StatusCreated, f.call(t, http.MethodPost, base, map[string]any{"school_id": schoolID, "role_id": roles[0].ID, "first_name": "Anna", "last_name": "Zugang"}, &granted))
+	assert.Equal(t, http.StatusCreated, f.call(t, http.MethodPost, base, map[string]any{"school_id": fmt.Sprint(schoolID), "role_id": roles[0].ID, "first_name": "Anna", "last_name": "Zugang"}, &granted))
 	assert.Equal(t, roles[0].ID, find(granted).Roles[0].ID)
 	var changed []access
-	f.call(t, http.MethodPut, fmt.Sprintf("%s/%d", base, schoolID), map[string]any{"role_id": roles[1].ID}, &changed)
+	f.call(t, http.MethodPut, fmt.Sprintf("%s/%d", base, schoolID), map[string]any{"role_id": roles[1].ID, "expected_version": find(granted).Version}, &changed)
 	assert.Equal(t, roles[1].ID, find(changed).Roles[0].ID)
 	var revoked []access
 	f.call(t, http.MethodDelete, fmt.Sprintf("%s/%d", base, schoolID), nil, &revoked)
@@ -282,17 +283,19 @@ func TestOperatorRoutesWriteChangeAndDeleteAnAnnouncement(t *testing.T) {
 		ID              wireID   `json:"id"`
 		Title           string   `json:"title"`
 		TargetTenantIDs []wireID `json:"target_tenant_ids"`
+		EditVersion     string   `json:"edit_version"`
 	}
 
 	var created announcement
 	assert.Equal(t, http.StatusCreated, f.call(t, http.MethodPost, "/operator/announcements/", map[string]any{
 		"title": "Route Wartung", "content": "Heute Abend", "type": "announcement", "severity": "info",
-		"target_tenant_ids": []int64{testpkg.Tenant(t)},
+		"target_tenant_ids": []string{fmt.Sprint(testpkg.Tenant(t))},
 	}, &created))
 	assert.Equal(t, []int64{testpkg.Tenant(t)}, testpkg.IDs(created.TargetTenantIDs))
 	var changed announcement
 	f.call(t, http.MethodPut, fmt.Sprintf("/operator/announcements/%d", created.ID), map[string]any{
 		"title": "Route Wartung verschoben", "content": "Morgen Abend", "type": "announcement", "severity": "info",
+		"expected_edit_version": created.EditVersion,
 	}, &changed)
 	assert.Equal(t, "Route Wartung verschoben", changed.Title)
 	f.call(t, http.MethodDelete, fmt.Sprintf("/operator/announcements/%d", created.ID), nil, nil)

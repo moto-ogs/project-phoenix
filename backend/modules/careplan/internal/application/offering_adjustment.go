@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // offeringAdjustmentWork carries one adjustment from its validation through
@@ -32,6 +33,10 @@ type offeringAdjustmentWork struct {
 	overridden                             []careplan.OfferingOverride
 	authoritative, afterHasCareDays        bool
 	isCompleteWithdrawal                   bool
+	// keptEnds are the stored ends a change found before the office's
+	// extensions (#7929; only an undated correction extends); see
+	// keepUnextendedBookingEnds.
+	keptEnds map[int64]calendar.Date
 }
 
 func (m *BookingMaterialization) AdjustOfferings(ctx context.Context, in careplan.OfferingAdjustment) (*careplan.OfferingAdjustmentResult, error) {
@@ -44,6 +49,9 @@ func (m *BookingMaterialization) AdjustOfferings(ctx context.Context, in carepla
 		return nil, err
 	}
 	if err := m.persistOfferingAdjustment(ctx, work); err != nil {
+		return nil, err
+	}
+	if err := recordExtendedEnds(work); err != nil {
 		return nil, err
 	}
 	adjustmentID, err := m.recordOfferingAdjustment(ctx, work)
@@ -76,6 +84,9 @@ func (m *BookingMaterialization) prepareOfferingAdjustment(ctx context.Context, 
 	if err := m.loadOfferingAdjustmentSubject(ctx, work); err != nil {
 		return nil, err
 	}
+	if err := m.checkReadBookings(ctx, work); err != nil {
+		return nil, err
+	}
 	if err := m.loadOfferingAdjustmentCatalog(ctx, work); err != nil {
 		return nil, err
 	}
@@ -104,6 +115,9 @@ func (m *BookingMaterialization) validateOfferingAdjustmentInput(ctx context.Con
 	reason := strings.TrimSpace(in.Reason)
 	if reason == "" {
 		return "", fmt.Errorf("%w: reason is required", careplan.ErrOfferingAdjustmentInvalid)
+	}
+	if in.EffectiveFrom != nil && len(extendedOfferings(in.Offerings)) > 0 {
+		return "", fmt.Errorf("%w: ein Ende lässt sich nur in einer Korrektur ohne Datum verlängern", careplan.ErrOfferingAdjustmentInvalid)
 	}
 	return reason, nil
 }
@@ -142,6 +156,20 @@ func (m *BookingMaterialization) loadOfferingAdjustmentSubject(ctx context.Conte
 	work.effectiveFrom = effectiveFrom
 	work.selectionDate = adjustmentSelectionDate(phase.OfferingPhase, effectiveFrom, today)
 	return nil
+}
+
+// checkReadBookings refuses a correction over bookings that changed since the
+// office read them (ADR 0311). It runs under the gates and the student lock
+// every writer of the child's bookings holds, before anything is written.
+func (m *BookingMaterialization) checkReadBookings(ctx context.Context, work *offeringAdjustmentWork) error {
+	if work.input.ExpectedVersion == nil {
+		return nil
+	}
+	stored, err := m.deps.Enrollment.SelectionHistory(ctx, work.child.ID)
+	if err != nil {
+		return fmt.Errorf("decision: read child bookings for adjustment: %w", err)
+	}
+	return readstate.Check(*work.input.ExpectedVersion, careplan.BookingsVersion(stored))
 }
 
 // validateAdjustmentEffectiveFrom keeps a dated switch inside the window it
@@ -210,7 +238,7 @@ func (m *BookingMaterialization) loadOfferingAdjustmentCatalog(ctx context.Conte
 		beforeOfferingByID = offeringsByID(beforeOfferings)
 		addOfferingMap(offeringByID, beforeOfferingByID)
 	}
-	beforeJSON, err := adjustmentSnapshotJSON(beforeLinks, offeringByID)
+	beforeJSON, err := adjustmentSnapshotJSON(beforeLinks, offeringByID, nil)
 	if err != nil {
 		return err
 	}

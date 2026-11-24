@@ -37,7 +37,8 @@ type ModuleDefinition struct {
 	Summary    string
 	Requires   []ModuleKey
 	// Available is false for a module moto does not offer yet. Its switch
-	// still records what the school booked.
+	// still records what the school booked, and no production route may
+	// belong to it: nothing would lock that route (#6052).
 	Available bool
 }
 
@@ -61,15 +62,15 @@ var moduleCatalog = []ModuleDefinition{
 	{Key: ModulePersonalakte, SettingKey: KeyModulePersonalakte, CatalogID: "personalakte", Label: "Personalakte",
 		Summary: "Dokumente, Qualifikationen und Eintrittsdaten der Mitarbeitenden.", Available: true},
 	{Key: ModuleTraegerUebersicht, SettingKey: KeyModuleTraegerUebersicht, CatalogID: "traeger-cockpit", Label: "Träger-Übersicht",
-		Summary: "Alle Standorte eines Trägers mit Auslastung und Berichten. Gibt es in moto noch nicht."},
+		Summary: "Dashboard, Belegung, Auslastung, Standortvergleich und Berichte für alle Schulen im Träger-Portal.", Available: true},
 	{Key: ModuleFerienbetreuung, SettingKey: KeyModuleFerienbetreuung, CatalogID: "ferienbetreuung", Label: "Ferienbetreuung",
-		Summary:  "Eltern buchen Ferienwochen, die Schule führt Ferienlisten. Gibt es in moto noch nicht.",
-		Requires: []ModuleKey{ModuleOnlineAnmeldung}},
+		Summary:  "Der Träger plant Ferienzeiträume im Träger-Portal, Eltern melden ihr Kind online an.",
+		Requires: []ModuleKey{ModuleOnlineAnmeldung}, Available: true},
 	{Key: ModuleVertraege, SettingKey: KeyModuleVertraege, CatalogID: "vertraege", Label: "Verträge und Dokumente",
-		Summary: "Betreuungsverträge, Vorlagen und Serienbriefe. Gibt es in moto noch nicht."},
+		Summary: "Betreuungsverträge mit Vorlagen, Unterschrift und Kündigung im Träger-Portal.", Available: true},
 	{Key: ModuleElternbeitraege, SettingKey: KeyModuleElternbeitraege, CatalogID: "elternbeitraege", Label: "Elternbeiträge und Abrechnung",
-		Summary:  "Rechnungen, Lastschrift und Buchhaltung. Gibt es in moto noch nicht.",
-		Requires: []ModuleKey{ModuleVertraege}},
+		Summary:  "Monatsbeiträge, Rechnungen, Lastschrift und Buchhaltungsexport im Träger-Portal.",
+		Requires: []ModuleKey{ModuleVertraege}, Available: true},
 }
 
 // Modules returns the module list in catalog order. The slices are copies.
@@ -156,13 +157,19 @@ func moduleKeyList(modules []ModuleDefinition) string {
 }
 
 // ModuleNotBookedError reports that a school has not booked a module a
-// route, job or portal needs. Module names the first missing module.
+// route, job or portal needs. Module names the first missing module. For a
+// refusal in the Träger portal OrganizationID names the Träger none of whose
+// schools books the module, and TenantID stays zero (#6052).
 type ModuleNotBookedError struct {
-	TenantID int64
-	Module   ModuleKey
+	TenantID       int64
+	OrganizationID int64
+	Module         ModuleKey
 }
 
 func (e *ModuleNotBookedError) Error() string {
+	if e.OrganizationID > 0 {
+		return fmt.Sprintf("module %s is not booked for any school of Träger %d", e.Module, e.OrganizationID)
+	}
 	return fmt.Sprintf("module %s is not booked for school %d", e.Module, e.TenantID)
 }
 

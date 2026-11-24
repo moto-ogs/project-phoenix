@@ -90,63 +90,51 @@ export const OverrunEvaluationSchema: z.ZodType<OverrunEvaluation, unknown> = ob
   children: nullable(arr(OverrunChildSchema)),
 });
 
-/** Query of GET /traeger/care-time-overruns/ */
-export interface GetTraegerCareTimeOverrunsQuery {
-  from?: string;
-  school_id?: string;
-  to?: string;
-}
-
-/** Query of GET /traeger/care-time-overruns/children */
-export interface GetTraegerCareTimeOverrunsChildrenQuery {
-  from?: string;
-  school_id?: string;
-  to?: string;
-}
-
-/** Query of GET /traeger/care-time-overruns/children/export */
-export interface GetTraegerCareTimeOverrunsChildrenExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  from?: string;
-  school_id?: string;
-  to?: string;
-}
-
-/** Query of GET /traeger/care-time-overruns/export */
-export interface GetTraegerCareTimeOverrunsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  from?: string;
-  school_id?: string;
-  to?: string;
-}
-
 export const routes = {
   "GET /traeger/care-time-overruns/": {
     method: "GET",
     pattern: "/traeger/care-time-overruns/",
     portals: ["org"],
-    query: ["from", "school_id", "to"],
+    query: {
+      "from": { kind: "date" },
+      "school_id": { kind: "id" },
+      "to": { kind: "date" },
+    },
     response: success(OverrunEvaluationSchema),
   },
   "GET /traeger/care-time-overruns/children": {
     method: "GET",
     pattern: "/traeger/care-time-overruns/children",
     portals: ["org"],
-    query: ["from", "school_id", "to"],
+    query: {
+      "from": { kind: "date" },
+      "school_id": { kind: "id" },
+      "to": { kind: "date" },
+    },
     response: success(OverrunEvaluationSchema),
   },
   "GET /traeger/care-time-overruns/children/export": {
     method: "GET",
     pattern: "/traeger/care-time-overruns/children/export",
     portals: ["org"],
-    query: ["format", "from", "school_id", "to"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "school_id": { kind: "id" },
+      "to": { kind: "date" },
+    },
     response: fileAnswer,
   },
   "GET /traeger/care-time-overruns/export": {
     method: "GET",
     pattern: "/traeger/care-time-overruns/export",
     portals: ["org"],
-    query: ["format", "from", "school_id", "to"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "school_id": { kind: "id" },
+      "to": { kind: "date" },
+    },
     response: fileAnswer,
   },
 } as const;

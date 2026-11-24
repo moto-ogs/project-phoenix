@@ -40,9 +40,13 @@ import {
 } from "~/lib/files-api";
 import { formatBytes, isViewableInBrowser } from "~/lib/file-format";
 import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useReadDraftForm,
+  useSwrLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
+import { useActionOn } from "~/lib/swr/read-draft";
 import { fileKeys } from "~/lib/swr/portal-keys";
 import { cn } from "~/lib/utils";
 import { FolderModal } from "./folder-modal";
@@ -77,14 +81,20 @@ function visibilityIcon(visibility: FileFolder["visibility"]) {
 
 export function FilesPage() {
   const { data: session } = useSession();
+  const foldersRead = useSWRAuth<FolderOverview>(fileKeys.folders(), () =>
+    filesService.listFolders(),
+  );
   const {
     data: overview,
     isLoading,
     error,
     mutate: mutateFolders,
-  } = useSWRAuth<FolderOverview>(fileKeys.folders(), () =>
-    filesService.listFolders(),
-  );
+  } = foldersRead;
+  // Reads one folder again after a refused write; rejects on failure.
+  const reloadFolder = async (id: string) =>
+    (await revalidateOrThrow(foldersRead)).folders.find(
+      (folder) => folder.id === id,
+    );
 
   const loadError = useSwrLoadError(
     error,
@@ -114,26 +124,57 @@ export function FilesPage() {
   const deleteFolderErrors = useApiFormError();
   const latestDeleteFolderRef = useRef<() => void>(() => undefined);
 
+  // The dialog names the folder's files as the list reads them now; the
+  // delete confirms exactly those (ADR 0311). After a refusal it shows the
+  // new count and sends nothing until that read arrived.
+  const deleteShown = deleteFolderTarget
+    ? (folders.find((folder) => folder.id === deleteFolderTarget.id) ??
+      deleteFolderTarget)
+    : undefined;
+  const deleteFolderAction = useActionOn(
+    {
+      opening: deleteFolderTarget?.id ?? null,
+      data: deleteShown,
+      reload: () => revalidateOrThrow(foldersRead),
+    },
+    { token: (folder) => folder.fingerprint },
+  );
+  const deleteFolderLoad = useReadDraftForm(
+    deleteFolderTarget ? deleteFolderAction : null,
+    deleteFolderErrors,
+    "der Ordner",
+  );
   const handleDeleteFolder = async () => {
-    if (!deleteFolderTarget) return;
+    if (!deleteShown) return;
+    if (!deleteFolderLoad.begin()) return;
     setDeletingFolder(true);
-    deleteFolderErrors.clear();
-    try {
-      await filesService.deleteFolder(deleteFolderTarget.id);
+    const result = await deleteFolderAction.submit(() =>
+      filesService.deleteFolder(deleteShown.id, deleteShown.fingerprint),
+    );
+    setDeletingFolder(false);
+    if (result.ok) {
       setDeleteFolderTarget(null);
       await mutateFolders();
-    } catch (err) {
-      logger.error("folder_delete_failed", {
-        folder_id: deleteFolderTarget.id,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await deleteFolderErrors.show(err, {
-        object: "das Löschen des Ordners",
-        retry: () => latestDeleteFolderRef.current(),
-      });
-    } finally {
-      setDeletingFolder(false);
+      return;
     }
+    if (result.skipped) return;
+    logger.error("folder_delete_failed", {
+      folder_id: deleteShown.id,
+      error:
+        result.error instanceof Error
+          ? result.error.message
+          : String(result.error),
+    });
+    // A file came or went meanwhile: `reload` shows the new count, no retry.
+    await deleteFolderErrors.show(
+      result.error,
+      result.refused
+        ? { object: "das Löschen des Ordners", reload: result.reload }
+        : {
+            object: "das Löschen des Ordners",
+            retry: () => latestDeleteFolderRef.current(),
+          },
+    );
   };
   // „Wiederholen“ löscht den Ordner, der dann im Dialog steht.
   useLayoutEffect(() => {
@@ -246,6 +287,14 @@ export function FilesPage() {
           <FolderModal
             isOpen={folderModal.open}
             initial={folderModal.folder}
+            stored={folders.find(
+              (folder) => folder.id === folderModal.folder?.id,
+            )}
+            reload={() =>
+              folderModal.folder
+                ? reloadFolder(folderModal.folder.id)
+                : Promise.resolve(undefined)
+            }
             onClose={() => setFolderModal({ open: false, folder: null })}
             onSaved={() => void mutateFolders()}
           />
@@ -256,9 +305,9 @@ export function FilesPage() {
             description={
               <>
                 Der Ordner{" "}
-                <span className="font-medium">{deleteFolderTarget?.name}</span>{" "}
-                und alle {deleteFolderTarget?.fileCount ?? 0} Dateien darin
-                werden endgültig gelöscht.
+                <span className="font-medium">{deleteShown?.name}</span> und
+                alle {deleteShown?.fileCount ?? 0} Dateien darin werden
+                endgültig gelöscht.
               </>
             }
             gate={{ mode: "twoStep" }}
@@ -269,7 +318,8 @@ export function FilesPage() {
               setDeleteFolderTarget(null);
             }}
             loading={deletingFolder}
-            error={deleteFolderErrors.error}
+            confirmDisabled={!deleteFolderAction.canSubmit}
+            error={deleteFolderErrors.error ?? deleteFolderLoad.loadError}
           />
         </>
       }

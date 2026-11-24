@@ -123,6 +123,7 @@ const PUBLIC_MODULES = new Set(
     "mutate",
     "config-boundaries",
     "scope-boundary",
+    "read-draft",
     "course-waitlist-keys",
     "portal-keys",
     "traeger-keys",
@@ -362,7 +363,7 @@ const keyBaseline = JSON.parse(
 );
 const KEYED_HOOKS = new Set([
   "useSWRAuth",
-  "useFreshSWR",
+  "useOpeningRead",
   "useConfirmedSWR",
   "useImmutableSWR",
   "useTraegerResource",

@@ -129,6 +129,7 @@
     "errorObjectRemove": "dostęp dla tego konta",
     "reloadObject": "widok kontaktów",
     "savedButStale": "Twoja zmiana została zapisana. Tylko widok nie jest jeszcze aktualny.",
+    "contactGone": "Tego kontaktu nie ma już przy Twoim dziecku. Twoja zmiana nie została zapisana.",
     "errorObjectContact": "zmiana kontaktu",
     "errorObjectPickup": "ustalenie dotyczące odbioru",
     "addContactTooltip": "Otwiera formularz dla osoby kontaktowej lub odbierającej bez konta.",

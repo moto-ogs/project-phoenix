@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -19,8 +21,8 @@ import (
 // the message froze staff-name visibility on at send time (see toMessageResponses
 // and operations.parent_message_staff_name_visible).
 type ParentMessageResponse struct {
-	ClientMessageID string                     `json:"client_message_id,omitempty"`
-	ID              string                     `json:"id"`
+	ClientMessageID string                     `json:"client_message_id,omitempty" contract_text:"client-supplied message deduplication key"`
+	ID              ident.ID                   `json:"id"`
 	SenderKind      string                     `json:"sender_kind"`
 	SenderName      string                     `json:"sender_name"`
 	Body            string                     `json:"body"`
@@ -29,25 +31,25 @@ type ParentMessageResponse struct {
 	EventType       string                     `json:"event_type,omitempty"`
 	RequestType     string                     `json:"request_type,omitempty"`
 	RequestStatus   string                     `json:"request_status,omitempty"`
-	Payload         map[string]json.RawMessage `json:"payload,omitempty"`
+	Payload         map[string]json.RawMessage `json:"payload,omitempty" contract_json:"The message kind selects an extensible event payload, including historical kinds"`
 	RefTable        string                     `json:"ref_table,omitempty"`
-	RefID           string                     `json:"ref_id,omitempty"`
+	RefID           *ident.ID                  `json:"ref_id,omitempty"`
 	AppliedAt       *time.Time                 `json:"applied_at,omitempty"`
 	DecisionReason  string                     `json:"decision_reason,omitempty"`
 	ReadByStaff     bool                       `json:"read_by_staff,omitempty"`
 	// GroupThreadID and GroupThreadTitle name the group thread this answer
 	// refers to (#4784).
-	GroupThreadID    string `json:"group_thread_id,omitempty"`
-	GroupThreadTitle string `json:"group_thread_title,omitempty"`
+	GroupThreadID    *ident.ID `json:"group_thread_id,omitempty"`
+	GroupThreadTitle string    `json:"group_thread_title,omitempty"`
 	// Attachments are the photos and files of the message (#6685).
-	Attachments json.RawMessage `json:"attachments,omitempty"`
+	Attachments []messageAttachmentResponse `json:"attachments,omitempty"`
 }
 
 // ThreadSummaryResponse is one row on the parent thread list. counterpart_name
 // is the "OGS [Schulname]" the guardian is talking to.
 type ThreadSummaryResponse struct {
-	ThreadID        string     `json:"thread_id"`
-	StudentID       string     `json:"student_id"`
+	ThreadID        ident.ID   `json:"thread_id"`
+	StudentID       ident.ID   `json:"student_id"`
 	StudentName     string     `json:"student_name"`
 	SchoolName      string     `json:"school_name"`
 	CounterpartName string     `json:"counterpart_name"`
@@ -63,7 +65,7 @@ type ThreadSummaryResponse struct {
 	LastEventType          string                     `json:"last_event_type,omitempty"`
 	LastRequestType        string                     `json:"last_request_type,omitempty"`
 	LastRequestStatus      string                     `json:"last_request_status,omitempty"`
-	LastMessagePayload     map[string]json.RawMessage `json:"last_message_payload,omitempty"`
+	LastMessagePayload     map[string]json.RawMessage `json:"last_message_payload,omitempty" contract_json:"The last message kind selects its extensible event payload"`
 	LastMessageReadByStaff bool                       `json:"last_message_read_by_staff"`
 	Unread                 int                        `json:"unread"`
 	// Audience is "team" or "leadership" (#5200); a child can have one
@@ -147,8 +149,8 @@ func threadAudience(audience string) string {
 // list and the per-child list so the two cannot drift.
 func toThreadSummary(t *parentService.InboxThread) ThreadSummaryResponse {
 	return ThreadSummaryResponse{
-		ThreadID:               strconv.FormatInt(t.ThreadID, 10),
-		StudentID:              strconv.FormatInt(t.StudentID, 10),
+		ThreadID:               ident.ID(t.ThreadID),
+		StudentID:              ident.ID(t.StudentID),
 		StudentName:            t.StudentName,
 		SchoolName:             t.SchoolName,
 		CounterpartName:        ogsLabel(t.SchoolName),
@@ -170,11 +172,11 @@ func toThreadSummary(t *parentService.InboxThread) ThreadSummaryResponse {
 // ThreadViewResponse is the full conversation for one child. thread_id is empty
 // when no conversation exists yet (created on the first message).
 type ThreadViewResponse struct {
-	ThreadID        string `json:"thread_id"`
-	StudentID       string `json:"student_id"`
-	StudentName     string `json:"student_name"`
-	SchoolName      string `json:"school_name"`
-	CounterpartName string `json:"counterpart_name"`
+	ThreadID        string   `json:"thread_id" contract_text:"empty string before the first message"`
+	StudentID       ident.ID `json:"student_id"`
+	StudentName     string   `json:"student_name"`
+	SchoolName      string   `json:"school_name"`
+	CounterpartName string   `json:"counterpart_name"`
 	// Audience, Readers and LeadershipOption describe the conversation and
 	// the compose choice (#5200). They are filled also while no conversation
 	// exists yet (thread_id empty), as the preview of who would read it.
@@ -186,12 +188,12 @@ type ThreadViewResponse struct {
 
 // PostMessageRequest is the wire shape for POST .../children/{studentId}.
 type PostMessageRequest struct {
-	ClientMessageID string `json:"client_message_id,omitempty"`
+	ClientMessageID string `json:"client_message_id,omitempty" contract_text:"client-supplied message deduplication key"`
 	Body            string `json:"body"`
 	// AttachmentIDs names the uploads the message carries (#6685).
-	AttachmentIDs []string `json:"attachment_ids,omitempty"`
+	AttachmentIDs []ident.ID `json:"attachment_ids,omitempty"`
 	// GroupThreadID names the group thread this message answers (#4784).
-	GroupThreadID string `json:"group_thread_id,omitempty"`
+	GroupThreadID string `json:"group_thread_id,omitempty" contract_text:"empty string means send without a group thread"`
 	// Audience is "team" (default) or "leadership" (#5200). An answer to a
 	// group thread always goes to the team.
 	Audience string `json:"audience,omitempty"`
@@ -242,12 +244,8 @@ func toMessageResponses(messages []*parentService.ParentMessage, counterpart str
 				senderName = counterpart
 			}
 		}
-		refID := ""
-		if m.RefID != nil {
-			refID = strconv.FormatInt(*m.RefID, 10)
-		}
 		out = append(out, ParentMessageResponse{
-			ID:              strconv.FormatInt(m.ID, 10),
+			ID:              ident.ID(m.ID),
 			SenderKind:      m.SenderKind,
 			SenderName:      senderName,
 			ClientMessageID: clientMessageIDForViewer(m.ClientMessageID, m.SenderAccountID, viewer), Body: m.Body,
@@ -258,13 +256,13 @@ func toMessageResponses(messages []*parentService.ParentMessage, counterpart str
 			RequestStatus:    m.RequestStatus,
 			Payload:          m.Payload,
 			RefTable:         m.RefTable,
-			RefID:            refID,
+			RefID:            (*ident.ID)(m.RefID),
 			AppliedAt:        m.AppliedAt,
 			DecisionReason:   m.DecisionReason,
 			ReadByStaff:      m.ReadByStaff,
-			GroupThreadID:    groupThreadIDString(m.GroupThreadID),
+			GroupThreadID:    (*ident.ID)(m.GroupThreadID),
 			GroupThreadTitle: m.GroupThreadTitle,
-			Attachments:      m.Attachments,
+			Attachments:      toMessageAttachmentResponses(m.Attachments),
 		})
 	}
 	return out
@@ -279,7 +277,7 @@ func toThreadView(v *parentService.MessageThreadView, viewer ...int64) ThreadVie
 	audience := threadAudience(v.Audience)
 	return ThreadViewResponse{
 		ThreadID:        threadID,
-		StudentID:       strconv.FormatInt(v.StudentID, 10),
+		StudentID:       ident.ID(v.StudentID),
 		StudentName:     v.StudentName,
 		SchoolName:      v.SchoolName,
 		CounterpartName: counterpart,
@@ -397,7 +395,7 @@ func (rs *Resource) postChildMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req PostMessageRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

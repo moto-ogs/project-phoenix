@@ -15,32 +15,33 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // FormSchemaResponse is the wire shape returned to admin UIs. The id is
 // stringified so the frontend can keep its int64-as-string convention.
 type FormSchemaResponse struct {
-	ID               string                      `json:"id"`
+	ID               ident.ID                    `json:"id"`
 	Name             string                      `json:"name"`
 	Version          int                         `json:"version"`
 	IsActive         bool                        `json:"is_active"`
 	Fields           []capability.FormField      `json:"fields"`
 	CoreRequirements capability.CoreRequirements `json:"core_requirements"`
 	LegalBlocks      []capability.FormLegalBlock `json:"legal_blocks"`
-	CreatedBy        string                      `json:"created_by"`
+	CreatedBy        ident.ID                    `json:"created_by"`
 	CreatedAt        time.Time                   `json:"created_at"`
 }
 
 func toFormSchemaResponse(s *capability.FormSchema) FormSchemaResponse {
 	return FormSchemaResponse{
-		ID:               strconv.FormatInt(s.ID, 10),
+		ID:               ident.ID(s.ID),
 		Name:             s.Name,
 		Version:          s.Version,
 		IsActive:         s.IsActive,
 		Fields:           s.Fields,
 		CoreRequirements: coreRequirementsValue(s.CoreRequirements),
 		LegalBlocks:      legalBlocksValue(s.LegalBlocks),
-		CreatedBy:        strconv.FormatInt(s.CreatedBy, 10),
+		CreatedBy:        ident.ID(s.CreatedBy),
 		CreatedAt:        s.CreatedAt,
 	}
 }
@@ -121,7 +122,7 @@ func (req *RenameSchemaRequest) Bind(_ *http.Request) error {
 // don't need to render the form. The fields array carries everything the dynamic renderer
 // consumes (label, type, options, validation).
 type PublicFormSchemaResponse struct {
-	ID               string                      `json:"id"`
+	ID               ident.ID                    `json:"id"`
 	Version          int                         `json:"version"`
 	Fields           []capability.FormField      `json:"fields"`
 	CoreRequirements capability.CoreRequirements `json:"core_requirements"`
@@ -414,8 +415,9 @@ func (rs *Resource) publishSchema(w http.ResponseWriter, r *http.Request) {
 }
 
 // updateSchema publishes a new version of an existing named schema.
-// PUT /schema/{id} — id refers to any prior version of the schema;
-// the new row inherits its name and is written with version+1.
+// PUT /schema/{id} — id is the version the editor read, which must still
+// be the newest of its lineage (ADR 0311); the new row inherits its name
+// and is written with version+1.
 func (rs *Resource) updateSchema(w http.ResponseWriter, r *http.Request) {
 	if rs.FormSchemaService == nil {
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("form schema service not configured")))
@@ -471,7 +473,9 @@ func (rs *Resource) updateSchema(w http.ResponseWriter, r *http.Request) {
 // missing lineage is a 404 — same as the PATCH route, regardless of which
 // step raised it. A rename failure beyond those sentinels is infrastructure
 // (lock/read/exec), mapped to 5xx like the PATCH handler; publish/validation
-// errors keep the 400 contract shared with POST /schema.
+// errors keep the 400 contract shared with POST /schema. A version published
+// since the editor read {id} is a business rejection that RenderError answers
+// with 409 general.changed_since_read through any of these (ADR 0311).
 func renderSchemaVersionError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, capability.ErrFormSchemaNameExists):

@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/render"
 
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
@@ -135,6 +136,24 @@ func newCategoryResponse(category *activityContract.Category) ActivityCategoryRe
 		CreatedAt:   category.CreatedAt,
 		UpdatedAt:   category.UpdatedAt,
 	}
+}
+
+// newEditableCategoryResponse is a category as the catalog routes answer
+// it: with the token an edit of it sends and the token of its shift-type
+// link a shift-type edit sends (ADR 0311). The category nested in an
+// activity carries neither.
+func newEditableCategoryResponse(category *activityContract.Category) ActivityCategoryResponse {
+	response := newCategoryResponse(category)
+	if category == nil {
+		return response
+	}
+	stored := timetable.Category{
+		ID: category.ID, Name: category.Name, Description: category.Description, Color: category.Color,
+		IsSystem: category.IsSystem, ShiftTypeID: category.ShiftTypeID, ArchivedAt: category.ArchivedAt,
+	}
+	response.Version = timetable.CategoryVersion(stored)
+	response.ShiftTypeLinkVersion = timetable.CategoryShiftTypeLinkVersion(stored)
+	return response
 }
 
 // newActivityResponse converts an activity group model to a response object

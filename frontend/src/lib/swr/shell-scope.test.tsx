@@ -48,7 +48,7 @@ import { useImmutableSWR } from "~/lib/swr";
 import { resetSWRScope, resumeSWRSession } from "~/lib/swr/scope";
 import { TenantProviders } from "~/app/[tenant]/providers";
 
-const session = mockSessionData({ user: { tenantId: 1 } });
+const session = mockSessionData({ user: { tenantId: "1" } });
 const shell: ShellBootstrap = {
   accountId: "1",
   userContext: {

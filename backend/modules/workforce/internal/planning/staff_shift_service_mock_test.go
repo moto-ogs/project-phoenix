@@ -172,7 +172,7 @@ func (s *stubShiftTypeService) CreateShiftType(_ context.Context, t *workforce.S
 	return t, nil
 }
 
-func (s *stubShiftTypeService) UpdateShiftType(_ context.Context, t *workforce.ShiftTypeRecord) (*workforce.ShiftTypeRecord, error) {
+func (s *stubShiftTypeService) UpdateShiftType(_ context.Context, t *workforce.ShiftTypeRecord, _ string) (*workforce.ShiftTypeRecord, error) {
 	return t, nil
 }
 

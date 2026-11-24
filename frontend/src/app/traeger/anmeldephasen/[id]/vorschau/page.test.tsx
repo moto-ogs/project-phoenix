@@ -39,7 +39,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "A", scope: "org", orgId: 7 } },
+    data: { user: { id: "A", scope: "org", orgId: "7" } },
     status: "authenticated",
   }),
 }));
@@ -178,5 +178,26 @@ describe("TraegerCatalogPreviewPage (#4704)", () => {
         "Seit der Vorschau hat sich etwas geändert. Bitte sieh dir die Vorschau noch einmal an.",
       ),
     ).toBeInTheDocument();
+  });
+
+  // ADR 0311 rule 6: a failed read of the preview after a refusal says so.
+  it("names a failed read of the preview after a refusal", async () => {
+    mockPreview
+      .mockResolvedValueOnce(preview)
+      .mockRejectedValue(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+    mockRollout.mockRejectedValue(
+      new ApiError("stale", 409, { code: "enrollment.traeger_preview_stale" }),
+    );
+    render(<TraegerCatalogPreviewPage />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Freigeben und übertragen" }),
+    );
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(mockRollout).toHaveBeenCalledTimes(1);
   });
 });

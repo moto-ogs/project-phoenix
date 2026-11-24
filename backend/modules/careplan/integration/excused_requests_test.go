@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/careplantest"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -97,7 +98,7 @@ func (f *excusedFixture) decide(t *testing.T, input careplan.ExcusedRequestDecid
 
 func (f *excusedFixture) approve(t *testing.T, requestID int64) {
 	t.Helper()
-	_, err := f.decide(t, careplan.ExcusedRequestDecideInput{RequestID: requestID, Approve: true, ReviewedBy: f.chain.AccountID})
+	_, err := f.decide(t, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, requestID), RequestID: requestID, Approve: true, ReviewedBy: f.chain.AccountID})
 	require.NoError(t, err)
 }
 
@@ -213,7 +214,7 @@ func TestExcusedRequestQueueBadgeAndParentList(t *testing.T) {
 	// Reject one through the workflow; historic withdrawn rows are written
 	// straight through the owner, guardians edit instead of withdrawing now.
 	require.NoError(t, f.inTenant(t, func(ctx context.Context) error {
-		if _, err := f.requests.Decide(ctx, careplan.ExcusedRequestDecideInput{RequestID: rejected.ID, Approve: false, Reason: "telefonisch klaeren", ReviewedBy: f.chain.AccountID}); err != nil {
+		if _, err := f.requests.Decide(ctx, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, rejected.ID), RequestID: rejected.ID, Approve: false, Reason: "telefonisch klaeren", ReviewedBy: f.chain.AccountID}); err != nil {
 			return err
 		}
 		return f.repos.CarePlan().DecideExcusedAbsenceRequest(ctx, careplan.ExcusedAbsenceDecision{ID: withdrawn.ID, Status: careplan.ExcusedRequestStatusWithdrawn})
@@ -253,10 +254,10 @@ func TestExcusedRequestGuardianEdit(t *testing.T) {
 			RequestID: pending.ID, StudentID: f.chain.StudentID, GuardianAccountID: f.chain.AccountID,
 			ExpectedVersion: "stale", Dates: []careplan.Date{excusedIn3Days}, Note: "neu", NoteRequired: true,
 		})
-		assert.ErrorIs(t, err, careplan.ErrParentRequestStale)
+		assert.ErrorIs(t, err, readstate.ErrChanged)
 		edited, err := f.requests.EditRequest(ctx, careplan.ExcusedRequestEditInput{
 			RequestID: pending.ID, StudentID: f.chain.StudentID, GuardianAccountID: f.chain.AccountID,
-			ExpectedVersion: careplan.ParentRequestVersion(pending.UpdatedAt), Dates: []careplan.Date{excusedIn3Days}, Note: "neuer Termin", NoteRequired: true,
+			ExpectedVersion: readstate.Of(pending.UpdatedAt), Dates: []careplan.Date{excusedIn3Days}, Note: "neuer Termin", NoteRequired: true,
 		})
 		require.NoError(t, err)
 		assert.Equal(t, pending.ID, edited.ID, "the request keeps its id")
@@ -272,14 +273,14 @@ func TestExcusedRequestDecideGuards(t *testing.T) {
 	pending := f.createPending(t, []careplan.Date{excusedTomorrow}, "Privater Termin")
 
 	_, err := f.decide(t, careplan.ExcusedRequestDecideInput{RequestID: pending.ID, Approve: true, ExpectedVersion: "stale"})
-	assert.ErrorIs(t, err, careplan.ErrParentRequestStale)
+	assert.ErrorIs(t, err, readstate.ErrChanged)
 	assert.Empty(t, f.activeStatusDays(t), "a refused decision writes nothing")
 
-	_, err = f.decide(t, careplan.ExcusedRequestDecideInput{RequestID: pending.ID + 999999, Approve: true})
+	_, err = f.decide(t, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.MissingRequestVersion, RequestID: pending.ID + 999999, Approve: true})
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestNotFound)
 
 	f.approve(t, pending.ID)
-	_, err = f.decide(t, careplan.ExcusedRequestDecideInput{RequestID: pending.ID, Approve: true})
+	_, err = f.decide(t, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, pending.ID), RequestID: pending.ID, Approve: true})
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestNotPending, "a second decision finds the row decided")
 }
 
@@ -291,7 +292,7 @@ func TestExcusedRequestApproveRejectsDatesAfterPlannedCareEnd(t *testing.T) {
 		Where("student_profile_id = ? AND deleted_at IS NULL", f.chain.StudentID).Exec(context.Background())
 	require.NoError(t, err)
 
-	_, err = f.decide(t, careplan.ExcusedRequestDecideInput{RequestID: pending.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+	_, err = f.decide(t, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, pending.ID), RequestID: pending.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestNotFound)
 	assert.Empty(t, f.activeStatusDays(t), "approval must not create an absence after care ends")
 }
@@ -304,7 +305,7 @@ func TestExcusedRequestApproveWritesDaysAndClearsLiveSickToday(t *testing.T) {
 	require.NoError(t, err)
 	pending := f.createPending(t, []careplan.Date{excusedToday, excusedTomorrow}, "krank gemeldet, jetzt entschuldigt")
 
-	item, err := f.decide(t, careplan.ExcusedRequestDecideInput{RequestID: pending.ID, Approve: true, Reason: "Mit der Leitung abgesprochen", ReviewedBy: f.chain.AccountID})
+	item, err := f.decide(t, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, pending.ID), RequestID: pending.ID, Approve: true, Reason: "Mit der Leitung abgesprochen", ReviewedBy: f.chain.AccountID})
 	require.NoError(t, err)
 	assert.Equal(t, careplan.ExcusedRequestStatusApproved, item.Request.Status)
 	require.NotNil(t, item.Request.DecisionReason, "an approval reason survives into the history")
@@ -340,11 +341,11 @@ func TestExcusedRequestApproveRefusedWhenNewerStatusExists(t *testing.T) {
 		assert.Equal(t, careplan.StudentStatusDaySick, items[0].CurrentStatusByDate[excusedIn3Days.String()])
 		return nil
 	}))
-	_, err := f.decide(t, careplan.ExcusedRequestDecideInput{RequestID: pending.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+	_, err := f.decide(t, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, pending.ID), RequestID: pending.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestStatusConflict)
 	assert.Equal(t, careplan.ExcusedRequestStatusPending, f.requestStatus(t, pending.ID))
 
-	item, err := f.decide(t, careplan.ExcusedRequestDecideInput{RequestID: pending.ID, Approve: false, Reason: "bitte klaeren", ReviewedBy: f.chain.AccountID})
+	item, err := f.decide(t, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, pending.ID), RequestID: pending.ID, Approve: false, Reason: "bitte klaeren", ReviewedBy: f.chain.AccountID})
 	require.NoError(t, err, "rejecting the stale request still works")
 	assert.Equal(t, careplan.ExcusedRequestStatusRejected, item.Request.Status)
 }
@@ -377,7 +378,7 @@ func TestExcusedRequestPartialAbsenceConflicts(t *testing.T) {
 			"the queue names the partial absence it would replace")
 		return nil
 	}))
-	_, err := f.decide(t, careplan.ExcusedRequestDecideInput{RequestID: pending.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+	_, err := f.decide(t, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, pending.ID), RequestID: pending.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestStatusConflict)
 	assert.Empty(t, f.activeStatusDays(t))
 
@@ -414,12 +415,13 @@ func TestExcusedRequestPastRequestsMarkDoneInsteadOfApprove(t *testing.T) {
 	past := f.createPending(t, []careplan.Date{excusedPast}, "Rückwirkend")
 	future := f.createPending(t, []careplan.Date{excusedTomorrow}, "Kommende Woche")
 
-	_, err := f.decide(t, careplan.ExcusedRequestDecideInput{RequestID: past.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+	_, err := f.decide(t, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, past.ID), RequestID: past.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 	assert.ErrorIs(t, err, careplan.ErrParentRequestPast)
 	require.NoError(t, f.inTenant(t, func(ctx context.Context) error {
-		assert.ErrorIs(t, f.requests.MarkDone(ctx, future.ID, "", "", f.chain.AccountID), careplan.ErrParentRequestNotPast)
-		assert.ErrorIs(t, f.requests.MarkDone(ctx, past.ID, "stale", "", f.chain.AccountID), careplan.ErrParentRequestStale)
-		return f.requests.MarkDone(ctx, past.ID, "", "Tage sind vorbei", f.chain.AccountID)
+		assert.ErrorIs(t, f.requests.MarkDone(ctx, future.ID, testpkg.ExcusedRequestVersion(t, future.ID), "", f.chain.AccountID), careplan.ErrParentRequestNotPast)
+		assert.ErrorIs(t, f.requests.MarkDone(ctx, past.ID, "stale", "", f.chain.AccountID), readstate.ErrChanged)
+		assert.ErrorIs(t, f.requests.MarkDone(ctx, past.ID, "", "", f.chain.AccountID), readstate.ErrChanged, "a mark-done without a read is refused")
+		return f.requests.MarkDone(ctx, past.ID, testpkg.ExcusedRequestVersion(t, past.ID), "Tage sind vorbei", f.chain.AccountID)
 	}))
 	assert.Equal(t, careplan.ExcusedRequestStatusDone, f.requestStatus(t, past.ID))
 	assert.Empty(t, f.activeStatusDays(t), "a done request never writes a status day")
@@ -430,7 +432,7 @@ func TestExcusedRequestCorrections(t *testing.T) {
 	f := newExcusedFixture(t)
 	undecided := f.createPending(t, []careplan.Date{excusedIn6Days}, "Offen")
 	require.NoError(t, f.inTenant(t, func(ctx context.Context) error {
-		assert.ErrorIs(t, f.requests.Correct(ctx, undecided.ID, false, "", "Korrektur", f.chain.AccountID), careplan.ErrParentRequestNotDecided)
+		assert.ErrorIs(t, f.requests.Correct(ctx, undecided.ID, false, testpkg.ExcusedRequestVersion(t, undecided.ID), "Korrektur", f.chain.AccountID), careplan.ErrParentRequestNotDecided)
 		return nil
 	}))
 
@@ -438,13 +440,13 @@ func TestExcusedRequestCorrections(t *testing.T) {
 	f.approve(t, approved.ID)
 	require.Len(t, f.activeStatusDays(t), 1)
 	require.NoError(t, f.inTenant(t, func(ctx context.Context) error {
-		return f.requests.Correct(ctx, approved.ID, false, "", "Doch nicht genehmigt", f.chain.AccountID)
+		return f.requests.Correct(ctx, approved.ID, false, testpkg.ExcusedRequestVersion(t, approved.ID), "Doch nicht genehmigt", f.chain.AccountID)
 	}))
 	assert.Empty(t, f.activeStatusDays(t), "turning an approval into a rejection undoes the days it wrote")
 	assert.Equal(t, careplan.ExcusedRequestStatusRejected, f.requestStatus(t, approved.ID))
 
 	require.NoError(t, f.inTenant(t, func(ctx context.Context) error {
-		return f.requests.Correct(ctx, approved.ID, true, "", "Doch genehmigt", f.chain.AccountID)
+		return f.requests.Correct(ctx, approved.ID, true, testpkg.ExcusedRequestVersion(t, approved.ID), "Doch genehmigt", f.chain.AccountID)
 	}))
 	assert.Len(t, f.activeStatusDays(t), 1, "the other direction re-runs the approve path")
 
@@ -455,7 +457,7 @@ func TestExcusedRequestCorrections(t *testing.T) {
 		Where("student_id = ?", f.chain.StudentID).Where("cleared_at IS NULL").Exec(context.Background())
 	require.NoError(t, err)
 	err = f.inTenant(t, func(ctx context.Context) error {
-		return f.requests.Correct(ctx, approved.ID, false, "", "Korrektur", f.chain.AccountID)
+		return f.requests.Correct(ctx, approved.ID, false, testpkg.ExcusedRequestVersion(t, approved.ID), "Korrektur", f.chain.AccountID)
 	})
 	assert.ErrorIs(t, err, careplan.ErrParentRequestCorrectionUnsupported)
 	assert.Len(t, f.activeStatusDays(t), 1, "the newer entry must survive")
@@ -470,7 +472,7 @@ func TestExcusedRequestHistoryListsDecidedRowsWithNamesAndPages(t *testing.T) {
 	pending := f.createPending(t, []careplan.Date{excusedIn6Days}, "Ausflug")
 
 	require.NoError(t, f.inTenant(t, func(ctx context.Context) error {
-		if _, err := f.requests.Decide(ctx, careplan.ExcusedRequestDecideInput{RequestID: rejected.ID, Approve: false, Reason: "bitte anrufen", ReviewedBy: staffAccount.ID}); err != nil {
+		if _, err := f.requests.Decide(ctx, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, rejected.ID), RequestID: rejected.ID, Approve: false, Reason: "bitte anrufen", ReviewedBy: staffAccount.ID}); err != nil {
 			return err
 		}
 		return f.repos.CarePlan().DecideExcusedAbsenceRequest(ctx, careplan.ExcusedAbsenceDecision{ID: withdrawn.ID, Status: careplan.ExcusedRequestStatusWithdrawn})
@@ -521,9 +523,9 @@ func TestExcusedRequestGraduatedChildLeavesQueueAndRefusesDecisions(t *testing.T
 		badges, err := f.requests.PendingByStudentForDate(ctx, excusedIn3Days)
 		require.NoError(t, err)
 		assert.NotContains(t, badges, f.chain.StudentID)
-		_, err = f.requests.Decide(ctx, careplan.ExcusedRequestDecideInput{RequestID: req.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+		_, err = f.requests.Decide(ctx, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, req.ID), RequestID: req.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 		assert.ErrorIs(t, err, careplan.ErrExcusedRequestNotFound)
-		_, err = f.requests.Decide(ctx, careplan.ExcusedRequestDecideInput{RequestID: req.ID, Approve: false, Reason: "child has left", ReviewedBy: f.chain.AccountID})
+		_, err = f.requests.Decide(ctx, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, req.ID), RequestID: req.ID, Approve: false, Reason: "child has left", ReviewedBy: f.chain.AccountID})
 		assert.ErrorIs(t, err, careplan.ErrExcusedRequestNotFound)
 		return nil
 	}))
@@ -552,9 +554,9 @@ func TestExcusedRequestTwoTenantIsolation(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, items, 1)
 		assert.Equal(t, first.ID, items[0].Request.ID)
-		_, err = f.requests.Decide(ctx, careplan.ExcusedRequestDecideInput{RequestID: second.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+		_, err = f.requests.Decide(ctx, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, second.ID), RequestID: second.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 		assert.ErrorIs(t, err, careplan.ErrExcusedRequestNotFound, "another tenant's request is invisible")
-		_, err = f.requests.Decide(ctx, careplan.ExcusedRequestDecideInput{RequestID: first.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+		_, err = f.requests.Decide(ctx, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, first.ID), RequestID: first.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 		return err
 	}))
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), f.db, secondTenantID, func(ctx context.Context, _ bun.Tx) error {
@@ -648,7 +650,8 @@ func TestExcusedRequestCreateAndEditRollBackAndRetry(t *testing.T) {
 	failing = newExcusedRequests(t, f.reposPeople, &failingCarePlan{Capability: f.repos.CarePlan(), failAfterUpdate: true})
 	edit := careplan.ExcusedRequestEditInput{
 		RequestID: created.ID, StudentID: f.chain.StudentID, GuardianAccountID: f.chain.AccountID,
-		Dates: []careplan.Date{excusedIn3Days}, Note: "verschoben", NoteRequired: true,
+		ExpectedVersion: testpkg.ExcusedRequestVersion(t, created.ID),
+		Dates:           []careplan.Date{excusedIn3Days}, Note: "verschoben", NoteRequired: true,
 	}
 	err = f.inTenant(t, func(ctx context.Context) error {
 		_, err := failing.EditRequest(ctx, edit)
@@ -673,12 +676,12 @@ func TestExcusedRequestMarkDoneAndCorrectRollBackAndRetry(t *testing.T) {
 	past := f.createPending(t, []careplan.Date{excusedPast}, "Längst vorbei")
 	failing := newExcusedRequests(t, f.reposPeople, &failingCarePlan{Capability: f.repos.CarePlan(), failAfterDecide: true})
 	err := f.inTenant(t, func(ctx context.Context) error {
-		return failing.MarkDone(ctx, past.ID, "", "Tage sind vorbei", f.chain.AccountID)
+		return failing.MarkDone(ctx, past.ID, testpkg.ExcusedRequestVersion(t, past.ID), "Tage sind vorbei", f.chain.AccountID)
 	})
 	require.ErrorIs(t, err, errInjected)
 	assert.Equal(t, careplan.ExcusedRequestStatusPending, f.requestStatus(t, past.ID), "a failed mark-done leaves the request pending")
 	require.NoError(t, f.inTenant(t, func(ctx context.Context) error {
-		return f.requests.MarkDone(ctx, past.ID, "", "Tage sind vorbei", f.chain.AccountID)
+		return f.requests.MarkDone(ctx, past.ID, testpkg.ExcusedRequestVersion(t, past.ID), "Tage sind vorbei", f.chain.AccountID)
 	}))
 	assert.Equal(t, careplan.ExcusedRequestStatusDone, f.requestStatus(t, past.ID))
 
@@ -690,14 +693,14 @@ func TestExcusedRequestMarkDoneAndCorrectRollBackAndRetry(t *testing.T) {
 	} {
 		failing := newExcusedRequests(t, f.reposPeople, plan)
 		err := f.inTenant(t, func(ctx context.Context) error {
-			return failing.Correct(ctx, approved.ID, false, "", "Doch nicht", f.chain.AccountID)
+			return failing.Correct(ctx, approved.ID, false, testpkg.ExcusedRequestVersion(t, approved.ID), "Doch nicht", f.chain.AccountID)
 		})
 		require.ErrorIs(t, err, errInjected, name)
 		assert.Len(t, f.activeStatusDays(t), 1, "%s: the approved day survives the rollback", name)
 		assert.Equal(t, careplan.ExcusedRequestStatusApproved, f.requestStatus(t, approved.ID), "%s: the decision stands", name)
 	}
 	require.NoError(t, f.inTenant(t, func(ctx context.Context) error {
-		return f.requests.Correct(ctx, approved.ID, false, "", "Doch nicht", f.chain.AccountID)
+		return f.requests.Correct(ctx, approved.ID, false, testpkg.ExcusedRequestVersion(t, approved.ID), "Doch nicht", f.chain.AccountID)
 	}))
 	assert.Empty(t, f.activeStatusDays(t), "the retry applies the complete correction")
 	assert.Equal(t, careplan.ExcusedRequestStatusRejected, f.requestStatus(t, approved.ID))
@@ -714,7 +717,7 @@ func TestExcusedRequestDecisionRollsBackAfterEachWriteAndRetries(t *testing.T) {
 	} {
 		failing := newExcusedRequests(t, f.reposPeople, plan)
 		err := f.inTenant(t, func(ctx context.Context) error {
-			_, err := failing.Decide(ctx, careplan.ExcusedRequestDecideInput{RequestID: pending.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+			_, err := failing.Decide(ctx, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, pending.ID), RequestID: pending.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 			return err
 		})
 		require.ErrorIs(t, err, errInjected, name)
@@ -725,6 +728,6 @@ func TestExcusedRequestDecisionRollsBackAfterEachWriteAndRetries(t *testing.T) {
 	f.approve(t, pending.ID)
 	assert.Len(t, f.activeStatusDays(t), 2, "the retry applies the complete decision")
 	assert.Equal(t, careplan.ExcusedRequestStatusApproved, f.requestStatus(t, pending.ID))
-	_, err := f.decide(t, careplan.ExcusedRequestDecideInput{RequestID: pending.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+	_, err := f.decide(t, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, pending.ID), RequestID: pending.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestNotPending, "a second retry finds the work already done")
 }

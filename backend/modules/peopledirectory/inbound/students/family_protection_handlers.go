@@ -1,10 +1,8 @@
 package students
 
 import (
-	json "encoding/json"
 	errors "errors"
 	http "net/http"
-	strconv "strconv"
 	strings "strings"
 
 	common "github.com/moto-ogs/project-phoenix/api/common"
@@ -12,6 +10,8 @@ import (
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	securityruntime "github.com/moto-ogs/project-phoenix/modules/securityruntime"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 type setFamilyProtectionBody struct {
@@ -20,8 +20,8 @@ type setFamilyProtectionBody struct {
 }
 
 type familyProtectionResponse struct {
-	StudentID string `json:"student_id"`
-	Enabled   bool   `json:"enabled"`
+	StudentID ident.ID `json:"student_id"`
+	Enabled   bool     `json:"enabled"`
 	// Unchanged says the child was already in the requested state, so no new
 	// ledger entry was written. The request still succeeded — repeating a
 	// switch is not an error the user has to fix.
@@ -43,7 +43,7 @@ func (rs *Resource) getFamilyProtection(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	common.Respond(w, r, http.StatusOK, familyProtectionResponse{
-		StudentID: strconv.FormatInt(studentID, 10), Enabled: current[studentID],
+		StudentID: ident.ID(studentID), Enabled: current[studentID],
 	}, "Family protection retrieved")
 }
 
@@ -57,7 +57,7 @@ func (rs *Resource) setFamilyProtection(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	var body setFamilyProtectionBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Enabled == nil || strings.TrimSpace(body.Reason) == "" {
+	if err := wire.Decode(r.Body, &body); err != nil || body.Enabled == nil || strings.TrimSpace(body.Reason) == "" {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("enabled and reason are required")))
 		return
 	}
@@ -78,7 +78,7 @@ func (rs *Resource) setFamilyProtection(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	common.Respond(w, r, http.StatusOK, familyProtectionResponse{
-		StudentID: strconv.FormatInt(studentID, 10), Enabled: enabled, Unchanged: unchanged,
+		StudentID: ident.ID(studentID), Enabled: enabled, Unchanged: unchanged,
 	}, "Family protection updated")
 }
 

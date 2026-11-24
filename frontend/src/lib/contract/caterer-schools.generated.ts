@@ -5,6 +5,7 @@ import {
   bool,
   calendarDate,
   instant,
+  int64String,
   noData,
   nullable,
   object,
@@ -21,7 +22,7 @@ export interface SchoolResponse {
 }
 
 export const SchoolResponseSchema: z.ZodType<SchoolResponse, unknown> = object<SchoolResponse>({
-  id: str,
+  id: int64String,
   name: str,
 });
 
@@ -94,7 +95,7 @@ export const DayResponseSchema: z.ZodType<DayResponse, unknown> = object<DayResp
   closed: bool,
   deadline: instant,
   status: str,
-  order_id: optional(str),
+  order_id: optional(int64String),
   confirmed_at: optional(instant),
   total: safeInt,
   classes: nullable(arr(ClassCountResponseSchema)),
@@ -121,12 +122,6 @@ export const SchoolOrdersResponseSchema: z.ZodType<SchoolOrdersResponse, unknown
   days: nullable(arr(DayResponseSchema)),
 });
 
-/** Query of GET /caterer/schools/{schoolId}/orders */
-export interface GetCatererSchoolsSchoolIdOrdersQuery {
-  from?: string;
-  to?: string;
-}
-
 export const routes = {
   "GET /caterer/schools": {
     method: "GET",
@@ -138,7 +133,10 @@ export const routes = {
     method: "GET",
     pattern: "/caterer/schools/{schoolId}/orders",
     portals: ["caterer"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(SchoolOrdersResponseSchema),
   },
   "POST /caterer/schools/{schoolId}/orders/{orderId}/confirm": {

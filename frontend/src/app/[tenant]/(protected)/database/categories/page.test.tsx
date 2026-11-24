@@ -4,7 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import CategoriesPage from "./page";
 interface CapturedConfig {
   isReadOnly: (item: { isSystem?: boolean; archivedAt?: string }) => boolean;
-  update: (item: { id: string }, values: Record<string, unknown>) => unknown;
+  update: (
+    item: { id: string; version?: string },
+    values: Record<string, unknown>,
+  ) => unknown;
 }
 
 const captured = vi.hoisted(() => ({
@@ -57,11 +60,13 @@ describe("Terminkategorien", () => {
     ).toBe(true);
   });
 
+  // Das Speichern schickt auch den Stand, aus dem das Formular stammt
+  // (ADR 0311).
   it("clears the stored color after resetting an existing category", () => {
     render(<CategoriesPage />);
 
     captured.config?.update(
-      { id: "7" },
+      { id: "7", version: "c7" },
       { name: "Essen", description: "Mittagessen", color: null },
     );
 
@@ -69,6 +74,7 @@ describe("Terminkategorien", () => {
       name: "Essen",
       description: "Mittagessen",
       color: "",
+      expected_version: "c7",
     });
   });
 });

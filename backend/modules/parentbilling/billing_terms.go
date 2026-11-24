@@ -121,6 +121,9 @@ type ServiceTerms struct {
 	BundleWith    string     `json:"bundle_with"`
 	Custom        bool       `json:"custom"`
 	UpdatedAt     *time.Time `json:"updated_at"`
+	// Version is the read-state token of the terms (ADR 0311): a change
+	// sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // DefaultServiceTerms are the terms of a service the Träger did not set:
@@ -206,19 +209,26 @@ type FamilyBillingInput struct {
 	PaymentMethod   string
 	DueDay          *int
 	DebtorNumber    string
+	// ExpectedVersion is the Version of ContractFamilyBilling the office
+	// read; a deviation stored differently since is refused with
+	// readstate.ErrChanged (ADR 0311).
+	ExpectedVersion string
 }
 
 // ContractFamilyBilling is the family of a care contract as the Abrechnung
 // sets its deviation without a run (#7770): the party its invoices go to,
 // the key of the family and the deviation it has, nil without one. A
 // contract names its family before the first invoice, so the payment method
-// of a family can be set as soon as its contract exists.
+// of a family can be set as soon as its contract exists. Version is the
+// read-state token of the family's deviation, also of none (ADR 0311): the
+// save sends it back.
 type ContractFamilyBilling struct {
 	ContractID     ident.ID       `json:"contract_id"`
 	FamilyEmail    string         `json:"family_email"`
 	PartyFirstName string         `json:"party_first_name"`
 	PartyLastName  string         `json:"party_last_name"`
 	Family         *FamilyBilling `json:"family"`
+	Version        string         `json:"version"`
 }
 
 // RunDueDates are the due dates of a run per payment method.
@@ -360,8 +370,10 @@ func ContractOfFamily(key string) (contractID int64, ok bool) {
 type BillingTerms interface {
 	// ServiceTerms answers the terms of every service of BillingServices.
 	ServiceTerms(ctx context.Context, organizationID int64) ([]ServiceTerms, error)
-	// SaveServiceTerms sets the terms of one service.
-	SaveServiceTerms(ctx context.Context, reviewer HolidayReviewer, terms ServiceTerms) ([]ServiceTerms, error)
+	// SaveServiceTerms sets the terms of one service as the Abrechnung
+	// read them: terms changed since expectedVersion are refused with
+	// readstate.ErrChanged (ADR 0311).
+	SaveServiceTerms(ctx context.Context, reviewer HolidayReviewer, terms ServiceTerms, expectedVersion string) ([]ServiceTerms, error)
 	// ListFamilyBilling lists the deviations of the families, by family.
 	ListFamilyBilling(ctx context.Context, reviewer HolidayReviewer) ([]FamilyBilling, error)
 	// FamilyBillingOfContract reads the family of a contract with the
@@ -369,10 +381,14 @@ type BillingTerms interface {
 	// ErrFamilyUnknown.
 	FamilyBillingOfContract(ctx context.Context, reviewer HolidayReviewer, contractID int64) (ContractFamilyBilling, error)
 	// SaveFamilyBilling sets the deviation of the family of a contract; an
-	// applicant without payment deviation removes it.
+	// applicant without payment deviation removes it. A deviation stored
+	// differently since the office read input.ExpectedVersion is refused
+	// with readstate.ErrChanged.
 	SaveFamilyBilling(ctx context.Context, reviewer HolidayReviewer, input FamilyBillingInput) (*FamilyBilling, error)
 	// SetCareRunDueDates and SetHolidayRunDueDates replace the due dates of a
 	// calculated run; a released run is ErrBillingRunReleased.
-	SetCareRunDueDates(ctx context.Context, reviewer HolidayReviewer, runID int64, dates RunDueDates) (RunDueDates, error)
-	SetHolidayRunDueDates(ctx context.Context, reviewer HolidayReviewer, runID int64, dates RunDueDates) (RunDueDates, error)
+	// Dates changed since expectedVersion, the DueDatesVersion of the run
+	// as it was read, are refused with readstate.ErrChanged (ADR 0311).
+	SetCareRunDueDates(ctx context.Context, reviewer HolidayReviewer, runID int64, dates RunDueDates, expectedVersion string) (RunDueDates, error)
+	SetHolidayRunDueDates(ctx context.Context, reviewer HolidayReviewer, runID int64, dates RunDueDates, expectedVersion string) (RunDueDates, error)
 }

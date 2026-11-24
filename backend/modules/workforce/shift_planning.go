@@ -1,6 +1,11 @@
 package workforce
 
-import "context"
+import (
+	"context"
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
+)
 
 // --- HTTP contracts ---
 
@@ -53,6 +58,25 @@ type CreateStaffShift struct {
 	StaffShiftInput
 }
 
+// ShiftReadState is what an edit of a planned shift was read from (ADR
+// 0311): the ShiftVersion of the shift and, for a cancellation, the
+// ShiftVersion of every replacement the planner showed, by shift id. The
+// write refuses a shift or a cover set changed since with
+// readstate.ErrChanged. A nil read state is a write no person read (the sick
+// cascade and its restoration, internal steps under the owner's own lock)
+// and checks nothing. Every route that saves what a person read sets it,
+// also when the client sent no token: an empty token is refused.
+type ShiftReadState struct {
+	Version      string
+	Replacements map[int64]string
+}
+
+// ShiftVersion is the token of a planned shift (ADR 0311): every writer of
+// schedule.staff_shifts updates the row, and its trigger moves updated_at.
+func ShiftVersion(updatedAt time.Time) string {
+	return readstate.Of(updatedAt)
+}
+
 // UpdateStaffShift rewrites one shift. The Preserve flags keep stored values
 // a client omitted; the cancellation state is always preserved because it is
 // changed through CancelStaffShift only.
@@ -62,6 +86,8 @@ type UpdateStaffShift struct {
 	PreserveExistingNotes        bool
 	PreserveExistingShiftType    bool
 	PreserveExistingChangeReason bool
+	// Read is what the planner read; nil checks nothing (see ShiftReadState).
+	Read *ShiftReadState
 }
 
 // MoveStaffShift is the complete desired slot of one concrete shift.
@@ -81,6 +107,8 @@ type MoveStaffShift struct {
 	ActorAccountID *int64
 	// WorkingTime confirms the working-time warnings of the move (#4708).
 	WorkingTime WorkingTimeConfirmation
+	// Read is what the planner read; nil checks nothing (see ShiftReadState).
+	Read *ShiftReadState
 }
 
 // ShiftReplacement is one person covering part of a cancelled shift's gap.
@@ -117,6 +145,9 @@ type CancelStaffShift struct {
 	TraegerAccountID int64
 	// WorkingTime confirms the working-time warnings of the covers (#4708).
 	WorkingTime WorkingTimeConfirmation
+	// Read is what the planner read, the shift and its covers; nil checks
+	// nothing (see ShiftReadState).
+	Read *ShiftReadState
 }
 
 type StaffShiftCancellation struct {
@@ -185,6 +216,14 @@ type SplitStaffShiftSeries struct {
 	// WorkingTime confirms the working-time warnings of the occurrences
 	// (#4708).
 	WorkingTime WorkingTimeConfirmation
+	// ExpectedOccurrenceVersion is the ShiftVersion of the occurrence the
+	// planner opened (ADR 0311). A split effective today rewrites that row in
+	// place and refuses it when it changed since, also when an earlier
+	// same-day split kept it as the retained occurrence.
+	ExpectedOccurrenceVersion string
+	// ExpectedVersion is the version of the series the planner edited (ADR
+	// 0311); a series changed since is not written.
+	ExpectedVersion string
 }
 
 // StaffShiftSeriesResult reports what a series write materialized; the
@@ -307,14 +346,21 @@ type StaffShiftPlanning interface {
 // ShiftTypeInput is the writable part of a shift type on the administration
 // route. A nil IsActive keeps the stored flag on update and means active on
 // create. CategoryIDs, when non-nil, replaces the timetable categories mapped
-// to the type; nil leaves the mapping untouched.
+// to the type; nil leaves the mapping untouched. An update carries the
+// ShiftTypeVersion its editor read in ExpectedVersion; a create or update
+// with CategoryIDs carries the link token of every category it read in
+// ExpectedCategoryLinks (category id ->
+// timetable.CategoryShiftTypeLinkVersion, ADR 0311). A create ignores
+// ExpectedVersion.
 type ShiftTypeInput struct {
-	ID          int64
-	Name        string
-	Color       string
-	Description string
-	IsActive    *bool
-	CategoryIDs []int64
+	ID                    int64
+	Name                  string
+	Color                 string
+	Description           string
+	IsActive              *bool
+	CategoryIDs           []int64
+	ExpectedVersion       string
+	ExpectedCategoryLinks map[int64]string
 }
 
 // ShiftTypeAdministration is the capability the shift-type administration

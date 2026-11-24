@@ -10,6 +10,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -185,7 +186,7 @@ func TestBillingRunCountsTheInvoicesThePaymentTextWouldRefuse(t *testing.T) {
 			continue
 		}
 		for _, child := range document.Children {
-			correction := map[string]any{"registration_id": f.again, "child_id": child.ChildID, "total_cents": 0, "reason": "Härtefall"}
+			correction := map[string]any{"registration_id": fmt.Sprint(f.again), "child_id": fmt.Sprint(child.ChildID), "total_cents": 0, "reason": "Härtefall"}
 			rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), correction)
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		}

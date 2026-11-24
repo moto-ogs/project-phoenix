@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -19,13 +20,24 @@ import (
 // and the Träger ends today; the Demo-Schule Manuell takes the child in
 // with its own record and a contract from tomorrow, for the same family.
 // The open runs of the month of both schools then bill the child once and
-// show it under „Ein Kind an zwei Schulen“.
+// show it under „Ein Kind an zwei Schulen“. The Jahresbescheid of the old
+// school still assesses the months after the change, so the open run of the
+// next month at the Demo-Schule Manuell holds the child back under „Kind hat
+// schon eine Rechnung – bitte prüfen“ (ADR 0158, Nachtrag „Schon abgerechnet
+// je Kind“, #7892).
 //
 // The Demo-Schule Manuell has no online enrollment. The step switches it on
 // for the one manual enrollment the contract needs and off again, so the
 // profile keeps its settings. It runs last among the Träger steps: the
 // steps before read the active contracts of the seeded school.
-type seedTraegerSchoolChangeStep struct{}
+//
+// Every date of the step is the day its clock shows when it starts, not the
+// frozen seed day: the server dates the conclusion of a contract and checks
+// a termination's receipt against its own clock. A seed that crossed
+// midnight before this step concluded the old contract on the new day, so a
+// receipt on the seed day would lie before the conclusion. now is the
+// clock; nil reads the system clock.
+type seedTraegerSchoolChangeStep struct{ now func() time.Time }
 
 func (seedTraegerSchoolChangeStep) Name() string { return "Seeding a child changing its school" }
 
@@ -36,13 +48,13 @@ var seedSchoolChangeEnrollmentSettings = []string{profileSettingEnrollmentEnable
 // seedSchoolChangeReason is the reason of the termination at the old school.
 const seedSchoolChangeReason = "Schulwechsel an die Demo-Schule Manuell."
 
-func (seedTraegerSchoolChangeStep) Run(ctx context.Context, rt *Runtime) error {
+func (s seedTraegerSchoolChangeStep) Run(ctx context.Context, rt *Runtime) error {
 	if rt == nil || rt.Client == nil || rt.Bootstrap == nil || rt.Bootstrap.AdminEmail == "" || rt.Adapter == nil {
 		return fmt.Errorf("the school change seed prerequisites are not available")
 	}
-	manual, today, ok, err := seedSchoolChangeDay(rt)
-	if err != nil || !ok {
-		return err
+	manual, today, ok := seedSchoolChangeDay(rt, s.today())
+	if !ok {
+		return nil
 	}
 	month := calendar.NewDate(today.Year(), today.Month(), 1)
 	change := today.AddDays(1)
@@ -66,7 +78,7 @@ func (seedTraegerSchoolChangeStep) Run(ctx context.Context, rt *Runtime) error {
 	if err != nil {
 		return err
 	}
-	contractID, err := seedSchoolChangeNewContract(rt.Client, auth, school, offering, requestChild, old.party)
+	contractID, err := seedSchoolChangeNewContract(rt.Client, auth, school, offering, requestChild, old.party, today)
 	if err != nil {
 		return err
 	}
@@ -81,30 +93,36 @@ func (seedTraegerSchoolChangeStep) Run(ctx context.Context, rt *Runtime) error {
 	return nil
 }
 
-// seedSchoolChangeDay answers the second school of the Träger and the day
-// the old contract ends; ok is false without that school or on the last day
-// of a month, when the change would fall into the next month.
-func seedSchoolChangeDay(rt *Runtime) (*SeedProfile, calendar.Date, bool, error) {
+// today is the day the step's clock shows in Berlin.
+func (s seedTraegerSchoolChangeStep) today() calendar.Date {
+	now := time.Now
+	if s.now != nil {
+		now = s.now
+	}
+	return seedDateAt(now()).CalendarDate()
+}
+
+// seedSchoolChangeDay answers the second school of the Träger and today,
+// the day the old contract ends; ok is false without that school or on the
+// last day of a month, when the change would fall into the next month.
+func seedSchoolChangeDay(rt *Runtime, today calendar.Date) (*SeedProfile, calendar.Date, bool) {
 	manual := rt.AdditionalProfiles[ManualProfileKey]
 	if manual == nil || manual.Organization.ID != rt.Bootstrap.OrganizationID {
 		fmt.Println("  Schulwechsel: no second school of the Träger; no child changes its school")
-		return nil, "", false, nil
-	}
-	today, err := rt.historyToday()
-	if err != nil {
-		return nil, "", false, err
+		return nil, "", false
 	}
 	if today.AddDays(1).Month() != today.Month() {
 		// The change must lie within the month the open run bills.
 		fmt.Println("  Schulwechsel: the month ends today; no child changes its school")
-		return nil, "", false, nil
+		return nil, "", false
 	}
-	return manual, today, true, nil
+	return manual, today, true
 }
 
 // seedSchoolChangeRun prices the modules of the Demo-Schule Manuell from
 // the month on and leaves its run of the month open, so the review shows
-// the child at both schools.
+// the child at both schools, and its run of the next month, which holds the
+// child back for the Jahresbescheid of its old school.
 func seedSchoolChangeRun(client *Client, auth AuthRef, school int64, month calendar.Date) error {
 	if err := seedSchoolChangePrices(client, auth, school, month); err != nil {
 		return err
@@ -113,7 +131,24 @@ func seedSchoolChangeRun(client *Client, auth AuthRef, school int64, month calen
 	if err != nil {
 		return err
 	}
-	return seedBillingTerms(client, auth, runID, month)
+	if _, err := seedBillingTerms(client, auth, runID, month); err != nil {
+		return err
+	}
+	return seedSchoolChangeHeldRun(client, auth, school, month)
+}
+
+// seedSchoolChangeHeldRun leaves the run of the month after the change open
+// at the Demo-Schule Manuell. The Jahresbescheid of the old school
+// (seedCareNotices) assesses that month for the ended contract, so the run
+// issues no invoice for the child and names the notice (#7892). The notices
+// end in December: a change in December starts no such run.
+func seedSchoolChangeHeldRun(client *Client, auth AuthRef, school int64, month calendar.Date) error {
+	next := monthAfter(month)
+	if next.Year() != month.Year() {
+		return nil
+	}
+	_, err := seedStartCareRun(client, auth, school, next)
+	return err
 }
 
 // seedSchoolChangePrices gives every module of the school its weekday
@@ -131,8 +166,12 @@ func seedSchoolChangePrices(client *Client, auth AuthRef, school int64, month ca
 			prices = append(prices, seedCareWeekdays(module)...)
 		}
 	}
+	version, err := seedCarePriceListsVersion(client, auth, school)
+	if err != nil {
+		return err
+	}
 	if _, err := client.PutWithAuth(auth, "/traeger/care-tariffs/", map[string]any{
-		"school_id": school, "valid_from": month.String(), "free_months": []int{}, "prices": prices,
+		"school_id": ident.ID(school), "valid_from": month.String(), "free_months": []int{}, "prices": prices, "expected_version": version,
 	}); err != nil {
 		return fmt.Errorf("set the prices of the Demo-Schule Manuell: %w", err)
 	}
@@ -307,7 +346,11 @@ func seedSchoolChangeOffering(rt *Runtime, auth AuthRef, change calendar.Date) (
 	if err != nil {
 		return 0, err
 	}
-	yearEnd := calendar.NewDate(seedSchoolYearStart(rt.FixedSeeder.seedDay)+1, 7, 31)
+	yearStart := change.Year()
+	if change.Month() < time.August {
+		yearStart--
+	}
+	yearEnd := calendar.NewDate(yearStart+1, 7, 31)
 	raw, err = rt.Client.PostWithAuth(auth, "/api/enrollment/phases", map[string]any{
 		"name": seedSchoolChangePhase, "kind": "school_year",
 		"service_start_date": change.String(), "service_end_date": yearEnd.String(),
@@ -332,15 +375,19 @@ func seedSchoolChangeApproval(rt *Runtime, auth AuthRef, phaseID int64, child se
 	if offeringID, err = parseEnvelopeStringID(raw); err != nil {
 		return 0, 0, err
 	}
-	raw, err = rt.Client.PostWithAuth(auth, fmt.Sprintf("/api/enrollment/phases/%d/manual-approved-enrollments", phaseID), map[string]any{
+	enrollment := map[string]any{
 		"guardian_first_name": child.party.FirstName, "guardian_last_name": child.party.LastName, "guardian_email": child.party.Email,
 		"consent_flags": map[string]bool{"data_processing": true},
 		"children": []map[string]any{{
 			"first_name": child.firstName, "last_name": child.lastName, "date_of_birth": child.birthDate.String(),
-			"target_grade_level": 2, "offering_ids": []int64{offeringID},
+			"target_grade_level": 2, "offering_ids": []ident.ID{ident.ID(offeringID)},
 		}},
 		"reason": "Schulwechsel im laufenden Schuljahr", "external_consent_confirmed": true,
-	})
+	}
+	if err := showPhaseFormVersion(staffGet(rt, auth), phaseID, enrollment); err != nil {
+		return 0, 0, err
+	}
+	raw, err = rt.Client.PostWithAuth(auth, fmt.Sprintf("/api/enrollment/phases/%d/manual-approved-enrollments", phaseID), enrollment)
 	if err != nil {
 		return 0, 0, fmt.Errorf("enroll the child at the Demo-Schule Manuell: %w", err)
 	}
@@ -361,13 +408,18 @@ func seedSchoolChangeApproval(rt *Runtime, auth AuthRef, phaseID int64, child se
 }
 
 // seedSchoolChangeNewContract gives the offering its contract template and
-// concludes the child's contract at the Demo-Schule Manuell on paper.
-func seedSchoolChangeNewContract(client *Client, auth AuthRef, school, offering, requestChild int64, party seedSchoolChangeParty) (int64, error) {
-	if _, err := client.PutWithAuth(auth, fmt.Sprintf("/traeger/contract-templates/%d/%d", school, offering), seedCareContractTemplate); err != nil {
+// concludes the child's contract at the Demo-Schule Manuell on paper,
+// signed today.
+func seedSchoolChangeNewContract(client *Client, auth AuthRef, school, offering, requestChild int64, party seedSchoolChangeParty, today calendar.Date) (int64, error) {
+	version, err := seedTemplateVersion(client, auth, school, offering)
+	if err != nil {
+		return 0, err
+	}
+	if _, err := client.PutWithAuth(auth, fmt.Sprintf("/traeger/contract-templates/%d/%d", school, offering), seedTemplateBody(version)); err != nil {
 		return 0, fmt.Errorf("save the contract template of the Demo-Schule Manuell: %w", err)
 	}
 	raw, err := client.PostWithAuth(auth, "/traeger/contracts/", map[string]any{
-		"contracts": []map[string]any{{"school_id": school, "request_child_id": requestChild}},
+		"contracts": []map[string]any{{"school_id": ident.ID(school), "request_child_id": ident.ID(requestChild)}},
 	})
 	if err != nil {
 		return 0, fmt.Errorf("create the contract at the Demo-Schule Manuell: %w", err)
@@ -387,7 +439,7 @@ func seedSchoolChangeNewContract(client *Client, auth AuthRef, school, offering,
 		return 0, fmt.Errorf("the contract at the Demo-Schule Manuell was not created: %s", created.Data.Skipped)
 	}
 	id := int64(created.Data.Created[0].ID)
-	if err := seedPaperContractSignature(client, auth, id, party.FirstName+" "+party.LastName); err != nil {
+	if err := seedPaperContractSignature(client, auth, id, party.FirstName+" "+party.LastName, today); err != nil {
 		return 0, err
 	}
 	return id, nil

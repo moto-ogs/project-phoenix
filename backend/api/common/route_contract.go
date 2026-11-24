@@ -58,6 +58,11 @@ type RouteContract struct {
 	Enums []EnumContract
 	// Deprecated announces the removal of the route one release ahead.
 	Deprecated bool
+	// Refuses says why a Deprecated route answers every request with a
+	// refusal: an old write kept for its release (ADR 0270) that carries no
+	// read state, so a tab from before the release reloads (ADR 0311). It
+	// has no success answer; a test that sees its refusal answers it.
+	Refuses string
 	// DeprecatedFields announces the removal of fields one release ahead, as
 	// "GoType.json_name".
 	DeprecatedFields []string
@@ -78,7 +83,8 @@ type RouteContract struct {
 	NoCommit string
 	// File replaces Response on a route that answers a file: its bytes with
 	// Content-Type and Content-Disposition instead of the envelope. The proxy
-	// streams them through and never caches them; an error keeps the envelope.
+	// streams them through; FileCache and PrivateCache govern caching.
+	// An error keeps the problem envelope.
 	File bool
 	// Multipart replaces Request on a route that takes a multipart/form-data
 	// upload. The proxy streams the body to the backend without reading it,
@@ -102,7 +108,7 @@ type RouteContract struct {
 	// the file. The proxy sends no session, no bearer and no body, and the
 	// backend's limiter of the link keys the request by client IP. Only a
 	// File route of the portal public names it; a public file without it is
-	// refused, as is a public upload.
+	// refused. Public multipart uploads use PublicUpload instead.
 	PublicFile string
 	// PublicUpload opens a multipart upload to the portal public, route by
 	// route (#2352, ADR 0270): it says why a link or a public form may send
@@ -128,6 +134,14 @@ type RouteContract struct {
 	// cookie. The route is typed like any other, and no proxy allowlist
 	// names it, so the proxy never hands its answer to a browser.
 	RouteFile string
+	// BrowserPath is the exact same-origin address of a RouteFile route. An
+	// empty path leaves the Go entry available only to server callers.
+	BrowserPath string
+	// BrowserMethod overrides the Go method at BrowserPath; empty uses Method.
+	BrowserMethod string
+	// BrowserOwnContract marks a route file that changes the browser's
+	// request or answer. The address is typed, not the Go body or answer.
+	BrowserOwnContract bool
 	// Plain says the handler writes the data as the whole body
 	// (RenderJSON), without the envelope. Only a RouteFile route may.
 	Plain bool

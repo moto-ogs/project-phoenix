@@ -42,6 +42,7 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
 // Mock Profile Context
 const mockUpdateProfileData = vi.fn();
 const mockRefreshProfile = vi.fn();
+const mockReloadProfile = vi.fn();
 const mockUseProfile = vi.fn();
 vi.mock("~/lib/profile-context", () => ({
   useProfile: () => mockUseProfile(),
@@ -254,9 +255,11 @@ describe("ProfilePage", () => {
         lastName: "Doe",
         email: "john.doe@example.com",
         avatar: null,
+        version: "p1",
       },
       updateProfileData: mockUpdateProfileData,
       refreshProfile: mockRefreshProfile,
+      reloadProfile: mockReloadProfile,
       loading: false,
     });
   });
@@ -393,6 +396,7 @@ describe("ProfilePage", () => {
         expect(mockUpdateProfile).toHaveBeenCalledWith({
           firstName: "Jane",
           lastName: "Doe",
+          expectedVersion: "p1",
         });
         expect(mockToastSuccess).toHaveBeenCalledWith(
           "Dein Profil ist gespeichert.",
@@ -453,6 +457,69 @@ describe("ProfilePage", () => {
       ).toBeInTheDocument();
       expect(screen.getByLabelText("Vorname")).toHaveValue("Jane");
       expect(mockToastError).not.toHaveBeenCalled();
+    });
+
+    // ADR 0311: the edit saves only over the profile it was read from. A
+    // name changed since (by the Leitung in the staff administration) is
+    // refused: the stored name shows, without a retry, and the next save
+    // sends the stored version.
+    it("shows the stored names after a refusal and saves over their version", async () => {
+      mockUpdateProfile
+        .mockRejectedValueOnce(
+          new ApiError("changed", 409, { code: "general.changed_since_read" }),
+        )
+        .mockResolvedValue({
+          id: "1",
+          firstName: "Johanna",
+          lastName: "Doe",
+          email: "john.doe@example.com",
+          version: "p3",
+        });
+      const stored = {
+        id: "1",
+        firstName: "Johanna",
+        lastName: "Doe",
+        email: "john.doe@example.com",
+        version: "p2",
+      };
+      // The reload puts the stored profile into the shared cache.
+      const shown = mockUseProfile() as Record<string, unknown>;
+      mockReloadProfile.mockImplementation(async () => {
+        mockUseProfile.mockReturnValue({ ...shown, profile: stored });
+        return stored;
+      });
+      render(<ProfilePage />);
+
+      fireEvent.click(screen.getByRole("button", { name: /bearbeiten/i }));
+      fireEvent.change(screen.getByLabelText("Vorname"), {
+        target: { value: "Jane" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /^speichern$/i }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        catalogText("general.changed_since_read", "das Profil"),
+      );
+      await waitFor(() =>
+        expect(screen.getByLabelText("Vorname")).toHaveValue("Johanna"),
+      );
+      expect(
+        screen.queryByRole("button", { name: "Wiederholen" }),
+      ).not.toBeInTheDocument();
+      expect(mockUpdateProfileData).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole("button", { name: /^speichern$/i }));
+      await waitFor(() =>
+        expect(mockUpdateProfile).toHaveBeenLastCalledWith({
+          firstName: "Johanna",
+          lastName: "Doe",
+          expectedVersion: "p2",
+        }),
+      );
+      await waitFor(() =>
+        expect(mockUpdateProfileData).toHaveBeenCalledWith(
+          expect.objectContaining({ version: "p3" }),
+        ),
+      );
     });
 
     it("should handle avatar upload successfully", async () => {

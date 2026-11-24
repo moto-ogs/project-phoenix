@@ -1,15 +1,14 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -40,9 +39,9 @@ type CareOfferingsResponse struct {
 
 // CareOfferingItemResponse is one booked care offering.
 type CareOfferingItemResponse struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
+	ID          ident.ID `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description,omitempty"`
 	// Weekdays are ISO weekdays (1=Mon..7=Sun); empty when the offering has no
 	// per-day choice.
 	Weekdays        []int `json:"weekdays"`
@@ -77,12 +76,13 @@ func toCareOfferingsResponse(v *parentService.ChildCareOfferings) CareOfferingsR
 	}
 	if v.PendingRequest != nil {
 		pending := &PendingOfferingChangeResponse{
-			ID:              strconv.FormatInt(v.PendingRequest.ID, 10),
+			ID:              ident.ID(v.PendingRequest.ID),
 			CreatedAt:       v.PendingRequest.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			EffectiveFrom:   v.PendingRequest.EffectiveFrom.String(),
 			Note:            v.PendingRequest.Note,
 			Diff:            make([]OfferingDiffResponse, 0, len(v.PendingRequest.Diff)),
 			SubmittedBySelf: v.PendingRequest.SubmittedBySelf,
+			Version:         v.PendingRequest.Version,
 		}
 		for _, entry := range v.PendingRequest.Diff {
 			pending.Diff = append(pending.Diff, offeringDiffResponse(entry))
@@ -97,7 +97,7 @@ func toCareOfferingsResponse(v *parentService.ChildCareOfferings) CareOfferingsR
 
 func offeringDecisionResponse(decision *parentService.OfferingChangeDecisionSnapshot) *OfferingDecisionResponse {
 	resp := &OfferingDecisionResponse{
-		ID:                 strconv.FormatInt(decision.ID, 10),
+		ID:                 ident.ID(decision.ID),
 		Status:             decision.Status,
 		DecidedAt:          decision.DecidedAt.Format("2006-01-02T15:04:05Z07:00"),
 		EffectiveFrom:      decision.EffectiveFrom.String(),
@@ -108,7 +108,7 @@ func offeringDecisionResponse(decision *parentService.OfferingChangeDecisionSnap
 	}
 	for _, item := range decision.Requested {
 		resp.Requested = append(resp.Requested, OfferingRequestedItemResponse{
-			ID:       strconv.FormatInt(item.OfferingID, 10),
+			ID:       ident.ID(item.OfferingID),
 			Name:     item.Name,
 			Weekdays: weekdaysFromDayKeys(item.Days),
 		})
@@ -128,7 +128,7 @@ func offeringDecisionResponse(decision *parentService.OfferingChangeDecisionSnap
 
 func careOfferingItemResponse(offering parentService.CareOfferingSelection) CareOfferingItemResponse {
 	item := CareOfferingItemResponse{
-		ID:              strconv.FormatInt(offering.OfferingID, 10),
+		ID:              ident.ID(offering.OfferingID),
 		Name:            offering.Name,
 		Description:     offering.Description,
 		Weekdays:        weekdaysOrEmpty(offering.Weekdays),
@@ -190,20 +190,23 @@ func weekdaysOrEmpty(weekdays []int) []int {
 
 // PendingOfferingChangeResponse is the child's open change request.
 type PendingOfferingChangeResponse struct {
-	ID            string `json:"id"`
-	CreatedAt     string `json:"created_at"`
-	EffectiveFrom string `json:"effective_from"`
-	Note          string `json:"note,omitempty"`
+	ID            ident.ID `json:"id"`
+	CreatedAt     string   `json:"created_at"`
+	EffectiveFrom string   `json:"effective_from"`
+	Note          string   `json:"note,omitempty"`
 	// Diff lists the "current → requested" lines with stable states and canonical
 	// day keys. The parents portal renders them in the guardian's language.
 	Diff            []OfferingDiffResponse `json:"diff"`
 	SubmittedBySelf bool                   `json:"submitted_by_self"`
+	// Version is what an edit of this request sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // OfferingDecisionResponse is a decided request: what the office decided, when,
 // from which date it would have applied, and why it was rejected.
 type OfferingDecisionResponse struct {
-	ID string `json:"id"`
+	ID ident.ID `json:"id"`
 	// Status is "approved" or "rejected".
 	Status             string `json:"status"`
 	DecidedAt          string `json:"decided_at"`
@@ -225,8 +228,8 @@ type OfferingDecisionResponse struct {
 
 // OfferingRequestedItemResponse is one offering of a decided request.
 type OfferingRequestedItemResponse struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 	// Weekdays are ISO weekdays (1=Mon..7=Sun); empty means every care day.
 	Weekdays []int `json:"weekdays"`
 }
@@ -263,7 +266,7 @@ type OfferingCatalogResponse struct {
 
 // OfferingCatalogItemResponse is one selectable offering.
 type OfferingCatalogItemResponse struct {
-	ID              string   `json:"id"`
+	ID              ident.ID `json:"id"`
 	Name            string   `json:"name"`
 	Description     string   `json:"description,omitempty"`
 	DaysOfWeekMode  string   `json:"days_of_week_mode"`
@@ -284,7 +287,7 @@ type OfferingCatalogItemResponse struct {
 
 // OfferingSelectionBody is one offering of a change request and its days.
 type OfferingSelectionBody struct {
-	OfferingID   string   `json:"offering_id"`
+	OfferingID   ident.ID `json:"offering_id"`
 	SelectedDays []string `json:"selected_days"`
 }
 
@@ -296,7 +299,7 @@ type OfferingChangeRequestBody struct {
 	CompleteWithdrawalConfirmed bool                    `json:"complete_withdrawal_confirmed,omitempty"`
 	// RecipientGuardianProfileIDs travel with the creation so the share is
 	// written in the same transaction (#2267); empty shares with nobody.
-	RecipientGuardianProfileIDs []string `json:"recipient_guardian_profile_ids"`
+	RecipientGuardianProfileIDs []ident.ID `json:"recipient_guardian_profile_ids"`
 }
 
 // getChildCareOfferings returns what the child is booked into.
@@ -345,6 +348,11 @@ func (rs *Resource) getChildOfferingCatalog(w http.ResponseWriter, r *http.Reque
 	common.Respond(w, r, http.StatusOK, toOfferingCatalogResponse(catalog), "Care offering catalog retrieved")
 }
 
+func renderInvalidOfferingID(w http.ResponseWriter, r *http.Request) {
+	common.RenderError(w, r, common.ErrorInvalidRequestWithCode(
+		errors.New("offering_id must be a numeric id"), common.CodeCareOfferingChangeInvalid))
+}
+
 // createOfferingChangeRequest stores a pending post-enrollment change request.
 func (rs *Resource) createOfferingChangeRequest(w http.ResponseWriter, r *http.Request) {
 	accountID, ok := rs.parentAccountID(w, r)
@@ -356,8 +364,7 @@ func (rs *Resource) createOfferingChangeRequest(w http.ResponseWriter, r *http.R
 		return
 	}
 	var body OfferingChangeRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
+	if !decodeCreateBody(w, r, &body) {
 		return
 	}
 	effectiveFrom, err := timezone.ParseDate(strings.TrimSpace(body.EffectiveFrom))
@@ -368,10 +375,9 @@ func (rs *Resource) createOfferingChangeRequest(w http.ResponseWriter, r *http.R
 	}
 	selections := make([]parentService.OfferingChangeSelectionSnapshot, 0, len(body.Offerings))
 	for _, entry := range body.Offerings {
-		offeringID, convErr := strconv.ParseInt(strings.TrimSpace(entry.OfferingID), 10, 64)
-		if convErr != nil || offeringID <= 0 {
-			common.RenderError(w, r, common.ErrorInvalidRequestWithCode(
-				errors.New("offering_id must be a numeric id"), common.CodeCareOfferingChangeInvalid))
+		offeringID := entry.OfferingID.Int64()
+		if offeringID <= 0 {
+			renderInvalidOfferingID(w, r)
 			return
 		}
 		selections = append(selections, parentService.OfferingChangeSelectionSnapshot{
@@ -407,7 +413,7 @@ func toOfferingCatalogResponse(catalog *parentService.OfferingChangeCatalogSnaps
 	}
 	for _, item := range catalog.Items {
 		resp.Items = append(resp.Items, OfferingCatalogItemResponse{
-			ID:              strconv.FormatInt(item.OfferingID, 10),
+			ID:              ident.ID(item.OfferingID),
 			Name:            item.Name,
 			Description:     item.Description,
 			DaysOfWeekMode:  item.DaysOfWeekMode,

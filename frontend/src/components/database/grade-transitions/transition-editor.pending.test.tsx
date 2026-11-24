@@ -24,7 +24,7 @@ vi.mock("vaul", () => import("~/test/mocks/vaul"));
 vi.unmock("swr");
 
 const session = {
-  data: { user: { id: "1", tenantId: 1, scope: "tenant" } },
+  data: { user: { id: "1", tenantId: "1", scope: "tenant" } },
   status: "authenticated",
 };
 vi.mock("next-auth/react", () => ({ useSession: () => session }));
@@ -69,9 +69,10 @@ const draft: GradeTransition = {
   canModify: true,
   canApply: true,
   canRevert: false,
+  version: "v1",
 };
 
-function renderAndSave() {
+function renderAndSave(reload?: () => Promise<GradeTransition>) {
   const answer = deferred<GradeTransition>();
   api.updateGradeTransition.mockReturnValue(answer.promise);
   const onClose = vi.fn();
@@ -81,6 +82,7 @@ function renderAndSave() {
       existingDraft={draft}
       onClose={onClose}
       onReadyForPreview={onReadyForPreview}
+      reload={reload}
     />,
   );
   fireEvent.change(screen.getByLabelText("Notiz (optional)"), {
@@ -98,7 +100,7 @@ describe("TransitionEditor pending lock (#6593)", () => {
     api.fetchTransitionClasses.mockResolvedValue(["1a"]);
   });
 
-  it("waits for this opening's suggestions before creating an editable draft", async () => {
+  it("shows the cached suggestions at once on reopening and keeps an edit", async () => {
     const first = [
       {
         fromClass: "1a",
@@ -108,9 +110,7 @@ describe("TransitionEditor pending lock (#6593)", () => {
         studentCount: 2,
       },
     ];
-    api.fetchSuggestedMappings.mockResolvedValueOnce(first);
-    const answer = deferred<typeof first>();
-    api.fetchSuggestedMappings.mockReturnValueOnce(answer.promise);
+    api.fetchSuggestedMappings.mockResolvedValue(first);
     const props = {
       existingDraft: null,
       onClose: vi.fn(),
@@ -120,20 +120,11 @@ describe("TransitionEditor pending lock (#6593)", () => {
     expect(await screen.findByLabelText("Zielklasse für 1a")).toHaveValue("2a");
     view.rerender(<></>);
     view.rerender(<TransitionEditor {...props} />);
-    // Anker: die neue Öffnung wartet auf ihre eigenen Vorschläge.
+    // Die Vorlage kommt aus dem Cache; der Server prüft sie beim Speichern.
+    expect(screen.getByLabelText("Zielklasse für 1a")).toHaveValue("2a");
     expect(
       screen.getByRole("button", { name: "Weiter zur Vorschau" }),
-    ).toBeDisabled();
-    expect(
-      screen.queryByLabelText("Zielklasse für 1a"),
-    ).not.toBeInTheDocument();
-    await act(async () => {
-      answer.resolve([
-        ...first,
-        { ...first[0]!, fromClass: "2b", toClass: "3b" },
-      ]);
-    });
-    expect(await screen.findByLabelText("Zielklasse für 2b")).toHaveValue("3b");
+    ).toBeEnabled();
     fireEvent.change(screen.getByLabelText("Zielklasse für 1a"), {
       target: { value: "2c" },
     });
@@ -183,5 +174,64 @@ describe("TransitionEditor pending lock (#6593)", () => {
     });
 
     expect(onReadyForPreview).not.toHaveBeenCalled();
+  });
+
+  it("shows the stored draft instead of a retry when a colleague saved it since (ADR 0311)", async () => {
+    const stored = { ...draft, notes: "Kollegin", version: "v2" };
+    const { answer, rerender, onReadyForPreview } = renderAndSave(() =>
+      Promise.resolve(stored),
+    );
+    expect(api.updateGradeTransition).toHaveBeenCalledWith(
+      "8",
+      expect.objectContaining({ expectedVersion: "v1", notes: "Sommer" }),
+    );
+    await act(async () =>
+      answer.reject(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      ),
+    );
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "das Speichern des Entwurfs"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Wiederholen|Erneut versuchen/ }),
+    ).not.toBeInTheDocument();
+    expect(onReadyForPreview).not.toHaveBeenCalled();
+
+    rerender(
+      <TransitionEditor
+        existingDraft={stored}
+        onClose={vi.fn()}
+        onReadyForPreview={onReadyForPreview}
+      />,
+    );
+    expect(screen.getByLabelText("Notiz (optional)")).toHaveValue("Kollegin");
+  });
+
+  // ADR 0311 rule 6: a failed read of the stored draft after a refusal is a
+  // load error, and the refused version is not sent again.
+  it("names a failed read of the stored draft after a refusal", async () => {
+    const { answer } = renderAndSave(() =>
+      Promise.reject(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      ),
+    );
+    await act(async () =>
+      answer.reject(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      ),
+    );
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weiter zur Vorschau" }),
+    );
+    expect(api.updateGradeTransition).toHaveBeenCalledOnce();
   });
 });

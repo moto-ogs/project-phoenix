@@ -16,7 +16,7 @@ func menuChangeMark(before []domain.Entry, after []mealplan.Dish, now time.Time)
 	if len(before) == 0 {
 		return nil
 	}
-	if sameMenu(before, after) {
+	if dayVersion(storedDishes(before)) == dayVersion(after) {
 		return before[0].MenuChangedAt
 	}
 	changed := now

@@ -71,7 +71,7 @@ const neighbour: InfoDisplay = { ...display, id: "2", name: "Mensa" };
 function signedIn(id = "A") {
   return {
     data: {
-      user: { id, tenantId: 1, roles: ["admin"], permissions: [] },
+      user: { id, tenantId: "1", roles: ["admin"], permissions: [] },
       expires: "2099-01-01",
     } satisfies Session,
     status: "authenticated",

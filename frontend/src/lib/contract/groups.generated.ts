@@ -58,6 +58,7 @@ export interface GroupResponse {
   student_count: number;
   created_at: string;
   updated_at: string;
+  version?: string;
 }
 
 export const GroupResponseSchema: z.ZodType<GroupResponse, unknown> = object<GroupResponse>({
@@ -71,6 +72,7 @@ export const GroupResponseSchema: z.ZodType<GroupResponse, unknown> = object<Gro
   student_count: safeInt,
   created_at: instant,
   updated_at: instant,
+  version: optional(str),
 });
 
 /** Go: schoolstructurehttp.GroupRequest */
@@ -80,12 +82,12 @@ export interface GroupRequest {
   teacher_ids?: string[] | null;
 }
 
-/** Query of GET /api/groups/ */
-export interface GetGroupsQuery {
+/** Go: schoolstructurehttp.GroupUpdateRequest */
+export interface GroupUpdateRequest {
   name?: string;
-  page?: number;
-  page_size?: number;
-  room_id?: string;
+  room_id?: string | null;
+  teacher_ids?: string[] | null;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -99,7 +101,12 @@ export const routes = {
     method: "GET",
     pattern: "/api/groups/",
     portals: ["tenant"],
-    query: ["name", "page", "page_size", "room_id"],
+    query: {
+      "name": { kind: "string" },
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+      "room_id": { kind: "id" },
+    },
     response: paginated(z.array(GroupResponseSchema)),
   },
   "GET /api/groups/{id}": {
@@ -119,7 +126,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/groups/{id}",
     portals: ["tenant"],
-    request: requestBody<GroupRequest>(),
+    request: requestBody<GroupUpdateRequest>(),
     response: success(GroupResponseSchema),
   },
 } as const;

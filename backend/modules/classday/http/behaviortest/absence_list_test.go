@@ -75,7 +75,7 @@ func TestAbsenceListAPI(t *testing.T) {
 	// Today the child without a report is absent and the child reported
 	// sick is at school; the week before holds an absent morning excused by
 	// a status day and a class trip.
-	rec := f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":%d,"status":"absent"},{"student_id":%d,"status":"present"}]}`,
+	rec := f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":"%d","status":"absent"},{"student_id":"%d","status":"present"}]}`,
 		f.present, f.sick), morningAttendancePermission)
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
 	insertMorningMark(t, f.db, f.tenantID, f.present, "2099-02-27", "absent")

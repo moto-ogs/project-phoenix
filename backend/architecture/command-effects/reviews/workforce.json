@@ -7762,24 +7762,24 @@
     },
     {
       "adr": "0083",
-      "approval_adr": "0098",
+      "approval_adr": "0315",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.shiftTypeAdministration.CreateShiftType",
       "classification": "debt",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.ShiftTypeAdministration.CreateShiftType",
-      "reason": "Unreviewed cross-owner mutation, explicit coordination finding (not a leaf or E1-E5 grant): workforce reaches modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks (timetable-activities) through modules/workforce/internal/planning.shiftTypeAdministration.CreateShiftType. Newly visible through #4836 callable resolution; protocol review is follow-up work (ADR 0098).",
+      "reason": "Unreviewed cross-owner mutation, explicit coordination finding (not a leaf or E1-E5 grant): workforce reaches modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks (timetable-activities) through modules/workforce/internal/planning.shiftTypeAdministration.CreateShiftType. Newly visible through #4836 callable resolution; protocol review is follow-up work (ADR 0098). Re-reviewed with #7997: a create links categories with the link token of each one the shift-type form read from the category list, and Timetable refuses a category the create moves from another type when its link changed since, under its row locks (ADR 0311); effect and classification unchanged, approved by ADR 0315.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks",
       "target_owner": "timetable-activities"
     },
     {
       "adr": "0083",
-      "approval_adr": "0098",
+      "approval_adr": "0315",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.shiftTypeAdministration.UpdateShiftType",
       "classification": "debt",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.ShiftTypeAdministration.UpdateShiftType",
-      "reason": "Unreviewed cross-owner mutation, explicit coordination finding (not a leaf or E1-E5 grant): workforce reaches modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks (timetable-activities) through modules/workforce/internal/planning.shiftTypeAdministration.UpdateShiftType. Newly visible through #4836 callable resolution; protocol review is follow-up work (ADR 0098).",
+      "reason": "Unreviewed cross-owner mutation, explicit coordination finding (not a leaf or E1-E5 grant): workforce reaches modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks (timetable-activities) through modules/workforce/internal/planning.shiftTypeAdministration.UpdateShiftType. Newly visible through #4836 callable resolution; protocol review is follow-up work (ADR 0098). Re-reviewed with #7997: the link write now carries the link token of every category the shift-type form read and Timetable refuses a changed link under its row locks (ADR 0311); effect and classification unchanged, approved by ADR 0315.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks",
       "target_owner": "timetable-activities"
@@ -10586,6 +10586,26 @@
       "reason": "Read-only: the log of the Personal-Import names the colleagues of the session's Träger who imported (#4724) through Organisation \u0026 Tenancy's names of the Träger memberships, the same binding as the export protocol, in one statement in the caller's Träger transaction (platform.traeger_member_names answers only for app.current_org_id). No persistent, lock or scope effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMemberNames.ListTraegerMemberNames",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffEmployers.SchoolEmployers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffEmployers.SchoolEmployers",
+      "reason": "Read-only: Organisation \u0026 Tenancy names per Einsatzort the Schulträger or the Gemeinde that employs its staff in place of the Träger (#4811, ADR 0318), read in the caller's Träger transaction; no write, lock or scope change.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffEmployers.SchoolEmployers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffEmployers.SchoolEmployers",
+      "reason": "Read-only: Organisation \u0026 Tenancy names per Einsatzort the Schulträger or the Gemeinde that employs its staff in place of the Träger (#4811, ADR 0318), read in the caller's Träger transaction; no write, lock or scope change.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
       "target_owner": "organization-tenancy"
     },
     {
@@ -17165,7 +17185,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.ExportTransfer.Transfer",
-      "reason": "Read-only target already reviewed as query: workforce reaches *modules/documentrendering/lists.RendererService.Render (document-rendering) through api.exportTransferPort.Transfer. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: workforce reaches *modules/documentrendering/lists.RendererService.Render (document-rendering) through api.exportTransferPort.Transfer. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed with #8017: the digest moved because the unused transaction wrappers around the schedule commands were removed; the binding still only renders, no persistent, lock or scope effect.",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.RendererService.Render",
       "target_owner": "document-rendering"
@@ -17175,7 +17195,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.ExportTransfer.Transfer",
-      "reason": "Read-only target already reviewed as query: workforce reaches modules/documentrendering/lists.RenderWorkbook (document-rendering) through api.exportTransferPort.Transfer. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: workforce reaches modules/documentrendering/lists.RenderWorkbook (document-rendering) through api.exportTransferPort.Transfer. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed with #8017: the digest moved because the unused transaction wrappers around the schedule commands were removed; the binding still only renders, no persistent, lock or scope effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.RenderWorkbook",
       "target_owner": "document-rendering"

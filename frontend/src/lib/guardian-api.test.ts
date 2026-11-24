@@ -4,28 +4,16 @@ import { plainResponse } from "~/test/mocks/plain-session-fetch";
 vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 import {
   fetchStudentGuardians,
-  updateGuardian,
+  saveStudentGuardian,
   deleteGuardian,
   createStudentGuardians,
   fetchGuardianDeletePreview,
   linkGuardianToStudent,
-  updateStudentGuardianRelationship,
   removeGuardianFromStudent,
   searchGuardians,
-  addGuardianPhoneNumber,
-  updateGuardianPhoneNumber,
-  deleteGuardianPhoneNumber,
-  setGuardianPrimaryPhone,
 } from "./guardian-api";
-import type {
-  StudentGuardianLinkRequest,
-  PhoneNumberCreateRequest,
-  PhoneNumberUpdateRequest,
-} from "./guardian-helpers";
-import type {
-  GuardianResponse,
-  PhoneNumberResponse,
-} from "./contract/guardians.generated";
+import type { StudentGuardianLinkRequest } from "./guardian-helpers";
+import type { GuardianResponse } from "./contract/guardians.generated";
 import type * as guardiansContract from "./contract/guardians.generated";
 
 // Mock data helpers
@@ -73,6 +61,7 @@ const mockBackendGuardianWithRelationship: guardiansContract.GuardianWithRelatio
     guardian_role: "",
     is_payer: false,
     account_status: "",
+    version: "v1",
   };
 
 const mockLinkRequest: StudentGuardianLinkRequest = {
@@ -153,6 +142,7 @@ describe("guardian-api functions", () => {
         pickupNotes: "Can pickup anytime",
         emergencyPriority: 1,
         accountStatus: "none",
+        version: "v1",
       });
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/guardians/students/123/guardians",
@@ -189,76 +179,135 @@ describe("guardian-api functions", () => {
     });
   });
 
-  describe("updateGuardian", () => {
-    it("updates guardian and returns mapped result", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              status: "success",
-              data: { ...mockBackendGuardian, first_name: "Johnny" },
-            }),
-        }),
+  describe("saveStudentGuardian", () => {
+    const answer = () =>
+      plainResponse({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            status: "success",
+            data: {
+              ...mockBackendGuardianWithRelationship,
+              guardian: { ...mockBackendGuardian, first_name: "Johnny" },
+              version: "v2",
+            },
+          }),
+      });
+    const sentBody = () => {
+      const callArgs = vi.mocked(global.fetch).mock.calls[0] as [
+        string,
+        RequestInit,
+      ];
+      return JSON.parse(callArgs[1].body as string) as Record<string, unknown>;
+    };
+
+    it("saves profile, link and phones in one request with the read version", async () => {
+      global.fetch = vi.fn().mockImplementation(answer);
+
+      const result = await saveStudentGuardian(
+        "7",
+        "1",
+        {
+          guardian: { firstName: "Johnny" },
+          relationship: {
+            relationshipType: "guardian",
+            guardianRole: "co_guardian",
+            isPrimary: false,
+            isEmergencyContact: true,
+            canPickup: false,
+            pickupNotes: "New notes",
+            emergencyPriority: 2,
+          },
+          phoneNumbers: [
+            {
+              id: "1",
+              phoneNumber: "123-456-7890",
+              phoneType: "home",
+              isPrimary: true,
+            },
+            {
+              phoneNumber: "0151 1",
+              phoneType: "mobile",
+              label: "Neu",
+              isPrimary: false,
+            },
+          ],
+        },
+        "v1",
       );
 
-      const result = await updateGuardian("1", { firstName: "Johnny" });
-
-      expect(result.firstName).toBe("Johnny");
-      expect(global.fetch).toHaveBeenCalledWith("/api/guardians/1", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
+      expect(result?.firstName).toBe("Johnny");
+      expect(result?.version).toBe("v2");
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/guardians/students/7/guardians/1",
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: expect.any(String),
         },
-        body: expect.any(String),
+      );
+      expect(sentBody()).toEqual({
+        guardian: { first_name: "Johnny" },
+        relationship: {
+          relationship_type: "guardian",
+          guardian_role: "co_guardian",
+          is_primary: false,
+          is_emergency_contact: true,
+          can_pickup: false,
+          pickup_notes: "New notes",
+          emergency_priority: 2,
+        },
+        phone_numbers: [
+          {
+            id: "1",
+            phone_number: "123-456-7890",
+            phone_type: "home",
+            is_primary: true,
+          },
+          {
+            phone_number: "0151 1",
+            phone_type: "mobile",
+            label: "Neu",
+            is_primary: false,
+          },
+        ],
+        expected_version: "v1",
       });
     });
 
-    it("only sends defined fields in partial update", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              status: "success",
-              data: mockBackendGuardian,
-            }),
-        }),
+    it("only sends defined fields", async () => {
+      global.fetch = vi.fn().mockImplementation(answer);
+
+      // Without phoneNumbers the stored phone list stays.
+      await saveStudentGuardian(
+        "7",
+        "1",
+        {
+          guardian: { firstName: "Johnny", email: undefined },
+          relationship: { isPrimary: true },
+        },
+        "v1",
       );
 
-      // When email is undefined, it should not be included in the request
-      await updateGuardian("1", { firstName: "Johnny", email: undefined });
-
-      const callArgs = vi.mocked(global.fetch).mock.calls[0] as [
-        string,
-        RequestInit,
-      ];
-      const body = JSON.parse(callArgs[1].body as string) as Record<
-        string,
-        unknown
-      >;
-      // mapGuardianFormToBackend only includes email if !== undefined
-      expect(body).toEqual({ first_name: "Johnny" });
+      expect(sentBody()).toEqual({
+        guardian: { first_name: "Johnny" },
+        relationship: { is_primary: true },
+        expected_version: "v1",
+      });
     });
 
     it("sends an emptied e-mail so the backend removes the address", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: true,
-          json: () =>
-            Promise.resolve({ status: "success", data: mockBackendGuardian }),
-        }),
+      global.fetch = vi.fn().mockImplementation(answer);
+
+      await saveStudentGuardian(
+        "7",
+        "1",
+        { guardian: { firstName: "Johnny", email: "" }, relationship: {} },
+        "v1",
       );
 
-      await updateGuardian("1", { firstName: "Johnny", email: "" });
-
-      const callArgs = vi.mocked(global.fetch).mock.calls[0] as [
-        string,
-        RequestInit,
-      ];
-      expect(JSON.parse(callArgs[1].body as string)).toEqual({
-        first_name: "Johnny",
-        email: "",
+      expect(sentBody()).toMatchObject({
+        guardian: { first_name: "Johnny", email: "" },
       });
     });
 
@@ -273,12 +322,17 @@ describe("guardian-api functions", () => {
       );
 
       await expect(
-        updateGuardian("999", { firstName: "Johnny" }),
+        saveStudentGuardian(
+          "7",
+          "999",
+          { guardian: { firstName: "Johnny" }, relationship: {} },
+          "v1",
+        ),
       ).rejects.toMatchObject({
         name: "ApiError",
         status: 404,
         code: "general.input",
-        message: "Failed to update guardian",
+        message: "Failed to save guardian",
         detail: "guardian not found",
       });
     });
@@ -292,7 +346,12 @@ describe("guardian-api functions", () => {
       );
 
       await expect(
-        updateGuardian("1", { firstName: "Johnny" }),
+        saveStudentGuardian(
+          "7",
+          "1",
+          { guardian: { firstName: "Johnny" }, relationship: {} },
+          "v1",
+        ),
       ).rejects.toMatchObject({
         status: 502,
         code: "general.write_answer_unreadable",
@@ -578,93 +637,6 @@ describe("guardian-api functions", () => {
     });
   });
 
-  describe("updateStudentGuardianRelationship", () => {
-    it("updates relationship with all fields", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: true,
-          json: () => Promise.resolve({ status: "success", data: null }),
-        }),
-      );
-
-      await updateStudentGuardianRelationship("10", {
-        relationshipType: "guardian",
-        guardianRole: "co_guardian",
-        isPrimary: false,
-        isEmergencyContact: true,
-        canPickup: false,
-        pickupNotes: "New notes",
-        emergencyPriority: 2,
-      });
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/guardians/relationships/10",
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: expect.any(String),
-        },
-      );
-
-      const callArgs = vi.mocked(global.fetch).mock.calls[0] as [
-        string,
-        RequestInit,
-      ];
-      const body = JSON.parse(callArgs[1].body as string) as Record<
-        string,
-        unknown
-      >;
-      expect(body).toEqual({
-        relationship_type: "guardian",
-        guardian_role: "co_guardian",
-        is_primary: false,
-        is_emergency_contact: true,
-        can_pickup: false,
-        pickup_notes: "New notes",
-        emergency_priority: 2,
-      });
-    });
-
-    it("only sends defined fields", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: true,
-          json: () => Promise.resolve({ status: "success", data: null }),
-        }),
-      );
-
-      await updateStudentGuardianRelationship("10", {
-        isPrimary: true,
-      });
-
-      const callArgs = vi.mocked(global.fetch).mock.calls[0] as [
-        string,
-        RequestInit,
-      ];
-      const body = JSON.parse(callArgs[1].body as string) as Record<
-        string,
-        unknown
-      >;
-      expect(body).toEqual({ is_primary: true });
-    });
-
-    it("throws error on non-ok response", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: false,
-          statusText: "Not Found",
-          json: () => Promise.resolve({ detail: "Relationship not found" }),
-        }),
-      );
-
-      await expect(
-        updateStudentGuardianRelationship("999", { isPrimary: true }),
-      ).rejects.toThrow("Failed to update relationship");
-    });
-  });
-
   describe("removeGuardianFromStudent", () => {
     it("succeeds with 204 No Content response", async () => {
       global.fetch = vi.fn().mockImplementation(() =>
@@ -797,433 +769,6 @@ describe("guardian-api functions", () => {
       await expect(searchGuardians("john")).rejects.toThrow(
         "Failed to search guardians",
       );
-    });
-  });
-
-  // =============================================================================
-  // Phone Number API Functions Tests
-  // =============================================================================
-
-  describe("addGuardianPhoneNumber", () => {
-    const mockCreateRequest: PhoneNumberCreateRequest = {
-      phoneNumber: "555-9999",
-      phoneType: "work",
-      label: "Office",
-      isPrimary: false,
-    };
-
-    const mockBackendPhoneNumber: PhoneNumberResponse = {
-      id: "3",
-      phone_number: "555-9999",
-      phone_type: "work",
-      label: "Office",
-      is_primary: false,
-      priority: 3,
-    };
-
-    it("adds a phone number to a guardian", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              status: "success",
-              data: mockBackendPhoneNumber,
-            }),
-        }),
-      );
-
-      const result = await addGuardianPhoneNumber("123", mockCreateRequest);
-
-      expect(result).toEqual({
-        id: "3",
-        phoneNumber: "555-9999",
-        phoneType: "work",
-        label: "Office",
-        isPrimary: false,
-        priority: 3,
-      });
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/guardians/123/phone-numbers",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: expect.any(String),
-        },
-      );
-
-      // Verify the request body was mapped correctly
-      const callArgs = vi.mocked(global.fetch).mock.calls[0] as [
-        string,
-        RequestInit,
-      ];
-      const body = JSON.parse(callArgs[1].body as string) as Record<
-        string,
-        unknown
-      >;
-      expect(body).toEqual({
-        phone_number: "555-9999",
-        phone_type: "work",
-        label: "Office",
-        is_primary: false,
-      });
-    });
-
-    it("adds phone number without optional fields", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              status: "success",
-              data: {
-                id: "4",
-                phone_number: "555-0000",
-                phone_type: "mobile",
-                is_primary: true,
-                priority: 1,
-              },
-            }),
-        }),
-      );
-
-      const minimalRequest: PhoneNumberCreateRequest = {
-        phoneNumber: "555-0000",
-        phoneType: "mobile",
-      };
-
-      const result = await addGuardianPhoneNumber("123", minimalRequest);
-
-      expect(result.phoneNumber).toBe("555-0000");
-      expect(result.phoneType).toBe("mobile");
-    });
-
-    it("throws the backend message as diagnostic on non-ok response", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: false,
-          statusText: "Bad Request",
-          json: () => Promise.resolve({ detail: "validation failed" }),
-        }),
-      );
-
-      await expect(
-        addGuardianPhoneNumber("123", mockCreateRequest),
-      ).rejects.toThrow("Failed to add phone number");
-    });
-
-    it("rejects a success answer without data", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: true,
-          json: () => Promise.resolve({ status: "success" }),
-        }),
-      );
-
-      await expect(
-        addGuardianPhoneNumber("123", mockCreateRequest),
-      ).rejects.toThrow();
-    });
-
-    it("throws error when data is missing", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              status: "success",
-              data: null,
-            }),
-        }),
-      );
-
-      await expect(
-        addGuardianPhoneNumber("123", mockCreateRequest),
-      ).rejects.toThrow();
-    });
-
-    it("throws the fallback diagnostic when JSON parse fails", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: false,
-          status: 400,
-          statusText: "Bad Request",
-          json: () => Promise.reject(new Error("Parse error")),
-        }),
-      );
-
-      await expect(
-        addGuardianPhoneNumber("123", mockCreateRequest),
-      ).rejects.toMatchObject({
-        message: "Failed to add phone number",
-        code: "general.input",
-      });
-    });
-  });
-
-  describe("updateGuardianPhoneNumber", () => {
-    const mockUpdateRequest: PhoneNumberUpdateRequest = {
-      phoneNumber: "555-1111",
-      phoneType: "mobile",
-      label: "New Mobile",
-    };
-
-    it("updates a guardian phone number", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: true,
-          json: () => Promise.resolve({ status: "success", data: null }),
-        }),
-      );
-
-      await expect(
-        updateGuardianPhoneNumber("123", "456", mockUpdateRequest),
-      ).resolves.toBeUndefined();
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/guardians/123/phone-numbers/456",
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: expect.any(String),
-        },
-      );
-
-      // Verify the request body was mapped correctly
-      const callArgs = vi.mocked(global.fetch).mock.calls[0] as [
-        string,
-        RequestInit,
-      ];
-      const body = JSON.parse(callArgs[1].body as string) as Record<
-        string,
-        unknown
-      >;
-      expect(body).toEqual({
-        phone_number: "555-1111",
-        phone_type: "mobile",
-        label: "New Mobile",
-      });
-    });
-
-    it("updates only specified fields", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: true,
-          json: () => Promise.resolve({ status: "success", data: null }),
-        }),
-      );
-
-      const partialUpdate: PhoneNumberUpdateRequest = {
-        phoneType: "home",
-      };
-
-      await updateGuardianPhoneNumber("123", "456", partialUpdate);
-
-      const callArgs = vi.mocked(global.fetch).mock.calls[0] as [
-        string,
-        RequestInit,
-      ];
-      const body = JSON.parse(callArgs[1].body as string) as Record<
-        string,
-        unknown
-      >;
-      expect(body).toEqual({
-        phone_type: "home",
-      });
-      expect(body).not.toHaveProperty("phone_number");
-      expect(body).not.toHaveProperty("label");
-    });
-
-    it("throws the backend message as diagnostic on non-ok response", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: false,
-          statusText: "Not Found",
-          json: () => Promise.resolve({ detail: "guardian not found" }),
-        }),
-      );
-
-      await expect(
-        updateGuardianPhoneNumber("999", "456", mockUpdateRequest),
-      ).rejects.toThrow("Failed to update phone number");
-    });
-
-    it("throws the fallback diagnostic when JSON parse fails", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: false,
-          statusText: "Bad Request",
-          json: () => Promise.reject(new Error("Parse error")),
-        }),
-      );
-
-      await expect(
-        updateGuardianPhoneNumber("123", "456", mockUpdateRequest),
-      ).rejects.toThrow("Failed to update phone number");
-    });
-  });
-
-  describe("deleteGuardianPhoneNumber", () => {
-    it("deletes a phone number with 204 No Content response", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: true,
-          status: 204,
-        }),
-      );
-
-      await expect(
-        deleteGuardianPhoneNumber("123", "456"),
-      ).resolves.toBeUndefined();
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/guardians/123/phone-numbers/456",
-        {
-          method: "DELETE",
-        },
-      );
-    });
-
-    it("deletes a phone number with JSON success response", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve({ status: "success", data: null }),
-        }),
-      );
-
-      await expect(
-        deleteGuardianPhoneNumber("123", "456"),
-      ).resolves.toBeUndefined();
-    });
-
-    it("throws error on non-ok response", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: false,
-          statusText: "Not Found",
-          json: () => Promise.resolve({ detail: "Phone number not found" }),
-        }),
-      );
-
-      await expect(deleteGuardianPhoneNumber("123", "999")).rejects.toThrow(
-        "Failed to delete phone number",
-      );
-    });
-
-    it("throws fallback error when JSON parse fails", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: false,
-          statusText: "Bad Request",
-          json: () => Promise.reject(new Error("Parse error")),
-        }),
-      );
-
-      await expect(deleteGuardianPhoneNumber("123", "456")).rejects.toThrow(
-        "Failed to delete phone number",
-      );
-    });
-  });
-
-  describe("setGuardianPrimaryPhone", () => {
-    it("sets a phone number as primary", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: true,
-          json: () => Promise.resolve({ status: "success", data: null }),
-        }),
-      );
-
-      await expect(
-        setGuardianPrimaryPhone("123", "456"),
-      ).resolves.toBeUndefined();
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/guardians/123/phone-numbers/456/set-primary",
-        {
-          method: "POST",
-        },
-      );
-    });
-
-    it("throws error on non-ok response", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: false,
-          statusText: "Not Found",
-          json: () => Promise.resolve({ detail: "Phone number not found" }),
-        }),
-      );
-
-      await expect(setGuardianPrimaryPhone("123", "999")).rejects.toThrow(
-        "Failed to set primary phone",
-      );
-    });
-
-    it("throws fallback error when JSON parse fails", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: false,
-          statusText: "Internal Server Error",
-          json: () => Promise.reject(new Error("Parse error")),
-        }),
-      );
-
-      await expect(setGuardianPrimaryPhone("123", "456")).rejects.toThrow(
-        "Failed to set primary phone",
-      );
-    });
-
-    it("handles guardian not found error", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: false,
-          statusText: "Not Found",
-          json: () => Promise.resolve({ detail: "Guardian not found" }),
-        }),
-      );
-
-      await expect(setGuardianPrimaryPhone("999", "456")).rejects.toThrow(
-        "Failed to set primary phone",
-      );
-    });
-
-    it("handles unauthorized error", async () => {
-      global.fetch = vi.fn().mockImplementation(() =>
-        plainResponse({
-          ok: false,
-          statusText: "Unauthorized",
-          json: () => Promise.resolve({ detail: "Unauthorized" }),
-        }),
-      );
-
-      await expect(setGuardianPrimaryPhone("123", "456")).rejects.toThrow(
-        "Failed to set primary phone",
-      );
-    });
-  });
-});
-
-describe("guardian-api transport failures", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  // #2517: a request that never reaches the API is general.unavailable, not
-  // a raw "Failed to fetch".
-  it("turns a network failure into general.unavailable", async () => {
-    global.fetch = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
-
-    await expect(fetchStudentGuardians("1")).rejects.toMatchObject({
-      name: "TypeError",
-      code: "general.unavailable",
     });
   });
 });

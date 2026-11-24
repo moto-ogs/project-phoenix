@@ -57,13 +57,13 @@ func TestWeeklyReviewShowsThePlanTheFamilySubmittedAgainst(t *testing.T) {
 	assert.NotEqual(t, unchangedToken, token)
 
 	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("/care-schedule-change-requests/%d/decide", pending.ID),
-		strings.NewReader(fmt.Sprintf(`{"approve":true,"reason":"Passt so","impact_token":%q}`, token)))
+		strings.NewReader(fmt.Sprintf(`{"approve":true,"reason":"Passt so","impact_token":%q,"expected_version":%q}`, token, testpkg.CareRequestVersion(t, pending.ID))))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	rr := authExec(t, tc, req, claims, []string{"admin:*"})
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 
-	req, err = http.NewRequest(http.MethodGet, "/change-requests?view=history&types=care_schedule", nil)
+	req, err = http.NewRequest(http.MethodGet, "/change-requests/history?types=care_schedule", nil)
 	require.NoError(t, err)
 	rr = authExec(t, tc, req, claims, []string{"admin:*"})
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
@@ -73,7 +73,7 @@ func TestWeeklyReviewShowsThePlanTheFamilySubmittedAgainst(t *testing.T) {
 				Data struct {
 					ID   string         `json:"id"`
 					Diff []baselineDiff `json:"diff"`
-				} `json:"data"`
+				} `json:"care_schedule"`
 			} `json:"items"`
 		} `json:"data"`
 	}
@@ -89,7 +89,7 @@ func TestWeeklyReviewShowsThePlanTheFamilySubmittedAgainst(t *testing.T) {
 
 func openWeeklyBaseline(t *testing.T, tc *testContext, claims sessiontoken.AppClaims, studentID, requestID int64) (string, baselineDiff) {
 	t.Helper()
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("/change-requests?view=open&types=care_schedule&student_id=%d", studentID), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("/change-requests?types=care_schedule&student_id=%d", studentID), nil)
 	require.NoError(t, err)
 	rr := authExec(t, tc, req, claims, []string{"admin:*"})
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
@@ -100,7 +100,7 @@ func openWeeklyBaseline(t *testing.T, tc *testContext, claims sessiontoken.AppCl
 					ID          string         `json:"id"`
 					ImpactToken string         `json:"impact_token"`
 					Diff        []baselineDiff `json:"diff"`
-				} `json:"data"`
+				} `json:"care_schedule"`
 			} `json:"items"`
 		} `json:"data"`
 	}

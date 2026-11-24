@@ -14,6 +14,7 @@ import (
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -105,14 +106,6 @@ func (p *GuardianDirectory) ListGuardianPhones(ctx context.Context, guardianID i
 	return toDirectoryPhones(phones), nil
 }
 
-func (p *GuardianDirectory) FindGuardianPhone(ctx context.Context, phoneID int64) (peopledirectory.GuardianPhone, error) {
-	phone, err := p.guardians.GuardianPhoneNumbers().FindByID(ctx, phoneID)
-	if err != nil {
-		return peopledirectory.GuardianPhone{}, mapGuardianPhoneError(err)
-	}
-	return toDirectoryPhone(phone), nil
-}
-
 func (p *GuardianDirectory) ListStudentGuardians(ctx context.Context, studentID int64) ([]peopledirectory.GuardianWithLink, error) {
 	rows, err := p.guardians.GetStudentGuardians(ctx, studentID)
 	if err != nil {
@@ -158,7 +151,7 @@ func (p *GuardianDirectory) GuardianPaymentMasked(ctx context.Context, guardianI
 	if err != nil {
 		return peopledirectory.GuardianPayment{}, mapGuardianPaymentError(err)
 	}
-	return peopledirectory.GuardianPayment{GuardianProfileID: masked.GuardianProfileID, IBAN: masked.IBANMasked, AccountHolder: masked.AccountHolder}, nil
+	return peopledirectory.GuardianPayment{GuardianProfileID: masked.GuardianProfileID, IBAN: masked.IBANMasked, AccountHolder: masked.AccountHolder, Version: masked.Version}, nil
 }
 
 func (p *GuardianDirectory) ListPaymentOverview(ctx context.Context, actor peopledirectory.GuardianPaymentActor) ([]peopledirectory.GuardianPaymentRow, error) {
@@ -236,26 +229,6 @@ func (p *GuardianDirectory) AddGuardianPhone(ctx context.Context, guardianID int
 	return toDirectoryPhone(phone), nil
 }
 
-func (p *GuardianDirectory) UpdateGuardianPhone(ctx context.Context, phoneID int64, input peopledirectory.GuardianPhoneUpdate) error {
-	return mapGuardianPhoneError(p.inTenantTx(ctx, func(txCtx context.Context) error {
-		return p.guardians.UpdatePhoneNumber(txCtx, phoneID, peoplePorts.PhoneNumberUpdateRequest{
-			PhoneNumber: input.PhoneNumber, PhoneType: input.PhoneType, Label: input.Label, IsPrimary: input.IsPrimary, Priority: input.Priority,
-		})
-	}))
-}
-
-func (p *GuardianDirectory) DeleteGuardianPhone(ctx context.Context, phoneID int64) error {
-	return mapGuardianPhoneError(p.inTenantTx(ctx, func(txCtx context.Context) error {
-		return p.guardians.DeletePhoneNumber(txCtx, phoneID)
-	}))
-}
-
-func (p *GuardianDirectory) SetPrimaryGuardianPhone(ctx context.Context, phoneID int64) error {
-	return mapGuardianPhoneError(p.inTenantTx(ctx, func(txCtx context.Context) error {
-		return p.guardians.SetPrimaryPhone(txCtx, phoneID)
-	}))
-}
-
 func (p *GuardianDirectory) LinkGuardianToStudent(ctx context.Context, input peopledirectory.LinkGuardian) (peopledirectory.GuardianLink, error) {
 	if !(RepositoryRuntime{}).InTransaction(ctx) {
 		input.CreatedStudent, input.CreatedGuardian = nil, nil
@@ -302,6 +275,16 @@ func (p *GuardianDirectory) UpdateGuardianLink(ctx context.Context, linkID int64
 	}))
 }
 
+// UpdateGuardianEntry runs in the caller's unit (the owner capability
+// requires it) and checks the version of the locked entry with the
+// projection the guardian list reads, so read and check share one token.
+func (p *GuardianDirectory) UpdateGuardianEntry(ctx context.Context, edit peopledirectory.GuardianEntryEdit) error {
+	return mapGuardianError(p.guardians.UpdateGuardianEntry(ctx, edit, func(profile *peopledirectory.GuardianProfileSnapshot, link *peopledirectory.GuardianRelationshipSnapshot) error {
+		stored := peopledirectory.GuardianWithLink{Guardian: toDirectoryGuardian(profile), Link: toDirectoryLink(link, p.permissionGranted)}
+		return readstate.Check(edit.ExpectedVersion, peopledirectory.GuardianEntryVersion(stored))
+	}))
+}
+
 func (p *GuardianDirectory) RemoveGuardianFromStudent(ctx context.Context, input peopledirectory.RemoveGuardian) error {
 	return mapGuardianError(p.inTenantTx(ctx, func(txCtx context.Context) error {
 		return p.guardians.RemoveGuardianFromStudent(txCtx, input.StudentID, input.GuardianProfileID, input.ActorAccountID, input.MayClearPayer)
@@ -313,12 +296,12 @@ func (p *GuardianDirectory) RevealGuardianPayment(ctx context.Context, guardianI
 	if err != nil {
 		return peopledirectory.GuardianPayment{}, mapGuardianPaymentError(err)
 	}
-	return peopledirectory.GuardianPayment{GuardianProfileID: plain.GuardianProfileID, IBAN: plain.IBAN, AccountHolder: plain.AccountHolder}, nil
+	return peopledirectory.GuardianPayment{GuardianProfileID: plain.GuardianProfileID, IBAN: plain.IBAN, AccountHolder: plain.AccountHolder, Version: plain.Version}, nil
 }
 
 func (p *GuardianDirectory) UpdateGuardianPayment(ctx context.Context, guardianID int64, input peopledirectory.GuardianPaymentInput) error {
 	return mapGuardianPaymentError(p.guardians.UpdateGuardianPayment(ctx, guardianID, peoplePorts.GuardianPaymentInput{
-		IBAN: input.IBAN, AccountHolder: input.AccountHolder,
+		IBAN: input.IBAN, AccountHolder: input.AccountHolder, ExpectedVersion: input.ExpectedVersion,
 	}, input.ActorAccountID, input.Note))
 }
 
@@ -348,8 +331,6 @@ func mapGuardianError(err error) error {
 		return &peopledirectory.GuardianStillLinkedError{StudentNames: stillLinked.StudentNames}
 	case errors.Is(err, peoplePorts.ErrGuardianForceDeleteRequiresAdmin):
 		return peopledirectory.ErrGuardianForceDeleteRequiresAdmin
-	case errors.Is(err, peoplePorts.ErrGuardianDeletePreviewChanged):
-		return peopledirectory.ErrGuardianDeletePreviewChanged
 	case errors.Is(err, peoplePorts.ErrPayerRemovalRequiresFinancial):
 		return peopledirectory.ErrPayerRemovalRequiresFinancial
 	case errors.Is(err, peopledirectory.ErrGuardianProfileNotFound):
@@ -364,16 +345,6 @@ func mapGuardianError(err error) error {
 	default:
 		return err
 	}
-}
-
-func mapGuardianPhoneError(err error) error {
-	if err == nil {
-		return nil
-	}
-	if errors.Is(err, peopledirectory.ErrGuardianPhoneNotFound) {
-		return fmt.Errorf("%w: %w", peopledirectory.ErrGuardianPhoneNotFound, err)
-	}
-	return mapGuardianError(err)
 }
 
 func mapGuardianLinkError(err error) error {

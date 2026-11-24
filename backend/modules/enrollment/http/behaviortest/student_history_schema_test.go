@@ -49,8 +49,8 @@ func TestEnrollmentHistorySchemaMetadataKeepsRowFailures(t *testing.T) {
 	require.NoError(t, json.Unmarshal(raw, &rows))
 	require.Len(t, rows, len(schemaIDs))
 	for i, row := range rows {
-		require.Equal(t, requestIDs[len(rows)-1-i], row.ID)
-		require.Equal(t, testFormValues(map[string]any{"answer": "retained"}), row.CustomData)
+		require.Equal(t, requestIDs[len(rows)-1-i], row.ID.String())
+		require.Equal(t, map[string]any{"answer": "retained"}, row.CustomData)
 		require.Len(t, row.Children, 1)
 		require.False(t, row.Children[0].OfferingsUnavailable)
 	}

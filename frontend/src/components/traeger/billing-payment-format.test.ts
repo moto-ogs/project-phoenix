@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type {
   BillingTerms,
-  FamilyBilling,
   ServiceTerms,
 } from "~/lib/traeger-billing-terms-api";
 import {
@@ -11,7 +10,6 @@ import {
   familiesPath,
   familyPaymentFilterOf,
   familyPaymentPath,
-  findFamilyBilling,
   invoiceDueDatesText,
   paymentMethodsText,
   recipientKindLabel,
@@ -21,26 +19,6 @@ import {
 } from "./billing-payment-format";
 
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
-
-function family(patch: Partial<FamilyBilling>): FamilyBilling {
-  return {
-    id: "1",
-    familyEmail: "anna@example.org",
-    contractId: "",
-    recipientKind: "applicant",
-    secondFirstName: "",
-    secondLastName: "",
-    payerFirstName: "",
-    payerLastName: "",
-    payerEmail: "",
-    payerAddress: null,
-    paymentMethod: "",
-    dueDay: 15,
-    debtorNumber: "",
-    updatedAt: "2026-09-01T10:00:00Z",
-    ...patch,
-  };
-}
 
 describe("billing payment format", () => {
   it("names the payment term and the invoice a service travels on", () => {
@@ -116,65 +94,13 @@ describe("billing payment format", () => {
       ]),
     ).toBe("Überweisung am 01.10.2026 · Überweisung am 15.10.2026");
   });
-
-  it("finds a family's deviation by contract, else by its address", () => {
-    const byContract = family({ id: "2", contractId: "42" });
-    const byEmail = family({ id: "3", familyEmail: "anna@example.org" });
-    const payer = family({
-      id: "4",
-      familyEmail: "carla@example.org",
-      recipientKind: "payer",
-      payerEmail: "Amt@Example.org",
-    });
-    const otherFamily = family({
-      id: "5",
-      familyEmail: "dora@example.org",
-      recipientKind: "payer",
-      payerEmail: "Amt@Example.org",
-    });
-    const families = [byEmail, byContract, payer, otherFamily];
-
-    expect(
-      findFamilyBilling(families, {
-        contractId: "42",
-        recipientEmail: "other@example.org",
-      })?.id,
-    ).toBe("2");
-    expect(
-      findFamilyBilling(families, {
-        contractId: "7",
-        recipientEmail: " Anna@Example.org ",
-      })?.id,
-    ).toBe("3");
-    // A payer deviation sends the invoice to the payer's address.
-    expect(
-      findFamilyBilling(families, {
-        contractId: "8",
-        recipientEmail: "amt@example.org",
-        recipientKind: "payer",
-        familyEmail: " Dora@Example.org ",
-      })?.id,
-    ).toBe("5");
-    expect(
-      findFamilyBilling(families, {
-        contractId: "8",
-        recipientEmail: "amt@example.org",
-        recipientKind: "payer",
-      }),
-    ).toBeNull();
-    expect(
-      findFamilyBilling(families, {
-        contractId: "9",
-        recipientEmail: "nobody@example.org",
-      }),
-    ).toBeNull();
-  });
 });
 
 function terms(...entries: Partial<ServiceTerms>[]): BillingTerms {
   return {
     services: [],
     terms: entries.map((entry) => ({
+      version: "v1",
       service: "care",
       paymentMethod: "transfer",
       dueDays: 14,

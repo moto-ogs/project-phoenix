@@ -179,6 +179,7 @@ const STANDARD_REPORT: KeyDateReport = {
 };
 
 const TEMPLATE: ReportTemplate = {
+  version: "v-1",
   id: "12",
   name: "Kommune Belegung",
   sections: ["demand"],
@@ -209,7 +210,7 @@ const TEMPLATE_REPORT: KeyDateReport = {
 
 function signIn(permissions: string[]) {
   mockUseSession.mockReturnValue({
-    data: { user: { id: "A", scope: "org", orgId: 7, permissions } },
+    data: { user: { id: "A", scope: "org", orgId: "7", permissions } },
     status: "authenticated",
   });
 }

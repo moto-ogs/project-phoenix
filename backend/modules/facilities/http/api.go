@@ -121,7 +121,6 @@ func (rs *Resource) Router() chi.Router {
 		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/", rs.listRooms)
 		protected.With(rs.runtime.Permission(rs.runtime.Read), rs.runtime.Permission(rs.runtime.ReadUsers), withTx).Post("/export", rs.exportSnapshot)
 		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/{id}", rs.getRoom)
-		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/by-category", rs.getRoomsByCategory)
 		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/{id}/history", rs.GetRoomHistory)
 		protected.With(rs.runtime.Permission(rs.runtime.Create), withTx).Post("/", rs.createRoom)
 		protected.With(rs.runtime.Permission(rs.runtime.Update), withTx).Put("/{id}", rs.updateRoom)
@@ -142,6 +141,10 @@ type RoomRequest struct {
 	// as it is". The room form posts a partial payload, so a plain bool
 	// would revoke a standing release on the first unrelated edit.
 	IsOpenRoom *bool `json:"is_open_room,omitempty"`
+	// ExpectedVersion is the version of the room an update edits; an
+	// update of a room changed since is refused (ADR 0311). A create
+	// ignores it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 func (req *RoomRequest) Bind(_ *http.Request) error {
@@ -169,6 +172,8 @@ type RoomResponse struct {
 	ArchivedAt      *time.Time `json:"archived_at,omitempty"`
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
+	// Version is the token an update sends back as expected_version.
+	Version string `json:"version"`
 }
 
 func newRoomResponse(view RoomView) RoomResponse {
@@ -178,7 +183,7 @@ func newRoomResponse(view RoomView) RoomResponse {
 		IsOccupied: view.IsOccupied, GroupName: view.GroupName, CategoryName: view.CategoryName,
 		StudentCount: view.StudentCount, SupervisorNames: view.SupervisorNames,
 		IsSystem: view.IsSystem, IsOpenRoom: view.IsOpenRoom, ArchivedAt: view.ArchivedAt,
-		CreatedAt: view.CreatedAt, UpdatedAt: view.UpdatedAt,
+		CreatedAt: view.CreatedAt, UpdatedAt: view.UpdatedAt, Version: facilities.RoomVersion(view.Room),
 	}
 }
 
@@ -283,31 +288,13 @@ func (rs *Resource) updateRoom(w http.ResponseWriter, r *http.Request) {
 	room, err := rs.rooms.UpdateRoom(r.Context(), facilities.UpdateRoom{
 		ID: id, Name: req.Name, Building: req.Building, Floor: req.Floor,
 		Capacity: req.Capacity, Category: req.Category, Color: req.Color,
-		IsOpenRoom: req.IsOpenRoom,
+		IsOpenRoom: req.IsOpenRoom, ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		rs.failure(w, r, err)
 		return
 	}
 	rs.runtime.Success(w, r, http.StatusOK, simpleRoomResponse(room), "Room updated successfully")
-}
-
-func (rs *Resource) getRoomsByCategory(w http.ResponseWriter, r *http.Request) {
-	category := r.URL.Query().Get("category")
-	if category == "" {
-		rs.runtime.Failure(w, r, FailureInvalid, errors.New("category parameter is required"), "invalid_request")
-		return
-	}
-	rooms, err := rs.rooms.ListRooms(r.Context(), facilities.RoomFilter{Category: &category})
-	if err != nil {
-		rs.failure(w, r, err)
-		return
-	}
-	responses := make([]RoomResponse, 0, len(rooms))
-	for _, room := range rooms {
-		responses = append(responses, simpleRoomResponse(room))
-	}
-	rs.runtime.Success(w, r, http.StatusOK, responses, "Rooms retrieved successfully")
 }
 
 // ErrHistoryDisabled refuses the room history of a school whose attendance

@@ -1,15 +1,13 @@
 package operator
 
 import (
-	"encoding/json"
-
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 )
 
 // ProvisioningRouteContracts registers the operator's provisioning routes
 // (ADR 0270, #2352), with patterns relative to the /operator mount.
-func ProvisioningRouteContracts() []common.RouteContract {
+func ProvisioningRouteContracts(caregiverState any) []common.RouteContract {
 	operator := []common.PortalScope{common.PortalOperator}
 	route := func(method, pattern string, request, response any) common.RouteContract {
 		return common.RouteContract{Method: method, Pattern: pattern, Portals: operator, Request: request, Response: response, NoData: response == nil}
@@ -62,9 +60,9 @@ func ProvisioningRouteContracts() []common.RouteContract {
 		route("GET", "/schools/{id}/persons", nil, []organizationtenancy.OperatorPerson{}),
 		route("GET", "/schools/{id}/pwa-usage", nil, organizationtenancy.SchoolPWAUsage{}),
 		// People Directory renders the capability; this package hands it on.
-		route("GET", "/schools/{id}/accounts/{accountId}/caregiver-capability/", nil, json.RawMessage{}),
-		route("POST", "/schools/{id}/accounts/{accountId}/caregiver-capability/", updateCaregiverCapabilityRequest{}, json.RawMessage{}),
-		route("DELETE", "/schools/{id}/accounts/{accountId}/caregiver-capability/", nil, json.RawMessage{}),
+		route("GET", "/schools/{id}/accounts/{accountId}/caregiver-capability/", nil, caregiverState),
+		route("POST", "/schools/{id}/accounts/{accountId}/caregiver-capability/", updateCaregiverCapabilityRequest{}, caregiverState),
+		route("DELETE", "/schools/{id}/accounts/{accountId}/caregiver-capability/", nil, caregiverState),
 	}
 }
 

@@ -35,6 +35,7 @@ import { ChoiceTile } from "~/components/ui/choice-tile";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
 import { ParentSubsection } from "~/components/parent/shell/parent-section";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { isValidISODate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import {
@@ -43,7 +44,10 @@ import {
   type MealPlanEntry,
 } from "~/lib/parent-api";
 import { useMealParticipation } from "~/lib/hooks/use-meal-participation";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useReadDraftLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { usedMealAllergens } from "~/lib/meal-allergens";
 import {
@@ -68,6 +72,7 @@ const logger = createLogger({ component: "ParentMealPlanPage" });
 
 const NO_ENTRIES: MealPlanEntry[] = [];
 const NO_SCHOOLS: ChildOption[] = [];
+const NO_WEEKDAYS: readonly number[] = [];
 
 // One school the parent has a child at, with a representative child used for the
 // per-child (school-scoped) backend calls.
@@ -304,6 +309,8 @@ function MealParticipationEditActions({
   onCancel,
   onSave,
   saveTooltip,
+  saveDisabled = false,
+  saveDisabledReason,
   align = "end",
   className = "",
 }: Readonly<{
@@ -311,6 +318,9 @@ function MealParticipationEditActions({
   onCancel: () => void;
   onSave: () => void;
   saveTooltip: string;
+  /** Saving waits for something else, e.g. a read of the stored days. */
+  saveDisabled?: boolean;
+  saveDisabledReason?: string;
   align?: "start" | "end";
   className?: string;
 }>) {
@@ -335,10 +345,11 @@ function MealParticipationEditActions({
         variant="primary"
         size="md"
         onClick={onSave}
-        disabled={saving}
+        disabled={saving || saveDisabled}
         isLoading={saving}
         loadingText={t("saving")}
         tooltip={saveTooltip}
+        disabledReason={saving ? undefined : saveDisabledReason}
       >
         {t("save")}
       </Button>
@@ -386,7 +397,6 @@ function ParticipationWeek({
   const weekDishes = weekDates.flatMap((date) => dishesByDate.get(date) ?? []);
   const hasDishes = weekDishes.length > 0;
   const weekAllergens = usedMealAllergens(weekDishes);
-  const [weekdays, setWeekdays] = useState<number[]>([]);
   const [editingRegularDays, setEditingRegularDays] = useState(false);
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [dayChange, setDayChange] = useState<DraftDayChange | null>(null);
@@ -476,10 +486,28 @@ function ParticipationWeek({
     t("errorObjectParticipation"),
     () => meal.mutate(),
   );
-  useEffect(() => {
-    if (participation && !editingRegularDays)
-      setWeekdays(participation.weekdays);
-  }, [participation, editingRegularDays]);
+  // The regular days a family edits rest on the version they saw (ADR
+  // 0311): a newer read refills them only while untouched, the save sends
+  // that version, and after a refusal the stored days show again.
+  const regular = useDraftOn<MealParticipation, number[], string, unknown>(
+    {
+      opening: studentId ? `${schoolId}:${studentId}` : null,
+      data: participation,
+      error: participation ? undefined : meal.error,
+      reload: meal.reloadOrThrow,
+    },
+    {
+      token: (read) => read.version,
+      toDraft: (read) => read.weekdays,
+    },
+  );
+  // A failed read after a refused or saved change: the stored days are
+  // unknown, so saving waits for a read (ADR 0311, rules 4 and 6).
+  const regularLoadError = useReadDraftLoadError(
+    regular,
+    t("errorObjectParticipation"),
+  );
+  const weekdays = regular.draft ?? participation?.weekdays ?? NO_WEEKDAYS;
 
   // Ist in dieser Woche kein Tag mehr änderbar (Wochenende, Freitag nach
   // Annahmeschluss), öffnet die Seite einmalig die nächste Woche: Nur dort
@@ -505,7 +533,7 @@ function ParticipationWeek({
   }, [onWeekChange, participation, today, weekFromLink, weekOffset]);
 
   function toggleWeekday(weekday: number) {
-    setWeekdays((current) =>
+    regular.setDraft((current) =>
       current.includes(weekday)
         ? current.filter((value) => value !== weekday)
         : [...current, weekday].sort((a, b) => a - b),
@@ -515,23 +543,37 @@ function ParticipationWeek({
   async function saveRegularDays() {
     setSaving(true);
     clearSaveError();
-    try {
-      const outcome = await meal.saveSchedule(weekdays);
+    let discarded = false;
+    let accessRefused = false;
+    const result = await regular.submit(async (version, days) => {
+      const outcome = await meal.saveSchedule(days, version);
       if (outcome.status === "discarded") {
-        setSaving(false);
-        return;
+        discarded = true;
+        return outcome;
       }
       if (outcome.status === "failed") {
-        if (outcome.refused) setEditingRegularDays(false);
+        accessRefused = outcome.refused;
         throw outcome.error;
       }
-    } catch (err) {
+      return outcome;
+    });
+    if (discarded) {
+      setSaving(false);
+      return;
+    }
+    if (!result.ok) {
+      const err = result.error;
+      if (accessRefused) setEditingRegularDays(false);
       logger.error("parent_meal_participation_schedule_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
+      // The regular days changed since they were read: the open draft
+      // shows the stored days again; the message waits for them and offers
+      // no retry of the same request (ADR 0311).
       void showSaveError(err, {
         object: t("errorObjectParticipation"),
         retry: () => retrySaveRef.current(),
+        reload: result.reload,
       });
       setSaving(false);
       return;
@@ -549,7 +591,7 @@ function ParticipationWeek({
 
   function cancelRegularDaysEdit() {
     clearSaveError();
-    setWeekdays(participation?.weekdays ?? []);
+    regular.discard();
     setEditingRegularDays(false);
   }
 
@@ -799,11 +841,22 @@ function ParticipationWeek({
               </div>
               <p className="mt-3 text-xs text-gray-500">{t("finishEdit")}</p>
               <FormErrorAlert message={saveError} className="mt-3" />
+              {/* After a refusal the save's alert already names the failed
+                  read, with its retry; otherwise it stands here. */}
+              {regularLoadError && !saveError ? (
+                <LoadErrorAlert error={regularLoadError} className="mt-3" />
+              ) : null}
               <MealParticipationEditActions
                 saving={saving}
                 onCancel={cancelRegularDaysEdit}
                 onSave={() => void saveRegularDays()}
                 saveTooltip={t("saveRegularDaysTooltip")}
+                saveDisabled={!regular.canSubmit}
+                saveDisabledReason={
+                  regular.status === "loadFailed"
+                    ? t("saveAfterReload")
+                    : undefined
+                }
                 className="mt-4"
               />
             </fieldset>

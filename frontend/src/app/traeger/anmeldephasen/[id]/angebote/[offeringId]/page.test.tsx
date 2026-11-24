@@ -27,7 +27,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "A", scope: "org", orgId: 7 } },
+    data: { user: { id: "A", scope: "org", orgId: "7" } },
     status: "authenticated",
   }),
 }));

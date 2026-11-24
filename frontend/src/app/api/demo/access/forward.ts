@@ -1,20 +1,18 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { sendBackend } from "~/lib/backend-client.server";
+import { type NextRequest, type NextResponse } from "next/server";
+import { contractGet } from "~/lib/contract/client.server";
+import type { routes } from "~/lib/contract/demo-access.generated";
 import { createLogger } from "~/lib/logger";
-import {
-  envelopedBackendSuccess,
-  forwardBackendResponse,
-} from "~/lib/backend-proxy-response.server";
-import { problemResponse } from "~/lib/api-helpers.server";
+import { problemResponse } from "~/lib/api-response-error.server";
+import { contractResponse } from "~/lib/contract/route-response.server";
+import { successResponse } from "~/lib/route-wrapper-utils.server";
 
 const logger = createLogger({ component: "DemoAccessRoute" });
 
 // Forwards a demo token to the backend (#3462). The token comes in the POST
-// body and is never logged. A success answers `{ status, data }`, an error
-// passes through unchanged.
+// body and is never logged. A success answers `{ status, data }`.
 export async function forwardDemoToken(
   request: NextRequest,
-  path: string,
+  route: (typeof routes)["GET /demo/access/status"],
 ): Promise<NextResponse> {
   let token = "";
   try {
@@ -27,12 +25,11 @@ export async function forwardDemoToken(
     return problemResponse(404, "demo access is unknown", request);
   }
   try {
-    const response = await sendBackend(demoBackendPath(path), token, {
+    const reply = await contractGet(route, {
+      token,
       request,
     });
-    return response.ok
-      ? await envelopedBackendSuccess(response, request)
-      : forwardBackendResponse(response, request);
+    return contractResponse(reply, request, successResponse);
   } catch (error) {
     logger.error("demo_access_forward_failed", {
       error: error instanceof Error ? error.message : String(error),
@@ -55,7 +52,3 @@ export const DEMO_TOKEN_COOKIE_OPTIONS = {
   path: "/api/demo",
   maxAge: 14 * 24 * 60 * 60,
 } as const;
-
-export function demoBackendPath(path: string): string {
-  return `/demo/access/${path}`;
-}

@@ -32,6 +32,8 @@ vi.mock("next-auth/react", () => ({
 vi.mock("next/navigation", () => ({
   redirect: vi.fn(),
   usePathname: () => "/traeger/konto",
+  // The module gate leaves an unbooked dashboard for the school list (#6052).
+  useRouter: () => ({ replace: vi.fn() }),
 }));
 vi.mock("~/lib/traeger-api", () => api);
 // „Konto“ also lists the trusted devices; these tests cover the name only.

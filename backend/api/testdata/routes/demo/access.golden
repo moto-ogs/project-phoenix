@@ -1,0 +1,3 @@
+GET /demo/access/status
+POST /demo/access/reset
+POST /demo/access/sessions

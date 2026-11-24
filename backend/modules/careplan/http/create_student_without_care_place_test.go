@@ -6,11 +6,12 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // TestCreateStudentWithoutCarePlace creates a child of the class without an
@@ -44,7 +45,7 @@ func TestCreateStudentWithoutCarePlace(t *testing.T) {
 
 	require.NoError(t, tc.settings().SetValue(ctx, settings.KeyChildrenWithoutCarePlace, true, nil, nil))
 	group := testpkg.CreateTestEducationGroup(t, tc.db, "Gruppe ohne Platz")
-	status, code = post(body(map[string]any{"group_id": group.ID}))
+	status, code = post(body(map[string]any{"group_id": fmt.Sprint(group.ID)}))
 	assert.Equal(t, http.StatusBadRequest, status)
 	assert.Equal(t, "students.without_care_place_group", code)
 	for _, wayHome := range []map[string]any{
@@ -80,7 +81,7 @@ func TestCreateStudentWithoutCarePlace(t *testing.T) {
 
 	// Every later write of the child (an edit, a sick note) rewrites its
 	// membership; it keeps the mark and gives the child no OGS place.
-	update := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", created.Data.ID), map[string]any{
+	update := studentUpdateRequest(t, tc, int64(created.Data.ID), map[string]any{
 		"extra_info": "Brille", "bus_days": map[string]bool{"mon": true},
 	})
 	rr = authExec(t, tc, update, testutil.AdminTestClaims(1), []string{"admin:*"})

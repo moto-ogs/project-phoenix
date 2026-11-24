@@ -78,15 +78,31 @@ func (s *regularBookingServer) handle(w seedHTTPResponseWriter, r *seedHTTPReque
 		_ = json.NewDecoder(r.Body).Decode(&body)
 	}
 	switch {
+	case r.Method == "GET" && r.URL.Path == "/api/enrollment/phases/77/manual-bootstrap":
+		// The office's form shows the phase's version and token (ADR 0311).
+		_, _ = fmt.Fprint(w, `{"status":"success","data":{"schema":{"id":"5"},"terms_fingerprint":"form-5"}}`)
+	case r.Method == "GET" && r.URL.Path == "/api/enrollment/phases/77":
+		// The phase editor reads the version it saves over (ADR 0311).
+		_, _ = fmt.Fprint(w, `{"status":"success","data":{"version":"phase-77"}}`)
 	case r.URL.Path == "/api/enrollment/phases/77":
+		assert.Equal(s.t, "phase-77", body["expected_version"], "the phase save sends the version it read (ADR 0311)")
 		s.events = append(s.events, fmt.Sprintf("audience %v", body["audience"]))
+		_, _ = fmt.Fprint(w, `{"status":"success","data":{}}`)
+	case r.Method == "PUT" && strings.HasPrefix(r.URL.Path, "/api/guardians/students/"):
+		parts := strings.Split(r.URL.Path, "/")
+		relationship, _ := body["relationship"].(map[string]any)
+		assert.Equal(s.t, "8"+parts[4], parts[6], "the staff save names the primary guardian")
+		assert.Equal(s.t, "v"+parts[4], body["expected_version"], "the staff save sends the version it read (ADR 0311)")
+		s.events = append(s.events, fmt.Sprintf("relationship %s %v", parts[4], relationship["relationship_type"]))
 		_, _ = fmt.Fprint(w, `{"status":"success","data":{}}`)
 	case strings.HasPrefix(r.URL.Path, "/api/guardians/students/"):
 		studentID := strings.Split(r.URL.Path, "/")[4]
 		_, _ = fmt.Fprintf(w, `{"status":"success","data":[`+
-			`{"guardian":{"first_name":"Oma","last_name":"X","email":"oma@example.test"},"relationship_id":1,"relationship_type":"relative","is_primary":false},`+
-			`{"guardian":{"first_name":"Eva","last_name":"Muster","email":"eva.%s@example.test"},"relationship_id":%s,"relationship_type":"parent","is_primary":true}]}`, studentID, studentID)
+			`{"guardian":{"id":"1","first_name":"Oma","last_name":"X","email":"oma@example.test"},"relationship_id":1,"relationship_type":"relative","is_primary":false},`+
+			`{"guardian":{"id":"8%s","first_name":"Eva","last_name":"Muster","email":"eva.%s@example.test"},"relationship_id":%s,"relationship_type":"parent","is_primary":true,"version":"v%s"}]}`, studentID, studentID, studentID, studentID)
 	case r.URL.Path == "/api/enrollment/phases/77/manual-approved-enrollments":
+		assert.Equal(s.t, "5", body["form_schema_id"], "the booking names the form version it filled")
+		assert.Equal(s.t, "form-5", body["expected_terms_fingerprint"], "the booking sends the token of the form it filled")
 		s.bookings = append(s.bookings, body)
 		child := body["children"].([]any)[0].(map[string]any)
 		studentID := map[string]string{"Emma": "1002", "Leon": "1003"}[child["first_name"].(string)]
@@ -95,9 +111,6 @@ func (s *regularBookingServer) handle(w seedHTTPResponseWriter, r *seedHTTPReque
 		}
 		s.events = append(s.events, "book "+studentID)
 		_, _ = fmt.Fprintf(w, `{"status":"success","data":{"request_id":"9","child_id":"9","student_id":%q,"status":"approved"}}`, studentID)
-	case strings.HasPrefix(r.URL.Path, "/api/guardians/relationships/"):
-		s.events = append(s.events, fmt.Sprintf("relationship %s %v", strings.Split(r.URL.Path, "/")[4], body["relationship_type"]))
-		_, _ = fmt.Fprint(w, `{"status":"success","data":{}}`)
 	default:
 		s.t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
 		w.WriteHeader(seedHTTPStatusNotFound)
@@ -134,10 +147,10 @@ func TestSeedRegularBookingsBooksCareAndLunchOnTheLunchDays(t *testing.T) {
 	child := leon["children"].([]any)[0].(map[string]any)
 	assert.Equal(t, "Koch", child["last_name"])
 	assert.EqualValues(t, 1, child["target_grade_level"], "the child keeps its class")
-	assert.Equal(t, []any{float64(11), float64(13)}, child["offering_ids"])
+	assert.Equal(t, []any{"11", "13"}, child["offering_ids"])
 	assert.Equal(t, []any{
-		map[string]any{"offering_id": float64(11), "selected_days": []any{"mon", "tue", "thu"}},
-		map[string]any{"offering_id": float64(13), "selected_days": []any{"mon", "tue", "thu"}},
+		map[string]any{"offering_id": "11", "selected_days": []any{"mon", "tue", "thu"}},
+		map[string]any{"offering_id": "13", "selected_days": []any{"mon", "tue", "thu"}},
 	}, child["offering_days"])
 }
 
@@ -160,7 +173,7 @@ func TestSeedRegularBookingsMixesGanztagAndKurzbetreuung(t *testing.T) {
 	careOf := func(booking map[string]any) any {
 		return booking["children"].([]any)[0].(map[string]any)["offering_ids"].([]any)[0]
 	}
-	assert.Equal(t, []any{float64(11), float64(11), float64(12)}, []any{careOf(server.bookings[0]), careOf(server.bookings[1]), careOf(server.bookings[2])})
+	assert.Equal(t, []any{"11", "11", "12"}, []any{careOf(server.bookings[0]), careOf(server.bookings[1]), careOf(server.bookings[2])})
 	assert.Equal(t, "audience open", server.events[len(server.events)-1], "the phase opens again after a failure")
 }
 

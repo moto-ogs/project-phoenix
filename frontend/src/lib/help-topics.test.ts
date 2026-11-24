@@ -763,6 +763,7 @@ describe("getParentHelpTopicForPath", () => {
       HELP_TOPICS.traegerSchoolSwitch,
       HELP_TOPICS.traegerTestSystem,
       HELP_TOPICS.traegerAccounts,
+      HELP_TOPICS.traegerSchoolRoles,
       HELP_TOPICS.traegerHolidayPeriod,
       HELP_TOPICS.traegerClosingDays,
       HELP_TOPICS.traegerHolidayForm,
@@ -802,7 +803,9 @@ describe("getParentHelpTopicForPath", () => {
       HELP_TOPICS.traegerBriefkopf,
       HELP_TOPICS.traegerDocumentTemplates,
       HELP_TOPICS.traegerDocumentKinds,
+      HELP_TOPICS.traegerResponsibilities,
       HELP_TOPICS.traegerSettings,
+      HELP_TOPICS.traegerModules,
       HELP_TOPICS.errorMessages,
     ]);
     expect([...new Set(traegerTopics.map((topic) => topic.group))]).toEqual([

@@ -92,7 +92,7 @@ describe("public links below the staff portal's auth", () => {
 
     const response = await call(POST, "POST", ["tok", "accept"], body);
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
     expect(await response.json()).toEqual({
       status: "success",
       data: { account_id: "42", email: "a@example.test" },

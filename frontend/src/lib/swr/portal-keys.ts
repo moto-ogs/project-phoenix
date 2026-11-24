@@ -1,4 +1,5 @@
 import { encodeMultiValueParam } from "~/lib/multi-value-param";
+import { compareIds } from "~/lib/compare-ids";
 import {
   SEARCH_STUDENTS_KEY_PREFIX,
   searchStudentsGroupScope,
@@ -328,7 +329,7 @@ export const devicePinKeys = {
 } as const;
 
 export const databaseKeys = {
-  counts: () => "/api/database/stats",
+  counts: () => "database-stats",
   // The SSE hook revalidates every key containing this name.
   calendarPeriods: () => "database-calendar-periods-list",
   /** The id/name options of one API list for a select, per query. */
@@ -578,7 +579,5 @@ export const holidayKeys = {
   guestGroups: "holiday-guest-groups",
   /** Je Satz von Feriengästen ein Schlüssel: ein neuer Gast fragt neu. */
   guestBadges: (studentIds: readonly string[]) =>
-    `holiday-guest-badges:${[...studentIds]
-      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-      .join(",")}`,
+    `holiday-guest-badges:${[...studentIds].sort(compareIds).join(",")}`,
 };

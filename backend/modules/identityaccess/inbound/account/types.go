@@ -26,7 +26,7 @@ type TenantResolveResponse struct {
 	OrganizationID   ident.ID        `json:"organization_id"`
 	OrganizationName string          `json:"organization_name"`
 	Hidden           bool            `json:"hidden"`
-	Settings         json.RawMessage `json:"settings"`
+	Settings         json.RawMessage `json:"settings" contract_json:"The tenant directory forwards legacy school-specific settings without interpreting their keys"`
 	// PresenceMode is the tenant's resolved operations.presence_mode setting
 	// ("detailed" | "binary"). Included so the frontend can render the right
 	// badge component (PresenceBadge vs LocationBadge) without a second call.
@@ -278,7 +278,7 @@ type RegisterRequest struct {
 	// requests that may never arrive.
 	FirstName string  `json:"first_name,omitempty"`
 	LastName  string  `json:"last_name,omitempty"`
-	TagID     *string `json:"tag_id,omitempty"`
+	TagID     *string `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"`
 }
 
 // Bind validates the register request
@@ -354,7 +354,7 @@ type LinkToTenantRequest struct {
 	// Identity fields, same meaning as on RegisterRequest (#2222).
 	FirstName string  `json:"first_name,omitempty"`
 	LastName  string  `json:"last_name,omitempty"`
-	TagID     *string `json:"tag_id,omitempty"`
+	TagID     *string `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"`
 }
 
 func (req *LinkToTenantRequest) Bind(_ *http.Request) error {
@@ -428,12 +428,34 @@ type UpdateRoleRequest struct {
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
 	BaseRole    *string `json:"base_role,omitempty"`
+	// ExpectedVersion is the version of the role the change was made from
+	// (ADR 0311); a role changed since answers 409
+	// general.changed_since_read.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // ReplaceRolePermissionsRequest contains the complete target set for a role.
 // An explicit empty array removes every permission; an omitted field is invalid.
+// ExpectedVersion is the version of the selection the set was made from
+// (ADR 0311); a selection changed since answers 409
+// general.changed_since_read.
 type ReplaceRolePermissionsRequest struct {
-	PermissionIDs []ident.ID `json:"permission_ids"`
+	PermissionIDs   []ident.ID `json:"permission_ids"`
+	ExpectedVersion string     `json:"expected_version"`
+}
+
+// ReplaceRolePermissionsResponse answers a replacement with the version of
+// the selection it stored; the next replacement sends it as
+// expected_version.
+type ReplaceRolePermissionsResponse struct {
+	Version string `json:"version"`
+}
+
+// RolePermissionsResponse is a role's selection with the version a
+// replacement sends back as expected_version.
+type RolePermissionsResponse struct {
+	Permissions []PermissionResponse `json:"permissions"`
+	Version     string               `json:"version"`
 }
 
 func (req *ReplaceRolePermissionsRequest) Bind(_ *http.Request) error {
@@ -458,6 +480,17 @@ func (req *ReplaceRolePermissionsRequest) Bind(_ *http.Request) error {
 // removed; guardian access is kept.
 type ReplaceAccountRoleRequest struct {
 	RoleID *ident.ID `json:"role_id"`
+	// ExpectedVersion is the version of the roles the change was made from
+	// (GET /accounts/{accountId}/role-selection/, ADR 0311); roles changed
+	// since answer 409 general.changed_since_read.
+	ExpectedVersion string `json:"expected_version"`
+}
+
+// AccountRolesResponse is an account's roles at this school with the
+// version a role change sends back as expected_version.
+type AccountRolesResponse struct {
+	Roles   []*RoleResponse `json:"roles"`
+	Version string          `json:"version"`
 }
 
 func (req *ReplaceAccountRoleRequest) Bind(_ *http.Request) error {
@@ -513,10 +546,17 @@ type RoleResponse struct {
 	BaseRole    *string  `json:"base_role,omitempty"`
 	// SchoolPortal marks a school role made from the Lehrkraft template: its
 	// accounts use moto schule like the Lehrkraft role (#4574).
-	SchoolPortal bool     `json:"school_portal"`
-	CreatedAt    string   `json:"created_at"`
-	UpdatedAt    string   `json:"updated_at"`
-	Permissions  []string `json:"permissions,omitempty"`
+	SchoolPortal bool `json:"school_portal"`
+	// FromTraeger marks a role the Träger of the school gives (#4810): the
+	// school assigns it but does not change or delete it.
+	FromTraeger bool   `json:"from_traeger"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
+	// Version is the read-state token of the role's master data (ADR 0311):
+	// an edit sends it back as expected_version. The permission selection
+	// carries its own.
+	Version     string   `json:"version"`
+	Permissions []string `json:"permissions,omitempty"`
 }
 
 // PermissionResponse represents a permission response

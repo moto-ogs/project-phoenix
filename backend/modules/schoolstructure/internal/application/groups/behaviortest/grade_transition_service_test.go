@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/moto-ogs/project-phoenix/workflows/gradetransition"
 	"github.com/stretchr/testify/assert"
@@ -94,7 +95,7 @@ func TestGradeTransitionWorkflow_Update(t *testing.T) {
 		id := f.createDraft(t, ctx, "2025-2026")
 
 		newYear := "2026-2027"
-		updated, err := wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{AcademicYear: &newYear})
+		updated, err := wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{ExpectedVersion: draftVersion(t, ctx, wf, id), AcademicYear: &newYear})
 		require.NoError(t, err)
 		assert.Equal(t, "2026-2027", updated.AcademicYear)
 	})
@@ -103,7 +104,7 @@ func TestGradeTransitionWorkflow_Update(t *testing.T) {
 		id := f.createDraft(t, ctx, "2025-2026")
 
 		notes := "Updated notes"
-		updated, err := wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{Notes: &notes})
+		updated, err := wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{ExpectedVersion: draftVersion(t, ctx, wf, id), Notes: &notes})
 		require.NoError(t, err)
 		require.NotNil(t, updated.Notes)
 		assert.Equal(t, "Updated notes", *updated.Notes)
@@ -112,7 +113,7 @@ func TestGradeTransitionWorkflow_Update(t *testing.T) {
 	t.Run("update mappings", func(t *testing.T) {
 		id := f.createDraft(t, ctx, "2025-2026", promote("1a", "2a"))
 
-		updated, err := wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{
+		updated, err := wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{ExpectedVersion: draftVersion(t, ctx, wf, id),
 			Mappings: []gradetransition.Mapping{promote("2a", "3a"), promote("3a", "4a")},
 		})
 		require.NoError(t, err)
@@ -123,13 +124,36 @@ func TestGradeTransitionWorkflow_Update(t *testing.T) {
 		suffix := uuid.Must(uuid.NewV4()).String()[:8]
 		id := f.createDraft(t, ctx, "2025-2026",
 			promote(fmt.Sprintf("1upd-%s", suffix), fmt.Sprintf("2upd-%s", suffix)))
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 
 		newYear := "2026-2027"
-		_, err = wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{AcademicYear: &newYear})
+		_, err = wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{ExpectedVersion: draftVersion(t, ctx, wf, id), AcademicYear: &newYear})
 		require.ErrorIs(t, err, gradetransition.ErrTransitionNotDraft)
 		assert.Contains(t, err.Error(), "cannot modify transition")
+	})
+
+	// An editor saves only over the draft it read (ADR 0311): a colleague's
+	// save in between, or no read at all, is refused and writes nothing.
+	t.Run("update refuses a draft changed since it was read", func(t *testing.T) {
+		id := f.createDraft(t, ctx, "2025-2026", promote("1a", "2a"))
+		read := draftVersion(t, ctx, wf, id)
+		colleague := "Kollegin"
+		saved, err := wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{ExpectedVersion: read, Notes: &colleague})
+		require.NoError(t, err)
+		assert.Equal(t, draftVersion(t, ctx, wf, id), gradetransition.Version(saved), "the answer carries the stored version")
+		require.NotEqual(t, read, gradetransition.Version(saved))
+
+		for _, stale := range []string{read, ""} {
+			_, err = wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{
+				ExpectedVersion: stale, Mappings: []gradetransition.Mapping{graduate("1a")},
+			})
+			require.ErrorIs(t, err, readstate.ErrChanged)
+		}
+		unchanged, err := findTransition(ctx, wf, id)
+		require.NoError(t, err)
+		require.Len(t, unchanged.Mappings, 1)
+		require.NotNil(t, unchanged.Mappings[0].ToClass, "the colleague's draft stays")
 	})
 
 	t.Run("update non-existent transition", func(t *testing.T) {
@@ -155,7 +179,7 @@ func TestGradeTransitionWorkflow_Delete(t *testing.T) {
 		require.NoError(t, wf.DeleteDraft(ctx, id))
 
 		// Verify deletion
-		_, err := wf.FindTransition(ctx, id)
+		_, err := findTransition(ctx, wf, id)
 		require.ErrorIs(t, err, gradetransition.ErrTransitionNotFound)
 	})
 
@@ -163,7 +187,7 @@ func TestGradeTransitionWorkflow_Delete(t *testing.T) {
 		suffix := uuid.Must(uuid.NewV4()).String()[:8]
 		id := f.createDraft(t, ctx, "2025-2026",
 			promote(fmt.Sprintf("1del-%s", suffix), fmt.Sprintf("2del-%s", suffix)))
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 
 		err = wf.DeleteDraft(ctx, id)
@@ -178,7 +202,9 @@ func TestGradeTransitionWorkflow_Delete(t *testing.T) {
 	})
 }
 
-func TestGradeTransitionWorkflow_Get(t *testing.T) {
+// The list answers a transition with its mappings; the workflow has no read
+// of a single transition since its route left (#7723).
+func TestGradeTransitionWorkflow_ListAnswersMappings(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
@@ -188,20 +214,13 @@ func TestGradeTransitionWorkflow_Get(t *testing.T) {
 	ctx, cancel := context.WithTimeout(testpkg.Ctx(t), 10*time.Second)
 	defer cancel()
 
-	t.Run("get transition with mappings", func(t *testing.T) {
-		id := f.createDraft(t, ctx, "2025-2026", promote("1a", "2a"), promote("2a", "3a"))
+	id := f.createDraft(t, ctx, "2025-2026", promote("1a", "2a"), promote("2a", "3a"))
 
-		result, err := wf.FindTransition(ctx, id)
-		require.NoError(t, err)
-		assert.Equal(t, id, result.ID)
-		assert.Equal(t, "2025-2026", result.AcademicYear)
-		assert.Len(t, result.Mappings, 2)
-	})
-
-	t.Run("get non-existent transition", func(t *testing.T) {
-		_, err := wf.FindTransition(ctx, deletedTransitionID(t, ctx, f, wf))
-		require.ErrorIs(t, err, gradetransition.ErrTransitionNotFound)
-	})
+	result, err := findTransition(ctx, wf, id)
+	require.NoError(t, err)
+	assert.Equal(t, id, result.ID)
+	assert.Equal(t, "2025-2026", result.AcademicYear)
+	assert.Len(t, result.Mappings, 2)
 }
 
 func TestGradeTransitionWorkflow_List(t *testing.T) {
@@ -339,7 +358,7 @@ func TestGradeTransitionWorkflow_Apply(t *testing.T) {
 
 		id := f.createDraft(t, ctx, "2025-2026", promote(fromClass, toClass))
 
-		result, err := wf.Apply(ctx, id, "")
+		result, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 		assert.Equal(t, schoolstructure.TransitionStatusApplied, result.Status)
 		assert.Equal(t, 2, result.StudentsPromoted)
@@ -368,7 +387,7 @@ func TestGradeTransitionWorkflow_Apply(t *testing.T) {
 
 		id := f.createDraft(t, ctx, "2025-2026", promote(fromClass, toClass))
 
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 
 		// Verify history was created
@@ -396,11 +415,11 @@ func TestGradeTransitionWorkflow_Apply(t *testing.T) {
 			promote(fmt.Sprintf("9z-%s", suffix), fmt.Sprintf("10z-%s", suffix)))
 
 		// First apply
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 
 		// Second apply should fail
-		_, err = wf.Apply(ctx, id, "")
+		_, err = wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.ErrorIs(t, err, gradetransition.ErrTransitionNotDraft)
 		assert.Contains(t, err.Error(), "already been applied")
 	})
@@ -408,7 +427,7 @@ func TestGradeTransitionWorkflow_Apply(t *testing.T) {
 	t.Run("cannot apply transition without mappings", func(t *testing.T) {
 		id := f.createDraft(t, ctx, "2025-2026")
 
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.ErrorIs(t, err, gradetransition.ErrTransitionNotDraft)
 		assert.Contains(t, err.Error(), "must be in draft status with mappings")
 	})
@@ -436,7 +455,7 @@ func TestGradeTransitionWorkflow_Revert(t *testing.T) {
 		// Create and apply transition
 		id := f.createDraft(t, ctx, "2025-2026", promote(fromClass, toClass))
 
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 
 		// Verify student is in toClass
@@ -482,7 +501,7 @@ func TestGradeTransitionWorkflow_Revert(t *testing.T) {
 			promote(fmt.Sprintf("6y-%s", suffix), fmt.Sprintf("7y-%s", suffix)))
 
 		// Apply then revert
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 		_, err = wf.Revert(ctx, id)
 		require.NoError(t, err)
@@ -672,7 +691,7 @@ func TestGradeTransitionWorkflow_History(t *testing.T) {
 		id := f.createDraft(t, ctx, "2025-2026", promote(fromClass, toClass))
 
 		// Apply transition
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 
 		// Get history
@@ -727,13 +746,13 @@ func TestGradeTransitionWorkflow_Apply_RevertedTransition(t *testing.T) {
 		id := f.createDraft(t, ctx, "2025-2026", promote(fromClass, toClass))
 
 		// Apply then revert
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 		_, err = wf.Revert(ctx, id)
 		require.NoError(t, err)
 
 		// Try to apply again - should fail
-		_, err = wf.Apply(ctx, id, "")
+		_, err = wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.ErrorIs(t, err, gradetransition.ErrTransitionNotDraft)
 		assert.Contains(t, err.Error(), "has been reverted")
 	})
@@ -776,7 +795,7 @@ func TestGradeTransitionWorkflow_Update_InvalidAcademicYearFormat(t *testing.T) 
 		id := f.createDraft(t, ctx, "2025-2026")
 
 		invalidYear := "bad-format"
-		_, err := wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{AcademicYear: &invalidYear})
+		_, err := wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{ExpectedVersion: draftVersion(t, ctx, wf, id), AcademicYear: &invalidYear})
 		require.ErrorIs(t, err, gradetransition.ErrInvalidTransitionData)
 		assert.Contains(t, err.Error(), "format")
 	})
@@ -796,14 +815,14 @@ func TestGradeTransitionWorkflow_Update_InvalidMapping(t *testing.T) {
 		id := f.createDraft(t, ctx, "2025-2026", promote("1a", "2a"))
 
 		notes := "must not be saved"
-		_, err := wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{
+		_, err := wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{ExpectedVersion: draftVersion(t, ctx, wf, id),
 			Notes:    &notes,
 			Mappings: []gradetransition.Mapping{promote("1a", "1a")},
 		})
 		require.ErrorIs(t, err, gradetransition.ErrInvalidTransitionData)
 		assert.Contains(t, err.Error(), "cannot be the same")
 
-		unchanged, err := wf.FindTransition(ctx, id)
+		unchanged, err := findTransition(ctx, wf, id)
 		require.NoError(t, err)
 		assert.Nil(t, unchanged.Notes)
 		require.Len(t, unchanged.Mappings, 1)
@@ -815,7 +834,7 @@ func TestGradeTransitionWorkflow_Update_InvalidMapping(t *testing.T) {
 	t.Run("update fails with empty from_class", func(t *testing.T) {
 		id := f.createDraft(t, ctx, "2025-2026")
 
-		_, err := wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{
+		_, err := wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{ExpectedVersion: draftVersion(t, ctx, wf, id),
 			Mappings: []gradetransition.Mapping{promote("", "2a")},
 		})
 		require.ErrorIs(t, err, gradetransition.ErrInvalidTransitionData)
@@ -944,7 +963,7 @@ func TestGradeTransitionWorkflow_Apply_GraduateStudents(t *testing.T) {
 
 		id := f.createDraft(t, ctx, "2025-2026", graduate(graduateClass))
 
-		result, err := wf.Apply(ctx, id, "")
+		result, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 		assert.Equal(t, 1, result.StudentsGraduated)
 		assert.NotEmpty(t, result.Warnings)
@@ -998,7 +1017,7 @@ func TestGradeTransitionWorkflow_Apply_CascadingGraduation(t *testing.T) {
 		graduate(upper),       // graduate 4c
 	)
 
-	result, err := wf.Apply(ctx, id, "")
+	result, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.StudentsPromoted, "only the 3c child is promoted")
 	assert.Equal(t, 1, result.StudentsGraduated, "only the original 4c child graduates")
@@ -1060,7 +1079,7 @@ func TestGradeTransitionWorkflow_Revert_WithGraduatedStudents(t *testing.T) {
 		// Create and apply transition with graduate
 		id := f.createDraft(t, ctx, "2025-2026", graduate(graduateClass))
 
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 
 		// Revert - graduates are restored to active (soft delete is reversible)
@@ -1139,7 +1158,7 @@ func TestGradeTransitionWorkflow_Revert_ReconcilesOnlyReactivatedStudents(t *tes
 
 	id := f.createDraft(t, ctx, "2025-2026", graduate(graduateClass))
 
-	_, err := wf.Apply(ctx, id, "")
+	_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 	require.NoError(t, err)
 	require.ElementsMatch(t, []int64{restorable.ID, handChanged.ID}, reconciler.removed,
 		"both graduates leave the future rosters on apply")
@@ -1197,7 +1216,7 @@ func TestGradeTransitionWorkflow_Revert_SkipsRosterReplayForNonActiveRestores(t 
 
 	id := f.createDraft(t, ctx, "2025-2026", graduate(graduateClass))
 
-	_, err = wf.Apply(ctx, id, "")
+	_, err = wf.Apply(ctx, id, previewed(ctx, wf, id))
 	require.NoError(t, err)
 
 	result, err := wf.Revert(ctx, id)
@@ -1271,12 +1290,12 @@ func TestGradeTransitionWorkflow_Update_ClearMappings(t *testing.T) {
 		id := f.createDraft(t, ctx, "2025-2026", promote("1a", "2a"))
 
 		// Verify mapping exists
-		initial, err := wf.FindTransition(ctx, id)
+		initial, err := findTransition(ctx, wf, id)
 		require.NoError(t, err)
 		assert.Len(t, initial.Mappings, 1)
 
 		// Update with empty mappings
-		updated, err := wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{
+		updated, err := wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{ExpectedVersion: draftVersion(t, ctx, wf, id),
 			Mappings: []gradetransition.Mapping{},
 		})
 		require.NoError(t, err)
@@ -1334,7 +1353,7 @@ func TestGradeTransitionWorkflow_AlumniExcluded(t *testing.T) {
 	t.Run("apply graduates only non-alumni", func(t *testing.T) {
 		id := f.createDraft(t, ctx, "2025-2026", graduate(class))
 
-		result, err := wf.Apply(ctx, id, "")
+		result, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 		assert.Equal(t, 1, result.StudentsGraduated, "only the active student graduates")
 	})
@@ -1367,7 +1386,7 @@ func TestGradeTransitionWorkflow_PromotionSkipsAlumni(t *testing.T) {
 
 	id := f.createDraft(t, ctx, "2025-2026", promote(fromClass, toClass))
 
-	result, err := wf.Apply(ctx, id, "")
+	result, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 	require.NoError(t, err)
 	assert.Equal(t, 0, result.StudentsPromoted)
 
@@ -1380,4 +1399,12 @@ func TestGradeTransitionWorkflow_PromotionSkipsAlumni(t *testing.T) {
 		Scan(ctx, &currentClass)
 	require.NoError(t, err)
 	assert.Equal(t, fromClass, currentClass)
+}
+
+// draftVersion is the version an editor reads before it saves the draft.
+func draftVersion(t *testing.T, ctx context.Context, wf *gradetransition.Workflow, id int64) string {
+	t.Helper()
+	found, err := findTransition(ctx, wf, id)
+	require.NoError(t, err)
+	return gradetransition.Version(found)
 }

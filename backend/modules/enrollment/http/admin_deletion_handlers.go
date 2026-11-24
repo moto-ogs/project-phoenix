@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type AdminEnrollmentDeletionCounts struct {
@@ -29,20 +29,25 @@ type AdminEnrollmentDeletionCounts struct {
 }
 
 type AdminEnrollmentDeletionImpact struct {
-	RequestID                     string                        `json:"request_id"`
-	ChildID                       string                        `json:"child_id,omitempty"`
+	RequestID                     ident.ID                      `json:"request_id"`
+	ChildID                       *ident.ID                     `json:"child_id,omitempty"`
 	DeletesRequest                bool                          `json:"deletes_request"`
 	CanDelete                     bool                          `json:"can_delete"`
 	Counts                        AdminEnrollmentDeletionCounts `json:"counts"`
-	BlockingStudentIDs            []string                      `json:"blocking_student_ids"`
+	BlockingStudentIDs            []ident.ID                    `json:"blocking_student_ids"`
 	PreservedGuardianProfiles     int                           `json:"preserved_guardian_profiles"`
 	PreservedParentAccounts       int                           `json:"preserved_parent_accounts"`
 	UnlinkedGuardianProfiles      int                           `json:"unlinked_guardian_profiles"`
 	ParentAccountsWithoutStudents int                           `json:"parent_accounts_without_students"`
+	// Fingerprint is the token of this preview; the deletion sends it as
+	// expected_fingerprint (ADR 0311).
+	Fingerprint string `json:"fingerprint"`
 }
 
 type AdminEnrollmentDeleteRequest struct {
 	Reason string `json:"reason"`
+	// ExpectedFingerprint is the fingerprint of the confirmed preview.
+	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
 func (req *AdminEnrollmentDeleteRequest) Bind(_ *http.Request) error { return nil }
@@ -140,9 +145,9 @@ func (rs *Resource) executeEnrollmentDeletion(w http.ResponseWriter, r *http.Req
 	err := rs.runInTenantTx(r, func(ctx context.Context) error {
 		var deleteErr error
 		if childID > 0 {
-			impact, deleteErr = rs.DeletionService.DeleteChild(ctx, requestID, childID, actorAccountID, body.Reason)
+			impact, deleteErr = rs.DeletionService.DeleteChild(ctx, requestID, childID, actorAccountID, body.Reason, body.ExpectedFingerprint)
 		} else {
-			impact, deleteErr = rs.DeletionService.DeleteRequest(ctx, requestID, actorAccountID, body.Reason)
+			impact, deleteErr = rs.DeletionService.DeleteRequest(ctx, requestID, actorAccountID, body.Reason, body.ExpectedFingerprint)
 		}
 		return deleteErr
 	})
@@ -181,13 +186,13 @@ func toAdminEnrollmentDeletionImpact(impact *capability.DeletionImpact) AdminEnr
 	if impact == nil {
 		return AdminEnrollmentDeletionImpact{}
 	}
-	blockingIDs := make([]string, 0, len(impact.BlockingStudentIDs))
+	blockingIDs := make([]ident.ID, 0, len(impact.BlockingStudentIDs))
 	for _, id := range impact.BlockingStudentIDs {
-		blockingIDs = append(blockingIDs, strconv.FormatInt(id, 10))
+		blockingIDs = append(blockingIDs, ident.ID(id))
 	}
 	return AdminEnrollmentDeletionImpact{
-		RequestID:                     strconv.FormatInt(impact.RequestID, 10),
-		ChildID:                       optionalInt64String(impact.ChildID),
+		RequestID:                     ident.ID(impact.RequestID),
+		ChildID:                       optionalPositiveWireID(impact.ChildID),
 		DeletesRequest:                impact.DeletesRequest,
 		CanDelete:                     len(impact.BlockingStudentIDs) == 0,
 		Counts:                        toAdminEnrollmentDeletionCounts(impact.Counts),
@@ -196,6 +201,7 @@ func toAdminEnrollmentDeletionImpact(impact *capability.DeletionImpact) AdminEnr
 		PreservedParentAccounts:       impact.PreservedParentAccounts,
 		UnlinkedGuardianProfiles:      impact.UnlinkedGuardianProfiles,
 		ParentAccountsWithoutStudents: impact.ParentAccountsWithoutStudents,
+		Fingerprint:                   impact.Fingerprint,
 	}
 }
 

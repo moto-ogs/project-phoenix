@@ -143,6 +143,7 @@ describe("FilteredBulkArrivalModal", () => {
     mockFetchClassArrivalTimes.mockResolvedValue({
       school_class: "3a",
       times: {},
+      version: "v-empty",
     });
   });
 
@@ -333,6 +334,7 @@ describe("FilteredBulkArrivalModal", () => {
         { weekday: 1, expected_arrival: "08:00" },
         { weekday: 3, expected_arrival: "09:30" },
       ],
+      "v-empty",
     );
     expect(onSuccess).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
@@ -375,6 +377,7 @@ describe("FilteredBulkArrivalModal", () => {
       expect(mockBulkUpsert).toHaveBeenCalledWith(
         { type: "school_class", schoolClass: "3a" },
         [{ weekday: 2, expected_arrival: "13:20" }],
+        "v-empty",
       ),
     );
   });
@@ -424,6 +427,7 @@ describe("FilteredBulkArrivalModal", () => {
       expect(mockBulkUpsert).toHaveBeenCalledWith(
         { type: "group", groupId: "17" },
         [{ weekday: 2, expected_arrival: "09:15" }],
+        undefined,
       ),
     );
   });
@@ -456,6 +460,167 @@ describe("FilteredBulkArrivalModal", () => {
     );
     expect(alert).not.toHaveTextContent("Save failed");
     expect(mockToastError).not.toHaveBeenCalled();
+  });
+
+  // ADR 0311: the save goes out with the version the draft was filled from.
+  // A colleague's change since is refused; the dialog then shows the stored
+  // times and offers no retry of the refused draft.
+  it("shows the stored times again when the class changed since it was read", async () => {
+    mockFetchClassArrivalTimes
+      .mockResolvedValueOnce({
+        school_class: "3a",
+        times: { mon: "11:45" },
+        version: "v1",
+      })
+      .mockResolvedValue({
+        school_class: "3a",
+        times: { mon: "12:30", tue: "13:00" },
+        version: "v2",
+      });
+    mockBulkUpsert.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+
+    render(
+      <FilteredBulkArrivalModal
+        isOpen={true}
+        onClose={vi.fn()}
+        filter={{ type: "school_class", schoolClass: "3a" }}
+        filterLabel="3a"
+        studentsInFilter={[makeStudent("1")]}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Montag")).toHaveValue("11:45"),
+    );
+    fireEvent.change(screen.getByLabelText("Mittwoch"), {
+      target: { value: "09:30" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(mockBulkUpsert).toHaveBeenCalledWith(
+        { type: "school_class", schoolClass: "3a" },
+        [
+          { weekday: 1, expected_arrival: "11:45" },
+          { weekday: 3, expected_arrival: "09:30" },
+        ],
+        "v1",
+      ),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Du siehst jetzt den neuen Stand.",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByLabelText("Montag")).toHaveValue("12:30"),
+    );
+    expect(screen.getByLabelText("Dienstag")).toHaveValue("13:00");
+    expect(screen.getByLabelText("Mittwoch")).toHaveValue("");
+  });
+
+  // ADR 0311, rule 6: a failed reload after the refusal is a load error,
+  // never „Du siehst jetzt den neuen Stand“, and nothing can be sent.
+  it("names a failed reload of the class times after a refusal", async () => {
+    mockFetchClassArrivalTimes
+      .mockResolvedValueOnce({
+        school_class: "3a",
+        times: { mon: "11:45" },
+        version: "v1",
+      })
+      .mockRejectedValue(
+        new ApiError("offline", 503, { code: "general.unavailable" }),
+      );
+    mockBulkUpsert.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+
+    render(
+      <FilteredBulkArrivalModal
+        isOpen={true}
+        onClose={vi.fn()}
+        filter={{ type: "school_class", schoolClass: "3a" }}
+        filterLabel="3a"
+        studentsInFilter={[makeStudent("1")]}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Montag")).toHaveValue("11:45"),
+    );
+    fireEvent.change(screen.getByLabelText("Mittwoch"), {
+      target: { value: "09:30" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Der neue Stand konnte nicht geladen werden.",
+    );
+    expect(screen.getByRole("alert")).not.toHaveTextContent(
+      "Du siehst jetzt den neuen Stand.",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(mockBulkUpsert).toHaveBeenCalledTimes(1);
+    // A load error, not a load that never ends.
+    expect(
+      screen.queryByText("Klassenzeiten werden geladen."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("names a failed opening read over cached class times and saves nothing until a retry", async () => {
+    mockFetchClassArrivalTimes
+      .mockResolvedValueOnce({
+        school_class: "3a",
+        times: { mon: "11:45" },
+        version: "v1",
+      })
+      .mockRejectedValueOnce(
+        new ApiError("offline", 503, { code: "general.unavailable" }),
+      )
+      .mockResolvedValueOnce({
+        school_class: "3a",
+        times: { mon: "12:00" },
+        version: "v2",
+      });
+    mockBulkUpsert.mockResolvedValue(undefined);
+    const modal = (isOpen: boolean) => (
+      <FilteredBulkArrivalModal
+        isOpen={isOpen}
+        onClose={vi.fn()}
+        filter={{ type: "school_class", schoolClass: "3a" }}
+        filterLabel="3a"
+        studentsInFilter={[makeStudent("1")]}
+      />
+    );
+    const { rerender } = render(modal(true));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Montag")).toHaveValue("11:45"),
+    );
+    rerender(modal(false));
+    rerender(modal(true));
+
+    // The cached times show, the failed read of this opening is named.
+    expect(
+      await screen.findByText(
+        "Die Klassenzeit ist gerade nicht erreichbar. Bitte versuche es erneut.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Klassenzeiten werden geladen."),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(mockBulkUpsert).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Montag")).toHaveValue("12:00"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(mockBulkUpsert).toHaveBeenCalledTimes(1));
+    expect(mockBulkUpsert.mock.calls[0]?.[2]).toBe("v2");
   });
 
   it("cancel button calls onClose", () => {

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useAnnounceMessageComposer } from "~/lib/hooks/use-message-composer-presence";
 import { ParentFirstSteps } from "./parent-first-steps";
 import {
   parentFirstStepsStorageKey,
@@ -10,6 +11,20 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/",
   useRouter: () => ({ push: vi.fn() }),
 }));
+
+const analytics = vi.hoisted(() => ({
+  trackOnboardingSurface: vi.fn(() => true),
+}));
+vi.mock("~/lib/analytics", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/analytics")>()),
+  trackOnboardingSurface: analytics.trackOnboardingSurface,
+}));
+
+/** Stands in for a chat's writing field, which announces itself (#7686). */
+function OpenChat() {
+  useAnnounceMessageComposer();
+  return <p>Chat offen</p>;
+}
 
 describe("ParentFirstSteps", () => {
   beforeEach(() => {
@@ -106,5 +121,57 @@ describe("ParentFirstSteps", () => {
     fireEvent.click(guide);
 
     expect(readParentFirstStepsState("42").completed).toContain("installApp");
+  });
+
+  describe("in a chat (#7686)", () => {
+    const steps = (chat: boolean) => (
+      <>
+        <ParentFirstSteps accountId="42" childCount={1} newsEnabled={true} />
+        {chat ? <OpenChat /> : null}
+      </>
+    );
+    const beacon = () =>
+      screen.queryByRole("button", { name: /Erste Schritte öffnen/ });
+    const list = () => screen.queryByRole("region", { name: "Erste Schritte" });
+
+    it("steps aside with button and list while a chat is open", async () => {
+      sessionStorage.setItem("parent-first-steps-opened:42", "1");
+      const { rerender } = render(steps(true));
+      // Anker: der Chat steht, die Liste hat ihren Stand gelesen.
+      expect(await screen.findByText("Chat offen")).toBeVisible();
+      expect(beacon()).not.toBeInTheDocument();
+
+      rerender(steps(false));
+      fireEvent.click(
+        await screen.findByRole("button", { name: /Erste Schritte öffnen/ }),
+      );
+      expect(list()).toBeVisible();
+
+      rerender(steps(true));
+      expect(screen.getByText("Chat offen")).toBeVisible();
+      expect(list()).not.toBeInTheDocument();
+
+      rerender(steps(false));
+      expect(list()).toBeVisible();
+    });
+
+    it("counts the list that opened by itself as shown once it is on screen", async () => {
+      analytics.trackOnboardingSurface.mockClear();
+      // Neu geladen, während der Chat offen ist: Die Liste bleibt fällig.
+      render(steps(true)).unmount();
+      const { rerender } = render(steps(true));
+      expect(await screen.findByText("Chat offen")).toBeVisible();
+      expect(list()).not.toBeInTheDocument();
+      expect(analytics.trackOnboardingSurface).not.toHaveBeenCalled();
+
+      rerender(steps(false));
+      expect(
+        await screen.findByRole("region", { name: "Erste Schritte" }),
+      ).toBeVisible();
+      expect(analytics.trackOnboardingSurface).toHaveBeenCalledExactlyOnceWith(
+        "shown",
+        "parent_first_steps",
+      );
+    });
   });
 });

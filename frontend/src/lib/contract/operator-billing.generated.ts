@@ -69,7 +69,7 @@ export interface billingKeyDateCountResponse {
 }
 
 export const billingKeyDateCountResponseSchema: z.ZodType<billingKeyDateCountResponse, unknown> = object<billingKeyDateCountResponse>({
-  school_id: str,
+  school_id: int64String,
   school_name: str,
   organization_name: str,
   period: str,
@@ -82,11 +82,6 @@ export const billingKeyDateCountResponseSchema: z.ZodType<billingKeyDateCountRes
 /** Go: operator.updateBillingKeyDayRequest */
 export interface updateBillingKeyDayRequest {
   key_day?: number | null;
-}
-
-/** Query of GET /operator/billing/key-date-counts/export */
-export interface GetOperatorBillingKeyDateCountsExportQuery {
-  month?: string;
 }
 
 export const routes = {
@@ -112,7 +107,9 @@ export const routes = {
     method: "GET",
     pattern: "/operator/billing/key-date-counts/export",
     portals: ["platform"],
-    query: ["month"],
+    query: {
+      "month": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /operator/billing/key-day": {

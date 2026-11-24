@@ -52,6 +52,7 @@ import {
   type PublicLegalTexts,
 } from "~/lib/enrollment-form-schema-api";
 import {
+  consentsToUnchangedTexts,
   EmailContactNotice,
   EnrollmentConsent,
   LegalMarkdown,
@@ -92,7 +93,7 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import {
   SignaturePad,
   type SignaturePadLabels,
@@ -252,6 +253,15 @@ interface PropsBase {
    * change requests and manual staff entries carry no parent signature.
    */
   readonly withoutSignature?: boolean;
+  /**
+   * Loads the current form after the server refused the one this form
+   * showed (`general.changed_since_read`, ADR 0311). The caller keeps the
+   * form it opened with until then and hands the new one in as
+   * `prefetchedData`; entered answers stay, consents to changed legal texts
+   * are cleared. It rejects when the current form does not load; the form
+   * then shows that load error instead of the refusal.
+   */
+  readonly onFormChanged?: () => Promise<void>;
 }
 
 /**
@@ -283,6 +293,7 @@ export function EnrollmentForm({
   showBlockedOfferings = false,
   offeringBookingStats,
   withoutSignature = false,
+  onFormChanged,
 }: Props) {
   const intl = useCareTermTranslations("enrollmentForm");
   const careTerm = useCareFacilityTerm();
@@ -473,7 +484,7 @@ export function EnrollmentForm({
   );
   // A confirmed signature only belongs to the values visible when it was
   // confirmed. Its own state update must not clear it; every later change to
-  // signed enrollment data does.
+  // signed enrollment data does, and so does another form (ADR 0311).
   const changeSignature = (value: SignatureValue | null) => {
     signatureJustConfirmed.current = value !== null;
     setSignature(value);
@@ -492,9 +503,19 @@ export function EnrollmentForm({
     children,
     additionalGuardians,
     customData,
+    config.termsFingerprint,
   ]);
 
+  // A consent holds only for the legal text the parent saw: a new form keeps
+  // the ticks of unchanged texts and clears the others (ADR 0311).
+  const shownLegalBlocks = useRef(initial.config.legalTexts?.blocks ?? []);
   const applyConfig = useCallback((next: EnrollmentFormConfig) => {
+    const before = shownLegalBlocks.current;
+    const after = next.legalTexts?.blocks ?? [];
+    shownLegalBlocks.current = after;
+    setLegalConsents((consents) =>
+      consentsToUnchangedTexts(consents, before, after),
+    );
     setConfig(next);
     setChildren((prev) => {
       const seeded = prev.map((child) =>
@@ -546,6 +567,7 @@ export function EnrollmentForm({
   // for the next one instead of sending without it (#6739).
   const [retryPending, setRetryPending] = useState(false);
   const captchaSectionRef = useRef<HTMLElement>(null);
+
   const retrySubmit = () => {
     setRetryPending(true);
     // A challenge the parent has to answer sits below the form: show it,
@@ -919,6 +941,7 @@ export function EnrollmentForm({
       restrictToOfferings,
       captchaToken: captchaRequired ? captchaToken || undefined : undefined,
       lateInviteToken,
+      termsFingerprint: config.termsFingerprint,
     });
 
     setSubmitting(true);
@@ -944,6 +967,9 @@ export function EnrollmentForm({
     } catch (err) {
       setCaptchaToken("");
       captchaRef.current?.reset();
+      // The school changed the form meanwhile: the parent sees the current
+      // one, with the answers kept, and sends it again after checking it.
+      const formChanged = isChangedSinceRead(err);
       const code = err instanceof ApiError ? err.code : undefined;
       // A rejected input is expected; only server failures and crashes are
       // errors in the log.
@@ -984,10 +1010,13 @@ export function EnrollmentForm({
           ? pickupTimeMarks(schema, children, customData)
           : [];
       // "Wiederholen" submits the form again, so it sends what the parent
-      // sees now, not the draft of the failed attempt.
+      // sees now, not the draft of the failed attempt. A changed form
+      // (ADR 0311) loads the current one first; the message waits for it and
+      // names a failed load instead.
       const presentation = await formError.show(err, {
-        object: tr("errorObject"),
+        object: tr(formChanged ? "errorObjectForm" : "errorObject"),
         retry: retrySubmit,
+        reload: onFormChanged,
       });
       if (
         presentation &&

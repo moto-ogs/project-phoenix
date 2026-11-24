@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	testpkg "github.com/moto-ogs/project-phoenix/test"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -210,6 +212,9 @@ func TestFixedSeeder_RetireFormerStaffRemovesActiveReferences(t *testing.T) {
 		case seedHTTPMethodDelete:
 			retiredPath = r.URL.Path
 			_, _ = w.Write([]byte(`{"status":"success"}`))
+		case seedHTTPMethodGet:
+			require.Equal(t, "/api/staff/11/stammdaten", r.URL.Path)
+			_, _ = w.Write([]byte(`{"data":{"versions":{"kontakt":"k","qualifikationen":"q"}}}`))
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
@@ -303,11 +308,11 @@ func TestFixedSeeder_SeedGroups(t *testing.T) {
 func TestFixedSeeder_SeedGroupsAssignsWiesengruppeTeacher(t *testing.T) {
 	t.Parallel()
 
-	var wiesengruppeTeacherIDs []int64
+	var wiesengruppeTeacherIDs []testpkg.ID
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 		var body struct {
-			Name       string  `json:"name"`
-			TeacherIDs []int64 `json:"teacher_ids"`
+			Name       string       `json:"name"`
+			TeacherIDs []testpkg.ID `json:"teacher_ids"`
 		}
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 		if body.Name == "Wiesengruppe" {
@@ -322,7 +327,7 @@ func TestFixedSeeder_SeedGroupsAssignsWiesengruppeTeacher(t *testing.T) {
 	fs.teacherIDs["Anna Müller"] = 42
 
 	require.NoError(t, fs.seedGroups(context.Background(), &FixedResult{}))
-	assert.Equal(t, []int64{42}, wiesengruppeTeacherIDs)
+	assert.Equal(t, []testpkg.ID{42}, wiesengruppeTeacherIDs)
 }
 
 func TestFixedSeeder_SeedStudents(t *testing.T) {
@@ -1012,17 +1017,30 @@ func TestFixedSeeder_SeedClassArrivalTimes(t *testing.T) {
 		} `json:"schedules"`
 	}
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
+		if r.Method == "GET" {
+			require.Contains(t, r.URL.Path, "/api/students/class-arrival-times/")
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]string{"version": "read-version"}})
+			return
+		}
 		require.Equal(t, "POST", r.Method)
 		require.Equal(t, "/api/students/arrival-schedules/bulk", r.URL.Path)
 		request := struct {
-			SchoolClass string `json:"school_class"`
-			Schedules   []struct {
+			SchoolClass     string `json:"school_class"`
+			ExpectedVersion string `json:"expected_version"`
+			Schedules       []struct {
 				Weekday int    `json:"weekday"`
 				Time    string `json:"expected_arrival"`
 			} `json:"schedules"`
 		}{}
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&request))
-		requests = append(requests, request)
+		require.Equal(t, "read-version", request.ExpectedVersion)
+		requests = append(requests, struct {
+			SchoolClass string `json:"school_class"`
+			Schedules   []struct {
+				Weekday int    `json:"weekday"`
+				Time    string `json:"expected_arrival"`
+			} `json:"schedules"`
+		}{request.SchoolClass, request.Schedules})
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	})
 	defer srv.Close()

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func (s *HolidayPeriodStore) InsertHolidayFormDocument(ctx context.Context, org, period, actor int64, filename string, content []byte) (enrollment.HolidayFormDocument, error) {
@@ -12,7 +13,7 @@ func (s *HolidayPeriodStore) InsertHolidayFormDocument(ctx context.Context, org,
 	if err != nil {
 		return enrollment.HolidayFormDocument{}, err
 	}
-	var id string
+	var id ident.ID
 	err = db.NewRaw(`INSERT INTO enrollment.holiday_form_documents
 		(organization_id, holiday_period_id, filename, content, size, created_by)
 		VALUES (?, ?, ?, ?, ?, ?) RETURNING id`, org, period, filename, content, len(content), actor).Scan(ctx, &id)
@@ -28,10 +29,10 @@ func (s *HolidayPeriodStore) ReadHolidayFormDocument(ctx context.Context, org, p
 		return enrollment.HolidayFormDocument{}, false, err
 	}
 	var rows []struct {
-		ID       string `bun:"id"`
-		Filename string `bun:"filename"`
-		Content  []byte `bun:"content"`
-		Size     int    `bun:"size"`
+		ID       ident.ID `bun:"id"`
+		Filename string   `bun:"filename"`
+		Content  []byte   `bun:"content"`
+		Size     int      `bun:"size"`
 	}
 	err = db.NewRaw(`SELECT id, filename, CASE WHEN ? THEN content END AS content, size FROM enrollment.holiday_form_documents
 		WHERE organization_id = ? AND holiday_period_id = ? AND id = ?`, content, org, period, id).Scan(ctx, &rows)

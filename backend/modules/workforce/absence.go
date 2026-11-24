@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // MaxSickAbsenceRangeDays bounds the synchronous sick-report plan cascade.
@@ -332,6 +333,9 @@ type AbsenceTypeAllowanceSummary struct {
 	// KeptByTraeger is true when the Träger keeps this account: a type of
 	// the Träger for a person with a Personalakte, over all schools (#4710).
 	KeptByTraeger bool
+	// Version is the token of the person's stored claim in Year; a change
+	// of the claim sends it back (ADR 0311).
+	Version string
 }
 
 // AbsenceTypeAllowanceAccount is one active school-defined type with an
@@ -379,6 +383,17 @@ type UpdateAbsenceType struct {
 	// removes it.
 	Offered     *bool
 	SchoolLimit *SchoolLimitPatch
+	// ExpectedVersion is the AbsenceTypeVersion the edit was read from (ADR
+	// 0311); a type changed since, and an empty version, are refused with
+	// readstate.ErrChanged.
+	ExpectedVersion string
+}
+
+// AbsenceTypeVersion is the token of a stored absence type (ADR 0311): every
+// write of the row, the Träger's included, moves updated_at through its
+// trigger.
+func AbsenceTypeVersion(t StaffAbsenceType) string {
+	return readstate.Of(t.UpdatedAt)
 }
 
 // SchoolLimitPatch sets (Days) or removes (nil Days) the school's limit.
@@ -393,6 +408,9 @@ type SetAbsenceTypeAllowance struct {
 	EntitledDays  float64
 	Reason        string
 	ChangedBy     int64
+	// ExpectedVersion is the Version of the summary the form showed; nil
+	// only for a write that showed no claim (the seeder).
+	ExpectedVersion *string
 }
 
 // AbsenceTypeAdministration is the capability the absence-type administration

@@ -47,8 +47,9 @@ func TestRBACRolesListQueryBudget(t *testing.T) {
 			role := testpkg.CreateTestRole(t, f.db, label)
 			custom = append(custom, role)
 			want = append(want, map[string]any{"id": fmt.Sprint(role.ID), "name": role.Name, "description": "Test role: " + label,
-				"is_system": false, "base_role": "user", "school_portal": false,
-				"created_at": role.CreatedAt.Format("2006-01-02T15:04:05Z07:00"), "updated_at": role.UpdatedAt.Format("2006-01-02T15:04:05Z07:00")})
+				"is_system": false, "base_role": "user", "school_portal": false, "from_traeger": false,
+				"created_at": role.CreatedAt.Format("2006-01-02T15:04:05Z07:00"), "updated_at": role.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+				"version": identityaccess.RoleVersion(identityaccess.Role{UpdatedAt: role.UpdatedAt})})
 		}
 		t.Logf("additional_custom_roles=%d baseline_roles=%d system_roles=%d", n, len(baseline), systemCount)
 		rr, queries := f.get(t, "/auth/roles/", f.token)

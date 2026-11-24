@@ -23,6 +23,14 @@ func (m *Service) Phase(ctx context.Context, id int64) (*enrollment.Phase, error
 	return m.store.Phase(ctx, id)
 }
 
+// LockPhase reads one phase under its row lock.
+func (m *Service) LockPhase(ctx context.Context, id int64) (*enrollment.Phase, error) {
+	if err := m.transactions.RequireTransaction(ctx); err != nil {
+		return nil, err
+	}
+	return m.store.LockPhase(ctx, id)
+}
+
 func (m *Service) PhasesByID(ctx context.Context, ids []int64) ([]*enrollment.Phase, error) {
 	if err := m.transactions.RequireTransaction(ctx); err != nil {
 		return nil, err

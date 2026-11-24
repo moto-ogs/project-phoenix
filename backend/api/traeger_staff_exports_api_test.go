@@ -264,11 +264,11 @@ func TestTraegerStaffExportsBookEveryKindOverAllSchools(t *testing.T) {
 
 func linkStaffRecord(t *testing.T, router http.Handler, office traegerOffice, members map[int64]int64) int64 {
 	t.Helper()
-	var list []map[string]int64
+	var list []map[string]string
 	for school, staff := range members {
-		list = append(list, map[string]int64{"school_id": school, "staff_id": staff})
+		list = append(list, map[string]string{"school_id": fmt.Sprint(school), "staff_id": fmt.Sprint(staff)})
 	}
-	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{"members": list})
+	rec := traegerLink(t, router, office.token, map[string]any{"members": list})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	return int64(decode[staffRecordBody](t, rec).ID)
 }
@@ -283,7 +283,7 @@ func addContract(t *testing.T, router http.Handler, office traegerOffice, record
 	t.Helper()
 	rec := traegerJSON(t, router, office.token, http.MethodPost, fmt.Sprintf("/traeger/staff-records/%d/contracts", recordID), map[string]any{
 		"kind": kind, "starts_on": "2026-08-01",
-		"sites": []map[string]any{{"school_id": school, "staff_id": staff, "weekday_minutes": []int{daily, daily, daily, daily, daily}}},
+		"sites": []map[string]any{{"school_id": fmt.Sprint(school), "staff_id": fmt.Sprint(staff), "weekday_minutes": []int{daily, daily, daily, daily, daily}}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 }

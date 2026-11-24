@@ -5,7 +5,7 @@
 // shape drifts from it (number IDs, fields the decoder drops). The guard
 // finds such types by their form, not by their name:
 //
-// - shape: an interface or object type that declares at least two
+// - shape: an interface, object type or union branch that declares at least two
 //   snake_case fields of its own (a `Backend*` name: one is enough);
 // - rename: a generated type imported under another name
 //   (`import type { GroupResponse as GroupWire }`);
@@ -40,13 +40,73 @@ function ownSnakeCaseFields(members) {
     .filter((name) => name !== null && SNAKE_CASE.test(name));
 }
 
-/** The members of an interface or an object type alias, else null. */
+/** Object branches only; nested property types are not separate declarations. */
+function objectBranches(type) {
+  if (ts.isTypeLiteralNode(type)) return [type.members];
+  if (ts.isParenthesizedTypeNode(type)) return objectBranches(type.type);
+  if (ts.isUnionTypeNode(type)) return type.types.flatMap(objectBranches);
+  return [];
+}
+
 function declaredMembers(node) {
-  if (ts.isInterfaceDeclaration(node)) return node.members;
-  if (ts.isTypeAliasDeclaration(node) && ts.isTypeLiteralNode(node.type)) {
-    return node.type.members;
+  if (ts.isInterfaceDeclaration(node)) return [node.members];
+  if (ts.isTypeAliasDeclaration(node)) return objectBranches(node.type);
+  return [];
+}
+
+function declaredBranch(node) {
+  let parent = node.parent;
+  while (ts.isParenthesizedTypeNode(parent) || ts.isUnionTypeNode(parent)) {
+    parent = parent.parent;
   }
-  return null;
+  return ts.isTypeAliasDeclaration(parent);
+}
+
+// A named projection with an intersection transforms a base type; it is not
+// an independently declared wire shape. Inline casts and other use sites do
+// not get this exemption, even when their type is an intersection.
+function namedProjection(node, generated) {
+  const parent = node.parent;
+  if (!ts.isIntersectionTypeNode(parent)) return false;
+  let owner = parent.parent;
+  while (ts.isParenthesizedTypeNode(owner) || ts.isUnionTypeNode(owner)) {
+    owner = owner.parent;
+  }
+  if (
+    !ts.isTypeAliasDeclaration(owner) &&
+    !(ts.isPropertySignature(owner) && ts.isInterfaceDeclaration(owner.parent))
+  )
+    return false;
+  return parent.types.some((part) =>
+    derivedType(part, node.getSourceFile(), generated),
+  );
+}
+
+function derivedType(type, source, generated, seen = new Set()) {
+  if (ts.isParenthesizedTypeNode(type))
+    return derivedType(type.type, source, generated, seen);
+  if (ts.isUnionTypeNode(type) || ts.isIntersectionTypeNode(type)) {
+    return type.types.some((part) =>
+      derivedType(part, source, generated, seen),
+    );
+  }
+  if (!ts.isTypeReferenceNode(type)) return false;
+  if (isGeneratedReference(type, generated)) return true;
+  if (!ts.isIdentifier(type.typeName)) return false;
+  const name = type.typeName.text;
+  if (["Omit", "Pick", "Partial", "Required", "Readonly"].includes(name)) {
+    const base = type.typeArguments?.[0];
+    return base !== undefined && derivedType(base, source, generated, seen);
+  }
+  if (seen.has(name)) return false;
+  seen.add(name);
+  const alias = source.statements.find(
+    (statement) =>
+      ts.isTypeAliasDeclaration(statement) && statement.name.text === name,
+  );
+  return (
+    alias !== undefined && derivedType(alias.type, source, generated, seen)
+  );
 }
 
 /** Names bound to the generated contract in one file: types and namespaces. */
@@ -70,8 +130,20 @@ function generatedBindings(source) {
 }
 
 /** True when a type only names a generated type, without changing it. */
-function isGeneratedReference(type, { names, namespaces }) {
+function isGeneratedReference(type, generated) {
+  if (ts.isParenthesizedTypeNode(type)) {
+    return isGeneratedReference(type.type, generated);
+  }
+  if (
+    ts.isTypeReferenceNode(type) &&
+    ts.isIdentifier(type.typeName) &&
+    type.typeName.text === "Readonly" &&
+    type.typeArguments?.length === 1
+  ) {
+    return isGeneratedReference(type.typeArguments[0], generated);
+  }
   if (!ts.isTypeReferenceNode(type) || type.typeArguments) return false;
+  const { names, namespaces } = generated;
   const name = type.typeName;
   if (ts.isIdentifier(name)) return names.has(name.text);
   return ts.isIdentifier(name.left) && namespaces.has(name.left.text);
@@ -115,14 +187,35 @@ export function findBackendWireTypes(fileName, text) {
 
   const visit = (node) => {
     const members = declaredMembers(node);
-    if (members) {
-      const fields = ownSnakeCaseFields(members);
+    if (members.length) {
       const minimum = BACKEND_NAME.test(node.name.text) ? 1 : 2;
-      if (fields.length >= minimum) {
+      const fields = [
+        ...new Set(
+          members
+            .map(ownSnakeCaseFields)
+            .filter((fields) => fields.length >= minimum)
+            .flat(),
+        ),
+      ];
+      if (fields.length) {
         findings.push({
           kind: "shape",
           name: node.name.text,
           line: lineOf(node.name),
+          fields,
+        });
+      }
+    } else if (
+      ts.isTypeLiteralNode(node) &&
+      !declaredBranch(node) &&
+      !namedProjection(node, generated)
+    ) {
+      const fields = ownSnakeCaseFields(node.members);
+      if (fields.length >= 2) {
+        findings.push({
+          kind: "shape",
+          name: `inline:${fields.join(",")}`,
+          line: lineOf(node),
           fields,
         });
       }

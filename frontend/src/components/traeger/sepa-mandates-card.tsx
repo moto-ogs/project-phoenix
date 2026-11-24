@@ -54,10 +54,7 @@ import {
   mandateState,
   nextDebitLabel,
 } from "./sepa-format";
-import {
-  useFreshTraegerResource,
-  useTraegerResource,
-} from "./use-traeger-resource";
+import { useFreshTraegerResource } from "./use-traeger-resource";
 
 const logger = createLogger({ component: "SepaMandatesCard" });
 
@@ -161,7 +158,7 @@ function HistoryModal({
   );
   // The people of the Träger-Büro name the accounts; a role that may not
   // read them sees the account number instead, without an error.
-  const { data: buero } = useTraegerResource(
+  const { data: buero } = useFreshTraegerResource(
     mandate ? traegerKeys.buero() : null,
     fetchTraegerBuero,
     "die Personen des Träger-Büros",

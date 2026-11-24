@@ -212,7 +212,7 @@ func (f divergingPeriodFixture) resyncTemplateSave(t *testing.T, effectiveFrom c
 func (f divergingPeriodFixture) correct(t *testing.T, name string, effectiveFrom *calendar.Date) {
 	t.Helper()
 	replacement := createAdjustmentCareOfferingWith(t, f.env, name, nil)
-	_, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), f.env.db, f.env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), f.env.db, correctOverRead(f.env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      f.requestID,
 		ChildID:        f.childID,
 		ActorAccountID: f.env.creatorID,
@@ -324,9 +324,12 @@ func TestSourcedRowPeriod_ConnectingSourceWithNarrowerSchedulePeriodSucceeds(t *
 	createCareOfferingTemplateSchedule(t, env.db, group.ID, timetable.WeekdayMonday, &narrowID)
 
 	resyncer := offeringResyncer(t, env)
+	sources, err := api.NewTimetableHTTPTestOfferingSources(testpkg.NewDatabase(t, env.db), testpkg.TenantRuntime(t, env.db))
+	require.NoError(t, err)
 	templates, err := api.NewTimetableHTTP(testpkg.NewDatabase(t, env.db),
 		api.WithOfferingRosterResync(resyncer.ResyncTemplateOfferingRoster),
 		api.WithOfferingSourceValidator(env.offeringCatalog.ValidateTemplateOfferingSource),
+		api.WithTimetableOfferingSources(sources),
 		api.WithTimetableClock(decisionTestClock))
 	require.NoError(t, err)
 	module, _, _, err := api.NewTimetableTestModule(testpkg.NewDatabase(t, env.db), testpkg.TenantRuntime(t, env.db), decisionTestClock)
@@ -335,9 +338,10 @@ func TestSourcedRowPeriod_ConnectingSourceWithNarrowerSchedulePeriodSucceeds(t *
 	monday := firstFutureMondayOnOrAfter(narrowStart)
 
 	err = testpkg.WithTenantTx(t, ctx, env.db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
-		_, connectErr := templates.RosterReview.ConnectOfferingSource(txCtx, timetable.ConnectOfferingSourceCommand{
-			TemplateID: group.ID, OfferingIDs: []int64{source.ID}, EffectiveDate: monday,
-		})
+		cmd := timetable.ConnectOfferingSourceCommand{TemplateID: group.ID, OfferingIDs: []int64{source.ID}, EffectiveDate: monday}
+		// The phase check is under test: the school confirmed the current preview.
+		cmd.ExpectedFingerprint = offeringPreviewFingerprint(t, txCtx, templates.RosterReview, sources, cmd)
+		_, connectErr := templates.RosterReview.ConnectOfferingSource(txCtx, cmd)
 		return connectErr
 	})
 	require.NoError(t, err, "connecting the source must not fail on the phase check, as on development")
@@ -444,6 +448,7 @@ func TestSourcedRowPeriod_SplitWithoutPeriodPlansSuccessorWithoutPeriod(t *testi
 			CategoryID:      f.template.CategoryID,
 			TargetGroupType: timetable.TargetGroupTypeOffering,
 			GradeLevelMax:   testpkg.MaxSchoolGradeLevel,
+			ExpectedVersion: templateSeriesVersion(t, txCtx, templates.Data, f.template.ID),
 		})
 		return splitErr
 	})
@@ -463,4 +468,32 @@ func TestSourcedRowPeriod_SplitWithoutPeriodPlansSuccessorWithoutPeriod(t *testi
 	s.resyncTenant(t)
 	requireUnchanged(t, "repeated tenant-wide resync after split", settled, s.requireSingleRow(t, "repeated tenant-wide resync after split"))
 	s.requirePlannedOn(t, "tenant-wide resync after split", monday.AddDays(14))
+}
+
+// offeringPreviewFingerprint is the fingerprint GET offering-preview answers
+// for the connection: the owner's token over the segments from the effective
+// date on and the weekday changes the bookings of the living segment's
+// planning period give.
+func offeringPreviewFingerprint(t *testing.T, ctx context.Context, review timetable.TemplateRosterReview, sources timetable.OfferingSourceSupport, cmd timetable.ConnectOfferingSourceCommand) string {
+	t.Helper()
+	segments, err := review.SeriesSegments(ctx, cmd.TemplateID, cmd.EffectiveDate)
+	require.NoError(t, err)
+	require.NotEmpty(t, segments)
+	living := segments[len(segments)-1]
+	bookings, err := sources.OfferingWeekdayBookings(ctx, living.CalendarPeriodID, cmd.EffectiveDate)
+	require.NoError(t, err)
+	rosters, err := review.FutureRosters(ctx, []int64{living.TemplateID}, cmd.EffectiveDate)
+	require.NoError(t, err)
+	filter := timetable.OfferingSourceFilter{OfferingIDs: cmd.OfferingIDs, GradeLevels: cmd.GradeLevels, SchoolClasses: cmd.SchoolClasses}
+	return timetable.OfferingSourcePreviewFingerprint(cmd.EffectiveDate, segments, timetable.PreviewOfferingSource(rosters[living.TemplateID], filter, bookings))
+}
+
+// templateSeriesVersion is the version GET /templates/{id} answers for the
+// series editor: the owner's ReadTemplateSeriesVersion.
+func templateSeriesVersion(t *testing.T, ctx context.Context, reads timetable.TimetableDataCapability, templateID int64) string {
+	t.Helper()
+	version, found, err := timetable.ReadTemplateSeriesVersion(ctx, reads, templateID)
+	require.NoError(t, err)
+	require.True(t, found)
+	return version
 }

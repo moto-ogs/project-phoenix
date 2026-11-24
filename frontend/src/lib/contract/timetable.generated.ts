@@ -53,6 +53,7 @@ export interface PlanningTrack {
   color: string;
   sort_order: number;
   archived_at?: string;
+  version: string;
 }
 
 export const PlanningTrackSchema: z.ZodType<PlanningTrack, unknown> = object<PlanningTrack>({
@@ -64,6 +65,7 @@ export const PlanningTrackSchema: z.ZodType<PlanningTrack, unknown> = object<Pla
   color: str,
   sort_order: safeInt,
   archived_at: optional(instant),
+  version: str,
 });
 
 /** Go: timetablehttp.TemplateArchivedResponse */
@@ -83,6 +85,7 @@ export interface ClosingDayResponse {
   reason: string;
   created_at: string;
   updated_at: string;
+  version: string;
   traeger: boolean;
 }
 
@@ -93,6 +96,7 @@ export const ClosingDayResponseSchema: z.ZodType<ClosingDayResponse, unknown> = 
   reason: str,
   created_at: str,
   updated_at: str,
+  version: str,
   traeger: bool,
 });
 
@@ -354,6 +358,7 @@ export interface enrichedInstance {
   can_reopen?: boolean;
   can_complete: boolean;
   complete_available_at: string;
+  version: string;
 }
 
 export const enrichedInstanceSchema: z.ZodType<enrichedInstance, unknown> = object<enrichedInstance>({
@@ -401,6 +406,7 @@ export const enrichedInstanceSchema: z.ZodType<enrichedInstance, unknown> = obje
   can_reopen: optional(bool),
   can_complete: bool,
   complete_available_at: str,
+  version: str,
 });
 
 /** Go: timetablehttp.weeklyInstancesResponse */
@@ -768,6 +774,7 @@ export interface offeringPreviewResponse {
   weekdays: offeringPreviewWeekdayResponse[] | null;
   segments: offeringPreviewSegmentResponse[] | null;
   other_offerings: offeringPreviewAlternativeResponse[] | null;
+  fingerprint: string;
 }
 
 export const offeringPreviewResponseSchema: z.ZodType<offeringPreviewResponse, unknown> = object<offeringPreviewResponse>({
@@ -775,6 +782,7 @@ export const offeringPreviewResponseSchema: z.ZodType<offeringPreviewResponse, u
   weekdays: nullable(arr(offeringPreviewWeekdayResponseSchema)),
   segments: nullable(arr(offeringPreviewSegmentResponseSchema)),
   other_offerings: nullable(arr(offeringPreviewAlternativeResponseSchema)),
+  fingerprint: str,
 });
 
 /** Go: timetablehttp.offeringSuggestionResponse */
@@ -845,6 +853,7 @@ export interface CalendarPeriodResponse {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  version: string;
   warnings?: PeriodWarning[];
   enrollment_phase_count: number;
   activity_group_count: number;
@@ -866,6 +875,7 @@ export const CalendarPeriodResponseSchema: z.ZodType<CalendarPeriodResponse, unk
   is_active: bool,
   created_at: str,
   updated_at: str,
+  version: str,
   warnings: optional(arr(PeriodWarningSchema)),
   enrollment_phase_count: safeInt,
   activity_group_count: safeInt,
@@ -1206,6 +1216,7 @@ export interface templateResponse {
   protected_student_assignments: templateProtectedStudentAssignmentResponse[] | null;
   roster_maintenance?: templateRosterMaintenanceResponse;
   manual_roster_confirmed: boolean;
+  version?: string;
 }
 
 export const templateResponseSchema: z.ZodType<templateResponse, unknown> = object<templateResponse>({
@@ -1252,6 +1263,7 @@ export const templateResponseSchema: z.ZodType<templateResponse, unknown> = obje
   protected_student_assignments: nullable(arr(templateProtectedStudentAssignmentResponseSchema)),
   roster_maintenance: optional(templateRosterMaintenanceResponseSchema),
   manual_roster_confirmed: bool,
+  version: optional(str),
 });
 
 /** Go: timetablehttp.listTemplatesResponse */
@@ -1386,6 +1398,7 @@ export interface ClosingDayRequest {
   start_date?: string;
   end_date?: string;
   reason?: string;
+  expected_version?: string;
 }
 
 /** Go: timetablehttp.createInstanceRequest */
@@ -1410,6 +1423,7 @@ export interface bulkCancelRequest {
   to?: string;
   dry_run?: boolean;
   include_closing_day_series?: boolean;
+  expected_fingerprint?: string;
 }
 
 /** Go: timetable.BulkCancelDay */
@@ -1443,6 +1457,7 @@ export interface BulkCancelResult {
   days: BulkCancelDay[] | null;
   kept: number;
   kept_series: BulkCancelKeptSeries[] | null;
+  fingerprint: string;
 }
 
 export const BulkCancelResultSchema: z.ZodType<BulkCancelResult, unknown> = object<BulkCancelResult>({
@@ -1453,6 +1468,7 @@ export const BulkCancelResultSchema: z.ZodType<BulkCancelResult, unknown> = obje
   days: nullable(arr(BulkCancelDaySchema)),
   kept: safeInt,
   kept_series: nullable(arr(BulkCancelKeptSeriesSchema)),
+  fingerprint: str,
 });
 
 /** Go: timetablehttp.replanWeekRequest */
@@ -1577,6 +1593,7 @@ export interface convertInstanceToSeriesRequest {
   primary_staff_id?: string | null;
   weekday_assignments?: weekdayAssignmentRequest[] | null;
   instance_notes?: string | null;
+  expected_version?: string;
 }
 
 /** Go: timetablehttp.convertInstanceToSeriesResponse */
@@ -1749,8 +1766,8 @@ export const StartInstanceResponseSchema: z.ZodType<StartInstanceResponse, unkno
 /** Go: timetablehttp.CorrectAttendanceRequest */
 export interface CorrectAttendanceRequest {
   status?: string | null;
-  substatus?: unknown | null;
-  note?: unknown | null;
+  substatus?: string | null;
+  note?: string | null;
   reason?: string;
 }
 
@@ -2023,6 +2040,7 @@ export interface CalendarPeriodRequest {
   week_cycle_length?: number;
   week_cycle_anchor?: string | null;
   is_active?: boolean;
+  expected_version?: string;
 }
 
 /** Go: timetablehttp.bootstrapPeriodsResponse */
@@ -2061,6 +2079,7 @@ export interface planningTrackRequest {
   name?: string;
   color?: string;
   sort_order?: number;
+  expected_version?: string;
 }
 
 /** Go: timetablehttp.schoolVacationAcknowledgementRequest */
@@ -2212,6 +2231,7 @@ export interface offeringConnectionRequest {
   grade_levels?: number[] | null;
   school_classes?: string[] | null;
   effective_date?: string;
+  expected_fingerprint?: string;
 }
 
 /** Go: timetablehttp.offeringConnectionResponse */
@@ -2251,6 +2271,7 @@ export interface splitTemplateRequest {
   staff_ids?: string[] | null;
   primary_staff_id?: string | null;
   weekday_assignments?: weekdayAssignmentRequest[] | null;
+  expected_version?: string;
   series_roster_from?: string | null;
   series_roster_scope_student_ids?: string[] | null;
   series_roster_scope_staff_ids?: string[] | null;
@@ -2317,6 +2338,7 @@ export interface updateInstanceRequest {
   staff_ids?: string[] | null;
   student_ids?: string[] | null;
   required_staff?: number | null;
+  expected_version?: string;
 }
 
 /** Go: timetablehttp.offeringGapAckRequest */
@@ -2370,6 +2392,7 @@ export interface updateTemplateRequest {
   staff_ids?: string[] | null;
   primary_staff_id?: string | null;
   weekday_assignments?: weekdayAssignmentRequest[] | null;
+  expected_version?: string;
   series_roster_from?: string | null;
   series_roster_scope_student_ids?: string[] | null;
   series_roster_scope_staff_ids?: string[] | null;
@@ -2412,155 +2435,6 @@ export const keptStudentTemplateDaysResponseSchema: z.ZodType<keptStudentTemplat
   kept: bool,
   roster_rows: safeInt,
 });
-
-/** Query of GET /api/timetable/conflicts */
-export interface GetTimetableConflictsQuery {
-  date?: string;
-  end_time?: string;
-  exclude_activity_group_id?: string;
-  exclude_instance_id?: string;
-  room_id?: string;
-  staff_ids?: string;
-  start_time?: string;
-  student_ids?: string;
-}
-
-/** Query of GET /api/timetable/deviations/history */
-export interface GetTimetableDeviationsHistoryQuery {
-  activity_group_id?: string;
-  date?: string;
-  date_to?: string;
-  start_time?: string;
-}
-
-/** Query of GET /api/timetable/gaps */
-export interface GetTimetableGapsQuery {
-  date?: string;
-  date_to?: string;
-}
-
-/** Query of GET /api/timetable/holidays */
-export interface GetTimetableHolidaysQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/timetable/instances/ */
-export interface GetTimetableInstancesQuery {
-  from?: string;
-  group_id?: string;
-  room_id?: string;
-  staff_id?: string;
-  to?: string;
-  view?: string;
-}
-
-/** Query of GET /api/timetable/instances/edited-in-window */
-export interface GetTimetableInstancesEditedInWindowQuery {
-  activity_group_id?: string;
-  from?: string;
-  include_deletions?: boolean;
-  to?: string;
-}
-
-/** Query of GET /api/timetable/offering-gaps */
-export interface GetTimetableOfferingGapsQuery {
-  period_id?: string;
-}
-
-/** Query of GET /api/timetable/offering-sources */
-export interface GetTimetableOfferingSourcesQuery {
-  calendar_period_id?: string;
-}
-
-/** Query of GET /api/timetable/offering-sources/combined-counts */
-export interface GetTimetableOfferingSourcesCombinedCountsQuery {
-  calendar_period_id?: string;
-  ids?: string;
-}
-
-/** Query of GET /api/timetable/offering-sources/preview */
-export interface GetTimetableOfferingSourcesPreviewQuery {
-  from?: string;
-  grade_levels?: string;
-  list_kind?: string;
-  offering_ids?: string;
-  period_id?: string;
-  roster?: string[];
-  school_classes?: string;
-  type?: string;
-}
-
-/** Query of GET /api/timetable/offering-sources/suggestion */
-export interface GetTimetableOfferingSourcesSuggestionQuery {
-  end_time?: string;
-  grade_levels?: string;
-  list_kind?: string;
-  period_id?: string;
-  roster?: string[];
-  school_classes?: string;
-  type?: string;
-}
-
-/** Query of GET /api/timetable/operations/planned-now */
-export interface GetTimetableOperationsPlannedNowQuery {
-  date?: string;
-  horizon_minutes?: number;
-  include_roster?: boolean;
-  limit?: number;
-  scope?: "day" | "past";
-}
-
-/** Query of GET /api/timetable/pickup-extensions/ */
-export interface GetTimetablePickupExtensionsQuery {
-  student_id?: string;
-}
-
-/** Query of GET /api/timetable/school-vacations */
-export interface GetTimetableSchoolVacationsQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/timetable/student/{id}/day */
-export interface GetTimetableStudentIdDayQuery {
-  date?: string;
-}
-
-/** Query of GET /api/timetable/student/{id}/week */
-export interface GetTimetableStudentIdWeekQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/timetable/templates */
-export interface GetTimetableTemplatesQuery {
-  period_id?: string;
-}
-
-/** Query of GET /api/timetable/templates/booking-leftovers */
-export interface GetTimetableTemplatesBookingLeftoversQuery {
-  period_id?: string;
-}
-
-/** Query of GET /api/timetable/templates/roster-deviations */
-export interface GetTimetableTemplatesRosterDeviationsQuery {
-  period_id?: string;
-  template_id?: string;
-}
-
-/** Query of GET /api/timetable/templates/{id} */
-export interface GetTimetableTemplatesIdQuery {
-  period_id?: string;
-}
-
-/** Query of GET /api/timetable/templates/{id}/offering-preview */
-export interface GetTimetableTemplatesIdOfferingPreviewQuery {
-  from?: string;
-  grade_levels?: string;
-  offering_ids?: string;
-  school_classes?: string;
-}
 
 export const routes = {
   "DELETE /api/timetable/closing-days/{id}": {
@@ -2615,42 +2489,74 @@ export const routes = {
     method: "GET",
     pattern: "/api/timetable/conflicts",
     portals: ["tenant"],
-    query: ["date", "end_time", "exclude_activity_group_id", "exclude_instance_id", "room_id", "staff_ids", "start_time", "student_ids"],
+    query: {
+      "date": { kind: "date" },
+      "end_time": { kind: "string" },
+      "exclude_activity_group_id": { kind: "id" },
+      "exclude_instance_id": { kind: "id" },
+      "room_id": { kind: "id" },
+      "staff_ids": { kind: "string" },
+      "start_time": { kind: "string" },
+      "student_ids": { kind: "string" },
+    },
     response: success(PlannedConflictsResponseSchema),
   },
   "GET /api/timetable/deviations/history": {
     method: "GET",
     pattern: "/api/timetable/deviations/history",
     portals: ["tenant"],
-    query: ["activity_group_id", "date", "date_to", "start_time"],
+    query: {
+      "activity_group_id": { kind: "id" },
+      "date": { kind: "date" },
+      "date_to": { kind: "date" },
+      "start_time": { kind: "string" },
+    },
     response: success(DeviationHistoryResponseSchema),
   },
   "GET /api/timetable/gaps": {
     method: "GET",
     pattern: "/api/timetable/gaps",
     portals: ["tenant"],
-    query: ["date", "date_to"],
+    query: {
+      "date": { kind: "date" },
+      "date_to": { kind: "date" },
+    },
     response: success(GapsResponseSchema),
   },
   "GET /api/timetable/holidays": {
     method: "GET",
     pattern: "/api/timetable/holidays",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(HolidaysResponseSchema),
   },
   "GET /api/timetable/instances/": {
     method: "GET",
     pattern: "/api/timetable/instances/",
     portals: ["tenant"],
-    query: ["from", "group_id", "room_id", "staff_id", "to", "view"],
+    query: {
+      "from": { kind: "date" },
+      "group_id": { kind: "id" },
+      "room_id": { kind: "id" },
+      "staff_id": { kind: "id" },
+      "to": { kind: "date" },
+      "view": { kind: "string" },
+    },
     response: success(weeklyInstancesResponseSchema),
   },
   "GET /api/timetable/instances/edited-in-window": {
     method: "GET",
     pattern: "/api/timetable/instances/edited-in-window",
     portals: ["tenant"],
-    query: ["activity_group_id", "from", "include_deletions", "to"],
+    query: {
+      "activity_group_id": { kind: "id" },
+      "from": { kind: "date" },
+      "include_deletions": { kind: "bool" },
+      "to": { kind: "date" },
+    },
     response: success(editedInWindowResponseSchema),
   },
   "GET /api/timetable/instances/{id}/guardian-notice": {
@@ -2681,35 +2587,59 @@ export const routes = {
     method: "GET",
     pattern: "/api/timetable/offering-gaps",
     portals: ["tenant"],
-    query: ["period_id"],
+    query: {
+      "period_id": { kind: "id" },
+    },
     response: success(offeringGapsResponseSchema),
   },
   "GET /api/timetable/offering-sources": {
     method: "GET",
     pattern: "/api/timetable/offering-sources",
     portals: ["tenant"],
-    query: ["calendar_period_id"],
+    query: {
+      "calendar_period_id": { kind: "id" },
+    },
     response: success(offeringSourcesResponseSchema),
   },
   "GET /api/timetable/offering-sources/combined-counts": {
     method: "GET",
     pattern: "/api/timetable/offering-sources/combined-counts",
     portals: ["tenant"],
-    query: ["calendar_period_id", "ids"],
+    query: {
+      "calendar_period_id": { kind: "id" },
+      "ids": { kind: "string" },
+    },
     response: success(combinedOfferingCountsResponseSchema),
   },
   "GET /api/timetable/offering-sources/preview": {
     method: "GET",
     pattern: "/api/timetable/offering-sources/preview",
     portals: ["tenant"],
-    query: ["from", "grade_levels", "list_kind", "offering_ids", "period_id", "roster", "school_classes", "type"],
+    query: {
+      "from": { kind: "date" },
+      "grade_levels": { kind: "string" },
+      "list_kind": { kind: "string" },
+      "offering_ids": { kind: "string" },
+      "period_id": { kind: "id" },
+      "roster": { kind: "string", repeated: true },
+      "school_classes": { kind: "string" },
+      "type": { kind: "string" },
+    },
     response: success(offeringPreviewResponseSchema),
   },
   "GET /api/timetable/offering-sources/suggestion": {
     method: "GET",
     pattern: "/api/timetable/offering-sources/suggestion",
     portals: ["tenant"],
-    query: ["end_time", "grade_levels", "list_kind", "period_id", "roster", "school_classes", "type"],
+    query: {
+      "end_time": { kind: "string" },
+      "grade_levels": { kind: "string" },
+      "list_kind": { kind: "string" },
+      "period_id": { kind: "id" },
+      "roster": { kind: "string", repeated: true },
+      "school_classes": { kind: "string" },
+      "type": { kind: "string" },
+    },
     response: success(offeringSuggestionEnvelopeSchema),
   },
   "GET /api/timetable/operations/active-groups/{id}/roster": {
@@ -2728,7 +2658,13 @@ export const routes = {
     method: "GET",
     pattern: "/api/timetable/operations/planned-now",
     portals: ["tenant"],
-    query: ["date", "horizon_minutes", "include_roster", "limit", "scope"],
+    query: {
+      "date": { kind: "date" },
+      "horizon_minutes": { kind: "int" },
+      "include_roster": { kind: "bool" },
+      "limit": { kind: "int" },
+      "scope": { kind: "string", values: ["day", "past"] },
+    },
     response: success(PlannedNowResponseSchema),
   },
   "GET /api/timetable/periods/": {
@@ -2747,7 +2683,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/timetable/pickup-extensions/",
     portals: ["tenant"],
-    query: ["student_id"],
+    query: {
+      "student_id": { kind: "id" },
+    },
     response: success(pickupExtensionsResponseSchema),
   },
   "GET /api/timetable/planning-tracks/": {
@@ -2766,56 +2704,78 @@ export const routes = {
     method: "GET",
     pattern: "/api/timetable/school-vacations",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(SchoolVacationsResponseSchema),
   },
   "GET /api/timetable/student/{id}/day": {
     method: "GET",
     pattern: "/api/timetable/student/{id}/day",
     portals: ["tenant"],
-    query: ["date"],
+    query: {
+      "date": { kind: "date" },
+    },
     response: success(StudentDayResponseSchema),
   },
   "GET /api/timetable/student/{id}/week": {
     method: "GET",
     pattern: "/api/timetable/student/{id}/week",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(StudentWeekResponseSchema),
   },
   "GET /api/timetable/templates": {
     method: "GET",
     pattern: "/api/timetable/templates",
     portals: ["tenant"],
-    query: ["period_id"],
+    query: {
+      "period_id": { kind: "id" },
+    },
     response: success(listTemplatesResponseSchema),
   },
   "GET /api/timetable/templates/booking-leftovers": {
     method: "GET",
     pattern: "/api/timetable/templates/booking-leftovers",
     portals: ["tenant"],
-    query: ["period_id"],
+    query: {
+      "period_id": { kind: "id" },
+    },
     response: success(bookingLeftoversResponseSchema),
   },
   "GET /api/timetable/templates/roster-deviations": {
     method: "GET",
     pattern: "/api/timetable/templates/roster-deviations",
     portals: ["tenant"],
-    query: ["period_id", "template_id"],
+    query: {
+      "period_id": { kind: "id" },
+      "template_id": { kind: "id" },
+    },
     response: success(rosterDeviationsResponseSchema),
   },
   "GET /api/timetable/templates/{id}": {
     method: "GET",
     pattern: "/api/timetable/templates/{id}",
     portals: ["tenant"],
-    query: ["period_id"],
+    query: {
+      "period_id": { kind: "id" },
+    },
     response: success(templateResponseSchema),
   },
   "GET /api/timetable/templates/{id}/offering-preview": {
     method: "GET",
     pattern: "/api/timetable/templates/{id}/offering-preview",
     portals: ["tenant"],
-    query: ["from", "grade_levels", "offering_ids", "school_classes"],
+    query: {
+      "from": { kind: "date" },
+      "grade_levels": { kind: "string" },
+      "offering_ids": { kind: "string" },
+      "school_classes": { kind: "string" },
+    },
     response: success(offeringPreviewResponseSchema),
   },
   "PATCH /api/timetable/instances/{instance_id}/students/{student_id}": {

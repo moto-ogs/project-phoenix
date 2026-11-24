@@ -1,5 +1,6 @@
 {
   "business_rejection": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "changed_since_read": "{object} bu arada değiştirildi. Şimdi güncel durumu görüyorsunuz. Kontrol edin ve tekrar deneyin.",
   "input": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "permission": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
   "request_too_large": "{object} işlenemedi. Lütfen tarayıcınızda bu sitenin çerezlerini silin. Ardından yeniden giriş yapın.",

@@ -28,7 +28,7 @@ func TestHolidayAllocationWorkflowOrdersLocksAndStopsAtTheFirstFailure(t *testin
 		{
 			name: "rebooking",
 			run: func(ctx context.Context, w *Workflow) (any, error) {
-				return w.RebookHolidayChild(ctx, reviewer, 11, 21, 31, []enrollment.HolidayBookingInput{{WeekID: 41, TimeModelID: 51}})
+				return w.RebookHolidayChild(ctx, reviewer, 11, 21, 31, "read", []enrollment.HolidayBookingInput{{WeekID: 41, TimeModelID: 51}})
 			},
 			want: enrollment.HolidayRegistrationDetail{ID: 21, Promotions: []enrollment.HolidayPromotion{{RegistrationID: 15}, {RegistrationID: 14}, {RegistrationID: 15}}},
 			// Whoever moved up, once, and the rebooked registration itself:
@@ -158,7 +158,7 @@ func (f *fakeOwners) HoldHolidayPeriod(ctx context.Context, reviewer enrollment.
 	return f.step(ctx, "period")
 }
 
-func (f *fakeOwners) RebookHolidayChild(ctx context.Context, reviewer enrollment.HolidayReviewer, periodID, registrationID, childID int64, bookings []enrollment.HolidayBookingInput) (enrollment.HolidayRegistrationDetail, error) {
+func (f *fakeOwners) RebookHolidayChild(ctx context.Context, reviewer enrollment.HolidayReviewer, periodID, registrationID, childID int64, _ string, bookings []enrollment.HolidayBookingInput) (enrollment.HolidayRegistrationDetail, error) {
 	f.keys(reviewer.OrganizationID, reviewer.AccountID, periodID)
 	require.Equal(f.t, []int64{21, 31}, []int64{registrationID, childID})
 	require.Equal(f.t, []enrollment.HolidayBookingInput{{WeekID: 41, TimeModelID: 51}}, bookings)

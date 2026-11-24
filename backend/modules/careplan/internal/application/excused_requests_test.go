@@ -14,6 +14,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // errBoom is the injected failure used across the error-path tests.
@@ -307,9 +308,16 @@ func pendingRow(id int64, dates ...careplan.Date) careplan.ExcusedAbsenceRequest
 	return careplan.ExcusedAbsenceRequest{
 		ID: id, TenantID: fakeTenantID, StudentID: fakeStudentID, SubmittedBy: fakeGuardian,
 		Dates: dates, Note: "Arzttermin", AbsenceStatus: careplan.StudentStatusDayExcused,
-		Status: careplan.ExcusedRequestStatusPending, CreatedAt: time.Now().Add(-time.Hour),
+		Status: careplan.ExcusedRequestStatusPending, CreatedAt: time.Now().Add(-time.Hour), UpdatedAt: fakeUpdatedAt,
 	}
 }
+
+// fakeUpdatedAt is the stored change time of every fake row; fakeVersion is
+// the version a reader of that row sends back (ADR 0311).
+var (
+	fakeUpdatedAt = fakeNow().Add(-time.Hour)
+	fakeVersion   = readstate.Of(fakeUpdatedAt)
+)
 
 func decidablePlan(row careplan.ExcusedAbsenceRequest) *fakeCarePlan {
 	return &fakeCarePlan{
@@ -363,13 +371,13 @@ func TestDecideValidatesBeforeTheLock(t *testing.T) {
 	h := newHarness(t, &fakeCarePlan{}, &fakeStudents{})
 	ctx := context.Background()
 
-	_, err := h.workflow.Decide(ctx, careplan.ExcusedRequestDecideInput{RequestID: 0, Approve: true})
+	_, err := h.workflow.Decide(ctx, careplan.ExcusedRequestDecideInput{ExpectedVersion: fakeVersion, RequestID: 0, Approve: true})
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestNotFound)
-	_, err = h.workflow.Decide(ctx, careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: false, Reason: "  "})
+	_, err = h.workflow.Decide(ctx, careplan.ExcusedRequestDecideInput{ExpectedVersion: fakeVersion, RequestID: 5, Approve: false, Reason: "  "})
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestRejectReasonRequired)
-	_, err = h.workflow.Decide(ctx, careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: true, ReasonRequired: true})
+	_, err = h.workflow.Decide(ctx, careplan.ExcusedRequestDecideInput{ExpectedVersion: fakeVersion, RequestID: 5, Approve: true, ReasonRequired: true})
 	assert.ErrorIs(t, err, careplan.ErrParentRequestReasonRequired)
-	_, err = h.workflow.Decide(ctx, careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: false, Reason: strings.Repeat("x", 2001)})
+	_, err = h.workflow.Decide(ctx, careplan.ExcusedRequestDecideInput{ExpectedVersion: fakeVersion, RequestID: 5, Approve: false, Reason: strings.Repeat("x", 2001)})
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestRejectReasonTooLong)
 }
 
@@ -627,7 +635,7 @@ func TestDecideForbiddenOutsideTheReviewScope(t *testing.T) {
 	t.Parallel()
 	h := newHarness(t, decidablePlan(pendingRow(5, fakeTomorrow)), &fakeStudents{})
 	h.scope = careplan.ReviewScope{}
-	_, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: true})
+	_, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{ExpectedVersion: fakeVersion, RequestID: 5, Approve: true})
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestForbidden)
 	assert.Zero(t, h.hooks.pending())
 }
@@ -636,11 +644,17 @@ func TestDecideRejectsStaleVersionAfterTheLock(t *testing.T) {
 	t.Parallel()
 	row := pendingRow(5, fakeTomorrow)
 	row.UpdatedAt = time.Now()
-	h := newHarness(t, decidablePlan(row), &fakeStudents{})
-	_, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: true, ExpectedVersion: "stale"})
-	assert.ErrorIs(t, err, careplan.ErrParentRequestStale)
-	_, err = h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{
-		RequestID: 5, Approve: true, ExpectedVersion: careplan.ParentRequestVersion(row.UpdatedAt),
+	plan := decidablePlan(row)
+	decided := 0
+	plan.decide = func(context.Context, careplan.ExcusedAbsenceDecision) error { decided++; return nil }
+	h := newHarness(t, plan, &fakeStudents{})
+	for _, expected := range []string{"stale", ""} {
+		_, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: true, ExpectedVersion: expected})
+		assert.ErrorIs(t, err, readstate.ErrChanged, "version %q", expected)
+	}
+	assert.Zero(t, decided, "a refused decision writes nothing")
+	_, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{
+		RequestID: 5, Approve: true, ExpectedVersion: readstate.Of(row.UpdatedAt),
 	})
 	require.NoError(t, err)
 }
@@ -650,24 +664,24 @@ func TestDecideRefusesAlumniEndedCareAndDaysBeyondCare(t *testing.T) {
 	alumnus := activeStudent()
 	alumnus.Alumnus = true
 	h := newHarness(t, decidablePlan(pendingRow(5, fakeTomorrow)), &fakeStudents{lock: func(context.Context, int64) (careplan.ReviewStudent, error) { return alumnus, nil }})
-	_, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: false, Reason: "weg"})
+	_, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{ExpectedVersion: fakeVersion, RequestID: 5, Approve: false, Reason: "weg"})
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestNotFound, "neither verdict may act on an alumnus")
 
 	beyond := activeStudent()
 	beyond.EnrolledUntil = fakeTomorrow
 	h = newHarness(t, decidablePlan(pendingRow(5, fakeTomorrow, fakeNextWeek)), &fakeStudents{lock: func(context.Context, int64) (careplan.ReviewStudent, error) { return beyond, nil }})
-	_, err = h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: true})
+	_, err = h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{ExpectedVersion: fakeVersion, RequestID: 5, Approve: true})
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestNotFound, "approval must not create an absence after care ends")
-	_, err = h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: false, Reason: "zu spät"})
+	_, err = h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{ExpectedVersion: fakeVersion, RequestID: 5, Approve: false, Reason: "zu spät"})
 	require.NoError(t, err, "rejecting stays possible while care still runs")
 }
 
 func TestDecideApproveRefusedWhenAllDaysArePast(t *testing.T) {
 	t.Parallel()
 	h := newHarness(t, decidablePlan(pendingRow(5, fakePast)), &fakeStudents{})
-	_, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: true})
+	_, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{ExpectedVersion: fakeVersion, RequestID: 5, Approve: true})
 	assert.ErrorIs(t, err, careplan.ErrParentRequestPast)
-	_, err = h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: false, Reason: "Zu spät eingereicht"})
+	_, err = h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{ExpectedVersion: fakeVersion, RequestID: 5, Approve: false, Reason: "Zu spät eingereicht"})
 	require.NoError(t, err, "rejecting is how staff wind a stale request down")
 }
 
@@ -675,7 +689,7 @@ func TestDecideApproveRefusedWhenGuardianLostAccess(t *testing.T) {
 	t.Parallel()
 	h := newHarness(t, decidablePlan(pendingRow(5, fakeTomorrow)), &fakeStudents{})
 	h.messenger.hasAccess = false
-	_, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: true})
+	_, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{ExpectedVersion: fakeVersion, RequestID: 5, Approve: true})
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestGuardianAccessRevoked)
 
 	h.carePlan.listRequests = func(context.Context, careplan.ExcusedAbsenceRequestFilter) ([]careplan.ExcusedAbsenceRequest, error) {
@@ -687,7 +701,7 @@ func TestDecideApproveRefusedWhenGuardianLostAccess(t *testing.T) {
 	assert.False(t, items[0].BulkEligible)
 	assert.Equal(t, careplan.BulkIneligibleAccessRevoked, items[0].BulkIneligibleReason)
 
-	_, err = h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: false, Reason: "nicht mehr berechtigt"})
+	_, err = h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{ExpectedVersion: fakeVersion, RequestID: 5, Approve: false, Reason: "nicht mehr berechtigt"})
 	require.NoError(t, err, "rejecting is deliberately not gated on the guardian link")
 }
 
@@ -711,14 +725,14 @@ func TestDecideApproveRefusedWhenANewerStatusExists(t *testing.T) {
 	require.NotNil(t, items[0].CurrentValueChanged)
 	assert.True(t, *items[0].CurrentValueChanged)
 
-	_, err = h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: true})
+	_, err = h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{ExpectedVersion: fakeVersion, RequestID: 5, Approve: true})
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestStatusConflict)
 
 	// An older status is exactly what the request supersedes.
 	plan.listStatusDays = func(context.Context, careplan.StudentStatusDayFilter) ([]careplan.StudentStatusDay, error) {
 		return []careplan.StudentStatusDay{{StudentID: fakeStudentID, Date: fakeTomorrow, Status: careplan.StudentStatusDaySick, ReportedAt: row.CreatedAt.Add(-time.Minute)}}, nil
 	}
-	_, err = h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: true})
+	_, err = h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{ExpectedVersion: fakeVersion, RequestID: 5, Approve: true})
 	require.NoError(t, err)
 }
 
@@ -740,7 +754,7 @@ func TestDecideApproveAppliesDaysNotifiesInsideAndBroadcastsAfterCommit(t *testi
 	h := newHarness(t, plan, &fakeStudents{})
 	h.messenger.audience = ports.DecisionAudience{Neutral: []int64{4}}
 
-	item, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: true, Reason: "Passt", ReviewedBy: fakeReviewer})
+	item, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{ExpectedVersion: fakeVersion, RequestID: 5, Approve: true, Reason: "Passt", ReviewedBy: fakeReviewer})
 	require.NoError(t, err)
 	assert.Equal(t, careplan.ExcusedRequestStatusApproved, item.Request.Status)
 	assert.Equal(t, "Felix", item.FirstName)
@@ -780,7 +794,7 @@ func TestDecideRejectWritesNoDaysAndCarriesTheReason(t *testing.T) {
 	plan.decide = func(_ context.Context, value careplan.ExcusedAbsenceDecision) error { decision = value; return nil }
 	h := newHarness(t, plan, &fakeStudents{})
 
-	_, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: false, Reason: " telefonisch klären ", ReviewedBy: fakeReviewer})
+	_, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{ExpectedVersion: fakeVersion, RequestID: 5, Approve: false, Reason: " telefonisch klären ", ReviewedBy: fakeReviewer})
 	require.NoError(t, err)
 	assert.Equal(t, careplan.ExcusedRequestStatusRejected, decision.Status)
 	require.NotNil(t, decision.Reason)
@@ -822,7 +836,7 @@ func TestDecidePropagatesEveryWriteFailure(t *testing.T) {
 			plan, students := decidablePlan(row), &fakeStudents{}
 			inject(plan, students)
 			h := newHarness(t, plan, students)
-			_, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{RequestID: 5, Approve: true})
+			_, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{ExpectedVersion: fakeVersion, RequestID: 5, Approve: true})
 			require.ErrorIs(t, err, errBoom)
 		})
 	}
@@ -838,7 +852,7 @@ func TestMarkDoneRequiresAPastRequestAndAppliesNothing(t *testing.T) {
 		return careplan.StudentStatusDay{}, nil
 	}
 	h := newHarness(t, plan, &fakeStudents{})
-	err := h.workflow.MarkDone(context.Background(), 5, "", "", fakeReviewer)
+	err := h.workflow.MarkDone(context.Background(), 5, fakeVersion, "", fakeReviewer)
 	assert.ErrorIs(t, err, careplan.ErrParentRequestNotPast)
 
 	past := pendingRow(6, fakePast)
@@ -846,8 +860,11 @@ func TestMarkDoneRequiresAPastRequestAndAppliesNothing(t *testing.T) {
 	plan.findPending = func(context.Context, int64) (careplan.ExcusedAbsenceRequest, error) { return past, nil }
 	var decision careplan.ExcusedAbsenceDecision
 	plan.decide = func(_ context.Context, value careplan.ExcusedAbsenceDecision) error { decision = value; return nil }
-	assert.ErrorIs(t, h.workflow.MarkDone(context.Background(), 6, "stale", "", fakeReviewer), careplan.ErrParentRequestStale)
-	require.NoError(t, h.workflow.MarkDone(context.Background(), 6, "", "Tage sind vorbei", fakeReviewer))
+	for _, expected := range []string{"stale", ""} {
+		assert.ErrorIs(t, h.workflow.MarkDone(context.Background(), 6, expected, "", fakeReviewer), readstate.ErrChanged)
+	}
+	assert.Empty(t, decision.Status, "a refused mark-done decides nothing")
+	require.NoError(t, h.workflow.MarkDone(context.Background(), 6, readstate.Of(past.UpdatedAt), "Tage sind vorbei", fakeReviewer))
 	assert.Equal(t, careplan.ExcusedRequestStatusDone, decision.Status)
 	require.Len(t, h.ledger.entries, 1)
 	assert.Equal(t, careplan.ParentRequestEventMarkedDone, h.ledger.entries[0].EventType)
@@ -861,7 +878,7 @@ func TestCorrectRefusesUndecidedAndRevertsOnlyItsOwnDays(t *testing.T) {
 	pending := pendingRow(5, fakeTomorrow)
 	plan := &fakeCarePlan{findRequest: func(context.Context, int64, bool) (careplan.ExcusedAbsenceRequest, error) { return pending, nil }}
 	h := newHarness(t, plan, &fakeStudents{})
-	assert.ErrorIs(t, h.workflow.Correct(context.Background(), 5, false, "", "Korrektur", fakeReviewer), careplan.ErrParentRequestNotDecided)
+	assert.ErrorIs(t, h.workflow.Correct(context.Background(), 5, false, fakeVersion, "Korrektur", fakeReviewer), careplan.ErrParentRequestNotDecided)
 
 	reviewedAt := time.Now().Add(-time.Hour)
 	approved := pendingRow(5, fakeTomorrow)
@@ -875,7 +892,7 @@ func TestCorrectRefusesUndecidedAndRevertsOnlyItsOwnDays(t *testing.T) {
 			Source: careplan.StudentStatusSourceManual, GuardianAccountID: &guardian, ReportedAt: reviewedAt.Add(time.Minute),
 		}}, nil
 	}
-	err := h.workflow.Correct(context.Background(), 5, false, "", "Doch nicht", fakeReviewer)
+	err := h.workflow.Correct(context.Background(), 5, false, fakeVersion, "Doch nicht", fakeReviewer)
 	assert.ErrorIs(t, err, careplan.ErrParentRequestCorrectionUnsupported, "a day re-entered by staff after the approval is never cleared")
 
 	cleared := 0
@@ -888,7 +905,11 @@ func TestCorrectRefusesUndecidedAndRevertsOnlyItsOwnDays(t *testing.T) {
 	plan.clearDays = func(context.Context, int64, string, []careplan.Date, time.Time, string) error { cleared++; return nil }
 	var redecision careplan.ExcusedAbsenceDecision
 	plan.redecide = func(_ context.Context, value careplan.ExcusedAbsenceDecision) error { redecision = value; return nil }
-	require.NoError(t, h.workflow.Correct(context.Background(), 5, false, "", "Doch nicht genehmigt", fakeReviewer))
+	for _, expected := range []string{"stale", ""} {
+		assert.ErrorIs(t, h.workflow.Correct(context.Background(), 5, false, expected, "Doch nicht genehmigt", fakeReviewer), readstate.ErrChanged)
+	}
+	assert.Zero(t, cleared, "a refused correction clears nothing")
+	require.NoError(t, h.workflow.Correct(context.Background(), 5, false, fakeVersion, "Doch nicht genehmigt", fakeReviewer))
 	assert.Equal(t, 1, cleared, "the approval's own days are cleared")
 	assert.Equal(t, careplan.ExcusedRequestStatusRejected, redecision.Status)
 	require.Len(t, h.ledger.entries, 1)
@@ -959,7 +980,7 @@ func TestCorrectApprovalKeepsDecideGuards(t *testing.T) {
 			h := newHarness(t, tc.plan(row), tc.students)
 			h.messenger.hasAccess = tc.access
 
-			err := h.workflow.Correct(context.Background(), row.ID, true, "", "Doch genehmigt", fakeReviewer)
+			err := h.workflow.Correct(context.Background(), row.ID, true, fakeVersion, "Doch genehmigt", fakeReviewer)
 			assert.ErrorIs(t, err, tc.want)
 		})
 	}

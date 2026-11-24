@@ -55,7 +55,7 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "A", tenantId: 1 }, expires: "2099-01-01" },
+    data: { user: { id: "A", tenantId: "1" }, expires: "2099-01-01" },
     status: "authenticated",
   }),
 }));
@@ -332,6 +332,54 @@ describe("BookingLeftoverHints", () => {
     expect(await within(dialog).findByRole("alert")).toBeInTheDocument();
     expect(mocks.toastSuccess).not.toHaveBeenCalled();
   });
+
+  // ADR 0311: the gap changed since it was read. The dialog's dates would
+  // be refused again, so it closes; the message waits for the hints read
+  // again (`reload`), which rejects when that read fails.
+  it.each([[true], [false]])(
+    "closes the dialog after a changed gap and reads the hints again (read succeeds: %s)",
+    async (readSucceeds) => {
+      const refusal = new ApiError("stale", 409, {
+        code: "timetable.template_booking_gap_stale",
+      });
+      mocks.remove.mockRejectedValue(refusal);
+      if (!readSucceeds) {
+        mocks.mutate.mockRejectedValueOnce(
+          new ApiError("down", 503, { code: "general.unavailable" }),
+        );
+      }
+      renderHints();
+
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "Entfernen: Hannah Schmitz in „Hausaufgabenbetreuung“",
+        }),
+      );
+      const dialog = await screen.findByRole("dialog");
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Entfernen" }),
+      );
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Jetzt entfernen" }),
+      );
+
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      );
+      expect(mocks.remove).toHaveBeenCalledOnce();
+      expect(mocks.showError).toHaveBeenCalledWith(
+        refusal,
+        expect.objectContaining({ reload: expect.any(Function) }),
+      );
+      const { reload } = mocks.showError.mock.calls[0]![1] as {
+        reload: () => Promise<unknown>;
+      };
+      const read = reload();
+      if (readSucceeds) await expect(read).resolves.toBeUndefined();
+      else await expect(read).rejects.toBeInstanceOf(ApiError);
+      expect(mocks.mutate).toHaveBeenCalledOnce();
+    },
+  );
 
   it("keeps the child with „Bleibt so“ and can show the hint again", async () => {
     renderHints();

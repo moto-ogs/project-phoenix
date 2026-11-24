@@ -40,11 +40,11 @@ func TestFlowJ_TemplateUpdateReplansTheWholePeriod(t *testing.T) {
 			"weekdays":           []int{3},
 			"start_time":         start,
 			"end_time":           end,
-			"room_id":            room.ID,
-			"category_id":        category.ID,
-			"calendar_period_id": period.ID,
-			"staff_ids":          []int64{staffA.ID, staffB.ID},
-			"primary_staff_id":   staffA.ID,
+			"room_id":            testpkg.ID(room.ID),
+			"category_id":        testpkg.ID(category.ID),
+			"calendar_period_id": testpkg.ID(period.ID),
+			"staff_ids":          []testpkg.ID{testpkg.ID(staffA.ID), testpkg.ID(staffB.ID)},
+			"primary_staff_id":   testpkg.ID(staffA.ID),
 		}
 	}
 	create := body("14:00", "15:00")
@@ -63,15 +63,25 @@ func TestFlowJ_TemplateUpdateReplansTheWholePeriod(t *testing.T) {
 	require.Equal(t, "14:00", farBefore.StartTime.Format("15:04"))
 
 	devReq := map[string]any{
-		"absences":          []map[string]any{{"staff_id": staffA.ID, "reason": "Krank"}},
+		"absences":          []map[string]any{{"staff_id": testpkg.ID(staffA.ID), "reason": "Krank"}},
 		"understaffed_ack":  true,
 		"understaffed_note": "Kein Ersatz verfügbar",
 	}
 	rr = s.do("POST", fmt.Sprintf("/instances/%d/deviations", farBefore.ID), devReq, s.primaryAdminClaims())
 	require.Equal(t, http.StatusOK, rr.Code, "deviations body=%s", rr.Body.String())
 
+	// The editor saves back the series it read (ADR 0311).
+	rr = s.do("GET", fmt.Sprintf("/templates/%d?period_id=%d", created.TemplateID, period.ID), nil, s.primaryAdminClaims())
+	require.Equal(t, http.StatusOK, rr.Code, "read template body=%s", rr.Body.String())
+	var opened struct {
+		Version string `json:"version"`
+	}
+	decodeResponse(t, rr, &opened)
+	require.NotEmpty(t, opened.Version)
+
 	update := body("15:00", "16:00")
 	update["replan_future"] = true
+	update["expected_version"] = opened.Version
 	rr = s.do("PUT", fmt.Sprintf("/templates/%d", created.TemplateID), update, s.primaryAdminClaims())
 	require.Equal(t, http.StatusOK, rr.Code, "update template body=%s", rr.Body.String())
 

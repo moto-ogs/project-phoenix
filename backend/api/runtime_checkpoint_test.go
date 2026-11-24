@@ -16,12 +16,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	deliveryModule "github.com/moto-ogs/project-phoenix/modules/delivery/runtime"
+	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/require"
 )
 
 var runtimeCheckpointOutput = flag.String("runtime-checkpoint-output", "", "write the opt-in #3019 runtime measurement JSON to this file")
@@ -109,7 +111,7 @@ func measureRuntimeCheckpoint(t *testing.T, production *Runtime) {
 	scenarios := []checkpointScenario{
 		{"timetable.not-found", "GET", fmt.Sprintf("/api/activities/%d", missingActivityID), 404, true, ""},
 		{"organization-tenancy.resolve", "GET", "/auth/tenant/resolve?slug=" + slug, 200, false, ""},
-		{"facilities.update", "PUT", fmt.Sprintf("/api/rooms/%d", writeRoom.ID), 200, true, `{"name":"Checkpoint Updated Room","capacity":40}`},
+		{"facilities.update", "PUT", fmt.Sprintf("/api/rooms/%d", writeRoom.ID), 200, true, `{"name":"Checkpoint Updated Room","capacity":40,"expected_version":"{{room_version}}"}`},
 		{"facilities.list", "GET", "/api/rooms/", 200, true, ""},
 		{"school-structure.list", "GET", "/api/groups/", 200, true, ""},
 		{"people-directory.guardians", "GET", "/api/guardians/search?q=Checkpoint", 200, true, ""},
@@ -208,21 +210,48 @@ func measureRuntimeCheckpoint(t *testing.T, production *Runtime) {
 				require.NoError(t, db.NewRaw("SELECT subdomain FROM platform.schools WHERE id = ?", testpkg.Tenant(t)).Scan(context.Background(), &parentSubdomain))
 				workloadVersion = "enrollment-2694-writes-v8"
 			}
+			// Every update saves over the version it read (ADR 0311). The
+			// workload repeats one update: it is stored once and read, and
+			// each repetition then saves the same state over its version.
+			phasePath := fmt.Sprintf("/api/enrollment/phases/%d", phase.ID)
+			phaseUpdate := fmt.Sprintf(`"name":"Checkpoint Updated Phase","kind":"school_year","service_start_date":%q,"service_end_date":%q,"care_overflow_mode":"waitlist","care_offering_selection_mode":"optional","is_active":true`, phaseStart, phaseEnd)
+			type storedPhase struct {
+				Version          string `json:"version"`
+				ServiceStartDate string `json:"service_start_date"`
+				ServiceEndDate   string `json:"service_end_date"`
+			}
+			readPhase := func() storedPhase {
+				read := checkpointRequest(production.Handler(), checkpointScenario{Method: "GET", Path: phasePath, Authenticated: true}, token)
+				require.Equal(t, http.StatusOK, read.Code, read.Body.String())
+				var stored struct {
+					Data storedPhase `json:"data"`
+				}
+				require.NoError(t, json.Unmarshal(read.Body.Bytes(), &stored))
+				return stored.Data
+			}
+			// The priming save takes the period the phase stores.
+			before := readPhase()
+			primed := checkpointRequest(production.Handler(), checkpointScenario{
+				Method: "PUT", Path: phasePath, Authenticated: true,
+				Body: fmt.Sprintf(`{"name":"Checkpoint Updated Phase","kind":"school_year","service_start_date":%q,"service_end_date":%q,"care_overflow_mode":"waitlist","care_offering_selection_mode":"optional","is_active":true,"expected_version":%q}`,
+					before.ServiceStartDate, before.ServiceEndDate, before.Version),
+			}, token)
+			require.Equal(t, http.StatusOK, primed.Code, primed.Body.String())
+			updated := readPhase().Version
 			scenarios = []checkpointScenario{
-				{"enrollment.phase-update", "PUT", fmt.Sprintf("/api/enrollment/phases/%d", phase.ID), 200, true,
-					fmt.Sprintf(`{"name":"Checkpoint Updated Phase","kind":"school_year","service_start_date":%q,"service_end_date":%q,"care_overflow_mode":"waitlist","care_offering_selection_mode":"optional","is_active":true}`, phaseStart, phaseEnd)},
-				{"enrollment.phase-update-invalid", "PUT", fmt.Sprintf("/api/enrollment/phases/%d", phase.ID), 400, true, `{}`},
+				{"enrollment.phase-update", "PUT", phasePath, 200, true, fmt.Sprintf(`{%s,"expected_version":%q}`, phaseUpdate, updated)},
+				{"enrollment.phase-update-invalid", "PUT", phasePath, 400, true, fmt.Sprintf(`{"expected_version":%q}`, updated)},
 				{"enrollment.schema-rename", "PATCH", "/api/enrollment/schema/" + checkpointSchemaID, 200, true, `{"name":"Checkpoint Renamed Schema"}`},
 				{"enrollment.schema-rename-conflict", "PATCH", "/api/enrollment/schema/" + checkpointSchemaID, 409, true, `{"name":"Checkpoint Reserved Schema"}`},
 				{"enrollment.schema-publish-version", "PUT", "/api/enrollment/schema/" + checkpointSchemaID, 201, true, `{"fields":[]}`},
 				{"enrollment.public-submit", "POST", "/api/enrollment/" + slug + "/submit", 201, false,
-					fmt.Sprintf(`{"phase_id":%d,"guardian_first_name":"Checkpoint","guardian_last_name":"Applicant","guardian_email":"checkpoint-{{attempt}}@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Checkpoint","last_name":"Child{{attempt}}","date_of_birth":"2018-04-15","target_grade_level":2}]}`, phase.ID)},
+					fmt.Sprintf(`{"phase_id":"%d","guardian_first_name":"Checkpoint","guardian_last_name":"Applicant","guardian_email":"checkpoint-{{attempt}}@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Checkpoint","last_name":"Child{{attempt}}","date_of_birth":"2018-04-15","target_grade_level":2}]}`, phase.ID)},
 				throttled,
 				emailThrottled,
 			}
 			if *runtimeCheckpointEnrollmentParents {
 				parentSubmit := checkpointScenario{"enrollment.parent-submit", "POST", "/parent/enrollments/" + parentSubdomain + "/submit", 201, true,
-					fmt.Sprintf(`{"phase_id":%d,"guardian_first_name":"Checkpoint","guardian_last_name":"Parent","guardian_email":"checkpoint-parent-{{attempt}}@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Checkpoint","last_name":"ParentChild{{attempt}}","date_of_birth":"2018-04-15","target_grade_level":2}]}`, phase.ID)}
+					fmt.Sprintf(`{"phase_id":"%d","guardian_first_name":"Checkpoint","guardian_last_name":"Parent","guardian_email":"checkpoint-parent-{{attempt}}@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Checkpoint","last_name":"ParentChild{{attempt}}","date_of_birth":"2018-04-15","target_grade_level":2}]}`, phase.ID)}
 				scenarios = append(scenarios, parentSubmit)
 				wrongScope := parentSubmit
 				wrongScope.Name = "enrollment.parent-submit-wrong-scope"
@@ -322,6 +351,12 @@ func measureRuntimeCheckpoint(t *testing.T, production *Runtime) {
 			sequence = requestSequence
 		}
 		requestToken := token
+		if scenario.Name == "facilities.update" {
+			// Each save carries the version of the room as stored now (ADR 0311).
+			var room facilitiesModule.Room
+			require.NoError(t, db.NewRaw("SELECT updated_at FROM facilities.rooms WHERE id = ?", writeRoom.ID).Scan(context.Background(), &room.UpdatedAt))
+			scenario.Body = strings.ReplaceAll(scenario.Body, "{{room_version}}", facilitiesModule.RoomVersion(room))
+		}
 		if scenario.Name == "enrollment.parent-submit" {
 			requestToken = parentToken
 		}

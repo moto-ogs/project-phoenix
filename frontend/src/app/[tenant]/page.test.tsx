@@ -27,7 +27,7 @@ vi.mock("~/lib/analytics", () => ({
 // Mock next-auth/react
 const mockSignIn = vi.fn();
 const browserSession = {
-  user: { id: "42", tenantId: 7 },
+  user: { id: "42", tenantId: "7" },
   expires: "2099-01-01T00:00:00.000Z",
 };
 const mockUpdateSession = vi.fn().mockResolvedValue(browserSession);

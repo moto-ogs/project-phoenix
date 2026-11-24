@@ -296,8 +296,7 @@ func (p parentDocumentPushes) send(ctx context.Context, intent deliveryContract.
 // Delivery worker over the children of the parents portal, the Träger of
 // their schools, the accounts, the guardians' languages and the school's
 // notification router (ADR 0126). It reads the children without the
-// portal's booking filter, which resolves settings per school inside the
-// administrative lookup; Delivery's module gate still drops the push of a
+// portal's booking filter: Delivery's module gate drops the push of a
 // school that does not book the Eltern-App.
 func BuildParentDocumentNotices(
 	db transactionruntime.Database, env RootEnvironment, portal carePlanCompose.ParentPortalRepositories, organizations organizationtenancy.Query,

@@ -372,7 +372,7 @@ func loadSourceTree(t *testing.T, root string) *sourceTree {
 		if !strings.HasSuffix(file, ".go") || strings.HasSuffix(file, "_test.go") {
 			return nil
 		}
-		syntax, err := parser.ParseFile(tree.fset, file, nil, parser.SkipObjectResolution|parser.ParseComments)
+		syntax, err := parser.ParseFile(tree.fset, file, nil, parser.ParseComments)
 		if err != nil {
 			return err
 		}
@@ -422,6 +422,9 @@ func (tree *sourceTree) importNames(syntax *ast.File) map[string]string {
 			continue
 		}
 		name := path.Base(importPath)
+		if importPath == "encoding/json/v2" {
+			name = "json"
+		}
 		if target, ok := tree.packages[importPath]; ok {
 			name = target.name
 		}

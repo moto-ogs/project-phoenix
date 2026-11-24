@@ -24,7 +24,7 @@ vi.mock("next-auth/react", () => ({
       user: {
         id: "account-1",
         token: "test-token",
-        tenantId: 1,
+        tenantId: "1",
         roles: ["user"],
       },
     },
@@ -188,7 +188,7 @@ describe("useGlobalSSE", () => {
           user: {
             id: "account-1",
             token: "test-token",
-            tenantId: 1,
+            tenantId: "1",
             roles: ["admin"],
           },
         } as never,
@@ -228,7 +228,7 @@ describe("useGlobalSSE", () => {
       vi.mocked(useSession).mockReturnValueOnce({
         status: "authenticated",
         data: {
-          user: { id: "account-1", tenantId: 1, roles: ["user"] },
+          user: { id: "account-1", tenantId: "1", roles: ["user"] },
           error: "RefreshTokenError",
         } as never,
         update: vi.fn(),
@@ -251,7 +251,7 @@ describe("useGlobalSSE", () => {
           user: {
             id: "account-1",
             token: "test-token",
-            tenantId: 1,
+            tenantId: "1",
             roles: ["guardian"],
           },
         } as never,
@@ -272,7 +272,7 @@ describe("useGlobalSSE", () => {
       vi.mocked(useSession).mockReturnValueOnce({
         status: "authenticated",
         data: {
-          user: { id: "account-1", token: "test-token", tenantId: 1 },
+          user: { id: "account-1", token: "test-token", tenantId: "1" },
         } as never,
         update: vi.fn(),
       });
@@ -294,7 +294,7 @@ describe("useGlobalSSE", () => {
           user: {
             id: "account-1",
             token: "test-token",
-            tenantId: 42,
+            tenantId: "42",
             roles: ["user"],
           },
         } as never,
@@ -306,7 +306,7 @@ describe("useGlobalSSE", () => {
       expect(useSSE).toHaveBeenCalledWith(
         "/api/sse/events",
         expect.objectContaining({
-          reconnectKey: 42,
+          reconnectKey: "42",
         }),
       );
     });
@@ -319,7 +319,7 @@ describe("useGlobalSSE", () => {
           user: {
             id: "account-1",
             token: "test-token",
-            tenantId: 1,
+            tenantId: "1",
             roles: ["user"],
           },
         } as never,
@@ -331,7 +331,7 @@ describe("useGlobalSSE", () => {
       expect(useSSE).toHaveBeenLastCalledWith(
         "/api/sse/events",
         expect.objectContaining({
-          reconnectKey: 1,
+          reconnectKey: "1",
         }),
       );
 
@@ -342,7 +342,7 @@ describe("useGlobalSSE", () => {
           user: {
             id: "account-1",
             token: "new-token",
-            tenantId: 2,
+            tenantId: "2",
             roles: ["user"],
           },
         } as never,
@@ -354,7 +354,7 @@ describe("useGlobalSSE", () => {
       expect(useSSE).toHaveBeenLastCalledWith(
         "/api/sse/events",
         expect.objectContaining({
-          reconnectKey: 2,
+          reconnectKey: "2",
         }),
       );
     });

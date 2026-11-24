@@ -48,7 +48,11 @@ const detailRequest = vi.hoisted(() => ({
   plannedExitDate: null as string | null,
   mutate: vi.fn(),
 }));
-const roleAssignment = vi.hoisted(() => ({ currentIsLehrkraft: false }));
+const roleAssignment = vi.hoisted(() => ({
+  currentIsLehrkraft: false,
+  withBetreuung: false,
+}));
+const mockReplaceAccountRole = vi.hoisted(() => vi.fn());
 const mockTenantMutate = vi.hoisted(() =>
   vi.fn((_key: string) => Promise.resolve<unknown>(undefined)),
 );
@@ -74,6 +78,13 @@ vi.mock("~/lib/breadcrumb-context", () => ({
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
   useToast: () => ({ success: vi.fn(), error: vi.fn() }),
+  // Ablehnungen stehen beim Reiter (ADR 0311); hier ohne ToastProvider.
+  useApiErrorDisplay: () => ({
+    error: null,
+    show: vi.fn(),
+    clear: vi.fn(),
+    showMessage: vi.fn(),
+  }),
 }));
 
 vi.mock("~/lib/teacher-api", () => ({
@@ -188,8 +199,14 @@ vi.mock("~/lib/swr", () => {
       if (key?.startsWith("staff-role-assignment-")) {
         return {
           data: {
-            options: [{ id: "1", name: "Administration", systemName: "admin" }],
+            options: [
+              { id: "1", name: "Administration", systemName: "admin" },
+              ...(roleAssignment.withBetreuung
+                ? [{ id: "2", name: "Betreuung", systemName: "user" }]
+                : []),
+            ],
             currentRoleIds: ["1"],
+            version: "roles-v1",
             currentIsLehrkraft: roleAssignment.currentIsLehrkraft,
           },
           isLoading: false,
@@ -202,12 +219,20 @@ vi.mock("~/lib/swr", () => {
   return {
     ...lib,
     // A read that is new per opening answers like the cache here.
-    useFreshSWR: (key: string | null, fetcher?: () => Promise<unknown>) => ({
+    useOpeningRead: (key: string | null, fetcher?: () => Promise<unknown>) => ({
       ...lib.useSWRAuth(key, fetcher),
-      fresh: true,
+      settled: true,
+      latest: undefined,
+      retry: () => undefined,
+      reload: () => Promise.resolve(undefined),
     }),
   };
 });
+
+vi.mock("~/lib/account-role-assignment", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/account-role-assignment")>()),
+  replaceAccountRole: mockReplaceAccountRole,
+}));
 
 vi.mock("~/lib/staff-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/staff-api")>()),
@@ -349,6 +374,8 @@ describe("StaffDetailContent permissions", () => {
     detailRequest.avatarUrl = undefined;
     detailRequest.plannedExitDate = null;
     roleAssignment.currentIsLehrkraft = false;
+    roleAssignment.withBetreuung = false;
+    mockReplaceAccountRole.mockReset();
     searchParams.delete("from");
     searchParams.delete("tab");
     searchParams.delete("date");
@@ -926,6 +953,7 @@ describe("StaffDetailContent permissions", () => {
           first_name: "Mila",
           last_name: "Muster",
         }),
+        { onPersonSaved: expect.any(Function) },
       );
     });
     expect(mockRecordUpdate).not.toHaveBeenCalled();
@@ -952,6 +980,43 @@ describe("StaffDetailContent permissions", () => {
     expect(screen.queryByLabelText("Position")).not.toBeInTheDocument();
     expect(
       screen.queryByLabelText("Notizen der Leitung"),
+    ).not.toBeInTheDocument();
+  });
+
+  // ADR 0311: the role change carries the version of the roles the field
+  // shows; a refusal reads them again so the field shows the stored role.
+  it("changes the role on the version it read and reads again on a refusal", async () => {
+    roleAssignment.withBetreuung = true;
+    mockReplaceAccountRole.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    vi.mocked(useSession).mockReturnValue({
+      data: {
+        user: {
+          id: "7",
+          roles: ["teacher"],
+          permissions: ["users:read", "users:manage"],
+        },
+        expires: "2099-01-01T00:00:00.000Z",
+      },
+      status: "authenticated",
+      update: vi.fn(),
+    });
+
+    render(<StaffDetailContent />);
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Rolle" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Betreuung" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(mockReplaceAccountRole).toHaveBeenCalledWith("7", "2", "roles-v1"),
+    );
+    await waitFor(() =>
+      expect(mockTenantMutate).toHaveBeenCalledWith("staff-role-assignment-7"),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
     ).not.toBeInTheDocument();
   });
 

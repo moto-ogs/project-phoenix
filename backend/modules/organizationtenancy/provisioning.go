@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Provisioning is the operator-led tenant provisioning capability (#3253):
@@ -91,6 +92,9 @@ type OrganizationChanges struct {
 	Name   string
 	Slug   string
 	Active bool
+	// ExpectedVersion is the Organization.Version the form was read with;
+	// an organisation that changed since is readstate.ErrChanged (ADR 0311).
+	ExpectedVersion string
 }
 
 // SchoolChanges are the operator-editable fields of a school.
@@ -109,6 +113,43 @@ type SchoolChanges struct {
 	// ChildQuota changes the Kinderkontingent (#3567) when set. Nil leaves it
 	// as it is, so a school update that does not mention it never clears it.
 	ChildQuota *ChildQuotaChange
+	// ExpectedVersion is the School.Version the form was read with; a school
+	// that changed since is readstate.ErrChanged (ADR 0311).
+	ExpectedVersion string
+}
+
+// OrganizationVersion is the read-state token of the fields an operator
+// edits on an organisation (ADR 0311): a fingerprint of them, so a write of
+// another column of the row (deletion order, settings) refuses no edit.
+func OrganizationVersion(organization Organization) string {
+	return readstate.Fingerprint(struct {
+		Name   string `json:"name"`
+		Slug   string `json:"slug"`
+		Active bool   `json:"active"`
+	}{organization.Name, organization.Slug, organization.Active})
+}
+
+// SchoolVersion is the read-state token of the fields an operator edits on
+// a school, the Kinderkontingent included, as the edit forms send all of them
+// back (ADR 0311). The device slots, the settings and the branding have
+// writes of their own and stay out, so they refuse no edit.
+func SchoolVersion(school School) string {
+	return readstate.Fingerprint(struct {
+		OrganizationID       ident.ID `json:"organization_id"`
+		Name                 string   `json:"name"`
+		Slug                 string   `json:"slug"`
+		Subdomain            string   `json:"subdomain"`
+		Address              string   `json:"address"`
+		City                 string   `json:"city"`
+		Zip                  string   `json:"zip"`
+		Phone                string   `json:"phone"`
+		Email                string   `json:"email"`
+		Active               bool     `json:"active"`
+		Hidden               bool     `json:"hidden"`
+		ChildQuotaBundles    *int     `json:"child_quota_bundles"`
+		ChildQuotaBundleSize int      `json:"child_quota_bundle_size"`
+	}{school.OrganizationID, school.Name, school.Slug, school.Subdomain, school.Address, school.City, school.Zip,
+		school.Phone, school.Email, school.Active, school.Hidden, school.ChildQuotaBundles, school.ChildQuotaBundleSize})
 }
 
 // ChildQuotaChange is the operator's Kinderkontingent decision. A nil Quota
@@ -208,7 +249,7 @@ type OrganizationAccount struct {
 // every read and transfer returns only MaskedAPIKey.
 type OperatorDevice struct {
 	ID               ident.ID   `json:"id"`
-	DeviceID         string     `json:"device_id"`
+	DeviceID         string     `json:"device_id" contract_text:"device provisioning key"`
 	DeviceType       string     `json:"device_type"`
 	Name             *string    `json:"name,omitempty"`
 	Status           string     `json:"status"`
@@ -285,6 +326,9 @@ type OrganizationSummary struct {
 	KontenCount   int        `json:"konten_count"`
 	GeraeteCount  int        `json:"geraete_count"`
 	PersonenCount int        `json:"personen_count"`
+	// Version is the read state an edit of the organisation sends back
+	// (OrganizationVersion).
+	Version string `json:"version"`
 }
 
 // SchoolSummary is a school with its organisation's name and the counts of
@@ -320,6 +364,9 @@ type SchoolSummary struct {
 	// while moto has not set one (#2312). GeraeteCount is what occupies
 	// them: the registered, not removed devices.
 	DeviceSlots *int `json:"device_slots"`
+	// Version is the read state an edit of the school sends back
+	// (SchoolVersion).
+	Version string `json:"version"`
 }
 
 // DeviceBlockingProvisioning blocks and unblocks a device for operators

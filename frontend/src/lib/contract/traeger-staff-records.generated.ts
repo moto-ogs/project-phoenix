@@ -42,6 +42,7 @@ export interface TraegerStaffEmployment {
   staff_id: string;
   active: boolean;
   via_pool: boolean;
+  employer_name: string;
 }
 
 export const TraegerStaffEmploymentSchema: z.ZodType<TraegerStaffEmployment, unknown> = object<TraegerStaffEmployment>({
@@ -50,6 +51,7 @@ export const TraegerStaffEmploymentSchema: z.ZodType<TraegerStaffEmployment, unk
   staff_id: int64String,
   active: bool,
   via_pool: bool,
+  employer_name: str,
 });
 
 /** Go: workforce.TraegerStaffFinancial */
@@ -57,12 +59,14 @@ export interface TraegerStaffFinancial {
   iban: string | null;
   tax_id: string | null;
   social_security_number: string | null;
+  version: string;
 }
 
 export const TraegerStaffFinancialSchema: z.ZodType<TraegerStaffFinancial, unknown> = object<TraegerStaffFinancial>({
   iban: nullable(str),
   tax_id: nullable(str),
   social_security_number: nullable(str),
+  version: str,
 });
 
 /** Go: workforce.TraegerStaffChange */
@@ -138,6 +142,7 @@ export interface TraegerStaffContract {
   pool: boolean;
   sites: TraegerContractSiteDetail[] | null;
   holiday_weeks: TraegerContractHolidayWeek[] | null;
+  version: string;
 }
 
 export const TraegerStaffContractSchema: z.ZodType<TraegerStaffContract, unknown> = object<TraegerStaffContract>({
@@ -148,6 +153,7 @@ export const TraegerStaffContractSchema: z.ZodType<TraegerStaffContract, unknown
   pool: bool,
   sites: nullable(arr(TraegerContractSiteDetailSchema)),
   holiday_weeks: nullable(arr(TraegerContractHolidayWeekSchema)),
+  version: str,
 });
 
 /** Go: workforce.TraegerStaffRecordDetail */
@@ -159,11 +165,13 @@ export interface TraegerStaffRecordDetail {
   personnel_number: string | null;
   has_financial: boolean;
   employments: TraegerStaffEmployment[] | null;
+  person_version: string;
   financial: TraegerStaffFinancial;
   changes: TraegerStaffChange[] | null;
   proofs: TraegerStaffProof[] | null;
   contracts: TraegerStaffContract[] | null;
   unsynced_schools?: string[];
+  held_bank_schools?: string[];
 }
 
 export const TraegerStaffRecordDetailSchema: z.ZodType<TraegerStaffRecordDetail, unknown> = object<TraegerStaffRecordDetail>({
@@ -174,11 +182,13 @@ export const TraegerStaffRecordDetailSchema: z.ZodType<TraegerStaffRecordDetail,
   personnel_number: nullable(str),
   has_financial: bool,
   employments: nullable(arr(TraegerStaffEmploymentSchema)),
+  person_version: str,
   financial: TraegerStaffFinancialSchema,
   changes: nullable(arr(TraegerStaffChangeSchema)),
   proofs: nullable(arr(TraegerStaffProofSchema)),
   contracts: nullable(arr(TraegerStaffContractSchema)),
   unsynced_schools: optional(arr(str)),
+  held_bank_schools: optional(arr(str)),
 });
 
 /** Go: workforce.TraegerStaffRecordSummary */
@@ -302,6 +312,7 @@ export interface TraegerAbsenceAccount {
   expired_days: number;
   carried_in: TraegerAbsenceCarry | null;
   schools: TraegerAbsenceSchoolUse[] | null;
+  version: string;
 }
 
 export const TraegerAbsenceAccountSchema: z.ZodType<TraegerAbsenceAccount, unknown> = object<TraegerAbsenceAccount>({
@@ -318,6 +329,7 @@ export const TraegerAbsenceAccountSchema: z.ZodType<TraegerAbsenceAccount, unkno
   expired_days: num,
   carried_in: nullable(TraegerAbsenceCarrySchema),
   schools: nullable(arr(TraegerAbsenceSchoolUseSchema)),
+  version: str,
 });
 
 /** Go: workforce.TraegerAbsenceAccounts */
@@ -386,6 +398,7 @@ export interface TraegerTimeAccount {
   state: string;
   ended: boolean;
   schools: TraegerTimeAccountSchool[] | null;
+  fingerprint: string;
 }
 
 export const TraegerTimeAccountSchema: z.ZodType<TraegerTimeAccount, unknown> = object<TraegerTimeAccount>({
@@ -401,6 +414,7 @@ export const TraegerTimeAccountSchema: z.ZodType<TraegerTimeAccount, unknown> = 
   state: str,
   ended: bool,
   schools: nullable(arr(TraegerTimeAccountSchoolSchema)),
+  fingerprint: str,
 });
 
 /** Go: workforce.TraegerStaffMemberRef */
@@ -414,6 +428,7 @@ export interface StaffLinkRequest {
   staff_record_id?: string | null;
   members?: TraegerStaffMemberRef[] | null;
   choices?: Record<string, string> | null;
+  expected_fingerprint?: string;
 }
 
 /** Go: traegerstaff.HireContract */
@@ -473,12 +488,14 @@ export interface TraegerStaffLinkPreview {
   record?: TraegerStaffRecordSummary;
   members: TraegerStaffCandidate[] | null;
   fields: TraegerStaffFieldPreview[] | null;
+  fingerprint: string;
 }
 
 export const TraegerStaffLinkPreviewSchema: z.ZodType<TraegerStaffLinkPreview, unknown> = object<TraegerStaffLinkPreview>({
   record: optional(TraegerStaffRecordSummarySchema),
   members: nullable(arr(TraegerStaffCandidateSchema)),
   fields: nullable(arr(TraegerStaffFieldPreviewSchema)),
+  fingerprint: str,
 });
 
 /** Go: traegerstaff.SiteSollPayload */
@@ -510,6 +527,7 @@ export interface HolidayWeeksRequest {
 export interface ContractSollRequest {
   valid_from?: string | null;
   sites?: SiteSollPayload[] | null;
+  expected_version?: string;
 }
 
 /** Go: traegerstaff.TimeAccountMonthRequest */
@@ -517,6 +535,7 @@ export interface TimeAccountMonthRequest {
   year?: number;
   month?: number;
   reason?: string;
+  expected_fingerprint?: string;
 }
 
 /** Go: traegerstaff.AbsenceAllowanceRequest */
@@ -524,6 +543,7 @@ export interface AbsenceAllowanceRequest {
   year?: number;
   entitled_days?: number;
   reason?: string;
+  expected_version?: string;
 }
 
 /** Go: traegerstaff.UpdateContractRequest */
@@ -531,6 +551,7 @@ export interface UpdateContractRequest {
   kind?: string;
   ends_on?: string | null;
   pool?: boolean;
+  expected_version?: string;
 }
 
 /** Go: traegerstaff.StaffFinancialRequest */
@@ -538,6 +559,7 @@ export interface StaffFinancialRequest {
   iban?: string | null;
   tax_id?: string | null;
   social_security_number?: string | null;
+  expected_version?: string;
 }
 
 /** Go: traegerstaff.PersonRequest */
@@ -545,27 +567,12 @@ export interface PersonRequest {
   first_name?: string;
   last_name?: string;
   birthday?: string | null;
+  expected_version?: string;
 }
 
 /** Go: traegerstaff.PersonnelNumberRequest */
 export interface PersonnelNumberRequest {
   personnel_number?: string | null;
-}
-
-/** Query of GET /traeger/staff-records/export */
-export interface GetTraegerStaffRecordsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/staff-records/{id}/absence-accounts */
-export interface GetTraegerStaffRecordsIdAbsenceAccountsQuery {
-  year?: number;
-}
-
-/** Query of GET /traeger/staff-records/{id}/time-account */
-export interface GetTraegerStaffRecordsIdTimeAccountQuery {
-  month?: number;
-  year?: number;
 }
 
 export const routes = {
@@ -597,7 +604,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/staff-records/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/staff-records/{id}": {
@@ -610,7 +619,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/staff-records/{id}/absence-accounts",
     portals: ["org"],
-    query: ["year"],
+    query: {
+      "year": { kind: "int" },
+    },
     response: success(TraegerAbsenceAccountsSchema),
   },
   "GET /traeger/staff-records/{id}/financial": {
@@ -623,7 +634,10 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/staff-records/{id}/time-account",
     portals: ["org"],
-    query: ["month", "year"],
+    query: {
+      "month": { kind: "int" },
+      "year": { kind: "int" },
+    },
     response: success(TraegerTimeAccountSchema),
   },
   "POST /traeger/staff-records/": {

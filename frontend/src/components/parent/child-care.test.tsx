@@ -9,7 +9,7 @@ import {
   type RenderHookOptions,
   type RenderOptions,
 } from "@testing-library/react";
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { waitFor } from "~/test/wait-for-state";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -49,6 +49,9 @@ function renderHook<Result, Props>(
   });
 }
 
+// A list reload for dialogs whose test never reads the requests again.
+const reloadNothing = () => Promise.resolve([]);
+
 // The factory is hoisted above the imports, so the mock helper has to be
 // pulled in inside it rather than at the top of the file.
 vi.mock("~/components/ui/date-picker", async () =>
@@ -73,6 +76,7 @@ beforeEach(() => {
     recipients: [],
   });
   vi.spyOn(parentApi, "getRequestSharing").mockResolvedValue({
+    version: "v1",
     family_protected: false,
     recipients: [],
   });
@@ -107,6 +111,7 @@ function makeRequest(
     note: "Termin",
     created_at: "2026-03-01T09:00:00Z",
     is_self: false,
+    version: "v1",
     ...over,
   };
 }
@@ -142,6 +147,7 @@ function renderModal(
   const onClose = vi.fn();
   render(
     <PickupTimeModal
+      reloadRequests={reloadNothing}
       careExceptions={[]}
       careExceptionsLoaded
       pickupChangeEnabled
@@ -173,6 +179,7 @@ describe("PickupTimeModal, bereits abgeholt", () => {
   it("erklärt bei einem bereits gegangenen Kind den tatsächlichen Sperrgrund", () => {
     render(
       <PickupTimeModal
+        reloadRequests={reloadNothing}
         childFirstName="Hannah"
         today={{ at_ogs: false, state: "left", until: "15:30" }}
         careExceptions={[
@@ -453,12 +460,14 @@ describe("PickupTimeModal — failed preload guard", () => {
   it("names a pending Abholart in the request status", () => {
     render(
       <PickupTimeModal
+        reloadRequests={reloadNothing}
         careExceptions={[]}
         careExceptionsLoaded
         pickupChangeEnabled
         departureModeEnabled
         pickupChangeRequests={[
           {
+            version: "v1",
             is_self: true,
             signed: false,
             id: "7",
@@ -512,11 +521,21 @@ describe("PickupTimeModal — failed preload guard", () => {
       onRemove: vi.fn(),
     };
     const { rerender } = render(
-      <PickupTimeModal {...props} careExceptions={[entry]} />,
+      <PickupTimeModal
+        reloadRequests={reloadNothing}
+        {...props}
+        careExceptions={[entry]}
+      />,
     );
     const reason = screen.getByRole("textbox", { name: /Grund/ });
     fireEvent.change(reason, { target: { value: "typed draft" } });
-    rerender(<PickupTimeModal {...props} careExceptions={[{ ...entry }]} />);
+    rerender(
+      <PickupTimeModal
+        reloadRequests={reloadNothing}
+        {...props}
+        careExceptions={[{ ...entry }]}
+      />,
+    );
     expect(reason).toHaveValue("typed draft");
   });
 
@@ -551,6 +570,7 @@ describe("PickupTimeModal — failed preload guard", () => {
                 departure_mode: null,
                 is_self: true,
                 signed: false,
+                version: "v1",
               }))
             : [],
       });
@@ -570,6 +590,7 @@ describe("PickupTimeModal — failed preload guard", () => {
     const update = vi
       .spyOn(parentApi, "updatePickupChangeRequest")
       .mockResolvedValue({
+        version: "v1",
         departure_mode: null,
         is_self: true,
         signed: false,
@@ -582,6 +603,7 @@ describe("PickupTimeModal — failed preload guard", () => {
       });
     render(
       <PickupTimeModal
+        reloadRequests={reloadNothing}
         studentId="1"
         careExceptions={[]}
         careExceptionsLoaded
@@ -591,6 +613,7 @@ describe("PickupTimeModal — failed preload guard", () => {
         onRemove={vi.fn()}
         pickupChangeRequests={[
           {
+            version: "v1",
             departure_mode: null,
             is_self: true,
             signed: false,
@@ -622,14 +645,502 @@ describe("PickupTimeModal — failed preload guard", () => {
     );
   });
 
-  it("shows a pending request and lets the guardian edit it", () => {
-    const onRemove = vi.fn().mockResolvedValue(undefined);
+  // ADR 0311: an edit follows a newer read only while the parent has not
+  // typed; typed input stays and keeps the version it started from.
+  it.each([
+    { typed: false, reason: "changed elsewhere", version: "v2" },
+    { typed: true, reason: "my draft", version: "v1" },
+  ])(
+    "refills an edit from a newer read only while untouched (typed: $typed)",
+    async ({ typed, reason: expectedReason, version }) => {
+      const update = vi
+        .spyOn(parentApi, "updatePickupChangeRequest")
+        .mockImplementation(async () => ({ ...stored, version: "v3" }));
+      const stored = {
+        version: "v1",
+        departure_mode: null,
+        is_self: true,
+        signed: false,
+        id: "request-edit",
+        date: todayISO(),
+        pickup_time: "14:30",
+        reason: "appointment",
+        status: "pending",
+        created_at: "2026-09-09T08:00:00Z",
+      };
+      const props = {
+        studentId: "1",
+        careExceptions: [],
+        careExceptionsLoaded: true,
+        pickupChangeEnabled: true,
+        onClose: vi.fn(),
+        onSubmit: vi.fn(),
+        onRemove: vi.fn(),
+      };
+      const { rerender } = render(
+        <PickupTimeModal
+          reloadRequests={reloadNothing}
+          {...props}
+          pickupChangeRequests={[stored]}
+        />,
+      );
+      fireEvent.click(
+        screen.getByRole("button", { name: "Anfrage bearbeiten" }),
+      );
+      const reason = screen.getByRole("textbox", { name: /Grund/ });
+      if (typed) fireEvent.change(reason, { target: { value: "my draft" } });
+      rerender(
+        <PickupTimeModal
+          reloadRequests={reloadNothing}
+          {...props}
+          pickupChangeRequests={[
+            { ...stored, version: "v2", reason: "changed elsewhere" },
+          ]}
+        />,
+      );
+      expect(reason).toHaveValue(expectedReason);
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Änderung speichern" }),
+      );
+      await waitFor(() =>
+        expect(update).toHaveBeenCalledWith(
+          "1",
+          "request-edit",
+          expect.objectContaining({
+            reason: expectedReason,
+            expectedVersion: version,
+          }),
+        ),
+      );
+    },
+  );
+
+  // ADR 0311: the next edit takes its version from the cached list. A save
+  // must reload that list, or a second edit of the same request would send
+  // the version the first save replaced and be refused.
+  it("edits the same pickup request twice with the version of each save", async () => {
+    const stored = {
+      version: "v1",
+      departure_mode: null,
+      is_self: true,
+      signed: false,
+      id: "request-edit",
+      date: todayISO(),
+      pickup_time: "14:30",
+      reason: "appointment",
+      status: "pending",
+      created_at: "2026-09-09T08:00:00Z",
+    };
+    let current = stored;
+    vi.spyOn(parentApi, "listSickDays").mockResolvedValue([]);
+    vi.spyOn(parentApi, "listExcusedRequests").mockResolvedValue([]);
+    vi.spyOn(parentApi, "listCareExceptions").mockResolvedValue([]);
+    vi.spyOn(parentApi, "getChildCareSchedule").mockRejectedValue(
+      new Error("no schedule"),
+    );
+    vi.spyOn(parentApi, "getChildFeatures").mockRejectedValue(
+      new Error("no features"),
+    );
+    const list = vi
+      .spyOn(parentApi, "listPickupChangeRequests")
+      .mockImplementation(async () => [current]);
+    const update = vi
+      .spyOn(parentApi, "updatePickupChangeRequest")
+      .mockImplementation(async (_student, _id, input) => {
+        current = {
+          ...current,
+          reason: input.reason,
+          version: current.version === "v1" ? "v2" : "v3",
+        };
+        return current;
+      });
+    function Page() {
+      const care = useChildCare("1");
+      const [open, setOpen] = useState(true);
+      if (!care.pickupChangeRequestsLoaded) return null;
+      return open ? (
+        <PickupTimeModal
+          reloadRequests={care.reloadPickupRequests}
+          studentId="1"
+          careExceptions={care.careExceptions}
+          careExceptionsLoaded
+          pickupChangeRequests={care.pickupChangeRequests}
+          pickupChangeRequestsLoaded
+          pickupChangeEnabled
+          onClose={() => setOpen(false)}
+          onSubmit={vi.fn()}
+          onRemove={vi.fn()}
+        />
+      ) : (
+        <button type="button" onClick={() => setOpen(true)}>
+          Wieder öffnen
+        </button>
+      );
+    }
+    render(<Page />);
+
+    const edit = async (reason: string) => {
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Anfrage bearbeiten" }),
+      );
+      fireEvent.change(screen.getByRole("textbox", { name: /Grund/ }), {
+        target: { value: reason },
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Änderung speichern" }),
+      );
+    };
+    await edit("first edit");
+    await waitFor(() =>
+      expect(update).toHaveBeenLastCalledWith(
+        "1",
+        "request-edit",
+        expect.objectContaining({ expectedVersion: "v1" }),
+      ),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Wieder öffnen" }),
+    );
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
+    await edit("second edit");
+    await waitFor(() =>
+      expect(update).toHaveBeenLastCalledWith(
+        "1",
+        "request-edit",
+        expect.objectContaining({
+          reason: "second edit",
+          expectedVersion: "v2",
+        }),
+      ),
+    );
+  });
+
+  // ADR 0311 rule 6: after a refusal the dialog reads the list again through
+  // useChildCare. SWR's plain mutate answers a failed read with the old
+  // list; the dialog then claimed the new state, replaced the typed reason
+  // with the old stored one and sent the refused version again.
+  it("names a failed list read after a refused edit and sends nothing", async () => {
+    const stored = {
+      version: "v1",
+      departure_mode: null,
+      is_self: true,
+      signed: false,
+      id: "request-edit",
+      date: todayISO(),
+      pickup_time: "14:30",
+      reason: "appointment",
+      status: "pending",
+      created_at: "2026-09-09T08:00:00Z",
+    };
+    vi.spyOn(parentApi, "listSickDays").mockResolvedValue([]);
+    vi.spyOn(parentApi, "listExcusedRequests").mockResolvedValue([]);
+    vi.spyOn(parentApi, "listCareExceptions").mockResolvedValue([]);
+    vi.spyOn(parentApi, "getChildCareSchedule").mockRejectedValue(
+      new Error("no schedule"),
+    );
+    vi.spyOn(parentApi, "getChildFeatures").mockRejectedValue(
+      new Error("no features"),
+    );
+    vi.spyOn(parentApi, "listPickupChangeRequests")
+      .mockResolvedValueOnce([stored])
+      .mockRejectedValue(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+    const update = vi
+      .spyOn(parentApi, "updatePickupChangeRequest")
+      .mockRejectedValue(
+        new ApiError("changed since it was read", 409, {
+          code: "general.changed_since_read",
+        }),
+      );
+    function Page() {
+      const care = useChildCare("1");
+      // A failed read keeps the last list on screen, as the pages do.
+      if (care.pickupChangeRequests.length === 0) return null;
+      return (
+        <PickupTimeModal
+          reloadRequests={care.reloadPickupRequests}
+          studentId="1"
+          careExceptions={care.careExceptions}
+          careExceptionsLoaded
+          pickupChangeRequests={care.pickupChangeRequests}
+          pickupChangeRequestsLoaded
+          pickupChangeEnabled
+          onClose={vi.fn()}
+          onSubmit={vi.fn()}
+          onRemove={vi.fn()}
+        />
+      );
+    }
+    render(<Page />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Anfrage bearbeiten" }),
+    );
+    const reason = screen.getByRole("textbox", { name: /Grund/ });
+    fireEvent.change(reason, { target: { value: "my draft" } });
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(reason).toHaveValue("my draft");
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+
+  // ADR 0311: an edit carries the version of the request its draft was
+  // filled from. A request stored differently since is refused: the dialog
+  // names it without a retry, reloads and then shows the stored values, and
+  // the next save carries their version.
+  it("reloads a pickup request changed since it was read and shows its stored values", async () => {
+    const update = vi
+      .spyOn(parentApi, "updatePickupChangeRequest")
+      .mockRejectedValueOnce(
+        new ApiError("changed since it was read", 409, {
+          code: "general.changed_since_read",
+        }),
+      );
+    const stored = {
+      version: "v1",
+      departure_mode: null,
+      is_self: true,
+      signed: false,
+      id: "request-edit",
+      date: todayISO(),
+      pickup_time: "14:30",
+      reason: "appointment",
+      status: "pending",
+      created_at: "2026-09-09T08:00:00Z",
+    };
+    const props = {
+      studentId: "1",
+      careExceptions: [],
+      careExceptionsLoaded: true,
+      pickupChangeEnabled: true,
+      onClose: vi.fn(),
+      onSubmit: vi.fn(),
+      onRemove: vi.fn(),
+    };
+    const changed = { ...stored, version: "v2", reason: "changed elsewhere" };
+    let answerReload: (list: (typeof stored)[]) => void = () => undefined;
+    const reloadRequests = () =>
+      new Promise<(typeof stored)[]>((resolve) => {
+        answerReload = resolve;
+      });
+    const { rerender } = render(
+      <PickupTimeModal
+        {...props}
+        reloadRequests={reloadRequests}
+        pickupChangeRequests={[stored]}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Anfrage bearbeiten" }));
+    const reason = screen.getByRole("textbox", { name: /Grund/ });
+    fireEvent.change(reason, { target: { value: "my draft" } });
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+
+    // Until the stored request arrives, saving would resend "v1".
+    expect(
+      await screen.findByRole("button", {
+        name: /Lädt den gespeicherten Stand/,
+      }),
+    ).toBeDisabled();
+    expect(update).toHaveBeenLastCalledWith(
+      "1",
+      "request-edit",
+      expect.objectContaining({ reason: "my draft", expectedVersion: "v1" }),
+    );
+
+    rerender(
+      <PickupTimeModal
+        {...props}
+        reloadRequests={reloadRequests}
+        pickupChangeRequests={[changed]}
+      />,
+    );
+    await act(async () => answerReload([changed]));
+    // The refusal names the change once the stored state shows.
+    expect(
+      await screen.findByText(/wurde inzwischen geändert/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Erneut versuchen" }),
+    ).not.toBeInTheDocument();
+    expect(reason).toHaveValue("changed elsewhere");
+
+    update.mockResolvedValueOnce({ ...stored, version: "v3" });
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+    await waitFor(() =>
+      expect(update).toHaveBeenLastCalledWith(
+        "1",
+        "request-edit",
+        expect.objectContaining({
+          reason: "changed elsewhere",
+          expectedVersion: "v2",
+        }),
+      ),
+    );
+  });
+
+  // ADR 0311: a newer read refills the edit only while the guardian has not
+  // typed; the save sends the version the edit rests on.
+  it("refills an untouched edit from a newer read and keeps a typed one", async () => {
+    const update = vi
+      .spyOn(parentApi, "updatePickupChangeRequest")
+      .mockResolvedValue(undefined as never);
+    const request = (version: string, reason: string) => ({
+      version,
+      departure_mode: null,
+      is_self: true,
+      signed: false,
+      id: "request-edit",
+      date: todayISO(),
+      pickup_time: "14:30",
+      reason,
+      status: "pending",
+      created_at: "2026-09-09T08:00:00Z",
+    });
+    const modal = (requests: ReturnType<typeof request>[]) => (
+      <PickupTimeModal
+        reloadRequests={reloadNothing}
+        studentId="1"
+        careExceptions={[]}
+        careExceptionsLoaded
+        pickupChangeEnabled
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        onRemove={vi.fn()}
+        pickupChangeRequests={requests}
+      />
+    );
+    const { rerender } = render(modal([request("v1", "appointment")]));
+    fireEvent.click(screen.getByRole("button", { name: "Anfrage bearbeiten" }));
+    const reason = screen.getByRole("textbox", { name: /Grund/ });
+
+    rerender(modal([request("v2", "changed elsewhere")]));
+    expect(reason).toHaveValue("changed elsewhere");
+
+    fireEvent.change(reason, { target: { value: "my draft" } });
+    rerender(modal([request("v3", "changed again")]));
+    expect(reason).toHaveValue("my draft");
+
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith(
+        "1",
+        "request-edit",
+        expect.objectContaining({ reason: "my draft", expectedVersion: "v2" }),
+      ),
+    );
+  });
+
+  // A newer read that refills an untouched edit replaces what the old error
+  // was about: the error goes, as it did before the edit had its own draft.
+  it("clears the form error when a newer read refills an untouched edit", async () => {
+    vi.spyOn(parentApi, "updatePickupChangeRequest").mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    const request = (version: string, reason: string) => ({
+      version,
+      departure_mode: null,
+      is_self: true,
+      signed: false,
+      id: "request-edit",
+      date: todayISO(),
+      pickup_time: "14:30",
+      reason,
+      status: "pending",
+      created_at: "2026-09-09T08:00:00Z",
+    });
+    const modal = (requests: ReturnType<typeof request>[]) => (
+      <PickupTimeModal
+        reloadRequests={reloadNothing}
+        studentId="1"
+        careExceptions={[]}
+        careExceptionsLoaded
+        pickupChangeEnabled
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        onRemove={vi.fn()}
+        pickupChangeRequests={requests}
+      />
+    );
+    const { rerender } = render(modal([request("v1", "appointment")]));
+    fireEvent.click(screen.getByRole("button", { name: "Anfrage bearbeiten" }));
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+    const alert = await screen.findByRole("alert");
+
+    rerender(modal([request("v2", "changed elsewhere")]));
+    expect(screen.getByRole("textbox", { name: /Grund/ })).toHaveValue(
+      "changed elsewhere",
+    );
+    expect(alert).not.toBeInTheDocument();
+  });
+
+  // ADR 0311 rule 6: a failed read of the request after a refusal says so,
+  // stops waiting, and sends nothing with the refused version.
+  it("names a failed read of a refused pickup request and sends nothing", async () => {
+    const update = vi
+      .spyOn(parentApi, "updatePickupChangeRequest")
+      .mockRejectedValue(
+        new ApiError("changed since it was read", 409, {
+          code: "general.changed_since_read",
+        }),
+      );
+    const stored = {
+      version: "v1",
+      departure_mode: null,
+      is_self: true,
+      signed: false,
+      id: "request-edit",
+      date: todayISO(),
+      pickup_time: "14:30",
+      reason: "appointment",
+      status: "pending",
+      created_at: "2026-09-09T08:00:00Z",
+    };
     render(
       <PickupTimeModal
         studentId="1"
         careExceptions={[]}
+        careExceptionsLoaded
+        pickupChangeEnabled
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        onRemove={vi.fn()}
+        pickupChangeRequests={[stored]}
+        reloadRequests={() =>
+          Promise.reject(
+            new ApiError("down", 503, { code: "general.unavailable" }),
+          )
+        }
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Anfrage bearbeiten" }));
+    fireEvent.change(screen.getByRole("textbox", { name: /Grund/ }), {
+      target: { value: "my draft" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    const save = screen.getByRole("button", { name: "Änderung speichern" });
+    fireEvent.click(save);
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a pending request and lets the guardian edit it", () => {
+    const onRemove = vi.fn().mockResolvedValue(undefined);
+    render(
+      <PickupTimeModal
+        reloadRequests={reloadNothing}
+        studentId="1"
+        careExceptions={[]}
         pickupChangeRequests={[
           {
+            version: "v1",
             departure_mode: null,
             is_self: true,
             signed: false,
@@ -676,9 +1187,11 @@ describe("PickupTimeModal — failed preload guard", () => {
     const onRemove = vi.fn().mockResolvedValue(undefined);
     render(
       <PickupTimeModal
+        reloadRequests={reloadNothing}
         careExceptions={[]}
         pickupChangeRequests={[
           {
+            version: "v1",
             departure_mode: null,
             is_self: true,
             signed: false,
@@ -822,6 +1335,7 @@ describe("PickupTimeModal — Änderungsfrist für heute", () => {
     const onRemove = vi.fn().mockResolvedValue(undefined);
     render(
       <PickupTimeModal
+        reloadRequests={reloadNothing}
         careExceptions={[]}
         careExceptionsLoaded
         pickupChangeEnabled
@@ -912,6 +1426,7 @@ describe("PickupTimeModal — Änderungsfrist für heute", () => {
     status: "pending" as const,
     created_at: "2026-09-09T08:00:00Z",
     is_self: true,
+    version: "v1",
   };
 
   const LOCK_NOTICE =
@@ -1028,6 +1543,7 @@ describe("PickupTimeModal — Betreuungsende", () => {
   ) {
     render(
       <PickupTimeModal
+        reloadRequests={reloadNothing}
         careExceptions={[]}
         careExceptionsLoaded
         pickupChangeEnabled
@@ -2787,12 +3303,14 @@ describe("PickupTimeModal, Abholperson an einem Tag", () => {
       ]);
     render(
       <PickupTimeModal
+        reloadRequests={reloadNothing}
         studentId="1"
         careExceptions={[]}
         careExceptionsLoaded
         pickupChangeEnabled
         pickupChangeRequests={[
           {
+            version: "v1",
             is_self: true,
             id: "request-collector",
             date: todayISO(),
@@ -2830,12 +3348,14 @@ describe("PickupTimeModal, Abholperson an einem Tag", () => {
       .mockResolvedValue({} as parentMeContract.PickupChangeRequestResponse);
     render(
       <PickupTimeModal
+        reloadRequests={reloadNothing}
         studentId="1"
         careExceptions={[]}
         careExceptionsLoaded
         pickupChangeEnabled
         pickupChangeRequests={[
           {
+            version: "v1",
             is_self: true,
             id: "request-collector",
             date: todayISO(),

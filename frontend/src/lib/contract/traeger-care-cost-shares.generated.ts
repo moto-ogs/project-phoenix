@@ -34,6 +34,7 @@ export interface CareCostShare {
   checked_on: string | null;
   status: string;
   updated_at: string;
+  version: string;
 }
 
 export const CareCostShareSchema: z.ZodType<CareCostShare, unknown> = object<CareCostShare>({
@@ -51,6 +52,7 @@ export const CareCostShareSchema: z.ZodType<CareCostShare, unknown> = object<Car
   checked_on: nullable(calendarDate),
   status: str,
   updated_at: instant,
+  version: str,
 });
 
 /** Go: parentbilling.CareCostShareContract */
@@ -99,11 +101,7 @@ export interface CareCostShareRequest {
   valid_until?: string | null;
   reference?: string;
   checked_on?: string | null;
-}
-
-/** Query of GET /traeger/care-cost-shares/export */
-export interface GetTraegerCareCostSharesExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
+  expected_version?: string;
 }
 
 export const routes = {
@@ -123,7 +121,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/care-cost-shares/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "POST /traeger/care-cost-shares/": {

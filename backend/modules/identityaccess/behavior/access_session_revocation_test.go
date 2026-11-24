@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -22,11 +23,12 @@ func accessSessionOf(t *testing.T, accessToken string) identityaccess.AccessSess
 	t.Helper()
 	claims := decodePreviewTokenPayload(t, accessToken)
 	session := identityaccess.AccessSession{FamilyID: fmt.Sprint(claims["family_id"])}
-	if id, ok := claims["id"].(float64); ok {
-		session.AccountID = int64(id)
-	}
-	if admin, ok := claims["acting_admin_id"].(float64); ok {
-		session.ActingAdminID = int64(admin)
+	id, err := strconv.ParseInt(claims["id"].(string), 10, 64)
+	require.NoError(t, err)
+	session.AccountID = id
+	if actingAdmin, ok := claims["acting_admin_id"].(string); ok {
+		session.ActingAdminID, err = strconv.ParseInt(actingAdmin, 10, 64)
+		require.NoError(t, err)
 	}
 	if scope, ok := claims["scope"].(string); ok {
 		session.Scope = scope

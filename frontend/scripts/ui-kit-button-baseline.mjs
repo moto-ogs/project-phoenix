@@ -76,7 +76,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/files/files-page.tsx",
-    lines: [160],
+    lines: [201],
     reason: "Ordner-Navigation (aria-current), Navigationszeile",
   },
   {
@@ -94,7 +94,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-button-override",
     file: "src/app/[tenant]/(protected)/time-tracking/page.tsx",
-    lines: [838, 875, 981, 1169],
+    lines: [841, 878, 984, 1172],
     reason:
       "Pausen-Stepper −/+ und Stempelknöpfe Abwesenheit/Ausstempeln der Zeiterfassung (#5529: nicht angleichen)",
   },
@@ -120,7 +120,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/care-schedule-manager.tsx",
-    lines: [1618],
+    lines: [1662],
     reason: "Wochentagskarte, öffnet den Editor: Kachel",
   },
   {
@@ -138,7 +138,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/planned-status-days-modal.tsx",
-    lines: [1093],
+    lines: [1171],
     reason: "Kalendertag zum Umschalten: Kalender-/Auswahlzelle",
   },
   {
@@ -172,7 +172,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/care-schedule-manager.tsx",
-    lines: [1575],
+    lines: [1619],
     reason: "Statustag-Karte, öffnet das Entfernen: Kachel",
   },
   {

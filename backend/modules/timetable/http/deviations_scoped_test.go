@@ -15,15 +15,16 @@ import (
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	apiTest "github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetableAPI "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 type scopedDevSetup struct {
@@ -122,9 +123,9 @@ func TestApplyDeviations_SubstitutionTargetsSelectedInstances(t *testing.T) {
 
 	w := doScopedDev(t, s, selected.ID, map[string]any{
 		"substitutions": []map[string]any{{
-			"absent_staff_id":     s.staffA,
-			"substitute_staff_id": s.staffY,
-			"instance_ids":        []int64{selected.ID},
+			"absent_staff_id":     fmt.Sprint(s.staffA),
+			"substitute_staff_id": fmt.Sprint(s.staffY),
+			"instance_ids":        []string{fmt.Sprint(selected.ID)},
 		}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
@@ -160,8 +161,8 @@ func TestApplyDeviations_AbsenceTargetsSelectedInstances(t *testing.T) {
 
 	w := doScopedDev(t, s, selected.ID, map[string]any{
 		"absences": []map[string]any{{
-			"staff_id":     s.staffA,
-			"instance_ids": []int64{selected.ID},
+			"staff_id":     fmt.Sprint(s.staffA),
+			"instance_ids": []string{fmt.Sprint(selected.ID)},
 		}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
@@ -186,11 +187,11 @@ func TestApplyDeviations_SelectedCoverageWithAllDayAbsence(t *testing.T) {
 	testpkg.CreateTestInstanceStaff(t, s.db, uncovered.ID, s.staffA, testpkg.InstanceStaffOpts{})
 
 	w := doScopedDev(t, s, covered.ID, map[string]any{
-		"absences": []map[string]any{{"staff_id": s.staffA}},
+		"absences": []map[string]any{{"staff_id": fmt.Sprint(s.staffA)}},
 		"substitutions": []map[string]any{{
-			"absent_staff_id":     s.staffA,
-			"substitute_staff_id": s.staffY,
-			"instance_ids":        []int64{covered.ID},
+			"absent_staff_id":     fmt.Sprint(s.staffA),
+			"substitute_staff_id": fmt.Sprint(s.staffY),
+			"instance_ids":        []string{fmt.Sprint(covered.ID)},
 		}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
@@ -229,9 +230,9 @@ func TestApplyDeviations_PartiallyAbsentStaffCanCoverAnotherAppointment(t *testi
 
 	w := doScopedDev(t, s, target.ID, map[string]any{
 		"substitutions": []map[string]any{{
-			"absent_staff_id":     s.staffA,
-			"substitute_staff_id": s.staffY,
-			"instance_ids":        []int64{target.ID},
+			"absent_staff_id":     fmt.Sprint(s.staffA),
+			"substitute_staff_id": fmt.Sprint(s.staffY),
+			"instance_ids":        []string{fmt.Sprint(target.ID)},
 		}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
@@ -257,13 +258,13 @@ func TestApplyDeviations_SameSaveCanAbsenceAndSubstituteStaffOnDifferentAppointm
 
 	w := doScopedDev(t, s, target.ID, map[string]any{
 		"absences": []map[string]any{{
-			"staff_id":     s.staffY,
-			"instance_ids": []int64{other.ID},
+			"staff_id":     fmt.Sprint(s.staffY),
+			"instance_ids": []string{fmt.Sprint(other.ID)},
 		}},
 		"substitutions": []map[string]any{{
-			"absent_staff_id":     s.staffA,
-			"substitute_staff_id": s.staffY,
-			"instance_ids":        []int64{target.ID},
+			"absent_staff_id":     fmt.Sprint(s.staffA),
+			"substitute_staff_id": fmt.Sprint(s.staffY),
+			"instance_ids":        []string{fmt.Sprint(target.ID)},
 		}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
@@ -289,8 +290,8 @@ func TestApplyDeviations_PresenceTargetsSelectedInstances(t *testing.T) {
 
 	w := doScopedDev(t, s, selected.ID, map[string]any{
 		"presences": []map[string]any{{
-			"staff_id":     s.staffA,
-			"instance_ids": []int64{selected.ID},
+			"staff_id":     fmt.Sprint(s.staffA),
+			"instance_ids": []string{fmt.Sprint(selected.ID)},
 		}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
@@ -316,12 +317,12 @@ func TestApplyDeviations_SameStaffCanBePresentAndAbsentOnDifferentAppointments(t
 
 	w := doScopedDev(t, s, restored.ID, map[string]any{
 		"presences": []map[string]any{{
-			"staff_id":     s.staffA,
-			"instance_ids": []int64{restored.ID},
+			"staff_id":     fmt.Sprint(s.staffA),
+			"instance_ids": []string{fmt.Sprint(restored.ID)},
 		}},
 		"absences": []map[string]any{{
-			"staff_id":     s.staffA,
-			"instance_ids": []int64{absent.ID},
+			"staff_id":     fmt.Sprint(s.staffA),
+			"instance_ids": []string{fmt.Sprint(absent.ID)},
 		}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
@@ -346,8 +347,8 @@ func TestApplyDeviations_CannotClearSickAbsence(t *testing.T) {
 
 	w := doScopedDev(t, s, instance.ID, map[string]any{
 		"presences": []map[string]any{{
-			"staff_id":     s.staffA,
-			"instance_ids": []int64{instance.ID},
+			"staff_id":     fmt.Sprint(s.staffA),
+			"instance_ids": []string{fmt.Sprint(instance.ID)},
 		}},
 	})
 	require.Equal(t, http.StatusConflict, w.Code, "body=%s", w.Body.String())
@@ -378,8 +379,8 @@ func TestApplyDeviations_RemovesSubstituteOnlyFromSelectedInstances(t *testing.T
 
 	w := doScopedDev(t, s, selected.ID, map[string]any{
 		"substitution_removals": []map[string]any{{
-			"staff_id":     s.staffX,
-			"instance_ids": []int64{selected.ID},
+			"staff_id":     fmt.Sprint(s.staffX),
+			"instance_ids": []string{fmt.Sprint(selected.ID)},
 		}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
@@ -412,8 +413,8 @@ func TestApplyDeviations_CannotRemoveSickSubstitute(t *testing.T) {
 
 	w := doScopedDev(t, s, instance.ID, map[string]any{
 		"substitution_removals": []map[string]any{{
-			"staff_id":     s.staffX,
-			"instance_ids": []int64{instance.ID},
+			"staff_id":     fmt.Sprint(s.staffX),
+			"instance_ids": []string{fmt.Sprint(instance.ID)},
 		}},
 	})
 	require.Equal(t, http.StatusConflict, w.Code, "body=%s", w.Body.String())
@@ -438,8 +439,8 @@ func TestApplyDeviations_RejectsSubstituteRemovalWithoutSelectedAssignment(t *te
 
 	w := doScopedDev(t, s, selected.ID, map[string]any{
 		"substitution_removals": []map[string]any{{
-			"staff_id":     s.staffX,
-			"instance_ids": []int64{selected.ID},
+			"staff_id":     fmt.Sprint(s.staffX),
+			"instance_ids": []string{fmt.Sprint(selected.ID)},
 		}},
 	})
 	require.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
@@ -456,8 +457,8 @@ func TestApplyDeviations_DeduplicatesOverlappingSubstituteRemovals(t *testing.T)
 	testpkg.CreateTestInstanceStaff(t, s.db, instance.ID, s.staffX, testpkg.InstanceStaffOpts{IsSubstitute: true})
 
 	removal := map[string]any{
-		"staff_id":     s.staffX,
-		"instance_ids": []int64{instance.ID},
+		"staff_id":     fmt.Sprint(s.staffX),
+		"instance_ids": []string{fmt.Sprint(instance.ID)},
 	}
 	w := doScopedDev(t, s, instance.ID, map[string]any{
 		"substitution_removals": []map[string]any{removal, removal},
@@ -482,10 +483,10 @@ func TestApplyDeviations_ReplacesSubstituteInOneScopedSave(t *testing.T) {
 
 	w := doScopedDev(t, s, instance.ID, map[string]any{
 		"substitution_removals": []map[string]any{{
-			"staff_id": s.staffX, "instance_ids": []int64{instance.ID},
+			"staff_id": fmt.Sprint(s.staffX), "instance_ids": []string{fmt.Sprint(instance.ID)},
 		}},
 		"substitutions": []map[string]any{{
-			"absent_staff_id": s.staffA, "substitute_staff_id": s.staffY, "instance_ids": []int64{instance.ID},
+			"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffY), "instance_ids": []string{fmt.Sprint(instance.ID)},
 		}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
@@ -514,13 +515,13 @@ func TestApplyDeviations_PartialAbsenceElsewhereDoesNotMakeSelectedBlockUndersta
 	w := doScopedDev(t, s, target.ID, map[string]any{
 		"understaffed_ack": true,
 		"absences": []map[string]any{{
-			"staff_id":     s.staffB,
-			"instance_ids": []int64{other.ID},
+			"staff_id":     fmt.Sprint(s.staffB),
+			"instance_ids": []string{fmt.Sprint(other.ID)},
 		}},
 		"substitutions": []map[string]any{{
-			"absent_staff_id":     s.staffA,
-			"substitute_staff_id": s.staffY,
-			"instance_ids":        []int64{target.ID},
+			"absent_staff_id":     fmt.Sprint(s.staffA),
+			"substitute_staff_id": fmt.Sprint(s.staffY),
+			"instance_ids":        []string{fmt.Sprint(target.ID)},
 		}},
 	})
 	require.Equal(t, http.StatusConflict, w.Code, "body=%s", w.Body.String())
@@ -541,8 +542,8 @@ func TestApplyDeviations_RejectsEmptyAppointmentScope(t *testing.T) {
 
 	w := doScopedDev(t, s, instance.ID, map[string]any{
 		"absences": []map[string]any{{
-			"staff_id":     s.staffA,
-			"instance_ids": []int64{},
+			"staff_id":     fmt.Sprint(s.staffA),
+			"instance_ids": []string{},
 		}},
 	})
 	require.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
@@ -563,8 +564,8 @@ func TestApplyDeviations_RejectsTerminalAppointmentInExplicitScope(t *testing.T)
 
 	w := doScopedDev(t, s, selected.ID, map[string]any{
 		"absences": []map[string]any{{
-			"staff_id":     s.staffA,
-			"instance_ids": []int64{selected.ID, terminal.ID},
+			"staff_id":     fmt.Sprint(s.staffA),
+			"instance_ids": []string{fmt.Sprint(selected.ID), fmt.Sprint(terminal.ID)},
 		}},
 	})
 	require.Equal(t, http.StatusConflict, w.Code, "body=%s", w.Body.String())
@@ -586,8 +587,8 @@ func TestApplyDeviations_RejectsAlreadyAbsentTerminalAppointmentInExplicitScope(
 
 	w := doScopedDev(t, s, selected.ID, map[string]any{
 		"absences": []map[string]any{{
-			"staff_id":     s.staffA,
-			"instance_ids": []int64{selected.ID, terminal.ID},
+			"staff_id":     fmt.Sprint(s.staffA),
+			"instance_ids": []string{fmt.Sprint(selected.ID), fmt.Sprint(terminal.ID)},
 		}},
 	})
 	require.Equal(t, http.StatusConflict, w.Code, "body=%s", w.Body.String())
@@ -609,8 +610,8 @@ func TestApplyDeviations_RejectsAlreadyPresentTerminalAppointmentInExplicitScope
 
 	w := doScopedDev(t, s, selected.ID, map[string]any{
 		"presences": []map[string]any{{
-			"staff_id":     s.staffA,
-			"instance_ids": []int64{selected.ID, terminal.ID},
+			"staff_id":     fmt.Sprint(s.staffA),
+			"instance_ids": []string{fmt.Sprint(selected.ID), fmt.Sprint(terminal.ID)},
 		}},
 	})
 	require.Equal(t, http.StatusConflict, w.Code, "body=%s", w.Body.String())
@@ -634,7 +635,7 @@ func TestApplyDeviations_DayWidePresenceSkipsTerminalSickAbsence(t *testing.T) {
 	stampInstanceStaffSickAbsence(t, s.db, s.ctx, terminalRow.ID, terminalRow.SickAbsenceID)
 
 	w := doScopedDev(t, s, planned.ID, map[string]any{
-		"presences": []map[string]any{{"staff_id": s.staffA}},
+		"presences": []map[string]any{{"staff_id": fmt.Sprint(s.staffA)}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 	assert.False(t, readScopedInstanceStaff(t, s.db, s.ctx, plannedRow.ID).IsAbsent)

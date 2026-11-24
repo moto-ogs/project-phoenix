@@ -3,6 +3,9 @@ package ports
 import (
 	"context"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // StaffMember is the users.staff fact of a school. FindStaffByPerson also
@@ -122,6 +125,12 @@ type StudentGuardianLink struct {
 type Student struct {
 	ID       int64
 	PersonID int64
+	// WithoutCarePlace and EnrolledUntil are the child's OGS place and last
+	// care day (People Directory), read by the parent step (#7760).
+	WithoutCarePlace bool
+	EnrolledUntil    *calendar.Date
+	// Alumnus is a graduated child: the parents portal no longer lists it.
+	Alumnus bool
 }
 
 // GuardianRoleClass classifies a stored guardian role for the invite flow.
@@ -148,6 +157,13 @@ type GuardianDirectory interface {
 	FindStudentGuardianLinkForUpdate(ctx context.Context, studentID, guardianProfileID int64) (StudentGuardianLink, bool, error)
 	LinkStudentGuardianIfAbsent(ctx context.Context, link StudentGuardianLink) (bool, error)
 	PromoteStudentGuardianLink(ctx context.Context, linkID int64) error
+	// ApprovedCarePeriods reads the approved care periods of the children
+	// (Enrollment) in one statement, as the parents portal reads them.
+	ApprovedCarePeriods(ctx context.Context, studentIDs []int64) ([]identityaccess.ChildCarePeriod, error)
+	// CareBookingsInForce reports which of the request children have at
+	// least one care booking in force on day (Care Plan, valid_from on or
+	// before day, valid_until after it), in one statement.
+	CareBookingsInForce(ctx context.Context, requestChildIDs []int64, day calendar.Date) ([]int64, error)
 	ListStudentGuardianLinksByStudents(ctx context.Context, studentIDs []int64) ([]StudentGuardianLink, error)
 	ListStudentGuardianLinksByProfile(ctx context.Context, guardianProfileID int64) ([]StudentGuardianLink, error)
 	DeleteStudentGuardianLink(ctx context.Context, linkID int64) error

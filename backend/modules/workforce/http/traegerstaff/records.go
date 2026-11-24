@@ -124,6 +124,10 @@ type StaffLinkRequest struct {
 	StaffRecordID *ident.ID                         `json:"staff_record_id"`
 	Members       []workforce.TraegerStaffMemberRef `json:"members"`
 	Choices       map[string]string                 `json:"choices"`
+	// ExpectedFingerprint is the fingerprint of the preview the choices were
+	// made on; the link refuses values changed since with
+	// general.changed_since_read (ADR 0311). The preview ignores it.
+	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
 func (req *StaffLinkRequest) Bind(*http.Request) error {
@@ -134,7 +138,10 @@ func (req *StaffLinkRequest) Bind(*http.Request) error {
 }
 
 func (req *StaffLinkRequest) toInput() workforce.TraegerStaffLinkRequest {
-	return workforce.TraegerStaffLinkRequest{RecordID: (*int64)(req.StaffRecordID), Members: req.Members, Choices: req.Choices}
+	return workforce.TraegerStaffLinkRequest{
+		RecordID: (*int64)(req.StaffRecordID), Members: req.Members, Choices: req.Choices,
+		ExpectedFingerprint: req.ExpectedFingerprint,
+	}
 }
 
 func (rs *RecordsResource) preview(w http.ResponseWriter, r *http.Request) {
@@ -226,6 +233,10 @@ type PersonRequest struct {
 	FirstName string  `json:"first_name"`
 	LastName  string  `json:"last_name"`
 	Birthday  *string `json:"birthday" contract:"date"`
+	// ExpectedVersion is the record's person_version the form showed; a
+	// person changed since is refused with general.changed_since_read (ADR
+	// 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func (req *PersonRequest) Bind(*http.Request) error { return nil }
@@ -241,7 +252,7 @@ func (rs *RecordsResource) person(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	err := rs.records.UpdatePerson(r.Context(), session, id, workforce.TraegerStaffPerson{
-		FirstName: req.FirstName, LastName: req.LastName, Birthday: req.Birthday,
+		FirstName: req.FirstName, LastName: req.LastName, Birthday: req.Birthday, ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		renderError(w, r, err)
@@ -275,8 +286,11 @@ func (rs *RecordsResource) serveFinancial(w http.ResponseWriter, r *http.Request
 
 type StaffFinancialRequest struct {
 	IBAN                 *string `json:"iban"`
-	TaxID                *string `json:"tax_id"`
+	TaxID                *string `json:"tax_id" contract_text:"statutory tax identifier"`
 	SocialSecurityNumber *string `json:"social_security_number"`
+	// ExpectedVersion is the section's version the form showed; values
+	// changed since are refused with general.changed_since_read (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func (req *StaffFinancialRequest) Bind(*http.Request) error { return nil }
@@ -292,7 +306,7 @@ func (rs *RecordsResource) updateFinancial(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	err := rs.records.UpdateFinancial(r.Context(), session, id, workforce.StammdatenFinancialInput{
-		IBAN: req.IBAN, TaxID: req.TaxID, SocialSecurityNumber: req.SocialSecurityNumber,
+		IBAN: req.IBAN, TaxID: req.TaxID, SocialSecurityNumber: req.SocialSecurityNumber, ExpectedVersion: &req.ExpectedVersion,
 	})
 	if err != nil {
 		renderError(w, r, err)

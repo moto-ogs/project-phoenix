@@ -978,7 +978,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.GroupTeacherRepository.TeacherAssignmentIDs",
-      "binding_digest": "b910d688f45c73afc113a0631f59ab15",
+      "binding_digest": "eef6f49f183ae48a69f544ccd2775457",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.GroupTeacherStore.TeacherAssignmentIDs",
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListGroupAssignments",
@@ -986,7 +986,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.GroupTeacherRepository.TeacherAssignmentIDs",
-      "binding_digest": "aacb2940ce41758be9dbd52dec1404aa",
+      "binding_digest": "ea7285b79a08d663a2a3621e33235148",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.GroupTeacherStore.TeacherAssignmentIDs",
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListGroupAssignments",

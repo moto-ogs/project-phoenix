@@ -16,6 +16,14 @@ export const traegerKeys = {
   organization: () => "traeger-organization",
   masterData: () => "traeger-master-data",
   sepaCreditor: () => "traeger-sepa-creditor",
+  // Rollen des Trägers für das Personal seiner Schulen (#4810): die Liste,
+  // der Rechtekatalog und die Vorschau vor dem Entfernen einer Rolle.
+  schoolRoles: () => "traeger-school-roles",
+  schoolRoleCatalog: () => "traeger-school-role-catalog",
+  schoolRoleRemoval: (id: string) =>
+    `traeger-school-role-removal-${encodeURIComponent(id)}`,
+  // Zuständigkeiten je Schule mit Schulträger und Gemeinde (#4811).
+  responsibilities: () => "traeger-responsibilities",
   // Verlauf des Träger-Büros (#5474): die erste Seite; ältere Seiten lädt
   // die Ansicht dazu. Jede Änderung im Büro liest die Familie neu.
   accountHistoryFamily: "traeger-account-history-",

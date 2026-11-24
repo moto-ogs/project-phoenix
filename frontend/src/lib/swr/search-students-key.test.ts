@@ -27,6 +27,15 @@ describe("searchStudentsGroupScope", () => {
     expect(searchStudentsGroupScope(["0"])).toBe("gall");
   });
 
+  it("keeps the int64 limit exact without rounding", () => {
+    expect(
+      searchStudentsGroupScope([
+        "+0009223372036854775807",
+        "9223372036854775808",
+      ]),
+    ).toBe("g9223372036854775807");
+  });
+
   it("collapses duplicates", () => {
     expect(searchStudentsGroupScope(["7", "007"])).toBe("g7");
   });

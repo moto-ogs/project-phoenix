@@ -47,7 +47,7 @@ export const TenantMismatchSwitching: Story = {
           user: {
             id: "1",
             roles: ["admin"],
-            tenantId: 2,
+            tenantId: "2",
             scope: "",
           },
           expires: "2099-01-01",
@@ -77,7 +77,7 @@ export const OperatorSessionOnTenant: Story = {
           user: {
             id: "1",
             roles: ["operator"],
-            tenantId: 1,
+            tenantId: "1",
             scope: "platform",
           },
           expires: "2099-01-01",
@@ -108,7 +108,7 @@ export const ExpiredSession: Story = {
           user: {
             id: "1",
             roles: ["admin"],
-            tenantId: 1,
+            tenantId: "1",
             scope: "",
           },
           expires: "2099-01-01",

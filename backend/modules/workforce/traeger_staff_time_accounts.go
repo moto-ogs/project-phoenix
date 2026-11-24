@@ -68,6 +68,9 @@ type TraegerSchoolMonth struct {
 	// LaterClosed is the latest closed month after this one (YYYY-MM), or
 	// empty.
 	LaterClosed string
+	// Version is the token of this read (ADR 0311): the close sends it back
+	// and the school compares it under its balance lock.
+	Version string
 }
 
 // TraegerStaffMonths reads, closes and reopens the month of one employment
@@ -75,7 +78,9 @@ type TraegerSchoolMonth struct {
 type TraegerStaffMonths interface {
 	TraegerMonthAccount(ctx context.Context, staffID int64, year, month int) (TraegerSchoolMonth, error)
 	// CloseMonthForTraeger reports false when the month was closed already.
-	CloseMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason string) (bool, error)
+	// expectedVersion is the Version of the read the close was confirmed
+	// on; a month that differs under the lock is refused as changed.
+	CloseMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason, expectedVersion string) (bool, error)
 	ReopenMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason string) error
 }
 
@@ -126,6 +131,9 @@ type TraegerTimeAccount struct {
 	// Ended is true once the month is over; only then may it be closed.
 	Ended   bool                       `json:"ended"`
 	Schools []TraegerTimeAccountSchool `json:"schools"`
+	// Fingerprint is the token of the month as shown; the close sends it
+	// back as expected_fingerprint (ADR 0311).
+	Fingerprint string `json:"fingerprint"`
 }
 
 // TraegerMonthChange closes or reopens one month of a record, with the
@@ -134,6 +142,9 @@ type TraegerMonthChange struct {
 	Year   int
 	Month  int
 	Reason string
+	// ExpectedFingerprint is the Fingerprint of the month the close was
+	// confirmed on (ADR 0311); a reopen does not read it.
+	ExpectedFingerprint string
 }
 
 // TraegerStaffTimeAccounts is the Stundenkonto of the Personalakte.

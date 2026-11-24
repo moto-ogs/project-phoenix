@@ -3,10 +3,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { releaseFakeTimers } from "~/test/clock";
 import type { TenantInfo } from "~/lib/tenant-api";
 
-const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
+const { mockBackendAnswer } = vi.hoisted(() => ({
+  mockBackendAnswer: vi.fn(),
+}));
 
-vi.mock("~/lib/api-helpers.server", () => ({
-  apiGet: mockApiGet,
+vi.mock("~/lib/backend-client.server", async (original) => ({
+  ...(await original<typeof import("~/lib/backend-client.server")>()),
+  sendBackend: async (
+    endpoint: string,
+    token: string,
+    options: { signal?: AbortSignal },
+  ) =>
+    Response.json(
+      await mockBackendAnswer(endpoint, token, { signal: options.signal }),
+    ),
 }));
 
 vi.mock("~/lib/user-context.server", () => ({
@@ -33,7 +43,7 @@ function session(overrides: Partial<Session["user"]> = {}): Session {
       email: "admin@example.com",
       roles: ["admin"],
       permissions: ["admin:*"],
-      tenantId: 1,
+      tenantId: "1",
       ...overrides,
     },
     expires: "2099-01-01",
@@ -54,19 +64,120 @@ const tenant = {
 } as TenantInfo;
 
 const calledEndpoints = () =>
-  mockApiGet.mock.calls.map((call) => call[0] as string).sort();
+  mockBackendAnswer.mock.calls.map((call) => call[0] as string).sort();
 
 function routeBackend(responses: Record<string, unknown | Error>): void {
-  mockApiGet.mockImplementation(async (endpoint: string) => {
+  mockBackendAnswer.mockImplementation(async (endpoint: string) => {
     const response = responses[endpoint];
     if (response instanceof Error) throw response;
     if (response === undefined) throw new Error(`unrouted ${endpoint}`);
-    return response;
+    return { status: "success", ...(response as object) };
   });
 }
 
+const instant = "2026-01-01T00:00:00Z";
+const room = {
+  id: "8",
+  name: "Kreativraum",
+  is_occupied: false,
+  student_count: 0,
+  is_system: false,
+  is_open_room: true,
+  created_at: instant,
+  updated_at: instant,
+  version: instant,
+};
+const page = {
+  current_page: 1,
+  page_size: 20,
+  total_pages: 1,
+  total_records: 1,
+};
+const overviewGroup = {
+  id: "1",
+  group_id: "1",
+  room_id: "5",
+  room: { id: "5", name: "Aula" },
+  start_time: instant,
+  is_active: true,
+  created_at: instant,
+  updated_at: instant,
+};
+const ownGroup = {
+  id: overviewGroup.id,
+  group_id: overviewGroup.group_id,
+  room_id: overviewGroup.room_id,
+  start_time: instant,
+  created_at: instant,
+  updated_at: instant,
+  tenant_id: "1",
+  last_activity: instant,
+  timeout_minutes: 30,
+  room: {
+    ...overviewGroup.room,
+    tenant_id: "1",
+    created_at: instant,
+    updated_at: instant,
+    is_system: false,
+    is_open_room: true,
+  },
+};
+const absence = {
+  id: "1",
+  tenant_id: "1",
+  staff_id: "1",
+  absence_type: "vacation",
+  date_start: "2026-01-01",
+  date_end: "2026-01-01",
+  half_day: false,
+  start_half_day: false,
+  end_half_day: false,
+  status: "pending",
+  created_by: "1",
+  requested_at: instant,
+  created_at: instant,
+  updated_at: instant,
+  duration_days: 1,
+};
+const notice = {
+  id: "1",
+  title: "Hinweis",
+  body: "Text",
+  priority: "info",
+  audience: "all",
+  valid_from: "2026-01-01",
+  weekdays: null,
+  week_pattern: 0,
+  active: true,
+  version: instant,
+};
+const notices = [
+  { ...notice, requires_acknowledgement: true },
+  {
+    ...notice,
+    id: "2",
+    requires_acknowledgement: true,
+    acknowledged_at: instant,
+  },
+  { ...notice, id: "3", requires_acknowledgement: false },
+];
+const announcement = {
+  id: "1",
+  title: "Update",
+  content: "Text",
+  type: "info",
+  severity: "info",
+  published_at: instant,
+};
+const navigationGroup = {
+  id: "2",
+  name: "Zebra",
+  via_substitution: false,
+  is_personal: false,
+};
+
 beforeEach(() => {
-  mockApiGet.mockReset();
+  mockBackendAnswer.mockReset();
   vi.mocked(loadUserContext).mockClear();
 });
 
@@ -84,6 +195,7 @@ describe("loadShellBootstrap", () => {
           last_login: null,
           created_at: "2026-01-01T00:00:00Z",
           updated_at: "2026-01-01T00:00:00Z",
+          version: "2026-01-01T00:00:00Z",
         },
       },
       "/auth/account/tenants": {
@@ -99,29 +211,24 @@ describe("loadShellBootstrap", () => {
         ],
       },
       "/api/students/ogs-group-navigation": {
-        data: [{ id: "2", name: "Zebra" }],
+        data: [navigationGroup],
       },
       "/api/active/supervisors/all": {
-        data: [
-          { id: 1, group_id: 1, room_id: 5, room: { id: 5, name: "Aula" } },
-        ],
+        data: [overviewGroup],
       },
       "/api/me/groups/supervised": {
-        data: [
-          { id: 1, group_id: 1, room_id: 5, room: { id: 5, name: "Aula" } },
-        ],
+        data: [ownGroup],
       },
-      "/api/rooms?is_open_room=true": {
-        data: [{ id: 8, name: "Kreativraum" }],
+      "/api/rooms/?is_open_room=true": {
+        data: [room],
+        pagination: page,
       },
-      "/api/staff/absences/pending": { data: [{}, {}] },
+      "/api/staff/absences/pending": {
+        data: [absence, { ...absence, id: "2" }],
+      },
       "/api/messages/unread-count": { data: { unread_count: 4 } },
       "/api/staff-notices/today": {
-        data: [
-          { requires_acknowledgement: true },
-          { requires_acknowledgement: true, acknowledged_at: "2026-09-01" },
-          { requires_acknowledgement: false },
-        ],
+        data: notices,
       },
       "/api/students/change-requests/pending-count": {
         data: { pending_count: 3 },
@@ -129,9 +236,11 @@ describe("loadShellBootstrap", () => {
       "/api/enrollment/admin/change-requests/pending-count": {
         data: { pending_count: 1 },
       },
-      "/api/students/care-withdrawals?page_size=1": { data: { total: 5 } },
-      "/api/reminders": { data: { enabled: true, reminders: [], count: 0 } },
-      "/api/platform/announcements/unread": { data: [{ id: 1 }] },
+      "/api/students/care-withdrawals?page_size=1": {
+        data: { total: 5, items: [], page: 1, page_size: 1 },
+      },
+      "/api/reminders/": { data: { enabled: true, reminders: [], count: 0 } },
+      "/api/platform/announcements/unread": { data: [announcement] },
     });
 
     const shell = await loadShellBootstrap(session(), tenant, ACCESS_TOKEN);
@@ -142,7 +251,7 @@ describe("loadShellBootstrap", () => {
       reminders: [],
       count: 0,
     });
-    expect(shell.announcements).toEqual([{ id: 1 }]);
+    expect(shell.announcements).toEqual([announcement]);
     expect(loadUserContext).toHaveBeenCalledWith(
       "access-token",
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
@@ -154,23 +263,17 @@ describe("loadShellBootstrap", () => {
     expect(shell.profile?.firstName).toBe("Ada");
     expect(shell.accountTenants?.[0]?.organizationName).toBe("Org");
     expect(shell.supervision).toEqual({
-      groups: [{ id: "2", name: "Zebra" }],
-      supervised: [
-        { id: 1, group_id: 1, room_id: 5, room: { id: 5, name: "Aula" } },
-      ],
-      ownSupervised: [
-        { id: 1, group_id: 1, room_id: 5, room: { id: 5, name: "Aula" } },
-      ],
-      openRooms: [{ id: 8, name: "Kreativraum" }],
+      groups: [navigationGroup],
+      supervised: [overviewGroup],
+      ownSupervised: [ownGroup],
+      openRooms: [room],
       overviewOk: true,
     });
     // The list itself, not only its count (#4989): badge, home block and
     // /tagesinformationen read it from one SWR entry.
-    expect(shell.staffNoticesToday).toEqual([
-      { requires_acknowledgement: true },
-      { requires_acknowledgement: true, acknowledged_at: "2026-09-01" },
-      { requires_acknowledgement: false },
-    ]);
+    expect(shell.staffNoticesToday).toEqual(
+      notices.map((notice) => ({ ...notice, weekdays: [] })),
+    );
     expect(shell.counts).toEqual({
       staffAbsencesPending: 2,
       messagesUnread: 4,
@@ -188,7 +291,7 @@ describe("loadShellBootstrap", () => {
       "/api/me/profile": {
         status: "success",
         data: {
-          id: 8,
+          id: "8",
           first_name: "Bo",
           last_name: "K",
           email: "b@k",
@@ -201,11 +304,11 @@ describe("loadShellBootstrap", () => {
       "/auth/account/tenants": { data: [] },
       "/api/students/ogs-group-navigation": { data: [] },
       "/api/me/groups/supervised": { data: [] },
-      "/api/rooms?is_open_room=true": { data: [] },
+      "/api/rooms/?is_open_room=true": { data: [], pagination: page },
       "/api/staff-notices/today": { data: [] },
       "/api/messages/unread-count": { data: { unread_count: 2 } },
-      "/api/reminders": { data: { enabled: false, reminders: [], count: 0 } },
-      "/api/platform/announcements/unread": { data: null },
+      "/api/reminders/": { data: { enabled: false, reminders: [], count: 0 } },
+      "/api/platform/announcements/unread": { data: [] },
     });
 
     const shell = await loadShellBootstrap(
@@ -240,15 +343,15 @@ describe("loadShellBootstrap", () => {
     routeBackend({
       "/api/me/profile": {
         status: "success",
-        data: { id: 9, first_name: "Jo", last_name: "B", email: "j@b" },
+        data: { id: "9", first_name: "Jo", last_name: "B", email: "j@b" },
       },
       "/auth/account/tenants": { data: [] },
       "/api/students/ogs-group-navigation": { data: [] },
       "/api/me/groups/supervised": { data: [] },
-      "/api/rooms?is_open_room=true": { data: [] },
+      "/api/rooms/?is_open_room=true": { data: [], pagination: page },
       "/api/staff-notices/today": { data: [] },
       "/api/messages/unread-count": { data: { unread_count: 3 } },
-      "/api/platform/announcements/unread": { data: null },
+      "/api/platform/announcements/unread": { data: [] },
     });
 
     const shell = await loadShellBootstrap(
@@ -275,14 +378,14 @@ describe("loadShellBootstrap", () => {
       "/api/me/groups/supervised": {
         data: [{ id: 3, group_id: 3, room_id: 2, room: { id: 2, name: "B" } }],
       },
-      "/api/rooms?is_open_room=true": new Error("500"),
+      "/api/rooms/?is_open_room=true": new Error("500"),
       "/api/staff/absences/pending": new Error("500"),
       "/api/messages/unread-count": new Error("500"),
       "/api/staff-notices/today": new Error("500"),
       "/api/students/change-requests/pending-count": new Error("500"),
       "/api/enrollment/admin/change-requests/pending-count": new Error("500"),
       "/api/students/care-withdrawals?page_size=1": new Error("500"),
-      "/api/reminders": new Error("500"),
+      "/api/reminders/": new Error("500"),
       "/api/platform/announcements/unread": new Error("500"),
     });
     vi.mocked(loadUserContext).mockRejectedValueOnce(new Error("500"));
@@ -305,25 +408,38 @@ describe("loadShellBootstrap", () => {
     routeBackend({
       "/api/students/ogs-group-navigation": { data: [] },
       "/api/active/supervisors/all": {
-        data: [
-          { id: 1, group_id: 1, room_id: 5, room: { id: 5, name: "Aula" } },
-        ],
+        data: [overviewGroup],
       },
       "/api/me/groups/supervised": new Error("500"),
-      "/api/rooms?is_open_room=true": { data: [] },
+      "/api/rooms/?is_open_room=true": { data: [], pagination: page },
     });
 
     const shell = await loadShellBootstrap(session(), tenant, ACCESS_TOKEN);
 
     expect(shell.supervision).toEqual({
       groups: [],
-      supervised: [
-        { id: 1, group_id: 1, room_id: 5, room: { id: 5, name: "Aula" } },
-      ],
+      supervised: [overviewGroup],
       ownSupervised: null,
       openRooms: [],
       overviewOk: true,
     });
+  });
+
+  it("does not seed a complete supervision snapshot from a malformed answer", async () => {
+    routeBackend({
+      "/api/students/ogs-group-navigation": { data: [] },
+      "/api/me/groups/supervised": { data: [{ ...ownGroup, id: 1 }] },
+      "/api/rooms/?is_open_room=true": { data: [], pagination: page },
+    });
+
+    const shell = await loadShellBootstrap(
+      session({ roles: ["teacher"], permissions: ["groups:read"] }),
+      tenant,
+      ACCESS_TOKEN,
+    );
+
+    expect(calledEndpoints()).toContain("/api/me/groups/supervised");
+    expect(shell.supervision).toBeUndefined();
   });
 
   it("leaves an incomplete navigation projection to the browser", async () => {
@@ -348,7 +464,7 @@ describe("loadShellBootstrap", () => {
   it("aborts timed-out backend preloads", async () => {
     vi.useFakeTimers();
     let profileSignal: AbortSignal | undefined;
-    mockApiGet.mockImplementation(
+    mockBackendAnswer.mockImplementation(
       (
         endpoint: string,
         _token: string,

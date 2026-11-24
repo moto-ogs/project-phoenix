@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -21,7 +23,7 @@ func TestThreadSummaryResponseIncludesStaffReadStatus(t *testing.T) {
 		LastMessagePayload:     map[string]json.RawMessage{"effective_from": json.RawMessage(`"2026-09-01"`)},
 	})
 
-	body, err := json.Marshal(response)
+	body, err := wire.Marshal(response)
 	require.NoError(t, err)
 	assert.JSONEq(t, `{
 		"thread_id":"41",

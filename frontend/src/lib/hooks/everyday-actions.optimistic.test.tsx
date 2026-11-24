@@ -88,6 +88,7 @@ const meals: MealParticipation = {
   model: "ongoing_single",
   schedule_changeable: true,
   sick_cancels_after_deadline: false,
+  version: "v1",
   days: [
     {
       date: "2026-09-09",
@@ -105,7 +106,7 @@ const meals: MealParticipation = {
 function signedIn(id = "A") {
   return {
     data: {
-      user: { id, tenantId: 1 },
+      user: { id, tenantId: "1" },
       expires: "2099-01-01",
     } satisfies Session,
     status: "authenticated",
@@ -206,7 +207,7 @@ function useSchedule() {
   const hook = useMealParticipation("1", "child-1", "2026-09-07", "2026-10-02");
   return {
     data: hook.data?.weekdays.includes(3),
-    run: () => hook.saveSchedule([3]),
+    run: () => hook.saveSchedule([3], hook.data?.version ?? ""),
     ready: !!hook.data,
   };
 }
@@ -238,7 +239,7 @@ function usePolicies() {
   const hook = useHomeLayout();
   return {
     data: hook.isReady ? hook.state.policies.news === "required" : undefined,
-    run: () => hook.savePolicies({ news: "required" }),
+    run: () => hook.savePolicies({ news: "required" }, "v1"),
     ready: hook.isReady,
   };
 }
@@ -376,22 +377,22 @@ it("keeps confirmed policies separate from optimistic updates and rollback", asy
     wrapper: Wrapper,
   });
   await waitFor(() => expect(result.current.isReady).toBe(true));
-  const confirmed = result.current.confirmedPolicies;
+  const confirmed = result.current.confirmed?.policies;
   expect(confirmed).toBe(layout.policies);
   let task!: Promise<unknown>;
   act(() => {
     task = result.current
-      .savePolicies({ news: "required" })
+      .savePolicies({ news: "required" }, "v1")
       .catch(() => undefined);
   });
   expect(result.current.state.policies).toEqual({ news: "required" });
-  expect(result.current.confirmedPolicies).toBe(confirmed);
+  expect(result.current.confirmed?.policies).toBe(confirmed);
   await act(async () => {
     pending.reject(new ApiError("diag", 500));
     await task;
   });
   expect(result.current.state.policies).toEqual(layout.policies);
-  expect(result.current.confirmedPolicies).toBe(confirmed);
+  expect(result.current.confirmed?.policies).toBe(confirmed);
   unmount();
 });
 

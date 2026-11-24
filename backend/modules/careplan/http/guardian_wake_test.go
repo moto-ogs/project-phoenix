@@ -76,7 +76,7 @@ func TestStaffStatusUpdate_WakesChildGuardians(t *testing.T) {
 	// A sick=true update writes today's status day → must wake guardians.
 	tc.broadcaster.Reset()
 	sick := true
-	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", chain.StudentID), map[string]any{"sick": sick})
+	req := studentUpdateRequest(t, tc, chain.StudentID, map[string]any{"sick": sick})
 	rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
 	require.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
 
@@ -95,7 +95,7 @@ func TestStaffStatusUpdate_WakesChildGuardians(t *testing.T) {
 	// A non-status update (health info) does not change the absence → no wake.
 	tc.broadcaster.Reset()
 	notes := "Interner Vermerk"
-	req = testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", chain.StudentID), map[string]any{"health_info": notes})
+	req = studentUpdateRequest(t, tc, chain.StudentID, map[string]any{"health_info": notes})
 	rr = authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
 	require.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
 

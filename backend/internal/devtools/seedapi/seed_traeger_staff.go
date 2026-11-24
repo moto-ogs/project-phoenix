@@ -62,8 +62,8 @@ func (seedTraegerStaffStep) Run(ctx context.Context, rt *Runtime) error {
 		return err
 	}
 	if first > 0 {
-		if _, err := rt.Client.PutWithAuth(auth, fmt.Sprintf("/traeger/staff-records/%d/financial", first), map[string]any{"iban": seedTraegerStaffIBAN}); err != nil {
-			return fmt.Errorf("keep the bank values of a Träger staff record: %w", err)
+		if err := seedTraegerStaffFinancial(rt.Client, auth, first); err != nil {
+			return err
 		}
 	}
 	imported, hired, err := seedTraegerStaffIntake(rt.Client, auth, rt.Bootstrap.SchoolID)
@@ -182,9 +182,9 @@ func seedTraegerStaffSuggestions(client *Client, auth AuthRef) ([]seedTraegerSta
 // seedTraegerStaffLink confirms one proposal with the first value of every
 // field the schools disagree on; it returns 0 when another run linked it.
 func seedTraegerStaffLink(client *Client, auth AuthRef, suggestion seedTraegerStaffSuggestion) (int64, error) {
-	members := make([]map[string]int64, 0, len(suggestion.Members))
+	members := make([]map[string]ident.ID, 0, len(suggestion.Members))
 	for _, member := range suggestion.Members {
-		members = append(members, map[string]int64{"school_id": int64(member.SchoolID), "staff_id": int64(member.StaffID)})
+		members = append(members, map[string]ident.ID{"school_id": member.SchoolID, "staff_id": member.StaffID})
 	}
 	body := map[string]any{"members": members}
 	if suggestion.RecordID != nil {
@@ -199,7 +199,8 @@ func seedTraegerStaffLink(client *Client, auth AuthRef, suggestion seedTraegerSt
 	}
 	var preview struct {
 		Data struct {
-			Fields []struct {
+			Fingerprint string `json:"fingerprint"`
+			Fields      []struct {
 				Field    string `json:"field"`
 				Conflict bool   `json:"conflict"`
 				Options  []struct {
@@ -218,6 +219,8 @@ func seedTraegerStaffLink(client *Client, auth AuthRef, suggestion seedTraegerSt
 		}
 	}
 	body["choices"] = choices
+	// The link carries the fingerprint of the preview it chose on (ADR 0311).
+	body["expected_fingerprint"] = preview.Data.Fingerprint
 	raw, err = client.PostWithAuth(auth, "/traeger/staff-records/", body)
 	if seedTraegerStaffAlreadyLinked(err) {
 		return 0, nil
@@ -241,4 +244,18 @@ func seedTraegerStaffLink(client *Client, auth AuthRef, suggestion seedTraegerSt
 func seedTraegerStaffAlreadyLinked(err error) bool {
 	var refused *APIError
 	return errors.As(err, &refused) && (refused.Code == seedCodeStaffAlreadyLinked || refused.Code == seedCodeStaffNumberTaken)
+}
+
+// seedTraegerStaffFinancial keeps the bank values of a record, saved over
+// the version of the section's read as the form does (ADR 0311).
+func seedTraegerStaffFinancial(client *Client, auth AuthRef, recordID int64) error {
+	path := fmt.Sprintf("/traeger/staff-records/%d/financial", recordID)
+	version, err := readDataVersion(func(path string) ([]byte, error) { return client.GetWithAuth(auth, path) }, path)
+	if err != nil {
+		return err
+	}
+	if _, err := client.PutWithAuth(auth, path, map[string]any{"iban": seedTraegerStaffIBAN, "expected_version": version}); err != nil {
+		return fmt.Errorf("keep the bank values of a Träger staff record: %w", err)
+	}
+	return nil
 }

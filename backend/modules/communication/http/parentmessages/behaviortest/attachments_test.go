@@ -120,15 +120,21 @@ func TestStaffSendPhotosToGuardiansAndReadThemWithTheMessages(t *testing.T) {
 		Data messaging.ParentChatThreadDetailResponse
 	}
 	require.NoError(t, json.Unmarshal(opened.Body.Bytes(), &thread))
-	sent := post("/threads/"+thread.Data.ThreadID, fmt.Sprintf(`{"body":"","attachment_ids":[%q]}`, photo.ID))
+	sent := post("/threads/"+thread.Data.ThreadID.String(), fmt.Sprintf(`{"body":"","attachment_ids":[%q]}`, photo.ID))
 	require.Equal(t, http.StatusCreated, sent.Code, sent.Body.String())
-	detail := call(t, router, sender, http.MethodGet, "/threads/"+thread.Data.ThreadID, "", nil)
+	detail := call(t, router, sender, http.MethodGet, "/threads/"+thread.Data.ThreadID.String(), "", nil)
 	require.Equal(t, http.StatusOK, detail.Code, detail.Body.String())
 	require.NoError(t, json.Unmarshal(detail.Body.Bytes(), &thread))
 	require.Len(t, thread.Data.Messages, 1)
-	var carried []attachmentWire
-	require.NoError(t, json.Unmarshal(thread.Data.Messages[0].Attachments, &carried))
-	require.Equal(t, []attachmentWire{photo}, carried)
+	var carried struct {
+		Data struct {
+			Messages []struct {
+				Attachments []attachmentWire `json:"attachments"`
+			} `json:"messages"`
+		}
+	}
+	require.NoError(t, json.Unmarshal(detail.Body.Bytes(), &carried))
+	require.Equal(t, []attachmentWire{photo}, carried.Data.Messages[0].Attachments)
 
 	// Whoever reads the conversation reads its photo; the route's right
 	// keeps everybody else out.
@@ -146,6 +152,6 @@ func TestStaffSendPhotosToGuardiansAndReadThemWithTheMessages(t *testing.T) {
 	require.Equal(t, http.StatusOK, call(t, router, colleague, http.MethodGet, "/attachments/"+file.ID+"/download", "", nil).Code)
 
 	// A sent upload rides on no second message.
-	again := post("/threads/"+thread.Data.ThreadID, fmt.Sprintf(`{"body":"nochmal","attachment_ids":[%q],"handled_up_to_message_id":%q}`, photo.ID, thread.Data.Messages[0].ID))
+	again := post("/threads/"+thread.Data.ThreadID.String(), fmt.Sprintf(`{"body":"nochmal","attachment_ids":[%q],"handled_up_to_message_id":%q}`, photo.ID, thread.Data.Messages[0].ID))
 	require.Equal(t, http.StatusBadRequest, again.Code, again.Body.String())
 }

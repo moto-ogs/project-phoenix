@@ -40,6 +40,9 @@ var (
 type HomeworkFeedbackRequest struct {
 	Status string  `json:"status"`
 	Note   *string `json:"note,omitempty"`
+	// ExpectedVersion is the roster row's homework_feedback_version (ADR
+	// 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind implements render.Binder; the service validates status and note.
@@ -56,6 +59,8 @@ type HomeworkFeedbackResponse struct {
 	Date      string   `json:"date"`
 	Status    string   `json:"status"`
 	Note      *string  `json:"note,omitempty"`
+	// Version is the token of the stored feedback; a second save sends it.
+	Version string `json:"version"`
 }
 
 var homeworkFeedbackErrorRenderer = common.RulesRenderer([]common.ErrorRule{
@@ -100,7 +105,7 @@ func (rs *Resource) operationsPutHomeworkFeedback(w http.ResponseWriter, r *http
 	}
 	saved, err := rs.HomeworkFeedback.RecordHomeworkFeedback(r.Context(), timetable.HomeworkFeedbackInput{
 		StudentID: studentID, SchoolClass: row.SchoolClass, Date: calendar.Date(roster.Instance.Date),
-		Status: req.Status, Note: req.Note,
+		Status: req.Status, Note: req.Note, ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		common.RenderError(w, r, homeworkFeedbackErrorRenderer(err))
@@ -108,6 +113,7 @@ func (rs *Resource) operationsPutHomeworkFeedback(w http.ResponseWriter, r *http
 	}
 	common.Respond(w, r, http.StatusOK, HomeworkFeedbackResponse{
 		StudentID: ident.ID(saved.StudentID), Date: saved.Date.String(), Status: saved.Status, Note: saved.Note,
+		Version: timetable.HomeworkFeedbackVersion(&saved),
 	}, "Homework feedback saved")
 }
 

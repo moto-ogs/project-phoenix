@@ -340,7 +340,7 @@ export function useGlobalSSE(): SSEHookState {
     hasSessionAccess(session) &&
     // A refused stream would re-read the same wrong-school session forever,
     // and a late lookup could restore its cookie after explicit signout.
-    (!tenant || String(tenantID) === tenant.tenantId) &&
+    (!tenant || tenantID === tenant.tenantId) &&
     (hasStaffRole || hasAdminWildcard);
 
   // Every event acts only for the school and account its stream is bound to
@@ -1673,7 +1673,7 @@ export function useGlobalSSE(): SSEHookState {
     };
   }, []);
 
-  const connectedTenantRef = useRef<number | undefined>(tenantID);
+  const connectedTenantRef = useRef<string | undefined>(tenantID);
   const connectedScopeRef = useRef(boundScope);
   const connectedReconnectKeyRef = useRef(reconnectKey);
   useEffect(() => {

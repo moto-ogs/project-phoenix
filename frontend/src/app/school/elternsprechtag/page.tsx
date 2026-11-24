@@ -7,7 +7,7 @@
 // `?sprechtag=…` in der Adresse, damit der Hinweis zu einer Buchung direkt
 // dorthin führt.
 
-import { Suspense, useRef, useState } from "react";
+import { Suspense, useLayoutEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -40,7 +40,10 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { berlinTodayISO, formatDate } from "~/lib/date-helpers";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useReadDraftForm,
+  useSwrLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import {
   createSchoolParentConference,
@@ -59,7 +62,8 @@ import {
 import { schoolClassLabel } from "~/lib/school-class-label";
 import { NO_OWN_CLASS_REASON } from "~/components/school/no-own-class";
 import { schoolPath } from "~/lib/school-url";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 import type * as schoolCalendarContract from "~/lib/contract/school-calendar.generated";
 
@@ -140,10 +144,15 @@ function SchoolParentConferences() {
   const selectedId = useSearchParams().get(CONFERENCE_PARAM);
   const toast = useToast();
 
-  const { data, error, isLoading, mutate } = useSWRAuth(
+  const conferencesRead = useSWRAuth(
     session ? schoolPortalKeys.parentConferences() : null,
     fetchSchoolParentConferences,
   );
+  const { data, error, isLoading, mutate } = conferencesRead;
+  const conferencesReadRef = useRef(conferencesRead);
+  useLayoutEffect(() => {
+    conferencesReadRef.current = conferencesRead;
+  });
   const loadError = useSwrLoadError(error, "Deine Elternsprechtage", () =>
     mutate(),
   );
@@ -158,13 +167,62 @@ function SchoolParentConferences() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ParentConference | null>(null);
-  const [draft, setDraft] = useState<ParentConferenceDraft>(() =>
+  const [createDraft, setCreateDraft] = useState<ParentConferenceDraft>(() =>
     emptyParentConferenceDraft([]),
   );
   const save = useFormModalPending(formOpen);
   const submitting = save.pending;
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
+  // Eine Änderung ruht auf dem Tag, wie er beim Öffnen gelesen war, mit
+  // seinen Buchungen (ADR 0311): ein neueres Lesen füllt den Entwurf nur
+  // nach, solange nichts geändert ist. Hat inzwischen eine Familie gebucht,
+  // lehnt der Server ab; das Formular zeigt dann den gespeicherten Tag, und
+  // Speichern wartet, bis er gelesen ist.
+  const editingId = formOpen && editing ? editing.id : null;
+  const edit = useDraftOn<
+    ParentConference,
+    ParentConferenceDraft,
+    string,
+    ParentConference
+  >(
+    {
+      opening: editingId,
+      data: conferences.find((row) => row.id === editingId),
+      error,
+      reload: async () => {
+        const stored = await revalidateOrThrow(conferencesReadRef.current);
+        const day = stored.conferences.find((row) => row.id === editingId);
+        if (!day) throw new Error("parent conference is gone");
+        return day;
+      },
+      write: (stored) =>
+        mutate(
+          (current) =>
+            current && {
+              ...current,
+              conferences: current.conferences.map((row) =>
+                row.id === stored.id ? stored : row,
+              ),
+            },
+          { revalidate: false },
+        ),
+    },
+    {
+      token: (day) => day.version,
+      toDraft: parentConferenceDraftOf,
+      answer: (saved) => saved,
+    },
+  );
+  const editForm = useReadDraftForm(
+    editingId === null ? null : edit,
+    formErrors,
+    "den Elternsprechtag",
+  );
+  const draft =
+    editing && editingId !== null
+      ? (edit.draft ?? parentConferenceDraftOf(editing))
+      : createDraft;
   // A retry submits the form again, so it saves the current draft.
   const conferenceFormRef = useRef<HTMLFormElement>(null);
 
@@ -179,20 +237,22 @@ function SchoolParentConferences() {
     router.replace(`${pathname}${query}`, { scroll: false });
   };
 
-  const update = (patch: Partial<ParentConferenceDraft>) =>
-    setDraft((current) => ({ ...current, ...patch }));
+  const update = (patch: Partial<ParentConferenceDraft>) => {
+    if (editingId === null)
+      setCreateDraft((current) => ({ ...current, ...patch }));
+    else edit.setDraft((current) => ({ ...current, ...patch }));
+  };
 
   const openCreate = () => {
     formErrors.clear();
     setEditing(null);
-    setDraft(emptyParentConferenceDraft(classes));
+    setCreateDraft(emptyParentConferenceDraft(classes));
     setFormOpen(true);
   };
 
   const openEdit = (conference: ParentConference) => {
     formErrors.clear();
     setEditing(conference);
-    setDraft(parentConferenceDraftOf(conference));
     setFormOpen(true);
   };
 
@@ -208,18 +268,20 @@ function SchoolParentConferences() {
       formErrors.invalid("Bitte prüfe die markierten Felder.", fields);
       return;
     }
-    formErrors.clear();
+    // Nichts geht raus, bevor der gespeicherte Stand gelesen ist; der
+    // gezeigte Fehler bleibt dann stehen.
+    if (!editForm.begin()) return;
+    if (editing && editingId !== null) {
+      await save.run((op) => submitEdit(editing.id, op));
+      return;
+    }
     await save.run(async (op) => {
       try {
         const request = parentConferenceRequest(draft);
-        const saved = editing
-          ? await updateSchoolParentConference(editing.id, request)
-          : await createSchoolParentConference(request);
+        const saved = await createSchoolParentConference(request);
         await mutate();
         toast.success(
-          editing
-            ? `Der Elternsprechtag am ${formatDate(saved.date)} ist geändert.`
-            : `Der Elternsprechtag am ${formatDate(saved.date)} ist angelegt. Die Eltern der ${schoolClassLabel(saved.school_class)} können jetzt buchen.`,
+          `Der Elternsprechtag am ${formatDate(saved.date)} ist angelegt. Die Eltern der ${schoolClassLabel(saved.school_class)} können jetzt buchen.`,
         );
         if (!op.isCurrent()) return;
         closeForm();
@@ -237,6 +299,53 @@ function SchoolParentConferences() {
       }
     });
   };
+  // Ein geänderter Tag geht mit dem Stand raus, auf dem der Entwurf ruht.
+  // Seit dem Lesen geändert (eine neue Buchung, eine Änderung in einem
+  // anderen Fenster): das Formular zeigt den gespeicherten Tag, ohne
+  // „Wiederholen“ (ADR 0311).
+  const submitEdit = async (id: string, op: { isCurrent: () => boolean }) => {
+    const result = await edit.submit((version, current) =>
+      updateSchoolParentConference(
+        id,
+        parentConferenceRequest(current),
+        version,
+      ),
+    );
+    if (result.ok) {
+      toast.success(
+        `Der Elternsprechtag am ${formatDate(result.saved.date)} ist geändert.`,
+      );
+      if (op.isCurrent()) {
+        closeForm();
+        select(result.saved.id);
+      }
+      await mutate();
+      return;
+    }
+    if (result.skipped) return;
+    logger.error("school_parent_conference_save_failed", {
+      error:
+        result.error instanceof Error
+          ? result.error.message
+          : String(result.error),
+    });
+    if (!op.isCurrent()) return;
+    // Not awaited: after a refusal the error path waits for the read of the
+    // stored day, and Speichern waits on that read itself (waitReason).
+    void formErrors.show(
+      result.error,
+      result.refused
+        ? {
+            object: "das Speichern des Elternsprechtags",
+            reload: result.reload,
+          }
+        : {
+            object: "das Speichern des Elternsprechtags",
+            retry: () => conferenceFormRef.current?.requestSubmit(),
+          },
+    );
+  };
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     void submit();
@@ -322,6 +431,10 @@ function SchoolParentConferences() {
               >
                 <SlideOverBody error={formErrors.error}>
                   <div ref={formRef}>
+                    <LoadErrorAlert
+                      error={editForm.loadError}
+                      className="mb-4"
+                    />
                     <div className="space-y-5">
                       <CustomSelect
                         id="parent-conference-class"
@@ -456,6 +569,8 @@ function SchoolParentConferences() {
                   <EditActions
                     onCancel={closeForm}
                     saving={submitting}
+                    disabled={editForm.waitReason !== undefined}
+                    disabledReason={editForm.waitReason}
                     saveLabel="Speichern"
                     savingLabel="Wird gespeichert…"
                   />

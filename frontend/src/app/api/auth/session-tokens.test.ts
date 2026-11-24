@@ -1,3 +1,4 @@
+import { sessionClaims } from "~/test/helpers/session-claims";
 import {
   afterAll,
   beforeAll,
@@ -56,7 +57,7 @@ beforeEach(() => {
   familyStatus = 200;
   backend.mockImplementation(async (url: unknown) =>
     String(url).endsWith("/auth/session/validate")
-      ? Response.json({ id: 7 }, { status: familyStatus })
+      ? Response.json(sessionClaims(), { status: familyStatus })
       : new Response(null, { status: 404 }),
   );
 });
@@ -151,8 +152,8 @@ async function sessionCookie(
       permissions: ["admin:*"],
       firstName: "Erika",
       isAdmin: true,
-      tenantId: 3,
-      orgId: 2,
+      tenantId: "3",
+      orgId: "2",
       scope,
       tokenExpiry: Date.now() + 10 * 60_000,
       refreshTokenExpiry: Date.now() + 24 * 60 * 60_000,
@@ -284,7 +285,7 @@ describe.each(PORTALS)(
       familyStatus = 401;
       backend.mockImplementation(async (url: unknown) =>
         String(url).endsWith("/auth/session/validate")
-          ? Response.json({ id: 7 }, { status: familyStatus })
+          ? Response.json(sessionClaims(), { status: familyStatus })
           : new Response(null, { status: 503 }),
       );
 

@@ -3,7 +3,11 @@
  * Tests group config structure and response mapping
  */
 import { describe, it, expect, vi } from "vitest";
-import { groupsConfig } from "./groups.config";
+import {
+  groupsConfig,
+  toGroupRequest,
+  toGroupUpdateRequest,
+} from "./groups.config";
 import type { Group } from "@/lib/group-helpers";
 import { ApiError } from "~/lib/api-error";
 
@@ -32,10 +36,6 @@ describe("groupsConfig", () => {
       singular: "Gruppe",
       plural: "Gruppen",
     });
-  });
-
-  it("has correct API configuration", () => {
-    expect(groupsConfig.api.routes.list).toBe("GET /api/groups/");
   });
 
   it("has form sections configured", () => {
@@ -104,11 +104,30 @@ describe("groupsConfig", () => {
       teacher_ids: ["1", "2"],
     };
 
-    const mapped = groupsConfig.service?.mapRequest?.(data);
+    const mapped = toGroupRequest(data);
     expect(mapped).toEqual({
       name: "Test Group",
       room_id: "5",
       teacher_ids: ["1", "2"],
+    });
+  });
+
+  // ADR 0311: the save sends the version the form was filled from, and a
+  // cleared room as null, because the route keeps a room the body does not
+  // name.
+  it("saves against the version read and clears a room with null", () => {
+    expect(
+      toGroupUpdateRequest({
+        name: "Test Group",
+        room_id: "",
+        teacher_ids: ["1"],
+        version: "v3",
+      }),
+    ).toEqual({
+      name: "Test Group",
+      room_id: null,
+      teacher_ids: ["1"],
+      expected_version: "v3",
     });
   });
 
@@ -245,7 +264,9 @@ describe("groupsConfig", () => {
     const { mapGroupResponse } = await import("@/lib/group-helpers");
     const row = { id: "12", name: "Gruppe" };
 
-    groupsConfig.service?.mapResponse?.(row);
+    mockFetch.mockResolvedValueOnce(Response.json({ data: row }));
+
+    await groupsConfig.api.get!("12");
 
     expect(vi.mocked(mapGroupResponse)).toHaveBeenCalledWith(row);
   });

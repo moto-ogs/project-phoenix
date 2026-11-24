@@ -99,6 +99,10 @@ type StudentStore interface {
 	ListByStatusFlag(context.Context, string) ([]peopledirectory.Student, domain.OperationStats, error)
 	// Lock takes the row FOR UPDATE and reports whether it exists.
 	Lock(context.Context, int64) (bool, domain.OperationStats, error)
+	// LockNoKeyUpdate takes the row FOR NO KEY UPDATE and reports whether
+	// it exists: it waits for every other lock of the row's writers, but a
+	// row referencing the child may be inserted meanwhile.
+	LockNoKeyUpdate(context.Context, int64) (bool, domain.OperationStats, error)
 	// CountGuardianLinks counts the relationships a permanent deletion removes.
 	CountGuardianLinks(ctx context.Context, studentID int64) (int, domain.OperationStats, error)
 	// Delete hard-deletes the student row; dependent rows cascade or unlink

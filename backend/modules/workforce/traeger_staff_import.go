@@ -108,7 +108,7 @@ type StaffImportColumns struct {
 	LastName             string `json:"last_name"`
 	Birthday             string `json:"birthday"`
 	IBAN                 string `json:"iban"`
-	TaxID                string `json:"tax_id"`
+	TaxID                string `json:"tax_id" contract_text:"statutory tax identifier column mapping"`
 	SocialSecurityNumber string `json:"social_security_number"`
 }
 

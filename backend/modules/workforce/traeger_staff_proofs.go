@@ -71,6 +71,9 @@ type TraegerStaffProofType struct {
 	Mandatory         bool     `json:"mandatory"`
 	Archived          bool     `json:"archived"`
 	PoliceCertificate bool     `json:"police_certificate"`
+	// Version is the token of the kind's fields (ADR 0311); an update sends
+	// it back.
+	Version string `json:"version"`
 }
 
 // TraegerStaffProofTypeInput creates or rewrites a kind.
@@ -80,6 +83,9 @@ type TraegerStaffProofTypeInput struct {
 	ReminderLeadWeeks int
 	Mandatory         bool
 	Archived          bool
+	// ExpectedVersion is the Version the update was made on; a create
+	// ignores it.
+	ExpectedVersion string
 }
 
 // TraegerStaffProof is the state of one kind at one record: Held with the

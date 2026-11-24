@@ -145,7 +145,12 @@ func (c *CareBilling) CareTariffs(ctx context.Context, reviewer parentbilling.Ho
 			modules[i].SchoolName = names[modules[i].SchoolID.Int64()]
 		}
 	}
-	return parentbilling.CareTariffs{Schools: schools, Modules: modules, Tariffs: withValidity(tariffs), Lists: heads, BilledUntil: billed}, nil
+	listVersions := make(map[int64]string, len(schools))
+	for _, school := range schools {
+		listVersions[school.ID.Int64()] = priceListsVersion(school.ID.Int64(), tariffs, heads)
+	}
+	return parentbilling.CareTariffs{Schools: schools, Modules: modules, Tariffs: withValidity(tariffs), Lists: heads, BilledUntil: billed,
+		Versions: listVersions}, nil
 }
 
 // bookedVersions reads the versions in force in the year before and the
@@ -246,7 +251,9 @@ func (b moduleBook) addVersion(version parentbilling.CareContractVersion) {
 
 // SaveCarePriceList sets the prices of a school from a month on. A month an
 // issued invoice of the school already bills keeps its prices: the list
-// starts after it.
+// starts after it. The office saves over the price lists of the school it
+// read: under the lock of the monthly billing, lists changed since are
+// refused with readstate.ErrChanged (ADR 0311).
 func (c *CareBilling) SaveCarePriceList(ctx context.Context, reviewer parentbilling.HolidayReviewer, list parentbilling.CarePriceList) (parentbilling.CareTariffs, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return parentbilling.CareTariffs{}, err
@@ -261,7 +268,7 @@ func (c *CareBilling) SaveCarePriceList(ctx context.Context, reviewer parentbill
 		}
 		return parentbilling.CareTariffs{}, validation.Errors{"school_id": errors.New("is no school of the Träger")}
 	}
-	if err := c.keepBilledPrices(ctx, reviewer.OrganizationID, list.SchoolID, list.ValidFrom, &list); err != nil {
+	if err := c.keepBilledPrices(ctx, reviewer.OrganizationID, list.SchoolID, list.ValidFrom, &list, list.ExpectedVersion); err != nil {
 		return parentbilling.CareTariffs{}, err
 	}
 	if err := c.store.ReplaceCarePrices(ctx, reviewer.OrganizationID, reviewer.AccountID, list); err != nil {
@@ -324,7 +331,9 @@ func moduleBatchSchool(modules []parentbilling.CareModulePriceList) (int64, erro
 
 // DeleteCarePriceList removes the prices of a school that start on a month
 // no invoice bills yet.
-func (c *CareBilling) DeleteCarePriceList(ctx context.Context, reviewer parentbilling.HolidayReviewer, schoolID int64, validFrom calendar.Date) (parentbilling.CareTariffs, error) {
+func (c *CareBilling) DeleteCarePriceList(ctx context.Context, reviewer parentbilling.HolidayReviewer, schoolID int64, validFrom calendar.Date,
+	expectedVersion string,
+) (parentbilling.CareTariffs, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return parentbilling.CareTariffs{}, err
 	}
@@ -337,7 +346,7 @@ func (c *CareBilling) DeleteCarePriceList(ctx context.Context, reviewer parentbi
 		}
 		return parentbilling.CareTariffs{}, parentbilling.ErrCareTariffNotFound
 	}
-	if err := c.keepBilledPrices(ctx, reviewer.OrganizationID, schoolID, validFrom, nil); err != nil {
+	if err := c.keepBilledPrices(ctx, reviewer.OrganizationID, schoolID, validFrom, nil, expectedVersion); err != nil {
 		return parentbilling.CareTariffs{}, err
 	}
 	deleted, err := c.store.DeleteCarePrices(ctx, reviewer.OrganizationID, schoolID, validFrom)
@@ -464,13 +473,14 @@ func (c *CareBilling) ReleaseCareRun(ctx context.Context, reviewer parentbilling
 	if err != nil {
 		return parentbilling.CareRunDetail{}, err
 	}
-	if err := c.store.InsertCareRunHolds(ctx, reviewer.OrganizationID, run.ID.Int64(), holdSnapshot(month.duplicates)); err != nil {
+	if err := c.store.InsertCareRunHolds(ctx, reviewer.OrganizationID, run.ID.Int64(), releaseSnapshot(month.duplicates, month.billedChildren)); err != nil {
 		return parentbilling.CareRunDetail{}, err
 	}
 	if err := c.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventRelease,
 		map[string]any{"document_count": len(month.invoices), "total_cents": month.total(), "month_rule": rule,
 			"free_of_charge":     month.free,
 			"duplicate_children": duplicateChildren(month.duplicates), "issued_on": issuedOn.String(),
+			"billed_children":       len(month.billedChildren),
 			"excluded_contract_ids": excludedContracts(month.excluded),
 			"excluded_invoices":     excludedInvoices(month.excluded)}); err != nil {
 		return parentbilling.CareRunDetail{}, fmt.Errorf("parent billing: record care release: %w", err)
@@ -632,8 +642,8 @@ func (c *CareBilling) issuedCareChildren(ctx context.Context, organizationID int
 // range the release uses.
 func (c *CareBilling) detail(ctx context.Context, reviewer parentbilling.HolidayReviewer, run parentbilling.CareRun) (parentbilling.CareRunDetail, error) {
 	detail := parentbilling.CareRunDetail{CareRun: run, Unpriced: []parentbilling.CareUnpriced{}, Duplicates: []parentbilling.CareDuplicate{},
-		JoinedChildren: []parentbilling.CareJoinedChild{},
-		MealGaps:       []parentbilling.CareMealGap{}, MealUnbilled: []parentbilling.CareMealUnbilled{}, MealChanged: []parentbilling.CareMealChanged{}}
+		JoinedChildren: []parentbilling.CareJoinedChild{}, BilledChildren: []parentbilling.CareBilledChild{},
+		MealGaps: []parentbilling.CareMealGap{}, MealUnbilled: []parentbilling.CareMealUnbilled{}, MealChanged: []parentbilling.CareMealChanged{}}
 	if run.Status == parentbilling.RunDiscarded {
 		return c.discardedDetail(ctx, reviewer.OrganizationID, detail)
 	}
@@ -680,14 +690,14 @@ func (c *CareBilling) releasedDetail(ctx context.Context, organizationID int64, 
 	if err != nil {
 		return err
 	}
-	detail.Duplicates = holdView(holds)
+	detail.Duplicates, detail.BilledChildren = holdView(holds), billedHoldView(holds)
 	detail.DocumentKind = issuedCareDocumentKind(invoices)
 	// The dates of the release, which its invoices copied.
 	payments, err := readInvoicePayments(ctx, c.store, organizationID, detail.ID.Int64(), 0, parentbilling.DebtorNumberScopePayer, false)
 	if err != nil {
 		return err
 	}
-	detail.DueDates = payments.run.InPaymentOrder()
+	detail.DueDates, detail.DueDatesVersion = payments.run.InPaymentOrder(), runDueDatesVersion(payments.run)
 	cancellations, err := c.store.CareRunCancellations(ctx, organizationID, detail.ID.Int64())
 	if err != nil {
 		return err
@@ -736,7 +746,8 @@ func versionContracts(versions []parentbilling.CareContractVersion) []int64 {
 }
 
 // shownContracts names the contracts whose child a detail shows: on an
-// invoice, without a price, as a duplicate or joined across schools.
+// invoice, without a price, as a duplicate, joined across schools or held
+// for an issued invoice, with the contract of that invoice (#7892).
 func shownContracts(detail parentbilling.CareRunDetail) []int64 {
 	ids := []int64{}
 	for _, invoice := range detail.Invoices {
@@ -753,7 +764,7 @@ func shownContracts(detail parentbilling.CareRunDetail) []int64 {
 	for _, child := range detail.JoinedChildren {
 		ids = appendContracts(ids, child.Contracts)
 	}
-	return ids
+	return appendBilledChildren(ids, detail.BilledChildren)
 }
 
 // appendContracts adds the contracts not named yet.

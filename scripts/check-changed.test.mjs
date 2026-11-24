@@ -42,6 +42,9 @@ function unassignedSourceTests(files, selected, exceptions = []) {
 const fixtureExceptions = (file, names, reason = 'Synthetic temporary fixtures only; no repository input.') =>
   names.map(name => ({ file, name, reason }));
 const sourceTestExceptions = [
+  ...fixtureExceptions('formatted_identifier_ratchet_test.go', [
+    'TestFormattedIdentifierScannerFollowsIntegerFields',
+  ], 'Parses an inline Go fixture; no repository input.'),
   ...fixtureExceptions('calendar_date_alias_test.go', [
     'TestCalendarDateAliasTypeIdentity',
     'TestCanonicalCalendarDateTypeIdentity',

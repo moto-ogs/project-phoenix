@@ -14,6 +14,7 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -188,7 +189,9 @@ func TestUpdateCurrentProfileEvictsIdentity(t *testing.T) {
 	require.Error(t, err)
 
 	first, last := "Frisch", "Angelegt"
-	profile, err := caller.UpdateProfile(ctx, identityaccess.CallerProfileUpdate{FirstName: &first, LastName: &last})
+	profile, err := caller.UpdateProfile(ctx, identityaccess.CallerProfileUpdate{
+		FirstName: &first, LastName: &last, ExpectedVersion: readstate.Absent,
+	})
 	require.NoError(t, err)
 	require.NotNil(t, profile.Person,
 		"the post-write re-read must see the freshly created person, not the memoized 'not linked' outcome")

@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	identityoperator "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator"
 	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The account school-access routes are Identity & Access routes (#3252)
@@ -26,7 +27,7 @@ type mockAccountAccess struct {
 	identityaccess.OperatorAuthentication
 	listFn   func(context.Context, int64) ([]identityaccess.AccountTenantAccess, error)
 	grantFn  func(context.Context, identityaccess.GrantAccountTenantAccess) ([]identityaccess.AccountTenantAccess, error)
-	updateFn func(ctx context.Context, accountID, schoolID, roleID, operatorID int64, clientIP string) ([]identityaccess.AccountTenantAccess, error)
+	updateFn func(ctx context.Context, accountID, schoolID, roleID, operatorID int64, clientIP, expectedVersion string) ([]identityaccess.AccountTenantAccess, error)
 	revokeFn func(ctx context.Context, accountID, schoolID, operatorID int64, clientIP string) ([]identityaccess.AccountTenantAccess, error)
 }
 
@@ -48,9 +49,9 @@ func (m *mockAccountAccess) GrantAccountTenantAccess(ctx context.Context, reques
 	return nil, nil
 }
 
-func (m *mockAccountAccess) UpdateAccountTenantRole(ctx context.Context, accountID, schoolID, roleID, operatorID int64, clientIP string) ([]identityaccess.AccountTenantAccess, error) {
+func (m *mockAccountAccess) UpdateAccountTenantRole(ctx context.Context, accountID, schoolID, roleID, operatorID int64, clientIP, expectedVersion string) ([]identityaccess.AccountTenantAccess, error) {
 	if m.updateFn != nil {
-		return m.updateFn(ctx, accountID, schoolID, roleID, operatorID, clientIP)
+		return m.updateFn(ctx, accountID, schoolID, roleID, operatorID, clientIP, expectedVersion)
 	}
 	return nil, nil
 }
@@ -149,7 +150,7 @@ func TestProvisioningResource_GrantAccountTenantAccess(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	resource.GrantAccountTenantAccess(rr, accountTenantRequest(t, http.MethodPost,
-		`{"school_id":12,"role_id":"9007199254740993","first_name":"  Erika  ","last_name":"Muster"}`,
+		`{"school_id":"12","role_id":"9007199254740993","first_name":"  Erika  ","last_name":"Muster"}`,
 		map[string]string{"accountId": "7"}))
 
 	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
@@ -165,7 +166,7 @@ func TestProvisioningResource_GrantAccountTenantAccess_RequiresSchoolAndRole(t *
 		},
 	})
 
-	for _, body := range []string{`{"role_id":3}`, `{"school_id":12}`} {
+	for _, body := range []string{`{"role_id":"3"}`, `{"school_id":"12"}`} {
 		rr := httptest.NewRecorder()
 		resource.GrantAccountTenantAccess(rr, accountTenantRequest(t, http.MethodPost, body, map[string]string{"accountId": "7"}))
 		assert.Equal(t, http.StatusBadRequest, rr.Code, body)
@@ -183,7 +184,7 @@ func TestProvisioningResource_GrantAccountTenantAccess_ConflictIsSurfaced(t *tes
 
 	rr := httptest.NewRecorder()
 	resource.GrantAccountTenantAccess(rr, accountTenantRequest(t, http.MethodPost,
-		`{"school_id":12,"role_id":3}`, map[string]string{"accountId": "7"}))
+		`{"school_id":"12","role_id":"3"}`, map[string]string{"accountId": "7"}))
 
 	assert.Equal(t, http.StatusConflict, rr.Code)
 }
@@ -199,7 +200,7 @@ func TestProvisioningResource_GrantAccountTenantAccess_InvalidRoleMessageSurvive
 
 	rr := httptest.NewRecorder()
 	resource.GrantAccountTenantAccess(rr, accountTenantRequest(t, http.MethodPost,
-		`{"school_id":12,"role_id":3}`, map[string]string{"accountId": "7"}))
+		`{"school_id":"12","role_id":"3"}`, map[string]string{"accountId": "7"}))
 
 	require.Equal(t, http.StatusBadRequest, rr.Code)
 	body := decodeBody(t, rr)
@@ -212,20 +213,39 @@ func TestProvisioningResource_UpdateAccountTenantRole(t *testing.T) {
 	t.Parallel()
 
 	resource := newAccountAccessResource(&mockAccountAccess{
-		updateFn: func(_ context.Context, accountID, schoolID, roleID, operatorID int64, _ string) ([]identityaccess.AccountTenantAccess, error) {
+		updateFn: func(_ context.Context, accountID, schoolID, roleID, operatorID int64, _, expectedVersion string) ([]identityaccess.AccountTenantAccess, error) {
 			assert.Equal(t, int64(7), accountID)
 			assert.Equal(t, int64(12), schoolID)
 			assert.Equal(t, int64(9007199254740993), roleID)
 			assert.Equal(t, int64(42), operatorID)
+			assert.Equal(t, "roles-read", expectedVersion)
 			return []identityaccess.AccountTenantAccess{}, nil
 		},
 	})
 
 	rr := httptest.NewRecorder()
-	resource.UpdateAccountTenantRole(rr, accountTenantRequest(t, http.MethodPut, `{"role_id":"9007199254740993"}`,
+	resource.UpdateAccountTenantRole(rr, accountTenantRequest(t, http.MethodPut, `{"role_id":"9007199254740993","expected_version":"roles-read"}`,
 		map[string]string{"accountId": "7", "tenantId": "12"}))
 
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+}
+
+// A role change from an older listing answers the general refusal (ADR 0311).
+func TestProvisioningResource_UpdateAccountTenantRole_RefusesChangedRoles(t *testing.T) {
+	t.Parallel()
+
+	resource := newAccountAccessResource(&mockAccountAccess{
+		updateFn: func(context.Context, int64, int64, int64, int64, string, string) ([]identityaccess.AccountTenantAccess, error) {
+			return nil, readstate.ErrChanged
+		},
+	})
+
+	rr := httptest.NewRecorder()
+	resource.UpdateAccountTenantRole(rr, accountTenantRequest(t, http.MethodPut, `{"role_id":"5","expected_version":"old"}`,
+		map[string]string{"accountId": "7", "tenantId": "12"}))
+
+	require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
+	assert.Equal(t, readstate.ChangedCode, decodeBody(t, rr)["code"])
 }
 
 func TestProvisioningResource_UpdateAccountTenantRole_RequiresRole(t *testing.T) {

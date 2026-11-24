@@ -65,7 +65,7 @@ func TestTraegerLoginSetsUpTheSecondFactorBeforeTheSession(t *testing.T) {
 	require.NotEmpty(t, session.RefreshToken)
 	claims := traegerTokenClaims(t, session.AccessToken)
 	assert.Equal(t, "org", claims["scope"])
-	assert.Equal(t, float64(organization), claims["org_id"])
+	assert.Equal(t, strconv.FormatInt(organization, 10), claims["org_id"])
 	rec, schools := traegerSchools(t, portal, session.AccessToken)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Len(t, schools, 1)
@@ -80,7 +80,7 @@ func TestTraegerLoginSetsUpTheSecondFactorBeforeTheSession(t *testing.T) {
 		"challenge_token": again.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email), "organization_id": strconv.FormatInt(organization, 10),
 	})
 	require.Equal(t, http.StatusOK, code)
-	assert.Equal(t, float64(organization), traegerTokenClaims(t, verified.AccessToken)["org_id"])
+	assert.Equal(t, strconv.FormatInt(organization, 10), traegerTokenClaims(t, verified.AccessToken)["org_id"])
 }
 
 func TestTraegerSecondFactorRefusesForeignChallengesAndCodes(t *testing.T) {

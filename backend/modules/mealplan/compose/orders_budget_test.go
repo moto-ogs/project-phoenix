@@ -29,7 +29,7 @@ func TestOrders_QueryBudget(t *testing.T) {
 	addChildren := func(count int) {
 		for range count {
 			student := testpkg.CreateTestStudent(t, db, "Budget", "Kind", "2a")
-			_, err := register.ReplaceParticipationSchedule(ctx, mealplan.ReplaceParticipationSchedule{StudentID: student.ID, GuardianAccountID: account.ID, Weekdays: []mealplan.Weekday{mealplan.Monday, mealplan.Tuesday, mealplan.Wednesday}})
+			_, err := register.ReplaceParticipationSchedule(ctx, AsRead(t, register, ctx, mealplan.ReplaceParticipationSchedule{StudentID: student.ID, GuardianAccountID: account.ID, Weekdays: []mealplan.Weekday{mealplan.Monday, mealplan.Tuesday, mealplan.Wednesday}}))
 			require.NoError(t, err)
 		}
 	}

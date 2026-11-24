@@ -74,16 +74,6 @@
       "target_class": "orm-sql"
     },
     {
-      "id": "student-deletion.public.crypto",
-      "description": "The deletion preview fingerprint is a SHA-256 digest compared in constant time (#2710).",
-      "scopes": [
-        "production"
-      ],
-      "source_owner": "student-deletion",
-      "source_role": "public",
-      "target_class": "crypto"
-    },
-    {
       "id": "student-deletion.http.tenant-runtime.http",
       "description": "Owner-owned HTTP transport uses native capabilities and runtime contracts (#4079, ADR 0056).",
       "scopes": [

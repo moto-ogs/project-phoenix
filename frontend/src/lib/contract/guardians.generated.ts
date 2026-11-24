@@ -40,11 +40,11 @@ export interface pendingApprovalResponse {
 }
 
 export const pendingApprovalResponseSchema: z.ZodType<pendingApprovalResponse, unknown> = object<pendingApprovalResponse>({
-  id: str,
-  guardian_profile_id: str,
+  id: int64String,
+  guardian_profile_id: int64String,
   guardian_name: str,
   guardian_email: optional(str),
-  student_id: optional(str),
+  student_id: optional(int64String),
   student_name: optional(str),
   requested_by_email: optional(str),
   created_at: instant,
@@ -65,10 +65,10 @@ export interface PaymentOverviewRow {
 }
 
 export const PaymentOverviewRowSchema: z.ZodType<PaymentOverviewRow, unknown> = object<PaymentOverviewRow>({
-  student_id: str,
+  student_id: int64String,
   student_name: str,
   school_class: str,
-  guardian_id: nullable(str),
+  guardian_id: nullable(int64String),
   guardian_name: str,
   relationship_type: str,
   account_holder: str,
@@ -181,6 +181,7 @@ export interface GuardianWithRelationship {
   emergency_priority: number;
   is_payer: boolean;
   account_status: string;
+  version: string;
 }
 
 export const GuardianWithRelationshipSchema: z.ZodType<GuardianWithRelationship, unknown> = object<GuardianWithRelationship>({
@@ -196,6 +197,7 @@ export const GuardianWithRelationshipSchema: z.ZodType<GuardianWithRelationship,
   emergency_priority: safeInt,
   is_payer: bool,
   account_status: str,
+  version: str,
 });
 
 /** Go: users.GuardianDeletePreview */
@@ -209,7 +211,7 @@ export interface GuardianDeletePreview {
 export const GuardianDeletePreviewSchema: z.ZodType<GuardianDeletePreview, unknown> = object<GuardianDeletePreview>({
   linked_count: safeInt,
   affected_names: nullable(arr(str)),
-  affected_link_ids: nullable(arr(str)),
+  affected_link_ids: nullable(arr(int64String)),
   warning: str,
 });
 
@@ -218,12 +220,14 @@ export interface GuardianPaymentMaskedResponse {
   guardian_id: string;
   iban_masked: string | null;
   account_holder: string | null;
+  version: string;
 }
 
 export const GuardianPaymentMaskedResponseSchema: z.ZodType<GuardianPaymentMaskedResponse, unknown> = object<GuardianPaymentMaskedResponse>({
-  guardian_id: str,
+  guardian_id: int64String,
   iban_masked: nullable(str),
   account_holder: nullable(str),
+  version: str,
 });
 
 /** Go: users.GuardianCreateRequest */
@@ -244,6 +248,8 @@ export interface bulkInviteRequest {
   student_ids?: string[] | null;
   resend_open?: boolean;
   dry_run?: boolean;
+  notify_active?: boolean;
+  expected_fingerprint?: string;
 }
 
 /** Go: users.bulkInviteProblemResponse */
@@ -255,7 +261,7 @@ export interface bulkInviteProblemResponse {
 }
 
 export const bulkInviteProblemResponseSchema: z.ZodType<bulkInviteProblemResponse, unknown> = object<bulkInviteProblemResponse>({
-  guardian_profile_id: str,
+  guardian_profile_id: int64String,
   guardian_name: str,
   student_names: nullable(arr(str)),
   reason: str,
@@ -270,7 +276,11 @@ export interface bulkInviteResponse {
   skipped_active: number;
   skipped_open: number;
   skipped_restricted: number;
+  notified: number;
+  already_notified: number;
+  without_visible_care: number;
   problems: bulkInviteProblemResponse[] | null;
+  fingerprint: string;
 }
 
 export const bulkInviteResponseSchema: z.ZodType<bulkInviteResponse, unknown> = object<bulkInviteResponse>({
@@ -281,7 +291,11 @@ export const bulkInviteResponseSchema: z.ZodType<bulkInviteResponse, unknown> = 
   skipped_active: safeInt,
   skipped_open: safeInt,
   skipped_restricted: safeInt,
+  notified: safeInt,
+  already_notified: safeInt,
+  without_visible_care: safeInt,
   problems: nullable(arr(bulkInviteProblemResponseSchema)),
+  fingerprint: str,
 });
 
 /** Go: users.PaymentExportRequest */
@@ -359,8 +373,8 @@ export interface inviteToStudentResponse {
 
 export const inviteToStudentResponseSchema: z.ZodType<inviteToStudentResponse, unknown> = object<inviteToStudentResponse>({
   outcome: str,
-  guardian_profile_id: str,
-  invitation_id: optional(str),
+  guardian_profile_id: int64String,
+  invitation_id: optional(int64String),
   existing_role: optional(str),
   mail_held: optional(bool),
 });
@@ -387,12 +401,14 @@ export interface GuardianPaymentRevealResponse {
   guardian_id: string;
   iban: string | null;
   account_holder: string | null;
+  version: string;
 }
 
 export const GuardianPaymentRevealResponseSchema: z.ZodType<GuardianPaymentRevealResponse, unknown> = object<GuardianPaymentRevealResponse>({
-  guardian_id: str,
+  guardian_id: int64String,
   iban: nullable(str),
   account_holder: nullable(str),
+  version: str,
 });
 
 /** Go: users.PhoneNumberCreateRequest */
@@ -414,11 +430,6 @@ export interface StudentGuardianUpdateRequest {
   emergency_priority?: number | null;
 }
 
-/** Go: users.StudentPayerRequest */
-export interface StudentPayerRequest {
-  guardian_id?: string | null;
-}
-
 /** Go: users.GuardianUpdateRequest */
 export interface GuardianUpdateRequest {
   first_name?: string | null;
@@ -432,11 +443,34 @@ export interface GuardianUpdateRequest {
   notes?: string | null;
 }
 
+/** Go: users.GuardianEntryPhone */
+export interface GuardianEntryPhone {
+  id?: string | null;
+  phone_number?: string;
+  phone_type?: string;
+  label?: string | null;
+  is_primary?: boolean;
+}
+
+/** Go: users.GuardianEntryRequest */
+export interface GuardianEntryRequest {
+  guardian?: GuardianUpdateRequest;
+  relationship?: StudentGuardianUpdateRequest;
+  phone_numbers?: GuardianEntryPhone[] | null;
+  expected_version?: string;
+}
+
+/** Go: users.StudentPayerRequest */
+export interface StudentPayerRequest {
+  guardian_id?: string | null;
+}
+
 /** Go: users.GuardianPaymentRequest */
 export interface GuardianPaymentRequest {
   iban?: string | null;
   account_holder?: string | null;
   note?: string;
+  expected_version?: string;
 }
 
 /** Go: users.PhoneNumberUpdateRequest */
@@ -446,19 +480,6 @@ export interface PhoneNumberUpdateRequest {
   label?: string | null;
   is_primary?: boolean | null;
   priority?: number | null;
-}
-
-/** Query of DELETE /api/guardians/{id} */
-export interface DeleteGuardiansIdQuery {
-  expected_link_ids?: string;
-  force?: string;
-}
-
-/** Query of GET /api/guardians/search */
-export interface GetGuardiansSearchQuery {
-  page?: number;
-  page_size?: number;
-  q?: string;
 }
 
 export const routes = {
@@ -472,7 +493,10 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/guardians/{id}",
     portals: ["tenant"],
-    query: ["expected_link_ids", "force"],
+    query: {
+      "expected_link_ids": { kind: "string" },
+      "force": { kind: "string" },
+    },
     response: noData,
   },
   "DELETE /api/guardians/{id}/email-block": {
@@ -491,6 +515,7 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/guardians/{id}/phone-numbers/{phoneId}",
     portals: ["tenant"],
+    deprecated: true,
     response: noData,
   },
   "GET /api/guardians/invitations/pending-approval": {
@@ -509,7 +534,11 @@ export const routes = {
     method: "GET",
     pattern: "/api/guardians/search",
     portals: ["tenant"],
-    query: ["page", "page_size", "q"],
+    query: {
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+      "q": { kind: "string" },
+    },
     response: paginated(z.array(GuardianPickerResponseSchema)),
   },
   "GET /api/guardians/students/{studentId}/email-status": {
@@ -631,14 +660,23 @@ export const routes = {
     method: "POST",
     pattern: "/api/guardians/{id}/phone-numbers/{phoneId}/set-primary",
     portals: ["tenant"],
+    deprecated: true,
     response: success(PhoneNumberResponseSchema),
   },
   "PUT /api/guardians/relationships/{relationshipId}": {
     method: "PUT",
     pattern: "/api/guardians/relationships/{relationshipId}",
     portals: ["tenant"],
+    deprecated: true,
     request: requestBody<StudentGuardianUpdateRequest>(),
     response: noData,
+  },
+  "PUT /api/guardians/students/{studentId}/guardians/{guardianId}": {
+    method: "PUT",
+    pattern: "/api/guardians/students/{studentId}/guardians/{guardianId}",
+    portals: ["tenant"],
+    request: requestBody<GuardianEntryRequest>(),
+    response: success(GuardianWithRelationshipSchema),
   },
   "PUT /api/guardians/students/{studentId}/payer": {
     method: "PUT",
@@ -651,6 +689,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/guardians/{id}",
     portals: ["tenant"],
+    deprecated: true,
     request: requestBody<GuardianUpdateRequest>(),
     response: success(GuardianResponseSchema),
   },
@@ -665,6 +704,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/guardians/{id}/phone-numbers/{phoneId}",
     portals: ["tenant"],
+    deprecated: true,
     request: requestBody<PhoneNumberUpdateRequest>(),
     response: success(PhoneNumberResponseSchema),
   },

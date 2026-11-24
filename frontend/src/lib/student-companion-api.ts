@@ -70,30 +70,19 @@ export function mergeCompanionConfirmations(
 }
 
 /**
- * Order-independent fingerprint of a companion list, so reordering (or a
- * re-fetch handing the same links back in another order) is not mistaken for an
- * edit.
+ * Order-independent key of a companion list, so reordering (or a re-fetch
+ * handing the same links back in another order) is not mistaken for an edit.
  *
  * Every form that can submit the list needs it: the submitted list REPLACES the
  * stored one, so it may only travel when the user actually edited it — sending
  * the loaded snapshot on an unrelated save would overwrite whatever someone
  * else changed in the meantime.
- */
-/**
- * Orders two entries by code point, exactly like Go's sort.Strings.
  *
- * Deliberately NOT localeCompare: the fingerprint is compared byte for byte
- * against the one CompanionLinksFingerprint builds in
- * backend/models/users/student_companion.go, and a collator reorders the ":"
- * and "," separators the entries are built from — every save would then be
- * refused as a stale list.
+ * It only compares two lists in this browser. The state a save claims is the
+ * `fingerprint` the read returned beside the list (ADR 0311); the browser
+ * never builds that one.
  */
-function compareCodePoints(a: string, b: string): number {
-  if (a < b) return -1;
-  return a > b ? 1 : 0;
-}
-
-export function companionsFingerprint(companions: StudentCompanion[]): string {
+export function companionListKey(companions: StudentCompanion[]): string {
   return companions
     .map((companion) => {
       const days = ALL_COMPANION_WEEKDAYS.filter((day) =>
@@ -101,7 +90,7 @@ export function companionsFingerprint(companions: StudentCompanion[]): string {
       );
       return `${companion.companion_student_id}:${days.join(",")}`;
     })
-    .sort(compareCodePoints)
+    .sort()
     .join("|");
 }
 
@@ -187,24 +176,38 @@ export function notifyStudentCompanionDisplayChanged(): void {
   for (const listener of [...companionDisplayListeners]) listener();
 }
 
+/**
+ * A child's Laufgemeinschaft as stored, with the fingerprint of exactly this
+ * read: a save that replaces or trims the links sends it back as
+ * `companions_fingerprint`, and the backend refuses it when someone changed
+ * the links since (`general.changed_since_read`, ADR 0311).
+ */
+export interface StudentCompanionList {
+  companions: StudentCompanion[];
+  fingerprint: string;
+}
+
 export async function fetchStudentCompanions(
   studentId: string,
-): Promise<StudentCompanion[]> {
-  const companions = await bffJson(
+): Promise<StudentCompanionList> {
+  const list = await bffJson(
     "tenant",
-    "GET /api/students/{id}/companions",
+    "GET /api/students/{id}/companion-links",
     {
       params: { id: studentId },
     },
   );
-  return companions.map((companion) => ({
-    ...companion,
-    // A weekday this build does not know drops out.
-    weekdays: (companion.weekdays ?? []).flatMap((day) => {
-      const known = knownEnum(ALL_COMPANION_WEEKDAYS, day);
-      return known ? [known] : [];
-    }),
-  }));
+  return {
+    fingerprint: list.fingerprint,
+    companions: (list.companions ?? []).map((companion) => ({
+      ...companion,
+      // A weekday this build does not know drops out.
+      weekdays: (companion.weekdays ?? []).flatMap((day) => {
+        const known = knownEnum(ALL_COMPANION_WEEKDAYS, day);
+        return known ? [known] : [];
+      }),
+    })),
+  };
 }
 
 /** Full name of a companion, falling back to the id when names are missing. */

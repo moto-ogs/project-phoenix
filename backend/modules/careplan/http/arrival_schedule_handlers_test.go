@@ -5,16 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func createStudentsAPITestStaffID(t *testing.T, tc *testContext) int64 {
@@ -135,6 +137,7 @@ func TestUpdateStudentArrivalSchedules(t *testing.T) {
 				{"weekday": 1, "expected_arrival": "07:45"},
 				{"weekday": 3, "expected_arrival": "08:00"},
 			},
+			"expected_version": weeklyPlanVersion(t, tc, student.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/arrival-schedules", student.ID), body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
@@ -159,7 +162,8 @@ func TestUpdateStudentArrivalSchedules(t *testing.T) {
 		})
 
 		body := map[string]any{
-			"schedules": []map[string]any{},
+			"schedules":        []map[string]any{},
+			"expected_version": weeklyPlanVersion(t, tc, student.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/arrival-schedules", student.ID), body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
@@ -190,7 +194,7 @@ func TestUpdateStudentArrivalSchedules(t *testing.T) {
 	t.Run("bad_request_empty_time_without_class_selector", func(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, tc.db, "BulkEmptyTime", "Test", "BET1")
 		body := map[string]any{
-			"student_ids": []int64{student.ID},
+			"student_ids": []string{fmt.Sprint(student.ID)},
 			"schedules": []map[string]any{
 				{"weekday": 1, "expected_arrival": ""},
 			},
@@ -227,6 +231,7 @@ func TestUpdateStudentArrivalSchedules(t *testing.T) {
 			"schedules": []map[string]any{
 				{"weekday": 1},
 			},
+			"expected_version": weeklyPlanVersion(t, tc, student.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/arrival-schedules", student.ID), body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
@@ -864,8 +869,9 @@ func TestUpdateStudentArrivalNote(t *testing.T) {
 		})
 
 		body := map[string]any{
-			"note_date": "2026-04-15",
-			"content":   "Updated content",
+			"note_date":        "2026-04-15",
+			"content":          "Updated content",
+			"expected_version": arrivalNoteVersion(t, tc, student.ID, note.ID, "2026-04-15"),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/arrival-notes/%d", student.ID, note.ID), body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
@@ -966,7 +972,7 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 
 		body := map[string]any{
 			"school_class": "1a",
-			"group_id":     group.ID,
+			"group_id":     fmt.Sprint(group.ID),
 			"schedules": []map[string]any{
 				{"weekday": 1, "expected_arrival": "08:00"},
 			},
@@ -979,8 +985,8 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 
 	t.Run("bad_request_with_group_and_student_filters", func(t *testing.T) {
 		body := map[string]any{
-			"group_id":    42,
-			"student_ids": []int64{1, 2},
+			"group_id":    "42",
+			"student_ids": []string{fmt.Sprint(1), fmt.Sprint(2)},
 			"schedules": []map[string]any{
 				{"weekday": 1, "expected_arrival": "08:00"},
 			},
@@ -1021,7 +1027,8 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 		_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "BulkArr", "Teacher")
 
 		body := map[string]any{
-			"school_class": "BAR1",
+			"school_class":     "BAR1",
+			"expected_version": classArrivalVersion(t, tc, "BAR1"),
 			"schedules": []map[string]any{
 				{"weekday": 1, "expected_arrival": "07:45"},
 				{"weekday": 3, "expected_arrival": "08:15"},
@@ -1033,6 +1040,26 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
 	})
 
+	t.Run("class_save_against_an_outdated_read_is_refused", func(t *testing.T) {
+		testpkg.CreateTestStudent(t, tc.db, "BulkArrivalStale", "Test", "BAR2")
+		_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "BulkArrStale", "Teacher")
+		save := func(version string, clock string) *httptest.ResponseRecorder {
+			req := testutil.NewAuthenticatedRequest(t, "POST", "/arrival-schedules/bulk", map[string]any{
+				"school_class": "BAR2", "expected_version": version,
+				"schedules": []map[string]any{{"weekday": 2, "expected_arrival": clock}},
+			})
+			return authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
+		}
+		unstored := classArrivalVersion(t, tc, "BAR2")
+		require.Equal(t, http.StatusOK, save(unstored, "12:00").Code)
+
+		rr := save(unstored, "13:00")
+		require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
+		assert.Contains(t, rr.Body.String(), `"code":"general.changed_since_read"`)
+		read := authExec(t, tc, testutil.NewRequest("GET", "/class-arrival-times/BAR2", nil), testutil.AdminTestClaims(1), []string{"users:read"})
+		assert.Contains(t, read.Body.String(), `"tue":"12:00"`)
+	})
+
 	t.Run("success_with_group_filter", func(t *testing.T) {
 		group := testpkg.CreateTestEducationGroup(t, tc.db, "BulkArrivalHandlerGroup")
 		student := testpkg.CreateTestStudent(t, tc.db, "BulkGroupArrival", "Test", "BGAR1")
@@ -1041,7 +1068,7 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 		_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "BulkGroupArr", "Teacher")
 
 		body := map[string]any{
-			"group_id": group.ID,
+			"group_id": fmt.Sprint(group.ID),
 			"schedules": []map[string]any{
 				{"weekday": 2, "expected_arrival": "09:20"},
 			},
@@ -1060,7 +1087,7 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 		_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "BulkExplicit", "Teacher")
 
 		body := map[string]any{
-			"student_ids": []int64{student1.ID, student2.ID},
+			"student_ids": []string{fmt.Sprint(student1.ID), fmt.Sprint(student2.ID)},
 			"schedules": []map[string]any{
 				{"weekday": 5, "expected_arrival": "10:30"},
 			},
@@ -1094,9 +1121,11 @@ func TestStaffArrivalWrite_BroadcastsArrivalScheduleChanged(t *testing.T) {
 	t.Run("weekly_schedule_update", func(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, tc.db, "ArrCast", "Weekly", "AC1")
 
+		version := weeklyPlanVersion(t, tc, student.ID)
 		tc.broadcaster.Reset()
 		body := map[string]any{
-			"schedules": []map[string]any{{"weekday": 1, "expected_arrival": "07:45"}},
+			"schedules":        []map[string]any{{"weekday": 1, "expected_arrival": "07:45"}},
+			"expected_version": version,
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/arrival-schedules", student.ID), body)
 		rr := authExec(t, tc, req, claims, []string{"admin:*"})

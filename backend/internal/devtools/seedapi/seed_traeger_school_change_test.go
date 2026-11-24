@@ -1,8 +1,11 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -68,4 +71,73 @@ func TestSeedSchoolChangeRunsOnce(t *testing.T) {
 		require.NoError(t, err, name)
 		assert.Equal(t, name == "repeated seed", done, name)
 	}
+}
+
+// The run of the month after the change stays open at the new school: the
+// Jahresbescheid of the old school assesses that month, so the run holds the
+// child back (#7892). In December no notice assesses a next month.
+func TestSeedSchoolChangeLeavesTheNextMonthOpen(t *testing.T) {
+	t.Parallel()
+	var started []string
+	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
+		w.Header().Set("Content-Type", "application/json")
+		require.Equal(t, "/traeger/care-billing-runs/", r.URL.Path)
+		if r.Method == http.MethodGet {
+			_, _ = fmt.Fprint(w, `{"data":{"runs":[{"id":3,"billing_month":"2026-11-01","status":"calculated","school_ids":[6]}]}}`)
+			return
+		}
+		started = append(started, r.Method)
+		_, _ = fmt.Fprint(w, `{"data":{"id":4}}`)
+	})
+	defer srv.Close()
+	client := newTestClient(srv.URL, false)
+
+	require.NoError(t, seedSchoolChangeHeldRun(client, AuthRef{}, 6, calendar.NewDate(2026, 12, 1)))
+	assert.Empty(t, started, "a change in December starts no run of January")
+	require.NoError(t, seedSchoolChangeHeldRun(client, AuthRef{}, 6, calendar.NewDate(2026, 11, 1)))
+	assert.Equal(t, []string{http.MethodPost}, started, "the run of December is started for the school")
+}
+
+// A seed that crosses midnight before the school change concluded the old
+// contract on the new day, on the server's clock. The step dates the change,
+// the receipt and the end of the termination from its own clock, not from
+// the frozen seed day, so the receipt never lies before the conclusion; it
+// failed with care_contract.field_invalid before.
+func TestSeedSchoolChangeDatesFromTheClockPastMidnight(t *testing.T) {
+	t.Parallel()
+	berlin := seedBerlinLocation()
+	rt := &Runtime{
+		Bootstrap:          &bootstrapSeedState{OrganizationID: 7},
+		FixedSeeder:        &FixedSeeder{seedDay: seedDateAt(time.Date(2026, 11, 24, 23, 50, 0, 0, berlin))},
+		AdditionalProfiles: map[string]*SeedProfile{ManualProfileKey: {Organization: SeedOrganizationRef{ID: 7}}},
+	}
+	step := seedTraegerSchoolChangeStep{now: func() time.Time { return time.Date(2026, 11, 25, 0, 1, 0, 0, berlin) }}
+
+	manual, today, ok := seedSchoolChangeDay(rt, step.today())
+	require.True(t, ok)
+	assert.Same(t, rt.AdditionalProfiles[ManualProfileKey], manual)
+	assert.Equal(t, calendar.NewDate(2026, 11, 25), today, "the day the server concluded the old contract on")
+
+	var bodies []map[string]any
+	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
+		var body map[string]any
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		bodies = append(bodies, body)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprint(w, `{"data":{}}`)
+	})
+	defer srv.Close()
+	require.NoError(t, seedSchoolChangeEnd(newTestClient(srv.URL, false), AuthRef{}, 9, today))
+	require.Len(t, bodies, 2)
+	assert.Equal(t, "2026-11-25", bodies[0]["received_on"])
+	assert.Equal(t, "2026-11-25", bodies[1]["ends_on"])
+
+	// Past midnight into a new month the step changes within that month;
+	// on the last day of a month it moves no child.
+	rt.FixedSeeder.seedDay = seedDateAt(time.Date(2026, 11, 30, 23, 50, 0, 0, berlin))
+	_, today, ok = seedSchoolChangeDay(rt, calendar.NewDate(2026, 12, 1))
+	require.True(t, ok)
+	assert.Equal(t, calendar.NewDate(2026, 12, 1), today)
+	_, _, ok = seedSchoolChangeDay(rt, calendar.NewDate(2026, 11, 30))
+	assert.False(t, ok)
 }

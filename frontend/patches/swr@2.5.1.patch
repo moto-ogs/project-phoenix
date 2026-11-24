@@ -1,0 +1,54 @@
+diff --git a/dist/config-context-ext53wcz.mjs b/dist/config-context-ext53wcz.mjs
+index d0e8b59275322edcacf745e39526357264a5e2d7..bc5629c8dabeda802cf57c873984c38991b30705 100644
+--- a/dist/config-context-ext53wcz.mjs
++++ b/dist/config-context-ext53wcz.mjs
+@@ -235,8 +235,11 @@ const serialize = (key)=>{
+ let __timestamp = 0;
+ const getTimestamp = ()=>++__timestamp;
+ 
+-async function internalMutate(...args) {
+-    const [cache, _key, _data, _opts] = args;
++async function internalMutate(cache, _key, _data, _opts) {
++    // moto patch: Safari 26 throws "undefined is not a function" when this
++    // function destructures a rest parameter, after the write is saved.
++    // Named parameters need no iterator.
++    const argumentCount = arguments.length;
+     // When passing as a boolean, it's explicitly used to disable/enable
+     // revalidation.
+     const options = mergeObjects({
+@@ -288,7 +291,7 @@ async function internalMutate(...args) {
+             return get().data;
+         };
+         // If there is no new data provided, revalidate the key with current state.
+-        if (args.length < 3) {
++        if (argumentCount < 3) {
+             // Revalidate and broadcast state.
+             return startRevalidate();
+         }
+diff --git a/dist/config-context-s960zqob.js b/dist/config-context-s960zqob.js
+index 4edf4e5da9a7e219ecc59744761a27d13c2eb25a..84ffc23fe6a2fa3595a37282314d6dadfaa0eae5 100644
+--- a/dist/config-context-s960zqob.js
++++ b/dist/config-context-s960zqob.js
+@@ -239,8 +239,11 @@ const serialize = (key)=>{
+ let __timestamp = 0;
+ const getTimestamp = ()=>++__timestamp;
+ 
+-async function internalMutate(...args) {
+-    const [cache, _key, _data, _opts] = args;
++async function internalMutate(cache, _key, _data, _opts) {
++    // moto patch: Safari 26 throws "undefined is not a function" when this
++    // function destructures a rest parameter, after the write is saved.
++    // Named parameters need no iterator.
++    const argumentCount = arguments.length;
+     // When passing as a boolean, it's explicitly used to disable/enable
+     // revalidation.
+     const options = mergeObjects({
+@@ -292,7 +295,7 @@ async function internalMutate(...args) {
+             return get().data;
+         };
+         // If there is no new data provided, revalidate the key with current state.
+-        if (args.length < 3) {
++        if (argumentCount < 3) {
+             // Revalidate and broadcast state.
+             return startRevalidate();
+         }

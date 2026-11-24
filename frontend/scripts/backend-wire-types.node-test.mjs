@@ -34,6 +34,54 @@ test("finds a hand-written wire type by its shape, whatever its name", () => {
   ]);
 });
 
+test("finds a copy in an object union branch", () => {
+  const findings = findBackendWireTypes(
+    "x.ts",
+    `
+    type Reply = null | ({ challenge_token: string; masked_email: string });
+    type Domain = { first_name: string } | { last_name: string };
+  `,
+  );
+  assert.deepEqual(summary(findings), [
+    ["shape", "Reply", ["challenge_token", "masked_email"]],
+  ]);
+});
+
+test("does not exempt a wire shape intersected with an unrelated utility type", () => {
+  const findings = findBackendWireTypes(
+    "x.ts",
+    `type Wire = Readonly<object> & {
+      target_school_class: string;
+      target_grade_level: number;
+    };`,
+  );
+  assert.deepEqual(
+    findings.map(({ fields }) => fields),
+    [["target_school_class", "target_grade_level"]],
+  );
+});
+
+test("finds wire shapes inside casts, call type arguments, parameters and returns", () => {
+  const findings = findBackendWireTypes(
+    "x.ts",
+    `
+    void (answer as { student_id: string; role_version: string });
+    void load<{ child_id: string; first_name: string }>();
+    function send(x: { request_id: string; request_kind: string }):
+      { record_id: string; created_at: string } { return load(x); }
+  `,
+  );
+  assert.deepEqual(
+    findings.map(({ fields }) => fields),
+    [
+      ["student_id", "role_version"],
+      ["child_id", "first_name"],
+      ["request_id", "request_kind"],
+      ["record_id", "created_at"],
+    ],
+  );
+});
+
 test("finds renamed and merely aliased generated types", () => {
   const findings = findBackendWireTypes(
     "x.ts",
@@ -41,11 +89,13 @@ test("finds renamed and merely aliased generated types", () => {
     import type { GroupResponse as GroupWire } from "./contract/groups.generated";
     import type * as roomsContract from "~/lib/contract/rooms.generated";
     export type RoomWire = roomsContract.RoomResponse;
+    type ReadOnlyRoom = Readonly<(roomsContract.RoomResponse)>;
     `,
   );
   assert.deepEqual(summary(findings), [
     ["rename", "GroupWire", ["GroupResponse"]],
     ["alias", "RoomWire", ["roomsContract.RoomResponse"]],
+    ["alias", "ReadOnlyRoom", ["Readonly<(roomsContract.RoomResponse)>"]],
   ]);
 });
 

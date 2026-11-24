@@ -1,8 +1,8 @@
 /**
  * API client for the timetable feature.
  *
- * All calls go through Next.js proxy routes under `/api/timetable/*` which
- * inject the JWT server-side. The client mirrors the surface of the backend:
+ * Calls use the generated route keys through the tenant catalog proxy,
+ * which supplies the session token server-side. The client mirrors the surface of the backend:
  * - getWeek(from, to)            → GET    /instances?from=&to=
  * - start(id), complete(id),     → POST   /instances/{id}/{action}
  *   cancel(id), reinstate(id)
@@ -33,6 +33,7 @@ import type {
   ConflictCheckParams,
   ConflictCheckResult,
   CreateInstanceBody,
+  UpdateInstanceBody,
   CreateTemplateBody,
   CreateTemplateResult,
   ConvertInstanceToSeriesBody,
@@ -423,19 +424,21 @@ class TimetableService {
 
   /**
    * POST /api/timetable/templates/{id}/offering-connection — „Mit Angebot
-   * verbinden“ (#5103) for every period of the series from effectiveDate on.
+   * verbinden“ (#5103) for every period of the series from the confirmed
+   * preview's day on. The preview's fingerprint travels along; the server
+   * refuses when other children would join or leave now (ADR 0311).
    */
   async connectTemplateToOffering(
     templateId: string,
     selection: OfferingSelection,
-    effectiveDate: string,
+    preview: Pick<OfferingPreview, "from" | "fingerprint">,
   ): Promise<void> {
     await bffJson(
       "tenant",
       "POST /api/timetable/templates/{id}/offering-connection",
       {
         params: { id: templateId },
-        body: connectionBody(selection, effectiveDate),
+        body: connectionBody(selection, preview),
       },
     );
   }
@@ -601,7 +604,7 @@ class TimetableService {
 
   async update(
     instanceId: string,
-    body: CreateInstanceBody,
+    body: UpdateInstanceBody,
   ): Promise<EnrichedInstance> {
     const raw = await bffJson("tenant", "PUT /api/timetable/instances/{id}", {
       params: { id: instanceId },
@@ -776,13 +779,16 @@ class TimetableService {
    * Cancels and removes the planned appointments in [from, to] from today
    * on, except series planned on closing days on purpose unless
    * `includeClosingDaySeries` is set. Parents are not notified. `dryRun`
-   * only counts them for the confirmation dialog.
+   * only counts them for the confirmation dialog; a real run sends that
+   * count's `fingerprint`, and the server refuses it when other appointments
+   * would be cancelled now (ADR 0311).
    */
   async bulkCancel(
     from: string,
     to: string,
     dryRun: boolean,
     includeClosingDaySeries = false,
+    expectedFingerprint?: string,
   ): Promise<BulkCancelResult> {
     const raw = await bffJson(
       "tenant",
@@ -793,6 +799,7 @@ class TimetableService {
           to,
           dry_run: dryRun,
           include_closing_day_series: includeClosingDaySeries,
+          expected_fingerprint: expectedFingerprint,
         },
       },
     );
@@ -829,7 +836,7 @@ class TimetableService {
           activity_group_id: activityGroupId,
           from,
           to,
-          include_deletions: includeDeletions ? "true" : undefined,
+          include_deletions: includeDeletions || undefined,
         },
       },
     );

@@ -69,7 +69,7 @@ func releaseMealMonth(t *testing.T, db *bun.DB, organizationID, schoolID, studen
 }
 
 func mealPrice(schoolID int64, validFrom, mode string, cents int64) map[string]any {
-	return map[string]any{"school_id": schoolID, "valid_from": validFrom, "mode": mode, "amount_cents": cents}
+	return map[string]any{"school_id": fmt.Sprint(schoolID), "valid_from": validFrom, "mode": mode, "amount_cents": cents}
 }
 
 // Hardt (MK-001) through the routes: November and December 2029 released
@@ -83,9 +83,9 @@ func TestCareMealMonthsAreBilledOnceOnTheChildsInvoice(t *testing.T) {
 	school := f.office.schools[0]
 	contract := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
 	careContract(t, f.db, f.office.organization, school, "Noah", "2030-02-01", sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careMealTariffsPath, mealPrice(school, "2029-11-01", "per_meal", 480))
+	rec = putMealPrice(t, f.traeger, f.office.token, mealPrice(school, "2029-11-01", "per_meal", 480))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	// Mia keeps her student identity across both monthly releases.
 	miaID := testpkg.UniqueTestTenantID(t)
@@ -123,10 +123,10 @@ func TestCareMealMonthsAreBilledOnceOnTheChildsInvoice(t *testing.T) {
 	for _, invoice := range decodeSchoolPortalData[careMealRunBody](t, rec.Body.Bytes()).Invoices {
 		assert.Empty(t, invoice.MealPositions, "a billed Mensa month is never billed again")
 	}
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careMealTariffsPath, mealPrice(school, "2029-12-01", "per_meal", 500))
+	rec = putMealPrice(t, f.traeger, f.office.token, mealPrice(school, "2029-12-01", "per_meal", 500))
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.care_meal_tariff_month_billed")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careMealTariffsPath, mealPrice(school, "2030-01-01", "flat", 5500))
+	rec = putMealPrice(t, f.traeger, f.office.token, mealPrice(school, "2030-01-01", "flat", 5500))
 	assert.Equal(t, http.StatusOK, rec.Code, "a later month gets a new price: %s", rec.Body.String())
 }
 
@@ -136,7 +136,7 @@ func TestCareMealPricesNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 	t.Parallel()
 	f := newCareBillingFixture(t, "Träger Mensa Grenze")
 	school := f.office.schools[0]
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careMealTariffsPath, mealPrice(school, "2029-11-01", "per_meal", 480))
+	rec := putMealPrice(t, f.traeger, f.office.token, mealPrice(school, "2029-11-01", "per_meal", 480))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	password := testpkg.NewTestPassword()
@@ -160,7 +160,7 @@ func TestCareMealPricesNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodGet, careMealTariffsPath, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.NotContains(t, rec.Body.String(), `"amount_cents":480`, "no Mensa price of another Träger")
-	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodPut, careMealTariffsPath, mealPrice(school, "2029-12-01", "flat", 1))
+	rec = putMealPrice(t, f.traeger, foreign.token, mealPrice(school, "2029-12-01", "flat", 1))
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.care_meal_tariff_invalid")
 	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodDelete, careMealTariffsPath+fmt.Sprintf("/%d/2029-11-01", school), nil)
@@ -168,11 +168,11 @@ func TestCareMealPricesNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 	for _, body := range []map[string]any{
 		mealPrice(school, "2029-11-02", "flat", 1), mealPrice(school, "2029-11-01", "pauschal", 1), mealPrice(school, "2029-11-01", "flat", -1),
 	} {
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careMealTariffsPath, body)
+		rec := putMealPrice(t, f.traeger, f.office.token, body)
 		assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	}
 	// The Träger itself deletes its price again.
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, careMealTariffsPath+fmt.Sprintf("/%d/2029-11-01", school), nil)
+	rec = deleteMealPrice(t, f.traeger, f.office.token, school, "2029-11-01")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.NotContains(t, rec.Body.String(), `"amount_cents":480`, "the deleted price is gone from the answer")
 }
@@ -190,11 +190,11 @@ func TestCareMealPriceListQueryBudgetIsFlat(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		return counter.Measurement(counter.Selects(""))
 	}
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careMealTariffsPath, mealPrice(f.office.schools[0], "2029-11-01", "per_meal", 480))
+	rec := putMealPrice(t, f.traeger, f.office.token, mealPrice(f.office.schools[0], "2029-11-01", "per_meal", 480))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	first := list()
 	for _, school := range f.office.schools {
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careMealTariffsPath, mealPrice(school, "2030-01-01", "flat", 5500))
+		rec := putMealPrice(t, f.traeger, f.office.token, mealPrice(school, "2030-01-01", "flat", 5500))
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
 	assert.Len(t, list().Statements, len(first.Statements), "the Mensa prices read the same statements for any number of prices")
@@ -211,9 +211,9 @@ func TestCareMealMonthsReturnOnTheReissueAfterAStorno(t *testing.T) {
 	brandCareTraeger(t, f)
 	school := f.office.schools[0]
 	contract := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careMealTariffsPath, mealPrice(school, "2029-12-01", "flat", 5500))
+	rec = putMealPrice(t, f.traeger, f.office.token, mealPrice(school, "2029-12-01", "flat", 5500))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	releaseMealMonth(t, db, f.office.organization, school, testpkg.UniqueTestTenantID(t), "2029-12-01", "Mia", 1)
 
@@ -305,9 +305,9 @@ func TestCareMealReleaseAfterTheReviewRefusesTheRunRelease(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	school := f.office.schools[0]
 	careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careMealTariffsPath, mealPrice(school, "2029-11-01", "per_meal", 480))
+	rec = putMealPrice(t, f.traeger, f.office.token, mealPrice(school, "2029-11-01", "per_meal", 480))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := f.startRun(t, careMonth)
 	reviewed := f.run(t, int64(run.ID))
@@ -333,16 +333,16 @@ func TestCareMealExcludedChildGetsNoMensaPosition(t *testing.T) {
 	school := f.office.schools[0]
 	mia := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
 	careContract(t, f.db, f.office.organization, school, "Lea", careMonth, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careMealTariffsPath, mealPrice(school, "2029-11-01", "per_meal", 480))
+	rec = putMealPrice(t, f.traeger, f.office.token, mealPrice(school, "2029-11-01", "per_meal", 480))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	releaseMealMonth(t, db, f.office.organization, school, testpkg.UniqueTestTenantID(t), "2029-12-01", "Mia", 2)
 	releaseMealMonth(t, db, f.office.organization, school, testpkg.UniqueTestTenantID(t), "2029-12-01", "Lea", 3)
 
 	run := f.startRun(t, careMonth)
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/exclusions"),
-		map[string]any{"contract_id": mia, "service": "care", "reason": "Rückfrage"})
+		map[string]any{"contract_id": fmt.Sprint(mia), "service": "care", "reason": "Rückfrage"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	reviewed := f.run(t, int64(run.ID))
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(reviewed))
@@ -400,9 +400,9 @@ func mealPaymentRun(t *testing.T, f careBillingFixture, terms map[string]any) (i
 	db := testpkg.SetupTestDB(t)
 	school := f.office.schools[0]
 	contract := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careMealTariffsPath, mealPrice(school, "2029-11-01", "per_meal", 480))
+	rec = putMealPrice(t, f.traeger, f.office.token, mealPrice(school, "2029-11-01", "per_meal", 480))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	if terms != nil {
 		setTerms(t, f.traeger, f.office.token, "meal", terms)
@@ -414,7 +414,7 @@ func mealPaymentRun(t *testing.T, f careBillingFixture, terms map[string]any) (i
 	}
 	releaseMealMonth(t, db, f.office.organization, school, testpkg.UniqueTestTenantID(t), "2029-12-01", "Mia", 2)
 	run := f.startRun(t, careMonth)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, runDueDatesPathOf("care", int64(run.ID)), dueDates("2030-02-02", "2030-02-04"))
+	rec = putRunDueDates(t, f.traeger, f.office.token, "care", int64(run.ID), dueDates("2030-02-02", "2030-02-04"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(int64(run.ID), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -519,9 +519,9 @@ func TestCareMealReissueKeepsItsChainWhenTheMensaMovesOntoItsOwnInvoice(t *testi
 	brandCareTraeger(t, f)
 	school := f.office.schools[0]
 	careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careMealTariffsPath, mealPrice(school, "2029-12-01", "flat", 5500))
+	rec = putMealPrice(t, f.traeger, f.office.token, mealPrice(school, "2029-12-01", "flat", 5500))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	releaseMealMonth(t, db, f.office.organization, school, testpkg.UniqueTestTenantID(t), "2029-12-01", "Mia", 1)
 
@@ -576,9 +576,9 @@ func TestCareMealReleaseAgainReachesTheReissueAfterAStorno(t *testing.T) {
 	brandCareTraeger(t, f)
 	school := f.office.schools[0]
 	careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careMealTariffsPath, mealPrice(school, "2029-12-01", "per_meal", 480))
+	rec = putMealPrice(t, f.traeger, f.office.token, mealPrice(school, "2029-12-01", "per_meal", 480))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	mia := testpkg.UniqueTestTenantID(t)
 	releaseMealMonth(t, db, f.office.organization, school, mia, "2029-12-01", "Mia", 2)
@@ -644,9 +644,9 @@ func TestCareCostSharesTakeTheMensaByTheirScope(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	school := f.office.schools[0]
 	mia := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careMealTariffsPath, mealPrice(school, "2029-12-01", "per_meal", 480))
+	rec = putMealPrice(t, f.traeger, f.office.token, mealPrice(school, "2029-12-01", "per_meal", 480))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	releaseMealMonth(t, db, f.office.organization, school, testpkg.UniqueTestTenantID(t), "2029-12-01", "Mia", 2)
 	jobcenter := f.costBearer(t, "Jobcenter Musterkreis")
@@ -743,11 +743,11 @@ func TestCareMealExclusionLeavesOutOnlyTheChosenInvoice(t *testing.T) {
 	mia := preview.Invoices[0].ContractID
 	exclude := func(service, reason string) *httptest.ResponseRecorder {
 		return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(runID, "/exclusions"),
-			map[string]any{"contract_id": mia, "service": service, "reason": reason})
+			map[string]any{"contract_id": fmt.Sprint(mia), "service": service, "reason": reason})
 	}
 	include := func(service string) *httptest.ResponseRecorder {
 		return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(runID, "/inclusions"),
-			map[string]any{"contract_id": mia, "service": service})
+			map[string]any{"contract_id": fmt.Sprint(mia), "service": service})
 	}
 	read := func() careExclusionRun {
 		return decodeExclusionRun(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(runID, ""), nil))
@@ -802,15 +802,15 @@ func TestCareExclusionSwitchBetweenEqualInvoicesChangesTheFingerprint(t *testing
 	db := testpkg.SetupTestDB(t)
 	school := f.office.schools[0]
 	mia := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careMealTariffsPath, mealPrice(school, "2029-11-01", "flat", 7750))
+	rec = putMealPrice(t, f.traeger, f.office.token, mealPrice(school, "2029-11-01", "flat", 7750))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	setTerms(t, f.traeger, f.office.token, "meal", map[string]any{"payment_method": "transfer", "due_days": 14, "bundle_with": ""})
 	releaseMealMonth(t, db, f.office.organization, school, testpkg.UniqueTestTenantID(t), "2029-12-01", "Mia", 1)
 	run := f.startRun(t, careMonth)
 	exclusion := func(path, service string, extra map[string]any) careExclusionRun {
-		body := map[string]any{"contract_id": mia, "service": service}
+		body := map[string]any{"contract_id": fmt.Sprint(mia), "service": service}
 		for key, value := range extra {
 			body[key] = value
 		}

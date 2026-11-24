@@ -1,14 +1,27 @@
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as renderUi,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactElement } from "react";
+import { ToastProvider } from "~/contexts/ToastContext";
 import { describe, expect, it, vi } from "vitest";
 import type { Teacher } from "~/lib/teacher-api";
 import { ApiError } from "~/lib/api-error";
 import {
+  KontoNameSavedError,
   KontoRoleSaveError,
   KontoTab,
   type KontoDraft,
   type KontoEditing,
 } from "./konto-tab";
+
+// Eine Ablehnung des Datensatzes meldet der Reiter über den Toast-Weg.
+function render(ui: ReactElement) {
+  return renderUi(ui, { wrapper: ToastProvider });
+}
 
 vi.mock("~/lib/use-clipboard-copy", () => ({
   useClipboardCopy: () => ({ copied: false, copy: vi.fn() }),
@@ -101,6 +114,7 @@ function editingProps(overrides: Partial<KontoEditing> = {}): KontoEditing {
     canDeleteStaff: false,
     onEditingChange: vi.fn(),
     onSave: vi.fn(() => Promise.resolve()),
+    reload: vi.fn(() => Promise.resolve()),
     ...overrides,
   };
 }
@@ -161,6 +175,8 @@ describe("KontoTab", () => {
         last_name: "Muster",
         role: "OGS-Büro",
         staff_notes: "Neue Notiz",
+        // Der Datensatz beim Öffnen: seine Stände gehen mit (ADR 0311).
+        record: teacher,
       });
     });
     await waitFor(() => {
@@ -187,6 +203,7 @@ describe("KontoTab", () => {
       expect(editing.onSave).toHaveBeenCalledWith({
         role: "Betreuung",
         staff_notes: "Springt gerne ein.",
+        record: teacher,
       });
     });
   });
@@ -323,6 +340,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["2"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
       onSave: vi.fn(() =>
@@ -372,6 +390,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["2"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
       onSave,
@@ -399,10 +418,174 @@ describe("KontoTab", () => {
       expect.objectContaining({
         first_name: "Milena",
         last_name: "Muster",
-        role_id: "1",
+        roleId: "1",
       }),
     );
-    expect(onSave).toHaveBeenLastCalledWith({ role_id: "1" });
+    expect(onSave).toHaveBeenLastCalledWith({
+      roleId: "1",
+      roleVersion: "roles-v1",
+    });
+  });
+
+  it("shows the stored role without a retry when the roles changed since reading", async () => {
+    const editing = editingProps({
+      canEditRole: true,
+      roleAssignment: {
+        options: [
+          { id: "1", name: "Administration", systemName: "admin" },
+          { id: "2", name: "Betreuung", systemName: "user" },
+        ],
+        currentRoleIds: ["2"],
+        version: "roles-v1",
+        currentIsLehrkraft: false,
+      },
+      onSave: vi.fn(() =>
+        Promise.reject(
+          new KontoRoleSaveError(
+            new ApiError("changed", 409, {
+              code: "general.changed_since_read",
+            }),
+          ),
+        ),
+      ),
+    });
+    render(<KontoTab teacher={teacher} editing={editing} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    const role = screen.getByLabelText("Rolle");
+    fireEvent.change(role, { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(role).toHaveValue("2"));
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the draft open on the stored record when the record changed since reading", async () => {
+    // ADR 0311: Name, Position und Notizen ruhen auf dem Datensatz beim
+    // Öffnen. Lehnt der Server ab, bleibt der Entwurf offen und zeigt den
+    // gespeicherten Stand mit der Meldung, ohne „Wiederholen“; Speichern
+    // sendet danach den neuen Stand.
+    const stored: Teacher = {
+      ...teacher,
+      staff_notes: "Notiz der Kollegin",
+      version: "record-v2",
+      person_version: "person-v1",
+    };
+    let answerReload: (record: Teacher) => void = () => undefined;
+    const reload = vi.fn(
+      () =>
+        new Promise<Teacher>((resolve) => {
+          answerReload = resolve;
+        }),
+    );
+    const onSave = vi
+      .fn<KontoEditing["onSave"]>()
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValueOnce(stored);
+    const editing = editingProps({ reload, onSave });
+    const read = {
+      ...teacher,
+      version: "record-v1",
+      person_version: "person-v1",
+    };
+    const view = render(<KontoTab teacher={read} editing={editing} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    fireEvent.change(screen.getByLabelText("Notizen der Leitung"), {
+      target: { value: "Ältere Notiz" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ record: read, staff_notes: "Ältere Notiz" }),
+    );
+    // Bis der gespeicherte Stand gelesen ist, geht nichts raus.
+    expect(
+      screen.queryByRole("button", { name: "Speichern" }),
+    ).not.toBeInTheDocument();
+    expect(onSave).toHaveBeenCalledTimes(1);
+
+    // Die Lesung der Seite liefert den gespeicherten Stand.
+    answerReload(stored);
+    view.rerender(<KontoTab teacher={stored} editing={editing} />);
+    await waitFor(() =>
+      expect(screen.getByLabelText("Notizen der Leitung")).toHaveValue(
+        "Notiz der Kollegin",
+      ),
+    );
+    expect(await screen.findByText(/inzwischen geändert/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    expect(onSave).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        record: stored,
+        staff_notes: "Notiz der Kollegin",
+      }),
+    );
+  });
+
+  it("retries on the saved name after the record step failed, never on the old person version", async () => {
+    // Der Name ging durch, Position und Notizen nicht (5xx). „Wiederholen“
+    // ruht auf dem gespeicherten Namen und dessen Stand: der Name geht
+    // nicht noch einmal mit dem alten Stand raus, der eigene Schreibvorgang
+    // wird nicht als fremde Änderung abgelehnt.
+    const read = {
+      ...teacher,
+      version: "record-v1",
+      person_version: "person-v1",
+    };
+    const onSave = vi
+      .fn<KontoEditing["onSave"]>()
+      .mockRejectedValueOnce(
+        new KontoNameSavedError(
+          new ApiError("unavailable", 503, { code: "general.unavailable" }),
+          {
+            first_name: "Milena",
+            last_name: "Muster",
+            tag_id: "ABC123",
+            person_version: "person-v2",
+          },
+        ),
+      )
+      .mockResolvedValueOnce(undefined);
+    const editing = editingProps({ onSave });
+    render(<KontoTab teacher={read} editing={editing} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    fireEvent.change(screen.getByLabelText("Vorname"), {
+      target: { value: "Milena" },
+    });
+    fireEvent.change(screen.getByLabelText("Notizen der Leitung"), {
+      target: { value: "Neue Notiz" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    const retry = await screen.findByRole("button", { name: "Wiederholen" });
+    expect(screen.getByLabelText("Notizen der Leitung")).toHaveValue(
+      "Neue Notiz",
+    );
+    fireEvent.click(retry);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    expect(onSave).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        first_name: "Milena",
+        staff_notes: "Neue Notiz",
+        record: expect.objectContaining({
+          first_name: "Milena",
+          person_version: "person-v2",
+          version: "record-v1",
+        }),
+      }),
+    );
   });
 
   it("sends the new system role only when it differs from the current one", async () => {
@@ -414,6 +597,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["2"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
     });
@@ -423,11 +607,11 @@ describe("KontoTab", () => {
     const roleField = screen.getByLabelText<HTMLSelectElement>("Rolle");
     expect(roleField.value).toBe("2");
 
-    // Unverändert: keine role_id im Entwurf.
+    // Unverändert: keine roleId im Entwurf.
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => {
       expect(editing.onSave).toHaveBeenCalledWith(
-        expect.not.objectContaining({ role_id: expect.anything() }),
+        expect.not.objectContaining({ roleId: expect.anything() }),
       );
     });
 
@@ -438,7 +622,7 @@ describe("KontoTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => {
       expect(editing.onSave).toHaveBeenLastCalledWith(
-        expect.objectContaining({ role_id: "1" }),
+        expect.objectContaining({ roleId: "1" }),
       );
     });
   });
@@ -457,6 +641,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["2", "1"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
     });
@@ -479,7 +664,10 @@ describe("KontoTab", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => {
-      expect(editing.onSave).toHaveBeenLastCalledWith({ role_id: "1" });
+      expect(editing.onSave).toHaveBeenLastCalledWith({
+        roleId: "1",
+        roleVersion: "roles-v1",
+      });
     });
   });
 
@@ -497,6 +685,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["9", "2"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
     });
@@ -519,7 +708,10 @@ describe("KontoTab", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => {
-      expect(editing.onSave).toHaveBeenLastCalledWith({ role_id: "1" });
+      expect(editing.onSave).toHaveBeenLastCalledWith({
+        roleId: "1",
+        roleVersion: "roles-v1",
+      });
     });
   });
 
@@ -534,6 +726,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["2"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
     });
@@ -552,7 +745,57 @@ describe("KontoTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() => {
-      expect(editing.onSave).toHaveBeenCalledWith({ role_id: "1" });
+      expect(editing.onSave).toHaveBeenCalledWith({
+        roleId: "1",
+        roleVersion: "roles-v1",
+      });
+    });
+  });
+
+  // ADR 0311: Die Rollen laden im Hintergrund neu, während die Person
+  // bearbeitet (eine Kollegin vergab inzwischen eine Rolle). Das Speichern
+  // trägt den Stand, den die Person beim Wählen sah, damit der Server den
+  // Wechsel ablehnt, statt die neue Rolle still zu entfernen.
+  it("sends the role version seen when the role was picked, not a later reload", async () => {
+    const assignment = (version: string, currentRoleIds: string[]) => ({
+      options: [
+        { id: "1", name: "Administration", systemName: "admin" },
+        { id: "2", name: "Betreuung", systemName: "user" },
+      ],
+      currentRoleIds,
+      version,
+      currentIsLehrkraft: false,
+    });
+    const editing = editingProps({
+      canEditPersonFields: false,
+      canEditStaffFields: false,
+      canEditRole: true,
+      roleAssignment: assignment("roles-v1", ["2"]),
+    });
+    const { rerender } = render(
+      <KontoTab teacher={teacher} editing={editing} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    fireEvent.change(screen.getByLabelText("Rolle"), {
+      target: { value: "1" },
+    });
+    rerender(
+      <KontoTab
+        teacher={teacher}
+        editing={{
+          ...editing,
+          roleAssignment: assignment("roles-v2", ["2", "3"]),
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => {
+      expect(editing.onSave).toHaveBeenCalledWith({
+        roleId: "1",
+        roleVersion: "roles-v1",
+      });
     });
   });
 
@@ -566,6 +809,7 @@ describe("KontoTab", () => {
           roleAssignment: {
             options: [{ id: "1", name: "Administration", systemName: "admin" }],
             currentRoleIds: ["3"],
+            version: "roles-v1",
             currentIsLehrkraft: true,
           },
         })}

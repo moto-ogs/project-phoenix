@@ -30,6 +30,13 @@ type MealPlan interface {
 	ClearParticipationForDay(context.Context, MealParticipationChange) error
 }
 
+// MealScheduleSaved answers a save of the regular days: the day they apply
+// from and the version of the regular days stored (ADR 0311).
+type MealScheduleSaved struct {
+	EffectiveFrom string
+	Version       string
+}
+
 // MealWeekChange lists the days a week change changed and the days whose
 // deadline had already passed.
 type MealWeekChange struct {
@@ -38,10 +45,12 @@ type MealWeekChange struct {
 }
 
 // MealParticipationSchedule replaces a child's standing weekday participation.
+// ExpectedVersion is the MealParticipationPlan.Version the parent read.
 type MealParticipationSchedule struct {
 	StudentID         int64
 	GuardianAccountID int64
 	Weekdays          []MealWeekday
+	ExpectedVersion   string
 }
 
 // MealParticipationChange sets or clears one day's participation.

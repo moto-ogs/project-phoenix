@@ -34,8 +34,8 @@ type payrollScenario struct {
 	svc                   workforce.StaffRecordAdmin
 	ctx                   context.Context
 	// updateStaff runs the staff directory's directory-field update without a
-	// teacher-record change.
-	updateStaff func(context.Context, *peopleValues.Staff) error
+	// teacher-record change, on the record token the caller read.
+	updateStaff func(context.Context, *peopleValues.Staff, string) error
 }
 
 type serializingStaffRepo struct {
@@ -82,8 +82,8 @@ func newPayrollScenario(t *testing.T) *payrollScenario {
 		MayManageStaff: api.StaffAdministrationPermitted,
 	})
 
-	updateStaff := func(ctx context.Context, staff *peopleValues.Staff) error {
-		_, _, err := dir.UpdateStaffWithTeacher(ctx, staff, false, "", "", "")
+	updateStaff := func(ctx context.Context, staff *peopleValues.Staff, expectedVersion string) error {
+		_, _, err := dir.UpdateStaffWithTeacher(ctx, staff, false, "", "", "", expectedVersion)
 		return err
 	}
 
@@ -118,7 +118,7 @@ func TestUpdatePersonnelNumber_SetChangeClear(t *testing.T) {
 
 	// Set
 	value := "90001"
-	updated, err := testpkg.TenantQuery4(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, staff.ID, &value, actor.ID, "Ersteinrichtung")
+	updated, err := testpkg.TenantQuery5(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, staff.ID, &value, (*string)(nil), actor.ID, "Ersteinrichtung")
 	require.NoError(t, err)
 	require.NotNil(t, updated.PersonnelNumber)
 	assert.Equal(t, "90001", *updated.PersonnelNumber)
@@ -131,13 +131,13 @@ func TestUpdatePersonnelNumber_SetChangeClear(t *testing.T) {
 	assert.Equal(t, "Ersteinrichtung", rows[0].Note)
 
 	// No-op: same value writes no second audit row
-	_, err = testpkg.TenantQuery4(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, staff.ID, &value, actor.ID, "")
+	_, err = testpkg.TenantQuery5(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, staff.ID, &value, (*string)(nil), actor.ID, "")
 	require.NoError(t, err)
 	require.Len(t, s.auditRows(t, staff.ID), 1, "a no-op change must not produce an audit row")
 
 	// Change
 	changed := " 90002 " // whitespace is normalized away
-	updated, err = testpkg.TenantQuery4(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, staff.ID, &changed, actor.ID, "Korrektur")
+	updated, err = testpkg.TenantQuery5(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, staff.ID, &changed, (*string)(nil), actor.ID, "Korrektur")
 	require.NoError(t, err)
 	assert.Equal(t, "90002", *updated.PersonnelNumber)
 	rows = s.auditRows(t, staff.ID)
@@ -146,7 +146,7 @@ func TestUpdatePersonnelNumber_SetChangeClear(t *testing.T) {
 	assert.Equal(t, "90002", rows[1].NewValue)
 
 	// Clear
-	updated, err = testpkg.TenantQuery4(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, staff.ID, nil, actor.ID, "Austritt")
+	updated, err = testpkg.TenantQuery5(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, staff.ID, nil, (*string)(nil), actor.ID, "Austritt")
 	require.NoError(t, err)
 	assert.Nil(t, updated.PersonnelNumber)
 	rows = s.auditRows(t, staff.ID)
@@ -164,10 +164,10 @@ func TestUpdatePersonnelNumber_DuplicateIsConflictAndLeavesNoAudit(t *testing.T)
 	actor := testpkg.CreateTestStaff(t, s.db, "Payroll", "Aktor")
 
 	value := "90010"
-	_, err := testpkg.TenantQuery4(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, first.ID, &value, actor.ID, "")
+	_, err := testpkg.TenantQuery5(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, first.ID, &value, (*string)(nil), actor.ID, "")
 	require.NoError(t, err)
 
-	_, err = testpkg.TenantQuery4(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, second.ID, &value, actor.ID, "")
+	_, err = testpkg.TenantQuery5(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, second.ID, &value, (*string)(nil), actor.ID, "")
 	require.ErrorIs(t, err, workforce.ErrPersonnelNumberTaken)
 
 	assert.Empty(t, s.auditRows(t, second.ID), "the rolled-back change must not leave an audit row")
@@ -182,7 +182,7 @@ func TestUpdatePersonnelNumber_DuplicateIsConflictAndLeavesNoAudit(t *testing.T)
 		Exec(context.Background())
 	require.NoError(t, err)
 
-	_, err = testpkg.TenantQuery4(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, second.ID, &value, actor.ID, "")
+	_, err = testpkg.TenantQuery5(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, second.ID, &value, (*string)(nil), actor.ID, "")
 	require.NoError(t, err, "an offboarded holder must free the number")
 }
 
@@ -207,7 +207,7 @@ func TestUpdatePersonnelNumber_SerializesConcurrentAuditValues(t *testing.T) {
 	firstValue := fmt.Sprintf("7%07d1", personnelNumberSeed)
 	firstDone := make(chan error, 1)
 	go func() {
-		_, err := testpkg.TenantQuery4(t, s.ctx, testpkg.SetupTestDB(t), svc.UpdatePersonnelNumber, staff.ID, &firstValue, actor.ID, "Erste Änderung")
+		_, err := testpkg.TenantQuery5(t, s.ctx, testpkg.SetupTestDB(t), svc.UpdatePersonnelNumber, staff.ID, &firstValue, (*string)(nil), actor.ID, "Erste Änderung")
 		firstDone <- err
 	}()
 
@@ -223,7 +223,7 @@ func TestUpdatePersonnelNumber_SerializesConcurrentAuditValues(t *testing.T) {
 	secondValue := fmt.Sprintf("7%07d2", personnelNumberSeed)
 	secondDone := make(chan error, 1)
 	go func() {
-		_, err := testpkg.TenantQuery4(t, s.ctx, testpkg.SetupTestDB(t), svc.UpdatePersonnelNumber, staff.ID, &secondValue, actor.ID, "Zweite Änderung")
+		_, err := testpkg.TenantQuery5(t, s.ctx, testpkg.SetupTestDB(t), svc.UpdatePersonnelNumber, staff.ID, &secondValue, (*string)(nil), actor.ID, "Zweite Änderung")
 		secondDone <- err
 	}()
 
@@ -282,11 +282,14 @@ func TestUpdateStaffWithTeacher_PreservesConcurrentPersonnelNumber(t *testing.T)
 	require.NoError(t, err)
 
 	value := fmt.Sprintf("6%07d1", staff.ID%10_000_000)
-	_, err = testpkg.TenantQuery4(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, staff.ID, &value, actor.ID, "Ersteinrichtung")
+	_, err = testpkg.TenantQuery5(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, staff.ID, &value, (*string)(nil), actor.ID, "Ersteinrichtung")
 	require.NoError(t, err)
 
+	// The personnel number is not part of the record form's token: the
+	// form read before the number changed still saves.
+	readVersion := peopleValues.StaffRecordVersion(staleStaff.PersonID.Int64(), staleStaff.StaffNotes, nil)
 	staleStaff.StaffNotes = "Aktualisierte Notiz"
-	err = s.updateStaff(s.ctx, staleStaff)
+	err = s.updateStaff(s.ctx, staleStaff, readVersion)
 	require.NoError(t, err)
 
 	reloaded, err := s.reposPeople.Staff.FindByID(s.ctx, staff.ID)
@@ -310,7 +313,7 @@ func TestUpdatePersonnelNumber_Validation(t *testing.T) {
 
 	for _, invalid := range []string{"12a", "1 2", "-5", "1234567890"} {
 		v := invalid
-		_, err := testpkg.TenantQuery4(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, staff.ID, &v, actor.ID, "")
+		_, err := testpkg.TenantQuery5(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, staff.ID, &v, (*string)(nil), actor.ID, "")
 		require.ErrorIs(t, err, workforce.ErrPersonnelNumberInvalid, "value %q must be rejected", invalid)
 	}
 

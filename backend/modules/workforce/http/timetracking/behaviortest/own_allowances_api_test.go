@@ -133,7 +133,7 @@ func TestOwnAbsenceAllowances_ShowTheLeitungNumbersOfTheCaller(t *testing.T) {
 	route.claim(t, ctx, staff.ID, retired.ID, 2, admin.ID)
 	route.claim(t, ctx, colleague.ID, regeneration.ID, 9, admin.ID)
 	inactive := false
-	_, err := route.capability.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: retired.ID, IsActive: &inactive})
+	_, err := route.capability.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: retired.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, route.capability, retired.ID), IsActive: &inactive})
 	require.NoError(t, err)
 	route.book(t, ctx, staff.ID, regeneration.ID, "2026-03-02", workforce.AbsenceStatusApproved)
 	route.book(t, ctx, staff.ID, regeneration.ID, "2026-09-07", workforce.AbsenceStatusRequested)
@@ -148,7 +148,7 @@ func TestOwnAbsenceAllowances_ShowTheLeitungNumbersOfTheCaller(t *testing.T) {
 	leitung, err := route.capability.AllowanceSummary(ctx, staff.ID, regeneration.ID, 2026)
 	require.NoError(t, err)
 	assert.Equal(t, absencetypes.ToOwnAllowanceResponses([]workforce.AbsenceTypeAllowanceAccount{{AbsenceType: regeneration, Summary: leitung}})[0], got[0])
-	assert.Equal(t, fmt.Sprint(staff.ID), got[0].StaffID)
+	assert.Equal(t, fmt.Sprint(staff.ID), got[0].StaffID.String())
 	assert.Equal(t, 3.0, got[0].EntitledDays)
 	assert.Equal(t, 1.0, got[0].TakenDays)
 	assert.Equal(t, 1.0, got[0].ReservedDays)

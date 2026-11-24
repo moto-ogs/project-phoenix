@@ -154,6 +154,13 @@ export interface OfferingTemplate {
   readonly priceCents: number | null;
   readonly active: boolean;
   readonly template: ContractTemplate | null;
+  /**
+   * The Schulträger or the Gemeinde that concludes the contracts of the
+   * school in place of the Träger (#4811); empty for the Träger.
+   */
+  readonly issuerName: string;
+  /** The read state a save sends back (ADR 0311). */
+  readonly version: string;
 }
 
 /** One contract per accepted application child at its school. */
@@ -486,6 +493,7 @@ function offeringFromBackend(
     noticeText: row.notice_text,
     schoolId: row.school_id,
     schoolName: row.school_name,
+    issuerName: row.issuer_name,
     offeringId: row.offering_id,
     offeringName: row.offering_name,
     phaseName: row.phase_name,
@@ -498,6 +506,7 @@ function offeringFromBackend(
           updatedAt: row.template.updated_at,
         }
       : null,
+    version: row.version,
   };
 }
 
@@ -846,23 +855,43 @@ export async function fetchContractTemplates(): Promise<OfferingTemplate[]> {
   return rows.map(offeringFromBackend);
 }
 
+/**
+ * Saves the conditions of one offering over the version they were read with
+ * (ADR 0311); a changed template answers `general.changed_since_read`.
+ */
 export async function saveContractTemplate(
   schoolId: string,
   offeringId: string,
   terms: ContractTerms,
+  expectedVersion: string,
 ): Promise<OfferingTemplate> {
   return offeringFromBackend(
     await bffJson(
       "org",
       "PUT /traeger/contract-templates/{schoolId}/{offeringId}",
-      { params: { schoolId, offeringId }, body: termsToBackend(terms) },
+      {
+        params: { schoolId, offeringId },
+        body: { ...termsToBackend(terms), expected_version: expectedVersion },
+      },
     ),
   );
 }
 
 /**
+ * Hands the contract over on paper (#8030): moto freezes the PDF the office
+ * prints, and a draft counts as sent, without a mail. The office then
+ * downloads that PDF with `downloadCareContract`.
+ */
+export async function handOverCareContractOnPaper(id: string): Promise<void> {
+  await bffJson("org", "POST /traeger/contracts/{id}/paper-handover", {
+    params: { id },
+  });
+}
+
+/**
  * Records a contract the parents signed on paper (#4679): the signed PDF,
- * who signed and on which day. The contract is concluded afterwards.
+ * who signed and on which day. The contract must have been handed over or
+ * sent first (#8030); it is concluded afterwards.
  */
 export async function recordPaperSignature(
   id: string,

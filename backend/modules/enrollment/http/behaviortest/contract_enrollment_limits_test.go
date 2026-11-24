@@ -14,11 +14,12 @@ import (
 )
 
 // What the enrollment of the children of imported care contracts refuses
-// before it writes, since the third review round (#7760, ADR 0309): a
-// booking its roster cannot end with, care past the care end of the child
-// record, a window without one of its weekdays and a start that is still to
-// come. And what holds afterwards: a repeated call compares the weekdays in
-// effect, and an undated correction of the office keeps the first day.
+// before it writes, since the third review round (#7760, ADR 0309): care
+// past the care end of the child record, a window without one of its
+// weekdays and a start that is still to come. And what holds afterwards: a
+// roster ends with its booking (#7908), a repeated call compares the
+// weekdays in effect, and an undated correction of the office keeps the
+// first day.
 
 // contractWritten counts the request children and the roster rows of one
 // child record; its arguments are the tenant and the child record, twice.
@@ -39,46 +40,49 @@ func (e *contractEnrollmentEnv) careOffering(t *testing.T, name string, roster *
 	})
 }
 
-// A booking that ends before its phase is refused when its offering names
-// its roster through the direct link (ActivityGroupID): Care Plan writes the
-// roster row of such an offering to the end of the phase whatever the
-// booking says, so the child would stay on the roster and its occurrences
-// after the booking ended. Two such bookings that end on different days on
-// one roster are the same case. A check and a run answer alike, and nothing
-// is written. A booking that ends early on an offering a roster names as its
-// source is enrolled, and that roster row ends with the booking.
-func TestContractEnrollmentRefusesABookingItsRosterCannotEndWith(t *testing.T) {
+// rosterEnds are the exclusive ends of the rows of one child record on one
+// roster.
+func (e *contractEnrollmentEnv) rosterEnds(t *testing.T, studentID, rosterID int64) []calendar.Date {
+	t.Helper()
+	var ends []calendar.Date
+	require.NoError(t, e.db.NewRaw(`SELECT valid_until FROM activities.student_enrollments WHERE tenant_id = ? AND student_id = ?
+		AND activity_group_id = ? ORDER BY valid_until`, testpkg.Tenant(t), studentID, rosterID).Scan(testpkg.Ctx(t), &ends))
+	return ends
+}
+
+// A booking that ends before its phase is enrolled, and its roster row ends
+// with it, whatever names the roster: the direct link of the offering
+// (ActivityGroupID) or a roster that names the offering as its source
+// (#7908; refused as roster_bound before). A check and a run answer alike.
+// Two offerings that feed one roster and end on different days keep the
+// child on it for as long as the longer booking runs.
+func TestContractEnrollmentEndsTheRosterWithTheBooking(t *testing.T) {
 	t.Parallel()
 	e := setupContractEnrollment(t)
-	ctx := testpkg.Ctx(t)
-	student := e.student(t, "Lina")
+	lina, mats, nora := e.student(t, "Lina"), e.student(t, "Mats"), e.student(t, "Nora")
 	start, until := calendar.Date(e.sourcePhase.ServiceStartDate), calendar.Date(e.sourcePhase.ServiceEndDate).AddDays(1)
 	february := calendar.NewDate(2027, 3, 1)
 
-	bounded := e.input(student.ID, bookingOf(e.offering, start, february, "tue"))
-	assert.Equal(t, e.refused(student.ID, capability.ContractEnrollmentRosterBound), e.check(t, bounded))
-	assert.Equal(t, e.refused(student.ID, capability.ContractEnrollmentRosterBound), e.enroll(t, bounded))
+	bounded := e.input(lina.ID, bookingOf(e.offering, start, february, "tue"))
+	assert.Equal(t, capability.ContractEnrollmentEnrolled, e.check(t, bounded)[0].Status)
+	require.Equal(t, capability.ContractEnrollmentEnrolled, e.enroll(t, bounded)[0].Status)
+	assert.Equal(t, []calendar.Date{february}, e.rosterEnds(t, lina.ID, e.groupID), "the roster row of a direct link ends with the booking, exclusive")
 
 	// Two offerings feed one roster and end apart: Monday in February,
 	// Wednesday with the phase.
 	shared := testpkg.CreateTestActivityGroup(t, e.db, "ContractSharedRoster")
 	monday, wednesday := e.careOffering(t, "Modul Montag", &shared.ID), e.careOffering(t, "Modul Mittwoch", &shared.ID)
-	apart := e.input(student.ID, bookingOf(monday, start, february, "mon"), bookingOf(wednesday, start, until, "wed"))
-	assert.Equal(t, e.refused(student.ID, capability.ContractEnrollmentRosterBound), e.check(t, apart))
-	assert.Equal(t, e.refused(student.ID, capability.ContractEnrollmentRosterBound), e.enroll(t, apart))
-	assert.Zero(t, e.count(t, contractWritten, testpkg.Tenant(t), student.ID, testpkg.Tenant(t), student.ID), "nothing is written for a refused row")
-	together := e.input(student.ID, bookingOf(monday, start, until, "mon"), bookingOf(wednesday, start, until, "wed"))
-	assert.Equal(t, capability.ContractEnrollmentEnrolled, e.check(t, together)[0].Status, "bookings that run to the end of the phase share the row")
+	apart := e.input(mats.ID, bookingOf(monday, start, february, "mon"), bookingOf(wednesday, start, until, "wed"))
+	assert.Equal(t, capability.ContractEnrollmentEnrolled, e.check(t, apart)[0].Status)
+	require.Equal(t, capability.ContractEnrollmentEnrolled, e.enroll(t, apart)[0].Status)
+	assert.Equal(t, []calendar.Date{until}, e.rosterEnds(t, mats.ID, shared.ID), "the child stays on the group while one of its bookings runs")
 
 	// An offering without a direct link, named by a roster as its source.
 	sourcedOffering := e.careOffering(t, "Ganztag bis Februar", nil)
 	sourced := createSourcedTemplate(t, e.decisionTestEnv, "contract-roster-end-sourced", sourcedOffering.ID, nil, offeringSourcePeriod(t, e.decisionTestEnv))
-	result := e.enroll(t, e.input(student.ID, bookingOf(sourcedOffering, start, february, "mon")))
+	result := e.enroll(t, e.input(nora.ID, bookingOf(sourcedOffering, start, february, "mon")))
 	require.Equal(t, capability.ContractEnrollmentEnrolled, result[0].Status)
-	var ends calendar.Date
-	require.NoError(t, e.db.NewRaw(`SELECT valid_until FROM activities.student_enrollments WHERE tenant_id = ? AND student_id = ?
-		AND activity_group_id = ?`, testpkg.Tenant(t), student.ID, sourced.ID).Scan(ctx, &ends))
-	assert.Equal(t, february, ends, "the roster row of a source rule ends with the booking, exclusive")
+	assert.Equal(t, []calendar.Date{february}, e.rosterEnds(t, nora.ID, sourced.ID), "the roster row of a source rule ends with the booking, exclusive")
 }
 
 // A recorded care end holds the row: a child record whose last care day
@@ -177,7 +181,7 @@ func TestContractEnrollmentComparesTheWeekdaysInEffect(t *testing.T) {
 	require.Equal(t, capability.ContractEnrollmentEnrolled, made[0].Status)
 	assert.Equal(t, capability.ContractEnrollmentExisting, e.enroll(t, input)[0].Status)
 
-	_, err := testpkg.TenantQuery1(t, ctx, e.db, e.owner.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, ctx, e.db, correctOverRead(e.owner), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID: made[0].RequestID, ChildID: made[0].RequestChildID, ActorAccountID: e.creatorID, ActorRole: "admin",
 		Reason: "Korrektur", Offerings: []enrollmentAPI.OfferingAdjustmentSelection{
 			{OfferingID: care.ID, SelectedDays: []string{"mon"}}, {OfferingID: lunch.ID, SelectedDays: []string{"tue"}}},
@@ -230,7 +234,7 @@ func TestAnUndatedCorrectionKeepsTheStartOfAContractEnrollment(t *testing.T) {
 	require.Equal(t, capability.ContractEnrollmentEnrolled, made[0].Status)
 
 	correct := func(requestID, childID int64, days ...string) {
-		_, err := testpkg.TenantQuery1(t, ctx, e.db, e.owner.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+		_, err := testpkg.TenantQuery1(t, ctx, e.db, correctOverRead(e.owner), enrollmentAPI.UpdateChildOfferingsInput{
 			RequestID: requestID, ChildID: childID, ActorAccountID: e.creatorID, ActorRole: "admin",
 			Reason: "Korrektur der Wochentage", Offerings: []enrollmentAPI.OfferingAdjustmentSelection{{OfferingID: offering.ID, SelectedDays: days}},
 		})
@@ -301,11 +305,11 @@ func (e *contractEnrollmentEnv) setOffering(t *testing.T, offeringID int64, chan
 
 // A repeated call confirms its own stored enrollment whatever only guards a
 // new one. The run enrolled the child with a booking that ends in February
-// and stopped before the binding. Then the office linked the offering to a
-// roster directly and deactivated it: a new enrollment with that booking is
-// refused (roster_bound, offering_inactive). The repeated call for the
-// enrolled child still answers existing, so its contract gets bound, and
-// writes nothing. Other bookings than the stored ones are still refused.
+// and stopped before the binding. Then the office deactivated the offering:
+// a new enrollment with that booking is refused (offering_inactive). The
+// repeated call for the enrolled child still answers existing, so its
+// contract gets bound, and writes nothing. Other bookings than the stored
+// ones are still refused.
 func TestARepeatedContractEnrollmentConfirmsItsStoredEnrollment(t *testing.T) {
 	t.Parallel()
 	e := setupContractEnrollment(t)
@@ -317,23 +321,13 @@ func TestARepeatedContractEnrollmentConfirmsItsStoredEnrollment(t *testing.T) {
 	require.Equal(t, capability.ContractEnrollmentEnrolled, made[0].Status)
 	written := e.count(t, contractWritten, testpkg.Tenant(t), enrolled.ID, testpkg.Tenant(t), enrolled.ID)
 
-	guards := []struct{ change, reason string }{
-		{"activity_group_id = ?", capability.ContractEnrollmentRosterBound},
-		{"is_active = FALSE, activity_group_id = NULL", capability.ContractEnrollmentOfferingInactive},
-	}
-	for _, guard := range guards {
-		args := []any{}
-		if guard.reason == capability.ContractEnrollmentRosterBound {
-			args = append(args, e.groupID)
-		}
-		e.setOffering(t, offering.ID, guard.change, args...)
-		assert.Equal(t, e.refused(later.ID, guard.reason), e.check(t, e.input(later.ID, bookingOf(offering, start, february, "mon"))),
-			"a new enrollment is refused")
-		for name, answer := range map[string][]capability.ContractEnrollmentResult{"check": e.check(t, input), "run": e.enroll(t, input)} {
-			assert.Equal(t, capability.ContractEnrollmentExisting, answer[0].Status, "%s after %s", name, guard.reason)
-			assert.Empty(t, answer[0].Reason, name)
-			assert.Equal(t, made[0].RequestChildID, answer[0].RequestChildID, name)
-		}
+	e.setOffering(t, offering.ID, "is_active = FALSE")
+	assert.Equal(t, e.refused(later.ID, capability.ContractEnrollmentOfferingInactive), e.check(t, e.input(later.ID, bookingOf(offering, start, february, "mon"))),
+		"a new enrollment is refused")
+	for name, answer := range map[string][]capability.ContractEnrollmentResult{"check": e.check(t, input), "run": e.enroll(t, input)} {
+		assert.Equal(t, capability.ContractEnrollmentExisting, answer[0].Status, name)
+		assert.Empty(t, answer[0].Reason, name)
+		assert.Equal(t, made[0].RequestChildID, answer[0].RequestChildID, name)
 	}
 	assert.Equal(t, written, e.count(t, contractWritten, testpkg.Tenant(t), enrolled.ID, testpkg.Tenant(t), enrolled.ID), "a repeated call writes nothing")
 

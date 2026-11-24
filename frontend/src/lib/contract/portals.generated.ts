@@ -39,6 +39,7 @@ import { routes as catererSchools } from "./caterer-schools.generated";
 import { routes as classListEntries } from "./class-list-entries.generated";
 import { routes as database } from "./database.generated";
 import { routes as dayChanges } from "./day-changes.generated";
+import { routes as demoAccess } from "./demo-access.generated";
 import { routes as display } from "./display.generated";
 import { routes as emergency } from "./emergency.generated";
 import { routes as enrollment } from "./enrollment.generated";
@@ -138,6 +139,7 @@ import { routes as traegerContractChanges } from "./traeger-contract-changes.gen
 import { routes as traegerContractChildLinks } from "./traeger-contract-child-links.generated";
 import { routes as traegerContractCorrections } from "./traeger-contract-corrections.generated";
 import { routes as traegerContractEnrollments } from "./traeger-contract-enrollments.generated";
+import { routes as traegerContractFamilies } from "./traeger-contract-families.generated";
 import { routes as traegerContractImports } from "./traeger-contract-imports.generated";
 import { routes as traegerContractNotices } from "./traeger-contract-notices.generated";
 import { routes as traegerContractTemplates } from "./traeger-contract-templates.generated";
@@ -164,6 +166,7 @@ import { routes as traegerProfile } from "./traeger-profile.generated";
 import { routes as traegerReportTemplates } from "./traeger-report-templates.generated";
 import { routes as traegerReports } from "./traeger-reports.generated";
 import { routes as traegerRequiredDetails } from "./traeger-required-details.generated";
+import { routes as traegerSchoolRoles } from "./traeger-school-roles.generated";
 import { routes as traegerSchoolSessions } from "./traeger-school-sessions.generated";
 import { routes as traegerSchools } from "./traeger-schools.generated";
 import { routes as traegerSepaCreditor } from "./traeger-sepa-creditor.generated";
@@ -348,6 +351,10 @@ export const portalRoutes = {
     traegerContractEnrollments["DELETE /traeger/contract-enrollments/{contractId}"],
     traegerContractEnrollments["POST /traeger/contract-enrollments/"],
     traegerContractEnrollments["POST /traeger/contract-enrollments/preview"],
+    traegerContractFamilies["GET /traeger/contract-families/"],
+    traegerContractFamilies["GET /traeger/contract-families/export"],
+    traegerContractFamilies["POST /traeger/contract-families/"],
+    traegerContractFamilies["POST /traeger/contract-families/{contractId}/leave"],
     traegerContractImports["GET /traeger/contract-imports/"],
     traegerContractImports["POST /traeger/contract-imports/"],
     traegerContractImports["POST /traeger/contract-imports/offering-corrections"],
@@ -370,6 +377,7 @@ export const portalRoutes = {
     traegerContracts["GET /traeger/contracts/{id}/versions/{number}/document"],
     traegerContracts["POST /traeger/contracts/"],
     traegerContracts["POST /traeger/contracts/send"],
+    traegerContracts["POST /traeger/contracts/{id}/paper-handover"],
     traegerContracts["POST /traeger/contracts/{id}/paper-signature"],
     traegerContributionRules["DELETE /traeger/contribution-rules/{id}"],
     traegerContributionRules["GET /traeger/contribution-rules/"],
@@ -472,17 +480,20 @@ export const portalRoutes = {
     traegerHolidayPeriods["PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/details"],
     traegerMasterData["DELETE /traeger/master-data/bank-accounts/{id}"],
     traegerMasterData["DELETE /traeger/master-data/logo"],
+    traegerMasterData["DELETE /traeger/master-data/responsibilities/schools/{schoolId}/parties/{kind}"],
     traegerMasterData["GET /traeger/master-data/"],
     traegerMasterData["GET /traeger/master-data/document-templates"],
     traegerMasterData["GET /traeger/master-data/document-templates/export"],
     traegerMasterData["GET /traeger/master-data/document-templates/{kind}"],
     traegerMasterData["GET /traeger/master-data/logo"],
+    traegerMasterData["GET /traeger/master-data/responsibilities"],
     traegerMasterData["POST /traeger/master-data/bank-accounts"],
     traegerMasterData["POST /traeger/master-data/document-templates/{kind}/preview"],
     traegerMasterData["POST /traeger/master-data/document-templates/{kind}/versions"],
     traegerMasterData["PUT /traeger/master-data/bank-accounts/{id}"],
     traegerMasterData["PUT /traeger/master-data/contact"],
     traegerMasterData["PUT /traeger/master-data/logo"],
+    traegerMasterData["PUT /traeger/master-data/responsibilities/schools/{schoolId}/parties/{kind}"],
     traegerMasterData["PUT /traeger/master-data/withdrawal-contact"],
     traegerNotifications["GET /traeger/notifications/feed/"],
     traegerNotifications["GET /traeger/notifications/feed/unread-count"],
@@ -501,6 +512,12 @@ export const portalRoutes = {
     traegerReports["GET /traeger/reports/key-date"],
     traegerReports["GET /traeger/reports/key-date/export"],
     traegerRequiredDetails["GET /traeger/required-details/"],
+    traegerSchoolRoles["GET /traeger/school-roles/"],
+    traegerSchoolRoles["GET /traeger/school-roles/catalog"],
+    traegerSchoolRoles["GET /traeger/school-roles/{id}/removal-preview"],
+    traegerSchoolRoles["POST /traeger/school-roles/"],
+    traegerSchoolRoles["POST /traeger/school-roles/{id}/removal"],
+    traegerSchoolRoles["PUT /traeger/school-roles/{id}"],
     traegerSchoolSessions["POST /traeger/school-sessions/"],
     traegerSchools["GET /traeger/schools/"],
     traegerSchools["GET /traeger/schools/alerts"],
@@ -903,7 +920,6 @@ export const portalRoutes = {
     schoolCalendar["GET /school/calendar/feed"],
     schoolCalendar["GET /school/calendar/my"],
     schoolCalendar["GET /school/calendar/parent-conferences"],
-    schoolCalendar["GET /school/calendar/parent-conferences/{conferenceId}"],
     schoolCalendar["POST /school/calendar/appointments"],
     schoolCalendar["POST /school/calendar/feed/rotate"],
     schoolCalendar["POST /school/calendar/parent-conferences"],
@@ -1024,7 +1040,6 @@ export const portalRoutes = {
     admin["GET /api/admin/grade-transitions/"],
     admin["GET /api/admin/grade-transitions/classes"],
     admin["GET /api/admin/grade-transitions/suggest"],
-    admin["GET /api/admin/grade-transitions/{id}/"],
     admin["GET /api/admin/grade-transitions/{id}/history"],
     admin["GET /api/admin/grade-transitions/{id}/preview"],
     admin["POST /api/admin/grade-transitions/"],
@@ -1042,6 +1057,7 @@ export const portalRoutes = {
     authAccounts["DELETE /auth/accounts/{accountId}/mfa/"],
     authAccounts["GET /auth/accounts/{accountId}/caregiver-capability"],
     authAccounts["GET /auth/accounts/{accountId}/mfa/"],
+    authAccounts["GET /auth/accounts/{accountId}/role-selection/"],
     authAccounts["GET /auth/accounts/{accountId}/roles/"],
     authAccounts["POST /auth/accounts/{accountId}/caregiver-capability"],
     authAccounts["PUT /auth/accounts/{accountId}/mfa/override"],
@@ -1065,9 +1081,12 @@ export const portalRoutes = {
     authRoles["DELETE /auth/roles/{id}/"],
     authRoles["GET /auth/roles/"],
     authRoles["GET /auth/roles/{id}/"],
+    authRoles["GET /auth/roles/{roleId}/permission-selection/"],
     authRoles["GET /auth/roles/{roleId}/permissions/"],
     authRoles["POST /auth/roles/"],
     authRoles["PUT /auth/roles/{id}/"],
+    authRoles["PUT /auth/roles/{id}/master-data/"],
+    authRoles["PUT /auth/roles/{roleId}/permission-selection/"],
     authRoles["PUT /auth/roles/{roleId}/permissions/"],
     authStaffPreview["GET /auth/staff-preview/candidates"],
     birthdays["GET /api/birthdays/"],
@@ -1127,7 +1146,6 @@ export const portalRoutes = {
     enrollment["GET /api/enrollment/admin/students/{studentId}/requests/"],
     enrollment["GET /api/enrollment/care-offerings/"],
     enrollment["GET /api/enrollment/care-offerings/booking-stats"],
-    enrollment["GET /api/enrollment/care-offerings/{id}/"],
     enrollment["GET /api/enrollment/phases/"],
     enrollment["GET /api/enrollment/phases/expiry-warnings"],
     enrollment["GET /api/enrollment/phases/{id}/"],
@@ -1208,6 +1226,7 @@ export const portalRoutes = {
     guardians["POST /api/guardians/{id}/phone-numbers/"],
     guardians["POST /api/guardians/{id}/phone-numbers/{phoneId}/set-primary"],
     guardians["PUT /api/guardians/relationships/{relationshipId}"],
+    guardians["PUT /api/guardians/students/{studentId}/guardians/{guardianId}"],
     guardians["PUT /api/guardians/students/{studentId}/payer"],
     guardians["PUT /api/guardians/{id}"],
     guardians["PUT /api/guardians/{id}/payment"],
@@ -1265,6 +1284,7 @@ export const portalRoutes = {
     mealPlan["DELETE /api/meal-plan/participation/{studentId}/days/{date}"],
     mealPlan["DELETE /api/meal-plan/{date}"],
     mealPlan["GET /api/meal-plan/"],
+    mealPlan["GET /api/meal-plan/days"],
     mealPlan["GET /api/meal-plan/orders"],
     mealPlan["GET /api/meal-plan/orders/month/export"],
     mealPlan["GET /api/meal-plan/participants"],
@@ -1272,6 +1292,7 @@ export const portalRoutes = {
     mealPlan["GET /api/meal-plan/participants/week"],
     mealPlan["GET /api/meal-plan/participants/week/export"],
     mealPlan["GET /api/meal-plan/participation/{studentId}"],
+    mealPlan["PUT /api/meal-plan/days/{date}"],
     mealPlan["PUT /api/meal-plan/participation/{studentId}/days/{date}"],
     mealPlan["PUT /api/meal-plan/participation/{studentId}/schedule"],
     mealPlan["PUT /api/meal-plan/{date}"],
@@ -1339,7 +1360,6 @@ export const portalRoutes = {
     reminders["GET /api/reminders/"],
     rooms["DELETE /api/rooms/{id}"],
     rooms["GET /api/rooms/"],
-    rooms["GET /api/rooms/by-category"],
     rooms["GET /api/rooms/{id}"],
     rooms["GET /api/rooms/{id}/history"],
     rooms["GET /api/rooms/{id}/removal-impact"],
@@ -1553,6 +1573,7 @@ export const portalRoutes = {
     students["GET /api/students/{id}/attendance-history/export"],
     students["GET /api/students/{id}/care-withdrawals"],
     students["GET /api/students/{id}/change-history"],
+    students["GET /api/students/{id}/companion-links"],
     students["GET /api/students/{id}/companions"],
     students["GET /api/students/{id}/delete-impact"],
     students["GET /api/students/{id}/documents"],
@@ -1792,6 +1813,9 @@ export const routeFileRoutes = {
     catererAuth["POST /caterer/auth/passkeys/login/verify"],
   ],
   org: [
+    demoAccess["GET /demo/access/status"],
+    demoAccess["POST /demo/access/reset"],
+    demoAccess["POST /demo/access/sessions"],
     traegerAuth["POST /traeger/auth/login"],
     traegerAuth["POST /traeger/auth/mfa/enroll/confirm"],
     traegerAuth["POST /traeger/auth/mfa/enroll/start"],
@@ -1800,6 +1824,9 @@ export const routeFileRoutes = {
     traegerAuth["POST /traeger/auth/mfa/verify"],
   ],
   parent: [
+    demoAccess["GET /demo/access/status"],
+    demoAccess["POST /demo/access/reset"],
+    demoAccess["POST /demo/access/sessions"],
     parentAuth["POST /parent/auth/login"],
     parentAuth["POST /parent/auth/mfa/resend"],
     parentAuth["POST /parent/auth/mfa/verify"],
@@ -1842,6 +1869,9 @@ export const routeFileRoutes = {
     authStaffPreview["POST /auth/staff-preview"],
     authStaffPreview["POST /auth/staff-preview/end"],
     authSwitchTenant["POST /auth/switch-tenant"],
+    demoAccess["GET /demo/access/status"],
+    demoAccess["POST /demo/access/reset"],
+    demoAccess["POST /demo/access/sessions"],
     display["GET /api/display/dashboard"],
     enrollment["GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}"],
     enrollment["GET /api/enrollment/me/profile"],

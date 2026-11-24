@@ -6,17 +6,19 @@ package behaviortest
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/api/testutil"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
+
+	"github.com/moto-ogs/project-phoenix/api/testutil"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type rebookFixture struct {
@@ -50,23 +52,47 @@ func setupRebookFixture(t *testing.T, entitledDays float64) rebookFixture {
 	for _, day := range []int{7, 14, 21} {
 		friday := testpkg.Date(2026, time.August, day)
 		fixture.absences = append(fixture.absences, insertAbsenceRow(t, tc, map[string]any{
-			"staff_id":     subjectID,
+			"staff_id":     fmt.Sprint(subjectID),
 			"absence_type": "comp_time",
 			"date_start":   friday.String(),
 			"date_end":     friday.String(),
 			"status":       "reported",
-			"created_by":   subjectID,
+			"created_by":   fmt.Sprint(subjectID),
 			"requested_at": time.Now(),
 		}))
 	}
 	return fixture
 }
 
+// rebook posts body. A write without expected_fingerprint first confirms
+// the dry run of the same body, as the dialog does (ADR 0311); a body that
+// names its fingerprint is sent as it is.
 func (f rebookFixture) rebook(t *testing.T, body map[string]any) *httptest.ResponseRecorder {
+	t.Helper()
+	if _, named := body["expected_fingerprint"]; !named && body["dry_run"] == false {
+		body = f.confirmed(t, body)
+	}
+	return f.post(t, body)
+}
+
+func (f rebookFixture) post(t *testing.T, body map[string]any) *httptest.ResponseRecorder {
 	t.Helper()
 	return testutil.ExecuteRequest(f.tc.router, testutil.NewAuthenticatedRequest(
 		t, http.MethodPost, fmt.Sprintf("/staff/%d/absences/rebook", f.subjectID),
 		body, testutil.WithJWTBearer(f.token)))
+}
+
+// confirmed returns body with the fingerprint of its dry run; a refused dry
+// run leaves it without one.
+func (f rebookFixture) confirmed(t *testing.T, body map[string]any) map[string]any {
+	t.Helper()
+	preview := maps.Clone(body)
+	preview["dry_run"] = true
+	confirmed := maps.Clone(body)
+	if rec := f.post(t, preview); rec.Code == http.StatusOK {
+		confirmed["expected_fingerprint"] = decodeRebook(t, rec).Data.Fingerprint
+	}
+	return confirmed
 }
 
 func (f rebookFixture) body(reason string, dryRun bool) map[string]any {
@@ -124,8 +150,9 @@ type rebookResponse struct {
 			RemainingDays float64 `json:"remaining_days"`
 			BookingDays   float64 `json:"booking_days"`
 		} `json:"allowances"`
-		AllowanceExceeded bool `json:"allowance_exceeded"`
-		Applied           bool `json:"applied"`
+		AllowanceExceeded bool   `json:"allowance_exceeded"`
+		Applied           bool   `json:"applied"`
+		Fingerprint       string `json:"fingerprint"`
 	} `json:"data"`
 }
 
@@ -210,18 +237,46 @@ func TestAdminRebookAbsences_CompTimeToAllowanceType(t *testing.T) {
 	}
 }
 
+// A rebooking writes only the effect the Leitung confirmed (ADR 0311): when
+// the allowance changes after the preview, the write is refused and changes
+// nothing; the fingerprint of a new preview books.
+func TestAdminRebookAbsences_RefusesAnEffectThatChangedSinceThePreview(t *testing.T) {
+	t.Parallel()
+	f := setupRebookFixture(t, 10)
+	reason := "Kontingent angelegt"
+	confirmed := f.confirmed(t, f.body(reason, false))
+	require.NotEmpty(t, confirmed["expected_fingerprint"])
+
+	_, err := f.tc.db.NewRaw(`UPDATE active.staff_absence_type_allowances SET entitled_days = 5
+		WHERE tenant_id = ? AND staff_id = ? AND absence_type_id = ?`,
+		testpkg.Tenant(t), f.subjectID, f.typeID).Exec(testpkg.Ctx(t))
+	require.NoError(t, err)
+	unread := f.body(reason, false)
+	unread["expected_fingerprint"] = ""
+	for name, body := range map[string]map[string]any{"older preview": confirmed, "no preview": unread} {
+		rec := f.post(t, body)
+		require.Equal(t, http.StatusConflict, rec.Code, "%s: %s", name, rec.Body.String())
+		assert.Contains(t, rec.Body.String(), `"code":"general.changed_since_read"`, name)
+		assert.Equal(t, []string{"comp_time:", "comp_time:", "comp_time:"}, f.storedTypes(t), name)
+	}
+
+	rec := f.post(t, f.confirmed(t, f.body(reason, false)))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.True(t, decodeRebook(t, rec).Data.Applied)
+}
+
 func TestAdminRebookAbsences_RejectsBlockingOverlap(t *testing.T) {
 	t.Parallel()
 
 	f := setupRebookFixture(t, 10)
 	friday := testpkg.Date(2026, time.August, 7)
 	insertAbsenceRow(t, f.tc, map[string]any{
-		"staff_id":     f.subjectID,
+		"staff_id":     fmt.Sprint(f.subjectID),
 		"absence_type": "training",
 		"date_start":   friday.String(),
 		"date_end":     friday.String(),
 		"status":       "reported",
-		"created_by":   f.subjectID,
+		"created_by":   fmt.Sprint(f.subjectID),
 		"requested_at": time.Now(),
 	})
 
@@ -275,12 +330,12 @@ func TestAdminRebookAbsences_RejectsSickReportsAndForeignEntries(t *testing.T) {
 
 	monday := testpkg.Date(2026, time.August, 3)
 	sickID := insertAbsenceRow(t, f.tc, map[string]any{
-		"staff_id":     f.subjectID,
+		"staff_id":     fmt.Sprint(f.subjectID),
 		"absence_type": "sick",
 		"date_start":   monday.String(),
 		"date_end":     monday.String(),
 		"status":       "reported",
-		"created_by":   f.subjectID,
+		"created_by":   fmt.Sprint(f.subjectID),
 		"requested_at": time.Now(),
 	})
 	body := f.body("Korrektur", false)
@@ -301,12 +356,12 @@ func TestAdminRebookAbsences_RejectsSickReportsAndForeignEntries(t *testing.T) {
 	// Another person's entry is not reachable through this staff member.
 	other := testpkg.CreateTestStaff(t, f.tc.db, "Rebook", fmt.Sprintf("Other-%d", time.Now().UnixNano()))
 	foreignID := insertAbsenceRow(t, f.tc, map[string]any{
-		"staff_id":     other.ID,
+		"staff_id":     fmt.Sprint(other.ID),
 		"absence_type": "comp_time",
 		"date_start":   monday.String(),
 		"date_end":     monday.String(),
 		"status":       "reported",
-		"created_by":   other.ID,
+		"created_by":   fmt.Sprint(other.ID),
 		"requested_at": time.Now(),
 	})
 	foreign := f.body("Korrektur", false)

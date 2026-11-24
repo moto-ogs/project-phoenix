@@ -44,7 +44,7 @@ export interface CurrentActivityItem {
 }
 
 export const CurrentActivityItemSchema: z.ZodType<CurrentActivityItem, unknown> = object<CurrentActivityItem>({
-  id: str,
+  id: int64String,
   name: str,
   category: str,
   participants: safeInt,
@@ -473,7 +473,7 @@ export const OpenRoomSchema: z.ZodType<OpenRoom, unknown> = object<OpenRoom>({
   room_id: int64String,
   name: str,
   is_user_supervising: bool,
-  active_group_ids: nullable(arr(str)),
+  active_group_ids: nullable(arr(int64String)),
   has_occupying_session: bool,
   student_count: safeInt,
   students: nullable(arr(OpenRoomStudentSchema)),
@@ -1011,23 +1011,6 @@ export const TransitAssignResultSchema: z.ZodType<TransitAssignResult, unknown> 
   room_id: int64String,
 });
 
-/** Query of GET /api/active/groups/ */
-export interface GetActiveGroupsQuery {
-  active?: string;
-  is_active?: string;
-}
-
-/** Query of GET /api/active/supervision-dashboard */
-export interface GetActiveSupervisionDashboardQuery {
-  group_id?: string;
-}
-
-/** Query of GET /api/active/visits/ */
-export interface GetActiveVisitsQuery {
-  active?: string;
-  active_group_ids?: string;
-}
-
 export const routes = {
   "GET /api/active/analytics/dashboard": {
     method: "GET",
@@ -1039,7 +1022,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/active/groups/",
     portals: ["tenant"],
-    query: ["active", "is_active"],
+    query: {
+      "active": { kind: "bool" },
+      "is_active": { kind: "bool" },
+    },
     response: success(z.array(ActiveGroupResponseSchema)),
   },
   "GET /api/active/groups/{id}/supervisors": {
@@ -1058,7 +1044,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/active/supervision-dashboard",
     portals: ["tenant"],
-    query: ["group_id"],
+    query: {
+      "group_id": { kind: "id" },
+    },
     response: success(DashboardProjectionSchema),
   },
   "GET /api/active/supervisors/all": {
@@ -1077,7 +1065,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/active/visits/",
     portals: ["tenant"],
-    query: ["active", "active_group_ids"],
+    query: {
+      "active": { kind: "bool" },
+      "active_group_ids": { kind: "string" },
+    },
     response: success(z.array(VisitResponseSchema)),
   },
   "POST /api/active/groups/{id}/claim": {

@@ -11,8 +11,9 @@ import type {
   MailProviderBlock,
   MailOutcome,
 } from "~/lib/email-delivery-status";
-import { bffFile, bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffFileHref, bffJson } from "~/lib/bff-fetch";
 import type * as parentAnnouncementsContract from "~/lib/contract/parent-announcements.generated";
+import type * as attachmentContract from "~/lib/contract/announcement-attachments.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
 
@@ -338,14 +339,14 @@ export type DeclarationStatus = Omit<
   submissions: DeclarationSubmission[];
 };
 
-const BASE = "/api/parent-announcements";
+const BASE = "tenant";
 
 /**
  * The routes of a class letter in moto schule (#4800): the same announcement
- * calls behind the school session. Every call below takes the base; the OGS
+ * calls behind the school session. Every call below takes the portal selector; the OGS
  * portal uses the default.
  */
-export const SCHOOL_PARENT_LETTERS_BASE = "/api/school/parent-letters";
+export const SCHOOL_PARENT_LETTERS_BASE = "school";
 
 /** Where an announcement call goes: the OGS portal or moto schule. */
 export type AnnouncementApiBase =
@@ -461,14 +462,19 @@ export async function createAnnouncement(
   );
 }
 
+/**
+ * Speichert den Entwurf, der mit `expectedVersion` gelesen wurde (ADR 0311);
+ * hat ihn jemand seitdem geändert, lehnt der Server ab.
+ */
 export async function updateAnnouncement(
   id: string,
   input: AnnouncementInput,
+  expectedVersion: string,
 ): Promise<Announcement> {
   return toAnnouncement(
     await bffJson("tenant", "PUT /api/parent-announcements/{announcementId}", {
       params: { announcementId: id },
-      body: input,
+      body: { ...input, expected_version: expectedVersion },
       errorMessage: "Elternmitteilung konnte nicht gespeichert werden",
     }),
   );
@@ -512,12 +518,18 @@ export async function deleteAnnouncement(
   );
 }
 
+/**
+ * Veröffentlicht den Entwurf, wie er gelesen wurde: `expectedVersion` ist
+ * seine `version` (ADR 0311).
+ */
 export async function publishAnnouncement(
   id: string,
+  expectedVersion: string,
   base: AnnouncementApiBase = BASE,
 ): Promise<Announcement> {
   const errorMessage = "Elternmitteilung konnte nicht veröffentlicht werden";
   const params = { announcementId: id };
+  const body = { expected_version: expectedVersion };
   return toAnnouncement(
     await onPortal(
       base,
@@ -525,13 +537,13 @@ export async function publishAnnouncement(
         bffJson(
           "tenant",
           "POST /api/parent-announcements/{announcementId}/publish",
-          { params, errorMessage },
+          { params, body, errorMessage },
         ),
       () =>
         bffJson(
           "school",
           "POST /school/parent-letters/{announcementId}/publish",
-          { params, errorMessage },
+          { params, body, errorMessage },
         ),
     ),
   );
@@ -861,15 +873,14 @@ export async function fetchAnnouncementRecipients(
  * Empfängerkreis bei.
  */
 
-const ATTACHMENTS_BASE = "/api/announcement-attachments";
-
 /**
  * Die Anhänge einer Mitteilung mit `max_count` (Höchstzahl je Mitteilung),
- * `max_bytes` (Größengrenze je Datei) und `editable` (false, sobald die
- * Mitteilung veröffentlicht ist).
+ * `max_bytes` (Größengrenze je Datei), `editable` (false, sobald die
+ * Mitteilung veröffentlicht ist) und `announcement_version`: der Stand des
+ * Entwurfs, zu dem die Liste gehört (ADR 0311).
  */
 export type AnnouncementAttachmentList = Omit<
-  sharedContract.AnnouncementAttachmentListResponse,
+  attachmentContract.StaffAttachmentListResponse,
   "attachments"
 > & {
   attachments: sharedContract.AnnouncementAttachmentResponse[];
@@ -889,10 +900,17 @@ export async function fetchAnnouncementAttachments(
   return { ...list, attachments: list.attachments ?? [] };
 }
 
+/**
+ * Lädt eine Datei an den Entwurf der Version `expectedVersion` (ADR 0311).
+ * Die Anhänge gehören zu dem Stand, den die Veröffentlichung bestätigt: die
+ * Antwort trägt die neue Version des Entwurfs, die das nächste Speichern
+ * oder Veröffentlichen schickt.
+ */
 export function uploadAnnouncementAttachment(
   announcementId: string,
   file: File,
-): Promise<sharedContract.AnnouncementAttachmentResponse> {
+  expectedVersion: string,
+): Promise<attachmentContract.UploadedAttachmentResponse> {
   const form = new FormData();
   form.append("file", file);
   return bffJson(
@@ -900,32 +918,46 @@ export function uploadAnnouncementAttachment(
     "POST /api/announcement-attachments/{announcementId}",
     {
       params: { announcementId },
+      query: { expected_version: expectedVersion },
       body: form,
       errorMessage: "Die Datei konnte nicht hochgeladen werden",
     },
   );
 }
 
+/** Entfernt einen Anhang vom Entwurf der Version `expectedVersion` und
+ * antwortet die neue Version des Entwurfs (ADR 0311). */
 export async function deleteAnnouncementAttachment(
   announcementId: string,
   attachmentId: string,
-): Promise<void> {
-  await bffJson(
+  expectedVersion: string,
+): Promise<string> {
+  const removed = await bffJson(
     "tenant",
     "DELETE /api/announcement-attachments/{announcementId}/{attachmentId}",
     {
       params: { announcementId, attachmentId },
+      body: { expected_version: expectedVersion },
       errorMessage: "Der Anhang konnte nicht entfernt werden",
     },
   );
+  return removed.announcement_version;
 }
 
 /** Adresse, unter der das Personal einen Anhang zur Kontrolle öffnet. */
 export function announcementAttachmentDownloadUrl(
   announcementId: string,
   attachmentId: string,
+  inline = false,
 ): string {
-  return `${ATTACHMENTS_BASE}/${encodeURIComponent(announcementId)}/${encodeURIComponent(attachmentId)}/download`;
+  return bffFileHref(
+    "tenant",
+    "GET /api/announcement-attachments/{announcementId}/{attachmentId}/download",
+    {
+      params: { announcementId, attachmentId },
+      query: inline ? { inline: "1" } : {},
+    },
+  );
 }
 
 // --- Serienbriefe (#4813) ----------------------------------------------------

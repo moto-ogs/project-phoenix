@@ -51,6 +51,10 @@ type AbsenceTypeRequest struct {
 	CarryoverUntil   string  `json:"carryover_until"`
 	Requestable      bool    `json:"requestable"`
 	IsActive         *bool   `json:"is_active"`
+	// ExpectedVersion is the type's version an update was made on; a type
+	// changed since is refused with general.changed_since_read (ADR 0311).
+	// A create ignores it.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func (req *AbsenceTypeRequest) Bind(*http.Request) error { return nil }
@@ -60,6 +64,7 @@ func (req *AbsenceTypeRequest) toInput() workforce.TraegerAbsenceTypeInput {
 	return workforce.TraegerAbsenceTypeInput{
 		Name: req.Name, AllowanceEnabled: req.AllowanceEnabled, StandardDays: req.StandardDays,
 		CarryoverUntil: req.CarryoverUntil, Requestable: req.Requestable, IsActive: active,
+		ExpectedVersion: req.ExpectedVersion,
 	}
 }
 
@@ -141,6 +146,10 @@ type AbsenceAllowanceRequest struct {
 	Year         int     `json:"year"`
 	EntitledDays float64 `json:"entitled_days"`
 	Reason       string  `json:"reason"`
+	// ExpectedVersion is the version of the account the form showed; a
+	// claim changed since is refused with general.changed_since_read (ADR
+	// 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func (req *AbsenceAllowanceRequest) Bind(*http.Request) error { return nil }
@@ -163,6 +172,7 @@ func (rs *RecordsResource) setAbsenceAllowance(w http.ResponseWriter, r *http.Re
 	}
 	err := rs.absences.SetAbsenceAllowance(r.Context(), session, workforce.SetTraegerAbsenceAllowance{
 		RecordID: id, AbsenceTypeID: typeID, Year: req.Year, EntitledDays: req.EntitledDays, Reason: req.Reason,
+		ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		renderAbsenceError(w, r, err)

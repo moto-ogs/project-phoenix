@@ -101,7 +101,7 @@ func correctedAndCancelled(t *testing.T, f reviewFixture, billing string) (carri
 	document, child := run.Documents[0], run.Documents[0].Children[0]
 	require.Greater(t, child.TotalCents, carriedCorrectionCents)
 	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), map[string]any{
-		"registration_id": document.RegistrationID, "child_id": child.ChildID,
+		"registration_id": fmt.Sprint(document.RegistrationID), "child_id": fmt.Sprint(child.ChildID),
 		"total_cents": child.TotalCents - carriedCorrectionCents, "reason": "Erster Tag krank",
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -228,7 +228,7 @@ func raisedAndZeroedCancelled(t *testing.T, f reviewFixture, billing string) car
 	document, child := first.Documents[0], first.Documents[0].Children[0]
 	for _, total := range []int64{child.TotalCents + 5000, 0} {
 		rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(first.ID), "/corrections"), map[string]any{
-			"registration_id": document.RegistrationID, "child_id": child.ChildID, "total_cents": total, "reason": "Nachbuchung",
+			"registration_id": fmt.Sprint(document.RegistrationID), "child_id": fmt.Sprint(child.ChildID), "total_cents": total, "reason": "Nachbuchung",
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		first = decodeSchoolPortalData[carriedRunBody](t, rec.Body.Bytes())
@@ -275,7 +275,7 @@ func TestRemovingACarriedCorrectionCannotPushTheChildBelowZero(t *testing.T) {
 	raised := decodeSchoolPortalData[carriedRunBody](t, rec.Body.Bytes())
 	document, child := raised.Documents[0], raised.Documents[0].Children[0]
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(next.ID), "/corrections"), map[string]any{
-		"registration_id": document.RegistrationID, "child_id": child.ChildID, "total_cents": 0, "reason": "Doch nicht gebucht",
+		"registration_id": fmt.Sprint(document.RegistrationID), "child_id": fmt.Sprint(child.ChildID), "total_cents": 0, "reason": "Doch nicht gebucht",
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 

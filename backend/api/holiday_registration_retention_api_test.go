@@ -11,6 +11,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -63,7 +64,7 @@ func TestHolidayRegistrationsGoAfterTheirRetentionAndInvoicesStay(t *testing.T) 
 	}
 	require.NotZero(t, lia)
 	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), map[string]any{
-		"registration_id": f.siblings, "child_id": lia, "total_cents": 3000, "reason": "Erste Woche krank, halber Beitrag",
+		"registration_id": fmt.Sprint(f.siblings), "child_id": fmt.Sprint(lia), "total_cents": 3000, "reason": "Erste Woche krank, halber Beitrag",
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	run = billingRun(t, f, billing, int64(run.ID))

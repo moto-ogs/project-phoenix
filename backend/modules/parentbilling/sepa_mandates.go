@@ -123,10 +123,13 @@ var (
 // pre-notification goes out before the debit and what an invoice without
 // a valid mandate does.
 type SEPACreditor struct {
-	CreditorID          string     `json:"creditor_id"`
+	CreditorID          string     `json:"creditor_id" contract_text:"SEPA creditor identifier"`
 	PrenotificationDays int        `json:"prenotification_days"`
 	MissingMandate      string     `json:"missing_mandate"`
 	UpdatedAt           *time.Time `json:"updated_at"`
+	// Version is the read-state token of the creditor (ADR 0311): a change
+	// sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // DefaultSEPACreditor is the creditor of a Träger that set nothing.
@@ -151,7 +154,7 @@ type SEPAMandate struct {
 	Kind            string         `json:"kind"`
 	Sequence        string         `json:"sequence"`
 	AccountHolder   string         `json:"account_holder"`
-	CreditorID      string         `json:"creditor_id"`
+	CreditorID      string         `json:"creditor_id" contract_text:"SEPA creditor identifier"`
 	CreditorCurrent bool           `json:"creditor_current"`
 	LastCollectedOn *calendar.Date `json:"last_collected_on"`
 	// ExpiresOn is the first day the mandate no longer holds without a
@@ -262,7 +265,7 @@ type InvoiceMandate struct {
 	MandateID    ident.ID      `json:"mandate_id"`
 	Reference    string        `json:"reference"`
 	SignedOn     calendar.Date `json:"signed_on"`
-	CreditorID   string        `json:"creditor_id"`
+	CreditorID   string        `json:"creditor_id" contract_text:"SEPA creditor identifier"`
 	IBANMasked   string        `json:"iban_masked"`
 	SequenceType string        `json:"sequence_type"`
 	// HolderSealed is copied on release and opened only for the invoice letter.
@@ -340,7 +343,9 @@ type SEPAMandates interface {
 	SEPACreditor(ctx context.Context, organizationID int64) (SEPACreditor, error)
 	// SaveSEPACreditor sets the creditor identifier, the pre-notification
 	// days and the choice for a direct debit without a mandate.
-	SaveSEPACreditor(ctx context.Context, reviewer HolidayReviewer, creditor SEPACreditor) (SEPACreditor, error)
+	// A creditor changed since expectedVersion is refused with
+	// readstate.ErrChanged (ADR 0311).
+	SaveSEPACreditor(ctx context.Context, reviewer HolidayReviewer, creditor SEPACreditor, expectedVersion string) (SEPACreditor, error)
 	// ListSEPAMandates lists the mandates, newest first; contractID > 0
 	// keeps those of the family of that contract.
 	ListSEPAMandates(ctx context.Context, reviewer HolidayReviewer, contractID int64) ([]SEPAMandate, error)

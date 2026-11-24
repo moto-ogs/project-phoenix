@@ -1040,7 +1040,7 @@ describe("logout leaves no personal entries behind (#5000)", () => {
       data: {
         user: {
           id: "7",
-          tenantId: 1,
+          tenantId: "1",
           name: "Mia Lehrerin",
           email: "mia@example.com",
           roles: [],

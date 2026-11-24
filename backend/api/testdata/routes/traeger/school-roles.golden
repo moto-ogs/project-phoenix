@@ -1,0 +1,6 @@
+GET /traeger/school-roles/
+GET /traeger/school-roles/catalog
+GET /traeger/school-roles/{id}/removal-preview
+POST /traeger/school-roles/
+POST /traeger/school-roles/{id}/removal
+PUT /traeger/school-roles/{id}

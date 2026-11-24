@@ -8,9 +8,12 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
@@ -41,18 +44,22 @@ func holidayPDF(t *testing.T, f holidayRegistrationFixture, office traegerOffice
 	t.Helper()
 	rec := holidayPDFUpload(t, f, office.token, period, "Hinweise.pdf", []byte(holidayTestPDF))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	return decodeSchoolPortalData[enrollment.HolidayFormDocument](t, rec.Body.Bytes()).ID
+	return decodeSchoolPortalData[enrollment.HolidayFormDocument](t, rec.Body.Bytes()).ID.String()
 }
 func holidayLegalBlocks(ids ...string) []enrollment.FormLegalBlock {
 	blocks := []enrollment.FormLegalBlock{}
 	for i, id := range ids {
-		blocks = append(blocks, enrollment.FormLegalBlock{Key: fmt.Sprintf("hinweis_%d", i), Kind: "notice", Source: "custom", Title: fmt.Sprintf("Hinweis %d", i+1), Label: "Ich habe den Hinweis gelesen und zur Kenntnis genommen.", Enabled: true, Required: true, DisplayMode: "pdf", Attachments: []enrollment.FormAttachment{{Label: "PDF-Hinweis", DocumentID: id}}})
+		numericID, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			panic(err)
+		}
+		blocks = append(blocks, enrollment.FormLegalBlock{Key: fmt.Sprintf("hinweis_%d", i), Kind: "notice", Source: "custom", Title: fmt.Sprintf("Hinweis %d", i+1), Label: "Ich habe den Hinweis gelesen und zur Kenntnis genommen.", Enabled: true, Required: true, DisplayMode: "pdf", Attachments: []enrollment.FormAttachment{{Label: "PDF-Hinweis", DocumentID: ident.ID(numericID)}}})
 	}
 	return append(blocks, enrollment.FormLegalBlock{Key: "foto_ferien", Kind: "consent", Source: "custom", Title: "Fotos", Label: "Mein Kind darf fotografiert werden.", Text: "Fotos bleiben in der OGS.", Enabled: true})
 }
 func saveHolidayLegalBlocks(t *testing.T, f holidayRegistrationFixture, office traegerOffice, period int64, blocks []enrollment.FormLegalBlock) *httptest.ResponseRecorder {
 	t.Helper()
-	return traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(period), map[string]any{"fields": []any{}, "legal_blocks": blocks})
+	return putHolidayForm(t, f.traeger, office.token, holidayFormPath(period), map[string]any{"fields": []any{}, "legal_blocks": blocks})
 }
 
 func TestHolidayLegalDocumentsAndPinnedAcceptanceEvidence(t *testing.T) {

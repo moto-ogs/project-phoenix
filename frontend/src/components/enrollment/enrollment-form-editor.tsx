@@ -94,6 +94,7 @@ import {
 } from "~/lib/enrollment-legal-blocks";
 import { listPhases, type Phase } from "~/lib/enrollment-phase-api";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { ApiError } from "~/lib/api-error";
 import { useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import type { Translations } from "~/lib/enrollment-translations";
@@ -593,11 +594,19 @@ export function EnrollmentFormEditor({
       // deletes the uploads of this save.
       draftSave?.fail();
       if (!unmountedRef.current) {
-        logger.error("schema_save_failed", {
+        // A rejected save is expected; only server failures are errors.
+        const expected = err instanceof ApiError && (err.status ?? 500) < 500;
+        const failure = {
           error: err instanceof Error ? err.message : String(err),
-        });
+        };
+        if (expected) logger.warn("schema_save_failed", failure);
+        else logger.error("schema_save_failed", failure);
+        // A colleague published a newer version since this one was read
+        // (ADR 0311): the editor shows it, no stale draft stays, and the
+        // refusal offers no retry of the same save.
         void showSaveError(err, {
           object: "die Formularvorlage",
+          reload: reloadNewestSchema,
           retry: () => void saveSchemaRef.current(nextMode),
         });
       }
@@ -610,6 +619,35 @@ export function EnrollmentFormEditor({
   useLayoutEffect(() => {
     saveSchemaRef.current = saveSchema;
   });
+
+  // Loads the templates and opens the newest version of the edited lineage;
+  // a failed read comes back instead of a claim that the new one is shown.
+  const adoptNewestSchema = async (): Promise<{ error: unknown } | null> => {
+    const editedID = selectedKey;
+    try {
+      const list =
+        (await mutateSchemas(listSchemas(), { revalidate: false })) ?? [];
+      // A rename keeps the row ids, so the lineage is found by the edited id.
+      const lineage =
+        list.find((schema) => schema.id === editedID)?.name ??
+        currentSchema?.name;
+      const newest = latestSchemasByName(list).find(
+        (schema) => schema.name === lineage,
+      );
+      if (newest) selectSchema(newest, mode);
+      return null;
+    } catch (error) {
+      logger.warn("schema_newest_read_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { error };
+    }
+  };
+  // The read after a refusal; rejects when the newest version is not there.
+  const reloadNewestSchema = async () => {
+    const failed = await adoptNewestSchema();
+    if (failed) throw failed.error;
+  };
 
   const handleSave = async () => {
     await saveSchema("detail");

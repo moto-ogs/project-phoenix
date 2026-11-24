@@ -2,8 +2,9 @@ package requestreview
 
 import (
 	"encoding/json"
-	"reflect"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The per-type "requested change" shapes. Each list item carries one of
@@ -26,29 +27,17 @@ type Payload struct {
 	DirectCorrection    *DirectCorrectionResponse
 }
 
-// value is the one projection the payload holds, for the deprecated data
-// member of the list item; nil when none is set.
-func (p Payload) value() any {
-	for _, candidate := range []any{p.MasterData, p.MasterDataHistory, p.CareSchedule, p.CareScheduleHistory,
-		p.Offering, p.OfferingHistory, p.Excused, p.ExcusedHistory, p.DirectCorrection} {
-		if !reflect.ValueOf(candidate).IsNil() {
-			return candidate
-		}
-	}
-	return nil
-}
-
 // MasterDataChangeRequestResponse is the staff-facing projection of one parent
 // Stammdaten change request in the review queue.
 type MasterDataChangeRequestResponse struct {
-	ID         string          `json:"id"`
-	StudentID  string          `json:"student_id"`
+	ID         ident.ID        `json:"id"`
+	StudentID  ident.ID        `json:"student_id"`
 	FirstName  string          `json:"first_name"`
 	LastName   string          `json:"last_name"`
 	Target     string          `json:"target"`
 	FieldKey   string          `json:"field_key"`
-	OldValue   json.RawMessage `json:"old_value,omitempty"`
-	NewValue   json.RawMessage `json:"new_value"`
+	OldValue   json.RawMessage `json:"old_value,omitempty" contract_json:"The requested student field selects the master-data value type"`
+	NewValue   json.RawMessage `json:"new_value" contract_json:"The requested student field selects the master-data value type"`
 	Status     string          `json:"status"`
 	CreatedAt  time.Time       `json:"created_at"`
 	ReviewedAt *time.Time      `json:"reviewed_at,omitempty"`
@@ -67,8 +56,8 @@ type MasterDataChangeRequestHistoryResponse struct {
 // care-schedule change request in the review queue, including the live
 // "current → requested" weekly diff.
 type CareRequestResponse struct {
-	ID              string                    `json:"id"`
-	StudentID       string                    `json:"student_id"`
+	ID              ident.ID                  `json:"id"`
+	StudentID       ident.ID                  `json:"student_id"`
 	FirstName       string                    `json:"first_name"`
 	LastName        string                    `json:"last_name"`
 	Status          string                    `json:"status"`
@@ -88,10 +77,10 @@ type CareRequestResponse struct {
 
 // AffectedCareBlock is one timetable block a care-schedule change touches.
 type AffectedCareBlock struct {
-	ID        string `json:"id"`
-	Title     string `json:"title"`
-	StartTime string `json:"start_time"`
-	EndTime   string `json:"end_time"`
+	ID        ident.ID `json:"id"`
+	Title     string   `json:"title"`
+	StartTime string   `json:"start_time"`
+	EndTime   string   `json:"end_time"`
 }
 
 // CareRequestDiffResponse mirrors the request-diff wire shape the messaging
@@ -115,8 +104,8 @@ type CareRequestDiffResponse struct {
 // rows without one (withdrawn, pre-snapshot) fall back to the payload-derived
 // requested summary (each entry's old side is empty).
 type CareRequestHistoryResponse struct {
-	ID             string                    `json:"id"`
-	StudentID      string                    `json:"student_id"`
+	ID             ident.ID                  `json:"id"`
+	StudentID      ident.ID                  `json:"student_id"`
 	FirstName      string                    `json:"first_name"`
 	LastName       string                    `json:"last_name"`
 	Status         string                    `json:"status"`
@@ -134,10 +123,10 @@ type CareRequestHistoryResponse struct {
 // offering-change request in the review queue, with the live
 // "current → requested" diff (#1665).
 type OfferingRequestResponse struct {
-	ID          string `json:"id"`
-	StudentID   string `json:"student_id"`
-	StudentName string `json:"student_name"`
-	Status      string `json:"status"`
+	ID          ident.ID `json:"id"`
+	StudentID   ident.ID `json:"student_id"`
+	StudentName string   `json:"student_name"`
+	Status      string   `json:"status"`
 	// EffectiveFrom is the date the switch would take effect (YYYY-MM-DD).
 	EffectiveFrom string `json:"effective_from"`
 	// EarliestEffectiveFrom / LatestEffectiveFrom bound the date staff may
@@ -165,10 +154,10 @@ type OfferingRequestResponse struct {
 // OfferingRequestDiffResponse is one German-localized diff line for the
 // German-only staff portal.
 type OfferingRequestDiffResponse struct {
-	OfferingID string `json:"offering_id"`
-	Label      string `json:"label"`
-	Old        string `json:"old"`
-	New        string `json:"new"`
+	OfferingID ident.ID `json:"offering_id"`
+	Label      string   `json:"label"`
+	Old        string   `json:"old"`
+	New        string   `json:"new"`
 	// Automatic marks a line whose NEW side contains days a Mitbuchungs-Regel
 	// (or the required lunch) added rather than the parents (#2365).
 	Automatic bool `json:"automatic,omitempty"`
@@ -183,8 +172,8 @@ type OfferingRequestDiffResponse struct {
 	// TriggerIDs / TriggerNames identify the selected offerings whose rule
 	// produced the automatic share. TriggerIDs lets the review card grey out
 	// dependent lines while staff untick an override (#2370).
-	TriggerIDs   []string `json:"trigger_ids,omitempty"`
-	TriggerNames []string `json:"trigger_names,omitempty"`
+	TriggerIDs   []ident.ID `json:"trigger_ids,omitempty"`
+	TriggerNames []string   `json:"trigger_names,omitempty"`
 	// Optoutable marks a rule-triggered line staff may exclude per request.
 	Optoutable bool `json:"optoutable,omitempty"`
 	// IsCourse marks a line about a Kurs (an AG reached through a care
@@ -194,9 +183,9 @@ type OfferingRequestDiffResponse struct {
 
 // OfferingRequestUnchangedResponse is one booking the request does not touch.
 type OfferingRequestUnchangedResponse struct {
-	OfferingID string `json:"offering_id"`
-	Label      string `json:"label"`
-	Days       string `json:"days"`
+	OfferingID ident.ID `json:"offering_id"`
+	Label      string   `json:"label"`
+	Days       string   `json:"days"`
 }
 
 // OfferingRequestHistoryResponse extends the queue projection with the
@@ -211,16 +200,16 @@ type OfferingRequestHistoryResponse struct {
 // OfferingRequestRequestedResponse is a payload-derived recap for history
 // rows without a frozen decision snapshot, such as withdrawn requests.
 type OfferingRequestRequestedResponse struct {
-	OfferingID string `json:"offering_id"`
-	Label      string `json:"label"`
-	New        string `json:"new"`
+	OfferingID ident.ID `json:"offering_id"`
+	Label      string   `json:"label"`
+	New        string   `json:"new"`
 }
 
 // StaffExcusedRequestResponse is the legacy-named staff projection of one
 // parent absence approval request in the review queue.
 type StaffExcusedRequestResponse struct {
-	ID            string     `json:"id"`
-	StudentID     string     `json:"student_id"`
+	ID            ident.ID   `json:"id"`
+	StudentID     ident.ID   `json:"student_id"`
 	FirstName     string     `json:"first_name"`
 	LastName      string     `json:"last_name"`
 	AbsenceStatus string     `json:"absence_status"`
@@ -245,9 +234,9 @@ type StaffExcusedRequestHistoryResponse struct {
 // and no decision fields: a correction is not a request, it has no open state
 // and nothing was decided about it.
 type DirectCorrectionResponse struct {
-	ID          string `json:"id"`
-	StudentID   string `json:"student_id"`
-	StudentName string `json:"student_name"`
+	ID          ident.ID `json:"id"`
+	StudentID   ident.ID `json:"student_id"`
+	StudentName string   `json:"student_name"`
 	// ChangedAt is when the office applied the correction.
 	ChangedAt time.Time `json:"changed_at"`
 	// ChangedByName is the actor snapshot taken at write time, "Unbekannt"

@@ -7,6 +7,8 @@ import (
 	"sync"
 	"testing"
 
+	testpkg "github.com/moto-ogs/project-phoenix/test"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -66,7 +68,7 @@ func (f *seedCareTraeger) serve(t *testing.T) func(w seedHTTPResponseWriter, r *
 		case "POST /traeger/care-evidences/":
 			var body map[string]any
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
-			contract := int64(body["contract_id"].(float64))
+			contract := testpkg.JSONID(t, body["contract_id"])
 			if ruleID, ok := body["rule_id"].(float64); ok {
 				for _, rule := range f.rules {
 					if int64(rule.ID) == int64(ruleID) && !slices.Contains(rule.SchoolIDs, ident.ID(f.contracts[contract])) {

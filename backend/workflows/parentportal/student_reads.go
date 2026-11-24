@@ -12,12 +12,15 @@ type StudentSnapshot care.PortalStudent
 type StudentReadCallbacks struct {
 	Find func(context.Context, int64) (*StudentSnapshot, error)
 	Lock func(context.Context, int64) (*StudentSnapshot, error)
+	// LockNoKeyUpdate reads the child with its row FOR NO KEY UPDATE.
+	LockNoKeyUpdate func(context.Context, int64) (*StudentSnapshot, error)
 }
 
 // NewStudentReads binds public-root callbacks to the native workflow port.
 type StudentReads interface {
 	FindByID(context.Context, int64) (*care.PortalStudent, error)
 	FindByIDForUpdate(context.Context, int64) (*care.PortalStudent, error)
+	FindByIDForNoKeyUpdate(context.Context, int64) (*care.PortalStudent, error)
 }
 
 func NewStudentReads(callbacks StudentReadCallbacks) StudentReads {
@@ -32,6 +35,10 @@ func (r portalStudentReads) FindByID(ctx context.Context, id int64) (*care.Porta
 }
 func (r portalStudentReads) FindByIDForUpdate(ctx context.Context, id int64) (*care.PortalStudent, error) {
 	value, err := r.callbacks.Lock(ctx, id)
+	return (*care.PortalStudent)(value), err
+}
+func (r portalStudentReads) FindByIDForNoKeyUpdate(ctx context.Context, id int64) (*care.PortalStudent, error) {
+	value, err := r.callbacks.LockNoKeyUpdate(ctx, id)
 	return (*care.PortalStudent)(value), err
 }
 

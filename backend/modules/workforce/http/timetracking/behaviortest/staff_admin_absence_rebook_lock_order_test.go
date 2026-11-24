@@ -2,15 +2,17 @@ package behaviortest
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
 	"time"
 
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
+
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // #6702: a rebooking takes the subject's work-time gates before it pins the
@@ -27,6 +29,8 @@ func TestRebookingAndBookingOfTheSameSubjectDoNotDeadlock(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	require.Same(t, f.tc.db, db, "the fixture runs on the package database")
 
+	// The dialog confirmed the dry run before the art row was taken.
+	confirmed := f.confirmed(t, f.body("Umbuchung", false))
 	holder, err := db.BeginTx(ctx, nil)
 	require.NoError(t, err)
 	defer func() { _ = holder.Rollback() }()
@@ -35,12 +39,12 @@ func TestRebookingAndBookingOfTheSameSubjectDoNotDeadlock(t *testing.T) {
 	_, err = holder.ExecContext(ctx, `SELECT id FROM active.staff_absence_types WHERE id = ? FOR UPDATE`, f.typeID)
 	require.NoError(t, err)
 
-	rebook := startRequest(func() *httptest.ResponseRecorder { return f.rebook(t, f.body("Umbuchung", false)) })
+	rebook := startRequest(func() *httptest.ResponseRecorder { return f.post(t, confirmed) })
 	rebookPID := awaitBlockedBy(t, db, rebook, 0, holderPID)
 	friday := testpkg.Date(2026, time.September, 18)
 	book := startRequest(func() *httptest.ResponseRecorder {
 		return postAbsence(t, f.tc, f.token, f.subjectID, map[string]any{
-			"absence_type": "other", "absence_type_id": f.typeID,
+			"absence_type": "other", "absence_type_id": fmt.Sprint(f.typeID),
 			"date_start": friday.String(), "date_end": friday.String(),
 		})
 	})

@@ -81,7 +81,7 @@ type SEPAMandateText struct {
 type SEPAMandateCreditor struct {
 	Name       string `json:"name"`
 	Address    string `json:"address"`
-	CreditorID string `json:"creditor_id"`
+	CreditorID string `json:"creditor_id" contract_text:"SEPA creditor identifier"`
 }
 
 // SEPAMandatePrefill proposes holder and address of the contract party.
@@ -102,9 +102,11 @@ type SEPAMandateProof struct {
 }
 
 // SEPAMandateSummary is the family's mandate with the mask of its IBAN.
+// Version is its read-state token; a revocation sends it back (ADR 0311).
 type SEPAMandateSummary struct {
 	CollectionEligible bool              `json:"collection_eligible"`
 	ID                 ident.ID          `json:"id"`
+	Version            string            `json:"version"`
 	Reference          string            `json:"reference"`
 	SignedOn           calendar.Date     `json:"signed_on"`
 	Kind               string            `json:"kind"`
@@ -112,7 +114,7 @@ type SEPAMandateSummary struct {
 	IBANMasked         string            `json:"iban_masked"`
 	BIC                string            `json:"bic"`
 	Source             string            `json:"source"`
-	CreditorID         string            `json:"creditor_id"`
+	CreditorID         string            `json:"creditor_id" contract_text:"SEPA creditor identifier"`
 	RevokedOn          *calendar.Date    `json:"revoked_on"`
 	Proof              *SEPAMandateProof `json:"proof"`
 }
@@ -141,7 +143,7 @@ type SEPAMandates interface {
 	SEPAMandate(ctx context.Context, organizationID int64, reader SEPAMandateReader) (SEPAMandateView, error)
 	PreviewSEPAMandate(ctx context.Context, organizationID int64, reader SEPAMandateReader, input SEPAMandateInput) (SEPAMandateText, error)
 	GrantSEPAMandate(ctx context.Context, organizationID int64, reader SEPAMandateReader, input SEPAMandateInput) (SEPAMandateView, error)
-	RevokeSEPAMandate(ctx context.Context, organizationID int64, reader SEPAMandateReader) (SEPAMandateView, error)
+	RevokeSEPAMandate(ctx context.Context, organizationID int64, reader SEPAMandateReader, expectedVersion string) (SEPAMandateView, error)
 }
 
 // SEPAMandate reads the mandate of the account's family on a contract of
@@ -183,13 +185,14 @@ func (s *Service) GrantSEPAMandate(ctx context.Context, accountID, organizationI
 	return view, err
 }
 
-// RevokeSEPAMandate ends the mandate of the account's family today.
-func (s *Service) RevokeSEPAMandate(ctx context.Context, accountID, organizationID, contractID int64) (SEPAMandateView, error) {
+// RevokeSEPAMandate ends the mandate of the account's family today, the one
+// whose version the account read (expectedVersion).
+func (s *Service) RevokeSEPAMandate(ctx context.Context, accountID, organizationID, contractID int64, expectedVersion string) (SEPAMandateView, error) {
 	var view SEPAMandateView
 	err := s.sepaMandate(ctx, accountID, organizationID, contractID, GuardianPermissionEnrollmentSubmit,
 		func(txCtx context.Context, reader SEPAMandateReader, _ bool) error {
 			var err error
-			view, err = s.SEPAMandates.RevokeSEPAMandate(txCtx, organizationID, reader)
+			view, err = s.SEPAMandates.RevokeSEPAMandate(txCtx, organizationID, reader, expectedVersion)
 			view.CanManage = view.Enabled
 			return err
 		})

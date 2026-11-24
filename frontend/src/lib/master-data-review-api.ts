@@ -50,8 +50,9 @@ function logFailure(error: unknown): never {
 export function decideMasterDataChangeRequest(
   requestId: string,
   approve: boolean,
-  reason?: string,
-  expectedVersion?: string,
+  reason: string | undefined,
+  /** Die Fassung der Anfrage aus der Liste (ADR 0311). */
+  expectedVersion: string,
 ): Promise<studentsContract.MasterDataChangeRequestResponse> {
   return bffJson(
     "tenant",
@@ -61,7 +62,7 @@ export function decideMasterDataChangeRequest(
       body: {
         approve,
         reason: reason ?? "",
-        ...(expectedVersion ? { expected_version: expectedVersion } : {}),
+        expected_version: expectedVersion,
       },
       errorMessage: "master data decision failed",
     },

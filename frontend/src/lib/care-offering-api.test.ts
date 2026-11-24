@@ -162,13 +162,17 @@ describe("createCareOffering", () => {
 describe("updateCareOffering", () => {
   it("PUTs to the id-bearing URL and returns the unwrapped offering", async () => {
     let seenURL = "";
-    mockFetch(async (input) => {
+    let seenBody: unknown;
+    mockFetch(async (input, init) => {
       seenURL = typeof input === "string" ? input : input.toString();
+      seenBody = JSON.parse(String(init?.body));
       return jsonResponse({ data: mkOffering("1234") });
     });
-    const out = await updateCareOffering("1234", validInput);
+    const out = await updateCareOffering("1234", validInput, "v1");
     expect(out.id).toBe("1234");
     expect(seenURL).toContain("/1234");
+    // The save carries the version its editor read (ADR 0311).
+    expect(seenBody).toMatchObject({ expected_version: "v1" });
   });
 
   it("URL-encodes the id", async () => {
@@ -177,7 +181,7 @@ describe("updateCareOffering", () => {
       seenURL = typeof input === "string" ? input : input.toString();
       return jsonResponse({ data: mkOffering("a/b") });
     });
-    await updateCareOffering("a/b", validInput);
+    await updateCareOffering("a/b", validInput, "v1");
     expect(seenURL).toContain("a%2Fb");
   });
 
@@ -185,7 +189,7 @@ describe("updateCareOffering", () => {
     mockFetch(async () =>
       jsonResponse({ error: "service unavailable" }, { status: 500 }),
     );
-    await expect(updateCareOffering("1234", validInput)).rejects.toThrow(
+    await expect(updateCareOffering("1234", validInput, "v1")).rejects.toThrow(
       /Betreuungsangebot konnte nicht gespeichert werden/,
     );
   });
@@ -202,7 +206,9 @@ describe("updateCareOffering", () => {
       ),
     );
 
-    await expect(updateCareOffering("1234", validInput)).rejects.toMatchObject({
+    await expect(
+      updateCareOffering("1234", validInput, "v1"),
+    ).rejects.toMatchObject({
       status: 400,
       code: "enrollment.care_offering_template_period_mismatch",
     });

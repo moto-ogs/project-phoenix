@@ -76,6 +76,9 @@ type TraegerAbsenceType struct {
 	IsActive       bool                       `json:"is_active"`
 	Schools        []TraegerAbsenceTypeSchool `json:"schools"`
 	CreatedAt      time.Time                  `json:"created_at"`
+	// Version is the token of the type's fields (ADR 0311); an update
+	// sends it back.
+	Version string `json:"version"`
 }
 
 // TraegerAbsenceTypeInput creates a type or, as an update, replaces every
@@ -87,6 +90,9 @@ type TraegerAbsenceTypeInput struct {
 	CarryoverUntil   string
 	Requestable      bool
 	IsActive         bool
+	// ExpectedVersion is the Version the update was made on; a create
+	// ignores it.
+	ExpectedVersion string
 }
 
 // TraegerAbsenceTypeList is what the Personalverwaltung sees: the release,
@@ -127,6 +133,9 @@ type TraegerAbsenceAccount struct {
 	ExpiredDays   float64                   `json:"expired_days"`
 	CarriedIn     *TraegerAbsenceCarry      `json:"carried_in"`
 	Schools       []TraegerAbsenceSchoolUse `json:"schools"`
+	// Version is the token of the person's claim of the type and year; the
+	// change of the days sends it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // TraegerAbsenceCarry is the previous year's rest still usable in the
@@ -151,6 +160,9 @@ type SetTraegerAbsenceAllowance struct {
 	Year          int
 	EntitledDays  float64
 	Reason        string
+	// ExpectedVersion is the Version of the account the form was read from
+	// (ADR 0311); a claim changed since is not overwritten.
+	ExpectedVersion string
 }
 
 // TraegerAbsenceTypes is the Träger-Portal's part of the types and

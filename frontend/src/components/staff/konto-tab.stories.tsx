@@ -47,10 +47,12 @@ export const Editable: Story = {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["2"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
       onEditingChange: () => undefined,
       onSave: async () => undefined,
+      reload: async () => undefined,
     },
   },
 };
@@ -66,6 +68,7 @@ export const EditableWithoutPersonFields: Story = {
       canDeleteStaff: false,
       onEditingChange: () => undefined,
       onSave: async () => undefined,
+      reload: async () => undefined,
     },
   },
 };

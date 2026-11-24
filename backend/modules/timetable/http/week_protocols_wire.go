@@ -1,19 +1,19 @@
 package timetablehttp
 
 import (
-	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // weekProtocolResponse is the wire form of a protocol; int64 ids travel as
 // strings, calendar days as YYYY-MM-DD.
 type weekProtocolResponse struct {
-	ID                  string                    `json:"id"`
+	ID                  ident.ID                  `json:"id"`
 	Scope               string                    `json:"scope"`
-	GroupID             *string                   `json:"group_id,omitempty"`
+	GroupID             *ident.ID                 `json:"group_id,omitempty"`
 	GroupName           string                    `json:"group_name"`
 	WeekStart           string                    `json:"week_start"`
 	WeekEnd             string                    `json:"week_end"`
@@ -26,6 +26,9 @@ type weekProtocolResponse struct {
 	ClosedByName        string                    `json:"closed_by_name,omitempty"`
 	ClosedAutomatically bool                      `json:"closed_automatically"`
 	Days                []weekProtocolDayResponse `json:"days,omitempty"`
+	// Version is the protocol's read-state token (ADR 0311), answered with
+	// the days; the notes and the closing send it back as expected_version.
+	Version string `json:"version,omitempty"`
 }
 
 type weekProtocolDayResponse struct {
@@ -45,28 +48,29 @@ type weekProtocolDayResponse struct {
 }
 
 type weekProtocolMissingChildResponse struct {
-	StudentID string `json:"student_id"`
-	Name      string `json:"name"`
-	Reason    string `json:"reason"`
-	Label     string `json:"label"`
+	StudentID ident.ID `json:"student_id"`
+	Name      string   `json:"name"`
+	Reason    string   `json:"reason"`
+	Label     string   `json:"label"`
 }
 
 // weekProtocolResponseOf projects a protocol; withDays adds Monday to Friday
 // always and a weekend day only when it was recorded or noted.
 func weekProtocolResponseOf(protocol timetable.WeekProtocol, withDays bool) weekProtocolResponse {
 	out := weekProtocolResponse{
-		ID: strconv.FormatInt(protocol.ID, 10), Scope: protocol.Scope, GroupName: protocol.GroupName,
+		ID: ident.ID(protocol.ID), Scope: protocol.Scope, GroupName: protocol.GroupName,
 		WeekStart: protocol.WeekStart.String(), WeekEnd: protocol.WeekEnd.String(), Status: protocol.Status,
 		DraftFrom: protocol.WeekStart.AddDays(4).String(), AutoCloseOn: protocol.WeekStart.AddDays(14).String(),
 		WeekNote: protocol.WeekNote, DraftedAt: rfc3339(protocol.DraftedAt), ClosedAt: rfc3339(protocol.ClosedAt),
 		ClosedByName: protocol.ClosedByName, ClosedAutomatically: protocol.ClosedAutomatically,
 	}
 	if protocol.GroupID != nil {
-		id := strconv.FormatInt(*protocol.GroupID, 10)
+		id := ident.ID(*protocol.GroupID)
 		out.GroupID = &id
 	}
 	if withDays {
 		out.Days = weekProtocolDaysResponse(protocol)
+		out.Version = timetable.WeekProtocolVersion(protocol)
 	}
 	return out
 }
@@ -93,7 +97,7 @@ func weekProtocolDayResponseOf(date calendar.Date, day timetable.WeekProtocolDay
 	out.Present, out.Sick, out.Excused, out.ClassTrip, out.Absent = facts.Present, facts.Sick, facts.Excused, facts.ClassTrip, facts.Absent
 	for _, child := range facts.Missing {
 		out.Missing = append(out.Missing, weekProtocolMissingChildResponse{
-			StudentID: strconv.FormatInt(child.StudentID, 10), Name: child.Name, Reason: child.Reason, Label: child.Label,
+			StudentID: ident.ID(child.StudentID), Name: child.Name, Reason: child.Reason, Label: child.Label,
 		})
 	}
 	if facts.Blocks != nil {

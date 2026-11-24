@@ -161,9 +161,12 @@ func holidayWays() []holidayWay {
 			f.setCapacity(t, int64(first.ID), 2)
 			f.submitPlaces(t, "tom.sperre@example.org", map[string][]int{"Tom": {0}})
 			ben := f.list(t, "").Registrations[0].Children[1]
+			// The office read the registration before the locks are held.
+			path := holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID))
+			body := withRegistrationVersion(t, f.traeger, f.office.token, path,
+				map[string]any{"bookings": []map[string]any{{"week_id": fmt.Sprint(second.ID), "time_model_id": fmt.Sprint(second.TimeModels[0].ID)}}})
 			return f, func() *httptest.ResponseRecorder {
-				return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)),
-					map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}})
+				return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, body)
 			}
 		}},
 		{name: "capacity", setup: func(t *testing.T) (reviewFixture, func() *httptest.ResponseRecorder) {
@@ -237,9 +240,12 @@ func releaseWays() []releaseWay {
 			f, billing, tom := placesSetup(t, "Träger Lauf Umbuchung")
 			second := f.offer.Weeks[1]
 			ben := f.list(t, "").Registrations[0].Children[1]
+			// The office read the registration before the locks are held.
+			path := holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID))
+			body := withRegistrationVersion(t, f.traeger, f.office.token, path,
+				map[string]any{"bookings": []map[string]any{{"week_id": fmt.Sprint(second.ID), "time_model_id": fmt.Sprint(second.TimeModels[0].ID)}}})
 			return f, billing, tom, func() *httptest.ResponseRecorder {
-				return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)),
-					map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}})
+				return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, body)
 			}
 		}},
 		{name: "capacity", setup: func(t *testing.T) (reviewFixture, string, int64, func() *httptest.ResponseRecorder) {
@@ -332,10 +338,12 @@ func TestHolidayAllocationWorkflowWaysSerializeInOnePeriod(t *testing.T) {
 		f.setCapacity(t, int64(first.ID), 2)
 		tom := f.submitPlaces(t, "tom.wege@example.org", map[string][]int{"Tom": {0}})
 		ben := f.list(t, "").Registrations[0].Children[1]
+		path := holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID))
+		body := withRegistrationVersion(t, f.traeger, f.office.token, path,
+			map[string]any{"bookings": []map[string]any{{"week_id": fmt.Sprint(second.ID), "time_model_id": fmt.Sprint(second.TimeModels[0].ID)}}})
 		holder := holdAllocationLock(t, actors, holdAdvisoryLock, billingLockKey(f.office.organization, int64(f.period.ID)))
 		rebooked := asyncRequest(func() *httptest.ResponseRecorder {
-			return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)),
-				map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}})
+			return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, body)
 		})
 		widened := asyncRequest(func() *httptest.ResponseRecorder {
 			return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayCapacityPath(int64(f.period.ID), int64(first.ID)), map[string]any{"capacity": 3})

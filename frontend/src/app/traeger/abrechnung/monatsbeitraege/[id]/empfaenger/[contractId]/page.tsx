@@ -3,15 +3,15 @@
 // Empfänger und Zahlung einer Familie (#4689): an wen ihre Rechnungen gehen
 // und wie sie zahlt, mit ihrem SEPA-Mandat (#4695). Geöffnet aus dem Monatslauf für die Familie eines
 // Vertrags; eine eigene Seite, damit die Seite des Laufs das Formular nicht
-// lädt. Die gespeicherte Abweichung wird bei jedem Öffnen frisch gelesen.
+// lädt. Die Abweichung der Familie wird bei jedem Öffnen gelesen, weil das
+// Backend jeden Lesezugriff protokolliert; gelesen wird die Familie des
+// Vertrags, genau die, die das Speichern schreibt, mit ihrem Stand für die
+// Prüfung beim Speichern (ADR 0311).
 
 import { SepaMandateStatusCard } from "~/components/traeger/sepa-mandate-status-card";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo } from "react";
-import {
-  findFamilyBilling,
-  runDueDatesText,
-} from "~/components/traeger/billing-payment-format";
+import { runDueDatesText } from "~/components/traeger/billing-payment-format";
 import { formatMonth } from "~/components/traeger/care-billing-format";
 import { FamilyBillingForm } from "~/components/traeger/family-billing-form";
 import { useDebtorNumberFormat } from "~/components/traeger/use-debtor-number-format";
@@ -22,7 +22,7 @@ import { ApiError } from "~/lib/api-error";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useInvalidateFamily } from "~/lib/swr";
 import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
-import { fetchFamilyBillings } from "~/lib/traeger-billing-terms-api";
+import { fetchContractFamilyBilling } from "~/lib/traeger-billing-terms-api";
 import { fetchCareRun } from "~/lib/traeger-care-billing-api";
 import { traegerPath } from "~/lib/traeger-url";
 
@@ -44,9 +44,9 @@ export default function TraegerFamilyBillingPage() {
     () => fetchCareRun(runId),
     object,
   );
-  const familiesRead = useFreshTraegerResource(
-    traegerBillingRunKeys.familyBillings(),
-    fetchFamilyBillings,
+  const familyRead = useFreshTraegerResource(
+    contractId ? traegerBillingRunKeys.contractFamilyBilling(contractId) : null,
+    () => fetchContractFamilyBilling(contractId),
     object,
   );
   const run = runRead.data;
@@ -60,19 +60,10 @@ export default function TraegerFamilyBillingPage() {
     [run, invoice],
   );
   const missingError = useSwrLoadError(missing, object, runRead.reload);
-  const loadError = runRead.error ?? familiesRead.error ?? missingError;
+  const loadError = runRead.error ?? familyRead.error ?? missingError;
   const loaded =
-    run && invoice && familiesRead.data
-      ? {
-          run,
-          invoice,
-          existing: findFamilyBilling(familiesRead.data, {
-            contractId,
-            familyEmail: invoice.familyEmail,
-            recipientEmail: invoice.recipient.email,
-            recipientKind: invoice.recipient.kind,
-          }),
-        }
+    run && invoice && familyRead.data
+      ? { run, invoice, family: familyRead.data }
       : null;
 
   const childName = loaded
@@ -112,12 +103,21 @@ export default function TraegerFamilyBillingPage() {
               issued: loaded.invoice.number !== "",
             }}
             format={debtorNumberFormat}
-            existing={loaded.existing}
+            existing={loaded.family.family}
+            version={loaded.family.version}
+            // The stored state arrives through `familyRead`.
+            reload={async () => {
+              await familyRead.reloadOrThrow();
+              return undefined;
+            }}
             runDueText={runDueDatesText(loaded.run.dueDates ?? [])}
             onCancel={() => router.push(runHref)}
             onSaved={() => {
-              // The run names the recipient of each invoice.
-              void invalidateFamily(traegerBillingRunKeys.familyBillings());
+              // The run names the recipient of each invoice; the contract
+              // page shows the family's recipient and payment.
+              void invalidateFamily(
+                traegerBillingRunKeys.contractFamilyBillingFamily,
+              );
               void invalidateFamily(traegerBillingRunKeys.careRun(runId));
               router.push(runHref);
             }}

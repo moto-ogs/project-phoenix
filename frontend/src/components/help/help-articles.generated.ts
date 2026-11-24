@@ -406,6 +406,8 @@ import type { traegerInvitationTopic as authored_traegerInvitationTopic } from "
 
 import type { traegerLoginTopic as authored_traegerLoginTopic } from "./articles/traeger-login";
 
+import type { traegerModulesTopic as authored_traegerModulesTopic } from "./articles/traeger-modules";
+
 import type { traegerNotificationFeedTopic as authored_traegerNotificationFeedTopic } from "./articles/traeger-notification-feed";
 
 import type { traegerOccupancyTopic as authored_traegerOccupancyTopic } from "./articles/traeger-occupancy";
@@ -416,7 +418,11 @@ import type { traegerProfileTopic as authored_traegerProfileTopic } from "./arti
 
 import type { traegerReportsTopic as authored_traegerReportsTopic } from "./articles/traeger-reports";
 
+import type { traegerResponsibilitiesTopic as authored_traegerResponsibilitiesTopic } from "./articles/traeger-responsibilities";
+
 import type { traegerSchoolComparisonTopic as authored_traegerSchoolComparisonTopic } from "./articles/traeger-school-comparison";
+
+import type { traegerSchoolRolesTopic as authored_traegerSchoolRolesTopic } from "./articles/traeger-school-roles";
 
 import type { traegerSchoolSwitchTopic as authored_traegerSchoolSwitchTopic } from "./articles/traeger-school-switch";
 
@@ -1607,6 +1613,7 @@ export const caregiverFirstStepsTopic =
       differences: [
         "Welche Schritte du siehst, hängt von deiner OGS ab. Ohne feste Gruppen fehlt zum Beispiel `Meine Gruppe ansehen`.",
         "`Meine Gruppe ansehen` erscheint erst, wenn dir eine Gruppe zugeordnet ist.",
+        "In einem Chat ist `Erste Schritte` ausgeblendet, damit `Senden` frei bleibt. Auf jeder anderen Seite ist es wieder da.",
       ],
       troubleshootingDetails: [
         "Die Checkliste erscheint nicht? Sie kommt erst, wenn deine OGS eine Gruppe oder ein Kind in moto hat. Wer schon vor der Checkliste mit moto gearbeitet hat, bekommt sie nicht.",
@@ -2993,6 +3000,8 @@ export const enrollmentReviewTopic =
         "Mit `Statusseite öffnen` siehst du, was die Eltern sehen.",
         // #5102: Auswirkung nach einer Korrektur unter `Nachbearbeitung`.
         "Angebote eines bestätigten Kindes änderst du unter `Nachbearbeitung` mit `Bearbeiten`. Danach steht dort `Auswirkung auf den Betreuungsplan`.",
+        // #7929: ein befristetes Angebot verlängern.
+        "Eine Korrektur behält das Ende einer Buchung. Endet ein Angebot früher, als die Betreuung des Kindes läuft, steht darunter `Gebucht bis`. Setze den Haken bei `Bis … verlängern`. Dann gilt das Angebot bis zu dem Tag, der dort steht: dem Ende der Phase, dem Betreuungsende des Kindes oder dem Tag vor einer geplanten Änderung.",
         "Unter `Automatisch angepasst` stehen Regeltermine, die moto selbst geändert hat.",
         "Unter `Nicht angepasst, weil von Hand gepflegt` steht das Kind an abgemeldeten Tagen weiter im Plan. Mit `Dort auch entfernen` nimmst du es dort ab diesem Datum heraus. Vergangene Termine bleiben.",
         "Unter `Abholzeit weicht von der Buchung ab` gilt an einem Tag noch eine von Hand eingetragene Abholzeit. Mit `Gebuchte Zeiten übernehmen` gilt die gebuchte Zeit. Steht ein Datum dabei, gilt sie erst ab diesem Tag.",
@@ -3336,6 +3345,9 @@ export const firstStepsTopic = function firstStepsTopic(): HelpTopic {
       "Du hast eine Liste aller Kinder? Starte die Tour zu `Erstes Kind anlegen`. Öffne dort das Menü mit den drei Punkten. Wähle `Importieren`. Dann zeigt die Tour den Import.",
       "Deine OGS nutzt die Eltern-App nicht? Dann überspringe `Erste Eltern einladen`.",
       "Der Stand gilt für die ganze OGS. Andere Leitungen sehen denselben Stand.",
+    ],
+    differences: [
+      "In einem Chat ist `Erste Schritte` ausgeblendet, damit `Senden` frei bleibt. Auf jeder anderen Seite ist es wieder da.",
     ],
     troubleshootingDetails: [
       "Die Tour ist plötzlich weg? Sie endet, wenn du eine andere Seite öffnest. Mit `Zeig es mir` startest du sie neu.",
@@ -3992,6 +4004,12 @@ export const invitationTopic = function invitationTopic(): HelpTopic {
  * Eine eingeschraenkte `Portalrolle` (`Notfallkontakt`, `Nur Abholung`,
  * `Sozialdienst`) hat keinen Portalzugriff. Eine Einladung stuft sie hoch
  * und fragt vorher `Vollen Zugriff gewähren?`.
+ *
+ * `Eltern mit Konto benachrichtigen` (#7760, ADR 0309 Abschnitt 5) steht in
+ * derselben Sammeleinladung, wenn die Auswahl Eltern mit Konto hat. Die Mail
+ * geht an die Anmeldeadresse des Kontos, nennt nur Kinder mit heute gebuchter
+ * Betreuung und geht je Elternteil und Kind einmal raus; der Zugang merkt
+ * sich, dass sie eingeplant wurde. Einen zweiten Versand gibt es nicht.
  */
 export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
   return {
@@ -4046,6 +4064,19 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
         ],
       },
       {
+        title: "Eltern mit Konto benachrichtigen",
+        description:
+          "Wurden Kinder aus einem importierten Vertrag angemeldet, sehen ihre Eltern die Betreuung jetzt im Elternportal. Eltern mit Konto sagst du das mit einer kurzen E-Mail.",
+        steps: [
+          "Öffne `Datenverwaltung` und danach `Kinderdaten`.",
+          "Wähle oben rechts das Menü mit den drei Punkten und dann `Auswählen`.",
+          "Hake die Kinder an und wähle `Eltern einladen`.",
+          "Setze den Haken bei `Eltern mit Konto benachrichtigen`.",
+          "Prüfe die Zahlen: `Werden eingeladen`, `Bekommen die Nachricht` und `Keine E-Mail-Adresse`. Kinder, die heute keine Betreuung gebucht haben, zählt `Kinder ohne gebuchte Betreuung: keine Nachricht`.",
+          "Wähle unten zum Beispiel `3 Eltern anschreiben`.",
+        ],
+      },
+      {
         title: "Eine Anfrage von Eltern freigeben",
         description:
           "Eltern können weitere Bezugspersonen einladen, zum Beispiel eine Großmutter. Je nach Einstellung landet das erst bei dir.",
@@ -4063,15 +4094,20 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
       "Hinter dem Namen steht, wie weit die Person ist: `Kein Konto`, `Einladung offen`, `Link gilt nicht mehr` oder `Konto aktiv`.",
       "Bei `Einladung offen` heißt der Knopf `Erneut einladen`. Damit geht die E-Mail noch einmal raus.",
       "Eine Person mit mehreren Kindern lädst du nur einmal ein. Sie sieht danach alle ihre Kinder.",
+      "Die Nachricht geht an die E-Mail-Adresse, mit der sich die Eltern im Elternportal anmelden. Sie nennt nur die Vornamen der Kinder, die Schule und den Weg ins Elternportal. Geschwister stehen in einer Nachricht.",
+      "Die Nachricht nennt nur Kinder, die heute Betreuung gebucht haben. Buchungen, die erst später beginnen, zählen nicht, ein Wochenplan allein auch nicht. Jedes Elternteil bekommt sie pro Kind nur einmal. Wurde sie schon verschickt, steht das Elternteil unter `Nachricht schon verschickt`.",
       "Holt jemand das Kind nur ab, wähle `Portalrolle` `Nur Abholung`. Dann sind `E-Mail` und Telefon freiwillig. Die Person bekommt keinen Zugang zur Eltern-App.",
     ],
     differences: [
+      "`Eltern mit Konto benachrichtigen` fehlt? Dann hat in der Auswahl niemand ein Konto. Eltern ohne Konto bekommen die Einladung.",
       "Steht bei der Person `Konto aktiv, kein Portalzugriff`, heißt der Knopf `Zugriff gewähren`.",
       "Bei einer eingeschränkten `Portalrolle` wie `Notfallkontakt` oder `Nur Abholung` fragt moto zuerst `Vollen Zugriff gewähren?`. Erst `Zugriff gewähren` erteilt den Zugang.",
       "Unter `Elternzugänge` steht `Einladungen gehen ohne Freigabe raus`? Dann laden Eltern direkt ein. Über `Zu den Einstellungen` änderst du das.",
       "Dort steht `Eltern können derzeit niemanden einladen`? Dann darfst nur du einladen.",
     ],
     troubleshootingDetails: [
+      "Jemand mit Konto bekommt keine Nachricht? Die Person darf das Kind im Elternportal nicht sehen, zum Beispiel mit `Portalrolle` `Nur Abholung`. Oder das Kind hat heute keine Betreuung gebucht. Oder die Nachricht für dieses Kind wurde schon verschickt.",
+      "Ein Elternteil sagt, die Nachricht ist nicht angekommen? moto schickt sie kein zweites Mal. Bitte die Person, im Spam-Ordner nachzusehen. Sonst sag ihr selbst: Die Betreuung steht im Elternportal beim Kind unter `Betreuung & Wochenplan`.",
       "`Einladen` bewirkt nichts? Dann fehlt die `E-Mail`. Trage sie über `Bearbeiten` nach.",
       "Bei der Person steht `Link gilt nicht mehr`? Zum Beispiel wurde die `E-Mail` nach der Einladung geändert. Wähle `Einladung neu senden`. Der neue Link geht an die Adresse, die jetzt eingetragen ist.",
       "Bei der Person steht `Adresse prüfen` oder `Verzögert`, und `Erneut einladen` fehlt? Der Hinweis dort sagt, was zu tun ist. Mehr dazu unter `Wenn eine E-Mail nicht ankommt`.",
@@ -5119,6 +5155,7 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Bekommen Eltern keinen Hinweis zu Änderungen? Prüfe unter `Einstellungen` den Schalter `Hinweis bei geändertem Speiseplan`. Für vergangene Tage gibt es keinen Hinweis.",
+      "Meldet moto beim Speichern, dass jemand anderes den Speiseplan inzwischen geändert hat? Deine Änderungen bleiben stehen. Mit `Verwerfen` siehst du den neuen Stand. Mit `Speichern` ersetzt du ihn durch deine Änderungen.",
       "Fehlt `Speiseplan` in der Seitenleiste? Dann ist die Funktion für deine OGS ausgeschaltet, oder deiner Rolle fehlt das Recht `Mittagessen: Lesen`.",
     ],
     related: [
@@ -5232,6 +5269,7 @@ export const modulesTopic = function modulesTopic(): HelpTopic {
       "Ohne `Online-Anmeldung` verschickt moto keine E-Mails zu Anmeldungen.",
       "Ohne `NFC-Anwesenheit` lässt sich kein Tablet mit der Geräte-PIN anmelden. Das Tablet zeigt dann einen Hinweis.",
       "Ohne `Zeiterfassung` kann dein Team am Tablet nicht stempeln. Anwesenheit mit Armband geht weiter.",
+      "`Träger-Übersicht`, `Ferienbetreuung`, `Verträge und Dokumente` und `Elternbeiträge und Abrechnung` nutzt dein Träger im Träger-Portal. In deiner OGS ändert sich dadurch kein Menüpunkt.",
     ],
     differences: [
       "Ein Menüpunkt hat ein Schloss? Dann gehört er zu einem Modul, das deine OGS nicht gebucht hat. Das Schloss siehst nur du als Leitung. Dein Team sieht den Menüpunkt nicht.",
@@ -6799,6 +6837,9 @@ export const parentFirstStepsTopic =
         "`Angaben zu meinem Kind ändern` zeigt Angaben, Betreuungszeiten, den Heimweg und Kontakte.",
         "`moto als App auf dem Handy hinzufügen` und `Benachrichtigungen einschalten` sind zwei getrennte Touren.",
         "Der Stand gilt für dieses Elternkonto auf diesem Gerät.",
+      ],
+      differences: [
+        "In einem Chat ist `Erste Schritte` ausgeblendet, damit `Senden` frei bleibt. Auf jeder anderen Seite ist es wieder da.",
       ],
       troubleshootingDetails: [
         "Du hast `Erste Schritte ausblenden` gewählt? Dann erscheint die Checkliste auf diesem Gerät nicht mehr. Die einzelnen Anleitungen findest du weiterhin in der Hilfe.",
@@ -8979,7 +9020,8 @@ export const staffNotificationsTopic =
 
 /**
  * Rollen unter `/database/roles`, Rechteliste unter `/database/permissions`.
- * Vorgegebene Rollen (`role.isSystem`) haben keine Kopfaktionen
+ * Rollen des Trägers (`role.fromTraeger`, #4810) und
+ * vorgegebene Rollen (`role.isSystem`) haben keine Kopfaktionen
  * (roles-master-detail.tsx). Eine neue Rolle startet mit den Rechten ihrer
  * Vorlage; gesperrte Rechte bietet der Reiter nicht an (#4574).
  */
@@ -9042,6 +9084,7 @@ export const staffPermissionsTopic =
       differences: [
         "moto bringt einige Rollen schon mit: `Verwaltung`, `Betreuung`, `Lehrkraft`, `Schulverwaltung`, `AG-Leitung` und `Gast`. Sie sind als `Vorgegeben` markiert.",
         "Bei einer vorgegebenen Rolle fehlen `Bearbeiten` und `Löschen`. Zum Ändern von Rechten lege deshalb eine eigene Rolle an.",
+        "Eine Rolle trägt den Vermerk `Vom Träger`: Dein Träger gibt sie für alle seine Schulen vor. Du gibst sie Personen wie jede andere Rolle. `Bearbeiten` und `Löschen` fehlen, das macht das Träger-Büro.",
         "Einige Rechte stehen nicht zur Auswahl. Sie gehören nur der Rolle `Verwaltung` oder dem moto-Team.",
       ],
       troubleshootingDetails: [
@@ -9564,14 +9607,14 @@ export const studentSearchTopic = function studentSearchTopic(
         // #6954: der Filter steht im Filterfeld unter `Anmeldung`, nur mit
         // Zugriff auf die Angaben der Kinderakte und nur bei eigenen Fragen
         // der Online-Anmeldung. Freitext, Zahl und Datum: `Angabe vorhanden`
-        // (#7012).
+        // (#7012). Die Zahl folgt den übrigen Filtern der Liste (#7645).
         title: "Nach Angaben aus der Anmeldung filtern",
         steps: [
           "Wähle rechts neben der Suche das Filtersymbol.",
           "Wähle unter `Anmeldung` bei `Angabe aus der Anmeldung` eine Antwort, zum Beispiel eine Frage mit `Ja`.",
           "Bei Fragen mit freiem Text, Zahl oder Datum wählst du `Angabe vorhanden`. Dann siehst du alle Kinder, bei denen die Eltern etwas eingetragen haben. Auch „keine“ zählt als Angabe.",
           "Haben die Eltern nur wenige verschiedene Antworten gegeben, steht jede Antwort darunter, zum Beispiel `keine`. So siehst du, wie viele Kinder welche Antwort haben.",
-          "Die Zahl in Klammern nennt, wie viele Kinder die Liste dann zeigt. Kinder, die die Schule verlassen haben, zählen nicht.",
+          "Die Zahl in Klammern nennt, wie viele Kinder die Liste mit dieser Antwort zeigt. Deine anderen Filter zählen mit, zum Beispiel Gruppe, Klasse oder Anwesenheit. Kinder, die die Schule verlassen haben, zählen nicht.",
           "`Alle Angaben` hebt den Filter wieder auf.",
         ],
       },
@@ -11915,12 +11958,14 @@ export const traegerBriefkopfTopic =
  * `/traeger/vertraege` (#4678, #4679, #4680, #4681): festlegen, wann der
  * Vertrag gilt, Vertragsbedingungen je Angebot festlegen, Entwürfe aus
  * angenommenen Anmeldungen erstellen, prüfen und senden; die Unterschrift
- * der Eltern und den Papiervertrag erfassen; Versionen nach einer Änderung;
+ * der Eltern, die Übergabe auf Papier (#8030) und den Papiervertrag
+ * erfassen; Versionen nach einer Änderung;
  * Kündigung und Widerruf (#4682); Änderungswünsche der Eltern freigeben (#5979);
  * Kinder und bestehende Verträge aus einer Datei importieren (#4723), auch
  * ohne Mail-Adresse der Eltern (#7360), ihre Vertragsangaben aus den
  * Originalunterlagen nachpflegen (#7767), importierte Verträge mit der
- * Kinderakte verknüpfen und ihre Anmeldungen nachtragen (#7760).
+ * Kinderakte verknüpfen und ihre Anmeldungen nachtragen (#7760) und
+ * Geschwister ohne Mail-Adresse zu einer Familie zusammenführen (#7161).
  */
 export const traegerCareContractsTopic =
   function traegerCareContractsTopic(): HelpTopic {
@@ -12003,15 +12048,18 @@ export const traegerCareContractsTopic =
           ],
         },
         {
-          title: "Papiervertrag erfassen",
+          title: "Auf Papier übergeben und erfassen",
           description:
             "Für Familien ohne Internet oder einen Vertrag, den es nur auf Papier gibt.",
           steps: [
-            "Wähle oben `PDF herunterladen` und drucke den Vertrag.",
-            "Die Eltern unterschreiben ihn. Scanne den unterschriebenen Vertrag als PDF.",
-            "Wähle auf der Vertragsseite im Reiter `Unterschrift und Versand` in der Karte `Unterschrift` den Knopf `Papiervertrag erfassen`.",
+            "Öffne den Entwurf und den Reiter `Unterschrift und Versand`. Wähle in der Karte `Unterschrift` den Knopf `Auf Papier übergeben`.",
+            "Bestätige mit `Übergeben und PDF laden`. moto speichert den Vertrag so, wie er jetzt ist, und lädt das PDF herunter. Ein neuer Briefkopf ändert dieses PDF nicht mehr. Kam kein PDF an? Dann hol es oben im Menü mit `PDF herunterladen`.",
+            "Der Vertrag ist dann `Versendet`. Die Eltern bekommen keine Mail und keine Erinnerung.",
+            "Drucke das PDF und gib es den Eltern. Sie unterschreiben es. Scanne den unterschriebenen Vertrag als PDF.",
+            "Wähle in der Karte `Unterschrift` den Knopf `Papiervertrag erfassen`.",
             "Prüfe `Unterschrieben von` und `Unterschrieben am`. Wähle mit `PDF wählen` die Datei.",
             "Wähle `Vertrag abschließen`. Der Vertrag ist dann `Aktiv`. Mit `Papiervertrag laden` holst du das PDF später wieder.",
+            "Ging der Vertrag schon per Mail? Dann drucke ihn mit `PDF herunterladen` und erfasse ihn wie oben.",
           ],
         },
         {
@@ -12038,13 +12086,31 @@ export const traegerCareContractsTopic =
             "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Pflicht sind Vorname und Nachname des Kindes.",
             "Hat deine Datei keine Spalte für die Schule, das Modul oder den Vertragsbeginn? Dann wählst du `Schule für alle Zeilen`, `Modul für alle Zeilen` und `Vertragsbeginn für alle Zeilen`.",
             "Nennt eine Zeile keine Eltern? moto übernimmt den Vertrag trotzdem. Er hat dann keinen Vertragspartner.",
-            "Steht eine Zeile auf `Bereit` und nennt die Eltern, aber keine Mail-Adresse? moto übernimmt den Vertrag trotzdem. Die Vorschau zählt diese Verträge. Unter `Ohne Mail` siehst du nur diese Zeilen. Die Familien bekommen keine Mail von moto und haben keinen Zugang zur Eltern-App. Rechnungen gibt es für sie nur auf Papier. Geschwister bleiben getrennte Familien. Hast du die Adressen? Dann trage sie in die Datei ein. Lade die Datei danach noch einmal.",
-            "Steht die `Debitorennummer` in der Datei? Ordne die Spalte zu. moto trägt die Nummer beim Zahler oder beim Kind ein, je nach deiner Einstellung. Fehlt die `E-Mail der Eltern`, gehört die Nummer zu diesem einen Vertrag. Geschwister erkennt moto nur über dieselbe E-Mail.",
+            "Steht eine Zeile auf `Bereit` und nennt die Eltern, aber keine Mail-Adresse? moto übernimmt den Vertrag trotzdem. Die Vorschau zählt diese Verträge. Unter `Ohne Mail` siehst du nur diese Zeilen. Die Familien bekommen keine Mail von moto und haben keinen Zugang zur Eltern-App. Rechnungen gibt es für sie nur auf Papier. Geschwister sind zuerst getrennte Familien. Du führst sie danach unter `Geschwister zusammenführen` zusammen. Hast du die Adressen? Dann trage sie in die Datei ein. Lade die Datei danach noch einmal.",
+            "Steht die `Debitorennummer` in der Datei? Ordne die Spalte zu. moto trägt die Nummer beim Zahler oder beim Kind ein, je nach deiner Einstellung. Fehlt die `E-Mail der Eltern`, gehört die Nummer zu diesem einen Vertrag. Geschwister erkennt moto von selbst nur über dieselbe E-Mail.",
             "Zählt deine Geschwisterregel alle Kinder der Familie? Ordne die Spalte `Kinder in der Familie` zu. Die Zahl gilt dann als bestätigt ab Vertragsbeginn. Das Feld siehst du nur mit dem Recht `Abrechnung`. Ohne das Recht trägt die Abrechnung die Zahlen später unter `Kinderzahl` nach.",
             "Prüfe die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. `Schon vorhanden` heißt: Das Kind hat an der Schule schon einen Vertrag. Bei `Fehlerhaft` steht der Grund in der Spalte `Hinweis`.",
             "Wähle unten `übernehmen`. Die Verträge stehen danach in der Liste mit dem Status `Aktiv`.",
             "Fehler in der Datei? Korrigiere die Datei und lade sie noch einmal. moto legt kein Kind doppelt an.",
-            "Danach verknüpfst du die Verträge mit der Kinderakte. Wie das geht, steht im nächsten Abschnitt.",
+            "Hat die Datei keine Mail-Adressen? Dann führe Geschwister zuerst zusammen, siehe nächster Abschnitt. Sonst zahlt jedes Kind den Preis des ersten Kindes.",
+            "Danach verknüpfst du die Verträge mit der Kinderakte. Wie das geht, steht weiter unten.",
+          ],
+        },
+        {
+          title: "Geschwister ohne Mail-Adresse zusammenführen",
+          description:
+            "Ohne Mail-Adresse kennt moto jeden Vertrag nur einzeln. Jeder ist eine eigene Familie. Dann gilt kein Geschwisterpreis, und ein Mandat für zwei Geschwister zeigt der Mandatsimport als Konflikt. Hier legst du fest, welche Kinder Geschwister sind. moto führt nichts von selbst zusammen. Das darf, wer das Recht `Verträge verwalten` oder `Abrechnung` hat.",
+          steps: [
+            "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Geschwister zusammenführen`. Nach einem Import führt dich auch `Geschwister zusammenführen` dorthin.",
+            "Die Liste zeigt jede Familie ohne Mail-Adresse, nach Nachnamen. Geschwister mit demselben Nachnamen stehen untereinander. Mit der Suche findest du Kind, Eltern oder Vertragsnummer.",
+            "Kreuze die Familien an, die zusammengehören. Unten erscheint eine Leiste. Wähle dort `Zusammenführen`.",
+            "Wähle im Fenster, welcher Vertrag die Familie führt. Von ihm kommen Debitorennummer, Zahlungsweg und SEPA-Mandat der Familie. Eine Debitorennummer je Kind bleibt beim Kind.",
+            "Wähle `Zusammenführen`. Die Spalte `Familie` zeigt jetzt zum Beispiel `2 Kinder zusammen`. Im nächsten Monatslauf zählen die Kinder als Geschwister.",
+            "Kommt danach der Mandatsimport, gilt ein Mandat mit derselben Referenz für beide Kinder.",
+            "Falsch zusammengeführt? Wähle bei der Familie das Menü mit den drei Punkten und dann zum Beispiel `Mila Schulz lösen`. Bestätige mit `Lösen`. Danach gilt für das Kind wieder, was bei seinem Vertrag gespeichert war.",
+            "Unter `Verlauf` siehst du, wer wann welche Kinder zusammengeführt oder gelöst hat.",
+            "Die Liste als Datei? Wähle oben rechts das Menü mit den drei Punkten und dann PDF, Excel oder CSV.",
+            "Ausgestellte Rechnungen ändern sich nicht. Das Zusammenführen gilt für Monatsläufe, die danach rechnen.",
           ],
         },
         {
@@ -12091,6 +12157,7 @@ export const traegerCareContractsTopic =
             "Wähle unten zum Beispiel `Für 12 Verträge nachtragen`. moto fragt vorher nach. Bestätige mit `Jetzt nachtragen`.",
             "Danach zeigt moto, wie viele Anmeldungen nachgetragen und wie viele Verträge nur gebunden sind. Die offenen Zeilen bleiben als Arbeitsliste stehen.",
             "Mit `Neue Vorschau` holst du den neuen Stand. Erledigtes steht dann auf `Erledigt`. Es entsteht nichts doppelt.",
+            "Danach sind die Eltern dran. Das macht die Schule in ihrer Kinderliste mit `Eltern einladen`. Eltern ohne Konto bekommen die Einladung ins Elternportal. Mit `Eltern mit Konto benachrichtigen` bekommen Eltern mit Konto eine kurze Nachricht, für Kinder, die heute Betreuung gebucht haben. Jedes Elternteil bekommt sie pro Kind nur einmal.",
           ],
         },
         {
@@ -12192,12 +12259,12 @@ export const traegerCareContractsTopic =
         "Ein importierter Vertrag beginnt frühestens mit dem Schuljahr seines Moduls. Er endet auch mit diesem Schuljahr, wenn das Modul ein Ende hat und die Datei kein früheres nennt. Lief der Vertrag schon vorher, steht der frühere Tag unter `Abgeschlossen`. Der Vertrag ist mit keiner Kinderakte der Schule verknüpft, bis du ihn verknüpfst: moto gleicht Kinder nicht über den Namen ab. Im Reiter `Versionen` steht bei ihm `Aus einer Datei importiert`.",
         "Hat ein Kind einen laufenden importierten Vertrag, bekommt es aus einer Anmeldung keinen zweiten Vertrag für dieselbe Zeit. Das gilt auch, solange der Vertrag noch nicht verknüpft ist: Dann zählen Name und Geburtsdatum. Das Kind steht in `Verträge erstellen` mit `Hat schon einen importierten Vertrag` und der Nummer des Vertrags. Stimmt das nicht, prüfe dort die Kinderakte und das Vertragsende. Endet der importierte Vertrag vor der gebuchten Betreuung, bekommt das Kind seinen neuen Vertrag wie sonst.",
         "Die Suche und die Filter gelten für alle Verträge. Mit `Weitere Verträge laden` zeigst du ältere Treffer an.",
-        "Beim ersten Senden hält moto das PDF fest. Änderst du danach Bedingungen oder Brieftext, bleibt der versendete Vertrag gleich.",
+        "Beim ersten Senden oder mit `Auf Papier übergeben` hält moto das PDF fest. Änderst du danach Bedingungen oder Brieftext, bleibt der versendete Vertrag gleich.",
         "Im Reiter `Unterschrift und Versand` siehst du in der Karte `Versand`, ob die Mail gesendet wurde. Mit `Versand aktualisieren` prüfst du den neuen Stand. Mit `Erneut senden` geht dasselbe PDF noch einmal an die Eltern; moto fragt vorher. Bei einem aktiven Vertrag steht `Erneut senden` im Menü mit den drei Punkten oben rechts. Eine zweite Nachricht aufs Handy gibt es dabei nicht. Nur eine korrigierte Mail-Adresse bekommt eine eigene Nachricht.",
         "Neben jedem Versand steht, was aus der Mail geworden ist: wie bei der Abrechnung. Der Hinweis oben nennt den Grund und den nächsten Schritt. Bei `Verzögert` wartest du. Hat die Schule die Mails gestoppt, kläre das mit der Schule. Bei `Gesperrt` klärt das der moto-Support. Solange das gilt, ist `Erneut senden` aus.",
         "Den Brieftext des Vertrags änderst du unter `Einstellungen` → `Briefkopf und Vorlagen` bei der Vorlage `Vertrag`.",
-        "Mit `PDF herunterladen` bekommst du den Vertrag zum Drucken, etwa für Familien ohne Mail.",
-        "Wartet ein versendeter Vertrag auf die Unterschrift, bekommen die Eltern Erinnerungen per Mail. Es gibt höchstens drei. Bereits abgeschlossene Verträge bekommen keine Erinnerung. Nach wie vielen Tagen, lege unter `Einstellungen` → `Allgemein` im Bereich `Betreuungsverträge` fest. Bei 0 gibt es keine Erinnerung.",
+        "Mit `PDF herunterladen` bekommst du den versendeten Vertrag zum Drucken. Bei einem Entwurf heißt der Eintrag `Vorschau herunterladen`. Auf jeder Seite der Vorschau steht `Vorschau, nicht zum Unterschreiben`. Für Familien ohne Mail wähle `Auf Papier übergeben`.",
+        "Wartet ein per Mail versendeter Vertrag auf die Unterschrift, bekommen die Eltern Erinnerungen per Mail. Es gibt höchstens drei. Abgeschlossene und auf Papier übergebene Verträge bekommen keine Erinnerung. Nach wie vielen Tagen, lege unter `Einstellungen` → `Allgemein` im Bereich `Betreuungsverträge` fest. Bei 0 gibt es keine Erinnerung.",
         "Der Link in der Mail gilt einmal und 30 Tage. Jede Erinnerung bringt einen neuen Link.",
         "Frühere Versionen bleiben unter `Versionen` lesbar. `Gilt jetzt` zeigt die Version von heute. Die Abrechnung nimmt für jeden Tag die Version, die an diesem Tag gilt.",
         "Bei einer außerordentlichen Kündigung steht in `Vertrag beenden` der Grund der Eltern und `Ende noch offen`. Prüfe den Grund. Bis zu deiner Entscheidung gilt der Vertrag weiter.",
@@ -12220,7 +12287,7 @@ export const traegerCareContractsTopic =
       troubleshootingDetails: [
         "Beim Nachtragen steht `Seit deiner Vorschau hat sich etwas geändert`? Ein Vertrag, die Schule oder der Tag ist neu. moto hat nichts eingetragen. Prüfe die neue Vorschau und trag noch einmal nach.",
         "Beim Nachtragen steht `Das Nachtragen ist nicht ganz durchgelaufen`? Manche Kinder können schon angemeldet sein. Trag noch einmal nach. moto bindet dann die Verträge, es entsteht nichts doppelt.",
-        "Die Schule fragt, warum ein Kind ohne Eltern angemeldet ist? Die Anmeldung kommt aus dem importierten Vertrag. Die Schule lädt die Eltern in ihrer Kinderliste mit `Eltern einladen` ins Elternportal ein. Eine Nachricht an Eltern, die schon ein Konto haben, gibt es noch nicht.",
+        "Die Schule fragt, warum ein Kind ohne Eltern angemeldet ist? Die Anmeldung kommt aus dem importierten Vertrag. Die Schule lädt die Eltern in ihrer Kinderliste mit `Eltern einladen` ins Elternportal ein. Setzt sie dort den Haken bei `Eltern mit Konto benachrichtigen`, bekommen Eltern mit Konto eine kurze Nachricht: Die Betreuung ist jetzt im Elternportal sichtbar.",
         "Beim Import steht `Für das Modul fehlen die Vertragsbedingungen`? Trage unter `Vertragsbedingungen` Laufzeit und Frist für das Modul ein. Wähle danach im Import `Erneut prüfen` oder lade die Datei noch einmal.",
         "Beim Import steht `Dieses Modul gibt es an der Schule nicht`? Der Name in der Datei muss so heißen wie das Angebot der Schule. Ändere den Namen in der Datei, oder wähle `Modul für alle Zeilen`.",
         "Beim Import steht `„Kinder in der Familie“ ist keine ganze Zahl von 1 bis 20`? moto übernimmt die Zeile nicht. Korrigiere die Zahl in der Datei und lade die Datei noch einmal.",
@@ -12476,6 +12543,8 @@ export const traegerCareMonthsTopic =
             "Steht oben `Ohne Preis`, fehlt für einen gebuchten Wochentag oder eine Zahl von Tagen je Woche ein Preis. Wähle `Preis eintragen`. Danach kommt das Kind in den Lauf.",
             "Steht oben `Doppelter Vertrag – bitte prüfen`, rechnen zwei Verträge eines Kindes am selben Tag dasselbe Modul ab. Die Freigabe rechnet dieses Kind mit allen seinen Verträgen nicht ab, alle anderen Kinder schon. Nach der Freigabe steht es unter `Nicht abgerechnet – Doppelter Vertrag`. Beende oder ändere einen der Verträge. Starte dann einen neuen Monatslauf für diesen Monat. Er rechnet nur dieses Kind ab.",
             "Steht `Ein Kind an zwei Schulen`, hat ein Kind die Schule gewechselt und an jeder Schule eine eigene Kinderakte. Name, Geburtstag und Familie sind gleich, die Verträge laufen nacheinander. moto rechnet beide Verträge darum ab wie die eines Kindes. Sind es doch zwei Kinder, gib den Lauf nicht frei und schreib dem moto-Support.",
+            "Steht `Kind hat schon eine Rechnung – bitte prüfen`, ist der Monat für das Kind schon abgerechnet: durch eine Rechnung oder einen Jahresbescheid eines anderen Vertrags. Der Lauf stellt keine zweite Rechnung aus. Wähle `Rechnung öffnen`, `Bescheid öffnen` oder `Jahresbescheid öffnen` und prüfe das Dokument. Stimmt es, musst du nichts tun. Eine falsche Rechnung stornierst du. Einen falschen Jahresbescheid änderst du mit einem neuen Jahreslauf. Öffne danach den Monatslauf wieder. Er rechnet das Kind jetzt ab.",
+            "Steht `Betreuung noch nicht abgerechnet – Rechnung nur mit Mensa`, enthält die Rechnung des Kindes nur die Mensa. Storniere sie. Danach rechnet der Lauf das Kind neu und zeigt, was noch offen ist. Ist der Lauf schon freigegeben, starte nach dem Storno einen neuen Monatslauf für diesen Monat. Das gilt für beide Karten.",
           ],
         },
         {
@@ -12715,6 +12784,7 @@ export const traegerCareNoticesTopic =
         "Ein Jahreslauf lässt sich nicht starten: Für dieses Jahr gibt es schon einen offenen Lauf. Öffne ihn in der Liste. Stelle die Bescheide aus, oder schließe oder verwirf den leeren Lauf.",
         "Die Vorschau ist leer, weil alle Bescheide noch gelten: Es gibt nichts Neues auszustellen. Wähle `Jahreslauf abschließen` und dann `Abschließen`. Danach kannst du einen neuen Jahreslauf für andere Schulen starten.",
         "Der Lauf zeigt `Dieser Lauf hat nichts abzurechnen`: Seine Schulen haben in diesem Jahr keinen Vertrag. Wähle `Leeren Lauf verwerfen` und dann `Verwerfen`. Der Lauf steht danach als `Verworfen` in der Liste, und das Jahr ist frei für einen neuen Jahreslauf.",
+        "Im Jahreslauf steht `Preis fehlt – Kind bekommt keinen neuen Bescheid`: Für einen Vertrag des Kindes fehlt ein Preis. Sein bisheriger Bescheid gilt weiter, auch für Tage eines anderen Vertrags. Damit der Jahreslauf keinen Tag doppelt abrechnet, bekommt der andere Vertrag keinen neuen Bescheid. Wähle `Preisliste öffnen` und trage den Preis ein. Öffne danach den Jahreslauf wieder.",
         "Im Monatslauf steht `Durch aufgehobenen Bescheid gesperrt`: Ein Änderungsbescheid hat den Monat auf 0,00 € gesetzt. Der Monat bleibt gesperrt, damit ihn niemand doppelt abrechnet. Willst du ihn abrechnen, stelle mit `Neuen Bescheid ausstellen` einen neuen Bescheid aus.",
       ],
       related: [
@@ -14588,6 +14658,52 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
 } satisfies typeof authored_traegerLoginTopic;
 
 /**
+ * moto-Module im Träger-Portal (#6052). Die Seite `moto-Module` unter
+ * `Einstellungen` zeigt ihren Stand; Navigation und Seiten
+ * folgen dem Register (lib/traeger-modules.ts). Das Schloss sieht nur, wer
+ * das Träger-Büro leitet. „moto-Modul“, weil „Modul“ im Träger-Portal auch
+ * die Betreuungsmodule eines Vertrags meint.
+ */
+export const traegerModulesTopic = function traegerModulesTopic(): HelpTopic {
+  return {
+    id: HELP_TOPICS.traegerModules,
+    title: "Welche moto-Module hat mein Träger?",
+    question: "Welche moto-Module hat mein Träger?",
+    summary:
+      "Unter `Einstellungen` siehst du, welche moto-Module dein Träger gebucht hat.",
+    group: "konfiguration",
+    audience: "traeger",
+    icon: "PuzzlePiece",
+    steps: [
+      "Wähle unten in der Navigation `Einstellungen`.",
+      "Wähle `moto-Module`.",
+      "Bei jedem moto-Modul steht `Gebucht` oder `Nicht gebucht`.",
+    ],
+    result: "Du weißt, welche Bereiche dein Träger-Büro nutzen kann.",
+    notes: [
+      "Schulen, Schließtage, Anmeldephasen, Dokumente, Personal und die Einstellungen hat jeder Träger.",
+      "`Träger-Übersicht` öffnet Dashboard, Belegung, Auslastung, Ankunft und Abholung, Standortvergleich, Berichte und `Länger als gebucht`.",
+      "`Ferienbetreuung` öffnet die Ferienzeiträume mit ihren Anmeldungen. Ohne das moto-Modul können Eltern sich nicht mehr für Ferien anmelden. Der Link zur Anmeldung ist dann geschlossen.",
+      "`Verträge und Dokumente` öffnet die Betreuungsverträge.",
+      "`Elternbeiträge und Abrechnung` öffnet Abrechnungsläufe, Familien und Zahlung, Preise und Ermäßigungen, die Dokumentarten und die Vorgaben für Rechnungen.",
+      "Ein moto-Modul gilt für deinen Träger, sobald eine deiner Schulen es gebucht hat. Was gebucht ist, steht im Vertrag mit moto.",
+      "Ohne `Elternbeiträge und Abrechnung` fehlen auf einem Vertrag die Karten `Empfänger und Zahlung` und `SEPA-Lastschriftmandat`.",
+    ],
+    differences: [
+      "Ein Menüpunkt hat ein Schloss? Dann gehört er zu einem moto-Modul, das keine deiner Schulen gebucht hat. Das Schloss sieht nur, wer das Träger-Büro leitet. Alle anderen sehen den Menüpunkt nicht.",
+      "Eine Seite sagt `ist nicht gebucht`? Dann gehört sie zu einem moto-Modul, das keine deiner Schulen gebucht hat. Die Seite nennt das moto-Modul.",
+      "Das `Dashboard` fehlt? Ohne `Träger-Übersicht` startet das Träger-Portal mit `Schulen`.",
+      "Unter `Abrechnungsvorgaben` stehen nur die Bankverbindungen? Die übrigen Vorgaben gehören zu `Elternbeiträge und Abrechnung`.",
+    ],
+    troubleshootingDetails: [
+      "Du brauchst ein weiteres moto-Modul, oder eines ist falsch eingetragen? Wende dich an das moto-Team. Nur das moto-Team kann moto-Module buchen oder abbestellen.",
+      "Ein moto-Modul wurde abbestellt? Die Daten bleiben gespeichert, bis ihre Löschfrist abläuft. Verschickte Verträge können Eltern weiter unterschreiben. Brauchst du die Daten noch, frage das moto-Team nach einem Export.",
+    ],
+    related: [HELP_TOPICS.traegerSettings, HELP_TOPICS.traegerLogin],
+  };
+} satisfies typeof authored_traegerModulesTopic;
+
+/**
  * Die Glocke oben rechts im Träger-Portal (#7146): die Hinweise aller Schulen
  * des Trägers, jeweils mit dem Namen der Schule. Erster Typ ist der
  * Schließtag einer Schule.
@@ -14840,6 +14956,82 @@ export const traegerReportsTopic = function traegerReportsTopic(): HelpTopic {
   };
 } satisfies typeof authored_traegerReportsTopic;
 
+/**
+ * `/traeger/einstellungen/zustaendigkeiten` und der Reiter
+ * „Zuständigkeiten“ einer Schule (#4811): Träger, Schulträger oder Gemeinde
+ * für Verträge, Abrechnung und Personal, mit den Angaben der Stelle je
+ * Schule.
+ */
+export const traegerResponsibilitiesTopic =
+  function traegerResponsibilitiesTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.traegerResponsibilities,
+      title: "Zuständigkeiten festlegen",
+      question:
+        "Wie lege ich fest, wer Verträge schließt, abrechnet und Personal anstellt?",
+      summary:
+        "Je Schule ist dein Träger, der Schulträger oder die Gemeinde zuständig. Du legst das für alle Schulen fest und trägst Name und Anschrift der Stelle bei der Schule ein.",
+      group: "konfiguration",
+      audience: "traeger",
+      icon: "Building2",
+      requirements: ["Deine Rolle im Träger-Büro ist Verwaltung."],
+      steps: [],
+      instructionGroups: [
+        {
+          title: "Für alle Schulen festlegen",
+          description: "Ohne deine Wahl ist dein Träger für alles zuständig.",
+          steps: [
+            "Wähle unten in der Navigation `Einstellungen` und dann `Zuständigkeiten`.",
+            "In der Karte `Für alle Schulen` wählst du je Frage eine Stelle: `Träger`, `Schulträger` oder `Gemeinde`.",
+            "moto speichert die Wahl sofort. Unter `Je Schule` siehst du, wer an jeder Schule zuständig ist.",
+          ],
+        },
+        {
+          title: "Schulträger oder Gemeinde einer Schule eintragen",
+          description:
+            "Eine Stelle ist erst zuständig, wenn ihr Name und ihre Anschrift bei der Schule stehen. Bis dahin bleibt dein Träger zuständig.",
+          steps: [
+            "Wähle unter `Je Schule` die Schule. Der Reiter `Zuständigkeiten` der Schule öffnet sich.",
+            "Wähle in der Karte `Schulträger` oder `Gemeinde` den Knopf `Angaben eintragen`.",
+            "Trage Name, Straße, Postleitzahl und Ort ein. Die Ansprechperson ist freiwillig.",
+            "Rechnet die Stelle mit den Eltern ab? Dann trage auch Gläubiger-ID und Bankverbindung ein.",
+            "Wähle `Speichern`.",
+          ],
+        },
+        {
+          title: "Eine Schule weicht ab",
+          description:
+            "Den eigenen Wert einer Schule stellst du in der Schul-App ein, nicht im Träger-Portal.",
+          steps: [
+            "Öffne die Schule und wähle `Schul-App öffnen`.",
+            "Wähle in der Schul-App `Einstellungen` und den Bereich `Zuständigkeiten`.",
+            "Wähle die Stelle. Im Träger-Portal steht bei der Schule dann `Eigener Wert`.",
+          ],
+        },
+      ],
+      result:
+        "Neue Betreuungsverträge der Schule nennen die zuständige Stelle als Absender und, wenn die Vertragsbedingungen keinen Vertragspartner nennen, als Vertragspartner. Die Personalakte nennt sie beim Einsatzort als Arbeitgeber.",
+      notes: [
+        "Schon verschickte Verträge bleiben, wie sie sind. Auch Erinnerungen und die Seite zum Unterschreiben nennen weiter die Stelle, die den Vertrag ausgestellt hat.",
+        "Auf dem Vertrag einer anderen Stelle stehen das Logo und die Fußzeile deines Trägers nicht.",
+        "Rechnungen, Bescheide und Lastschriften stellt moto noch mit den Angaben deines Trägers aus. Die Wahl bei `Wer rechnet mit den Eltern ab?` bereitet den Wechsel vor.",
+        "Der Lohnexport bleibt eine Datei für alle Schulen.",
+      ],
+      troubleshootingDetails: [
+        "Bei einer Schule steht `Angaben fehlen`? Die gewählte Stelle hat dort noch keinen Namen und keine Anschrift. Trage sie bei der Schule ein.",
+        "Bei `Abrechnung` steht `Bankdaten fehlen`? Trage Gläubiger-ID und Bankverbindung bei der Stelle ein. Beides muss da sein.",
+        "Du kannst nichts ändern? Dir fehlt die Rolle `Verwaltung`.",
+        "Bei einer Schule steht `Eigener Wert` und du willst den Wert deines Trägers? Den eigenen Wert ändert und entfernt nur die Schule in ihren Einstellungen.",
+      ],
+      related: [
+        HELP_TOPICS.traegerSettings,
+        HELP_TOPICS.traegerCareContracts,
+        HELP_TOPICS.traegerStaffRecords,
+        HELP_TOPICS.traegerSchoolView,
+      ],
+    };
+  } satisfies typeof authored_traegerResponsibilitiesTopic;
+
 /** `/traeger/standortvergleich` (#4715): Kennzahlen der Schulen nebeneinander. */
 export const traegerSchoolComparisonTopic =
   function traegerSchoolComparisonTopic(): HelpTopic {
@@ -14882,6 +15074,74 @@ export const traegerSchoolComparisonTopic =
       related: [HELP_TOPICS.traegerUtilization, HELP_TOPICS.traegerReports],
     };
   } satisfies typeof authored_traegerSchoolComparisonTopic;
+
+/**
+ * `/traeger/einstellungen/schulrollen` (#4810, ADR 0317): Rollen des Trägers
+ * für das Personal aller seiner Schulen anlegen, ändern und entfernen.
+ */
+export const traegerSchoolRolesTopic =
+  function traegerSchoolRolesTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.traegerSchoolRoles,
+      title: "Rollen für alle Schulen",
+      question: "Wie lege ich eine Rolle für das Personal aller Schulen an?",
+      summary:
+        "Du legst eine Rolle einmal an. Jede deiner Schulen bekommt sie und gibt sie ihren Personen.",
+      group: "einstieg",
+      audience: "traeger",
+      icon: "KeyRound",
+      requirements: ["Du hast die Rolle `Verwaltung`."],
+      instructionGroups: [
+        {
+          title: "Eine Rolle anlegen",
+          steps: [
+            "Wähle in der Navigation `Einstellungen`, dann `Rollen für Schulen`.",
+            "Wähle oben `Rolle anlegen`.",
+            "Gib einen Namen ein, zum Beispiel Springerkraft.",
+            "Wähle bei `Gilt als`, ob die Rolle zur Betreuung oder zur Verwaltung zählt. Damit startet sie mit den passenden Rechten.",
+            "Wähle `Anlegen`.",
+          ],
+        },
+        {
+          title: "Die Rechte einer Rolle ändern",
+          steps: [
+            "Wähle in der Karte der Rolle `Bearbeiten`.",
+            "Kreuze unter `Rechte` an, was die Rolle darf. Mit der Suche findest du ein Recht schneller.",
+            "Wähle `Speichern`.",
+          ],
+        },
+        {
+          title: "Eine Rolle entfernen",
+          steps: [
+            "Wähle in der Karte der Rolle das Menü mit den drei Punkten.",
+            "Wähle `Entfernen`.",
+            "Lies, wer die Rolle an welcher Schule hat.",
+            "Wähle `Rolle entfernen`, dann `Endgültig entfernen`.",
+          ],
+        },
+      ],
+      steps: [],
+      result:
+        "moto trägt die Rolle sofort in alle deine Schulen. Dort steht sie unter `Rollen` mit dem Vermerk `Vom Träger`. Die Schule gibt sie ihren Personen wie jede andere Rolle.",
+      notes: [
+        "Kommt später eine Schule zu deinem Träger, bekommt sie die Rollen von selbst.",
+        "Ändern und entfernen kannst nur du. Jede Schule legt weiter eigene Rollen an.",
+        "Ein neues Recht haben die Personen kurz nach dem Speichern. Nimmst du ein Recht weg, meldet moto sie ab. Sie melden sich danach wieder an.",
+        "Wer im Träger-Büro was darf, stellst du unter `Mitglieder und Rollen` ein. Das sind andere Rollen.",
+        "Jede Änderung steht im Protokoll der Schule, mit dem Hinweis, dass sie vom Träger kommt.",
+      ],
+      differences: [
+        "Bei einer Schule steht `Name vergeben`: Die Schule hat schon eine eigene Rolle mit diesem Namen. Gib deiner Rolle einen anderen Namen, oder die Schule benennt ihre um.",
+        "Bei einer Schule steht `Nicht übertragen`: Wähle `Bearbeiten` und `Speichern`. Dann trägt moto die Rolle auch dorthin.",
+        "Beim Entfernen steht bei einer Schule, dass die Rolle bleibt: Eine Einladung dieser Schule nennt die Rolle. Sie gehört danach der Schule.",
+      ],
+      troubleshootingDetails: [
+        "Du siehst `Rollen für Schulen` nicht: Dir fehlt die Rolle `Verwaltung`. Bitte die Leitung deines Trägers darum.",
+        "Nach dem Entfernen darf eine Person nichts mehr: Die Schule gibt ihr unter `Personal` eine andere Rolle.",
+      ],
+      related: [HELP_TOPICS.traegerAccounts, HELP_TOPICS.traegerSchoolSwitch],
+    };
+  } satisfies typeof authored_traegerSchoolRolesTopic;
 
 /** `/traeger` (#4654): Absprung in eine Schule des Trägers. */
 export const traegerSchoolSwitchTopic =

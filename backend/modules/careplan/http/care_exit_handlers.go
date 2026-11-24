@@ -14,16 +14,17 @@ import (
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	securityruntime "github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // careExitRequest is the body of both the preview and the confirmation. The
 // confirmation additionally quotes the preview token back.
 type careExitRequest struct {
-	StudentIDs  []string `json:"student_ids"`
-	LastCareDay string   `json:"last_care_day"`
-	Reason      string   `json:"reason"`
-	ReasonNote  string   `json:"reason_note"`
-	Token       string   `json:"token"`
+	StudentIDs  []ident.ID `json:"student_ids"`
+	LastCareDay string     `json:"last_care_day"`
+	Reason      string     `json:"reason"`
+	ReasonNote  string     `json:"reason_note"`
+	Token       string     `json:"token"`
 }
 
 type careWithdrawalExitRequest struct {
@@ -65,8 +66,8 @@ func (b *careExitRequest) Bind(_ *http.Request) error {
 func (b *careExitRequest) toInput() (careplan.CareExitInput, error) {
 	ids := make([]int64, 0, len(b.StudentIDs))
 	for _, raw := range b.StudentIDs {
-		id, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
-		if err != nil || id <= 0 {
+		id := raw.Int64()
+		if id <= 0 {
 			return careplan.CareExitInput{}, errors.New("die Auswahl enthält ein ungültiges Kind")
 		}
 		ids = append(ids, id)
@@ -85,7 +86,7 @@ func (b *careExitRequest) toInput() (careplan.CareExitInput, error) {
 
 // careExitImpactResponse is one child in the preview, named.
 type careExitImpactResponse struct {
-	StudentID          string                            `json:"student_id"`
+	StudentID          ident.ID                          `json:"student_id"`
 	FirstName          string                            `json:"first_name"`
 	LastName           string                            `json:"last_name"`
 	SchoolClass        string                            `json:"school_class,omitempty"`
@@ -113,7 +114,7 @@ func toCareExitPreviewResponse(preview *careplan.CareExitPreview) careExitPrevie
 	students := make([]careExitImpactResponse, 0, len(preview.Students))
 	for _, impact := range preview.Students {
 		row := careExitImpactResponse{
-			StudentID:          strconv.FormatInt(impact.StudentID, 10),
+			StudentID:          ident.ID(impact.StudentID),
 			FirstName:          impact.FirstName,
 			LastName:           impact.LastName,
 			SchoolClass:        impact.SchoolClass,
@@ -194,25 +195,21 @@ func (rs *Resource) confirmCareExit(w http.ResponseWriter, r *http.Request) {
 }
 
 type careWithdrawalResponse struct {
-	ID                  string `json:"id"`
-	StudentID           string `json:"student_id,omitempty"`
-	FirstName           string `json:"first_name,omitempty"`
-	LastName            string `json:"last_name,omitempty"`
-	SchoolClass         string `json:"school_class,omitempty"`
-	FirstBookinglessDay string `json:"first_bookingless_day"`
-	Urgency             string `json:"urgency"`
-	State               string `json:"state"`
-	Outcome             string `json:"outcome,omitempty"`
-	ResolvedAt          string `json:"resolved_at,omitempty"`
+	ID                  ident.ID  `json:"id"`
+	StudentID           *ident.ID `json:"student_id,omitempty"`
+	FirstName           string    `json:"first_name,omitempty"`
+	LastName            string    `json:"last_name,omitempty"`
+	SchoolClass         string    `json:"school_class,omitempty"`
+	FirstBookinglessDay string    `json:"first_bookingless_day"`
+	Urgency             string    `json:"urgency"`
+	State               string    `json:"state"`
+	Outcome             string    `json:"outcome,omitempty"`
+	ResolvedAt          string    `json:"resolved_at,omitempty"`
 }
 
 func toCareWithdrawalResponse(row careplan.WithdrawalCompletion, today calendar.Date) careWithdrawalResponse {
-	studentID := ""
-	if row.StudentID != nil {
-		studentID = strconv.FormatInt(*row.StudentID, 10)
-	}
 	response := careWithdrawalResponse{
-		ID: strconv.FormatInt(row.ID, 10), StudentID: studentID,
+		ID: ident.ID(row.ID), StudentID: (*ident.ID)(row.StudentID),
 		FirstName: row.FirstName, LastName: row.LastName, SchoolClass: row.SchoolClass,
 		FirstBookinglessDay: row.FirstBookinglessDay.String(), Urgency: row.UrgencyOn(today), State: row.State,
 	}
@@ -373,7 +370,7 @@ func (rs *Resource) confirmWithdrawalCareEnd(w http.ResponseWriter, r *http.Requ
 }
 
 type careExitCancelRequest struct {
-	StudentIDs []string `json:"student_ids"`
+	StudentIDs []ident.ID `json:"student_ids"`
 }
 
 func (b *careExitCancelRequest) Bind(_ *http.Request) error {
@@ -396,8 +393,8 @@ func (rs *Resource) cancelCareExit(w http.ResponseWriter, r *http.Request) {
 	}
 	ids := make([]int64, 0, len(body.StudentIDs))
 	for _, raw := range body.StudentIDs {
-		id, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
-		if err != nil || id <= 0 {
+		id := raw.Int64()
+		if id <= 0 {
 			renderError(w, r, common.ErrorInvalidRequest(errors.New("student_ids enthält einen ungültigen Wert")))
 			return
 		}
@@ -461,14 +458,14 @@ func (rs *Resource) resumeCare(w http.ResponseWriter, r *http.Request) {
 }
 
 type endedCareResponse struct {
-	StudentID   string  `json:"student_id"`
-	FirstName   string  `json:"first_name"`
-	LastName    string  `json:"last_name"`
-	SchoolClass string  `json:"school_class,omitempty"`
-	LastCareDay string  `json:"last_care_day"`
-	Reason      *string `json:"reason,omitempty"`
-	ReasonNote  *string `json:"reason_note,omitempty"`
-	RecordedAt  *string `json:"recorded_at,omitempty"`
+	StudentID   ident.ID `json:"student_id"`
+	FirstName   string   `json:"first_name"`
+	LastName    string   `json:"last_name"`
+	SchoolClass string   `json:"school_class,omitempty"`
+	LastCareDay string   `json:"last_care_day"`
+	Reason      *string  `json:"reason,omitempty"`
+	ReasonNote  *string  `json:"reason_note,omitempty"`
+	RecordedAt  *string  `json:"recorded_at,omitempty"`
 }
 
 // listEndedCare is the "Beendete Betreuungen" archive. It holds every
@@ -506,7 +503,7 @@ func (rs *Resource) listEndedCare(w http.ResponseWriter, r *http.Request) {
 	items := make([]endedCareResponse, 0, len(rows))
 	for _, row := range rows {
 		item := endedCareResponse{
-			StudentID:   strconv.FormatInt(row.StudentID, 10),
+			StudentID:   ident.ID(row.StudentID),
 			FirstName:   row.FirstName,
 			LastName:    row.LastName,
 			SchoolClass: row.SchoolClass,

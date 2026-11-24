@@ -35,7 +35,21 @@ func (seedWeekProtocolStep) Run(_ context.Context, rt *Runtime) error {
 	if len(response.Data) == 0 || response.Data[0].ID == "" {
 		return fmt.Errorf("weekly protocol seed did not create a protocol")
 	}
-	if _, err := rt.Client.Post("/api/week-protocols/"+response.Data[0].ID+"/close", nil); err != nil {
+	// Closing confirms the protocol as read; its detail answers the version
+	// the closing sends (ADR 0311).
+	raw, err = rt.Client.Get("/api/week-protocols/" + response.Data[0].ID)
+	if err != nil {
+		return fmt.Errorf("read weekly protocol: %w", err)
+	}
+	var detail struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &detail); err != nil {
+		return fmt.Errorf("decode weekly protocol: %w", err)
+	}
+	if _, err := rt.Client.Post("/api/week-protocols/"+response.Data[0].ID+"/close", map[string]any{"expected_version": detail.Data.Version}); err != nil {
 		return fmt.Errorf("close weekly protocol: %w", err)
 	}
 	fmt.Println("  1 Wochenprotokoll mit abgelegtem PDF erstellt")

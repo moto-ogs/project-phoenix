@@ -2,6 +2,7 @@ package timetablehttp
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -71,7 +72,7 @@ func TestOperationsCreateAndStartSpontaneousRechecksWorkdayAfterRequestValidatio
 	roomID := int64(70)
 	rr := executeOperationRequest(t, router, http.MethodPost, "/spontaneous/start", map[string]any{
 		"title":   "Freispiel",
-		"room_id": roomID,
+		"room_id": fmt.Sprint(roomID),
 	})
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -106,7 +107,7 @@ func TestOperationsCreateAndStartSpontaneousRechecksWorkdayBeforeInstanceCreatio
 	})
 	router := operationRouter(http.MethodPost, "/spontaneous/start", res.operationsCreateAndStartSpontaneous)
 
-	req := httptest.NewRequest(http.MethodPost, "/spontaneous/start", strings.NewReader(`{"title":"Freispiel","room_id":70}`))
+	req := httptest.NewRequest(http.MethodPost, "/spontaneous/start", strings.NewReader(`{"title":"Freispiel","room_id":"70"}`))
 	req.Header.Set("Content-Type", "application/json")
 	testutil.WithClaims(t, testutil.AdminTestClaims(120))(req)
 	testutil.WithPermissions(permissions.UsersRead)(req)

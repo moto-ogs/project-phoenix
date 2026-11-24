@@ -24,16 +24,19 @@ import { TenantPage } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import {
   type MealBillingChild,
+  type MealBillingMonth,
   type MealBillingStatus,
   fetchMealBillingMonth,
   fetchMealBillingMonths,
   releaseMealBillingMonth,
 } from "~/lib/meal-billing-api";
 import { schoolClassLabel } from "~/lib/school-class-label";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 const logger = createLogger({ component: "MealBillingReleasePage" });
@@ -167,17 +170,30 @@ export default function MealBillingReleasePage() {
     (months?.find((entry) => entry.status !== "running")?.month ??
       months?.[0]?.month ??
       "");
-  const {
-    data: loadedMonth,
-    error: monthError,
-    mutate: mutateMonth,
-  } = useSWRAuth(
+  const monthRead = useSWRAuth(
     selected ? tenantDailyKeys.mealBillingMonth(selected) : null,
     () => fetchMealBillingMonth(selected),
     { keepPreviousData: false },
   );
-  const month = loadedMonth?.month === selected ? loadedMonth : null;
+  const {
+    data: loadedMonth,
+    error: monthError,
+    mutate: mutateMonth,
+  } = monthRead;
+  const shownMonth = loadedMonth?.month === selected ? loadedMonth : null;
   const [confirming, setConfirming] = useState(false);
+  // The release confirms the counts as the dialog opened on them (ADR
+  // 0311): a newer read in the background does not change what is
+  // released; a refusal reads the month again.
+  const releaseRead = useDraftOn<MealBillingMonth, MealBillingMonth, string>(
+    {
+      opening: confirming && shownMonth ? shownMonth.month : null,
+      data: shownMonth ?? undefined,
+      reload: () => revalidateOrThrow(monthRead),
+    },
+    { token: (counted) => counted.fingerprint, follow: false },
+  );
+  const month = shownMonth;
   const [releasing, setReleasing] = useState(false);
   const [reason, setReason] = useState("");
   const monthsLoad = useSwrResourceLoadError(
@@ -195,15 +211,16 @@ export default function MealBillingReleasePage() {
   const { success } = useToast();
 
   const release = async () => {
-    if (!month) return;
+    const confirmed = releaseRead.base ?? month;
+    if (!confirmed) return;
     setReleasing(true);
     // A released month that counts differently now is released again,
     // with what it counts now and the reason (#4686).
-    const again = month.current;
+    const again = confirmed.current;
     try {
       const released = again
         ? await releaseMealBillingMonth(again, reason.trim())
-        : await releaseMealBillingMonth(month);
+        : await releaseMealBillingMonth(confirmed);
       void mutateMonth(released, { revalidate: false });
       void mutateMonths(
         (current) =>
@@ -232,8 +249,13 @@ export default function MealBillingReleasePage() {
         error: err instanceof Error ? err.message : String(err),
       });
       setConfirming(false);
-      void errors.show(err, { object: "die Freigabe" });
-      void mutateMonth();
+      // Changed since the counts were read: `reload` shows the new ones,
+      // or says it could not read them (ADR 0311).
+      void errors.show(err, {
+        object: "die Freigabe",
+        reload: () => revalidateOrThrow(monthRead),
+      });
+      if (!isReadStateRefusal(err)) void mutateMonth();
     } finally {
       setReleasing(false);
     }

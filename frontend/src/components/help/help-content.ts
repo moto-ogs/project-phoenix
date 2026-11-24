@@ -254,6 +254,7 @@ const TRAEGER_TOPICS: readonly HelpTopic[] = [
   articles.traegerSchoolSwitchTopic(),
   articles.traegerTestSystemTopic(),
   articles.traegerAccountsTopic(),
+  articles.traegerSchoolRolesTopic(),
   articles.traegerHolidayPeriodTopic(),
   articles.traegerClosingDaysTopic(),
   articles.traegerHolidayFormTopic(),
@@ -293,7 +294,9 @@ const TRAEGER_TOPICS: readonly HelpTopic[] = [
   articles.traegerBriefkopfTopic(),
   articles.traegerDocumentTemplatesTopic(),
   articles.traegerDocumentKindsTopic(),
+  articles.traegerResponsibilitiesTopic(),
   articles.traegerSettingsTopic(),
+  articles.traegerModulesTopic(),
 ];
 
 const TEACHER_DRAFT_TOPICS: readonly HelpTopic[] = [

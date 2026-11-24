@@ -2,10 +2,50 @@ package careplan
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"slices"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
+
+// CareOfferingVersion is the token of an offering as the school edits it
+// (ADR 0311): a fingerprint of the stored values the catalog form shows and
+// saves back, because not every writer of the row stamps updated_at. The
+// change times, the template-gap decisions (their own command) and the
+// Träger link are left out; an empty list and none are the same state.
+func CareOfferingVersion(offering CareOffering) string {
+	state := offering
+	state.Version = ""
+	state.CreatedAt, state.UpdatedAt = time.Time{}, time.Time{}
+	state.TemplateGapAcks, state.Traeger = nil, nil
+	if state.AvailableDays == nil {
+		state.AvailableDays = []string{}
+	}
+	if state.AutoAddGradeLevels == nil {
+		state.AutoAddGradeLevels = []int{}
+	}
+	state.AutoAddTriggerOfferingIDs = slices.Sorted(slices.Values(state.AutoAddTriggerOfferingIDs))
+	if state.AutoAddTriggerOfferingIDs == nil {
+		state.AutoAddTriggerOfferingIDs = []int64{}
+	}
+	if state.PickupTimes == nil {
+		state.PickupTimes = map[string]string{}
+	}
+	state.AvailabilityRule = rawOrNull(state.AvailabilityRule)
+	state.Translations = rawOrNull(state.Translations)
+	return readstate.Fingerprint(state)
+}
+
+// rawOrNull reads a missing JSON document as null.
+func rawOrNull(raw json.RawMessage) json.RawMessage {
+	if len(raw) == 0 {
+		return json.RawMessage("null")
+	}
+	return raw
+}
 
 // The error contract of the care-offering catalog (#3559). Handlers render
 // err.Error() to administrators, so every text is byte-identical to the
@@ -43,7 +83,10 @@ type CareOfferingCatalog interface {
 	ListByPhase(ctx context.Context, phaseID int64) ([]CareOffering, error)
 	FindOffering(ctx context.Context, id int64) (CareOffering, error)
 	CreateOffering(ctx context.Context, offering CareOffering) (CareOffering, error)
-	UpdateOffering(ctx context.Context, offering CareOffering) (CareOffering, error)
+	// UpdateOffering saves the offering under its row lock when
+	// expectedVersion is the stored CareOfferingVersion, else
+	// readstate.ErrChanged (ADR 0311).
+	UpdateOffering(ctx context.Context, offering CareOffering, expectedVersion string) (CareOffering, error)
 	DeleteOffering(ctx context.Context, id int64) error
 	// Clone copies an offering into a target phase. Linked timetable
 	// templates are cleared across phases so the admin relinks one for the

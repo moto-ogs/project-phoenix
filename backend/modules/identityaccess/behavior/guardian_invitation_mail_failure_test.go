@@ -71,9 +71,9 @@ func TestBulkInviteToStudents_MailFailureListsOnlyThatGuardian(t *testing.T) {
 	require.NotNil(t, unreached.Email)
 	failingEmail.Store(*unreached.Email)
 
-	result, err := env.service.BulkInviteToStudents(testpkg.Ctx(t), identityaccess.BulkInviteRequest{
+	result, err := env.service.BulkInviteToStudents(testpkg.Ctx(t), previewedBulkInvite(t, env.service, identityaccess.BulkInviteRequest{
 		StudentIDs: []int64{first.ID, second.ID}, CreatedBy: env.inviterAccountID(t),
-	})
+	}))
 
 	require.NoError(t, err, "one failed mail does not fail the run")
 	assert.Equal(t, 1, result.Invited)

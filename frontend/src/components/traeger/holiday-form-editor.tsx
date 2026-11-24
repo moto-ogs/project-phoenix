@@ -9,7 +9,15 @@
 // und Medikamente zur Pflicht (#6686). Speichern legt eine neue Version an.
 
 import { Plus } from "lucide-react";
-import { useCallback, useId, useMemo, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   FieldEditorRow,
   FieldErrorContext,
@@ -32,7 +40,10 @@ import { Button, buttonClassName } from "~/components/ui/button";
 import { EditActions } from "~/components/ui/edit-actions";
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { EmptyState } from "~/components/ui/empty-state";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
 import { SegmentedControl } from "~/components/ui/segmented-control";
@@ -48,7 +59,9 @@ import {
   type FormLegalBlock,
 } from "~/lib/enrollment-form-schema-api";
 import { draftDocumentURLsInLegalBlocks } from "~/lib/enrollment-legal-blocks";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   HOLIDAY_FORM_FIELD_TYPES,
   type HolidayForm,
@@ -101,28 +114,87 @@ function questionBadge(field: FormField) {
   );
 }
 
+/** What the editor changes of a form version. */
+interface FormDraft {
+  readonly fields: HolidayFormField[];
+  readonly legalBlocks: FormLegalBlock[];
+  readonly address: HolidayForm["addressRequirement"];
+  readonly health: HolidayForm["healthRequirement"];
+}
+
+/** New row identities: a refill also discards row-local input drafts. */
+function formDraftOf(form: HolidayForm): FormDraft {
+  return {
+    fields: form.fields.map((field) => ({ ...field })),
+    legalBlocks: [...(form.legalBlocks ?? [])],
+    address: form.addressRequirement,
+    health: form.healthRequirement,
+  };
+}
+
+function sameFormDraft(a: FormDraft, b: FormDraft): boolean {
+  return (
+    holidayFieldsSignature(a.fields) === holidayFieldsSignature(b.fields) &&
+    JSON.stringify(a.legalBlocks) === JSON.stringify(b.legalBlocks) &&
+    a.address === b.address &&
+    a.health === b.health
+  );
+}
+
 export function HolidayFormEditor({
   periodId,
   form,
   onSaved,
+  reload,
 }: Readonly<{
   periodId: string;
+  /**
+   * The newest read of the form. The draft rests on the version read when
+   * editing starts; a newer version refills it only while untouched
+   * (ADR 0311).
+   */
   form: HolidayForm;
   onSaved: (form: HolidayForm) => void;
+  /**
+   * Reads the current form again and rejects when that fails: after a
+   * refused save the stored version replaces the draft.
+   */
+  reload: () => Promise<HolidayForm | undefined>;
 }>) {
   const formRef = useRef<HTMLDivElement>(null);
   const healthHeadingId = useId();
   const addressHeadingId = useId();
   const errorPath = useApiFormError(formRef);
   const { success } = useToast();
-  const [fields, setFields] = useState<HolidayFormField[]>(() => [
-    ...form.fields,
-  ]);
-  const [legalBlocks, setLegalBlocks] = useState<FormLegalBlock[]>(() => [
-    ...(form.legalBlocks ?? []),
-  ]);
-  const [address, setAddress] = useState(form.addressRequirement);
-  const [health, setHealth] = useState(form.healthRequirement);
+  const editor = useDraftOn<HolidayForm, FormDraft, number, HolidayForm>(
+    { opening: periodId, data: form, reload },
+    {
+      token: (stored) => stored.version,
+      toDraft: formDraftOf,
+      same: sameFormDraft,
+      answer: (saved) => saved,
+    },
+  );
+  const formErrors = useReadDraftForm(editor, errorPath, "das Anmeldeformular");
+  const draft = editor.draft ?? formDraftOf(form);
+  const { fields, legalBlocks, address, health } = draft;
+  const setFields = (
+    next: (current: HolidayFormField[]) => HolidayFormField[],
+  ) =>
+    editor.setDraft((current) => ({
+      ...current,
+      fields: next(current.fields),
+    }));
+  const setLegalBlocks: Dispatch<SetStateAction<FormLegalBlock[]>> = (next) =>
+    editor.setDraft((current) => ({
+      ...current,
+      legalBlocks:
+        typeof next === "function" ? next(current.legalBlocks) : next,
+    }));
+  const setAddress = (next: HolidayForm["addressRequirement"]) =>
+    editor.setDraft((current) => ({ ...current, address: next }));
+  const setHealth = (next: HolidayForm["healthRequirement"]) =>
+    editor.setDraft((current) => ({ ...current, health: next }));
   const adapter = useMemo(
     () => ({
       upload: (file: File) => uploadHolidayDocument(periodId, file),
@@ -139,12 +211,9 @@ export function HolidayFormEditor({
     (name: string) => readFieldError(name) ?? undefined,
     [readFieldError],
   );
-  const dirty =
-    holidayFieldsSignature(fields) !== holidayFieldsSignature(form.fields) ||
-    JSON.stringify(legalBlocks) !== JSON.stringify(form.legalBlocks ?? []) ||
-    address !== form.addressRequirement ||
-    health !== form.healthRequirement;
-  const missingTemplateFields = templateFieldsMissing(fields, form.template);
+  const dirty = editor.touched;
+  const template = (editor.base ?? form).template;
+  const missingTemplateFields = templateFieldsMissing(fields, template);
   // On a phone a question folds to its head, so the long form stays
   // walkable; from tablet width on every question starts open, all fields
   // in view. A new question opens, and so does one the check marks.
@@ -192,6 +261,9 @@ export function HolidayFormEditor({
     setFields((current) => current.filter((_, i) => i !== index));
 
   const save = async () => {
+    // Nothing goes out before the stored form is read; the shown error
+    // stays.
+    if (!formErrors.begin()) return;
     const errors = validateHolidayForm(fields);
     if (Object.keys(errors).length > 0) {
       const marked = new Set(
@@ -205,34 +277,46 @@ export function HolidayFormEditor({
       return;
     }
     setSaving(true);
-    errorPath.clear();
     let draftSave: DraftDocumentSave | null = null;
     try {
-      draftSave = await draftDocuments.startSave(
-        draftDocumentURLsInLegalBlocks(legalBlocks, draftDocuments.drafts()),
-      );
-      const saved = await saveHolidayForm(
-        periodId,
-        prepareHolidayFieldsForSave(fields),
-        legalBlocks,
-        address,
-        health,
-      );
-      draftSave.commit();
-      setFields([...saved.fields]);
-      setLegalBlocks([...(saved.legalBlocks ?? [])]);
-      setAddress(saved.addressRequirement);
-      setHealth(saved.healthRequirement);
-      success(
-        `Das Anmeldeformular ist als Version ${saved.version} gespeichert.`,
-      );
-      onSaved(saved);
-    } catch (err) {
-      draftSave?.fail();
-      logger.error("traeger_holiday_form_save_failed", {
-        error: err instanceof Error ? err.message : String(err),
+      const result = await editor.submit(async (version, edited) => {
+        draftSave = await draftDocuments.startSave(
+          draftDocumentURLsInLegalBlocks(
+            edited.legalBlocks,
+            draftDocuments.drafts(),
+          ),
+        );
+        return saveHolidayForm(
+          periodId,
+          version,
+          prepareHolidayFieldsForSave(edited.fields),
+          edited.legalBlocks,
+          edited.address,
+          edited.health,
+        );
       });
-      void errorPath.show(err, { object: "das Anmeldeformular" });
+      if (result.ok) {
+        (draftSave as DraftDocumentSave | null)?.commit();
+        success(
+          `Das Anmeldeformular ist als Version ${result.saved.version} gespeichert.`,
+        );
+        onSaved(result.saved);
+        return;
+      }
+      (draftSave as DraftDocumentSave | null)?.fail();
+      logger.error("traeger_holiday_form_save_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      // Another version was saved since this one was read: the stored
+      // version replaces the draft once it is read, without offering the
+      // same save again. A failed read shows with a retry of the read alone.
+      void errorPath.show(result.error, {
+        object: "das Anmeldeformular",
+        ...(result.refused ? { reload: result.reload } : {}),
+      });
     } finally {
       setSaving(false);
     }
@@ -246,16 +330,25 @@ export function HolidayFormEditor({
       onCancel={() => {
         errorPath.clear();
         void draftDocuments.cleanup();
-        setLegalBlocks([...(form.legalBlocks ?? [])]);
-        setAddress(form.addressRequirement);
-        setHealth(form.healthRequirement);
-        // New row identities also discard row-local input drafts.
-        setFields(form.fields.map((field) => ({ ...field })));
+        // The draft of the stored version: new row identities also discard
+        // row-local input drafts.
+        editor.discard();
       }}
       onSave={() => void save()}
       saving={saving}
       cancelDisabled={uploading}
-      disabled={!dirty || uploading}
+      disabled={!dirty || uploading || !editor.canSubmit}
+      {...(!editor.canSubmit &&
+      editor.status !== "saving" &&
+      dirty &&
+      !uploading
+        ? {
+            disabledReason:
+              editor.status === "loadFailed"
+                ? "Lade zuerst das gespeicherte Formular neu."
+                : "Das gespeicherte Formular wird geladen.",
+          }
+        : {})}
       // A phone keeps both buttons on one line under the long list: two
       // lines would cover a quarter of the screen with the sticky footer.
       cancelLabel={isPhone ? "Verwerfen" : "Änderungen verwerfen"}
@@ -301,7 +394,7 @@ export function HolidayFormEditor({
                     }
                     disabledReason={
                       missingTemplateFields === 0 && !saving && !uploading
-                        ? form.template.length === 0
+                        ? template.length === 0
                           ? "Für dieses Formular gibt es keine Standardvorlage."
                           : "Alle Fragen der Standardvorlage sind schon im Formular."
                         : undefined
@@ -309,7 +402,7 @@ export function HolidayFormEditor({
                     tooltip="Fügt die fehlenden Fragen der Standardvorlage unten im Formular an."
                     onClick={() =>
                       setFields((current) =>
-                        insertTemplateFields(current, form.template),
+                        insertTemplateFields(current, template),
                       )
                     }
                   >
@@ -334,7 +427,8 @@ export function HolidayFormEditor({
 
               <div className="space-y-4">
                 <FormErrorAlert message={errorPath.error} />
-                {missingTemplateFields === 0 && form.template.length > 0 ? (
+                <LoadErrorAlert error={formErrors.loadError} />
+                {missingTemplateFields === 0 && template.length > 0 ? (
                   <p className="text-sm text-gray-600">
                     Alle Fragen der Standardvorlage sind im Formular.
                   </p>

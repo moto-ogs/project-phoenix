@@ -60,6 +60,11 @@ export interface FamilyChildren {
   readonly count: FamilyChildCount | null;
   /** undefined: a state this build does not know. */
   readonly status: FamilyChildrenStatus | undefined;
+  /**
+   * The read-state token of the family's stored numbers, which a
+   * confirmation sends back (ADR 0311).
+   */
+  readonly version: string;
 }
 
 export interface FamilyChildrenSet {
@@ -107,6 +112,7 @@ function familyChildrenSetFromBackend(
       })),
       count: family.count ? countFromBackend(family.count) : null,
       status: knownEnum(STATUS_VALUES, family.status),
+      version: family.version,
     })),
     rules: (body.rules ?? []).map((rule) => ({
       id: rule.id,
@@ -121,9 +127,13 @@ export async function fetchFamilyChildren(): Promise<FamilyChildrenSet> {
   );
 }
 
-/** Confirms or changes the number of the family of a contract. */
+/**
+ * Confirms or changes the number of the family of a contract, on the
+ * family's numbers read at `version` (ADR 0311).
+ */
 export async function confirmFamilyChildren(
   input: FamilyChildrenInput,
+  version: string,
 ): Promise<FamilyChildrenSet> {
   return familyChildrenSetFromBackend(
     // bffJson writes the JSON itself: a string here went out as a
@@ -134,6 +144,7 @@ export async function confirmFamilyChildren(
         children: input.children,
         valid_from: input.validFrom,
         valid_until: input.validUntil,
+        expected_version: version,
       } satisfies traegerFamilyChildrenContract.FamilyChildrenRequest,
     }),
   );

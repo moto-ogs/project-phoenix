@@ -64,7 +64,7 @@ func TestHolidayAllocationWorkflowRollsBackOnARefusedContribution(t *testing.T) 
 	frozen := f.contributionVersions(t, int64(tom.ID))
 	require.Len(t, frozen, 1)
 	ben := f.list(t, "").Registrations[0].Children[1]
-	rebook := map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}}
+	rebook := map[string]any{"bookings": []map[string]any{{"week_id": fmt.Sprint(second.ID), "time_model_id": fmt.Sprint(second.TimeModels[0].ID)}}}
 	a, sibling, candidate := refusedDecisionFixture(t)
 	outbox, decisionOutbox := f.traegerOutbox(t), a.traegerOutbox(t)
 	allow := refuseHolidayContributions(t, f)
@@ -80,7 +80,7 @@ func TestHolidayAllocationWorkflowRollsBackOnARefusedContribution(t *testing.T) 
 		assert.Equal(t, frozen, f.contributionVersions(t, int64(tom.ID)), "%s: no contribution version", what)
 		assert.Equal(t, outbox, f.traegerOutbox(t), "%s: no mail is queued", what)
 	}
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)), rebook)
+	rec := putReadRegistration(t, f.traeger, f.office.token, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)), rebook)
 	require.Equal(t, http.StatusInternalServerError, rec.Code, rec.Body.String())
 	assertUnchanged(t, "rebooking")
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayCapacityPath(int64(f.period.ID), int64(first.ID)), map[string]any{"capacity": 3})
@@ -95,7 +95,7 @@ func TestHolidayAllocationWorkflowRollsBackOnARefusedContribution(t *testing.T) 
 	assert.Equal(t, decisionOutbox, a.traegerOutbox(t), "no decision mail is queued")
 
 	allow()
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)), rebook)
+	rec = putReadRegistration(t, f.traeger, f.office.token, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)), rebook)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, f.places(t)[int64(first.ID)].Waitlist, "the retry moves Tom up")
 	assert.Equal(t, 1, f.mails(t, "holiday_place_granted", int64(tom.ID)))

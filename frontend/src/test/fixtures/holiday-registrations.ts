@@ -27,6 +27,7 @@ export const HOLIDAY_PERIOD: HolidayPeriod = {
   publishedAt: "2026-08-20T10:00:00Z",
   publicToken: "link",
   registrationCount: 2,
+  version: "period-read",
   weeks: [
     {
       id: "51",
@@ -70,6 +71,7 @@ export const HOLIDAY_PERIOD: HolidayPeriod = {
 
 export const HOLIDAY_REGISTRATION: HolidayRegistrationDetail = {
   id: "7",
+  version: "registration-read",
   status: "received",
   frozen: false,
   submittedAt: "2026-09-03T08:00:00Z",
@@ -220,6 +222,7 @@ export const HOLIDAY_CONTRIBUTION: HolidayContribution = {
   benefitsExemption: false,
   frozen: false,
   confirmedAt: null,
+  fingerprint: "vorschau-1",
 };
 
 /** The health information of HOLIDAY_REGISTRATION, read apart (#4722). */

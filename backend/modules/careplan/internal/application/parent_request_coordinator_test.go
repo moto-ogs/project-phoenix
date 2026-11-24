@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type masterDataBulkStub struct {
@@ -174,13 +175,13 @@ func TestParentRequestCoordinatorValidatesEveryVersionBeforeApplying(t *testing.
 
 	err := service.BulkApprove(context.Background(), parentrequests.BulkApproveInput{
 		Requests: []parentrequests.Ref{
-			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: readstate.Of(bulkNow)},
 			{Kind: parentrequests.KindExcused, ID: 2, ExpectedVersion: "stale"},
 		},
 		Reason: "Geprüft", ReviewerID: 99,
 	})
 
-	require.ErrorIs(t, err, parentrequests.ErrStale)
+	require.ErrorIs(t, err, readstate.ErrChanged)
 	assert.Empty(t, master.decided)
 	assert.Empty(t, excused.decided)
 	assert.True(t, rollback.requested)
@@ -193,8 +194,8 @@ func TestParentRequestCoordinatorMarksRollbackWhenApplyFails(t *testing.T) {
 
 	err := service.BulkApprove(context.Background(), parentrequests.BulkApproveInput{
 		Requests: []parentrequests.Ref{
-			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
-			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: readstate.Of(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: readstate.Of(bulkNow)},
 		},
 		Reason: "Geprüft", ReviewerID: 99,
 	})
@@ -230,13 +231,13 @@ func TestParentRequestCoordinatorReportsDecisionRaceAsStale(t *testing.T) {
 
 	err := service.BulkApprove(context.Background(), parentrequests.BulkApproveInput{
 		Requests: []parentrequests.Ref{
-			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
-			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: readstate.Of(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: readstate.Of(bulkNow)},
 		},
 		Reason: "Geprüft", ReviewerID: 99,
 	})
 
-	require.ErrorIs(t, err, parentrequests.ErrStale)
+	require.ErrorIs(t, err, readstate.ErrChanged)
 	assert.True(t, rollback.requested)
 }
 
@@ -250,14 +251,14 @@ func TestParentRequestCoordinatorReportsLockRaceAsStale(t *testing.T) {
 
 	err := service.BulkApprove(context.Background(), parentrequests.BulkApproveInput{
 		Requests: []parentrequests.Ref{
-			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
-			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: readstate.Of(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: readstate.Of(bulkNow)},
 		},
 		Reason: "Geprüft", ReviewerID: 99,
 	})
 
-	require.ErrorIs(t, err, parentrequests.ErrStale)
-	assert.Equal(t, "parent requests: request version is stale: master_data 1 changed before locking", err.Error(),
+	require.ErrorIs(t, err, readstate.ErrChanged)
+	assert.Equal(t, "changed since it was read: master_data 1 changed before locking", err.Error(),
 		"the students route renders this text verbatim")
 	assert.Empty(t, master.decided)
 	assert.True(t, rollback.requested)
@@ -270,8 +271,8 @@ func TestParentRequestCoordinatorRejectsMasterDataForAbsenceOnlyReviewer(t *test
 
 	err := service.BulkApprove(context.Background(), parentrequests.BulkApproveInput{
 		Requests: []parentrequests.Ref{
-			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
-			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: readstate.Of(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: readstate.Of(bulkNow)},
 		},
 		Reason: "Geprüft", ReviewerID: 99,
 	})
@@ -288,8 +289,8 @@ func TestParentRequestCoordinatorRequiresTheSchoolsReasonForABulkApproval(t *tes
 
 	err := service.BulkApprove(context.Background(), parentrequests.BulkApproveInput{
 		Requests: []parentrequests.Ref{
-			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
-			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: readstate.Of(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: readstate.Of(bulkNow)},
 		},
 		Reason: "  ", ReasonRequired: true, ReviewerID: 99,
 	})

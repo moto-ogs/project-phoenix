@@ -46,12 +46,13 @@ func buildTimetablePlanning(
 	}
 	templateDeps, err := TimetableTemplateDependencies(owner.TemplateRows, owner.PlanningTracks, lifecycle.Materialization,
 		lifecycle.Instances.SeriesDeviations(), offerings.Catalog, timetableOfferingRosterResync(offerings.Bookings),
-		owner.RecurrenceLock, hub, env.Logger.With("service", "timetable-templates"), env.Today)
+		owner.RecurrenceLock, data, hub, env.Logger.With("service", "timetable-templates"), env.Today)
 	if err != nil {
 		return TimetablePlanning{}, fmt.Errorf("compose timetable templates: %w", err)
 	}
 	templateDeps.Transactions = arrivalTimetable.NewTenantTransactions(db.Pool())
 	templateDeps.SickReports = sickReports
+	templateDeps.OfferingSources = NewTimetableOfferingSources(offerings.Bookings)
 	templates, rosterReview, err := arrivalTimetable.NewTemplateAdministration(templateDeps)
 	if err != nil {
 		return TimetablePlanning{}, fmt.Errorf("compose timetable templates: %w", err)

@@ -397,11 +397,11 @@ export interface CalendarAppointmentDetail {
     sharedContract.Appointment,
     "title" | "description" | "location" | "all_day" | "notify_guardians"
   > & {
-    // Persisted SERIES base dates ("YYYY-MM-DD"): for a recurring
-    // appointment the anchor, not the clicked occurrence, so an edit does
-    // not re-anchor the series.
-    readonly start_date: string;
-    readonly end_date: string;
+    // The persisted series anchor, not the clicked occurrence.
+    readonly [
+      K in "start_date" | "end_date" | "start_time" | "end_time"
+    ]-?: NonNullable<sharedContract.Appointment[K]>;
+  } & {
     readonly overview_visibility: CalendarOverviewVisibility;
     readonly delivery_mode: CalendarDeliveryMode;
   };
@@ -413,6 +413,21 @@ export interface CalendarAppointmentDetail {
     | "ends_on"
     | "occurrence_count"
   > & { readonly frequency: (typeof FREQUENCIES)[number] };
+  /** The stored appointment as read (ADR 0311); an edit sends it back. */
+  readonly version: string;
+}
+
+/**
+ * "HH:MM" of a stored wall clock: the server sends a TIME column as a
+ * timestamp whose clock digits are the wall clock, in whatever offset the
+ * driver attached, so the digits are read as they stand.
+ */
+function wallClock(value: string | undefined, field: string): string {
+  const clock = value?.slice(11, 16) ?? "";
+  if (!/^\d{2}:\d{2}$/.test(clock)) {
+    throw new Error(`contract: appointment detail without ${field}`);
+  }
+  return clock;
 }
 
 /**
@@ -436,6 +451,8 @@ function appointmentDetail(
       notify_guardians: base.notify_guardians,
       start_date: base.start_date,
       end_date: base.end_date,
+      start_time: wallClock(base.start_time, "start_time"),
+      end_time: wallClock(base.end_time, "end_time"),
       overview_visibility: requiredEnum(
         OVERVIEW_VISIBILITIES,
         base.overview_visibility,
@@ -457,6 +474,7 @@ function appointmentDetail(
         occurrence_count: rule.occurrence_count,
       },
     }),
+    version: answer.version,
   };
 }
 
@@ -473,14 +491,18 @@ export function getStaffAppointmentDetail(
 // Editing an appointment cannot change its audience (targets) or delivery
 // mode: re-resolving recipients would discard the RSVP responses already
 // collected.
-export async function updateStaffAppointment(
+export function updateStaffAppointment(
   appointmentId: string,
-  body: calendarContract.updateAppointmentRequest,
-): Promise<void> {
+  body: Omit<calendarContract.updateAppointmentRequest, "expected_version">,
+  expectedVersion: string,
+): Promise<CalendarAppointmentDetail> {
   const route = "PUT /api/calendar/appointments/{appointmentId}";
-  await bffJson("tenant", route, { params: { appointmentId }, body }).catch(
-    failed(route),
-  );
+  // The edit rests on the version it read; the server refuses it when the
+  // appointment changed since (ADR 0311).
+  return bffJson("tenant", route, {
+    params: { appointmentId },
+    body: { ...body, expected_version: expectedVersion },
+  }).then(appointmentDetail, failed(route));
 }
 
 export async function cancelStaffAppointment(
@@ -582,11 +604,15 @@ export async function createSchoolAppointment(
 export async function updateSchoolAppointment(
   appointmentId: string,
   body: SchoolAppointmentRequest,
+  expectedVersion: string,
 ): Promise<void> {
   const route = "PUT /school/calendar/appointments/{appointmentId}";
-  await bffJson("school", route, { params: { appointmentId }, body }).catch(
-    failed(route),
-  );
+  // The change rests on the version of the Schultermin the calendar showed
+  // (ADR 0311).
+  await bffJson("school", route, {
+    params: { appointmentId },
+    body: { ...body, expected_version: expectedVersion },
+  }).catch(failed(route));
 }
 
 export async function deleteSchoolAppointment(

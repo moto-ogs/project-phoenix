@@ -256,7 +256,7 @@ func TestParentPortalMessagesAndNewsAnswerThroughTheParentMount(t *testing.T) {
 	var threads []parentHTTP.ThreadSummaryResponse
 	r.call(t, http.MethodGet, "/parent/me/messages", f.token, nil, &threads)
 	require.Len(t, threads, 1)
-	assert.Equal(t, fmt.Sprint(f.StudentID), threads[0].StudentID)
+	assert.Equal(t, fmt.Sprint(f.StudentID), threads[0].StudentID.String())
 	var unread parentHTTP.UnreadCountResponse
 	r.call(t, http.MethodGet, "/parent/me/messages/unread-count", f.token, nil, &unread)
 	assert.Zero(t, unread.UnreadCount, "the guardian's own message is no unread one")

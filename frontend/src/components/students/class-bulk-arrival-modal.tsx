@@ -13,8 +13,9 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { ClassArrivalExceptionPanel } from "./class-arrival-exception-panel";
 import type { Student } from "~/lib/student-helpers";
 import { createLogger } from "~/lib/logger";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { useReadDraft } from "~/lib/swr/read-draft";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import type { ArrivalScheduleInput } from "~/lib/contract/students.generated";
 import {
@@ -82,6 +83,38 @@ function initialDraft(): DraftState {
   return draft;
 }
 
+const EMPTY_DRAFT = initialDraft();
+
+type SaveOutcome =
+  | { readonly ok: true }
+  | {
+      readonly ok: false;
+      readonly error: unknown;
+      readonly reload?: () => Promise<unknown>;
+    };
+
+/** The draft of the stored class times. */
+function draftFromClassTimes(stored: {
+  readonly times?: Readonly<Record<string, string>> | null;
+}): DraftState {
+  const next = initialDraft();
+  for (const day of WEEKDAYS) {
+    next[day.value] = stored.times?.[DAY_CODES[day.value] ?? ""] ?? "";
+  }
+  return next;
+}
+
+/** The times a draft sets, one per filled weekday. */
+function schedulesOf(draft: DraftState): ArrivalScheduleInput[] {
+  return WEEKDAYS.filter(({ value }) => (draft[value] ?? "").trim() !== "").map(
+    ({ value }) => ({ weekday: value, expected_arrival: draft[value] ?? "" }),
+  );
+}
+
+function sameDraft(a: DraftState, b: DraftState): boolean {
+  return WEEKDAYS.every(({ value }) => (a[value] ?? "") === (b[value] ?? ""));
+}
+
 function isValidTime(value: string): boolean {
   if (value === "") return true;
   return /^\d{2}:\d{2}$/.test(value);
@@ -97,7 +130,8 @@ export function FilteredBulkArrivalModal({
 }: FilteredBulkArrivalModalProps) {
   const { success: toastSuccess } = useToast();
   const weekendOpen = useWeekendFollowsFriday();
-  const [draft, setDraft] = useState<DraftState>(initialDraft);
+  // Without a class (a group, a selection) the draft starts empty.
+  const [freeDraft, setFreeDraft] = useState<DraftState>(initialDraft);
   const save = useFormModalPending(isOpen);
   const saving = save.pending;
   // Validation and save errors of the form (Bauart 2 Regel 5): shown in the
@@ -110,7 +144,6 @@ export function FilteredBulkArrivalModal({
     arrivalExceptionConfirmationOpen,
     setArrivalExceptionConfirmationOpen,
   ] = useState(false);
-  const [lastChanged, setLastChanged] = useState<string | null>(null);
   // Bewusst still: der Hinweis auf eigene Ankunftszeiten ist nur eine
   // Zusatzinfo, das Speichern hängt nicht davon ab.
   const collisionStudentIds = useMemo(
@@ -142,53 +175,45 @@ export function FilteredBulkArrivalModal({
   const schoolClass =
     filter.type === "school_class" ? filter.schoolClass : null;
 
-  const classTimes = useFreshSWR(
-    isOpen && schoolClass
-      ? tenantStudentKeys.classArrivalTimes(schoolClass)
-      : null,
-    () => fetchClassArrivalTimes(schoolClass ?? ""),
-  );
-  // A failed load of this opening fills nothing from an earlier answer.
-  const classTimesData = classTimes.error ? undefined : classTimes.data;
-  const classTimesLoad = useSwrResourceLoadError(
-    [{ data: classTimesData, error: classTimes.error }],
+  // The class times the draft rests on (ADR 0311): each opening reads them,
+  // a newer read refills the draft only while nobody has typed, a save sends
+  // the version the draft was filled from, and after a refusal the stored
+  // times show again.
+  const classTimes = useReadDraft({
+    key:
+      isOpen && schoolClass
+        ? tenantStudentKeys.classArrivalTimes(schoolClass)
+        : null,
+    fetcher: () => fetchClassArrivalTimes(schoolClass ?? ""),
+    token: (read) => read.version,
+    toDraft: draftFromClassTimes,
+    same: sameDraft,
+  });
+  // Also over a cached draft: nothing is sent until a read succeeded.
+  const classTimesLoadError = useReadDraftLoadError(
+    classTimes,
     "die Klassenzeit",
-    () => classTimes.mutate(),
   );
-  // The class the draft was filled from in this opening; null = not yet.
-  const [seededClass, setSeededClass] = useState<string | null>(null);
-  const classTimesError = classTimesLoad.failure !== undefined;
+  const classTimesError =
+    schoolClass !== null && classTimes.status === "loadFailed";
   const classTimesLoading =
-    schoolClass !== null && seededClass !== schoolClass && !classTimesError;
+    schoolClass !== null && !classTimes.canSubmit && !classTimesError;
+  const draft: DraftState = schoolClass
+    ? (classTimes.draft ?? EMPTY_DRAFT)
+    : freeDraft;
+  const setDraft = (next: (prev: DraftState) => DraftState) => {
+    if (schoolClass) classTimes.setDraft(next);
+    else setFreeDraft(next);
+  };
+  const lastChanged = schoolClass
+    ? (classTimes.base?.updated_at ?? null)
+    : null;
 
   useEffect(() => {
-    if (!isOpen) {
-      setSeededClass(null);
-      return;
-    }
-    setDraft(initialDraft());
-    setLastChanged(null);
+    if (!isOpen) return;
+    setFreeDraft(initialDraft());
     setView("weekly");
   }, [isOpen, schoolClass]);
-
-  // Fill the draft once per opening, from an answer read in this opening,
-  // so later refreshes never replace what is being typed.
-  useEffect(() => {
-    if (
-      !isOpen ||
-      !schoolClass ||
-      seededClass === schoolClass ||
-      !classTimesData
-    )
-      return;
-    const next = initialDraft();
-    for (const day of WEEKDAYS) {
-      next[day.value] = classTimesData.times?.[DAY_CODES[day.value] ?? ""] ?? "";
-    }
-    setDraft(next);
-    setLastChanged(classTimesData.updated_at ?? null);
-    setSeededClass(schoolClass);
-  }, [isOpen, schoolClass, seededClass, classTimesData]);
 
   const targetTitle =
     filter.type === "school_class"
@@ -233,35 +258,39 @@ export function FilteredBulkArrivalModal({
       return;
     }
 
-    const schedules: ArrivalScheduleInput[] = WEEKDAYS.filter(
-      ({ value }) => (draft[value] ?? "").trim() !== "",
-    ).map(({ value }) => ({
-      weekday: value,
-      expected_arrival: draft[value] ?? "",
-    }));
+    const schedules = schedulesOf(draft);
 
     await save.run(async (op) => {
-      try {
-        await bulkUpsertArrivalSchedules(filter, schedules);
+      const sent: SaveOutcome = schoolClass
+        ? await classTimes.submit((version, filled) =>
+            bulkUpsertArrivalSchedules(filter, schedulesOf(filled), version),
+          )
+        : await bulkUpsertArrivalSchedules(filter, schedules, undefined).then(
+            () => ({ ok: true }) as const,
+            (error: unknown) => ({ ok: false, error }) as const,
+          );
+      if (sent.ok) {
         toastSuccess(
           isClassTimetable
             ? `Der Unterrichtsschluss für ${targetTitle} ist gespeichert.`
             : `Die Ankunftszeiten für ${childCountLabel(studentsInFilter.length)} aus ${targetTitle} sind gespeichert.`,
         );
         onSuccess?.();
-        if (op.isCurrent()) {
-          if (isClassTimetable) void classTimes.mutate();
-          onClose();
-        }
-      } catch (err) {
+        if (op.isCurrent()) onClose();
+      } else {
+        const err = sent.error;
         logger.error("failed to bulk upsert arrival schedules", {
           filter_type: filter.type,
           error: err instanceof Error ? err.message : String(err),
         });
         if (!op.isCurrent()) return;
+        // Someone changed the class since the draft was filled: the stored
+        // times show again, the message waits for them and offers no retry
+        // of the same draft (ADR 0311).
         await formErrors.show(err, {
           object: isClassTimetable ? "die Klassenzeit" : "die Ankunftszeit",
           retry: () => void latestSubmitRef.current(),
+          reload: sent.reload,
         });
       }
     });
@@ -386,8 +415,10 @@ export function FilteredBulkArrivalModal({
             {classTimesLoading ? (
               <Alert type="info" message="Klassenzeiten werden geladen." />
             ) : null}
-            {classTimesError ? (
-              <LoadErrorAlert error={classTimesLoad.error} />
+            {/* After a refusal the form's alert already names the failed
+                read, with its retry. */}
+            {classTimesError && !formErrors.error ? (
+              <LoadErrorAlert error={classTimesLoadError} />
             ) : null}
             {collisionCount > 0 ? (
               <Alert type="info" message={collisionMessage} />

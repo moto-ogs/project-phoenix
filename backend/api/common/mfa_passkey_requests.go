@@ -75,8 +75,8 @@ func (req *MFAEnrollConfirmRequest) Bind(_ *http.Request) error {
 
 // PasskeyVerifyRequest is the body for the passkey login/verify endpoints.
 type PasskeyVerifyRequest struct {
-	SessionID string          `json:"session_id"`
-	Response  json.RawMessage `json:"response"`
+	SessionID string          `json:"session_id" contract_text:"opaque passkey ceremony key"`
+	Response  json.RawMessage `json:"response" contract_json:"The WebAuthn verifier owns the browser assertion document"`
 }
 
 // Bind validates the passkey verify request.
@@ -105,9 +105,9 @@ func (req *PasskeyRegisterOptionsRequest) Bind(_ *http.Request) error {
 // PasskeyRegisterVerifyRequest is the body for the passkey register/verify
 // endpoints.
 type PasskeyRegisterVerifyRequest struct {
-	SessionID string          `json:"session_id"`
+	SessionID string          `json:"session_id" contract_text:"opaque passkey ceremony key"`
 	Name      string          `json:"name,omitempty"`
-	Response  json.RawMessage `json:"response"`
+	Response  json.RawMessage `json:"response" contract_json:"The WebAuthn verifier owns the browser attestation document"`
 }
 
 // Bind validates the passkey register-verify request.

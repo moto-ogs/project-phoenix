@@ -10,6 +10,7 @@
     "popupBlocked": "Lütfen yeni bir pencerenin açılmasına izin verin."
   },
   "errorObject": "kayıt",
+  "errorObjectForm": "kayıt formu",
   "loading": "Form yükleniyor…",
   "legalGermanNotice": "Bu yasal metinlerin bağlayıcı sürümü Almancadır.",
   "previewError": "Bu bir ön izlemedir. Bu görünümden kayıt gönderilmez.",

@@ -15,6 +15,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/tenant/tenanttest"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -884,12 +885,20 @@ func TestArrivalScheduleService_UpdateStudentArrivalNote(t *testing.T) {
 		}
 		err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalNote, note)
 		require.NoError(t, err)
+		read := careplan.ArrivalNoteVersion(*note)
 
 		note.Content = "Updated content"
 
-		err = testpkg.TenantCommand1(t, ctx, db, service.UpdateStudentArrivalNote, note)
+		err = testpkg.TenantCommand2(t, ctx, db, service.UpdateStudentArrivalNote, note, read)
 
 		require.NoError(t, err)
+
+		// ADR 0311: a second change made on the first read is refused and
+		// keeps the stored text.
+		stale := *note
+		stale.Content = "Stale content"
+		err = testpkg.TenantCommand2(t, ctx, db, service.UpdateStudentArrivalNote, &stale, read)
+		require.ErrorIs(t, err, readstate.ErrChanged)
 
 		notes, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentArrivalNotes, student.ID)
 		require.NoError(t, err)
@@ -905,7 +914,7 @@ func TestArrivalScheduleService_UpdateStudentArrivalNote(t *testing.T) {
 			CreatedBy: createArrivalServiceTestStaffID(t, db),
 		}
 
-		err := testpkg.TenantCommand1(t, ctx, db, service.UpdateStudentArrivalNote, note)
+		err := testpkg.TenantCommand2(t, ctx, db, service.UpdateStudentArrivalNote, note, "")
 
 		require.Error(t, err)
 	})
@@ -1457,7 +1466,8 @@ func TestArrivalScheduleService_BulkUpsertArrivalSchedules(t *testing.T) {
 		testpkg.CreateTestStudent(t, db, "BulkClassAuth", "Denied", className)
 
 		result, err := testpkg.TenantQuery3(t, ctx, db, service.BulkUpsertArrivalSchedules, careplan.ArrivalScheduleBulkFilter{
-			SchoolClass: className,
+			SchoolClass:     className,
+			ExpectedVersion: classArrivalVersion(t, ctx, db, service, className),
 			Authorize: func(_ context.Context, student careplan.ScheduleStudent) (bool, error) {
 				return student.ID == allowed.ID, nil
 			},
@@ -1502,7 +1512,7 @@ func TestArrivalScheduleService_BulkUpsertArrivalSchedules(t *testing.T) {
 	})
 
 	t.Run("returns zero students affected for empty class", func(t *testing.T) {
-		result, err := testpkg.TenantQuery3(t, ctx, db, service.BulkUpsertArrivalSchedules, careplan.ArrivalScheduleBulkFilter{SchoolClass: "NONEXISTENT_CLASS_XYZ"}, []careplan.ArrivalScheduleInput{
+		result, err := testpkg.TenantQuery3(t, ctx, db, service.BulkUpsertArrivalSchedules, careplan.ArrivalScheduleBulkFilter{SchoolClass: "NONEXISTENT_CLASS_XYZ", ExpectedVersion: classArrivalVersion(t, ctx, db, service, "NONEXISTENT_CLASS_XYZ")}, []careplan.ArrivalScheduleInput{
 			{Weekday: 1, ArrivalTime: "08:00"},
 		}, createArrivalServiceTestStaffID(t, db))
 
@@ -1537,7 +1547,7 @@ func TestArrivalScheduleService_BulkUpsertArrivalSchedules(t *testing.T) {
 			{Weekday: 3, ArrivalTime: "08:15"},
 		}
 
-		result, err := testpkg.TenantQuery3(t, ctx, db, service.BulkUpsertArrivalSchedules, careplan.ArrivalScheduleBulkFilter{SchoolClass: className}, schedules, staffID)
+		result, err := testpkg.TenantQuery3(t, ctx, db, service.BulkUpsertArrivalSchedules, careplan.ArrivalScheduleBulkFilter{SchoolClass: className, ExpectedVersion: classArrivalVersion(t, ctx, db, service, className)}, schedules, staffID)
 
 		require.NoError(t, err)
 		assert.Equal(t, 2, result.StudentsAffected)
@@ -1570,7 +1580,7 @@ func TestArrivalScheduleService_BulkUpsertArrivalSchedules(t *testing.T) {
 		require.NoError(t, err)
 
 		schedules := []careplan.ArrivalScheduleInput{{Weekday: 1, ArrivalTime: "07:45"}}
-		result, err := testpkg.TenantQuery3(t, ctx, db, service.BulkUpsertArrivalSchedules, careplan.ArrivalScheduleBulkFilter{SchoolClass: className}, schedules, staffID)
+		result, err := testpkg.TenantQuery3(t, ctx, db, service.BulkUpsertArrivalSchedules, careplan.ArrivalScheduleBulkFilter{SchoolClass: className, ExpectedVersion: classArrivalVersion(t, ctx, db, service, className)}, schedules, staffID)
 
 		require.NoError(t, err, "one departed child must not abort the whole class")
 		assert.Equal(t, 1, result.StudentsAffected)
@@ -1635,7 +1645,7 @@ func TestArrivalScheduleService_BulkUpsertArrivalSchedules(t *testing.T) {
 			{Weekday: 1, ArrivalTime: "08:00"}, // Different time
 		}
 
-		result, err := testpkg.TenantQuery3(t, ctx, db, service.BulkUpsertArrivalSchedules, careplan.ArrivalScheduleBulkFilter{SchoolClass: className}, schedules, createArrivalServiceTestStaffID(t, db))
+		result, err := testpkg.TenantQuery3(t, ctx, db, service.BulkUpsertArrivalSchedules, careplan.ArrivalScheduleBulkFilter{SchoolClass: className, ExpectedVersion: classArrivalVersion(t, ctx, db, service, className)}, schedules, createArrivalServiceTestStaffID(t, db))
 
 		require.NoError(t, err)
 		assert.Equal(t, 1, result.StudentsAffected)
@@ -1655,7 +1665,7 @@ func TestArrivalScheduleService_BulkUpsertArrivalSchedules(t *testing.T) {
 			{Weekday: 1, ArrivalTime: "invalid"},
 		}
 
-		result, err := testpkg.TenantQuery3(t, ctx, db, service.BulkUpsertArrivalSchedules, careplan.ArrivalScheduleBulkFilter{SchoolClass: className}, schedules, createArrivalServiceTestStaffID(t, db))
+		result, err := testpkg.TenantQuery3(t, ctx, db, service.BulkUpsertArrivalSchedules, careplan.ArrivalScheduleBulkFilter{SchoolClass: className, ExpectedVersion: classArrivalVersion(t, ctx, db, service, className)}, schedules, createArrivalServiceTestStaffID(t, db))
 
 		require.Error(t, err)
 		assert.Nil(t, result)

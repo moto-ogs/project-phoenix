@@ -229,6 +229,8 @@ func TestBuildRejects(t *testing.T) {
 	commitsOnPut := post(body{})
 	commitsOnPut.Method = "PUT"
 	commitsOnPut.NoCommit = "a PUT changes"
+	refusesForGood := post(body{})
+	refusesForGood.Refuses = "a route that stays"
 	strayCode := post(body{})
 	strayCode.TooLargeCode = "files.file_too_large"
 	jsonCache := get("/api/rows/", inner{})
@@ -286,6 +288,7 @@ func TestBuildRejects(t *testing.T) {
 		"an upload on a GET":                         {[]Registration{uploadOnGet}, Options{Identifiers: identifiers}, "is a POST, PUT or PATCH"},
 		"an upload that names a retry":               {[]Registration{uploadRetry}, Options{Identifiers: identifiers}, "is sent once"},
 		"a PUT that claims to commit nothing":        {[]Registration{commitsOnPut}, Options{Identifiers: identifiers}, "only a POST names NoCommit"},
+		"a route that stays and only refuses":        {[]Registration{refusesForGood}, Options{Identifiers: identifiers}, "only a Deprecated route names Refuses"},
 		"a too large code without an upload":         {[]Registration{strayCode}, Options{Identifiers: identifiers}, "TooLargeCode belongs to a multipart upload"},
 		"a private cache trait on a JSON route":      {[]Registration{jsonCache}, Options{Identifiers: identifiers}, "PrivateCache belongs to a file route of a session portal"},
 		"a cache trait on a public file":             {[]Registration{publicCache}, Options{Identifiers: identifiers}, "PrivateCache belongs to a file route of a session portal"},
@@ -454,7 +457,7 @@ func TestTypeScriptWritesTypesBeforeTheirUse(t *testing.T) {
 func TestTypeScriptListsTheRoutesOfEachPortal(t *testing.T) {
 	t.Parallel()
 	staff := get("/api/rows/{id}", inner{})
-	staff.Query = []QueryParam{{Name: "view", Kind: "string"}, {Name: "page", Kind: "int"}}
+	staff.Query = []QueryParam{{Name: "view", Kind: "string"}, {Name: "page", Kind: "int"}, {Name: "ids", Kind: "id", Repeated: true}}
 	shared := get("/parent/me/rows", body{})
 	shared.Portals = []string{"tenant", "parent"}
 	doc, err := Build([]Registration{staff, shared}, Options{Identifiers: identifiers})
@@ -462,7 +465,11 @@ func TestTypeScriptListsTheRoutesOfEachPortal(t *testing.T) {
 	files, err := TypeScript(doc)
 	require.NoError(t, err)
 
-	assert.Contains(t, files["rows.generated.ts"], `    query: ["page", "view"],`)
+	assert.Contains(t, files["rows.generated.ts"], `    query: {
+      "ids": { kind: "id", repeated: true },
+      "page": { kind: "int" },
+      "view": { kind: "string" },
+    },`)
 	table := files["portals.generated.ts"]
 	for _, line := range []string{
 		`import { routes as parentMe } from "./parent-me.generated";`,
@@ -569,7 +576,7 @@ func TestTypeScriptWritesAFileAndAnUpload(t *testing.T) {
 	cachedFiles, err := TypeScript(cachedDoc)
 	require.NoError(t, err)
 	assert.Contains(t, cachedFiles["rows.generated.ts"], "    privateCache: true,\n    response: fileAnswer,\n")
-	assert.Contains(t, source, "  \"GET /api/rows/export\": {\n    method: \"GET\",\n    pattern: \"/api/rows/export\",\n    portals: [\"tenant\"],\n    query: [\"format\"],\n    response: fileAnswer,\n  },\n")
+	assert.Contains(t, source, "  \"GET /api/rows/export\": {\n    method: \"GET\",\n    pattern: \"/api/rows/export\",\n    portals: [\"tenant\"],\n    query: {\n      \"format\": { kind: \"string\" },\n    },\n    response: fileAnswer,\n  },\n")
 	assert.Contains(t, source, "    maxBodyBytes: 1048576,\n    tooLargeCode: \"files.file_too_large\",\n    request: multipart,\n    response: success(innerSchema),\n")
 	assert.Contains(t, source, "  fileAnswer,\n")
 	assert.Contains(t, source, "  multipart,\n")
@@ -644,9 +651,9 @@ func TestARegisteredPointerAnswersTheObjectOrNull(t *testing.T) {
 
 // stored hands on JSON its owner stored without reading it.
 type stored struct {
-	Old json.RawMessage `json:"old,omitempty"`
-	Raw json.RawMessage `json:"raw"`
-	Any any             `json:"any"`
+	Old json.RawMessage `json:"old,omitempty" contract_json:"historical extension data"`
+	Raw json.RawMessage `json:"raw" contract_json:"external provider metadata"`
+	Any any             `json:"any" contract_json:"schema-defined answer"`
 }
 
 // presence tells an absent key from null, as the template writes do.
@@ -676,6 +683,7 @@ func TestARawValueAndAValueReaderTravelAsWhatTheyHold(t *testing.T) {
 	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["raw"].Schema, "any JSON value, null included")
 	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["old"].Schema, "omitempty leaves an empty value out; a stored null still travels")
 	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["any"].Schema, "an empty interface holds any JSON")
+	assert.Equal(t, "schema-defined answer", fields["any"].JSONReason)
 	assert.True(t, fields["old"].Optional)
 	assert.Equal(t, Schema{Kind: KindID, Nullable: true}, fieldsOf(t, doc, "presenceBody")["track_id"].Schema, "the wrapper reads its Value")
 
@@ -788,4 +796,35 @@ func TestResourceAliasAvoidsReservedWords(t *testing.T) {
 			t.Errorf("resourceAlias(%q) = %q, want %q", resource, got, want)
 		}
 	}
+}
+
+type legacyValue struct {
+	Value bool
+}
+
+func (legacyValue) MarshalJSON() ([]byte, error) { return []byte("true"), nil }
+
+type unexplainedLegacyValue struct {
+	Flag legacyValue `json:"flag"`
+}
+
+func TestAnUnexplainedLegacyFallbackStopsTheGenerator(t *testing.T) {
+	t.Parallel()
+	_, err := Build([]Registration{get("/api/stored/", unexplainedLegacyValue{})}, Options{
+		Identifiers: identifiers,
+		Values:      map[reflect.Type]string{reflect.TypeFor[legacyValue](): LegacyValue},
+	})
+	require.ErrorContains(t, err, "unexplainedLegacyValue.Flag")
+	require.ErrorContains(t, err, "contract_json")
+}
+
+type unexplainedJSONFields struct {
+	Values map[string][]any `json:"values"`
+}
+
+func TestUnexplainedJSONStopsTheGenerator(t *testing.T) {
+	t.Parallel()
+	_, err := Build([]Registration{post(unexplainedJSONFields{})}, Options{Identifiers: identifiers})
+	require.ErrorContains(t, err, "unexplainedJSONFields.Values")
+	require.ErrorContains(t, err, "contract_json")
 }

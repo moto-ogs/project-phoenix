@@ -35,6 +35,9 @@ export interface TraegerAbsenceType {
   readonly requestable: boolean;
   readonly isActive: boolean;
   readonly schools: readonly TraegerAbsenceTypeSchool[];
+  /** Stand der Felder; Bearbeiten und Aus-/Einschalten schicken ihn zurück
+   *  (ADR 0311). */
+  readonly version: string;
 }
 
 export interface TraegerAbsenceTypeList {
@@ -83,6 +86,9 @@ export interface TraegerAbsenceAccount {
     readonly expiresOn: string;
   } | null;
   readonly schools: readonly TraegerAbsenceSchoolUse[];
+  /** Token of the person's claim; the change of the days sends it back
+   *  (ADR 0311). */
+  readonly version: string;
 }
 
 function mapType(
@@ -103,6 +109,7 @@ function mapType(
       offered: school.offered,
       schoolLimitDays: school.school_limit_days,
     })),
+    version: data.version,
   };
 }
 
@@ -121,6 +128,7 @@ function mapAccount(
     remainingDays: data.remaining_days,
     expiresOn: data.expires_on,
     expiredDays: data.expired_days,
+    version: data.version,
     carriedIn: data.carried_in
       ? {
           year: data.carried_in.year,
@@ -172,14 +180,16 @@ export async function createTraegerAbsenceType(
   );
 }
 
+/** Schreibt die Art neu, auf dem Stand `expectedVersion` (ADR 0311). */
 export async function updateTraegerAbsenceType(
   id: string,
   input: TraegerAbsenceTypeInput,
+  expectedVersion: string,
 ): Promise<TraegerAbsenceType> {
   return mapType(
     await bffJson("org", "PUT /traeger/absence-types/{id}", {
       params: { id },
-      body: typeBody(input),
+      body: { ...typeBody(input), expected_version: expectedVersion },
     }),
   );
 }
@@ -199,7 +209,13 @@ export async function fetchTraegerAbsenceAccounts(
 export async function setTraegerAbsenceAllowance(
   recordId: string,
   typeId: string,
-  input: { year: number; entitledDays: number; reason: string },
+  input: {
+    year: number;
+    entitledDays: number;
+    reason: string;
+    /** Version of the account the form was read from (ADR 0311). */
+    expectedVersion: string;
+  },
 ): Promise<void> {
   await bffJson(
     "org",
@@ -210,6 +226,7 @@ export async function setTraegerAbsenceAllowance(
         year: input.year,
         entitled_days: input.entitledDays,
         reason: input.reason.trim(),
+        expected_version: input.expectedVersion,
       } satisfies traegerStaffRecordsContract.AbsenceAllowanceRequest,
     },
   );

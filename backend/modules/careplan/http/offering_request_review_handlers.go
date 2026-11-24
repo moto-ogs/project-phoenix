@@ -1,17 +1,18 @@
 package careplanhttp
 
 import (
-	json "encoding/json"
 	errors "errors"
 	http "net/http"
-	strconv "strconv"
 	strings "strings"
 
 	render "github.com/go-chi/render"
+
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // DecideOfferingRequestBody is the body of POST
@@ -24,15 +25,15 @@ type DecideOfferingRequestBody struct {
 	EffectiveFrom string `json:"effective_from,omitempty"`
 	// ExcludedOfferingIDs are the rule-added offerings staff unticked for this
 	// one approval (#2370); the Mitbuchungs-Regel itself stays active.
-	ExcludedOfferingIDs         []string `json:"excluded_offering_ids,omitempty"`
-	CompleteWithdrawalConfirmed bool     `json:"complete_withdrawal_confirmed,omitempty"`
+	ExcludedOfferingIDs         []ident.ID `json:"excluded_offering_ids,omitempty"`
+	CompleteWithdrawalConfirmed bool       `json:"complete_withdrawal_confirmed,omitempty"`
 	// ExpectedVersion is the expected_version the list emitted for this row.
-	// Empty is accepted (old clients) and skips the check.
+	// An empty or different one is refused with readstate.ErrChanged.
 	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 type PreviewOfferingRequestBody struct {
-	ExcludedOfferingIDs []string `json:"excluded_offering_ids"`
+	ExcludedOfferingIDs []ident.ID `json:"excluded_offering_ids"`
 	// EffectiveFrom previews the decision for the date currently chosen in the
 	// card; empty previews the date the parents requested.
 	EffectiveFrom string `json:"effective_from,omitempty"`
@@ -53,9 +54,9 @@ func parseConfirmedEffectiveFrom(raw string) (*calendar.Date, error) {
 }
 
 type OfferingRequestPreviewSelectionResponse struct {
-	OfferingID string `json:"offering_id"`
-	New        string `json:"new"`
-	Removed    bool   `json:"removed,omitempty"`
+	OfferingID ident.ID `json:"offering_id"`
+	New        string   `json:"new"`
+	Removed    bool     `json:"removed,omitempty"`
 }
 
 type OfferingRequestPreviewResponse struct {
@@ -65,18 +66,18 @@ type OfferingRequestPreviewResponse struct {
 }
 
 type ManualPlanningConflictResponse struct {
-	ActivityGroupID   string   `json:"activity_group_id"`
+	ActivityGroupID   ident.ID `json:"activity_group_id"`
 	ActivityGroupName string   `json:"activity_group_name"`
 	Days              []string `json:"days"`
 	FirstDate         string   `json:"first_date"`
 	OccurrenceCount   int      `json:"occurrence_count"`
 }
 
-func parseExcludedOfferingIDs(rawIDs []string) ([]int64, error) {
+func parseExcludedOfferingIDs(rawIDs []ident.ID) ([]int64, error) {
 	excluded := make([]int64, 0, len(rawIDs))
 	for _, raw := range rawIDs {
-		id, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
-		if err != nil || id <= 0 {
+		id := raw.Int64()
+		if id <= 0 {
 			return nil, errors.New("excluded_offering_ids must contain numeric ids")
 		}
 		excluded = append(excluded, id)
@@ -96,7 +97,7 @@ func (rs *Resource) previewOfferingChangeRequest(w http.ResponseWriter, r *http.
 		return
 	}
 	var body PreviewOfferingRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -122,7 +123,7 @@ func (rs *Resource) previewOfferingChangeRequest(w http.ResponseWriter, r *http.
 	selections := make([]OfferingRequestPreviewSelectionResponse, 0, len(preview.Selections))
 	for _, selection := range preview.Selections {
 		selections = append(selections, OfferingRequestPreviewSelectionResponse{
-			OfferingID: strconv.FormatInt(selection.OfferingID, 10),
+			OfferingID: ident.ID(selection.OfferingID),
 			New:        rs.OfferingDiffLabel(selection.State, selection.Days),
 			Removed:    selection.State == "removed",
 		})
@@ -130,7 +131,7 @@ func (rs *Resource) previewOfferingChangeRequest(w http.ResponseWriter, r *http.
 	conflicts := make([]ManualPlanningConflictResponse, 0, len(preview.ManualPlanningConflicts))
 	for _, conflict := range preview.ManualPlanningConflicts {
 		conflicts = append(conflicts, ManualPlanningConflictResponse{
-			ActivityGroupID:   strconv.FormatInt(conflict.ActivityGroupID, 10),
+			ActivityGroupID:   ident.ID(conflict.ActivityGroupID),
 			ActivityGroupName: conflict.ActivityGroupName,
 			Days:              conflict.Days,
 			FirstDate:         conflict.FirstDate.String(),
@@ -156,7 +157,7 @@ func (rs *Resource) decideOfferingChangeRequest(w http.ResponseWriter, r *http.R
 		return
 	}
 	var body DecideOfferingRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

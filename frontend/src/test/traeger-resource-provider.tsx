@@ -13,7 +13,7 @@ export function TraegerResourceTestProvider({
   return (
     <SessionProvider
       session={{
-        user: { id: "traeger-test", scope: "org", orgId: 7 },
+        user: { id: "traeger-test", scope: "org", orgId: "7" },
         expires: "2099-01-01",
       }}
       refetchOnWindowFocus={false}

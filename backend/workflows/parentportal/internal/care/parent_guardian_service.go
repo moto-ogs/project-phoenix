@@ -133,6 +133,9 @@ type ChildGuardian struct {
 	// by themselves or the school, not another parent. Contact stays visible (not
 	// redacted) but is read-only here.
 	ContactLockedFullGuardian bool
+	// Version is the token of the shown contact a contact edit sends back
+	// (guardianContactVersion, ADR 0311); empty where the contact is redacted.
+	Version string
 }
 
 // GuardianPhone is one phone number in the parent-facing projection.
@@ -157,6 +160,10 @@ type GuardianContactInput struct {
 	AddressCity       *string
 	AddressPostalCode *string
 	Phones            []GuardianPhoneInput
+	// ExpectedVersion is the Version of the contact the edit form read; a
+	// contact edit refuses any other (ADR 0311). Creating a contact reads
+	// nothing and ignores it.
+	ExpectedVersion string
 }
 
 // GuardianPhoneInput is one phone row in a contact edit.

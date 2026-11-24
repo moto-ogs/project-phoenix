@@ -81,7 +81,7 @@ func submitAndApproveOfferingChild(
 ) (studentID, requestChildID int64) {
 	t.Helper()
 	ctx := testpkg.Ctx(t)
-	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, env.requestSvc.Submit, enrollmentTest.SubmitRequest{
+	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, submitShown(env.requestSvc), enrollmentTest.SubmitRequest{
 		TenantID:          testpkg.Tenant(t),
 		PhaseID:           env.sourcePhase.ID,
 		GuardianFirstName: "Eltern",
@@ -811,7 +811,7 @@ func TestDecide_ExistingStudentClassChangeResyncsSourcedTemplates(t *testing.T) 
 	// Matching pins the child to the already-created student, the way an
 	// existing_students phase does at submission time.
 	grade := int16(3)
-	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, env.requestSvc.Submit, enrollmentTest.SubmitRequest{
+	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, submitShown(env.requestSvc), enrollmentTest.SubmitRequest{
 		TenantID:          testpkg.Tenant(t),
 		PhaseID:           env.sourcePhase.ID,
 		GuardianFirstName: "Eltern",
@@ -1051,7 +1051,7 @@ func TestResync_UnionAcrossOfferings_PlansSharedChildOnce(t *testing.T) {
 
 	// One child holds BOTH offerings (same request), one child only offering B.
 	grade := int16(2)
-	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, env.requestSvc.Submit, enrollmentTest.SubmitRequest{
+	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, submitShown(env.requestSvc), enrollmentTest.SubmitRequest{
 		TenantID:          testpkg.Tenant(t),
 		PhaseID:           env.sourcePhase.ID,
 		GuardianFirstName: "Eltern",
@@ -1167,7 +1167,7 @@ func TestOfferingDetach_DriftedSiblingCapsExclusiveCoverage(t *testing.T) {
 	// One child holds BOTH offerings; the approval fan-out seeds the union
 	// row shaped by A (first in the array): Mo–Fr.
 	grade := int16(2)
-	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, env.requestSvc.Submit, enrollmentTest.SubmitRequest{
+	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, submitShown(env.requestSvc), enrollmentTest.SubmitRequest{
 		TenantID:          testpkg.Tenant(t),
 		PhaseID:           env.sourcePhase.ID,
 		GuardianFirstName: "Eltern",
@@ -1287,7 +1287,7 @@ func TestUpdateChildOfferings_UndatedCorrectionKeepsPhaseStartOnMultiSource(t *t
 
 	// Undated correction: the selection was wrong from the start, switch the
 	// child from offering A to B (both feed the same template).
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      child.RequestID,
 		ChildID:        childID,
 		ActorAccountID: env.creatorID,
@@ -1679,7 +1679,7 @@ func TestDecide_FanOutCapsRowAtLinkEnd(t *testing.T) {
 	template := createSourcedTemplate(t, env, "LinkFensterTermin", offering.ID, []int{2}, period.ID)
 
 	grade := int16(2)
-	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, env.requestSvc.Submit, enrollmentTest.SubmitRequest{
+	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, submitShown(env.requestSvc), enrollmentTest.SubmitRequest{
 		TenantID:          testpkg.Tenant(t),
 		PhaseID:           env.sourcePhase.ID,
 		GuardianFirstName: "Eltern",
@@ -1778,7 +1778,7 @@ func TestUpdateChildOfferings_DatedSwitchReconcilesMaterializedOccurrences(t *te
 	})
 	testpkg.CreateTestInstanceStudent(t, env.db, planned.ID, studentID, "expected")
 
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      child.RequestID,
 		ChildID:        childID,
 		ActorAccountID: env.creatorID,
@@ -1826,7 +1826,7 @@ func TestUpdateChildOfferings_DatedKeepRespectsSegmentEnd(t *testing.T) {
 	// The switch keeps the same offering with unchanged days, so the existing
 	// row is retained rather than capped and re-seeded.
 	switchDate := calendar.Date(env.sourcePhase.ServiceStartDate).AddDays(30)
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      child.RequestID,
 		ChildID:        childID,
 		ActorAccountID: env.creatorID,
@@ -1870,7 +1870,7 @@ func TestResyncTemplateOfferingRoster_LegacyChildGainsNonOverlappingSourceDays(t
 
 	// The child holds BOTH offerings.
 	grade := int16(2)
-	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, env.requestSvc.Submit, enrollmentTest.SubmitRequest{
+	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, submitShown(env.requestSvc), enrollmentTest.SubmitRequest{
 		TenantID:          testpkg.Tenant(t),
 		PhaseID:           env.sourcePhase.ID,
 		GuardianFirstName: "Eltern",

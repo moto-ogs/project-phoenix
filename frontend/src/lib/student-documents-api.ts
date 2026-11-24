@@ -5,7 +5,7 @@
 // caller may see plus the caller's visible categories.
 
 import type * as wire from "~/lib/contract/students.generated";
-import { bffJson } from "./bff-fetch";
+import { bffFileHref, bffJson } from "./bff-fetch";
 import {
   mapAccidentReport,
   type AccidentReportDetails,
@@ -31,6 +31,11 @@ export interface StudentDocument {
   /** False for an accident report without a paper copy (#4771). */
   hasFile: boolean;
   accidentReport: AccidentReportDetails | null;
+  /**
+   * The read-state token of an accident report (ADR 0311): changing, signing
+   * and the paper copy send it back. Empty for other documents.
+   */
+  version?: string;
 }
 
 export interface StudentDocumentList {
@@ -53,11 +58,8 @@ function mapDocument(data: wire.StudentDocumentResponse): StudentDocument {
     accidentReport: data.accident_report
       ? mapAccidentReport(data.accident_report)
       : null,
+    ...(data.version ? { version: data.version } : {}),
   };
-}
-
-function documentsPath(studentId: string, documentId: string): string {
-  return `/api/students/${encodeURIComponent(studentId)}/documents/${encodeURIComponent(documentId)}`;
 }
 
 class StudentDocumentsService {
@@ -93,7 +95,11 @@ class StudentDocumentsService {
 
   /** Same-origin proxy URL for the authenticated download. */
   downloadUrl(studentId: string, documentId: string): string {
-    return `${documentsPath(studentId, documentId)}/download`;
+    return bffFileHref(
+      "tenant",
+      "GET /api/students/{id}/documents/{documentId}/download",
+      { params: { id: studentId, documentId } },
+    );
   }
 }
 

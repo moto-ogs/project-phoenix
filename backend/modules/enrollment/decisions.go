@@ -184,6 +184,11 @@ type ChildOfferingRow struct {
 	// approved change scheduled for a future date. Those rows are
 	// informational: they describe what will be booked, not what is.
 	StartsLater bool
+	// ExtendsUntil is the last day an undated correction books this current
+	// booking to when the office extends it (#7929): the end of the phase or
+	// the child's earlier care end. Nil when the booking runs to there
+	// already, or when its end starts a scheduled change.
+	ExtendsUntil *calendar.Date
 	// SubmittedTerms are the catalog terms the parents submitted this
 	// offering under, nil without a snapshot (#6837). ChangedTerms names the
 	// booking-relevant terms the catalog changed since (OfferingTerm*); an
@@ -204,12 +209,18 @@ type ChildOfferingSet struct {
 	Current []ChildOfferingRow
 	// Upcoming only takes effect on a later date. Display only.
 	Upcoming []ChildOfferingRow
+	// Version is the token of the child's stored bookings a correction sends
+	// back (ADR 0311): Care Plan's BookingsVersion over every interval.
+	Version string
 }
 
 // OfferingAdjustmentSelection is one offering an admin books for a child.
 type OfferingAdjustmentSelection struct {
 	OfferingID   int64
 	SelectedDays []string
+	// ExtendToPhaseEnd books a limited offering to the end of the phase, or
+	// to the earlier care end (#7929). Only an undated correction accepts it.
+	ExtendToPhaseEnd bool
 }
 
 // ChildOfferingsUpdate is a corrected child with the effect of the
@@ -285,6 +296,11 @@ type UpdateChildOfferingsInput struct {
 	// CompleteWithdrawalConfirmed is the explicit confirmation shown only when
 	// an authoritative adjustment removes the child's final care day.
 	CompleteWithdrawalConfirmed bool
+	// ExpectedVersion is the ChildOfferingSet.Version the office corrected
+	// (ADR 0311). UpdateChildOfferings refuses another one, an empty one
+	// included, with readstate.ErrChanged; an approved change request
+	// saves back no read and ignores it.
+	ExpectedVersion string
 }
 
 // OfferingAdjustmentRecord is one entry of a child's offering adjustment

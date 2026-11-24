@@ -28,6 +28,7 @@ export interface DeviceResponse {
   is_online: boolean;
   created_at: string;
   updated_at: string;
+  version: string;
 }
 
 export const DeviceResponseSchema: z.ZodType<DeviceResponse, unknown> = object<DeviceResponse>({
@@ -42,6 +43,7 @@ export const DeviceResponseSchema: z.ZodType<DeviceResponse, unknown> = object<D
   is_online: bool,
   created_at: instant,
   updated_at: instant,
+  version: str,
 });
 
 /** Go: devices.DeviceSlotsResponse */
@@ -79,7 +81,7 @@ export interface LifecycleEventResponse {
 }
 
 export const LifecycleEventResponseSchema: z.ZodType<LifecycleEventResponse, unknown> = object<LifecycleEventResponse>({
-  id: str,
+  id: int64String,
   action: str,
   actor_kind: str,
   actor_name: nullable(str),
@@ -114,6 +116,7 @@ export interface DeviceCreationResponse {
   is_online: boolean;
   created_at: string;
   updated_at: string;
+  version: string;
   api_key: string;
 }
 
@@ -129,15 +132,18 @@ export const DeviceCreationResponseSchema: z.ZodType<DeviceCreationResponse, unk
   is_online: bool,
   created_at: instant,
   updated_at: instant,
+  version: str,
   api_key: str,
 });
 
-/** Query of GET /api/iot/ */
-export interface GetIotQuery {
+/** Go: devices.DeviceUpdateRequest */
+export interface DeviceUpdateRequest {
+  device_id?: string;
   device_type?: string;
-  registered_by_id?: string;
-  search?: string;
+  name?: string | null;
   status?: string;
+  registered_by_id?: string | null;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -151,7 +157,12 @@ export const routes = {
     method: "GET",
     pattern: "/api/iot/",
     portals: ["tenant"],
-    query: ["device_type", "registered_by_id", "search", "status"],
+    query: {
+      "device_type": { kind: "string" },
+      "registered_by_id": { kind: "id" },
+      "search": { kind: "string" },
+      "status": { kind: "string" },
+    },
     response: success(z.array(DeviceResponseSchema)),
   },
   "GET /api/iot/device-slots": {
@@ -190,7 +201,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/iot/{id}",
     portals: ["tenant"],
-    request: requestBody<DeviceRequest>(),
+    request: requestBody<DeviceUpdateRequest>(),
     response: success(DeviceResponseSchema),
   },
 } as const;

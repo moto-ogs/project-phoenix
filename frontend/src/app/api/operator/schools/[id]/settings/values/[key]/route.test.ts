@@ -36,9 +36,33 @@ global.fetch = mockFetch as unknown as typeof fetch;
 
 import { PUT, DELETE } from "./route";
 
+function schoolSummary(id: string, subdomain: string) {
+  return {
+    id,
+    slug: `slug-${subdomain}`,
+    subdomain,
+    name: subdomain,
+    organization_id: "1",
+    organization_name: "Test Träger",
+    active: true,
+    hidden: false,
+    created_at: "2026-07-01T00:00:00Z",
+    updated_at: "2026-07-01T00:00:00Z",
+    konten_count: 0,
+    geraete_count: 0,
+    personen_count: 0,
+    child_quota_bundles: null,
+    child_quota_bundle_size: 20,
+    child_quota_count: 0,
+    device_slots: null,
+    version: "v-1",
+  };
+}
+
 describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFetch.mockReset();
   });
 
   it("proxies valid setting update to backend", async () => {
@@ -46,7 +70,7 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ status: "success", data: null }),
+      json: async () => ({ status: "success", data: {} }),
     });
 
     const request = new NextRequest(
@@ -70,6 +94,35 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
       "http://localhost:8080/operator/schools/10/settings/values/operations.session_end_time",
       expect.objectContaining({ method: "PUT" }),
     );
+  });
+
+  it("purges the tenant cache even when the committed write's answer is unreadable", async () => {
+    mockAuth.mockResolvedValue({ user: { token: "valid-token" } });
+    mockFetch
+      .mockResolvedValueOnce(new Response("not JSON", { status: 200 }))
+      .mockResolvedValueOnce(
+        Response.json({
+          status: "success",
+          data: [schoolSummary("10", "school-ten")],
+        }),
+      );
+    const request = new NextRequest(
+      "http://localhost:3000/api/operator/schools/10/settings/values/analytics.enabled",
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: false }),
+      },
+    );
+
+    const result = await PUT(request, {
+      params: Promise.resolve({ id: "10", key: "analytics.enabled" }),
+    });
+
+    expect(result.status).toBe(502);
+    expect(mockRevalidateTag).toHaveBeenCalledWith("tenant-school-ten", {
+      expire: 0,
+    });
   });
 
   it("returns 401 when not authenticated", async () => {
@@ -148,7 +201,7 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
         .mockResolvedValueOnce({
           ok: true,
           status: 200,
-          json: async () => ({ status: "success", data: null }),
+          json: async () => ({ status: "success", data: {} }),
         })
         .mockResolvedValueOnce({
           ok: true,
@@ -156,8 +209,8 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
           json: async () => ({
             status: "success",
             data: [
-              { id: schoolId, slug: "school-ten" },
-              { id: "11", slug: "school-eleven" },
+              schoolSummary(schoolId, "school-ten"),
+              schoolSummary("11", "school-eleven"),
             ],
           }),
         });
@@ -200,14 +253,14 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ status: "success", data: null }),
+        json: async () => ({ status: "success", data: {} }),
       })
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: async () => ({
           status: "success",
-          data: [{ id: "10", slug: "school-ten" }],
+          data: [schoolSummary("10", "school-ten")],
         }),
       });
 
@@ -240,7 +293,7 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ status: "success", data: null }),
+      json: async () => ({ status: "success", data: {} }),
     });
 
     const request = new NextRequest(
@@ -271,7 +324,7 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ status: "success", data: null }),
+        json: async () => ({ status: "success", data: {} }),
       })
       // summaries lookup returns an empty list — no matching id.
       .mockResolvedValueOnce({
@@ -305,13 +358,15 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
 describe("DELETE /api/operator/schools/[id]/settings/values/[key]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFetch.mockReset();
   });
 
   it("proxies reset to backend", async () => {
     mockAuth.mockResolvedValue({ user: { token: "valid-token" } });
     mockFetch.mockResolvedValue({
       ok: true,
-      status: 204,
+      status: 200,
+      json: async () => ({ status: "success", data: {} }),
     });
 
     const request = new NextRequest(
@@ -323,7 +378,7 @@ describe("DELETE /api/operator/schools/[id]/settings/values/[key]", () => {
     };
     const response = await DELETE(request, context);
 
-    expect(response.status).toBe(204);
+    expect(response.status).toBe(200);
     expect(mockFetch).toHaveBeenCalledWith(
       "http://localhost:8080/operator/schools/10/settings/values/foo.bar",
       expect.objectContaining({ method: "DELETE" }),
@@ -390,14 +445,14 @@ describe("DELETE /api/operator/schools/[id]/settings/values/[key]", () => {
       mockAuth.mockResolvedValue({ user: { token: "valid-token" } });
       mockFetch
         // Backend DELETE — 204 No Content, parseResponse short-circuits.
-        .mockResolvedValueOnce({ ok: true, status: 204 })
+        .mockResolvedValueOnce(Response.json({ status: "success", data: {} }))
         // Slug lookup.
         .mockResolvedValueOnce({
           ok: true,
           status: 200,
           json: async () => ({
             status: "success",
-            data: [{ id: schoolId, slug: "school-ten" }],
+            data: [schoolSummary(schoolId, "school-ten")],
           }),
         });
 
@@ -413,7 +468,7 @@ describe("DELETE /api/operator/schools/[id]/settings/values/[key]", () => {
       };
       const response = await DELETE(request, context);
 
-      expect(response.status).toBe(204);
+      expect(response.status).toBe(200);
       expect(mockRevalidateTag).toHaveBeenCalledWith("tenant-school-ten", {
         expire: 0,
       });
@@ -423,7 +478,7 @@ describe("DELETE /api/operator/schools/[id]/settings/values/[key]", () => {
 
   it("skips revalidation when the key does not affect /auth/tenant/resolve", async () => {
     mockAuth.mockResolvedValue({ user: { token: "valid-token" } });
-    mockFetch.mockResolvedValue({ ok: true, status: 204 });
+    mockFetch.mockResolvedValue(Response.json({ status: "success", data: {} }));
 
     const request = new NextRequest(
       "http://localhost:3000/api/operator/schools/10/settings/values/foo.bar",

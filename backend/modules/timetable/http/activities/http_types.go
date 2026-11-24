@@ -1,6 +1,7 @@
 package httpadapter
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 const (
@@ -33,9 +35,15 @@ type ActivityCategoryResponse struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 	// UsageCount is how many Aktivitäten/Termin-Vorlagen reference the
 	// category. Only populated by the category list endpoint; nil elsewhere.
-	UsageCount *int      `json:"usage_count,omitempty"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	UsageCount *int `json:"usage_count,omitempty"`
+	// Version is the token an edit of the category sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version,omitempty"`
+	// ShiftTypeLinkVersion is the token of the category's link to a shift
+	// type; a shift-type edit sends it per category it read.
+	ShiftTypeLinkVersion string    `json:"shift_type_link_version,omitempty"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
 }
 
 // ActivitySupervisorResponse represents a supervisor in activity response
@@ -65,6 +73,11 @@ type ActivityResponse struct {
 	EnrollmentCount int                          `json:"enrollment_count,omitempty"`
 	CreatedAt       time.Time                    `json:"created_at"`
 	UpdatedAt       time.Time                    `json:"updated_at"`
+	// Version is the read-state token of the activity (ADR 0311): the
+	// detail read and the answer of an update carry it, an update sends it
+	// back as expected_version. The list does not read the schedules and
+	// carries none.
+	Version string `json:"version,omitempty"`
 }
 
 // ActivityScheduleResponse represents a schedule API response
@@ -102,6 +115,112 @@ type ActivityRequest struct {
 	PlannedRoomID   *ident.ID         `json:"planned_room_id,omitempty"`
 	Schedules       []ScheduleRequest `json:"schedules,omitempty"`
 	SupervisorIDs   []ident.ID        `json:"supervisor_ids,omitempty"`
+}
+
+// ActivityUpdateRequest is the body of PUT /api/activities/{id}. Name,
+// max_participants and category_id are always written. is_open,
+// planned_room_id, schedules and supervisor_ids are written only when the
+// body carries them, so a form that shows only the master data keeps the
+// stored opening, room, schedules and supervisors (ADR 0311).
+// planned_room_id null clears the room. expected_version is the version the
+// editor read.
+type ActivityUpdateRequest struct {
+	Name            string             `json:"name"`
+	MaxParticipants *int               `json:"max_participants"`
+	IsOpen          OptionalOpen       `json:"is_open"`
+	CategoryID      ident.ID           `json:"category_id"`
+	PlannedRoomID   OptionalRoomID     `json:"planned_room_id"`
+	Schedules       *[]ScheduleRequest `json:"schedules,omitempty"`
+	SupervisorIDs   *[]ident.ID        `json:"supervisor_ids,omitempty"`
+	ExpectedVersion string             `json:"expected_version"`
+}
+
+// OptionalOpen tells an omitted is_open (keep the opening) apart from a
+// value (set it).
+type OptionalOpen struct {
+	Set   bool
+	Value bool
+}
+
+// UnmarshalJSON notes that the key was present and reads its value; null
+// keeps the opening like an omitted key.
+func (o *OptionalOpen) UnmarshalJSON(b []byte) error {
+	if string(b) == "null" {
+		return nil
+	}
+	o.Set = true
+	return json.Unmarshal(b, &o.Value)
+}
+
+// OptionalRoomID tells an omitted planned_room_id (keep the room) apart
+// from null (clear it) and an ID (set it).
+type OptionalRoomID struct {
+	Set   bool
+	Value *ident.ID
+}
+
+// UnmarshalJSON notes that the key was present and reads its value.
+func (o *OptionalRoomID) UnmarshalJSON(b []byte) error {
+	o.Set = true
+	if string(b) == "null" {
+		o.Value = nil
+		return nil
+	}
+	return wire.Unmarshal(b, &o.Value)
+}
+
+// Bind validates the update the way ActivityRequest validates a write.
+func (req *ActivityUpdateRequest) Bind(_ *http.Request) error {
+	if req.Name == "" {
+		return errors.New("activity name is required")
+	}
+	if req.MaxParticipants != nil && *req.MaxParticipants < 0 {
+		return errors.New("max participants cannot be negative")
+	}
+	if req.CategoryID <= 0 {
+		return errors.New("category ID is required")
+	}
+	if req.Schedules != nil {
+		for _, schedule := range *req.Schedules {
+			if !activityContract.IsValidWeekday(schedule.Weekday) {
+				return errors.New("invalid weekday in schedule")
+			}
+		}
+	}
+	return nil
+}
+
+// groupEdit is the edit the request asks for on activity id.
+func (req *ActivityUpdateRequest) groupEdit(id int64) activityContract.GroupEdit {
+	edit := activityContract.GroupEdit{
+		ID: id, Name: req.Name, MaxParticipants: participantLimit(req.MaxParticipants),
+		CategoryID:     req.CategoryID.Int64(),
+		SetPlannedRoom: req.PlannedRoomID.Set, PlannedRoomID: (*int64)(req.PlannedRoomID.Value),
+		ExpectedVersion: req.ExpectedVersion,
+	}
+	if req.IsOpen.Set {
+		edit.IsOpen = &req.IsOpen.Value
+	}
+	if req.SupervisorIDs != nil {
+		edit.ReplaceSupervisors, edit.SupervisorIDs = true, ident.Int64s(*req.SupervisorIDs)
+	}
+	if req.Schedules != nil {
+		edit.ReplaceSchedules = true
+		edit.Schedules = scheduleRequests(*req.Schedules)
+	}
+	return edit
+}
+
+// scheduleRequests are the requested schedules as model schedules.
+func scheduleRequests(requests []ScheduleRequest) []*activityContract.Schedule {
+	schedules := make([]*activityContract.Schedule, 0, len(requests))
+	for _, s := range requests {
+		schedules = append(schedules, &activityContract.Schedule{
+			Weekday:     s.Weekday,
+			TimeframeID: (*int64)(s.TimeframeID),
+		})
+	}
+	return schedules
 }
 
 // QuickActivityRequest represents a simplified activity creation request for mobile devices

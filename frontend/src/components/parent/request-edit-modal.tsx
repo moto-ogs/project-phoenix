@@ -14,8 +14,9 @@ import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useLocalizedDatePicker } from "~/lib/hooks/use-localized-date-picker";
 import { createLogger } from "~/lib/logger";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
-import { useFreshSWR, useInvalidateFamily } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import {
   listParentRequestEvents,
@@ -30,17 +31,21 @@ const logger = createLogger({ component: "RequestEditModal" });
 /**
  * Eine noch offene Anfrage, so wie die Eltern sie ändern können. Ein Typ pro
  * Anfrageart, damit ein Dialog reicht statt vier fast gleicher Dialoge.
+ * `version` stammt aus derselben Listenzeile wie die Werte; das Speichern
+ * schickt sie als `expected_version` zurück (ADR 0311).
  */
 export type EditableRequest =
   | {
       readonly type: "excused";
       readonly id: string;
+      readonly version: string;
       readonly dates: string[];
       readonly note: string;
     }
   | {
       readonly type: "pickup_change";
       readonly id: string;
+      readonly version: string;
       readonly date: string;
       readonly pickupTime: string;
       readonly reason: string;
@@ -48,39 +53,32 @@ export type EditableRequest =
   | {
       readonly type: "master_data";
       readonly id: string;
+      readonly version: string;
       readonly label: string;
       readonly value: string;
     };
 
 /**
- * Liest die Änderungsgeschichte einer Anfrage. Der neueste Eintrag trägt die
- * aktuelle Fassung (`expected_version`); ohne ihn wird leer gesendet, was das
- * Backend als "keine Prüfung" behandelt.
+ * Wann die Eltern die Anfrage zuletzt geändert haben, aus ihrer
+ * Änderungsgeschichte. Nur eine Anzeige: fehlt sie, bleibt das Bearbeiten
+ * möglich.
  */
-export function useRequestVersion(
+export function useRequestEditedAt(
   studentId: string,
   requestType: ParentRequestShareType,
   requestId: string,
   active: boolean,
-): { version: string; editedAt: string | null } {
-  // Die Geschichte ist nur eine Zusatzangabe. Fehlt sie, bleibt das
-  // Bearbeiten möglich; das Backend prüft dann ohne Fassungsvergleich.
-  // Jedes Öffnen liest sie neu: die OGS oder ein anderer Elternteil kann die
-  // Anfrage seitdem geändert haben, und eine alte Fassung lehnt das Backend ab.
-  const { data: events } = useFreshSWR(
+): string | null {
+  const { data: events } = useSWRAuth(
     active ? parentKeys.requestEvents(studentId, requestType, requestId) : null,
     () => listParentRequestEvents(studentId, requestType, requestId),
   );
-  return useMemo(() => {
-    if (!events) return { version: "", editedAt: null };
-    const edited = events
-      .filter((event) => event.event_type === "guardian_edited")
-      .at(-1);
-    return {
-      version: events.at(-1)?.version ?? "",
-      editedAt: edited?.created_at ?? null,
-    };
-  }, [events]);
+  return useMemo(
+    () =>
+      events?.filter((event) => event.event_type === "guardian_edited").at(-1)
+        ?.created_at ?? null,
+    [events],
+  );
 }
 
 async function saveRequest(
@@ -162,24 +160,43 @@ export function RequestEditModal({
   request,
   reasonRequired = true,
   onClose,
-  onSaved,
+  onReload,
 }: Readonly<{
   studentId: string;
+  /** Die Anfrage aus der aktuellen Liste, mit ihrer `version`. */
   request: EditableRequest;
   reasonRequired?: boolean;
   onClose: () => void;
-  onSaved: () => void;
+  /** Lädt die Liste neu: nach dem Speichern und wenn die Anfrage inzwischen
+   * anders gespeichert ist. Lehnt ab, wenn das Lesen scheitert. */
+  onReload: () => void | Promise<unknown>;
 }>) {
   const t = useCareTermTranslations("parentRequestEdit");
   const tError = useTranslations("errorCatalog");
   const tTimePicker = useTranslations("datePicker.timePicker");
   const locale = useLocale();
   const datePicker = useLocalizedDatePicker();
-  const [draft, setDraft] = useState<Draft>(() => initialDraft(request));
+  // The version the draft was filled from; saving sends it (ADR 0311). A
+  // newer read refills the draft only while it is untouched, so typed input
+  // is never replaced silently. After a refusal the list reloads and the
+  // stored request replaces the draft; until then nothing is sent.
+  const edit = useDraftOn<EditableRequest, Draft, string, unknown>(
+    {
+      opening: `${request.type}:${request.id}`,
+      data: request,
+      reload: async () => {
+        await onReload();
+        return undefined;
+      },
+    },
+    { token: (read) => read.version, toDraft: initialDraft },
+  );
+  const draft = edit.draft ?? initialDraft(request);
+  const reloading = edit.status === "refused" || edit.status === "reloading";
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
   const { error, show, invalid, fieldError, clear } = useApiFormError(formRef);
-  const { version, editedAt } = useRequestVersion(
+  const editedAt = useRequestEditedAt(
     studentId,
     request.type,
     request.id,
@@ -187,8 +204,9 @@ export function RequestEditModal({
   );
   const invalidateFamily = useInvalidateFamily();
 
-  const set = (patch: Partial<Draft>) =>
-    setDraft((current) => ({ ...current, ...patch }));
+  const set = (patch: Partial<Draft>) => {
+    edit.setDraft((current) => ({ ...current, ...patch }));
+  };
 
   const submit = async () => {
     const fieldHint = tError("actions.fieldCheck");
@@ -206,26 +224,29 @@ export function RequestEditModal({
     }
     setSaving(true);
     clear();
-    try {
-      await saveRequest(studentId, request, draft, version);
-      // A reopened dialog must send the new version, not the cached one.
+    const result = await edit.submit((version, sent) =>
+      saveRequest(studentId, request, sent, version),
+    );
+    setSaving(false);
+    if (result.ok) {
+      // The list was read again inside the save (rule 5).
       void invalidateFamily(parentKeys.requestEventsFamily(studentId));
-      onSaved();
       onClose();
-    } catch (err) {
-      logger.warn("parent_request_edit_failed", {
-        error: err instanceof Error ? err.message : String(err),
-        request_type: request.type,
-      });
-      // A stale version (students.change_request_stale) has its own catalog
-      // text that asks to reload the page.
-      void show(err, {
-        object: t("errorObject"),
-        retry: () => void submitRef.current(),
-      });
-    } finally {
-      setSaving(false);
+      return;
     }
+    const err = result.error;
+    logger.warn("parent_request_edit_failed", {
+      error: err instanceof Error ? err.message : String(err),
+      request_type: request.type,
+    });
+    // Stored differently since the list was read: the list reloads, the
+    // stored values replace the draft, and the message waits for them
+    // without a retry of the same version.
+    void show(err, {
+      object: t("errorObject"),
+      retry: () => void submitRef.current(),
+      reload: result.reload,
+    });
   };
   // The retry sends the latest draft, not the one of the failed attempt.
   const submitRef = useRef(submit);
@@ -260,8 +281,9 @@ export function RequestEditModal({
             type="button"
             size="md"
             className="w-full sm:w-auto"
-            isLoading={saving}
-            loadingText={t("saving")}
+            isLoading={saving || reloading}
+            disabled={!saving && !reloading && !edit.canSubmit}
+            loadingText={reloading ? t("reloading") : t("saving")}
             tooltip={t("submitTooltip")}
             onClick={() => void submit()}
           >

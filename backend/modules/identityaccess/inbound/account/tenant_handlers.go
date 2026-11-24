@@ -57,7 +57,18 @@ func (rs *Resource) resolveTenant(w http.ResponseWriter, r *http.Request) {
 	}
 
 	school, err := rs.SchoolService.GetSchoolBySubdomain(r.Context(), slug)
-	if err != nil || school == nil || school.Deleted || !school.Active {
+	if errors.Is(err, ErrInvalidSchoolSubdomain) {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInternalServerWrap(
+			http.StatusText(http.StatusInternalServerError),
+			fmt.Errorf("tenant resolve: %w", err),
+		))
+		return
+	}
+	if school == nil || school.Deleted || !school.Active {
 		common.RenderError(w, r, common.ErrorNotFound(errors.New("tenant not found")))
 		return
 	}
@@ -150,9 +161,9 @@ func analyticsSamplePercent(resolved tenantShellSettings) int {
 	return resolved.analyticsSamplePercent
 }
 
-// tenantShellSettingKeys lists every setting the tenant shell reads, for the
-// one batched resolve.
-func tenantShellSettingKeys() []string {
+// TenantShellSettingKeys lists every setting the tenant shell reads. The
+// contract generator also uses it for frontend cache invalidation.
+func TenantShellSettingKeys() []string {
 	return append([]string{
 		settings.KeyPresenceMode,
 		settings.KeyStudentPhotosEnabled,
@@ -194,7 +205,7 @@ func (rs *Resource) resolveTenantShellSettings(ctx context.Context, tenantID int
 	if batch, ok := rs.SettingsService.(interface {
 		ResolveManyForTenant(context.Context, int64, []string) (*settings.Snapshot, error)
 	}); ok {
-		snapshot, err := batch.ResolveManyForTenant(ctx, tenantID, tenantShellSettingKeys())
+		snapshot, err := batch.ResolveManyForTenant(ctx, tenantID, TenantShellSettingKeys())
 		if err != nil {
 			return tenantShellSettings{}, fmt.Errorf("resolve tenant shell settings: %w", err)
 		}

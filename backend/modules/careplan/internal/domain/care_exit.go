@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // NormalizeCareExitInput validates the whole-action fields and returns the
@@ -382,7 +382,7 @@ func BuildBookingAuthorityImpact(evaluations []CareBookingEvaluation, on calenda
 	}
 	for _, evaluation := range evaluations {
 		child := careplan.BookingAuthorityImpactChild{
-			StudentID:           strconv.FormatInt(evaluation.StudentID, 10),
+			StudentID:           ident.ID(evaluation.StudentID),
 			FirstName:           evaluation.FirstName,
 			LastName:            evaluation.LastName,
 			SchoolClass:         evaluation.SchoolClass,

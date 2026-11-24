@@ -1,11 +1,9 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -14,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -75,7 +74,7 @@ func (rs *Resource) updateMyProfile(w http.ResponseWriter, r *http.Request) {
 	// client can't stream an unbounded payload into the decoder.
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<10)
 	req := UpdateParentProfileRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
@@ -114,8 +113,8 @@ func (rs *Resource) updateMyProfile(w http.ResponseWriter, r *http.Request) {
 // list. Mirrors the workflow child projection but stringifies int64 IDs
 // per the project's frontend convention (Rule 4 in CLAUDE.md).
 type ChildResponse struct {
-	StudentID     string         `json:"student_id"`
-	TenantID      string         `json:"tenant_id"`
+	StudentID     ident.ID       `json:"student_id"`
+	TenantID      ident.ID       `json:"tenant_id"`
 	FirstName     string         `json:"first_name"`
 	LastName      string         `json:"last_name"`
 	SchoolClass   string         `json:"school_class,omitempty"`
@@ -136,8 +135,8 @@ type ChildResponse struct {
 
 func toChildResponse(c *parentService.ChildSummary, today timezone.Date) ChildResponse {
 	return ChildResponse{
-		StudentID:        strconv.FormatInt(c.StudentID, 10),
-		TenantID:         strconv.FormatInt(c.TenantID, 10),
+		StudentID:        ident.ID(c.StudentID),
+		TenantID:         ident.ID(c.TenantID),
 		FirstName:        c.FirstName,
 		LastName:         c.LastName,
 		SchoolClass:      c.SchoolClass,

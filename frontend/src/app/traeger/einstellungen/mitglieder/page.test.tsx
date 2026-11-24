@@ -50,7 +50,7 @@ vi.mock("next-auth/react", () => ({
       user: {
         id: "1",
         scope: "org",
-        orgId: 7,
+        orgId: "7",
         email: "leitung@traeger.example",
       },
     },
@@ -71,12 +71,14 @@ const BUERO = {
       email: "leitung@traeger.example",
       name: "Lea Leitung",
       roles: ["leadership", "administration"],
+      version: "r1",
     },
     {
       accountId: "2",
       email: "kasse@traeger.example",
       name: "",
       roles: ["billing"],
+      version: "r2",
     },
   ],
   invitations: [
@@ -88,6 +90,18 @@ const BUERO = {
     },
   ],
 };
+
+/** The role change answers the person as saved, with a new version. */
+function savedRoles(accountId: string, roles: readonly string[]) {
+  const member = BUERO.members.find((one) => one.accountId === accountId);
+  return Promise.resolve({
+    accountId,
+    email: member?.email ?? "",
+    name: member?.name ?? "",
+    roles,
+    version: `${accountId}-saved`,
+  });
+}
 
 const HISTORY = {
   entries: [
@@ -207,6 +221,9 @@ describe("TraegerAccountsPage", () => {
       expect((await screen.findAllByText("Rollen geändert"))[0]).toBeVisible();
       expect(office.readCurrent?.().data).toEqual(BUERO);
       expect(history.readCurrent?.().data).toEqual(HISTORY);
+      // The right is gone: the list, read anew on every opening, is refused
+      // as well.
+      api.fetchTraegerBuero.mockRejectedValue(new ApiError("refused", 403));
       await openDownload(downloadLabel);
       fireEvent.click(await screen.findByRole("menuitem", { name: /Excel/ }));
       expect(
@@ -280,7 +297,7 @@ describe("TraegerAccountsPage", () => {
 
     const [kasse] = await screen.findAllByText("kasse@traeger.example");
     expect(kasse).toBeInTheDocument();
-    expect(screen.getAllByText("Abrechnung")[0]).toBeInTheDocument();
+    expect((await screen.findAllByText("Abrechnung"))[0]).toBeInTheDocument();
     expect(screen.getAllByText("(Du)")[0]).toBeInTheDocument();
     expect(screen.getByText("Offene Einladungen")).toBeInTheDocument();
     expect(screen.getAllByText("neu@traeger.example")[0]).toBeInTheDocument();
@@ -327,7 +344,7 @@ describe("TraegerAccountsPage", () => {
   });
 
   it("changes the roles of a person", async () => {
-    api.changeTraegerRoles.mockResolvedValue(undefined);
+    api.changeTraegerRoles.mockImplementation(savedRoles);
     renderPage();
 
     await openMenu("kasse@traeger.example");
@@ -343,17 +360,18 @@ describe("TraegerAccountsPage", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(api.changeTraegerRoles).toHaveBeenCalledWith("2", [
-        "billing",
-        "personnel",
-      ]),
+      expect(api.changeTraegerRoles).toHaveBeenCalledWith(
+        "2",
+        ["billing", "personnel"],
+        "r2",
+      ),
     );
   });
 
   // #5992: the role Dokumente has its own row with a plain description. A
   // person who holds it keeps it when someone changes their other roles.
   it("shows the role Dokumente and keeps it when roles change", async () => {
-    api.changeTraegerRoles.mockResolvedValue(undefined);
+    api.changeTraegerRoles.mockImplementation(savedRoles);
     api.fetchTraegerBuero.mockResolvedValue({
       ...BUERO,
       members: [
@@ -363,6 +381,7 @@ describe("TraegerAccountsPage", () => {
           name: "",
           email: "verwaltung@traeger.example",
           roles: ["administration", "documents"],
+          version: "r3",
         },
       ],
     });
@@ -387,16 +406,16 @@ describe("TraegerAccountsPage", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(api.changeTraegerRoles).toHaveBeenCalledWith("3", [
-        "administration",
-        "documents",
-        "personnel",
-      ]),
+      expect(api.changeTraegerRoles).toHaveBeenCalledWith(
+        "3",
+        ["administration", "documents", "personnel"],
+        "r3",
+      ),
     );
   });
 
   it("keeps Leitung for its only holder and says why", async () => {
-    api.changeTraegerRoles.mockResolvedValue(undefined);
+    api.changeTraegerRoles.mockImplementation(savedRoles);
     renderPage();
 
     await openMenu("leitung@traeger.example");
@@ -418,12 +437,156 @@ describe("TraegerAccountsPage", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(api.changeTraegerRoles).toHaveBeenCalledWith("1", [
-        "leadership",
-        "administration",
-        "school_access",
-      ]),
+      expect(api.changeTraegerRoles).toHaveBeenCalledWith(
+        "1",
+        ["leadership", "administration", "school_access"],
+        "r1",
+      ),
     );
+  });
+
+  // ADR 0311: the change rests on the roles as read. A refusal shows the
+  // stored roles, and the next save goes out over their version.
+  it("shows the stored roles after a refusal and saves over their version", async () => {
+    const changed = new ApiError("changed", 409, {
+      code: "general.changed_since_read",
+    });
+    api.changeTraegerRoles
+      .mockRejectedValueOnce(changed)
+      .mockImplementation(savedRoles);
+    api.fetchTraegerBuero.mockResolvedValueOnce(BUERO).mockResolvedValue({
+      ...BUERO,
+      members: [
+        BUERO.members[0]!,
+        {
+          ...BUERO.members[1]!,
+          roles: ["billing", "read_only"],
+          version: "r2b",
+        },
+      ],
+    });
+    renderPage();
+
+    await openMenu("kasse@traeger.example");
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Rollen bearbeiten" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: /Personal/ }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(
+        within(dialog).getByRole("checkbox", { name: /Nur lesen/ }),
+      ).toBeChecked(),
+    );
+    expect(
+      within(dialog).getByRole("checkbox", { name: /Personal/ }),
+    ).not.toBeChecked();
+    expect(api.changeTraegerRoles).toHaveBeenLastCalledWith(
+      "2",
+      ["billing", "personnel"],
+      "r2",
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(api.changeTraegerRoles).toHaveBeenLastCalledWith(
+        "2",
+        ["billing", "read_only"],
+        "r2b",
+      ),
+    );
+  });
+
+  // ADR 0311 rule 6: after a refusal whose read fails, nothing is sent.
+  it("sends no role change after a refusal until the stored roles are read", async () => {
+    api.changeTraegerRoles.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    api.fetchTraegerBuero
+      .mockResolvedValueOnce(BUERO)
+      .mockRejectedValue(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+    renderPage();
+
+    await openMenu("kasse@traeger.example");
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Rollen bearbeiten" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(api.fetchTraegerBuero).toHaveBeenCalledTimes(2));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(api.fetchTraegerBuero).toHaveBeenCalledTimes(2));
+    expect(api.changeTraegerRoles).toHaveBeenCalledTimes(1);
+  });
+
+  // A person removed after the refused change has nothing left to save:
+  // the dialog closes and says so, instead of a load error that blocks
+  // Speichern.
+  it("closes the role change when the person left meanwhile", async () => {
+    api.changeTraegerRoles.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    api.fetchTraegerBuero
+      .mockResolvedValueOnce(BUERO)
+      .mockResolvedValue({ ...BUERO, members: [BUERO.members[0]!] });
+    renderPage();
+
+    await openMenu("kasse@traeger.example");
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Rollen bearbeiten" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        "Diese Person gehört nicht mehr zum Träger-Büro. Die Rollen sind nicht geändert.",
+      ),
+    ).toBeVisible();
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(
+      screen.queryByRole("button", {
+        name: "Aktionen für kasse@traeger.example",
+      }),
+    ).not.toBeInTheDocument();
+    expect(api.changeTraegerRoles).toHaveBeenCalledTimes(1);
+  });
+
+  // ADR 0311 rule 1: the server logs every read of the people in the
+  // history, so each opening of the page reads once and shows no cached
+  // list without that entry.
+  it("reads the people anew on every opening", async () => {
+    function View({ open }: { open: boolean }) {
+      return open ? <TraegerAccountsPage /> : null;
+    }
+    function Providers({ children }: { children: React.ReactNode }) {
+      return (
+        <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+          <ToastProvider>{children}</ToastProvider>
+        </SWRConfig>
+      );
+    }
+    const view = render(<View open />, { wrapper: Providers });
+    await screen.findAllByText("kasse@traeger.example");
+    expect(api.fetchTraegerBuero).toHaveBeenCalledTimes(1);
+
+    view.rerender(<View open={false} />);
+    const reopened = deferred<typeof BUERO>();
+    api.fetchTraegerBuero.mockReturnValueOnce(reopened.promise);
+    view.rerender(<View open />);
+
+    await waitFor(() => expect(api.fetchTraegerBuero).toHaveBeenCalledTimes(2));
+    const actions = { name: "Aktionen für kasse@traeger.example" };
+    expect(screen.queryByRole("button", actions)).not.toBeInTheDocument();
+    await act(async () => reopened.resolve(BUERO));
+    expect((await screen.findAllByRole("button", actions))[0]).toBeVisible();
+    expect(api.fetchTraegerBuero).toHaveBeenCalledTimes(2);
   });
 
   it("lets Leitung pass on once another person holds it", async () => {
@@ -706,6 +869,11 @@ describe("TraegerAccountsPage", () => {
       renderPage();
       await screen.findAllByText("kasse@traeger.example");
       await screen.findAllByText("Rollen geändert");
+      // A 403 means the right is gone: the list, read anew on every
+      // opening, is refused as well.
+      if (status === 403) {
+        api.fetchTraegerBuero.mockRejectedValue(new ApiError("refused", 403));
+      }
       await openDownload(downloadLabel);
       fireEvent.click(await screen.findByRole("menuitem", { name: /Excel/ }));
       const closeToast = await screen.findByRole("button", {
@@ -735,7 +903,7 @@ describe("TraegerAccountsPage", () => {
   );
 
   it("reads the history again after a change", async () => {
-    api.changeTraegerRoles.mockResolvedValue(undefined);
+    api.changeTraegerRoles.mockImplementation(savedRoles);
     renderPage();
     await waitFor(() =>
       expect(api.fetchTraegerAccountHistory).toHaveBeenCalledTimes(1),
@@ -853,7 +1021,7 @@ describe("TraegerAccountsPage", () => {
     });
 
     it("keeps changed roles and the list shown when the reload fails", async () => {
-      api.changeTraegerRoles.mockResolvedValue(undefined);
+      api.changeTraegerRoles.mockImplementation(savedRoles);
       renderPage();
 
       await openMenu("kasse@traeger.example");

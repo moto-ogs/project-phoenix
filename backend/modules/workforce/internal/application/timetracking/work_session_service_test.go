@@ -3633,15 +3633,18 @@ func TestWSUpdateScheduleAnnouncesTimeTrackingChange(t *testing.T) {
 	svc.broadcaster = broadcaster
 	svc.scheduleRepo = &wsMockStaffWorkScheduleRepository{}
 	svc.staffRepo = &wsStaffAccessMock{
-		BindFn: func(context.Context, StaffScheduleBinding) error { return nil },
+		ScheduleFn: func(context.Context, int64) (*StaffScheduleAssignment, error) { return &StaffScheduleAssignment{}, nil },
+		BindFn:     func(context.Context, StaffScheduleBinding) error { return nil },
 	}
 	ctx, commit := tenanttest.WithAfterCommitHooks(
 		tenant.WithTenantID(context.Background(), 42),
 	)
 
 	err := svc.UpdateSchedule(ctx, &StaffScheduleBinding{ID: 100}, ScheduleUpdateInput{
-		Mode:           "custom",
-		RotationLength: 1,
+		// The token of the empty schedule the mocks store (ADR 0311).
+		ExpectedVersion: storedScheduleVersion(StaffScheduleBinding{ID: 100}, nil),
+		Mode:            "custom",
+		RotationLength:  1,
 		Entries: []ScheduleEntry{{
 			WeekIndex:     0,
 			DayOfWeek:     DayMonday,

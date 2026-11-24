@@ -39,6 +39,8 @@ export interface EnrollmentPayloadRules {
   restrictToOfferings: boolean;
   captchaToken: string | undefined;
   lateInviteToken: string | undefined;
+  /** The token of the form read the payload was filled on (ADR 0311). */
+  termsFingerprint: string | undefined;
 }
 
 export function buildEnrollmentPayload(
@@ -46,7 +48,9 @@ export function buildEnrollmentPayload(
   rules: EnrollmentPayloadRules,
 ): sharedContract.SubmitEnrollmentRequest {
   const fields = rules.schema?.fields ?? [];
-  const consentFlags: Record<string, unknown> = {};
+  const consentFlags: NonNullable<
+    sharedContract.SubmitEnrollmentRequest["consent_flags"]
+  > = {};
   for (const block of rules.restrictToOfferings ? [] : rules.legalBlocks) {
     // A notice records that the form showed it; the parent ticks nothing.
     consentFlags[block.key] = legalBlockHasCheckbox(block.kind)
@@ -77,6 +81,7 @@ export function buildEnrollmentPayload(
       additionalGuardians.length > 0 ? additionalGuardians : undefined,
     consent_flags: consentFlags,
     form_schema_id: rules.schema?.id || undefined,
+    expected_terms_fingerprint: rules.termsFingerprint,
     custom_data: rules.restrictToOfferings
       ? { ...values.customData }
       : visibleAnswerData(

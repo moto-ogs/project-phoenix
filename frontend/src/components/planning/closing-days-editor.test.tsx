@@ -277,6 +277,7 @@ describe("ClosingDaysEditor", () => {
         count: 83,
         days: [{ date: "2026-10-12", count: 83 }],
         kept: 0,
+        fingerprint: "zaehlung",
       }),
     );
 
@@ -318,6 +319,7 @@ describe("ClosingDaysEditor", () => {
         "2026-10-25",
         false,
         false,
+        "zaehlung",
       ),
     );
     await waitFor(() =>

@@ -28,7 +28,10 @@ import { StaffNotReleasedPage } from "~/components/traeger/staff/staff-not-relea
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Button } from "~/components/ui/button";
 import { EditActions } from "~/components/ui/edit-actions";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { FormModal } from "~/components/ui/form-modal";
 import { FramedList } from "~/components/ui/framed-list";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
@@ -43,8 +46,14 @@ import {
   useToast,
 } from "~/contexts/ToastContext";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
+import {
+  readStateWaitReason,
+  useReadDraftForm,
+  useReadDraftLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useInvalidateFamily } from "~/lib/swr";
+import { useActionOn, useDraftOn } from "~/lib/swr/read-draft";
 import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
   createTraegerAbsenceType,
@@ -165,44 +174,111 @@ function CreateAbsenceTypeModal({
 
 function AbsenceTypeCard({
   type,
+  reload,
   onSaved,
 }: Readonly<{
   type: TraegerAbsenceType;
+  /** Reads the types again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<readonly TraegerAbsenceType[]>;
   onSaved: (type: TraegerAbsenceType, message: string) => void;
 }>) {
-  const [draft, setDraft] = useState<AbsenceTypeDraft | null>(null);
+  const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const errors = useApiFormError();
   const display = useApiErrorDisplay();
+  const storedType = async () => {
+    const found = (await reload()).find((entry) => entry.id === type.id);
+    if (!found) throw new Error("absence type is gone");
+    return found;
+  };
+  // The form rests on the type as it was when editing began (ADR 0311): a
+  // newer read refills it only while untouched, a refused save shows the
+  // stored type with the message, and nothing goes out until it is read.
+  const edit = useDraftOn<
+    TraegerAbsenceType,
+    AbsenceTypeDraft,
+    string,
+    TraegerAbsenceType
+  >(
+    {
+      opening: editing ? `traeger-absence-type:${type.id}` : null,
+      data: type,
+      reload: storedType,
+      write: async (stored) => onSaved(stored, ""),
+    },
+    {
+      token: (read) => read.version,
+      toDraft: draftOf,
+      answer: (saved) => saved,
+    },
+  );
+  const form = useReadDraftForm(
+    editing ? edit : null,
+    errors,
+    "die Abwesenheitsart",
+  );
+  // Switching off and on sends the type as the card shows it: after a
+  // refusal nothing goes out until the stored type is read.
+  const toggle = useActionOn(
+    { opening: `traeger-absence-type-switch:${type.id}`, data: type, reload },
+    { token: (read) => read.version },
+  );
+  const toggleLoadError = useReadDraftLoadError(toggle, "die Abwesenheitsart");
+  const toggleWait = readStateWaitReason(toggle.status);
+  const draft = editing ? edit.draft : undefined;
 
-  const write = async (next: AbsenceTypeDraft, message: string) => {
-    setSaving(true);
-    try {
-      const saved = await updateTraegerAbsenceType(type.id, next);
-      setDraft(null);
-      onSaved(saved, message);
-    } catch (err) {
-      logger.error("traeger_absence_type_update_failed", {
-        error: errorMessage(err),
-      });
-      if (draft) void errors.show(err, { object: "die Abwesenheitsart" });
-      else void display.show(err, { object: "die Abwesenheitsart" });
-    } finally {
-      setSaving(false);
+  const switchActive = async (isActive: boolean, message: string) => {
+    const result = await toggle.submit(() =>
+      updateTraegerAbsenceType(
+        type.id,
+        { ...draftOf(type), isActive },
+        type.version,
+      ),
+    );
+    if (result.ok) {
+      onSaved(result.saved, message);
+      return;
     }
+    if (result.skipped) return;
+    logger.error("traeger_absence_type_update_failed", {
+      error: errorMessage(result.error),
+    });
+    void display.show(result.error, {
+      object: "die Abwesenheitsart",
+      reload: result.reload,
+    });
   };
 
-  const save = () => {
-    if (!draft) return;
+  const save = async () => {
+    if (!draft || !form.begin()) return;
     const invalid = absenceTypeDraftErrors(draft);
     if (Object.keys(invalid).length > 0) {
       errors.invalid("Bitte prüfe die markierten Felder.", invalid);
       return;
     }
-    void write(
-      draft,
-      `Die Abwesenheitsart „${draft.name.trim()}“ ist gespeichert. Alle Schulen sehen sie.`,
+    setSaving(true);
+    const result = await edit.submit((version, sent) =>
+      updateTraegerAbsenceType(type.id, sent, version),
     );
+    setSaving(false);
+    if (result.ok) {
+      setEditing(false);
+      onSaved(
+        result.saved,
+        `Die Abwesenheitsart „${result.saved.name}“ ist gespeichert. Alle Schulen sehen sie.`,
+      );
+      return;
+    }
+    if (result.skipped) return;
+    logger.error("traeger_absence_type_update_failed", {
+      error: errorMessage(result.error),
+    });
+    // Changed since editing began: the form stays open on the stored type
+    // and says so, without a retry (ADR 0311).
+    void errors.show(result.error, {
+      object: "die Abwesenheitsart",
+      reload: result.reload,
+    });
   };
 
   const carried = type.schools.filter((school) => school.carried).length;
@@ -218,7 +294,7 @@ function AbsenceTypeCard({
       }
       description={absenceTypeSummary(type)}
       action={
-        draft ? undefined : (
+        editing ? undefined : (
           <div className="flex items-center gap-2">
             <Button
               size="md"
@@ -228,7 +304,7 @@ function AbsenceTypeCard({
               tooltip="Öffnet die Felder dieser Art zum Bearbeiten."
               onClick={() => {
                 errors.clear();
-                setDraft(draftOf(type));
+                setEditing(true);
               }}
             >
               <PencilSimpleIcon className="h-4 w-4" aria-hidden="true" />
@@ -241,19 +317,22 @@ function AbsenceTypeCard({
                   ? {
                       label: "Ausschalten",
                       description:
+                        toggleWait ??
                         "Sofort an allen Schulen nicht mehr wählbar. Eingetragene Tage behalten den Namen.",
                       icon: (
                         <ProhibitIcon className="size-4" aria-hidden="true" />
                       ),
+                      disabled: !toggle.canSubmit,
                       onClick: () =>
-                        void write(
-                          { ...draftOf(type), isActive: false },
+                        void switchActive(
+                          false,
                           `Die Abwesenheitsart „${type.name}“ ist ausgeschaltet.`,
                         ),
                     }
                   : {
                       label: "Wieder einschalten",
                       description:
+                        toggleWait ??
                         "Sofort an allen Schulen wieder wählbar, außer an Schulen, die sie nicht anbieten.",
                       icon: (
                         <ArrowCounterClockwiseIcon
@@ -261,9 +340,10 @@ function AbsenceTypeCard({
                           aria-hidden="true"
                         />
                       ),
+                      disabled: !toggle.canSubmit,
                       onClick: () =>
-                        void write(
-                          { ...draftOf(type), isActive: true },
+                        void switchActive(
+                          true,
                           `Die Abwesenheitsart „${type.name}“ ist wieder eingeschaltet.`,
                         ),
                     },
@@ -273,28 +353,34 @@ function AbsenceTypeCard({
         )
       }
       footer={
-        draft ? (
+        editing ? (
           <EditActions
-            onCancel={() => setDraft(null)}
-            onSave={save}
+            onCancel={() => setEditing(false)}
+            onSave={() => void save()}
             saving={saving}
+            disabled={!edit.canSubmit}
+            disabledReason={form.waitReason}
             saveTooltip="Speichert die Art und trägt die Änderung sofort in alle deine Schulen."
           />
         ) : undefined
       }
     >
-      {draft ? (
+      {editing ? (
         <div className="space-y-4">
+          <LoadErrorAlert error={form.loadError} />
           <FormErrorAlert message={errors.error} />
-          <AbsenceTypeFields
-            idPrefix={`traeger-absence-type-${type.id}`}
-            draft={draft}
-            onChange={setDraft}
-            fieldError={errors.fieldError}
-          />
+          {draft ? (
+            <AbsenceTypeFields
+              idPrefix={`traeger-absence-type-${type.id}`}
+              draft={draft}
+              onChange={edit.setDraft}
+              fieldError={errors.fieldError}
+            />
+          ) : null}
         </div>
       ) : (
         <div>
+          <LoadErrorAlert error={toggleLoadError} className="mb-4" />
           <SectionLabel as="h3" className="mb-2">
             An den Schulen
             <span className="ml-2 font-normal text-gray-500">
@@ -335,6 +421,7 @@ export default function TraegerAbsenceTypesPage() {
     loading,
     error,
     mutate,
+    reloadOrThrow,
   } = useTraegerResource(
     traegerStaffKeys.absenceTypes(),
     fetchTraegerAbsenceTypes,
@@ -453,9 +540,10 @@ export default function TraegerAbsenceTypesPage() {
             <AbsenceTypeCard
               key={type.id}
               type={type}
+              reload={async () => (await reloadOrThrow()).types}
               onSaved={(saved, message) => {
                 replace(saved);
-                success(message);
+                if (message) success(message);
               }}
             />
           ))}

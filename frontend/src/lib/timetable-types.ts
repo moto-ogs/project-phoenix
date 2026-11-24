@@ -6,6 +6,7 @@
  * mappers in timetable-helpers.ts.
  */
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import type * as timetableContract from "~/lib/contract/timetable.generated";
 
 export type InstanceStatus = "planned" | "active" | "completed" | "cancelled";
@@ -145,6 +146,12 @@ interface InstanceOccupancy {
 
 export interface EnrichedInstance {
   id: string;
+  /**
+   * Read-state token (ADR 0311): an edit or conversion sends it back. The
+   * planner's read always answers it; a block built elsewhere has none and
+   * its save is refused as changed since read.
+   */
+  version?: string;
   date: string; // YYYY-MM-DD
   startTime: string; // HH:MM
   endTime: string; // HH:MM
@@ -350,6 +357,12 @@ interface TimetableTarget {
 
 export interface TimetableTemplate {
   id: string;
+  /**
+   * Read-state token (ADR 0311), answered by the editing read
+   * (`getTemplate`) and the update; the list carries none. A series edit
+   * and a split send it back.
+   */
+  version?: string;
   name: string;
   /** undefined: a block type this build does not know. */
   type: ActivityType | undefined;
@@ -494,6 +507,8 @@ export interface BulkCancelResult {
   kept: number;
   /** Those series by name, with their count in the range. */
   keptSeries: { name: string; count: number }[];
+  /** Token of the counted selection; the real run sends it back (ADR 0311). */
+  fingerprint: string;
 }
 
 /**
@@ -593,11 +608,13 @@ export interface GuardianNoticeReach {
   familyCount: number;
 }
 
-export interface AttendancePatchBody {
+export type AttendancePatchBody = Omit<
+  sharedContract.PatchAttendanceRequest,
+  "status" | "substatus"
+> & {
   status?: InstanceAttendanceStatus;
   substatus?: InstanceAttendanceSubstatus | null;
-  note?: string | null;
-}
+};
 
 export interface AttendanceResponse {
   id: string;
@@ -775,6 +792,10 @@ export type CreateInstanceBody = timetableContract.createInstanceRequest &
     >
   >;
 
+/** Body for PUT /api/timetable/instances/{id}: the edit and the block's read version. */
+export type UpdateInstanceBody = CreateInstanceBody &
+  Required<Pick<timetableContract.updateInstanceRequest, "expected_version">>;
+
 /**
  * Body for POST /api/timetable/templates. weekdays use ISO 8601
  * (Mo=1 … Fr=5). week_pattern: 0=every week, 1=A, 2=B.
@@ -833,6 +854,8 @@ export type UpdateTemplateBody = Omit<
   CreateTemplateBody,
   "materialize_from" | "materialize_to" | "list_kind" | "start_date"
 > & {
+  /** The series' read version (ADR 0311); a split sends it as well. */
+  expected_version: string;
   /**
    * Pulls a not-yet-started series forward (#2226): schedule envelope and
    * series-managed roster move to this earlier date. The backend accepts only
@@ -952,6 +975,8 @@ export type ConvertInstanceToSeriesBody = Omit<
   start_date: string;
   /** Per-occurrence note retained on the converted seed. */
   instance_notes?: string;
+  /** The one-off block's read version (ADR 0311). */
+  expected_version: string;
 };
 
 export interface ConvertInstanceToSeriesResult {

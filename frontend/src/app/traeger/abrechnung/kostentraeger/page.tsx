@@ -128,6 +128,7 @@ export default function TraegerKostentraegerPage() {
     loading,
     error: loadError,
     mutate,
+    reloadOrThrow,
   } = useTraegerResource(
     traegerBillingKeys.costShares(),
     fetchCareCostShares,
@@ -336,6 +337,7 @@ export default function TraegerKostentraegerPage() {
             <CareCostShareModal
               data={data}
               target={target}
+              reload={reloadOrThrow}
               onClose={() => setTarget(null)}
               onSaved={(next) => {
                 void mutate(next, { revalidate: false });

@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // upsertClassArrivalTimes writes the Unterrichtsschluss of one class. Weekdays
@@ -20,11 +21,11 @@ import (
 // higher-priority deviation until a person resets it explicitly (ADR 0005).
 func (s *arrivalScheduleService) upsertClassArrivalTimes(
 	ctx context.Context,
-	schoolClass string,
+	filter careplan.ArrivalScheduleBulkFilter,
 	schedules []careplan.ArrivalScheduleInput,
 	updatedBy int64,
-	authorize func(context.Context, careplan.ScheduleStudent) (bool, error),
 ) (*careplan.BulkUpsertResult, error) {
+	schoolClass := filter.SchoolClass
 	touched, err := classArrivalTimeChanges(schedules)
 	if err != nil {
 		return nil, err
@@ -39,7 +40,7 @@ func (s *arrivalScheduleService) upsertClassArrivalTimes(
 	}
 	students = dropDepartedArrivalStudents(students)
 
-	students, err = s.writeClassArrivalTimes(ctx, schoolClass, touched, updatedBy, students, authorize)
+	students, err = s.writeClassArrivalTimes(ctx, filter, touched, updatedBy, students)
 	if err != nil {
 		return nil, &careplan.ScheduleError{Op: opBulkUpsertArrivalSchedules, Err: err}
 	}
@@ -67,15 +68,15 @@ func classArrivalTimeChanges(schedules []careplan.ArrivalScheduleInput) (map[int
 
 func (s *arrivalScheduleService) writeClassArrivalTimes(
 	ctx context.Context,
-	schoolClass string,
+	filter careplan.ArrivalScheduleBulkFilter,
 	touched map[int]string,
 	updatedBy int64,
 	students []ports.ArrivalBulkStudent,
-	authorize func(context.Context, careplan.ScheduleStudent) (bool, error),
 ) ([]ports.ArrivalBulkStudent, error) {
+	schoolClass := filter.SchoolClass
 	err := s.tx.WithinTenant(ctx, func(txCtx context.Context) error {
 		var lockErr error
-		students, lockErr = s.lockClassArrivalStudents(txCtx, schoolClass, students, authorize)
+		students, lockErr = s.lockClassArrivalStudents(txCtx, schoolClass, students, filter.Authorize)
 		if lockErr != nil {
 			return lockErr
 		}
@@ -84,7 +85,7 @@ func (s *arrivalScheduleService) writeClassArrivalTimes(
 		if lockErr := s.classes.LockClass(txCtx, schoolClass); lockErr != nil {
 			return fmt.Errorf("lock class arrival times for %s: %w", schoolClass, lockErr)
 		}
-		row, before, mergeErr := s.mergedClassRow(txCtx, schoolClass, touched, updatedBy)
+		row, before, mergeErr := s.mergedClassRow(txCtx, schoolClass, filter.ExpectedVersion, touched, updatedBy)
 		if mergeErr != nil {
 			return mergeErr
 		}
@@ -137,16 +138,23 @@ func (s *arrivalScheduleService) lockClassArrivalStudents(
 
 // mergedClassRow folds the touched weekdays into whatever the class already
 // carries. An empty time clears that weekday. It also returns the times the
-// class carried before, normalized, so a save can tell what it changed.
+// class carried before, normalized, so a save can tell what it changed. The
+// caller holds the class lock: a class whose stored times differ from the
+// version its author read is refused (ADR 0311), since the screen sends
+// every filled weekday back, also the ones nobody touched.
 func (s *arrivalScheduleService) mergedClassRow(
 	ctx context.Context,
 	schoolClass string,
+	expectedVersion string,
 	touched map[int]string,
 	updatedBy int64,
 ) (*ports.ArrivalClassPlan, map[string]string, error) {
 	existing, err := s.classes.FindByClasses(ctx, []string{schoolClass})
 	if err != nil {
 		return nil, nil, fmt.Errorf("load class arrival times for %s: %w", schoolClass, err)
+	}
+	if err := readstate.Check(expectedVersion, classArrivalVersion(existing)); err != nil {
+		return nil, nil, err
 	}
 	row := &ports.ArrivalClassPlan{SchoolClass: schoolClass, ArrivalTimes: map[string]string{}}
 	var before map[string]string
@@ -191,7 +199,7 @@ func (s *arrivalScheduleService) GetClassArrivalTimes(
 	schoolClass string,
 ) (*careplan.ClassArrivalTimes, error) {
 	class := strings.TrimSpace(schoolClass)
-	result := &careplan.ClassArrivalTimes{SchoolClass: class, Times: map[string]string{}}
+	result := &careplan.ClassArrivalTimes{SchoolClass: class, Times: map[string]string{}, Version: classArrivalVersion(nil)}
 	if class == "" || s.classes == nil {
 		return result, nil
 	}
@@ -199,6 +207,7 @@ func (s *arrivalScheduleService) GetClassArrivalTimes(
 	if err != nil {
 		return nil, &careplan.ScheduleError{Op: "get class arrival times", Err: err}
 	}
+	result.Version = classArrivalVersion(rows)
 	if len(rows) == 0 || rows[0] == nil {
 		return result, nil
 	}
@@ -211,4 +220,14 @@ func (s *arrivalScheduleService) GetClassArrivalTimes(
 		result.UpdatedAt = &updated
 	}
 	return result, nil
+}
+
+// classArrivalVersion is the read-state token of a class's stored times: the
+// row's updated_at, which its trigger bumps on every update. A class without
+// a row has readstate.Absent, so a first save is bound as well.
+func classArrivalVersion(rows []*ports.ArrivalClassPlan) string {
+	if len(rows) == 0 || rows[0] == nil {
+		return readstate.Absent
+	}
+	return readstate.Of(rows[0].UpdatedAt)
 }

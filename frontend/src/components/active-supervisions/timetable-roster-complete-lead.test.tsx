@@ -30,6 +30,7 @@ describe("TimetableRosterContent complete lead (#3809)", () => {
   it("names the time from which the block can be completed", () => {
     render(
       <TimetableRosterContent
+        reloadAfterRefusal={vi.fn().mockResolvedValue(null)}
         addStudentSearch=""
         attendanceWebEnabled
         isAddingStudent={false}

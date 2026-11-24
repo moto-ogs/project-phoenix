@@ -281,7 +281,7 @@ type HolidayRegistrationHealth struct {
 	Allergies   string         `json:"allergies"`
 	Medication  string         `json:"medication"`
 	HealthNotes string         `json:"health_notes"`
-	CustomData  HolidayAnswers `json:"custom_data"`
+	CustomData  HolidayAnswers `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 }
 
 // HolidayRegistrationContact is an emergency contact or a person allowed to
@@ -355,7 +355,7 @@ type HolidayRegistrationEvent struct {
 // form.
 type HolidayChildAnswers struct {
 	ChildID    ident.ID       `json:"child_id"`
-	CustomData HolidayAnswers `json:"custom_data"`
+	CustomData HolidayAnswers `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 }
 
 // HolidayRegistrationAnswers are the form version and the answers of one
@@ -383,7 +383,7 @@ type HolidayRegistrationDetail struct {
 	LegalAcceptances map[string]time.Time         `json:"legal_acceptances"`
 	SecondGuardian   *HolidayGuardianInput        `json:"second_guardian,omitempty"`
 	Form             *HolidayPeriodForm           `json:"form"`
-	CustomData       HolidayAnswers               `json:"custom_data"`
+	CustomData       HolidayAnswers               `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 	ChildCustomData  []HolidayChildAnswers        `json:"child_custom_data"`
 	Contacts         []HolidayRegistrationContact `json:"contacts"`
 	PrivacyConsentAt time.Time                    `json:"privacy_consent_at"`
@@ -415,6 +415,9 @@ type HolidayRegistrationDetail struct {
 	// the waiting list because of the change that answers with this detail:
 	// a cancellation or a rebooking (#4699). A read has none.
 	Promotions []HolidayPromotion `json:"promotions,omitempty"`
+	// Version is the token of what the Büro edits and rebooks on the
+	// registration; an edit and a rebooking send it back (ADR 0311).
+	Version string `json:"version"`
 }
 
 // HolidayRegistrationExportRow is one booking of the export: one row per
@@ -464,6 +467,9 @@ type HolidayRegistrationEdit struct {
 	// CustomData replaces the family's answers to the questions of the form
 	// without health information.
 	CustomData *HolidayAnswers
+	// ExpectedVersion is the Version of the registration the Büro read; an
+	// edit refuses another one (ADR 0311).
+	ExpectedVersion string
 }
 
 // HolidayGuardiansEdit are the parent who registered with the postal
@@ -557,7 +563,7 @@ type HolidayRegistrationReview interface {
 	SetHolidayDebtorNumber(ctx context.Context, reviewer HolidayReviewer, periodID, registrationID int64, debtorNumber string) (HolidayRegistrationDetail, error)
 	// RebookHolidayChild replaces the bookings of one child: one time model
 	// per week, at least one week.
-	RebookHolidayChild(ctx context.Context, reviewer HolidayReviewer, periodID, registrationID, childID int64, bookings []HolidayBookingInput) (HolidayRegistrationDetail, error)
+	RebookHolidayChild(ctx context.Context, reviewer HolidayReviewer, periodID, registrationID, childID int64, expectedVersion string, bookings []HolidayBookingInput) (HolidayRegistrationDetail, error)
 	// EditHolidayRegistration changes the details a family entered (#5629)
 	// with the checks of the public form; the answers are checked against the
 	// form version of the registration, and schools are the Träger's

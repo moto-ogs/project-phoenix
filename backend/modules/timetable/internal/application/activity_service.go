@@ -104,11 +104,11 @@ func (s *ActivityService) ListCategories(ctx context.Context) ([]*activityContra
 // follow-up). Called from the shift-types admin flow; the FK lives on the
 // category side, so the write is owned here. Runs inside the caller's tenant
 // transaction (the shift-types router wires TenantTxMiddleware).
-func (s *ActivityService) SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64) error {
+func (s *ActivityService) SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64, expected map[int64]string) error {
 	if s.timetable == nil {
 		return &activityContract.ActivityError{Op: "set category shift type links", Err: errors.New("category capability is required")}
 	}
-	if err := s.timetable.SetCategoryShiftTypeLinks(ctx, shiftTypeID, categoryIDs); err != nil {
+	if err := s.timetable.SetCategoryShiftTypeLinks(ctx, shiftTypeID, categoryIDs, expected); err != nil {
 		return categoryActivityError("set category shift type links", err)
 	}
 	return nil
@@ -491,7 +491,8 @@ func (s *ActivityService) GetGroupWithDetails(ctx context.Context, id int64) (*a
 }
 
 // GetGroupsWithEnrollmentCounts returns the groups by name with the number
-// of enrollments of each.
+// of children enrolled in each; a child with several rows on a group counts
+// once (#7908).
 func (s *ActivityService) GetGroupsWithEnrollmentCounts(ctx context.Context) ([]*activityContract.Group, map[int64]int, error) {
 	groups, err := s.timetable.ListGroups(ctx, timetable.GroupFilter{OrderByName: true})
 	if err != nil {
@@ -509,8 +510,12 @@ func (s *ActivityService) GetGroupsWithEnrollmentCounts(ctx context.Context) ([]
 	if err != nil {
 		return nil, nil, legacyDatabaseError("count enrollments", err)
 	}
+	counted := make(map[[2]int64]bool, len(enrollments))
 	for _, enrollment := range enrollments {
-		counts[enrollment.ActivityGroupID]++
+		if key := [2]int64{enrollment.ActivityGroupID, enrollment.StudentID}; !counted[key] {
+			counted[key] = true
+			counts[enrollment.ActivityGroupID]++
+		}
 	}
 	return legacyGroups(groups), counts, nil
 }

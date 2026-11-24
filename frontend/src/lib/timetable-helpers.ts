@@ -16,6 +16,7 @@ import {
 } from "./date-helpers";
 import { LOCATION_COLORS } from "./location-helper";
 import { knownEnum } from "./contract/known-enum";
+import { compareIds } from "./compare-ids";
 import type {
   applyDeviationsRequest,
   bulkSubstitutionRequest,
@@ -637,6 +638,7 @@ export function mapInstance(
 
   return {
     id: raw.id,
+    version: raw.version,
     date: raw.date,
     startTime: raw.start_time,
     endTime: raw.end_time,
@@ -740,6 +742,7 @@ export function mapBulkCancelResult(
       name: series.name,
       count: series.count,
     })),
+    fingerprint: raw.fingerprint,
   };
 }
 
@@ -1201,6 +1204,8 @@ function mapRosterMaintenance(
 function mapTemplate(template: WireTemplate): TimetableTemplate {
   return {
     id: template.id,
+    // The editing read answers it; the list carries none (ADR 0311).
+    version: template.version || undefined,
     name: template.name,
     type: knownEnum(ACTIVITY_TYPE_VALUES, template.type),
     listKind: knownEnum(LIST_KIND_VALUES, template.list_kind),
@@ -1504,7 +1509,7 @@ export function comparePlanningInstances(
   const aOrder = a.planningTrackSortOrder ?? Number.MAX_SAFE_INTEGER;
   const bOrder = b.planningTrackSortOrder ?? Number.MAX_SAFE_INTEGER;
   if (aOrder !== bOrder) return aOrder - bOrder;
-  return a.id.localeCompare(b.id, "de", { numeric: true });
+  return compareIds(a.id, b.id);
 }
 
 /**

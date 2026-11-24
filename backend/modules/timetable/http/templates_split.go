@@ -13,11 +13,13 @@ import (
 	"net/http"
 
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -31,19 +33,19 @@ type NullableInt struct {
 	Value *int
 }
 
-// NullableInt64 is the int64 member of the tri-state family.
-type NullableInt64 struct {
+// NullableID is the ident.ID member of the tri-state family.
+type NullableID struct {
 	Set   bool
 	Value *ident.ID
 }
 
-func (n *NullableInt64) UnmarshalJSON(b []byte) error {
+func (n *NullableID) UnmarshalJSON(b []byte) error {
 	n.Set = true
 	if string(b) == "null" {
 		n.Value = nil
 		return nil
 	}
-	return json.Unmarshal(b, &n.Value)
+	return wire.Unmarshal(b, &n.Value)
 }
 
 func (n *NullableInt) UnmarshalJSON(b []byte) error {
@@ -73,22 +75,22 @@ func (n *NullableIntSlice) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, &n.Value)
 }
 
-// NullableInt64Slice is the []int64 member of the tri-state family: it tells
+// NullableIDSlice is the []ident.ID member of the tri-state family: it tells
 // an omitted source_care_offering_ids ("keep the stored Quelle") apart from
 // an explicit null or empty list ("clear the source") on the template PUT
 // and the split body (multi-source follow-up to #2147 round 12).
-type NullableInt64Slice struct {
+type NullableIDSlice struct {
 	Set   bool
 	Value []ident.ID
 }
 
-func (n *NullableInt64Slice) UnmarshalJSON(b []byte) error {
+func (n *NullableIDSlice) UnmarshalJSON(b []byte) error {
 	n.Set = true
 	if string(b) == "null" {
 		n.Value = nil
 		return nil
 	}
-	return json.Unmarshal(b, &n.Value)
+	return wire.Unmarshal(b, &n.Value)
 }
 
 // NullableStringSlice is the []string member of the tri-state family: it
@@ -111,9 +113,7 @@ func (n *NullableStringSlice) UnmarshalJSON(b []byte) error {
 
 // NullableStr is the string analogue of NullableInt: it tells an omitted note
 // ("inherit the source Wochennotiz") apart from an explicit null ("clear the
-// series note") for the split flow (#1837 follow-up). (Named NullableStr to
-// avoid colliding with the RawMessage-based nullableString in
-// instance_students.go, which is a different tri-state mechanism.)
+// series note") for the split flow (#1837 follow-up).
 type NullableStr struct {
 	Set   bool
 	Value *string
@@ -260,6 +260,8 @@ func (rs *Resource) splitTemplate(w http.ResponseWriter, r *http.Request) {
 	if !rs.validateSplitTemplateReferences(w, r, req) {
 		return
 	}
+	// The owner compares the version under its recurrence gate (ADR 0311).
+	in.ExpectedVersion = req.ExpectedVersion
 
 	result, err := rs.Templates.SplitTemplate(r.Context(), in)
 	if err != nil {

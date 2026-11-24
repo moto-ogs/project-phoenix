@@ -46,7 +46,7 @@ func (s *parentFormsRequestStub) LoadEnrolleeFormBootstrap(_ context.Context, _ 
 	return &PublicFormBootstrapData{Phase: &capability.Phase{}}, nil
 }
 
-const parentFormsSubmitBody = `{"phase_id":4242,"guardian_first_name":"Anna","guardian_last_name":"Beispiel","guardian_email":"anna@example.test","late_invite_token":"parent-late-token","children":[{"first_name":"Lara","last_name":"Beispiel","date_of_birth":"2018-03-04"}]}`
+const parentFormsSubmitBody = `{"phase_id":"4242","guardian_first_name":"Anna","guardian_last_name":"Beispiel","guardian_email":"anna@example.test","late_invite_token":"parent-late-token","children":[{"first_name":"Lara","last_name":"Beispiel","date_of_birth":"2018-03-04"}]}`
 
 // The portal hands over the resolved school, the caller's account and the
 // school-wide submit fact; the owner side stamps them onto the public
@@ -80,7 +80,7 @@ func TestParentFormsSubmitStampsGuardianAccountTenantAndEligibility(t *testing.T
 		Data SubmitEnrollmentResponse `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
-	assert.Equal(t, "99001", body.Data.RequestID)
+	assert.Equal(t, "99001", body.Data.RequestID.String())
 	assert.Equal(t, "/status/status-token", body.Data.StatusURL)
 }
 

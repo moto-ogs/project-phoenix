@@ -35,7 +35,9 @@ func (s *OfferingChanges) pendingRow(ctx context.Context, requestID int64) (care
 
 // LockConflictRequest locks a pending request of the conflict group.
 func (s *OfferingChanges) LockConflictRequest(ctx context.Context, requestID int64) error {
-	_, err := s.lockPendingRow(ctx, requestID, "")
+	// The coordinator compares the group's versions itself, and each decision
+	// of the group compares its own again (ADR 0311).
+	_, err := s.lockOpenRow(ctx, requestID, nil)
 	return err
 }
 

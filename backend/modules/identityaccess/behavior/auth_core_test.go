@@ -1137,10 +1137,11 @@ func TestAuthService_UpdateRole(t *testing.T) {
 		role, err := rbac.CreateRole(ctx, name, "original description", testpkg.StrPtr("user"))
 		require.NoError(t, err)
 
-		role.Description = "updated description"
+		read, err := rbac.GetRole(ctx, role.ID)
+		require.NoError(t, err)
 
 		// ACT
-		err = rbac.UpdateRole(ctx, role)
+		_, err = rbac.UpdateRole(ctx, role.ID, identityaccess.RoleChange{Name: role.Name, Description: "updated description", BaseRole: role.BaseRole}, identityaccess.RoleVersion(read))
 
 		// ASSERT
 		require.NoError(t, err)
@@ -1322,7 +1323,7 @@ func TestAuthService_ReplaceAccountRole(t *testing.T) {
 	require.NoError(t, rbac.AssignRoleToAccount(ctx, account.ID, oldRole.ID))
 	require.NoError(t, rbac.AssignRoleToAccount(ctx, account.ID, extraRole.ID))
 
-	require.NoError(t, rbac.ReplaceAccountRole(ctx, account.ID, newRole.ID))
+	require.NoError(t, rbac.ReplaceAccountRole(ctx, account.ID, newRole.ID, accountRolesVersion(t, ctx, rbac, account.ID)))
 
 	roles, err := rbac.GetAccountRoles(ctx, account.ID)
 	require.NoError(t, err)
@@ -1331,15 +1332,16 @@ func TestAuthService_ReplaceAccountRole(t *testing.T) {
 	// Replacing with a role the account already holds keeps that role and
 	// still drops every other staff role.
 	require.NoError(t, rbac.AssignRoleToAccount(ctx, account.ID, extraRole.ID))
-	require.NoError(t, rbac.ReplaceAccountRole(ctx, account.ID, newRole.ID))
+	require.NoError(t, rbac.ReplaceAccountRole(ctx, account.ID, newRole.ID, accountRolesVersion(t, ctx, rbac, account.ID)))
 
 	roles, err = rbac.GetAccountRoles(ctx, account.ID)
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []int64{guardianRole.ID, newRole.ID}, roleIDs(roles))
 
 	sentinelErr := errors.New("force outer rollback")
+	version := accountRolesVersion(t, ctx, rbac, account.ID)
 	err = testpkg.RunInTenantTransaction(ctx, func(txCtx context.Context) error {
-		if err := rbac.ReplaceAccountRole(txCtx, account.ID, oldRole.ID); err != nil {
+		if err := rbac.ReplaceAccountRole(txCtx, account.ID, oldRole.ID, version); err != nil {
 			return err
 		}
 		return sentinelErr
@@ -1541,24 +1543,29 @@ func TestAuthService_ReplaceRolePermissions(t *testing.T) {
 	newPermission := testpkg.CreateTestPermission(t, db, "replace-new", "replace-new", "read")
 	require.NoError(t, rbac.AssignPermissionToRole(ctx, role.ID, oldPermission.ID))
 
-	require.NoError(t, rbac.ReplaceRolePermissions(ctx, role.ID, []int64{newPermission.ID}))
-
-	permissions, err := rbac.GetRolePermissions(ctx, role.ID)
+	read, err := rbac.GetRolePermissions(ctx, role.ID)
 	require.NoError(t, err)
+	_, err = rbac.ReplaceRolePermissions(ctx, role.ID, []int64{newPermission.ID}, read.Version)
+	require.NoError(t, err)
+
+	selection, err := rbac.GetRolePermissions(ctx, role.ID)
+	require.NoError(t, err)
+	permissions := selection.Permissions
 	require.Len(t, permissions, 1)
 	assert.Equal(t, newPermission.ID, permissions[0].ID)
 
 	sentinelErr := errors.New("force outer rollback")
 	err = testpkg.RunInTenantTransaction(ctx, func(txCtx context.Context) error {
-		if err := rbac.ReplaceRolePermissions(txCtx, role.ID, []int64{oldPermission.ID}); err != nil {
+		if _, err := rbac.ReplaceRolePermissions(txCtx, role.ID, []int64{oldPermission.ID}, selection.Version); err != nil {
 			return err
 		}
 		return sentinelErr
 	})
 	require.ErrorIs(t, err, sentinelErr)
 
-	permissions, err = rbac.GetRolePermissions(ctx, role.ID)
+	selection, err = rbac.GetRolePermissions(ctx, role.ID)
 	require.NoError(t, err)
+	permissions = selection.Permissions
 	require.Len(t, permissions, 1)
 	assert.Equal(t, newPermission.ID, permissions[0].ID)
 }
@@ -1618,7 +1625,7 @@ func TestAuthService_GetRolePermissions(t *testing.T) {
 
 		// ASSERT
 		require.NoError(t, err)
-		assert.NotEmpty(t, result)
+		assert.NotEmpty(t, result.Permissions)
 	})
 }
 

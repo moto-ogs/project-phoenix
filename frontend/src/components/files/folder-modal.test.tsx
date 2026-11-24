@@ -38,7 +38,14 @@ function renderModal() {
   const onClose = vi.fn();
   render(
     <ToastProvider>
-      <FolderModal isOpen initial={null} onSaved={onSaved} onClose={onClose} />
+      <FolderModal
+        isOpen
+        initial={null}
+        stored={undefined}
+        reload={() => Promise.resolve(undefined)}
+        onSaved={onSaved}
+        onClose={onClose}
+      />
     </ToastProvider>,
   );
   return { onSaved, onClose };

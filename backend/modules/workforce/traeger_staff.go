@@ -161,6 +161,11 @@ type TraegerStaffEmployment struct {
 	StaffID    ident.ID `json:"staff_id"`
 	Active     bool     `json:"active"`
 	ViaPool    bool     `json:"via_pool"`
+	// EmployerName names the Schulträger or the Gemeinde that employs the
+	// staff of this school in place of the Träger (#4811); empty where the
+	// Träger is the employer, as for every Einsatzort of the Vertretungspool.
+	// Only the view of one record carries it.
+	EmployerName string `json:"employer_name"`
 }
 
 // TraegerStaffRecordSummary is one record in the list.
@@ -217,6 +222,9 @@ type TraegerStaffLinkRequest struct {
 	RecordID *int64
 	Members  []TraegerStaffMemberRef
 	Choices  map[string]string
+	// ExpectedFingerprint is the Fingerprint of the preview the choices were
+	// made on (ADR 0311); the link refuses values changed since.
+	ExpectedFingerprint string
 }
 
 // TraegerStaffFieldOption is one value a source brings for a field. Bank
@@ -241,14 +249,20 @@ type TraegerStaffLinkPreview struct {
 	Record  *TraegerStaffRecordSummary `json:"record,omitempty"`
 	Members []TraegerStaffCandidate    `json:"members"`
 	Fields  []TraegerStaffFieldPreview `json:"fields"`
+	// Fingerprint is the token of every value the preview compares; the
+	// link sends it back as expected_fingerprint (ADR 0311).
+	Fingerprint string `json:"fingerprint"`
 }
 
 // TraegerStaffFinancial is the bank and tax section of a record, masked or,
 // after an explicit reveal, as entered.
 type TraegerStaffFinancial struct {
 	IBAN                 *string `json:"iban"`
-	TaxID                *string `json:"tax_id"`
+	TaxID                *string `json:"tax_id" contract_text:"statutory tax identifier"`
 	SocialSecurityNumber *string `json:"social_security_number"`
+	// Version is the section's token over its sealed values (ADR 0311);
+	// a save of the section sends it back.
+	Version string `json:"version"`
 }
 
 // TraegerStaffChange is one entry of a record's trail. Value is the value
@@ -266,8 +280,11 @@ type TraegerStaffChange struct {
 // section, its trail and its proofs.
 type TraegerStaffRecordDetail struct {
 	TraegerStaffRecordSummary
-	Financial TraegerStaffFinancial `json:"financial"`
-	Changes   []TraegerStaffChange  `json:"changes"`
+	// PersonVersion is the token of name and birthday (ADR 0311); a
+	// correction of the person sends it back.
+	PersonVersion string                `json:"person_version"`
+	Financial     TraegerStaffFinancial `json:"financial"`
+	Changes       []TraegerStaffChange  `json:"changes"`
 	// Proofs is the state of every live kind of the Träger at the record
 	// (#4707).
 	Proofs []TraegerStaffProof `json:"proofs"`
@@ -277,6 +294,11 @@ type TraegerStaffRecordDetail struct {
 	// but could not reach yet; the next change of the record brings them up
 	// to date (ADR 0237 section 4). Empty after every complete write.
 	UnsyncedSchools []string `json:"unsynced_schools,omitempty"`
+	// HeldBankSchools names the schools whose bank values changed between a
+	// link's read and its hand-over: the record keeps the values the link
+	// read, the school keeps its new row, and the Personalverwaltung checks
+	// the bank section (ADR 0311). Only a link answers it.
+	HeldBankSchools []string `json:"held_bank_schools,omitempty"`
 }
 
 // TraegerStaffPerson is the person of a record as the Personalverwaltung
@@ -286,6 +308,9 @@ type TraegerStaffPerson struct {
 	FirstName string
 	LastName  string
 	Birthday  *string
+	// ExpectedVersion is the PersonVersion the form opened on; a person
+	// changed since is refused (readstate.ErrChanged).
+	ExpectedVersion string
 }
 
 // TraegerStaffPersonError names the refused field of a person correction;
@@ -334,6 +359,15 @@ type TraegerStaffReleases interface {
 // TraegerStaffSchools lists the live schools of a Träger.
 type TraegerStaffSchools interface {
 	TraegerSchools(ctx context.Context, organizationID int64) ([]TraegerStaffSchool, error)
+}
+
+// TraegerStaffEmployers names per school the body that employs its staff
+// when that is not the Träger (#4811): the school's Schulträger or Gemeinde
+// as the responsibility "Personal" names it, in the caller's Träger
+// transaction. A school whose staff the Träger employs has no entry. The
+// roots bind it to the responsibilities of Organisation & Tenancy.
+type TraegerStaffEmployers interface {
+	SchoolEmployers(ctx context.Context, organizationID int64, schoolIDs []int64) (map[int64]string, error)
 }
 
 // TraegerSchoolEmployment is one live employment of a school as School
@@ -426,4 +460,7 @@ type TraegerStaffPorts struct {
 	// Emails finds a school's accounts and invitations of an address, for
 	// the check of a hire (#7378); nil outside the records.
 	Emails TraegerSchoolEmails
+	// Employers names the employer at each Einsatzort of a record (#4811);
+	// nil where the Träger employs everywhere.
+	Employers TraegerStaffEmployers
 }

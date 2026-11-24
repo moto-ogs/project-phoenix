@@ -99,8 +99,10 @@ func (m parentSEPAMandates) GrantSEPAMandate(ctx context.Context, organizationID
 	return parentMandateView(view), parentMandateError(err)
 }
 
-func (m parentSEPAMandates) RevokeSEPAMandate(ctx context.Context, organizationID int64, reader parentportal.SEPAMandateReader) (parentportal.SEPAMandateView, error) {
-	view, err := m.mandates.RevokeParentSEPAMandate(ctx, organizationID, parentbilling.ParentMandateReader(reader))
+func (m parentSEPAMandates) RevokeSEPAMandate(ctx context.Context, organizationID int64, reader parentportal.SEPAMandateReader,
+	expectedVersion string,
+) (parentportal.SEPAMandateView, error) {
+	view, err := m.mandates.RevokeParentSEPAMandate(ctx, organizationID, parentbilling.ParentMandateReader(reader), expectedVersion)
 	return parentMandateView(view), parentMandateError(err)
 }
 
@@ -115,7 +117,7 @@ func parentMandateView(view parentbilling.ParentMandate) parentportal.SEPAMandat
 		out.Prefill = &prefill
 	}
 	if mandate := view.Mandate; mandate != nil {
-		summary := parentportal.SEPAMandateSummary{ID: ident.ID(mandate.ID), Reference: mandate.Reference, SignedOn: mandate.SignedOn,
+		summary := parentportal.SEPAMandateSummary{ID: ident.ID(mandate.ID), Version: mandate.Version, Reference: mandate.Reference, SignedOn: mandate.SignedOn,
 			Kind: mandate.Kind, AccountHolder: mandate.AccountHolder, IBANMasked: mandate.IBANMasked, BIC: mandate.BIC,
 			Source: mandate.Source, CollectionEligible: mandate.CollectionEligible, CreditorID: mandate.CreditorID, RevokedOn: mandate.RevokedOn}
 		if mandate.Proof != nil {

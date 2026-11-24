@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { env } from "~/env";
 import { tenantSessionCookieName } from "~/lib/session-cookie-exit.server";
 import { toBrowserSession } from "~/server/auth/browser-session";
+import { sessionIdentifier } from "~/server/auth/jwt-payload";
 import {
   PORTALS,
   type PortalDescriptor,
@@ -61,7 +62,7 @@ async function readFreshPortalToken(
   const cookie = (await headers()).get("cookie");
   if (!cookie) return null;
   const cookieName = sessionCookieName(key);
-  const token = await getToken({
+  const cookieToken = await getToken({
     // The cookie header alone: getToken would otherwise fall back to an
     // Authorization bearer value, which is no portal cookie.
     req: { headers: new Headers({ cookie }) },
@@ -69,11 +70,17 @@ async function readFreshPortalToken(
     cookieName,
     salt: cookieName,
   });
+  if (!cookieToken) return null;
+  const token = {
+    ...cookieToken,
+    tenantId: sessionIdentifier(cookieToken.tenantId),
+    orgId: sessionIdentifier(cookieToken.orgId),
+    actingAdminId: sessionIdentifier(cookieToken.actingAdminId),
+  };
 
   const portal: PortalDescriptor = PORTALS[key];
   const now = Date.now();
   if (
-    !token ||
     !portal.scopes.includes(token.scope) ||
     (portal.snapshotClaims && !portal.snapshotClaims(token)) ||
     typeof token.id !== "string" ||

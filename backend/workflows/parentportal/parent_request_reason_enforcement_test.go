@@ -149,7 +149,7 @@ func TestStaffApprovalReasonFollowsReasonPolicy(t *testing.T) {
 			require.NoError(t, err)
 
 			decideErr := testpkg.WithTenantTx(t, adminCtx(), db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-				_, err := requests.Decide(txCtx, careplan.ExcusedRequestDecideInput{
+				_, err := requests.Decide(txCtx, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, res.PendingRequest.ID),
 					RequestID:      res.PendingRequest.ID,
 					Approve:        true,
 					ReviewedBy:     chain.AccountID,
@@ -181,7 +181,7 @@ func TestStaffRejectionAlwaysNeedsAReason(t *testing.T) {
 	require.NoError(t, err)
 
 	decideErr := testpkg.WithTenantTx(t, adminCtx(), db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		_, err := requests.Decide(txCtx, careplan.ExcusedRequestDecideInput{
+		_, err := requests.Decide(txCtx, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, res.PendingRequest.ID),
 			RequestID: res.PendingRequest.ID, Approve: false, ReviewedBy: chain.AccountID,
 			ReasonRequired: false,
 		})

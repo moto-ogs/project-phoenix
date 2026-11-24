@@ -78,23 +78,38 @@ function criteriaFromBackend(
   }));
 }
 
+/** The criteria as read, with the token a save sends back (ADR 0311). */
+export interface HolidayCriteriaRead {
+  readonly criteria: HolidayCriterion[];
+  readonly version: string;
+}
+
+function criteriaReadFromBackend(
+  data: traegerHolidayPeriodsContract.HolidayCriteriaCatalog,
+): HolidayCriteriaRead {
+  return { criteria: criteriaFromBackend(data), version: data.version };
+}
+
 /** The criteria of the Träger, highest priority first. */
-export async function fetchHolidayCriteria(): Promise<HolidayCriterion[]> {
-  return criteriaFromBackend(
+export async function fetchHolidayCriteria(): Promise<HolidayCriteriaRead> {
+  return criteriaReadFromBackend(
     await bffJson("org", "GET /traeger/holiday-periods/criteria"),
   );
 }
 
 /**
- * Saves the whole list; its order is the priority. A criterion left out is
- * archived: given answers and decisions keep it.
+ * Saves the whole list over the version it was read in; its order is the
+ * priority. A criterion left out is archived: given answers and decisions
+ * keep it. The backend refuses a list saved since (ADR 0311).
  */
 export async function saveHolidayCriteria(
   criteria: readonly HolidayCriterionInput[],
-): Promise<HolidayCriterion[]> {
-  return criteriaFromBackend(
+  version: string,
+): Promise<HolidayCriteriaRead> {
+  return criteriaReadFromBackend(
     await bffJson("org", "PUT /traeger/holiday-periods/criteria", {
       body: {
+        expected_version: version,
         criteria: criteria.map((criterion) => ({
           id: criterion.id ? criterion.id : "0",
           name: criterion.name,

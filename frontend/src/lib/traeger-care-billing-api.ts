@@ -173,6 +173,11 @@ export interface CareTariffs {
   readonly lists?: readonly CarePriceListHead[];
   /** Per school ID the last month an issued invoice bills ("YYYY-MM-01"). */
   readonly billedUntil: Readonly<Record<string, string>>;
+  /**
+   * Per school ID the read-state token of its price lists: a save or
+   * removal sends back the one it started from (ADR 0311).
+   */
+  readonly versions?: Readonly<Record<string, string>>;
 }
 
 export interface CarePriceInput {
@@ -477,6 +482,69 @@ export function joinedChildrenFromBackend(
   }));
 }
 
+const BILLED_REASON_VALUES = [
+  "already_billed",
+  "meal_only_invoice",
+  "unpriced_notice",
+] as const;
+const BILLED_SOURCE_VALUES = ["care_run", "care_notice_run"] as const;
+const DOCUMENT_KIND_VALUES = ["invoice", "fee_notice"] as const;
+
+/**
+ * An issued monthly invoice or a month of a Jahresbescheid that already
+ * bills a child's month (#7892), with the run that issued it.
+ */
+export interface CareBilledInvoice {
+  /** A monthly run or a run of Jahresbescheide; undefined: unknown. */
+  readonly source: (typeof BILLED_SOURCE_VALUES)[number] | undefined;
+  /** Empty when the run is not known. */
+  readonly runId: string;
+  readonly contractId: string;
+  readonly schoolName: string;
+  readonly number: string;
+  readonly documentKind: (typeof DOCUMENT_KIND_VALUES)[number] | undefined;
+}
+
+/**
+ * A child a run holds back because an issued invoice of the month already
+ * bills it (ADR 0158, Nachtrag #7892): another contract of the child billed
+ * the month, or the invoice of the contract itself carries only its Mensa.
+ * In a Jahreslauf also: a contract of the child without a price keeps its
+ * notice, which assesses days another contract would assess (#7952).
+ * `contracts` get no invoice in this run, `invoices` are in their way.
+ */
+export interface CareBilledChild {
+  readonly childFirstName: string;
+  readonly childLastName: string;
+  readonly reason: (typeof BILLED_REASON_VALUES)[number] | undefined;
+  readonly contracts: CareDuplicate["contracts"];
+  readonly invoices: readonly CareBilledInvoice[];
+}
+
+/** Maps the children a monthly or notice run holds for an issued invoice. */
+export function billedChildrenFromBackend(
+  children: readonly sharedContract.CareBilledChild[] | null | undefined,
+): CareBilledChild[] {
+  return (children ?? []).map((child) => ({
+    childFirstName: child.child_first_name,
+    childLastName: child.child_last_name,
+    reason: knownEnum(BILLED_REASON_VALUES, child.reason),
+    contracts: (child.contracts ?? []).map((contract) => ({
+      contractId: id(contract.contract_id),
+      schoolId: id(contract.school_id),
+      schoolName: contract.school_name,
+    })),
+    invoices: (child.invoices ?? []).map((invoice) => ({
+      source: knownEnum(BILLED_SOURCE_VALUES, invoice.source),
+      runId: invoice.run_id === "0" ? "" : id(invoice.run_id),
+      contractId: id(invoice.contract_id),
+      schoolName: invoice.school_name,
+      number: invoice.number,
+      documentKind: knownEnum(DOCUMENT_KIND_VALUES, invoice.document_kind),
+    })),
+  }));
+}
+
 /**
  * An invoice of a monthly run whose family has no confirmed number of
  * children for the month (#7356): the sibling rule counts its children with
@@ -500,6 +568,11 @@ export interface CareRunDetail extends CareRun {
   /** Children of a calculated run joined by their name across schools. */
   readonly joinedChildren: readonly CareJoinedChild[];
   /**
+   * Children the run holds back because an issued invoice of the month
+   * already bills them (#7892); a released run shows those it stored.
+   */
+  readonly billedChildren?: readonly CareBilledChild[];
+  /**
    * Families a sibling rule that counts the family ranks without a
    * confirmed number for the month (#5918); it counts their children with a
    * contract alone.
@@ -522,6 +595,8 @@ export interface CareRunDetail extends CareRun {
   readonly mealChanged: readonly CareMealChanged[];
   /** The due dates of the run per payment method (#4689). */
   readonly dueDates?: readonly RunDueDate[];
+  /** The read-state token of `dueDates` a change sends back (ADR 0311). */
+  readonly dueDatesVersion?: string;
   /** The review of a calculated run (#5916). */
   readonly schools: readonly CareSchool[];
   readonly excludedCount: number;
@@ -671,6 +746,7 @@ function tariffsFromBackend(
       freeMonths: list.free_months ?? [],
     })),
     billedUntil: billedUntilFromBackend(body.billed_until),
+    versions: { ...body.versions },
   };
 }
 
@@ -815,6 +891,7 @@ export function detailFromBackend(
     })),
     duplicateChildren: detail.duplicate_children,
     joinedChildren: joinedChildrenFromBackend(detail.joined_children),
+    billedChildren: billedChildrenFromBackend(detail.billed_children),
     uncountedFamilies: detail.uncounted_families,
     uncountedContracts: (detail.uncounted_contracts ?? []).map((contract) => ({
       contractId: id(contract.contract_id),
@@ -833,6 +910,7 @@ export function detailFromBackend(
     mealUnbilled: mealUnbilledFromBackend(detail.meal_unbilled),
     mealChanged: mealChangedFromBackend(detail.meal_changed),
     dueDates: runDueDatesFromBackend(detail.due_dates),
+    dueDatesVersion: detail.due_dates_version,
     schools: (detail.schools ?? []).map(schoolFromBackend),
     excludedCount: detail.excluded_count,
     excludedCents: detail.excluded_cents,
@@ -860,12 +938,16 @@ export async function fetchCareTariffs(): Promise<CareTariffs> {
   return tariffsFromBackend(await bffJson("org", "GET /traeger/care-tariffs/"));
 }
 
-/** Sets the prices of a school from `validFrom` (the 1st of a month) on. */
+/**
+ * Sets the prices of a school from `validFrom` (the 1st of a month) on,
+ * over the version of the school's price lists the form started from.
+ */
 export async function saveCarePriceList(
   schoolId: string,
   validFrom: string,
   prices: readonly CarePriceInput[],
-  freeMonths: readonly number[] = [],
+  freeMonths: readonly number[],
+  expectedVersion: string,
 ): Promise<CareTariffs> {
   return tariffsFromBackend(
     await bffJson("org", "PUT /traeger/care-tariffs/", {
@@ -873,6 +955,7 @@ export async function saveCarePriceList(
         school_id: schoolId,
         valid_from: validFrom,
         free_months: [...freeMonths],
+        expected_version: expectedVersion,
         prices: prices.map((price) => ({
           care_offering_id: price.careOfferingId,
           module_name: price.moduleName,
@@ -887,16 +970,23 @@ export async function saveCarePriceList(
   );
 }
 
-/** Removes the prices of a school that start on `validFrom`. */
+/**
+ * Removes the prices of a school that start on `validFrom`, over the
+ * version of the school's price lists the page showed.
+ */
 export async function deleteCarePriceList(
   schoolId: string,
   validFrom: string,
+  expectedVersion: string,
 ): Promise<CareTariffs> {
   return tariffsFromBackend(
     await bffJson(
       "org",
       "DELETE /traeger/care-tariffs/{schoolID}/{validFrom}",
-      { params: { schoolID: schoolId, validFrom } },
+      {
+        params: { schoolID: schoolId, validFrom },
+        query: { expected_version: expectedVersion },
+      },
     ),
   );
 }

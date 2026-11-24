@@ -64,7 +64,7 @@ export interface RunningActivity {
 }
 
 export const RunningActivitySchema: z.ZodType<RunningActivity, unknown> = object<RunningActivity>({
-  id: str,
+  id: int64String,
   name: str,
   category: str,
   room_name: str,
@@ -82,7 +82,7 @@ export interface UpcomingActivity {
 }
 
 export const UpcomingActivitySchema: z.ZodType<UpcomingActivity, unknown> = object<UpcomingActivity>({
-  id: str,
+  id: int64String,
   name: str,
   category: str,
   start_time: str,
@@ -184,6 +184,8 @@ export const routes = {
     pattern: "/api/display/dashboard",
     portals: ["tenant"],
     routeFile: "the wall display sends its display token in a header, no session; its route file forwards it",
+    browserPath: "/api/display/dashboard",
+    browserOwnContract: true,
     plain: true,
     response: DashboardResponseSchema,
   },

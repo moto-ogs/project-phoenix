@@ -42,7 +42,9 @@ import {
   useRefreshAfterWrite,
   type RefreshAfterWrite,
 } from "~/lib/hooks/use-refresh-after-write";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { type ReadDraftResult, useDraftOn } from "~/lib/swr/read-draft";
 import {
   type CostBearer,
   type CostBearerInput,
@@ -61,6 +63,10 @@ const EMPTY: CostBearerInput = {
 
 type FormErrors = ReturnType<typeof useApiFormError>;
 type CostBearerSaveResult = "saved" | "late" | "failed";
+/** Sends a change on the version it was read at (`useDraftOn`'s submit). */
+type CostBearerChange = (
+  send: (version: string) => Promise<CostBearer>,
+) => Promise<ReadDraftResult<CostBearer>>;
 
 /**
  * Saves a cost bearer from a draft: a new one for a null id. The name is
@@ -72,14 +78,22 @@ function useCostBearerSave(
   formRef: RefObject<HTMLFormElement | null>,
   isOpen = true,
 ): readonly [
-  (id: string | null, draft: CostBearerInput) => Promise<CostBearerSaveResult>,
+  (
+    id: string | null,
+    draft: CostBearerInput,
+    change?: CostBearerChange,
+  ) => Promise<CostBearerSaveResult>,
   FormModalPending,
   FormErrors,
 ] {
   const pending = useFormModalPending(isOpen);
   const formErrors = useApiFormError(formRef);
   const { success } = useToast();
-  const save = async (id: string | null, draft: CostBearerInput) => {
+  const save = async (
+    id: string | null,
+    draft: CostBearerInput,
+    change?: CostBearerChange,
+  ) => {
     formErrors.clear();
     if (!draft.name.trim()) {
       formErrors.invalid("Bitte prüfe deine Angaben.", {
@@ -88,19 +102,32 @@ function useCostBearerSave(
       return "failed";
     }
     const result = await pending.run<CostBearerSaveResult>(async (op) => {
-      try {
-        await saveCostBearer(id, draft);
+      const outcome: ReadDraftResult<CostBearer> =
+        id && change
+          ? await change((version) => saveCostBearer(id, draft, version))
+          : await saveCostBearer(id, draft).then(
+              (saved) => ({ ok: true, saved }) as const,
+              (error: unknown) => ({ ok: false, error, refused: false }),
+            );
+      if (outcome.ok) {
         success("Der Kostenträger ist gespeichert.");
         return op.isCurrent() ? "saved" : "late";
-      } catch (err) {
-        logger.error("cost_bearer_save_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (op.isCurrent()) {
-          void formErrors.show(err, { object: "der Kostenträger" });
-        }
-        return "failed";
       }
+      logger.error("cost_bearer_save_failed", {
+        error:
+          outcome.error instanceof Error
+            ? outcome.error.message
+            : String(outcome.error),
+      });
+      if (op.isCurrent()) {
+        // A refused change shows the cost bearer as stored now, without a
+        // retry (ADR 0311).
+        void formErrors.show(outcome.error, {
+          object: "der Kostenträger",
+          reload: outcome.reload,
+        });
+      }
+      return "failed";
     });
     return result ?? "failed";
   };
@@ -160,16 +187,25 @@ function CostBearerFields({
 function CostBearerModal({
   isOpen,
   bearer,
+  bearers,
+  reload,
+  write,
   onClose,
   onSaved,
 }: Readonly<{
   isOpen: boolean;
   /** The cost bearer to change; null adds a new one. */
   bearer: CostBearer | null;
+  /** The stored cost bearers as the card shows them. */
+  bearers: readonly CostBearer[];
+  /** Reads the cost bearers again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<readonly CostBearer[]>;
+  /** Hands a changed cost bearer to the read (ADR 0311, rule 5). */
+  write: (bearer: CostBearer) => Promise<unknown>;
   onClose: () => void;
   onSaved: RefreshAfterWrite;
 }>) {
-  const [draft, setDraft] = useState<CostBearerInput>(EMPTY);
+  const [created, setCreated] = useState<CostBearerInput>(EMPTY);
   const formRef = useRef<HTMLFormElement>(null);
   const [save, pending, formErrors] = useCostBearerSave(formRef, isOpen);
   const saving = pending.pending;
@@ -177,12 +213,52 @@ function CostBearerModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    setDraft(bearer ?? EMPTY);
+    setCreated(EMPTY);
     clearErrors();
-  }, [isOpen, bearer, clearErrors]);
+  }, [isOpen, clearErrors]);
+
+  // A change rests on the cost bearer as it was read (ADR 0311): a newer
+  // read refills the form only while untouched, the save sends its
+  // version, and after a refusal the stored cost bearer shows.
+  const changedId = isOpen && bearer ? bearer.id : null;
+  const stored = useDraftOn<CostBearer, CostBearerInput, string, CostBearer>(
+    {
+      opening: changedId,
+      data: bearers.find((entry) => entry.id === changedId),
+      reload: async () => {
+        const found = (await reload()).find((entry) => entry.id === changedId);
+        if (!found) throw new Error("cost bearer is gone");
+        return found;
+      },
+      write,
+    },
+    {
+      token: (entry) => entry.version,
+      toDraft: ({ name, address, fileReference, active }) => ({
+        name,
+        address,
+        fileReference,
+        active,
+      }),
+      answer: (saved) => saved,
+    },
+  );
+  const form = useReadDraftForm(
+    changedId ? stored : null,
+    formErrors,
+    "den Kostenträger",
+  );
+  const draft = changedId ? (stored.draft ?? EMPTY) : created;
+  const setDraft = (patch: Partial<CostBearerInput>) =>
+    changedId
+      ? stored.setDraft((current) => ({ ...current, ...patch }))
+      : setCreated((current) => ({ ...current, ...patch }));
 
   const submit = async () => {
-    const result = await save(bearer?.id ?? null, draft);
+    // Enter submits too: a change goes out only after the stored cost
+    // bearer is read, and the shown error stays until then.
+    if (!form.begin()) return;
+    const result = await save(bearer?.id ?? null, draft, stored.submit);
     if (result === "failed") return;
     if (result === "saved") onClose();
     await onSaved();
@@ -214,13 +290,12 @@ function CostBearerModal({
           void submit();
         }}
       >
+        <LoadErrorAlert error={form.loadError} />
         <CostBearerFields
           idPrefix={bearer ? `cost-bearer-${bearer.id}` : "cost-bearer"}
           draft={draft}
           formErrors={formErrors}
-          onChange={(patch) =>
-            setDraft((current) => ({ ...current, ...patch }))
-          }
+          onChange={setDraft}
         />
         <p className="text-sm text-gray-600">
           Name, Anschrift und Aktenzeichen stehen auf der Liste für die
@@ -234,14 +309,27 @@ function CostBearerModal({
 export function CostBearersCard({
   bearers,
   onChanged,
+  reload,
+  write,
 }: Readonly<{
   bearers: readonly CostBearer[];
   onChanged: () => Promise<unknown>;
+  /** Reads the cost bearers again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<readonly CostBearer[]>;
+  /**
+   * Hands a saved cost bearer to the read (ADR 0311, rule 5): the next
+   * change sends its version even when reading the list again fails.
+   */
+  write: (bearer: CostBearer) => Promise<unknown>;
 }>) {
   // The dialog: null closed, "new" adds one, a cost bearer changes it.
   const [editing, setEditing] = useState<CostBearer | "new" | null>(null);
   const [deleting, setDeleting] = useState<CostBearer | null>(null);
   const [busy, setBusy] = useState(false);
+  // From a switch until the read after its refusal settled: the row still
+  // carries the refused version (ADR 0311, rule 4).
+  const [switching, setSwitching] = useState(false);
+  const switchingRef = useRef(false);
   const deleteErrors = useApiFormError();
   const { show: showActionError } = useApiErrorDisplay();
   const { success } = useToast();
@@ -253,14 +341,30 @@ export function CostBearersCard({
   );
 
   const switchActive = async (bearer: CostBearer) => {
+    if (switchingRef.current) return;
+    switchingRef.current = true;
+    setSwitching(true);
     try {
-      await saveCostBearer(bearer.id, { ...bearer, active: !bearer.active });
+      // The switch acts on the cost bearer as the row shows it (ADR 0311).
+      const saved = await saveCostBearer(
+        bearer.id,
+        { ...bearer, active: !bearer.active },
+        bearer.version,
+      );
+      await write(saved);
     } catch (err) {
       logger.error("cost_bearer_switch_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      await showActionError(err, { object: "die Änderung des Kostenträgers" });
+      // Resolves once the read after a refusal settled.
+      await showActionError(err, {
+        object: "die Änderung des Kostenträgers",
+        reload,
+      });
       return;
+    } finally {
+      switchingRef.current = false;
+      setSwitching(false);
     }
     success(
       bearer.active
@@ -354,6 +458,7 @@ export function CostBearersCard({
                         description: bearer.active
                           ? "Nimmt den Kostenträger sofort aus der Auswahl beim Bestätigen von Anmeldungen."
                           : "Bietet den Kostenträger sofort wieder beim Bestätigen von Anmeldungen an.",
+                        disabled: switching,
                         onClick: () => void switchActive(bearer),
                       },
                       ...(bearer.inUse
@@ -379,6 +484,9 @@ export function CostBearersCard({
       <CostBearerModal
         isOpen={editing !== null}
         bearer={editing === "new" ? null : editing}
+        bearers={bearers}
+        reload={reload}
+        write={write}
         onClose={() => setEditing(null)}
         onSaved={afterWrite.refresh}
       />

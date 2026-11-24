@@ -110,14 +110,14 @@ func TestStaffPoolLetsEverySchoolBlockASpringerOnce(t *testing.T) {
 	_, southLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, south, "Sina", "Süd")
 	_, westLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, west, "Wim", "West")
 	record := func(staffID int64, pool bool) int64 {
-		rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
-			"members": []map[string]int64{{"school_id": north, "staff_id": staffID}},
+		rec := traegerLink(t, router, office.token, map[string]any{
+			"members": []map[string]string{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(staffID)}},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		id := decode[staffRecordBody](t, rec).ID
 		rec = traegerJSON(t, router, office.token, http.MethodPost, fmt.Sprintf("/traeger/staff-records/%d/contracts", id), map[string]any{
 			"kind": "part_time", "starts_on": "2026-08-01", "pool": pool,
-			"sites": []map[string]any{{"school_id": north, "staff_id": staffID, "weekday_minutes": []int{300, 300, 300, 300, 300}}},
+			"sites": []map[string]any{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(staffID), "weekday_minutes": []int{300, 300, 300, 300, 300}}},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		assert.Contains(t, rec.Body.String(), fmt.Sprintf(`"pool":%t`, pool))
@@ -193,7 +193,7 @@ func TestStaffPoolLetsEverySchoolBlockASpringerOnce(t *testing.T) {
 	t.Run("a school cannot block a Springer during a shift at an Einsatzort", func(t *testing.T) {
 		_, northLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, north, "Nora", "Nord")
 		rec := schoolShift(t, school, north, northLead.ID, map[string]any{
-			"staff_id": mira.ID, "date": "2026-11-26", "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
+			"staff_id": fmt.Sprint(mira.ID), "date": "2026-11-26", "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		assertStaffRefusal(t, block(south, southLead.ID, springer, "2026-11-26", "11:00", "13:00"), http.StatusConflict, "workforce.pool_springer_busy")
@@ -327,14 +327,14 @@ func TestStaffPoolWeekQueryBudget(t *testing.T) {
 	_, southLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, south, "Sina", "Süd")
 	springer := func(last, date string) {
 		member := testpkg.CreateTestStaffForTenant(t, db, north, "Mira", last)
-		rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
-			"members": []map[string]int64{{"school_id": north, "staff_id": member.ID}},
+		rec := traegerLink(t, router, office.token, map[string]any{
+			"members": []map[string]string{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(member.ID)}},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		id := decode[staffRecordBody](t, rec).ID
 		rec = traegerJSON(t, router, office.token, http.MethodPost, fmt.Sprintf("/traeger/staff-records/%d/contracts", id), map[string]any{
 			"kind": "minijob", "starts_on": "2026-08-01", "pool": true,
-			"sites": []map[string]any{{"school_id": north, "staff_id": member.ID, "weekday_minutes": []int{120, 120, 120, 120, 120}}},
+			"sites": []map[string]any{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(member.ID), "weekday_minutes": []int{120, 120, 120, 120, 120}}},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		rec = poolSchoolRequest(t, school, south, southLead.ID, []string{permissions.TimeTrackingManage}, http.MethodPost, "/api/staff-pool/blocks",

@@ -92,9 +92,15 @@ export async function createSchoolParentConference(
   );
 }
 
+/**
+ * Saves a changed day on the `version` of the day the change started from;
+ * the server refuses it when the day or its bookings changed since
+ * (ADR 0311).
+ */
 export async function updateSchoolParentConference(
   id: string,
   request: ParentConferenceRequest,
+  expectedVersion: string,
 ): Promise<ParentConference> {
   return mapConference(
     await bffJson(
@@ -102,7 +108,7 @@ export async function updateSchoolParentConference(
       "PUT /school/calendar/parent-conferences/{conferenceId}",
       {
         params: { conferenceId: id },
-        body: request,
+        body: { ...request, expected_version: expectedVersion },
       },
     ),
   );

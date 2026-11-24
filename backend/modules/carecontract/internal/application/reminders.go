@@ -108,6 +108,8 @@ func (r *Reminders) remind(ctx context.Context, organizationID int64, letterhead
 	if err != nil {
 		return err
 	}
+	// The reminder names the body that issued the contract (#4811).
+	letterhead = issuedSender(letterhead, record)
 	if letterheadMissing(letterhead) {
 		return carecontract.ErrLetterheadMissing
 	}

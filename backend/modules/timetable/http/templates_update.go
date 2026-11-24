@@ -17,15 +17,15 @@ import (
 )
 
 type updateTemplateRequest struct {
-	Name            string        `json:"name"`
-	Type            string        `json:"type"`
-	Weekdays        []int         `json:"weekdays"`
-	StartTime       string        `json:"start_time"`
-	EndTime         string        `json:"end_time"`
-	RoomID          ident.ID      `json:"room_id"`
-	CategoryID      ident.ID      `json:"category_id"`
-	PlanningTrackID NullableInt64 `json:"planning_track_id"`
-	MaxParticipants NullableInt   `json:"max_participants"`
+	Name            string      `json:"name"`
+	Type            string      `json:"type"`
+	Weekdays        []int       `json:"weekdays"`
+	StartTime       string      `json:"start_time"`
+	EndTime         string      `json:"end_time"`
+	RoomID          ident.ID    `json:"room_id"`
+	CategoryID      ident.ID    `json:"category_id"`
+	PlanningTrackID NullableID  `json:"planning_track_id"`
+	MaxParticipants NullableInt `json:"max_participants"`
 	// RequiredStaff is the optional manual Personalbedarf override (#1839);
 	// omitted/null clears the override (derive from the Betreuungsschlüssel).
 	RequiredStaff    *int      `json:"required_staff,omitempty"`
@@ -42,8 +42,8 @@ type updateTemplateRequest struct {
 	// template's stored value, only an explicit null (or explicit empty
 	// list) clears it. A client predating these fields must not strip a
 	// template's dynamic Angebots-Belegung by simply not knowing them.
-	SourceCareOfferingIDs NullableInt64Slice `json:"source_care_offering_ids"`
-	SourceGradeLevels     NullableIntSlice   `json:"source_grade_levels"`
+	SourceCareOfferingIDs NullableIDSlice  `json:"source_care_offering_ids"`
+	SourceGradeLevels     NullableIntSlice `json:"source_grade_levels"`
 	// SourceSchoolClasses is the Klassenfilter (#2482), same presence
 	// contract. Mutually exclusive with source_grade_levels: submitting one
 	// non-empty filter drops a carried-over other one, submitting both
@@ -63,6 +63,9 @@ type updateTemplateRequest struct {
 	// WeekdayAssignments overrides the shared roster for individual weekdays
 	// (#2129); omitted/empty resets the series to one shared roster.
 	WeekdayAssignments []weekdayAssignmentRequest `json:"weekday_assignments,omitempty"`
+	// ExpectedVersion is the template's version its editor read (ADR 0311);
+	// the split carries it as well.
+	ExpectedVersion string `json:"expected_version"`
 	// SeriesRosterFrom (#2187, YYYY-MM-DD) extends the saved roster backwards
 	// over the template's split series: bounded predecessor segments
 	// overlapping [series_roster_from, this segment's valid_from) receive the
@@ -290,6 +293,10 @@ func (rs *Resource) getTemplate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	rs.attachRosterMaintenance(r.Context(), templates[:1], periodID)
+	if templates[0].Version, err = rs.templateReadVersion(r.Context(), templates[0].ID.Int64()); err != nil {
+		common.RenderError(w, r, common.ErrorInternalServerWrap("load template failed", err))
+		return
+	}
 	common.Respond(w, r, http.StatusOK, templates[0], "Template retrieved")
 }
 
@@ -369,19 +376,14 @@ func (rs *Resource) updateTemplate(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if err := rs.Templates.ValidateTemplateEducationGroup(ctx, (*int64)(parsed.req.EducationGroupID)); err != nil {
-		if !renderTemplateEducationGroupError(w, r, err) {
-			common.RenderError(w, r, common.ErrorInternalServerWrap("validate education group failed", err))
-		}
-		return
-	}
-	timeframeID, err := rs.Templates.FindOrCreateTimeframe(ctx, parsed.startTime, parsed.endTime, parsed.req.Name)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServerWrap("resolve timeframe failed", err))
+	timeframeID, ok := rs.templateUpdateTarget(w, r, id, parsed)
+	if !ok {
 		return
 	}
 	command := buildUpdateTemplateInput(id, parsed, timeframeID, gradeLevelMax, rosterValidFrom)
 	command.ActorAccountID = sessiontoken.ActorAccountIDFromCtx(ctx)
+	// The owner compares the version under its recurrence gate (ADR 0311).
+	command.ExpectedVersion = parsed.req.ExpectedVersion
 	updateErr := rs.Templates.UpdateTemplate(ctx, command)
 	if updateErr != nil {
 		// findOrCreateTimeframe runs before the recurrence service. Tenant
@@ -391,12 +393,42 @@ func (rs *Resource) updateTemplate(w http.ResponseWriter, r *http.Request) {
 		renderUpdateTemplateError(w, r, updateErr)
 		return
 	}
-	templates, err := rs.loadTemplates(ctx, &id, (*int64)(parsed.req.CalendarPeriodID))
+	rs.respondUpdatedTemplate(w, r, id, (*int64)(parsed.req.CalendarPeriodID))
+}
+
+// respondUpdatedTemplate answers the saved series as its editing read shows
+// it, with the version a next save sends (ADR 0311).
+func (rs *Resource) respondUpdatedTemplate(w http.ResponseWriter, r *http.Request, id int64, periodID *int64) {
+	templates, err := rs.loadTemplates(r.Context(), &id, periodID)
 	if err != nil || len(templates) == 0 {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("reload template failed", err))
 		return
 	}
+	if templates[0].Version, err = rs.templateReadVersion(r.Context(), id); err != nil {
+		common.RenderError(w, r, common.ErrorInternalServerWrap("reload template failed", err))
+		return
+	}
 	common.Respond(w, r, http.StatusOK, templates[0], "Template updated")
+}
+
+// templateUpdateTarget validates the education group and resolves the
+// timeframe. The update takes the recurrence gate after it, in the order a
+// template create takes them, and compares the editor's version under it
+// (ADR 0311). It returns ok=false after rendering the refusal.
+func (rs *Resource) templateUpdateTarget(w http.ResponseWriter, r *http.Request, id int64, parsed *parsedUpdateTemplate) (int64, bool) {
+	ctx := r.Context()
+	if err := rs.Templates.ValidateTemplateEducationGroup(ctx, (*int64)(parsed.req.EducationGroupID)); err != nil {
+		if !renderTemplateEducationGroupError(w, r, err) {
+			common.RenderError(w, r, common.ErrorInternalServerWrap("validate education group failed", err))
+		}
+		return 0, false
+	}
+	timeframeID, err := rs.Templates.FindOrCreateTimeframe(ctx, parsed.startTime, parsed.endTime, parsed.req.Name)
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInternalServerWrap("resolve timeframe failed", err))
+		return 0, false
+	}
+	return timeframeID, true
 }
 
 // loadTemplateForUpdate loads the existing recurrence independently of the

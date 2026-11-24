@@ -17,6 +17,7 @@ import {
 } from "./runtime";
 import {
   BillingLetterSeriesSchema,
+  CareBilledChildSchema,
   CareDuplicateSchema,
   CareJoinedChildSchema,
   CareRecipientSchema,
@@ -25,6 +26,7 @@ import {
   InvoicePaymentSchema,
   PostalAddressSchema,
   RunDueDateSchema,
+  type CareBilledChild,
   type CareDuplicate,
   type CareJoinedChild,
   type CareRecipient,
@@ -509,6 +511,7 @@ export interface CareRunDetail {
   unpriced: CareUnpriced[] | null;
   duplicates: CareDuplicate[] | null;
   joined_children: CareJoinedChild[] | null;
+  billed_children: CareBilledChild[] | null;
   duplicate_children: number;
   uncounted_families: number;
   uncounted_contracts: CareUncountedContract[] | null;
@@ -523,6 +526,7 @@ export interface CareRunDetail {
   meal_unbilled: CareMealUnbilled[] | null;
   meal_changed: CareMealChanged[] | null;
   due_dates: RunDueDate[] | null;
+  due_dates_version: string;
   cost_bearers: CareCostBearerTotal[] | null;
   schools: CareSchool[] | null;
   excluded_count: number;
@@ -552,6 +556,7 @@ export const CareRunDetailSchema: z.ZodType<CareRunDetail, unknown> = object<Car
   unpriced: nullable(arr(CareUnpricedSchema)),
   duplicates: nullable(arr(CareDuplicateSchema)),
   joined_children: nullable(arr(CareJoinedChildSchema)),
+  billed_children: nullable(arr(CareBilledChildSchema)),
   duplicate_children: safeInt,
   uncounted_families: safeInt,
   uncounted_contracts: nullable(arr(CareUncountedContractSchema)),
@@ -566,6 +571,7 @@ export const CareRunDetailSchema: z.ZodType<CareRunDetail, unknown> = object<Car
   meal_unbilled: nullable(arr(CareMealUnbilledSchema)),
   meal_changed: nullable(arr(CareMealChangedSchema)),
   due_dates: nullable(arr(RunDueDateSchema)),
+  due_dates_version: str,
   cost_bearers: nullable(arr(CareCostBearerTotalSchema)),
   schools: nullable(arr(CareSchoolSchema)),
   excluded_count: safeInt,
@@ -744,46 +750,6 @@ export interface CareInvoiceDateRequest {
   invoice_date?: string | null;
 }
 
-/** Query of GET /traeger/care-billing-runs/export */
-export interface GetTraegerCareBillingRunsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/care-billing-runs/schools */
-export interface GetTraegerCareBillingRunsSchoolsQuery {
-  month?: string;
-}
-
-/** Query of GET /traeger/care-billing-runs/{id}/cost-shares/{costBearerID}/export */
-export interface GetTraegerCareBillingRunsIdCostSharesCostBearerIDExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/care-billing-runs/{id}/invoices/export */
-export interface GetTraegerCareBillingRunsIdInvoicesExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/care-billing-runs/{id}/invoices/{invoiceID}/letter */
-export interface GetTraegerCareBillingRunsIdInvoicesInvoiceIDLetterQuery {
-  kind?: string;
-}
-
-/** Query of GET /traeger/care-billing-runs/{id}/letters/print */
-export interface GetTraegerCareBillingRunsIdLettersPrintQuery {
-  only?: "without_email";
-}
-
-/** Query of GET /traeger/care-billing-runs/{id}/review-export */
-export interface GetTraegerCareBillingRunsIdReviewExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of POST /traeger/care-billing-runs/{id}/invoices/{invoiceID}/mail */
-export interface PostTraegerCareBillingRunsIdInvoicesInvoiceIDMailQuery {
-  kind?: string;
-}
-
 export const routes = {
   "GET /traeger/care-billing-runs/": {
     method: "GET",
@@ -795,14 +761,18 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/care-billing-runs/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/care-billing-runs/schools": {
     method: "GET",
     pattern: "/traeger/care-billing-runs/schools",
     portals: ["org"],
-    query: ["month"],
+    query: {
+      "month": { kind: "date" },
+    },
     response: success(z.array(CareRunSchoolSchema)),
   },
   "GET /traeger/care-billing-runs/{id}": {
@@ -815,21 +785,27 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/care-billing-runs/{id}/cost-shares/{costBearerID}/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/care-billing-runs/{id}/invoices/export": {
     method: "GET",
     pattern: "/traeger/care-billing-runs/{id}/invoices/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/care-billing-runs/{id}/invoices/{invoiceID}/letter": {
     method: "GET",
     pattern: "/traeger/care-billing-runs/{id}/invoices/{invoiceID}/letter",
     portals: ["org"],
-    query: ["kind"],
+    query: {
+      "kind": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /traeger/care-billing-runs/{id}/letters": {
@@ -842,14 +818,18 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/care-billing-runs/{id}/letters/print",
     portals: ["org"],
-    query: ["only"],
+    query: {
+      "only": { kind: "string", values: ["without_email"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/care-billing-runs/{id}/review-export": {
     method: "GET",
     pattern: "/traeger/care-billing-runs/{id}/review-export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "POST /traeger/care-billing-runs/": {
@@ -897,7 +877,9 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/care-billing-runs/{id}/invoices/{invoiceID}/mail",
     portals: ["org"],
-    query: ["kind"],
+    query: {
+      "kind": { kind: "string" },
+    },
     response: success(CareLetterMailingSchema),
   },
   "POST /traeger/care-billing-runs/{id}/letters": {

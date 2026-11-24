@@ -76,8 +76,9 @@ und hält fest, was er in den Registern ändert (ADR 0057 Punkt 5, ADR 0070).
      nie mehr zu, als die Buchung hergibt. Die Zeilen ändern sich nie.
    - `contract_parties`: die Eltern aus der Anmeldung, mit optionalem
      Elternkonto.
-   - `contract_documents`: das PDF einer Version, erzeugt beim ersten Versand,
-     mit SHA-256. Es ändert sich nie.
+   - `contract_documents`: das PDF einer Version, erzeugt beim ersten Versand
+     oder bei der Übergabe auf Papier (Nachtrag 2026-11-24 in ADR 0155), mit
+     SHA-256. Es ändert sich nie.
    - `contract_mailings`: jeder Versand mit Outbox-Eintrag und Adresse.
    - `contract_events`: Spur jedes Lesens und Schreibens. Sie hält die
      Vertrags-ID ohne Fremdschlüssel, damit ein verworfener Entwurf seine Spur
@@ -104,7 +105,8 @@ und hält fest, was er in den Registern ändert (ADR 0057 Punkt 5, ADR 0070).
    des Kindes, sonst der Leistungsbeginn der Anmeldephase. Der Vertrag endet
    mit der letzten Buchung, wenn alle enden, oder früher mit einer festen
    Laufzeit.
-4. **Status.** `entwurf` → `versendet` beim ersten Versand. Nur ein Entwurf
+4. **Status.** `entwurf` → `versendet` beim ersten Versand oder bei der
+   Übergabe auf Papier (Nachtrag 2026-11-24 in ADR 0155). Nur ein Entwurf
    lässt sich verwerfen; die Lösch-Policy der Tabelle lässt für die
    Request-Rolle nur Entwürfe zu. Der Workflow `contractconclusion`, der den
    Vertrag bei der Annahme anlegt, kommt mit #4680.
@@ -114,8 +116,10 @@ und hält fest, was er in den Registern ändert (ADR 0057 Punkt 5, ADR 0070).
    Wochentag von Montag bis Freitag (Module mit Endzeit oder „keine
    Betreuung“) und, wenn gewählt, Sonderkündigung und Satzung,
    damit kein Vorlagentext eine Bedingung weglassen kann. Vor dem Versand ist
-   das PDF eine Vorschau mit der aktuellen Vorlage; beim ersten Versand wird es
-   festgehalten und jeder weitere Versand nutzt dasselbe PDF.
+   das PDF eine Vorschau mit der aktuellen Vorlage, mit dem Vermerk „Vorschau,
+   nicht zum Unterschreiben“; beim ersten Versand oder bei der Übergabe auf
+   Papier wird es ohne Vermerk festgehalten (Nachtrag 2026-11-24 in ADR 0155),
+   und jeder weitere Versand nutzt dasselbe PDF.
 6. **Versand.** Wie ADR 0123: Mail des Trägers in der Outbox
    (`EnqueueEmail` mit `OrganizationID`, Art `care_contract`, Vertrag als
    verknüpfte Entität), PDF im Payload, in derselben Träger-Transaktion wie

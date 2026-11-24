@@ -4,6 +4,7 @@ package groups
 import (
 	"context"
 
+	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/domain"
 )
 
@@ -12,6 +13,8 @@ type Service interface {
 	// Group operations
 	CreateGroup(ctx context.Context, group *domain.Group) error
 	UpdateGroup(ctx context.Context, group *domain.Group) error
+	// EditGroup applies an edit read at its ExpectedVersion (ADR 0311).
+	EditGroup(ctx context.Context, edit schoolstructure.GroupEdit) error
 	DeleteGroup(ctx context.Context, id int64) error
 
 	// Group-Teacher operations
@@ -26,5 +29,5 @@ type Service interface {
 	// matched via schoolclass.Normalize; there is no class entity. changedBy
 	// is the authenticated account ID for the audit trail.
 	GetStaffSchoolClasses(ctx context.Context, staffID int64) ([]string, error)
-	SetStaffSchoolClasses(ctx context.Context, staffID int64, classes []string, changedBy int64) error
+	SetStaffSchoolClasses(ctx context.Context, staffID int64, classes []string, expectedVersion string, changedBy int64) error
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -20,15 +21,28 @@ type scheduledOfferingReplacement struct {
 }
 
 func (m *BookingMaterialization) persistOfferingAdjustment(ctx context.Context, work *offeringAdjustmentWork) error {
-	history, err := m.correctedSelectionHistory(ctx, work)
-	if err != nil {
-		return err
+	phaseEnd := work.phase.ServiceEnd.AddDays(1)
+	var stored []*careplan.BookedOffering
+	// An undated correction schedules the stored later changes again; a
+	// change with a date reads them only for an end it may keep.
+	if work.effectiveFrom == nil || endsBeforePhase(work.beforeLinks, phaseEnd) {
+		history, err := m.deps.Enrollment.SelectionHistory(ctx, work.child.ID)
+		if err != nil {
+			return fmt.Errorf("decision: list stored child offerings: %w", err)
+		}
+		stored = bookedOfferingPointers(history)
 	}
-	scheduled := scheduledOfferingReplacements(history, work.selectionDate)
+	// A change with a date extends nothing (validateOfferingAdjustmentInput),
+	// so it keeps every end it finds.
+	work.keptEnds = keepUnextendedBookingEnds(work, stored)
 	phase := work.phase.OfferingPhase
-	if start := correctionStart(work, history); len(scheduled) == 0 && start.After(phase.ServiceStart) {
-		phase.ServiceStart = start
-		work.replacement = replacementFrom(work.replacement, start)
+	var scheduled []scheduledOfferingReplacement
+	if work.effectiveFrom == nil {
+		scheduled = scheduledOfferingReplacements(stored, work.selectionDate)
+		if start := correctionStart(work, stored); len(scheduled) == 0 && start.After(phase.ServiceStart) {
+			phase.ServiceStart = start
+			work.replacement = replacementFrom(work.replacement, start)
+		}
 	}
 	if err := m.persistOfferingBookings(ctx, work, scheduled, phase); err != nil {
 		return err
@@ -38,30 +52,18 @@ func (m *BookingMaterialization) persistOfferingAdjustment(ctx context.Context, 
 		materializeFrom = &work.selectionDate
 	}
 	studentID := *work.child.CreatedStudentID
-	adjusted := adjustedRoster{requestChildID: work.child.ID, studentID: studentID, phase: phase}
+	adjusted := adjustedRoster{requestChildID: work.child.ID, studentID: studentID, phase: phase, toBookingEnd: true}
 	if err := m.rematerializeAdjustedEnrollments(ctx, adjusted, work.beforeLinks, work.replacement, materializeFrom); err != nil {
 		return err
 	}
+	// A restored change ends where the next one starts: no booking end.
+	adjusted.toBookingEnd = false
 	for _, future := range scheduled {
 		if err := m.splitAdjustedEnrollments(ctx, adjusted, future.Rows, future.EffectiveFrom); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-// correctedSelectionHistory reads every dated selection of the child before
-// an undated staff correction rewrites the current one; a dated switch reads
-// none.
-func (m *BookingMaterialization) correctedSelectionHistory(ctx context.Context, work *offeringAdjustmentWork) ([]*careplan.BookedOffering, error) {
-	if work.effectiveFrom != nil {
-		return nil, nil
-	}
-	history, err := m.deps.Enrollment.SelectionHistory(ctx, work.child.ID)
-	if err != nil {
-		return nil, fmt.Errorf("decision: list scheduled child offerings: %w", err)
-	}
-	return bookedOfferingPointers(history), nil
 }
 
 // correctionStart is the day an undated correction books and plans the
@@ -201,6 +203,11 @@ type adjustedRoster struct {
 	requestChildID int64
 	studentID      int64
 	phase          careplan.OfferingPhase
+	// toBookingEnd lets a kept row follow a booking that ends earlier: set
+	// for the selection of a change, whose ends are those of the bookings
+	// (keepBookingEnds), not for a change an undated correction schedules
+	// again, whose end is the start of the next one.
+	toBookingEnd bool
 }
 
 func (m *BookingMaterialization) rematerializeAdjustedEnrollments(
@@ -266,16 +273,15 @@ func taggedWithRequestChild(row ports.RosterEnrollment, requestChildID int64) bo
 //
 // Per existing row materialized from this request child:
 //   - already ended before the switch: untouched, it is history
-//   - identical to a row the new selection wants: kept, so an unchanged
-//     offering does not become two adjacent rows
+//   - identical to a row the new selection wants on the switch date: kept,
+//     so an unchanged offering does not become two adjacent rows; its end
+//     follows retainAdjustedEnrollment
 //   - starts on/after the switch: deleted, it never took effect
 //   - started earlier: capped at effectiveFrom (valid_until is exclusive, so
 //     the last attended day is the day before)
 //
 // Rows the new selection still wants are then materialized starting at the
-// switch date. Phase-window edits are deliberately not reconciled here: a
-// kept row keeps its original valid_until, and correcting phase dates is what
-// the undated (correction) path is for.
+// switch date.
 func (m *BookingMaterialization) splitAdjustedEnrollments(
 	ctx context.Context,
 	adjusted adjustedRoster,
@@ -306,7 +312,7 @@ func (m *BookingMaterialization) splitAdjustedEnrollments(
 			continue
 		}
 		affectedGroups[row.ActivityGroupID] = true
-		if err := m.reconcileAdjustedEnrollment(ctx, row, adjusted.phase, effectiveFrom, drafts); err != nil {
+		if err := m.reconcileAdjustedEnrollment(ctx, row, adjusted, effectiveFrom, drafts); err != nil {
 			return err
 		}
 	}
@@ -453,11 +459,11 @@ func (m *BookingMaterialization) excludeInvalidAdjustedUnionTemplates(ctx contex
 // row; capping it here would replace an unchanged union row (#5234). A
 // template the selection no longer feeds is not in multiSource and is
 // capped below as before.
-func deferredToUnionResync(row ports.RosterEnrollment, drafts map[int64]*careEnrollmentDraft, multiSource map[int64]ports.SourcedTemplate) bool {
+func deferredToUnionResync(row ports.RosterEnrollment, drafts map[int64][]*careEnrollmentDraft, multiSource map[int64]ports.SourcedTemplate) bool {
 	if _, ok := multiSource[row.ActivityGroupID]; !ok {
 		return false
 	}
-	return drafts[row.ActivityGroupID] == nil
+	return len(drafts[row.ActivityGroupID]) == 0
 }
 
 // reconcileAdjustedEnrollment keeps, caps or deletes one of the request
@@ -465,27 +471,15 @@ func deferredToUnionResync(row ports.RosterEnrollment, drafts map[int64]*careEnr
 func (m *BookingMaterialization) reconcileAdjustedEnrollment(
 	ctx context.Context,
 	row ports.RosterEnrollment,
-	phase careplan.OfferingPhase,
+	adjusted adjustedRoster,
 	effectiveFrom calendar.Date,
-	drafts map[int64]*careEnrollmentDraft,
+	drafts map[int64][]*careEnrollmentDraft,
 ) error {
 	if row.ValidUntil != nil && !row.ValidUntil.After(effectiveFrom) {
 		return nil
 	}
-	if draft := drafts[row.ActivityGroupID]; draft != nil && !row.ValidFrom.After(effectiveFrom) && careDraftMatchesEnrollment(draft, row) {
-		// The retained row is only ever extended to the end the draft itself
-		// may reach — the phase end, clamped by the sourced segment's envelope
-		// and the offering-link window (#2147 review). Extending a capped
-		// split predecessor back to the phase end would restore coverage past
-		// the split and overlap its successor.
-		draftEndExclusive := careDraftValidUntil(draft, phase)
-		if row.ValidUntil != nil && row.ValidUntil.Before(draftEndExclusive) {
-			if err := m.deps.Rosters.SetEnrollmentValidUntil(ctx, row.ID, draftEndExclusive); err != nil {
-				return fmt.Errorf("decision: extend retained adjusted enrollment: %w", err)
-			}
-		}
-		delete(drafts, row.ActivityGroupID)
-		return nil
+	if kept := takeKeptDraft(drafts, row, adjusted.phase, effectiveFrom); kept != nil {
+		return m.retainAdjustedEnrollment(ctx, row, kept, adjusted)
 	}
 	if !row.ValidFrom.Before(effectiveFrom) {
 		if err := m.deps.Rosters.DeleteEnrollment(ctx, row.ID); err != nil {
@@ -495,6 +489,58 @@ func (m *BookingMaterialization) reconcileAdjustedEnrollment(
 	}
 	if err := m.deps.Rosters.SetEnrollmentValidUntil(ctx, row.ID, effectiveFrom); err != nil {
 		return fmt.Errorf("decision: cap adjusted enrollment: %w", err)
+	}
+	return nil
+}
+
+// retainAdjustedEnrollment moves the end of a row the new selection keeps
+// to the end of its draft. The row is only ever extended to the end the
+// draft itself may reach — the phase end, clamped by the sourced segment's
+// envelope and the offering-link window (#2147 review). Extending a capped
+// split predecessor back to the phase end would restore coverage past the
+// split and overlap its successor. For the selection of a change it is
+// shortened to a booking that ends before the phase (#7909, #7928): a
+// co-booking whose trigger ends earlier ends there on the roster too.
+func (m *BookingMaterialization) retainAdjustedEnrollment(ctx context.Context, row ports.RosterEnrollment, draft *careEnrollmentDraft, adjusted adjustedRoster) error {
+	phase := adjusted.phase
+	draftEndExclusive := careDraftValidUntil(draft, phase)
+	if row.ValidUntil != nil && row.ValidUntil.Before(draftEndExclusive) {
+		if err := m.deps.Rosters.SetEnrollmentValidUntil(ctx, row.ID, draftEndExclusive); err != nil {
+			return fmt.Errorf("decision: extend retained adjusted enrollment: %w", err)
+		}
+		return nil
+	}
+	bookingEnds := adjusted.toBookingEnd && draft.validUntil != nil && *draft.validUntil == draftEndExclusive && draftEndExclusive.Before(phase.ServiceEnd.AddDays(1))
+	if bookingEnds && (row.ValidUntil == nil || row.ValidUntil.After(draftEndExclusive)) {
+		if err := m.deps.Rosters.SetEnrollmentValidUntil(ctx, row.ID, draftEndExclusive); err != nil {
+			return fmt.Errorf("decision: shorten retained adjusted enrollment: %w", err)
+		}
+	}
+	return nil
+}
+
+// takeKeptDraft removes and returns the draft the row already is on the
+// switch date: same weekdays and period, the row started by then, and the
+// draft plans that day. Such a draft needs no new row. nil when the new
+// selection wants no such row there.
+func takeKeptDraft(
+	drafts map[int64][]*careEnrollmentDraft, row ports.RosterEnrollment, phase careplan.OfferingPhase, effectiveFrom calendar.Date,
+) *careEnrollmentDraft {
+	if row.ValidFrom.After(effectiveFrom) {
+		return nil
+	}
+	group := drafts[row.ActivityGroupID]
+	for i, draft := range group {
+		if !careDraftMatchesEnrollment(draft, row) || careDraftValidFrom(draft, phase, nil).After(effectiveFrom) ||
+			!careDraftValidUntil(draft, phase).After(effectiveFrom) {
+			continue
+		}
+		if len(group) == 1 {
+			delete(drafts, row.ActivityGroupID)
+		} else {
+			drafts[row.ActivityGroupID] = slices.Delete(group, i, i+1)
+		}
+		return draft
 	}
 	return nil
 }

@@ -30,7 +30,7 @@ func TestCareExitAndGradeTransitionDoNotDeadlock(t *testing.T) {
 			database := testpkg.NewDatabase(t, db)
 			actorID := testpkg.CreateTestAccount(t, db, "care-actor").ID
 			principal, err := permissions.NewPrincipal(permissions.PrincipalInput{
-				AccountID: actorID, TenantID: testpkg.Tenant(t), Permissions: []string{permissions.GradeTransitionsApply},
+				AccountID: actorID, TenantID: testpkg.Tenant(t), Permissions: []string{permissions.GradeTransitionsRead, permissions.GradeTransitionsApply},
 			})
 			require.NoError(t, err)
 			ctx = permissions.WithPrincipal(ctx, principal)
@@ -90,6 +90,13 @@ func TestCareExitAndGradeTransitionDoNotDeadlock(t *testing.T) {
 				}
 			}
 
+			// The apply confirms the preview an admin was shown (ADR 0311).
+			var confirmed string
+			require.NoError(t, testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(previewCtx context.Context, _ bun.Tx) error {
+				preview, previewErr := grade.GradeTransition.Preview(previewCtx, transition.ID)
+				confirmed = preview.Fingerprint
+				return previewErr
+			}))
 			careDone := make(chan error, 1)
 			gradeErr := testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(gradeCtx context.Context, tx bun.Tx) error {
 				if err := membership.LockStudentClassWrites(gradeCtx, true); err != nil {
@@ -109,7 +116,7 @@ func TestCareExitAndGradeTransitionDoNotDeadlock(t *testing.T) {
 					)`, int32(0x636c6173), testpkg.Tenant(t), gradePID).Scan(gradeCtx, &waiting)
 					return err == nil && waiting
 				}, 5*time.Second, 10*time.Millisecond, "care end must be waiting on the grade transition's class gate")
-				_, applyErr := grade.GradeTransition.Apply(gradeCtx, transition.ID, "")
+				_, applyErr := grade.GradeTransition.Apply(gradeCtx, transition.ID, confirmed)
 				return applyErr
 			})
 			select {

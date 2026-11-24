@@ -34,6 +34,11 @@ func (seedTraegerCareContractImportStep) Run(_ context.Context, rt *Runtime) err
 		return err
 	}
 	fmt.Printf("  Träger care contract import: %d contracts taken over\n", imported)
+	joined, err := seedContractFamily(rt.Client, auth, "Schulz")
+	if err != nil {
+		return err
+	}
+	fmt.Printf("  Träger care contract families: %d contracts joined\n", joined)
 	linked, bound, err := seedCareContractChildLink(rt, auth, module)
 	if err != nil {
 		return err
@@ -101,17 +106,26 @@ func seedCareContractImport(client *Client, auth AuthRef, school, module, start 
 	// The last column is how many children the family has (#7356); moto
 	// keeps it only for an account that bills. Ida's row names no parents,
 	// as the master data of OGS Connect does: her contract is a family of
-	// its own, known by the contract.
+	// its own, known by the contract. The Schulz and Yilmaz siblings name
+	// their parents but no mail address, as that export does (#7161): each
+	// contract is a family of its own until the office joins them.
 	rows := []string{"Vorname Kind;Nachname Kind;Geburtsdatum;Schule;Modul;Vertragsbeginn;Vorname Eltern;Nachname Eltern;E-Mail;Kinder in der Familie"}
-	for _, child := range [][5]string{
-		{"Jonte", "Petersen", "14.03.2018", "Maren", "2"},
-		{"Malia", "Okafor", "02.09.2019", "Chidi", ""},
-		{"Emil", "Wagner", "27.11.2017", "Sabine", "3"},
-		{"Ida", "Brandt", "19.06.2018", "", "2"},
+	for _, child := range [][6]string{
+		{"Jonte", "Petersen", "14.03.2018", "Maren", "2", "mail"},
+		{"Malia", "Okafor", "02.09.2019", "Chidi", "", "mail"},
+		{"Emil", "Wagner", "27.11.2017", "Sabine", "3", "mail"},
+		{"Ida", "Brandt", "19.06.2018", "", "2", ""},
+		{"Finn", "Schulz", "05.05.2018", "Katrin", "2", ""},
+		{"Mila", "Schulz", "11.01.2020", "Katrin", "2", ""},
+		{"Ben", "Yilmaz", "23.07.2018", "Aylin", "", ""},
+		{"Elif", "Yilmaz", "30.04.2020", "Aylin", "", ""},
 	} {
 		parentLast, email := child[1], strings.ToLower(child[3]+"."+child[1])+"@familie.example.test"
 		if child[3] == "" {
-			parentLast, email = "", ""
+			parentLast = ""
+		}
+		if child[5] == "" {
+			email = ""
 		}
 		rows = append(rows, strings.Join([]string{child[0], child[1], child[2], school, module, start, child[3], parentLast, email, child[4]}, ";"))
 	}

@@ -1,5 +1,5 @@
-GET /traeger/holiday-registrations/status/{statusToken} -> basis
-GET /traeger/holiday-registrations/{token} -> basis
-GET /traeger/holiday-registrations/{token}/documents/{documentId} -> basis
-POST /traeger/holiday-registrations/{token} -> basis
-POST /traeger/holiday-registrations/{token}/uploads -> basis
+GET /traeger/holiday-registrations/status/{statusToken} -> ferienbetreuung  (#6052 Ferienanmeldung: der Link schließt mit dem Modul)
+GET /traeger/holiday-registrations/{token} -> ferienbetreuung  (#6052 Ferienanmeldung: der Link schließt mit dem Modul)
+GET /traeger/holiday-registrations/{token}/documents/{documentId} -> ferienbetreuung  (#6052 Ferienanmeldung: der Link schließt mit dem Modul)
+POST /traeger/holiday-registrations/{token} -> ferienbetreuung  (#6052 Ferienanmeldung: der Link schließt mit dem Modul)
+POST /traeger/holiday-registrations/{token}/uploads -> ferienbetreuung  (#6052 Ferienanmeldung: der Link schließt mit dem Modul)

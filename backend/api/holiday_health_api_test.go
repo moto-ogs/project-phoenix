@@ -52,14 +52,14 @@ func registerWithHealth(t *testing.T, f holidayGuestFixture) int64 {
 	body["consent_version"] = enrollment.HolidayConsentVersionCurrent
 	body["children"] = []map[string]any{
 		{
-			"first_name": "Mila", "last_name": "Sonne", "birth_date": "2018-04-02", "home_school_id": f.offer.Schools[0].ID,
+			"first_name": "Mila", "last_name": "Sonne", "birth_date": "2018-04-02", "home_school_id": fmt.Sprint(f.offer.Schools[0].ID),
 			"allergies": "Erdnüsse-MILA", "custom_data": map[string]any{"tetanus_impfschutz": "ja"},
-			"bookings": []map[string]any{{"week_id": f.offer.Weeks[0].ID, "time_model_id": f.offer.Weeks[0].TimeModels[1].ID}},
+			"bookings": []map[string]any{{"week_id": fmt.Sprint(f.offer.Weeks[0].ID), "time_model_id": fmt.Sprint(f.offer.Weeks[0].TimeModels[1].ID)}},
 		},
 		{
-			"first_name": "Finn", "last_name": "Sonne", "birth_date": "2016-01-05", "home_school_id": 0,
+			"first_name": "Finn", "last_name": "Sonne", "birth_date": "2016-01-05", "home_school_id": "0",
 			"medication": "Asthmaspray-FINN", "health_notes": "Trägt eine Brille",
-			"bookings": []map[string]any{{"week_id": f.offer.Weeks[0].ID, "time_model_id": f.offer.Weeks[0].TimeModels[0].ID}},
+			"bookings": []map[string]any{{"week_id": fmt.Sprint(f.offer.Weeks[0].ID), "time_model_id": fmt.Sprint(f.offer.Weeks[0].TimeModels[0].ID)}},
 		},
 	}
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.link), body)

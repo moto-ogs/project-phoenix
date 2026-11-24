@@ -29,7 +29,7 @@ import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { STALE_DATA_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
-import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { TenantPageStats } from "~/components/ui/tenant-page";
@@ -267,10 +267,10 @@ const config: CatalogConfig<AbsenceType> = {
   // Eine Art des Trägers ändert die Schule nur in ihrer Abweichung (#4710).
   update: (type, values) =>
     type.keptByTraeger
-      ? absenceTypeService.updateAbsenceType(type.id, {
+      ? absenceTypeService.updateAbsenceType(type.id, type.version, {
           schoolLimitDays: schoolLimitOf(values.schoolLimitDays),
         })
-      : absenceTypeService.updateAbsenceType(type.id, {
+      : absenceTypeService.updateAbsenceType(type.id, type.version, {
           name: String(values.name ?? type.name).trim(),
           allowanceEnabled: Boolean(values.allowanceEnabled),
           carryoverUntil: String(values.carryoverUntil ?? "") || null,
@@ -288,6 +288,7 @@ const config: CatalogConfig<AbsenceType> = {
     run: (type) =>
       absenceTypeService.updateAbsenceType(
         type.id,
+        type.version,
         type.keptByTraeger ? { offered: false } : { isActive: false },
       ),
     toast: (type) =>
@@ -298,6 +299,7 @@ const config: CatalogConfig<AbsenceType> = {
     run: (type) =>
       absenceTypeService.updateAbsenceType(
         type.id,
+        type.version,
         type.keptByTraeger ? { offered: true } : { isActive: true },
       ),
     toast: (type) =>
@@ -307,17 +309,12 @@ const config: CatalogConfig<AbsenceType> = {
 
 function AbsenceTypesPageContent() {
   const searchParams = useSearchParams();
-  const tenantMutate = useTenantMutate();
 
   const discardRefused = useDiscardRefusedEntity();
-  const {
-    data: cachedData,
-    isLoading,
-    error: swrError,
-    mutate,
-  } = useSWRAuth<AbsenceType[]>(CACHE_KEY, () =>
+  const list = useSWRAuth<AbsenceType[]>(CACHE_KEY, () =>
     absenceTypeService.getAbsenceTypes(),
   );
+  const { data: cachedData, isLoading, error: swrError, mutate } = list;
   const accessRefused =
     swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
@@ -338,7 +335,9 @@ function AbsenceTypesPageContent() {
     data === undefined ? undefined : STALE_DATA_SUFFIX,
   );
 
-  const onChanged = useCallback(() => tenantMutate(CACHE_KEY), [tenantMutate]);
+  // Lehnt ab, wenn das Lesen scheitert (ADR 0311), mit der Liste als
+  // Antwort.
+  const onChanged = useCallback(() => revalidateOrThrow(list), [list]);
 
   const items = useMemo(
     () =>

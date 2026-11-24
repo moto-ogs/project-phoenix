@@ -1,7 +1,6 @@
 package announcement
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -14,6 +13,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	announcementService "github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -139,7 +140,11 @@ func (rs *SurveyResource) delete(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if err := rs.Service.DeleteSurvey(r.Context(), id); err != nil {
+	var req fingerprintRequest
+	if !decodeReadState(w, r, &req) {
+		return
+	}
+	if err := rs.Service.DeleteSurvey(r.Context(), id, req.ExpectedFingerprint); err != nil {
 		surveyFailure(w, r, err)
 		return
 	}
@@ -151,7 +156,11 @@ func (rs *SurveyResource) publish(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	survey, err := rs.Service.PublishSurvey(r.Context(), callerAccountID(r), id)
+	var req versionRequest
+	if !decodeReadState(w, r, &req) {
+		return
+	}
+	survey, err := rs.Service.PublishSurvey(r.Context(), callerAccountID(r), id, req.ExpectedVersion)
 	rs.respondSurvey(w, r, survey, err, http.StatusOK, "Survey published")
 }
 
@@ -249,7 +258,7 @@ func (rs *SurveyResource) toAnswer(w http.ResponseWriter, r *http.Request) {
 	out := make([]surveyToAnswerResponse, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, surveyToAnswerResponse{
-			ID: strconv.FormatInt(row.ID, 10), Title: row.Title, Intro: row.Intro,
+			ID: ident.ID(row.ID), Title: row.Title, Intro: row.Intro,
 			Anonymous: row.Anonymous, ClosesAt: row.ClosesAt, Participated: row.Participated,
 		})
 	}
@@ -288,7 +297,7 @@ func (rs *SurveyResource) answer(w http.ResponseWriter, r *http.Request) {
 
 func decodeSurveyRequest(w http.ResponseWriter, r *http.Request) (announcementService.SurveyInput, bool) {
 	var req surveyRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return announcementService.SurveyInput{}, false
 	}

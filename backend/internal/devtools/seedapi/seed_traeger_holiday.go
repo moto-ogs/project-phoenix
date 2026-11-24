@@ -6,6 +6,8 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -41,7 +43,7 @@ func seedParallelHolidayDraft(client *Client, auth AuthRef, today calendar.Date,
 		draft := seedHolidayPeriodShifted(today, schools[0], shift)
 		weeks, _ := draft["weeks"].([]map[string]any)
 		parallel := maps.Clone(weeks[0])
-		parallel["host_school_id"] = schools[1]
+		parallel["host_school_id"] = ident.ID(schools[1])
 		draft["name"] = "Ferienbetreuung an zwei Schulen (Entwurf)"
 		draft["weeks"] = []map[string]any{weeks[0], parallel}
 		_, err := client.PostWithAuth(auth, "/traeger/holiday-periods/", draft)

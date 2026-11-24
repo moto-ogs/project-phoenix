@@ -160,7 +160,7 @@ type ValidationRules struct {
 type Dependency struct {
 	Key       string `json:"key"`
 	Condition string `json:"condition"` // eq, neq, not_empty
-	Value     any    `json:"value"`
+	Value     any    `json:"value" contract_json:"The controlling setting's registered kind determines the comparison value"`
 }
 
 // DependsOnEq builds a Dependency that shows the setting when key equals value.
@@ -187,7 +187,7 @@ type SelectOptions struct {
 // SelectOption is a single static option for a FieldSelect.
 type SelectOption struct {
 	Label string `json:"label"`
-	Value any    `json:"value"`
+	Value any    `json:"value" contract_json:"Option values have the kind of the setting declaring them"`
 }
 
 // TabOrder defines the display ordering of setting tabs.

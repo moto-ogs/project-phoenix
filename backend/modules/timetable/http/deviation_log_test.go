@@ -6,18 +6,20 @@ package timetablehttp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 // deviationEventRow is one audit.deviation_events row as these tests read it
@@ -64,8 +66,8 @@ func TestApplyDeviations_WritesAbsenceAndSubstitutionEvents(t *testing.T) {
 	testpkg.CreateTestInstanceStaff(t, s.db, inst.ID, s.staffX, testpkg.InstanceStaffOpts{})
 
 	w := doDev(t, router, inst.ID, map[string]any{
-		"absences":      []map[string]any{{"staff_id": s.staffX, "reason": "krank"}},
-		"substitutions": []map[string]any{{"absent_staff_id": s.staffA, "substitute_staff_id": s.staffY}},
+		"absences":      []map[string]any{{"staff_id": fmt.Sprint(s.staffX), "reason": "krank"}},
+		"substitutions": []map[string]any{{"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffY)}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 
@@ -112,7 +114,7 @@ func TestApplyDeviations_PresenceWritesReturnEvent(t *testing.T) {
 	testpkg.CreateTestInstanceStaff(t, s.db, inst.ID, s.staffB, testpkg.InstanceStaffOpts{})
 
 	w := doDev(t, router, inst.ID, map[string]any{
-		"presences": []int64{s.staffA},
+		"presences": []map[string]any{{"staff_id": fmt.Sprint(s.staffA)}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 
@@ -138,7 +140,7 @@ func TestApplyDeviations_IdempotentReplayWritesNoEvent(t *testing.T) {
 	testpkg.CreateTestInstanceStaff(t, s.db, inst.ID, s.staffB, testpkg.InstanceStaffOpts{})
 
 	w := doDev(t, router, inst.ID, map[string]any{
-		"absences": []map[string]any{{"staff_id": s.staffA}},
+		"absences": []map[string]any{{"staff_id": fmt.Sprint(s.staffA)}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 
@@ -183,7 +185,7 @@ func TestApplyDeviations_ActiveInstance_EndsAndCreatesSupervisor(t *testing.T) {
 	require.NoError(t, sessions.CreateSupervision(s.ctx, absentSup))
 
 	w := doDev(t, router, inst.ID, map[string]any{
-		"substitutions": []map[string]any{{"absent_staff_id": s.staffA, "substitute_staff_id": s.staffY}},
+		"substitutions": []map[string]any{{"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffY)}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 

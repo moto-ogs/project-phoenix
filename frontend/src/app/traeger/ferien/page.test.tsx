@@ -39,6 +39,7 @@ const period: HolidayPeriod = {
   publishedAt: "2027-01-04T09:00:00Z",
   publicToken: "token",
   registrationCount: 0,
+  version: "period-read",
   weeks: [
     {
       id: "7",
@@ -113,7 +114,7 @@ function render(ui: React.ReactElement) {
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "A", scope: "org", orgId: 7 } },
+    data: { user: { id: "A", scope: "org", orgId: "7" } },
     status: "authenticated",
   }),
 }));

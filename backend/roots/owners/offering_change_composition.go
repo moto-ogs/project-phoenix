@@ -16,6 +16,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // OfferingChangeOwners binds the offering-change review's ports over its
@@ -113,8 +114,6 @@ func mapOfferingLifecycleError(err error) error {
 	switch {
 	case err == nil:
 		return nil
-	case errors.Is(err, careplan.ErrParentRequestStale):
-		return parentrequests.ErrStale
 	case errors.Is(err, careplan.ErrParentRequestPast):
 		return parentrequests.ErrPast
 	case errors.Is(err, careplan.ErrParentRequestNotPast):
@@ -371,6 +370,11 @@ func (e offeringChangeEnrollment) SelectionsAt(ctx context.Context, childID int6
 	return BookedOfferings(values), err
 }
 
+func (e offeringChangeEnrollment) SelectionHistory(ctx context.Context, childID int64) ([]careplan.BookedOffering, error) {
+	values, err := e.owner.RequestChildOfferingHistory(ctx, childID)
+	return BookedOfferings(values), err
+}
+
 func (e offeringChangeEnrollment) EffectiveSelectionsAt(ctx context.Context, dates map[int64]calendar.Date) ([]careplan.BookedOffering, error) {
 	ownerDates := make(map[int64]enrollmentOwner.Date, len(dates))
 	for childID, date := range dates {
@@ -490,7 +494,7 @@ func (l *ParentRequestLedger) Record(ctx context.Context, entry carePlanCompose.
 		RequestType: entry.RequestType,
 		RequestID:   entry.RequestID,
 		EventType:   entry.EventType,
-		Version:     careplan.ParentRequestVersion(entry.UpdatedAt),
+		Version:     readstate.Of(entry.UpdatedAt),
 	}
 	if entry.Payload != nil {
 		payload, err := json.Marshal(entry.Payload)

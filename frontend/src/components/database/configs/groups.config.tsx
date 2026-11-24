@@ -7,6 +7,37 @@ import { bffJson } from "~/lib/bff-fetch";
 import { groupsConcept } from "~/lib/concepts/groups";
 import type * as groupsContract from "~/lib/contract/groups.generated";
 
+/**
+ * The body of a group write: only the fields of `GroupRequest`. The form
+ * hands in the whole loaded group (room name, supervisors, counts), which the
+ * route does not take.
+ */
+export function toGroupRequest(
+  data: Partial<Group>,
+): groupsContract.GroupRequest {
+  return {
+    name: data.name,
+    room_id: data.room_id || undefined,
+    teacher_ids: data.teacher_ids,
+  };
+}
+
+/**
+ * The body of a group save from the form: the name, the room (null clears
+ * it, the route keeps a room the body does not name), the teachers, and the
+ * `version` the form was filled from (ADR 0311).
+ */
+export function toGroupUpdateRequest(
+  data: Partial<Group>,
+): groupsContract.GroupUpdateRequest {
+  return {
+    name: data.name,
+    room_id: data.room_id || null,
+    teacher_ids: data.teacher_ids,
+    expected_version: data.version,
+  };
+}
+
 export const groupsConfig = defineEntityConfig<Group>({
   name: {
     singular: "Gruppe",
@@ -18,13 +49,32 @@ export const groupsConfig = defineEntityConfig<Group>({
   backUrl: "/database",
 
   api: {
-    routes: {
-      list: "GET /api/groups/",
-      get: "GET /api/groups/{id}",
-      create: "POST /api/groups/",
-      update: "PUT /api/groups/{id}",
-      delete: "DELETE /api/groups/{id}",
+    list: async () => {
+      const page = await bffJson("tenant", "GET /api/groups/");
+      return {
+        data: page.data.map(mapGroupResponse),
+        pagination: page.pagination,
+      };
     },
+    get: async (id) =>
+      mapGroupResponse(
+        await bffJson("tenant", "GET /api/groups/{id}", { params: { id } }),
+      ),
+    create: async (data) =>
+      mapGroupResponse(
+        await bffJson("tenant", "POST /api/groups/", {
+          body: toGroupRequest(data),
+        }),
+      ),
+    update: async (id, data) =>
+      mapGroupResponse(
+        await bffJson("tenant", "PUT /api/groups/{id}", {
+          params: { id },
+          body: toGroupUpdateRequest(data),
+        }),
+      ),
+    delete: (id) =>
+      bffJson("tenant", "DELETE /api/groups/{id}", { params: { id } }),
   },
 
   form: {
@@ -203,20 +253,6 @@ export const groupsConfig = defineEntityConfig<Group>({
       avatar: {
         text: (group: Group) => group.name?.[0] ?? "G",
       },
-    },
-  },
-
-  service: {
-    mapResponse: (data: unknown): Group =>
-      mapGroupResponse(data as groupsContract.GroupResponse),
-
-    mapRequest: (data: Partial<Group>) => {
-      const mapped: Record<string, unknown> = {
-        ...data,
-        room_id: data.room_id || undefined,
-      };
-
-      return mapped;
     },
   },
 

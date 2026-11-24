@@ -11,6 +11,7 @@ import { ApiError } from "./api-error";
 import {
   acceptTraegerInvitation,
   changeTraegerMemberName,
+  changeTraegerRoles,
   changeTraegerProfileName,
   fetchTraegerProfile,
   fetchTraegerInvitation,
@@ -581,6 +582,41 @@ describe("traeger-api", () => {
     expect(JSON.parse(init!.body as string)).toEqual({ name: "Eva Müller" });
   });
 
+  // ADR 0311: the change carries the version of the roles it was made from
+  // and answers the person with the new one.
+  it("changes the roles over the read version", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, {
+        status: "success",
+        data: {
+          account_id: "4",
+          email: "e@f.de",
+          name: "",
+          roles: ["billing", "personnel"],
+          activated_at: "2026-09-01T08:00:00Z",
+          version: "v2",
+        },
+      }),
+    );
+
+    await expect(
+      changeTraegerRoles("4", ["billing", "personnel"], "v1"),
+    ).resolves.toEqual({
+      accountId: "4",
+      email: "e@f.de",
+      name: "",
+      roles: ["billing", "personnel"],
+      version: "v2",
+    });
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/traeger/accounts/4/roles");
+    expect(init!.method).toBe("PUT");
+    expect(JSON.parse(init!.body as string)).toEqual({
+      roles: ["billing", "personnel"],
+      expected_version: "v1",
+    });
+  });
+
   it("reads and changes the own profile", async () => {
     fetchMock
       .mockResolvedValueOnce(
@@ -628,6 +664,7 @@ describe("traeger-api holiday periods", () => {
 
   const backendPeriod = {
     id: "5",
+    version: "period-read",
     name: "Osterferien",
     registration_opens_on: "2027-01-11",
     registration_closes_on: "2027-02-26",
@@ -679,43 +716,49 @@ describe("traeger-api holiday periods", () => {
       jsonResponse(200, { status: "success", data: backendPeriod }),
     );
 
-    await updateHolidayPeriod("5", {
-      name: "Osterferien",
-      registrationOpensOn: "2027-01-11",
-      registrationClosesOn: "2027-02-26",
-      binding: false,
-      holidayWishRule: false,
-      notes: "",
-      weeks: [
-        {
-          id: "7",
-          startsOn: "2027-03-22",
-          endsOn: "2027-03-26",
-          hostSchoolId: "31",
-          timeModels: [
-            {
-              name: "bis 16 Uhr",
-              startsAt: "08:00",
-              endsAt: "16:00",
-              priceCents: 6500,
-            },
-            {
-              id: "9",
-              name: "bis 13 Uhr",
-              startsAt: "08:00",
-              endsAt: "13:00",
-              priceCents: 4500,
-              archived: true,
-            },
-          ],
-        },
-      ],
-    });
+    await updateHolidayPeriod(
+      "5",
+      {
+        name: "Osterferien",
+        registrationOpensOn: "2027-01-11",
+        registrationClosesOn: "2027-02-26",
+        binding: false,
+        holidayWishRule: false,
+        notes: "",
+        weeks: [
+          {
+            id: "7",
+            startsOn: "2027-03-22",
+            endsOn: "2027-03-26",
+            hostSchoolId: "31",
+            timeModels: [
+              {
+                name: "bis 16 Uhr",
+                startsAt: "08:00",
+                endsAt: "16:00",
+                priceCents: 6500,
+              },
+              {
+                id: "9",
+                name: "bis 13 Uhr",
+                startsAt: "08:00",
+                endsAt: "13:00",
+                priceCents: 4500,
+                archived: true,
+              },
+            ],
+          },
+        ],
+      },
+      "period-read",
+    );
 
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe("/api/traeger/holiday-periods/5");
     expect(init?.method).toBe("PUT");
     expect(JSON.parse(String(init?.body))).toEqual({
+      // The save sends the version its draft rests on (ADR 0311).
+      expected_version: "period-read",
       name: "Osterferien",
       registration_opens_on: "2027-01-11",
       registration_closes_on: "2027-02-26",

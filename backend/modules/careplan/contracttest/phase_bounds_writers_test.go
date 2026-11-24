@@ -262,7 +262,7 @@ func TestSubmit_WaitsForAnOpenPhaseEditAndCopiesItsBounds(t *testing.T) {
 	err := editHeldOpen(t, env, ctx, movedSourcePhase(env, -7, 14), func(writeCtx context.Context) error {
 		return testpkg.WithinTenantContext(t, writeCtx, env.db, testpkg.Tenant(t), func(txCtx context.Context) error {
 			var submitErr error
-			result, submitErr = intake.Submit(txCtx, boundsSubmission(t, env, offering.ID, "eingereicht-nach@example.com", "Nach"))
+			result, submitErr = submitShown(intake)(txCtx, boundsSubmission(t, env, offering.ID, "eingereicht-nach@example.com", "Nach"))
 			return submitErr
 		})
 	})
@@ -288,7 +288,7 @@ func TestSubmit_OpenSubmissionMakesThePhaseEditWait(t *testing.T) {
 	var result *enrollmentTest.SubmitResult
 	writeHeldOpen(t, env, ctx, movedSourcePhase(env, -7, 14), func(holdCtx context.Context) error {
 		var err error
-		result, err = intake.Submit(holdCtx, boundsSubmission(t, env, offering.ID, "eingereicht-vor@example.com", "Vor"))
+		result, err = submitShown(intake)(holdCtx, boundsSubmission(t, env, offering.ID, "eingereicht-vor@example.com", "Vor"))
 		return err
 	})
 	requestID, childID := requireSingleChild(t, result)
@@ -310,9 +310,10 @@ func TestReplaceEditable_WaitsForAnOpenPhaseEditAndCopiesItsBounds(t *testing.T)
 	intake := gatedIntake(t, env)
 	offering := createSourceOffering(t, env, "BearbeitetNach", nil)
 	submission := boundsSubmission(t, env, offering.ID, "bearbeitet-nach@example.com", "Nach")
-	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, intake.Submit, submission)
+	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, submitShown(intake), submission)
 	require.NoError(t, err)
 
+	require.NoError(t, enrollmentTest.ShowEditForm(ctx, intake, submitted.Request.StatusToken, &submission))
 	var result *enrollmentTest.SubmitResult
 	err = editHeldOpen(t, env, ctx, movedSourcePhase(env, 7, -14), func(writeCtx context.Context) error {
 		var replaceErr error
@@ -339,11 +340,12 @@ func TestReplaceEditable_OpenEditMakesThePhaseEditWait(t *testing.T) {
 	intake := gatedIntake(t, env)
 	offering := createSourceOffering(t, env, "BearbeitetVor", nil)
 	submission := boundsSubmission(t, env, offering.ID, "bearbeitet-vor@example.com", "Vor")
-	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, intake.Submit, submission)
+	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, submitShown(intake), submission)
 	require.NoError(t, err)
 
 	pause := pausedParentChanges{inner: env.reposEnrollment.Enrollment(), reached: make(chan int, 1), release: make(chan struct{})}
 	pausedIntake := gatedIntakeWith(t, env, pause)
+	require.NoError(t, enrollmentTest.ShowEditForm(ctx, intake, submitted.Request.StatusToken, &submission))
 	var result *enrollmentTest.SubmitResult
 	replaced := make(chan error, 1)
 	go func() {
@@ -397,6 +399,7 @@ func proposePhoneChange(t *testing.T, env *decisionTestEnv, changeRequests enrol
 	proposed.Children = []enrollmentTest.SubmitChild{submission.Children[0]}
 	proposed.Children[0].ID = childID
 	proposed.GuardianPhone = new("0201 123456")
+	require.NoError(t, enrollmentTest.ShowEditForm(testpkg.Ctx(t), env.requestSvc, token, &proposed))
 	created, err := changeRequests.Propose(testpkg.Ctx(t), token, enrollmentTest.CreateChangeRequestInput{Submission: proposed, ParentNote: "Neue Telefonnummer."})
 	require.NoError(t, err)
 	return created.ChangeRequest.ID
@@ -415,7 +418,7 @@ func TestChangeRequestApproval_WaitsForAnOpenPhaseEditAndCopiesItsBounds(t *test
 	changeRequests := gatedChangeRequests(t, env)
 	offering := createSourceOffering(t, env, "AntragNach", nil)
 	submission := boundsSubmission(t, env, offering.ID, "antrag-nach@example.com", "Nach")
-	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, intake.Submit, submission)
+	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, submitShown(intake), submission)
 	require.NoError(t, err)
 	requestID, childID := requireSingleChild(t, submitted)
 	changeRequestID := proposePhoneChange(t, env, changeRequests, requestID, submitted.Request.StatusToken, submission, childID)
@@ -446,7 +449,7 @@ func TestChangeRequestApproval_OpenApprovalMakesThePhaseEditWait(t *testing.T) {
 	changeRequests := gatedChangeRequests(t, env)
 	offering := createSourceOffering(t, env, "AntragVor", nil)
 	submission := boundsSubmission(t, env, offering.ID, "antrag-vor@example.com", "Vor")
-	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, intake.Submit, submission)
+	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, submitShown(intake), submission)
 	require.NoError(t, err)
 	requestID, childID := requireSingleChild(t, submitted)
 	changeRequestID := proposePhoneChange(t, env, changeRequests, requestID, submitted.Request.StatusToken, submission, childID)

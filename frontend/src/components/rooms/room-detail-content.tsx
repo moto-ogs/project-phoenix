@@ -26,7 +26,7 @@ import {
   DataFieldSkeleton,
   DataGrid,
 } from "~/components/ui/data-field";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { roomKeys } from "~/lib/swr/rooms-keys";
 import { ApiError } from "~/lib/api-error";
 import { bffJson } from "~/lib/bff-fetch";
@@ -131,6 +131,8 @@ export interface UseRoomDetailResult {
   historyDisabled: boolean;
   /** Fehler beim separaten Laden der Belegungshistorie. */
   historyError: FormError | null;
+  /** Reads the room again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<Room>;
 }
 
 export function useRoomDetail(roomId: string): UseRoomDetailResult {
@@ -144,7 +146,7 @@ export function useRoomDetail(roomId: string): UseRoomDetailResult {
   // window. If a future caller starts passing range params, fold them into
   // the cache key (e.g. `room-detail-${roomId}-${start}-${end}`) so
   // distinct windows don't share a cache slot.
-  const { data, error, isLoading, mutate } = useSWRAuth<{
+  const read = useSWRAuth<{
     room: Room;
     history: RoomHistoryEntry[];
     historyDisabled: boolean;
@@ -194,6 +196,7 @@ export function useRoomDetail(roomId: string): UseRoomDetailResult {
     },
     { keepPreviousData: false },
   );
+  const { data, error, isLoading, mutate } = read;
 
   if (error) {
     logger.error("failed to fetch room data", {
@@ -215,6 +218,7 @@ export function useRoomDetail(roomId: string): UseRoomDetailResult {
     error: loadError,
     historyDisabled: data?.historyDisabled ?? false,
     historyError,
+    reload: async () => (await revalidateOrThrow(read)).room,
   };
 }
 

@@ -88,10 +88,11 @@ func TestQualificationsAPI_AssignKindAndReadStatus(t *testing.T) {
 	firstAid := listed.Data[0].ID
 
 	base := fmt.Sprintf("/staff/%d", target.ID)
-	rec = ctx.put(base+"/stammdaten/qualifikationen", fmt.Sprintf(`{"qualifikationen":[{"type_id":%q,"name":"","expires_on":"2020-03-01"}],"note":"Test"}`, firstAid), "staff:stammdaten")
+	rec = ctx.putRead(t, base+"/stammdaten/qualifikationen", fmt.Sprintf(`{"qualifikationen":[{"type_id":%q,"name":"","expires_on":"2020-03-01"}],"note":"Test"}`, firstAid), "staff:stammdaten")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = ctx.put(base+"/stammdaten/qualifikationen", `{"qualifikationen":[{"type_id":999999999,"name":""}],"note":"Test"}`, "staff:stammdaten")
+	rec = ctx.putRead(t, base+"/stammdaten/qualifikationen", `{"qualifikationen":[{"type_id":"999999999","name":""}],"note":"Test"}`, "staff:stammdaten")
 	require.Equal(t, http.StatusBadRequest, rec.Code, "an unknown kind is refused: "+rec.Body.String())
+	assert.Contains(t, rec.Body.String(), `"code":"workforce.stammdaten_invalid"`)
 
 	rec = ctx.get(base+"/stammdaten", "staff:stammdaten")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -116,7 +117,7 @@ func TestQualificationsAPI_ListQueryBudgets(t *testing.T) {
 	addQualifications := func() {
 		staff := testpkg.CreateTestStaff(t, ctx.tc.db, "Budget", fmt.Sprintf("Nachweis-%d", time.Now().UnixNano()))
 		body := `{"qualifikationen":[{"name":"Erste Hilfe","expires_on":"2027-01-01"},{"name":"Hygiene","expires_on":"2020-01-01"}],"note":"Test"}`
-		rec := ctx.put(fmt.Sprintf("/staff/%d/stammdaten/qualifikationen", staff.ID), body, "staff:stammdaten")
+		rec := ctx.putRead(t, fmt.Sprintf("/staff/%d/stammdaten/qualifikationen", staff.ID), body, "staff:stammdaten")
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
 	measure := func(path string) testpkg.QueryMeasurement {

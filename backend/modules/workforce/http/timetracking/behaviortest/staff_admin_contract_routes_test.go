@@ -54,15 +54,24 @@ func TestAdminSessionWritesAnswerWithTheStoredBlock(t *testing.T) {
 	assert.Equal(t, "2026-03-10", created.Date)
 	require.NotEmpty(t, created.ID)
 
-	rec = ctx.put(sessions+"/"+created.ID, `{"notes":"Nachgetragen laut Dienstbuch"}`, "time_tracking:manage")
+	history := fmt.Sprintf("/staff/%d/time-tracking/history?from=2026-03-10&to=2026-03-10", target.ID)
+	rec = ctx.get(history, "time_tracking:manage")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	read := historyVersion(t, rec.Body.Bytes(), created.ID)
+	rec = ctx.put(sessions+"/"+created.ID, withExpectedVersion(t, `{"notes":"Nachgetragen laut Dienstbuch"}`, read), "time_tracking:manage")
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	// A second correction from the same read is refused and writes nothing
+	// (ADR 0311); the block changed since.
+	stale := ctx.put(sessions+"/"+created.ID, withExpectedVersion(t, `{"notes":"Überschrieben"}`, read), "time_tracking:manage")
+	require.Equal(t, http.StatusConflict, stale.Code, stale.Body.String())
+	assert.Contains(t, stale.Body.String(), "general.changed_since_read")
+	var stored string
+	require.NoError(t, ctx.tc.db.NewRaw(`SELECT notes FROM active.work_sessions WHERE id = ?`, created.ID).Scan(t.Context(), &stored))
+	assert.Equal(t, "Nachgetragen laut Dienstbuch", stored, "the refused correction leaves the stored note")
 	updated := decodeContractData[block](t, rec)
 	assert.Equal(t, created.ID, updated.ID)
 	assert.Equal(t, "Nachgetragen laut Dienstbuch", updated.Notes)
 	assert.Equal(t, strconv.FormatInt(ctx.staffID, 10), updated.UpdatedBy)
-	var stored string
-	require.NoError(t, ctx.tc.db.NewRaw(`SELECT notes FROM active.work_sessions WHERE id = ?`, created.ID).Scan(t.Context(), &stored))
-	assert.Equal(t, "Nachgetragen laut Dienstbuch", stored)
 }
 
 // /payroll changes and archives a wage type and a surcharge rule and books a

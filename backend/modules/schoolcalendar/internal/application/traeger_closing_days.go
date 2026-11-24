@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Closing days of a Träger (#4702). The caller runs every operation in the
@@ -134,6 +135,9 @@ func (t *TraegerClosingDays) save(ctx context.Context, organizationID, id int64,
 		if lockErr != nil {
 			return traegercalendar.ClosingDay{}, traegerClosingDayError(lockErr)
 		}
+		if err := readstate.Check(input.ExpectedVersion, traegerClosingDay(previous).Version); err != nil {
+			return traegercalendar.ClosingDay{}, err
+		}
 		input.ClosingDayID = id
 		input.Previous = &traegercalendar.ClosingDaySpan{StartDate: previous.StartDate, EndDate: previous.EndDate, SchoolIDs: previous.SchoolIDs}
 		day, err = storedTraegerClosingDay(t.store.UpdateTraegerClosingDay(ctx, organizationID, id, fields))
@@ -177,7 +181,11 @@ func (t *TraegerClosingDays) DeleteClosingDay(ctx context.Context, organizationI
 }
 
 func traegerClosingDay(day domain.TraegerClosingDay) traegercalendar.ClosingDay {
-	return traegercalendar.ClosingDay{ID: ident.ID(day.ID), StartDate: day.StartDate, EndDate: day.EndDate, Reason: day.Reason, SchoolIDs: ident.IDs(day.SchoolIDs), UpdatedAt: day.UpdatedAt, AffectedSchoolIDs: append([]int64(nil), day.SchoolIDs...)}
+	return traegercalendar.ClosingDay{
+		ID: ident.ID(day.ID), StartDate: day.StartDate, EndDate: day.EndDate, Reason: day.Reason, SchoolIDs: ident.IDs(day.SchoolIDs),
+		// Every write of the row moves updated_at through its trigger.
+		UpdatedAt: day.UpdatedAt, Version: readstate.Of(day.UpdatedAt), AffectedSchoolIDs: append([]int64(nil), day.SchoolIDs...),
+	}
 }
 
 func affectedSchoolIDs(schoolIDSets ...[]int64) []int64 {

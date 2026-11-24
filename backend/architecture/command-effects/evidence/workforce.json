@@ -5570,7 +5570,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.shiftTypeAdministration.CreateShiftType",
-      "binding_digest": "bea4e354d57d61b5042905c2c40223d1",
+      "binding_digest": "3972a21f8a00f52fc9419f2f41a15e1b",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.ShiftTypeAdministration.CreateShiftType",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks",
@@ -5578,7 +5578,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.shiftTypeAdministration.UpdateShiftType",
-      "binding_digest": "bea4e354d57d61b5042905c2c40223d1",
+      "binding_digest": "3972a21f8a00f52fc9419f2f41a15e1b",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.ShiftTypeAdministration.UpdateShiftType",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks",
@@ -7622,6 +7622,22 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffActorNames.TraegerActorNames",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMemberNames.ListTraegerMemberNames",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffEmployers.SchoolEmployers",
+      "binding_digest": "d12d143d719a233e747e6aa6925c410f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffEmployers.SchoolEmployers",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffEmployers.SchoolEmployers",
+      "binding_digest": "2612eb346b39476314affb8a86a71e11",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffEmployers.SchoolEmployers",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
       "target_owner": "organization-tenancy"
     },
     {
@@ -12322,7 +12338,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.exportTransferPort.Transfer",
-      "binding_digest": "e36635c19229ae18d227aaf2e23cc698",
+      "binding_digest": "4416d7dee59fc9e80133897264f89556",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.ExportTransfer.Transfer",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.RendererService.Render",
@@ -12330,7 +12346,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.exportTransferPort.Transfer",
-      "binding_digest": "595cfe41d6ffe6e82aac2cf9e3dc7886",
+      "binding_digest": "58fb86a89ad9746ddd53cb93a6cdcc5e",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.ExportTransfer.Transfer",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.RenderWorkbook",

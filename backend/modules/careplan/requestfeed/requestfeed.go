@@ -10,7 +10,12 @@ import (
 )
 
 var (
-	ErrNotFound      = errors.New("request feed not found")
+	// ErrNotFound: the account has no feed, or the public token names none.
+	// The public feed also answers a token whose owner lost access with it,
+	// so the address reveals nothing.
+	ErrNotFound = errors.New("request feed not found")
+	// ErrNoAccess: the signed-in account lacks school-wide request access.
+	ErrNoAccess      = errors.New("request feed needs school-wide request access")
 	ErrAlreadyActive = errors.New("request feed already active")
 )
 

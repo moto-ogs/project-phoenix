@@ -1,11 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { problemResponse } from "./api-response-error.server";
-import {
-  readBackendJson,
-  sendBackend,
-  unwrapEnvelope,
-} from "./backend-client.server";
 import type { ErrorCode } from "./error-codes.generated";
 import { readBoundedBody, successResponse } from "./route-wrapper-utils.server";
 import { tenant } from "./route-wrapper.server";
@@ -93,11 +88,7 @@ function validateFile(file: File, options: FileUploadOptions): void {
 
   // Reject path traversal. Multiple dots are valid in ordinary display names;
   // the backend verifies content and replaces the stored name with a UUID.
-  if (
-    fileName.includes("..") ||
-    fileName.includes("/") ||
-    fileName.includes("\\")
-  ) {
+  if (fileName.includes("/") || fileName.includes("\\")) {
     throw new FileValidationError(
       "Invalid filename",
       422,
@@ -128,21 +119,6 @@ async function parseBoundedMultipartFormData(
     headers: { "content-type": request.headers.get("content-type") ?? "" },
     body: bytes,
   }).formData();
-}
-
-/** Sends a multipart form to the tenant backend and answers its `data`. */
-export async function postForm<T>(
-  request: NextRequest,
-  path: string,
-  token: string,
-  form: FormData,
-): Promise<T> {
-  const response = await sendBackend(path, token, {
-    method: "POST",
-    body: form,
-    request,
-  });
-  return unwrapEnvelope<T>(await readBackendJson(response));
 }
 
 /**

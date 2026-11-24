@@ -181,7 +181,9 @@ describe("timetableService", () => {
       id: "42",
       title: "Mensa",
     });
-    await expect(timetableService.update("42", body)).resolves.toMatchObject({
+    await expect(
+      timetableService.update("42", { ...body, expected_version: "v1" }),
+    ).resolves.toMatchObject({
       id: "42",
     });
     await expect(
@@ -204,7 +206,7 @@ describe("timetableService", () => {
       "/api/timetable/instances/42",
       expect.objectContaining({
         method: "PUT",
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, expected_version: "v1" }),
       }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
@@ -257,7 +259,10 @@ describe("timetableService", () => {
       templates: [{ id: "7", schedules: [{ calendarPeriodId: "5" }] }],
     });
     await expect(
-      timetableService.updateTemplate("7", createBody),
+      timetableService.updateTemplate("7", {
+        ...createBody,
+        expected_version: "v7",
+      }),
     ).resolves.toMatchObject({ id: "7", primaryStaffId: "11" });
     await expect(
       timetableService.archiveTemplate("7"),
@@ -292,6 +297,7 @@ describe("timetableService", () => {
       calendar_period_id: "5",
       start_date: "2026-05-04",
       instance_notes: "Heute draußen",
+      expected_version: "v42",
     };
 
     await expect(
@@ -324,6 +330,7 @@ describe("timetableService", () => {
       category_id: "2",
       calendar_period_id: "5",
       series_roster_from: "2026-06-01",
+      expected_version: "v7",
     };
 
     await timetableService.updateTemplate("7", body);
@@ -350,6 +357,7 @@ describe("timetableService", () => {
       category_id: "2",
       calendar_period_id: "5",
       start_date: "2026-08-12",
+      expected_version: "v7",
     };
 
     await timetableService.updateTemplate("7", body);
@@ -406,6 +414,7 @@ describe("timetableService", () => {
       effective_date: "2026-06-01",
       materialize_from: "2026-06-01",
       materialize_to: "2026-06-07",
+      expected_version: "v7",
     };
 
     await expect(

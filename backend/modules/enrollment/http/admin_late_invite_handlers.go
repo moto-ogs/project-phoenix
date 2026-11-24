@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -29,13 +28,13 @@ type AdminCreateLateInviteRequest struct {
 func (req *AdminCreateLateInviteRequest) Bind(_ *http.Request) error { return nil }
 
 type AdminCreateLateInviteResponse struct {
-	ID                string    `json:"id"`
-	PhaseID           string    `json:"phase_id"`
+	ID                ident.ID  `json:"id"`
+	PhaseID           ident.ID  `json:"phase_id"`
 	GuardianEmail     string    `json:"guardian_email"`
 	GuardianFirstName *string   `json:"guardian_first_name,omitempty"`
 	GuardianLastName  *string   `json:"guardian_last_name,omitempty"`
 	ExpiresAt         time.Time `json:"expires_at"`
-	CreatedBy         string    `json:"created_by"`
+	CreatedBy         ident.ID  `json:"created_by"`
 	Reason            *string   `json:"reason,omitempty"`
 	Token             string    `json:"token"`
 }
@@ -85,13 +84,13 @@ func (rs *Resource) createLateInvite(w http.ResponseWriter, r *http.Request) {
 
 	invite := result.Invite
 	common.Respond(w, r, http.StatusCreated, AdminCreateLateInviteResponse{
-		ID:                strconv.FormatInt(invite.ID, 10),
-		PhaseID:           strconv.FormatInt(invite.PhaseID, 10),
+		ID:                ident.ID(invite.ID),
+		PhaseID:           ident.ID(invite.PhaseID),
 		GuardianEmail:     invite.GuardianEmail,
 		GuardianFirstName: invite.GuardianFirstName,
 		GuardianLastName:  invite.GuardianLastName,
 		ExpiresAt:         invite.ExpiresAt,
-		CreatedBy:         strconv.FormatInt(invite.CreatedBy, 10),
+		CreatedBy:         ident.ID(invite.CreatedBy),
 		Reason:            invite.Reason,
 		Token:             result.Token,
 	}, "Late invite created")
@@ -106,9 +105,9 @@ type AdminManualApprovedEnrollmentRequest struct {
 	// enrollment.child_possibly_enrolled (#6148): renew that enrolled child,
 	// or create a new one. At most one is set. ShownExistingStudentIDs are
 	// the candidates the office saw before it chose a new child (#6247).
-	ExistingStudentID       string   `json:"existing_student_id,omitempty"`
-	CreateNewStudent        bool     `json:"create_new_student,omitempty"`
-	ShownExistingStudentIDs []string `json:"shown_existing_student_ids,omitempty"`
+	ExistingStudentID       string     `json:"existing_student_id,omitempty" contract_text:"empty string means no existing student selected"`
+	CreateNewStudent        bool       `json:"create_new_student,omitempty"`
+	ShownExistingStudentIDs []ident.ID `json:"shown_existing_student_ids,omitempty"`
 }
 
 func (req *AdminManualApprovedEnrollmentRequest) Bind(r *http.Request) error {
@@ -134,11 +133,11 @@ func (req *AdminManualApprovedEnrollmentRequest) existingChildChoice() (ManualAp
 }
 
 type AdminManualApprovedEnrollmentResponse struct {
-	RequestID string `json:"request_id"`
-	ChildID   string `json:"child_id"`
-	StudentID string `json:"student_id,omitempty"`
-	Status    string `json:"status"`
-	StatusURL string `json:"status_url"`
+	RequestID ident.ID `json:"request_id"`
+	ChildID   ident.ID `json:"child_id"`
+	StudentID ident.ID `json:"student_id,omitempty"`
+	Status    string   `json:"status"`
+	StatusURL string   `json:"status_url"`
 }
 
 func (rs *Resource) createManualApprovedEnrollment(w http.ResponseWriter, r *http.Request) {
@@ -233,13 +232,13 @@ func manualApprovedEnrollmentReason(body *AdminManualApprovedEnrollmentRequest) 
 func manualApprovedEnrollmentResponse(result *ManualApprovedEnrollmentResult) AdminManualApprovedEnrollmentResponse {
 	child := result.Child
 	resp := AdminManualApprovedEnrollmentResponse{
-		RequestID: strconv.FormatInt(result.Request.ID, 10),
-		ChildID:   strconv.FormatInt(child.ID, 10),
+		RequestID: ident.ID(result.Request.ID),
+		ChildID:   ident.ID(child.ID),
 		Status:    child.Status,
 		StatusURL: result.StatusURL,
 	}
 	if child.CreatedStudentID != nil {
-		resp.StudentID = strconv.FormatInt(*child.CreatedStudentID, 10)
+		resp.StudentID = ident.ID(*child.CreatedStudentID)
 	}
 	return resp
 }
@@ -288,6 +287,7 @@ func (rs *Resource) getManualEnrollmentBootstrap(w http.ResponseWriter, r *http.
 		CollectGradeLevel:         capabilities.CollectGradeLevel,
 		CareOfferingsEnabled:      capabilities.CareOfferingsEnabled,
 		CaptchaConfig:             PublicCaptchaConfigResponse{},
+		TermsFingerprint:          capability.FormTermsFingerprint(data.Schema, texts.Blocks),
 		LegalTexts: PublicLegalTextsResponse{
 			AGB:                 texts.AGB,
 			AGBDocumentURL:      texts.AGBDocumentURL,

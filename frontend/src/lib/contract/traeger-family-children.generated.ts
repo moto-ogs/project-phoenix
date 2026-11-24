@@ -73,6 +73,7 @@ export interface FamilyChildren {
   count: FamilyChildCount | null;
   status: string;
   differing: boolean;
+  version: string;
 }
 
 export const FamilyChildrenSchema: z.ZodType<FamilyChildren, unknown> = object<FamilyChildren>({
@@ -84,6 +85,7 @@ export const FamilyChildrenSchema: z.ZodType<FamilyChildren, unknown> = object<F
   count: nullable(FamilyChildCountSchema),
   status: str,
   differing: bool,
+  version: str,
 });
 
 /** Go: parentbilling.FamilyChildrenSet */
@@ -225,11 +227,7 @@ export interface FamilyChildrenRequest {
   children?: number;
   valid_from?: string | null;
   valid_until?: string | null;
-}
-
-/** Query of GET /traeger/family-children/export */
-export interface GetTraegerFamilyChildrenExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
+  expected_version?: string;
 }
 
 export const routes = {
@@ -249,7 +247,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/family-children/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "POST /traeger/family-children/imports": {

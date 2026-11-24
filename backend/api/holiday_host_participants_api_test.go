@@ -104,8 +104,8 @@ func newHolidayHostFixture(t *testing.T, name string) holidayHostFixture {
 	siblings := submit(siblingsRegistration(offer, "eva.muster@example.org"))
 	tom := siblingsRegistration(offer, "tom.beispiel@example.org")
 	tom["children"] = []map[string]any{{
-		"first_name": "Tom", "last_name": "Beispiel", "birth_date": "2017-05-20", "home_school_id": offer.Schools[1].ID,
-		"bookings": []map[string]any{{"week_id": offer.Weeks[0].ID, "time_model_id": offer.Weeks[0].TimeModels[0].ID}},
+		"first_name": "Tom", "last_name": "Beispiel", "birth_date": "2017-05-20", "home_school_id": fmt.Sprint(offer.Schools[1].ID),
+		"bookings": []map[string]any{{"week_id": fmt.Sprint(offer.Weeks[0].ID), "time_model_id": fmt.Sprint(offer.Weeks[0].TimeModels[0].ID)}},
 	}}
 	submit(tom)
 	// Both stand for registrations from before the consent texts of version 2
@@ -177,8 +177,11 @@ func (f holidayHostFixture) confirm(t *testing.T, registration int64, action str
 	path := fmt.Sprintf("%s/registrations/%d/%s", holidayPeriodPath(f.periodID(t)), registration, action)
 	switch action {
 	case "confirm":
-		// The Elternabrechnung confirms and freezes the contribution (#4664, ADR 0115).
-		path = holidayConfirmPath(f.periodID(t), registration)
+		// The Elternabrechnung confirms and freezes the contribution (#4664,
+		// ADR 0115) the office read (ADR 0311).
+		rec := confirmReadHoliday(t, f.traeger, f.office.token, f.periodID(t), registration, nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		return
 	case "cancel":
 		// It cancels too, to compute the sibling group again (#5662).
 		path = holidayCancelPath(f.periodID(t), registration)

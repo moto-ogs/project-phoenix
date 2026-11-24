@@ -479,6 +479,54 @@ describe("trailing slash", () => {
   });
 });
 
+// A tab from before a release calls the new BFF with its old bundle; the
+// Kindersuche read the new answer shape as its old one and crashed.
+describe("deployment skew", () => {
+  function apiCall(deployment?: string): NextRequest {
+    const req = makeRequest(
+      "http://school-a.localhost:3000/api/students?view=slim",
+      "school-a.localhost:3000",
+    );
+    if (deployment) req.headers.set("X-Moto-Deployment-ID", deployment);
+    return req;
+  }
+
+  it("refuses a BFF call from another deployment with the reload code", async () => {
+    vi.stubEnv("NEXT_DEPLOYMENT_ID", "release-b");
+    try {
+      const res = proxy(apiCall("release-a"));
+
+      expect(res.status).toBe(412);
+      expect(res.headers.get("x-middleware-next")).toBeNull();
+      await expect(res.json()).resolves.toMatchObject({
+        title: "Precondition Failed",
+        status: 412,
+        code: "general.route_not_found",
+      });
+      // The tab compares it with its own and may reload by itself.
+      expect(res.headers.get("X-Moto-Deployment-ID")).toBe("release-b");
+    } finally {
+      vi.stubEnv("NEXT_DEPLOYMENT_ID", "");
+    }
+  });
+
+  it("passes a call from the same deployment, without one, or without an own ID", () => {
+    vi.stubEnv("NEXT_DEPLOYMENT_ID", "release-b");
+    try {
+      expect(proxy(apiCall("release-b")).headers.get("x-middleware-next")).toBe(
+        "1",
+      );
+      expect(proxy(apiCall()).headers.get("x-middleware-next")).toBe("1");
+      vi.stubEnv("NEXT_DEPLOYMENT_ID", "");
+      expect(proxy(apiCall("release-a")).headers.get("x-middleware-next")).toBe(
+        "1",
+      );
+    } finally {
+      vi.stubEnv("NEXT_DEPLOYMENT_ID", "");
+    }
+  });
+});
+
 // Since @sentry/nextjs 11 the tunnel route runs through the proxy (#3687).
 // Events arrive without a session, so the proxy must hand them on untouched.
 describe("Sentry tunnel", () => {

@@ -84,7 +84,10 @@ export function isCompanionPlanConflictResponse(body: unknown): boolean {
 /**
  * The submitted "läuft mit" list was built on a snapshot someone else has
  * since replaced. Re-sending the SAME list is exactly what the refusal
- * prevents, so the form reloads first and lets the user redo the edit.
+ * prevents, so the form reloads first and lets the user redo the edit. This
+ * is the code an older backend still in service answers; the current one
+ * answers general.changed_since_read (ADR 0311), which the form handles
+ * before it, with isChangedSinceRead.
  */
 export function isCompanionsChanged(err: unknown): boolean {
   return err instanceof ApiError && err.code === "students.companions_changed";

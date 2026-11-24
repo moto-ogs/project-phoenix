@@ -21,9 +21,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 
+	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -170,11 +173,29 @@ func newCareContractFixtureWithoutLetterhead(t *testing.T, name string) careCont
 }
 
 func (f careContractFixture) key() map[string]any {
-	return map[string]any{"school_id": f.school, "request_child_id": f.child}
+	return map[string]any{"school_id": fmt.Sprint(f.school), "request_child_id": fmt.Sprint(f.child)}
 }
 
 func templatePath(schoolID, offeringID int64) string {
 	return fmt.Sprintf("/traeger/contract-templates/%d/%d", schoolID, offeringID)
+}
+
+// putTemplate saves the conditions of one offering as the Träger-Büro does:
+// it reads the offering's version first and sends it back (ADR 0311).
+func putTemplate(t *testing.T, router http.Handler, token string, schoolID, offeringID int64, template map[string]any) *httptest.ResponseRecorder {
+	t.Helper()
+	rec := traegerJSON(t, router, token, http.MethodGet, "/traeger/contract-templates", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	body := map[string]any{"expected_version": ""}
+	for _, offering := range decodeSchoolPortalData[[]carecontract.OfferingTemplate](t, rec.Body.Bytes()) {
+		if offering.SchoolID == ident.ID(schoolID) && offering.OfferingID == ident.ID(offeringID) {
+			body["expected_version"] = offering.Version
+		}
+	}
+	for key, value := range template {
+		body[key] = value
+	}
+	return traegerJSON(t, router, token, http.MethodPut, templatePath(schoolID, offeringID), body)
 }
 
 func contractPath(id int64, suffix string) string {
@@ -208,12 +229,12 @@ func TestCareContractDraftFromTheAcceptedApplicationIsSentWithItsFrozenPDF(t *te
 	assert.Equal(t, "template_missing", created.Skipped[0].Reason)
 
 	invalid := map[string]any{"term_kind": "fixed_months", "notice_months": 13, "notice_to": "month_end", "statute_required": true}
-	rec = traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), invalid)
+	rec = putTemplate(t, f.traeger, token, f.school, f.offering, invalid)
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "care_contract.field_invalid")
 	assert.Contains(t, rec.Body.String(), "term_months")
 	assert.Contains(t, rec.Body.String(), "statute_title")
-	rec = traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate)
+	rec = putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key()}})
@@ -251,7 +272,7 @@ func TestCareContractDraftFromTheAcceptedApplicationIsSentWithItsFrozenPDF(t *te
 
 	// A later change of the template changes no contract.
 	changed := map[string]any{"term_kind": "open_ended", "notice_months": 3, "notice_to": "half_year"}
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), changed).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, changed).Code)
 	rec = traegerJSON(t, f.traeger, token, http.MethodGet, contractPath(int64(contract.ID), ""), nil)
 	assert.Equal(t, "school_year", decodeSchoolPortalData[careContractDetailBody](t, rec.Body.Bytes()).Version.Terms.TermKind)
 
@@ -261,7 +282,10 @@ func TestCareContractDraftFromTheAcceptedApplicationIsSentWithItsFrozenPDF(t *te
 	assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
 	assert.True(t, bytes.HasPrefix(rec.Body.Bytes(), []byte("%PDF")))
 
-	rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{int64(contract.ID)}})
+	rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", json.RawMessage(fmt.Appendf(nil, `{"contract_ids":[%d]}`, contract.ID)))
+	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+
+	rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []string{fmt.Sprint(contract.ID)}})
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), fmt.Sprintf(`"sent":["%d"]`, contract.ID))
 
@@ -292,7 +316,7 @@ func TestCareContractDraftFromTheAcceptedApplicationIsSentWithItsFrozenPDF(t *te
 	// The frozen PDF is the mailed one, and the waiting mail is not sent twice.
 	rec = traegerJSON(t, f.traeger, token, http.MethodGet, contractPath(int64(contract.ID), "/document"), nil)
 	assert.Equal(t, payload.PDF, rec.Body.Bytes())
-	rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{int64(contract.ID)}})
+	rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []string{fmt.Sprint(int64(contract.ID))}})
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "mail_pending")
 
@@ -364,7 +388,7 @@ func TestCareContractDraftIsDiscardedAndOnlyADraft(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Verwerfen")
 	token := f.office.token
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 	rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key()}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	contract := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes()).Created[0]
@@ -387,7 +411,7 @@ func TestCareContractDraftIsDiscardedAndOnlyADraft(t *testing.T) {
 func TestCareContractsNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Grenze")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key()}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	contract := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes()).Created[0]
@@ -417,12 +441,12 @@ func TestCareContractsNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 	assert.Empty(t, decodeSchoolPortalData[struct {
 		Contracts []careContractSummaryBody `json:"contracts"`
 	}](t, rec.Body.Bytes()).Contracts)
-	rec = traegerJSON(t, f.traeger, other.token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{int64(contract.ID)}})
+	rec = traegerJSON(t, f.traeger, other.token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []string{fmt.Sprint(int64(contract.ID))}})
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, other.token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key()}})
 	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "care_contract.school_outside_traeger")
-	rec = traegerJSON(t, f.traeger, other.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate)
+	rec = putTemplate(t, f.traeger, other.token, f.school, f.offering, careContractTemplate)
 	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, other.token, http.MethodGet, "/traeger/contracts/candidates?school_id="+strconv.FormatInt(f.school, 10), nil)
 	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
@@ -432,7 +456,7 @@ func TestCareContractListsQueryBudget(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Budget")
 	token := f.office.token
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 	read := func(path string) testpkg.QueryMeasurement {
 		counter := testpkg.CaptureQueriesForContext(t, f.db)
 		req := httptest.NewRequest(http.MethodGet, path, nil)
@@ -446,7 +470,7 @@ func TestCareContractListsQueryBudget(t *testing.T) {
 		rec := traegerJSON(t, f.traeger, token, http.MethodGet, "/traeger/contracts/candidates", nil)
 		keys := []map[string]any{}
 		for _, candidate := range decodeSchoolPortalData[[]careContractCandidateBody](t, rec.Body.Bytes()) {
-			keys = append(keys, map[string]any{"school_id": candidate.SchoolID, "request_child_id": candidate.RequestChildID})
+			keys = append(keys, map[string]any{"school_id": fmt.Sprint(candidate.SchoolID), "request_child_id": fmt.Sprint(candidate.RequestChildID)})
 		}
 		require.Equal(t, http.StatusCreated, traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": keys}).Code)
 	}
@@ -469,8 +493,8 @@ func TestCareContractListPaginatesAndFiltersAllContracts(t *testing.T) {
 	f := newCareContractFixture(t, "Träger Vertrag Seiten")
 	token := f.office.token
 	other := careContractApplication(t, f.db, f.school, f.phase, f.offering, "Ben", "ben@example.org")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
-	rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key(), map[string]any{"school_id": f.school, "request_child_id": other}}})
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
+	rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key(), map[string]any{"school_id": fmt.Sprint(f.school), "request_child_id": fmt.Sprint(other)}}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	created := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes()).Created
 	require.Len(t, created, 2)
@@ -508,7 +532,7 @@ func TestCareContractFailedDeliveryCanUseACorrectedAddressWithItsFrozenPDF(t *te
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Empfänger")
 	token := f.office.token
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 	rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key()}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	created := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes()).Created
@@ -516,16 +540,16 @@ func TestCareContractFailedDeliveryCanUseACorrectedAddressWithItsFrozenPDF(t *te
 	id := created[0].ID
 	send := func(address *string) *httptest.ResponseRecorder {
 		t.Helper()
-		body := map[string]any{"contract_ids": []int64{int64(id)}}
+		body := map[string]any{"contract_ids": []string{fmt.Sprint(int64(id))}}
 		if address != nil {
 			body["recipient_email"] = *address
 		}
 		return traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", body)
 	}
-	correctedBatch := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{int64(id), int64(id)}, "recipient_email": "neu@example.org"})
+	correctedBatch := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []string{fmt.Sprint(int64(id)), fmt.Sprint(int64(id))}, "recipient_email": "neu@example.org"})
 	require.Equal(t, http.StatusBadRequest, correctedBatch.Code, "a correction must identify exactly one contract")
 	assert.Contains(t, correctedBatch.Body.String(), "care_contract.selection_invalid", "the selection, not a field, is refused")
-	emptyBatch := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{}})
+	emptyBatch := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []string{}})
 	require.Equal(t, http.StatusBadRequest, emptyBatch.Code, emptyBatch.Body.String())
 	assert.Contains(t, emptyBatch.Body.String(), "care_contract.selection_invalid", "an empty batch is a selection refusal")
 	corrected := "korrigiert@example.org"
@@ -581,12 +605,12 @@ func TestCareContractBouncedAfterAcceptanceShowsAsFailedAndTakesACorrection(t *t
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Bounce")
 	token := f.office.token
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 	rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key()}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	id := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes()).Created[0].ID
 	require.Equal(t, http.StatusAccepted, traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send",
-		map[string]any{"contract_ids": []int64{int64(id)}}).Code)
+		map[string]any{"contract_ids": []string{fmt.Sprint(int64(id))}}).Code)
 	mailState := func() string {
 		t.Helper()
 		rec := traegerJSON(t, f.traeger, token, http.MethodGet, contractPath(int64(id), ""), nil)
@@ -605,7 +629,7 @@ func TestCareContractBouncedAfterAcceptanceShowsAsFailedAndTakesACorrection(t *t
 	require.NoError(t, err)
 	assert.Equal(t, "failed", mailState(), "a bounce after acceptance did not arrive")
 	rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send",
-		map[string]any{"contract_ids": []int64{int64(id)}, "recipient_email": "korrigiert@example.org"})
+		map[string]any{"contract_ids": []string{fmt.Sprint(int64(id))}, "recipient_email": "korrigiert@example.org"})
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), fmt.Sprintf(`"sent":["%d"]`, id), "the corrected address takes the contract")
 }
@@ -623,13 +647,13 @@ func TestCareContractMailFollowsTheCurrentStateOfTheAddress(t *testing.T) {
 		fmt.Sprintf("zustellung-%d@example.org", testpkg.UniqueTestTenantID(t)), f.child)
 	require.NoError(t, err)
 	token := f.office.token
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 	rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key()}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	id := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes()).Created[0].ID
 	send := func() string {
 		t.Helper()
-		rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{int64(id)}})
+		rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []string{fmt.Sprint(int64(id))}})
 		require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 		return rec.Body.String()
 	}
@@ -690,11 +714,11 @@ func TestCareContractSameAddressAsCorrectionKeepsItsResult(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Gleiche Adresse")
 	token := f.office.token
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 	rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key()}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	id := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes()).Created[0].ID
-	first := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{int64(id)}})
+	first := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []string{fmt.Sprint(int64(id))}})
 	require.Equal(t, http.StatusAccepted, first.Code, first.Body.String())
 	mails := func() int {
 		t.Helper()
@@ -711,7 +735,7 @@ func TestCareContractSameAddressAsCorrectionKeepsItsResult(t *testing.T) {
 	}
 	resend := func(address string) string {
 		t.Helper()
-		rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{int64(id)}, "recipient_email": address})
+		rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []string{fmt.Sprint(int64(id))}, "recipient_email": address})
 		require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 		return rec.Body.String()
 	}
@@ -752,11 +776,11 @@ func TestCareContractBulkSendSharesTheProviderBudget(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Sammelversand")
 	token := f.office.token
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 	keys := []any{f.key()}
 	for i := range deliveryContract.ProviderBlockReads + 1 {
 		child := careContractApplication(t, f.db, f.school, f.phase, f.offering, fmt.Sprintf("Kind%d", i), fmt.Sprintf("sammel-%d-%d@example.org", i, testpkg.UniqueTestTenantID(t)))
-		keys = append(keys, map[string]any{"school_id": f.school, "request_child_id": child})
+		keys = append(keys, map[string]any{"school_id": fmt.Sprint(f.school), "request_child_id": fmt.Sprint(child)})
 	}
 	rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": keys})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -768,7 +792,7 @@ func TestCareContractBulkSendSharesTheProviderBudget(t *testing.T) {
 	}
 	send := func() *httptest.ResponseRecorder {
 		t.Helper()
-		rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": ids})
+		rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": testpkg.IDsOf[testpkg.ID](ids)})
 		require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 		return rec
 	}
@@ -801,11 +825,11 @@ func TestCareContractMailNamesAHoldOfTheSchool(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Sperre")
 	token := f.office.token
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 	rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key()}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	id := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes()).Created[0].ID
-	require.Equal(t, http.StatusAccepted, traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{int64(id)}}).Code)
+	require.Equal(t, http.StatusAccepted, traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []string{fmt.Sprint(int64(id))}}).Code)
 	detail := func() careContractDetailBody {
 		rec := traegerJSON(t, f.traeger, token, http.MethodGet, contractPath(int64(id), ""), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -817,7 +841,7 @@ func TestCareContractMailNamesAHoldOfTheSchool(t *testing.T) {
 	_, err = f.db.ExecContext(context.Background(), `INSERT INTO platform.email_suppressions (tenant_id, address, reason) VALUES (?, ?, 'failed')`, f.school, address)
 	require.NoError(t, err)
 	assert.Equal(t, "address", detail().Mailings[0].SendBlock)
-	sent := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{int64(id)}})
+	sent := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []string{fmt.Sprint(int64(id))}})
 	assert.Contains(t, sent.Body.String(), `"reason":"mail_blocked"`)
 
 	_, err = f.db.ExecContext(context.Background(), `DELETE FROM platform.email_suppressions WHERE tenant_id = ? AND address = ?`, f.school, address)
@@ -833,7 +857,7 @@ func TestCareContractWithoutALetterheadIsNotSent(t *testing.T) {
 	f := newCareContractFixtureWithoutLetterhead(t, "Träger Vertrag ohne Briefkopf")
 	terms := map[string]any{"term_kind": "school_year", "notice_months": 1, "notice_to": "month_end"}
 	token := f.office.token
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), terms).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, terms).Code)
 	rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key()}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	created := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes()).Created
@@ -842,7 +866,7 @@ func TestCareContractWithoutALetterheadIsNotSent(t *testing.T) {
 	// A letterhead of blanks or without an address is incomplete.
 	for _, text := range []string{"  \n ", "Träger ohne Anschrift"} {
 		setTraegerLetterhead(t, f.reviewFixture, text)
-		rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{int64(id)}})
+		rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []string{fmt.Sprint(int64(id))}})
 		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 		code, _ := registrationRefusalOf(t, rec)
 		assert.Equal(t, "care_contract.letterhead_missing", code)
@@ -853,4 +877,55 @@ func TestCareContractWithoutALetterheadIsNotSent(t *testing.T) {
 	var mails int
 	require.NoError(t, f.db.NewRaw(`SELECT COUNT(*) FROM platform.email_outbox WHERE organization_id = ? AND kind = 'care_contract' AND related_entity_id = ?`, f.office.organization, id).Scan(context.Background(), &mails))
 	assert.Zero(t, mails)
+}
+
+// A save of an offering's conditions carries the version the form was read
+// with (ADR 0311): a stale or missing one is refused with
+// general.changed_since_read and writes nothing; the answer's version saves
+// again.
+func TestContractTemplateSaveIsBoundToTheReadVersion(t *testing.T) {
+	t.Parallel()
+	f := newCareContractFixture(t, "Träger Vertrag Vorlage Stand")
+	token := f.office.token
+	path := templatePath(f.school, f.offering)
+	var unread string
+	rec := traegerJSON(t, f.traeger, token, http.MethodGet, "/traeger/contract-templates", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	for _, offering := range decodeSchoolPortalData[[]carecontract.OfferingTemplate](t, rec.Body.Bytes()) {
+		if offering.OfferingID == ident.ID(f.offering) {
+			unread = offering.Version
+		}
+	}
+	require.NotEmpty(t, unread, "the template read carries the offering's token before its first save")
+	first := map[string]any{"expected_version": unread}
+	for key, value := range careContractTemplate {
+		first[key] = value
+	}
+	rec = traegerJSON(t, f.traeger, token, http.MethodPut, path, first)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	read := decodeSchoolPortalData[carecontract.OfferingTemplate](t, rec.Body.Bytes()).Version
+	require.NotEmpty(t, read)
+
+	changed := map[string]any{"expected_version": read}
+	for key, value := range careContractTemplate {
+		changed[key] = value
+	}
+	changed["notice_months"] = 3
+	rec = traegerJSON(t, f.traeger, token, http.MethodPut, path, changed)
+	require.Equal(t, http.StatusOK, rec.Code, "the answer's version saves again: %s", rec.Body.String())
+
+	for _, stale := range []string{read, readstate.Absent, ""} {
+		changed["expected_version"], changed["notice_months"] = stale, 6
+		rec = traegerJSON(t, f.traeger, token, http.MethodPut, path, changed)
+		assert.Equal(t, http.StatusConflict, rec.Code, "version %q: %s", stale, rec.Body.String())
+		assert.Contains(t, rec.Body.String(), readstate.ChangedCode)
+	}
+	rec = traegerJSON(t, f.traeger, token, http.MethodGet, "/traeger/contract-templates", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	for _, offering := range decodeSchoolPortalData[[]carecontract.OfferingTemplate](t, rec.Body.Bytes()) {
+		if offering.OfferingID == ident.ID(f.offering) {
+			require.NotNil(t, offering.Template)
+			assert.Equal(t, 3, offering.Template.NoticeMonths, "the refused saves wrote nothing")
+		}
+	}
 }

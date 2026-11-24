@@ -1,5 +1,6 @@
 {
   "child_not_enrolled": "{object} mümkün değil. Çocuk bu gün bakımda değil.",
+  "day_changed": "Başka biri yemek planının bu gününü bu arada değiştirdi. Şimdi güncel durumu görüyorsunuz. Kontrol edin ve tekrar kaydedin.",
   "day_closed": "{object} mümkün değil. Okul bu gün kapalı.",
   "day_past": "{object} artık mümkün değil. Bu gün geçti.",
   "invalid_allergens": "Alerjenler kaydedilemedi. Lütfen yeniden seçin.",

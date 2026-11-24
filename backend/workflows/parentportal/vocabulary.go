@@ -118,6 +118,7 @@ type (
 	MealParticipationDay             = care.MealParticipationDay
 	MealParticipationPlan            = care.MealParticipationPlan
 	MealWeekChange                   = care.MealWeekChange
+	MealScheduleSaved                = care.MealScheduleSaved
 	MealPlanEntry                    = care.MealPlanEntry
 	MealWeekday                      = care.MealWeekday
 	ParentRequestEventView           = messaging.ParentRequestEventView
@@ -156,7 +157,6 @@ var (
 	ErrAnnouncementAckNotRequired       = messaging.ErrAnnouncementAckNotRequired
 	ErrAnnouncementNotAPoll             = messaging.ErrAnnouncementNotAPoll
 	ErrAnnouncementNotFound             = messaging.ErrAnnouncementNotFound
-	ErrAnnouncementStale                = messaging.ErrAnnouncementStale
 	ErrCannotRemoveOwnAccess            = care.ErrCannotRemoveOwnAccess
 	ErrCannotRemovePayerGuardian        = care.ErrCannotRemovePayerGuardian
 	ErrCannotRemovePrimaryGuardian      = care.ErrCannotRemovePrimaryGuardian

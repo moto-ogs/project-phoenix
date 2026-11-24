@@ -58,7 +58,7 @@ var debitRunKinds = map[string]string{
 // SEPADebitSubmissionRequest is the body of POST …/submission: the message
 // ID of the file the office submitted to its bank.
 type SEPADebitSubmissionRequest struct {
-	MessageID string `json:"message_id"`
+	MessageID string `json:"message_id" contract_text:"SEPA payment message identifier"`
 }
 
 // Bind requires the message ID.

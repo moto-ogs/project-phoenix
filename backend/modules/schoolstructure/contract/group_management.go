@@ -30,9 +30,12 @@ type GroupQuery interface {
 	FindGroupWithRoom(context.Context, int64) (*Group, error)
 }
 
+// GroupCommand creates, edits and deletes groups. UpdateGroup refuses an
+// edit of a group changed since its editor read it with
+// readstate.ErrChanged (ADR 0311).
 type GroupCommand interface {
 	CreateGroup(context.Context, *Group) error
-	UpdateGroup(context.Context, *Group) error
+	UpdateGroup(context.Context, GroupEdit) error
 	DeleteGroup(context.Context, int64) error
 }
 
@@ -46,8 +49,10 @@ type GroupTeaching interface {
 }
 
 // StaffSchoolClasses manages free-text classes matched by normalized name.
-// The last argument of SetStaffSchoolClasses is the authenticated audit actor.
+// The last argument of SetStaffSchoolClasses is the authenticated audit
+// actor; the string before it the StaffSchoolClassesVersion the form showed
+// (ADR 0311), refused when the stored assignments differ or it is empty.
 type StaffSchoolClasses interface {
 	GetStaffSchoolClasses(context.Context, int64) ([]string, error)
-	SetStaffSchoolClasses(context.Context, int64, []string, int64) error
+	SetStaffSchoolClasses(context.Context, int64, []string, string, int64) error
 }

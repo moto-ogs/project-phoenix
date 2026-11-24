@@ -82,18 +82,4 @@ export const roomService = {
       throw error;
     }
   },
-
-  // Delete a room
-  deleteRoom: async (id: string): Promise<void> => {
-    try {
-      // Code, Feldfehler und Vorgangskennung bleiben erhalten (#2517).
-      await bffJson("tenant", "DELETE /api/rooms/{id}", { params: { id } });
-    } catch (error) {
-      logger.error("failed to delete room", {
-        room_id: id,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
-    }
-  },
 };

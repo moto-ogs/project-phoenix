@@ -23,6 +23,10 @@ import (
 // Träger transaction.
 type ChildNumberStore interface {
 	ChildDebtorNumbers(ctx context.Context, organizationID int64) ([]parentbilling.ChildDebtorNumber, error)
+	// LockChildDebtorNumbers holds the numbers of the children of the
+	// families until the transaction ends; every write below takes it
+	// itself, a check of read numbers takes it before it reads them.
+	LockChildDebtorNumbers(ctx context.Context, organizationID int64, familyEmails []string) error
 	// SaveChildDebtorNumbers writes the numbers; with onlyNew a child that
 	// has a number keeps it.
 	SaveChildDebtorNumbers(ctx context.Context, organizationID, accountID int64, numbers []parentbilling.ChildDebtorNumber,
@@ -76,7 +80,7 @@ func (f *BillingFamilies) contractChildren(ctx context.Context, organizationID i
 	at := map[string]int{}
 	for _, id := range ids {
 		version, recipient := first[id], recipients[id]
-		family := parentbilling.ContractFamilyKey(recipient.Email, id)
+		family := recipient.FamilyOf(id)
 		key := parentbilling.ChildKey(version.ChildFirstName, version.ChildLastName, version.ChildBirthDate)
 		if family == "" || key == "" {
 			continue
@@ -180,8 +184,18 @@ func familyChildNumbers(contracts []contractChild, numbers []parentbilling.Child
 	for _, contract := range contracts {
 		i := add(contract.family, contract.contractID, contract.until, contract.recipient)
 		child := contract.child
-		key := parentbilling.ChildDebtorNumberKey(contract.family, parentbilling.ChildKey(child.FirstName, child.LastName, child.BirthDate))
-		if number, ok := byKey[key]; ok {
+		childKey := parentbilling.ChildKey(child.FirstName, child.LastName, child.BirthDate)
+		key := parentbilling.ChildDebtorNumberKey(contract.family, childKey)
+		number, ok := byKey[key]
+		// A child joined to the family of another contract (#7161) shows
+		// the number of its own contract until the family has one.
+		if own, rests := parentbilling.OwnContractFamily(contract.family, contract.contractID); !ok && rests {
+			ownKey := parentbilling.ChildDebtorNumberKey(own, childKey)
+			if number, ok = byKey[ownKey]; ok {
+				shown[ownKey] = true
+			}
+		}
+		if ok {
 			child.DebtorNumber = number.DebtorNumber
 			read = append(read, number)
 		}

@@ -90,8 +90,13 @@ import {
   toISODate,
 } from "~/lib/date-helpers";
 import { staffAbsenceService, type StaffAbsenceRow } from "~/lib/staff-api";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
+  useReadDraftLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import { useDraftOn } from "~/lib/swr/read-draft";
+import {
+  revalidateOrThrow,
   useSWRAuth,
   useTenantMutate,
   useTenantMutateMatching,
@@ -412,6 +417,37 @@ export function AbwesenheitenTab({
   const customAllowances = current?.allowances ?? NO_ALLOWANCES;
   const loading = current === null && !loadFailed;
 
+  // The quota form's read (ADR 0311): reads again and rejects on failure,
+  // and takes the stored claim a save answered.
+  const quotaRead = useMemo(
+    () => ({
+      reload: () => revalidateOrThrow(quotaResource),
+      write: (stored: sharedContract.VacationQuotaSummary) =>
+        quotaResource.mutate(stored, { revalidate: false }),
+    }),
+    [quotaResource],
+  );
+
+  // The read of one own claim (ADR 0311): reads the claims again and rejects
+  // on failure, and takes the stored claim a save answered.
+  const allowanceRead = useCallback(
+    (typeId: string) => ({
+      reload: async () =>
+        (await revalidateOrThrow(allowancesResource)).find(
+          (entry) => entry.type.id === typeId,
+        )?.summary,
+      write: (stored: AbsenceTypeAllowanceSummary) =>
+        allowancesResource.mutate(
+          (entries) =>
+            entries?.map((entry) =>
+              entry.type.id === typeId ? { ...entry, summary: stored } : entry,
+            ),
+          { revalidate: false },
+        ),
+    }),
+    [allowancesResource],
+  );
+
   // The reload after a write fetches anew and rejects on failure, so
   // useRefreshAfterWrite can say that the change is saved (#6652).
   const reload = useCallback(async () => {
@@ -642,6 +678,7 @@ export function AbwesenheitenTab({
                   staffId={staffId}
                   quota={quota}
                   year={year}
+                  read={quotaRead}
                   onCancel={() => setEditing(null)}
                   onSaved={() => {
                     setEditing(null);
@@ -686,6 +723,7 @@ export function AbwesenheitenTab({
                     year={year}
                     type={entry.type}
                     summary={entry.summary}
+                    read={allowanceRead(entry.type.id)}
                     onCancel={() => setEditing(null)}
                     onSaved={() => {
                       setEditing(null);
@@ -1507,6 +1545,21 @@ function quotaFieldError(raw: string): string | undefined {
     : undefined;
 }
 
+/** The values a stored claim fills the quota form with. */
+function quotaDraft(quota: sharedContract.VacationQuotaSummary): QuotaDraft {
+  return {
+    entitled: String(quota.entitled_days),
+    carryover: String(quota.carryover_days),
+    reason: "",
+  };
+}
+
+interface QuotaDraft {
+  readonly entitled: string;
+  readonly carryover: string;
+  readonly reason: string;
+}
+
 /**
  * Der Bearbeiten-Zustand des Urlaubsanspruchs (BAUARTEN-SPEC Bauart 2 Regeln
  * 3 bis 5, #3119): an Ort und Stelle der Kennzahl-Kacheln, zwei Felder, ein
@@ -1518,26 +1571,65 @@ function QuotaEditForm({
   staffId,
   quota,
   year,
+  read,
   onCancel,
   onSaved,
 }: {
   readonly staffId: string;
   readonly quota: sharedContract.VacationQuotaSummary;
   readonly year: number;
+  /** The tab's read of the claim: reads it again (rejects on failure),
+   * takes a stored claim a save answered. */
+  readonly read: {
+    readonly reload: () => Promise<sharedContract.VacationQuotaSummary>;
+    readonly write: (
+      stored: sharedContract.VacationQuotaSummary,
+    ) => Promise<unknown>;
+  };
   readonly onCancel: () => void;
   /** Closes the form and reloads; never rejects (#6652). */
   readonly onSaved: RefreshAfterWrite;
 }) {
-  const [entitled, setEntitled] = useState(String(quota.entitled_days));
-  const [carryover, setCarryover] = useState(String(quota.carryover_days));
-  const [reason, setReason] = useState("");
+  // The claim the form opened from (ADR 0311): its version goes out with the
+  // save. A newer read refills the form only while nothing is typed; after a
+  // refusal the stored claim shows, and nothing is sent until it is read.
+  const edit = useDraftOn<
+    sharedContract.VacationQuotaSummary,
+    QuotaDraft,
+    string,
+    sharedContract.VacationQuotaSummary
+  >(
+    {
+      opening: `${staffId}:${year}`,
+      data: quota,
+      reload: read.reload,
+      write: read.write,
+    },
+    {
+      token: (claim) => claim.version,
+      toDraft: quotaDraft,
+      // The reason annotates the change, it is no stored value: it stays
+      // over the stored claim a refusal shows.
+      rebase: (draft, _from, stored) => ({
+        ...quotaDraft(stored),
+        reason: draft.reason,
+      }),
+      answer: (saved) => saved,
+    },
+  );
+  const { entitled, carryover, reason } = edit.draft ?? quotaDraft(quota);
+  const set = (patch: Partial<QuotaDraft>) =>
+    edit.setDraft((current) => ({ ...current, ...patch }));
   const [saving, setSaving] = useState(false);
   const formErrors = useApiFormError();
   const toast = useToast();
+  const loadError = useReadDraftLoadError(edit, "den Urlaubsanspruch");
   // „Wiederholen“ sendet den aktuellen Entwurf, nicht den vom Fehlerzeitpunkt.
   const latestSaveRef = useRef<() => Promise<void>>(async () => undefined);
 
   const handleSave = async () => {
+    // Enter submits too: nothing goes out before the stored claim is read.
+    if (!edit.canSubmit) return;
     formErrors.clear();
     const fields: Record<string, string> = {};
     const entitledError = quotaFieldError(entitled);
@@ -1552,27 +1644,34 @@ function QuotaEditForm({
       return;
     }
     setSaving(true);
-    try {
-      await staffAbsenceService.setVacationQuota(staffId, {
+    const result = await edit.submit((version, sent) =>
+      staffAbsenceService.setVacationQuota(staffId, {
         year,
-        entitled_days: Number.parseFloat(entitled),
-        carryover_days: Number.parseFloat(carryover),
-        reason: reason.trim(),
-      });
-      toast.success("Der Urlaubsanspruch ist gespeichert.");
-    } catch (err) {
+        entitled_days: Number.parseFloat(sent.entitled),
+        carryover_days: Number.parseFloat(sent.carryover),
+        reason: sent.reason.trim(),
+        expected_version: version,
+      }),
+    );
+    setSaving(false);
+    if (!result.ok) {
       logger.error("quota_save_failed", {
         staff_id: staffId,
-        error: err instanceof Error ? err.message : String(err),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      await formErrors.show(err, {
+      // Seit dem Lesen geändert: `reload` zeigt den gespeicherten Stand,
+      // ohne „Wiederholen“ mit derselben Version.
+      await formErrors.show(result.error, {
         object: "die Änderung am Urlaubsanspruch",
         retry: () => void latestSaveRef.current(),
+        reload: result.reload,
       });
-      setSaving(false);
       return;
     }
-    setSaving(false);
+    toast.success("Der Urlaubsanspruch ist gespeichert.");
     await onSaved();
   };
 
@@ -1591,6 +1690,10 @@ function QuotaEditForm({
       }}
     >
       <FormErrorAlert message={formErrors.error} />
+      {/* After a refusal the form's alert already names the failed read. */}
+      {edit.status === "loadFailed" && !formErrors.error ? (
+        <LoadErrorAlert error={loadError} />
+      ) : null}
       <h4 className="text-sm font-semibold text-gray-900">
         Urlaubsanspruch {year}
       </h4>
@@ -1605,7 +1708,7 @@ function QuotaEditForm({
           step="0.5"
           controlSize="compact"
           value={entitled}
-          onChange={(e) => setEntitled(e.target.value)}
+          onChange={(e) => set({ entitled: e.target.value })}
           error={formErrors.fieldError("entitled_days")}
           disabled={saving}
         />
@@ -1619,7 +1722,7 @@ function QuotaEditForm({
           step="0.5"
           controlSize="compact"
           value={carryover}
-          onChange={(e) => setCarryover(e.target.value)}
+          onChange={(e) => set({ carryover: e.target.value })}
           error={formErrors.fieldError("carryover_days")}
           disabled={saving}
         />
@@ -1630,12 +1733,21 @@ function QuotaEditForm({
         label="Begründung"
         controlSize="compact"
         value={reason}
-        onChange={(e) => setReason(e.target.value)}
+        onChange={(e) => set({ reason: e.target.value })}
         placeholder="z. B. Stellenumfang geändert"
         error={formErrors.fieldError("reason")}
         disabled={saving}
       />
-      <EditActions onCancel={onCancel} saving={saving} />
+      <EditActions
+        onCancel={onCancel}
+        saving={saving}
+        disabled={!edit.canSubmit}
+        disabledReason={
+          edit.status === "loadFailed"
+            ? "Lade zuerst den gespeicherten Stand neu."
+            : "Der gespeicherte Stand wird geladen."
+        }
+      />
     </form>
   );
 }

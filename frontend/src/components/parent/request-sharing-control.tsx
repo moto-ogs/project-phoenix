@@ -20,8 +20,12 @@ import {
 import { Modal } from "~/components/ui/modal";
 import { useSharingOptions } from "~/components/parent/sharing-options-context";
 import { useApiFormError } from "~/contexts/ToastContext";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import {
+  useReadDraftLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import { useDraftOn } from "~/lib/swr/read-draft";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import {
   getRequestSharing,
@@ -116,51 +120,81 @@ function useSharingState(
   studentId: string,
   requestType: ParentRequestShareType,
   requestId: string,
-  open: boolean,
 ) {
   const t = useCareTermTranslations("parentRequestSharing");
-  const summary = useSWRAuth(
-    enabled && !open
+  // The summary and the dialog read the shared cache. A choice carries the
+  // version of the sharing it was made on, so the server refuses it when the
+  // sharing changed since (ADR 0311).
+  const resource = useSWRAuth(
+    enabled
       ? parentKeys.requestSharing(studentId, requestType, requestId)
       : null,
     () => getRequestSharing(studentId, requestType, requestId),
     { keepPreviousData: false, revalidateIfStale: false },
   );
-  const dialog = useFreshSWR(
-    enabled && open
-      ? parentKeys.requestSharing(studentId, requestType, requestId)
-      : null,
-    () => getRequestSharing(studentId, requestType, requestId),
-  );
-  const resource = open ? dialog : summary;
   const { data, mutate, isValidating } = resource;
   const { error: loadError } = useSwrResourceLoadError(
     [resource],
     t("errorObjectRecipients"),
     () => mutate(),
   );
-  // The selection is a draft of the dialog, reset by every new answer.
-  const [selected, setSelected] = useState<string[]>(() =>
-    selectedRecipients(data),
+  // The selection is a draft of the dialog with the version it was drawn
+  // from; saving sends that version (ADR 0311). A newer read replaces the
+  // draft only while it is untouched; after a refusal the stored sharing
+  // replaces it.
+  const readRef = useRef(resource);
+  useLayoutEffect(() => {
+    readRef.current = resource;
+  });
+  const draft = useDraftOn<
+    parentMeContract.requestSharingStateResponse,
+    string[],
+    string,
+    parentMeContract.requestSharingStateResponse
+  >(
+    {
+      opening: enabled ? `${requestType}:${requestId}` : null,
+      data,
+      reload: () => revalidateOrThrow(readRef.current),
+      write: (stored) => mutate(stored, { revalidate: false }),
+    },
+    {
+      token: (read) => read.version,
+      toDraft: selectedRecipients,
+      answer: (saved) => saved,
+    },
   );
-  const [draftSource, setDraftSource] = useState(data);
-  if (draftSource !== data) {
-    setDraftSource(data);
-    setSelected(selectedRecipients(data));
-  }
+  // A failed read after a refusal stays until a read succeeds, also over a
+  // reopened dialog: nothing is sent until then (ADR 0311, rule 6).
+  const draftLoadError = useReadDraftLoadError(
+    draft,
+    t("errorObjectRecipients"),
+  );
+  const toggle = (id: string) =>
+    draft.setDraft((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id],
+    );
   return {
     state: data ?? null,
-    mutate,
-    selected,
-    setSelected,
+    selected: draft.draft ?? NO_RECIPIENTS,
+    toggle,
+    // Opening the dialog starts a new draft from the stored sharing.
+    restart: draft.discard,
+    submit: draft.submit,
+    canSubmit: draft.canSubmit,
     loading: enabled && !data && !resource.error,
     reloading: resource.isLoading || isValidating,
     loadError,
+    draftLoadError,
   };
 }
 
+const NO_RECIPIENTS: string[] = [];
+
 function selectedRecipients(
-  state: parentMeContract.requestSharingResponse | undefined,
+  state: parentMeContract.requestSharingStateResponse | undefined,
 ): string[] {
   return (state?.recipients ?? [])
     .filter((recipient) => recipient.selected)
@@ -171,7 +205,7 @@ function useSharingSave({
   studentId,
   requestType,
   requestId,
-  selected,
+  submit,
   saved,
   failed,
   enabled,
@@ -179,25 +213,23 @@ function useSharingSave({
   studentId: string;
   requestType: ParentRequestShareType;
   requestId: string;
-  selected: string[];
-  saved: (state: parentMeContract.requestSharingResponse) => void;
-  failed: (err: unknown) => void;
+  /** Sends the selection with the version it was drawn from (ADR 0311). */
+  submit: ReturnType<typeof useSharingState>["submit"];
+  saved: () => void;
+  failed: (err: unknown, reload?: () => Promise<unknown>) => void;
   enabled: boolean;
 }>) {
   const [saving, setSaving] = useState(false);
   const save = useCallback(async () => {
     if (!enabled) return;
     setSaving(true);
-    try {
-      saved(
-        await setRequestSharing(studentId, requestType, requestId, selected),
-      );
-    } catch (err) {
-      failed(err);
-    } finally {
-      setSaving(false);
-    }
-  }, [enabled, failed, requestId, requestType, saved, selected, studentId]);
+    const result = await submit((version, selected) =>
+      setRequestSharing(studentId, requestType, requestId, selected, version),
+    );
+    setSaving(false);
+    if (result.ok) saved();
+    else failed(result.error, result.reload);
+  }, [enabled, failed, requestId, requestType, saved, studentId, submit]);
   return { save, saving };
 }
 
@@ -286,62 +318,49 @@ function useRequestSharingControl(props: RequestSharingControlProps) {
   const { studentId, requestType, requestId, isSelf } = props;
   const t = useCareTermTranslations("parentRequestSharing");
   const [open, setOpen] = useState(false);
-  const sharing = useSharingState(
-    isSelf,
-    studentId,
-    requestType,
-    requestId,
-    open,
-  );
+  const sharing = useSharingState(isSelf, studentId, requestType, requestId);
   const {
     error: saveError,
     show: showSaveError,
     clear: clearSaveError,
   } = useApiFormError();
-  const { mutate } = sharing;
-  const saved = useCallback(
-    (next: parentMeContract.requestSharingResponse) => {
-      void mutate(next, { revalidate: false });
-      setOpen(false);
-    },
-    [mutate],
-  );
+  const saved = useCallback(() => setOpen(false), []);
   // The retry sends the selection the dialog shows at that moment.
   const saveRef = useRef<() => Promise<void>>(async () => undefined);
   const failed = useCallback(
-    (err: unknown) =>
+    (err: unknown, reload?: () => Promise<unknown>) => {
+      // The sharing changed since it was read: the stored recipients show
+      // again and replace the selection; the message waits for them and
+      // offers no retry of the same choice.
       void showSaveError(err, {
         object: t("errorObjectSelection"),
         retry: () => void saveRef.current(),
-      }),
+        reload,
+      });
+    },
     [showSaveError, t],
   );
   const { save, saving } = useSharingSave({
     studentId,
     requestType,
     requestId,
-    selected: sharing.selected,
+    submit: sharing.submit,
     saved,
     failed,
     enabled:
       open &&
       sharing.state !== null &&
+      sharing.canSubmit &&
       !sharing.reloading &&
       !sharing.loadError,
   });
   useLayoutEffect(() => {
     saveRef.current = save;
   });
-  const toggle = (id: string) =>
-    sharing.setSelected((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id],
-    );
+  const toggle = sharing.toggle;
   const show = () => {
     clearSaveError();
-    sharing.setSelected(selectedRecipients(sharing.state ?? undefined));
-    // This opening confirms the recipients and Familienschutz before editing.
+    sharing.restart();
     setOpen(true);
   };
   return { open, setOpen, sharing, save, saving, saveError, toggle, show };
@@ -390,6 +409,11 @@ function SharingDialog({
           </p>
         ) : null}
         <LoadErrorAlert error={sharing.loadError} />
+        {/* After a refusal the form's alert already names the failed read,
+            with its retry. */}
+        {control.saveError ? null : (
+          <LoadErrorAlert error={sharing.draftLoadError} />
+        )}
         <FormErrorAlert message={control.saveError} />
         {sharing.state && !sharing.reloading && !sharing.loadError ? (
           <SharingRecipients

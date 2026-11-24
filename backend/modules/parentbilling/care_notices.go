@@ -185,7 +185,12 @@ type CareNoticeRunDetail struct {
 	// JoinedChildren are the children of a calculated run with a record at
 	// each of several schools its months bill as one (ADR 0158, Nachtrag
 	// Schulwechsel).
-	JoinedChildren     []CareJoinedChild `json:"joined_children"`
+	JoinedChildren []CareJoinedChild `json:"joined_children"`
+	// BilledChildren are the children a month of the run holds back because
+	// an issued invoice or Jahresbescheid of another of their contracts
+	// already bills it (ADR 0158, Nachtrag #7892): the run assesses that
+	// month for none of their contracts.
+	BilledChildren     []CareBilledChild `json:"billed_children"`
 	PreviewCount       int               `json:"preview_count"`
 	PreviewCents       int64             `json:"preview_cents" contract:"number"`
 	PreviewDeltaCents  int64             `json:"preview_delta_cents" contract:"number"`

@@ -71,7 +71,12 @@ func (seedTraegerHolidayCriteriaStep) Run(_ context.Context, rt *Runtime) error 
 // parents first, single parents second, a sibling in the OGS third, and a
 // hardship case switched off. It returns their IDs in this order.
 func seedHolidayCriteria(rt *Runtime, auth AuthRef) ([]int64, error) {
-	raw, err := rt.Client.PutWithAuth(auth, "/traeger/holiday-periods/criteria", map[string]any{"criteria": []map[string]any{
+	// The save carries the version of the criteria it replaces (ADR 0311).
+	version, err := readSeedVersion(rt, auth, "/traeger/holiday-periods/criteria", "the holiday criteria")
+	if err != nil {
+		return nil, err
+	}
+	raw, err := rt.Client.PutWithAuth(auth, "/traeger/holiday-periods/criteria", map[string]any{"expected_version": version, "criteria": []map[string]any{
 		{"name": "Beide Eltern berufstätig", "question": "Sind beide Eltern berufstätig?", "scope": "family", "active": true},
 		{"name": "Alleinerziehend und berufstätig", "question": "Sind Sie alleinerziehend und berufstätig?", "scope": "family", "active": true},
 		{"name": "Geschwisterkind in der OGS", "question": "Geht ein Geschwisterkind schon in die OGS?", "scope": "child", "active": true},
@@ -149,8 +154,8 @@ func seedHolidayCriteriaRegistrations(rt *Runtime, link seedHolidayLink, criteri
 			"guardian": map[string]any{"first_name": family.first, "last_name": family.last, "email": family.email, "phone": fmt.Sprintf("0151 000020%d", i)},
 			"criteria": map[string]bool{fmt.Sprint(criteria[0]): family.working, fmt.Sprint(criteria[1]): family.single},
 			"children": []map[string]any{{
-				"first_name": family.child, "last_name": family.last, "birth_date": "2018-04-21", "home_school_id": rt.Bootstrap.SchoolID,
-				"bookings": []map[string]any{{"week_id": link.weekID, "time_model_id": link.modelID}},
+				"first_name": family.child, "last_name": family.last, "birth_date": "2018-04-21", "home_school_id": ident.ID(rt.Bootstrap.SchoolID),
+				"bookings": []map[string]any{{"week_id": ident.ID(link.weekID), "time_model_id": ident.ID(link.modelID)}},
 				"criteria": map[string]bool{fmt.Sprint(criteria[2]): family.sibling},
 			}},
 			"emergency_contacts": []map[string]any{{"name": "Oma " + family.last, "phone": "05402 000020", "relationship": "Großmutter"}},
@@ -209,7 +214,7 @@ func seedHolidayCriteriaPeriod(today, monday calendar.Date, host int64) map[stri
 		"binding": true, "allocation_mode": "criteria",
 		"notes": "Die Plätze vergibt das Büro nach den Vergabekriterien des Trägers.",
 		"weeks": []map[string]any{{
-			"starts_on": monday.String(), "ends_on": monday.AddDays(4).String(), "host_school_id": host,
+			"starts_on": monday.String(), "ends_on": monday.AddDays(4).String(), "host_school_id": ident.ID(host),
 			"time_models": []map[string]any{{"name": "bis 16 Uhr", "starts_at": "08:00", "ends_at": "16:00", "price_cents": 6500}},
 		}},
 	}

@@ -23,7 +23,7 @@ type StudentResponse struct {
 	PersonID           ident.ID             `json:"person_id"`
 	FirstName          string               `json:"first_name"`
 	LastName           string               `json:"last_name"`
-	TagID              string               `json:"tag_id,omitempty"`
+	TagID              string               `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"`
 	Birthday           string               `json:"birthday,omitempty" contract:"date"` // Date in YYYY-MM-DD format
 	SchoolClass        string               `json:"school_class"`
 	Location           string               `json:"current_location"`
@@ -190,9 +190,12 @@ type StudentPrivacyConsentResponse struct {
 type StudentDetailResponse struct {
 	PrivacyConsent *StudentPrivacyConsentResponse `json:"privacy_consent,omitempty"`
 	StudentResponse
-	HasFullAccess  bool                     `json:"has_full_access"`
-	HasWriteAccess bool                     `json:"has_write_access"`
-	Consents       []StudentConsentResponse `json:"consents,omitempty"`
+	HasFullAccess  bool `json:"has_full_access"`
+	HasWriteAccess bool `json:"has_write_access"`
+	// Version is the state of the master data the edit form saves back,
+	// sent as expected_version (ADR 0311). Only with write access.
+	Version  string                   `json:"version,omitempty"`
+	Consents []StudentConsentResponse `json:"consents,omitempty"`
 	// HasAbsenceWriteAccess retains the class-trip write gate. Sick and excused
 	// actions additionally require HasSickExcusedWriteAccess. Neither flag
 	// grants Stammdaten writes or authority to review a parent request.

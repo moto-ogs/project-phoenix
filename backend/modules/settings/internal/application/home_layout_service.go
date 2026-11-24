@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
+
 	configModel "github.com/moto-ogs/project-phoenix/modules/settings/records"
 )
 
@@ -34,6 +36,18 @@ type HomeLayoutView struct {
 	// CanManagePolicies tells the client whether to offer the school-wide
 	// dialog at all. It mirrors the permission the write path enforces.
 	CanManagePolicies bool `json:"can_manage_policies"`
+	// PoliciesVersion is the read-state token of Policies (ADR 0311): a
+	// write of the prescription sends it back.
+	PoliciesVersion string `json:"policies_version"`
+}
+
+// homeBlockPoliciesVersion is the read-state token of the school's
+// prescription: a fingerprint of the stored map (its keys encode sorted).
+func homeBlockPoliciesVersion(policies map[string]configModel.BlockPolicy) string {
+	if policies == nil {
+		policies = map[string]configModel.BlockPolicy{}
+	}
+	return readstate.Fingerprint(policies)
 }
 
 // HomeLayoutService owns the personal composition of the start page and the
@@ -89,6 +103,7 @@ func (s *HomeLayoutService) View(ctx context.Context, tenantID, accountID int64,
 	// The client applies Policies when deciding visibility. Keep every stored
 	// personal choice here, including one for a block the school currently
 	// settles, so it becomes effective again if the school releases that block.
+	view.PoliciesVersion = homeBlockPoliciesVersion(view.Policies)
 	return view, nil
 }
 
@@ -184,7 +199,10 @@ func homeLayoutPoliciesLockKey(tenantID int64) string {
 // Blocks left optional are removed from the map before storing: "the school has
 // no opinion" is the default state and storing it would make a later change of
 // defaults indistinguishable from a deliberate decision.
-func (s *HomeLayoutService) SetPolicies(ctx context.Context, tenantID, accountID int64, permissions []string, policies map[string]configModel.BlockPolicy) error {
+// SetPolicies replaces the school's prescription. expectedVersion is the
+// PoliciesVersion the editor read; a prescription changed since is refused
+// with readstate.ErrChanged under the policy lock (ADR 0311).
+func (s *HomeLayoutService) SetPolicies(ctx context.Context, tenantID, accountID int64, permissions []string, policies map[string]configModel.BlockPolicy, expectedVersion string) error {
 	if err := s.ready(); err != nil {
 		return err
 	}
@@ -215,7 +233,7 @@ func (s *HomeLayoutService) SetPolicies(ctx context.Context, tenantID, accountID
 
 	changedBy := accountID
 	return s.runtime.WithinTenant(ctx, tenantID, func(txCtx context.Context) error {
-		if err := s.lockPolicies(txCtx, tenantID, false); err != nil {
+		if err := s.lockPoliciesRead(txCtx, tenantID, expectedVersion); err != nil {
 			return err
 		}
 		set := &configModel.HomeBlockPolicySet{
@@ -291,6 +309,23 @@ func mergeHomeLayoutOverrides(overrides map[string]bool, existing *configModel.H
 		delete(result, key)
 	}
 	return result
+}
+
+// lockPoliciesRead takes the policy lock and refuses a prescription written
+// on another one than the stored, read under that lock (ADR 0311).
+func (s *HomeLayoutService) lockPoliciesRead(ctx context.Context, tenantID int64, expectedVersion string) error {
+	if err := s.lockPolicies(ctx, tenantID, false); err != nil {
+		return err
+	}
+	stored, err := s.repo.FindPolicies(ctx)
+	if err != nil {
+		return err
+	}
+	var current map[string]configModel.BlockPolicy
+	if stored != nil {
+		current = stored.Policies
+	}
+	return readstate.Check(expectedVersion, homeBlockPoliciesVersion(current))
 }
 
 func (s *HomeLayoutService) readHomeLayout(ctx context.Context, accountID int64, view *HomeLayoutView) error {

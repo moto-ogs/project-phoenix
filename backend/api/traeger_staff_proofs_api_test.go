@@ -51,9 +51,9 @@ func proofKindByKey(t *testing.T, kinds []workforce.TraegerStaffProofType, key s
 	return workforce.TraegerStaffProofType{}
 }
 
-func linkSingleRecord(t *testing.T, router http.Handler, token string, members ...map[string]int64) staffRecordBody {
+func linkSingleRecord(t *testing.T, router http.Handler, token string, members ...map[string]string) staffRecordBody {
 	t.Helper()
-	rec := traegerJSON(t, router, token, http.MethodPost, "/traeger/staff-records/", map[string]any{"members": members})
+	rec := traegerLink(t, router, token, map[string]any{"members": members})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	return decode[staffRecordBody](t, rec)
 }
@@ -102,8 +102,8 @@ func TestTraegerStaffProofsWarnBeforeExpiry(t *testing.T) {
 
 	staffRelease(t, db, office.organization)
 	miraRecord := linkSingleRecord(t, router, office.token,
-		map[string]int64{"school_id": north, "staff_id": mira.ID}, map[string]int64{"school_id": south, "staff_id": miraSouth.ID})
-	jonasRecord := linkSingleRecord(t, router, office.token, map[string]int64{"school_id": south, "staff_id": jonas.ID})
+		map[string]string{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(mira.ID)}, map[string]string{"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(miraSouth.ID)})
+	jonasRecord := linkSingleRecord(t, router, office.token, map[string]string{"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(jonas.ID)})
 
 	var kinds []workforce.TraegerStaffProofType
 	t.Run("the Träger starts with the standard kinds and adds its own", func(t *testing.T) {
@@ -127,7 +127,22 @@ func TestTraegerStaffProofsWarnBeforeExpiry(t *testing.T) {
 			"name": "Belehrung Infektionsschutz", "reminder_lead_weeks": 60,
 		})
 		assertStaffRefusal(t, rec, http.StatusBadRequest, "workforce.traeger_proof_invalid")
-		rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/staff-proofs/types/%d", own.ID), map[string]any{
+		// ADR 0311: an update saves only over the kind the dialog read.
+		stale := own.Version
+		rec = traegerUpdateProofType(t, router, office.token, own.ID, map[string]any{
+			"name": "Belehrung Infektionsschutz", "validity_months": 24, "reminder_lead_weeks": 6,
+		})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Equal(t, 6, decode[workforce.TraegerStaffProofType](t, rec).ReminderLeadWeeks)
+		for _, version := range []string{stale, ""} {
+			rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/staff-proofs/types/%d", own.ID), map[string]any{
+				"name": "Belehrung Infektionsschutz", "reminder_lead_weeks": 4, "archived": true, "expected_version": version,
+			})
+			assertStaffRefusal(t, rec, http.StatusConflict, "general.changed_since_read")
+		}
+		assert.Equal(t, 1, staffSchoolValue(t, db, `SELECT COUNT(*) FROM workforce.staff_proof_types WHERE id = ? AND reminder_lead_weeks = 6 AND archived_at IS NULL`, own.ID),
+			"the colleague's change stays and the kind stays live")
+		rec = traegerUpdateProofType(t, router, office.token, own.ID, map[string]any{
 			"name": "Belehrung Infektionsschutz", "reminder_lead_weeks": 4, "archived": true,
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -225,11 +240,11 @@ func TestTraegerStaffProofsWarnBeforeExpiry(t *testing.T) {
 		assert.Nil(t, schools[0].Kinds[0].ProofTypeID)
 
 		rec = traegerJSON(t, router, office.token, http.MethodPut, "/traeger/staff-proofs/school-kinds", map[string]any{
-			"school_id": south, "school_type_id": schoolKind, "proof_type_id": police.ID,
+			"school_id": fmt.Sprint(south), "school_type_id": fmt.Sprint(schoolKind), "proof_type_id": fmt.Sprint(police.ID),
 		})
 		assertStaffRefusal(t, rec, http.StatusBadRequest, "workforce.traeger_proof_mapping_invalid")
 		rec = traegerJSON(t, router, office.token, http.MethodPut, "/traeger/staff-proofs/school-kinds", map[string]any{
-			"school_id": north, "school_type_id": schoolKind, "proof_type_id": police.ID,
+			"school_id": fmt.Sprint(north), "school_type_id": fmt.Sprint(schoolKind), "proof_type_id": fmt.Sprint(police.ID),
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		schools = decode[[]workforce.TraegerSchoolProofKinds](t, rec)
@@ -267,7 +282,7 @@ func TestTraegerStaffProofsWarnBeforeExpiry(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Empty(t, decode[staffProofListBody](t, rec).Entries)
 		rec = traegerJSON(t, router, other.token, http.MethodPut, "/traeger/staff-proofs/school-kinds", map[string]any{
-			"school_id": north, "school_type_id": 1, "proof_type_id": police.ID,
+			"school_id": fmt.Sprint(north), "school_type_id": "1", "proof_type_id": fmt.Sprint(police.ID),
 		})
 		assertStaffRefusal(t, rec, http.StatusBadRequest, "workforce.traeger_proof_mapping_invalid")
 	})
@@ -318,7 +333,7 @@ func TestTraegerStaffProofListQueryBudget(t *testing.T) {
 		for i := range n {
 			for _, school := range office.schools {
 				staff := testpkg.CreateTestStaffForTenant(t, db, school, "Kraft", fmt.Sprintf("Nummer %d", i))
-				record := linkSingleRecord(t, router, office.token, map[string]int64{"school_id": school, "staff_id": staff.ID})
+				record := linkSingleRecord(t, router, office.token, map[string]string{"school_id": fmt.Sprint(school), "staff_id": fmt.Sprint(staff.ID)})
 				kinds := decode[[]workforce.TraegerStaffProofType](t, traegerJSON(t, router, office.token, http.MethodGet, "/traeger/staff-proofs/types", nil))
 				rec := traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/staff-proofs/records/%d/%d", record.ID, proofKindByKey(t, kinds, "measles_protection").ID),
 					map[string]any{"presented_on": "2026-08-03"})

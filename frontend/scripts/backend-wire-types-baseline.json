@@ -2,19 +2,8 @@
   "components/enrollment/enrollment-child-derivation.ts shape ChildDraft",
   "components/enrollment/enrollment-form-shared.ts shape ContactEntryValue",
   "components/enrollment/enrollment-form-shared.ts shape PhoneEntry",
-  "lib/enrollment-admin-api.ts shape AdminOfferingAdjustmentSnapshot",
   "lib/enrollment-uploads.ts shape StoredUploadValue",
   "lib/error-log.ts shape ErrorLogFields",
   "lib/import-batch-result.ts shape ImportBatchResult",
-  "lib/messaging-status.ts shape ChatMessage",
-  "lib/operator/operator-invitation-helpers.ts shape InvitationValidationBody",
-  "lib/parent-api.ts alias GroupThreadChild",
-  "lib/parent-api.ts shape GroupThreadSummary",
-  "lib/parent-api.ts shape ThreadSummary",
-  "lib/parent-api.ts shape ThreadView",
-  "lib/sign-in-answer.ts shape WireSignInAnswer",
-  "lib/sse-types.ts shape SSEEventData",
-  "lib/staff-preview-api.ts shape StaffPreviewStartBody",
-  "server/auth/jwt-payload.ts shape JwtPayload",
-  "server/auth/token-refresh.ts shape TokenPair"
+  "lib/sse-types.ts shape SSEEventData"
 ]

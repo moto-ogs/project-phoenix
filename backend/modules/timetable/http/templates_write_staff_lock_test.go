@@ -3,7 +3,6 @@ package timetablehttp
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -11,10 +10,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/require"
 )
 
 // Model a deviation save or offboarding holding A's membership. A waiting
@@ -31,11 +32,11 @@ func TestTemplateWritersLockOldAndNewStaffBeforeRows(t *testing.T) {
 			ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
 			router := splitRouter(ctx, s.res, s.db, []string{permissions.SchedulesManage})
 			sourceBody := createTemplateBody(s, "Source staff locks")
-			sourceBody["staff_ids"] = []int64{s.staffA}
-			sourceBody["primary_staff_id"] = s.staffA
+			sourceBody["staff_ids"] = []string{fmt.Sprint(s.staffA)}
+			sourceBody["primary_staff_id"] = fmt.Sprint(s.staffA)
 			if name == "split_occurrence" || name == "split_reverse" {
-				sourceBody["staff_ids"] = []int64{s.staffB}
-				sourceBody["primary_staff_id"] = s.staffB
+				sourceBody["staff_ids"] = []string{fmt.Sprint(s.staffB)}
+				sourceBody["primary_staff_id"] = fmt.Sprint(s.staffB)
 			}
 			w := doTemplateJSON(t, router, http.MethodPost, "/templates", sourceBody)
 			require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
@@ -49,25 +50,25 @@ func TestTemplateWritersLockOldAndNewStaffBeforeRows(t *testing.T) {
 			}
 			method, path := http.MethodPut, fmt.Sprintf("/templates/%d", created.TemplateID)
 			body := createTemplateBody(s, "Updated staff locks")
-			body["staff_ids"] = []int64{s.staffB, s.staffA}
+			body["staff_ids"] = []string{fmt.Sprint(s.staffB), fmt.Sprint(s.staffA)}
 			if name == "update_weekday" {
-				body["staff_ids"] = []int64{s.staffB}
+				body["staff_ids"] = []string{fmt.Sprint(s.staffB)}
 				body["weekday_assignments"] = []map[string]any{{
-					"weekday": timetable.WeekdayWednesday, "staff_ids": []int64{s.staffA}, "primary_staff_id": s.staffA,
+					"weekday": timetable.WeekdayWednesday, "staff_ids": []string{fmt.Sprint(s.staffA)}, "primary_staff_id": fmt.Sprint(s.staffA),
 				}}
 			}
 			isSplit := name == "split_supervisor" || name == "split_reverse" || name == "split_occurrence"
 			if isSplit {
 				method, path = http.MethodPost, path+"/split"
 				body = splitBody(s, "Successor staff locks", effective)
-				body["staff_ids"] = []int64{s.staffB}
-				body["primary_staff_id"] = s.staffB
+				body["staff_ids"] = []string{fmt.Sprint(s.staffB)}
+				body["primary_staff_id"] = fmt.Sprint(s.staffB)
 				if name == "split_reverse" {
-					body["staff_ids"] = []int64{s.staffA}
-					body["primary_staff_id"] = s.staffA
+					body["staff_ids"] = []string{fmt.Sprint(s.staffA)}
+					body["primary_staff_id"] = fmt.Sprint(s.staffA)
 				}
 			}
-			payload, err := json.Marshal(body)
+			payload, err := wire.Marshal(withTemplateReadVersion(t, router, method, path, body))
 			require.NoError(t, err)
 			holder, err := s.db.BeginTx(ctx, nil)
 			require.NoError(t, err)
@@ -101,7 +102,7 @@ func TestTemplateWritersLockOldAndNewStaffBeforeRows(t *testing.T) {
 				result := decodeTemplateData[splitTemplateResponse](t, w)
 				rows := templateSupervisors(t, s, result.NewTemplateID.Int64())
 				require.Len(t, rows, 1)
-				require.Equal(t, body["primary_staff_id"], rows[0].StaffID)
+				require.Equal(t, body["primary_staff_id"], fmt.Sprint(rows[0].StaffID))
 				if name == "split_occurrence" {
 					require.Equal(t, 1, result.DeletedInstances)
 				}

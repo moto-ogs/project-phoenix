@@ -69,8 +69,8 @@ func TestChildBooksOnlyOneOfTheParallelWeeks(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	period := decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())
 	offer := holidayOffer(t, f, period.PublicToken)
-	first := map[string]any{"week_id": offer.Weeks[0].ID, "time_model_id": offer.Weeks[0].TimeModels[0].ID}
-	second := map[string]any{"week_id": offer.Weeks[1].ID, "time_model_id": offer.Weeks[1].TimeModels[0].ID}
+	first := map[string]any{"week_id": fmt.Sprint(offer.Weeks[0].ID), "time_model_id": fmt.Sprint(offer.Weeks[0].TimeModels[0].ID)}
+	second := map[string]any{"week_id": fmt.Sprint(offer.Weeks[1].ID), "time_model_id": fmt.Sprint(offer.Weeks[1].TimeModels[0].ID)}
 
 	rec = publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken),
 		oneChildRegistration(offer, "beide@example.org", first, second))
@@ -95,10 +95,10 @@ func TestChildBooksOnlyOneOfTheParallelWeeks(t *testing.T) {
 	detail := decodeSchoolPortalData[reviewRegistration](t, rec.Body.Bytes())
 	bookings := holidayRebookPath(int64(period.ID), int64(receipt.Data.ID), int64(detail.Children[0].ID))
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, bookings, map[string]any{"bookings": []map[string]any{first, second}})
+	rec = putReadRegistration(t, f.traeger, office.token, bookings, map[string]any{"bookings": []map[string]any{first, second}})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, bookings, map[string]any{"bookings": []map[string]any{first}})
+	rec = putReadRegistration(t, f.traeger, office.token, bookings, map[string]any{"bookings": []map[string]any{first}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }
 
@@ -110,8 +110,8 @@ func TestBookedWeeksOfOneChildCannotMoveOntoTheSameDays(t *testing.T) {
 	offer := holidayOffer(t, f, period.PublicToken)
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken),
 		oneChildRegistration(offer, "zwei@example.org",
-			map[string]any{"week_id": offer.Weeks[0].ID, "time_model_id": offer.Weeks[0].TimeModels[0].ID},
-			map[string]any{"week_id": offer.Weeks[1].ID, "time_model_id": offer.Weeks[1].TimeModels[0].ID}))
+			map[string]any{"week_id": fmt.Sprint(offer.Weeks[0].ID), "time_model_id": fmt.Sprint(offer.Weeks[0].TimeModels[0].ID)},
+			map[string]any{"week_id": fmt.Sprint(offer.Weeks[1].ID), "time_model_id": fmt.Sprint(offer.Weeks[1].TimeModels[0].ID)}))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
 	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayPeriodPath(int64(period.ID)), nil)
@@ -121,7 +121,7 @@ func TestBookedWeeksOfOneChildCannotMoveOntoTheSameDays(t *testing.T) {
 	moved.Weeks = []holidayWeekBody{current.Weeks[0], current.Weeks[1]}
 	moved.Weeks[1].StartsOn, moved.Weeks[1].EndsOn = current.Weeks[0].StartsOn, current.Weeks[0].EndsOn
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(int64(period.ID)), moved)
+	rec = putHolidayPeriod(t, f.traeger, office.token, holidayPeriodPath(int64(period.ID)), moved)
 
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	code, fields := registrationRefusalOf(t, rec)
@@ -138,7 +138,7 @@ func TestUnbookedWeekMovesParallelToABookedWeek(t *testing.T) {
 	offer := holidayOffer(t, f, period.PublicToken)
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken),
 		oneChildRegistration(offer, "nur-erste@example.org",
-			map[string]any{"week_id": offer.Weeks[0].ID, "time_model_id": offer.Weeks[0].TimeModels[0].ID}))
+			map[string]any{"week_id": fmt.Sprint(offer.Weeks[0].ID), "time_model_id": fmt.Sprint(offer.Weeks[0].TimeModels[0].ID)}))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
 	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayPeriodPath(int64(period.ID)), nil)
@@ -148,7 +148,7 @@ func TestUnbookedWeekMovesParallelToABookedWeek(t *testing.T) {
 	moved.Weeks = []holidayWeekBody{current.Weeks[0], current.Weeks[1]}
 	moved.Weeks[1].StartsOn, moved.Weeks[1].EndsOn = current.Weeks[0].StartsOn, current.Weeks[0].EndsOn
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(int64(period.ID)), moved)
+	rec = putHolidayPeriod(t, f.traeger, office.token, holidayPeriodPath(int64(period.ID)), moved)
 
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -182,6 +183,22 @@ func (p *postDouble) ContractMailStates(context.Context, int64, int64) ([]careco
 // publicContractToday is the fixed day of the intake's candidates, a
 // Wednesday before the short module ends on 2028-01-31 (#7104): on a later
 // day the intake rightly leaves the ended module out.
+// templateVersion is the version the Träger's template read answers for an
+// offering (ADR 0311): a save sends it back, never a token the test builds.
+func templateVersion(t *testing.T, ctx context.Context, intake carecontract.Intake, reviewer carecontract.Reviewer, schoolID, offeringID int64) string {
+	t.Helper()
+	offerings, err := intake.Templates(ctx, reviewer)
+	require.NoError(t, err)
+	for _, offering := range offerings {
+		if offering.SchoolID.Int64() == schoolID && offering.OfferingID.Int64() == offeringID {
+			require.NotEmpty(t, offering.Version, "the template read must carry the token")
+			return offering.Version
+		}
+	}
+	t.Fatalf("offering %d of school %d is not in the template read", offeringID, schoolID)
+	return ""
+}
+
 func publicContractToday() calendar.Date { return calendar.NewDate(2026, time.November, 18) }
 
 func TestPublicCareContractBooksModulesPerWeekdayInOneDraftAndFreezesItsPDFAtTheFirstSend(t *testing.T) {
@@ -216,16 +233,16 @@ func TestPublicCareContractBooksModulesPerWeekdayInOneDraftAndFreezesItsPDFAtThe
 		TermKind: carecontract.TermFixedMonths, TermMonths: new(12), NoticeMonths: 1, NoticeTo: carecontract.NoticeMonthEnd,
 	}
 	for _, offering := range []int64{school.offering, school.offering + 1} {
-		_, err = intake.SaveTemplate(ctx, reviewer, school.school.ID, offering, twelveMonths)
+		_, err = intake.SaveTemplate(ctx, reviewer, school.school.ID, offering, twelveMonths, templateVersion(t, ctx, intake, reviewer, school.school.ID, offering))
 		require.NoError(t, err)
 	}
-	_, err = intake.SaveTemplate(ctx, reviewer, school.school.ID, school.offering+2, carecontract.TemplateInput{
+	openEnded, err := intake.SaveTemplate(ctx, reviewer, school.school.ID, school.offering+2, carecontract.TemplateInput{
 		TermKind: carecontract.TermOpenEnded, NoticeMonths: 1, NoticeTo: carecontract.NoticeMonthEnd,
-	})
+	}, templateVersion(t, ctx, intake, reviewer, school.school.ID, school.offering+2))
 	require.NoError(t, err)
 	_, err = intake.SaveTemplate(ctx, reviewer, testpkg.UniqueTestTenantID(t), school.offering, carecontract.TemplateInput{
 		TermKind: carecontract.TermOpenEnded, NoticeTo: carecontract.NoticeMonthEnd,
-	})
+	}, readstate.Absent)
 	require.ErrorIs(t, err, carecontract.ErrSchoolOutsideTraeger)
 
 	differing, err := intake.CreateContracts(ctx, reviewer, []carecontract.CandidateKey{candidates[0].CandidateKey})
@@ -234,8 +251,25 @@ func TestPublicCareContractBooksModulesPerWeekdayInOneDraftAndFreezesItsPDFAtThe
 	require.Len(t, differing.Skipped, 1)
 	assert.Equal(t, carecontract.SkipTemplatesDiffer, differing.Skipped[0].Reason)
 
-	_, err = intake.SaveTemplate(ctx, reviewer, school.school.ID, school.offering+2, twelveMonths)
+	twelve, err := intake.SaveTemplate(ctx, reviewer, school.school.ID, school.offering+2, twelveMonths, openEnded.Version)
 	require.NoError(t, err)
+	// A save on the version read before that save, or on none, is refused
+	// and writes nothing (ADR 0311).
+	for _, stale := range []string{openEnded.Version, readstate.Absent, ""} {
+		_, err = intake.SaveTemplate(ctx, reviewer, school.school.ID, school.offering+2, carecontract.TemplateInput{
+			TermKind: carecontract.TermOpenEnded, NoticeMonths: 1, NoticeTo: carecontract.NoticeMonthEnd,
+		}, stale)
+		require.ErrorIs(t, err, readstate.ErrChanged, "version %q", stale)
+	}
+	stored, err := intake.Templates(ctx, reviewer)
+	require.NoError(t, err)
+	for _, offering := range stored {
+		if offering.OfferingID.Int64() == school.offering+2 {
+			require.NotNil(t, offering.Template)
+			assert.Equal(t, carecontract.TermFixedMonths, offering.Template.TermKind, "the refused saves wrote nothing")
+			assert.Equal(t, twelve.Version, offering.Version, "the read gives the token the save answered")
+		}
+	}
 	created, err := intake.CreateContracts(ctx, reviewer, []carecontract.CandidateKey{candidates[0].CandidateKey})
 	require.NoError(t, err)
 	require.Len(t, created.Created, 1)

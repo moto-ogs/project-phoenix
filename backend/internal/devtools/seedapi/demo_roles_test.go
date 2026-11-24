@@ -50,12 +50,16 @@ func TestFixedSeeder_SeedDemoRolesCreatesBothRolesWithTheirPermissionSets(t *tes
 			id := fmt.Sprintf("%d", 700+len(created))
 			idsByRole[id] = name
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"id": id}})
-		case strings.HasPrefix(r.URL.Path, "/auth/roles/") && strings.HasSuffix(r.URL.Path, "/permissions") && r.Method == seedHTTPMethodPut:
+		case strings.HasPrefix(r.URL.Path, "/auth/roles/") && strings.HasSuffix(r.URL.Path, "/permission-selection") && r.Method == seedHTTPMethodGet:
+			_, _ = fmt.Fprint(w, `{"data":{"permissions":[],"version":"empty"}}`)
+		case strings.HasPrefix(r.URL.Path, "/auth/roles/") && strings.HasSuffix(r.URL.Path, "/permission-selection") && r.Method == seedHTTPMethodPut:
 			var body struct {
-				PermissionIDs []string `json:"permission_ids"`
+				PermissionIDs   []string `json:"permission_ids"`
+				ExpectedVersion string   `json:"expected_version"`
 			}
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
-			id := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/auth/roles/"), "/permissions")
+			assert.Equal(t, "empty", body.ExpectedVersion, "the grant sends the version it read")
+			id := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/auth/roles/"), "/permission-selection")
 			granted[idsByRole[id]] = body.PermissionIDs
 			w.WriteHeader(seedHTTPStatusNoContent)
 		default:

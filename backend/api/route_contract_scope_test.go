@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -81,8 +82,14 @@ func TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal(t *testing.T) {
 	for key := range sharedPortalRoutes {
 		assert.Truef(t, registered[key], "sharedPortalRoutes names %s, which the contract no longer registers", key)
 	}
+	conditionalDemoRoutes := appendDemoCatalogRoutes(t, nil)
 	for _, route := range doc.Routes {
 		chain, known := chains[route.Key()]
+		// The production router does not mount the demo. Its portal route
+		// files are checked against the conditional catalog instead.
+		if !known && route.RouteFile != "" && slices.Contains(conditionalDemoRoutes, route.Key()) {
+			continue
+		}
 		require.Truef(t, known, "%s has no middleware golden", route.Key())
 		if route.RouteFile != "" {
 			// No proxy forwards a route file's route (#7808): a sign-in step

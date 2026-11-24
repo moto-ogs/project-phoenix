@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	appointmentcap "github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
@@ -151,7 +153,7 @@ func (s *service) activeStudentClass(ctx context.Context, studentID int64) (stri
 // childParentConference locks a coming day of the child's class and finds
 // the child's booking on it. A day of another class is not found.
 func (s *service) childParentConference(ctx context.Context, store schoolcalendar.ParentConferences, conferenceID int64, class string, studentID int64) (*schoolcalendar.ParentConference, *schoolcalendar.ParentConferenceBooking, error) {
-	conference, err := store.FindParentConference(ctx, conferenceID, true)
+	conference, err := store.FindParentConference(ctx, conferenceID)
 	if err != nil {
 		return nil, nil, mapParentConferenceError(err)
 	}
@@ -395,7 +397,7 @@ func (s *service) parentConferenceOffers(ctx context.Context, conferences []*sch
 
 func (s *service) buildParentConferenceOffer(conference *schoolcalendar.ParentConference, taken map[int]*schoolcalendar.ParentConferenceBooking, teacher *ports.Staff, studentID int64) ParentConferenceOffer {
 	offer := ParentConferenceOffer{
-		ID: formatID(conference.ID), SchoolClass: conference.SchoolClass, TeacherName: staffDisplayName(teacher),
+		ID: ident.ID(conference.ID), SchoolClass: conference.SchoolClass, TeacherName: staffDisplayName(teacher),
 		Date: conference.Date, Location: conference.Location, FreeSlots: []portal.ParentConferenceWindow{},
 	}
 	for _, start := range schoolcalendar.ParentConferenceSlots(conference.ParentConferenceFields) {

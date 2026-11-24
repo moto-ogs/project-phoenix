@@ -83,6 +83,7 @@ const meta: Meta<typeof TimetableRosterContent> = {
     onComplete: fn().mockResolvedValue(undefined),
     onConfirmExpected: fn().mockResolvedValue(undefined),
     onRosterAction: fn().mockResolvedValue(undefined),
+    reloadAfterRefusal: fn().mockResolvedValue(null),
     onExcuseRestOfDay: fn().mockResolvedValue(undefined),
     onSearchChange: fn(),
   },

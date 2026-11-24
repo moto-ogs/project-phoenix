@@ -58,4 +58,7 @@ type StudentDepartureSnapshot struct {
 type StudentSnapshotReads interface {
 	StudentSnapshotByID(context.Context, int64) (*StudentSnapshot, error)
 	StudentSnapshotForUpdate(context.Context, int64) (*StudentSnapshot, error)
+	// StudentSnapshotForNoKeyUpdate reads the child with its row FOR NO KEY
+	// UPDATE (StudentKeyShareLock).
+	StudentSnapshotForNoKeyUpdate(context.Context, int64) (*StudentSnapshot, error)
 }

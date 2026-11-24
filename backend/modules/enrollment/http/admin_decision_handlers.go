@@ -2,7 +2,6 @@ package enrollmenthttp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -28,22 +27,22 @@ import (
 // answer next to its label. Listing endpoints leave them empty to
 // keep payloads light.
 type AdminRequestSummary struct {
-	ID                        string  `json:"id"`
-	PhaseID                   string  `json:"phase_id"`
-	PhaseName                 string  `json:"phase_name"`
-	CareOfferingSelectionMode string  `json:"care_offering_selection_mode"`
-	GuardianFirstName         string  `json:"guardian_first_name"`
-	GuardianLastName          string  `json:"guardian_last_name"`
-	GuardianEmail             string  `json:"guardian_email"`
-	GuardianPhone             *string `json:"guardian_phone,omitempty"`
+	ID                        ident.ID `json:"id"`
+	PhaseID                   ident.ID `json:"phase_id"`
+	PhaseName                 string   `json:"phase_name"`
+	CareOfferingSelectionMode string   `json:"care_offering_selection_mode"`
+	GuardianFirstName         string   `json:"guardian_first_name"`
+	GuardianLastName          string   `json:"guardian_last_name"`
+	GuardianEmail             string   `json:"guardian_email"`
+	GuardianPhone             *string  `json:"guardian_phone,omitempty"`
 	// SubmissionSource tells how the request came in (public, late_invite,
 	// admin_manual, contract_import): the school names a request of an
 	// imported contract as such, without parents (ADR 0309).
 	SubmissionSource string                    `json:"submission_source"`
 	SubmittedAt      time.Time                 `json:"submitted_at"`
 	WithdrawnAt      *time.Time                `json:"withdrawn_at,omitempty"`
-	CustomData       capability.FormValues     `json:"custom_data,omitzero"`
-	ConsentFlags     capability.FormValues     `json:"consent_flags,omitzero"`
+	CustomData       map[string]any            `json:"custom_data,omitempty" contract_json:"Answer values follow the school's versioned form schema"`
+	ConsentFlags     ConsentFlags              `json:"consent_flags,omitempty" contract_json:"Preserve the recorded value of historical non-boolean checkbox answers"`
 	SchemaFields     []AdminRequestSchemaField `json:"schema_fields,omitempty"`
 	// SchemaLegalBlocks carries key→title pairs from the pinned schema's
 	// legal blocks so the detail UI can label custom consent flags (e.g.
@@ -78,11 +77,11 @@ type AdminRequestDetail struct {
 // AdminRequestGuardian is one additional guardian (co-guardian) within an
 // admin summary/detail payload. Email/phone are optional.
 type AdminRequestGuardian struct {
-	ID        string  `json:"id"`
-	FirstName string  `json:"first_name"`
-	LastName  string  `json:"last_name"`
-	Email     *string `json:"email,omitempty"`
-	Phone     *string `json:"phone,omitempty"`
+	ID        ident.ID `json:"id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
+	Email     *string  `json:"email,omitempty"`
+	Phone     *string  `json:"phone,omitempty"`
 }
 
 // AdminRequestSchemaLegalBlock is the slim legal-block shape the admin
@@ -116,12 +115,15 @@ type AdminRequestSchemaFieldOption struct {
 // AdminRequestChild is one child within an admin summary/detail
 // payload.
 type AdminRequestChild struct {
-	ID                string  `json:"id"`
-	FirstName         string  `json:"first_name"`
-	LastName          string  `json:"last_name"`
-	DateOfBirth       string  `json:"date_of_birth"`
-	TargetGradeLevel  *int16  `json:"target_grade_level,omitempty"`
-	TargetSchoolClass *string `json:"target_school_class,omitempty"`
+	ID                ident.ID `json:"id"`
+	FirstName         string   `json:"first_name"`
+	LastName          string   `json:"last_name"`
+	DateOfBirth       string   `json:"date_of_birth"`
+	TargetGradeLevel  *int16   `json:"target_grade_level,omitempty"`
+	TargetSchoolClass *string  `json:"target_school_class,omitempty"`
+	// Version is the token of the child's data a staff correction sends
+	// back as expected_version (ADR 0311).
+	Version string `json:"version"`
 	// HolidayCareWish is the parents' answer to the holiday care question
 	// when the form asked it (#4703).
 	HolidayCareWish  *bool      `json:"holiday_care_wish,omitempty"`
@@ -130,10 +132,10 @@ type AdminRequestChild struct {
 	ReviewedAt       *time.Time `json:"reviewed_at,omitempty"`
 	ReviewedBy       *ident.ID  `json:"reviewed_by,omitempty"`
 	ActivationMode   string     `json:"activation_mode"`
-	CreatedStudentID string     `json:"created_student_id,omitempty"`
+	CreatedStudentID *ident.ID  `json:"created_student_id,omitempty"`
 	// MatchedStudentID is the enrolled child the approval renews instead of
 	// creating a new one (#1663, #6053).
-	MatchedStudentID string `json:"matched_student_id,omitempty"`
+	MatchedStudentID *ident.ID `json:"matched_student_id,omitempty"`
 	// PossibleExistingChildren are enrolled children that may be this child
 	// (#6053). Detail endpoint only; while it is non-empty the approval needs
 	// the office's choice: existing_student_id or create_new_student.
@@ -150,8 +152,8 @@ type AdminRequestChild struct {
 	// WeeklyPlanOn is the day the approved weekly plan of a renewal applies
 	// when the child's care was still running at approval (#6043). Until
 	// then the running pickup times, care days and Heimweg stay.
-	WeeklyPlanOn string                `json:"weekly_plan_on,omitempty"`
-	CustomData   capability.FormValues `json:"custom_data,omitzero"`
+	WeeklyPlanOn string         `json:"weekly_plan_on,omitempty"`
+	CustomData   map[string]any `json:"custom_data,omitempty" contract_json:"Answer values follow the school's versioned form schema"`
 	// Offerings is the per-child Betreuungsangebote selection that is on
 	// file RIGHT NOW — exactly the set a correction replaces. Populated
 	// only on the detail endpoint (listing endpoints leave it empty to
@@ -168,16 +170,20 @@ type AdminRequestChild struct {
 	// save a correction in this state: an empty editor plus a save
 	// deletes whatever the family actually booked.
 	OfferingsUnavailable bool `json:"offerings_unavailable,omitempty"`
+	// OfferingsVersion is the token of the child's stored bookings a
+	// correction sends back as expected_version (ADR 0311). Detail endpoint
+	// only, absent while the bookings are unavailable.
+	OfferingsVersion string `json:"offerings_version,omitempty"`
 }
 
 // AdminExistingChildCandidate is an enrolled child that may be the child of
 // an enrollment (#6053).
 type AdminExistingChildCandidate struct {
-	StudentID   string  `json:"student_id"`
-	FirstName   string  `json:"first_name"`
-	LastName    string  `json:"last_name"`
-	DateOfBirth *string `json:"date_of_birth,omitempty"`
-	SchoolClass string  `json:"school_class,omitempty"`
+	StudentID   ident.ID `json:"student_id"`
+	FirstName   string   `json:"first_name"`
+	LastName    string   `json:"last_name"`
+	DateOfBirth *string  `json:"date_of_birth,omitempty"`
+	SchoolClass string   `json:"school_class,omitempty"`
 	// PhaseRequest is the other active request of the same phase that
 	// already created or renews this child (#6247). The office cannot renew
 	// it again in the phase; the enrollment duplicates that request.
@@ -187,31 +193,44 @@ type AdminExistingChildCandidate struct {
 // AdminCandidatePhaseRequest names the request of the phase that holds a
 // candidate.
 type AdminCandidatePhaseRequest struct {
-	RequestID         string `json:"request_id"`
-	ChildStatus       string `json:"child_status"`
-	GuardianFirstName string `json:"guardian_first_name"`
-	GuardianLastName  string `json:"guardian_last_name"`
+	RequestID         ident.ID `json:"request_id"`
+	ChildStatus       string   `json:"child_status"`
+	GuardianFirstName string   `json:"guardian_first_name"`
+	GuardianLastName  string   `json:"guardian_last_name"`
 }
 
 type AdminOfferingAdjustment struct {
-	ID                 string          `json:"id"`
-	RequestID          string          `json:"request_id"`
-	RequestChildID     string          `json:"request_child_id"`
-	StudentID          string          `json:"student_id"`
-	ActorAccountID     string          `json:"actor_account_id"`
-	ActorRole          string          `json:"actor_role"`
-	ActorNameSnapshot  *string         `json:"actor_name_snapshot,omitempty"`
-	ActorEmailSnapshot *string         `json:"actor_email_snapshot,omitempty"`
-	Reason             string          `json:"reason"`
-	Before             json.RawMessage `json:"before"`
-	After              json.RawMessage `json:"after"`
-	ChangedAt          time.Time       `json:"changed_at"`
+	ID                 ident.ID                          `json:"id"`
+	RequestID          ident.ID                          `json:"request_id"`
+	RequestChildID     ident.ID                          `json:"request_child_id"`
+	StudentID          ident.ID                          `json:"student_id"`
+	ActorAccountID     ident.ID                          `json:"actor_account_id"`
+	ActorRole          string                            `json:"actor_role"`
+	ActorNameSnapshot  *string                           `json:"actor_name_snapshot,omitempty"`
+	ActorEmailSnapshot *string                           `json:"actor_email_snapshot,omitempty"`
+	Reason             string                            `json:"reason"`
+	Before             []AdminOfferingAdjustmentSnapshot `json:"before"`
+	After              []AdminOfferingAdjustmentSnapshot `json:"after"`
+	ChangedAt          time.Time                         `json:"changed_at"`
+}
+
+// AdminOfferingAdjustmentSnapshot is a booked offering as recorded in an
+// adjustment. The name and mode are optional for historical audit rows.
+type AdminOfferingAdjustmentSnapshot struct {
+	OfferingID            ident.ID `json:"offering_id"`
+	OfferingName          *string  `json:"offering_name,omitempty"`
+	DaysOfWeekMode        *string  `json:"days_of_week_mode,omitempty"`
+	SelectedDays          []string `json:"selected_days,omitempty"`
+	ManualSelectedDays    []string `json:"manual_selected_days,omitempty"`
+	AutomaticSelectedDays []string `json:"automatic_selected_days,omitempty"`
+	AvailableDays         []string `json:"available_days,omitempty"`
+	ExtendedUntil         string   `json:"extended_until,omitempty" contract:"date"`
 }
 
 func toAdminRequestSummary(s *RequestSummary) AdminRequestSummary {
 	out := AdminRequestSummary{
-		ID:                strconv.FormatInt(s.Request.ID, 10),
-		PhaseID:           strconv.FormatInt(s.Request.PhaseID, 10),
+		ID:                ident.ID(s.Request.ID),
+		PhaseID:           ident.ID(s.Request.PhaseID),
 		GuardianFirstName: s.Request.GuardianFirstName,
 		GuardianLastName:  s.Request.GuardianLastName,
 		GuardianEmail:     s.Request.GuardianEmail,
@@ -227,29 +246,30 @@ func toAdminRequestSummary(s *RequestSummary) AdminRequestSummary {
 	out.Children = make([]AdminRequestChild, 0, len(s.Children))
 	for _, c := range s.Children {
 		out.Children = append(out.Children, AdminRequestChild{
-			ID:                strconv.FormatInt(c.ID, 10),
+			ID:                ident.ID(c.ID),
 			FirstName:         c.FirstName,
 			LastName:          c.LastName,
 			DateOfBirth:       string(c.DateOfBirth),
 			TargetGradeLevel:  c.TargetGradeLevel,
 			TargetSchoolClass: c.TargetSchoolClass,
+			Version:           capability.ChildDataVersion(c),
 			HolidayCareWish:   c.HolidayCareWish,
 			Status:            c.Status,
 			StatusReason:      c.StatusReason,
 			ReviewedAt:        c.ReviewedAt,
 			ReviewedBy:        (*ident.ID)(c.ReviewedBy),
 			ActivationMode:    c.ActivationMode,
-			CreatedStudentID:  optionalInt64String(c.CreatedStudentID),
-			MatchedStudentID:  optionalInt64String(c.MatchedStudentID),
+			CreatedStudentID:  optionalPositiveWireID(c.CreatedStudentID),
+			MatchedStudentID:  optionalPositiveWireID(c.MatchedStudentID),
 			ReviewReason:      c.ReviewReason,
 			WeeklyPlanOn:      optionalDateString(c.WeeklyPlanOn),
-			CustomData:        c.CustomData,
+			CustomData:        formAnswerMap(c.CustomData),
 		})
 	}
 	out.AdditionalGuardians = make([]AdminRequestGuardian, 0, len(s.Guardians))
 	for _, g := range s.Guardians {
 		out.AdditionalGuardians = append(out.AdditionalGuardians, AdminRequestGuardian{
-			ID:        strconv.FormatInt(g.ID, 10),
+			ID:        ident.ID(g.ID),
 			FirstName: g.FirstName,
 			LastName:  g.LastName,
 			Email:     g.Email,
@@ -423,8 +443,8 @@ func (rs *Resource) toAdminRequestDetailSummary(ctx context.Context, summary *Re
 	if summary == nil || summary.Request == nil {
 		return detail
 	}
-	detail.CustomData = summary.Request.CustomData
-	detail.ConsentFlags = summary.Request.ConsentFlags
+	detail.CustomData = formAnswerMap(summary.Request.CustomData)
+	detail.ConsentFlags = consentFlagsFromOwner(summary.Request.ConsentFlags)
 
 	if rs.FormSchemaService != nil && summary.Request.SchemaID != nil {
 		if fs, err := rs.FormSchemaService.SchemaVersion(ctx, *summary.Request.SchemaID); err == nil && fs != nil {
@@ -468,7 +488,7 @@ func attachExistingChildCandidates(children []AdminRequestChild, summaryChildren
 
 func newAdminExistingChildCandidate(candidate capability.ExistingChildCandidate) AdminExistingChildCandidate {
 	out := AdminExistingChildCandidate{
-		StudentID: strconv.FormatInt(candidate.StudentID, 10),
+		StudentID: ident.ID(candidate.StudentID),
 		FirstName: candidate.FirstName, LastName: candidate.LastName, SchoolClass: candidate.SchoolClass,
 	}
 	if candidate.DateOfBirth != nil {
@@ -477,7 +497,7 @@ func newAdminExistingChildCandidate(candidate capability.ExistingChildCandidate)
 	}
 	if held := candidate.PhaseRequest; held != nil {
 		out.PhaseRequest = &AdminCandidatePhaseRequest{
-			RequestID: strconv.FormatInt(held.RequestID, 10), ChildStatus: held.ChildStatus,
+			RequestID: ident.ID(held.RequestID), ChildStatus: held.ChildStatus,
 			GuardianFirstName: held.GuardianFirstName, GuardianLastName: held.GuardianLastName,
 		}
 	}
@@ -494,6 +514,7 @@ func attachChildOfferings(children []AdminRequestChild, summaryChildren []*capab
 			continue
 		}
 		set := childOfferings[summaryChildren[i].ID]
+		children[i].OfferingsVersion = set.Version
 		if len(set.Current) == 0 && len(set.Upcoming) == 0 {
 			continue
 		}
@@ -552,11 +573,11 @@ func toAdminSchemaMetadata(fs *capability.FormSchema) ([]AdminRequestSchemaField
 // ShownExistingStudentIDs lists the candidates the office saw when it chose a
 // new child; a candidate outside it refuses the approval again (#6247).
 type AdminDecideRequest struct {
-	Status                  string   `json:"status"` // approved | waitlisted | rejected | under_review
-	Reason                  string   `json:"reason,omitempty"`
-	ExistingStudentID       string   `json:"existing_student_id,omitempty"`
-	CreateNewStudent        bool     `json:"create_new_student,omitempty"`
-	ShownExistingStudentIDs []string `json:"shown_existing_student_ids,omitempty"`
+	Status                  string     `json:"status"` // approved | waitlisted | rejected | under_review
+	Reason                  string     `json:"reason,omitempty"`
+	ExistingStudentID       string     `json:"existing_student_id,omitempty" contract_text:"empty string means no existing student selected"`
+	CreateNewStudent        bool       `json:"create_new_student,omitempty"`
+	ShownExistingStudentIDs []ident.ID `json:"shown_existing_student_ids,omitempty"`
 	// AcceptOfferingChanges confirms booking the offerings' current terms
 	// although they changed since the submission (#6837).
 	AcceptOfferingChanges bool `json:"accept_offering_changes,omitempty"`
@@ -571,14 +592,13 @@ func (req *AdminDecideRequest) existingStudentID() (*int64, error) {
 
 // parseShownStudentIDs reads the candidates the office saw before it chose a
 // new child.
-func parseShownStudentIDs(values []string) ([]int64, error) {
+func parseShownStudentIDs(values []ident.ID) ([]int64, error) {
 	ids := make([]int64, 0, len(values))
 	for _, value := range values {
-		id, err := parseExistingStudentID(value)
-		if err != nil || id == nil {
+		if value <= 0 {
 			return nil, errors.New("invalid shown_existing_student_ids")
 		}
-		ids = append(ids, *id)
+		ids = append(ids, value.Int64())
 	}
 	return ids, nil
 }
@@ -734,20 +754,21 @@ func (rs *Resource) renderDecideError(w http.ResponseWriter, r *http.Request, er
 // detail-endpoint concerns).
 func newAdminRequestChild(child *capability.RequestChild) AdminRequestChild {
 	return AdminRequestChild{
-		ID:                strconv.FormatInt(child.ID, 10),
+		ID:                ident.ID(child.ID),
 		FirstName:         child.FirstName,
 		LastName:          child.LastName,
 		DateOfBirth:       string(child.DateOfBirth),
 		TargetGradeLevel:  child.TargetGradeLevel,
 		TargetSchoolClass: child.TargetSchoolClass,
+		Version:           capability.ChildDataVersion(child),
 		HolidayCareWish:   child.HolidayCareWish,
 		Status:            child.Status,
 		StatusReason:      child.StatusReason,
 		ReviewedAt:        child.ReviewedAt,
 		ReviewedBy:        (*ident.ID)(child.ReviewedBy),
 		ActivationMode:    child.ActivationMode,
-		CreatedStudentID:  optionalInt64String(child.CreatedStudentID),
-		MatchedStudentID:  optionalInt64String(child.MatchedStudentID),
+		CreatedStudentID:  optionalPositiveWireID(child.CreatedStudentID),
+		MatchedStudentID:  optionalPositiveWireID(child.MatchedStudentID),
 		ReviewReason:      child.ReviewReason,
 		WeeklyPlanOn:      optionalDateString(child.WeeklyPlanOn),
 	}

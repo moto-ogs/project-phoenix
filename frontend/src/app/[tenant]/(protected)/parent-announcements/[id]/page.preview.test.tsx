@@ -16,7 +16,7 @@ vi.mock("~/lib/activity-api", () => ({
 }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "7", tenantId: 1 } },
+    data: { user: { id: "7", tenantId: "1" } },
     status: "authenticated",
   }),
 }));

@@ -74,7 +74,12 @@ describe("MasterDataReviewItem", () => {
 
     render(
       <>
-        <MasterDataReviewItem row={row()} onDecided={onDecided} />
+        <MasterDataReviewItem
+          row={row()}
+          onDecided={onDecided}
+          expectedVersion="v1"
+          onStale={vi.fn()}
+        />
         <MasterDataReviewItem
           row={row({
             id: "101",
@@ -83,6 +88,8 @@ describe("MasterDataReviewItem", () => {
             new_value: { mon: ["bus", "alone"] },
           })}
           onDecided={onDecided}
+          expectedVersion="v1"
+          onStale={vi.fn()}
         />
       </>,
     );
@@ -102,7 +109,7 @@ describe("MasterDataReviewItem", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Freigeben" })[0]!);
 
     await waitFor(() =>
-      expect(mockDecide).toHaveBeenCalledWith("100", true, "passt"),
+      expect(mockDecide).toHaveBeenCalledWith("100", true, "passt", "v1"),
     );
     await waitFor(() =>
       expect(onDecided).toHaveBeenCalledWith("Die Änderung ist übernommen."),
@@ -120,6 +127,8 @@ describe("MasterDataReviewItem", () => {
             new_value: "mobile",
           })}
           onDecided={vi.fn()}
+          expectedVersion="v1"
+          onStale={vi.fn()}
         />
         <MasterDataReviewItem
           row={row({
@@ -129,6 +138,8 @@ describe("MasterDataReviewItem", () => {
             new_value: "tr",
           })}
           onDecided={vi.fn()}
+          expectedVersion="v1"
+          onStale={vi.fn()}
         />
       </>,
     );
@@ -151,6 +162,8 @@ describe("MasterDataReviewItem", () => {
             new_value: "2018-06-14",
           })}
           onDecided={vi.fn()}
+          expectedVersion="v1"
+          onStale={vi.fn()}
         />
         <MasterDataReviewItem
           row={row({
@@ -160,6 +173,8 @@ describe("MasterDataReviewItem", () => {
             new_value: "kein-datum",
           })}
           onDecided={vi.fn()}
+          expectedVersion="v1"
+          onStale={vi.fn()}
         />
       </>,
     );
@@ -181,6 +196,8 @@ describe("MasterDataReviewItem", () => {
             new_value: { tue: "not-an-array" },
           })}
           onDecided={vi.fn()}
+          expectedVersion="v1"
+          onStale={vi.fn()}
         />
         <MasterDataReviewItem
           row={row({
@@ -190,6 +207,8 @@ describe("MasterDataReviewItem", () => {
             new_value: "email",
           })}
           onDecided={vi.fn()}
+          expectedVersion="v1"
+          onStale={vi.fn()}
         />
         <MasterDataReviewItem
           row={row({
@@ -199,6 +218,8 @@ describe("MasterDataReviewItem", () => {
             new_value: "de",
           })}
           onDecided={vi.fn()}
+          expectedVersion="v1"
+          onStale={vi.fn()}
         />
       </>,
     );
@@ -224,6 +245,8 @@ describe("MasterDataReviewItem", () => {
       <MasterDataReviewItem
         row={row({ field_key: "unknown_field" })}
         onDecided={onDecided}
+        expectedVersion="v1"
+        onStale={vi.fn()}
       />,
     );
 
@@ -245,7 +268,14 @@ describe("MasterDataReviewItem", () => {
     mockDecide.mockResolvedValue(row({ status: "rejected" }));
     const onDecided = vi.fn();
 
-    render(<MasterDataReviewItem row={row()} onDecided={onDecided} />);
+    render(
+      <MasterDataReviewItem
+        row={row()}
+        onDecided={onDecided}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
+    );
 
     expandAll();
     fireEvent.change(
@@ -255,7 +285,12 @@ describe("MasterDataReviewItem", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ablehnen" }));
 
     await waitFor(() =>
-      expect(mockDecide).toHaveBeenCalledWith("100", false, "passt nicht"),
+      expect(mockDecide).toHaveBeenCalledWith(
+        "100",
+        false,
+        "passt nicht",
+        "v1",
+      ),
     );
     expect(onDecided).toHaveBeenCalledWith("Die Änderung ist abgelehnt.");
   });
@@ -266,7 +301,14 @@ describe("MasterDataReviewItem", () => {
     );
     const onDecided = vi.fn();
 
-    render(<MasterDataReviewItem row={row()} onDecided={onDecided} />);
+    render(
+      <MasterDataReviewItem
+        row={row()}
+        onDecided={onDecided}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
+    );
 
     expandAll();
     fireEvent.click(screen.getByRole("button", { name: "Freigeben" }));
@@ -285,12 +327,49 @@ describe("MasterDataReviewItem", () => {
       }),
     );
 
-    render(<MasterDataReviewItem row={row()} onDecided={vi.fn()} />);
+    render(
+      <MasterDataReviewItem
+        row={row()}
+        onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
+    );
 
     expandAll();
     fireEvent.click(screen.getByRole("button", { name: "Freigeben" }));
 
     await expectErrorToast(/Die Anfrage ist nicht mehr offen/);
     expect(screen.queryByText("not pending")).toBeNull();
+  });
+});
+
+// ADR 0311: a request stored differently since the list was read is refused.
+// The card names it without a retry and the list reloads.
+describe("MasterDataReviewItem on an outdated read", () => {
+  it("reloads instead of retrying the decision", async () => {
+    mockDecide.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    const onStale = vi.fn();
+    render(
+      <MasterDataReviewItem
+        row={row()}
+        onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={onStale}
+      />,
+    );
+
+    expandAll();
+    fireEvent.click(screen.getByRole("button", { name: "Freigeben" }));
+
+    await expectErrorToast(/wurde inzwischen geändert/);
+    expect(onStale).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByRole("button", { name: /Wiederholen/ }),
+    ).not.toBeInTheDocument();
   });
 });

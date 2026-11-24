@@ -1,0 +1,7 @@
+{
+  "scenario": "api.guardians.bulk_invite_notify.http_positive_growth",
+  "max": 15,
+  "exact": true,
+  "description": "Registered composed guardian HTTP resource mounted at the production /api/guardians path, JWT verifier/authenticator, real permission and tenant transaction middleware; capture includes every request-scoped SQL statement, excludes fixture setup/signing and outer production server/live-session middleware. Positive dry-run with notify_active for N3/N8 selected students, each with one guardian to invite, one guardian who already uses the parents portal and an approved care period without a booking (#7760): the care notice reads the access rows, the children, their care periods and the bookings in force today once each, whatever N; does not cover mail dispatch or the locks of a run that mails.",
+  "route": "POST /api/guardians/bulk-invite"
+}

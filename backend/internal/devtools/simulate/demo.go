@@ -251,7 +251,7 @@ func (d *DemoTicker) ensureSessions(ctx context.Context) ([]int64, error) {
 				return nil, fmt.Errorf("demo activity %q has no room", activities[i])
 			}
 			_, err = client.DevicePost("/api/iot/session/start", map[string]any{
-				"activity_id": state.Activities[activities[i]], "room_id": room,
+				"activity_id": state.Activities[activities[i]], "room_id": room.Int64(),
 				"supervisor_ids": []int64{state.Accounts.Betreuer[i].StaffID},
 			}, device.APIKey, state.DevicePIN)
 			if err != nil {

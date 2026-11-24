@@ -147,10 +147,7 @@ func registerBookedApplicationLunch(rt *Runtime, auth AuthRef, lunchDays map[int
 			if _, eats := lunchDays[studentID]; eats || len(weekdays) == 0 {
 				continue
 			}
-			if _, err := rt.Client.PutWithAuth(auth, fmt.Sprintf("/api/meal-plan/participation/%d/schedule", studentID), map[string]any{
-				"weekdays":       weekdays,
-				"effective_from": from.String(),
-			}); err != nil {
+			if err := schoolMealSchedule(rt, &auth, studentID, weekdays, from); err != nil {
 				return registered, fmt.Errorf("register booked lunch of child %d: %w", studentID, err)
 			}
 			recordRegularLunchDays(rt, studentID, weekdays)
@@ -259,7 +256,7 @@ func (s seedRegularBookingsStep) book(rt *Runtime, auth AuthRef, studentID int64
 	}
 	offerings := rt.Enrollment.Offerings
 	body := map[string]any{
-		"phase_id":            rt.Enrollment.PhaseID,
+		"phase_id":            ident.ID(rt.Enrollment.PhaseID),
 		"guardian_first_name": guardian.FirstName,
 		"guardian_last_name":  guardian.LastName,
 		"guardian_email":      guardian.Email,
@@ -271,10 +268,10 @@ func (s seedRegularBookingsStep) book(rt *Runtime, auth AuthRef, studentID int64
 			"last_name":          child.LastName,
 			"date_of_birth":      demoStudentBirthday(index, child, rt.FixedSeeder.seedDay),
 			"target_grade_level": grade,
-			"offering_ids":       []int64{offerings[careKey], offerings["mittagessen"]},
+			"offering_ids":       []ident.ID{ident.ID(offerings[careKey]), ident.ID(offerings["mittagessen"])},
 			"offering_days": []map[string]any{
-				{"offering_id": offerings[careKey], "selected_days": days},
-				{"offering_id": offerings["mittagessen"], "selected_days": days},
+				{"offering_id": ident.ID(offerings[careKey]), "selected_days": days},
+				{"offering_id": ident.ID(offerings["mittagessen"]), "selected_days": days},
 			},
 			"custom_data": seedEnrollmentChildAnswers(child.FirstName, child.LastName),
 		}},
@@ -282,7 +279,9 @@ func (s seedRegularBookingsStep) book(rt *Runtime, auth AuthRef, studentID int64
 		"external_consent_confirmed": true,
 		"send_notification":          false,
 	}
-	raw, err := rt.Client.PostWithAuth(auth, fmt.Sprintf("/api/enrollment/phases/%d/manual-approved-enrollments", rt.Enrollment.PhaseID), body)
+	raw, err := postShownForm(staffGet(rt, auth), body, func(b map[string]any) ([]byte, error) {
+		return rt.Client.PostWithAuth(auth, fmt.Sprintf("/api/enrollment/phases/%d/manual-approved-enrollments", rt.Enrollment.PhaseID), b)
+	})
 	if err != nil {
 		return fmt.Errorf("book care and lunch for child %d: %w", studentID, err)
 	}
@@ -298,59 +297,103 @@ func (s seedRegularBookingsStep) book(rt *Runtime, auth AuthRef, studentID int64
 	if response.Data.StudentID != strconv.FormatInt(studentID, 10) || response.Data.Status != "approved" {
 		return fmt.Errorf("booking of child %d landed on student %q with status %q", studentID, response.Data.StudentID, response.Data.Status)
 	}
-	return restoreGuardianRelationship(rt, auth, guardian)
+	return restoreGuardianRelationship(rt, auth, studentID, guardian)
 }
 
 // seedPrimaryGuardian is a child's primary guardian link as the school
 // shows it.
 type seedPrimaryGuardian struct {
 	FirstName, LastName, Email string
-	RelationshipID             int64
+	GuardianID, RelationshipID int64
 	RelationshipType           string
+	// Version is the token the staff form of this guardian saves back.
+	Version string
 }
 
 // primaryGuardianOf reads the child's primary guardian. The booking names
 // that guardian, so the approval links no second one.
 func primaryGuardianOf(rt *Runtime, auth AuthRef, studentID int64) (seedPrimaryGuardian, error) {
-	raw, err := rt.Client.GetWithAuth(auth, fmt.Sprintf("/api/guardians/students/%d/guardians", studentID))
+	rows, err := studentGuardianRows(rt, auth, studentID)
 	if err != nil {
-		return seedPrimaryGuardian{}, fmt.Errorf("load guardians of child %d: %w", studentID, err)
+		return seedPrimaryGuardian{}, err
 	}
-	var response struct {
-		Data []struct {
-			Guardian struct {
-				FirstName string  `json:"first_name"`
-				LastName  string  `json:"last_name"`
-				Email     *string `json:"email"`
-			} `json:"guardian"`
-			RelationshipID   ident.ID `json:"relationship_id"`
-			RelationshipType string   `json:"relationship_type"`
-			IsPrimary        bool     `json:"is_primary"`
-		} `json:"data"`
-	}
-	if err := parseJSON(raw, &response); err != nil {
-		return seedPrimaryGuardian{}, fmt.Errorf("parse guardians of child %d: %w", studentID, err)
-	}
-	for _, row := range response.Data {
-		if row.IsPrimary && row.Guardian.Email != nil && *row.Guardian.Email != "" {
-			return seedPrimaryGuardian{
-				FirstName: row.Guardian.FirstName, LastName: row.Guardian.LastName, Email: *row.Guardian.Email,
-				RelationshipID: int64(row.RelationshipID), RelationshipType: row.RelationshipType,
-			}, nil
+	for _, row := range rows {
+		if row.IsPrimary && row.Email != "" {
+			return row.seedPrimaryGuardian, nil
 		}
 	}
 	return seedPrimaryGuardian{}, fmt.Errorf("child %d has no primary guardian with an e-mail address", studentID)
 }
 
+// studentGuardianRow is one guardian of a child as the staff list shows it.
+type studentGuardianRow struct {
+	seedPrimaryGuardian
+	IsPrimary bool
+}
+
+// studentGuardianRows reads the child's guardians with the version each
+// staff form saves back.
+func studentGuardianRows(rt *Runtime, auth AuthRef, studentID int64) ([]studentGuardianRow, error) {
+	raw, err := rt.Client.GetWithAuth(auth, fmt.Sprintf("/api/guardians/students/%d/guardians", studentID))
+	if err != nil {
+		return nil, fmt.Errorf("load guardians of child %d: %w", studentID, err)
+	}
+	var response struct {
+		Data []struct {
+			Guardian struct {
+				ID        ident.ID `json:"id"`
+				FirstName string   `json:"first_name"`
+				LastName  string   `json:"last_name"`
+				Email     *string  `json:"email"`
+			} `json:"guardian"`
+			RelationshipID   ident.ID `json:"relationship_id"`
+			RelationshipType string   `json:"relationship_type"`
+			IsPrimary        bool     `json:"is_primary"`
+			Version          string   `json:"version"`
+		} `json:"data"`
+	}
+	if err := parseJSON(raw, &response); err != nil {
+		return nil, fmt.Errorf("parse guardians of child %d: %w", studentID, err)
+	}
+	rows := make([]studentGuardianRow, 0, len(response.Data))
+	for _, row := range response.Data {
+		email := ""
+		if row.Guardian.Email != nil {
+			email = *row.Guardian.Email
+		}
+		rows = append(rows, studentGuardianRow{IsPrimary: row.IsPrimary, seedPrimaryGuardian: seedPrimaryGuardian{
+			FirstName: row.Guardian.FirstName, LastName: row.Guardian.LastName, Email: email,
+			GuardianID: int64(row.Guardian.ID), RelationshipID: int64(row.RelationshipID), RelationshipType: row.RelationshipType,
+			Version: row.Version,
+		}})
+	}
+	return rows, nil
+}
+
 // restoreGuardianRelationship sets the relationship type back, which the
 // approval sets to "guardian" for the primary guardian it confirms; the
-// master data keeps "parent".
-func restoreGuardianRelationship(rt *Runtime, auth AuthRef, guardian seedPrimaryGuardian) error {
+// master data keeps "parent". It saves the guardian as the staff form does,
+// against the version it reads after the approval (ADR 0311).
+func restoreGuardianRelationship(rt *Runtime, auth AuthRef, studentID int64, guardian seedPrimaryGuardian) error {
 	if guardian.RelationshipType == "" || guardian.RelationshipType == "guardian" {
 		return nil
 	}
-	if _, err := rt.Client.PutWithAuth(auth, fmt.Sprintf("/api/guardians/relationships/%d", guardian.RelationshipID), map[string]any{
-		"relationship_type": guardian.RelationshipType,
+	rows, err := studentGuardianRows(rt, auth, studentID)
+	if err != nil {
+		return err
+	}
+	var approved *studentGuardianRow
+	for i := range rows {
+		if rows[i].RelationshipID == guardian.RelationshipID {
+			approved = &rows[i]
+		}
+	}
+	if approved == nil {
+		return fmt.Errorf("restore guardian relationship %d: child %d no longer has it", guardian.RelationshipID, studentID)
+	}
+	if _, err := rt.Client.PutWithAuth(auth, fmt.Sprintf("/api/guardians/students/%d/guardians/%d", studentID, approved.GuardianID), map[string]any{
+		"relationship":     map[string]any{"relationship_type": guardian.RelationshipType},
+		"expected_version": approved.Version,
 	}); err != nil {
 		return fmt.Errorf("restore guardian relationship %d: %w", guardian.RelationshipID, err)
 	}

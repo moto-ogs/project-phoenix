@@ -397,6 +397,9 @@ func (s *ActivityService) addNewEnrollmentsInTx(ctx context.Context, txService a
 // GET /api/activities/{id}/students, the activity detail response and the
 // enrollment counts — a soft-deleted child must not be listed or counted there
 // (#405 review).
+//
+// A child with several rows on the group (a dated switch, or bookings that
+// end on different days, #7908) is listed once.
 func (s *ActivityService) GetEnrolledStudents(ctx context.Context, groupID int64) ([]*timetable.OperationStudent, error) {
 	// Get the enrollments for this group
 	enrollments, err := groupStudentEnrollments(ctx, s.timetable, s.directories, groupID)
@@ -413,9 +416,10 @@ func (s *ActivityService) GetEnrolledStudents(ctx context.Context, groupID int64
 	}
 
 	students := make([]*timetable.OperationStudent, 0, len(enrollments))
+	listed := make(map[int64]bool, len(enrollments))
 	for _, enrollment := range enrollments {
 		student := studentsByID[enrollment.StudentID]
-		if student == nil {
+		if student == nil || listed[enrollment.StudentID] {
 			continue
 		}
 		if student.IsAlumnus() {
@@ -431,6 +435,7 @@ func (s *ActivityService) GetEnrolledStudents(ctx context.Context, groupID int64
 			FirstName: enrollment.StudentFirstName,
 			LastName:  enrollment.StudentLastName,
 		}
+		listed[enrollment.StudentID] = true
 		students = append(students, student)
 	}
 

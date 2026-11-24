@@ -466,16 +466,6 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolChangeRequests.PendingChanges",
-      "reason": "Pure timestamp-to-version value mapping used to reject obsolete request forms; listing the kept modules (#6334) adds no mutation or locking read (ADR 0163). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
-      "source_owner": "care-contract",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.ParentRequestVersion",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractChangeRequests.PendingChanges",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolChangeRequests.PendingChanges",
       "reason": "Pure reason-policy value check, retaining the same staff-side policy for the school and the office; listing the kept modules (#6334) leaves it unchanged (ADR 0163).",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests.ReasonRequired",
@@ -560,6 +550,36 @@
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveManyForTenants",
       "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractIssuers.SchoolIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolIssuers.SchoolIssuers",
+      "reason": "Read-only: Organisation \u0026 Tenancy names per school the Schulträger or the Gemeinde that concludes its contracts in place of the Träger (#4811, ADR 0318), read in the caller's Träger transaction; no write, lock or scope change.",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractIssuers.SchoolIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolIssuers.SchoolIssuers",
+      "reason": "Read-only: joins name and address of the read body into the sender text of a letter; no database access, write, lock or scope change.",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolParty.SenderText",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractIssuers.SchoolIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolIssuers.SchoolIssuers",
+      "reason": "Read-only: Organisation \u0026 Tenancy names per school the Schulträger or the Gemeinde that concludes its contracts in place of the Träger (#4811, ADR 0318), read in the caller's Träger transaction; no write, lock or scope change.",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
+      "target_owner": "organization-tenancy"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractSignatures.ContractSignatureProofs",

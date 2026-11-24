@@ -224,8 +224,13 @@ func TestSavingAGuardianKeepsTheStop(t *testing.T) {
 	testpkg.CreateTestStudentGuardianLink(t, c.db, student.ID, guardian.ID, "primary_guardian")
 	require.Equal(t, http.StatusOK, c.do(t, account.ID, http.MethodPost, fmt.Sprintf("/%d/email-stop", guardian.ID), permissions.UsersUpdate).Code)
 
-	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/guardians/%d", guardian.ID),
-		map[string]any{"first_name": "Neu", "email": "neu-" + *guardian.Email}, bearer(t, guardianStaffClaims(account.ID, permissions.UsersUpdate)))
+	// The staff form saves the guardian against the version it read (ADR 0311).
+	list := c.do(t, account.ID, http.MethodGet, fmt.Sprintf("/students/%d/guardians", student.ID), permissions.UsersRead)
+	require.Equal(t, http.StatusOK, list.Code, list.Body.String())
+	version := dataArray(t, list.Body.Bytes())[0].(map[string]any)["version"]
+	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/guardians/students/%d/guardians/%d", student.ID, guardian.ID),
+		map[string]any{"guardian": map[string]any{"first_name": "Neu", "email": "neu-" + *guardian.Email}, "expected_version": version},
+		bearer(t, guardianStaffClaims(account.ID, permissions.UsersUpdate)))
 	rr := testutil.ExecuteRequest(testpkg.MountedQueryBudgetRouter("/api", c.router), req)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 

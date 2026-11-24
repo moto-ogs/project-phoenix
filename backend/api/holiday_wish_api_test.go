@@ -71,7 +71,7 @@ func switchOnHolidayWish(t *testing.T, f reviewFixture) {
 	period := decodeSchoolPortalData[map[string]any](t, rec.Body.Bytes())
 	assert.Equal(t, false, period["holiday_wish_rule"], "the rule is off by default")
 	period["holiday_wish_rule"] = true
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayPeriodPath(int64(f.period.ID)), period)
+	rec = putHolidayPeriod(t, f.traeger, f.office.token, holidayPeriodPath(int64(f.period.ID)), period)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, true, decodeSchoolPortalData[map[string]any](t, rec.Body.Bytes())["holiday_wish_rule"])
 }

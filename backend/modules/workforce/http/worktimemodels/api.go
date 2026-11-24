@@ -16,8 +16,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Middleware is the HTTP middleware shape the composition root supplies.
@@ -109,6 +111,10 @@ type ModelRequest struct {
 	RotationLength     int            `json:"rotation_length"`
 	RotationAnchorDate string         `json:"rotation_anchor_date"`
 	Entries            []EntryRequest `json:"entries"`
+	// ExpectedVersion is the version of the template an edit replaces (ADR
+	// 0311); an edit of a template changed since is refused. A create
+	// ignores it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // ModelResponse mirrors the model with its entries.
@@ -119,6 +125,9 @@ type ModelResponse struct {
 	RotationAnchorDate string          `json:"rotation_anchor_date"`
 	Entries            []EntryResponse `json:"entries"`
 	WeeklyTotals       []int           `json:"weekly_totals"`
+	// Version is the token an edit sends back as expected_version (ADR
+	// 0311).
+	Version string `json:"version"`
 	// ArchivedAt is present while the template is not offered for new
 	// assignments (#6891).
 	ArchivedAt *string `json:"archived_at,omitempty"`
@@ -214,7 +223,7 @@ func (rs *Resource) get(w http.ResponseWriter, r *http.Request) {
 
 func (rs *Resource) create(w http.ResponseWriter, r *http.Request) {
 	var req ModelRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.runtime.Failure(w, r, FailureInvalid, err)
 		return
 	}
@@ -247,7 +256,7 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req ModelRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.runtime.Failure(w, r, FailureInvalid, err)
 		return
 	}
@@ -256,7 +265,7 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 		rs.runtime.Failure(w, r, FailureInvalid, err)
 		return
 	}
-	saved, err := rs.models.UpdateWorkTimeModel(r.Context(), workforce.UpdateWorkTimeModel{ID: id, WorkTimeModelFields: fields})
+	saved, err := rs.models.UpdateWorkTimeModel(r.Context(), workforce.UpdateWorkTimeModel{ID: id, WorkTimeModelFields: fields, ExpectedVersion: req.ExpectedVersion})
 	if err != nil {
 		rs.renderCapabilityError(w, r, err)
 		return
@@ -410,6 +419,7 @@ func toResponse(m workforce.WorkTimeModel) (ModelResponse, error) {
 		RotationAnchorDate: rotationAnchor(m.RotationAnchorDate),
 		Entries:            entries,
 		WeeklyTotals:       totals,
+		Version:            workforce.WorkTimeModelVersion(m),
 		ArchivedAt:         archivedAt,
 	}, nil
 }

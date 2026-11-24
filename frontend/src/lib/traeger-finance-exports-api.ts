@@ -158,6 +158,8 @@ export interface ExportSettings {
   /** Whether the Träger set a mapping of its own. */
   readonly custom: boolean;
   readonly updatedAt: string | null;
+  /** The read-state token of the mapping a change sends back (ADR 0311). */
+  readonly version: string;
   /** The number the next file gets. */
   readonly nextFileNumber: number;
   /** A start value was set or a file was made: the start is fixed. */
@@ -322,6 +324,7 @@ function settingsFromBackend(
     mapping: mappingFromBackend(settings.sollstellung.mapping),
     custom: settings.sollstellung.custom,
     updatedAt: settings.sollstellung.updated_at,
+    version: settings.sollstellung.version,
     nextFileNumber: settings.file_numbers.next,
     fileNumbersStarted: settings.file_numbers.started,
     datev: {
@@ -390,13 +393,17 @@ export async function fetchExportSettings(): Promise<ExportSettings> {
   );
 }
 
-/** Stores the mapping; the backend names each wrong field. */
+/**
+ * Stores the mapping from the `version` it was read at (ADR 0311); the
+ * backend names each wrong field.
+ */
 export async function saveSollMapping(
   mapping: SollMapping,
+  version: string,
 ): Promise<ExportSettings> {
   return settingsFromBackend(
     await bffJson("org", "PUT /traeger/finance-exports/settings/sollstellung", {
-      body: mappingToBackend(mapping),
+      body: { ...mappingToBackend(mapping), expected_version: version },
     }),
   );
 }

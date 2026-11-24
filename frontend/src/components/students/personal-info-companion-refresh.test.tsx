@@ -38,8 +38,19 @@ vi.mock("~/lib/tenant-router", () => ({
 }));
 
 import { PersonalInfoReadOnly } from "./student-detail-components";
-import { notifyStudentCompanionsChanged } from "~/lib/student-companion-api";
+import {
+  companionListKey,
+  notifyStudentCompanionsChanged,
+  type StudentCompanion,
+  type StudentCompanionList,
+} from "~/lib/student-companion-api";
 import type { Student } from "~/lib/student-helpers";
+
+// The read answers the list with the fingerprint of the same read (ADR 0311);
+// these tests give it the list's own key, so a save is seen to send it back.
+function companionList(companions: StudentCompanion[]): StudentCompanionList {
+  return { companions, fingerprint: companionListKey(companions) };
+}
 
 vi.unmock("swr");
 
@@ -97,28 +108,32 @@ describe("PersonalInfoReadOnly companion revalidation", () => {
   });
 
   it("refetches the links when a companion write is announced", async () => {
-    fetchStudentCompanionsMock.mockResolvedValueOnce([
-      {
-        companion_student_id: "2",
-        first_name: "Lina",
-        last_name: "Beispiel",
-        weekdays: ["mon"],
-      },
-    ]);
+    fetchStudentCompanionsMock.mockResolvedValueOnce(
+      companionList([
+        {
+          companion_student_id: "2",
+          first_name: "Lina",
+          last_name: "Beispiel",
+          weekdays: ["mon"],
+        },
+      ]),
+    );
 
     render(<PersonalInfoReadOnly student={student} />);
     expect(await screen.findByText(/Lina Beispiel/)).toBeInTheDocument();
 
     // A save on this child — or the symmetric one on Lina's card — replaced the
     // links. The card is still mounted with the same student id.
-    fetchStudentCompanionsMock.mockResolvedValueOnce([
-      {
-        companion_student_id: "3",
-        first_name: "Tom",
-        last_name: "Beispiel",
-        weekdays: ["mon"],
-      },
-    ]);
+    fetchStudentCompanionsMock.mockResolvedValueOnce(
+      companionList([
+        {
+          companion_student_id: "3",
+          first_name: "Tom",
+          last_name: "Beispiel",
+          weekdays: ["mon"],
+        },
+      ]),
+    );
     act(() => {
       notifyStudentCompanionsChanged();
     });
@@ -130,7 +145,7 @@ describe("PersonalInfoReadOnly companion revalidation", () => {
   });
 
   it("stops listening once unmounted", async () => {
-    fetchStudentCompanionsMock.mockResolvedValue([]);
+    fetchStudentCompanionsMock.mockResolvedValue(companionList([]));
     const { unmount } = render(<PersonalInfoReadOnly student={student} />);
     await waitFor(() =>
       expect(fetchStudentCompanionsMock).toHaveBeenCalledTimes(1),

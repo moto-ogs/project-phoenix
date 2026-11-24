@@ -11,10 +11,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
-	"github.com/stretchr/testify/require"
 )
 
 // These are staff-specific HTTP routes, not aliases of the tenant-wide report.
@@ -28,10 +29,10 @@ func TestWorkforce20StaffSessionGrowth(t *testing.T) {
 			foreign := testpkg.NewTenantScope(t, f.db)
 			foreignStaff := testpkg.CreateTestStaffForTenant(t, f.db, foreign.TenantID, "Foreign", "Session")
 			session := func(tenant, staff int64, i int) int64 {
-				return staffGrowthInsert(t, f.db, "active.work_sessions", map[string]any{"tenant_id": tenant, "staff_id": staff, "date": fmt.Sprintf("2026-01-%02d", i+1), "status": "present", "source": "app", "check_in_time": time.Date(2026, 1, i+1, 8, 0, 0, 0, time.UTC), "check_out_time": time.Date(2026, 1, i+1, 16, 0, 0, 0, time.UTC), "created_by": staff})
+				return staffGrowthInsert(t, f.db, "active.work_sessions", map[string]any{"tenant_id": fmt.Sprint(tenant), "staff_id": fmt.Sprint(staff), "date": fmt.Sprintf("2026-01-%02d", i+1), "status": "present", "source": "app", "check_in_time": time.Date(2026, 1, i+1, 8, 0, 0, 0, time.UTC), "check_out_time": time.Date(2026, 1, i+1, 16, 0, 0, 0, time.UTC), "created_by": fmt.Sprint(staff)})
 			}
 			foreignSession := session(foreign.TenantID, foreignStaff.ID, 0)
-			staffGrowthInsert(t, f.db, "audit.work_session_edits", map[string]any{"tenant_id": foreign.TenantID, "session_id": foreignSession, "staff_id": foreignStaff.ID, "edited_by": foreignStaff.ID, "field_name": "reason", "new_value": "Foreign", "created_at": time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)})
+			staffGrowthInsert(t, f.db, "audit.work_session_edits", map[string]any{"tenant_id": fmt.Sprint(foreign.TenantID), "session_id": fmt.Sprint(foreignSession), "staff_id": fmt.Sprint(foreignStaff.ID), "edited_by": fmt.Sprint(foreignStaff.ID), "field_name": "reason", "new_value": "Foreign", "created_at": time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)})
 			var sessions []int64
 			var edits []int64
 			counts := []int{}
@@ -40,7 +41,7 @@ func TestWorkforce20StaffSessionGrowth(t *testing.T) {
 				for len(sessions) < n {
 					i := len(sessions)
 					sessions = append(sessions, session(testpkg.Tenant(t), f.staff, i))
-					edits = append(edits, staffGrowthInsert(t, f.db, "audit.work_session_edits", map[string]any{"tenant_id": testpkg.Tenant(t), "session_id": sessions[0], "staff_id": f.staff, "edited_by": f.staff, "field_name": "reason", "new_value": fmt.Sprintf("Edit %02d", i), "created_at": time.Date(2026, 1, i+1, 12, 0, 0, 0, time.UTC)}))
+					edits = append(edits, staffGrowthInsert(t, f.db, "audit.work_session_edits", map[string]any{"tenant_id": fmt.Sprint(testpkg.Tenant(t)), "session_id": fmt.Sprint(sessions[0]), "staff_id": fmt.Sprint(f.staff), "edited_by": fmt.Sprint(f.staff), "field_name": "reason", "new_value": fmt.Sprintf("Edit %02d", i), "created_at": time.Date(2026, 1, i+1, 12, 0, 0, 0, time.UTC)}))
 				}
 				path := fmt.Sprintf("/staff/%d/time-tracking/%s?from=2026-01-01&to=2026-01-31&format=csv&year=2026&month=1", f.staff, route)
 				if route == "sessions/edits" {

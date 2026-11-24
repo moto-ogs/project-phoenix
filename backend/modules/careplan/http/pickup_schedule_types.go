@@ -4,7 +4,6 @@ import (
 	"context"
 	errors "errors"
 	http "net/http"
-	strconv "strconv"
 	time "time"
 
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -22,12 +21,12 @@ type PickupScheduleResponse struct {
 	Notes       *string  `json:"notes,omitempty"`
 	// Source marks the row's provenance: "staff" (manually maintained) or
 	// "care_offering" (booking-derived Angebots-Gehzeit).
-	Source           string   `json:"source"`
-	CareOfferingID   *string  `json:"care_offering_id,omitempty"`
-	CareOfferingName string   `json:"care_offering_name,omitempty"`
-	CreatedBy        ident.ID `json:"created_by"`
-	CreatedAt        string   `json:"created_at"`
-	UpdatedAt        string   `json:"updated_at"`
+	Source           string    `json:"source"`
+	CareOfferingID   *ident.ID `json:"care_offering_id,omitempty"`
+	CareOfferingName string    `json:"care_offering_name,omitempty"`
+	CreatedBy        ident.ID  `json:"created_by"`
+	CreatedAt        string    `json:"created_at"`
+	UpdatedAt        string    `json:"updated_at"`
 }
 
 // PickupExceptionResponse represents a pickup exception in API responses
@@ -58,6 +57,9 @@ type PickupNoteResponse struct {
 	CreatedBy ident.ID `json:"created_by"`
 	CreatedAt string   `json:"created_at"`
 	UpdatedAt string   `json:"updated_at"`
+	// Version is the note's read-state token (careplan.PickupNoteVersion);
+	// a change sends it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // PickupDataResponse represents combined pickup data
@@ -69,6 +71,9 @@ type PickupDataResponse struct {
 	// DepartureExceptions is the Abholart of single days (#3945) in the same
 	// window as Exceptions.
 	DepartureExceptions []DepartureExceptionResponse `json:"departure_exceptions"`
+	// WeeklyPlanVersion is the token of the child's weekly plan the weekly
+	// editor sends back with its save (ADR 0311); only the read sets it.
+	WeeklyPlanVersion string `json:"weekly_plan_version,omitempty"`
 }
 
 type DatedPickupScheduleResponse struct {
@@ -85,9 +90,13 @@ type PickupScheduleRequest struct {
 }
 
 // BulkPickupScheduleRequest represents a request to update all weekly schedules
+// BulkPickupScheduleRequest replaces the weekly pickup rows. ExpectedVersion
+// is the weekly plan token the rows were read with (weekly_plan_version of
+// GET pickup-schedules, ADR 0311).
 type BulkPickupScheduleRequest struct {
-	Schedules     []PickupScheduleRequest `json:"schedules"`
-	EffectiveDate *calendar.Date          `json:"effective_date,omitempty"`
+	Schedules       []PickupScheduleRequest `json:"schedules"`
+	EffectiveDate   *calendar.Date          `json:"effective_date,omitempty"`
+	ExpectedVersion string                  `json:"expected_version"`
 }
 
 type BulkPickupSchedulePatchRequest struct {
@@ -116,8 +125,11 @@ type PickupNoteRequest struct {
 
 // WeekdayPickupNotesRequest replaces the notes that recur every week. Dated
 // notes stay owned by the single-day editor and are deliberately excluded.
+// ExpectedVersion is the weekly plan token the notes were read with
+// (weekly_plan_version of GET pickup-schedules, ADR 0311).
 type WeekdayPickupNotesRequest struct {
-	Notes []PickupNoteRequest `json:"notes"`
+	Notes           []PickupNoteRequest `json:"notes"`
+	ExpectedVersion string              `json:"expected_version"`
 }
 
 // Bind implements render.Binder.
@@ -125,8 +137,26 @@ func (r *WeekdayPickupNotesRequest) Bind(_ *http.Request) error {
 	if r.Notes == nil {
 		return errors.New("notes is required")
 	}
-	seen := make(map[int]struct{}, len(r.Notes))
-	for _, note := range r.Notes {
+	return validateWeekdayPickupNotes(r.Notes)
+}
+
+// weekdayPickupNoteMap keys recurring notes by weekday; nil stays nil, so a
+// request without notes leaves them as they are.
+func weekdayPickupNoteMap(notes *[]PickupNoteRequest) map[int]string {
+	if notes == nil {
+		return nil
+	}
+	byWeekday := make(map[int]string, len(*notes))
+	for _, note := range *notes {
+		byWeekday[note.Weekday] = note.Content
+	}
+	return byWeekday
+}
+
+// validateWeekdayPickupNotes checks a complete set of recurring notes.
+func validateWeekdayPickupNotes(notes []PickupNoteRequest) error {
+	seen := make(map[int]struct{}, len(notes))
+	for _, note := range notes {
 		if note.NoteDate != "" {
 			return errors.New("weekday notes cannot have note_date")
 		}
@@ -142,6 +172,24 @@ func (r *WeekdayPickupNotesRequest) Bind(_ *http.Request) error {
 		}
 	}
 	return nil
+}
+
+// PickupNoteUpdateRequest changes a pickup note read at ExpectedVersion
+// (version of the note in the read, ADR 0311).
+type PickupNoteUpdateRequest struct {
+	NoteDate        string `json:"note_date"` // YYYY-MM-DD format
+	Weekday         int    `json:"weekday"`   // 1 (Monday) to 5 (Friday)
+	Content         string `json:"content"`
+	ExpectedVersion string `json:"expected_version"`
+}
+
+func (r *PickupNoteUpdateRequest) note() *PickupNoteRequest {
+	return &PickupNoteRequest{NoteDate: r.NoteDate, Weekday: r.Weekday, Content: r.Content}
+}
+
+// Bind implements render.Binder.
+func (r *PickupNoteUpdateRequest) Bind(req *http.Request) error {
+	return r.note().Bind(req)
 }
 
 // Bind implements render.Binder
@@ -267,7 +315,7 @@ func mapScheduleToResponse(s *careplan.PickupSchedule) PickupScheduleResponse {
 		resp.Source = careplan.ScheduleSourceStaff
 	}
 	if s.CareOfferingID != nil {
-		id := strconv.FormatInt(*s.CareOfferingID, 10)
+		id := ident.ID(*s.CareOfferingID)
 		resp.CareOfferingID = &id
 	}
 	return resp
@@ -308,6 +356,7 @@ func mapNoteToResponse(n *careplan.PickupNote) PickupNoteResponse {
 		CreatedBy: ident.ID(n.CreatedBy),
 		CreatedAt: n.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: n.UpdatedAt.Format(time.RFC3339),
+		Version:   careplan.PickupNoteVersion(*n),
 	}
 }
 
@@ -345,6 +394,9 @@ var (
 	errPersonNotFoundForAccount = errors.New("person not found for account")
 	errUserNotStaff             = errors.New("user is not a staff member")
 	errNoSessionAccount         = errors.New("no valid JWT claims found")
+	// errPickupNoteWeekdayChange refuses a note update that changes the
+	// weekday: weekday notes change with the weekly plan (ADR 0311).
+	errPickupNoteWeekdayChange = errors.New("a note keeps its weekday here; weekday notes change with the weekly plan (PUT pickup-notes)")
 	// errScheduleUpdatePermissionRequired refuses weekly schedules attached to
 	// a new child without the right to edit Betreuungszeiten.
 	errScheduleUpdatePermissionRequired = errors.New("users:update permission required to create student schedules")

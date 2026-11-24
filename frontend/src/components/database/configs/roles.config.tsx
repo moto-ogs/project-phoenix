@@ -4,7 +4,11 @@
 
 import { defineEntityConfig, type SectionConfig } from "@/lib/database/types";
 import type { Role } from "@/lib/auth-helpers";
-import type * as sharedContract from "~/lib/contract/shared.generated";
+import { bffJson } from "~/lib/bff-fetch";
+import type {
+  CreateRoleRequest,
+  UpdateRoleRequest,
+} from "~/lib/contract/auth-roles.generated";
 import {
   mapRoleResponse,
   getRoleDisplayName,
@@ -59,6 +63,35 @@ export const roleEditSections: SectionConfig[] = [
   },
 ];
 
+type RoleForm = Partial<Role> & { template?: string };
+
+/** A new role starts from its template, which also sets base_role (#4574). */
+export function toCreateRoleRequest(data: RoleForm): CreateRoleRequest {
+  return {
+    name: data.name,
+    description: data.description,
+    ...(data.template
+      ? { template: data.template }
+      : { base_role: data.baseRole }),
+  };
+}
+
+/**
+ * A system role keeps its base_role. The edit carries the version of the
+ * role it was made from (ADR 0311); a role changed since is refused.
+ */
+export function toUpdateRoleRequest(
+  data: Partial<Role>,
+  current?: Pick<Role, "version">,
+): UpdateRoleRequest {
+  return {
+    name: data.name,
+    description: data.description,
+    ...(!data.isSystem && { base_role: data.baseRole }),
+    expected_version: current?.version,
+  };
+}
+
 export const rolesConfig = defineEntityConfig<Role>({
   name: {
     singular: "Rolle",
@@ -70,13 +103,29 @@ export const rolesConfig = defineEntityConfig<Role>({
   backUrl: "/database",
 
   api: {
-    routes: {
-      list: "GET /auth/roles/",
-      get: "GET /auth/roles/{id}/",
-      create: "POST /auth/roles/",
-      update: "PUT /auth/roles/{id}/",
-      delete: "DELETE /auth/roles/{id}/",
-    },
+    list: async () =>
+      (await bffJson("tenant", "GET /auth/roles/")).map(mapRoleResponse),
+    get: async (id) =>
+      mapRoleResponse(
+        await bffJson("tenant", "GET /auth/roles/{id}/", { params: { id } }),
+      ),
+    create: async (data) =>
+      mapRoleResponse(
+        await bffJson("tenant", "POST /auth/roles/", {
+          body: toCreateRoleRequest(data),
+        }),
+      ),
+    // Answers the stored role with its new version: the next edit sends it
+    // without a read. It carries no permissions.
+    update: async (id, data, current) =>
+      mapRoleResponse(
+        await bffJson("tenant", "PUT /auth/roles/{id}/master-data/", {
+          params: { id },
+          body: toUpdateRoleRequest(data, current),
+        }),
+      ),
+    delete: (id) =>
+      bffJson("tenant", "DELETE /auth/roles/{id}/", { params: { id } }),
   },
 
   form: {
@@ -186,21 +235,6 @@ export const rolesConfig = defineEntityConfig<Role>({
         text: (role: Role) => getRoleDisplayName(role.name)?.[0] ?? "R",
       },
     },
-  },
-
-  service: {
-    mapRequest: (
-      data: Partial<Role> & { template?: string },
-    ): Record<string, unknown> => ({
-      name: data.name,
-      description: data.description,
-      // Beim Anlegen setzt die Vorlage auch base_role (#4574).
-      ...(data.template
-        ? { template: data.template }
-        : !data.isSystem && { base_role: data.baseRole }),
-    }),
-    mapResponse: (data: unknown): Role =>
-      mapRoleResponse(data as sharedContract.RoleResponse),
   },
 
   labels: {

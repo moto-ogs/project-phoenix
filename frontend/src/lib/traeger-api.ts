@@ -1,4 +1,5 @@
-import { bffFile, bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import { parseBookedModules, type ModuleKey } from "~/lib/modules";
+import { bffFile, bffFileHref, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the Träger portal ("moto träger", #4649). Talks to the BFF
  * routes under /api/traeger, which forward to the backend with the Träger
@@ -17,7 +18,7 @@ import type * as traegerProfileContract from "./contract/traeger-profile.generat
 import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
 import { toSettingsSchema, type SettingsSchema } from "./settings-api";
 import { filenameFromDisposition } from "./file-download";
-import { portalAuthPath } from "./portal-paths";
+import { sessionBff, type SessionLoginBody } from "./session-bff";
 import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
 import type { TraegerListFormat } from "./traeger-list-export";
 import { type TraegerRole, traegerRoles } from "./traeger-roles";
@@ -125,7 +126,7 @@ export async function traegerLogin(input: {
   /** Asks for the code even on a remembered device (#6955). */
   readonly ignoreTrustedDevice?: boolean;
 }): Promise<SignInAnswer> {
-  const body: Record<string, unknown> = {
+  const body: SessionLoginBody<"traeger"> = {
     email: input.email,
     password: input.password,
   };
@@ -134,12 +135,10 @@ export async function traegerLogin(input: {
     body.organization_id = input.organizationId;
   }
   // A sign-in step of the BFF without a session (ADR 0270).
-  const data = await bffJsonUncontracted<unknown>(
-    "public",
-    "POST",
-    portalAuthPath("traeger", "login"),
-    { body, errorMessage: "Request failed" },
-  );
+  const data = await bffJson("public", sessionBff.login("traeger"), {
+    body,
+    errorMessage: "Request failed",
+  });
   return signInAnswer("traeger", data);
 }
 
@@ -263,12 +262,9 @@ export async function verifyTraegerCodeStep(
   challengeToken: string,
   code: string,
 ): Promise<boolean> {
-  const data = await bffJsonUncontracted<{ session_renewed: boolean }>(
-    "org",
-    "POST",
-    "/api/traeger/auth/mfa/step-up/verify",
-    { body: { challenge_token: challengeToken, code } },
-  );
+  const data = await bffJson("org", sessionBff.verifyTraegerStepUp, {
+    body: { challenge_token: challengeToken, code },
+  });
   return data.session_renewed;
 }
 
@@ -375,6 +371,8 @@ export interface HolidayPeriod extends HolidayPeriodInput {
   readonly registrationCount: number;
   /** The period has a registration, so its allocation stays (#4700). */
   readonly allocationModeLocked?: boolean;
+  /** Token of the period as the Büro edits it; a save sends it (ADR 0311). */
+  readonly version: string;
 }
 
 function noCareDaysFromBackend(
@@ -412,6 +410,7 @@ function holidayPeriodFromBackend(
     maxDaysPerChild: period.max_days_per_child,
     allocationMode: knownEnum(ALLOCATION_MODE_VALUES, period.allocation_mode),
     allocationModeLocked: period.allocation_mode_locked,
+    version: period.version,
     weeks: (period.weeks ?? []).map((week) => ({
       id: week.id,
       startsOn: requiredDay(week.starts_on, "holiday_week.starts_on"),
@@ -486,6 +485,11 @@ export interface TraegerMember {
    */
   readonly name: string;
   readonly roles: readonly TraegerRole[];
+  /**
+   * The read-state token of the role set (ADR 0311): a role change sends
+   * it back. Absent where a list does not carry it.
+   */
+  readonly version?: string;
 }
 
 /** An open invitation into the Träger-Büro. */
@@ -531,6 +535,7 @@ function mapMember(
     email: member.email,
     name: member.name,
     roles: traegerRoles(member.roles ?? []),
+    version: member.version,
   };
 }
 
@@ -609,14 +614,22 @@ export async function revokeTraegerInvitation(id: string): Promise<void> {
   });
 }
 
+/**
+ * Gives the person the roles in place of the ones read with `version` (ADR
+ * 0311) and returns the person as saved, with the new version. A role set
+ * changed since is refused with `general.changed_since_read`.
+ */
 export async function changeTraegerRoles(
   accountId: string,
   roles: readonly TraegerRole[],
-): Promise<void> {
-  await bffJson("org", "PUT /traeger/accounts/{accountId}/roles", {
-    params: { accountId },
-    body: { roles: [...roles] },
-  });
+  version: string | undefined,
+): Promise<TraegerMember> {
+  return mapMember(
+    await bffJson("org", "PUT /traeger/accounts/{accountId}/roles", {
+      params: { accountId },
+      body: { roles: [...roles], expected_version: version },
+    }),
+  );
 }
 
 /**
@@ -742,15 +755,20 @@ export async function createHolidayPeriod(
   );
 }
 
-/** Saves the whole period; weeks and time models left out are removed. */
+/**
+ * Saves the whole period over the version its draft rests on; weeks and
+ * time models left out are removed. A period changed since is refused
+ * (ADR 0311).
+ */
 export async function updateHolidayPeriod(
   id: string,
   input: HolidayPeriodInput,
+  version: string,
 ): Promise<HolidayPeriod> {
   return holidayPeriodFromBackend(
     await bffJson("org", "PUT /traeger/holiday-periods/{id}", {
       params: { id },
-      body: holidayPeriodToBackend(input),
+      body: { ...holidayPeriodToBackend(input), expected_version: version },
     }),
   );
 }
@@ -923,6 +941,11 @@ export interface TraegerOrganization {
   readonly testSystem: boolean;
   /** The federal states of its schools, each once (#4717). */
   readonly federalStates: readonly string[];
+  /**
+   * The moto modules that count as booked for the Träger: at least one of
+   * its schools books them (#6052). A missing list books nothing.
+   */
+  readonly bookedModules: readonly ModuleKey[];
 }
 
 /** The Träger of the signed-in person's session. */
@@ -936,6 +959,7 @@ export async function fetchTraegerOrganization(): Promise<TraegerOrganization> {
     name: organization.name,
     testSystem: organization.test_system,
     federalStates: organization.federal_states ?? [],
+    bookedModules: parseBookedModules(organization.booked_modules),
   };
 }
 
@@ -980,6 +1004,8 @@ export interface TraegerBankAccountInput {
 /** A bank account of the Träger; exactly one is the default. */
 export interface TraegerBankAccount extends TraegerBankAccountInput {
   readonly id: string;
+  /** The read state a change sends back (ADR 0311). */
+  readonly version: string;
 }
 
 /** The master data of the Träger (#4653). */
@@ -988,6 +1014,18 @@ export interface TraegerMasterData {
   readonly withdrawal: TraegerWithdrawalContact;
   readonly logo: TraegerLogo | null;
   readonly bankAccounts: readonly TraegerBankAccount[];
+  /**
+   * The read state of each section (ADR 0311): both share one row, so each
+   * has its own token and a save of one leaves the other's as it was.
+   */
+  readonly contactVersion: string;
+  readonly withdrawalVersion: string;
+}
+
+/** A section of the master data as stored, with its read state. */
+export interface TraegerSection<T> {
+  readonly value: T;
+  readonly version: string;
 }
 
 function mapTraegerLogo(
@@ -1013,6 +1051,7 @@ function mapTraegerBankAccount(
     bic: account.bic,
     bankName: account.bank_name,
     isDefault: account.is_default,
+    version: account.version,
   };
 }
 
@@ -1029,11 +1068,11 @@ function backendBankAccount(
   };
 }
 
-const masterDataPath = "/api/traeger/master-data";
-
 /** The logo as an image source; the version reloads it after a change. */
 export function traegerLogoSrc(logo: TraegerLogo): string {
-  return `${masterDataPath}/logo?v=${encodeURIComponent(logo.updatedAt)}`;
+  return bffFileHref("org", "GET /traeger/master-data/logo", {
+    query: { v: logo.updatedAt },
+  });
 }
 
 /** Reads the master data of the Träger. The read is logged. */
@@ -1044,23 +1083,26 @@ export async function fetchTraegerMasterData(): Promise<TraegerMasterData> {
     withdrawal: { ...data.withdrawal },
     logo: data.logo ? mapTraegerLogo(data.logo) : null,
     bankAccounts: (data.bank_accounts ?? []).map(mapTraegerBankAccount),
+    contactVersion: data.contact_version,
+    withdrawalVersion: data.withdrawal_version,
   };
 }
 
 /**
- * Stores the contact person and returns it as the backend keeps it: trimmed,
- * the e-mail address in lower case. Throws an ApiError on failure.
+ * Stores the contact person over the version it was read with (ADR 0311) and
+ * returns it as the backend keeps it: trimmed, the e-mail address in lower
+ * case, with its new version. Throws an ApiError on failure.
  */
 export async function saveTraegerContact(
   contact: TraegerContact,
-): Promise<TraegerContact> {
+  expectedVersion: string,
+): Promise<TraegerSection<TraegerContact>> {
   const saved = await bffJson("org", "PUT /traeger/master-data/contact", {
-    body: contact,
+    body: { ...contact, expected_version: expectedVersion },
   });
   return {
-    name: saved?.name ?? contact.name,
-    phone: saved?.phone ?? contact.phone,
-    email: saved?.email ?? contact.email,
+    value: { name: saved.name, phone: saved.phone, email: saved.email },
+    version: saved.version,
   };
 }
 
@@ -1070,15 +1112,16 @@ export async function saveTraegerContact(
  */
 export async function saveTraegerWithdrawalContact(
   contact: TraegerWithdrawalContact,
-): Promise<TraegerWithdrawalContact> {
+  expectedVersion: string,
+): Promise<TraegerSection<TraegerWithdrawalContact>> {
   const saved = await bffJson(
     "org",
     "PUT /traeger/master-data/withdrawal-contact",
-    { body: contact },
+    { body: { ...contact, expected_version: expectedVersion } },
   );
   return {
-    phone: saved?.phone ?? contact.phone,
-    email: saved?.email ?? contact.email,
+    value: { phone: saved.phone, email: saved.email },
+    version: saved.version,
   };
 }
 
@@ -1107,15 +1150,19 @@ export async function createTraegerBankAccount(
   );
 }
 
-/** Changes a bank account. Throws an ApiError on failure. */
+/**
+ * Changes a bank account over the version it was read with (ADR 0311).
+ * Throws an ApiError on failure.
+ */
 export async function updateTraegerBankAccount(
   id: string,
   input: TraegerBankAccountInput,
+  expectedVersion: string,
 ): Promise<TraegerBankAccount> {
   return mapTraegerBankAccount(
     await bffJson("org", "PUT /traeger/master-data/bank-accounts/{id}", {
       params: { id },
-      body: backendBankAccount(input),
+      body: { ...backendBankAccount(input), expected_version: expectedVersion },
     }),
   );
 }

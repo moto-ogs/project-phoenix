@@ -75,7 +75,7 @@ vi.mock("~/lib/session-cache", async (importOriginal) => {
 
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
-    data: { user: { token: "test-token", id: "7", tenantId: 1 } },
+    data: { user: { token: "test-token", id: "7", tenantId: "1" } },
     status: "authenticated",
   })),
 }));
@@ -628,7 +628,7 @@ beforeEach(() => {
   vi.mocked(useSession)
     .mockReset()
     .mockReturnValue({
-      data: { user: { token: "test-token", id: "7", tenantId: 1 } },
+      data: { user: { token: "test-token", id: "7", tenantId: "1" } },
       status: "authenticated",
     } as never);
   vi.mocked(useSWRAuth)
@@ -2546,8 +2546,8 @@ describe("matchesSearchFilter (exported)", () => {
 
 describe("matchesAttendanceFilter (exported)", () => {
   const rs = {
-    "1": { in_group_room: true, current_room_id: 10 },
-    "2": { in_group_room: false, current_room_id: 20 },
+    "1": { in_group_room: true, current_room_id: "10" },
+    "2": { in_group_room: false, current_room_id: "20" },
   };
 
   it("returns true for 'all'", () => {
@@ -2610,7 +2610,7 @@ describe("matchesForeignRoomFilter (exported)", () => {
     expect(
       actualMatchesForeignRoomFilter({
         in_group_room: false,
-        current_room_id: 20,
+        current_room_id: "20",
       }),
     ).toBe(true);
   });
@@ -2619,7 +2619,7 @@ describe("matchesForeignRoomFilter (exported)", () => {
     expect(
       actualMatchesForeignRoomFilter({
         in_group_room: true,
-        current_room_id: 10,
+        current_room_id: "10",
       }),
     ).toBe(false);
   });

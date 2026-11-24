@@ -86,7 +86,8 @@ export function decideCareScheduleChangeRequest(
   approve: boolean,
   reason: string | undefined,
   impactToken: string,
-  expectedVersion?: string,
+  /** Die Fassung der Anfrage aus der Liste (ADR 0311). */
+  expectedVersion: string,
 ): Promise<studentsContract.CareRequestResponse> {
   return bffJson(
     "tenant",
@@ -97,7 +98,7 @@ export function decideCareScheduleChangeRequest(
         approve,
         reason: reason ?? "",
         impact_token: impactToken,
-        ...(expectedVersion ? { expected_version: expectedVersion } : {}),
+        expected_version: expectedVersion,
       },
       errorMessage: "Entscheidung konnte nicht gespeichert werden",
     },

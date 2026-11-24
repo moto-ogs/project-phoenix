@@ -26,6 +26,7 @@ POST /api/guardians/{id}/payment/reveal
 POST /api/guardians/{id}/phone-numbers/
 POST /api/guardians/{id}/phone-numbers/{phoneId}/set-primary
 PUT /api/guardians/relationships/{relationshipId}
+PUT /api/guardians/students/{studentId}/guardians/{guardianId}
 PUT /api/guardians/students/{studentId}/payer
 PUT /api/guardians/{id}
 PUT /api/guardians/{id}/payment

@@ -143,7 +143,6 @@
     "editedAt": "Changed on {date}",
     "saveEdit": "Save change",
     "noteRequired": "Please say briefly why the care should change.",
-    "staleError": "The request has changed in the meantime. Please reload the page.",
     "intro": "Choose which offerings your child should attend and when the change should take effect. The team reviews your request.",
     "noOfferings": "No care can be booked for this period.",
     "effectiveFromLabel": "Change applies from",

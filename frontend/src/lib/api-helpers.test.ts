@@ -1,14 +1,13 @@
+import { readBackendJson, sendBackend } from "./backend-client.server";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { handleDomainApiError } from "./api-helpers";
 import { ApiError, errorClassCode, problemTitle } from "./api-error";
 import {
   handleApiError,
-  apiGet,
-  apiPost,
   bffError,
   problemResponse,
   ApiResponseError as ServerApiResponseError,
-} from "./api-helpers.server";
+} from "./api-response-error.server";
 import { suppressConsole } from "~/test/helpers/console";
 
 const { mockNextHeaders } = vi.hoisted(() => ({
@@ -647,7 +646,7 @@ type MockedFetch = ReturnType<typeof vi.fn<typeof fetch>>;
 
 // ===== API FUNCTION TESTS (SERVER-SIDE) =====
 
-describe("apiGet (server-side)", () => {
+describe("Backend transport", () => {
   let originalWindow: typeof globalThis.window;
   let originalFetch: typeof fetch;
   let mockFetch: MockedFetch;
@@ -701,8 +700,9 @@ describe("apiGet (server-side)", () => {
 
       let thrown: unknown;
       try {
-        if (method === "GET") await apiGet(endpoint, "token");
-        else await apiPost(endpoint, "token", requestBody);
+        await readBackendJson(
+          await sendBackend(endpoint, "token", { method, json: requestBody }),
+        );
       } catch (error) {
         thrown = error;
       }
@@ -732,7 +732,7 @@ describe("apiGet (server-side)", () => {
       json: () => Promise.resolve({ result: "ok" }),
     } as Response);
 
-    await apiGet<{ result: string }>("/api/groups", "token");
+    await sendBackend("/api/groups", "token", { method: "GET" });
 
     expect(mockFetch).toHaveBeenCalledWith(
       "http://backend.test/api/groups",
@@ -753,7 +753,8 @@ describe("apiGet (server-side)", () => {
       json: () => Promise.resolve({ result: "ok" }),
     } as Response);
 
-    await apiGet<{ result: string }>("/api/test", "token", {
+    await sendBackend("/api/test", "token", {
+      method: "GET",
       signal: controller.signal,
     });
     const sent = mockFetch.mock.calls[0]?.[1]?.signal as AbortSignal;
@@ -772,7 +773,7 @@ describe("apiGet (server-side)", () => {
       json: () => Promise.resolve({ result: "ok" }),
     } as Response);
 
-    await apiGet<{ result: string }>("/api/test", "token");
+    await sendBackend("/api/test", "token", { method: "GET" });
 
     expect(mockFetch).toHaveBeenCalledWith(
       "http://backend.test/api/test",
@@ -796,9 +797,10 @@ describe("apiGet (server-side)", () => {
       JSON.stringify({ tenant_id: 101, scope: "" }),
     ).toString("base64url");
 
-    await apiGet<{ result: string }>(
+    await sendBackend(
       "/api/students/1234567890123456?verbose=true",
       `header.${tokenPayload}.signature`,
+      { method: "GET" },
     );
 
     expect(mockRecordBackendProxyMetric).toHaveBeenCalledWith({
@@ -819,7 +821,7 @@ describe("apiGet (server-side)", () => {
       json: () => Promise.resolve({ result: "ok" }),
     } as Response);
 
-    await apiGet<{ result: string }>("/api/test", "token");
+    await sendBackend("/api/test", "token", { method: "GET" });
 
     expect(mockFetch).toHaveBeenCalledWith(
       "http://backend.test/api/test",

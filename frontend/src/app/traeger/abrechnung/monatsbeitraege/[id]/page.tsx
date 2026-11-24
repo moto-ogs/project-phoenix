@@ -27,6 +27,11 @@ import {
   CareDuplicatesCard,
   CareUnpricedCard,
 } from "~/components/traeger/care-run-invoices";
+import { CareBilledChildrenCard } from "~/components/traeger/care-billed-children-card";
+import {
+  emptyCareRunText,
+  releaseBilledLines,
+} from "~/components/traeger/care-billed-children-format";
 import { CareJoinedChildrenCard } from "~/components/traeger/care-joined-children-card";
 import { CareUncountedCard } from "~/components/traeger/care-uncounted-card";
 import {
@@ -38,6 +43,8 @@ import {
 } from "~/components/traeger/care-debit-hints";
 import { usePrenotificationDays } from "~/components/traeger/use-prenotification-days";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useDraftOn } from "~/lib/swr/read-draft";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { CareLettersSummaryCard } from "~/components/traeger/care-letters-summary-card";
 import {
   type OpenPoint,
@@ -199,6 +206,7 @@ export default function TraegerCareRunPage() {
     error: loadError,
     mutate,
     reload,
+    reloadOrThrow,
   } = useTraegerResource(
     runId ? traegerBillingRunKeys.careRun(runId) : null,
     () => fetchCareRun(runId),
@@ -206,6 +214,26 @@ export default function TraegerCareRunPage() {
   );
   const invalidateFamily = useInvalidateFamily();
   const [confirming, setConfirming] = useState(false);
+  // The release confirms the run as the dialog opened on it (ADR 0311):
+  // a newer read in the background does not change what is confirmed, and
+  // after a refusal the stored run shows.
+  const releaseRead = useDraftOn<CareRunDetail, CareRunDetail, string, unknown>(
+    {
+      opening: confirming && run ? run.id : null,
+      data: run ?? undefined,
+      reload: reloadOrThrow,
+    },
+    // The dialog closes after the release or its refusal; reopened, it
+    // confirms the run then on screen.
+    { token: (shown) => shown.fingerprint, follow: false },
+  );
+  const releaseShown = async <A,>(
+    send: (shown: CareRunDetail) => Promise<A>,
+  ) => {
+    const shown = releaseRead.base ?? run;
+    if (!shown) throw new Error("no run to release");
+    return send(shown);
+  };
   const [releasing, setReleasing] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [discarding, setDiscarding] = useState(false);
@@ -237,7 +265,7 @@ export default function TraegerCareRunPage() {
     if (!run) return;
     setReleasing(true);
     try {
-      const released = await releaseCareRun(run);
+      const released = await releaseShown(releaseCareRun);
       await changed(released);
       // The exports list the released run.
       void invalidateFamily(traegerBillingKeys.exportRuns());
@@ -254,8 +282,11 @@ export default function TraegerCareRunPage() {
         error: err instanceof Error ? err.message : String(err),
       });
       setConfirming(false);
-      void releaseErrors.show(err, { object: "der Monatslauf" });
-      reload();
+      void releaseErrors.show(err, {
+        object: "der Monatslauf",
+        reload: reloadOrThrow,
+      });
+      if (!isReadStateRefusal(err)) reload();
     } finally {
       setReleasing(false);
     }
@@ -275,8 +306,11 @@ export default function TraegerCareRunPage() {
         error: err instanceof Error ? err.message : String(err),
       });
       setConfirmingDiscard(false);
-      void releaseErrors.show(err, { object: "der Monatslauf" });
-      reload();
+      void releaseErrors.show(err, {
+        object: "der Monatslauf",
+        reload: reloadOrThrow,
+      });
+      if (!isReadStateRefusal(err)) reload();
     } finally {
       setDiscarding(false);
     }
@@ -296,8 +330,11 @@ export default function TraegerCareRunPage() {
       logger.error("traeger_care_invoice_include_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      void reviewErrors.show(err, { object: "die Rechnung" });
-      reload();
+      void reviewErrors.show(err, {
+        object: "die Rechnung",
+        reload: reloadOrThrow,
+      });
+      if (!isReadStateRefusal(err)) reload();
     } finally {
       setReturning(null);
     }
@@ -565,6 +602,11 @@ export default function TraegerCareRunPage() {
                 neuen Lauf nach, wenn ein Vertrag beendet ist.
               </p>
             ) : null}
+            {releaseBilledLines(run.billedChildren ?? []).map((line) => (
+              <p key={line} className="mt-3 text-sm text-gray-700">
+                {line}
+              </p>
+            ))}
             <ReleaseOpenPoints points={releaseOpenPoints} />
           </ConfirmationModal>
         ) : null
@@ -595,7 +637,10 @@ export default function TraegerCareRunPage() {
             description={
               discarded
                 ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für ${formatMonth(run.billingMonth)} kannst du einen neuen Lauf starten.`
-                : `Für ${formatMonth(run.billingMonth)} gibt es keine Rechnung. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist der Monat frei für einen neuen Lauf.`
+                : emptyCareRunText(
+                    formatMonth(run.billingMonth),
+                    run.billedChildren ?? [],
+                  )
             }
             createdAt={run.createdAt}
             discardedAt={run.discardedAt}
@@ -611,6 +656,11 @@ export default function TraegerCareRunPage() {
               the empty run says why it has no invoice here. */}
           {empty ? (
             <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
+          ) : null}
+          {/* A child whose month an issued invoice already bills (#7892):
+              the empty run says why it has no invoice for it. */}
+          {empty ? (
+            <CareBilledChildrenCard childrenBilled={run.billedChildren ?? []} />
           ) : null}
           {/* Mensa months a school has not released yet come with a later
               run; the empty run still names them. */}
@@ -866,6 +916,10 @@ export default function TraegerCareRunPage() {
             />
           ) : null}
           <CareDuplicatesCard duplicates={run.duplicates} released={!preview} />
+          <CareBilledChildrenCard
+            childrenBilled={run.billedChildren ?? []}
+            released={!preview}
+          />
           {preview ? (
             <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
           ) : null}

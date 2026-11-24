@@ -58,8 +58,8 @@ type StudentRequest struct {
 	// Person details (required)
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
-	TagID     string `json:"tag_id,omitempty"`   // RFID tag ID (optional)
-	Birthday  string `json:"birthday,omitempty"` // Date in YYYY-MM-DD format
+	TagID     string `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"` // RFID tag ID (optional)
+	Birthday  string `json:"birthday,omitempty"`                                                    // Date in YYYY-MM-DD format
 
 	// Student-specific details (required)
 	SchoolClass string `json:"school_class"`
@@ -107,11 +107,16 @@ type StudentRequest struct {
 
 // UpdateStudentRequest represents a student update request
 type UpdateStudentRequest struct {
+	// ExpectedVersion is the version of the child's master data the form read
+	// (StudentRecordVersion, ADR 0311). Every update but a pure absence
+	// report needs it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
+
 	// Person details (optional for update)
 	FirstName *string `json:"first_name,omitempty"`
 	LastName  *string `json:"last_name,omitempty"`
 	Birthday  *string `json:"birthday,omitempty"` // Date in YYYY-MM-DD format
-	TagID     *string `json:"tag_id,omitempty"`
+	TagID     *string `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"`
 
 	// Student-specific details (optional for update)
 	SchoolClass       *string   `json:"school_class,omitempty"`
@@ -150,14 +155,14 @@ type UpdateStudentRequest struct {
 	// nil = leave the links untouched; [] = clear them.
 	Companions *[]CompanionEntry `json:"companions,omitempty"`
 	// CompanionsFingerprint is the fingerprint of the list the client LOADED
-	// before it built Companions (models/departure.CompanionLinksFingerprint,
-	// mirrored by companionsFingerprint() in the frontend).
+	// before it built Companions: the one GET /{id}/companion-links returned
+	// with it (careplan.CompanionLinksFingerprint, ADR 0311).
 	//
 	// Because Companions is a complete replacement, two staff members editing
 	// the same child from the same snapshot would both submit everything they
 	// saw and the second write would delete the first one's committed links.
-	// The handler compares this against the stored links while it holds the
-	// child's row lock and answers a mismatch with a retriable 409 instead.
+	// The owner compares this against the stored links while the child's row
+	// lock is held and answers a mismatch with 409 general.changed_since_read.
 	//
 	// It is equally required WITHOUT Companions: a departure plan alone removes
 	// links too (the backend trims the weekdays the new plan no longer allows),
@@ -408,6 +413,15 @@ func (req *UpdateStudentRequest) isAbsenceOnly() bool {
 // A nil pointer means "leave the links alone"; an empty slice clears them.
 func (req *UpdateStudentRequest) hasCompanionUpdate() bool {
 	return req.Companions != nil
+}
+
+// companionsFingerprint is the claimed companion state; an absent claim is
+// empty, which the owner refuses wherever the write would remove a link.
+func (req *UpdateStudentRequest) companionsFingerprint() string {
+	if req.CompanionsFingerprint == nil {
+		return ""
+	}
+	return *req.CompanionsFingerprint
 }
 
 func (req *UpdateStudentRequest) hasDeparturePlanUpdate() bool {

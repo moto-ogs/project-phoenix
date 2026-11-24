@@ -357,7 +357,7 @@ func TestShiftTypesAreTenantIsolatedAndNormalized(t *testing.T) {
 	zebra.Name = "Zebra neu"
 	zebra.Color = "#f78c10"
 	zebra.IsActive = false
-	updated, err := capability.UpdateShiftType(ctx, zebra)
+	updated, err := capability.UpdateShiftType(ctx, zebra, workforce.ShiftTypeVersion(zebra))
 	require.NoError(t, err)
 	assert.Equal(t, "#F78C10", updated.Color)
 	assert.False(t, updated.IsActive, "an explicit false is written, not the column default")
@@ -365,7 +365,7 @@ func TestShiftTypesAreTenantIsolatedAndNormalized(t *testing.T) {
 	_, err = capability.FindShiftType(ctx, foreignType.ID)
 	require.ErrorIs(t, err, workforce.ErrShiftTypeNotFound)
 	foreignType.Name = "Umbenannt"
-	_, err = capability.UpdateShiftType(ctx, foreignType)
+	_, err = capability.UpdateShiftType(ctx, foreignType, workforce.ShiftTypeVersion(foreignType))
 	require.ErrorIs(t, err, workforce.ErrShiftTypeNotFound)
 	require.ErrorIs(t, capability.DeleteShiftType(ctx, foreignType.ID), workforce.ErrShiftTypeNotFound)
 	unchanged, err := capability.FindShiftType(foreignCtx, foreignType.ID)

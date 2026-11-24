@@ -40,8 +40,8 @@ type DeviationHistoryEvent struct {
 	RelatedStaffName *string         `json:"related_staff_name,omitempty"`
 	ActorAccountID   *ident.ID       `json:"actor_account_id,omitempty"`
 	ActorName        *string         `json:"actor_name,omitempty"`
-	OldValue         json.RawMessage `json:"old_value,omitempty"`
-	NewValue         json.RawMessage `json:"new_value,omitempty"`
+	OldValue         json.RawMessage `json:"old_value,omitempty" contract_json:"The historical event's subject and field select the shape of its previous value"`
+	NewValue         json.RawMessage `json:"new_value,omitempty" contract_json:"The historical event's subject and field select the shape of its new value"`
 	Reason           *string         `json:"reason,omitempty"`
 	OccurredAt       string          `json:"occurred_at"` // RFC3339
 }

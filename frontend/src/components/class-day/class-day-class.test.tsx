@@ -770,6 +770,7 @@ describe("ClassDayClass", () => {
     ): ClassDayReport {
       return report({
         can_hand_over: true,
+        handover_version: "v-none",
         totals: {
           students: 3,
           staying: 2,
@@ -840,6 +841,7 @@ describe("ClassDayClass", () => {
         expect(save).toHaveBeenLastCalledWith("4a", todayISO(), {
           present: [],
           absent: ["1", "2"],
+          expectedVersion: "v-none",
         }),
       );
     });
@@ -890,6 +892,7 @@ describe("ClassDayClass", () => {
           handed_over_by: "Petra Lehrkraft",
           absent_count: 1,
         },
+        handover_version: "v-stored",
       });
       current.rows[0]!.handover_absent = true;
       fireEvent.click(screen.getByRole("button", { name: "Übergeben" }));
@@ -898,6 +901,7 @@ describe("ClassDayClass", () => {
         expect(handOver).toHaveBeenCalledWith("4a", todayISO(), {
           present: ["2"],
           absent: ["1"],
+          expectedVersion: "v-none",
         }),
       );
       expect(
@@ -918,6 +922,7 @@ describe("ClassDayClass", () => {
           handed_over_at: "2026-09-09T09:45:00Z",
           absent_count: 1,
         },
+        handover_version: "v-stored",
       });
       report.rows[0]!.handover_absent = true;
       render(
@@ -946,8 +951,108 @@ describe("ClassDayClass", () => {
         expect(handOver).toHaveBeenCalledWith("4a", todayISO(), {
           present: ["2"],
           absent: ["1"],
+          expectedVersion: "v-stored",
         }),
       );
+    });
+
+    // ADR 0311: a colleague handed the class over since the view was read.
+    // The save is refused, offers no retry, and the dialog shows the stored
+    // handover: the child marked "nicht da" there is not "da" again.
+    it("shows the stored handover after a refusal instead of retrying", async () => {
+      const handOver = vi
+        .fn()
+        .mockRejectedValueOnce(
+          new ApiError("changed", 409, { code: "general.changed_since_read" }),
+        );
+      let current = handoverReport();
+      render(
+        <ClassDayClass
+          schoolClass="4a"
+          fetchClassDay={() => Promise.resolve(current)}
+          handOverClass={handOver}
+          withdrawClassHandover={() => Promise.resolve()}
+        />,
+      );
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Klasse übergeben" }),
+      );
+      fireEvent.click(
+        within(choice("Mia Morgenfehlt")).getByRole("button", { name: "Da" }),
+      );
+      current = handoverReport({
+        handover: {
+          handed_over_at: "2026-09-09T09:45:00Z",
+          handed_over_by: "Petra Lehrkraft",
+          absent_count: 1,
+        },
+        handover_version: "v-stored",
+      });
+      current.rows[0]!.handover_absent = true;
+      current.rows[1]!.handover_absent = true;
+      fireEvent.click(screen.getByRole("button", { name: "Übergeben" }));
+
+      expect(
+        await screen.findByText(
+          catalogText("general.changed_since_read", "die Übergabe"),
+        ),
+      ).toBeInTheDocument();
+      await waitFor(() =>
+        expect(
+          within(choice("Mia Morgenfehlt")).getByRole("button", {
+            name: "Nicht da",
+          }),
+        ).toHaveAttribute("aria-pressed", "true"),
+      );
+      expect(
+        within(choice("Klara Klassentag")).getByRole("button", {
+          name: "Nicht da",
+        }),
+      ).toHaveAttribute("aria-pressed", "true");
+      expect(
+        screen.queryByRole("button", { name: "Wiederholen" }),
+      ).not.toBeInTheDocument();
+      expect(handOver).toHaveBeenCalledTimes(1);
+    });
+
+    it("names a failed read after a refusal and hands over nothing until it is read", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const handOver = vi
+        .fn()
+        .mockRejectedValueOnce(
+          new ApiError("changed", 409, { code: "general.changed_since_read" }),
+        );
+      let fail = false;
+      render(
+        <ClassDayClass
+          schoolClass="4a"
+          fetchClassDay={() =>
+            fail
+              ? Promise.reject(
+                  new ApiError("down", 503, { code: "general.unavailable" }),
+                )
+              : Promise.resolve(handoverReport())
+          }
+          handOverClass={handOver}
+          withdrawClassHandover={() => Promise.resolve()}
+        />,
+      );
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Klasse übergeben" }),
+      );
+      fail = true;
+      fireEvent.click(screen.getByRole("button", { name: "Übergeben" }));
+
+      // „Du siehst jetzt den neuen Stand“ would be false: the failed read is
+      // named, and the handover waits for a read that succeeds.
+      expect(
+        await screen.findByText(/Der neue Stand konnte nicht geladen werden\./),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/Du siehst jetzt den neuen Stand/),
+      ).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Übergeben" }));
+      expect(handOver).toHaveBeenCalledTimes(1);
     });
 
     it("takes the handover back only after the confirmation", async () => {
@@ -1058,8 +1163,8 @@ describe("ClassDayClass homework (#4796)", () => {
     return report({
       can_write_homework: true,
       homework: [
-        { id: "11", subject: "Mathe", description: "Seite 12" },
-        { id: "12", description: "Lesen" },
+        { id: "11", subject: "Mathe", description: "Seite 12", version: "v11" },
+        { id: "12", description: "Lesen", version: "v12" },
       ],
       rows: [
         {
@@ -1128,11 +1233,71 @@ describe("ClassDayClass homework (#4796)", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(homework.change).toHaveBeenCalledWith("4a", "12", {
-        subject: null,
-        description: "Lesen, Seite 4",
-      }),
+      expect(homework.change).toHaveBeenCalledWith(
+        "4a",
+        "12",
+        {
+          subject: null,
+          description: "Lesen, Seite 4",
+        },
+        "v12",
+      ),
     );
+  });
+
+  it("keeps a change's refusal visible when the entry was deleted meanwhile", async () => {
+    const homework = {
+      ...api(),
+      change: vi.fn(() =>
+        Promise.reject(
+          new ApiError("changed", 409, { code: "general.changed_since_read" }),
+        ),
+      ),
+    };
+    const fetchClassDay = vi
+      .fn()
+      .mockResolvedValueOnce(homeworkReport())
+      .mockResolvedValue(
+        homeworkReport({
+          homework: [
+            {
+              id: "11",
+              subject: "Mathe",
+              description: "Seite 12",
+              version: "v11",
+            },
+          ],
+        }),
+      );
+    render(
+      <ClassDayClass
+        schoolClass="4a"
+        fetchClassDay={fetchClassDay}
+        homework={homework}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Aktionen zur Hausaufgabe" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Ändern" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Was ist zu tun?"), {
+      target: { value: "Lesen, Seite 4" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+
+    // ADR 0311: the refusal is never silent. The dialog stays open with it,
+    // and the deleted entry cannot be saved again.
+    expect(
+      await within(dialog).findByText(
+        catalogText("general.changed_since_read", "die Hausaufgabe"),
+      ),
+    ).toBeInTheDocument();
+    const blocked = within(dialog).getByRole("button", { name: "Speichern" });
+    expect(blocked).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(blocked);
+    expect(homework.change).toHaveBeenCalledTimes(1);
   });
 
   it("deletes an entry that another Lehrkraft of the class entered", async () => {
@@ -1467,7 +1632,7 @@ describe("ClassDayClass class trips (#4799)", () => {
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: {
-      user: { id: "teacher", scope: "school", tenantId: 1 },
+      user: { id: "teacher", scope: "school", tenantId: "1" },
       expires: "2099-01-01",
     },
     status: "authenticated",

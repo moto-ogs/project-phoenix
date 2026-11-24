@@ -2,12 +2,13 @@ package settingshttp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"path/filepath"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -65,7 +66,9 @@ type HomeLayoutOperations interface {
 	// imported by the other, which the architecture policy does not allow.
 	SetHomeLayout(context.Context, int64, int64, map[string]bool, []string, map[string]int, map[string]int, map[string]int, bool) error
 	ResetHomeLayout(context.Context, int64, int64) error
-	SetHomeBlockPolicies(context.Context, int64, int64, []string, map[string]string) error
+	// SetHomeBlockPolicies takes the policies_version its editor read last
+	// (ADR 0311).
+	SetHomeBlockPolicies(context.Context, int64, int64, []string, map[string]string, string) error
 }
 
 const (
@@ -146,7 +149,7 @@ func (rs *SettingsResource) SettingsRouter() chi.Router {
 // --- Request types ---
 
 type setValueRequest struct {
-	Value any `json:"value"`
+	Value any `json:"value" contract_json:"The route's setting key selects the value type in the settings registry"`
 }
 
 // --- Handlers ---
@@ -178,7 +181,7 @@ func (rs *SettingsResource) setValue(w http.ResponseWriter, r *http.Request) {
 	key := chi.URLParam(r, "key")
 
 	var req setValueRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		rs.runtime.RenderError(w, r, http.StatusBadRequest, err)
 		return
 	}

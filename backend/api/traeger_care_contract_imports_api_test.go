@@ -111,7 +111,7 @@ func TestCareContractImportTakesOverExistingContractsOnce(t *testing.T) {
 	assert.Equal(t, "module", preview.Rows[0].Problems[0].Field)
 	assert.Equal(t, "conditions_missing", preview.Rows[0].Problems[0].Code)
 	assert.Equal(t, "payer", preview.DebtorNumberScope)
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 
 	rec = importForm(t, f.traeger, token, contractImportPreviewPath, "kinder.csv", file, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -202,7 +202,7 @@ func TestCareContractImportTakesOverExistingContractsOnce(t *testing.T) {
 func TestCareContractImportNeedsTheRightAndStaysWithTheTraeger(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertragsimport Grenze")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	file := contractImportFile(contractImportSchoolName(t, f),
 		"Mia;Beispiel;03.05.2019;{school};Offene Ganztagsschule;01.08.2027;Beispiel;eva.beispiel@example.org;")
 
@@ -241,7 +241,7 @@ func TestCareContractImportNeedsTheRightAndStaysWithTheTraeger(t *testing.T) {
 	assert.Equal(t, "invalid", foreign.Rows[0].Status)
 	assert.Equal(t, "unknown", foreign.Rows[0].Problems[0].Code)
 	rec = importForm(t, f.traeger, other.token, contractImportPreviewPath, "kinder.csv", file,
-		map[string]string{"mapping": fmt.Sprintf(`{"columns":{"child_first_name":"Vorname Kind","child_last_name":"Nachname Kind","effective_from":"Vertragsbeginn","party_last_name":"Zahler","module":"Modul"},"school_id":%d}`, f.school)})
+		map[string]string{"mapping": fmt.Sprintf(`{"columns":{"child_first_name":"Vorname Kind","child_last_name":"Nachname Kind","effective_from":"Vertragsbeginn","party_last_name":"Zahler","module":"Modul"},"school_id":"%d"}`, f.school)})
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	require.Equal(t, http.StatusCreated, applyContractImport(t, f, f.office.token, "kinder.csv", file).Code)
 	rec = traegerJSON(t, f.traeger, other.token, http.MethodGet, contractImportPath, nil)
@@ -260,7 +260,7 @@ func TestCareContractImportLogQueryBudgetIsFlat(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertragsimport Budget")
 	token := f.office.token
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 	school := contractImportSchoolName(t, f)
 	measure := func() testpkg.QueryMeasurement {
 		counter := testpkg.CaptureQueriesForContext(t, f.db)
@@ -312,7 +312,7 @@ func TestCareContractImportTakesTheOGSConnectMasterDataBeforeItsMandates(t *test
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Stammdaten OGS Connect")
 	ctx := context.Background()
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	file := ogsConnectMasterFile()
 
 	rec := importForm(t, f.traeger, f.office.token, contractImportPreviewPath, "csv-export-stammdaten.csv", file, nil)
@@ -321,7 +321,7 @@ func TestCareContractImportTakesTheOGSConnectMasterDataBeforeItsMandates(t *test
 	assert.Equal(t, []string{"effective_from", "school"}, suggested.Unmapped, "the file names no first day and no school")
 
 	fields := map[string]string{"mapping": fmt.Sprintf(`{"columns":{"child_first_name":"Vorname Kind","child_last_name":"Nachname Kind",`+
-		`"party_last_name":"Kontoinhaber","debtor_number":"Debitor-Nr."},"school_id":%d,"module_name":"Offene Ganztagsschule",`+
+		`"party_last_name":"Kontoinhaber","debtor_number":"Debitor-Nr."},"school_id":"%d","module_name":"Offene Ganztagsschule",`+
 		`"effective_from":"2027-08-01"}`, f.school)}
 	rec = importForm(t, f.traeger, f.office.token, contractImportPreviewPath, "csv-export-stammdaten.csv", file, fields)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -358,7 +358,8 @@ func TestCareContractImportTakesTheOGSConnectMasterDataBeforeItsMandates(t *test
 	// contract import kept and stores the mandate for that contract.
 	billing := traegerColleague(t, f.reviewFixture, identityaccess.TraegerRoleBilling)
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, sepaCreditorPath,
-		map[string]any{"creditor_id": sepaCreditorID, "prenotification_days": 14, "missing_mandate": "transfer"})
+		withVersion(map[string]any{"creditor_id": sepaCreditorID, "prenotification_days": 14, "missing_mandate": "transfer"},
+			creditorVersion(t, f.traeger, billing)))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = importForm(t, f.traeger, billing, sepaImportPreviewPath, "csv-export-stammdaten.csv", file, ogsConnectMapping())
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -383,7 +384,7 @@ func TestCareContractImportTakesTheOGSConnectMasterDataBeforeItsMandates(t *test
 func TestCareContractImportKeepsTheChildrenOfTheFamily(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertragsimport Kinderzahl")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	school := contractImportSchoolName(t, f)
 	lines := []string{"Vorname Kind;Nachname Kind;Schule;Modul;Vertragsbeginn;Zahler;E-Mail;Kinder in der Familie",
 		"Mia;Beispiel;{school};Offene Ganztagsschule;01.08.2027;Eva Beispiel;eva.beispiel@example.org;3",

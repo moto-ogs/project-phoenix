@@ -942,8 +942,8 @@ function NewsAttachments({
       </p>
       <AttachmentList
         attachments={attachments}
-        downloadUrl={(attachmentId) =>
-          announcementAttachmentDownloadUrl(item.id, attachmentId)
+        downloadUrl={(attachmentId, inline) =>
+          announcementAttachmentDownloadUrl(item.id, attachmentId, inline)
         }
         downloadLabel={t("newsAttachmentsDownload")}
         openLabel={t("newsAttachmentsOpen")}

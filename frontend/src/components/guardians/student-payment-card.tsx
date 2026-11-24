@@ -49,6 +49,8 @@ interface PaymentDraft {
   readonly payerId: string | null;
   readonly iban: string;
   readonly holder: string;
+  /** The version of the revealed bank section the edit saves against. */
+  readonly version?: string;
 }
 
 /**
@@ -172,6 +174,32 @@ export function StudentPaymentCard({
     }
   };
 
+  // The edit starts from the revealed state and keeps its version (ADR 0311).
+  const openRevealed = (
+    guardianId: string,
+    data: Awaited<ReturnType<typeof revealGuardianPayment>>,
+  ) => {
+    const opened = {
+      payerId: guardianId,
+      iban: data.iban ?? "",
+      holder: data.accountHolder ?? "",
+      version: data.version,
+    };
+    setBaseline(opened);
+    setDraft(opened);
+  };
+
+  // After a refused save the form shows the stored bank section; rejects
+  // when that audited read fails, so the refusal shows the load error.
+  const reloadRevealed = async () => {
+    if (!payerId) return;
+    const attempt = ++readAttempt.current;
+    const data = await revealGuardianPayment(payerId);
+    if (attempt !== readAttempt.current) return;
+    openRevealed(payerId, data);
+    void payment.mutate();
+  };
+
   const handleStartEdit = async () => {
     if (payment.refused) return;
     clearEditError();
@@ -188,13 +216,7 @@ export function StudentPaymentCard({
       // would silently overwrite the stored IBAN with dots on save.
       const data = await revealGuardianPayment(payerId);
       if (attempt !== readAttempt.current) return;
-      const opened = {
-        payerId,
-        iban: data.iban ?? "",
-        holder: data.accountHolder ?? "",
-      };
-      setBaseline(opened);
-      setDraft(opened);
+      openRevealed(payerId, data);
     } catch (error) {
       if (attempt !== readAttempt.current) return;
       logger.error("open_guardian_payment_failed", {
@@ -241,6 +263,7 @@ export function StudentPaymentCard({
           iban: draft.iban.trim() === "" ? null : draft.iban.trim(),
           accountHolder:
             draft.holder.trim() === "" ? null : draft.holder.trim(),
+          expectedVersion: baseline?.version ?? "",
         });
         setDraft(null);
         setRevealed(null);
@@ -257,6 +280,8 @@ export function StudentPaymentCard({
           ? "das Speichern des Zahlungskontos"
           : "das Speichern der Bankverbindung",
         retry: () => latestSaveRef.current(),
+        // Changed since the edit opened: the form shows the stored state.
+        reload: payerChanged ? undefined : reloadRevealed,
       });
     } finally {
       setIsSaving(false);

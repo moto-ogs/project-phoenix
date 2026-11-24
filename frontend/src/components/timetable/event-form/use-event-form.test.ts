@@ -8,6 +8,8 @@ import { createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ActivityCategory } from "~/lib/activity-helpers";
+import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 import type { PlanningTrack } from "~/lib/planning-track-api";
 import type {
   CombinedOfferingCounts,
@@ -31,7 +33,7 @@ import { SWRConfig } from "~/lib/swr/testing";
 vi.unmock("swr");
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "1", tenantId: 1, scope: "tenant" } },
+    data: { user: { id: "1", tenantId: "1", scope: "tenant" } },
     status: "authenticated",
   }),
 }));
@@ -1280,16 +1282,16 @@ describe("useEventForm category loading", () => {
     expect(result.current.form.categoryId).toBe("2");
   });
 
-  it("seeds a reopened form from this opening's category list, not the cached one", async () => {
+  it("seeds a reopened form from the cached category list at once (ADR 0311)", async () => {
     const timestamp = new Date("2026-08-03T10:00:00Z");
     vi.spyOn(plannerReferenceApi, "fetchPlannerRooms").mockResolvedValue([]);
     vi.spyOn(plannerReferenceApi, "fetchPlannerGroups").mockResolvedValue([]);
-    const secondOpening = deferredValue<ActivityCategory[]>();
-    vi.spyOn(plannerReferenceApi, "fetchPlannerActivityCategories")
-      .mockResolvedValueOnce([
-        { id: "1", name: "Alt", created_at: timestamp, updated_at: timestamp },
-      ])
-      .mockImplementationOnce(() => secondOpening.promise);
+    vi.spyOn(
+      plannerReferenceApi,
+      "fetchPlannerActivityCategories",
+    ).mockResolvedValue([
+      { id: "1", name: "Alt", created_at: timestamp, updated_at: timestamp },
+    ]);
     vi.spyOn(formModel, "fetchAllStudentOptions").mockResolvedValue([]);
     vi.spyOn(staffService, "getAllStaff").mockResolvedValue([]);
     const params = (isOpen: boolean): UseEventFormParams => ({
@@ -1316,21 +1318,10 @@ describe("useEventForm category loading", () => {
 
     rerender(params(false));
     rerender(params(true));
-    // The new form waits for its own read: nothing of the earlier answer.
-    expect(result.current.form.categoryId).toBe("");
-    expect(result.current.categories).toEqual([]);
-    expect(result.current.loadingRefs).toBe(true);
-
-    await act(async () => {
-      secondOpening.resolve([
-        { id: "3", name: "Neu", created_at: timestamp, updated_at: timestamp },
-      ]);
-      await secondOpening.promise;
-    });
-    await waitFor(() => expect(result.current.form.categoryId).toBe("3"));
-    expect(
-      plannerReferenceApi.fetchPlannerActivityCategories,
-    ).toHaveBeenCalledTimes(2);
+    // The catalog is a template: the cached list seeds the new form, and
+    // the save validates the category it receives.
+    await waitFor(() => expect(result.current.form.categoryId).toBe("1"));
+    expect(result.current.loadingRefs).toBe(false);
   });
 });
 
@@ -1689,5 +1680,108 @@ describe("useEventForm Wochennotiz-only series save (#6141)", () => {
     );
     expect(apis.replanWeek).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe("useEventForm read state (ADR 0311)", () => {
+  it("saves the block it opened with and, after a refusal, the stored one", async () => {
+    vi.spyOn(plannerReferenceApi, "fetchPlannerRooms").mockResolvedValue([]);
+    vi.spyOn(plannerReferenceApi, "fetchPlannerGroups").mockResolvedValue([]);
+    vi.spyOn(
+      plannerReferenceApi,
+      "fetchPlannerActivityCategories",
+    ).mockResolvedValue([]);
+    vi.spyOn(formModel, "fetchAllStudentOptions").mockResolvedValue([]);
+    vi.spyOn(staffService, "getAllStaff").mockResolvedValue([]);
+    const opened: EnrichedInstance = {
+      id: "42",
+      version: "v1",
+      date: "2026-08-03",
+      startTime: "12:00",
+      endTime: "13:00",
+      title: "Basteln",
+      status: "planned",
+      isSpontaneous: true,
+      isLive: false,
+      activityType: "activity",
+      roomId: "7",
+      roomName: "Mensa",
+      staff: [],
+      students: [],
+      studentIds: [],
+      staffCount: 0,
+      absentStaffCount: 0,
+      expectedStudentsCount: 0,
+      notScheduledStudentsCount: 0,
+      presentStudentsCount: 0,
+      requiredStaffCount: 0,
+      assignedStaffCount: 0,
+      conflictWarnings: [],
+    };
+    const stored = { ...opened, title: "Basteln (verschoben)", version: "v2" };
+    const update = vi
+      .spyOn(timetableService, "update")
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValue(stored);
+    const getWeek = vi.spyOn(timetableService, "getWeek").mockResolvedValue({
+      from: "2026-08-03",
+      to: "2026-08-03",
+      instances: [stored],
+    });
+
+    const { result } = renderHook(() =>
+      useEventForm({
+        isOpen: true,
+        onClose: vi.fn(),
+        onSaved: vi.fn(),
+        defaultDate: "2026-08-03",
+        calendarPeriods: [],
+        defaultCalendarPeriodId: null,
+        planningPeriods: null,
+        initialInstance: opened,
+        initialSeries: null,
+        convertInstance: null,
+        defaultRepeat: "none",
+        variant: "full",
+        canCheckShiftCoverage: false,
+      }),
+    );
+    await waitFor(() => expect(result.current.form.title).toBe("Basteln"));
+    const event = { preventDefault: vi.fn() } as unknown as Parameters<
+      typeof result.current.handleSubmit
+    >[0];
+
+    await act(async () => {
+      await result.current.handleSubmit(event);
+    });
+    expect(update).toHaveBeenLastCalledWith(
+      "42",
+      expect.objectContaining({ title: "Basteln", expected_version: "v1" }),
+    );
+    // The refusal reads the block again: the panel shows it as stored and
+    // says so, without a retry of the refused save.
+    expect(getWeek).toHaveBeenCalledWith("2026-08-03", "2026-08-03");
+    await waitFor(() =>
+      expect(result.current.form.title).toBe("Basteln (verschoben)"),
+    );
+    await waitFor(() =>
+      expect(result.current.saveError?.message).toBe(
+        catalogText("general.changed_since_read", "der Termin"),
+      ),
+    );
+    expect(result.current.saveError?.retry).toBeUndefined();
+
+    await act(async () => {
+      await result.current.handleSubmit(event);
+    });
+    expect(update).toHaveBeenLastCalledWith(
+      "42",
+      expect.objectContaining({
+        title: "Basteln (verschoben)",
+        expected_version: "v2",
+      }),
+    );
   });
 });

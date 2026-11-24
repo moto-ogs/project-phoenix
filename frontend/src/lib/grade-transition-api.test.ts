@@ -34,6 +34,7 @@ describe("mapTransition", () => {
     can_modify: true,
     can_apply: true,
     can_revert: false,
+    version: "v1",
   };
 
   it("maps snake_case to camelCase and ids to strings", () => {
@@ -69,6 +70,7 @@ describe("mapTransition", () => {
       can_modify: false,
       can_apply: false,
       can_revert: true,
+      version: "v1",
     });
     expect(t.mappings).toEqual([]);
     expect(t.notes).toBeNull();
@@ -242,6 +244,7 @@ describe("int64 ids on the wire", () => {
       can_modify: true,
       can_apply: false,
       can_revert: false,
+      version: "v1",
     });
     expect(t.id).toBe(big);
     expect(t.mappings[0]?.id).toBe(bigger);
@@ -300,6 +303,7 @@ describe("int64 ids on the wire", () => {
       can_modify: false,
       can_apply: false,
       can_revert: true,
+      version: "v1",
     });
     expect(Number(big)).toBe(Number("9007199254740992"));
 
@@ -328,6 +332,7 @@ describe("listGradeTransitions", () => {
     can_modify: false,
     can_apply: false,
     can_revert: true,
+    version: "v1",
   });
 
   const rows = (from: number, count: number) =>

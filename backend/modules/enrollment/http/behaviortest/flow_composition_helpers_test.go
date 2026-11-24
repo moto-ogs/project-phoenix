@@ -174,7 +174,46 @@ func newTestChangeRequestService(cfg owners.EnrollmentChangeRequestSources) enro
 		offerings, _ := cfg.CareOfferingRepo.(capacityOfferings)
 		cfg.Capacity = owners.NewEnrollmentOfferingCapacity(offerings, cfg.Children, cfg.Settings, calendar.TodayDate)
 	}
-	return enrollmentAPI.NewChangeRequestService(owners.NewEnrollmentChangeRequests(cfg))
+	root := changeRequestFixtureRoot{ChangeRequestService: enrollmentAPI.NewChangeRequestService(owners.NewEnrollmentChangeRequests(cfg)), children: cfg.Children}
+	if requests, ok := cfg.Requests.(enrollmentCompose.IntakeRequests); ok {
+		root.drafts = newTestRequestService(owners.EnrollmentIntakeSources{
+			Requests: requests, Children: cfg.Children, Guardians: cfg.Guardians, CareOfferingRepo: cfg.CareOfferingRepo,
+			Catalog: cfg.Catalog, Settings: cfg.Settings, ParentsURL: cfg.ParentsURL, FrontendURL: cfg.FrontendURL,
+			LockTemplateRecurrence: cfg.LockTemplateRecurrence, Now: cfg.Now,
+		})
+	}
+	return root
+}
+
+// changeRequestFixtureRoot sends a staff correction without a version as the
+// correction form does: with the version of the child it read (ADR 0311). A
+// test of a stale correction sets the version itself.
+type changeRequestFixtureRoot struct {
+	enrollmentAPI.ChangeRequestService
+	children interface {
+		ChildByID(context.Context, int64) (*enrollmentNative.RequestChild, error)
+	}
+	// drafts reads the edit bootstrap the family's change request form
+	// loads; nil where the suite's records cannot serve an intake.
+	drafts enrollmentAPI.RequestService
+}
+
+// Create sends a change request without a form token as the status page
+// does: with the terms_fingerprint of the edit bootstrap (ADR 0311).
+func (r changeRequestFixtureRoot) Create(ctx context.Context, token string, input enrollmentAPI.CreateChangeRequestInput) (*enrollmentAPI.ChangeRequestAggregate, error) {
+	if r.drafts != nil {
+		showEditDraft(ctx, r.drafts, token, &input.Submission)
+	}
+	return r.ChangeRequestService.Create(ctx, token, input)
+}
+
+func (r changeRequestFixtureRoot) CorrectApprovedChildData(ctx context.Context, input enrollmentAPI.CorrectApprovedChildDataInput) (*enrollmentAPI.ChangeRequestAggregate, error) {
+	if input.ExpectedVersion == "" && r.children != nil {
+		if child, err := r.children.ChildByID(ctx, input.ChildID); err == nil && child != nil {
+			input.ExpectedVersion = enrollmentNative.ChildDataVersion(child)
+		}
+	}
+	return r.ChangeRequestService.CorrectApprovedChildData(ctx, input)
 }
 
 // capacityOfferings locks the offerings a capacity check claims.
@@ -217,8 +256,56 @@ func (r requestFixtureRoot) Submit(ctx context.Context, req enrollmentAPI.Submit
 	if err != nil {
 		return nil, err
 	}
-	err = tenant.WithinTenant(ctx, id, func(txCtx context.Context) error { value, err = r.RequestService.Submit(txCtx, req); return err })
+	err = tenant.WithinTenant(ctx, id, func(txCtx context.Context) error {
+		r.showCurrentForm(txCtx, &req)
+		value, err = r.RequestService.Submit(txCtx, req)
+		return err
+	})
 	return value, err
+}
+
+// showCurrentForm sends a submission without a form token as the form
+// client does: with the version and the terms_fingerprint of the phase's
+// form it loaded (ADR 0311). A test of a stale form sets the token itself; a
+// phase whose form does not load is left to the submission's own refusal.
+func (r requestFixtureRoot) showCurrentForm(ctx context.Context, req *enrollmentAPI.SubmitRequest) {
+	if req.ExpectedTermsFingerprint != "" {
+		return
+	}
+	bootstrap, err := r.LoadManualEnrollmentBootstrap(ctx, req.PhaseID)
+	if err != nil || bootstrap == nil {
+		return
+	}
+	req.ExpectedTermsFingerprint = enrollmentNative.FormTermsFingerprint(bootstrap.Schema, bootstrap.LegalTexts.Blocks)
+	if req.DisplayedFormSchemaID == 0 && bootstrap.Schema != nil {
+		req.DisplayedFormSchemaID = bootstrap.Schema.ID
+	}
+}
+
+// ReplaceEditable sends an edit without a form token as the edit page does:
+// with the terms_fingerprint of the edit bootstrap it loaded (ADR 0311).
+func (r requestFixtureRoot) ReplaceEditable(ctx context.Context, token string, req enrollmentAPI.SubmitRequest) (*enrollmentAPI.SubmitResult, error) {
+	showEditDraft(ctx, r.RequestService, token, &req)
+	return r.RequestService.ReplaceEditable(ctx, token, req)
+}
+
+// showEditDraft fills the form token of an edit or a change request from
+// the edit bootstrap the status page loads; a draft that does not load is
+// left to the write's own refusal.
+func showEditDraft(ctx context.Context, drafts interface {
+	GetEditDraft(context.Context, string) (*enrollmentAPI.EditDraft, error)
+}, token string, req *enrollmentAPI.SubmitRequest) {
+	if req.ExpectedTermsFingerprint != "" || drafts == nil {
+		return
+	}
+	draft, err := drafts.GetEditDraft(ctx, token)
+	if err != nil || draft == nil {
+		return
+	}
+	req.ExpectedTermsFingerprint = enrollmentNative.FormTermsFingerprint(draft.Schema, draft.LegalTexts.Blocks)
+	if req.DisplayedFormSchemaID == 0 && draft.Schema != nil {
+		req.DisplayedFormSchemaID = draft.Schema.ID
+	}
 }
 func (r requestFixtureRoot) GetByStatusToken(ctx context.Context, token string) (value *enrollmentNative.Request, children []*enrollmentNative.RequestChild, err error) {
 	err = fixturePublicTokenRoot(ctx, func(txCtx context.Context) error {

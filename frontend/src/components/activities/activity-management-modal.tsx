@@ -3,13 +3,19 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import {
+  fetchActivity,
   updateActivity,
   deleteActivity,
   type Activity,
 } from "~/lib/activity-api";
+import { useReadDraft } from "~/lib/swr/read-draft";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import {
+  activityFormProblem,
   parseParticipantLimit,
   useActivityForm,
+  type ActivityFormState,
 } from "~/hooks/useActivityForm";
 import { createLogger } from "~/lib/logger";
 import { useApiFormError } from "~/contexts/ToastContext";
@@ -35,6 +41,15 @@ import { Loading } from "~/components/ui/loading";
 
 const logger = createLogger({ component: "ActivityManagement" });
 
+/** The form of a read activity: what the dialog edits and saves. */
+function activityForm(activity: Activity): ActivityFormState {
+  return {
+    name: activity.name,
+    category_id: activity.ag_category_id || "",
+    max_participants: activity.max_participant?.toString() ?? "",
+  };
+}
+
 interface ActivityManagementModalProps {
   readonly isOpen: boolean;
   readonly onClose: () => void;
@@ -50,6 +65,7 @@ function NormalFooter({
   isSubmitting,
   isDeleting,
   loading,
+  waitReason,
   onClose,
   onShowDeleteConfirm,
 }: Readonly<{
@@ -57,6 +73,8 @@ function NormalFooter({
   isSubmitting: boolean;
   isDeleting: boolean;
   loading: boolean;
+  /** Why saving waits for the stored state (ADR 0311). */
+  waitReason?: string;
   onClose: () => void;
   onShowDeleteConfirm: () => void;
 }>) {
@@ -98,6 +116,7 @@ function NormalFooter({
             disabled={isSubmitting || loading || isDeleting}
             className="min-w-[100px]"
             tooltip="Speichert die Änderungen an der Aktivität, sie gelten sofort."
+            disabledReason={isSubmitting || isDeleting ? undefined : waitReason}
           >
             {isSubmitting ? (
               <span className="flex items-center justify-center gap-2">
@@ -124,30 +143,43 @@ export function ActivityManagementModal({
 }: ActivityManagementModalProps) {
   const submission = useFormModalPending(isOpen);
   const isSubmitting = submission.pending;
+  // The list row carries no version: the dialog reads the activity once it
+  // opens and edits that stored state (ADR 0311). A newer read refills the
+  // form only while nobody has typed into it; the save sends its version.
+  const edit = useReadDraft<
+    Activity,
+    ActivityFormState,
+    string | undefined,
+    Activity
+  >({
+    key: isOpen && !readOnly ? tenantAdminKeys.activity(activity.id) : null,
+    fetcher: () => fetchActivity(activity.id),
+    token: (read) => read.version,
+    toDraft: activityForm,
+    answer: (saved) => saved,
+  });
+  // Read-only, the dialog shows the list row and saves nothing.
+  const form = edit.draft ?? activityForm(activity);
+  const setForm = edit.setDraft;
+  // Until the first read fills the draft, typing would go nowhere.
+  const locked = readOnly || edit.draft === undefined;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Use activity form hook for form state and validation
-  const {
-    form,
-    setForm,
-    categories,
-    loading,
-    loadError,
-    handleInputChange,
-    validateForm,
-  } = useActivityForm(
-    {
-      name: activity.name,
-      category_id: activity.ag_category_id || "",
-      max_participants: activity.max_participant?.toString() ?? "",
-    },
+  // The categories of the form; its own form state stays unused here.
+  const { categories, loading, loadError } = useActivityForm(
+    activityForm(activity),
     isOpen,
   );
 
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { clear: clearFormErrors, fieldError } = formErrors;
+  const draftForm = useReadDraftForm(
+    readOnly ? null : edit,
+    formErrors,
+    "die Aktivität",
+  );
   // Löschfehler bleiben im offenen Löschdialog.
   const deleteErrors = useApiFormError();
   const { clear: clearDeleteErrors } = deleteErrors;
@@ -166,50 +198,42 @@ export function ActivityManagementModal({
   };
 
   const onInput = (event: ChangeEvent<HTMLInputElement>) => {
-    handleInputChange(event);
+    const { name, value } = event.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
     clearFormErrors();
   };
 
-  // Reset form when activity changes
+  // A new opening starts without the errors of the last one.
   useEffect(() => {
     if (isOpen) {
-      setForm({
-        name: activity.name,
-        category_id: activity.ag_category_id || "",
-        max_participants: activity.max_participant?.toString() ?? "",
-      });
       clearFormErrors();
       clearDeleteErrors();
       setShowDeleteConfirm(false);
     }
-  }, [isOpen, activity, setForm, clearFormErrors, clearDeleteErrors]);
+  }, [isOpen, activity, clearFormErrors, clearDeleteErrors]);
 
   const save = async () => {
-    formErrors.clear();
-    const problem = validateForm();
+    // Nothing goes out until the stored state is read (ADR 0311).
+    if (!draftForm.begin()) return;
+    const problem = activityFormProblem(form);
     if (problem) {
       formErrors.invalid(problem.message, { [problem.field]: problem.message });
       return;
     }
 
     await submission.run(async (op) => {
-      try {
-        // Prepare the update data
-        const updateData = {
-          name: form.name.trim(),
-          category_id: form.category_id,
-          max_participants: parseParticipantLimit(form.max_participants),
-          // Include existing values that might be required
-          is_open: activity.is_open_ags || false,
-          supervisor_ids: activity.supervisor_id
-            ? [activity.supervisor_id]
-            : [],
-        };
-
-        // Call the update API
-        await updateActivity(activity.id, updateData);
-
-        const successMessage = `Die Aktivität „${form.name.trim()}“ ist gespeichert.`;
+      // Only what the dialog shows: the route keeps the opening, the room,
+      // the schedules and the supervisors (ADR 0311).
+      const result = await edit.submit((version, draft) =>
+        updateActivity(activity.id, {
+          name: draft.name.trim(),
+          category_id: draft.category_id,
+          max_participants: parseParticipantLimit(draft.max_participants),
+          expected_version: version,
+        }),
+      );
+      if (result.ok) {
+        const successMessage = `Die Aktivität „${result.saved.name}“ ist gespeichert.`;
 
         // Close modal with animation
         if (op.isCurrent()) onClose();
@@ -220,17 +244,23 @@ export function ActivityManagementModal({
             onSuccess(successMessage);
           }
         }, 100);
-      } catch (err) {
-        logger.error("activity_update_failed", {
-          error: err instanceof Error ? err.message : String(err),
-          activity_id: activity.id,
-        });
-        if (!op.isCurrent()) return;
-        void formErrors.show(err, {
-          object: "die Aktivität",
-          retry: () => retrySaveRef.current(),
-        });
+        return;
       }
+      if (result.skipped) return;
+      const err = result.error;
+      logger.error("activity_update_failed", {
+        error: err instanceof Error ? err.message : String(err),
+        activity_id: activity.id,
+      });
+      if (!op.isCurrent()) return;
+      // Changed since it was read: the form shows the stored state once it
+      // is read, and the message waits for that read; the same save would
+      // be refused again, so it offers no retry.
+      void formErrors.show(err, {
+        object: "die Aktivität",
+        retry: () => retrySaveRef.current(),
+        reload: result.reload,
+      });
     });
   };
 
@@ -285,7 +315,8 @@ export function ActivityManagementModal({
       readOnly={readOnly}
       isSubmitting={isSubmitting}
       isDeleting={isDeleting}
-      loading={loading}
+      loading={loading || (!readOnly && !edit.canSubmit)}
+      waitReason={draftForm.waitReason}
       onClose={onClose}
       onShowDeleteConfirm={() => setShowDeleteConfirm(true)}
     />
@@ -324,6 +355,7 @@ export function ActivityManagementModal({
             </div>
 
             <LoadErrorAlert error={loadError} />
+            <LoadErrorAlert error={draftForm.loadError} />
             <FormErrorAlert message={formErrors.error} />
 
             {/* Activity Name Card - Compact */}
@@ -348,7 +380,7 @@ export function ActivityManagementModal({
                   placeholder="z. B. Hausaufgaben, Malen, Basteln…"
                   className="disabled:cursor-not-allowed"
                   required
-                  disabled={readOnly}
+                  disabled={locked}
                   maxLength={255}
                 />
               </div>
@@ -386,7 +418,7 @@ export function ActivityManagementModal({
                   ]}
                   placeholder="Kategorie wählen…"
                   required
-                  disabled={readOnly}
+                  disabled={locked}
                 />
               </div>
             </InsetPanel>
@@ -418,7 +450,7 @@ export function ActivityManagementModal({
                     fieldError("max_participants") ? true : undefined
                   }
                   required={Boolean(form.max_participants)}
-                  disabled={readOnly || !form.max_participants}
+                  disabled={locked || !form.max_participants}
                 />
                 <label
                   htmlFor="activity-no-participant-limit"
@@ -427,13 +459,13 @@ export function ActivityManagementModal({
                   <Checkbox
                     id="activity-no-participant-limit"
                     checked={!form.max_participants}
-                    onChange={(event) =>
+                    onChange={(event) => {
                       setForm((prev) => ({
                         ...prev,
                         max_participants: event.target.checked ? "" : "15",
-                      }))
-                    }
-                    disabled={readOnly}
+                      }));
+                    }}
+                    disabled={locked}
                   />
                   Keine Begrenzung
                 </label>

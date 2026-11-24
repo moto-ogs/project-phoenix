@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The cost bearer shares of the monthly contribution (#4687, 1.15.816):
@@ -89,6 +90,11 @@ func (s *Store) CareCostShares(ctx context.Context, organizationID int64, contra
 			CostBearerName: row.CostBearerName, ShareBasisPoints: row.ShareBasisPoints, ShareCents: row.ShareCents, Scope: row.Scope,
 			ValidFrom: row.ValidFrom, ValidUntil: row.ValidUntil, Reference: row.Reference, CheckedOn: row.CheckedOn,
 			UpdatedAt: row.UpdatedAt,
+			// The stored share as the form shows it: updated_at has no
+			// trigger and takes the clock of the writer (ADR 0311).
+			Version: readstate.Fingerprint(parentbilling.CareCostShareInput{ContractID: ident.ID(row.CareContractID), Kind: row.Kind,
+				CostBearerID: ident.ID(row.CostBearerID), ShareBasisPoints: row.ShareBasisPoints, ShareCents: row.ShareCents,
+				Scope: row.Scope, ValidFrom: row.ValidFrom, ValidUntil: row.ValidUntil, Reference: row.Reference, CheckedOn: row.CheckedOn}),
 		}
 	}
 	return shares, nil

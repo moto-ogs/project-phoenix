@@ -44,7 +44,7 @@ func TestTemplateSplit_SingleEditThenSuccessorUpdateDoesNotDuplicate(t *testing.
 	updatedSingle, err := s.instance.UpdatePlanned(
 		s.ctx,
 		single.ID,
-		moveInput(s, single, singleDate, 1),
+		readMoveInput(t, s, single, singleDate, 1),
 		nil,
 	)
 	require.NoError(t, err)

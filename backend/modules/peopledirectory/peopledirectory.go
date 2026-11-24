@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -83,6 +84,36 @@ type UpdatePerson struct {
 	Birthday  string
 	TagID     *string
 	AccountID *int64
+	// ExpectedVersion is the PersonVersion of the person the form showed
+	// (ADR 0311). Nil only for a writer that showed no read; the person
+	// route always sets it.
+	ExpectedVersion *string
+}
+
+// PersonVersion is the token of a stored person (ADR 0311): the time of
+// its last change, which a trigger moves on every update of the row.
+func PersonVersion(updatedAt time.Time) string { return readstate.Of(updatedAt) }
+
+// StaffRecordProfile is the caregiver profile part of a staff record token.
+type StaffRecordProfile struct {
+	Specialization string
+	Role           string
+	Qualifications string
+}
+
+// StaffRecordVersion is the token of what the staff record form shows and
+// PUT /api/staff/{id} writes back whole (ADR 0311): the person the record
+// names, the notes and the live caregiver profile (nil for none; a retired
+// profile counts as none, as the record read leaves it out). The other
+// columns of the staff row (employment, schedule binding, exit) have their
+// own forms and do not refuse this one. UpdateStaffWithTeacher compares it
+// under the staff row lock it writes under.
+func StaffRecordVersion(personID int64, notes string, profile *StaffRecordProfile) string {
+	state := []any{personID, notes, nil}
+	if profile != nil {
+		state[2] = []string{profile.Specialization, profile.Role, profile.Qualifications}
+	}
+	return readstate.Fingerprint(state)
 }
 
 // PersonFilter narrows a directory search. Every field is optional; the
@@ -273,7 +304,7 @@ func ErrorCode(err error) string {
 		return "not_found"
 	case errors.Is(err, ErrInvalidPerson), errors.Is(err, ErrInvalidStudent), errors.Is(err, ErrInvalidGuardian), errors.Is(err, ErrGuardianPaymentInvalid):
 		return "invalid"
-	case errors.Is(err, ErrGuardianStillLinked), errors.Is(err, ErrGuardianDeletePreviewChanged), errors.Is(err, ErrGuardianLinkConflict):
+	case errors.Is(err, ErrGuardianStillLinked), errors.Is(err, ErrGuardianLinkConflict):
 		return "guardian_linked"
 	case errors.Is(err, ErrGuardianForceDeleteRequiresAdmin), errors.Is(err, ErrPayerRemovalRequiresFinancial):
 		return "forbidden"
@@ -286,7 +317,9 @@ func ErrorCode(err error) string {
 	case errors.Is(err, ErrPersonHasActiveProfile):
 		return "person_has_active_profile"
 	default:
-		return "internal_error"
+		// A business rejection, readstate.ErrChanged among them, is
+		// labelled with its own code like in every other owner (ADR 0311).
+		return readstate.OperationCode("internal_error", err)
 	}
 }
 

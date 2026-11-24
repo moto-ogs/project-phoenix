@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   bool,
+  int64String,
   noData,
   object,
   requestBody,
@@ -22,8 +23,8 @@ export interface CatererSecurityResponse {
 }
 
 export const CatererSecurityResponseSchema: z.ZodType<CatererSecurityResponse, unknown> = object<CatererSecurityResponse>({
-  id: str,
-  account_id: str,
+  id: int64String,
+  account_id: int64String,
   name: str,
   email: str,
   mfa_enabled: bool,

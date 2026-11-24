@@ -6,7 +6,7 @@
 // that never comes back, and the newest handovers with their outcome.
 
 import { ArrowRightLeft, Inbox, KeyRound, Send } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   HANDOVER_FORMAT_LABELS,
   HANDOVER_STATE_LABELS,
@@ -24,7 +24,10 @@ import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { IconTile } from "~/components/ui/icon-tile";
 import { Input } from "~/components/ui/input";
 import { ListRowLink } from "~/components/ui/list-row-link";
@@ -33,7 +36,9 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { SwitchRow } from "~/components/ui/switch";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatBerlinDate, formatBerlinTime } from "~/lib/date-helpers";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   type ExportFormatAssignment,
   type ExportHandover,
@@ -109,43 +114,71 @@ export const EXPORT_RECIPIENT_ACCESS_ID = "export-recipient-access";
  */
 export function ExportRecipientFormCard({
   recipient,
+  reload,
   onSave,
   onDelete,
 }: Readonly<{
   recipient: ExportRecipient | null;
-  onSave: (draft: ExportRecipientDraft) => Promise<void>;
+  /** Reads the saved recipient again after a refusal; rejects on failure. */
+  reload?: () => Promise<ExportRecipient | undefined>;
+  /** Saves; `version` is the read state of a saved recipient (ADR 0311). */
+  onSave: (
+    draft: ExportRecipientDraft,
+    version: string,
+  ) => Promise<ExportRecipient | void>;
   onDelete?: () => Promise<void>;
 }>) {
-  const [draft, setDraft] = useState<Draft>(() => draftOf(recipient));
+  const [created, setCreated] = useState<Draft>(EMPTY_DRAFT);
+  // A saved recipient is edited on the version it was read with (ADR 0311):
+  // a newer read refills only an untouched form, a refused save shows the
+  // stored recipient, and nothing goes out until it was read.
+  const change = useDraftOn<
+    ExportRecipient,
+    Draft,
+    string,
+    ExportRecipient | void
+  >(
+    {
+      opening: recipient ? `export-recipient:${recipient.id}` : null,
+      data: recipient ?? undefined,
+      reload: () => reload?.() ?? Promise.resolve(undefined),
+    },
+    {
+      token: (read) => read.version,
+      toDraft: draftOf,
+      answer: (saved) => saved || undefined,
+    },
+  );
+  const draft = recipient ? (change.draft ?? draftOf(recipient)) : created;
+  const setDraft = recipient ? change.setDraft : setCreated;
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const previousRecipient = useRef(recipient);
   const formErrors = useApiFormError(formRef);
+  const form = useReadDraftForm(
+    recipient ? change : null,
+    formErrors,
+    "den Empfänger",
+  );
   const deleteErrors = useApiFormError();
   const { success } = useToast();
-
-  useEffect(() => {
-    const previousDraft = draftOf(previousRecipient.current);
-    previousRecipient.current = recipient;
-    setDraft((current) => {
-      return JSON.stringify(current) === JSON.stringify(previousDraft)
-        ? draftOf(recipient)
-        : current;
-    });
-  }, [recipient]);
 
   const set = (patch: Partial<Draft>) =>
     setDraft((current) => ({ ...current, ...patch }));
   const changed = useMemo(
-    () => JSON.stringify(draft) !== JSON.stringify(draftOf(recipient)),
-    [draft, recipient],
+    () =>
+      recipient
+        ? change.touched
+        : JSON.stringify(draft) !== JSON.stringify(EMPTY_DRAFT),
+    [recipient, change.touched, draft],
   );
 
   const submit = async (event: { preventDefault: () => void }) => {
     event.preventDefault();
-    formErrors.clear();
+    // Enter submits too: a change goes out only after the stored recipient
+    // is read, and the shown error stays until then.
+    if (!form.begin()) return;
     const port = Number(draft.port);
     const fields: Record<string, string> = {};
     if (!draft.name.trim())
@@ -162,19 +195,42 @@ export function ExportRecipientFormCard({
       formErrors.invalid("Bitte prüfe die markierten Angaben.", fields);
       return;
     }
+    const input: ExportRecipientDraft = {
+      name: draft.name.trim(),
+      enabled: draft.enabled,
+      host: draft.host.trim(),
+      port,
+      username: draft.username.trim(),
+      password: draft.password || undefined,
+      remoteDirectory: draft.remoteDirectory.trim(),
+      hostKeyFingerprint: draft.hostKeyFingerprint.trim(),
+    };
+    if (recipient) {
+      setSaving(true);
+      const result = await change.submit((version) => onSave(input, version));
+      setSaving(false);
+      if (result.ok) {
+        success(`${input.name} ist gespeichert.`);
+        return;
+      }
+      logger.error("traeger_export_recipient_save_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      // A colleague saved the recipient since: `reload` shows it instead
+      // of the draft over it.
+      void formErrors.show(result.error, {
+        object: "der Empfänger",
+        reload: result.reload,
+      });
+      return;
+    }
     setSaving(true);
     try {
-      await onSave({
-        name: draft.name.trim(),
-        enabled: draft.enabled,
-        host: draft.host.trim(),
-        port,
-        username: draft.username.trim(),
-        password: draft.password || undefined,
-        remoteDirectory: draft.remoteDirectory.trim(),
-        hostKeyFingerprint: draft.hostKeyFingerprint.trim(),
-      });
-      success(`${draft.name.trim()} ist gespeichert.`);
+      await onSave(input, "");
+      success(`${input.name} ist gespeichert.`);
     } catch (err) {
       logger.error("traeger_export_recipient_save_failed", {
         error: err instanceof Error ? err.message : String(err),
@@ -242,8 +298,10 @@ export function ExportRecipientFormCard({
             size="md"
             isLoading={saving}
             loadingText="Speichert…"
-            disabled={!changed && recipient !== null}
-            disabledReason="Du hast noch nichts geändert."
+            disabled={recipient !== null && (!changed || !change.canSubmit)}
+            disabledReason={
+              changed ? form.waitReason : "Du hast noch nichts geändert."
+            }
             noTooltip="Ein reines Speichern ohne Folgen."
           >
             {recipient ? "Speichern" : "Empfänger anlegen"}
@@ -259,6 +317,7 @@ export function ExportRecipientFormCard({
         onSubmit={(event) => void submit(event)}
       >
         <FormErrorAlert message={formErrors.error} />
+        <LoadErrorAlert error={form.loadError} />
         <Input
           name="name"
           label="Name"
@@ -384,22 +443,41 @@ function assignmentsOf(page: ExportRecipientsPage) {
  */
 export function ExportFormatAssignmentCard({
   page,
+  reload,
   onSave,
 }: Readonly<{
   page: ExportRecipientsPage;
-  onSave: (assignments: readonly ExportFormatAssignment[]) => Promise<void>;
+  /** Reads the page again after a refused save; rejects on failure. */
+  reload: () => Promise<ExportRecipientsPage>;
+  /** Saves over `version`, the assignments' read state (ADR 0311). */
+  onSave: (
+    assignments: readonly ExportFormatAssignment[],
+    version: string,
+  ) => Promise<ExportRecipientsPage>;
 }>) {
-  const [draft, setDraft] = useState(() => assignmentsOf(page));
   const [saving, setSaving] = useState(false);
   const errors = useApiFormError();
   const { success } = useToast();
-
-  useEffect(() => setDraft(assignmentsOf(page)), [page]);
-
-  const saved = assignmentsOf(page);
-  const changed = HANDOVER_FORMATS.some(
-    (format) => draft[format] !== saved[format],
+  // The selects rest on the assignments they were read with (ADR 0311): a
+  // newer read refills them only while untouched, a refused save shows the
+  // stored assignments, and the save's answer is the new base.
+  const assignment = useDraftOn<
+    ExportRecipientsPage,
+    Record<HandoverFormat, string>,
+    string,
+    ExportRecipientsPage
+  >(
+    { opening: "export-formats", data: page, reload },
+    {
+      token: (read) => read.assignmentsVersion,
+      toDraft: assignmentsOf,
+      answer: (saved) => saved,
+    },
   );
+  const draft = assignment.draft ?? assignmentsOf(page);
+  const setDraft = assignment.setDraft;
+  const changed = assignment.touched;
+  const form = useReadDraftForm(assignment, errors, "die Zuordnung");
   const options = [
     { value: DOWNLOAD, label: "Nur herunterladen" },
     ...page.recipients.map((recipient) => ({
@@ -411,24 +489,34 @@ export function ExportFormatAssignmentCard({
   ];
 
   const save = async () => {
-    errors.clear();
+    if (!form.begin()) return;
     setSaving(true);
-    try {
-      await onSave(
+    const result = await assignment.submit((version, chosen) =>
+      onSave(
         HANDOVER_FORMATS.map((format) => ({
           format,
-          recipientId: draft[format] === DOWNLOAD ? null : draft[format],
+          recipientId: chosen[format] === DOWNLOAD ? null : chosen[format],
         })),
-      );
+        version,
+      ),
+    );
+    setSaving(false);
+    if (result.ok) {
       success("Die Zuordnung ist gespeichert.");
-    } catch (err) {
-      logger.error("traeger_export_formats_save_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void errors.show(err, { object: "die Zuordnung" });
-    } finally {
-      setSaving(false);
+      return;
     }
+    logger.error("traeger_export_formats_save_failed", {
+      error:
+        result.error instanceof Error
+          ? result.error.message
+          : String(result.error),
+    });
+    // A colleague changed the assignments since: `reload` shows them
+    // instead of the choice over them.
+    void errors.show(result.error, {
+      object: "die Zuordnung",
+      reload: result.reload,
+    });
   };
 
   return (
@@ -438,15 +526,19 @@ export function ExportFormatAssignmentCard({
       icon={ArrowRightLeft}
       footer={
         <EditActions
-          onCancel={() => setDraft(saved)}
+          onCancel={() => assignment.discard()}
           onSave={() => void save()}
           saving={saving}
-          disabled={!changed}
+          disabled={!changed || !assignment.canSubmit}
+          disabledReason={
+            changed ? form.waitReason : "Du hast noch nichts geändert."
+          }
           cancelDisabled={!changed || saving}
         />
       }
     >
       <FormErrorAlert message={errors.error} />
+      <LoadErrorAlert error={form.loadError} />
       <ul className="divide-y divide-gray-100">
         {HANDOVER_FORMATS.map((format) => {
           const chosen = page.recipients.find(

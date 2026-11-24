@@ -359,6 +359,7 @@ describe("staffShiftService requests", () => {
       endTime: "15:00",
       breakMinutes: 20,
       shiftTypeId: "5",
+      expectedVersion: "v4",
     });
 
     expect(fetchMock).toHaveBeenCalledWith("/api/staff-shifts/42/move", {
@@ -372,6 +373,7 @@ describe("staffShiftService requests", () => {
         end_time: "15:00",
         break_minutes: 20,
         shift_type_id: "5",
+        expected_version: "v4",
       }),
     });
   });

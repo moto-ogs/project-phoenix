@@ -1,9 +1,22 @@
 // #6533: Schließen während des Speicherns ist gesperrt, eine späte Antwort
 // schließt keinen anderen Dialog. Echter FormModal.
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { updateActivity, type Activity } from "~/lib/activity-api";
+import {
+  fetchActivity,
+  updateActivity,
+  type Activity,
+} from "~/lib/activity-api";
+import { SWRConfig } from "~/lib/swr/testing";
 import { ApiError } from "~/lib/api-error";
 import {
   deferred,
@@ -15,13 +28,34 @@ vi.mock("./activity-waitlist-section", () => ({
   ActivityWaitlistSection: () => null,
 }));
 vi.mock("~/lib/activity-api", () => ({
+  fetchActivity: vi.fn(),
   updateActivity: vi.fn(),
   deleteActivity: vi.fn(),
 }));
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in OGS session per render: the
+// dialog reads the activity it saves (ADR 0311), `fetchActivity` answers
+// with the stored state of the row and its version.
+function render(...[ui, options]: Parameters<typeof rtlRender>) {
+  return rtlRender(ui, {
+    ...options,
+    wrapper: ({ children }: Readonly<{ children: ReactNode }>) => (
+      <SessionProvider
+        session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+        refetchOnWindowFocus={false}
+      >
+        <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+          {children}
+        </SWRConfig>
+      </SessionProvider>
+    ),
+  });
+}
+
 const { setForm } = vi.hoisted(() => ({ setForm: vi.fn() }));
-vi.mock("~/hooks/useActivityForm", () => ({
-  parseParticipantLimit: (value: string) =>
-    value ? Number.parseInt(value, 10) : null,
+vi.mock("~/hooks/useActivityForm", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/hooks/useActivityForm")>()),
   useActivityForm: vi.fn(() => ({
     form: { name: "Test Activity", category_id: "1", max_participants: "15" },
     setForm,
@@ -49,15 +83,20 @@ const activity: Activity = {
     { id: "1", staff_id: "1", is_primary: true, full_name: "John Doe" },
   ],
 };
+const storedActivity: Activity = { ...activity, version: "v1" };
 
-function renderAndSave() {
+async function renderAndSave() {
   const answer = deferred<Activity>();
   vi.mocked(updateActivity).mockReturnValue(answer.promise);
+  vi.mocked(fetchActivity).mockResolvedValue(storedActivity);
   const onClose = vi.fn();
   const view = render(
     <ActivityManagementModal isOpen onClose={onClose} activity={activity} />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+  // Saving waits for the read of the stored activity (ADR 0311).
+  const save = screen.getByRole("button", { name: "Speichern" });
+  await waitFor(() => expect(save).toBeEnabled());
+  fireEvent.click(save);
   return { ...view, answer, onClose };
 }
 
@@ -67,7 +106,7 @@ describe("ActivityManagementModal pending lock (#6533)", () => {
   });
 
   it("keeps the dialog shut while saving and unlocks it after a failure", async () => {
-    const { answer, onClose } = renderAndSave();
+    const { answer, onClose } = await renderAndSave();
 
     expectSaveLocksDialog(TITLE);
 
@@ -80,10 +119,11 @@ describe("ActivityManagementModal pending lock (#6533)", () => {
   });
 
   it("closes nothing when the answer arrives after unmount", async () => {
-    const { answer, onClose, unmount } = renderAndSave();
+    const { answer, onClose, rerender } = await renderAndSave();
     expect(updateActivity).toHaveBeenCalledOnce();
 
-    unmount();
+    // The dialog goes, the app's cache stays (as the app's SWRConfig does).
+    rerender(<></>);
     await act(async () => {
       answer.resolve(activity);
     });

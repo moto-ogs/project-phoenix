@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/driver/pgdriver"
 )
@@ -191,10 +192,11 @@ func (s *Store) CreateCareDocument(ctx context.Context, value domain.CareDocumen
 }
 
 // UpdateOpenCareAccidentReport writes the report, signature and paper copy of
-// a report that is still open. The signed and deleted guard is in the
-// statement, so two signatures racing each other leave exactly one; the
-// loser matches no row. A trigger refuses any change of a signed report
-// independently of this guard.
+// a report that is still open and unchanged since value was read: the
+// statement matches the row only while it is unsigned, not deleted and still
+// carries the updated_at of value, so of two writes racing each other the
+// loser matches no row and is refused like a stale read (ADR 0311). A trigger
+// refuses any change of a signed report independently of this guard.
 func (s *Store) UpdateOpenCareAccidentReport(ctx context.Context, value domain.CareDocument) (domain.CareDocument, domain.OperationStats, error) {
 	db, tenantID, err := s.databaseForWrite(ctx, "update open care accident report")
 	if err != nil {
@@ -214,8 +216,9 @@ func (s *Store) UpdateOpenCareAccidentReport(ctx context.Context, value domain.C
 		Where(`"care_document".accident_report IS NOT NULL`).
 		Where(`"care_document".accident_signed_at IS NULL`).
 		Where(`"care_document".deleted_at IS NULL`).
+		Where(`"care_document".updated_at = ?`, value.UpdatedAt).
 		Where(`"care_document".tenant_id = ?`, tenantID).
-		Returning("*"), "update open care accident report", careplan.ErrAccidentReportSigned)
+		Returning("*"), "update open care accident report", readstate.ErrChanged)
 	if err != nil {
 		return domain.CareDocument{}, stats, err
 	}

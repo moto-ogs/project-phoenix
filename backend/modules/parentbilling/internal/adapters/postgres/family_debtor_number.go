@@ -124,6 +124,32 @@ func (s *Store) FamilyBillingOf(ctx context.Context, organizationID int64, famil
 	return &family, nil
 }
 
+// LockFamilyBilling holds the family of the address until the transaction
+// ends and reads its row, nil without one. The transaction lock on the
+// family's key orders two saves of a family that has no row yet; the row
+// lock holds an existing row against every other writer.
+func (s *Store) LockFamilyBilling(ctx context.Context, organizationID int64, familyEmail string) (*parentbilling.FamilyBilling, error) {
+	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := db.NewRaw(`SELECT pg_advisory_xact_lock(hashtextextended('parent_billing.family_billing:' || ?::text || ':' || ?, 0))`,
+		organizationID, familyEmail).Exec(ctx); err != nil {
+		return nil, fmt.Errorf("lock the family billing: %w", err)
+	}
+	var row familyBillingRow
+	err = db.NewSelect().Model(&row).Where("organization_id = ?", organizationID).Where("family_email = ?", familyEmail).
+		For("UPDATE").Scan(ctx)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("lock the family billing: %w", err)
+	}
+	family := row.family()
+	return &family, nil
+}
+
 // FamilyHasDocuments reports whether a holiday document or a monthly
 // invoice of the Träger belongs to the family, by the rule of the list of
 // families: the family it copied, else its recipient's address.

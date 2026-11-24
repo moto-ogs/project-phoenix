@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Copy, ClipboardPaste, Plus, Trash2, X } from "lucide-react";
 
@@ -32,6 +25,7 @@ import {
   useApiFormError,
   useToast,
 } from "~/contexts/ToastContext";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { formatWeekLabel, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import {
@@ -39,13 +33,19 @@ import {
   mondayOf,
   setDay,
   workWeekDates,
-  type MealPlanEntry,
+  type DishInput,
+  type MealPlanDay,
+  type MealPlanDish,
 } from "~/lib/meal-plan-api";
 import { createLogger } from "~/lib/logger";
 import { useNavigationGuard } from "~/lib/hooks/use-navigation-guard";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useFreshSWR } from "~/lib/swr";
+import {
+  useReadDraftForm,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
 import {
   useMealPlanEnabled,
@@ -119,6 +119,15 @@ function normalizeDay(rows: DishDraft[]): DishDraft[] {
     .filter((r) => r.dish !== "");
 }
 
+// The wire form of a normalised day.
+function dishInputs(rows: DishDraft[]): DishInput[] {
+  return rows.map((d) => ({
+    dish: d.dish,
+    note: d.note === "" ? null : d.note,
+    allergens: d.allergens,
+  }));
+}
+
 function dayHasContent(rows: DishDraft[] | undefined): boolean {
   return normalizeDay(rows ?? []).length > 0;
 }
@@ -130,23 +139,104 @@ function rowHasContent(row: DishDraft): boolean {
   );
 }
 
-// Build editable drafts (always at least one empty row per day) from persisted
-// entries keyed by date.
-function draftsFromEntries(
-  entries: MealPlanEntry[],
+function draftRows(dishes: readonly MealPlanDish[] | undefined): DishDraft[] {
+  return dishes?.length
+    ? dishes.map((d) => createDishDraft(d.dish, d.note ?? "", d.allergens))
+    : [createDishDraft()];
+}
+
+// Build editable drafts (always at least one empty row per day) from the
+// stored days.
+function draftsFromDays(
+  days: MealPlanDay[],
   dates: string[],
 ): Record<string, DishDraft[]> {
-  const byDate = new Map<string, DishDraft[]>();
-  for (const e of entries) {
-    const rows = byDate.get(e.date) ?? [];
-    rows.push(createDishDraft(e.dish, e.note ?? "", e.allergens));
-    byDate.set(e.date, rows);
-  }
+  const byDate = new Map(days.map((day) => [day.date, day.dishes]));
   const next: Record<string, DishDraft[]> = {};
+  for (const date of dates) next[date] = draftRows(byDate.get(date));
+  return next;
+}
+
+// The version of each stored day, which its save sends back (ADR 0311).
+function versionsFromDays(days: MealPlanDay[]): Record<string, string> {
+  return Object.fromEntries(days.map((day) => [day.date, day.version]));
+}
+
+type WeekDrafts = Record<string, DishDraft[]>;
+
+// The stored dishes of each day in the dirty check's normalised form.
+function storedRows(
+  days: MealPlanDay[] | undefined,
+  dates: string[],
+): Record<string, DishDraft[]> {
+  if (days === undefined) return {};
+  const built = draftsFromDays(days, dates);
+  const rows: Record<string, DishDraft[]> = {};
+  for (const date of dates) rows[date] = normalizeDay(built[date]!);
+  return rows;
+}
+
+// Whether two drafts hold the same input. Any row with content counts, a
+// note without a dish too: a newer read replaces only a draft without it.
+function sameWeekInput(a: WeekDrafts, b: WeekDrafts): boolean {
+  const input = (drafts: WeekDrafts) =>
+    Object.keys(drafts)
+      .sort()
+      .map((date) => [
+        date,
+        (drafts[date] ?? []).filter(rowHasContent).map((row) => ({
+          dish: row.dish,
+          note: row.note,
+          allergens: normalizeMealAllergens(row.allergens),
+        })),
+      ]);
+  return JSON.stringify(input(a)) === JSON.stringify(input(b));
+}
+
+// After a refusal, the drafts on the stored week `to`: a day keeps its
+// unsaved draft only while it is stored as the page read it (`from`); every
+// other day, the refused one included, shows the stored plan, so
+// „Speichern“ never replaces a change the person has not seen.
+function rebaseWeek(
+  draft: WeekDrafts,
+  from: MealPlanDay[],
+  to: MealPlanDay[],
+  dates: string[],
+): WeekDrafts {
+  const read = storedRows(from, dates);
+  const readVersions = versionsFromDays(from);
+  const storedVersions = versionsFromDays(to);
+  const stored = draftsFromDays(to, dates);
+  const next: WeekDrafts = {};
   for (const date of dates) {
-    next[date] = byDate.get(date) ?? [createDishDraft()];
+    const unsaved =
+      JSON.stringify(normalizeDay(draft[date] ?? [])) !==
+      JSON.stringify(read[date] ?? []);
+    next[date] =
+      unsaved && storedVersions[date] === readVersions[date]
+        ? (draft[date] ?? stored[date]!)
+        : stored[date]!;
   }
   return next;
+}
+
+// The week as the save's answers store it: each saved day replaces the
+// day it was read as.
+function withSavedDays(
+  base: MealPlanDay[],
+  saved: MealPlanDay[],
+): MealPlanDay[] {
+  const byDate = new Map(base.map((day) => [day.date, day]));
+  for (const day of saved) byDate.set(day.date, day);
+  return [...byDate.values()];
+}
+
+// A save that failed after some days were stored: the page must read the
+// stored week before it sends again, as after a refusal.
+class PartlySaved extends Error {
+  constructor(cause: unknown) {
+    super("meal plan week saved in part", { cause });
+  }
 }
 
 export default function MealPlanPage() {
@@ -208,8 +298,6 @@ export default function MealPlanPage() {
   const retrySaveRef = useRef<() => void>(() => undefined);
   const retryCopyPrevRef = useRef<() => void>(() => undefined);
   const [copyingPrev, setCopyingPrev] = useState(false);
-  const [drafts, setDrafts] = useState<Record<string, DishDraft[]>>({});
-  const [originals, setOriginals] = useState<Record<string, DishDraft[]>>({});
   const [clipboard, setClipboard] = useState<DishDraft[] | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
     date: string;
@@ -235,31 +323,26 @@ export default function MealPlanPage() {
   }, [today, weekOffset]);
 
   const weekDates = useMemo(() => workWeekDates(mondayISO), [mondayISO]);
-  // Legende unter dem Plan: nur die Buchstaben, die diese Woche vorkommen.
-  const weekAllergens = usedMealAllergens(
-    weekDates.flatMap((date) => drafts[date] ?? []),
-  );
 
-  // The loaded week is an edit form: its answer is copied into the drafts
-  // once per week. A refresh of the same week replaces only a plan without
-  // unsaved edits; only an explicit read replaces those.
   const weekKey =
     status === "authenticated" && canReadPlan && mealPlanEnabled
       ? tenantListKeys.mealPlanWeek(mondayISO)
       : null;
-  // Saving compares against the plan this visit read: a cached answer of an
-  // earlier visit may miss a colleague's change and would be overwritten.
-  // So the week is shown and editable only once this visit's own read of it
-  // answered.
-  const week = useFreshSWR(weekKey, () => getMealPlanWeek(mondayISO));
-  // SWR keeps the cached answer next to a failed read; it is not this
-  // visit's plan.
-  const weekData = week.error ? undefined : week.data;
-  // True when the displayed week failed to load. The grid is then NOT shown:
-  // editing/saving against an unknown persisted state could overwrite real
-  // meals based on a failed load, so we surface an error + retry instead.
+  // A revisit shows the cached week at once and reads it again in the
+  // background (no deduplication). Each save sends the version of the day
+  // this page read; the backend refuses a day someone stored differently
+  // since (general.changed_since_read), so an older cached answer never
+  // overwrites a colleague's change.
+  const week = useSWRAuth(weekKey, () => getMealPlanWeek(mondayISO), {
+    keepPreviousData: false,
+    dedupingInterval: 0,
+  });
+  const weekData = week.data;
+  // True when the week never loaded. The grid is then NOT shown: there is
+  // no read state to edit against, so we surface an error + retry instead.
+  // A failed background read keeps the shown week.
   const { error: loadError } = useSwrResourceLoadError(
-    [{ data: weekData, error: week.error }],
+    [week],
     "die Woche im Speiseplan",
     () => week.mutate(),
   );
@@ -268,22 +351,70 @@ export default function MealPlanPage() {
     weekKey === null ||
     reloading ||
     (weekData === undefined && (!week.error || week.isValidating));
-  const appliedWeek = useRef<{ key: string; data: MealPlanEntry[] } | null>(
-    null,
+
+  // The loaded week is an edit form (ADR 0311): one draft per opening of a
+  // week, its token the version of each stored day. An untouched draft
+  // follows a newer read; a touched one keeps the days it was edited on.
+  const { mutate: mutateWeek } = week;
+  const readWeek = useCallback(
+    () =>
+      mutateWeek(getMealPlanWeek(mondayISO), {
+        revalidate: false,
+      }),
+    [mutateWeek, mondayISO],
   );
-  const applyWeek = useCallback(
-    (key: string, entries: MealPlanEntry[]) => {
-      appliedWeek.current = { key, data: entries };
-      const built = draftsFromEntries(entries, weekDates);
-      setDrafts(built);
-      // Originals store only the persisted (non-empty) rows for dirty checks.
-      const orig: Record<string, DishDraft[]> = {};
-      for (const date of weekDates) orig[date] = normalizeDay(built[date]!);
-      setOriginals(orig);
-      setHasLoaded(true);
+  const weekDraft = useDraftOn<
+    MealPlanDay[],
+    WeekDrafts,
+    Record<string, string>,
+    MealPlanDay[]
+  >(
+    {
+      opening: weekKey,
+      data: weekData,
+      reload: readWeek,
+      write: (stored) => mutateWeek(stored, { revalidate: false }),
     },
-    [weekDates],
+    {
+      token: versionsFromDays,
+      toDraft: (days) => draftsFromDays(days, weekDates),
+      same: sameWeekInput,
+      rebase: (draft, from, to) => rebaseWeek(draft, from, to, weekDates),
+      answer: (saved, base) => withSavedDays(base, saved),
+      isRefusal: (error) =>
+        isReadStateRefusal(error) || error instanceof PartlySaved,
+    },
   );
+  const draftForm = useReadDraftForm(
+    weekDraft,
+    saveErrors,
+    "die Woche im Speiseplan",
+  );
+  const { setDraft: setDrafts } = weekDraft;
+  const drafts = useMemo(() => weekDraft.draft ?? {}, [weekDraft.draft]);
+  // The stored days the draft rests on, as the dirty check compares them.
+  const originals = useMemo(
+    () => storedRows(weekDraft.base, weekDates),
+    [weekDraft.base, weekDates],
+  );
+  const weekLoaded = weekDraft.base !== undefined;
+  if (weekLoaded && !hasLoaded) setHasLoaded(true);
+  // Legende unter dem Plan: nur die Buchstaben, die diese Woche vorkommen.
+  const weekAllergens = usedMealAllergens(
+    weekDates.flatMap((date) => drafts[date] ?? []),
+  );
+
+  // „Verwerfen & neu laden“: the read of the stored week replaces the
+  // drafts once it arrived, also over input typed since.
+  const discardOnRead = useRef<MealPlanDay[] | undefined>(undefined);
+  const { discard: discardDraft } = weekDraft;
+  useLayoutEffect(() => {
+    if (discardOnRead.current === undefined) return;
+    if (weekData === undefined || weekData === discardOnRead.current) return;
+    discardOnRead.current = undefined;
+    discardDraft();
+  }, [weekData, discardDraft]);
+
   // Rejects on failure, so after a save the caller keeps the week on screen
   // (#6652).
   const afterSave = useRefreshAfterWrite(
@@ -292,10 +423,7 @@ export default function MealPlanPage() {
       if (!weekKey) return;
       setReloading(true);
       try {
-        const entries = await week.mutate(getMealPlanWeek(mondayISO), {
-          revalidate: false,
-        });
-        if (entries) applyWeek(weekKey, entries);
+        await readWeek();
       } finally {
         setReloading(false);
       }
@@ -313,24 +441,15 @@ export default function MealPlanPage() {
   );
   const isDirty = changedDays.length > 0;
 
-  // Freeze all edit controls while a save, a read of the week, or "Vorwoche
-  // übernehmen" is in flight. handleSave() captures the pre-click draft
-  // snapshot and the read after it replaces drafts/originals from the
-  // backend; an edit made after the request started would otherwise be
-  // silently overwritten when it resolves. Until this visit's read of the
-  // shown week answered, drafts and originals are not that week's stored
-  // plan, so a save would compare against the wrong state. canEdit gates
-  // *who* may edit; editingLocked gates *when*.
-  const editingLocked = saving || copyingPrev || loading;
+  // Freeze all edit controls while a save, an explicit read of the week, a
+  // read after a refusal, or "Vorwoche übernehmen" is in flight. The read
+  // after it replaces the drafts from the backend; an edit made after the
+  // request started would otherwise be silently overwritten when it
+  // resolves. canEdit gates *who* may edit; editingLocked gates *when*.
+  const readingAfterRefusal =
+    weekDraft.status === "refused" || weekDraft.status === "reloading";
+  const editingLocked = saving || copyingPrev || loading || readingAfterRefusal;
   const canEditNow = canEdit && !editingLocked;
-
-  useEffect(() => {
-    const entries = weekData;
-    if (!weekKey || !entries || appliedWeek.current?.data === entries) return;
-    const sameWeek = appliedWeek.current?.key === weekKey;
-    if (sameWeek && (isDirty || editingLocked)) return;
-    applyWeek(weekKey, entries);
-  }, [weekKey, weekData, isDirty, editingLocked, applyWeek]);
 
   // Warn before discarding unsaved changes — both on hard unloads (tab close /
   // reload) and on in-app navigation (clicking a sidebar/header link), which
@@ -425,14 +544,19 @@ export default function MealPlanPage() {
     }
   };
 
+  // The draft belongs to the week's opening: another week opens its own,
+  // and the discarded edits do not come back when the person returns.
   const confirmWeekChange = () => {
-    // The discarded edits must not come back when the person returns to this
-    // week: the next read of it applies as a new week.
-    appliedWeek.current = null;
-    setDrafts({});
-    setOriginals({});
     if (pendingOffset !== null) setWeekOffset(pendingOffset);
     setPendingOffset(null);
+  };
+
+  const reloadDiscardingDrafts = () => {
+    discardOnRead.current = weekData;
+    void afterSave.refresh().then((read) => {
+      // A failed read shows as afterSave.error; the drafts stay.
+      if (!read) discardOnRead.current = undefined;
+    });
   };
 
   const retryAfterSave = () => {
@@ -451,23 +575,16 @@ export default function MealPlanPage() {
         return toISODate(base);
       })();
       const prevDates = workWeekDates(prevMonday);
-      const entries = await getMealPlanWeek(prevMonday);
-      const byDate = new Map<string, DishDraft[]>();
-      for (const e of entries) {
-        const rows = byDate.get(e.date) ?? [];
-        rows.push(createDishDraft(e.dish, e.note ?? "", e.allergens));
-        byDate.set(e.date, rows);
-      }
+      // Only the dishes are copied: each day of this week keeps the version
+      // it was read with, so its save still checks this week's stored day.
+      const previous = draftsFromDays(
+        await getMealPlanWeek(prevMonday),
+        prevDates,
+      );
       setDrafts((prev) => {
         const next = { ...prev };
         prevDates.forEach((pd, i) => {
-          const target = weekDates[i]!;
-          const rows = byDate.get(pd);
-          next[target] = rows?.length
-            ? rows.map((row) =>
-                createDishDraft(row.dish, row.note, row.allergens),
-              )
-            : [createDishDraft()];
+          next[weekDates[i]!] = previous[pd]!;
         });
         return next;
       });
@@ -485,7 +602,7 @@ export default function MealPlanPage() {
     } finally {
       setCopyingPrev(false);
     }
-  }, [mondayISO, weekDates, toast, showActionError]);
+  }, [mondayISO, weekDates, toast, showActionError, setDrafts]);
   useLayoutEffect(() => {
     retryCopyPrevRef.current = () => void doCopyPreviousWeek();
   });
@@ -503,63 +620,66 @@ export default function MealPlanPage() {
   // --- Save / discard ---------------------------------------------------
   const discard = () => {
     clearSaveError();
-    setDrafts((prev) => {
-      const next = { ...prev };
-      for (const date of weekDates) {
-        const o = originals[date] ?? [];
-        next[date] = o.length
-          ? o.map((row) => createDishDraft(row.dish, row.note, row.allergens))
-          : [createDishDraft()];
-      }
-      return next;
-    });
+    weekDraft.discard();
   };
 
   const handleSave = async () => {
+    // After a refusal nothing is sent until the stored week is read.
+    if (!draftForm.begin()) return;
+    const stored = originals;
     setSaving(true);
-    clearSaveError();
-    // Each setDay is its own backend transaction, so a mid-loop failure leaves
-    // the already-sent days committed. Track what actually persisted and fold
-    // it into originals on failure, so the dirty indicator and Verwerfen reflect
-    // what is really stored rather than the pre-save snapshot.
-    const persisted: Record<string, DishDraft[]> = {};
-    try {
+    // Each setDay is its own backend transaction, so a mid-loop failure
+    // leaves the already-sent days committed: the draft then counts as
+    // refused and rests on the stored week read again (`PartlySaved`).
+    const result = await weekDraft.submit(async (versions, draft) => {
+      const saved: MealPlanDay[] = [];
       for (const date of weekDates) {
-        const draft = normalizeDay(drafts[date] ?? []);
-        const original = originals[date] ?? [];
-        if (JSON.stringify(draft) === JSON.stringify(original)) continue;
-        await setDay(
-          date,
-          draft.map((d) => ({
-            dish: d.dish,
-            note: d.note === "" ? null : d.note,
-            allergens: d.allergens,
-          })),
-        );
-        persisted[date] = draft;
+        const next = normalizeDay(draft[date] ?? []);
+        if (JSON.stringify(next) === JSON.stringify(stored[date] ?? [])) {
+          continue;
+        }
+        try {
+          saved.push(
+            await setDay(date, dishInputs(next), versions[date] ?? ""),
+          );
+        } catch (err) {
+          if (saved.length > 0 && !isReadStateRefusal(err)) {
+            throw new PartlySaved(err);
+          }
+          throw err;
+        }
       }
-    } catch (err) {
-      logger.error("meal_plan_save_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      // Commit the days that did persist; the still-unsaved days stay dirty.
-      if (Object.keys(persisted).length > 0) {
-        setOriginals((prev) => ({ ...prev, ...persisted }));
+      return saved;
+    });
+    if (!result.ok) {
+      if (!result.skipped) {
+        const err =
+          result.error instanceof PartlySaved
+            ? result.error.cause
+            : result.error;
+        logger.error("meal_plan_save_failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+        // Der Fehler steht über dem Wochenplan (Bauart 2 Regel 5), nicht als
+        // Toast: die noch ungespeicherten Tage bleiben sichtbar markiert.
+        // A changed day needs the person's decision, not the same request
+        // again: `reload` reads the stored week; a day keeps its draft only
+        // while it is stored as this page read it. A failed read is shown
+        // with a retry of the read alone, and saving waits for it
+        // (ADR 0311).
+        void saveErrors.show(err, {
+          object: "die Woche im Speiseplan",
+          retry: () => retrySaveRef.current(),
+          reload: result.reload,
+        });
       }
-      // Der Fehler steht über dem Wochenplan (Bauart 2 Regel 5), nicht als
-      // Toast: die noch ungespeicherten Tage bleiben sichtbar markiert.
-      void saveErrors.show(err, {
-        object: "die Woche im Speiseplan",
-        retry: () => retrySaveRef.current(),
-      });
       setSaving(false);
       return;
     }
-    // The saved days are stored even when the reload below fails.
-    setOriginals((prev) => ({ ...prev, ...persisted }));
     toast.success("Der Speiseplan ist gespeichert.");
     // Saving stays on during the reload: no edit or week switch can slip in
-    // before the stored week replaces the drafts.
+    // before the stored week replaces the drafts. The saved days are stored
+    // even when it fails; their answers are the draft's base.
     await afterSave.refresh();
     setSaving(false);
   };
@@ -588,7 +708,6 @@ export default function MealPlanPage() {
   const initialLoading = canReadPlan && loading && !hasLoaded;
   // Die Zahl der geplanten Tage gibt es nur für eine geladene Woche: nach
   // einem Ladefehler stünde sonst "0 von 5 Tagen geplant" da (#2517).
-  const weekLoaded = weekDates.every((date) => date in originals);
   const statusLine = weekLoaded
     ? `${plannedDays} von ${weekDates.length} Tagen geplant`
     : null;
@@ -659,7 +778,7 @@ export default function MealPlanPage() {
             onConfirm={() => {
               if (confirmReload) {
                 setConfirmReload(false);
-                void afterSave.refresh();
+                reloadDiscardingDrafts();
               } else confirmWeekChange();
             }}
             title="Ungespeicherte Änderungen"
@@ -718,6 +837,7 @@ export default function MealPlanPage() {
       }
     >
       <FormErrorAlert message={saveErrors.error} />
+      <LoadErrorAlert error={draftForm.loadError} className="mb-4" />
       <LoadErrorAlert
         error={
           afterSave.error && {
@@ -975,7 +1095,8 @@ export default function MealPlanPage() {
             variant="primary"
             size="md"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || !weekDraft.canSubmit}
+            disabledReason={saving ? undefined : draftForm.waitReason}
             tooltip="Speichert die Woche, Eltern sehen den Plan im Elternportal."
             isLoading={saving}
             loadingText="Speichern…"

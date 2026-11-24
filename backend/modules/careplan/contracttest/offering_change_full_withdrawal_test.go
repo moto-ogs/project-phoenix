@@ -83,7 +83,7 @@ func TestOfferingChangeRequestService_Decide_RequiresStaffWithdrawalConfirmation
 	})
 	require.NoError(t, err)
 
-	decision := careplan.OfferingChangeDecisionInput{
+	decision := careplan.OfferingChangeDecisionInput{ExpectedVersion: testpkg.OfferingRequestVersion(t, row.ID),
 		RequestID: row.ID, Approve: true, ReviewedBy: env.creatorID, ActorRole: "admin",
 	}
 	err = testpkg.TenantCommand1(t, ctx, testpkg.SetupTestDB(t), decidesOfferingChange(svc), decision)
@@ -124,7 +124,7 @@ func TestOfferingChangeRequestService_Reject_DoesNotCreateWithdrawalCompletion(t
 	})
 	require.NoError(t, err)
 
-	require.NoError(t, testpkg.TenantCommand1(t, ctx, testpkg.SetupTestDB(t), decidesOfferingChange(svc), careplan.OfferingChangeDecisionInput{
+	require.NoError(t, testpkg.TenantCommand1(t, ctx, testpkg.SetupTestDB(t), decidesOfferingChange(svc), careplan.OfferingChangeDecisionInput{ExpectedVersion: testpkg.OfferingRequestVersion(t, row.ID),
 		RequestID: row.ID, Approve: false, Reason: "Nicht freigegeben",
 		ReviewedBy: env.creatorID, ActorRole: "admin",
 	}))
@@ -164,7 +164,7 @@ func TestOfferingChangeRequestService_Decide_ReportsAppliedWithdrawalResult(t *t
 		Set("payload = ?::jsonb", payload).Where("id = ?", row.ID).Exec(ctx)
 	require.NoError(t, err)
 
-	require.NoError(t, testpkg.TenantCommand1(t, ctx, testpkg.SetupTestDB(t), decidesOfferingChange(svc), careplan.OfferingChangeDecisionInput{
+	require.NoError(t, testpkg.TenantCommand1(t, ctx, testpkg.SetupTestDB(t), decidesOfferingChange(svc), careplan.OfferingChangeDecisionInput{ExpectedVersion: testpkg.OfferingRequestVersion(t, row.ID),
 		RequestID: row.ID, Approve: true, ReviewedBy: env.creatorID, ActorRole: "admin",
 	}))
 	decided, err := enrollmentTest.NewOfferingChangeRecords(env.repos.CarePlan()).FindByID(ctx, row.ID)
@@ -207,7 +207,7 @@ func TestOfferingChangeRequestService_Decide_RequiresConfirmationAfterTargetBeco
 	preview, err := testpkg.TenantQuery3(t, ctx, testpkg.SetupTestDB(t), svc.PreviewDecision, row.ID, nil, nil)
 	require.NoError(t, err, "the required-care preview must allow staff to reach the confirmation step")
 	require.NotEmpty(t, preview.Selections)
-	decision := careplan.OfferingChangeDecisionInput{
+	decision := careplan.OfferingChangeDecisionInput{ExpectedVersion: testpkg.OfferingRequestVersion(t, row.ID),
 		RequestID: row.ID, Approve: true, ReviewedBy: env.creatorID, ActorRole: "admin",
 	}
 	err = testpkg.TenantCommand1(t, ctx, testpkg.SetupTestDB(t), decidesOfferingChange(svc), decision)
@@ -237,7 +237,7 @@ func TestOfferingChangeRequestService_GetForStudent_DropsOldWithdrawalAfterCareR
 		CompleteWithdrawalConfirmed: true,
 	})
 	require.NoError(t, err)
-	require.NoError(t, testpkg.TenantCommand1(t, ctx, testpkg.SetupTestDB(t), decidesOfferingChange(svc), careplan.OfferingChangeDecisionInput{
+	require.NoError(t, testpkg.TenantCommand1(t, ctx, testpkg.SetupTestDB(t), decidesOfferingChange(svc), careplan.OfferingChangeDecisionInput{ExpectedVersion: testpkg.OfferingRequestVersion(t, row.ID),
 		RequestID: row.ID, Approve: true, ReviewedBy: env.creatorID, ActorRole: "admin",
 		CompleteWithdrawalConfirmed: true,
 	}))

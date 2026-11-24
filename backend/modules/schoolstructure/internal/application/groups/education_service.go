@@ -19,6 +19,7 @@ type service struct {
 	rooms            RoomDirectory
 	teachers         TeacherDirectory
 	staff            StaffDirectory
+	staffLock        StaffLockStore
 	students         StudentCounter
 	substitutionRepo HandoverReader
 	runtime          Runtime
@@ -77,10 +78,20 @@ func NewService(
 		rooms:            rooms,
 		teachers:         teachers,
 		staff:            staff,
+		staffLock:        staffLockOf(staff),
 		students:         students,
 		substitutionRepo: substitutionRepo,
 		runtime:          runtime,
 	}
+}
+
+// staffLockOf is the staff row lock of the staff checks the root binds,
+// which lock as well (StaffLockStore); the class assignments of one person
+// are replaced under it (ADR 0311). Checks without it leave the lock
+// unwired, and a class write refuses.
+func staffLockOf(staff StaffDirectory) StaffLockStore {
+	lock, _ := staff.(StaffLockStore)
+	return lock
 }
 
 // Group operations
@@ -326,7 +337,12 @@ func (s *service) updateGroupTeachersInTx(ctx context.Context, groupID int64, te
 	if err != nil {
 		return false, &EducationError{Op: "UpdateGroupTeachers", Err: err}
 	}
+	return s.replaceGroupTeachers(ctx, groupID, currentTeacherIDs, teacherIDs)
+}
 
+// replaceGroupTeachers replaces the group's locked assignments, mapped from
+// teacher to assignment, with teacherIDs and reports whether anything changed.
+func (s *service) replaceGroupTeachers(ctx context.Context, groupID int64, currentTeacherIDs map[int64]int64, teacherIDs []int64) (bool, error) {
 	newTeacherIDs := make(map[int64]bool, len(teacherIDs))
 	for _, teacherID := range teacherIDs {
 		newTeacherIDs[teacherID] = true

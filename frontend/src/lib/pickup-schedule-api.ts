@@ -8,7 +8,6 @@ import type {
   PickupException,
   PickupNoteFormData,
   PickupNote,
-  WeekdayNoteEntry,
   DepartureException,
   DepartureMode,
 } from "./pickup-schedule-helpers";
@@ -241,13 +240,17 @@ export async function updateStudentPickupNote(
   studentId: string,
   noteId: string,
   data: PickupNoteFormData,
+  expectedVersion: string,
 ): Promise<PickupNote> {
   const updated = await bffJson(
     "tenant",
     "PUT /api/students/{id}/pickup-notes/{noteId}",
     {
       params: { id: studentId, noteId },
-      body: mapPickupNoteFormToBackend(data),
+      body: {
+        ...mapPickupNoteFormToBackend(data),
+        expected_version: expectedVersion,
+      },
       errorMessage: "Failed to update pickup note",
     },
   );
@@ -264,21 +267,6 @@ export async function deleteStudentPickupNote(
   await bffJson("tenant", "DELETE /api/students/{id}/pickup-notes/{noteId}", {
     params: { id: studentId, noteId },
     errorMessage: "Failed to delete pickup note",
-  });
-}
-
-/**
- * Replace all recurring weekday notes in one request. Dated notes remain in
- * place because they belong to the single-day editor.
- */
-export async function replaceStudentWeekdayPickupNotes(
-  studentId: string,
-  notes: readonly WeekdayNoteEntry[],
-): Promise<void> {
-  await bffJson("tenant", "PUT /api/students/{id}/pickup-notes", {
-    params: { id: studentId },
-    body: { notes: [...notes] },
-    errorMessage: "Failed to update pickup notes",
   });
 }
 

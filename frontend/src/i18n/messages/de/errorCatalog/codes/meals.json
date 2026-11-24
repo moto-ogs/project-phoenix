@@ -1,5 +1,6 @@
 {
   "child_not_enrolled": "{object} geht nicht. Das Kind ist an diesem Tag nicht in der Betreuung.",
+  "day_changed": "Jemand anderes hat diesen Tag im Speiseplan inzwischen geändert. Du siehst jetzt den neuen Stand. Prüfe ihn und speichere dann noch einmal.",
   "day_closed": "{object} geht nicht. An diesem Tag ist die Schule geschlossen.",
   "day_past": "{object} geht nicht mehr. Der Tag ist schon vorbei.",
   "invalid_allergens": "Die Allergene konnten nicht gespeichert werden. Bitte wähle sie neu aus.",

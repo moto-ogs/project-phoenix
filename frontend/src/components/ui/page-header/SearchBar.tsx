@@ -141,6 +141,9 @@ function SearchBarContent({
 
       <input
         {...inputProps}
+        // A search only filters the page and holds no draft: a tab of an
+        // earlier release may reload over it (lib/deployment-reload.ts).
+        data-search-field=""
         type="text"
         placeholder={placeholder}
         value={shownValue}

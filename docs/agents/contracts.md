@@ -4,6 +4,36 @@ Read the relevant section before changing auth, portal routing, enrollment,
 tenant scoping, IoT endpoints, or kiosk presence modes. Paths start at the
 repository root unless the section says otherwise.
 
+## Browser query parameters and request bodies
+
+Go's `RouteContracts()` declares each query key and its kind. Generated
+TypeScript route entries keep those kinds, allowed string values and
+repetition. `bffJson`, `bffFile`, `bffFileHref`, `bffPath`,
+`contractGet` and `contractWrite` type the query from the selected route: dates are
+`YYYY-MM-DD` strings, IDs and text are strings, integers are numbers and
+booleans are booleans. The helpers serialize values to the URL; the catalog
+proxy filters names only and forwards every occurrence of each registered
+key to Go, which validates the values. Server calls build the Go address
+from the same route entry. Catalog paths use the portal's BFF prefix;
+a named route file must register its exact `BrowserPath` to expose its
+address. Only legacy `GET /api/students/` selects its response shape by query;
+both clients use the selected variant or the registered default. See the
+[students example](frontend-api.md#generated-contract-adr-0270).
+
+Bigint identifiers in portal JSON use Go `ident.ID` and travel as decimal
+strings. Identically named text fields carry a `contract_text` reason.
+Stored JSON and the numeric kiosk contract are separate from this boundary.
+New session JWTs also carry identifiers as decimal strings, including in
+login, refresh, and school switch. Auth.js keeps them as text through the
+host and browser comparisons. Legacy numeric claims are read only in the
+exactly representable range. Session validation carries role origin flags
+from the access token, so a school role called `user` is not a system role.
+
+Generated JSON body field types remain optional. The Go handler validates
+required fields and field combinations, as recorded in [ADR 0270](../adr/0270-der-vertrag-zwischen-go-und-frontend-entsteht-aus-der-go-registrierung.md).
+See [the route example](new-route.md) for `from` and `to` on
+`GET /api/students/{id}/partial-absences`.
+
 ## Ecosystem and IoT
 
 The sibling `../PyrePortal/` repository runs the React web kiosk on GKT/GKTL
@@ -433,7 +463,7 @@ line, and writes one WARN. It still counts in
 ## Portal session isolation
 
 Each portal has its own NextAuth instance, cookie, and base path.
-Operator, parents, school, and Träger cookies are host-only. The tenant cookie is
+Operator, parents, school, caterer, and Träger cookies are host-only. The tenant cookie is
 domain-scoped to support switching between school subdomains (localhost:
 host-only). The proxy redirects cross-host paths to their canonical subdomain.
 
@@ -463,6 +493,11 @@ layout redirects it to the school's subdomain (path and query from the
 proxy's `X-Moto-Original-Path`; the browser keeps the fragment), the BFF
 refuses a school's session on the bare domain, and `TenantGuard` moves a tab
 still on path mode to the subdomain.
+
+For browser callers, [One transport](frontend-api.md#browser-calls) names
+the lint rules for BFF calls, raw transport and keeping wire IDs as strings.
+The fetch observer, session renewal and client log shipping are transport
+infrastructure, not patterns to copy for new callers.
 
 All tabs of a portal also share one account: another account that signs in
 in tab B replaces tab A's session before tab A hears of it (#5183). Every
@@ -741,11 +776,12 @@ old session back; the browser only saves requests.
    keeps the session unchanged, marks it `notBooked` (the session route
    carries the mark, the guards read it), asks again after a minute and
    clears the mark with the next rotation or a live family answer
-   (`token-refresh.ts`). Every other 401/403 of the refresh ends the session
-   and is remembered per process (#2952); a snapshot of a session whose
-   refresh is remembered as refused does not hydrate, so the login page
-   cannot send the browser back to a portal whose requests end it. A family that cannot be
-   read (503) and an expired
+   (`token-refresh.ts`). A refresh 401 or any other 403 with a complete body
+   ends the session and is remembered per process (#2952). An interrupted
+   403 body is retryable because it may have carried `module.not_booked`.
+   A snapshot of a session whose refresh is remembered as refused does not
+   hydrate, so the login page cannot send the browser back to a portal whose
+   requests end it. A family that cannot be read (503) and an expired
    access token, which the backend refuses before it reads the family, leave
    the shown session as it is; its own refresh decides.
 3. **Family check.** `POST /auth/session/validate` without a refresh token
@@ -810,6 +846,26 @@ pages need no barrier: their answers pass the same server gates.
 
 ### Login, refresh, and MFA
 
+All six portals use generated `RouteFile` entries for session calls to Go.
+`frontend/src/server/auth/portals.ts` selects the login, refresh and
+logout contracts, including which bearer logout takes. Login and factor
+routes decode and install the pair server-side, then answer the browser
+through the shared types in `frontend/src/lib/session-bff.ts`. Those entries
+use the generated Go request types for the body even when the BFF defines
+a narrower answer. The BFF strips its own `ignore_trusted_device` flag on
+the password step before forwarding. Go validates the incoming fields. The only
+proofs sent before sign-in are limited enrollment or challenge proofs,
+never a session pair. These routes do not enter a catalog proxy allowlist.
+For the call syntax and error handling, see
+[Frontend API](frontend-api.md#generated-contract-adr-0270).
+
+The contract types closed Go fields and requires a field-local
+`contract_json` reason for open ones. The reason appears in `contract.json`.
+Refining a response must keep its existing wire data. A request may refine
+free JSON with `contract_refines` only when the previously accepted input
+still works; otherwise, add the new shape before retiring the old one.
+A password or code goes to Go once, not again after session renewal.
+
 Backend paths in this section are relative to `backend/`:
 
 - Tenant login rejects guardian-only accounts with `ErrParentMustUseParentPortal`
@@ -836,7 +892,7 @@ Backend paths in this section are relative to `backend/`:
   nowhere, and redeeming it again leaves an existing password unchanged.
 - School login requires a school-portal role (currently `lehrkraft`) on an
   active mapping and pins that school's `tenant_id`. `SchoolScopeMiddleware`
-  accepts only `scope=school`; `common.ProtectedSchoolGroup` includes tenant
+  accepts only `scope=school`; `common.ProtectedSchoolRoutes` includes tenant
   transactions. Unlike parent scope, school scope is tenant-bound.
 - Caterer login requires a caterer account (`auth.caterer_accounts`) that
   supplies at least one school; any other account answers like a wrong
@@ -978,7 +1034,8 @@ Backend paths in this section are relative to `backend/`:
   portals it names and answers every other scope, including one no portal
   issues, with 401 `general.permission`. Tenant routes accept the tenant
   portal (empty or legacy `tenant` claim) and `platform`. The portal facts
-  live in `tokenprimitives.AllPortalClaims()` and `internal/domain/portal.go`,
+  live in `modules/identityaccess/tokenprimitives/portal.go` and
+  `modules/identityaccess/internal/domain/portal.go`,
   pinned to each other by `TestPortalTableMatchesTheTokenGates`.
   `TestFullProductionRouterGolden/contracts/school_scope_matrix` checks school-token rejection under `/api`.
 - Every account portal answers a refused sign-in, MFA step, exchange, switch,
@@ -1156,8 +1213,13 @@ moved pages. The page list comes from the `app/<portal>/` folders:
 `/api/*` path outside its allow-list, because the domain-scoped tenant cookie
 reaches it too; a portal's catalog routes pass under its prefix, and a path
 outside it that a portal page calls belongs in that list.
-`[tenant]/layout.tsx` resolves slugs through `/auth/tenant/resolve?slug=...`
-(cached five minutes). `POST /auth/switch-tenant` returns a tenant-session JWT
+`[tenant]/layout.tsx` resolves slugs through the public contract entry
+`GET /auth/tenant/resolve` via `contractGet`. The per-replica cache in
+`tenant-resolve.server.ts` keeps decoded successes and 404s for 60 seconds.
+Only missing, deleted or inactive schools return 404; lookup failures are
+not cached. Provisioning and writes to the generated lookup setting keys
+invalidate the same cache. The registry test checks that none of those keys
+can change through a Träger write. `POST /auth/switch-tenant` returns a tenant-session JWT
 for the target school, not a `scope=school` portal token.
 Verified MFA belongs to the live tenant-session family of the same account,
 not its school or organization. A permitted switch across organizations preserves
@@ -1195,6 +1257,11 @@ The routes below are mounted only when `APP_ENV=demo`
 (`authAPI.MountDemoRoutes`); elsewhere they answer 404 and the capability is
 not composed. The backend routes are public, take no cookies, and rely on
 `CORS_ALLOWED_ORIGINS` naming the website origins in the demo environment.
+The route catalog walks the demo router without composing it, so the contract
+check includes these routes even when the server does not mount them.
+The portal calls use plain `RouteFile` contracts, not the generic catalog
+proxy. The separate moto website calls the demo-link request directly
+([ADR 0316](../adr/0316-demo-link-anfrage-bleibt-ein-website-vertrag.md)).
 
 | Route | Contract |
 |---|---|
@@ -1426,7 +1493,7 @@ ends no parent session either. `TenantGuard` leaves the entry page alone
 
 The parents portal serves `/parents/anmeldung/{slug}/{phaseId}` with the same
 `EnrollmentForm` used by `{slug}.TENANT_DOMAIN/anmeldung/{phaseId}`, injecting
-`profileFetcher`, `submitter`, and `skipCaptcha`. Authenticated parent submissions
+its authenticated bootstrap and `submitter`, with `skipCaptcha`. Authenticated parent submissions
 stamp `enrollment.requests.guardian_account_id`; decisions prefer attachment by
 that ID over email matching.
 

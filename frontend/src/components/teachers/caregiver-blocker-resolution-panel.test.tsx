@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render as renderRaw,
   screen,
@@ -103,6 +104,48 @@ function noData() {
     ok: true,
     json: () => Promise.resolve({ status: "success", data: null }),
   };
+}
+
+/** GET /api/groups/14: the blocking group as stored, with its version. */
+function storedGroups(teacherIds: string[], version = "v14") {
+  return {
+    ok: true,
+    json: () =>
+      Promise.resolve({
+        status: "success",
+        data: {
+          id: "14",
+          name: "Gruppe Gelb",
+          student_count: 0,
+          created_at: "2026-09-01T08:00:00Z",
+          updated_at: "2026-09-01T08:00:00Z",
+          version,
+          teachers: teacherIds.map((id) => ({
+            id,
+            staff_id: `s${id}`,
+            first_name: "Lea",
+            last_name: `Leitung ${id}`,
+            specialization: "",
+            full_name: `Lea Leitung ${id}`,
+          })),
+        },
+      }),
+  };
+}
+
+/** Answers the group list read and writes with no data, or `write`. */
+function routeGroupFetch(
+  teacherIds: string[],
+  write: () => unknown = noData,
+  version?: string,
+) {
+  mockFetch.mockImplementation((url: string, init?: RequestInit) =>
+    Promise.resolve(
+      (init?.method ?? "GET") === "GET" && url.startsWith("/api/groups")
+        ? storedGroups(teacherIds, version)
+        : write(),
+    ),
+  );
 }
 
 function createState(overrides: Record<string, unknown> = {}) {
@@ -391,7 +434,7 @@ describe("CaregiverBlockerResolutionPanel", () => {
   });
 
   it("preserves other group leaders when removing a Stammgruppe assignment", async () => {
-    mockFetch.mockResolvedValue(noData());
+    routeGroupFetch(["30", "31"]);
 
     render(
       <CaregiverBlockerResolutionPanel
@@ -411,8 +454,14 @@ describe("CaregiverBlockerResolutionPanel", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /^Aktionen für/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("menuitem", { name: "Entfernen" })).toBeEnabled(),
+    );
     fireEvent.click(screen.getByRole("menuitem", { name: "Entfernen" }));
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalledWith(
+      "/api/groups/14",
+      expect.objectContaining({ method: "PUT" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Ja, entfernen" }));
     fireEvent.click(
       screen.getByRole("button", { name: "Ohne Ersatz entfernen" }),
@@ -423,7 +472,11 @@ describe("CaregiverBlockerResolutionPanel", () => {
         "/api/groups/14",
         expect.objectContaining({
           method: "PUT",
-          body: JSON.stringify({ name: "Gruppe Gelb", teacher_ids: ["31"] }),
+          body: JSON.stringify({
+            name: "Gruppe Gelb",
+            teacher_ids: ["31"],
+            expected_version: "v14",
+          }),
         }),
       );
     });
@@ -433,7 +486,7 @@ describe("CaregiverBlockerResolutionPanel", () => {
   });
 
   it("preserves other group leaders when reassigning a Stammgruppe", async () => {
-    mockFetch.mockResolvedValue(noData());
+    routeGroupFetch(["30", "31"]);
 
     render(
       <CaregiverBlockerResolutionPanel
@@ -459,6 +512,11 @@ describe("CaregiverBlockerResolutionPanel", () => {
     fireEvent.click(screen.getByRole("combobox"));
     fireEvent.click(screen.getByRole("option", { name: "Other Caregiver" }));
     fireEvent.click(screen.getByRole("button", { name: /^Aktionen für/ }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("menuitem", { name: "Übertragen" }),
+      ).toBeEnabled(),
+    );
     fireEvent.click(screen.getByRole("menuitem", { name: "Übertragen" }));
 
     await waitFor(() => {
@@ -469,6 +527,7 @@ describe("CaregiverBlockerResolutionPanel", () => {
           body: JSON.stringify({
             name: "Gruppe Gelb",
             teacher_ids: ["31", "32"],
+            expected_version: "v14",
           }),
         }),
       );
@@ -476,6 +535,219 @@ describe("CaregiverBlockerResolutionPanel", () => {
     expect(mockToastSuccess).toHaveBeenCalledWith(
       "Die Gruppenleitung für „Gruppe Gelb“ ist übertragen.",
     );
+  });
+
+  // ADR 0311: the body names no room, so the group keeps it, and the leads
+  // come from the group as stored when the step opened, with its version.
+  // A group changed since is refused: no retry, the group is read again.
+  it("resolves a Stammgruppe from the stored group and reads it again after a refusal", async () => {
+    routeGroupFetch(["30", "31", "33"], () => ({
+      ok: false,
+      status: 409,
+      text: async () => JSON.stringify({ code: "general.changed_since_read" }),
+    }));
+
+    render(
+      <CaregiverBlockerResolutionPanel
+        active
+        state={createState({
+          groupAssignments: [
+            {
+              id: "10",
+              groupId: "14",
+              groupName: "Gruppe Gelb",
+              teacherId: "30",
+              teacherIds: ["30", "31"],
+            },
+          ],
+        })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^Aktionen für/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("menuitem", { name: "Entfernen" })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Entfernen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ja, entfernen" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Ohne Ersatz entfernen" }),
+    );
+
+    expect(
+      await screen.findByText(
+        catalogText(
+          "general.changed_since_read",
+          "die Gruppenleitung für „Gruppe Gelb“",
+        ),
+      ),
+    ).toBeInTheDocument();
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/groups/14",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({
+          name: "Gruppe Gelb",
+          teacher_ids: ["31", "33"],
+          expected_version: "v14",
+        }),
+      }),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+    const groupReads = () =>
+      mockFetch.mock.calls.filter(
+        ([url, init]) =>
+          String(url) === "/api/groups/14" &&
+          ((init as RequestInit | undefined)?.method ?? "GET") === "GET",
+      ).length;
+    await waitFor(() => expect(groupReads()).toBeGreaterThan(1));
+  });
+
+  // The read after a refusal answers late: until then the group's actions
+  // wait, and the next save sends the version of that read, not the one
+  // refused (ADR 0311).
+  it("saves a refused Stammgruppe again only with the version read after the refusal", async () => {
+    let reads = 0;
+    let answerReread: () => void = () => undefined;
+    let puts = 0;
+    mockFetch.mockImplementation((url: string, init?: RequestInit) => {
+      if ((init?.method ?? "GET") === "GET" && url === "/api/groups/14") {
+        reads += 1;
+        if (reads === 1) return Promise.resolve(storedGroups(["30", "31"]));
+        return new Promise((resolve) => {
+          answerReread = () => resolve(storedGroups(["30", "31", "33"], "v15"));
+        });
+      }
+      puts += 1;
+      return Promise.resolve(
+        puts === 1
+          ? {
+              ok: false,
+              status: 409,
+              text: async () =>
+                JSON.stringify({ code: "general.changed_since_read" }),
+            }
+          : noData(),
+      );
+    });
+
+    render(
+      <CaregiverBlockerResolutionPanel
+        active
+        state={createState({
+          groupAssignments: [
+            {
+              id: "10",
+              groupId: "14",
+              groupName: "Gruppe Gelb",
+              teacherId: "30",
+              teacherIds: ["30", "31"],
+            },
+          ],
+        })}
+      />,
+    );
+    const remove = async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Aktionen für/ }));
+      await waitFor(() =>
+        expect(
+          screen.getByRole("menuitem", { name: "Entfernen" }),
+        ).toBeEnabled(),
+      );
+      fireEvent.click(screen.getByRole("menuitem", { name: "Entfernen" }));
+      fireEvent.click(screen.getByRole("button", { name: "Ja, entfernen" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Ohne Ersatz entfernen" }),
+      );
+    };
+    const putBodies = () =>
+      mockFetch.mock.calls
+        .filter(
+          ([, init]) => (init as RequestInit | undefined)?.method === "PUT",
+        )
+        .map(([, init]) => JSON.parse(String((init as RequestInit).body)));
+
+    await remove();
+    await waitFor(() => expect(putBodies()).toHaveLength(1));
+    await waitFor(() => expect(reads).toBe(2));
+    fireEvent.click(screen.getByRole("button", { name: /^Aktionen für/ }));
+    expect(screen.getByRole("menuitem", { name: "Entfernen" })).toBeDisabled();
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
+
+    act(() => answerReread());
+    await remove();
+    await waitFor(() => expect(putBodies()).toHaveLength(2));
+    expect(putBodies()[1]).toEqual({
+      name: "Gruppe Gelb",
+      teacher_ids: ["31", "33"],
+      expected_version: "v15",
+    });
+  });
+
+  it("names a failed read after a refusal and resolves nothing until it is read", async () => {
+    let reads = 0;
+    mockFetch.mockImplementation((url: string, init?: RequestInit) => {
+      if ((init?.method ?? "GET") === "GET" && url === "/api/groups/14") {
+        reads += 1;
+        return Promise.resolve(
+          reads === 2
+            ? {
+                ok: false,
+                status: 503,
+                text: async () =>
+                  JSON.stringify({ code: "general.unavailable" }),
+              }
+            : storedGroups(["30", "31"]),
+        );
+      }
+      return Promise.resolve({
+        ok: false,
+        status: 409,
+        text: async () => JSON.stringify({ code: "general.changed_since_read" }),
+      });
+    });
+
+    render(
+      <CaregiverBlockerResolutionPanel
+        active
+        state={createState({
+          groupAssignments: [
+            {
+              id: "10",
+              groupId: "14",
+              groupName: "Gruppe Gelb",
+              teacherId: "30",
+              teacherIds: ["30", "31"],
+            },
+          ],
+        })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^Aktionen für/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("menuitem", { name: "Entfernen" })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Entfernen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ja, entfernen" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Ohne Ersatz entfernen" }),
+    );
+
+    // „Du siehst jetzt den neuen Stand“ would be false: the failed read is
+    // named, and the group waits for a read that succeeds.
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden\./),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Aktionen für/ }));
+    expect(screen.getByRole("menuitem", { name: "Entfernen" })).toBeDisabled();
   });
 
   it("weist auf den Rückweg hin, sobald nichts mehr offen ist", () => {

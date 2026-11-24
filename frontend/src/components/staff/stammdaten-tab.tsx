@@ -21,7 +21,12 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
 import { employmentTypeLabels } from "~/lib/staff-helpers";
 import { staffQualificationKeys, staffKeys } from "~/lib/swr/staff-keys";
-import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
+import {
+  revalidateOrThrow,
+  useSWRAuth,
+  useTenantMutateMatching,
+} from "~/lib/swr";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { staffQualificationService } from "~/lib/staff-qualification-api";
 import {
   mergeQualificationEntries,
@@ -125,23 +130,26 @@ export function StammdatenTab({
   const tenantPath = useTenantAwarePath();
   const berlinToday = useBerlinToday();
 
+  const payrollRead = useSWRAuth(
+    canManagePayroll ? staffKeys.payrollNumber(staffId) : null,
+    () => staffPayrollNumberService.get(staffId),
+  );
   const {
     data: payroll,
     error: payrollError,
     isLoading: payrollLoading,
     mutate: mutatePayroll,
-  } = useSWRAuth(
-    canManagePayroll ? staffKeys.payrollNumber(staffId) : null,
-    () => staffPayrollNumberService.get(staffId),
-  );
+  } = payrollRead;
 
+  const stammdatenRead = useSWRAuth(
+    canViewSections ? staffKeys.stammdaten(staffId) : null,
+    () => staffStammdatenService.get(staffId),
+  );
   const {
     data: stammdaten,
     error: stammdatenError,
     mutate: mutateStammdaten,
-  } = useSWRAuth(canViewSections ? staffKeys.stammdaten(staffId) : null, () =>
-    staffStammdatenService.get(staffId),
-  );
+  } = stammdatenRead;
 
   // Nachweise mit Status und fehlenden Pflichtnachweisen (#4808); die Arten
   // braucht nur das Bearbeiten.
@@ -173,14 +181,15 @@ export function StammdatenTab({
 
   // Die maskierten Werte werden nur mit staff:financial angefragt: ohne die
   // Berechtigung bleibt der Schlüssel null und es geht keine Anfrage raus.
+  const financialRead = useSWRAuth(
+    canViewFinancial ? staffKeys.stammdatenFinancial(staffId) : null,
+    () => staffStammdatenService.getFinancial(staffId),
+  );
   const {
     data: financial,
     error: financialError,
     mutate: mutateFinancial,
-  } = useSWRAuth(
-    canViewFinancial ? staffKeys.stammdatenFinancial(staffId) : null,
-    () => staffStammdatenService.getFinancial(staffId),
-  );
+  } = financialRead;
 
   // Anzeigen-Zustand der Bankdaten (Lesemodus).
   const [revealed, setRevealed] = useState<StaffFinancialPlain | null>(null);
@@ -210,6 +219,12 @@ export function StammdatenTab({
   // ist: ein erneutes Speichern schickt ihn nicht noch einmal (sonst doppelte
   // Einträge im Änderungsprotokoll).
   const savedSectionsRef = useRef(new Map<string, string>());
+  // Der gelesene Stand je Abschnitt, auf dem der Entwurf ruht (ADR 0311):
+  // genommen, wenn das Bearbeiten beginnt, und mit dem Speichern gesendet.
+  // Ein späteres Neuladen ändert ihn nicht; der Server lehnt einen
+  // inzwischen geänderten Abschnitt ab. Nach einem Speichern gilt der Stand,
+  // den der Server dafür antwortet.
+  const tokensRef = useRef(new Map<string, string>());
   // Ladefehler stehen dort, wo die Daten fehlen, mit Wiederholen (#2514).
   const payrollLoadError = useSwrLoadError(
     canManagePayroll ? payrollError : undefined,
@@ -287,6 +302,13 @@ export function StammdatenTab({
     setNote("");
     formErrors.clear();
     savedSectionsRef.current.clear();
+    tokensRef.current = new Map([
+      ["Person", stammdaten?.versions.person ?? ""],
+      ["Kontakt", stammdaten?.versions.kontakt ?? ""],
+      ["Arbeitsvertrag", stammdaten?.versions.arbeitsvertrag ?? ""],
+      ["Qualifikationen", stammdaten?.versions.qualifikationen ?? ""],
+      ["Personalnummer", payroll?.version ?? ""],
+    ]);
     setBirthdayValid(true);
   };
 
@@ -306,6 +328,7 @@ export function StammdatenTab({
     formErrors.clear();
     try {
       const plain = await staffStammdatenService.revealFinancial(staffId);
+      tokensRef.current.set("Bank & Steuer", plain.version);
       setDraft((current) =>
         current
           ? {
@@ -389,8 +412,6 @@ export function StammdatenTab({
   const handleSave = async () => {
     if (!draft) return;
     const reason = note.trim();
-    // Der Rückgabewert der einzelnen Dienste ist hier ohne Belang — gespeichert
-    // wird der Reiter als Ganzes, und die Fläche lädt danach ohnehin neu.
     const steps: {
       label: string;
       /** Was die Meldung nennt, mit Artikel (ADR 0006). */
@@ -398,9 +419,11 @@ export function StammdatenTab({
       event: string;
       /** Der gesendete Stand, gemerkt nach Erfolg. */
       saved: string;
-      run: () => Promise<unknown>;
+      /** Speichert und antwortet den gespeicherten Stand (ADR 0311). */
+      run: () => Promise<string>;
     }[] = [];
     const section = (label: string) => `die Änderung an „${label}“`;
+    const token = (label: string) => tokensRef.current.get(label) ?? "";
 
     if (sectionsEditable) {
       if (changed("Person", (d) => toPersonPayload(d))) {
@@ -414,6 +437,7 @@ export function StammdatenTab({
               staffId,
               toPersonPayload(draft),
               reason,
+              token("Person"),
             ),
         });
       }
@@ -428,6 +452,7 @@ export function StammdatenTab({
               staffId,
               toKontaktPayload(draft),
               reason,
+              token("Kontakt"),
             ),
         });
       }
@@ -442,6 +467,7 @@ export function StammdatenTab({
               staffId,
               toArbeitsvertragPayload(draft),
               reason,
+              token("Arbeitsvertrag"),
             ),
         });
       }
@@ -456,6 +482,7 @@ export function StammdatenTab({
               staffId,
               toQualifikationenPayload(draft),
               reason,
+              token("Qualifikationen"),
             ),
         });
       }
@@ -470,12 +497,15 @@ export function StammdatenTab({
         object: "die Personalnummer",
         saved: JSON.stringify(draft.personnelNumber.trim()),
         event: "stammdaten_payroll_save_failed",
-        run: () =>
-          staffPayrollNumberService.update(
+        run: async () => {
+          const saved = await staffPayrollNumberService.update(
             staffId,
             emptyToNull(draft.personnelNumber),
             reason,
-          ),
+            token("Personalnummer"),
+          );
+          return saved.version;
+        },
       });
     }
 
@@ -499,6 +529,7 @@ export function StammdatenTab({
               socialSecurityNumber: emptyToNull(values.socialSecurityNumber),
             },
             reason,
+            token("Bank & Steuer"),
           ),
       });
     }
@@ -513,27 +544,50 @@ export function StammdatenTab({
     // Gespeichert wird Abschnitt für Abschnitt. Scheitert einer, hält der
     // Vorgang dort an: die Meldung nennt genau diesen Abschnitt, die übrigen
     // Änderungen bleiben im offenen Entwurf, und nichts scheitert still.
-    let failure: { object: string; error: unknown } | null = null;
+    let failure: { label: string; object: string; error: unknown } | null =
+      null;
     for (const step of steps) {
       try {
-        await step.run();
+        // Ein zweites Speichern im selben Bearbeiten ruht auf dem Stand,
+        // den der Server für diesen Abschnitt antwortet.
+        tokensRef.current.set(step.label, await step.run());
         savedSectionsRef.current.set(step.label, step.saved);
       } catch (err) {
         logger.error(step.event, {
           error: err instanceof Error ? err.message : String(err),
         });
-        failure = { object: step.object, error: err };
+        failure = { label: step.label, object: step.object, error: err };
         break;
       }
     }
     setSaving(false);
 
-    void mutateStammdaten();
+    if (failure && isReadStateRefusal(failure.error)) {
+      // Jemand hat den Abschnitt seit dem Lesen geändert (ADR 0311): Der
+      // Entwurf schließt, der gespeicherte Stand erscheint mit der Meldung.
+      // Was vorher in diesem Durchgang gespeichert wurde, bleibt gespeichert.
+      cancelEditing();
+      setRevealed(null);
+      void refreshStaffViews();
+      void mutateQualificationEntries();
+      await actionErrors.show(failure.error, {
+        object: `der Abschnitt „${failure.label}“`,
+        reload: () =>
+          Promise.all([
+            canViewSections ? revalidateOrThrow(stammdatenRead) : null,
+            canManagePayroll ? revalidateOrThrow(payrollRead) : null,
+            canViewFinancial ? revalidateOrThrow(financialRead) : null,
+          ]),
+      });
+      return;
+    }
+
     void refreshStaffViews();
     void mutateQualificationEntries();
     void mutatePayroll();
     void mutateFinancial();
     setRevealed(null);
+    void mutateStammdaten();
 
     if (failure) {
       await formErrors.show(failure.error, {

@@ -154,7 +154,7 @@ func TestSplitSeries_SchoolBreakOptIn(t *testing.T) {
 			})
 
 			result, err := service.SplitSeries(context.Background(), SplitSeriesInput{
-				SeriesID: old.ID, EffectiveDate: seriesTestToday.AddDays(1),
+				SeriesID: old.ID, ExpectedVersion: seriesVersion(old), EffectiveDate: seriesTestToday.AddDays(1),
 				StartTime: old.StartTime, EndTime: old.EndTime, IncludeSchoolBreaks: tc.edit, ActorStaffID: 5,
 			})
 			require.NoError(t, err)

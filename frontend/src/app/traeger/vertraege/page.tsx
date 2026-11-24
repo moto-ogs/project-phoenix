@@ -17,6 +17,7 @@ import {
   Repeat,
   Send,
   Upload,
+  UsersRound,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type MouseEvent, useMemo, useState } from "react";
@@ -659,6 +660,14 @@ export default function TraegerVertraegePage() {
             "Öffnet die Vorschau: Verknüpfte Verträge bekommen die Anmeldung an ihrer Schule.",
           icon: <ClipboardCheck className="h-4 w-4" aria-hidden />,
           href: traegerPath("/traeger/vertraege/anmeldungen"),
+          onClick: () => undefined,
+        },
+        {
+          label: "Geschwister zusammenführen",
+          description:
+            "Öffnet die Verträge ohne Mail-Adresse, um Geschwister zu einer Familie zusammenzuführen.",
+          icon: <UsersRound className="h-4 w-4" aria-hidden />,
+          href: traegerPath("/traeger/vertraege/geschwister"),
           onClick: () => undefined,
         },
         {

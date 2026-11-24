@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -27,9 +28,31 @@ func TestParentMessageWireContractPreservesJSONPayloadAndStringIDs(t *testing.T)
 		AppliedBy: &appliedBy, DecisionReason: "bestätigt", ReadByStaff: true, ReadByGuardian: true,
 	}})
 
-	encoded, err := json.Marshal(response)
+	encoded, err := wire.Marshal(response)
 	require.NoError(t, err)
 	assert.JSONEq(t, `[{"id":"7","sender_kind":"guardian","sender_name":"Erika","body":"Ja","created_at":"2026-09-04T08:15:00Z","kind":"request","event_type":"care","request_type":"pickup","request_status":"open","payload":{"answer":"Ja"},"ref_table":"schedule.requests","ref_id":"12","applied_by":"34","decision_reason":"bestätigt","read_by_staff":true,"read_by_guardian":true}]`, string(encoded))
+}
+
+// The answer types the attachments (#7806) but writes the bytes the message
+// stores, as it did when it passed the snapshot through.
+func TestParentMessageAttachmentsKeepTheStoredSnapshotOnTheWire(t *testing.T) {
+	t.Parallel()
+	snapshot, err := communication.ReservedMessageAttachments([]int64{9007199254740993, 5}, []communication.MessageAttachment{
+		{ID: 5, Filename: "brief.pdf", SizeBytes: 2048, ContentType: "application/pdf"},
+		{ID: 9007199254740993, Filename: "basteln.png", SizeBytes: 4096, ContentType: "image/png", Width: 640, Height: 480},
+	})
+	require.NoError(t, err)
+	response := toMessageResponses([]communication.ParentMessage{
+		{ID: 1, SenderKind: "staff", Attachments: snapshot},
+		{ID: 2, SenderKind: "staff"},
+	})
+
+	encoded, err := wire.Marshal(response)
+	require.NoError(t, err)
+	var messages []map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(encoded, &messages))
+	assert.JSONEq(t, string(snapshot), string(messages[0]["attachments"]))
+	assert.NotContains(t, messages[1], "attachments", "a message without files omits the member")
 }
 
 func TestParentSystemEventWireContractPreservesActorKind(t *testing.T) {

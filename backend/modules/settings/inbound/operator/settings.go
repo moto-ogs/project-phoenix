@@ -11,15 +11,16 @@ package operator
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // errAdminOnlyForOperator explains why an operator may not touch an
@@ -95,12 +96,12 @@ func NewSettingsResource(cfg SettingsConfig) *SettingsResource {
 }
 
 type setSchoolSettingRequest struct {
-	Value any `json:"value"`
+	Value any `json:"value" contract_json:"The route's setting key selects the value type in the settings registry"`
 }
 
 // revealedSettingValue is the unmasked value of a password or PIN setting.
 type revealedSettingValue struct {
-	Value any `json:"value"`
+	Value any `json:"value" contract_json:"The revealed setting's registered kind determines its value type"`
 }
 
 // requiresPhotoMutationResponse gates which keys name the school slug in
@@ -181,7 +182,7 @@ func (rs *SettingsResource) SetSchoolSettingValue(w http.ResponseWriter, r *http
 	}
 
 	var req setSchoolSettingRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.OperatorInvalidRequest(err))
 		return
 	}

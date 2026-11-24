@@ -21,15 +21,15 @@ import (
 )
 
 type ChangeRequestResponse struct {
-	ID                string                         `json:"id"`
-	RequestID         string                         `json:"request_id"`
+	ID                ident.ID                       `json:"id"`
+	RequestID         ident.ID                       `json:"request_id"`
 	Origin            string                         `json:"origin"`
 	Status            string                         `json:"status"`
 	ParentNote        *string                        `json:"parent_note,omitempty"`
 	AdminDecisionNote *string                        `json:"admin_decision_note,omitempty"`
-	BaseSnapshot      map[string]any                 `json:"base_snapshot"`
-	ProposedSnapshot  map[string]any                 `json:"proposed_snapshot"`
-	Diff              map[string]any                 `json:"diff"`
+	BaseSnapshot      *ChangeRequestSnapshot         `json:"base_snapshot"`
+	ProposedSnapshot  *ChangeRequestSnapshot         `json:"proposed_snapshot"`
+	Diff              *ChangeRequestDiff             `json:"diff"`
 	CreatedAt         time.Time                      `json:"created_at"`
 	UpdatedAt         time.Time                      `json:"updated_at"`
 	ReviewedAt        *time.Time                     `json:"reviewed_at,omitempty"`
@@ -41,7 +41,7 @@ type ChangeRequestResponse struct {
 }
 
 type ChangeRequestMessageResponse struct {
-	ID              string    `json:"id"`
+	ID              ident.ID  `json:"id"`
 	AuthorType      string    `json:"author_type"`
 	AuthorAccountID *ident.ID `json:"author_account_id,omitempty"`
 	Body            string    `json:"body"`
@@ -281,8 +281,8 @@ func toChangeRequestResponse(agg *ChangeRequestAggregate, includeRequest bool, i
 	}
 	row := agg.ChangeRequest
 	resp := ChangeRequestResponse{
-		ID:                strconv.FormatInt(row.ID, 10),
-		RequestID:         strconv.FormatInt(row.RequestID, 10),
+		ID:                ident.ID(row.ID),
+		RequestID:         ident.ID(row.RequestID),
 		Origin:            row.Origin,
 		Status:            row.Status,
 		ParentNote:        row.ParentNote,
@@ -300,7 +300,7 @@ func toChangeRequestResponse(agg *ChangeRequestAggregate, includeRequest bool, i
 	}
 	for _, msg := range agg.Messages {
 		out := ChangeRequestMessageResponse{
-			ID:           strconv.FormatInt(msg.ID, 10),
+			ID:           ident.ID(msg.ID),
 			AuthorType:   msg.AuthorType,
 			Body:         msg.Body,
 			InternalOnly: msg.InternalOnly,
@@ -360,7 +360,7 @@ func mapChangeRequestError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, capability.ErrChangeRequestConflict):
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeEnrollmentChangeRequestConflict))
 	case errors.Is(err, capability.ErrChangeRequestInvalidStatus):
-		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeEnrollmentChangeRequestStatusChanged))
+		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeEnrollmentChangeRequestStatusChanged))
 	case errors.Is(err, capability.ErrChangeRequestInvalidData):
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 	// Approving a change (or correcting child data) replaces the student's

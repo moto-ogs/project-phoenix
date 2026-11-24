@@ -410,7 +410,7 @@ func TestChangeRequestService_Approve_PreservesLegacyCustomDataWithoutSchema(t *
 	})
 	require.NoError(t, err)
 	require.NotNil(t, created.ChangeRequest)
-	assert.Equal(t, "legacy-seed", created.ChangeRequest.ProposedSnapshot["custom_data"].(map[string]any)["seed_source"])
+	assert.Equal(t, "legacy-seed", created.ChangeRequest.ProposedSnapshot.CustomData.Value["seed_source"])
 
 	_, err = testpkg.TenantQuery2(t, ctx, testpkg.SetupTestDB(t), svc.Approve, created.ChangeRequest.ID, enrollmentAPI.ReviewChangeRequestInput{
 		Note:           "Freigegeben.",
@@ -730,12 +730,9 @@ func TestChangeRequestService_Approve_PreservesHiddenOfferingsAcrossDisabledToEn
 	})
 	require.NoError(t, err)
 	require.False(t, created.ChangeRequest.CareOfferingsEnabledAtCreation)
-	proposedChildren, ok := created.ChangeRequest.ProposedSnapshot["children"].([]any)
-	require.True(t, ok)
+	proposedChildren := created.ChangeRequest.ProposedSnapshot.Children
 	require.Len(t, proposedChildren, 1)
-	proposedChild, ok := proposedChildren[0].(map[string]any)
-	require.True(t, ok)
-	require.NotEmpty(t, proposedChild["offering_ids"], "hidden persisted links must be part of the frozen proposal")
+	require.NotEmpty(t, proposedChildren[0].Value.OfferingIDs, "hidden persisted links must be part of the frozen proposal")
 
 	// Re-enabling the UI capability must not reinterpret the frozen proposal
 	// as an offering removal or make the base snapshot look stale.
@@ -820,7 +817,7 @@ func TestChangeRequestService_Approve_AppliesPinnedOfferingChangeToApprovedChild
 
 	careOfferingsEnabled = false
 	env.settings.boolValues[settingKeyCareOfferingsEnabled] = false
-	_, err = testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID:      result.Request.ID,
 		ChildID:        result.Children[0].ID,
 		ActorAccountID: env.creatorID,
@@ -984,7 +981,7 @@ func TestChangeRequestService_CorrectApprovedChildData_UpdatesEnrollmentStudentA
 	assert.Equal(t, enrollmentNative.ChangeRequestOriginAdmin, audit.ChangeRequest.Origin)
 	assert.Equal(t, enrollmentNative.ChangeRequestStatusApproved, audit.ChangeRequest.Status)
 	assert.Equal(t, result.Children[0].ID, *audit.ChangeRequest.RequestChildID)
-	assert.Contains(t, audit.ChangeRequest.Diff["changed"], "children")
+	assert.Contains(t, audit.ChangeRequest.Diff.Changed, "children")
 
 	child, err := ReadOwnerChildForTest(ctx, env.repos.Enrollment(), result.Children[0].ID)
 	require.NoError(t, err)
@@ -1427,7 +1424,8 @@ func TestChangeRequestService_Create_ForcesStoredGuardianEmail(t *testing.T) {
 		ParentNote: "Bitte Namen korrigieren.",
 	})
 	require.NoError(t, err)
-	assert.Equal(t, result.Request.GuardianEmail, created.ChangeRequest.ProposedSnapshot["guardian_email"])
+	require.NotNil(t, created.ChangeRequest.ProposedSnapshot.GuardianEmail.Value)
+	assert.Equal(t, result.Request.GuardianEmail, *created.ChangeRequest.ProposedSnapshot.GuardianEmail.Value)
 }
 
 func TestChangeRequestService_Approve_DoesNotReopenUnchangedRejectedChild(t *testing.T) {

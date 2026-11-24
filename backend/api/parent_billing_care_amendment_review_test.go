@@ -35,7 +35,7 @@ func TestCareRecipientChainResolvesToItsEndStateThroughReissueAndSend(t *testing
 	first := amendedInvoice(t, review, mia).Amendments[0]
 	code, _ = f.amend(t, int64(run.ID), mia, recipient("Ole", "ole@example.org"))
 	require.Equal(t, http.StatusOK, code)
-	code, review = f.amend(t, int64(run.ID), mia, map[string]any{"kind": "revoke", "revokes_id": first.ID, "reason": "Doch nicht"})
+	code, review = f.amend(t, int64(run.ID), mia, map[string]any{"kind": "revoke", "revokes_id": fmt.Sprint(first.ID), "reason": "Doch nicht"})
 	require.Equal(t, http.StatusOK, code)
 	invoice := amendedInvoice(t, review, mia)
 	assert.Equal(t, "Ole", invoice.Recipient.FirstName, "the change in force applies, whatever it was made on")
@@ -87,7 +87,7 @@ func TestCareRemovalOfALongModuleIsStoredExportedAndKept(t *testing.T) {
 			price["module_name"] = long
 		}
 	}
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, prices)
+	rec := putCarePriceList(t, f.traeger, f.office.token, prices)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := f.startRun(t, careMonth)
 	monday := amendedInvoice(t, f.amended(t, int64(run.ID)), mia).Positions[0]

@@ -25,9 +25,9 @@ import {
   type StudentDeletionReason,
 } from "~/lib/student-api";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR } from "~/lib/swr";
+import { useReadDraft } from "~/lib/swr/read-draft";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 
@@ -95,58 +95,53 @@ export function StudentDeletionModal({
   onClose,
   onDeleted,
 }: StudentDeletionModalProps) {
-  const [impact, setImpact] = useState<studentDeleteImpactResponse | null>(
-    null,
-  );
   const [reason, setReason] = useState<StudentDeletionReason | "">("");
-  const [acknowledged, setAcknowledged] = useState(false);
-  const [refreshingPreview, setRefreshingPreview] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const errors = useApiFormError();
   const clearErrors = errors.clear;
   // Bumped after a 409 so the dialog returns to its first confirmation step.
   const [gateReset, setGateReset] = useState(0);
-  // The impact the person confirms stays fixed for this opening: no focus or
-  // reconnect refresh replaces it under the acknowledgement. A changed impact
-  // comes back as a 409 and is then shown fresh (below).
-  const previewRead = useFreshSWR(
-    isOpen ? tenantStudentKeys.deletionImpact(studentId, completionId) : null,
-    () => fetchStudentDeletionImpact(studentId, completionId),
-    {
-      keepPreviousData: false,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    },
-  );
-  const { mutate: mutatePreview } = previewRead;
-  const previewLoad = useSwrResourceLoadError(
-    [previewRead],
+  // The impact the person confirms (ADR 0311): each opening reads it again
+  // (the cached one shows meanwhile) and follows a newer read until the
+  // person acknowledges it; the acknowledgement is the draft. From then on
+  // it stays fixed, and the delete carries its fingerprint. After a 409 the
+  // stored impact shows without the acknowledgement; nothing is sent until
+  // it is read.
+  const preview = useReadDraft<
+    studentDeleteImpactResponse,
+    boolean,
+    string,
+    unknown
+  >({
+    key: isOpen
+      ? tenantStudentKeys.deletionImpact(studentId, completionId)
+      : null,
+    fetcher: () => fetchStudentDeletionImpact(studentId, completionId),
+    token: (shown) => shown.fingerprint,
+    toDraft: () => false,
+    // The dialog closes after a deletion: no read of the old impact.
+    answer: (_saved, shown) => shown,
+  });
+  const previewError = useReadDraftLoadError(
+    preview,
     "die Vorschau der Löschung",
-    () => mutatePreview(),
   );
-  // Whether this opening already took its impact (also when a refresh after
-  // a 409 failed and left none).
-  const [impactTaken, setImpactTaken] = useState(false);
-  const previewData = previewRead.data;
-  const previewValidating = previewRead.isValidating;
+  const previewFailed = preview.status === "loadFailed";
+  const impact = previewFailed ? null : (preview.base ?? null);
+  const acknowledged = preview.draft === true;
+  const setAcknowledged = (value: boolean) => preview.setDraft(value);
   const loadingPreview =
     isOpen &&
-    (refreshingPreview || (!impactTaken && previewLoad.failure === undefined));
+    !previewFailed &&
+    (preview.status === "loading" ||
+      preview.status === "refused" ||
+      preview.status === "reloading");
 
   useEffect(() => {
     if (isOpen) return;
-    setImpact(null);
-    setImpactTaken(false);
     setReason("");
-    setAcknowledged(false);
     clearErrors();
   }, [clearErrors, isOpen]);
-
-  useEffect(() => {
-    if (!isOpen || impactTaken || !previewData || previewValidating) return;
-    setImpact(previewData);
-    setImpactTaken(true);
-  }, [impactTaken, isOpen, previewData, previewValidating]);
 
   const countRows = useMemo(() => {
     if (!impact) return [];
@@ -168,18 +163,25 @@ export function StudentDeletionModal({
   const prerequisitesMet = Boolean(impact && reason && acknowledged);
 
   const handleDelete = async () => {
-    if (!impact || !reason || !acknowledged) return;
+    if (!impact || !reason || !acknowledged || !preview.canSubmit) return;
     setDeleting(true);
     errors.clear();
-    try {
-      const input = {
-        expected_fingerprint: impact.fingerprint,
-        confirmation_name: impact.confirmation_name,
-        reason,
-        acknowledged: true as const,
-      };
-      await deleteStudentWithData(studentId, input, completionId);
-    } catch (deleteError) {
+    const result = await preview.submit((fingerprint, shown) =>
+      shown
+        ? deleteStudentWithData(
+            studentId,
+            {
+              expected_fingerprint: fingerprint,
+              confirmation_name: impact.confirmation_name,
+              reason,
+              acknowledged: true as const,
+            },
+            completionId,
+          )
+        : Promise.reject(new Error("deletion not acknowledged")),
+    );
+    if (!result.ok) {
+      const deleteError = result.error;
       logger.error("student_delete_failed", {
         student_id: studentId,
         status:
@@ -189,40 +191,17 @@ export function StudentDeletionModal({
             ? deleteError.message
             : String(deleteError),
       });
-
-      if (
-        deleteError instanceof ApiError &&
-        deleteError.code === "students.deletion_preview_changed"
-      ) {
-        // The backend re-checks the preview under a row lock. A 409 means the
-        // user must see a fresh impact before confirming again: the
-        // acknowledgement resets, and the dialog remounts (`key` below),
-        // which returns the two-step gate to its first step.
-        setAcknowledged(false);
-        setGateReset((count) => count + 1);
-        setRefreshingPreview(true);
-        try {
-          const fresh = await mutatePreview(
-            fetchStudentDeletionImpact(studentId, completionId),
-            { revalidate: false },
-          );
-          setImpact(fresh ?? null);
-        } catch (refreshError) {
-          logger.error("student_delete_preview_refresh_failed", {
-            student_id: studentId,
-            error:
-              refreshError instanceof Error
-                ? refreshError.message
-                : String(refreshError),
-          });
-          setImpact(null);
-        } finally {
-          setRefreshingPreview(false);
-        }
-      }
+      // The backend re-checks the preview under a row lock. A 409 means the
+      // person must see a fresh impact before confirming again: `reload`
+      // shows it without the acknowledgement, and the dialog remounts
+      // (`key` below), which returns the two-step gate to its first step.
+      if (result.refused) setGateReset((count) => count + 1);
       // Kein „Wiederholen“: ein erneutes Löschen geht wieder durch beide
       // Bestätigungsschritte, nicht über einen Knopf im Fehlerkasten.
-      await errors.show(deleteError, { object: "die Löschung" });
+      await errors.show(deleteError, {
+        object: "die Löschung",
+        reload: result.reload,
+      });
       setDeleting(false);
       return;
     }
@@ -250,7 +229,10 @@ export function StudentDeletionModal({
       }
       warningSlot={
         <div className="space-y-4">
-          <LoadErrorAlert error={previewLoad.error} />
+          {/* After a refusal the form's alert already names the failed read. */}
+          {previewFailed && !errors.error ? (
+            <LoadErrorAlert error={previewError} />
+          ) : null}
           {loadingPreview ? (
             <p className="text-sm text-gray-500">
               Auswirkungen werden geladen…
@@ -327,7 +309,9 @@ export function StudentDeletionModal({
         </div>
       }
       gate={{ mode: "twoStep" }}
-      confirmDisabled={loadingPreview || !prerequisitesMet}
+      confirmDisabled={
+        loadingPreview || !prerequisitesMet || !preview.canSubmit
+      }
       confirmLabel="Kind endgültig löschen"
       onConfirm={handleDelete}
       onClose={onClose}

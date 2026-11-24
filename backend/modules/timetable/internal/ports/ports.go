@@ -41,6 +41,9 @@ type Store interface {
 	UpdateCategoryIfActive(context.Context, int64, timetable.CreateCategory) (timetable.Category, bool, domain.OperationStats, error)
 	SetCategoryArchivedAt(context.Context, int64, *time.Time) (timetable.Category, bool, domain.OperationStats, error)
 	SetCategoryShiftTypeLinks(context.Context, int64, []int64) (domain.OperationStats, error)
+	// LockShiftTypeLinkCategories locks the categories linked to the shift
+	// type and the given ones, ascending, and reads them after the lock.
+	LockShiftTypeLinkCategories(ctx context.Context, shiftTypeID int64, categoryIDs []int64) ([]timetable.Category, domain.OperationStats, error)
 	SetCategoryShiftTypeID(context.Context, int64, *int64) (domain.OperationStats, error)
 	DeleteCategory(context.Context, int64) (domain.OperationStats, error)
 	LockStudentEnrollmentsForCareExit(context.Context, []int64, string) (domain.OperationStats, error)
@@ -177,6 +180,12 @@ type HomeworkStore interface {
 	DeleteClassHomework(ctx context.Context, ref timetable.HomeworkRef, classKey string) (bool, domain.OperationStats, error)
 	ListHomeworkFeedback(ctx context.Context, date calendar.Date, studentIDs []int64) ([]timetable.HomeworkFeedback, domain.OperationStats, error)
 	UpsertHomeworkFeedback(ctx context.Context, in timetable.HomeworkFeedbackInput) (timetable.HomeworkFeedback, domain.OperationStats, error)
+	// LockClassHomework locks an entry of the class for its change and
+	// returns it; found is false when the class has no such entry.
+	LockClassHomework(ctx context.Context, ref timetable.HomeworkRef, classKey string) (entry timetable.HomeworkEntry, found bool, stats domain.OperationStats, err error)
+	// LockHomeworkFeedback serializes the feedback writes of a child and day,
+	// also before its first feedback, and returns the stored one or nil.
+	LockHomeworkFeedback(ctx context.Context, studentID int64, date calendar.Date) (*timetable.HomeworkFeedback, domain.OperationStats, error)
 	// DeleteHomeworkBefore deletes the tenant's entries and feedback dated
 	// before cutoff and returns how many rows went.
 	DeleteHomeworkBefore(ctx context.Context, cutoff calendar.Date) (int, domain.OperationStats, error)

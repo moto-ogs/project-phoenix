@@ -1,5 +1,6 @@
 {
   "child_not_enrolled": "{object} is not possible. The child is not in care on this day.",
+  "day_changed": "Someone else has changed this day of the meal plan in the meantime. You now see the current state. Check it, then save again.",
   "day_closed": "{object} is not possible. The school is closed on this day.",
   "day_past": "{object} is no longer possible. The day is already over.",
   "invalid_allergens": "The allergens could not be saved. Please select them again.",

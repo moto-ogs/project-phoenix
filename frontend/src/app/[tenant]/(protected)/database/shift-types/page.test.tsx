@@ -9,6 +9,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ShiftTypesPage from "./page";
+import { ApiError } from "~/lib/api-error";
 import { useModuleBooked } from "~/lib/tenant-context";
 
 const mockUpdateUrlParams = vi.hoisted(() => vi.fn());
@@ -74,6 +75,7 @@ vi.mock("~/lib/swr", () => ({
     );
   },
   useTenantMutate: () => mockTenantMutate,
+  revalidateOrThrow: (read: { data: unknown }) => Promise.resolve(read.data),
 }));
 
 const SHIFT_TYPES = [
@@ -83,6 +85,7 @@ const SHIFT_TYPES = [
     color: "#83CD2D",
     description: "Zeit am Kind",
     isActive: true,
+    version: "v1",
   },
 ];
 
@@ -165,6 +168,135 @@ describe("Dienstarten — Kategorie-Zuordnung (#1837, #3114)", () => {
       expect(shiftTypeService.updateShiftType).toHaveBeenCalledWith(
         "10",
         expect.objectContaining({ categoryIds: ["1"] }),
+      ),
+    );
+  });
+
+  // ADR 0311: das Speichern schickt den Stand der Dienstart und die Stände
+  // der Kategorien aus der Lesung, mit der das Bearbeiten begann.
+  it("saves over the type and the category links it read when editing started", async () => {
+    swrState.current["database-shift-types"] = {
+      data: [{ ...SHIFT_TYPES[0], version: "type-read" }],
+      error: undefined,
+      isLoading: false,
+    };
+    setCategories({
+      data: [
+        { ...CATEGORIES[0], shiftTypeLinkVersion: "essen-read" },
+        { ...CATEGORIES[1], shiftTypeLinkVersion: "lernzeit-read" },
+      ],
+    });
+    const { rerender } = render(<ShiftTypesPage />);
+
+    fireEvent.change(screen.getByDisplayValue("Betreuung"), {
+      target: { value: "Betreuung am Kind" },
+    });
+    // A newer read arrives while the form is touched: the save still rests
+    // on what the form showed.
+    setCategories({
+      data: [
+        { ...CATEGORIES[0], shiftTypeLinkVersion: "essen-newer" },
+        {
+          ...CATEGORIES[1],
+          shiftTypeId: "10",
+          shiftTypeLinkVersion: "lernzeit-newer",
+        },
+      ],
+    });
+    rerender(<ShiftTypesPage />);
+    save();
+
+    await waitFor(() =>
+      expect(shiftTypeService.updateShiftType).toHaveBeenCalledWith(
+        "10",
+        expect.objectContaining({
+          name: "Betreuung am Kind",
+          categoryIds: ["1"],
+          expectedVersion: "type-read",
+          expectedCategoryLinkVersions: {
+            "1": "essen-read",
+            "2": "lernzeit-read",
+          },
+        }),
+      ),
+    );
+  });
+
+  // ADR 0311: nach einer Ablehnung ruht das Formular auf dem neu gelesenen
+  // Eintrag. Er trägt die Stände der Kategorien derselben Lesung, sonst
+  // würde das nächste Speichern jede geänderte Zuordnung wieder ablehnen.
+  it("saves again after a refusal with the category links of the reload", async () => {
+    setCategories({
+      data: [
+        { ...CATEGORIES[0], shiftTypeLinkVersion: "essen-read" },
+        { ...CATEGORIES[1], shiftTypeLinkVersion: "lernzeit-read" },
+      ],
+    });
+    shiftTypeService.updateShiftType.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    render(<ShiftTypesPage />);
+
+    fireEvent.change(screen.getByDisplayValue("Betreuung"), {
+      target: { value: "Betreuung am Kind" },
+    });
+    save();
+    await waitFor(() =>
+      expect(shiftTypeService.updateShiftType).toHaveBeenCalledTimes(1),
+    );
+    await waitFor(() => {
+      save();
+      expect(shiftTypeService.updateShiftType).toHaveBeenCalledTimes(2);
+    });
+
+    expect(shiftTypeService.updateShiftType).toHaveBeenLastCalledWith(
+      "10",
+      expect.objectContaining({
+        categoryIds: ["1"],
+        expectedVersion: "v1",
+        expectedCategoryLinkVersions: {
+          "1": "essen-read",
+          "2": "lernzeit-read",
+        },
+      }),
+    );
+  });
+
+  // ADR 0311: ein Anlegen holt Kategorien von ihrer bisherigen Dienstart
+  // weg und schickt deshalb die Stände der Kategorien, aus denen es wählt.
+  it("creates a type with the link tokens of the categories it offers", async () => {
+    setCategories({
+      data: [
+        { ...CATEGORIES[0], shiftTypeLinkVersion: "essen-read" },
+        { ...CATEGORIES[1], shiftTypeLinkVersion: "lernzeit-read" },
+      ],
+    });
+    shiftTypeService.createShiftType.mockResolvedValue({
+      ...SHIFT_TYPES[0],
+      id: "11",
+      name: "Neue Dienstart",
+    });
+    render(<ShiftTypesPage />);
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Dienstart anlegen" })[0]!,
+    );
+    const modal = within(screen.getByRole("dialog"));
+    fireEvent.change(modal.getByLabelText("Name"), {
+      target: { value: "Neue Dienstart" },
+    });
+    fireEvent.click(modal.getByRole("button", { name: "Erstellen" }));
+
+    await waitFor(() =>
+      expect(shiftTypeService.createShiftType).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Neue Dienstart",
+          categoryIds: [],
+          expectedCategoryLinkVersions: {
+            "1": "essen-read",
+            "2": "lernzeit-read",
+          },
+        }),
       ),
     );
   });
@@ -334,7 +466,8 @@ describe("Dienstarten — Kategorie-Zuordnung (#1837, #3114)", () => {
     );
     const payload = shiftTypeService.updateShiftType.mock.calls[0]?.[1] as
       Record<string, unknown> | undefined;
-    expect(payload).toMatchObject({ isActive: false });
+    // ADR 0311: über den Stand der Zeile, die die Liste zeigt.
+    expect(payload).toMatchObject({ isActive: false, expectedVersion: "v1" });
     expect(payload).not.toHaveProperty("categoryIds");
   });
 });

@@ -744,7 +744,7 @@ func TestAccountPasskeyCredentialMethods(t *testing.T) {
 	list, err := flows.ListCredentials(context.Background(), account.ID)
 	require.NoError(t, err)
 	require.Len(t, list, 1)
-	assert.Equal(t, "92", list[0].ID)
+	assert.Equal(t, int64(92), list[0].ID.Int64())
 
 	require.NoError(t, flows.RevokeCredential(context.Background(), account.ID, row.ID))
 	assert.Equal(t, account.ID, store.revokedAccountID)

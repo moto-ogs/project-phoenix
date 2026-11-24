@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -13,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // renderPublicEnrollmentError renders the error chain returned from a
@@ -88,6 +88,9 @@ type PublicEnrollmentFormBootstrapResponse struct {
 	CaptchaConfig             PublicCaptchaConfigResponse `json:"captcha_config"`
 	LegalTexts                PublicLegalTextsResponse    `json:"legal_texts"`
 	LateInvite                *PublicLateInvitePrefill    `json:"late_invite,omitempty"`
+	// TermsFingerprint is the read-state token of the form and its legal
+	// texts (ADR 0311); the submit sends it as expected_terms_fingerprint.
+	TermsFingerprint string `json:"terms_fingerprint"`
 }
 
 // PublicLateInvitePrefill exposes only the recipient fields the parent form
@@ -152,15 +155,15 @@ func effectiveCareOfferingSelectionMode(mode string, enabled bool) string {
 // PublicPhase is the parent-safe shape returned by the public phases
 // endpoint. Intentionally slim — no created_by, no audit metadata.
 type PublicPhase struct {
-	ID                        string `json:"id"`
-	Name                      string `json:"name"`
-	Kind                      string `json:"kind"`
-	ServiceStartDate          string `json:"service_start_date"`
-	ServiceEndDate            string `json:"service_end_date"`
-	EnrollmentOpenAt          string `json:"enrollment_open_at,omitempty"`
-	EnrollmentCloseAt         string `json:"enrollment_close_at,omitempty"`
-	ShowStatusReasonToParent  bool   `json:"show_status_reason_to_parent"`
-	CareOfferingSelectionMode string `json:"care_offering_selection_mode"`
+	ID                        ident.ID `json:"id"`
+	Name                      string   `json:"name"`
+	Kind                      string   `json:"kind"`
+	ServiceStartDate          string   `json:"service_start_date"`
+	ServiceEndDate            string   `json:"service_end_date"`
+	EnrollmentOpenAt          string   `json:"enrollment_open_at,omitempty"`
+	EnrollmentCloseAt         string   `json:"enrollment_close_at,omitempty"`
+	ShowStatusReasonToParent  bool     `json:"show_status_reason_to_parent"`
+	CareOfferingSelectionMode string   `json:"care_offering_selection_mode"`
 	// Audience (#1663): audience-restricted phases (linked_parents and
 	// existing_students) never reach this listing — ListPublicOpen filters
 	// exactly what the anonymous form gate refuses; "new_students" lets the
@@ -179,7 +182,7 @@ type PublicPhase struct {
 
 func toPublicPhase(p *capability.Phase) PublicPhase {
 	entry := PublicPhase{
-		ID:                        strconv.FormatInt(p.ID, 10),
+		ID:                        ident.ID(p.ID),
 		Name:                      p.Name,
 		Kind:                      p.Kind,
 		ServiceStartDate:          string(p.ServiceStartDate),
@@ -210,7 +213,7 @@ func toPublicFormSchemaResponse(schema *capability.FormSchema) *PublicFormSchema
 		return nil
 	}
 	return &PublicFormSchemaResponse{
-		ID:               strconv.FormatInt(schema.ID, 10),
+		ID:               ident.ID(schema.ID),
 		Version:          schema.Version,
 		Fields:           capability.PublicFormFields(schema.Fields),
 		CoreRequirements: coreRequirementsValue(schema.CoreRequirements),
@@ -300,6 +303,7 @@ func buildPublicEnrollmentFormBootstrapResponse(data *PublicFormBootstrapData, c
 		CareOfferingsEnabled:      capabilities.CareOfferingsEnabled,
 		CaptchaConfig:             captcha,
 		LateInvite:                lateInvite,
+		TermsFingerprint:          capability.FormTermsFingerprint(data.Schema, texts.Blocks),
 		LegalTexts: PublicLegalTextsResponse{
 			AGB:                 texts.AGB,
 			DSGVO:               texts.DSGVO,

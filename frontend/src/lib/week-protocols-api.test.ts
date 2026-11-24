@@ -117,6 +117,7 @@ describe("weekProtocolsService", () => {
     await weekProtocolsService.saveNotes("41", {
       weekNote: "Ruhig",
       days: { "2026-09-07": "Elternabend" },
+      expectedVersion: "v1",
     });
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/week-protocols/41/notes");
@@ -124,6 +125,7 @@ describe("weekProtocolsService", () => {
     expect(JSON.parse(init.body as string)).toEqual({
       week_note: "Ruhig",
       days: [{ date: "2026-09-07", note: "Elternabend" }],
+      expected_version: "v1",
     });
   });
 
@@ -141,7 +143,7 @@ describe("weekProtocolsService", () => {
         },
       ),
     );
-    await expect(weekProtocolsService.close("41")).rejects.toMatchObject({
+    await expect(weekProtocolsService.close("41", "v1")).rejects.toMatchObject({
       status: 409,
     });
   });

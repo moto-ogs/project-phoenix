@@ -2,7 +2,7 @@ import {
   HOMEWORK_FEEDBACK_STATUSES,
   type HomeworkFeedbackStatus,
 } from "./homework-feedback";
-import type { CareDayStatus } from "./timetable-types";
+import type { AttendancePatchBody, CareDayStatus } from "./timetable-types";
 import { knownEnum } from "./contract/known-enum";
 import type * as sharedContract from "./contract/shared.generated";
 
@@ -178,6 +178,11 @@ export interface TimetableRosterRow {
   homework?: TimetableRosterHomework[];
   /** Rückmeldung der OGS zu diesen Hausaufgaben, falls schon gegeben. */
   homeworkFeedback?: TimetableHomeworkFeedback;
+  /**
+   * Lese-Token dieser Rückmeldung (ADR 0311), auch vor der ersten; die
+   * Rückmeldung schickt ihn als expected_version mit.
+   */
+  homeworkFeedbackVersion?: string;
 }
 
 export type TimetableHomeworkFeedbackStatus = HomeworkFeedbackStatus;
@@ -257,13 +262,11 @@ export interface StartOperationResult {
 export interface HomeworkFeedbackBody {
   status: TimetableHomeworkFeedbackStatus;
   note: string | null;
+  /** The feedback as the dialog opened it (ADR 0311). */
+  expected_version: string;
 }
 
-export interface AttendancePatchBody {
-  status?: RosterRowStatus;
-  substatus?: RosterRowSubstatus | null;
-  note?: string | null;
-}
+export type { AttendancePatchBody };
 
 /** An ID of the contract that may be absent; null when it is. */
 function optionalId(value: string | undefined): string | null {
@@ -385,6 +388,9 @@ function mapRosterRow(
             note: row.homework_feedback.note ?? null,
           },
         }
+      : {}),
+    ...(row.homework_feedback_version
+      ? { homeworkFeedbackVersion: row.homework_feedback_version }
       : {}),
   };
 }

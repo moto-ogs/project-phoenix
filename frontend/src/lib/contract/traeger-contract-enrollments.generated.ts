@@ -169,17 +169,14 @@ export const EnrollmentPreviewSchema: z.ZodType<EnrollmentPreview, unknown> = ob
   rows: nullable(arr(EnrollmentRowSchema)),
 });
 
-/** Query of DELETE /traeger/contract-enrollments/{contractId} */
-export interface DeleteTraegerContractEnrollmentsContractIdQuery {
-  request_child_id?: string;
-}
-
 export const routes = {
   "DELETE /traeger/contract-enrollments/{contractId}": {
     method: "DELETE",
     pattern: "/traeger/contract-enrollments/{contractId}",
     portals: ["org"],
-    query: ["request_child_id"],
+    query: {
+      "request_child_id": { kind: "id" },
+    },
     response: noData,
   },
   "POST /traeger/contract-enrollments/": {

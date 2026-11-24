@@ -10,6 +10,7 @@
     "popupBlocked": "Ju lutemi lejoni hapjen e një dritareje të re."
   },
   "errorObject": "regjistrimi",
+  "errorObjectForm": "formulari i regjistrimit",
   "loading": "Formulari po ngarkohet…",
   "legalGermanNotice": "Këto tekste ligjore janë detyruese në gjermanisht.",
   "fixMarked": "Disa fusha kanë një shënim. Ju lutemi korrigjoni këto fusha.",

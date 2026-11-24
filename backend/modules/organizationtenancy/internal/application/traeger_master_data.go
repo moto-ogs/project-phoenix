@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Master data of a Träger (#4653, ADR 0112). The service opens no
@@ -69,6 +70,8 @@ func (m *TraegerMasterData) Profile(ctx context.Context, organizationID, account
 		return organizationtenancy.TraegerProfile{}, fmt.Errorf("organization tenancy: log Träger master data %s %s: %w",
 			domain.TraegerAuditSubjectMasterData, domain.TraegerAuditActionRead, err)
 	}
+	profile.ContactVersion = organizationtenancy.TraegerContactVersion(profile.Contact)
+	profile.WithdrawalVersion = organizationtenancy.TraegerWithdrawalVersion(profile.Withdrawal)
 	return profile, nil
 }
 
@@ -142,53 +145,64 @@ func (m *TraegerMasterData) RemoveLogo(ctx context.Context, organizationID, acco
 }
 
 // UpdateContact stores the contact person; empty fields clear it.
-func (m *TraegerMasterData) UpdateContact(ctx context.Context, organizationID, accountID int64, contact organizationtenancy.TraegerContact) (organizationtenancy.TraegerContact, error) {
+func (m *TraegerMasterData) UpdateContact(ctx context.Context, organizationID, accountID int64, contact organizationtenancy.TraegerContact,
+	expectedVersion string) (organizationtenancy.TraegerSavedContact, error) {
 	if organizationID <= 0 {
-		return organizationtenancy.TraegerContact{}, errTraegerRequired
+		return organizationtenancy.TraegerSavedContact{}, errTraegerRequired
 	}
 	contact = organizationtenancy.TraegerContact{
 		Name: strings.TrimSpace(contact.Name), Phone: strings.TrimSpace(contact.Phone), Email: strings.ToLower(strings.TrimSpace(contact.Email)),
 	}
 	if err := validateContact(contact); err != nil {
-		return organizationtenancy.TraegerContact{}, err
+		return organizationtenancy.TraegerSavedContact{}, err
 	}
 	locked, err := m.store.LockProfile(ctx, organizationID, true)
 	if err != nil {
-		return organizationtenancy.TraegerContact{}, err
+		return organizationtenancy.TraegerSavedContact{}, err
+	}
+	// The section as its author read it (ADR 0311), checked under the lock
+	// every change of the master data takes first.
+	if err := readstate.Check(expectedVersion, organizationtenancy.TraegerContactVersion(locked.Contact)); err != nil {
+		return organizationtenancy.TraegerSavedContact{}, err
 	}
 	if err := m.store.SaveContact(ctx, organizationID, accountID, contact); err != nil {
-		return organizationtenancy.TraegerContact{}, err
+		return organizationtenancy.TraegerSavedContact{}, err
 	}
 	if err := m.audit(ctx, organizationID, accountID, domain.TraegerAuditSubjectContact, 0, domain.TraegerAuditActionSet, mustJSON(locked.Contact), mustJSON(contact)); err != nil {
-		return organizationtenancy.TraegerContact{}, err
+		return organizationtenancy.TraegerSavedContact{}, err
 	}
-	return contact, nil
+	return organizationtenancy.TraegerSavedContact{TraegerContact: contact, Version: organizationtenancy.TraegerContactVersion(contact)}, nil
 }
 
 // UpdateWithdrawalContact stores the phone number and e-mail address the
 // withdrawal notice names (#6200); empty fields take the contact person's.
-func (m *TraegerMasterData) UpdateWithdrawalContact(ctx context.Context, organizationID, accountID int64, contact organizationtenancy.TraegerWithdrawalContact) (organizationtenancy.TraegerWithdrawalContact, error) {
+func (m *TraegerMasterData) UpdateWithdrawalContact(ctx context.Context, organizationID, accountID int64, contact organizationtenancy.TraegerWithdrawalContact,
+	expectedVersion string) (organizationtenancy.TraegerSavedWithdrawalContact, error) {
 	if organizationID <= 0 {
-		return organizationtenancy.TraegerWithdrawalContact{}, errTraegerRequired
+		return organizationtenancy.TraegerSavedWithdrawalContact{}, errTraegerRequired
 	}
 	contact = organizationtenancy.TraegerWithdrawalContact{
 		Phone: strings.TrimSpace(contact.Phone), Email: strings.ToLower(strings.TrimSpace(contact.Email)),
 	}
 	if err := validateContact(organizationtenancy.TraegerContact{Phone: contact.Phone, Email: contact.Email}); err != nil {
-		return organizationtenancy.TraegerWithdrawalContact{}, err
+		return organizationtenancy.TraegerSavedWithdrawalContact{}, err
 	}
 	locked, err := m.store.LockProfile(ctx, organizationID, true)
 	if err != nil {
-		return organizationtenancy.TraegerWithdrawalContact{}, err
+		return organizationtenancy.TraegerSavedWithdrawalContact{}, err
+	}
+	if err := readstate.Check(expectedVersion, organizationtenancy.TraegerWithdrawalVersion(locked.Withdrawal)); err != nil {
+		return organizationtenancy.TraegerSavedWithdrawalContact{}, err
 	}
 	if err := m.store.SaveWithdrawalContact(ctx, organizationID, accountID, contact); err != nil {
-		return organizationtenancy.TraegerWithdrawalContact{}, err
+		return organizationtenancy.TraegerSavedWithdrawalContact{}, err
 	}
 	if err := m.audit(ctx, organizationID, accountID, domain.TraegerAuditSubjectWithdrawal, 0, domain.TraegerAuditActionSet,
 		mustJSON(locked.Withdrawal), mustJSON(contact)); err != nil {
-		return organizationtenancy.TraegerWithdrawalContact{}, err
+		return organizationtenancy.TraegerSavedWithdrawalContact{}, err
 	}
-	return contact, nil
+	return organizationtenancy.TraegerSavedWithdrawalContact{TraegerWithdrawalContact: contact,
+		Version: organizationtenancy.TraegerWithdrawalVersion(contact)}, nil
 }
 
 // CreateBankAccount adds a bank account. The first one of the Träger is the
@@ -226,7 +240,8 @@ func (m *TraegerMasterData) CreateBankAccount(ctx context.Context, organizationI
 
 // UpdateBankAccount changes a bank account. The default stays the default:
 // the Träger chooses another one instead.
-func (m *TraegerMasterData) UpdateBankAccount(ctx context.Context, organizationID, accountID, bankAccountID int64, input organizationtenancy.TraegerBankAccountInput) (organizationtenancy.TraegerBankAccount, error) {
+func (m *TraegerMasterData) UpdateBankAccount(ctx context.Context, organizationID, accountID, bankAccountID int64, input organizationtenancy.TraegerBankAccountInput,
+	expectedVersion string) (organizationtenancy.TraegerBankAccount, error) {
 	if organizationID <= 0 {
 		return organizationtenancy.TraegerBankAccount{}, errTraegerRequired
 	}
@@ -241,6 +256,11 @@ func (m *TraegerMasterData) UpdateBankAccount(ctx context.Context, organizationI
 	old := findBankAccount(existing, bankAccountID)
 	if old == nil {
 		return organizationtenancy.TraegerBankAccount{}, organizationtenancy.ErrTraegerBankAccountNotFound
+	}
+	// The account as its author read it (ADR 0311): the form sends every
+	// field back. The profile lock above serializes every change.
+	if err := readstate.Check(expectedVersion, organizationtenancy.TraegerBankAccountVersion(*old)); err != nil {
+		return organizationtenancy.TraegerBankAccount{}, err
 	}
 	if labelTaken(existing, input.Label, bankAccountID) {
 		return organizationtenancy.TraegerBankAccount{}, organizationtenancy.ErrTraegerBankAccountLabelTaken

@@ -110,7 +110,9 @@ func ownShiftError(shift workforce.PlannedShift, err error, site planningSite) e
 }
 
 // ChangeShift changes a shift of the record at the same Einsatzort. The
-// school keeps its type and the reason of a change.
+// school keeps its type and the reason of a change. The change rests on the
+// shift the week showed: a shift changed since is refused under the
+// Dienstplan's lock (ADR 0311).
 func (t *TraegerStaff) ChangeShift(ctx context.Context, actor workforce.TraegerStaffActor, shiftID int64, input workforce.TraegerPlanShift) (workforce.TraegerPlanningShift, error) {
 	site, err := t.resolvePlanningSite(ctx, actor, input.RecordID, input.SchoolID)
 	if err != nil {
@@ -125,6 +127,7 @@ func (t *TraegerStaff) ChangeShift(ctx context.Context, actor workforce.TraegerS
 		planned, err = t.sites.SitePlanning().UpdateShift(ctx, workforce.UpdateStaffShift{
 			ID: shiftID, StaffShiftInput: planInput(site, actor, input),
 			PreserveExistingShiftType: true, PreserveExistingChangeReason: true,
+			Read: &workforce.ShiftReadState{Version: input.ExpectedVersion},
 		})
 		return err
 	})

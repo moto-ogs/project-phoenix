@@ -21,9 +21,11 @@ Proxy rules, file flags and the session path in detail:
 
 Go is the source of every response shape. A type the frontend writes by hand
 for a registered route (`Backend*`) is a second, unchecked copy; import the
-generated type instead. `frontend/scripts/backend-wire-types.node-test.mjs`
-(part of `pnpm run check`) fails on a `Backend*` type with `snake_case`
-fields; a copy under another name is just as wrong.
+generated type instead. `frontend/scripts/backend-wire-types.mjs` finds
+such a copy by its form, whatever its name (run by
+`frontend/scripts/backend-wire-types.node-test.mjs` in `pnpm run check`):
+two `snake_case` fields of its own (a `Backend*` name: one), a generated type
+imported under another name, or a type that only renames a generated one.
 
 ## Read route
 
@@ -52,20 +54,33 @@ Worked example, the same route from Go to the browser:
    may call it (`common.PortalTenant`, `PortalParent`, `PortalSchool`,
    `PortalTraeger`, `PortalCaterer`, `PortalOperator`, `PortalPublic`). `Query`
    lists every parameter the handler reads (`days` is `from`/`to` as
-   `QueryDate`); the proxy drops the others. Identifiers are `ident.ID`
+   `QueryDate`). The generated route keeps the kind of each key. The catalog
+   proxy drops unregistered keys and forwards every occurrence of registered
+   keys without checking values. Identifiers are `ident.ID`
    (`sharedkernel/ident`) in every role, days are `calendar.Date`, closed value
    sets go in `Enums`. A count is an `int`; an amount or a count kept as
    `int64` says so with `contract:"number"`. The generator refuses a bare
    `int64`, the json option `,string`, a number under an identifier's name
-   (`id`, `*_id`, `*_ids`), a numeric identifier in an answer and an answer
-   whose shape depends on a query parameter. Outside the contract,
-   `TestNoNumericIdentifierRatchet` (`backend/test`) refuses a numeric
-   identifier in any struct of `api/` and of every `http` and `inbound`
-   role; only the kiosk device API (`/api/iot/*`, `/api/students/{id}/rfid`)
+   (`id`, `*_id`, `*_ids`) and a numeric identifier in an answer. Use a discriminator in the answer
+   body or separate paths for different shapes. The generator accepts
+   query-selected shapes only for the legacy `GET /api/students/`.
+   Do not format database IDs into
+   Go strings. A field named like an ID that actually carries text, such as an
+   RFID tag or a SEPA creditor ID, states why with `contract_text:"reason"`.
+   The generator records the reason as `text_reason` in `contract.json`.
+   `TestNoNumericIdentifierRatchet` checks numeric types and unmarked strings
+   in the `api/`, `http` and `inbound` roles; only the kiosk device API (`/api/iot/*`, `/api/students/{id}/rfid`)
    keeps numbers and tags them `contract:"number"`, because PyrePortal
-   v1.11.5 reads them. `ident.ID` still reads a JSON number in a request:
-   that is the one-release compatibility for browser tabs of the previous
-   frontend and goes after the next release (`backend/sharedkernel/ident/id.go`).
+   v1.11.5 reads them. For JSON requests, `render.Bind` uses the strict
+   ID decoder installed by `api/common`. A handler that reads its own JSON
+   body uses `wire.Decode` or `wire.Unmarshal` (including custom request
+   readers with nested IDs). Use `wire.NewDecoder` when the same stream
+   must be checked for trailing data. Keep `encoding/json` for stored JSON, which
+   continues to write and read numeric IDs.
+   Keep IDs as strings in browser code, including when filtering or sorting;
+   see [One transport](frontend-api.md#browser-calls).
+   Give each Go field a concrete wire type; the generator rejects free JSON
+   unless the field carries `contract_json:"<why its shape is open>"`.
 3. **Mount.** A new contracts function gets one row in the matching
    `*ContractMounts()` list of `backend/api/route_contracts.go`, e.g.
    `{"/api/activities", timetableActivitiesHTTP.RouteContracts()}`. This
@@ -104,6 +119,14 @@ Worked example, the same route from Go to the browser:
    return rows.map(mapPartialAbsence);
    ```
 
+   Pass `from` and `to` as `YYYY-MM-DD` strings, never as numbers or
+   timestamps. For both `bffJson` and `bffFile`, `QueryID` takes a string,
+   `QueryInt` a number and `QueryBool` a boolean. `QueryString` takes a
+   string or one of its registered `Values`; `Repeated: true` takes an
+   array of the corresponding type. The browser helper encodes the values;
+   Go checks format and validity. The compile-time examples in
+   `frontend/src/lib/bff-fetch.test.ts` guard against the old untyped query.
+
    `mapPartialAbsence` maps to the view type. A failure throws an `ApiError`
    for the shared error path; `errorMessage` keeps a client's own text.
    Another portal is the first argument, with a pattern of that portal:
@@ -124,6 +147,13 @@ a list registers a query budget scenario; a paged list answers through
 feature ships seed data; the architecture check and `check-changed.mjs` run
 before push.
 
+File links and browser navigations use `bffFileHref` with the registered GET
+file key, typed path parameters and query. Use `bffFile` when the caller
+reads the response itself. Use `bffPath` with a registered key for other
+BFF addresses. The BFF route guard scans production source for retired
+forwarding helpers and handwritten registered addresses, including templates
+and concatenations that refer to constants or helper returns.
+
 ## Write route
 
 Same steps; the contract names the body type, and the client sends it typed
@@ -137,12 +167,19 @@ Same steps; the contract names the body type, and the client sends it typed
   request type has only optional fields and repeats no rule.
 - Every route whose handler reads a body names its type in `Request`, a
   file export too. A test that reaches a handler reading a body its contract
-  does not type fails the answer check (`api/common/answer_contract_test_helpers.go`).
+  does not type fails the answer check (`api/common/answer_contract_test_helpers.go`),
+  through the whole router or a route-sized one whose pattern fits one
+  registered route. A file answer does not pass that check, so its `Request`
+  rests on this rule and review.
   A Go type that a body and an answer both carry is generated twice: the
   answer keeps its name, the body is `<Name>Input` with optional fields.
-- A route without an answer body registers `NoData: true`.
+- A route without data registers `NoData: true` and answers either 204
+  without a body or the success envelope without data. An empty 200 is
+  not a success envelope.
 - A route whose body carries a password or a code names why it must not be
-  sent twice in `NoRetryAfterRenewal`.
+  sent twice. For catalog proxy routes, set `NoRetryAfterRenewal`. For
+  `RouteFile` routes, pass `retry: { off: "<reason>" }` to the session
+  transport; the generator rejects `NoRetryAfterRenewal` there.
 - A POST that commits nothing its caller asked for (a preview, a search)
   names why in `NoCommit`. When its answer does not match the contract, the
   proxy then offers a retry; every other write asks to reload.
@@ -151,6 +188,10 @@ Same steps; the contract names the body type, and the client sends it typed
 - Renaming or removing a registered field or route takes one release marked
   `Deprecated` / `DeprecatedFields`; `scripts/check-contract-compat.mjs` fails
   otherwise.
+- A deprecated write that refuses every request for its last release (an old
+  save without read state, ADR 0311) names why in `Refuses`. A test that sees
+  its refusal through the route's full path answers it for
+  `TestEveryRegisteredRouteIsAnsweredInATest`.
 
 ### Registers a write route touches
 
@@ -191,8 +232,7 @@ takes an exception for a new route.
 
 - **File answer:** `File: true` instead of `Response`. Example:
   `GET /school/class-day/absence-list/export` in
-  `backend/modules/classday/http/route_contracts.go`; the browser opens
-  `/api/school/class-day/absence-list/export?…`
+  `backend/modules/classday/http/route_contracts.go`; the client downloads it with `bffFile`
   (`frontend/src/lib/school-class-day-api.ts`). The handler sets
   `Content-Type` and `Content-Disposition`; the proxy streams the bytes,
   `private, no-store`.
@@ -212,23 +252,40 @@ Only for what belongs to the browser and cannot live in Go:
   (`frontend/src/lib/login-route.server.ts`, `frontend/src/lib/logout-route.server.ts`);
 - the SSE pipe (`app/api/sse/events`, `app/api/parent/sse/events`,
   `app/api/school/sse/events`) and the client log routes;
-- a BFF cache or cookie the write must change: `settings/values/[key]`
-  purges the cached tenant lookup, `demo/access/sessions` sets the demo cookie;
-- a hand-off for a registered path that Next would give to a neighbouring
-  route file (`catalogProxyUnder`); `app/api/catalog-route-selection.test.ts`
+- a device token in a header instead of a browser session, as in
+  `frontend/src/app/api/display/dashboard/route.ts`;
+- a BFF cache or cookie the write must change: staff and operator writes to
+  school settings purge the tenant lookup; `gencontract` emits
+  the keys from the Go lookup's batch. `demo/access/sessions` sets the demo cookie;
+- a hand-off for a path on the catalog proxy allowlist that Next would give
+  to a neighbouring route file (`catalogProxyUnder`); `app/api/catalog-route-selection.test.ts`
   fails when one is missing.
+
+One named exception: `app/api/enrollment/form-bootstrap/public/[tenantSlug]/[phaseId]/route.ts`
+adds the signed-in Staff profile to the public form. Both backend requests
+use their generated entries. #5018 tracks moving the projection to Go; the
+browser caller is allowlisted for exactly this address.
 
 Such a JSON route stays typed: its `common.RouteContract` names `RouteFile`,
 one sentence why the route file serves it (`common.RouteFileSession` for a
 session step), beside its portal, `Request` and `Response` (or `NoData`,
 `File`, `Multipart`). `Plain: true` says the handler writes the data without
 the envelope (`common.RenderJSON`). The generator writes its types, decoder
-and route entry, so the route file calls `contractGet` or `contractWrite`
-(`frontend/src/lib/contract/client.server.ts`), and lists it in
-`routeFileRoutes` of `portals.generated.ts`, never in a proxy allowlist:
-the catalog proxy never hands a session step's tokens to the browser.
-Example: `SessionRouteContracts` in
-`backend/modules/identityaccess/inbound/account/route_contracts.go`.
+and route entry and lists that entry in `routeFileRoutes`, never in a proxy
+allowlist. The named handler calls `contractGet(entry, options)` or
+`contractWrite(entry, body, options)`, even without a session. Both fill the
+route entry’s path with typed `params` and serialize its typed `query`. The session
+step's Go tokens never reach the browser; put its BFF answer in
+`frontend/src/lib/session-bff.ts` and call that entry with `bffJson`.
+See [school switching](../../frontend/src/app/api/auth/switch-tenant/route.ts)
+and [pre-session enrollment start](../../frontend/src/app/api/auth/mfa/enroll/start/route.ts).
+`app/api/route-backend-paths.test.ts` checks entry use and rejects raw Go
+response reads in named routes and server modules. A server caller of a
+registered JSON route also uses its generated entry with `contractGet`
+or `contractWrite`; the old generic JSON helpers are not an alternative.
+
+The browser uses `bffJsonUncontracted` only from the remaining callers
+listed by the lint rule. See [One transport](frontend-api.md#browser-calls).
 
 A reshaping, an ID or format check or a second backend call for the same
 screen moves into the Go handler; an aggregation of several reads is a Go

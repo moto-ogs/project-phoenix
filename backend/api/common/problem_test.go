@@ -96,12 +96,15 @@ func TestProblemResponsePreservesLargeLegacyNumbers(t *testing.T) {
 	common.ProblemResponseMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusConflict)
-		_, _ = w.Write([]byte(`{"status":"error","error":"conflict","details":{"id":9007199254740993}}`))
+		_, _ = w.Write([]byte(`{"status":"error","error":"conflict","details":{"id":9007199254740993,"count":9007199254740993}}`))
 	})).ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/test", nil))
 
 	var body map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &body))
-	require.JSONEq(t, `{"id":9007199254740993}`, string(body["details"]))
+	var details map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(body["details"], &details))
+	require.Equal(t, `"9007199254740993"`, string(details["id"]))
+	require.Equal(t, "9007199254740993", string(details["count"]))
 }
 
 // Every error body leaves the API in the one shared envelope (#2507, #2520),

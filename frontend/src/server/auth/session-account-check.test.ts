@@ -1,3 +1,4 @@
+import { readBackendJson, sendBackend } from "~/lib/backend-client.server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextAuthRequest, Session } from "next-auth";
 import { NextRequest } from "next/server";
@@ -12,7 +13,7 @@ const { mockFetch } = vi.hoisted(() => ({ mockFetch: vi.fn() }));
 // in after this tab had loaded its page as account 1.
 vi.mock("next-auth", () => {
   const session = {
-    user: { id: "2", token: "access-token", tenantId: 7 },
+    user: { id: "2", token: "access-token", tenantId: "7" },
     expires: "2099-01-01T00:00:00.000Z",
   } as unknown as Session;
   type RouteHandler = (
@@ -42,6 +43,16 @@ vi.mock("~/lib/tenant-resolve.server", async (importOriginal) => ({
   }),
 }));
 
+async function sending(
+  method: "GET" | "POST",
+  request: NextRequest,
+  token: string,
+) {
+  await readBackendJson(
+    await sendBackend("/api/x", token, { method, request }),
+  );
+}
+
 type Route = (
   request: NextRequest,
   context: { params: Promise<Record<string, string>> },
@@ -59,49 +70,109 @@ const portals: Portal[] = [
     name: "tenant",
     host: "schule-a.localhost:3000",
     read: async () =>
-      (await import("~/lib/route-wrapper.server")).proxyGet("/api/x"),
+      (await import("~/lib/route-wrapper.server")).tenant.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
     write: async () =>
-      (await import("~/lib/route-wrapper.server")).proxyPost("/api/x"),
+      (await import("~/lib/route-wrapper.server")).tenant.post(
+        async (request, _body, token) => {
+          await sending("POST", request, token);
+          return { id: 1 };
+        },
+      ),
   },
   {
     name: "operator",
     host: "operator.localhost:3000",
     read: async () =>
-      (await import("~/lib/operator/route-wrapper.server")).proxyGet("/api/x"),
+      (await import("~/lib/operator/route-wrapper.server")).operator.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
     write: async () =>
-      (await import("~/lib/operator/route-wrapper.server")).proxyPost("/api/x"),
+      (await import("~/lib/operator/route-wrapper.server")).operator.post(
+        async (request, _body, token) => {
+          await sending("POST", request, token);
+          return { id: 1 };
+        },
+      ),
   },
   {
     name: "parent",
     host: "eltern.localhost:3000",
     read: async () =>
-      (await import("~/lib/parent/route-wrapper.server")).proxyGet("/api/x"),
+      (await import("~/lib/parent/route-wrapper.server")).parent.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
     write: async () =>
-      (await import("~/lib/parent/route-wrapper.server")).proxyPost("/api/x"),
+      (await import("~/lib/parent/route-wrapper.server")).parent.post(
+        async (request, _body, token) => {
+          await sending("POST", request, token);
+          return { id: 1 };
+        },
+      ),
   },
   {
     name: "school",
     host: "schule.localhost:3000",
     read: async () =>
-      (await import("~/lib/school/route-wrapper.server")).proxyGet("/api/x"),
+      (await import("~/lib/school/route-wrapper.server")).school.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
     write: async () =>
-      (await import("~/lib/school/route-wrapper.server")).proxyPost("/api/x"),
+      (await import("~/lib/school/route-wrapper.server")).school.post(
+        async (request, _body, token) => {
+          await sending("POST", request, token);
+          return { id: 1 };
+        },
+      ),
   },
   {
     name: "caterer",
     host: "caterer.localhost:3000",
     read: async () =>
-      (await import("~/lib/caterer/route-wrapper.server")).proxyGet("/api/x"),
+      (await import("~/lib/caterer/route-wrapper.server")).caterer.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
     write: async () =>
-      (await import("~/lib/caterer/route-wrapper.server")).proxyPost("/api/x"),
+      (await import("~/lib/caterer/route-wrapper.server")).caterer.post(
+        async (request, _body, token) => {
+          await sending("POST", request, token);
+          return { id: 1 };
+        },
+      ),
   },
   {
     name: "traeger",
     host: "traeger.localhost:3000",
     read: async () =>
-      (await import("~/lib/traeger/route-wrapper.server")).proxyGet("/api/x"),
+      (await import("~/lib/traeger/route-wrapper.server")).traeger.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
     write: async () =>
-      (await import("~/lib/traeger/route-wrapper.server")).proxyPost("/api/x"),
+      (await import("~/lib/traeger/route-wrapper.server")).traeger.post(
+        async (request, _body, token) => {
+          await sending("POST", request, token);
+          return { id: 1 };
+        },
+      ),
   },
 ];
 
@@ -224,8 +295,11 @@ describe("routes that must work with another account in the cookie", () => {
   it.each(["/api/auth/logout", "/api/auth/token", "/api/logs"])(
     "tenant %s stays reachable",
     async (path) => {
-      const route = (await import("~/lib/route-wrapper.server")).proxyPost(
-        "/api/x",
+      const route = (await import("~/lib/route-wrapper.server")).tenant.post(
+        async (request, _body, token) => {
+          await sending("POST", request, token);
+          return { id: 1 };
+        },
       );
 
       const response = await call(route, {
@@ -268,8 +342,11 @@ describe("routes that must work with another account in the cookie", () => {
 it.each(["/api/auth/switch-tenant", "/api/auth/staff-preview/end"])(
   "%s cannot act on a different cookie account",
   async (path) => {
-    const route = (await import("~/lib/route-wrapper.server")).proxyPost(
-      "/api/x",
+    const route = (await import("~/lib/route-wrapper.server")).tenant.post(
+      async (request, _body, token) => {
+        await sending("POST", request, token);
+        return { id: 1 };
+      },
     );
     const response = await call(route, {
       host: "schule-a.localhost:3000",
@@ -315,8 +392,11 @@ it.each([
 
 describe("school and account checks of the tenant portal", () => {
   it("keeps the school mismatch for the same account on another school", async () => {
-    const route = (await import("~/lib/route-wrapper.server")).proxyGet(
-      "/api/x",
+    const route = (await import("~/lib/route-wrapper.server")).tenant.get(
+      async (request, token) => {
+        await sending("GET", request, token);
+        return { id: 1 };
+      },
     );
 
     const response = await call(route, {

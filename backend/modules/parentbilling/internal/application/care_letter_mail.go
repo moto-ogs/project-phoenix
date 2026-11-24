@@ -306,9 +306,10 @@ func effectiveRecipients(ctx context.Context, source CareLetterRecipients, store
 	}
 	for contractID, applicant := range recipients {
 		effective := parentbilling.ResolveRecipient(parentbilling.BillingRecipient{FirstName: applicant.FirstName,
-			LastName: applicant.LastName, Email: applicant.Email}, byFamily[parentbilling.ContractFamilyKey(applicant.Email, contractID)])
+			LastName: applicant.LastName, Email: applicant.Email}, byFamily[applicant.FamilyOf(contractID)])
 		recipients[contractID] = parentbilling.CareRecipient{FirstName: effective.FirstName, LastName: effective.LastName,
-			Email: effective.Email, Kind: effective.Kind, SecondName: effective.SecondName, Address: effective.Address}
+			Email: effective.Email, Kind: effective.Kind, SecondName: effective.SecondName, Address: effective.Address,
+			FamilyContractID: applicant.FamilyContractID}
 	}
 	return recipients, nil
 }

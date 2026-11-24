@@ -26,7 +26,8 @@ const logger = createLogger({ component: "BackendClient" });
 
 /**
  * How long the backend may take until its response headers arrive, per kind
- * of call. A body still streaming (a large export) is not cut off.
+ * of call. Session upkeep also needs the body within that budget. Other
+ * bodies, such as streaming exports, are not cut off.
  */
 const BACKEND_TIMEOUTS_MS = {
   /** Below Cloudflare's 100 s origin timeout, so the BFF answers 503 first. */
@@ -96,11 +97,9 @@ function assertNoDotSegments(path: string): void {
 /** The tenant, organization and scope of a call's token, for log and metric. */
 function bearerClaims(bearer: string | null | undefined) {
   const claims = bearer ? decodeJwtPayload(bearer) : null;
-  const number = (value: unknown) =>
-    typeof value === "number" ? value : undefined;
   return {
-    tenantId: number(claims?.tenant_id),
-    orgId: number(claims?.org_id),
+    tenantId: claims?.tenant_id,
+    orgId: claims?.org_id,
     scope: typeof claims?.scope === "string" ? claims.scope : undefined,
   };
 }
@@ -114,8 +113,8 @@ function contentLength(response: Response): number | null {
 
 /**
  * The one request path to the backend for every portal: base URL, bearer,
- * client identity, `cache: "no-store"`, Idempotency-Key, a header timeout,
- * and one log line and metric per call.
+ * client identity, `cache: "no-store"`, Idempotency-Key, a timeout, and one
+ * log line and metric per call.
  */
 export async function sendBackend(
   path: string,
@@ -124,11 +123,17 @@ export async function sendBackend(
 ): Promise<Response> {
   assertNoDotSegments(path);
   const method = call.method ?? "GET";
-  const timeout = new AbortController();
-  const timer = setTimeout(
-    () => timeout.abort(new Error("backend did not answer in time")),
-    BACKEND_TIMEOUTS_MS[call.timeout ?? "default"],
-  );
+  const timeoutMs = BACKEND_TIMEOUTS_MS[call.timeout ?? "default"];
+  const headerTimeout =
+    call.timeout === "session" ? undefined : new AbortController();
+  const timer =
+    headerTimeout &&
+    setTimeout(
+      () => headerTimeout.abort(new Error("backend did not answer in time")),
+      timeoutMs,
+    );
+  // Keep the session deadline attached to Fetch while its body is read.
+  const deadline = headerTimeout?.signal ?? AbortSignal.timeout(timeoutMs);
   const body = call.json === undefined ? call.body : JSON.stringify(call.json);
   const contentType =
     call.json === undefined ? call.contentType : "application/json";
@@ -152,9 +157,7 @@ export async function sendBackend(
       // A streamed upload (catalog proxy, #2352) leaves while it is read.
       ...(body instanceof ReadableStream && { duplex: "half" }),
       cache: "no-store",
-      signal: call.signal
-        ? AbortSignal.any([call.signal, timeout.signal])
-        : timeout.signal,
+      signal: call.signal ? AbortSignal.any([call.signal, deadline]) : deadline,
     });
     status = response.status;
     responseBytes = contentLength(response);
@@ -198,42 +201,17 @@ export async function sendBackend(
 /** The JSON of a successful backend answer; an error answer throws. */
 export async function readBackendJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    throw new ApiResponseError(response.status, await response.text(), {
+    // A refusal's status still applies if the body stream breaks. In
+    // particular, losing a 401 here must not turn a revoked session live.
+    const body = await response.text().catch(() => null);
+    throw new ApiResponseError(response.status, body ?? "", {
       retryAfter: response.headers?.get?.("Retry-After") ?? null,
       contentType: response.headers?.get?.("Content-Type") ?? null,
+      bodyInterrupted: body === null,
     });
   }
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
-}
-
-/**
- * The backend's JSON for a token the caller holds, envelope included; an
- * error answer throws ApiResponseError. The one JSON path of every portal:
- * the portal handlers' `api` and the tenant's `apiGet`/`apiPost`/… use it,
- * and a 401 is repeated by the route handler around it, per endpoint.
- */
-export async function backendJson<T>(
-  method: BackendMethod,
-  endpoint: string,
-  token: string,
-  body?: unknown,
-  options: Pick<BackendCall, "idempotencyKey" | "request" | "signal"> = {},
-): Promise<T> {
-  const response = await sendBackend(endpoint, token, {
-    method,
-    json: body ?? undefined,
-    ...options,
-  });
-  return readBackendJson<T>(response);
-}
-
-/** The `data` of the backend's `{ status, data, message }` envelope. */
-export function unwrapEnvelope<T>(json: unknown): T {
-  if (typeof json === "object" && json !== null && "data" in json) {
-    return (json as { data: T }).data;
-  }
-  return json as T;
 }
 
 /** One portal's session, as its Auth.js instance reads it. */

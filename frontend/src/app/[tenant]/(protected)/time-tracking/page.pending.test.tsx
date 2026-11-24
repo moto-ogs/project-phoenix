@@ -203,6 +203,7 @@ function render(ui: ReactElement) {
 const DAY = "2026-09-09";
 
 const session: WorkSessionHistory = {
+  version: "v100",
   id: "100",
   staffId: "10",
   date: DAY,

@@ -3,14 +3,17 @@
 package httpadapter_test
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	httpadapter "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
-	"github.com/stretchr/testify/assert"
 )
 
 // =============================================================================
@@ -323,46 +326,67 @@ func TestBuildBaseActivityResponse_NilRoomID(t *testing.T) {
 }
 
 // =============================================================================
-// UpdateGroupFieldsForTest Tests
+// GroupEditForTest Tests
 // =============================================================================
 
-func TestUpdateGroupFields_AllFields(t *testing.T) {
-	t.Parallel()
-
-	roomID := int64(25)
-	group := &activityContract.Group{}
-	req := &httpadapter.ActivityRequest{
-		Name:            "Updated Name",
-		MaxParticipants: new(50),
-		IsOpen:          true,
-		CategoryID:      10,
-		PlannedRoomID:   (*ident.ID)(&roomID),
-	}
-
-	httpadapter.UpdateGroupFieldsForTest(group, req)
-
-	assert.Equal(t, "Updated Name", group.Name)
-	assert.Equal(t, 50, group.MaxParticipants)
-	assert.True(t, group.IsOpen)
-	assert.Equal(t, int64(10), group.CategoryID)
-	assert.Equal(t, int64(25), *group.PlannedRoomID)
+// decodeActivityUpdate reads a PUT /api/activities/{id} body as the route
+// does.
+func decodeActivityUpdate(t *testing.T, body string) *httpadapter.ActivityUpdateRequest {
+	t.Helper()
+	req := &httpadapter.ActivityUpdateRequest{}
+	require.NoError(t, json.Unmarshal([]byte(body), req))
+	return req
 }
 
-func TestUpdateGroupFields_NilRoomID(t *testing.T) {
+func TestGroupEdit_AllFields(t *testing.T) {
 	t.Parallel()
 
-	roomID := int64(10)
-	group := &activityContract.Group{
-		PlannedRoomID: &roomID,
-	}
+	req := decodeActivityUpdate(t, `{"name":"Updated Name","max_participants":50,"is_open":true,"category_id":"10","planned_room_id":"25","schedules":[{"weekday":2}],"supervisor_ids":["7","8"],"expected_version":"v1"}`)
+	edit := httpadapter.GroupEditForTest(req, 3)
 
-	req := &httpadapter.ActivityRequest{
-		Name:          "Test",
-		PlannedRoomID: nil,
-	}
+	assert.Equal(t, int64(3), edit.ID)
+	assert.Equal(t, "Updated Name", edit.Name)
+	assert.Equal(t, 50, edit.MaxParticipants)
+	require.NotNil(t, edit.IsOpen)
+	assert.True(t, *edit.IsOpen)
+	assert.Equal(t, int64(10), edit.CategoryID)
+	assert.True(t, edit.SetPlannedRoom)
+	require.NotNil(t, edit.PlannedRoomID)
+	assert.Equal(t, int64(25), *edit.PlannedRoomID)
+	assert.True(t, edit.ReplaceSupervisors)
+	assert.Equal(t, []int64{7, 8}, edit.SupervisorIDs)
+	assert.True(t, edit.ReplaceSchedules)
+	require.Len(t, edit.Schedules, 1)
+	assert.Equal(t, 2, edit.Schedules[0].Weekday)
+	assert.Equal(t, "v1", edit.ExpectedVersion)
+}
 
-	httpadapter.UpdateGroupFieldsForTest(group, req)
-	assert.Nil(t, group.PlannedRoomID)
+// A body that names only the master data, as the database form sends it,
+// keeps the opening, the room, the schedules and the supervisors.
+func TestGroupEdit_OmittedPartsKeepStoredState(t *testing.T) {
+	t.Parallel()
+
+	req := decodeActivityUpdate(t, `{"name":"Test","max_participants":null,"category_id":"10","expected_version":"v1"}`)
+	edit := httpadapter.GroupEditForTest(req, 3)
+
+	assert.Nil(t, edit.IsOpen)
+	assert.False(t, edit.SetPlannedRoom)
+	assert.False(t, edit.ReplaceSupervisors)
+	assert.False(t, edit.ReplaceSchedules)
+}
+
+func TestGroupEdit_NullRoomClearsRoom(t *testing.T) {
+	t.Parallel()
+
+	req := decodeActivityUpdate(t, `{"name":"Test","category_id":"10","planned_room_id":null,"schedules":[],"supervisor_ids":[]}`)
+	edit := httpadapter.GroupEditForTest(req, 3)
+
+	assert.True(t, edit.SetPlannedRoom)
+	assert.Nil(t, edit.PlannedRoomID)
+	assert.True(t, edit.ReplaceSchedules)
+	assert.Empty(t, edit.Schedules)
+	assert.True(t, edit.ReplaceSupervisors)
+	assert.Empty(t, edit.SupervisorIDs)
 }
 
 // =============================================================================

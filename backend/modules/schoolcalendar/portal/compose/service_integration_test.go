@@ -21,6 +21,7 @@ import (
 	calendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/assert"
@@ -334,14 +335,14 @@ func TestCalendarServiceIntegration_UpdateCancelDeleteLifecycle(t *testing.T) {
 	assert.True(t, errors.Is(err, calendarSvc.ErrForbidden))
 
 	// The organizer edits event details; recipients (RSVP audience) are preserved.
-	updated, err := testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), calendarSvc.UpdateAppointmentRequest{
+	updated, err := testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), editOnRead(t, db, service, organizerAccount.ID, detail.Appointment.ID.Int64(), calendarSvc.UpdateAppointmentRequest{
 		Title:     "Updated title",
 		Location:  testpkg.StrPtr("Room 2"),
 		StartDate: portalDate(2026, 3, 3),
 		EndDate:   portalDate(2026, 3, 3),
 		StartTime: wallClock(11, 0),
 		EndTime:   wallClock(12, 0),
-	})
+	}))
 	require.NoError(t, err)
 	assert.Equal(t, "Updated title", updated.Appointment.Title)
 	require.Len(t, updated.Recipients, 1)
@@ -1546,7 +1547,7 @@ func TestCalendarServiceIntegration_AttendeeOverviewVisibility(t *testing.T) {
 	ownGuardianRecipientID := findRecipientByGuardian(t, detail, parentChain.GuardianProfileID)
 	listed := make([]string, 0, len(parentOverview.Attendees))
 	for _, attendee := range parentOverview.Attendees {
-		listed = append(listed, attendee.RecipientID)
+		listed = append(listed, attendee.RecipientID.String())
 	}
 	assert.ElementsMatch(t, []string{strconv.FormatInt(ownGuardianRecipientID, 10), strconv.FormatInt(staffRecipientID, 10)}, listed)
 	assert.NotContains(t, listed, strconv.FormatInt(otherGuardianRecipientID, 10))
@@ -1784,7 +1785,7 @@ func TestCalendarServiceIntegration_RecipientOptionsAndGroupedTargets(t *testing
 func parentOptionIDs(options []calendarSvc.ParentOption) []string {
 	ids := make([]string, 0, len(options))
 	for _, option := range options {
-		ids = append(ids, option.ID)
+		ids = append(ids, option.ID.String())
 	}
 	return ids
 }
@@ -1999,9 +2000,9 @@ func setupRecurrenceUpdateRollbackFixture(t *testing.T, db *bun.DB) recurrenceUp
 	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, account.ID), testpkg.SetupTestDB(t), service.CancelStaffAppointmentOccurrence, detail.Appointment.ID.Int64(), cancelledDate))
 	newEndsOn := portalDate(2030, 6, 30)
 	return recurrenceUpdateRollbackFixture{config: config, service: service, accountID: account.ID, appointmentID: detail.Appointment.ID.Int64(), cancelledDate: cancelledDate,
-		update: calendarSvc.UpdateAppointmentRequest{Title: "Replacement series", StartDate: portalDate(2030, 4, 2), EndDate: portalDate(2030, 4, 2),
+		update: editOnRead(t, testpkg.SetupTestDB(t), service, account.ID, detail.Appointment.ID.Int64(), calendarSvc.UpdateAppointmentRequest{Title: "Replacement series", StartDate: portalDate(2030, 4, 2), EndDate: portalDate(2030, 4, 2),
 			StartTime: wallClock(10, 0), EndTime: wallClock(11, 0),
-			Recurrence: &calendarSvc.RecurrenceRequest{Frequency: appointments.RecurrenceFrequencyMonthly, IntervalCount: 1, MonthDays: []int{2}, EndsOn: &newEndsOn}}}
+			Recurrence: &calendarSvc.RecurrenceRequest{Frequency: appointments.RecurrenceFrequencyMonthly, IntervalCount: 1, MonthDays: []int{2}, EndsOn: &newEndsOn}})}
 }
 
 func assertRecurrenceUpdateRolledBack(t *testing.T, fixture recurrenceUpdateRollbackFixture) {
@@ -2423,14 +2424,14 @@ func TestCalendarServiceIntegration_SeriesEditClearsOccurrenceOverrides(t *testi
 
 	// Edit the series (same cadence). The stale cancellation must be cleared, so
 	// 2026-01-12 reappears in the edited series.
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), calendarSvc.UpdateAppointmentRequest{
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), editOnRead(t, db, service, organizerAccount.ID, detail.Appointment.ID.Int64(), calendarSvc.UpdateAppointmentRequest{
 		Title:      "Weekly standup (edited)",
 		StartDate:  portalDate(2026, 1, 5),
 		EndDate:    portalDate(2026, 1, 5),
 		StartTime:  wallClock(9, 0),
 		EndTime:    wallClock(9, 30),
 		Recurrence: weekly(),
-	})
+	}))
 	require.NoError(t, err)
 
 	events, err = testpkg.TenantQuery2(t, calendarContext(t, invitedAccount.ID), db, service.ListMyStaffEvents, portalDate(2026, 1, 5), portalDate(2026, 1, 19))
@@ -2523,7 +2524,7 @@ func TestCalendarServiceIntegration_UpdateCancelsPendingNotifications(t *testing
 
 	// Edit WITHOUT re-sending: the stale pending mail is cancelled and no new mail
 	// is queued.
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), base)
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), editOnRead(t, db, service, organizerAccount.ID, detail.Appointment.ID.Int64(), base))
 	require.NoError(t, err)
 	assert.Equal(t, 1, outbox.cancelled, "update must cancel pending mail even when not re-sending")
 	require.Len(t, outbox.enqueued, 1, "no new mail queued when send_email is off")
@@ -2538,7 +2539,7 @@ func TestCalendarServiceIntegration_UpdateCancelsPendingNotifications(t *testing
 	// Edit WITH re-sending: cancels again, then queues a single update notice.
 	resend := base
 	resend.SendEmail = true
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), resend)
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), editOnRead(t, db, service, organizerAccount.ID, detail.Appointment.ID.Int64(), resend))
 	require.NoError(t, err)
 	assert.Equal(t, 2, outbox.cancelled)
 	require.Len(t, outbox.enqueued, 2)
@@ -2579,13 +2580,13 @@ func TestCalendarServiceIntegration_UpdateRetainsGuardianNotificationsWhenSendEm
 	require.NoError(t, err)
 	require.Len(t, outbox.enqueued, 1)
 
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), calendarSvc.UpdateAppointmentRequest{
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), editOnRead(t, db, service, organizerAccount.ID, detail.Appointment.ID.Int64(), calendarSvc.UpdateAppointmentRequest{
 		Title:     "Elternabend (verschoben)",
 		StartDate: portalDate(2026, 4, 3),
 		EndDate:   portalDate(2026, 4, 3),
 		StartTime: wallClock(18, 0),
 		EndTime:   wallClock(19, 0),
-	})
+	}))
 	require.NoError(t, err)
 	assert.Equal(t, 1, outbox.cancelled, "update must cancel the stale pending mail")
 	require.Len(t, outbox.enqueued, 2, "omitting send_email must retain guardian notifications")
@@ -2716,13 +2717,13 @@ func TestCalendarServiceIntegration_EditCancelledAppointmentRejected(t *testing.
 	_, err = testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointment, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), calendarSvc.UpdateAppointmentRequest{
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), editOnRead(t, db, service, organizerAccount.ID, detail.Appointment.ID.Int64(), calendarSvc.UpdateAppointmentRequest{
 		Title:     "Termin (editiert)",
 		StartDate: portalDate(2026, 8, 4),
 		EndDate:   portalDate(2026, 8, 4),
 		StartTime: wallClock(9, 0),
 		EndTime:   wallClock(10, 0),
-	})
+	}))
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, calendarSvc.ErrInvalidRequest))
 }
@@ -2860,14 +2861,14 @@ func TestCalendarServiceIntegration_ICSRevisionSequence(t *testing.T) {
 	assert.NotContains(t, content, "SEQUENCE:")
 
 	// Editing bumps the revision → SEQUENCE:1.
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), calendarSvc.UpdateAppointmentRequest{
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), editOnRead(t, db, service, organizerAccount.ID, detail.Appointment.ID.Int64(), calendarSvc.UpdateAppointmentRequest{
 		Title:      "Reihe (v2)",
 		StartDate:  portalDate(2026, 10, 5),
 		EndDate:    portalDate(2026, 10, 5),
 		StartTime:  wallClock(9, 0),
 		EndTime:    wallClock(10, 0),
 		Recurrence: weekly(),
-	})
+	}))
 	require.NoError(t, err)
 	_, content, err = testpkg.TenantQueryPair1(t, calendarContext(t, organizerAccount.ID), db, service.StaffAppointmentICS, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
@@ -3178,4 +3179,53 @@ func calendarTestRepositories(t *testing.T, db *bun.DB) (api.CalendarTestReposit
 	require.NoError(t, err)
 	return repositories, members, api.NewCalendarSchoolRows(database), api.NewCalendarTimetableRows(database, members),
 		api.NewCalendarAppointmentRows(database), api.NewCalendarParentRows(database, members), api.MustNewTimetableRoomRows(database)
+}
+
+// editOnRead returns req on the version of the appointment as its organizer
+// reads it (ADR 0311).
+func editOnRead(t *testing.T, db *bun.DB, service interface {
+	GetStaffAppointmentDetail(context.Context, int64) (*calendarSvc.AppointmentDetail, error)
+}, accountID, appointmentID int64, req calendarSvc.UpdateAppointmentRequest) calendarSvc.UpdateAppointmentRequest {
+	t.Helper()
+	detail, err := testpkg.TenantQuery1(t, calendarContext(t, accountID), db, service.GetStaffAppointmentDetail, appointmentID)
+	require.NoError(t, err)
+	require.NotEmpty(t, detail.Version)
+	req.ExpectedVersion = detail.Version
+	return req
+}
+
+// An edit of an appointment rests on the appointment as its organizer read
+// it (ADR 0311): after a later write of the appointment (here the
+// cancellation of one date) an edit from the older read, or without a
+// read, is refused and changes nothing; the current version saves.
+func TestCalendarServiceIntegration_EditOfAnOlderReadIsRefused(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	service := setupCalendarService(t, db)
+	_, organizerAccount := testpkg.CreateTestCalendarStaff(t, db, "Stand", "Organisatorin")
+	ctx := calendarContext(t, organizerAccount.ID)
+	detail, err := testpkg.TenantQuery1(t, ctx, db, service.CreateStaffAppointment, calendarSvc.CreateAppointmentRequest{
+		Title: "Teamrunde", StartDate: portalDate(2030, 3, 4), EndDate: portalDate(2030, 3, 4),
+		StartTime: wallClock(8, 0), EndTime: wallClock(9, 0), DeliveryMode: appointments.DeliveryModeInformational,
+		Recurrence: &calendarSvc.RecurrenceRequest{Frequency: appointments.RecurrenceFrequencyWeekly, IntervalCount: 1, Weekdays: []string{"monday"}},
+		Targets:    []calendarSvc.AppointmentTarget{{Type: appointments.TargetTypeAllTeachers}},
+	})
+	require.NoError(t, err)
+	id := detail.Appointment.ID.Int64()
+	edit := calendarSvc.UpdateAppointmentRequest{Title: "Teamrunde (neu)", StartDate: portalDate(2030, 3, 4), EndDate: portalDate(2030, 3, 4), StartTime: wallClock(8, 0), EndTime: wallClock(9, 0)}
+	read := editOnRead(t, db, service, organizerAccount.ID, id, edit)
+	require.NoError(t, testpkg.TenantCommand2(t, ctx, db, service.CancelStaffAppointmentOccurrence, id, portalDate(2030, 3, 11)))
+
+	for name, req := range map[string]calendarSvc.UpdateAppointmentRequest{"older read": read, "no read": edit} {
+		_, err = testpkg.TenantQuery2(t, ctx, db, service.UpdateStaffAppointment, id, req)
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+	}
+	stored, err := testpkg.TenantQuery1(t, ctx, db, service.GetStaffAppointmentDetail, id)
+	require.NoError(t, err)
+	assert.Equal(t, "Teamrunde", stored.Appointment.Title, "a refused edit writes nothing")
+
+	updated, err := testpkg.TenantQuery2(t, ctx, db, service.UpdateStaffAppointment, id, editOnRead(t, db, service, organizerAccount.ID, id, edit))
+	require.NoError(t, err)
+	assert.Equal(t, "Teamrunde (neu)", updated.Appointment.Title)
+	assert.NotEqual(t, stored.Version, updated.Version, "the answer carries the new version")
 }

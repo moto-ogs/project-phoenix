@@ -317,13 +317,6 @@
     },
     {
       "build": "testhooks",
-      "evidence": "func (adapter fromCalendarPeriodRecords) Update(arg0 context.Context, arg1 *CalendarPeriod) error {\n\tresult0 := adapter.value.Update(arg0, toNative7(arg1))\n\treturn result0\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/timetable/fixturetest/fromCalendarPeriodRecords.Update",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "testhooks",
       "evidence": "func (adapter fromCalendarPeriodRecords) UsageCounts(arg0 context.Context) (map[int64]CalendarPeriodUsage, error) {\n\tresult0, result1 := adapter.value.UsageCounts(arg0)\n\treturn fromNative9(result0), result1\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/fixturetest/fromCalendarPeriodRecords.UsageCounts",
@@ -1269,13 +1262,6 @@
     },
     {
       "build": "testhooks",
-      "evidence": "func (adapter intoCalendarPeriodRecords) Update(arg0 context.Context, arg1 *records.CalendarPeriod) error {\n\tfixtureArg1 := fromNative7(arg1)\n\tdefer func() {\n\t\tif arg1 != nil {\n\t\t\t*arg1 = fixtureArg1.CalendarPeriod\n\t\t}\n\t}()\n\tresult0 := adapter.value.Update(arg0, fixtureArg1)\n\treturn result0\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/timetable/fixturetest/intoCalendarPeriodRecords.Update",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "testhooks",
       "evidence": "func (adapter intoCalendarPeriodRecords) UsageCounts(arg0 context.Context) (map[int64]records.CalendarPeriodUsage, error) {\n\tresult0, result1 := adapter.value.UsageCounts(arg0)\n\treturn toNative9(result0), result1\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/fixturetest/intoCalendarPeriodRecords.UsageCounts",
@@ -1479,14 +1465,14 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *ActivityService) SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64) error {\n\tif s.timetable == nil {\n\t\treturn \u0026activityContract.ActivityError{Op: \"set category shift type links\", Err: errors.New(\"category capability is required\")}\n\t}\n\tif err := s.timetable.SetCategoryShiftTypeLinks(ctx, shiftTypeID, categoryIDs); err != nil {\n\t\treturn categoryActivityError(\"set category shift type links\", err)\n\t}\n\treturn nil\n}",
+      "evidence": "func (s *ActivityService) SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64, expected map[int64]string) error {\n\tif s.timetable == nil {\n\t\treturn \u0026activityContract.ActivityError{Op: \"set category shift type links\", Err: errors.New(\"category capability is required\")}\n\t}\n\tif err := s.timetable.SetCategoryShiftTypeLinks(ctx, shiftTypeID, categoryIDs, expected); err != nil {\n\t\treturn categoryActivityError(\"set category shift type links\", err)\n\t}\n\treturn nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/application/ActivityService.SetCategoryShiftTypeLinks",
       "owner": "modules/timetable"
     },
     {
       "build": "production",
-      "evidence": "func (s *ActivityService) UpdateCategory(ctx context.Context, id int64, input activityContract.CategoryInput) (*activityContract.Category, error) {\n\tupdated, err := s.timetable.UpdateCategory(ctx, timetable.UpdateCategory{ID: id, Name: input.Name, Description: input.Description, Color: input.Color})\n\tif err != nil {\n\t\treturn nil, categoryActivityError(opUpdateCategory, err)\n\t}\n\treturn LegacyServiceCategory(updated), nil\n}",
+      "evidence": "func (s *ActivityService) UpdateCategory(ctx context.Context, id int64, input activityContract.CategoryInput) (*activityContract.Category, error) {\n\tupdated, err := s.timetable.UpdateCategory(ctx, timetable.UpdateCategory{ID: id, Name: input.Name, Description: input.Description, Color: input.Color, ExpectedVersion: input.ExpectedVersion})\n\tif err != nil {\n\t\treturn nil, categoryActivityError(opUpdateCategory, err)\n\t}\n\treturn LegacyServiceCategory(updated), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/application/ActivityService.UpdateCategory",
       "owner": "modules/timetable"
@@ -2165,13 +2151,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64) error {\n\tif shiftTypeID \u003c= 0 || hasInvalidID(categoryIDs) {\n\t\treturn s.reject(\"set_category_shift_type_links\", timetable.ErrInvalidCategory)\n\t}\n\treturn s.runWrite(ctx, \"set_category_shift_type_links\", true, func(txCtx context.Context, stats *domain.OperationStats) error {\n\t\tqueryStats, err := s.store.SetCategoryShiftTypeLinks(txCtx, shiftTypeID, categoryIDs)\n\t\tstats.Add(queryStats)\n\t\treturn err\n\t})\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/timetable/internal/application/Service.SetCategoryShiftTypeLinks",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *Service) SetPlanningTrackArchivedAt(ctx context.Context, id int64, value *time.Time) (result timetable.PlanningTrack, updated bool, err error) {\n\tif id \u003c= 0 {\n\t\treturn timetable.PlanningTrack{}, false, s.reject(\"archive_planning_track\", timetable.ErrInvalidPlanningTrack)\n\t}\n\terr = s.runWrite(ctx, \"archive_planning_track\", true, func(txCtx context.Context, stats *domain.OperationStats) error {\n\t\ttrack, found, queryStats, updateErr := s.store.SetPlanningTrackArchivedAt(txCtx, id, value)\n\t\tstats.Add(queryStats)\n\t\tresult, updated = track, found\n\t\treturn updateErr\n\t})\n\treturn result, updated, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/application/Service.SetPlanningTrackArchivedAt",
@@ -2448,13 +2427,6 @@
       "evidence": "func (r closingDayCalendarRepository) FindByTenantID(ctx context.Context) ([]*scheduleModels.ClosingDay, error) {\n\tvalues, err := r.calendar.ListClosingDays(ctx, schoolcalendar.ClosingDayFilter{})\n\tif err != nil {\n\t\treturn nil, calendarError(\"find by tenant id\", err)\n\t}\n\treturn toLegacyClosingDays(values), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/application/closingDayCalendarRepository.FindByTenantID",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "testhooks",
-      "evidence": "func (r closingDayCalendarRepository) Update(ctx context.Context, day *scheduleModels.ClosingDay) error {\n\tif day == nil {\n\t\treturn errors.New(\"ClosingDay cannot be nil or zero value\")\n\t}\n\tif err := day.Validate(); err != nil {\n\t\treturn err\n\t}\n\tupdated, err := r.calendar.UpdateClosingDay(ctx, schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: closingDayFieldsFromLegacy(day)})\n\tif err != nil {\n\t\treturn calendarError(\"update\", err)\n\t}\n\tapplyClosingDayToLegacy(day, updated)\n\treturn nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/timetable/internal/application/closingDayCalendarRepository.Update",
       "owner": "modules/timetable"
     },
     {

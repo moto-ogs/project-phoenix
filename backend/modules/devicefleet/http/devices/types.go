@@ -13,7 +13,7 @@ import (
 // DeviceResponse represents a device API response
 type DeviceResponse struct {
 	ID             ident.ID  `json:"id"`
-	DeviceID       string    `json:"device_id"`
+	DeviceID       string    `json:"device_id" contract_text:"device provisioning key, not the numeric device row ID"`
 	DeviceType     string    `json:"device_type"`
 	Name           *string   `json:"name,omitempty"`
 	Status         string    `json:"status"`
@@ -23,6 +23,9 @@ type DeviceResponse struct {
 	IsOnline       bool      `json:"is_online"`
 	CreatedAt      WireTime  `json:"created_at"`
 	UpdatedAt      WireTime  `json:"updated_at"`
+	// Version is the read-state token of the device's edit (ADR 0311): an
+	// update sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // DeviceCreationResponse represents a device creation response with API key
@@ -33,11 +36,18 @@ type DeviceCreationResponse struct {
 
 // DeviceRequest represents a device creation/update request
 type DeviceRequest struct {
-	DeviceID       string    `json:"device_id"`
+	DeviceID       string    `json:"device_id" contract_text:"device provisioning key, not the numeric device row ID"`
 	DeviceType     string    `json:"device_type"`
 	Name           *string   `json:"name,omitempty"`
 	Status         string    `json:"status,omitempty"`
 	RegisteredByID *ident.ID `json:"registered_by_id,omitempty"`
+}
+
+// DeviceUpdateRequest is the body of PUT /api/iot/{id}: the device as its
+// editor read it, with the version of that read (ADR 0311).
+type DeviceUpdateRequest struct {
+	DeviceRequest
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind validates the device request
@@ -91,6 +101,7 @@ func newDeviceResponse(ctx context.Context, svc devicefleet.DeviceOnlineMonitori
 		IsOnline:       svc.IsDeviceOnline(ctx, device),
 		CreatedAt:      WireTime(device.CreatedAt),
 		UpdatedAt:      WireTime(device.UpdatedAt),
+		Version:        devicefleet.DeviceVersion(device),
 	}
 
 	if device.LastSeen != nil {

@@ -64,8 +64,7 @@ func (seedTraegerHolidayHomeSchoolStep) Run(_ context.Context, rt *Runtime) erro
 	if err != nil || !ok {
 		return err
 	}
-	confirm := fmt.Sprintf("/traeger/holiday-contributions/%d/registrations/%d/confirm", periodID, registration)
-	if _, err := rt.Client.PostWithAuth(auth, confirm, map[string]any{"benefits_exemption": false, "debtor_number": "47030"}); err != nil {
+	if err := postReadHolidayConfirmation(rt, auth, periodID, registration, map[string]any{"benefits_exemption": false, "debtor_number": "47030"}); err != nil {
 		return fmt.Errorf("confirm the registration at another school: %w", err)
 	}
 	return seedHomeSchoolStudent(rt)
@@ -83,7 +82,7 @@ func seedHomeSchoolPeriod(client *Client, auth AuthRef, today calendar.Date, hos
 			"registration_opens_on": today.String(), "registration_closes_on": start.AddDays(-7).String(),
 			"binding": true,
 			"weeks": []map[string]any{{
-				"starts_on": start.String(), "ends_on": start.AddDays(4).String(), "host_school_id": host,
+				"starts_on": start.String(), "ends_on": start.AddDays(4).String(), "host_school_id": ident.ID(host),
 				"time_models": []map[string]any{{"name": "bis 15 Uhr", "starts_at": "08:00", "ends_at": "15:00", "price_cents": 5500}},
 			}},
 		})
@@ -131,8 +130,8 @@ func seedHomeSchoolRegistration(rt *Runtime, token string, weekID, modelID int64
 	raw, err := rt.Client.PostPublicWithHeaders("/traeger/holiday-registrations/"+token, map[string]any{
 		"guardian": map[string]any{"first_name": child.parent, "last_name": child.last, "email": child.email, "phone": "0151 0000301"},
 		"children": []map[string]any{{
-			"first_name": child.first, "last_name": child.last, "birth_date": child.birth, "home_school_id": rt.Bootstrap.SchoolID,
-			"bookings": []map[string]any{{"week_id": weekID, "time_model_id": modelID}},
+			"first_name": child.first, "last_name": child.last, "birth_date": child.birth, "home_school_id": ident.ID(rt.Bootstrap.SchoolID),
+			"bookings": []map[string]any{{"week_id": ident.ID(weekID), "time_model_id": ident.ID(modelID)}},
 		}},
 		"emergency_contacts": []map[string]any{{"name": "Opa " + child.last, "phone": "05402 000030", "relationship": "Großvater"}},
 		"privacy_consent":    true, "binding_confirmed": true, "custody_confirmed": true,
@@ -164,7 +163,7 @@ func seedHomeSchoolStudent(rt *Runtime) error {
 	}
 	if _, err := rt.Client.PostWithAuth(rt.TenantAuth, "/api/students", map[string]any{
 		"first_name": child.first, "last_name": child.last, "school_class": "Klasse 3a",
-		"group_id": groupID, "birthday": child.birth, "pickup_status": "pickup",
+		"group_id": ident.ID(groupID), "birthday": child.birth, "pickup_status": "pickup",
 	}); err != nil {
 		return fmt.Errorf("create the demo school's child at another school: %w", err)
 	}

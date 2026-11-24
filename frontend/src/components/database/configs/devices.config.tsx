@@ -10,7 +10,7 @@ import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { defineEntityConfig } from "@/lib/database/types";
 import type { Device } from "@/lib/iot-helpers";
-import type { DeviceResponse } from "~/lib/contract/iot.generated";
+import { bffJson } from "~/lib/bff-fetch";
 import {
   mapDeviceResponse,
   prepareDeviceForBackend,
@@ -24,7 +24,18 @@ import {
   DEVICE_TYPE_OPTIONS,
 } from "@/lib/iot-helpers";
 import { devicesConcept } from "~/lib/concepts/devices";
+import type * as iotContract from "~/lib/contract/iot.generated";
 import { useClipboardCopy } from "~/lib/use-clipboard-copy";
+
+/**
+ * The body of a device edit: the fields of the form and the `version` of the
+ * stored device the form was filled from (ADR 0311).
+ */
+function toDeviceUpdateRequest(
+  data: Partial<Device>,
+): iotContract.DeviceUpdateRequest {
+  return { ...prepareDeviceForBackend(data), expected_version: data.version };
+}
 
 /**
  * Der API-Schlüssel eines Geräts: verborgen, mit zwei Schaltflächen aus dem
@@ -107,14 +118,30 @@ export const devicesConfig = defineEntityConfig<Device>({
 
   backUrl: "/database",
 
+  // The catalog proxy hands on the contract's device; the client maps it
+  // once (#7563).
   api: {
-    routes: {
-      list: "GET /api/iot/",
-      get: "GET /api/iot/{id}",
-      create: "POST /api/iot/",
-      update: "PUT /api/iot/{id}",
-      delete: "DELETE /api/iot/{id}",
-    },
+    list: async () =>
+      (await bffJson("tenant", "GET /api/iot/")).map(mapDeviceResponse),
+    get: async (id) =>
+      mapDeviceResponse(
+        await bffJson("tenant", "GET /api/iot/{id}", { params: { id } }),
+      ),
+    create: async (data) =>
+      mapDeviceResponse(
+        await bffJson("tenant", "POST /api/iot/", {
+          body: prepareDeviceForBackend(data),
+        }),
+      ),
+    update: async (id, data) =>
+      mapDeviceResponse(
+        await bffJson("tenant", "PUT /api/iot/{id}", {
+          params: { id },
+          body: toDeviceUpdateRequest(data),
+        }),
+      ),
+    delete: (id) =>
+      bffJson("tenant", "DELETE /api/iot/{id}", { params: { id } }),
   },
 
   form: {
@@ -300,14 +327,6 @@ export const devicesConfig = defineEntityConfig<Device>({
         text: (device) => getDeviceTypeEmoji(device.device_type),
       },
     },
-  },
-
-  service: {
-    // The catalog proxy hands on the contract's DeviceResponse; the client
-    // maps it once (#7563).
-    mapResponse: (data: unknown) => mapDeviceResponse(data as DeviceResponse),
-    mapRequest: (data: Partial<Device>) =>
-      prepareDeviceForBackend(data) as Record<string, unknown>,
   },
 
   onCreateSuccess: (_device: Device) => {

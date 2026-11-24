@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
+import { CheckboxCard } from "~/components/ui/checkbox-card";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
@@ -14,9 +15,14 @@ import {
   type BulkInviteProblem,
   type BulkInviteResult,
 } from "~/lib/guardian-bulk-invite-api";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  readStateWaitReason,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR } from "~/lib/swr";
+import { cn } from "~/lib/utils";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
+import { useActionOn } from "~/lib/swr/read-draft";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 
 const logger = createLogger({ component: "SelectionBulkInviteModal" });
@@ -54,6 +60,41 @@ function invitedNotice(count: number): string {
     : `${count} Eltern sind eingeladen.`;
 }
 
+function invitations(result: BulkInviteResult): number {
+  return result.invited + result.resent + result.linkedExistingAccount;
+}
+
+/** Was der Lauf verschickt: Einladungen und die Nachricht an Eltern mit Konto. */
+function mails(result: BulkInviteResult): number {
+  return invitations(result) + result.notified;
+}
+
+function sentNotice(result: BulkInviteResult): string {
+  if (result.notified === 0) return invitedNotice(invitations(result));
+  const notified =
+    result.notified === 1
+      ? "1 Elternteil bekommt die Nachricht."
+      : `${result.notified} Eltern bekommen die Nachricht.`;
+  return invitations(result) === 0
+    ? notified
+    : `${invitedNotice(invitations(result))} ${notified}`;
+}
+
+function sendLabel(preview: BulkInviteResult | null): string {
+  if (!preview || mails(preview) === 0) return "Einladen";
+  if (invitations(preview) === 0) {
+    return `${parents(preview.notified)} benachrichtigen`;
+  }
+  return preview.notified > 0
+    ? `${parents(mails(preview))} anschreiben`
+    : `${parents(mails(preview))} einladen`;
+}
+
+/** Eltern mit Konto in der Auswahl: nur dann gibt es die Wahl. */
+function hasAccountHolders(preview: BulkInviteResult): boolean {
+  return preview.skippedActive + preview.notified > 0;
+}
+
 interface SelectionBulkInviteModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -63,6 +104,10 @@ interface SelectionBulkInviteModalProps {
 /**
  * Sammeleinladung ins Elternportal für die ausgewählten Kinder (#3378). Der
  * Dialog zählt zuerst nur (dry run) und verschickt erst nach dem Klick.
+ * Auf Wunsch bekommen Eltern, die das Elternportal schon nutzen, eine
+ * Nachricht, dass die Betreuung ihrer Kinder dort sichtbar ist (#7760): an die
+ * Adresse ihres Kontos, nur für Kinder mit heute gebuchter Betreuung, je Kind
+ * einmal.
  * Gezählt werden Eltern, nicht Kinder: ein Elternteil mit drei Kindern
  * bekommt eine E-Mail.
  */
@@ -74,6 +119,8 @@ export function SelectionBulkInviteModal({
   const { success } = useToast();
   const [sent, setSent] = useState<BulkInviteResult | null>(null);
   const [resendOpen, setResendOpen] = useState(false);
+  // Off by default: only on request do parents with an account get mail (#7760).
+  const [notifyActive, setNotifyActive] = useState(false);
   const save = useFormModalPending(isOpen);
   const sending = save.pending;
   const errors = useApiFormError();
@@ -81,58 +128,111 @@ export function SelectionBulkInviteModal({
   const latestSendRef = useRef<() => Promise<void>>(async () => undefined);
 
   // The dry run only counts; nothing is sent until the click below. The
-  // button names the counts of this opening's own dry run, never a cached one.
-  const previewRead = useFreshSWR(
-    isOpen ? tenantStudentKeys.bulkInvitePreview(studentIds, resendOpen) : null,
-    () => bulkInviteGuardians(studentIds, { dryRun: true, resendOpen }),
+  // send carries the fingerprint of the counts on screen: when the guardians
+  // or the notices changed since, the backend refuses
+  // (general.changed_since_read) and the dialog shows the new counts.
+  const previewKey = isOpen
+    ? tenantStudentKeys.bulkInvitePreview(studentIds, resendOpen, notifyActive)
+    : null;
+  const previewRead = useSWRAuth(
+    previewKey,
+    () =>
+      bulkInviteGuardians(studentIds, {
+        dryRun: true,
+        resendOpen,
+        notifyActive,
+      }),
+    // Every change of a choice counts again, also back to one counted a
+    // moment ago (#7760): the send confirms these counts.
+    { keepPreviousData: false, dedupingInterval: 0 },
   );
   const { mutate: mutatePreview } = previewRead;
   // A failed dry run shows its error, not the counts of an earlier one.
   const previewData = previewRead.error ? undefined : previewRead.data;
   const preview = previewData ?? null;
+
+  const toMail = preview ? mails(preview) : 0;
+
+  // The send confirms the counts on screen (ADR 0311): after a refusal it
+  // waits for the recount, and a failed recount stays on screen with its
+  // retry until the counts are there again.
+  const confirm = useActionOn(
+    {
+      opening: previewKey,
+      data: previewData,
+      reload: () => revalidateOrThrow(previewRead),
+    },
+    { token: (counted) => counted.fingerprint },
+  );
+  // Only after a refusal: while the first count runs, the counts say why.
+  const waitReason =
+    confirm.status === "loading"
+      ? undefined
+      : readStateWaitReason(confirm.status);
+  // A failed count, also the recount after a refusal: its retry counts
+  // again and, after a refusal, lifts the lock once the counts are there.
   const load = useSwrResourceLoadError(
     [{ data: previewData, error: previewRead.error }],
     "die Vorschau",
-    () => mutatePreview(),
+    () => confirm.retryLoad(),
   );
 
-  const toMail = preview
-    ? preview.invited + preview.resent + preview.linkedExistingAccount
-    : 0;
+  // While the preview counts again after a choice changed, the last counts
+  // stay on screen, marked as busy: both choices keep their place and the
+  // keyboard focus, and can be changed back right away. A new opening and a
+  // failed count never show earlier counts.
+  const [shown, setShown] = useState<BulkInviteResult | null>(null);
+  if (!isOpen && shown !== null) setShown(null);
+  if (isOpen && preview !== null && preview !== shown) setShown(preview);
+  const recounting = preview === null && shown !== null && !load.error;
+  const displayed = preview ?? (recounting ? shown : null);
 
   const handleResendOpenChange = (value: boolean) => {
     errors.clear();
     setResendOpen(value);
   };
 
+  const handleNotifyActiveChange = (value: boolean) => {
+    errors.clear();
+    setNotifyActive(value);
+  };
+
   const handleSend = async () => {
+    if (!confirm.canSubmit) return;
     await save.run(async (op) => {
       errors.clear();
-      try {
-        const result = await bulkInviteGuardians(studentIds, {
+      const counted = preview;
+      const sentRun = await confirm.submit(() =>
+        bulkInviteGuardians(studentIds, {
           dryRun: false,
           resendOpen,
-        });
+          notifyActive,
+          expectedFingerprint: counted?.fingerprint ?? "",
+        }),
+      );
+      if (sentRun.ok) {
         if (op.isCurrent()) {
-          setSent(result);
+          setSent(sentRun.saved);
           // The counts of a later opening come from a new dry run.
           void mutatePreview();
         }
-        success(
-          invitedNotice(
-            result.invited + result.resent + result.linkedExistingAccount,
-          ),
-        );
-      } catch (err) {
-        logger.error("bulk_invite_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!op.isCurrent()) return;
-        await errors.show(err, {
-          object: "die Einladung",
-          retry: () => void latestSendRef.current(),
-        });
+        success(sentNotice(sentRun.saved));
+        return;
       }
+      if (sentRun.skipped) return;
+      const err = sentRun.error;
+      logger.error("bulk_invite_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      if (!op.isCurrent()) return;
+      // Die Eltern der Auswahl haben sich geändert: Der Dialog zählt neu, die
+      // Meldung wartet auf die neuen Zahlen und bietet kein „Wiederholen“ des
+      // Versands an (`reload`).
+      await errors.show(err, {
+        object: sentRun.refused ? "die Vorschau" : "die Einladung",
+        retry: () => void latestSendRef.current(),
+        reload: sentRun.reload,
+      });
     });
   };
   useLayoutEffect(() => {
@@ -177,19 +277,21 @@ export function SelectionBulkInviteModal({
                 variant="success"
                 size="md"
                 onClick={handleSend}
-                disabled={sending || toMail === 0}
-                tooltip="Schickt den Eltern sofort eine E-Mail mit dem Zugang zum Elternportal."
+                disabled={sending || toMail === 0 || !confirm.canSubmit}
+                tooltip={
+                  notifyActive
+                    ? "Schickt sofort die Einladungen und die Nachricht an Eltern mit Konto."
+                    : "Schickt den Eltern sofort eine E-Mail mit dem Zugang zum Elternportal."
+                }
                 disabledReason={
                   preview && toMail === 0
-                    ? "In dieser Auswahl gibt es niemanden einzuladen."
-                    : undefined
+                    ? notifyActive
+                      ? "In dieser Auswahl bekommt niemand eine E-Mail."
+                      : "In dieser Auswahl gibt es niemanden einzuladen."
+                    : waitReason
                 }
               >
-                {sending
-                  ? "Wird gesendet..."
-                  : toMail === 0
-                    ? "Einladen"
-                    : `${parents(toMail)} einladen`}
+                {sending ? "Wird gesendet..." : sendLabel(preview)}
               </Button>
             </>
           )}
@@ -199,12 +301,15 @@ export function SelectionBulkInviteModal({
       <div className="space-y-4 p-4">
         {sent ? (
           <SentSummary result={sent} />
-        ) : preview ? (
+        ) : displayed ? (
           <PreviewSummary
-            preview={preview}
+            preview={displayed}
+            recounting={recounting}
             childCount={studentIds.length}
             resendOpen={resendOpen}
             onResendOpenChange={handleResendOpenChange}
+            notifyActive={notifyActive}
+            onNotifyActiveChange={handleNotifyActiveChange}
             disabled={sending}
           />
         ) : load.error ? (
@@ -215,8 +320,11 @@ export function SelectionBulkInviteModal({
             <Skeleton className="h-5 w-1/2" />
           </div>
         )}
-        {(sent ?? preview)?.problems.length ? (
-          <ProblemList problems={(sent ?? preview)?.problems ?? []} />
+        {(sent ?? displayed)?.problems.length ? (
+          <ProblemList
+            problems={(sent ?? displayed)?.problems ?? []}
+            notifyActive={notifyActive}
+          />
         ) : null}
       </div>
     </FormModal>
@@ -225,23 +333,34 @@ export function SelectionBulkInviteModal({
 
 function PreviewSummary({
   preview,
+  recounting,
   childCount,
   resendOpen,
   onResendOpenChange,
+  notifyActive,
+  onNotifyActiveChange,
   disabled,
 }: {
   preview: BulkInviteResult;
+  recounting: boolean;
   childCount: number;
   resendOpen: boolean;
   onResendOpenChange: (value: boolean) => void;
+  notifyActive: boolean;
+  onNotifyActiveChange: (value: boolean) => void;
   disabled: boolean;
 }) {
-  const toMail =
-    preview.invited + preview.resent + preview.linkedExistingAccount;
+  const toMail = invitations(preview);
   const openCount = preview.skippedOpen + preview.resent;
+  const missingEmail = preview.problems.filter(
+    (problem) => problem.reason === "missing_email",
+  ).length;
+  // Counts and sentences are dimmed and marked busy while they are counted
+  // again; the two choices below stay as they are.
+  const counts = recounting ? "opacity-60" : undefined;
   return (
     <>
-      <p className="text-sm text-gray-900">
+      <p className={cn("text-sm text-gray-900", counts)} aria-busy={recounting}>
         {toMail === 0 ? (
           "Für diese Auswahl gibt es niemanden einzuladen."
         ) : (
@@ -257,14 +376,21 @@ function PreviewSummary({
           Sage den Eltern vorher Bescheid, dass eine E-Mail von moto kommt.
         </p>
       ) : null}
-      <ul className="space-y-1 text-sm text-gray-700">
+      <ul
+        className={cn("space-y-1 text-sm text-gray-700", counts)}
+        aria-busy={recounting}
+      >
         <CountRow
           label="Vorhandenes moto-Konto wird verbunden"
           count={preview.linkedExistingAccount}
         />
         <CountRow
           label="Nutzen das Elternportal schon"
-          count={preview.skippedActive}
+          count={preview.skippedActive - preview.alreadyNotified}
+        />
+        <CountRow
+          label="Nachricht schon verschickt"
+          count={preview.alreadyNotified}
         />
         <CountRow label="Einladung ist noch offen" count={openCount} />
         <CountRow
@@ -286,12 +412,48 @@ function PreviewSummary({
           <span>Offene Einladungen noch einmal senden</span>
         </label>
       ) : null}
+      {notifyActive || hasAccountHolders(preview) ? (
+        <CheckboxCard
+          checked={notifyActive}
+          disabled={disabled}
+          onChange={onNotifyActiveChange}
+          label="Eltern mit Konto benachrichtigen"
+          hint="Eine kurze E-Mail an die Adresse, mit der sie sich anmelden: Die Betreuung ist jetzt im Elternportal sichtbar. Nur für Kinder, die heute Betreuung gebucht haben, pro Kind nur einmal."
+        />
+      ) : null}
+      {notifyActive ? (
+        <ul
+          className={cn("space-y-1 text-sm text-gray-700", counts)}
+          aria-label="Was verschickt wird"
+          aria-busy={recounting}
+        >
+          <CountRow label="Werden eingeladen" count={toMail} always />
+          <CountRow
+            label="Bekommen die Nachricht"
+            count={preview.notified}
+            always
+          />
+          <CountRow label="Keine E-Mail-Adresse" count={missingEmail} always />
+          <CountRow
+            label="Kinder ohne gebuchte Betreuung: keine Nachricht"
+            count={preview.withoutVisibleCare}
+          />
+        </ul>
+      ) : null}
     </>
   );
 }
 
-function CountRow({ label, count }: { label: string; count: number }) {
-  if (count === 0) return null;
+function CountRow({
+  label,
+  count,
+  always = false,
+}: {
+  label: string;
+  count: number;
+  always?: boolean;
+}) {
+  if (count === 0 && !always) return null;
   return (
     <li className="flex items-baseline justify-between gap-4">
       <span>{label}</span>
@@ -311,6 +473,9 @@ function SentSummary({ result }: { result: BulkInviteResult }) {
     result.linkedExistingAccount > 0
       ? `Der Hinweis an ${parents(result.linkedExistingAccount)} mit moto-Konto wird jetzt verschickt.`
       : null,
+    result.notified > 0
+      ? `Die Nachricht an ${parents(result.notified)} mit Konto wird jetzt verschickt.`
+      : null,
   ].filter((message): message is string => message !== null);
   const summary =
     messages.length > 0
@@ -319,6 +484,19 @@ function SentSummary({ result }: { result: BulkInviteResult }) {
   return (
     <div className="space-y-2">
       <Alert type="success" message={summary} />
+      {result.withoutVisibleCare > 0 ? (
+        <p className="text-sm text-gray-700">
+          {result.withoutVisibleCare === 1
+            ? "1 Kind hat heute keine Betreuung gebucht. Dafür geht keine Nachricht raus."
+            : `${result.withoutVisibleCare} Kinder haben heute keine Betreuung gebucht. Für sie geht keine Nachricht raus.`}
+        </p>
+      ) : null}
+      {result.alreadyNotified > 0 ? (
+        <p className="text-sm text-gray-700">
+          Die Nachricht an {parents(result.alreadyNotified)} mit Konto ist schon
+          verschickt. Es geht keine zweite raus.
+        </p>
+      ) : null}
       {result.linkedExistingAccount > 0 ? (
         <p className="text-sm text-gray-700">
           {parents(result.linkedExistingAccount)} mit vorhandenem moto-Konto:
@@ -329,12 +507,21 @@ function SentSummary({ result }: { result: BulkInviteResult }) {
   );
 }
 
-function ProblemList({ problems }: { problems: BulkInviteProblem[] }) {
+function ProblemList({
+  problems,
+  notifyActive,
+}: {
+  problems: BulkInviteProblem[];
+  notifyActive: boolean;
+}) {
+  const verb = notifyActive
+    ? "keine E-Mail bekommen"
+    : "nicht eingeladen werden";
   return (
     <div className="space-y-2">
       <Alert
         type="warning"
-        message={`${parents(problems.length)} ${problems.length === 1 ? "kann" : "können"} nicht eingeladen werden. Prüfe die Hinweise bei den Eltern.`}
+        message={`${parents(problems.length)} ${problems.length === 1 ? "kann" : "können"} ${verb}. Prüfe die Hinweise bei den Eltern.`}
       />
       <ul className="max-h-48 space-y-1 overflow-y-auto text-sm text-gray-700">
         {problems.map((problem) => (

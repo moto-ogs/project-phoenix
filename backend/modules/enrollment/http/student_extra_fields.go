@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	enrollmentCapability "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -15,10 +14,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type StudentEnrollmentExtraFieldGroup struct {
-	RequestID   string                        `json:"request_id"`
+	RequestID   ident.ID                      `json:"request_id"`
 	PhaseName   string                        `json:"phase_name"`
 	SubmittedAt time.Time                     `json:"submitted_at"`
 	Fields      []StudentEnrollmentExtraField `json:"fields"`
@@ -30,7 +30,7 @@ type StudentEnrollmentExtraField struct {
 	Type    string                              `json:"type"`
 	Target  string                              `json:"target,omitempty"`
 	Options []StudentEnrollmentExtraFieldOption `json:"options,omitempty"`
-	Value   any                                 `json:"value"`
+	Value   any                                 `json:"value" contract_json:"The school's enrollment field schema determines the answer type"`
 }
 
 type StudentEnrollmentExtraFieldOption struct {
@@ -87,7 +87,7 @@ func (rs *StudentResource) toStudentEnrollmentExtraFieldGroups(r *http.Request, 
 			continue
 		}
 		group := StudentEnrollmentExtraFieldGroup{
-			RequestID:   strconv.FormatInt(summary.Request.ID, 10),
+			RequestID:   ident.ID(summary.Request.ID),
 			SubmittedAt: summary.Request.SubmittedAt,
 			Fields:      fields,
 		}

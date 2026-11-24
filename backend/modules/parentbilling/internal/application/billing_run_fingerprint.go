@@ -1,11 +1,8 @@
 package application
 
 import (
-	"encoding/hex"
-	"encoding/json"
-	"hash/fnv"
-
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The release of a holiday run issues exactly the preview the Abrechnung
@@ -38,7 +35,7 @@ func holidayPreviewFingerprint(run parentbilling.BillingRun, current preview, do
 		document.DocumentKind = ""
 		documents[i] = fingerprintDocument{Document: document, FamilyEmail: document.FamilyEmail}
 	}
-	return contentFingerprint(struct {
+	return readstate.Fingerprint(struct {
 		Run          int64                      `json:"run"`
 		Documents    []fingerprintDocument      `json:"documents"`
 		Unbilled     int                        `json:"unbilled"`
@@ -46,18 +43,4 @@ func holidayPreviewFingerprint(run parentbilling.BillingRun, current preview, do
 		DocumentKind string                     `json:"document_kind"`
 		LegalRemedy  string                     `json:"legal_remedy"`
 	}{run.ID.Int64(), documents, current.unbilled, current.dueDates.InPaymentOrder(), documentKind, legalRemedy})
-}
-
-// contentFingerprint is a change detector for a reviewer's own state, not a
-// secret: a 128-bit FNV hash of the canonical JSON is enough to tell two
-// states apart. A state that does not marshal has no fingerprint a release
-// could match.
-func contentFingerprint(state any) string {
-	encoded, err := json.Marshal(state)
-	if err != nil {
-		return ""
-	}
-	hash := fnv.New128a()
-	_, _ = hash.Write(encoded)
-	return hex.EncodeToString(hash.Sum(nil))
 }

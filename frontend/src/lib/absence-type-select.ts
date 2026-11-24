@@ -1,3 +1,5 @@
+import type { OwnAbsenceRequest } from "./contract/time-tracking.generated";
+
 // Pure mapping between the Abwesenheitsart dropdown's option values and the
 // two request fields (#2403).
 //
@@ -38,10 +40,9 @@ export function selectValueFor(
  * from the art itself, which is what keeps a name from choosing its own
  * arithmetic.
  */
-export function absenceRequestFor(selectValue: string): {
-  absence_type: string;
-  absence_type_id: string | null;
-} {
+export function absenceRequestFor(
+  selectValue: string,
+): Required<Pick<OwnAbsenceRequest, "absence_type" | "absence_type_id">> {
   if (selectValue.startsWith(CUSTOM_PREFIX)) {
     return {
       absence_type: "other",

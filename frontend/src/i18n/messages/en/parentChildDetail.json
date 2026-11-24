@@ -129,6 +129,7 @@
     "errorObjectRemove": "the access for this account",
     "reloadObject": "the contacts view",
     "savedButStale": "Your change is saved. Only the display is not up to date yet.",
+    "contactGone": "This contact is no longer listed for your child. Your change was not saved.",
     "errorObjectContact": "the change to the contact",
     "errorObjectPickup": "the pickup arrangement",
     "addContactTooltip": "Opens a form for a contact or pickup person without an account.",

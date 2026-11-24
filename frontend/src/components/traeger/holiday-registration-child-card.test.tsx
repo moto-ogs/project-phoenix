@@ -16,12 +16,20 @@ import {
 } from "~/test/fixtures/holiday-registrations";
 import { schoolNames } from "./holiday-registration-format";
 
-const { mockRebook } = vi.hoisted(() => ({ mockRebook: vi.fn() }));
-
-vi.mock("~/lib/traeger-holiday-registrations-api", () => ({
-  rebookHolidayChild: (...args: unknown[]) => mockRebook(...args),
+const { mockRebook, mockRebookVersion } = vi.hoisted(() => ({
+  mockRebook: vi.fn(),
+  mockRebookVersion: vi.fn(),
 }));
 
+vi.mock("~/lib/traeger-holiday-registrations-api", () => ({
+  // The version goes to its own spy: the rebooking sends the one it read.
+  rebookHolidayChild: (...args: unknown[]) => {
+    mockRebookVersion(args[4]);
+    return mockRebook(...args.slice(0, 4));
+  },
+}));
+
+import { catalogText } from "~/test/error-catalog-text";
 import { HolidayRegistrationChildCard } from "./holiday-registration-child-card";
 
 const names = schoolNames([
@@ -40,6 +48,7 @@ function renderCard(
   render(
     <ToastProvider>
       <HolidayRegistrationChildCard
+        reload={vi.fn()}
         period={period}
         registration={registration}
         child={child}
@@ -170,6 +179,7 @@ describe("HolidayRegistrationChildCard", () => {
     fireEvent.click(save);
 
     await waitFor(() => expect(onChanged).toHaveBeenCalledWith(rebooked));
+    expect(mockRebookVersion).toHaveBeenCalledWith("registration-read");
     expect(mockRebook).toHaveBeenCalledWith("5", "7", "10", [
       { weekId: "51", timeModelId: "62" },
       { weekId: "52", timeModelId: "63" },
@@ -221,6 +231,55 @@ describe("HolidayRegistrationChildCard", () => {
     );
 
     expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
+  });
+
+  // ADR 0311: a registration changed since the rebooking opened is refused;
+  // the message stays as a toast while the card reads the stored weeks and
+  // closes the rebooking, and nothing is sent again.
+  it("reads the stored weeks again after a registration changed since", async () => {
+    mockRebook.mockRejectedValue(
+      apiErrorFromBody("changed", 409, {
+        status: 409,
+        code: "general.changed_since_read",
+        detail: "changed since it was read",
+      }),
+    );
+    const reload = vi.fn().mockResolvedValue(undefined);
+    const child = HOLIDAY_REGISTRATION.children[1]!;
+    render(
+      <ToastProvider>
+        <HolidayRegistrationChildCard
+          reload={reload}
+          period={HOLIDAY_PERIOD}
+          registration={HOLIDAY_REGISTRATION}
+          child={child}
+          health={undefined}
+          names={names}
+          onChanged={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Umbuchen" }));
+    fireEvent.click(
+      screen.getByRole("combobox", {
+        name: "Zeitmodell 04.01. bis 08.01.2027, OGS Nord",
+      }),
+    );
+    fireEvent.click(await screen.findByRole("option", { name: "bis 16 Uhr" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Wochen des Kindes"),
+      ),
+    ).toBeInTheDocument();
+    expect(reload).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Umbuchen" }),
+      ).toBeInTheDocument(),
+    );
+    expect(mockRebook).toHaveBeenCalledTimes(1);
   });
 
   it.each(["Feiertag", "Betriebsausflug"])(

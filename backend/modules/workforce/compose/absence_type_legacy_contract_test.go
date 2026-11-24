@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/modules/workforce/workforcetest"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
@@ -84,12 +85,12 @@ func TestUpdateAbsenceTypeRenamesWithoutTouchingActiveFlag(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	inactive := false
-	if _, err := svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: created.ID, Name: nil, IsActive: &inactive}); err != nil {
+	if _, err := svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: created.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, svc, created.ID), Name: nil, IsActive: &inactive}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	renamed := "Ferienbetreuung"
-	updated, err := svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: created.ID, Name: &renamed, IsActive: nil})
+	updated, err := svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: created.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, svc, created.ID), Name: &renamed, IsActive: nil})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -117,7 +118,7 @@ func TestUpdateAbsenceTypeRejectsRenameOntoAnotherName(t *testing.T) {
 	}
 
 	clash := "ferienzeit"
-	if _, err := svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: second.ID, Name: &clash, IsActive: nil}); !errors.Is(err, workforce.ErrAbsenceTypeNameTaken) {
+	if _, err := svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: second.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, svc, second.ID), Name: &clash, IsActive: nil}); !errors.Is(err, workforce.ErrAbsenceTypeNameTaken) {
 		t.Errorf("expected workforce.ErrAbsenceTypeNameTaken, got %v", err)
 	}
 }
@@ -134,7 +135,7 @@ func TestUpdateAbsenceTypeAllowsRenamingToItsOwnName(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	same := "Ferienzeit"
-	if _, err := svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: created.ID, Name: &same, IsActive: nil}); err != nil {
+	if _, err := svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: created.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, svc, created.ID), Name: &same, IsActive: nil}); err != nil {
 		t.Errorf("renaming an art to its own name must be a no-op, got %v", err)
 	}
 }
@@ -153,6 +154,6 @@ func TestUpdateAbsenceTypeRejectsRenamingUsedType(t *testing.T) {
 	require.NoError(t, err)
 
 	renamed := "Gesundheitstag"
-	_, err = svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: created.ID, Name: &renamed, IsActive: nil})
+	_, err = svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: created.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, svc, created.ID), Name: &renamed, IsActive: nil})
 	require.ErrorIs(t, err, workforce.ErrAbsenceTypeInUse)
 }

@@ -40,10 +40,12 @@ func (r traegerReportTemplateRow) toDomain() (organizationtenancy.TraegerReportT
 	if sections == nil {
 		sections = []string{}
 	}
-	return organizationtenancy.TraegerReportTemplate{
+	template := organizationtenancy.TraegerReportTemplate{
 		ID: ident.ID(r.ID), Name: r.Name, Sections: sections, KeyDateMonth: r.KeyDateMonth, KeyDateDay: r.KeyDateDay,
 		Districts: districts, UpdatedAt: r.UpdatedAt,
-	}, nil
+	}
+	template.Version = organizationtenancy.TraegerReportTemplateVersion(template)
+	return template, nil
 }
 
 const (

@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,7 +16,7 @@ import (
 func TestApplyExportFiltersKeepsOnlySelectedStudents(t *testing.T) {
 	t.Parallel()
 
-	got := applyExportFilters(birthdayFixtures(), studentExportFilters{StudentIDs: []string{"102", "105"}}, lists.PresetOGSWeekly, testExportDate)
+	got := applyExportFilters(birthdayFixtures(), studentExportFilters{StudentIDs: []ident.ID{102, 105}}, lists.PresetOGSWeekly, testExportDate)
 
 	assert.Equal(t, []int64{102, 105}, exportedIDs(got))
 }
@@ -25,7 +27,7 @@ func TestApplyExportFiltersSelectionIntersectsOtherFilters(t *testing.T) {
 	t.Parallel()
 
 	got := applyExportFilters(birthdayFixtures(), studentExportFilters{
-		StudentIDs: []string{"101", "103"},
+		StudentIDs: []ident.ID{101, 103},
 		Months:     []string{"09"},
 	}, lists.PresetOGSWeekly, testExportDate)
 
@@ -49,25 +51,25 @@ func TestParseExportStudentIDs(t *testing.T) {
 		assert.Nil(t, ids)
 	})
 
-	t.Run("accepts trimmed numeric ids", func(t *testing.T) {
-		ids, err := parseExportStudentIDs([]string{"7", " 12 "})
+	t.Run("accepts positive identifiers", func(t *testing.T) {
+		ids, err := parseExportStudentIDs([]ident.ID{7, 12})
 		require.NoError(t, err)
 		assert.Equal(t, map[int64]bool{7: true, 12: true}, ids)
 	})
 
 	// A silently skipped id would print a list that misses a marked child.
-	for _, value := range []string{"", "abc", "0", "-3", "1.5"} {
-		t.Run("rejects "+value, func(t *testing.T) {
-			_, err := parseExportStudentIDs([]string{value})
+	for _, value := range []ident.ID{0, -3} {
+		t.Run("rejects "+value.String(), func(t *testing.T) {
+			_, err := parseExportStudentIDs([]ident.ID{value})
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "invalid student id")
 		})
 	}
 
 	t.Run("rejects a selection over the export cap", func(t *testing.T) {
-		values := make([]string, studentExportPageSize+1)
+		values := make([]ident.ID, studentExportPageSize+1)
 		for i := range values {
-			values[i] = "1"
+			values[i] = 1
 		}
 		_, err := parseExportStudentIDs(values)
 		require.Error(t, err)
@@ -89,7 +91,7 @@ func TestDecodeStudentExportRequestRejectsInvalidStudentID(t *testing.T) {
 func TestExportFilterLabelsNameTheSelection(t *testing.T) {
 	t.Parallel()
 
-	labels := exportFilterLabelsForDate(studentExportFilters{StudentIDs: []string{"1", "2"}}, testExportDate, true)
+	labels := exportFilterLabelsForDate(studentExportFilters{StudentIDs: []ident.ID{1, 2}}, testExportDate, true)
 
 	assert.Contains(t, labels, "Nur ausgewählte Kinder")
 }

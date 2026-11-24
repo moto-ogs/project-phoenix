@@ -42,6 +42,7 @@ describe("ProfileContext", () => {
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-01T00:00:00Z",
     lastLogin: "2024-01-01T00:00:00Z",
+    version: "p1",
     settings: {
       theme: "light",
       language: "en",
@@ -613,7 +614,7 @@ describe("ProfileContext", () => {
     it("should reset debounce when tenantId changes, allowing immediate refresh", async () => {
       const sessionWithTenant = {
         ...mockSession,
-        user: { ...mockSession.user, tenantId: 1 },
+        user: { ...mockSession.user, tenantId: "1" },
       };
 
       vi.mocked(nextAuthReact.useSession).mockReturnValue({
@@ -644,7 +645,7 @@ describe("ProfileContext", () => {
         ...mockSession,
         user: {
           ...mockSession.user,
-          tenantId: 2,
+          tenantId: "2",
         },
       };
 
@@ -665,7 +666,7 @@ describe("ProfileContext", () => {
     it("should not reset debounce when tenantId is undefined", async () => {
       const sessionWithTenant = {
         ...mockSession,
-        user: { ...mockSession.user, tenantId: 1 },
+        user: { ...mockSession.user, tenantId: "1" },
       };
 
       vi.mocked(nextAuthReact.useSession).mockReturnValue({
@@ -713,7 +714,7 @@ describe("ProfileContext", () => {
     it("should reset debounce on re-login to same tenant after logout", async () => {
       const sessionWithTenant = {
         ...mockSession,
-        user: { ...mockSession.user, tenantId: 1 },
+        user: { ...mockSession.user, tenantId: "1" },
       };
 
       vi.mocked(nextAuthReact.useSession).mockReturnValue({
@@ -756,7 +757,7 @@ describe("ProfileContext", () => {
           ...mockSession,
           user: {
             ...mockSession.user,
-            tenantId: 1,
+            tenantId: "1",
           },
         },
         status: "authenticated",
@@ -769,6 +770,35 @@ describe("ProfileContext", () => {
       // so the identity change triggers a fresh fetch
       await waitFor(() => {
         expect(profileApi.fetchProfile).toHaveBeenCalled();
+      });
+    });
+  });
+
+  // ADR 0311 rule 6: a refused profile edit shows the stored profile only
+  // once a read succeeded; a failed read rejects instead of answering the
+  // shown profile.
+  describe("reloadProfile", () => {
+    it("reads the profile again and rejects when the read fails", async () => {
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
+      );
+      const { result } = renderHook(() => useProfile(), { wrapper });
+      await waitFor(() => expect(result.current.profile).toEqual(mockProfile));
+
+      const stored = { ...mockProfile, firstName: "Johanna", version: "p2" };
+      vi.mocked(profileApi.fetchProfile).mockResolvedValueOnce(stored);
+      await act(async () => {
+        await expect(result.current.reloadProfile()).resolves.toEqual(stored);
+      });
+      expect(result.current.profile).toEqual(stored);
+
+      vi.mocked(profileApi.fetchProfile).mockRejectedValueOnce(
+        new Error("offline"),
+      );
+      await act(async () => {
+        await expect(result.current.reloadProfile()).rejects.toThrow("offline");
       });
     });
   });

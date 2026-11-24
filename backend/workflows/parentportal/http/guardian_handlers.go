@@ -1,12 +1,12 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -14,10 +14,10 @@ import (
 // child: profile-level contact data plus the per-child pickup relationship,
 // annotated with what the caller may edit. int64 IDs are stringified.
 type childGuardianResponse struct {
-	GuardianProfileID string `json:"guardian_profile_id"`
-	StudentGuardianID string `json:"student_guardian_id"`
-	FirstName         string `json:"first_name"`
-	LastName          string `json:"last_name"`
+	GuardianProfileID ident.ID `json:"guardian_profile_id"`
+	StudentGuardianID ident.ID `json:"student_guardian_id"`
+	FirstName         string   `json:"first_name"`
+	LastName          string   `json:"last_name"`
 	// Salutation is the caller's own chosen form of address (ms, mr); absent
 	// for other guardians and without a choice (#7362).
 	Salutation         string                  `json:"salutation,omitempty"`
@@ -51,6 +51,9 @@ type childGuardianResponse struct {
 	// without their own account, so they are read-only to the caller (managed by
 	// themselves or the school); contact stays visible.
 	ContactLockedFullGuardian bool `json:"contact_locked_full_guardian"`
+	// Version is the token of the shown contact a contact edit sends back as
+	// expected_version (ADR 0311); empty where the contact is redacted.
+	Version string `json:"version,omitempty"`
 }
 
 type guardianPhoneResponse struct {
@@ -62,8 +65,15 @@ type guardianPhoneResponse struct {
 
 // updateGuardianContactRequest is the wire shape for PUT
 // /parent/me/children/{studentId}/guardians/{guardianProfileId}/contact.
-// Profile fields and the phone list are replaced wholesale.
+// Profile fields and the phone list are replaced wholesale, against the
+// version of the contact the form read (ADR 0311).
 type updateGuardianContactRequest struct {
+	guardianContactFields
+	ExpectedVersion string `json:"expected_version"`
+}
+
+// guardianContactFields are the contact fields a parent writes.
+type guardianContactFields struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	// Salutation applies to the caller's own profile only: omitted keeps the
@@ -95,7 +105,7 @@ type updateGuardianRelationshipRequest struct {
 // createGuardianContactRequest creates an accountless contact. It never grants
 // app access, which remains the responsibility of related-accounts invitations.
 type createGuardianContactRequest struct {
-	updateGuardianContactRequest
+	guardianContactFields
 	RelationshipType string `json:"relationship_type"`
 	// CanPickup asks the OGS to let the new contact collect the child on
 	// PickupWeekdays (empty: every day), signed (#4780).
@@ -145,13 +155,13 @@ func (rs *Resource) createGuardianContact(w http.ResponseWriter, r *http.Request
 	// The pickup permission may carry its signature image (#5697).
 	r.Body = http.MaxBytesReader(w, r.Body, signedBodyLimit)
 	var body createGuardianContactRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		renderPickupSignatureBodyError(w, r, err)
 		return
 	}
 
 	created, err := rs.ParentService.CreateGuardianContact(r.Context(), accountID, studentID, parentService.CreateGuardianContactInput{
-		Contact:            guardianContactInput(body.updateGuardianContactRequest),
+		Contact:            guardianContactInput(body.guardianContactFields),
 		RelationshipType:   body.RelationshipType,
 		CanPickup:          body.CanPickup,
 		PickupWeekdays:     body.PickupWeekdays,
@@ -183,12 +193,13 @@ func (rs *Resource) updateGuardianContact(w http.ResponseWriter, r *http.Request
 
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<10)
 	var body updateGuardianContactRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
 
-	input := guardianContactInput(body)
+	input := guardianContactInput(body.guardianContactFields)
+	input.ExpectedVersion = body.ExpectedVersion
 
 	updated, err := rs.ParentService.UpdateGuardianContact(r.Context(), accountID, studentID, guardianProfileID, input)
 	if err != nil {
@@ -208,7 +219,7 @@ func renderPickupSignatureBodyError(w http.ResponseWriter, r *http.Request, err 
 	common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 }
 
-func guardianContactInput(body updateGuardianContactRequest) parentService.GuardianContactInput {
+func guardianContactInput(body guardianContactFields) parentService.GuardianContactInput {
 	input := parentService.GuardianContactInput{
 		FirstName:         body.FirstName,
 		LastName:          body.LastName,
@@ -246,7 +257,7 @@ func (rs *Resource) updateGuardianRelationship(w http.ResponseWriter, r *http.Re
 
 	r.Body = http.MaxBytesReader(w, r.Body, 2<<10)
 	var body updateGuardianRelationshipRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -278,8 +289,8 @@ func guardianResponse(g *parentService.ChildGuardian) childGuardianResponse {
 		})
 	}
 	return childGuardianResponse{
-		GuardianProfileID:         strconv.FormatInt(g.GuardianProfileID, 10),
-		StudentGuardianID:         strconv.FormatInt(g.StudentGuardianID, 10),
+		GuardianProfileID:         ident.ID(g.GuardianProfileID),
+		StudentGuardianID:         ident.ID(g.StudentGuardianID),
 		FirstName:                 g.FirstName,
 		LastName:                  g.LastName,
 		Salutation:                g.Salutation,
@@ -302,5 +313,6 @@ func guardianResponse(g *parentService.ChildGuardian) childGuardianResponse {
 		ContactLockedShared:       g.ContactLockedShared,
 		ContactLockedSocialWorker: g.ContactLockedSocialWorker,
 		ContactLockedFullGuardian: g.ContactLockedFullGuardian,
+		Version:                   g.Version,
 	}
 }

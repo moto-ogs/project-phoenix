@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -32,12 +33,15 @@ type reportTemplateBody struct {
 	KeyDateMonth int                      `json:"key_date_month"`
 	KeyDateDay   int                      `json:"key_date_day"`
 	Districts    []reportTemplateDistrict `json:"districts"`
+	// ExpectedVersion is the version a replace was read with (ADR 0311).
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 type reportTemplateAnswer struct {
 	ID wireID `json:"id"`
 	reportTemplateBody
 	UpdatedAt string `json:"updated_at"`
+	Version   string `json:"version"`
 }
 
 func reportTemplatePath(id int64) string {
@@ -120,19 +124,30 @@ func TestTraegerReportTemplatesKeepTheTemplatesOfTheTraeger(t *testing.T) {
 
 	replaced := traegerJSON(t, router, office.token, http.MethodPut, reportTemplatePath(int64(leap.ID)), reportTemplateBody{
 		Name: "Kommune Belegung und Nachfrage", Sections: []string{"demand"}, KeyDateMonth: 3, KeyDateDay: 1,
-		Districts: []reportTemplateDistrict{{SchoolID: wireID(north), District: "Mitte"}},
+		Districts:       []reportTemplateDistrict{{SchoolID: wireID(north), District: "Mitte"}},
+		ExpectedVersion: leap.Version,
 	})
 	require.Equal(t, http.StatusOK, replaced.Code, replaced.Body.String())
 	updated := decodeSchoolPortalData[reportTemplateAnswer](t, replaced.Body.Bytes())
+	// A replace on the version read before that one, or on none, is refused
+	// and writes nothing (ADR 0311).
+	for _, stale := range []string{leap.Version, ""} {
+		rec := traegerJSON(t, router, office.token, http.MethodPut, reportTemplatePath(int64(leap.ID)), reportTemplateBody{
+			Name: "Veraltet", Sections: []string{"staff"}, KeyDateMonth: 3, KeyDateDay: 1, ExpectedVersion: stale,
+		})
+		require.Equal(t, http.StatusConflict, rec.Code, "version %q: %s", stale, rec.Body.String())
+		assert.Equal(t, readstate.ChangedCode, refusalOf(t, rec).Code)
+	}
 	assert.Equal(t, leap.ID, updated.ID)
 	assert.Equal(t, "Kommune Belegung und Nachfrage", updated.Name)
 	assert.Equal(t, []string{"demand"}, updated.Sections)
 	renamedOnto := traegerJSON(t, router, office.token, http.MethodPut, reportTemplatePath(int64(leap.ID)), reportTemplateBody{
-		Name: "Jugendamt Stichtag", Sections: []string{"demand"}, KeyDateMonth: 3, KeyDateDay: 1,
+		Name: "Jugendamt Stichtag", Sections: []string{"demand"}, KeyDateMonth: 3, KeyDateDay: 1, ExpectedVersion: updated.Version,
 	})
 	assert.Equal(t, http.StatusConflict, renamedOnto.Code, "another template's name: %s", renamedOnto.Body.String())
+	assert.Equal(t, "traeger.report_template_name_taken", refusalOf(t, renamedOnto).Code)
 	keptName := traegerJSON(t, router, office.token, http.MethodPut, reportTemplatePath(int64(jugendamt.ID)), reportTemplateBody{
-		Name: "Jugendamt Stichtag", Sections: []string{"children"}, KeyDateMonth: 10, KeyDateDay: 15,
+		Name: "Jugendamt Stichtag", Sections: []string{"children"}, KeyDateMonth: 10, KeyDateDay: 15, ExpectedVersion: jugendamt.Version,
 	})
 	assert.Equal(t, http.StatusOK, keptName.Code, "a template keeps its own name: %s", keptName.Body.String())
 

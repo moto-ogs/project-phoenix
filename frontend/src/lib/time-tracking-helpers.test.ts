@@ -184,6 +184,7 @@ describe("mapWorkSessionBreakResponse", () => {
 describe("mapWorkSessionHistoryResponse", () => {
   it("maps base session and adds history fields", () => {
     const backend: shared.HistorySessionResponse = {
+      version: "v1",
       pack_up_minutes: 0,
       rounding_minutes: 0,
       ...createMockBackendSession(),
@@ -206,6 +207,7 @@ describe("mapWorkSessionHistoryResponse", () => {
 
   it("maps nested breaks array", () => {
     const backend: shared.HistorySessionResponse = {
+      version: "v1",
       pack_up_minutes: 0,
       rounding_minutes: 0,
       ...createMockBackendSession(),
@@ -249,6 +251,7 @@ describe("mapWorkSessionHistoryResponse", () => {
 
   it("handles null breaks array", () => {
     const backend: shared.HistorySessionResponse = {
+      version: "v1",
       pack_up_minutes: 0,
       rounding_minutes: 0,
       ...createMockBackendSession(),
@@ -266,6 +269,7 @@ describe("mapWorkSessionHistoryResponse", () => {
 
   it("defaults edit_count to 0 when undefined", () => {
     const backend: shared.HistorySessionResponse = {
+      version: "v1",
       pack_up_minutes: 0,
       rounding_minutes: 0,
       ...createMockBackendSession(),
@@ -845,6 +849,7 @@ describe("calculateNetMinutes", () => {
 describe("indexWorkSessionMinutesByBerlinDate", () => {
   it("splits a night block and its pause at the Berlin day boundary", () => {
     const session: WorkSessionHistory = {
+      version: "v1",
       id: "1",
       staffId: "1",
       date: "2026-07-20",
@@ -875,6 +880,7 @@ describe("indexWorkSessionMinutesByBerlinDate", () => {
 
   it("uses the server net value while a break is still running", () => {
     const session: WorkSessionHistory = {
+      version: "v1",
       id: "1",
       staffId: "1",
       date: "2026-07-20",
@@ -918,6 +924,7 @@ describe("indexWorkSessionMinutesByBerlinDate", () => {
   const openSession = (
     overrides: Partial<WorkSessionHistory>,
   ): WorkSessionHistory => ({
+    version: "v1",
     id: "1",
     staffId: "1",
     date: "2026-07-20",

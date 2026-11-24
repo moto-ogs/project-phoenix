@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 const problemContentType = "application/problem+json"
@@ -90,6 +91,7 @@ func problemResponseHandler(next http.Handler, logger func() *slog.Logger) http.
 		body := readProblemBody(capture, w.Header().Get("Content-Type"))
 		repaired := wroteBody && departsFromEnvelope(body, capture.status)
 		addProblemFields(body, capture.status, middleware.GetReqID(r.Context()))
+		repairProblemIdentifiers(r, body, logger)
 		if repaired {
 			// A handler wrote its own error body. The answer is repaired, but
 			// that is a regression of the one error path (#2520): it is logged
@@ -102,7 +104,7 @@ func problemResponseHandler(next http.Handler, logger func() *slog.Logger) http.
 				slog.String("code", problemStringField(body, "code")),
 			)
 		}
-		encoded, err := json.Marshal(body)
+		encoded, err := wire.Marshal(body)
 		if err != nil {
 			slog.Default().ErrorContext(r.Context(), "failed to encode problem response", slog.String("error", err.Error()))
 			return

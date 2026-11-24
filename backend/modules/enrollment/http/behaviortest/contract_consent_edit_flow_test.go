@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -84,11 +86,11 @@ func setupContractConsentTest(t *testing.T, tenantID int64) (*signatureEnv, int6
 // conditions, edit their enrollment on the edit page and the school accepts
 // it afterwards. The Betreuungsvertrag must still read the agreement as
 // proof, so Weg b concludes the contract (#4680). The edit page sends the
-// form version it showed, like the enrollment form; without it the edited
-// snapshot proves nothing and the contract would wait.
+// form version and the terms_fingerprint it showed, like the enrollment
+// form; an edit without them proves nothing and is refused (ADR 0311).
 func TestContractConsentSurvivesTheParentsEdit(t *testing.T) {
 	t.Parallel()
-	for name, version := range map[string]string{"edit page names its version": "shown", "old client without version": ""} {
+	for name, version := range map[string]string{"edit page names its version": "shown", "outdated edit page": ""} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			env, schemaID := setupContractConsentTest(t, testpkg.UniqueTestTenantID(t))
@@ -107,12 +109,24 @@ func TestContractConsentSurvivesTheParentsEdit(t *testing.T) {
 
 			formVersion := ""
 			if version != "" {
-				formVersion = `"form_schema_id":` + strconv.FormatInt(schemaID, 10) + `,`
+				formVersion = `"form_schema_id":"` + strconv.FormatInt(schemaID, 10) + `",`
 			}
-			edit := `{"phase_id":` + strconv.FormatInt(env.phaseID, 10) + `,` + formVersion +
+			edit := `{"phase_id":"` + strconv.FormatInt(env.phaseID, 10) + `",` + formVersion +
 				`"guardian_first_name":"Erika","guardian_last_name":"Muster-Berg","guardian_email":"erika.muster@example.com",` +
 				`"consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"care_contract":true},` +
 				`"children":[{"id":"` + strconv.FormatInt(childID, 10) + `","first_name":"Lina","last_name":"Muster","date_of_birth":"2018-04-15","target_grade_level":1}]}`
+			if version == "" {
+				// An edit page read before the school changed its form proves
+				// no agreement to the form in force: it is refused and changes
+				// nothing (ADR 0311).
+				outdated := strings.Replace(edit, `{"phase_id"`, `{"expected_terms_fingerprint":"outdated","phase_id"`, 1)
+				rec := env.do(t, http.MethodPut, "/requests/"+submitted.Request.StatusToken, "", outdated)
+				require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+				assert.Contains(t, rec.Body.String(), readstate.ChangedCode)
+				assert.Equal(t, childID, editedChild(t, env, submitted.Request.ID), "the refused edit keeps the child")
+				return
+			}
+			edit = withShownTerms(t, env.router, "/requests/"+submitted.Request.StatusToken+"/edit-bootstrap", edit)
 			rec := env.do(t, http.MethodPut, "/requests/"+submitted.Request.StatusToken, "", edit)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			childID = editedChild(t, env, submitted.Request.ID)
@@ -129,10 +143,6 @@ func TestContractConsentSurvivesTheParentsEdit(t *testing.T) {
 			require.Len(t, found, 1)
 			require.NotNil(t, found[0].AcceptedAt, "the school accepted the child")
 			assert.True(t, found[0].AcceptedAt.After(time.Time{}))
-			if version == "" {
-				assert.Empty(t, found[0].Acceptances, "an edit that names no shown version proves no agreement")
-				return
-			}
 			require.Len(t, found[0].Acceptances, 1, "the agreement survives the parents' edit")
 			assert.Equal(t, "care_contract", found[0].Acceptances[0].Key)
 			assert.Equal(t, contractConditions, found[0].Acceptances[0].Text)

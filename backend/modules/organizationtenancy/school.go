@@ -50,6 +50,8 @@ type School struct {
 	// nil means moto has not set a limit yet.
 	DeviceSlots  *int          `json:"device_slots"`
 	Organization *Organization `json:"organization,omitempty"`
+	// Version is the read state an edit sends back (SchoolVersion).
+	Version string `json:"version"`
 }
 
 func (s School) IsDeleted() bool { return s.DeletedAt != nil }

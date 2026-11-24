@@ -460,28 +460,6 @@ export const SendResultSchema: z.ZodType<SendResult, unknown> = object<SendResul
   skipped: nullable(arr(SendSkipSchema)),
 });
 
-/** Query of GET /traeger/contracts/ */
-export interface GetTraegerContractsQuery {
-  limit?: number;
-  offset?: number;
-  school_id?: string;
-  search?: string;
-  status?: string;
-}
-
-/** Query of GET /traeger/contracts/candidates */
-export interface GetTraegerContractsCandidatesQuery {
-  school_id?: string;
-}
-
-/** Query of GET /traeger/contracts/export */
-export interface GetTraegerContractsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  school_id?: string;
-  search?: string;
-  status?: string;
-}
-
 export const routes = {
   "DELETE /traeger/contracts/{id}": {
     method: "DELETE",
@@ -493,14 +471,22 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/contracts/",
     portals: ["org"],
-    query: ["limit", "offset", "school_id", "search", "status"],
+    query: {
+      "limit": { kind: "int" },
+      "offset": { kind: "int" },
+      "school_id": { kind: "id" },
+      "search": { kind: "string" },
+      "status": { kind: "string" },
+    },
     response: success(ContractListSchema),
   },
   "GET /traeger/contracts/candidates": {
     method: "GET",
     pattern: "/traeger/contracts/candidates",
     portals: ["org"],
-    query: ["school_id"],
+    query: {
+      "school_id": { kind: "id" },
+    },
     response: success(z.array(CandidateSchema)),
   },
   "GET /traeger/contracts/conclusion-modes": {
@@ -513,7 +499,12 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/contracts/export",
     portals: ["org"],
-    query: ["format", "school_id", "search", "status"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "school_id": { kind: "id" },
+      "search": { kind: "string" },
+      "status": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /traeger/contracts/{id}": {
@@ -553,6 +544,12 @@ export const routes = {
     portals: ["org"],
     request: requestBody<SendRequest>(),
     response: success(SendResultSchema),
+  },
+  "POST /traeger/contracts/{id}/paper-handover": {
+    method: "POST",
+    pattern: "/traeger/contracts/{id}/paper-handover",
+    portals: ["org"],
+    response: noData,
   },
   "POST /traeger/contracts/{id}/paper-signature": {
     method: "POST",

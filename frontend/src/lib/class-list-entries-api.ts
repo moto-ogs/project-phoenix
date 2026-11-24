@@ -16,6 +16,8 @@ export interface ClassListEntry {
   // IDs regulärer Kinder mit gleichem Namen in derselben Klasse — der
   // Hinweis für die bewusste Zuordnung. Nie automatisch zusammengeführt.
   matchingStudentIds: string[];
+  /** The stored entry as read (ADR 0311); an edit sends it back. */
+  version: string;
 }
 
 export interface ClassListEntryInput {
@@ -34,6 +36,7 @@ function mapEntry(
     schoolClass: wire.school_class,
     createdAt: wire.created_at,
     matchingStudentIds: wire.matching_student_ids ?? [],
+    version: wire.version,
   };
 }
 
@@ -69,14 +72,19 @@ export async function createClassListEntry(
   );
 }
 
+/**
+ * Saves an edited entry on the `version` of the entry the edit started
+ * from; the server refuses it when the entry changed since (ADR 0311).
+ */
 export async function updateClassListEntry(
   id: string,
   input: ClassListEntryInput,
+  expectedVersion: string,
 ): Promise<ClassListEntry> {
   return mapEntry(
     await bffJson("tenant", "PUT /api/class-list-entries/{id}", {
       params: { id },
-      body: toWireInput(input),
+      body: { ...toWireInput(input), expected_version: expectedVersion },
       errorMessage,
     }),
   );

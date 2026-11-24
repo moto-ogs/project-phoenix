@@ -42,9 +42,9 @@ import {
   useRefreshAfterWrite,
 } from "~/lib/hooks/use-refresh-after-write";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
-import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useModuleBooked } from "~/lib/tenant-context";
 import { staffPlanConcept } from "~/lib/concepts/staffPlan";
@@ -58,6 +58,48 @@ const logger = createLogger({ component: "DatabaseShiftTypesPage" });
 const CACHE_KEY = tenantAdminKeys.shiftTypes();
 const CATEGORY_CACHE_KEY = tenantAdminKeys.shiftTypeCategories();
 const DEFAULT_COLOR: string = LOCATION_COLORS.GROUP_ROOM;
+
+/**
+ * A type as its form reads it: with the categories that belong to it and
+ * the link token of every category of the same read (ADR 0311). Without
+ * loaded categories both are missing and a save leaves the links alone.
+ */
+interface EditableShiftType extends ShiftType {
+  readonly categoryIds?: readonly string[];
+  readonly categoryLinkVersions?: Readonly<Record<string, string>>;
+}
+
+/** The link token of every category of one read, keyed by category id. */
+function linkVersionsOf(
+  categories: readonly ActivityCategory[],
+): Readonly<Record<string, string>> {
+  return Object.fromEntries(
+    categories.map((category) => [
+      category.id,
+      category.shiftTypeLinkVersion ?? "",
+    ]),
+  );
+}
+
+/**
+ * The types as their forms read them: each with the categories that belong
+ * to it and the link tokens of the same category read. Without categories
+ * the types stay bare and a save leaves the links alone.
+ */
+function withCategoryLinks(
+  types: readonly ShiftType[],
+  categories: readonly ActivityCategory[] | undefined,
+): EditableShiftType[] {
+  if (!categories) return [...types];
+  const linkVersions = linkVersionsOf(categories);
+  return types.map((type) => ({
+    ...type,
+    categoryIds: categories
+      .filter((category) => category.shiftTypeId === type.id)
+      .map((category) => category.id),
+    categoryLinkVersions: linkVersions,
+  }));
+}
 
 /** „12 geplante Dienste“ / „1 Schichtserie“ für die Rückfrage (#6845). */
 function usageParts(usage: ShiftTypeUsage): string[] {
@@ -157,22 +199,17 @@ function shiftTypeStats(types: readonly ShiftType[]) {
 
 function ShiftTypesPageContent() {
   const searchParams = useSearchParams();
-  const tenantMutate = useTenantMutate();
   const toast = useToast();
   // „Beispiele hinzufügen“ ist eine Aktion ohne Formular: Fehler als Toast.
   const { show: showSeedError } = useApiErrorDisplay();
   const [seeding, setSeeding] = useState(false);
 
   const discardRefused = useDiscardRefusedEntity();
-  const {
-    data: cachedData,
-    isLoading,
-    error: swrError,
-    mutate,
-  } = useSWRAuth<ShiftType[]>(CACHE_KEY, () =>
+  const list = useSWRAuth<ShiftType[]>(CACHE_KEY, () =>
     // Die Zahlen sagen der Rückfrage, ob gelöscht oder archiviert wird.
     shiftTypeService.getShiftTypes({ withUsage: true }),
   );
+  const { data: cachedData, isLoading, error: swrError, mutate } = list;
   const accessRefused =
     swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
@@ -197,29 +234,44 @@ function ShiftTypesPageContent() {
   // Vorauswahl. Solange sie nicht geladen sind, zeigt das Formular das Feld
   // gar nicht und die Speichern-Aufrufe lassen `categoryIds` weg — eine leere
   // Liste würde bestehende Zuordnungen löschen (#1837).
-  const { data: categories, error: categoriesError } = useSWRAuth<
-    ActivityCategory[]
-  >(CATEGORY_CACHE_KEY, () => categoryService.getManagedCategories());
+  const categoriesRead = useSWRAuth<ActivityCategory[]>(
+    CATEGORY_CACHE_KEY,
+    () => categoryService.getManagedCategories(),
+  );
+  const { data: categories, error: categoriesError } = categoriesRead;
   const categoriesReady = categories !== undefined && !categoriesError;
 
-  const onChanged = useCallback(
-    () =>
-      Promise.all([tenantMutate(CACHE_KEY), tenantMutate(CATEGORY_CACHE_KEY)]),
-    [tenantMutate],
-  );
+  // Lehnt ab, wenn das Lesen der Liste scheitert (ADR 0311). Die Antwort
+  // trägt die Kategorien der neuen Lesung wie die Einträge auf dem
+  // Bildschirm: nach einer Ablehnung speichert das Formular damit wieder.
+  const onChanged = useCallback(async () => {
+    const [stored, storedCategories] = await Promise.all([
+      revalidateOrThrow(list),
+      // Scheitert das Lesen der Kategorien, zeigt das Formular das Feld
+      // nicht (categoriesError) und das Speichern lässt die Zuordnung weg.
+      revalidateOrThrow(categoriesRead).catch(() => undefined),
+    ]);
+    return withCategoryLinks(stored, storedCategories);
+  }, [list, categoriesRead]);
 
-  const items = useMemo(
-    () =>
-      data
-        ? [...data].sort((a, b) => a.name.localeCompare(b.name, "de"))
-        : undefined,
-    [data],
-  );
+  // Ein Eintrag trägt die Kategorien, die zu ihm gehören, und den Stand
+  // jeder gelesenen Kategorie: das Formular zeigt die Zuordnung aus genau
+  // dieser Lesung, und das Speichern schickt deren Stände mit (ADR 0311).
+  const items = useMemo(() => {
+    if (!data) return undefined;
+    const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name, "de"));
+    return withCategoryLinks(sorted, categoriesReady ? categories : undefined);
+  }, [data, categories, categoriesReady]);
 
-  const config = useMemo<CatalogConfig<ShiftType>>(() => {
+  const config = useMemo<CatalogConfig<EditableShiftType>>(() => {
     const categoryList = categoriesReady ? (categories ?? []) : [];
+    // Ein Anlegen holt Kategorien von ihrer bisherigen Dienstart weg: es
+    // schickt die Stände der Kategorien, aus denen das Formular wählt.
+    const createLinkVersions = categoriesReady
+      ? linkVersionsOf(categoryList)
+      : undefined;
 
-    const sections = (type: ShiftType | null): SectionConfig[] => [
+    const sections = (type: EditableShiftType | null): SectionConfig[] => [
       {
         title: "Dienstart",
         fields: [
@@ -291,7 +343,7 @@ function ShiftTypesPageContent() {
      *  Kategorien nicht sicher geladen sind (#1837). */
     const payloadOf = (
       values: Record<string, unknown>,
-      fallback: ShiftType | null,
+      fallback: EditableShiftType | null,
     ) => ({
       name: String(values.name ?? fallback?.name ?? "").trim(),
       color:
@@ -303,6 +355,14 @@ function ShiftTypesPageContent() {
       ...(categoriesReady && Array.isArray(values.categoryIds)
         ? { categoryIds: values.categoryIds as string[] }
         : {}),
+      // Ein Bearbeiten schickt den Stand, aus dem das Formular stammt, und
+      // die Stände der Kategorien, deren Zuordnung es zeigte (ADR 0311).
+      ...(fallback
+        ? {
+            expectedVersion: fallback.version,
+            expectedCategoryLinkVersions: fallback.categoryLinkVersions,
+          }
+        : { expectedCategoryLinkVersions: createLinkVersions }),
     });
 
     return {
@@ -328,9 +388,11 @@ function ShiftTypesPageContent() {
         color: type.color,
         description: type.description,
         isActive: type.isActive,
-        categoryIds: categoryList
-          .filter((category) => category.shiftTypeId === type.id)
-          .map((category) => category.id),
+        categoryIds: type.categoryIds
+          ? [...type.categoryIds]
+          : categoryList
+              .filter((category) => category.shiftTypeId === type.id)
+              .map((category) => category.id),
       }),
       createDefaults: {
         name: "",
@@ -339,8 +401,19 @@ function ShiftTypesPageContent() {
         isActive: true,
         categoryIds: [],
       },
-      create: (values) =>
-        shiftTypeService.createShiftType(payloadOf(values, null)),
+      create: async (values) => {
+        try {
+          return await shiftTypeService.createShiftType(
+            payloadOf(values, null),
+          );
+        } catch (err: unknown) {
+          // Seit dem Lesen geändert: die Kategorien neu lesen, damit das
+          // nächste Anlegen mit ihren Ständen geht; die Meldung zeigt das
+          // Formular. Scheitert das Lesen, steht sein Fehler über der Liste.
+          if (isChangedSinceRead(err)) await onChanged().catch(() => undefined);
+          throw err;
+        }
+      },
       update: (type, values) =>
         shiftTypeService.updateShiftType(type.id, payloadOf(values, type)),
       retire: {
@@ -356,6 +429,7 @@ function ShiftTypesPageContent() {
             color: type.color,
             description: type.description,
             isActive: false,
+            expectedVersion: type.version,
           }),
         toast: (type) =>
           `Die Dienstart „${type.name}“ wird nicht mehr angeboten.`,
@@ -368,6 +442,7 @@ function ShiftTypesPageContent() {
             color: type.color,
             description: type.description,
             isActive: true,
+            expectedVersion: type.version,
           }),
         toast: (type) => `Die Dienstart „${type.name}“ wird wieder angeboten.`,
       },
@@ -394,7 +469,7 @@ function ShiftTypesPageContent() {
             : `Die Dienstart „${type.name}“ ist gelöscht.`,
       },
     };
-  }, [categories, categoriesReady]);
+  }, [categories, categoriesReady, onChanged]);
 
   // Die Beispiele laden nach dem Anlegen; ein Fehler dabei steht über der
   // Liste und legt nichts erneut an (#6652).

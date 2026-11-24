@@ -68,7 +68,15 @@ func (rs *Resource) passkeyLoginOptions(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	school, err := rs.SchoolService.GetSchoolBySubdomain(r.Context(), req.TenantSlug)
-	if err != nil || school == nil || school.Deleted || !school.Active {
+	if errors.Is(err, ErrInvalidSchoolSubdomain) {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
+	if err != nil {
+		mapPasskeyError(w, r, err)
+		return
+	}
+	if school == nil || school.Deleted || !school.Active {
 		common.RenderError(w, r, common.ErrorNotFound(identityaccess.ErrTenantNotFound))
 		return
 	}

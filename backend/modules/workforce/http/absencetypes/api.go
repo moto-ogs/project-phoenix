@@ -15,7 +15,6 @@ package absencetypes
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -23,7 +22,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Middleware is the HTTP middleware shape the composition root supplies.
@@ -122,32 +124,34 @@ type UpdateAbsenceTypeRequest struct {
 	// Offered and SchoolLimitDays are the school's deviation from a type of
 	// its Träger (#4710). SchoolLimitDays: omitted keeps the limit, null
 	// removes it.
-	Offered         *bool           `json:"offered"`
-	SchoolLimitDays json.RawMessage `json:"school_limit_days"`
+	Offered         *bool                         `json:"offered"`
+	SchoolLimitDays common.DeferredJSON[*float64] `json:"school_limit_days" contract_refines:"The absence type handler already requires a number or null"`
+	// ExpectedVersion is the version of the type the edit was read from
+	// (ADR 0311); an edit of a type changed since is refused.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // schoolLimit reads the optional limit: nil when omitted, a patch without
 // days for null.
 func (req UpdateAbsenceTypeRequest) schoolLimit() (*workforce.SchoolLimitPatch, error) {
-	if len(req.SchoolLimitDays) == 0 {
+	if !req.SchoolLimitDays.Present {
 		return nil, nil
 	}
-	patch := &workforce.SchoolLimitPatch{}
-	if err := json.Unmarshal(req.SchoolLimitDays, &patch.Days); err != nil {
+	if req.SchoolLimitDays.Invalid != nil {
 		return nil, &workforce.InvalidAbsenceTypeError{Reason: "school_limit_days must be a number or null"}
 	}
-	return patch, nil
+	return &workforce.SchoolLimitPatch{Days: req.SchoolLimitDays.Value}, nil
 }
 
 // AbsenceTypeResponse is the wire format returned to clients. BaseType tells
 // the client which standard type's calculation this art inherits, so the UI can
 // say so instead of leaving the school guessing.
 type AbsenceTypeResponse struct {
-	ID               string `json:"id"`
-	Name             string `json:"name"`
-	BaseType         string `json:"base_type"`
-	IsActive         bool   `json:"is_active"`
-	AllowanceEnabled bool   `json:"allowance_enabled"`
+	ID               ident.ID `json:"id"`
+	Name             string   `json:"name"`
+	BaseType         string   `json:"base_type"`
+	IsActive         bool     `json:"is_active"`
+	AllowanceEnabled bool     `json:"allowance_enabled"`
 	// CarryoverUntil is null when a rest expires on 31.12.
 	CarryoverUntil *string `json:"carryover_until"`
 	Requestable    bool    `json:"requestable"`
@@ -157,18 +161,21 @@ type AbsenceTypeResponse struct {
 	KeptByTraeger   bool     `json:"kept_by_traeger"`
 	Offered         bool     `json:"offered"`
 	SchoolLimitDays *float64 `json:"school_limit_days"`
+	// Version is the token an edit sends back as expected_version (ADR
+	// 0311).
+	Version string `json:"version"`
 }
 
 // AllowanceSummaryResponse keeps database IDs as strings on the wire, matching
 // every other frontend-facing int64 ID in the application.
 type AllowanceSummaryResponse struct {
-	StaffID       string  `json:"staff_id"`
-	AbsenceTypeID string  `json:"absence_type_id"`
-	Year          int     `json:"year"`
-	EntitledDays  float64 `json:"entitled_days"`
-	TakenDays     float64 `json:"taken_days"`
-	ReservedDays  float64 `json:"reserved_days"`
-	RemainingDays float64 `json:"remaining_days"`
+	StaffID       ident.ID `json:"staff_id"`
+	AbsenceTypeID ident.ID `json:"absence_type_id"`
+	Year          int      `json:"year"`
+	EntitledDays  float64  `json:"entitled_days"`
+	TakenDays     float64  `json:"taken_days"`
+	ReservedDays  float64  `json:"reserved_days"`
+	RemainingDays float64  `json:"remaining_days"`
 	// ExpiresOn is the last day the rest can be booked; ExpiredDays is the
 	// rest that was left when that day passed.
 	ExpiresOn   string  `json:"expires_on"`
@@ -179,6 +186,9 @@ type AllowanceSummaryResponse struct {
 	// KeptByTraeger: the Träger keeps this account over all schools of the
 	// person (#4710); the school reads it and does not change it.
 	KeptByTraeger bool `json:"kept_by_traeger"`
+	// Version is the token of the stored claim; PUT .../allowances/{staffId}
+	// sends it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // AllowanceCarryResponse is the previous year's rest still usable in the
@@ -205,12 +215,14 @@ type SetAllowanceRequest struct {
 	Year         int     `json:"year"`
 	EntitledDays float64 `json:"entitled_days"`
 	Reason       string  `json:"reason"`
+	// ExpectedVersion is the version of the summary the form showed.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func toAllowanceSummaryResponse(summary workforce.AbsenceTypeAllowanceSummary) AllowanceSummaryResponse {
 	response := AllowanceSummaryResponse{
-		StaffID:       strconv.FormatInt(summary.StaffID, 10),
-		AbsenceTypeID: strconv.FormatInt(summary.AbsenceTypeID, 10),
+		StaffID:       ident.ID(summary.StaffID),
+		AbsenceTypeID: ident.ID(summary.AbsenceTypeID),
 		Year:          summary.Year,
 		EntitledDays:  summary.EntitledDays,
 		TakenDays:     summary.TakenDays,
@@ -220,6 +232,7 @@ func toAllowanceSummaryResponse(summary workforce.AbsenceTypeAllowanceSummary) A
 		ExpiredDays:   summary.ExpiredDays,
 		BookingDays:   summary.BookingDays,
 		KeptByTraeger: summary.KeptByTraeger,
+		Version:       summary.Version,
 	}
 	if carried := summary.CarriedIn; carried != nil {
 		response.CarriedIn = &AllowanceCarryResponse{
@@ -252,7 +265,7 @@ func ToOwnAllowanceResponses(accounts []workforce.AbsenceTypeAllowanceAccount) [
 
 func toAbsenceTypeResponse(t workforce.StaffAbsenceType) AbsenceTypeResponse {
 	return AbsenceTypeResponse{
-		ID:               strconv.FormatInt(t.ID, 10),
+		ID:               ident.ID(t.ID),
 		Name:             t.Name,
 		BaseType:         t.BaseType,
 		IsActive:         t.IsActive,
@@ -262,6 +275,7 @@ func toAbsenceTypeResponse(t workforce.StaffAbsenceType) AbsenceTypeResponse {
 		KeptByTraeger:    t.TraegerAbsenceTypeID != nil,
 		Offered:          t.Offered,
 		SchoolLimitDays:  t.SchoolLimitDays,
+		Version:          workforce.AbsenceTypeVersion(t),
 	}
 }
 
@@ -324,7 +338,7 @@ func (rs *Resource) list(w http.ResponseWriter, r *http.Request) {
 
 func (rs *Resource) create(w http.ResponseWriter, r *http.Request) {
 	var req CreateAbsenceTypeRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.runtime.Failure(w, r, FailureInvalid, err)
 		return
 	}
@@ -345,7 +359,7 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req UpdateAbsenceTypeRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.runtime.Failure(w, r, FailureInvalid, err)
 		return
 	}
@@ -357,6 +371,7 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 	saved, err := rs.types.UpdateAbsenceType(r.Context(), workforce.UpdateAbsenceType{
 		ID: id, Name: req.Name, IsActive: req.IsActive, AllowanceEnabled: req.AllowanceEnabled,
 		CarryoverUntil: req.CarryoverUntil, Requestable: req.Requestable, Offered: req.Offered, SchoolLimit: limit,
+		ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		rs.renderError(w, r, err)
@@ -425,13 +440,14 @@ func (rs *Resource) setAllowance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req SetAllowanceRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.runtime.Failure(w, r, FailureInvalid, err)
 		return
 	}
 	summary, err := rs.types.SetAllowance(r.Context(), workforce.SetAbsenceTypeAllowance{
 		StaffID: staffID, AbsenceTypeID: typeID, Year: req.Year,
 		EntitledDays: req.EntitledDays, Reason: req.Reason, ChangedBy: actorID,
+		ExpectedVersion: &req.ExpectedVersion,
 	})
 	if err != nil {
 		rs.renderError(w, r, err)

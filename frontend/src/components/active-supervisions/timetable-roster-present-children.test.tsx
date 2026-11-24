@@ -10,7 +10,7 @@ import type { TimetableRoster } from "~/lib/timetable-operations-types";
 // (#5000), so the hooks read the session.
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "7", tenantId: 1 } },
+    data: { user: { id: "7", tenantId: "1" } },
     status: "authenticated",
   }),
 }));
@@ -51,6 +51,7 @@ function renderRoster(
 ) {
   return render(
     <TimetableRosterContent
+      reloadAfterRefusal={vi.fn().mockResolvedValue(null)}
       addStudentSearch=""
       attendanceWebEnabled
       isAddingStudent={false}

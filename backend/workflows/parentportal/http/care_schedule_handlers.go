@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -51,10 +53,13 @@ type CareScheduleWeekdayResponse struct {
 // PendingCareRequestResponse is the child's open change request on the read
 // view, with the same "current → requested" diff staff see.
 type PendingCareRequestResponse struct {
-	ID              string                          `json:"id"`
+	ID              ident.ID                        `json:"id"`
 	CreatedAt       string                          `json:"created_at"`
 	Diff            []ParentCareRequestDiffResponse `json:"diff"`
 	SubmittedBySelf bool                            `json:"submitted_by_self"`
+	// Version is what an edit of this request sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // ParentCareRequestDiffResponse mirrors the messaging diff wire shape so the
@@ -71,10 +76,31 @@ type ParentCareRequestDiffResponse struct {
 
 // CareScheduleRequestBody is the wire shape for POST .../care-schedule/requests.
 type CareScheduleRequestBody struct {
-	Payload map[string]any `json:"payload"`
+	Payload common.DeferredJSON[*carerequests.WeeklyChange] `json:"payload" contract_refines:"The care-plan parser already validates this weekly change document"`
 	// Signature is needed when a weekday lets the child walk home alone
 	// (#4780).
 	Signature *declarationSignatureRequest `json:"signature,omitempty"`
+}
+
+// Pass the typed weekly document to the existing workflow boundary. If a
+// nested value fails to decode, let the workflow return its established
+// request error. A non-object still fails HTTP body decoding as before.
+func weeklyPayload(w http.ResponseWriter, r *http.Request, input common.DeferredJSON[*carerequests.WeeklyChange]) (map[string]any, bool) {
+	raw := input.Invalid
+	if raw == nil {
+		var err error
+		raw, err = json.Marshal(input.Value)
+		if err != nil {
+			common.RenderError(w, r, common.ErrorInternalServerWrap("encode weekly care request", err))
+			return nil, false
+		}
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
+		return nil, false
+	}
+	return payload, true
 }
 
 func toCareRequestDiffResponses(entries []parentService.CareRequestDiffEntry) []ParentCareRequestDiffResponse {
@@ -121,10 +147,11 @@ func toCareScheduleResponse(v *parentService.ChildCareSchedule) CareScheduleResp
 	}
 	if v.PendingRequest != nil {
 		resp.PendingRequest = &PendingCareRequestResponse{
-			ID:              strconv.FormatInt(v.PendingRequest.ID, 10),
+			ID:              ident.ID(v.PendingRequest.ID),
 			CreatedAt:       v.PendingRequest.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			Diff:            toCareRequestDiffResponses(v.PendingRequest.Diff),
 			SubmittedBySelf: v.PendingRequest.SubmittedBySelf,
+			Version:         v.PendingRequest.Version,
 		}
 	}
 	return resp
@@ -159,11 +186,15 @@ func (rs *Resource) createCareScheduleRequest(w http.ResponseWriter, r *http.Req
 		return
 	}
 	var body CareScheduleRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
-	view, err := rs.ParentService.CreateSignedCareScheduleRequest(r.Context(), accountID, studentID, body.Payload, body.Signature.pickupInput())
+	payload, ok := weeklyPayload(w, r, body.Payload)
+	if !ok {
+		return
+	}
+	view, err := rs.ParentService.CreateSignedCareScheduleRequest(r.Context(), accountID, studentID, payload, body.Signature.pickupInput())
 	if err != nil {
 		renderParentWriteError(w, r, err)
 		return

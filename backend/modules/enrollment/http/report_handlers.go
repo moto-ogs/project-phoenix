@@ -79,23 +79,23 @@ type CareUsageReportResponse struct {
 }
 
 type careUsagePhaseResponse struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 type careUsageAppliedFiltersResponse struct {
-	PhaseID         string   `json:"phase_id"`
-	Status          string   `json:"status"`
-	CareOfferingIDs []string `json:"care_offering_ids"`
-	DayCount        *int     `json:"day_count,omitempty"`
-	GradeLevel      *int16   `json:"grade_level,omitempty"`
-	Weekday         string   `json:"weekday,omitempty"`
-	PickupTime      string   `json:"pickup_time,omitempty"`
-	Search          string   `json:"search,omitempty"`
+	PhaseID         ident.ID   `json:"phase_id"`
+	Status          string     `json:"status"`
+	CareOfferingIDs []ident.ID `json:"care_offering_ids"`
+	DayCount        *int       `json:"day_count,omitempty"`
+	GradeLevel      *int16     `json:"grade_level,omitempty"`
+	Weekday         string     `json:"weekday,omitempty"`
+	PickupTime      string     `json:"pickup_time,omitempty"`
+	Search          string     `json:"search,omitempty"`
 }
 
 type careUsageOfferingStatResponse struct {
-	OfferingID   string         `json:"offering_id"`
+	OfferingID   ident.ID       `json:"offering_id"`
 	OfferingName string         `json:"offering_name"`
 	Children     int            `json:"children"`
 	ByDayCount   map[string]int `json:"by_day_count"`
@@ -108,14 +108,14 @@ type careUsageFilterOptionsResponse struct {
 }
 
 type careUsageOfferingOptionResponse struct {
-	ID           string `json:"id"`
-	Name         string `json:"name"`
-	CountsAsCare bool   `json:"counts_as_care"`
+	ID           ident.ID `json:"id"`
+	Name         string   `json:"name"`
+	CountsAsCare bool     `json:"counts_as_care"`
 }
 
 type careUsageRowResponse struct {
-	RequestID         string                         `json:"request_id"`
-	ChildID           string                         `json:"child_id"`
+	RequestID         ident.ID                       `json:"request_id"`
+	ChildID           ident.ID                       `json:"child_id"`
 	ChildFirstName    string                         `json:"child_first_name"`
 	ChildLastName     string                         `json:"child_last_name"`
 	DateOfBirth       string                         `json:"date_of_birth"`
@@ -135,7 +135,7 @@ type careUsageRowResponse struct {
 }
 
 type careUsageRowOfferingResponse struct {
-	ID                    string   `json:"id"`
+	ID                    ident.ID `json:"id"`
 	Name                  string   `json:"name"`
 	Days                  []string `json:"days"`
 	DaysSource            string   `json:"days_source"`
@@ -481,11 +481,11 @@ func toCareUsageReportResponse(report *capability.CareUsageReport) *CareUsageRep
 	}
 	out := &CareUsageReportResponse{
 		Phase: careUsagePhaseResponse{
-			ID:   strconv.FormatInt(report.Phase.ID, 10),
+			ID:   ident.ID(report.Phase.ID),
 			Name: report.Phase.Name,
 		},
 		Filters: careUsageAppliedFiltersResponse{
-			PhaseID:    strconv.FormatInt(report.Filters.PhaseID, 10),
+			PhaseID:    ident.ID(report.Filters.PhaseID),
 			Status:     report.Filters.Status,
 			DayCount:   report.Filters.DayCount,
 			GradeLevel: report.Filters.GradeLevel,
@@ -500,14 +500,14 @@ func toCareUsageReportResponse(report *capability.CareUsageReport) *CareUsageRep
 		},
 		Rows: make([]careUsageRowResponse, 0, len(report.Rows)),
 	}
-	out.Filters.CareOfferingIDs = make([]string, 0, len(report.Filters.CareOfferingIDs))
+	out.Filters.CareOfferingIDs = make([]ident.ID, 0, len(report.Filters.CareOfferingIDs))
 	for _, id := range report.Filters.CareOfferingIDs {
-		out.Filters.CareOfferingIDs = append(out.Filters.CareOfferingIDs, strconv.FormatInt(id, 10))
+		out.Filters.CareOfferingIDs = append(out.Filters.CareOfferingIDs, ident.ID(id))
 	}
 	out.ByOffering = make([]careUsageOfferingStatResponse, 0, len(report.ByOffering))
 	for _, stat := range report.ByOffering {
 		out.ByOffering = append(out.ByOffering, careUsageOfferingStatResponse{
-			OfferingID:   strconv.FormatInt(stat.OfferingID, 10),
+			OfferingID:   ident.ID(stat.OfferingID),
 			OfferingName: stat.OfferingName,
 			Children:     stat.Children,
 			ByDayCount:   stat.ByDayCount,
@@ -516,7 +516,7 @@ func toCareUsageReportResponse(report *capability.CareUsageReport) *CareUsageRep
 	out.FilterOptions.Offerings = make([]careUsageOfferingOptionResponse, 0, len(report.FilterOptions.Offerings))
 	for _, option := range report.FilterOptions.Offerings {
 		out.FilterOptions.Offerings = append(out.FilterOptions.Offerings, careUsageOfferingOptionResponse{
-			ID:           strconv.FormatInt(option.ID, 10),
+			ID:           ident.ID(option.ID),
 			Name:         option.Name,
 			CountsAsCare: option.CountsAsCare,
 		})
@@ -529,8 +529,8 @@ func toCareUsageReportResponse(report *capability.CareUsageReport) *CareUsageRep
 
 func toCareUsageRowResponse(row capability.CareUsageRow) careUsageRowResponse {
 	rowOut := careUsageRowResponse{
-		RequestID:         strconv.FormatInt(row.RequestID, 10),
-		ChildID:           strconv.FormatInt(row.ChildID, 10),
+		RequestID:         ident.ID(row.RequestID),
+		ChildID:           ident.ID(row.ChildID),
 		ChildFirstName:    row.ChildFirstName,
 		ChildLastName:     row.ChildLastName,
 		DateOfBirth:       row.DateOfBirth,
@@ -550,7 +550,7 @@ func toCareUsageRowResponse(row capability.CareUsageRow) careUsageRowResponse {
 	}
 	for _, offering := range row.Offerings {
 		rowOut.Offerings = append(rowOut.Offerings, careUsageRowOfferingResponse{
-			ID:                    strconv.FormatInt(offering.ID, 10),
+			ID:                    ident.ID(offering.ID),
 			Name:                  offering.Name,
 			Days:                  nonNilStringSlice(offering.Days),
 			DaysSource:            offering.DaysSource,

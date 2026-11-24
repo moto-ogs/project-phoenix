@@ -10,7 +10,13 @@
  * compile until both are updated.
  */
 
-import type { MessageAttachment } from "~/lib/message-attachments";
+import type * as sharedContract from "~/lib/contract/shared.generated";
+import type {
+  ParentMessageResponse,
+  ThreadSummaryResponse,
+} from "~/lib/contract/parent-me.generated";
+import type * as messagesContract from "~/lib/contract/messages.generated";
+import { knownEnum } from "~/lib/contract/known-enum";
 import { formatDate } from "~/lib/date-helpers";
 
 /** Who sent a message: the guardian, the OGS staff, or a system event. */
@@ -38,45 +44,114 @@ type WireRequestType =
 type RequestStatus = "offen" | "erledigt" | "abgelehnt" | "zurueckgezogen";
 
 /**
- * One message/event/request in a parent-OGS conversation, as it arrives over the
- * wire (int64 ids already stringified by the backend). Shared verbatim by the
- * staff client (parent-messages-api `Message`) and the parent client (parent-api
- * `ParentMessage`). For staff messages on the parent side `sender_name` is the
- * "OGS [Schulname]" label.
+ * One message/event/request in a parent-OGS conversation, as the screens read
+ * it. Derived from the staff answer (`ParentChatMessageResponse`), the wider of
+ * the two; the parents' answer (`ParentMessageResponse`) carries a subset of its
+ * fields. Shared by the staff client (parent-messages-api `Message`) and the
+ * parent client (parent-api `ParentMessage`); both read the wire through
+ * `chatMessageFieldsOf`. For staff messages on the parent side `sender_name` is
+ * the "OGS [Schulname]" label.
+ *
+ * The contract types the enums as plain strings (#7808); this type names the
+ * values this build knows. `payload` stays open on the wire because its keys
+ * depend on the event or request type; the reader keeps only an object.
  */
-export interface ChatMessage {
-  client_message_id?: string;
-  readonly id: string;
+export type ChatMessage = Omit<
+  messagesContract.ParentChatMessageResponse,
+  ChatMessageFieldKey | "attachments"
+> & {
   readonly sender_kind: MessageSenderKind;
-  readonly sender_name: string;
-  readonly body: string;
-  readonly created_at: string; // ISO timestamp
   // A plain message ("message"), a system event ("event"), or a structured
   // change-request ("request"). Defaults to a plain message when absent so an
   // older payload still renders as a bubble.
   readonly kind?: MessageKind;
-  readonly event_type?: string;
   readonly event_actor_kind?: MessageSenderKind;
   readonly request_type?: WireRequestType;
   readonly request_status?: RequestStatus;
-  // Deep-link reference to the underlying request row (e.g.
-  // "users.student_data_change_requests" / "schedule.care_schedule_change_requests"
-  // + row id, both stringified). A request_created pill and the request_status
-  // pill that resolves it carry the SAME ref, so open/closed is tracked per row
-  // — essential for multi-row master-data submissions where several rows of the
-  // same request_type are pending at once. Optional (older/non-request events).
-  readonly ref_table?: string;
-  readonly ref_id?: string;
   readonly payload?: Record<string, unknown>;
-  readonly decision_reason?: string;
-  // read_by_staff: a guardian message the OGS has read ("Gelesen", shown to the
-  // parent). read_by_guardian: a staff message the guardian has read ("Gelesen",
-  // shown to staff). Each side renders the receipt for its OWN messages the other
-  // side has read.
-  readonly read_by_staff?: boolean;
-  readonly read_by_guardian?: boolean;
   /** Fotos und Dateien der Nachricht (#6685). */
-  readonly attachments?: readonly MessageAttachment[];
+  readonly attachments?: readonly Readonly<sharedContract.UploadResponse>[];
+};
+
+/** The fields chatMessageFieldsOf reads out of a wire message. */
+type ChatMessageFieldKey =
+  | "sender_kind"
+  | "kind"
+  | "event_actor_kind"
+  | "request_type"
+  | "request_status"
+  | "payload";
+
+const SENDER_KINDS = [
+  "guardian",
+  "staff",
+  "system",
+] as const satisfies readonly MessageSenderKind[];
+const MESSAGE_KINDS = [
+  "message",
+  "event",
+  "request",
+] as const satisfies readonly MessageKind[];
+const REQUEST_TYPES = [
+  "care_schedule",
+  "pickup_change",
+  "master_data",
+  "excused_absence",
+  "sick_absence",
+  "care_offering",
+] as const satisfies readonly WireRequestType[];
+const REQUEST_STATUSES = [
+  "offen",
+  "erledigt",
+  "abgelehnt",
+  "zurueckgezogen",
+] as const satisfies readonly RequestStatus[];
+
+/**
+ * The fields the reader narrows, as the staff answer types them; the parents'
+ * answer (`ParentMessageResponse`) fits, it only lacks `event_actor_kind`.
+ */
+type WireChatMessageFields = Pick<
+  messagesContract.ParentChatMessageResponse,
+  ChatMessageFieldKey
+>;
+
+/** Reads a sender kind the conversation list shows; unknown ones drop. */
+export function knownSenderKind(
+  value: string | undefined,
+): MessageSenderKind | undefined {
+  return knownEnum(SENDER_KINDS, value);
+}
+
+/** Reads a last-message kind of a conversation row. */
+export function knownMessageKind(
+  value: string | undefined,
+): MessageKind | undefined {
+  return knownEnum(MESSAGE_KINDS, value);
+}
+
+/**
+ * Narrows the string enums and the payload of one wire message to the values
+ * ChatMessage names. Null for a sender this build does not know: such a
+ * message is left out rather than shown under a guessed sender.
+ */
+export function chatMessageFieldsOf(
+  raw: WireChatMessageFields,
+): { readonly [K in ChatMessageFieldKey]: ChatMessage[K] } | null {
+  const senderKind = knownEnum(SENDER_KINDS, raw.sender_kind);
+  if (!senderKind) return null;
+  const payload = raw.payload;
+  return {
+    sender_kind: senderKind,
+    kind: knownEnum(MESSAGE_KINDS, raw.kind),
+    event_actor_kind: knownEnum(SENDER_KINDS, raw.event_actor_kind),
+    request_type: knownEnum(REQUEST_TYPES, raw.request_type),
+    request_status: knownEnum(REQUEST_STATUSES, raw.request_status),
+    payload:
+      payload !== null && typeof payload === "object" && !Array.isArray(payload)
+        ? (payload as Record<string, unknown>)
+        : undefined,
+  };
 }
 
 /**
@@ -210,14 +285,10 @@ function pickupChangeWithMode(message: {
  * (matching the previous behavior for unknown events).
  */
 export function parentEventI18nDescriptor(
-  message: {
-    readonly kind?: MessageKind;
-    readonly event_type?: string;
-    readonly request_status?: string;
-    readonly request_type?: string;
-    readonly decision_reason?: string;
-    readonly payload?: Record<string, unknown>;
-  },
+  message: Pick<
+    ParentMessageResponse,
+    "event_type" | "request_status" | "request_type" | "decision_reason"
+  > & { kind?: MessageKind; payload?: Record<string, unknown> },
   locale = "de-DE",
 ): { key: string; values?: Record<string, string> } | null {
   if (message.kind !== "event") {
@@ -300,13 +371,13 @@ export function parentEventI18nDescriptor(
  * still renders the reason.
  */
 export function parentThreadPreviewI18nDescriptor(
-  thread: {
-    readonly last_message_kind?: string;
-    readonly last_event_type?: string;
-    readonly last_request_type?: string;
-    readonly last_request_status?: string;
-    readonly last_message_payload?: Record<string, unknown>;
-  },
+  thread: Pick<
+    ThreadSummaryResponse,
+    | "last_message_kind"
+    | "last_event_type"
+    | "last_request_type"
+    | "last_request_status"
+  > & { last_message_payload?: Record<string, unknown> },
   locale = "de-DE",
 ): { key: string; values?: Record<string, string> } | null {
   if (thread.last_message_kind === "request") {

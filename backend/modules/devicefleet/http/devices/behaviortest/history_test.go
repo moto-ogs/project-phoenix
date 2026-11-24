@@ -66,9 +66,11 @@ func TestDeviceHistoryRecordsEveryLifecycleChange(t *testing.T) {
 	created.data(t, &device)
 	require.NotEmpty(t, device.APIKey)
 
-	edit := map[string]any{"device_id": hardwareID, "device_type": "rfid_reader", "name": "Haupteingang"}
-	require.Equal(t, http.StatusOK, request(http.MethodPut, fmt.Sprintf("/devices/%d", device.ID), edit).status)
-	require.Equal(t, http.StatusOK, request(http.MethodPut, fmt.Sprintf("/devices/%d", device.ID), edit).status, "an unchanged edit")
+	devicePath := fmt.Sprintf("/devices/%d", device.ID)
+	edit := map[string]any{"device_id": hardwareID, "device_type": "rfid_reader", "name": "Haupteingang", "expected_version": deviceVersion(t, router, devicePath)}
+	require.Equal(t, http.StatusOK, request(http.MethodPut, devicePath, edit).status)
+	edit["expected_version"] = deviceVersion(t, router, devicePath)
+	require.Equal(t, http.StatusOK, request(http.MethodPut, devicePath, edit).status, "an unchanged edit")
 	statusPath := "/devices/" + url.PathEscape(hardwareID) + "/status"
 	require.Equal(t, http.StatusOK, request(http.MethodPatch, statusPath, map[string]any{"status": "inactive"}).status)
 	require.Equal(t, http.StatusOK, request(http.MethodPatch, statusPath, map[string]any{"status": "inactive"}).status, "a repeated block")
@@ -159,6 +161,7 @@ func TestDeviceHistoryEditRacingARemovalRecordsNothing(t *testing.T) {
 	device := testpkg.CreateTestDevice(t, ctx.db, hardwareID)
 	router := testutil.NewTenantRouter(ctx.db)
 	router.Mount("/devices", ctx.resource.Router())
+	read := deviceVersion(t, router, fmt.Sprintf("/devices/%d", device.ID))
 
 	removal, err := ctx.db.BeginTx(testpkg.Ctx(t), nil)
 	require.NoError(t, err)
@@ -171,7 +174,7 @@ func TestDeviceHistoryEditRacingARemovalRecordsNothing(t *testing.T) {
 	done := make(chan int, 1)
 	go func() {
 		req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/devices/%d", device.ID),
-			map[string]any{"device_id": hardwareID, "device_type": "terminal", "name": "Nach dem Entfernen"},
+			map[string]any{"device_id": hardwareID, "device_type": "terminal", "name": "Nach dem Entfernen", "expected_version": read},
 			testutil.WithClaims(t, testutil.DefaultTestClaims()), testutil.WithPermissions("devices:manage"))
 		done <- testutil.ExecuteRequest(router, req).Code
 	}()

@@ -5,6 +5,7 @@ import {
   bool,
   fileAnswer,
   instant,
+  int64String,
   json,
   multipart,
   noData,
@@ -76,8 +77,8 @@ export interface ParentChatInboxThreadResponse {
 }
 
 export const ParentChatInboxThreadResponseSchema: z.ZodType<ParentChatInboxThreadResponse, unknown> = object<ParentChatInboxThreadResponse>({
-  thread_id: str,
-  student_id: str,
+  thread_id: int64String,
+  student_id: int64String,
   student_name: str,
   school_class: optional(str),
   group_name: optional(str),
@@ -133,7 +134,7 @@ export interface StaffGroupThreadSummaryResponse {
 }
 
 export const StaffGroupThreadSummaryResponseSchema: z.ZodType<StaffGroupThreadSummaryResponse, unknown> = object<StaffGroupThreadSummaryResponse>({
-  id: str,
+  id: int64String,
   target_type: str,
   target_id: str,
   target_label: str,
@@ -159,7 +160,7 @@ export interface GroupChildResponse {
 }
 
 export const GroupChildResponseSchema: z.ZodType<GroupChildResponse, unknown> = object<GroupChildResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: optional(str),
@@ -180,7 +181,7 @@ export interface GroupThreadResponse {
 }
 
 export const GroupThreadResponseSchema: z.ZodType<GroupThreadResponse, unknown> = object<GroupThreadResponse>({
-  id: str,
+  id: int64String,
   target_type: str,
   target_id: str,
   target_label: str,
@@ -201,7 +202,7 @@ export interface ParentMessageAttachmentResponse {
 }
 
 export const ParentMessageAttachmentResponseSchema: z.ZodType<ParentMessageAttachmentResponse, unknown> = object<ParentMessageAttachmentResponse>({
-  id: str,
+  id: int64String,
   filename: str,
   size_bytes: safeInt,
   content_type: str,
@@ -221,7 +222,7 @@ export interface StaffGroupMessageResponse {
 
 export const StaffGroupMessageResponseSchema: z.ZodType<StaffGroupMessageResponse, unknown> = object<StaffGroupMessageResponse>({
   client_message_id: optional(str),
-  id: str,
+  id: int64String,
   sender_name: str,
   body: str,
   created_at: instant,
@@ -262,7 +263,7 @@ export interface ReachableStudentsResponse {
 }
 
 export const ReachableStudentsResponseSchema: z.ZodType<ReachableStudentsResponse, unknown> = object<ReachableStudentsResponse>({
-  student_ids: nullable(arr(str)),
+  student_ids: nullable(arr(int64String)),
 });
 
 /** Go: messaging.MessageableGuardianResponse */
@@ -276,7 +277,7 @@ export interface MessageableGuardianResponse {
 }
 
 export const MessageableGuardianResponseSchema: z.ZodType<MessageableGuardianResponse, unknown> = object<MessageableGuardianResponse>({
-  account_id: str,
+  account_id: int64String,
   name: str,
   relationship_type: optional(str),
   is_primary: bool,
@@ -307,12 +308,12 @@ export interface ParentChatMessageResponse {
   read_by_guardian?: boolean;
   group_thread_id?: string;
   group_thread_title?: string;
-  attachments?: unknown | null;
+  attachments?: ParentMessageAttachmentResponse[];
 }
 
 export const ParentChatMessageResponseSchema: z.ZodType<ParentChatMessageResponse, unknown> = object<ParentChatMessageResponse>({
   client_message_id: optional(str),
-  id: str,
+  id: int64String,
   sender_kind: str,
   sender_name: str,
   body: str,
@@ -324,15 +325,15 @@ export const ParentChatMessageResponseSchema: z.ZodType<ParentChatMessageRespons
   request_status: optional(str),
   payload: optional(nullable(json)),
   ref_table: optional(str),
-  ref_id: optional(str),
+  ref_id: optional(int64String),
   applied_at: optional(instant),
-  applied_by: optional(str),
+  applied_by: optional(int64String),
   decision_reason: optional(str),
   read_by_staff: optional(bool),
   read_by_guardian: optional(bool),
-  group_thread_id: optional(str),
+  group_thread_id: optional(int64String),
   group_thread_title: optional(str),
-  attachments: optional(nullable(json)),
+  attachments: optional(arr(ParentMessageAttachmentResponseSchema)),
 });
 
 /** Go: messaging.ParentChatThreadDetailResponse */
@@ -348,8 +349,8 @@ export interface ParentChatThreadDetailResponse {
 }
 
 export const ParentChatThreadDetailResponseSchema: z.ZodType<ParentChatThreadDetailResponse, unknown> = object<ParentChatThreadDetailResponse>({
-  thread_id: str,
-  student_id: str,
+  thread_id: int64String,
+  student_id: int64String,
   student_name: str,
   guardian_name: str,
   relationship_type: optional(str),
@@ -428,40 +429,23 @@ export const CountScopeSavedResponseSchema: z.ZodType<CountScopeSavedResponse, u
   scope: str,
 });
 
-/** Query of GET /api/messages/ */
-export interface GetMessagesQuery {
-  unread?: boolean;
-}
-
-/** Query of GET /api/messages/attachments/{attachmentId}/download */
-export interface GetMessagesAttachmentsAttachmentIdDownloadQuery {
-  inline?: string;
-}
-
-/** Query of GET /api/messages/group-threads/audience */
-export interface GetMessagesGroupThreadsAudienceQuery {
-  target_id?: string;
-  target_type?: string;
-}
-
-/** Query of GET /api/messages/students/{studentId}/guardians */
-export interface GetMessagesStudentsStudentIdGuardiansQuery {
-  audience?: string;
-}
-
 export const routes = {
   "GET /api/messages/": {
     method: "GET",
     pattern: "/api/messages/",
     portals: ["tenant"],
-    query: ["unread"],
+    query: {
+      "unread": { kind: "bool" },
+    },
     response: success(z.array(ParentChatInboxThreadResponseSchema)),
   },
   "GET /api/messages/attachments/{attachmentId}/download": {
     method: "GET",
     pattern: "/api/messages/attachments/{attachmentId}/download",
     portals: ["tenant"],
-    query: ["inline"],
+    query: {
+      "inline": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /api/messages/count-scope": {
@@ -480,7 +464,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/messages/group-threads/audience",
     portals: ["tenant"],
-    query: ["target_id", "target_type"],
+    query: {
+      "target_id": { kind: "string" },
+      "target_type": { kind: "string" },
+    },
     response: success(z.array(GroupChildResponseSchema)),
   },
   "GET /api/messages/group-threads/{groupThreadId}": {
@@ -505,7 +492,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/messages/students/{studentId}/guardians",
     portals: ["tenant"],
-    query: ["audience"],
+    query: {
+      "audience": { kind: "string" },
+    },
     response: success(z.array(MessageableGuardianResponseSchema)),
   },
   "GET /api/messages/students/{studentId}/threads": {

@@ -85,7 +85,10 @@ func careExitRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/care-withdrawals/{completionId}/care-end", Portals: portals, Request: careWithdrawalExitRequest{}, Response: careExitConfirmedResponse{}},
 		{Method: "POST", Pattern: "/{id}/care-end/resume", Portals: portals, Request: careResumeRequest{}, Response: careResumedResponse{}},
 		{Method: "GET", Pattern: "/ended-care", Portals: portals, Query: ended, Response: endedCarePageResponse{}},
-		{Method: "GET", Pattern: "/{id}/companions", Portals: portals, Response: []CompanionResponse{}},
+		// Superseded by /{id}/companion-links, which carries the fingerprint
+		// of the read (ADR 0311); goes after one release.
+		{Method: "GET", Pattern: "/{id}/companions", Portals: portals, Deprecated: true, Response: []CompanionResponse{}},
+		{Method: "GET", Pattern: "/{id}/companion-links", Portals: portals, Response: StudentCompanionList{}},
 	}
 }
 
@@ -110,7 +113,7 @@ func pickupRouteContracts() []common.RouteContract {
 		{Method: "DELETE", Pattern: "/{id}/partial-absences/{partialAbsenceId}", Portals: portals, Response: partialAbsenceDeletedResponse{}},
 		{Method: "POST", Pattern: "/{id}/pickup-notes", Portals: portals, Request: PickupNoteRequest{}, Response: PickupNoteResponse{}},
 		{Method: "PUT", Pattern: "/{id}/pickup-notes", Portals: portals, Request: WeekdayPickupNotesRequest{}, NoData: true},
-		{Method: "PUT", Pattern: "/{id}/pickup-notes/{noteId}", Portals: portals, Request: PickupNoteRequest{}, Response: PickupNoteResponse{}},
+		{Method: "PUT", Pattern: "/{id}/pickup-notes/{noteId}", Portals: portals, Request: PickupNoteUpdateRequest{}, Response: PickupNoteResponse{}},
 		{Method: "DELETE", Pattern: "/{id}/pickup-notes/{noteId}", Portals: portals, NoData: true},
 		{Method: "GET", Pattern: "/pickup-change-notices", Portals: portals, Response: []pickupChangeNoticeResponse{}},
 		{Method: "POST", Pattern: "/{id}/pickup-change-notices/read", Portals: portals, Request: pickupChangeNoticesReadRequest{}, Response: []pickupChangeNoticeResponse{}},
@@ -131,7 +134,7 @@ func arrivalRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: "/{id}/arrival-exceptions/{exceptionId}", Portals: portals, Request: StudentArrivalExceptionRequest{}, Response: StudentArrivalExceptionResponse{}},
 		{Method: "DELETE", Pattern: "/{id}/arrival-exceptions/{exceptionId}", Portals: portals, NoData: true},
 		{Method: "POST", Pattern: "/{id}/arrival-notes", Portals: portals, Request: ArrivalNoteRequest{}, Response: ArrivalNoteResponse{}},
-		{Method: "PUT", Pattern: "/{id}/arrival-notes/{noteId}", Portals: portals, Request: ArrivalNoteRequest{}, Response: ArrivalNoteResponse{}},
+		{Method: "PUT", Pattern: "/{id}/arrival-notes/{noteId}", Portals: portals, Request: ArrivalNoteUpdateRequest{}, Response: ArrivalNoteResponse{}},
 		{Method: "DELETE", Pattern: "/{id}/arrival-notes/{noteId}", Portals: portals, NoData: true},
 		{Method: "POST", Pattern: "/arrival-schedules/bulk", Portals: portals, Request: BulkUpsertArrivalScheduleRequest{}, Response: careplan.BulkUpsertResult{}},
 		{Method: "POST", Pattern: "/arrival-schedules/status", Portals: portals, NoCommit: "reads the arrival times of the children the body names", Request: BulkEffectiveTimeRequest{}, Response: ArrivalScheduleStatusResponse{}},

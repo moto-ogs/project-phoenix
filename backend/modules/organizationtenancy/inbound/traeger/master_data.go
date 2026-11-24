@@ -45,6 +45,7 @@ var (
 type MasterDataResource struct {
 	masterData    organizationtenancy.TraegerMasterData
 	templates     organizationtenancy.TraegerDocumentTemplates
+	responsible   organizationtenancy.SchoolResponsibilities
 	lists         common.ListRenderer
 	requireRead   common.Middleware
 	requireManage common.Middleware
@@ -53,12 +54,14 @@ type MasterDataResource struct {
 // NewMasterDataResource builds the resource. The root binds requireRead and
 // requireManage to the rights Identity & Access bundles into the Träger roles
 // (ADR 0084 section 4); lists renders the list of the templates as PDF,
-// Excel or CSV (#4718).
-func NewMasterDataResource(masterData organizationtenancy.TraegerMasterData, templates organizationtenancy.TraegerDocumentTemplates, lists common.ListRenderer, requireRead, requireManage common.Middleware) *MasterDataResource {
-	if masterData == nil || templates == nil || lists == nil || requireRead == nil || requireManage == nil {
-		panic("organization tenancy traeger: the master data, the document templates, the list renderer and the right checks are required")
+// Excel or CSV (#4718); responsible serves who is responsible at the
+// schools and the master data of their Schulträger and Gemeinde (#4811).
+func NewMasterDataResource(masterData organizationtenancy.TraegerMasterData, templates organizationtenancy.TraegerDocumentTemplates,
+	responsible organizationtenancy.SchoolResponsibilities, lists common.ListRenderer, requireRead, requireManage common.Middleware) *MasterDataResource {
+	if masterData == nil || templates == nil || responsible == nil || lists == nil || requireRead == nil || requireManage == nil {
+		panic("organization tenancy traeger: the master data, the document templates, the responsibilities, the list renderer and the right checks are required")
 	}
-	return &MasterDataResource{masterData: masterData, templates: templates, lists: lists, requireRead: requireRead, requireManage: requireManage}
+	return &MasterDataResource{masterData: masterData, templates: templates, responsible: responsible, lists: lists, requireRead: requireRead, requireManage: requireManage}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/master-data. The
@@ -88,6 +91,7 @@ func (rs *MasterDataResource) TraegerRouter(protectedTraegerRoutes func(chi.Rout
 		// The preview fills sample data and stores nothing, so every
 		// reader of the templates may see it.
 		read.Post("/document-templates/{kind}/preview", rs.previewTemplate)
+		rs.responsibilityRoutes(read, manage)
 	})
 	return r
 }
@@ -97,6 +101,9 @@ type ContactRequest struct {
 	Name  string `json:"name"`
 	Phone string `json:"phone"`
 	Email string `json:"email"`
+	// ExpectedVersion is the section's contact_version the form was read
+	// with (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind accepts the body; the Owner validates it.
@@ -107,6 +114,9 @@ func (req *ContactRequest) Bind(*http.Request) error { return nil }
 type WithdrawalContactRequest struct {
 	Phone string `json:"phone"`
 	Email string `json:"email"`
+	// ExpectedVersion is the section's withdrawal_version the form was
+	// read with (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind accepts the body; the Owner validates it.
@@ -128,6 +138,14 @@ func (req *BankAccountRequest) Bind(*http.Request) error { return nil }
 
 func (req *BankAccountRequest) input() organizationtenancy.TraegerBankAccountInput {
 	return organizationtenancy.TraegerBankAccountInput(*req)
+}
+
+// BankAccountUpdateRequest is the body of PUT
+// /traeger/master-data/bank-accounts/{id}: the account with the version it
+// was read with (ADR 0311).
+type BankAccountUpdateRequest struct {
+	BankAccountRequest
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // session returns the Träger and the account of the session, or renders 401.
@@ -276,7 +294,8 @@ func (rs *MasterDataResource) updateContact(w http.ResponseWriter, r *http.Reque
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	contact, err := rs.masterData.UpdateContact(r.Context(), organizationID, accountID, organizationtenancy.TraegerContact(*req))
+	contact, err := rs.masterData.UpdateContact(r.Context(), organizationID, accountID,
+		organizationtenancy.TraegerContact{Name: req.Name, Phone: req.Phone, Email: req.Email}, req.ExpectedVersion)
 	if err != nil {
 		renderMasterDataError(w, r, err)
 		return
@@ -294,7 +313,8 @@ func (rs *MasterDataResource) updateWithdrawalContact(w http.ResponseWriter, r *
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	contact, err := rs.masterData.UpdateWithdrawalContact(r.Context(), organizationID, accountID, organizationtenancy.TraegerWithdrawalContact(*req))
+	contact, err := rs.masterData.UpdateWithdrawalContact(r.Context(), organizationID, accountID,
+		organizationtenancy.TraegerWithdrawalContact{Phone: req.Phone, Email: req.Email}, req.ExpectedVersion)
 	if err != nil {
 		renderMasterDataError(w, r, err)
 		return
@@ -330,12 +350,12 @@ func (rs *MasterDataResource) updateBankAccount(w http.ResponseWriter, r *http.R
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	req := &BankAccountRequest{}
+	req := &BankAccountUpdateRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	account, err := rs.masterData.UpdateBankAccount(r.Context(), organizationID, accountID, bankAccountID, req.input())
+	account, err := rs.masterData.UpdateBankAccount(r.Context(), organizationID, accountID, bankAccountID, req.input(), req.ExpectedVersion)
 	if err != nil {
 		renderMasterDataError(w, r, err)
 		return

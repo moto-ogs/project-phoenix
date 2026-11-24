@@ -5,18 +5,26 @@ import { SWRConfig } from "~/lib/swr/testing";
 import { _resetTraegerHostCache } from "~/lib/traeger-url";
 
 vi.unmock("swr");
-const { mockUseSession, mockRedirect, mockFetchOrganization, mockPathname } =
-  vi.hoisted(() => ({
-    mockUseSession: vi.fn(),
-    mockRedirect: vi.fn(),
-    mockFetchOrganization: vi.fn(),
-    mockPathname: vi.fn(() => "/traeger"),
-  }));
+const {
+  mockUseSession,
+  mockRedirect,
+  mockReplace,
+  mockFetchOrganization,
+  mockPathname,
+} = vi.hoisted(() => ({
+  mockUseSession: vi.fn(),
+  mockRedirect: vi.fn(),
+  mockReplace: vi.fn(),
+  mockFetchOrganization: vi.fn(),
+  mockPathname: vi.fn(() => "/traeger"),
+}));
 
 vi.mock("next-auth/react", () => ({ useSession: () => mockUseSession() }));
 vi.mock("next/navigation", () => ({
   redirect: (path: string) => mockRedirect(path),
   usePathname: () => mockPathname(),
+  // The module gate leaves an unbooked dashboard for the school list (#6052).
+  useRouter: () => ({ replace: mockReplace }),
 }));
 vi.mock("~/components/traeger/traeger-shell", () => ({
   TraegerShell: ({
@@ -54,6 +62,7 @@ describe("TraegerAuthGuard", () => {
   beforeEach(() => {
     mockUseSession.mockReset();
     mockRedirect.mockReset();
+    mockReplace.mockReset();
     mockFetchOrganization.mockReset();
     mockPathname.mockReturnValue("/traeger");
     mockFetchOrganization.mockResolvedValue({
@@ -104,7 +113,7 @@ describe("TraegerAuthGuard", () => {
 
   // The layout's server snapshot carries no token (#4991).
   it("renders the portal for the layout's server snapshot", () => {
-    mockUseSession.mockReturnValue(session({ scope: "org", orgId: 7 }));
+    mockUseSession.mockReturnValue(session({ scope: "org", orgId: "7" }));
     render(
       <TraegerAuthGuard>
         <p>Schulen</p>
@@ -145,7 +154,7 @@ describe("TraegerAuthGuard", () => {
       testSystem: true,
     });
     mockUseSession.mockReturnValue(
-      session({ id: "1", scope: "org", orgId: 7 }),
+      session({ id: "1", scope: "org", orgId: "7" }),
     );
     render(
       <TraegerAuthGuard>
@@ -164,7 +173,7 @@ describe("TraegerAuthGuard", () => {
 
   it("shows no test-system mark for a real Träger", async () => {
     mockUseSession.mockReturnValue(
-      session({ id: "1", scope: "org", orgId: 7 }),
+      session({ id: "1", scope: "org", orgId: "7" }),
     );
     render(
       <TraegerAuthGuard>
@@ -178,5 +187,54 @@ describe("TraegerAuthGuard", () => {
       "data-test-system",
       "false",
     );
+  });
+
+  // #6052: the dashboard is the start page. Without the module
+  // Träger-Übersicht the school list takes over, so nobody lands on an
+  // explanation after signing in.
+  it("leaves the dashboard for the school list without Träger-Übersicht", async () => {
+    mockPathname.mockReturnValue("/traeger/uebersicht");
+    mockFetchOrganization.mockResolvedValue({
+      id: "5",
+      name: "Echter Träger",
+      testSystem: false,
+      federalStates: [],
+      bookedModules: ["vertraege"],
+    });
+    mockUseSession.mockReturnValue(
+      session({ id: "1", scope: "org", orgId: "7" }),
+    );
+    render(
+      <TraegerAuthGuard>
+        <p>Dashboard</p>
+      </TraegerAuthGuard>,
+      { wrapper: Providers },
+    );
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/traeger"));
+  });
+
+  it("keeps the dashboard of a Träger with Träger-Übersicht", async () => {
+    mockPathname.mockReturnValue("/traeger/uebersicht");
+    mockFetchOrganization.mockResolvedValue({
+      id: "5",
+      name: "Echter Träger",
+      testSystem: false,
+      federalStates: [],
+      bookedModules: ["traeger_uebersicht"],
+    });
+    mockUseSession.mockReturnValue(
+      session({ id: "1", scope: "org", orgId: "7" }),
+    );
+    render(
+      <TraegerAuthGuard>
+        <p>Dashboard</p>
+      </TraegerAuthGuard>,
+      { wrapper: Providers },
+    );
+
+    await waitFor(() => expect(mockFetchOrganization).toHaveBeenCalled());
+    expect(await screen.findByText("Dashboard")).toBeInTheDocument();
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 });

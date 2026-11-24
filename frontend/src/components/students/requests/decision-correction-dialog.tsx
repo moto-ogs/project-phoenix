@@ -8,18 +8,18 @@
  */
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { ApiError } from "~/lib/api-error";
 
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { Textarea } from "~/components/ui/textarea";
-import { useApiFormError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import {
   correctRequestDecision,
   type ParentRequestKind,
+  isOutdatedDecision,
 } from "~/lib/change-request-list-api";
 
 const logger = createLogger({ component: "DecisionCorrectionDialog" });
@@ -49,12 +49,16 @@ export function DecisionCorrectionDialog({
   reasonRequired,
   onClose,
   onCorrected,
+  onStale,
 }: Readonly<{
   target: CorrectionTarget;
   /** Verlangt die Schule beim Entscheiden eine Begründung? */
   reasonRequired: boolean;
   onClose: () => void;
   onCorrected: (notice: string) => void;
+  /** Die Entscheidung ist inzwischen anders gespeichert: die Liste lädt neu
+   * und der Dialog schließt. */
+  onStale: () => Promise<unknown>;
 }>) {
   // Vorbelegt auf das Gegenteil der bisherigen Entscheidung: wer korrigiert,
   // will fast immer das andere Ergebnis.
@@ -63,6 +67,7 @@ export function DecisionCorrectionDialog({
   const [saving, setSaving] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
   const errors = useApiFormError(bodyRef);
+  const staleErrors = useApiErrorDisplay();
   // „Wiederholen“ sendet den aktuellen Grund, nicht den vom Fehler.
   const latestSaveRef = useRef<() => Promise<void>>(async () => undefined);
 
@@ -92,15 +97,19 @@ export function DecisionCorrectionDialog({
         error: err instanceof Error ? err.message : String(err),
         kind: target.kind,
       });
+      if (isOutdatedDecision(err)) {
+        // Veraltet: erst neu laden, dann neu entscheiden. Der Dialog trägt
+        // die alte Fassung und schickte sie wieder; er schließt, die Liste
+        // zeigt den gespeicherten Stand und die Meldung steht als Toast.
+        void staleErrors.show(err, {
+          object: "die Korrektur",
+          reload: onStale,
+        });
+        return;
+      }
       await errors.show(err, {
         object: "die Korrektur",
-        // Veraltet: erst neu laden, dann neu entscheiden. Ein Wiederholen mit
-        // der alten Fassung schlüge wieder fehl.
-        retry:
-          err instanceof ApiError &&
-          err.code === "students.change_request_stale"
-            ? undefined
-            : () => void latestSaveRef.current(),
+        retry: () => void latestSaveRef.current(),
       });
       setSaving(false);
     }

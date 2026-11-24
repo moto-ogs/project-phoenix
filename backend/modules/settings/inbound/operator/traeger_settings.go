@@ -2,12 +2,13 @@ package operator
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // TraegerOperations is the operator's side of the Träger level (ADR 0086,
@@ -89,7 +90,7 @@ func (rs *TraegerSettingsResource) SetTraegerSettingValue(w http.ResponseWriter,
 		return
 	}
 	var req setSchoolSettingRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.OperatorInvalidRequest(err))
 		return
 	}

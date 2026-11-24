@@ -96,6 +96,12 @@ interface StaffEmployment {
    * nimmt ihn wieder auf (#7197).
    */
   readonly viaPool: boolean;
+  /**
+   * Der Schulträger oder die Gemeinde, die das Personal dieser Schule
+   * anstellt (#4811); leer, wenn der Träger der Arbeitgeber ist. Nur die
+   * Ansicht einer Akte trägt ihn.
+   */
+  readonly employerName: string;
 }
 
 export interface StaffRecordSummary {
@@ -136,10 +142,16 @@ export interface StaffOverview {
   readonly suggestions: readonly StaffSuggestion[];
 }
 
-export interface StaffFinancial {
+/** Die Werte von „Bank und Steuer“, wie ein Speichern sie schickt. */
+export interface StaffFinancialValues {
   readonly iban: string | null;
   readonly taxId: string | null;
   readonly socialSecurityNumber: string | null;
+}
+
+export interface StaffFinancial extends StaffFinancialValues {
+  /** Stand des Abschnitts; ein Speichern schickt ihn zurück (ADR 0311). */
+  readonly version: string;
 }
 
 export interface StaffChange {
@@ -201,9 +213,15 @@ export interface StaffContract {
   readonly pool: boolean;
   readonly sites: readonly StaffContractSite[];
   readonly holidayWeeks: readonly StaffContractHolidayWeek[];
+  /** Stand des Vertrags mit jedem Soll und jeder Ferienwoche; „Vertrag
+   *  ändern“ und „Soll ändern“ schicken ihn zurück (ADR 0311). */
+  readonly version: string;
 }
 
 export interface StaffRecordDetail extends StaffRecordSummary {
+  /** Stand von Name und Geburtstag; die Karte „Person“ schickt ihn zurück
+   *  (ADR 0311). */
+  readonly personVersion: string;
   readonly financial: StaffFinancial;
   readonly changes: readonly StaffChange[];
   /** Der Stand jeder Nachweisart des Trägers an der Akte (#4707). */
@@ -211,6 +229,9 @@ export interface StaffRecordDetail extends StaffRecordSummary {
   readonly contracts: readonly StaffContract[];
   /** Schulen, die eine gespeicherte Änderung noch nicht erreicht hat. */
   readonly unsyncedSchools: readonly string[];
+  /** Schulen, deren neue Bankdaten ein Verknüpfen nicht übernommen hat:
+   *  Sie kamen nach der Vorschau (ADR 0311). */
+  readonly heldBankSchools: readonly string[];
 }
 
 /** Das Soll eines Einsatzorts in einer Eingabe. */
@@ -253,6 +274,9 @@ export interface StaffLinkPreview {
   readonly record: StaffRecordSummary | null;
   readonly members: readonly StaffCandidate[];
   readonly fields: readonly StaffFieldPreview[];
+  /** Token of every value the preview compares; the link sends it back
+   *  (ADR 0311). */
+  readonly fingerprint: string;
 }
 
 interface StaffMemberRef {
@@ -264,6 +288,8 @@ export interface StaffLinkInput {
   readonly recordId: string | null;
   readonly members: readonly StaffMemberRef[];
   readonly choices: Readonly<Partial<Record<StaffRecordField, string>>>;
+  /** Fingerprint of the preview the choices were made on (ADR 0311). */
+  readonly expectedFingerprint?: string;
 }
 
 function mapSummary(
@@ -282,6 +308,7 @@ function mapSummary(
       staffId: employment.staff_id,
       active: employment.active,
       viaPool: employment.via_pool,
+      employerName: employment.employer_name,
     })),
   };
 }
@@ -308,6 +335,7 @@ function mapFinancial(
     iban: financial.iban,
     taxId: financial.tax_id,
     socialSecurityNumber: financial.social_security_number,
+    version: financial.version,
   };
 }
 
@@ -316,6 +344,7 @@ function mapDetail(
 ): StaffRecordDetail {
   return {
     ...mapSummary(record),
+    personVersion: record.person_version,
     financial: mapFinancial(record.financial),
     changes: (record.changes ?? []).map((change) => ({
       kind: knownEnum(STAFF_CHANGE_KIND_VALUES, change.kind),
@@ -327,6 +356,7 @@ function mapDetail(
     proofs: (record.proofs ?? []).map(mapStaffProof),
     contracts: (record.contracts ?? []).map(mapContract),
     unsyncedSchools: record.unsynced_schools ?? [],
+    heldBankSchools: record.held_bank_schools ?? [],
   };
 }
 
@@ -365,6 +395,7 @@ function mapContract(
       ),
       weekdayMinutes: week.weekday_minutes ?? [],
     })),
+    version: contract.version,
   };
 }
 
@@ -412,6 +443,9 @@ function linkBody(
       staff_id: member.staffId,
     })),
     choices: input.choices,
+    ...(input.expectedFingerprint !== undefined
+      ? { expected_fingerprint: input.expectedFingerprint }
+      : {}),
   };
 }
 
@@ -463,6 +497,7 @@ export async function previewStaffLink(
         },
       ];
     }),
+    fingerprint: data.fingerprint,
   };
 }
 
@@ -502,16 +537,19 @@ export interface StaffPersonInput {
  * Korrigiert Vorname, Nachname und Geburtstag der Akte (#7379). Jeder
  * geänderte Wert steht danach mit seinem alten Wert im Verlauf; die
  * Angaben an den Schulen bleiben unverändert. Die Antwort trägt keine Akte:
- * Wer sie zeigt, lädt sie neu.
+ * Wer sie zeigt, lädt sie neu. `expectedVersion` ist der `personVersion`
+ * der Akte, auf der die Bearbeitung begann (ADR 0311).
  */
 export async function updateStaffPerson(
   id: string,
   input: StaffPersonInput,
+  expectedVersion: string,
 ): Promise<void> {
   const body: traegerStaffRecordsContract.PersonRequest = {
     first_name: input.firstName,
     last_name: input.lastName,
     birthday: input.birthday === "" ? null : input.birthday,
+    expected_version: expectedVersion,
   };
   await bffJson("org", "PUT /traeger/staff-records/{id}/person", {
     params: { id },
@@ -529,9 +567,11 @@ export async function revealStaffFinancial(
   );
 }
 
+/** Speichert „Bank und Steuer“ auf dem Stand `expectedVersion` (ADR 0311). */
 export async function updateStaffFinancial(
   id: string,
-  values: StaffFinancial,
+  values: StaffFinancialValues,
+  expectedVersion: string,
 ): Promise<void> {
   await bffJson("org", "PUT /traeger/staff-records/{id}/financial", {
     params: { id },
@@ -539,6 +579,7 @@ export async function updateStaffFinancial(
       iban: values.iban,
       tax_id: values.taxId,
       social_security_number: values.socialSecurityNumber,
+      expected_version: expectedVersion,
     } satisfies traegerStaffRecordsContract.StaffFinancialRequest,
   });
 }
@@ -562,7 +603,7 @@ export async function createStaffContract(
   );
 }
 
-/** Ändert Art und letzten Tag eines Vertrags. */
+/** Ändert Art und letzten Tag eines Vertrags auf dem Stand `expectedVersion`. */
 export async function updateStaffContract(
   recordId: string,
   contractId: string,
@@ -571,6 +612,7 @@ export async function updateStaffContract(
     readonly endsOn: string | null;
     readonly pool: boolean;
   },
+  expectedVersion: string,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
     await bffJson(
@@ -582,18 +624,23 @@ export async function updateStaffContract(
           kind: input.kind,
           ends_on: input.endsOn,
           pool: input.pool,
+          expected_version: expectedVersion,
         } satisfies traegerStaffRecordsContract.UpdateContractRequest,
       },
     ),
   );
 }
 
-/** Setzt ein neues Soll ab einem Tag für die genannten Einsatzorte. */
+/**
+ * Setzt ein neues Soll ab einem Tag für die genannten Einsatzorte, auf dem
+ * Stand `expectedVersion` des Vertrags (ADR 0311).
+ */
 export async function changeStaffContractSoll(
   recordId: string,
   contractId: string,
   validFrom: string,
   sites: readonly StaffContractSiteInput[],
+  expectedVersion: string,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
     await bffJson(
@@ -604,6 +651,7 @@ export async function changeStaffContractSoll(
         body: {
           valid_from: validFrom,
           sites: sites.map(siteBody),
+          expected_version: expectedVersion,
         } satisfies traegerStaffRecordsContract.ContractSollRequest,
       },
     ),
@@ -754,8 +802,7 @@ function hireMatchReasons(raw: unknown): StaffHireMatchReason[] {
 
 /**
  * One entry of `details.matches` of the hire refusal. It travels in the error
- * envelope, which no contract decoder reads; Go writes its IDs as JSON
- * numbers (`workforce.HireMatch`, #7808).
+ * envelope. Identifiers are decimal strings, just as in success responses.
  */
 function hireMatch(
   match: Readonly<Record<string, unknown>>,
@@ -765,25 +812,25 @@ function hireMatch(
     lastName: typeof match.last_name === "string" ? match.last_name : "",
     reasons: hireMatchReasons(match.reasons),
   };
-  if (match.kind === "record" && match.staff_record_id != null) {
+  if (match.kind === "record" && typeof match.staff_record_id === "string") {
     return {
       ...common,
       kind: "record",
-      recordId: String(match.staff_record_id),
+      recordId: match.staff_record_id,
     };
   }
   if (
     match.kind === "school" &&
     typeof match.school_name === "string" &&
-    match.school_id != null &&
-    match.staff_id != null
+    typeof match.school_id === "string" &&
+    typeof match.staff_id === "string"
   ) {
     return {
       ...common,
       kind: "school",
-      schoolId: String(match.school_id),
+      schoolId: match.school_id,
       schoolName: match.school_name,
-      staffId: String(match.staff_id),
+      staffId: match.staff_id,
     };
   }
   return null;
@@ -828,10 +875,7 @@ export function staffHireIncomplete(
     schools: schools.filter(
       (school): school is string => typeof school === "string",
     ),
-    recordId:
-      typeof recordId === "number" || typeof recordId === "string"
-        ? String(recordId)
-        : null,
+    recordId: typeof recordId === "string" ? recordId : null,
   };
 }
 

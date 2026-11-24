@@ -71,7 +71,7 @@ func TestParentRequestReviewScopeCoversEveryWriteQueue(t *testing.T) {
 	openRequests := func(actor sessiontoken.AppClaims) int {
 		t.Helper()
 		list := authExec(t, tc, testutil.NewRequest("GET",
-			"/change-requests?view=open&search=Zteamfreigabe&types=master_data,care_schedule,offering", nil), actor, perms)
+			"/change-requests?search=Zteamfreigabe&types=master_data,care_schedule,offering", nil), actor, perms)
 		require.Equal(t, http.StatusOK, list.Code, list.Body.String())
 		var listed aggListEnvelope
 		require.NoError(t, json.Unmarshal(list.Body.Bytes(), &listed))
@@ -101,7 +101,7 @@ func TestParentRequestReviewScopeCoversEveryWriteQueue(t *testing.T) {
 	reject := func(actor sessiontoken.AppClaims, path string) int {
 		t.Helper()
 		rr := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "POST", path,
-			map[string]any{"approve": false, "reason": "Bitte im Büro klären"}), actor, perms)
+			map[string]any{"approve": false, "reason": "Bitte im Büro klären", "expected_version": decidePathVersion(t, tc, path)}), actor, perms)
 		return rr.Code
 	}
 	setScope := func(scope string) {
@@ -145,7 +145,7 @@ func TestParentRequestReviewScopeCoversEveryWriteQueue(t *testing.T) {
 	_, outsiderAccount := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, otherTenant, "Scope", "Fremdschule")
 	outsider := testutil.TeacherTestClaims(int(outsiderAccount.ID))
 	outsiderList := authExec(t, tc, testutil.NewRequest("GET",
-		"/change-requests?view=open&search=Zteamfreigabe", nil), outsider, perms)
+		"/change-requests?search=Zteamfreigabe", nil), outsider, perms)
 	require.NotContains(t, outsiderList.Body.String(), "Zteamfreigabe", "no row leaks across schools")
 	require.NotEqual(t, http.StatusOK, reject(outsider, foreignPath))
 

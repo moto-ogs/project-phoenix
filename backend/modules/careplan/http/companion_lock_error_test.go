@@ -3,11 +3,13 @@ package careplanhttp_test
 import (
 	"errors"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/workflows/studentdeletion"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -69,37 +71,20 @@ func TestUpdateStudentTxErrorRenderer_CompanionLockBusy(t *testing.T) {
 
 // TestUpdateStudentTxErrorRenderer_CompanionsChanged pins the third 409 this
 // endpoint can answer with: the submitted "läuft mit" list was built on a
-// snapshot someone else has since replaced.
-//
-// It needs its own code because the retry differs from both siblings: the lock
-// collision is retriable with the SAME payload, the plan conflict is answered
-// with a confirmation — but re-sending this list is exactly the write that was
-// refused, so the client has to reload first.
+// snapshot someone else has since replaced. The owner refuses it with
+// readstate.ErrChanged (ADR 0311), which the shared error path answers with
+// 409 general.changed_since_read; this table must not claim it first, or the
+// lock collision's "just try again" would hide the "reload first".
 func TestUpdateStudentTxErrorRenderer_CompanionsChanged(t *testing.T) {
 	t.Parallel()
 
-	t.Run("a stale list is a coded, retriable conflict", func(t *testing.T) {
-		resp := rendererStatus(t, updateStudentTxErrorRenderer(careplan.ErrCompanionsChanged))
-
-		assert.Equal(t, http.StatusConflict, resp.HTTPStatusCode)
-		assert.Equal(t, common.CodeStudentsCompanionsChanged, resp.Code)
-		// The German sentence reaches the UI unchanged — it carries the one
-		// instruction that gets the user out ("neu laden").
-		assert.Equal(t, careplan.ErrCompanionsChanged.Error(), resp.Detail)
-	})
-
-	t.Run("still classified when wrapped by a caller", func(t *testing.T) {
-		resp := rendererStatus(t, updateStudentTxErrorRenderer(
-			errors.Join(errors.New("update student"), careplan.ErrCompanionsChanged),
-		))
-
-		assert.Equal(t, http.StatusConflict, resp.HTTPStatusCode)
-		assert.Equal(t, common.CodeStudentsCompanionsChanged, resp.Code)
-	})
-
-	t.Run("its code is distinct from the lock collision", func(t *testing.T) {
-		// The client keys "reload first" off this code and "just try again" off
-		// the other; collapsing them would show the wrong instruction.
-		assert.NotEqual(t, common.CodeStudentsCompanionLockBusy, common.CodeStudentsCompanionsChanged)
-	})
+	for name, err := range map[string]error{
+		"a stale list":        readstate.ErrChanged,
+		"wrapped by a caller": errors.Join(errors.New("update student"), readstate.ErrChanged),
+	} {
+		w := httptest.NewRecorder()
+		common.RenderError(w, httptest.NewRequest(http.MethodPut, "/", nil), updateStudentTxErrorRenderer(err))
+		assert.Equal(t, http.StatusConflict, w.Code, name)
+		assert.Contains(t, w.Body.String(), `"code":"`+readstate.ChangedCode+`"`, name)
+	}
 }

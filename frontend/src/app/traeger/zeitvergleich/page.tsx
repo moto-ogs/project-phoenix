@@ -20,7 +20,10 @@ import {
 } from "react";
 import { useSession } from "next-auth/react";
 import { FreshPerTraeger } from "~/components/traeger/fresh-per-traeger";
-import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
+import {
+  useFreshTraegerResource,
+  useTraegerResource,
+} from "~/components/traeger/use-traeger-resource";
 import { CalendarOff, CircleCheck, CircleDashed } from "lucide-react";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -468,27 +471,32 @@ function TraegerZeitvergleichContent() {
   const range = useMemo(() => monthWindow(month, today), [month, today]);
 
   const chosenSchool = schoolId === ALL_SCHOOLS ? undefined : schoolId;
+  const query = { ...range, schoolId: chosenSchool };
+  const key = traegerReportKeys.careTimeOverruns(
+    range.from,
+    range.to,
+    chosenSchool ?? null,
+    canSeeNames,
+  );
   // With names the read stands in the access log of every school it shows:
   // one read per opening and filter, none on reconnect.
+  const named = useFreshTraegerResource(
+    canSeeNames ? key : null,
+    () => fetchOverrunChildren(query),
+    "die Auswertung",
+  );
+  // Without names the figures name no child; the report logs their view at
+  // most every 15 minutes, so the shared cache shows a revisit at once.
+  const summary = useTraegerResource(
+    canSeeNames ? null : key,
+    () => fetchOverrunSummary(query),
+    "die Auswertung",
+  );
   const {
     data: evaluation,
     loading,
     error: loadError,
-  } = useFreshTraegerResource(
-    traegerReportKeys.careTimeOverruns(
-      range.from,
-      range.to,
-      chosenSchool ?? null,
-      canSeeNames,
-    ),
-    () => {
-      const query = { ...range, schoolId: chosenSchool };
-      return canSeeNames
-        ? fetchOverrunChildren(query)
-        : fetchOverrunSummary(query);
-    },
-    "die Auswertung",
-  );
+  } = canSeeNames ? named : summary;
   // The school choice keeps the schools of the last evaluation over all
   // schools of this Träger: reading it again for a chosen school would open
   // the names of every school once more, and that read stands in their

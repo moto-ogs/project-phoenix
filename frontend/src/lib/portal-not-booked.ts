@@ -4,9 +4,14 @@ import type { AppLocale } from "~/i18n/locales";
  * The portals that follow a module of their own (#4895): the parents portal
  * follows Eltern-App, the school portal Unterricht am Vormittag. The OGS
  * team portal is Basis; its pages explain a missing module themselves
- * (`moduleNotBookedExplanation`).
+ * (`moduleNotBookedExplanation`). The Träger portal is Basis too, with the
+ * pages of four modules that count for the Träger once one of its schools
+ * books them (#6052, `traegerModuleNotBookedExplanation`).
  */
-export type ModulePortal = "staff" | "parent" | "school";
+export type ModulePortal = "staff" | "parent" | "school" | "traeger";
+
+/** The portals that are a module themselves and explain that one module. */
+export type OwnModulePortal = "parent" | "school";
 
 /**
  * Parents read the explanation in their portal language. They cannot book a
@@ -33,7 +38,7 @@ const SCHOOL_PORTAL_NOT_BOOKED =
  * and when a request of an open session is refused with `module.not_booked`.
  */
 export function portalNotBookedExplanation(
-  portal: Exclude<ModulePortal, "staff">,
+  portal: OwnModulePortal,
   locale: AppLocale,
 ): string {
   return portal === "parent"

@@ -354,14 +354,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractChangeRequests.PendingChanges",
-      "binding_digest": "abd05baa9c30038e842adcdf0c0a5cd5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolChangeRequests.PendingChanges",
-      "source_owner": "care-contract",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.ParentRequestVersion",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractChangeRequests.PendingChanges",
       "binding_digest": "f10e433ce84e00950bb871871f3eca43",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolChangeRequests.PendingChanges",
       "source_owner": "care-contract",
@@ -431,6 +423,30 @@
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveManyForTenants",
       "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractIssuers.SchoolIssuers",
+      "binding_digest": "74ec54cb17d85c5cccdd1f48b0e3c943",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolIssuers.SchoolIssuers",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractIssuers.SchoolIssuers",
+      "binding_digest": "cdcbdbab6bde2ad2f19ad8819ffbdbd5",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolIssuers.SchoolIssuers",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolParty.SenderText",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractIssuers.SchoolIssuers",
+      "binding_digest": "f1efed57ec31e1795677159fae6aeb55",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolIssuers.SchoolIssuers",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
+      "target_owner": "organization-tenancy"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractSignatures.ContractSignatureProofs",

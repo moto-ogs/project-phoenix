@@ -3,7 +3,6 @@ package enrollmenthttp_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -11,6 +10,9 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/api"
 	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
@@ -21,10 +23,10 @@ import (
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 func TestParentInvitationOutboxIsAtomicWithApproval(t *testing.T) {
@@ -77,8 +79,8 @@ func TestParentInvitationOutboxIsAtomicWithApproval(t *testing.T) {
 			path, payload, wantStatus := fmt.Sprintf("/admin/requests/%d/children/%d/decide", request.ID, child.ID), []byte(`{"status":"approved"}`), http.StatusOK
 			if manual {
 				grade := int16(1)
-				payload, err = json.Marshal(enrollmentAPI.AdminManualApprovedEnrollmentRequest{
-					SubmitEnrollmentRequest:  enrollmentAPI.SubmitEnrollmentRequest{GuardianFirstName: "Atomic", GuardianLastName: "Parent", GuardianEmail: fmt.Sprintf("atomic-manual-%d@example.test", testpkg.Tenant(t)), Children: []enrollmentAPI.SubmitChildRequest{{FirstName: "Atomic", LastName: "Child", DateOfBirth: "2019-03-01", TargetGradeLevel: &grade}}},
+				payload, err = wire.Marshal(enrollmentAPI.AdminManualApprovedEnrollmentRequest{
+					SubmitEnrollmentRequest:  enrollmentAPI.SubmitEnrollmentRequest{GuardianFirstName: "Atomic", GuardianLastName: "Parent", GuardianEmail: fmt.Sprintf("atomic-manual-%d@example.test", testpkg.Tenant(t)), Children: []enrollmentAPI.SubmitChildRequest{{FirstName: "Atomic", LastName: "Child", DateOfBirth: "2019-03-01", TargetGradeLevel: &grade}}, FormSchemaID: ident.ID(schema.ID), ExpectedTermsFingerprint: phaseTerms(t, requests, phase.ID)},
 					ExternalConsentConfirmed: true, Reason: "Anmeldung auf Papier", SendNotification: true,
 				})
 				require.NoError(t, err)

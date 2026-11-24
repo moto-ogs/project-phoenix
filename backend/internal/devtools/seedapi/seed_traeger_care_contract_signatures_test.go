@@ -16,7 +16,7 @@ func TestSeedSendContractsToParentsReadsTheDraftsOfTheSeededSchool(t *testing.T)
 	t.Parallel()
 
 	var query string
-	var sent map[string][]int64
+	var sent map[string][]string
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method + " " + r.URL.Path {
@@ -38,12 +38,12 @@ func TestSeedSendContractsToParentsReadsTheDraftsOfTheSeededSchool(t *testing.T)
 
 	require.NoError(t, seedSendContractsToParents(rt, AuthRef{Kind: AuthBearer, Token: "traeger"}))
 	assert.Equal(t, "status=entwurf&school_id=65&limit=100", query)
-	assert.Equal(t, map[string][]int64{"contract_ids": {4}}, sent)
+	assert.Equal(t, map[string][]string{"contract_ids": {"4"}}, sent)
 }
 
-// The paper contract is a draft of the seeded school, and a school that has
-// an active contract already gets none, whatever the other schools of the
-// Träger hold (#6621).
+// The paper contract is a draft of the seeded school, handed over before its
+// signature (#8030), and a school that has an active contract already gets
+// none, whatever the other schools of the Träger hold (#6621).
 func TestSeedPaperContractSignsADraftOfTheSeededSchool(t *testing.T) {
 	t.Parallel()
 
@@ -67,7 +67,7 @@ func TestSeedPaperContractSignsADraftOfTheSeededSchool(t *testing.T) {
 						return
 					}
 					_, _ = fmt.Fprint(w, `{"data":{"contracts":[{"id":7,"party_name":"Erika Muster"},{"id":8,"party_name":"Max Muster"}]}}`)
-				case "POST /traeger/contracts/8/paper-signature":
+				case "POST /traeger/contracts/8/paper-handover", "POST /traeger/contracts/8/paper-signature":
 					signed = append(signed, r.URL.Path)
 					_, _ = fmt.Fprint(w, `{"data":{}}`)
 				default:
@@ -86,7 +86,8 @@ func TestSeedPaperContractSignsADraftOfTheSeededSchool(t *testing.T) {
 			}
 			assert.Equal(t, 1, paper)
 			assert.Equal(t, []string{"status=aktiv&school_id=65", "status=entwurf&school_id=65"}, queries)
-			assert.Equal(t, []string{"/traeger/contracts/8/paper-signature"}, signed)
+			assert.Equal(t, []string{"/traeger/contracts/8/paper-handover", "/traeger/contracts/8/paper-signature"}, signed,
+				"the draft is handed over on paper before its signature is recorded (#8030)")
 		})
 	}
 }

@@ -57,6 +57,9 @@ export function getTraegerHelpTopicForPath(pathname: string): HelpTopicId {
   if (onPage(page, "/einstellungen/mitglieder")) {
     return HELP_TOPICS.traegerAccounts;
   }
+  if (onPage(page, "/einstellungen/schulrollen")) {
+    return HELP_TOPICS.traegerSchoolRoles;
+  }
   if (onPage(page, "/einstellungen/zugriffsprotokoll")) {
     return HELP_TOPICS.traegerAccessLog;
   }
@@ -66,8 +69,14 @@ export function getTraegerHelpTopicForPath(pathname: string): HelpTopicId {
   if (onPage(page, "/einstellungen/briefkopf")) {
     return HELP_TOPICS.traegerBriefkopf;
   }
+  if (onPage(page, "/einstellungen/module")) {
+    return HELP_TOPICS.traegerModules;
+  }
   if (onPage(page, "/einstellungen/dokumentarten")) {
     return HELP_TOPICS.traegerDocumentKinds;
+  }
+  if (onPage(page, "/einstellungen/zustaendigkeiten")) {
+    return HELP_TOPICS.traegerResponsibilities;
   }
   if (onPage(page, "/einstellungen/abrechnung")) {
     return HELP_TOPICS.traegerHolidayContribution;

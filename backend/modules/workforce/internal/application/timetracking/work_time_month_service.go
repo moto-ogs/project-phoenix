@@ -69,6 +69,18 @@ func (s *workTimeMonthService) now() time.Time {
 	return requireClock(s.nowFunc)()
 }
 
+// AtEndOfToday pins the clock to the last second of today. Completed
+// sessions keep their check-out; open ones end at the day's end or their
+// live limit, which follow from their stored check-in.
+func (s *workTimeMonthService) AtEndOfToday() WorkTimeMonthService {
+	pinned := *s
+	today := s.today()
+	end := today.EndOfDay()
+	pinned.todayFunc = func() calendar.Date { return today }
+	pinned.nowFunc = func() time.Time { return end }
+	return &pinned
+}
+
 // maxDailyTargetRangeDays bounds GetDailyProjection: the table never shows more
 // than a month, and an unbounded range would let a caller walk years of
 // calendar days per request.

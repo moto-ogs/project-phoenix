@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // conflictPortStub records what the resolver asked of a queue, in order, so a
@@ -97,7 +98,7 @@ func resolverWithExcusedPort(t *testing.T, rights ports.ParentRequestRights, por
 func excusedResolveInput(versions time.Time, ids ...int64) parentrequests.ResolveConflictInput {
 	expected := make([]string, 0, len(ids))
 	for range ids {
-		expected = append(expected, careplan.ParentRequestVersion(versions))
+		expected = append(expected, readstate.Of(versions))
 	}
 	return parentrequests.ResolveConflictInput{
 		Kind: parentrequests.KindExcused, RequestIDs: ids, ExpectedVersions: expected,
@@ -223,7 +224,7 @@ func TestResolveConflictRefusesTheWholeSetWhenOneVersionIsStale(t *testing.T) {
 	coordinator, rollback := resolverWithExcusedPort(t, writeReviewer, port, nil)
 	err := coordinator.ResolveConflict(context.Background(), input)
 
-	require.ErrorIs(t, err, parentrequests.ErrStale)
+	require.ErrorIs(t, err, readstate.ErrChanged)
 	assert.Empty(t, port.approved)
 	assert.Empty(t, port.rejected)
 	assert.Empty(t, port.locked, "a stale set is refused before anything is locked")
@@ -253,8 +254,8 @@ func TestResolveConflictReportsADecisionRaceAsStale(t *testing.T) {
 	coordinator, _ := resolverWithExcusedPort(t, writeReviewer, port, nil)
 	err := coordinator.ResolveConflict(context.Background(), input)
 
-	require.ErrorIs(t, err, parentrequests.ErrStale)
-	assert.Equal(t, "parent requests: request version is stale: excused 5 changed during resolution", err.Error(),
+	require.ErrorIs(t, err, readstate.ErrChanged)
+	assert.Equal(t, "changed since it was read: excused 5 changed during resolution", err.Error(),
 		"the students route renders this text verbatim")
 }
 
@@ -383,7 +384,7 @@ func TestResolveConflictReportsALockRaceAsStale(t *testing.T) {
 	coordinator, rollback := resolverWithExcusedPort(t, writeReviewer, port, nil)
 	err := coordinator.ResolveConflict(context.Background(), input)
 
-	require.ErrorIs(t, err, parentrequests.ErrStale)
+	require.ErrorIs(t, err, readstate.ErrChanged)
 	assert.Empty(t, port.rejected)
 	assert.True(t, rollback.requested)
 }

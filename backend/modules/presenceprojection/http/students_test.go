@@ -721,7 +721,7 @@ func TestUpdateStudent_ExtendedFields(t *testing.T) {
 		body := map[string]interface{}{
 			"health_info": "Allergies: Peanuts",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
@@ -734,7 +734,7 @@ func TestUpdateStudent_ExtendedFields(t *testing.T) {
 		body := map[string]interface{}{
 			"extra_info": "Additional notes about the student",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
@@ -749,7 +749,7 @@ func TestUpdateStudent_ExtendedFields(t *testing.T) {
 		body := map[string]interface{}{
 			"supervisor_notes": "Supervisor observations",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
@@ -769,7 +769,7 @@ func TestUpdateStudent_ExtendedFields(t *testing.T) {
 			"address_city":        "  Bonn  ",
 			"address_postal_code": "  53111  ",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 		require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
@@ -786,7 +786,7 @@ func TestUpdateStudent_ExtendedFields(t *testing.T) {
 			"address_city":        "",
 			"address_postal_code": "",
 		}
-		clearReq := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), clearBody)
+		clearReq := studentUpdateRequest(t, tc, student.ID, clearBody)
 		clearRR := authExec(t, tc, clearReq, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 		require.Equal(t, http.StatusOK, clearRR.Code, "Body: %s", clearRR.Body.String())
@@ -811,7 +811,7 @@ func TestUpdateStudent_ExtendedFields(t *testing.T) {
 		body := map[string]interface{}{
 			"pickup_status": "ready",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
@@ -825,7 +825,7 @@ func TestUpdateStudent_ExtendedFields(t *testing.T) {
 		body := map[string]interface{}{
 			"bus": true,
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
@@ -851,7 +851,7 @@ func TestUpdateStudent_ExtendedFields(t *testing.T) {
 		body := map[string]interface{}{
 			"bus": true,
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
@@ -876,7 +876,7 @@ func TestUpdateStudent_ExtendedFields(t *testing.T) {
 				"thu": true,
 			},
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
@@ -896,13 +896,13 @@ func TestUpdateStudent_ExtendedFields(t *testing.T) {
 
 		// Seed an existing bus plan, then replace it via the unified field.
 		seed := map[string]interface{}{"bus_days": map[string]bool{"mon": true}}
-		seedReq := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), seed)
+		seedReq := studentUpdateRequest(t, tc, student.ID, seed)
 		require.Equal(t, http.StatusOK, authExec(t, tc, seedReq, testutil.AdminTestClaims(1), []string{"admin:*"}).Code)
 
 		body := map[string]interface{}{
 			"departure_days": map[string]string{"tue": "pickup", "thu": "bus"},
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 		require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
@@ -940,7 +940,7 @@ func TestUpdateStudent_ExtendedFields(t *testing.T) {
 				"sat": true,
 			},
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
@@ -963,7 +963,7 @@ func TestUpdateStudent_ExtendedFields(t *testing.T) {
 		body := map[string]interface{}{
 			"guardian_contact": "Emergency: 0800-123456",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 

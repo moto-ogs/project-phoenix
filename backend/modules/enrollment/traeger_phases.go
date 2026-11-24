@@ -75,6 +75,9 @@ type TraegerPhaseInput struct {
 	Fields     TraegerPhaseFields
 	AllSchools bool
 	SchoolIDs  []int64
+	// ExpectedVersion is the Version of the phase its author read; an
+	// update refuses another one with readstate.ErrChanged (ADR 0311).
+	ExpectedVersion string
 }
 
 // TraegerCatalogSchool is one school of a Träger phase or offering with the
@@ -100,6 +103,9 @@ type TraegerPhase struct {
 	WithdrawnAt     *time.Time             `json:"withdrawn_at,omitempty"`
 	Schools         []TraegerCatalogSchool `json:"schools"`
 	UpdatedAt       time.Time              `json:"updated_at"`
+	// Version is the token of what the office edits: the draft, the
+	// schools it is chosen for and whether it is withdrawn (ADR 0311).
+	Version string `json:"version"`
 }
 
 // TraegerCopyOutcome records the outcome of one school's copy.
@@ -133,8 +139,8 @@ type TraegerPhases interface {
 type TraegerFieldChange struct {
 	Field   string `json:"field"`
 	State   string `json:"state"`
-	Traeger any    `json:"traeger"`
-	School  any    `json:"school"`
+	Traeger any    `json:"traeger" contract_json:"The changed field selects the inherited phase value type"`
+	School  any    `json:"school" contract_json:"The changed field selects the overridden phase value type"`
 }
 
 // TraegerCopyState is the state of a school's copy that a preview reads and

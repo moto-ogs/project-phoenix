@@ -23,6 +23,8 @@ import {
   rateCountLabel,
 } from "~/components/traeger/care-notice-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
+import { CareBilledChildrenCard } from "~/components/traeger/care-billed-children-card";
+import { emptyNoticeRunText } from "~/components/traeger/care-billed-children-format";
 import { CareJoinedChildrenCard } from "~/components/traeger/care-joined-children-card";
 import { EmptyRunCard } from "~/components/traeger/empty-run-card";
 import {
@@ -30,6 +32,8 @@ import {
   useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useDraftOn } from "~/lib/swr/read-draft";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -162,6 +166,7 @@ export default function TraegerCareNoticeRunPage() {
     error: loadError,
     mutate,
     reload,
+    reloadOrThrow,
   } = useTraegerResource(
     traegerBillingRunKeys.noticeRun(runId),
     () => fetchCareNoticeRun(runId),
@@ -169,6 +174,31 @@ export default function TraegerCareNoticeRunPage() {
   );
   const invalidateFamily = useInvalidateFamily();
   const [confirming, setConfirming] = useState(false);
+  // The release confirms the run as the dialog opened on it (ADR 0311):
+  // a newer read in the background does not change what is confirmed, and
+  // after a refusal the stored run shows.
+  const releaseRead = useDraftOn<
+    NonNullable<typeof run>,
+    NonNullable<typeof run>,
+    string,
+    unknown
+  >(
+    {
+      opening: confirming && run ? run.id : null,
+      data: run ?? undefined,
+      reload: reloadOrThrow,
+    },
+    // The dialog closes after the release or its refusal; reopened, it
+    // confirms the run then on screen.
+    { token: (shown) => shown.fingerprint, follow: false },
+  );
+  const releaseShown = async <A,>(
+    send: (shown: NonNullable<typeof run>) => Promise<A>,
+  ) => {
+    const shown = releaseRead.base ?? run;
+    if (!shown) throw new Error("no run to release");
+    return send(shown);
+  };
   const [releasing, setReleasing] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [discarding, setDiscarding] = useState(false);
@@ -179,7 +209,9 @@ export default function TraegerCareNoticeRunPage() {
     if (!run) return;
     setReleasing(true);
     try {
-      await mutate(await releaseCareNoticeRun(run), { revalidate: false });
+      await mutate(await releaseShown(releaseCareNoticeRun), {
+        revalidate: false,
+      });
       void invalidateFamily(traegerBillingRunKeys.noticeRuns());
       // The exports list the notices of the released run.
       void invalidateFamily(traegerBillingKeys.exportRuns());
@@ -194,8 +226,11 @@ export default function TraegerCareNoticeRunPage() {
         error: err instanceof Error ? err.message : String(err),
       });
       setConfirming(false);
-      void releaseErrors.show(err, { object: "der Jahreslauf" });
-      reload();
+      void releaseErrors.show(err, {
+        object: "der Jahreslauf",
+        reload: reloadOrThrow,
+      });
+      if (!isReadStateRefusal(err)) reload();
     } finally {
       setReleasing(false);
     }
@@ -216,8 +251,11 @@ export default function TraegerCareNoticeRunPage() {
         error: err instanceof Error ? err.message : String(err),
       });
       setConfirmingDiscard(false);
-      void releaseErrors.show(err, { object: "der Jahreslauf" });
-      reload();
+      void releaseErrors.show(err, {
+        object: "der Jahreslauf",
+        reload: reloadOrThrow,
+      });
+      if (!isReadStateRefusal(err)) reload();
     } finally {
       setDiscarding(false);
     }
@@ -443,7 +481,7 @@ export default function TraegerCareNoticeRunPage() {
             description={
               discarded
                 ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für das Jahr ${run.year} kannst du einen neuen Lauf starten.`
-                : `Für das Jahr ${run.year} gibt es keinen Bescheid. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist das Jahr frei für einen neuen Lauf.`
+                : emptyNoticeRunText(run.year, run.billedChildren ?? [])
             }
             createdAt={run.createdAt}
             discardedAt={run.discardedAt}
@@ -461,6 +499,14 @@ export default function TraegerCareNoticeRunPage() {
             why it has no notice here. */}
           {empty ? (
             <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
+          ) : null}
+          {/* A month an issued invoice already bills (#7892): the empty run
+            says why it has no notice for the child. */}
+          {empty ? (
+            <CareBilledChildrenCard
+              childrenBilled={run.billedChildren ?? []}
+              yearly
+            />
           ) : null}
         </>
       ) : run ? (
@@ -508,6 +554,12 @@ export default function TraegerCareNoticeRunPage() {
           ) : null}
           {preview ? (
             <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
+          ) : null}
+          {preview ? (
+            <CareBilledChildrenCard
+              childrenBilled={run.billedChildren ?? []}
+              yearly
+            />
           ) : null}
           <div className="grid gap-4 sm:grid-cols-3">
             <StatCard

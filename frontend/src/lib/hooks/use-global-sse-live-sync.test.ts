@@ -4,9 +4,9 @@ import type { SSEEvent, SSEHookOptions, SSEHookState } from "~/lib/sse-types";
 
 const { session, sse, invalidatedFamilies, useSSESpy } = vi.hoisted(() => ({
   session: {
-    current: { id: "account-7", tenantId: 1, roles: ["user"] } as {
+    current: { id: "account-7", tenantId: "1", roles: ["user"] } as {
       id: string;
-      tenantId: number;
+      tenantId: string;
       roles: string[];
     },
   },
@@ -142,7 +142,7 @@ beforeEach(() => {
   vi.mocked(mutate).mockClear();
   invalidatedFamilies.length = 0;
   sse.handlers = [];
-  session.current = { id: "account-7", tenantId: 1, roles: ["user"] };
+  session.current = { id: "account-7", tenantId: "1", roles: ["user"] };
   setVisibility("visible");
   resumeSWRSession();
 });

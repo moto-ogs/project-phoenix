@@ -43,6 +43,7 @@ export function mapDeviceResponse(
     is_online: data.is_online ?? false,
     created_at: data.created_at,
     updated_at: data.updated_at,
+    version: data.version,
     api_key: "api_key" in data ? data.api_key : undefined,
   };
 }

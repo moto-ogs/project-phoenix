@@ -30,6 +30,9 @@ type (
 type ContractStore interface {
 	Store
 	SignatureStore
+	// FamilyStore keeps the families of the contracts without a mail
+	// address (#7161).
+	ports.FamilyStore
 }
 
 // SignaturePorts are the root-bound ports of the signature.
@@ -423,7 +426,7 @@ func (s *Signatures) confirm(ctx context.Context, organizationID int64, record C
 	if err != nil {
 		return fmt.Errorf("care contract: letterhead: %w", err)
 	}
-	if letterheadMissing(letterhead) {
+	if letterheadMissing(issuedSender(letterhead, record)) {
 		return carecontract.ErrLetterheadMissing
 	}
 	signature := view.Signature
@@ -451,6 +454,10 @@ func (s *Signatures) view(ctx context.Context, organizationID int64, record Cont
 	reach, err := s.ports.Sender.WithdrawalReach(ctx, organizationID)
 	if err != nil {
 		return carecontract.SigningView{}, fmt.Errorf("care contract: withdrawal reach: %w", err)
+	}
+	// The signing page names the body that issued the PDF it shows (#4811).
+	if issuer, _ := issuedBy(record); issuer != nil {
+		letterhead, reach = issuer.SenderText, issuer.Reach()
 	}
 	// A contract is sent only with a named party, so one of both is set.
 	traeger := traegerName(letterhead, record.Version.Terms)

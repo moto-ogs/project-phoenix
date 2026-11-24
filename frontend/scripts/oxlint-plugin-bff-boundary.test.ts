@@ -1,0 +1,110 @@
+import { afterAll, describe, expect, it } from "vitest";
+import { lintSource, removeProbeDirectories } from "./oxlint-probe";
+
+afterAll(removeProbeDirectories);
+
+describe.concurrent("bff-boundary", () => {
+  it.each([
+    "fetch('/api/rooms')",
+    "window.fetch = replacement",
+    "const f = fetch; f('/api/rooms')",
+    "const { fetch: f } = window",
+    "let f; ({ fetch: f } = globalThis)",
+    "fetch.call(null, '/api/rooms')",
+    "self['fetch']",
+    "const win = window; win.fetch('/api/rooms')",
+    "let win = window; win.fetch('/api/rooms')",
+    "let win: Window; win = window; export const send = win.fetch",
+    "let win: Window | undefined; win ??= window; win.fetch('/api/rooms')",
+    "export const send = window.top?.fetch",
+    "export const send = window.frames[0]?.fetch",
+    "export const send = frames[0]?.fetch",
+    "parent.fetch('/api/rooms')",
+    "const { navigator: nav } = window; nav.sendBeacon('/api/log')",
+    "globalThis.window.fetch",
+    "(window as Window).fetch('/api/rooms')",
+    "document.defaultView?.fetch('/api/rooms')",
+    "const { navigator: { sendBeacon } } = self",
+    "sessionFetch('/api/rooms')",
+    "navigator.sendBeacon('/api/log')",
+    "const { sendBeacon } = window.navigator",
+    "new XMLHttpRequest()",
+    'new EventSource("/api/sse/events")',
+    'const Socket = globalThis.WebSocket; new Socket("/api/live")',
+    "globalThis.XMLHttpRequest",
+  ])("rejects raw browser transport: %s", async (source) => {
+    const result = await lintSource(source);
+    expect(result.output).toContain("bff-boundary(no-raw-browser-transport)");
+  });
+
+  it.each([
+    "import { bffJsonUncontracted as x } from '~/lib/bff-fetch'; x()",
+    "import { bffJsonUncontracted as x } from '~/lib/../lib/bff-fetch'; x()",
+    "export { bffJsonUncontracted as x } from '~/lib/bff-fetch'",
+    "export * from '../lib/bff-fetch'",
+    "import * as bff from '~/lib/bff-fetch'; bff['bffJsonUncontracted']()",
+    "const { bffJsonUncontracted: x } = await import('~/lib/bff-fetch'); x()",
+    "const { bffJsonUncontracted: x } = require('~/lib/bff-fetch'); x()",
+  ])("rejects access to the uncontracted helper: %s", async (source) => {
+    const result = await lintSource(source);
+    expect(result.output).toContain("bff-boundary(only-listed-uncontracted)");
+  });
+
+  it("does not let an allowlisted caller forward the helper", async () => {
+    const result = await lintSource(
+      "import { bffJsonUncontracted as x } from './bff-fetch'; export { x }",
+      "src/lib/demo-access.ts",
+    );
+    expect(result.output).toContain("bff-boundary(only-listed-uncontracted)");
+  });
+
+  it.each([
+    "import { sessionPost as post } from '~/lib/session-bff-route'; post('/api/students')",
+    "import * as session from './session-bff-route'; session['sessionPost']('/api/students')",
+    "export * from '~/lib/session-bff-route'",
+    "const { sessionPost } = await import('~/lib/session-bff-route')",
+  ])(
+    "prevents constructing a session contract outside its owner: %s",
+    async (source) => {
+      const result = await lintSource(source, "src/lib/probe.ts");
+      expect(result.status).toBe(1);
+      expect(result.output).toContain("Only session-bff.ts may construct");
+    },
+  );
+
+  it.each([
+    "address('tenant', 'POST /auth/invitations/{token}/accept')",
+    "'/api/rooms'",
+  ])("rejects a second call to %s in an allowlisted file", async (path) => {
+    const result = await lintSource(
+      `import { bffJsonUncontracted as x, bffPath as address } from './bff-fetch';
+       x('public', 'POST', address('tenant', 'POST /auth/invitations/{token}/accept'));
+       x('public', 'POST', ${path});`,
+      "src/lib/invitation-api.ts",
+    );
+    expect(result.output).toContain("bff-boundary(only-listed-uncontracted)");
+    expect(result.status).toBe(1);
+  });
+
+  it.each([
+    ["src/lib/probe.server.ts", "fetch('/api/rooms')"],
+    ["src/lib/bff-fetch.ts", "fetch('/api/rooms')"],
+    [
+      "src/lib/invitation-api.ts",
+      "import { bffJsonUncontracted as x, bffPath as address } from './bff-fetch'; x('public', 'POST', address('tenant', 'POST /auth/invitations/{token}/accept'))",
+    ],
+    ["src/lib/probe.ts", "const fetch = () => 1; fetch()"],
+    ["src/lib/probe.ts", "const send: typeof fetch = fakeSend; send('/')"],
+    ["src/lib/probe.ts", "const window = { fetch: () => 1 }; window.fetch()"],
+    ["src/lib/probe.ts", "let win; win = { fetch: () => 1 }; win.fetch()"],
+    ["src/lib/probe.ts", "const parent = { fetch: () => 1 }; parent.fetch()"],
+    [
+      "src/lib/probe.ts",
+      "const frames = [{ fetch: () => 1 }]; frames[0].fetch()",
+    ],
+    ["src/lib/probe.ts", "import { bffJson } from './bff-fetch'; bffJson()"],
+  ])("allows valid code in %s: %s", async (path, source) => {
+    const result = await lintSource(source, path);
+    expect(result.output).not.toContain("bff-boundary(");
+  });
+});

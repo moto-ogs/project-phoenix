@@ -89,7 +89,7 @@ func TestPublishNotifiesOnlyGuardiansWhoAgreed(t *testing.T) {
 	notifier := &fakeNotifier{}
 	prefs := &fakePreferences{optedIn: []int64{202}}
 
-	if _, err := consentTestService(repo, notifier, prefs).Publish(context.Background(), repo.announcement.ID); err != nil {
+	if _, err := publishAsRead(context.Background(), consentTestService(repo, notifier, prefs), repo.announcement.ID); err != nil {
 		t.Fatalf("publish failed: %v", err)
 	}
 
@@ -113,8 +113,7 @@ func TestPublishNotifiesNobodyWithoutConsent(t *testing.T) {
 	repo := consentTestRepo()
 	notifier := &fakeNotifier{}
 
-	published, err := consentTestService(repo, notifier, &fakePreferences{}).
-		Publish(context.Background(), repo.announcement.ID)
+	published, err := publishAsRead(context.Background(), consentTestService(repo, notifier, &fakePreferences{}), repo.announcement.ID)
 	if err != nil {
 		t.Fatalf("publish failed: %v", err)
 	}
@@ -154,7 +153,7 @@ func TestPublishEmailsEveryGuardianWhoDidNotOptOut(t *testing.T) {
 		Logger:      slog.Default(),
 	}, testpkg.TenantTransactionRuntime{}, devices.NewParentDeliveryPolicy())
 
-	if _, err := svc.Publish(context.Background(), repo.announcement.ID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, repo.announcement.ID); err != nil {
 		t.Fatalf("publish failed: %v", err)
 	}
 
@@ -199,7 +198,7 @@ func TestPublishEmailsFamiliesWithoutAnyPreferenceRow(t *testing.T) {
 		Logger:      slog.Default(),
 	}, testpkg.TenantTransactionRuntime{}, devices.NewParentDeliveryPolicy())
 
-	if _, err := svc.Publish(context.Background(), repo.announcement.ID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, repo.announcement.ID); err != nil {
 		t.Fatalf("publish failed: %v", err)
 	}
 
@@ -234,7 +233,7 @@ func TestPublishFailsOnEmailOptOutLookupError(t *testing.T) {
 		Logger:      slog.Default(),
 	}, testpkg.TenantTransactionRuntime{}, devices.NewParentDeliveryPolicy())
 
-	if _, err := svc.Publish(context.Background(), repo.announcement.ID); err == nil {
+	if _, err := publishAsRead(context.Background(), svc, repo.announcement.ID); err == nil {
 		t.Fatal("a failed opt-out lookup must surface, not silently e-mail everyone")
 	}
 	if len(outbox.requests) != 0 {
@@ -265,7 +264,7 @@ func TestPublishDeduplicatesOptedInGuardiansByNormalizedEmail(t *testing.T) {
 		Logger:      slog.Default(),
 	}, testpkg.TenantTransactionRuntime{}, devices.NewParentDeliveryPolicy())
 
-	if _, err := svc.Publish(context.Background(), repo.announcement.ID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, repo.announcement.ID); err != nil {
 		t.Fatalf("publish failed: %v", err)
 	}
 
@@ -316,7 +315,7 @@ func TestPublishStillEmailsWhenPushIsGated(t *testing.T) {
 				Logger:      slog.Default(),
 			}, testpkg.TenantTransactionRuntime{}, devices.NewParentDeliveryPolicy())
 
-			published, err := svc.Publish(context.Background(), repo.announcement.ID)
+			published, err := publishAsRead(context.Background(), svc, repo.announcement.ID)
 			if err != nil {
 				t.Fatalf("notification gate must not roll back publication: %v", err)
 			}
@@ -342,7 +341,7 @@ func TestPublishFailsOnConsentLookupError(t *testing.T) {
 	notifier := &fakeNotifier{}
 	prefs := &fakePreferences{err: errors.New("boom")}
 
-	if _, err := consentTestService(repo, notifier, prefs).Publish(context.Background(), repo.announcement.ID); err == nil {
+	if _, err := publishAsRead(context.Background(), consentTestService(repo, notifier, prefs), repo.announcement.ID); err == nil {
 		t.Fatal("a failed consent lookup must surface, not silently notify nobody")
 	}
 	if len(notifier.events) != 0 {

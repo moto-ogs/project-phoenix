@@ -16,8 +16,10 @@ const sampleBackendRole: sharedContract.RoleResponse = {
   description: "Administrator role",
   is_system: false,
   school_portal: false,
+  from_traeger: false,
   created_at: "2024-01-01T00:00:00Z",
   updated_at: "2024-01-01T00:00:00Z",
+  version: "2024-01-01T00:00:00Z",
 };
 
 const sampleBackendPermission: sharedContract.PermissionResponse = {
@@ -81,27 +83,33 @@ describe("authService", () => {
 
     describe("getRolePermissions", () => {
       it("fetches role permissions", async () => {
-        respondWith({ data: [sampleBackendPermission] });
+        respondWith({
+          data: { permissions: [sampleBackendPermission], version: "v1" },
+        });
 
         const result = await authService.getRolePermissions("1");
 
-        expect(result).toHaveLength(1);
-        expect(result[0]?.name).toBe("users.read");
-        expect(sentUrl()).toBe("/api/auth/roles/1/permissions");
+        expect(result.permissions).toHaveLength(1);
+        expect(result.permissions[0]?.name).toBe("users.read");
+        expect(result.version).toBe("v1");
+        expect(sentUrl()).toBe("/api/auth/roles/1/permission-selection");
       });
     });
 
     describe("replaceRolePermissions", () => {
       it("replaces the permission set of a role with one PUT", async () => {
-        respondWith(undefined, 204);
+        respondWith({ data: { version: "v2" } });
 
-        await authService.replaceRolePermissions("1", ["2", "3"]);
+        await expect(
+          authService.replaceRolePermissions("1", ["2", "3"], "v1"),
+        ).resolves.toBe("v2");
 
         expect(fetchMock).toHaveBeenCalledTimes(1);
-        expect(sentUrl()).toBe("/api/auth/roles/1/permissions");
+        expect(sentUrl()).toBe("/api/auth/roles/1/permission-selection");
         expect(sentInit().method).toBe("PUT");
         expect(JSON.parse(String(sentInit().body))).toEqual({
           permission_ids: ["2", "3"],
+          expected_version: "v1",
         });
       });
     });
@@ -135,23 +143,27 @@ describe("authService", () => {
       it("replaces the system role of an account with one PUT", async () => {
         respondWith(undefined, 204);
 
-        await authService.replaceAccountRole("1", "2");
+        await authService.replaceAccountRole("1", "2", "v1");
 
         expect(fetchMock).toHaveBeenCalledTimes(1);
         expect(sentUrl()).toBe("/api/auth/accounts/1/roles");
         expect(sentInit().method).toBe("PUT");
-        expect(JSON.parse(String(sentInit().body))).toEqual({ role_id: "2" });
+        expect(JSON.parse(String(sentInit().body))).toEqual({
+          role_id: "2",
+          expected_version: "v1",
+        });
       });
 
       // The route reads the session cookie; the browser holds no token (#5005).
       it("gets account roles without a bearer token", async () => {
-        respondWith({ data: [sampleBackendRole] });
+        respondWith({ data: { roles: [sampleBackendRole], version: "v1" } });
 
         const result = await authService.getAccountRoles("1");
 
-        expect(result[0]?.name).toBe("admin");
+        expect(result.roles[0]?.name).toBe("admin");
+        expect(result.version).toBe("v1");
         expect(fetchMock).toHaveBeenCalledWith(
-          "/api/auth/accounts/1/roles",
+          "/api/auth/accounts/1/role-selection",
           expect.objectContaining({ method: "GET" }),
         );
         expect(sentInit().headers).toBeUndefined();

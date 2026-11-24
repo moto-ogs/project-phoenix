@@ -199,6 +199,7 @@ describe("OperatorAnnouncementsPage", () => {
     severity: "info" as const,
     status: "draft" as const,
     version: "1.0.0",
+    editVersion: "2025-01-01T08:00:00Z",
     expiresAt: "2025-12-31",
     targetRoles: ["admin" as const],
     targetOrgIds: [] as string[],
@@ -1357,7 +1358,7 @@ describe("OperatorAnnouncementsPage", () => {
       fireEvent.click(screen.getByTestId("confirm-button"));
 
       await waitFor(() => {
-        expect(mockPublish).toHaveBeenCalledWith("1");
+        expect(mockPublish).toHaveBeenCalledWith("1", "2025-01-01T08:00:00Z");
         expect(mockToastSuccess).toHaveBeenCalledWith(
           "Ankündigung veröffentlicht",
         );
@@ -1506,7 +1507,7 @@ describe("OperatorAnnouncementsPage", () => {
       fireEvent.click(screen.getByTestId("confirm-button"));
 
       await waitFor(() => {
-        expect(mockPublish).toHaveBeenCalledWith("1");
+        expect(mockPublish).toHaveBeenCalledWith("1", "2025-01-01T08:00:00Z");
         expect(mockToastSuccess).toHaveBeenCalledWith(
           "Ankündigung veröffentlicht",
         );
@@ -1538,6 +1539,7 @@ describe("OperatorAnnouncementsPage", () => {
         created_at: "2026-09-01T08:00:00Z",
         updated_at: "2026-09-01T08:00:00Z",
         status: "draft",
+        edit_version: "2026-09-01T08:00:00Z",
       });
       mockUpdate.mockResolvedValue({});
       mockUseSWR.mockReturnValue({

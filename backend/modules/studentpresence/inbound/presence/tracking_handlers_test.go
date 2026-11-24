@@ -11,9 +11,11 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
-	tenantsettings "github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	tenantsettings "github.com/moto-ogs/project-phoenix/modules/settings"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // --- Mock SettingsService ---
@@ -43,7 +45,7 @@ func newTrackingMockSettingsService(resolveBoolFunc func(ctx context.Context, ke
 
 func createTrackingRequest(t *testing.T, body TrackingIndicatorsRequest) *testutil.Request {
 	t.Helper()
-	b, err := json.Marshal(body)
+	b, err := wire.Marshal(body)
 	require.NoError(t, err)
 	return httptest.NewRequest(testutil.MethodPost, "/tracking-indicators", bytes.NewReader(b))
 }

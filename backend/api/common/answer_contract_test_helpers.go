@@ -3,6 +3,7 @@
 package common
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -29,7 +30,23 @@ import (
 // that end in this pattern and answer with this Go type, so a handler that
 // writes a different type than it registered shows only in a whole-router
 // test.
-func init() { answerObserver = observeAnswerContract }
+func init() {
+	answerObserver = observeAnswerContract
+	refusalObserver = observeRefusal
+	numericProblemDetailsObserver = func(r *http.Request) {
+		if observe, ok := r.Context().Value(numericProblemDetailsKey{}).(func()); ok {
+			observe()
+		}
+	}
+}
+
+type numericProblemDetailsKey struct{}
+
+// ObserveNumericProblemDetails flags a wire violation even when the final
+// problem middleware repaired the response before sending it.
+func ObserveNumericProblemDetails(r *http.Request, observe func()) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), numericProblemDetailsKey{}, observe))
+}
 
 // answersFileEnv names a file that collects the key of every registered
 // route a test unambiguously identified and answered, one per line, to
@@ -75,6 +92,32 @@ func observeAnswerContract(r *http.Request, status int, data any, envelope any) 
 	return loadAnswerContract().observe(r, status, data, envelope, recordAnswered)
 }
 
+func observeRefusal(r *http.Request) {
+	loadAnswerContract().observeRefusal(r, recordAnswered)
+}
+
+// RefusedAnswerKey is the line the answers file holds for a refusal of the
+// route key: it answers a route that only refuses (RouteContract.Refuses),
+// no other.
+func RefusedAnswerKey(key string) string { return "refused " + key }
+
+// observeRefusal records a refusal of a route a test identified by its full
+// pattern. A route-sized router cannot tell which route refused: an error
+// carries no type to narrow the candidates.
+func (loaded *answerContract) observeRefusal(r *http.Request, record func(string)) {
+	routeContext := chi.RouteContext(r.Context())
+	if routeContext == nil {
+		return
+	}
+	pattern := strings.TrimSuffix(routeContext.RoutePattern(), "/")
+	for _, route := range loaded.doc.Routes {
+		if route.Method == r.Method && strings.TrimSuffix(route.Pattern, "/") == pattern {
+			record(RefusedAnswerKey(route.Key()))
+			return
+		}
+	}
+}
+
 func (loaded *answerContract) observe(r *http.Request, status int, data any, envelope any, record func(string)) error {
 	routeContext := chi.RouteContext(r.Context())
 	if len(loaded.byKey) == 0 || routeContext == nil || status >= http.StatusMultipleChoices {
@@ -94,8 +137,8 @@ func (loaded *answerContract) observe(r *http.Request, status int, data any, env
 		}
 	}
 	var reports []string
-	if whole && readsAnUntypedBody(r, routes[0]) {
-		return fmt.Errorf("%s read a request body, but its contract registers no Request type, so no typed client can send it. Name the body type in the route's common.RouteContract and run gencontract", routes[0].Key())
+	if err := untypedBodyError(r, routes, whole); err != nil {
+		return err
 	}
 	for _, route := range routes {
 		violations := loaded.doc.Violations(route, contractmodel.Answer{Status: status, Body: body, Variant: variantOf(r, route)})
@@ -129,6 +172,16 @@ func plainCandidates(routes []contractmodel.Route, envelope any) ([]contractmode
 		return routes, envelope
 	}
 	return slices.DeleteFunc(routes, func(route contractmodel.Route) bool { return !route.Plain }), plain.Value
+}
+
+// untypedBodyError refuses a handler that read a body its route's contract
+// does not type. A route-sized router names the route only when one
+// registered route fits; then its body is held to the contract as well.
+func untypedBodyError(r *http.Request, routes []contractmodel.Route, whole bool) error {
+	if (!whole && len(routes) != 1) || !readsAnUntypedBody(r, routes[0]) {
+		return nil
+	}
+	return fmt.Errorf("%s read a request body, but its contract registers no Request type, so no typed client can send it. Name the body type in the route's common.RouteContract and run gencontract", routes[0].Key())
 }
 
 // readsAnUntypedBody tells whether the handler read a body the route's

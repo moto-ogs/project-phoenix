@@ -64,6 +64,7 @@ const existingClosingDay: ClosingDay = {
   startDate: "2026-12-24",
   endDate: "2026-12-31",
   reason: "Weihnachtswoche",
+  version: "v1",
 };
 
 function renderModal(initial: ClosingDay | null = null) {
@@ -236,6 +237,7 @@ describe("ClosingDayModal", () => {
         start_date: "2026-12-24",
         end_date: "2026-12-31",
         reason: "Weihnachtsferien",
+        expected_version: "v1",
       }),
     );
     expect(onSaved).toHaveBeenCalledOnce();
@@ -320,10 +322,103 @@ describe("ClosingDayModal", () => {
         start_date: "2026-12-24",
         end_date: "2026-12-31",
         reason: "Weihnachtsferien",
+        expected_version: "v1",
       }),
     );
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
     expect(onSaved).toHaveBeenCalledOnce();
+  });
+
+  // ADR 0311: hat jemand den Schließtag seit dem Öffnen geändert, zeigt der
+  // Dialog dessen gespeicherten Stand, bietet kein Wiederholen an und
+  // speichert danach mit dem neuen Stand.
+  it("shows the stored closing day after a save refused as changed since read", async () => {
+    mockUpdate
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValueOnce(existingClosingDay);
+    const stored = {
+      ...existingClosingDay,
+      reason: "Betriebsferien",
+      version: "v2",
+    };
+    const reload = vi.fn(() => Promise.resolve(stored));
+    render(
+      <ClosingDayModal
+        isOpen
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        reload={reload}
+        initial={existingClosingDay}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Grund"), {
+      target: { value: "Weihnachtsferien" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        catalogText(
+          "general.changed_since_read",
+          "das Speichern des Schließtags",
+        ),
+      ),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByLabelText("Grund")).toHaveValue("Betriebsferien"),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mockUpdate).toHaveBeenLastCalledWith(
+        "7",
+        expect.objectContaining({
+          reason: "Betriebsferien",
+          expected_version: "v2",
+        }),
+      ),
+    );
+  });
+
+  // ADR 0311 rule 6: a failed read of the stored closing day after a
+  // refusal is a load error, and the refused version is not sent again.
+  it("names a failed read of the stored closing day after a refusal", async () => {
+    mockUpdate.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    render(
+      <ClosingDayModal
+        isOpen
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        reload={() =>
+          Promise.reject(
+            new ApiError("down", 503, { code: "general.unavailable" }),
+          )
+        }
+        initial={existingClosingDay}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Grund"), {
+      target: { value: "Weihnachtsferien" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
   });
 
   it("marks the field the server names", async () => {
@@ -403,6 +498,8 @@ describe("ClosingDayModal", () => {
         startDate: "2026-12-25",
         endDate: "2026-12-30",
         schoolIds: ["1"],
+        // Der Stand, aus dem das Formular stammt (ADR 0311).
+        expectedVersion: "v1",
       }),
     );
     expect(mockUpdate).not.toHaveBeenCalled();

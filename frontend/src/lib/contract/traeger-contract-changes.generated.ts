@@ -77,7 +77,7 @@ export interface ChangeAdjustedTemplate {
 }
 
 export const ChangeAdjustedTemplateSchema: z.ZodType<ChangeAdjustedTemplate, unknown> = object<ChangeAdjustedTemplate>({
-  template_id: str,
+  template_id: int64String,
   name: str,
   removed_weekdays: nullable(arr(safeInt)),
   added_weekdays: nullable(arr(safeInt)),
@@ -93,7 +93,7 @@ export interface ChangeManualTemplate {
 }
 
 export const ChangeManualTemplateSchema: z.ZodType<ChangeManualTemplate, unknown> = object<ChangeManualTemplate>({
-  template_id: str,
+  template_id: int64String,
   name: str,
   weekdays: nullable(arr(safeInt)),
   via_target: bool,
@@ -157,17 +157,14 @@ export interface ChangeDecisionRequest {
   expected_version?: string;
 }
 
-/** Query of GET /traeger/contract-changes/{id} */
-export interface GetTraegerContractChangesIdQuery {
-  effective_from?: string;
-}
-
 export const routes = {
   "GET /traeger/contract-changes/{id}": {
     method: "GET",
     pattern: "/traeger/contract-changes/{id}",
     portals: ["org"],
-    query: ["effective_from"],
+    query: {
+      "effective_from": { kind: "date" },
+    },
     response: success(ContractChangesSchema),
   },
   "POST /traeger/contract-changes/{id}/requests/{requestId}/decide": {

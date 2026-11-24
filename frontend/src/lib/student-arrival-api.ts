@@ -63,6 +63,8 @@ export interface ArrivalNote {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  /** The note's read-state token; a change sends it back (ADR 0311). */
+  version?: string;
 }
 
 export interface ArrivalData {
@@ -118,6 +120,7 @@ function mapArrivalNote(data: ArrivalNoteResponse): ArrivalNote {
     createdBy: data.created_by,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
+    ...(data.version ? { version: data.version } : {}),
   };
 }
 
@@ -221,16 +224,32 @@ export async function fetchArrivalSettings(): Promise<ArrivalSettings> {
   };
 }
 
+/**
+ * Saves the weekly arrival plan and, when given, the recurring weekday notes
+ * in one request. `expectedVersion` is the weekly plan token of the pickup
+ * read the editor started from; the backend refuses the save with
+ * `general.changed_since_read` when the plan changed since (ADR 0311).
+ */
 export async function updateArrivalSchedules(
   studentId: string,
   schedules: ArrivalScheduleRequestItem[],
+  plan: {
+    expectedVersion: string;
+    weekdayNotes?: readonly { weekday: number; content: string }[];
+  },
 ): Promise<ArrivalData> {
   const data = await bffJson(
     "tenant",
     "PUT /api/students/{id}/arrival-schedules",
     {
       params: { id: studentId },
-      body: { schedules },
+      body: {
+        schedules,
+        expected_version: plan.expectedVersion,
+        ...(plan.weekdayNotes
+          ? { weekday_notes: [...plan.weekdayNotes] }
+          : {}),
+      },
     },
   );
   return mapArrivalData(data);
@@ -238,13 +257,22 @@ export async function updateArrivalSchedules(
 
 const POSITIVE_ID = /^[1-9]\d{0,18}$/;
 
+/**
+ * Writes the weekly times of a class, a group or a child list. A class save
+ * sends the version of the class times the form was filled from
+ * (`expectedVersion`, ADR 0311): the form sends every filled weekday back, so
+ * the backend refuses it with `general.changed_since_read` when a colleague
+ * changed the class since.
+ */
 export async function bulkUpsertArrivalSchedules(
   filter: BulkArrivalFilter,
   schedules: ArrivalScheduleInput[],
+  expectedVersion?: string,
 ): Promise<BulkUpsertResult> {
   const body: BulkUpsertArrivalScheduleRequest = { schedules };
   if (filter.type === "school_class") {
     body.school_class = filter.schoolClass;
+    body.expected_version = expectedVersion;
   } else if (filter.type === "group") {
     if (!POSITIVE_ID.test(filter.groupId)) {
       throw new ApiError("Ungültige Gruppen-ID", 400, {
@@ -326,17 +354,19 @@ export async function createArrivalNote(
   return mapArrivalNote(data);
 }
 
+/** Changes a note as read at `expectedVersion` (ADR 0311). */
 export async function updateArrivalNote(
   studentId: string,
   noteId: string,
   input: ArrivalNoteRequest,
+  expectedVersion: string,
 ): Promise<ArrivalNote> {
   const data = await bffJson(
     "tenant",
     "PUT /api/students/{id}/arrival-notes/{noteId}",
     {
       params: { id: studentId, noteId },
-      body: input,
+      body: { ...input, expected_version: expectedVersion },
     },
   );
   return mapArrivalNote(data);

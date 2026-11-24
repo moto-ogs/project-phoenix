@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -37,7 +36,7 @@ type SubmitChildRequest struct {
 	TargetGradeLevel  *int16                  `json:"target_grade_level,omitempty"`
 	TargetSchoolClass *string                 `json:"target_school_class,omitempty"`
 	HolidayCareWish   *bool                   `json:"holiday_care_wish,omitempty"`
-	CustomData        map[string]any          `json:"custom_data,omitempty"`
+	CustomData        map[string]any          `json:"custom_data,omitempty" contract_json:"Answer values follow the school's versioned form schema"`
 	OfferingIDs       []ident.ID              `json:"offering_ids,omitempty"`
 	OfferingDays      []SubmitOfferingDaysRow `json:"offering_days,omitempty"`
 }
@@ -73,13 +72,16 @@ type SubmitEnrollmentRequest struct {
 	GuardianEmail       string                  `json:"guardian_email"`
 	GuardianPhone       *string                 `json:"guardian_phone,omitempty"`
 	AdditionalGuardians []SubmitGuardianRequest `json:"additional_guardians,omitempty"`
-	ConsentFlags        map[string]any          `json:"consent_flags,omitempty"`
+	ConsentFlags        ConsentFlagsInput       `json:"consent_flags,omitzero" contract_refines:"The typed checkbox input still reads the full legacy JSON value domain"`
 	// FormSchemaID is the form version the page showed (#4680).
-	FormSchemaID    ident.ID             `json:"form_schema_id,omitempty"`
-	CustomData      map[string]any       `json:"custom_data,omitempty"`
-	Children        []SubmitChildRequest `json:"children"`
-	CaptchaToken    string               `json:"captcha_token,omitempty"`
-	LateInviteToken string               `json:"late_invite_token,omitempty"`
+	FormSchemaID ident.ID `json:"form_schema_id,omitempty"`
+	// ExpectedTermsFingerprint is the terms_fingerprint of the form read the
+	// page filled in (ADR 0311); a submission without it is refused.
+	ExpectedTermsFingerprint string               `json:"expected_terms_fingerprint"`
+	CustomData               map[string]any       `json:"custom_data,omitempty" contract_json:"Answer values follow the school's versioned form schema"`
+	Children                 []SubmitChildRequest `json:"children"`
+	CaptchaToken             string               `json:"captcha_token,omitempty"`
+	LateInviteToken          string               `json:"late_invite_token,omitempty"`
 	// Signature is the parent's signature (#4786), required when the form
 	// asks for one.
 	Signature *SubmitSignatureRequest `json:"signature,omitempty"`
@@ -88,9 +90,7 @@ type SubmitEnrollmentRequest struct {
 // Bind defaults nil maps + slices to empty so downstream code doesn't
 // have to nil-check.
 func (req *SubmitEnrollmentRequest) Bind(_ *http.Request) error {
-	if req.ConsentFlags == nil {
-		req.ConsentFlags = map[string]any{}
-	}
+
 	if req.CustomData == nil {
 		req.CustomData = map[string]any{}
 	}
@@ -108,7 +108,7 @@ func (req *SubmitEnrollmentRequest) Bind(_ *http.Request) error {
 // email; we return it inline too so the confirmation page can show it
 // without waiting for the email.
 type SubmitEnrollmentResponse struct {
-	RequestID string              `json:"request_id"`
+	RequestID ident.ID            `json:"request_id"`
 	StatusURL string              `json:"status_url"`
 	Warnings  []SubmissionWarning `json:"warnings,omitempty"`
 }
@@ -141,7 +141,7 @@ func (rs *Resource) submitEnrollment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := SubmitEnrollmentResponse{
-		RequestID: strconv.FormatInt(result.Request.ID, 10),
+		RequestID: ident.ID(result.Request.ID),
 		StatusURL: result.StatusURL,
 		Warnings:  result.Warnings,
 	}
@@ -215,11 +215,13 @@ func buildServiceRequest(wireReq *SubmitEnrollmentRequest, tenantID int64, remot
 		GuardianLastName:      wireReq.GuardianLastName,
 		GuardianEmail:         wireReq.GuardianEmail,
 		GuardianPhone:         wireReq.GuardianPhone,
-		ConsentFlags:          formValues(wireReq.ConsentFlags),
+		ConsentFlags:          formValues(wireReq.ConsentFlags.values()),
 		CustomData:            formValues(wireReq.CustomData),
 		LateInviteToken:       wireReq.LateInviteToken,
 		DisplayedFormSchemaID: wireReq.FormSchemaID.Int64(),
 		Signature:             wireReq.Signature.value(),
+
+		ExpectedTermsFingerprint: wireReq.ExpectedTermsFingerprint,
 	}
 	for _, g := range wireReq.AdditionalGuardians {
 		out.AdditionalGuardians = append(out.AdditionalGuardians, SubmitGuardian{

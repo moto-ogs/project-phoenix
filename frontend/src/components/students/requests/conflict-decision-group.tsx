@@ -11,7 +11,6 @@
  */
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { ApiError } from "~/lib/api-error";
 
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -218,7 +217,7 @@ export function ConflictDecisionGroup({
 }: Readonly<{
   group: ConflictGroup;
   onResolved: (notice: string) => void;
-  onStale: () => void;
+  onStale: () => Promise<unknown>;
 }>) {
   const [choice, setChoice] = useState<string | null>(null);
   const [staffDraft, setStaffDraft] = useState<StaffDraft>(EMPTY_DRAFT);
@@ -295,15 +294,13 @@ export function ConflictDecisionGroup({
         error: err instanceof Error ? err.message : String(err),
       });
       setConfirming(false);
-      // Veraltet: der Katalog nennt den Grund, die Liste lädt die neue
-      // Fassung. Ein Wiederholen mit dem alten Stand wäre sinnlos.
-      const stale =
-        err instanceof ApiError && err.code === "students.change_request_stale";
+      // Veraltet: die Liste lädt die neue Fassung, die Meldung wartet darauf
+      // und bietet kein Wiederholen mit dem alten Stand an.
       await errors.show(err, {
         object: "die Entscheidung",
-        retry: stale ? undefined : () => void latestSaveRef.current(),
+        retry: () => void latestSaveRef.current(),
+        reload: onStale,
       });
-      if (stale) onStale();
       setBusy(false);
     }
   };

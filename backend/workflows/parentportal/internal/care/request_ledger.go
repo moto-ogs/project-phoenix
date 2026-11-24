@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // errRequestEventIncomplete refuses a ledger entry that cannot name its
@@ -66,7 +66,7 @@ func RecordRequestEvent(ctx context.Context, ledger RequestEventWriter, entry Re
 		RequestType: entry.RequestType,
 		RequestID:   entry.RequestID,
 		EventType:   entry.EventType,
-		Version:     excusedrequests.ParentRequestVersion(entry.UpdatedAt),
+		Version:     readstate.Of(entry.UpdatedAt),
 		Payload:     entry.Payload,
 	}
 	if entry.ActorAccountID > 0 {

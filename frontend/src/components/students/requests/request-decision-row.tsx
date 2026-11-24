@@ -9,7 +9,6 @@
  */
 
 import { useState } from "react";
-import { ApiError } from "~/lib/api-error";
 
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -45,6 +44,7 @@ const logger = createLogger({ component: "RequestDecisionRow" });
 function OpenRequestContent({
   request,
   onDecided,
+  onStale,
   onHold,
   held,
   decisionDisabledReason,
@@ -52,6 +52,7 @@ function OpenRequestContent({
 }: Readonly<{
   request: AggregatedOpenRequest;
   onDecided: (notice: string) => void;
+  onStale: () => Promise<unknown>;
   onHold?: (decision: HeldOfferingDecision) => void;
   held?: HeldOfferingDecision;
   decisionDisabledReason?: string;
@@ -67,6 +68,7 @@ function OpenRequestContent({
           onDecided={onDecided}
           grouped
           expectedVersion={request.expected_version}
+          onStale={onStale}
           decisionDisabledReason={decisionDisabledReason}
           approveReasonRequired={approveReasonRequired}
         />
@@ -78,6 +80,7 @@ function OpenRequestContent({
           onDecided={onDecided}
           grouped
           expectedVersion={request.expected_version}
+          onStale={onStale}
           decisionDisabledReason={decisionDisabledReason}
           approveReasonRequired={approveReasonRequired}
         />
@@ -91,6 +94,7 @@ function OpenRequestContent({
           held={held}
           grouped
           expectedVersion={request.expected_version}
+          onStale={onStale}
           decisionDisabledReason={decisionDisabledReason}
           approveReasonRequired={approveReasonRequired}
         />
@@ -102,6 +106,7 @@ function OpenRequestContent({
           onDecided={onDecided}
           grouped
           expectedVersion={request.expected_version}
+          onStale={onStale}
           currentStatusByDate={request.current_status_by_date}
           partialAbsenceFromByDate={request.partial_absence_from_by_date}
           decisionDisabledReason={decisionDisabledReason}
@@ -141,7 +146,7 @@ export function RequestDecisionRow({
   ) => void;
   /** Gehaltene Freigabe dieser Anfrage, falls die Karte noch offen ist. */
   held?: HeldOfferingDecision;
-  onStale: () => void;
+  onStale: () => Promise<unknown>;
 }>) {
   const key = itemKey(request);
   const hold = onHold
@@ -155,6 +160,7 @@ export function RequestDecisionRow({
       <OpenRequestContent
         request={request}
         onDecided={(notice) => onDecided(key, notice)}
+        onStale={onStale}
         onHold={hold}
         held={held}
         approveReasonRequired={approveReasonRequired}
@@ -185,15 +191,13 @@ export function RequestDecisionRow({
       logger.warn("parent_request_mark_done_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      // Eine veraltete Anfrage meldet der Katalog über ihren Code; die Liste
-      // lädt dann die neue Fassung, statt einen Wiederholen-Klick anzubieten.
-      const stale =
-        err instanceof ApiError && err.code === "students.change_request_stale";
+      // Eine veraltete Anfrage: die Liste lädt die neue Fassung, die Meldung
+      // wartet darauf und bietet kein Wiederholen mit dem alten Stand an.
       await actionErrors.show(err, {
         object: "die Anfrage",
-        retry: stale ? undefined : () => void markDone(),
+        retry: () => void markDone(),
+        reload: onStale,
       });
-      if (stale) onStale();
       setMarkingDone(false);
     }
   };
@@ -261,6 +265,7 @@ export function RequestDecisionRow({
         <OpenRequestContent
           request={request}
           onDecided={(notice) => onDecided(key, notice)}
+          onStale={onStale}
           onHold={hold}
           held={held}
           decisionDisabledReason={disabledReason}

@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -18,7 +19,19 @@ func (s *staffAbsenceService) GetVacationQuotaSummary(ctx context.Context, staff
 	if err != nil {
 		return nil, err
 	}
-	return computeVacationQuotaSummary(staffID, year, in.entitled, in.carryover, in.absences, in.opening), nil
+	summary := computeVacationQuotaSummary(staffID, year, in.entitled, in.carryover, in.absences, in.opening)
+	summary.Version = in.version(year)
+	return summary, nil
+}
+
+// version is the token of the stored claim of year: what the quota form
+// shows and its change replaces (ADR 0311).
+func (in vacationQuotaInputs) version(year int) string {
+	return readstate.Fingerprint(struct {
+		Year      int     `json:"year"`
+		Entitled  float64 `json:"entitled"`
+		Carryover float64 `json:"carryover"`
+	}{year, in.entitled, in.carryover})
 }
 
 type vacationQuotaInputs struct {
@@ -293,20 +306,24 @@ type VacationQuotaChange struct {
 	CarryoverDays float64
 	Reason        string
 	ChangedBy     int64
+	// ExpectedVersion is the Version of the summary the form was read from.
+	ExpectedVersion string
 }
 
 func (s *staffAbsenceService) UpsertVacationQuota(ctx context.Context, staffID int64, year int, entitled, carryover float64) error {
-	return s.upsertVacationQuota(ctx, VacationQuotaChange{StaffID: staffID, Year: year, EntitledDays: entitled, CarryoverDays: carryover})
+	return s.upsertVacationQuota(ctx, VacationQuotaChange{StaffID: staffID, Year: year, EntitledDays: entitled, CarryoverDays: carryover}, nil)
 }
 
 func (s *staffAbsenceService) SetVacationQuota(ctx context.Context, change VacationQuotaChange) error {
 	if strings.TrimSpace(change.Reason) == "" || change.ChangedBy <= 0 {
 		return fmt.Errorf("%w: reason and actor are required", ErrVacationQuotaInvalid)
 	}
-	return s.upsertVacationQuota(ctx, change)
+	return s.upsertVacationQuota(ctx, change, &change.ExpectedVersion)
 }
 
-func (s *staffAbsenceService) upsertVacationQuota(ctx context.Context, change VacationQuotaChange) error {
+// upsertVacationQuota writes the claim under the absence lock. With
+// expected, the Leitung's form, the stored claim must be the one it read.
+func (s *staffAbsenceService) upsertVacationQuota(ctx context.Context, change VacationQuotaChange, expected *string) error {
 	staffID, year, entitled, carryover := change.StaffID, change.Year, change.EntitledDays, change.CarryoverDays
 	now := s.now()
 	quota := &StaffVacationQuota{
@@ -331,6 +348,11 @@ func (s *staffAbsenceService) upsertVacationQuota(ctx context.Context, change Va
 	in, err := s.loadVacationQuotaInputs(ctx, staffID, year)
 	if err != nil {
 		return err
+	}
+	if expected != nil {
+		if err := readstate.Check(*expected, in.version(year)); err != nil {
+			return err
+		}
 	}
 	if summary := computeVacationQuotaSummary(staffID, year, entitled, carryover, in.absences, in.opening); summary.RemainingDays < -vacationDayEpsilon {
 		return fmt.Errorf("%w: %d: remaining %s", ErrVacationQuotaExceeded, year,

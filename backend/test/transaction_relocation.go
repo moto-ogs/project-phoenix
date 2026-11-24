@@ -24,6 +24,7 @@ func transactionScopeSubset(current, previous map[string]string, moves map[strin
 	current = withoutReviewedTraegerFeedTransactions(current)
 	current = withoutReviewedCatererFeedTransactions(current)
 	current = withoutReviewedTraegerStaffTransactions(current)
+	current = withoutReviewedTraegerSchoolRoleTransactions(current)
 	current = withoutReviewedVisitRetentionTransaction(current)
 	current = withoutReviewedFeedbackHistoryTransaction(current)
 	current = withoutReviewedTraegerExportTransferTransactions(current)

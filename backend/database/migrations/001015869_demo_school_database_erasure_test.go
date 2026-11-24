@@ -133,6 +133,7 @@ var demoErasureSchoolTablesOutsideThePlan = map[string]struct {
 	"enrollment.traeger_care_offering_schools": {true, "Träger offering outcome per school (ADR 0195), no person; stays with the Träger like after any school erasure"},
 	"parent_billing.care_run_schools":          {true, "school, month and run state of a Träger billing run, no person"},
 	"parent_billing.care_tariffs":              {true, "Träger price per care module and weekday, no person"},
+	"platform.school_responsible_parties":      {true, "Schulträger and Gemeinde the Träger-Büro keeps for a school (ADR 0318); stay with the Träger like after any school erasure"},
 	"platform.billing_key_day_overrides":       {true, "operator's own key day of a school (#7301), no person; a row of a deleted school is never read"},
 	"platform.billing_key_date_counts":         {true, "school and Träger name with sums for billing, no person; its own 10-year deadline (ADR 0092)"},
 	"platform.school_erasures":                 {true, "evidence of an operator's school erasure; IDs and counts only"},

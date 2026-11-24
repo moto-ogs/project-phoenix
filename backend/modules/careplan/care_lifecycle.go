@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The care lifecycle (#2487, #3427): ending a child's care ("Betreuung
@@ -231,7 +232,7 @@ const GroupRosterIncludesPendingWithdrawals = false
 // BookingAuthorityImpactChild is one child an operator reviews before
 // switching to booking-led care.
 type BookingAuthorityImpactChild struct {
-	StudentID           string         `json:"student_id"`
+	StudentID           ident.ID       `json:"student_id"`
 	FirstName           string         `json:"first_name"`
 	LastName            string         `json:"last_name"`
 	SchoolClass         string         `json:"school_class"`

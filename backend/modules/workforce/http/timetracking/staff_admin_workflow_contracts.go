@@ -12,6 +12,9 @@ type VacationQuotaRequest struct {
 	EntitledDays  float64 `json:"entitled_days"`
 	CarryoverDays float64 `json:"carryover_days"`
 	Reason        string  `json:"reason"`
+	// ExpectedVersion is the version of the summary the form showed; a claim
+	// changed since is refused with general.changed_since_read (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // StaffAdminWorkflowRouteContracts registers the absence decisions, the

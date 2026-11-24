@@ -422,7 +422,7 @@ function OGSGroupPageContent() {
   const [attendanceFilter, setAttendanceFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [roomStatus, setRoomStatus] = useState<
-    Record<string, { in_group_room: boolean; current_room_id?: string }>
+    Record<string, studentsContract.RoomStatus>
   >({});
 
   // State for desktop detection (die Gruppenreiter gibt es nur unterhalb lg)

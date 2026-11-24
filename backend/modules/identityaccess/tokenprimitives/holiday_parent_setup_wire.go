@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The setup link of a parent account at a Träger (ADR 0216 point 5) is a
@@ -24,17 +26,17 @@ type HolidayParentSetupClaims struct {
 
 // HolidayParentSetupWire is the signed form of a setup token.
 type HolidayParentSetupWire struct {
-	Purpose        bool   `json:"holiday_parent_setup"`
-	Email          string `json:"email"`
-	OrganizationID int64  `json:"org_id"`
-	IssuedAt       int64  `json:"iat"`
-	ExpiresAt      int64  `json:"exp"`
+	Purpose        bool     `json:"holiday_parent_setup"`
+	Email          string   `json:"email"`
+	OrganizationID ident.ID `json:"org_id"`
+	IssuedAt       int64    `json:"iat"`
+	ExpiresAt      int64    `json:"exp"`
 }
 
 // EncodeHolidayParentSetup is the wire form of a setup token.
 func EncodeHolidayParentSetup(c HolidayParentSetupClaims, issuedAt time.Time, ttl time.Duration) HolidayParentSetupWire {
 	return HolidayParentSetupWire{
-		Purpose: true, Email: c.Email, OrganizationID: c.OrganizationID,
+		Purpose: true, Email: c.Email, OrganizationID: ident.ID(c.OrganizationID),
 		IssuedAt: issuedAt.Unix(), ExpiresAt: issuedAt.Add(ttl).Unix(),
 	}
 }
@@ -62,7 +64,7 @@ func decodeHolidayParentSetup(wire map[string]any, now time.Time) (HolidayParent
 			return HolidayParentSetupClaims{}, fmt.Errorf("holiday parent setup token carries the foreign claim %s", claim)
 		}
 	}
-	claims := HolidayParentSetupClaims{Email: text(wire, "email"), OrganizationID: number(wire, "org_id"), ExpiresAt: number(wire, "exp")}
+	claims := HolidayParentSetupClaims{Email: text(wire, "email"), OrganizationID: identifier(wire, "org_id"), ExpiresAt: number(wire, "exp")}
 	switch {
 	case claims.Email == "":
 		return HolidayParentSetupClaims{}, errors.New("missing required claim: email")

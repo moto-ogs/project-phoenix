@@ -3,8 +3,10 @@ package careplan
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Booking materialization (#3560) turns approved care-offering bookings into
@@ -199,6 +201,10 @@ type OfferingOverride struct {
 type OfferingAdjustmentChoice struct {
 	OfferingID   int64
 	SelectedDays []string
+	// ExtendToPhaseEnd books the offering to the end of the phase, or to the
+	// earlier care end, instead of keeping its booking's end (#7929). Only
+	// an undated correction accepts it.
+	ExtendToPhaseEnd bool
 }
 
 // OfferingAdjustment is a booking switch of one approved child.
@@ -220,6 +226,66 @@ type OfferingAdjustment struct {
 	// Source is OfferingAdjustmentSourceDirect or
 	// OfferingAdjustmentSourceRequest.
 	Source string
+	// ExpectedVersion is the BookingsVersion of the child's bookings the
+	// office corrected (ADR 0311): another one is readstate.ErrChanged,
+	// checked under the student lock before anything is written. Nil for a
+	// switch that saves back no read: an approved change request, a pickup
+	// adjustment confirmed against its own preview.
+	ExpectedVersion *string
+}
+
+// BookingsVersion is the token of a child's bookings as the office reads
+// them before a correction (ADR 0311): a fingerprint of every stored
+// interval of the child's selections, in a canonical order. Row ids are
+// left out, so rewriting the same bookings keeps the token.
+func BookingsVersion(bookings []BookedOffering) string {
+	state := make([]BookedOffering, 0, len(bookings))
+	for _, booking := range bookings {
+		booking.SelectedDays = daysOrEmpty(booking.SelectedDays)
+		booking.ManualSelectedDays = daysOrEmpty(booking.ManualSelectedDays)
+		booking.AutomaticSelectedDays = daysOrEmpty(booking.AutomaticSelectedDays)
+		state = append(state, booking)
+	}
+	slices.SortFunc(state, func(a, b BookedOffering) int {
+		switch {
+		case a.RequestChildID != b.RequestChildID:
+			return compareIDs(a.RequestChildID, b.RequestChildID)
+		case a.CareOfferingID != b.CareOfferingID:
+			return compareIDs(a.CareOfferingID, b.CareOfferingID)
+		}
+		if order := compareOptionalDate(a.ValidFrom, b.ValidFrom); order != 0 {
+			return order
+		}
+		return compareOptionalDate(a.ValidUntil, b.ValidUntil)
+	})
+	return readstate.Fingerprint(state)
+}
+
+func daysOrEmpty(days []string) []string {
+	if days == nil {
+		return []string{}
+	}
+	return days
+}
+
+func compareIDs(a, b int64) int {
+	if a < b {
+		return -1
+	}
+	return 1
+}
+
+// compareOptionalDate orders an open bound before every date.
+func compareOptionalDate(a, b *calendar.Date) int {
+	switch {
+	case a == nil && b == nil:
+		return 0
+	case a == nil:
+		return -1
+	case b == nil:
+		return 1
+	}
+	return a.Compare(*b)
 }
 
 // OfferingAdjustmentResult is the materialization an adjustment persisted, so
@@ -340,6 +406,10 @@ type OfferingAdjustmentSnapshot struct {
 	ManualSelectedDays    []string `json:"manual_selected_days,omitempty"`
 	AutomaticSelectedDays []string `json:"automatic_selected_days,omitempty"`
 	AvailableDays         []string `json:"available_days,omitempty"`
+	// ExtendedUntil is the last booked day (YYYY-MM-DD) of an offering the
+	// office extended to the end of the phase (#7929), set in the after
+	// snapshot only and only when the end moved.
+	ExtendedUntil string `json:"extended_until,omitempty"`
 }
 
 // OfferingAdjustmentRecord is the audit row of one adjustment.

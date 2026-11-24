@@ -358,7 +358,7 @@ function ChildSections({
           care.features.absence_request_edit_enabled === true
         }
         reasonRequired={requiresGuardianReason(care.features)}
-        onCareRefresh={care.refresh}
+        onExcusedReload={care.reloadExcusedRequests}
       />
 
       {modal === "sick" && canReportAbsence && (
@@ -386,6 +386,7 @@ function ChildSections({
           pickupChangeRequests={care.pickupChangeRequests}
           careExceptionsLoaded={care.careExceptionsLoaded}
           pickupChangeRequestsLoaded={care.pickupChangeRequestsLoaded}
+          reloadRequests={care.reloadPickupRequests}
           pickupChangeEnabled={care.features.pickup_change_enabled}
           departureModeEnabled={
             care.features.pickup_change_mode_enabled === true
@@ -420,7 +421,7 @@ function ChildAreaTabs({
   excusedRequests,
   canEditAbsenceRequests,
   reasonRequired,
-  onCareRefresh,
+  onExcusedReload,
 }: Readonly<{
   child: parentMeContract.ChildResponse;
   childName: string;
@@ -435,7 +436,8 @@ function ChildAreaTabs({
   excusedRequests: parentMeContract.ParentExcusedRequestResponse[];
   canEditAbsenceRequests: boolean;
   reasonRequired: boolean;
-  onCareRefresh: () => void;
+  /** Reads the absence requests again; rejects when the read fails. */
+  onExcusedReload: () => Promise<unknown>;
 }>) {
   const t = useCareTermTranslations("parentChild");
   const conferenceT = useTranslations("parentConference");
@@ -555,7 +557,7 @@ function ChildAreaTabs({
                 excusedRequests={excusedRequests}
                 canEdit={canEditAbsenceRequests}
                 reasonRequired={reasonRequired}
-                onEdited={onCareRefresh}
+                onEdited={onExcusedReload}
               />
             </ParentSection>
           )}

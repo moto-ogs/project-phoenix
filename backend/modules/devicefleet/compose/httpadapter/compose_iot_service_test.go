@@ -3,6 +3,7 @@
 package httpadapter_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -12,6 +13,7 @@ import (
 
 	iotModels "github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	iot "github.com/moto-ogs/project-phoenix/modules/devicefleet/internal/application/deviceservice"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,6 +26,15 @@ func setupIoTService(t *testing.T, db *bun.DB) iot.Service {
 	fleet, err := api.NewDeviceFleet(testpkg.NewDatabase(t, db), time.Now)
 	require.NoError(t, err, "Failed to compose the device fleet")
 	return iot.NewService(fleet, time.Now)
+}
+
+// updateDeviceInTx runs the edit in a tenant unit like the request
+// transaction does: the owner checks the read state under the row lock.
+func updateDeviceInTx(t *testing.T, db *bun.DB, service iot.Service, device *iotModels.Device, expectedVersion string) error {
+	t.Helper()
+	return testpkg.WithinTenantContext(t, testpkg.Ctx(t), db, testpkg.Tenant(t), func(txCtx context.Context) error {
+		return service.UpdateDevice(txCtx, device, expectedVersion)
+	})
 }
 
 // =============================================================================
@@ -71,6 +82,22 @@ func TestIoTService_CreateDevice(t *testing.T) {
 		// ASSERT
 		require.NoError(t, err)
 		assert.Equal(t, providedAPIKey, *device.APIKey, "Should use provided API key")
+	})
+
+	t.Run("refuses an edit of an older read and writes nothing", func(t *testing.T) {
+		device := ownerDevice(testpkg.CreateTestDevice(t, db, "stale-update"))
+		read := iotModels.DeviceVersion(device)
+		renamed := "Renamed by a colleague"
+		device.Name = &renamed
+		require.NoError(t, updateDeviceInTx(t, db, service, device, read))
+
+		stale := "Saved over an older read"
+		device.Name = &stale
+		require.ErrorIs(t, updateDeviceInTx(t, db, service, device, read), readstate.ErrChanged)
+		require.ErrorIs(t, updateDeviceInTx(t, db, service, device, ""), readstate.ErrChanged, "an edit without a read is refused")
+		stored, err := service.GetDeviceByID(ctx, device.ID)
+		require.NoError(t, err)
+		assert.Equal(t, renamed, *stored.Name)
 	})
 
 	t.Run("returns error for nil device", func(t *testing.T) {
@@ -241,6 +268,7 @@ func TestIoTService_UpdateDevice(t *testing.T) {
 	t.Run("updates device successfully", func(t *testing.T) {
 		// ARRANGE
 		device := ownerDevice(testpkg.CreateTestDevice(t, db, "to-update"))
+		read := iotModels.DeviceVersion(device)
 
 		// Modify device
 		newName := "Updated Device Name"
@@ -248,7 +276,7 @@ func TestIoTService_UpdateDevice(t *testing.T) {
 		device.DeviceType = "terminal"
 
 		// ACT
-		err := service.UpdateDevice(ctx, device)
+		err := updateDeviceInTx(t, db, service, device, read)
 
 		// ASSERT
 		require.NoError(t, err)
@@ -262,7 +290,7 @@ func TestIoTService_UpdateDevice(t *testing.T) {
 
 	t.Run("returns error for nil device", func(t *testing.T) {
 		// ACT
-		err := service.UpdateDevice(ctx, nil)
+		err := updateDeviceInTx(t, db, service, nil, "")
 
 		// ASSERT
 		require.Error(t, err)
@@ -278,7 +306,7 @@ func TestIoTService_UpdateDevice(t *testing.T) {
 		device.ID = 0 // Set ID via embedded base.Model
 
 		// ACT
-		err := service.UpdateDevice(ctx, device)
+		err := updateDeviceInTx(t, db, service, device, iotModels.DeviceVersion(device))
 
 		// ASSERT
 		require.Error(t, err)
@@ -294,7 +322,7 @@ func TestIoTService_UpdateDevice(t *testing.T) {
 		device.ID = 99999999 // Set ID via embedded base.Model
 
 		// ACT
-		err := service.UpdateDevice(ctx, device)
+		err := updateDeviceInTx(t, db, service, device, iotModels.DeviceVersion(device))
 
 		// ASSERT
 		require.Error(t, err)
@@ -309,7 +337,7 @@ func TestIoTService_UpdateDevice(t *testing.T) {
 		device.DeviceType = "" // invalid
 
 		// ACT
-		err := service.UpdateDevice(ctx, device)
+		err := updateDeviceInTx(t, db, service, device, iotModels.DeviceVersion(device))
 
 		// ASSERT
 		require.Error(t, err)
@@ -319,12 +347,13 @@ func TestIoTService_UpdateDevice(t *testing.T) {
 		// ARRANGE - create two devices
 		device1 := testpkg.CreateTestDevice(t, db, "first-device")
 		device2 := ownerDevice(testpkg.CreateTestDevice(t, db, "second-device"))
+		read := iotModels.DeviceVersion(device2)
 
 		// Try to change device2's DeviceID to match device1's
 		device2.DeviceID = device1.DeviceID
 
 		// ACT
-		err := service.UpdateDevice(ctx, device2)
+		err := updateDeviceInTx(t, db, service, device2, read)
 
 		// ASSERT
 		require.Error(t, err)
@@ -536,7 +565,7 @@ func TestIoTService_WebManualDeviceProtection(t *testing.T) {
 	t.Run("UpdateDevice rejects reserved web manual device", func(t *testing.T) {
 		webManualDevice.Name = testpkg.StrPtr("Hacked Name")
 
-		err := service.UpdateDevice(ctx, webManualDevice)
+		err := updateDeviceInTx(t, db, service, webManualDevice, iotModels.DeviceVersion(webManualDevice))
 
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, iot.ErrDeviceProtected))
@@ -551,9 +580,10 @@ func TestIoTService_WebManualDeviceProtection(t *testing.T) {
 
 	t.Run("UpdateDevice allows tenant-managed virtual devices", func(t *testing.T) {
 		virtualDevice := createTenantVirtualDevice(t, "update")
+		read := iotModels.DeviceVersion(virtualDevice)
 		virtualDevice.Name = testpkg.StrPtr("Updated Tenant Virtual Device")
 
-		err := service.UpdateDevice(ctx, virtualDevice)
+		err := updateDeviceInTx(t, db, service, virtualDevice, read)
 		require.NoError(t, err)
 
 		updatedDevice, err := service.GetDeviceByID(ctx, virtualDevice.ID)
