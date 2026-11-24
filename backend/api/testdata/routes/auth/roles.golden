@@ -5,5 +5,6 @@ GET /auth/roles/{roleId}/permission-selection/
 GET /auth/roles/{roleId}/permissions/
 POST /auth/roles/
 PUT /auth/roles/{id}/
+PUT /auth/roles/{id}/master-data/
 PUT /auth/roles/{roleId}/permission-selection/
 PUT /auth/roles/{roleId}/permissions/

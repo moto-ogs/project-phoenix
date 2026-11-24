@@ -30,7 +30,11 @@ import { hasPermission, isAdmin } from "~/lib/auth-utils";
 import { RolesMasterDetail } from "@/components/roles/roles-master-detail";
 import { DatabaseFormModal } from "~/components/database/database-form-modal";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
-import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import {
+  useApiErrorDisplay,
+  useApiFormError,
+  useToast,
+} from "~/contexts/ToastContext";
 import { useDeleteConfirmation } from "~/hooks/useDeleteConfirmation";
 import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -49,6 +53,9 @@ const ROLES_INFO =
   "Die Rolle einer Person legt fest, was sie in moto sehen und tun darf. Rollen vom System kannst du nicht ändern. Lege dafür eine eigene Rolle an.";
 
 const NO_ROLES: Role[] = [];
+
+const ROLE_GONE =
+  "Diese Rolle gibt es nicht mehr. Deine Änderung ist nicht gespeichert.";
 
 export default function RolesPage() {
   return (
@@ -86,6 +93,7 @@ function RolesPageContent() {
   } = useDeleteConfirmation();
 
   const { success: toastSuccess } = useToast();
+  const { showMessage } = useApiErrorDisplay();
 
   const { data: session, status } = useSession({
     required: true,
@@ -271,19 +279,59 @@ function RolesPageContent() {
   );
 
   const handleUpdateRole = useCallback(
-    async (data: Partial<Role>) => {
-      if (!selectedRole) return;
-      // Ein Fehler bleibt im Formular (errorPath im Stammdaten-Reiter).
-      await service.update(selectedRole.id, data);
-      toastSuccess(
-        `Die Rolle „${getRoleDisplayName(data.name ?? selectedRole.name)}“ ist gespeichert.`,
+    async (data: Partial<Role>, base: Role) => {
+      // Ein Fehler bleibt im Formular (errorPath im Stammdaten-Reiter); eine
+      // Ablehnung eines geänderten Stands liest die Rolle dort neu.
+      const saved = await service.update(base.id, data, base);
+      if (!saved) throw new Error("role update answered without the role");
+      // Die Antwort trägt die neue Version und keine Rechte: die nächste
+      // Bearbeitung sendet sie, auch wenn das Neuladen unten scheitert
+      // (ADR 0311).
+      const stored: Role = { ...saved, permissionNames: base.permissionNames };
+      await reloadDetail(
+        (current) =>
+          current && { ...stored, permissionNames: current.permissionNames },
+        { revalidate: false },
       );
-      // Liste und Detail neu laden.
-      void reloadDetail();
+      toastSuccess(
+        `Die Rolle „${getRoleDisplayName(saved.name)}“ ist gespeichert.`,
+      );
+      // Die Liste neu laden; ein Fehler dabei steht über der Liste.
       await refreshRoles();
+      return stored;
     },
-    [selectedRole, service, refreshRoles, reloadDetail, toastSuccess],
+    [service, refreshRoles, reloadDetail, toastSuccess],
   );
+
+  // Liest die gewählte Rolle neu und legt sie in den Cache; scheitert das
+  // Lesen, lehnt es ab, statt mit dem alten Stand aufzulösen (ADR 0311).
+  // Wurde die Rolle inzwischen gelöscht, ist nichts mehr zu speichern: Die
+  // Auswahl endet, die Liste verliert die Rolle, und eine Meldung sagt es.
+  const reloadRole = useCallback(async () => {
+    if (!selectedRoleId) throw new Error("no role is selected");
+    let fresh: Role;
+    try {
+      fresh = await service.getOne(selectedRoleId);
+    } catch (err) {
+      if (!(err instanceof ApiError && err.status === 404)) throw err;
+      handleSelectRole(null);
+      showMessage(ROLE_GONE);
+      await mutateRoles(
+        (current) => current?.filter((role) => role.id !== selectedRoleId),
+        { revalidate: false },
+      );
+      return undefined;
+    }
+    await reloadDetail(fresh, { revalidate: false });
+    return fresh;
+  }, [
+    service,
+    reloadDetail,
+    selectedRoleId,
+    handleSelectRole,
+    showMessage,
+    mutateRoles,
+  ]);
 
   const handleDeleteRole = useCallback(async () => {
     if (!selectedRole) return;
@@ -459,6 +507,7 @@ function RolesPageContent() {
             canManagePermissions={canManagePermissions}
             onSelect={handleSelectRole}
             onSaveRole={handleUpdateRole}
+            onReloadRole={reloadRole}
             onDeleteClick={handleDeleteClick}
             onPermissionsSaved={handlePermissionsSaved}
           />

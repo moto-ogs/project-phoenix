@@ -62,7 +62,8 @@ func TestSchoolPortalRoleReachesEveryReader(t *testing.T) {
 	require.True(t, managed.SchoolPortal)
 	managed.Description = "Leitet eine Klasse"
 	managed.SchoolPortal = false
-	require.NoError(t, roleStore.UpdateRole(ctx, managed))
+	_, err = roleStore.UpdateRole(ctx, managed)
+	require.NoError(t, err)
 	reread, _, err := roleStore.FindRole(ctx, role.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "Leitet eine Klasse", reread.Description)

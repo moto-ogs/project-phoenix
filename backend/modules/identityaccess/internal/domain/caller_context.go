@@ -99,11 +99,13 @@ type CallerProfile struct {
 }
 
 // CallerProfileUpdate names the self-editable fields; nil leaves a field.
+// ExpectedVersion is the version of the profile the edit was made from.
 type CallerProfileUpdate struct {
-	FirstName *string
-	LastName  *string
-	Username  *string
-	Bio       *string
+	FirstName       *string
+	LastName        *string
+	Username        *string
+	Bio             *string
+	ExpectedVersion string
 }
 
 // CallerError names the failed caller-context operation. The text format is

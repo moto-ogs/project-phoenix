@@ -15,10 +15,12 @@ import (
 	"image/jpeg"
 	"image/png"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
@@ -30,6 +32,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -115,8 +118,9 @@ func TestUpdateCurrentProfile_Success(t *testing.T) {
 	_, account := testpkg.CreateTestPersonWithAccount(t, tc.db, "Update", "ProfileTest")
 
 	body := map[string]interface{}{
-		"first_name": "Updated",
-		"last_name":  "Name",
+		"first_name":       "Updated",
+		"last_name":        "Name",
+		"expected_version": readProfileVersion(t, tc, account.ID),
 	}
 
 	claims := testutil.TeacherTestClaims(int(account.ID))
@@ -127,6 +131,82 @@ func TestUpdateCurrentProfile_Success(t *testing.T) {
 	rr := testutil.ExecuteRequest(tc.router, req)
 
 	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+}
+
+// ADR 0311: the self-edit saves only over the profile it was read from. An
+// admin's rename of the same person through PUT /api/users/{id} in between
+// (here the row write it ends in) refuses the edit, as do the older version
+// and a missing one, and nothing is written; the version the save answers
+// saves the next edit without a read, also of bio alone.
+func TestUpdateCurrentProfile_SavesOnlyOverTheReadVersion(t *testing.T) {
+	t.Parallel()
+	tc := setupUserContextRoute(t)
+	person, account := testpkg.CreateTestPersonWithAccount(t, tc.db, "Read", "Version")
+	read := readProfileVersion(t, tc, account.ID)
+	put := func(body map[string]any) *httptest.ResponseRecorder {
+		claims := testutil.TeacherTestClaims(int(account.ID))
+		return testutil.ExecuteRequest(tc.router, testutil.NewAuthenticatedRequest(t, "PUT", "/profile", body,
+			testutil.WithJWTBearer(testutil.MintTestJWT(t, claims))))
+	}
+
+	_, err := tc.db.NewUpdate().TableExpr("users.persons").Set("last_name = ?", "Admin").
+		Where("id = ?", person.ID).Exec(testpkg.Ctx(t))
+	require.NoError(t, err)
+	for name, version := range map[string]string{"read before the admin's rename": read, "no version": ""} {
+		rr := put(map[string]any{"first_name": "Selbst", "last_name": "Version", "expected_version": version})
+		assert.Equal(t, http.StatusConflict, rr.Code, name)
+		assert.Contains(t, rr.Body.String(), "general.changed_since_read", name)
+	}
+	stored := getData(t, tc, "/profile", account.ID, "Current profile retrieved successfully").(map[string]any)
+	assert.Equal(t, "Read", stored["first_name"], "a refused edit writes nothing")
+	assert.Equal(t, "Admin", stored["last_name"], "the admin's rename stays")
+
+	current, _ := stored["version"].(string)
+	rr := put(map[string]any{"first_name": "Selbst", "last_name": "Admin", "expected_version": current})
+	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+	saved := testutil.ParseJSONResponse(t, rr.Body.Bytes())["data"].(map[string]any)
+	assert.Equal(t, "Selbst", saved["first_name"])
+	answered, _ := saved["version"].(string)
+	require.NotEqual(t, current, answered, "the save answers the stored version")
+	assert.Equal(t, readProfileVersion(t, tc, account.ID), answered)
+
+	rr = put(map[string]any{"bio": "Nur die Beschreibung", "expected_version": current})
+	assert.Equal(t, http.StatusConflict, rr.Code, "an edit of bio alone is checked as well")
+	rr = put(map[string]any{"bio": "Nur die Beschreibung", "expected_version": answered})
+	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+}
+
+// An account without a person reads its profile as absent; the first edit
+// creates the person over that version only.
+func TestUpdateCurrentProfile_CreatesThePersonOverTheAbsentVersion(t *testing.T) {
+	t.Parallel()
+	tc := setupUserContextRoute(t)
+	account := testpkg.CreateTestAccount(t, tc.db, fmt.Sprintf("profile-absent-%d@example.com", time.Now().UnixNano()))
+	put := func(version string) *httptest.ResponseRecorder {
+		claims := testutil.TeacherTestClaims(int(account.ID))
+		body := map[string]any{"first_name": "Neu", "last_name": "Person", "expected_version": version}
+		return testutil.ExecuteRequest(tc.router, testutil.NewAuthenticatedRequest(t, "PUT", "/profile", body,
+			testutil.WithJWTBearer(testutil.MintTestJWT(t, claims))))
+	}
+	read := readProfileVersion(t, tc, account.ID)
+	require.Equal(t, readstate.Absent, read)
+
+	assert.Equal(t, http.StatusConflict, put("").Code)
+	rr := put(read)
+	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+	saved := testutil.ParseJSONResponse(t, rr.Body.Bytes())["data"].(map[string]any)
+	assert.Equal(t, "Neu", saved["first_name"])
+	assert.Equal(t, http.StatusConflict, put(read).Code, "the person exists now: the absent version is stale")
+}
+
+// readProfileVersion reads the caller's profile version the way the profile
+// page does.
+func readProfileVersion(t *testing.T, tc *testContext, accountID int64) string {
+	t.Helper()
+	data := getData(t, tc, "/profile", accountID, "Current profile retrieved successfully").(map[string]any)
+	version, _ := data["version"].(string)
+	require.NotEmpty(t, version, "the profile read carries its version")
+	return version
 }
 
 func TestUpdateCurrentProfile_Unauthenticated(t *testing.T) {
@@ -147,7 +227,7 @@ func TestUpdateCurrentProfile_EmptyBody(t *testing.T) {
 
 	_, account := testpkg.CreateTestPersonWithAccount(t, tc.db, "Empty", "Update")
 
-	body := map[string]interface{}{}
+	body := map[string]interface{}{"expected_version": readProfileVersion(t, tc, account.ID)}
 
 	claims := testutil.TeacherTestClaims(int(account.ID))
 	req := testutil.NewAuthenticatedRequest(t, "PUT", "/profile", body,
@@ -384,10 +464,11 @@ func TestUpdateCurrentProfile_WithUsernameAndBio(t *testing.T) {
 
 	uniqueUsername := fmt.Sprintf("user_%d", account.ID)
 	body := map[string]interface{}{
-		"first_name": "NewFirst",
-		"last_name":  "NewLast",
-		"username":   uniqueUsername,
-		"bio":        "This is my bio text",
+		"first_name":       "NewFirst",
+		"last_name":        "NewLast",
+		"username":         uniqueUsername,
+		"bio":              "This is my bio text",
+		"expected_version": readProfileVersion(t, tc, account.ID),
 	}
 
 	claims := testutil.TeacherTestClaims(int(account.ID))

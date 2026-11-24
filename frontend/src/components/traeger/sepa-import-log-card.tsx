@@ -10,14 +10,14 @@ import { formatBerlinDate, formatBerlinTime } from "~/lib/date-helpers";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { fetchTraegerBuero } from "~/lib/traeger-api";
 import type { ImportLogEntry } from "~/lib/traeger-sepa-import-api";
-import { useTraegerResource } from "./use-traeger-resource";
+import { useFreshTraegerResource } from "./use-traeger-resource";
 
 export function SepaImportLogCard({
   entries,
 }: Readonly<{ entries: readonly ImportLogEntry[] }>) {
   // Die Personen des Träger-Büros nennen die Konten; ohne Leserecht
   // bleibt die Kontonummer, ohne Fehlermeldung.
-  const { data: buero } = useTraegerResource(
+  const { data: buero } = useFreshTraegerResource(
     entries.length > 0 ? traegerKeys.buero() : null,
     fetchTraegerBuero,
     "die Personen des Träger-Büros",

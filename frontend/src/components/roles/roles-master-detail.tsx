@@ -16,7 +16,12 @@ import { GroupedList } from "~/components/database/grouped-list";
 import { MasterDetailLayout } from "~/components/database/master-detail-layout";
 import { useGroupedItems } from "~/components/database/use-grouped-items";
 import { roleEditSections } from "~/components/database/configs/roles.config";
-import { DatabaseForm } from "~/components/database/database-form";
+import {
+  DatabaseForm,
+  draftSubmitBlock,
+  formValuesFor,
+  type DatabaseFormErrorPath,
+} from "~/components/database/database-form";
 import type { FormErrorInput } from "~/components/ui/form-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiFormError } from "~/contexts/ToastContext";
@@ -35,6 +40,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { Loading } from "~/components/ui/loading";
+import { useDraftOn } from "~/lib/swr/read-draft";
 
 interface RolesMasterDetailProps {
   roles: Role[];
@@ -47,8 +53,14 @@ interface RolesMasterDetailProps {
   /** Darf den Berechtigungskatalog laden und Rollenrechte ändern. */
   canManagePermissions?: boolean;
   onSelect: (id: string | null) => void;
-  /** Speichert die im Detailbereich bearbeiteten Stammdaten. */
-  onSaveRole: (data: Partial<Role>) => Promise<void>;
+  /**
+   * Speichert die im Detailbereich bearbeiteten Stammdaten über `base`, der
+   * gelesenen Rolle mit ihrer Version (ADR 0311), und antwortet die
+   * gespeicherte Rolle.
+   */
+  onSaveRole: (data: Partial<Role>, base: Role) => Promise<Role>;
+  /** Liest die Rolle neu; scheitert das Lesen, lehnt es ab (ADR 0311). */
+  onReloadRole: () => Promise<Role | undefined>;
   onDeleteClick: () => void;
   /** Nach dem Speichern der Berechtigungen: Liste und Detail neu laden. */
   onPermissionsSaved: () => void | Promise<void>;
@@ -72,6 +84,7 @@ export function RolesMasterDetail({
   canManagePermissions = false,
   onSelect,
   onSaveRole,
+  onReloadRole,
   onDeleteClick,
   onPermissionsSaved,
 }: RolesMasterDetailProps) {
@@ -105,6 +118,7 @@ export function RolesMasterDetail({
       detailError={detailError}
       canManagePermissions={canManagePermissions}
       onSaveRole={onSaveRole}
+      onReloadRole={onReloadRole}
       onDeleteClick={onDeleteClick}
       onPermissionsSaved={onPermissionsSaved}
     />
@@ -137,7 +151,8 @@ interface RoleDetailContentProps {
   loading: boolean;
   detailError: FormErrorInput;
   canManagePermissions: boolean;
-  onSaveRole: (data: Partial<Role>) => Promise<void>;
+  onSaveRole: (data: Partial<Role>, base: Role) => Promise<Role>;
+  onReloadRole: () => Promise<Role | undefined>;
   onDeleteClick: () => void;
   onPermissionsSaved: () => void | Promise<void>;
 }
@@ -148,6 +163,7 @@ function RoleDetailContent({
   detailError,
   canManagePermissions,
   onSaveRole,
+  onReloadRole,
   onDeleteClick,
   onPermissionsSaved,
 }: RoleDetailContentProps) {
@@ -157,11 +173,6 @@ function RoleDetailContent({
   // wie Berechtigungen (#3116). Ein Reiterwechsel beendet den Zustand, der
   // Entwurf gehört zum Reiter.
   const [editing, setEditing] = useState(false);
-
-  const handleSaveRole = async (data: Partial<Role>) => {
-    await onSaveRole(data);
-    setEditing(false);
-  };
 
   const handlePermissionsSaved = async () => {
     await onPermissionsSaved();
@@ -210,7 +221,9 @@ function RoleDetailContent({
           loading={loading}
           detailError={detailError}
           editing={editing && activeTab === "master-data"}
-          onSaveRole={handleSaveRole}
+          onSaveRole={onSaveRole}
+          onReloadRole={onReloadRole}
+          onSaved={() => setEditing(false)}
           onCancelEdit={() => setEditing(false)}
         />
       ),
@@ -263,13 +276,17 @@ function RoleStammdatenTab({
   detailError,
   editing,
   onSaveRole,
+  onReloadRole,
+  onSaved,
   onCancelEdit,
 }: {
   role: Role;
   loading: boolean;
   detailError: FormErrorInput;
   editing: boolean;
-  onSaveRole: (data: Partial<Role>) => Promise<void>;
+  onSaveRole: (data: Partial<Role>, base: Role) => Promise<Role>;
+  onReloadRole: () => Promise<Role | undefined>;
+  onSaved: () => void;
   onCancelEdit: () => void;
 }) {
   // Speicherfehler im Formular, Namensdopplung am Feld (#2517).
@@ -288,15 +305,13 @@ function RoleStammdatenTab({
 
   if (editing) {
     return (
-      <DatabaseForm<Partial<Role>>
-        sections={roleEditSections}
-        initialData={role}
-        onSubmit={onSaveRole}
+      <RoleMasterDataForm
+        role={role}
+        onSave={onSaveRole}
+        reload={onReloadRole}
+        onSaved={onSaved}
         onCancel={onCancelEdit}
-        submitLabel="Speichern"
-        stickyActions
         errorPath={saveErrors}
-        errorObject="die Rolle"
       />
     );
   }
@@ -358,5 +373,83 @@ function RoleStammdatenTab({
         />
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Das Formular der Stammdaten, je Öffnen neu. Es ruht auf der gelesenen
+ * Version der Rolle (ADR 0311): ein neuerer Stand füllt es nur, solange
+ * nichts getippt ist; nach einer Ablehnung steht der gespeicherte Stand da,
+ * und Speichern wartet, bis er gelesen ist.
+ */
+function RoleMasterDataForm({
+  role,
+  onSave,
+  reload,
+  onSaved,
+  onCancel,
+  errorPath,
+}: {
+  role: Role;
+  onSave: (data: Partial<Role>, base: Role) => Promise<Role>;
+  /** undefined: the role is gone; the page ends the selection. */
+  reload: () => Promise<Role | undefined>;
+  onSaved: () => void;
+  onCancel: () => void;
+  errorPath: DatabaseFormErrorPath;
+}) {
+  const edit = useDraftOn<
+    Role,
+    Record<string, unknown>,
+    string | undefined,
+    Role
+  >(
+    { opening: role.id, data: role, reload },
+    {
+      token: (stored) => stored.version,
+      toDraft: (stored) => formValuesFor(roleEditSections, stored),
+      answer: (saved) => saved,
+    },
+  );
+
+  const handleSave = async (data: Partial<Role>) => {
+    if (!edit.canSubmit) return;
+    const result = await edit.submit((version) =>
+      onSave(data, { ...role, version }),
+    );
+    if (result.ok) {
+      onSaved();
+      return;
+    }
+    // Seit dem Lesen geändert: `reload` zeigt die gespeicherte Rolle, ohne
+    // Wiederholen derselben Version. Jeden anderen Fehler zeigt das
+    // Formular mit Wiederholen.
+    if (!result.refused) throw result.error;
+    void errorPath.show(result.error, {
+      object: "die Rolle",
+      reload: result.reload,
+    });
+  };
+
+  return (
+    <DatabaseForm<Partial<Role>>
+      sections={roleEditSections}
+      draft={
+        edit.draft
+          ? {
+              values: edit.draft,
+              setValues: edit.setDraft,
+              blocked: draftSubmitBlock(edit),
+            }
+          : undefined
+      }
+      initialData={role}
+      onSubmit={handleSave}
+      onCancel={onCancel}
+      submitLabel="Speichern"
+      stickyActions
+      errorPath={errorPath}
+      errorObject="die Rolle"
+    />
   );
 }

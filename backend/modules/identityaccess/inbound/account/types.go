@@ -428,6 +428,10 @@ type UpdateRoleRequest struct {
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
 	BaseRole    *string `json:"base_role,omitempty"`
+	// ExpectedVersion is the version of the role the change was made from
+	// (ADR 0311); a role changed since answers 409
+	// general.changed_since_read.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // ReplaceRolePermissionsRequest contains the complete target set for a role.
@@ -542,10 +546,14 @@ type RoleResponse struct {
 	BaseRole    *string  `json:"base_role,omitempty"`
 	// SchoolPortal marks a school role made from the Lehrkraft template: its
 	// accounts use moto schule like the Lehrkraft role (#4574).
-	SchoolPortal bool     `json:"school_portal"`
-	CreatedAt    string   `json:"created_at"`
-	UpdatedAt    string   `json:"updated_at"`
-	Permissions  []string `json:"permissions,omitempty"`
+	SchoolPortal bool   `json:"school_portal"`
+	CreatedAt    string `json:"created_at"`
+	UpdatedAt    string `json:"updated_at"`
+	// Version is the read-state token of the role's master data (ADR 0311):
+	// an edit sends it back as expected_version. The permission selection
+	// carries its own.
+	Version     string   `json:"version"`
+	Permissions []string `json:"permissions,omitempty"`
 }
 
 // PermissionResponse represents a permission response

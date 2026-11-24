@@ -499,6 +499,7 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/auth/roles/"}:                                      notCaptured,
 	{http.MethodDelete, "/auth/roles/{id}/"}:                               notCaptured,
 	{http.MethodPut, "/auth/roles/{id}/"}:                                  notCaptured,
+	{http.MethodPut, "/auth/roles/{id}/master-data/"}:                      notCaptured,
 	{http.MethodPut, "/auth/roles/{roleId}/permission-selection/"}:         notCaptured,
 	{http.MethodPut, "/auth/roles/{roleId}/permissions/"}:                  notCaptured,
 	{http.MethodPost, "/auth/session/validate"}:                            notCaptured,

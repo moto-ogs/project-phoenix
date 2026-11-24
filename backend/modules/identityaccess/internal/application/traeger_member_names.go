@@ -178,5 +178,6 @@ func publicTraegerMember(account domain.TraegerAccount, membership identityPorts
 	}
 	return identityaccess.TraegerMember{
 		AccountID: account.AccountID, Email: account.Email, Name: membership.DisplayName, Roles: roles, ActivatedAt: membership.ActivatedAt,
+		Version: identityaccess.TraegerRolesVersion(roles),
 	}
 }

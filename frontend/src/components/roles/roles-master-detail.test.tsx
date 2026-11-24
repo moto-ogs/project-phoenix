@@ -8,7 +8,8 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 class MockResizeObserver {
@@ -41,6 +42,7 @@ vi.mock("~/components/roles/role-permissions-tab", () => ({
 
 import { RolesMasterDetail } from "./roles-master-detail";
 import type { Role } from "@/lib/auth-helpers";
+import { ApiError } from "~/lib/api-error";
 
 const customRole: Role = {
   id: "1",
@@ -50,6 +52,7 @@ const customRole: Role = {
   baseRole: "teacher",
   createdAt: "2026-01-01",
   updatedAt: "2026-01-02",
+  version: "v1",
   permissionNames: ["permission.read"],
 };
 
@@ -72,9 +75,47 @@ const unclassifiedRole: Role = {
   updatedAt: "2026-01-02",
 };
 
+/**
+ * The page around the detail: a read puts the role it read into the shown
+ * role, as the page's cache does.
+ */
+function Page({
+  initial,
+  onSave,
+  reload,
+}: {
+  initial: Role;
+  onSave: (data: Partial<Role>, base: Role) => Promise<Role>;
+  reload: () => Promise<Role>;
+}) {
+  const [role, setRole] = useState(initial);
+  return (
+    <RolesMasterDetail
+      roles={[role]}
+      selectedId={role.id}
+      selectedRole={role}
+      detailLoading={false}
+      onSelect={() => undefined}
+      onSaveRole={async (data, base) => {
+        const saved = await onSave(data, base);
+        setRole(saved);
+        return saved;
+      }}
+      onReloadRole={async () => {
+        const read = await reload();
+        setRole(read);
+        return read;
+      }}
+      onDeleteClick={() => undefined}
+      onPermissionsSaved={() => undefined}
+    />
+  );
+}
+
 describe("RolesMasterDetail", () => {
   const onSelect = vi.fn();
-  const onSaveRole = vi.fn(async () => undefined);
+  const onSaveRole = vi.fn(async (_data: Partial<Role>, base: Role) => base);
+  const onReloadRole = vi.fn(async () => customRole);
   const onDeleteClick = vi.fn();
   const onPermissionsSaved = vi.fn(async () => undefined);
 
@@ -91,6 +132,7 @@ describe("RolesMasterDetail", () => {
         detailLoading={false}
         onSelect={onSelect}
         onSaveRole={onSaveRole}
+        onReloadRole={onReloadRole}
         onDeleteClick={onDeleteClick}
         onPermissionsSaved={onPermissionsSaved}
       />,
@@ -109,6 +151,7 @@ describe("RolesMasterDetail", () => {
         detailLoading={false}
         onSelect={onSelect}
         onSaveRole={onSaveRole}
+        onReloadRole={onReloadRole}
         onDeleteClick={onDeleteClick}
         onPermissionsSaved={onPermissionsSaved}
       />,
@@ -130,6 +173,7 @@ describe("RolesMasterDetail", () => {
         canManagePermissions
         onSelect={onSelect}
         onSaveRole={onSaveRole}
+        onReloadRole={onReloadRole}
         onDeleteClick={onDeleteClick}
         onPermissionsSaved={onPermissionsSaved}
       />,
@@ -167,6 +211,7 @@ describe("RolesMasterDetail", () => {
         canManagePermissions
         onSelect={onSelect}
         onSaveRole={onSaveRole}
+        onReloadRole={onReloadRole}
         onDeleteClick={onDeleteClick}
         onPermissionsSaved={onPermissionsSaved}
       />,
@@ -204,6 +249,7 @@ describe("RolesMasterDetail", () => {
         detailLoading={false}
         onSelect={onSelect}
         onSaveRole={onSaveRole}
+        onReloadRole={onReloadRole}
         onDeleteClick={onDeleteClick}
         onPermissionsSaved={onPermissionsSaved}
       />,
@@ -225,6 +271,7 @@ describe("RolesMasterDetail", () => {
         canManagePermissions
         onSelect={onSelect}
         onSaveRole={onSaveRole}
+        onReloadRole={onReloadRole}
         onDeleteClick={onDeleteClick}
         onPermissionsSaved={onPermissionsSaved}
       />,
@@ -245,6 +292,90 @@ describe("RolesMasterDetail", () => {
     expect(screen.getByText("Bearbeiten")).toBeInTheDocument();
   });
 
+  // ADR 0311: the edit rests on the role's version. A refusal shows the
+  // stored role, and the next save goes out over its version.
+  it("shows the stored role after a refusal and saves over its version", async () => {
+    const stored: Role = {
+      ...customRole,
+      description: "Von der Kollegin geändert",
+      version: "v2",
+    };
+    const save = vi
+      .fn<(data: Partial<Role>, base: Role) => Promise<Role>>()
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockImplementation(async (data, base) => ({
+        ...base,
+        ...data,
+        version: "v3",
+      }));
+    render(
+      <Page
+        initial={customRole}
+        onSave={save}
+        reload={() => Promise.resolve(stored)}
+      />,
+    );
+    fireEvent.click(screen.getByText("Bearbeiten"));
+    fireEvent.change(screen.getByLabelText("Beschreibung"), {
+      target: { value: "Mein Entwurf" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Beschreibung")).toHaveValue(
+        "Von der Kollegin geändert",
+      ),
+    );
+    expect(save).toHaveBeenLastCalledWith(
+      expect.objectContaining({ description: "Mein Entwurf" }),
+      expect.objectContaining({ id: "1", version: "v1" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(save).toHaveBeenLastCalledWith(
+        expect.objectContaining({ description: "Von der Kollegin geändert" }),
+        expect.objectContaining({ version: "v2" }),
+      ),
+    );
+  });
+
+  // ADR 0311 rule 6: after a refusal whose read fails, nothing is sent.
+  it("keeps Speichern locked after a refusal until the stored role is read", async () => {
+    const save = vi.fn(() =>
+      Promise.reject(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      ),
+    );
+    render(
+      <Page
+        initial={customRole}
+        onSave={save}
+        reload={() =>
+          Promise.reject(
+            new ApiError("down", 503, { code: "general.unavailable" }),
+          )
+        }
+      />,
+    );
+    fireEvent.click(screen.getByText("Bearbeiten"));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    // Locked with its reason (aria-disabled keeps the reason reachable).
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Speichern" })).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      ),
+    );
+    expect(
+      screen.getByText("Lade zuerst den gespeicherten Stand neu."),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
   it("hides edit, delete, and permission actions for system roles", () => {
     render(
       <RolesMasterDetail
@@ -255,6 +386,7 @@ describe("RolesMasterDetail", () => {
         canManagePermissions
         onSelect={onSelect}
         onSaveRole={onSaveRole}
+        onReloadRole={onReloadRole}
         onDeleteClick={onDeleteClick}
         onPermissionsSaved={onPermissionsSaved}
       />,
@@ -282,6 +414,7 @@ describe("RolesMasterDetail", () => {
         detailLoading={false}
         onSelect={onSelect}
         onSaveRole={onSaveRole}
+        onReloadRole={onReloadRole}
         onDeleteClick={onDeleteClick}
         onPermissionsSaved={onPermissionsSaved}
       />,
@@ -299,6 +432,7 @@ describe("RolesMasterDetail", () => {
         detailLoading={false}
         onSelect={onSelect}
         onSaveRole={onSaveRole}
+        onReloadRole={onReloadRole}
         onDeleteClick={onDeleteClick}
         onPermissionsSaved={onPermissionsSaved}
       />,
@@ -317,6 +451,7 @@ describe("RolesMasterDetail", () => {
         detailLoading={true}
         onSelect={onSelect}
         onSaveRole={onSaveRole}
+        onReloadRole={onReloadRole}
         onDeleteClick={onDeleteClick}
         onPermissionsSaved={onPermissionsSaved}
       />,

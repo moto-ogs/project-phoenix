@@ -16,6 +16,8 @@ export interface Profile {
   updatedAt: string;
   lastLogin?: string | null;
   settings?: ProfileSettings;
+  /** The read-state token of the profile; an edit sends it back (ADR 0311). */
+  version: string;
 }
 
 export interface ProfileSettings {
@@ -44,6 +46,8 @@ export interface ProfileUpdateRequest {
   bio?: string;
   avatar?: string;
   settings?: ProfileSettings;
+  /** The version of the profile the edit was made from (ADR 0311). */
+  expectedVersion?: string;
 }
 
 // The decoded answer of the catalog proxy (#2353), mapped to the view.
@@ -85,6 +89,7 @@ export function mapProfileResponse(data: meContract.ProfileResponse): Profile {
     updatedAt: data.updated_at,
     lastLogin: data.last_login,
     settings,
+    version: data.version,
   };
 }
 
@@ -107,6 +112,9 @@ export function mapProfileUpdateRequest(
   }
   if (request.avatar !== undefined) {
     mapped.avatar = request.avatar;
+  }
+  if (request.expectedVersion !== undefined) {
+    mapped.expected_version = request.expectedVersion;
   }
   if (request.settings !== undefined) {
     // Convert settings to JSON string if needed

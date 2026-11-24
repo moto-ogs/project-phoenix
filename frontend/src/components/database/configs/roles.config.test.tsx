@@ -86,12 +86,16 @@ describe("rolesConfig", () => {
       }),
     ).toEqual({ name: "Springkraft", description: "", template: "user" });
     expect(
-      toUpdateRoleRequest({
-        name: "Springkraft",
-        description: "",
-        baseRole: "admin",
-      }),
-    ).toEqual({ name: "Springkraft", description: "", base_role: "admin" });
+      toUpdateRoleRequest(
+        { name: "Springkraft", description: "", baseRole: "admin" },
+        { version: "v1" },
+      ),
+    ).toEqual({
+      name: "Springkraft",
+      description: "",
+      base_role: "admin",
+      expected_version: "v1",
+    });
   });
 
   it("has detail header configuration", () => {

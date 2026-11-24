@@ -42,6 +42,7 @@ describe("ProfileContext", () => {
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-01T00:00:00Z",
     lastLogin: "2024-01-01T00:00:00Z",
+    version: "p1",
     settings: {
       theme: "light",
       language: "en",
@@ -769,6 +770,35 @@ describe("ProfileContext", () => {
       // so the identity change triggers a fresh fetch
       await waitFor(() => {
         expect(profileApi.fetchProfile).toHaveBeenCalled();
+      });
+    });
+  });
+
+  // ADR 0311 rule 6: a refused profile edit shows the stored profile only
+  // once a read succeeded; a failed read rejects instead of answering the
+  // shown profile.
+  describe("reloadProfile", () => {
+    it("reads the profile again and rejects when the read fails", async () => {
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
+      );
+      const { result } = renderHook(() => useProfile(), { wrapper });
+      await waitFor(() => expect(result.current.profile).toEqual(mockProfile));
+
+      const stored = { ...mockProfile, firstName: "Johanna", version: "p2" };
+      vi.mocked(profileApi.fetchProfile).mockResolvedValueOnce(stored);
+      await act(async () => {
+        await expect(result.current.reloadProfile()).resolves.toEqual(stored);
+      });
+      expect(result.current.profile).toEqual(stored);
+
+      vi.mocked(profileApi.fetchProfile).mockRejectedValueOnce(
+        new Error("offline"),
+      );
+      await act(async () => {
+        await expect(result.current.reloadProfile()).rejects.toThrow("offline");
       });
     });
   });

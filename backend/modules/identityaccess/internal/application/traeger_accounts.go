@@ -425,58 +425,6 @@ func (t *TraegerAccounts) RevokeTraegerInvitation(ctx context.Context, actor ide
 	})
 }
 
-// ChangeTraegerRoles replaces the role set of an active member and mails the
-// person (#5474). An added role reaches the person's session at its next
-// refresh; a withdrawn role ends the person's Träger sessions at once, since
-// the access token still carries its rights (#6850).
-func (t *TraegerAccounts) ChangeTraegerRoles(ctx context.Context, actor identityaccess.TraegerActor, accountID int64, roles []string) (identityaccess.TraegerMember, error) {
-	roles, err := normalizeTraegerRoles(roles)
-	if err != nil {
-		return identityaccess.TraegerMember{}, err
-	}
-	var result identityaccess.TraegerMember
-	err = t.run(ctx, actor, func(txCtx context.Context, unit traegerUnit) error {
-		membership, ok := unit.member(accountID)
-		if !ok {
-			return identityaccess.ErrTraegerMemberNotFound
-		}
-		before, _, err := t.store.ListTraegerRoles(txCtx, actor.OrganizationID, accountID)
-		if err != nil {
-			return err
-		}
-		if err := unit.checkLeadershipChange(accountID, before, roles); err != nil {
-			return err
-		}
-		if err := t.replaceTraegerRoles(txCtx, actor.OrganizationID, accountID, before, roles); err != nil {
-			return err
-		}
-		accounts, _, err := t.store.ListTraegerAccounts(txCtx, actor.OrganizationID, []int64{accountID})
-		if err != nil {
-			return err
-		}
-		if len(accounts) != 1 {
-			return identityaccess.ErrTraegerMemberNotFound
-		}
-		result = publicTraegerMember(accounts[0], membership)
-		return t.notifyAndRecord(txCtx, actor, unit, identityaccess.TraegerAccountRolesChanged, accounts[0], before, roles)
-	})
-	return result, err
-}
-
-// replaceTraegerRoles grants the member the roles after in place of before.
-// A role of before that after lacks ends the member's Träger sessions, so
-// its right leaves the issued access tokens at once (#6850).
-func (t *TraegerAccounts) replaceTraegerRoles(ctx context.Context, organizationID, accountID int64, before, after []string) error {
-	if _, err := t.store.ReplaceTraegerRoles(ctx, organizationID, accountID, after); err != nil {
-		return err
-	}
-	if !identityaccess.TraegerRolesWithdrawn(before, after) {
-		return nil
-	}
-	_, err := t.store.DeleteTraegerAccountSessions(ctx, organizationID, accountID)
-	return err
-}
-
 // RemoveTraegerMember ends the membership of an active member, withdraws its
 // roles, ends its Träger sessions at once and mails the person (#5474).
 func (t *TraegerAccounts) RemoveTraegerMember(ctx context.Context, actor identityaccess.TraegerActor, accountID int64) error {

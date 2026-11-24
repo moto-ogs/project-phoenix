@@ -64,6 +64,9 @@ type TraegerMemberResponse struct {
 	Name        string     `json:"name"`
 	Roles       []string   `json:"roles"`
 	ActivatedAt *time.Time `json:"activated_at"`
+	// Version is the read-state token of the role set (ADR 0311): a role
+	// change sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // TraegerInvitationResponse is an open invitation.
@@ -118,6 +121,10 @@ func (req *TraegerInviteRequest) Bind(_ *http.Request) error {
 // TraegerRolesRequest is the body of PUT /traeger/accounts/{accountId}/roles.
 type TraegerRolesRequest struct {
 	Roles []string `json:"roles"`
+	// ExpectedVersion is the version of the member the change was made from
+	// (ADR 0311); a role set changed since answers 409
+	// general.changed_since_read.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind validates the request.
@@ -250,7 +257,7 @@ func (rs *Resource) changeRoles(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	member, err := rs.accounts.ChangeTraegerRoles(r.Context(), actor, accountID, req.Roles)
+	member, err := rs.accounts.ChangeTraegerRoles(r.Context(), actor, accountID, req.Roles, req.ExpectedVersion)
 	if err != nil {
 		common.RenderError(w, r, renderAccountError(err))
 		return
@@ -381,7 +388,7 @@ func renderAccountError(err error) render.Renderer {
 }
 
 func memberResponse(member identityaccess.TraegerMember) TraegerMemberResponse {
-	return TraegerMemberResponse{AccountID: ident.ID(member.AccountID), Email: member.Email, Name: member.Name, Roles: member.Roles, ActivatedAt: member.ActivatedAt}
+	return TraegerMemberResponse{AccountID: ident.ID(member.AccountID), Email: member.Email, Name: member.Name, Roles: member.Roles, ActivatedAt: member.ActivatedAt, Version: member.Version}
 }
 
 func invitationResponse(invitation identityaccess.TraegerInvitation) TraegerInvitationResponse {

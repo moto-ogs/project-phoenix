@@ -53,11 +53,11 @@ func (s *Service) createAsGiven(ctx context.Context, person peopledirectory.Crea
 	return value, MapError(err)
 }
 
-func (s *Service) RenamePerson(ctx context.Context, personID int64, firstName, lastName *string) error {
+func (s *Service) RenamePerson(ctx context.Context, personID int64, firstName, lastName *string, expectedVersion string) error {
 	if firstName != nil && *firstName == "" || lastName != nil && *lastName == "" {
 		return invalid("first name and last name are required")
 	}
-	return (PersonWrites{persons: s}).RenamePerson(ctx, personID, firstName, lastName)
+	return (PersonWrites{persons: s}).RenamePerson(ctx, personID, firstName, lastName, expectedVersion)
 }
 
 func (s *Service) SetPersonDetails(ctx context.Context, personID int64, details peopledirectory.PersonDetails) error {
