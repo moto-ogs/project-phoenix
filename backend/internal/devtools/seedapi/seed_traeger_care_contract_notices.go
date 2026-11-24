@@ -155,7 +155,7 @@ func seedOrdinaryEnd(client *Client, auth AuthRef, path string, day calendar.Dat
 func seedNoticeCase(client *Client, auth AuthRef, contract seedNoticeContract, decision string) error {
 	id := contract.ID
 	if contract.NeedsSignature {
-		if err := seedPaperContractSignature(client, auth, int64(id), contract.PartyName); err != nil {
+		if err := seedPaperContractSignature(client, auth, int64(id), contract.PartyName, calendar.TodayDate()); err != nil {
 			return err
 		}
 	}

@@ -96,20 +96,23 @@ func seedPaperContracts(client *Client, auth AuthRef, school int64, minimum int)
 	}
 	count := min(missing, len(drafts.Data.Contracts))
 	for _, draft := range drafts.Data.Contracts[len(drafts.Data.Contracts)-count:] {
-		if err := seedPaperContractSignature(client, auth, int64(draft.ID), draft.PartyName); err != nil {
+		if err := seedPaperContractSignature(client, auth, int64(draft.ID), draft.PartyName, calendar.TodayDate()); err != nil {
 			return 0, err
 		}
 	}
 	return count, nil
 }
 
-func seedPaperContractSignature(client *Client, auth AuthRef, id int64, signer string) error {
+// seedPaperContractSignature records the paper signature of contract id,
+// signed on signedOn. The server concludes the contract on its own clock
+// whatever day the paper names, and refuses a signing day after its today.
+func seedPaperContractSignature(client *Client, auth AuthRef, id int64, signer string, signedOn calendar.Date) error {
 	if signer == "" {
 		signer = "Erika Muster"
 	}
 	path := fmt.Sprintf("/traeger/contracts/%d/paper-signature", id)
 	if _, err := client.PostFileWithAuthAndFields(auth, path, "file", "vertrag-unterschrieben.pdf", seedPaperContractPDF,
-		map[string]string{"signer_name": signer, "signed_on": calendar.TodayDate().String()}); err != nil {
+		map[string]string{"signer_name": signer, "signed_on": signedOn.String()}); err != nil {
 		return fmt.Errorf("record the paper contract %d: %w", id, err)
 	}
 	return nil
