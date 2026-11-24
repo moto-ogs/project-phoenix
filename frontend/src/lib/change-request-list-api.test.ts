@@ -178,7 +178,7 @@ describe("change request list API", () => {
     ).resolves.toEqual({ items: [] });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/students/change-requests?view=open&search=Emma&types=master_data%2Cexcused",
+      "/api/students/change-requests?search=Emma&types=master_data%2Cexcused",
       { method: "GET" },
     );
   });

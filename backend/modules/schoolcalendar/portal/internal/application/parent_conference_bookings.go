@@ -151,7 +151,7 @@ func (s *service) activeStudentClass(ctx context.Context, studentID int64) (stri
 // childParentConference locks a coming day of the child's class and finds
 // the child's booking on it. A day of another class is not found.
 func (s *service) childParentConference(ctx context.Context, store schoolcalendar.ParentConferences, conferenceID int64, class string, studentID int64) (*schoolcalendar.ParentConference, *schoolcalendar.ParentConferenceBooking, error) {
-	conference, err := store.FindParentConference(ctx, conferenceID, true)
+	conference, err := store.FindParentConference(ctx, conferenceID)
 	if err != nil {
 		return nil, nil, mapParentConferenceError(err)
 	}

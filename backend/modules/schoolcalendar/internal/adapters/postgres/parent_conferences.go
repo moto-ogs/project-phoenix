@@ -102,7 +102,7 @@ func (s ParentConferences) UpdateParentConference(ctx context.Context, id int64,
 	return parentConferenceToPublic(*row), nil
 }
 
-func (s ParentConferences) FindParentConference(ctx context.Context, id int64, lock bool) (*schoolcalendar.ParentConference, error) {
+func (s ParentConferences) FindParentConference(ctx context.Context, id int64) (*schoolcalendar.ParentConference, error) {
 	if id <= 0 {
 		return nil, schoolcalendar.ErrParentConferenceNotFound
 	}
@@ -113,10 +113,8 @@ func (s ParentConferences) FindParentConference(ctx context.Context, id int64, l
 	row := new(parentConferenceRow)
 	query := db.NewSelect().Model(row).ModelTableExpr(parentConferenceTable).
 		Where(`"parent_conference".tenant_id = ?`, tenantID).
-		Where(`"parent_conference".id = ?`, id)
-	if lock {
-		query = query.For("UPDATE")
-	}
+		Where(`"parent_conference".id = ?`, id).
+		For("UPDATE")
 	err = query.Scan(ctx)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, schoolcalendar.ErrParentConferenceNotFound

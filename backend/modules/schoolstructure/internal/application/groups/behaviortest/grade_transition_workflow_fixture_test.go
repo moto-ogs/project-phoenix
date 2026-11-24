@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 	rootowners "github.com/moto-ogs/project-phoenix/roots/owners"
 
+	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/moto-ogs/project-phoenix/workflows/gradetransition"
@@ -86,6 +87,20 @@ func (f *transitionFixture) workflow(t *testing.T) *gradetransition.Workflow {
 	workflow, err := gradetransition.New(f.deps)
 	require.NoError(t, err)
 	return workflow
+}
+
+// findTransition reads one transition as the list answers it: the keyset
+// window behind the id before it starts with that transition.
+func findTransition(ctx context.Context, workflow *gradetransition.Workflow, id int64) (schoolstructure.Transition, error) {
+	after := id - 1
+	rows, _, err := workflow.ListTransitions(ctx, gradetransition.ListFilter{AfterID: &after, PageSize: 1})
+	if err != nil {
+		return schoolstructure.Transition{}, err
+	}
+	if len(rows) == 0 || rows[0].ID != id {
+		return schoolstructure.Transition{}, gradetransition.ErrTransitionNotFound
+	}
+	return rows[0], nil
 }
 
 // previewed is the fingerprint an admin confirms before an apply: the one the

@@ -147,7 +147,7 @@ func TestAbsenceWriter_ParentExcusedRequestDecidable(t *testing.T) {
 				Items []struct {
 					Data struct {
 						ID string `json:"id"`
-					} `json:"data"`
+					} `json:"excused"`
 				} `json:"items"`
 			} `json:"data"`
 		}

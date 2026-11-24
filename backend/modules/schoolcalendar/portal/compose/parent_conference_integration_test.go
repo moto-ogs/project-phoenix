@@ -77,10 +77,16 @@ func createConference(t *testing.T, db *bun.DB, service calendarSvc.FullService,
 // the change req on the version of that read (ADR 0311).
 func readConference(t *testing.T, db *bun.DB, service calendarSvc.FullService, accountID, id int64, req calendarSvc.ParentConferenceRequest) calendarSvc.ParentConferenceRequest {
 	t.Helper()
-	view, err := testpkg.TenantQuery1(t, calendarContext(t, accountID), db, service.GetSchoolParentConference, id)
+	days, err := testpkg.TenantQuery0(t, calendarContext(t, accountID), db, service.ListSchoolParentConferences)
 	require.NoError(t, err)
-	require.NotEmpty(t, view.Version)
-	req.ExpectedVersion = view.Version
+	for _, view := range days.Conferences {
+		if view.ID == strconv.FormatInt(id, 10) {
+			require.NotEmpty(t, view.Version)
+			req.ExpectedVersion = view.Version
+			return req
+		}
+	}
+	t.Fatalf("parent conference %d missing from the Lehrkraft's list", id)
 	return req
 }
 
@@ -113,8 +119,11 @@ func TestParentConferenceIntegration_LehrkraftOffersADayForOwnClassesOnly(t *tes
 	require.ErrorIs(t, err, calendarSvc.ErrInvalidRequest, "a day in the past")
 
 	_, otherAccount := createTestLehrkraft(t, db, "Andere", "Lehrkraft")
-	_, err = testpkg.TenantQuery1(t, calendarContext(t, otherAccount.ID), db, service.GetSchoolParentConference, conferenceID(t, view))
-	require.ErrorIs(t, err, calendarSvc.ErrNotFound, "another Lehrkraft's day is not hers to see")
+	others, err := testpkg.TenantQuery0(t, calendarContext(t, otherAccount.ID), db, service.ListSchoolParentConferences)
+	require.NoError(t, err)
+	assert.Empty(t, others.Conferences, "another Lehrkraft's day is not hers to see")
+	err = testpkg.TenantCommand1(t, calendarContext(t, otherAccount.ID), db, service.DeleteSchoolParentConference, conferenceID(t, view))
+	require.ErrorIs(t, err, calendarSvc.ErrNotFound, "another Lehrkraft's day is not hers to change")
 }
 
 func TestParentConferenceIntegration_FamilyBooksAFreeSlotThatShowsInBothCalendars(t *testing.T) {
@@ -140,8 +149,11 @@ func TestParentConferenceIntegration_FamilyBooksAFreeSlotThatShowsInBothCalendar
 	assert.True(t, booked.CanChange)
 	assert.Equal(t, []string{"14:00", "14:45"}, slotStarts(booked.FreeSlots), "a booked slot is gone from the free slots")
 
-	occupancy, err := testpkg.TenantQuery1(t, calendarContext(t, account.ID), db, service.GetSchoolParentConference, conferenceID(t, view))
+	days, err := testpkg.TenantQuery0(t, calendarContext(t, account.ID), db, service.ListSchoolParentConferences)
 	require.NoError(t, err)
+	require.Len(t, days.Conferences, 1)
+	occupancy := days.Conferences[0]
+	require.Equal(t, view.ID, occupancy.ID)
 	assert.Equal(t, 1, occupancy.BookedCount)
 	require.True(t, occupancy.Slots[1].Booked)
 	require.NotNil(t, occupancy.Slots[1].StudentName)

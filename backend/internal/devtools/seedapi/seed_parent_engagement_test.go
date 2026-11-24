@@ -75,8 +75,8 @@ func TestSeedParentEngagementStepUsesParentFacingFlows(t *testing.T) {
 			_, _ = fmt.Fprint(w, `{"status":"success","data":[{"id":"95","guardian_profile_id":"93","status":"pending"}]}`)
 		case r.URL.Path == "/api/students/change-requests":
 			_, _ = fmt.Fprint(w, `{"status":"success","data":{"items":[`+
-				`{"request_type":"care_schedule","expected_version":"v95","data":{"id":"95","impact_token":""}},`+
-				`{"request_type":"care_schedule","expected_version":"v96","data":{"id":"96","impact_token":""}}]}}`)
+				`{"request_type":"care_schedule","expected_version":"v95","care_schedule":{"id":"95","impact_token":""}},`+
+				`{"request_type":"care_schedule","expected_version":"v96","care_schedule":{"id":"96","impact_token":""}}]}}`)
 		case r.URL.Path == "/parent/me/children/44/care-exception":
 			request := decode()
 			pickupSignatures = append(pickupSignatures, request["signature"].(map[string]any))

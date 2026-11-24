@@ -62,7 +62,7 @@ func TestCareRequestHistory_ServesFrozenDecisionDiff(t *testing.T) {
 	upsertPickup(17, 0)
 
 	// The history must still replay the frozen decision-time comparison.
-	histReq, err := http.NewRequest(http.MethodGet, "/change-requests?view=history&types=care_schedule", nil)
+	histReq, err := http.NewRequest(http.MethodGet, "/change-requests/history?types=care_schedule", nil)
 	require.NoError(t, err)
 	rr = authExec(t, tc, histReq, testutil.AdminTestClaims(int(staffAccount.ID)), []string{"admin:*"})
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
@@ -83,7 +83,7 @@ func TestCareRequestHistory_ServesFrozenDecisionDiff(t *testing.T) {
 						Old   string `json:"old"`
 						New   string `json:"new"`
 					} `json:"diff"`
-				} `json:"data"`
+				} `json:"care_schedule"`
 			} `json:"items"`
 		} `json:"data"`
 	}

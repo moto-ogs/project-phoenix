@@ -2391,13 +2391,6 @@ export const routes = {
     },
     response: success(z.array(CareOfferingBookingStatsResponseSchema)),
   },
-  "GET /api/enrollment/care-offerings/{id}/": {
-    method: "GET",
-    pattern: "/api/enrollment/care-offerings/{id}/",
-    portals: ["tenant"],
-    deprecated: true,
-    response: success(CareOfferingResponseSchema),
-  },
   "GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}": {
     method: "GET",
     pattern: "/api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}",

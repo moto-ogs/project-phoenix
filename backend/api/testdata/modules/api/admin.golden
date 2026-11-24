@@ -2,7 +2,6 @@ DELETE /api/admin/grade-transitions/{id}/ -> basis
 GET /api/admin/grade-transitions/ -> basis
 GET /api/admin/grade-transitions/classes -> basis
 GET /api/admin/grade-transitions/suggest -> basis
-GET /api/admin/grade-transitions/{id}/ -> basis
 GET /api/admin/grade-transitions/{id}/history -> basis
 GET /api/admin/grade-transitions/{id}/preview -> basis
 POST /api/admin/grade-transitions/ -> basis

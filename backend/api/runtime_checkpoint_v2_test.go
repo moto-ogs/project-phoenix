@@ -354,7 +354,7 @@ func (w *targetRiskWorkload) scenarios() []checkpointScenario {
 		{"people-directory.students", "GET", "/api/students/", 200, true, ""},
 		{"people-directory.students-invalid-view", "GET", "/api/students/?view=bogus", 400, true, ""},
 		{"request-review.queue", "GET", "/api/students/change-requests", 200, true, ""},
-		{"request-review.queue-invalid-view", "GET", "/api/students/change-requests?view=bogus", 400, true, ""},
+		{"request-review.queue-invalid-type", "GET", "/api/students/change-requests?types=bogus", 400, true, ""},
 		{"request-review.care-schedule-decide", "POST", "/api/students/care-schedule-change-requests/" + checkpointRequestPlaceholder + "/decide", 200, true, `{"approve":true,"reason":"Checkpoint"}`},
 		{"request-review.care-schedule-decide-not-found", "POST", fmt.Sprintf("/api/students/care-schedule-change-requests/%d/decide", w.missingRequestID), 404, true, `{"approve":true,"reason":"Checkpoint"}`},
 		{"care-plan.withdrawals", "GET", "/api/students/care-withdrawals", 200, true, ""},

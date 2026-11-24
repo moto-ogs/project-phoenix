@@ -7,7 +7,6 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	GET /school/calendar/feed
 	GET /school/calendar/my
 	GET /school/calendar/parent-conferences
-	GET /school/calendar/parent-conferences/{conferenceId}
 	POST /school/calendar/appointments
 	POST /school/calendar/feed/rotate
 	POST /school/calendar/parent-conferences

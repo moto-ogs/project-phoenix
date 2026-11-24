@@ -15,8 +15,8 @@ const describe = (schema) => schema.elem ? `${schema.kind}<${describe(schema.ele
   : schema.kind === "ref" ? "object" : schema.kind;
 
 // The legacy_id decoder on a released base already accepted a decimal
-// string in answers, and ident.ID still reads legacy numeric request IDs.
-// lax_id was a request reader in the later migration, not an answer kind.
+// string in answers, and Go reads a request identifier as a decimal string,
+// so a string of the base may become an id there.
 // Naming the form of a string narrows the type, not the wire. Typing a JSON
 // answer or an open object does not break a reader of the older schema.
 const openObject = (schema) => schema.kind === "map" && schema.elem.kind === "json";
@@ -24,7 +24,7 @@ const sameKind = (before, after, request) => before.kind === after.kind
   || (before.kind === "string" && ["enum", "date", "clock"].includes(after.kind))
   || (!request && (before.kind === "json" || (openObject(before) && after.kind === "ref")))
   || (before.kind === "legacy_id" && after.kind === "id")
-  || (request && after.kind === "id" && ["string", "lax_id"].includes(before.kind));
+  || (request && before.kind === "string" && after.kind === "id");
 
 export function breakingChanges(base, head) {
   const breaking = [];

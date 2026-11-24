@@ -203,13 +203,6 @@ export const routes = {
     portals: ["school"],
     response: success(SchoolParentConferenceListSchema),
   },
-  "GET /school/calendar/parent-conferences/{conferenceId}": {
-    method: "GET",
-    pattern: "/school/calendar/parent-conferences/{conferenceId}",
-    portals: ["school"],
-    deprecated: true,
-    response: success(ParentConferenceViewSchema),
-  },
   "POST /school/calendar/appointments": {
     method: "POST",
     pattern: "/school/calendar/appointments",
