@@ -101,7 +101,7 @@ import {
   holidaysAsCalendarEvents,
   type SchoolHolidays,
 } from "~/lib/school-holidays-api";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth, useSWRPreload } from "~/lib/swr";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { useCalDAVEnabled } from "~/lib/tenant-context";
@@ -532,8 +532,18 @@ function StaffCalendarPageInner() {
   const [createFields, setCreateFields] = useState<AppointmentFormFields>(() =>
     newAppointmentFields(berlinTodayISO()),
   );
-  // The appointment as its edit read it: on opening, after a refusal.
-  const [editedDetail, setEditedDetail] = useState<CalendarAppointmentDetail>();
+  // The appointment as its edit reads it, through the shared cache: the
+  // opening read (preloaded by `handleEdit`), the read after a refusal and
+  // the save's answer all land under the same key (ADR 0311).
+  const preload = useSWRPreload();
+  const detailRead = useSWRAuth<CalendarAppointmentDetail>(
+    editingId ? tenantDailyKeys.staffAppointmentDetail(editingId) : null,
+    () => getStaffAppointmentDetail(editingId ?? ""),
+  );
+  const detailReadRef = useRef(detailRead);
+  useLayoutEffect(() => {
+    detailReadRef.current = detailRead;
+  });
   const edit = useDraftOn<
     CalendarAppointmentDetail,
     AppointmentFormFields,
@@ -542,12 +552,11 @@ function StaffCalendarPageInner() {
   >(
     {
       opening: editingId,
-      data: editedDetail,
-      reload: async () => {
-        const stored = await getStaffAppointmentDetail(editingId ?? "");
-        setEditedDetail(stored);
-        return stored;
-      },
+      data: detailRead.data,
+      error: detailRead.data === undefined ? detailRead.error : undefined,
+      reload: () => revalidateOrThrow(detailReadRef.current),
+      write: (stored) =>
+        detailReadRef.current.mutate(stored, { revalidate: false }),
     },
     {
       token: (detail) => detail.version,
@@ -766,7 +775,6 @@ function StaffCalendarPageInner() {
     setTargets([]);
     setDeliveryMode("rsvp_required");
     setEditingId(null);
-    setEditedDetail(undefined);
     clearFormErrors();
     setFormOpen(false);
   };
@@ -785,11 +793,15 @@ function StaffCalendarPageInner() {
       // base title/dates/etc. — NOT from the clicked occurrence. Otherwise
       // opening a later occurrence and saving would re-anchor the series to that
       // occurrence's date and drop earlier occurrences.
-      // The draft rests on this read and its version (ADR 0311).
-      const detail = await getStaffAppointmentDetail(event.appointment_id);
+      // The draft rests on this read and its version (ADR 0311). It goes
+      // into the shared cache, where the form's read takes it over; the
+      // form opens only once the appointment is there.
+      const appointmentId = event.appointment_id;
+      await preload(tenantDailyKeys.staffAppointmentDetail(appointmentId), () =>
+        getStaffAppointmentDetail(appointmentId),
+      );
       clearFormErrors();
-      setEditedDetail(detail);
-      setEditingId(event.appointment_id);
+      setEditingId(appointmentId);
       setFormOpen(true);
     } catch (err) {
       logFailure("calendar_appointment_detail_failed", err);

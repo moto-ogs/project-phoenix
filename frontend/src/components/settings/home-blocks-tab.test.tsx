@@ -272,6 +272,31 @@ describe("HomeBlocksTab", () => {
     );
   });
 
+  // ADR 0311 rule 2: a background re-read (another tab saved, the cache
+  // revalidated) must not reset a selection the admin already started; the
+  // save still carries the token of the state it rests on.
+  it("behält eine begonnene Vorgabe, wenn die Seite im Hintergrund neu liest", async () => {
+    const { rerender } = renderWithToast(<HomeBlocksTab />);
+    const group = () =>
+      screen.getByRole("group", { name: "Vorgabe für Geburtstage" });
+    fireEvent.click(within(group()).getByRole("button", { name: "Aus" }));
+
+    mockState.confirmedPolicies = { "section.birthdays": "required" };
+    mockState.version = "v2";
+    rerender(<HomeBlocksTab />);
+
+    expect(
+      within(group()).getByRole("button", { name: "Aus" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mockSavePolicies).toHaveBeenCalledWith(
+        { "section.birthdays": "disabled" },
+        "v1",
+      ),
+    );
+  });
+
   it("meldet einen fehlgeschlagenen Speicherversuch", async () => {
     mockSavePolicies.mockRejectedValueOnce(new ApiError("boom", 500));
     renderWithToast(<HomeBlocksTab />);
