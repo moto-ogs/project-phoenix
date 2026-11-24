@@ -85,7 +85,7 @@ func TestUpdateChildOfferings_UndatedCorrectionKeepsTemplateWithConflictingSched
 
 	replacement := createAdjustmentCareOfferingWith(t, env, "Fruehbetreuung", nil)
 	// Correct only the other offering; the template's source stays booked.
-	_, err := testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      requestID,
 		ChildID:        childID,
 		ActorAccountID: env.creatorID,

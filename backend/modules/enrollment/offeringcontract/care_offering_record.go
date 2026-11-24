@@ -177,6 +177,9 @@ type CareOfferingRecord struct {
 	// care_offerings itself.
 	AutoAddTriggerOfferingIDs []int64 `json:"auto_add_trigger_offering_ids,omitempty"`
 	CountsAsCareSet           bool    `json:"-"`
+	// Version is Care Plan's token of the offering as its catalog read it
+	// (ADR 0311), empty where another read served the row.
+	Version string `json:"-"`
 }
 
 // Validate enforces the column-level CHECK constraints in app code so

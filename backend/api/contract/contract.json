@@ -27134,6 +27134,13 @@
           }
         },
         {
+          "name": "offerings_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "roster_impact",
           "schema": {
             "kind": "ref",
@@ -28201,6 +28208,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "offerings_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -29083,6 +29097,13 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -39312,6 +39333,13 @@
               }
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -39493,6 +39521,13 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        },
+        {
+          "name": "version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

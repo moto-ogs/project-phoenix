@@ -611,7 +611,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (v *CareOfferingValues) Update(ctx context.Context, offering *enrollment.CareOffering) error {\n\trow, err := CareOfferingRowOf(offering)\n\tif err != nil {\n\t\treturn err\n\t}\n\tif err := v.CareOfferingRows.Update(ctx, row); err != nil {\n\t\treturn err\n\t}\n\t*offering = *PublicCareOffering(row)\n\treturn nil\n}",
+      "evidence": "func (v *CareOfferingValues) Update(ctx context.Context, offering *enrollment.CareOffering, expectedVersion string) error {\n\trow, err := CareOfferingRowOf(offering)\n\tif err != nil {\n\t\treturn err\n\t}\n\tif err := v.CareOfferingRows.Update(ctx, row, expectedVersion); err != nil {\n\t\treturn err\n\t}\n\t*offering = *PublicCareOffering(row)\n\treturn nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/enrollment/internal/application/CareOfferingValues.Update",
       "owner": "modules/enrollment"

@@ -170,6 +170,10 @@ type AdminRequestChild struct {
 	// save a correction in this state: an empty editor plus a save
 	// deletes whatever the family actually booked.
 	OfferingsUnavailable bool `json:"offerings_unavailable,omitempty"`
+	// OfferingsVersion is the token of the child's stored bookings a
+	// correction sends back as expected_version (ADR 0311). Detail endpoint
+	// only, absent while the bookings are unavailable.
+	OfferingsVersion string `json:"offerings_version,omitempty"`
 }
 
 // AdminExistingChildCandidate is an enrolled child that may be the child of
@@ -510,6 +514,7 @@ func attachChildOfferings(children []AdminRequestChild, summaryChildren []*capab
 			continue
 		}
 		set := childOfferings[summaryChildren[i].ID]
+		children[i].OfferingsVersion = set.Version
 		if len(set.Current) == 0 && len(set.Upcoming) == 0 {
 			continue
 		}

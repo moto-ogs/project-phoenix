@@ -816,6 +816,7 @@ export interface CareOfferingResponse {
   translations?: Record<string, Record<string, TranslatedText> | null>;
   created_at: string;
   updated_at: string;
+  version?: string;
 }
 
 export const CareOfferingResponseSchema: z.ZodType<CareOfferingResponse, unknown> = object<CareOfferingResponse>({
@@ -843,6 +844,7 @@ export const CareOfferingResponseSchema: z.ZodType<CareOfferingResponse, unknown
   translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
   created_at: instant,
   updated_at: instant,
+  version: optional(str),
 });
 
 /** Go: enrollmenthttp.PublicPhase */

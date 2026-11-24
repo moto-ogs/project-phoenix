@@ -50,7 +50,7 @@ func setupMultiSourceCorrection(t *testing.T, email string, periods divergingPer
 // the switch date or undated.
 func (f multiSourceCorrection) correctFrom(t *testing.T, effectiveFrom *calendar.Date, selections ...enrollmentTest.OfferingAdjustmentSelection) {
 	t.Helper()
-	_, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), f.env.db, f.env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), f.env.db, correctOverRead(f.env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      f.requestID,
 		ChildID:        f.childID,
 		ActorAccountID: f.env.creatorID,

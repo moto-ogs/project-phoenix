@@ -181,7 +181,7 @@ func TestContractEnrollmentComparesTheWeekdaysInEffect(t *testing.T) {
 	require.Equal(t, capability.ContractEnrollmentEnrolled, made[0].Status)
 	assert.Equal(t, capability.ContractEnrollmentExisting, e.enroll(t, input)[0].Status)
 
-	_, err := testpkg.TenantQuery1(t, ctx, e.db, e.owner.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, ctx, e.db, correctOverRead(e.owner), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID: made[0].RequestID, ChildID: made[0].RequestChildID, ActorAccountID: e.creatorID, ActorRole: "admin",
 		Reason: "Korrektur", Offerings: []enrollmentAPI.OfferingAdjustmentSelection{
 			{OfferingID: care.ID, SelectedDays: []string{"mon"}}, {OfferingID: lunch.ID, SelectedDays: []string{"tue"}}},
@@ -234,7 +234,7 @@ func TestAnUndatedCorrectionKeepsTheStartOfAContractEnrollment(t *testing.T) {
 	require.Equal(t, capability.ContractEnrollmentEnrolled, made[0].Status)
 
 	correct := func(requestID, childID int64, days ...string) {
-		_, err := testpkg.TenantQuery1(t, ctx, e.db, e.owner.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+		_, err := testpkg.TenantQuery1(t, ctx, e.db, correctOverRead(e.owner), enrollmentAPI.UpdateChildOfferingsInput{
 			RequestID: requestID, ChildID: childID, ActorAccountID: e.creatorID, ActorRole: "admin",
 			Reason: "Korrektur der Wochentage", Offerings: []enrollmentAPI.OfferingAdjustmentSelection{{OfferingID: offering.ID, SelectedDays: days}},
 		})

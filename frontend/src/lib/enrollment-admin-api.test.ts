@@ -283,10 +283,15 @@ describe("enrollment-admin-api", () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({ data: history }));
 
     await expect(
-      updateAdminChildOfferings("request-1", "child-1", {
-        offerings: [{ offering_id: "offering-1", selected_days: ["mon"] }],
-        reason: "Elternwunsch",
-      }),
+      updateAdminChildOfferings(
+        "request-1",
+        "child-1",
+        {
+          offerings: [{ offering_id: "offering-1", selected_days: ["mon"] }],
+          reason: "Elternwunsch",
+        },
+        "bookings-1",
+      ),
     ).resolves.toEqual(updatedChild);
     expect(mockFetch).toHaveBeenNthCalledWith(
       1,
@@ -298,6 +303,8 @@ describe("enrollment-admin-api", () => {
           offerings: [{ offering_id: "offering-1", selected_days: ["mon"] }],
           reason: "Elternwunsch",
           complete_withdrawal_confirmed: false,
+          // The correction carries the bookings it read (ADR 0311).
+          expected_version: "bookings-1",
         }),
       }),
     );
@@ -446,10 +453,12 @@ describe("enrollment-admin-api", () => {
       ],
       [
         () =>
-          updateAdminChildOfferings("request-1", "child-1", {
-            offerings: [],
-            reason: "Korrektur",
-          }),
+          updateAdminChildOfferings(
+            "request-1",
+            "child-1",
+            { offerings: [], reason: "Korrektur" },
+            "bookings-1",
+          ),
         "Betreuungsangebote konnten nicht gespeichert werden",
       ],
       [

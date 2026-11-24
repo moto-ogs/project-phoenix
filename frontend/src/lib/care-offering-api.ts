@@ -197,14 +197,19 @@ export async function createCareOffering(
   );
 }
 
+/**
+ * Saves the offering over the version its editor read (ADR 0311); the
+ * server refuses another one with `general.changed_since_read`.
+ */
 export async function updateCareOffering(
   id: string,
   input: CareOfferingInput,
+  version: string,
 ): Promise<CareOffering> {
   return careOfferingFromContract(
     await bffJson("tenant", "PUT /api/enrollment/care-offerings/{id}/", {
       params: { id },
-      body: input,
+      body: { ...input, expected_version: version },
       errorMessage: "Betreuungsangebot konnte nicht gespeichert werden",
     }),
   );

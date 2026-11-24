@@ -209,6 +209,9 @@ type ChildOfferingSet struct {
 	Current []ChildOfferingRow
 	// Upcoming only takes effect on a later date. Display only.
 	Upcoming []ChildOfferingRow
+	// Version is the token of the child's stored bookings a correction sends
+	// back (ADR 0311): Care Plan's BookingsVersion over every interval.
+	Version string
 }
 
 // OfferingAdjustmentSelection is one offering an admin books for a child.
@@ -293,6 +296,11 @@ type UpdateChildOfferingsInput struct {
 	// CompleteWithdrawalConfirmed is the explicit confirmation shown only when
 	// an authoritative adjustment removes the child's final care day.
 	CompleteWithdrawalConfirmed bool
+	// ExpectedVersion is the ChildOfferingSet.Version the office corrected
+	// (ADR 0311). UpdateChildOfferings refuses another one, an empty one
+	// included, with readstate.ErrChanged; an approved change request
+	// saves back no read and ignores it.
+	ExpectedVersion string
 }
 
 // OfferingAdjustmentRecord is one entry of a child's offering adjustment

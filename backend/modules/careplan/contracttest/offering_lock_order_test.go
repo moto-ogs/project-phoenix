@@ -72,7 +72,8 @@ func TestOfferingCorrectionAndGradeTransitionDoNotDeadlock(t *testing.T) {
 			done <- testpkg.WithTenantTx(t, ctx, env.db, testpkg.Tenant(t), func(writeCtx context.Context, _ bun.Tx) error {
 				_, err := decisions.UpdateChildOfferings(writeCtx, enrollment.UpdateChildOfferingsInput{
 					RequestID: fx.requestID, ChildID: fx.childID, ActorAccountID: env.creatorID, ActorRole: "admin", Reason: "Correct offering",
-					Offerings: []enrollment.OfferingAdjustmentSelection{{OfferingID: fx.newOffering.ID, SelectedDays: []string{"mon"}}},
+					Offerings:       []enrollment.OfferingAdjustmentSelection{{OfferingID: fx.newOffering.ID, SelectedDays: []string{"mon"}}},
+					ExpectedVersion: readOfferingsVersion(writeCtx, decisions, fx.requestID, fx.childID),
 				})
 				return err
 			})

@@ -119,6 +119,8 @@ func TestAggregatedChangeRequests_RouterDirectCorrections(t *testing.T) {
 			Reason:         "Telefonisch gemeldet",
 			ActorAccountID: account.ID,
 			ActorRole:      "admin",
+			// The office corrects the bookings it read (ADR 0311).
+			ExpectedVersion: readOfferingsVersion(ctx, tc.enrollmentDecision, fixture.child.RequestID, fixture.child.ID),
 		})
 		return updateErr
 	})
@@ -228,6 +230,7 @@ func TestAggregatedChangeRequests_HistoryOrdersSourcesOnOneClock(t *testing.T) {
 			RequestID: fixture.child.RequestID, ChildID: fixture.child.ID,
 			Offerings: []capability.OfferingAdjustmentSelection{{OfferingID: fixture.ganztag.ID}},
 			Reason:    "Telefonisch gemeldet", ActorAccountID: account.ID, ActorRole: "admin",
+			ExpectedVersion: readOfferingsVersion(ctx, tc.enrollmentDecision, fixture.child.RequestID, fixture.child.ID),
 		})
 		return updateErr
 	}))
