@@ -385,36 +385,35 @@ func seedReadCareRun(client *Client, auth AuthRef, runID int64) (seedCareRunDeta
 	return envelope.Data, nil
 }
 
-// The contract-conclusion worker can change the preview even while this
-// process serializes the Träger's seed steps (#6438). Like the office after
-// a conflict, read the current preview before trying its release again.
-// Keep payment/mandate setup outside this loop and stop after three attempts
-// if the state keeps changing; every release still checks its fingerprint.
+// seedReleaseCareRun releases the preview of the run it reads. The
+// contract-conclusion worker can change the preview even while this process
+// serializes the Träger's seed steps (#6438); seedOnCurrentPreview reads it
+// again after the refusal. Payment and mandate setup stay outside: a fresh
+// review replays none of it, and every release still checks its fingerprint.
 // A family the worker added gets its debtor number first (numbered holds the
 // contracts that have one), so every invoice can go to DATEV.
 func seedReleaseCareRun(client *Client, auth AuthRef, runID int64, numbered map[ident.ID]bool) (int, error) {
-	for attempt := 0; ; attempt++ {
-		run, err := seedReadNumberedCareRun(client, auth, runID, numbered)
-		if err != nil {
-			return 0, err
-		}
+	issued := 0
+	err := seedOnCurrentPreview(func() (seedCareRunDetail, error) {
+		return seedReadNumberedCareRun(client, auth, runID, numbered)
+	}, func(run seedCareRunDetail) error {
+		issued = 0
 		if run.PreviewCount == 0 {
-			return 0, nil
+			return nil
 		}
-		_, err = client.PostWithAuth(auth, fmt.Sprintf("/traeger/care-billing-runs/%d/release", runID), map[string]any{
+		_, err := client.PostWithAuth(auth, fmt.Sprintf("/traeger/care-billing-runs/%d/release", runID), map[string]any{
 			"document_count": run.PreviewCount, "total_cents": run.PreviewCents, "fingerprint": run.Fingerprint,
 		})
-		if seedConflictCode(err, seedCareRunChanged) && attempt < 2 {
-			continue
-		}
 		if seedConflictCode(err, seedCareRunReleased) {
-			return 0, nil
+			return nil
 		}
 		if err != nil {
-			return 0, fmt.Errorf("release the monthly run: %w", err)
+			return fmt.Errorf("release the monthly run: %w", err)
 		}
-		return run.PreviewCount, nil
-	}
+		issued = run.PreviewCount
+		return nil
+	})
+	return issued, err
 }
 
 // seedReadNumberedCareRun reads the preview of the run and, when the worker
@@ -496,30 +495,24 @@ func seedCareReview(client *Client, auth AuthRef, month calendar.Date, run seedC
 // seedCareAmendment changes the first invoice of the open run before its
 // release (#6197): an added position with its reason, as the SJR office
 // adds an outing the parents agreed to. A run whose first invoice has a
-// change already keeps it.
+// change already keeps it. The change carries the fingerprint of the
+// preview it read, which the worker can change (seedOnCurrentPreview).
 func seedCareAmendment(client *Client, auth AuthRef, runID int64) error {
-	raw, err := client.GetWithAuth(auth, fmt.Sprintf("/traeger/care-billing-runs/%d", runID))
-	if err != nil {
-		return fmt.Errorf("read the monthly run before its change: %w", err)
-	}
-	var envelope struct {
-		Data seedCareRunDetail `json:"data"`
-	}
-	if err := json.Unmarshal(raw, &envelope); err != nil {
-		return fmt.Errorf("read the monthly run before its change: %w", err)
-	}
-	run := envelope.Data
-	if len(run.Invoices) == 0 || len(run.Invoices[0].Amendments) > 0 {
+	return seedOnCurrentPreview(func() (seedCareRunDetail, error) {
+		return seedReadCareRun(client, auth, runID)
+	}, func(run seedCareRunDetail) error {
+		if len(run.Invoices) == 0 || len(run.Invoices[0].Amendments) > 0 {
+			return nil
+		}
+		invoice := run.Invoices[0]
+		if _, err := client.PostWithAuth(auth, fmt.Sprintf("/traeger/care-billing-runs/%d/amendments", runID), map[string]any{
+			"contract_id": invoice.ContractID, "service": invoice.Service, "fingerprint": run.Fingerprint,
+			"kind": "add_position", "label": "Ausflug Wildpark", "amount_cents": 1200, "reason": "Elternbrief vom 3. des Monats",
+		}); err != nil {
+			return fmt.Errorf("change an invoice of the monthly run: %w", err)
+		}
 		return nil
-	}
-	invoice := run.Invoices[0]
-	if _, err := client.PostWithAuth(auth, fmt.Sprintf("/traeger/care-billing-runs/%d/amendments", runID), map[string]any{
-		"contract_id": invoice.ContractID, "service": invoice.Service, "fingerprint": run.Fingerprint,
-		"kind": "add_position", "label": "Ausflug Wildpark", "amount_cents": 1200, "reason": "Elternbrief vom 3. des Monats",
-	}); err != nil {
-		return fmt.Errorf("change an invoice of the monthly run: %w", err)
-	}
-	return nil
+	})
 }
 
 // seedCareRunRef is a monthly run as the run list shows it.
