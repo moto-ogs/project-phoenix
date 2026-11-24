@@ -70,6 +70,9 @@ type ParentConferenceRequest struct {
 	SlotMinutes int                      `json:"slot_minutes"`
 	Breaks      []ParentConferenceWindow `json:"breaks"`
 	Location    *string                  `json:"location,omitempty"`
+	// ExpectedVersion is the ParentConferenceView.Version a change of the
+	// day was edited on (ADR 0311); a creation has none.
+	ExpectedVersion string `json:"-"`
 }
 
 // ParentConferenceWindow is a span of the day, "HH:MM" to "HH:MM".
@@ -98,6 +101,9 @@ type ParentConferenceView struct {
 	Location    *string                  `json:"location,omitempty"`
 	BookedCount int                      `json:"booked_count"`
 	Slots       []ParentConferenceSlot   `json:"slots"`
+	// Version is the read-state token of the day and its bookings
+	// (ADR 0311): a change sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // ParentConferenceSlot is one slot of a day. StudentName is set for a

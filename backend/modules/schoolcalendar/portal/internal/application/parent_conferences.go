@@ -1,14 +1,17 @@
 package application
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The Lehrkraft's side of the Elternsprechtag in moto schule (#4801). A
@@ -110,6 +113,16 @@ func (s *service) UpdateSchoolParentConference(ctx context.Context, id int64, re
 	err = s.withinAppointmentWrite(ctx, func(txCtx context.Context) error {
 		current, err := s.loadOwnParentConference(txCtx, id, true)
 		if err != nil {
+			return err
+		}
+		// A booking takes the same row lock: the bookings read here are the
+		// ones the change keeps or cancels. A day booked or changed since
+		// the Lehrkraft read it is refused (ADR 0311).
+		bookings, err := store.ListParentConferenceBookings(txCtx, []int64{current.ID})
+		if err != nil {
+			return err
+		}
+		if err := readstate.Check(req.ExpectedVersion, parentConferenceVersion(current, bookings)); err != nil {
 			return err
 		}
 		fields, err := s.parentConferenceFields(txCtx, req, current.SchoolClass)
@@ -313,6 +326,7 @@ func buildParentConferenceView(conference *schoolcalendar.ParentConference, book
 		StartTime: formatClockMinute(conference.StartMinute), EndTime: formatClockMinute(conference.EndMinute),
 		SlotMinutes: conference.SlotMinutes, Breaks: parentConferenceBreakWindows(conference.Breaks),
 		Location: conference.Location, BookedCount: len(bookings), Slots: []portal.ParentConferenceSlot{},
+		Version: parentConferenceVersion(conference, bookings),
 	}
 	for _, start := range schoolcalendar.ParentConferenceSlots(conference.ParentConferenceFields) {
 		slot := portal.ParentConferenceSlot{
@@ -329,6 +343,36 @@ func buildParentConferenceView(conference *schoolcalendar.ParentConference, book
 		view.Slots = append(view.Slots, slot)
 	}
 	return view
+}
+
+// parentConferenceState is the canonical form of a day as the Lehrkraft
+// reads it: its settings and which child holds which slot.
+type parentConferenceState struct {
+	SchoolClass string                                 `json:"school_class"`
+	Date        string                                 `json:"date"`
+	StartMinute int                                    `json:"start_minute"`
+	EndMinute   int                                    `json:"end_minute"`
+	SlotMinutes int                                    `json:"slot_minutes"`
+	Breaks      []schoolcalendar.ParentConferenceBreak `json:"breaks"`
+	Location    *string                                `json:"location"`
+	Bookings    [][2]int64                             `json:"bookings"`
+}
+
+// parentConferenceVersion is the read-state token of a day (ADR 0311): its
+// settings and its bookings, sorted by slot. A booking writes no column of
+// the day, so the token is a fingerprint, not readstate.Of.
+func parentConferenceVersion(conference *schoolcalendar.ParentConference, bookings []*schoolcalendar.ParentConferenceBooking) string {
+	state := parentConferenceState{
+		SchoolClass: conference.SchoolClass, Date: conference.Date.String(),
+		StartMinute: conference.StartMinute, EndMinute: conference.EndMinute, SlotMinutes: conference.SlotMinutes,
+		Breaks: append([]schoolcalendar.ParentConferenceBreak{}, conference.Breaks...), Location: conference.Location,
+		Bookings: make([][2]int64, 0, len(bookings)),
+	}
+	for _, booking := range bookings {
+		state.Bookings = append(state.Bookings, [2]int64{int64(booking.SlotStartMinute), booking.StudentID})
+	}
+	slices.SortFunc(state.Bookings, func(a, b [2]int64) int { return cmp.Or(cmp.Compare(a[0], b[0]), cmp.Compare(a[1], b[1])) })
+	return readstate.Fingerprint(state)
 }
 
 func parentConferenceBreakWindows(breaks []schoolcalendar.ParentConferenceBreak) []portal.ParentConferenceWindow {

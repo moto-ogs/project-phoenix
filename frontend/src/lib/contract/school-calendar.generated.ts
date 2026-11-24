@@ -96,6 +96,7 @@ export interface ParentConferenceView {
   location?: string;
   booked_count: number;
   slots: ParentConferenceSlot[] | null;
+  version: string;
 }
 
 export const ParentConferenceViewSchema: z.ZodType<ParentConferenceView, unknown> = object<ParentConferenceView>({
@@ -109,6 +110,7 @@ export const ParentConferenceViewSchema: z.ZodType<ParentConferenceView, unknown
   location: optional(str),
   booked_count: safeInt,
   slots: nullable(arr(ParentConferenceSlotSchema)),
+  version: str,
 });
 
 /** Go: portal.SchoolParentConferenceList */
@@ -152,6 +154,18 @@ export interface ParentConferenceRequest {
   slot_minutes?: number;
   breaks?: ParentConferenceBreak[] | null;
   location?: string | null;
+}
+
+/** Go: staffcalendarhttp.ParentConferenceUpdateRequest */
+export interface ParentConferenceUpdateRequest {
+  school_class?: string;
+  date?: string | null;
+  start_time?: string;
+  end_time?: string;
+  slot_minutes?: number;
+  breaks?: ParentConferenceBreak[] | null;
+  location?: string | null;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -234,7 +248,7 @@ export const routes = {
     method: "PUT",
     pattern: "/school/calendar/parent-conferences/{conferenceId}",
     portals: ["school"],
-    request: requestBody<ParentConferenceRequest>(),
+    request: requestBody<ParentConferenceUpdateRequest>(),
     response: success(ParentConferenceViewSchema),
   },
 } as const;

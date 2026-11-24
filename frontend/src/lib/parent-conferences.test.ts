@@ -45,6 +45,7 @@ describe("parent conference form (#4801)", () => {
       breaks,
       booked_count: 0,
       slots: [],
+      version: "v1",
     };
     const editing = parentConferenceDraftOf(conference);
     expect(
