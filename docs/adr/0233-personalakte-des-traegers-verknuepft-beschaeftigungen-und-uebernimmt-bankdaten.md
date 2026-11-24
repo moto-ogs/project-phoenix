@@ -124,3 +124,35 @@ Personalstamm, Schule und Freigabe technisch zusammenhängen.
 Der Besucher ist Mitglied ihres Träger-Büros. Der Seed verknüpft dort
 Personalakten, aber keine, die die Beschäftigung des Besuchers nennt. Für den
 gemeinsamen Demo-Träger gilt Punkt 9 unverändert.
+
+## Nachtrag 2026-11-24: Auflösen gibt je Feld die neuere Eingabe zurück (#8029)
+
+Seit [#7941](https://github.com/moto-ogs/project-phoenix/pull/7941) gilt beim
+Verknüpfen nicht mehr der Wert der Vorschau (Punkt 6): Ändert eine Schule
+ihre Bankzeile zwischen Vorschau und Verknüpfen, behält sie die Zeile. Der
+Verknüpfungsschritt stempelt sie dabei über `linked_at` hinaus
+(`HoldSchoolFinancialRow`), und der Verlauf der Akte nennt die Werte als
+nicht übernommen. Jede spätere Änderung der Akte lässt eine so gehaltene
+Zeile stehen.
+
+„Akte auflösen“ entscheidet dann je Feld (IBAN, Steuer-ID, SV-Nummer), welche
+Eingabe neuer ist:
+
+1. Eine Zeile von vor dem Verknüpfen (`updated_at <= linked_at`), die eine
+   gescheiterte Übergabe zurückließ, verliert in jedem Feld an die Akte.
+2. In einer gehaltenen Zeile (`updated_at > linked_at`) gewinnt die Akte ein
+   Feld, wenn ihr Verlauf für dieses Feld eine Änderung oder einen Import
+   (`changed`, `imported`) nach `updated_at` der Zeile hat; sonst bleibt der
+   Wert der Schule. Ein danach geleertes Feld wird auch bei der Schule
+   geleert.
+3. Ohne Zeile bekommt die Schule die Werte der Akte. Eine Zeile ohne jeden
+   Wert wird gelöscht.
+
+Workforce liest die Zeitpunkte im Verlauf in der Träger-Transaktion, bevor
+die Akte geht, und schreibt jede Schule in ihrer Tenant-Transaktion unter der
+Sperre der Beschäftigung (ADR 0105). Beide Zeitstempel stammen aus der
+Datenbankuhr (ADR 0280). Jedes Feld, das sich bei der Schule ändert, steht mit
+alter und neuer Maske in ihrem Stammdaten-Audit; ein unverändertes Feld
+schreibt keinen Eintrag. Die Auflösung bleibt wiederholbar: Eine Zeile, die
+eine abgebrochene Auflösung schon geschrieben hat, ist neuer als jede
+Änderung der Akte davor und bleibt beim nächsten Versuch unverändert.

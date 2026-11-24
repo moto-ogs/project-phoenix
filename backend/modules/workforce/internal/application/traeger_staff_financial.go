@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
@@ -101,17 +102,24 @@ func (t *TraegerStaff) writeFinancial(ctx context.Context, actor workforce.Traeg
 
 // Dissolve ends a record: every live Einsatzort gets the bank and tax values
 // back as its own row, then the record goes with its links and trail. The
-// schools' personnel numbers stay. A school that kept a row of its own
-// meanwhile keeps it.
+// schools' personnel numbers stay. Per field the newer entry wins (#8029,
+// returnedFinancial); the trail's times are read before the record goes.
+// Each school is written in its own tenant transaction, never with the
+// Träger's (ADR 0105), so a dissolution that fails at one school repeats
+// (ADR 0233 section 6): a school that got its values back keeps them.
 func (t *TraegerStaff) Dissolve(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64) error {
 	var record domain.TraegerStaffRecord
 	var values map[string]string
+	var changedAt map[string]time.Time
 	err := t.released(ctx, actor, func(ctx context.Context) error {
 		var err error
 		if record, err = t.store.FindStaffRecord(ctx, actor.OrganizationID, recordID, false); err != nil {
 			return err
 		}
-		values, err = t.openRecordFinancial(record)
+		if values, err = t.openRecordFinancial(record); err != nil {
+			return err
+		}
+		changedAt, err = t.store.FinancialChangeTimes(ctx, actor.OrganizationID, recordID)
 		return err
 	})
 	if err != nil {
@@ -119,7 +127,7 @@ func (t *TraegerStaff) Dissolve(ctx context.Context, actor workforce.TraegerStaf
 	}
 	for _, link := range record.Links {
 		err := t.ports.Runtime.WithinSchool(ctx, link.SchoolID, func(ctx context.Context) error {
-			return t.returnToSchool(ctx, actor, link, values)
+			return t.returnToSchool(ctx, actor, link, values, changedAt)
 		})
 		if err != nil {
 			return publicTraegerStaffError(fmt.Errorf("return to school %d: %w", link.SchoolID, err))
@@ -130,31 +138,80 @@ func (t *TraegerStaff) Dissolve(ctx context.Context, actor workforce.TraegerStaf
 	}))
 }
 
-func (t *TraegerStaff) returnToSchool(ctx context.Context, actor workforce.TraegerStaffActor, link domain.TraegerStaffLink, values map[string]string) error {
+// returnToSchool writes the values returnedFinancial decides into the
+// school's bank row of a live employment, under the lock the school writes
+// its row under, with a master data audit entry per field that changes. A
+// row left without a value goes.
+func (t *TraegerStaff) returnToSchool(ctx context.Context, actor workforce.TraegerStaffActor, link domain.TraegerStaffLink, values map[string]string, changedAt map[string]time.Time) error {
 	live, err := t.schoolStaff(ctx, []int64{link.StaffID})
-	if err != nil || len(live) == 0 || len(values) == 0 {
+	if err != nil || len(live) == 0 {
 		return err
 	}
-	existing, err := t.store.SchoolFinancialRows(ctx, []int64{link.StaffID})
-	if err != nil || len(existing) > 0 {
+	if _, err := t.subjects.LockStaff(ctx, link.StaffID, false); err != nil {
 		return err
 	}
-	row, err := t.schoolFinancialRow(link.SchoolID, link.StaffID, values)
+	rows, err := t.store.SchoolFinancialRows(ctx, []int64{link.StaffID})
 	if err != nil {
 		return err
 	}
-	for _, field := range []string{domain.StaffFieldIBAN, domain.StaffFieldTaxID, domain.StaffFieldSocialSecurityNumber} {
-		if values[field] == "" {
+	school := map[string]string{}
+	if len(rows) > 0 {
+		if school, err = t.openSchoolFinancial(rows[0]); err != nil {
+			return err
+		}
+	}
+	after := returnedFinancial(link, rows, school, values, changedAt)
+	changed := false
+	for _, field := range bankFields {
+		if school[field] == after[field] {
 			continue
 		}
+		changed = true
 		if err := t.audit.RecordMasterDataChange(ctx, domain.MasterDataChange{
 			StaffID: link.StaffID, ChangedBy: actor.AccountID, Section: domain.AuditSectionBankSteuer, Field: field,
-			OldValue: "", NewValue: domain.MaskStaffValue(field, values[field]), Note: noteReturnedByTraeger,
+			OldValue: domain.MaskStaffValue(field, school[field]), NewValue: domain.MaskStaffValue(field, after[field]), Note: noteReturnedByTraeger,
 		}); err != nil {
 			return fmt.Errorf("write bank return audit: %w", err)
 		}
 	}
+	if !changed {
+		return nil
+	}
+	if len(after) == 0 {
+		return t.store.DeleteSchoolFinancialRow(ctx, link.StaffID)
+	}
+	row, err := t.schoolFinancialRow(link.SchoolID, link.StaffID, after)
+	if err != nil {
+		return err
+	}
 	return t.store.InsertSchoolFinancialRow(ctx, row)
+}
+
+// bankFields are the bank and tax fields a dissolution returns.
+var bankFields = []string{domain.StaffFieldIBAN, domain.StaffFieldTaxID, domain.StaffFieldSocialSecurityNumber}
+
+// returnedFinancial decides the school's bank values when its Träger
+// dissolves a record (#8029): per field the newer entry wins. A school
+// without a row, or with a row from before the link (one a failed hand-over
+// left), gets the record's values. A row stamped after the link is one the
+// link held back (HoldSchoolFinancialRow): it keeps a value unless the
+// trail changed or imported that field after the row's stamp, a value then
+// emptied included. Both stamps are on the database clock (ADR 0280).
+func returnedFinancial(link domain.TraegerStaffLink, rows []domain.StaffFinancialData, school, record map[string]string, changedAt map[string]time.Time) map[string]string {
+	if len(rows) == 0 || !rows[0].UpdatedAt.After(link.LinkedAt) {
+		return record
+	}
+	after := map[string]string{}
+	for _, field := range bankFields {
+		value := school[field]
+		if at, ok := changedAt[field]; ok && at.After(rows[0].UpdatedAt) {
+			value = record[field]
+		}
+		if value != "" {
+			after[field] = value
+		}
+	}
+	return after
 }
 
 func optional(value string) *string {

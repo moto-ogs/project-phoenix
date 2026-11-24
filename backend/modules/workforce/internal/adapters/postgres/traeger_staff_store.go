@@ -350,6 +350,31 @@ func (s *TraegerStaffStore) ListStaffChanges(ctx context.Context, organizationID
 	return changes, nil
 }
 
+// FinancialChangeTimes returns, per bank and tax field of a record, when
+// the trail last saw the Personalverwaltung change or the import fill it,
+// on the database clock (ADR 0280), in one statement.
+func (s *TraegerStaffStore) FinancialChangeTimes(ctx context.Context, organizationID, recordID int64) (map[string]time.Time, error) {
+	db, err := traegerStaffDB(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	var rows []struct {
+		Field string    `bun:"field"`
+		At    time.Time `bun:"at"`
+	}
+	if err := db.NewRaw(`SELECT field, MAX(occurred_at) AS at FROM workforce.staff_record_changes
+		WHERE organization_id = ? AND staff_record_id = ? AND kind = ANY(?) AND field = ANY(?) GROUP BY field`,
+		organizationID, recordID, pgdialect.Array([]string{domain.StaffChangeChanged, domain.StaffChangeImported}),
+		pgdialect.Array([]string{domain.StaffFieldIBAN, domain.StaffFieldTaxID, domain.StaffFieldSocialSecurityNumber})).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("workforce postgres: read financial change times: %w", err)
+	}
+	times := make(map[string]time.Time, len(rows))
+	for _, row := range rows {
+		times[row.Field] = row.At
+	}
+	return times, nil
+}
+
 // DeleteStaffRecord removes a record with its links and trail.
 func (s *TraegerStaffStore) DeleteStaffRecord(ctx context.Context, organizationID, recordID int64) error {
 	db, err := traegerStaffDB(ctx, organizationID)
