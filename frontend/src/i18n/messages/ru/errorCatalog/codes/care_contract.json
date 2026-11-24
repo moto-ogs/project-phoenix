@@ -34,5 +34,6 @@
   "child_link_refused": "Не удалось изменить: {object}. Проверьте текущее состояние.",
   "child_link_bound": "Не удалось изменить: {object}. Проверьте текущее состояние.",
   "enrollment_preview_changed": "Не удалось изменить: {object}. Проверьте текущее состояние.",
-  "enrollment_binding_changed": "Не удалось изменить: {object}. Проверьте текущее состояние."
+  "enrollment_binding_changed": "Не удалось изменить: {object}. Проверьте текущее состояние.",
+  "family_refused": "Не удалось изменить: {object}. Проверьте текущее состояние."
 }

@@ -3,12 +3,16 @@
 import type { Session } from "next-auth";
 import { PortalAuthGuard } from "~/components/auth/portal-auth-guard";
 import { ShellIntlProvider } from "~/components/dashboard/shell-intl-provider";
+import { TraegerModuleGate } from "~/components/traeger/traeger-module-not-booked";
 import { TraegerShell } from "~/components/traeger/traeger-shell";
 import {
   useTraegerOwnName,
   type TraegerMembershipKey,
 } from "~/components/traeger/traeger-own-name";
-import { useTraegerOrganization } from "~/components/traeger/use-traeger-organization";
+import {
+  useTraegerBookedModules,
+  useTraegerOrganization,
+} from "~/components/traeger/use-traeger-organization";
 import { BreadcrumbProvider } from "~/lib/breadcrumb-context";
 import { hasSessionAccess } from "~/lib/session-access";
 import { TraegerShellProvider } from "~/lib/shell-auth-context";
@@ -76,20 +80,27 @@ function TraegerPortal({
   readonly membership: TraegerMembershipKey | null;
 }) {
   const organization = useTraegerOrganization();
+  const booked = useTraegerBookedModules();
   const ownName = useTraegerOwnName(membership);
   return (
     <TraegerShellProvider
       organizationName={organization?.name}
       memberName={ownName.name}
+      bookedModules={booked.modules}
     >
       <BreadcrumbProvider>
         <ShellIntlProvider>
-          <TraegerShell
-            testSystem={organization?.testSystem === true}
-            federalStates={organization?.federalStates}
-          >
-            {children}
-          </TraegerShell>
+          {/* Pages of a moto module no school of the Träger booked explain
+              themselves; the navigation shows them with a lock (#6052). */}
+          <TraegerModuleGate booked={booked}>
+            <TraegerShell
+              testSystem={organization?.testSystem === true}
+              federalStates={organization?.federalStates}
+              bookedModules={booked.modules}
+            >
+              {children}
+            </TraegerShell>
+          </TraegerModuleGate>
         </ShellIntlProvider>
       </BreadcrumbProvider>
     </TraegerShellProvider>

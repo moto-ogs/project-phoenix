@@ -58,7 +58,7 @@ func seedTraegerPayroll(client *Client, auth AuthRef, year, month int) (int, err
 }
 
 // seedTraegerPayrollEmployerValues are the invented payroll values of every
-// body that employs the staff of a demo school (#8041, ADR 0319): the Lohnbüro
+// body that employs the staff of a demo school (#8041, ADR 0320): the Lohnbüro
 // of the Träger keeps the Gemeinde as its own DATEV client, and the
 // Kostenstelle marks its lines in the one file of the Träger.
 var seedTraegerPayrollEmployerValues = map[string]any{"consultant_number": "29098", "client_number": "55005", "cost_center": "4711"}

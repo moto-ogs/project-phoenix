@@ -401,7 +401,7 @@ func noticeFamily(notice parentbilling.CareNotice) string {
 	if notice.FamilyEmail != "" {
 		return notice.FamilyEmail
 	}
-	return parentbilling.ContractFamilyKey(notice.Recipient.Email, notice.ContractID.Int64())
+	return notice.Recipient.FamilyOf(notice.ContractID.Int64())
 }
 
 func noticeRow(organizationID, runID int64, numberYear int, sequence int64, notice parentbilling.CareNotice) *careNoticeRow {

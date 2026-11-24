@@ -37,6 +37,7 @@ import (
 	careContractHTTP "github.com/moto-ogs/project-phoenix/modules/carecontract/http"
 	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
 	requestFeedHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/requestfeed/http"
+	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	messageAttachmentsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/messageattachments"
 	operatorAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/operatorannouncements"
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
@@ -74,6 +75,7 @@ import (
 	timeTrackingHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
 	workforceTraegerStaff "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	worktimemodelsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/worktimemodels"
+	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
 	contractEnrollmentHTTP "github.com/moto-ogs/project-phoenix/workflows/contractenrollment/http"
@@ -122,6 +124,7 @@ func traegerBillingContractMounts() []contractMount {
 		{"/traeger/contract-imports", careContractHTTP.ImportRouteContracts()},
 		{"/traeger/contract-corrections", careContractHTTP.CorrectionRouteContracts()},
 		{"/traeger/contract-child-links", careContractHTTP.ChildLinkRouteContracts()},
+		{"/traeger/contract-families", careContractHTTP.FamilyRouteContracts()},
 		{"/traeger/contract-enrollments", contractEnrollmentHTTP.RouteContracts()},
 	}
 }
@@ -282,6 +285,15 @@ func ContractDocument() (contract.Document, error) {
 	}
 	substitutions := substitutionsHTTP.RouteContractTypes()
 	options := contract.Options{
+		StreamEvent: realtime.SSEEvent{},
+		StreamEnums: []contract.EnumSpec{{
+			Name: "StreamEventType", Type: realtime.EventType(""), Values: realtime.EventTypeValues(),
+		}},
+		ProblemDetails: map[string]any{
+			common.CodeStudentsCompanionPlanConflict:   careStudentsHTTP.CompanionConflictDetails{},
+			common.CodeClassdayClassTripStatusConflict: classdayHTTP.ClassTripConflictDetails{},
+			common.CodeStudentsStatusDayConflict:       presenceStudentsHTTP.StatusDayConflictDetails{},
+		},
 		Identifiers: map[reflect.Type]string{
 			reflect.TypeFor[ident.ID](): contract.KindID,
 			// The device management renders its instants in whole seconds.
@@ -414,7 +426,8 @@ func contractRegistration(prefix string, route common.RouteContract) contract.Re
 	registration := contract.Registration{
 		Method: route.Method, Pattern: prefix + route.Pattern,
 		Request: route.Request, Response: route.Response, Paginated: route.Paginated, NoData: route.NoData,
-		Deprecated: route.Deprecated, DeprecatedFields: route.DeprecatedFields, Refuses: route.Refuses,
+		PartialError: route.PartialError,
+		Deprecated:   route.Deprecated, DeprecatedFields: route.DeprecatedFields, Refuses: route.Refuses,
 		NoRetryAfterRenewal: route.NoRetryAfterRenewal, MaxBodyBytes: route.MaxBodyBytes, NoCommit: route.NoCommit,
 		File: route.File, Multipart: route.Multipart, TooLargeCode: route.TooLargeCode, PublicFile: route.PublicFile, PublicUpload: route.PublicUpload,
 		FileCache: route.FileCache, ConditionalGet: route.ConditionalGet,
@@ -507,7 +520,7 @@ func guardianRouteContracts() []common.RouteContract {
 	types := guardiansHTTP.RouteContractTypes()
 	portals := []common.PortalScope{common.PortalTenant}
 	search := []common.QueryParam{{Name: "q", Kind: common.QueryString}, {Name: "page", Kind: common.QueryInt}, {Name: "page_size", Kind: common.QueryInt}}
-	deleteQuery := []common.QueryParam{{Name: "force", Kind: common.QueryString}, {Name: "expected_link_ids", Kind: common.QueryString}}
+	deleteQuery := []common.QueryParam{{Name: "force", Kind: common.QueryString}, {Name: "expected_link_ids", Kind: common.QueryID, Repeated: true}}
 	const guardianEditRefused = "the staff form saves a guardian as one entry against its read state (ADR 0311, #7953 removes this edit)"
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/search", Portals: portals, Query: search, Paginated: true, Response: types.Pickers},
@@ -654,15 +667,20 @@ func importRouteContracts() []common.RouteContract {
 		route.NoCommit = "an import preview checks the file and saves no row of it; only its audit entry is written"
 		return route
 	}
+	result := func(pattern string, response any) common.RouteContract {
+		route := upload(pattern, response)
+		route.PartialError = common.CodeImportImportBatchFailed
+		return route
+	}
 	return []common.RouteContract{
 		preview("/students/preview", importAPI.StudentPreviewResponse{}),
-		upload("/students/import", importModels.StudentImportResult{}),
+		result("/students/import", importModels.StudentImportResult{}),
 		preview("/teachers/preview", importModels.StaffImportResult{}),
-		upload("/teachers/import", importModels.StaffImportResult{}),
+		result("/teachers/import", importModels.StaffImportResult{}),
 		preview("/class-list-entries/preview", importModels.ClassListImportResult{}),
-		upload("/class-list-entries/import", importModels.ClassListImportResult{}),
+		result("/class-list-entries/import", importModels.ClassListImportResult{}),
 		preview("/opening-balances/preview", importModels.OpeningBalanceImportResult{}),
-		upload("/opening-balances/import", importModels.OpeningBalanceImportResult{}),
+		result("/opening-balances/import", importModels.OpeningBalanceImportResult{}),
 	}
 }
 

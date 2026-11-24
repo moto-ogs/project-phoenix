@@ -66,7 +66,7 @@ export interface PayrollGap {
 const PAYROLL_FORM_VALUES = ["traeger", "arbeitgeber"] as const;
 
 /**
- * Die Form der Lohndatei (#8041, ADR 0319): eine Datei für den ganzen
+ * Die Form der Lohndatei (#8041, ADR 0320): eine Datei für den ganzen
  * Träger oder eine Datei je Arbeitgeber.
  */
 export type PayrollForm = (typeof PAYROLL_FORM_VALUES)[number];
@@ -302,7 +302,7 @@ export const downloadPayrollFile = (
   );
 
 /**
- * Die Lohnwerte eines Arbeitgebers neben dem Träger (#8041, ADR 0319): die
+ * Die Lohnwerte eines Arbeitgebers neben dem Träger (#8041, ADR 0320): die
  * DATEV-Nummern seiner eigenen Datei und die Kostenstelle seiner Zeilen in
  * der einen Datei des Trägers.
  */

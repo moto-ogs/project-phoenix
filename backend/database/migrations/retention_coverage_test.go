@@ -533,7 +533,7 @@ var tableRetentions = map[string]tableRetention{
 	"users.survey_responses":                                parent("users.surveys"),
 	"users.surveys":                                         own("nightly retention steps parent_survey_retention and staff_survey_retention, SurveyRetention.DeleteExpiredParentSurveys / DeleteExpiredStaffSurveys (school window gdpr.parent_message_retention_days or gdpr.staff_message_retention_days after the survey closed, a draft after its last change, #4781)"),
 	"users.teachers":                                        staffRetention("School Membership EraseNextRetiredStaff"),
-	"workforce.payroll_employers":                           notPersonal("the DATEV numbers and the Kostenstelle of a Schulträger or a Gemeinde of a school of a Träger, by plain id; overwritten in the Träger-Portal and gone with platform.organizations (#8041, ADR 0319)"),
+	"workforce.payroll_employers":                           notPersonal("the DATEV numbers and the Kostenstelle of a Schulträger or a Gemeinde of a school of a Träger, by plain id; overwritten in the Träger-Portal and gone with platform.organizations (#8041, ADR 0320)"),
 	"workforce.staff_proof_type_mappings":                   notPersonal("which kind of a school maps onto which kind of its Träger, by plain id; goes with its Träger kind and with platform.organizations (#4707)"),
 	"workforce.staff_proof_types":                           notPersonal("the kinds of proof a Träger asks for; archived, never deleted; they go with platform.organizations (#4707)"),
 	"workforce.staff_proofs":                                parent("workforce.staff_records"),

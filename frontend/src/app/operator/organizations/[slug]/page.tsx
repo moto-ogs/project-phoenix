@@ -19,10 +19,7 @@ import {
 import { useSWRAuth, useInvalidateMatching } from "~/lib/swr";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import {
-  operatorProvisioningService,
-  revalidateTenantCache,
-} from "~/lib/operator/provisioning-api";
+import { operatorProvisioningService } from "~/lib/operator/provisioning-api";
 import type {
   OperatorDevice,
   OrgAccount,
@@ -573,17 +570,11 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
   );
   const statusAfterWrite = useRefreshAfterWrite(
     "die Anzeige des Trägers",
-    async () => {
-      await refreshOrganizationDrillIn();
-      await revalidateTenantCache(activeSchools.map((item) => item.subdomain));
-    },
+    refreshOrganizationDrillIn,
   );
   const schoolCreatedAfterWrite = useRefreshAfterWrite(
     "die Anzeige der Schulen",
-    async (subdomain: string) => {
-      await refreshOrganizationDrillIn();
-      await revalidateTenantCache([subdomain]);
-    },
+    refreshOrganizationDrillIn,
   );
   const accountsAfterWrite = useRefreshAfterWrite(
     "die Anzeige der Konten",
@@ -694,11 +685,7 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
     logEventPrefix: "organization",
     reloadObject: "die Anzeige des Trägers",
     onAfterSoftDelete: async () => {
-      await revalidateTenantCache(activeSchools.map((item) => item.subdomain));
       router.push("/operator/organizations");
-    },
-    onAfterRestore: async () => {
-      await revalidateTenantCache(activeSchools.map((item) => item.subdomain));
     },
   });
 
@@ -716,12 +703,6 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
     },
     logEventPrefix: "school",
     reloadObject: "die Anzeige der Schulen",
-    onAfterSoftDelete: async (target) => {
-      await revalidateTenantCache([target.subdomain]);
-    },
-    onAfterRestore: async (target) => {
-      await revalidateTenantCache([target.subdomain]);
-    },
   });
 
   const requestRestoreSchool = useCallback(

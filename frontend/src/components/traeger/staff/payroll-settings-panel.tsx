@@ -1,6 +1,6 @@
 "use client";
 
-// Die Einrichtung der Lohndatei (#4712, ADR 0250 Punkt 3; #8041, ADR 0319):
+// Die Einrichtung der Lohndatei (#4712, ADR 0250 Punkt 3; #8041, ADR 0320):
 // die Form (eine Datei oder eine je Arbeitgeber), der DATEV-Mandant des
 // Trägers, die Werte der anderen Arbeitgeber und eine Lohnart je Kategorie
 // und Art des Vertrags. Form, Mandant und Lohnarten sind Einstellungen des
@@ -75,7 +75,7 @@ const CONSULTANT_PATTERN = /^\d{1,7}$/;
 const CLIENT_PATTERN = /^\d{1,5}$/;
 const COST_CENTER_PATTERN = /^\d{1,8}$/;
 
-/** Die zwei Formen der Lohndatei mit dem, was jede bedeutet (ADR 0319). */
+/** Die zwei Formen der Lohndatei mit dem, was jede bedeutet (ADR 0320). */
 const FORM_OPTIONS: readonly {
   readonly value: PayrollForm;
   readonly title: string;

@@ -5,7 +5,7 @@ type AttendanceEventType = "student_checkin" | "student_checkout";
 const OWN_EVENT_TTL_MS = 5_000;
 const pending = new Map<string, number>();
 
-function key(eventType: AttendanceEventType, studentId: string): string {
+function key(eventType: string, studentId: string): string {
   return `${eventType}:${studentId}`;
 }
 

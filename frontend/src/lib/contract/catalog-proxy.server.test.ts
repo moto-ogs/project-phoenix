@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { TEST_CLOCK_INSTANT } from "~/test/clock";
-import { ApiError } from "~/lib/api-error";
+import { apiErrorFromBody } from "~/lib/api-error";
 import { presentError } from "~/lib/error-presentation";
 import { ApiResponseError } from "~/lib/api-response-error.server";
 import { suppressConsole } from "~/test/helpers/console";
@@ -17,6 +17,10 @@ import {
   CATALOG_PUBLIC_OUTSIDE_MOUNTS,
 } from "./catalog-outside-mounts";
 import { portalRoutes } from "./portals.generated";
+import { resolveTenantCached } from "~/lib/tenant-resolve.server";
+import { tenantLookupWrites } from "./tenant-lookup-writes.server";
+
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const { api } = vi.hoisted(() => ({ api: vi.fn() }));
 vi.mock("~/lib/backend-client.server", async (original) => ({
@@ -78,6 +82,44 @@ const portal = {
   put: withBody,
   patch: withBody,
 } as unknown as Parameters<typeof makeCatalogProxy>[0];
+
+it.each([...tenantLookupWrites])(
+  "forgets a cached lookup miss in the write request: %s",
+  async (key) => {
+    const [method, pattern] = key.split(" ");
+    const path = pattern!
+      .replace(/\{id\}/g, "1")
+      .split("/")
+      .filter(Boolean);
+    const lookup = "missing-after-write";
+    api.mockResolvedValueOnce(new Response(null, { status: 404 }));
+    await expect(resolveTenantCached(lookup, {})).rejects.toMatchObject({
+      status: 404,
+    });
+
+    api.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const routes = [...portalRoutes.platform, ...portalRoutes.org];
+    const registration = routes.find(
+      (route) => route.method === method && route.pattern === pattern,
+    );
+    expect(registration).toBeDefined();
+    const response = await makeCatalogProxy(
+      portal,
+      "",
+      [{ method: method!, pattern: pattern!, response: noData }],
+      method as CatalogMethod,
+      [],
+    )(new NextRequest(`http://localhost/${path.join("/")}`, { method }), {
+      params: Promise.resolve({ path }),
+    });
+    expect(response.status).toBe(204);
+
+    api.mockResolvedValueOnce(new Response(null, { status: 503 }));
+    await expect(resolveTenantCached(lookup, {})).rejects.toMatchObject({
+      status: 503,
+    });
+  },
+);
 
 const row = success(z.object({ name: z.string() }));
 const routes: CatalogRoute[] = [
@@ -562,11 +604,7 @@ describe("makeCatalogProxy", () => {
     });
     expect(
       presentError(
-        new ApiError(
-          "Bad Gateway",
-          refusal.status,
-          refusal.body<{ code: string }>() ?? undefined,
-        ),
+        apiErrorFromBody("Bad Gateway", refusal.status, refusal.body()),
         "Vorschau",
       ).retryable,
     ).toBe(true);

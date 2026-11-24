@@ -2,7 +2,7 @@ import type { HelpTopic } from "../help-types";
 import { HELP_TOPICS } from "~/lib/help-topics";
 
 /**
- * `/traeger/personal/lohnexport` (#4712, ADR 0250; #8041, ADR 0319): die
+ * `/traeger/personal/lohnexport` (#4712, ADR 0250; #8041, ADR 0320): die
  * DATEV-Lohndatei über alle Schulen mit eigenen Lohnarten je Art des
  * Vertrags, als eine Datei für den ganzen Träger oder als eine Datei je
  * Arbeitgeber, der Zeitexport als CSV mit seinen festen Spalten und die

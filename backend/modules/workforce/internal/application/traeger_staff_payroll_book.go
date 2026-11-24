@@ -11,7 +11,7 @@ import (
 
 // payrollBook collects the files of the Träger's payroll export and its
 // report, contract after contract. In the form of the Träger there is one
-// file; in the form per employer one per DATEV client (ADR 0319).
+// file; in the form per employer one per DATEV client (ADR 0320).
 type payrollBook struct {
 	settings workforce.TraegerPayrollSettings
 	report   workforce.TraegerPayrollReport

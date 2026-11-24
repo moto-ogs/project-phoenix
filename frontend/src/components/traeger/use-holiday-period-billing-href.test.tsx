@@ -1,5 +1,7 @@
 import { renderHook } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TraegerBookedModulesProvider } from "~/lib/traeger-booked-modules";
 import type { HolidayPeriod } from "~/lib/traeger-api";
 import type { BillingRun } from "~/lib/traeger-billing-api";
 
@@ -73,6 +75,28 @@ describe("billingPathForPeriod", () => {
 });
 
 describe("useHolidayPeriodBillingHref", () => {
+  // #6052: the runs belong to Elternbeiträge und Abrechnung. Without that
+  // module the action is gone and the runs are not read, although the
+  // period is published and the person holds the billing right.
+  it("offers nothing and reads no run without the billing module", () => {
+    state.permissions = ["traeger_billing:manage"];
+    state.runs = [run("9", "5")];
+    state.error = undefined;
+    state.keys = [];
+    const { result } = renderHook(() => useHolidayPeriodBillingHref(PERIOD), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <TraegerBookedModulesProvider
+          value={{ modules: ["ferienbetreuung"], settled: true }}
+        >
+          {children}
+        </TraegerBookedModulesProvider>
+      ),
+    });
+
+    expect(result.current).toBeNull();
+    expect(state.keys).toEqual([null]);
+  });
+
   beforeEach(() => {
     state.permissions = ["traeger_billing:manage"];
     state.runs = [run("9", "5")];

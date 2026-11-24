@@ -469,6 +469,7 @@ func TestFullProductionRouterGolden(t *testing.T) {
 			t.Run("own routes without staff profile", func(t *testing.T) { checkNoStaffProfileOwnRoutes(t, api) })
 			t.Run("module route map", func(t *testing.T) { checkModuleRouteMap(t, api) })
 			t.Run("module booking gate", func(t *testing.T) { checkModuleBookingGate(t, api) })
+			t.Run("module booking gate of the Träger portal", func(t *testing.T) { checkTraegerModuleBookingGate(t, api) })
 		})
 		return nil
 	})

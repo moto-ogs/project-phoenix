@@ -1,2 +1,2 @@
-GET /traeger/billing-terms/ -> basis
-PUT /traeger/billing-terms/{service} -> basis
+GET /traeger/billing-terms/ -> elternbeitraege
+PUT /traeger/billing-terms/{service} -> elternbeitraege

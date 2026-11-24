@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { NextRequest } from "next/server";
 import { fireEvent, render as renderUi, screen } from "@testing-library/react";
 import type { PortalSessionSnapshot } from "~/lib/portal-session-snapshot.server";
 import { deferred } from "~/test/helpers/form-modal-pending";
@@ -31,9 +30,7 @@ vi.mock("next/headers", () => ({
   headers: headersMock,
 }));
 
-const revalidateTagMock = vi.hoisted(() => vi.fn());
 vi.mock("next/cache", () => ({
-  revalidateTag: revalidateTagMock,
   revalidatePath: vi.fn(),
 }));
 
@@ -72,8 +69,6 @@ const {
 } = await import("~/lib/tenant-resolve.server");
 const { setTestClock, TEST_CLOCK_INSTANT } = await import("~/test/clock");
 const navigation = await import("next/navigation");
-const { POST: revalidateTenant } =
-  await import("~/app/api/operator/provisioning/revalidate-tenant/route");
 
 beforeEach(() => {
   authMock.mockClear();
@@ -85,7 +80,6 @@ beforeEach(() => {
     async () => new Headers({ host: "school-a.localhost:3000" }),
   );
   invalidateTenantResolve("school-a");
-  revalidateTagMock.mockClear();
   vi.restoreAllMocks();
 });
 
@@ -349,17 +343,7 @@ describe("TenantLayout", () => {
     });
     expect(fetchSpy).toHaveBeenCalledOnce();
 
-    const response = await revalidateTenant(
-      new NextRequest(
-        "http://operator.localhost:3000/api/operator/provisioning/revalidate-tenant",
-        {
-          method: "POST",
-          body: JSON.stringify({ slugs: ["school-a"] }),
-        },
-      ),
-      { params: Promise.resolve({}) },
-    );
-    expect(response.status).toBe(200);
+    invalidateTenantResolve("school-a");
     expect((await resolveTenantCached("school-a", {})).name).toBe("School A");
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
@@ -445,9 +429,6 @@ describe("TenantLayout", () => {
       "Updated school",
     );
     expect(fetchSpy).toHaveBeenCalledTimes(2);
-    expect(revalidateTagMock).toHaveBeenCalledWith("tenant-school-a", {
-      expire: 0,
-    });
   });
 
   it.each([404, 429])(

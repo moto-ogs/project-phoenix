@@ -8,7 +8,7 @@ import {
   type BackendCall,
   type BackendMethod,
 } from "~/lib/backend-client.server";
-import { wireErrorCode } from "~/lib/api-error";
+import { isProblemRecord, wireErrorCode } from "~/lib/api-error";
 import {
   ApiResponseError,
   bffError,
@@ -42,8 +42,8 @@ type ContractResult<T> =
   { ok: true; value: T } | { ok: false; error: ContractFailure };
 
 function failure(cause: ApiResponseError): ContractResult<never> {
-  const body = cause.body<{ code?: unknown; instance?: unknown }>();
-  const envelope = body !== null && typeof body === "object" ? body : {};
+  const body = cause.body();
+  const envelope = isProblemRecord(body) ? body : {};
   return {
     ok: false,
     error: {

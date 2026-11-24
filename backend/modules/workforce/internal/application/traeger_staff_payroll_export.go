@@ -15,7 +15,7 @@ import (
 
 // The DATEV payroll file of the Träger (#4712, ADR 0089 section 11,
 // ADR 0250): one file over every Arbeitsvertrag the Träger closes in the
-// month, or one file per employer (#8041, ADR 0319). Each school computes the month of its employments in its own tenant
+// month, or one file per employer (#8041, ADR 0320). Each school computes the month of its employments in its own tenant
 // transaction and writes the access log entry before the values leave it.
 // The Träger sums a contract over its Einsatzorte and books each category
 // with the Lohnart of the contract's kind, so a Minijob and an
@@ -125,7 +125,7 @@ func (t *TraegerStaff) payrollRun(ctx context.Context, actor workforce.TraegerSt
 		}
 		scene.contracts = contracts
 		// Who employs at each school and the values of those employers
-		// (#8041, ADR 0319), in the same Träger transaction.
+		// (#8041, ADR 0320), in the same Träger transaction.
 		targets.employers, targets.values, readErr = t.payrollEmployers(ctx, actor.OrganizationID, schoolIDs(scene.schools))
 		return readErr
 	})

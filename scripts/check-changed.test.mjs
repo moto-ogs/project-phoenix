@@ -42,6 +42,9 @@ function unassignedSourceTests(files, selected, exceptions = []) {
 const fixtureExceptions = (file, names, reason = 'Synthetic temporary fixtures only; no repository input.') =>
   names.map(name => ({ file, name, reason }));
 const sourceTestExceptions = [
+  ...fixtureExceptions('problem_identifier_origin_test.go', [
+    'TestProblemIdentifierOriginsFollowPublicTypes',
+  ], 'Parses inline Go fixtures; no repository input.'),
   ...fixtureExceptions('formatted_identifier_ratchet_test.go', [
     'TestFormattedIdentifierScannerFollowsIntegerFields',
   ], 'Parses an inline Go fixture; no repository input.'),

@@ -491,12 +491,15 @@ Die Staff-Shell lässt nicht lesbare
 optionale Startdaten aus; der Browser lädt sie auf dem normalen Weg.
 Der Schul-Lookup prüft den öffentlichen Routeneintrag und speichert
 dekodierte Treffer mit geprüften Branding-Feldern sowie 404, aber keine
-anderen Fehler. Die Invalidierung gilt für Treffer und 404; der Generator
+anderen Fehler. Die Invalidierung gilt für Treffer und 404 und läuft
+serverseitig im Schreibaufruf, nicht in einem zweiten Browser-Aufruf. Der Generator
 übernimmt die betroffenen Einstellungsschlüssel aus Go. Schulbezogene
 Zusatzschlüssel bleiben offen. Der Wächter in `route-backend-paths.test.ts` prüft
 auch Server-Module, nicht nur benannte BFF-Routen.
 
-Katalog-Proxy und Vertragsclient lesen JSON auf demselben Fehlerpfad.
+Katalog-Proxy, benannte Routen und SSE verwenden für Ablehnungen vor dem
+Stream denselben Fehlerpfad. Die registrierten Formen in `details` und
+die SSE-Ereignisform erzeugt `gencontract` aus den Go-Typen.
 Eine unlesbare Erfolgsantwort, auch abgeschnittenes JSON, ergibt 502.
 Kann die Änderung festgeschrieben sein, lautet der Fehlercode
 `general.write_answer_unreadable`; bei GET und `NoCommit` bleibt der

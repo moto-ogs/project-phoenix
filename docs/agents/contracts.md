@@ -23,6 +23,11 @@ both clients use the selected variant or the registered default. See the
 Bigint identifiers in portal JSON use Go `ident.ID` and travel as decimal
 strings. Identically named text fields carry a `contract_text` reason.
 Stored JSON and the numeric kiosk contract are separate from this boundary.
+Structured refusal data belongs in `details`. Register its Go type by error
+code and consume the generated decoder. When a batch refusal reports a
+partially saved result, set `PartialError` on the route registration.
+`gencontract` emits a browser decoder for `details.result` from the same Go
+type as the success response. A cast of the error body is not a decoder.
 New session JWTs also carry identifiers as decimal strings, including in
 login, refresh, and school switch. Auth.js keeps them as text through the
 host and browser comparisons. Legacy numeric claims are read only in the

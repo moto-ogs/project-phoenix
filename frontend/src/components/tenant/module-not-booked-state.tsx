@@ -18,6 +18,10 @@ import { moduleNotBookedExplanation } from "~/lib/module-not-booked";
 import { useModulePortal } from "~/lib/module-portal-context";
 import { portalNotBookedExplanation } from "~/lib/portal-not-booked";
 import { MODULE_LABELS, type ModuleKey } from "~/lib/modules";
+import {
+  seesLockedTraegerModules,
+  traegerModuleNotBookedExplanation,
+} from "~/lib/traeger-modules";
 import { normalizeTenantPathname, useTenantAwarePath } from "~/lib/tenant-path";
 import {
   useBookedModules,
@@ -37,17 +41,23 @@ export function ModuleNotBookedAlert({
   const { data: session } = useSession();
   const portal = useModulePortal();
   // The parents and the school portal follow a module of their own (#4895).
+  // The Träger portal names the Träger, as its toasts do (#6052).
   const description =
-    portal === "staff"
-      ? moduleNotBookedExplanation(module, seesLockedModules(session))
-      : portalNotBookedExplanation(
-          portal,
-          normalizeLocale(
-            typeof document === "undefined"
-              ? undefined
-              : document.documentElement.lang,
-          ),
-        );
+    portal === "traeger"
+      ? traegerModuleNotBookedExplanation(
+          module,
+          seesLockedTraegerModules(session),
+        )
+      : portal === "staff"
+        ? moduleNotBookedExplanation(module, seesLockedModules(session))
+        : portalNotBookedExplanation(
+            portal,
+            normalizeLocale(
+              typeof document === "undefined"
+                ? undefined
+                : document.documentElement.lang,
+            ),
+          );
   return <Alert type="info" message={description} className={className} />;
 }
 

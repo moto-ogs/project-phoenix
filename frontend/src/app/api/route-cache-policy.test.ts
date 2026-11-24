@@ -76,7 +76,6 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     "catalogProxyUnder",
   ],
   "~/lib/auth-proxy.server": ["authStepProxy"],
-  "~/lib/file-upload-wrapper.server": ["createFileUploadHandler"],
 };
 
 /**

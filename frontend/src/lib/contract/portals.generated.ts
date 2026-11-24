@@ -139,6 +139,7 @@ import { routes as traegerContractChanges } from "./traeger-contract-changes.gen
 import { routes as traegerContractChildLinks } from "./traeger-contract-child-links.generated";
 import { routes as traegerContractCorrections } from "./traeger-contract-corrections.generated";
 import { routes as traegerContractEnrollments } from "./traeger-contract-enrollments.generated";
+import { routes as traegerContractFamilies } from "./traeger-contract-families.generated";
 import { routes as traegerContractImports } from "./traeger-contract-imports.generated";
 import { routes as traegerContractNotices } from "./traeger-contract-notices.generated";
 import { routes as traegerContractTemplates } from "./traeger-contract-templates.generated";
@@ -350,6 +351,10 @@ export const portalRoutes = {
     traegerContractEnrollments["DELETE /traeger/contract-enrollments/{contractId}"],
     traegerContractEnrollments["POST /traeger/contract-enrollments/"],
     traegerContractEnrollments["POST /traeger/contract-enrollments/preview"],
+    traegerContractFamilies["GET /traeger/contract-families/"],
+    traegerContractFamilies["GET /traeger/contract-families/export"],
+    traegerContractFamilies["POST /traeger/contract-families/"],
+    traegerContractFamilies["POST /traeger/contract-families/{contractId}/leave"],
     traegerContractImports["GET /traeger/contract-imports/"],
     traegerContractImports["POST /traeger/contract-imports/"],
     traegerContractImports["POST /traeger/contract-imports/offering-corrections"],
@@ -1371,13 +1376,16 @@ export const portalRoutes = {
     search["POST /api/search/"],
     settings["DELETE /api/settings/enrollment/legal-agb-document"],
     settings["DELETE /api/settings/home-layout"],
+    settings["DELETE /api/settings/login-image"],
     settings["GET /api/settings/device-pin-status"],
     settings["GET /api/settings/home-layout"],
+    settings["GET /api/settings/login-image"],
     settings["GET /api/settings/payroll-status"],
     settings["GET /api/settings/schema"],
     settings["GET /api/settings/school-contact-email"],
     settings["GET /api/settings/values/{key}/reveal"],
     settings["POST /api/settings/enrollment/legal-agb-document"],
+    settings["POST /api/settings/login-image"],
     settings["PUT /api/settings/home-layout"],
     settings["PUT /api/settings/home-layout/policies"],
     shiftTypes["DELETE /api/shift-types/{id}"],
@@ -1873,10 +1881,7 @@ export const routeFileRoutes = {
     display["GET /api/display/dashboard"],
     enrollment["GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}"],
     enrollment["GET /api/enrollment/me/profile"],
-    settings["DELETE /api/settings/login-image"],
     settings["DELETE /api/settings/values/{key}"],
-    settings["GET /api/settings/login-image"],
-    settings["POST /api/settings/login-image"],
     settings["PUT /api/settings/values/{key}"],
   ],
 } as const;

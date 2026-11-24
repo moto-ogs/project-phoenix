@@ -1,1 +1,1 @@
-POST /traeger/holiday-quotes/{token} -> basis
+POST /traeger/holiday-quotes/{token} -> ferienbetreuung  (#6052 Ferienanmeldung: der Link schließt mit dem Modul)

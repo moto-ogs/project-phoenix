@@ -274,7 +274,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingCareContracts.Recipients",
-      "binding_digest": "505ff39d2c92b92ea5a412573b0c3703",
+      "binding_digest": "ba60bb58f3ca18b26718fcff534e9054",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
@@ -282,7 +282,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingTermContracts.Recipients",
-      "binding_digest": "1c07bc5b593be4d2e948ef7dddba3b44",
+      "binding_digest": "dfe4f390bae4b8d8b9f365aa34eccd1d",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
@@ -802,18 +802,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.schoolModuleSwitches.BookedModules",
-      "binding_digest": "e9921933eb1f808541d358c4cfdc1a1f",
+      "binding_digest": "23d913184a693e6983718f32e48eeca7",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.SchoolModules.BookedModules",
       "source_owner": "parent-billing",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsSnapshot.Bool",
-      "target_owner": "settings-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.schoolModuleSwitches.BookedModules",
-      "binding_digest": "854fdf9be853b6d2ebf6742aacc65d35",
-      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.SchoolModules.BookedModules",
-      "source_owner": "parent-billing",
-      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveManyForTenants",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ModulesBookedByAnySchool",
       "target_owner": "settings-platform"
     },
     {
@@ -850,7 +842,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
-      "binding_digest": "608bfc018d5b7dbd06bc0e2fc3eb9e5c",
+      "binding_digest": "c1206d5e7acc2632c914d29444933bc4",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application.CareLetterRecipients.Recipients",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",

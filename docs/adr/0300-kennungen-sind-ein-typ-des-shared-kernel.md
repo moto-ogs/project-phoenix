@@ -239,7 +239,9 @@ Dieser Nachtrag beantwortet die offene Frage aus Punkt 2 des vorigen Nachtrags (
 
 Auch Kennungen in RFC-9457-`details` sind auf der HTTP-Naht
 Dezimalstrings. Strukturierte Fehlerwerte verwenden `ident.ID` und
-denselben `wire`-Encoder wie Erfolgsantworten. Die gemeinsame
+denselben `wire`-Encoder wie Erfolgsantworten und SSE. Der Browser prüft
+erzeugte Dezimalstrings auf kanonische Schreibweise und den
+vorzeichenbehafteten 64-Bit-Wertebereich. Die gemeinsame
 Fehler-Middleware erkennt auch in Maps und verschachtelten Objekten
 Zahlen unter `id`, `*_id` und `*_ids`. Sie meldet den Vertragsverstoß
 und schreibt den ursprünglichen Zahlenwert als Text, ohne den Umweg über

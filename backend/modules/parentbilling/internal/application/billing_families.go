@@ -86,7 +86,8 @@ func (f *BillingFamilies) ListBillingFamilies(ctx context.Context, reviewer pare
 		return nil, fmt.Errorf("parent billing: read family contracts: %w", err)
 	}
 	families := withFamilyRows(details, rows, familiesUnderContract(contracted, keys))
-	if err := f.nameContractFamilies(ctx, reviewer.OrganizationID, families, rows); err != nil {
+	families, err = f.nameContractFamilies(ctx, reviewer.OrganizationID, families, rows)
+	if err != nil {
 		return nil, err
 	}
 	slices.SortStableFunc(families, func(a, b parentbilling.BillingFamily) int {
@@ -130,10 +131,12 @@ func familiesUnderContract(contracted, keys []string) map[string]bool {
 // contract (ADR 0232), whose key is no mail address and is not shown as
 // one, and a family whose deviation the office set before its first invoice
 // (#7770), which would otherwise show its address as its name. Families
-// with a name read nothing.
+// with a name read nothing. The same read leaves out the family of a
+// contract the office joined to the family of another (#7161, ADR 0319):
+// what is stored under its own key rests until it leaves again.
 func (f *BillingFamilies) nameContractFamilies(ctx context.Context, organizationID int64, families []parentbilling.BillingFamily,
 	rows []parentbilling.FamilyBilling,
-) error {
+) ([]parentbilling.BillingFamily, error) {
 	contractOf := map[string]int64{}
 	for _, row := range rows {
 		if row.ContractID > 0 {
@@ -148,24 +151,39 @@ func (f *BillingFamilies) nameContractFamilies(ctx context.Context, organization
 		if !ok || family.ID != 0 {
 			continue
 		}
-		if parentbilling.IsContractFamily(family.FamilyEmail) {
+		if own, isContract := parentbilling.ContractOfFamily(family.FamilyEmail); isContract {
 			family.RecipientEmail = ""
+			ids = append(ids, own)
 		}
 		if family.RecipientFirstName == "" && family.RecipientLastName == "" {
 			unnamed, ids = append(unnamed, family), append(ids, id)
 		}
 	}
 	if len(ids) == 0 {
-		return nil
+		return families, nil
 	}
 	recipients, err := f.careContracts.Recipients(ctx, organizationID, ids)
 	if err != nil {
-		return fmt.Errorf("parent billing: read the contract parties of the families: %w", err)
+		return nil, fmt.Errorf("parent billing: read the contract parties of the families: %w", err)
 	}
-	for i, family := range unnamed {
-		family.RecipientFirstName, family.RecipientLastName = recipients[ids[i]].FirstName, recipients[ids[i]].LastName
+	for _, family := range unnamed {
+		recipient := recipients[contractOf[family.FamilyEmail]]
+		family.RecipientFirstName, family.RecipientLastName = recipient.FirstName, recipient.LastName
 	}
-	return nil
+	return withoutRestingFamilies(families, contractOf, recipients), nil
+}
+
+// withoutRestingFamilies leaves out the family of a contract that is led in
+// the family of another contract and has no document of its own: its own
+// key rests until it leaves (#7161, ADR 0319 point 4).
+func withoutRestingFamilies(families []parentbilling.BillingFamily, contractOf map[string]int64,
+	recipients map[int64]parentbilling.CareRecipient,
+) []parentbilling.BillingFamily {
+	return slices.DeleteFunc(families, func(family parentbilling.BillingFamily) bool {
+		own, isContract := parentbilling.ContractOfFamily(family.FamilyEmail)
+		_, listed := contractOf[family.FamilyEmail]
+		return isContract && listed && family.ID == 0 && recipients[own].FamilyOf(own) != family.FamilyEmail
+	})
 }
 
 // BillingFamily reads one family with its documents, the newest first, and

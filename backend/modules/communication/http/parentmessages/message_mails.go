@@ -2,11 +2,11 @@ package messaging
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // mountMessageMailRoutes adds what became of the e-mails of OGS messages
@@ -25,13 +25,13 @@ func (rs *Resource) mountMessageMailRoutes(r chi.Router, read, withTx func(http.
 // ThreadMailsResponse maps a message ID to its mail's outcome. A message
 // without a mail is absent.
 type ThreadMailsResponse struct {
-	Messages map[string]string `json:"messages"`
+	Messages map[ident.ID]string `json:"messages"`
 }
 
 // GroupThreadMailsResponse maps a message ID to its mails counted by outcome,
 // one mail per family. A message without a mail is absent.
 type GroupThreadMailsResponse struct {
-	Messages map[string]map[string]int `json:"messages"`
+	Messages map[ident.ID]map[string]int `json:"messages"`
 }
 
 func (rs *Resource) getThreadMails(w http.ResponseWriter, r *http.Request) {
@@ -44,9 +44,9 @@ func (rs *Resource) getThreadMails(w http.ResponseWriter, r *http.Request) {
 		renderMessagingError(w, r, err)
 		return
 	}
-	out := ThreadMailsResponse{Messages: make(map[string]string, len(mails))}
+	out := ThreadMailsResponse{Messages: make(map[ident.ID]string, len(mails))}
 	for id, outcome := range mails {
-		out.Messages[strconv.FormatInt(id, 10)] = outcome
+		out.Messages[ident.ID(id)] = outcome
 	}
 	common.Respond(w, r, http.StatusOK, out, "Message mails retrieved")
 }
@@ -61,9 +61,9 @@ func (rs *Resource) getGroupThreadMails(w http.ResponseWriter, r *http.Request) 
 		renderGroupThreadError(w, r, err)
 		return
 	}
-	out := GroupThreadMailsResponse{Messages: make(map[string]map[string]int, len(mails))}
+	out := GroupThreadMailsResponse{Messages: make(map[ident.ID]map[string]int, len(mails))}
 	for id, outcomes := range mails {
-		out.Messages[strconv.FormatInt(id, 10)] = outcomes
+		out.Messages[ident.ID(id)] = outcomes
 	}
 	common.Respond(w, r, http.StatusOK, out, "Group message mails retrieved")
 }

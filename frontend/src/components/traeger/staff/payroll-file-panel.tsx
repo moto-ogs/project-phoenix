@@ -4,7 +4,7 @@
 // Prüfung zeigt dieselbe Rechnung wie die Datei: Verträge je Art, Zeilen,
 // Werte ohne Lohnart und Schulen mit offenem Monat. Was die Datei noch
 // verhindert, steht als Liste mit dem nächsten Schritt darunter. In der Form
-// je Arbeitgeber (#8041, ADR 0319) gibt es eine Datei je DATEV-Mandant, jede
+// je Arbeitgeber (#8041, ADR 0320) gibt es eine Datei je DATEV-Mandant, jede
 // mit eigenem Download.
 
 import { DownloadSimpleIcon, WarningCircleIcon } from "@phosphor-icons/react";

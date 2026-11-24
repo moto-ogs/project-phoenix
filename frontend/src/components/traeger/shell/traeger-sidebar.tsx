@@ -8,9 +8,12 @@ import {
   PortalSidebarLink,
   PortalSettingsSidebarEntries,
 } from "~/components/ui/portal-sidebar";
+import { ModuleLockMark } from "~/components/ui/module-lock-mark";
 import { portalSidebarTopOffset } from "~/components/ui/sidebar-geometry";
 import { useDemoBannerShown } from "~/components/demo/demo-banner";
 import { useStoredOpenGroups } from "~/lib/hooks/use-stored-open-groups";
+import type { ModuleKey } from "~/lib/modules";
+import { TRAEGER_MODULE_LOCK_TITLE } from "~/lib/traeger-modules";
 import { traegerPath } from "~/lib/traeger-url";
 import {
   isTraegerNavActive,
@@ -28,6 +31,18 @@ import {
 import { useTraegerReturnHref } from "./traeger-return-path";
 import { TraegerSearchButton } from "./traeger-search";
 
+/**
+ * Ein Eintrag eines moto-Moduls, das keine Schule des Trägers gebucht hat
+ * (#6052): das Schloss am Zeilenende, und der Name der eingeklappten Leiste
+ * sagt es dazu.
+ */
+function lockedRow(label: string) {
+  return {
+    trailing: <ModuleLockMark title={TRAEGER_MODULE_LOCK_TITLE} />,
+    collapsedLabel: `${label}, nicht gebucht`,
+  };
+}
+
 /** Eigener Schlüssel fürs Träger-Portal; die OGS-App nutzt `sidebar-open-groups`. */
 const openGroupsStorageKey = "traeger-sidebar-open-groups";
 const KNOWN_GROUP_KEYS: ReadonlySet<string> = new Set(TRAEGER_NAV_GROUP_KEYS);
@@ -41,17 +56,27 @@ const KNOWN_GROUP_KEYS: ReadonlySet<string> = new Set(TRAEGER_NAV_GROUP_KEYS);
  */
 export function TraegerSidebar({
   federalStates,
+  bookedModules = null,
 }: {
   /** Die Bundesländer der Schulen des Trägers, für Einträge wie die Tagesmeldung (#4717). */
   readonly federalStates?: readonly string[];
+  /** Die gebuchten moto-Module des Trägers (#6052); `null`, solange sie laden. */
+  readonly bookedModules?: readonly ModuleKey[] | null;
 }) {
   const pathname = usePathname() ?? "";
   const { data: session } = useSession();
-  const settingsItems = traegerSettingsNavItemsFor(session ?? null);
+  const settingsItems = traegerSettingsNavItemsFor(
+    session ?? null,
+    bookedModules,
+  );
   const returnHref = useTraegerReturnHref();
   // The demo banner (#6193) sits above the header; the sidebar moves with it.
   const topOffset = portalSidebarTopOffset(useDemoBannerShown());
-  const groups = traegerNavGroupsFor(session ?? null, federalStates);
+  const groups = traegerNavGroupsFor(
+    session ?? null,
+    federalStates,
+    bookedModules,
+  );
   // Einklappbare Gruppen wie in der OGS-App (#7647): anfangs alle offen, der
   // Zustand bleibt im Browser, die Gruppe der aktuellen Seite ist immer offen.
   const { isGroupOpen, toggleGroup } = useStoredOpenGroups({
@@ -76,6 +101,7 @@ export function TraegerSidebar({
             label: item.label,
             concept: item.concept,
             active: isTraegerNavActive(item.href, pathname),
+            ...(item.locked ? lockedRow(item.label) : {}),
           }))}
           navItemAttribute="data-traeger-nav-item"
         />
@@ -127,6 +153,7 @@ export function TraegerSidebar({
               concept={item.concept}
               active={isTraegerNavActive(item.href, pathname)}
               data-traeger-nav-item={item.key}
+              {...(item.locked ? lockedRow(item.label) : {})}
             />
           ))}
         </PortalSidebarGroup>

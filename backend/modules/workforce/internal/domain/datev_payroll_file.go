@@ -37,7 +37,7 @@ type DatevPayrollLine struct {
 	Days            *float64
 	AmountCents     *int
 	// CostCenter marks the line of an employer besides the Träger in the
-	// one file of the Träger (#8041, ADR 0319); empty for every other line.
+	// one file of the Träger (#8041, ADR 0320); empty for every other line.
 	CostCenter string
 }
 

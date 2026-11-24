@@ -270,6 +270,7 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/einstellungen/briefkopf/vorlagen/:kind",
   "/einstellungen/dokumentarten",
   "/einstellungen/mitglieder",
+  "/einstellungen/module",
   "/einstellungen/schulrollen",
   "/einstellungen/zugriffsprotokoll",
   "/einstellungen/zustaendigkeiten",
@@ -308,6 +309,7 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/vertraege/module-zuordnen",
   "/vertraege/verknuepfen",
   "/vertraege/anmeldungen",
+  "/vertraege/geschwister",
   "/zeitvergleich",
 ] as const;
 

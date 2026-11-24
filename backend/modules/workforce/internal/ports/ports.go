@@ -484,7 +484,7 @@ type TraegerStaffStore interface {
 
 // TraegerPayrollEmployerStore keeps, in the Träger transaction, the payroll
 // values of the bodies that employ staff in place of the Träger and the
-// personnel numbers per employer at the Einsatzorte (#8041, ADR 0319).
+// personnel numbers per employer at the Einsatzorte (#8041, ADR 0320).
 type TraegerPayrollEmployerStore interface {
 	ListPayrollEmployers(ctx context.Context, organizationID int64) ([]domain.TraegerPayrollEmployer, error)
 	// LockPayrollEmployer locks the stored values of the body at the school

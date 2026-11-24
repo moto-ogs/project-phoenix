@@ -13,7 +13,7 @@ const traegerPayrollEmployersVersion = "20261124180000"
 func init() {
 	MigrationRegistry.Register(&Migration{
 		Version:     traegerPayrollEmployersVersion,
-		Description: "Lohnexport je Arbeitgeber: DATEV-Nummern und Kostenstelle von Schulträger und Gemeinde, Personalnummer je Arbeitgeber am Einsatzort (#8041, ADR 0319)",
+		Description: "Lohnexport je Arbeitgeber: DATEV-Nummern und Kostenstelle von Schulträger und Gemeinde, Personalnummer je Arbeitgeber am Einsatzort (#8041, ADR 0320)",
 		DependsOn: []string{
 			traegerStaffImportTrailVersion, // the last shape of the trail's field constraint
 			springerEmploymentEndVersion,   // the last shape of the Einsatzorte
@@ -23,7 +23,7 @@ func init() {
 }
 
 // traegerPayrollEmployersUpSQL adds what the Träger's payroll file needs for
-// an employer besides the Träger (#8041, ADR 0319):
+// an employer besides the Träger (#8041, ADR 0320):
 //
 //   - workforce.payroll_employers: per school and body (Schulträger or
 //     Gemeinde) the DATEV Berater- and Mandantennummer of the Lohn and the
@@ -57,7 +57,7 @@ CREATE TABLE workforce.payroll_employers (
 	)
 );
 COMMENT ON TABLE workforce.payroll_employers IS
-	'Payroll values of a Schulträger or a Gemeinde that employs the staff of a school of a Träger (#8041, ADR 0319): DATEV Berater- and Mandantennummer of its own payroll file and the Kostenstelle of its lines in the one file of the Träger; read and written in the Träger transaction (ADR 0105).';
+	'Payroll values of a Schulträger or a Gemeinde that employs the staff of a school of a Träger (#8041, ADR 0320): DATEV Berater- and Mandantennummer of its own payroll file and the Kostenstelle of its lines in the one file of the Träger; read and written in the Träger transaction (ADR 0105).';
 
 CREATE TRIGGER update_workforce_payroll_employers_updated_at
 	BEFORE UPDATE ON workforce.payroll_employers
@@ -83,7 +83,7 @@ ALTER TABLE workforce.staff_record_links
 		OR (employer_body IN ('schultraeger', 'gemeinde') AND employer_personnel_number ~ '^[0-9]{1,9}$')
 	);
 COMMENT ON COLUMN workforce.staff_record_links.employer_personnel_number IS
-	'Personnel number of the person with employer_body, the body that employs at this Einsatzort, when its Lohnbüro uses another number than the Träger (#8041, ADR 0319); the file per employer books it.';
+	'Personnel number of the person with employer_body, the body that employs at this Einsatzort, when its Lohnbüro uses another number than the Träger (#8041, ADR 0320); the file per employer books it.';
 
 ALTER TABLE workforce.staff_record_changes DROP CONSTRAINT chk_workforce_staff_record_changes_field;
 ALTER TABLE workforce.staff_record_changes ADD CONSTRAINT chk_workforce_staff_record_changes_field CHECK (field IN (

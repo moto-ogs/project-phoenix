@@ -257,7 +257,7 @@ func (m *SEPAMandates) familyOf(ctx context.Context, organizationID, contractID 
 	// A contract of another Träger is not among the recipients and names
 	// no family.
 	recipient, known := recipients[contractID]
-	key := parentbilling.ContractFamilyKey(recipient.Email, contractID)
+	key := recipient.FamilyOf(contractID)
 	if !known || key == "" {
 		return "", false, parentbilling.ErrFamilyUnknown
 	}

@@ -7,7 +7,7 @@ import (
 )
 
 // TraegerPayrollEmployer are the stored payroll values of a body that
-// employs the staff of a school in place of the Träger (#8041, ADR 0319):
+// employs the staff of a school in place of the Träger (#8041, ADR 0320):
 // the DATEV client of its own payroll file and the Kostenstelle of its
 // lines in the one file of the Träger.
 type TraegerPayrollEmployer struct {

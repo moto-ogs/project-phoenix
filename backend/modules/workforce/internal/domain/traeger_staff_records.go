@@ -63,7 +63,7 @@ type TraegerStaffLink struct {
 	ViaPool bool
 	// EmployerNumber is the personnel number with EmployerBody, the body
 	// that employs at this Einsatzort, when its Lohnbüro uses another one
-	// than the Träger (#8041, ADR 0319); nil keeps the Träger's number.
+	// than the Träger (#8041, ADR 0320); nil keeps the Träger's number.
 	EmployerBody   string
 	EmployerNumber *string
 }

@@ -107,7 +107,7 @@ type ReadersResponse struct {
 }
 
 type GuardianReaderResponse struct {
-	AccountID        string `json:"account_id" contract_text:"empty string when no guardian account is present"`
+	AccountID        string `json:"account_id" contract_text:"required legacy field, empty when no guardian account is present"`
 	Name             string `json:"name"`
 	RelationshipType string `json:"relationship_type,omitempty"`
 }
@@ -125,7 +125,7 @@ func toReadersResponse(readers communication.ParentMessageReaders) ReadersRespon
 	names, unnamed := communication.SplitParentMessageLeaderNames(readers.School.Names)
 	accountID := ""
 	if readers.Guardian.AccountID > 0 {
-		accountID = strconv.FormatInt(readers.Guardian.AccountID, 10)
+		accountID = ident.ID(readers.Guardian.AccountID).String()
 	}
 	return ReadersResponse{
 		Guardian: GuardianReaderResponse{

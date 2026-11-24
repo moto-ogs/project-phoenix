@@ -18,7 +18,7 @@ import (
 // schools (#4712, ADR 0089 section 11) at /traeger/staff-exports: the DATEV
 // payroll file and the time export, each with the check the page shows
 // before the download, and the payroll values of the employers besides the
-// Träger (#8041, ADR 0319). Every route needs the Träger right „Personal“;
+// Träger (#8041, ADR 0320). Every route needs the Träger right „Personal“;
 // each read of a month writes the access log entry of every school before
 // its values leave it.
 type ExportsResource struct {

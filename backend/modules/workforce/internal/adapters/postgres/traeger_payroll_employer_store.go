@@ -12,7 +12,7 @@ import (
 )
 
 // The payroll values of the bodies that employ staff in place of the Träger
-// and the personnel numbers per employer (#8041, ADR 0319), in the Träger
+// and the personnel numbers per employer (#8041, ADR 0320), in the Träger
 // transaction of their Träger.
 
 type payrollEmployerRow struct {

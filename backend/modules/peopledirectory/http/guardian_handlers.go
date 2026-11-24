@@ -176,7 +176,7 @@ func (rs *GuardianResource) guardianDeletePreview(w http.ResponseWriter, r *http
 }
 
 func parseExpectedGuardianLinkIDs(r *http.Request) ([]int64, error) {
-	raw := strings.TrimSpace(r.URL.Query().Get("expected_link_ids"))
+	raw := strings.TrimSpace(strings.Join(r.URL.Query()["expected_link_ids"], ","))
 	if raw == "" {
 		return nil, nil
 	}

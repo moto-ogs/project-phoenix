@@ -7,7 +7,11 @@ import {
   optional,
   requestBody,
   str,
+  type OpenEnum,
 } from "./runtime";
+
+export const DEMO_SESSION_ROLE_VALUES = ["all", "caregiver", "lead", "parent", "traeger"] as const;
+export type DemoSessionRole = (typeof DEMO_SESSION_ROLE_VALUES)[number];
 
 /** Go: account.demoAccessStatus */
 export interface demoAccessStatus {
@@ -47,7 +51,7 @@ export interface demoSessionRequest {
 /** Go: account.demoSessionFacts */
 export interface demoSessionFacts {
   access_id: string;
-  role?: string;
+  role?: OpenEnum<DemoSessionRole>;
   src?: string;
   fixed_role: boolean;
   traeger: boolean;

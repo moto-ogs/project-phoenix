@@ -30,6 +30,9 @@ type (
 type ContractStore interface {
 	Store
 	SignatureStore
+	// FamilyStore keeps the families of the contracts without a mail
+	// address (#7161).
+	ports.FamilyStore
 }
 
 // SignaturePorts are the root-bound ports of the signature.

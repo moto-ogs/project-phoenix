@@ -51,13 +51,10 @@ export const browserRoutePaths = {
     "POST /school/auth/mfa/verify": "/api/school/auth/mfa/verify",
   },
   tenant: {
-    "DELETE /api/settings/login-image": "/api/settings/login-image",
     "DELETE /api/settings/values/{key}": "/api/settings/values/{key}",
     "GET /api/display/dashboard": "/api/display/dashboard",
     "GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}": "/api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}",
-    "GET /api/settings/login-image": "/api/settings/login-image",
     "GET /demo/access/status": "/api/demo/access/status",
-    "POST /api/settings/login-image": "/api/settings/login-image",
     "POST /auth/invitations/{token}/accept": "/api/invitations/accept",
     "POST /auth/login": "/api/auth/login",
     "POST /auth/logout": "/api/auth/logout",
@@ -74,6 +71,13 @@ export const browserRoutePaths = {
     "POST /demo/access/sessions": "/api/demo/access/sessions",
     "PUT /api/settings/values/{key}": "/api/settings/values/{key}",
   },
+} as const;
+
+export const accountLogoutBrowserPaths = {
+  caterer: "/api/caterer/auth/logout",
+  parent: "/api/parent/auth/logout",
+  school: "/api/school/auth/logout",
+  traeger: "/api/traeger/auth/logout",
 } as const;
 
 export const noCommitRoutes = new Set<string>([

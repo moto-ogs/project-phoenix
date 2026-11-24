@@ -3,7 +3,7 @@
 // Die Personalnummer einer Akte (#4705, ADR 0089 Abschnitt 4): die Nummer
 // des Trägers, die an allen Schulen gilt, und je Einsatzort bei einer
 // Gemeinde oder einem Schulträger die Nummer, die dessen Lohnbüro nutzt
-// (#8041, ADR 0319). Ohne eigene Nummer gilt dort die des Trägers. Die
+// (#8041, ADR 0320). Ohne eigene Nummer gilt dort die des Trägers. Die
 // Datei je Arbeitgeber bucht mit ihr; die eine Datei des Trägers nicht.
 
 import { PencilSimpleIcon } from "@phosphor-icons/react";

@@ -174,7 +174,7 @@ type TraegerStaffEmployment struct {
 	// gemeinde), empty where the Träger employs.
 	EmployerBody string `json:"employer_body"`
 	// EmployerPersonnelNumber is the number the person has with that body
-	// when its Lohnbüro uses another one than the Träger (#8041, ADR 0319);
+	// when its Lohnbüro uses another one than the Träger (#8041, ADR 0320);
 	// nil keeps the Träger's number. EmployerNumberVersion is the read state
 	// a change sends back (ADR 0311).
 	EmployerPersonnelNumber *string `json:"employer_personnel_number"`
@@ -353,7 +353,7 @@ type TraegerStaffRecords interface {
 	UpdatePersonnelNumber(ctx context.Context, actor TraegerStaffActor, recordID int64, value *string) (TraegerStaffRecordDetail, error)
 	// UpdateEmployerNumber sets or, with nil, clears the personnel number of
 	// the record with the body that employs at its Einsatzort schoolID
-	// (#8041, ADR 0319). An Einsatzort the Träger employs at is
+	// (#8041, ADR 0320). An Einsatzort the Träger employs at is
 	// ErrTraegerStaffEmployerNotOther; a number changed since expectedVersion
 	// was read is readstate.ErrChanged.
 	UpdateEmployerNumber(ctx context.Context, actor TraegerStaffActor, recordID, schoolID int64, value *string, expectedVersion string) (TraegerStaffRecordDetail, error)

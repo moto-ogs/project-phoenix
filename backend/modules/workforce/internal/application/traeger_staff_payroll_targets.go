@@ -7,7 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 )
 
-// Where the month of an Einsatzort goes (#8041, ADR 0319): which employer
+// Where the month of an Einsatzort goes (#8041, ADR 0320): which employer
 // it belongs to, which file carries it, which Kostenstelle marks it and
 // under which personnel number it books.
 

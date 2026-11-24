@@ -13,7 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// The payroll file per employer (#8041, ADR 0319). OGS Nord employs through
+// The payroll file per employer (#8041, ADR 0320). OGS Nord employs through
 // the Träger, the Gemeinde Hardt employs the staff of OGS Süd. Mira works at
 // both, Jonas only at OGS Süd, Lea is a Springer of the Vertretungspool at
 // OGS Süd and so stays with the Träger.

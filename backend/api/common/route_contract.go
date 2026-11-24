@@ -46,6 +46,8 @@ type RouteContract struct {
 	Request any
 	// Response is a zero value of the type rendered as the envelope's data.
 	Response any
+	// PartialError names a problem whose details.result reuses Response.
+	PartialError string
 	// Paginated says the route answers through RespondPaginated.
 	Paginated bool
 	// NoData replaces Response on a route that answers no data: a 204, or

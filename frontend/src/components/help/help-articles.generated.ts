@@ -406,6 +406,8 @@ import type { traegerInvitationTopic as authored_traegerInvitationTopic } from "
 
 import type { traegerLoginTopic as authored_traegerLoginTopic } from "./articles/traeger-login";
 
+import type { traegerModulesTopic as authored_traegerModulesTopic } from "./articles/traeger-modules";
+
 import type { traegerNotificationFeedTopic as authored_traegerNotificationFeedTopic } from "./articles/traeger-notification-feed";
 
 import type { traegerOccupancyTopic as authored_traegerOccupancyTopic } from "./articles/traeger-occupancy";
@@ -5267,6 +5269,7 @@ export const modulesTopic = function modulesTopic(): HelpTopic {
       "Ohne `Online-Anmeldung` verschickt moto keine E-Mails zu Anmeldungen.",
       "Ohne `NFC-Anwesenheit` lässt sich kein Tablet mit der Geräte-PIN anmelden. Das Tablet zeigt dann einen Hinweis.",
       "Ohne `Zeiterfassung` kann dein Team am Tablet nicht stempeln. Anwesenheit mit Armband geht weiter.",
+      "`Träger-Übersicht`, `Ferienbetreuung`, `Verträge und Dokumente` und `Elternbeiträge und Abrechnung` nutzt dein Träger im Träger-Portal. In deiner OGS ändert sich dadurch kein Menüpunkt.",
     ],
     differences: [
       "Ein Menüpunkt hat ein Schloss? Dann gehört er zu einem Modul, das deine OGS nicht gebucht hat. Das Schloss siehst nur du als Leitung. Dein Team sieht den Menüpunkt nicht.",
@@ -11961,7 +11964,8 @@ export const traegerBriefkopfTopic =
  * Kinder und bestehende Verträge aus einer Datei importieren (#4723), auch
  * ohne Mail-Adresse der Eltern (#7360), ihre Vertragsangaben aus den
  * Originalunterlagen nachpflegen (#7767), importierte Verträge mit der
- * Kinderakte verknüpfen und ihre Anmeldungen nachtragen (#7760).
+ * Kinderakte verknüpfen und ihre Anmeldungen nachtragen (#7760) und
+ * Geschwister ohne Mail-Adresse zu einer Familie zusammenführen (#7161).
  */
 export const traegerCareContractsTopic =
   function traegerCareContractsTopic(): HelpTopic {
@@ -12082,13 +12086,31 @@ export const traegerCareContractsTopic =
             "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Pflicht sind Vorname und Nachname des Kindes.",
             "Hat deine Datei keine Spalte für die Schule, das Modul oder den Vertragsbeginn? Dann wählst du `Schule für alle Zeilen`, `Modul für alle Zeilen` und `Vertragsbeginn für alle Zeilen`.",
             "Nennt eine Zeile keine Eltern? moto übernimmt den Vertrag trotzdem. Er hat dann keinen Vertragspartner.",
-            "Steht eine Zeile auf `Bereit` und nennt die Eltern, aber keine Mail-Adresse? moto übernimmt den Vertrag trotzdem. Die Vorschau zählt diese Verträge. Unter `Ohne Mail` siehst du nur diese Zeilen. Die Familien bekommen keine Mail von moto und haben keinen Zugang zur Eltern-App. Rechnungen gibt es für sie nur auf Papier. Geschwister bleiben getrennte Familien. Hast du die Adressen? Dann trage sie in die Datei ein. Lade die Datei danach noch einmal.",
-            "Steht die `Debitorennummer` in der Datei? Ordne die Spalte zu. moto trägt die Nummer beim Zahler oder beim Kind ein, je nach deiner Einstellung. Fehlt die `E-Mail der Eltern`, gehört die Nummer zu diesem einen Vertrag. Geschwister erkennt moto nur über dieselbe E-Mail.",
+            "Steht eine Zeile auf `Bereit` und nennt die Eltern, aber keine Mail-Adresse? moto übernimmt den Vertrag trotzdem. Die Vorschau zählt diese Verträge. Unter `Ohne Mail` siehst du nur diese Zeilen. Die Familien bekommen keine Mail von moto und haben keinen Zugang zur Eltern-App. Rechnungen gibt es für sie nur auf Papier. Geschwister sind zuerst getrennte Familien. Du führst sie danach unter `Geschwister zusammenführen` zusammen. Hast du die Adressen? Dann trage sie in die Datei ein. Lade die Datei danach noch einmal.",
+            "Steht die `Debitorennummer` in der Datei? Ordne die Spalte zu. moto trägt die Nummer beim Zahler oder beim Kind ein, je nach deiner Einstellung. Fehlt die `E-Mail der Eltern`, gehört die Nummer zu diesem einen Vertrag. Geschwister erkennt moto von selbst nur über dieselbe E-Mail.",
             "Zählt deine Geschwisterregel alle Kinder der Familie? Ordne die Spalte `Kinder in der Familie` zu. Die Zahl gilt dann als bestätigt ab Vertragsbeginn. Das Feld siehst du nur mit dem Recht `Abrechnung`. Ohne das Recht trägt die Abrechnung die Zahlen später unter `Kinderzahl` nach.",
             "Prüfe die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. `Schon vorhanden` heißt: Das Kind hat an der Schule schon einen Vertrag. Bei `Fehlerhaft` steht der Grund in der Spalte `Hinweis`.",
             "Wähle unten `übernehmen`. Die Verträge stehen danach in der Liste mit dem Status `Aktiv`.",
             "Fehler in der Datei? Korrigiere die Datei und lade sie noch einmal. moto legt kein Kind doppelt an.",
-            "Danach verknüpfst du die Verträge mit der Kinderakte. Wie das geht, steht im nächsten Abschnitt.",
+            "Hat die Datei keine Mail-Adressen? Dann führe Geschwister zuerst zusammen, siehe nächster Abschnitt. Sonst zahlt jedes Kind den Preis des ersten Kindes.",
+            "Danach verknüpfst du die Verträge mit der Kinderakte. Wie das geht, steht weiter unten.",
+          ],
+        },
+        {
+          title: "Geschwister ohne Mail-Adresse zusammenführen",
+          description:
+            "Ohne Mail-Adresse kennt moto jeden Vertrag nur einzeln. Jeder ist eine eigene Familie. Dann gilt kein Geschwisterpreis, und ein Mandat für zwei Geschwister zeigt der Mandatsimport als Konflikt. Hier legst du fest, welche Kinder Geschwister sind. moto führt nichts von selbst zusammen. Das darf, wer das Recht `Verträge verwalten` oder `Abrechnung` hat.",
+          steps: [
+            "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Geschwister zusammenführen`. Nach einem Import führt dich auch `Geschwister zusammenführen` dorthin.",
+            "Die Liste zeigt jede Familie ohne Mail-Adresse, nach Nachnamen. Geschwister mit demselben Nachnamen stehen untereinander. Mit der Suche findest du Kind, Eltern oder Vertragsnummer.",
+            "Kreuze die Familien an, die zusammengehören. Unten erscheint eine Leiste. Wähle dort `Zusammenführen`.",
+            "Wähle im Fenster, welcher Vertrag die Familie führt. Von ihm kommen Debitorennummer, Zahlungsweg und SEPA-Mandat der Familie. Eine Debitorennummer je Kind bleibt beim Kind.",
+            "Wähle `Zusammenführen`. Die Spalte `Familie` zeigt jetzt zum Beispiel `2 Kinder zusammen`. Im nächsten Monatslauf zählen die Kinder als Geschwister.",
+            "Kommt danach der Mandatsimport, gilt ein Mandat mit derselben Referenz für beide Kinder.",
+            "Falsch zusammengeführt? Wähle bei der Familie das Menü mit den drei Punkten und dann zum Beispiel `Mila Schulz lösen`. Bestätige mit `Lösen`. Danach gilt für das Kind wieder, was bei seinem Vertrag gespeichert war.",
+            "Unter `Verlauf` siehst du, wer wann welche Kinder zusammengeführt oder gelöst hat.",
+            "Die Liste als Datei? Wähle oben rechts das Menü mit den drei Punkten und dann PDF, Excel oder CSV.",
+            "Ausgestellte Rechnungen ändern sich nicht. Das Zusammenführen gilt für Monatsläufe, die danach rechnen.",
           ],
         },
         {
@@ -14636,6 +14658,52 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
 } satisfies typeof authored_traegerLoginTopic;
 
 /**
+ * moto-Module im Träger-Portal (#6052). Die Seite `moto-Module` unter
+ * `Einstellungen` zeigt ihren Stand; Navigation und Seiten
+ * folgen dem Register (lib/traeger-modules.ts). Das Schloss sieht nur, wer
+ * das Träger-Büro leitet. „moto-Modul“, weil „Modul“ im Träger-Portal auch
+ * die Betreuungsmodule eines Vertrags meint.
+ */
+export const traegerModulesTopic = function traegerModulesTopic(): HelpTopic {
+  return {
+    id: HELP_TOPICS.traegerModules,
+    title: "Welche moto-Module hat mein Träger?",
+    question: "Welche moto-Module hat mein Träger?",
+    summary:
+      "Unter `Einstellungen` siehst du, welche moto-Module dein Träger gebucht hat.",
+    group: "konfiguration",
+    audience: "traeger",
+    icon: "PuzzlePiece",
+    steps: [
+      "Wähle unten in der Navigation `Einstellungen`.",
+      "Wähle `moto-Module`.",
+      "Bei jedem moto-Modul steht `Gebucht` oder `Nicht gebucht`.",
+    ],
+    result: "Du weißt, welche Bereiche dein Träger-Büro nutzen kann.",
+    notes: [
+      "Schulen, Schließtage, Anmeldephasen, Dokumente, Personal und die Einstellungen hat jeder Träger.",
+      "`Träger-Übersicht` öffnet Dashboard, Belegung, Auslastung, Ankunft und Abholung, Standortvergleich, Berichte und `Länger als gebucht`.",
+      "`Ferienbetreuung` öffnet die Ferienzeiträume mit ihren Anmeldungen. Ohne das moto-Modul können Eltern sich nicht mehr für Ferien anmelden. Der Link zur Anmeldung ist dann geschlossen.",
+      "`Verträge und Dokumente` öffnet die Betreuungsverträge.",
+      "`Elternbeiträge und Abrechnung` öffnet Abrechnungsläufe, Familien und Zahlung, Preise und Ermäßigungen, die Dokumentarten und die Vorgaben für Rechnungen.",
+      "Ein moto-Modul gilt für deinen Träger, sobald eine deiner Schulen es gebucht hat. Was gebucht ist, steht im Vertrag mit moto.",
+      "Ohne `Elternbeiträge und Abrechnung` fehlen auf einem Vertrag die Karten `Empfänger und Zahlung` und `SEPA-Lastschriftmandat`.",
+    ],
+    differences: [
+      "Ein Menüpunkt hat ein Schloss? Dann gehört er zu einem moto-Modul, das keine deiner Schulen gebucht hat. Das Schloss sieht nur, wer das Träger-Büro leitet. Alle anderen sehen den Menüpunkt nicht.",
+      "Eine Seite sagt `ist nicht gebucht`? Dann gehört sie zu einem moto-Modul, das keine deiner Schulen gebucht hat. Die Seite nennt das moto-Modul.",
+      "Das `Dashboard` fehlt? Ohne `Träger-Übersicht` startet das Träger-Portal mit `Schulen`.",
+      "Unter `Abrechnungsvorgaben` stehen nur die Bankverbindungen? Die übrigen Vorgaben gehören zu `Elternbeiträge und Abrechnung`.",
+    ],
+    troubleshootingDetails: [
+      "Du brauchst ein weiteres moto-Modul, oder eines ist falsch eingetragen? Wende dich an das moto-Team. Nur das moto-Team kann moto-Module buchen oder abbestellen.",
+      "Ein moto-Modul wurde abbestellt? Die Daten bleiben gespeichert, bis ihre Löschfrist abläuft. Verschickte Verträge können Eltern weiter unterschreiben. Brauchst du die Daten noch, frage das moto-Team nach einem Export.",
+    ],
+    related: [HELP_TOPICS.traegerSettings, HELP_TOPICS.traegerLogin],
+  };
+} satisfies typeof authored_traegerModulesTopic;
+
+/**
  * Die Glocke oben rechts im Träger-Portal (#7146): die Hinweise aller Schulen
  * des Trägers, jeweils mit dem Namen der Schule. Erster Typ ist der
  * Schließtag einer Schule.
@@ -14716,7 +14784,7 @@ export const traegerOccupancyTopic =
   } satisfies typeof authored_traegerOccupancyTopic;
 
 /**
- * `/traeger/personal/lohnexport` (#4712, ADR 0250; #8041, ADR 0319): die
+ * `/traeger/personal/lohnexport` (#4712, ADR 0250; #8041, ADR 0320): die
  * DATEV-Lohndatei über alle Schulen mit eigenen Lohnarten je Art des
  * Vertrags, als eine Datei für den ganzen Träger oder als eine Datei je
  * Arbeitgeber, der Zeitexport als CSV mit seinen festen Spalten und die

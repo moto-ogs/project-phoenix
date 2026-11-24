@@ -10,10 +10,6 @@ const (
 	profileSettingAnalyticsEnabled      = "analytics.enabled"
 	profileSettingPresenceMode          = "operations.presence_mode"
 	profileSettingAttendanceNFC         = "module.nfc_anwesenheit"
-	profileSettingModuleTraeger         = "module.traeger_uebersicht"
-	profileSettingModuleFerien          = "module.ferienbetreuung"
-	profileSettingModuleVertraege       = "module.vertraege"
-	profileSettingModuleBeitraege       = "module.elternbeitraege"
 	profileSettingAttendanceWeb         = "attendance.web_enabled"
 	profileSettingSessionEndTime        = "operations.session_end_time"
 	profileSettingOverviewScope         = "operations.operational_overview_scope"
@@ -146,9 +142,6 @@ func demoPayrollSettings() map[string]SeedSetting {
 
 func fullOperationSettings() map[string]SeedSetting {
 	settings := fullOperationFeatureSettings()
-	for key, setting := range notOfferedModuleSettings() {
-		settings[key] = setting
-	}
 	// The public form goes online only with a privacy notice (#7176).
 	for key, setting := range enrollmentPrivacyNoticeProfileSettings() {
 		settings[key] = setting
@@ -166,19 +159,6 @@ func demoHistorySettings() map[string]SeedSetting {
 		// The Feedbackhistorie of a child shows the seeded feedback (#5029);
 		// the feedback API refuses to store entries while it is off.
 		profileSettingFeedbackEnabled: {Value: json.RawMessage(`true`), ManagedBy: SettingManagedByTenant},
-	}
-}
-
-// notOfferedModuleSettings cancels the modules moto does not offer yet, so
-// the Module tab shows booked and not booked switches (#4892). Writes run in
-// key order: Elternbeiträge goes before the Verträge it requires.
-func notOfferedModuleSettings() map[string]SeedSetting {
-	cancelled := SeedSetting{Value: json.RawMessage(`false`), ManagedBy: SettingManagedByOperator}
-	return map[string]SeedSetting{
-		profileSettingModuleTraeger:   cancelled,
-		profileSettingModuleFerien:    cancelled,
-		profileSettingModuleVertraege: cancelled,
-		profileSettingModuleBeitraege: cancelled,
 	}
 }
 

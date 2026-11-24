@@ -33,7 +33,7 @@ func TestParentHolidayRegistrationLinksNameTheLinksTraegerOnly(t *testing.T) {
 		DB: f.db, People: owners.EnrollmentFlowGuardianDirectory{}, Observe: func(deliveryContract.Observation) {},
 	})
 	require.NoError(t, err)
-	links := newParentHolidayRegistrationLinks(organizations, delivery.Module, testHealthCipher(), nil, slog.Default(), holidayFixtureNow)
+	links := newParentHolidayRegistrationLinks(organizations, delivery.Module, testHealthCipher(), nil, nil, slog.Default(), holidayFixtureNow)
 	resolve := func(token string) (int64, []int64, error) {
 		var organizationID int64
 		var schoolIDs []int64

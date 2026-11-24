@@ -46,6 +46,7 @@ func TestNoNumericIdentifierRatchet(t *testing.T) {
 	integers := namedScalarTypes(files, module, builtinIntegers, true)
 	textTypes := namedScalarTypes(files, module, builtinStrings, false)
 	found := formattedIdentifierFields(files, module, integers, textTypes)
+	found = append(found, problemIdentifierOrigins(files, module, integers)...)
 	for _, file := range files {
 		if !seamPackage(file.dir) {
 			continue

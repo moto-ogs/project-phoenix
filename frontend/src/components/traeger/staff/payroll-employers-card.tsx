@@ -1,6 +1,6 @@
 "use client";
 
-// Die Lohnwerte der Arbeitgeber neben dem Träger (#8041, ADR 0319): je
+// Die Lohnwerte der Arbeitgeber neben dem Träger (#8041, ADR 0320): je
 // Schule, an der eine Gemeinde oder ein Schulträger das Personal anstellt,
 // die Berater- und Mandantennummer ihrer eigenen Datei und die Kostenstelle
 // ihrer Zeilen in der einen Datei des Trägers. Welche Werte gebraucht

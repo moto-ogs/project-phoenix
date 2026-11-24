@@ -11,7 +11,7 @@ const (
 	KeyTraegerPayrollConsultantNumber = "traeger_payroll.datev_consultant_number"
 	KeyTraegerPayrollClientNumber     = "traeger_payroll.datev_client_number"
 	// KeyTraegerPayrollFileForm chooses one file for the whole Träger or one
-	// file per employer (#8041, ADR 0319).
+	// file per employer (#8041, ADR 0320).
 	KeyTraegerPayrollFileForm = "traeger_payroll.file_form"
 )
 

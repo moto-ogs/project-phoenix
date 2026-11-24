@@ -412,7 +412,7 @@ describe("guardian-api functions", () => {
         }),
       ).resolves.toBeUndefined();
       expect(global.fetch).toHaveBeenCalledWith(
-        "/api/guardians/1?force=true&expected_link_ids=10%2C20",
+        "/api/guardians/1?force=true&expected_link_ids=10&expected_link_ids=20",
         {
           method: "DELETE",
         },

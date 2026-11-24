@@ -1171,7 +1171,7 @@ class StaffAbsenceService {
   ): Promise<Record<string, MailOutcome>> {
     if (absenceIds.length === 0) return {};
     const mails = await bffJson("tenant", "GET /api/staff/absences/mails", {
-      query: { ids: absenceIds.join(",") },
+      query: { ids: absenceIds },
     });
     const outcomes: Record<string, MailOutcome> = {};
     for (const [id, outcome] of Object.entries(mails.absences ?? {})) {

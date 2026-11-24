@@ -30,7 +30,7 @@ const (
 	TraegerPayrollFormatLug   = "datev_lug"
 )
 
-// The forms of the payroll file (#8041, ADR 0319): one file for the whole
+// The forms of the payroll file (#8041, ADR 0320): one file for the whole
 // Träger, whose lines of another employer carry its Kostenstelle, or one
 // file per employer with its own DATEV client.
 const (
@@ -181,7 +181,7 @@ type TraegerExportMonth struct {
 }
 
 // TraegerPayrollEmployerValues are the payroll values of a body that
-// employs the staff of a school in place of the Träger (#8041, ADR 0319):
+// employs the staff of a school in place of the Träger (#8041, ADR 0320):
 // the DATEV client of its own file and the Kostenstelle of its lines in the
 // one file of the Träger. Version is the read state a save sends back (ADR
 // 0311); readstate.Absent while nothing is stored.
@@ -288,7 +288,7 @@ type TraegerPayrollReport struct {
 	Year   int    `json:"year"`
 	Month  int    `json:"month"`
 	Format string `json:"format"`
-	// Form is the form of the file the Träger chose (ADR 0319).
+	// Form is the form of the file the Träger chose (ADR 0320).
 	Form      string                    `json:"form"`
 	Contracts int                       `json:"contracts"`
 	People    int                       `json:"people"`
@@ -359,7 +359,7 @@ type TraegerStaffExports interface {
 	TimeReport(ctx context.Context, actor TraegerStaffActor, month TraegerExportMonth) (TraegerTimeReport, error)
 	TimeFile(ctx context.Context, actor TraegerStaffActor, month TraegerExportMonth) (TraegerExportFile, error)
 	// PayrollEmployers lists the bodies that employ staff of a school with
-	// their payroll values (#8041, ADR 0319); it reads no person.
+	// their payroll values (#8041, ADR 0320); it reads no person.
 	PayrollEmployers(ctx context.Context, actor TraegerStaffActor) (TraegerPayrollEmployerList, error)
 	// SavePayrollEmployer stores the payroll values of the body that employs
 	// the staff of schoolID. A body that does not employ there is
