@@ -14,9 +14,11 @@ import {
   getAdminRequestMails,
 } from "~/lib/enrollment-admin-api";
 import { formatBerlinDate, formatTime } from "~/lib/date-helpers";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSwrPollingRecovery } from "~/lib/hooks/use-swr-polling-recovery";
-import { useSWRAuth } from "~/lib/swr";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  MAIL_RECONCILE_MS,
+  useMailStatusRead,
+} from "~/lib/hooks/use-mail-status-read";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 
 const REQUEST_MAIL_LABELS: Record<string, string> = {
@@ -38,22 +40,20 @@ const CHECK_REQUEST_ADDRESS = `Ist das Kind schon aufgenommen: ${CHECK_ADDRESS_A
 
 const NO_MAILS: AdminRequestMail[] = [];
 
-// What became of the mails to the family (#5934). Polls every 15 s while the
-// tab is visible (SWR skips hidden tabs).
+// Follow active delivery; reconcile quiet requests for mails sent elsewhere.
 export function useRequestMails(requestId: string) {
-  const { data, error, mutate } = useSWRAuth(
+  const { data, error, mutate } = useMailStatusRead(
     enrollmentKeys.requestMails(requestId),
     () => getAdminRequestMails(requestId),
-    { keepPreviousData: false, refreshInterval: 15_000 },
+    (mails) =>
+      mails.some((mail) => mail.awaiting_feedback) ? 15_000 : MAIL_RECONCILE_MS,
+    15_000,
   );
-  useSwrPollingRecovery(error, mutate, 15_000);
-  const load = useSwrResourceLoadError(
-    [{ data, error }],
-    "der Stand der E-Mails",
-    () => mutate(),
+  const loadError = useSwrLoadError(error, "der Stand der E-Mails", () =>
+    mutate(),
   );
   const refresh = useCallback(() => mutate(), [mutate]);
-  return { mails: data ?? NO_MAILS, loadError: load.error, refresh };
+  return { mails: data ?? NO_MAILS, loadError, refresh };
 }
 
 /**

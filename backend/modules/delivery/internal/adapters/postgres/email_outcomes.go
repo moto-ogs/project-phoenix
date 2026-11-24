@@ -13,7 +13,7 @@ import (
 // caller's tenant transaction, without payload. The address of a mail is compared
 // in the list's form, which idx_email_outbox_school_kind_address serves.
 const emailOutcomeColumns = `outbox.id, outbox.kind, outbox.related_entity_type, outbox.related_entity_id,
-		outbox.status, outbox.delivery_state, COALESCE(outbox.delivery_state_at, outbox.sent_at) AS outcome_at,
+		outbox.created_at, outbox.status, outbox.delivery_state, COALESCE(outbox.delivery_state_at, outbox.sent_at) AS outcome_at,
 		COALESCE(outbox.delivery_state_recorded_at, outbox.delivery_state_at) AS state_age_from, outbox.attempts, outbox.last_error, LOWER(TRIM(outbox.recipient->>'address')) AS address,
 		suppression.reason AS address_mark,
 		EXISTS (SELECT 1 FROM platform.delivery_guardian_contacts AS contact
@@ -26,6 +26,7 @@ const emailOutcomeColumns = `outbox.id, outbox.kind, outbox.related_entity_type,
 		AND suppression.address = LOWER(TRIM(outbox.recipient->>'address'))`
 
 type emailOutcomeRow struct {
+	CreatedAt     time.Time  `bun:"created_at"`
 	ID            int64      `bun:"id"`
 	Kind          string     `bun:"kind"`
 	RelatedType   *string    `bun:"related_entity_type"`
@@ -55,6 +56,7 @@ func (row emailOutcomeRow) report(now time.Time) deliveryContract.EmailOutcomeRe
 		report.Mark = deliveryContract.EmailAddressMark(*row.AddressMark)
 	}
 	report.Outcome = deliveryContract.EmailOutcomeAt(deliveryContract.EmailOutcomeOf(row.Status, row.DeliveryState, row.LastError, report.Mark), row.StateAgeFrom, now)
+	report.AwaitingFeedback = report.Outcome.AwaitingFeedback(row.CreatedAt, row.OutcomeAt, row.StateAgeFrom, now)
 	return report
 }
 

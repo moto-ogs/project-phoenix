@@ -296,6 +296,7 @@ export function getStaffAppointmentOverview(
  * address. A kind without a mail is absent.
  */
 export interface CalendarAppointmentMails {
+  readonly awaitingFeedback?: boolean;
   readonly kinds: Readonly<Record<string, MailOutcomeCounts>>;
   readonly not_arrived?: Readonly<Record<string, readonly string[]>>;
 }
@@ -316,6 +317,7 @@ function appointmentMails(
   answer: calendarContract.AppointmentMails,
 ): CalendarAppointmentMails {
   return {
+    awaitingFeedback: answer.awaiting_feedback,
     kinds: Object.fromEntries(
       Object.entries(answer.kinds ?? {}).map(([kind, counts]) => [
         kind,

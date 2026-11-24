@@ -14,10 +14,12 @@ import { Loading } from "~/components/ui/loading";
 
 interface AnnouncementViewsAccordionProps {
   readonly announcementId: string;
+  readonly expired?: boolean;
 }
 
 export function AnnouncementViewsAccordion({
   announcementId,
+  expired = false,
 }: AnnouncementViewsAccordionProps) {
   const [isOpen, setIsOpen] = useState(false);
   const {
@@ -27,7 +29,11 @@ export function AnnouncementViewsAccordion({
   } = useSWRAuth(
     isOpen ? operatorAnnouncementKeys.stats(announcementId) : null,
     () => operatorAnnouncementsService.fetchStats(announcementId),
-    { keepPreviousData: false, refreshInterval: 30000 },
+    {
+      keepPreviousData: false,
+      revalidateOnFocus: true,
+      refreshInterval: expired ? 0 : 30_000,
+    },
   );
   const {
     data: viewDetails,

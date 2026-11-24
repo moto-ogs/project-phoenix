@@ -82,10 +82,10 @@ func TestAbsenceMailsShowWhatBecameOfThem(t *testing.T) {
 		var decisions map[int64]string
 		tenantCtx(func(txCtx context.Context) error {
 			var err error
-			if requests, err = status.AbsenceRequestMails(txCtx, []int64{absenceID}); err != nil {
+			if requests, _, err = status.AbsenceRequestMails(txCtx, []int64{absenceID}); err != nil {
 				return err
 			}
-			decisions, err = status.AbsenceDecisionMails(txCtx, []int64{absenceID})
+			decisions, _, err = status.AbsenceDecisionMails(txCtx, []int64{absenceID})
 			return err
 		})
 		return requests, decisions

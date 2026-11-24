@@ -94,10 +94,28 @@ func AddressesHeldAtProvider(latest map[string]EmailOutcomeReport) []string {
 	return addresses
 }
 
+// EmailFeedbackWindow is how long an accepted mail may remain without an event.
+const EmailFeedbackWindow = 24 * time.Hour
+
 // EmailDelayLimit ends the wait for a delayed mail. Mail servers give up after a
 // few days, usually with a bounce (RFC 5321 suggests four to five). If no final
 // event came by then, a new mail is allowed again and an alarm goes off.
 const EmailDelayLimit = 5 * 24 * time.Hour
+
+// AwaitingFeedback distinguishes a live delivery from a silent provider without
+// relabelling an accepted mail as delivered. Late events still update the outcome.
+func (o EmailOutcome) AwaitingFeedback(created time.Time, outcomeAt, stateAgeFrom *time.Time, now time.Time) bool {
+	switch o {
+	case EmailQueued:
+		return now.Sub(created) < EmailFeedbackWindow
+	case EmailAccepted:
+		return outcomeAt != nil && now.Sub(*outcomeAt) < EmailFeedbackWindow
+	case EmailDelayed:
+		return stateAgeFrom != nil && now.Sub(*stateAgeFrom) <= EmailDelayLimit
+	default:
+		return false
+	}
+}
 
 // EmailSendBlock says why sending again would do nothing or do harm.
 type EmailSendBlock string
@@ -204,16 +222,17 @@ func EmailSendBlockOf(mark EmailAddressMark, stopped bool, latest EmailOutcome, 
 // EmailOutcomeReport is the outcome of one mail. It carries no address: a
 // consumer that shows one owns it.
 type EmailOutcomeReport struct {
-	MailID      int64
-	Kind        string
-	RelatedType string
-	RelatedID   int64
-	Address     string
-	Outcome     EmailOutcome
-	Mark        EmailAddressMark
-	Stopped     bool
-	OutcomeAt   *time.Time
-	Attempts    int
+	MailID           int64
+	Kind             string
+	RelatedType      string
+	RelatedID        int64
+	Address          string
+	Outcome          EmailOutcome
+	Mark             EmailAddressMark
+	Stopped          bool
+	AwaitingFeedback bool
+	OutcomeAt        *time.Time
+	Attempts         int
 }
 
 // EmailOutcomeQuery names the mails of some related entities, of the given

@@ -17,13 +17,15 @@ import {
   sumMailOutcomeCounts,
   type MailOutcomeCounts,
 } from "~/lib/email-delivery-status";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
   getStaffAppointmentMails,
   type CalendarAppointmentMails,
 } from "~/lib/personal-calendar-api";
-import { useSwrPollingRecovery } from "~/lib/hooks/use-swr-polling-recovery";
-import { useSWRAuth } from "~/lib/swr";
+import {
+  MAIL_RECONCILE_MS,
+  useMailStatusRead,
+} from "~/lib/hooks/use-mail-status-read";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 /** The kinds in the order a family receives them, named like the subject. */
@@ -34,21 +36,16 @@ const APPOINTMENT_MAIL_KINDS = [
   ["appointment_reminder", "Erinnerung"],
 ] as const;
 
-// SWR pauses the refresh while the tab is hidden.
-const POLL_MS = 15_000;
-
 /** The mails of the appointment, refreshed while the page is visible. */
 function useAppointmentMails(appointmentId: string) {
-  const { data, error, mutate } = useSWRAuth(
+  const { data, error, mutate } = useMailStatusRead(
     tenantDailyKeys.appointmentMails(appointmentId),
     () => getStaffAppointmentMails(appointmentId),
-    { refreshInterval: POLL_MS, keepPreviousData: false },
+    (mails) => (mails.awaitingFeedback ? 15_000 : MAIL_RECONCILE_MS),
+    15_000,
   );
-  useSwrPollingRecovery(error, mutate, POLL_MS);
-  const { error: loadError } = useSwrResourceLoadError(
-    [{ data, error }],
-    "der Stand der E-Mails",
-    () => mutate(),
+  const loadError = useSwrLoadError(error, "der Stand der E-Mails", () =>
+    mutate(),
   );
   return { mails: data ?? null, loadError };
 }

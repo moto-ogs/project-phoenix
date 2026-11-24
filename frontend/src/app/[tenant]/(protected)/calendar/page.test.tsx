@@ -96,6 +96,7 @@ vi.mock("~/lib/swr", async () => {
         ? detail
         : mockUseSWRAuth(key, fetcher, ...options);
     },
+    useTenantMutate: () => vi.fn(),
     useSWRPreload:
       () => async (key: string, fetcher: () => Promise<unknown>) => {
         const value = await fetcher();

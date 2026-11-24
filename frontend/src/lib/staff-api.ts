@@ -1166,19 +1166,18 @@ class StaffAbsenceService {
   // Ob die Mails zu Entscheidungen und Rückfragen bei der Person ankamen
   // (#7058): je Antrag das Ergebnis der neuesten Mail. Ein Antrag ohne Mail
   // fehlt.
-  async decisionMails(
-    absenceIds: readonly string[],
-  ): Promise<Record<string, MailOutcome>> {
-    if (absenceIds.length === 0) return {};
+  async decisionMails(absenceIds: readonly string[]) {
+    const outcomes: Record<string, MailOutcome> = {};
+    if (absenceIds.length === 0)
+      return { mails: outcomes, awaitingFeedback: false };
     const mails = await bffJson("tenant", "GET /api/staff/absences/mails", {
       query: { ids: absenceIds },
     });
-    const outcomes: Record<string, MailOutcome> = {};
     for (const [id, outcome] of Object.entries(mails.absences ?? {})) {
       const known = knownMailOutcome(outcome);
       if (known) outcomes[id] = known;
     }
-    return outcomes;
+    return { mails: outcomes, awaitingFeedback: mails.awaiting_feedback };
   }
 
   // Rückfrage: moves a requested absence into status "question" with a

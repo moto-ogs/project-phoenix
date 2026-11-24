@@ -22,9 +22,7 @@ const (
 	emailWebhookGrace = 30 * time.Minute
 	// emailRecheckInterval rotates through the open mails.
 	emailRecheckInterval = time.Hour
-	// emailEventSilence is how long an accepted mail may go without any event.
-	emailEventSilence   = 24 * time.Hour
-	emailReconcileBatch = 100
+	emailReconcileBatch  = 100
 )
 
 // The alarms of a reconciliation. Lettermint gives up on a webhook after 12
@@ -195,10 +193,10 @@ func (r *EmailReconciliation) recordEvents(ctx context.Context, mail domain.Prov
 // last asked about. An open mail is asked about for up to 28 days, and it counts
 // only the first time: the check that follows is already past the limit.
 func turnedSilent(mail domain.ProviderMail, now time.Time) bool {
-	if now.Sub(mail.SentAt) <= emailEventSilence {
+	if now.Sub(mail.SentAt) <= deliveryContract.EmailFeedbackWindow {
 		return false
 	}
-	return mail.CheckedAt == nil || mail.CheckedAt.Sub(mail.SentAt) <= emailEventSilence
+	return mail.CheckedAt == nil || mail.CheckedAt.Sub(mail.SentAt) <= deliveryContract.EmailFeedbackWindow
 }
 
 // turnedOverdue reports whether the mail's delay passed the limit since it was

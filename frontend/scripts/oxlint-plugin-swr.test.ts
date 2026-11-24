@@ -20,6 +20,7 @@ const RULE = "swr(no-direct-import)";
 describe.concurrent("swr/no-direct-import", () => {
   it.each([
     ["useSWRAuth", "~/lib/swr"],
+    ["useMailStatusRead", "~/lib/hooks/use-mail-status-read"],
     ["useConfirmedSWR", "~/lib/hooks/use-confirmed-resource"],
     ["useUnreadCount", "~/lib/hooks/use-unread-count"],
   ])("checks forwarded keys of %s, including aliases", async (hook, source) => {

@@ -25863,6 +25863,12 @@
       "go_type": "timetracking.AbsenceDecisionMailsResponse",
       "fields": [
         {
+          "name": "awaiting_feedback",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "absences",
           "schema": {
             "kind": "map",
@@ -26170,6 +26176,12 @@
       "name": "AbsenceRequestMailsResponse",
       "go_type": "timetracking.AbsenceRequestMailsResponse",
       "fields": [
+        {
+          "name": "awaiting_feedback",
+          "schema": {
+            "kind": "bool"
+          }
+        },
         {
           "name": "absences",
           "schema": {
@@ -31388,6 +31400,13 @@
       "name": "AppointmentMails",
       "go_type": "portal.AppointmentMails",
       "fields": [
+        {
+          "name": "awaiting_feedback",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
         {
           "name": "kinds",
           "schema": {
@@ -60333,6 +60352,12 @@
       "go_type": "messaging.GroupThreadMailsResponse",
       "fields": [
         {
+          "name": "awaiting_feedback",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "messages",
           "schema": {
             "kind": "map",
@@ -87346,6 +87371,13 @@
       "go_type": "enrollment.RequestMailOutcome",
       "fields": [
         {
+          "name": "awaiting_feedback",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "kind",
           "schema": {
             "kind": "string"
@@ -108017,6 +108049,12 @@
       "name": "ThreadMailsResponse",
       "go_type": "messaging.ThreadMailsResponse",
       "fields": [
+        {
+          "name": "awaiting_feedback",
+          "schema": {
+            "kind": "bool"
+          }
+        },
         {
           "name": "messages",
           "schema": {

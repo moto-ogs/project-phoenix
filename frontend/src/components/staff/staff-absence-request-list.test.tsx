@@ -100,7 +100,7 @@ function decidedRow(): StaffAbsenceRequestRow {
 describe("StaffAbsenceRequestList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    decisionMails.mockResolvedValue({});
+    decisionMails.mockResolvedValue({ mails: {}, awaitingFeedback: false });
   });
 
   it("zeigt offene Anträge mit Namen und Entscheidungs-Schaltflächen", async () => {
@@ -168,7 +168,10 @@ describe("StaffAbsenceRequestList", () => {
   // #7058: ob die Mail zur Entscheidung bei der Person ankam.
   it("zeigt eine nicht zugestellte Mail zur Entscheidung schon in der zugeklappten Zeile", async () => {
     listRequests.mockResolvedValue([decidedRow()]);
-    decisionMails.mockResolvedValue({ "18": "undeliverable" });
+    decisionMails.mockResolvedValue({
+      mails: { "18": "undeliverable" },
+      awaitingFeedback: false,
+    });
 
     render(
       <StaffAbsenceRequestList
@@ -193,7 +196,10 @@ describe("StaffAbsenceRequestList", () => {
       openRow(),
       { ...openRow(), id: "19", status: "question", decision_note: "Wer?" },
     ]);
-    decisionMails.mockResolvedValue({ "19": "delivered" });
+    decisionMails.mockResolvedValue({
+      mails: { "19": "delivered" },
+      awaitingFeedback: false,
+    });
 
     render(
       <StaffAbsenceRequestList

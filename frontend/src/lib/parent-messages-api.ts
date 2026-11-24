@@ -223,9 +223,7 @@ export async function fetchThread(threadId: string): Promise<ThreadDetail> {
  * What became of the e-mail of each OGS message in a conversation (#7058),
  * keyed by message id. A message without a mail has no key.
  */
-export async function fetchThreadMails(
-  threadId: string,
-): Promise<Readonly<Record<string, MailOutcome>>> {
+export async function fetchThreadMails(threadId: string) {
   const result = await bffJson(
     "tenant",
     "GET /api/messages/threads/{threadId}/mails",
@@ -240,7 +238,7 @@ export async function fetchThreadMails(
     const known = knownMailOutcome(outcome);
     if (known) mails[messageId] = known;
   }
-  return mails;
+  return { mails: mails, awaitingFeedback: result.awaiting_feedback };
 }
 
 /**
