@@ -48,6 +48,10 @@ type SeriesRequest struct {
 type SeriesSplitRequest struct {
 	SeriesRequest
 	ExpectedVersion string `json:"expected_version"`
+	// ExpectedOccurrenceVersion is the version of the opened occurrence
+	// (occurrence_shift_id). A split effective today rewrites it in place and
+	// refuses it when it changed since that read.
+	ExpectedOccurrenceVersion string `json:"expected_occurrence_version,omitempty"`
 }
 
 // SeriesResponse is the wire format for series create/split/end results.
@@ -281,6 +285,7 @@ func (rs *Resource) splitSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ExpectedVersion = req.ExpectedVersion
+	input.ExpectedOccurrenceVersion = req.ExpectedOccurrenceVersion
 	actor, ok := rs.actor(w, r)
 	if !ok {
 		return

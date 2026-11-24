@@ -67,6 +67,11 @@ vi.mock("~/lib/hooks/use-berlin-today", () => ({
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
   useToast: () => ({ success: mocks.toastSuccess, error: vi.fn() }),
+  useApiErrorDisplay: () => ({
+    show: vi.fn(),
+    showMessage: vi.fn(),
+    clear: vi.fn(),
+  }),
 }));
 
 vi.mock("~/lib/calendar-period-api", () => ({

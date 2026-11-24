@@ -4,7 +4,7 @@ import { staff as staffKeys } from "~/lib/swr/staff";
 import { timetableKeys } from "~/lib/swr/portal-keys";
 import { useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
-import type { KeyedMutator } from "~/lib/swr";
+import { revalidateOrThrow, type KeyedMutator } from "~/lib/swr";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 import { hasPermission } from "~/lib/auth-utils";
@@ -106,6 +106,12 @@ export interface UseDienstplanDataResult {
   scheduleLoading: boolean;
   /** Re-fetches whichever data path is currently active. */
   retryLoad: () => void;
+  /**
+   * Reads the week's shifts again and rejects when the read fails (ADR
+   * 0311): a refused save shows the stored shift only from a read that
+   * succeeded.
+   */
+  reloadShifts: () => Promise<StaffShift[]>;
   /** Invalidates every cache a sick report can affect: this week's
    *  Dienstplan, the Vertretungsplan, and the absence lists surfaced
    *  elsewhere (#1843). */
@@ -143,17 +149,18 @@ export function useDienstplanData(
   // self-service surfaces (#1843).
   const refreshPlanCaches = useTenantMutateMatching(PLAN_CACHE_KEY_PREFIXES);
 
-  const {
-    data: overview,
-    error: overviewError,
-    isLoading: overviewLoading,
-    mutate: mutateOverview,
-  } = useSWRAuth<StaffScheduleOverview>(
+  const overviewRead = useSWRAuth<StaffScheduleOverview>(
     canUseAssignmentOverview
       ? tenantDailyKeys.dienstplanOverview(weekFrom, weekTo)
       : null,
     () => staffShiftService.getOverview(weekFrom, weekTo),
   );
+  const {
+    data: overview,
+    error: overviewError,
+    isLoading: overviewLoading,
+    mutate: mutateOverview,
+  } = overviewRead;
 
   const {
     data: legacyStaff,
@@ -165,17 +172,18 @@ export function useDienstplanData(
     () => staffKeys.fetcher(),
   );
 
-  const {
-    data: legacyShifts,
-    error: legacyShiftsError,
-    isLoading: legacyShiftsLoading,
-    mutate: mutateLegacyShifts,
-  } = useSWRAuth<StaffShift[]>(
+  const legacyShiftsRead = useSWRAuth<StaffShift[]>(
     canUseAssignmentOverview
       ? null
       : tenantDailyKeys.dienstplanShifts(weekFrom, weekTo),
     () => staffShiftService.getShifts(weekFrom, weekTo),
   );
+  const {
+    data: legacyShifts,
+    error: legacyShiftsError,
+    isLoading: legacyShiftsLoading,
+    mutate: mutateLegacyShifts,
+  } = legacyShiftsRead;
 
   const {
     data: shiftTypes,
@@ -256,6 +264,13 @@ export function useDienstplanData(
     mutateLegacyStaff,
     mutateLegacyShifts,
   ]);
+  const reloadShifts = useCallback(
+    async () =>
+      canUseAssignmentOverview
+        ? (await revalidateOrThrow(overviewRead)).shifts
+        : revalidateOrThrow(legacyShiftsRead),
+    [canUseAssignmentOverview, overviewRead, legacyShiftsRead],
+  );
   return {
     canManageAbsences,
     reducedPath: !canUseAssignmentOverview,
@@ -272,6 +287,7 @@ export function useDienstplanData(
     scheduleError,
     scheduleLoading,
     retryLoad,
+    reloadShifts,
     refreshPlanCaches,
   };
 }

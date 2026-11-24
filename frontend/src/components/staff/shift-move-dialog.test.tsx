@@ -95,6 +95,7 @@ function renderDialog(
   overrides: {
     shift?: StaffShift;
     shiftTypes?: readonly ShiftType[];
+    reloadShifts?: () => Promise<readonly StaffShift[]>;
   } = {},
 ) {
   const onClose = vi.fn();
@@ -108,6 +109,7 @@ function renderDialog(
       shiftTypes={overrides.shiftTypes ?? [shiftType]}
       onClose={onClose}
       onDataChanged={onDataChanged}
+      reloadShifts={overrides.reloadShifts}
     />,
   );
   return { onClose, onDataChanged };
@@ -362,6 +364,79 @@ describe("ShiftMoveDialog person change", () => {
         catalogText("general.business_rejection", "die Schicht"),
       ),
     ).toBeInTheDocument();
+  });
+
+  // ADR 0311: der Umzug schickt den Stand der Schicht, aus dem das Formular
+  // stammt; nach einer Ablehnung füllt der gespeicherte Stand das Formular,
+  // und erst der nächste Umzug schickt dessen Stand.
+  it("moves over the version it opened and refills from the stored shift after a refusal", async () => {
+    const refusal = shiftError(
+      409,
+      "changed since it was read",
+      "general.changed_since_read",
+    );
+    vi.mocked(staffShiftService.moveShift)
+      .mockRejectedValueOnce(refusal)
+      .mockResolvedValueOnce(baseShift());
+    const stored = baseShift({
+      startTime: "09:00",
+      endTime: "13:00",
+      version: "v2",
+    });
+    const reloadShifts = vi.fn().mockResolvedValue([stored]);
+    const { onDataChanged } = renderDialog({
+      shift: baseShift({ version: "v1" }),
+      reloadShifts,
+    });
+
+    await confirmMove();
+
+    await waitFor(() => expect(reloadShifts).toHaveBeenCalledTimes(1));
+    expect(staffShiftService.moveShift).toHaveBeenLastCalledWith(
+      "1",
+      expect.objectContaining({ expectedVersion: "v1", startTime: "08:00" }),
+    );
+    expect(onDataChanged).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Verschieben" })).toBeEnabled(),
+    );
+
+    await confirmMove();
+
+    await waitFor(() =>
+      expect(staffShiftService.moveShift).toHaveBeenCalledTimes(2),
+    );
+    expect(staffShiftService.moveShift).toHaveBeenLastCalledWith(
+      "1",
+      expect.objectContaining({
+        expectedVersion: "v2",
+        startTime: "09:00",
+        endTime: "13:00",
+      }),
+    );
+  });
+
+  it("keeps moving locked when the read after a refusal fails", async () => {
+    vi.mocked(staffShiftService.moveShift).mockRejectedValueOnce(
+      shiftError(
+        409,
+        "changed since it was read",
+        "general.changed_since_read",
+      ),
+    );
+    const reloadShifts = vi.fn().mockRejectedValue(new Error("offline"));
+    renderDialog({ shift: baseShift({ version: "v1" }), reloadShifts });
+
+    await confirmMove();
+
+    await waitFor(() => expect(reloadShifts).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Verschieben" }),
+      ).toHaveAttribute("aria-disabled", "true"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Verschieben" }));
+    expect(staffShiftService.moveShift).toHaveBeenCalledTimes(1);
   });
 
   it("marks the field of a refused move", async () => {

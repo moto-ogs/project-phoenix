@@ -3684,6 +3684,7 @@ export interface ShiftResponse {
   origin_shift_id?: string;
   series_occurrence_date?: string;
   planned_by_traeger?: boolean;
+  version?: string;
 }
 
 export const ShiftResponseSchema: z.ZodType<ShiftResponse, unknown> = object<ShiftResponse>({
@@ -3704,6 +3705,7 @@ export const ShiftResponseSchema: z.ZodType<ShiftResponse, unknown> = object<Shi
   origin_shift_id: optional(int64String),
   series_occurrence_date: optional(str),
   planned_by_traeger: optional(bool),
+  version: optional(str),
 });
 
 /** Go: schoolcalendar.Holiday */

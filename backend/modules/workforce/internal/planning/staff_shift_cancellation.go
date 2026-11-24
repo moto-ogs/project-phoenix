@@ -48,6 +48,9 @@ type CancelShiftInput struct {
 	TraegerAccountID int64
 	// WorkingTime confirms the working-time warnings of the covers (#4708).
 	WorkingTime workforce.WorkingTimeConfirmation
+	// Read is what the planner read, the shift and its covers; nil checks
+	// nothing.
+	Read *workforce.ShiftReadState
 }
 
 // CancelShiftResult reports the updated origin and the freshly created covers.
@@ -88,6 +91,10 @@ func (s *staffShiftService) ApplyCancellation(ctx context.Context, input CancelS
 	}
 	covers, err := s.reloadLockedCovers(ctx, existing.ID, lockedStaffIDs)
 	if err != nil {
+		return nil, err
+	}
+	// The covers are rebuilt from the request: the planner read these (ADR 0311).
+	if err := checkCancellationRead(input.Read, existing, covers); err != nil {
 		return nil, err
 	}
 	grandfatheredTypesByStaff := grandfatheredCoverTypes(covers)

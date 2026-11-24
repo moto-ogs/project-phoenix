@@ -43,6 +43,7 @@ function shift(patch: Partial<TraegerPlanningShift>): TraegerPlanningShift {
     endTime: "16:00",
     breakMinutes: 0,
     notes: "",
+    version: "v9",
     cancelled: false,
     shiftTypeName: null,
     shiftTypeColor: null,
