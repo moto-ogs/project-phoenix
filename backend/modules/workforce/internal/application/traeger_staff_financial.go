@@ -111,8 +111,8 @@ func (t *TraegerStaff) writeFinancial(ctx context.Context, actor workforce.Traeg
 // The record is read and deleted under its lock, which every write of its
 // values and links takes. A record whose values or Einsatzorte changed while
 // the schools were written is not deleted: the return runs again on the
-// changed record, and a value changed meanwhile wins at every school, being
-// newer than anything a school holds. After dissolveAttempts the
+// changed record, and a value changed meanwhile wins at every school the
+// earlier attempt wrote (markNewer). After dissolveAttempts the
 // dissolution is refused as changed (ADR 0311).
 func (t *TraegerStaff) Dissolve(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64) error {
 	var read dissolution
@@ -124,7 +124,7 @@ func (t *TraegerStaff) Dissolve(ctx context.Context, actor workforce.TraegerStaf
 	if err != nil {
 		return publicTraegerStaffError(err)
 	}
-	newer := map[string]bool{}
+	newer := map[employmentKey]map[string]bool{}
 	for attempt := 1; ; attempt++ {
 		if err := t.returnToSchools(ctx, actor, read, newer); err != nil {
 			return err
@@ -136,12 +136,28 @@ func (t *TraegerStaff) Dissolve(ctx context.Context, actor workforce.TraegerStaf
 		if attempt == dissolveAttempts {
 			return readstate.ErrChanged
 		}
-		for _, field := range domain.FinancialStaffFields {
-			if read.values[field] != current.values[field] {
-				newer[field] = true
-			}
-		}
+		markNewer(newer, read, current)
 		read = current
+	}
+}
+
+// markNewer records, per Einsatzort of the earlier read, the fields the
+// record changed since: that attempt already wrote them to its school, so
+// the changed value must win there whatever the stamps say. An Einsatzort
+// linked meanwhile gets no mark: its link may have held a newer value of its
+// school back (HoldSchoolFinancialRow), which the stamps rule decides.
+func markNewer(newer map[employmentKey]map[string]bool, read, current dissolution) {
+	for _, link := range read.record.Links {
+		key := employmentKey{link.SchoolID, link.StaffID}
+		for _, field := range domain.FinancialStaffFields {
+			if read.values[field] == current.values[field] {
+				continue
+			}
+			if newer[key] == nil {
+				newer[key] = map[string]bool{}
+			}
+			newer[key][field] = true
+		}
 	}
 }
 
@@ -213,10 +229,10 @@ func sameLinks(a, b []domain.TraegerStaffLink) bool {
 
 // returnToSchools returns the values to every Einsatzort of the read record,
 // each in its school's transaction.
-func (t *TraegerStaff) returnToSchools(ctx context.Context, actor workforce.TraegerStaffActor, read dissolution, newer map[string]bool) error {
+func (t *TraegerStaff) returnToSchools(ctx context.Context, actor workforce.TraegerStaffActor, read dissolution, newer map[employmentKey]map[string]bool) error {
 	for _, link := range read.record.Links {
 		err := t.ports.Runtime.WithinSchool(ctx, link.SchoolID, func(ctx context.Context) error {
-			return t.returnToSchool(ctx, actor, link, read, newer)
+			return t.returnToSchool(ctx, actor, link, read, newer[employmentKey{link.SchoolID, link.StaffID}])
 		})
 		if err != nil {
 			return publicTraegerStaffError(fmt.Errorf("return to school %d: %w", link.SchoolID, err))
@@ -280,8 +296,8 @@ func (t *TraegerStaff) returnToSchool(ctx context.Context, actor workforce.Traeg
 // left), gets the record's values. A row stamped after the link is one the
 // link held back (HoldSchoolFinancialRow) or an earlier attempt of the
 // dissolution wrote: it keeps a value unless the trail changed or imported
-// that field after the row's stamp, or the field changed while the
-// dissolution ran (newer), a value then emptied included. Both stamps are
+// that field after the row's stamp, or the field changed after an earlier
+// attempt wrote this school (newer), a value then emptied included. Both stamps are
 // on the database clock (ADR 0280).
 func returnedFinancial(link domain.TraegerStaffLink, rows []domain.StaffFinancialData, school map[string]string, read dissolution, newer map[string]bool) map[string]string {
 	if len(rows) == 0 || !rows[0].UpdatedAt.After(link.LinkedAt) {

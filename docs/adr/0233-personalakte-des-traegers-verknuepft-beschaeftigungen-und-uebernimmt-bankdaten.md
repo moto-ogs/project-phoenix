@@ -149,14 +149,17 @@ Eingabe neuer ist:
    Wert wird gelöscht.
 
 Workforce liest Akte und Zeitpunkte im Verlauf in der Träger-Transaktion unter
-der Sperre der Akte, die jedes Schreiben ihrer Werte und Einsatzorte nimmt,
-und schreibt jede Schule in ihrer Tenant-Transaktion unter der Sperre der
+der Sperre der Akte, die jedes Schreiben ihrer Werte und Einsatzorte nimmt.
+Ein Springer-Einsatz (`workforce.pool_link`) nimmt sie nicht selbst, wartet
+aber mit seinem Verlaufseintrag über dessen Fremdschlüssel auf sie. Workforce
+schreibt jede Schule in ihrer Tenant-Transaktion unter der Sperre der
 Beschäftigung (ADR 0105). Gelöscht wird die Akte erst, wenn sie unter
 erneuter Sperre noch dieselben Werte und Einsatzorte hat. Hat die
 Personalverwaltung währenddessen gespeichert oder verknüpft, gibt die
 Auflösung die Werte noch einmal zurück: Ein in dieser Zeit geänderter Wert
-ist neuer als alles bei den Schulen und gewinnt überall, ein neuer
-Einsatzort bekommt die Werte der Akte. Ändert sich die Akte auch beim dritten
+gewinnt an jedem Einsatzort, den der vorige Versuch schon geschrieben hat.
+Ein neuer Einsatzort folgt den Regeln 1 bis 3; eine Zeile, die sein
+Verknüpfen gehalten hat, bleibt also stehen. Ändert sich die Akte auch beim dritten
 Versuch, wird die Auflösung als geändert abgelehnt (ADR 0311); die Akte
 bleibt. Beide Zeitstempel stammen aus der
 Datenbankuhr (ADR 0280). Jedes Feld, das sich bei der Schule ändert, steht mit

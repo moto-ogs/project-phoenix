@@ -337,3 +337,28 @@ func TestDissolveRefusesARecordThatKeepsChanging(t *testing.T) {
 	require.ErrorIs(t, service.Dissolve(context.Background(), dissolveActor(), 7), readstate.ErrChanged)
 	assert.False(t, store.dissolved)
 }
+
+// An Einsatzort linked while the dissolution writes the schools holds a
+// newer IBAN its school saved during the link (HoldSchoolFinancialRow), and
+// the link changed the record's IBAN. The value the record changed meanwhile
+// wins only at the Einsatzorte the earlier attempt already wrote: the newly
+// linked school keeps the IBAN the Personalverwaltung has not seen.
+func TestDissolveKeepsARowHeldByALinkDuringTheDissolution(t *testing.T) {
+	t.Parallel()
+	service, store, _ := dissolveFixture(t)
+	linkedAt := store.writtenAt.Add(time.Minute)
+	store.meanwhile = func(s *dissolveStore) {
+		s.meanwhile = nil
+		s.record.Links = append(s.record.Links, domain.TraegerStaffLink{SchoolID: 4, StaffID: 12, LinkedAt: linkedAt})
+		require.NoError(t, service.sealRecordFinancial(&s.record, map[string]string{domain.StaffFieldIBAN: recordIBANLater, domain.StaffFieldTaxID: recordTax}))
+		s.changedAt = map[string]time.Time{domain.StaffFieldIBAN: linkedAt}
+		s.rows[12] = schoolRow(t, service, map[string]string{domain.StaffFieldIBAN: schoolIBAN}, linkedAt.Add(time.Second))
+	}
+
+	require.NoError(t, service.Dissolve(context.Background(), dissolveActor(), 7))
+	assert.True(t, store.dissolved)
+	assert.Equal(t, schoolIBAN, schoolValues(t, service, store, 12)[domain.StaffFieldIBAN],
+		"the school linked meanwhile keeps the IBAN it held")
+	assert.Equal(t, recordIBANLater, schoolValues(t, service, store, 10)[domain.StaffFieldIBAN],
+		"a school written before the change gets the record's new IBAN")
+}
