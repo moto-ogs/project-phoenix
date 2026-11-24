@@ -4,6 +4,11 @@
 // docs/agents/frontend-api.md#browser-calls.
 import type { z } from "zod";
 import {
+  browserRoutePaths,
+  noCommitRoutes,
+} from "./contract/browser-traits.generated";
+import { commits } from "./contract/commit";
+import {
   ApiError,
   apiErrorFromResponse,
   unavailableApiError,
@@ -40,32 +45,8 @@ type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 type AnyRoute<P extends Portal> =
   | (typeof portalRoutes)[P][number]
   | (P extends keyof typeof routeFileRoutes
-      ? (typeof routeFileRoutes)[P][number]
+      ? Extract<(typeof routeFileRoutes)[P][number], { browserPath: string }>
       : never);
-
-/**
- * A sign-in, second factor, renewal or switch step: its route file keeps the
- * tokens and answers the BFF's own `{ status, data }` (#7833). The generated
- * answer is the backend's, not the browser's, so these steps are no routes
- * of bffJson under their Go keys; the BFF defines its own browser entries.
- */
-const SESSION_STEP =
-  "the answer carries or ends the tokens the portal's route file turns into its session cookie";
-
-type RouteFileReason = {
-  [
-    P in keyof typeof routeFileRoutes
-  ]: (typeof routeFileRoutes)[P][number] extends infer R
-    ? R extends { routeFile: infer T extends string }
-      ? T
-      : never
-    : never;
-}[keyof typeof routeFileRoutes];
-
-// Fails to compile once the generator words the reason differently, so the
-// session steps never slip into bffJson with the backend's answer type.
-const sessionStepAnchor: RouteFileReason = SESSION_STEP;
-void sessionStepAnchor;
 
 // A JSON route: its answer is one decoder, or one per variant that a query
 // parameter picks (GET /api/students/ and its `view`). File answers, the
@@ -73,7 +54,7 @@ void sessionStepAnchor;
 // routes of this helper.
 type JsonRoute<P extends Portal> = Exclude<
   Extract<AnyRoute<P>, { response: z.ZodType } | { variantParam: string }>,
-  { routeFile: typeof SESSION_STEP } | { plain: true }
+  { browserOwnContract: true } | { plain: true }
 >;
 
 type KeyOf<R> = R extends {
@@ -101,7 +82,7 @@ type FileRouteOf<P extends Portal, K extends FileRouteKey<P>> =
     : never;
 
 /** A registered JSON route of the portal: `"GET /api/activities/categories"`. */
-export type RouteKey<P extends Portal> = KeyOf<JsonRoute<P>>;
+type RouteKey<P extends Portal> = KeyOf<JsonRoute<P>>;
 
 type RouteOf<P extends Portal, K extends RouteKey<P>> =
   JsonRoute<P> extends infer R
@@ -138,7 +119,7 @@ type Answer<R, V> = R extends { variantParam: string; response: infer M }
  * What the call resolves to: the `data` of the answer, a paginated list
  * also its `pagination`; `null` for a route without data and for a 204.
  */
-export type BffResult<R, V = never> =
+type BffResult<R, V = never> =
   Answer<R, [V] extends [never] ? DefaultVariant<R> : V> extends {
     data: infer D;
     pagination: infer G;
@@ -341,7 +322,11 @@ function browserPath(
   pattern: string,
   params: Readonly<Record<string, string>> = {},
   query?: Readonly<Record<string, QueryValue>>,
+  key?: string,
 ): `/api/${string}` {
+  const explicit = key && browserRoutePathsForPortal(portal)?.[key];
+  if (explicit)
+    return `${fillRoutePath(explicit, params)}${routeSearch(query)}` as `/api/${string}`;
   const { mount, bff } = PORTALS[portal];
   const filled = fillRoutePath(pattern, params);
   const underMount =
@@ -352,6 +337,16 @@ function browserPath(
     atBff ? filled : bff + (underMount ? filled.slice(mount.length) : filled)
   ).replace(/\/+$/, "");
   return `${path}${routeSearch(query)}` as `/api/${string}`;
+}
+
+function browserRoutePathsForPortal(
+  portal: Portal,
+): Readonly<Record<string, string>> | undefined {
+  return (
+    browserRoutePaths as Partial<
+      Record<Portal, Readonly<Record<string, string>>>
+    >
+  )[portal];
 }
 
 type AddressRoute<P extends Portal, K extends KeyOf<AnyRoute<P>>> =
@@ -382,10 +377,14 @@ export function bffPath<P extends Portal, K extends KeyOf<AnyRoute<P>>>(
     route.slice(route.indexOf(" ") + 1),
     opts?.params,
     opts?.query,
+    route,
   );
 }
 
-type PathOptions<R> = ParamsOf<R> & QueryOf<R, VariantOf<R>>;
+type BrowserPattern<R> = R extends { browserPath: infer P extends string }
+  ? { pattern: P }
+  : R;
+type PathOptions<R> = ParamsOf<BrowserPattern<R>> & QueryOf<R, VariantOf<R>>;
 
 /** Sends through the portal's row; a failure is the ApiError. */
 async function send(
@@ -432,6 +431,7 @@ async function call<T>(
   method: Method,
   url: string,
   options: SendOptions & { body?: unknown },
+  noCommit?: string,
 ): Promise<T> {
   const { errorMessage } = options;
   const init = requestInit(method, options);
@@ -450,10 +450,9 @@ async function call<T>(
     // The proxy decodes every answer, so this is a broken BFF route. A
     // write may have happened: the person reloads before trying again.
     throw new ApiError(message(502), 502, {
-      code:
-        method === "GET"
-          ? "general.unavailable"
-          : "general.write_answer_unreadable",
+      code: commits({ method, noCommit })
+        ? "general.write_answer_unreadable"
+        : "general.unavailable",
     });
   }
   const { data, pagination } = answer as {
@@ -516,12 +515,19 @@ export function bffJson(
     route.slice(space + 1),
     opts.params,
     opts.query,
+    route,
   );
-  return call(portal, method, url, {
-    ...opts,
-    noRetryAfterRenewal:
-      portal === "tenant" && Object.hasOwn(TENANT_NO_RETRY, route),
-  });
+  return call(
+    portal,
+    method,
+    url,
+    {
+      ...opts,
+      noRetryAfterRenewal:
+        portal === "tenant" && Object.hasOwn(TENANT_NO_RETRY, route),
+    },
+    noCommitRoutes.has(route) ? route : undefined,
+  );
 }
 
 type FileHrefOptions<R> = ParamsOf<R> & QueryOf<R, never>;
@@ -543,7 +549,7 @@ export function bffFileHref<
         query?: Record<string, QueryValue>;
       }
     | undefined;
-  return browserPath(portal, route.slice(4), opts?.params, opts?.query);
+  return browserPath(portal, route.slice(4), opts?.params, opts?.query, route);
 }
 
 /**

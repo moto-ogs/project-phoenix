@@ -23,7 +23,7 @@ import {
 
 vi.unmock("swr");
 const { owner } = vi.hoisted(() => ({
-  owner: { id: "account-7", scope: "tenant", tenantId: 42 },
+  owner: { id: "account-7", scope: "tenant", tenantId: "42" },
 }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({

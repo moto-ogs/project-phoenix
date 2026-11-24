@@ -149,7 +149,7 @@ describe("TenantGuard", () => {
 
   it("renders children when session tenant matches URL tenant", () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -191,7 +191,7 @@ describe("TenantGuard", () => {
 
   it("shows switching state when mismatch detected", () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -215,7 +215,7 @@ describe("TenantGuard", () => {
   it("calls performTenantSwitch + update on mismatch", async () => {
     const mockUpdate = vi.fn().mockResolvedValue(undefined);
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: mockUpdate,
     });
@@ -249,7 +249,7 @@ describe("TenantGuard", () => {
   it("revalidates the mounted views after the switch went through", async () => {
     const mockUpdate = vi.fn().mockResolvedValue(undefined);
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: mockUpdate,
     });
@@ -281,7 +281,7 @@ describe("TenantGuard", () => {
   it("auto-switches with the subdomain when slug differs (#1975)", async () => {
     const mockUpdate = vi.fn().mockResolvedValue(undefined);
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: mockUpdate,
     });
@@ -312,7 +312,7 @@ describe("TenantGuard", () => {
 
   it("stops automatic switching and offers explicit target login when MFA proof is missing", async () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -338,7 +338,7 @@ describe("TenantGuard", () => {
 
   it("leads a Träger session the target school refused for its remembered device back to the Träger sign-in with code (#6955)", async () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -373,7 +373,7 @@ describe("TenantGuard", () => {
 
   it("signs out when switchTenant reports access denied", async () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -400,7 +400,7 @@ describe("TenantGuard", () => {
 
   it("offers recovery when automatic sign-out after access denial fails", async () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -606,7 +606,7 @@ describe("TenantGuard", () => {
 
   it("does not sign out on transient switch failures", async () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -634,7 +634,7 @@ describe("TenantGuard", () => {
 
   it("retries after a remount instead of persisting a failed slug marker", async () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -679,7 +679,7 @@ describe("TenantGuard", () => {
 
   it("renders children when tenant context is null", () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -707,7 +707,7 @@ describe("TenantGuard", () => {
     mockUseSession.mockReturnValue({
       data: {
         user: {
-          tenantId: 1,
+          tenantId: "1",
           roles: [],
         },
         error: "RefreshTokenError",
@@ -757,7 +757,7 @@ describe("TenantGuard", () => {
         mockUseSession.mockReturnValue({
           data:
             status === "authenticated"
-              ? { user: { tenantId: 1 }, error: "RefreshTokenError" }
+              ? { user: { tenantId: "1" }, error: "RefreshTokenError" }
               : null,
           status,
           update: vi.fn(),
@@ -793,7 +793,7 @@ describe("TenantGuard", () => {
     mockUseSession.mockReturnValue({
       data: {
         user: {
-          tenantId: 1,
+          tenantId: "1",
           token: "access-token",
           roles: [],
         },
@@ -833,7 +833,7 @@ describe("TenantGuard", () => {
       mockUsePathname.mockReturnValue(pathname);
       mockUseSession.mockReturnValue({
         data: {
-          user: { tenantId: 1, roles: [] },
+          user: { tenantId: "1", roles: [] },
           error: "RefreshTokenError",
         },
         status: "authenticated",
@@ -863,7 +863,7 @@ describe("TenantGuard", () => {
   describe("when the mismatch survives the switch (#3375)", () => {
     function mismatchedSession() {
       mockUseSession.mockReturnValue({
-        data: { user: { tenantId: 1, token: "access-token" } },
+        data: { user: { tenantId: "1", token: "access-token" } },
         status: "authenticated",
         update: vi.fn().mockResolvedValue(undefined),
       });
@@ -1021,7 +1021,7 @@ describe("TenantGuard", () => {
   // bound to its school (#5130).
   describe("when a tenant route refuses the session", () => {
     const sessionOf = (tenantId: number) => ({
-      user: { tenantId, token: "access-token" },
+      user: { tenantId: String(tenantId), token: "access-token" },
     });
 
     /**

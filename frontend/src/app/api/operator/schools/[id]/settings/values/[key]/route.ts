@@ -1,6 +1,5 @@
-import { invalidateTenantResolve } from "~/lib/tenant-resolve.server";
+import { purgeTenantSettingsCache } from "~/lib/tenant-settings-cache.server";
 import { requireStringParam } from "~/lib/route-wrapper-utils.server";
-import { revalidatePath } from "next/cache";
 import type { NextRequest } from "next/server";
 import { createLogger } from "~/lib/logger";
 import {
@@ -20,13 +19,13 @@ const logger = createLogger({
   component: "OperatorSchoolSettingsValuesRoute",
 });
 
-async function resolveSchoolSlug(
+async function resolveSchoolSubdomain(
   schoolId: string,
   token: string,
 ): Promise<string | null> {
   try {
     // No dedicated single-school endpoint exists; the summaries list is the
-    // cheapest server-side path that returns the slug for an operator. List
+    // cheapest server-side path that returns the subdomain for an operator. List
     // size is bounded (one entry per school in the platform) so a single
     // server-to-server call per write is acceptable for an admin action.
     // Identifiers arrive as strings (ADR 0300).
@@ -36,9 +35,9 @@ async function resolveSchoolSlug(
     );
     if (!result.ok) throw result.error.cause;
     const match = result.value.data.find((school) => school.id === schoolId);
-    return match?.slug ?? null;
+    return match?.subdomain ?? null;
   } catch (error) {
-    logger.warn("school_slug_lookup_failed", {
+    logger.warn("school_subdomain_lookup_failed", {
       school_id: schoolId,
       error: error instanceof Error ? error.message : String(error),
     });
@@ -53,18 +52,17 @@ async function revalidateTenantIfNeeded(
 ): Promise<void> {
   if (!TENANT_RESOLVE_AFFECTING_KEYS.has(key)) return;
 
-  const slug = await resolveSchoolSlug(schoolId, token);
-  if (!slug) {
-    logger.warn("tenant_revalidate_skipped_no_slug", {
+  const subdomain = await resolveSchoolSubdomain(schoolId, token);
+  if (!subdomain) {
+    logger.warn("tenant_revalidate_skipped_no_subdomain", {
       school_id: schoolId,
       key,
     });
     return;
   }
 
-  invalidateTenantResolve(slug);
-  revalidatePath(`/${slug}`, "layout");
-  logger.info("tenant_cache_revalidated", { slug, key });
+  purgeTenantSettingsCache(subdomain);
+  logger.info("tenant_cache_revalidated", { subdomain, key });
 }
 
 export const PUT = createOperatorPutHandler(

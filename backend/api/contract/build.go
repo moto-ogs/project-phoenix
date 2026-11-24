@@ -181,6 +181,7 @@ func (b *builder) route(rc Registration, options Options) (Route, error) {
 		File: rc.File, Multipart: rc.Multipart, TooLargeCode: rc.TooLargeCode, PublicFile: rc.PublicFile, PublicUpload: rc.PublicUpload,
 		FileCache: rc.FileCache, ConditionalGet: rc.ConditionalGet,
 		PrivateCache: rc.PrivateCache, RouteFile: rc.RouteFile, Plain: rc.Plain,
+		BrowserPath: rc.BrowserPath, BrowserMethod: rc.BrowserMethod, BrowserOwnContract: rc.BrowserOwnContract,
 	}
 	where := route.Key()
 	if rc.Method == "" || !strings.HasPrefix(rc.Pattern, "/") {

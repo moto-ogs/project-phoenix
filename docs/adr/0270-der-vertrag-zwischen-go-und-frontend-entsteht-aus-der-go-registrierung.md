@@ -82,6 +82,17 @@ scheiterte der zweite Weg an zwei Stellen:
 8. **Ein Typ mit eigenem `MarshalJSON` braucht einen Eintrag im Generator.**
    Ohne Eintrag bricht die Erzeugung ab.
 
+## Nachtrag vom 2026-11-24: Browser-Adresse und Status
+
+Eine `RouteFile`-Registrierung hält den Go-Aufruf aus den Proxy-Listen.
+`BrowserPath` nennt zusätzlich die Adresse einer Routendatei für
+`bffPath`. Ohne sie bleibt der Go-Schlüssel serverseitig.
+`BrowserOwnContract` lässt die Adresse zu, aber nicht den Go-Request oder
+die Go-Antwort in `bffJson`, etwa bei der Cookie-Anmeldung. Weicht die
+Methode ab, nennt `BrowserMethod` die Methode der Routendatei.
+Alle JSON-Proxy-Wege behalten den Erfolgsstatus des Backends. Browser und
+Server behandeln eine unlesbare Antwort nach `NoCommit` wie bei einem GET.
+
 ## Folgen
 
 - Der Generator verlinkt die `http`-Pakete aller angemeldeten Routen. Mit
@@ -133,8 +144,7 @@ Body als JSON. Jede dieser Routen brauchte deshalb eine eigene Datei.
    `Content-Disposition`, `Content-Length`, `X-Content-Type-Options`);
    `Range`, `ETag`, `Last-Modified` und `Accept-Ranges` gingen nie durch und
    gehen auch jetzt nicht durch. Jede Antwort einer Datei-Route ist
-   `private, no-store`, auch eine Ablehnung, wie bei
-   `withPrivateDownloadNoStore`. Ein Backend-Fehler bleibt sein
+   `private, no-store`, auch eine Ablehnung. Ein Backend-Fehler bleibt sein
    Problem-JSON. Die Sandbox-CSP eines hochgeladenen Dokuments setzt
    `src/proxy.ts` weiter nach dem Pfad (`SANDBOXED_FILE_ROUTES`), gleich ob
    eine Routendatei oder der Katalog antwortet.

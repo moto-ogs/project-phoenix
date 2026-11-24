@@ -1,3 +1,4 @@
+import { sessionClaims } from "~/test/helpers/session-claims";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { RequestCookies } from "next/dist/server/web/spec-extension/cookies";
@@ -81,14 +82,15 @@ const LOGIN = {
 } as const;
 
 const backend = vi.fn();
-const claims = (scope: string) => ({
-  id: "42",
-  sub: "local@example.test",
-  tenant_id: "7",
-  org_id: "9",
-  scope,
-  exp: Math.floor(Date.now() / 1000) + 900,
-});
+const claims = (scope: string) =>
+  sessionClaims({
+    id: "42",
+    sub: "local@example.test",
+    tenant_id: "7",
+    org_id: "9",
+    scope,
+    exp: Math.floor(Date.now() / 1000) + 900,
+  });
 const pair = () => ({
   status: "authenticated",
   access_token: `e30.${Buffer.from(JSON.stringify(claims(""))).toString("base64url")}.synthetic`,

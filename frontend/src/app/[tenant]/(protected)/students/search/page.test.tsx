@@ -23,7 +23,7 @@ const STUDENT_SEARCH_FILTER_STORAGE_KEY =
 // Mock next-auth/react
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
-    data: { user: { id: "user-1", tenantId: 7, token: "test-token" } },
+    data: { user: { id: "user-1", tenantId: "7", token: "test-token" } },
     status: "authenticated",
   })),
 }));
@@ -520,7 +520,7 @@ describe("StudentSearchPage", () => {
     const sessionModule = await import("next-auth/react");
     vi.mocked(sessionModule.useSession).mockReturnValue({
       data: {
-        user: { id: "user-1", tenantId: 7, token: "test-token" },
+        user: { id: "user-1", tenantId: "7", token: "test-token" },
         expires: "2099-01-01",
       },
       status: "authenticated",
@@ -1088,7 +1088,7 @@ describe("StudentSearchPage", () => {
         });
         const sessionModule = await import("next-auth/react");
         vi.mocked(sessionModule.useSession).mockReturnValue({
-          data: { user: { id: "user-2", tenantId: 7, token: "test-token" } },
+          data: { user: { id: "user-2", tenantId: "7", token: "test-token" } },
           status: "authenticated",
         } as unknown as ReturnType<typeof sessionModule.useSession>);
         await act(async () => {

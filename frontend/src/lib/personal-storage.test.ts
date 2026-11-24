@@ -207,14 +207,14 @@ describe("mayWritePersonalStorage", () => {
 
 describe("personalStorageOwner", () => {
   it("names school and account of the session", () => {
-    expect(personalStorageOwner({ id: "7", tenantId: 1 })).toBe("1:7");
-    expect(personalStorageOwner({ id: "7", orgId: 3 })).toBe("3:7");
+    expect(personalStorageOwner({ id: "7", tenantId: "1" })).toBe("1:7");
+    expect(personalStorageOwner({ id: "7", orgId: "3" })).toBe("3:7");
     expect(personalStorageOwner({ id: "7" })).toBe("-:7");
   });
 
   it("knows no owner without an account", () => {
     expect(personalStorageOwner(null)).toBeNull();
-    expect(personalStorageOwner({ id: "", tenantId: 1 })).toBeNull();
+    expect(personalStorageOwner({ id: "", tenantId: "1" })).toBeNull();
   });
 });
 

@@ -2,6 +2,7 @@
 // abwesenheiten-tab.tsx and leave-requests-card.tsx; the /staff inbox is the
 // third consumer, so the copies were consolidated here.
 
+import type { StaffAbsenceResponse } from "~/lib/contract/shared.generated";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 
@@ -29,10 +30,9 @@ export const ABSENCE_TYPE_HEX: Record<string, string> = {
 // resolves to. Every view that renders an absence type goes through here so
 // the wording cannot differ between the Abwesenheiten-Tab, the Monatskarte and
 // an export.
-export function absenceRowLabel(row: {
-  readonly absence_type: string;
-  readonly absence_type_label?: string;
-}): string {
+export function absenceRowLabel(
+  row: Pick<StaffAbsenceResponse, "absence_type" | "absence_type_label">,
+): string {
   if (row.absence_type_label) return row.absence_type_label;
   return ABSENCE_TYPE_LABEL[row.absence_type] ?? row.absence_type;
 }
@@ -52,10 +52,9 @@ export function absenceTypeNoun(absenceType: string): string {
 // falling back to the generic noun its canonical type resolves to; the
 // standard types keep the noun form above, so the button stays
 // "Krankmeldung löschen" and never becomes "Krank löschen".
-export function absenceRowActionNoun(row: {
-  readonly absence_type: string;
-  readonly absence_type_label?: string;
-}): string {
+export function absenceRowActionNoun(
+  row: Pick<StaffAbsenceResponse, "absence_type" | "absence_type_label">,
+): string {
   if (row.absence_type_label) return row.absence_type_label;
   return absenceTypeNoun(row.absence_type);
 }

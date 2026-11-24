@@ -83,7 +83,7 @@ import {
 import ParentEnrollFormPage from "./page";
 
 const tenant = {
-  tenantId: 1,
+  tenantId: "1",
   slug: "demo",
   name: "Demo School",
   subdomain: "demo",

@@ -199,10 +199,10 @@ describe("matchesSearchFilter", () => {
 describe("matchesAttendanceFilter", () => {
   const roomStatus: Record<
     string,
-    { in_group_room?: boolean; current_room_id?: number }
+    { in_group_room?: boolean; current_room_id?: string }
   > = {
-    "1": { in_group_room: true, current_room_id: 5 },
-    "2": { in_group_room: false, current_room_id: 10 },
+    "1": { in_group_room: true, current_room_id: "5" },
+    "2": { in_group_room: false, current_room_id: "10" },
     "3": { in_group_room: false },
   };
 
@@ -280,13 +280,13 @@ describe("matchesAttendanceFilter", () => {
 describe("matchesForeignRoomFilter", () => {
   it("returns true when student is in a foreign room", () => {
     expect(
-      matchesForeignRoomFilter({ in_group_room: false, current_room_id: 10 }),
+      matchesForeignRoomFilter({ in_group_room: false, current_room_id: "10" }),
     ).toBe(true);
   });
 
   it("returns false when student is in group room", () => {
     expect(
-      matchesForeignRoomFilter({ in_group_room: true, current_room_id: 5 }),
+      matchesForeignRoomFilter({ in_group_room: true, current_room_id: "5" }),
     ).toBe(false);
   });
 
@@ -299,6 +299,6 @@ describe("matchesForeignRoomFilter", () => {
   });
 
   it("returns false when in_group_room is undefined but has room_id", () => {
-    expect(matchesForeignRoomFilter({ current_room_id: 10 })).toBe(false);
+    expect(matchesForeignRoomFilter({ current_room_id: "10" })).toBe(false);
   });
 });

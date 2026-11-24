@@ -1,4 +1,5 @@
 import "server-only";
+import { sessionIdentifier } from "./jwt-payload";
 import type { NextAuthConfig, Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import {
@@ -242,8 +243,8 @@ export function serverSessionFromJwt(
       permissions: token.permissions,
       firstName: token.firstName,
       isAdmin: token.isAdmin ?? false,
-      tenantId: token.tenantId,
-      orgId: token.orgId,
+      tenantId: sessionIdentifier(token.tenantId),
+      orgId: sessionIdentifier(token.orgId),
       scope: token.scope,
       viaTraeger: token.viaTraeger ?? false,
       isPreview: isPreviewActive(token),

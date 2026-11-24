@@ -46,7 +46,7 @@ vi.mock("~/lib/auth-utils", () => ({
 // Mock next-auth/react
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
-    data: { user: { token: "test-token", id: "7", tenantId: 1 } },
+    data: { user: { token: "test-token", id: "7", tenantId: "1" } },
     status: "authenticated",
   })),
 }));
@@ -1877,7 +1877,7 @@ describe("EmptyRoomsView without children lists", () => {
     // Restore useSession to authenticated for these tests
     const { useSession } = await import("next-auth/react");
     vi.mocked(useSession).mockReturnValue({
-      data: { user: { token: "test-token", id: "7", tenantId: 1 } },
+      data: { user: { token: "test-token", id: "7", tenantId: "1" } },
       status: "authenticated",
     } as never);
 

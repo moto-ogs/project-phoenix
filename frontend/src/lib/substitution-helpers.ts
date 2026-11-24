@@ -224,12 +224,7 @@ export function mapScheduleSubstitutionOverview(
 // Prepare frontend types for backend
 export interface CreateSubstitutionRequest {
   type: "group_handover";
-  group_handover: {
-    group_id: string;
-    target_staff_id: string;
-    start_date: string;
-    end_date: string;
-  };
+  group_handover: Required<substitutionsContract.groupHandoverRequest>;
 }
 
 export function prepareSubstitutionForBackend(

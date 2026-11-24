@@ -168,7 +168,7 @@ const TRIGGER_LABEL = /, Einrichtung wechseln$/;
 // ============================================================================
 
 const tenantA = {
-  tenantId: 1,
+  tenantId: "1",
   slug: "school-a",
   name: "School A",
   subdomain: "school-a",
@@ -178,7 +178,7 @@ const tenantA = {
 };
 
 const tenantB = {
-  tenantId: 2,
+  tenantId: "2",
   slug: "school-b",
   name: "School B",
   subdomain: "school-b",
@@ -188,7 +188,7 @@ const tenantB = {
 };
 
 const tenantC = {
-  tenantId: 3,
+  tenantId: "3",
   slug: "school-c",
   name: "School C",
   subdomain: "school-c",

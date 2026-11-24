@@ -1,3 +1,4 @@
+import type { ClassListImportResult } from "~/lib/contract/import.generated";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 
 const importBatchFailedCode: ErrorCode = "import.import_batch_failed";
@@ -76,10 +77,9 @@ export function readImportBatchRejection(payload: unknown): unknown {
   return payload.details.rejection;
 }
 
-export function importBatchSavedCount(result: {
-  created_count: number;
-  updated_count: number;
-}): number {
+export function importBatchSavedCount(
+  result: Pick<ClassListImportResult, "created_count" | "updated_count">,
+): number {
   return result.created_count + result.updated_count;
 }
 

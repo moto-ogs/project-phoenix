@@ -65,7 +65,7 @@ describe("traegerAuthConfig", () => {
       id: 41,
       sub: "buero@traeger.example",
       scope: "org",
-      org_id: 7,
+      org_id: "7",
       roles: ["administration"],
       permissions: ["traeger_overview:read"],
       exp: Math.floor(Date.now() / 1000) + 900,
@@ -83,7 +83,7 @@ describe("traegerAuthConfig", () => {
     expect(user).toMatchObject({
       id: "41",
       scope: "org",
-      orgId: 7,
+      orgId: "7",
       roles: ["administration"],
       permissions: ["traeger_overview:read"],
     });

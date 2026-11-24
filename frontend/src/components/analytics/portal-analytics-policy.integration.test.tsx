@@ -406,7 +406,7 @@ describe("embedded enrollment analytics policy", () => {
       vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
       mocks.useSession.mockReturnValue({
         status: "authenticated",
-        data: { user: { id: "7", scope, tenantId: 42 } },
+        data: { user: { id: "7", scope, tenantId: "42" } },
       });
       vi.mocked(fetch).mockResolvedValueOnce(
         Response.json({ data: { enabled: true } }),
@@ -428,7 +428,7 @@ describe("embedded enrollment analytics policy", () => {
 
       mocks.useSession.mockReturnValue({
         status: "authenticated",
-        data: { user: { id: "8", scope, tenantId: 43 } },
+        data: { user: { id: "8", scope, tenantId: "43" } },
       });
       await act(async () =>
         view.rerender(
@@ -577,7 +577,7 @@ describe("embedded enrollment analytics policy", () => {
       vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
       mocks.useSession.mockReturnValue({
         status: "authenticated",
-        data: { user: { id: "7", scope, tenantId: 42 } },
+        data: { user: { id: "7", scope, tenantId: "42" } },
       });
       vi.mocked(fetch).mockResolvedValueOnce(
         Response.json({ data: { enabled: true } }),

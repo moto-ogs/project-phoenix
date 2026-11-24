@@ -28,11 +28,15 @@ export type CareUsageFilters = Omit<
     (typeof enrollmentContract.routes)["GET /api/enrollment/admin/reports/care-usage"]
   >,
   "care_offering_id" | "care_offering_ids" | "phase_id" | "status"
-> & {
-  phase_id: string;
-  care_offering_ids?: string[];
-  status?: EnrollmentReportStatus;
-};
+> &
+  Required<
+    Pick<enrollmentContract.careUsageExportFiltersRequest, "phase_id">
+  > & {
+    care_offering_ids?: NonNullable<
+      enrollmentContract.careUsageAppliedFiltersResponse["care_offering_ids"]
+    >;
+    status?: EnrollmentReportStatus;
+  };
 
 type CareUsageRowOffering = Omit<
   enrollmentContract.careUsageRowOfferingResponse,
@@ -56,18 +60,25 @@ export type CareUsageReport = Omit<
   "totals" | "by_offering" | "filter_options" | "rows"
 > & {
   totals: {
-    children: number;
-    by_day_count: Record<string, number>;
-    by_weekday_pickup_time: Record<string, Record<string, number>>;
+    [
+      K in keyof enrollmentContract.CareUsageTotals
+    ]: K extends "by_weekday_pickup_time"
+      ? Record<
+          string,
+          NonNullable<
+            NonNullable<enrollmentContract.CareUsageTotals[K]>[string]
+          >
+        >
+      : NonNullable<enrollmentContract.CareUsageTotals[K]>;
   };
   by_offering: (Omit<
     enrollmentContract.careUsageOfferingStatResponse,
     "by_day_count"
   > & { by_day_count: Record<string, number> })[];
   filter_options: {
-    offerings: enrollmentContract.careUsageOfferingOptionResponse[];
-    grade_levels: number[];
-    pickup_times: string[];
+    [
+      K in keyof enrollmentContract.careUsageFilterOptionsResponse
+    ]-?: NonNullable<enrollmentContract.careUsageFilterOptionsResponse[K]>;
   };
   rows: CareUsageRow[];
 };

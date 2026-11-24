@@ -29,7 +29,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: {
-      user: { id: "teacher", scope: "school", tenantId: 1 },
+      user: { id: "teacher", scope: "school", tenantId: "1" },
       expires: "2099-01-01",
     },
     status: "authenticated",

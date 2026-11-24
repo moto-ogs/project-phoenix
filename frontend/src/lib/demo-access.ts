@@ -4,6 +4,11 @@
 
 import { ApiError } from "~/lib/api-error";
 import { bffJsonUncontracted, bffPath } from "~/lib/bff-fetch";
+import type {
+  demoAccessStatus,
+  demoResetResponse,
+  demoSessionFacts,
+} from "~/lib/contract/demo-access.generated";
 import { parentsPortalUrl } from "~/lib/parent-url";
 import { requiredPortalHostname } from "~/lib/portal-paths";
 
@@ -310,7 +315,7 @@ export async function restartDemo(
   role: DemoRole | undefined,
 ): Promise<string | null> {
   const body = await demoResult(() =>
-    bffJsonUncontracted<{ entry_url?: string }>(
+    bffJsonUncontracted<Pick<demoResetResponse, "entry_url">>(
       "public",
       "POST",
       bffPath("tenant", "POST /demo/access/reset"),
@@ -363,8 +368,8 @@ export function demoHandoffPath(role: DemoRole): string {
 }
 
 /**
- * A demo route of the BFF (no Go contract: the demo routes exist only with
- * APP_ENV=demo). An unknown or expired link (404, 410) is null; any other
+ * A demo route of the BFF, whose server calls the generated Go contract.
+ * The backend mounts these routes only with APP_ENV=demo. An unknown or expired link (404, 410) is null; any other
  * failure is the ApiError.
  */
 async function demoResult<T>(send: () => Promise<T>): Promise<T | null> {
@@ -394,14 +399,15 @@ async function fetchDemoAccessProgress(
   token: string,
 ): Promise<DemoAccessProgress> {
   const body = await demoResult(() =>
-    bffJsonUncontracted<{
-      status?: string;
-      school_url?: string;
-      school_name?: string;
-    }>("public", "POST", bffPath("tenant", "GET /demo/access/status"), {
-      body: { token },
-      errorMessage: "demo status failed",
-    }),
+    bffJsonUncontracted<demoAccessStatus>(
+      "public",
+      "POST",
+      bffPath("tenant", "GET /demo/access/status"),
+      {
+        body: { token },
+        errorMessage: "demo status failed",
+      },
+    ),
   );
   if (body === null) return { status: "invalid" };
   if (body.status === "ready") {
@@ -482,19 +488,15 @@ async function postSession(body: {
   role: DemoRole;
 }): Promise<DemoSession | null> {
   const payload = await demoResult(() =>
-    bffJsonUncontracted<{
-      session_created?: boolean;
-      demo?: {
-        access_id?: string;
-        role?: string;
-        src?: string;
-        fixed_role?: boolean;
-        traeger?: boolean;
-      };
-    }>("public", "POST", bffPath("tenant", "POST /demo/access/sessions"), {
-      body,
-      errorMessage: "demo redeem failed",
-    }),
+    bffJsonUncontracted<{ session_created: boolean; demo: demoSessionFacts }>(
+      "public",
+      "POST",
+      bffPath("tenant", "POST /demo/access/sessions"),
+      {
+        body,
+        errorMessage: "demo redeem failed",
+      },
+    ),
   );
   if (payload === null) return null;
   return {

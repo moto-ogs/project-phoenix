@@ -29,7 +29,7 @@ vi.unmock("swr");
 
 const sessionUser = vi.hoisted(() => ({
   id: "account-1",
-  tenantId: 1,
+  tenantId: "1",
   scope: "tenant",
 }));
 

@@ -754,7 +754,7 @@ function buildSearchFilterStorageKey(
     | {
         id?: string | null;
         email?: string | null;
-        tenantId?: number | null;
+        tenantId?: string | null;
       }
     | undefined,
 ) {

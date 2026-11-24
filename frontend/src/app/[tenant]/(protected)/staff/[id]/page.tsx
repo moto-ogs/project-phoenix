@@ -346,7 +346,8 @@ export default function StaffDetailContent() {
     recordReadRef.current = recordRequest;
   });
   const reloadRecordOrThrow = useCallback(
-    async () => mapTeacherResponse(await revalidateOrThrow(recordReadRef.current)),
+    async () =>
+      mapTeacherResponse(await revalidateOrThrow(recordReadRef.current)),
     [],
   );
   const reloadRecord = useCallback(async () => {
@@ -374,8 +375,8 @@ export default function StaffDetailContent() {
   const handleSaveKonto = useCallback(
     async (draft: KontoDraft) => {
       const {
-        role_id: targetRoleId,
-        role_version: roleVersion,
+        roleId: targetRoleId,
+        roleVersion,
         record: readRecord,
         ...recordData
       } = draft;
@@ -391,11 +392,16 @@ export default function StaffDetailContent() {
           // (ADR 0311), nicht die einer späteren Lesung.
           const base = readRecord ?? record;
           if (!base) throw new Error("Staff record is not loaded");
-          saved = await teacherService.updateTeacher(staffId, recordData, base, {
-            onPersonSaved: (person) => {
-              savedPerson = person;
+          saved = await teacherService.updateTeacher(
+            staffId,
+            recordData,
+            base,
+            {
+              onPersonSaved: (person) => {
+                savedPerson = person;
+              },
             },
-          });
+          );
         } catch (err) {
           logger.error("failed to update staff record", {
             staff_id: staffId,

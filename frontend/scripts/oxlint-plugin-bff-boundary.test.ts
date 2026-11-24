@@ -29,6 +29,8 @@ describe.concurrent("bff-boundary", () => {
     "navigator.sendBeacon('/api/log')",
     "const { sendBeacon } = window.navigator",
     "new XMLHttpRequest()",
+    'new EventSource("/api/sse/events")',
+    'const Socket = globalThis.WebSocket; new Socket("/api/live")',
     "globalThis.XMLHttpRequest",
   ])("rejects raw browser transport: %s", async (source) => {
     const result = await lintSource(source);
@@ -70,26 +72,26 @@ describe.concurrent("bff-boundary", () => {
     },
   );
 
-  it.each(["/api/invitations/accept", "/api/rooms"])(
-    "rejects a second call to %s in an allowlisted file",
-    async (path) => {
-      const result = await lintSource(
-        `import { bffJsonUncontracted as x } from './bff-fetch';
-       x('public', 'POST', '/api/invitations/accept');
-       x('public', 'POST', '${path}');`,
-        "src/lib/invitation-api.ts",
-      );
-      expect(result.output).toContain("bff-boundary(only-listed-uncontracted)");
-      expect(result.status).toBe(1);
-    },
-  );
+  it.each([
+    "address('tenant', 'POST /auth/invitations/{token}/accept')",
+    "'/api/rooms'",
+  ])("rejects a second call to %s in an allowlisted file", async (path) => {
+    const result = await lintSource(
+      `import { bffJsonUncontracted as x, bffPath as address } from './bff-fetch';
+       x('public', 'POST', address('tenant', 'POST /auth/invitations/{token}/accept'));
+       x('public', 'POST', ${path});`,
+      "src/lib/invitation-api.ts",
+    );
+    expect(result.output).toContain("bff-boundary(only-listed-uncontracted)");
+    expect(result.status).toBe(1);
+  });
 
   it.each([
     ["src/lib/probe.server.ts", "fetch('/api/rooms')"],
     ["src/lib/bff-fetch.ts", "fetch('/api/rooms')"],
     [
       "src/lib/invitation-api.ts",
-      "import { bffJsonUncontracted as x } from './bff-fetch'; x('public', 'POST', '/api/invitations/accept')",
+      "import { bffJsonUncontracted as x, bffPath as address } from './bff-fetch'; x('public', 'POST', address('tenant', 'POST /auth/invitations/{token}/accept'))",
     ],
     ["src/lib/probe.ts", "const fetch = () => 1; fetch()"],
     ["src/lib/probe.ts", "const send: typeof fetch = fakeSend; send('/')"],

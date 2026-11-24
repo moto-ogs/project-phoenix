@@ -10,7 +10,7 @@ import { buildSupervisionDashboardWire } from "~/test/fixtures/supervision-dashb
 function context(permissions: string[], scope = "") {
   const session: Session = {
     expires: "2099-01-01",
-    user: { id: "42", tenantId: 7, permissions, scope },
+    user: { id: "42", tenantId: "7", permissions, scope },
   };
   return {
     session,

@@ -88,7 +88,7 @@ describe("POST /api/timetable/instances without enrichment", () => {
       params: Promise.resolve({ path: ["timetable", "instances"] }),
     });
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
     expect(sendBackend).toHaveBeenCalledExactlyOnceWith(
       "/api/timetable/instances",
       "token",

@@ -150,12 +150,12 @@ const CARE_OFFERING_TEMPLATE_PERIOD_MISMATCH_MESSAGE =
 const CARE_OFFERING_DAYS_REQUIRED_MESSAGE =
   "Bitte wähle mindestens einen Wochentag für das Angebot aus.";
 
-function missingRequiredPickupDays(offering: {
-  is_active: boolean;
-  counts_as_care?: boolean;
-  available_days: string[];
-  pickup_times?: Record<string, string> | null;
-}): string[] {
+function missingRequiredPickupDays(
+  offering: Pick<
+    CareOffering,
+    "is_active" | "counts_as_care" | "available_days"
+  > & { pickup_times?: CareOfferingInput["pickup_times"] },
+): string[] {
   if (!offering.is_active || offering.counts_as_care === false) return [];
   return offering.available_days.filter(
     (day) => isSchoolWeekday(day) && !offering.pickup_times?.[day],

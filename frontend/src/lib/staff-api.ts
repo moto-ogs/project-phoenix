@@ -86,7 +86,7 @@ export interface Staff {
   firstName: string;
   lastName: string;
   email?: string;
-  /** Profilbild über `/api/staff/[id]/avatar`, fehlt ohne Bild (#4432). */
+  /** Profilbild über den registrierten Avatar-Endpunkt, fehlt ohne Bild (#4432). */
   avatarUrl?: string;
   role?: string; // Display role (custom position from teacher profile)
   roleForm?: RoleForm; // Form der Position aus den Stammdaten
@@ -1067,15 +1067,7 @@ class StaffAbsenceService {
 
   async setVacationQuota(
     staffId: string,
-    payload: {
-      year: number;
-      entitled_days: number;
-      carryover_days: number;
-      /** Pflicht: erscheint im Änderungsprotokoll (#3256). */
-      reason: string;
-      /** Version des gelesenen Anspruchs (ADR 0311). */
-      expected_version: string;
-    },
+    payload: Required<staffContract.VacationQuotaRequest>,
   ): Promise<sharedContract.VacationQuotaSummary> {
     const quota = await bffJson(
       "tenant",

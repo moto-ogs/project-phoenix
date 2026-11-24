@@ -244,7 +244,7 @@ describe("createResponseAwareAuth", () => {
           ...tenantSession.user,
           sentryUserId: PSEUDONYM,
           email: "leitung@example.com",
-          tenantId: 12,
+          tenantId: "12",
           scope: "",
           isAdmin: true,
         },
@@ -285,7 +285,7 @@ describe("createResponseAwareAuth", () => {
           sentryUserId: PSEUDONYM,
           token: "parent-access",
           scope: "parent",
-          tenantId: 0,
+          tenantId: "0",
         },
         expires: "2099-01-01T00:00:00.000Z",
       } as Session);

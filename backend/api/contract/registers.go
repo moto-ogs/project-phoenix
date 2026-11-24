@@ -89,8 +89,11 @@ type Registration struct {
 
 	// RouteFile and Plain are the route file traits of
 	// common.RouteContract.
-	RouteFile string
-	Plain     bool
+	RouteFile          string
+	BrowserPath        string
+	BrowserMethod      string
+	BrowserOwnContract bool
+	Plain              bool
 	// Outside keeps the line out of the contract.
 	Outside *OutsideSpec
 }

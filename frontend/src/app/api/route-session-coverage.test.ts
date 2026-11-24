@@ -29,7 +29,7 @@ const state = vi.hoisted(() => {
 });
 
 const SESSION = {
-  user: { id: "1", token: "access-token", refreshToken: "r", tenantId: 7 },
+  user: { id: "1", token: "access-token", refreshToken: "r", tenantId: "7" },
   expires: "2099-01-01T00:00:00.000Z",
 };
 

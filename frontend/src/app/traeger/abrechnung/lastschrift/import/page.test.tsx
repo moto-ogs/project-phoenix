@@ -28,7 +28,7 @@ vi.mock("~/lib/traeger-sepa-import-api", async (original) => ({
 }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "traeger-test", scope: "org", orgId: 7 } },
+    data: { user: { id: "traeger-test", scope: "org", orgId: "7" } },
   }),
   SessionProvider: ({ children }: { children: ReactNode }) => children,
 }));

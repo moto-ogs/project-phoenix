@@ -1,4 +1,4 @@
-import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import { bffJson, bffJsonUncontracted, bffPath } from "~/lib/bff-fetch";
 import type * as authInvitationsContract from "~/lib/contract/auth-invitations.generated";
 import type {
   InvitationValidation,
@@ -42,7 +42,7 @@ export async function acceptInvitation(
     await bffJsonUncontracted<authInvitationsContract.AcceptInvitationResponse>(
       "public",
       "POST",
-      "/api/invitations/accept",
+      bffPath("tenant", "POST /auth/invitations/{token}/accept"),
       {
         body: { token, ...data },
         errorMessage: "Einladung konnte nicht angenommen werden.",

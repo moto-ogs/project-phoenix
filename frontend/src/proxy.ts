@@ -1,3 +1,4 @@
+import { browserRoutePaths } from "~/lib/contract/browser-traits.generated";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { problemBody } from "~/lib/api-error";
@@ -340,7 +341,7 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
       // The invitation link through the staff proxy's public route (#2352);
       // the path's other methods are staff session routes.
       STAFF_INVITATION_LINK,
-      "/api/invitations/accept",
+      browserRoutePaths.tenant["POST /auth/invitations/{token}/accept"],
       "/api/auth/guardian-invitations/",
       // The holiday link, its summary, documents and proof upload through
       // the Träger proxy's public routes (#2352); every other /api/traeger/
@@ -363,7 +364,7 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
     api: [
       "/api/school/",
       STAFF_INVITATION_LINK,
-      "/api/invitations/accept",
+      browserRoutePaths.tenant["POST /auth/invitations/{token}/accept"],
       // The invitation's school picker (#7369); attaches no session.
       "/api/auth/tenants",
     ],

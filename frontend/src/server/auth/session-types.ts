@@ -20,8 +20,8 @@ declare module "next-auth" {
       permissions?: string[];
       firstName?: string;
       isAdmin?: boolean;
-      tenantId?: number;
-      orgId?: number;
+      tenantId?: string;
+      orgId?: string;
       scope?: string;
       // Absprung aus dem Träger-Portal (#4654): diese OGS-Sitzung kam über
       // das Träger-Büro, ohne eigenen Zugang zur Schule.
@@ -51,8 +51,8 @@ declare module "next-auth" {
     permissions?: string[];
     firstName?: string;
     isAdmin?: boolean;
-    tenantId?: number;
-    orgId?: number;
+    tenantId?: string;
+    orgId?: string;
     scope?: string;
     viaTraeger?: boolean;
   }
@@ -70,8 +70,8 @@ declare module "next-auth/jwt" {
     permissions?: string[];
     firstName?: string;
     isAdmin?: boolean;
-    tenantId?: number;
-    orgId?: number;
+    tenantId?: string;
+    orgId?: string;
     scope?: string;
     viaTraeger?: boolean;
     tokenExpiry?: number;

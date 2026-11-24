@@ -104,7 +104,7 @@ describe("TraegerAuthGuard", () => {
 
   // The layout's server snapshot carries no token (#4991).
   it("renders the portal for the layout's server snapshot", () => {
-    mockUseSession.mockReturnValue(session({ scope: "org", orgId: 7 }));
+    mockUseSession.mockReturnValue(session({ scope: "org", orgId: "7" }));
     render(
       <TraegerAuthGuard>
         <p>Schulen</p>
@@ -145,7 +145,7 @@ describe("TraegerAuthGuard", () => {
       testSystem: true,
     });
     mockUseSession.mockReturnValue(
-      session({ id: "1", scope: "org", orgId: 7 }),
+      session({ id: "1", scope: "org", orgId: "7" }),
     );
     render(
       <TraegerAuthGuard>
@@ -164,7 +164,7 @@ describe("TraegerAuthGuard", () => {
 
   it("shows no test-system mark for a real Träger", async () => {
     mockUseSession.mockReturnValue(
-      session({ id: "1", scope: "org", orgId: 7 }),
+      session({ id: "1", scope: "org", orgId: "7" }),
     );
     render(
       <TraegerAuthGuard>

@@ -1,5 +1,6 @@
 "use client";
 
+import type { AdminRestoreResponse } from "~/lib/contract/enrollment.generated";
 import {
   APPROVAL_WITHOUT_OFFERING_COPY,
   approvalNeedsOfferingConfirm,
@@ -1412,10 +1413,7 @@ function getDecisionIcon(status: DecisionStatus): React.ReactNode {
   return <CalendarClock className="h-4 w-4" aria-hidden="true" />;
 }
 
-function buildRestoreInfoMessage(result: {
-  restored_children: number;
-  waitlisted_children: number;
-}): string {
+function buildRestoreInfoMessage(result: AdminRestoreResponse): string {
   const restored = result.restored_children;
   const waitlisted = result.waitlisted_children;
   if (waitlisted > 0) {

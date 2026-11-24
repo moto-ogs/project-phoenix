@@ -101,7 +101,7 @@ describe("tenant-api", () => {
       const backendData = {
         status: "success",
         data: {
-          tenant_id: 1,
+          tenant_id: "1",
           slug: "demo-school",
           name: "Demo School",
           subdomain: "demo",
@@ -128,7 +128,7 @@ describe("tenant-api", () => {
       );
       expect(result).toEqual({
         careFacilityTerm: "OGS",
-        tenantId: 1,
+        tenantId: "1",
         slug: "demo-school",
         name: "Demo School",
         subdomain: "demo",
@@ -195,7 +195,7 @@ describe("tenant-api", () => {
 
     it("normalizes explicit enabled and disabled tenant settings", async () => {
       const tenantData = {
-        tenant_id: 2,
+        tenant_id: "2",
         slug: "settings-school",
         name: "Settings School",
         subdomain: "settings",
@@ -265,7 +265,7 @@ describe("tenant-api", () => {
 
     it("maps the Analyse-Freigabe and never widens an unreadable sample", async () => {
       const tenantData = {
-        tenant_id: 3,
+        tenant_id: "3",
         slug: "analyse-school",
         name: "Analyse School",
         subdomain: "analyse",
@@ -335,7 +335,7 @@ describe("tenant-api", () => {
       const backendData = {
         status: "success",
         data: {
-          tenant_id: 2,
+          tenant_id: "2",
           slug: "binary-school",
           name: "Binary School",
           subdomain: "binary",
@@ -361,7 +361,7 @@ describe("tenant-api", () => {
           JSON.stringify({
             status: "success",
             data: {
-              tenant_id: 3,
+              tenant_id: "3",
               slug: "traeger-school",
               name: "Träger School",
               subdomain: "traeger",
@@ -391,7 +391,7 @@ describe("tenant-api", () => {
           JSON.stringify({
             status: "success",
             data: {
-              tenant_id: 4,
+              tenant_id: "4",
               slug: "barnstorf",
               name: "Grundschule Barnstorf",
               subdomain: "barnstorf",
@@ -415,7 +415,7 @@ describe("tenant-api", () => {
       const backendData = {
         status: "success",
         data: {
-          tenant_id: 2,
+          tenant_id: "2",
           slug: "nfc-school",
           name: "NFC School",
           subdomain: "nfc",
@@ -443,7 +443,7 @@ describe("tenant-api", () => {
       const backendData = {
         status: "success",
         data: {
-          tenant_id: 2,
+          tenant_id: "2",
           slug: "basis-school",
           name: "Basis School",
           subdomain: "basis",
@@ -473,7 +473,7 @@ describe("tenant-api", () => {
         const backendData = {
           status: "success",
           data: {
-            tenant_id: 3,
+            tenant_id: "3",
             slug: "demo",
             name: "Demo",
             subdomain: "demo",
@@ -504,7 +504,7 @@ describe("tenant-api", () => {
         const backendData = {
           status: "success",
           data: {
-            tenant_id: 3,
+            tenant_id: "3",
             slug: "demo",
             name: "Demo",
             subdomain: "demo",
@@ -535,7 +535,7 @@ describe("tenant-api", () => {
         const backendData = {
           status: "success",
           data: {
-            tenant_id: 3,
+            tenant_id: "3",
             slug: "demo",
             name: "Demo",
             subdomain: "demo",
@@ -560,7 +560,7 @@ describe("tenant-api", () => {
       const backendData = {
         status: "success",
         data: {
-          tenant_id: 3,
+          tenant_id: "3",
           slug: "display-school",
           name: "Display School",
           subdomain: "display",
@@ -584,7 +584,7 @@ describe("tenant-api", () => {
       const backendData = {
         status: "success",
         data: {
-          tenant_id: 3,
+          tenant_id: "3",
           slug: "demo-ogs",
           name: "Demo-OGS",
           subdomain: "demo-ogs",
@@ -610,7 +610,7 @@ describe("tenant-api", () => {
       const backendData = {
         status: "success",
         data: {
-          tenant_id: 3,
+          tenant_id: "3",
           slug: "weird-school",
           name: "Weird",
           subdomain: "weird",
@@ -634,7 +634,7 @@ describe("tenant-api", () => {
       const backendData = {
         status: "success",
         data: {
-          tenant_id: 1,
+          tenant_id: "1",
           slug: "demo",
           name: "Demo",
           subdomain: "demo",
@@ -786,7 +786,7 @@ describe("tenant-api", () => {
       const data = {
         data: [
           {
-            tenant_id: 1,
+            tenant_id: "1",
             slug: "school-a",
             name: "School A",
             subdomain: "school-a",
@@ -794,7 +794,7 @@ describe("tenant-api", () => {
             organization_name: "Org Alpha",
           },
           {
-            tenant_id: 2,
+            tenant_id: "2",
             slug: "school-b",
             name: "School B",
             subdomain: "school-b",
@@ -818,7 +818,7 @@ describe("tenant-api", () => {
       });
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({
-        tenantId: 1,
+        tenantId: "1",
         slug: "school-a",
         name: "School A",
         subdomain: "school-a",

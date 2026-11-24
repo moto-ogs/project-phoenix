@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { forwardDemoToken } from "../forward";
 import { withPrivateNoStore } from "~/lib/private-no-store";
+import { routes } from "~/lib/contract/demo-access.generated";
 
 /*
  * Stays (#2352): the browser sends the demo token in the body, and the
@@ -10,7 +11,7 @@ import { withPrivateNoStore } from "~/lib/private-no-store";
  */
 
 async function POSTHandler(request: NextRequest) {
-  return forwardDemoToken(request);
+  return forwardDemoToken(request, routes["GET /demo/access/status"]);
 }
 
 export const POST = withPrivateNoStore(POSTHandler);

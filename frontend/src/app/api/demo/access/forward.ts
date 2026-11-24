@@ -1,21 +1,18 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { contractGet, type ContractReply } from "~/lib/contract/client.server";
-import { routes } from "~/lib/contract/demo-access.generated";
+import { type NextRequest, type NextResponse } from "next/server";
+import { contractGet } from "~/lib/contract/client.server";
+import type { routes } from "~/lib/contract/demo-access.generated";
 import { createLogger } from "~/lib/logger";
-import {
-  handleApiError,
-  problemResponse,
-} from "~/lib/api-response-error.server";
-import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
+import { problemResponse } from "~/lib/api-response-error.server";
+import { contractResponse } from "~/lib/contract/route-response.server";
 import { successResponse } from "~/lib/route-wrapper-utils.server";
 
 const logger = createLogger({ component: "DemoAccessRoute" });
 
 // Forwards a demo token to the backend (#3462). The token comes in the POST
-// body and is never logged. A success answers `{ status, data }`, an error
-// passes through unchanged.
+// body and is never logged. A success answers `{ status, data }`.
 export async function forwardDemoToken(
   request: NextRequest,
+  route: (typeof routes)["GET /demo/access/status"],
 ): Promise<NextResponse> {
   let token = "";
   try {
@@ -28,35 +25,17 @@ export async function forwardDemoToken(
     return problemResponse(404, "demo access is unknown", request);
   }
   try {
-    const reply = await contractGet(routes["GET /demo/access/status"], {
+    const reply = await contractGet(route, {
       token,
       request,
     });
-    if (!reply.ok) return forwardDemoFailure(reply, request);
-    return NextResponse.json(successResponse(reply.value), {
-      status: reply.backend?.status,
-    });
+    return contractResponse(reply, request, successResponse);
   } catch (error) {
     logger.error("demo_access_forward_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
     return problemResponse(500, "Internal Server Error", request);
   }
-}
-
-export function forwardDemoFailure(
-  reply: Extract<ContractReply<unknown>, { ok: false }>,
-  request: NextRequest,
-): NextResponse {
-  if (!reply.backend) throw reply.error.cause;
-  if (reply.backend.ok) return handleApiError(reply.error.cause, request);
-  return forwardBackendResponse(
-    new Response(reply.error.cause.bodyText, {
-      status: reply.backend.status,
-      headers: reply.backend.headers,
-    }),
-    request,
-  );
 }
 
 /**

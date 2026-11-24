@@ -61,8 +61,9 @@ Worked example, the same route from Go to the browser:
    sets go in `Enums`. A count is an `int`; an amount or a count kept as
    `int64` says so with `contract:"number"`. The generator refuses a bare
    `int64`, the json option `,string`, a number under an identifier's name
-   (`id`, `*_id`, `*_ids`) and a numeric identifier in an answer. Register
-   response variants when the answer shape depends on a query parameter.
+   (`id`, `*_id`, `*_ids`) and a numeric identifier in an answer. Use a discriminator in the answer
+   body or separate paths for different shapes. The generator accepts
+   query-selected shapes only for the legacy `GET /api/students/`.
    Do not format database IDs into
    Go strings. A field named like an ID that actually carries text, such as an
    RFID tag or a SEPA creditor ID, states why with `contract_text:"reason"`.
@@ -229,8 +230,7 @@ takes an exception for a new route.
 
 - **File answer:** `File: true` instead of `Response`. Example:
   `GET /school/class-day/absence-list/export` in
-  `backend/modules/classday/http/route_contracts.go`; the browser opens
-  `/api/school/class-day/absence-list/export?…`
+  `backend/modules/classday/http/route_contracts.go`; the client downloads it with `bffFile`
   (`frontend/src/lib/school-class-day-api.ts`). The handler sets
   `Content-Type` and `Content-Disposition`; the proxy streams the bytes,
   `private, no-store`.

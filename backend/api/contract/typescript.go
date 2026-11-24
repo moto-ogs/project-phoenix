@@ -26,7 +26,7 @@ func TypeScript(doc Document) (map[string]string, error) {
 	for _, route := range doc.Routes {
 		resources[resourceOf(route.Pattern)] = append(resources[resourceOf(route.Pattern)], route)
 	}
-	for _, reserved := range []string{portalsFile, sharedFile} {
+	for _, reserved := range []string{portalsFile, sharedFile, browserTraitsFile} {
 		if _, taken := resources[strings.TrimSuffix(reserved, ".generated.ts")]; taken {
 			return nil, fmt.Errorf("the resource name %q is taken by a generated table", strings.TrimSuffix(reserved, ".generated.ts"))
 		}
@@ -49,7 +49,9 @@ func TypeScript(doc Document) (map[string]string, error) {
 		w.typeOrder = shared.take(w.typeOrder, "", users)
 		w.enumOrder = shared.take(w.enumOrder, "enum:", users)
 	}
-	files := map[string]string{portalsFile: portalTable(resources)}
+	files := map[string]string{
+		portalsFile: portalTable(resources), browserTraitsFile: browserTraits(doc.Routes),
+	}
 	for resource, routes := range resources {
 		files[resource+".generated.ts"] = writers[resource].file(routes, shared)
 	}
@@ -100,6 +102,40 @@ func (w *tsWriter) take(names []string, prefix string, users map[string]int) []s
 const sharedFile = "shared.generated.ts"
 
 const portalsFile = "portals.generated.ts"
+
+const browserTraitsFile = "browser-traits.generated.ts"
+
+// browserTraits carries only routing facts; importing it never ships decoders.
+func browserTraits(routes []Route) string {
+	var out strings.Builder
+	out.WriteString(tsHeader)
+	paths := map[string][]string{}
+	noCommit := map[string]bool{}
+	for _, route := range routes {
+		if route.BrowserPath != "" {
+			for _, portal := range route.Portals {
+				paths[portal] = append(paths[portal], fmt.Sprintf("%q: %q", route.Key(), route.BrowserPath))
+			}
+		}
+		if route.NoCommit != "" {
+			noCommit[route.Key()] = true
+		}
+	}
+	out.WriteString("\nexport const browserRoutePaths = {\n")
+	for _, portal := range sortedKeys(paths) {
+		fmt.Fprintf(&out, "  %s: {\n", portal)
+		for _, entry := range paths[portal] {
+			fmt.Fprintf(&out, "    %s,\n", entry)
+		}
+		out.WriteString("  },\n")
+	}
+	out.WriteString("} as const;\n\nexport const noCommitRoutes = new Set<string>([\n")
+	for _, key := range sortedKeys(noCommit) {
+		fmt.Fprintf(&out, "  %q,\n", key)
+	}
+	out.WriteString("]);\n")
+	return out.String()
+}
 
 // portalTable writes the routes each portal may reach: the allowlist of a
 // portal's proxy. A route that names no portal is in no list. A route its
@@ -398,6 +434,15 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 func writeRouteFileTraits(out *strings.Builder, route Route) {
 	if route.RouteFile != "" {
 		fmt.Fprintf(out, "    routeFile: %q,\n", route.RouteFile)
+		if route.BrowserPath != "" {
+			fmt.Fprintf(out, "    browserPath: %q,\n", route.BrowserPath)
+		}
+		if route.BrowserMethod != "" {
+			fmt.Fprintf(out, "    browserMethod: %q,\n", route.BrowserMethod)
+		}
+		if route.BrowserOwnContract {
+			out.WriteString("    browserOwnContract: true,\n")
+		}
 	}
 	if route.Plain {
 		out.WriteString("    plain: true,\n")

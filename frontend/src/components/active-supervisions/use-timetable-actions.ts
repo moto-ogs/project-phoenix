@@ -61,12 +61,7 @@ function noStaffProfileError(): ApiError {
 // strings while building the request: Number() would silently change an ID
 // past 2^53 before the API can validate it.
 function normalizePositiveStaffID(value: string): string | null {
-  try {
-    const id = BigInt(value);
-    return id > 0n ? id.toString() : null;
-  } catch {
-    return null;
-  }
+  return /^[1-9]\d{0,18}$/.test(value) ? value : null;
 }
 
 interface TimetableActionsOptions {

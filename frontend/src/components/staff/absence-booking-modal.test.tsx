@@ -813,7 +813,7 @@ function TenantSWR({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider
       session={{
-        user: { id: "staff-test", tenantId: 1 },
+        user: { id: "staff-test", tenantId: "1" },
         expires: "2099-01-01",
       }}
       refetchOnWindowFocus={false}

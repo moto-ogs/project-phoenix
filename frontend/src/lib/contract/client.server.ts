@@ -23,6 +23,7 @@ import {
   type QueryOf,
   type QueryValue,
 } from "./address";
+import { commits } from "./commit";
 import type { RequestBody } from "./runtime";
 
 const logger = createLogger({ component: "Contract" });
@@ -37,7 +38,7 @@ interface ContractFailure {
   cause: ApiResponseError;
 }
 
-export type ContractResult<T> =
+type ContractResult<T> =
   { ok: true; value: T } | { ok: false; error: ContractFailure };
 
 function failure(cause: ApiResponseError): ContractResult<never> {
@@ -53,19 +54,6 @@ function failure(cause: ApiResponseError): ContractResult<never> {
       cause,
     },
   };
-}
-
-/**
- * Whether a request may have committed a change its caller asked for: every
- * method but GET, unless the contract names why a POST commits nothing
- * (`noCommit`, a preview or a search). An unreadable answer of such a request
- * asks to reload instead of offering a resend (#7563).
- */
-export function commits(route: {
-  readonly method: string;
-  readonly noCommit?: string;
-}): boolean {
-  return route.method !== "GET" && route.noCommit === undefined;
 }
 
 /**

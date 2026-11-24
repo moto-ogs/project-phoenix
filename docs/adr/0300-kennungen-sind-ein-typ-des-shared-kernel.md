@@ -254,3 +254,11 @@ Beispiel ein RFID-Tag, eine SEPA-Gläubigerkennung oder ein
 Kalenderschlüssel aus mehreren Teilen. Der Vertrag führt die Begründung
 als `text_reason`. Der Ratchet lehnt neue unmarkierte String-Felder an der
 Client-Naht ab.
+
+## Nachtrag vom 2026-11-24: Sitzungen
+
+Neu ausgestellte Sitzungs-JWTs tragen Konto-, Schul-, Träger- und
+Vorschau-Admin-Kennungen als Dezimalstrings. Die Sitzungsprüfung übernimmt
+die Claims einschließlich der Herkunft der Rollen. Auth.js und der Browser
+vergleichen die Kennungen ohne numerische Umwandlung. Alte signierte
+Zahl-Claims werden nur im exakt darstellbaren Bereich gelesen.

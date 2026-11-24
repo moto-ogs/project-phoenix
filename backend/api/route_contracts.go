@@ -419,6 +419,7 @@ func contractRegistration(prefix string, route common.RouteContract) contract.Re
 		File: route.File, Multipart: route.Multipart, TooLargeCode: route.TooLargeCode, PublicFile: route.PublicFile, PublicUpload: route.PublicUpload,
 		FileCache: route.FileCache, ConditionalGet: route.ConditionalGet,
 		PrivateCache: route.PrivateCache, RouteFile: route.RouteFile, Plain: route.Plain,
+		BrowserPath: route.BrowserPath, BrowserMethod: route.BrowserMethod, BrowserOwnContract: route.BrowserOwnContract,
 	}
 	if route.Outside != nil {
 		registration.Outside = &contract.OutsideSpec{Reason: string(route.Outside.Reason), Why: route.Outside.Why}
@@ -692,6 +693,7 @@ func tenantCalendarAndDeviceContractMounts() []contractMount {
 	// route file sends (#7808).
 	displays := []common.RouteContract{
 		{Method: "GET", Pattern: "/dashboard", Portals: portals, Plain: true, Response: displayHTTP.DashboardResponse{},
+			BrowserPath: "/api/display/dashboard", BrowserOwnContract: true,
 			RouteFile: "the wall display sends its display token in a header, no session; its route file forwards it"},
 		{Method: "GET", Pattern: "/", Portals: portals, Response: []displayHTTP.InfoDisplayResponse{}},
 		{Method: "POST", Pattern: "/", Portals: portals, Request: displayHTTP.InfoDisplayWriteRequest{}, Response: displayHTTP.InfoDisplayCreatedResponse{}},

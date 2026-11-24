@@ -65,7 +65,7 @@ function TenantSWRWrapper({ children }: Readonly<{ children: TenantSWRNode }>) {
   return (
     <SessionProvider
       session={{
-        user: { id: "1", scope: "school", tenantId: 1 },
+        user: { id: "1", scope: "school", tenantId: "1" },
         expires: "2099-01-01",
       }}
       refetchOnWindowFocus={false}

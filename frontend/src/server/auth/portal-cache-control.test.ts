@@ -10,7 +10,7 @@ const { mockFetch } = vi.hoisted(() => ({ mockFetch: vi.fn() }));
 
 vi.mock("next-auth", () => {
   const session = {
-    user: { id: "1", token: "access-token", tenantId: 7 },
+    user: { id: "1", token: "access-token", tenantId: "7" },
     expires: "2099-01-01T00:00:00.000Z",
   } as unknown as Session;
   type RouteHandler = (

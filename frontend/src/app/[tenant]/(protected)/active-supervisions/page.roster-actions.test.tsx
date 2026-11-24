@@ -41,7 +41,7 @@ vi.mock("~/lib/auth-utils", () => ({
 // Mock next-auth/react
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
-    data: { user: { token: "test-token", id: "7", tenantId: 1 } },
+    data: { user: { token: "test-token", id: "7", tenantId: "1" } },
     status: "authenticated",
   })),
 }));

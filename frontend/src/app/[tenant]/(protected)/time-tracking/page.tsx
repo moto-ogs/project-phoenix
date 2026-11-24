@@ -137,6 +137,8 @@ import {
   PLANNED_START_NOT_REACHED_CODE,
   timeTrackingService,
 } from "~/lib/time-tracking-api";
+import type { CreateAbsenceRequest } from "~/lib/time-tracking-api";
+import type { UpdateAbsenceRequest } from "~/lib/contract/time-tracking.generated";
 import { ApiError, isReadStateRefusal } from "~/lib/api-error";
 import {
   type MonthSummary,
@@ -2214,14 +2216,7 @@ function EditSessionModal({
   readonly absence: StaffAbsence | null;
   readonly onUpdateAbsence: (
     id: string,
-    req: {
-      absence_type?: string;
-      absence_type_id?: string | null;
-      date_start?: string;
-      date_end?: string;
-      half_day?: boolean;
-      note?: string;
-    },
+    req: UpdateAbsenceRequest,
   ) => Promise<void>;
   readonly onDeleteAbsence: (id: string) => Promise<void>;
 }) {
@@ -2960,14 +2955,7 @@ function CreateAbsenceModal({
 }: {
   readonly isOpen: boolean;
   readonly onClose: () => void;
-  readonly onSave: (req: {
-    absence_type: string;
-    absence_type_id: string | null;
-    date_start: string;
-    date_end: string;
-    half_day?: boolean;
-    note?: string;
-  }) => Promise<void>;
+  readonly onSave: (req: CreateAbsenceRequest) => Promise<void>;
   /** Gates the "Name hinzufügen" affordance on time_tracking:manage (#2403). */
   readonly canManageAbsenceTypes: boolean;
 }) {
@@ -3954,14 +3942,7 @@ function TimeTrackingContent() {
   );
 
   const handleCreateAbsence = useCallback(
-    async (req: {
-      absence_type: string;
-      absence_type_id: string | null;
-      date_start: string;
-      date_end: string;
-      half_day?: boolean;
-      note?: string;
-    }) => {
+    async (req: CreateAbsenceRequest) => {
       const created = await timeTrackingService.createAbsence({
         absence_type: req.absence_type,
         absence_type_id: req.absence_type_id,
@@ -3996,17 +3977,7 @@ function TimeTrackingContent() {
   );
 
   const handleUpdateAbsence = useCallback(
-    async (
-      id: string,
-      req: {
-        absence_type?: string;
-        absence_type_id?: string | null;
-        date_start?: string;
-        date_end?: string;
-        half_day?: boolean;
-        note?: string;
-      },
-    ) => {
+    async (id: string, req: UpdateAbsenceRequest) => {
       await timeTrackingService.updateAbsence(id, req);
       await Promise.all([mutateAbsences(), refreshTableData()]);
       // Eine eigene Art mit Kontingent ändert die Kontingente (#4971).

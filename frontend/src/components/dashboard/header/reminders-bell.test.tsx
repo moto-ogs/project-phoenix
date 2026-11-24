@@ -226,7 +226,7 @@ beforeEach(() => {
   setUnread(0);
   vi.mocked(useTenantSafe).mockReturnValue({
     tenantSlug: "test-tenant",
-    tenant: { tenantId: 7 },
+    tenant: { tenantId: "7" },
   } as unknown as ReturnType<typeof useTenantSafe>);
   api.fetchNotificationFeed.mockImplementation(
     (_base: string, cursor?: string | null) =>

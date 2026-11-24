@@ -235,7 +235,7 @@ func (b *builder) omission(field *Field, t reflect.Type, options []string) {
 	}
 	if slices.Contains(options, "omitzero") {
 		field.Optional = true
-		if t.Kind() == reflect.Pointer || b.dates[t] {
+		if nilable || b.dates[t] {
 			field.Schema.Nullable = false
 		}
 	}

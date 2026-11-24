@@ -310,8 +310,8 @@ describe("makeCatalogProxy, public routes", () => {
   it("answers a backend 204 as a result without data", async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
     const response = await call("POST", ["rows", "public", "tok", "withdraw"]);
-    expect(response.status).toBe(200);
-    expect(((await response.json()) as { data: unknown }).data).toBeNull();
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
   });
 
   it("refuses an answer outside the contract with 502", async () => {

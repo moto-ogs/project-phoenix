@@ -165,8 +165,8 @@ export interface ChangeRequestChildSnapshot {
   target_school_class?: string;
   holiday_care_wish?: boolean;
   custom_data?: Record<string, unknown | null> | null;
-  offering_ids?: string[] | null;
-  offering_days?: ChangeRequestOfferingDays[] | null;
+  offering_ids?: string[];
+  offering_days?: ChangeRequestOfferingDays[];
 }
 
 export const ChangeRequestChildSnapshotSchema: z.ZodType<ChangeRequestChildSnapshot, unknown> = object<ChangeRequestChildSnapshot>({
@@ -179,8 +179,8 @@ export const ChangeRequestChildSnapshotSchema: z.ZodType<ChangeRequestChildSnaps
   target_school_class: optional(str),
   holiday_care_wish: optional(bool),
   custom_data: optional(nullable(rec(nullable(json)))),
-  offering_ids: optional(nullable(arr(int64String))),
-  offering_days: optional(nullable(arr(ChangeRequestOfferingDaysSchema))),
+  offering_ids: optional(arr(int64String)),
+  offering_days: optional(arr(ChangeRequestOfferingDaysSchema)),
 });
 
 /** Go: enrollmenthttp.ChangeRequestSnapshot */
@@ -192,8 +192,8 @@ export interface ChangeRequestSnapshot {
   guardian_phone?: string | null;
   consent_flags?: Record<string, boolean | LegacyJSON> | null;
   custom_data?: Record<string, unknown | null> | null;
-  additional_guardians?: (ChangeRequestGuardian | LegacyJSON)[] | null;
-  children?: (ChangeRequestChildSnapshot | LegacyJSON)[] | null;
+  additional_guardians?: (ChangeRequestGuardian | LegacyJSON)[];
+  children?: (ChangeRequestChildSnapshot | LegacyJSON)[];
 }
 
 export const ChangeRequestSnapshotSchema: z.ZodType<ChangeRequestSnapshot, unknown> = object<ChangeRequestSnapshot>({
@@ -204,17 +204,17 @@ export const ChangeRequestSnapshotSchema: z.ZodType<ChangeRequestSnapshot, unkno
   guardian_phone: optional(nullable(str)),
   consent_flags: optional(nullable(rec(legacyJSON(nullable(bool))))),
   custom_data: optional(nullable(rec(nullable(json)))),
-  additional_guardians: optional(nullable(arr(legacyJSON(ChangeRequestGuardianSchema)))),
-  children: optional(nullable(arr(legacyJSON(ChangeRequestChildSnapshotSchema)))),
+  additional_guardians: optional(arr(legacyJSON(ChangeRequestGuardianSchema))),
+  children: optional(arr(legacyJSON(ChangeRequestChildSnapshotSchema))),
 });
 
 /** Go: enrollmenthttp.ChangeRequestDiff */
 export interface ChangeRequestDiff {
-  changed?: string[] | null;
+  changed?: string[];
 }
 
 export const ChangeRequestDiffSchema: z.ZodType<ChangeRequestDiff, unknown> = object<ChangeRequestDiff>({
-  changed: optional(nullable(arr(str))),
+  changed: optional(arr(str)),
 });
 
 /** Go: enrollmenthttp.AdminRequestSchemaFieldOption */
@@ -2396,6 +2396,8 @@ export const routes = {
     pattern: "/api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}",
     portals: ["tenant"],
     routeFile: "the route file adds the signed-in staff member's profile to the public form",
+    browserPath: "/api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}",
+    browserOwnContract: true,
     query: {
       "late_invite": { kind: "string" },
     },

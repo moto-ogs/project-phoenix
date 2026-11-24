@@ -40,7 +40,7 @@ vi.mock("~/lib/hooks/use-school-team-chat-portal", () => ({
 vi.unmock("swr");
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "7", tenantId: 1, scope: state.kind } },
+    data: { user: { id: "7", tenantId: "1", scope: state.kind } },
     status: "authenticated",
   }),
 }));

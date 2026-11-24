@@ -1,32 +1,9 @@
 import "server-only";
 import { contractWrite } from "~/lib/contract/client.server";
-import {
-  routes,
-  type SessionClaimsResponse,
-} from "~/lib/contract/auth-session.generated";
+import { routes } from "~/lib/contract/auth-session.generated";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { decodeJwtPayload, type JwtPayload } from "./jwt-payload";
 import { acceptsScope, type ValidationPortal } from "./portals";
-
-/**
- * The backend answers the claims' identifiers as strings (ADR 0300, #7808);
- * the session keeps the access token's own claim shape, whose school,
- * Träger and preview admin are numbers.
- */
-function claimShape(
-  answer: SessionClaimsResponse & { id: string },
-): JwtPayload {
-  return {
-    ...answer,
-    tenant_id:
-      answer.tenant_id === undefined ? undefined : Number(answer.tenant_id),
-    org_id: answer.org_id === undefined ? undefined : Number(answer.org_id),
-    acting_admin_id:
-      answer.acting_admin_id === undefined
-        ? undefined
-        : Number(answer.acting_admin_id),
-  };
-}
 
 /** Only backend-verified claims may cross a client token-handoff boundary. */
 export async function validateSessionToken(
@@ -59,7 +36,7 @@ export async function validateSessionToken(
     )
       return null;
     if (!acceptsScope(portal, claims.scope)) return null;
-    return claimShape({ ...claims, id: claims.id });
+    return { ...claims, id: claims.id };
   } catch {
     return null;
   }

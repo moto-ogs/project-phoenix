@@ -13,7 +13,7 @@ vi.unmock("swr");
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: {
-      user: { id: "7", tenantId: 1, isAdmin: true },
+      user: { id: "7", tenantId: "1", isAdmin: true },
       expires: "2099-01-01",
     },
     status: "authenticated",

@@ -36,12 +36,12 @@ global.fetch = mockFetch as unknown as typeof fetch;
 
 import { PUT, DELETE } from "./route";
 
-function schoolSummary(id: string, slug: string) {
+function schoolSummary(id: string, subdomain: string) {
   return {
     id,
-    slug,
-    subdomain: slug,
-    name: slug,
+    slug: `slug-${subdomain}`,
+    subdomain,
+    name: subdomain,
     organization_id: "1",
     organization_name: "Test Träger",
     active: true,

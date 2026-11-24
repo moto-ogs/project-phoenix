@@ -56,9 +56,7 @@ export function SWRScopeBoundary({
   // undefined while the provider has no answer yet: a lookup is no change.
   const generation = status === "loading" ? undefined : authGeneration(session);
   const accountId = hasSessionAccess(session) ? session.user.id : null;
-  // The session claim is a number, the page's school a string (#2342).
-  const claim = session?.user?.tenantId;
-  const tenantId = claim === undefined ? undefined : String(claim);
+  const tenantId = session?.user?.tenantId;
   const committed = useRef<{
     generation: string | null;
     accountId: string | null;

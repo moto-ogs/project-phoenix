@@ -42,7 +42,7 @@ const waitFor: typeof waitForDOM = (callback, options) =>
 
 const KEY = "badge-test-unread";
 
-function signIn(id = "7", tenantId = 1) {
+function signIn(id = "7", tenantId = "1") {
   identity.session = {
     user: { id, tenantId },
     expires: "2099-01-01",
@@ -472,7 +472,7 @@ describe("useUnreadCount — tenant/session isolation", () => {
 
     // Same account, other school: the slug and the session's school change.
     identity.slug = "school-b";
-    signIn("7", 2);
+    signIn("7", "2");
     rerender({});
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
 
@@ -492,7 +492,7 @@ describe("useUnreadCount — tenant/session isolation", () => {
     expect(result.current.unreadCount).toBe(5);
 
     identity.slug = "school-b";
-    signIn("7", 2);
+    signIn("7", "2");
     rerender({});
 
     // Not even until the new school's first answer.

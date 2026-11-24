@@ -313,6 +313,7 @@ export const routes = {
     pattern: "/operator/schools/{id}/settings/values/{key}",
     portals: ["platform"],
     routeFile: "the operator's route file purges the school's cached tenant lookup",
+    browserPath: "/api/operator/schools/{id}/settings/values/{key}",
     response: success(schoolSettingMutationResponseSchema),
   },
   "GET /operator/schools/": {
@@ -447,6 +448,7 @@ export const routes = {
     pattern: "/operator/schools/{id}/settings/values/{key}",
     portals: ["platform"],
     routeFile: "the operator's route file purges the school's cached tenant lookup",
+    browserPath: "/api/operator/schools/{id}/settings/values/{key}",
     query: {
       "force": { kind: "string", values: ["true"] },
     },

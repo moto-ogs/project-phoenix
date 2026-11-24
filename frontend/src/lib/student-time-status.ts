@@ -1,3 +1,4 @@
+import type { StudentResponse } from "~/lib/contract/students.generated";
 import { isNotCheckedInLocation, LOCATION_COLORS } from "./location-helper";
 import {
   countedDayStatus,
@@ -59,11 +60,14 @@ export interface StudentDayTimes {
  */
 export function getStudentDayTimes(
   student: {
-    arrival_time?: string | null;
-    actual_arrival_time?: string | null;
-    pickup_time?: string | null;
-    actual_pickup_time?: string | null;
-    current_location?: string | null;
+    [
+      K in
+        | "arrival_time"
+        | "actual_arrival_time"
+        | "pickup_time"
+        | "actual_pickup_time"
+        | "current_location"
+    ]?: StudentResponse[K] | null;
   },
   { ignoreCurrentAttendance = false } = {},
 ): StudentDayTimes {

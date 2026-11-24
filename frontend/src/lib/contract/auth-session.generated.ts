@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   int64String,
+  nullable,
   object,
   optional,
   requestBody,
@@ -26,6 +27,7 @@ export interface SessionClaimsResponse {
   first_name?: string;
   last_name?: string;
   roles?: string[];
+  role_is_system: boolean[] | null;
   permissions?: string[];
   is_admin?: boolean;
   scope?: string;
@@ -36,7 +38,8 @@ export interface SessionClaimsResponse {
   acting_admin_id?: string;
   preview_id?: string;
   via_traeger?: boolean;
-  exp?: number;
+  iat: number;
+  exp: number;
 }
 
 export const SessionClaimsResponseSchema: z.ZodType<SessionClaimsResponse, unknown> = object<SessionClaimsResponse>({
@@ -46,6 +49,7 @@ export const SessionClaimsResponseSchema: z.ZodType<SessionClaimsResponse, unkno
   first_name: optional(str),
   last_name: optional(str),
   roles: optional(arr(str)),
+  role_is_system: nullable(arr(bool)),
   permissions: optional(arr(str)),
   is_admin: optional(bool),
   scope: optional(str),
@@ -56,7 +60,8 @@ export const SessionClaimsResponseSchema: z.ZodType<SessionClaimsResponse, unkno
   acting_admin_id: optional(int64String),
   preview_id: optional(str),
   via_traeger: optional(bool),
-  exp: optional(safeInt),
+  iat: safeInt,
+  exp: safeInt,
 });
 
 export const routes = {

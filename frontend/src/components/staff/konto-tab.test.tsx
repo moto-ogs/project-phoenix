@@ -418,12 +418,12 @@ describe("KontoTab", () => {
       expect.objectContaining({
         first_name: "Milena",
         last_name: "Muster",
-        role_id: "1",
+        roleId: "1",
       }),
     );
     expect(onSave).toHaveBeenLastCalledWith({
-      role_id: "1",
-      role_version: "roles-v1",
+      roleId: "1",
+      roleVersion: "roles-v1",
     });
   });
 
@@ -487,7 +487,11 @@ describe("KontoTab", () => {
       )
       .mockResolvedValueOnce(stored);
     const editing = editingProps({ reload, onSave });
-    const read = { ...teacher, version: "record-v1", person_version: "person-v1" };
+    const read = {
+      ...teacher,
+      version: "record-v1",
+      person_version: "person-v1",
+    };
     const view = render(<KontoTab teacher={read} editing={editing} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
@@ -514,9 +518,7 @@ describe("KontoTab", () => {
         "Notiz der Kollegin",
       ),
     );
-    expect(
-      await screen.findByText(/inzwischen geändert/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/inzwischen geändert/)).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Wiederholen" }),
     ).not.toBeInTheDocument();
@@ -536,7 +538,11 @@ describe("KontoTab", () => {
     // ruht auf dem gespeicherten Namen und dessen Stand: der Name geht
     // nicht noch einmal mit dem alten Stand raus, der eigene Schreibvorgang
     // wird nicht als fremde Änderung abgelehnt.
-    const read = { ...teacher, version: "record-v1", person_version: "person-v1" };
+    const read = {
+      ...teacher,
+      version: "record-v1",
+      person_version: "person-v1",
+    };
     const onSave = vi
       .fn<KontoEditing["onSave"]>()
       .mockRejectedValueOnce(
@@ -601,11 +607,11 @@ describe("KontoTab", () => {
     const roleField = screen.getByLabelText<HTMLSelectElement>("Rolle");
     expect(roleField.value).toBe("2");
 
-    // Unverändert: keine role_id im Entwurf.
+    // Unverändert: keine roleId im Entwurf.
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => {
       expect(editing.onSave).toHaveBeenCalledWith(
-        expect.not.objectContaining({ role_id: expect.anything() }),
+        expect.not.objectContaining({ roleId: expect.anything() }),
       );
     });
 
@@ -616,7 +622,7 @@ describe("KontoTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => {
       expect(editing.onSave).toHaveBeenLastCalledWith(
-        expect.objectContaining({ role_id: "1" }),
+        expect.objectContaining({ roleId: "1" }),
       );
     });
   });
@@ -659,8 +665,8 @@ describe("KontoTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => {
       expect(editing.onSave).toHaveBeenLastCalledWith({
-        role_id: "1",
-        role_version: "roles-v1",
+        roleId: "1",
+        roleVersion: "roles-v1",
       });
     });
   });
@@ -703,8 +709,8 @@ describe("KontoTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => {
       expect(editing.onSave).toHaveBeenLastCalledWith({
-        role_id: "1",
-        role_version: "roles-v1",
+        roleId: "1",
+        roleVersion: "roles-v1",
       });
     });
   });
@@ -740,8 +746,8 @@ describe("KontoTab", () => {
 
     await waitFor(() => {
       expect(editing.onSave).toHaveBeenCalledWith({
-        role_id: "1",
-        role_version: "roles-v1",
+        roleId: "1",
+        roleVersion: "roles-v1",
       });
     });
   });
@@ -787,8 +793,8 @@ describe("KontoTab", () => {
 
     await waitFor(() => {
       expect(editing.onSave).toHaveBeenCalledWith({
-        role_id: "1",
-        role_version: "roles-v1",
+        roleId: "1",
+        roleVersion: "roles-v1",
       });
     });
   });

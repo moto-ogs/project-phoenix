@@ -345,11 +345,10 @@ export type ExistingChildChoice =
 /** The choice in the wire fields the decision and the manual enrollment take. */
 export function existingChildChoiceFields(
   choice: ExistingChildChoice | undefined,
-): {
-  existing_student_id?: string;
-  create_new_student?: true;
-  shown_existing_student_ids?: string[];
-} {
+): Pick<
+  enrollmentContract.AdminDecideRequest,
+  "existing_student_id" | "create_new_student" | "shown_existing_student_ids"
+> {
   if (!choice) return {};
   return "existingStudentId" in choice
     ? { existing_student_id: choice.existingStudentId }

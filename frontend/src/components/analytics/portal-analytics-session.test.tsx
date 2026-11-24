@@ -64,7 +64,7 @@ describe("PortalAnalyticsSession", () => {
           user: {
             id: "7",
             scope: surface === "parents" ? "parent" : "school",
-            tenantId: 42,
+            tenantId: "42",
           },
         },
       });
@@ -126,7 +126,7 @@ describe("PortalAnalyticsSession", () => {
     async ({ surface, scope, portal }) => {
       mocks.useSession.mockReturnValue({
         status: "authenticated",
-        data: { user: { id: "7", scope, tenantId: 42 } },
+        data: { user: { id: "7", scope, tenantId: "42" } },
       });
 
       render(<PortalAnalyticsSession surface={surface} consentCopy={COPY} />);
@@ -144,7 +144,7 @@ describe("PortalAnalyticsSession", () => {
   it("registers a teacher of the school portal with the school", async () => {
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { id: "9", scope: "school", tenantId: 42 } },
+      data: { user: { id: "9", scope: "school", tenantId: "42" } },
     });
 
     render(<PortalAnalyticsSession surface="school" consentCopy={COPY} />);
@@ -185,7 +185,7 @@ describe("PortalAnalyticsSession", () => {
   it("clears the context at logout", () => {
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { id: "9", scope: "school", tenantId: 42 } },
+      data: { user: { id: "9", scope: "school", tenantId: "42" } },
     });
     const view = render(
       <PortalAnalyticsSession surface="school" consentCopy={COPY} />,
@@ -203,7 +203,7 @@ describe("PortalAnalyticsSession", () => {
   it("resets the identity when the school changes", async () => {
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { id: "9", scope: "school", tenantId: 42 } },
+      data: { user: { id: "9", scope: "school", tenantId: "42" } },
     });
     const view = render(
       <PortalAnalyticsSession surface="school" consentCopy={COPY} />,
@@ -214,7 +214,7 @@ describe("PortalAnalyticsSession", () => {
 
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { id: "9", scope: "school", tenantId: 43 } },
+      data: { user: { id: "9", scope: "school", tenantId: "43" } },
     });
     view.rerender(
       <PortalAnalyticsSession surface="school" consentCopy={COPY} />,
@@ -286,7 +286,7 @@ describe("PortalAnalyticsSession", () => {
   it("registers nothing for a session of another portal", () => {
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { id: "9", scope: "", tenantId: 42 } },
+      data: { user: { id: "9", scope: "", tenantId: "42" } },
     });
 
     render(<PortalAnalyticsSession surface="school" consentCopy={COPY} />);

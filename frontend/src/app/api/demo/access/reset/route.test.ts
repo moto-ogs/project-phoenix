@@ -106,11 +106,11 @@ describe("demo reset route", () => {
     });
   });
 
-  it("answers 500 when the backend cannot be reached", async () => {
+  it("answers 503 when the backend cannot be reached", async () => {
     fetchMock.mockRejectedValue(new Error("connection refused"));
 
     const response = await reset(request({ role: "lead" }, "secret-token"));
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(503);
   });
 });

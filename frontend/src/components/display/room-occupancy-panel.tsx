@@ -9,11 +9,7 @@ import { roomsConcept } from "~/lib/concepts/rooms";
 
 interface RoomOccupancyPanelProps {
   readonly rooms: displayContract.RoomOccupancy[];
-  readonly totals?: {
-    students_present: number;
-    rooms_occupied: number;
-    activities_running: number;
-  };
+  readonly totals?: displayContract.DashboardTotals;
 }
 
 /** Occupancy ratio → brand color: green = free, orange = filling, red = full. */

@@ -179,7 +179,7 @@ describe("TraegerDailyAttendancePage", () => {
         user: {
           id: "A",
           scope: "org",
-          orgId: 7,
+          orgId: "7",
           permissions: ["traeger_reports:read"],
         },
       },

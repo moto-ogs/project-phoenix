@@ -103,6 +103,7 @@ type SessionClaims struct {
 	// ViaTraeger marks a school session opened through the Träger (ADR 0084
 	// section 5): its school access rests on the Träger, not on a mapping.
 	ViaTraeger bool
+	IssuedAt   int64
 	ExpiresAt  int64
 }
 

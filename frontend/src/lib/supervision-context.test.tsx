@@ -2070,7 +2070,7 @@ describe("SupervisionProvider school switch (#3375)", () => {
     return {
       data: {
         user: {
-          tenantId,
+          tenantId: tenantId === undefined ? undefined : String(tenantId),
           id: "1",
           email: "test@example.com",
           name: "Test User",

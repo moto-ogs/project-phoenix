@@ -2,7 +2,6 @@ package account_test
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -248,12 +247,7 @@ func TestDemoAccessRedeemsRepeatedlyIntoALockedTenantSession(t *testing.T) {
 		require.NotEmpty(t, tokens.RefreshToken)
 	}
 
-	segments := strings.Split(tokens.AccessToken, ".")
-	require.Len(t, segments, 3)
-	payload, err := base64.RawURLEncoding.DecodeString(segments[1])
-	require.NoError(t, err)
-	var claims testutil.Claims
-	require.NoError(t, json.Unmarshal(payload, &claims))
+	claims := (demoSession{AccessToken: tokens.AccessToken}).claims(t)
 	assert.EqualValues(t, adminID, claims.ID)
 	assert.Equal(t, testpkg.Tenant(t), claims.TenantID)
 	assert.Empty(t, claims.Scope, "a demo session is a tenant session")

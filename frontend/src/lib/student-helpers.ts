@@ -3,6 +3,7 @@
 // the Heimweg plan in departure-plan.ts.
 
 import { schoolClassLabel } from "./school-class-label";
+import type { Pagination } from "~/lib/contract/runtime";
 import type { AttendanceActor } from "~/lib/attendance-actor";
 import type {
   CompanionExtensionConfirmation,
@@ -201,12 +202,7 @@ export type Student = StudentCore &
 /** One page of a student list. */
 export interface StudentPage {
   data: Student[];
-  pagination: {
-    current_page: number;
-    page_size: number;
-    total_pages: number;
-    total_records: number;
-  };
+  pagination: Pagination;
 }
 
 /**

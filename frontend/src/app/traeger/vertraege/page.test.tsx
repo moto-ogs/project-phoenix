@@ -39,7 +39,7 @@ vi.mock("next-auth/react", () => ({
       user: {
         id: "A",
         scope: "org",
-        orgId: 7,
+        orgId: "7",
         permissions: ["traeger_contracts:manage", "traeger_overview:read"],
       },
     },

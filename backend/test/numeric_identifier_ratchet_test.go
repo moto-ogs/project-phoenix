@@ -67,7 +67,14 @@ func seamPackage(dir string) bool {
 	case parts[0] == "api":
 		return true
 	case (parts[0] == "modules" || parts[0] == "workflows") && len(parts) >= 3:
-		return parts[2] == "http" || parts[2] == "inbound"
+		for _, part := range parts[2:] {
+			if part == "internal" {
+				return false
+			}
+			if part == "http" || part == "inbound" {
+				return true
+			}
+		}
 	}
 	return false
 }
@@ -370,7 +377,7 @@ func handler() any {
 	if got := scan("modules/devicescan/http/x"); !slices.Equal(got, kiosk) {
 		t.Errorf("kiosk package:\n got %q\nwant %q", got, kiosk)
 	}
-	if !seamPackage("modules/x/http") || !seamPackage("workflows/x/inbound/y") || !seamPackage("api/x") || seamPackage("modules/x") || seamPackage("modules/x/internal/http") {
+	if !seamPackage("modules/x/http") || !seamPackage("modules/careplan/requestfeed/http") || !seamPackage("workflows/x/inbound/y") || !seamPackage("api/x") || seamPackage("modules/x") || seamPackage("modules/x/internal/http") {
 		t.Error("seamPackage covers the api root and every http and inbound role")
 	}
 }

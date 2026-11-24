@@ -88,11 +88,7 @@ function validateFile(file: File, options: FileUploadOptions): void {
 
   // Reject path traversal. Multiple dots are valid in ordinary display names;
   // the backend verifies content and replaces the stored name with a UUID.
-  if (
-    fileName.includes("..") ||
-    fileName.includes("/") ||
-    fileName.includes("\\")
-  ) {
+  if (fileName.includes("/") || fileName.includes("\\")) {
     throw new FileValidationError(
       "Invalid filename",
       422,

@@ -65,7 +65,7 @@ const report: ClassDayReport = {
     },
   ],
 };
-function signIn(id = "A", tenantId = 1) {
+function signIn(id = "A", tenantId = "1") {
   identity.session = {
     user: { id, tenantId, scope: "school" },
     expires: "2099-01-01",
@@ -668,7 +668,10 @@ describe("school report cache", () => {
       } else {
         if (change === "logout") identity.session = null;
         else
-          signIn(change === "account" ? "B" : "A", change === "school" ? 2 : 1);
+          signIn(
+            change === "account" ? "B" : "A",
+            change === "school" ? "2" : "1",
+          );
         view.rerender(<ClassDayClass schoolClass="4a" {...options} />);
       }
       expect(screen.queryByText("Klassentag, Klara")).not.toBeInTheDocument();
@@ -686,7 +689,7 @@ describe("school report cache", () => {
       }
       signIn(
         change === "other-tab-school" ? "A" : "B",
-        change.includes("school") ? 2 : 1,
+        change.includes("school") ? "2" : "1",
       );
       view.rerender(<ClassDayClass schoolClass="4a" {...options} />);
       expect(screen.queryByText("Klassentag, Klara")).not.toBeInTheDocument();

@@ -16,19 +16,19 @@ const schoolAuthConfig = createPortalAuthConfig(PORTALS.school);
 const catererAuthConfig = createPortalAuthConfig(PORTALS.caterer);
 
 // Shared JWT token constants — decoded payloads documented inline
-// { id: 1, first_name: "John", last_name: "Doe", email: "john@example.com", roles: ["teacher"], is_admin: false }
+// { id: "1", first_name: "John", last_name: "Doe", email: "john@example.com", roles: ["teacher"], is_admin: false }
 const TEACHER_JWT =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZmlyc3RfbmFtZSI6IkpvaG4iLCJsYXN0X25hbWUiOiJEb2UiLCJlbWFpbCI6ImpvaG5AZXhhbXBsZS5jb20iLCJyb2xlcyI6WyJ0ZWFjaGVyIl0sImlzX2FkbWluIjpmYWxzZX0.test";
-// { id: 123, first_name: "Test", last_name: "User", email: "test@example.com", roles: ["teacher"] }
+// { id: "123", first_name: "Test", last_name: "User", email: "test@example.com", roles: ["teacher"] }
 const INTERNAL_REFRESH_JWT =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTIzLCJmaXJzdF9uYW1lIjoiVGVzdCIsImxhc3RfbmFtZSI6IlVzZXIiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJyb2xlcyI6WyJ0ZWFjaGVyIl19.test";
-// { id: 45, sub: "operator:45", username: "op@example.com", first_name: "Op", roles: ["operator"], permissions: [], scope: "platform", is_admin: false }
+// { id: "45", sub: "operator:45", username: "op@example.com", first_name: "Op", roles: ["operator"], permissions: [], scope: "platform", is_admin: false }
 const OPERATOR_JWT =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NDUsInN1YiI6Im9wZXJhdG9yOjQ1IiwidXNlcm5hbWUiOiJvcEBleGFtcGxlLmNvbSIsImZpcnN0X25hbWUiOiJPcCIsInJvbGVzIjpbIm9wZXJhdG9yIl0sInBlcm1pc3Npb25zIjpbXSwic2NvcGUiOiJwbGF0Zm9ybSIsImlzX2FkbWluIjpmYWxzZX0.test";
-// { id: 45, sub: "operator:45", email: "legacy-op@example.com", first_name: "Op", roles: ["operator"], scope: "platform" }
+// { id: "45", sub: "operator:45", email: "legacy-op@example.com", first_name: "Op", roles: ["operator"], scope: "platform" }
 const OPERATOR_JWT_EMAIL_ONLY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NDUsInN1YiI6Im9wZXJhdG9yOjQ1IiwiZW1haWwiOiJsZWdhY3ktb3BAZXhhbXBsZS5jb20iLCJmaXJzdF9uYW1lIjoiT3AiLCJyb2xlcyI6WyJvcGVyYXRvciJdLCJzY29wZSI6InBsYXRmb3JtIn0.test";
-// { id: 45, sub: "operator:45", first_name: "Op", roles: ["operator"], scope: "platform" }
+// { id: "45", sub: "operator:45", first_name: "Op", roles: ["operator"], scope: "platform" }
 const OPERATOR_JWT_NO_EMAIL =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NDUsInN1YiI6Im9wZXJhdG9yOjQ1IiwiZmlyc3RfbmFtZSI6Ik9wIiwicm9sZXMiOlsib3BlcmF0b3IiXSwic2NvcGUiOiJwbGF0Zm9ybSJ9.test";
 
@@ -42,7 +42,7 @@ function refreshJwt(
   ).toString("base64url");
   const payload = Buffer.from(
     JSON.stringify({
-      id: 123,
+      id: "123",
       token,
       exp: Math.floor(expiresAt / 1000),
       iat: issuedAt,
@@ -864,7 +864,7 @@ describe("authConfig", () => {
       const payload = parseJwtPayload(TEACHER_JWT);
 
       expect(payload).not.toBeNull();
-      expect(payload?.id).toBe(1);
+      expect(payload?.id).toBe("1");
       expect(payload?.first_name).toBe("John");
       expect(payload?.last_name).toBe("Doe");
       expect(payload?.email).toBe("john@example.com");
@@ -886,34 +886,34 @@ describe("authConfig", () => {
 
   describe("buildDisplayName", () => {
     it("should use first and last name when available", () => {
-      const payload = { id: 1, first_name: "John", last_name: "Doe" };
+      const payload = { id: "1", first_name: "John", last_name: "Doe" };
       expect(buildDisplayName(payload, "john@example.com")).toBe("John Doe");
     });
 
     it("should use first name only when last name is missing", () => {
-      const payload = { id: 1, first_name: "John" };
+      const payload = { id: "1", first_name: "John" };
       expect(buildDisplayName(payload, "john@example.com")).toBe("John");
     });
 
     it("should fall back to username", () => {
-      const payload = { id: 1, username: "johnd" };
+      const payload = { id: "1", username: "johnd" };
       expect(buildDisplayName(payload, "")).toBe("johnd");
     });
 
     it("should fall back to email", () => {
-      const payload = { id: 1 };
+      const payload = { id: "1" };
       expect(buildDisplayName(payload, "john@example.com")).toBe(
         "john@example.com",
       );
     });
 
     it("should fall back to ultimate fallback", () => {
-      const payload = { id: 1 };
+      const payload = { id: "1" };
       expect(buildDisplayName(payload, "", "Unknown")).toBe("Unknown");
     });
 
     it("should use default ultimate fallback", () => {
-      const payload = { id: 1 };
+      const payload = { id: "1" };
       expect(buildDisplayName(payload, "")).toBe("User");
     });
   });
@@ -921,7 +921,7 @@ describe("authConfig", () => {
   describe("buildAuthUser", () => {
     it("should build user with all fields", () => {
       const payload = {
-        id: 1,
+        id: "1",
         first_name: "John",
         last_name: "Doe",
         email: "john@example.com",
@@ -951,7 +951,7 @@ describe("authConfig", () => {
 
     it("should override roles with operator when scope is platform", () => {
       const payload = {
-        id: 45,
+        id: "45",
         first_name: "Op",
         roles: ["admin"],
         is_admin: true,
@@ -971,7 +971,7 @@ describe("authConfig", () => {
     });
 
     it("should handle missing roles with empty array", () => {
-      const payload = { id: 2, email: "test@example.com" };
+      const payload = { id: "2", email: "test@example.com" };
 
       const user = buildAuthUser(
         payload,
@@ -986,7 +986,7 @@ describe("authConfig", () => {
 
     it("should handle non-array roles defensively", () => {
       const payload = {
-        id: 3,
+        id: "3",
         roles: "not-an-array" as unknown as string[],
       };
 
@@ -1003,7 +1003,7 @@ describe("authConfig", () => {
 
     it("preserves the system origin of each tenant role", () => {
       const user = buildAuthUser(
-        { id: 4, roles: ["user", "user"], role_is_system: [true, false] },
+        { id: "4", roles: ["user", "user"], role_is_system: [true, false] },
         "token",
         "refresh",
         "test@example.com",

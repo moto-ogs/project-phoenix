@@ -14,7 +14,7 @@ import { SWRConfig } from "./testing";
 
 vi.unmock("swr");
 const { owner } = vi.hoisted(() => ({
-  owner: { current: { id: "account-7", scope: "tenant", tenantId: 42 } },
+  owner: { current: { id: "account-7", scope: "tenant", tenantId: "42" } },
 }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
@@ -71,7 +71,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   resetSWRScope({ revalidate: false });
   resumeSWRSession();
-  owner.current = { id: "account-7", scope: "tenant", tenantId: 42 };
+  owner.current = { id: "account-7", scope: "tenant", tenantId: "42" };
   setVisibility("visible");
 });
 

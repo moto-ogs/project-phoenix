@@ -44,7 +44,7 @@ let currentSearch = new URLSearchParams();
 
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
-    data: { user: { id: "3", tenantId: 2 }, error: sessionState.error },
+    data: { user: { id: "3", tenantId: "2" }, error: sessionState.error },
     status: sessionState.status,
     update: mockUpdateSession,
   })),

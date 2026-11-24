@@ -23,9 +23,7 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-// init seeds JWT viper defaults before any test (and before setupRoomsRoute
-// constructs a Resource via sessiontoken.MustNewTokenAuth). CI runs without a .env so
-// AUTH_JWT_SECRET is unset; without a secret jwx refuses HMAC signing.
+// CI runs without a .env; the route fixtures need an explicit signing key.
 func init() {
 	testutil.SeedTestJWTConfig()
 }

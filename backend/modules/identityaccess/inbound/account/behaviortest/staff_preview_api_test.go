@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -89,8 +90,8 @@ func TestStaffPreviewEndpoints(t *testing.T) {
 		var claims map[string]any
 		require.NoError(t, json.Unmarshal(payload, &claims))
 		assert.Equal(t, true, claims["read_only"])
-		assert.EqualValues(t, admin.ID, claims["acting_admin_id"])
-		assert.EqualValues(t, target.ID, claims["id"])
+		assert.Equal(t, strconv.FormatInt(admin.ID, 10), claims["acting_admin_id"])
+		assert.Equal(t, strconv.FormatInt(target.ID, 10), claims["id"])
 	})
 
 	t.Run("preview token is blocked on every write under /auth", func(t *testing.T) {

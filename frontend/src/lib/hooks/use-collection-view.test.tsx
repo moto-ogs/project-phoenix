@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useCollectionView } from "./use-collection-view";
 
 const sessionUser = vi.hoisted(() => ({
-  current: { id: "7", tenantId: 3 } as { id: string; tenantId: number },
+  current: { id: "7", tenantId: "3" } as { id: string; tenantId: string },
 }));
 
 vi.mock("next-auth/react", () => ({
@@ -19,7 +19,7 @@ const COLUMNS = [
 describe("useCollectionView (#3834)", () => {
   beforeEach(() => {
     localStorage.clear();
-    sessionUser.current = { id: "7", tenantId: 3 };
+    sessionUser.current = { id: "7", tenantId: "3" };
   });
   afterEach(() => {
     localStorage.clear();
@@ -58,7 +58,7 @@ describe("useCollectionView (#3834)", () => {
     );
     expect(otherPage.current.view).toBe("tiles");
 
-    sessionUser.current = { id: "8", tenantId: 3 };
+    sessionUser.current = { id: "8", tenantId: "3" };
     const { result: otherAccount } = renderHook(() =>
       useCollectionView("page", COLUMNS),
     );

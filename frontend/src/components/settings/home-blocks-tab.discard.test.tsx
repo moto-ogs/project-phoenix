@@ -57,7 +57,7 @@ const layout = {
 function signedIn(id: string) {
   return {
     data: {
-      user: { id, tenantId: 1, permissions: ["config:update"] },
+      user: { id, tenantId: "1", permissions: ["config:update"] },
       expires: "2099-01-01",
     } satisfies Session,
     status: "authenticated",

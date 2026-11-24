@@ -1,4 +1,5 @@
 import "server-only";
+import { browserRoutePaths } from "~/lib/contract/browser-traits.generated";
 import { portalAuthPath, portalLogPath } from "~/lib/portal-paths";
 import { ALL_PORTALS } from "./portals";
 
@@ -17,7 +18,7 @@ export const MISMATCH_EXEMPT_PATHS: ReadonlySet<string> = new Set([
     portalAuthPath("tenant", step),
   ),
   portalLogPath("tenant"),
-  "/api/invitations/accept",
+  browserRoutePaths.tenant["POST /auth/invitations/{token}/accept"],
 ]);
 
 /**

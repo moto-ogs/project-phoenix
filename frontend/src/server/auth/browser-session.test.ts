@@ -29,7 +29,7 @@ const serverSession = (): ServerSession => ({
     token: "access-token",
     refreshToken: "refresh-token",
     roles: ["admin"],
-    tenantId: 3,
+    tenantId: "3",
     isPreview: false,
   },
 });
@@ -45,7 +45,7 @@ describe("toBrowserSession (#5005)", () => {
         sentryUserId: PSEUDONYM,
         email: "erika@example.com",
         roles: ["admin"],
-        tenantId: 3,
+        tenantId: "3",
         isPreview: false,
       },
     });

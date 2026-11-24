@@ -42,7 +42,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockUseUnreadCount.mockReturnValue({ unreadCount: 0, isLoading: false });
   mockUseSession.mockReturnValue({
-    data: { user: { id: "7", tenantId: 3 } },
+    data: { user: { id: "7", tenantId: "3" } },
     status: "authenticated",
   });
 });

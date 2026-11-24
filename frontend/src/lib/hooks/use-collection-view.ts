@@ -98,7 +98,7 @@ const getServerSnapshot = () => null;
 function buildStorageKey(
   pageKey: string,
   user:
-    | { id?: string | null; email?: string | null; tenantId?: number | null }
+    | { id?: string | null; email?: string | null; tenantId?: string | null }
     | undefined,
 ): string | null {
   if (typeof window === "undefined") return null;

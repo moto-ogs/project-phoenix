@@ -210,12 +210,18 @@ or write a `Backend*` interface for a registered route.
   (`YYYY-MM-DD`) or `contract:"clock"` (`HH:MM`); the decoder then rejects
   another form. Closed value sets are registered in `Enums`.
 - An identifier is an `ident.ID` in every role, a count an `int`; the
-  generator rejects a bare `int64`; a response shape that depends on the
-  query must register its variants. Registered bigint identifiers travel as decimal strings and decode with
+  generator rejects a bare `int64`. Use a discriminator in the response
+  body or a separate path for a second shape. Only legacy
+  `GET /api/students/` registers query-selected variants. Identifiers travel
+  as decimal strings and decode with
   `int64String` (ADR 0300). An identifier-shaped field that carries genuine
   text instead stays a string, with a Go `contract_text` reason.
   A sign-in step or another route its portal's route file serves is typed
-  too (`RouteFile`) and stays out of every proxy allowlist. The catalog
+  too (`RouteFile`) and stays out of every proxy allowlist. `BrowserPath`
+  exposes its exact same-origin address to `bffPath`; without it, only the
+  server can use the Go key. `BrowserOwnContract` excludes the key from
+  `bffJson` when the route file changes the request or answer. If the route
+  file uses another HTTP method, name it in `BrowserMethod` (demo status). The catalog
   lines outside the contract (`Outside`: a device, webhook or protocol
   endpoint) only shrink: `scripts/check-contract-shrink.mjs <base>` fails on
   a new one unless a new ADR names its catalog line
@@ -263,8 +269,9 @@ The key is the scope claim of the portal's session token
   from the portal's handlers (`makePortalHandlers`). The answer is the
   backend's envelope with the decoded data: `{ status, data, message }`, a
   paginated list also `pagination`, as `common.Response` writes them.
-  A backend 204 still goes through the decoder. A NoData DELETE answers
-  204; a data-bearing DELETE with no answer fails with 502. The proxy
+  The proxy retains the backend's success status for every method. A
+  backend 204 still goes through the decoder and remains bodyless; a
+  data-bearing DELETE with no answer fails with 502. The proxy
   and the server contract client share JSON reading: unreadable 2xx
   answers (including truncated JSON) are 502. After a write that may
   have committed, they carry `general.write_answer_unreadable`; reads
@@ -282,7 +289,7 @@ The key is the scope claim of the portal's session token
   The proxy streams both unread: the file with the headers of
   `fileResponse`, every answer `private, no-store`; the upload once, without
   a retry after a renewal, and 413 with `TooLargeCode` above the limit. Such
-  a route has no entry in `src/test/private-download-routes.ts`. The backend
+  a route needs no BFF route file. The backend
   names the file's `Content-Type` and `Content-Disposition` itself; the proxy
   adds no fallback. A BFF-side ID, query or format check moves to the Go
   handler, and the client sends the backend's parameters and body as they are.
@@ -335,8 +342,9 @@ The key is the scope claim of the portal's session token
   `lib/contract/shared.generated.ts`, and imported by both resource files.
 - A route that answers 204 or the envelope without data registers
   `NoData: true` in place of a response type. Its decoder (`noData`) takes
-  exactly those two answers, and the BFF answers `{ status: "success",
-  data: null }` with the backend's message (a DELETE: 204).
+  exactly those two answers. A 204 remains bodyless. Other success statuses
+  keep their status and answer `{ status: "success", data: null }` with the
+  backend's message, including for DELETE.
 - A client type reads an identifier as `string`, never `number`.
 
 The registered routes are the entries of `portals.generated.ts`.
@@ -450,8 +458,8 @@ the full chain:
 
 Backend error responses have one wire contract: the portal handlers
 (`makePortalHandlers`, under the catalog proxy and every named route)
-propagate `ApiResponseError` through `handleApiError`; the public JSON
-proxies and file responses use `forwardBackendResponse`. Both retain status
+and public JSON proxies propagate `ApiResponseError` through `handleApiError`;
+file responses use `forwardBackendResponse`. Both retain status
 and `Retry-After` and replace 5xx bodies with safe Problem Details. The
 forwarder streams other error bodies with their content type; the handler
 instead replaces invalid or empty bodies and adds the BFF request ID to a
@@ -470,12 +478,9 @@ passkeys, demo access, invitations, Auth.js endpoints) wraps its handler in
 exported handler that is neither built by a policy factory nor listed with a
 reason in its exception table, and for every re-export (`export * from`,
 `export { GET } from`) in a route file. Files, images and event streams keep their own
-headers. A private file a route file answers additionally uses
-`withPrivateDownloadNoStore` around the outer portal handler and an entry in
-`src/test/private-download-routes.ts` (empty: every private file is a catalog
-route, answered `private, no-store` by the proxy). `route-cache-policy.test.ts`
-scans file constructors and download paths for missing entries; the SSE routes
-are its only `NON_DOWNLOAD_RESOURCES`.
+headers. The catalog serves private files. `route-cache-policy.test.ts`
+checks file constructors and download paths; only the SSE routes are
+listed as `NON_DOWNLOAD_RESOURCES`.
 
 Sentry ownership follows the same boundary: forwarding a backend HTTP error,
 including 5xx, creates no BFF event. A caught network failure or BFF exception

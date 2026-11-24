@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "teacher", tenantId: 7, scope: "school" } },
+    data: { user: { id: "teacher", tenantId: "7", scope: "school" } },
     status: "authenticated",
   }),
 }));
