@@ -5,7 +5,7 @@ import { Plus, Search } from "lucide-react";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import type { FormEvent } from "react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -58,6 +58,14 @@ interface SpontaneousActivityStartProps {
   readonly isStarting?: boolean;
   readonly occupiedRoomIds?: readonly string[];
   readonly onStart: (payload: SpontaneousActivityStartPayload) => void;
+  /**
+   * Eigener Auslöser statt der Karte (App, #8070): ein Knopf am Listenende
+   * oder in der Aktionsleiste. Der Dialog bleibt derselbe.
+   */
+  readonly renderTrigger?: (trigger: {
+    open: () => void;
+    disabled: boolean;
+  }) => ReactNode;
 }
 
 function normalizeRooms(rooms: roomsContract.RoomResponse[]): RoomOption[] {
@@ -122,6 +130,7 @@ export function SpontaneousActivityStart({
   isStarting = false,
   occupiedRoomIds = EMPTY_OCCUPIED_ROOM_IDS,
   onStart,
+  renderTrigger,
 }: SpontaneousActivityStartProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activityInput, setActivityInput] = useState("");
@@ -290,29 +299,36 @@ export function SpontaneousActivityStart({
 
   return (
     <>
-      <SectionCard className="mb-4">
-        <button
-          type="button"
-          disabled={disabled || isStarting}
-          onClick={() => setIsOpen(true)}
-          className="border-moto-green/40 bg-moto-green/10 hover:border-moto-green hover:bg-moto-green/15 flex min-h-14 w-full items-center gap-3 rounded-lg border px-3 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <IconTile
-            shape="round"
-            tone="greenFill"
-            icon={<Plus aria-hidden="true" />}
-          />
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold text-gray-900">
-              Spontane Aktivität starten
+      {renderTrigger ? (
+        renderTrigger({
+          open: () => setIsOpen(true),
+          disabled: disabled || isStarting,
+        })
+      ) : (
+        <SectionCard className="mb-4">
+          <button
+            type="button"
+            disabled={disabled || isStarting}
+            onClick={() => setIsOpen(true)}
+            className="border-moto-green/40 bg-moto-green/10 hover:border-moto-green hover:bg-moto-green/15 flex min-h-14 w-full items-center gap-3 rounded-lg border px-3 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <IconTile
+              shape="round"
+              tone="greenFill"
+              icon={<Plus aria-hidden="true" />}
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-gray-900">
+                Spontane Aktivität starten
+              </span>
+              <span className="block text-sm text-gray-600">
+                {disabledReason ??
+                  "Aktivität wählen, Raum belegen, Kinder danach hinzufügen"}
+              </span>
             </span>
-            <span className="block text-sm text-gray-600">
-              {disabledReason ??
-                "Aktivität wählen, Raum belegen, Kinder danach hinzufügen"}
-            </span>
-          </span>
-        </button>
-      </SectionCard>
+          </button>
+        </SectionCard>
+      )}
 
       {/* oxlint-disable-next-line ui-kit/form-modal-pending -- übergibt die Auswahl synchron an onStart und schließt; gespeichert wird danach außerhalb des Dialogs. */}
       <FormModal

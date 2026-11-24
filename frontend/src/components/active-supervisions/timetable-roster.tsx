@@ -96,7 +96,7 @@ export async function runOwnAttendanceMutation<T>(
   }
 }
 
-const ATTENDANCE_SUBSTATUS_LABELS: Record<
+export const ATTENDANCE_SUBSTATUS_LABELS: Record<
   NonNullable<TimetableRosterRow["substatus"]>,
   string
 > = {
@@ -242,7 +242,7 @@ export async function runRestOfDayExcusalRequest(
 }
 
 const EXCUSE_SCOPE_BLOCK = "block";
-const EXCUSE_SCOPE_REST_OF_DAY = "rest-of-day";
+export const EXCUSE_SCOPE_REST_OF_DAY = "rest-of-day";
 
 interface ExcuseScopeModalProps {
   readonly instance: TimetableRoster["instance"];
@@ -252,7 +252,7 @@ interface ExcuseScopeModalProps {
   readonly onSelect: (scope: string) => void;
 }
 
-function ExcuseScopeModal({
+export function ExcuseScopeModal({
   instance,
   row,
   isBusy,
@@ -283,7 +283,7 @@ function ExcuseScopeModal({
   );
 }
 
-interface RosterActionAccess {
+export interface RosterActionAccess {
   readonly attendance: boolean;
   readonly statuses: boolean;
   readonly absence: boolean;
@@ -291,7 +291,7 @@ interface RosterActionAccess {
   readonly excuseAsksScope: boolean;
 }
 
-const CHECK_IN_TOOLTIP =
+export const CHECK_IN_TOOLTIP =
   "Trägt das Kind sofort hier als anwesend ein, auch aus anderen Räumen.";
 
 interface RosterRowActionsProps {
@@ -300,7 +300,7 @@ interface RosterRowActionsProps {
   readonly onAction: (
     action: RosterAction,
     row: TimetableRosterRow,
-  ) => Promise<void>;
+  ) => Promise<unknown>;
   /** Adresse der Kinderseite; ohne sie gibt es den Knopf „Profil ansehen“ nicht. */
   readonly profileHref?: string;
   /**
@@ -473,19 +473,24 @@ interface TimetableRosterRowProps {
   readonly onHomework?: (row: TimetableRosterRow) => void;
 }
 
-function TimetableRosterStudentRow({
-  actionAccess,
-  instanceIsSpontaneous,
+/**
+ * Die Zeilen unter dem Namen eines Kindes im Block: Gehzeit, Ankunft,
+ * Hinweise, Abwesenheit, Hausaufgaben. Die Liste am Computer und das
+ * Aufsicht-Kind-Blatt der App zeigen dieselben Angaben.
+ */
+export function RosterStudentDetailLines({
+  row,
   now,
   rosterDate,
   pickupTimesLoaded,
   pickupTimesRedacted,
-  row,
-  onAction,
-  onOpenStudent,
-  studentProfileHref,
-  onHomework,
-}: TimetableRosterRowProps) {
+}: Readonly<{
+  row: TimetableRosterRow;
+  now: Date;
+  rosterDate: string;
+  pickupTimesLoaded?: boolean;
+  pickupTimesRedacted?: boolean;
+}>) {
   const pickupTimeLabel = rosterPickupTimeLabel(
     row.pickupTime,
     pickupTimesLoaded,
@@ -526,6 +531,94 @@ function TimetableRosterStudentRow({
   );
 
   return (
+    <>
+      {pickupTimeLabel === null ? null : (
+        <div className="mt-0.5 text-sm font-medium text-gray-700">
+          Gehzeit: {pickupTimeLabel}
+        </div>
+      )}
+      {arrivalTime ? (
+        <div className="mt-0.5 text-sm font-medium text-gray-700">
+          Kommt um {arrivalTime} Uhr
+        </div>
+      ) : null}
+      {classException && expectsArrival ? (
+        <div className="mt-0.5 text-sm text-gray-700">
+          {classException.message}
+        </div>
+      ) : null}
+      {planningNotes.map((warning) => (
+        <div
+          key={`${warning.kind}:${warning.message}`}
+          className="text-moto-amber-strong mt-0.5 text-sm"
+        >
+          {warning.message}
+        </div>
+      ))}
+      {attendanceDetail ? (
+        <div className="text-moto-amber-strong mt-0.5 text-sm">
+          {attendanceDetail}
+        </div>
+      ) : null}
+      {/* Hinweise der Lehrkraft (#4795): dieselbe Zeile wie auf den Karten. */}
+      {(row.teacherHints ?? []).map((hint) => (
+        <div
+          key={teacherHintKey(hint)}
+          className="mt-0.5 text-sm break-words text-gray-700"
+        >
+          {teacherHintText(hint)}
+        </div>
+      ))}
+      {row.parallelPresentIn ? (
+        <div className="text-moto-amber-strong mt-0.5 text-sm">
+          {`Auch in „${row.parallelPresentIn.title}“ (${row.parallelPresentIn.startTime}–${row.parallelPresentIn.endTime}) als anwesend eingetragen`}
+        </div>
+      ) : null}
+      {/* Hausaufgaben der Klasse in der Lernzeit (#4796): was zu tun ist
+          und, falls schon gegeben, die Rückmeldung. */}
+      {row.homework?.map((entry, index) => (
+        <div
+          key={`${index}:${homeworkLine(entry)}`}
+          className="mt-0.5 text-sm break-words text-gray-700"
+        >
+          Hausaufgaben: {homeworkLine(entry)}
+        </div>
+      ))}
+      {row.homeworkFeedback ? (
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <StatusColorBadge
+            label={`Rückmeldung: ${labelOf(HOMEWORK_FEEDBACK_LABELS, row.homeworkFeedback.status, "–")}`}
+            color={labelOf(
+              HOMEWORK_FEEDBACK_COLORS,
+              row.homeworkFeedback.status,
+              LOCATION_COLORS.UNKNOWN,
+            )}
+          />
+          {row.homeworkFeedback.note ? (
+            <span className="text-sm break-words text-gray-600">
+              {row.homeworkFeedback.note}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function TimetableRosterStudentRow({
+  actionAccess,
+  instanceIsSpontaneous,
+  now,
+  rosterDate,
+  pickupTimesLoaded,
+  pickupTimesRedacted,
+  row,
+  onAction,
+  onOpenStudent,
+  studentProfileHref,
+  onHomework,
+}: TimetableRosterRowProps) {
+  return (
     <div className="flex flex-col gap-2 border-b border-gray-100 px-4 py-2.5 last:border-b-0 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
@@ -547,75 +640,13 @@ function TimetableRosterStudentRow({
             instanceIsSpontaneous={instanceIsSpontaneous}
           />
         </div>
-        {pickupTimeLabel === null ? null : (
-          <div className="mt-0.5 text-sm font-medium text-gray-700">
-            Gehzeit: {pickupTimeLabel}
-          </div>
-        )}
-        {arrivalTime ? (
-          <div className="mt-0.5 text-sm font-medium text-gray-700">
-            Kommt um {arrivalTime} Uhr
-          </div>
-        ) : null}
-        {classException && expectsArrival ? (
-          <div className="mt-0.5 text-sm text-gray-700">
-            {classException.message}
-          </div>
-        ) : null}
-        {planningNotes.map((warning) => (
-          <div
-            key={`${warning.kind}:${warning.message}`}
-            className="text-moto-amber-strong mt-0.5 text-sm"
-          >
-            {warning.message}
-          </div>
-        ))}
-        {attendanceDetail ? (
-          <div className="text-moto-amber-strong mt-0.5 text-sm">
-            {attendanceDetail}
-          </div>
-        ) : null}
-        {/* Hinweise der Lehrkraft (#4795): dieselbe Zeile wie auf den Karten. */}
-        {(row.teacherHints ?? []).map((hint) => (
-          <div
-            key={teacherHintKey(hint)}
-            className="mt-0.5 text-sm break-words text-gray-700"
-          >
-            {teacherHintText(hint)}
-          </div>
-        ))}
-        {row.parallelPresentIn ? (
-          <div className="text-moto-amber-strong mt-0.5 text-sm">
-            {`Auch in „${row.parallelPresentIn.title}“ (${row.parallelPresentIn.startTime}–${row.parallelPresentIn.endTime}) als anwesend eingetragen`}
-          </div>
-        ) : null}
-        {/* Hausaufgaben der Klasse in der Lernzeit (#4796): was zu tun ist
-            und, falls schon gegeben, die Rückmeldung. */}
-        {row.homework?.map((entry, index) => (
-          <div
-            key={`${index}:${homeworkLine(entry)}`}
-            className="mt-0.5 text-sm break-words text-gray-700"
-          >
-            Hausaufgaben: {homeworkLine(entry)}
-          </div>
-        ))}
-        {row.homeworkFeedback ? (
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <StatusColorBadge
-              label={`Rückmeldung: ${labelOf(HOMEWORK_FEEDBACK_LABELS, row.homeworkFeedback.status, "–")}`}
-              color={labelOf(
-                HOMEWORK_FEEDBACK_COLORS,
-                row.homeworkFeedback.status,
-                LOCATION_COLORS.UNKNOWN,
-              )}
-            />
-            {row.homeworkFeedback.note ? (
-              <span className="text-sm break-words text-gray-600">
-                {row.homeworkFeedback.note}
-              </span>
-            ) : null}
-          </div>
-        ) : null}
+        <RosterStudentDetailLines
+          row={row}
+          now={now}
+          rosterDate={rosterDate}
+          pickupTimesLoaded={pickupTimesLoaded}
+          pickupTimesRedacted={pickupTimesRedacted}
+        />
       </div>
       <RosterRowActions
         row={row}
@@ -965,7 +996,7 @@ function TimetableRosterHeader({
   );
 }
 
-interface TimetableRosterContentProps {
+export interface TimetableRosterContentProps {
   readonly addStudentSearch: string;
   readonly attendanceWebEnabled: boolean;
   readonly isAddingStudent: boolean;
@@ -1081,7 +1112,7 @@ interface TimetableRosterContentProps {
  * row for the head figures and the bulk confirm, and once over the rows the
  * page's search and filters leave for the sections on screen (#3889).
  */
-function rosterSections(
+export function rosterSections(
   rows: readonly TimetableRosterRow[],
   now: Date,
   date: string,
@@ -1142,6 +1173,171 @@ function rosterSections(
     absent,
     departed,
     unplanned,
+  };
+}
+
+/**
+ * Rückmeldung zu den Hausaufgaben (#4796): ein Dialog je Kind, der Antwort
+ * und Notiz sammelt und erst dann speichert. Die Liste am Computer und das
+ * Aufsicht-Kind-Blatt der App öffnen denselben Dialog.
+ */
+export function useHomeworkFeedbackDialog({
+  enabled,
+  onSaveHomeworkFeedback,
+  reloadAfterRefusal,
+}: Readonly<{
+  enabled: boolean;
+  onSaveHomeworkFeedback?: TimetableRosterContentProps["onSaveHomeworkFeedback"];
+  reloadAfterRefusal: TimetableRosterContentProps["reloadAfterRefusal"];
+}>): {
+  open: (row: TimetableRosterRow) => void;
+  dialog: ReactNode;
+} {
+  const [homeworkRow, setHomeworkRow] = useState<TimetableRosterRow | null>(
+    null,
+  );
+  const [homeworkStatus, setHomeworkStatus] =
+    useState<TimetableHomeworkFeedbackStatus | null>(null);
+  const [homeworkNote, setHomeworkNote] = useState("");
+  const homeworkSave = useFormModalPending(
+    homeworkRow !== null,
+    homeworkRow?.studentId,
+  );
+  const savingHomework = homeworkSave.pending;
+  const homeworkErrors = useApiFormError();
+  // The child left the block since the dialog opened: nothing to save for
+  // it any more, but the dialog stays open with the refusal.
+  const [homeworkGone, setHomeworkGone] = useState(false);
+  // After a feedback refused as changed since read (ADR 0311) the dialog
+  // shows the child's stored feedback with its token. A child no longer on
+  // the roster keeps the dialog open: its alert carries the refusal, which
+  // a closed dialog would swallow, and saving is blocked with the reason.
+  const reloadHomework = async (studentId: string) => {
+    const fresh = await reloadAfterRefusal();
+    const row = fresh?.rows.find(
+      (candidate) => candidate.studentId === studentId,
+    );
+    if (!row) {
+      setHomeworkGone(true);
+      return;
+    }
+    setHomeworkRow(row);
+    setHomeworkStatus(row.homeworkFeedback?.status ?? null);
+    setHomeworkNote(row.homeworkFeedback?.note ?? "");
+  };
+  const openHomework = (row: TimetableRosterRow) => {
+    homeworkErrors.clear();
+    setHomeworkGone(false);
+    setHomeworkRow(row);
+    setHomeworkStatus(row.homeworkFeedback?.status ?? null);
+    setHomeworkNote(row.homeworkFeedback?.note ?? "");
+  };
+  const closeHomework = () => {
+    homeworkErrors.clear();
+    setHomeworkGone(false);
+    setHomeworkRow(null);
+  };
+  const retrySaveRef = useRef<() => Promise<void>>(async () => undefined);
+  const saveHomework = async () => {
+    if (!homeworkRow || !onSaveHomeworkFeedback || homeworkGone) return;
+    if (!homeworkStatus) {
+      homeworkErrors.invalid("Bitte wähle eine Antwort.");
+      return;
+    }
+    homeworkErrors.clear();
+    await homeworkSave.run(async (op) => {
+      try {
+        await onSaveHomeworkFeedback(homeworkRow, {
+          status: homeworkStatus,
+          note: homeworkNote.trim() === "" ? null : homeworkNote.trim(),
+          // The feedback as the dialog opened it (ADR 0311).
+          expected_version: homeworkRow.homeworkFeedbackVersion ?? "",
+        });
+        // Eine späte Antwort schließt nicht die Rückmeldung eines anderen
+        // Kindes (#6533).
+        if (op.isCurrent()) setHomeworkRow(null);
+      } catch (cause) {
+        if (!op.isCurrent()) return;
+        const studentId = homeworkRow.studentId;
+        void homeworkErrors.show(cause, {
+          object: "die Rückmeldung",
+          retry: () => void retrySaveRef.current(),
+          reload: () => reloadHomework(studentId),
+        });
+      }
+    });
+  };
+  useLayoutEffect(() => {
+    retrySaveRef.current = saveHomework;
+  });
+  return {
+    open: openHomework,
+    dialog: enabled ? (
+      <FormModal
+        isOpen={homeworkRow !== null}
+        onClose={closeHomework}
+        title={`Hausaufgaben von ${homeworkRow?.studentName ?? ""}`}
+        size="md"
+        mobilePosition="bottom"
+        pending={homeworkSave}
+        error={homeworkErrors.error}
+        footer={
+          <EditActions
+            className="p-4"
+            onCancel={closeHomework}
+            onSave={() => void saveHomework()}
+            saving={savingHomework}
+            saveLabel="Rückmeldung speichern"
+            disabled={homeworkGone}
+            disabledReason={
+              homeworkGone
+                ? "Das Kind ist nicht mehr in diesem Block."
+                : undefined
+            }
+          />
+        }
+      >
+        <div className="space-y-4 p-4">
+          <ul className="space-y-1 text-sm text-gray-700">
+            {homeworkRow?.homework?.map((entry, index) => (
+              <li
+                key={`${index}:${homeworkLine(entry)}`}
+                className="break-words whitespace-pre-line"
+              >
+                {homeworkLine(entry)}
+              </li>
+            ))}
+          </ul>
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-700">
+              Wie lief es heute?
+            </p>
+            <SegmentedControl
+              items={HOMEWORK_FEEDBACK_STATUSES.map((status) => ({
+                value: status,
+                label: HOMEWORK_FEEDBACK_LABELS[status],
+                tone: HOMEWORK_FEEDBACK_TONES[status],
+                disabled: savingHomework,
+              }))}
+              value={homeworkStatus}
+              onChange={setHomeworkStatus}
+              variant="pills"
+              ariaLabel="Rückmeldung zu den Hausaufgaben"
+              fullWidth
+            />
+          </div>
+          <Input
+            id="homework-feedback-note"
+            name="note"
+            label="Kurze Notiz (freiwillig)"
+            controlSize="compact"
+            maxLength={HOMEWORK_NOTE_MAX_LENGTH}
+            value={homeworkNote}
+            onChange={(event) => setHomeworkNote(event.target.value)}
+          />
+        </div>
+      </FormModal>
+    ) : null,
   };
 }
 
@@ -1260,83 +1456,12 @@ export function TimetableRosterContent({
   const homeworkEnabled =
     roster.canRecordHomeworkFeedback === true &&
     onSaveHomeworkFeedback !== undefined;
-  const [homeworkRow, setHomeworkRow] = useState<TimetableRosterRow | null>(
-    null,
-  );
-  const [homeworkStatus, setHomeworkStatus] =
-    useState<TimetableHomeworkFeedbackStatus | null>(null);
-  const [homeworkNote, setHomeworkNote] = useState("");
-  const homeworkSave = useFormModalPending(
-    homeworkRow !== null,
-    homeworkRow?.studentId,
-  );
-  const savingHomework = homeworkSave.pending;
-  const homeworkErrors = useApiFormError();
-  // The child left the block since the dialog opened: nothing to save for
-  // it any more, but the dialog stays open with the refusal.
-  const [homeworkGone, setHomeworkGone] = useState(false);
-  // After a feedback refused as changed since read (ADR 0311) the dialog
-  // shows the child's stored feedback with its token. A child no longer on
-  // the roster keeps the dialog open: its alert carries the refusal, which
-  // a closed dialog would swallow, and saving is blocked with the reason.
-  const reloadHomework = async (studentId: string) => {
-    const fresh = await reloadAfterRefusal();
-    const row = fresh?.rows.find(
-      (candidate) => candidate.studentId === studentId,
-    );
-    if (!row) {
-      setHomeworkGone(true);
-      return;
-    }
-    setHomeworkRow(row);
-    setHomeworkStatus(row.homeworkFeedback?.status ?? null);
-    setHomeworkNote(row.homeworkFeedback?.note ?? "");
-  };
-  const openHomework = (row: TimetableRosterRow) => {
-    homeworkErrors.clear();
-    setHomeworkGone(false);
-    setHomeworkRow(row);
-    setHomeworkStatus(row.homeworkFeedback?.status ?? null);
-    setHomeworkNote(row.homeworkFeedback?.note ?? "");
-  };
-  const closeHomework = () => {
-    homeworkErrors.clear();
-    setHomeworkGone(false);
-    setHomeworkRow(null);
-  };
-  const retrySaveRef = useRef<() => Promise<void>>(async () => undefined);
-  const saveHomework = async () => {
-    if (!homeworkRow || !onSaveHomeworkFeedback || homeworkGone) return;
-    if (!homeworkStatus) {
-      homeworkErrors.invalid("Bitte wähle eine Antwort.");
-      return;
-    }
-    homeworkErrors.clear();
-    await homeworkSave.run(async (op) => {
-      try {
-        await onSaveHomeworkFeedback(homeworkRow, {
-          status: homeworkStatus,
-          note: homeworkNote.trim() === "" ? null : homeworkNote.trim(),
-          // The feedback as the dialog opened it (ADR 0311).
-          expected_version: homeworkRow.homeworkFeedbackVersion ?? "",
-        });
-        // Eine späte Antwort schließt nicht die Rückmeldung eines anderen
-        // Kindes (#6533).
-        if (op.isCurrent()) setHomeworkRow(null);
-      } catch (cause) {
-        if (!op.isCurrent()) return;
-        const studentId = homeworkRow.studentId;
-        void homeworkErrors.show(cause, {
-          object: "die Rückmeldung",
-          retry: () => void retrySaveRef.current(),
-          reload: () => reloadHomework(studentId),
-        });
-      }
-    });
-  };
-  useLayoutEffect(() => {
-    retrySaveRef.current = saveHomework;
+  const homework = useHomeworkFeedbackDialog({
+    enabled: homeworkEnabled,
+    onSaveHomeworkFeedback,
+    reloadAfterRefusal,
   });
+  const openHomework = homework.open;
   const closeAddStudent = () => {
     setAddStudentOpen(false);
     // Der nächste Dialog startet ohne Suche und ohne Fehlermeldung; beides
@@ -1456,72 +1581,7 @@ export function TimetableRosterContent({
           onSelect={(scope) => void handleExcuseScope(scope)}
         />
       ) : null}
-      {homeworkEnabled ? (
-        <FormModal
-          isOpen={homeworkRow !== null}
-          onClose={closeHomework}
-          title={`Hausaufgaben von ${homeworkRow?.studentName ?? ""}`}
-          size="md"
-          mobilePosition="bottom"
-          pending={homeworkSave}
-          error={homeworkErrors.error}
-          footer={
-            <EditActions
-              className="p-4"
-              onCancel={closeHomework}
-              onSave={() => void saveHomework()}
-              saving={savingHomework}
-              saveLabel="Rückmeldung speichern"
-              disabled={homeworkGone}
-              disabledReason={
-                homeworkGone
-                  ? "Das Kind ist nicht mehr in diesem Block."
-                  : undefined
-              }
-            />
-          }
-        >
-          <div className="space-y-4 p-4">
-            <ul className="space-y-1 text-sm text-gray-700">
-              {homeworkRow?.homework?.map((entry, index) => (
-                <li
-                  key={`${index}:${homeworkLine(entry)}`}
-                  className="break-words whitespace-pre-line"
-                >
-                  {homeworkLine(entry)}
-                </li>
-              ))}
-            </ul>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-700">
-                Wie lief es heute?
-              </p>
-              <SegmentedControl
-                items={HOMEWORK_FEEDBACK_STATUSES.map((status) => ({
-                  value: status,
-                  label: HOMEWORK_FEEDBACK_LABELS[status],
-                  tone: HOMEWORK_FEEDBACK_TONES[status],
-                  disabled: savingHomework,
-                }))}
-                value={homeworkStatus}
-                onChange={setHomeworkStatus}
-                variant="pills"
-                ariaLabel="Rückmeldung zu den Hausaufgaben"
-                fullWidth
-              />
-            </div>
-            <Input
-              id="homework-feedback-note"
-              name="note"
-              label="Kurze Notiz (freiwillig)"
-              controlSize="compact"
-              maxLength={HOMEWORK_NOTE_MAX_LENGTH}
-              value={homeworkNote}
-              onChange={(event) => setHomeworkNote(event.target.value)}
-            />
-          </div>
-        </FormModal>
-      ) : null}
+      {homework.dialog}
       {hasNoMatch ? (
         <SectionCard>
           <EmptyStudentResults

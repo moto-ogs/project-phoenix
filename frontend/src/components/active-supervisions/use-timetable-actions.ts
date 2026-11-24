@@ -119,10 +119,11 @@ export interface TimetableActions {
   readonly handleStartSpontaneousActivity: (
     payload: SpontaneousActivityStartPayload,
   ) => Promise<void>;
+  /** `true`, wenn die Aktion gespeichert ist; Fehler zeigt ein Toast. */
   readonly handleRosterAction: (
     action: RosterAction,
     row: TimetableRosterRow,
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   readonly handleExcuseRestOfDay: (row: TimetableRosterRow) => Promise<void>;
   /** Rückmeldung zu den Hausaufgaben (#4796); Fehler zeigt der Dialog. */
   readonly handleSaveHomeworkFeedback: (
@@ -466,7 +467,7 @@ export function useTimetableActions(
 
   const handleRosterAction = useCallback(
     async (action: RosterAction, row: TimetableRosterRow) => {
-      if (!activeTimetableInstanceId) return;
+      if (!activeTimetableInstanceId) return false;
       const instanceId = activeTimetableInstanceId;
       setMoveNotice(null);
       let rosterResult: TimetableRoster | null;
@@ -477,7 +478,7 @@ export function useTimetableActions(
           row.studentId,
         );
       } catch (err) {
-        if (activeTimetableInstanceIdRef.current !== instanceId) return;
+        if (activeTimetableInstanceIdRef.current !== instanceId) return false;
         logger.error("failed timetable roster action", {
           action,
           student_id: row.studentId,
@@ -489,9 +490,9 @@ export function useTimetableActions(
           object: `die Anwesenheit von ${row.studentName}`,
           retry: () => retryRef.current.rosterAction(action, row),
         });
-        return;
+        return false;
       }
-      if (activeTimetableInstanceIdRef.current !== instanceId) return;
+      if (activeTimetableInstanceIdRef.current !== instanceId) return false;
       await updateAfterSavedWrite(
         instanceId,
         { action, student_id: row.studentId },
@@ -504,6 +505,7 @@ export function useTimetableActions(
             : mutateRoster());
         },
       );
+      return true;
     },
     [
       activeTimetableInstanceId,
