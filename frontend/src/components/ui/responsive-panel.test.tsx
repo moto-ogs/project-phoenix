@@ -327,6 +327,7 @@ describe("ResponsivePanel: erste Darstellung und Wechsel über sm (#8013)", () =
     const onOpenChange = vi.fn();
     render(<OpenPanel onOpenChange={onOpenChange} />);
 
+    // Anker: das Blatt steht offen da.
     await screen.findByRole("dialog", { name: "Weitere Aktionen" });
     expect(screen.getByRole("menu", { name: "Aktionen" })).toHaveAttribute(
       "data-as-sheet",
@@ -351,6 +352,7 @@ describe("ResponsivePanel: erste Darstellung und Wechsel über sm (#8013)", () =
       root = hydrateRoot(container, <OpenPanel onOpenChange={onOpenChange} />);
     });
     try {
+      // Anker: nach der Hydration steht das Blatt offen da.
       await screen.findByRole("dialog", { name: "Weitere Aktionen" });
       expect(onOpenChange).not.toHaveBeenCalled();
     } finally {

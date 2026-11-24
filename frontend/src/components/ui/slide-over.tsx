@@ -62,7 +62,7 @@
 import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
 
-import { BELOW_SM } from "~/lib/hooks/use-media-query";
+import { BELOW_SM, useResolvedMediaQuery } from "~/lib/hooks/use-media-query";
 import { cn } from "~/lib/utils";
 import { ActionHint } from "./action-hint";
 import { buttonClassName } from "./button";
@@ -85,34 +85,23 @@ import { FOCUSABLE_SELECTOR, useScrollRegion } from "./hooks/useScrollRegion";
 import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
 
 /**
- * Unter sm fährt das Panel von unten ein, darüber von rechts. Vor dem ersten
- * Effect gilt "right", damit Server- und Client-Render übereinstimmen. Die
- * Auflösung wird separat mitgegeben, damit ein beim Laden bereits offenes
- * Panel einmalig die korrekte Richtung übernehmen kann.
+ * Unter sm fährt das Panel von unten ein, darüber von rechts. Im Server-Render
+ * und während der Hydration gilt "right", damit Server- und Client-Render
+ * übereinstimmen. Die Auflösung wird separat mitgegeben, damit ein beim Laden
+ * bereits offenes Panel einmalig die korrekte Richtung übernehmen kann. Ein
+ * Panel, das erst im Client eingehängt wird, kennt die Richtung schon im
+ * ersten Render (#8013): Es entsteht am Telefon nicht erst von rechts und
+ * dann noch einmal von unten.
  */
 function useSlideOverDirection(): {
   direction: "right" | "bottom";
   isResolved: boolean;
 } {
-  const [state, setState] = React.useState<{
-    direction: "right" | "bottom";
-    isResolved: boolean;
-  }>({ direction: "right", isResolved: false });
-
-  React.useEffect(() => {
-    const mediaQuery = window.matchMedia(BELOW_SM);
-    const update = () => {
-      setState({
-        direction: mediaQuery.matches ? "bottom" : "right",
-        isResolved: true,
-      });
-    };
-    update();
-    mediaQuery.addEventListener("change", update);
-    return () => mediaQuery.removeEventListener("change", update);
-  }, []);
-
-  return state;
+  const belowSm = useResolvedMediaQuery(BELOW_SM);
+  return {
+    direction: belowSm === true ? "bottom" : "right",
+    isResolved: belowSm !== null,
+  };
 }
 
 const SlideOverDirectionContext = React.createContext<"right" | "bottom">(

@@ -8,7 +8,11 @@ import {
   type RefObject,
 } from "react";
 
-import { BELOW_SM, useResolvedMediaQuery } from "~/lib/hooks/use-media-query";
+import {
+  BELOW_SM,
+  useMediaQuery,
+  useResolvedMediaQuery,
+} from "~/lib/hooks/use-media-query";
 import { ResponsivePanelSheet } from "./responsive-panel-sheet";
 
 /**
@@ -18,7 +22,7 @@ import { ResponsivePanelSheet } from "./responsive-panel-sheet";
  * (Lage am Auslöser, Schließen bei Scrollen) im Blatt abzuschalten.
  */
 export function useResponsivePanelSheet(): boolean {
-  return useResolvedMediaQuery(BELOW_SM) === true;
+  return useMediaQuery(BELOW_SM);
 }
 
 interface ResponsivePanelProps {
