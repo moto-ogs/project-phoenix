@@ -16,7 +16,6 @@ package timetablehttp
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -26,9 +25,11 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // PatchAttendanceRequest preserves the distinction between an omitted
@@ -195,7 +196,7 @@ func decodePatchBody(w http.ResponseWriter, r *http.Request) (*PatchAttendanceRe
 		return &PatchAttendanceRequest{}, true
 	}
 	req := &PatchAttendanceRequest{}
-	if err := json.NewDecoder(bytes.NewReader(body)).Decode(req); err != nil {
+	if err := wire.Decode(bytes.NewReader(body), req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(fmt.Errorf("invalid JSON body: %w", err)))
 		return nil, false
 	}

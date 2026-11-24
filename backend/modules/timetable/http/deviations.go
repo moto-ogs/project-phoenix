@@ -20,16 +20,17 @@
 package timetablehttp
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // deviationAbsence marks one staff member absent. An omitted instance_ids keeps
@@ -50,9 +51,7 @@ type deviationSubstitution struct {
 	InstanceIDs       *[]ident.ID `json:"instance_ids,omitempty"`
 }
 
-// DeviationPresence clears an absence in an optional appointment scope. Its
-// decoder accepts the former numeric staff id so an already-open frontend from
-// before this change keeps its established day-wide correction behavior.
+// DeviationPresence clears an absence in an optional appointment scope.
 type DeviationPresence struct {
 	StaffID     ident.ID    `json:"staff_id"`
 	InstanceIDs *[]ident.ID `json:"instance_ids,omitempty"`
@@ -61,22 +60,6 @@ type DeviationPresence struct {
 type deviationSubstitutionRemoval struct {
 	StaffID     ident.ID    `json:"staff_id"`
 	InstanceIDs *[]ident.ID `json:"instance_ids,omitempty"`
-}
-
-func (p *DeviationPresence) UnmarshalJSON(data []byte) error {
-	var legacyStaffID int64
-	if err := json.Unmarshal(data, &legacyStaffID); err == nil {
-		p.StaffID = ident.ID(legacyStaffID)
-		p.InstanceIDs = nil
-		return nil
-	}
-	type presenceObject DeviationPresence
-	var object presenceObject
-	if err := json.Unmarshal(data, &object); err != nil {
-		return err
-	}
-	*p = DeviationPresence(object)
-	return nil
 }
 
 // applyDeviationsRequest is the POST body. All mutation fields are optional; a
@@ -91,8 +74,7 @@ type applyDeviationsRequest struct {
 	Absences             []deviationAbsence             `json:"absences,omitempty"`
 	Substitutions        []deviationSubstitution        `json:"substitutions,omitempty"`
 	SubstitutionRemovals []deviationSubstitutionRemoval `json:"substitution_removals,omitempty"`
-	// Presences marks staff present again. Numeric legacy items are day-wide;
-	// object items may target selected appointments.
+	// Presences marks staff present again, optionally for selected appointments.
 	Presences []DeviationPresence `json:"presences,omitempty"`
 	// GuardianNotice informs the families of the booked children when cancel
 	// is set (#2601).
@@ -168,7 +150,7 @@ func (rs *Resource) applyDeviations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req applyDeviationsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid JSON body")))
 		return
 	}

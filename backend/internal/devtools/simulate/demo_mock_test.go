@@ -2,12 +2,15 @@ package simulate
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 type demoCapacityClient struct {
@@ -135,6 +138,16 @@ func (c *demoRecordingClient) DeviceGet(string, string, string) ([]byte, error) 
 func (c *demoRecordingClient) DevicePost(path string, body any, _, _ string) ([]byte, error) {
 	switch path {
 	case "/api/iot/session/start":
+		raw, err := wire.Marshal(body)
+		if err != nil {
+			return nil, err
+		}
+		var request struct {
+			RoomID int64 `json:"room_id"`
+		}
+		if err := json.Unmarshal(raw, &request); err != nil {
+			return nil, err
+		}
 		c.sessionsStarted++
 	case "/api/iot/ping":
 	default:

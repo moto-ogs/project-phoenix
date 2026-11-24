@@ -2,14 +2,16 @@ package careplanhttp_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCreateStudent_WithGroupID(t *testing.T) {
@@ -24,7 +26,7 @@ func TestCreateStudent_WithGroupID(t *testing.T) {
 			"first_name":   "WithGroup",
 			"last_name":    "Student",
 			"school_class": "3a",
-			"group_id":     group.ID,
+			"group_id":     fmt.Sprint(group.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "POST", "/", body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
@@ -46,7 +48,7 @@ func TestCreateStudent_WithAllOptionalFields(t *testing.T) {
 			"last_name":     "Create",
 			"school_class":  "FC1",
 			"birthday":      "2015-03-25",
-			"group_id":      group.ID,
+			"group_id":      fmt.Sprint(group.ID),
 			"health_info":   "No allergies",
 			"extra_info":    "Extra notes",
 			"pickup_status": "bus",

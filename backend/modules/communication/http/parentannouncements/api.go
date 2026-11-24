@@ -5,7 +5,6 @@
 package announcement
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -18,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	announcementService "github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Resource is the staff parent-announcement HTTP resource.
@@ -405,7 +405,7 @@ func (rs *Resource) updateReminder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req reminderRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -734,7 +734,7 @@ func (rs *Resource) resendFailed(w http.ResponseWriter, r *http.Request) {
 
 func decodeInput(w http.ResponseWriter, r *http.Request) (announcementService.ParentAnnouncementInput, bool) {
 	var req announcementRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return announcementService.ParentAnnouncementInput{}, false
 	}

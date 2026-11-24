@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -875,9 +876,9 @@ func createCourseEnrollment(
 	}
 	_, err := db.NewInsert().
 		Model(&map[string]any{
-			"tenant_id":         testpkg.Tenant(t),
-			"student_id":        studentID,
-			"activity_group_id": groupID,
+			"tenant_id":         fmt.Sprint(testpkg.Tenant(t)),
+			"student_id":        fmt.Sprint(studentID),
+			"activity_group_id": fmt.Sprint(groupID),
 			"valid_from":        validFrom,
 			"selected_weekdays": selected,
 		}).

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedEnrollmentPlacementStep places the children the online enrollment
@@ -43,7 +45,7 @@ func (seedEnrollmentPlacementStep) Run(_ context.Context, rt *Runtime) error {
 			return err
 		}
 		if _, err := rt.Client.Put("/api/students/"+student.ID.String(), map[string]any{
-			"school_class": option.class, "group_id": groupID, "expected_version": version,
+			"school_class": option.class, "group_id": ident.ID(groupID), "expected_version": version,
 		}); err != nil {
 			return fmt.Errorf("place admitted child %s in %s: %w", student.ID, option.class, err)
 		}

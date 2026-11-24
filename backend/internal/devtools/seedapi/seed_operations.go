@@ -111,7 +111,7 @@ func seedStaffShift(rt *Runtime, today seedDate, staffID int64) error {
 	}
 	shiftDate := nextWeekday(today.UTCMidnight().AddDate(0, 0, 1), time.Monday)
 	if _, err := rt.Client.Post("/api/staff-shifts", map[string]any{
-		"staff_id":      staffID,
+		"staff_id":      ident.ID(staffID),
 		"date":          shiftDate.Format(seedDateLayout),
 		"start_time":    lateDutyStart,
 		"end_time":      lateDutyEnd,
@@ -134,12 +134,12 @@ func seedStaffShift(rt *Runtime, today seedDate, staffID int64) error {
 		return nil
 	}
 	if _, err := rt.Client.Post("/api/staff-shifts", map[string]any{
-		"staff_id":      staffID,
+		"staff_id":      ident.ID(staffID),
 		"date":          shiftDate.AddDate(0, 0, 1).Format(seedDateLayout),
 		"start_time":    "13:00",
 		"end_time":      "15:00",
 		"break_minutes": 0,
-		"shift_type_id": preparationID,
+		"shift_type_id": ident.ID(preparationID),
 		"notes":         "Vorbereitung und Dienstversammlung",
 	}); err != nil {
 		return fmt.Errorf("seed second staff shift: %w", err)

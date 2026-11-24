@@ -64,7 +64,7 @@ func TestHolidayAllocationWorkflowRollsBackOnARefusedContribution(t *testing.T) 
 	frozen := f.contributionVersions(t, int64(tom.ID))
 	require.Len(t, frozen, 1)
 	ben := f.list(t, "").Registrations[0].Children[1]
-	rebook := map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}}
+	rebook := map[string]any{"bookings": []map[string]any{{"week_id": fmt.Sprint(second.ID), "time_model_id": fmt.Sprint(second.TimeModels[0].ID)}}}
 	a, sibling, candidate := refusedDecisionFixture(t)
 	outbox, decisionOutbox := f.traegerOutbox(t), a.traegerOutbox(t)
 	allow := refuseHolidayContributions(t, f)

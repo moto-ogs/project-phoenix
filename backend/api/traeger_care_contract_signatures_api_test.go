@@ -65,12 +65,12 @@ func signatureImage(t *testing.T) string {
 func sentCareContract(t *testing.T, f careContractFixture, child int64) (int64, string) {
 	t.Helper()
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, "/traeger/contracts",
-		map[string]any{"contracts": []any{map[string]any{"school_id": f.school, "request_child_id": child}}})
+		map[string]any{"contracts": []any{map[string]any{"school_id": fmt.Sprint(f.school), "request_child_id": fmt.Sprint(child)}}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	created := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes())
 	require.Len(t, created.Created, 1, rec.Body.String())
 	id := created.Created[0].ID
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{int64(id)}})
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []string{fmt.Sprint(int64(id))}})
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	return int64(id), lastSigningLink(t, f, int64(id))
 }

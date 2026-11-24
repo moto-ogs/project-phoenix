@@ -181,7 +181,7 @@ func NewAuthenticatedRequest(t *testing.T, method, target string, body interface
 
 	var reader io.Reader
 	if body != nil {
-		jsonBytes, err := json.Marshal(body)
+		jsonBytes, err := wire.Marshal(body)
 		if err != nil {
 			t.Fatalf("failed to marshal JSON body: %v", err)
 		}
@@ -204,7 +204,7 @@ func NewJSONRequest(t *testing.T, method, target string, body interface{}) *http
 
 	var reader io.Reader
 	if body != nil {
-		jsonBytes, err := json.Marshal(body)
+		jsonBytes, err := wire.Marshal(body)
 		if err != nil {
 			t.Fatalf("failed to marshal JSON body: %v", err)
 		}

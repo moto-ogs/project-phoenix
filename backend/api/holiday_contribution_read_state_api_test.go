@@ -7,6 +7,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -36,7 +37,7 @@ func TestHolidayChildNumbersSaveOnlyOverTheNumbersTheOfficeRead(t *testing.T) {
 	require.Len(t, proposal.Children, 2)
 	first, second := proposal.Children[0], proposal.Children[1]
 	rec := f.confirmWith(t, f.siblings, map[string]any{"child_debtor_numbers": []map[string]any{
-		{"child_id": first.ChildID, "debtor_number": "60101"}, {"child_id": second.ChildID, "debtor_number": "60102"},
+		{"child_id": fmt.Sprint(first.ChildID), "debtor_number": "60101"}, {"child_id": fmt.Sprint(second.ChildID), "debtor_number": "60102"},
 	}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	read := holidayChildNumbers(t, f, f.siblings)
@@ -52,7 +53,7 @@ func TestHolidayChildNumbersSaveOnlyOverTheNumbersTheOfficeRead(t *testing.T) {
 	require.Equal(t, "60109", stored["Lia"])
 
 	path := holidayContributionPath(int64(f.period.ID), f.siblings) + "/child-debtor-numbers"
-	inputs := []map[string]any{{"child_id": first.ChildID, "debtor_number": "60101"}, {"child_id": second.ChildID, "debtor_number": "60103"}}
+	inputs := []map[string]any{{"child_id": fmt.Sprint(first.ChildID), "debtor_number": "60101"}, {"child_id": fmt.Sprint(second.ChildID), "debtor_number": "60103"}}
 	for name, version := range map[string]string{"an older read": read.Version, "no read": ""} {
 		rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, map[string]any{"children": inputs, "expected_version": version})
 		require.Equal(t, http.StatusConflict, rec.Code, "%s: %s", name, rec.Body.String())
@@ -115,7 +116,7 @@ func TestHolidayChildNumbersSaveOnlyOverTheNumbersTheOfficeRead(t *testing.T) {
 		"child_first_name": "Lia", "child_last_name": "Muster", "child_birth_date": "2018-03-01", "debtor_number": "60110"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	body := withHolidayPreview(t, f.traeger, f.office.token, int64(f.period.ID), repeated, map[string]any{"child_debtor_numbers": []map[string]any{
-		{"child_id": shown.Children[0].ChildID, "debtor_number": shown.Children[0].DebtorNumber},
+		{"child_id": fmt.Sprint(shown.Children[0].ChildID), "debtor_number": shown.Children[0].DebtorNumber},
 	}})
 	body["expected_child_debtor_numbers_version"] = shown.Version
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), repeated), body)
@@ -124,7 +125,7 @@ func TestHolidayChildNumbersSaveOnlyOverTheNumbersTheOfficeRead(t *testing.T) {
 	assert.Equal(t, "received", f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(repeated, ""), nil)).Status)
 	assert.Equal(t, "60110", numbersOf(holidayChildNumbers(t, f, repeated))["Lia"], "the refused confirmation keeps the colleague's number")
 	rec = f.confirmWith(t, repeated, map[string]any{"child_debtor_numbers": []map[string]any{
-		{"child_id": shown.Children[0].ChildID, "debtor_number": "60110"},
+		{"child_id": fmt.Sprint(shown.Children[0].ChildID), "debtor_number": "60110"},
 	}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }

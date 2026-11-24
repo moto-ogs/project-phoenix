@@ -35,10 +35,10 @@ func seedBookingAccounts(client *Client, auth AuthRef, from calendar.Date) (int,
 		return 0, fmt.Errorf("read the booking accounts: %w", err)
 	}
 	accounts := []map[string]any{
-		{"scope": "meals", "scope_id": 0, "account": "4420"},
-		{"scope": "holiday", "scope_id": 0, "account": "4430"},
+		{"scope": "meals", "scope_id": "0", "account": "4420"},
+		{"scope": "holiday", "scope_id": "0", "account": "4430"},
 	}
-	centers := []map[string]any{{"scope": "holiday", "scope_id": 0, "code": "FER"}}
+	centers := []map[string]any{{"scope": "holiday", "scope_id": "0", "code": "FER"}}
 	for i, school := range envelope.Data.Schools {
 		centers = append(centers, map[string]any{"scope": "school", "scope_id": school.ID, "code": fmt.Sprintf("KST%d00", i+1)})
 		if i == 0 {

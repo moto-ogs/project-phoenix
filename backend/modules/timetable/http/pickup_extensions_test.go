@@ -111,7 +111,7 @@ func TestPickupExtensions_ListAndResolve(t *testing.T) {
 	assert.Equal(t, []pickupExtensionBlockResponse{{ID: ident.ID(s.freePlay), Title: "Freies Spiel", StartTime: "14:45", EndTime: "16:00"}}, task.Blocks)
 
 	w = executeRequest(testpkg.MountedQueryBudgetRouter("/api/timetable", router), http.MethodPost, fmt.Sprintf("/pickup-extensions/%d/resolve", task.ID),
-		map[string]any{"block_ids": []int64{s.freePlay}})
+		map[string]any{"block_ids": []string{fmt.Sprint(s.freePlay)}})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 	resolved := decodeTemplateData[resolvePickupExtensionResponse](t, w)
 	assert.Equal(t, ident.ID(childID), resolved.StudentID)
@@ -148,11 +148,11 @@ func TestPickupExtensions_ResolveErrors(t *testing.T) {
 	office := testpkg.CreateTestActivityInstance(t, s.db, testpkg.Date(2099, time.March, 3), s.room, testpkg.ActivityInstanceOpts{
 		StartHHMM: "15:00", EndHHMM: "15:30", Title: "Bürotermin",
 	})
-	w := executeRequest(testpkg.MountedQueryBudgetRouter("/api/timetable", router), http.MethodPost, path, map[string]any{"block_ids": []int64{office.ID}})
+	w := executeRequest(testpkg.MountedQueryBudgetRouter("/api/timetable", router), http.MethodPost, path, map[string]any{"block_ids": []string{fmt.Sprint(office.ID)}})
 	assert.Equal(t, http.StatusConflict, w.Code, "body=%s", w.Body.String())
 	assert.Contains(t, w.Body.String(), "timetable.pickup_extension_block_gone")
 
-	w = executeRequest(testpkg.MountedQueryBudgetRouter("/api/timetable", router), http.MethodPost, path, map[string]any{"block_ids": []int64{-4}})
+	w = executeRequest(testpkg.MountedQueryBudgetRouter("/api/timetable", router), http.MethodPost, path, map[string]any{"block_ids": []string{fmt.Sprint(-4)}})
 	assert.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
 
 	w = executeRequest(testpkg.MountedQueryBudgetRouter("/api/timetable", router), http.MethodGet, "/pickup-extensions?student_id=abc", nil)
@@ -182,7 +182,7 @@ func TestPickupExtensions_UnreadableChildrenAreHidden(t *testing.T) {
 	counter := testpkg.CaptureQueries(t, s.db)
 	counter.Reset()
 	w = executeRequest(testpkg.MountedQueryBudgetRouter("/api/timetable", router), http.MethodPost, fmt.Sprintf("/pickup-extensions/%d/resolve", tasks[0].ID),
-		map[string]any{"block_ids": []int64{s.freePlay}})
+		map[string]any{"block_ids": []string{fmt.Sprint(s.freePlay)}})
 	assert.Equal(t, http.StatusNotFound, w.Code, "body=%s", w.Body.String())
 	taskQuerySeen := false
 	for _, query := range counter.Queries() {

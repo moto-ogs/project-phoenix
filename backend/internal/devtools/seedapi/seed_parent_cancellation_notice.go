@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedParentCancellationNoticeStep cancels a coming offering of the first
@@ -61,7 +63,7 @@ func (seedParentCancellationNoticeStep) Run(_ context.Context, rt *Runtime) erro
 func createNoticeOccurrence(rt *Runtime, name string, date seedDate, roomID int64, studentIDs []int64) (int64, error) {
 	respBody, err := rt.Client.Post("/api/timetable/instances", map[string]any{
 		"date": date.String(), "start_time": "14:00", "end_time": "15:00",
-		"title": name, "room_id": roomID, "student_ids": studentIDs,
+		"title": name, "room_id": ident.ID(roomID), "student_ids": ident.IDs(studentIDs),
 	})
 	if err != nil {
 		return 0, fmt.Errorf("create %s on %s: %w", name, date, err)

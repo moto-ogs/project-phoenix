@@ -10,6 +10,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -328,7 +329,7 @@ func TestHolidayInvoiceTakesTheDebtorNumberOfTheFamily(t *testing.T) {
 		WHERE contract_id = ?`, contract)
 	require.NoError(t, err)
 	rec := putFamilyBilling(t, f.traeger, billing,
-		map[string]any{"contract_id": contract, "recipient_kind": "applicant", "debtor_number": "20 815"})
+		map[string]any{"contract_id": fmt.Sprint(contract), "recipient_kind": "applicant", "debtor_number": "20 815"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	require.Equal(t, http.StatusOK, f.confirmWith(t, f.siblings, nil).Code)

@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -84,7 +84,7 @@ func (rs *Resource) createAbsence(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body OwnAbsenceRequest
-	if err := render.DecodeJSON(r.Body, &body); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
@@ -123,7 +123,7 @@ func (rs *Resource) updateAbsence(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req workforce.UpdateAbsenceRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

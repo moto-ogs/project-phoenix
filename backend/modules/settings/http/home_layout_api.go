@@ -1,9 +1,10 @@
 package settingshttp
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Start page composition (#2875).
@@ -79,7 +80,7 @@ func (rs *SettingsResource) setHomeLayout(w http.ResponseWriter, r *http.Request
 	}
 
 	var req homeLayoutOverridesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		rs.runtime.RenderError(w, r, http.StatusBadRequest, err)
 		return
 	}
@@ -143,7 +144,7 @@ func (rs *SettingsResource) setHomeBlockPolicies(w http.ResponseWriter, r *http.
 	}
 
 	var req homeBlockPoliciesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		rs.runtime.RenderError(w, r, http.StatusBadRequest, err)
 		return
 	}

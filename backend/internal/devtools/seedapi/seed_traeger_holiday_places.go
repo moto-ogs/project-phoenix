@@ -75,10 +75,9 @@ func seedFirstBookedWeek(registration map[string]any) (int64, bool) {
 	if len(bookings) == 0 {
 		return 0, false
 	}
-	if typed, ok := bookings[0]["week_id"].(ident.ID); ok {
-		bookings[0]["week_id"] = typed.Int64()
-	}
 	switch id := bookings[0]["week_id"].(type) {
+	case ident.ID:
+		return id.Int64(), true
 	case int64:
 		return id, true
 	case int:

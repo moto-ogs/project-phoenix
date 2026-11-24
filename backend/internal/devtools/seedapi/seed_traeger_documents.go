@@ -199,13 +199,13 @@ const seedTraegerDocumentReleaseActive = "traeger.document_already_released"
 func seedTraegerDocumentRelease(client *Client, auth AuthRef, documentID int64, release seedTraegerRelease, school, group int64) error {
 	body := map[string]any{"audience": release.audience}
 	if release.school {
-		body["school_id"] = school
+		body["school_id"] = ident.ID(school)
 	}
 	if release.group {
 		if group == 0 {
 			return nil
 		}
-		body["group_id"] = group
+		body["group_id"] = ident.ID(group)
 	}
 	_, err := client.PostWithAuth(auth, fmt.Sprintf("/traeger/documents/%d/releases", documentID), body)
 	var refused *APIError

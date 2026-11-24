@@ -11,8 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
+
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 var runtimeCheckpointEnrollmentAcceptance = flag.Bool("runtime-checkpoint-enrollment-acceptance", false, "measure the #2699 Enrollment acceptance workload instead of the checkpoint baseline")
@@ -78,7 +79,7 @@ func (w *acceptanceWorkload) nextSequence() int {
 func (w *acceptanceWorkload) submitPublic(t *testing.T) acceptanceChild {
 	t.Helper()
 	sequence := w.nextSequence()
-	body := fmt.Sprintf(`{"phase_id":%d,"guardian_first_name":"Checkpoint","guardian_last_name":"Applicant","guardian_email":"checkpoint-acceptance-{{attempt}}@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Checkpoint","last_name":"Child{{attempt}}","date_of_birth":"2018-04-15","target_grade_level":2}]}`, w.phaseID)
+	body := fmt.Sprintf(`{"phase_id":"%d","guardian_first_name":"Checkpoint","guardian_last_name":"Applicant","guardian_email":"checkpoint-acceptance-{{attempt}}@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Checkpoint","last_name":"Child{{attempt}}","date_of_birth":"2018-04-15","target_grade_level":2}]}`, w.phaseID)
 	response := checkpointSequencedRequest(w.handler, checkpointScenario{Method: http.MethodPost, Path: "/api/enrollment/" + w.slug + "/submit", Body: body}, "", sequence)
 	require.Equal(t, http.StatusCreated, response.Code, "prepare public submission: %s", response.Body.String())
 	w.submitted++
@@ -91,7 +92,7 @@ func (w *acceptanceWorkload) submitPublic(t *testing.T) acceptanceChild {
 func (w *acceptanceWorkload) submitParent(t *testing.T) acceptanceChild {
 	t.Helper()
 	sequence := w.nextSequence()
-	body := fmt.Sprintf(`{"phase_id":%d,"guardian_first_name":"Checkpoint","guardian_last_name":"Parent","guardian_email":"checkpoint-parent-acceptance-{{attempt}}@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Checkpoint","last_name":"ParentChild{{attempt}}","date_of_birth":"2018-04-15","target_grade_level":2}]}`, w.phaseID)
+	body := fmt.Sprintf(`{"phase_id":"%d","guardian_first_name":"Checkpoint","guardian_last_name":"Parent","guardian_email":"checkpoint-parent-acceptance-{{attempt}}@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Checkpoint","last_name":"ParentChild{{attempt}}","date_of_birth":"2018-04-15","target_grade_level":2}]}`, w.phaseID)
 	response := checkpointSequencedRequest(w.handler, checkpointScenario{Method: http.MethodPost, Path: "/parent/enrollments/" + w.subdomain + "/submit", Authenticated: true, Body: body}, w.parentToken, sequence)
 	require.Equal(t, http.StatusCreated, response.Code, "prepare parent submission: %s", response.Body.String())
 	w.submitted++

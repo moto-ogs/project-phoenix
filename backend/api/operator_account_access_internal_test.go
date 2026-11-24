@@ -150,7 +150,7 @@ func TestProvisioningResource_GrantAccountTenantAccess(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	resource.GrantAccountTenantAccess(rr, accountTenantRequest(t, http.MethodPost,
-		`{"school_id":12,"role_id":"9007199254740993","first_name":"  Erika  ","last_name":"Muster"}`,
+		`{"school_id":"12","role_id":"9007199254740993","first_name":"  Erika  ","last_name":"Muster"}`,
 		map[string]string{"accountId": "7"}))
 
 	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
@@ -166,7 +166,7 @@ func TestProvisioningResource_GrantAccountTenantAccess_RequiresSchoolAndRole(t *
 		},
 	})
 
-	for _, body := range []string{`{"role_id":3}`, `{"school_id":12}`} {
+	for _, body := range []string{`{"role_id":"3"}`, `{"school_id":"12"}`} {
 		rr := httptest.NewRecorder()
 		resource.GrantAccountTenantAccess(rr, accountTenantRequest(t, http.MethodPost, body, map[string]string{"accountId": "7"}))
 		assert.Equal(t, http.StatusBadRequest, rr.Code, body)
@@ -184,7 +184,7 @@ func TestProvisioningResource_GrantAccountTenantAccess_ConflictIsSurfaced(t *tes
 
 	rr := httptest.NewRecorder()
 	resource.GrantAccountTenantAccess(rr, accountTenantRequest(t, http.MethodPost,
-		`{"school_id":12,"role_id":3}`, map[string]string{"accountId": "7"}))
+		`{"school_id":"12","role_id":"3"}`, map[string]string{"accountId": "7"}))
 
 	assert.Equal(t, http.StatusConflict, rr.Code)
 }
@@ -200,7 +200,7 @@ func TestProvisioningResource_GrantAccountTenantAccess_InvalidRoleMessageSurvive
 
 	rr := httptest.NewRecorder()
 	resource.GrantAccountTenantAccess(rr, accountTenantRequest(t, http.MethodPost,
-		`{"school_id":12,"role_id":3}`, map[string]string{"accountId": "7"}))
+		`{"school_id":"12","role_id":"3"}`, map[string]string{"accountId": "7"}))
 
 	require.Equal(t, http.StatusBadRequest, rr.Code)
 	body := decodeBody(t, rr)

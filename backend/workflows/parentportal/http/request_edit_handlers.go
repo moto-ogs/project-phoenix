@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -139,7 +140,7 @@ func (rs *Resource) parentRequestEditTarget(w http.ResponseWriter, r *http.Reque
 // decodeEditBody reads a JSON body into target, answering with the same
 // "invalid request body" every other parent write uses.
 func decodeEditBody(w http.ResponseWriter, r *http.Request, target any) bool {
-	if err := json.NewDecoder(r.Body).Decode(target); err != nil {
+	if err := wire.Decode(r.Body, target); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return false
 	}

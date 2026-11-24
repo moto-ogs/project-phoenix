@@ -337,7 +337,7 @@ func TestHolidayGuestsJoinTheGroupOfTheHostingSchoolOnlyFromAConfirmedBooking(t 
 		t.Helper()
 		bookings := []map[string]any{}
 		for _, index := range weeks {
-			bookings = append(bookings, map[string]any{"week_id": f.offer.Weeks[index].ID, "time_model_id": f.offer.Weeks[index].TimeModels[0].ID})
+			bookings = append(bookings, map[string]any{"week_id": fmt.Sprint(f.offer.Weeks[index].ID), "time_model_id": fmt.Sprint(f.offer.Weeks[index].TimeModels[0].ID)})
 		}
 		path := holidayRebookPath(f.periodID(t), f.siblings, benChild)
 		rec := putReadRegistration(t, f.traeger, f.office.token, path, map[string]any{"bookings": bookings})
@@ -464,7 +464,7 @@ func TestHolidayGuestReconciliationPlansWithoutAStaffAuthorAndReplansOnTheNextGr
 		f.siblings).Scan(t.Context(), &benChild))
 	path := holidayRebookPath(f.periodID(t), f.siblings, benChild)
 	rec := putReadRegistration(t, f.traeger, f.office.token, path, map[string]any{"bookings": []map[string]any{
-		{"week_id": week, "time_model_id": f.offer.Weeks[0].TimeModels[1].ID},
+		{"week_id": fmt.Sprint(week), "time_model_id": fmt.Sprint(f.offer.Weeks[0].TimeModels[1].ID)},
 	}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	f.reconcile(t)

@@ -17,6 +17,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/uptrace/bun"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/http/absencetypes"
 	timetracking "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
@@ -24,7 +26,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
-	"github.com/stretchr/testify/require"
 )
 
 // Delivery's related types of the absence mails, as the notifications name
@@ -115,7 +116,7 @@ func TestAbsenceDecisionMailsShowTheNewestDecision(t *testing.T) {
 	// Another school's decision mail stays unknown, even by its ID.
 	foreign := testpkg.NewTenantScope(t, tc.db)
 	foreignStaff := testpkg.CreateTestStaffForTenant(t, tc.db, foreign.TenantID, "Foreign", "Applicant")
-	foreignRow := map[string]any{"tenant_id": foreign.TenantID, "staff_id": foreignStaff.ID, "created_by": foreignStaff.ID, "absence_type": absenceTypeVacation,
+	foreignRow := map[string]any{"tenant_id": fmt.Sprint(foreign.TenantID), "staff_id": fmt.Sprint(foreignStaff.ID), "created_by": fmt.Sprint(foreignStaff.ID), "absence_type": absenceTypeVacation,
 		"status": absenceStatusApprovd, "date_start": "2099-04-01", "date_end": "2099-04-01", "requested_at": time.Now()}
 	var foreignAbsence int64
 	require.NoError(t, tc.db.NewInsert().Model(&foreignRow).TableExpr("active.staff_absences").Returning("id").Scan(testpkg.Ctx(t), &foreignAbsence))
@@ -187,7 +188,7 @@ func newOwnAbsenceMailRouter(t *testing.T) (*bun.DB, http.Handler, workforcetest
 
 func insertOwnAbsence(t *testing.T, db *bun.DB, staffID int64, status string, day int) int64 {
 	t.Helper()
-	row := map[string]any{"tenant_id": testpkg.Tenant(t), "staff_id": staffID, "created_by": staffID, "absence_type": absenceTypeVacation, "status": status,
+	row := map[string]any{"tenant_id": fmt.Sprint(testpkg.Tenant(t)), "staff_id": fmt.Sprint(staffID), "created_by": fmt.Sprint(staffID), "absence_type": absenceTypeVacation, "status": status,
 		"date_start": fmt.Sprintf("2099-03-%02d", day), "date_end": fmt.Sprintf("2099-03-%02d", day), "requested_at": time.Now()}
 	var id int64
 	require.NoError(t, db.NewInsert().Model(&row).TableExpr("active.staff_absences").Returning("id").Scan(testpkg.Ctx(t), &id))

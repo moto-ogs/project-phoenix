@@ -14,16 +14,18 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func setupShiftCoverageRoute(t *testing.T) chi.Router {
@@ -56,7 +58,7 @@ func shiftCoverageRouter(parentCtx context.Context, resource *Resource) chi.Rout
 
 func postShiftCoverage(t *testing.T, router chi.Router, body any) *httptest.ResponseRecorder {
 	t.Helper()
-	encoded, err := json.Marshal(body)
+	encoded, err := wire.Marshal(body)
 	require.NoError(t, err)
 	request := httptest.NewRequest(http.MethodPost, "/shift-coverage", bytes.NewReader(encoded))
 	request.Header.Set("Content-Type", "application/json")
@@ -233,7 +235,7 @@ func TestShiftCoverage_RouteRequiresAllPermissionsAndLegacyConflictsStaysReadOnl
 	t.Parallel()
 	router := setupShiftCoverageRoute(t)
 	claims := testutil.AdminTestClaims(999999)
-	requestBody := `{"dates":["2070-11-03"],"start_time":"09:00","end_time":"10:00","staff_ids":[999999]}`
+	requestBody := `{"dates":["2070-11-03"],"start_time":"09:00","end_time":"10:00","staff_ids":["999999"]}`
 
 	coverageRequest := func() *http.Request {
 		request := httptest.NewRequest(http.MethodPost, "/timetable/shift-coverage", strings.NewReader(requestBody))

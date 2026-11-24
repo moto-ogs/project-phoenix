@@ -16,6 +16,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Resource is the internal messaging HTTP resource.
@@ -308,7 +309,7 @@ func (rs *Resource) listRecipients(w http.ResponseWriter, r *http.Request) {
 
 func (rs *Resource) openThread(w http.ResponseWriter, r *http.Request) {
 	var body openThreadRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
@@ -345,7 +346,7 @@ func (rs *Resource) postMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body postMessageRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

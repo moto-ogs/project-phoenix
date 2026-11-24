@@ -152,7 +152,7 @@ func TestTraegerEditsEachSectionOfAHolidayRegistration(t *testing.T) {
 
 	children := f.edited(t, f.editDetails(t, f.siblings, map[string]any{"children": []map[string]any{{
 		"id": ben.ID, "first_name": "Ben", "last_name": "Mustermann", "birth_date": "2016-09-13",
-		"home_school_id": f.offer.Schools[0].ID, "guest_school_name": "Grundschule Melle",
+		"home_school_id": fmt.Sprint(f.offer.Schools[0].ID), "guest_school_name": "Grundschule Melle",
 		"custom_data": map[string]any{"darf_allein_nach_hause": true, "allein_ab": "15 Uhr"},
 	}}}))
 	editedBen := children.Children[1]
@@ -222,7 +222,7 @@ func TestTraegerEditRefusesWhatThePublicFormRefuses(t *testing.T) {
 	lia := detail.Children[0]
 	child := func(changes map[string]any) map[string]any {
 		body := map[string]any{"id": lia.ID, "first_name": "Lia", "last_name": "Muster", "birth_date": "2018-03-01",
-			"home_school_id": f.offer.Schools[0].ID, "custom_data": map[string]any{"lieblingsessen": "Nudeln"}}
+			"home_school_id": fmt.Sprint(f.offer.Schools[0].ID), "custom_data": map[string]any{"lieblingsessen": "Nudeln"}}
 		for key, value := range changes {
 			body[key] = value
 		}
@@ -236,7 +236,7 @@ func TestTraegerEditRefusesWhatThePublicFormRefuses(t *testing.T) {
 		{"invalid e-mail", map[string]any{"guardian": map[string]any{"first_name": "Eva", "last_name": "Muster", "email": "eva@", "phone": "0151 1"}}, "guardian.email"},
 		{"missing last name", child(map[string]any{"last_name": " "}), "children.0.last_name"},
 		{"implausible date of birth", child(map[string]any{"birth_date": "2099-01-01"}), "children.0.birth_date"},
-		{"unknown school", child(map[string]any{"home_school_id": 999999999}), "children.0.home_school_id"},
+		{"unknown school", child(map[string]any{"home_school_id": "999999999"}), "children.0.home_school_id"},
 		{"no emergency contact", map[string]any{"emergency_contacts": []map[string]any{}}, "emergency_contacts"},
 		{"required question without answer", map[string]any{"custom_data": map[string]any{}}, "custom_data.abholung_hinweis"},
 		{"answer with health information", child(map[string]any{"custom_data": map[string]any{"tetanus_impfschutz": "nein"}}), "children.0.custom_data.tetanus_impfschutz"},
@@ -250,7 +250,7 @@ func TestTraegerEditRefusesWhatThePublicFormRefuses(t *testing.T) {
 	assert.Empty(t, f.editEntries(t, f.siblings), "a refused edit writes no entry")
 	assert.Equal(t, detail.Children, f.readDetail(t, f.siblings).Children, "a refused edit changes nothing")
 
-	rec := f.editDetails(t, f.siblings, map[string]any{"children": []map[string]any{{"id": 999999999, "first_name": "X", "last_name": "Y", "birth_date": "2018-03-01"}}})
+	rec := f.editDetails(t, f.siblings, map[string]any{"children": []map[string]any{{"id": "999999999", "first_name": "X", "last_name": "Y", "birth_date": "2018-03-01"}}})
 	require.Equal(t, http.StatusNotFound, rec.Code, "a child of no registration: %s", rec.Body.String())
 }
 
@@ -276,7 +276,7 @@ func TestTraegerEditFollowsTheStateAndKeepsContributionAndInvoice(t *testing.T) 
 	ben := f.readDetail(t, f.siblings).Children[1]
 	confirmed := f.edited(t, f.editDetails(t, f.siblings, map[string]any{
 		"guardian": map[string]any{"first_name": "Evelyn", "last_name": "Muster", "email": "evelyn.muster@example.org", "phone": "0151 1111111"},
-		"children": []map[string]any{{"id": ben.ID, "first_name": "Benjamin", "last_name": "Muster", "birth_date": "2016-09-12", "home_school_id": 0}},
+		"children": []map[string]any{{"id": ben.ID, "first_name": "Benjamin", "last_name": "Muster", "birth_date": "2016-09-12", "home_school_id": "0"}},
 	}))
 	assert.Equal(t, "Evelyn", confirmed.GuardianFirstName, "a confirmed registration can be changed")
 	assert.Equal(t, contribution, f.contribution(t, f.siblings), "no detail changes the contribution")
@@ -366,7 +366,7 @@ func TestHolidayHostSeesAnEditedNameAtOnceAndTheGuestCopyAfterTheReconciliation(
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	ben := decodeSchoolPortalData[editedRegistration](t, rec.Body.Bytes()).Children[1]
 	rec = putReadRegistration(t, f.traeger, f.office.token, path, map[string]any{"children": []map[string]any{{
-		"id": ben.ID, "first_name": "Ben", "last_name": "Mustermann", "birth_date": "2016-09-12", "home_school_id": 0,
+		"id": ben.ID, "first_name": "Ben", "last_name": "Mustermann", "birth_date": "2016-09-12", "home_school_id": "0",
 		"guest_school_name": "Grundschule Melle", "custom_data": map[string]any{},
 	}}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -438,8 +438,8 @@ func TestTraegerEditKeepsAnAnswerThatDependsOnAHealthQuestion(t *testing.T) {
 	health := f.sealedHealth(t, f.siblings)
 
 	edited := f.edited(t, f.editDetails(t, f.siblings, map[string]any{"children": []map[string]any{{
-		"id": lia, "first_name": "Lia", "last_name": "Mustermann", "birth_date": "2018-03-01",
-		"home_school_id": f.offer.Schools[0].ID,
+		"id": fmt.Sprint(lia), "first_name": "Lia", "last_name": "Mustermann", "birth_date": "2018-03-01",
+		"home_school_id": fmt.Sprint(f.offer.Schools[0].ID),
 		"custom_data":    map[string]any{"ausflug_ziel": "Zoo", "tetanus_datum": "Mai 2024"},
 	}}}))
 	assert.Equal(t, map[string]any{"ausflug_ziel": "Zoo", "tetanus_datum": "Mai 2024"}, childAnswersOf(edited, lia),
@@ -597,7 +597,7 @@ func TestTraegerEditCorrectsAChildWhoseSchoolWasDeleted(t *testing.T) {
 
 	edited := f.edited(t, f.editDetails(t, f.siblings, map[string]any{"children": []map[string]any{{
 		"id": lia.ID, "first_name": "Lia", "last_name": "Mustermann", "birth_date": "2018-03-01",
-		"home_school_id": deleted, "custom_data": map[string]any{},
+		"home_school_id": fmt.Sprint(deleted), "custom_data": map[string]any{},
 	}}}))
 	assert.Equal(t, "Mustermann", edited.Children[0].LastName)
 	require.NotNil(t, edited.Children[0].HomeSchoolID)
@@ -606,7 +606,7 @@ func TestTraegerEditCorrectsAChildWhoseSchoolWasDeleted(t *testing.T) {
 
 	rec := f.editDetails(t, f.siblings, map[string]any{"children": []map[string]any{{
 		"id": ben.ID, "first_name": "Ben", "last_name": "Muster", "birth_date": "2016-09-12",
-		"home_school_id": deleted, "custom_data": map[string]any{},
+		"home_school_id": fmt.Sprint(deleted), "custom_data": map[string]any{},
 	}}})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	_, fields := registrationRefusalOf(t, rec)

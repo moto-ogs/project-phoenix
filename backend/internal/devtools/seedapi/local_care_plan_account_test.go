@@ -128,7 +128,7 @@ func assertLocalCarePlanAccountRole(t *testing.T, scope string) {
 	rt := &Runtime{Client: s.client, FixedSeeder: fs}
 	require.NoError(t, (seedLocalCarePlanAccountStep{seeder: s}).Run(t.Context(), rt))
 	assert.Equal(t, 1, createdRoles)
-	assert.EqualValues(t, 7300, registration["role_id"])
+	assert.Equal(t, "7300", registration["role_id"])
 	assert.NotContains(t, registration, "role_ids")
 	assert.Equal(t, scopedEmail("nachbearbeitung-ohne-planung@example.test", scope), registration["email"])
 	username := registration["username"].(string)

@@ -8,12 +8,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestGetStudentPickupSchedules(t *testing.T) {
@@ -754,7 +755,7 @@ func TestBulkUpsertPickupSchedules(t *testing.T) {
 	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "BulkPickupAPI", "Teacher")
 
 	body := map[string]any{
-		"student_ids": []int64{student1.ID, student2.ID},
+		"student_ids": []string{fmt.Sprint(student1.ID), fmt.Sprint(student2.ID)},
 		"schedules":   []map[string]any{{"weekday": 3, "pickup_time": "16:20"}},
 	}
 	req := testutil.NewAuthenticatedRequest(t, "POST", "/pickup-schedules/bulk", body)

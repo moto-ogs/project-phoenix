@@ -1,11 +1,11 @@
 package staffmessaging
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Group chat handlers (#4776). Authorization lives in the service: membership
@@ -36,7 +36,7 @@ func parseAccountIDs(raw []string) ([]int64, bool) {
 
 func decodeGroupRequest(w http.ResponseWriter, r *http.Request) (groupRequest, []int64, bool) {
 	var body groupRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return body, nil, false
 	}
@@ -67,7 +67,7 @@ func (rs *Resource) renameGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body renameGroupRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

@@ -131,10 +131,10 @@ func carePriceList(schoolID int64, validFrom string, until1400 int64) map[string
 	prices := []map[string]any{}
 	for _, weekday := range []string{"mon", "tue", "wed", "thu", "fri"} {
 		prices = append(prices,
-			map[string]any{"care_offering_id": careModuleUntil1400, "module_name": "Betreuung bis 14:00 Uhr", "weekday": weekday, "monthly_cents": until1400},
-			map[string]any{"care_offering_id": careModuleUntil1630, "module_name": "Betreuung bis 16:30 Uhr", "weekday": weekday, "monthly_cents": 4550})
+			map[string]any{"care_offering_id": fmt.Sprint(careModuleUntil1400), "module_name": "Betreuung bis 14:00 Uhr", "weekday": weekday, "monthly_cents": until1400},
+			map[string]any{"care_offering_id": fmt.Sprint(careModuleUntil1630), "module_name": "Betreuung bis 16:30 Uhr", "weekday": weekday, "monthly_cents": 4550})
 	}
-	return map[string]any{"school_id": schoolID, "valid_from": validFrom, "prices": prices}
+	return map[string]any{"school_id": fmt.Sprint(schoolID), "valid_from": validFrom, "prices": prices}
 }
 
 // carePriceListsVersion reads the version of a school's price lists as the
@@ -423,11 +423,11 @@ func TestCarePriceListIsCheckedBeforeItIsSaved(t *testing.T) {
 		carePriceList(school, "2029-09-02", 3200),
 		carePriceList(0, "2029-09-01", 3200),
 		carePriceList(school, "2029-09-01", -1),
-		{"school_id": school, "valid_from": "2029-09-01", "prices": []map[string]any{
-			{"care_offering_id": careModuleUntil1400, "module_name": "M", "weekday": "mon", "monthly_cents": 1},
-			{"care_offering_id": careModuleUntil1400, "module_name": "M", "weekday": "mon", "monthly_cents": 2}}},
-		{"school_id": school, "valid_from": "2029-09-01", "prices": []map[string]any{
-			{"care_offering_id": careModuleUntil1400, "module_name": "M", "weekday": "montag", "monthly_cents": 1}}},
+		{"school_id": fmt.Sprint(school), "valid_from": "2029-09-01", "prices": []map[string]any{
+			{"care_offering_id": fmt.Sprint(careModuleUntil1400), "module_name": "M", "weekday": "mon", "monthly_cents": 1},
+			{"care_offering_id": fmt.Sprint(careModuleUntil1400), "module_name": "M", "weekday": "mon", "monthly_cents": 2}}},
+		{"school_id": fmt.Sprint(school), "valid_from": "2029-09-01", "prices": []map[string]any{
+			{"care_offering_id": fmt.Sprint(careModuleUntil1400), "module_name": "M", "weekday": "montag", "monthly_cents": 1}}},
 	}
 	for _, body := range bad {
 		rec := putCarePriceList(t, f.traeger, f.office.token, body)
@@ -551,7 +551,7 @@ func TestCareMonthlyContractLeftOutForAMissingPriceIsBilledLater(t *testing.T) {
 	// The billed Monday keeps its price; Saturday gets one from the same list.
 	withSaturday := carePriceList(school, "2029-09-01", 3200)
 	withSaturday["prices"] = append(withSaturday["prices"].([]map[string]any),
-		map[string]any{"care_offering_id": careModuleUntil1400, "module_name": "Betreuung bis 14:00 Uhr", "weekday": "sat", "monthly_cents": 900})
+		map[string]any{"care_offering_id": fmt.Sprint(careModuleUntil1400), "module_name": "Betreuung bis 14:00 Uhr", "weekday": "sat", "monthly_cents": 900})
 	rec = putCarePriceList(t, f.traeger, f.office.token, withSaturday)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3300))

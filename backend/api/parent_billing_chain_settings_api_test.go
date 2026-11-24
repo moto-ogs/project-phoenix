@@ -30,7 +30,7 @@ func (f reviewFixture) submitYoungerDearer(t *testing.T, email string) int64 {
 	t.Helper()
 	body := siblingsRegistration(f.offer, email)
 	ben := body["children"].([]map[string]any)[1]
-	ben["bookings"] = []map[string]any{{"week_id": f.offer.Weeks[0].ID, "time_model_id": f.offer.Weeks[0].TimeModels[0].ID}}
+	ben["bookings"] = []map[string]any{{"week_id": fmt.Sprint(f.offer.Weeks[0].ID), "time_model_id": fmt.Sprint(f.offer.Weeks[0].TimeModels[0].ID)}}
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	return int64(decodeSchoolPortalData[struct {
@@ -55,8 +55,8 @@ func TestOldestChildIsTheFirstChildInPreviewQuoteAndConfirmation(t *testing.T) {
 
 	quote := func(lia, ben int) contributionBody {
 		children := []map[string]any{
-			{"bookings": []map[string]any{{"week_id": f.offer.Weeks[0].ID, "time_model_id": f.offer.Weeks[0].TimeModels[1].ID}}, "age_rank": lia},
-			{"bookings": []map[string]any{{"week_id": f.offer.Weeks[0].ID, "time_model_id": f.offer.Weeks[0].TimeModels[0].ID}}, "age_rank": ben},
+			{"bookings": []map[string]any{{"week_id": fmt.Sprint(f.offer.Weeks[0].ID), "time_model_id": fmt.Sprint(f.offer.Weeks[0].TimeModels[1].ID)}}, "age_rank": lia},
+			{"bookings": []map[string]any{{"week_id": fmt.Sprint(f.offer.Weeks[0].ID), "time_model_id": fmt.Sprint(f.offer.Weeks[0].TimeModels[0].ID)}}, "age_rank": ben},
 		}
 		rec := publicJSON(t, f.traeger, http.MethodPost, holidayQuotePath(f.period.PublicToken), map[string]any{"children": children})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -118,7 +118,7 @@ func TestCostBearerPaysTheFullPriceBeforeTheDiscountAcrossAGroup(t *testing.T) {
 	assert.Equal(t, []string{"base:4500", "cost_takeover:-4500"}, lineKinds(preview.Children[0].Lines),
 		"the second child of the group: the cost bearer pays the full price, no discount")
 
-	rec = f.confirmWith(t, cheaper, map[string]any{"cost_bearer_id": office.ID})
+	rec = f.confirmWith(t, cheaper, map[string]any{"cost_bearer_id": fmt.Sprint(office.ID)})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	frozen := f.contribution(t, cheaper)
 	assert.Equal(t, []string{"base:4500", "cost_takeover:-4500"}, lineKinds(frozen.Children[0].Lines), "the confirmation freezes what the preview showed")
@@ -136,7 +136,7 @@ func TestDiscountOfTheOtherChildStaysWhenTheFirstChildHasACostBearer(t *testing.
 	cheaper := f.submitChild(t, f.period, f.offer, "erstes.zwei@example.org", "Tom", 0)
 	rec := f.merge(t, f.office.token, dearer, cheaper)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = f.confirmWith(t, dearer, map[string]any{"cost_bearer_id": office.ID})
+	rec = f.confirmWith(t, dearer, map[string]any{"cost_bearer_id": fmt.Sprint(office.ID)})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	assert.Equal(t, []string{"base:6750", "cost_takeover:-6750"}, lineKinds(f.contribution(t, dearer).Children[0].Lines))

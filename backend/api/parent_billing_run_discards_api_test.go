@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 	"testing"
@@ -88,7 +89,7 @@ func TestCareRunWithContentIsNeverDiscarded(t *testing.T) {
 	refused("an invoice")
 
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/exclusions"),
-		map[string]any{"contract_id": mia, "service": "care", "reason": "Rückfrage"})
+		map[string]any{"contract_id": fmt.Sprint(mia), "service": "care", "reason": "Rückfrage"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	refused("an excluded invoice is content the release closes")
 }
@@ -150,7 +151,7 @@ func TestEmptyNoticeRunIsDiscardedAndFreesTheYear(t *testing.T) {
 	writeLegalRemedy(t, f.db, f.office.organization)
 	// The second school has no contract: its run has nothing to issue.
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunsPath,
-		map[string]any{"year": 2030, "from_month": "2030-09-01", "school_ids": []int64{f.office.schools[1]}})
+		map[string]any{"year": 2030, "from_month": "2030-09-01", "school_ids": []string{fmt.Sprint(f.office.schools[1])}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	empty := f.noticeRun(t, int64(decodeSchoolPortalData[careNoticeRunBody](t, rec.Body.Bytes()).ID))
 	require.Zero(t, empty.PreviewCount)

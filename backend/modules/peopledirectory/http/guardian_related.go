@@ -2,10 +2,11 @@ package users
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Related accounts: invite a further guardian to a child by e-mail (staff
@@ -61,7 +62,7 @@ func (rs *GuardianResource) inviteGuardianToStudent(w http.ResponseWriter, r *ht
 		return
 	}
 	var body inviteToStudentRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		rs.failMessage(w, r, FailureInvalidRequest, "invalid request body")
 		return
 	}

@@ -145,7 +145,7 @@ func seedGroupAppointments(today seedDate, groupID int64) []map[string]any {
 			"description": "Wir stellen den Tagesablauf vor und planen die Wochen bis zu den Ferien.",
 			"start_date":  parentsEvening, "end_date": parentsEvening, "start_time": "19:00", "end_time": "20:30", "all_day": false,
 			"delivery_mode": "rsvp_required", "overview_visibility": "all",
-			"targets":    []map[string]any{{"type": "parents_by_group", "id": groupID}, {"type": "all_staff"}},
+			"targets":    []map[string]any{{"type": "parents_by_group", "id": ident.ID(groupID)}, {"type": "all_staff"}},
 			"send_email": false,
 		},
 		{

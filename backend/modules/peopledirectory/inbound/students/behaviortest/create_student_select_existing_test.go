@@ -1,6 +1,7 @@
 package students_test
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -20,7 +21,7 @@ func TestCreateStudent_SelectExistingGuardian_NotFound(t *testing.T) {
 		"last_name":    lastName,
 		"school_class": "3d",
 		"guardians": []map[string]interface{}{
-			{"guardian_profile_id": int64(999999999), "relationship_type": "parent", "emergency_priority": 1},
+			{"guardian_profile_id": fmt.Sprint(int64(999999999)), "relationship_type": "parent", "emergency_priority": 1},
 		},
 	}
 

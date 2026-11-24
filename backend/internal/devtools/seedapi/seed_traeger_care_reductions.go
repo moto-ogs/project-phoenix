@@ -153,7 +153,7 @@ func seedCareRuleTargets(rules []seedCareRule, kind string, schools []int64, sch
 
 func seedKeepCareRule(client *Client, auth AuthRef, placeholder map[string]any, schools []int64, month calendar.Date) error {
 	rule := maps.Clone(placeholder)
-	rule["valid_from"], rule["school_ids"] = month.String(), schools
+	rule["valid_from"], rule["school_ids"] = month.String(), ident.IDs(schools)
 	if _, err := client.PostWithAuth(auth, "/traeger/care-rules/", rule); err != nil {
 		return fmt.Errorf("keep the care rule %q: %w", rule["name"], err)
 	}

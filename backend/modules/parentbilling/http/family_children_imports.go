@@ -1,7 +1,6 @@
 package parentbillinghttp
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -10,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -65,7 +65,7 @@ func familyImportRequestOf(w http.ResponseWriter, r *http.Request) (capability.F
 	request := capability.FamilyChildrenImportRequest{Content: content, Delimiter: r.FormValue("delimiter"), Fingerprint: r.FormValue("fingerprint")}
 	if raw := r.FormValue("mapping"); raw != "" {
 		mapping := &capability.FamilyChildrenImportMapping{}
-		if err := json.Unmarshal([]byte(raw), mapping); err != nil {
+		if err := wire.Unmarshal([]byte(raw), mapping); err != nil {
 			return capability.FamilyChildrenImportRequest{}, validation.Errors{"mapping": errors.New("is no mapping")}
 		}
 		request.Mapping = mapping

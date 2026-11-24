@@ -5,6 +5,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -114,13 +115,13 @@ func TestArchivedTimeModelIsNoLongerBookable(t *testing.T) {
 	rec = publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), body)
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "a new registration cannot book the archived time model: %s", rec.Body.String())
 
-	onto := map[string]any{"bookings": []map[string]any{{"week_id": week.ID, "time_model_id": booked}}}
+	onto := map[string]any{"bookings": []map[string]any{{"week_id": fmt.Sprint(week.ID), "time_model_id": fmt.Sprint(booked)}}}
 	rec = putReadRegistration(t, f.traeger, f.office.token,
 		holidayRebookPath(int64(f.period.ID), f.siblings, int64(lia.ID)), onto)
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "nor does a rebooking onto it: %s", rec.Body.String())
 
 	// Ben keeps his booking on it and gives up the second week.
-	keep := map[string]any{"bookings": []map[string]any{{"week_id": week.ID, "time_model_id": booked}}}
+	keep := map[string]any{"bookings": []map[string]any{{"week_id": fmt.Sprint(week.ID), "time_model_id": fmt.Sprint(booked)}}}
 	f.detail(t, putReadRegistration(t, f.traeger, f.office.token,
 		holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)), keep))
 

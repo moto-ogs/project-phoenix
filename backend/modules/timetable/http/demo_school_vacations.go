@@ -1,13 +1,13 @@
 package timetablehttp
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // maxDemoSchoolVacationsBytes bounds one request; the seed sends four windows.
@@ -35,8 +35,7 @@ func DemoSchoolVacationsHandler(seed schoolcalendar.SchoolVacationSeed) http.Han
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		var body DemoSchoolVacationsRequest
-		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxDemoSchoolVacationsBytes))
-		decoder.DisallowUnknownFields()
+		decoder := wire.NewObjectDecoder(http.MaxBytesReader(w, r.Body, maxDemoSchoolVacationsBytes))
 		if err := decoder.Decode(&body); err != nil {
 			common.RenderError(w, r, common.OperatorInvalidRequest(fmt.Errorf("invalid school vacations: %w", err)))
 			return

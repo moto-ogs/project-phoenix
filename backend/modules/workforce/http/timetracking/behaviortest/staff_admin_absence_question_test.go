@@ -14,9 +14,10 @@ import (
 	"testing"
 	"time"
 
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // createRequestedVacation inserts a requested vacation absence for the staff
@@ -25,12 +26,12 @@ func createRequestedVacation(t *testing.T, tc *testContext, staffID int64) int64
 	t.Helper()
 	start := testpkg.TodayDate().AddDays(14)
 	return insertAbsenceRow(t, tc, map[string]any{
-		"staff_id":     staffID,
+		"staff_id":     fmt.Sprint(staffID),
 		"absence_type": absenceTypeVacation,
 		"date_start":   start.String(),
 		"date_end":     start.AddDays(1).String(),
 		"status":       absenceStatusReqd,
-		"created_by":   staffID,
+		"created_by":   fmt.Sprint(staffID),
 		"requested_at": time.Now(),
 	})
 	// Audit rows cascade with the absence (FK ON DELETE CASCADE).

@@ -11,14 +11,15 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun/driver/pgdriver"
+
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun/driver/pgdriver"
 )
 
 func updateRouter(parentCtx context.Context, res *Resource) chi.Router {
@@ -57,8 +58,8 @@ func TestUpdateInstance_Success(t *testing.T) {
 		"start_time": "09:00",
 		"end_time":   "10:00",
 		"title":      "Updated Basteln",
-		"room_id":    s.roomID,
-		"staff_ids":  []int64{50, 60},
+		"room_id":    fmt.Sprint(s.roomID),
+		"staff_ids":  []string{fmt.Sprint(50), fmt.Sprint(60)},
 	}
 
 	w := doTemplateJSON(t, router, http.MethodPut, fmt.Sprintf("/instances/%d", persisted.ID), body)
@@ -87,7 +88,7 @@ func TestUpdateInstance_Validation(t *testing.T) {
 		"start_time": "11:00",
 		"end_time":   "12:00",
 		"title":      "Valid",
-		"room_id":    s.roomID,
+		"room_id":    fmt.Sprint(s.roomID),
 	}
 
 	cases := []struct {
@@ -101,7 +102,7 @@ func TestUpdateInstance_Validation(t *testing.T) {
 		{name: "missing date", path: "/instances/50", mutate: func(b map[string]any) { b["date"] = "" }, want: http.StatusBadRequest},
 		{name: "missing title", path: "/instances/50", mutate: func(b map[string]any) { b["title"] = "" }, want: http.StatusBadRequest},
 		{name: "missing time", path: "/instances/50", mutate: func(b map[string]any) { b["start_time"] = "" }, want: http.StatusBadRequest},
-		{name: "missing room", path: "/instances/50", mutate: func(b map[string]any) { b["room_id"] = 0 }, want: http.StatusBadRequest},
+		{name: "missing room", path: "/instances/50", mutate: func(b map[string]any) { b["room_id"] = fmt.Sprint(0) }, want: http.StatusBadRequest},
 		{name: "invalid date", path: "/instances/50", mutate: func(b map[string]any) { b["date"] = "tomorrow" }, want: http.StatusBadRequest},
 		{name: "weekend date on unknown instance", path: "/instances/50", mutate: func(b map[string]any) { b["date"] = "2026-05-09" }, updateErr: timetable.ErrInstanceNotFound, want: http.StatusNotFound},
 		{name: "invalid start", path: "/instances/50", mutate: func(b map[string]any) { b["start_time"] = "soon" }, want: http.StatusBadRequest},
@@ -135,7 +136,7 @@ func TestUpdateInstance_ServiceErrors(t *testing.T) {
 		"start_time": "11:00",
 		"end_time":   "12:00",
 		"title":      "Valid",
-		"room_id":    s.roomID,
+		"room_id":    fmt.Sprint(s.roomID),
 	}
 
 	s.mock.updateErr = timetable.ErrInstanceNotFound
@@ -185,7 +186,7 @@ func TestUpdateInstance_UnwiredAndEnrichmentFailure(t *testing.T) {
 		"start_time": "11:00",
 		"end_time":   "12:00",
 		"title":      "Valid",
-		"room_id":    s.roomID,
+		"room_id":    fmt.Sprint(s.roomID),
 	}
 	s.mock.updateRes = &timetable.LifecycleInstance{
 		Date:          calendar.NewDate(2026, 5, 6),

@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	testpkg "github.com/moto-ogs/project-phoenix/test"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -194,7 +196,7 @@ func TestParentEnrollmentCareOfferingsIncludePickupBaselines(t *testing.T) {
 	t.Parallel()
 
 	type offeringPayload struct {
-		PhaseID       int64             `json:"phase_id"`
+		PhaseID       testpkg.ID        `json:"phase_id"`
 		HolidayCare   bool              `json:"includes_holiday_care"`
 		Name          string            `json:"name"`
 		AvailableDays []string          `json:"available_days"`
@@ -1411,8 +1413,8 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			require.NoError(t, err)
 			var body map[string]any
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
-			require.Equal(t, float64(2), body["school_id"])
-			require.Equal(t, float64(1), body["role_id"])
+			require.Equal(t, "2", body["school_id"])
+			require.Equal(t, "1", body["role_id"])
 			require.Equal(t, DemoStaff[0].FirstName, body["first_name"])
 			require.Equal(t, DemoStaff[0].LastName, body["last_name"])
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": []any{}})

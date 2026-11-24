@@ -1,7 +1,6 @@
 package catererauth
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 var errLoginFieldsRequired = errors.New("email and password are required")
@@ -38,7 +38,7 @@ type CatererLoginResponse struct {
 // browser presents a device it remembered.
 func (rs *Resource) login(w http.ResponseWriter, r *http.Request) {
 	var request catererLoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := wire.Decode(r.Body, &request); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

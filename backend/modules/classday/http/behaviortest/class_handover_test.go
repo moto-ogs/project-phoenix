@@ -99,7 +99,7 @@ func TestClassHandoverRoundTrip(t *testing.T) {
 	require.NotEmpty(t, read, "a class not handed over has a version too")
 
 	before := time.Now()
-	code := f.handOver(t, morningMonday, fmt.Sprintf(`{"present_student_ids":[%d],"absent_student_ids":[%d]}`, f.sick, f.present), classHandoverPermission)
+	code := f.handOver(t, morningMonday, fmt.Sprintf(`{"present_student_ids":["%d"],"absent_student_ids":["%d"]}`, f.sick, f.present), classHandoverPermission)
 	require.Equal(t, http.StatusNoContent, code)
 	var stored []struct {
 		StudentID int64 `bun:"student_id"`
@@ -124,7 +124,7 @@ func TestClassHandoverRoundTrip(t *testing.T) {
 	// A class view read before that handover cannot mark the child "da"
 	// again (ADR 0311).
 	stale := f.do(t, http.MethodPut, fmt.Sprintf("/handover/%s/%s", f.class, morningMonday),
-		fmt.Sprintf(`{"present_student_ids":[%d,%d],"expected_version":%q}`, f.sick, f.present, read), classHandoverPermission)
+		fmt.Sprintf(`{"present_student_ids":["%d","%d"],"expected_version":%q}`, f.sick, f.present, read), classHandoverPermission)
 	require.Equal(t, http.StatusConflict, stale.Code, stale.Body.String())
 	assert.Contains(t, stale.Body.String(), `"code":"general.changed_since_read"`)
 	assert.True(t, f.handoverReport(t, morningMonday, classDayReadPermission).absent(f.present))
@@ -153,11 +153,11 @@ func TestClassHandoverLeavesMorningAttendanceUntouched(t *testing.T) {
 	t.Parallel()
 	f := setupMorningAttendanceFixture(t, morningMonday)
 	f.openHandover(t)
-	rec := f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":%d,"status":"present"}]}`, f.present), morningAttendancePermission)
+	rec := f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":"%d","status":"present"}]}`, f.present), morningAttendancePermission)
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
 
 	require.Equal(t, http.StatusNoContent,
-		f.handOver(t, morningMonday, fmt.Sprintf(`{"absent_student_ids":[%d]}`, f.present), classHandoverPermission))
+		f.handOver(t, morningMonday, fmt.Sprintf(`{"absent_student_ids":["%d"]}`, f.present), classHandoverPermission))
 
 	_, statuses := f.report(t, morningMonday, classDayReadPermission)
 	assert.Equal(t, "present/teacher", statuses[fmt.Sprintf("s%d", f.present)],
@@ -167,7 +167,7 @@ func TestClassHandoverLeavesMorningAttendanceUntouched(t *testing.T) {
 func TestClassHandoverGates(t *testing.T) {
 	t.Parallel()
 	f := setupMorningAttendanceFixture(t, morningMonday)
-	body := fmt.Sprintf(`{"absent_student_ids":[%d]}`, f.present)
+	body := fmt.Sprintf(`{"absent_student_ids":["%d"]}`, f.present)
 
 	// The write scope does not tick the handover yet.
 	rec := f.do(t, http.MethodPut, fmt.Sprintf("/handover/%s/%s", f.class, morningMonday), body, classHandoverPermission)
@@ -190,13 +190,13 @@ func TestClassHandoverGates(t *testing.T) {
 
 	// Only children with an OGS record on the class roster, da or nicht da.
 	rec = f.do(t, http.MethodPut, fmt.Sprintf("/handover/%s/%s", f.class, morningMonday),
-		fmt.Sprintf(`{"absent_student_ids":[%d]}`, f.other), classHandoverPermission)
+		fmt.Sprintf(`{"absent_student_ids":["%d"]}`, f.other), classHandoverPermission)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "classday.class_handover_unknown_child")
 	assert.Equal(t, http.StatusConflict, f.handOver(t, morningMonday,
-		fmt.Sprintf(`{"present_student_ids":[%d]}`, f.other), classHandoverPermission))
+		fmt.Sprintf(`{"present_student_ids":["%d"]}`, f.other), classHandoverPermission))
 	assert.Equal(t, http.StatusBadRequest, f.handOver(t, morningMonday,
-		fmt.Sprintf(`{"present_student_ids":[%d],"absent_student_ids":[%d]}`, f.present, f.present), classHandoverPermission),
+		fmt.Sprintf(`{"present_student_ids":["%d"],"absent_student_ids":["%d"]}`, f.present, f.present), classHandoverPermission),
 		"a child is either da or nicht da")
 	// List entries number apart from students; skip one whose ID a roster
 	// child happens to share. Start with a roster ID to exercise the collision
@@ -206,12 +206,12 @@ func TestClassHandoverGates(t *testing.T) {
 		entry = testpkg.CreateTestClassListEntry(t, f.db, "Lena", fmt.Sprintf("Liste-%d", attempt), f.class).ID
 	}
 	assert.Equal(t, http.StatusConflict, f.handOver(t, morningMonday,
-		fmt.Sprintf(`{"absent_student_ids":[%d]}`, entry), classHandoverPermission), "a class-list-only entry does not go to the OGS")
+		fmt.Sprintf(`{"absent_student_ids":["%d"]}`, entry), classHandoverPermission), "a class-list-only entry does not go to the OGS")
 
 	// Only assigned classes, and well-formed IDs.
 	rec = f.do(t, http.MethodPut, "/handover/"+f.class+"x/"+morningMonday, body, classHandoverPermission)
 	require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
-	assert.Equal(t, http.StatusBadRequest, f.handOver(t, morningMonday, `{"absent_student_ids":[0]}`, classHandoverPermission))
+	assert.Equal(t, http.StatusBadRequest, f.handOver(t, morningMonday, `{"absent_student_ids":["0"]}`, classHandoverPermission))
 
 	var handovers int
 	require.NoError(t, f.db.NewRaw(`SELECT COUNT(*) FROM active.class_handovers WHERE tenant_id = ?`, f.tenantID).

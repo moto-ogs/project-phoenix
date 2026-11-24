@@ -115,13 +115,13 @@ func (s *rosterReviewSetup) createClassTemplate(t *testing.T, name, class string
 		"weekdays":            []int{timetableModule.WeekdayMonday, timetableModule.WeekdayWednesday},
 		"start_time":          "07:00",
 		"end_time":            "08:00",
-		"room_id":             s.roomID,
-		"category_id":         s.category.ID,
-		"calendar_period_id":  periodID,
+		"room_id":             fmt.Sprint(s.roomID),
+		"category_id":         fmt.Sprint(s.category.ID),
+		"calendar_period_id":  fmt.Sprint(periodID),
 		"target_group_type":   timetableModule.TargetGroupTypeSchoolClass,
 		"target_school_class": class,
-		"student_ids":         studentIDs,
-		"staff_ids":           []int64{s.staffA},
+		"student_ids":         testpkg.IDsOf[testpkg.ID](studentIDs),
+		"staff_ids":           []string{fmt.Sprint(s.staffA)},
 	}
 	w := doTemplateJSON(t, s.router, http.MethodPost, "/templates", body)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
@@ -294,9 +294,9 @@ func (s *rosterReviewSetup) arrangeTwoSegmentSeries(t *testing.T) seriesFixture 
 	splitRequest := map[string]any{
 		"name": "RDST 2c", "type": timetableModule.GroupTypeCare,
 		"weekdays":   []int{timetableModule.WeekdayMonday, timetableModule.WeekdayWednesday},
-		"start_time": "07:00", "end_time": "08:00", "room_id": s.roomID, "category_id": s.category.ID,
-		"calendar_period_id": period.ID, "target_group_type": timetableModule.TargetGroupTypeSchoolClass,
-		"target_school_class": "2c", "student_ids": class, "staff_ids": []int64{s.staffA},
+		"start_time": "07:00", "end_time": "08:00", "room_id": fmt.Sprint(s.roomID), "category_id": fmt.Sprint(s.category.ID),
+		"calendar_period_id": fmt.Sprint(period.ID), "target_group_type": timetableModule.TargetGroupTypeSchoolClass,
+		"target_school_class": "2c", "student_ids": testpkg.IDsOf[testpkg.ID](class), "staff_ids": []string{fmt.Sprint(s.staffA)},
 		"effective_date": fixture.split.String(),
 	}
 	w := doTemplateJSON(t, s.router, http.MethodPost, fmt.Sprintf("/templates/%d/split", fixture.segmentA), splitRequest)
@@ -361,7 +361,7 @@ func TestTemplateOfferingConnectionCoversEveryFutureSegment(t *testing.T) {
 	s.res.Staffing = announcer
 	connect := func(fingerprint string) *httptest.ResponseRecorder {
 		return doTemplateJSON(t, s.router, http.MethodPost, fmt.Sprintf("/templates/%d/offering-connection", fixture.segmentB), map[string]any{
-			"offering_ids": []int64{rosterReviewOfferingID}, "school_classes": []string{"2c"}, "effective_date": effective.String(),
+			"offering_ids": []string{fmt.Sprint(rosterReviewOfferingID)}, "school_classes": []string{"2c"}, "effective_date": effective.String(),
 			"expected_fingerprint": fingerprint,
 		})
 	}
@@ -441,10 +441,10 @@ func TestTemplateOfferingConnectionRefusals(t *testing.T) {
 	s.res.Staffing = announcer
 	path := fmt.Sprintf("/templates/%d/offering-connection", fixture.segmentB)
 	for name, body := range map[string]map[string]any{
-		"past date":           {"offering_ids": []int64{rosterReviewOfferingID}, "effective_date": calendar.NewDate(2020, 1, 6).String()},
-		"no offering":         {"offering_ids": []int64{}, "effective_date": rosterReviewMonday.String()},
-		"grade and class":     {"offering_ids": []int64{rosterReviewOfferingID}, "grade_levels": []int{2}, "school_classes": []string{"2c"}, "effective_date": rosterReviewMonday.String()},
-		"malformed date":      {"offering_ids": []int64{rosterReviewOfferingID}, "effective_date": "04.03.2030"},
+		"past date":           {"offering_ids": []string{fmt.Sprint(rosterReviewOfferingID)}, "effective_date": calendar.NewDate(2020, 1, 6).String()},
+		"no offering":         {"offering_ids": []string{}, "effective_date": rosterReviewMonday.String()},
+		"grade and class":     {"offering_ids": []string{fmt.Sprint(rosterReviewOfferingID)}, "grade_levels": []int{2}, "school_classes": []string{"2c"}, "effective_date": rosterReviewMonday.String()},
+		"malformed date":      {"offering_ids": []string{fmt.Sprint(rosterReviewOfferingID)}, "effective_date": "04.03.2030"},
 		"preview in the past": nil,
 	} {
 		t.Run(name, func(t *testing.T) {

@@ -2,7 +2,6 @@ package students
 
 import (
 	context "context"
-	json "encoding/json"
 	errors "errors"
 	http "net/http"
 	strconv "strconv"
@@ -15,6 +14,7 @@ import (
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	securityruntime "github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -394,7 +394,7 @@ func (rs *Resource) noteActivities(ctx context.Context, studentID int64) ([]peop
 
 func decodeStudentNoteBody(w http.ResponseWriter, r *http.Request) (studentNoteRequestBody, bool) {
 	var body studentNoteRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("invalid note payload")))
 		return studentNoteRequestBody{}, false
 	}

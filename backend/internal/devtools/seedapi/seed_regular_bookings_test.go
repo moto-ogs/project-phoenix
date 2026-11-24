@@ -147,10 +147,10 @@ func TestSeedRegularBookingsBooksCareAndLunchOnTheLunchDays(t *testing.T) {
 	child := leon["children"].([]any)[0].(map[string]any)
 	assert.Equal(t, "Koch", child["last_name"])
 	assert.EqualValues(t, 1, child["target_grade_level"], "the child keeps its class")
-	assert.Equal(t, []any{float64(11), float64(13)}, child["offering_ids"])
+	assert.Equal(t, []any{"11", "13"}, child["offering_ids"])
 	assert.Equal(t, []any{
-		map[string]any{"offering_id": float64(11), "selected_days": []any{"mon", "tue", "thu"}},
-		map[string]any{"offering_id": float64(13), "selected_days": []any{"mon", "tue", "thu"}},
+		map[string]any{"offering_id": "11", "selected_days": []any{"mon", "tue", "thu"}},
+		map[string]any{"offering_id": "13", "selected_days": []any{"mon", "tue", "thu"}},
 	}, child["offering_days"])
 }
 
@@ -173,7 +173,7 @@ func TestSeedRegularBookingsMixesGanztagAndKurzbetreuung(t *testing.T) {
 	careOf := func(booking map[string]any) any {
 		return booking["children"].([]any)[0].(map[string]any)["offering_ids"].([]any)[0]
 	}
-	assert.Equal(t, []any{float64(11), float64(11), float64(12)}, []any{careOf(server.bookings[0]), careOf(server.bookings[1]), careOf(server.bookings[2])})
+	assert.Equal(t, []any{"11", "11", "12"}, []any{careOf(server.bookings[0]), careOf(server.bookings[1]), careOf(server.bookings[2])})
 	assert.Equal(t, "audience open", server.events[len(server.events)-1], "the phase opens again after a failure")
 }
 

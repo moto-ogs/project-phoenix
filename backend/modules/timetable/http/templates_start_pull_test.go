@@ -53,7 +53,7 @@ func TestTemplateUpdateStartDatePullForward(t *testing.T) {
 
 	createBody := createTemplateBody(s, "Tpl-StartPull")
 	createBody["weekdays"] = []int{1}
-	createBody["calendar_period_id"] = period.ID
+	createBody["calendar_period_id"] = fmt.Sprint(period.ID)
 	createBody["start_date"] = oldStart.String()
 	w := doTemplateJSON(t, router, http.MethodPost, "/templates", createBody)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
@@ -62,7 +62,7 @@ func TestTemplateUpdateStartDatePullForward(t *testing.T) {
 	updateBody := func(startDate string) map[string]any {
 		body := createTemplateBody(s, "Tpl-StartPull")
 		body["weekdays"] = []int{1}
-		body["calendar_period_id"] = period.ID
+		body["calendar_period_id"] = fmt.Sprint(period.ID)
 		if startDate != "" {
 			body["start_date"] = startDate
 		}

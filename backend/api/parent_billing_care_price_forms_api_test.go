@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -43,21 +44,21 @@ type priceFormsRunBody struct {
 func ispringenModule2(school int64) map[string]any {
 	prices := []map[string]any{}
 	for _, weekday := range []string{"mon", "tue", "wed", "thu"} {
-		prices = append(prices, map[string]any{"care_offering_id": sjrModule2, "module_name": "Regelschule Modul 2",
+		prices = append(prices, map[string]any{"care_offering_id": fmt.Sprint(sjrModule2), "module_name": "Regelschule Modul 2",
 			"weekday": weekday, "monthly_cents": 1600, "sibling_cents": 1250})
 	}
-	prices = append(prices, map[string]any{"care_offering_id": sjrModule2, "module_name": "Regelschule Modul 2",
+	prices = append(prices, map[string]any{"care_offering_id": fmt.Sprint(sjrModule2), "module_name": "Regelschule Modul 2",
 		"weekday": "fri", "monthly_cents": 1400, "sibling_cents": 1050})
-	return map[string]any{"school_id": school, "valid_from": "2029-09-01", "free_months": []int{8}, "prices": prices}
+	return map[string]any{"school_id": fmt.Sprint(school), "valid_from": "2029-09-01", "free_months": []int{8}, "prices": prices}
 }
 
 func birkenfeldModule4(school int64, threeDays int64) map[string]any {
 	prices := []map[string]any{}
 	for days, cents := range []int64{2000, 4000, threeDays, 8000, 10000} {
-		prices = append(prices, map[string]any{"care_offering_id": sjrModule4, "module_name": "Modul 4 mit Mittagessen",
+		prices = append(prices, map[string]any{"care_offering_id": fmt.Sprint(sjrModule4), "module_name": "Modul 4 mit Mittagessen",
 			"days_per_week": days + 1, "monthly_cents": cents, "meal_extra": true})
 	}
-	return map[string]any{"school_id": school, "valid_from": "2029-09-01", "prices": prices}
+	return map[string]any{"school_id": fmt.Sprint(school), "valid_from": "2029-09-01", "prices": prices}
 }
 
 func sjrModule2Services() []careService {
@@ -172,14 +173,14 @@ func TestPriceFormsAreCheckedBeforeTheyAreSaved(t *testing.T) {
 	school := f.office.schools[0]
 	for name, prices := range map[string][]map[string]any{
 		"two forms in one module": {
-			{"care_offering_id": sjrModule4, "module_name": "Modul 4", "days_per_week": 1, "monthly_cents": 2000},
-			{"care_offering_id": sjrModule4, "module_name": "Modul 4", "weekday": "mon", "monthly_cents": 2000},
+			{"care_offering_id": fmt.Sprint(sjrModule4), "module_name": "Modul 4", "days_per_week": 1, "monthly_cents": 2000},
+			{"care_offering_id": fmt.Sprint(sjrModule4), "module_name": "Modul 4", "weekday": "mon", "monthly_cents": 2000},
 		},
 		"sibling above first": {
-			{"care_offering_id": sjrModule4, "module_name": "Modul 4", "days_per_week": 1, "monthly_cents": 2000, "sibling_cents": 2100},
+			{"care_offering_id": fmt.Sprint(sjrModule4), "module_name": "Modul 4", "days_per_week": 1, "monthly_cents": 2000, "sibling_cents": 2100},
 		},
 	} {
-		rec := putCarePriceList(t, f.traeger, f.office.token, map[string]any{"school_id": school, "valid_from": "2029-09-01", "prices": prices})
+		rec := putCarePriceList(t, f.traeger, f.office.token, map[string]any{"school_id": fmt.Sprint(school), "valid_from": "2029-09-01", "prices": prices})
 		assert.Equal(t, http.StatusBadRequest, rec.Code, "%s: %s", name, rec.Body.String())
 	}
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRulesPath, careRule("sibling", "Beides", []int64{school},
@@ -197,7 +198,7 @@ func TestFreeMonthRunClosesWithoutInvoices(t *testing.T) {
 	rec := putCarePriceList(t, f.traeger, f.office.token, ispringenModule2(ispringen))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunsPath,
-		map[string]any{"billing_month": "2030-08-01", "school_ids": []int64{ispringen}})
+		map[string]any{"billing_month": "2030-08-01", "school_ids": []string{fmt.Sprint(ispringen)}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	august := f.priceFormsRun(t, int64(decodeSchoolPortalData[priceFormsRunBody](t, rec.Body.Bytes()).ID))
 	assert.Zero(t, august.PreviewCount)

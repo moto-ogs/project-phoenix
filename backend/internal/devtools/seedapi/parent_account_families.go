@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -80,7 +82,7 @@ var demoLimitedGuardianRoles = map[string]string{
 // The role follows the person, so siblings see the same one.
 func demoGuardianLink(guardianID int64, guardian DemoGuardian) map[string]any {
 	link := map[string]any{
-		"guardian_profile_id":  guardianID,
+		"guardian_profile_id":  ident.ID(guardianID),
 		"relationship_type":    guardian.Relationship,
 		"is_primary":           guardian.IsPrimary,
 		"is_emergency_contact": true,

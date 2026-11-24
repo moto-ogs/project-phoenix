@@ -105,7 +105,7 @@ func TestFlowC_GapsAndSubstitute(t *testing.T) {
 	// Deviations-Save; die Zuweisung bleibt tagesweit über alle Blöcke.
 	subReq := map[string]any{
 		"substitutions": []map[string]any{
-			{"absent_staff_id": staff1.ID, "substitute_staff_id": staff3.ID},
+			{"absent_staff_id": testpkg.ID(staff1.ID), "substitute_staff_id": testpkg.ID(staff3.ID)},
 		},
 	}
 	rr = s.do("POST", fmt.Sprintf("/instances/%d/deviations", inst1.ID), subReq, s.primaryAdminClaims())
@@ -168,7 +168,7 @@ func TestFlowC_GapsAndSubstitute(t *testing.T) {
 
 	conflictReq := map[string]any{
 		"substitutions": []map[string]any{
-			{"absent_staff_id": staff1.ID, "substitute_staff_id": staff4.ID},
+			{"absent_staff_id": testpkg.ID(staff1.ID), "substitute_staff_id": testpkg.ID(staff4.ID)},
 		},
 	}
 	rr = s.do("POST", fmt.Sprintf("/instances/%d/deviations", inst1.ID), conflictReq, s.primaryAdminClaims())

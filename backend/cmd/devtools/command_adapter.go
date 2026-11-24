@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 type AuthKind string
@@ -451,7 +453,7 @@ func (a *Adapter) buildRequest(ctx context.Context, auth AuthRef, method, path s
 
 	var bodyReader io.Reader
 	if body != nil {
-		jsonBody, err := json.Marshal(body)
+		jsonBody, err := wire.Marshal(body)
 		if err != nil {
 			return nil, fmt.Errorf("marshal request body: %w", err)
 		}

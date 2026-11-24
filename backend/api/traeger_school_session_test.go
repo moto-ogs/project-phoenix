@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -47,7 +48,7 @@ type traegerSchoolSessionAnswer struct {
 
 func startTraegerSchoolSession(t *testing.T, router http.Handler, token string, schoolID int64) (int, traegerSchoolSessionAnswer) {
 	t.Helper()
-	body, err := json.Marshal(map[string]any{"school_id": schoolID})
+	body, err := json.Marshal(map[string]any{"school_id": fmt.Sprint(schoolID)})
 	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodPost, "/traeger/school-sessions/", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -165,7 +166,7 @@ func TestTraegerSchoolSessionRefusesForeignSchoolsAndMissingRights(t *testing.T)
 
 	ogs := testpkg.MintTestJWT(t, sessiontoken.AppClaims{ID: int(admin.ID), Sub: admin.Email, TenantID: school, OrgID: organization, Roles: []string{"admin"},
 		Permissions: []string{"admin:*", identityaccess.TraegerRightSchoolSwitch}, IsAdmin: true})
-	req := httptest.NewRequest(http.MethodPost, "/traeger/school-sessions/", bytes.NewReader([]byte(`{"school_id":1}`)))
+	req := httptest.NewRequest(http.MethodPost, "/traeger/school-sessions/", bytes.NewReader([]byte(`{"school_id":"1"}`)))
 	req.Header.Set("Authorization", "Bearer "+ogs)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -507,7 +508,7 @@ func TestTraegerAbsprungHonoursASchoolWithoutRememberedDevices(t *testing.T) {
 	require.Equal(t, "mfa_required", login.Status)
 	rec := traegerRequest(t, portal, "/traeger/auth/mfa/verify", map[string]any{
 		"challenge_token": login.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email),
-		"organization_id": organization, "remember_device": true,
+		"organization_id": fmt.Sprint(organization), "remember_device": true,
 	})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var byCode traegerLoginAnswer

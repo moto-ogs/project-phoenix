@@ -47,7 +47,7 @@ func checkSubstitutionRoutes(t *testing.T, graph *goldenRuntime) {
 
 	rec := checkpointRequest(graph, checkpointScenario{
 		Method: http.MethodPost, Path: "/api/substitutions/", Authenticated: true,
-		Body: fmt.Sprintf(`{"type":"group_handover","group_handover":{"group_id":"%d","target_staff_id":%d}}`, group.ID, target.ID),
+		Body: fmt.Sprintf(`{"type":"group_handover","group_handover":{"group_id":"%d","target_staff_id":"%d"}}`, group.ID, target.ID),
 	}, token)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	assigned := decodeSubstitutionAnswer[struct {

@@ -53,7 +53,7 @@ func (seedTraegerBillingCreditStep) Run(_ context.Context, rt *Runtime) error {
 		return nil
 	}
 	if _, err := rt.Client.PostWithAuth(auth, fmt.Sprintf("/traeger/billing-runs/%d/documents/%d/credits", runID, documentID),
-		map[string]any{"child_id": childID, "amount_cents": seedCreditCents, "reason": seedCreditReason}); err != nil {
+		map[string]any{"child_id": ident.ID(childID), "amount_cents": seedCreditCents, "reason": seedCreditReason}); err != nil {
 		return fmt.Errorf("credit the invoice: %w", err)
 	}
 	fmt.Println("  Abrechnung: one invoice of the holiday run credited")

@@ -142,7 +142,7 @@ func TestOwnChildBookedInTwoHostedWeeksShowsItsContactsInBoth(t *testing.T) {
 	require.NoError(t, err)
 	bookings := []map[string]any{}
 	for _, week := range f.offer.Weeks[:2] {
-		bookings = append(bookings, map[string]any{"week_id": week.ID, "time_model_id": week.TimeModels[0].ID})
+		bookings = append(bookings, map[string]any{"week_id": fmt.Sprint(week.ID), "time_model_id": fmt.Sprint(week.TimeModels[0].ID)})
 	}
 	rec := putReadRegistration(t, f.traeger, f.office.token, holidayRebookPath(f.periodID(t), f.siblings, liaChild), map[string]any{"bookings": bookings})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

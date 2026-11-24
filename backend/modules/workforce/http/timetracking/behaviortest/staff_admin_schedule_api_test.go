@@ -331,7 +331,7 @@ func TestUpdateSchedule_ArchivedTemplateOnlyKeepsExistingAssignees(t *testing.T)
 	claims.Permissions = []string{"time_tracking:manage"}
 	token := testutil.MintTestJWT(t, claims)
 	assign := func(staffID int64) *http.Response {
-		body := map[string]any{"mode": "template", "model_id": model.ID, "expected_version": scheduleVersion(t, ctx, token, staffID)}
+		body := map[string]any{"mode": "template", "model_id": fmt.Sprint(model.ID), "expected_version": scheduleVersion(t, ctx, token, staffID)}
 		req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/staff/%d/schedule", staffID), body, testutil.WithJWTBearer(token))
 		return testutil.ExecuteRequest(ctx.router, req).Result()
 	}

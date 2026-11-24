@@ -94,7 +94,7 @@ func TestStaffShiftIsCreatedChangedAndDeletedThroughTheRoutes(t *testing.T) {
 	}
 
 	response := send(http.MethodPost, "/staff-shifts/", map[string]any{
-		"staff_id": staff.ID, "date": "2026-07-06", "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
+		"staff_id": fmt.Sprint(staff.ID), "date": "2026-07-06", "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
 	})
 	require.Equal(t, http.StatusCreated, response.Code, response.Body.String())
 	var created struct {
@@ -154,11 +154,11 @@ func TestStaffShiftPlanningRoutesStoreThePlan(t *testing.T) {
 
 	var created shift
 	send(http.MethodPost, "/staff-shifts/", map[string]any{
-		"staff_id": first.ID, "date": "2030-03-04", "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
+		"staff_id": fmt.Sprint(first.ID), "date": "2030-03-04", "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
 	}, http.StatusCreated, &created)
 	var moved shift
 	send(http.MethodPut, "/staff-shifts/"+created.ID+"/move", map[string]any{
-		"source_staff_id": first.ID, "target_staff_id": second.ID, "date": "2030-03-05",
+		"source_staff_id": fmt.Sprint(first.ID), "target_staff_id": fmt.Sprint(second.ID), "date": "2030-03-05",
 		"start_time": "08:00", "end_time": "12:00", "break_minutes": 0, "shift_type_id": nil,
 	}, http.StatusOK, &moved)
 	assert.Equal(t, created.ID, moved.ID, "the move keeps the shift")
@@ -187,8 +187,8 @@ func TestStaffShiftPlanningRoutesStoreThePlan(t *testing.T) {
 	}
 	var planned series
 	send(http.MethodPost, "/staff-shifts/series", map[string]any{
-		"staff_id": first.ID, "weekdays": []int{1}, "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
-		"shift_type_id": nil, "calendar_period_id": period.ID, "week_pattern": 0, "valid_from": "2030-04-01", "valid_until": nil,
+		"staff_id": fmt.Sprint(first.ID), "weekdays": []int{1}, "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
+		"shift_type_id": nil, "calendar_period_id": fmt.Sprint(period.ID), "week_pattern": 0, "valid_from": "2030-04-01", "valid_until": nil,
 	}, http.StatusCreated, &planned)
 	require.NotEmpty(t, planned.SeriesID)
 	assert.Positive(t, planned.Created, "the series plans its Mondays")

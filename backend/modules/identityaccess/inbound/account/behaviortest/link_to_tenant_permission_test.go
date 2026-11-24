@@ -41,7 +41,7 @@ func TestLinkToTenant_RequiresUsersManage(t *testing.T) {
 	// would make this test pass for the wrong reason.
 	body := map[string]interface{}{
 		"email":      email,
-		"role_id":    adminRole.ID,
+		"role_id":    fmt.Sprint(adminRole.ID),
 		"first_name": "Link",
 		"last_name":  "Permission",
 	}
