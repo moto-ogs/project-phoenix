@@ -24,6 +24,17 @@ export const FamilyRefusalDetailsSchema: Decoder<FamilyRefusalDetails> = /*#__PU
   contract_id: int64String,
 });
 
+/** Go: common.BodyLimitDetails */
+export interface BodyLimitDetails {
+  max_bytes: number;
+  max_mb?: number;
+}
+
+export const BodyLimitDetailsSchema: Decoder<BodyLimitDetails> = /*#__PURE__*/ object<BodyLimitDetails>({
+  max_bytes: safeInt,
+  max_mb: /*#__PURE__*/ optional(safeInt),
+});
+
 /** Go: classdayhttp.classTripConflict */
 export interface classTripConflict {
   student_id: string;
@@ -204,10 +215,12 @@ export const HolidayWeekNoCareDetailsSchema: Decoder<HolidayWeekNoCareDetails> =
 /** Go: common.SizeLimitDetails */
 export interface SizeLimitDetails {
   max_mb: number;
+  max_bytes?: number;
 }
 
 export const SizeLimitDetailsSchema: Decoder<SizeLimitDetails> = /*#__PURE__*/ object<SizeLimitDetails>({
   max_mb: safeInt,
+  max_bytes: /*#__PURE__*/ optional(safeInt),
 });
 
 /** Go: enrollmenthttp.BookingBoundsDetails */
@@ -231,11 +244,13 @@ export const UploadContentDetailsSchema: Decoder<UploadContentDetails> = /*#__PU
 /** Go: enrollmenthttp.UploadRefusalDetails */
 export interface UploadRefusalDetails {
   max_mb: number;
+  max_bytes?: number;
   allowed_types?: string[];
 }
 
 export const UploadRefusalDetailsSchema: Decoder<UploadRefusalDetails> = /*#__PURE__*/ object<UploadRefusalDetails>({
   max_mb: safeInt,
+  max_bytes: /*#__PURE__*/ optional(safeInt),
   allowed_types: /*#__PURE__*/ optional(/*#__PURE__*/ arr(str)),
 });
 
@@ -898,11 +913,95 @@ export const TraegerPayrollGapSchema: Decoder<TraegerPayrollGap> = /*#__PURE__*/
   kind: str,
 });
 
+/** Go: workforce.TraegerPayrollFileEmployer */
+export interface TraegerPayrollFileEmployer {
+  body: string;
+  name: string;
+}
+
+export const TraegerPayrollFileEmployerSchema: Decoder<TraegerPayrollFileEmployer> = /*#__PURE__*/ object<TraegerPayrollFileEmployer>({
+  body: str,
+  name: str,
+});
+
+/** Go: workforce.TraegerPayrollDuplicate */
+export interface TraegerPayrollDuplicate {
+  number: string;
+  people: TraegerExportPerson[] | null;
+}
+
+export const TraegerPayrollDuplicateSchema: Decoder<TraegerPayrollDuplicate> = /*#__PURE__*/ object<TraegerPayrollDuplicate>({
+  number: str,
+  people: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(TraegerExportPersonSchema)),
+});
+
+/** Go: workforce.TraegerPayrollSplitNumber */
+export interface TraegerPayrollSplitNumber {
+  person: TraegerExportPerson;
+  numbers: string[] | null;
+}
+
+export const TraegerPayrollSplitNumberSchema: Decoder<TraegerPayrollSplitNumber> = /*#__PURE__*/ object<TraegerPayrollSplitNumber>({
+  person: TraegerExportPersonSchema,
+  numbers: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(str)),
+});
+
+/** Go: workforce.TraegerPayrollFile */
+export interface TraegerPayrollFile {
+  key: string;
+  employers: TraegerPayrollFileEmployer[] | null;
+  schools: string[] | null;
+  consultant_number: string;
+  client_number: string;
+  people: number;
+  line_count: number;
+  missing_client: boolean;
+  without_number: TraegerExportPerson[] | null;
+  duplicates: TraegerPayrollDuplicate[] | null;
+  split_numbers: TraegerPayrollSplitNumber[] | null;
+  ready: boolean;
+}
+
+export const TraegerPayrollFileSchema: Decoder<TraegerPayrollFile> = /*#__PURE__*/ object<TraegerPayrollFile>({
+  key: str,
+  employers: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(TraegerPayrollFileEmployerSchema)),
+  schools: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(str)),
+  consultant_number: str,
+  client_number: str,
+  people: safeInt,
+  line_count: safeInt,
+  missing_client: bool,
+  without_number: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(TraegerExportPersonSchema)),
+  duplicates: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(TraegerPayrollDuplicateSchema)),
+  split_numbers: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(TraegerPayrollSplitNumberSchema)),
+  ready: bool,
+});
+
+/** Go: workforce.TraegerPayrollEmployerCheck */
+export interface TraegerPayrollEmployerCheck {
+  school_id: string;
+  school_name: string;
+  body: string;
+  name: string;
+  missing_client: boolean;
+  missing_cost_center: boolean;
+}
+
+export const TraegerPayrollEmployerCheckSchema: Decoder<TraegerPayrollEmployerCheck> = /*#__PURE__*/ object<TraegerPayrollEmployerCheck>({
+  school_id: int64String,
+  school_name: str,
+  body: str,
+  name: str,
+  missing_client: bool,
+  missing_cost_center: bool,
+});
+
 /** Go: workforce.TraegerPayrollReport */
 export interface TraegerPayrollReport {
   year: number;
   month: number;
   format: string;
+  form: string;
   contracts: number;
   people: number;
   schools: number;
@@ -914,6 +1013,9 @@ export interface TraegerPayrollReport {
   no_wage_type: boolean;
   open_schools: string[] | null;
   contract_changes: TraegerExportPerson[] | null;
+  files: TraegerPayrollFile[] | null;
+  employers: TraegerPayrollEmployerCheck[] | null;
+  in_several_files: TraegerExportPerson[] | null;
   ready: boolean;
 }
 
@@ -921,6 +1023,7 @@ export const TraegerPayrollReportSchema: Decoder<TraegerPayrollReport> = /*#__PU
   year: safeInt,
   month: safeInt,
   format: str,
+  form: str,
   contracts: safeInt,
   people: safeInt,
   schools: safeInt,
@@ -932,6 +1035,9 @@ export const TraegerPayrollReportSchema: Decoder<TraegerPayrollReport> = /*#__PU
   no_wage_type: bool,
   open_schools: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(str)),
   contract_changes: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(TraegerExportPersonSchema)),
+  files: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(TraegerPayrollFileSchema)),
+  employers: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(TraegerPayrollEmployerCheckSchema)),
+  in_several_files: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(TraegerExportPersonSchema)),
   ready: bool,
 });
 
@@ -989,6 +1095,8 @@ export const HireIncompleteDetailsSchema: Decoder<HireIncompleteDetails> = /*#__
 
 export const problemDetails = {
   "care_contract.family_refused": FamilyRefusalDetailsSchema,
+  "care_contract.import_file_too_large": BodyLimitDetailsSchema,
+  "care_contract.paper_document_invalid": BodyLimitDetailsSchema,
   "classday.class_trip_status_conflict": ClassTripConflictDetailsSchema,
   "communication.letter_placeholder_unknown": PlaceholderDetailsSchema,
   "communication.staff_group_name_invalid": StaffGroupNameLimitDetailsSchema,
@@ -1010,9 +1118,11 @@ export const problemDetails = {
   "enrollment.upload_invalid": UploadRefusalDetailsSchema,
   "files.file_too_large": SizeLimitDetailsSchema,
   "general.input": InputLimitDetailsSchema,
+  "general.request_too_large": BodyLimitDetailsSchema,
   "identity.role_platform_permission": PermissionDetailsSchema,
   "import.file_columns_missing": MissingColumnsDetailsSchema,
   "import.file_row_invalid": InvalidRowDetailsSchema,
+  "import.file_too_large": BodyLimitDetailsSchema,
   "iot.deviation_reason_required": DeviationReasonDetailsSchema,
   "iot.device_in_active_session": DeviceInActiveSessionDetailsSchema,
   "iot.device_slots_full": SchoolDeviceSlotsDetailsSchema,
@@ -1022,9 +1132,11 @@ export const problemDetails = {
   "parent_billing.datev_not_ready": DatevReadinessDetailsSchema,
   "parent_billing.debtor_number_digit_range": DebtorNumberDigitRangeDetailsSchema,
   "parent_billing.debtor_number_digits": DebtorNumberDigitsDetailsSchema,
+  "parent_billing.family_children_import_file_too_large": BodyLimitDetailsSchema,
   "parent_billing.family_debtor_number_conflict": FamilyDebtorNumberDetailsSchema,
   "parent_billing.number_range_start_taken": NumberRangeTakenDetailsSchema,
   "parent_billing.payment_text_debtor_number_missing": PaymentTextDebtorDetailsSchema,
+  "parent_billing.sepa_import_file_too_large": BodyLimitDetailsSchema,
   "parent_billing.sollstellung_revenue_account_missing": SollRevenueAccountDetailsSchema,
   "presence.activity_participant_limit_reached": ActivityParticipantLimitDetailsSchema,
   "presence.room_capacity_exceeded": RoomCapacityDetailsSchema,
@@ -1057,6 +1169,7 @@ export const problemDetails = {
   "timetable.window_too_large": RefusalValuesSchema,
   "traeger.access_log_export_too_large": AccessLogLimitDetailsSchema,
   "traeger.document_template_unknown_placeholder": PlaceholderDetailsSchema,
+  "traeger.logo_too_large": BodyLimitDetailsSchema,
   "traeger.school_role_name_used_at_school": SchoolRoleNameDetailsSchema,
   "workforce.month_closed": RebookingValuesSchema,
   "workforce.rebooking_before_vacation_opening": RebookingValuesSchema,
@@ -1081,4 +1194,5 @@ export const problemDetails = {
   "workforce.traeger_payroll_not_ready": PayrollNotReadyDetailsSchema,
   "workforce.traeger_staff_hire_duplicate": HireDuplicateDetailsSchema,
   "workforce.traeger_staff_hire_incomplete": HireIncompleteDetailsSchema,
+  "workforce.traeger_staff_import_file_too_large": BodyLimitDetailsSchema,
 } as const;

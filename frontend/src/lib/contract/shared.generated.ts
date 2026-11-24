@@ -6,7 +6,6 @@ import {
   calendarDate,
   instant,
   int64String,
-  int64StringOrNone,
   json,
   nullable,
   num,
@@ -2611,7 +2610,7 @@ export interface InboxThreadResponse {
 
 export const InboxThreadResponseSchema: z.ZodType<InboxThreadResponse, unknown> = object<InboxThreadResponse>({
   thread_id: int64String,
-  counterpart_account_id: int64StringOrNone,
+  counterpart_account_id: int64String.orNone,
   counterpart_name: str,
   counterpart_role_kind: str,
   last_message_at: optional(str),
@@ -2711,7 +2710,7 @@ export interface ThreadDetailResponse {
 
 export const ThreadDetailResponseSchema: z.ZodType<ThreadDetailResponse, unknown> = object<ThreadDetailResponse>({
   thread_id: int64String,
-  counterpart_account_id: int64StringOrNone,
+  counterpart_account_id: int64String.orNone,
   counterpart_name: str,
   counterpart_role_kind: str,
   messages: nullable(arr(MessageResponseSchema)),

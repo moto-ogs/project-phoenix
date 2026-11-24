@@ -54,10 +54,9 @@ const text = (accept: (value: string) => boolean) =>
   );
 
 export const str = text(() => true);
-export const int64String = text(isInt64Decimal);
-export const int64StringOrNone = text(
-  (value) => value === "" || isInt64Decimal(value),
-);
+export const int64String = /*#__PURE__*/ Object.assign(text(isInt64Decimal), {
+  orNone: text((value) => value === "" || isInt64Decimal(value)),
+});
 export const safeInt = decoder((value) =>
   typeof value === "number" && Number.isSafeInteger(value) ? value : invalid,
 );

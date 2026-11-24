@@ -4,6 +4,7 @@ package common
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -40,6 +41,10 @@ func observeProblemDetailsContract(r *http.Request, code string, details any) er
 	if chi.RouteContext(r.Context()) == nil {
 		return nil
 	}
+	// Refreshing the route catalog precedes rebuilding the contract from it.
+	if update := flag.Lookup("update-goldens"); update != nil && update.Value.String() == "true" {
+		return nil
+	}
 	loaded := loadAnswerContract()
 	pattern := RoutePattern(r)
 	route := r.Method + " " + pattern
@@ -57,7 +62,8 @@ func observeProblemDetailsContract(r *http.Request, code string, details any) er
 func (loaded *answerContract) checkProblemDetails(route, code string, details any) error {
 	schema, ok := loaded.doc.ProblemDetails[code]
 	theType := reflect.TypeOf(details)
-	if !ok || theType == nil || theType.Kind() != reflect.Struct || loaded.goTypes[schema.Ref] != theType.String() {
+	if !ok || theType == nil || theType.Kind() != reflect.Struct ||
+		theType.PkgPath() != schema.GoPackage || loaded.goTypes[schema.Ref] != theType.String() {
 		return fmt.Errorf("%s: %s details from %T do not match their registered Go type %q", route, code, details, loaded.goTypes[schema.Ref])
 	}
 	return nil

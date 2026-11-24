@@ -30,6 +30,8 @@ type Schema struct {
 	Elem       *Schema `json:"elem,omitempty"`
 	// Ref names the object of a KindRef or the enum of a KindEnum.
 	Ref string `json:"ref,omitempty"`
+	// GoPackage identifies the producer type of a problem-details schema.
+	GoPackage string `json:"go_package,omitempty"`
 }
 
 // Field is one member of an object. Optional means the key may be absent.

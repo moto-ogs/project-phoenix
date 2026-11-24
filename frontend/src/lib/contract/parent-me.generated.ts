@@ -7,7 +7,6 @@ import {
   fileAnswer,
   instant,
   int64String,
-  int64StringOrNone,
   json,
   multipart,
   noData,
@@ -1596,7 +1595,7 @@ export interface ThreadViewResponse {
 }
 
 export const ThreadViewResponseSchema: z.ZodType<ThreadViewResponse, unknown> = object<ThreadViewResponse>({
-  thread_id: int64StringOrNone,
+  thread_id: int64String.orNone,
   student_id: int64String,
   student_name: str,
   school_name: str,

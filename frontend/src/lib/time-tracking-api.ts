@@ -46,7 +46,7 @@ export const PLANNED_START_NOT_REACHED_CODE: ErrorCode =
  * planned shift window by more than the configured tolerance (F9). The page
  * prompts for a reason and retries the same stamp with `reason` set.
  */
-export const DEVIATION_REASON_REQUIRED_CODE: ErrorCode =
+const DEVIATION_REASON_REQUIRED_CODE: ErrorCode =
   "iot.deviation_reason_required";
 
 export function readStampDeviation(

@@ -133,9 +133,8 @@ Worked example, the same route from Go to the browser:
    `mapPartialAbsence` maps to the view type. A failure throws an `ApiError`
    for the shared error path; `errorMessage` keeps a client's own text.
    Another portal is the first argument, with a pattern of that portal:
-   `bffJson("parent", "GET /parent/me/notifications/feed/")`,
-   `bffJson("org", …)`, `bffJson("platform", …)`; every portal has a real
-   example in [Browser calls](frontend-api.md#browser-calls), with the rules
+   see the working calls for every portal in
+   [Browser calls](frontend-api.md#browser-calls), with the rules
    for 204, 401, a missing `data` and the guards against the old helpers and
    hand-written wire types.
    Components load through `useSWRAuth` and a key factory of `~/lib/swr`.

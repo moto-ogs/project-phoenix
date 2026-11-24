@@ -232,6 +232,34 @@ func TestStudentService_ReplaceCompanions_ExtendPreservesCompanionFields(t *test
 	assert.True(t, allowed["fri"], "Friday must survive — extension is additive")
 }
 
+func TestStudentService_ReplaceCompanions_FirstLinkCoversConfirmedDay(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	service := newCompanionTestService(db)
+	subject := testpkg.CreateTestStudent(t, db, "Subject", "FirstLink", "1a")
+	companion := testpkg.CreateTestStudent(t, db, "Companion", "FirstLink", "1a")
+	setAccompaniedDepartureDays(t, ctx, studentPlans(db), subject.ID, "mon")
+
+	conflicts, err := testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
+		Links:                []careplan.CompanionLink{{CompanionStudentID: companion.ID, Weekdays: []string{"mon"}}},
+		ExtendCompanionPlans: true,
+		AuthorizedExtensions: map[int64]map[string]bool{companion.ID: {"mon": true}},
+	})
+	require.NoError(t, err)
+	require.Empty(t, conflicts)
+	studentRepo := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db)).Student
+	stored, err := studentRepo.FindByID(ctx, companion.ID)
+	require.NoError(t, err)
+	assert.Nil(t, stored.DepartureCompanionNote)
+	assert.True(t, peopledirectory.AccompaniedWeekdays(stored.AllowedDepartureModes, stored.DepartureDays)["mon"])
+	links, err := testpkg.TenantQuery1(t, ctx, db, service.ListCompanions, companion.ID)
+	require.NoError(t, err)
+	require.Len(t, links, 1)
+	assert.Equal(t, subject.ID, links[0].CompanionStudentID)
+	assert.Equal(t, []string{"mon"}, links[0].Weekdays)
+}
+
 func TestStudentService_ReplaceCompanions_ExtensionRecordsCompanionAudit(t *testing.T) {
 	t.Parallel()
 

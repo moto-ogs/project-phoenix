@@ -101,10 +101,16 @@ func (b *builder) buildNonRouteShapes(doc *Document, options Options) error {
 		doc.ProblemDetails = make(map[string]Schema, len(options.ProblemDetails))
 	}
 	for _, code := range sortedKeys(options.ProblemDetails) {
-		schema, err := b.top(options.ProblemDetails[code], "error details "+code, false)
+		value := options.ProblemDetails[code]
+		t := reflect.TypeOf(value)
+		if t == nil || t.Kind() != reflect.Struct || t.PkgPath() == "" {
+			return fmt.Errorf("error details %s: register a named Go struct, got %T", code, value)
+		}
+		schema, err := b.top(value, "error details "+code, false)
 		if err != nil {
 			return err
 		}
+		schema.GoPackage = t.PkgPath()
 		doc.ProblemDetails[code] = schema
 	}
 	return nil
