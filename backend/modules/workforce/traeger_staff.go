@@ -88,6 +88,10 @@ var (
 	ErrTraegerStaffReleaseNotFound = errors.New("workforce: the Träger is not released")
 	// ErrTraegerStaffRecordNotFound answers an unknown or foreign record.
 	ErrTraegerStaffRecordNotFound = errors.New("workforce: staff record not found")
+	// ErrTraegerStaffEmployerChanged refuses a payroll value for a body that
+	// does not employ the staff of the school (any more), and a personnel
+	// number per employer at an Einsatzort the Träger employs at (#8041).
+	ErrTraegerStaffEmployerChanged = errors.New("workforce: another body employs the staff of this school")
 	// ErrTraegerStaffLinkInvalid refuses a link; TraegerStaffLinkError names
 	// the field.
 	ErrTraegerStaffLinkInvalid = errors.New("workforce: the link is invalid")
@@ -166,6 +170,15 @@ type TraegerStaffEmployment struct {
 	// Träger is the employer, as for every Einsatzort of the Vertretungspool.
 	// Only the view of one record carries it.
 	EmployerName string `json:"employer_name"`
+	// EmployerBody is the body EmployerName names (schultraeger or
+	// gemeinde), empty where the Träger employs.
+	EmployerBody string `json:"employer_body"`
+	// EmployerPersonnelNumber is the number the person has with that body
+	// when its Lohnbüro uses another one than the Träger (#8041, ADR 0319);
+	// nil keeps the Träger's number. EmployerNumberVersion is the read state
+	// a change sends back (ADR 0311).
+	EmployerPersonnelNumber *string `json:"employer_personnel_number"`
+	EmployerNumberVersion   string  `json:"employer_number_version"`
 }
 
 // TraegerStaffRecordSummary is one record in the list.
@@ -338,6 +351,12 @@ type TraegerStaffRecords interface {
 	PreviewLink(ctx context.Context, actor TraegerStaffActor, request TraegerStaffLinkRequest) (TraegerStaffLinkPreview, error)
 	Link(ctx context.Context, actor TraegerStaffActor, request TraegerStaffLinkRequest) (TraegerStaffRecordDetail, error)
 	UpdatePersonnelNumber(ctx context.Context, actor TraegerStaffActor, recordID int64, value *string) (TraegerStaffRecordDetail, error)
+	// UpdateEmployerNumber sets or, with nil, clears the personnel number of
+	// the record with the body that employs at its Einsatzort schoolID
+	// (#8041, ADR 0319). An Einsatzort the Träger employs at is
+	// ErrTraegerStaffEmployerNotOther; a number changed since expectedVersion
+	// was read is readstate.ErrChanged.
+	UpdateEmployerNumber(ctx context.Context, actor TraegerStaffActor, recordID, schoolID int64, value *string, expectedVersion string) (TraegerStaffRecordDetail, error)
 	// UpdatePerson corrects name and birthday of the record (#7379); the
 	// schools keep their own person rows. It answers no record: a reader
 	// loads it again, which writes the read into the access log.
@@ -361,13 +380,27 @@ type TraegerStaffSchools interface {
 	TraegerSchools(ctx context.Context, organizationID int64) ([]TraegerStaffSchool, error)
 }
 
+// The bodies besides the Träger that may employ the staff of a school
+// (#4811), the values of the setting responsibility.staff.
+const (
+	TraegerEmployerSchultraeger = "schultraeger"
+	TraegerEmployerGemeinde     = "gemeinde"
+)
+
+// TraegerStaffEmployer is the body that employs the staff of a school in
+// place of the Träger: its kind and its name.
+type TraegerStaffEmployer struct {
+	Body string
+	Name string
+}
+
 // TraegerStaffEmployers names per school the body that employs its staff
 // when that is not the Träger (#4811): the school's Schulträger or Gemeinde
 // as the responsibility "Personal" names it, in the caller's Träger
 // transaction. A school whose staff the Träger employs has no entry. The
 // roots bind it to the responsibilities of Organisation & Tenancy.
 type TraegerStaffEmployers interface {
-	SchoolEmployers(ctx context.Context, organizationID int64, schoolIDs []int64) (map[int64]string, error)
+	SchoolEmployers(ctx context.Context, organizationID int64, schoolIDs []int64) (map[int64]TraegerStaffEmployer, error)
 }
 
 // TraegerSchoolEmployment is one live employment of a school as School

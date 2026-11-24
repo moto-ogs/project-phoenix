@@ -15,7 +15,7 @@ import (
 
 // The DATEV payroll file of the Träger (#4712, ADR 0089 section 11,
 // ADR 0250): one file over every Arbeitsvertrag the Träger closes in the
-// month. Each school computes the month of its employments in its own tenant
+// month, or one file per employer (#8041, ADR 0319). Each school computes the month of its employments in its own tenant
 // transaction and writes the access log entry before the values leave it.
 // The Träger sums a contract over its Einsatzorte and books each category
 // with the Lohnart of the contract's kind, so a Minijob and an
@@ -38,11 +38,11 @@ func (t *TraegerStaff) exportMonthBounds(month workforce.TraegerExportMonth) (ca
 	return first, next.AddDays(-1), nil
 }
 
-// payrollRun is one computation of the file: the report and the lines.
+// payrollRun is one computation of the files: the report and the lines of
+// each file.
 type payrollRun struct {
-	report   workforce.TraegerPayrollReport
-	lines    []domain.DatevPayrollLine
-	settings workforce.TraegerPayrollSettings
+	report workforce.TraegerPayrollReport
+	files  map[string]*payrollFile
 }
 
 // PayrollReport is the check the page shows before the download.
@@ -51,26 +51,54 @@ func (t *TraegerStaff) PayrollReport(ctx context.Context, actor workforce.Traege
 	return run.report, err
 }
 
-// PayrollFile renders the file; while the report names a reason, it refuses
-// with the report.
+// PayrollFile renders a file: the one file of the Träger or, in the form per
+// employer, the file month.File names. While the report names a reason the
+// file waits for, it refuses with the report.
 func (t *TraegerStaff) PayrollFile(ctx context.Context, actor workforce.TraegerStaffActor, month workforce.TraegerExportMonth) (workforce.TraegerExportFile, error) {
 	run, err := t.payrollRun(ctx, actor, month, workforce.TraegerStaffViewPayrollExport)
 	if err != nil {
 		return workforce.TraegerExportFile{}, err
 	}
-	if !run.report.Ready {
+	file, err := run.chosenFile(month.File)
+	if err != nil {
+		return workforce.TraegerExportFile{}, err
+	}
+	if file == nil || !file.Ready {
 		return workforce.TraegerExportFile{}, &workforce.TraegerPayrollNotReadyError{Report: run.report}
 	}
-	file := workforce.TraegerExportFile{
+	lines := run.files[file.Key].lines
+	export := workforce.TraegerExportFile{
 		ContentType: "text/plain; charset=windows-1252",
 		Filename:    fmt.Sprintf("lohnexport_%s_%04d-%02d.txt", month.Format, month.Year, month.Month),
 	}
-	if month.Format == workforce.TraegerPayrollFormatLodas {
-		file.Data = domain.WriteDatevLodas(run.lines, run.settings.ConsultantNumber, run.settings.ClientNumber, month.Year, month.Month)
-	} else {
-		file.Data = domain.WriteDatevLug(run.lines)
+	if run.report.Form == workforce.TraegerPayrollFormArbeitgeber {
+		export.Filename = fmt.Sprintf("lohnexport_%s_%04d-%02d_%s-%s.txt", month.Format, month.Year, month.Month, file.ConsultantNumber, file.ClientNumber)
 	}
-	return file, nil
+	if month.Format == workforce.TraegerPayrollFormatLodas {
+		export.Data = domain.WriteDatevLodas(lines, file.ConsultantNumber, file.ClientNumber, month.Year, month.Month)
+	} else {
+		export.Data = domain.WriteDatevLug(lines)
+	}
+	return export, nil
+}
+
+// chosenFile is the file of the download: the only one, or the one key
+// names. In the form of the Träger the key is ignored. An unknown key is
+// invalid; nil means the month has no file.
+func (r payrollRun) chosenFile(key string) (*workforce.TraegerPayrollFile, error) {
+	files := r.report.Files
+	if r.report.Form != workforce.TraegerPayrollFormArbeitgeber || (key == "" && len(files) <= 1) {
+		if len(files) == 0 {
+			return nil, nil
+		}
+		return &files[0], nil
+	}
+	for i := range files {
+		if files[i].Key == key {
+			return &files[i], nil
+		}
+	}
+	return nil, fmt.Errorf("%w: choose one of the files of the month", workforce.ErrTraegerExportInvalid)
 }
 
 func (t *TraegerStaff) payrollRun(ctx context.Context, actor workforce.TraegerStaffActor, month workforce.TraegerExportMonth, view string) (payrollRun, error) {
@@ -89,12 +117,22 @@ func (t *TraegerStaff) payrollRun(ctx context.Context, actor workforce.TraegerSt
 	if err != nil {
 		return payrollRun{}, fmt.Errorf("read the payroll settings: %w", err)
 	}
-	scene, err := t.exportScene(ctx, actor, func(ctx context.Context) ([]domain.TraegerStaffContract, error) {
-		return t.store.ListMonthContracts(ctx, actor.OrganizationID, first, last)
+	targets := payrollTargets{settings: settings}
+	scene, err := t.exportScene(ctx, actor, func(ctx context.Context, scene *exportScene) error {
+		contracts, readErr := t.store.ListMonthContracts(ctx, actor.OrganizationID, first, last)
+		if readErr != nil {
+			return readErr
+		}
+		scene.contracts = contracts
+		// Who employs at each school and the values of those employers
+		// (#8041, ADR 0319), in the same Träger transaction.
+		targets.employers, targets.values, readErr = t.payrollEmployers(ctx, actor.OrganizationID, schoolIDs(scene.schools))
+		return readErr
 	})
 	if err != nil {
 		return payrollRun{}, err
 	}
+	targets.names = scene.names
 	months, err := t.schoolPayrollMonths(ctx, actor, scene, view, month)
 	if err != nil {
 		return payrollRun{}, err
@@ -102,10 +140,12 @@ func (t *TraegerStaff) payrollRun(ctx context.Context, actor workforce.TraegerSt
 	book := newPayrollBook(settings, month)
 	owners, changes := scene.siteOwners()
 	for _, contract := range scene.contractsByName() {
-		book.add(scene.records[contract.RecordID], contract, contractMonths(contract, owners, months))
+		record := scene.records[contract.RecordID]
+		book.add(record, contract, targets.groups(record, contractMonths(contract, owners, months)))
 	}
 	book.contractChanges(scene, changes)
-	return payrollRun{report: book.finish(scene, months), lines: book.lines, settings: settings}, nil
+	report := book.finish(scene, months)
+	return payrollRun{report: report, files: book.byKey}, nil
 }
 
 // exportScene is what an export reads in the Träger transaction: the live
@@ -117,8 +157,10 @@ type exportScene struct {
 	contracts []domain.TraegerStaffContract
 }
 
+// also reads what one export needs besides the records, in the same
+// Träger transaction; nil reads nothing more.
 func (t *TraegerStaff) exportScene(ctx context.Context, actor workforce.TraegerStaffActor,
-	contracts func(context.Context) ([]domain.TraegerStaffContract, error),
+	also func(context.Context, *exportScene) error,
 ) (exportScene, error) {
 	schools, err := t.ports.Schools.TraegerSchools(ctx, actor.OrganizationID)
 	if err != nil {
@@ -133,10 +175,10 @@ func (t *TraegerStaff) exportScene(ctx context.Context, actor workforce.TraegerS
 		for _, record := range records {
 			scene.records[record.ID] = record
 		}
-		if contracts != nil {
-			scene.contracts, err = contracts(ctx)
+		if also != nil {
+			return also(ctx, &scene)
 		}
-		return err
+		return nil
 	})
 	if err != nil {
 		return exportScene{}, publicTraegerStaffError(err)
@@ -199,7 +241,7 @@ func (t *TraegerStaff) schoolPayrollMonths(ctx context.Context, actor workforce.
 			return nil, err
 		}
 		for _, value := range read {
-			months[siteKey{school.ID.Int64(), value.StaffID}] = schoolPayrollMonth{school: school.Name, month: value}
+			months[siteKey{school.ID.Int64(), value.StaffID}] = schoolPayrollMonth{schoolID: school.ID.Int64(), school: school.Name, month: value}
 		}
 	}
 	return months, nil
@@ -227,8 +269,9 @@ func (t *TraegerStaff) recordExportAccess(ctx context.Context, actor workforce.T
 
 // schoolPayrollMonth is the month of one Einsatzort with its school.
 type schoolPayrollMonth struct {
-	school string
-	month  workforce.TraegerPayrollMonth
+	schoolID int64
+	school   string
+	month    workforce.TraegerPayrollMonth
 }
 
 // siteOwners decides which contract books the month of each Einsatzort. A

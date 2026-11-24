@@ -479,6 +479,23 @@ type TraegerStaffStore interface {
 	TraegerProofStore
 	TraegerStaffImportStore
 	TraegerStaffPoolStore
+	TraegerPayrollEmployerStore
+}
+
+// TraegerPayrollEmployerStore keeps, in the Träger transaction, the payroll
+// values of the bodies that employ staff in place of the Träger and the
+// personnel numbers per employer at the Einsatzorte (#8041, ADR 0319).
+type TraegerPayrollEmployerStore interface {
+	ListPayrollEmployers(ctx context.Context, organizationID int64) ([]domain.TraegerPayrollEmployer, error)
+	// LockPayrollEmployer locks the stored values of the body at the school
+	// until the Träger transaction ends; nil when none are stored.
+	LockPayrollEmployer(ctx context.Context, organizationID, schoolID int64, body string) (*domain.TraegerPayrollEmployer, error)
+	// SavePayrollEmployer updates the stored values or, with insert, adds
+	// them; an insert another one beat answers false.
+	SavePayrollEmployer(ctx context.Context, value domain.TraegerPayrollEmployer, accountID int64, insert bool) (domain.TraegerPayrollEmployer, bool, error)
+	// SetLinkEmployerNumber sets the personnel number with body at the
+	// Einsatzort of the record at the school; a nil number clears it.
+	SetLinkEmployerNumber(ctx context.Context, organizationID, recordID, schoolID int64, body string, number *string) error
 }
 
 // TraegerStaffPoolStore is the persistence of the Vertretungspool (#4709):

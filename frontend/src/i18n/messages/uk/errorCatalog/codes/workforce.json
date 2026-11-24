@@ -127,6 +127,8 @@
   "pool_block_taken": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "pool_springer_not_found": "Не вдалося зберегти: {object}. Перевірте введені дані.",
   "pool_springer_busy": "Не вдалося змінити: {object}. Перевірте поточний стан.",
+  "traeger_payroll_employer_invalid": "Не вдалося зберегти: {object}. Перевірте введені дані.",
   "traeger_payroll_not_ready": "Не вдалося змінити: {object}. Перевірте поточний стан.",
+  "traeger_staff_employer_changed": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "no_staff_profile": "У вас немає доступу до: {object}. Зверніться до школи."
 }

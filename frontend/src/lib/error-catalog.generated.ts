@@ -2132,6 +2132,8 @@ export const ERROR_CATALOG = {
         "An der Schule {school} ist {month} schon abgeschlossen. Bitte öffne zuerst diesen späteren Monat.",
       "workforce.traeger_month_not_kept":
         "In diesem Monat gilt kein Arbeitsvertrag des Trägers. Die Schulen schließen den Monat selbst ab.",
+      "workforce.traeger_payroll_employer_invalid":
+        "Die Nummern des Arbeitgebers konnten nicht gespeichert werden. Prüfe die markierten Felder.",
       "workforce.traeger_payroll_not_ready":
         "Die Lohndatei kann noch nicht entstehen. Die Prüfung auf der Seite nennt, was noch fehlt.",
       "workforce.traeger_planning_shift_not_found":
@@ -2150,6 +2152,8 @@ export const ERROR_CATALOG = {
         "Diese Nachweisart gibt es nicht mehr oder sie ist archiviert. Bitte lade die Seite neu.",
       "workforce.traeger_staff_already_linked":
         "Eine dieser Personen hat schon eine Personalakte. Bitte lade die Seite neu.",
+      "workforce.traeger_staff_employer_changed":
+        "An dieser Schule stellt inzwischen eine andere Stelle das Personal an. Lade die Seite neu und prüfe die Angaben.",
       "workforce.traeger_staff_hire_duplicate":
         "Diese Person gibt es vielleicht schon. Bitte prüfe die Angaben.",
       "workforce.traeger_staff_hire_incomplete":

@@ -36,6 +36,9 @@ type DatevPayrollLine struct {
 	HoursMinutes    *int
 	Days            *float64
 	AmountCents     *int
+	// CostCenter marks the line of an employer besides the Träger in the
+	// one file of the Träger (#8041, ADR 0319); empty for every other line.
+	CostCenter string
 }
 
 // LODAS record types: 1 = hour bookings, 2 = day bookings. The field order of
@@ -50,6 +53,12 @@ const (
 	// without one stays byte-identical.
 	lodasRecordAmount   = "3"
 	lodasAmountBSNumber = "02"
+	// lodasRecordHoursCost and lodasRecordDaysCost book hours and days with
+	// the Kostenstelle of their employer (kostenstelle#bwd, #8041). Declared
+	// only when the file carries a cost center, so every other file stays
+	// byte-identical.
+	lodasRecordHoursCost = "4"
+	lodasRecordDaysCost  = "5"
 )
 
 // WriteDatevLodas renders a LODAS file for the Abrechnungszeitraum
@@ -71,19 +80,41 @@ func WriteDatevLodas(lines []DatevPayrollLine, consultant, client string, year, 
 	if datevLinesCarryAmounts(lines) {
 		b.WriteString(lodasRecordAmount + ";u_lod_bwd_buchung_standard;pnr#bwd;abrechnung_zeitraum#bwd;bs_wert_butab#bwd;bs_nr#bwd;la_eigene#bwd;\n")
 	}
+	if datevLinesCarryCostCenters(lines) {
+		b.WriteString(lodasRecordHoursCost + ";u_lod_bwd_buchung_stunden;pnr#bwd;abrechnung_zeitraum#bwd;stunden#bwd;la_eigene#bwd;kostenstelle#bwd;\n")
+		b.WriteString(lodasRecordDaysCost + ";u_lod_bwd_buchung_tage;pnr#bwd;abrechnung_zeitraum#bwd;tage#bwd;la_eigene#bwd;kostenstelle#bwd;\n")
+	}
 	b.WriteString("\n[Bewegungsdaten]\n")
 	for _, line := range lines {
-		if line.AmountCents != nil {
-			b.WriteString(strings.Join([]string{lodasRecordAmount, line.PersonnelNumber, period, DatevCents(*line.AmountCents), lodasAmountBSNumber, line.WageType}, ";") + ";\n")
-			continue
-		}
-		if line.Days != nil {
-			b.WriteString(strings.Join([]string{lodasRecordDays, line.PersonnelNumber, period, DatevDays(*line.Days), line.WageType}, ";") + ";\n")
-			continue
-		}
-		b.WriteString(strings.Join([]string{lodasRecordHours, line.PersonnelNumber, period, DatevHours(*line.HoursMinutes), line.WageType}, ";") + ";\n")
+		b.WriteString(strings.Join(lodasFields(line, period), ";") + ";\n")
 	}
 	return EncodeDatevANSI(b.String())
+}
+
+// lodasFields are the fields of one data line in the order its record type
+// declares them.
+func lodasFields(line DatevPayrollLine, period string) []string {
+	switch {
+	case line.AmountCents != nil:
+		return []string{lodasRecordAmount, line.PersonnelNumber, period, DatevCents(*line.AmountCents), lodasAmountBSNumber, line.WageType}
+	case line.Days != nil && line.CostCenter != "":
+		return []string{lodasRecordDaysCost, line.PersonnelNumber, period, DatevDays(*line.Days), line.WageType, line.CostCenter}
+	case line.Days != nil:
+		return []string{lodasRecordDays, line.PersonnelNumber, period, DatevDays(*line.Days), line.WageType}
+	case line.CostCenter != "":
+		return []string{lodasRecordHoursCost, line.PersonnelNumber, period, DatevHours(*line.HoursMinutes), line.WageType, line.CostCenter}
+	default:
+		return []string{lodasRecordHours, line.PersonnelNumber, period, DatevHours(*line.HoursMinutes), line.WageType}
+	}
+}
+
+func datevLinesCarryCostCenters(lines []DatevPayrollLine) bool {
+	for _, line := range lines {
+		if line.CostCenter != "" && line.AmountCents == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func datevLinesCarryAmounts(lines []DatevPayrollLine) bool {
@@ -97,8 +128,9 @@ func datevLinesCarryAmounts(lines []DatevPayrollLine) bool {
 
 // The 11-field Bewegungsdaten layout. Kalendertag stays empty: the bookings
 // are month aggregates, the Abrechnungszeitraum is chosen at import time.
-// Ausfallschlüssel, Wert, factors and cost centers stay empty — we book
-// amounts per Lohnart, nothing else.
+// Ausfallschlüssel, Wert and factors stay empty — we book amounts per
+// Lohnart. The cost center marks the lines of an employer besides the
+// Träger in the one file of the Träger (#8041).
 var datevLugHeader = []string{
 	"Personalnummer", "Kalendertag", "Ausfallschluessel", "Lohnartennummer",
 	"Stundenanzahl", "Tagesanzahl", "Wert",
@@ -119,7 +151,7 @@ func WriteDatevLug(lines []DatevPayrollLine) []byte {
 		default:
 			hours = DatevHours(*line.HoursMinutes)
 		}
-		fields := []string{line.PersonnelNumber, "", "", line.WageType, hours, days, value, "", "", "", ""}
+		fields := []string{line.PersonnelNumber, "", "", line.WageType, hours, days, value, "", "", line.CostCenter, ""}
 		b.WriteString(strings.Join(fields, ";") + "\n")
 	}
 	return EncodeDatevANSI(b.String())

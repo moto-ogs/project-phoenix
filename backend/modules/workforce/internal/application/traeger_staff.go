@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // TraegerStaff is the Personalstamm of ADR 0089 (#4705) in the Träger-Portal.
@@ -232,7 +233,7 @@ func (t *TraegerStaff) Record(ctx context.Context, actor workforce.TraegerStaffA
 	var changes []domain.TraegerStaffChange
 	var proofs []workforce.TraegerStaffProof
 	var contracts []domain.TraegerStaffContract
-	var employers map[int64]string
+	var employers map[int64]workforce.TraegerStaffEmployer
 	err = t.released(ctx, actor, func(ctx context.Context) error {
 		if record, err = t.store.FindStaffRecord(ctx, actor.OrganizationID, recordID, false); err != nil {
 			return err
@@ -270,7 +271,7 @@ func (t *TraegerStaff) Record(ctx context.Context, actor workforce.TraegerStaffA
 		Proofs:                    proofs,
 		Contracts:                 publicContracts(contracts, names, openFrom),
 	}
-	nameEmployers(detail.Employments, employers)
+	nameEmployers(detail.Employments, employers, record)
 	for _, change := range changes {
 		detail.Changes = append(detail.Changes, publicChange(change, names))
 	}
@@ -280,7 +281,7 @@ func (t *TraegerStaff) Record(ctx context.Context, actor workforce.TraegerStaffA
 // employers names who employs at each Einsatzort of the record where that
 // is not the Träger (#4811), in one read for all, in the caller's Träger
 // transaction. Without the port the Träger employs everywhere.
-func (t *TraegerStaff) employers(ctx context.Context, organizationID int64, record domain.TraegerStaffRecord) (map[int64]string, error) {
+func (t *TraegerStaff) employers(ctx context.Context, organizationID int64, record domain.TraegerStaffRecord) (map[int64]workforce.TraegerStaffEmployer, error) {
 	if t.ports.Employers == nil || len(record.Links) == 0 {
 		return nil, nil
 	}
@@ -291,14 +292,37 @@ func (t *TraegerStaff) employers(ctx context.Context, organizationID int64, reco
 	return employers, nil
 }
 
-// nameEmployers names the employer at each Einsatzort. A Springer of the
-// Vertretungspool stays employed by the Träger.
-func nameEmployers(employments []workforce.TraegerStaffEmployment, employers map[int64]string) {
-	for i := range employments {
-		if !employments[i].ViaPool {
-			employments[i].EmployerName = employers[employments[i].SchoolID.Int64()]
-		}
+// nameEmployers names the employer at each Einsatzort with the personnel
+// number the record keeps for it (#8041). A Springer of the Vertretungspool
+// stays employed by the Träger.
+func nameEmployers(employments []workforce.TraegerStaffEmployment, employers map[int64]workforce.TraegerStaffEmployer, record domain.TraegerStaffRecord) {
+	links := make(map[int64]domain.TraegerStaffLink, len(record.Links))
+	for _, link := range record.Links {
+		links[link.SchoolID] = link
 	}
+	for i := range employments {
+		schoolID := employments[i].SchoolID.Int64()
+		employer := siteEmployer(employers, employments[i].ViaPool, schoolID)
+		number := links[schoolID].EmployerNumberFor(employer.Body)
+		employments[i].EmployerName, employments[i].EmployerBody = employer.Name, employer.Body
+		employments[i].EmployerPersonnelNumber = number
+		employments[i].EmployerNumberVersion = employerNumberVersion(employer.Body, number)
+	}
+}
+
+// siteEmployer is the body that employs at an Einsatzort, the zero value
+// where the Träger does: always for one of the Vertretungspool.
+func siteEmployer(employers map[int64]workforce.TraegerStaffEmployer, viaPool bool, schoolID int64) workforce.TraegerStaffEmployer {
+	if viaPool {
+		return workforce.TraegerStaffEmployer{}
+	}
+	return employers[schoolID]
+}
+
+// employerNumberVersion is the read state of the personnel number with the
+// employer of an Einsatzort (ADR 0311): the body and the number it keeps.
+func employerNumberVersion(body string, number *string) string {
+	return readstate.Fingerprint([]string{body, domain.Deref(number)})
 }
 
 // publicTraegerStaffError maps the stored refusals onto the contract.

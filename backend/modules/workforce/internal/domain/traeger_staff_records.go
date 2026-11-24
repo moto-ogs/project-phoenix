@@ -61,6 +61,20 @@ type TraegerStaffLink struct {
 	// ViaPool marks an Einsatzort a block of the Vertretungspool created
 	// (ADR 0251); it ends after the school's last block (ADR 0253).
 	ViaPool bool
+	// EmployerNumber is the personnel number with EmployerBody, the body
+	// that employs at this Einsatzort, when its Lohnbüro uses another one
+	// than the Träger (#8041, ADR 0319); nil keeps the Träger's number.
+	EmployerBody   string
+	EmployerNumber *string
+}
+
+// EmployerNumberFor is the number the link keeps for body, nil when it
+// keeps none or one for another body.
+func (l TraegerStaffLink) EmployerNumberFor(body string) *string {
+	if body == "" || l.EmployerBody != body {
+		return nil
+	}
+	return l.EmployerNumber
 }
 
 // TraegerStaffChange is one trail entry. A bank or tax value is sealed with
