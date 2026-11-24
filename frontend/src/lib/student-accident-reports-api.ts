@@ -5,7 +5,7 @@
 // (student_accidents:read / :manage) and refuses changes to a signed report.
 
 import type { AccidentReportResponse } from "~/lib/contract/students.generated";
-import { bffJson } from "./bff-fetch";
+import { bffFileHref, bffJson } from "./bff-fetch";
 import { signatureRequestBody, type SignatureValue } from "./signature";
 
 type AccidentReportStatus = "open" | "signed";
@@ -181,7 +181,11 @@ class StudentAccidentReportsService {
 
   /** Same-origin proxy URL of the report as PDF. */
   pdfUrl(studentId: string, reportIdValue: string): string {
-    return `/api/students/${encodeURIComponent(studentId)}/accident-reports/${encodeURIComponent(reportIdValue)}/pdf`;
+    return bffFileHref(
+      "tenant",
+      "GET /api/students/{id}/accident-reports/{documentId}/pdf",
+      { params: { id: studentId, documentId: reportIdValue } },
+    );
   }
 }
 

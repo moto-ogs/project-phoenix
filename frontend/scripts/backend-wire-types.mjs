@@ -5,7 +5,7 @@
 // shape drifts from it (number IDs, fields the decoder drops). The guard
 // finds such types by their form, not by their name:
 //
-// - shape: an interface or object type that declares at least two
+// - shape: an interface, object type or union branch that declares at least two
 //   snake_case fields of its own (a `Backend*` name: one is enough);
 // - rename: a generated type imported under another name
 //   (`import type { GroupResponse as GroupWire }`);
@@ -40,13 +40,18 @@ function ownSnakeCaseFields(members) {
     .filter((name) => name !== null && SNAKE_CASE.test(name));
 }
 
-/** The members of an interface or an object type alias, else null. */
+/** Object branches only; nested property types are not separate declarations. */
+function objectBranches(type) {
+  if (ts.isTypeLiteralNode(type)) return [type.members];
+  if (ts.isParenthesizedTypeNode(type)) return objectBranches(type.type);
+  if (ts.isUnionTypeNode(type)) return type.types.flatMap(objectBranches);
+  return [];
+}
+
 function declaredMembers(node) {
-  if (ts.isInterfaceDeclaration(node)) return node.members;
-  if (ts.isTypeAliasDeclaration(node) && ts.isTypeLiteralNode(node.type)) {
-    return node.type.members;
-  }
-  return null;
+  if (ts.isInterfaceDeclaration(node)) return [node.members];
+  if (ts.isTypeAliasDeclaration(node)) return objectBranches(node.type);
+  return [];
 }
 
 /** Names bound to the generated contract in one file: types and namespaces. */
@@ -115,10 +120,17 @@ export function findBackendWireTypes(fileName, text) {
 
   const visit = (node) => {
     const members = declaredMembers(node);
-    if (members) {
-      const fields = ownSnakeCaseFields(members);
+    if (members.length) {
       const minimum = BACKEND_NAME.test(node.name.text) ? 1 : 2;
-      if (fields.length >= minimum) {
+      const fields = [
+        ...new Set(
+          members
+            .map(ownSnakeCaseFields)
+            .filter((fields) => fields.length >= minimum)
+            .flat(),
+        ),
+      ];
+      if (fields.length) {
         findings.push({
           kind: "shape",
           name: node.name.text,

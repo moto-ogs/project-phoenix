@@ -5,7 +5,7 @@ import { contractResponse } from "~/lib/contract/route-response.server";
 import { routes } from "~/lib/contract/auth-invitations.generated";
 import { createLogger } from "~/lib/logger";
 import { withInvitationOwnerSession } from "~/lib/invitation-owner-session.server";
-import { problemResponse } from "~/lib/api-helpers.server";
+import { problemResponse } from "~/lib/api-response-error.server";
 import { withPrivateNoStore } from "~/lib/private-no-store";
 
 const logger = createLogger({ component: "InvitationAcceptRoute" });

@@ -1,8 +1,8 @@
 /**
  * API client for the timetable feature.
  *
- * All calls go through Next.js proxy routes under `/api/timetable/*` which
- * inject the JWT server-side. The client mirrors the surface of the backend:
+ * Calls use the generated route keys through the tenant catalog proxy,
+ * which supplies the session token server-side. The client mirrors the surface of the backend:
  * - getWeek(from, to)            → GET    /instances?from=&to=
  * - start(id), complete(id),     → POST   /instances/{id}/{action}
  *   cancel(id), reinstate(id)

@@ -5,32 +5,21 @@ import type {
   ServerAuthRequest,
 } from "~/server/auth/route-handler";
 import {
-  bffError,
   handleApiError,
   isApiResponseError,
 } from "./api-response-error.server";
 import {
   assertPortalRequestContext,
-  backendJson,
   createBackendFetch,
   renewalFailureResponse,
   renewSession,
-  unwrapEnvelope,
   type PortalSession,
   type SessionCall,
 } from "./backend-client.server";
-import type { ErrorCode } from "./error-codes.generated";
-import { forwardBackendResponse } from "./backend-proxy-response.server";
-import { fileResponse, type FileResponseOptions } from "./file-response.server";
-import { forwardJsonRequest, type JsonProxyOptions } from "./json-proxy.server";
 import {
-  allowedQueryString,
-  bodyTooLargeError,
-  buildQueryString,
   createUnauthorizedResponse,
   extractParams,
   parseRequestBody,
-  readBoundedBody,
   successResponse,
   type RouteContext,
 } from "./route-wrapper-utils.server";
@@ -70,37 +59,6 @@ interface BodyOptions extends HandlerOptions {
   /** Reject a larger request body with 413 while reading it. */
   maxBodyBytes?: number;
 }
-
-/** A backend endpoint: a fixed path, or a builder from route params. */
-export type ProxyEndpoint = string | ((params: Params) => string);
-
-interface GetProxyOptions {
-  /** Forward only these query parameters, first non-empty value each. */
-  forwardQuery?: readonly string[];
-}
-
-interface FileProxyOptions
-  extends FileResponseOptions, Pick<SessionCall, "retry"> {
-  /** POST forwards the JSON request body, read once for the retry. */
-  method?: "GET" | "POST";
-  /** Query parameters passed on; none by default, `true` for all. */
-  forwardQuery?: true | readonly string[];
-  /** The largest POST body; 1 MiB by default. */
-  maxBodyBytes?: number;
-}
-
-interface UploadProxyOptions {
-  method?: "PUT" | "POST";
-  /** The portal's code for a file over maxFileBytes. */
-  tooLargeCode: ErrorCode;
-  /** Values the catalog text of tooLargeCode names, like max_mb. */
-  tooLargeDetails?: Record<string, unknown>;
-}
-
-const FILE_POST_MAX_BYTES = 1024 * 1024;
-
-/** Room for the multipart boundaries around the largest admitted file. */
-const UPLOAD_OVERHEAD_BYTES = 64 * 1024;
 
 const json = (data: unknown) =>
   data instanceof Response ? data : NextResponse.json(successResponse(data));
@@ -196,174 +154,6 @@ export function makePortalHandlers(portal: PortalBinding) {
   const del = noBody(deleted);
   const delWithBody = withBody(deleted);
 
-  const api = backendJson;
-
-  const resolve = (endpoint: ProxyEndpoint, params: Params) =>
-    typeof endpoint === "function" ? endpoint(params) : endpoint;
-
-  function proxyGet<T = unknown>(
-    endpoint: ProxyEndpoint,
-    options?: GetProxyOptions,
-  ) {
-    return get<T>(async (request, token, params) => {
-      const query = options?.forwardQuery
-        ? allowedQueryString(request, options.forwardQuery)
-        : buildQueryString(request);
-      const body = await api(
-        "GET",
-        `${resolve(endpoint, params)}${query}`,
-        token,
-        undefined,
-        { request },
-      );
-      return unwrapEnvelope<T>(body);
-    });
-  }
-
-  function proxyWrite(method: "POST" | "PUT" | "PATCH") {
-    const factory = method === "POST" ? post : method === "PUT" ? put : patch;
-    return <T = unknown, B = unknown>(
-      endpoint: ProxyEndpoint,
-      options?: BodyOptions,
-    ) =>
-      factory<T, B>(async (request, body, token, params) => {
-        const response = await api(
-          method,
-          resolve(endpoint, params),
-          token,
-          body,
-          { idempotencyKey: request.headers.get("Idempotency-Key"), request },
-        );
-        return unwrapEnvelope<T>(response);
-      }, options);
-  }
-
-  function proxyDelete(endpoint: ProxyEndpoint) {
-    return del(async (request, token, params) => {
-      await api("DELETE", resolve(endpoint, params), token, undefined, {
-        request,
-      });
-      return null;
-    });
-  }
-
-  const query = (request: NextRequest, forward?: true | readonly string[]) =>
-    forward === true
-      ? buildQueryString(request)
-      : forward
-        ? allowedQueryString(request, forward)
-        : "";
-
-  /** The backend's answer as it is, on this portal's session. */
-  async function forwardToBackend(
-    request: NextRequest,
-    path: string,
-    call: SessionCall = {},
-  ): Promise<Response> {
-    return forwardBackendResponse(
-      await backendFetch(request, path, call),
-      request,
-    );
-  }
-
-  /** A file of the backend on this portal's session; see fileResponse. */
-  async function downloadFile(
-    request: NextRequest,
-    path: string,
-    options: FileResponseOptions & SessionCall = {},
-  ): Promise<Response> {
-    const {
-      backendCacheControl,
-      cacheControl,
-      fallbackType,
-      fallbackDisposition,
-      ...call
-    } = options;
-    return fileResponse(await backendFetch(request, path, call), request, {
-      backendCacheControl,
-      cacheControl,
-      fallbackType,
-      fallbackDisposition,
-    });
-  }
-
-  /** Download route: streams the backend's file with its headers. */
-  function proxyFile(endpoint: ProxyEndpoint, options: FileProxyOptions = {}) {
-    const { method = "GET", forwardQuery, maxBodyBytes, ...rest } = options;
-    return portal.withAuth(async (request, context) => {
-      try {
-        const path = resolve(endpoint, await extractParams(request, context));
-        let body: string | undefined;
-        if (method === "POST") {
-          const limit = maxBodyBytes ?? FILE_POST_MAX_BYTES;
-          const bytes = await readBoundedBody(request, limit);
-          if (bytes === null) throw bodyTooLargeError(limit);
-          body = new TextDecoder().decode(bytes);
-        }
-        return await downloadFile(
-          request,
-          `${path}${query(request, forwardQuery)}`,
-          {
-            ...rest,
-            method,
-            body,
-            contentType: body === undefined ? undefined : "application/json",
-          },
-        );
-      } catch (error) {
-        return handleApiError(error, request);
-      }
-    });
-  }
-
-  /**
-   * Multipart upload route. The body is read once within maxFileBytes plus
-   * multipart room, so the retry can send it again; the backend checks type,
-   * size and content.
-   */
-  function proxyUpload(
-    endpoint: ProxyEndpoint,
-    maxFileBytes: number,
-    options: UploadProxyOptions,
-  ) {
-    const tooLarge = () =>
-      bffError(400, "Upload too large", {
-        code: options.tooLargeCode,
-        details: options.tooLargeDetails,
-      });
-    return portal.withAuth(async (request, context) => {
-      try {
-        const contentType = request.headers.get("content-type") ?? "";
-        if (!contentType.startsWith("multipart/form-data")) {
-          throw bffError(400, "Expected a multipart upload");
-        }
-        const body = await readBoundedBody(
-          request,
-          maxFileBytes + UPLOAD_OVERHEAD_BYTES,
-        );
-        if (body === null) throw tooLarge();
-        const path = resolve(endpoint, await extractParams(request, context));
-        const response = await backendFetch(request, path, {
-          method: options.method ?? "PUT",
-          body,
-          contentType,
-        });
-        return forwardBackendResponse(response, request);
-      } catch (error) {
-        return handleApiError(error, request);
-      }
-    });
-  }
-
-  /** Forwards the backend's answer as it is, on this portal's session. */
-  function jsonProxy(options: JsonProxyOptions & Pick<SessionCall, "retry">) {
-    return portal.withAuth((request, context) =>
-      forwardJsonRequest(request, context, options, (path, call) =>
-        backendFetch(request, path, { ...call, retry: options.retry }),
-      ),
-    );
-  }
-
   return {
     route,
     runWithRenewal,
@@ -373,17 +163,6 @@ export function makePortalHandlers(portal: PortalBinding) {
     patch,
     del,
     delWithBody,
-    api,
     backendFetch,
-    forwardToBackend,
-    proxyGet,
-    proxyPost: proxyWrite("POST"),
-    proxyPut: proxyWrite("PUT"),
-    proxyPatch: proxyWrite("PATCH"),
-    proxyDelete,
-    jsonProxy,
-    downloadFile,
-    proxyFile,
-    proxyUpload,
   };
 }

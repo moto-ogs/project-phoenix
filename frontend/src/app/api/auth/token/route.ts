@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { tenantPortal } from "~/server/auth";
 import { createLogger } from "~/lib/logger";
-import { problemResponse } from "~/lib/api-helpers.server";
+import { problemResponse } from "~/lib/api-response-error.server";
 import { portalOfScope } from "~/server/auth/portals";
 import { sessionFamilyState } from "~/server/auth/token-validation";
 
