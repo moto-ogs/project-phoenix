@@ -494,3 +494,68 @@ describe("RouteFile response decoding", () => {
     expect([...handlerCalls(file, previous).bypasses]).toEqual(["sendBackend"]);
   });
 });
+
+// These modules implement the transport, the contract boundary, or
+// unregistered streaming/demo routes. The legacy portal helpers are owned
+// by #8004. Each exception is scoped to an existing call name.
+const serverTransportExceptions: Record<string, readonly string[]> = {
+  "lib/backend-client.server.ts": ["fetch", "sendBackend", "readBackendJson"],
+  "lib/contract/catalog-proxy.server.ts": ["sendBackend", "backendFetch"],
+  "lib/contract/client.server.ts": ["sendBackend", "readBackendJson"],
+  "lib/portal-handlers.server.ts": [
+    "api",
+    "backendFetch",
+    "forwardJsonRequest",
+  ],
+  "lib/operator/route-wrapper.server.ts": ["api"],
+  "lib/sse-proxy.server.ts": ["sendBackend"],
+  "app/api/demo/access/forward.ts": ["sendBackend"],
+  "app/api/demo/access/handoff/route.ts": ["sendBackend"],
+  "app/api/demo/access/reset/route.ts": ["sendBackend"],
+  "app/api/demo/access/sessions/route.ts": ["sendBackend"],
+};
+
+function serverTransportBypasses(file: string, source: string): string[] {
+  return [...handlerCalls(file, source).bypasses].filter(
+    (name) =>
+      (name !== "fetch" || /getServerApiUrl|\bAPI_URL\b/.test(source)) &&
+      !serverTransportExceptions[file]?.includes(name),
+  );
+}
+
+describe("Server response decoding", () => {
+  it("does not call the backend outside the contract and transport boundaries", () => {
+    const src = path.resolve(apiDir, "../..");
+    const violations = readdirSync(src, { recursive: true, encoding: "utf8" })
+      .filter(
+        (file) =>
+          /\.tsx?$/.test(file) &&
+          !/\.(test|spec|stories|generated|d)\./.test(file),
+      )
+      .flatMap((file) => {
+        const source = readFileSync(path.join(src, file), "utf8");
+        if (
+          !file.endsWith(".server.ts") &&
+          !file.startsWith("server/") &&
+          !file.startsWith("app/api/") &&
+          !/backend-client\.server|api-helpers\.server|\bAPI_URL\b/.test(source)
+        )
+          return [];
+        return serverTransportBypasses(file, source).map(
+          (name) => `${file}: ${name}`,
+        );
+      });
+    expect(violations).toEqual([]);
+  });
+
+  it("catches a typed unchecked read in a shell helper even under an alias", () => {
+    const source = `
+      import { apiGet as read } from "~/lib/api-helpers.server";
+      export const load = (token: string) =>
+        read<{ data: unknown }>("/api/me/groups/supervised", token);
+    `;
+    expect(
+      serverTransportBypasses("lib/shell-bootstrap.server.ts", source),
+    ).toEqual(["apiGet"]);
+  });
+});
