@@ -38,11 +38,11 @@ describe("ApiResponseError", () => {
     );
 
     expect(error.status).toBe(403);
-    expect(error.body<{ detail: string }>()).toEqual({
+    expect(error.body()).toEqual({
       detail: "feature_disabled",
       code: "feedback.disabled",
     });
-    expect(error.body<{ detail: string }>()).toEqual({
+    expect(error.body()).toEqual({
       detail: "feature_disabled",
       code: "feedback.disabled",
     });

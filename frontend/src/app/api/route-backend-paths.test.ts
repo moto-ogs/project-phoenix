@@ -8,6 +8,7 @@ import {
 } from "~/lib/contract/portals.generated";
 import { PORTALS } from "~/server/auth/portals";
 import { localSessionKeys } from "~/lib/session-bff";
+import { accountLogoutBrowserPaths } from "~/lib/contract/browser-traits.generated";
 import { sourceBindings } from "~/test/helpers/source-bindings";
 
 vi.mock("~/env", () => ({ env: { TENANT_DOMAIN: "localhost" } }));
@@ -268,8 +269,6 @@ function handlerContracts(file: string, text: string, method: string) {
           ["createOperatorPutHandler", "createOperatorDeleteHandler"].includes(
             imported,
           )) ||
-        (factory.from === "~/lib/file-upload-wrapper.server" &&
-          imported === "createFileUploadHandler") ||
         portalCallback(node.expression)
       )
         follow(portal);
@@ -614,7 +613,12 @@ function missingDecoders(file: string, source: string): string[] {
 
 describe("RouteFile response decoding", () => {
   it("serves each BFF-only session key from its named route file", () => {
-    for (const key of Object.values(localSessionKeys)) {
+    for (const key of [
+      ...Object.values(localSessionKeys),
+      ...Object.values(accountLogoutBrowserPaths).map(
+        (address) => `POST ${address}`,
+      ),
+    ]) {
       const [method, pathname] = key.split(" ");
       const file = `${pathname?.slice("/api/".length)}/route.ts`;
       const route = routeFiles.find((item) => item.file === file);

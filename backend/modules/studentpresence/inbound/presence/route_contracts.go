@@ -11,7 +11,7 @@ import (
 func RouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	active := []common.QueryParam{{Name: "active", Kind: common.QueryBool}, {Name: "is_active", Kind: common.QueryBool}}
-	visits := []common.QueryParam{{Name: "active", Kind: common.QueryBool}, {Name: "active_group_ids", Kind: common.QueryString}}
+	visits := []common.QueryParam{{Name: "active", Kind: common.QueryBool}, {Name: "active_group_ids", Kind: common.QueryID, Repeated: true}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/groups/", Portals: portals, Query: active, Response: []ActiveGroupResponse{}},
 		{Method: "GET", Pattern: "/groups/{id}/supervisors", Portals: portals, Response: []SupervisorResponse{}},

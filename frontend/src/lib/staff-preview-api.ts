@@ -112,16 +112,16 @@ async function startStaffPreview(
  * The signed preview token is the credential the whole way down. A running
  * preview's token lives only in the session cookie (#5005), so the route reads
  * it there. Failed starts are rolled back entirely server-side.
- * Through `public`, not the staff portal: its session gate would throw when
- * the admin session has already expired, and the call must never fail the end.
+ * Skip browser-side recovery: the admin session may already have expired.
  */
 export async function recordStaffPreviewEnd(
   signal?: AbortSignal,
 ): Promise<void> {
   signal?.throwIfAborted();
   try {
-    await bffJson("public", sessionBff.endPreview, {
+    await bffJson("tenant", sessionBff.endPreview, {
       body: {},
+      skipAuthRecovery: true,
       // The end of the preview waits for this call; a stalled request must
       // not keep the admin in the preview.
       signal: signal

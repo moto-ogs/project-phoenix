@@ -129,7 +129,10 @@ func planningRouteContracts() []common.RouteContract {
 	days := query(dateQuery, "date", "date_to")
 	history := append(query(dateQuery, "date", "date_to"), query(idQuery, "activity_group_id")...)
 	history = append(history, common.QueryParam{Name: "start_time", Kind: common.QueryString})
-	conflicts := append(query(dateQuery, "date"), query(common.QueryString, "start_time", "end_time", "staff_ids", "student_ids")...)
+	conflicts := params(query(dateQuery, "date"), query(common.QueryString, "start_time", "end_time"), []common.QueryParam{
+		{Name: "staff_ids", Kind: idQuery, Repeated: true},
+		{Name: "student_ids", Kind: idQuery, Repeated: true},
+	})
 	conflicts = append(conflicts, query(idQuery, "room_id", "exclude_instance_id", "exclude_activity_group_id")...)
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/student/{id}/day", Portals: p, Query: query(dateQuery, "date"), Response: StudentDayResponse{}},
@@ -172,7 +175,8 @@ func operationRouteContracts() []common.RouteContract {
 func templateRouteContracts() []common.RouteContract {
 	p := tenantPortal
 	period := query(idQuery, "period_id")
-	filter := query(common.QueryString, "offering_ids", "grade_levels", "school_classes")
+	filter := append(query(common.QueryString, "grade_levels", "school_classes"),
+		common.QueryParam{Name: "offering_ids", Kind: idQuery, Repeated: true})
 	draft := params(query(idQuery, "period_id"), []common.QueryParam{{Name: "roster", Kind: common.QueryString, Repeated: true}},
 		query(common.QueryString, "list_kind", "type"))
 	suggestion := params(draft, query(common.QueryString, "school_classes", "grade_levels", "end_time"))
@@ -193,7 +197,7 @@ func templateRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: "/templates/{id}/manual-roster", Portals: p, Request: manualRosterRequest{}, Response: manualRosterResponse{}},
 		{Method: "GET", Pattern: "/templates/booking-leftovers", Portals: p, Query: period, Response: bookingLeftoversResponse{}},
 		{Method: "GET", Pattern: "/offering-sources", Portals: p, Query: query(idQuery, "calendar_period_id"), Response: offeringSourcesResponse{}},
-		{Method: "GET", Pattern: "/offering-sources/combined-counts", Portals: p, Query: params(query(common.QueryString, "ids"), query(idQuery, "calendar_period_id")), Response: combinedOfferingCountsResponse{}},
+		{Method: "GET", Pattern: "/offering-sources/combined-counts", Portals: p, Query: append(query(idQuery, "calendar_period_id"), common.QueryParam{Name: "ids", Kind: idQuery, Repeated: true}), Response: combinedOfferingCountsResponse{}},
 		{Method: "GET", Pattern: "/offering-sources/suggestion", Portals: p, Query: suggestion, Response: offeringSuggestionEnvelope{}},
 		{Method: "GET", Pattern: "/offering-sources/preview", Portals: p, Query: preview, Response: offeringPreviewResponse{}},
 		{Method: "GET", Pattern: "/offering-gaps", Portals: p, Query: period, Response: offeringGapsResponse{}},

@@ -693,9 +693,11 @@ auth reservation expires after three minutes, so a crashed replica cannot
 hold a burst slot indefinitely. Requests whose outcome is lost stay charged.
 
 Each Next.js replica caches the school settings returned by the tenant
-lookup for at most 60 seconds. A settings write invalidates the tag on the
-replica that handled it. The first request after expiry on any other replica
-waits for a fresh lookup. An open browser tab needs a refresh or navigation
+lookup for at most 60 seconds. A settings write clears the school's lookup on
+the replica that handled it; provisioning and Träger name writes clear that
+replica's lookup cache, including remembered 404s. The first request after
+expiry on any other replica waits for a fresh lookup. An open tab needs a
+refresh or navigation
 that makes a new lookup to see the change.
 
 | State kept in a process | Effect of adding replicas |

@@ -60,7 +60,6 @@ vi.mock("next/navigation", () => ({
 vi.mock("~/lib/breadcrumb-context", () => ({ useSetBreadcrumb: vi.fn() }));
 vi.mock("~/lib/operator/provisioning-api", () => ({
   operatorProvisioningService: api,
-  revalidateTenantCache: vi.fn(),
 }));
 vi.mock("~/components/operator/accounts-table", () => ({
   AccountsTable: ({

@@ -69,9 +69,8 @@ export function EditSchoolModal({
   /** Reads the school again after a refused save; rejects on failure. */
   readonly reload: () => Promise<School>;
   readonly organizations: Organization[] | undefined;
-  /** Reloads the school and the portal caches of the given subdomains;
-   *  never rejects (#6652). */
-  readonly onUpdated: RefreshAfterWrite<[subdomains: readonly string[]]>;
+  /** Reloads the school view without rejecting (#6652). */
+  readonly onUpdated: RefreshAfterWrite<[]>;
   /** Marks a school whose parent replies have no address (#7174). */
   readonly requiredDetails?: SchoolRequiredDetails;
 }) {
@@ -162,7 +161,6 @@ export function EditSchoolModal({
       if (!opened || !edit.canSubmit) return;
       setSchoolSaving(true);
       clearError();
-      const oldSubdomain = opened.subdomain;
       const newSubdomain = schoolSubdomain.trim();
       const result = await edit.submit((version) =>
         operatorProvisioningService.updateSchool(opened.id, {
@@ -197,13 +195,8 @@ export function EditSchoolModal({
       }
       setSchoolSaving(false);
       onClose();
-      // The portal cache reloads with the page: its failure is a load error,
-      // the change itself is saved (#6652).
-      await onUpdated(
-        oldSubdomain !== newSubdomain || opened.hidden !== schoolHidden
-          ? [oldSubdomain, newSubdomain]
-          : [],
-      );
+      // A reload failure does not undo the saved change (#6652).
+      await onUpdated();
     },
     [
       school,

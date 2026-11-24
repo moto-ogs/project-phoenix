@@ -1,5 +1,4 @@
 import "server-only";
-import { revalidateTag } from "next/cache";
 import { contractGet } from "~/lib/contract/client.server";
 import {
   parseTenantSettings,
@@ -76,7 +75,13 @@ export function invalidateTenantResolve(slug: string): void {
   hits.delete(slug);
   misses.delete(slug);
   pending.delete(slug);
-  revalidateTag(`tenant-${slug}`, { expire: 0 });
+}
+
+export function invalidateAllTenantResolves(): void {
+  const { hits, misses, pending } = tenantCache();
+  hits.clear();
+  misses.clear();
+  pending.clear();
 }
 
 /**

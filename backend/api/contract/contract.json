@@ -1,4 +1,22 @@
 {
+  "problem_details": {
+    "classday.class_trip_status_conflict": {
+      "kind": "ref",
+      "ref": "ClassTripConflictDetails"
+    },
+    "students.companion_plan_conflict": {
+      "kind": "ref",
+      "ref": "CompanionConflictDetails"
+    },
+    "students.status_day_conflict": {
+      "kind": "ref",
+      "ref": "StatusDayConflictDetails"
+    }
+  },
+  "stream_event": {
+    "kind": "ref",
+    "ref": "SSEEvent"
+  },
   "routes": [
     {
       "method": "DELETE",
@@ -212,7 +230,8 @@
       "query": [
         {
           "name": "expected_link_ids",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         },
         {
           "name": "force",
@@ -377,9 +396,7 @@
       "portals": [
         "tenant"
       ],
-      "no_data": true,
-      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change",
-      "browser_path": "/api/settings/login-image"
+      "no_data": true
     },
     {
       "method": "DELETE",
@@ -1803,7 +1820,8 @@
         },
         {
           "name": "active_group_ids",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         }
       ],
       "response": {
@@ -2162,7 +2180,8 @@
       "query": [
         {
           "name": "request_child_ids",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         }
       ],
       "response": {
@@ -4266,9 +4285,7 @@
       "response": {
         "kind": "ref",
         "ref": "loginImageResponse"
-      },
-      "route_file": "served by the same route file as its writes",
-      "browser_path": "/api/settings/login-image"
+      }
     },
     {
       "method": "GET",
@@ -4590,7 +4607,8 @@
       "query": [
         {
           "name": "ids",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         }
       ],
       "response": {
@@ -5412,7 +5430,7 @@
         },
         {
           "name": "group_id",
-          "kind": "string",
+          "kind": "id",
           "repeated": true
         },
         {
@@ -5456,7 +5474,7 @@
         },
         {
           "name": "group_id",
-          "kind": "string",
+          "kind": "id",
           "repeated": true
         },
         {
@@ -5498,7 +5516,7 @@
         },
         {
           "name": "group_id",
-          "kind": "string",
+          "kind": "id",
           "repeated": true
         },
         {
@@ -5531,7 +5549,7 @@
         },
         {
           "name": "group_id",
-          "kind": "string",
+          "kind": "id",
           "repeated": true
         },
         {
@@ -5567,7 +5585,7 @@
         },
         {
           "name": "group_id",
-          "kind": "string",
+          "kind": "id",
           "repeated": true
         },
         {
@@ -7042,7 +7060,8 @@
         },
         {
           "name": "staff_ids",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         },
         {
           "name": "start_time",
@@ -7050,7 +7069,8 @@
         },
         {
           "name": "student_ids",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         }
       ],
       "response": {
@@ -7286,7 +7306,8 @@
         },
         {
           "name": "ids",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         }
       ],
       "response": {
@@ -7315,7 +7336,8 @@
         },
         {
           "name": "offering_ids",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         },
         {
           "name": "period_id",
@@ -7656,7 +7678,8 @@
         },
         {
           "name": "offering_ids",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         },
         {
           "name": "school_classes",
@@ -14482,6 +14505,7 @@
         "kind": "ref",
         "ref": "ClassListImportResult"
       },
+      "partial_error": "import.import_batch_failed",
       "max_body_bytes": 10485760,
       "multipart": true,
       "too_large_code": "import.file_too_large"
@@ -14511,6 +14535,7 @@
         "kind": "ref",
         "ref": "OpeningBalanceImportResult"
       },
+      "partial_error": "import.import_batch_failed",
       "max_body_bytes": 10485760,
       "multipart": true,
       "too_large_code": "import.file_too_large"
@@ -14540,6 +14565,7 @@
         "kind": "ref",
         "ref": "StudentImportResult"
       },
+      "partial_error": "import.import_batch_failed",
       "max_body_bytes": 10485760,
       "multipart": true,
       "too_large_code": "import.file_too_large"
@@ -14569,6 +14595,7 @@
         "kind": "ref",
         "ref": "StaffImportResult"
       },
+      "partial_error": "import.import_batch_failed",
       "max_body_bytes": 10485760,
       "multipart": true,
       "too_large_code": "import.file_too_large"
@@ -14991,9 +15018,7 @@
       },
       "max_body_bytes": 2098176,
       "multipart": true,
-      "too_large_code": "files.file_too_large",
-      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change",
-      "browser_path": "/api/settings/login-image"
+      "too_large_code": "files.file_too_large"
     },
     {
       "method": "POST",
@@ -24862,6 +24887,16 @@
       ]
     },
     {
+      "name": "DemoSessionRole",
+      "values": [
+        "all",
+        "caregiver",
+        "lead",
+        "parent",
+        "traeger"
+      ]
+    },
+    {
       "name": "DepartureMode",
       "values": [
         "accompanied",
@@ -25097,6 +25132,44 @@
       "values": [
         "failed",
         "loaded"
+      ]
+    },
+    {
+      "name": "StreamEventType",
+      "values": [
+        "active_supervision_changed",
+        "activity_end",
+        "activity_start",
+        "activity_update",
+        "arrival_schedule_changed",
+        "bulk_student_checkin",
+        "bulk_student_checkout",
+        "calendar_appointments_changed",
+        "change_requests_changed",
+        "class_day_changed",
+        "dashboard_counts_changed",
+        "group_access_changed",
+        "instance_cancelled",
+        "instance_completed",
+        "instance_overdue",
+        "instance_started",
+        "meal_plan_changed",
+        "notification",
+        "notification_feed_changed",
+        "parent_child_updated",
+        "parent_message",
+        "parent_message_read",
+        "parent_message_unread_changed",
+        "pickup_schedule_changed",
+        "staff_message",
+        "staff_notices_changed",
+        "staff_time_tracking_changed",
+        "staffing_deviation_changed",
+        "student_checkin",
+        "student_checkout",
+        "student_companions_changed",
+        "student_updated",
+        "tenant_settings_changed"
       ]
     },
     {
@@ -45071,6 +45144,29 @@
       ]
     },
     {
+      "name": "ClassTripConflictDetails",
+      "go_type": "classdayhttp.ClassTripConflictDetails",
+      "fields": [
+        {
+          "name": "conflicts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "classTripConflict"
+            }
+          }
+        },
+        {
+          "name": "conflict_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "ClassTripRequest",
       "go_type": "classdayhttp.ClassTripRequest",
       "request": true,
@@ -45622,6 +45718,23 @@
           "name": "fingerprint",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CompanionConflictDetails",
+      "go_type": "careplanhttp.CompanionConflictDetails",
+      "fields": [
+        {
+          "name": "conflicts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "companionConflictDetail"
+            }
           }
         }
       ]
@@ -60011,7 +60124,7 @@
       "fields": [
         {
           "name": "account_id",
-          "text_reason": "empty string when no guardian account is present",
+          "text_reason": "required legacy field, empty when no guardian account is present",
           "schema": {
             "kind": "string"
           }
@@ -67513,7 +67626,7 @@
         },
         {
           "name": "counterpart_account_id",
-          "text_reason": "empty string for group threads without a counterpart",
+          "text_reason": "required legacy field, empty for group threads without a counterpart",
           "schema": {
             "kind": "string"
           }
@@ -88599,6 +88712,218 @@
       ]
     },
     {
+      "name": "SSEEvent",
+      "go_type": "realtime.SSEEvent",
+      "fields": [
+        {
+          "name": "type",
+          "schema": {
+            "kind": "enum",
+            "ref": "StreamEventType"
+          }
+        },
+        {
+          "name": "active_group_id",
+          "text_reason": "decimal, edu:\u003cID\u003e, or empty topic",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "data",
+          "schema": {
+            "kind": "ref",
+            "ref": "SSEEventData"
+          }
+        },
+        {
+          "name": "timestamp",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SSEEventData",
+      "go_type": "realtime.SSEEventData",
+      "fields": [
+        {
+          "name": "activity_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "instance_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "instance_start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "attendance_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "attendance_substatus",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "attendance_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "deep_link",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_deep_link",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "priority",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notification_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notification_data",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "group_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "supervisor_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "instance_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "thread_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        }
+      ]
+    },
+    {
       "name": "SampleChildrenResult",
       "go_type": "dataimport.SampleChildrenResult",
       "fields": [
@@ -100340,6 +100665,29 @@
       ]
     },
     {
+      "name": "StatusDayConflictDetails",
+      "go_type": "studentpresencehttp.StatusDayConflictDetails",
+      "fields": [
+        {
+          "name": "conflicts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StudentStatusDayResponse"
+            }
+          }
+        },
+        {
+          "name": "conflict_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "StatusDayDeletedResponse",
       "go_type": "studentpresencehttp.StatusDayDeletedResponse",
       "fields": [
@@ -105108,7 +105456,7 @@
         },
         {
           "name": "counterpart_account_id",
-          "text_reason": "empty string for group threads without a counterpart",
+          "text_reason": "required legacy field, empty for group threads without a counterpart",
           "schema": {
             "kind": "string"
           }
@@ -117059,6 +117407,30 @@
       ]
     },
     {
+      "name": "classTripConflict",
+      "go_type": "classdayhttp.classTripConflict",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "closingDayRangeResponse",
       "go_type": "timetracking.closingDayRangeResponse",
       "fields": [
@@ -117130,6 +117502,28 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "companionConflictDetail",
+      "go_type": "careplanhttp.companionConflictDetail",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "weekdays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
           }
         }
       ]
@@ -119606,7 +120000,8 @@
           "name": "role",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "enum",
+            "ref": "DemoSessionRole"
           }
         },
         {

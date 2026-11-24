@@ -263,7 +263,13 @@ describe.each(portals)(
       },
     );
     it("preserves wrong-portal refusal from the backend", async () => {
-      const problem = { code: "identity.use_parent_portal", status: 403 };
+      const problem = {
+        type: "about:blank",
+        title: "Forbidden",
+        detail: "Use the parent portal",
+        code: "identity.use_parent_portal",
+        status: 403,
+      };
       backend.mockResolvedValueOnce(Response.json(problem, { status: 403 }));
       const response = await LOGIN[portal].login(request(portal));
       expect(response.status).toBe(403);

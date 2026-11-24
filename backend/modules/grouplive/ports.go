@@ -98,9 +98,8 @@ type RosterStudent struct {
 	SickSince    *time.Time
 	Excused      bool
 	ExcusedSince *time.Time
-	// PhotoPath is the stored path; the projection rewrites it to the
-	// authenticated proxy URL.
-	PhotoPath *string
+	// PhotoURL is the browser address; the projection checks photo access.
+	PhotoURL string
 }
 
 // Roster lists a group's members and their care participation.

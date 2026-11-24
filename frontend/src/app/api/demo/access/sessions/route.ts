@@ -2,7 +2,11 @@ import { captureBffException } from "~/lib/sentry-bff.server";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { contractWrite } from "~/lib/contract/client.server";
-import { routes } from "~/lib/contract/demo-access.generated";
+import {
+  DEMO_SESSION_ROLE_VALUES,
+  routes,
+} from "~/lib/contract/demo-access.generated";
+import { TokenResponseSchema } from "~/lib/contract/shared.generated";
 import { contractError } from "~/lib/contract/route-response.server";
 import { frontendOrigin } from "~/lib/client-headers.server";
 import { createLogger } from "~/lib/logger";
@@ -33,18 +37,13 @@ const DEMO_PORTAL_AUTH = {
   traeger: traegerPortal,
 } as const;
 
-const demoSessionRole = z.enum([
-  "lead",
-  "caregiver",
-  "parent",
-  "traeger",
-  "all",
-]);
-const rollbackAnswer = z.object({
-  access_token: z.string().min(1),
-  refresh_token: z.string().min(1),
-  demo: z.object({ role: demoSessionRole }),
-});
+const demoSessionRole = z.enum(DEMO_SESSION_ROLE_VALUES);
+const rollbackAnswer = z.intersection(
+  TokenResponseSchema.refine(
+    (pair) => !!pair.access_token && !!pair.refresh_token,
+  ),
+  z.object({ demo: z.object({ role: demoSessionRole }) }),
+);
 
 /** The portal a demo role's session belongs to (#3468, #6193). */
 function portalOfDemoRole(role: string): DemoPortal {

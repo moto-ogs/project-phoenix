@@ -453,8 +453,8 @@ func TestGetProjectsRosterUnderFullAccess(t *testing.T) {
 		members: func(_ context.Context, groupID int64) ([]RosterStudent, error) {
 			assert.Equal(t, appleGroupID, groupID)
 			return []RosterStudent{
-				{ID: 11, FirstName: "Ada", LastName: "Lovelace", SchoolClass: "2a", Sick: true, SickSince: &since, PhotoPath: new("/uploads/student-photos/ada.jpg")},
-				{ID: 12, FirstName: "Bob", LastName: "Builder", SchoolClass: "2b", PhotoPath: new("https://example.test/bob.jpg")},
+				{ID: 11, FirstName: "Ada", LastName: "Lovelace", SchoolClass: "2a", Sick: true, SickSince: &since, PhotoURL: "/api/students/11/photo/ada.jpg"},
+				{ID: 12, FirstName: "Bob", LastName: "Builder", SchoolClass: "2b", PhotoURL: "https://example.test/bob.jpg"},
 				{ID: 13, FirstName: "Cy", LastName: "Absent", SchoolClass: "2b"},
 			}, nil
 		},
@@ -532,7 +532,7 @@ func TestGetProjectsRosterUnderFullAccess(t *testing.T) {
 	assert.Equal(t, new("#A3D977"), ada.RoomColor)
 	assert.True(t, ada.Sick)
 	assert.Equal(t, &since, ada.SickSince)
-	assert.Equal(t, "/api/students/11/photo/ada.jpg", ada.PhotoURL, "stored uploads are rewritten to the authenticated proxy")
+	assert.Equal(t, "/api/students/11/photo/ada.jpg", ada.PhotoURL)
 	assert.Equal(t, "not_coming_today", ada.DayPlanningStatus)
 	assert.Equal(t, DayReasonSick, ada.DayPlanningReason)
 	assert.Equal(t, "krank gemeldet", ada.DayPlanningLabel)
@@ -736,7 +736,7 @@ func TestGetRedactsRestrictedCallersButKeepsTheReviewersNote(t *testing.T) {
 		},
 		supervisedGroups: func(context.Context) ([]GroupRecord, error) { return twoGroups(), nil },
 		members: func(context.Context, int64) ([]RosterStudent, error) {
-			return []RosterStudent{{ID: 11, FirstName: "Ada", PhotoPath: new("/uploads/student-photos/ada.jpg")}}, nil
+			return []RosterStudent{{ID: 11, FirstName: "Ada", PhotoURL: "/api/students/11/photo/ada.jpg"}}, nil
 		},
 		snapshot: func(context.Context, []int64, Date) (PresenceSnapshot, error) {
 			return presenceFake{
@@ -1240,16 +1240,6 @@ func TestPlanningLabelDescribesEveryPlanningReason(t *testing.T) {
 	for _, tt := range tests {
 		assert.Equal(t, tt.want, planningLabel(tt.decision))
 	}
-}
-
-func TestBuildPhotoURLRewritesOnlyStoredUploads(t *testing.T) {
-	t.Parallel()
-
-	assert.Empty(t, buildPhotoURL(5, ""))
-	assert.Equal(t, "https://example.invalid/x.jpg", buildPhotoURL(5, "https://example.invalid/x.jpg"),
-		"non-upload URLs pass through untouched")
-	assert.Equal(t, "/api/students/5/photo/abc.jpg", buildPhotoURL(5, "/uploads/student-photos/abc.jpg"),
-		"stored upload paths are rewritten to the authenticated proxy")
 }
 
 // #3946: an Abholart set for today only reaches the Kinderkarte.

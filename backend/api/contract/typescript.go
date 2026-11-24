@@ -29,7 +29,7 @@ func TypeScript(doc Document) (map[string]string, error) {
 	for _, route := range doc.Routes {
 		resources[resourceOf(route.Pattern)] = append(resources[resourceOf(route.Pattern)], route)
 	}
-	for _, reserved := range []string{portalsFile, sharedFile, browserTraitsFile} {
+	for _, reserved := range []string{portalsFile, sharedFile, browserTraitsFile, "problem-details.generated.ts", "stream-event.generated.ts", "partial-results.generated.ts"} {
 		if _, taken := resources[strings.TrimSuffix(reserved, ".generated.ts")]; taken {
 			return nil, fmt.Errorf("the resource name %q is taken by a generated table", strings.TrimSuffix(reserved, ".generated.ts"))
 		}
@@ -61,7 +61,47 @@ func TypeScript(doc Document) (map[string]string, error) {
 	if len(shared.typeOrder)+len(shared.enumOrder) > 0 {
 		files[sharedFile] = shared.file(nil, nil)
 	}
+	writeNonRouteFiles(files, doc, newWriter)
+	writePartialResults(files, doc.Routes, newWriter())
 	return files, nil
+}
+
+func writePartialResults(files map[string]string, routes []Route, writer *tsWriter) {
+	writer.browser = true
+	var entries strings.Builder
+	for _, route := range routes {
+		if route.PartialError == "" {
+			continue
+		}
+		writer.visit(*route.Response)
+		fmt.Fprintf(&entries, "  %q: %s,\n", route.Key(), writer.field(*route.Response))
+	}
+	if entries.Len() > 0 {
+		files["partial-results.generated.ts"] = writer.file(nil, nil) +
+			"\nexport const partialResults = {\n" + entries.String() + "} as const;\n"
+	}
+}
+
+func writeNonRouteFiles(files map[string]string, doc Document, newWriter func() *tsWriter) {
+	if len(doc.ProblemDetails) > 0 {
+		writer := newWriter()
+		writer.browser = true
+		var decoders strings.Builder
+		decoders.WriteString("\nexport const problemDetails = {\n")
+		for _, code := range sortedKeys(doc.ProblemDetails) {
+			schema := doc.ProblemDetails[code]
+			writer.visit(schema)
+			fmt.Fprintf(&decoders, "  %q: %s,\n", code, writer.field(schema))
+		}
+		decoders.WriteString("} as const;\n")
+		files["problem-details.generated.ts"] = writer.file(nil, nil) + decoders.String()
+	}
+	if doc.StreamEvent != nil {
+		writer := newWriter()
+		writer.browser = true
+		writer.visit(*doc.StreamEvent)
+		files["stream-event.generated.ts"] = writer.file(nil, nil)
+	}
 }
 
 // visitRoutes orders the types of a resource's routes and counts the
@@ -129,6 +169,7 @@ func browserTraits(routes []Route) string {
 		out.WriteString("  },\n")
 	}
 	out.WriteString("} as const;\n")
+	writeAccountLogoutBrowserPaths(&out, routes)
 	writeRouteSet(&out, "noCommitRoutes", routes, func(route Route) bool {
 		return route.NoCommit != ""
 	})
@@ -142,6 +183,21 @@ func browserTraits(routes []Route) string {
 	}
 	out.WriteString("]);\n")
 	return out.String()
+}
+
+// These browser routes revoke portal-specific sessions through the same Go route.
+func writeAccountLogoutBrowserPaths(out *strings.Builder, routes []Route) {
+	for _, route := range routes {
+		if route.Key() != "POST /auth/logout" {
+			continue
+		}
+		out.WriteString("\nexport const accountLogoutBrowserPaths = {\n")
+		for _, portal := range []string{"caterer", "parent", "school", "traeger"} {
+			fmt.Fprintf(out, "  %s: %q,\n", portal, "/api/"+portal+route.Pattern)
+		}
+		out.WriteString("} as const;\n")
+		return
+	}
 }
 
 func writeRouteSet(out *strings.Builder, name string, routes []Route, matches func(Route) bool) {
@@ -259,6 +315,8 @@ type tsWriter struct {
 	helpers   map[string]bool
 	typeOrder []string
 	enumOrder []string
+	// Non-route decoders run in browsers and must not bring the route runtime.
+	browser bool
 	// pending names the types of the file not written yet: a reference to one
 	// of them closes a cycle and is read lazily.
 	pending map[string]bool
@@ -309,11 +367,15 @@ func (w *tsWriter) file(routes []Route, shared *tsWriter) string {
 
 	var out strings.Builder
 	out.WriteString(tsHeader)
+	runtime := "runtime"
+	if w.browser {
+		runtime = "browser-runtime"
+	}
 	if strings.Contains(body.String(), "z.") {
 		out.WriteString("import { z } from \"zod\";\n")
 	}
 	if helpers := sortedKeys(w.helpers); len(helpers) > 0 {
-		fmt.Fprintf(&out, "import {\n  %s,\n} from \"./runtime\";\n", strings.Join(helpers, ",\n  "))
+		fmt.Fprintf(&out, "import {\n  %s,\n} from \"./%s\";\n", strings.Join(helpers, ",\n  "), runtime)
 	}
 	if imports := shared.namedIn(body.String()); len(imports) > 0 {
 		fmt.Fprintf(&out, "import {\n  %s,\n} from \"./%s\";\n", strings.Join(imports, ",\n  "), strings.TrimSuffix(sharedFile, ".ts"))
@@ -360,7 +422,12 @@ func (w *tsWriter) object(out *strings.Builder, object Object) {
 	// The interface above and this shape come from one model; `object` hands
 	// the checker the interface instead of letting it derive the shape's type.
 	w.helpers["object"] = true
-	fmt.Fprintf(out, "\nexport const %sSchema: z.ZodType<%s, unknown> = object<%s>({\n", object.Name, object.Name, object.Name)
+	codecType := "z.ZodType<" + object.Name + ", unknown>"
+	if w.browser {
+		w.helpers["type Decoder"] = true
+		codecType = "Decoder<" + object.Name + ">"
+	}
+	fmt.Fprintf(out, "\nexport const %sSchema: %s = object<%s>({\n", object.Name, codecType, object.Name)
 	for _, field := range object.Fields {
 		decoder := w.field(field.Schema)
 		if field.Optional {

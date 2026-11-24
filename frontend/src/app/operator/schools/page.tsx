@@ -16,10 +16,7 @@ import {
   STALE_DATA_SUFFIX,
   useRefreshAfterWrite,
 } from "~/lib/hooks/use-refresh-after-write";
-import {
-  operatorProvisioningService,
-  revalidateTenantCache,
-} from "~/lib/operator/provisioning-api";
+import { operatorProvisioningService } from "~/lib/operator/provisioning-api";
 import type { SchoolSummary } from "~/lib/operator/provisioning-helpers";
 import {
   buildSchoolColumns,
@@ -142,10 +139,7 @@ export default function OperatorSchoolsPage() {
   // failure stands above the list, also after the dialog closed (#6652).
   const createdAfterWrite = useRefreshAfterWrite(
     "die Anzeige der Schulen",
-    async (subdomain: string) => {
-      await refreshAll();
-      await revalidateTenantCache([subdomain]);
-    },
+    refreshAll,
   );
 
   const activeOrganizations = useMemo(
@@ -225,14 +219,8 @@ export default function OperatorSchoolsPage() {
     },
     logEventPrefix: "school",
     reloadObject: "die Anzeige der Schulen",
-    onAfterSoftDelete: async (target) => {
-      await revalidateTenantCache([target.subdomain]);
-    },
-    onAfterRestore: async (target) => {
-      await Promise.all([
-        revalidateTenantCache([target.subdomain]),
-        mutateRequiredDetails(),
-      ]);
+    onAfterRestore: async () => {
+      await mutateRequiredDetails();
     },
   });
 

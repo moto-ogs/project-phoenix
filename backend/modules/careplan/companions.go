@@ -101,8 +101,8 @@ type CompanionUpdate struct {
 // CompanionConflict names a companion whose departure plan does not permit
 // leaving with another child on the requested weekdays.
 type CompanionConflict struct {
-	StudentID int64    `json:"student_id"`
-	Weekdays  []string `json:"weekdays"`
+	StudentID int64
+	Weekdays  []string
 }
 
 // CompanionLocks is the shared lock protocol every writer of companion edges

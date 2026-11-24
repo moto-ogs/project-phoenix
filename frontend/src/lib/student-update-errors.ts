@@ -4,18 +4,24 @@
 // the ApiError of updateStudent (~/lib/student-api). Keyed off the code, never
 // the status: the student PUT answers 409 and 400 for several reasons.
 
-import { ApiError, enrichApiError, problemDetail } from "./api-error";
+import {
+  ApiError,
+  enrichApiError,
+  isProblemRecord,
+  problemDetail,
+} from "./api-error";
+import { knownEnum } from "./contract/known-enum";
+import { problemDetails } from "./contract/problem-details.generated";
 import {
   ALL_COMPANION_WEEKDAYS,
   type CompanionExtensionConfirmation,
-  type CompanionWeekday,
 } from "./student-companion-api";
 
 /** The error body: parsed already (ApiError.problem) or its JSON text. */
 function parsedBody(body: unknown): unknown {
   if (typeof body !== "string") return body;
   try {
-    return JSON.parse(body) as unknown;
+    return JSON.parse(body);
   } catch {
     return undefined;
   }
@@ -27,23 +33,28 @@ function parsedBody(body: unknown): unknown {
  * confirm something we could not read.
  */
 function conflictExtensions(body: unknown): CompanionExtensionConfirmation[] {
-  const conflicts =
-    body && typeof body === "object"
-      ? (
-          body as {
-            conflicts?: { student_id?: number | string; weekdays?: string[] }[];
-          }
-        ).conflicts
-      : undefined;
-  return (Array.isArray(conflicts) ? conflicts : [])
-    .filter((conflict) => conflict.student_id !== undefined)
-    .map((conflict) => ({
-      companion_student_id: String(conflict.student_id),
-      weekdays: (conflict.weekdays ?? []).filter(
-        (day): day is CompanionWeekday =>
-          ALL_COMPANION_WEEKDAYS.includes(day as CompanionWeekday),
-      ),
-    }));
+  if (
+    !isProblemRecord(body) ||
+    body.code !== "students.companion_plan_conflict"
+  ) {
+    return [];
+  }
+  const parsed = problemDetails["students.companion_plan_conflict"].safeParse(
+    body.details,
+  );
+  if (!parsed.success) return [];
+  const confirmations: CompanionExtensionConfirmation[] = [];
+  for (const conflict of parsed.data.conflicts ?? []) {
+    const days = conflict.weekdays?.map((day) =>
+      knownEnum(ALL_COMPANION_WEEKDAYS, day),
+    );
+    if (!days?.length || !days.every((day) => day !== undefined)) return [];
+    confirmations.push({
+      companion_student_id: conflict.student_id,
+      weekdays: days,
+    });
+  }
+  return confirmations;
 }
 
 /**

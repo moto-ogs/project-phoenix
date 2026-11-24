@@ -173,7 +173,7 @@ describe("active-service", () => {
         });
 
         expect(mockFetch).toHaveBeenCalledWith(
-          "/api/active/visits?active=true&active_group_ids=17%2C23",
+          "/api/active/visits?active=true&active_group_ids=17&active_group_ids=23",
           expect.any(Object),
         );
       });

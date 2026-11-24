@@ -27,6 +27,7 @@ let restoreObserver: () => void;
 let streams: ReadableStreamDefaultController<Uint8Array>[];
 const onMessage = vi.fn();
 const encoder = new TextEncoder();
+const eventTimestamp = "2026-11-24T12:00:00Z";
 function session(id: string) {
   return { data: { user: { id, token: "access" } }, status: "authenticated" };
 }
@@ -96,7 +97,7 @@ it.each([
           types
             .map(
               (type) =>
-                `event: ${type}\ndata: ${JSON.stringify({ type, data: {} })}\n\n`,
+                `event: ${type}\ndata: ${JSON.stringify({ type, active_group_id: "", timestamp: eventTimestamp, data: {} })}\n\n`,
             )
             .join(""),
         ),
@@ -182,7 +183,7 @@ it("parses split UTF-8, CRLF, multiline data and ignores heartbeats", async () =
   const { result } = renderHook(() => useSSE("/api/sse/events", { onMessage }));
   await waitFor(() => expect(result.current.isConnected).toBe(true));
   const bytes = encoder.encode(
-    ': heartbeat\r\nevent: student_updated\r\ndata: {"type":"student_updated",\r\ndata: "data":{"name":"Müller"}}\r\n\r\n',
+    `: heartbeat\r\nevent: activity_start\r\ndata: {"type":"activity_start","active_group_id":"1",\r\ndata: "timestamp":"${eventTimestamp}","data":{"activity_name":"Müller"}}\r\n\r\n`,
   );
   // Split every byte: includes CR/LF boundaries and the two-byte ü.
   act(() => {
@@ -190,8 +191,10 @@ it("parses split UTF-8, CRLF, multiline data and ignores heartbeats", async () =
   });
   await waitFor(() =>
     expect(onMessage).toHaveBeenCalledWith({
-      type: "student_updated",
-      data: { name: "Müller" },
+      type: "activity_start",
+      active_group_id: "1",
+      timestamp: eventTimestamp,
+      data: { activity_name: "Müller" },
     }),
   );
   expect(onMessage).toHaveBeenCalledTimes(1);

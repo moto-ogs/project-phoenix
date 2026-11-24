@@ -28,8 +28,6 @@ var ErrForbiddenGroup = errors.New("caller does not supervise the requested acti
 // wired.
 var ErrIncompleteDependencies = errors.New("supervision dashboard projection is not fully configured")
 
-const studentPhotoStoredURLPrefix = "/uploads/student-photos/"
-
 // SpontaneousStartBlockedWeekend is the reason code for a weekend business
 // day on which no spontaneous session may start.
 const SpontaneousStartBlockedWeekend = "weekend"
@@ -689,8 +687,8 @@ func (s *service) buildVisit(row VisitRecord, attendance map[int64]Attendance, f
 	}
 	// Same full-access gate the single endpoint used: without it, avatar
 	// requests for out-of-scope students would 403 in the byte-serve path.
-	if photosEnabled && fullAccess && row.PhotoPath != nil {
-		visit.PhotoURL = buildPhotoURL(row.StudentID, *row.PhotoPath)
+	if photosEnabled && fullAccess {
+		visit.PhotoURL = row.PhotoURL
 	}
 	return visit
 }
@@ -701,13 +699,6 @@ func (s *service) clock(at *time.Time) *string {
 	}
 	formatted := s.deps.Calendar.Clock(*at)
 	return &formatted
-}
-
-func buildPhotoURL(studentID int64, storedURL string) string {
-	if storedURL == "" || !strings.HasPrefix(storedURL, studentPhotoStoredURLPrefix) {
-		return storedURL
-	}
-	return fmt.Sprintf("/api/students/%d/photo/%s", studentID, strings.TrimPrefix(storedURL, studentPhotoStoredURLPrefix))
 }
 
 func (s *service) loadTracking(ctx context.Context, studentIDs []int64) (DashboardTrackingIndicators, error) {

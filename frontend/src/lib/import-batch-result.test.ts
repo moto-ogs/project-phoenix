@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import {
   countAlreadyExistsRows,
@@ -20,6 +21,21 @@ const committed = {
   errors: [abortingWrite],
 };
 
+const resultSchema = z.object({
+  total_rows: z.number(),
+  created_count: z.number(),
+  updated_count: z.number(),
+  error_count: z.number(),
+  errors: z
+    .array(
+      z.object({
+        row_number: z.number(),
+        errors: z.array(z.object({ code: z.string() })),
+      }),
+    )
+    .nullable(),
+});
+
 function envelope(result: Record<string, unknown>) {
   return {
     status: "error",
@@ -31,10 +47,12 @@ function envelope(result: Record<string, unknown>) {
 
 describe("readImportBatchFailure", () => {
   it("reads details.result from an import_batch_failed envelope", () => {
-    expect(readImportBatchFailure(envelope(committed))).toEqual(committed);
+    expect(readImportBatchFailure(envelope(committed), resultSchema)).toEqual(
+      committed,
+    );
   });
 
-  it("treats a nil Go Errors slice as an empty list", () => {
+  it("accepts a nil Go Errors slice", () => {
     expect(
       readImportBatchFailure(
         envelope({
@@ -44,27 +62,34 @@ describe("readImportBatchFailure", () => {
           error_count: 0,
           errors: null,
         }),
+        resultSchema,
       ),
     ).toEqual({
       total_rows: 205,
       created_count: 100,
       updated_count: 0,
       error_count: 0,
-      errors: [],
+      errors: null,
     });
   });
 
   it("ignores other error envelopes", () => {
     expect(
-      readImportBatchFailure({
-        error: "Import fehlgeschlagen",
-        message: "Import fehlgeschlagen",
-      }),
+      readImportBatchFailure(
+        {
+          error: "Import fehlgeschlagen",
+          message: "Import fehlgeschlagen",
+        },
+        resultSchema,
+      ),
     ).toBeNull();
     expect(
-      readImportBatchFailure({ code: "import.import_batch_failed" }),
+      readImportBatchFailure(
+        { code: "import.import_batch_failed" },
+        resultSchema,
+      ),
     ).toBeNull();
-    expect(readImportBatchFailure(null)).toBeNull();
+    expect(readImportBatchFailure(null, resultSchema)).toBeNull();
   });
 });
 

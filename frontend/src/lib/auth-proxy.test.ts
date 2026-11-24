@@ -83,7 +83,13 @@ describe("authStepProxy", () => {
   it("passes a backend refusal through with its status and body", async () => {
     fetchMock.mockResolvedValueOnce(
       Response.json(
-        { status: 429, title: "Too Many Requests", code: "general.rate_limit" },
+        {
+          type: "about:blank",
+          status: 429,
+          title: "Too Many Requests",
+          detail: "Too Many Requests",
+          code: "general.unavailable",
+        },
         { status: 429, headers: { "Retry-After": "60" } },
       ),
     );
@@ -93,7 +99,7 @@ describe("authStepProxy", () => {
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("60");
     await expect(response.json()).resolves.toMatchObject({
-      code: "general.rate_limit",
+      code: "general.unavailable",
     });
   });
 

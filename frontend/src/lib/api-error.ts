@@ -262,14 +262,8 @@ export function apiErrorFromBody(
   status: number,
   body: unknown,
 ): ApiError {
-  const data =
-    body && typeof body === "object" ? (body as Record<string, unknown>) : {};
-  const details =
-    data.details &&
-    typeof data.details === "object" &&
-    !Array.isArray(data.details)
-      ? (data.details as Record<string, unknown>)
-      : undefined;
+  const data = isProblemRecord(body) ? body : {};
+  const details = isProblemRecord(data.details) ? data.details : undefined;
   const errors = Array.isArray(data.errors)
     ? data.errors.filter(
         (entry): entry is { field: string; reason: string } =>
@@ -294,6 +288,12 @@ export function apiErrorFromBody(
     reportSessionTenantMismatch(error.code);
   }
   return error;
+}
+
+export function isProblemRecord(
+  value: unknown,
+): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 /**

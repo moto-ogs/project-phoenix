@@ -141,8 +141,11 @@ describe("GET /api/sse/events", () => {
     const response = await GET(request);
 
     expect(response.status).toBe(403);
-    const text = await response.text();
-    expect(text).toBe("Forbidden");
+    expect(await response.json()).toMatchObject({
+      status: 403,
+      detail: "Forbidden",
+      code: "general.permission",
+    });
   });
 
   it("replaces an empty backend server error with a safe problem envelope", async () => {
@@ -181,11 +184,14 @@ describe("GET /api/sse/events", () => {
     const request = createMockRequest("/api/sse/events");
     const response = await GET(request);
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(503);
     expect(response.headers.get("content-type")).toContain(
       "application/problem+json",
     );
-    expect(await response.json()).toMatchObject({ status: 500 });
+    expect(await response.json()).toMatchObject({
+      status: 503,
+      code: "general.unavailable",
+    });
   });
 
   it("aborts the upstream fetch when the client request aborts", async () => {

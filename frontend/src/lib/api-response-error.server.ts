@@ -4,6 +4,7 @@ import { captureBffException } from "~/lib/sentry-bff.server";
 import {
   ApiError,
   errorClassCode,
+  isProblemRecord,
   problemBody,
   problemTitle,
   type ProblemBody,
@@ -13,9 +14,6 @@ import { requestInstance } from "./request-id";
 
 const logger = createLogger({ component: "ApiHelpers" });
 const registeredErrorCodes: ReadonlySet<string> = new Set(ERROR_CODES);
-
-type JsonBody = Record<string, unknown> | unknown[] | string | number | boolean;
-
 /**
  * Typed error thrown by serverFetchWithRetry for non-OK backend responses and
  * by the route wrappers for failures they detect themselves. Carries the HTTP
@@ -31,7 +29,7 @@ export class ApiResponseError extends Error {
   readonly bodyInterrupted: boolean;
   // Memoized parse result — `null` means "not JSON". Lazy so callers that
   // only check status never pay the JSON.parse cost.
-  private parsedBody: JsonBody | null = null;
+  private parsedBody: unknown = null;
   private parseAttempted = false;
 
   constructor(
@@ -53,16 +51,16 @@ export class ApiResponseError extends Error {
   }
 
   /** Returns the parsed JSON body, or `null` if the body isn't valid JSON. */
-  body<T = unknown>(): T | null {
+  body(): unknown {
     if (!this.parseAttempted) {
       this.parseAttempted = true;
       try {
-        this.parsedBody = JSON.parse(this.bodyText) as JsonBody;
+        this.parsedBody = JSON.parse(this.bodyText);
       } catch {
         this.parsedBody = null;
       }
     }
-    return (this.parsedBody ?? null) as T | null;
+    return this.parsedBody;
   }
 }
 
@@ -217,7 +215,7 @@ export function handleApiError(
     captureBffException(error.cause, request);
   }
   if (error instanceof ApiResponseError) {
-    const parsed = error.body<unknown>();
+    const parsed = error.body();
     const isEnvelope = isProblemEnvelope(parsed, error.status);
     logApiRouteError(
       error.status,
@@ -308,11 +306,8 @@ function isProblemEnvelope(
   value: unknown,
   status: number,
 ): value is ProblemBody {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    return false;
-  }
-
-  const body = value as Record<string, unknown>;
+  if (!isProblemRecord(value)) return false;
+  const body = value;
   const code = body.code;
   return (
     body.status === status &&

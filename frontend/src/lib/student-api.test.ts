@@ -631,7 +631,10 @@ describe("updateStudent", () => {
       .mockResolvedValueOnce(
         problem(409, {
           detail: "linked child may not walk along",
-          conflicts: [{ student_id: 42, weekdays: ["mon"] }],
+          code: "students.companion_plan_conflict",
+          details: {
+            conflicts: [{ student_id: "9007199254740993", weekdays: ["mon"] }],
+          },
         }),
       )
       .mockResolvedValueOnce(
@@ -647,7 +650,9 @@ describe("updateStudent", () => {
     expect(conflict).toBeInstanceOf(CompanionPlanConflictError);
     expect(conflict).toMatchObject({
       status: 409,
-      conflicts: [{ companion_student_id: "42", weekdays: ["mon"] }],
+      conflicts: [
+        { companion_student_id: "9007199254740993", weekdays: ["mon"] },
+      ],
     });
 
     const sickExcused = await updateStudent("1", { first_name: "A" }).catch(
@@ -703,8 +708,11 @@ describe("updateStudent", () => {
       .mockResolvedValueOnce(
         problem(409, {
           detail: "companion may not walk along on this day",
-          conflicts: [{ student_id: 7, weekdays: ["mon"] }],
-          details: { other: 1 },
+          code: "students.companion_plan_conflict",
+          details: {
+            other: 1,
+            conflicts: [{ student_id: "7", weekdays: ["mon"] }],
+          },
         }),
       )
       .mockResolvedValueOnce(ok(null))

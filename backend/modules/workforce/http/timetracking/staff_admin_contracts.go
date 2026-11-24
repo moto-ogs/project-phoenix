@@ -139,7 +139,7 @@ func StaffAdminRouteContracts() []common.RouteContract {
 		route("GET", "/{id}/time-tracking/sessions/{sessionId}/edits", nil, []workforce.WorkSessionEditView{}),
 		route("POST", "/{id}/absences/rebook", RebookAbsencesBody{}, workforce.AbsenceRebookingResult{}),
 		route("DELETE", "/{id}/absences/{absenceId}", nil, nil),
-		route("GET", "/absences/mails", nil, AbsenceDecisionMailsResponse{}, common.QueryParam{Name: "ids", Kind: common.QueryString}),
+		route("GET", "/absences/mails", nil, AbsenceDecisionMailsResponse{}, common.QueryParam{Name: "ids", Kind: common.QueryID, Repeated: true}),
 		route("DELETE", "/{id}/documents/{documentId}", nil, StammdatenAck{}),
 		route("GET", "/{id}/documents", nil, StaffDocumentListResponse{}, common.QueryParam{Name: "category", Kind: common.QueryString}),
 		{Method: "POST", Pattern: "/{id}/documents", Portals: portals, Multipart: true,

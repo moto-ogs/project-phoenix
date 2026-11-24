@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const mockApiPut = vi.fn();
 const mockApiDelete = vi.fn();
-const mockRevalidateTag = vi.fn();
 const mockRevalidatePath = vi.fn();
 
 vi.mock("~/lib/backend-client.server", async (original) => ({
@@ -26,7 +25,6 @@ vi.mock("~/lib/route-wrapper.server", () => ({
 }));
 
 vi.mock("next/cache", () => ({
-  revalidateTag: (...args: unknown[]) => mockRevalidateTag(...args),
   revalidatePath: (...args: unknown[]) => mockRevalidatePath(...args),
 }));
 
@@ -72,7 +70,6 @@ describe("PUT /api/settings/values/[key]", () => {
       body,
     );
     expect(result).toBeNull();
-    expect(mockRevalidateTag).not.toHaveBeenCalled();
     expect(mockRevalidatePath).not.toHaveBeenCalled();
   });
 });
@@ -94,7 +91,7 @@ describe("DELETE /api/settings/values/[key]", () => {
       "/api/settings/values/operations.session_end_time",
       "test-token",
     );
-    expect(mockRevalidateTag).not.toHaveBeenCalled();
+    expect(mockRevalidatePath).not.toHaveBeenCalled();
   });
 });
 
@@ -166,9 +163,7 @@ describe("settings values tenant cache busting", () => {
         { key: "analytics.enabled" },
       ),
     ).rejects.toMatchObject({ status: 502 });
-    expect(mockRevalidateTag).toHaveBeenCalledWith("tenant-school-a", {
-      expire: 0,
-    });
+    expect(mockRevalidatePath).toHaveBeenCalledWith("/school-a", "layout");
   });
 
   it.each([
@@ -185,9 +180,6 @@ describe("settings values tenant cache busting", () => {
         "test-token",
         { key },
       );
-      expect(mockRevalidateTag).toHaveBeenCalledWith("tenant-school-a", {
-        expire: 0,
-      });
       expect(mockRevalidatePath).toHaveBeenCalledWith("/school-a", "layout");
     },
   );
@@ -200,9 +192,6 @@ describe("settings values tenant cache busting", () => {
         "test-token",
         { key },
       );
-      expect(mockRevalidateTag).toHaveBeenCalledWith("tenant-school-b", {
-        expire: 0,
-      });
       expect(mockRevalidatePath).toHaveBeenCalledWith("/school-b", "layout");
     },
   );
@@ -214,9 +203,6 @@ describe("settings values tenant cache busting", () => {
       "test-token",
       { key: "operations.presence_mode" },
     );
-    expect(mockRevalidateTag).toHaveBeenCalledWith("tenant-school-a", {
-      expire: 0,
-    });
     expect(mockRevalidatePath).toHaveBeenCalledWith("/school-a", "layout");
   });
 
@@ -227,9 +213,6 @@ describe("settings values tenant cache busting", () => {
       "test-token",
       { key: "enrollment.care_offerings_enabled" },
     );
-    expect(mockRevalidateTag).toHaveBeenCalledWith("tenant-school-a", {
-      expire: 0,
-    });
     expect(mockRevalidatePath).toHaveBeenCalledWith("/school-a", "layout");
   });
 
@@ -240,9 +223,6 @@ describe("settings values tenant cache busting", () => {
       "test-token",
       { key: "enrollment.grade_level_max" },
     );
-    expect(mockRevalidateTag).toHaveBeenCalledWith("tenant-school-a", {
-      expire: 0,
-    });
     expect(mockRevalidatePath).toHaveBeenCalledWith("/school-a", "layout");
   });
 
@@ -255,9 +235,6 @@ describe("settings values tenant cache busting", () => {
       "test-token",
       { key: "enrollment.care_facility_term" },
     );
-    expect(mockRevalidateTag).toHaveBeenCalledWith("tenant-school-a", {
-      expire: 0,
-    });
     expect(mockRevalidatePath).toHaveBeenCalledWith("/school-a", "layout");
   });
 
@@ -268,7 +245,6 @@ describe("settings values tenant cache busting", () => {
       "test-token",
       { key: "operations.session_end_time" },
     );
-    expect(mockRevalidateTag).not.toHaveBeenCalled();
     expect(mockRevalidatePath).not.toHaveBeenCalled();
   });
 
@@ -279,7 +255,6 @@ describe("settings values tenant cache busting", () => {
       "test-token",
       { key: "operations.student_photos_enabled" },
     );
-    expect(mockRevalidateTag).not.toHaveBeenCalled();
     expect(mockRevalidatePath).not.toHaveBeenCalled();
   });
 
@@ -293,7 +268,7 @@ describe("settings values tenant cache busting", () => {
         { key: "operations.student_photos_enabled" },
       ),
     ).rejects.toThrow(/TENANT_DOMAIN is not set/);
-    expect(mockRevalidateTag).not.toHaveBeenCalled();
+    expect(mockRevalidatePath).not.toHaveBeenCalled();
   });
 
   it("does NOT require TENANT_DOMAIN for non-tenant-resolve-affecting keys", async () => {
@@ -304,6 +279,6 @@ describe("settings values tenant cache busting", () => {
       "test-token",
       { key: "operations.session_end_time" },
     );
-    expect(mockRevalidateTag).not.toHaveBeenCalled();
+    expect(mockRevalidatePath).not.toHaveBeenCalled();
   });
 });
