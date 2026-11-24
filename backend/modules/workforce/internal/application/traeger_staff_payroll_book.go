@@ -24,6 +24,10 @@ type payrollBook struct {
 	// inFiles names the files of each record, for the people in several.
 	inFiles map[int64]map[string]bool
 	checks  map[employerKey]*workforce.TraegerPayrollEmployerCheck
+	// checkFiles names the file of each body's lines; kept are the files
+	// the report shows.
+	checkFiles map[employerKey]string
+	kept       map[string]bool
 }
 
 // payrollFile is one file: its report, its lines and what decides whether
@@ -62,6 +66,7 @@ func newPayrollBook(settings workforce.TraegerPayrollSettings, month workforce.T
 		byKey: map[string]*payrollFile{}, people: map[int64]bool{}, missing: map[int64]bool{},
 		gaps: map[workforce.TraegerPayrollGap]bool{}, kinds: map[string]*workforce.TraegerPayrollKindCount{},
 		inFiles: map[int64]map[string]bool{}, checks: map[employerKey]*workforce.TraegerPayrollEmployerCheck{},
+		checkFiles: map[employerKey]string{}, kept: map[string]bool{},
 	}
 }
 
@@ -159,6 +164,7 @@ func (b *payrollBook) noteEmployer(target payrollTarget, file *payrollFile) {
 			check.MissingCostCenter = target.costCenter == ""
 		}
 		b.checks[target.check.key] = check
+		b.checkFiles[target.check.key] = file.report.Key
 	}
 	if check.MissingCostCenter {
 		file.costCenterMissing = true
@@ -247,8 +253,8 @@ func (b *payrollBook) finish(scene exportScene, months map[siteKey]schoolPayroll
 	report.MissingClient = report.Form == workforce.TraegerPayrollFormTraeger && report.Format == workforce.TraegerPayrollFormatLodas &&
 		(b.settings.ConsultantNumber == "" || b.settings.ClientNumber == "")
 	report.NoWageType = !anyWageType(b.settings)
-	report.Employers = b.orderedChecks(scene)
 	report.Files = b.finishFiles(scene)
+	report.Employers = b.orderedChecks(scene)
 	report.InSeveralFiles = b.inSeveralFiles(scene)
 	report.Ready = len(report.Files) > 0
 	for _, file := range report.Files {
@@ -259,12 +265,18 @@ func (b *payrollBook) finish(scene exportScene, months map[siteKey]schoolPayroll
 }
 
 // finishFiles completes the report of every file: the Träger's own file
-// first, then by employer name.
+// first, then by employer name. A file without a line and without a person
+// it waits for has nothing to export (its people had no value in the
+// month), so the report leaves it out.
 func (b *payrollBook) finishFiles(scene exportScene) []workforce.TraegerPayrollFile {
 	files := make([]workforce.TraegerPayrollFile, 0, len(b.files))
 	for _, file := range b.files {
 		report := file.report
 		report.People, report.LineCount = len(file.people), len(file.lines)
+		if report.LineCount == 0 && len(report.WithoutNumber) == 0 {
+			continue
+		}
+		b.kept[report.Key] = true
 		report.Schools = orderedSchools(scene, file.schools)
 		report.MissingClient = report.ConsultantNumber == "" || report.ClientNumber == ""
 		if b.report.Form == workforce.TraegerPayrollFormTraeger {
@@ -332,7 +344,8 @@ func (b *payrollBook) orderedChecks(scene exportScene) []workforce.TraegerPayrol
 	checks := []workforce.TraegerPayrollEmployerCheck{}
 	for _, school := range scene.schools {
 		for _, body := range []string{workforce.TraegerEmployerSchultraeger, workforce.TraegerEmployerGemeinde} {
-			if check, ok := b.checks[employerKey{school.ID.Int64(), body}]; ok {
+			key := employerKey{school.ID.Int64(), body}
+			if check, ok := b.checks[key]; ok && b.kept[b.checkFiles[key]] {
 				checks = append(checks, *check)
 			}
 		}
@@ -348,7 +361,13 @@ func (b *payrollBook) inSeveralFiles(scene exportScene) []workforce.TraegerExpor
 		return people
 	}
 	for _, record := range scene.recordsByName() {
-		if len(b.inFiles[record.ID]) > 1 {
+		files := 0
+		for key := range b.inFiles[record.ID] {
+			if b.kept[key] {
+				files++
+			}
+		}
+		if files > 1 {
 			people = append(people, workforce.TraegerExportPerson{RecordID: ident.ID(record.ID), FirstName: record.FirstName, LastName: record.LastName})
 		}
 	}

@@ -120,7 +120,7 @@ export function PayrollEmployersCard({
         render: (employer) => {
           const key = employerFieldKey(employer.schoolId, field);
           return (
-            <span className="block w-28">
+            <span className="block w-full md:w-28">
               <Input
                 name={key}
                 controlSize="compact"
@@ -179,6 +179,7 @@ export function PayrollEmployersCard({
           rows={[...employers]}
           getRowKey={(employer) => `${employer.schoolId}-${employer.body}`}
           stackedOnMobile
+          stackedLayout="form"
         />
       ) : null}
     </SectionCard>

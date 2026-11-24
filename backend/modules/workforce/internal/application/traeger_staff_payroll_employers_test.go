@@ -216,3 +216,22 @@ func TestPayrollEmployerNumberHoldsOnlyForItsBody(t *testing.T) {
 	assert.Nil(t, link.EmployerNumberFor(""))
 	assert.Equal(t, "7", *link.EmployerNumberFor(workforce.TraegerEmployerSchultraeger))
 }
+
+// A person whose Einsatzort at the Träger had no value in the month books
+// no line there: the form per employer shows no empty file of the Träger
+// and does not name her as in several files.
+func TestPayrollFilePerEmployerLeavesOutAFileWithoutLines(t *testing.T) {
+	t.Parallel()
+	jonas := "7"
+	scene := newEmployerScene(workforce.TraegerPayrollFormArbeitgeber,
+		domain.TraegerPayrollEmployer{ConsultantNumber: "1234", ClientNumber: "567"}, &jonas)
+	delete(scene.scene.records, 9)
+	scene.scene.contracts = scene.scene.contracts[:2]
+	scene.months[siteKey{1, 10}] = schoolPayrollMonth{schoolID: 1, school: "OGS Nord", month: workforce.TraegerPayrollMonth{StaffID: 10, Closed: true}}
+	_, report := scene.run(t)
+
+	require.Len(t, report.Files, 1, "only the Gemeinde's file has lines")
+	assert.Equal(t, "1234-567", report.Files[0].Key)
+	assert.Empty(t, report.InSeveralFiles)
+	assert.True(t, report.Ready)
+}

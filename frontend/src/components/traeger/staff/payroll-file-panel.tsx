@@ -490,7 +490,9 @@ export function PayrollFilePanel({
               />
               <StatCard
                 variant="tile"
-                label="Zeilen in der Datei"
+                label={
+                  perEmployer ? "Zeilen in den Dateien" : "Zeilen in der Datei"
+                }
                 value={String(report.lineCount)}
               />
             </div>
