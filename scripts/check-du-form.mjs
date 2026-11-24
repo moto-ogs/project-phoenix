@@ -33,13 +33,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 export const MARKER = /sie-anrede-erlaubt \(ADR 0294\):\s*\S/;
 
 // Message keys whose German wording is bound by ADR 0294, Ausnahmen.
-export const JSON_EXCEPTIONS = [
-  {
-    file: 'frontend/src/i18n/messages/de/holidayRegistration.json',
-    key: 'declarationText',
-    reason: 'Versionierter Erklärungssatz der Ferienanmeldung (holidayDeclarationNameText); Du-Fassung nur mit neuer Version.',
-  },
-];
+export const JSON_EXCEPTIONS = [];
 
 const FORMAL_ANYWHERE = /\b(Sie|Ihnen|Ihre?[mnrs]?)\b/;
 const FORMAL = /(?<![\p{L}\p{N}_])(Sie|Ihnen|Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihres)(?![\p{L}\p{N}_])/gu;

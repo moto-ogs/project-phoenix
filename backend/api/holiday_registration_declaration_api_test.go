@@ -19,8 +19,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 )
 
-// The texts of version 5 word for word, with the retention of a year the
-// Träger keeps by default (#6691) and the kept debtor number (#6692). They bind; a change is a new version, and
+// The texts of version 6 word for word, with the retention of a year the
+// Träger keeps by default (#6691), the kept debtor number (#6692) and the name sentence in Du (#7687). They bind; a change is a new version, and
 // another retention another wording of this one.
 const (
 	declarationPrivacyText = "Ich bin einverstanden, dass der Träger die Angaben für die Ferienbetreuung nutzt. " +
@@ -39,7 +39,7 @@ const (
 		"Sie sieht die Angaben ab der Bestätigung bis zum letzten Tag der Woche."
 	declarationBindingText = "Ich weiß, dass die Anmeldung verbindlich ist."
 	declarationCustodyText = "Ich darf die Anmeldung allein abgeben: Ich bin allein sorgeberechtigt oder die andere sorgeberechtigte Person ist einverstanden."
-	declarationNameText    = "Mit Ihrem Namen geben Sie die Erklärungen oben ab."
+	declarationNameText    = "Mit deinem Namen gibst du die Erklärungen oben ab."
 )
 
 func TestHolidayOfferServesTheTextsOfTheCurrentVersion(t *testing.T) {
@@ -54,7 +54,7 @@ func TestHolidayOfferServesTheTextsOfTheCurrentVersion(t *testing.T) {
 		ConsentTexts enrollment.HolidayConsentTexts `json:"consent_texts"`
 	}](t, rec.Body.Bytes())
 	assert.Equal(t, enrollment.HolidayConsentTexts{
-		Version: 5, RetentionDays: 365, PrivacyConsent: declarationPrivacyText, HealthConsent: declarationHealthText,
+		Version: 6, RetentionDays: 365, PrivacyConsent: declarationPrivacyText, HealthConsent: declarationHealthText,
 		BindingConfirmed: declarationBindingText, CustodyConfirmed: declarationCustodyText, DeclarationName: declarationNameText,
 	}, offer.ConsentTexts)
 	for _, word := range []string{"Unterschrift", "unterschreib", "schriftlich"} {
@@ -116,7 +116,7 @@ func TestHolidayRegistrationRequiresTheCustodyAndTheName(t *testing.T) {
 		SameAt  bool   `bun:"same_at"`
 		Name    string `bun:"declaration_name"`
 		Version int    `bun:"consent_version"`
-	}{Custody: true, SameAt: true, Name: "Eva Muster", Version: 5}, stored, "the custody, the trimmed name and version 5 are stored")
+	}{Custody: true, SameAt: true, Name: "Eva Muster", Version: 6}, stored, "the custody, the trimmed name and version 6 are stored")
 }
 
 // declarationMail is the declaration of a receipt mail as Delivery stores it.
