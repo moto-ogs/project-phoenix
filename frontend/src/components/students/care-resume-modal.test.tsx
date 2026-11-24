@@ -4,6 +4,7 @@ import { setTestClock } from "~/test/clock";
 
 import { ModalProvider } from "~/components/ui/modal-context";
 import { ApiError } from "~/lib/api-error";
+import { errorFromProblem } from "~/test/helpers/problem-response";
 import { CareResumeModal } from "./care-resume-modal";
 
 const { mockResume } = vi.hoisted(() => ({ mockResume: vi.fn() }));
@@ -38,7 +39,7 @@ describe("CareResumeModal", () => {
 
   it("explains a full Kinderkontingent and keeps the dialog as entered", async () => {
     mockResume.mockRejectedValue(
-      new ApiError("child quota reached", 409, {
+      await errorFromProblem("child quota reached", 409, {
         code: "students.child_quota_reached",
         details: {
           booked_places: 50,

@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
+import { errorFromProblem } from "~/test/helpers/problem-response";
 import { CarePlanEditorModal } from "./care-plan-editor-modal";
 import type { ArrivalDayData } from "~/lib/arrival-schedule-helpers";
 import type { DayData as PickupDayData } from "~/lib/pickup-schedule-helpers";
@@ -690,7 +691,7 @@ describe("CarePlanEditorModal", () => {
 
   it("names the day from which the booked pickup time can be taken over", async () => {
     const onResetPickupToOffering = vi.fn().mockRejectedValueOnce(
-      new ApiError("request failed", 409, {
+      await errorFromProblem("request failed", 409, {
         code: "students.pickup_reset_still_needed",
         details: { needed_until: "09.11.2026", possible_from: "10.11.2026" },
       }),
