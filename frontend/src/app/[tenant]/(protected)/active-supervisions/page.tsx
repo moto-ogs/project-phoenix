@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, Suspense, useMemo, useCallback } from "react";
-import { UserPlus } from "lucide-react";
+import { Search, UserPlus } from "lucide-react";
+import { ActiveFilterChips } from "~/components/ui/page-header/ActiveFilterChips";
+import { OverlaySheet } from "~/components/ui/overlay-sheet";
+import { TenantPageSearchRow } from "~/components/ui/tenant-page-search-row";
 import { useSession } from "next-auth/react";
 import { sessionIdentityKey } from "~/lib/session-access";
 import { useSearchParams } from "next/navigation";
@@ -83,6 +86,13 @@ import { useSchulhofActions } from "~/components/active-supervisions/use-schulho
 import { AddUnplannedStudentModal } from "~/components/active-supervisions/add-unplanned-student-modal";
 import { PresentChildrenPicker } from "~/components/active-supervisions/present-children-picker";
 import { TimetableRosterContent } from "~/components/active-supervisions/timetable-roster";
+import { TimetableRosterApp } from "~/components/active-supervisions/timetable-roster-app";
+import { ActionBar } from "~/components/ui/action-bar";
+import { useDeviceContext } from "~/lib/device-context";
+import {
+  canStartPlannedInstance,
+  isPlannedStartExpired,
+} from "~/lib/timetable-lifecycle";
 import {
   SupervisionStudentGrid,
   buildSupervisionTableColumns,
@@ -147,6 +157,11 @@ function MeinRaumPageContent() {
     },
   });
   const memory = useSidebarMemory();
+  const [searchSheetOpen, setSearchSheetOpen] = useState(false);
+  // App-Oberfläche (#8070): eigene Liste, Kopf und Aktionsleiste. Der
+  // Desktop-Zweig bleibt der heutige Code.
+  const device = useDeviceContext();
+  const appMode = device.resolved && device.isApp;
 
   // Pre-select the session from the URL. `?session=<activeGroupId>` is the
   // precise key (parallel sessions can share one room, #2265); the legacy
@@ -420,7 +435,29 @@ function MeinRaumPageContent() {
     supervisionOccupancy,
     nfcEnabled,
   );
-  const supervisionSummary = supervisionName ? (
+  // In der App: Chips „13 / 20 da“, Raum, Betreuende.
+  const appSupervisionSummary = supervisionName ? (
+    <TenantPageStats
+      items={[
+        {
+          label:
+            supervisionOccupancy.limit != null && supervisionOccupancy.limit > 0
+              ? `${supervisionCount} / ${supervisionOccupancy.limit} da`
+              : `${supervisionCount} da`,
+        },
+        ...(supervisionOverbookedHint ? [{ label: OVERBOOKED_LABEL }] : []),
+        ...(headFacts.roomName ? [{ label: headFacts.roomName }] : []),
+        ...(headFacts.supervisorNames.length > 0
+          ? [{ label: headFacts.supervisorNames.join(", ") }]
+          : []),
+      ]}
+    />
+  ) : (
+    "Keine Aufsicht aktiv"
+  );
+  const supervisionSummary = appMode ? (
+    appSupervisionSummary
+  ) : supervisionName ? (
     <SupervisionHeadFacts
       childCount={
         supervisionOverbookedHint ? (
@@ -503,6 +540,50 @@ function MeinRaumPageContent() {
       </Button>
     ) : undefined;
 
+  // In der App: läuft schon eine Aufsicht, steht der spontane Start am
+  // Listenende; sonst ist er die Hauptaktion in der Leiste über der Pill.
+  const appHasRunningRoster = appMode && currentTimetableRoster !== null;
+  // Ohne laufende Aufsicht und ohne offenen Raum gibt es in der App keine
+  // Liste: keine Suche, kein „Keine Kinder in diesem Raum“.
+  const appHasList =
+    currentTimetableRoster !== null ||
+    currentOpenRoom !== null ||
+    currentRoom !== null;
+  const appStartablePlanned = appMode
+    ? [...plannedNow]
+        .filter(
+          (instance) =>
+            !isPlannedStartExpired(instance.startExpiresAt, now) &&
+            canStartPlannedInstance(instance, now),
+        )
+        .sort((a, b) => a.minutesUntilStart - b.minutesUntilStart)[0]
+    : undefined;
+  const renderAppSpontaneousTrigger = ({
+    open,
+    disabled,
+  }: {
+    open: () => void;
+    disabled: boolean;
+  }) => {
+    const button = (
+      <Button
+        type="button"
+        variant={
+          appHasRunningRoster || appStartablePlanned ? "outline" : "success"
+        }
+        size="md"
+        disabled={disabled}
+        disabledReason={spontaneousStartBlockedReason}
+        tooltip="Öffnet ein Fenster: Aktivität wählen, Raum belegen, Kinder danach hinzufügen."
+        onClick={open}
+      >
+        Spontane Aktivität starten
+      </Button>
+    );
+    if (appHasRunningRoster) return button;
+    if (appStartablePlanned) return button;
+    return <ActionBar>{button}</ActionBar>;
+  };
   const spontaneousStartBanner = dashboard.webSpontaneousActivitiesEnabled ? (
     <SpontaneousActivityStart
       canCreateExternalCaregiver={hasPermission(session, "users:create")}
@@ -516,6 +597,7 @@ function MeinRaumPageContent() {
       onStart={(payload) =>
         void actions.handleStartSpontaneousActivity(payload)
       }
+      renderTrigger={appMode ? renderAppSpontaneousTrigger : undefined}
     />
   ) : null;
   // Das Banner steht über jeder Aufsicht, die nach dem Beenden offen ist. Es
@@ -753,6 +835,18 @@ function MeinRaumPageContent() {
         tenantPath(`/students/${row.studentId}?from=/active-supervisions`)
     : undefined;
 
+  // Kinder in einen Raum setzen ist eine Verwaltungsaktion. Einen
+  // offenen Raum oder eine fremde Sitzung zu sehen verleiht sie
+  // nicht (#3065, #5035); wer dort die Aufsicht hat, behält sie,
+  // die Verwaltung auch auf fremden Sitzungen (canAssign).
+  const transitSection = (
+    currentOpenRoom ? currentOpenRoom.isUserSupervising : currentRoom?.canAssign
+  ) ? (
+    <Suspense fallback={null}>
+      <TransitStudentsSection fromReferrer="/active-supervisions" collapsible />
+    </Suspense>
+  ) : null;
+
   // Render helper for student grid content
   const renderStudentContent = (
     tableSelection: StudentTableSelection | null,
@@ -798,6 +892,62 @@ function MeinRaumPageContent() {
             onPresentPickerAutoOpened: actions.clearPresentPickerAutoOpen,
           }}
         />
+      );
+    }
+
+    if (currentTimetableRoster && appMode) {
+      return (
+        <>
+          {actions.moveNotice && (
+            <div className="mb-4">
+              <Alert type="info" message={actions.moveNotice} />
+            </div>
+          )}
+          <TimetableRosterApp
+            addStudentSearch={actions.addStudentSearch}
+            addStudentError={actions.addStudentError}
+            attendanceWebEnabled={attendanceWebEnabled}
+            isAddingStudent={actions.isAddingStudent}
+            isCompletingInstance={actions.isCompletingInstance}
+            isConfirmingExpected={actions.isConfirmingExpected}
+            roster={currentTimetableRoster}
+            showTimetableCounts={showTimetableCounts}
+            occupancy={supervisionOccupancy}
+            onAddStudent={actions.handleAddUnplannedStudent}
+            onAddPresentStudents={
+              hasPermission(session, "users:read")
+                ? actions.handleAddPresentStudents
+                : undefined
+            }
+            presentChildrenPicker={PresentChildrenPicker}
+            addUnplannedStudentModal={AddUnplannedStudentModal}
+            presentPickerAutoOpen={
+              actions.presentPickerAutoOpenInstanceId ===
+              currentTimetableRoster.instance.id
+            }
+            onPresentPickerAutoOpened={actions.clearPresentPickerAutoOpen}
+            onComplete={actions.handleCompleteTimetableInstance}
+            onConfirmExpected={actions.handleConfirmExpectedStudents}
+            onRosterAction={actions.handleRosterAction}
+            onSaveHomeworkFeedback={actions.handleSaveHomeworkFeedback}
+            reloadAfterRefusal={actions.reloadRosterAfterRefusal}
+            onExcuseRestOfDay={
+              hasPermission(session, "users:update")
+                ? actions.handleExcuseRestOfDay
+                : undefined
+            }
+            studentProfileHref={studentProfileHref}
+            onSearchChange={actions.handleAddStudentSearchChange}
+            rowFilter={filters.rosterRowFilter}
+            listFooter={
+              <>
+                {spontaneousStartBanner}
+                {transitSection}
+                <PastBlocksSection onReopen={reopenPastBlock} />
+              </>
+            }
+          />
+        </>
       );
     }
 
@@ -882,7 +1032,21 @@ function MeinRaumPageContent() {
       actions={
         hasHeadActions || tableApplies ? (
           <>
-            {tableApplies ? (
+            {appHasRunningRoster ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Kinder suchen"
+                // Abstand zum „…“: beide behalten ihre 44-px-Trefferfläche.
+                className="mr-3"
+                tooltip="Öffnet Suche und Filter für die Kinderliste."
+                onClick={() => setSearchSheetOpen(true)}
+              >
+                <Search className="size-5" aria-hidden="true" />
+              </Button>
+            ) : null}
+            {tableApplies && !(appMode && !appHasList) ? (
               <CollectionViewSwitch
                 value={collectionView.view}
                 onChange={changeView}
@@ -930,6 +1094,18 @@ function MeinRaumPageContent() {
         ) : undefined
       }
       tabs={supervisionTabs}
+      {...(appMode && appHasList && !appHasRunningRoster
+        ? {
+            search: {
+              value: filters.searchTerm,
+              onChange: filters.setSearchTerm,
+              placeholder: "Name suchen…",
+            },
+            filters: filters.filterConfigs,
+            activeFilters: filters.activeFilters,
+            onClearAllFilters: filters.clearAllFilters,
+          }
+        : {})}
       statsLoading={isPageLoading}
       loading={isPageLoading}
       loadingLabel="Aktuelle Aufsicht wird geladen…"
@@ -999,66 +1175,95 @@ function MeinRaumPageContent() {
       {showUnclaimedOnly ? (
         <>
           {reopenBanner}
-          {spontaneousStartBanner}
+          {appMode ? null : spontaneousStartBanner}
           <EmptyRoomsView />
           {/* The day review must survive the empty state: after the last block
               ends, supervisors land exactly here (#2335). */}
           <PastBlocksSection onReopen={reopenPastBlock} />
+          {appMode ? spontaneousStartBanner : null}
         </>
       ) : (
         <>
           {reopenBanner}
-          <PlannedNowSection
-            plannedNow={plannedNow}
-            hasActiveTimetableSession={
-              currentTimetableRoster !== null || hasOwnBlock(openRoomLayout)
-            }
-            isStartingInstance={actions.isStartingInstance}
-            onStart={(instance) =>
-              void actions.handleStartPlannedInstance(instance)
-            }
-          />
+          {appHasRunningRoster && !openRoomLayout ? null : (
+            <PlannedNowSection
+              plannedNow={plannedNow}
+              hasActiveTimetableSession={
+                currentTimetableRoster !== null || hasOwnBlock(openRoomLayout)
+              }
+              isStartingInstance={actions.isStartingInstance}
+              onStart={(instance) =>
+                void actions.handleStartPlannedInstance(instance)
+              }
+            />
+          )}
 
-          {spontaneousStartBanner}
+          {appMode ? null : spontaneousStartBanner}
 
           {superviseBlockedReason ? (
             <Alert type="info" message={superviseBlockedReason} />
           ) : null}
 
-          {/* Kinder in einen Raum setzen ist eine Verwaltungsaktion. Einen
-              offenen Raum oder eine fremde Sitzung zu sehen verleiht sie
-              nicht (#3065, #5035); wer dort die Aufsicht hat, behält sie,
-              die Verwaltung auch auf fremden Sitzungen (canAssign). */}
-          {(
-            currentOpenRoom
-              ? currentOpenRoom.isUserSupervising
-              : currentRoom?.canAssign
-          ) ? (
-            <Suspense fallback={null}>
-              <TransitStudentsSection
-                fromReferrer="/active-supervisions"
-                collapsible
-              />
-            </Suspense>
-          ) : null}
+          {/* In der App steht „Kinder unterwegs“ am Listenende. */}
+          {appHasRunningRoster && !openRoomLayout ? null : transitSection}
 
           {/* Die Suche steht direkt über den Kinderlisten, nicht in der
               Kopfkarte: dazwischen liegen sonst Als Nächstes, Kinder
               unterwegs und der Kopf des Blocks (#4353). Sie filtert jede
               Liste darunter, in offenen Räumen jeden Block. */}
-          <TenantPageListSearch
-            label="Kinder suchen"
-            search={{
-              value: filters.searchTerm,
-              onChange: filters.setSearchTerm,
-              placeholder: "Name suchen…",
-            }}
-            filters={filters.filterConfigs}
-            activeFilters={filters.activeFilters}
-            onClearAllFilters={filters.clearAllFilters}
-          />
+          {appHasRunningRoster ? (
+            <>
+              <ActiveFilterChips
+                filters={filters.activeFilters}
+                className="mb-4"
+              />
+              <OverlaySheet
+                open={searchSheetOpen}
+                onOpenChange={setSearchSheetOpen}
+                title="Kinder suchen"
+                footer={
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    className="w-full"
+                    noTooltip="Schließt nur das Blatt, die Liste bleibt gefiltert."
+                    onClick={() => setSearchSheetOpen(false)}
+                  >
+                    Fertig
+                  </Button>
+                }
+              >
+                <div role="search" aria-label="Kinder suchen">
+                  <TenantPageSearchRow
+                    search={{
+                      value: filters.searchTerm,
+                      onChange: filters.setSearchTerm,
+                      placeholder: "Name suchen…",
+                    }}
+                    filters={filters.filterConfigs}
+                    activeFilters={filters.activeFilters}
+                    onClearAllFilters={filters.clearAllFilters}
+                  />
+                </div>
+              </OverlaySheet>
+            </>
+          ) : null}
+          {appMode ? null : (
+            <TenantPageListSearch
+              label="Kinder suchen"
+              search={{
+                value: filters.searchTerm,
+                onChange: filters.setSearchTerm,
+                placeholder: "Name suchen…",
+              }}
+              filters={filters.filterConfigs}
+              activeFilters={filters.activeFilters}
+              onClearAllFilters={filters.clearAllFilters}
+            />
+          )}
 
-          {showTable ? (
+          {appMode && !appHasList ? null : showTable ? (
             <StudentSelectionScope
               visibleStudents={filters.filteredStudents}
               scopeKey={selectionScope}
@@ -1071,7 +1276,31 @@ function MeinRaumPageContent() {
           )}
 
           {/* End-of-day review of finished and expired blocks (#2335) */}
-          <PastBlocksSection onReopen={reopenPastBlock} />
+          {appHasRunningRoster && !openRoomLayout ? null : (
+            <PastBlocksSection onReopen={reopenPastBlock} />
+          )}
+          {/* In der App ohne laufende Aufsicht: Start am Ende, die Leiste
+              schwebt über der Pill. */}
+          {appMode && !appHasRunningRoster ? spontaneousStartBanner : null}
+          {appMode && !appHasRunningRoster && appStartablePlanned ? (
+            <ActionBar>
+              <Button
+                type="button"
+                variant="success"
+                size="md"
+                isLoading={
+                  actions.isStartingInstance === appStartablePlanned.id
+                }
+                loadingText="Startet…"
+                tooltip="Startet die Aufsicht sofort und öffnet die Kinderliste."
+                onClick={() =>
+                  void actions.handleStartPlannedInstance(appStartablePlanned)
+                }
+              >
+                {`${appStartablePlanned.title} starten`}
+              </Button>
+            </ActionBar>
+          ) : null}
         </>
       )}
     </TenantPage>
