@@ -2,15 +2,16 @@ package careplanhttp
 
 import (
 	context "context"
-	json "encoding/json"
 	errors "errors"
 	http "net/http"
 
 	chi "github.com/go-chi/chi/v5"
 	render "github.com/go-chi/render"
+
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	parentrequests "github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -74,7 +75,7 @@ func (rs *Resource) markParentRequestDone(w http.ResponseWriter, r *http.Request
 		return
 	}
 	var body markRequestDoneBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -166,7 +167,7 @@ func (rs *Resource) correctParentRequestDecision(w http.ResponseWriter, r *http.
 		return
 	}
 	var body correctRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

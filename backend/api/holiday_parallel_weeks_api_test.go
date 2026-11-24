@@ -69,8 +69,8 @@ func TestChildBooksOnlyOneOfTheParallelWeeks(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	period := decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())
 	offer := holidayOffer(t, f, period.PublicToken)
-	first := map[string]any{"week_id": offer.Weeks[0].ID, "time_model_id": offer.Weeks[0].TimeModels[0].ID}
-	second := map[string]any{"week_id": offer.Weeks[1].ID, "time_model_id": offer.Weeks[1].TimeModels[0].ID}
+	first := map[string]any{"week_id": fmt.Sprint(offer.Weeks[0].ID), "time_model_id": fmt.Sprint(offer.Weeks[0].TimeModels[0].ID)}
+	second := map[string]any{"week_id": fmt.Sprint(offer.Weeks[1].ID), "time_model_id": fmt.Sprint(offer.Weeks[1].TimeModels[0].ID)}
 
 	rec = publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken),
 		oneChildRegistration(offer, "beide@example.org", first, second))
@@ -110,8 +110,8 @@ func TestBookedWeeksOfOneChildCannotMoveOntoTheSameDays(t *testing.T) {
 	offer := holidayOffer(t, f, period.PublicToken)
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken),
 		oneChildRegistration(offer, "zwei@example.org",
-			map[string]any{"week_id": offer.Weeks[0].ID, "time_model_id": offer.Weeks[0].TimeModels[0].ID},
-			map[string]any{"week_id": offer.Weeks[1].ID, "time_model_id": offer.Weeks[1].TimeModels[0].ID}))
+			map[string]any{"week_id": fmt.Sprint(offer.Weeks[0].ID), "time_model_id": fmt.Sprint(offer.Weeks[0].TimeModels[0].ID)},
+			map[string]any{"week_id": fmt.Sprint(offer.Weeks[1].ID), "time_model_id": fmt.Sprint(offer.Weeks[1].TimeModels[0].ID)}))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
 	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayPeriodPath(int64(period.ID)), nil)
@@ -138,7 +138,7 @@ func TestUnbookedWeekMovesParallelToABookedWeek(t *testing.T) {
 	offer := holidayOffer(t, f, period.PublicToken)
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken),
 		oneChildRegistration(offer, "nur-erste@example.org",
-			map[string]any{"week_id": offer.Weeks[0].ID, "time_model_id": offer.Weeks[0].TimeModels[0].ID}))
+			map[string]any{"week_id": fmt.Sprint(offer.Weeks[0].ID), "time_model_id": fmt.Sprint(offer.Weeks[0].TimeModels[0].ID)}))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
 	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayPeriodPath(int64(period.ID)), nil)

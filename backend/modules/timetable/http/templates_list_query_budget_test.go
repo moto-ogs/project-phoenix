@@ -8,11 +8,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // TestListTemplatesQueryBudget keeps the period-scoped roster-maintenance
@@ -34,7 +35,7 @@ func TestListTemplatesQueryBudget(t *testing.T) {
 	addTemplates := func(n int) {
 		for range n {
 			body := createTemplateBody(s, fmt.Sprintf("Budget-Regeltermin-%d", created))
-			body["calendar_period_id"] = period.ID
+			body["calendar_period_id"] = fmt.Sprint(period.ID)
 			w := doTemplateJSON(t, router, http.MethodPost, "/templates", body)
 			require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 			created++
@@ -83,7 +84,7 @@ func TestListTargetedTemplatesQueryBudget(t *testing.T) {
 	add := func(n int) {
 		for range n {
 			body := createTemplateBody(s, fmt.Sprintf("Targeted-Budget-%d", created))
-			body["calendar_period_id"] = period.ID
+			body["calendar_period_id"] = fmt.Sprint(period.ID)
 			body["student_ids"] = []int64{}
 			body["target_group_type"] = "klasse"
 			body["targets"] = []map[string]any{{"type": "klasse", "school_class": "3a"}}

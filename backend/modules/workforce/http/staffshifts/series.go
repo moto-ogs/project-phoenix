@@ -4,10 +4,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/go-chi/render"
-
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // SeriesRequest is the create payload for a recurring shift series (#1889).
@@ -240,7 +239,7 @@ func buildSplit(id int64, req SeriesRequest) (workforce.SplitStaffShiftSeries, e
 
 func (rs *Resource) createSeries(w http.ResponseWriter, r *http.Request) {
 	var req SeriesRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.invalid(w, r, err)
 		return
 	}
@@ -272,7 +271,7 @@ func (rs *Resource) splitSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req SeriesSplitRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.invalid(w, r, err)
 		return
 	}

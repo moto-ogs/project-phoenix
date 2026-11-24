@@ -6,9 +6,9 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 
-	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -55,7 +55,7 @@ func (rs *StaffAdminResource) setVacationOpening(w http.ResponseWriter, r *http.
 		return
 	}
 	var req setVacationOpeningRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

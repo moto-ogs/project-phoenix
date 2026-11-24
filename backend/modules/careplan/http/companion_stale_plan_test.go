@@ -7,12 +7,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // putStudentExpect performs the student PUT and returns the recorder, for the
@@ -82,7 +83,7 @@ func TestUpdateStudent_PlanOnlyTrimNeedsBaseline(t *testing.T) {
 	putStudent(t, tc, companion.ID, widePlan(nil))
 	putStudent(t, tc, student.ID, widePlan(map[string]any{
 		"companions": []map[string]any{
-			{"companion_student_id": companion.ID, "weekdays": []string{"mon", "tue"}},
+			{"companion_student_id": fmt.Sprint(companion.ID), "weekdays": []string{"mon", "tue"}},
 		},
 		"companions_fingerprint": mondayLinkFingerprint(),
 	}))
@@ -176,7 +177,7 @@ func TestUpdateStudent_ReportsCompanionVerdict(t *testing.T) {
 	t.Run("a new link reports a change", func(t *testing.T) {
 		assert.True(t, *verdict(t, accompaniedPlanBody(map[string]any{
 			"companions": []map[string]any{
-				{"companion_student_id": companion.ID, "weekdays": []string{"mon"}},
+				{"companion_student_id": fmt.Sprint(companion.ID), "weekdays": []string{"mon"}},
 			},
 			"companions_fingerprint": mondayLinkFingerprint(),
 		})))
@@ -210,7 +211,7 @@ func TestUpdateStudent_CompanionsWithoutAccompaniedDayRefused(t *testing.T) {
 	putStudent(t, tc, companion.ID, accompaniedPlanBody(nil))
 	putStudent(t, tc, student.ID, accompaniedPlanBody(map[string]any{
 		"companions": []map[string]any{
-			{"companion_student_id": companion.ID, "weekdays": []string{"mon"}},
+			{"companion_student_id": fmt.Sprint(companion.ID), "weekdays": []string{"mon"}},
 		},
 		"companions_fingerprint": mondayLinkFingerprint(),
 	}))
@@ -231,7 +232,7 @@ func TestUpdateStudent_CompanionsWithoutAccompaniedDayRefused(t *testing.T) {
 	t.Run("a non-empty list is refused", func(t *testing.T) {
 		rr := putStudentExpect(t, tc, student.ID, alonePlan(map[string]any{
 			"companions": []map[string]any{
-				{"companion_student_id": companion.ID, "weekdays": []string{"mon"}},
+				{"companion_student_id": fmt.Sprint(companion.ID), "weekdays": []string{"mon"}},
 			},
 			"companions_fingerprint": mondayLinkFingerprint(companion.ID),
 		}))
@@ -274,7 +275,7 @@ func TestCompanionListReadCarriesTheFingerprintASaveSends(t *testing.T) {
 	}
 	link := func(fingerprint string, partnerID int64) *httptest.ResponseRecorder {
 		return putStudentExpect(t, tc, student.ID, accompaniedPlanBody(map[string]any{
-			"companions":             []map[string]any{{"companion_student_id": partnerID, "weekdays": []string{"mon"}}},
+			"companions":             []map[string]any{{"companion_student_id": fmt.Sprint(partnerID), "weekdays": []string{"mon"}}},
 			"companions_fingerprint": fingerprint,
 		}))
 	}

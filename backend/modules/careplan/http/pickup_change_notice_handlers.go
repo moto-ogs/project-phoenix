@@ -1,7 +1,6 @@
 package careplanhttp
 
 import (
-	json "encoding/json"
 	errors "errors"
 	http "net/http"
 	strconv "strconv"
@@ -11,6 +10,7 @@ import (
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // pickupChangeNoticeResponse is one unread marker of a changed pickup time
@@ -55,7 +55,7 @@ func (rs *Resource) readPickupChangeNotices(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	var body pickupChangeNoticesReadRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("invalid pickup change notice revisions")))
 		return
 	}

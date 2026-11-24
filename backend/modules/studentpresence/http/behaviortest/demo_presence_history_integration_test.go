@@ -10,14 +10,15 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil/routetest"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 	studentpresencehttp "github.com/moto-ogs/project-phoenix/modules/studentpresence/http"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // The public demo's route (ADR 0127) writes the days in the school of its
@@ -42,9 +43,9 @@ func TestDemoPresenceHistoryRouteWritesInTheSchoolOfThePath(t *testing.T) {
 		return day.BerlinMidnight().Add(time.Duration(hour)*time.Hour + time.Duration(minute)*time.Minute)
 	}
 	body, err := json.Marshal(map[string]any{"days": []map[string]any{{
-		"student_id": student.ID, "date": day.String(), "device_id": device.ID,
+		"student_id": fmt.Sprint(student.ID), "date": day.String(), "device_id": fmt.Sprint(device.ID),
 		"check_in": at(12, 0), "check_out": at(15, 30),
-		"visit": map[string]any{"activity_group_id": activity.ID, "room_id": room.ID,
+		"visit": map[string]any{"activity_group_id": fmt.Sprint(activity.ID), "room_id": fmt.Sprint(room.ID),
 			"session_start": at(12, 0), "session_end": at(16, 0), "entry": at(12, 10), "exit": at(15, 20)},
 	}}})
 	require.NoError(t, err)

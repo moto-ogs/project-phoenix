@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -58,7 +59,7 @@ func templateBodyFields(t *testing.T, body any) (map[string]any, bool) {
 	if body == nil {
 		return nil, false
 	}
-	encoded, err := json.Marshal(body)
+	encoded, err := wire.Marshal(body)
 	if err != nil {
 		return nil, false
 	}

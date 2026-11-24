@@ -11,12 +11,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func historyRouter(s *devSetup) chi.Router {
@@ -46,7 +47,7 @@ func TestDeviationHistory_ReturnsEventsWithResolvedNames(t *testing.T) {
 	testpkg.CreateTestInstanceStaff(t, s.db, inst.ID, s.staffB, testpkg.InstanceStaffOpts{})
 
 	w := doDev(t, router, inst.ID, map[string]any{
-		"substitutions": []map[string]any{{"absent_staff_id": s.staffA, "substitute_staff_id": s.staffY, "reason": "krank"}},
+		"substitutions": []map[string]any{{"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffY), "reason": "krank"}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 

@@ -133,15 +133,15 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 	_, northLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, north, "Lea", "Leitung")
 
 	rec := traegerLink(t, router, office.token, map[string]any{
-		"members": []map[string]int64{{"school_id": north, "staff_id": miraNorth.ID}, {"school_id": south, "staff_id": miraSouth.ID}},
+		"members": []map[string]string{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID)}, {"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(miraSouth.ID)}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	recordID := decode[staffRecordBody](t, rec).ID
 	rec = traegerJSON(t, router, office.token, http.MethodPost, fmt.Sprintf("/traeger/staff-records/%d/contracts", recordID), map[string]any{
 		"kind": "part_time", "starts_on": "2026-08-01",
 		"sites": []map[string]any{
-			{"school_id": north, "staff_id": miraNorth.ID, "weekday_minutes": []int{300, 300, 300, 300, 0}},
-			{"school_id": south, "staff_id": miraSouth.ID, "weekday_minutes": []int{0, 0, 0, 0, 240}},
+			{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID), "weekday_minutes": []int{300, 300, 300, 300, 0}},
+			{"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(miraSouth.ID), "weekday_minutes": []int{0, 0, 0, 0, 240}},
 		},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -152,11 +152,11 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 
 	t.Run("the school plans its morning as before", func(t *testing.T) {
 		rec := schoolShift(t, schoolShifts, north, northLead.ID, map[string]any{
-			"staff_id": miraNorth.ID, "date": "2026-11-23", "start_time": "08:00", "end_time": "13:00", "break_minutes": 0,
+			"staff_id": fmt.Sprint(miraNorth.ID), "date": "2026-11-23", "start_time": "08:00", "end_time": "13:00", "break_minutes": 0,
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		rec = schoolShift(t, schoolShifts, south, account.ID, map[string]any{
-			"staff_id": jonas.ID, "date": "2026-11-23", "start_time": "07:00", "end_time": "19:00", "break_minutes": 60,
+			"staff_id": fmt.Sprint(jonas.ID), "date": "2026-11-23", "start_time": "07:00", "end_time": "19:00", "break_minutes": 60,
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, "a person without Personalakte keeps the checks of the school: %s", rec.Body.String())
 	})
@@ -206,7 +206,7 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 
 	t.Run("the school sees the shifts of the other Einsatzort when it plans", func(t *testing.T) {
 		rec := schoolShift(t, schoolShifts, north, northLead.ID, map[string]any{
-			"staff_id": miraNorth.ID, "date": "2026-11-24", "start_time": "04:30", "end_time": "09:00", "break_minutes": 0,
+			"staff_id": fmt.Sprint(miraNorth.ID), "date": "2026-11-24", "start_time": "04:30", "end_time": "09:00", "break_minutes": 0,
 		})
 		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 		refusal := planningRefusalOf(t, rec)
@@ -216,7 +216,7 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 		assert.Equal(t, 630, refusal.Details.Warnings[0].Minutes, "south ends at 18:00, north would start at 04:30")
 
 		rec = schoolShift(t, schoolShifts, north, northLead.ID, map[string]any{
-			"staff_id": miraNorth.ID, "date": "2026-11-24", "start_time": "12:00", "end_time": "17:00", "break_minutes": 0,
+			"staff_id": fmt.Sprint(miraNorth.ID), "date": "2026-11-24", "start_time": "12:00", "end_time": "17:00", "break_minutes": 0,
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	})
@@ -336,7 +336,7 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 		})
 		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.shift_planning_off")
 		rec = schoolShift(t, schoolShifts, north, northLead.ID, map[string]any{
-			"staff_id": miraNorth.ID, "date": "2026-11-27", "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
+			"staff_id": fmt.Sprint(miraNorth.ID), "date": "2026-11-27", "start_time": "08:00", "end_time": "12:00", "break_minutes": 0,
 		})
 		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.shift_planning_off")
 
@@ -356,7 +356,7 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 			schoolShifts.ServeHTTP(out, req)
 			return out
 		}
-		rec = cancel([]map[string]any{{"staff_id": cover.ID, "start_time": "08:00", "end_time": "12:00", "break_minutes": 0}})
+		rec = cancel([]map[string]any{{"staff_id": fmt.Sprint(cover.ID), "start_time": "08:00", "end_time": "12:00", "break_minutes": 0}})
 		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.shift_planning_off")
 		rec = cancel([]map[string]any{})
 		assert.Less(t, rec.Code, 300, "cancelling without a cover stays possible: %s", rec.Body.String())
@@ -376,7 +376,7 @@ func TestTraegerStaffPlanningWeekQueryBudget(t *testing.T) {
 		atNorth, account := testpkg.CreateTestStaffWithAccountForTenant(t, db, north, "Mira", last)
 		atSouth := testpkg.CreateTestStaffForExistingAccountInTenant(t, db, south, account.ID, "Mira", last)
 		rec := traegerLink(t, router, office.token, map[string]any{
-			"members": []map[string]int64{{"school_id": north, "staff_id": atNorth.ID}, {"school_id": south, "staff_id": atSouth.ID}},
+			"members": []map[string]string{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(atNorth.ID)}, {"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(atSouth.ID)}},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		return int64(decode[staffRecordBody](t, rec).ID)

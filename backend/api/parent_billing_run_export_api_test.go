@@ -35,7 +35,7 @@ func TestReleasedBillingRunExportsTheOverviewForTheKaemmerei(t *testing.T) {
 	preview := billingRun(t, f, billing, int64(run.ID))
 	lia := preview.Documents[0].Children[0]
 	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/corrections"),
-		map[string]any{"registration_id": f.siblings, "child_id": lia.ChildID, "total_cents": 1000, "reason": "Härtefall"})
+		map[string]any{"registration_id": fmt.Sprint(f.siblings), "child_id": fmt.Sprint(lia.ChildID), "total_cents": 1000, "reason": "Härtefall"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
 	// A run in preview has issued nothing the Kämmerei could collect.

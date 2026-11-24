@@ -6,10 +6,10 @@ import (
 	"slices"
 	"time"
 
-	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // AdminSessionResponse is a work session as the admin session writes answer
@@ -90,7 +90,7 @@ type RebookAbsencesBody struct {
 // its id.
 func decodeRebookAbsences(r *http.Request) (workforce.RebookAbsencesRequest, error) {
 	var body RebookAbsencesBody
-	if err := render.DecodeJSON(r.Body, &body); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &body); err != nil {
 		return workforce.RebookAbsencesRequest{}, err
 	}
 	if slices.Contains(body.AbsenceIDs, 0) {

@@ -112,7 +112,7 @@ func TestBillingFamiliesShowEveryDocumentWhoPaysAndWhatIsOpen(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(run.ID), int64(first.ID)), map[string]any{"reason": "Anschrift falsch"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, creditPath(int64(run.ID), int64(second.ID)),
-		map[string]any{"child_id": child.ChildID, "amount_cents": 500, "reason": "Erster Tag krank"})
+		map[string]any{"child_id": fmt.Sprint(child.ChildID), "amount_cents": 500, "reason": "Erster Tag krank"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
 	// The family of the first invoice registers again for another period,

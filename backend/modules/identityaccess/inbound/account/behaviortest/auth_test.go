@@ -278,7 +278,7 @@ func TestRegister(t *testing.T) {
 			"username":         username,
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          validRoleID,
+			"role_id":          fmt.Sprint(validRoleID),
 			"first_name":       "Test",
 			"last_name":        "Register",
 		}
@@ -308,7 +308,7 @@ func TestRegister(t *testing.T) {
 			"username":         username1,
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          validRoleID,
+			"role_id":          fmt.Sprint(validRoleID),
 			"first_name":       "Dupe",
 			"last_name":        "Register",
 		}
@@ -336,7 +336,7 @@ func TestRegister(t *testing.T) {
 			"username":         fmt.Sprintf("weakpassuser_%d", time.Now().UnixNano()),
 			"password":         "weak",
 			"confirm_password": "weak",
-			"role_id":          validRoleID,
+			"role_id":          fmt.Sprint(validRoleID),
 		}
 
 		req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
@@ -353,7 +353,7 @@ func TestRegister(t *testing.T) {
 			"username":         fmt.Sprintf("mismatchuser_%d", time.Now().UnixNano()),
 			"password":         "SecurePass123!",
 			"confirm_password": "DifferentPass123!",
-			"role_id":          validRoleID,
+			"role_id":          fmt.Sprint(validRoleID),
 		}
 
 		req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
@@ -370,7 +370,7 @@ func TestRegister(t *testing.T) {
 			"username":         fmt.Sprintf("invaliduser_%d", time.Now().UnixNano()),
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          validRoleID,
+			"role_id":          fmt.Sprint(validRoleID),
 		}
 
 		req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
@@ -387,7 +387,7 @@ func TestRegister(t *testing.T) {
 			"username":         "ab",
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          validRoleID,
+			"role_id":          fmt.Sprint(validRoleID),
 		}
 
 		req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
@@ -410,7 +410,7 @@ func TestRegister(t *testing.T) {
 					"username":         fmt.Sprintf("noname_%s_%d", missing, time.Now().UnixNano()),
 					"password":         "SecurePass123!",
 					"confirm_password": "SecurePass123!",
-					"role_id":          validRoleID,
+					"role_id":          fmt.Sprint(validRoleID),
 				}
 				if missing != "first_name" {
 					body["first_name"] = "Namenlos"
@@ -453,7 +453,7 @@ func TestRegisterRejectsGuardianRole(t *testing.T) {
 		"username":         fmt.Sprintf("guardianrole_%d", time.Now().UnixNano()),
 		"password":         "SecurePass123!",
 		"confirm_password": "SecurePass123!",
-		"role_id":          guardianRole.ID,
+		"role_id":          fmt.Sprint(guardianRole.ID),
 	}
 
 	req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
@@ -475,7 +475,7 @@ func TestRegisterRequiresAdminAuth(t *testing.T) {
 			"username":         fmt.Sprintf("authuser_%d", time.Now().UnixNano()),
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          1,
+			"role_id":          "1",
 		}
 	}
 
@@ -554,7 +554,7 @@ func TestRegisterRequiresAdminAuth(t *testing.T) {
 			"username":         fmt.Sprintf("zerorole_%d", time.Now().UnixNano()),
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          0,
+			"role_id":          "0",
 		}
 
 		req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
@@ -572,7 +572,7 @@ func TestRegisterRequiresAdminAuth(t *testing.T) {
 			"username":         fmt.Sprintf("negrole_%d", time.Now().UnixNano()),
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          -1,
+			"role_id":          fmt.Sprint(-1),
 		}
 
 		req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
@@ -589,7 +589,7 @@ func TestRegisterRequiresAdminAuth(t *testing.T) {
 			"username":         fmt.Sprintf("badrole_%d", time.Now().UnixNano()),
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          99999,
+			"role_id":          "99999",
 		}
 		req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
 		req.Header.Set("Authorization", "Bearer "+adminToken)
@@ -607,7 +607,7 @@ func TestRegisterRequiresAdminAuth(t *testing.T) {
 			"username":         username,
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          validRoleID,
+			"role_id":          fmt.Sprint(validRoleID),
 			"first_name":       "Admin",
 			"last_name":        "Register",
 		}
@@ -1331,7 +1331,7 @@ func TestRolePermissionAssignment(t *testing.T) {
 		require.NoError(t, json.Unmarshal(read.Body.Bytes(), &selection))
 
 		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d/permissions", role.ID), map[string]any{
-			"permission_ids":   []int64{99999},
+			"permission_ids":   []string{fmt.Sprint(99999)},
 			"expected_version": selection.Data.Version,
 		})
 		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"roles:manage"})
@@ -1546,7 +1546,7 @@ func TestInvitationManagement(t *testing.T) {
 			"email":      "invalid-email",
 			"first_name": "Test",
 			"last_name":  "User",
-			"role_id":    1,
+			"role_id":    "1",
 		}
 
 		req := testutil.NewJSONRequest(t, "POST", "/auth/invitations", body)
@@ -1828,7 +1828,7 @@ func TestInvitationCreateSuccess(t *testing.T) {
 		inviteeEmail := fmt.Sprintf("invitee-%d@test.local", time.Now().UnixNano())
 		body := map[string]interface{}{
 			"email":      inviteeEmail,
-			"role_id":    role.ID,
+			"role_id":    fmt.Sprint(role.ID),
 			"first_name": "Test",
 			"last_name":  "Invitee",
 		}
@@ -1859,7 +1859,7 @@ func TestInvitationCreateSuccess(t *testing.T) {
 		inviteeEmail := fmt.Sprintf("slug-test-%d@test.local", time.Now().UnixNano())
 		createBody := map[string]interface{}{
 			"email":      inviteeEmail,
-			"role_id":    role.ID,
+			"role_id":    fmt.Sprint(role.ID),
 			"first_name": "Slug",
 			"last_name":  "Test",
 		}
@@ -1921,7 +1921,7 @@ func TestLinkToTenant(t *testing.T) {
 		// The identity fields are required for a staff-tier role (#2222).
 		body := map[string]interface{}{
 			"email":      email,
-			"role_id":    validRoleID,
+			"role_id":    fmt.Sprint(validRoleID),
 			"first_name": "Link",
 			"last_name":  "Success",
 		}
@@ -1942,7 +1942,7 @@ func TestLinkToTenant(t *testing.T) {
 	t.Run("returns 404 for non-existent email", func(t *testing.T) {
 		body := map[string]interface{}{
 			"email":      fmt.Sprintf("nonexistent-%d@example.com", time.Now().UnixNano()),
-			"role_id":    validRoleID,
+			"role_id":    fmt.Sprint(validRoleID),
 			"first_name": "Nicht",
 			"last_name":  "Vorhanden",
 		}
@@ -1957,7 +1957,7 @@ func TestLinkToTenant(t *testing.T) {
 	t.Run("returns 401 without auth", func(t *testing.T) {
 		body := map[string]interface{}{
 			"email":   "someone@example.com",
-			"role_id": validRoleID,
+			"role_id": fmt.Sprint(validRoleID),
 		}
 
 		req := testutil.NewJSONRequest(t, "POST", "/auth/link-to-tenant", body)
@@ -2029,7 +2029,7 @@ func TestCreateInvitationRequiresRoleGrantAuthority(t *testing.T) {
 
 	body := map[string]any{
 		"email":   fmt.Sprintf("invitee-%d@example.com", time.Now().UnixNano()),
-		"role_id": role.ID,
+		"role_id": fmt.Sprint(role.ID),
 	}
 
 	req := testutil.NewJSONRequest(t, "POST", "/auth/invitations", body)
@@ -2064,7 +2064,7 @@ func TestRoleAssignmentEndpointsRejectEscalation(t *testing.T) {
 			"email":    fmt.Sprintf("newadmin-%d@example.com", time.Now().UnixNano()),
 			"username": fmt.Sprintf("newadmin%d", time.Now().UnixNano()),
 			"password": "Test1234%",
-			"role_id":  adminRole.ID,
+			"role_id":  fmt.Sprint(adminRole.ID),
 		}
 		req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
 		rr := testutil.ExecuteWithAuthPermissions(t, router, req, claims, betreuer)
@@ -2075,7 +2075,7 @@ func TestRoleAssignmentEndpointsRejectEscalation(t *testing.T) {
 	t.Run("link-to-tenant rejects users:create", func(t *testing.T) {
 		body := map[string]any{
 			"email":   account.Email,
-			"role_id": adminRole.ID,
+			"role_id": fmt.Sprint(adminRole.ID),
 		}
 		req := testutil.NewJSONRequest(t, "POST", "/auth/link-to-tenant", body)
 		rr := testutil.ExecuteWithAuthPermissions(t, router, req, claims, betreuer)
@@ -2091,7 +2091,7 @@ func TestRoleAssignmentEndpointsRejectEscalation(t *testing.T) {
 			"username":         fmt.Sprintf("realadmin%d", time.Now().UnixNano()),
 			"password":         "Test1234%",
 			"confirm_password": "Test1234%",
-			"role_id":          adminRole.ID,
+			"role_id":          fmt.Sprint(adminRole.ID),
 			"first_name":       "Echter",
 			"last_name":        "Admin",
 		}

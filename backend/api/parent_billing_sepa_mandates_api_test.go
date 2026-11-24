@@ -95,7 +95,7 @@ func createMandate(t *testing.T, f careBillingFixture, body map[string]any) sepa
 }
 
 func mandateBody(contract int64, reference string) map[string]any {
-	return map[string]any{"contract_id": contract, "reference": reference, "signed_on": "2026-09-01", "kind": "recurring",
+	return map[string]any{"contract_id": fmt.Sprint(contract), "reference": reference, "signed_on": "2026-09-01", "kind": "recurring",
 		"sequence": "recurring", "account_holder": "Eva Beispiel", "iban": "de89 3704 0044 0532 0130 00"}
 }
 

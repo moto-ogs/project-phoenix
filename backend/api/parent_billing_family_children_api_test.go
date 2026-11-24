@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -38,7 +39,7 @@ type familyChildrenSetBody struct {
 }
 
 func familyChildren(contractID int64, children int, from string) map[string]any {
-	return map[string]any{"contract_id": contractID, "children": children, "valid_from": from}
+	return map[string]any{"contract_id": fmt.Sprint(contractID), "children": children, "valid_from": from}
 }
 
 // A family of three with one child under contract: the sibling rule that
@@ -169,9 +170,9 @@ func TestFamilyChildrenAreCheckedNeedTheRightAndAreRecorded(t *testing.T) {
 		familyChildren(mia, 0, "2026-09-01"),
 		familyChildren(mia, 21, "2026-09-01"),
 		familyChildren(mia, -1, "2026-09-01"),
-		{"contract_id": mia, "children": 3},
-		{"contract_id": mia, "children": 3, "valid_from": "2026-09-01", "valid_until": "2026-08-31"},
-		{"contract_id": mia, "children": 2.5, "valid_from": "2026-09-01"},
+		{"contract_id": fmt.Sprint(mia), "children": 3},
+		{"contract_id": fmt.Sprint(mia), "children": 3, "valid_from": "2026-09-01", "valid_until": "2026-08-31"},
+		{"contract_id": fmt.Sprint(mia), "children": 2.5, "valid_from": "2026-09-01"},
 	} {
 		rec := confirmFamily(t, f.traeger, f.office.token, body)
 		assert.Equal(t, http.StatusBadRequest, rec.Code, "%v: %s", body, rec.Body.String())

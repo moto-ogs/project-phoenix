@@ -7,11 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // The admin bypass is granted by the validated HTTP principal, not by
@@ -32,7 +33,7 @@ func checkMoveBypassAuthorization(t *testing.T, graph *goldenRuntime) {
 	now := time.Now().Add(-time.Minute)
 	testpkg.CreateTestAttendance(t, db, child.ID, staff.ID, device.ID, now, nil)
 	testpkg.CreateTestVisit(t, db, child.ID, source.ID, now, nil)
-	body := fmt.Sprintf(`{"student_ids":[%d],"target_active_group_id":%d}`, child.ID, target.ID)
+	body := fmt.Sprintf(`{"student_ids":["%d"],"target_active_group_id":"%d"}`, child.ID, target.ID)
 	request := func(token string) *httptest.ResponseRecorder {
 		return checkpointRequest(graph, checkpointScenario{
 			Method: http.MethodPost, Path: "/api/active/visits/move-to-group", Authenticated: token != "", Body: body,
@@ -57,7 +58,7 @@ func checkMoveBypassAuthorization(t *testing.T, graph *goldenRuntime) {
 	foreignToken := testpkg.MintLiveSessionJWT(t, db, testutil.AdminTestClaimsForTenant(int(foreignAccount.ID), foreignTenant))
 	foreignMove := checkpointRequest(graph, checkpointScenario{
 		Method: http.MethodPost, Path: "/api/active/visits/move-to-group", Authenticated: true,
-		Body: fmt.Sprintf(`{"student_ids":[%d],"target_active_group_id":%d}`, child.ID, foreignTarget.ID),
+		Body: fmt.Sprintf(`{"student_ids":["%d"],"target_active_group_id":"%d"}`, child.ID, foreignTarget.ID),
 	}, foreignToken)
 	require.Equal(t, http.StatusConflict, foreignMove.Code, foreignMove.Body.String())
 	assert.Contains(t, foreignMove.Body.String(), `"code":"general.business_rejection"`)

@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -21,7 +23,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
-	"github.com/stretchr/testify/require"
 )
 
 // These are resource HTTP tests with real owner bindings. The test router
@@ -166,7 +167,7 @@ func TestStudents20CompanionsGrowthQueryBudget(t *testing.T) {
 		}
 		entries := make([]map[string]any, 0, n)
 		for _, id := range ids {
-			entries = append(entries, map[string]any{"companion_student_id": id, "weekdays": []string{"mon"}})
+			entries = append(entries, map[string]any{"companion_student_id": fmt.Sprint(id), "weekdays": []string{"mon"}})
 		}
 		putStudent(t, tc, child.ID, accompaniedPlanBody(map[string]any{"companions": entries, "companions_fingerprint": mondayLinkFingerprint(previous...)}))
 		counter.Reset()

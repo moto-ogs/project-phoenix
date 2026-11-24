@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -25,7 +27,7 @@ func seedTraegerCatalog(client *Client, auth AuthRef, today calendar.Date, schoo
 		"name": fmt.Sprintf("Trägerphase Schuljahr %d/%02d", year, (year+1)%100), "kind": "school_year",
 		"service_start_date": calendar.NewDate(year, time.August, 1).String(),
 		"service_end_date":   calendar.NewDate(year+1, time.July, 31).String(),
-		"school_ids":         schools[:2],
+		"school_ids":         ident.IDs(schools[:2]),
 	})
 	if err != nil {
 		return fmt.Errorf("create the Träger phase: %w", err)

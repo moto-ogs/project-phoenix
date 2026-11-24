@@ -15,7 +15,7 @@ func TestHolidayAllocationCriterionScopeStaysAfterTheFirstAnswer(t *testing.T) {
 	t.Parallel()
 	a := newAllocationFixture(t, "Träger Kriterienbezug")
 	// The editor opened before the first answer was submitted.
-	stale := map[string]any{"criteria": []map[string]any{{"id": a.working, "name": "Berufstätig", "question": "Sind Sie berufstätig?", "scope": "child", "active": true}}}
+	stale := map[string]any{"criteria": []map[string]any{{"id": fmt.Sprint(a.working), "name": "Berufstätig", "question": "Sind Sie berufstätig?", "scope": "child", "active": true}}}
 	read := criteriaVersion(t, a.traeger, a.office.token)
 	a.submitCriteria(t, "bezug@example.org", true, false)
 	rec := saveHolidayCriteria(t, a.traeger, a.office.token, read, stale)
@@ -29,8 +29,8 @@ func TestHolidayAllocationCriterionScopeStaysAfterTheFirstAnswer(t *testing.T) {
 	// A colleague renames the criteria; a save over the version read before
 	// is refused and writes nothing (ADR 0311).
 	renamed := map[string]any{"criteria": []map[string]any{
-		{"id": a.working, "name": "Beide berufstätig", "question": "Sind Sie berufstätig?", "scope": "family", "active": true},
-		{"id": a.sibling, "name": "Geschwister", "question": "Ist ein Geschwisterkind schon in der OGS?", "scope": "child", "active": true},
+		{"id": fmt.Sprint(a.working), "name": "Beide berufstätig", "question": "Sind Sie berufstätig?", "scope": "family", "active": true},
+		{"id": fmt.Sprint(a.sibling), "name": "Geschwister", "question": "Ist ein Geschwisterkind schon in der OGS?", "scope": "child", "active": true},
 	}}
 	rec = saveHolidayCriteria(t, a.traeger, a.office.token, read, renamed)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

@@ -85,7 +85,7 @@ func TestSEPAMandateImportFindsThePayerByTheFamilysDebtorNumber(t *testing.T) {
 	mia, _, _ := siblingContracts(t, f, f.office.schools[0])
 	saveCreditor(t, f, map[string]any{"creditor_id": sepaCreditorID, "prenotification_days": 14, "missing_mandate": "transfer"})
 	rec := putFamilyBilling(t, f.traeger, f.office.token,
-		map[string]any{"contract_id": mia, "recipient_kind": "applicant", "debtor_number": "70001"})
+		map[string]any{"contract_id": fmt.Sprint(mia), "recipient_kind": "applicant", "debtor_number": "70001"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	file := ogsConnectFile(

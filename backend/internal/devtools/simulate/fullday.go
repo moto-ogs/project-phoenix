@@ -377,8 +377,8 @@ func (seedStaffFeedTombstoneAction) Run(_ context.Context, rt *Runtime) error {
 		"start_time": "07:00",
 		"end_time":   "07:30",
 		"title":      "Abgesagter Demo-Termin",
-		"room_id":    rt.State.Rooms[roomNames[0]],
-		"staff_ids":  []int64{rt.State.Accounts.Betreuer[0].StaffID},
+		"room_id":    ident.ID(rt.State.Rooms[roomNames[0]]),
+		"staff_ids":  []ident.ID{ident.ID(rt.State.Accounts.Betreuer[0].StaffID)},
 	}
 	created, err := rt.Client.Post("/api/timetable/instances", body)
 	if err != nil {
@@ -429,8 +429,8 @@ func (independentRoomStaysAction) Run(_ context.Context, rt *Runtime) error {
 	}
 
 	if _, err := rt.Client.Post("/api/active/visits/move-to-room", map[string]any{
-		"student_ids":    studentIDs,
-		"target_room_id": sporthalle,
+		"student_ids":    ident.IDs(studentIDs),
+		"target_room_id": ident.ID(sporthalle),
 	}); err != nil {
 		return fmt.Errorf("move children into the released Sporthalle: %w", err)
 	}
@@ -488,9 +488,9 @@ func (openRoomBlockAction) Run(_ context.Context, rt *Runtime) error {
 		"start_time":  openRoomBlockStart.String(),
 		"end_time":    openRoomBlockEnd.String(),
 		"title":       openRoomBlockTitle,
-		"room_id":     sporthalle,
-		"staff_ids":   []int64{caregiver},
-		"student_ids": studentIDs,
+		"room_id":     ident.ID(sporthalle),
+		"staff_ids":   []ident.ID{ident.ID(caregiver)},
+		"student_ids": ident.IDs(studentIDs),
 	})
 	if err != nil {
 		return fmt.Errorf("plan the block in the released Sporthalle: %w", err)

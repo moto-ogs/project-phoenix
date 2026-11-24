@@ -5,10 +5,13 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/moto-ogs/project-phoenix/modules/timetable"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ADR 0311: the weekday rows of a series in a planning period belong to the
@@ -26,11 +29,11 @@ func TestTemplateUpdateRefusesAWeekdayMoveSinceItsRead(t *testing.T) {
 
 	body := func(name string, monday, wednesday []int64) map[string]any {
 		b := createTemplateBody(s, name)
-		b["calendar_period_id"] = period.ID
-		b["student_ids"] = []int64{s.studentA, s.studentB}
+		b["calendar_period_id"] = fmt.Sprint(period.ID)
+		b["student_ids"] = []string{fmt.Sprint(s.studentA), fmt.Sprint(s.studentB)}
 		b["weekday_assignments"] = []map[string]any{
-			{"weekday": timetable.WeekdayMonday, "staff_ids": []int64{s.staffA, s.staffB}, "student_ids": monday, "primary_staff_id": s.staffB},
-			{"weekday": timetable.WeekdayWednesday, "staff_ids": []int64{s.staffA, s.staffB}, "student_ids": wednesday, "primary_staff_id": s.staffB},
+			{"weekday": timetable.WeekdayMonday, "staff_ids": []string{fmt.Sprint(s.staffA), fmt.Sprint(s.staffB)}, "student_ids": testpkg.IDsOf[testpkg.ID](monday), "primary_staff_id": fmt.Sprint(s.staffB)},
+			{"weekday": timetable.WeekdayWednesday, "staff_ids": []string{fmt.Sprint(s.staffA), fmt.Sprint(s.staffB)}, "student_ids": testpkg.IDsOf[testpkg.ID](wednesday), "primary_staff_id": fmt.Sprint(s.staffB)},
 		}
 		return b
 	}

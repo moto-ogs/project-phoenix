@@ -3,6 +3,8 @@ package api
 import (
 	"errors"
 	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // „Person einstellen“ (#7206): the Personalverwaltung of the demo Träger
@@ -20,7 +22,7 @@ func seedTraegerStaffHire(client *Client, auth AuthRef, schoolID int64) (bool, e
 		"first_name": "Lena", "last_name": "Brandt", "birthday": "1990-04-12",
 		"email": "lena.brandt@ganztag-nord.example", "personnel_number": seedTraegerHireNumber,
 		"contract": map[string]any{"kind": "part_time", "starts_on": seedTraegerContractStart},
-		"sites":    []map[string]any{{"school_id": schoolID, "weekday_minutes": []int{240, 240, 240, 240, 0}}},
+		"sites":    []map[string]any{{"school_id": ident.ID(schoolID), "weekday_minutes": []int{240, 240, 240, 240, 0}}},
 		// A demo person of another run may share name and birthday.
 		"confirm_duplicate": true,
 	})

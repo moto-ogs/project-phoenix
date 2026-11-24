@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"testing"
@@ -73,7 +74,7 @@ func TestParentBillingRebookingPreservesCalendarRefusal(t *testing.T) {
 			previousDay.Date = calendar.NewDate(2027, 1, 4)
 			router := parentBillingCalendarRouter(t, f, owners.HolidayTestSchoolCalendar{previousDay, day})
 			path := holidayRebookPath(int64(f.period.ID), int64(registration.ID), int64(before.Children[0].ID))
-			rebook := map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}}
+			rebook := map[string]any{"bookings": []map[string]any{{"week_id": fmt.Sprint(second.ID), "time_model_id": fmt.Sprint(second.TimeModels[0].ID)}}}
 
 			rec := putReadRegistrationVia(t, f.traeger, router, f.office.token, path, rebook)
 			assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
@@ -103,12 +104,12 @@ func TestParentBillingRebookingPreservesCalendarRefusal(t *testing.T) {
 			assert.NotContains(t, rec.Body.String(), day.Name, "a foreign office receives no calendar details")
 
 			// The same week may be kept even after it became closed.
-			keep := map[string]any{"bookings": []map[string]any{{"week_id": first.ID, "time_model_id": first.TimeModels[0].ID}}}
+			keep := map[string]any{"bookings": []map[string]any{{"week_id": fmt.Sprint(first.ID), "time_model_id": fmt.Sprint(first.TimeModels[0].ID)}}}
 			rec = putReadRegistrationVia(t, f.traeger, router, f.office.token, path, keep)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			assert.Equal(t, contribution, readContribution())
 
-			invalid := map[string]any{"bookings": []map[string]any{{"week_id": first.ID, "time_model_id": second.TimeModels[0].ID}}}
+			invalid := map[string]any{"bookings": []map[string]any{{"week_id": fmt.Sprint(first.ID), "time_model_id": fmt.Sprint(second.TimeModels[0].ID)}}}
 			rec = putReadRegistrationVia(t, f.traeger, router, f.office.token, path, invalid)
 			require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 			var validation holidayErrorBody

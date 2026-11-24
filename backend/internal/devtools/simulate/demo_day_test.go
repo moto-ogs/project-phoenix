@@ -10,9 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Friday 2026-09-11, a care day; the clock is set per test in Berlin time.
@@ -612,8 +613,8 @@ func TestDemoDayRebuildsAnEndedDayForALateVisitor(t *testing.T) {
 	byTitle := createdByTitle(client)
 	assert.Equal(t, "18:30", byTitle["Basteln"]["start_time"], "the AGs run again around the current hour")
 	assert.Equal(t, "19:30", byTitle["Fußball"]["start_time"])
-	assert.Equal(t, []int64{11, 12}, byTitle["Basteln"]["student_ids"])
-	assert.Equal(t, []int64{11, 12}, byTitle["Fußball"]["student_ids"])
+	assert.Equal(t, []ident.ID{11, 12}, byTitle["Basteln"]["student_ids"])
+	assert.Equal(t, []ident.ID{11, 12}, byTitle["Fußball"]["student_ids"])
 	assert.Empty(t, day.home, "the children come again")
 
 	// While the new afternoon runs, nothing is rebuilt.

@@ -104,8 +104,8 @@ func newHolidayHostFixture(t *testing.T, name string) holidayHostFixture {
 	siblings := submit(siblingsRegistration(offer, "eva.muster@example.org"))
 	tom := siblingsRegistration(offer, "tom.beispiel@example.org")
 	tom["children"] = []map[string]any{{
-		"first_name": "Tom", "last_name": "Beispiel", "birth_date": "2017-05-20", "home_school_id": offer.Schools[1].ID,
-		"bookings": []map[string]any{{"week_id": offer.Weeks[0].ID, "time_model_id": offer.Weeks[0].TimeModels[0].ID}},
+		"first_name": "Tom", "last_name": "Beispiel", "birth_date": "2017-05-20", "home_school_id": fmt.Sprint(offer.Schools[1].ID),
+		"bookings": []map[string]any{{"week_id": fmt.Sprint(offer.Weeks[0].ID), "time_model_id": fmt.Sprint(offer.Weeks[0].TimeModels[0].ID)}},
 	}}
 	submit(tom)
 	// Both stand for registrations from before the consent texts of version 2

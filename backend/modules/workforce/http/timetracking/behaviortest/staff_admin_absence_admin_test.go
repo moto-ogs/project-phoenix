@@ -16,12 +16,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // insertAbsenceType writes one active.staff_absence_types row (a school-defined
@@ -33,7 +34,7 @@ func insertAbsenceType(t *testing.T, tc *testContext, name string, allowanceEnab
 		"base_type":         absenceTypeOther,
 		"is_active":         true,
 		"allowance_enabled": allowanceEnabled,
-		"tenant_id":         testpkg.Tenant(t),
+		"tenant_id":         fmt.Sprint(testpkg.Tenant(t)),
 	}
 	var id int64
 	require.NoError(t, tc.db.NewInsert().
@@ -434,7 +435,7 @@ func TestAdminCreateStaffAbsence_RejectsBlockedCustomAllowanceOverrun(t *testing
 	tomorrow := today.AddDays(1)
 	rec := postAbsence(t, tc, token, subjectID, map[string]any{
 		"absence_type":    "other",
-		"absence_type_id": absenceTypeID,
+		"absence_type_id": fmt.Sprint(absenceTypeID),
 		"date_start":      tomorrow.String(),
 		"date_end":        tomorrow.String(),
 	})
@@ -516,13 +517,13 @@ func TestApproveAbsence_RejectsBeyondVacationQuota(t *testing.T) {
 	require.Equal(t, http.StatusOK, quota.Code, quota.Body.String())
 	monday := testpkg.Date(2027, time.February, 15)
 	absenceID := insertAbsenceRow(t, tc, map[string]any{
-		"staff_id":     subject.ID,
+		"staff_id":     fmt.Sprint(subject.ID),
 		"absence_type": absenceTypeVacation,
 		"date_start":   monday.String(),
 		"date_end":     monday.AddDays(2).String(),
 		"working_days": 3.0,
 		"status":       absenceStatusReqd,
-		"created_by":   subject.ID,
+		"created_by":   fmt.Sprint(subject.ID),
 		"requested_at": time.Now(),
 	})
 

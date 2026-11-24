@@ -13,15 +13,16 @@ import (
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	apiTest "github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	timetableAPI "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 type idempotentCreateSetup struct {
@@ -101,7 +102,7 @@ func TestCreateInstance_IdempotencyKeyDeduplicatesOnlyOneCreateOperation(t *test
 	title := fmt.Sprintf("Idempotent manual instance %d", suffix)
 	body := map[string]any{
 		"date": nextCreateWorkday().String(), "start_time": "10:00", "end_time": "11:00",
-		"title": title, "room_id": setup.roomID,
+		"title": title, "room_id": fmt.Sprint(setup.roomID),
 	}
 
 	first := postIdempotentCreate(t, setup, body, fmt.Sprintf("form-%d", suffix))
@@ -126,7 +127,7 @@ func TestCreateInstance_IdempotencyKeyRejectsDifferentCreateOperation(t *testing
 	suffix := time.Now().UnixNano()
 	body := map[string]any{
 		"date": nextCreateWorkday().String(), "start_time": "10:00", "end_time": "11:00",
-		"title": fmt.Sprintf("Idempotent manual instance %d", suffix), "room_id": setup.roomID,
+		"title": fmt.Sprintf("Idempotent manual instance %d", suffix), "room_id": fmt.Sprint(setup.roomID),
 	}
 	key := fmt.Sprintf("form-%d", suffix)
 	first := postIdempotentCreate(t, setup, body, key)

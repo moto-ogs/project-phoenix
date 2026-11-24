@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
@@ -156,7 +157,7 @@ func (rs *Resource) updateMasterDataField(w http.ResponseWriter, r *http.Request
 	}
 
 	var req UpdateMasterDataRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -214,7 +215,7 @@ func (rs *Resource) submitMasterDataRequest(w http.ResponseWriter, r *http.Reque
 	}
 
 	var body MasterDataChangeRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

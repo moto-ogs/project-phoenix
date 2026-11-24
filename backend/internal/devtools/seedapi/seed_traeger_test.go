@@ -295,7 +295,7 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 		"PUT /traeger/export-recipient/formats Bearer traeger-token",
 		"POST /traeger/finance-handovers/runs/holiday-runs/9/sollstellung Bearer traeger-token",
 	}, calls, "the registrations go through the public link without a session; the Träger-Büro reviews them with its session")
-	assert.Equal(t, map[string]any{"registration_id": float64(9), "child_id": float64(91), "total_cents": float64(3500),
+	assert.Equal(t, map[string]any{"registration_id": "9", "child_id": "91", "total_cents": float64(3500),
 		"reason": "Am ersten Ferientag krank, Tag wird erstattet."}, correction, "the Abrechnung lowers one child with a reason")
 	assert.Equal(t, map[string]any{"document_count": float64(1), "total_cents": float64(11250), "fingerprint": "geprueft"}, release,
 		"the release names the preview it checked")
@@ -304,14 +304,14 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 		"the Träger-Büro asks for the debtor number and confirms the siblings with theirs (#5621); the family keeps its own (#6692)")
 	assert.Equal(t, "Fachdienst Jugend des Landkreises Musterstadt", costBearer["name"], "the Abrechnung keeps an invented cost bearer (#5627)")
 	assert.Equal(t, true, costBearer["active"])
-	assert.Equal(t, map[string]any{"benefits_exemption": false, "cost_bearer_id": float64(7), "debtor_number": "10472",
+	assert.Equal(t, map[string]any{"benefits_exemption": false, "cost_bearer_id": "7", "debtor_number": "10472",
 		"expected_fingerprint": "vorschau-10"}, takeover,
 		"the Träger-Büro confirms the second registration with the cost takeover by that cost bearer (#5627)")
 	weeks, ok := period["weeks"].([]any)
 	require.True(t, ok)
 	require.Len(t, weeks, 2)
-	assert.Equal(t, float64(31), weeks[0].(map[string]any)["host_school_id"])
-	assert.Equal(t, float64(31), weeks[1].(map[string]any)["host_school_id"], "the profile's school hosts both weeks, never the manual test school")
+	assert.Equal(t, "31", weeks[0].(map[string]any)["host_school_id"])
+	assert.Equal(t, "31", weeks[1].(map[string]any)["host_school_id"], "the profile's school hosts both weeks, never the manual test school")
 	assert.Equal(t, map[string]any{"capacity": float64(3)}, capacity, "the week holds as many places as it has children with a place")
 	require.Len(t, registrations, 10)
 	holidayFamily := []any{registrations[6]["guardian"].(map[string]any)["email"], registrations[7]["guardian"].(map[string]any)["email"]}
@@ -323,11 +323,11 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 	require.Len(t, children, 2)
 	assert.Equal(t, map[string]any{"street": "Sonnenweg 7", "postal_code": "49143", "city": "Bissendorf"}, registration["guardian_address"],
 		"the form asks for the postal address and the family names it (#5625)")
-	assert.Equal(t, float64(31), children[0].(map[string]any)["home_school_id"])
-	assert.Equal(t, float64(0), children[1].(map[string]any)["home_school_id"], "the second sibling is a holiday guest")
+	assert.Equal(t, "31", children[0].(map[string]any)["home_school_id"])
+	assert.Equal(t, "0", children[1].(map[string]any)["home_school_id"], "the second sibling is a holiday guest")
 	assert.Equal(t, []any{
-		map[string]any{"week_id": float64(51), "time_model_id": float64(61), "lunch": true},
-		map[string]any{"week_id": float64(52), "time_model_id": float64(63)},
+		map[string]any{"week_id": fmt.Sprint(51), "time_model_id": fmt.Sprint(61), "lunch": true},
+		map[string]any{"week_id": fmt.Sprint(52), "time_model_id": fmt.Sprint(63)},
 	}, children[1].(map[string]any)["bookings"], "the guest eats lunch in the first week only (#5631)")
 	duplicate := registrations[1]
 	assert.NotEqual(t, registration["guardian"], duplicate["guardian"], "another parent registers the child again")
@@ -337,7 +337,7 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 	assert.Equal(t, children[0].(map[string]any)["first_name"], duplicateChildren[0].(map[string]any)["first_name"])
 	assert.Equal(t, children[0].(map[string]any)["birth_date"], duplicateChildren[0].(map[string]any)["birth_date"],
 		"same name and date of birth: a possible duplicate")
-	assert.Equal(t, []any{map[string]any{"week_id": float64(52), "time_model_id": float64(63)}}, duplicateChildren[0].(map[string]any)["bookings"])
+	assert.Equal(t, []any{map[string]any{"week_id": "52", "time_model_id": "63"}}, duplicateChildren[0].(map[string]any)["bookings"])
 	assert.Equal(t, 1, proofs, "the second parent uploads the proof of benefits through the public link")
 	assert.Equal(t, true, duplicate["benefits_declared"])
 	assert.Equal(t, []any{"proof-token"}, duplicate["benefits_proof_tokens"], "the registration names the uploaded proof")
@@ -348,13 +348,13 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 	require.Len(t, thirdChildren, 1, "the second parent registers a third sibling in a form of its own")
 	assert.Equal(t, "Mila", thirdChildren[0].(map[string]any)["first_name"])
 	require.Len(t, merges, 2)
-	assert.Equal(t, map[string]any{"registration_ids": []any{float64(9), float64(11)}}, merges[0],
+	assert.Equal(t, map[string]any{"registration_ids": []any{"9", "11"}}, merges[0],
 		"the Träger-Büro merges the third sibling's registration with the siblings (#5628)")
 	fourthChildren, ok := registrations[3]["children"].([]any)
 	require.True(t, ok)
 	require.Len(t, fourthChildren, 1)
 	assert.Equal(t, "Paul", fourthChildren[0].(map[string]any)["first_name"])
-	assert.Equal(t, map[string]any{"registration_ids": []any{float64(9), float64(12)}}, merges[1],
+	assert.Equal(t, map[string]any{"registration_ids": []any{"9", "12"}}, merges[1],
 		"the fourth sibling joins the group before the Träger-Büro cancels it (#5662)")
 }
 

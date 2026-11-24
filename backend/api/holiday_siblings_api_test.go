@@ -59,7 +59,7 @@ func (f reviewFixture) submitChild(t *testing.T, period traegerPeriodLink, offer
 	body := siblingsRegistration(offer, email)
 	first := body["children"].([]map[string]any)[0]
 	first["first_name"] = child
-	first["bookings"] = []map[string]any{{"week_id": offer.Weeks[0].ID, "time_model_id": offer.Weeks[0].TimeModels[model].ID}}
+	first["bookings"] = []map[string]any{{"week_id": fmt.Sprint(offer.Weeks[0].ID), "time_model_id": fmt.Sprint(offer.Weeks[0].TimeModels[model].ID)}}
 	body["children"] = []map[string]any{first}
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -70,7 +70,7 @@ func (f reviewFixture) submitChild(t *testing.T, period traegerPeriodLink, offer
 
 func (f reviewFixture) merge(t *testing.T, token string, ids ...int64) *httptest.ResponseRecorder {
 	t.Helper()
-	return traegerJSON(t, f.traeger, token, http.MethodPost, siblingGroupsPath(int64(f.period.ID)), map[string]any{"registration_ids": ids})
+	return traegerJSON(t, f.traeger, token, http.MethodPost, siblingGroupsPath(int64(f.period.ID)), map[string]any{"registration_ids": testpkg.IDsOf[testpkg.ID](ids)})
 }
 
 func (f reviewFixture) split(t *testing.T, token string, id int64) *httptest.ResponseRecorder {
@@ -249,7 +249,7 @@ func TestMergeRefusesWhatIsNoSiblingGroup(t *testing.T) {
 		{http.MethodPost, siblingGroupsPath(int64(f.period.ID))},
 		{http.MethodDelete, siblingSplitPath(int64(f.period.ID), f.siblings)},
 	} {
-		body := map[string]any{"registration_ids": []int64{f.siblings, f.again}}
+		body := map[string]any{"registration_ids": []string{fmt.Sprint(f.siblings), fmt.Sprint(f.again)}}
 		rec := traegerJSON(t, f.traeger, billing, request.method, request.path, body)
 		assert.Equal(t, http.StatusForbidden, rec.Code, "%s %s without the right: %s", request.method, request.path, rec.Body.String())
 	}
@@ -454,7 +454,7 @@ func TestCostTakeoverOfOneSiblingRegistration(t *testing.T) {
 	later := f.submitChild(t, f.period, f.offer, "papa.kosten@example.org", "Tom", 0)
 	require.Equal(t, http.StatusOK, f.merge(t, f.office.token, earlier, later).Code)
 
-	rec := f.confirmWith(t, later, map[string]any{"cost_bearer_id": bearer.ID})
+	rec := f.confirmWith(t, later, map[string]any{"cost_bearer_id": fmt.Sprint(bearer.ID)})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	frozen := f.siblingContribution(t, later)
 	assert.Equal(t, int64(0), frozen.TotalCents, "the family pays nothing for the registration with the cost takeover")

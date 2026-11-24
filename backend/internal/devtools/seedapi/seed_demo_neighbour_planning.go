@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -52,8 +54,8 @@ var neighbourStaff = []neighbourStaffMember{
 func seedNeighbourDeployment(rt *Runtime, auth AuthRef, monday time.Time, schoolID int64, person neighbourStaffMember) error {
 	primary := rt.Bootstrap.SchoolID
 	sites := []map[string]any{
-		{"school_id": primary, "weekday_minutes": []int{150, 150, 0, 0, 0}},
-		{"school_id": schoolID, "weekday_minutes": []int{0, 0, 150, 0, 150}},
+		{"school_id": ident.ID(primary), "weekday_minutes": []int{150, 150, 0, 0, 0}},
+		{"school_id": ident.ID(schoolID), "weekday_minutes": []int{0, 0, 150, 0, 150}},
 	}
 	raw, err := rt.Client.PostWithAuth(auth, "/traeger/staff-records/hire", map[string]any{
 		"first_name": person.first, "last_name": person.last, "birthday": person.birthday,

@@ -8,11 +8,12 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/require"
 )
 
 func TestDirectAbsenceScope(t *testing.T) {
@@ -113,7 +114,7 @@ func TestDirectAbsenceScopeRestrictsExistingReportsOnNextRequest(t *testing.T) {
 	}
 	other := testpkg.CreateTestStudent(t, tc.db, "Bulk", "Absence", "1b")
 	rr = authExec(t, tc, testutil.NewAuthenticatedRequest(t, "POST", "/status-days/bulk", map[string]any{
-		"student_ids": []int64{student.ID, other.ID}, "status": "sick", "from": date, "to": date,
+		"student_ids": []string{fmt.Sprint(student.ID), fmt.Sprint(other.ID)}, "status": "sick", "from": date, "to": date,
 	}), claims, perms)
 	require.Equal(t, http.StatusForbidden, rr.Code, rr.Body.String())
 	rows, err := tc.resource.StudentStatusDayService.FindActiveByStudentAndDateRange(testpkg.Ctx(t), other.ID, calendar.DateFromTime(fixedCalendarClock()), calendar.DateFromTime(fixedCalendarClock()).AddDays(5))

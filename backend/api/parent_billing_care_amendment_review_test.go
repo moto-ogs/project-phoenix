@@ -35,7 +35,7 @@ func TestCareRecipientChainResolvesToItsEndStateThroughReissueAndSend(t *testing
 	first := amendedInvoice(t, review, mia).Amendments[0]
 	code, _ = f.amend(t, int64(run.ID), mia, recipient("Ole", "ole@example.org"))
 	require.Equal(t, http.StatusOK, code)
-	code, review = f.amend(t, int64(run.ID), mia, map[string]any{"kind": "revoke", "revokes_id": first.ID, "reason": "Doch nicht"})
+	code, review = f.amend(t, int64(run.ID), mia, map[string]any{"kind": "revoke", "revokes_id": fmt.Sprint(first.ID), "reason": "Doch nicht"})
 	require.Equal(t, http.StatusOK, code)
 	invoice := amendedInvoice(t, review, mia)
 	assert.Equal(t, "Ole", invoice.Recipient.FirstName, "the change in force applies, whatever it was made on")

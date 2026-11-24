@@ -169,7 +169,7 @@ func enrollmentWriteCases(t *testing.T, ctx *testContext, activityID int64) []ac
 
 	return []activityWriteCase{
 		{name: "unenroll student", method: http.MethodDelete, path: fmt.Sprintf("/activities/%d/students/%d", activityID, existing.ID)},
-		{name: "replace roster", method: http.MethodPut, path: fmt.Sprintf("/activities/%d/students", activityID), body: map[string]any{"student_ids": []int64{target.ID}}},
+		{name: "replace roster", method: http.MethodPut, path: fmt.Sprintf("/activities/%d/students", activityID), body: map[string]any{"student_ids": []string{fmt.Sprint(target.ID)}}},
 	}
 }
 
@@ -210,7 +210,7 @@ func assertActivityWritesAllowed(t *testing.T, ctx *testContext, activityID int6
 	response := testutil.ExecuteWithAuth(t, ctx.router, request, claims)
 	require.Equal(t, http.StatusOK, response.Code, "body: %s", response.Body.String())
 
-	request = testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/activities/%d/students", activityID), map[string]any{"student_ids": []int64{student.ID}})
+	request = testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/activities/%d/students", activityID), map[string]any{"student_ids": []string{fmt.Sprint(student.ID)}})
 	response = testutil.ExecuteWithAuth(t, ctx.router, request, claims)
 	require.Equal(t, http.StatusOK, response.Code, "body: %s", response.Body.String())
 }
@@ -228,7 +228,7 @@ func TestActivityWritesRequireDomainPermission(t *testing.T) {
 	response := testutil.ExecuteWithAuth(t, ctx.router, request, activityStaffClaims(account))
 	assert.Equal(t, http.StatusForbidden, response.Code, "body: %s", response.Body.String())
 
-	request = testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/activities/%d/students", activityID), map[string]any{"student_ids": []int64{}})
+	request = testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/activities/%d/students", activityID), map[string]any{"student_ids": []string{}})
 	response = testutil.ExecuteWithAuth(t, ctx.router, request, activityStaffClaims(account))
 	assert.Equal(t, http.StatusForbidden, response.Code, "body: %s", response.Body.String())
 }

@@ -56,8 +56,8 @@ func TestSeedTraegerReportTemplatesStepAddsTheMissingTemplates(t *testing.T) {
 	assert.Equal(t, "Jugendamt Stichtag 15.10.", created[0]["name"])
 	assert.Equal(t, []any{"children", "staff", "absences", "demand"}, created[0]["sections"])
 	assert.Equal(t, []any{
-		map[string]any{"school_id": float64(11), "district": "Nord"},
-		map[string]any{"school_id": float64(12), "district": "Süd"},
-		map[string]any{"school_id": float64(13), "district": "Nord"},
+		map[string]any{"school_id": "11", "district": "Nord"},
+		map[string]any{"school_id": "12", "district": "Süd"},
+		map[string]any{"school_id": "13", "district": "Nord"},
 	}, created[0]["districts"], "the schools in two Sozialräume")
 }

@@ -13,11 +13,13 @@ import (
 	"net/http"
 
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -43,7 +45,7 @@ func (n *NullableInt64) UnmarshalJSON(b []byte) error {
 		n.Value = nil
 		return nil
 	}
-	return json.Unmarshal(b, &n.Value)
+	return wire.Unmarshal(b, &n.Value)
 }
 
 func (n *NullableInt) UnmarshalJSON(b []byte) error {
@@ -88,7 +90,7 @@ func (n *NullableInt64Slice) UnmarshalJSON(b []byte) error {
 		n.Value = nil
 		return nil
 	}
-	return json.Unmarshal(b, &n.Value)
+	return wire.Unmarshal(b, &n.Value)
 }
 
 // NullableStringSlice is the []string member of the tri-state family: it

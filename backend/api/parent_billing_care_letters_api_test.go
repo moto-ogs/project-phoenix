@@ -387,7 +387,7 @@ func TestCareLettersResolveThePayerAndRefuseAChangedPayer(t *testing.T) {
 				brandCareTraeger(t, f)
 				_, contracts := releasedCareRun(t, f, "Mia")
 				input := map[string]any{
-					"contract_id": contracts["Mia"], "recipient_kind": "payer",
+					"contract_id": fmt.Sprint(contracts["Mia"]), "recipient_kind": "payer",
 					"payer_first_name": "Oma", "payer_last_name": "Muster", "payer_email": "oma@example.org",
 					"payer_address": map[string]any{"street": "Amtsweg 2", "postal_code": "75175", "city": "Pforzheim"},
 				}

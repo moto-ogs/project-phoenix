@@ -44,7 +44,7 @@ func TestCareOfferingWritesOnAStaleIDAnswerNotFound(t *testing.T) {
 	path := fmt.Sprintf("/care-offerings/%d", staleID)
 	body := func(translations bool) map[string]any {
 		value := map[string]any{
-			"phase_id": phase.ID, "name": "OGS", "days_of_week_mode": "fixed",
+			"phase_id": fmt.Sprint(phase.ID), "name": "OGS", "days_of_week_mode": "fixed",
 			"available_days": []string{"mon"}, "pickup_times": map[string]string{"mon": "15:00"}, "is_active": true,
 		}
 		if translations {

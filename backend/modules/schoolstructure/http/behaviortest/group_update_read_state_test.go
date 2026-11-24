@@ -51,7 +51,7 @@ func TestUpdateGroup_TeachersOnlyKeepsRoomAndRefusesStaleVersion(t *testing.T) {
 		return rr.Code
 	}
 	require.Equal(t, http.StatusOK, put(map[string]any{
-		"name": group.Name, "room_id": room.ID, "teacher_ids": []int64{leaving.ID},
+		"name": group.Name, "room_id": fmt.Sprint(room.ID), "teacher_ids": []string{fmt.Sprint(leaving.ID)},
 		"expected_version": groupVersion(t, router, group.ID, claims),
 	}))
 	read := groupVersion(t, router, group.ID, claims)
@@ -65,7 +65,7 @@ func TestUpdateGroup_TeachersOnlyKeepsRoomAndRefusesStaleVersion(t *testing.T) {
 
 	// The body of the caregiver blocker resolution.
 	require.Equal(t, http.StatusOK, put(map[string]any{
-		"name": group.Name, "teacher_ids": []int64{replacement.ID}, "expected_version": read,
+		"name": group.Name, "teacher_ids": []string{fmt.Sprint(replacement.ID)}, "expected_version": read,
 	}))
 	after := groupDetail(t, router, group.ID, claims)
 	assert.Equal(t, fmt.Sprint(room.ID), fmt.Sprint(after["room_id"]), "replacing the teachers must keep the room")
@@ -74,7 +74,7 @@ func TestUpdateGroup_TeachersOnlyKeepsRoomAndRefusesStaleVersion(t *testing.T) {
 
 	// Read before the teacher change: refused, nothing written.
 	assert.Equal(t, http.StatusConflict, put(map[string]any{
-		"name": group.Name, "teacher_ids": []int64{leaving.ID}, "expected_version": read,
+		"name": group.Name, "teacher_ids": []string{fmt.Sprint(leaving.ID)}, "expected_version": read,
 	}))
 	assert.Equal(t, http.StatusConflict, put(map[string]any{"name": "Ohne Stand"}))
 	after = groupDetail(t, router, group.ID, claims)

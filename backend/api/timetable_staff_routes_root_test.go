@@ -71,7 +71,7 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 		assert.Equal(t, "Frühdienst", renamed.Name)
 
 		var ordered []track
-		request(t, http.MethodPut, "/api/timetable/planning-tracks/order", fmt.Sprintf(`{"ids":[%d,%d]}`, late.ID, early.ID), &ordered)
+		request(t, http.MethodPut, "/api/timetable/planning-tracks/order", fmt.Sprintf(`{"ids":["%d","%d"]}`, late.ID, early.ID), &ordered)
 		require.Len(t, ordered, 2)
 		assert.Equal(t, late.ID, ordered[0].ID, "the stored order leads with the moved track")
 

@@ -171,7 +171,7 @@ func seedSchoolChangePrices(client *Client, auth AuthRef, school int64, month ca
 		return err
 	}
 	if _, err := client.PutWithAuth(auth, "/traeger/care-tariffs/", map[string]any{
-		"school_id": school, "valid_from": month.String(), "free_months": []int{}, "prices": prices, "expected_version": version,
+		"school_id": ident.ID(school), "valid_from": month.String(), "free_months": []int{}, "prices": prices, "expected_version": version,
 	}); err != nil {
 		return fmt.Errorf("set the prices of the Demo-Schule Manuell: %w", err)
 	}
@@ -380,7 +380,7 @@ func seedSchoolChangeApproval(rt *Runtime, auth AuthRef, phaseID int64, child se
 		"consent_flags": map[string]bool{"data_processing": true},
 		"children": []map[string]any{{
 			"first_name": child.firstName, "last_name": child.lastName, "date_of_birth": child.birthDate.String(),
-			"target_grade_level": 2, "offering_ids": []int64{offeringID},
+			"target_grade_level": 2, "offering_ids": []ident.ID{ident.ID(offeringID)},
 		}},
 		"reason": "Schulwechsel im laufenden Schuljahr", "external_consent_confirmed": true,
 	}
@@ -419,7 +419,7 @@ func seedSchoolChangeNewContract(client *Client, auth AuthRef, school, offering,
 		return 0, fmt.Errorf("save the contract template of the Demo-Schule Manuell: %w", err)
 	}
 	raw, err := client.PostWithAuth(auth, "/traeger/contracts/", map[string]any{
-		"contracts": []map[string]any{{"school_id": school, "request_child_id": requestChild}},
+		"contracts": []map[string]any{{"school_id": ident.ID(school), "request_child_id": ident.ID(requestChild)}},
 	})
 	if err != nil {
 		return 0, fmt.Errorf("create the contract at the Demo-Schule Manuell: %w", err)

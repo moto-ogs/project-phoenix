@@ -96,8 +96,8 @@ func seedHolidayDayRegistrations(rt *Runtime, auth AuthRef, token string, period
 		raw, err := rt.Client.PostPublic("/traeger/holiday-registrations/"+token, map[string]any{
 			"guardian": map[string]any{"first_name": family.first, "last_name": family.last, "email": family.email, "phone": fmt.Sprintf("0151 000010%d", i)},
 			"children": []map[string]any{{
-				"first_name": family.child, "last_name": family.last, "birth_date": "2018-02-14", "home_school_id": rt.Bootstrap.SchoolID,
-				"bookings": []map[string]any{{"week_id": weekID, "time_model_id": modelID, "days": days}},
+				"first_name": family.child, "last_name": family.last, "birth_date": "2018-02-14", "home_school_id": ident.ID(rt.Bootstrap.SchoolID),
+				"bookings": []map[string]any{{"week_id": ident.ID(weekID), "time_model_id": ident.ID(modelID), "days": days}},
 			}},
 			"emergency_contacts": []map[string]any{{"name": "Oma " + family.last, "phone": "05402 000010", "relationship": "Großmutter"}},
 			"privacy_consent":    true, "binding_confirmed": true, "custody_confirmed": true,
@@ -146,7 +146,7 @@ func seedHolidayOwnChild(rt *Runtime, weekID int64, firstName, lastName string) 
 	}
 	if _, err := rt.Client.PostWithAuth(rt.TenantAuth, "/api/students", map[string]any{
 		"first_name": firstName, "last_name": lastName, "school_class": "Klasse 2b",
-		"group_id": ownGroupID, "birthday": "2018-02-14", "pickup_status": "pickup",
+		"group_id": ident.ID(ownGroupID), "birthday": "2018-02-14", "pickup_status": "pickup",
 	}); err != nil {
 		return fmt.Errorf("create the school's own holiday child: %w", err)
 	}
@@ -178,7 +178,7 @@ func seedHolidayDayPeriod(today, monday calendar.Date, host int64) map[string]an
 		"binding": true, "max_days_per_child": 3,
 		"notes": "Sie wählen einzelne Tage. Ein Kind kann höchstens drei Tage kommen.",
 		"weeks": []map[string]any{{
-			"starts_on": monday.String(), "ends_on": monday.AddDays(4).String(), "host_school_id": host, "booking_unit": "day",
+			"starts_on": monday.String(), "ends_on": monday.AddDays(4).String(), "host_school_id": ident.ID(host), "booking_unit": "day",
 			"time_models": []map[string]any{{"name": "bis 15 Uhr", "starts_at": "08:00", "ends_at": "15:00", "price_cents": 1500}},
 		}},
 	}

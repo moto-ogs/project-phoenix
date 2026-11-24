@@ -2,13 +2,13 @@ package settingshttp
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // TraegerOperations is the Träger level of the settings system (ADR 0086):
@@ -84,7 +84,7 @@ func (rs *TraegerSettingsResource) setValue(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	var req setValueRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

@@ -485,7 +485,7 @@ func (s *Seeder) retireAbandonedSchool(subdomain string) error {
 
 func (s *Seeder) createSeedSchool(organizationID int64, name, slug, subdomain string) (int64, string, error) {
 	schoolResp, err := s.client.Post("/operator/schools", map[string]any{
-		"organization_id": organizationID,
+		"organization_id": ident.ID(organizationID),
 		"name":            name,
 		"slug":            slug,
 		"subdomain":       subdomain,

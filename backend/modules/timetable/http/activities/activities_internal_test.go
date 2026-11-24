@@ -9,10 +9,11 @@ import (
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 
-	httpadapter "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	httpadapter "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // =============================================================================
@@ -340,7 +341,7 @@ func decodeActivityUpdate(t *testing.T, body string) *httpadapter.ActivityUpdate
 func TestGroupEdit_AllFields(t *testing.T) {
 	t.Parallel()
 
-	req := decodeActivityUpdate(t, `{"name":"Updated Name","max_participants":50,"is_open":true,"category_id":10,"planned_room_id":25,"schedules":[{"weekday":2}],"supervisor_ids":[7,8],"expected_version":"v1"}`)
+	req := decodeActivityUpdate(t, `{"name":"Updated Name","max_participants":50,"is_open":true,"category_id":"10","planned_room_id":"25","schedules":[{"weekday":2}],"supervisor_ids":["7","8"],"expected_version":"v1"}`)
 	edit := httpadapter.GroupEditForTest(req, 3)
 
 	assert.Equal(t, int64(3), edit.ID)
@@ -365,7 +366,7 @@ func TestGroupEdit_AllFields(t *testing.T) {
 func TestGroupEdit_OmittedPartsKeepStoredState(t *testing.T) {
 	t.Parallel()
 
-	req := decodeActivityUpdate(t, `{"name":"Test","max_participants":null,"category_id":10,"expected_version":"v1"}`)
+	req := decodeActivityUpdate(t, `{"name":"Test","max_participants":null,"category_id":"10","expected_version":"v1"}`)
 	edit := httpadapter.GroupEditForTest(req, 3)
 
 	assert.Nil(t, edit.IsOpen)
@@ -377,7 +378,7 @@ func TestGroupEdit_OmittedPartsKeepStoredState(t *testing.T) {
 func TestGroupEdit_NullRoomClearsRoom(t *testing.T) {
 	t.Parallel()
 
-	req := decodeActivityUpdate(t, `{"name":"Test","category_id":10,"planned_room_id":null,"schedules":[],"supervisor_ids":[]}`)
+	req := decodeActivityUpdate(t, `{"name":"Test","category_id":"10","planned_room_id":null,"schedules":[],"supervisor_ids":[]}`)
 	edit := httpadapter.GroupEditForTest(req, 3)
 
 	assert.True(t, edit.SetPlannedRoom)

@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -170,14 +171,14 @@ func siblingsRegistration(offer holidayOfferBody, email string) map[string]any {
 		"guardian": map[string]any{"first_name": "Eva", "last_name": "Muster", "email": email, "phone": "0151 2345678"},
 		"children": []map[string]any{
 			{
-				"first_name": "Lia", "last_name": "Muster", "birth_date": "2018-03-01", "home_school_id": offer.Schools[0].ID,
-				"allergies": "Erdnüsse", "bookings": []map[string]any{{"week_id": offer.Weeks[0].ID, "time_model_id": offer.Weeks[0].TimeModels[1].ID}},
+				"first_name": "Lia", "last_name": "Muster", "birth_date": "2018-03-01", "home_school_id": fmt.Sprint(offer.Schools[0].ID),
+				"allergies": "Erdnüsse", "bookings": []map[string]any{{"week_id": fmt.Sprint(offer.Weeks[0].ID), "time_model_id": fmt.Sprint(offer.Weeks[0].TimeModels[1].ID)}},
 			},
 			{
-				"first_name": "Ben", "last_name": "Muster", "birth_date": "2016-09-12", "home_school_id": 0, "guest_school_name": "Grundschule Melle",
+				"first_name": "Ben", "last_name": "Muster", "birth_date": "2016-09-12", "home_school_id": "0", "guest_school_name": "Grundschule Melle",
 				"bookings": []map[string]any{
-					{"week_id": offer.Weeks[0].ID, "time_model_id": offer.Weeks[0].TimeModels[0].ID},
-					{"week_id": offer.Weeks[1].ID, "time_model_id": offer.Weeks[1].TimeModels[0].ID},
+					{"week_id": fmt.Sprint(offer.Weeks[0].ID), "time_model_id": fmt.Sprint(offer.Weeks[0].TimeModels[0].ID)},
+					{"week_id": fmt.Sprint(offer.Weeks[1].ID), "time_model_id": fmt.Sprint(offer.Weeks[1].TimeModels[0].ID)},
 				},
 			},
 		},
@@ -440,8 +441,8 @@ func TestHolidayRegistrationRefusesInvalidClosedAndAbusiveSubmissions(t *testing
 
 	invalid := siblingsRegistration(offer, "pruefung@example.org")
 	children := invalid["children"].([]map[string]any)
-	children[0]["home_school_id"] = foreignSchool
-	children[1]["bookings"] = []map[string]any{{"week_id": offer.Weeks[1].ID, "time_model_id": offer.Weeks[0].TimeModels[0].ID}}
+	children[0]["home_school_id"] = fmt.Sprint(foreignSchool)
+	children[1]["bookings"] = []map[string]any{{"week_id": fmt.Sprint(offer.Weeks[1].ID), "time_model_id": fmt.Sprint(offer.Weeks[0].TimeModels[0].ID)}}
 	invalid["privacy_consent"] = false
 	invalid["health_consent"] = false
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), invalid)

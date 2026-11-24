@@ -14,12 +14,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	feedbackModule "github.com/moto-ogs/project-phoenix/modules/feedback"
 	feedbackHTTP "github.com/moto-ogs/project-phoenix/modules/feedback/http"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type engine struct {
@@ -115,7 +116,7 @@ func TestDemoFeedbackHistoryWireContract(t *testing.T) {
 		router.ServeHTTP(recorder, request)
 		return recorder
 	}
-	entry := `{"value":"positive","day":"2026-08-31","time":"12:34:56","student_id":42,"is_mensa_feedback":true}`
+	entry := `{"value":"positive","day":"2026-08-31","time":"12:34:56","student_id":"42","is_mensa_feedback":true}`
 
 	recorder := post("/schools/9/demo-feedback-history", `{"entries":[`+entry+`]}`)
 	assert.Equal(t, http.StatusOK, recorder.Code)

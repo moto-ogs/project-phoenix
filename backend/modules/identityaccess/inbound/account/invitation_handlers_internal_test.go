@@ -13,14 +13,15 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // invitationsStub is a func-field double for the Invitations capability the
@@ -153,7 +154,7 @@ func TestInvitationHandlers_CreateInvitation_AccountAlreadyHasTenantAccess(t *te
 
 	resource := NewResource(nil, service, nil, nil, nil, transactionFailures.IsConstraintViolation, unusedTenantSettings{})
 
-	req := httptest.NewRequest(http.MethodPost, "/auth/invitations", bytes.NewBufferString(`{"email":"existing@example.com","role_id":1}`))
+	req := httptest.NewRequest(http.MethodPost, "/auth/invitations", bytes.NewBufferString(`{"email":"existing@example.com","role_id":"1"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(testutil.WithAuthenticatedContext(req.Context(), testutil.Claims{ID: 1}, nil))
 	rr := httptest.NewRecorder()
@@ -171,8 +172,8 @@ func TestInvitationHandlers_CreateInvitation_AccountAlreadyHasTenantAccess(t *te
 func TestInvitationHandlers_CreateInvitation_PassesTheFormerEmploymentVersion(t *testing.T) {
 	t.Parallel()
 	for name, tc := range map[string]struct{ body, want string }{
-		"read":          {`{"email":"a@example.com","role_id":1,"expected_former_employment":" v-1 "}`, "v-1"},
-		"lookup failed": {`{"email":"a@example.com","role_id":1}`, ""},
+		"read":          {`{"email":"a@example.com","role_id":"1","expected_former_employment":" v-1 "}`, "v-1"},
+		"lookup failed": {`{"email":"a@example.com","role_id":"1"}`, ""},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -208,7 +209,7 @@ func TestInvitationHandlers_CreateInvitation_EmailAlreadyExistsNamesTheField(t *
 	}
 	resource := NewResource(nil, service, nil, nil, nil, transactionFailures.IsConstraintViolation, unusedTenantSettings{})
 
-	req := httptest.NewRequest(http.MethodPost, "/auth/invitations", bytes.NewBufferString(`{"email":"existing@example.com","role_id":1}`))
+	req := httptest.NewRequest(http.MethodPost, "/auth/invitations", bytes.NewBufferString(`{"email":"existing@example.com","role_id":"1"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(testutil.WithAuthenticatedContext(req.Context(), testutil.Claims{ID: 1}, nil))
 	rr := httptest.NewRecorder()

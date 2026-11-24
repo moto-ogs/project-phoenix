@@ -10,11 +10,12 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
-	"github.com/stretchr/testify/require"
 )
 
 func TestStaffDirectoryPositiveGrowthQueryBudget(t *testing.T) {
@@ -29,7 +30,7 @@ func TestStaffDirectoryPositiveGrowthQueryBudget(t *testing.T) {
 			router = testpkg.TenantRuntimeMiddleware(t, db)(router)
 			foreign := testpkg.NewTenantScope(t, db)
 			foreignStaff, foreignAccount := testpkg.CreateTestStaffWithAccountForTenant(t, db, foreign.TenantID, "Foreign", "Directory")
-			foreignTeacher := map[string]any{"tenant_id": foreign.TenantID, "staff_id": foreignStaff.ID}
+			foreignTeacher := map[string]any{"tenant_id": fmt.Sprint(foreign.TenantID), "staff_id": fmt.Sprint(foreignStaff.ID)}
 			_, err = db.NewInsert().Model(&foreignTeacher).TableExpr("users.teachers").Exec(testpkg.Ctx(t))
 			require.NoError(t, err)
 			testpkg.AssignLehrkraftSystemRole(t, db, foreignAccount.ID, foreign.TenantID)
@@ -107,7 +108,7 @@ func TestStaffShiftPositiveGrowthQueryBudget(t *testing.T) {
 	foreign := testpkg.NewTenantScope(t, db)
 	foreignStaff := testpkg.CreateTestStaffForTenant(t, db, foreign.TenantID, "Foreign", "Shift")
 	add := func(tenant, id int64, i int) {
-		row := map[string]any{"tenant_id": tenant, "staff_id": id, "date": fmt.Sprintf("2026-01-%02d", i+1), "start_time": "08:00:00", "end_time": "16:00:00", "break_minutes": 30, "notes": fmt.Sprintf("Shift %02d", i), "created_by": id}
+		row := map[string]any{"tenant_id": fmt.Sprint(tenant), "staff_id": fmt.Sprint(id), "date": fmt.Sprintf("2026-01-%02d", i+1), "start_time": "08:00:00", "end_time": "16:00:00", "break_minutes": 30, "notes": fmt.Sprintf("Shift %02d", i), "created_by": fmt.Sprint(id)}
 		_, err := db.NewInsert().Model(&row).TableExpr("schedule.staff_shifts").Exec(testpkg.Ctx(t))
 		require.NoError(t, err)
 	}

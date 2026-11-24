@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
-	"github.com/stretchr/testify/require"
 )
 
 func TestPresence25BulkGrowthQueryBudget(t *testing.T) {
@@ -33,7 +34,7 @@ func TestPresence25BulkGrowthQueryBudget(t *testing.T) {
 					testpkg.CreateTestArrivalSchedule(t, tc.db, student.ID, 1, staff.ID, "08:15")
 				}
 				counter.Reset()
-				req := testutil.NewAuthenticatedRequest(t, http.MethodPost, "/api/students"+route.path, map[string]any{"student_ids": ids, "date": studentsTestToday.String()})
+				req := testutil.NewAuthenticatedRequest(t, http.MethodPost, "/api/students"+route.path, map[string]any{"student_ids": testpkg.IDsOf[testpkg.ID](ids), "date": studentsTestToday.String()})
 				req = req.WithContext(counter.Context(req.Context()))
 				rr := testutil.ExecuteWithAuthPermissions(t, router, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 				require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())

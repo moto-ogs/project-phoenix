@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -38,7 +39,7 @@ func TestHolidayGuestPlansOnlyBookedDaysAndReconcilesDateChanges(t *testing.T) {
 
 	path := holidayRebookPath(f.periodID(t), f.siblings, guest.ChildID)
 	rec = putReadRegistration(t, f.traeger, f.office.token, path, map[string]any{"bookings": []map[string]any{
-		{"week_id": week.ID, "time_model_id": week.TimeModels[0].ID, "days": []string{"2099-07-07"}},
+		{"week_id": fmt.Sprint(week.ID), "time_model_id": fmt.Sprint(week.TimeModels[0].ID), "days": []string{"2099-07-07"}},
 	}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	f.reconcile(t)

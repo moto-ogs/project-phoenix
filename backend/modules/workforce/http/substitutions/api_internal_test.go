@@ -7,18 +7,19 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestAssignAdditionalSupervisionAcceptsOnlyTargetIDs(t *testing.T) {
 	t.Parallel()
 	request, err := decodeAssignment(strings.NewReader(`{
 		"type":"additional_supervision",
-		"additional_supervision":{"active_group_id":41,"target_staff_id":73}
+		"additional_supervision":{"active_group_id":"41","target_staff_id":"73"}
 	}`))
 
 	require.NoError(t, err)
@@ -33,7 +34,7 @@ func TestAssignAdditionalSupervisionCarriesHandOver(t *testing.T) {
 	t.Parallel()
 	request, err := decodeAssignment(strings.NewReader(`{
 		"type":"additional_supervision",
-		"additional_supervision":{"active_group_id":41,"target_staff_id":73,"hand_over":true}
+		"additional_supervision":{"active_group_id":"41","target_staff_id":"73","hand_over":true}
 	}`))
 
 	require.NoError(t, err)
@@ -44,7 +45,7 @@ func TestAssignAdditionalSupervisionCarriesHandOver(t *testing.T) {
 
 	plain, err := decodeAssignment(strings.NewReader(`{
 		"type":"additional_supervision",
-		"additional_supervision":{"active_group_id":41,"target_staff_id":73}
+		"additional_supervision":{"active_group_id":"41","target_staff_id":"73"}
 	}`))
 	require.NoError(t, err)
 	assignment, err = plain.toAssignment()
@@ -81,11 +82,11 @@ func TestAssignAdditionalSupervisionRejectsClientRoleAndStart(t *testing.T) {
 	for name, body := range map[string]string{
 		"role": `{
 			"type":"additional_supervision",
-			"additional_supervision":{"active_group_id":41,"target_staff_id":73,"role":"supervisor"}
+			"additional_supervision":{"active_group_id":"41","target_staff_id":"73","role":"supervisor"}
 		}`,
 		"start": `{
 			"type":"additional_supervision",
-			"additional_supervision":{"active_group_id":41,"target_staff_id":73,"start_time":"2026-08-30T10:00:00Z"}
+			"additional_supervision":{"active_group_id":"41","target_staff_id":"73","start_time":"2026-08-30T10:00:00Z"}
 		}`,
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -100,7 +101,7 @@ func TestAssignAdditionalSupervisionRejectsTrailingJSON(t *testing.T) {
 	t.Parallel()
 
 	_, err := decodeAssignment(strings.NewReader(
-		`{"type":"additional_supervision","additional_supervision":{"active_group_id":41,"target_staff_id":73}} {}`,
+		`{"type":"additional_supervision","additional_supervision":{"active_group_id":"41","target_staff_id":"73"}} {}`,
 	))
 	require.Error(t, err)
 }
@@ -126,8 +127,8 @@ func TestScheduleAssignmentRequestPreservesAppointmentScope(t *testing.T) {
 	err := json.NewDecoder(strings.NewReader(`{
 		"type":"schedule_substitution",
 		"schedule_substitution":{
-			"instance_id":42,
-			"substitutions":[{"absent_staff_id":7,"substitute_staff_id":8,"instance_ids":[42,43]}]
+			"instance_id":"42",
+			"substitutions":[{"absent_staff_id":"7","substitute_staff_id":"8","instance_ids":["42","43"]}]
 		}
 	}`)).Decode(&request)
 	require.NoError(t, err)

@@ -16,8 +16,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Middleware is the HTTP middleware shape the composition root supplies.
@@ -214,7 +216,7 @@ func (rs *Resource) get(w http.ResponseWriter, r *http.Request) {
 
 func (rs *Resource) create(w http.ResponseWriter, r *http.Request) {
 	var req ModelRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.runtime.Failure(w, r, FailureInvalid, err)
 		return
 	}
@@ -247,7 +249,7 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req ModelRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.runtime.Failure(w, r, FailureInvalid, err)
 		return
 	}

@@ -319,7 +319,7 @@ func TestCareNoticeMailGoesToTheDeviatingPayer(t *testing.T) {
 	writeLegalRemedy(t, f.db, f.office.organization)
 	brandCareTraeger(t, f)
 	input := map[string]any{
-		"contract_id": contract, "recipient_kind": "payer",
+		"contract_id": fmt.Sprint(contract), "recipient_kind": "payer",
 		"payer_first_name": "Oma", "payer_last_name": "Muster", "payer_email": "oma@example.org",
 		"payer_address": map[string]any{"street": "Amtsweg 2", "postal_code": "75175", "city": "Pforzheim"},
 	}

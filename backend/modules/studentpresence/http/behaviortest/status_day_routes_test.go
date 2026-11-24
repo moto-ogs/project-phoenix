@@ -16,6 +16,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
@@ -26,9 +30,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 func TestStudentStatusDayHandlers_CreateGetDelete(t *testing.T) {
@@ -80,7 +81,7 @@ func TestStudentStatusDayHandlers_BulkCreatesEveryChildAndDay(t *testing.T) {
 	router.Mount("/api/students", statusDayTestRouter(resource))
 
 	req := testutil.NewAuthenticatedRequest(t, "POST", "/api/students/status-days/bulk", map[string]any{
-		"student_ids": []int64{first.ID, second.ID},
+		"student_ids": []string{fmt.Sprint(first.ID), fmt.Sprint(second.ID)},
 		"status":      absencerecords.StudentStatusDayClassTrip,
 		"from":        "2026-05-25",
 		"to":          "2026-05-27",
@@ -271,7 +272,7 @@ func TestStudentStatusDayHandlers_InvalidRequests(t *testing.T) {
 			method: "POST",
 			path:   "/status-days/bulk",
 			body: map[string]any{
-				"student_ids": overLimitIDs,
+				"student_ids": testpkg.IDsOf[testpkg.ID](overLimitIDs),
 				"status":      absencerecords.StudentStatusDayClassTrip,
 				"from":        "2026-05-01",
 				"to":          "2026-05-02",
@@ -282,7 +283,7 @@ func TestStudentStatusDayHandlers_InvalidRequests(t *testing.T) {
 			method: "POST",
 			path:   "/status-days/bulk",
 			body: map[string]any{
-				"student_ids": []int64{student.ID},
+				"student_ids": []string{fmt.Sprint(student.ID)},
 				"status":      absencerecords.StudentStatusDayClassTrip,
 				"from":        "2026-05-01",
 				"to":          "2026-06-01",

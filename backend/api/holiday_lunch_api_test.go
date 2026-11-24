@@ -62,11 +62,11 @@ func lunchWeeks(office traegerOffice, lunchPrice any) []map[string]any {
 		return []map[string]any{{"name": "bis 13 Uhr", "starts_at": "08:00", "ends_at": "13:00", "price_cents": price}}
 	}
 	return []map[string]any{
-		{"starts_on": dayMonday, "ends_on": dayFriday, "host_school_id": office.schools[0], "booking_unit": "day",
+		{"starts_on": dayMonday, "ends_on": dayFriday, "host_school_id": fmt.Sprint(office.schools[0]), "booking_unit": "day",
 			"lunch_price_cents": lunchPrice, "time_models": model(1500)},
-		{"starts_on": "2099-01-12", "ends_on": "2099-01-16", "host_school_id": office.schools[0],
+		{"starts_on": "2099-01-12", "ends_on": "2099-01-16", "host_school_id": fmt.Sprint(office.schools[0]),
 			"lunch_price_cents": lunchPrice, "time_models": model(4500)},
-		{"starts_on": "2099-01-19", "ends_on": "2099-01-23", "host_school_id": office.schools[0], "time_models": model(4500)},
+		{"starts_on": "2099-01-19", "ends_on": "2099-01-23", "host_school_id": fmt.Sprint(office.schools[0]), "time_models": model(4500)},
 	}
 }
 
@@ -95,7 +95,7 @@ func newLunchFixture(t *testing.T, name string) lunchFixture {
 // booking books week (by its position in the period) with or without lunch;
 // days name the days of the week by days.
 func (l lunchFixture) booking(week int, lunch bool, days ...string) map[string]any {
-	booking := map[string]any{"week_id": l.lunch.Weeks[week].ID, "time_model_id": l.lunch.Weeks[week].TimeModels[0].ID, "lunch": lunch}
+	booking := map[string]any{"week_id": fmt.Sprint(l.lunch.Weeks[week].ID), "time_model_id": fmt.Sprint(l.lunch.Weeks[week].TimeModels[0].ID), "lunch": lunch}
 	if len(days) > 0 {
 		booking["days"] = days
 	}

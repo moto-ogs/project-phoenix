@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // bookingLeftoverRequestKey names the approved requests that booked four
@@ -89,8 +91,8 @@ func seedHandTemplate(rt *Runtime, studentID int64) error {
 	if _, err := rt.Client.Post("/api/timetable/templates", map[string]any{
 		"name": "Hausaufgabenbetreuung", "type": "care", "target_group_type": "none",
 		"weekdays": []int{1, 2, 3, 4, 5}, "start_time": "14:00", "end_time": "16:00",
-		"room_id": roomID, "category_id": categoryID, "week_pattern": 0,
-		"student_ids": []int64{studentID}, "staff_ids": staffIDs[:1], "primary_staff_id": staffIDs[0],
+		"room_id": ident.ID(roomID), "category_id": ident.ID(categoryID), "week_pattern": 0,
+		"student_ids": []ident.ID{ident.ID(studentID)}, "staff_ids": ident.IDs(staffIDs[:1]), "primary_staff_id": ident.ID(staffIDs[0]),
 	}); err != nil {
 		return fmt.Errorf("booking leftover: create hand template: %w", err)
 	}

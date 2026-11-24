@@ -93,7 +93,7 @@ func TestPlanningTrackHandlersCreateAndReorder(t *testing.T) {
 		t.Fatalf("unexpected create input: %#v", service.created)
 	}
 
-	orderRequest := httptest.NewRequest(http.MethodPut, "/planning-tracks/order", strings.NewReader(`{"ids":[9,4]}`))
+	orderRequest := httptest.NewRequest(http.MethodPut, "/planning-tracks/order", strings.NewReader(`{"ids":["9","4"]}`))
 	orderRequest.Header.Set("Content-Type", "application/json")
 	orderRecorder := httptest.NewRecorder()
 	resource.reorderPlanningTracks(orderRecorder, orderRequest)

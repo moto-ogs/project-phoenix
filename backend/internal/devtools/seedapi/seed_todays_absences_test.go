@@ -71,10 +71,10 @@ func TestSeedTodaysAbsencesCoversTheSickColleaguesMorning(t *testing.T) {
 	assert.Equal(t, "sick", absences[2]["absence_type"], "the sick report cancels her Dienst and marks her blocks (#1843)")
 	assert.Equal(t, "2026-10-20", absences[2]["date_end"])
 	substitution := deviation["substitutions"].([]any)[0].(map[string]any)
-	assert.EqualValues(t, 33, substitution["absent_staff_id"])
-	assert.EqualValues(t, 35, substitution["substitute_staff_id"])
+	assert.Equal(t, "33", substitution["absent_staff_id"])
+	assert.Equal(t, "35", substitution["substitute_staff_id"])
 	assert.Equal(t, "Vertretung wegen Krankheit", substitution["reason"])
-	assert.Equal(t, []any{float64(61), float64(62)}, substitution["instance_ids"], "the afternoon block stays an open gap")
+	assert.Equal(t, []any{"61", "62"}, substitution["instance_ids"], "the afternoon block stays an open gap")
 }
 
 func TestSeedTodaysAbsencesSkipsTheWeekend(t *testing.T) {
@@ -134,7 +134,7 @@ func TestSeedTodaysAbsencesCoversOnlyBlocksNotOver(t *testing.T) {
 
 	assert.Equal(t, "POST /api/timetable/instances/62/deviations", paths[len(paths)-1])
 	substitution := deviation["substitutions"].([]any)[0].(map[string]any)
-	assert.Equal(t, []any{float64(62)}, substitution["instance_ids"], "the completed Frühbetreuung is not rewritten")
+	assert.Equal(t, []any{"62"}, substitution["instance_ids"], "the completed Frühbetreuung is not rewritten")
 }
 
 // After 13:00 both blocks are over: the sick report stays, no substitution.

@@ -43,7 +43,7 @@ func seedHolidayKnownChild(rt *Runtime, auth AuthRef, token string, periodID int
 	known["children"] = []map[string]any{{
 		"first_name": student.FirstName, "last_name": student.LastName,
 		"birth_date":     demoStudentBirthday(knownHolidayChildStudentIndex, student, rt.FixedSeeder.seedDay),
-		"home_school_id": 0, "guest_school_name": "Grundschule am Park",
+		"home_school_id": "0", "guest_school_name": "Grundschule am Park",
 		"bookings":    guestBookings[len(guestBookings)-1:],
 		"custom_data": children[1]["custom_data"],
 	}}

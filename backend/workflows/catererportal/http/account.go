@@ -1,12 +1,12 @@
 package catererportalhttp
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 var (
@@ -27,7 +27,7 @@ type changePasswordRequest struct {
 // every session of the account, this one included.
 func (rs *Resource) changePassword(w http.ResponseWriter, r *http.Request) {
 	var request changePasswordRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.CurrentPassword == "" || request.NewPassword == "" {
+	if err := wire.Decode(r.Body, &request); err != nil || request.CurrentPassword == "" || request.NewPassword == "" {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errPasswordFieldsRequired))
 		return
 	}

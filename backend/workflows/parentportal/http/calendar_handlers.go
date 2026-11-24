@@ -1,13 +1,13 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	calendarService "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -46,7 +46,7 @@ func (rs *Resource) respondToCalendarInvitation(w http.ResponseWriter, r *http.R
 		return
 	}
 	var req calendarService.InvitationAnswer
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

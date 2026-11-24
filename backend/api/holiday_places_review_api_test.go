@@ -22,7 +22,7 @@ func TestHolidayPlacesRebookingKeepsTheFrozenContribution(t *testing.T) {
 	child := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(registration.ID), ""), nil)).Children[0].ID
 	second := f.offer.Weeks[1]
 	rec := putReadRegistration(t, f.traeger, f.office.token, holidayRebookPath(int64(f.period.ID), int64(registration.ID), int64(child)), map[string]any{
-		"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}},
+		"bookings": []map[string]any{{"week_id": fmt.Sprint(second.ID), "time_model_id": fmt.Sprint(second.TimeModels[0].ID)}},
 	})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Zero(t, f.mails(t, "holiday_place_granted", int64(registration.ID)), "a direct rebooking is not a promotion")
@@ -72,7 +72,7 @@ func TestHolidayPlacesNotifyEachPromotionOfARebookedWeek(t *testing.T) {
 	rebook := func(week, model int64) {
 		t.Helper()
 		rec := putReadRegistration(t, f.traeger, f.office.token, holidayRebookPath(int64(f.period.ID), int64(registration.ID), int64(child)), map[string]any{
-			"bookings": []map[string]any{{"week_id": week, "time_model_id": model}},
+			"bookings": []map[string]any{{"week_id": fmt.Sprint(week), "time_model_id": fmt.Sprint(model)}},
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
@@ -99,7 +99,7 @@ func TestHolidayPlacesRebookingStillPromotesAWaitingSibling(t *testing.T) {
 	require.Equal(t, http.StatusOK, f.confirmWith(t, int64(registration.ID), nil).Code)
 	detail := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(registration.ID), ""), nil))
 	rec := putReadRegistration(t, f.traeger, f.office.token, holidayRebookPath(int64(f.period.ID), int64(registration.ID), int64(detail.Children[0].ID)), map[string]any{
-		"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}},
+		"bookings": []map[string]any{{"week_id": fmt.Sprint(second.ID), "time_model_id": fmt.Sprint(second.TimeModels[0].ID)}},
 	})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, f.places(t)[int64(first.ID)].Waitlist, "the sibling receives the freed place")
@@ -118,7 +118,7 @@ func TestHolidayPlacesDelayedReplacementKeepsTheFrozenCharge(t *testing.T) {
 	f.setCapacity(t, int64(second.ID), full)
 	child := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(registration.ID), ""), nil)).Children[0].ID
 	rec := putReadRegistration(t, f.traeger, f.office.token, holidayRebookPath(int64(f.period.ID), int64(registration.ID), int64(child)), map[string]any{
-		"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}},
+		"bookings": []map[string]any{{"week_id": fmt.Sprint(second.ID), "time_model_id": fmt.Sprint(second.TimeModels[0].ID)}},
 	})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, original, f.contributionTotal(t, int64(registration.ID)), "a replacement on the waiting list keeps the frozen charge")
@@ -128,7 +128,7 @@ func TestHolidayPlacesDelayedReplacementKeepsTheFrozenCharge(t *testing.T) {
 	// A later rebooking back through the same lineage also replaces a paid week.
 	f.setCapacity(t, int64(first.ID), 2)
 	rec = putReadRegistration(t, f.traeger, f.office.token, holidayRebookPath(int64(f.period.ID), int64(registration.ID), int64(child)), map[string]any{
-		"bookings": []map[string]any{{"week_id": first.ID, "time_model_id": first.TimeModels[0].ID}},
+		"bookings": []map[string]any{{"week_id": fmt.Sprint(first.ID), "time_model_id": fmt.Sprint(first.TimeModels[0].ID)}},
 	})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	f.setCapacity(t, int64(first.ID), 3)

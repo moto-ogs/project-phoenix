@@ -244,9 +244,9 @@ func TestOfferingPreviewsUseMensaKindForCombinedCareAndLunch(t *testing.T) {
 	w := doTemplateJSON(t, s.router, http.MethodPost, "/templates", map[string]any{
 		"name": "Mensa 1a", "type": timetableModule.GroupTypeCare, "list_kind": "mensa",
 		"weekdays": []int{1}, "start_time": "12:00", "end_time": "13:00",
-		"room_id": s.roomID, "category_id": s.category.ID, "calendar_period_id": period.ID,
+		"room_id": fmt.Sprint(s.roomID), "category_id": fmt.Sprint(s.category.ID), "calendar_period_id": fmt.Sprint(period.ID),
 		"target_group_type": timetableModule.TargetGroupTypeSchoolClass, "target_school_class": "1a",
-		"student_ids": class, "staff_ids": []int64{s.staffA},
+		"student_ids": testpkg.IDsOf[testpkg.ID](class), "staff_ids": []string{fmt.Sprint(s.staffA)},
 	})
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 	templateID := decodeTemplateData[createTemplateResponse](t, w).TemplateID

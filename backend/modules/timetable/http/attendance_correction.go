@@ -12,7 +12,6 @@ package timetablehttp
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -21,6 +20,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // CorrectAttendanceRequest reuses the PATCH body shape (same tri-state
@@ -163,7 +163,7 @@ func decodeCorrectionBody(w http.ResponseWriter, r *http.Request) (*CorrectAtten
 	if len(body) == 0 {
 		return req, true
 	}
-	if err := json.NewDecoder(bytes.NewReader(body)).Decode(req); err != nil {
+	if err := wire.Decode(bytes.NewReader(body), req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(fmt.Errorf("invalid JSON body: %w", err)))
 		return nil, false
 	}
