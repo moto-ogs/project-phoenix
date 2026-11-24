@@ -43,11 +43,11 @@ func newProductionEnvironment(logger *slog.Logger, publicAPIURL string) (owners.
 	return newRootEnvironment(cfg, logger, nil, productionObservers())
 }
 
-func mountServeRootHost(db transactionruntime.Database, env owners.RootEnvironment, config ServeConfig, hub *realtime.Hub, metrics *httpMetrics, tracer *observability.Tracer, tracker analytics.Tracker, settings settingsCompose.SettingsService, identity identityaccess.Owner, organizations organizationtenancy.SchoolQuery, pwa deliveryCompose.PWAUsageService, newLimiter rateLimiterFactory) (chi.Router, *sessiontoken.TokenAuth, error) {
+func mountServeRootHost(db transactionruntime.Database, env owners.RootEnvironment, config ServeConfig, hub *realtime.Hub, metrics *httpMetrics, tracer *observability.Tracer, tracker analytics.Tracker, settings settingsCompose.SettingsService, identity identityaccess.Owner, organizations organizationtenancy.SchoolQuery, traegerModules TraegerBookedModules, pwa deliveryCompose.PWAUsageService, newLimiter rateLimiterFactory) (chi.Router, *sessiontoken.TokenAuth, error) {
 	registerRuntimeStatsProviders(hub, pwa)
 	router := chi.NewRouter()
 	policy := analyticsCollectionPolicy(IsDemoEnvironment(env.Config.AppEnv), settings, identity, organizations)
-	auth, err := mountServeMiddleware(router, db.UnitOfWork(), env.Logger, config, tracer, metrics, tracker, settings, policy, identity, identity, identity, env.Config.RateLimitEnabled, newLimiter)
+	auth, err := mountServeMiddleware(router, db.UnitOfWork(), env.Logger, config, tracer, metrics, tracker, settings, policy, identity, identity, identity, traegerModules, env.Config.RateLimitEnabled, newLimiter)
 	return router, auth, err
 }
 
@@ -56,7 +56,7 @@ func mountServeRootHost(db transactionruntime.Database, env owners.RootEnvironme
 func mountServeMiddleware(
 	router chi.Router, unit tenant.UnitOfWork, logger *slog.Logger, config ServeConfig, tracer *observability.Tracer,
 	metrics *httpMetrics, tracker analytics.Tracker, settings settingsCompose.SettingsService, policy analytics.CollectionPolicy,
-	consent identityaccess.AccountAnalyticsConsent, guardianSchools identityaccess.GuardianSchools, sessions identityaccess.AccessSessions,
+	consent identityaccess.AccountAnalyticsConsent, guardianSchools identityaccess.GuardianSchools, sessions identityaccess.AccessSessions, traegerModules TraegerBookedModules,
 	rateLimitEnabled bool, newLimiter rateLimiterFactory,
 ) (*sessiontoken.TokenAuth, error) {
 	router.Use(requestIDs(tracer))
@@ -103,12 +103,13 @@ func mountServeMiddleware(
 	// Classifies each path by module; TenantScopeMiddleware and
 	// SchoolScopeMiddleware refuse a module the bound school has not booked
 	// (#4893, #4895), ParentScopeMiddleware a parents portal none of the
-	// account's schools books (#4895).
+	// account's schools books (#4895), TraegerScopeMiddleware a module none
+	// of the Träger's schools books (#6052).
 	booking, err := settingsModule.NewModuleBooking(settings)
 	if err != nil {
 		return nil, err
 	}
-	router.Use(moduleRoutesMiddleware(booking, guardianSchools))
+	router.Use(moduleRoutesMiddleware(booking, guardianSchools, traegerModules))
 	if err := mountSessionObservers(router, logger, tracker, settings, policy, consent, sessionAuth); err != nil {
 		return nil, err
 	}

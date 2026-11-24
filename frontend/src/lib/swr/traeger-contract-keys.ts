@@ -56,4 +56,6 @@ export const traegerContractKeys = {
   importLog: () => "traeger-care-contract-import-log",
   // Bisher nachgepflegte Vertragsangaben (#7767): Datei, Zeitpunkt, Konto, Anzahl.
   correctionLog: () => "traeger-care-contract-correction-log",
+  // Familien der Verträge ohne Mail-Adresse und ihr Verlauf (#7161).
+  families: () => "traeger-care-contract-families",
 } as const;

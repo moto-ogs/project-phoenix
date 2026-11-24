@@ -220,6 +220,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/einstellungen/briefkopf/vorlagen/:kind": "Vorlage",
     "/einstellungen/dokumentarten": "Dokumentarten",
     "/einstellungen/mitglieder": "Mitglieder und Rollen",
+    "/einstellungen/module": "moto-Module",
     "/einstellungen/schulrollen": "Rollen für Schulen",
     "/einstellungen/zugriffsprotokoll": "Zugriffsprotokoll",
     "/einstellungen/zustaendigkeiten": "Zuständigkeiten",
@@ -258,6 +259,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/vertraege/module-zuordnen": "Module neu zuordnen",
     "/vertraege/verknuepfen": "Verträge mit Kinderakten verknüpfen",
     "/vertraege/anmeldungen": "Anmeldungen nachtragen",
+    "/vertraege/geschwister": "Geschwister zusammenführen",
     "/zeitvergleich": "Länger als gebucht",
   },
   operator: {

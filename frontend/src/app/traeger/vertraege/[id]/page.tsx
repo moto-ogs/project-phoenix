@@ -6,6 +6,7 @@
 // behält sein PDF und lässt sich erneut senden. Ein abgeschlossener Vertrag
 // (#4680) zeigt, wann und wie er zustande kam; erneut senden lässt er sich mit demselben PDF.
 
+import { useTraegerModuleBooked } from "~/lib/traeger-booked-modules";
 import { FamilyBillingStatusCard } from "~/components/traeger/family-billing-status-card";
 import { SepaMandateStatusCard } from "~/components/traeger/sepa-mandate-status-card";
 import {
@@ -457,6 +458,7 @@ function TraegerVertragView() {
   const firstMail =
     isDraft ||
     (contract?.status === "versendet" && handedOverOnPaper(contract));
+  const billingBooked = useTraegerModuleBooked("elternbeitraege") === true;
   const canSend =
     isDraft || contract?.status === "versendet" || contract?.status === "aktiv";
   const lastMail = contract?.mailings[0];
@@ -943,8 +945,11 @@ function TraegerVertragView() {
                   of its own. Not on a draft, which can be discarded with
                   what hangs on it, and not on a contract that is over: the
                   family's running contract carries it, and the retention
-                  moves it to the family's next contract (#7862). */}
-              {isDraft ||
+                  moves it to the family's next contract (#7862). Payment and
+                  mandate belong to Elternbeiträge und Abrechnung: without
+                  that module the contract shows neither (#6052). */}
+              {!billingBooked ||
+              isDraft ||
               contract.status === "beendet" ||
               contract.status === "widerrufen" ||
               (contract.endsOn && contract.endsOn < today) ? null : (
@@ -952,7 +957,7 @@ function TraegerVertragView() {
               )}
               {/* A mandate hangs on its contract; discarding a draft
                   would take it along, so a draft gets none (#7862). */}
-              {party?.email && !isDraft ? (
+              {billingBooked && party?.email && !isDraft ? (
                 <SepaMandateStatusCard contractId={contract.id} />
               ) : null}
             </>

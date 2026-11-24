@@ -51,7 +51,7 @@ func countFamily(count parentbilling.FamilyChildCount, recipients map[int64]pare
 	if !ok {
 		return count.FamilyEmail
 	}
-	return parentbilling.ContractFamilyKey(recipients[contractID].Email, contractID)
+	return recipients[contractID].FamilyOf(contractID)
 }
 
 // familyNumbers are the stored numbers of one family: its own and those

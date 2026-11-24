@@ -381,6 +381,10 @@ type Party struct {
 	// billing reads (ContractBilling) fill it: a draft can be discarded, so
 	// nothing of the billing may hang on it (#7770).
 	ContractDraft bool `json:"-"`
+	// FamilyContractID is the leading contract of the family the office
+	// joined the contract to (#7161, ADR 0319), zero when it leads or is
+	// alone. Only the billing reads fill it.
+	FamilyContractID int64 `json:"-"`
 }
 
 // Mailing is one send of the contract with the state of its mail.
@@ -500,6 +504,16 @@ type Contracts interface {
 	// when it was sent, else a rendering with the current template that
 	// stores nothing.
 	VersionDocument(ctx context.Context, reviewer Reviewer, contractID int64, number int) (File, error)
+	// ContractFamilies lists the contracts without a mail address with their
+	// families and the newest changes of the families (#7161, ADR 0319).
+	ContractFamilies(ctx context.Context, reviewer Reviewer) (ContractFamilySet, error)
+	// JoinContractFamily joins the contracts to one family. A contract of
+	// another Träger is ErrContractNotFound, one that may not join a
+	// FamilyRefusal, another version than the stored one readstate.ErrChanged.
+	JoinContractFamily(ctx context.Context, reviewer Reviewer, input FamilyJoinInput) (ContractFamilySet, error)
+	// LeaveContractFamily gives a contract led by another its own family
+	// back, with the same refusals.
+	LeaveContractFamily(ctx context.Context, reviewer Reviewer, contractID int64, expectedVersion string) (ContractFamilySet, error)
 }
 
 // ContractExportLimit is the most contracts one export holds; a filter with

@@ -154,5 +154,4 @@ describe("CatalogPhaseForm über den gelesenen Stand", () => {
     ).toBeInTheDocument();
     expect(onSave).toHaveBeenCalledTimes(1);
   });
-
 });

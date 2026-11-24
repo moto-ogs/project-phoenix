@@ -5,6 +5,7 @@ import { TraegerAnalyticsSession } from "~/components/analytics/traeger-analytic
 import { PortalProviders } from "~/components/auth/portal-providers";
 import { TraegerErrorFixTargetsProvider } from "~/components/traeger/error-fix-targets";
 import { ErrorContactProvider } from "~/lib/error-contact";
+import { ModulePortalProvider } from "~/lib/module-portal-context";
 
 /** Träger-scoped providers ("moto träger", #4649). */
 export function TraegerProviders({
@@ -19,7 +20,10 @@ export function TraegerProviders({
       <ErrorContactProvider contact="traeger">
         {/* Fehler führen zur Stelle, an der man sie behebt (#7092). */}
         <TraegerErrorFixTargetsProvider>
-          {children}
+          {/* A refused module is explained in the words of this portal (#6052). */}
+          <ModulePortalProvider portal="traeger">
+            {children}
+          </ModulePortalProvider>
         </TraegerErrorFixTargetsProvider>
       </ErrorContactProvider>
     </PortalProviders>

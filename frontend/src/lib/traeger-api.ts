@@ -1,3 +1,4 @@
+import { parseBookedModules, type ModuleKey } from "~/lib/modules";
 import { bffFile, bffFileHref, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the Träger portal ("moto träger", #4649). Talks to the BFF
@@ -940,6 +941,11 @@ export interface TraegerOrganization {
   readonly testSystem: boolean;
   /** The federal states of its schools, each once (#4717). */
   readonly federalStates: readonly string[];
+  /**
+   * The moto modules that count as booked for the Träger: at least one of
+   * its schools books them (#6052). A missing list books nothing.
+   */
+  readonly bookedModules: readonly ModuleKey[];
 }
 
 /** The Träger of the signed-in person's session. */
@@ -953,6 +959,7 @@ export async function fetchTraegerOrganization(): Promise<TraegerOrganization> {
     name: organization.name,
     testSystem: organization.test_system,
     federalStates: organization.federal_states ?? [],
+    bookedModules: parseBookedModules(organization.booked_modules),
   };
 }
 

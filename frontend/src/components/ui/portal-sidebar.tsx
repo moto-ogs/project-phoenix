@@ -268,6 +268,10 @@ type PortalSidebarLinkProps = Omit<
   readonly newTab?: boolean;
   /** Ein Zähler hinter dem Namen. */
   readonly badge?: SidebarRowBadge | null;
+  /** Ein Zeichen am Zeilenende, etwa das Schloss eines nicht gebuchten Moduls (#6052). */
+  readonly trailing?: ReactNode;
+  /** Der Name in der eingeklappten Leiste, wenn er mehr sagt als `label`. */
+  readonly collapsedLabel?: string;
 };
 
 /** Ein Eintrag der `PortalSidebar`: Icon des Konzepts, Name, Aktivzustand. */
@@ -332,6 +336,9 @@ interface PortalSettingsNavItem {
   readonly label: string;
   readonly concept: MotoConcept;
   readonly active: boolean;
+  /** Ein Zeichen am Zeilenende, wie bei `PortalSidebarLink` (#6052). */
+  readonly trailing?: ReactNode;
+  readonly collapsedLabel?: string;
 }
 
 /**
@@ -371,6 +378,8 @@ export function PortalSettingsSidebarEntries({
             label={item.label}
             concept={item.concept}
             active={item.active}
+            trailing={item.trailing}
+            collapsedLabel={item.collapsedLabel}
             {...{ [navItemAttribute]: item.key }}
           />
         ))}

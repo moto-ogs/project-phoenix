@@ -100,7 +100,7 @@ func serveThroughModuleLock(t *testing.T, switches moduleSwitches, tenantID int6
 	booking, err := settings.NewModuleBooking(switches)
 	require.NoError(t, err)
 	reached := false
-	handler := moduleRoutesMiddleware(booking, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := moduleRoutesMiddleware(booking, nil, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if tenantID > 0 {
 			r = r.WithContext(tenant.WithTenantID(r.Context(), tenantID))
 		}
@@ -181,7 +181,7 @@ func serveThroughDeviceLock(t *testing.T, switches moduleSwitches, tenantID int6
 		})
 	}
 	reached := false
-	handler := moduleRoutesMiddleware(booking, nil)(gateDeviceAuthentication(authenticate)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	handler := moduleRoutesMiddleware(booking, nil, nil)(gateDeviceAuthentication(authenticate)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		reached = true
 		w.WriteHeader(http.StatusNoContent)
 	})))

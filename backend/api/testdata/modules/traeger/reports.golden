@@ -1,2 +1,2 @@
-GET /traeger/reports/key-date -> basis
-GET /traeger/reports/key-date/export -> basis
+GET /traeger/reports/key-date -> traeger_uebersicht
+GET /traeger/reports/key-date/export -> traeger_uebersicht

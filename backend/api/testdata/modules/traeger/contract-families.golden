@@ -1,0 +1,4 @@
+GET /traeger/contract-families/ -> basis
+GET /traeger/contract-families/export -> basis
+POST /traeger/contract-families/ -> basis
+POST /traeger/contract-families/{contractId}/leave -> basis

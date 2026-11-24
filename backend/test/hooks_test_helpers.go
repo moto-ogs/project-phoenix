@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken/tokentest"
+	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/tenant/tenanttest"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -53,6 +54,11 @@ func MintTestJWT(t testing.TB, claims sessiontoken.AppClaims) string {
 // token whose family is gone (#5194); tests that drive it need this one.
 func MintLiveSessionJWT(t testing.TB, db *bun.DB, claims sessiontoken.AppClaims) string {
 	t.Helper()
+	// A Träger session names its Träger and no school.
+	if claims.Scope == tenant.ScopeOrg {
+		claims.FamilyID = CreateTestTraegerSessionFamily(t, db, int64(claims.ID), claims.OrgID)
+		return MintTestJWT(t, claims)
+	}
 	claims.TenantID = RebaseTenantID(t, claims.TenantID)
 	// Parent and caterer tokens name no school; their session row has one.
 	school := claims.TenantID

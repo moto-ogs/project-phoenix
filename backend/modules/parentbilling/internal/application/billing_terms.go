@@ -230,7 +230,7 @@ func (t *BillingTerms) familyOfContract(ctx context.Context, organizationID, con
 		return parentbilling.CareRecipient{}, "", fmt.Errorf("parent billing: read the contract party: %w", err)
 	}
 	recipient, known := recipients[contractID]
-	key := parentbilling.ContractFamilyKey(recipient.Email, contractID)
+	key := recipient.FamilyOf(contractID)
 	if !known || key == "" {
 		return parentbilling.CareRecipient{}, "", parentbilling.ErrFamilyUnknown
 	}
@@ -359,7 +359,7 @@ func (t *BillingTerms) bindingContract(ctx context.Context, organizationID int64
 	}
 	var contracts []familyContract
 	for _, id := range ids {
-		if parentbilling.ContractFamilyKey(recipients[id].Email, id) == family {
+		if recipients[id].FamilyOf(id) == family {
 			contracts = append(contracts, familyContract{id: id, from: first[id].From, until: until[id]})
 		}
 	}
@@ -544,12 +544,17 @@ type invoicePayments struct {
 func (p invoicePayments) perChild() bool { return p.children != nil && !p.payerNumbers }
 
 // childNumber answers the number of a child of a family and notes its
-// read; empty without one.
-func (p invoicePayments) childNumber(familyEmail, childKey string) string {
+// read; empty without one. A child whose contract the office joined to the
+// family of another contract (#7161, ADR 0319 point 6) keeps the number
+// stored under its own contract until the family has one for it.
+func (p invoicePayments) childNumber(familyEmail, childKey string, contractID int64) string {
 	if childKey == "" {
 		return ""
 	}
 	number := p.children[parentbilling.ChildDebtorNumberKey(familyEmail, childKey)]
+	if own, rests := parentbilling.OwnContractFamily(familyEmail, contractID); number == nil && rests {
+		number = p.children[parentbilling.ChildDebtorNumberKey(own, childKey)]
+	}
 	if number == nil {
 		return ""
 	}
@@ -721,10 +726,11 @@ func (p invoicePayments) careInvoice(invoice *parentbilling.CareInvoice, issuedO
 	recipient := parentbilling.ResolveRecipient(parentbilling.BillingRecipient{FirstName: invoice.Recipient.FirstName,
 		LastName: invoice.Recipient.LastName, Email: invoice.Recipient.Email}, family)
 	invoice.Recipient = parentbilling.CareRecipient{FirstName: recipient.FirstName, LastName: recipient.LastName,
-		Email: recipient.Email, Kind: recipient.Kind, SecondName: recipient.SecondName, Address: recipient.Address}
+		Email: recipient.Email, Kind: recipient.Kind, SecondName: recipient.SecondName, Address: recipient.Address,
+		FamilyContractID: invoice.Recipient.FamilyContractID}
 	switch {
 	case p.perChild():
-		invoice.DebtorNumber = p.childNumber(invoice.FamilyEmail, p.contractChildren[invoice.ContractID.Int64()])
+		invoice.DebtorNumber = p.childNumber(invoice.FamilyEmail, p.contractChildren[invoice.ContractID.Int64()], invoice.ContractID.Int64())
 	case family != nil:
 		invoice.DebtorNumber = family.DebtorNumber
 	}
@@ -754,7 +760,7 @@ func (p invoicePayments) holidayDocument(document *parentbilling.BillingDocument
 	case document.RegistrationChildID != 0 || p.perChild():
 		if len(document.Children) > 0 {
 			child := document.Children[0]
-			document.DebtorNumber = p.childNumber(document.FamilyEmail, parentbilling.ChildKey(child.FirstName, child.LastName, &child.BirthDate))
+			document.DebtorNumber = p.childNumber(document.FamilyEmail, parentbilling.ChildKey(child.FirstName, child.LastName, &child.BirthDate), 0)
 		}
 	case family != nil:
 		document.DebtorNumber = family.DebtorNumber

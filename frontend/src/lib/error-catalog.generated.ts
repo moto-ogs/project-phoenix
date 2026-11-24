@@ -75,6 +75,8 @@ export const ERROR_CATALOG = {
         "Der Vertrag ist nicht mehr an diese Anmeldung gebunden. Lade die Seite neu und prüfe den Stand.",
       "care_contract.enrollment_preview_changed":
         "Die Verträge oder die Schule haben sich seit der Vorschau geändert. Lade die Vorschau neu und prüfe sie noch einmal.",
+      "care_contract.family_refused":
+        "Diese Familie lässt sich so nicht ändern. Lade die Seite neu und prüfe die Auswahl.",
       "care_contract.field_invalid":
         "Einige Angaben stimmen nicht. Bitte prüfe deine Eingaben.",
       "care_contract.import_changed":
@@ -2258,6 +2260,8 @@ export const ERROR_CATALOG = {
         "The contract is no longer bound to this enrollment. Reload the page and check the current state.",
       "care_contract.enrollment_preview_changed":
         "The contracts or the school have changed since the preview. Reload the preview and check it again.",
+      "care_contract.family_refused":
+        "This family cannot be changed like this. Reload the page and check your selection.",
       "care_contract.field_invalid":
         "Some details are not valid. Please check your entries.",
       "care_contract.letterhead_missing":
