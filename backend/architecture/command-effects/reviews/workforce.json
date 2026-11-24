@@ -7762,24 +7762,24 @@
     },
     {
       "adr": "0083",
-      "approval_adr": "0098",
+      "approval_adr": "0315",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.shiftTypeAdministration.CreateShiftType",
       "classification": "debt",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.ShiftTypeAdministration.CreateShiftType",
-      "reason": "Unreviewed cross-owner mutation, explicit coordination finding (not a leaf or E1-E5 grant): workforce reaches modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks (timetable-activities) through modules/workforce/internal/planning.shiftTypeAdministration.CreateShiftType. Newly visible through #4836 callable resolution; protocol review is follow-up work (ADR 0098).",
+      "reason": "Unreviewed cross-owner mutation, explicit coordination finding (not a leaf or E1-E5 grant): workforce reaches modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks (timetable-activities) through modules/workforce/internal/planning.shiftTypeAdministration.CreateShiftType. Newly visible through #4836 callable resolution; protocol review is follow-up work (ADR 0098). Re-reviewed with #7997: the link write now carries the link token of every category the shift-type form read and Timetable refuses a changed link under its row locks (ADR 0311); effect and classification unchanged, approved by ADR 0315.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks",
       "target_owner": "timetable-activities"
     },
     {
       "adr": "0083",
-      "approval_adr": "0098",
+      "approval_adr": "0315",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.shiftTypeAdministration.UpdateShiftType",
       "classification": "debt",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.ShiftTypeAdministration.UpdateShiftType",
-      "reason": "Unreviewed cross-owner mutation, explicit coordination finding (not a leaf or E1-E5 grant): workforce reaches modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks (timetable-activities) through modules/workforce/internal/planning.shiftTypeAdministration.UpdateShiftType. Newly visible through #4836 callable resolution; protocol review is follow-up work (ADR 0098).",
+      "reason": "Unreviewed cross-owner mutation, explicit coordination finding (not a leaf or E1-E5 grant): workforce reaches modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks (timetable-activities) through modules/workforce/internal/planning.shiftTypeAdministration.UpdateShiftType. Newly visible through #4836 callable resolution; protocol review is follow-up work (ADR 0098). Re-reviewed with #7997: the link write now carries the link token of every category the shift-type form read and Timetable refuses a changed link under its row locks (ADR 0311); effect and classification unchanged, approved by ADR 0315.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks",
       "target_owner": "timetable-activities"
