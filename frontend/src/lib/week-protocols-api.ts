@@ -3,7 +3,7 @@
 // Woche ab Freitagabend zum Entwurf und schließt ihn nach der Folgewoche
 // selbst ab. Wer welches Protokoll sieht, entscheidet das Backend.
 
-import { bffJson } from "./bff-fetch";
+import { bffFileHref, bffJson } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
 import type {
   weekProtocolDayResponse,
@@ -215,7 +215,9 @@ class WeekProtocolsService {
 
   /** Same-origin proxy URL of the closed protocol as PDF. */
   pdfUrl(protocolId: string): string {
-    return `/api/week-protocols/${protocolId}/pdf`;
+    return bffFileHref("tenant", "GET /api/week-protocols/{protocolId}/pdf", {
+      params: { protocolId },
+    });
   }
 }
 

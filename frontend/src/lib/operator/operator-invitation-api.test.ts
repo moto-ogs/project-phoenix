@@ -16,12 +16,12 @@ vi.mock("~/lib/bff-fetch", async (importOriginal) => {
     ...original,
     bffJson: (
       portal: "public",
-      route: string | SessionBffRoute<unknown>,
+      route: string | SessionBffRoute<unknown, unknown>,
       options?: { body?: unknown },
     ) =>
       typeof route === "string"
         ? mockBffJson(portal, route, options)
-        : original.bffJson(portal, route, options),
+        : original.bffJson(portal, route, { ...options, body: options?.body }),
   };
 });
 

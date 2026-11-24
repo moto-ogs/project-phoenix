@@ -9,7 +9,7 @@ import {
   demoBackendPath,
 } from "../forward";
 import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
-import { problemResponse } from "~/lib/api-helpers.server";
+import { problemResponse } from "~/lib/api-response-error.server";
 import { withPrivateNoStore } from "~/lib/private-no-store";
 import { successResponse } from "~/lib/route-wrapper-utils.server";
 import { configuredPortalOfHost } from "~/lib/portal-paths";

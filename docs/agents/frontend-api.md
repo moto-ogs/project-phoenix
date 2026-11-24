@@ -90,7 +90,8 @@ slash is dropped and each parameter encoded.
   All three rules run in `pnpm run check`.
   `scripts/backend-wire-types.mjs`
   finds hand-written wire types by their form (two `snake_case` fields of
-  their own, a generated type imported under another name, a type that only
+  their own in an interface, object alias or union branch, a generated type
+  imported under another name, a type that only
   renames a generated one); its baseline only shrinks.
 - **Tests:** a client test stubs the global `fetch` and mocks the session
   gate with
@@ -101,7 +102,9 @@ slash is dropped and each parameter encoded.
   `bffFile(portal, route, options)` from the same module: the same path,
   portal table and ApiError, resolving to the successful `Response` whose
   body and `Content-Disposition` the caller reads. A link the browser opens
-  itself (`<a href>`) stays a plain URL.
+  itself (`<a href>`, image or navigation) uses `bffFileHref(portal, route,
+  { params, query })`. It accepts only registered GET file keys with their
+  typed path parameters and query. Do not concatenate a BFF file address.
 
 ## Environment & API URLs — Fail Fast, No Defaults
 
@@ -149,8 +152,10 @@ or write a `Backend*` interface for a registered route.
   job fail on a stale file.
 - A portal forwards its backend routes through one catalog proxy, so a new
   backend route needs no pass-through `route.ts`. `app/api/proxy-routes.test.ts`
-  fails on a `route.ts` whose only code is `proxyGet(...)` and its siblings.
-- Read with `contractGet(entry, options)`; write with
+  rejects retired forwarding helpers even in a route with its own code, and
+  checks for hand-built file addresses.
+- In named routes, layouts and server modules, read with
+  `contractGet(entry, options)`; write with
   `contractWrite(entry, body, options)`. Import the entry from its
   generated resource file. The entry types the write body and decodes the
   full answer, with or without an envelope. A malformed answer is a 502,
@@ -236,6 +241,12 @@ The key is the scope claim of the portal's session token
   from the portal's handlers (`makePortalHandlers`). The answer is the
   backend's envelope with the decoded data: `{ status, data, message }`, a
   paginated list also `pagination`, as `common.Response` writes them.
+  A backend 204 still goes through the decoder. A NoData DELETE answers
+  204; a data-bearing DELETE with no answer fails with 502. The proxy
+  and the server contract client share JSON reading: unreadable 2xx
+  answers (including truncated JSON) are 502. After a write that may
+  have committed, they carry `general.write_answer_unreadable`; reads
+  and routes marked `NoCommit` keep the retryable error.
 - The BFF path must equal the backend path below the portal's prefix. A
   route whose BFF path differs (`/api/operator/provisioning/schools` for
   `/operator/schools`) moves its callers to the backend's path first.
@@ -316,7 +327,7 @@ the portal object its entry module exports (`tenantPortal`, `parentPortal`,
 `post`, `put`, `patch`, `del`) runs inside the portal's `withAuth`, reads the
 session, renews it once on a backend 401 and answers errors through
 `handleApiError`. The helpers that read the session (`backendFetch`,
-`forwardToBackend`, `runWithRenewal`) throw outside that wrapper;
+`runWithRenewal`) throw outside that wrapper;
 `src/app/api/route-session-coverage.test.ts` runs every route and fails on a
 session read outside it. Success answers the backend's envelope
 `{ status: "success", data }` (`successResponse` in
@@ -339,6 +350,20 @@ No route file calls `fetch`; both contract helpers go through `sendBackend`. A f
 backend error as its problem body). An upload the BFF must check before
 forwarding uses `createFileUploadHandler` (`lib/file-upload-wrapper.server.ts`;
 `settings/login-image` checks the image and purges the tenant cache).
+
+Go owns validation of the domain request. Two named adapters check or map
+only what they need to assemble that request:
+
+- Tenant and operator school settings writes check the registry key's path
+  segment before forwarding from `settings/values/[key]`. They keep the
+  existing 400 for malformed segments; Go decides which keys and values are
+  allowed. The named handlers invalidate the tenant cache after a write.
+- `/api/invitations/accept` adapts the browser form to Go's
+  `/auth/invitations/{token}/accept`: it moves the token to the encoded path,
+  maps the camelCase form fields and resolves an owner session only for
+  existing-account acceptance. Go validates the invitation and form values.
+
+Use `problemResponse` directly from `lib/api-response-error.server.ts`.
 
 Read the affected portal's route wrapper before changing a handler; retain the
 affected endpoint's error contract. Logout forwards backend errors unchanged
@@ -371,9 +396,14 @@ sets `NoRetryAfterRenewal` for a catalog route or passes
 `retry: { off: "<reason>" }` to the named route's session transport;
 `src/app/api/credential-retry.test.ts` proves the credential goes out once
 after a 401. `contractGet` and `contractWrite` send once by default. Only a
-portal's session transport or wrapper can renew and repeat the call. The SSE stream
-and the cached tenant resolve call `sendBackend` without that wrapper; the
-stream keeps its connection open past the header timeout. A route
+portal's session transport or wrapper can renew and repeat the call.
+The Staff shell reads its startup data through the generated decoders;
+a failed optional read is left out so the browser can load it normally.
+`tenant-resolve.server.ts` uses the public `GET /auth/tenant/resolve`
+entry without a session. Its own per-replica cache coalesces concurrent
+lookups, keeps only decoded successes for 60 seconds and retains its
+explicit invalidation. The unregistered SSE stream uses `sendBackend`
+directly and keeps its connection open past the header timeout. A route
 param in a backend path is encoded (`requirePathSegmentParam`,
 `encodeURIComponent`); a query key never replaces a route param. Why and
 the full chain:

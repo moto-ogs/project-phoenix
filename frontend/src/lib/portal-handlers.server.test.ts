@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ServerSession } from "~/server/auth/session-types";
 import { testPortalBinding } from "~/test/portal-binding";
 import { createMockContext } from "~/test/route-test-helpers";
+import { backendJson, unwrapEnvelope } from "./backend-client.server";
 import { makePortalHandlers } from "./portal-handlers.server";
 
 const { captureException } = vi.hoisted(() => ({
@@ -23,6 +24,21 @@ const auth = vi.fn<() => Promise<ServerSession | null>>();
 const uncachedAuth = vi.fn<() => Promise<ServerSession | null>>();
 
 const portal = makePortalHandlers(testPortalBinding(auth, uncachedAuth));
+
+async function backendData(
+  method: "GET" | "POST" | "DELETE",
+  path: string,
+  request: NextRequest,
+  token: string,
+  body?: unknown,
+) {
+  return unwrapEnvelope(
+    await backendJson(method, path, token, body, {
+      request,
+      idempotencyKey: request.headers.get("Idempotency-Key"),
+    }),
+  );
+}
 
 function request(
   path: string,
@@ -64,7 +80,14 @@ describe("one backend call for every portal route", () => {
   it("sends the session's bearer, the client identity and no-store", async () => {
     fetchMock.mockResolvedValueOnce(json({ status: "success", data: [1] }));
 
-    await portal.proxyGet("/parent/me/children")(
+    await portal.get((req, token) =>
+      backendData(
+        "GET",
+        "/parent/me/children" + req.nextUrl.search,
+        req,
+        token,
+      ),
+    )(
       request("/api/parent/me/children?include=guardians"),
       createMockContext(),
     );
@@ -83,7 +106,9 @@ describe("one backend call for every portal route", () => {
   it("forwards the browser's Idempotency-Key on a POST", async () => {
     fetchMock.mockResolvedValueOnce(json({ status: "success", data: {} }));
 
-    await portal.proxyPost("/parent/me/sick-notes")(
+    await portal.post((req, body, token) =>
+      backendData("POST", "/parent/me/sick-notes", req, token, body),
+    )(
       request("/api/parent/me/sick-notes", {
         method: "POST",
         body: { day: "2026-09-09" },
@@ -97,8 +122,13 @@ describe("one backend call for every portal route", () => {
   });
 
   it("refuses a dot segment from a route param before any request", async () => {
-    const response = await portal.proxyGet(
-      (params) => `/parent/me/children/${String(params.id)}`,
+    const response = await portal.get((req, token, params) =>
+      backendData(
+        "GET",
+        `/parent/me/children/${String(params.id)}`,
+        req,
+        token,
+      ),
     )(request("/api/parent/me/children/x"), createMockContext({ id: ".." }));
 
     expect(response.status).toBe(400);
@@ -118,10 +148,14 @@ describe("one backend call for every portal route", () => {
         }),
     );
 
-    const pending = portal.proxyGet("/parent/me/children")(
-      request("/api/parent/me/children"),
-      createMockContext(),
-    );
+    const pending = portal.get((req, token) =>
+      backendData(
+        "GET",
+        "/parent/me/children" + req.nextUrl.search,
+        req,
+        token,
+      ),
+    )(request("/api/parent/me/children"), createMockContext());
     await vi.advanceTimersByTimeAsync(90_000);
 
     const response = await pending;
@@ -138,10 +172,9 @@ describe("one response contract", () => {
       json({ status: "success", data: [1], message: "ok" }),
     );
 
-    const response = await portal.proxyGet("/x")(
-      request("/api/x"),
-      createMockContext(),
-    );
+    const response = await portal.get((req, token) =>
+      backendData("GET", "/x" + req.nextUrl.search, req, token),
+    )(request("/api/x"), createMockContext());
 
     await expect(response.json()).resolves.toEqual({
       status: "success",
@@ -152,7 +185,9 @@ describe("one response contract", () => {
   it("answers a DELETE without a result with 204", async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
-    const response = await portal.proxyDelete("/parent/me/push")(
+    const response = await portal.del((req, token) =>
+      backendData("DELETE", "/parent/me/push", req, token),
+    )(
       request("/api/parent/me/push", { method: "DELETE" }),
       createMockContext(),
     );
@@ -175,10 +210,9 @@ describe("one response contract", () => {
       ),
     );
 
-    const response = await portal.proxyGet("/x")(
-      request("/api/x"),
-      createMockContext(),
-    );
+    const response = await portal.get((req, token) =>
+      backendData("GET", "/x" + req.nextUrl.search, req, token),
+    )(request("/api/x"), createMockContext());
 
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toMatchObject({
@@ -196,10 +230,9 @@ describe("401 retry", () => {
       .mockResolvedValueOnce(problem401())
       .mockResolvedValueOnce(json({ status: "success", data: "ok" }));
 
-    const response = await portal.proxyGet("/x")(
-      request("/api/x"),
-      createMockContext(),
-    );
+    const response = await portal.get((req, token) =>
+      backendData("GET", "/x" + req.nextUrl.search, req, token),
+    )(request("/api/x"), createMockContext());
 
     expect(response.status).toBe(200);
     expect(sent(1).headers.get("authorization")).toBe("Bearer token-2");
@@ -220,23 +253,14 @@ describe("401 retry", () => {
     fetchMock.mockResolvedValueOnce(problem401());
     arrange();
 
-    const viaHandler = await portal.proxyGet("/x")(
-      request("/api/x"),
-      createMockContext(),
-    );
-    fetchMock.mockResolvedValueOnce(problem401());
-    const viaProxy = await portal.jsonProxy({ method: "GET", path: "/x" })(
-      request("/api/x"),
-      createMockContext(),
-    );
-
-    for (const response of [viaHandler, viaProxy]) {
-      expect(response.status).toBe(401);
-      await expect(response.json()).resolves.toMatchObject({
-        detail: "Token expired",
-      });
-    }
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const response = await portal.get((req, token) =>
+      backendData("GET", "/x" + req.nextUrl.search, req, token),
+    )(request("/api/x"), createMockContext());
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      detail: "Token expired",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   // The refresh could not be decided (backend down, timeout, 5xx): the
@@ -254,23 +278,14 @@ describe("401 retry", () => {
     fetchMock.mockResolvedValueOnce(problem401());
     arrange();
 
-    const viaHandler = await portal.proxyGet("/x")(
-      request("/api/x"),
-      createMockContext(),
-    );
-    fetchMock.mockResolvedValueOnce(problem401());
-    const viaProxy = await portal.jsonProxy({ method: "GET", path: "/x" })(
-      request("/api/x"),
-      createMockContext(),
-    );
-
-    for (const response of [viaHandler, viaProxy]) {
-      expect(response.status).toBe(503);
-      await expect(response.json()).resolves.toMatchObject({
-        code: "general.unavailable",
-      });
-    }
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const response = await portal.get((req, token) =>
+      backendData("GET", "/x" + req.nextUrl.search, req, token),
+    )(request("/api/x"), createMockContext());
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "general.unavailable",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   // A renewal that throws on every request would otherwise be an endless,
@@ -281,10 +296,9 @@ describe("401 retry", () => {
     fetchMock.mockResolvedValueOnce(problem401());
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    const response = await portal.proxyGet("/x")(
-      request("/api/x"),
-      createMockContext(),
-    );
+    const response = await portal.get((req, token) =>
+      backendData("GET", "/x" + req.nextUrl.search, req, token),
+    )(request("/api/x"), createMockContext());
 
     expect(response.status).toBe(503);
     expect(warn).toHaveBeenCalledWith("session_renewal_failed", {
@@ -311,26 +325,15 @@ describe("401 retry", () => {
       );
     fetchMock
       .mockResolvedValueOnce(problem401())
-      .mockResolvedValueOnce(refusal())
-      .mockResolvedValueOnce(problem401())
       .mockResolvedValueOnce(refusal());
 
-    const viaHandler = await portal.proxyGet("/x")(
-      request("/api/x"),
-      createMockContext(),
-    );
-    uncachedAuth.mockResolvedValue(session("token-3"));
-    const viaProxy = await portal.jsonProxy({ method: "GET", path: "/x" })(
-      request("/api/x"),
-      createMockContext(),
-    );
-
-    for (const response of [viaHandler, viaProxy]) {
-      expect(response.status).toBe(401);
-      await expect(response.json()).resolves.toMatchObject({
-        code: "identity.mfa_session_required",
-      });
-    }
+    const response = await portal.get((req, token) =>
+      backendData("GET", "/x" + req.nextUrl.search, req, token),
+    )(request("/api/x"), createMockContext());
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "identity.mfa_session_required",
+    });
   });
 
   it("answers the retry's own result: a DELETE's 204 or a business refusal", async () => {
@@ -345,15 +348,13 @@ describe("401 retry", () => {
         ),
       );
 
-    const deleted = await portal.proxyDelete("/x")(
-      request("/api/x", { method: "DELETE" }),
-      createMockContext(),
-    );
+    const deleted = await portal.del((req, token) =>
+      backendData("DELETE", "/x", req, token),
+    )(request("/api/x", { method: "DELETE" }), createMockContext());
     uncachedAuth.mockResolvedValue(session("token-3"));
-    const refused = await portal.proxyGet("/x")(
-      request("/api/x"),
-      createMockContext(),
-    );
+    const refused = await portal.get((req, token) =>
+      backendData("GET", "/x" + req.nextUrl.search, req, token),
+    )(request("/api/x"), createMockContext());
 
     expect(deleted.status).toBe(204);
     expect(refused.status).toBe(403);
@@ -365,7 +366,7 @@ describe("401 retry", () => {
   it("does not run a handler again that opts out, and forwards its 401", async () => {
     fetchMock.mockResolvedValueOnce(problem401());
     const handler = vi.fn(async (_request, body: unknown, token: string) =>
-      portal.api("POST", "/operator/profile/password", token, body),
+      backendJson("POST", "/operator/profile/password", token, body),
     );
 
     const response = await portal.post(handler, {
@@ -382,43 +383,6 @@ describe("401 retry", () => {
     expect(uncachedAuth).not.toHaveBeenCalled();
     expect(response.status).toBe(401);
   });
-
-  it("does not repeat an endpoint that opts out, and forwards its 401", async () => {
-    fetchMock.mockResolvedValueOnce(problem401());
-
-    const response = await portal.jsonProxy({
-      method: "POST",
-      path: "/caterer/account/password",
-      retry: { off: "credential" },
-    })(
-      request("/api/caterer/account/password", {
-        method: "POST",
-        body: { current_password: "x" },
-      }),
-      createMockContext(),
-    );
-
-    expect(fetchMock).toHaveBeenCalledOnce();
-    expect(uncachedAuth).not.toHaveBeenCalled();
-    await expect(response.json()).resolves.toMatchObject({
-      code: "identity.x",
-    });
-  });
-
-  it("answers 401 Unauthorized without a session and calls nothing", async () => {
-    auth.mockResolvedValue(null);
-
-    const response = await portal.jsonProxy({ method: "GET", path: "/x" })(
-      request("/api/x"),
-      createMockContext(),
-    );
-
-    expect(response.status).toBe(401);
-    await expect(response.json()).resolves.toMatchObject({
-      detail: "Unauthorized",
-    });
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
 });
 
 // Outside the portal's wrapper a session read can rotate the refresh token
@@ -426,11 +390,6 @@ describe("401 retry", () => {
 describe("session helpers outside the portal's wrapper", () => {
   it.each([
     ["backendFetch", () => portal.backendFetch(request("/api/x"), "/x")],
-    ["downloadFile", () => portal.downloadFile(request("/api/x"), "/x")],
-    [
-      "forwardToBackend",
-      () => portal.forwardToBackend(request("/api/x"), "/x"),
-    ],
     [
       "runWithRenewal",
       () => portal.runWithRenewal(request("/api/x"), "token-1", async () => 1),
@@ -451,199 +410,16 @@ describe("session helpers outside the portal's wrapper", () => {
   it("runs inside its own portal's wrapper only", async () => {
     fetchMock.mockResolvedValueOnce(new Response("pdf"));
     const route = testPortalBinding(auth).withAuth((req) =>
-      makePortalHandlers(testPortalBinding(auth)).downloadFile(req, "/x"),
+      makePortalHandlers(testPortalBinding(auth)).backendFetch(req, "/x"),
     );
     await expect(route(request("/api/x"))).rejects.toThrow(
       "outside its portal's auth wrapper",
     );
     await expect(
-      portal.route(async (req) => portal.downloadFile(req, "/x"))(
+      portal.route(async (req) => portal.backendFetch(req, "/x"))(
         request("/api/x"),
         createMockContext(),
       ),
     ).resolves.toHaveProperty("status", 200);
-  });
-});
-
-describe("file responses", () => {
-  it("streams the file with its headers, nosniff and no-store", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response("a;b", {
-        headers: {
-          "Content-Type": "text/csv",
-          "Content-Disposition": 'attachment; filename="x.csv"',
-          "Content-Length": "3",
-          "Set-Cookie": "backend=1",
-        },
-      }),
-    );
-
-    const response = await portal.proxyFile("/export", {
-      forwardQuery: ["month"],
-    })(request("/api/export?month=2026-09&other=1"), createMockContext());
-
-    expect(sent().url).toBe("http://backend:8080/export?month=2026-09");
-    expect(response.headers.get("content-type")).toBe("text/csv");
-    expect(response.headers.get("content-disposition")).toBe(
-      'attachment; filename="x.csv"',
-    );
-    expect(response.headers.get("content-length")).toBe("3");
-    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
-    expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(response.headers.get("set-cookie")).toBeNull();
-    await expect(response.text()).resolves.toBe("a;b");
-  });
-
-  it("sends the client identity and a POST body again on the retry", async () => {
-    fetchMock
-      .mockResolvedValueOnce(json({ status: 401 }, 401))
-      .mockResolvedValueOnce(new Response("csv"));
-
-    await portal.proxyFile("/students/export", { method: "POST" })(
-      request("/api/students/export", {
-        method: "POST",
-        body: { format: "csv" },
-      }),
-      createMockContext(),
-    );
-
-    for (const call of [0, 1]) {
-      expect(sent(call).init.method).toBe("POST");
-      expect(sent(call).init.body).toBe('{"format":"csv"}');
-      expect(sent(call).headers.get("content-type")).toBe("application/json");
-      expect(sent(call).headers.get("x-forwarded-for")).toBe("203.0.113.7");
-    }
-  });
-
-  it("keeps a backend error's content type and Retry-After", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ status: 429, code: "general.rate_limit" }),
-        {
-          status: 429,
-          headers: {
-            "Content-Type": "application/problem+json",
-            "Retry-After": "30",
-          },
-        },
-      ),
-    );
-
-    const response = await portal.proxyFile("/export")(
-      request("/api/export"),
-      createMockContext(),
-    );
-
-    expect(response.status).toBe(429);
-    expect(response.headers.get("content-type")).toBe(
-      "application/problem+json",
-    );
-    expect(response.headers.get("retry-after")).toBe("30");
-  });
-
-  it.each([
-    ["a success without a body", () => new Response(null), 502],
-    [
-      "a network failure",
-      () => {
-        throw new TypeError("fetch failed");
-      },
-      503,
-    ],
-  ])("answers %s with %s", async (_case, backend, status) => {
-    fetchMock.mockImplementationOnce(async () => backend());
-
-    const response = await portal.proxyFile("/export")(
-      request("/api/export"),
-      createMockContext(),
-    );
-
-    expect(response.status).toBe(status);
-  });
-
-  // The proxy's CSP is the one the browser gets; a second one from the
-  // backend would only look like it mattered (review L9).
-  it("does not pass the backend's CSP on", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response("pdf", {
-        headers: { "Content-Security-Policy": "sandbox; default-src 'none'" },
-      }),
-    );
-
-    const response = await portal.proxyFile("/upload")(
-      request("/api/upload"),
-      createMockContext(),
-    );
-
-    // Anker: a real file answer.
-    expect(await response.text()).toBe("pdf");
-    expect(response.headers.get("content-security-policy")).toBeNull();
-  });
-
-  it("answers a backend error as its problem body", async () => {
-    fetchMock.mockResolvedValueOnce(
-      json({ status: 404, title: "Not Found", code: "general.not_found" }, 404),
-    );
-
-    const response = await portal.proxyFile("/export")(
-      request("/api/export"),
-      createMockContext(),
-    );
-
-    expect(response.status).toBe(404);
-    await expect(response.json()).resolves.toMatchObject({
-      code: "general.not_found",
-    });
-  });
-
-  // #6728: undici cancels the body of a fetch Response that is garbage
-  // collected while its stream is still unlocked. The session cookie exit
-  // awaits after the route returned; a collection then left errors as an
-  // empty 500 and files truncated.
-  it.each([
-    ["a backend error", 404, '{"status":404,"code":"general.not_found"}'],
-    ["a file", 200, "pdf"],
-  ])(
-    "takes the backend body of %s before the route returns",
-    async (_case, status, body) => {
-      const backend = new Response(body, { status });
-      fetchMock.mockResolvedValueOnce(backend);
-
-      const response = await portal.proxyFile("/proof")(
-        request("/api/proof"),
-        createMockContext(),
-      );
-
-      expect(backend.body?.locked).toBe(true);
-      expect(response.status).toBe(status);
-      await expect(response.text()).resolves.toBe(body);
-    },
-  );
-
-  it("repeats a file request after a 401 with the renewed token", async () => {
-    fetchMock
-      .mockResolvedValueOnce(json({ status: 401 }, 401))
-      .mockResolvedValueOnce(new Response("pdf"));
-
-    const response = await portal.proxyFile("/proof")(
-      request("/api/proof"),
-      createMockContext(),
-    );
-
-    expect(sent(1).headers.get("authorization")).toBe("Bearer token-2");
-    await expect(response.text()).resolves.toBe("pdf");
-  });
-
-  it("refuses a POST body above the limit with 413", async () => {
-    const response = await portal.proxyFile("/letters", {
-      method: "POST",
-      maxBodyBytes: 8,
-    })(
-      request("/api/letters", { method: "POST", body: { text: "too long" } }),
-      createMockContext(),
-    );
-
-    expect(response.status).toBe(413);
-    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

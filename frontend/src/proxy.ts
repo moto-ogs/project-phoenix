@@ -126,7 +126,7 @@ function isPostHogProxyPath(pathname: string): boolean {
   );
 }
 
-function proxyPostHog(request: NextRequest): NextResponse {
+function forwardAnalytics(request: NextRequest): NextResponse {
   const path =
     request.nextUrl.pathname.slice(POSTHOG_PROXY_PREFIX.length) || "/";
   const origin = /^\/(static|array)\//.test(path)
@@ -762,7 +762,7 @@ export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
 
   if (isPostHogProxyPath(pathname)) {
-    return proxyPostHog(request);
+    return forwardAnalytics(request);
   }
 
   const response = routeRequest(request);

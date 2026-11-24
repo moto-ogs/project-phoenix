@@ -17,7 +17,7 @@ import type * as traegerProfileContract from "./contract/traeger-profile.generat
 import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
 import { toSettingsSchema, type SettingsSchema } from "./settings-api";
 import { filenameFromDisposition } from "./file-download";
-import { sessionBff } from "./session-bff";
+import { sessionBff, type SessionLoginBody } from "./session-bff";
 import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
 import type { TraegerListFormat } from "./traeger-list-export";
 import { type TraegerRole, traegerRoles } from "./traeger-roles";
@@ -125,7 +125,7 @@ export async function traegerLogin(input: {
   /** Asks for the code even on a remembered device (#6955). */
   readonly ignoreTrustedDevice?: boolean;
 }): Promise<SignInAnswer> {
-  const body: Record<string, unknown> = {
+  const body: SessionLoginBody<"traeger"> = {
     email: input.email,
     password: input.password,
   };

@@ -34,12 +34,9 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
 	"github.com/moto-ogs/project-phoenix/modules/appointments"
-	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	careContractHTTP "github.com/moto-ogs/project-phoenix/modules/carecontract/http"
 	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
 	requestFeedHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/requestfeed/http"
-	"github.com/moto-ogs/project-phoenix/modules/classday"
-	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	messageAttachmentsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/messageattachments"
 	operatorAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/operatorannouncements"
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
@@ -81,7 +78,6 @@ import (
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
 	contractEnrollmentHTTP "github.com/moto-ogs/project-phoenix/workflows/contractenrollment/http"
 	holidayClosureHTTP "github.com/moto-ogs/project-phoenix/workflows/holidayclosurenotification/http"
-	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
 	staffPersonMergeHTTP "github.com/moto-ogs/project-phoenix/workflows/staffpersonmerge/http"
 	deleteStudentsHTTP "github.com/moto-ogs/project-phoenix/workflows/studentdeletion/http"
 	traegerCatalogHTTP "github.com/moto-ogs/project-phoenix/workflows/traegercatalog/http"
@@ -94,7 +90,7 @@ type contractMount struct {
 }
 
 // traegerBillingContractMounts are the Elternabrechnung, the care contracts
-// and their evaluations in the Träger-Portal (#2352).
+// and their evaluations in the Träger-Portal.
 func traegerBillingContractMounts() []contractMount {
 	return []contractMount{
 		{"/traeger/billing-runs", parentBillingHTTP.BillingRunRouteContracts()},
@@ -133,18 +129,22 @@ func traegerBillingContractMounts() []contractMount {
 // contractRegistrations lists every typed registration under its mount and
 // refuses one the route catalog does not know.
 func contractRegistrations() ([]contract.Registration, error) {
-	mounts := append(contractMounts(), traegerBillingContractMounts()...)
-	mounts = append(mounts, operatorContractMounts()...)
+	// Group registrations by portal; shared and non-portal routes follow.
+	mounts := tenantStudentContractMounts()
+	mounts = append(mounts, tenantContractMounts()...)
+	mounts = append(mounts, tenantAdminContractMounts()...)
+	mounts = append(mounts, tenantEnrollmentContractMounts()...)
+	mounts = append(mounts, tenantCalendarAndDeviceContractMounts()...)
+	mounts = append(mounts, tenantLiveContractMounts()...)
+	mounts = append(mounts, tenantAccountContractMounts()...)
+	mounts = append(mounts, parentContractMounts()...)
+	mounts = append(mounts, schoolContractMounts()...)
+	mounts = append(mounts, catererContractMounts()...)
 	mounts = append(mounts, traegerContractMounts()...)
-	mounts = append(mounts, staffPortalContractMounts()...)
-	mounts = append(mounts, staffPortalAdminContractMounts()...)
-	mounts = append(mounts, staffPortalEnrollmentContractMounts()...)
-	mounts = append(mounts, staffPortalCalendarContractMounts()...)
-	mounts = append(mounts, staffPortalLiveContractMounts()...)
-	mounts = append(mounts, rootContractMounts()...)
+	mounts = append(mounts, traegerBillingContractMounts()...)
+	mounts = append(mounts, operatorContractMounts()...)
+	mounts = append(mounts, sharedPortalContractMounts()...)
 	mounts = append(mounts, publicContractMounts()...)
-	mounts = append(mounts, staffPortalInvitationContractMounts()...)
-	mounts = append(mounts, secondFactorContractMounts()...)
 	mounts = append(mounts, outsideContractMounts()...)
 	catalog, err := RouteCatalog()
 	if err != nil {
@@ -170,8 +170,8 @@ func contractRegistrations() ([]contract.Registration, error) {
 	return registrations, nil
 }
 
-// contractMounts lists every owner's typed registrations under its mount.
-func contractMounts() []contractMount {
+// tenantStudentContractMounts lists the staff portal’s student routes.
+func tenantStudentContractMounts() []contractMount {
 	return []contractMount{
 		{"/api/students", projectionStudentsHTTP.StudentRouteContracts()},
 		// The projection renders the answer of Care Plan's student writes
@@ -188,20 +188,19 @@ func contractMounts() []contractMount {
 		{"/api/students", reviewStudentsHTTP.StudentRouteContracts()},
 		{"/api/students", enrollmentHTTP.StudentRouteContracts()},
 		{"/api/students", groupLiveHTTP.RouteContracts()},
+	}
+}
+
+// tenantContractMounts lists the staff portal’s core routes beside /api/students.
+func tenantContractMounts() []contractMount {
+	return []contractMount{
 		{"/api/search", schoolSearchHTTP.RouteContracts()},
 		{"/api/day-changes", dayChangesHTTP.RouteContracts()},
 		{"/api/care-contracts", careContractHTTP.ApplicationRouteContracts()},
-		{"/parent", parentAPI.MeRouteContracts()},
-		{"/parent", parentPortalRouteContracts()},
 		{"/api/notifications", notificationRouteContracts(common.PortalTenant)},
-		{"/school/class-day", classdayHTTP.RouteContracts()},
-		{"/school/notifications", notificationRouteContracts(common.PortalSchool)},
 		{"/api/parent-announcements", announcementAPI.RouteContracts(common.PortalTenant)},
-		{"/school/parent-letters", announcementAPI.RouteContracts(common.PortalSchool)},
 		{"/api/staff-messages", staffMessagingAPI.RouteContracts(common.PortalTenant)},
 		{"/api/staff-messages", messageAttachmentsHTTP.RouteContracts(common.PortalTenant)},
-		// The school portal's chat files sit beside its mount (#6685, #2352).
-		{"/school-staff-messages", messageAttachmentsHTTP.RouteContracts(common.PortalSchool)},
 		{"/api/time-tracking", timeTrackingRouteContracts()},
 		{"/api/work-time-models", worktimemodelsHTTP.RouteContracts()},
 		{"/api/staff", timeTrackingHTTP.StaffAdminRouteContracts()},
@@ -209,30 +208,49 @@ func contractMounts() []contractMount {
 		{"/api/absence-types", absenceTypeRouteContracts()},
 		{"/api/shift-types", shiftTypeRouteContracts()},
 		{"/api/staff-shifts", staffShiftRouteContracts()},
-		// Class Day owns the child sheet the supervision route answers with.
-		{"/school/calendar", calendarAPI.SchoolRouteContracts()},
 		{"/api/timetable", timetableHTTP.RouteContracts()},
 		{"/api/week-protocols", timetableHTTP.WeekProtocolRouteContracts()},
-		{"/school/staff-notices", timetableHTTP.SchoolStaffNoticeRouteContracts()},
-		{"/school/supervisions", timetableHTTP.SchoolSupervisionRouteContracts(classday.SupervisionStudentSheet{})},
-		{"/school/staff-messages", staffMessagingAPI.RouteContracts(common.PortalSchool)},
-		{"/operator/schools", provisioningOperatorAPI.SchoolDeviceSlotRouteContracts()},
-		{"/traeger/master-data", organizationTenancyTraeger.MasterDataRouteContracts()},
-		{"/traeger/documents", organizationTenancyTraeger.DocumentRouteContracts()},
-		{"/traeger/report-templates", organizationTenancyTraeger.ReportTemplateRouteContracts()},
-		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
-		{"/traeger/notifications", schoolFeedRouteContracts(common.PortalTraeger)},
-		{"/traeger/staff-records", workforceTraegerStaff.RecordRouteContracts()},
-		{"/traeger/staff-record-imports", workforceTraegerStaff.ImportRouteContracts()},
-		{"/caterer", catererPortalHTTP.RouteContracts()},
-		{"/caterer/notifications", schoolFeedRouteContracts(common.PortalCaterer)},
+		{"/api/surveys", announcementAPI.SurveyRouteContracts()},
+		{"/api/messages", parentMessagingAPI.RouteContracts()},
+		{"/api/guardians", guardianRouteContracts()},
+		{"/api/files", filestoreAPI.RouteContracts()},
+		{"/api/enrollment/phases", enrollmentHTTP.PhaseRouteContracts()},
+		{"/api/holiday-closure-notices", holidayClosureHTTP.SchoolRouteContracts()},
+		{"/api/rooms", roomsHTTP.RouteContracts()},
+		{"/api/activities", timetableActivitiesHTTP.RouteContracts()},
+		{"/api/traeger-documents", organizationTenancyTraeger.SchoolDocumentRouteContracts()},
+		{"/api/meal-caterer", catererPortalHTTP.SchoolRouteContracts()},
+		{"/api/class-list-entries", classListEntryRouteContracts()},
+		{"/api", schoolSetupRouteContracts()},
+		{"/api/staff-pool", workforceTraegerStaff.SchoolPoolRouteContracts()},
+		{"/api", mealPlanRouteContracts()},
+		{"/api/settings", settingsRouteContracts()},
+		// The platform announcements' http role may not import the contract
+		// types; the root names their answer.
+		{"/api/platform", []common.RouteContract{
+			{Method: "GET", Pattern: "/announcements/unread", Portals: []common.PortalScope{common.PortalTenant}, Response: []platformAnnouncementsHTTP.PlatformAnnouncementResponse{}},
+			{Method: "POST", Pattern: "/announcements/{id}/dismiss", Portals: []common.PortalScope{common.PortalTenant}, NoData: true},
+			{Method: "POST", Pattern: "/announcements/{id}/seen", Portals: []common.PortalScope{common.PortalTenant}, NoData: true},
+		}},
+		// Delivery's http role may not import the contract types; the report
+		// answers no data.
+		{"/api/pwa", []common.RouteContract{{Method: "POST", Pattern: "/usage", Portals: []common.PortalScope{common.PortalTenant}, NoData: true}}},
+		{"/api/announcement-attachments", filestoreAPI.AnnouncementAttachmentRouteContracts()},
+		{"/api/students/change-requests/rss-feed", requestFeedRouteContracts()},
+		{"/api/import", importRouteContracts()},
+		{"/api/substitutions", substitutionRouteContracts()},
+		// The Datenverwaltung hub's counts (#4013), served by the root.
+		{"/api/database", []common.RouteContract{{Method: "GET", Pattern: "/stats", Portals: []common.PortalScope{common.PortalTenant}, Response: statsContract.StatsResponse{}}}},
+		{"/api/emergency", emergencyHTTP.RouteContracts()},
+		{"/api/import", importTemplateRouteContracts()},
 	}
 }
 
 // operatorContractMounts are the registered routes of the operator portal
-// (#2352), under their /operator mounts.
+// under its /operator mounts.
 func operatorContractMounts() []contractMount {
 	return []contractMount{
+		{"/operator/schools", provisioningOperatorAPI.SchoolDeviceSlotRouteContracts()},
 		{"/operator", provisioningOperatorAPI.ProvisioningRouteContracts(peopledirectory.CaregiverCapabilityState{})},
 		{"/operator", identityOperatorAPI.RouteContracts()},
 		{"/operator", identityOperatorAPI.SessionRouteContracts()},
@@ -426,9 +444,16 @@ func timeTrackingRouteContracts() []common.RouteContract {
 }
 
 // traegerContractMounts are the Träger-Portal's staff, holiday and master
-// data routes (#2352), mounted like their resources in the serve mounts.
+// data routes, mounted like their resources in the serve mounts.
 func traegerContractMounts() []contractMount {
 	return []contractMount{
+		{"/traeger/master-data", organizationTenancyTraeger.MasterDataRouteContracts()},
+		{"/traeger/documents", organizationTenancyTraeger.DocumentRouteContracts()},
+		{"/traeger/report-templates", organizationTenancyTraeger.ReportTemplateRouteContracts()},
+		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
+		{"/traeger/notifications", schoolFeedRouteContracts(common.PortalTraeger)},
+		{"/traeger/staff-records", workforceTraegerStaff.RecordRouteContracts()},
+		{"/traeger/staff-record-imports", workforceTraegerStaff.ImportRouteContracts()},
 		{"/traeger/absence-types", workforceTraegerStaff.AbsenceTypeRouteContracts()},
 		{"/traeger/staff-proofs", workforceTraegerStaff.ProofRouteContracts()},
 		{"/traeger/staff-planning", workforceTraegerStaff.PlanningRouteContracts()},
@@ -456,69 +481,10 @@ func traegerContractMounts() []contractMount {
 	}
 }
 
-// ContractDocument builds the model of the frontend/backend contract from
-// the typed registrations of every owner (ADR 0270). The mounts repeat the
-
-// parentPortalRouteContracts registers the guardians' routes below /parent.
-// Enrollment renders the form load and submission (parentEnrollmentForms
-// binds it) and Care Contract the contract to sign
-// (NewParentContractDocuments), so their types are named here.
-func parentPortalRouteContracts() []common.RouteContract {
-	return parentAPI.PortalRouteContracts(parentAPI.ForeignContractTypes{
-		EnrollmentBootstrap:          enrollmentHTTP.PublicEnrollmentFormBootstrapResponse{},
-		EnrollmentSubmitRequest:      enrollmentHTTP.SubmitEnrollmentRequest{},
-		EnrollmentSubmit:             enrollmentHTTP.SubmitEnrollmentResponse{},
-		ContractSigning:              carecontract.SigningView{},
-		EnrollmentUpload:             enrollmentHTTP.UploadReceipt{},
-		EnrollmentUploadMaxBodyBytes: enrollmentHTTP.MaxUploadBodyBytes,
-		EnrollmentUploadTooLargeCode: common.CodeEnrollmentUploadInvalid,
-	})
-}
-
-// staffPortalContractMounts lists the staff portal's routes that left their
-// pass-through route files in #2352.
-func staffPortalContractMounts() []contractMount {
-	return []contractMount{
-		{"/api/surveys", announcementAPI.SurveyRouteContracts()},
-		{"/api/messages", parentMessagingAPI.RouteContracts()},
-		{"/api/guardians", guardianRouteContracts()},
-		{"/api/files", filestoreAPI.RouteContracts()},
-		{"/api/enrollment/phases", enrollmentHTTP.PhaseRouteContracts()},
-		{"/api/holiday-closure-notices", holidayClosureHTTP.SchoolRouteContracts()},
-		{"/api/rooms", roomsHTTP.RouteContracts()},
-		{"/api/activities", timetableActivitiesHTTP.RouteContracts()},
-		{"/api/traeger-documents", organizationTenancyTraeger.SchoolDocumentRouteContracts()},
-		{"/api/meal-caterer", catererPortalHTTP.SchoolRouteContracts()},
-		{"/api/class-list-entries", classListEntryRouteContracts()},
-		{"/api", schoolSetupRouteContracts()},
-		{"/api/staff-pool", workforceTraegerStaff.SchoolPoolRouteContracts()},
-		{"/api", mealPlanRouteContracts()},
-		{"/api/settings", settingsRouteContracts()},
-		// The platform announcements' http role may not import the contract
-		// types; the root names their answer.
-		{"/api/platform", []common.RouteContract{
-			{Method: "GET", Pattern: "/announcements/unread", Portals: []common.PortalScope{common.PortalTenant}, Response: []platformAnnouncementsHTTP.PlatformAnnouncementResponse{}},
-			{Method: "POST", Pattern: "/announcements/{id}/dismiss", Portals: []common.PortalScope{common.PortalTenant}, NoData: true},
-			{Method: "POST", Pattern: "/announcements/{id}/seen", Portals: []common.PortalScope{common.PortalTenant}, NoData: true},
-		}},
-		// Delivery's http role may not import the contract types; the report
-		// answers no data.
-		{"/api/pwa", []common.RouteContract{{Method: "POST", Pattern: "/usage", Portals: []common.PortalScope{common.PortalTenant}, NoData: true}}},
-		{"/api/announcement-attachments", filestoreAPI.AnnouncementAttachmentRouteContracts()},
-		{"/api/students/change-requests/rss-feed", requestFeedRouteContracts()},
-		{"/api/import", importRouteContracts()},
-		{"/api/substitutions", substitutionRouteContracts()},
-		// The Datenverwaltung hub's counts (#4013), served by the root.
-		{"/api/database", []common.RouteContract{{Method: "GET", Pattern: "/stats", Portals: []common.PortalScope{common.PortalTenant}, Response: statsContract.StatsResponse{}}}},
-		{"/api/emergency", emergencyHTTP.RouteContracts()},
-		{"/api/import", importTemplateRouteContracts()},
-	}
-}
-
-// rootContractMounts are the routes the root mounts outside every portal's
+// sharedPortalContractMounts are the routes the root mounts outside every portal's
 // mount (#2352). Each portal's proxy reaches them through its fixed list of
 // such paths (frontend/src/lib/contract/catalog-outside-mounts.ts).
-func rootContractMounts() []contractMount {
+func sharedPortalContractMounts() []contractMount {
 	return []contractMount{
 		{"/analytics-consent", meAPI.AnalyticsConsentRouteContracts()},
 		// The analytics package writes its envelope without api/common; the
@@ -697,10 +663,9 @@ func importRouteContracts() []common.RouteContract {
 	}
 }
 
-// staffPortalCalendarContractMounts lists the staff calendar, the parent
-// messages inbox and the device pages of the staff portal that left their
-// pass-through route files in #2352.
-func staffPortalCalendarContractMounts() []contractMount {
+// tenantCalendarAndDeviceContractMounts lists the staff calendar, the parent
+// messages inbox and device management.
+func tenantCalendarAndDeviceContractMounts() []contractMount {
 	portals := []common.PortalScope{common.PortalTenant}
 	// Device Fleet's http role may not import the contract types; the root
 	// names the device management's answers and bodies. The kiosk's device
@@ -742,10 +707,9 @@ func staffPortalCalendarContractMounts() []contractMount {
 	}
 }
 
-// staffPortalEnrollmentContractMounts lists the staff portal's enrollment,
-// holiday week and holiday guest routes and the guardian invitation
-// decisions that left their pass-through route files in #2352.
-func staffPortalEnrollmentContractMounts() []contractMount {
+// tenantEnrollmentContractMounts lists the staff portal's enrollment,
+// holiday week and holiday guest routes and guardian invitation decisions.
+func tenantEnrollmentContractMounts() []contractMount {
 	portals := []common.PortalScope{common.PortalTenant}
 	return []contractMount{
 		{"/api/enrollment", enrollmentHTTP.ConfigRouteContracts()},
@@ -762,10 +726,9 @@ func staffPortalEnrollmentContractMounts() []contractMount {
 	}
 }
 
-// staffPortalAdminContractMounts lists the staff portal's administration
-// routes (staff, notices, statistics, groups, users, grade transitions) that
-// left their pass-through route files in the closing round of #2352.
-func staffPortalAdminContractMounts() []contractMount {
+// tenantAdminContractMounts lists the staff portal's administration
+// routes (staff, notices, statistics, groups, users, grade transitions).
+func tenantAdminContractMounts() []contractMount {
 	return []contractMount{
 		{"/api/staff", timeTrackingHTTP.StaffAdminWorkflowRouteContracts()},
 		{"/api/admin/grade-transitions", gradeTransitionHTTP.RouteContracts()},

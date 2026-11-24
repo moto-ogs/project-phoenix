@@ -81,17 +81,37 @@ export function decodeContract<T>(
       .slice(0, 20)
       .map((issue) => `${issue.path.join(".")}: ${issue.code}`),
   });
-  return invalidAnswer(write);
+  return failure(invalidAnswer(write));
 }
 
-function invalidAnswer(write: boolean): ContractResult<never> {
-  return failure(
-    bffError(
-      502,
-      "backend response does not match the contract",
-      write ? { code: "general.write_answer_unreadable" } : undefined,
-    ),
+function invalidAnswer(write: boolean): ApiResponseError {
+  return bffError(
+    502,
+    "backend response does not match the contract",
+    write ? { code: "general.write_answer_unreadable" } : undefined,
   );
+}
+
+/** Reads a JSON answer without losing the distinction between refusal and a
+ * successful write whose answer was lost. Never log the raw parse error. */
+export async function readContractJson(
+  response: Response,
+  route: { pattern: string; method: string; noCommit?: string },
+  options?: Pick<BackendCall, "signal" | "request">,
+): Promise<unknown> {
+  try {
+    return await readBackendJson<unknown>(response);
+  } catch (error) {
+    const write = commits(route);
+    // A browser disconnect does not undo an upstream commit.
+    const aborted =
+      options?.signal?.aborted || options?.request?.signal.aborted;
+    if (!response.ok || (aborted && !write)) throw error;
+    if (!aborted) {
+      logger.error("contract_json_failed", { route: route.pattern, write });
+    }
+    throw invalidAnswer(write);
+  }
 }
 
 interface JsonRoute {
@@ -146,22 +166,7 @@ async function callContract<T>(
       ok: response.ok,
     };
     const write = commits(route);
-    let payload: unknown;
-    try {
-      payload = await readBackendJson<unknown>(response);
-    } catch (error) {
-      if (!response.ok) throw error;
-      const aborted =
-        options.signal?.aborted || options.request?.signal.aborted;
-      // A browser disconnect does not undo an upstream commit. The route
-      // still needs the 2xx to invalidate its cache before it answers.
-      if (aborted && !write) throw error;
-      if (!aborted) {
-        // A parse error may quote credentials from the response. Never log it.
-        logger.error("contract_json_failed", { route: route.pattern, write });
-      }
-      return { ...invalidAnswer(write), backend };
-    }
+    const payload = await readContractJson(response, route, options);
     return {
       ...decodeContract(
         `${route.method} ${route.pattern}`,

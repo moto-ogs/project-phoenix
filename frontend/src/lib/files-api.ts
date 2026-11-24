@@ -4,7 +4,7 @@
 // the caller may do via can_manage / can_upload / can_delete — the page
 // renders exactly that, no client-side authority.
 
-import { bffJson } from "./bff-fetch";
+import { bffFileHref, bffJson } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
 import type {
   FileResponse,
@@ -256,7 +256,11 @@ class FilesService {
   }
 
   downloadUrl(folderId: string, fileId: string): string {
-    return `/api/files/folders/${folderId}/files/${fileId}/download`;
+    return bffFileHref(
+      "tenant",
+      "GET /api/files/folders/{folderId}/files/{fileId}/download",
+      { params: { folderId, fileId } },
+    );
   }
 
   /** Same URL, but the browser shows the file (PDF, image) instead of saving it. */

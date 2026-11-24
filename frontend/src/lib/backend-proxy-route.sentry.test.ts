@@ -24,7 +24,7 @@ const { authStepProxy } = await import("./auth-proxy.server");
 const { routes } = await import("./contract/auth-mfa.generated");
 const { POST: login } = await import("~/app/api/auth/login/route");
 const { handleApiError, ApiResponseError } =
-  await import("./api-helpers.server");
+  await import("./api-response-error.server");
 
 const requestId = "0b6f3f4e-5c1d-4a52-9d57-2d3c1b5e8f10";
 const request = () =>

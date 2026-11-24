@@ -141,6 +141,11 @@ a list registers a query budget scenario; a paged list answers through
 feature ships seed data; the architecture check and `check-changed.mjs` run
 before push.
 
+File links and browser navigations use `bffFileHref` with the registered GET
+file key, typed path parameters and query. Use `bffFile` when the caller
+reads the response itself; never build a file URL by hand. The BFF route
+guard checks both retired forwarding helpers and handwritten file URLs.
+
 ## Write route
 
 Same steps; the contract names the body type, and the client sends it typed
@@ -255,7 +260,9 @@ step's Go tokens never reach the browser; put its BFF answer in
 See [school switching](../../frontend/src/app/api/auth/switch-tenant/route.ts)
 and [pre-session enrollment start](../../frontend/src/app/api/auth/mfa/enroll/start/route.ts).
 `app/api/route-backend-paths.test.ts` checks entry use and rejects raw Go
-response reads in named routes.
+response reads in named routes and server modules. A server caller of a
+registered JSON route also uses its generated entry with `contractGet`
+or `contractWrite`; the old generic JSON helpers are not an alternative.
 
 The browser uses `bffJsonUncontracted` only from the remaining callers
 listed by the lint rule. See [One transport](frontend-api.md#browser-calls).

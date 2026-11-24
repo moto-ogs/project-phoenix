@@ -10,7 +10,10 @@ import {
   createOperatorPutHandler,
   createOperatorDeleteHandler,
 } from "~/lib/operator/route-wrapper.server";
-import { TENANT_RESOLVE_AFFECTING_KEYS } from "~/lib/settings-keys";
+import {
+  SETTINGS_KEY_SEGMENT,
+  TENANT_RESOLVE_AFFECTING_KEYS,
+} from "~/lib/settings-keys";
 import { bffError } from "~/lib/api-response-error.server";
 import { contractGet, contractWrite } from "~/lib/contract/client.server";
 import { routes } from "~/lib/contract/operator-schools.generated";
@@ -19,8 +22,6 @@ import type * as sharedContract from "~/lib/contract/shared.generated";
 const logger = createLogger({
   component: "OperatorSchoolSettingsValuesRoute",
 });
-
-const VALID_KEY_PATTERN = /^[a-z0-9_.]{1,255}$/;
 
 async function resolveSchoolSlug(
   schoolId: string,
@@ -78,7 +79,7 @@ export const PUT = createOperatorPutHandler(
   ) => {
     const id = requireStringParam(params, "id");
     const key = params.key as string;
-    if (!VALID_KEY_PATTERN.test(key)) {
+    if (!SETTINGS_KEY_SEGMENT.test(key)) {
       throw bffError(400, "Invalid settings key format");
     }
     const result = await contractWrite(
@@ -105,7 +106,7 @@ export const DELETE = createOperatorDeleteHandler(
   ) => {
     const id = requireStringParam(params, "id");
     const key = params.key as string;
-    if (!VALID_KEY_PATTERN.test(key)) {
+    if (!SETTINGS_KEY_SEGMENT.test(key)) {
       throw bffError(400, "Invalid settings key format");
     }
     const result = await contractWrite(

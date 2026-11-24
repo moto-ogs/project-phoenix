@@ -2,7 +2,7 @@ import { type NextRequest } from "next/server";
 import { tenantPortal } from "~/server/auth";
 import { createLogger } from "~/lib/logger";
 import { proxySSEStream } from "~/lib/sse-proxy.server";
-import { problemResponse } from "~/lib/api-helpers.server";
+import { problemResponse } from "~/lib/api-response-error.server";
 
 const logger = createLogger({ component: "SSEEventsRoute" });
 

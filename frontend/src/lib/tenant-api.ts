@@ -6,7 +6,7 @@ import { sessionBff } from "./session-bff";
  */
 
 import { normalizeCareFacilityTerm } from "~/lib/care-facility-term-value";
-import { bffJson } from "./bff-fetch";
+import { bffFileHref, bffJson } from "./bff-fetch";
 import { clearSessionCache } from "./session-cache";
 import { clearPersonalStorage } from "./personal-storage";
 import { mapAccountTenant } from "./account-tenants";
@@ -35,8 +35,11 @@ export function bookedModuleFields(
 
 /** Convert a stored login image URL path to the public-serving proxy URL. */
 export function loginImageSrc(storedPath: string): string {
-  const filename = storedPath.split("/").pop() ?? "";
-  return `/api/public/login-image/${filename}`;
+  const filename = storedPath.split("/").pop();
+  if (!filename) return "/images/moto_transparent.webp";
+  return bffFileHref("public", "GET /public/login-image/{filename}", {
+    params: { filename },
+  });
 }
 
 /**

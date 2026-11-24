@@ -3,7 +3,7 @@
 // „Dokumente“. Das Backend liefert Vertrag, Prüfsumme des PDFs und
 // Widerrufsbelehrung; die Unterschrift schließt den Vertrag ab.
 
-import { bffFile, bffJson, bffPath } from "./bff-fetch";
+import { bffFile, bffJson, bffFileHref } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
 import type * as publicCareContractSigningContract from "./contract/public-care-contract-signing.generated";
 import { requiredDay } from "./contract/required-day";
@@ -199,15 +199,23 @@ export async function signContract(
  */
 export function signingDocumentUrl(source: SigningSource): string {
   return source.kind === "link"
-    ? bffPath("public", "/public/care-contract-signing/{link}/document", {
-        link: source.link,
-      })
-    : bffPath(
-        "parent",
-        "/parent/me/documents/{organizationId}/contracts/{contractId}/pdf",
+    ? bffFileHref(
+        "public",
+        "GET /public/care-contract-signing/{link}/document",
         {
-          organizationId: source.organizationId,
-          contractId: source.contractId,
+          params: {
+            link: source.link,
+          },
+        },
+      )
+    : bffFileHref(
+        "parent",
+        "GET /parent/me/documents/{organizationId}/contracts/{contractId}/pdf",
+        {
+          params: {
+            organizationId: source.organizationId,
+            contractId: source.contractId,
+          },
         },
       );
 }

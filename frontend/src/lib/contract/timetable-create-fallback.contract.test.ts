@@ -1,9 +1,15 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
+import { sendBackend } from "~/lib/backend-client.server";
 import { mapInstance } from "~/lib/timetable-helpers";
 import { makeCatalogProxy } from "./catalog-proxy.server";
 import { portalRoutes } from "./portals.generated";
 import type { enrichedInstance } from "./timetable.generated";
+
+vi.mock("~/lib/backend-client.server", async (original) => ({
+  ...(await original<typeof import("~/lib/backend-client.server")>()),
+  sendBackend: vi.fn(),
+}));
 
 /**
  * A created block whose enriched re-read failed (#2352): the backend answers
@@ -62,8 +68,10 @@ const withBody =
 
 describe("POST /api/timetable/instances without enrichment", () => {
   it("reaches the client as the created block, not as a 502", async () => {
-    const api = vi.fn().mockResolvedValue(createdWithoutEnrichment);
-    const portal = { post: withBody, api } as unknown as Parameters<
+    vi.mocked(sendBackend).mockResolvedValueOnce(
+      Response.json(createdWithoutEnrichment, { status: 201 }),
+    );
+    const portal = { post: withBody } as unknown as Parameters<
       typeof makeCatalogProxy
     >[0];
     const request = new NextRequest(
@@ -81,12 +89,14 @@ describe("POST /api/timetable/instances without enrichment", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(api).toHaveBeenCalledWith(
-      "POST",
+    expect(sendBackend).toHaveBeenCalledExactlyOnceWith(
       "/api/timetable/instances",
       "token",
-      { title: "Hausaufgaben" },
-      expect.anything(),
+      expect.objectContaining({
+        method: "POST",
+        json: { title: "Hausaufgaben" },
+        request,
+      }),
     );
     const { status, data } = (await response.json()) as {
       status: string;

@@ -14,7 +14,9 @@ vi.mock("./session-cache", () => ({
 }));
 
 import { ApiError } from "./api-error";
-import { bffFile, bffJson, bffPath } from "./bff-fetch";
+import { bffFile, bffFileHref, bffJson, bffPath } from "./bff-fetch";
+
+import { sessionBff } from "./session-bff";
 
 const ok = (data: unknown, extra: object = {}) =>
   Response.json({ status: "success", data, ...extra });
@@ -85,6 +87,59 @@ describe("bffPath", () => {
       "missing path parameter id",
     );
   });
+});
+
+describe("bffFileHref", () => {
+  it("encodes path parameters and uses the registered file query", () => {
+    expect(
+      bffFileHref(
+        "parent",
+        "GET /parent-news-attachments/{announcementId}/{attachmentId}/download",
+        {
+          params: { announcementId: "12/34", attachmentId: "5?6" },
+          query: { student_id: "7" },
+        },
+      ),
+    ).toBe(
+      "/api/parent/parent-news-attachments/12%2F34/5%3F6/download?student_id=7",
+    );
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("requires a GET file key, its path parameters and a registered query", () => {
+    const checks = () => {
+      // @ts-expect-error: a browser link is not a POST request
+      bffFileHref("tenant", "POST /api/students/export");
+      // @ts-expect-error: an address needs its path parameters
+      bffFileHref("tenant", "GET /api/week-protocols/{protocolId}/pdf");
+      const route = "GET /api/staff/time-tracking/export";
+      // @ts-expect-error: the route does not register this query key
+      bffFileHref("tenant", route, { query: { staff_id: "7" } });
+    };
+    expect(checks).toBeTypeOf("function");
+  });
+});
+
+it("types session requests independently of the BFF's answer", () => {
+  const checks = () => {
+    const login = sessionBff.login("tenant");
+    void bffJson("public", login, {
+      body: { email: "a@example.test", password: "password" },
+    });
+    // @ts-expect-error: the generated login body has password, not passwort
+    void bffJson("public", login, {
+      body: { email: "a@example.test", passwort: "password" },
+    });
+    // @ts-expect-error: only the Träger login accepts an organization_id
+    void bffJson("public", login, {
+      body: { email: "a@example.test", organization_id: "7" },
+    });
+    // @ts-expect-error: the generated MFA body has challenge_token, not challengeToken
+    void bffJson("public", sessionBff.verifyMfa("tenant"), {
+      body: { challengeToken: "proof", code: "000000" },
+    });
+  };
+  expect(checks).toBeTypeOf("function");
 });
 
 describe("bffFile", () => {
