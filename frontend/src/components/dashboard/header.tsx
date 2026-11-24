@@ -162,6 +162,7 @@ const TRAEGER_PAGE_TITLES: ReadonlyArray<
   ["/einstellungen/abrechnung", "Abrechnungsvorgaben"],
   ["/einstellungen/dokumentarten", "Dokumentarten"],
   ["/einstellungen/zugriffsprotokoll", "Zugriffsprotokoll"],
+  ["/einstellungen/module", "moto-Module"],
   ["/einstellungen", "Allgemein"],
   ["/konto", "Konto"],
 ];

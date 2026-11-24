@@ -857,7 +857,8 @@ export function ContractTermsDialog({
   const { kind, endsOn, pool } = edit.draft ?? termsDraftOf(contract);
   const patch = (next: Partial<TermsDraft>) =>
     edit.setDraft((current) => ({ ...current, ...next }));
-  const setKind = (next: StaffContractKind | undefined) => patch({ kind: next });
+  const setKind = (next: StaffContractKind | undefined) =>
+    patch({ kind: next });
   const setEndsOn = (next: string) => patch({ endsOn: next });
   const setPool = (next: boolean) => patch({ pool: next });
   const earliest = changeableFrom(contract.sites);

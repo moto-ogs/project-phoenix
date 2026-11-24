@@ -68,14 +68,18 @@ func newParentPortalCheck(booking *settings.ModuleBooking, guardianSchools ident
 // (#4893). It runs router-wide before any session is authenticated, so it
 // decides nothing itself: a request of an additional module only carries the
 // requirement on, and TenantScopeMiddleware checks it once the school of the
-// session is bound. Basis routes, paths no rule covers and the surfaces in
+// session is bound, TraegerScopeMiddleware once the Träger is (#6052). Basis
+// routes, paths no rule covers and the surfaces in
 // moduleRoutesLockedElsewhere pass unmarked.
-func moduleRoutesMiddleware(booking *settings.ModuleBooking, guardianSchools identityaccess.GuardianSchools) func(http.Handler) http.Handler {
+func moduleRoutesMiddleware(booking *settings.ModuleBooking, guardianSchools identityaccess.GuardianSchools, traegerModules TraegerBookedModules) func(http.Handler) http.Handler {
 	parentCheck := newParentPortalCheck(booking, guardianSchools)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if parentCheck != nil {
 				r = r.WithContext(context.WithValue(r.Context(), parentPortalGateKey{}, parentCheck))
+			}
+			if traegerModules != nil {
+				r = r.WithContext(context.WithValue(r.Context(), traegerModuleGateKey{}, traegerModules))
 			}
 			// The same path chi routes on: the escaped form when the request
 			// carries one, so an encoded slash cannot shift the segments.

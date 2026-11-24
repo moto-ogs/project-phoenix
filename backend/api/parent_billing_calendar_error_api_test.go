@@ -36,7 +36,7 @@ func parentBillingCalendarRouter(t *testing.T, f reviewFixture, days owners.Holi
 		DB: f.db, People: owners.EnrollmentFlowGuardianDirectory{}, Observe: func(deliveryContract.Observation) {},
 	})
 	require.NoError(t, err)
-	_, holiday := NewParentBillingHTTP(organizations, settings, delivery.Module, testHealthCipher(), days, func() calendar.Date { return calendar.NewDate(2026, 12, 1) },
+	_, holiday := NewParentBillingHTTP(organizations, settings, delivery.Module, testHealthCipher(), days, nil, func() calendar.Date { return calendar.NewDate(2026, 12, 1) },
 		func() time.Time { return calendar.NewDate(2026, 12, 1).BerlinMidnight().Add(10 * time.Hour) }, slog.Default())
 	router := chi.NewRouter()
 	router.Use(func(next http.Handler) http.Handler {

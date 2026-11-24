@@ -5,6 +5,7 @@ import {
   useSettingsReturnHref,
 } from "~/components/ui/settings-return-path";
 import { useSession } from "next-auth/react";
+import { useTraegerOrganization } from "~/components/traeger/use-traeger-organization";
 import { traegerHomeHref } from "~/lib/traeger-home";
 import { isTraegerSettingsPath } from "./traeger-nav-active";
 
@@ -26,8 +27,10 @@ export function TraegerReturnPathMemory() {
  */
 export function useTraegerReturnHref(): string {
   const { data: session } = useSession();
+  // Ohne das Modul Träger-Übersicht ist die Schulliste das Startziel (#6052).
+  const bookedModules = useTraegerOrganization()?.bookedModules ?? null;
   return useSettingsReturnHref(
     RETURN_PATH_KEY,
-    traegerHomeHref(session ?? null),
+    traegerHomeHref(session ?? null, bookedModules),
   );
 }

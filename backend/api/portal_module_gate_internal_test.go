@@ -31,7 +31,7 @@ func serveThroughParentPortalLock(t *testing.T, switches moduleSwitches, schools
 	booking, err := settings.NewModuleBooking(switches)
 	require.NoError(t, err)
 	reached := false
-	handler := moduleRoutesMiddleware(booking, schools)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := moduleRoutesMiddleware(booking, schools, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r = r.WithContext(context.WithValue(r.Context(), sessiontoken.CtxClaims, sessiontoken.AppClaims{ID: 4895, Scope: "parent"}))
 		requireParentPortal(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			reached = true

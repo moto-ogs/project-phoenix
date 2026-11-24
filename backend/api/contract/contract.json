@@ -106270,6 +106270,16 @@
               "kind": "string"
             }
           }
+        },
+        {
+          "name": "booked_modules",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
         }
       ]
     },

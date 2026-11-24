@@ -1,5 +1,6 @@
 "use client";
 
+import type { ModuleKey } from "~/lib/modules";
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -56,10 +57,13 @@ export function useOpenTraegerSearch(): (() => void) | null {
 export function TraegerSearchProvider({
   children,
   federalStates,
+  bookedModules = null,
 }: Readonly<{
   children: ReactNode;
   /** Die Bundesländer der Schulen, wie in den Leisten (#4717). */
   federalStates?: readonly string[];
+  /** Die gebuchten moto-Module des Trägers, wie in den Leisten (#6052). */
+  bookedModules?: readonly ModuleKey[] | null;
 }>) {
   const [isOpen, setIsOpen] = useState(false);
   const open = useCallback(() => setIsOpen(true), []);
@@ -70,7 +74,11 @@ export function TraegerSearchProvider({
     <TraegerSearchContext.Provider value={open}>
       {children}
       {isOpen ? (
-        <TraegerSearchDialog onClose={close} federalStates={federalStates} />
+        <TraegerSearchDialog
+          onClose={close}
+          federalStates={federalStates}
+          bookedModules={bookedModules}
+        />
       ) : null}
     </TraegerSearchContext.Provider>
   );
@@ -156,9 +164,11 @@ const NO_SCHOOLS: readonly TraegerSchool[] = [];
 function TraegerSearchDialog({
   onClose,
   federalStates,
+  bookedModules,
 }: Readonly<{
   onClose: () => void;
   federalStates?: readonly string[];
+  bookedModules: readonly ModuleKey[] | null;
 }>) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -167,8 +177,8 @@ function TraegerSearchDialog({
   const term = query.trim();
 
   const pages = useMemo(
-    () => traegerSearchPagesFor(session ?? null, federalStates),
-    [session, federalStates],
+    () => traegerSearchPagesFor(session ?? null, federalStates, bookedModules),
+    [session, federalStates, bookedModules],
   );
 
   const go = useCallback(
@@ -191,9 +201,17 @@ function TraegerSearchDialog({
         items: matchTraegerSearch(pages, term, pageName, pageArea).map(
           (page) => ({
             id: `page-${page.key}`,
-            label: `${page.label}, ${page.area}`,
+            // Eine Seite eines nicht gebuchten moto-Moduls sagt es dazu,
+            // wie das Schloss in der Seitenleiste (#6052).
+            label: page.locked
+              ? `${page.label}, ${page.area}, nicht gebucht`
+              : `${page.label}, ${page.area}`,
             title: <CommandPaletteHighlight text={page.label} query={term} />,
-            subtitle: <CommandPaletteHighlight text={page.area} query={term} />,
+            subtitle: page.locked ? (
+              `${page.area} · nicht gebucht`
+            ) : (
+              <CommandPaletteHighlight text={page.area} query={term} />
+            ),
             leading: <ConceptIconTile concept={page.concept} size="xs" />,
             onSelect: () =>
               page.newTab ? go(page.href, true) : go(traegerPath(page.href)),

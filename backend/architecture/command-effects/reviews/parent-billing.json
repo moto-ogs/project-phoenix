@@ -1022,19 +1022,9 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.SchoolModules.BookedModules",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/settings/records.SettingsSnapshot.Bool: reads a module switch (module.vertraege, module.elternbeitraege, module.ferienbetreuung) of a school of the Träger from the snapshot of the batch read, for the details the Träger still has to enter (#7177).",
+      "reason": "Read-only: resolve the module switches of the Träger's schools in one administrative read of its own (tenant.ContextWithoutTransaction): the Träger transaction of the request hides school settings by row security and shares nothing with it (ADR 0105); no write, lock or change of the request's scope (#7177). Since #6052 the binding reads through modules/settings.ModulesBookedByAnySchool, the rule the lock of the Träger portal uses: a module counts once one school books it. The same batch read (ResolveManyForTenants) and the same three switches as before.",
       "source_owner": "parent-billing",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsSnapshot.Bool",
-      "target_owner": "settings-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.schoolModuleSwitches.BookedModules",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.SchoolModules.BookedModules",
-      "reason": "Read-only: resolve the module switches of the Träger's schools in one administrative read of its own (tenant.ContextWithoutTransaction): the Träger transaction of the request hides school settings by row security and shares nothing with it (ADR 0105); no write, lock or change of the request's scope (#7177).",
-      "source_owner": "parent-billing",
-      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveManyForTenants",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ModulesBookedByAnySchool",
       "target_owner": "settings-platform"
     },
     {

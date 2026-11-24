@@ -804,6 +804,7 @@ describe("getParentHelpTopicForPath", () => {
       HELP_TOPICS.traegerDocumentTemplates,
       HELP_TOPICS.traegerDocumentKinds,
       HELP_TOPICS.traegerSettings,
+      HELP_TOPICS.traegerModules,
       HELP_TOPICS.errorMessages,
     ]);
     expect([...new Set(traegerTopics.map((topic) => topic.group))]).toEqual([

@@ -1,14 +1,14 @@
 # Modulschalter je Schule
 
-**Stand:** 24.10.2026\
-**Quelle für:** gebuchte Module einer Schule, Leistungskatalog Schleswig-Holstein 4.16. Entscheidungen: Kommentar vom 24.10.2026 in [#4812](https://github.com/moto-ogs/project-phoenix/issues/4812). Umsetzung der Grundlage: [#4892](https://github.com/moto-ogs/project-phoenix/issues/4892). Folge-Issues: Routen [#4893](https://github.com/moto-ogs/project-phoenix/issues/4893), Navigation [#4894](https://github.com/moto-ogs/project-phoenix/issues/4894), Jobs und Portale [#4895](https://github.com/moto-ogs/project-phoenix/issues/4895), Geräte [#4896](https://github.com/moto-ogs/project-phoenix/issues/4896).
+**Stand:** 24.11.2026\
+**Quelle für:** gebuchte Module einer Schule, Leistungskatalog Schleswig-Holstein 4.16. Entscheidungen: Kommentar vom 24.10.2026 in [#4812](https://github.com/moto-ogs/project-phoenix/issues/4812). Umsetzung der Grundlage: [#4892](https://github.com/moto-ogs/project-phoenix/issues/4892). Folge-Issues: Routen [#4893](https://github.com/moto-ogs/project-phoenix/issues/4893), Navigation [#4894](https://github.com/moto-ogs/project-phoenix/issues/4894), Jobs und Portale [#4895](https://github.com/moto-ogs/project-phoenix/issues/4895), Geräte [#4896](https://github.com/moto-ogs/project-phoenix/issues/4896), Träger-Portal [#6052](https://github.com/moto-ogs/project-phoenix/issues/6052).
 
 moto Basis hat jede Schule. Dazu bucht eine Schule Zusatzmodule. Je Zusatzmodul gibt es einen Schalter je Schule, den nur das moto-Team im Operator-Portal umlegt. Schul-Admins sehen ihre Module lesend unter Einstellungen, Reiter „Module“.
 
 ## Regeln
 
-- **Ebene: je Schule.** Die Schule bleibt der Mandant. Eine Vorgabe je Träger kommt erst mit [ADR 0086](../adr/0086-traeger-werte-liegen-zwischen-standard-und-schule.md) und ist nicht Teil dieser Liste.
-- **Bestandsschutz.** Jeder Modulschalter hat die Voreinstellung „gebucht“. Keine Schule verliert mit dem Deployment eine Funktion. Danach gleicht das moto-Team die Schalter an die Verträge an. Auch eine neu angelegte Schule startet mit allen Modulen; das moto-Team bestellt ab, was der Vertrag nicht enthält.
+- **Ebene: je Schule.** Die Schule bleibt der Mandant. Eine Vorgabe je Träger kommt erst mit [ADR 0086](../adr/0086-traeger-werte-liegen-zwischen-standard-und-schule.md) und ist nicht Teil dieser Liste. Das Träger-Portal reicht über die Schulen eines Trägers: Dort zählt ein Modul, sobald eine Schule des Trägers es gebucht hat (siehe „Träger-Portal“).
+- **Bestandsschutz.** Jeder Modulschalter hat die Voreinstellung „gebucht“. Keine Schule verliert mit dem Deployment eine Funktion. Danach gleicht das moto-Team die Schalter an die Verträge an. Auch eine neu angelegte Schule startet mit allen Modulen; das moto-Team bestellt ab, was der Vertrag nicht enthält. #6052 hat diese Regel am 24.11.2026 geprüft und beibehalten: Das Anlegen einer Schule schreibt weiter keinen Schalter.
 - **Abbestellen löscht keine Daten.** Ein abbestelltes Modul ist sofort ausgeblendet und gesperrt. Die Daten bleiben, bis ihre Löschfrist abläuft ([Löschfristen](loeschfristen.md)). Arbeitszeitnachweise bleiben nach § 16 Abs. 2 ArbZG zwei Jahre erhalten. Einen eigenen Nur-Lesen-Modus gibt es nicht.
 - **Export nach Abbestellung.** Braucht eine Schule Daten eines abbestellten Moduls, bucht das moto-Team das Modul vorübergehend, die Schule exportiert, und das moto-Team bestellt wieder ab. Jede Änderung steht im Einstellungs-Audit.
 - **Feinsteuerung bleibt.** Schul-Einstellungen wie `operations.meal_plan_enabled` oder `enrollment.enabled` schalten innerhalb eines Moduls. Eine Funktion ist nur sichtbar, wenn das Modul gebucht und die Einstellung an ist.
@@ -28,12 +28,12 @@ Die Liste steht im Code in `backend/modules/settings/records/modules.go`. Das Fr
 | Dienstplan | `dienstplan` | `module.dienstplan` | Basis | ja |
 | Zeiterfassung | `zeiterfassung` | `module.zeiterfassung` | Basis | ja |
 | Personalakte | `personalakte` | `module.personalakte` | Basis | ja |
-| Träger-Übersicht | `traeger_uebersicht` | `module.traeger_uebersicht` | Basis | noch nicht |
-| Ferienbetreuung | `ferienbetreuung` | `module.ferienbetreuung` | Online-Anmeldung | noch nicht |
-| Verträge und Dokumente | `vertraege` | `module.vertraege` | Basis | noch nicht |
-| Elternbeiträge und Abrechnung | `elternbeitraege` | `module.elternbeitraege` | Verträge und Dokumente | noch nicht |
+| Träger-Übersicht | `traeger_uebersicht` | `module.traeger_uebersicht` | Basis | ja, im Träger-Portal |
+| Ferienbetreuung | `ferienbetreuung` | `module.ferienbetreuung` | Online-Anmeldung | ja, im Träger-Portal |
+| Verträge und Dokumente | `vertraege` | `module.vertraege` | Basis | ja, im Träger-Portal |
+| Elternbeiträge und Abrechnung | `elternbeitraege` | `module.elternbeitraege` | Verträge und Dokumente | ja, im Träger-Portal |
 
-Ein Modul, das es noch nicht gibt, hat trotzdem einen Schalter. Er hält fest, was die Schule gebucht hat.
+Seit #6052 gibt es jedes Modul der Liste. Kommt ein Modul dazu, das es noch nicht gibt (`Available: false` in der Modulliste), hat es trotzdem einen Schalter, der festhält, was die Schule gebucht hat. Eine Route darf ihm nicht gehören: Nichts würde sie sperren. `TestFullProductionRouterGolden` („only an offered module owns routes“) schlägt sonst an.
 
 `module.nfc_anwesenheit` hat `attendance.nfc_enabled` abgelöst. Migration 1.15.501 hat für jede Schule den bisherigen Wert übernommen; eine Schule ohne Wert hatte NFC aus und behält es aus.
 
@@ -70,7 +70,7 @@ Katalogpunkt 4.16 fragt, ob sich die Funktionen 4.1 bis 4.15 modular hinzufügen
 | 4.11 | Dateiablage | Basis | Ablage des Teams ohne eigenes Modul im Modulkatalog. |
 | 4.12 | Kommunikationsmodul | Eltern-App | Nachrichten und Elternbriefe an Eltern gehören zu Eltern-App. Der Team-Chat ist Basis. |
 | 4.13 | Essen-Anmeldung | Mittagessen und Catering | |
-| 4.14 | Abrechnungsfunktion | Elternbeiträge und Abrechnung | Gibt es noch nicht (#2639). |
+| 4.14 | Abrechnungsfunktion | Elternbeiträge und Abrechnung | Im Träger-Portal: Abrechnungsläufe, Monatsbeiträge, Lastschrift und Export. |
 | 4.15 | Weitergehendes Personalmanagement | Personalakte | Arbeitszeit und Urlaub gehören zu Zeiterfassung. |
 
 ## Schnittstelle für Routen, Jobs und Portale
@@ -116,7 +116,33 @@ Seit #4893 gehört jede Route des Produktions-Routers genau einem Modul oder der
 - **Kosten.** Die Prüfung liest den Schalter in einer eigenen kurzen Lesetransaktion vor der Transaktion der Anfrage. Der Budget-Test der Anmeldungs-Rückläufe hält diese Form fest (genau ein Select des Schalters), das Budget der Route selbst bleibt unverändert.
 - **Öffentliche Anmeldung.** Die öffentlichen Routen lösen die Schule über den Pfad auf, nicht über eine Sitzung. `enrollment.enabled` gilt dort nur, wenn das Modul Online-Anmeldung gebucht ist. Phasenliste, Formular, Uploads und Absenden antworten dann mit `enrollment.disabled`. Formularaufbau, Angebotsliste, Rechtstexte und Captcha einer Phase enthalten keine Personendaten und bleiben lesbar. Auch der Statuslink einer abgeschickten Anmeldung schließt sich und antwortet wie ein abgelaufener Link. So erfährt die Familie nichts über den Vertrag der Schule. Die Anmeldung bleibt gespeichert; nach erneutem Buchen gilt der Link wieder.
 - **Download des Lohnbüros (#4805).** `/public/payroll-download` ist Basis. Der Link holt eine Datei ab, die schon verschickt ist; einen Versand legt nur der Monatsabschluss einer Schule mit Zeiterfassung an. Der Link nennt die Schule, die Abfrage läuft in ihrer Transaktion.
+- **Träger-Portal.** `api.TraegerScopeMiddleware` sperrt die Routen der vier Träger-Module nach dem Binden des Trägers, siehe „Träger-Portal“.
 - **Portale.** Elternportal und Schulportal sperrt #4895 an der Sitzung, siehe unten. Geräte sperrt seit #4896 eine eigene Sperre hinter der Geräte-Anmeldung, siehe „Geräte und PyrePortal“. Welche Flächen anderswo gesperrt werden, steht in `moduleRoutesLockedElsewhere`; der Golden-Test verlangt für jede andere Modulroute die Sperre.
+
+## Träger-Portal (#6052)
+
+Träger-Übersicht, Ferienbetreuung, Verträge und Dokumente und Elternbeiträge und Abrechnung liegen im Träger-Portal (`/traeger/...`). Dessen Sitzung gehört einem Träger, nicht einer Schule.
+
+- **Ein Modul zählt für den Träger, sobald eine seiner Schulen es gebucht hat.** Die Schalter bleiben je Schule. Dieselbe Regel gilt im Elternportal (offen, solange eine Schule Eltern-App bucht) und seit #7177 bei den fehlenden Angaben des Trägers. Ferienzeiträume, Abrechnungsläufe und Verträge sind Objekte des ganzen Trägers; innerhalb einer Funktion wird nicht je Schule gefiltert. Das moto-Team bucht ein Träger-Modul deshalb einheitlich für alle Schulen eines Trägers. Eine Vorgabe je Träger folgt mit ADR 0086.
+- **Sperre.** Der Router-weite Schritt ordnet die Anfrage ein, `api.TraegerScopeMiddleware` prüft nach dem Binden des Trägers (`requireTraegerModule` in `backend/api/module_traeger_booking.go`). Bucht keine Schule das Modul, antwortet die Route mit 403 `module.not_booked`, `details.module` und `details.module_label`. Ein Träger ohne Schulen hat nichts gebucht. Ein deaktivierter oder gelöschter Träger bekommt 401 wie beim Rahmen des Portals. Ein Lesefehler ist ein Serverfehler, nie eine Buchungsentscheidung. Fehlt beim Start eine der beiden Quellen, bricht die Komposition ab.
+- **Kosten.** Die Prüfung liest vor der Träger-Transaktion in eigenen administrativen Lesungen erst die Schulen des Trägers, dann gebündelt die Schalter aller Schulen (`settings.TraegerModuleBooking` über `ResolveManyForTenants`). Die Zahl der Abfragen hängt nicht von der Zahl der Schulen ab. Die Träger-Routen haben keinen Request-Cache der Einstellungen, jede Modulroute liest also neu; Basis-Routen lesen nichts.
+- **Rahmen des Portals.** `GET /traeger/organization/` nennt in `booked_modules` die Module, die für den Träger zählen. Das Portal sperrt damit Navigation und Seiten. Eine Antwort ohne Liste bucht nichts. Solange der Rahmen lädt oder nicht lesbar ist, zeigt das Portal alles offen und ohne Schloss: Die Sperre selbst sitzt im Backend, und kein Eintrag soll kurz verschwinden. Lehnt das Backend eine Anfrage mit `module.not_booked` ab, lädt das Portal den Rahmen neu.
+- **Basis im Träger-Portal:** Anmeldung, Mitglieder, Schulliste und Schulansicht, Einstellungen und Stammdaten (auch Bankverbindungen und Dokumentvorlagen), Dokumente des Trägers, Schließtage, Anmeldephasen, Personal, Hinweise und die fehlenden Angaben. Zu den Schließtagen gehört auch die Benachrichtigung der Familien, deren Ferienbuchung ein neuer Schließtag trifft (`/traeger/holiday-closures`): Diese Familien haben gebucht und müssen es erfahren, auch wenn die Ferienbetreuung inzwischen abbestellt ist.
+- **Öffentliche Ferienanmeldung.** Der Link trägt keine Sitzung. `holidayTraegerDirectory` löst den Träger des Links auf und antwortet ohne Ferienbetreuung wie bei einem abgelaufenen Link. Das gilt für Formular, Beitragsauskunft (`/traeger/holiday-quotes`), Statuslink und die Vorbelegung im Elternportal. Die PDFs eines Zeitraums bleiben lesbar (keine Personendaten). Die Ausnahme in `moduleRoutesLockedElsewhere` gilt für den ganzen Pfadanfang `/traeger/holiday-registrations`: Dort liegen nur die öffentlichen Routen des Links, eine Route des Büros gehört nicht dorthin.
+- **Was schon verschickt ist, bleibt erreichbar.** Der Link zum Unterschreiben eines Vertrags (`/public/care-contract-signing`), die Dokumente im Elternportal und die Jobs `care-contract-conclusion`, `care-contract-reminders` und `holiday-closure-*` bleiben Basis: Sie schließen ab, was das Träger-Büro mit gebuchtem Modul begonnen hat. Neues beginnt nur über die gesperrten Routen des Büros. Mails des Trägers tragen keine Schule und laufen deshalb nicht durch die Sperre je Schule.
+- **Schule liest weiter.** `/api/care-contracts` (Verträge aus den Anmeldungen der Schule), `/api/holiday-weeks`, `/api/holiday-guests` und `/api/traeger-documents` folgen nicht den Träger-Modulen: Die Schule, die ein Kind betreut, braucht diese Angaben, egal welche Schule des Trägers das Modul bucht.
+
+| Bereich im Träger-Portal | Routen unter `/traeger` | Modul |
+|---|---|---|
+| Dashboard, Belegung, Auslastung, Ankunft und Abholung, Standortvergleich, Tagesmeldung | `schools/alerts`, `schools/occupancy`, `schools/utilization`, `schools/{id}/utilization`, `schools/arrival-pickup-times`, `schools/comparison`, `schools/daily-attendance` | Träger-Übersicht |
+| Berichte, Länger als gebucht | `reports`, `report-templates`, `care-time-overruns` | Träger-Übersicht |
+| Ferienbetreuung | `holiday-periods`, `holiday-contributions`, öffentlich `holiday-registrations`, `holiday-quotes` | Ferienbetreuung |
+| Verträge | `contracts`, `contract-templates`, `contract-notices`, `contract-imports`, `contract-corrections`, `contract-child-links`, `contract-enrollments`, `contract-changes` | Verträge und Dokumente |
+| Abrechnungsläufe, Familien und Zahlung, Preise und Ermäßigungen, Abrechnungsvorgaben, Dokumentarten | `billing-*`, `number-ranges`, `family-billing`, `family-children`, `contribution-rules`, `cost-bearers`, `care-billing-runs`, `care-tariffs`, `care-meal-tariffs`, `care-rules`, `care-evidences`, `care-cost-shares`, `care-notice-runs`, `sepa-*`, `finance-exports`, `finance-handovers`, `export-recipient` | Elternbeiträge und Abrechnung |
+
+Grenzfälle: „Länger als gebucht“ ist eine Auswertung hinter dem Recht „Berichte lesen“ und gehört deshalb zur Träger-Übersicht, nicht zu den Verträgen. Die Regeln des Ferienbeitrags (`contribution-rules`) stehen bei den Abrechnungsvorgaben hinter dem Recht „Abrechnung“ und gehören zu Elternbeiträge und Abrechnung; was eine einzelne Ferienanmeldung kostet (`holiday-contributions`), gehört zur Ferienbetreuung. Die Seite „Abrechnungsvorgaben“ zeigt die Bankverbindungen immer und erklärt ohne das Modul nur ihren Abrechnungsteil. Auf einem Vertrag fehlen ohne Elternbeiträge und Abrechnung die Karten „Empfänger und Zahlung“ und „SEPA-Lastschriftmandat“.
+
+**Frontend.** Das Register `frontend/src/lib/traeger-modules.ts` ordnet jede Seite des Träger-Portals einem Modul oder der Basis zu. Wer das Träger-Büro leitet (Recht „Mitglieder und Rollen“), sieht die Einträge eines nicht gebuchten Moduls mit Schloss, alle anderen sehen sie nicht (Darstellung C wie im Team-Portal). Die Seite zeigt statt des Inhalts, zu welchem moto-Modul sie gehört und wer handelt. Im Träger-Portal heißt es „moto-Modul“, weil „Modul“ dort auch die Betreuungsmodule eines Vertrags meint. Das Dashboard ist das Startziel: Ohne Träger-Übersicht fehlt sein Eintrag für alle, und die Schulliste ist das Startziel. Unter Einstellungen, „moto-Module“ steht der Stand der vier Module.
 
 ## Geräte und PyrePortal (#4896)
 

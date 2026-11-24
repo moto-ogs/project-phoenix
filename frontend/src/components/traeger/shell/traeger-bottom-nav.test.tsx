@@ -165,7 +165,8 @@ describe("TraegerBottomNav", () => {
     mockPathname.mockReturnValue("/einstellungen");
     render(<TraegerBottomNav />);
 
-    expect(bar().getAllByRole("link")).toHaveLength(4);
+    // Rückweg, Allgemein, Briefkopf, Vorgaben und seit #6052 moto-Module.
+    expect(bar().getAllByRole("link")).toHaveLength(5);
     expect(bar().queryByRole("button", { name: "Mehr" })).toBeNull();
     expect(bar().getByRole("link", { name: "Allgemein" })).toHaveAttribute(
       "aria-current",
@@ -209,5 +210,29 @@ describe("TraegerBottomNav", () => {
     );
     expect(bar().queryByRole("button", { name: "Suchen" })).toBeNull();
     expect(bar().getByRole("button", { name: "Mehr" })).toBeInTheDocument();
+  });
+
+  // #6052: the bar shows open pages only; a page of a moto module that is
+  // not booked stands behind Mehr with its lock.
+  it("keeps pages of a module that is not booked behind Mehr, with a lock", async () => {
+    sessionUser.permissions = [
+      "traeger_enrollment:manage",
+      "traeger_billing:manage",
+      "traeger_accounts:manage",
+    ];
+    render(<TraegerBottomNav bookedModules={["ferienbetreuung"]} />);
+
+    expect(
+      bar()
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Schulen", "Ferienbetreuung", "Anmeldephasen"]);
+    fireEvent.click(bar().getByRole("button", { name: "Mehr" }));
+    const drawer = within(await screen.findByRole("dialog"));
+    const locked = drawer.getByRole("link", {
+      name: /^Abrechnungsläufe ?, nicht gebucht$/,
+    });
+    expect(locked).toHaveAttribute("href", "/abrechnung");
+    expect(drawer.getByRole("link", { name: "Hilfe" })).toBeInTheDocument();
   });
 });

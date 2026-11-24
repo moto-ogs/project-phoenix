@@ -21,7 +21,11 @@ import { clientEnv } from "~/env.client";
 import { normalizeLocale, type AppLocale } from "~/i18n/locales";
 import { useErrorContact } from "~/lib/error-contact";
 import { useModulePortal } from "~/lib/module-portal-context";
-import { portalNotBookedExplanation } from "~/lib/portal-not-booked";
+import {
+  portalNotBookedExplanation,
+  type ModulePortal,
+} from "~/lib/portal-not-booked";
+import { traegerModuleNotBookedExplanation } from "~/lib/traeger-modules";
 import { ApiError, isReadStateRefusal } from "~/lib/api-error";
 import type { ErrorPresentation } from "~/lib/error-presentation";
 import {
@@ -897,6 +901,20 @@ function openFixTarget(href: string, newTab: boolean): void {
   window.location.assign(href);
 }
 
+/** Why a module was refused, in the words of the portal that shows it. */
+function moduleRefusalExplanation(
+  portal: ModulePortal,
+  module: ModuleKey,
+  seesLocked: boolean,
+  locale: AppLocale,
+): string {
+  if (portal === "staff") return moduleNotBookedExplanation(module, seesLocked);
+  if (portal === "traeger") {
+    return traegerModuleNotBookedExplanation(module, seesLocked);
+  }
+  return portalNotBookedExplanation(portal, locale);
+}
+
 /** Opt-in display path for actions without a form (#2510). */
 export function useApiErrorDisplay(formRef?: RefObject<HTMLElement | null>) {
   const toast = useToast();
@@ -930,9 +948,12 @@ export function useApiErrorDisplay(formRef?: RefObject<HTMLElement | null>) {
         // The parents and the school portal follow a module of their own
         // (#4895); their readers cannot book anything.
         toast.info(
-          portal === "staff"
-            ? moduleNotBookedExplanation(shown.notBookedModule, seesLocked)
-            : portalNotBookedExplanation(portal, locale),
+          moduleRefusalExplanation(
+            portal,
+            shown.notBookedModule,
+            seesLocked,
+            locale,
+          ),
           options,
         );
         return;

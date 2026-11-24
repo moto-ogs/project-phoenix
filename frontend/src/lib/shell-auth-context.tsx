@@ -12,6 +12,7 @@ import { operatorAbsoluteUrl, operatorPath } from "~/lib/operator-url";
 import { parentPath } from "~/lib/parent-url";
 import { schoolPath } from "~/lib/school-url";
 import { catererPath } from "~/lib/caterer-url";
+import type { ModuleKey } from "~/lib/modules";
 import { traegerHomeHref } from "~/lib/traeger-home";
 import { traegerPath } from "~/lib/traeger-url";
 import { clearSessionCache, DELIBERATE_LOGOUT_KEY } from "~/lib/session-cache";
@@ -578,6 +579,7 @@ export function TraegerShellProvider({
   children,
   organizationName,
   memberName,
+  bookedModules = null,
 }: {
   readonly children: React.ReactNode;
   /**
@@ -592,6 +594,11 @@ export function TraegerShellProvider({
    * oder fehlt, steht sie in der Kopfzeile.
    */
   readonly memberName?: string;
+  /**
+   * Die gebuchten moto-Module des Trägers (#6052); `null`, solange sie
+   * laden. Ohne die Träger-Übersicht führt das Logo zur Schulliste.
+   */
+  readonly bookedModules?: readonly ModuleKey[] | null;
 }) {
   const { data: session, status: sessionStatus } = useSession();
   const { show: showLogoutError } = useApiErrorDisplay();
@@ -624,13 +631,20 @@ export function TraegerShellProvider({
       logout: reportingLogout(endTraegerSession, showLogoutError),
       mode: "traeger" as const,
       // Dashboard with its right, else the school list (#7646).
-      homeUrl: traegerHomeHref(session ?? null),
+      homeUrl: traegerHomeHref(session ?? null, bookedModules),
       // Die Konto-Seite mit dem eigenen Namen (#4693). Passwort und Code
       // gehören zum moto-Konto und haben dort keine Karte.
       profileUrl: traegerPath("/traeger/konto"),
       ...(organizationName ? { brandLabel: organizationName } : {}),
     };
-  }, [memberName, organizationName, session, sessionStatus, showLogoutError]);
+  }, [
+    bookedModules,
+    memberName,
+    organizationName,
+    session,
+    sessionStatus,
+    showLogoutError,
+  ]);
 
   return (
     <ShellAuthContext.Provider value={value}>

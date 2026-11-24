@@ -263,6 +263,8 @@ export const HELP_TOPICS = {
   traegerDatevExport: "datev-werte-eintragen",
   traegerAccessLog: "zugriffsprotokoll-des-traegers-lesen",
   traegerSettings: "traeger-einstellungen",
+  // Die moto-Module des Träger-Portals und ihr Stand (#6052).
+  traegerModules: "welche-moto-module-hat-mein-traeger",
   traegerBriefkopf: "briefkopf-des-traegers",
   traegerDocumentTemplates: "vorlagen-des-traegers",
   traegerDocumentKinds: "rechnung-oder-gebuehrenbescheid",
