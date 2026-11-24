@@ -23,11 +23,9 @@ func SchoolRouteContracts(schema any) []common.RouteContract {
 // relative to the /operator/organizations/{id}/traeger-settings mount.
 func TraegerRouteContracts(schema any) []common.RouteContract {
 	operator := []common.PortalScope{common.PortalOperator}
-	const browserPath = "/api/operator/organizations/{id}/traeger-settings/values/{key}"
-	const purge = "invalidate the tenant lookup after inherited settings change"
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/schema", Portals: operator, Response: schema},
-		{Method: "PUT", Pattern: "/values/{key}", Portals: operator, Request: setSchoolSettingRequest{}, NoData: true, BrowserPath: browserPath, RouteFile: purge},
-		{Method: "DELETE", Pattern: "/values/{key}", Portals: operator, NoData: true, BrowserPath: browserPath, RouteFile: purge},
+		{Method: "PUT", Pattern: "/values/{key}", Portals: operator, Request: setSchoolSettingRequest{}, NoData: true},
+		{Method: "DELETE", Pattern: "/values/{key}", Portals: operator, NoData: true},
 	}
 }

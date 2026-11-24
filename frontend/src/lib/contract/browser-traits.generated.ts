@@ -10,7 +10,6 @@ export const browserRoutePaths = {
     "POST /caterer/auth/passkeys/login/verify": "/api/caterer/auth/passkeys/login/verify",
   },
   org: {
-    "DELETE /traeger/settings/values/{key}": "/api/traeger/settings/values/{key}",
     "GET /demo/access/status": "/api/demo/access/status",
     "POST /demo/access/reset": "/api/demo/access/reset",
     "POST /demo/access/sessions": "/api/demo/access/sessions",
@@ -20,7 +19,6 @@ export const browserRoutePaths = {
     "POST /traeger/auth/mfa/resend": "/api/traeger/auth/mfa/resend",
     "POST /traeger/auth/mfa/step-up/verify": "/api/traeger/auth/mfa/step-up/verify",
     "POST /traeger/auth/mfa/verify": "/api/traeger/auth/mfa/verify",
-    "PUT /traeger/settings/values/{key}": "/api/traeger/settings/values/{key}",
   },
   parent: {
     "GET /demo/access/status": "/api/demo/access/status",
@@ -32,7 +30,6 @@ export const browserRoutePaths = {
     "POST /parent/me/mfa/confirm": "/api/parent/me/mfa/confirm",
   },
   platform: {
-    "DELETE /operator/organizations/{id}/traeger-settings/values/{key}": "/api/operator/organizations/{id}/traeger-settings/values/{key}",
     "DELETE /operator/schools/{id}/settings/values/{key}": "/api/operator/schools/{id}/settings/values/{key}",
     "POST /operator/auth/invitations/accept": "/api/operator/auth/invitations/accept",
     "POST /operator/auth/invitations/validate": "/api/operator/auth/invitations/validate",
@@ -44,7 +41,6 @@ export const browserRoutePaths = {
     "POST /operator/auth/mfa/verify": "/api/operator/auth/mfa/verify",
     "POST /operator/auth/passkeys/login/options": "/api/operator/auth/passkeys/login/options",
     "POST /operator/auth/passkeys/login/verify": "/api/operator/auth/passkeys/login/verify",
-    "PUT /operator/organizations/{id}/traeger-settings/values/{key}": "/api/operator/organizations/{id}/traeger-settings/values/{key}",
     "PUT /operator/schools/{id}/settings/values/{key}": "/api/operator/schools/{id}/settings/values/{key}",
   },
   school: {

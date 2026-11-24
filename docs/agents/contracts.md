@@ -1218,8 +1218,8 @@ outside it that a portal page calls belongs in that list.
 `tenant-resolve.server.ts` keeps decoded successes and 404s for 60 seconds.
 Only missing, deleted or inactive schools return 404; lookup failures are
 not cached. Provisioning and writes to the generated lookup setting keys
-invalidate the same cache. Träger writes invalidate its schools' inherited
-values on the replica serving the write. `POST /auth/switch-tenant` returns a tenant-session JWT
+invalidate the same cache. The registry test checks that none of those keys
+can change through a Träger write. `POST /auth/switch-tenant` returns a tenant-session JWT
 for the target school, not a `scope=school` portal token.
 Verified MFA belongs to the live tenant-session family of the same account,
 not its school or organization. A permitted switch across organizations preserves

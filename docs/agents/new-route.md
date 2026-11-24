@@ -254,8 +254,8 @@ Only for what belongs to the browser and cannot live in Go:
   `app/api/school/sse/events`) and the client log routes;
 - a device token in a header instead of a browser session, as in
   `frontend/src/app/api/display/dashboard/route.ts`;
-- a BFF cache or cookie the write must change: settings writes in the staff,
-  operator and Träger portals purge the tenant lookup; `gencontract` emits
+- a BFF cache or cookie the write must change: staff and operator writes to
+  school settings purge the tenant lookup; `gencontract` emits
   the keys from the Go lookup's batch. `demo/access/sessions` sets the demo cookie;
 - a hand-off for a path on the catalog proxy allowlist that Next would give
   to a neighbouring route file (`catalogProxyUnder`); `app/api/catalog-route-selection.test.ts`

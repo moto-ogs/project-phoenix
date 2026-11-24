@@ -72,7 +72,6 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
   "~/lib/caterer/route-wrapper.server": ["catalogProxy", "catalogProxyUnder"],
   "~/lib/traeger/route-wrapper.server": [
     "traeger.del",
-    "traeger.put",
     "catalogProxy",
     "catalogProxyUnder",
   ],

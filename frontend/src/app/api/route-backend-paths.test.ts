@@ -268,9 +268,6 @@ function handlerContracts(file: string, text: string, method: string) {
           ["createOperatorPutHandler", "createOperatorDeleteHandler"].includes(
             imported,
           )) ||
-        (factory.from === "~/lib/traeger/route-wrapper.server" &&
-          imported === "traeger" &&
-          ["put", "del"].includes(factory.names[1] ?? "")) ||
         (factory.from === "~/lib/file-upload-wrapper.server" &&
           imported === "createFileUploadHandler") ||
         portalCallback(node.expression)

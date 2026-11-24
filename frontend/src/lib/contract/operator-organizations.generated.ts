@@ -480,8 +480,6 @@ export const routes = {
     method: "DELETE",
     pattern: "/operator/organizations/{id}/traeger-settings/values/{key}",
     portals: ["platform"],
-    routeFile: "invalidate the tenant lookup after inherited settings change",
-    browserPath: "/api/operator/organizations/{id}/traeger-settings/values/{key}",
     response: noData,
   },
   "GET /operator/organizations/": {
@@ -655,8 +653,6 @@ export const routes = {
     method: "PUT",
     pattern: "/operator/organizations/{id}/traeger-settings/values/{key}",
     portals: ["platform"],
-    routeFile: "invalidate the tenant lookup after inherited settings change",
-    browserPath: "/api/operator/organizations/{id}/traeger-settings/values/{key}",
     request: requestBody<setSchoolSettingRequest>(),
     response: noData,
   },

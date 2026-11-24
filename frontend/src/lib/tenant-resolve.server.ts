@@ -33,7 +33,6 @@ type TenantLookup =
 interface TenantCacheEntry {
   lookup: Promise<TenantLookup>;
   expiresAt: number;
-  data?: TenantResolveResponse;
 }
 
 interface TenantCache {
@@ -80,19 +79,6 @@ export function invalidateTenantResolve(slug: string): void {
   revalidateTag(`tenant-${slug}`, { expire: 0 });
 }
 
-/** Settings from a Träger can change every school's inherited value. */
-export function tenantResolvesInOrganization(organizationId: string): string[] {
-  const { hits, pending } = tenantCache();
-  // An in-flight read may already have captured the pre-write value.
-  const slugs = [...pending.keys()];
-  for (const [slug, entry] of hits) {
-    if (entry.data?.organization_id === organizationId) {
-      slugs.push(slug);
-    }
-  }
-  return slugs;
-}
-
 /**
  * Each replica caches successful and missing lookups by school slug. The visitor who
  * starts the lookup supplies the forwarding headers. Other visitors reuse it.
@@ -127,7 +113,6 @@ function lookupTenant(
         if (pending.get(slug) !== entry) return result;
         pending.delete(slug);
         if (result.ok) {
-          entry.data = result.data;
           rememberTenant(hits, slug, entry);
         } else if (result.status === 404) {
           rememberTenant(misses, slug, entry);
