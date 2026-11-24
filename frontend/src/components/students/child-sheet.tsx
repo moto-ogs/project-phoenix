@@ -72,6 +72,11 @@ export function ChildSheet({
       footer={
         <ButtonLink
           href={href}
+          // Das Blatt trägt einen eigenen Verlaufseintrag (gleiche Adresse
+          // wie die Liste). Die Akte ersetzt ihn: Zurück führt dann direkt
+          // auf die Liste mit ihrer Scroll-Position, nicht auf einen leeren
+          // Blatt-Eintrag.
+          replace
           variant="primary"
           size="md"
           className="flex-1"
@@ -88,6 +93,7 @@ export function ChildSheet({
           isToday={isToday}
           classLabel={classLabel}
           contextActions={contextActions}
+          replaceEntry
         />
       ) : null}
     </OverlaySheet>
@@ -112,6 +118,7 @@ export function ChildSummary({
   classLabel,
   contextActions,
   header = false,
+  replaceEntry = false,
 }: Readonly<{
   student: Student;
   href: string;
@@ -120,6 +127,8 @@ export function ChildSummary({
   contextActions?: ReactNode;
   /** Name und Foto oben (Detail neben der Liste; das Blatt hat einen Titel). */
   header?: boolean;
+  /** Im Blatt: Die Akte ersetzt dessen Verlaufseintrag (siehe `ChildSheet`). */
+  replaceEntry?: boolean;
 }>) {
   const status = childDayStatus(student, isToday);
   const fullAccess = student.has_full_access !== false;
@@ -152,7 +161,13 @@ export function ChildSummary({
         tone={CHILD_DAY_TONE_BADGE[status.tone]}
       />
       {contextActions}
-      {isToday ? <ChildQuickActions student={student} href={href} /> : null}
+      {isToday ? (
+        <ChildQuickActions
+          student={student}
+          href={href}
+          replaceEntry={replaceEntry}
+        />
+      ) : null}
       <DataGrid columns={1}>
         <DataField label="Klasse" inline>
           {classLabel ?? (student.school_class || "–")}
@@ -212,7 +227,8 @@ function pickupText(student: Student): string {
 function ChildQuickActions({
   student,
   href,
-}: Readonly<{ student: Student; href: string }>) {
+  replaceEntry,
+}: Readonly<{ student: Student; href: string; replaceEntry: boolean }>) {
   const router = useTenantRouter();
   const { data: session, status } = useSession();
   // Dieselbe Abfrage wie die Akte: Die Rechte am Kind stehen nur dort, und
@@ -227,7 +243,9 @@ function ChildQuickActions({
   const sickExcused = detail.hasSickExcusedWriteAccess;
   if (!showCheckout && !showCheckin && !sickExcused) return null;
   const open = (action: StudentQuickAction) => () =>
-    router.push(studentQuickActionHref(href, action));
+    replaceEntry
+      ? router.replace(studentQuickActionHref(href, action))
+      : router.push(studentQuickActionHref(href, action));
   const isQuickExcused = (student.excused ?? false) && !student.class_trip;
   return (
     <div className="flex gap-2" aria-label="Schnellaktionen">
