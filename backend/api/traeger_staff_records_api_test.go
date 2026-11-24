@@ -347,6 +347,7 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 			"members": members, "choices": map[string]string{"last_name": strconv.FormatInt(south, 10)},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		assert.NotContains(t, rec.Body.String(), "held_bank_schools", "every school's bank row moved as the link read it")
 		record = decode[staffRecordBody](t, rec)
 		assert.Equal(t, "Sommer-Berg", record.LastName)
 		require.NotNil(t, record.PersonnelNumber)

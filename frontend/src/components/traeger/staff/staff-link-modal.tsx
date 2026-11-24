@@ -22,7 +22,7 @@ import { Radio } from "~/components/ui/radio";
 import { SectionLabel } from "~/components/ui/section-label";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
-import { useApiFormError } from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
@@ -100,6 +100,7 @@ export function StaffLinkModal({
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { clear: clearErrors } = formErrors;
+  const { warning } = useToast();
 
   // A new request starts without the errors of the one before.
   useEffect(() => {
@@ -137,6 +138,16 @@ export function StaffLinkModal({
         }),
       );
       if (result.ok) {
+        // A school saved new bank values after the preview: the record keeps
+        // the values shown, the school keeps its new ones. The notice stays
+        // until it is closed.
+        const held = result.saved.heldBankSchools;
+        if (held.length > 0) {
+          warning(
+            `Die Akte hat die neuen Bankdaten von ${held.join(", ")} nicht übernommen. Prüfe Bank und Steuer.`,
+            { duration: 0 },
+          );
+        }
         if (op.isCurrent()) onLinked(result.saved);
         return;
       }

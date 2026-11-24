@@ -148,8 +148,10 @@ func (t *TraegerStaff) replacedValues(actor workforce.TraegerStaffActor, recordI
 // read and this school's lock gets here. The trail names a held row right
 // after its school commits the hold, so a later school that fails cannot
 // leave a held row the Träger never learns of: every later catch-up keeps
-// it silently.
-func (t *TraegerStaff) handOver(ctx context.Context, actor workforce.TraegerStaffActor, record domain.TraegerStaffRecord, planned map[employmentKey]string) error {
+// it silently. handOver returns the schools that kept a row, so the link's
+// answer names them as well.
+func (t *TraegerStaff) handOver(ctx context.Context, actor workforce.TraegerStaffActor, record domain.TraegerStaffRecord, planned map[employmentKey]string) ([]int64, error) {
+	var heldSchools []int64
 	for _, link := range record.Links {
 		var held *domain.StaffFinancialData
 		err := t.ports.Runtime.WithinSchool(ctx, link.SchoolID, func(ctx context.Context) error {
@@ -158,15 +160,16 @@ func (t *TraegerStaff) handOver(ctx context.Context, actor workforce.TraegerStaf
 			return err
 		})
 		if err != nil {
-			return publicTraegerStaffError(fmt.Errorf("hand over to school %d: %w", link.SchoolID, err))
+			return heldSchools, publicTraegerStaffError(fmt.Errorf("hand over to school %d: %w", link.SchoolID, err))
 		}
 		if held != nil {
+			heldSchools = append(heldSchools, link.SchoolID)
 			if err := t.recordHeldBankRows(ctx, actor, heldBankChanges(record.ID, link, actor.AccountID, *held)); err != nil {
-				return err
+				return heldSchools, err
 			}
 		}
 	}
-	return nil
+	return heldSchools, nil
 }
 
 // plannedBankRow is the bank row the link read for the employment, nil for
@@ -368,7 +371,7 @@ func (t *TraegerStaff) UpdatePersonnelNumber(ctx context.Context, actor workforc
 	if err != nil {
 		return workforce.TraegerStaffRecordDetail{}, publicTraegerStaffError(err)
 	}
-	if err := t.handOver(ctx, actor, record, nil); err != nil {
+	if _, err := t.handOver(ctx, actor, record, nil); err != nil {
 		return workforce.TraegerStaffRecordDetail{}, err
 	}
 	return t.Record(ctx, actor, recordID)

@@ -169,6 +169,7 @@ export interface TraegerStaffRecordDetail {
   proofs: TraegerStaffProof[] | null;
   contracts: TraegerStaffContract[] | null;
   unsynced_schools?: string[];
+  held_bank_schools?: string[];
 }
 
 export const TraegerStaffRecordDetailSchema: z.ZodType<TraegerStaffRecordDetail, unknown> = object<TraegerStaffRecordDetail>({
@@ -185,6 +186,7 @@ export const TraegerStaffRecordDetailSchema: z.ZodType<TraegerStaffRecordDetail,
   proofs: nullable(arr(TraegerStaffProofSchema)),
   contracts: nullable(arr(TraegerStaffContractSchema)),
   unsynced_schools: optional(arr(str)),
+  held_bank_schools: optional(arr(str)),
 });
 
 /** Go: workforce.TraegerStaffRecordSummary */

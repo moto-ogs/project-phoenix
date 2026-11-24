@@ -70,6 +70,7 @@ const HIRED = {
     { schoolId: "1", schoolName: "OGS Nord", staffId: "41", active: true },
   ],
   unsyncedSchools: [],
+  heldBankSchools: [],
 } as unknown as StaffRecordDetail;
 
 function renderPage() {

@@ -289,6 +289,11 @@ type TraegerStaffRecordDetail struct {
 	// but could not reach yet; the next change of the record brings them up
 	// to date (ADR 0237 section 4). Empty after every complete write.
 	UnsyncedSchools []string `json:"unsynced_schools,omitempty"`
+	// HeldBankSchools names the schools whose bank values changed between a
+	// link's read and its hand-over: the record keeps the values the link
+	// read, the school keeps its new row, and the Personalverwaltung checks
+	// the bank section (ADR 0311). Only a link answers it.
+	HeldBankSchools []string `json:"held_bank_schools,omitempty"`
 }
 
 // TraegerStaffPerson is the person of a record as the Personalverwaltung
