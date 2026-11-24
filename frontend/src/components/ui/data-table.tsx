@@ -78,6 +78,10 @@ export interface DataTableColumn<T> {
   // the table cell ("15:30" instead of "🕒 15:30 Uhr"): the "row" line's
   // title, meta and detail, and the head (title, meta) of a "lines" card.
   stackedRender?: (row: T) => ReactNode;
+  // "row" layout, as the `stackedDetailKey` column: true opens the full
+  // table cell in the card's details too, when the short `stackedRender`
+  // under the title drops part of it (a note, a marker; #7915).
+  stackedFullInDetails?: boolean;
   // False drops the visible header where the value names itself: in the
   // "row" phone line in front of the value (a class, a group), in the
   // "lines" layout a "field" then takes the full width (an invoice's
@@ -871,12 +875,11 @@ function StackedRows<T>({
     (c) => c !== title && c !== meta && c !== rowMenu && c.stacked !== "hidden",
   );
   // "row" shows one chosen field on the card; every other one opens in the
-  // details, so no column is lost on a phone (#7911). A chosen field shown
-  // in a short form (`stackedRender`) opens there in full too: the short
-  // form drops notes and markers of the cell (#7915).
+  // details, so no column is lost on a phone (#7911). A chosen field whose
+  // short form drops part of the cell opens there in full too (#7915).
   const detailFields =
     layout === "row"
-      ? fields.filter((c) => c !== detail || c.stackedRender !== undefined)
+      ? fields.filter((c) => c !== detail || c.stackedFullInDetails === true)
       : [];
   const shownDetail =
     layout === "row" && detail && detail !== title && detail !== meta

@@ -64,6 +64,10 @@ interface EditRow {
   readonly notes: string | null | undefined;
 }
 
+function fieldLabel(edit: WorkSessionEdit): string {
+  return FIELD_LABELS[edit.fieldName] ?? edit.fieldName;
+}
+
 function OldValue({ edit }: Readonly<{ edit: WorkSessionEdit }>) {
   return (
     <span className="text-moto-red line-through">
@@ -93,6 +97,11 @@ const EDIT_COLUMNS: DataTableColumn<EditRow>[] = [
       row.firstOfSave ? (
         <span className="text-gray-500">{row.dateStr}</span>
       ) : null,
+    // On a phone every card of a save carries its date: without the table's
+    // rows beside each other, the date ties the cards of one save together.
+    stackedRender: (row) => (
+      <span className="text-gray-500">{row.dateStr}</span>
+    ),
   },
   {
     key: "editor",
@@ -109,15 +118,11 @@ const EDIT_COLUMNS: DataTableColumn<EditRow>[] = [
     className: "whitespace-nowrap",
     stacked: "title",
     render: (row) => (
-      <span className="text-gray-600">
-        {FIELD_LABELS[row.edit.fieldName] ?? row.edit.fieldName}
-      </span>
+      <span className="text-gray-600">{fieldLabel(row.edit)}</span>
     ),
     stackedRender: (row) => (
       <span className="flex flex-wrap items-center gap-x-2 text-sm">
-        <span className="text-gray-600">
-          {FIELD_LABELS[row.edit.fieldName] ?? row.edit.fieldName}
-        </span>
+        <span className="text-gray-600">{fieldLabel(row.edit)}</span>
         <OldValue edit={row.edit} />
         <span className="text-gray-500" aria-hidden="true">
           →

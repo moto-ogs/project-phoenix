@@ -66,8 +66,10 @@ describe("EditHistoryAccordion on a phone (#7915)", () => {
     expect(firstCard.getByText("Anna Müller (Admin)")).toBeInTheDocument();
     expect(firstCard.getByText(/Zeitkorrektur/)).toBeInTheDocument();
 
-    // The second change of the same save names only what changed.
+    // The second change of the same save carries its date, so the cards
+    // of one save read together; author and reason stand once.
     const secondCard = within(second!);
+    expect(secondCard.getByText("20.10.2026, 17:00")).toBeInTheDocument();
     expect(secondCard.getByText("Pause")).toBeInTheDocument();
     expect(secondCard.getByText("30 min")).toBeInTheDocument();
     expect(secondCard.getByText("45 min")).toBeInTheDocument();

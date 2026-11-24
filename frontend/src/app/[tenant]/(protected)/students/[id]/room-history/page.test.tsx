@@ -935,8 +935,29 @@ describe("StudentRoomHistoryPage", () => {
       fireEvent.click(card.getByRole("button", { name: /Details öffnen/ }));
 
       expect(card.getAllByText("Krank")).toHaveLength(2);
+      // The report reads as a report, not as an arrival (#7915).
+      expect(card.getByText("gemeldet 09:30")).toBeInTheDocument();
+      expect(card.getByText("beendet 18:00")).toBeInTheDocument();
       expect(
         card.getByText("Keine Raumwechsel an diesem Tag."),
+      ).toBeInTheDocument();
+    });
+
+    it("keeps the report of a day past the room-detail retention", async () => {
+      setupFetch(
+        mockAttendanceHistoryResponse([
+          { ...sickStatusDay, room_detail_available: false, visits: null },
+        ]),
+      );
+      render(<StudentRoomHistoryPage />);
+
+      const list = await screen.findByTestId("data-table-stacked");
+      const card = within(within(list).getByRole("listitem"));
+      fireEvent.click(card.getByRole("button", { name: /Details öffnen/ }));
+
+      expect(card.getByText("gemeldet 09:30")).toBeInTheDocument();
+      expect(
+        card.getByText(/Raumdetails nicht mehr verfügbar/),
       ).toBeInTheDocument();
     });
   });

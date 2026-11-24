@@ -325,18 +325,9 @@ function daySlotRows(
 
 // Die Statusmeldungen und Raumwechsel eines aufgeklappten Tages.
 function dayRoomRows(day: AttendanceHistoryDay): DataTableExtraRow[] {
-  if (!day.roomDetailAvailable) {
-    return [
-      {
-        key: `${day.date}-rooms-expired`,
-        content: (
-          <span className="italic">
-            Raumdetails nicht mehr verfügbar (Aufbewahrungsfrist überschritten).
-          </span>
-        ),
-      },
-    ];
-  }
+  // A report stands under the arrival and departure columns, named as a
+  // report: stacked on a phone, the column label alone would read as an
+  // arrival (#7915). Reports outlive the room-detail retention.
   const statusRows: DataTableExtraRow[] = day.statusEntries.map((entry) => ({
     key: `${day.date}-${entry.status}`,
     cells: [
@@ -351,14 +342,16 @@ function dayRoomRows(day: AttendanceHistoryDay): DataTableExtraRow[] {
       {
         columnKey: "arrival",
         content: (
-          <span className="tabular-nums">{formatTime(entry.reportedAt)}</span>
+          <span className="tabular-nums">
+            gemeldet {formatTime(entry.reportedAt)}
+          </span>
         ),
       },
       {
         columnKey: "departure",
         content: (
           <span className="tabular-nums">
-            {entry.clearedAt ? formatTime(entry.clearedAt) : "–"}
+            {entry.clearedAt ? `beendet ${formatTime(entry.clearedAt)}` : "–"}
           </span>
         ),
       },
@@ -368,6 +361,19 @@ function dayRoomRows(day: AttendanceHistoryDay): DataTableExtraRow[] {
       },
     ],
   }));
+  if (!day.roomDetailAvailable) {
+    return [
+      ...statusRows,
+      {
+        key: `${day.date}-rooms-expired`,
+        content: (
+          <span className="italic">
+            Raumdetails nicht mehr verfügbar (Aufbewahrungsfrist überschritten).
+          </span>
+        ),
+      },
+    ];
+  }
   if (day.visits.length === 0) {
     return [
       ...statusRows,

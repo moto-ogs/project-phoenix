@@ -1272,6 +1272,7 @@ describe("DataTable phone cards without lost columns (#7911)", () => {
               ...c,
               render: (r: CardRow) => `${r.pickup} (mit Notiz)`,
               stackedRender: (r: CardRow) => r.pickup,
+              stackedFullInDetails: true,
             }
           : c,
       ),
@@ -1284,6 +1285,25 @@ describe("DataTable phone cards without lost columns (#7911)", () => {
     fireEvent.click(card.getByRole("button", { name: "Details zu Alpha" }));
 
     expect(card.getByText("15:30 (mit Notiz)")).toBeInTheDocument();
+  });
+
+  it("keeps a short detail out of the details unless the column asks for it", () => {
+    const { card } = renderCards("row", {
+      columns: cardColumns
+        .filter((c) => c.key === "name" || c.key === "pickup")
+        .map((c) =>
+          c.key === "pickup"
+            ? { ...c, stackedRender: (r: CardRow) => `um ${r.pickup}` }
+            : c,
+        ),
+    });
+
+    // Anker: die Kurzform steht auf der Zeile.
+    expect(card.getByText("um 15:30")).toBeInTheDocument();
+    // Nothing else to show: no details button that only repeats the line.
+    expect(
+      card.queryByRole("button", { name: "Details zu Alpha" }),
+    ).not.toBeInTheDocument();
   });
 
   it("opens the details without opening the entry, and the card still opens it", () => {
