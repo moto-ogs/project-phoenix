@@ -226,19 +226,6 @@ func (s *administration) writeDeviceEdit(ctx context.Context, device *Device, ed
 	return updated, nil
 }
 
-// findDevice loads one device by primary key for op and reports a missing
-// row as ErrAdministrationDeviceNotFound.
-func (s *administration) findDevice(ctx context.Context, op string, id int64) (Device, error) {
-	device, err := s.devices.FindDevice(ctx, id)
-	if errors.Is(err, ErrDeviceNotFound) {
-		return Device{}, &AdministrationError{Op: op, Err: ErrAdministrationDeviceNotFound}
-	}
-	if err != nil {
-		return Device{}, &AdministrationError{Op: op, Err: err}
-	}
-	return device, nil
-}
-
 // DeleteDevice deletes an IoT device by its ID.
 func (s *administration) DeleteDevice(ctx context.Context, id int64) error {
 	if id <= 0 {
