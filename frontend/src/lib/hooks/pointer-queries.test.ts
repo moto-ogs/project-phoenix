@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { COARSE_POINTER, FINE_POINTER } from "./use-media-query";
 
 /*
- * Zeigerart entscheidet Bedienmaße und Trefferflächen (ADR 0321).
+ * Zeigerart entscheidet Bedienmaße und Trefferflächen (ADR 0322).
  * Happy DOM leitet `pointer` aus `navigator.maxTouchPoints` ab: über 0 ist der
  * Hauptzeiger grob (Finger), 0 ist fein (Maus). Das iPad meldet im
  * Simulator 5 Berührungspunkte und `pointer: coarse`.
@@ -36,7 +36,7 @@ describe("COARSE_POINTER / FINE_POINTER", () => {
     expect(FINE_POINTER).toBe("(pointer: fine)");
   });
 
-  // iPad-Viewports im iOS-Simulator gemessen (ADR 0321): Ein iPad quer ist
+  // iPad-Viewports im iOS-Simulator gemessen (ADR 0322): Ein iPad quer ist
   // breit wie ein Laptop und bleibt trotzdem Finger.
   it.each([
     { name: "iPad (A16) quer", width: 1180, height: 688, touch: true },
