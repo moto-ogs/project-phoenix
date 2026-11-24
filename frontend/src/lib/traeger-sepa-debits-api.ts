@@ -95,7 +95,7 @@ export interface SepaDebitRun {
 }
 
 /** A body that bills a school itself, named by its creditor identifier. */
-export interface SepaDebitIssuer {
+interface SepaDebitIssuer {
   readonly key: string;
   readonly name: string;
 }

@@ -15,19 +15,19 @@ const SERVICE_VALUES = ["holiday", "care"] as const;
 const DOCUMENT_KIND_VALUES = ["confirmation", "invoice", "fee_notice"] as const;
 const BODY_VALUES = ["schultraeger", "gemeinde"] as const;
 
-export type IssuerService = (typeof SERVICE_VALUES)[number];
-export type IssuerDocumentKind = (typeof DOCUMENT_KIND_VALUES)[number];
-export type IssuerBody = (typeof BODY_VALUES)[number];
+type IssuerService = (typeof SERVICE_VALUES)[number];
+type IssuerDocumentKind = (typeof DOCUMENT_KIND_VALUES)[number];
+type IssuerBody = (typeof BODY_VALUES)[number];
 
 /** Eine Stelle, die die Eltern einer Schule selbst abrechnet. */
-export interface BillingIssuer {
+interface BillingIssuer {
   /** Die Gläubiger-ID der Stelle; sie benennt den Rechnungssteller. */
   readonly key: string;
   readonly body: IssuerBody | undefined;
   readonly name: string;
 }
 
-export interface IssuerServiceState {
+interface IssuerServiceState {
   readonly service: IssuerService;
   /** Leer, solange kein Muster festgelegt ist. */
   readonly pattern: string;

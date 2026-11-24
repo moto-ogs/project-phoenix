@@ -126,7 +126,7 @@ function rowsOf(status: BillingIssuerStatus): CheckRow[] {
   ];
 }
 
-export function BillingIssuerChecklist({
+function BillingIssuerChecklist({
   status,
   schoolNames,
 }: Readonly<{
