@@ -350,7 +350,9 @@ func loadQueryReadPackage(t *testing.T, root, pkgPath string) *queryReadPackage 
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, filepath.Join(dir, name), nil, parser.SkipObjectResolution)
+		// Resolve lexical declarations: the scanner follows local aliases and
+		// parameters by their declaration rather than by their spelling.
+		file, err := parser.ParseFile(fset, filepath.Join(dir, name), nil, 0)
 		require.NoError(t, err)
 		fileImports := queryReadFileImports(file)
 		for _, decl := range file.Decls {

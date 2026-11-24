@@ -7822,7 +7822,8 @@
         },
         {
           "name": "grade_levels",
-          "kind": "string"
+          "kind": "string",
+          "text_reason": "comma-separated grade numbers, not row identifiers"
         },
         {
           "name": "list_kind",
@@ -7870,7 +7871,8 @@
         },
         {
           "name": "grade_levels",
-          "kind": "string"
+          "kind": "string",
+          "text_reason": "comma-separated grade numbers, not row identifiers"
         },
         {
           "name": "list_kind",
@@ -8170,7 +8172,8 @@
         },
         {
           "name": "grade_levels",
-          "kind": "string"
+          "kind": "string",
+          "text_reason": "comma-separated grade numbers, not row identifiers"
         },
         {
           "name": "offering_ids",
