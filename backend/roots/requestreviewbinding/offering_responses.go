@@ -1,7 +1,7 @@
 package requestreviewbinding
 
 import (
-	"strconv"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/offeringrequests"
 	"github.com/moto-ogs/project-phoenix/modules/requestreview"
@@ -11,7 +11,7 @@ func OfferingRequestDiffLines(entries []offeringrequests.DiffEntry) []requestrev
 	diff := make([]requestreview.OfferingRequestDiffResponse, 0, len(entries))
 	for _, entry := range entries {
 		line := requestreview.OfferingRequestDiffResponse{
-			OfferingID: strconv.FormatInt(entry.OfferingID, 10),
+			OfferingID: ident.ID(entry.OfferingID),
 			Label:      entry.Label,
 			Old:        requestreview.GermanOfferingDiffLabel(entry.OldState, entry.OldDays),
 			New:        requestreview.GermanOfferingDiffLabel(entry.NewState, entry.NewDays),
@@ -28,7 +28,7 @@ func OfferingRequestDiffLines(entries []offeringrequests.DiffEntry) []requestrev
 				line.NewWhenExcluded = requestreview.GermanOfferingDiffLabel("booked", entry.NewDaysWithoutRules)
 			}
 			for _, triggerID := range entry.AutoTriggerIDs {
-				line.TriggerIDs = append(line.TriggerIDs, strconv.FormatInt(triggerID, 10))
+				line.TriggerIDs = append(line.TriggerIDs, ident.ID(triggerID))
 			}
 			line.TriggerNames = entry.AutoTriggerNames
 		}
@@ -43,14 +43,14 @@ func ToOfferingRequestResponse(item *offeringrequests.ReviewItem) requestreview.
 	unchanged := make([]requestreview.OfferingRequestUnchangedResponse, 0, len(item.Unchanged))
 	for _, entry := range item.Unchanged {
 		unchanged = append(unchanged, requestreview.OfferingRequestUnchangedResponse{
-			OfferingID: strconv.FormatInt(entry.OfferingID, 10),
+			OfferingID: ident.ID(entry.OfferingID),
 			Label:      entry.Label,
 			Days:       requestreview.GermanOfferingDiffLabel(entry.NewState, entry.NewDays),
 		})
 	}
 	resp := requestreview.OfferingRequestResponse{
-		ID:             strconv.FormatInt(row.ID, 10),
-		StudentID:      strconv.FormatInt(row.StudentID, 10),
+		ID:             ident.ID(row.ID),
+		StudentID:      ident.ID(row.StudentID),
 		StudentName:    item.StudentName,
 		Status:         row.Status,
 		EffectiveFrom:  row.EffectiveFrom,
@@ -82,7 +82,7 @@ func ToOfferingRequestHistoryResponse(item *offeringrequests.HistoryItem) reques
 	requested := make([]requestreview.OfferingRequestRequestedResponse, 0, len(item.Requested))
 	for _, entry := range item.Requested {
 		requested = append(requested, requestreview.OfferingRequestRequestedResponse{
-			OfferingID: strconv.FormatInt(entry.OfferingID, 10),
+			OfferingID: ident.ID(entry.OfferingID),
 			Label:      entry.Name,
 			New:        requestreview.GermanOfferingDiffLabel("booked", entry.Days),
 		})

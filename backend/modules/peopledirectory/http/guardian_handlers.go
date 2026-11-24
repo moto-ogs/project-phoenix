@@ -139,10 +139,10 @@ func guardianFullDeleteWarning(names []string) string {
 	}
 }
 
-func stringifyLinkIDs(ids []int64) []string {
-	out := make([]string, len(ids))
+func linkIDs(ids []int64) []ident.ID {
+	out := make([]ident.ID, len(ids))
 	for i, id := range ids {
-		out[i] = strconv.FormatInt(id, 10)
+		out[i] = ident.ID(id)
 	}
 	return out
 }
@@ -170,7 +170,7 @@ func (rs *GuardianResource) guardianDeletePreview(w http.ResponseWriter, r *http
 	rs.succeed(w, r, http.StatusOK, &GuardianDeletePreview{
 		LinkedCount:     len(impact.StudentNames),
 		AffectedNames:   impact.StudentNames,
-		AffectedLinkIDs: stringifyLinkIDs(impact.LinkIDs),
+		AffectedLinkIDs: linkIDs(impact.LinkIDs),
 		Warning:         guardianFullDeleteWarning(impact.StudentNames),
 	}, "Guardian delete preview retrieved successfully")
 }

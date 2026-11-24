@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	announcementService "github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -57,7 +58,7 @@ type declarationAttachmentResponse struct {
 }
 
 type declarationVersionResponse struct {
-	ID          string                          `json:"id"`
+	ID          ident.ID                        `json:"id"`
 	VersionNo   int                             `json:"version_no"`
 	Title       string                          `json:"title"`
 	Body        string                          `json:"body"`
@@ -68,7 +69,7 @@ type declarationVersionResponse struct {
 }
 
 type declarationSignerResponse struct {
-	AccountID   string     `json:"account_id"`
+	AccountID   ident.ID   `json:"account_id"`
 	FirstName   string     `json:"first_name"`
 	LastName    string     `json:"last_name"`
 	Action      *string    `json:"action"`
@@ -76,7 +77,7 @@ type declarationSignerResponse struct {
 }
 
 type declarationChildResponse struct {
-	StudentID   string                      `json:"student_id"`
+	StudentID   ident.ID                    `json:"student_id"`
 	FirstName   string                      `json:"first_name"`
 	LastName    string                      `json:"last_name"`
 	SchoolClass string                      `json:"school_class"`
@@ -85,8 +86,8 @@ type declarationChildResponse struct {
 }
 
 type declarationSubmissionResponse struct {
-	ID                string    `json:"id"`
-	StudentID         string    `json:"student_id"`
+	ID                ident.ID  `json:"id"`
+	StudentID         ident.ID  `json:"student_id"`
 	StudentFirstName  string    `json:"student_first_name"`
 	StudentLastName   string    `json:"student_last_name"`
 	SignerName        string    `json:"signer_name"`
@@ -146,7 +147,7 @@ var declarationSummaryStates = []string{
 
 func toDeclarationVersionResponse(v announcementService.DeclarationVersion) declarationVersionResponse {
 	out := declarationVersionResponse{
-		ID: strconv.FormatInt(v.ID, 10), VersionNo: v.VersionNo, Title: v.Title, Body: v.Body, ContentHash: v.ContentHash,
+		ID: ident.ID(v.ID), VersionNo: v.VersionNo, Title: v.Title, Body: v.Body, ContentHash: v.ContentHash,
 		PublishedAt: v.PublishedAt, IntegrityOK: v.IntegrityOK,
 		Attachments: make([]declarationAttachmentResponse, 0, len(v.Attachments)),
 	}
@@ -179,12 +180,12 @@ func toDeclarationStatusResponse(s *announcementService.ParentDeclarationStatus)
 	}
 	for _, c := range s.Children {
 		child := declarationChildResponse{
-			StudentID: strconv.FormatInt(c.StudentID, 10), FirstName: c.FirstName, LastName: c.LastName,
+			StudentID: ident.ID(c.StudentID), FirstName: c.FirstName, LastName: c.LastName,
 			SchoolClass: c.SchoolClass, State: c.State, Signers: make([]declarationSignerResponse, 0, len(c.Signers)),
 		}
 		for _, signer := range c.Signers {
 			child.Signers = append(child.Signers, declarationSignerResponse{
-				AccountID: strconv.FormatInt(signer.AccountID, 10), FirstName: signer.FirstName,
+				AccountID: ident.ID(signer.AccountID), FirstName: signer.FirstName,
 				LastName: signer.LastName, Action: signer.Action, SubmittedAt: signer.SubmittedAt,
 			})
 		}
@@ -192,7 +193,7 @@ func toDeclarationStatusResponse(s *announcementService.ParentDeclarationStatus)
 	}
 	for _, sub := range s.Submissions {
 		out.Submissions = append(out.Submissions, declarationSubmissionResponse{
-			ID: strconv.FormatInt(sub.ID, 10), StudentID: strconv.FormatInt(sub.StudentID, 10),
+			ID: ident.ID(sub.ID), StudentID: ident.ID(sub.StudentID),
 			StudentFirstName: sub.StudentFirstName, StudentLastName: sub.StudentLastName,
 			SignerName: sub.SignerName, GuardianRole: sub.GuardianRole, Action: sub.Action, Method: sub.Method,
 			PasswordConfirmed: sub.PasswordConfirmed, VersionNo: sub.VersionNo, ContentHash: sub.ContentHash,

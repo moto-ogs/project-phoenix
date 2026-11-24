@@ -42,7 +42,7 @@ type SessionDevice struct {
 	TenantID   ident.ID   `json:"tenant_id"`
 	CreatedAt  time.Time  `json:"created_at"`
 	UpdatedAt  time.Time  `json:"updated_at"`
-	DeviceID   string     `json:"device_id"`
+	DeviceID   string     `json:"device_id" contract_text:"device provisioning key"`
 	DeviceType string     `json:"device_type"`
 	Name       *string    `json:"name,omitempty"`
 	Status     string     `json:"status"`

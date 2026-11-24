@@ -417,7 +417,7 @@ func TestMapScheduleToResponse(t *testing.T) {
 		resp := careplanhttp.MapScheduleToResponseForTest(row)
 
 		require.NotNil(t, resp.CareOfferingID)
-		assert.Equal(t, "42", *resp.CareOfferingID)
+		assert.Equal(t, "42", resp.CareOfferingID.String())
 		assert.Equal(t, "Ganztag bis 14:30 Uhr", resp.CareOfferingName)
 	})
 }

@@ -60,9 +60,9 @@ func TestListPhaseExpiryWarnings_StringifiesIDsAndDates(t *testing.T) {
 	}
 	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &response))
 	require.Len(t, response.Data, 1)
-	assert.Equal(t, "3", response.Data[0].SourcePhaseID)
+	assert.Equal(t, "3", response.Data[0].SourcePhaseID.String())
 	require.NotNil(t, response.Data[0].SuccessorPhaseID)
-	assert.Equal(t, "22", *response.Data[0].SuccessorPhaseID)
+	assert.Equal(t, "22", response.Data[0].SuccessorPhaseID.String())
 	assert.Equal(t, "2027-02-01", response.Data[0].FirstAffectedDate)
 	assert.Equal(t, 17, response.Data[0].UnresolvedChildren)
 }

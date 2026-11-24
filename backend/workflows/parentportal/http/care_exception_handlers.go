@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -13,7 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
@@ -65,11 +64,11 @@ type SubmitCareExceptionRequest struct {
 	Reason        string  `json:"reason"`
 	// RecipientGuardianProfileIDs travel with the creation so the share is
 	// written in the same transaction (#2267); empty shares with nobody.
-	RecipientGuardianProfileIDs []string `json:"recipient_guardian_profile_ids"`
+	RecipientGuardianProfileIDs []ident.ID `json:"recipient_guardian_profile_ids"`
 	// PickupPersonGuardianProfileID names a contact person who collects the
 	// child that day; Signature is needed for a collector or walking home
 	// alone (#4780).
-	PickupPersonGuardianProfileID *string                      `json:"pickup_person_guardian_profile_id"`
+	PickupPersonGuardianProfileID *string                      `json:"pickup_person_guardian_profile_id" contract_text:"empty string explicitly clears the collector; null leaves it unspecified"`
 	Signature                     *declarationSignatureRequest `json:"signature,omitempty"`
 }
 
@@ -105,7 +104,7 @@ type CareExceptionResponse struct {
 // PickupChangeRequestResponse carries the stored ask. PickupTime and
 // DepartureMode are null for a leg the request leaves unchanged (#3945).
 type PickupChangeRequestResponse struct {
-	ID                     string     `json:"id"`
+	ID                     ident.ID   `json:"id"`
 	Date                   string     `json:"date"`
 	PickupTime             *string    `json:"pickup_time"`
 	PreviousPickup         *string    `json:"previous_pickup_time,omitempty"`
@@ -119,9 +118,9 @@ type PickupChangeRequestResponse struct {
 	IsSelf                 bool       `json:"is_self"`
 	// PickupPerson is the one-day collector (#4780); Signed says the request
 	// carries a signature, whose proof the submitter can open.
-	PickupPerson                  *string `json:"pickup_person,omitempty"`
-	PickupPersonGuardianProfileID *string `json:"pickup_person_guardian_profile_id,omitempty"`
-	Signed                        bool    `json:"signed"`
+	PickupPerson                  *string   `json:"pickup_person,omitempty"`
+	PickupPersonGuardianProfileID *ident.ID `json:"pickup_person_guardian_profile_id,omitempty"`
+	Signed                        bool      `json:"signed"`
 	// Version is what an edit of this request sends back as
 	// expected_version (ADR 0311).
 	Version string `json:"version"`
@@ -140,7 +139,7 @@ func toPickupChangeRequestResponse(req *careplan.CareScheduleChangeRequest, acco
 		return PickupChangeRequestResponse{}, errors.New("invalid pickup change request payload")
 	}
 	response := PickupChangeRequestResponse{
-		ID: strconv.FormatInt(req.ID, 10), Date: terms.Date.String(),
+		ID: ident.ID(req.ID), Date: terms.Date.String(),
 		PreviousDepartureModes: terms.PreviousDepartureModes, Reason: reason, Status: req.Status, DecisionReason: req.DecisionReason,
 		CreatedAt: req.CreatedAt, ReviewedAt: req.ReviewedAt, IsSelf: req.SubmittedBy == accountID,
 		Version: readstate.Of(req.UpdatedAt),
@@ -157,7 +156,7 @@ func toPickupChangeRequestResponse(req *careplan.CareScheduleChangeRequest, acco
 	if terms.PickupPersonName != "" {
 		response.PickupPerson = &terms.PickupPersonName
 		if req.Status == carerequests.StatusPending && req.SubmittedBy == accountID {
-			guardianProfileID := strconv.FormatInt(terms.PickupPersonGuardianProfileID, 10)
+			guardianProfileID := ident.ID(terms.PickupPersonGuardianProfileID)
 			response.PickupPersonGuardianProfileID = &guardianProfileID
 		}
 	}
@@ -186,8 +185,7 @@ func toCareExceptionResponse(c *parentService.CareException) CareExceptionRespon
 func decodePickupChangeSubmission(w http.ResponseWriter, r *http.Request) (parentService.PickupChangeSubmission, bool) {
 	var none parentService.PickupChangeSubmission
 	var req SubmitCareExceptionRequest
-	if err := wire.Decode(r.Body, &req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
+	if !decodeCreateBody(w, r, &req) {
 		return none, false
 	}
 	date, err := timezone.ParseDate(req.Date)

@@ -20,12 +20,12 @@ func (f *fakeCalendarService) ListSchoolParentConferences(context.Context) (*cal
 
 func (f *fakeCalendarService) CreateSchoolParentConference(_ context.Context, req calendarSvc.ParentConferenceRequest) (*calendarSvc.ParentConferenceView, error) {
 	f.school.gotConference = req
-	return &calendarSvc.ParentConferenceView{ID: "5", SchoolClass: req.SchoolClass}, f.school.writeErr
+	return &calendarSvc.ParentConferenceView{ID: 5, SchoolClass: req.SchoolClass}, f.school.writeErr
 }
 
 func (f *fakeCalendarService) UpdateSchoolParentConference(_ context.Context, id int64, req calendarSvc.ParentConferenceRequest) (*calendarSvc.ParentConferenceView, error) {
 	f.school.gotConferenceID, f.school.gotConference = id, req
-	return &calendarSvc.ParentConferenceView{ID: "5"}, f.school.writeErr
+	return &calendarSvc.ParentConferenceView{ID: 5}, f.school.writeErr
 }
 
 func (f *fakeCalendarService) DeleteSchoolParentConference(_ context.Context, id int64) error {

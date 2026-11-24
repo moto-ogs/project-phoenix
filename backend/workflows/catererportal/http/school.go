@@ -3,11 +3,11 @@ package catererportalhttp
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/workflows/catererportal"
 )
@@ -15,7 +15,7 @@ import (
 // InvitationResponse is a school's invitation to its caterer. The link is
 // never part of it: it goes to the caterer by mail only.
 type InvitationResponse struct {
-	ID              string     `json:"id"`
+	ID              ident.ID   `json:"id"`
 	Email           string     `json:"email"`
 	CatererName     string     `json:"caterer_name"`
 	DeliveryAddress string     `json:"delivery_address"`
@@ -65,7 +65,7 @@ func invitationResponse(invitation identityaccess.CatererInvitation) InvitationR
 		status = "expired"
 	}
 	return InvitationResponse{
-		ID: strconv.FormatInt(invitation.ID, 10), Email: invitation.Email, CatererName: invitation.CatererName,
+		ID: ident.ID(invitation.ID), Email: invitation.Email, CatererName: invitation.CatererName,
 		DeliveryAddress: invitation.DeliveryAddress, Status: status, ExpiresAt: invitation.ExpiresAt,
 		AcceptedAt: invitation.AcceptedAt, RevokedAt: invitation.RevokedAt, CreatedAt: invitation.CreatedAt,
 	}

@@ -576,7 +576,7 @@ export interface HolidayFormDocument {
 }
 
 export const HolidayFormDocumentSchema: z.ZodType<HolidayFormDocument, unknown> = object<HolidayFormDocument>({
-  id: str,
+  id: int64String,
   filename: str,
   size: safeInt,
 });

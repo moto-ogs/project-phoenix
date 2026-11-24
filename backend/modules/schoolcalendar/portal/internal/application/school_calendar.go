@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 
 	appointmentcap "github.com/moto-ogs/project-phoenix/modules/appointments"
@@ -71,12 +73,12 @@ func (s *service) ListSchoolCalendar(ctx context.Context, from, to appointmentca
 	}
 	for _, day := range closingDays {
 		view.ClosingDays = append(view.ClosingDays, SchoolDays{
-			ID: formatID(day.ID), Name: day.Reason, StartDate: day.StartDate, EndDate: day.EndDate,
+			ID: ident.ID(day.ID), Name: day.Reason, StartDate: day.StartDate, EndDate: day.EndDate,
 		})
 	}
 	for _, period := range holidays {
 		view.Holidays = append(view.Holidays, SchoolDays{
-			ID: formatID(period.ID), Name: period.Name, StartDate: period.StartDate, EndDate: period.EndDate,
+			ID: ident.ID(period.ID), Name: period.Name, StartDate: period.StartDate, EndDate: period.EndDate,
 		})
 	}
 	return view, nil

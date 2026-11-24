@@ -3,7 +3,6 @@ package catererportalhttp
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/mealplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/workflows/catererportal"
 )
@@ -28,8 +28,8 @@ type PreviewResponse struct {
 
 // SchoolResponse is a school the caterer supplies.
 type SchoolResponse struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // SchoolsResponse is the caterer and its schools.
@@ -66,7 +66,7 @@ type DayResponse struct {
 	Closed      bool                 `json:"closed"`
 	Deadline    time.Time            `json:"deadline"`
 	Status      string               `json:"status"`
-	OrderID     string               `json:"order_id,omitempty"`
+	OrderID     ident.ID             `json:"order_id,omitempty"`
 	ConfirmedAt *time.Time           `json:"confirmed_at,omitempty"`
 	Total       int                  `json:"total"`
 	Classes     []ClassCountResponse `json:"classes"`
@@ -90,7 +90,7 @@ type acceptRequest struct {
 }
 
 func schoolResponse(school catererportal.School) SchoolResponse {
-	return SchoolResponse{ID: strconv.FormatInt(school.ID, 10), Name: school.Name}
+	return SchoolResponse{ID: ident.ID(school.ID), Name: school.Name}
 }
 
 func childResponse(child mealplan.OrderChild) OrderChildResponse {
@@ -104,7 +104,7 @@ func dayResponse(day mealplan.OrderDay) DayResponse {
 		Children: make([]OrderChildResponse, 0, len(day.Children)), Changes: make([]ChangeResponse, 0, len(day.Changes)),
 	}
 	if day.OrderID > 0 {
-		response.OrderID = strconv.FormatInt(day.OrderID, 10)
+		response.OrderID = ident.ID(day.OrderID)
 	}
 	for _, count := range day.Classes {
 		response.Classes = append(response.Classes, ClassCountResponse(count))

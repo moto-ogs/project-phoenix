@@ -113,7 +113,7 @@ func (s accountPasskeyScene) list(t *testing.T, accountID int64) []identityacces
 func passkeyID(t *testing.T, summary identityaccess.PasskeyCredentialSummary) int64 {
 	t.Helper()
 	var id int64
-	_, err := fmt.Sscan(summary.ID, &id)
+	_, err := fmt.Sscan(summary.ID.String(), &id)
 	require.NoError(t, err)
 	return id
 }

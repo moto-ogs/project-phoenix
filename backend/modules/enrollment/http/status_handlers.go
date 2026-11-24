@@ -17,6 +17,7 @@ import (
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
@@ -26,7 +27,7 @@ import (
 // StatusResponse is the public status-page payload. ChildID is
 // stringified so the frontend keeps its int64-as-string convention.
 type StatusResponse struct {
-	RequestID         string                `json:"request_id"`
+	RequestID         ident.ID              `json:"request_id"`
 	GuardianFirstName string                `json:"guardian_first_name"`
 	GuardianLastName  string                `json:"guardian_last_name"`
 	GuardianEmail     string                `json:"guardian_email"`
@@ -67,7 +68,7 @@ type StatusResponse struct {
 // page sends back with the ticks, the blocks, and when the parents last
 // accepted exactly these.
 type StatusRenewalTermsResponse struct {
-	FormSchemaID     string       `json:"form_schema_id"`
+	FormSchemaID     ident.ID     `json:"form_schema_id"`
 	TermsFingerprint string       `json:"terms_fingerprint"`
 	Blocks           []LegalBlock `json:"blocks"`
 	ConfirmedAt      *time.Time   `json:"confirmed_at,omitempty"`
@@ -84,11 +85,11 @@ type StatusGuardianResponse struct {
 
 // StatusChildResponse is one row in StatusResponse.Children.
 type StatusChildResponse struct {
-	ID           string  `json:"id"`
-	FirstName    string  `json:"first_name"`
-	LastName     string  `json:"last_name"`
-	Status       string  `json:"status"`
-	StatusReason *string `json:"status_reason,omitempty"`
+	ID           ident.ID `json:"id"`
+	FirstName    string   `json:"first_name"`
+	LastName     string   `json:"last_name"`
+	Status       string   `json:"status"`
+	StatusReason *string  `json:"status_reason,omitempty"`
 	// Locked marks a child that is already taken over into care. Its data
 	// stays readable through the status link, but changes to it run through
 	// the parent app only (ADR 0003).
@@ -116,11 +117,11 @@ type EditBootstrapResponse struct {
 }
 
 type EditDraftResponse struct {
-	RequestID           string                      `json:"request_id"`
+	RequestID           ident.ID                    `json:"request_id"`
 	StatusToken         string                      `json:"status_token"`
-	TenantID            string                      `json:"tenant_id"`
+	TenantID            ident.ID                    `json:"tenant_id"`
 	TenantSubdomain     string                      `json:"tenant_subdomain"`
-	PhaseID             string                      `json:"phase_id"`
+	PhaseID             ident.ID                    `json:"phase_id"`
 	GuardianFirstName   string                      `json:"guardian_first_name"`
 	GuardianLastName    string                      `json:"guardian_last_name"`
 	GuardianEmail       string                      `json:"guardian_email"`
@@ -139,7 +140,7 @@ type EditDraftGuardianResponse struct {
 }
 
 type EditDraftChildResponse struct {
-	ID                string                         `json:"id"`
+	ID                ident.ID                       `json:"id"`
 	FirstName         string                         `json:"first_name"`
 	LastName          string                         `json:"last_name"`
 	DateOfBirth       string                         `json:"date_of_birth"`
@@ -147,7 +148,7 @@ type EditDraftChildResponse struct {
 	TargetSchoolClass *string                        `json:"target_school_class,omitempty"`
 	HolidayCareWish   *bool                          `json:"holiday_care_wish,omitempty"`
 	CustomData        map[string]any                 `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
-	OfferingIDs       []string                       `json:"offering_ids"`
+	OfferingIDs       []ident.ID                     `json:"offering_ids"`
 	OfferingDays      []EditDraftOfferingDayResponse `json:"offering_days,omitempty"`
 	// Locked marks a child that is already taken over into care: the change
 	// form shows it read-only and points to the parent app (ADR 0003).
@@ -155,7 +156,7 @@ type EditDraftChildResponse struct {
 }
 
 type EditDraftOfferingDayResponse struct {
-	OfferingID            string   `json:"offering_id"`
+	OfferingID            ident.ID `json:"offering_id"`
 	SelectedDays          []string `json:"selected_days"`
 	ManualSelectedDays    []string `json:"manual_selected_days,omitempty"`
 	AutomaticSelectedDays []string `json:"automatic_selected_days,omitempty"`
@@ -336,7 +337,7 @@ func newStatusRenewalTerms(terms *capability.RenewalTerms) *StatusRenewalTermsRe
 		blocks = []LegalBlock{}
 	}
 	return &StatusRenewalTermsResponse{
-		FormSchemaID:     strconv.FormatInt(terms.FormSchemaID, 10),
+		FormSchemaID:     ident.ID(terms.FormSchemaID),
 		TermsFingerprint: terms.TermsFingerprint,
 		Blocks:           blocks,
 		ConfirmedAt:      terms.ConfirmedAt,
@@ -347,7 +348,7 @@ func newStatusRenewalTerms(terms *capability.RenewalTerms) *StatusRenewalTermsRe
 // whether any child is taken over into care.
 func newStatusResponse(req *capability.Request, editMode string, children []*capability.RequestChild, guardians []*capability.RequestGuardian) (StatusResponse, bool) {
 	resp := StatusResponse{
-		RequestID:         strconv.FormatInt(req.ID, 10),
+		RequestID:         ident.ID(req.ID),
 		GuardianFirstName: req.GuardianFirstName,
 		GuardianLastName:  req.GuardianLastName,
 		GuardianEmail:     req.GuardianEmail,
@@ -361,7 +362,7 @@ func newStatusResponse(req *capability.Request, editMode string, children []*cap
 		locked := ChildTakenOver(c)
 		anyLocked = anyLocked || locked
 		resp.Children = append(resp.Children, StatusChildResponse{
-			ID:           strconv.FormatInt(c.ID, 10),
+			ID:           ident.ID(c.ID),
 			FirstName:    c.FirstName,
 			LastName:     c.LastName,
 			Status:       c.Status,
@@ -460,10 +461,10 @@ func (rs *Resource) getEditBootstrap(w http.ResponseWriter, r *http.Request) {
 
 func toEditDraftResponse(draft *EditDraft) EditDraftResponse {
 	resp := EditDraftResponse{
-		RequestID:           strconv.FormatInt(draft.Request.ID, 10),
+		RequestID:           ident.ID(draft.Request.ID),
 		StatusToken:         draft.Request.StatusToken,
-		TenantID:            strconv.FormatInt(draft.Request.TenantID, 10),
-		PhaseID:             strconv.FormatInt(draft.Request.PhaseID, 10),
+		TenantID:            ident.ID(draft.Request.TenantID),
+		PhaseID:             ident.ID(draft.Request.PhaseID),
 		GuardianFirstName:   draft.Request.GuardianFirstName,
 		GuardianLastName:    draft.Request.GuardianLastName,
 		GuardianEmail:       draft.Request.GuardianEmail,
@@ -508,7 +509,7 @@ func toEditDraftChildResponses(draft *EditDraft) []EditDraftChildResponse {
 
 func toEditDraftChildResponse(child *capability.RequestChild, offeringLinks []*RequestChildOffering) EditDraftChildResponse {
 	response := EditDraftChildResponse{
-		ID:                strconv.FormatInt(child.ID, 10),
+		ID:                ident.ID(child.ID),
 		FirstName:         child.FirstName,
 		LastName:          child.LastName,
 		DateOfBirth:       string(child.DateOfBirth),
@@ -516,11 +517,11 @@ func toEditDraftChildResponse(child *capability.RequestChild, offeringLinks []*R
 		TargetSchoolClass: child.TargetSchoolClass,
 		HolidayCareWish:   child.HolidayCareWish,
 		CustomData:        formAnswerMap(child.CustomData),
-		OfferingIDs:       []string{},
+		OfferingIDs:       []ident.ID{},
 		Locked:            ChildTakenOver(child),
 	}
 	for _, link := range offeringLinks {
-		response.OfferingIDs = append(response.OfferingIDs, strconv.FormatInt(link.CareOfferingID, 10))
+		response.OfferingIDs = append(response.OfferingIDs, ident.ID(link.CareOfferingID))
 		if offeringDay := toEditDraftOfferingDayResponse(link); offeringDay != nil {
 			response.OfferingDays = append(response.OfferingDays, *offeringDay)
 		}
@@ -537,7 +538,7 @@ func toEditDraftOfferingDayResponse(link *RequestChildOffering) *EditDraftOfferi
 		manualDays = link.SelectedDays
 	}
 	return &EditDraftOfferingDayResponse{
-		OfferingID:            strconv.FormatInt(link.CareOfferingID, 10),
+		OfferingID:            ident.ID(link.CareOfferingID),
 		SelectedDays:          link.SelectedDays,
 		ManualSelectedDays:    manualDays,
 		AutomaticSelectedDays: link.AutomaticSelectedDays,
@@ -621,7 +622,7 @@ func (rs *Resource) replaceStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	common.Respond(w, r, http.StatusOK, SubmitEnrollmentResponse{
-		RequestID: strconv.FormatInt(result.Request.ID, 10),
+		RequestID: ident.ID(result.Request.ID),
 		StatusURL: result.StatusURL,
 		Warnings:  result.Warnings,
 	}, "Request updated")
@@ -641,7 +642,7 @@ func mapEditError(w http.ResponseWriter, r *http.Request, err error) {
 // WithdrawRequest is the wire shape for POST /requests/{token}/withdraw.
 // Optional child_id; omit to withdraw every non-terminal child.
 type WithdrawRequest struct {
-	ChildID *string `json:"child_id,omitempty"`
+	ChildID *string `json:"child_id,omitempty" contract_text:"empty string or omission withdraws the whole request"`
 }
 
 func (req *WithdrawRequest) Bind(_ *http.Request) error { return nil }
@@ -699,8 +700,8 @@ type ConfirmRenewalRequest struct {
 	ConsentFlags ConsentFlagsInput `json:"consent_flags,omitzero" contract_refines:"The typed checkbox input still reads the full legacy JSON value domain"`
 	// FormSchemaID is the renewal_terms.form_schema_id the page showed; "0"
 	// for the tenant-wide blocks.
-	FormSchemaID     string `json:"form_schema_id"`
-	TermsFingerprint string `json:"terms_fingerprint"`
+	FormSchemaID     *ident.ID `json:"form_schema_id"`
+	TermsFingerprint string    `json:"terms_fingerprint"`
 }
 
 // ConfirmRenewalResponse reports how many child rows were transitioned
@@ -716,11 +717,10 @@ func renewalConfirmation(r *http.Request) (capability.RenewalConfirmation, error
 	if err := wire.Decode(r.Body, &body); err != nil {
 		return capability.RenewalConfirmation{}, fmt.Errorf("decode renewal confirmation: %w", err)
 	}
-	formSchemaID, err := strconv.ParseInt(strings.TrimSpace(body.FormSchemaID), 10, 64)
-	if err != nil || formSchemaID < 0 {
+	if body.FormSchemaID == nil || *body.FormSchemaID < 0 {
 		return capability.RenewalConfirmation{}, errors.New("form_schema_id is required")
 	}
-	return capability.RenewalConfirmation{ConsentFlags: formValues(body.ConsentFlags.values()), DisplayedFormSchemaID: formSchemaID, TermsFingerprint: body.TermsFingerprint}, nil
+	return capability.RenewalConfirmation{ConsentFlags: formValues(body.ConsentFlags.values()), DisplayedFormSchemaID: body.FormSchemaID.Int64(), TermsFingerprint: body.TermsFingerprint}, nil
 }
 
 // confirmRenewal handles POST /requests/{statusToken}/confirm-renewal: the

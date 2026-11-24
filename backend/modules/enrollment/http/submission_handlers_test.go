@@ -136,7 +136,7 @@ func TestToEditDraftChildResponses_PreserveOnlyLockedOfferingsWhenDisabled(t *te
 	require.Len(t, responses, 2)
 	assert.Empty(t, responses[0].OfferingIDs)
 	assert.True(t, responses[1].Locked)
-	assert.Equal(t, []string{"7"}, responses[1].OfferingIDs)
+	assert.Equal(t, []ident.ID{7}, responses[1].OfferingIDs)
 }
 
 func TestBuildServiceRequest_RejectsBadDateOfBirth(t *testing.T) {

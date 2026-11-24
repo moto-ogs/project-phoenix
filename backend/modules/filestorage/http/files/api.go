@@ -11,7 +11,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -109,20 +108,11 @@ func renderError(w http.ResponseWriter, r *http.Request, err error) {
 	}
 }
 
-// idString renders a database id the way this API carries every id: a decimal
-// string. Ids are bigints and JavaScript has no integer type that holds one;
-// JSON.parse rounds anything past 2^53 silently, and a rounded id is a valid
-// id for a different row.
-func idString(id int64) string {
-	return strconv.FormatInt(id, 10)
-}
-
-// idStrings renders a share list, empty rather than null so the UI can iterate
-// without a guard.
-func idStrings(ids []int64) []string {
-	out := make([]string, 0, len(ids))
+// shareIDs preserves an empty share list as [] rather than null.
+func shareIDs(ids []int64) []ident.ID {
+	out := make([]ident.ID, 0, len(ids))
 	for _, id := range ids {
-		out = append(out, idString(id))
+		out = append(out, ident.ID(id))
 	}
 	return out
 }

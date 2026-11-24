@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	appointmentcap "github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
@@ -209,10 +210,6 @@ type GroupOption = portal.GroupOption
 
 type StudentOption = portal.StudentOption
 
-func formatID(id int64) string {
-	return strconv.FormatInt(id, 10)
-}
-
 func int64Set(values []int64) map[int64]struct{} {
 	out := make(map[int64]struct{}, len(values))
 	for _, value := range values {
@@ -310,12 +307,12 @@ func (s *service) parentTenantEvents(ctx context.Context, tenantID int64, tenant
 		return nil, err
 	}
 	schoolName := ""
-	tenantIDString := formatID(tenantID)
+	eventTenantID := ident.ID(tenantID)
 	if len(tenantChildren) > 0 {
 		schoolName = tenantChildren[0].SchoolName
 	}
 	for i := range appointmentEvents {
-		appointmentEvents[i].TenantID = &tenantIDString
+		appointmentEvents[i].TenantID = &eventTenantID
 		if schoolName != "" {
 			appointmentEvents[i].SchoolName = &schoolName
 		}

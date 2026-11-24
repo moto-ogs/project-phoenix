@@ -90,7 +90,7 @@ type PersonResponse struct {
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
 	Email     string    `json:"email,omitempty"`
-	TagID     string    `json:"tag_id,omitempty"`
+	TagID     string    `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"`
 	AccountID ident.ID  `json:"account_id,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -103,7 +103,7 @@ type PersonResponse struct {
 type DirectoryPersonRequest struct {
 	FirstName string   `json:"first_name"`
 	LastName  string   `json:"last_name"`
-	TagID     string   `json:"tag_id,omitempty"`
+	TagID     string   `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"`
 	AccountID ident.ID `json:"account_id,omitempty"`
 	// ExpectedVersion is the version of the person the form showed (ADR
 	// 0311): the person GET's, or person_version of a staff record. An

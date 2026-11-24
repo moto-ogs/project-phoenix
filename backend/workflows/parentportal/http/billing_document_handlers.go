@@ -3,12 +3,12 @@ package parent
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
@@ -19,8 +19,8 @@ import (
 
 // BillingDocumentResponse is one document in the inbox.
 type BillingDocumentResponse struct {
-	ID             string        `json:"id"`
-	OrganizationID string        `json:"organization_id"`
+	ID             ident.ID      `json:"id"`
+	OrganizationID ident.ID      `json:"organization_id"`
 	TraegerName    string        `json:"traeger_name"`
 	Kind           string        `json:"kind"`
 	Number         string        `json:"number"`
@@ -73,7 +73,7 @@ func (rs *Resource) respondInbox(w http.ResponseWriter, r *http.Request, inbox p
 	out := make([]BillingDocumentResponse, len(documents))
 	for i, document := range documents {
 		out[i] = BillingDocumentResponse{
-			ID: strconv.FormatInt(document.ID, 10), OrganizationID: strconv.FormatInt(document.OrganizationID, 10),
+			ID: ident.ID(document.ID), OrganizationID: ident.ID(document.OrganizationID),
 			TraegerName: document.TraegerName, Kind: document.Kind, Number: document.Number, PeriodName: document.PeriodName,
 			ServiceFrom: document.ServiceFrom, ServiceUntil: document.ServiceUntil, IssuedOn: document.IssuedOn,
 			TotalCents: int(document.TotalCents), ChildNames: document.ChildNames, SentAt: document.SentAt,

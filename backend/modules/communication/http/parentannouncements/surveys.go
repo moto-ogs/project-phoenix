@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	announcementService "github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
@@ -257,7 +258,7 @@ func (rs *SurveyResource) toAnswer(w http.ResponseWriter, r *http.Request) {
 	out := make([]surveyToAnswerResponse, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, surveyToAnswerResponse{
-			ID: strconv.FormatInt(row.ID, 10), Title: row.Title, Intro: row.Intro,
+			ID: ident.ID(row.ID), Title: row.Title, Intro: row.Intro,
 			Anonymous: row.Anonymous, ClosesAt: row.ClosesAt, Participated: row.Participated,
 		})
 	}

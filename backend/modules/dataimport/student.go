@@ -5,8 +5,8 @@ type StudentImportRow struct {
 	// Person fields
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
-	Birthday  string `json:"birthday,omitempty"` // YYYY-MM-DD
-	TagID     string `json:"tag_id,omitempty"`   // RFID card
+	Birthday  string `json:"birthday,omitempty"`                             // YYYY-MM-DD
+	TagID     string `json:"tag_id,omitempty" contract_text:"RFID tag code"` // RFID card
 
 	// Student fields
 	SchoolClass string `json:"school_class"`

@@ -38,6 +38,7 @@ type Field struct {
 	Deprecated  bool   `json:"deprecated,omitempty"`
 	JSONReason  string `json:"json_reason,omitempty"`
 	RefinesJSON string `json:"refines_json,omitempty"`
+	TextReason  string `json:"text_reason,omitempty"`
 	Schema      Schema `json:"schema"`
 }
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	reminder "github.com/moto-ogs/project-phoenix/workflows/reminderdelivery"
 	"github.com/moto-ogs/project-phoenix/workflows/reminderdelivery/ports"
 )
@@ -99,7 +100,7 @@ func buildRunningOverReminders(due []*ports.ActivityInstance, today calendar.Dat
 		endMin := minutesOfDay(inst.EndTime)
 		out = append(out, reminder.StaffReminder{
 			Type:               reminder.TypeActivityRunningOver,
-			ActivityInstanceID: int64String(inst.ID),
+			ActivityInstanceID: new(ident.ID(inst.ID)),
 			Title:              inst.Title,
 			Subtitle:           facts.roomNames[inst.RoomID],
 			DueTime:            formatMinutes(endMin),

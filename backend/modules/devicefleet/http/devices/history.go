@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // LifecycleEventResponse is one entry of a device's history (#2321). It
@@ -15,7 +15,7 @@ import (
 // member is named with the name the school's directory has now; the moto
 // support stays anonymous to the school.
 type LifecycleEventResponse struct {
-	ID        string                                 `json:"id"`
+	ID        ident.ID                               `json:"id"`
 	Action    string                                 `json:"action"`
 	ActorKind string                                 `json:"actor_kind"`
 	ActorName *string                                `json:"actor_name"`
@@ -77,7 +77,7 @@ func newLifecycleEventResponse(event devicefleet.LifecycleEvent, names map[int64
 		}
 	}
 	return LifecycleEventResponse{
-		ID: strconv.FormatInt(event.ID, 10), Action: string(event.Action), ActorKind: string(event.ActorKind),
+		ID: ident.ID(event.ID), Action: string(event.Action), ActorKind: string(event.ActorKind),
 		ActorName: actorName, Changes: event.Changes, OccurredAt: event.OccurredAt.Format(time.RFC3339),
 	}
 }

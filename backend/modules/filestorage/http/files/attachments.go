@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
@@ -34,7 +36,7 @@ var (
 
 // AnnouncementAttachmentResponse is one attachment on the wire.
 type AnnouncementAttachmentResponse struct {
-	ID          string    `json:"id"`
+	ID          ident.ID  `json:"id"`
 	Filename    string    `json:"filename"`
 	SizeBytes   int64     `json:"size_bytes" contract:"number"`
 	ContentType string    `json:"content_type"`
@@ -76,7 +78,7 @@ type AttachmentRemovalRequest struct {
 
 func newAttachmentResponse(attachment filestorage.Attachment) AnnouncementAttachmentResponse {
 	return AnnouncementAttachmentResponse{
-		ID:          idString(attachment.ID),
+		ID:          ident.ID(attachment.ID),
 		Filename:    attachment.Filename,
 		SizeBytes:   attachment.SizeBytes,
 		ContentType: attachment.ContentType,
@@ -256,7 +258,7 @@ func (rs *Resource) deleteAnnouncementAttachment(w http.ResponseWriter, r *http.
 		renderAttachmentError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, AttachmentRemovedResponse{AnnouncementID: idString(announcementID), AnnouncementVersion: version}, "Attachment deleted successfully")
+	common.Respond(w, r, http.StatusOK, AttachmentRemovedResponse{AnnouncementID: ident.ID(announcementID), AnnouncementVersion: version}, "Attachment deleted successfully")
 }
 
 // --- parent handlers ----------------------------------------------------------

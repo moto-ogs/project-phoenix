@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 
@@ -812,7 +814,7 @@ func TestCareUsageReportResponseStringifiesIDs(t *testing.T) {
 		},
 	}
 
-	raw, err := json.Marshal(toCareUsageReportResponse(report))
+	raw, err := wire.Marshal(toCareUsageReportResponse(report))
 	if err != nil {
 		t.Fatalf("marshal response: %v", err)
 	}

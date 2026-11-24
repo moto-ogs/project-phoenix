@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	compose "github.com/moto-ogs/project-phoenix/modules/communication/composition"
@@ -69,40 +71,40 @@ func TestOGSMessagesShowWhatBecameOfTheirMail(t *testing.T) {
 
 	var thread messaging.ParentChatThreadDetailResponse
 	read("POST", "/threads/open", fmt.Sprintf(`{"student_id":"%d","guardian_account_id":"%d"}`, chain.StudentID, chain.AccountID), &thread)
-	read("POST", "/threads/"+thread.ThreadID, `{"body":"Bitte Turnbeutel mitgeben"}`, &[]messaging.ParentChatMessageResponse{})
-	read("GET", "/threads/"+thread.ThreadID, "", &thread)
+	read("POST", "/threads/"+thread.ThreadID.String(), `{"body":"Bitte Turnbeutel mitgeben"}`, &[]messaging.ParentChatMessageResponse{})
+	read("GET", "/threads/"+thread.ThreadID.String(), "", &thread)
 	require.Len(t, thread.Messages, 1)
-	messageID := thread.Messages[0].ID
+	messageID := thread.Messages[0].ID.String()
 	var mails messaging.ThreadMailsResponse
-	read("GET", "/threads/"+thread.ThreadID+"/mails", "", &mails)
+	read("GET", "/threads/"+thread.ThreadID.String()+"/mails", "", &mails)
 	require.Equal(t, map[string]string{messageID: "queued"}, mails.Messages, "the mail is queued with the message")
 
 	_, err = db.NewRaw(`UPDATE platform.email_outbox SET status = 'sent', sent_at = now(), delivery_state = 'failed', delivery_state_at = now()
 		WHERE related_entity_type = 'parent_message' AND related_entity_id = ?`, messageID).Exec(testpkg.Ctx(t))
 	require.NoError(t, err)
-	read("GET", "/threads/"+thread.ThreadID+"/mails", "", &mails)
+	read("GET", "/threads/"+thread.ThreadID.String()+"/mails", "", &mails)
 	require.Equal(t, map[string]string{messageID: "undeliverable"}, mails.Messages)
 
 	var group messaging.GroupThreadDetailResponse
 	read("POST", "/group-threads", `{"target_type":"class","target_id":"1a","target_label":"Klasse 1a","title":"Ausflug","body":"Morgen Zoo"}`, &group)
 	require.Len(t, group.Messages, 1)
 	var groupMails messaging.GroupThreadMailsResponse
-	read("GET", "/group-threads/"+group.Thread.ID+"/mails", "", &groupMails)
+	read("GET", "/group-threads/"+group.Thread.ID.String()+"/mails", "", &groupMails)
 	require.Len(t, groupMails.Messages, 1)
-	require.Equal(t, map[string]int{"queued": 1}, groupMails.Messages[group.Messages[0].ID], "one mail per family of the class")
+	require.Equal(t, map[string]int{"queued": 1}, groupMails.Messages[group.Messages[0].ID.String()], "one mail per family of the class")
 
 	// The list shows the group thread with its families, the reach names
 	// the child, and closing the thread ends it.
 	var listed []messaging.StaffGroupThreadSummaryResponse
 	read("GET", "/group-threads", "", &listed)
 	require.Len(t, listed, 1)
-	require.Equal(t, group.Thread.ID, listed[0].ID)
+	require.Equal(t, group.Thread.ID.String(), listed[0].ID.String())
 	require.Equal(t, 1, listed[0].FamilyCount)
 	var reachable messaging.ReachableStudentsResponse
 	read("GET", "/reachable-students", "", &reachable)
-	require.Contains(t, reachable.StudentIDs, fmt.Sprint(chain.StudentID))
+	require.Contains(t, reachable.StudentIDs, ident.ID(chain.StudentID))
 	var closed messaging.GroupThreadDetailResponse
-	read("POST", "/group-threads/"+group.Thread.ID+"/close", "", &closed)
+	read("POST", "/group-threads/"+group.Thread.ID.String()+"/close", "", &closed)
 	require.NotNil(t, closed.Thread.ClosedAt)
 
 	// Another school's administrator reads neither status.
@@ -110,7 +112,7 @@ func TestOGSMessagesShowWhatBecameOfTheirMail(t *testing.T) {
 	_, foreign := testpkg.CreateTestStaffWithAccountForTenant(t, db, foreignTenant, "Foreign", "Mail")
 	testpkg.EnsureAccountTenant(t, db, foreign.ID, foreignTenant)
 	foreignToken := testutil.MintTestJWT(t, sessiontoken.AppClaims{ID: int(foreign.ID), Sub: foreign.Email, Roles: []string{"admin"}, Permissions: []string{"admin:*"}, TenantID: foreignTenant})
-	for _, path := range []string{"/threads/" + thread.ThreadID + "/mails", "/group-threads/" + group.Thread.ID + "/mails"} {
+	for _, path := range []string{"/threads/" + thread.ThreadID.String() + "/mails", "/group-threads/" + group.Thread.ID.String() + "/mails"} {
 		rec := request(foreignToken, "GET", path, "")
 		require.Equal(t, 404, rec.Code, rec.Body.String())
 	}

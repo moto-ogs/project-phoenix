@@ -81,7 +81,7 @@ export interface LifecycleEventResponse {
 }
 
 export const LifecycleEventResponseSchema: z.ZodType<LifecycleEventResponse, unknown> = object<LifecycleEventResponse>({
-  id: str,
+  id: int64String,
   action: str,
   actor_kind: str,
   actor_name: nullable(str),

@@ -159,26 +159,13 @@ func (rs *StaffAdminResource) listAbsenceRequests(w http.ResponseWriter, r *http
 	}
 	responses := make([]absenceRequestResponse, len(items))
 	for i, item := range items {
-		responses[i] = absenceRequestResponse{
-			StaffAbsenceRequestItem: item,
-			ID:                      strconv.FormatInt(item.ID.Int64(), 10),
-			StaffID:                 strconv.FormatInt(item.StaffID.Int64(), 10),
-		}
-		if item.ApprovedBy != nil {
-			approvedBy := strconv.FormatInt((*item.ApprovedBy).Int64(), 10)
-			responses[i].ApprovedBy = &approvedBy
-		}
+		responses[i] = absenceRequestResponse{StaffAbsenceRequestItem: item}
 	}
 	common.Respond(w, r, http.StatusOK, responses, "Absence requests retrieved")
 }
 
-// absenceRequestResponse keeps the three identifiers lossless for JavaScript
-// consumers. The embedded service response provides all non-ID fields.
 type absenceRequestResponse struct {
 	*workforce.StaffAbsenceRequestItem
-	ID         string  `json:"id"`
-	StaffID    string  `json:"staff_id"`
-	ApprovedBy *string `json:"approved_by,omitempty"`
 }
 
 // approveAbsence handles POST /api/staff/absences/{absenceId}/approve

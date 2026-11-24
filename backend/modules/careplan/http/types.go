@@ -58,8 +58,8 @@ type StudentRequest struct {
 	// Person details (required)
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
-	TagID     string `json:"tag_id,omitempty"`   // RFID tag ID (optional)
-	Birthday  string `json:"birthday,omitempty"` // Date in YYYY-MM-DD format
+	TagID     string `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"` // RFID tag ID (optional)
+	Birthday  string `json:"birthday,omitempty"`                                                    // Date in YYYY-MM-DD format
 
 	// Student-specific details (required)
 	SchoolClass string `json:"school_class"`
@@ -116,7 +116,7 @@ type UpdateStudentRequest struct {
 	FirstName *string `json:"first_name,omitempty"`
 	LastName  *string `json:"last_name,omitempty"`
 	Birthday  *string `json:"birthday,omitempty"` // Date in YYYY-MM-DD format
-	TagID     *string `json:"tag_id,omitempty"`
+	TagID     *string `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"`
 
 	// Student-specific details (optional for update)
 	SchoolClass       *string   `json:"school_class,omitempty"`

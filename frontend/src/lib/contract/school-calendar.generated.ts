@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  int64String,
   nullable,
   object,
   optional,
@@ -42,7 +43,7 @@ export interface SchoolDays {
 }
 
 export const SchoolDaysSchema: z.ZodType<SchoolDays, unknown> = object<SchoolDays>({
-  id: str,
+  id: int64String,
   name: str,
   start_date: str,
   end_date: str,
@@ -80,7 +81,7 @@ export const ParentConferenceSlotSchema: z.ZodType<ParentConferenceSlot, unknown
   start_time: str,
   end_time: str,
   booked: bool,
-  student_id: optional(str),
+  student_id: optional(int64String),
   student_name: optional(str),
 });
 
@@ -100,7 +101,7 @@ export interface ParentConferenceView {
 }
 
 export const ParentConferenceViewSchema: z.ZodType<ParentConferenceView, unknown> = object<ParentConferenceView>({
-  id: str,
+  id: int64String,
   school_class: str,
   date: nullable(calendarDate),
   start_time: str,

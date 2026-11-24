@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"context"
@@ -13,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	mealplanModule "github.com/moto-ogs/project-phoenix/modules/mealplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type Middleware = func(http.Handler) http.Handler
@@ -110,10 +110,10 @@ type MealPlanWeekEntryResponse struct {
 }
 
 type DailyParticipantResponse struct {
-	StudentID   string `json:"student_id"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	SchoolClass string `json:"school_class"`
+	StudentID   ident.ID `json:"student_id"`
+	FirstName   string   `json:"first_name"`
+	LastName    string   `json:"last_name"`
+	SchoolClass string   `json:"school_class"`
 }
 
 type DailyListResponse struct {
@@ -352,7 +352,7 @@ func (rs *Resource) getWeeklyParticipants(w http.ResponseWriter, r *http.Request
 func participantResponses(participants []mealplanModule.DailyParticipant) []DailyParticipantResponse {
 	responses := make([]DailyParticipantResponse, 0, len(participants))
 	for _, participant := range participants {
-		responses = append(responses, DailyParticipantResponse{StudentID: strconv.FormatInt(participant.StudentID, 10), FirstName: participant.FirstName, LastName: participant.LastName, SchoolClass: participant.SchoolClass})
+		responses = append(responses, DailyParticipantResponse{StudentID: ident.ID(participant.StudentID), FirstName: participant.FirstName, LastName: participant.LastName, SchoolClass: participant.SchoolClass})
 	}
 	return responses
 }

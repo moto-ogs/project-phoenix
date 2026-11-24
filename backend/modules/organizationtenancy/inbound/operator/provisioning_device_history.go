@@ -2,11 +2,11 @@ package operator
 
 import (
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // deviceHistoryChange is one value before and after; null where it did not
@@ -18,12 +18,12 @@ type deviceHistoryChange struct {
 
 // deviceHistoryResponse is one change of a device for the operator (#2321).
 type deviceHistoryResponse struct {
-	ID         string                         `json:"id"`
+	ID         ident.ID                       `json:"id"`
 	Action     string                         `json:"action"`
 	ActorKind  string                         `json:"actor_kind"`
 	Changes    map[string]deviceHistoryChange `json:"changes"`
 	OccurredAt time.Time                      `json:"occurred_at"`
-	SchoolID   string                         `json:"school_id"`
+	SchoolID   ident.ID                       `json:"school_id"`
 	SchoolName string                         `json:"school_name"`
 }
 
@@ -56,8 +56,8 @@ func newDeviceHistoryResponse(entry organizationtenancy.DeviceHistoryEntry) devi
 		changes[field] = deviceHistoryChange{Before: change.Before, After: change.After}
 	}
 	return deviceHistoryResponse{
-		ID: strconv.FormatInt(entry.ID, 10), Action: entry.Action, ActorKind: entry.ActorKind,
+		ID: ident.ID(entry.ID), Action: entry.Action, ActorKind: entry.ActorKind,
 		Changes: changes, OccurredAt: entry.OccurredAt,
-		SchoolID: strconv.FormatInt(entry.SchoolID, 10), SchoolName: entry.SchoolName,
+		SchoolID: ident.ID(entry.SchoolID), SchoolName: entry.SchoolName,
 	}
 }

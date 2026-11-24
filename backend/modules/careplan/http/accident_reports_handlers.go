@@ -14,6 +14,7 @@ import (
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	permissions "github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	readstate "github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
@@ -99,8 +100,8 @@ func (req *AccidentSignatureRequest) Bind(_ *http.Request) error {
 type AccidentReportResponse struct {
 	Status            string     `json:"status"`
 	Version           int        `json:"version,omitempty"`
-	SupersedesID      *string    `json:"supersedes_id,omitempty"`
-	SupersededByID    *string    `json:"superseded_by_id,omitempty"`
+	SupersedesID      *ident.ID  `json:"supersedes_id,omitempty"`
+	SupersededByID    *ident.ID  `json:"superseded_by_id,omitempty"`
 	SignedAt          *time.Time `json:"signed_at,omitempty"`
 	SignedDigitally   bool       `json:"signed_digitally"`
 	OccurredAt        time.Time  `json:"occurred_at"`
@@ -124,21 +125,13 @@ func newAccidentReportResponse(doc careplan.CareDocument, version int, supersede
 	}
 	return &AccidentReportResponse{
 		Status: careplan.AccidentReportStatus(doc), Version: version,
-		SupersedesID: idString(doc.AccidentSupersedesID), SupersededByID: idString(supersededBy),
+		SupersedesID: (*ident.ID)(doc.AccidentSupersedesID), SupersededByID: (*ident.ID)(supersededBy),
 		SignedAt: doc.AccidentSignedAt, SignedDigitally: doc.AccidentSignatureID != nil,
 		OccurredAt: report.OccurredAt, Location: report.Location, Description: report.Description,
 		InjuredBodyParts: report.InjuredBodyParts, InjuryKind: report.InjuryKind, Witnesses: report.Witnesses,
 		FirstAid: report.FirstAid, DoctorVisited: report.DoctorVisited, Doctor: report.Doctor,
 		ParentsNotified: report.ParentsNotified, ParentsNotifiedAt: report.ParentsNotifiedAt, Supervisor: report.Supervisor,
 	}
-}
-
-func idString(id *int64) *string {
-	if id == nil {
-		return nil
-	}
-	value := strconv.FormatInt(*id, 10)
-	return &value
 }
 
 // accidentReportVersions numbers each report of the list by its chain of

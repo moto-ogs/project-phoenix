@@ -636,7 +636,7 @@ func (rs *ProvisioningResource) ListOrganizationDevices(w http.ResponseWriter, r
 
 type createDeviceRequest struct {
 	SchoolID   ident.ID `json:"school_id"`
-	DeviceID   string   `json:"device_id"`
+	DeviceID   string   `json:"device_id" contract_text:"device provisioning key, not the numeric device row ID"`
 	DeviceType string   `json:"device_type"`
 	Name       string   `json:"name,omitempty"`
 	APIKey     string   `json:"api_key,omitempty"`

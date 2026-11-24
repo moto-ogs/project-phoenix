@@ -749,9 +749,9 @@ func TestDecideAdminChildHandler_PossiblyEnrolledNamesTheCandidates(t *testing.T
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
 	assert.Equal(t, "enrollment.child_possibly_enrolled", body.Code)
 	require.Len(t, body.Details.Candidates, 1)
-	assert.Equal(t, "501", body.Details.Candidates[0].StudentID)
+	assert.Equal(t, "501", body.Details.Candidates[0].StudentID.String())
 	require.NotNil(t, body.Details.Candidates[0].PhaseRequest)
-	assert.Equal(t, AdminCandidatePhaseRequest{RequestID: "77", ChildStatus: "approved", GuardianFirstName: "Eva", GuardianLastName: "Bestand"}, *body.Details.Candidates[0].PhaseRequest)
+	assert.Equal(t, AdminCandidatePhaseRequest{RequestID: 77, ChildStatus: "approved", GuardianFirstName: "Eva", GuardianLastName: "Bestand"}, *body.Details.Candidates[0].PhaseRequest)
 }
 
 func TestDecideAdminChildHandler_RejectsInvalidShownStudentIDs(t *testing.T) {

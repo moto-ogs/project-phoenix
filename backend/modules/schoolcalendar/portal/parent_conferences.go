@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -90,7 +92,7 @@ type SchoolParentConferenceList struct {
 // ParentConferenceView is one day with its occupancy, as the Lehrkraft sees
 // it.
 type ParentConferenceView struct {
-	ID          string                   `json:"id"`
+	ID          ident.ID                 `json:"id"`
 	SchoolClass string                   `json:"school_class"`
 	Date        calendar.Date            `json:"date"`
 	StartTime   string                   `json:"start_time"`
@@ -108,17 +110,17 @@ type ParentConferenceView struct {
 // ParentConferenceSlot is one slot of a day. StudentName is set for a
 // booked slot in the Lehrkraft's view only.
 type ParentConferenceSlot struct {
-	StartTime   string  `json:"start_time"`
-	EndTime     string  `json:"end_time"`
-	Booked      bool    `json:"booked"`
-	StudentID   *string `json:"student_id,omitempty"`
-	StudentName *string `json:"student_name,omitempty"`
+	StartTime   string    `json:"start_time"`
+	EndTime     string    `json:"end_time"`
+	Booked      bool      `json:"booked"`
+	StudentID   *ident.ID `json:"student_id,omitempty"`
+	StudentName *string   `json:"student_name,omitempty"`
 }
 
 // ParentConferenceOffer is one day as a family sees it for one child: the
 // free slots, the child's own booking and whether it can still change.
 type ParentConferenceOffer struct {
-	ID          string                   `json:"id"`
+	ID          ident.ID                 `json:"id"`
 	SchoolClass string                   `json:"school_class"`
 	TeacherName string                   `json:"teacher_name"`
 	Date        calendar.Date            `json:"date"`

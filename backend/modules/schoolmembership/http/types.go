@@ -22,7 +22,7 @@ type StaffPersonResponse struct {
 	LastName  string    `json:"last_name"`
 	Email     string    `json:"email,omitempty"`
 	Avatar    string    `json:"avatar,omitempty"`
-	TagID     string    `json:"tag_id,omitempty"`
+	TagID     string    `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"`
 	AccountID *ident.ID `json:"account_id,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

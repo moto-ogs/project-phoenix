@@ -278,7 +278,7 @@ type RegisterRequest struct {
 	// requests that may never arrive.
 	FirstName string  `json:"first_name,omitempty"`
 	LastName  string  `json:"last_name,omitempty"`
-	TagID     *string `json:"tag_id,omitempty"`
+	TagID     *string `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"`
 }
 
 // Bind validates the register request
@@ -354,7 +354,7 @@ type LinkToTenantRequest struct {
 	// Identity fields, same meaning as on RegisterRequest (#2222).
 	FirstName string  `json:"first_name,omitempty"`
 	LastName  string  `json:"last_name,omitempty"`
-	TagID     *string `json:"tag_id,omitempty"`
+	TagID     *string `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"`
 }
 
 func (req *LinkToTenantRequest) Bind(_ *http.Request) error {

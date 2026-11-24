@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -55,7 +57,7 @@ func TestDeclarationResponseCarriesTheEarlierConsentWording(t *testing.T) {
 		},
 	})
 
-	raw, err := json.Marshal([]any{out.Children[0].EarlierConsent, out.Children[1].EarlierConsent})
+	raw, err := wire.Marshal([]any{out.Children[0].EarlierConsent, out.Children[1].EarlierConsent})
 	require.NoError(t, err)
 	assert.JSONEq(t, `[
 		{"version":{"id":"11","version_no":1,"content_hash":"ab","title":"Zoo","body":"Alter Text"},

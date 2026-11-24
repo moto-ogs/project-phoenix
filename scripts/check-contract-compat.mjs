@@ -21,10 +21,9 @@ const describe = (schema) => schema.elem ? `${schema.kind}<${describe(schema.ele
 // answer or an open object does not break a reader of the older schema.
 const openObject = (schema) => schema.kind === "map" && schema.elem.kind === "json";
 const sameKind = (before, after, request) => before.kind === after.kind
-  || (before.kind === "string" && ["enum", "date", "clock"].includes(after.kind))
+  || (before.kind === "string" && ["enum", "date", "clock", "id"].includes(after.kind))
   || (!request && (before.kind === "json" || (openObject(before) && after.kind === "ref")))
-  || (before.kind === "legacy_id" && after.kind === "id")
-  || (request && before.kind === "string" && after.kind === "id");
+  || (before.kind === "legacy_id" && after.kind === "id");
 
 export function breakingChanges(base, head) {
   const breaking = [];
@@ -47,7 +46,7 @@ export function breakingChanges(base, head) {
     if (!request && !before.legacy_json && before.kind !== "json" && after.legacy_json) {
       breaking.push(`${where}: may now return other JSON shapes`);
     }
-    if (!before.nullable && after.nullable) breaking.push(`${where}: may now be null`);
+    if (!request && !before.nullable && after.nullable) breaking.push(`${where}: may now be null`);
     if (before.elem && after.elem) compare(`${where}[]`, before.elem, after.elem, request, refinesJSON);
     if (before.kind !== "ref") return;
     const pair = `${before.ref}>${after.ref}`;

@@ -64,7 +64,7 @@ export interface RunningActivity {
 }
 
 export const RunningActivitySchema: z.ZodType<RunningActivity, unknown> = object<RunningActivity>({
-  id: str,
+  id: int64String,
   name: str,
   category: str,
   room_name: str,
@@ -82,7 +82,7 @@ export interface UpcomingActivity {
 }
 
 export const UpcomingActivitySchema: z.ZodType<UpcomingActivity, unknown> = object<UpcomingActivity>({
-  id: str,
+  id: int64String,
   name: str,
   category: str,
   start_time: str,

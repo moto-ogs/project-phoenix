@@ -45,24 +45,24 @@ func TestStaffInboxCountsMarksAndConfirmsConversations(t *testing.T) {
 	// Opening the conversation sends nothing; the first message starts it.
 	var opened messaging.ParentChatThreadDetailResponse
 	send(sender, http.MethodPost, "/threads/open", fmt.Sprintf(`{"student_id":%q,"guardian_account_id":%q}`, fmt.Sprint(chain.StudentID), fmt.Sprint(chain.AccountID)), &opened)
-	require.Equal(t, fmt.Sprint(chain.StudentID), opened.StudentID)
+	require.Equal(t, fmt.Sprint(chain.StudentID), opened.StudentID.String())
 	require.Empty(t, opened.Messages)
 	var messages []messaging.ParentChatMessageResponse
-	send(sender, http.MethodPost, "/threads/"+opened.ThreadID, `{"body":"Bitte Turnbeutel mitgeben"}`, &messages)
+	send(sender, http.MethodPost, "/threads/"+opened.ThreadID.String(), `{"body":"Bitte Turnbeutel mitgeben"}`, &messages)
 	require.Len(t, messages, 1)
 	var thread messaging.ParentChatThreadDetailResponse
-	send(colleague, http.MethodGet, "/threads/"+opened.ThreadID, "", &thread)
+	send(colleague, http.MethodGet, "/threads/"+opened.ThreadID.String(), "", &thread)
 	require.Len(t, thread.Messages, 1)
 	require.Equal(t, opened.ThreadID, thread.ThreadID)
 
 	// Unread for the whole team, then confirmed for the whole team.
-	send(sender, http.MethodPost, "/threads/"+opened.ThreadID+"/unread", "", nil)
+	send(sender, http.MethodPost, "/threads/"+opened.ThreadID.String()+"/unread", "", nil)
 	require.Equal(t, 1, unread(colleague), "the team sees the conversation as unread")
-	send(sender, http.MethodPost, "/threads/"+opened.ThreadID+"/handled", fmt.Sprintf(`{"handled_up_to_message_id":%q}`, messages[0].ID), nil)
+	send(sender, http.MethodPost, "/threads/"+opened.ThreadID.String()+"/handled", fmt.Sprintf(`{"handled_up_to_message_id":%q}`, messages[0].ID), nil)
 	require.Zero(t, unread(colleague), "the confirmation clears it for the team")
 
 	// Marking all read answers the caller's new count.
-	send(sender, http.MethodPost, "/threads/"+opened.ThreadID+"/unread", "", nil)
+	send(sender, http.MethodPost, "/threads/"+opened.ThreadID.String()+"/unread", "", nil)
 	var afterAll messaging.ParentChatUnreadCountResponse
 	send(colleague, http.MethodPost, "/mark-all-read", "", &afterAll)
 	require.Equal(t, unread(colleague), afterAll.UnreadCount)

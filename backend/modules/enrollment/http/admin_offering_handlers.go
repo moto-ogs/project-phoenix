@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"strings"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -16,6 +15,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 type AdminUpdateOfferingsRequest struct {
@@ -29,7 +30,7 @@ type AdminUpdateOfferingsRequest struct {
 }
 
 type AdminUpdateOfferingSelection struct {
-	OfferingID   string   `json:"offering_id"`
+	OfferingID   ident.ID `json:"offering_id"`
 	SelectedDays []string `json:"selected_days,omitempty"`
 	// ExtendToPhaseEnd books a limited offering to the end of the phase, or
 	// to the earlier care end of the child record (#7929).
@@ -89,7 +90,12 @@ func (rs *Resource) updateAdminChildOfferings(w http.ResponseWriter, r *http.Req
 	}
 	body := &AdminUpdateOfferingsRequest{}
 	if err := render.Bind(r, body); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		if wire.InvalidIDAt(err, "/offerings") {
+			common.RenderError(w, r, updateAdminOfferingsErrorRenderer(
+				fmt.Errorf("%w: invalid offering_id", capability.ErrOfferingAdjustmentInvalid)))
+		} else {
+			common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		}
 		return
 	}
 	updated, err := rs.applyAdminOfferingUpdate(r, requestID, childID, body)
@@ -137,8 +143,8 @@ func parseAdminOfferingUpdate(
 ) ([]OfferingAdjustmentSelection, *calendar.Date, error) {
 	selections := make([]OfferingAdjustmentSelection, 0, len(body.Offerings))
 	for _, row := range body.Offerings {
-		offeringID, parseErr := strconv.ParseInt(row.OfferingID, 10, 64)
-		if parseErr != nil || offeringID <= 0 {
+		offeringID := row.OfferingID.Int64()
+		if offeringID <= 0 {
 			return nil, nil, fmt.Errorf("%w: invalid offering_id", capability.ErrOfferingAdjustmentInvalid)
 		}
 		selections = append(selections, OfferingAdjustmentSelection{
@@ -186,11 +192,11 @@ func (rs *Resource) enrichUpdatedAdminOfferings(
 	}
 }
 
-func optionalInt64String(value *int64) string {
+func optionalPositiveWireID(value *int64) *ident.ID {
 	if value == nil || *value <= 0 {
-		return ""
+		return nil
 	}
-	return strconv.FormatInt(*value, 10)
+	return (*ident.ID)(value)
 }
 
 // optionalDateString renders a nullable calendar date as ISO
@@ -269,7 +275,7 @@ func (rs *Resource) listAdminChildOfferingAdjustments(w http.ResponseWriter, r *
 // booking is not yet in effect AND on file, so the two questions have
 // different answers and must not share one flag.
 type AdminRequestChildOffering struct {
-	OfferingID            string   `json:"offering_id"`
+	OfferingID            ident.ID `json:"offering_id"`
 	OfferingName          string   `json:"offering_name"`
 	DaysOfWeekMode        string   `json:"days_of_week_mode"`
 	SelectedDays          []string `json:"selected_days,omitempty"`
@@ -305,7 +311,7 @@ type AdminSubmittedOfferingTerms struct {
 
 func toAdminChildOffering(row ChildOfferingRow) AdminRequestChildOffering {
 	return AdminRequestChildOffering{
-		OfferingID:            strconv.FormatInt(row.OfferingID, 10),
+		OfferingID:            ident.ID(row.OfferingID),
 		OfferingName:          row.OfferingName,
 		DaysOfWeekMode:        row.DaysOfWeekMode,
 		SelectedDays:          row.SelectedDays,
@@ -336,11 +342,11 @@ func toAdminSubmittedOfferingTerms(terms *capability.OfferingTerms) *AdminSubmit
 
 func toAdminOfferingAdjustment(row *OfferingAdjustment) (AdminOfferingAdjustment, error) {
 	response := AdminOfferingAdjustment{
-		ID:                 strconv.FormatInt(row.ID, 10),
-		RequestID:          strconv.FormatInt(row.RequestID, 10),
-		RequestChildID:     strconv.FormatInt(row.RequestChildID, 10),
-		StudentID:          strconv.FormatInt(row.StudentID, 10),
-		ActorAccountID:     strconv.FormatInt(row.ActorAccountID, 10),
+		ID:                 ident.ID(row.ID),
+		RequestID:          ident.ID(row.RequestID),
+		RequestChildID:     ident.ID(row.RequestChildID),
+		StudentID:          ident.ID(row.StudentID),
+		ActorAccountID:     ident.ID(row.ActorAccountID),
 		ActorRole:          row.ActorRole,
 		ActorNameSnapshot:  row.ActorNameSnapshot,
 		ActorEmailSnapshot: row.ActorEmailSnapshot,

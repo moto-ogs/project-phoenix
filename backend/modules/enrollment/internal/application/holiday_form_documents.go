@@ -88,7 +88,7 @@ func (h *HolidayRegistrations) PublicHolidayFormDocument(ctx context.Context, li
 			continue
 		}
 		for _, attachment := range block.Attachments {
-			if attachment.DocumentID == id {
+			if attachment.DocumentID.String() == id {
 				return readHolidayDocument(ctx, h.deps.Forms, link.OrganizationID, link.PeriodID, id, true)
 			}
 		}
@@ -176,14 +176,14 @@ func holidayLegalValidationCopy(block enrollment.FormLegalBlock) (enrollment.For
 		if block.Attachments[j].DocumentURL != "" {
 			return block, holidayLegalInput(fmt.Sprintf("attachments.%d.document_url", j), errors.New("use a period document ID"))
 		}
-		block.Attachments[j].DocumentURL = block.Attachments[j].DocumentID
+		block.Attachments[j].DocumentURL = block.Attachments[j].DocumentID.String()
 	}
 	return block, nil
 }
 
 func (h *HolidayPeriods) validateHolidayLegalDocuments(ctx context.Context, org, period int64, attachments []enrollment.FormAttachment) error {
 	for j, attachment := range attachments {
-		if _, err := readHolidayDocument(ctx, h.forms, org, period, attachment.DocumentID, false); err != nil {
+		if _, err := readHolidayDocument(ctx, h.forms, org, period, attachment.DocumentID.String(), false); err != nil {
 			if errors.Is(err, enrollment.ErrHolidayFormDocumentNotFound) {
 				return holidayLegalInput(fmt.Sprintf("attachments.%d.document_id", j), err)
 			}

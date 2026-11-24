@@ -34,7 +34,7 @@ func TestEnrollmentSchemaPositiveGrowthQueryBudget(t *testing.T) {
 		var preview enrollmenthttp.SchemaPreviewBootstrapResponse
 		require.NoError(t, json.Unmarshal(raw, &preview))
 		require.NotNil(t, preview.Schema)
-		require.Equal(t, fmt.Sprint(schema.ID), preview.Schema.ID)
+		require.Equal(t, fmt.Sprint(schema.ID), preview.Schema.ID.String())
 		require.Equal(t, 1, preview.AssignedPhaseCount)
 		require.Equal(t, 1, preview.ActiveAssignedPhaseCount)
 		require.Equal(t, fields, preview.Schema.Fields)
@@ -43,7 +43,7 @@ func TestEnrollmentSchemaPositiveGrowthQueryBudget(t *testing.T) {
 		require.NoError(t, json.Unmarshal(raw, &bootstrap))
 		public := bootstrap.Schema
 		require.NotNil(t, public)
-		require.Equal(t, fmt.Sprint(schema.ID), public.ID)
+		require.Equal(t, fmt.Sprint(schema.ID), public.ID.String())
 		require.Equal(t, fields, public.Fields)
 		require.Equal(t, schema.Version, public.Version)
 		return []testpkg.QueryMeasurement{previewQ, publicQ}
