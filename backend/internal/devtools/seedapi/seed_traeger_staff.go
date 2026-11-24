@@ -82,13 +82,17 @@ func (seedTraegerStaffStep) Run(ctx context.Context, rt *Runtime) error {
 	if err != nil {
 		return err
 	}
+	employers, err := seedTraegerPayrollEmployers(rt.Client, auth, records)
+	if err != nil {
+		return err
+	}
 	last := time.Now().AddDate(0, -1, 0)
 	paid, err := seedTraegerPayroll(rt.Client, auth, last.Year(), int(last.Month()))
 	if err != nil {
 		return err
 	}
-	fmt.Printf("  Träger staff records: %d linked, %d contracts, %d imported, person hired: %t, %d planned shifts, Springer blocked: %t, month closed: %t, %d contracts in the payroll file\n",
-		linked, contracts, imported, hired, planned, blocked, closed, paid)
+	fmt.Printf("  Träger staff records: %d linked, %d contracts, %d imported, person hired: %t, %d planned shifts, Springer blocked: %t, month closed: %t, %d employers with payroll values, %d contracts in the payroll file\n",
+		linked, contracts, imported, hired, planned, blocked, closed, employers, paid)
 	return seedTraegerAbsences(ctx, rt, auth)
 }
 
