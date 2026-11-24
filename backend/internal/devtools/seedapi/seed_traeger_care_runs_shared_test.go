@@ -286,3 +286,73 @@ func TestSeedCareNoticesLeaveARunWithSomethingToSettleOpen(t *testing.T) {
 	require.NoError(t, err)
 	assert.Zero(t, issued)
 }
+
+// The contract-conclusion worker can conclude a contract between the read
+// of the notice run and its release (seed smoke, 409
+// parent_billing.billing_run_changed 70 s after the server start). The seed
+// reads the preview once more and releases that; a second refusal stays an
+// error.
+func TestSeedCareNoticesReadAChangedPreviewOnceMore(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name         string
+		changes      int
+		wantReleases int
+		wantError    bool
+	}{
+		{name: "worker concludes a contract", changes: 1, wantReleases: 2},
+		{name: "preview changes again", changes: 2, wantReleases: 2, wantError: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			reads, releases, letters := 0, 0, 0
+			srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
+				w.Header().Set("Content-Type", "application/json")
+				switch r.Method + " " + r.URL.Path {
+				case "GET /traeger/master-data/document-templates/bescheid":
+					_, _ = fmt.Fprint(w, `{"data":{"current":{"standard":false}}}`)
+				case "POST /traeger/care-notice-runs/":
+					_, _ = fmt.Fprint(w, `{"data":{"id":4}}`)
+				case "GET /traeger/care-notice-runs/4":
+					reads++
+					_, _ = fmt.Fprintf(w, `{"data":{"id":4,"year":2026,"status":"calculated","school_ids":[65],"preview_count":%d,"preview_cents":9100,"fingerprint":"read-%d"}}`, 2+reads, reads)
+				case "POST /traeger/care-notice-runs/4/release":
+					releases++
+					var release struct {
+						Count       int    `json:"document_count"`
+						Fingerprint string `json:"fingerprint"`
+					}
+					require.NoError(t, json.NewDecoder(r.Body).Decode(&release))
+					assert.Equal(t, fmt.Sprintf("read-%d", releases), release.Fingerprint, "every release sends the preview it read last")
+					if releases <= tc.changes {
+						w.WriteHeader(http.StatusConflict)
+						_, _ = fmt.Fprint(w, `{"status":409,"code":"parent_billing.billing_run_changed","detail":"changed"}`)
+						return
+					}
+					_, _ = fmt.Fprint(w, `{"data":{"id":4,"status":"released"}}`)
+				case "POST /traeger/care-notice-runs/4/letters", "POST /traeger/care-notice-runs/4/letters/mail":
+					letters++
+					_, _ = fmt.Fprint(w, `{"data":{}}`)
+				default:
+					t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+				}
+			})
+			defer srv.Close()
+
+			issued, err := seedCareNotices(newTestClient(srv.URL, false), AuthRef{Kind: AuthBearer, Token: "traeger"}, 65, calendar.NewDate(2026, 10, 1))
+			assert.Equal(t, tc.wantReleases, releases, "one more read, never a loop")
+			assert.Equal(t, tc.wantReleases, reads)
+			if tc.wantError {
+				require.Error(t, err)
+				assert.True(t, seedConflictCode(err, seedCareRunChanged), "the refusal stays visible: %v", err)
+				assert.Zero(t, letters)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, 4, issued, "the notices of the preview read again")
+			assert.Equal(t, 2, letters)
+		})
+	}
+}
