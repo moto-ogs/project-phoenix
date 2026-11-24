@@ -24,6 +24,7 @@ describe("fetchHomeLayout", () => {
             overrides: { "section.birthdays": false },
             policies: { "tile.students_present": "required" },
             can_manage_policies: true,
+            policies_version: "v-stored",
           },
         }),
     } as Response);
@@ -33,6 +34,7 @@ describe("fetchHomeLayout", () => {
       overrides: { "section.birthdays": false },
       policies: { "tile.students_present": "required" },
       canManagePolicies: true,
+      policiesVersion: "v-stored",
     });
   });
 
@@ -47,6 +49,7 @@ describe("fetchHomeLayout", () => {
       overrides: {},
       policies: {},
       canManagePolicies: false,
+      policiesVersion: "",
     });
   });
 

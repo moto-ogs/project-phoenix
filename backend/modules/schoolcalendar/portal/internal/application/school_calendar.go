@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
+
 	appointmentcap "github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
@@ -174,6 +176,11 @@ func (s *service) UpdateSchoolAppointment(ctx context.Context, appointmentID int
 	err := s.withinAppointmentWrite(ctx, func(txCtx context.Context) error {
 		appointment, err := s.loadSchoolAppointmentForWrite(txCtx, appointmentID)
 		if err != nil {
+			return err
+		}
+		// Locked: a change from a read older than the stored Schultermin is
+		// refused (ADR 0311).
+		if err := readstate.Check(req.ExpectedVersion, appointmentVersion(appointment)); err != nil {
 			return err
 		}
 		eventType := req.EventType

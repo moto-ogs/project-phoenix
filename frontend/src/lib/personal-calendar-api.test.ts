@@ -39,8 +39,10 @@ const APPOINTMENT = {
   title: "Planning",
   start_date: "2026-01-06",
   end_date: "2026-01-06",
-  start_time: "10:00",
-  end_time: "11:00",
+  // A TIME column travels as a timestamp whose clock digits are the wall
+  // clock.
+  start_time: "0000-01-01T10:00:00Z",
+  end_time: "0000-01-01T11:00:00Z",
   all_day: false,
   delivery_mode: "informational",
   overview_visibility: "organizer",
@@ -232,10 +234,10 @@ describe("personal calendar API", () => {
   it("edits, cancels, deletes and reads appointment detail", async () => {
     fetchMock
       .mockResolvedValueOnce(
-        jsonResponse({ data: { appointment: APPOINTMENT } }),
+        jsonResponse({ data: { appointment: APPOINTMENT, version: "v1" } }),
       )
       .mockResolvedValueOnce(
-        jsonResponse({ data: { appointment: APPOINTMENT } }),
+        jsonResponse({ data: { appointment: APPOINTMENT, version: "v2" } }),
       )
       .mockResolvedValueOnce(jsonResponse({ data: { status: "cancelled" } }))
       .mockResolvedValueOnce(jsonResponse({ data: { status: "deleted" } }))
@@ -250,18 +252,28 @@ describe("personal calendar API", () => {
         notify_guardians: false,
         start_date: "2026-01-06",
         end_date: "2026-01-06",
+        start_time: "10:00",
+        end_time: "11:00",
         overview_visibility: "organizer",
         delivery_mode: "informational",
       },
+      version: "v1",
     });
-    await updateStaffAppointment("15", {
-      title: "New",
-      start_date: "2026-01-06",
-      end_date: "2026-01-06",
-      start_time: "10:00",
-      end_time: "11:00",
-      all_day: false,
-    });
+    // The edit sends the version it read and answers the stored one.
+    await expect(
+      updateStaffAppointment(
+        "15",
+        {
+          title: "New",
+          start_date: "2026-01-06",
+          end_date: "2026-01-06",
+          start_time: "10:00",
+          end_time: "11:00",
+          all_day: false,
+        },
+        "v1",
+      ),
+    ).resolves.toMatchObject({ version: "v2" });
     await cancelStaffAppointment("15");
     await deleteStaffAppointment("15");
     await cancelStaffAppointmentOccurrence("15", "2026-01-12");
@@ -276,7 +288,7 @@ describe("personal calendar API", () => {
       "/api/calendar/appointments/15",
       expect.objectContaining({
         method: "PUT",
-        body: expect.stringContaining('"title":"New"'),
+        body: expect.stringMatching(/"title":"New".*"expected_version":"v1"/),
       }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(

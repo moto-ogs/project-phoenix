@@ -154,6 +154,14 @@ func TestSchoolCalendarIntegration_LehrkraftChangesOnlyOwnSchultermine(t *testin
 	require.ErrorIs(t, err, calendarSvc.ErrForbidden)
 
 	changed.EventType = appointments.SchoolEventTypeLessonsEnd
+	// The change rests on the Schultermin as the owner's calendar shows it.
+	own, err := testpkg.TenantQuery2(t, calendarContext(t, ownerAccount.ID), db, service.ListSchoolCalendar, portalDate(2026, 3, 2), portalDate(2026, 3, 8))
+	require.NoError(t, err)
+	ownEvent := findAppointmentEvent(own.Events, detail.Appointment.ID.Int64())
+	require.NotNil(t, ownEvent)
+	require.NotEmpty(t, ownEvent.Version, "an event the reader may edit carries its version")
+	assert.Empty(t, seen.Version, "an event the reader may not edit carries none")
+	changed.ExpectedVersion = ownEvent.Version
 	updated, err := testpkg.TenantQuery2(t, calendarContext(t, ownerAccount.ID), db, service.UpdateSchoolAppointment, detail.Appointment.ID.Int64(), changed)
 	require.NoError(t, err)
 	assert.Equal(t, "Wandertag verschoben", updated.Appointment.Title)

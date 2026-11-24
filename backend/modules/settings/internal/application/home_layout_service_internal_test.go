@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
+
 	configModel "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -131,7 +133,7 @@ func TestHomeLayoutService_NotifiesAffectedStartPagesAfterWrites(t *testing.T) {
 	require.NoError(t, service.ResetOverrides(context.Background(), 7, 42))
 	require.NoError(t, service.SetPolicies(context.Background(), 7, 42, []string{adminPermissions}, map[string]configModel.BlockPolicy{
 		"tile.students_sick": configModel.BlockRequired,
-	}))
+	}, policiesRead(t, service)))
 
 	assert.Equal(t, []string{
 		"7:home-layout:42",
@@ -309,7 +311,7 @@ func TestHomeLayoutService_SetPolicies_RequiresPermission(t *testing.T) {
 	service, repo, _ := newHomeLayoutTestService(t)
 
 	err := service.SetPolicies(context.Background(), 7, 42, []string{"groups:read"},
-		map[string]configModel.BlockPolicy{"section.birthdays": configModel.BlockDisabled})
+		map[string]configModel.BlockPolicy{"section.birthdays": configModel.BlockDisabled}, policiesRead(t, service))
 
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, configModel.ErrPermissionDenied))
@@ -321,7 +323,7 @@ func TestHomeLayoutService_SetPolicies_AcceptsAdminWildcard(t *testing.T) {
 	service, repo, runtime := newHomeLayoutTestService(t)
 
 	err := service.SetPolicies(context.Background(), 7, 42, []string{"admin:*"},
-		map[string]configModel.BlockPolicy{"section.birthdays": configModel.BlockRequired})
+		map[string]configModel.BlockPolicy{"section.birthdays": configModel.BlockRequired}, policiesRead(t, service))
 
 	require.NoError(t, err)
 	require.NotNil(t, repo.policies)
@@ -332,10 +334,11 @@ func TestHomeLayoutService_SetPolicies_AcceptsAdminWildcard(t *testing.T) {
 func TestHomeLayoutService_PolicyWritesStopWhenThePolicyLockFails(t *testing.T) {
 	t.Parallel()
 	service, repo, runtime := newHomeLayoutTestService(t)
+	version := policiesRead(t, service)
 	runtime.lockErr = errors.New("lock failed")
 
 	err := service.SetPolicies(context.Background(), 7, 42, []string{adminPermissions},
-		map[string]configModel.BlockPolicy{"section.birthdays": configModel.BlockRequired})
+		map[string]configModel.BlockPolicy{"section.birthdays": configModel.BlockRequired}, version)
 
 	require.Error(t, err)
 	assert.Nil(t, repo.policies)
@@ -349,7 +352,7 @@ func TestHomeLayoutService_SetPolicies_DropsOptionalAndStampsAuthor(t *testing.T
 		map[string]configModel.BlockPolicy{
 			"section.birthdays":  configModel.BlockOptional,
 			"tile.students_sick": configModel.BlockRequired,
-		})
+		}, policiesRead(t, service))
 	require.NoError(t, err)
 
 	require.NotNil(t, repo.policies)
@@ -366,11 +369,33 @@ func TestHomeLayoutService_SetPolicies_RejectsUnknownPolicy(t *testing.T) {
 	service, repo, _ := newHomeLayoutTestService(t)
 
 	err := service.SetPolicies(context.Background(), 7, 42, []string{adminPermissions},
-		map[string]configModel.BlockPolicy{"section.birthdays": "sometimes"})
+		map[string]configModel.BlockPolicy{"section.birthdays": "sometimes"}, policiesRead(t, service))
 
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, configModel.ErrInvalidValue))
 	assert.Nil(t, repo.policies)
+}
+
+// A prescription is written on the prescription its editor read (ADR 0311):
+// one from a read before another admin's save, or without a read, is
+// refused under the policy lock and stores nothing.
+func TestHomeLayoutService_SetPolicies_RefusesAnOlderRead(t *testing.T) {
+	t.Parallel()
+	service, repo, _ := newHomeLayoutTestService(t)
+	read := policiesRead(t, service)
+	require.NoError(t, service.SetPolicies(context.Background(), 7, 42, []string{adminPermissions},
+		map[string]configModel.BlockPolicy{"tile.students_sick": configModel.BlockRequired}, read))
+
+	for name, version := range map[string]string{"older read": read, "no read": ""} {
+		err := service.SetPolicies(context.Background(), 7, 42, []string{adminPermissions},
+			map[string]configModel.BlockPolicy{"section.birthdays": configModel.BlockDisabled}, version)
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+	}
+	assert.Equal(t, map[string]configModel.BlockPolicy{"tile.students_sick": configModel.BlockRequired},
+		repo.policies.Policies, "a refused write stores nothing")
+
+	require.NoError(t, service.SetPolicies(context.Background(), 7, 42, []string{adminPermissions},
+		map[string]configModel.BlockPolicy{"section.birthdays": configModel.BlockDisabled}, policiesRead(t, service)))
 }
 
 func TestHomeLayoutService_WritesRunInTheCallersTenant(t *testing.T) {
@@ -393,4 +418,14 @@ func TestHomeLayoutService_NotConfigured(t *testing.T) {
 	assert.True(t, errors.Is(err, configModel.ErrHomeLayoutUnavailable))
 	assert.True(t, errors.Is(service.SetOverrides(context.Background(), 7, 42, nil, nil), configModel.ErrHomeLayoutUnavailable))
 	assert.True(t, errors.Is(service.ResetOverrides(context.Background(), 7, 42), configModel.ErrHomeLayoutUnavailable))
+}
+
+// policiesRead is the policies_version of the layout as a reader sees it
+// (ADR 0311).
+func policiesRead(t *testing.T, service *HomeLayoutService) string {
+	t.Helper()
+	view, err := service.View(context.Background(), 7, 42, []string{adminPermissions})
+	require.NoError(t, err)
+	require.NotEmpty(t, view.PoliciesVersion)
+	return view.PoliciesVersion
 }

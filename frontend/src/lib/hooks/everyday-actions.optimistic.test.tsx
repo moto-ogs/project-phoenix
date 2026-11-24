@@ -239,7 +239,7 @@ function usePolicies() {
   const hook = useHomeLayout();
   return {
     data: hook.isReady ? hook.state.policies.news === "required" : undefined,
-    run: () => hook.savePolicies({ news: "required" }),
+    run: () => hook.savePolicies({ news: "required" }, "v1"),
     ready: hook.isReady,
   };
 }
@@ -377,22 +377,22 @@ it("keeps confirmed policies separate from optimistic updates and rollback", asy
     wrapper: Wrapper,
   });
   await waitFor(() => expect(result.current.isReady).toBe(true));
-  const confirmed = result.current.confirmedPolicies;
+  const confirmed = result.current.confirmed?.policies;
   expect(confirmed).toBe(layout.policies);
   let task!: Promise<unknown>;
   act(() => {
     task = result.current
-      .savePolicies({ news: "required" })
+      .savePolicies({ news: "required" }, "v1")
       .catch(() => undefined);
   });
   expect(result.current.state.policies).toEqual({ news: "required" });
-  expect(result.current.confirmedPolicies).toBe(confirmed);
+  expect(result.current.confirmed?.policies).toBe(confirmed);
   await act(async () => {
     pending.reject(new ApiError("diag", 500));
     await task;
   });
   expect(result.current.state.policies).toEqual(layout.policies);
-  expect(result.current.confirmedPolicies).toBe(confirmed);
+  expect(result.current.confirmed?.policies).toBe(confirmed);
   unmount();
 });
 

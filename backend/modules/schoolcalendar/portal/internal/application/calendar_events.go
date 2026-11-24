@@ -225,6 +225,11 @@ func appointmentEvent(appointment *appointmentcap.Appointment, occurrenceDate ap
 		recipientIDString = &value
 	}
 	organizerStaffID := formatID(appointment.OrganizerStaffID.Int64())
+	canEdit := appointment.OrganizerStaffID == ident.ID(staffID) && !isParentConferenceAppointment(appointment)
+	var version string
+	if canEdit {
+		version = appointmentVersion(appointment)
+	}
 	return Event{
 		ID:               fmt.Sprintf("appointment:%d:%s", appointment.ID, occurrence),
 		Source:           EventSourceAppointment,
@@ -250,9 +255,10 @@ func appointmentEvent(appointment *appointmentcap.Appointment, occurrenceDate ap
 		// cancelled appointment freezes RSVP entirely (matching the server-side
 		// rejection in RespondTo*Invitation).
 		CanRespond:      appointment.CancelledAt == nil && recipientID != nil && responseStatus != nil && *responseStatus != appointmentcap.ResponseStatusInfo,
-		CanEdit:         appointment.OrganizerStaffID == ident.ID(staffID) && !isParentConferenceAppointment(appointment),
+		CanEdit:         canEdit,
 		CanViewOverview: canStaffViewOverview(appointment, staffID, isStaffRecipient),
 		SchoolEventType: appointment.SchoolEventType,
+		Version:         version,
 	}
 }
 

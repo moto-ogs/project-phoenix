@@ -20,6 +20,8 @@ export interface HomeLayoutState {
   policies: HomeBlockPolicies;
   /** Darf diese Person die Vorgabe der Schule ändern? */
   canManagePolicies: boolean;
+  /** Der gelesene Stand der Vorgabe (ADR 0311); ein Speichern sendet ihn. */
+  policiesVersion: string;
 }
 
 const EMPTY_STATE: HomeLayoutState = {
@@ -27,6 +29,7 @@ const EMPTY_STATE: HomeLayoutState = {
   overrides: {},
   policies: {},
   canManagePolicies: false,
+  policiesVersion: "",
 };
 
 /**
@@ -59,6 +62,7 @@ export async function fetchHomeLayout(): Promise<HomeLayoutState> {
     overrides: sanitizeHomeLayoutOverrides(layout.overrides),
     policies: sanitizeHomeBlockPolicies(layout.policies),
     canManagePolicies: layout.can_manage_policies === true,
+    policiesVersion: layout.policies_version,
   };
 }
 
@@ -97,10 +101,13 @@ export async function resetHomeLayout(): Promise<void> {
 /** Speichert, was die Einrichtung für alle vorgibt. */
 export async function saveHomeBlockPolicies(
   policies: HomeBlockPolicies,
+  expectedVersion: string,
 ): Promise<void> {
   try {
+    // Die Vorgabe ruht auf dem gelesenen Stand; hat sie inzwischen jemand
+    // geändert, lehnt der Server ab (ADR 0311).
     await bffJson("tenant", "PUT /api/settings/home-layout/policies", {
-      body: { policies },
+      body: { policies, expected_version: expectedVersion },
       errorMessage: "Home block policies save failed",
     });
   } catch (error) {
