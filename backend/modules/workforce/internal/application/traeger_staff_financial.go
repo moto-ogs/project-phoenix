@@ -1,10 +1,8 @@
 package application
 
 import (
-	"cmp"
 	"context"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
@@ -195,19 +193,22 @@ func (t *TraegerStaff) deleteDissolved(ctx context.Context, actor workforce.Trae
 	return current, deleted, err
 }
 
-// sameLinks reports whether two reads hold the same employments.
+// sameLinks reports whether two reads hold the same employments; a record
+// holds one per school.
 func sameLinks(a, b []domain.TraegerStaffLink) bool {
-	keys := func(links []domain.TraegerStaffLink) []employmentKey {
-		out := make([]employmentKey, 0, len(links))
-		for _, link := range links {
-			out = append(out, employmentKey{link.SchoolID, link.StaffID})
-		}
-		slices.SortFunc(out, func(x, y employmentKey) int {
-			return cmp.Or(cmp.Compare(x.schoolID, y.schoolID), cmp.Compare(x.staffID, y.staffID))
-		})
-		return out
+	if len(a) != len(b) {
+		return false
 	}
-	return slices.Equal(keys(a), keys(b))
+	held := make(map[employmentKey]bool, len(a))
+	for _, link := range a {
+		held[employmentKey{link.SchoolID, link.StaffID}] = true
+	}
+	for _, link := range b {
+		if !held[employmentKey{link.SchoolID, link.StaffID}] {
+			return false
+		}
+	}
+	return true
 }
 
 // returnToSchools returns the values to every Einsatzort of the read record,
