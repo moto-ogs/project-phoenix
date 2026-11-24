@@ -47,9 +47,12 @@ import {
   HOMEWORK_DESCRIPTION_MAX_LENGTH,
   HOMEWORK_SUBJECT_MAX_LENGTH,
 } from "~/lib/homework-feedback";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useReadDraftForm,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
-import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import {
   type ClassDayClasses,
@@ -86,6 +89,13 @@ import { type ClassHomeworkApi, useClassHomework } from "./use-class-homework";
 const logger = createLogger({ component: "ClassDayClass" });
 
 const REPORT_FOCUS_THROTTLE_MS = 60 * 1000;
+
+const NO_IDS: ReadonlySet<string> = new Set();
+
+/** Two sets of children are the same handover choice. */
+function sameIds(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  return a.size === b.size && [...a].every((id) => b.has(id));
+}
 
 /** Höchstlänge eines Hinweises an die OGS (#4795) in Zeichen, wie im Backend. */
 const DAY_HINT_MAX_LENGTH = 500;
@@ -607,39 +617,49 @@ export function ClassDayClass({
     !weekend;
   const ogsRows = useMemo(() => handoverRows(rows), [rows]);
   const [handoverOpen, setHandoverOpen] = useState(false);
-  const [handoverAbsent, setHandoverAbsent] = useState<ReadonlySet<string>>(
-    () => new Set(),
+  // The handover the dialog edits (ADR 0311): a newer read fills it again
+  // only while no child was changed in it, and the save sends the version
+  // it was filled from. After a refusal it shows the stored handover once
+  // it is read; nothing is sent until then.
+  const handover = useDraftOn<
+    schoolClassDayContract.DayReport,
+    ReadonlySet<string>,
+    string
+  >(
+    {
+      opening: handoverOpen ? classReportKey : null,
+      data: report,
+      error: report === undefined ? error : undefined,
+      reload: () => revalidateOrThrow(reportRead),
+    },
+    {
+      token: (read) => read.handover_version ?? "",
+      toDraft: (read) =>
+        initialAbsentIds(read.rows ?? [], Boolean(read.handover), draft),
+      same: sameIds,
+      // The dialog closes after the save; the next opening fills from the
+      // read refreshed then.
+      answer: (_saved, shown) => shown,
+    },
   );
-  // The handover the dialog was filled from (ADR 0311). A newer read fills
-  // it again only while no child was changed in it.
-  const [handoverVersion, setHandoverVersion] = useState<string | null>(null);
-  const [handoverTouched, setHandoverTouched] = useState(false);
-  const storedHandoverVersion = report?.handover_version ?? "";
-  if (
-    handoverOpen &&
-    !handoverTouched &&
-    handoverVersion !== null &&
-    handoverVersion !== storedHandoverVersion
-  ) {
-    setHandoverVersion(storedHandoverVersion);
-    setHandoverAbsent(initialAbsentIds(rows, Boolean(report?.handover), draft));
-  }
+  const handoverAbsent = handover.draft ?? NO_IDS;
   const handoverSave = useFormModalPending(handoverOpen);
   const savingHandover = handoverSave.pending;
   const handoverErrors = useApiFormError();
+  const handoverForm = useReadDraftForm(
+    handover,
+    handoverErrors,
+    "die Übergabe",
+  );
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
   const withdrawErrors = useApiFormError();
   const openHandover = () => {
     handoverErrors.clear();
-    setHandoverAbsent(initialAbsentIds(rows, Boolean(report?.handover), draft));
-    setHandoverVersion(storedHandoverVersion);
-    setHandoverTouched(false);
     setHandoverOpen(true);
   };
   const markHandover = (studentId: string, choice: HandoverChoice) => {
-    setHandoverTouched(true);
-    setHandoverAbsent((current) => {
+    handover.setDraft((current) => {
       const next = new Set(current);
       if (choice === "absent") next.add(studentId);
       else next.delete(studentId);
@@ -648,40 +668,38 @@ export function ClassDayClass({
   };
   const saveHandover = async () => {
     if (!handOverClass) return;
-    handoverErrors.clear();
+    if (!handoverForm.begin()) return;
     await handoverSave.run(async (op) => {
-      try {
-        await handOverClass(schoolClass, dateISO, {
+      const result = await handover.submit((expectedVersion, absent) =>
+        handOverClass(schoolClass, dateISO, {
           present: ogsRows
-            .filter((row) => !handoverAbsent.has(row.student_id))
+            .filter((row) => !absent.has(row.student_id))
             .map((row) => row.student_id),
           absent: ogsRows
-            .filter((row) => handoverAbsent.has(row.student_id))
+            .filter((row) => absent.has(row.student_id))
             .map((row) => row.student_id),
-          expectedVersion: handoverVersion ?? storedHandoverVersion,
-        });
+          expectedVersion,
+        }),
+      );
+      if (result.ok) {
         await reportAfterWrite.refresh();
         if (op.isCurrent()) setHandoverOpen(false);
-      } catch (cause) {
-        logger.error("class_day_handover_save_failed", {
-          error: cause instanceof Error ? cause.message : String(cause),
-        });
-        if (!op.isCurrent()) return;
-        // Another handover of the class was stored since the view was read:
-        // the dialog shows the stored one once it is read, and the same
-        // save would be refused again (ADR 0311).
-        const changed = isChangedSinceRead(cause);
-        if (changed) {
-          setHandoverTouched(false);
-          void reportAfterWrite.refresh();
-        }
-        void handoverErrors.show(cause, {
-          object: "die Übergabe",
-          retry: changed
-            ? undefined
-            : () => void retrySaveRef.current.handover(),
-        });
+        return;
       }
+      if (result.skipped) return;
+      const cause = result.error;
+      logger.error("class_day_handover_save_failed", {
+        error: cause instanceof Error ? cause.message : String(cause),
+      });
+      if (!op.isCurrent()) return;
+      // Another handover of the class was stored since the view was read:
+      // the message waits for the stored one, which the dialog then shows;
+      // the same save would be refused again (ADR 0311).
+      void handoverErrors.show(cause, {
+        object: "die Übergabe",
+        retry: () => void retrySaveRef.current.handover(),
+        reload: result.reload,
+      });
     });
   };
   useLayoutEffect(() => {
@@ -832,6 +850,8 @@ export function ClassDayClass({
                   onCancel={() => setHandoverOpen(false)}
                   onSave={() => void saveHandover()}
                   saving={savingHandover}
+                  disabled={!handover.canSubmit}
+                  disabledReason={handoverForm.waitReason}
                   saveLabel="Übergeben"
                   savingLabel="Übergibt…"
                   saveTooltip="Übergibt die Klasse, die OGS sieht sofort, wer nicht da ist."
@@ -839,6 +859,7 @@ export function ClassDayClass({
               }
             >
               <div className="space-y-3 p-4">
+                <LoadErrorAlert error={handoverForm.loadError} />
                 <p className="text-sm text-gray-600">
                   {ogsRows.length > 0
                     ? "Diese Kinder gehen jetzt in die OGS. Tippe bei jedem Kind, das nicht da ist, auf „Nicht da“."

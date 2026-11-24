@@ -10,16 +10,19 @@ import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Skeleton } from "~/components/ui/skeleton";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import { isChangedSinceRead } from "~/lib/api-error";
 import {
   bulkInviteGuardians,
   type BulkInviteProblem,
   type BulkInviteResult,
 } from "~/lib/guardian-bulk-invite-api";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  readStateWaitReason,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { cn } from "~/lib/utils";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
+import { useActionOn } from "~/lib/swr/read-draft";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 
 const logger = createLogger({ component: "SelectionBulkInviteModal" });
@@ -128,14 +131,11 @@ export function SelectionBulkInviteModal({
   // send carries the fingerprint of the counts on screen: when the guardians
   // or the notices changed since, the backend refuses
   // (general.changed_since_read) and the dialog shows the new counts.
+  const previewKey = isOpen
+    ? tenantStudentKeys.bulkInvitePreview(studentIds, resendOpen, notifyActive)
+    : null;
   const previewRead = useSWRAuth(
-    isOpen
-      ? tenantStudentKeys.bulkInvitePreview(
-          studentIds,
-          resendOpen,
-          notifyActive,
-        )
-      : null,
+    previewKey,
     () =>
       bulkInviteGuardians(studentIds, {
         dryRun: true,
@@ -150,10 +150,31 @@ export function SelectionBulkInviteModal({
   // A failed dry run shows its error, not the counts of an earlier one.
   const previewData = previewRead.error ? undefined : previewRead.data;
   const preview = previewData ?? null;
+
+  const toMail = preview ? mails(preview) : 0;
+
+  // The send confirms the counts on screen (ADR 0311): after a refusal it
+  // waits for the recount, and a failed recount stays on screen with its
+  // retry until the counts are there again.
+  const confirm = useActionOn(
+    {
+      opening: previewKey,
+      data: previewData,
+      reload: () => revalidateOrThrow(previewRead),
+    },
+    { token: (counted) => counted.fingerprint },
+  );
+  // Only after a refusal: while the first count runs, the counts say why.
+  const waitReason =
+    confirm.status === "loading"
+      ? undefined
+      : readStateWaitReason(confirm.status);
+  // A failed count, also the recount after a refusal: its retry counts
+  // again and, after a refusal, lifts the lock once the counts are there.
   const load = useSwrResourceLoadError(
     [{ data: previewData, error: previewRead.error }],
     "die Vorschau",
-    () => mutatePreview(),
+    () => confirm.retryLoad(),
   );
 
   // While the preview counts again after a choice changed, the last counts
@@ -166,8 +187,6 @@ export function SelectionBulkInviteModal({
   const recounting = preview === null && shown !== null && !load.error;
   const displayed = preview ?? (recounting ? shown : null);
 
-  const toMail = preview ? mails(preview) : 0;
-
   const handleResendOpenChange = (value: boolean) => {
     errors.clear();
     setResendOpen(value);
@@ -179,38 +198,41 @@ export function SelectionBulkInviteModal({
   };
 
   const handleSend = async () => {
+    if (!confirm.canSubmit) return;
     await save.run(async (op) => {
       errors.clear();
-      try {
-        const result = await bulkInviteGuardians(studentIds, {
+      const counted = preview;
+      const sentRun = await confirm.submit(() =>
+        bulkInviteGuardians(studentIds, {
           dryRun: false,
           resendOpen,
           notifyActive,
-          expectedFingerprint: preview?.fingerprint ?? "",
-        });
+          expectedFingerprint: counted?.fingerprint ?? "",
+        }),
+      );
+      if (sentRun.ok) {
         if (op.isCurrent()) {
-          setSent(result);
+          setSent(sentRun.saved);
           // The counts of a later opening come from a new dry run.
           void mutatePreview();
         }
-        success(sentNotice(result));
-      } catch (err) {
-        logger.error("bulk_invite_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!op.isCurrent()) return;
-        if (isChangedSinceRead(err)) {
-          // Die Eltern der Auswahl haben sich geändert: Der Dialog zählt neu,
-          // die Person entscheidet mit den neuen Zahlen.
-          await errors.show(err, { object: "die Einladung" });
-          void mutatePreview();
-          return;
-        }
-        await errors.show(err, {
-          object: "die Einladung",
-          retry: () => void latestSendRef.current(),
-        });
+        success(sentNotice(sentRun.saved));
+        return;
       }
+      if (sentRun.skipped) return;
+      const err = sentRun.error;
+      logger.error("bulk_invite_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      if (!op.isCurrent()) return;
+      // Die Eltern der Auswahl haben sich geändert: Der Dialog zählt neu, die
+      // Meldung wartet auf die neuen Zahlen und bietet kein „Wiederholen“ des
+      // Versands an (`reload`).
+      await errors.show(err, {
+        object: sentRun.refused ? "die Vorschau" : "die Einladung",
+        retry: () => void latestSendRef.current(),
+        reload: sentRun.reload,
+      });
     });
   };
   useLayoutEffect(() => {
@@ -255,7 +277,7 @@ export function SelectionBulkInviteModal({
                 variant="success"
                 size="md"
                 onClick={handleSend}
-                disabled={sending || toMail === 0}
+                disabled={sending || toMail === 0 || !confirm.canSubmit}
                 tooltip={
                   notifyActive
                     ? "Schickt sofort die Einladungen und die Nachricht an Eltern mit Konto."
@@ -266,7 +288,7 @@ export function SelectionBulkInviteModal({
                     ? notifyActive
                       ? "In dieser Auswahl bekommt niemand eine E-Mail."
                       : "In dieser Auswahl gibt es niemanden einzuladen."
-                    : undefined
+                    : waitReason
                 }
               >
                 {sending ? "Wird gesendet..." : sendLabel(preview)}

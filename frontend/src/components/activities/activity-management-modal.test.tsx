@@ -2,11 +2,22 @@
  * Tests for ActivityManagementModal Component
  * Tests the rendering, update functionality, and the shared error path
  */
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import {
+  render as rtlRender,
+  screen,
+  waitFor,
+  fireEvent,
+} from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { ActivityManagementModal } from "./activity-management-modal";
-import { deleteActivity, updateActivity } from "~/lib/activity-api";
+import {
+  deleteActivity,
+  fetchActivity,
+  updateActivity,
+} from "~/lib/activity-api";
+import { SWRConfig } from "~/lib/swr/testing";
 import type { Activity } from "~/lib/activity-api";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
@@ -26,24 +37,33 @@ vi.mock("~/lib/activity-api", () => ({
   updateActivity: vi.fn(),
   deleteActivity: vi.fn(),
 }));
-// The dialog reads the activity it saves (ADR 0311); the test answers with
-// the stored state of the row and its version.
-const { detailMutate } = vi.hoisted(() => ({ detailMutate: vi.fn() }));
-vi.mock("~/lib/swr", () => ({
-  useSWRAuth: vi.fn((key: string | null) => ({
-    data: key ? storedActivity : undefined,
-    error: undefined,
-    mutate: detailMutate,
-  })),
-}));
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in OGS session per render: the
+// dialog reads the activity it saves (ADR 0311), `fetchActivity` answers
+// with the stored state of the row and its version.
+function render(...[ui, options]: Parameters<typeof rtlRender>) {
+  return rtlRender(ui, {
+    ...options,
+    wrapper: ({ children }: Readonly<{ children: ReactNode }>) => (
+      <SessionProvider
+        session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+        refetchOnWindowFocus={false}
+      >
+        <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+          {children}
+        </SWRConfig>
+      </SessionProvider>
+    ),
+  });
+}
 
 // The real hook returns a stable setForm (useState); the modal's reset effect
 // depends on it.
 const { mockSetForm } = vi.hoisted(() => ({ mockSetForm: vi.fn() }));
 
-vi.mock("~/hooks/useActivityForm", () => ({
-  parseParticipantLimit: (value: string) =>
-    value ? Number.parseInt(value, 10) : null,
+vi.mock("~/hooks/useActivityForm", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/hooks/useActivityForm")>()),
   useActivityForm: vi.fn(() => ({
     form: {
       name: "Test Activity",
@@ -140,7 +160,15 @@ describe("ActivityManagementModal", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(fetchActivity).mockResolvedValue(storedActivity);
   });
+
+  /** Saving waits for the read of the stored activity (ADR 0311). */
+  async function submitOnceRead() {
+    const save = screen.getByRole("button", { name: "Speichern" });
+    await waitFor(() => expect(save).toBeEnabled());
+    fireEvent.submit(screen.getByLabelText(/Aktivitätsname/).closest("form")!);
+  }
 
   it("renders modal when open", () => {
     render(
@@ -364,7 +392,7 @@ describe("ActivityManagementModal", () => {
       />,
     );
 
-    fireEvent.submit(screen.getByLabelText(/Aktivitätsname/).closest("form")!);
+    await submitOnceRead();
 
     expect(
       await screen.findByText(catalogText("general.server", "die Aktivität")),
@@ -385,7 +413,7 @@ describe("ActivityManagementModal", () => {
       />,
     );
 
-    fireEvent.submit(screen.getByLabelText(/Aktivitätsname/).closest("form")!);
+    await submitOnceRead();
 
     await waitFor(() =>
       expect(updateActivity).toHaveBeenCalledWith("1", {
@@ -409,18 +437,51 @@ describe("ActivityManagementModal", () => {
       />,
     );
 
-    fireEvent.submit(screen.getByLabelText(/Aktivitätsname/).closest("form")!);
+    await submitOnceRead();
 
     expect(
       await screen.findByText(
         catalogText("general.changed_since_read", "die Aktivität"),
       ),
     ).toBeInTheDocument();
-    expect(detailMutate).toHaveBeenCalledWith();
+    expect(fetchActivity).toHaveBeenCalledTimes(2);
     expect(
       screen.queryByRole("button", { name: "Wiederholen" }),
     ).not.toBeInTheDocument();
     expect(mockOnClose).not.toHaveBeenCalled();
+  });
+
+  it("names a failed read after a refusal and saves nothing until it is read", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.mocked(updateActivity).mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    vi.mocked(fetchActivity)
+      .mockResolvedValueOnce(storedActivity)
+      .mockRejectedValueOnce(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+    render(
+      <ActivityManagementModal
+        isOpen={true}
+        onClose={mockOnClose}
+        activity={mockActivity}
+      />,
+    );
+
+    await submitOnceRead();
+
+    // „Du siehst jetzt den neuen Stand“ would be false: the failed read is
+    // named, and the save stays locked until a read succeeds.
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden\./),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
+    fireEvent.submit(screen.getByLabelText(/Aktivitätsname/).closest("form")!);
+    expect(updateActivity).toHaveBeenCalledTimes(1);
   });
 
   it("keeps a failed delete in the open delete dialog", async () => {

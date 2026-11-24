@@ -875,6 +875,57 @@ describe("PickupTimeModal — failed preload guard", () => {
     );
   });
 
+  // ADR 0311: a newer read refills the edit only while the guardian has not
+  // typed; the save sends the version the edit rests on.
+  it("refills an untouched edit from a newer read and keeps a typed one", async () => {
+    const update = vi
+      .spyOn(parentApi, "updatePickupChangeRequest")
+      .mockResolvedValue(undefined as never);
+    const request = (version: string, reason: string) => ({
+      version,
+      departure_mode: null,
+      is_self: true,
+      signed: false,
+      id: "request-edit",
+      date: todayISO(),
+      pickup_time: "14:30",
+      reason,
+      status: "pending",
+      created_at: "2026-09-09T08:00:00Z",
+    });
+    const modal = (requests: ReturnType<typeof request>[]) => (
+      <PickupTimeModal
+        studentId="1"
+        careExceptions={[]}
+        careExceptionsLoaded
+        pickupChangeEnabled
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        onRemove={vi.fn()}
+        pickupChangeRequests={requests}
+      />
+    );
+    const { rerender } = render(modal([request("v1", "appointment")]));
+    fireEvent.click(screen.getByRole("button", { name: "Anfrage bearbeiten" }));
+    const reason = screen.getByRole("textbox", { name: /Grund/ });
+
+    rerender(modal([request("v2", "changed elsewhere")]));
+    expect(reason).toHaveValue("changed elsewhere");
+
+    fireEvent.change(reason, { target: { value: "my draft" } });
+    rerender(modal([request("v3", "changed again")]));
+    expect(reason).toHaveValue("my draft");
+
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith(
+        "1",
+        "request-edit",
+        expect.objectContaining({ reason: "my draft", expectedVersion: "v2" }),
+      ),
+    );
+  });
+
   // ADR 0311 rule 6: a failed read of the request after a refusal says so,
   // stops waiting, and sends nothing with the refused version.
   it("names a failed read of a refused pickup request and sends nothing", async () => {
