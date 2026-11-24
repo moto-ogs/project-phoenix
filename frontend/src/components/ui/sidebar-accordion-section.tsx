@@ -134,7 +134,7 @@ export function SidebarAccordionSection({
             {!isLoading && hasChildren && children}
             {!isLoading && !hasChildren && (
               /* Empty state */
-              <div className="py-2 pr-3 pl-11 text-xs text-gray-500">
+              <div className="py-2 pr-3 pl-11 text-sm text-gray-500">
                 {emptyText}
               </div>
             )}

@@ -36,6 +36,18 @@ describe("ListRow", () => {
 
     expect(onClick).toHaveBeenCalledOnce();
   });
+
+  it("writes the compact density as desktop value plus phone tier (#8064)", () => {
+    render(
+      <ListRow density="compact" onClick={() => undefined}>
+        Mia
+      </ListRow>,
+    );
+
+    const row = screen.getByRole("button", { name: "Mia" });
+    expect(row).toHaveClass("py-1.5", "max-sm:py-2");
+    expect(row).not.toHaveClass("sm:py-1.5");
+  });
 });
 
 describe("ListRowSkeleton", () => {

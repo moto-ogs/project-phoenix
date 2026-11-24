@@ -19,7 +19,10 @@ import {
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
 import { ForbiddenPage } from "~/components/ui/forbidden-page";
-import { SectionCard } from "~/components/ui/section-card";
+import {
+  SectionCard,
+  SECTION_CARD_BODY_GAP,
+} from "~/components/ui/section-card";
 import { Input } from "~/components/ui/input";
 import { ConfirmationModal, Modal } from "~/components/ui/modal";
 import { TenantPage } from "~/components/ui/tenant-page";
@@ -777,7 +780,7 @@ function RunningCard({
       title="Laufende Betreuungen"
       icon={Clock}
       className="flex h-full flex-col"
-      bodyClassName="compact:mt-3 mt-4 flex min-h-0 flex-1 flex-col space-y-3"
+      bodyClassName={`${SECTION_CARD_BODY_GAP} flex min-h-0 flex-1 flex-col space-y-3`}
     >
       <p className="text-sm text-gray-600">
         Hier siehst du laufende Aufsichten in deinem Sichtbereich.
@@ -825,7 +828,7 @@ function ScheduleCard({
       title="Vertretungen heute"
       icon={CalendarClock}
       className="flex h-full flex-col"
-      bodyClassName="compact:mt-3 mt-4 flex min-h-0 flex-1 flex-col space-y-3"
+      bodyClassName={`${SECTION_CARD_BODY_GAP} flex min-h-0 flex-1 flex-col space-y-3`}
     >
       <p className="text-sm text-gray-600">
         Hier siehst du Vertretungen für heutige Termine.
@@ -862,7 +865,7 @@ function GroupCard({
       title="Gruppen"
       icon={Repeat2}
       className="flex h-full flex-col"
-      bodyClassName="compact:mt-3 mt-4 flex min-h-0 flex-1 flex-col space-y-3"
+      bodyClassName={`${SECTION_CARD_BODY_GAP} flex min-h-0 flex-1 flex-col space-y-3`}
     >
       <p className="text-sm text-gray-600">
         Hier verwaltest du zeitlich begrenzte Gruppenübergaben.

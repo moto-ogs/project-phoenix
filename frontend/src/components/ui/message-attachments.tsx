@@ -184,7 +184,7 @@ export function MessageAttachments({
               >
                 {item.filename}
               </button>
-              <span className="block text-xs text-gray-500">
+              <span className="block text-sm text-gray-500">
                 {kind ? `${kind} · ` : ""}
                 {formatAttachmentSize(item.size_bytes)}
               </span>

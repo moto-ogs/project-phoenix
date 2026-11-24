@@ -65,7 +65,7 @@ export function WizardStepper({
           ))}
         </ol>
       ) : (
-        <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center justify-between text-sm">
           <span className="font-medium" style={{ color: ACTIVE_TEXT }}>
             Schritt {clampedCurrent + 1} von {total}
           </span>

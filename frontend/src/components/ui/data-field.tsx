@@ -68,7 +68,7 @@ export function DataField({
 }: DataFieldProps) {
   const span = fullWidth ? "col-span-1 sm:col-span-2" : "";
   const value = mono
-    ? "font-mono text-xs break-all text-gray-600 md:text-sm"
+    ? "font-mono text-sm break-all text-gray-600"
     : "text-sm font-medium break-words text-gray-900";
   return (
     <div

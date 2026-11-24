@@ -963,7 +963,7 @@ export default function MealPlanPage() {
                         key={row.clientId}
                         tone="white"
                         padding="md"
-                        className="group relative min-h-20 pr-10 focus-within:outline-2 focus-within:outline-gray-600 pointer-coarse:pr-12"
+                        className="group relative min-h-20 pr-10 focus-within:outline-2 focus-within:outline-gray-600 max-sm:pr-10 pointer-coarse:pr-12 max-sm:pointer-coarse:pr-12"
                       >
                         <Textarea
                           rows={1}

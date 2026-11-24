@@ -304,7 +304,7 @@ export function ConfirmDeleteModal({
                       {option.label}
                     </span>
                     {option.description && (
-                      <span className="mt-0.5 block text-xs font-normal text-gray-600">
+                      <span className="mt-0.5 block text-sm font-normal text-gray-600">
                         {option.description}
                       </span>
                     )}
