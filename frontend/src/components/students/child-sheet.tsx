@@ -32,7 +32,7 @@ import {
 } from "~/components/students/requested-quick-action";
 import { hasPermission } from "~/lib/auth-utils";
 import { useStudentData } from "~/lib/hooks/use-student-data";
-import { isNotCheckedInLocation } from "~/lib/location-helper";
+import { isNotCheckedInLocation, parseLocation } from "~/lib/location-helper";
 import {
   teacherHintKey,
   teacherHintText,
@@ -132,6 +132,10 @@ export function ChildSummary({
 }>) {
   const status = childDayStatus(student, isToday);
   const fullAccess = student.has_full_access !== false;
+  // Der Raum steht in der Liste nicht (dort zählt die Gehzeit), hier schon.
+  const room = isToday
+    ? parseLocation(student.current_location).room
+    : undefined;
   const hints = [
     ...(student.teacher_hints ?? []).map((hint) => ({
       key: teacherHintKey(hint),
@@ -169,6 +173,11 @@ export function ChildSummary({
         />
       ) : null}
       <DataGrid columns={1}>
+        {room ? (
+          <DataField label="Raum" inline>
+            {room}
+          </DataField>
+        ) : null}
         <DataField label="Klasse" inline>
           {classLabel ?? (student.school_class || "–")}
         </DataField>
