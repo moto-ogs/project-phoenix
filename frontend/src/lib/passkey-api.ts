@@ -49,10 +49,13 @@ function requestLoginOptions(
   scope: PasskeyScope,
   tenantSlug: string,
 ): Promise<sharedContract.PasskeyCeremonyOptions> {
-  return bffJson("public", sessionBff.passkeyOptions(scope), {
-    body: { tenant_slug: tenantSlug },
-    errorMessage: PASSKEY_ERROR,
-  });
+  const options = { errorMessage: PASSKEY_ERROR };
+  return scope === "tenant"
+    ? bffJson("public", sessionBff.passkeyOptions(scope), {
+        ...options,
+        body: { tenant_slug: tenantSlug },
+      })
+    : bffJson("public", sessionBff.passkeyOptions(scope), options);
 }
 
 export function isPasskeyCeremonyIncompleteError(error: unknown): boolean {

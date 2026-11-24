@@ -12,6 +12,10 @@ Punkte 4 und 5 und [ADR 0040](0040-every-role-may-import-the-shared-kernel.md).
 Sie fügt das Paket `sharedkernel/ident` zum Owner `shared-kernel` (Rolle
 `contract`) hinzu, keine Regel, keine Tabelle und keine Route.
 
+> Geltender Stand: Alle Rollen verwenden `ident.ID`. Die HTTP-Naht
+> schreibt und liest Dezimalstrings; gespeichertes JSON bleibt numerisch.
+> Die Nachträge dokumentieren die Zwischenschritte und Geräte-Ausnahmen.
+
 ## Kontext
 
 Phase 2 lässt Go auf allen angemeldeten Routen Kennungen als JSON-String
@@ -53,7 +57,7 @@ Der Typ aus ADR 0270, `common.ID`, liegt in `api/common`. Das dürfen nur
    Prüfcode, eine geänderte Pflichtliste würde die Basis ablehnen. Die
    Liste folgt in einem eigenen Schritt, wenn sie gebraucht wird.
 4. **Phase 2 geht in einem Deploy hinaus, nicht in zwei Releases.**
-   Abweichend von ADR 0270 Punkt 5 und dem ersten Nachtrag wechselt jedes
+   Abweichend vom zuerst geplanten Wechsel in zwei Releases wechselt jedes
    Feld direkt auf `ID` und den strengen Decoder `int64String`, ohne die
    Zwischenmarke `contract:"legacy-id"`. Bewusst gegen
    „expand, then contract“ in einem Release liegen:

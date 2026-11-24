@@ -12,17 +12,6 @@ import { makePortalHandlers } from "../portal-handlers.server";
 /** The parents portal's route handlers, on the parent session only. */
 export const parent = makePortalHandlers(parentPortal);
 
-export const {
-  proxyFile,
-  proxyUpload,
-  proxyGet,
-  proxyPost,
-  proxyPut,
-  proxyPatch,
-  proxyDelete,
-  jsonProxy: createParentJsonProxy,
-} = parent;
-
 /**
  * The guardians' portal proxy: forwards `/api/parent/…` to the backend's
  * `/parent/…` for the routes the contract registers for this portal.

@@ -9,13 +9,14 @@ import {
   createPutHandler,
   createDeleteHandler,
 } from "~/lib/route-wrapper.server";
-import { TENANT_RESOLVE_AFFECTING_KEYS } from "~/lib/settings-keys";
+import {
+  SETTINGS_KEY_SEGMENT,
+  TENANT_RESOLVE_AFFECTING_KEYS,
+} from "~/lib/settings-keys";
 import { tenantSlugFromHost } from "~/lib/tenant-host";
 import { bffError } from "~/lib/api-response-error.server";
 
 const logger = createLogger({ component: "SettingsValuesRoute" });
-
-const VALID_KEY_PATTERN = /^[a-z0-9_.]{1,255}$/;
 
 // Settings whose value rides on /auth/tenant/resolve are tagged with
 // `tenant-${slug}` in the cached tenant lookup. A naked
@@ -46,7 +47,7 @@ export const PUT = createPutHandler(
     params: Record<string, unknown>,
   ) => {
     const key = params.key as string;
-    if (!VALID_KEY_PATTERN.test(key)) {
+    if (!SETTINGS_KEY_SEGMENT.test(key)) {
       throw bffError(400, "Invalid settings key format");
     }
     const result = await contractWrite(
@@ -72,7 +73,7 @@ export const DELETE = createDeleteHandler(
     params: Record<string, unknown>,
   ) => {
     const key = params.key as string;
-    if (!VALID_KEY_PATTERN.test(key)) {
+    if (!SETTINGS_KEY_SEGMENT.test(key)) {
       throw bffError(400, "Invalid settings key format");
     }
     const result = await contractWrite(

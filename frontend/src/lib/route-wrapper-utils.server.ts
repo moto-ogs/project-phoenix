@@ -7,29 +7,6 @@ export type RouteContext = {
   params: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export function buildQueryString(request: NextRequest): string {
-  const queryParams = new URLSearchParams();
-  request.nextUrl.searchParams.forEach((value, key) => {
-    queryParams.append(key, value);
-  });
-  const qs = queryParams.toString();
-  return qs ? `?${qs}` : "";
-}
-
-/** Only the listed keys, first non-empty value each, in the listed order. */
-export function allowedQueryString(
-  request: NextRequest,
-  allowed: readonly string[],
-): string {
-  const forwarded = new URLSearchParams();
-  for (const key of allowed) {
-    const value = request.nextUrl.searchParams.get(key);
-    if (value) forwarded.set(key, value);
-  }
-  const qs = forwarded.toString();
-  return qs ? `?${qs}` : "";
-}
-
 /**
  * The route params, then every query parameter the route does not name, so a
  * query key never replaces a route param (`/x/5?id=7` keeps id 5). Without an
@@ -116,7 +93,7 @@ export async function readBoundedBody(
   return body;
 }
 
-export function bodyTooLargeError(maxBodyBytes: number): Error {
+function bodyTooLargeError(maxBodyBytes: number): Error {
   return bffError(413, `request body exceeds ${maxBodyBytes} bytes`, {
     details: { max_bytes: maxBodyBytes },
   });

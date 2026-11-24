@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFileHref, bffJson } from "~/lib/bff-fetch";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 
 /** File kinds a `file` form field may accept (backend FileType*). */
@@ -211,7 +211,11 @@ export async function uploadEnrollmentFile(params: {
 
 /** Address of the staff download proxy for one stored upload. */
 export function adminUploadHref(requestId: string, uploadId: string): string {
-  return `/api/enrollment/admin/requests/${encodeURIComponent(
-    requestId,
-  )}/uploads/${encodeURIComponent(uploadId)}`;
+  return bffFileHref(
+    "tenant",
+    "GET /api/enrollment/admin/requests/{id}/uploads/{uploadId}",
+    {
+      params: { id: requestId, uploadId },
+    },
+  );
 }

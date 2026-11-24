@@ -18,14 +18,9 @@ import {
 // ============================================================================
 
 // Create hoisted mocks that will be available when vi.mock runs
-const { mockAuth, mockApiGet, mockApiPost, mockApiPut, mockApiDelete } =
-  vi.hoisted(() => ({
-    mockAuth: vi.fn<() => Promise<ExtendedSession | null>>(),
-    mockApiGet: vi.fn(),
-    mockApiPost: vi.fn(),
-    mockApiPut: vi.fn(),
-    mockApiDelete: vi.fn(),
-  }));
+const { mockAuth } = vi.hoisted(() => ({
+  mockAuth: vi.fn<() => Promise<ExtendedSession | null>>(),
+}));
 
 // Mock auth module
 vi.mock("../server/auth", async () =>
@@ -34,19 +29,6 @@ vi.mock("../server/auth", async () =>
     uncachedAuth: mockAuth,
   }),
 );
-
-// Mock api-helpers module
-vi.mock("./api-helpers.server", async () => {
-  const { mockHandleApiError } =
-    await import("~/test/helpers/handle-api-error");
-  return {
-    apiGet: mockApiGet,
-    apiPost: mockApiPost,
-    apiPut: mockApiPut,
-    apiDelete: mockApiDelete,
-    handleApiError: vi.fn(mockHandleApiError),
-  };
-});
 
 // ============================================================================
 // Test Helpers

@@ -1,3 +1,4 @@
+import { backendJson as sendJson } from "~/lib/backend-client.server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextAuthRequest, Session } from "next-auth";
 import { NextRequest } from "next/server";
@@ -45,6 +46,14 @@ vi.mock("~/lib/tenant-resolve.server", async (importOriginal) => ({
 
 const PRIVATE_NO_STORE = "private, no-store";
 
+async function sending(
+  method: "GET" | "POST",
+  request: NextRequest,
+  token: string,
+) {
+  await sendJson(method, "/api/x", token, undefined, { request });
+}
+
 type Route = (
   request: NextRequest,
   context: { params: Promise<Record<string, string | string[]>> },
@@ -74,47 +83,63 @@ function backendJson(status: number, body: unknown): Response {
 const routes: Array<[string, () => Promise<Route>]> = [
   [
     "tenant",
-    async () => (await import("~/lib/route-wrapper.server")).proxyGet("/api/x"),
-  ],
-  [
-    "tenant pass-through",
     async () =>
-      (await import("~/lib/route-wrapper.server")).createTenantJsonProxy({
-        method: "GET",
-        path: "/api/x",
-      }),
+      (await import("~/lib/route-wrapper.server")).tenant.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
   ],
   [
     "operator",
     async () =>
-      (await import("~/lib/operator/route-wrapper.server")).proxyGet("/api/x"),
-  ],
-  [
-    "operator pass-through",
-    async () =>
-      (
-        await import("~/lib/operator/route-wrapper.server")
-      ).createOperatorJsonProxy({ method: "GET", path: "/api/x" }),
+      (await import("~/lib/operator/route-wrapper.server")).operator.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
   ],
   [
     "parent",
     async () =>
-      (await import("~/lib/parent/route-wrapper.server")).proxyGet("/api/x"),
+      (await import("~/lib/parent/route-wrapper.server")).parent.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
   ],
   [
     "school",
     async () =>
-      (await import("~/lib/school/route-wrapper.server")).proxyGet("/api/x"),
+      (await import("~/lib/school/route-wrapper.server")).school.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
   ],
   [
     "caterer",
     async () =>
-      (await import("~/lib/caterer/route-wrapper.server")).proxyGet("/api/x"),
+      (await import("~/lib/caterer/route-wrapper.server")).caterer.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
   ],
   [
     "traeger",
     async () =>
-      (await import("~/lib/traeger/route-wrapper.server")).proxyGet("/api/x"),
+      (await import("~/lib/traeger/route-wrapper.server")).traeger.get(
+        async (request, token) => {
+          await sending("GET", request, token);
+          return { id: 1 };
+        },
+      ),
   ],
   [
     // A removal that answers its result (export recipient, ADR 0218).
@@ -122,7 +147,7 @@ const routes: Array<[string, () => Promise<Route>]> = [
     async () => {
       const { traeger } = await import("~/lib/traeger/route-wrapper.server");
       return traeger.del(async (request, token) =>
-        traeger.api("DELETE", "/api/x", token, undefined, { request }),
+        sendJson("DELETE", "/api/x", token, undefined, { request }),
       ) as Route;
     },
   ],

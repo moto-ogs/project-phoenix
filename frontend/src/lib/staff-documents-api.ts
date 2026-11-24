@@ -4,7 +4,7 @@
 // staff:financial, rest → staff:documents, #2906) and returns only what the caller
 // may see plus the caller's visible categories.
 
-import { bffJson } from "./bff-fetch";
+import { bffFileHref, bffJson } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
 import type { StaffDocumentResponse } from "./contract/staff.generated";
 
@@ -108,7 +108,11 @@ class StaffDocumentsService {
 
   /** Same-origin proxy URL for the authenticated download. */
   downloadUrl(staffId: string, documentId: string): string {
-    return `/api/staff/${staffId}/documents/${documentId}/download`;
+    return bffFileHref(
+      "tenant",
+      "GET /api/staff/{id}/documents/{documentId}/download",
+      { params: { id: staffId, documentId } },
+    );
   }
 }
 

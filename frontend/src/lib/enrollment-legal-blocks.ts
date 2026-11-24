@@ -1,3 +1,4 @@
+import { bffFileHref } from "./bff-fetch";
 /**
  * Legal blocks of an enrollment form template: the four standard blocks the
  * tenant's legal texts fill, the template's own consents, and the rules both
@@ -177,12 +178,26 @@ export function legalBlockDisplayMode(
 /** The public download address of a stored legal document. */
 export function publicAGBDocumentURL(storedURL: string): string {
   const globalPrefix = "/uploads/enrollment-legal-documents/";
-  if (storedURL.startsWith(globalPrefix)) {
-    return `/api/public/enrollment-legal-documents/${storedURL.slice(globalPrefix.length)}`;
+  if (
+    storedURL.startsWith(globalPrefix) &&
+    storedURL.length > globalPrefix.length
+  ) {
+    return bffFileHref(
+      "public",
+      "GET /public/enrollment-legal-documents/{filename}",
+      { params: { filename: storedURL.slice(globalPrefix.length) } },
+    );
   }
   const formPrefix = "/uploads/enrollment-form-legal-documents/";
-  if (storedURL.startsWith(formPrefix)) {
-    return `/api/public/enrollment-form-legal-documents/${storedURL.slice(formPrefix.length)}`;
+  if (
+    storedURL.startsWith(formPrefix) &&
+    storedURL.length > formPrefix.length
+  ) {
+    return bffFileHref(
+      "public",
+      "GET /public/enrollment-form-legal-documents/{filename}",
+      { params: { filename: storedURL.slice(formPrefix.length) } },
+    );
   }
   return storedURL;
 }

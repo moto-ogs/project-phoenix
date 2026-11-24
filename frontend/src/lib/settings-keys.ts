@@ -1,5 +1,8 @@
 import { MODULE_SETTING_KEYS } from "./modules";
 
+/** Wire syntax for the settings key segment; Go owns key and value semantics. */
+export const SETTINGS_KEY_SEGMENT = /^[a-z0-9_.]{1,255}$/;
+
 // Keys whose value rides on /auth/tenant/resolve. The settings PUT/DELETE
 // proxies (tenant-side `/api/settings/values/[key]` and operator-side
 // `/api/operator/schools/[id]/settings/values/[key]`) consult

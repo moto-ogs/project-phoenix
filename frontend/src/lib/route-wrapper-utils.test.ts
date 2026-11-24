@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { NextRequest } from "next/server";
 import {
-  buildQueryString,
   extractParams,
   parseRequestBody,
   successResponse,
@@ -26,31 +25,6 @@ function createMockRequest(
   }
   return new NextRequest(url, init);
 }
-
-describe("buildQueryString", () => {
-  it("returns empty string for no query params", () => {
-    const request = createMockRequest("/api/test");
-    expect(buildQueryString(request)).toBe("");
-  });
-
-  it("returns query string with single param", () => {
-    const request = createMockRequest("/api/test?status=active");
-    expect(buildQueryString(request)).toBe("?status=active");
-  });
-
-  it("returns query string with multiple params", () => {
-    const request = createMockRequest("/api/test?status=active&page=2");
-    const result = buildQueryString(request);
-    expect(result).toContain("status=active");
-    expect(result).toContain("page=2");
-    expect(result.startsWith("?")).toBe(true);
-  });
-
-  it("handles special characters in query params", () => {
-    const request = createMockRequest("/api/test?search=hello%20world");
-    expect(buildQueryString(request)).toBe("?search=hello+world");
-  });
-});
 
 describe("extractParams", () => {
   it("extracts params from context", async () => {

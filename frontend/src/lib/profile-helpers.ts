@@ -1,3 +1,4 @@
+import { bffFileHref } from "./bff-fetch";
 import type * as meContract from "./contract/me.generated";
 import { createLogger } from "~/lib/logger";
 
@@ -72,7 +73,11 @@ export function mapProfileResponse(data: meContract.ProfileResponse): Profile {
     const filename = avatarUrl.split("/").pop();
     if (filename) {
       // Use authenticated API route that goes through Next.js
-      avatarUrl = `/api/me/profile/avatar/${filename}`;
+      avatarUrl = bffFileHref(
+        "tenant",
+        "GET /api/me/profile/avatar/{filename}",
+        { params: { filename } },
+      );
     }
   }
 
