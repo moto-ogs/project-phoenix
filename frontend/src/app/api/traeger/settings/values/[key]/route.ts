@@ -12,41 +12,49 @@ import { purgeOrganizationTenantSettingsCache } from "~/lib/tenant-settings-cach
 import { traeger } from "~/lib/traeger/route-wrapper.server";
 import { traegerPortal } from "~/server/auth/traeger";
 
-async function write(
+function settingsWriteOptions(
   request: NextRequest,
   token: string,
   params: Record<string, unknown>,
-  body?: setValueRequest,
 ) {
   const key = requireStringParam(params, "key");
   if (!SETTINGS_KEY_SEGMENT.test(key)) {
     throw bffError(400, "Invalid settings key format");
   }
-  const options = { params: { key }, token, request };
-  const result =
-    body === undefined
-      ? await contractWrite(
-          routes["DELETE /traeger/settings/values/{key}"],
-          undefined,
-          options,
-        )
-      : await contractWrite(
-          routes["PUT /traeger/settings/values/{key}"],
-          body,
-          options,
-        );
-  if (result.backend?.ok && TENANT_RESOLVE_AFFECTING_KEYS.has(key)) {
-    const organizationId = (await traegerPortal.auth())?.user?.orgId;
-    if (organizationId) purgeOrganizationTenantSettingsCache(organizationId);
-  }
-  if (!result.ok) throw result.error.cause;
-  return result.value.data;
+  return { params: { key }, token, request };
+}
+
+async function invalidateAfterWrite(
+  committed: boolean | undefined,
+  key: string,
+) {
+  if (!committed || !TENANT_RESOLVE_AFFECTING_KEYS.has(key)) return;
+  const organizationId = (await traegerPortal.auth())?.user?.orgId;
+  if (organizationId) purgeOrganizationTenantSettingsCache(organizationId);
 }
 
 export const PUT = traeger.put(
-  (request, body: setValueRequest, token, params) =>
-    write(request, token, params, body),
+  async (request, body: setValueRequest, token, params) => {
+    const options = settingsWriteOptions(request, token, params);
+    const result = await contractWrite(
+      routes["PUT /traeger/settings/values/{key}"],
+      body,
+      options,
+    );
+    await invalidateAfterWrite(result.backend?.ok, options.params.key);
+    if (!result.ok) throw result.error.cause;
+    return result.value.data;
+  },
 );
-export const DELETE = traeger.del((request, token, params) =>
-  write(request, token, params),
-);
+
+export const DELETE = traeger.del(async (request, token, params) => {
+  const options = settingsWriteOptions(request, token, params);
+  const result = await contractWrite(
+    routes["DELETE /traeger/settings/values/{key}"],
+    undefined,
+    options,
+  );
+  await invalidateAfterWrite(result.backend?.ok, options.params.key);
+  if (!result.ok) throw result.error.cause;
+  return result.value.data;
+});

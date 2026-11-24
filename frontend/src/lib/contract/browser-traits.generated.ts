@@ -32,6 +32,7 @@ export const browserRoutePaths = {
     "POST /parent/me/mfa/confirm": "/api/parent/me/mfa/confirm",
   },
   platform: {
+    "DELETE /operator/organizations/{id}/traeger-settings/values/{key}": "/api/operator/organizations/{id}/traeger-settings/values/{key}",
     "DELETE /operator/schools/{id}/settings/values/{key}": "/api/operator/schools/{id}/settings/values/{key}",
     "POST /operator/auth/invitations/accept": "/api/operator/auth/invitations/accept",
     "POST /operator/auth/invitations/validate": "/api/operator/auth/invitations/validate",
@@ -43,6 +44,7 @@ export const browserRoutePaths = {
     "POST /operator/auth/mfa/verify": "/api/operator/auth/mfa/verify",
     "POST /operator/auth/passkeys/login/options": "/api/operator/auth/passkeys/login/options",
     "POST /operator/auth/passkeys/login/verify": "/api/operator/auth/passkeys/login/verify",
+    "PUT /operator/organizations/{id}/traeger-settings/values/{key}": "/api/operator/organizations/{id}/traeger-settings/values/{key}",
     "PUT /operator/schools/{id}/settings/values/{key}": "/api/operator/schools/{id}/settings/values/{key}",
   },
   school: {

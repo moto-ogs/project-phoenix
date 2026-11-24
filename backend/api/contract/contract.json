@@ -993,7 +993,9 @@
       "portals": [
         "platform"
       ],
-      "no_data": true
+      "no_data": true,
+      "route_file": "invalidate the tenant lookup after inherited settings change",
+      "browser_path": "/api/operator/organizations/{id}/traeger-settings/values/{key}"
     },
     {
       "method": "DELETE",
@@ -22762,7 +22764,9 @@
         "kind": "ref",
         "ref": "setSchoolSettingRequest"
       },
-      "no_data": true
+      "no_data": true,
+      "route_file": "invalidate the tenant lookup after inherited settings change",
+      "browser_path": "/api/operator/organizations/{id}/traeger-settings/values/{key}"
     },
     {
       "method": "PUT",

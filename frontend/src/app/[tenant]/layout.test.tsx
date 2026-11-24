@@ -47,6 +47,11 @@ vi.mock("~/server/auth/operator", async () =>
     auth: async () => ({ user: { token: "operator-token" } }),
   }),
 );
+vi.mock("~/server/auth/traeger", async () =>
+  (await import("~/test/portal-binding")).mockPortalModule("traeger", {
+    auth: async () => ({ user: { token: "traeger-token", orgId: "2" } }),
+  }),
+);
 
 vi.mock("~/lib/shell-bootstrap.server", () => ({
   loadShellBootstrap: vi.fn(),
@@ -75,6 +80,10 @@ const { setTestClock, TEST_CLOCK_INSTANT } = await import("~/test/clock");
 const navigation = await import("next/navigation");
 const { POST: revalidateTenant } =
   await import("~/app/api/operator/provisioning/revalidate-tenant/route");
+const { PUT: writeOperatorTraegerSetting } =
+  await import("~/app/api/operator/organizations/[id]/traeger-settings/values/[key]/route");
+const { PUT: writeTraegerSetting } =
+  await import("~/app/api/traeger/settings/values/[key]/route");
 
 beforeEach(() => {
   authMock.mockClear();
@@ -365,37 +374,74 @@ describe("TenantLayout", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
-  it("selects the affected schools and pending reads on a Träger settings write", async () => {
-    const pending = deferred<Response>();
-    const original = await tenantResponse().json();
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(tenantResponse())
-      .mockResolvedValueOnce(
-        Response.json({
-          ...original,
-          data: { ...original.data, organization_id: "8028" },
+  it.each([
+    [
+      "operator",
+      writeOperatorTraegerSetting,
+      "/api/operator/organizations/2/traeger-settings/values",
+    ],
+    ["traeger", writeTraegerSetting, "/api/traeger/settings/values"],
+  ] as const)(
+    "invalidates affected schools and pending reads after a %s write",
+    async (_portal, write, path) => {
+      const pending = deferred<Response>();
+      const original = await tenantResponse().json();
+      let started = false;
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockImplementation(async (input, options) => {
+          if (options?.method === "PUT")
+            return Response.json({ status: "success" });
+          const slug = new URL(String(input)).searchParams.get("slug");
+          if (slug === "unaffected-school-8028") {
+            return Response.json({
+              ...original,
+              data: { ...original.data, organization_id: "8028" },
+            });
+          }
+          if (slug === "pending-school-8028" && !started) {
+            started = true;
+            return pending.promise;
+          }
+          return tenantResponse();
+        });
+
+      const first = await resolveTenantCached("school-a", {});
+      await resolveTenantCached("unaffected-school-8028", {});
+      const read = resolveTenantCached("pending-school-8028", {});
+      const affected = tenantResolvesInOrganization(first.organization_id);
+      expect(affected).toContain("school-a");
+      expect(affected).toContain("pending-school-8028");
+      expect(affected).not.toContain("unaffected-school-8028");
+
+      const key = "operations.attendance_edit_scope";
+      const response = await write(
+        new NextRequest(`http://localhost:3000${path}/${key}`, {
+          method: "PUT",
+          body: JSON.stringify({ value: "all_staff" }),
         }),
-      )
-      .mockReturnValueOnce(pending.promise);
-
-    const first = await resolveTenantCached("school-a", {});
-    await resolveTenantCached("unaffected-school-8028", {});
-    const read = resolveTenantCached("pending-school-8028", {});
-    const affected = tenantResolvesInOrganization(first.organization_id);
-    expect(affected).toContain("school-a");
-    expect(affected).toContain("pending-school-8028");
-    expect(affected).not.toContain("unaffected-school-8028");
-
-    invalidateTenantResolve("pending-school-8028");
-    pending.resolve(tenantResponse());
-    await read;
-    fetchSpy.mockResolvedValueOnce(tenantResponse());
-    await resolveTenantCached("pending-school-8028", {});
-    expect(fetchSpy).toHaveBeenCalledTimes(4);
-    invalidateTenantResolve("pending-school-8028");
-    invalidateTenantResolve("unaffected-school-8028");
-  });
+        { params: Promise.resolve({ id: first.organization_id, key }) },
+      );
+      expect(response.status).toBe(200);
+      expect(revalidateTagMock).toHaveBeenCalledWith("tenant-school-a", {
+        expire: 0,
+      });
+      expect(revalidateTagMock).toHaveBeenCalledWith(
+        "tenant-pending-school-8028",
+        { expire: 0 },
+      );
+      expect(revalidateTagMock).not.toHaveBeenCalledWith(
+        "tenant-unaffected-school-8028",
+        { expire: 0 },
+      );
+      pending.resolve(tenantResponse());
+      await read;
+      await resolveTenantCached("pending-school-8028", {});
+      expect(fetchSpy).toHaveBeenCalledTimes(5);
+      invalidateTenantResolve("pending-school-8028");
+      invalidateTenantResolve("unaffected-school-8028");
+    },
+  );
 
   it("keeps cached schools even when a lookup starts at the hit limit", async () => {
     const fetchSpy = vi
