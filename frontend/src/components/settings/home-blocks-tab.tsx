@@ -28,6 +28,9 @@ import {
   type HomeBlockPolicy,
 } from "~/lib/home-blocks";
 import { useHomeLayout } from "~/lib/hooks/use-home-layout";
+import type { HomeLayoutState } from "~/lib/home-layout-api";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { useSettingsSchema } from "~/lib/hooks/use-settings-schema";
 import { createLogger } from "~/lib/logger";
 import { notifySettingsChanged } from "~/lib/settings-broadcast";
@@ -92,8 +95,10 @@ function birthdaySettingsIn(
  * bewussten Entscheidung unterscheidbar. "Immer anzeigen" und "Aus" nehmen den
  * Baustein aus dem persönlichen Dialog heraus.
  */
+const EMPTY_POLICIES: HomeBlockPolicies = {};
+
 export function HomeBlocksTab() {
-  const { state, confirmedPolicies, isLoading, savePolicies } = useHomeLayout();
+  const { state, confirmed, reload, isLoading, savePolicies } = useHomeLayout();
   const {
     data: schema,
     isLoading: schemaLoading,
@@ -109,7 +114,24 @@ export function HomeBlocksTab() {
   const openCareGroupMode = useOpenCareGroupMode();
   const bookedModules = useBookedModules();
 
-  const [draft, setDraft] = useState<HomeBlockPolicies>({});
+  // Die Vorgabe ruht auf dem gelesenen Stand (ADR 0311): ein neueres Lesen
+  // füllt sie nur nach, solange nichts geändert ist; nach einer Ablehnung
+  // zeigt der Reiter die gespeicherte Vorgabe, und Speichern wartet, bis sie
+  // gelesen ist.
+  const edit = useDraftOn<HomeLayoutState, HomeBlockPolicies, string>(
+    {
+      opening: confirmed?.canManagePolicies ? "home-block-policies" : null,
+      data: confirmed,
+      reload,
+    },
+    {
+      token: (stored) => stored.policiesVersion,
+      toDraft: (stored) => stored.policies,
+    },
+  );
+  const draft = edit.draft ?? EMPTY_POLICIES;
+  const setDraft = edit.setDraft;
+
   const birthdaySettings = useMemo(() => birthdaySettingsIn(schema), [schema]);
   const storedBirthdays = useMemo(
     () =>
@@ -128,11 +150,12 @@ export function HomeBlocksTab() {
   // der Karte, Wiederholen speichert den Stand, der dann gilt (#2517).
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
+  const policiesForm = useReadDraftForm(
+    edit,
+    formErrors,
+    "die Startseite für alle",
+  );
   const latestSaveRef = useRef<() => void>(() => undefined);
-
-  useEffect(() => {
-    setDraft(confirmedPolicies);
-  }, [confirmedPolicies]);
 
   useEffect(() => {
     setBirthdayDraft(storedBirthdays);
@@ -181,6 +204,7 @@ export function HomeBlocksTab() {
         birthdayDraft[key] !== storedBirthdays[key],
     );
   const dirty = policiesDirty || changedBirthdayKeys.length > 0;
+  const policiesWait = policiesDirty ? policiesForm.waitReason : undefined;
 
   const changeBirthdaySetting = (key: string, value: boolean) => {
     setBirthdayDraft((prev) => ({ ...prev, [key]: value }));
@@ -196,6 +220,9 @@ export function HomeBlocksTab() {
   };
 
   const save = async () => {
+    // Nichts von der Vorgabe geht raus, bevor ihr gespeicherter Stand gelesen
+    // ist; der gezeigte Fehler bleibt dann stehen.
+    if (policiesDirty && !policiesForm.begin()) return;
     setBusy(true);
     formErrors.clear();
     try {
@@ -206,9 +233,27 @@ export function HomeBlocksTab() {
         notifySettingsChanged();
         await schemaAfterWrite.refresh();
       }
-      // Discarded: the account or school changed meanwhile, nothing was
-      // confirmed for this view. No success and no error (#5012).
-      if (policiesDirty && (await savePolicies(draft)) === "discarded") return;
+      if (policiesDirty) {
+        const result = await edit.submit((version, policies) =>
+          savePolicies(policies, version),
+        );
+        if (!result.ok) {
+          if (result.skipped) return;
+          // Seit dem Lesen geändert: der Reiter zeigt die gespeicherte
+          // Vorgabe, ohne „Wiederholen“ (ADR 0311).
+          if (result.refused) {
+            void formErrors.show(result.error, {
+              object: "die Startseite für alle",
+              reload: result.reload,
+            });
+            return;
+          }
+          throw result.error;
+        }
+        // Discarded: the account or school changed meanwhile, nothing was
+        // confirmed for this view. No success and no error (#5012).
+        if (result.saved === "discarded") return;
+      }
       toast.success("Die Startseite für alle ist gespeichert.");
     } catch (err) {
       logger.error("home_block_policies_save_failed", {
@@ -260,7 +305,8 @@ export function HomeBlocksTab() {
           type="button"
           variant="primary"
           size="md"
-          disabled={busy || !dirty}
+          disabled={busy || !dirty || policiesWait !== undefined}
+          disabledReason={busy || !dirty ? undefined : policiesWait}
           onClick={() => void save()}
           tooltip="Übernimmt deine Auswahl für die Startseite aller Mitarbeitenden."
         >
@@ -276,6 +322,7 @@ export function HomeBlocksTab() {
         </p>
 
         <LoadErrorAlert error={schemaAfterWrite.error} />
+        <LoadErrorAlert error={policiesForm.loadError} />
         <FormErrorAlert message={formErrors.error} />
 
         <PolicyGroup

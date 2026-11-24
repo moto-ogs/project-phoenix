@@ -2,7 +2,7 @@
 
 import { homeLayoutKeys } from "~/lib/swr/portal-keys";
 import { useEffect, useRef } from "react";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { useSession } from "next-auth/react";
 
 import type {
@@ -27,6 +27,7 @@ const EMPTY: HomeLayoutState = {
   overrides: {},
   policies: {},
   canManagePolicies: false,
+  policiesVersion: "",
 };
 
 const HOME_LAYOUT_POLICIES_CHANGED = "home-layout";
@@ -60,8 +61,13 @@ export type HomeLayoutWrite = "done" | "discarded";
 
 export function useHomeLayout(): {
   state: HomeLayoutState;
-  /** Edit forms must not seed their drafts from optimistic overlays. */
-  confirmedPolicies: HomeBlockPolicies;
+  /**
+   * The confirmed read, without optimistic overlays: an edit form rests its
+   * draft on it (ADR 0311).
+   */
+  confirmed: HomeLayoutState | undefined;
+  /** Reads the layout again; rejects when the read fails. */
+  reload: () => Promise<HomeLayoutState>;
   isLoading: boolean;
   isReady: boolean;
   save: (
@@ -69,7 +75,10 @@ export function useHomeLayout(): {
     blocks: readonly HomeBlockPlacement[],
   ) => Promise<HomeLayoutWrite>;
   reset: () => Promise<HomeLayoutWrite>;
-  savePolicies: (policies: HomeBlockPolicies) => Promise<HomeLayoutWrite>;
+  savePolicies: (
+    policies: HomeBlockPolicies,
+    expectedVersion: string,
+  ) => Promise<HomeLayoutWrite>;
 } {
   const { data: session, status } = useSession();
   const tenantSlug = useTenantSlugSafe();
@@ -78,11 +87,11 @@ export function useHomeLayout(): {
     status === "authenticated" && tenantSlug && accountID
       ? homeLayoutKeys.key()
       : null;
-  const { data, isLoading, mutate } = useSWRAuth<HomeLayoutState>(
-    cacheKey,
-    fetchHomeLayout,
-    { keepPreviousData: false, revalidateOnFocus: false },
-  );
+  const read = useSWRAuth<HomeLayoutState>(cacheKey, fetchHomeLayout, {
+    keepPreviousData: false,
+    revalidateOnFocus: false,
+  });
+  const { data, isLoading, mutate } = read;
 
   useEffect(() => {
     if (!cacheKey || !accountID || typeof window === "undefined") {
@@ -155,10 +164,10 @@ export function useHomeLayout(): {
       (current) => ({ ...current, overrides: {}, blocks: [] }),
       resetHomeLayout,
     );
-  const savePolicies = (policies: HomeBlockPolicies) =>
+  const savePolicies = (policies: HomeBlockPolicies, expectedVersion: string) =>
     change(
       (current) => ({ ...current, policies }),
-      () => saveHomeBlockPolicies(policies),
+      () => saveHomeBlockPolicies(policies, expectedVersion),
     );
 
   // Ein leerer Zustand ist erst nach einer erfolgreichen Antwort eine sichere
@@ -167,7 +176,8 @@ export function useHomeLayout(): {
   // die persönliche Anordnung überschreiben.
   return {
     state: action.data ?? EMPTY,
-    confirmedPolicies: data?.policies ?? EMPTY.policies,
+    confirmed: data,
+    reload: () => revalidateOrThrow(read),
     isLoading,
     isReady: data !== undefined,
     save,

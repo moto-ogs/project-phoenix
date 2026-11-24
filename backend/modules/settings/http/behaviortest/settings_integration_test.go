@@ -177,6 +177,8 @@ func TestSettingsSetHomeLayout_LegacyPayloadPreservesArrangement(t *testing.T) {
 	// recommended start page.
 	req = testutil.NewAuthenticatedRequest(t, "PUT", "/home-layout/policies", map[string]interface{}{
 		"policies": map[string]string{"section.staff_notices": "required"},
+		// The prescription rests on the layout read just above (ADR 0311).
+		"expected_version": data["policies_version"],
 	}, testutil.WithTestTenant(t))
 	rr = testutil.ExecuteRequest(router, req)
 	testutil.AssertSuccessResponse(t, rr, 200)

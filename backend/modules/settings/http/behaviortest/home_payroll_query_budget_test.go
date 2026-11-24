@@ -5,6 +5,7 @@ package settingshttp_test
 import (
 	"encoding/json"
 	"fmt"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
@@ -51,11 +52,19 @@ func TestSettingsHomeLayoutGETQueryBudget(t *testing.T) {
 			// Persist choices before policy prescriptions: both remembered
 			// true and false choices must survive the school settling a block.
 			require.NoError(t, home.SetHomeLayout(testpkg.Ctx(t), testpkg.Tenant(t), f.account, overrides, keys, spans, cols, rows, true))
-			require.NoError(t, home.SetHomeBlockPolicies(testpkg.Ctx(t), testpkg.Tenant(t), f.account, f.admin.Permissions, policies))
+			// The prescription is written on the version the layout read
+			// answers (ADR 0311).
+			require.NoError(t, home.SetHomeBlockPolicies(testpkg.Ctx(t), testpkg.Tenant(t), f.account, f.admin.Permissions, policies, policiesVersionOf(t, f.get(t, "/api/settings/home-layout", token))))
 		}
 		t.Logf("home_layout persisted_slots=%d", n)
 		raw := settingsBudgetData(t, f.get(t, "/api/settings/home-layout", token))
-		want, err := json.Marshal(map[string]any{"overrides": overrides, "blocks": blocks, "policies": policies, "can_manage_policies": true})
+		var read struct {
+			PoliciesVersion string `json:"policies_version"`
+		}
+		require.NoError(t, json.Unmarshal(raw, &read))
+		require.NotEmpty(t, read.PoliciesVersion, "the read carries the prescription's version")
+		version := read.PoliciesVersion
+		want, err := json.Marshal(map[string]any{"overrides": overrides, "blocks": blocks, "policies": policies, "can_manage_policies": true, "policies_version": version})
 		require.NoError(t, err)
 		require.JSONEq(t, string(want), string(raw), "exact personal choice, placement order/grid and school prescription DTO")
 		f.noSettingsDML(t, false)
@@ -147,4 +156,15 @@ func TestSettingsPayrollStatusGETQueryBudget(t *testing.T) {
 		baseline = len(statements.Statements)
 	}
 	querybudgets.AssertQueryBudget(t, "api.settings.payroll_status", statements)
+}
+
+// policiesVersionOf is the policies_version of a home layout read.
+func policiesVersionOf(t *testing.T, rec *httptest.ResponseRecorder) string {
+	t.Helper()
+	var view struct {
+		PoliciesVersion string `json:"policies_version"`
+	}
+	require.NoError(t, json.Unmarshal(settingsBudgetData(t, rec), &view))
+	require.NotEmpty(t, view.PoliciesVersion)
+	return view.PoliciesVersion
 }

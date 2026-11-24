@@ -324,7 +324,7 @@ func setupSettingsCallbackRoute(t *testing.T) *settingsCallbackRoute {
 		HomeLayout(context.Context, int64, int64, []string) (any, error)
 		SetHomeLayout(context.Context, int64, int64, map[string]bool, []string, map[string]int, map[string]int, map[string]int, bool) error
 		ResetHomeLayout(context.Context, int64, int64) error
-		SetHomeBlockPolicies(context.Context, int64, int64, []string, map[string]string) error
+		SetHomeBlockPolicies(context.Context, int64, int64, []string, map[string]string, string) error
 	})
 	require.True(t, ok)
 	schools, err := owners.BuildServeOrganizations(testpkg.NewDatabase(t, db), time.Now)
