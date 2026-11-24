@@ -3,9 +3,10 @@
  * from a tab older than the server is refused with 412 before any route runs,
  * so nothing happened on the server. Instead of showing every open tab the
  * „neue Version“ message after each release, the tab reloads once by itself
- * when the reload costs nothing: no form or field on screen that someone
- * typed into (a search field aside), no open dialog, no page guarding unsaved changes. Otherwise the refusal
- * reaches the caller and its message asks the person to reload. A marker in
+ * on a refused read when the reload costs nothing: no form or field on screen
+ * that someone typed into (a search field aside), no open dialog, no page
+ * guarding unsaved changes. A refused write and every other case reach the
+ * caller, whose message asks the person to reload. A marker in
  * sessionStorage (reload-once) stops a reload loop.
  */
 import { isOtherDeployment } from "./deployment-skew";
@@ -26,7 +27,7 @@ const edited = new WeakSet<Element>();
 if (typeof document !== "undefined") {
   const markDraft = ({ target }: Event) => {
     if (!(target instanceof Element)) return;
-    if (target.closest('[role="search"]')) return;
+    if (target.closest('[role="search"], [data-search-field]')) return;
     if (target instanceof HTMLInputElement && target.type === "search") return;
     edited.add(target.closest("form") ?? target);
   };
@@ -54,18 +55,24 @@ function reloadLosesNothing(): boolean {
 }
 
 /**
- * Reloads the page for the proxy's refusal of a call from another deployment
+ * Reloads the page for the proxy's refusal of a read from another deployment
  * when the reload loses nothing. Returns true when the reload started, also
  * for every further refusal of this page; the caller then leaves the answer
  * unread.
  */
-export function reloadForNewDeployment(response: Response): boolean {
+export function reloadForNewDeployment(
+  response: Response,
+  isRead: boolean,
+): boolean {
   if (typeof window === "undefined") return false;
   if (response.status !== 412 || !isOtherDeployment(response.headers)) {
     return false;
   }
   if (reloading) return true;
-  if (!reloadLosesNothing() || !reloadOnce(RELOAD_MARKER_KEY)) return false;
+  // A refused write was a save the person just asked for: its edit is on
+  // screen whatever the page shows of it, so the message asks them instead.
+  if (!isRead || !reloadLosesNothing()) return false;
+  if (!reloadOnce(RELOAD_MARKER_KEY)) return false;
   reloading = true;
   return true;
 }

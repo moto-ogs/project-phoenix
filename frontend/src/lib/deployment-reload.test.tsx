@@ -11,6 +11,9 @@ vi.mock("./session-cache", () => ({
   renewTenantSession: vi.fn(() => Promise.resolve()),
 }));
 
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+
+import { SearchBar } from "~/components/ui/page-header/SearchBar";
 import type { bffFile, bffJson } from "./bff-fetch";
 
 /** The proxy's refusal of a call from an older bundle (proxy.ts). */
@@ -72,6 +75,7 @@ describe("a tab of an earlier deployment, refused by the proxy", () => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     sessionStorage.clear();
+    cleanup();
     document.body.innerHTML = "";
   });
 
@@ -108,6 +112,14 @@ describe("a tab of an earlier deployment, refused by the proxy", () => {
     await expectRefusalReachesCaller(read("tenant", "GET /api/groups/"));
   });
 
+  it("shows the message for a refused save, whose edit the page may not show as a draft", async () => {
+    await expectRefusalReachesCaller(
+      read("tenant", "POST /api/activities/categories", {
+        body: { name: "Sport", color: "#83CD2D" },
+      }),
+    );
+  });
+
   it("shows the message while a dialog is open", async () => {
     document.body.innerHTML = '<div role="dialog"></div>';
 
@@ -129,11 +141,7 @@ describe("a tab of an earlier deployment, refused by the proxy", () => {
       .querySelector("input")
       ?.dispatchEvent(new Event("input", { bubbles: true }));
 
-    await expectRefusalReachesCaller(
-      read("tenant", "POST /api/activities/categories", {
-        body: { name: "Sport", color: "#83CD2D" },
-      }),
-    );
+    await expectRefusalReachesCaller(read("tenant", "GET /api/groups/"));
   });
 
   it("shows the message while an editor outside a form holds a draft", async () => {
@@ -143,17 +151,19 @@ describe("a tab of an earlier deployment, refused by the proxy", () => {
       .querySelector("textarea")
       ?.dispatchEvent(new Event("input", { bubbles: true }));
 
-    await expectRefusalReachesCaller(
-      read("tenant", "POST /api/activities/categories", {
-        body: { name: "Sport", color: "#83CD2D" },
-      }),
-    );
+    await expectRefusalReachesCaller(read("tenant", "GET /api/groups/"));
   });
 
   it("reloads although someone typed into the page's search", async () => {
-    document.body.innerHTML =
+    render(<SearchBar value="" onChange={() => undefined} />);
+    fireEvent.input(screen.getByPlaceholderText("Name suchen..."), {
+      target: { value: "Mia" },
+    });
+    const landmark = document.createElement("div");
+    landmark.innerHTML =
       '<div role="search"><input /></div><input type="search" />';
-    for (const input of document.querySelectorAll("input")) {
+    document.body.append(landmark);
+    for (const input of landmark.querySelectorAll("input")) {
       input.dispatchEvent(new Event("input", { bubbles: true }));
     }
 

@@ -389,9 +389,12 @@ async function send(
   const response = options.skipAuthRecovery
     ? await sendPlain(url, init)
     : await PORTALS[portal].send(url, init, options);
-  // The proxy refused a call of a tab older than the server; when nothing is
-  // lost, the tab reloads and the call never settles (deployment-reload.ts).
-  if (reloadForNewDeployment(response)) return new Promise<never>(() => {});
+  // The proxy refused a call of a tab older than the server; for a read that
+  // loses nothing, the tab reloads and the call never settles
+  // (deployment-reload.ts).
+  if (reloadForNewDeployment(response, method === "GET")) {
+    return new Promise<never>(() => {});
+  }
   if (!response.ok) {
     throw await apiErrorFromResponse(
       response,
