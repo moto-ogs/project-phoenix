@@ -181,3 +181,59 @@ func traegerContractWrite[R, C ~int64](t *testing.T, router http.Handler, token,
 	confirmed["expected_version"] = traegerContractVersion(t, router, token, recordID, contractID)
 	return traegerJSON(t, router, token, method, path, confirmed)
 }
+
+// traegerCatalogVersion is the version of entry id in the read of a Träger
+// catalog: the list itself (path answers an array) or its types field.
+func traegerCatalogVersion[T ~int64](t *testing.T, router http.Handler, token, path, field string, id T) string {
+	t.Helper()
+	read := traegerJSON(t, router, token, http.MethodGet, path, nil)
+	if read.Code != http.StatusOK {
+		t.Fatalf("read %s: %s", path, read.Body.String())
+	}
+	var envelope struct {
+		Data json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(read.Body.Bytes(), &envelope); err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	entries := envelope.Data
+	if field != "" {
+		var wrapped map[string]json.RawMessage
+		if err := json.Unmarshal(entries, &wrapped); err != nil {
+			t.Fatalf("read %s: %v", path, err)
+		}
+		entries = wrapped[field]
+	}
+	var list []struct {
+		ID      wireID `json:"id"`
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(entries, &list); err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	for _, entry := range list {
+		if int64(entry.ID) == int64(id) && entry.Version != "" {
+			return entry.Version
+		}
+	}
+	t.Fatalf("the read of %s carries no version of %d: %s", path, id, read.Body.String())
+	return ""
+}
+
+// traegerUpdateAbsenceType rewrites a type with the version of the list the
+// card read.
+func traegerUpdateAbsenceType[T ~int64](t *testing.T, router http.Handler, token string, id T, body map[string]any) *httptest.ResponseRecorder {
+	t.Helper()
+	confirmed := maps.Clone(body)
+	confirmed["expected_version"] = traegerCatalogVersion(t, router, token, "/traeger/absence-types/", "types", id)
+	return traegerJSON(t, router, token, http.MethodPut, fmt.Sprintf("/traeger/absence-types/%d", id), confirmed)
+}
+
+// traegerUpdateProofType rewrites a Nachweisart with the version of the
+// list the dialog read.
+func traegerUpdateProofType[T ~int64](t *testing.T, router http.Handler, token string, id T, body map[string]any) *httptest.ResponseRecorder {
+	t.Helper()
+	confirmed := maps.Clone(body)
+	confirmed["expected_version"] = traegerCatalogVersion(t, router, token, "/traeger/staff-proofs/types", "", id)
+	return traegerJSON(t, router, token, http.MethodPut, fmt.Sprintf("/traeger/staff-proofs/types/%d", id), confirmed)
+}

@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The Nachweise of the Personalstamm (#4707, ADR 0089 section 7). Kinds,
@@ -97,7 +98,7 @@ func (t *TraegerStaff) CreateProofType(ctx context.Context, actor workforce.Trae
 
 // UpdateProofType rewrites a kind. Archiving keeps the first archive time;
 // restoring a kind whose name a live kind took meanwhile is refused as a
-// taken name.
+// taken name, and a kind changed since the form read it as changed.
 func (t *TraegerStaff) UpdateProofType(ctx context.Context, actor workforce.TraegerStaffActor, id int64, input workforce.TraegerStaffProofTypeInput) (workforce.TraegerStaffProofType, error) {
 	if id <= 0 {
 		return workforce.TraegerStaffProofType{}, workforce.ErrTraegerProofTypeNotFound
@@ -122,6 +123,16 @@ func (t *TraegerStaff) saveProofType(ctx context.Context, actor workforce.Traege
 	err = t.released(ctx, actor, func(ctx context.Context) error {
 		if err := t.store.EnsureStandardProofTypes(ctx, actor.OrganizationID, domain.StandardTraegerProofTypes()); err != nil {
 			return err
+		}
+		if id > 0 {
+			// A kind changed since the form read it is refused (ADR 0311).
+			locked, err := t.store.LockProofType(ctx, actor.OrganizationID, id)
+			if err != nil {
+				return err
+			}
+			if err := readstate.Check(input.ExpectedVersion, proofTypeVersion(locked)); err != nil {
+				return err
+			}
 		}
 		saved, err = t.store.SaveProofType(ctx, kind)
 		return err
@@ -436,7 +447,7 @@ func publicProofType(kind domain.TraegerProofType) workforce.TraegerStaffProofTy
 	return workforce.TraegerStaffProofType{
 		ID: ident.ID(kind.ID), StandardKey: kind.StandardKey, Name: kind.Name, ValidityMonths: kind.ValidityMonths,
 		ReminderLeadWeeks: kind.ReminderLeadWeeks, Mandatory: kind.Mandatory, Archived: kind.Archived(),
-		PoliceCertificate: kind.PoliceCertificate(),
+		PoliceCertificate: kind.PoliceCertificate(), Version: proofTypeVersion(kind),
 	}
 }
 

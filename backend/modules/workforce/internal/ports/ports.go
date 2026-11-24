@@ -523,6 +523,9 @@ type TraegerStaffImportStore interface {
 type TraegerProofStore interface {
 	EnsureStandardProofTypes(ctx context.Context, organizationID int64, kinds []domain.TraegerProofType) error
 	ListProofTypes(ctx context.Context, organizationID int64) ([]domain.TraegerProofType, error)
+	// LockProofType locks one kind until the transaction ends and returns
+	// it as committed.
+	LockProofType(ctx context.Context, organizationID, id int64) (domain.TraegerProofType, error)
 	SaveProofType(ctx context.Context, kind domain.TraegerProofType) (domain.TraegerProofType, error)
 	ListProofs(ctx context.Context, organizationID int64, recordIDs []int64) ([]domain.TraegerProof, error)
 	SaveProof(ctx context.Context, proof domain.TraegerProof) error

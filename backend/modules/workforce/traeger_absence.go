@@ -76,6 +76,9 @@ type TraegerAbsenceType struct {
 	IsActive       bool                       `json:"is_active"`
 	Schools        []TraegerAbsenceTypeSchool `json:"schools"`
 	CreatedAt      time.Time                  `json:"created_at"`
+	// Version is the token of the type's fields (ADR 0311); an update
+	// sends it back.
+	Version string `json:"version"`
 }
 
 // TraegerAbsenceTypeInput creates a type or, as an update, replaces every
@@ -87,6 +90,9 @@ type TraegerAbsenceTypeInput struct {
 	CarryoverUntil   string
 	Requestable      bool
 	IsActive         bool
+	// ExpectedVersion is the Version the update was made on; a create
+	// ignores it.
+	ExpectedVersion string
 }
 
 // TraegerAbsenceTypeList is what the Personalverwaltung sees: the release,

@@ -259,16 +259,37 @@ func TestTraegerAbsenceTypesShareOneKontingentOverAllSchools(t *testing.T) {
 	})
 
 	t.Run("a booked type keeps its name", func(t *testing.T) {
-		rec := traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/absence-types/%d", regeneration.ID), map[string]any{
+		rec := traegerUpdateAbsenceType(t, router, office.token, regeneration.ID, map[string]any{
 			"name": "Regeneration", "allowance_enabled": true, "standard_days": 2,
 		})
 		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.traeger_absence_type_in_use")
-		rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/absence-types/%d", regeneration.ID), map[string]any{
+		rec = traegerUpdateAbsenceType(t, router, office.token, regeneration.ID, map[string]any{
 			"name": "Regenerationstag", "allowance_enabled": true, "standard_days": 3, "requestable": false,
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Equal(t, 1, staffSchoolValue(t, db, `SELECT COUNT(*) FROM active.staff_absence_types WHERE id = ? AND requestable = false AND school_limit_days = 0.5`, southType),
 			"the change reaches the school and keeps its deviation")
+	})
+
+	// ADR 0311: an update saves only over the type the card read, the
+	// answer carries the new version.
+	t.Run("an update refuses a type changed since the card read it", func(t *testing.T) {
+		path := fmt.Sprintf("/traeger/absence-types/%d", regeneration.ID)
+		stale := traegerCatalogVersion(t, router, office.token, "/traeger/absence-types/", "types", regeneration.ID)
+		rec := traegerUpdateAbsenceType(t, router, office.token, regeneration.ID, map[string]any{
+			"name": "Regenerationstag", "allowance_enabled": true, "standard_days": 4, "requestable": false,
+		})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		answered := decode[workforce.TraegerAbsenceType](t, rec).Version
+		assert.Equal(t, traegerCatalogVersion(t, router, office.token, "/traeger/absence-types/", "types", regeneration.ID), answered)
+		for _, version := range []string{stale, ""} {
+			rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{
+				"name": "Regenerationstag", "allowance_enabled": true, "standard_days": 3, "is_active": false, "expected_version": version,
+			})
+			assertStaffRefusal(t, rec, http.StatusConflict, "general.changed_since_read")
+		}
+		assert.Equal(t, 1, staffSchoolValue(t, db, `SELECT COUNT(*) FROM workforce.absence_types WHERE id = ? AND standard_days = 4 AND is_active`, regeneration.ID),
+			"the colleague's days stay and the type stays on")
 	})
 
 	t.Run("no role without the right and no other Träger reaches the types", func(t *testing.T) {

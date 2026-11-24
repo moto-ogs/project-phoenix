@@ -27,6 +27,7 @@ export interface TraegerStaffProofType {
   mandatory: boolean;
   archived: boolean;
   police_certificate: boolean;
+  version: string;
 }
 
 export const TraegerStaffProofTypeSchema: z.ZodType<TraegerStaffProofType, unknown> = object<TraegerStaffProofType>({
@@ -38,6 +39,7 @@ export const TraegerStaffProofTypeSchema: z.ZodType<TraegerStaffProofType, unkno
   mandatory: bool,
   archived: bool,
   police_certificate: bool,
+  version: str,
 });
 
 /** Go: workforce.TraegerStaffProofEntry */
@@ -130,6 +132,7 @@ export interface ProofTypeRequest {
   reminder_lead_weeks?: number | null;
   mandatory?: boolean;
   archived?: boolean;
+  expected_version?: string;
 }
 
 /** Go: traegerstaff.ProofRequest */

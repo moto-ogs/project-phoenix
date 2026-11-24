@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 )
@@ -86,6 +87,31 @@ func (s *TraegerStaffStore) ListProofTypes(ctx context.Context, organizationID i
 		kinds = append(kinds, row.toDomain())
 	}
 	return kinds, nil
+}
+
+// LockProofType locks one kind of the Träger until the transaction ends and
+// returns it as committed; an unknown ID fails with
+// ErrTraegerProofTypeMissing. The lock is FOR NO KEY UPDATE: it serializes
+// the writers of the kind, while a proof or a mapping that references it
+// (FOR KEY SHARE through its foreign key) is not held up. The update of a
+// kind changes no key column.
+func (s *TraegerStaffStore) LockProofType(ctx context.Context, organizationID, id int64) (domain.TraegerProofType, error) {
+	db, err := traegerStaffDB(ctx, organizationID)
+	if err != nil {
+		return domain.TraegerProofType{}, err
+	}
+	if err := tenant.OrderLock(ctx, tenant.LockLeaf, "workforce.staff_proof_types"); err != nil {
+		return domain.TraegerProofType{}, err
+	}
+	var rows []staffProofTypeRow
+	if err := db.NewRaw(`SELECT `+staffProofTypeColumns+` FROM workforce.staff_proof_types
+		WHERE organization_id = ? AND id = ? FOR NO KEY UPDATE`, organizationID, id).Scan(ctx, &rows); err != nil {
+		return domain.TraegerProofType{}, fmt.Errorf("workforce postgres: lock proof type: %w", err)
+	}
+	if len(rows) == 0 {
+		return domain.TraegerProofType{}, domain.ErrTraegerProofTypeMissing
+	}
+	return rows[0].toDomain(), nil
 }
 
 // SaveProofType inserts a kind without an ID after the existing ones or
