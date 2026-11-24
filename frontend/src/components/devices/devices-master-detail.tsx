@@ -21,8 +21,13 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { DatabaseForm } from "~/components/database/database-form";
+import {
+  DatabaseForm,
+  draftSubmitBlock,
+  formValuesFor,
+} from "~/components/database/database-form";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { InfoSection } from "~/components/ui/info-section";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
@@ -45,8 +50,13 @@ interface DevicesMasterDetailProps {
   selectedId: string | null;
   selectedDevice: Device | null;
   onSelect: (id: string | null) => void;
-  /** Speichert die im Detailbereich bearbeiteten Stammdaten. */
-  onSaveDevice: (data: Partial<Device>) => Promise<void>;
+  /**
+   * Speichert die im Detailbereich bearbeiteten Stammdaten mit dem Stand,
+   * auf dem das Formular beruht, und antwortet das gespeicherte Gerät.
+   */
+  onSaveDevice: SaveDevice;
+  /** Liest das Gerät neu; lehnt ab, wenn das Lesen scheitert (ADR 0311). */
+  reloadDevice: (id: string) => Promise<Device>;
   onDeleteClick: () => void;
   /** Sperrt (true) oder entsperrt (false) das gewählte Gerät (#2317). */
   onSetBlocked: (blocked: boolean) => void;
@@ -58,6 +68,11 @@ interface DevicesMasterDetailProps {
    */
   canManage: boolean;
 }
+
+type SaveDevice = (
+  data: Partial<Device>,
+  version: string | undefined,
+) => Promise<Device>;
 
 function keyForDevice(device: Device): string {
   return device.id;
@@ -79,6 +94,7 @@ export function DevicesMasterDetail({
   selectedDevice,
   onSelect,
   onSaveDevice,
+  reloadDevice,
   onDeleteClick,
   onSetBlocked,
   blockPending,
@@ -110,6 +126,7 @@ export function DevicesMasterDetail({
       key={selectedDevice.id}
       device={selectedDevice}
       onSaveDevice={onSaveDevice}
+      reloadDevice={reloadDevice}
       onDeleteClick={onDeleteClick}
       onSetBlocked={onSetBlocked}
       blockPending={blockPending}
@@ -155,7 +172,8 @@ function DeviceListBadge({ device }: Readonly<{ device: Device }>) {
 
 interface DeviceDetailContentProps {
   device: Device;
-  onSaveDevice: (data: Partial<Device>) => Promise<void>;
+  onSaveDevice: SaveDevice;
+  reloadDevice: (id: string) => Promise<Device>;
   onDeleteClick: () => void;
   onSetBlocked: (blocked: boolean) => void;
   blockPending: boolean;
@@ -165,6 +183,7 @@ interface DeviceDetailContentProps {
 function DeviceDetailContent({
   device,
   onSaveDevice,
+  reloadDevice,
   onDeleteClick,
   onSetBlocked,
   blockPending,
@@ -175,9 +194,10 @@ function DeviceDetailContent({
   // (BAUARTEN-SPEC Bauart 2 Regel 3).
   const [editing, setEditing] = useState(false);
 
-  const handleSaveDevice = async (data: Partial<Device>) => {
-    await onSaveDevice(data);
+  const handleSaveDevice: SaveDevice = async (data, version) => {
+    const saved = await onSaveDevice(data, version);
     setEditing(false);
+    return saved;
   };
 
   const headerActions =
@@ -210,6 +230,7 @@ function DeviceDetailContent({
           device={device}
           editing={editing}
           onSaveDevice={handleSaveDevice}
+          reloadDevice={reloadDevice}
           onCancelEdit={() => setEditing(false)}
           onSetBlocked={onSetBlocked}
           blockPending={blockPending}
@@ -247,10 +268,81 @@ function DeviceDetailContent({
   );
 }
 
+/**
+ * Das Formular der Gerätedaten. Es beruht auf dem Stand des Geräts beim
+ * Öffnen (ADR 0311): ein neueres Lesen füllt es nur nach, solange nichts
+ * getippt ist; nach einer Ablehnung zeigt es den gespeicherten Stand, und
+ * Speichern wartet, bis er gelesen ist.
+ */
+function DeviceEditForm({
+  device,
+  onSaveDevice,
+  reloadDevice,
+  onCancelEdit,
+}: {
+  device: Device;
+  onSaveDevice: SaveDevice;
+  reloadDevice: (id: string) => Promise<Device>;
+  onCancelEdit: () => void;
+}) {
+  // Speicherfehler im Formular, eine vergebene Geräte-ID am Feld (#2517).
+  const saveErrors = useApiFormError();
+  const sections = devicesConfig.form.sections;
+  const edit = useDraftOn<Device, Record<string, unknown>, string, Device>(
+    {
+      opening: device.id,
+      data: device,
+      reload: () => reloadDevice(device.id),
+    },
+    {
+      token: (stored) => stored.version,
+      toDraft: (stored) => formValuesFor(sections, stored),
+      answer: (saved) => saved,
+    },
+  );
+
+  const handleSave = async (data: Partial<Device>) => {
+    if (!edit.canSubmit) return;
+    const result = await edit.submit((version) => onSaveDevice(data, version));
+    if (result.ok) return;
+    // Seit dem Lesen geändert: das Formular zeigt den gespeicherten Stand,
+    // ohne Wiederholen derselben Version. Jeder andere Fehler geht an das
+    // Formular, das ihn mit Wiederholen zeigt.
+    if (!result.refused) throw result.error;
+    void saveErrors.show(result.error, {
+      object: "das Gerät",
+      reload: result.reload,
+    });
+  };
+
+  return (
+    <DatabaseForm<Partial<Device>>
+      sections={sections}
+      draft={
+        edit.draft
+          ? {
+              values: edit.draft,
+              setValues: edit.setDraft,
+              blocked: draftSubmitBlock(edit),
+            }
+          : undefined
+      }
+      initialData={device}
+      onSubmit={handleSave}
+      onCancel={onCancelEdit}
+      submitLabel="Speichern"
+      stickyActions
+      errorPath={saveErrors}
+      errorObject="das Gerät"
+    />
+  );
+}
+
 function DeviceStammdatenTab({
   device,
   editing,
   onSaveDevice,
+  reloadDevice,
   onCancelEdit,
   onSetBlocked,
   blockPending,
@@ -258,25 +350,20 @@ function DeviceStammdatenTab({
 }: {
   device: Device;
   editing: boolean;
-  onSaveDevice: (data: Partial<Device>) => Promise<void>;
+  onSaveDevice: SaveDevice;
+  reloadDevice: (id: string) => Promise<Device>;
   onCancelEdit: () => void;
   onSetBlocked: (blocked: boolean) => void;
   blockPending: boolean;
   canManage: boolean;
 }) {
-  // Speicherfehler im Formular, eine vergebene Geräte-ID am Feld (#2517).
-  const saveErrors = useApiFormError();
   if (editing) {
     return (
-      <DatabaseForm<Partial<Device>>
-        sections={devicesConfig.form.sections}
-        initialData={device}
-        onSubmit={onSaveDevice}
-        onCancel={onCancelEdit}
-        submitLabel="Speichern"
-        stickyActions
-        errorPath={saveErrors}
-        errorObject="das Gerät"
+      <DeviceEditForm
+        device={device}
+        onSaveDevice={onSaveDevice}
+        reloadDevice={reloadDevice}
+        onCancelEdit={onCancelEdit}
       />
     );
   }

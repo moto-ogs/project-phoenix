@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
+
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -97,6 +99,7 @@ func TestAdministrationRunsTheAuditedLifecycle(t *testing.T) {
 		ID:                   created.ID,
 		ClassListEntryFields: schoolmembership.ClassListEntryFields{FirstName: "Zoe", LastName: "Aalders", SchoolClass: "7z-b"},
 		ChangedBy:            actor.ID,
+		ExpectedVersion:      schoolmembership.ClassListEntryVersion(created),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "7z-b", revised.SchoolClass)
@@ -156,6 +159,7 @@ func TestAdministrationRefusesADuplicateEntryOrAnExistingStudent(t *testing.T) {
 		ID:                   second.ID,
 		ClassListEntryFields: schoolmembership.ClassListEntryFields{FirstName: "Zoe", LastName: "Aalders", SchoolClass: "8a"},
 		ChangedBy:            actor.ID,
+		ExpectedVersion:      schoolmembership.ClassListEntryVersion(second),
 	})
 	require.ErrorIs(t, err, schoolmembership.ErrClassListEntryDuplicate)
 
@@ -186,10 +190,53 @@ func TestRevisionWithoutAChangeIsANoOp(t *testing.T) {
 		ID:                   created.ID,
 		ClassListEntryFields: schoolmembership.ClassListEntryFields{FirstName: " Zoe ", LastName: "Aalders", SchoolClass: "9a"},
 		ChangedBy:            actor.ID,
+		ExpectedVersion:      schoolmembership.ClassListEntryVersion(created),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, created, unchanged)
 	assert.Len(t, trail.changes, 1, "only the create is on the trail")
+}
+
+// A revision writes back what its editor read (ADR 0311): one from a read
+// before another revision, or without a read, is refused and writes
+// nothing; the version of the stored entry saves.
+func TestRevisionOfAnOlderReadIsRefused(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module, _, trail := buildAdministeredModule(t, db)
+	ctx := testpkg.Ctx(t)
+	actor := testpkg.CreateTestAccount(t, db, "cle-admin-stale@test.local")
+	created, err := module.AddClassListEntry(ctx, schoolmembership.AddClassListEntry{
+		ClassListEntryFields: schoolmembership.ClassListEntryFields{FirstName: "Zoe", LastName: "Aalders", SchoolClass: "4a"},
+		ChangedBy:            actor.ID,
+	})
+	require.NoError(t, err)
+	read := schoolmembership.ClassListEntryVersion(created)
+	moved, err := module.ReviseClassListEntry(ctx, schoolmembership.ReviseClassListEntry{
+		ID: created.ID, ClassListEntryFields: schoolmembership.ClassListEntryFields{FirstName: "Zoe", LastName: "Aalders", SchoolClass: "4b"},
+		ChangedBy: actor.ID, ExpectedVersion: read,
+	})
+	require.NoError(t, err)
+
+	for name, version := range map[string]string{"older read": read, "no read": ""} {
+		_, err = module.ReviseClassListEntry(ctx, schoolmembership.ReviseClassListEntry{
+			ID: created.ID, ClassListEntryFields: schoolmembership.ClassListEntryFields{FirstName: "Zoey", LastName: "Aalders", SchoolClass: "4a"},
+			ChangedBy: actor.ID, ExpectedVersion: version,
+		})
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+		assert.Equal(t, schoolmembership.ClassListEntryFailureChanged, schoolmembership.ClassifyClassListEntryFailure(err), name)
+	}
+	stored, err := module.FindClassListEntry(ctx, created.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "4b", stored.SchoolClass, "a refused revision writes nothing")
+	assert.Equal(t, "Zoe", stored.FirstName)
+	assert.Len(t, trail.changes, 2, "a refused revision leaves no trace")
+
+	_, err = module.ReviseClassListEntry(ctx, schoolmembership.ReviseClassListEntry{
+		ID: created.ID, ClassListEntryFields: schoolmembership.ClassListEntryFields{FirstName: "Zoey", LastName: "Aalders", SchoolClass: "4b"},
+		ChangedBy: actor.ID, ExpectedVersion: schoolmembership.ClassListEntryVersion(moved),
+	})
+	require.NoError(t, err)
 }
 
 func TestAdministrationRefusesMissingEntries(t *testing.T) {

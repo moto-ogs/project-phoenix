@@ -36,6 +36,7 @@ type deviceWriteBudgetWire struct {
 	IsOnline       bool      `json:"is_online"`
 	CreatedAt      string    `json:"created_at"`
 	UpdatedAt      string    `json:"updated_at"`
+	Version        string    `json:"version"`
 	APIKey         *string   `json:"api_key,omitempty"`
 }
 
@@ -87,6 +88,9 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 					}
 					name := "After"
 					body := map[string]any{"device_id": id, "device_type": "terminal", "name": name, "status": "active", "registered_by_id": ident.ID(person.ID)}
+					if method == http.MethodPut {
+						body["expected_version"] = deviceVersion(t, router, path)
+					}
 					request := testutil.NewAuthenticatedRequest(t, method, path, body, testutil.WithClaims(t, testutil.DefaultTestClaims()), testutil.WithPermissions(permission))
 					ctx, cancel := context.WithTimeout(request.Context(), 10*time.Second)
 					var dbStart, dbEnd time.Time
@@ -136,7 +140,7 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 					require.Equal(t, testpkg.Tenant(t), row.TenantID)
 					assertDeviceWriteBudgetRow(t, want, row)
 					lastSeen := row.LastSeen.Format(time.RFC3339)
-					require.Equal(t, deviceWriteBudgetWire{ID: ident.ID(row.ID), DeviceID: id, DeviceType: "terminal", Name: &name, Status: "active", LastSeen: &lastSeen, RegisteredByID: (*ident.ID)(&person.ID), RoomName: roomName, IsOnline: true, CreatedAt: row.CreatedAt.Format(time.RFC3339), UpdatedAt: row.UpdatedAt.Format(time.RFC3339)}, wire)
+					require.Equal(t, deviceWriteBudgetWire{ID: ident.ID(row.ID), DeviceID: id, DeviceType: "terminal", Name: &name, Status: "active", LastSeen: &lastSeen, RegisteredByID: (*ident.ID)(&person.ID), RoomName: roomName, IsOnline: true, CreatedAt: row.CreatedAt.Format(time.RFC3339), UpdatedAt: row.UpdatedAt.Format(time.RFC3339), Version: devicefleet.DeviceVersion(&row)}, wire)
 					require.Equal(t, 1, len(counter.Operation("INSERT"))+len(counter.Operation("UPDATE")))
 					inserts := 0
 					if scenario == "create-no-room" {

@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/domain"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -301,6 +302,10 @@ func (s *Service) ReviseClassListEntry(ctx context.Context, input schoolmembersh
 	err = s.runWrite(ctx, "revise_class_list_entry", func(txCtx context.Context, stats *domain.OperationStats) error {
 		current, err := s.lockClassListEntry(txCtx, id, stats)
 		if err != nil {
+			return err
+		}
+		// The revision writes back what its editor read (ADR 0311).
+		if err := readstate.Check(input.ExpectedVersion, schoolmembership.ClassListEntryVersion(current)); err != nil {
 			return err
 		}
 		oldValue := ClassListEntryDisplayValue(classListEntryFieldsOf(current))

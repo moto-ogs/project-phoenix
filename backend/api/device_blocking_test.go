@@ -174,8 +174,18 @@ func TestDeviceEditWithAStatusChangeIsAudited(t *testing.T) {
 	t.Parallel()
 	f := newDeviceBlockingFixture(t)
 	device := testpkg.CreateTestDevice(t, f.db, "edit-status")
-	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/api/iot/%d", device.ID),
-		map[string]string{"device_id": device.DeviceID, "device_type": "terminal", "status": "inactive"},
+	path := fmt.Sprintf("/api/iot/%d", device.ID)
+	read := testutil.ExecuteRequest(f.router, testutil.NewAuthenticatedRequest(t, http.MethodGet, path, nil,
+		testutil.WithClaims(t, testutil.DefaultTestClaims()), testutil.WithPermissions("devices:read")))
+	require.Equal(t, http.StatusOK, read.Code, read.Body.String())
+	var stored struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(read.Body.Bytes(), &stored))
+	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, path,
+		map[string]string{"device_id": device.DeviceID, "device_type": "terminal", "status": "inactive", "expected_version": stored.Data.Version},
 		testutil.WithClaims(t, testutil.DefaultTestClaims()),
 		testutil.WithPermissions("devices:manage"),
 	)
