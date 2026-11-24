@@ -47183,6 +47183,13 @@
               "ref": "SiteSollPayload"
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -78773,6 +78780,13 @@
             "kind": "date",
             "nullable": true
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -95944,6 +95958,13 @@
             "kind": "string",
             "nullable": true
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -107494,6 +107515,12 @@
               "ref": "TraegerContractHolidayWeek"
             }
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -107610,6 +107637,12 @@
           "schema": {
             "kind": "string",
             "nullable": true
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -108044,6 +108077,12 @@
               "kind": "ref",
               "ref": "TraegerStaffEmployment"
             }
+          }
+        },
+        {
+          "name": "person_version",
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -109553,6 +109592,13 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

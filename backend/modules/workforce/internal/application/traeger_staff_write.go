@@ -140,32 +140,31 @@ func (t *TraegerStaff) replacedValues(actor workforce.TraegerStaffActor, recordI
 // no bank row of the school, because the record keeps the values (decision
 // E1). Every write of the record repeats it, so a school that failed before
 // catches up (ADR 0233 section 6). A link names the bank row it read per new
-// employment: a school whose row changed since keeps it, the Träger's trail
-// names the values it kept, and the link is refused as changed (ADR 0311)
-// once every school is through. The trail names a held row right after its
-// school commits the hold, so a later school that fails cannot leave a held
-// row the Träger never learns of: every later catch-up keeps it silently.
+// employment: a school whose row changed since keeps it, and the Träger's
+// trail names the values it kept as not taken over. The record is saved by
+// then, so the link answers as saved, not as changed: a refusal never
+// follows a committed write (ADR 0311). The link's own read refused every
+// change made while the dialog was open; only a row changed between that
+// read and this school's lock gets here. The trail names a held row right
+// after its school commits the hold, so a later school that fails cannot
+// leave a held row the Träger never learns of: every later catch-up keeps
+// it silently.
 func (t *TraegerStaff) handOver(ctx context.Context, actor workforce.TraegerStaffActor, record domain.TraegerStaffRecord, planned map[employmentKey]string) error {
-	changed := false
 	for _, link := range record.Links {
-		var outcome handOverOutcome
+		var held *domain.StaffFinancialData
 		err := t.ports.Runtime.WithinSchool(ctx, link.SchoolID, func(ctx context.Context) error {
 			var err error
-			outcome, err = t.handOverSchool(ctx, actor, link, record.PersonnelNumber, plannedBankRow(planned, link))
+			held, err = t.handOverSchool(ctx, actor, link, record.PersonnelNumber, plannedBankRow(planned, link))
 			return err
 		})
 		if err != nil {
 			return publicTraegerStaffError(fmt.Errorf("hand over to school %d: %w", link.SchoolID, err))
 		}
-		changed = changed || outcome.changed
-		if outcome.held != nil {
-			if err := t.recordHeldBankRows(ctx, actor, heldBankChanges(record.ID, link, actor.AccountID, *outcome.held)); err != nil {
+		if held != nil {
+			if err := t.recordHeldBankRows(ctx, actor, heldBankChanges(record.ID, link, actor.AccountID, *held)); err != nil {
 				return err
 			}
 		}
-	}
-	if changed {
-		return readstate.ErrChanged
 	}
 	return nil
 }
@@ -192,28 +191,22 @@ func (t *TraegerStaff) recordHeldBankRows(ctx context.Context, actor workforce.T
 	return publicTraegerStaffError(err)
 }
 
-// handOverOutcome is what one school's hand-over left: whether its bank row
-// differs from the one the link read, and the row it held back for that.
-type handOverOutcome struct {
-	changed bool
-	held    *domain.StaffFinancialData
-}
-
 // handOverSchool gives the employment the record's number and moves the
-// school's bank row to the record (handOverBankRow).
-func (t *TraegerStaff) handOverSchool(ctx context.Context, actor workforce.TraegerStaffActor, link domain.TraegerStaffLink, number *string, planned *string) (handOverOutcome, error) {
+// school's bank row to the record (handOverBankRow). It returns the row the
+// school held back, nil when it held none.
+func (t *TraegerStaff) handOverSchool(ctx context.Context, actor workforce.TraegerStaffActor, link domain.TraegerStaffLink, number *string, planned *string) (*domain.StaffFinancialData, error) {
 	live, err := t.schoolStaff(ctx, []int64{link.StaffID})
 	if err != nil || len(live) == 0 {
-		return handOverOutcome{}, err
+		return nil, err
 	}
 	// The school writes its bank row under the same lock and refuses one the
 	// Träger keeps, so the row read below stays until this transaction ends.
 	subject, err := t.subjects.LockStaff(ctx, link.StaffID, false)
 	if err != nil {
-		return handOverOutcome{}, err
+		return nil, err
 	}
 	if err := t.handOverNumber(ctx, actor, link.StaffID, subject, number); err != nil {
-		return handOverOutcome{}, err
+		return nil, err
 	}
 	return t.handOverBankRow(ctx, actor, link, planned)
 }
@@ -239,31 +232,31 @@ func (t *TraegerStaff) handOverNumber(ctx context.Context, actor workforce.Traeg
 // without a plan it holds back a row written after the link, which is one a
 // link held back: the school cannot write a row the Träger keeps
 // (refuseKeptByTraeger).
-func (t *TraegerStaff) handOverBankRow(ctx context.Context, actor workforce.TraegerStaffActor, link domain.TraegerStaffLink, planned *string) (handOverOutcome, error) {
+func (t *TraegerStaff) handOverBankRow(ctx context.Context, actor workforce.TraegerStaffActor, link domain.TraegerStaffLink, planned *string) (*domain.StaffFinancialData, error) {
 	rows, err := t.store.SchoolFinancialRows(ctx, []int64{link.StaffID})
 	if err != nil {
-		return handOverOutcome{}, err
+		return nil, err
 	}
 	if planned != nil && bankRowState(rows) != *planned {
 		// A value the Personalverwaltung has not seen, like a new IBAN, is
 		// neither taken over nor deleted.
 		if len(rows) == 0 {
-			return handOverOutcome{changed: true}, nil
+			return nil, nil
 		}
 		// The hold stamps the row after the link, so the next write's
 		// catch-up keeps it as well.
 		if err := t.store.HoldSchoolFinancialRow(ctx, link.StaffID); err != nil {
-			return handOverOutcome{}, err
+			return nil, err
 		}
 		if err := t.logHeldMasks(ctx, actor, link.StaffID, rows[0]); err != nil {
-			return handOverOutcome{}, err
+			return nil, err
 		}
-		return handOverOutcome{changed: true, held: &rows[0]}, nil
+		return &rows[0], nil
 	}
 	if planned == nil && len(rows) > 0 && rows[0].UpdatedAt.After(link.LinkedAt) {
-		return handOverOutcome{}, nil
+		return nil, nil
 	}
-	return handOverOutcome{}, t.removeSchoolBankRow(ctx, actor, link.StaffID, rows)
+	return nil, t.removeSchoolBankRow(ctx, actor, link.StaffID, rows)
 }
 
 // logHeldMasks writes the school's access entry for the masks of a held row

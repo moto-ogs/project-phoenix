@@ -3,9 +3,12 @@
 // Die Dialoge der Arbeitsverträge einer Personalakte (#4706): Vertrag
 // anlegen, Soll ab einem Tag ändern, Ferien-Soll eintragen und Art oder Ende
 // ändern. Jeder Dialog schickt eine Änderung; die Akte kommt danach neu.
+// „Soll ändern“ und „Vertrag ändern“ ruhen auf dem Stand des Vertrags beim
+// Öffnen (ADR 0311).
 
 import { useId, useState } from "react";
 import { Button } from "~/components/ui/button";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { ISODatePicker } from "~/components/ui/date-picker";
@@ -20,7 +23,9 @@ import { SwitchRow } from "~/components/ui/switch";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { type ReadDraftResult, useDraftOn } from "~/lib/swr/read-draft";
 import {
   addStaffHolidayWeeks,
   changeStaffContractSoll,
@@ -197,12 +202,17 @@ function DialogFooter({
   onSave,
   saveLabel,
   saveTooltip,
+  saveDisabled = false,
+  saveDisabledReason,
 }: Readonly<{
   saving: boolean;
   onCancel: () => void;
   onSave: () => void;
   saveLabel: string;
   saveTooltip: string;
+  /** Nothing can be sent yet: the stored contract is still being read. */
+  saveDisabled?: boolean;
+  saveDisabledReason?: string;
 }>) {
   return (
     <div className="flex justify-end gap-2">
@@ -224,6 +234,8 @@ function DialogFooter({
         isLoading={saving}
         loadingText="Speichert…"
         tooltip={saveTooltip}
+        disabled={saveDisabled}
+        disabledReason={saveDisabledReason}
       >
         {saveLabel}
       </Button>
@@ -306,7 +318,32 @@ function useContractSave(open: boolean, object: string) {
       }
     });
   };
-  return { save, errors, run };
+  /**
+   * Sends a change of a read contract: a refusal shows the stored contract
+   * in the dialog with the message, without a retry (ADR 0311).
+   */
+  const runOnRead = async (
+    submit: () => Promise<ReadDraftResult<StaffRecordDetail>>,
+    done: string,
+    onSaved: (record: StaffRecordDetail) => void,
+  ) => {
+    await save.run(async (op) => {
+      const result = await submit();
+      if (result.ok) {
+        success(done);
+        if (op.isCurrent()) onSaved(result.saved);
+        return;
+      }
+      if (result.skipped) return;
+      logger.error("traeger_staff_contract_save_failed", {
+        error: errorMessage(result.error),
+      });
+      if (op.isCurrent()) {
+        await errors.show(result.error, { object, reload: result.reload });
+      }
+    });
+  };
+  return { save, errors, run, runOnRead };
 }
 
 type DialogProps = Readonly<{
@@ -314,6 +351,50 @@ type DialogProps = Readonly<{
   onClose: () => void;
   onSaved: (record: StaffRecordDetail) => void;
 }>;
+
+type ReadDialogProps = DialogProps &
+  Readonly<{
+    contract: StaffContract;
+    /** Reads the record again; rejects when the read fails (ADR 0311). */
+    reload: () => Promise<StaffRecordDetail>;
+  }>;
+
+/**
+ * The draft of a dialog on one contract (ADR 0311): it rests on the
+ * contract as the dialog opened on it, a newer read refills it only while
+ * untouched, a refused save shows the stored contract, and nothing goes out
+ * until it is read. The save answers the record with the new version.
+ */
+function useContractDraft<D>(
+  record: StaffRecordDetail,
+  contract: StaffContract,
+  reload: () => Promise<StaffRecordDetail>,
+  kind: string,
+  toDraft: (contract: StaffContract) => D,
+) {
+  const contractIn = (read: StaffRecordDetail) =>
+    read.contracts.find((entry) => entry.id === contract.id);
+  // The contract the dialog opened with, until the record holds a newer one.
+  const listed = contractIn(record);
+  const shown =
+    listed && listed.version !== contract.version ? listed : contract;
+  return useDraftOn<StaffContract, D, string, StaffRecordDetail>(
+    {
+      opening: `traeger-staff-contract-${kind}:${contract.id}`,
+      data: shown,
+      reload: async () => {
+        const found = contractIn(await reload());
+        if (!found) throw new Error("contract is gone");
+        return found;
+      },
+    },
+    {
+      token: (read) => read.version,
+      toDraft,
+      answer: (saved) => contractIn(saved),
+    },
+  );
+}
 
 /**
  * Das Merkmal „Vertretungspool“ (#4709): die Person ist Springer, und jede
@@ -458,20 +539,23 @@ function firstOfNextMonth(day: string): string {
   return toISODate(new Date(date.getFullYear(), date.getMonth() + 1, 1));
 }
 
+interface SollDraft {
+  readonly validFrom: string;
+  readonly sites: readonly SiteDraft[];
+}
+
 /** Soll ab einem Tag ändern, für eine oder mehrere Schulen. */
 export function ChangeSollDialog({
   record,
-  contract,
+  contract: opened,
   today,
+  reload,
   onClose,
   onSaved,
-}: DialogProps & Readonly<{ contract: StaffContract; today: string }>) {
-  const earliest = changeableFrom(contract.sites);
-  const [validFrom, setValidFrom] = useState(() => {
+}: ReadDialogProps & Readonly<{ today: string }>) {
+  const sollDraftOf = (contract: StaffContract): SollDraft => {
+    const earliest = changeableFrom(contract.sites);
     const proposal = firstOfNextMonth(today);
-    return proposal < earliest ? earliest : proposal;
-  });
-  const [sites, setSites] = useState<readonly SiteDraft[]>(() => {
     const inContract = contract.sites.map((site) => {
       const current = latestSoll(site);
       return {
@@ -495,11 +579,25 @@ export function ChangeSollDialog({
         hours: hoursFields(null),
         before: null,
       }));
-    return [...inContract, ...joining];
-  });
-  const { save, errors, run } = useContractSave(true, "das Soll");
+    return {
+      validFrom: proposal < earliest ? earliest : proposal,
+      sites: [...inContract, ...joining],
+    };
+  };
+  const edit = useContractDraft(record, opened, reload, "soll", sollDraftOf);
+  const contract = edit.base ?? opened;
+  const draft = edit.draft ?? sollDraftOf(contract);
+  const { validFrom, sites } = draft;
+  const earliest = changeableFrom(contract.sites);
+  const { save, errors, runOnRead } = useContractSave(true, "das Soll");
+  const form = useReadDraftForm(edit, errors, "das Soll");
+  const setValidFrom = (next: string) =>
+    edit.setDraft((current) => ({ ...current, validFrom: next }));
+  const setSites = (next: readonly SiteDraft[]) =>
+    edit.setDraft((current) => ({ ...current, sites: next }));
 
   const submit = () => {
+    if (!form.begin()) return;
     const inputs = siteInputs(sites, true);
     const fields = {
       valid_from: validFrom ? undefined : "Bitte den ersten Tag wählen.",
@@ -514,8 +612,17 @@ export function ChangeSollDialog({
       errors.invalid("Bitte prüfe die markierten Felder.", fieldErrors(fields));
       return;
     }
-    void run(
-      () => changeStaffContractSoll(record.id, contract.id, validFrom, inputs),
+    void runOnRead(
+      () =>
+        edit.submit((version) =>
+          changeStaffContractSoll(
+            record.id,
+            contract.id,
+            validFrom,
+            inputs,
+            version,
+          ),
+        ),
       `Das neue Soll gilt ab dem ${formatDate(validFrom)}.`,
       onSaved,
     );
@@ -535,12 +642,15 @@ export function ChangeSollDialog({
           saving={save.pending}
           onCancel={onClose}
           onSave={submit}
+          saveDisabled={!edit.canSubmit}
+          saveDisabledReason={form.waitReason}
           saveLabel="Soll speichern"
           saveTooltip="Speichert das neue Soll. Die Schulen rechnen ab dem gewählten Tag damit."
         />
       }
     >
       <div className="space-y-5">
+        <LoadErrorAlert error={form.loadError} />
         <ISODatePicker
           controlSize="compact"
           id="contract-soll-valid-from"
@@ -722,22 +832,43 @@ export function HolidayWeeksDialog({
   );
 }
 
+interface TermsDraft {
+  readonly kind: StaffContractKind | undefined;
+  readonly endsOn: string;
+  readonly pool: boolean;
+}
+
+const termsDraftOf = (contract: StaffContract): TermsDraft => ({
+  kind: contract.kind,
+  endsOn: contract.endsOn ?? "",
+  pool: contract.pool,
+});
+
 /** Art und letzten Tag eines Vertrags ändern. */
 export function ContractTermsDialog({
   record,
-  contract,
+  contract: opened,
+  reload,
   onClose,
   onSaved,
-}: DialogProps & Readonly<{ contract: StaffContract }>) {
-  const [kind, setKind] = useState<StaffContractKind | undefined>(
-    contract.kind,
-  );
-  const [endsOn, setEndsOn] = useState(contract.endsOn ?? "");
-  const [pool, setPool] = useState(contract.pool);
+}: ReadDialogProps) {
+  const edit = useContractDraft(record, opened, reload, "terms", termsDraftOf);
+  const contract = edit.base ?? opened;
+  const { kind, endsOn, pool } = edit.draft ?? termsDraftOf(contract);
+  const patch = (next: Partial<TermsDraft>) =>
+    edit.setDraft((current) => ({ ...current, ...next }));
+  const setKind = (next: StaffContractKind | undefined) => patch({ kind: next });
+  const setEndsOn = (next: string) => patch({ endsOn: next });
+  const setPool = (next: boolean) => patch({ pool: next });
   const earliest = changeableFrom(contract.sites);
-  const { save, errors, run } = useContractSave(true, "den Arbeitsvertrag");
+  const { save, errors, runOnRead } = useContractSave(
+    true,
+    "den Arbeitsvertrag",
+  );
+  const form = useReadDraftForm(edit, errors, "den Arbeitsvertrag");
 
   const submit = () => {
+    if (!form.begin()) return;
     if (kind === undefined) {
       errors.invalid("Bitte prüfe die markierten Felder.", {
         kind: "Wähle die Art des Vertrags.",
@@ -750,13 +881,16 @@ export function ContractTermsDialog({
       });
       return;
     }
-    void run(
+    void runOnRead(
       () =>
-        updateStaffContract(record.id, contract.id, {
-          kind,
-          endsOn: endsOn || null,
-          pool,
-        }),
+        edit.submit((version) =>
+          updateStaffContract(
+            record.id,
+            contract.id,
+            { kind, endsOn: endsOn || null, pool },
+            version,
+          ),
+        ),
       "Der Arbeitsvertrag ist gespeichert.",
       onSaved,
     );
@@ -776,12 +910,15 @@ export function ContractTermsDialog({
           saving={save.pending}
           onCancel={onClose}
           onSave={submit}
+          saveDisabled={!edit.canSubmit}
+          saveDisabledReason={form.waitReason}
           saveLabel="Speichern"
           saveTooltip="Speichert Art, Ende und Vertretungspool. Nach dem letzten Tag zählt kein Soll mehr."
         />
       }
     >
       <div className="space-y-5">
+        <LoadErrorAlert error={form.loadError} />
         <KindChoice
           value={kind}
           onChange={setKind}

@@ -107,8 +107,9 @@ func (t *TraegerStaff) Link(ctx context.Context, actor workforce.TraegerStaffAct
 	// The choices were made on the preview's values. The schools are read in
 	// their own transactions (ADR 0105): this read refuses what changed while
 	// the dialog was open. What changes after it is caught under the lock each
-	// write takes: the record's values in writeLink, a school's bank row in
-	// handOverSchool, which keeps a row it did not read and refuses.
+	// write takes: the record's values in writeLink, refused before anything
+	// is saved; a school's bank row in handOverSchool, which keeps a row it
+	// did not read and names it in the trail once the record is saved.
 	if err := readstate.Check(request.ExpectedFingerprint, plan.fingerprint()); err != nil {
 		return workforce.TraegerStaffRecordDetail{}, err
 	}

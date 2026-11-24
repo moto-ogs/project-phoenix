@@ -347,9 +347,12 @@ function ContractPanel({
 
 export function StaffContractsCard({
   record,
+  reload,
   onChanged,
 }: Readonly<{
   record: StaffRecordDetail;
+  /** Reads the record again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<StaffRecordDetail>;
   onChanged: (record: StaffRecordDetail) => void;
 }>) {
   const today = useBerlinToday();
@@ -463,6 +466,7 @@ export function StaffContractsCard({
           record={record}
           contract={dialog.contract}
           today={today}
+          reload={reload}
           onClose={close}
           onSaved={saved}
         />
@@ -479,6 +483,7 @@ export function StaffContractsCard({
         <ContractTermsDialog
           record={record}
           contract={dialog.contract}
+          reload={reload}
           onClose={close}
           onSaved={saved}
         />

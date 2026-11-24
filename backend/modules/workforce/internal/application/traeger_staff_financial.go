@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Financial serves the bank and tax section of a record: masked, or with
@@ -38,11 +39,13 @@ func (t *TraegerStaff) Financial(ctx context.Context, actor workforce.TraegerSta
 	return workforce.TraegerStaffFinancial{
 		IBAN: optional(values[domain.StaffFieldIBAN]), TaxID: optional(values[domain.StaffFieldTaxID]),
 		SocialSecurityNumber: optional(values[domain.StaffFieldSocialSecurityNumber]),
+		Version:              financialVersion(record),
 	}, nil
 }
 
 // UpdateFinancial replaces the bank and tax section of a record. The trail
-// keeps each replaced value, sealed.
+// keeps each replaced value, sealed. A section changed since the form read
+// it is refused under the record lock (ADR 0311).
 func (t *TraegerStaff) UpdateFinancial(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64, input workforce.StammdatenFinancialInput) error {
 	section, err := domain.NormalizeFinancialSection(domain.FinancialSection{IBAN: input.IBAN, TaxID: input.TaxID, SocialSecurityNumber: input.SocialSecurityNumber})
 	if err != nil {
@@ -54,26 +57,8 @@ func (t *TraegerStaff) UpdateFinancial(ctx context.Context, actor workforce.Trae
 	}
 	var saved domain.TraegerStaffRecord
 	err = t.released(ctx, actor, func(ctx context.Context) error {
-		record, err := t.store.FindStaffRecord(ctx, actor.OrganizationID, recordID, true)
-		if err != nil {
-			return err
-		}
-		before, err := t.openRecordFinancial(record)
-		if err != nil {
-			return err
-		}
-		changes, err := t.replacedValues(actor, recordID, before, after)
-		if err != nil || len(changes) == 0 {
-			return err
-		}
-		if err := t.sealRecordFinancial(&record, after); err != nil {
-			return err
-		}
-		if err := t.store.SealStaffRecord(ctx, record); err != nil {
-			return err
-		}
-		saved = record
-		return t.store.AppendStaffChanges(ctx, actor.OrganizationID, changes)
+		saved, err = t.writeFinancial(ctx, actor, recordID, domain.Deref(input.ExpectedVersion), after)
+		return err
 	})
 	if err != nil {
 		return publicTraegerStaffError(err)
@@ -82,6 +67,35 @@ func (t *TraegerStaff) UpdateFinancial(ctx context.Context, actor workforce.Trae
 		return nil
 	}
 	return t.handOver(ctx, actor, saved, nil)
+}
+
+// writeFinancial seals the section under the record lock with the trail of
+// every replaced value; a section that differs from the expected version is
+// refused before anything is written. An unchanged section returns no
+// record.
+func (t *TraegerStaff) writeFinancial(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64, expectedVersion string, after map[string]string) (domain.TraegerStaffRecord, error) {
+	record, err := t.store.FindStaffRecord(ctx, actor.OrganizationID, recordID, true)
+	if err != nil {
+		return domain.TraegerStaffRecord{}, err
+	}
+	if err := readstate.Check(expectedVersion, financialVersion(record)); err != nil {
+		return domain.TraegerStaffRecord{}, err
+	}
+	before, err := t.openRecordFinancial(record)
+	if err != nil {
+		return domain.TraegerStaffRecord{}, err
+	}
+	changes, err := t.replacedValues(actor, recordID, before, after)
+	if err != nil || len(changes) == 0 {
+		return domain.TraegerStaffRecord{}, err
+	}
+	if err := t.sealRecordFinancial(&record, after); err != nil {
+		return domain.TraegerStaffRecord{}, err
+	}
+	if err := t.store.SealStaffRecord(ctx, record); err != nil {
+		return domain.TraegerStaffRecord{}, err
+	}
+	return record, t.store.AppendStaffChanges(ctx, actor.OrganizationID, changes)
 }
 
 // Dissolve ends a record: every live Einsatzort gets the bank and tax values

@@ -99,3 +99,85 @@ func readToken(t *testing.T, rec *httptest.ResponseRecorder, field string) (stri
 	}
 	return token, true
 }
+
+// traegerRecordRead reads the record as its page does; a refused read is the
+// answer.
+func traegerRecordRead[R ~int64](t *testing.T, router http.Handler, token string, recordID R) (*httptest.ResponseRecorder, map[string]json.RawMessage) {
+	t.Helper()
+	read := traegerJSON(t, router, token, http.MethodGet, fmt.Sprintf("/traeger/staff-records/%d", recordID), nil)
+	if read.Code != http.StatusOK {
+		return read, nil
+	}
+	var envelope struct {
+		Data map[string]json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(read.Body.Bytes(), &envelope); err != nil {
+		t.Fatalf("read the record: %v", err)
+	}
+	return read, envelope.Data
+}
+
+// traegerUpdatePerson corrects the person of a record with the
+// person_version of the record the card read.
+func traegerUpdatePerson[R ~int64](t *testing.T, router http.Handler, token string, recordID R, body map[string]any) *httptest.ResponseRecorder {
+	t.Helper()
+	read, data := traegerRecordRead(t, router, token, recordID)
+	if data == nil {
+		return read
+	}
+	version, ok := readToken(t, read, "person_version")
+	if !ok {
+		return read
+	}
+	confirmed := maps.Clone(body)
+	confirmed["expected_version"] = version
+	return traegerJSON(t, router, token, http.MethodPut, fmt.Sprintf("/traeger/staff-records/%d/person", recordID), confirmed)
+}
+
+// traegerUpdateFinancial saves the bank section with the version of the
+// section's read.
+func traegerUpdateFinancial[R ~int64](t *testing.T, router http.Handler, token string, recordID R, body map[string]any) *httptest.ResponseRecorder {
+	t.Helper()
+	path := fmt.Sprintf("/traeger/staff-records/%d/financial", recordID)
+	read := traegerJSON(t, router, token, http.MethodGet, path, nil)
+	version, ok := readToken(t, read, "version")
+	if !ok {
+		return read
+	}
+	confirmed := maps.Clone(body)
+	confirmed["expected_version"] = version
+	return traegerJSON(t, router, token, http.MethodPut, path, confirmed)
+}
+
+// traegerContractVersion is the version of one contract in a record read; a
+// read without that contract fails the test.
+func traegerContractVersion[R, C ~int64](t *testing.T, router http.Handler, token string, recordID R, contractID C) string {
+	t.Helper()
+	read, data := traegerRecordRead(t, router, token, recordID)
+	if data == nil {
+		t.Fatalf("read the record: %s", read.Body.String())
+	}
+	var contracts []struct {
+		ID      wireID `json:"id"`
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(data["contracts"], &contracts); err != nil {
+		t.Fatalf("read the contracts: %v", err)
+	}
+	for _, contract := range contracts {
+		if int64(contract.ID) == int64(contractID) && contract.Version != "" {
+			return contract.Version
+		}
+	}
+	t.Fatalf("the record read carries no version of contract %d: %s", contractID, read.Body.String())
+	return ""
+}
+
+// traegerContractWrite sends body to a contract route (method, path) with the
+// version of the contract the dialog opened on.
+func traegerContractWrite[R, C ~int64](t *testing.T, router http.Handler, token, method, path string, recordID R, contractID C, body map[string]any) *httptest.ResponseRecorder {
+	t.Helper()
+	confirmed := maps.Clone(body)
+	confirmed["expected_version"] = traegerContractVersion(t, router, token, recordID, contractID)
+	return traegerJSON(t, router, token, method, path, confirmed)
+}

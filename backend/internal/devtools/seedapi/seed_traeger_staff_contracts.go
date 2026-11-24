@@ -51,7 +51,8 @@ type seedTraegerStaffRecord struct {
 		Active   bool     `json:"active"`
 	} `json:"employments"`
 	Contracts []struct {
-		ID ident.ID `json:"id"`
+		ID      ident.ID `json:"id"`
+		Version string   `json:"version"`
 	} `json:"contracts"`
 }
 
@@ -125,7 +126,11 @@ func seedTraegerContractChanges(client *Client, auth AuthRef, recordID int64, cr
 	now := time.Now()
 	nextMonth := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC).Format("2006-01-02")
 	raised := map[string]any{"school_id": site["school_id"], "staff_id": site["staff_id"], "weekday_minutes": []int{360, 360, 360, 360, 240}}
-	if _, err := client.PostWithAuth(auth, base+"/soll", map[string]any{"valid_from": nextMonth, "sites": []map[string]any{raised}}); err != nil {
+	// The Soll dialog sends the version of the contract it opened on (ADR
+	// 0311): the one the create answered.
+	if _, err := client.PostWithAuth(auth, base+"/soll", map[string]any{
+		"valid_from": nextMonth, "sites": []map[string]any{raised}, "expected_version": envelope.Data.Contracts[0].Version,
+	}); err != nil {
 		return fmt.Errorf("raise the Soll of a Träger contract: %w", err)
 	}
 	_, err := client.PostWithAuth(auth, base+"/holiday-weeks", map[string]any{
