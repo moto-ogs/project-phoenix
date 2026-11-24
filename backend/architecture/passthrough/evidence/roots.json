@@ -905,7 +905,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (d groupLiveDirectory) TenantGroups(ctx context.Context) ([]grouplive.GroupRecord, error) {\n\tgroups, err := d.education.ListGroups(ctx, nil)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\trecords := make([]grouplive.GroupRecord, 0, len(groups))\n\tfor _, group := range groups {\n\t\tif group != nil {\n\t\t\trecords = append(records, grouplive.GroupRecord{ID: group.ID, Name: group.Name, RoomID: group.RoomID})\n\t\t}\n\t}\n\treturn records, nil\n}",
+      "evidence": "func (d groupLiveDirectory) TenantGroups(ctx context.Context) ([]grouplive.GroupRecord, error) {\n\tgroups, err := d.education.ListGroups(ctx, nil)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\trecords := make([]grouplive.GroupRecord, 0, len(groups))\n\tfor _, group := range groups {\n\t\tif group != nil {\n\t\t\trecords = append(records, navigationGroupRecord(group))\n\t\t}\n\t}\n\treturn records, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/groupLiveDirectory.TenantGroups",
       "owner": "roots"
@@ -1594,6 +1594,13 @@
       "evidence": "func (a supervisionAccess) FullStudentAccess(ctx context.Context) (bool, error) {\n\treturn a.caller.FullStudentAccess(ctx)\n}",
       "form": "forward-debt",
       "id": "api/supervisionAccess.FullStudentAccess",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s supervisionContextSessions) OwnSessionIDs(ctx context.Context, staffID int64) (map[int64]bool, error) {\n\tday := s.today().String()\n\trows, err := s.presence.QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{StaffID: \u0026staffID, ActiveOn: \u0026day})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tids := make(map[int64]bool, len(rows))\n\tfor _, row := range rows {\n\t\tids[row.GroupID] = true\n\t}\n\treturn ids, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/supervisionContextSessions.OwnSessionIDs",
       "owner": "roots"
     },
     {

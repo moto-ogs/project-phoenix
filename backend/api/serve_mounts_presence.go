@@ -102,7 +102,12 @@ func mountPresenceRoutes(
 		}
 		return staff.ID, true, err
 	})
-	tenant.Mount("/active", activeResource.Router(move.Register, yardResource.Register))
+	contextQuery := supervisionContextReader(groupLive, supervisionContextSessions{
+		staffID: caller.CurrentStaffID, settings: settings, presence: presence, rooms: facilities,
+		activities: timetableOwner, today: calendar.CalendarDateClock(now),
+	}, logger.With("handler", "supervision-context"))
+	contextResource := supervisionDashboardHTTP.ContextResource{Read: contextQuery.SupervisionContext}
+	tenant.Mount("/active", activeResource.Router(move.Register, yardResource.Register, contextResource.Register))
 	tenant.Mount("/iot", iotResource.Router())
 	return nil
 }

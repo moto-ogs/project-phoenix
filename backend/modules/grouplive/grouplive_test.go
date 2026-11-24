@@ -77,6 +77,10 @@ func (f *fakes) SupervisedGroups(ctx context.Context) ([]GroupRecord, error) {
 	return f.supervisedGroups(ctx)
 }
 
+func (f *fakes) SupervisedGroupsWithRooms(ctx context.Context) ([]GroupRecord, error) {
+	return f.SupervisedGroups(ctx)
+}
+
 // SupervisedGroupIDs serves the IDs of the supervised groups fixture, the
 // same groups the identity chain names.
 func (f *fakes) SupervisedGroupIDs(ctx context.Context) (map[int64]bool, error) {

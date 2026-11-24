@@ -1142,6 +1142,11 @@
     },
     {
       "decision": "0090",
+      "id": "api/supervisionContextSessions.OwnSessionIDs",
+      "reason": "Calendar View root port (#8084): selects date-active staff assignments and projects their session IDs as a set for one batched open-session read; no staff records in the projection."
+    },
+    {
+      "decision": "0090",
       "id": "api/supervisionPresence.AttendanceTimes",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

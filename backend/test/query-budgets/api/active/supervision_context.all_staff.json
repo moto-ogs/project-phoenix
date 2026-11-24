@@ -1,0 +1,7 @@
+{
+  "scenario": "api.active.supervision_context.all_staff",
+  "max": 36,
+  "exact": false,
+  "description": "Full staff navigation context with school-wide scope, 2/14 running sessions and 2/54 releases. Counts all transaction and savepoint statements, including session validation.",
+  "route": "GET /api/active/supervision-context"
+}
