@@ -236,11 +236,26 @@ type documentKindDouble struct {
 	reads  int
 }
 
-func (d *documentKindDouble) DocumentKinds(context.Context, int64) (map[string]parentbilling.ServiceDocumentKind, error) {
-	return d.kinds, nil
+func (d *documentKindDouble) DocumentKinds(context.Context, int64) (map[string]map[string]parentbilling.ServiceDocumentKind, error) {
+	return map[string]map[string]parentbilling.ServiceDocumentKind{"": d.kinds}, nil
 }
 
-func (d *documentKindDouble) SetDocumentKind(_ context.Context, _ int64, service, kind string) error {
+// SchoolBillingIssuers answers no body: the Träger bills every school.
+func (d *documentKindDouble) SchoolBillingIssuers(context.Context, int64, []int64) (map[int64]parentbilling.BillingIssuer, error) {
+	return map[int64]parentbilling.BillingIssuer{}, nil
+}
+
+// issuableKind is the kind the release of the Träger's documents of the
+// service freezes, as the holiday release decides it.
+func issuableKind(gate documentKindGate, service string) (string, error) {
+	kinds, err := gate.reviewed(context.Background(), 1, service, nil)
+	if err != nil {
+		return "", err
+	}
+	return releasedKind(kinds, parentbilling.BillingRelease{})
+}
+
+func (d *documentKindDouble) SetDocumentKind(_ context.Context, _ int64, _, service, kind string) error {
 	if d.kinds == nil {
 		d.kinds = map[string]parentbilling.ServiceDocumentKind{}
 	}
@@ -271,15 +286,15 @@ func TestDocumentKindsOfferPerServiceAndRefuseOthers(t *testing.T) {
 	assert.Equal(t, []string{"invoice", "fee_notice"}, overview.Services[1].Choices)
 	assert.False(t, overview.LegalRemedySet)
 
-	_, err = kinds.SetDocumentKind(context.Background(), 1, parentbilling.ServiceCare, parentbilling.DocumentKindConfirmation)
+	_, err = kinds.SetDocumentKind(context.Background(), 1, "", parentbilling.ServiceCare, parentbilling.DocumentKindConfirmation)
 	assert.Error(t, err, "the monthly care has no confirmation letter")
-	_, err = kinds.SetDocumentKind(context.Background(), 1, "mensa", parentbilling.DocumentKindInvoice)
+	_, err = kinds.SetDocumentKind(context.Background(), 1, "", "mensa", parentbilling.DocumentKindInvoice)
 	assert.Error(t, err)
-	_, err = kinds.SetDocumentKind(context.Background(), 0, parentbilling.ServiceCare, parentbilling.DocumentKindInvoice)
+	_, err = kinds.SetDocumentKind(context.Background(), 0, "", parentbilling.ServiceCare, parentbilling.DocumentKindInvoice)
 	assert.Error(t, err)
 
 	double.remedy = "Widerspruch"
-	overview, err = kinds.SetDocumentKind(context.Background(), 1, parentbilling.ServiceCare, parentbilling.DocumentKindFeeNotice)
+	overview, err = kinds.SetDocumentKind(context.Background(), 1, "", parentbilling.ServiceCare, parentbilling.DocumentKindFeeNotice)
 	require.NoError(t, err)
 	assert.Equal(t, parentbilling.DocumentKindFeeNotice, overview.Services[1].DocumentKind)
 	assert.True(t, overview.LegalRemedySet)
@@ -292,23 +307,23 @@ func TestGateRefusesAFeeNoticeWithoutLegalRemedy(t *testing.T) {
 	t.Parallel()
 	double := &documentKindDouble{}
 	gate := newDocumentKindGate(double, double)
-	kind, err := gate.issuable(context.Background(), 1, parentbilling.ServiceHoliday)
+	kind, err := issuableKind(gate, parentbilling.ServiceHoliday)
 	require.NoError(t, err)
 	assert.Equal(t, parentbilling.DocumentKindConfirmation, kind)
 	assert.Zero(t, double.reads, "an invoice needs no template read for the release")
 
-	require.NoError(t, double.SetDocumentKind(context.Background(), 1, parentbilling.ServiceHoliday, parentbilling.DocumentKindFeeNotice))
-	_, err = gate.issuable(context.Background(), 1, parentbilling.ServiceHoliday)
+	require.NoError(t, double.SetDocumentKind(context.Background(), 1, "", parentbilling.ServiceHoliday, parentbilling.DocumentKindFeeNotice))
+	_, err = issuableKind(gate, parentbilling.ServiceHoliday)
 	assert.True(t, errors.Is(err, parentbilling.ErrLegalRemedyMissing))
-	state, err := gate.current(context.Background(), 1, parentbilling.ServiceHoliday)
+	kinds, err := gate.reviewed(context.Background(), 1, parentbilling.ServiceHoliday, nil)
 	require.NoError(t, err)
-	assert.Equal(t, parentbilling.DocumentKindState{DocumentKind: parentbilling.DocumentKindFeeNotice, LegalRemedyMissing: true}, state)
+	assert.Equal(t, parentbilling.DocumentKindState{DocumentKind: parentbilling.DocumentKindFeeNotice, LegalRemedyMissing: true}, kinds.state())
 
 	double.remedy = "  "
-	_, err = gate.issuable(context.Background(), 1, parentbilling.ServiceHoliday)
+	_, err = issuableKind(gate, parentbilling.ServiceHoliday)
 	assert.ErrorIs(t, err, parentbilling.ErrLegalRemedyMissing, "blank is no legal remedy")
 	double.remedy = "Widerspruch binnen eines Monats."
-	kind, err = gate.issuable(context.Background(), 1, parentbilling.ServiceHoliday)
+	kind, err = issuableKind(gate, parentbilling.ServiceHoliday)
 	require.NoError(t, err)
 	assert.Equal(t, parentbilling.DocumentKindFeeNotice, kind)
 }
@@ -485,9 +500,9 @@ func TestHolidayInvoiceAndNoticeKeepLetterInputsOutsideTheirTemplates(t *testing
 func TestFeeNoticeGuardsRejectRemediesWithoutRenderedText(t *testing.T) {
 	t.Parallel()
 	double := &documentKindDouble{remedy: "{{ansprechperson}}"}
-	require.NoError(t, double.SetDocumentKind(context.Background(), 1, parentbilling.ServiceHoliday, parentbilling.DocumentKindFeeNotice))
+	require.NoError(t, double.SetDocumentKind(context.Background(), 1, "", parentbilling.ServiceHoliday, parentbilling.DocumentKindFeeNotice))
 	gate := newDocumentKindGate(double, double)
-	_, err := gate.issuable(context.Background(), 1, parentbilling.ServiceHoliday)
+	_, err := issuableKind(gate, parentbilling.ServiceHoliday)
 	assert.ErrorIs(t, err, parentbilling.ErrLegalRemedyMissing)
 	_, err = withDocumentTemplate(context.Background(), double, 1, parentbilling.Letterhead{}, parentbilling.DocumentKindFeeNotice, true)
 	assert.ErrorIs(t, err, parentbilling.ErrLegalRemedyMissing)
@@ -522,7 +537,7 @@ func TestMensaInvoiceOfItsOwnStaysAnInvoice(t *testing.T) {
 	t.Parallel()
 	invoices := []parentbilling.CareInvoice{{Service: parentbilling.ServiceCare}, {Service: parentbilling.ServiceMeal}}
 	excluded := []parentbilling.CareInvoice{{Service: parentbilling.ServiceCare}}
-	markDocumentKind(parentbilling.DocumentKindFeeNotice, invoices, excluded)
+	markDocumentKind(issuerKinds{kinds: map[string]string{"": parentbilling.DocumentKindFeeNotice}}, invoices, excluded)
 	assert.Equal(t, parentbilling.DocumentKindFeeNotice, invoices[0].DocumentKind)
 	assert.Equal(t, parentbilling.DocumentKindInvoice, invoices[1].DocumentKind)
 	assert.Equal(t, parentbilling.DocumentKindFeeNotice, excluded[0].DocumentKind)

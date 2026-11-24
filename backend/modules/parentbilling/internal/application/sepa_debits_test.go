@@ -57,6 +57,11 @@ func (fakeLetterheads) DocumentTemplate(context.Context, int64, string) (parentb
 	return parentbilling.LetterTemplate{}, nil
 }
 
+// SchoolBillingIssuers names no body: the Träger bills every school (#8040).
+func (fakeLetterheads) SchoolBillingIssuers(context.Context, int64, []int64) (map[int64]parentbilling.BillingIssuer, error) {
+	return map[int64]parentbilling.BillingIssuer{}, nil
+}
+
 type debitStoreFake struct {
 	// dues and rates feed the installments of the Jahresbescheide.
 	dues    []parentbilling.CareNoticeDue
@@ -132,7 +137,12 @@ func (s *debitStoreFake) SEPADebitsOfRun(_ context.Context, _ int64, runKind str
 		}
 	}
 	for i := range out {
+		// As the store's statement: a body's debit is collected for its
+		// creditor identifier (#8040).
 		out[i].CreditorNow = s.creditor
+		if out[i].Issuer != nil {
+			out[i].CreditorNow = out[i].Issuer.Key
+		}
 		// As the store's statement: another uncancelled debit of the same
 		// one-off mandate claims its single authorization too.
 		for j, other := range s.debits {
@@ -222,7 +232,7 @@ func newSJRDebits(store *debitStoreFake) *SEPADebits {
 func TestSEPADebitFileValidatesAgainstTheISOSchema(t *testing.T) {
 	t.Parallel()
 	store := sjrDebits()
-	file, err := newSJRDebits(store).SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	file, err := newSJRDebits(store).SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.NoError(t, err)
 	assert.Equal(t, "application/xml", file.ContentType)
 	assert.True(t, strings.HasSuffix(file.Filename, ".xml"))
@@ -271,7 +281,7 @@ func TestSEPADebitFileTakesOnlyValidMandates(t *testing.T) {
 	partial.CreditedCents = -400
 	store.debits = append(store.debits, revoked, changed, expired, cancelled, credited, partial)
 
-	run, err := newSJRDebits(store).SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	run, err := newSJRDebits(store).SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.NoError(t, err)
 	left := map[string]string{}
 	for _, debit := range run.Left {
@@ -286,7 +296,7 @@ func TestSEPADebitFileTakesOnlyValidMandates(t *testing.T) {
 	assert.Equal(t, int64(7800+4550+2200+600), run.TotalCents, "the partial credit lowers the debit")
 	assert.Equal(t, "DE•• •••• •••• •••• ••61 99", run.CreditorIBAN, "the account of the Träger only masked")
 
-	file, err := newSJRDebits(store).SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	file, err := newSJRDebits(store).SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.NoError(t, err)
 	for _, number := range []string{"0004", "0005", "0006", "0007", "0008"} {
 		assert.NotContains(t, string(file.Data), "RE-2027-"+number)
@@ -301,9 +311,9 @@ func TestSEPADebitDownloadTwiceGivesTheSameFile(t *testing.T) {
 	t.Parallel()
 	store := sjrDebits()
 	debits := newSJRDebits(store)
-	first, err := debits.SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	first, err := debits.SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.NoError(t, err)
-	second, err := debits.SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	second, err := debits.SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.NoError(t, err)
 	assert.Equal(t, first.Data, second.Data)
 	// Each download is a file of the export protocol with the next file
@@ -323,14 +333,14 @@ func TestSEPADebitSubmissionCollectsOnce(t *testing.T) {
 	t.Parallel()
 	store := sjrDebits()
 	debits := newSJRDebits(store)
-	run, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	run, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.NoError(t, err)
 
-	_, err = debits.SubmitSEPADebits(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "MOTO-M3-0000000000000000")
+	_, err = debits.SubmitSEPADebits(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "", "MOTO-M3-0000000000000000")
 	require.ErrorIs(t, err, parentbilling.ErrSEPADebitsChanged, "another file is not this run's file")
 	assert.Empty(t, store.submitted)
 
-	after, err := debits.SubmitSEPADebits(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, run.MessageID)
+	after, err := debits.SubmitSEPADebits(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "", run.MessageID)
 	require.NoError(t, err)
 	require.Len(t, store.submitted, 1)
 	assert.ElementsMatch(t, []int64{1, 2, 3}, store.submitted[0])
@@ -341,7 +351,7 @@ func TestSEPADebitSubmissionCollectsOnce(t *testing.T) {
 	assert.Zero(t, after.Count)
 	require.NotNil(t, after.SubmittedAt)
 
-	_, err = debits.SubmitSEPADebits(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, run.MessageID)
+	_, err = debits.SubmitSEPADebits(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "", run.MessageID)
 	require.ErrorIs(t, err, parentbilling.ErrSEPADebitsEmpty, "a second confirmation collects nothing")
 	assert.Len(t, store.submitted, 1)
 }
@@ -351,10 +361,10 @@ func TestSEPADebitSubmissionCollectsOnce(t *testing.T) {
 func TestSEPADebitPastDueIsCollectedTomorrow(t *testing.T) {
 	t.Parallel()
 	store := sjrDebits()
-	before, err := newSJRDebits(store).SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	before, err := newSJRDebits(store).SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.NoError(t, err)
 	store.debits[0].Debit.DueOn = calendar.NewDate(2026, 11, 1)
-	run, err := newSJRDebits(store).SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	run, err := newSJRDebits(store).SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.NoError(t, err)
 	assert.Equal(t, 1, run.PastDue)
 	assert.Equal(t, calendar.NewDate(2026, 11, 21), run.Groups[0].CollectOn)
@@ -367,12 +377,12 @@ func TestSEPADebitFileNeedsTheAccountOfTheTraeger(t *testing.T) {
 	t.Parallel()
 	store := sjrDebits()
 	debits := NewSEPADebits(store, fakeLetterheads{}, prefixCipher{}, func() calendar.Date { return calendar.NewDate(2026, 11, 20) }, time.Now, testpkg.ContentFingerprint)
-	_, err := debits.SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	_, err := debits.SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.ErrorIs(t, err, parentbilling.ErrSEPACreditorAccountMissing)
-	run, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	run, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.NoError(t, err)
 	assert.True(t, run.AccountMissing)
-	_, err = debits.SEPADebitRun(context.Background(), sjrReviewer, "school", 3)
+	_, err = debits.SEPADebitRun(context.Background(), sjrReviewer, "school", 3, "")
 	require.ErrorIs(t, err, parentbilling.ErrSEPADebitRunNotFound)
 }
 
@@ -403,7 +413,7 @@ func TestSEPADebitOneOffCannotBeUsedTwice(t *testing.T) {
 					store.debits[i].MandateLastCollectedOn = &on
 				}
 			}
-			run, err := newSJRDebits(store).SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+			run, err := newSJRDebits(store).SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 			require.NoError(t, err)
 			assert.Zero(t, run.Count, "an already used or ambiguous one-off mandate authorizes no debit")
 			assert.Len(t, run.Left, 2)
@@ -414,14 +424,14 @@ func TestSEPADebitOneOffCannotBeUsedTwice(t *testing.T) {
 func TestSEPADebitFingerprintIncludesCreditorAccount(t *testing.T) {
 	t.Parallel()
 	debits := newSJRDebits(sjrDebits())
-	before, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	before, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.NoError(t, err)
 	debits.letterheads = fakeLetterheads{account: &parentbilling.LetterheadBankAccount{
 		AccountHolder: "Anderer Träger", IBAN: "AT611904300234573201", BIC: "BKAUATWW"}}
-	after, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	after, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.NoError(t, err)
 	assert.NotEqual(t, before.MessageID, after.MessageID)
-	_, err = debits.SubmitSEPADebits(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, before.MessageID)
+	_, err = debits.SubmitSEPADebits(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "", before.MessageID)
 	require.ErrorIs(t, err, parentbilling.ErrSEPADebitsChanged)
 }
 
@@ -430,10 +440,10 @@ func TestSEPADebitConfirmationKeepsDownloadedDates(t *testing.T) {
 	store := sjrDebits()
 	store.debits[0].Debit.DueOn = calendar.NewDate(2026, 11, 1)
 	debits := newSJRDebits(store)
-	run, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	run, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.NoError(t, err)
 	debits.today = func() calendar.Date { return calendar.NewDate(2026, 11, 22) }
-	_, err = debits.SubmitSEPADebits(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, run.MessageID)
+	_, err = debits.SubmitSEPADebits(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "", run.MessageID)
 	require.NoError(t, err, "confirmation after midnight must still identify the file accepted by the bank")
 	require.Len(t, store.collected, 1)
 	assert.Equal(t, calendar.NewDate(2026, 11, 21), store.collected[0][11])
@@ -451,7 +461,7 @@ func TestSEPADebitFileRejectsEmptyConvertedNames(t *testing.T) {
 			} else {
 				store.debits[0] = sealedDebit(1, 11, "RE-2027-0001", 7800, parentbilling.SequenceTypeFirst, "李明", "DE89370400440532013000")
 			}
-			_, err := debits.SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+			_, err := debits.SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 			require.Error(t, err, "a name empty after conversion makes the XML invalid")
 		})
 	}
@@ -460,10 +470,10 @@ func TestSEPADebitFileRejectsEmptyConvertedNames(t *testing.T) {
 func TestSEPADebitFutureDatesKeepTheirIdentityAcrossMidnight(t *testing.T) {
 	t.Parallel()
 	debits := newSJRDebits(sjrDebits())
-	before, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	before, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.NoError(t, err)
 	debits.today = func() calendar.Date { return calendar.NewDate(2026, 11, 21) }
-	after, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	after, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.NoError(t, err)
 	assert.Equal(t, before.MessageID, after.MessageID, "an unchanged collection date must retain the bank's duplicate detection ID")
 	assert.LessOrEqual(t, len(after.MessageID), maxSEPAIdentifier)
@@ -479,7 +489,7 @@ func TestSEPADebitFileGivesEveryDebitItsOwnEndToEndID(t *testing.T) {
 	store := sjrDebits()
 	store.debits[0].Debit.InvoiceNumber = prefix + "-1"
 	store.debits[1].Debit.InvoiceNumber = prefix + "-2"
-	file, err := newSJRDebits(store).SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	file, err := newSJRDebits(store).SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.NoError(t, err)
 	xml := string(file.Data)
 	assert.Contains(t, xml, "<EndToEndId>MOTO-D1</EndToEndId>")
@@ -497,7 +507,7 @@ func TestSEPADebitFileRefusesTwoEqualEndToEndIDs(t *testing.T) {
 	store := sjrDebits()
 	store.debits[0].Debit.InvoiceNumber = strings.Repeat("B", 40)
 	store.debits[1].Debit.InvoiceNumber = "MOTO-D1"
-	_, err := newSJRDebits(store).SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	_, err := newSJRDebits(store).SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.ErrorIs(t, err, parentbilling.ErrSEPAEndToEndDuplicate)
 }
 
@@ -555,13 +565,13 @@ func TestSEPADebitFileCollectsTheInstallmentsOfTheMonth(t *testing.T) {
 		45: noticeRateFor(24, "SJR-RATE-OOFF", parentbilling.MandateOneOff, "DE02120300000000202051"),
 	}
 	debits := newSJRDebits(store)
-	monthly, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3)
+	monthly, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunCare, 3, "")
 	require.NoError(t, err)
 	for _, debit := range append(monthly.Debits, monthly.Left...) {
 		assert.Zero(t, debit.NoticeID, "the file of the monthly run carries no installment")
 	}
 
-	run, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunNotice, 202701)
+	run, err := debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunNotice, 202701, "")
 	require.NoError(t, err)
 	require.Equal(t, 1, run.Count, "the installment with a mandate")
 	assert.Equal(t, int64(6400), run.TotalCents)
@@ -572,7 +582,7 @@ func TestSEPADebitFileCollectsTheInstallmentsOfTheMonth(t *testing.T) {
 	assert.Equal(t, map[string]string{"MB-2027-0042": parentbilling.DebitLeftNoMandate,
 		"MB-2027-0044": parentbilling.DebitLeftOneOffMultiple, "MB-2027-0045": parentbilling.DebitLeftOneOffMultiple}, left)
 
-	file, err := debits.SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunNotice, 202701)
+	file, err := debits.SEPADebitFile(context.Background(), sjrReviewer, parentbilling.DebitRunNotice, 202701, "")
 	require.NoError(t, err)
 	xml := string(file.Data)
 	assert.Contains(t, xml, "<EndToEndId>MOTO-N41-202701</EndToEndId>")
@@ -583,7 +593,7 @@ func TestSEPADebitFileCollectsTheInstallmentsOfTheMonth(t *testing.T) {
 	assert.NotContains(t, xml, "RE-2027-0001", "no invoice of the monthly run")
 	testpkg.AssertXMLMatchesSchema(t, file.Data, filepath.Join("testdata", "sepa", "pain.008.001.08.xsd"))
 
-	_, err = debits.SubmitSEPADebits(context.Background(), sjrReviewer, parentbilling.DebitRunNotice, 202701, run.MessageID)
+	_, err = debits.SubmitSEPADebits(context.Background(), sjrReviewer, parentbilling.DebitRunNotice, 202701, "", run.MessageID)
 	require.NoError(t, err)
 	require.Len(t, store.written, 1, "the confirmation writes the installment it collected")
 	assert.Equal(t, ident.ID(int64(41)), store.written[0].NoticeID)
@@ -592,6 +602,6 @@ func TestSEPADebitFileCollectsTheInstallmentsOfTheMonth(t *testing.T) {
 	assert.Equal(t, parentbilling.SequenceTypeRecurring, store.written[0].SequenceType)
 	assert.Contains(t, store.collected[0], int64(21), "the installment's mandate is collected")
 
-	_, err = debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunNotice, 202713)
+	_, err = debits.SEPADebitRun(context.Background(), sjrReviewer, parentbilling.DebitRunNotice, 202713, "")
 	require.ErrorIs(t, err, parentbilling.ErrSEPADebitRunNotFound, "no thirteenth month")
 }

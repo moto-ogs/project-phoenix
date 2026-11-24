@@ -135,9 +135,9 @@ func TestCareNoticeFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		require.Len(t, monthly[own.contract].CostShares, 1, "InvoicedContracts reads the parts of a monthly invoice")
 		assert.Equal(t, int64(1200), monthly[own.contract].CostShares[0].AmountCents, "only the Träger's own invoice")
 
-		assert.NoError(t, claimInvoiceNumbers(ctx, tx, own.organization, []string{other.noticeNumber}, careNumbersTable),
+		assert.NoError(t, claimInvoiceNumbers(ctx, tx, own.organization, "", []string{other.noticeNumber}, careNumbersTable),
 			"a number of another Träger's notice is free")
-		assert.ErrorIs(t, claimInvoiceNumbers(ctx, tx, own.organization, []string{own.noticeNumber}, careNumbersTable),
+		assert.ErrorIs(t, claimInvoiceNumbers(ctx, tx, own.organization, "", []string{own.noticeNumber}, careNumbersTable),
 			parentbilling.ErrInvoiceNumberTaken, "a monthly invoice never repeats a notice number")
 
 		// The SEPA collection reads the rate of the effective notice (#4697):

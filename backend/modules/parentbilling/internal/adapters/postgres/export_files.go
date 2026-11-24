@@ -33,7 +33,7 @@ func (s *Store) ExportFileNumbers(ctx context.Context, organizationID int64) (pa
 	}
 	var last int64
 	err = db.NewRaw(`SELECT last_number FROM parent_billing.number_range_counters
-		WHERE organization_id = ? AND service = ? AND year = 0`, organizationID, exportFileNumberService).Scan(ctx, &last)
+		WHERE organization_id = ? AND issuer_key = '' AND service = ? AND year = 0`, organizationID, exportFileNumberService).Scan(ctx, &last)
 	if errors.Is(err, sql.ErrNoRows) {
 		return parentbilling.ExportFileNumbers{Next: 1}, nil
 	}
@@ -51,7 +51,7 @@ func (s *Store) StartExportFileNumbers(ctx context.Context, organizationID, star
 		return err
 	}
 	result, err := db.ExecContext(ctx, `INSERT INTO parent_billing.number_range_counters (organization_id, service, year, last_number, updated_at)
-		VALUES (?, ?, 0, ?, ?) ON CONFLICT (organization_id, service, year) DO NOTHING`, organizationID, exportFileNumberService, start-1, s.now())
+		VALUES (?, ?, 0, ?, ?) ON CONFLICT (organization_id, issuer_key, service, year) DO NOTHING`, organizationID, exportFileNumberService, start-1, s.now())
 	if err != nil {
 		return fmt.Errorf("start the export file numbers: %w", err)
 	}
@@ -65,7 +65,7 @@ func (s *Store) StartExportFileNumbers(ctx context.Context, organizationID, star
 // counter row stays locked until the transaction ends: a second download
 // waits, and a rollback returns the number.
 func (s *Store) ReserveExportFileNumber(ctx context.Context, organizationID int64) (int64, error) {
-	return s.ReserveNumbers(ctx, organizationID, exportFileNumberService, 0, 1)
+	return s.ReserveNumbers(ctx, organizationID, "", exportFileNumberService, 0, 1)
 }
 
 type exportMappingRow struct {

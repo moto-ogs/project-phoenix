@@ -9,6 +9,9 @@
 import { useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { SettingsCategory } from "~/components/settings/settings-category";
+import { BillingIssuerChecklists } from "~/components/traeger/billing-issuer-checklist";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { ResponsibilitySchoolsCard } from "~/components/traeger/responsibility-schools-card";
 import { useTraegerResponsibilities } from "~/components/traeger/use-traeger-responsibilities";
 import { useTraegerSettingsSchema } from "~/components/traeger/use-traeger-resources";
@@ -32,7 +35,7 @@ const logger = createLogger({ component: "TraegerResponsibilitiesPage" });
 const SETTINGS_RIGHT = "traeger_settings:manage";
 
 const INFO =
-  "Hier legst du fest, wer Verträge schließt, abrechnet und Personal anstellt: dein Träger, der Schulträger oder die Gemeinde. Die Wahl gilt für neue Verträge. Schon verschickte Verträge bleiben, wie sie sind.";
+  "Hier legst du fest, wer Verträge schließt, abrechnet und Personal anstellt: dein Träger, der Schulträger oder die Gemeinde. Die Wahl gilt für neue Verträge und Schreiben. Schon verschickte bleiben, wie sie sind.";
 
 export default function TraegerResponsibilitiesPage() {
   const { data: session } = useSession();
@@ -42,11 +45,18 @@ export default function TraegerResponsibilitiesPage() {
   const reloadSchools = schools.reload;
   const mutateSchema = schema.mutate;
   // The Träger value changes what every school without its own value shows.
+  const invalidateFamily = useInvalidateFamily();
+  // A body bills or stops billing with the value: its checklist follows.
   const afterWrite = useRefreshAfterWrite(
     "die Anzeige der Zuständigkeiten",
     useCallback(
-      () => Promise.all([mutateSchema(), reloadSchools()]),
-      [mutateSchema, reloadSchools],
+      () =>
+        Promise.all([
+          mutateSchema(),
+          reloadSchools(),
+          invalidateFamily(traegerKeys.billingIssuers()),
+        ]),
+      [mutateSchema, reloadSchools, invalidateFamily],
     ),
   );
   const refresh = afterWrite.refresh;
@@ -126,6 +136,7 @@ export default function TraegerResponsibilitiesPage() {
         />
       ))}
       {schools.data ? <ResponsibilitySchoolsCard schools={rows} /> : null}
+      {schools.data ? <BillingIssuerChecklists schools={rows} /> : null}
     </TenantPage>
   );
 }

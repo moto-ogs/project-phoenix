@@ -171,7 +171,8 @@ func leftReason(entry parentbilling.SealedSEPADebit, amountCents int64, collectO
 }
 
 // load reads the debits of a run and the creditor and plans the file.
-func (d *SEPADebits) load(ctx context.Context, reviewer parentbilling.HolidayReviewer, runKind string, runID int64, sealed, lock bool, day calendar.Date,
+func (d *SEPADebits) load(ctx context.Context, reviewer parentbilling.HolidayReviewer, runKind string, runID int64, issuerKey string,
+	sealed, lock bool, day calendar.Date,
 ) (debitPlan, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return debitPlan{}, err
@@ -187,16 +188,13 @@ func (d *SEPADebits) load(ctx context.Context, reviewer parentbilling.HolidayRev
 	if err != nil {
 		return debitPlan{}, err
 	}
-	plan := d.plan(runKind, runID, append(debits, rates...), day)
-	creditor, err := d.store.SEPACreditor(ctx, reviewer.OrganizationID)
-	if err != nil {
-		return debitPlan{}, err
+	mine, issuers := debitsOfIssuer(append(debits, rates...), issuerKey)
+	if issuerKey != "" && len(mine) == 0 {
+		return debitPlan{}, parentbilling.ErrSEPADebitRunNotFound
 	}
-	if creditor != nil {
-		plan.run.CreditorID = creditor.CreditorID
-	}
-	plan.account, err = d.creditorAccount(ctx, reviewer)
-	if err != nil {
+	plan := d.plan(runKind, runID, mine, day)
+	plan.run.Issuers = issuers
+	if err := d.creditorOf(ctx, reviewer, issuerKey, mine, &plan); err != nil {
 		return debitPlan{}, err
 	}
 	plan.run.MessageID = messageIDOf(runKind, runID, plan)
@@ -205,8 +203,9 @@ func (d *SEPADebits) load(ctx context.Context, reviewer parentbilling.HolidayRev
 
 // SEPADebitRun answers the file of a run without bank data of a family.
 func (d *SEPADebits) SEPADebitRun(ctx context.Context, reviewer parentbilling.HolidayReviewer, runKind string, runID int64,
+	issuerKey string,
 ) (parentbilling.SEPADebitRun, error) {
-	plan, err := d.load(ctx, reviewer, runKind, runID, false, false, d.today())
+	plan, err := d.load(ctx, reviewer, runKind, runID, issuerKey, false, false, d.today())
 	if err != nil {
 		return parentbilling.SEPADebitRun{}, err
 	}
@@ -222,8 +221,9 @@ func (d *SEPADebits) SEPADebitRun(ctx context.Context, reviewer parentbilling.Ho
 // SEPADebitFile opens the account of each debit of the file and writes it.
 // Every mandate whose account it opens gets a reveal in its trail.
 func (d *SEPADebits) SEPADebitFile(ctx context.Context, reviewer parentbilling.HolidayReviewer, runKind string, runID int64,
+	issuerKey string,
 ) (parentbilling.SEPADebitFile, error) {
-	plan, err := d.load(ctx, reviewer, runKind, runID, true, false, d.today())
+	plan, err := d.load(ctx, reviewer, runKind, runID, issuerKey, true, false, d.today())
 	if err != nil {
 		return parentbilling.SEPADebitFile{}, err
 	}
@@ -412,13 +412,13 @@ func debitEndToEndID(debit parentbilling.SEPADebit) string {
 // pending debit ErrSEPADebitsEmpty, so a second confirmation changes
 // nothing.
 func (d *SEPADebits) SubmitSEPADebits(ctx context.Context, reviewer parentbilling.HolidayReviewer, runKind string, runID int64,
-	messageID string,
+	issuerKey, messageID string,
 ) (parentbilling.SEPADebitRun, error) {
 	day, err := debitFileDay(messageID)
 	if err != nil {
 		return parentbilling.SEPADebitRun{}, err
 	}
-	plan, err := d.load(ctx, reviewer, runKind, runID, false, true, day)
+	plan, err := d.load(ctx, reviewer, runKind, runID, issuerKey, false, true, day)
 	if err != nil {
 		return parentbilling.SEPADebitRun{}, err
 	}
@@ -446,7 +446,7 @@ func (d *SEPADebits) SubmitSEPADebits(ctx context.Context, reviewer parentbillin
 	if err := d.store.MarkExportFilesSubmitted(ctx, reviewer.OrganizationID, reviewer.AccountID, runKind, runID, plan.run.MessageID); err != nil {
 		return parentbilling.SEPADebitRun{}, fmt.Errorf("parent billing: record the submission in the export protocol: %w", err)
 	}
-	return d.SEPADebitRun(ctx, reviewer, runKind, runID)
+	return d.SEPADebitRun(ctx, reviewer, runKind, runID, issuerKey)
 }
 
 // submittedDebits are the debits of a confirmed file with their collection

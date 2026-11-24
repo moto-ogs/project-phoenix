@@ -40,7 +40,7 @@ type LetterStore interface {
 	// The numbering and storing of a cancellation or a credit (#4690).
 	LockPeriodBilling(ctx context.Context, organizationID int64, service string, periodID int64) error
 	ListNumberRanges(ctx context.Context, organizationID int64) ([]parentbilling.NumberRange, error)
-	ReserveNumbers(ctx context.Context, organizationID int64, service string, year, count int) (int64, error)
+	ReserveNumbers(ctx context.Context, organizationID int64, issuerKey, service string, year, count int) (int64, error)
 	IssueDocument(ctx context.Context, organizationID int64, run parentbilling.BillingRun, year int, sequence int64, document parentbilling.BillingDocument) (int64, error)
 	ReferencingDocuments(ctx context.Context, organizationID int64, documentIDs []int64) ([]parentbilling.BillingDocument, error)
 }
@@ -86,17 +86,17 @@ func (b *BillingLetters) CreateBillingLetters(ctx context.Context, reviewer pare
 	if existing != nil {
 		return parentbilling.BillingLetters{}, parentbilling.ErrBillingLettersExist
 	}
-	head, documents, err := b.material(ctx, reviewer, run)
+	heads, documents, err := b.material(ctx, reviewer, run)
 	if err != nil {
 		return parentbilling.BillingLetters{}, err
 	}
-	letters, err := b.store.InsertRunLetters(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, input, head.Template.Version)
+	letters, err := b.store.InsertRunLetters(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, input, heads.first.Template.Version)
 	if err != nil {
 		return parentbilling.BillingLetters{}, err
 	}
 	details := map[string]any{"document_count": len(documents)}
 	for _, document := range documents {
-		file, err := b.render(reviewer.OrganizationID, runLetterContent(run, documents, document, input, head))
+		file, err := b.render(reviewer.OrganizationID, runLetterContent(run, documents, document, input, heads.of(document)))
 		if err != nil {
 			return parentbilling.BillingLetters{}, err
 		}
@@ -124,7 +124,7 @@ func (b *BillingLetters) PreviewBillingLetter(ctx context.Context, reviewer pare
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
-	head, documents, err := b.material(ctx, reviewer, run)
+	heads, documents, err := b.material(ctx, reviewer, run)
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
@@ -132,7 +132,7 @@ func (b *BillingLetters) PreviewBillingLetter(ctx context.Context, reviewer pare
 	if !ok {
 		return parentbilling.BillingLetterFile{}, parentbilling.ErrBillingRunEmpty
 	}
-	file, err := b.render(reviewer.OrganizationID, runLetterContent(run, documents, invoice, input, head))
+	file, err := b.render(reviewer.OrganizationID, runLetterContent(run, documents, invoice, input, heads.of(invoice)))
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
@@ -205,34 +205,79 @@ func (b *BillingLetters) releasedRun(ctx context.Context, organizationID, runID 
 	return run, nil
 }
 
-// material reads the layout of the Träger and the issued invoices. A
-// letter asks for payment, so the Träger needs a bank account.
-func (b *BillingLetters) material(ctx context.Context, reviewer parentbilling.HolidayReviewer, run parentbilling.BillingRun) (parentbilling.Letterhead, []parentbilling.BillingDocument, error) {
+// material reads the layout of the Träger and the issued invoices, and the
+// letterhead of every document: the template of its frozen kind (#4688) and
+// the sender, contact and account of its issuer (#8040). A letter asks for
+// payment, so each issuer needs a bank account.
+func (b *BillingLetters) material(ctx context.Context, reviewer parentbilling.HolidayReviewer, run parentbilling.BillingRun) (documentHeads, []parentbilling.BillingDocument, error) {
 	head, err := b.letterheads.Letterhead(ctx, reviewer)
 	if err != nil {
-		return parentbilling.Letterhead{}, nil, fmt.Errorf("parent billing: read letterhead: %w", err)
-	}
-	if head.BankAccount == nil {
-		return parentbilling.Letterhead{}, nil, parentbilling.ErrBankAccountMissing
-	}
-	if missingSender(head) {
-		return parentbilling.Letterhead{}, nil, parentbilling.ErrLetterheadMissing
+		return documentHeads{}, nil, fmt.Errorf("parent billing: read letterhead: %w", err)
 	}
 	documents, err := b.store.RunDocuments(ctx, reviewer.OrganizationID, run.ID.Int64())
 	if err != nil {
-		return parentbilling.Letterhead{}, nil, fmt.Errorf("parent billing: read invoices: %w", err)
+		return documentHeads{}, nil, fmt.Errorf("parent billing: read invoices: %w", err)
+	}
+	// The Träger's own documents print its account; a body prints its own
+	// (#8040).
+	if head.BankAccount == nil && traegerIssues(documentIssuers(documents)) {
+		return documentHeads{}, nil, parentbilling.ErrBankAccountMissing
+	}
+	if missingSender(head) {
+		return documentHeads{}, nil, parentbilling.ErrLetterheadMissing
 	}
 	if len(documents) == 0 {
-		return parentbilling.Letterhead{}, nil, parentbilling.ErrBillingRunEmpty
+		return documentHeads{}, nil, parentbilling.ErrBillingRunEmpty
 	}
 	if err := debtorNumbersForPaymentText(head, documents); err != nil {
-		return parentbilling.Letterhead{}, nil, err
+		return documentHeads{}, nil, err
+	}
+	heads, err := b.kindHeads(ctx, reviewer.OrganizationID, head, documents)
+	if err != nil {
+		return documentHeads{}, nil, err
 	}
 	invoice, _ := firstInvoice(documents)
-	if head, err = withDocumentTemplate(ctx, b.letterheads, reviewer.OrganizationID, head, invoice.DocumentKind, true); err != nil {
-		return parentbilling.Letterhead{}, nil, err
+	heads.first = heads.of(invoice)
+	for _, document := range documents {
+		if heads.of(document).BankAccount == nil {
+			return documentHeads{}, nil, parentbilling.ErrBankAccountMissing
+		}
 	}
-	return head, documents, nil
+	return heads, documents, nil
+}
+
+// kindHeads puts the template of each kind of document of the run on the
+// letterhead. The template of an invoice's kind needs its legal remedy; a
+// kind only a Storno or a Gutschrift carries does not (withDocumentTemplate).
+func (b *BillingLetters) kindHeads(ctx context.Context, organizationID int64, head parentbilling.Letterhead,
+	documents []parentbilling.BillingDocument,
+) (documentHeads, error) {
+	heads := documentHeads{byKind: map[string]parentbilling.Letterhead{}}
+	for _, invoices := range []bool{true, false} {
+		for _, document := range documents {
+			if _, ok := heads.byKind[document.DocumentKind]; ok || (document.Kind == parentbilling.DocumentInvoice) != invoices {
+				continue
+			}
+			kindHead, err := withDocumentTemplate(ctx, b.letterheads, organizationID, head, document.DocumentKind, invoices)
+			if err != nil {
+				return documentHeads{}, err
+			}
+			heads.byKind[document.DocumentKind] = kindHead
+		}
+	}
+	return heads, nil
+}
+
+// documentHeads is the letterhead of each document of a run: per kind of
+// document, then with the issuer of the document. first is the head of the
+// first invoice, whose template version the letters of the run record.
+type documentHeads struct {
+	byKind map[string]parentbilling.Letterhead
+	first  parentbilling.Letterhead
+}
+
+func (h documentHeads) of(document parentbilling.BillingDocument) parentbilling.Letterhead {
+	return issuerLetterhead(h.byKind[document.DocumentKind], document.Issuer)
 }
 
 // withDocumentTemplate puts the Träger's current template of the kind of

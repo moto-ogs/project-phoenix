@@ -84,6 +84,20 @@ export interface SepaDebitRun {
   readonly submitted: readonly SepaDebit[];
   readonly left: readonly SepaDebit[];
   readonly submittedAt: string | null;
+  /**
+   * The body whose file this is (#8040), undefined for the Träger's own.
+   * A Schulträger or a Gemeinde that bills a school itself collects with
+   * its own creditor identifier into its own account.
+   */
+  readonly issuer?: SepaDebitIssuer;
+  /** Every body with debits in this run; each has a file of its own. */
+  readonly issuers?: readonly SepaDebitIssuer[];
+}
+
+/** A body that bills a school itself, named by its creditor identifier. */
+interface SepaDebitIssuer {
+  readonly key: string;
+  readonly name: string;
 }
 
 function debitLeft(left: string | undefined): SepaDebitLeft | null {
@@ -133,17 +147,31 @@ function debitRunFromBackend(
     submitted: (run.submitted ?? []).map(debitFromBackend),
     left: (run.left ?? []).map(debitFromBackend),
     submittedAt: run.submitted_at,
+    issuer: run.issuer
+      ? { key: run.issuer.key, name: run.issuer.name }
+      : undefined,
+    issuers: (run.issuers ?? []).map((issuer) => ({
+      key: issuer.key,
+      name: issuer.name,
+    })),
   };
+}
+
+/** The query of the file of a body; the Träger's own file has none. */
+function issuerQuery(issuerKey: string) {
+  return { issuer: issuerKey === "" ? undefined : issuerKey };
 }
 
 /** The debit file of an issued run, without bank data of a family. */
 export async function fetchSepaDebitRun(
   kind: SepaDebitRunKind,
   runId: string,
+  issuerKey = "",
 ): Promise<SepaDebitRun> {
   return debitRunFromBackend(
     await bffJson("org", "GET /traeger/sepa-debits/{kind}/{id}", {
       params: { kind, id: runId },
+      query: issuerQuery(issuerKey),
     }),
   );
 }
@@ -152,10 +180,12 @@ export async function fetchSepaDebitRun(
 export async function downloadSepaDebitFile(
   kind: SepaDebitRunKind,
   runId: string,
+  issuerKey = "",
 ): Promise<BillingFile> {
   return billingFile(
     bffFile("org", "GET /traeger/sepa-debits/{kind}/{id}/file", {
       params: { kind, id: runId },
+      query: issuerQuery(issuerKey),
     }),
     "lastschrift.xml",
   );
@@ -174,10 +204,12 @@ export async function submitSepaDebits(
   kind: SepaDebitRunKind,
   runId: string,
   messageId: string,
+  issuerKey = "",
 ): Promise<SepaDebitRun> {
   return debitRunFromBackend(
     await bffJson("org", "POST /traeger/sepa-debits/{kind}/{id}/submission", {
       params: { kind, id: runId },
+      query: issuerQuery(issuerKey),
       body: {
         message_id: messageId,
       } satisfies traegerSepaDebitsContract.SEPADebitSubmissionRequest,

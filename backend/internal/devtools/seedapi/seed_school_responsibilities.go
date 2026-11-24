@@ -19,11 +19,13 @@ type seedSchoolResponsibilitiesStep struct{}
 
 func (seedSchoolResponsibilitiesStep) Name() string { return "Seeding the school's Gemeinde" }
 
-// seedSchoolGemeinde is the invented Gemeinde of a demo school.
+// seedSchoolGemeinde is the invented Gemeinde of a demo school, with a
+// creditor identifier of its own: a body never bills with the Träger's
+// (#8040, ADR 0322 point 10).
 var seedSchoolGemeinde = map[string]any{
 	"name": "Gemeinde Bissendorf", "street": "Kirchplatz 1", "postal_code": "49143", "city": "Bissendorf",
 	"contact_name": "Martina Vogt", "contact_phone": "+49 5402 404-0", "contact_email": "ganztag@bissendorf.example.test",
-	"creditor_id": "DE98ZZZ09999999999", "account_holder": "Gemeinde Bissendorf",
+	"creditor_id": "DE82ZZZ00000043210", "account_holder": "Gemeinde Bissendorf",
 	"iban": "DE02 1203 0000 0000 2020 51", "bic": "BYLADEM1001", "bank_name": "Deutsche Kreditbank",
 	"expected_version": "",
 }

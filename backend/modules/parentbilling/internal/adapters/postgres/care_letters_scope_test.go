@@ -146,9 +146,9 @@ func TestCareLettersFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		_, err = store.InsertCareCancellation(ctx, own.organization, other.released, 0, 2029, 9,
 			parentbilling.CareCancellation{InvoiceID: other.invoice, Number: "ST-OWN-9", IssuedOn: september, Reason: "x", TotalCents: -1})
 		assert.ErrorIs(t, err, parentbilling.ErrCareInvoiceNotFound, "InsertCareCancellation of another Träger's invoice")
-		assert.NoError(t, claimInvoiceNumbers(ctx, tx, own.organization, []string{other.number + "-ST"}, careNumbersTable),
+		assert.NoError(t, claimInvoiceNumbers(ctx, tx, own.organization, "", []string{other.number + "-ST"}, careNumbersTable),
 			"another Träger's Storno number is free here")
-		assert.ErrorIs(t, claimInvoiceNumbers(ctx, tx, own.organization, []string{own.number + "-ST"}, holidayNumbersTable),
+		assert.ErrorIs(t, claimInvoiceNumbers(ctx, tx, own.organization, "", []string{own.number + "-ST"}, holidayNumbersTable),
 			parentbilling.ErrInvoiceNumberTaken, "the own Storno number is taken")
 
 		replaced, err := cancelledInvoicesToReplace(ctx, tx, own.organization, september,

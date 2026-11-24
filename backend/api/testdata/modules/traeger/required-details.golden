@@ -1,1 +1,2 @@
 GET /traeger/required-details/ -> basis
+GET /traeger/required-details/issuers -> basis

@@ -5,12 +5,19 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// RequiredDetailStore reads the creditor and the number ranges of a Träger.
+// RequiredDetailStore reads the creditor and the number ranges of a Träger,
+// and for the state of its issuers the kinds of document, the terms, the
+// family deviations and the mandates in force (#8040).
 type RequiredDetailStore interface {
 	SEPACreditor(ctx context.Context, organizationID int64) (*parentbilling.SEPACreditor, error)
 	numberRangeReader
+	DocumentKindStore
+	InvoicePaymentTerms(ctx context.Context, organizationID, careRunID, holidayRunID int64) (
+		[]parentbilling.ServiceTerms, []parentbilling.FamilyBilling, parentbilling.RunDueDates, error)
+	InvoiceDebitTerms(ctx context.Context, organizationID int64) (*parentbilling.SEPACreditor, []parentbilling.SEPAMandate, error)
 }
 
 // RequiredDetails checks the details of a Träger its booked modules need
@@ -18,17 +25,19 @@ type RequiredDetailStore interface {
 type RequiredDetails struct {
 	store   RequiredDetailStore
 	sources parentbilling.RequiredDetailSources
+	today   func() calendar.Date
 }
 
 var _ parentbilling.RequiredDetailsCheck = (*RequiredDetails)(nil)
 
 // NewRequiredDetails builds the check over the store and the root-bound
-// sources.
-func NewRequiredDetails(store RequiredDetailStore, sources parentbilling.RequiredDetailSources) *RequiredDetails {
-	if store == nil || sources.Schools == nil || sources.Modules == nil || sources.Sender == nil || sources.Accounts == nil {
-		panic("parent billing: the required details need the store and their sources")
+// sources; today is the day whose contracts the state of an issuer counts.
+func NewRequiredDetails(store RequiredDetailStore, sources parentbilling.RequiredDetailSources, today func() calendar.Date) *RequiredDetails {
+	if store == nil || sources.Schools == nil || sources.Modules == nil || sources.Sender == nil || sources.Accounts == nil ||
+		sources.Issuers == nil || sources.Contracts == nil || today == nil {
+		panic("parent billing: the required details need the store, their sources and the clock")
 	}
-	return &RequiredDetails{store: store, sources: sources}
+	return &RequiredDetails{store: store, sources: sources, today: today}
 }
 
 // RequiredDetails reads only what a booked module needs.
@@ -110,6 +119,6 @@ func (r requiredDetails) done() parentbilling.RequiredDetails {
 }
 
 func hasPattern(ranges []parentbilling.NumberRange, service string) bool {
-	_, ok := patternOf(ranges, service)
+	_, ok := patternOf(ranges, "", service)
 	return ok
 }

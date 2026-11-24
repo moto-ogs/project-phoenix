@@ -459,6 +459,11 @@ export function BillingRunOverviewCard({
                 {reference}
               </span>
             ) : null}
+            {document.issuerName ? (
+              <span className="text-sm wrap-anywhere text-gray-600">
+                Stellt {document.issuerName} aus
+              </span>
+            ) : null}
           </span>
         );
       },

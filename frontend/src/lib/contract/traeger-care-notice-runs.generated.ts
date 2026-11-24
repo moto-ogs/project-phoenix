@@ -16,12 +16,14 @@ import {
   success,
 } from "./runtime";
 import {
+  BillingIssuerSchema,
   BillingLetterSeriesSchema,
   CareBilledChildSchema,
   CareDuplicateSchema,
   CareJoinedChildSchema,
   CareRecipientSchema,
   CareUnpricedSchema,
+  type BillingIssuer,
   type CareBilledChild,
   type CareDuplicate,
   type CareJoinedChild,
@@ -153,6 +155,7 @@ export interface CareNotice {
   child_first_name: string;
   child_last_name: string;
   recipient: CareRecipient;
+  issuer?: BillingIssuer;
   payment_method: string;
   year: number;
   period_from: string | null;
@@ -178,6 +181,7 @@ export const CareNoticeSchema: z.ZodType<CareNotice, unknown> = object<CareNotic
   child_first_name: str,
   child_last_name: str,
   recipient: CareRecipientSchema,
+  issuer: optional(BillingIssuerSchema),
   payment_method: str,
   year: safeInt,
   period_from: nullable(calendarDate),
@@ -220,6 +224,7 @@ export interface CareNoticeRunDetail {
   fingerprint: string;
   number_pattern: string;
   number_range_set: boolean;
+  number_range_missing_for?: BillingIssuer;
   legal_remedy_missing: boolean;
 }
 
@@ -250,6 +255,7 @@ export const CareNoticeRunDetailSchema: z.ZodType<CareNoticeRunDetail, unknown> 
   fingerprint: str,
   number_pattern: str,
   number_range_set: bool,
+  number_range_missing_for: optional(BillingIssuerSchema),
   legal_remedy_missing: bool,
 });
 

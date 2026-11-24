@@ -18,6 +18,7 @@ import { contributionsConcept } from "~/lib/concepts/contributions";
 import { documentTemplatesConcept } from "~/lib/concepts/documentTemplates";
 import { holidayWeeksConcept } from "~/lib/concepts/holidayWeeks";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
+import { fetchBillingIssuerStatuses } from "~/lib/traeger-billing-issuers-api";
 import {
   fetchDocumentKinds,
   mergeSavedService,
@@ -51,15 +52,27 @@ export default function TraegerDocumentKindsPage() {
     fetchDocumentKinds,
     "die Liste der Dokumentarten",
   );
-  const notice = overview?.services.some(
-    (service) => service.documentKind === "fee_notice",
+  // A Schulträger or a Gemeinde that bills a school itself chooses its own
+  // kinds (#8040); its standard is the fee notice.
+  const issuers = useTraegerResource(
+    canBill ? traegerKeys.billingIssuers() : null,
+    fetchBillingIssuerStatuses,
+    "die Liste der Stellen, die selbst abrechnen",
   );
+  const reloadIssuers = issuers.reload;
+  const notice =
+    overview?.services.some(
+      (service) => service.documentKind === "fee_notice",
+    ) ||
+    issuers.data?.some((status) =>
+      status.services.some((service) => service.documentKind === "fee_notice"),
+    );
 
   return (
     <TenantPage
       title="Dokumentarten"
       info={INFO}
-      error={error}
+      error={error ?? issuers.error}
       loading={loading}
     >
       {canBill ? null : (
@@ -89,6 +102,22 @@ export default function TraegerDocumentKindsPage() {
               }
             />
           ))}
+          {issuers.data?.flatMap((status) =>
+            status.services.map((service) => (
+              <DocumentKindCard
+                key={`${status.issuer.key}-${service.service}`}
+                issuer={status.issuer}
+                service={{ ...service, updatedAt: null }}
+                legalRemedyMissing={!overview.legalRemedySet}
+                concept={
+                  service.service === "holiday"
+                    ? holidayWeeksConcept
+                    : contributionsConcept
+                }
+                onSaved={() => void reloadIssuers()}
+              />
+            )),
+          )}
           <SectionCard
             title="Rechtsbehelfsbelehrung"
             description="Steht auf jedem Gebührenbescheid. Den Text ändert, wer die Rolle „Verwaltung“ hat."

@@ -44,12 +44,18 @@ export function DocumentKindCard({
   service,
   concept,
   legalRemedyMissing = false,
+  issuer,
   onSaved,
 }: Readonly<{
   service: ServiceDocumentKind;
   concept: MotoConcept;
   /** No Rechtsbehelfsbelehrung yet: the fee notice names its precondition. */
   legalRemedyMissing?: boolean;
+  /**
+   * A Schulträger or a Gemeinde that bills a school itself (#8040): its
+   * standard is the fee notice; without it the card is the Träger's.
+   */
+  issuer?: { readonly key: string; readonly name: string };
   onSaved: (overview: DocumentKindOverview) => void;
 }>) {
   // undefined: the stored kind is one this build does not know; no radio
@@ -66,17 +72,22 @@ export function DocumentKindCard({
   useEffect(() => setDraft(service.documentKind), [service.documentKind]);
 
   const changed = draft !== service.documentKind;
-  const standard = service.choices[0];
+  const title = issuer
+    ? `${BILLING_SERVICE_LABEL[service.service]}: ${issuer.name}`
+    : BILLING_SERVICE_LABEL[service.service];
+  const standard = issuer ? "fee_notice" : service.choices[0];
 
   const save = async () => {
     if (!draft) return;
     formErrors.clear();
     setSaving(true);
     try {
-      const overview = await saveDocumentKind(service.service, draft);
-      success(
-        `${BILLING_SERVICE_LABEL[service.service]}: ${DOCUMENT_KIND_LABEL[draft]} ist gespeichert.`,
+      const overview = await saveDocumentKind(
+        service.service,
+        draft,
+        issuer?.key,
       );
+      success(`${title}: ${DOCUMENT_KIND_LABEL[draft]} ist gespeichert.`);
       onSaved(overview);
     } catch (err) {
       logger.error("traeger_document_kind_save_failed", {
@@ -91,8 +102,12 @@ export function DocumentKindCard({
 
   return (
     <SectionCard
-      title={BILLING_SERVICE_LABEL[service.service]}
-      description={SERVICE_DESCRIPTION[service.service]}
+      title={title}
+      description={
+        issuer
+          ? `Gilt für die Schreiben, die ${issuer.name} ausstellt. Nach der Wahl speicherst du unten.`
+          : SERVICE_DESCRIPTION[service.service]
+      }
       concept={concept}
       footer={
         changed ? (
@@ -109,7 +124,7 @@ export function DocumentKindCard({
         <FormErrorAlert message={formErrors.error} />
         <div
           role="radiogroup"
-          aria-label={`Dokumentart für ${BILLING_SERVICE_LABEL[service.service]}`}
+          aria-label={`Dokumentart für ${title}`}
           // items-start: each tile keeps its own height; a chosen short tile
           // does not stretch into a tall empty green block.
           className="grid items-start gap-2 sm:grid-cols-2 xl:grid-cols-3"

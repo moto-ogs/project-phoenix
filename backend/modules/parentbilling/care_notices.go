@@ -150,7 +150,10 @@ type CareNotice struct {
 	Recipient CareRecipient `json:"recipient"`
 	// FamilyEmail is the family of the contract party, whoever pays
 	// (#4689); the sibling rules and caps count by it.
-	FamilyEmail   string                  `json:"-"`
+	FamilyEmail string `json:"-"`
+	// Issuer is the Schulträger or the Gemeinde that issues the notice
+	// (#8040, ADR 0322), nil for the Träger.
+	Issuer        *BillingIssuer          `json:"issuer,omitempty"`
 	PaymentMethod string                  `json:"payment_method"`
 	Year          int                     `json:"year"`
 	PeriodFrom    calendar.Date           `json:"period_from"`
@@ -190,14 +193,17 @@ type CareNoticeRunDetail struct {
 	// an issued invoice or Jahresbescheid of another of their contracts
 	// already bills it (ADR 0158, Nachtrag #7892): the run assesses that
 	// month for none of their contracts.
-	BilledChildren     []CareBilledChild `json:"billed_children"`
-	PreviewCount       int               `json:"preview_count"`
-	PreviewCents       int64             `json:"preview_cents" contract:"number"`
-	PreviewDeltaCents  int64             `json:"preview_delta_cents" contract:"number"`
-	Fingerprint        string            `json:"fingerprint"`
-	NumberPattern      string            `json:"number_pattern"`
-	NumberRangeSet     bool              `json:"number_range_set"`
-	LegalRemedyMissing bool              `json:"legal_remedy_missing"`
+	BilledChildren    []CareBilledChild `json:"billed_children"`
+	PreviewCount      int               `json:"preview_count"`
+	PreviewCents      int64             `json:"preview_cents" contract:"number"`
+	PreviewDeltaCents int64             `json:"preview_delta_cents" contract:"number"`
+	Fingerprint       string            `json:"fingerprint"`
+	NumberPattern     string            `json:"number_pattern"`
+	NumberRangeSet    bool              `json:"number_range_set"`
+	// NumberRangeMissingFor names the issuer without a pattern (#8040);
+	// the release refuses while it is set.
+	NumberRangeMissingFor *BillingIssuer `json:"number_range_missing_for,omitempty"`
+	LegalRemedyMissing    bool           `json:"legal_remedy_missing"`
 }
 
 // CareNoticeLetter is a fee notice with the letterhead of the Träger, as

@@ -120,7 +120,7 @@ func noticeRate(due parentbilling.CareNoticeDue, rate parentbilling.SEPANoticeRa
 		Debit: parentbilling.SEPADebit{ID: ident.ID(-due.NoticeID), ContractID: ident.ID(due.ContractID), RunKind: parentbilling.DebitRunNotice,
 			InvoiceNumber: due.NoticeNumber, RecipientName: rate.RecipientName, AmountCents: due.AmountCents, DueOn: due.DueOn,
 			Status: parentbilling.DebitPending, NoticeID: ident.ID(due.NoticeID), NoticeMonth: due.Month},
-		CreditorNow: rate.CreditorNow, OneOffShared: rate.OneOffClaimed, Holder: rate.Holder, IBAN: rate.IBAN,
+		CreditorNow: rate.CreditorNow, OneOffShared: rate.OneOffClaimed, Holder: rate.Holder, IBAN: rate.IBAN, Issuer: rate.Issuer,
 	}
 	mandate := rate.Mandate
 	if mandate == nil {

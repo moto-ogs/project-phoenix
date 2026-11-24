@@ -317,11 +317,15 @@ func SEPAMandateRouteContracts() []common.RouteContract {
 
 // SEPADebitRouteContracts registers the direct debits of a run (#4697),
 // relative to /traeger/sepa-debits. The PAIN.008 answers a file (#2352).
+// The query issuer names the file of a body that bills a school itself
+// (#8040), by its creditor identifier; without it the file is the Träger's.
 func SEPADebitRouteContracts() []common.RouteContract {
+	issuer := []common.QueryParam{{Name: "issuer", Kind: common.QueryString}}
 	return []common.RouteContract{
-		{Method: "GET", Pattern: "/{kind}/{id}", Portals: traegerPortal, Response: capability.SEPADebitRun{}},
-		{Method: "GET", Pattern: "/{kind}/{id}/file", Portals: traegerPortal, File: true},
-		{Method: "POST", Pattern: "/{kind}/{id}/submission", Portals: traegerPortal, Request: SEPADebitSubmissionRequest{}, Response: capability.SEPADebitRun{}},
+		{Method: "GET", Pattern: "/{kind}/{id}", Portals: traegerPortal, Query: issuer, Response: capability.SEPADebitRun{}},
+		{Method: "GET", Pattern: "/{kind}/{id}/file", Portals: traegerPortal, Query: issuer, File: true},
+		{Method: "POST", Pattern: "/{kind}/{id}/submission", Portals: traegerPortal, Query: issuer, Request: SEPADebitSubmissionRequest{},
+			Response: capability.SEPADebitRun{}},
 	}
 }
 

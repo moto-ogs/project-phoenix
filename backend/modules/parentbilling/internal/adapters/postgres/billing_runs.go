@@ -84,21 +84,6 @@ type runEventRow struct {
 	Details        map[string]any `bun:"details,type:jsonb"`
 }
 
-type numberRangeRow struct {
-	bun.BaseModel `bun:"table:parent_billing.number_ranges"`
-
-	ID             int64     `bun:"id,pk,autoincrement"`
-	OrganizationID int64     `bun:"organization_id"`
-	Service        string    `bun:"service"`
-	Pattern        string    `bun:"pattern"`
-	UpdatedAt      time.Time `bun:"updated_at,nullzero"`
-}
-
-func (r numberRangeRow) numberRange() parentbilling.NumberRange {
-	updatedAt := r.UpdatedAt
-	return parentbilling.NumberRange{Service: r.Service, Pattern: r.Pattern, UpdatedAt: &updatedAt}
-}
-
 type documentRow struct {
 	bun.BaseModel `bun:"table:parent_billing.documents"`
 
@@ -148,6 +133,8 @@ type documentRow struct {
 	DebtorIBANMasked    *string        `bun:"debtor_iban_masked"`
 	SequenceType        *string        `bun:"sequence_type"`
 	DebitGap            *string        `bun:"debit_gap"`
+	IssuerKey           string         `bun:"issuer_key"`
+	Issuer              *issuerRow     `bun:"issuer,type:jsonb"`
 }
 
 type documentPositionRow struct {
@@ -443,61 +430,6 @@ func (s *Store) InsertRunEvent(ctx context.Context, organizationID, runID, accou
 	return err
 }
 
-// ListNumberRanges lists the number ranges of the Träger by service.
-func (s *Store) ListNumberRanges(ctx context.Context, organizationID int64) ([]parentbilling.NumberRange, error) {
-	db, err := traegerDB(ctx, organizationID)
-	if err != nil {
-		return nil, err
-	}
-	var rows []numberRangeRow
-	if err := db.NewSelect().Model(&rows).Where("organization_id = ?", organizationID).OrderExpr("service").Scan(ctx); err != nil {
-		return nil, err
-	}
-	ranges := make([]parentbilling.NumberRange, len(rows))
-	for i, row := range rows {
-		ranges[i] = row.numberRange()
-	}
-	return ranges, nil
-}
-
-// SetNumberRange stores or replaces the pattern of a service.
-func (s *Store) SetNumberRange(ctx context.Context, organizationID int64, service, pattern string) (parentbilling.NumberRange, error) {
-	db, err := traegerDB(ctx, organizationID)
-	if err != nil {
-		return parentbilling.NumberRange{}, err
-	}
-	row := &numberRangeRow{OrganizationID: organizationID, Service: service, Pattern: pattern}
-	if _, err := db.NewInsert().Model(row).
-		On("CONFLICT (organization_id, service) DO UPDATE").Set("pattern = EXCLUDED.pattern").
-		Returning("id, updated_at").Exec(ctx); err != nil {
-		return parentbilling.NumberRange{}, err
-	}
-	return row.numberRange(), nil
-}
-
-// ReserveNumbers raises the counter by count in one statement, from the
-// last issued number or from the start value of the counter when that is
-// larger (#7358). Both stand on the counter row, which the statement holds
-// until the transaction ends: a release that waits for a start value sees
-// it, and a rollback returns the numbers, so the numbers of committed
-// invoices have no gap.
-func (s *Store) ReserveNumbers(ctx context.Context, organizationID int64, service string, year, count int) (int64, error) {
-	db, err := traegerDB(ctx, organizationID)
-	if err != nil {
-		return 0, err
-	}
-	var last int64
-	if err := db.NewRaw(`INSERT INTO parent_billing.number_range_counters AS counter (organization_id, service, year, last_number, updated_at)
-		VALUES (?, ?, ?, ?, ?)
-		ON CONFLICT (organization_id, service, year)
-		DO UPDATE SET last_number = GREATEST(counter.last_number, COALESCE(counter.start_number, 1) - 1) + EXCLUDED.last_number,
-			updated_at = EXCLUDED.updated_at
-		RETURNING last_number`, organizationID, service, year, count, s.now()).Scan(ctx, &last); err != nil {
-		return 0, err
-	}
-	return last - int64(count) + 1, nil
-}
-
 // IssueDocuments stores the invoices of a release with their positions.
 func (s *Store) IssueDocuments(ctx context.Context, organizationID int64, run parentbilling.BillingRun, year int, first int64, documents []parentbilling.BillingDocument) error {
 	ids, err := s.insertDocuments(ctx, organizationID, run, year, first, documents)
@@ -584,8 +516,10 @@ func claimedDocumentRows(ctx context.Context, db bun.IDB, organizationID int64, 
 		rows[i] = issuedDocumentRow(organizationID, run, year, first+int64(i), document)
 		numbers[i] = rows[i].Number
 	}
-	if err := claimInvoiceNumbers(ctx, db, organizationID, numbers, careNumbersTable); err != nil {
-		return nil, err
+	if len(rows) > 0 {
+		if err := claimInvoiceNumbers(ctx, db, organizationID, rows[0].IssuerKey, numbers, careNumbersTable); err != nil {
+			return nil, err
+		}
 	}
 	return rows, nil
 }
@@ -666,6 +600,7 @@ func (s *Store) selectDocuments(ctx context.Context, organizationID int64, where
 			ServiceFrom: row.ServiceFrom, ServiceUntil: row.ServiceUntil, Children: issuedChildren(byDocument[row.ID]),
 			TotalCents: row.TotalCents, RecipientAddress: row.recipientAddress(),
 			Kind: row.Kind, DocumentKind: row.DocumentKind, ReferenceDocumentID: (*ident.ID)(row.ReferenceDocumentID), ReferenceNumber: row.ReferenceNumber, Reason: row.Reason,
+			Issuer: row.Issuer.issuer(),
 		}
 		if row.DebtorNumber != nil {
 			documents[i].DebtorNumber = *row.DebtorNumber
@@ -692,6 +627,7 @@ func issuedDocumentRow(organizationID int64, run parentbilling.BillingRun, year 
 		TotalCents: document.TotalCents, Kind: document.Kind, ReferenceDocumentID: (*int64)(document.ReferenceDocumentID),
 		Reason: document.Reason,
 	}
+	row.IssuerKey, row.Issuer = issuerColumns(document.Issuer)
 	if document.RegistrationChildID != 0 {
 		child := document.RegistrationChildID
 		row.HolidayRegistrationChildID = (*int64)(&child)
