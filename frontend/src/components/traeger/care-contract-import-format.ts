@@ -309,7 +309,7 @@ export function contractsWithoutEmail(result: ContractImportResult): number {
 export const WITHOUT_EMAIL_CONSEQUENCES = [
   "Keine Mail von moto. Rechnungen gibt es nur auf Papier.",
   "Kein Zugang zur Eltern-App.",
-  "Geschwister bleiben getrennte Familien.",
+  "Geschwister sind zuerst getrennte Familien. Du führst sie danach zusammen.",
 ] as const;
 
 /** Ob eine Zeile zum gewählten Filter gehört. */

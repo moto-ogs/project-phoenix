@@ -63,6 +63,7 @@ const LIST_EXPORTS: Readonly<Record<string, string>> = {
   "/tagesmeldung": "page",
   "/uebersicht": "page",
   "/vertraege": "page",
+  "/vertraege/geschwister": "page",
   "/zeitvergleich": "page",
 };
 

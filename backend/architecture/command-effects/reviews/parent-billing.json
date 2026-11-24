@@ -348,7 +348,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to, read in its Träger transaction; the monthly run copies it and records the read in its own trail (#4684). It also marks a draft contract, so the Elternabrechnung refuses a SEPA mandate on a draft, which its discard would take along (#7862).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to, read in its Träger transaction; the monthly run copies it and records the read in its own trail (#4684). It also marks a draft contract, so the Elternabrechnung refuses a SEPA mandate on a draft, which its discard would take along (#7862). Since #7161 (ADR 0319) the binding also copies the leading contract of the family the Träger-Büro joined the contract to, from the same read; the read and its effect are unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
       "target_owner": "care-contract"
@@ -358,7 +358,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to, read in its Träger transaction; the monthly run copies it and records the read in its own trail (#4684). For the billing terms the binding leaves out the contracts that are still drafts (#7770); the read and its effect are unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to, read in its Träger transaction; the monthly run copies it and records the read in its own trail (#4684). For the billing terms the binding leaves out the contracts that are still drafts (#7770); the read and its effect are unchanged. Since #7161 (ADR 0319) the binding also copies the leading contract of the family the Träger-Büro joined the contract to, from the same read; the read and its effect are unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
       "target_owner": "care-contract"
@@ -1076,7 +1076,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application.CareLetterRecipients.Recipients",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to now, read in its Träger transaction before a letter is sent, so a letter only goes to the address that is still the contract's billing party (#4684, ADR 0165). Reviewed again for #7770: the party the target answers also says whether its contract is still a draft; this binding does not read it, and no read or write changes. It also marks a draft contract, so the Elternabrechnung refuses a SEPA mandate on a draft, which its discard would take along (#7862).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to now, read in its Träger transaction before a letter is sent, so a letter only goes to the address that is still the contract's billing party (#4684, ADR 0165). Reviewed again for #7770: the party the target answers also says whether its contract is still a draft; this binding does not read it, and no read or write changes. It also marks a draft contract, so the Elternabrechnung refuses a SEPA mandate on a draft, which its discard would take along (#7862). Since #7161 (ADR 0319) the binding also copies the leading contract of the family the Träger-Büro joined the contract to, from the same read; the read and its effect are unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
       "target_owner": "care-contract"

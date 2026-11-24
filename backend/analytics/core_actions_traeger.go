@@ -263,6 +263,10 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/traeger/contract-child-links/{contractId}/preview"}: notCaptured,
 	{http.MethodPut, "/traeger/contract-child-links/{contractId}"}:          notCaptured,
 	{http.MethodDelete, "/traeger/contract-child-links/{contractId}"}:       notCaptured,
+	// The families of contracts without a mail address (#7161) belong to
+	// the Träger: no school to count them for.
+	{http.MethodPost, "/traeger/contract-families/"}:                   notCaptured,
+	{http.MethodPost, "/traeger/contract-families/{contractId}/leave"}: notCaptured,
 	// The enrollment of the children of imported contracts (#7760, ADR
 	// 0309): a run that enrolled a child or bound a contract is the core
 	// action. A run that found everything done answers changed=false and

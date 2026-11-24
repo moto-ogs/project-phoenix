@@ -524,7 +524,7 @@ func placeMeal(month *careMonth, in careMealInput, position parentbilling.CareMe
 	month.invoices = append(month.invoices, parentbilling.CareInvoice{
 		ContractID: ident.ID(head.ContractID), Service: parentbilling.ServiceCare, SchoolID: ident.ID(head.SchoolID), SchoolName: head.SchoolName,
 		ChildFirstName: head.ChildFirstName, ChildLastName: head.ChildLastName, StudentID: studentOf(versions), Recipient: recipient,
-		FamilyEmail: parentbilling.ContractFamilyKey(recipient.Email, head.ContractID), Reductions: []parentbilling.CareReduction{},
+		FamilyEmail: recipient.FamilyOf(head.ContractID), Reductions: []parentbilling.CareReduction{},
 		Positions: []parentbilling.CarePosition{}, MealPositions: []parentbilling.CareMealPosition{position}, TotalCents: position.AmountCents,
 	})
 }

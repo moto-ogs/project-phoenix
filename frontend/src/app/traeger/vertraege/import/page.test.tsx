@@ -393,7 +393,9 @@ describe("Vertragsimport", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Kein Zugang zur Eltern-App.")).toBeInTheDocument();
     expect(
-      screen.getByText("Geschwister bleiben getrennte Familien."),
+      screen.getByText(
+        "Geschwister sind zuerst getrennte Familien. Du führst sie danach zusammen.",
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
