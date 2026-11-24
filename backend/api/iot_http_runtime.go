@@ -172,7 +172,15 @@ func iotSessionRuntime(now func() time.Time) sessionsAPI.Runtime {
 // renderIoTSessionConflict answers a session conflict in the shared error
 // envelope; the conflict travels as details.
 func renderIoTSessionConflict(w http.ResponseWriter, r *http.Request, message string, info devicescan.ConflictInfoResponse) {
-	common.RenderError(w, r, common.ErrorConflictWithDetails(errors.New(message), common.CodeGeneralBusinessRejection, info))
+	details := map[string]any{
+		"has_conflict":     info.HasConflict,
+		"conflict_message": info.ConflictMessage,
+		"can_override":     info.CanOverride,
+	}
+	if info.ConflictingDevice != nil {
+		details["conflicting_device"] = *info.ConflictingDevice
+	}
+	common.RenderError(w, r, common.ErrorConflictWithDetails(errors.New(message), common.CodeGeneralBusinessRejection, details))
 }
 
 func iotDataRuntime(now func() time.Time) dataAPI.Runtime {
@@ -244,7 +252,11 @@ func renderIoTKioskFailure(w http.ResponseWriter, r *http.Request, status int, c
 		common.RenderError(w, r, common.ErrorNotFoundWithCode(err, code))
 	case http.StatusConflict:
 		if len(details) > 0 {
-			common.RenderError(w, r, common.ErrorConflictWithDetails(err, code, details))
+			payload := make(map[string]any, len(details))
+			for key, value := range details {
+				payload[key] = value
+			}
+			common.RenderError(w, r, common.ErrorConflictWithDetails(err, code, payload))
 			return
 		}
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, code))

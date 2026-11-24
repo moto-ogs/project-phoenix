@@ -234,7 +234,7 @@ func planCheckDetails(err error) (any, bool) {
 		return warning.RefusalDetails(), true
 	}
 	if other, ok := errors.AsType[*workforce.ShiftOtherSiteError](err); ok {
-		return other.RefusalDetails(), true
+		return workforce.ShiftOtherSiteRefusalDetails(other), true
 	}
 	return nil, false
 }

@@ -6,6 +6,7 @@ import {
   fileAnswer,
   instant,
   int64String,
+  int64StringOrNone,
   json,
   multipart,
   noData,
@@ -30,7 +31,7 @@ export interface GuardianReaderResponse {
 }
 
 export const GuardianReaderResponseSchema: z.ZodType<GuardianReaderResponse, unknown> = object<GuardianReaderResponse>({
-  account_id: str,
+  account_id: int64StringOrNone,
   name: str,
   relationship_type: optional(str),
 });

@@ -35,7 +35,7 @@ func Optional(id int64) IDOrNone { return IDOrNone{id: ID(id), present: id != 0}
 
 func (id IDOrNone) IsZero() bool { return !id.present }
 
-func (id IDOrNone) Int64() int64 { return id.id.Int64() }
+func (id IDOrNone) Int64() int64 { return int64(id.id) }
 
 func (id IDOrNone) wireString() string {
 	if id.IsZero() {

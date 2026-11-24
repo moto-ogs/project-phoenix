@@ -388,6 +388,7 @@ export interface OpenRoomStudent {
   sick_since?: string;
   excused: boolean;
   excused_since?: string;
+  photo_version?: string;
   photo_url?: string;
   class_handover?: SupervisionClassHandover;
   activity_name?: string;
@@ -407,6 +408,7 @@ export const OpenRoomStudentSchema: z.ZodType<OpenRoomStudent, unknown> = object
   sick_since: optional(instant),
   excused: bool,
   excused_since: optional(instant),
+  photo_version: optional(str),
   photo_url: optional(str),
   class_handover: optional(SupervisionClassHandoverSchema),
   activity_name: optional(str),
@@ -714,6 +716,7 @@ export interface Visit {
   sick_since?: string;
   excused: boolean;
   excused_since?: string;
+  photo_version?: string;
   photo_url?: string;
   class_handover?: SupervisionClassHandover;
 }
@@ -731,6 +734,7 @@ export const VisitSchema: z.ZodType<Visit, unknown> = object<Visit>({
   sick_since: optional(instant),
   excused: bool,
   excused_since: optional(instant),
+  photo_version: optional(str),
   photo_url: optional(str),
   class_handover: optional(SupervisionClassHandoverSchema),
 });

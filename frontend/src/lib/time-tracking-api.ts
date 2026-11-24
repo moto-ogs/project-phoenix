@@ -4,7 +4,10 @@ import type * as shared from "~/lib/contract/shared.generated";
 import type * as tt from "~/lib/contract/time-tracking.generated";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { ApiError } from "~/lib/api-error";
-import { DeviationReasonDetailsSchema } from "~/lib/contract/problem-details.generated";
+import {
+  DeviationReasonDetailsSchema,
+  type DeviationReasonDetails,
+} from "~/lib/contract/problem-details.generated";
 import {
   knownMailOutcome,
   type MailOutcome,
@@ -46,7 +49,9 @@ export const PLANNED_START_NOT_REACHED_CODE: ErrorCode =
 export const DEVIATION_REASON_REQUIRED_CODE: ErrorCode =
   "iot.deviation_reason_required";
 
-export function readStampDeviation(error: unknown) {
+export function readStampDeviation(
+  error: unknown,
+): Partial<DeviationReasonDetails> | null {
   if (
     !(error instanceof ApiError) ||
     error.code !== DEVIATION_REASON_REQUIRED_CODE

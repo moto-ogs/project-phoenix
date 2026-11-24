@@ -100,7 +100,7 @@ type ShiftOtherSiteDetails struct {
 	School string        `json:"school,omitempty"`
 }
 
-func (e *ShiftOtherSiteError) RefusalDetails() ShiftOtherSiteDetails {
+func ShiftOtherSiteRefusalDetails(e *ShiftOtherSiteError) ShiftOtherSiteDetails {
 	return ShiftOtherSiteDetails{Date: e.Date, Day: e.Date.Format("02.01.2006"), Start: e.StartTime, End: e.EndTime, School: e.SchoolName}
 }
 

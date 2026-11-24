@@ -596,7 +596,7 @@ export const routes = {
     portals: ["org"],
     query: {
       "from": { kind: "date" },
-      "schools": { kind: "string" },
+      "schools": { kind: "id", repeated: true },
       "to": { kind: "date" },
     },
     response: success(SchoolComparisonSchema),
@@ -609,7 +609,7 @@ export const routes = {
       "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
       "from": { kind: "date" },
       "metrics": { kind: "string" },
-      "schools": { kind: "string" },
+      "schools": { kind: "id", repeated: true },
       "to": { kind: "date" },
     },
     response: fileAnswer,
