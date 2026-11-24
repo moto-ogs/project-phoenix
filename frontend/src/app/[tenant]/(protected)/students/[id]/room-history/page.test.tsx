@@ -864,7 +864,8 @@ describe("StudentRoomHistoryPage", () => {
       const list = await screen.findByTestId("data-table-stacked");
       expect(screen.queryByRole("table")).not.toBeInTheDocument();
       const card = within(within(list).getByRole("listitem"));
-      expect(card.getByText(/Montag, 06/)).toBeInTheDocument();
+      // The phone names the day short, as the old day card did.
+      expect(card.getByText("Mo., 06.04.")).toBeInTheDocument();
       expect(card.getByText("7 h 30 min")).toBeInTheDocument();
       expect(card.getByText("Ankunft")).toBeInTheDocument();
       expect(card.getByText("Abmeldung")).toBeInTheDocument();

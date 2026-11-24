@@ -3,6 +3,7 @@ import { LOCATION_COLORS } from "~/lib/location-helper";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import { parseISODate } from "~/lib/date-helpers";
 
 import React, { Suspense, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
@@ -116,6 +117,37 @@ function HistoryCharts({ days }: { readonly days: AttendanceHistoryDay[] }) {
 
 // ─── HistoryTable ──────────────────────────────────────────────────────────
 
+/** "Mo., 06.04." for a "YYYY-MM-DD" day. */
+function formatDayShort(dateKey: string): string {
+  return parseISODate(dateKey).toLocaleDateString("de-DE", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
+/** The day with its status (sick, excused), in the table and on the card. */
+function DayTitle({
+  day,
+  date,
+  wrap = false,
+}: Readonly<{ day: AttendanceHistoryDay; date: string; wrap?: boolean }>) {
+  const statusLabel = day.statusEntries.map((entry) => entry.label).join(", ");
+  return (
+    <div className={`flex items-center gap-2 ${wrap ? "flex-wrap" : ""}`}>
+      <span className="font-medium text-gray-900">{date}</span>
+      {statusLabel && (
+        <StatusColorBadge
+          label={statusLabel}
+          color={LOCATION_COLORS.WARNING}
+          compact
+          wrap
+        />
+      )}
+    </div>
+  );
+}
+
 // On a phone the same rows stack as cards (#7915): the day with its status
 // as title, the duration beside it, arrival, departure and the counts below;
 // the rooms and offerings open with the card's details button.
@@ -124,26 +156,12 @@ const HISTORY_COLUMNS: DataTableColumn<AttendanceHistoryDay>[] = [
     key: "day",
     header: "Tag",
     stacked: "title",
-    render: (day) => {
-      const statusLabel = day.statusEntries
-        .map((entry) => entry.label)
-        .join(", ");
-      return (
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-gray-900">
-            {formatDate(day.date)}
-          </span>
-          {statusLabel && (
-            <StatusColorBadge
-              label={statusLabel}
-              color={LOCATION_COLORS.WARNING}
-              compact
-              wrap
-            />
-          )}
-        </div>
-      );
-    },
+    render: (day) => <DayTitle day={day} date={formatDate(day.date)} />,
+    // The phone card names the day short ("Mo., 06.04."), as the old day
+    // card did: the long form wraps on a phone line (#7915).
+    stackedRender: (day) => (
+      <DayTitle day={day} date={formatDayShort(day.date)} wrap />
+    ),
   },
   {
     key: "arrival",
