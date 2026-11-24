@@ -63,7 +63,7 @@ func NewTemplateAdministration(deps ports.TemplateAdministrationDependencies) (t
 	}
 	templates := newTemplateAdministrationService(deps)
 	return &templateAdministration{templateAdministrationQueries: templates, templates: templates, split: split, templateEnder: split},
-		&templateRosterReview{templates: templates}, nil
+		&templateRosterReview{templates: templates, offerings: deps.OfferingSources}, nil
 }
 
 func (a *templateAdministration) CreateTemplate(ctx context.Context, cmd timetable.CreateTemplateCommand) (*timetable.CreateTemplateResult, error) {

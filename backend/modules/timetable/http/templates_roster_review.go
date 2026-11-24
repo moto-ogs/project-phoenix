@@ -22,7 +22,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type rosterDeviationResponse struct {
@@ -397,11 +396,11 @@ type offeringSourceOutcome struct {
 	changes  []timetable.OfferingSourceWeekdayChange
 }
 
-// fingerprint is the token of the outcome (ADR 0311): the preview answers
-// it, the connection compares it under the recurrence gate. The names and
-// the other offerings only explain it and stay out.
+// fingerprint is the owner's token of the outcome (ADR 0311): the preview
+// answers it, the connection computes and compares it under the recurrence
+// gate.
 func (o offeringSourceOutcome) fingerprint() string {
-	return readstate.Fingerprint([]any{o.from, offeringPreviewSegments(o.segments), o.changes})
+	return timetable.OfferingSourcePreviewFingerprint(o.from, o.segments, o.changes)
 }
 
 func (rs *Resource) offeringSourceOutcome(ctx context.Context, templateID int64, filter timetable.OfferingSourceFilter, from calendar.Date) (offeringSourceOutcome, error) {
@@ -634,9 +633,8 @@ func (rs *Resource) connectTemplateOfferingSource(w http.ResponseWriter, r *http
 	}
 	cmd := timetable.ConnectOfferingSourceCommand{
 		TemplateID: id, OfferingIDs: ident.Int64s(req.OfferingIDs), GradeLevels: req.GradeLevels,
-		SchoolClasses: req.SchoolClasses, EffectiveDate: effectiveDate,
+		SchoolClasses: req.SchoolClasses, EffectiveDate: effectiveDate, ExpectedFingerprint: req.ExpectedFingerprint,
 	}
-	cmd.ConfirmPreview = rs.confirmOfferingPreview(cmd, req.ExpectedFingerprint)
 	result, err := rs.RosterReview.ConnectOfferingSource(r.Context(), cmd)
 	if err != nil {
 		renderRosterReviewError(w, r, err)
@@ -647,23 +645,6 @@ func (rs *Resource) connectTemplateOfferingSource(w http.ResponseWriter, r *http
 	common.Respond(w, r, http.StatusOK, offeringConnectionResponse{
 		TemplateIDs: ident.IDs(result.TemplateIDs), EffectiveDate: result.EffectiveDate.String(),
 	}, "Template connected to offering")
-}
-
-// confirmOfferingPreview compares the confirmed preview with the one the
-// stored state gives now, computed like GET offering-preview. The connection
-// runs it under its recurrence gate, before it writes.
-func (rs *Resource) confirmOfferingPreview(cmd timetable.ConnectOfferingSourceCommand, expected string) func(context.Context) error {
-	return func(ctx context.Context) error {
-		if rs.OfferingSourceOptions == nil {
-			return errors.New("offering source options not wired")
-		}
-		filter := timetable.OfferingSourceFilter{OfferingIDs: cmd.OfferingIDs, GradeLevels: cmd.GradeLevels, SchoolClasses: cmd.SchoolClasses}
-		outcome, err := rs.offeringSourceOutcome(ctx, cmd.TemplateID, filter, cmd.EffectiveDate)
-		if err != nil {
-			return err
-		}
-		return readstate.Check(expected, outcome.fingerprint())
-	}
 }
 
 type manualRosterRequest struct {
