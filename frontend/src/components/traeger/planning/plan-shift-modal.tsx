@@ -15,6 +15,7 @@ import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { EditActions } from "~/components/ui/edit-actions";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { FormModal } from "~/components/ui/form-modal";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
@@ -22,6 +23,8 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useActionOn } from "~/lib/swr/read-draft";
 import {
   changeTraegerShift,
   planTraegerShift,
@@ -117,11 +120,17 @@ export function PlanShiftModal({
   target,
   onClose,
   onSaved,
+  reloadShift,
 }: Readonly<{
   target: PlanShiftTarget | null;
   onClose: () => void;
   /** Nach dem Speichern oder Löschen, mit dem Satz für die Erfolgsmeldung. */
   onSaved: (message: string) => void;
+  /**
+   * Liest die Woche nach einem abgelehnten Ändern neu und gibt dem Dialog
+   * die gespeicherte Schicht (ADR 0311); lehnt ab, wenn das Lesen scheitert.
+   */
+  reloadShift: () => Promise<unknown>;
 }>) {
   const isOpen = target !== null;
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -135,15 +144,35 @@ export function PlanShiftModal({
   const { clear: clearErrors } = errors;
   const { clear: clearDeleteErrors } = deleteErrors;
   const { reset: resetWorkingTime } = workingTime;
+  // Ein Ändern ruht auf der Schicht, die der Dialog zeigt (ADR 0311): es
+  // schickt ihren Stand; nach einer Ablehnung wartet es auf die gespeicherte.
+  const shown = target?.kind === "edit" ? target.shift : undefined;
+  const change = useActionOn(
+    { opening: shown?.id ?? null, data: shown, reload: reloadShift },
+    { token: (shift) => shift.version },
+  );
+  const changeLoadError = useReadDraftLoadError(change, "die Schicht");
+
+  // Fehler gehören zu einer Öffnung: die gespeicherte Schicht nach einer
+  // Ablehnung hat dieselbe Kennung, ihre Meldung bleibt stehen.
+  const openedKey =
+    target === null
+      ? null
+      : target.kind === "edit"
+        ? `edit:${target.shift.id}`
+        : `create:${target.person.recordId}:${target.date}`;
+  useEffect(() => {
+    if (openedKey === null) return;
+    clearErrors();
+    clearDeleteErrors();
+  }, [openedKey, clearErrors, clearDeleteErrors]);
 
   useEffect(() => {
     if (!target) return;
     setDraft(draftOf(target));
     setConfirmDelete(false);
-    clearErrors();
-    clearDeleteErrors();
     resetWorkingTime();
-  }, [target, clearErrors, clearDeleteErrors, resetWorkingTime]);
+  }, [target, resetWorkingTime]);
 
   if (!target || !draft) return null;
 
@@ -178,7 +207,26 @@ export function PlanShiftModal({
     await save.run(async (op) => {
       try {
         if (target.kind === "edit") {
-          await changeTraegerShift(person.recordId, target.shift.id, input);
+          const { shift } = target;
+          const result = await change.submit(() =>
+            changeTraegerShift(person.recordId, shift.id, {
+              ...input,
+              expectedVersion: shift.version,
+            }),
+          );
+          if (!result.ok) {
+            if (result.skipped) return;
+            if (!result.refused) throw result.error;
+            // Seit dem Lesen geändert: die Meldung wartet auf die
+            // gespeicherte Schicht, ohne Wiederholen.
+            if (op.isCurrent()) {
+              await errors.show(result.error, {
+                object: "die Schicht",
+                reload: result.reload,
+              });
+            }
+            return;
+          }
         } else {
           await planTraegerShift(person.recordId, input);
         }
@@ -278,6 +326,11 @@ export function PlanShiftModal({
             void submit();
           }}
         >
+          {/* Das Lesen nach einer Ablehnung scheiterte: Speichern wartet,
+              bis die gespeicherte Schicht da ist. */}
+          {change.status === "loadFailed" && !errors.error ? (
+            <LoadErrorAlert error={changeLoadError} />
+          ) : null}
           <p className="text-sm text-gray-700">
             <span className="font-medium text-gray-900">{name}</span>
             {editing && target.shift.fromSeries

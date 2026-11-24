@@ -23,7 +23,7 @@ type StudentResponse struct {
 	PersonID           ident.ID             `json:"person_id"`
 	FirstName          string               `json:"first_name"`
 	LastName           string               `json:"last_name"`
-	TagID              string               `json:"tag_id,omitempty"`
+	TagID              string               `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"`
 	Birthday           string               `json:"birthday,omitempty" contract:"date"` // Date in YYYY-MM-DD format
 	SchoolClass        string               `json:"school_class"`
 	Location           string               `json:"current_location"`

@@ -13,7 +13,7 @@ import (
 // DeviceResponse represents a device API response
 type DeviceResponse struct {
 	ID             ident.ID  `json:"id"`
-	DeviceID       string    `json:"device_id"`
+	DeviceID       string    `json:"device_id" contract_text:"device provisioning key, not the numeric device row ID"`
 	DeviceType     string    `json:"device_type"`
 	Name           *string   `json:"name,omitempty"`
 	Status         string    `json:"status"`
@@ -36,7 +36,7 @@ type DeviceCreationResponse struct {
 
 // DeviceRequest represents a device creation/update request
 type DeviceRequest struct {
-	DeviceID       string    `json:"device_id"`
+	DeviceID       string    `json:"device_id" contract_text:"device provisioning key, not the numeric device row ID"`
 	DeviceType     string    `json:"device_type"`
 	Name           *string   `json:"name,omitempty"`
 	Status         string    `json:"status,omitempty"`

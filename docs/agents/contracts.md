@@ -8,11 +8,15 @@ repository root unless the section says otherwise.
 
 Go's `RouteContracts()` declares each query key and its kind. Generated
 TypeScript route entries keep those kinds, allowed string values and
-repetition. `bffJson` and `bffFile` use them to type the query: dates are
+repetition. `bffJson`, `bffFile` and `bffFileHref` use them to type the query: dates are
 `YYYY-MM-DD` strings, IDs and text are strings, integers are numbers and
 booleans are booleans. The helpers serialize values to the URL; the catalog
 proxy filters names only and forwards every occurrence of each registered
 key to Go, which validates the values.
+
+Bigint identifiers in portal JSON use Go `ident.ID` and travel as decimal
+strings. Identically named text fields carry a `contract_text` reason.
+Stored JSON and the numeric kiosk contract are separate from this boundary.
 
 Generated JSON body field types remain optional. The Go handler validates
 required fields and field combinations, as recorded in [ADR 0270](../adr/0270-der-vertrag-zwischen-go-und-frontend-entsteht-aus-der-go-registrierung.md).
@@ -835,7 +839,10 @@ All six portals use generated `RouteFile` entries for session calls to Go.
 `frontend/src/server/auth/portals.ts` selects the login, refresh and
 logout contracts, including which bearer logout takes. Login and factor
 routes decode and install the pair server-side, then answer the browser
-through the shared types in `frontend/src/lib/session-bff.ts`. The only
+through the shared types in `frontend/src/lib/session-bff.ts`. Those entries
+use the generated Go request types for the body even when the BFF defines
+a narrower answer. The BFF strips its own `ignore_trusted_device` flag on
+the password step before forwarding. Go validates the incoming fields. The only
 proofs sent before sign-in are limited enrollment or challenge proofs,
 never a session pair. These routes do not enter a catalog proxy allowlist.
 For the call syntax and error handling, see

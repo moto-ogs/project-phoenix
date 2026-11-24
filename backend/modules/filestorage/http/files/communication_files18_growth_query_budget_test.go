@@ -8,6 +8,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"log/slog"
 
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
@@ -56,41 +58,41 @@ func TestCommunicationFiles18PositiveGrowthQueryBudget(t *testing.T) {
 			Last  string `bun:"last_name"`
 		}
 		require.NoError(t, c.db.NewRaw(`SELECT first_name,last_name FROM users.persons WHERE account_id = ?`, id).Scan(testpkg.Ctx(t), &row))
-		people = append(people, filesHTTP.AudienceAccountResponse{AccountID: idStr(id), FirstName: row.First, LastName: row.Last})
+		people = append(people, filesHTTP.AudienceAccountResponse{AccountID: ident.ID(id), FirstName: row.First, LastName: row.Last})
 	}
 	// Shared system roles are part of every tenant audience. Resolve their fixture
 	// IDs by their exact seeded names, not by hardcoded identifiers.
 	for _, name := range []string{"admin", "ag-leitung", "guest", "lehrkraft", "schulverwaltung", "springer", "user"} {
 		var id int64
 		require.NoError(t, c.db.NewRaw(`SELECT id FROM auth.roles WHERE name = ? AND is_system = true`, name).Scan(testpkg.Ctx(t), &id))
-		roles = append(roles, filesHTTP.AudienceRoleResponse{ID: idStr(id), Name: name})
+		roles = append(roles, filesHTTP.AudienceRoleResponse{ID: ident.ID(id), Name: name})
 	}
 	for _, n := range []int{3, 8} {
 		for len(folders) < n {
 			i := len(folders)
 			role := testpkg.CreateTestRoleForTenant(t, c.db, fmt.Sprintf("Growth%02d", i), testpkg.Tenant(t))
-			roles = append(roles, filesHTTP.AudienceRoleResponse{ID: idStr(role.ID), Name: role.Name})
+			roles = append(roles, filesHTTP.AudienceRoleResponse{ID: ident.ID(role.ID), Name: role.Name})
 			if len(people) < n {
 				person, account := testpkg.CreateTestPersonWithAccount(t, c.db, fmt.Sprintf("Person%02d", i), "Growth")
-				people = append(people, filesHTTP.AudienceAccountResponse{AccountID: idStr(account.ID), FirstName: person.FirstName, LastName: person.LastName})
+				people = append(people, filesHTTP.AudienceAccountResponse{AccountID: ident.ID(account.ID), FirstName: person.FirstName, LastName: person.LastName})
 			}
 			rec := c.json("POST", "/api/files/folders", folderPayload{Name: fmt.Sprintf("Folder%02d", i), Visibility: "selected", RoleIDs: []string{idStr(role.ID)}, AccountIDs: []string{idStr(c.member)}}, c.admin, permissions.AdminWildcard)
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 			folder := growthData[filesHTTP.FolderResponse](t, rec.Body.Bytes())
 			require.Equal(t, fmt.Sprintf("Folder%02d", i), folder.Name)
 			require.Equal(t, "selected", folder.Visibility)
-			require.Equal(t, []string{idStr(role.ID)}, folder.RoleIDs)
-			require.Equal(t, []string{idStr(c.member)}, folder.AccountIDs)
+			require.Equal(t, []ident.ID{ident.ID(role.ID)}, folder.RoleIDs)
+			require.Equal(t, []ident.ID{ident.ID(c.member)}, folder.AccountIDs)
 			require.False(t, folder.CreatedAt.IsZero())
 			folders = append(folders, folder)
-			rec = c.upload(mustGrowthID(t, folders[0].ID), fmt.Sprintf("File%02d.pdf", i), fakePDF, c.admin, permissions.AdminWildcard)
+			rec = c.upload(folders[0].ID.Int64(), fmt.Sprintf("File%02d.pdf", i), fakePDF, c.admin, permissions.AdminWildcard)
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 			file := growthData[filesHTTP.FileResponse](t, rec.Body.Bytes())
 			require.Equal(t, fmt.Sprintf("File%02d.pdf", i), file.Filename)
 			require.Equal(t, folders[0].ID, file.FolderID)
 			require.Equal(t, int64(len(fakePDF)), file.SizeBytes)
 			require.Equal(t, "application/pdf", file.ContentType)
-			require.Equal(t, idStr(c.admin), file.UploadedBy)
+			require.Equal(t, idStr(c.admin), file.UploadedBy.String())
 			require.True(t, file.CanDelete)
 			require.False(t, file.UploadedAt.IsZero())
 			files = append([]filesHTTP.FileResponse{file}, files...)
@@ -146,8 +148,8 @@ func TestCommunicationFiles18PositiveGrowthQueryBudget(t *testing.T) {
 			default:
 				got := growthData[filesHTTP.FileListResponse](t, rec.Body.Bytes())
 				want := folders[0]
-				want.RoleIDs = []string{}
-				want.AccountIDs = []string{}
+				want.RoleIDs = []ident.ID{}
+				want.AccountIDs = []ident.ID{}
 				require.Equal(t, want, got.Folder)
 				require.Equal(t, files, got.Files)
 				if n == 3 {
@@ -177,12 +179,4 @@ func TestCommunicationFiles18PositiveGrowthQueryBudget(t *testing.T) {
 			require.Equal(t, http.StatusUnauthorized, unauth.Code, unauth.Body.String())
 		}
 	}
-}
-
-func mustGrowthID(t *testing.T, s string) int64 {
-	t.Helper()
-	var id int64
-	_, err := fmt.Sscan(s, &id)
-	require.NoError(t, err)
-	return id
 }

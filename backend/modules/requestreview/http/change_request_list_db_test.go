@@ -123,7 +123,7 @@ func TestAggregatedChangeRequests_RouterHistoryCursor(t *testing.T) {
 		for _, item := range env.Data.Items {
 			assert.Equal(t, requestreview.TypeMasterData, item.RequestType)
 			require.NotNil(t, item.MasterData)
-			ids = append(ids, item.MasterData.ID)
+			ids = append(ids, item.MasterData.ID.String())
 		}
 		return ids, env.Data.NextCursor
 	}

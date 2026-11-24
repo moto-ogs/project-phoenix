@@ -1,9 +1,11 @@
 package schoolstructurehttp_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -86,4 +88,51 @@ func TestUpdateGroup_TeachersOnlyKeepsRoomAndRefusesStaleVersion(t *testing.T) {
 		"name": group.Name, "room_id": nil, "expected_version": groupVersion(t, router, group.ID, claims),
 	}))
 	assert.Nil(t, groupDetail(t, router, group.ID, claims)["room_id"])
+}
+
+// Offboarding removes a teacher's group assignments without the group row.
+// A group edit that already holds the row waits for that removal before it
+// builds its token and then refuses the stale read, instead of deciding on
+// a teacher set another writer is changing (#7904).
+func TestUpdateGroup_WaitsForAConcurrentTeacherRemoval(t *testing.T) {
+	t.Parallel()
+	tc, router := setupProtectedRouter(t)
+	claims := testutil.DefaultTestClaims()
+	group := testpkg.CreateTestEducationGroup(t, tc.db, "RemovalGroup")
+	leaving := testpkg.CreateTestTeacher(t, tc.db, "Leaving", "Teacher")
+	added := testpkg.CreateTestTeacher(t, tc.db, "Added", "Teacher")
+	testpkg.CreateTestGroupTeacher(t, tc.db, group.ID, leaving.ID)
+	read := groupVersion(t, router, group.ID, claims)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	removal, err := tc.db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	defer func() { _ = removal.Rollback() }()
+	_, err = removal.ExecContext(ctx, `DELETE FROM education.group_teacher WHERE group_id = ? AND teacher_id = ?`, group.ID, leaving.ID)
+	require.NoError(t, err)
+	var pid int
+	require.NoError(t, removal.NewRaw("SELECT pg_backend_pid()").Scan(ctx, &pid))
+
+	done := make(chan int, 1)
+	go func() {
+		rr := testutil.ExecuteRequest(router, newReq(t, http.MethodPut, fmt.Sprintf("/groups/%d", group.ID), map[string]any{
+			"name": group.Name, "teacher_ids": []string{fmt.Sprint(leaving.ID), fmt.Sprint(added.ID)}, "expected_version": read,
+		}, claims, "groups:update"))
+		done <- rr.Code
+	}()
+	require.Eventually(t, func() bool {
+		var waiting bool
+		err := tc.db.NewRaw("SELECT EXISTS (SELECT 1 FROM pg_locks l WHERE NOT l.granted AND ? = ANY(pg_blocking_pids(l.pid)))", pid).Scan(ctx, &waiting)
+		return err == nil && waiting
+	}, 5*time.Second, 10*time.Millisecond, "the edit must wait for the removal's row lock")
+	require.NoError(t, removal.Commit())
+
+	select {
+	case code := <-done:
+		assert.Equal(t, http.StatusConflict, code)
+	case <-ctx.Done():
+		t.Fatal("the edit did not finish after the removal")
+	}
+	assert.Empty(t, groupDetail(t, router, group.ID, claims)["teachers"], "the refused edit adds no teacher")
 }

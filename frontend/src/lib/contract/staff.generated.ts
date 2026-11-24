@@ -164,8 +164,11 @@ export const AbsencePlanGapSchema: z.ZodType<AbsencePlanGap, unknown> = object<A
 
 /** Go: timetracking.absenceRequestResponse */
 export interface absenceRequestResponse {
+  id: string;
   tenant_id: string;
+  staff_id: string;
   absence_type: string;
+  absence_type_id?: string;
   absence_type_label?: string;
   date_start: string;
   date_end: string;
@@ -174,6 +177,7 @@ export interface absenceRequestResponse {
   end_half_day: boolean;
   note?: string;
   status: string;
+  approved_by?: string;
   approved_at?: string;
   created_by: string;
   working_days?: number;
@@ -183,17 +187,16 @@ export interface absenceRequestResponse {
   created_at: string;
   updated_at: string;
   duration_days: number;
-  absence_type_id?: string;
   staff_name: string;
   decided_by_name?: string;
-  id: string;
-  staff_id: string;
-  approved_by?: string;
 }
 
 export const absenceRequestResponseSchema: z.ZodType<absenceRequestResponse, unknown> = object<absenceRequestResponse>({
+  id: int64String,
   tenant_id: int64String,
+  staff_id: int64String,
   absence_type: str,
+  absence_type_id: optional(int64String),
   absence_type_label: optional(str),
   date_start: str,
   date_end: str,
@@ -202,6 +205,7 @@ export const absenceRequestResponseSchema: z.ZodType<absenceRequestResponse, unk
   end_half_day: bool,
   note: optional(str),
   status: str,
+  approved_by: optional(int64String),
   approved_at: optional(instant),
   created_by: int64String,
   working_days: optional(num),
@@ -211,12 +215,8 @@ export const absenceRequestResponseSchema: z.ZodType<absenceRequestResponse, unk
   created_at: instant,
   updated_at: instant,
   duration_days: safeInt,
-  absence_type_id: optional(str),
   staff_name: str,
   decided_by_name: optional(str),
-  id: str,
-  staff_id: str,
-  approved_by: optional(str),
 });
 
 /** Go: staff.StaffWithRoleResponse */
@@ -348,9 +348,9 @@ export interface QualificationEntryResponse {
 }
 
 export const QualificationEntryResponseSchema: z.ZodType<QualificationEntryResponse, unknown> = object<QualificationEntryResponse>({
-  staff_id: str,
-  qualification_id: nullable(str),
-  type_id: nullable(str),
+  staff_id: int64String,
+  qualification_id: nullable(int64String),
+  type_id: nullable(int64String),
   name: str,
   acquired_on: nullable(calendarDate),
   expires_on: nullable(calendarDate),
@@ -371,7 +371,7 @@ export interface QualificationTypeResponse {
 }
 
 export const QualificationTypeResponseSchema: z.ZodType<QualificationTypeResponse, unknown> = object<QualificationTypeResponse>({
-  id: str,
+  id: int64String,
   standard_key: optional(str),
   name: str,
   validity_months: nullable(safeInt),
@@ -396,9 +396,9 @@ export interface QualificationOverviewResponse {
 }
 
 export const QualificationOverviewResponseSchema: z.ZodType<QualificationOverviewResponse, unknown> = object<QualificationOverviewResponse>({
-  staff_id: str,
-  qualification_id: nullable(str),
-  type_id: nullable(str),
+  staff_id: int64String,
+  qualification_id: nullable(int64String),
+  type_id: nullable(int64String),
   name: str,
   acquired_on: nullable(calendarDate),
   expires_on: nullable(calendarDate),
@@ -682,7 +682,7 @@ export interface PayrollWageTypeResponse {
 }
 
 export const PayrollWageTypeResponseSchema: z.ZodType<PayrollWageTypeResponse, unknown> = object<PayrollWageTypeResponse>({
-  id: str,
+  id: int64String,
   name: str,
   number: str,
   unit: str,
@@ -700,13 +700,13 @@ export interface PayrollSurchargeRuleResponse {
 }
 
 export const PayrollSurchargeRuleResponseSchema: z.ZodType<PayrollSurchargeRuleResponse, unknown> = object<PayrollSurchargeRuleResponse>({
-  id: str,
+  id: int64String,
   kind: str,
   window_start_minute: nullable(safeInt),
   window_end_minute: nullable(safeInt),
   rate_type: str,
   rate_hundredths: safeInt,
-  wage_type_id: str,
+  wage_type_id: int64String,
 });
 
 /** Go: timetracking.PayrollAbsenceTypeResponse */
@@ -718,10 +718,10 @@ export interface PayrollAbsenceTypeResponse {
 }
 
 export const PayrollAbsenceTypeResponseSchema: z.ZodType<PayrollAbsenceTypeResponse, unknown> = object<PayrollAbsenceTypeResponse>({
-  id: str,
+  id: int64String,
   name: str,
   is_active: bool,
-  wage_type_id: nullable(str),
+  wage_type_id: nullable(int64String),
 });
 
 /** Go: timetracking.PayrollRulesResponse */
@@ -936,8 +936,8 @@ export interface StammdatenQualificationResponse {
 }
 
 export const StammdatenQualificationResponseSchema: z.ZodType<StammdatenQualificationResponse, unknown> = object<StammdatenQualificationResponse>({
-  id: optional(str),
-  type_id: nullable(str),
+  id: optional(int64String),
+  type_id: nullable(int64String),
   name: str,
   acquired_on: nullable(calendarDate),
   expires_on: nullable(calendarDate),

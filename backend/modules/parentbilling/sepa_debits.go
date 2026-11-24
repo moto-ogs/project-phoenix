@@ -137,7 +137,7 @@ type SEPADebit struct {
 	// then the number of the notice.
 	NoticeID    ident.ID      `json:"notice_id,omitempty"`
 	NoticeMonth calendar.Date `json:"notice_month,omitempty"`
-	MessageID   string        `json:"message_id,omitempty"`
+	MessageID   string        `json:"message_id,omitempty" contract_text:"SEPA payment message identifier"`
 }
 
 // SEPADebitGroup is one batch of the file: the debits of one sequence type
@@ -155,11 +155,11 @@ type SEPADebitGroup struct {
 type SEPADebitRun struct {
 	RunKind        string           `json:"run_kind"`
 	RunID          ident.ID         `json:"run_id"`
-	CreditorID     string           `json:"creditor_id"`
+	CreditorID     string           `json:"creditor_id" contract_text:"SEPA creditor identifier"`
 	CreditorName   string           `json:"creditor_name"`
 	CreditorIBAN   string           `json:"creditor_iban_masked"`
 	AccountMissing bool             `json:"account_missing"`
-	MessageID      string           `json:"message_id"`
+	MessageID      string           `json:"message_id" contract_text:"SEPA payment message identifier"`
 	Count          int              `json:"count"`
 	TotalCents     int64            `json:"total_cents" contract:"number"`
 	Groups         []SEPADebitGroup `json:"groups"`

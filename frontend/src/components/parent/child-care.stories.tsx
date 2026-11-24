@@ -55,6 +55,7 @@ export const SickNote: Story = {
 export const PickupTimeEmpty: Story = {
   render: () => (
     <PickupTimeModal
+      reloadRequests={() => Promise.resolve([])}
       careExceptions={[]}
       careExceptionsLoaded={true}
       pickupChangeEnabled={true}
@@ -68,6 +69,7 @@ export const PickupTimeEmpty: Story = {
 export const PickupTimeWithExistingOverride: Story = {
   render: () => (
     <PickupTimeModal
+      reloadRequests={() => Promise.resolve([])}
       careExceptions={CARE_EXCEPTIONS}
       careExceptionsLoaded={true}
       pickupChangeEnabled={true}
@@ -81,6 +83,7 @@ export const PickupTimeWithExistingOverride: Story = {
 export const PickupTimeNotLoaded: Story = {
   render: () => (
     <PickupTimeModal
+      reloadRequests={() => Promise.resolve([])}
       careExceptions={[]}
       careExceptionsLoaded={false}
       pickupChangeEnabled={true}

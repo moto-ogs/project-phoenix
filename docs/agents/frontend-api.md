@@ -90,7 +90,8 @@ slash is dropped and each parameter encoded.
   All three rules run in `pnpm run check`.
   `scripts/backend-wire-types.mjs`
   finds hand-written wire types by their form (two `snake_case` fields of
-  their own, a generated type imported under another name, a type that only
+  their own in an interface, object alias or union branch, a generated type
+  imported under another name, a type that only
   renames a generated one); its baseline only shrinks.
 - **Tests:** a client test stubs the global `fetch` and mocks the session
   gate with
@@ -101,7 +102,9 @@ slash is dropped and each parameter encoded.
   `bffFile(portal, route, options)` from the same module: the same path,
   portal table and ApiError, resolving to the successful `Response` whose
   body and `Content-Disposition` the caller reads. A link the browser opens
-  itself (`<a href>`) stays a plain URL.
+  itself (`<a href>`, image or navigation) uses `bffFileHref(portal, route,
+  { params, query })`. It accepts only registered GET file keys with their
+  typed path parameters and query. Do not concatenate a BFF file address.
 
 ## Environment & API URLs — Fail Fast, No Defaults
 
@@ -149,7 +152,8 @@ or write a `Backend*` interface for a registered route.
   job fail on a stale file.
 - A portal forwards its backend routes through one catalog proxy, so a new
   backend route needs no pass-through `route.ts`. `app/api/proxy-routes.test.ts`
-  fails on a `route.ts` whose only code is `proxyGet(...)` and its siblings.
+  rejects retired forwarding helpers even in a route with its own code, and
+  checks for hand-built file addresses.
 - In named routes, layouts and server modules, read with
   `contractGet(entry, options)`; write with
   `contractWrite(entry, body, options)`. Import the entry from its
@@ -186,8 +190,9 @@ or write a `Backend*` interface for a registered route.
   another form. Closed value sets are registered in `Enums`.
 - An identifier is an `ident.ID` in every role, a count an `int`; the
   generator rejects a bare `int64` and a response shape that
-  depends on a query parameter. Every answer sends identifiers as strings,
-  and the generated decoder (`int64String`) takes nothing else (ADR 0300).
+  depends on a query parameter. Registered bigint identifiers travel as decimal strings and decode with
+  `int64String` (ADR 0300). An identifier-shaped field that carries genuine
+  text instead stays a string, with a Go `contract_text` reason.
   A sign-in step or another route its portal's route file serves is typed
   too (`RouteFile`) and stays out of every proxy allowlist. The catalog
   lines outside the contract (`Outside`: a device, webhook or protocol
@@ -323,7 +328,7 @@ the portal object its entry module exports (`tenantPortal`, `parentPortal`,
 `post`, `put`, `patch`, `del`) runs inside the portal's `withAuth`, reads the
 session, renews it once on a backend 401 and answers errors through
 `handleApiError`. The helpers that read the session (`backendFetch`,
-`forwardToBackend`, `runWithRenewal`) throw outside that wrapper;
+`runWithRenewal`) throw outside that wrapper;
 `src/app/api/route-session-coverage.test.ts` runs every route and fails on a
 session read outside it. Success answers the backend's envelope
 `{ status: "success", data }` (`successResponse` in
@@ -346,6 +351,20 @@ No route file calls `fetch`; both contract helpers go through `sendBackend`. A f
 backend error as its problem body). An upload the BFF must check before
 forwarding uses `createFileUploadHandler` (`lib/file-upload-wrapper.server.ts`;
 `settings/login-image` checks the image and purges the tenant cache).
+
+Go owns validation of the domain request. Two named adapters check or map
+only what they need to assemble that request:
+
+- Tenant and operator school settings writes check the registry key's path
+  segment before forwarding from `settings/values/[key]`. They keep the
+  existing 400 for malformed segments; Go decides which keys and values are
+  allowed. The named handlers invalidate the tenant cache after a write.
+- `/api/invitations/accept` adapts the browser form to Go's
+  `/auth/invitations/{token}/accept`: it moves the token to the encoded path,
+  maps the camelCase form fields and resolves an owner session only for
+  existing-account acceptance. Go validates the invitation and form values.
+
+Use `problemResponse` directly from `lib/api-response-error.server.ts`.
 
 Read the affected portal's route wrapper before changing a handler; retain the
 affected endpoint's error contract. Logout forwards backend errors unchanged

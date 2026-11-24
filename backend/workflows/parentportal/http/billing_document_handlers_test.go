@@ -64,7 +64,7 @@ func TestListBillingDocuments_AnswersTheAccountsDocuments(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
 	require.Len(t, body.Data, 1)
 	assert.Equal(t, BillingDocumentResponse{
-		ID: "31", OrganizationID: "4", TraegerName: "Ganztag im Quartier e.V.", Kind: "confirmation_letter", Number: "FE-0007",
+		ID: 31, OrganizationID: 4, TraegerName: "Ganztag im Quartier e.V.", Kind: "confirmation_letter", Number: "FE-0007",
 		PeriodName: "Herbstferien 2026", ServiceFrom: timezone.NewDate(2026, 10, 12), ServiceUntil: timezone.NewDate(2026, 10, 16),
 		IssuedOn: timezone.NewDate(2026, 10, 1), TotalCents: 4500, ChildNames: []string{"Felix"}, SentAt: sentAt,
 	}, body.Data[0])

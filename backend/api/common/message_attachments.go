@@ -9,10 +9,10 @@ import (
 	_ "image/png"  // decode the dimensions of PNG attachments
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/api/common/imagemeta"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Shared inbound helpers of the photos and files of chat messages (#6685).
@@ -93,7 +93,7 @@ func ParseMessageAttachment(w http.ResponseWriter, r *http.Request, maxFileSize 
 var ErrTooManyMessageAttachments = errors.New("too many attachments for one message")
 
 // ParseMessageAttachmentIDs reads the attachment_ids of a send request.
-func ParseMessageAttachmentIDs(raw []string, limit int) ([]int64, error) {
+func ParseMessageAttachmentIDs(raw []ident.ID, limit int) ([]int64, error) {
 	if len(raw) == 0 {
 		return nil, nil
 	}
@@ -102,8 +102,8 @@ func ParseMessageAttachmentIDs(raw []string, limit int) ([]int64, error) {
 	}
 	ids := make([]int64, 0, len(raw))
 	for _, value := range raw {
-		id, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
-		if err != nil || id <= 0 {
+		id := value.Int64()
+		if id <= 0 {
 			return nil, errors.New("invalid attachment ID")
 		}
 		ids = append(ids, id)
@@ -113,7 +113,7 @@ func ParseMessageAttachmentIDs(raw []string, limit int) ([]int64, error) {
 
 // ParseMessageSend checks the client key and the attachment_ids of a send
 // request. It answers a malformed request itself and reports false.
-func ParseMessageSend(w http.ResponseWriter, r *http.Request, clientMessageID string, attachmentIDs []string, limit int) ([]int64, bool) {
+func ParseMessageSend(w http.ResponseWriter, r *http.Request, clientMessageID string, attachmentIDs []ident.ID, limit int) ([]int64, bool) {
 	if len(clientMessageID) > 128 {
 		RenderError(w, r, ErrorInvalidRequestMessageWithCodeAndDetails("client_message_id exceeds 128 bytes", CodeGeneralInput, map[string]any{"max_bytes": 128}))
 		return nil, false

@@ -10,7 +10,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	devicefleet "github.com/moto-ogs/project-phoenix/modules/devicefleet"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 const (
@@ -151,7 +150,7 @@ func (rs *Resource) updateDevice(w http.ResponseWriter, r *http.Request) {
 
 	// Lock the live row first: the audit and the history entry then describe
 	// the committed row (#2317, #2321); deviceForEdit says why.
-	device, err := rs.deviceForEdit(r, id, req.ExpectedVersion)
+	device, err := rs.deviceForEdit(r, id)
 	if err != nil {
 		rs.renderError(w, r, err)
 		return
@@ -169,7 +168,7 @@ func (rs *Resource) updateDevice(w http.ResponseWriter, r *http.Request) {
 
 	// Update device
 	// The edit records its material changes in the device's history (#2321).
-	if err := rs.IoTService.UpdateDevice(rs.recordingContext(r), device); err != nil {
+	if err := rs.IoTService.UpdateDevice(rs.recordingContext(r), device, req.ExpectedVersion); err != nil {
 		rs.renderError(w, r, err)
 		return
 	}
@@ -328,15 +327,12 @@ func (rs *Resource) lockDeviceByDeviceID(r *http.Request, deviceID string) (devi
 // deviceForEdit reads the device an edit changes and locks its live row in
 // the same statement. A block committed meanwhile is not overwritten
 // unnoticed (#2317), and a removal committed while the edit waited answers
-// 404 without a history entry from the snapshot before it (#2321). The edit
-// writes back what its editor read: a device changed since that read is
-// refused under this lock (ADR 0311).
-func (rs *Resource) deviceForEdit(r *http.Request, id int64, expectedVersion string) (*devicefleet.Device, error) {
+// 404 without a history entry from the snapshot before it (#2321). The
+// owner's UpdateDevice refuses an edit of an older read under this lock
+// (ADR 0311).
+func (rs *Resource) deviceForEdit(r *http.Request, id int64) (*devicefleet.Device, error) {
 	device, err := rs.lockLiveDevice(r, "UpdateDevice", id)
 	if err != nil {
-		return nil, err
-	}
-	if err := readstate.Check(expectedVersion, devicefleet.DeviceVersion(&device)); err != nil {
 		return nil, err
 	}
 	return &device, nil

@@ -7,7 +7,7 @@ import {
   bffError,
   problemResponse,
   ApiResponseError as ServerApiResponseError,
-} from "./api-helpers.server";
+} from "./api-response-error.server";
 import { suppressConsole } from "~/test/helpers/console";
 
 const { mockNextHeaders } = vi.hoisted(() => ({

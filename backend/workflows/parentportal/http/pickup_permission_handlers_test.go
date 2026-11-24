@@ -97,7 +97,7 @@ func TestPickupChangeResponseExposesCollectorIDOnlyForOwnPendingRequest(t *testi
 	response, err := toPickupChangeRequestResponse(request, 7)
 	require.NoError(t, err)
 	require.NotNil(t, response.PickupPersonGuardianProfileID)
-	assert.Equal(t, "42", *response.PickupPersonGuardianProfileID)
+	assert.Equal(t, "42", response.PickupPersonGuardianProfileID.String())
 
 	request.Status = carerequests.StatusApproved
 	response, err = toPickupChangeRequestResponse(request, 7)

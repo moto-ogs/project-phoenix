@@ -29,7 +29,7 @@ export const ClassListEntryResponseSchema: z.ZodType<ClassListEntryResponse, unk
   last_name: str,
   school_class: str,
   created_at: instant,
-  matching_student_ids: nullable(arr(str)),
+  matching_student_ids: nullable(arr(int64String)),
   version: str,
 });
 

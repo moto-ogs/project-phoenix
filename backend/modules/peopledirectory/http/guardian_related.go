@@ -3,9 +3,9 @@ package users
 import (
 	"context"
 	"net/http"
-	"strconv"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
@@ -25,19 +25,19 @@ type inviteToStudentRequest struct {
 }
 
 type inviteToStudentResponse struct {
-	Outcome           string `json:"outcome"`
-	GuardianProfileID string `json:"guardian_profile_id"`
-	InvitationID      string `json:"invitation_id,omitempty"`
-	ExistingRole      string `json:"existing_role,omitempty"`
-	MailHeld          bool   `json:"mail_held,omitempty"`
+	Outcome           string   `json:"outcome"`
+	GuardianProfileID ident.ID `json:"guardian_profile_id"`
+	InvitationID      ident.ID `json:"invitation_id,omitempty"`
+	ExistingRole      string   `json:"existing_role,omitempty"`
+	MailHeld          bool     `json:"mail_held,omitempty"`
 }
 
 type pendingApprovalResponse struct {
-	ID                string    `json:"id"`
-	GuardianProfileID string    `json:"guardian_profile_id"`
+	ID                ident.ID  `json:"id"`
+	GuardianProfileID ident.ID  `json:"guardian_profile_id"`
 	GuardianName      string    `json:"guardian_name"`
 	GuardianEmail     string    `json:"guardian_email,omitempty"`
-	StudentID         string    `json:"student_id,omitempty"`
+	StudentID         ident.ID  `json:"student_id,omitempty"`
 	StudentName       string    `json:"student_name,omitempty"`
 	RequestedByEmail  string    `json:"requested_by_email,omitempty"`
 	CreatedAt         time.Time `json:"created_at"`
@@ -75,10 +75,10 @@ func (rs *GuardianResource) inviteGuardianToStudent(w http.ResponseWriter, r *ht
 		return
 	}
 	response := inviteToStudentResponse{
-		Outcome: result.Outcome, GuardianProfileID: strconv.FormatInt(result.GuardianProfileID, 10), ExistingRole: result.ExistingRole, MailHeld: result.MailHeld,
+		Outcome: result.Outcome, GuardianProfileID: ident.ID(result.GuardianProfileID), ExistingRole: result.ExistingRole, MailHeld: result.MailHeld,
 	}
 	if result.InvitationID != nil {
-		response.InvitationID = strconv.FormatInt(*result.InvitationID, 10)
+		response.InvitationID = ident.ID(*result.InvitationID)
 	}
 	rs.succeed(w, r, http.StatusCreated, response, "Guardian invited")
 }
@@ -92,12 +92,12 @@ func (rs *GuardianResource) listPendingApprovals(w http.ResponseWriter, r *http.
 	out := make([]pendingApprovalResponse, 0, len(views))
 	for _, view := range views {
 		response := pendingApprovalResponse{
-			ID: strconv.FormatInt(view.InvitationID, 10), GuardianProfileID: strconv.FormatInt(view.GuardianProfileID, 10),
+			ID: ident.ID(view.InvitationID), GuardianProfileID: ident.ID(view.GuardianProfileID),
 			GuardianName: view.GuardianName, GuardianEmail: view.GuardianEmail, StudentName: view.StudentName,
 			RequestedByEmail: view.RequestedByEmail, CreatedAt: view.CreatedAt, ExpiresAt: view.ExpiresAt, RoleUpgrade: view.RoleUpgrade,
 		}
 		if view.StudentID > 0 {
-			response.StudentID = strconv.FormatInt(view.StudentID, 10)
+			response.StudentID = ident.ID(view.StudentID)
 		}
 		out = append(out, response)
 	}

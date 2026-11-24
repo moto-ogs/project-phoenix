@@ -21,8 +21,8 @@ import (
 )
 
 type ChangeRequestResponse struct {
-	ID                string                         `json:"id"`
-	RequestID         string                         `json:"request_id"`
+	ID                ident.ID                       `json:"id"`
+	RequestID         ident.ID                       `json:"request_id"`
 	Origin            string                         `json:"origin"`
 	Status            string                         `json:"status"`
 	ParentNote        *string                        `json:"parent_note,omitempty"`
@@ -41,7 +41,7 @@ type ChangeRequestResponse struct {
 }
 
 type ChangeRequestMessageResponse struct {
-	ID              string    `json:"id"`
+	ID              ident.ID  `json:"id"`
 	AuthorType      string    `json:"author_type"`
 	AuthorAccountID *ident.ID `json:"author_account_id,omitempty"`
 	Body            string    `json:"body"`
@@ -281,8 +281,8 @@ func toChangeRequestResponse(agg *ChangeRequestAggregate, includeRequest bool, i
 	}
 	row := agg.ChangeRequest
 	resp := ChangeRequestResponse{
-		ID:                strconv.FormatInt(row.ID, 10),
-		RequestID:         strconv.FormatInt(row.RequestID, 10),
+		ID:                ident.ID(row.ID),
+		RequestID:         ident.ID(row.RequestID),
 		Origin:            row.Origin,
 		Status:            row.Status,
 		ParentNote:        row.ParentNote,
@@ -300,7 +300,7 @@ func toChangeRequestResponse(agg *ChangeRequestAggregate, includeRequest bool, i
 	}
 	for _, msg := range agg.Messages {
 		out := ChangeRequestMessageResponse{
-			ID:           strconv.FormatInt(msg.ID, 10),
+			ID:           ident.ID(msg.ID),
 			AuthorType:   msg.AuthorType,
 			Body:         msg.Body,
 			InternalOnly: msg.InternalOnly,

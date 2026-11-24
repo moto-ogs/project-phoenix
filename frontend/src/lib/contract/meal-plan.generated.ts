@@ -6,6 +6,7 @@ import {
   calendarDate,
   fileAnswer,
   instant,
+  int64String,
   noData,
   nullable,
   object,
@@ -103,7 +104,7 @@ export const OrderDayResponseSchema: z.ZodType<OrderDayResponse, unknown> = obje
   closed: bool,
   deadline: instant,
   status: str,
-  order_id: optional(str),
+  order_id: optional(int64String),
   confirmed_at: optional(instant),
   total: safeInt,
   classes: nullable(arr(OrderClassCountResponseSchema)),
@@ -134,7 +135,7 @@ export interface DailyParticipantResponse {
 }
 
 export const DailyParticipantResponseSchema: z.ZodType<DailyParticipantResponse, unknown> = object<DailyParticipantResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,

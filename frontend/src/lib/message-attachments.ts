@@ -4,7 +4,7 @@
  * IDs ihrer Uploads. Die Grenzen hier spiegeln das Backend
  * (modules/communication/message_attachments.go), das sie erneut prüft.
  */
-import { bffFile, bffJson, bffPath } from "~/lib/bff-fetch";
+import { bffFile, bffJson, bffFileHref } from "~/lib/bff-fetch";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 
 /** Ein Anhang, wie ihn der Upload und jede Unterhaltung liefert. */
@@ -87,9 +87,15 @@ export const PARENT_MESSAGE_ATTACHMENTS: MessageAttachmentRoutes = {
       errorMessage: UPLOAD_FAILED,
     }),
   downloadUrl: (attachmentId) =>
-    bffPath("tenant", "/api/messages/attachments/{attachmentId}/download", {
-      attachmentId,
-    }),
+    bffFileHref(
+      "tenant",
+      "GET /api/messages/attachments/{attachmentId}/download",
+      {
+        params: {
+          attachmentId,
+        },
+      },
+    ),
   loadFile: (attachmentId) =>
     bffFile("tenant", "GET /api/messages/attachments/{attachmentId}/download", {
       params: { attachmentId },
@@ -106,10 +112,10 @@ export const STAFF_MESSAGE_ATTACHMENTS: MessageAttachmentRoutes = {
       errorMessage: UPLOAD_FAILED,
     }),
   downloadUrl: (attachmentId) =>
-    bffPath(
+    bffFileHref(
       "tenant",
-      "/api/staff-messages/attachments/{attachmentId}/download",
-      { attachmentId },
+      "GET /api/staff-messages/attachments/{attachmentId}/download",
+      { params: { attachmentId } },
     ),
   loadFile: (attachmentId) =>
     bffFile(
@@ -133,10 +139,10 @@ export const SCHOOL_STAFF_MESSAGE_ATTACHMENTS: MessageAttachmentRoutes = {
       errorMessage: UPLOAD_FAILED,
     }),
   downloadUrl: (attachmentId) =>
-    bffPath(
+    bffFileHref(
       "school",
-      "/school-staff-messages/attachments/{attachmentId}/download",
-      { attachmentId },
+      "GET /school-staff-messages/attachments/{attachmentId}/download",
+      { params: { attachmentId } },
     ),
   loadFile: (attachmentId) =>
     bffFile(
@@ -167,10 +173,10 @@ export function guardianMessageAttachments(
         },
       ),
     downloadUrl: (attachmentId) =>
-      bffPath(
+      bffFileHref(
         "parent",
-        "/parent/me/messages/children/{studentId}/attachments/{attachmentId}/download",
-        { studentId, attachmentId },
+        "GET /parent/me/messages/children/{studentId}/attachments/{attachmentId}/download",
+        { params: { studentId, attachmentId } },
       ),
     loadFile: (attachmentId) =>
       bffFile(

@@ -1,5 +1,6 @@
 "use client";
 
+import { publicAGBDocumentURL } from "~/lib/enrollment-legal-blocks";
 import {
   useState,
   useCallback,
@@ -1758,14 +1759,6 @@ function selectedAGBSourceError(mode: LegalAGBDisplayMode): string {
     : "Bitte trage zuerst einen AGB-Text ein.";
 }
 
-function publicLegalDocumentURL(storedURL: string): string {
-  const prefix = "/uploads/enrollment-legal-documents/";
-  if (storedURL.startsWith(prefix)) {
-    return `/api/public/enrollment-legal-documents/${storedURL.slice(prefix.length)}`;
-  }
-  return storedURL;
-}
-
 interface AGBSourceEditorProps {
   readonly mode: LegalAGBDisplayMode;
   readonly onModeChange: (mode: LegalAGBDisplayMode) => void;
@@ -1929,7 +1922,7 @@ function renderAGBSourceEditor({
               {hasDocument && (
                 <ActionHint text="Öffnet die gespeicherte PDF in einem neuen Tab.">
                   <a
-                    href={publicLegalDocumentURL(documentURL)}
+                    href={publicAGBDocumentURL(documentURL)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={buttonClassName({

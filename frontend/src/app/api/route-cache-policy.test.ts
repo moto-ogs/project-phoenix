@@ -26,8 +26,6 @@ const HTTP_METHODS = new Set([
   "OPTIONS",
 ]);
 
-const PORTAL_PROXIES = ["proxyGet", "proxyPost", "proxyPut", "proxyPatch"];
-
 /**
  * Factories that apply the cache policy, keyed by module. Authenticated
  * factories run through a portal object's `withAuth`; the
@@ -57,72 +55,36 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     "createPatchHandler",
     "createDeleteHandler",
     "createDeleteWithBodyHandler",
-    "createTenantJsonProxy",
     "catalogProxy",
     "catalogProxyUnder",
-    "proxyFile",
-    "proxyUpload",
     "tenant.route",
     "tenant.get",
     "tenant.post",
-    "tenant.proxyFile",
-    ...PORTAL_PROXIES,
-    "proxyDelete",
   ],
   "~/lib/operator/route-wrapper.server": [
-    ...PORTAL_PROXIES,
-    "proxyDelete",
     "createOperatorGetHandler",
     "createOperatorPostHandler",
     "createOperatorPutHandler",
     "createOperatorDeleteHandler",
-    "createOperatorJsonProxy",
     "catalogProxy",
     "catalogProxyUnder",
-    "operator.proxyFile",
   ],
   "~/lib/parent/route-wrapper.server": [
-    ...PORTAL_PROXIES,
-    "proxyDelete",
     "catalogProxy",
     "catalogProxyUnder",
-    "createParentJsonProxy",
     "parent.route",
-    "parent.proxyFile",
-    "proxyFile",
-    "proxyUpload",
   ],
   "~/lib/school/route-wrapper.server": [
-    ...PORTAL_PROXIES,
-    "proxyDelete",
     "createSchoolDeleteHandler",
     "catalogProxy",
     "catalogProxyUnder",
     "school.route",
-    // The portal's JSON pass-through, which the tenant, operator and caterer
-    // wrappers export under their own names (#6955).
-    "school.jsonProxy",
-    "proxyFile",
-    "proxyUpload",
   ],
-  "~/lib/caterer/route-wrapper.server": [
-    "proxyGet",
-    "proxyPost",
-    "createCatererJsonProxy",
-    "catalogProxy",
-    "catalogProxyUnder",
-    "caterer.proxyFile",
-  ],
+  "~/lib/caterer/route-wrapper.server": ["catalogProxy", "catalogProxyUnder"],
   "~/lib/traeger/route-wrapper.server": [
-    ...PORTAL_PROXIES,
-    "proxyDelete",
-    "proxyFile",
-    "proxyUpload",
-    // The builder under proxyDelete, for a removal that answers its result.
     "traeger.del",
     "catalogProxy",
     "catalogProxyUnder",
-    "traeger.jsonProxy",
   ],
   "~/lib/auth-proxy.server": ["authStepProxy"],
   "~/lib/file-upload-wrapper.server": ["createFileUploadHandler"],
@@ -413,8 +375,7 @@ describe("private download cache policy (#5119)", () => {
     const missing = routeFiles(API_ROOT).filter((file) => {
       const route = path.relative(API_ROOT, path.dirname(file));
       const text = readFileSync(file, "utf8");
-      const fileFactory =
-        /\b(?:fileResponse|downloadFile|proxyFile)\s*[(<]/.test(text);
+      const fileFactory = /\b(?:fileResponse)\s*[(<]/.test(text);
       const binaryResponse =
         /new (?:Next)?Response\(/.test(text) &&
         /content-disposition|application\/octet-stream|text\/calendar|text\/event-stream|image\//i.test(

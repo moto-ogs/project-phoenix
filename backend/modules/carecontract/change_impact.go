@@ -1,6 +1,9 @@
 package carecontract
 
-import "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+import (
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+)
 
 // ChangeImpact preserves the approval's consequences for the school to review.
 // IDs travel as strings, matching the existing care-plan impact presentation.
@@ -12,14 +15,14 @@ type ChangeImpact struct {
 }
 
 type ChangeAdjustedTemplate struct {
-	TemplateID      string `json:"template_id"`
-	Name            string `json:"name"`
-	RemovedWeekdays []int  `json:"removed_weekdays"`
-	AddedWeekdays   []int  `json:"added_weekdays"`
+	TemplateID      ident.ID `json:"template_id"`
+	Name            string   `json:"name"`
+	RemovedWeekdays []int    `json:"removed_weekdays"`
+	AddedWeekdays   []int    `json:"added_weekdays"`
 }
 
 type ChangeManualTemplate struct {
-	TemplateID string         `json:"template_id"`
+	TemplateID ident.ID       `json:"template_id"`
 	Name       string         `json:"name"`
 	Weekdays   []int          `json:"weekdays"`
 	ViaTarget  bool           `json:"via_target"`

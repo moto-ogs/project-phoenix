@@ -1,7 +1,6 @@
 package presenceprojectionhttp
 
 import (
-	"encoding/json"
 	"math"
 	"net/http/httptest"
 	"testing"
@@ -12,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -463,7 +463,7 @@ func TestAttachUnassignedAttendance_WindowMatchAndNeutralLeftover(t *testing.T) 
 			},
 		},
 		Slots: []attendanceSlotEntry{{
-			InstanceID: "301", Title: "Ganztagsbetreuung",
+			InstanceID: 301, Title: "Ganztagsbetreuung",
 			StartTime: "07:00", EndTime: "16:00",
 			Status: studentpresence.SessionAttendancePresent, CheckedInAt: &reentry,
 		}},
@@ -473,7 +473,7 @@ func TestAttachUnassignedAttendance_WindowMatchAndNeutralLeftover(t *testing.T) 
 	synthetic := days[0].Slots[1]
 	assert.Equal(t, "Ohne Zuordnung", synthetic.Title)
 	assert.Equal(t, "17:30", synthetic.StartTime)
-	assert.Equal(t, "-3", synthetic.InstanceID, "synthetic entries carry the negative sentinel")
+	assert.Equal(t, "-3", synthetic.InstanceID.String(), "synthetic entries carry the negative sentinel")
 	assert.False(t, synthetic.IsUnplanned, "unknown booking situation must not claim 'ungeplant'")
 }
 
@@ -493,7 +493,7 @@ func TestAttachUnassignedAttendance_AbsentSlotDoesNotAbsorbSessions(t *testing.T
 			Sessions:    []attendanceSessionRecord{{CheckInTime: checkIn}},
 		},
 		Slots: []attendanceSlotEntry{{
-			InstanceID: "302", Title: "Morgenbetreuung",
+			InstanceID: 302, Title: "Morgenbetreuung",
 			StartTime: "07:00", EndTime: "12:00",
 			Status: studentpresence.SessionAttendanceAbsent, Substatus: &sick,
 		}},
@@ -515,8 +515,8 @@ func TestAttachUnassignedAttendance_SortsMergedSlotsByDisplayedTime(t *testing.T
 			Sessions:    []attendanceSessionRecord{{CheckInTime: checkIn}},
 		},
 		Slots: []attendanceSlotEntry{
-			{InstanceID: "401", Title: "Mittagsbetreuung", StartTime: "12:00", EndTime: "13:00"},
-			{InstanceID: "402", Title: "Nachmittagsbetreuung", StartTime: "14:00", EndTime: "16:00"},
+			{InstanceID: 401, Title: "Mittagsbetreuung", StartTime: "12:00", EndTime: "13:00"},
+			{InstanceID: 402, Title: "Nachmittagsbetreuung", StartTime: "14:00", EndTime: "16:00"},
 		},
 	}}, true)
 
@@ -582,7 +582,7 @@ func TestAttachUnassignedAttendance_ExpectationKeepsUnassignedRowOnSlotFreeDay(t
 				Sessions:    []attendanceSessionRecord{{CheckInTime: planned}},
 			},
 			Slots: []attendanceSlotEntry{{
-				InstanceID: "501", Title: "Morgenbetreuung",
+				InstanceID: 501, Title: "Morgenbetreuung",
 				StartTime: "07:00", EndTime: "12:00",
 				Status: studentpresence.SessionAttendancePresent, CheckedInAt: &planned,
 			}},
@@ -622,7 +622,7 @@ func TestAttachUnassignedAttendance_WalkInWithoutExpectationKeepsItsSlotOnly(t *
 			},
 		},
 		Slots: []attendanceSlotEntry{{
-			InstanceID: "601", Title: "Spontan-AG",
+			InstanceID: 601, Title: "Spontan-AG",
 			StartTime: "09:00", EndTime: "10:00",
 			Status: studentpresence.SessionAttendancePresent, CheckedInAt: &walkIn,
 			IsUnplanned: true,
@@ -681,7 +681,7 @@ func TestAttachSlotAttendance_SerializesInt64InstanceIDAsDecimalString(t *testin
 	}}, nil, date.BerlinMidnight())
 
 	require.Len(t, days, 1)
-	payload, err := json.Marshal(days[0].Slots[0])
+	payload, err := wire.Marshal(days[0].Slots[0])
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"instance_id":"9223372036854775807","instance_status":"completed","title":"","start_time":"07:00","end_time":"08:00","status":"expected","is_unplanned":false}`, string(payload))
 }

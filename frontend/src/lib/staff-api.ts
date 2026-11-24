@@ -2,7 +2,7 @@
 
 import type * as staffContract from "~/lib/contract/staff.generated";
 import type { RoleForm } from "~/lib/position-title";
-import { bffJson } from "./bff-fetch";
+import { bffFileHref, bffJson } from "./bff-fetch";
 import type { ActiveGroupResponse } from "~/lib/contract/active.generated";
 import { ApiError } from "~/lib/api-error";
 import {
@@ -40,8 +40,10 @@ export function staffAvatarUrl(
 ): string | undefined {
   if (!avatar) return undefined;
   const version = avatar.split("/").pop();
-  const base = `/api/staff/${staffId}/avatar`;
-  return version ? `${base}?v=${encodeURIComponent(version)}` : base;
+  return bffFileHref("tenant", "GET /api/staff/{id}/avatar", {
+    params: { id: staffId },
+    query: { v: version || undefined },
+  });
 }
 
 /**

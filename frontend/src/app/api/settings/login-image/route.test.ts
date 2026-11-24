@@ -30,15 +30,6 @@ vi.mock("next/cache", () => ({
   revalidateTag: mockRevalidateTag,
 }));
 
-vi.mock("~/lib/api-helpers.server", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/api-helpers.server")>()),
-  handleApiError: vi.fn((error: unknown) => {
-    const message =
-      error instanceof Error ? error.message : "Internal Server Error";
-    return new Response(JSON.stringify({ error: message }), { status: 500 });
-  }),
-}));
-
 global.fetch = mockFetch as unknown as typeof fetch;
 
 import { POST, DELETE, GET } from "./route";

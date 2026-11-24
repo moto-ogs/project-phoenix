@@ -8,7 +8,7 @@ import {
 } from "~/lib/contract/route-response.server";
 import { routes } from "~/lib/contract/enrollment.generated";
 import { createLogger } from "~/lib/logger";
-import { problemResponse } from "~/lib/api-helpers.server";
+import { problemResponse } from "~/lib/api-response-error.server";
 import {
   LATE_INVITE_QUERY_PARAM,
   withLateInviteQuery,

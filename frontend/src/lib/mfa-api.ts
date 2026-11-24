@@ -7,6 +7,7 @@ import {
   sessionBff,
   type SessionAuthenticated,
   type SessionBffRoute,
+  type SessionLoginBody,
 } from "./session-bff";
 import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
 
@@ -21,9 +22,9 @@ export type MFAResult = SessionAuthenticated;
  * the operator's start answers 204, `null`). The steps run without a session
  * (`public`); enrollment sends the login's enrollment token as its bearer.
  */
-function postSignInStep<T>(
-  route: SessionBffRoute<T>,
-  body: unknown,
+function postSignInStep<T, B>(
+  route: SessionBffRoute<T, B>,
+  body: NoInfer<B>,
   bearerToken?: string,
 ): Promise<T> {
   return bffJson("public", route, {
@@ -47,7 +48,7 @@ export async function login(
   // Tenant login requires a tenant slug. School login accepts one only for
   // a handoff from the OGS portal, where it pins a multi-school Lehrkraft to
   // the school they selected.
-  const payload =
+  const payload: SessionLoginBody =
     scope === "tenant" || (scope === "school" && params.tenantSlug)
       ? {
           email: params.email,

@@ -150,7 +150,7 @@ func renderMessageAttachmentError(w http.ResponseWriter, r *http.Request, err er
 
 // parseMessageAttachmentIDs reads the attachment_ids of a send request and
 // answers a malformed list itself.
-func parseMessageAttachmentIDs(w http.ResponseWriter, r *http.Request, raw []string) ([]int64, bool) {
+func parseMessageAttachmentIDs(w http.ResponseWriter, r *http.Request, raw []ident.ID) ([]int64, bool) {
 	ids, err := common.ParseMessageAttachmentIDs(raw, maxMessageAttachments)
 	if errors.Is(err, common.ErrTooManyMessageAttachments) {
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeFilesAttachmentLimitReached))

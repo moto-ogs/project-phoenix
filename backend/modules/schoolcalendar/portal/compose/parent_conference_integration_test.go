@@ -63,7 +63,7 @@ func slotStarts(windows []calendarSvc.ParentConferenceWindow) []string {
 }
 
 func offerConference(conferenceID string) func(calendarSvc.ParentConferenceOffer) bool {
-	return func(offer calendarSvc.ParentConferenceOffer) bool { return offer.ID == conferenceID }
+	return func(offer calendarSvc.ParentConferenceOffer) bool { return offer.ID.String() == conferenceID }
 }
 
 func createConference(t *testing.T, db *bun.DB, service calendarSvc.FullService, accountID int64, req calendarSvc.ParentConferenceRequest) *calendarSvc.ParentConferenceView {
@@ -80,7 +80,7 @@ func readConference(t *testing.T, db *bun.DB, service calendarSvc.FullService, a
 	days, err := testpkg.TenantQuery0(t, calendarContext(t, accountID), db, service.ListSchoolParentConferences)
 	require.NoError(t, err)
 	for _, view := range days.Conferences {
-		if view.ID == strconv.FormatInt(id, 10) {
+		if view.ID.String() == strconv.FormatInt(id, 10) {
 			require.NotEmpty(t, view.Version)
 			req.ExpectedVersion = view.Version
 			return req
@@ -92,7 +92,7 @@ func readConference(t *testing.T, db *bun.DB, service calendarSvc.FullService, a
 
 func conferenceID(t *testing.T, view *calendarSvc.ParentConferenceView) int64 {
 	t.Helper()
-	id, err := parseInt64(view.ID)
+	id, err := parseInt64(view.ID.String())
 	require.NoError(t, err)
 	return id
 }
@@ -137,7 +137,7 @@ func TestParentConferenceIntegration_FamilyBooksAFreeSlotThatShowsInBothCalendar
 
 	offers, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), db, service.ListChildParentConferences, conferenceChild(family))
 	require.NoError(t, err)
-	offer := findOffer(t, offers, view.ID)
+	offer := findOffer(t, offers, view.ID.String())
 	assert.Equal(t, []string{"14:00", "14:15", "14:45"}, slotStarts(offer.FreeSlots))
 	assert.Equal(t, "Buch Ung", offer.TeacherName)
 	assert.Nil(t, offer.Booking)
@@ -172,7 +172,7 @@ func TestParentConferenceIntegration_FamilyBooksAFreeSlotThatShowsInBothCalendar
 	schoolEvent := findConferenceEvent(schoolView.Events)
 	require.NotNil(t, schoolEvent, "the booking shows in moto schule")
 	assert.False(t, schoolEvent.CanEdit, "the booking changes through the Sprechtag only")
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, account.ID), db, service.UpdateSchoolAppointment, mustParseInt64(t, *schoolEvent.AppointmentID), schoolTrip("Umgehung", calendarSvc.SchoolParentsNone))
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, account.ID), db, service.UpdateSchoolAppointment, schoolEvent.AppointmentID.Int64(), schoolTrip("Umgehung", calendarSvc.SchoolParentsNone))
 	require.ErrorIs(t, err, calendarSvc.ErrForbidden)
 }
 
@@ -524,12 +524,5 @@ func findConferenceEvent(events []calendarSvc.Event) *calendarSvc.Event {
 }
 
 func parseInt64(value string) (int64, error) { return strconv.ParseInt(value, 10, 64) }
-
-func mustParseInt64(t *testing.T, value string) int64 {
-	t.Helper()
-	id, err := parseInt64(value)
-	require.NoError(t, err)
-	return id
-}
 
 func formatInt64(value int64) string { return strconv.FormatInt(value, 10) }

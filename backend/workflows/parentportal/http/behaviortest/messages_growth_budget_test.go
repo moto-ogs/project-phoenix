@@ -113,7 +113,7 @@ func TestParentPortalMessagesPositiveGrowthQueryBudget(t *testing.T) {
 				var out struct{ Data parentHTTP.ThreadViewResponse }
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
 				require.Len(t, out.Data.Messages, n)
-				require.Equal(t, fmt.Sprint(chain.StudentID), out.Data.StudentID)
+				require.Equal(t, fmt.Sprint(chain.StudentID), out.Data.StudentID.String())
 				for i, row := range out.Data.Messages {
 					require.Equal(t, fmt.Sprintf("message-%02d", i), row.Body)
 					require.NotEmpty(t, row.ID)
@@ -125,7 +125,7 @@ func TestParentPortalMessagesPositiveGrowthQueryBudget(t *testing.T) {
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
 				require.Len(t, out.Data, 2)
 				for _, row := range out.Data {
-					require.Equal(t, fmt.Sprint(chain.StudentID), row.StudentID)
+					require.Equal(t, fmt.Sprint(chain.StudentID), row.StudentID.String())
 					require.Contains(t, []string{"team", "leadership"}, row.Audience)
 				}
 			case "group_thread":

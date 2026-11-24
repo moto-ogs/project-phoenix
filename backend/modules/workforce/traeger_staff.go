@@ -253,7 +253,7 @@ type TraegerStaffLinkPreview struct {
 // after an explicit reveal, as entered.
 type TraegerStaffFinancial struct {
 	IBAN                 *string `json:"iban"`
-	TaxID                *string `json:"tax_id"`
+	TaxID                *string `json:"tax_id" contract_text:"statutory tax identifier"`
 	SocialSecurityNumber *string `json:"social_security_number"`
 	// Version is the section's token over its sealed values (ADR 0311);
 	// a save of the section sends it back.

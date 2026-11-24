@@ -43,6 +43,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // TypeMyActivityStarting is the notification kind of an activity the person
@@ -500,7 +501,7 @@ func collectFreshReminders(
 // twice.
 func notificationTypeFor(
 	reminder StaffReminder,
-	assigned map[string]struct{},
+	assigned map[ident.ID]struct{},
 	consent map[string]struct{},
 ) (string, bool) {
 	notificationType := reminder.Type
@@ -522,9 +523,9 @@ func reminderIdentity(r StaffReminder) string {
 	entity := ""
 	switch {
 	case r.StudentID != nil:
-		entity = "s" + *r.StudentID
+		entity = "s" + r.StudentID.String()
 	case r.ActivityInstanceID != nil:
-		entity = "a" + *r.ActivityInstanceID
+		entity = "a" + r.ActivityInstanceID.String()
 	}
 	return r.Type + "|" + entity + "|" + r.DueTime
 }

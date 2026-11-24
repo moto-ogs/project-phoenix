@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   fileAnswer,
+  int64String,
   nullable,
   object,
   optional,
@@ -22,7 +23,7 @@ export interface weekProtocolMissingChildResponse {
 }
 
 export const weekProtocolMissingChildResponseSchema: z.ZodType<weekProtocolMissingChildResponse, unknown> = object<weekProtocolMissingChildResponse>({
-  student_id: str,
+  student_id: int64String,
   name: str,
   reason: str,
   label: str,
@@ -110,9 +111,9 @@ export interface weekProtocolResponse {
 }
 
 export const weekProtocolResponseSchema: z.ZodType<weekProtocolResponse, unknown> = object<weekProtocolResponse>({
-  id: str,
+  id: int64String,
   scope: str,
-  group_id: optional(str),
+  group_id: optional(int64String),
   group_name: str,
   week_start: str,
   week_end: str,

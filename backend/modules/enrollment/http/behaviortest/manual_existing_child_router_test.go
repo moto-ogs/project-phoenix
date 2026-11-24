@@ -60,7 +60,7 @@ func TestCreateManualApprovedEnrollment_RefusalNamesTheCandidates(t *testing.T) 
 	assert.Equal(t, "enrollment.child_possibly_enrolled", body.Code)
 	require.Len(t, body.Details.Candidates, 1)
 	candidate := body.Details.Candidates[0]
-	assert.Equal(t, strconv.FormatInt(existing.ID, 10), candidate.StudentID)
+	assert.Equal(t, strconv.FormatInt(existing.ID, 10), candidate.StudentID.String())
 	assert.Equal(t, "Mara", candidate.FirstName)
 	assert.Equal(t, "Papier", candidate.LastName)
 	assert.Equal(t, "1a", candidate.SchoolClass)
@@ -116,7 +116,7 @@ func TestCreateManualApprovedEnrollment_NewChildChoiceRechecksTheCandidates(t *t
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 	assert.Equal(t, "enrollment.child_possibly_enrolled", body.Code)
 	require.Len(t, body.Details.Candidates, 1)
-	assert.Equal(t, strconv.FormatInt(existing.ID, 10), body.Details.Candidates[0].StudentID)
+	assert.Equal(t, strconv.FormatInt(existing.ID, 10), body.Details.Candidates[0].StudentID.String())
 	assert.Equal(t, 1, studentsNamed(t, m.db, "Mara", "Papier"))
 }
 

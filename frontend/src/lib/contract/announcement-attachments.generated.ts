@@ -5,6 +5,7 @@ import {
   bool,
   fileAnswer,
   instant,
+  int64String,
   multipart,
   nullable,
   object,
@@ -30,7 +31,7 @@ export interface AttachmentRemovedResponse {
 }
 
 export const AttachmentRemovedResponseSchema: z.ZodType<AttachmentRemovedResponse, unknown> = object<AttachmentRemovedResponse>({
-  announcement_id: str,
+  announcement_id: int64String,
   announcement_version: str,
 });
 
@@ -62,7 +63,7 @@ export interface UploadedAttachmentResponse {
 }
 
 export const UploadedAttachmentResponseSchema: z.ZodType<UploadedAttachmentResponse, unknown> = object<UploadedAttachmentResponse>({
-  id: str,
+  id: int64String,
   filename: str,
   size_bytes: safeInt,
   content_type: str,

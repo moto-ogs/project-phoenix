@@ -54,7 +54,7 @@ export interface AnnouncementAttachmentResponse {
 }
 
 export const AnnouncementAttachmentResponseSchema: z.ZodType<AnnouncementAttachmentResponse, unknown> = object<AnnouncementAttachmentResponse>({
-  id: str,
+  id: int64String,
   filename: str,
   size_bytes: safeInt,
   content_type: str,
@@ -300,7 +300,7 @@ export interface PasskeyCredentialSummary {
 }
 
 export const PasskeyCredentialSummarySchema: z.ZodType<PasskeyCredentialSummary, unknown> = object<PasskeyCredentialSummary>({
-  id: str,
+  id: int64String,
   name: str,
   created_at: instant,
   last_used_at: optional(instant),
@@ -557,7 +557,7 @@ export interface AppointmentAttendee {
 }
 
 export const AppointmentAttendeeSchema: z.ZodType<AppointmentAttendee, unknown> = object<AppointmentAttendee>({
-  recipient_id: str,
+  recipient_id: int64String,
   recipient_type: str,
   name: str,
   status: str,
@@ -575,7 +575,7 @@ export interface AppointmentOverview {
 }
 
 export const AppointmentOverviewSchema: z.ZodType<AppointmentOverview, unknown> = object<AppointmentOverview>({
-  appointment_id: str,
+  appointment_id: int64String,
   occurrence_date: optional(calendarDate),
   delivery_mode: str,
   overview_visibility: str,
@@ -621,13 +621,13 @@ export interface Event {
 export const EventSchema: z.ZodType<Event, unknown> = object<Event>({
   id: str,
   source: str,
-  appointment_id: optional(str),
+  appointment_id: optional(int64String),
   occurrence_date: optional(str),
-  timetable_id: optional(str),
+  timetable_id: optional(int64String),
   activity_type: optional(str),
-  student_id: optional(str),
+  student_id: optional(int64String),
   student_name: optional(str),
-  tenant_id: optional(str),
+  tenant_id: optional(int64String),
   school_name: optional(str),
   title: str,
   description: optional(str),
@@ -643,8 +643,8 @@ export const EventSchema: z.ZodType<Event, unknown> = object<Event>({
   response_status: optional(str),
   series_response_status: optional(str),
   has_occurrence_answers: optional(bool),
-  recipient_id: optional(str),
-  organizer_staff_id: optional(str),
+  recipient_id: optional(int64String),
+  organizer_staff_id: optional(int64String),
   can_respond: bool,
   can_edit: bool,
   can_view_overview: bool,
@@ -720,7 +720,7 @@ export interface FormAttachment {
 }
 
 export const FormAttachmentSchema: z.ZodType<FormAttachment, unknown> = object<FormAttachment>({
-  document_id: optional(str),
+  document_id: optional(int64String),
   label: str,
   document_url: str,
 });
@@ -809,9 +809,9 @@ export interface CareOfferingResponse {
 }
 
 export const CareOfferingResponseSchema: z.ZodType<CareOfferingResponse, unknown> = object<CareOfferingResponse>({
-  id: str,
-  phase_id: str,
-  activity_group_id: optional(str),
+  id: int64String,
+  phase_id: int64String,
+  activity_group_id: optional(int64String),
   name: str,
   description: optional(str),
   days_of_week_mode: str,
@@ -825,7 +825,7 @@ export const CareOfferingResponseSchema: z.ZodType<CareOfferingResponse, unknown
   counts_as_care: bool,
   auto_add_grade_levels: nullable(arr(safeInt)),
   availability_rule: optional(CareOfferingAvailabilityRuleSchema),
-  auto_add_trigger_offering_ids: nullable(arr(str)),
+  auto_add_trigger_offering_ids: nullable(arr(int64String)),
   sort_order: safeInt,
   selection_group: optional(str),
   selection_rule: str,
@@ -853,7 +853,7 @@ export interface PublicPhase {
 }
 
 export const PublicPhaseSchema: z.ZodType<PublicPhase, unknown> = object<PublicPhase>({
-  id: str,
+  id: int64String,
   name: str,
   kind: str,
   service_start_date: str,
@@ -971,7 +971,7 @@ export interface PublicFormSchemaResponse {
 }
 
 export const PublicFormSchemaResponseSchema: z.ZodType<PublicFormSchemaResponse, unknown> = object<PublicFormSchemaResponse>({
-  id: str,
+  id: int64String,
   version: safeInt,
   fields: nullable(arr(FormFieldSchema)),
   core_requirements: nullable(rec(bool)),
@@ -1134,7 +1134,7 @@ export interface GuardianProfileChild {
 }
 
 export const GuardianProfileChildSchema: z.ZodType<GuardianProfileChild, unknown> = object<GuardianProfileChild>({
-  id: str,
+  id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
@@ -1319,7 +1319,7 @@ export interface SubmitEnrollmentResponse {
 }
 
 export const SubmitEnrollmentResponseSchema: z.ZodType<SubmitEnrollmentResponse, unknown> = object<SubmitEnrollmentResponse>({
-  request_id: str,
+  request_id: int64String,
   status_url: str,
   warnings: optional(arr(SubmissionWarningSchema)),
 });
@@ -1991,7 +1991,7 @@ export interface targetResponse {
 
 export const targetResponseSchema: z.ZodType<targetResponse, unknown> = object<targetResponse>({
   target_type: str,
-  ref_id: optional(str),
+  ref_id: optional(int64String),
   ref_text: optional(str),
 });
 
@@ -2002,7 +2002,7 @@ export interface optionResponse {
 }
 
 export const optionResponseSchema: z.ZodType<optionResponse, unknown> = object<optionResponse>({
-  id: str,
+  id: int64String,
   label: str,
 });
 
@@ -2042,7 +2042,7 @@ export interface announcementResponse {
 }
 
 export const announcementResponseSchema: z.ZodType<announcementResponse, unknown> = object<announcementResponse>({
-  id: str,
+  id: int64String,
   title: str,
   body: str,
   priority: str,
@@ -2098,7 +2098,7 @@ export interface declarationSignerResponse {
 }
 
 export const declarationSignerResponseSchema: z.ZodType<declarationSignerResponse, unknown> = object<declarationSignerResponse>({
-  account_id: str,
+  account_id: int64String,
   first_name: str,
   last_name: str,
   action: nullable(str),
@@ -2133,7 +2133,7 @@ export interface declarationVersionResponse {
 }
 
 export const declarationVersionResponseSchema: z.ZodType<declarationVersionResponse, unknown> = object<declarationVersionResponse>({
-  id: str,
+  id: int64String,
   version_no: safeInt,
   title: str,
   body: str,
@@ -2154,7 +2154,7 @@ export interface declarationChildResponse {
 }
 
 export const declarationChildResponseSchema: z.ZodType<declarationChildResponse, unknown> = object<declarationChildResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
@@ -2197,8 +2197,8 @@ export interface declarationSubmissionResponse {
 }
 
 export const declarationSubmissionResponseSchema: z.ZodType<declarationSubmissionResponse, unknown> = object<declarationSubmissionResponse>({
-  id: str,
-  student_id: str,
+  id: int64String,
+  student_id: int64String,
   student_first_name: str,
   student_last_name: str,
   signer_name: str,
@@ -2291,7 +2291,7 @@ export interface letterChildResponse {
 }
 
 export const letterChildResponseSchema: z.ZodType<letterChildResponse, unknown> = object<letterChildResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
@@ -2366,7 +2366,7 @@ export interface recipientResponse {
 }
 
 export const recipientResponseSchema: z.ZodType<recipientResponse, unknown> = object<recipientResponse>({
-  account_id: str,
+  account_id: int64String,
   first_name: str,
   last_name: str,
   status: str,
@@ -2435,7 +2435,7 @@ export interface letterPreviewChild {
 }
 
 export const letterPreviewChildSchema: z.ZodType<letterPreviewChild, unknown> = object<letterPreviewChild>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
@@ -2588,7 +2588,7 @@ export interface InboxThreadResponse {
 }
 
 export const InboxThreadResponseSchema: z.ZodType<InboxThreadResponse, unknown> = object<InboxThreadResponse>({
-  thread_id: str,
+  thread_id: int64String,
   counterpart_account_id: str,
   counterpart_name: str,
   counterpart_role_kind: str,
@@ -2610,7 +2610,7 @@ export interface RecipientResponse {
 }
 
 export const RecipientResponseSchema: z.ZodType<RecipientResponse, unknown> = object<RecipientResponse>({
-  account_id: str,
+  account_id: int64String,
   name: str,
   role_kind: str,
 });
@@ -2626,7 +2626,7 @@ export interface AttachmentResponse {
 }
 
 export const AttachmentResponseSchema: z.ZodType<AttachmentResponse, unknown> = object<AttachmentResponse>({
-  id: str,
+  id: int64String,
   filename: str,
   size_bytes: safeInt,
   content_type: str,
@@ -2650,13 +2650,13 @@ export interface MessageResponse {
 
 export const MessageResponseSchema: z.ZodType<MessageResponse, unknown> = object<MessageResponse>({
   client_message_id: optional(str),
-  id: str,
-  sender_account_id: str,
+  id: int64String,
+  sender_account_id: int64String,
   sender_name: str,
   body: str,
   created_at: str,
-  read_by_account_ids: optional(arr(str)),
-  eligible_reader_account_ids: optional(arr(str)),
+  read_by_account_ids: optional(arr(int64String)),
+  eligible_reader_account_ids: optional(arr(int64String)),
   reader_count: safeInt,
   attachments: optional(arr(AttachmentResponseSchema)),
 });
@@ -2669,7 +2669,7 @@ export interface MemberResponse {
 }
 
 export const MemberResponseSchema: z.ZodType<MemberResponse, unknown> = object<MemberResponse>({
-  account_id: str,
+  account_id: int64String,
   name: str,
   role_kind: str,
 });
@@ -2688,7 +2688,7 @@ export interface ThreadDetailResponse {
 }
 
 export const ThreadDetailResponseSchema: z.ZodType<ThreadDetailResponse, unknown> = object<ThreadDetailResponse>({
-  thread_id: str,
+  thread_id: int64String,
   counterpart_account_id: str,
   counterpart_name: str,
   counterpart_role_kind: str,
@@ -2739,7 +2739,7 @@ export interface noticeResponse {
 }
 
 export const noticeResponseSchema: z.ZodType<noticeResponse, unknown> = object<noticeResponse>({
-  id: str,
+  id: int64String,
   title: str,
   body: str,
   priority: str,
@@ -3183,6 +3183,7 @@ export interface StaffAbsenceResponse {
   tenant_id: string;
   staff_id: string;
   absence_type: string;
+  absence_type_id?: string;
   absence_type_label?: string;
   date_start: string;
   date_end: string;
@@ -3201,7 +3202,6 @@ export interface StaffAbsenceResponse {
   created_at: string;
   updated_at: string;
   duration_days: number;
-  absence_type_id?: string;
 }
 
 export const StaffAbsenceResponseSchema: z.ZodType<StaffAbsenceResponse, unknown> = object<StaffAbsenceResponse>({
@@ -3209,6 +3209,7 @@ export const StaffAbsenceResponseSchema: z.ZodType<StaffAbsenceResponse, unknown
   tenant_id: int64String,
   staff_id: int64String,
   absence_type: str,
+  absence_type_id: optional(int64String),
   absence_type_label: optional(str),
   date_start: str,
   date_end: str,
@@ -3227,7 +3228,6 @@ export const StaffAbsenceResponseSchema: z.ZodType<StaffAbsenceResponse, unknown
   created_at: instant,
   updated_at: instant,
   duration_days: safeInt,
-  absence_type_id: optional(str),
 });
 
 /** Go: workforce.WorkSessionBreak */
@@ -3684,6 +3684,7 @@ export interface ShiftResponse {
   origin_shift_id?: string;
   series_occurrence_date?: string;
   planned_by_traeger?: boolean;
+  version?: string;
 }
 
 export const ShiftResponseSchema: z.ZodType<ShiftResponse, unknown> = object<ShiftResponse>({
@@ -3704,6 +3705,7 @@ export const ShiftResponseSchema: z.ZodType<ShiftResponse, unknown> = object<Shi
   origin_shift_id: optional(int64String),
   series_occurrence_date: optional(str),
   planned_by_traeger: optional(bool),
+  version: optional(str),
 });
 
 /** Go: schoolcalendar.Holiday */

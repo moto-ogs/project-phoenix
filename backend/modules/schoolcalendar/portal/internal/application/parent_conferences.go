@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
@@ -312,7 +314,7 @@ func buildParentConferenceView(conference *schoolcalendar.ParentConference, book
 		booked[booking.SlotStartMinute] = booking
 	}
 	view := ParentConferenceView{
-		ID: formatID(conference.ID), SchoolClass: conference.SchoolClass, Date: conference.Date,
+		ID: ident.ID(conference.ID), SchoolClass: conference.SchoolClass, Date: conference.Date,
 		StartTime: formatClockMinute(conference.StartMinute), EndTime: formatClockMinute(conference.EndMinute),
 		SlotMinutes: conference.SlotMinutes, Breaks: parentConferenceBreakWindows(conference.Breaks),
 		Location: conference.Location, BookedCount: len(bookings), Slots: []portal.ParentConferenceSlot{},
@@ -324,7 +326,7 @@ func buildParentConferenceView(conference *schoolcalendar.ParentConference, book
 		}
 		if booking, ok := booked[start]; ok {
 			slot.Booked = true
-			studentID := formatID(booking.StudentID)
+			studentID := ident.ID(booking.StudentID)
 			slot.StudentID = &studentID
 			if name, ok := names[booking.StudentID]; ok {
 				slot.StudentName = &name

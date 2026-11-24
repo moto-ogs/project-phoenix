@@ -4,9 +4,8 @@ status: accepted
 
 # Der Vertrag zwischen Go und Frontend entsteht aus der Go-Registrierung
 
-> Ergänzt am 2026-11-21 durch [ADR 0300](0300-kennungen-sind-ein-typ-des-shared-kernel.md):
-> `common.ID` ist ein Alias auf `sharedkernel/ident.ID`, und Phase 2 geht
-> abweichend von Punkt 5 in einem Deploy hinaus.
+> Die geltende HTTP-Form der Kennungen steht in Punkt 4 und 5 und in
+> [ADR 0300](0300-kennungen-sind-ein-typ-des-shared-kernel.md).
 
 Entscheidung vom 2026-11-16 für
 [#2342](https://github.com/moto-ogs/project-phoenix/issues/2342), Schritt A von
@@ -58,17 +57,18 @@ scheiterte der zweite Weg an zwei Stellen:
    Eine Variante bekommt ein Unterscheidungsfeld oder einen eigenen Pfad.
    `GET /api/students/` ist die eine benannte Altlast; ihre Liste im Generator
    darf nur schrumpfen.
-4. **Kennungen angemeldeter Routen tragen einen eigenen Go-Typ** (`common.ID`),
-   der sich als JSON-String schreibt und String oder Zahl liest. `int64` ist
-   auch ein Zähler, und `,string` wirkt nicht auf Slices; weder Feldname noch
-   Tag können die Sperre tragen. Ein nacktes `int64` auf einem angemeldeten
-   Typ lehnt der Generator ab, außer das Feld steht in der Liste der
-   numerischen Alt-Kennungen. Auch diese Liste darf nur schrumpfen.
-   `common.JSONID` behält seine Wire-Form.
-5. **Eine Route, die heute Zahlen sendet, wechselt in zwei Releases.** Zuerst
-   nimmt der erzeugte Decoder String und Zahl und gibt einen String heraus.
-   Einen Release später sendet Go Strings. Eine Zahl jenseits von 2^53 lässt
-   den Decoder scheitern, statt eine gerundete Kennung herauszugeben.
+4. **Bigint-Kennungen angemeldeter Routen tragen den Go-Typ `ident.ID`.**
+   HTTP-Antworten schreiben Kennungen über `wire.Marshal` als
+   Dezimalstrings. Der Generator lehnt ein nacktes `int64` auf einem
+   angemeldeten Typ ab; ein Betrag oder Zähler nennt `contract:"number"`.
+   Text unter einem Kennungsnamen trägt `contract_text:"Begründung"`; im
+   Modell steht der Grund als `text_reason`.
+5. **HTTP-Anfragen lesen Kennungen als Dezimalstrings.** Der erzeugte
+   Request-Typ schreibt Strings, der erzeugte Antwortdecoder nimmt nur
+   Strings. Gespeichertes JSON verwendet weiterhin die Standardkodierung
+   und bleibt numerisch. Die Geräte-API bleibt außerhalb dieses Vertrags
+   (ADR 0300). Die nachträgliche Typisierung von `string` zu `id` ändert
+   keine bereits als Dezimalstring übertragenen Kennungen.
 6. **Decoder vertragen Versionsunterschiede.** Sie ignorieren unbekannte
    Felder und scheitern an fehlenden oder kaputten Pflichtfeldern. Ein
    angemeldeter Enum ist im Typ eine Vereinigung seiner bekannten Werte, der
@@ -105,16 +105,9 @@ Zwei Schreibrouten (`POST /api/students/`, `PUT /api/students/{id}`) und eine
 Leseroute des Elternportals (`GET /parent/me/enrollable-schools`) sind
 angemeldet. Daraus folgen drei Ergänzungen:
 
-- **Punkt 8 gilt auch beim Lesen.** Ein Request-Typ mit eigenem
-  `UnmarshalJSON` braucht einen Eintrag, der sagt, was er liest: die Felder
-  wie `encoding/json` oder zusätzlich jede Kennung als Zahl oder String. Ohne
-  Eintrag bricht die Erzeugung ab.
-- **Eine Kennung im Request ist im Client ein String**, außer Go liest das
-  Feld noch nur als Zahl. Diese Felder stehen in derselben Liste der
-  numerischen Alt-Kennungen und sind im erzeugten Typ `number`. Ihr Wechsel
-  zu `common.ID` braucht zwei Releases in umgekehrter Reihenfolge zu Punkt 5:
-  zuerst liest Go beide Formen, einen Release später sendet der Client
-  Strings.
+- **Punkt 8 gilt auch beim Lesen.** Eigene JSON-Leser für HTTP-Anfragen
+  verwenden `wire.Decode` oder `wire.Unmarshal`. Die erzeugten
+  Request-Typen verwenden für Kennungen Strings.
 - **Eine Route, deren Antwort ein anderer Owner rendert**, meldet der Owner
   des Handlers an; die Wurzel nennt den Antworttyp, so wie sie auch die
   Antwortfunktion bindet.
@@ -474,7 +467,6 @@ Für [#7945](https://github.com/moto-ogs/project-phoenix/issues/7945).
    deshalb die einzige Quelle dafür, welche Felder der konkrete Aufruf
    braucht. Der Client erhält eine Ablehnung über den Fehlervertrag.
 
-
 ## Nachtrag: Derselbe Decoder auf dem Server
 
 Für [#8003](https://github.com/moto-ogs/project-phoenix/issues/8003):
@@ -490,3 +482,16 @@ Eine unlesbare Erfolgsantwort, auch abgeschnittenes JSON, ergibt 502.
 Kann die Änderung festgeschrieben sein, lautet der Fehlercode
 `general.write_answer_unreadable`; bei GET und `NoCommit` bleibt der
 Fehler wiederholbar. Ein 204 ersetzt keine zugesagten Daten.
+
+## Nachtrag vom 2026-11-24: Getypte Datei-Adressen und Sitzungsanfragen
+
+1. **Eine Datei-Adresse kommt aus dem Vertrag.** `bffFileHref` baut Links
+   aus einem registrierten GET-Dateischlüssel mit getypten Pfad- und
+   Query-Parametern. `bffFile` bleibt der Aufruf, der einen `Response`
+   liefert. Der Wächter beanstandet handgebaute Datei-Adressen und die
+   ausgebauten Durchreich-Helfer.
+2. **Ein Sitzungsschritt erbt den Request-Typ, nicht den Antworttyp.**
+   `sessionBff` nutzt die erzeugten Request-Typen. Die Antwort der
+   Oberfläche bleibt eine Projektion des dekodierten Backend-Ergebnisses:
+   Sitzungstokens verlassen den Server nicht. Der Wächter für
+   handgeschriebene Wire-Typen prüft auch Objektzweige von Unions.

@@ -13,8 +13,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
-
 	"github.com/go-chi/chi/v5"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -441,9 +439,6 @@ func renderCalendarError(w http.ResponseWriter, r *http.Request, err error) {
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeCalendarOccurrenceUnavailable))
 	case errors.Is(err, calendarService.ErrParentConferenceSlotTaken):
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeSchoolParentConferenceSlotTaken))
-	case errors.Is(err, readstate.ErrChanged):
-		// 409 general.changed_since_read (ADR 0311).
-		common.RenderError(w, r, common.ErrorBusinessRejection(err))
 	default:
 		common.RenderError(w, r, common.ErrorInternalServerWrap("calendar operation failed", err))
 	}

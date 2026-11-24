@@ -42,14 +42,14 @@ func TestEnrollmentDeletionRouteGrowthQueryBudget(t *testing.T) {
 			queries[i] = q
 			var impact enrollmentHTTP.AdminEnrollmentDeletionImpact
 			require.NoError(t, json.Unmarshal(raw, &impact))
-			require.Equal(t, fmt.Sprint(request.ID), impact.RequestID)
+			require.Equal(t, fmt.Sprint(request.ID), impact.RequestID.String())
 			require.True(t, impact.CanDelete)
 			if i == 0 {
 				require.Equal(t, n, impact.Counts.RequestChildren)
 				require.True(t, impact.DeletesRequest)
 			} else {
 				require.Equal(t, 1, impact.Counts.RequestChildren)
-				require.Equal(t, fmt.Sprint(firstChild), impact.ChildID)
+				require.Equal(t, fmt.Sprint(firstChild), impact.ChildID.String())
 				require.False(t, impact.DeletesRequest)
 			}
 		}

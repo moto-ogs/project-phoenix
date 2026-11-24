@@ -233,7 +233,7 @@ func TestStammdatenAPIUsesTheCurrentQualificationTypeName(t *testing.T) {
 	rec = ctx.putRead(t, base+"/qualifikationen", fmt.Sprintf(`{"qualifikationen":[{"type_id":%q,"name":"Alte Erste Hilfe"}],"note":"Nachweis"}`, typeID), "staff:stammdaten")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	rec = ctx.put("/staff/qualification-types/"+typeID, fmt.Sprintf(`{"name":"Erste Hilfe neu","validity_months":24,"reminder_lead_weeks":8,"mandatory":true,"archived":false,"expected_version":%q}`, typeVersion), "staff:stammdaten")
+	rec = ctx.put("/staff/qualification-types/"+typeID.String(), fmt.Sprintf(`{"name":"Erste Hilfe neu","validity_months":24,"reminder_lead_weeks":8,"mandatory":true,"archived":false,"expected_version":%q}`, typeVersion), "staff:stammdaten")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	rec = ctx.get(base, "staff:stammdaten")

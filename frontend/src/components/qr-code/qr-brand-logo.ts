@@ -1,5 +1,6 @@
 "use client";
 
+import { bffFileHref } from "~/lib/bff-fetch";
 import { loginImageSrc } from "~/lib/tenant-api";
 import { useTenantSafe } from "~/lib/tenant-context";
 
@@ -30,7 +31,10 @@ export type QrBrand = "school" | "traeger";
 export function useQrBrandLogo(brand: QrBrand): QrBrandLogo | undefined {
   const stored = useTenantSafe()?.tenant?.settings?.loginImageUrl;
   if (brand === "traeger") {
-    return { src: "/api/traeger/master-data/logo", label: "Träger" };
+    return {
+      src: bffFileHref("org", "GET /traeger/master-data/logo"),
+      label: "Träger",
+    };
   }
   return stored ? { src: loginImageSrc(stored), label: "Schule" } : undefined;
 }

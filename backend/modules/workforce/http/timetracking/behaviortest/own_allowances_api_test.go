@@ -148,7 +148,7 @@ func TestOwnAbsenceAllowances_ShowTheLeitungNumbersOfTheCaller(t *testing.T) {
 	leitung, err := route.capability.AllowanceSummary(ctx, staff.ID, regeneration.ID, 2026)
 	require.NoError(t, err)
 	assert.Equal(t, absencetypes.ToOwnAllowanceResponses([]workforce.AbsenceTypeAllowanceAccount{{AbsenceType: regeneration, Summary: leitung}})[0], got[0])
-	assert.Equal(t, fmt.Sprint(staff.ID), got[0].StaffID)
+	assert.Equal(t, fmt.Sprint(staff.ID), got[0].StaffID.String())
 	assert.Equal(t, 3.0, got[0].EntitledDays)
 	assert.Equal(t, 1.0, got[0].TakenDays)
 	assert.Equal(t, 1.0, got[0].ReservedDays)

@@ -3,6 +3,8 @@ package common
 import (
 	"regexp"
 	"strconv"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // GuardianProfileResponse is the autofill payload for the parent enrollment
@@ -27,11 +29,11 @@ type GuardianProfileGuardian struct {
 // slot. Date-of-birth is intentionally absent — users.students has no DOB
 // column today; the parent fills it manually for the enrollment row.
 type GuardianProfileChild struct {
-	ID          string `json:"id"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	SchoolClass string `json:"school_class"`
-	GradeLevel  *int   `json:"grade_level,omitempty"`
+	ID          ident.ID `json:"id"`
+	FirstName   string   `json:"first_name"`
+	LastName    string   `json:"last_name"`
+	SchoolClass string   `json:"school_class"`
+	GradeLevel  *int     `json:"grade_level,omitempty"`
 	// EnrollmentSubmit reports whether this guardian relationship grants
 	// parent_portal.enrollment.submit for this child. The form offers reuse
 	// only for children where this is true, so a permission-revoked child is
@@ -96,7 +98,7 @@ func BuildGuardianProfileResponse(defaults GuardianProfileDefaults, loaded *Guar
 	}
 	for _, child := range loaded.Children {
 		entry := GuardianProfileChild{
-			ID:               strconv.FormatInt(child.StudentID, 10),
+			ID:               ident.ID(child.StudentID),
 			FirstName:        child.FirstName,
 			LastName:         child.LastName,
 			SchoolClass:      child.SchoolClass,

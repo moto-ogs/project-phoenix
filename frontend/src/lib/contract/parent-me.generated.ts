@@ -122,8 +122,8 @@ export interface ChildResponse {
 }
 
 export const ChildResponseSchema: z.ZodType<ChildResponse, unknown> = object<ChildResponse>({
-  student_id: str,
-  tenant_id: str,
+  student_id: int64String,
+  tenant_id: int64String,
   first_name: str,
   last_name: str,
   school_class: optional(str),
@@ -180,7 +180,7 @@ export interface CareOfferingItemResponse {
 }
 
 export const CareOfferingItemResponseSchema: z.ZodType<CareOfferingItemResponse, unknown> = object<CareOfferingItemResponse>({
-  id: str,
+  id: int64String,
   name: str,
   description: optional(str),
   weekdays: nullable(arr(safeInt)),
@@ -229,7 +229,7 @@ export interface PendingOfferingChangeResponse {
 }
 
 export const PendingOfferingChangeResponseSchema: z.ZodType<PendingOfferingChangeResponse, unknown> = object<PendingOfferingChangeResponse>({
-  id: str,
+  id: int64String,
   created_at: str,
   effective_from: str,
   note: optional(str),
@@ -246,7 +246,7 @@ export interface OfferingRequestedItemResponse {
 }
 
 export const OfferingRequestedItemResponseSchema: z.ZodType<OfferingRequestedItemResponse, unknown> = object<OfferingRequestedItemResponse>({
-  id: str,
+  id: int64String,
   name: str,
   weekdays: nullable(arr(safeInt)),
 });
@@ -266,7 +266,7 @@ export interface OfferingDecisionResponse {
 }
 
 export const OfferingDecisionResponseSchema: z.ZodType<OfferingDecisionResponse, unknown> = object<OfferingDecisionResponse>({
-  id: str,
+  id: int64String,
   status: str,
   decided_at: str,
   effective_from: str,
@@ -325,7 +325,7 @@ export interface OfferingCatalogItemResponse {
 }
 
 export const OfferingCatalogItemResponseSchema: z.ZodType<OfferingCatalogItemResponse, unknown> = object<OfferingCatalogItemResponse>({
-  id: str,
+  id: int64String,
   name: str,
   description: optional(str),
   days_of_week_mode: str,
@@ -409,7 +409,7 @@ export interface PendingCareRequestResponse {
 }
 
 export const PendingCareRequestResponseSchema: z.ZodType<PendingCareRequestResponse, unknown> = object<PendingCareRequestResponse>({
-  id: str,
+  id: int64String,
   created_at: str,
   diff: nullable(arr(ParentCareRequestDiffResponseSchema)),
   submitted_by_self: bool,
@@ -464,8 +464,8 @@ export interface CourseItemResponse {
 }
 
 export const CourseItemResponseSchema: z.ZodType<CourseItemResponse, unknown> = object<CourseItemResponse>({
-  id: str,
-  activity_group_id: str,
+  id: int64String,
+  activity_group_id: int64String,
   name: str,
   description: optional(str),
   available_days: nullable(arr(str)),
@@ -498,7 +498,7 @@ export const CoursesResponseSchema: z.ZodType<CoursesResponse, unknown> = object
   disabled_reason: optional(str),
   phase_name: optional(str),
   effective_from: optional(str),
-  pending_request_id: optional(str),
+  pending_request_id: optional(int64String),
   pending_submitted_by_self: bool,
   other_request_pending: bool,
   items: nullable(arr(CourseItemResponseSchema)),
@@ -520,8 +520,8 @@ export interface ParentExcusedRequestResponse {
 }
 
 export const ParentExcusedRequestResponseSchema: z.ZodType<ParentExcusedRequestResponse, unknown> = object<ParentExcusedRequestResponse>({
-  id: str,
-  student_id: str,
+  id: int64String,
+  student_id: int64String,
   absence_status: str,
   status: str,
   dates: nullable(arr(str)),
@@ -643,8 +643,8 @@ export interface childGuardianResponse {
 }
 
 export const childGuardianResponseSchema: z.ZodType<childGuardianResponse, unknown> = object<childGuardianResponse>({
-  guardian_profile_id: str,
-  student_guardian_id: str,
+  guardian_profile_id: int64String,
+  student_guardian_id: int64String,
   first_name: str,
   last_name: str,
   salutation: optional(str),
@@ -684,7 +684,7 @@ export interface MasterDataChangeResponse {
 }
 
 export const MasterDataChangeResponseSchema: z.ZodType<MasterDataChangeResponse, unknown> = object<MasterDataChangeResponse>({
-  id: str,
+  id: int64String,
   target: str,
   field_key: str,
   old_value: optional(nullable(json)),
@@ -720,7 +720,7 @@ export interface MasterDataResponse {
 }
 
 export const MasterDataResponseSchema: z.ZodType<MasterDataResponse, unknown> = object<MasterDataResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   birthday: optional(str),
@@ -729,7 +729,7 @@ export const MasterDataResponseSchema: z.ZodType<MasterDataResponse, unknown> = 
   enrolled_from: optional(str),
   enrolled_until: optional(str),
   health_info: optional(str),
-  guardian_profile_id: str,
+  guardian_profile_id: int64String,
   email: optional(str),
   address_street: optional(str),
   address_city: optional(str),
@@ -820,7 +820,7 @@ export interface ParentConferenceOffer {
 }
 
 export const ParentConferenceOfferSchema: z.ZodType<ParentConferenceOffer, unknown> = object<ParentConferenceOffer>({
-  id: str,
+  id: int64String,
   school_class: str,
   teacher_name: str,
   date: nullable(calendarDate),
@@ -851,7 +851,7 @@ export interface PickupChangeRequestResponse {
 }
 
 export const PickupChangeRequestResponseSchema: z.ZodType<PickupChangeRequestResponse, unknown> = object<PickupChangeRequestResponse>({
-  id: str,
+  id: int64String,
   date: str,
   pickup_time: nullable(str),
   previous_pickup_time: optional(str),
@@ -864,7 +864,7 @@ export const PickupChangeRequestResponseSchema: z.ZodType<PickupChangeRequestRes
   reviewed_at: optional(instant),
   is_self: bool,
   pickup_person: optional(str),
-  pickup_person_guardian_profile_id: optional(str),
+  pickup_person_guardian_profile_id: optional(int64String),
   signed: bool,
   version: str,
 });
@@ -884,8 +884,8 @@ export interface pickupPermissionRequestResponse {
 }
 
 export const pickupPermissionRequestResponseSchema: z.ZodType<pickupPermissionRequestResponse, unknown> = object<pickupPermissionRequestResponse>({
-  id: str,
-  guardian_profile_id: str,
+  id: int64String,
+  guardian_profile_id: int64String,
   person_name: str,
   weekdays: nullable(arr(safeInt)),
   status: str,
@@ -910,7 +910,7 @@ export interface relatedAccountResponse {
 }
 
 export const relatedAccountResponseSchema: z.ZodType<relatedAccountResponse, unknown> = object<relatedAccountResponse>({
-  guardian_profile_id: str,
+  guardian_profile_id: int64String,
   first_name: str,
   last_name: str,
   email: optional(str),
@@ -930,7 +930,7 @@ export interface requestSharingRecipientResponse {
 }
 
 export const requestSharingRecipientResponseSchema: z.ZodType<requestSharingRecipientResponse, unknown> = object<requestSharingRecipientResponse>({
-  guardian_profile_id: str,
+  guardian_profile_id: int64String,
   first_name: str,
   last_name: str,
   selected: bool,
@@ -985,8 +985,8 @@ export interface StatusDayResponse {
 }
 
 export const StatusDayResponseSchema: z.ZodType<StatusDayResponse, unknown> = object<StatusDayResponse>({
-  id: str,
-  student_id: str,
+  id: int64String,
+  student_id: int64String,
   date: str,
   status: str,
   reported_at: instant,
@@ -1049,8 +1049,8 @@ export interface BillingDocumentResponse {
 }
 
 export const BillingDocumentResponseSchema: z.ZodType<BillingDocumentResponse, unknown> = object<BillingDocumentResponse>({
-  id: str,
-  organization_id: str,
+  id: int64String,
+  organization_id: int64String,
   traeger_name: str,
   kind: str,
   number: str,
@@ -1084,8 +1084,8 @@ export interface SharedDocumentResponse {
 }
 
 export const SharedDocumentResponseSchema: z.ZodType<SharedDocumentResponse, unknown> = object<SharedDocumentResponse>({
-  id: str,
-  organization_id: str,
+  id: int64String,
+  organization_id: int64String,
   traeger_name: str,
   title: str,
   file_name: str,
@@ -1380,7 +1380,7 @@ export interface HolidayRegistrationOfferChildResponse {
 }
 
 export const HolidayRegistrationOfferChildResponseSchema: z.ZodType<HolidayRegistrationOfferChildResponse, unknown> = object<HolidayRegistrationOfferChildResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
 });
 
@@ -1464,8 +1464,8 @@ export interface ThreadSummaryResponse {
 }
 
 export const ThreadSummaryResponseSchema: z.ZodType<ThreadSummaryResponse, unknown> = object<ThreadSummaryResponse>({
-  thread_id: str,
-  student_id: str,
+  thread_id: int64String,
+  student_id: int64String,
   student_name: str,
   school_name: str,
   counterpart_name: str,
@@ -1540,7 +1540,7 @@ export interface ParentMessageResponse {
 
 export const ParentMessageResponseSchema: z.ZodType<ParentMessageResponse, unknown> = object<ParentMessageResponse>({
   client_message_id: optional(str),
-  id: str,
+  id: int64String,
   sender_kind: str,
   sender_name: str,
   body: str,
@@ -1551,11 +1551,11 @@ export const ParentMessageResponseSchema: z.ZodType<ParentMessageResponse, unkno
   request_status: optional(str),
   payload: optional(rec(nullable(json))),
   ref_table: optional(str),
-  ref_id: optional(str),
+  ref_id: optional(int64String),
   applied_at: optional(instant),
   decision_reason: optional(str),
   read_by_staff: optional(bool),
-  group_thread_id: optional(str),
+  group_thread_id: optional(int64String),
   group_thread_title: optional(str),
   attachments: optional(arr(messageAttachmentResponseSchema)),
 });
@@ -1575,7 +1575,7 @@ export interface ThreadViewResponse {
 
 export const ThreadViewResponseSchema: z.ZodType<ThreadViewResponse, unknown> = object<ThreadViewResponse>({
   thread_id: str,
-  student_id: str,
+  student_id: int64String,
   student_name: str,
   school_name: str,
   counterpart_name: str,
@@ -1593,7 +1593,7 @@ export interface GroupThreadChildResponse {
 }
 
 export const GroupThreadChildResponseSchema: z.ZodType<GroupThreadChildResponse, unknown> = object<GroupThreadChildResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
 });
@@ -1614,7 +1614,7 @@ export interface GroupThreadSummaryResponse {
 }
 
 export const GroupThreadSummaryResponseSchema: z.ZodType<GroupThreadSummaryResponse, unknown> = object<GroupThreadSummaryResponse>({
-  id: str,
+  id: int64String,
   title: str,
   target_label: str,
   school_name: str,
@@ -1636,7 +1636,7 @@ export interface GroupMessageResponse {
 }
 
 export const GroupMessageResponseSchema: z.ZodType<GroupMessageResponse, unknown> = object<GroupMessageResponse>({
-  id: str,
+  id: int64String,
   body: str,
   created_at: instant,
   attachments: optional(arr(messageAttachmentResponseSchema)),
@@ -1659,7 +1659,7 @@ export interface GroupThreadViewResponse {
 }
 
 export const GroupThreadViewResponseSchema: z.ZodType<GroupThreadViewResponse, unknown> = object<GroupThreadViewResponse>({
-  id: str,
+  id: int64String,
   title: str,
   target_label: str,
   school_name: str,
@@ -1702,7 +1702,7 @@ export interface AnnouncementOption {
 }
 
 export const AnnouncementOptionSchema: z.ZodType<AnnouncementOption, unknown> = object<AnnouncementOption>({
-  id: str,
+  id: int64String,
   label: str,
 });
 
@@ -1715,10 +1715,10 @@ export interface AnnouncementPollChild {
 }
 
 export const AnnouncementPollChildSchema: z.ZodType<AnnouncementPollChild, unknown> = object<AnnouncementPollChild>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
-  selected_options: nullable(arr(str)),
+  selected_options: nullable(arr(int64String)),
 });
 
 /** Go: parent.parentDeclarationVersionResponse */
@@ -1729,7 +1729,7 @@ export interface parentDeclarationVersionResponse {
 }
 
 export const parentDeclarationVersionResponseSchema: z.ZodType<parentDeclarationVersionResponse, unknown> = object<parentDeclarationVersionResponse>({
-  id: str,
+  id: int64String,
   version_no: safeInt,
   content_hash: str,
 });
@@ -1759,7 +1759,7 @@ export interface declarationEarlierVersionResponse {
 }
 
 export const declarationEarlierVersionResponseSchema: z.ZodType<declarationEarlierVersionResponse, unknown> = object<declarationEarlierVersionResponse>({
-  id: str,
+  id: int64String,
   version_no: safeInt,
   content_hash: str,
   title: str,
@@ -1794,7 +1794,7 @@ export interface parentDeclarationChildResponse {
 }
 
 export const parentDeclarationChildResponseSchema: z.ZodType<parentDeclarationChildResponse, unknown> = object<parentDeclarationChildResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   can_submit: bool,
@@ -1840,7 +1840,7 @@ export interface AnnouncementSurveyResponse {
 }
 
 export const AnnouncementSurveyResponseSchema: z.ZodType<AnnouncementSurveyResponse, unknown> = object<AnnouncementSurveyResponse>({
-  survey_id: str,
+  survey_id: int64String,
   anonymous: bool,
   closes_at: instant,
   participated: bool,
@@ -1855,7 +1855,7 @@ export interface AnnouncementLetterResponse {
 }
 
 export const AnnouncementLetterResponseSchema: z.ZodType<AnnouncementLetterResponse, unknown> = object<AnnouncementLetterResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   body: str,
@@ -1890,7 +1890,7 @@ export interface AnnouncementResponse {
 }
 
 export const AnnouncementResponseSchema: z.ZodType<AnnouncementResponse, unknown> = object<AnnouncementResponse>({
-  id: str,
+  id: int64String,
   title: str,
   body: str,
   priority: str,
@@ -1926,7 +1926,7 @@ export interface proofAttachmentResponse {
 }
 
 export const proofAttachmentResponseSchema: z.ZodType<proofAttachmentResponse, unknown> = object<proofAttachmentResponse>({
-  id: str,
+  id: int64String,
   filename: str,
   content_type: str,
   size_bytes: safeInt,
@@ -1945,7 +1945,7 @@ export interface proofVersionResponse {
 }
 
 export const proofVersionResponseSchema: z.ZodType<proofVersionResponse, unknown> = object<proofVersionResponse>({
-  id: str,
+  id: int64String,
   version_no: safeInt,
   title: str,
   body: str,
@@ -1987,7 +1987,7 @@ export interface proofSubmissionResponse {
 }
 
 export const proofSubmissionResponseSchema: z.ZodType<proofSubmissionResponse, unknown> = object<proofSubmissionResponse>({
-  id: str,
+  id: int64String,
   action: str,
   submitted_at: instant,
   signer_name: str,
@@ -2032,7 +2032,7 @@ export interface parentSurveyOptionResponse {
 }
 
 export const parentSurveyOptionResponseSchema: z.ZodType<parentSurveyOptionResponse, unknown> = object<parentSurveyOptionResponse>({
-  id: str,
+  id: int64String,
   label: str,
 });
 
@@ -2047,7 +2047,7 @@ export interface parentSurveyQuestionResponse {
 }
 
 export const parentSurveyQuestionResponseSchema: z.ZodType<parentSurveyQuestionResponse, unknown> = object<parentSurveyQuestionResponse>({
-  id: str,
+  id: int64String,
   position: safeInt,
   kind: str,
   prompt: str,
@@ -2066,7 +2066,7 @@ export interface parentSurveyFormSurvey {
 }
 
 export const parentSurveyFormSurveySchema: z.ZodType<parentSurveyFormSurvey, unknown> = object<parentSurveyFormSurvey>({
-  id: str,
+  id: int64String,
   title: str,
   intro: str,
   anonymous: bool,
@@ -2348,7 +2348,7 @@ export interface inviteRelatedAccountResponse {
 
 export const inviteRelatedAccountResponseSchema: z.ZodType<inviteRelatedAccountResponse, unknown> = object<inviteRelatedAccountResponse>({
   outcome: str,
-  guardian_profile_id: str,
+  guardian_profile_id: int64String,
   existing_role: optional(str),
 });
 
@@ -2479,7 +2479,7 @@ export interface parentDeclarationSubmissionResponse {
 }
 
 export const parentDeclarationSubmissionResponseSchema: z.ZodType<parentDeclarationSubmissionResponse, unknown> = object<parentDeclarationSubmissionResponse>({
-  id: str,
+  id: int64String,
   action: str,
   submitted_at: instant,
   version_no: safeInt,

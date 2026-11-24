@@ -173,6 +173,7 @@ describe("staffShiftSeriesService", () => {
       expectedVersion: "series-v3",
       effectiveDate: "2026-10-05",
       occurrenceShiftId: "42",
+      expectedOccurrenceVersion: "occurrence-v2",
       startTime: "10:00",
       endTime: "14:00",
       breakMinutes: 30,
@@ -187,6 +188,7 @@ describe("staffShiftSeriesService", () => {
     expect(JSON.parse((init?.body as string) ?? "{}")).toEqual({
       effective_date: "2026-10-05",
       occurrence_shift_id: "42",
+      expected_occurrence_version: "occurrence-v2",
       start_time: "10:00",
       end_time: "14:00",
       break_minutes: 30,

@@ -159,8 +159,9 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 					rooms := 0
 					if roomID != nil {
 						// The edit names a status, so it reads the device under
-						// its row lock without the room (#2317).
-						rooms = 3
+						// its row lock without the room (#2317); the owner's
+						// read-state check locks it again, also without the room.
+						rooms = 2
 					}
 					require.Equal(t, rooms, countDeviceWriteBudgetSelects(queries.Statements, "facilities.rooms"))
 					switch scenario {

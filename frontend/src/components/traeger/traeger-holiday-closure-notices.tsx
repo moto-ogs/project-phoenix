@@ -48,6 +48,7 @@ import {
 import type { FormErrorInput } from "~/components/ui/form-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import {
   notifyPendingHolidayClosures,
@@ -87,6 +88,7 @@ export function TraegerHolidayClosureNotices({
   const notifyAll = useCallback(async () => {
     if (!pending) return;
     setNotifyingAll(true);
+    let refused = false;
     try {
       const families = await notifyPendingHolidayClosures(pending.token);
       success(
@@ -98,16 +100,25 @@ export function TraegerHolidayClosureNotices({
       logger.error("traeger_holiday_closure_notify_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      void showError(err, { object: "die E-Mail an die Eltern" });
+      refused = isReadStateRefusal(err);
+      // Eine Ablehnung wartet auf den neu gelesenen Stand (`reload`) und
+      // nennt einen Ladefehler, statt den neuen Stand zu behaupten (ADR 0311).
+      void showError(err, {
+        object: "die E-Mail an die Eltern",
+        ...(refused ? { reload } : {}),
+      });
     } finally {
       setNotifyingAll(false);
       // Bewusst still: Scheitert nur das Nachladen, bleibt der alte Stand
-      // stehen, bis die Seite wieder lädt.
-      await reload().catch((err: unknown) => {
-        logger.warn("traeger_holiday_closures_reload_failed", {
-          error: err instanceof Error ? err.message : String(err),
+      // stehen, bis die Seite wieder lädt. Nach einer Ablehnung lädt die
+      // Meldung selbst.
+      if (!refused) {
+        await reload().catch((err: unknown) => {
+          logger.warn("traeger_holiday_closures_reload_failed", {
+            error: err instanceof Error ? err.message : String(err),
+          });
         });
-      });
+      }
     }
   }, [pending, reload, retryableMails, showError, success, suggested.length]);
 

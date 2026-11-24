@@ -26,12 +26,14 @@ vi.mock("~/lib/timetable-operations-api", () => ({
     complete: vi.fn(),
     createAndStartSpontaneous: vi.fn(),
     reopen: vi.fn(),
+    roster: vi.fn(),
     start: vi.fn(),
   },
   isReopenUnavailableError: vi.fn(() => false),
 }));
 
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
 import { timetableOperationsApi } from "~/lib/timetable-operations-api";
 import type { TimetableRoster } from "~/lib/timetable-operations-types";
 import {
@@ -161,6 +163,37 @@ describe("useTimetableActions lifecycle reload (#3888)", () => {
 
     expect(result.current.showCompleteConfirmation).toBe(false);
     expect(result.current.completeError).toBeNull();
+  });
+
+  // ADR 0311: the children still checked in changed since the dialog read
+  // them. The message waits for the roster read again and names a failed
+  // read instead of claiming the new state shows.
+  it("names a failed read of the roster after a changed confirmation", async () => {
+    vi.mocked(timetableOperationsApi.complete).mockRejectedValueOnce(
+      new ApiError("stale", 409, {
+        code: "timetable.completion_confirmation_stale",
+      }),
+    );
+    vi.mocked(timetableOperationsApi.roster).mockRejectedValueOnce(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    const { result, options } = setup();
+
+    act(() => result.current.setShowCompleteConfirmation(true));
+    await act(async () => {
+      await result.current.confirmCompleteTimetableInstance();
+    });
+
+    await waitFor(() =>
+      expect(result.current.completeError?.message).toMatch(
+        /Der neue Stand konnte nicht geladen werden\./,
+      ),
+    );
+    expect(timetableOperationsApi.roster).toHaveBeenCalledOnce();
+    expect(timetableOperationsApi.roster).toHaveBeenCalledWith("99");
+    // The failed read leaves the shown roster as it was.
+    expect(options.mutateRoster).not.toHaveBeenCalled();
+    expect(result.current.showCompleteConfirmation).toBe(true);
   });
 
   it("reloads the sidebar after starting a planned block", async () => {

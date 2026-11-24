@@ -276,7 +276,7 @@ func TestPickupReminders(t *testing.T) {
 		assert.Equal(t, "Anna Müller", out[0].Title)
 		assert.Equal(t, "1a", out[0].Subtitle)
 		require.NotNil(t, out[0].StudentID)
-		assert.Equal(t, "1", *out[0].StudentID)
+		assert.Equal(t, "1", out[0].StudentID.String())
 	})
 
 	t.Run("overdue is reported with negative minutes", func(t *testing.T) {
@@ -388,7 +388,7 @@ func TestPickupReminders(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, out, 1)
 		require.NotNil(t, out[0].StudentID)
-		assert.Equal(t, "1", *out[0].StudentID)
+		assert.Equal(t, "1", out[0].StudentID.String())
 		assert.Equal(t, "Anna A", out[0].Title)
 	})
 
@@ -438,13 +438,13 @@ func TestActivityReminders(t *testing.T) {
 		assert.Equal(t, reminder.TypeActivityStart, byTitle["Schach"].Type)
 		assert.Equal(t, 5, byTitle["Schach"].MinutesAway)
 		require.NotNil(t, byTitle["Schach"].ActivityInstanceID)
-		assert.Equal(t, "101", *byTitle["Schach"].ActivityInstanceID)
+		assert.Equal(t, "101", byTitle["Schach"].ActivityInstanceID.String())
 		require.Contains(t, byTitle, "Fußball")
 		assert.Equal(t, reminder.TypeActivityOverdue, byTitle["Fußball"].Type)
 		assert.Equal(t, -10, byTitle["Fußball"].MinutesAway)
 		assert.Equal(t, "09:50", byTitle["Fußball"].DueTime)
 		require.NotNil(t, byTitle["Fußball"].ActivityInstanceID)
-		assert.Equal(t, "102", *byTitle["Fußball"].ActivityInstanceID)
+		assert.Equal(t, "102", byTitle["Fußball"].ActivityInstanceID.String())
 	})
 
 	t.Run("toggles gate each variant independently", func(t *testing.T) {
@@ -925,7 +925,6 @@ func TestPureHelpers(t *testing.T) {
 	assert.Equal(t, "09:55", formatMinutes(595))
 	assert.Equal(t, "2026-09-05T00:10:00+02:00", formatNextChangeAt(testDate, 1450))
 	assert.Equal(t, 605, minutesOfDay(wallClock(605)))
-	assert.Equal(t, "7", *int64String(7))
 }
 
 func (f fakeSettings) PickupUpcomingEnabled(ctx context.Context) (bool, error) {

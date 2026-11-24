@@ -45,7 +45,7 @@ test("every change that breaks a reader of the base is named", () => {
   assert.ok(breakingChanges(named, base).includes("GET /api/rows/[].name: enum became string"));
 });
 
-test("a request identifier may become an id, an answer's may not", () => {
+test("a decimal string identifier may become an id on either side", () => {
   const body = (kind) => {
     const route = model([field("id", kind)], { method: "POST", request: { kind: "ref", ref: "Row" }, response: undefined, no_data: true });
     route.types[0].request = true;
@@ -56,7 +56,8 @@ test("a request identifier may become an id, an answer's may not", () => {
   }
   assert.deepEqual(breakingChanges(body("lax_id"), body("id")), ["POST /api/rows/ request.id: lax_id became id"]);
   assert.deepEqual(breakingChanges(body("id"), body("string")), ["POST /api/rows/ request.id: id became string"]);
-  assert.deepEqual(breakingChanges(model([field("id", "string")]), model([field("id", "id")])), ["GET /api/rows/[].id: string became id"]);
+  assert.deepEqual(breakingChanges(model([field("id", "string")]), model([field("id", "id")])), []);
+  assert.deepEqual(breakingChanges(model([field("id", "id")]), model([field("id", "string")])), ["GET /api/rows/[].id: id became string"]);
 });
 
 test("a released reader accepts string answers for legacy numeric identifiers", () => {

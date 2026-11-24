@@ -11,9 +11,9 @@ import (
 	openRoomMoveHTTP "github.com/moto-ogs/project-phoenix/workflows/openroommove/http"
 )
 
-// staffPortalLiveContractMounts are the live sessions, visits and the
-// caller's own data of the staff portal (#2352).
-func staffPortalLiveContractMounts() []contractMount {
+// tenantLiveContractMounts are the live sessions, visits and the
+// caller's own data of the staff portal.
+func tenantLiveContractMounts() []contractMount {
 	return []contractMount{
 		{"/api/active", presenceAPI.RouteContracts()},
 		{"/api/active", openRoomMoveHTTP.RouteContracts()},

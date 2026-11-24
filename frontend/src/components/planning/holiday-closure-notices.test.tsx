@@ -7,7 +7,10 @@ import type { HolidayClosureNotice } from "~/lib/holiday-closure-notices";
 import { catalogText } from "~/test/error-catalog-text";
 
 const { store, mockNotify, mockReload, session } = vi.hoisted(() => ({
-  store: { current: [] as HolidayClosureNotice[] },
+  store: {
+    current: [] as HolidayClosureNotice[],
+    failReload: false,
+  },
   mockNotify: vi.fn(),
   mockReload: vi.fn(),
   session: { permissions: ["schedules:update"] as string[] },
@@ -19,13 +22,19 @@ vi.mock("~/lib/holiday-closure-notices", async (importOriginal) => ({
 }));
 
 // Ein kleiner Zwischenspeicher: `mutate` liest den Stand des Servers neu.
-vi.mock("~/lib/swr", async () => {
+vi.mock("~/lib/swr", async (importOriginal) => {
   const React = await import("react");
   return {
+    ...(await importOriginal<object>()),
     useSWRAuth: (key: string | null) => {
       const [data, setData] = React.useState(store.current);
       const mutate = React.useCallback(() => {
         mockReload();
+        if (store.failReload) {
+          return Promise.reject(
+            new ApiError("down", 503, { code: "general.unavailable" }),
+          );
+        }
         setData(store.current);
         return Promise.resolve(store.current);
       }, []);
@@ -86,6 +95,7 @@ describe("HolidayClosureNotices (ADR 0196)", () => {
     vi.clearAllMocks();
     session.permissions = ["schedules:update"];
     store.current = [notice()];
+    store.failReload = false;
   });
 
   it("proposes the notice with the number of families, never names", () => {
@@ -258,6 +268,23 @@ describe("HolidayClosureNotices (ADR 0196)", () => {
     ).toBeInTheDocument();
     fireEvent.click(button()!);
     expect(mockNotify).toHaveBeenLastCalledWith("7", 3, "impact-preview");
+  });
+
+  it("names a failed read of the changed notice instead of claiming it shows", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mockNotify.mockRejectedValue(
+      new ApiError("conflict", 409, {
+        code: "timetable.closing_day_notice_changed",
+      }),
+    );
+    renderNotices();
+
+    store.failReload = true;
+    fireEvent.click(button()!);
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden\./),
+    ).toBeInTheDocument();
+    expect(mockNotify).toHaveBeenCalledOnce();
   });
 
   it("shows nothing without the right to change closing days", () => {

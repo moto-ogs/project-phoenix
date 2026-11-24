@@ -90,7 +90,7 @@ type PersonResponse struct {
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
 	Email     string    `json:"email,omitempty"`
-	TagID     string    `json:"tag_id,omitempty"`
+	TagID     string    `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"`
 	AccountID ident.ID  `json:"account_id,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -103,7 +103,7 @@ type PersonResponse struct {
 type DirectoryPersonRequest struct {
 	FirstName string   `json:"first_name"`
 	LastName  string   `json:"last_name"`
-	TagID     string   `json:"tag_id,omitempty"`
+	TagID     string   `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"`
 	AccountID ident.ID `json:"account_id,omitempty"`
 	// ExpectedVersion is the version of the person the form showed (ADR
 	// 0311): the person GET's, or person_version of a staff record. An
@@ -275,8 +275,30 @@ func (rs *Resource) moduleFailure(w http.ResponseWriter, r *http.Request, err er
 }
 
 func (rs *Resource) failure(w http.ResponseWriter, r *http.Request, kind FailureKind, err error, code string) {
+	kind = renderedKind(kind, err)
 	rs.runtime.Failure(w, r, kind, err)
 	rs.runtime.ObserveResponse(statusOf(kind), code)
+}
+
+// businessRejection is the shape of a module's business rejection (ADR
+// 0006): a stable code and the values its message names. An input
+// rejection carries a field instead of details and keeps its 400.
+type businessRejection interface {
+	error
+	ErrorCode() string
+	ErrorDetails() any
+}
+
+// renderedKind is the kind the root answers with. A business rejection a
+// handler did not classify, readstate.ErrChanged among them (ADR 0311), is
+// a 409 and never a server error, so the response metric records the
+// status the client sees and no handler needs a case per rejection.
+func renderedKind(kind FailureKind, err error) FailureKind {
+	var rejection businessRejection
+	if kind == FailureInternal && errors.As(err, &rejection) {
+		return FailureConflict
+	}
+	return kind
 }
 
 func classifyModuleError(err error) FailureKind {

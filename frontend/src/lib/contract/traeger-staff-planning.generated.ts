@@ -64,6 +64,7 @@ export interface TraegerPlanningShift {
   shift_type_color?: string;
   planned_by_traeger: boolean;
   from_series: boolean;
+  version: string;
 }
 
 export const TraegerPlanningShiftSchema: z.ZodType<TraegerPlanningShift, unknown> = object<TraegerPlanningShift>({
@@ -81,6 +82,7 @@ export const TraegerPlanningShiftSchema: z.ZodType<TraegerPlanningShift, unknown
   shift_type_color: optional(str),
   planned_by_traeger: bool,
   from_series: bool,
+  version: str,
 });
 
 /** Go: workforce.TraegerPlanningSollDay */
@@ -191,6 +193,7 @@ export interface PlanShiftRequest {
   end_time?: string;
   break_minutes?: number;
   notes?: string;
+  expected_version?: string;
 }
 
 export const routes = {

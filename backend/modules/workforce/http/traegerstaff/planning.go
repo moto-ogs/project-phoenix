@@ -58,6 +58,10 @@ type PlanShiftRequest struct {
 	EndTime              string   `json:"end_time"`
 	BreakMinutes         int      `json:"break_minutes"`
 	Notes                string   `json:"notes"`
+	// ExpectedVersion is the version of the shift a change replaces, as the
+	// week showed it (ADR 0311); a change of a shift changed since is
+	// refused with general.changed_since_read. A plan ignores it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 func (req *PlanShiftRequest) Bind(*http.Request) error {
@@ -74,7 +78,8 @@ func (req *PlanShiftRequest) toInput(recordID int64) workforce.TraegerPlanShift 
 	return workforce.TraegerPlanShift{
 		RecordID: recordID, SchoolID: req.SchoolID.Int64(), Date: calendar.Date(req.Date), StartTime: req.StartTime, EndTime: req.EndTime,
 		BreakMinutes: req.BreakMinutes, Notes: req.Notes,
-		WorkingTime: workforce.WorkingTimeConfirmation{Confirmed: req.WorkingTimeConfirmed, Reason: req.WorkingTimeReason},
+		WorkingTime:     workforce.WorkingTimeConfirmation{Confirmed: req.WorkingTimeConfirmed, Reason: req.WorkingTimeReason},
+		ExpectedVersion: req.ExpectedVersion,
 	}
 }
 

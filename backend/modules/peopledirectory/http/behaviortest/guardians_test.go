@@ -11,6 +11,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 
 	"github.com/go-chi/chi/v5"
@@ -144,12 +146,12 @@ func newGuardianHarness(t *testing.T, directory *fakeGuardianDirectory) *guardia
 		},
 		ParsePagination: func(*http.Request) (int, int) { return 1, 20 },
 		Success: func(w http.ResponseWriter, r *http.Request, status int, data any, message string) {
-			payload, _ := json.Marshal(data)
+			payload, _ := wire.Marshal(data)
 			render.Status(r, status)
 			_ = render.Render(w, r, response{Status: "success", Data: payload, Message: message})
 		},
 		SuccessPaginated: func(w http.ResponseWriter, r *http.Request, status int, data any, pagination usersHTTP.Pagination, message string) {
-			payload, _ := json.Marshal(data)
+			payload, _ := wire.Marshal(data)
 			render.Status(r, status)
 			_ = render.Render(w, r, response{Status: "success", Data: payload, Message: message})
 		},

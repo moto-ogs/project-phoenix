@@ -51,7 +51,7 @@ func schoolTrip(title string, parents string, classes ...string) calendarSvc.Sch
 
 func findAppointmentEvent(events []calendarSvc.Event, appointmentID int64) *calendarSvc.Event {
 	for i := range events {
-		if events[i].AppointmentID != nil && *events[i].AppointmentID == strconv.FormatInt(appointmentID, 10) {
+		if events[i].AppointmentID != nil && events[i].AppointmentID.String() == strconv.FormatInt(appointmentID, 10) {
 			return &events[i]
 		}
 	}

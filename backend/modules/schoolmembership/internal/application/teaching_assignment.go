@@ -90,9 +90,16 @@ func (s *Service) ListGroupAssignments(ctx context.Context, filter schoolmembers
 	filter.TeacherIDs = uniquePositive(filter.TeacherIDs)
 	filter.TeacherStaffIDs = uniquePositive(filter.TeacherStaffIDs)
 	filter.GroupsOfTeacherStaffIDs = uniquePositive(filter.GroupsOfTeacherStaffIDs)
-	err = s.runRead(ctx, "list_group_assignments", func(txCtx context.Context, stats *domain.OperationStats) error {
+	run, operation := s.runRead, "list_group_assignments"
+	if filter.ForUpdate {
+		run, operation = s.runWrite, "lock_group_assignment_rows"
+	}
+	err = run(ctx, operation, func(txCtx context.Context, stats *domain.OperationStats) error {
+		if err := admitLeaf(txCtx, filter.ForUpdate, "education.group_teacher"); err != nil {
+			return err
+		}
 		var queryStats domain.OperationStats
-		result, queryStats, err = s.store.ListGroupAssignments(txCtx, filter, false)
+		result, queryStats, err = s.store.ListGroupAssignments(txCtx, filter, filter.ForUpdate)
 		stats.Add(queryStats)
 		return err
 	})

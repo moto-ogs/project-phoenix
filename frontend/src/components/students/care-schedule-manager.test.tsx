@@ -1186,6 +1186,29 @@ describe("CareScheduleManager", () => {
     });
   });
 
+  // The pickup preview the save confirmed changed meanwhile: an older code
+  // of the same refusal (ADR 0311 §6), shown the same way.
+  it("shows the stored plan when the pickup preview changed since it was read", async () => {
+    mockApplyStudentPickupAdjustment.mockRejectedValueOnce(
+      new ApiError("stale", 409, { code: "pickup.preview_stale" }),
+    );
+    render(<CareScheduleManager studentId="42" statusDays={statusDays} />);
+    await screen.findByText("Betreuungszeiten");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Wochenplan bearbeiten" }),
+    );
+    fireEvent.click(screen.getByText("Wochenplan im Test speichern"));
+
+    expect(await screen.findByText(/inzwischen geändert/)).toBeInTheDocument();
+    expect(mockApplyStudentPickupAdjustment).toHaveBeenCalledOnce();
+    expect(screen.queryByTestId("care-plan-editor-week")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Wiederholen" })).toBeNull();
+    await waitFor(() => {
+      expect(mockFetchStudentPickupData).toHaveBeenCalledTimes(2);
+    });
+  });
+
   it("saves and reloads an own arrival time on a booked care day", async () => {
     const bookedArrivalData = { ...arrivalData, exceptions: [] };
     let savedArrivalData: ArrivalData | undefined;

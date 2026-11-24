@@ -1,9 +1,8 @@
 package careplanhttp
 
 import (
-	"strconv"
-
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // rosterImpactResponse is the wire form of a booking change's effect on the
@@ -28,17 +27,17 @@ type pickupOverrideResponse struct {
 }
 
 type adjustedRosterTemplateResponse struct {
-	TemplateID      string `json:"template_id"`
-	Name            string `json:"name"`
-	RemovedWeekdays []int  `json:"removed_weekdays"`
-	AddedWeekdays   []int  `json:"added_weekdays"`
+	TemplateID      ident.ID `json:"template_id"`
+	Name            string   `json:"name"`
+	RemovedWeekdays []int    `json:"removed_weekdays"`
+	AddedWeekdays   []int    `json:"added_weekdays"`
 }
 
 type manualRosterTemplateResponse struct {
-	TemplateID string `json:"template_id"`
-	Name       string `json:"name"`
-	Weekdays   []int  `json:"weekdays"`
-	ViaTarget  bool   `json:"via_target"`
+	TemplateID ident.ID `json:"template_id"`
+	Name       string   `json:"name"`
+	Weekdays   []int    `json:"weekdays"`
+	ViaTarget  bool     `json:"via_target"`
 	// Until is the day a later booking carries the Regeltermin again
 	// (exclusive, #5497); null when none does. "Entfernen" ends there.
 	Until *string `json:"until"`
@@ -59,13 +58,13 @@ func newRosterImpactResponse(impact careplan.RosterImpact) rosterImpactResponse 
 	}
 	for _, template := range impact.Adjusted {
 		out.Adjusted = append(out.Adjusted, adjustedRosterTemplateResponse{
-			TemplateID: strconv.FormatInt(template.TemplateID, 10), Name: template.Name,
+			TemplateID: ident.ID(template.TemplateID), Name: template.Name,
 			RemovedWeekdays: nonNilWeekdays(template.RemovedWeekdays), AddedWeekdays: nonNilWeekdays(template.AddedWeekdays),
 		})
 	}
 	for _, template := range impact.NotAdjusted {
 		response := manualRosterTemplateResponse{
-			TemplateID: strconv.FormatInt(template.TemplateID, 10), Name: template.Name,
+			TemplateID: ident.ID(template.TemplateID), Name: template.Name,
 			Weekdays: nonNilWeekdays(template.Weekdays), ViaTarget: template.ViaTarget,
 		}
 		if template.Until != nil {

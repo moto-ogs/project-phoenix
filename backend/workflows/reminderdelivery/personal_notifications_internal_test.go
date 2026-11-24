@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -171,21 +173,19 @@ func (c *captureNotifier) Notify(ctx context.Context, notices []PersonalReminder
 	return nil
 }
 
-func str(s string) *string { return &s }
-
-func pickupFixture(studentID, due string) StaffReminder {
+func pickupFixture(studentID ident.ID, due string) StaffReminder {
 	return StaffReminder{
 		Type:      TypePickupUpcoming,
-		StudentID: str(studentID),
+		StudentID: &studentID,
 		Title:     "Kind Name", // must never surface in a notification
 		DueTime:   due,
 	}
 }
 
-func activityFixture(instanceID, due string) StaffReminder {
+func activityFixture(instanceID ident.ID, due string) StaffReminder {
 	return StaffReminder{
 		Type:               TypeActivityStart,
-		ActivityInstanceID: str(instanceID),
+		ActivityInstanceID: &instanceID,
 		Title:              "Bastel-AG",
 		DueTime:            due,
 	}
@@ -254,8 +254,8 @@ func TestPersonalRemindersReachOnlyTheConsenting(t *testing.T) {
 
 	setup := buildReminderProducer(t,
 		map[int64]*Result{
-			caregiverStaffID: resultOf(pickupFixture("11", "14:00")),
-			adminStaffID:     resultOf(pickupFixture("11", "14:00")),
+			caregiverStaffID: resultOf(pickupFixture(11, "14:00")),
+			adminStaffID:     resultOf(pickupFixture(11, "14:00")),
 		},
 		// Only the caregiver switched pickups on.
 		map[string][]int64{TypePickupUpcoming: {caregiverAccountID}},
@@ -290,7 +290,7 @@ func TestPersonalRemindersMarkAdminScope(t *testing.T) {
 	t.Parallel()
 
 	setup := buildReminderProducer(t,
-		map[int64]*Result{adminStaffID: resultOf(pickupFixture("11", "14:00"))},
+		map[int64]*Result{adminStaffID: resultOf(pickupFixture(11, "14:00"))},
 		map[string][]int64{TypePickupUpcoming: {adminAccountID}},
 	)
 
@@ -306,7 +306,7 @@ func TestPersonalRemindersIncludeStafflessEffectiveAdminsWhenDutyGateDisabled(t 
 	t.Parallel()
 
 	setup := buildReminderProducer(t,
-		map[int64]*Result{-stafflessAdminID: resultOf(pickupFixture("11", "14:00"))},
+		map[int64]*Result{-stafflessAdminID: resultOf(pickupFixture(11, "14:00"))},
 		map[string][]int64{TypePickupUpcoming: {stafflessAdminID}},
 	)
 	setup.staff.accounts = map[int64]int64{caregiverStaffID: caregiverAccountID}
@@ -328,7 +328,7 @@ func TestPersonalRemindersExcludeStafflessEffectiveAdminsWhenDutyGateEnabled(t *
 	t.Parallel()
 
 	setup := buildReminderProducer(t,
-		map[int64]*Result{-stafflessAdminID: resultOf(pickupFixture("11", "14:00"))},
+		map[int64]*Result{-stafflessAdminID: resultOf(pickupFixture(11, "14:00"))},
 		map[string][]int64{TypePickupUpcoming: {stafflessAdminID}},
 	)
 	setup.staff.accounts = map[int64]int64{caregiverStaffID: caregiverAccountID}
@@ -345,7 +345,7 @@ func TestPersonalRemindersSkipComputationWithoutConsent(t *testing.T) {
 	t.Parallel()
 
 	setup := buildReminderProducer(t,
-		map[int64]*Result{caregiverStaffID: resultOf(pickupFixture("11", "14:00"))},
+		map[int64]*Result{caregiverStaffID: resultOf(pickupFixture(11, "14:00"))},
 		nil, // nobody agreed to anything
 	)
 
@@ -365,7 +365,7 @@ func TestPersonalRemindersTreatStoredConsentAsGateNotAudience(t *testing.T) {
 
 	const staleAccountID int64 = 999
 	setup := buildReminderProducer(t,
-		map[int64]*Result{caregiverStaffID: resultOf(pickupFixture("11", "14:00"))},
+		map[int64]*Result{caregiverStaffID: resultOf(pickupFixture(11, "14:00"))},
 		map[string][]int64{TypePickupUpcoming: {staleAccountID}},
 	)
 
@@ -385,11 +385,11 @@ func TestPersonalRemindersAggregatePerTypeAndDedupPerPerson(t *testing.T) {
 	setup := buildReminderProducer(t,
 		map[int64]*Result{
 			caregiverStaffID: resultOf(
-				pickupFixture("11", "14:00"),
-				pickupFixture("12", "14:05"),
-				activityFixture("31", "14:10"),
+				pickupFixture(11, "14:00"),
+				pickupFixture(12, "14:05"),
+				activityFixture(31, "14:10"),
 			),
-			adminStaffID: resultOf(pickupFixture("11", "14:00")),
+			adminStaffID: resultOf(pickupFixture(11, "14:00")),
 		},
 		map[string][]int64{
 			TypePickupUpcoming: {caregiverAccountID, adminAccountID},
@@ -411,8 +411,8 @@ func TestPersonalRemindersAggregatePerTypeAndDedupPerPerson(t *testing.T) {
 
 	// A newly due overdue pickup for the caregiver alone.
 	setup.computer.results[caregiverStaffID] = resultOf(
-		pickupFixture("11", "14:00"),
-		StaffReminder{Type: TypePickupOverdue, StudentID: str("14"), DueTime: "13:30"},
+		pickupFixture(11, "14:00"),
+		StaffReminder{Type: TypePickupOverdue, StudentID: new(ident.ID(14)), DueTime: "13:30"},
 	)
 	setup.consent.byType[TypePickupOverdue] = []int64{caregiverAccountID}
 
@@ -427,8 +427,8 @@ func TestPersonalRemindersAggregatePerTypeAndDedupPerPerson(t *testing.T) {
 func TestPersonalRemindersClassifyAssignedActivities(t *testing.T) {
 	t.Parallel()
 
-	assigned := resultOf(activityFixture("31", "14:10"))
-	assigned.AssignedActivityInstanceIDs = map[string]struct{}{"31": {}}
+	assigned := resultOf(activityFixture(31, "14:10"))
+	assigned.AssignedActivityInstanceIDs = map[ident.ID]struct{}{31: {}}
 
 	t.Run("assigned slot needs the assignment consent", func(t *testing.T) {
 		setup := buildReminderProducer(t,
@@ -461,7 +461,7 @@ func TestPersonalRemindersClassifyAssignedActivities(t *testing.T) {
 
 	t.Run("an unassigned activity stays a room activity", func(t *testing.T) {
 		setup := buildReminderProducer(t,
-			map[int64]*Result{caregiverStaffID: resultOf(activityFixture("31", "14:10"))},
+			map[int64]*Result{caregiverStaffID: resultOf(activityFixture(31, "14:10"))},
 			map[string][]int64{TypeActivityStart: {caregiverAccountID}},
 		)
 
@@ -478,8 +478,8 @@ func TestPersonalRemindersOnDutyGate(t *testing.T) {
 	t.Parallel()
 
 	results := map[int64]*Result{
-		caregiverStaffID: resultOf(pickupFixture("11", "14:00")),
-		adminStaffID:     resultOf(pickupFixture("11", "14:00")),
+		caregiverStaffID: resultOf(pickupFixture(11, "14:00")),
+		adminStaffID:     resultOf(pickupFixture(11, "14:00")),
 	}
 	consent := map[string][]int64{
 		TypePickupUpcoming: {caregiverAccountID, adminAccountID},
@@ -533,7 +533,7 @@ func TestPersonalRemindersDutyGateOffByDefault(t *testing.T) {
 	t.Parallel()
 
 	setup := buildReminderProducer(t,
-		map[int64]*Result{caregiverStaffID: resultOf(pickupFixture("11", "14:00"))},
+		map[int64]*Result{caregiverStaffID: resultOf(pickupFixture(11, "14:00"))},
 		map[string][]int64{TypePickupUpcoming: {caregiverAccountID}},
 	)
 	setup.duty.onDuty = nil
@@ -548,7 +548,7 @@ func TestPersonalRemindersSkipConditions(t *testing.T) {
 	t.Parallel()
 
 	consent := map[string][]int64{TypePickupUpcoming: {caregiverAccountID}}
-	reminder := pickupFixture("11", "14:00")
+	reminder := pickupFixture(11, "14:00")
 
 	t.Run("reminder feature off", func(t *testing.T) {
 		setup := buildReminderProducer(t, map[int64]*Result{
@@ -595,7 +595,7 @@ func TestPersonalRemindersNotifyFailureLeavesUnmarked(t *testing.T) {
 	t.Parallel()
 
 	setup := buildReminderProducer(t,
-		map[int64]*Result{caregiverStaffID: resultOf(pickupFixture("11", "14:00"))},
+		map[int64]*Result{caregiverStaffID: resultOf(pickupFixture(11, "14:00"))},
 		map[string][]int64{TypePickupUpcoming: {caregiverAccountID}},
 	)
 	setup.notifier.err = errDispatchPaused
@@ -612,7 +612,7 @@ func TestPersonalRemindersNotifyFailureLeavesUnmarked(t *testing.T) {
 func TestPersonalRemindersMarkOccurrencesAfterCommit(t *testing.T) {
 	t.Parallel()
 
-	reminder := pickupFixture("11", "14:00")
+	reminder := pickupFixture(11, "14:00")
 	setup := buildReminderProducer(t,
 		map[int64]*Result{caregiverStaffID: resultOf(reminder)},
 		map[string][]int64{TypePickupUpcoming: {caregiverAccountID}},
@@ -650,13 +650,13 @@ func TestPersonalRemindersKeyIdentifiesTheNotifiedOccurrences(t *testing.T) {
 
 	consent := map[string][]int64{TypePickupUpcoming: {caregiverAccountID}}
 	setup := buildReminderProducer(t,
-		map[int64]*Result{caregiverStaffID: resultOf(pickupFixture("11", "10:00"))},
+		map[int64]*Result{caregiverStaffID: resultOf(pickupFixture(11, "10:00"))},
 		consent,
 	)
 	now := calendar.NewDate(2026, time.October, 26).BerlinMidnight().Add(14 * time.Hour)
 
 	setup.notify(context.Background(), now)
-	setup.computer.results[caregiverStaffID] = resultOf(pickupFixture("12", "14:00"))
+	setup.computer.results[caregiverStaffID] = resultOf(pickupFixture(12, "14:00"))
 	setup.notify(context.Background(), now)
 
 	require.Len(t, setup.notifier.notices, 2)
@@ -666,7 +666,7 @@ func TestPersonalRemindersKeyIdentifiesTheNotifiedOccurrences(t *testing.T) {
 		"a later pickup of the same count must not reuse the earlier key")
 
 	restarted := buildReminderProducer(t,
-		map[int64]*Result{caregiverStaffID: resultOf(pickupFixture("12", "14:00"))},
+		map[int64]*Result{caregiverStaffID: resultOf(pickupFixture(12, "14:00"))},
 		consent,
 	)
 	restarted.notify(context.Background(), now)
@@ -679,7 +679,7 @@ func TestPersonalRemindersKeyIdentifiesTheNotifiedOccurrences(t *testing.T) {
 func TestPersonalRemindersRollbackLeavesOccurrencesUnmarked(t *testing.T) {
 	t.Parallel()
 
-	reminder := pickupFixture("11", "14:00")
+	reminder := pickupFixture(11, "14:00")
 	setup := buildReminderProducer(t,
 		map[int64]*Result{caregiverStaffID: resultOf(reminder)},
 		map[string][]int64{TypePickupUpcoming: {caregiverAccountID}},
@@ -705,7 +705,7 @@ func TestPersonalRemindersTenantIsolationAndDayRotation(t *testing.T) {
 	t.Parallel()
 
 	setup := buildReminderProducer(t,
-		map[int64]*Result{caregiverStaffID: resultOf(pickupFixture("11", "14:00"))},
+		map[int64]*Result{caregiverStaffID: resultOf(pickupFixture(11, "14:00"))},
 		map[string][]int64{TypePickupUpcoming: {caregiverAccountID}},
 	)
 	// 00:30 on the night the clocks go back: that day has 25 hours, so

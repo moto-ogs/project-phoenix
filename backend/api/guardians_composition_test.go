@@ -15,7 +15,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
-	usersAPI "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -1226,6 +1225,6 @@ func TestGuardianComposition_BulkInviteRefusesAStalePreviewAsConflict(t *testing
 
 	require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
 	assert.Equal(t, readstate.ChangedCode, testutil.ParseJSONResponse(t, rr.Body.Bytes())["code"])
-	assert.Equal(t, usersAPI.FailureConflict, guardianFailureKind(ClassifyGuardianInvitationFailure(fmt.Errorf("bulk invite: %w", readstate.ErrChanged))),
-		"the response metric counts the kind's status, 409")
+	// The response metric counts the rendered 409: the adapter classifies
+	// every business rejection (TestGuardianReadStateRefusalsCountAsConflicts).
 }

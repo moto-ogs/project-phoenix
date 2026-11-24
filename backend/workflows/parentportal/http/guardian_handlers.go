@@ -3,9 +3,9 @@ package parent
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
@@ -14,10 +14,10 @@ import (
 // child: profile-level contact data plus the per-child pickup relationship,
 // annotated with what the caller may edit. int64 IDs are stringified.
 type childGuardianResponse struct {
-	GuardianProfileID string `json:"guardian_profile_id"`
-	StudentGuardianID string `json:"student_guardian_id"`
-	FirstName         string `json:"first_name"`
-	LastName          string `json:"last_name"`
+	GuardianProfileID ident.ID `json:"guardian_profile_id"`
+	StudentGuardianID ident.ID `json:"student_guardian_id"`
+	FirstName         string   `json:"first_name"`
+	LastName          string   `json:"last_name"`
 	// Salutation is the caller's own chosen form of address (ms, mr); absent
 	// for other guardians and without a choice (#7362).
 	Salutation         string                  `json:"salutation,omitempty"`
@@ -289,8 +289,8 @@ func guardianResponse(g *parentService.ChildGuardian) childGuardianResponse {
 		})
 	}
 	return childGuardianResponse{
-		GuardianProfileID:         strconv.FormatInt(g.GuardianProfileID, 10),
-		StudentGuardianID:         strconv.FormatInt(g.StudentGuardianID, 10),
+		GuardianProfileID:         ident.ID(g.GuardianProfileID),
+		StudentGuardianID:         ident.ID(g.StudentGuardianID),
 		FirstName:                 g.FirstName,
 		LastName:                  g.LastName,
 		Salutation:                g.Salutation,

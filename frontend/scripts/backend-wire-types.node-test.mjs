@@ -34,6 +34,19 @@ test("finds a hand-written wire type by its shape, whatever its name", () => {
   ]);
 });
 
+test("finds a copy in an object union branch", () => {
+  const findings = findBackendWireTypes(
+    "x.ts",
+    `
+    type Reply = null | ({ challenge_token: string; masked_email: string });
+    type Domain = { first_name: string } | { last_name: string };
+  `,
+  );
+  assert.deepEqual(summary(findings), [
+    ["shape", "Reply", ["challenge_token", "masked_email"]],
+  ]);
+});
+
 test("finds renamed and merely aliased generated types", () => {
   const findings = findBackendWireTypes(
     "x.ts",
