@@ -258,7 +258,10 @@ lesen darf jede Person mit vollem Zugriff auf das Kind. Wirkung im Code:
   Ferienwoche. Das gilt nicht für einen Feriengast ohne Schule beim Träger.
 - **Grenzen:** Ein im selben Moment
   nachgetragener, schon abgeschlossener Raumbesuch kann den Stopp überleben;
-  erneutes Aufheben und Setzen entfernt ihn.
+  erneutes Aufheben und Setzen an der Schule des Stopps entfernt ihn. Für
+  einen Feriengast an der ausrichtenden Schule gilt das nicht: Dort
+  verschwindet ein solcher Besuch erst mit dem nächsten Raumwechsel des
+  Gasts.
 
 Der zugehörige Personal-API-Weg ist `GET`/`PUT /students/{id}/privacy-consent`
 (`users:read` bzw. `users:update` plus Kinderzugriff). Auch der Kinderimport

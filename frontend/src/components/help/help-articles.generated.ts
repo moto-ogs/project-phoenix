@@ -6277,6 +6277,7 @@ export const parentChildDataTopic = function parentChildDataTopic(): HelpTopic {
           "Tippe bei `Raumverlauf und Stimmung` auf `Stoppen`.",
           "Tippe auf `Jetzt stoppen`.",
           "moto löscht sofort, in welchen Räumen dein Kind war. Danach speichert moto keine Räume und keine Stimmung mehr. Die Betreuung sieht weiter, wo dein Kind gerade ist. Schon gespeicherte Stimmungen löscht moto erst nach der üblichen Frist.",
+          "Wird dein Kind in den Ferien an einer anderen Schule betreut, gilt der Stopp auch dort.",
           "Mit `Wieder speichern` hebst du den Stopp für dein Kind auf. Deine Schule entscheidet, ob Raumverlauf und Stimmung gespeichert werden. Gelöschtes kommt nicht zurück.",
         ],
       },
