@@ -156,10 +156,13 @@ func (c *FamilyDebtorNumberConflict) Error() string {
 // When the Träger keeps the number per child (#7007), Children names every
 // child of the registration with the number it has, empty for none, and
 // DebtorNumber is the first child's; with a number per payer Children is
-// empty.
+// empty. Version is the token of the children's numbers as shown (ADR
+// 0311), which a change of them and a confirmation that sends them send
+// back; empty with a number per payer.
 type HolidayFamilyDebtorNumber struct {
 	DebtorNumber string                     `json:"debtor_number"`
 	Children     []HolidayChildDebtorNumber `json:"children,omitempty"`
+	Version      string                     `json:"version,omitempty"`
 }
 
 // HolidayChildDebtorNumber is a child of a holiday registration with its

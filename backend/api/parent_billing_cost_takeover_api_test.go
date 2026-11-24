@@ -455,7 +455,7 @@ func TestConfirmationAndDeletionOfACostBearerWaitForEachOther(t *testing.T) {
 	_, err = deletion.ExecContext(ctx, `SELECT id FROM parent_billing.cost_bearers WHERE id = ? FOR UPDATE`, deleted.ID)
 	require.NoError(t, err)
 	confirmation := requestInBackground(t, f, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), f.siblings),
-		map[string]any{"cost_bearer_id": deleted.ID})
+		withHolidayPreview(t, f.traeger, f.office.token, int64(f.period.ID), f.siblings, map[string]any{"cost_bearer_id": deleted.ID}))
 	assertWaits(t, confirmation, "the confirmation")
 	_, err = deletion.ExecContext(ctx, `DELETE FROM parent_billing.cost_bearers WHERE id = ?`, deleted.ID)
 	require.NoError(t, err)

@@ -118,8 +118,7 @@ func seedHolidayDayRegistrations(rt *Runtime, auth AuthRef, token string, period
 		}
 	}
 	fmt.Println("  Ferienanmeldung: three children booked single days, one of them waits")
-	confirm := fmt.Sprintf("/traeger/holiday-contributions/%d/registrations/%d/confirm", periodID, first)
-	if _, err := rt.Client.PostWithAuth(auth, confirm, map[string]any{"benefits_exemption": false, "debtor_number": "47010"}); err != nil {
+	if err := postReadHolidayConfirmation(rt, auth, periodID, first, map[string]any{"benefits_exemption": false, "debtor_number": "47010"}); err != nil {
 		return fmt.Errorf("confirm the registration by days: %w", err)
 	}
 	fmt.Println("  Träger-Büro: registration by days confirmed with two days at the day price")

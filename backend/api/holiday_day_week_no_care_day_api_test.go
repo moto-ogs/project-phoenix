@@ -101,7 +101,7 @@ func TestHolidayWeekByDaysLeavesOutOnlyItsDaysWithoutCare(t *testing.T) {
 	assert.Equal(t, map[string]int{dayMonday: 1, dayTuesday: 0, dayWednesday: 0, dayThursday: 0, dayFriday: 1}, d.placedOn(t),
 		"the booking takes a place on its days only")
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayConfirmPath(int64(created.ID), int64(ole.ID)), nil)
+	rec = confirmReadHoliday(t, f.traeger, office.token, int64(created.ID), int64(ole.ID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, int64(3000), decodeSchoolPortalData[confirmationBody](t, rec.Body.Bytes()).Contribution.TotalCents,
 		"two booked days at 15 €; the days without care cost nothing")

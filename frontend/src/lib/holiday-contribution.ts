@@ -95,6 +95,11 @@ export interface HolidayContribution {
    * now, for example after a sibling was cancelled (#5662).
    */
   readonly correctionNeeded?: boolean;
+  /**
+   * The token of a preview (ADR 0311): the confirmation sends it back and
+   * freezes only the contribution shown. "" on a frozen contribution.
+   */
+  readonly fingerprint?: string;
 }
 
 interface HolidaySibling {
@@ -154,5 +159,6 @@ export function contributionFromBackend(
     siblingDebtorNumber: contribution.sibling_debtor_number ?? "",
     siblingsInvoiced: contribution.siblings_invoiced ?? false,
     correctionNeeded: contribution.correction_needed ?? false,
+    fingerprint: contribution.fingerprint ?? "",
   };
 }

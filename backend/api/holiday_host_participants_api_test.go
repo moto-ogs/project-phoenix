@@ -177,8 +177,11 @@ func (f holidayHostFixture) confirm(t *testing.T, registration int64, action str
 	path := fmt.Sprintf("%s/registrations/%d/%s", holidayPeriodPath(f.periodID(t)), registration, action)
 	switch action {
 	case "confirm":
-		// The Elternabrechnung confirms and freezes the contribution (#4664, ADR 0115).
-		path = holidayConfirmPath(f.periodID(t), registration)
+		// The Elternabrechnung confirms and freezes the contribution (#4664,
+		// ADR 0115) the office read (ADR 0311).
+		rec := confirmReadHoliday(t, f.traeger, f.office.token, f.periodID(t), registration, nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		return
 	case "cancel":
 		// It cancels too, to compute the sibling group again (#5662).
 		path = holidayCancelPath(f.periodID(t), registration)

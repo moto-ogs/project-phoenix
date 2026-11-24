@@ -86,13 +86,23 @@ vi.mock("~/lib/traeger-sibling-groups-api", () => ({
   mergeHolidaySiblings: (periodId: string, ids: readonly string[]) =>
     mockMerge(periodId, ids),
 }));
-const { mockConfirm } = vi.hoisted(() => ({ mockConfirm: vi.fn() }));
+const { mockConfirm, mockConfirmRead } = vi.hoisted(() => ({
+  mockConfirm: vi.fn(),
+  mockConfirmRead: vi.fn(),
+}));
 vi.mock("~/lib/traeger-contributions-api", () => ({
+  // Each confirmation of the run reads the preview it freezes (ADR 0311).
+  fetchHolidayContribution: (periodId: string, registrationId: string) =>
+    Promise.resolve({ fingerprint: `vorschau-${periodId}-${registrationId}` }),
   confirmHolidayRegistration: (
     periodId: string,
     registrationId: string,
+    read: { fingerprint: string },
     benefitsExemption: boolean,
-  ) => mockConfirm(periodId, registrationId, benefitsExemption),
+  ) => {
+    mockConfirmRead(registrationId, read.fingerprint);
+    return mockConfirm(periodId, registrationId, benefitsExemption);
+  },
 }));
 vi.mock("~/lib/file-download", () => ({
   downloadBlob: (blob: Blob, name: string) => mockDownloadBlob(blob, name),
@@ -997,6 +1007,7 @@ describe("TraegerHolidayRegistrationsPage bulk confirmation (#6674)", () => {
     mockFetchList.mockReset();
     mockFetchGroups.mockReset();
     mockConfirm.mockReset();
+    mockConfirmRead.mockReset();
     mockFetchList.mockResolvedValue(BULK_LIST);
     mockFetchGroups.mockResolvedValue([]);
     mockConfirmationSettings.mockResolvedValue({ debtorNumberRequired: false });
@@ -1054,6 +1065,11 @@ describe("TraegerHolidayRegistrationsPage bulk confirmation (#6674)", () => {
     expect(mockConfirm.mock.calls).toEqual([
       ["5", "21", false],
       ["5", "22", false],
+    ]);
+    // Each confirmation freezes the preview it read right before (ADR 0311).
+    expect(mockConfirmRead.mock.calls).toEqual([
+      ["21", "vorschau-5-21"],
+      ["22", "vorschau-5-22"],
     ]);
     expect(
       result.getByText("2 Anmeldungen bleiben offen. Prüfe die Gründe unten."),
@@ -1151,6 +1167,33 @@ describe("TraegerHolidayRegistrationsPage bulk confirmation (#6674)", () => {
       ).not.toBeChecked();
     },
   );
+
+  it("keeps a registration whose contribution changed since its preview open as changed", async () => {
+    mockConfirm.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    renderPage();
+    await selectRows([
+      "Anmeldung Nr. 21 von Anna Muster",
+      "Anmeldung Nr. 22 von Bodo Muster",
+    ]);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Ausgewählte bestätigen" }),
+    );
+    fireEvent.click(
+      within(
+        await screen.findByRole("dialog", {
+          name: "2 Anmeldungen bestätigen?",
+        }),
+      ).getByRole("button", { name: "2 bestätigen" }),
+    );
+    const result = within(
+      await screen.findByRole("dialog", { name: "Keine Anmeldung bestätigt" }),
+    );
+    expect(result.getByText("Inzwischen geändert")).toBeInTheDocument();
+    // A refusal keeps only its registration open; the run goes on.
+    expect(mockConfirm).toHaveBeenCalledTimes(2);
+  });
 
   it.each([
     ["confirmed", "Bestätigt"],

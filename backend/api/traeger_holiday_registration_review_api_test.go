@@ -135,7 +135,7 @@ func (f reviewFixture) act(t *testing.T, id int64, action string) *httptest.Resp
 	t.Helper()
 	switch action {
 	case "confirm":
-		return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), id), nil)
+		return confirmReadHoliday(t, f.traeger, f.office.token, int64(f.period.ID), id, nil)
 	case "cancel":
 		return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayCancelPath(int64(f.period.ID), id), nil)
 	}
@@ -287,8 +287,11 @@ func TestTraegerConfirmsAndCancelsHolidayRegistrationsWithHistory(t *testing.T) 
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "enrollment.holiday_registration_entry_not_found", code)
 
+	// Each confirmation reads its preview first (ADR 0311): a read of the
+	// registration in the trail, also before a refused confirmation.
 	assert.Equal(t, []string{
-		fmt.Sprintf("read:%d", f.siblings), fmt.Sprintf("confirm:%d", f.siblings), fmt.Sprintf("cancel:%d", f.again),
+		fmt.Sprintf("read:%d", f.siblings), fmt.Sprintf("read:%d", f.siblings), fmt.Sprintf("confirm:%d", f.siblings),
+		fmt.Sprintf("read:%d", f.siblings), fmt.Sprintf("cancel:%d", f.again), fmt.Sprintf("read:%d", f.again),
 		fmt.Sprintf("read:%d", f.again), "list", fmt.Sprintf("cancel:%d", f.siblings), fmt.Sprintf("read:%d", f.siblings),
 	}, f.auditActions(t), "reads and changes are in the audit trail; refused changes left nothing")
 }
@@ -500,7 +503,8 @@ func TestHolidayRegistrationAuditGoesWithItsPeriod(t *testing.T) {
 		return rows
 	}
 	assert.Zero(t, count(int64(ended.ID)), "the audit trail of the ended period is gone")
-	assert.Equal(t, 2, count(int64(f.period.ID)), "the audit trail of the running period stays")
+	// The list, the read of the preview (ADR 0311) and the confirmation.
+	assert.Equal(t, 3, count(int64(f.period.ID)), "the audit trail of the running period stays")
 }
 
 // TestTimeModelOfAPastBookingIsNotRemoved pins the guard of migration

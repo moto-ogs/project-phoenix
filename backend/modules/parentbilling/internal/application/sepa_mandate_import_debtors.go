@@ -281,8 +281,17 @@ func childNumbersToSet(candidates []importCandidate) []parentbilling.ChildDebtor
 // saveChildNumbers gives each child its number where it has none and
 // records the change in the trail of the number.
 func (m *SEPAMandates) saveChildNumbers(ctx context.Context, reviewer parentbilling.HolidayReviewer, candidates []importCandidate) error {
-	set := childNumbersToSet(candidates)
-	if err := m.store.ExtendChildDebtorNumbers(ctx, reviewer.OrganizationID, childNumbersToExtend(candidates)); err != nil {
+	set, extend := childNumbersToSet(candidates), childNumbersToExtend(candidates)
+	// Both statements take the lock of their families; held here at once in
+	// the order of the families, the second takes no family after the first.
+	families := make([]string, 0, len(set)+len(extend))
+	for _, number := range slices.Concat(set, extend) {
+		families = append(families, number.FamilyEmail)
+	}
+	if err := m.store.LockChildDebtorNumbers(ctx, reviewer.OrganizationID, families); err != nil {
+		return err
+	}
+	if err := m.store.ExtendChildDebtorNumbers(ctx, reviewer.OrganizationID, extend); err != nil {
 		return fmt.Errorf("parent billing: keep the debtor numbers of the children: %w", err)
 	}
 	if len(set) == 0 {
