@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"slices"
 
@@ -54,6 +55,14 @@ func (e engine) TraegerSchoolRoles(collaborators identityaccess.TraegerSchoolRol
 // rewrites its row, so its change time covers the selection too.
 func traegerRoleVersion(role domain.TraegerSchoolRole) string {
 	return readstate.Of(role.UpdatedAt)
+}
+
+// alone serializes the writes of one Träger's roles across their Träger
+// transaction and every school's transaction: a slower save cannot write
+// its older state into a school after a newer one, and a save cannot
+// recreate a copy while a removal walks the schools.
+func (t *TraegerSchoolRoles) alone(ctx context.Context, actor identityaccess.TraegerSchoolRoleActor, fn func(context.Context) error) error {
+	return t.ports.Runtime.WithinExclusive(ctx, fmt.Sprintf("traeger-school-roles:%d", actor.OrganizationID), fn)
 }
 
 func (t *TraegerSchoolRoles) inTraeger(ctx context.Context, actor identityaccess.TraegerSchoolRoleActor, fn func(context.Context) error) error {
@@ -130,7 +139,7 @@ func schoolCarry(role domain.TraegerSchoolRole, school identityaccess.TraegerSch
 	for _, state := range states {
 		switch {
 		case state.TraegerRoleID != nil && *state.TraegerRoleID == role.ID:
-			carry.Carried, carry.Holders = true, state.Holders
+			carry.Carried, carry.Holders = state.Carries(role), state.Holders
 		case state.TraegerRoleID == nil && state.Name == role.CopyName():
 			carry.NameTaken = true
 		}
@@ -191,24 +200,29 @@ func (t *TraegerSchoolRoles) CreateTraegerSchoolRole(ctx context.Context, actor 
 	if err := invalidTraegerSchoolRole(role); err != nil {
 		return identityaccess.TraegerSchoolRole{}, err
 	}
-	schools, err := t.ports.Schools.TraegerSchools(ctx, actor.OrganizationID)
-	if err != nil {
-		return identityaccess.TraegerSchoolRole{}, err
-	}
-	if err := t.refuseNameOfSchoolRole(ctx, schools, role); err != nil {
-		return identityaccess.TraegerSchoolRole{}, err
-	}
-	err = t.inTraeger(ctx, actor, func(ctx context.Context) error {
-		if err := t.requireStorable(ctx, role); err != nil {
+	var saved identityaccess.TraegerSchoolRole
+	err := t.alone(ctx, actor, func(ctx context.Context) error {
+		schools, err := t.ports.Schools.TraegerSchools(ctx, actor.OrganizationID)
+		if err != nil {
 			return err
 		}
-		role, err = t.store.SaveTraegerSchoolRole(ctx, role)
-		return err
+		if err := t.refuseNameOfSchoolRole(ctx, schools, role); err != nil {
+			return err
+		}
+		err = t.inTraeger(ctx, actor, func(ctx context.Context) error {
+			if err := t.requireStorable(ctx, role); err != nil {
+				return err
+			}
+			role, err = t.store.SaveTraegerSchoolRole(ctx, role)
+			return err
+		})
+		if err != nil {
+			return err
+		}
+		saved = t.carry(ctx, actor, role, schools)
+		return nil
 	})
-	if err != nil {
-		return identityaccess.TraegerSchoolRole{}, err
-	}
-	return t.carry(ctx, actor, role, schools), nil
+	return saved, err
 }
 
 // UpdateTraegerSchoolRole rewrites a role and carries it into every school.
@@ -219,29 +233,42 @@ func (t *TraegerSchoolRoles) UpdateTraegerSchoolRole(ctx context.Context, actor 
 	if err := invalidTraegerSchoolRole(role); err != nil {
 		return identityaccess.TraegerSchoolRole{}, err
 	}
-	schools, err := t.ports.Schools.TraegerSchools(ctx, actor.OrganizationID)
-	if err != nil {
-		return identityaccess.TraegerSchoolRole{}, err
-	}
-	current, err := t.readTraegerRole(ctx, actor, id, input.ExpectedVersion)
-	if err != nil {
-		return identityaccess.TraegerSchoolRole{}, err
-	}
-	if current.CopyName() != role.CopyName() {
-		if err := t.refuseNameOfSchoolRole(ctx, schools, role); err != nil {
-			return identityaccess.TraegerSchoolRole{}, err
+	var saved identityaccess.TraegerSchoolRole
+	err := t.alone(ctx, actor, func(ctx context.Context) error {
+		schools, err := t.ports.Schools.TraegerSchools(ctx, actor.OrganizationID)
+		if err != nil {
+			return err
 		}
-	}
-	err = t.inTraeger(ctx, actor, func(ctx context.Context) error {
-		// One row FOR UPDATE: after a wait the row comes back as committed.
-		locked, found, err := t.store.FindTraegerSchoolRole(ctx, actor.OrganizationID, id, true)
+		current, err := t.readTraegerRole(ctx, actor, id, input.ExpectedVersion)
+		if err != nil {
+			return err
+		}
+		if current.CopyName() != role.CopyName() {
+			if err := t.refuseNameOfSchoolRole(ctx, schools, role); err != nil {
+				return err
+			}
+		}
+		if role, err = t.rewriteTraegerRole(ctx, actor, role, input.ExpectedVersion); err != nil {
+			return err
+		}
+		saved = t.carry(ctx, actor, role, schools)
+		return nil
+	})
+	return saved, err
+}
+
+// rewriteTraegerRole stores the role over the version the form read, under
+// the row lock: after a wait the row comes back as committed.
+func (t *TraegerSchoolRoles) rewriteTraegerRole(ctx context.Context, actor identityaccess.TraegerSchoolRoleActor, role domain.TraegerSchoolRole, expectedVersion string) (domain.TraegerSchoolRole, error) {
+	err := t.inTraeger(ctx, actor, func(ctx context.Context) error {
+		locked, found, err := t.store.FindTraegerSchoolRole(ctx, actor.OrganizationID, role.ID, true)
 		if err != nil {
 			return err
 		}
 		if !found {
 			return identityaccess.ErrTraegerSchoolRoleNotFound
 		}
-		if err := readstate.Check(input.ExpectedVersion, traegerRoleVersion(locked)); err != nil {
+		if err := readstate.Check(expectedVersion, traegerRoleVersion(locked)); err != nil {
 			return err
 		}
 		if err := t.requireStorable(ctx, role); err != nil {
@@ -250,10 +277,7 @@ func (t *TraegerSchoolRoles) UpdateTraegerSchoolRole(ctx context.Context, actor 
 		role, err = t.store.SaveTraegerSchoolRole(ctx, role)
 		return err
 	})
-	if err != nil {
-		return identityaccess.TraegerSchoolRole{}, err
-	}
-	return t.carry(ctx, actor, role, schools), nil
+	return role, err
 }
 
 // readTraegerRole reads the role the change was made from and refuses a

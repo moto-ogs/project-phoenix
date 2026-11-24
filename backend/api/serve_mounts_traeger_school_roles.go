@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/traegerportal"
+	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
 // mountTraegerSchoolRoleRoutes serves the roles a Träger gives the staff of
@@ -28,7 +29,7 @@ func mountTraegerSchoolRoleRoutes(root chi.Router, organizations HolidayOrganiza
 	}
 	roles, err := provider.TraegerSchoolRoles(identityaccess.TraegerSchoolRolePorts{
 		Schools: traegerRoleSchools{organizations: organizations},
-		Runtime: traegerDocumentRuntime{},
+		Runtime: traegerRoleRuntime{},
 		People:  traegerRolePeople{persons: persons},
 	})
 	if err != nil {
@@ -37,6 +38,15 @@ func mountTraegerSchoolRoleRoutes(root chi.Router, organizations HolidayOrganiza
 	requireSettings := common.RequiresPermission(identityaccess.TraegerRightSettingsManage)
 	root.Mount("/traeger/school-roles", traegerportal.NewSchoolRolesResource(roles, requireSettings).TraegerRouter(ProtectedTraegerRoutes))
 	return nil
+}
+
+// traegerRoleRuntime opens a school's tenant transaction or the Träger
+// transaction, never both at once (ADR 0105), and serializes the writes of
+// one Träger's roles across them (ADR 0317).
+type traegerRoleRuntime struct{ traegerDocumentRuntime }
+
+func (traegerRoleRuntime) WithinExclusive(ctx context.Context, key string, fn func(context.Context) error) error {
+	return tenant.WithinExclusive(ctx, key, fn)
 }
 
 // traegerRoleSchools lists the undeleted schools of the Träger by name.

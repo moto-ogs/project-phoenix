@@ -11489,7 +11489,15 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.traegerDocumentRuntime.WithinSchool",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleRuntime.WithinExclusive",
+      "binding_digest": "2954643ce7b7fe97991a6037f1544cbd",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinExclusive",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinExclusive",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleRuntime.WithinSchool",
       "binding_digest": "bfa11418ec7ca8493b66c7c61984f695",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinSchool",
       "source_owner": "identity-access",
@@ -11497,7 +11505,7 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.traegerDocumentRuntime.WithinSchool",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleRuntime.WithinSchool",
       "binding_digest": "7b31cc809beace1579627a8accc7185d",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinSchool",
       "source_owner": "identity-access",
@@ -11505,7 +11513,7 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.traegerDocumentRuntime.WithinTraeger",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleRuntime.WithinTraeger",
       "binding_digest": "589fb0341ccdc788fc7724ba4768bec4",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinTraeger",
       "source_owner": "identity-access",

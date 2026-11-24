@@ -42,6 +42,9 @@ func init() {
 //     own (as ADR 0195 section 8 does for phases and offerings): nobody loses
 //     a right through the move. A name the school already uses stays the
 //     school's; the Träger-Büro sees the role as not carried there.
+//   - auth.release_traeger_school_role_copies keeps every copy pointing at
+//     a role that exists: when a Träger role goes, a copy its removal did not
+//     reach becomes a role of the school's own.
 const traegerSchoolRolesUpSQL = `
 CREATE TABLE auth.traeger_school_roles (
 	id BIGSERIAL PRIMARY KEY,
@@ -123,6 +126,23 @@ CREATE FUNCTION auth.carry_traeger_school_roles()
 		JOIN auth.traeger_school_role_permissions AS selection ON selection.traeger_role_id = carried.traeger_role_id;
 		RETURN NULL;
 	END; $$;
+-- A removed Träger role leaves no copy that names it: a copy the removal did
+-- not reach (a school deleted for now, a school created meanwhile, a Träger
+-- erased with its roles) becomes a role of the school's own, which the school
+-- may change again. It runs as its owner because the Träger transaction sees
+-- no school's roles.
+CREATE FUNCTION auth.release_traeger_school_role_copies()
+	RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
+	BEGIN
+		UPDATE auth.roles SET traeger_role_id = NULL WHERE traeger_role_id = OLD.id;
+		RETURN NULL;
+	END; $$;
+REVOKE ALL ON FUNCTION auth.release_traeger_school_role_copies() FROM PUBLIC;
+CREATE TRIGGER release_traeger_school_role_copies
+	AFTER DELETE ON auth.traeger_school_roles
+	FOR EACH ROW EXECUTE FUNCTION auth.release_traeger_school_role_copies();
+CREATE INDEX idx_roles_traeger_role ON auth.roles (traeger_role_id) WHERE traeger_role_id IS NOT NULL;
+
 CREATE TRIGGER carry_traeger_school_roles_on_insert
 	AFTER INSERT ON platform.schools
 	FOR EACH ROW EXECUTE FUNCTION auth.carry_traeger_school_roles();
@@ -133,6 +153,9 @@ CREATE TRIGGER carry_traeger_school_roles_on_move
 `
 
 const traegerSchoolRolesDownSQL = `
+DROP TRIGGER release_traeger_school_role_copies ON auth.traeger_school_roles;
+DROP FUNCTION auth.release_traeger_school_role_copies();
+DROP INDEX auth.idx_roles_traeger_role;
 DROP TRIGGER carry_traeger_school_roles_on_move ON platform.schools;
 DROP TRIGGER carry_traeger_school_roles_on_insert ON platform.schools;
 DROP FUNCTION auth.carry_traeger_school_roles();

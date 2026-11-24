@@ -234,10 +234,13 @@ func (s *RoleStore) PlatformRolePermissionIDs(ctx context.Context, organizationI
 }
 
 type schoolRoleStateRow struct {
-	RoleID        int64  `bun:"role_id"`
-	Name          string `bun:"name"`
-	TraegerRoleID *int64 `bun:"traeger_role_id"`
-	Holders       int    `bun:"holders"`
+	RoleID        int64   `bun:"role_id"`
+	Name          string  `bun:"name"`
+	TraegerRoleID *int64  `bun:"traeger_role_id"`
+	Holders       int     `bun:"holders"`
+	Description   string  `bun:"description"`
+	BaseRole      string  `bun:"base_role"`
+	PermissionIDs []int64 `bun:"permission_ids,array"`
 }
 
 func (s *RoleStore) SchoolRoleStates(ctx context.Context) ([]domain.SchoolRoleState, error) {
@@ -250,9 +253,15 @@ func (s *RoleStore) SchoolRoleStates(ctx context.Context) ([]domain.SchoolRoleSt
 		return nil, domain.ErrTenantRequired
 	}
 	var rows []schoolRoleStateRow
+	// The selection is read for the copies only: the school's own roles
+	// matter by name.
 	if err := db.NewRaw(`SELECT role.id AS role_id, role.name, role.traeger_role_id,
+			COALESCE(role.description, '') AS description, COALESCE(role.base_role, '') AS base_role,
 			(SELECT COUNT(*) FROM auth.account_roles AS held
-			 WHERE held.role_id = role.id AND held.tenant_id = role.tenant_id) AS holders
+			 WHERE held.role_id = role.id AND held.tenant_id = role.tenant_id) AS holders,
+			CASE WHEN role.traeger_role_id IS NULL THEN '{}'::bigint[] ELSE COALESCE((
+				SELECT array_agg(selection.permission_id ORDER BY selection.permission_id)
+				FROM auth.role_permissions AS selection WHERE selection.role_id = role.id), '{}'::bigint[]) END AS permission_ids
 		FROM auth.roles AS role
 		WHERE role.tenant_id = ?
 		ORDER BY role.id`, scope.TenantID).Scan(ctx, &rows); err != nil {
@@ -260,7 +269,10 @@ func (s *RoleStore) SchoolRoleStates(ctx context.Context) ([]domain.SchoolRoleSt
 	}
 	states := make([]domain.SchoolRoleState, 0, len(rows))
 	for _, row := range rows {
-		states = append(states, domain.SchoolRoleState(row))
+		states = append(states, domain.SchoolRoleState{
+			RoleID: row.RoleID, Name: row.Name, TraegerRoleID: row.TraegerRoleID, Holders: row.Holders,
+			Description: row.Description, BaseRole: row.BaseRole, PermissionIDs: row.PermissionIDs,
+		})
 	}
 	return states, nil
 }

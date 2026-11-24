@@ -20,6 +20,7 @@ import {
 } from "~/components/roles/permission-picker";
 import {
   SchoolRoleFields,
+  holderCountLabel,
   schoolRoleBaseLabel,
   schoolRoleDraftErrors,
   type SchoolRoleMasterDraft,
@@ -70,11 +71,6 @@ function draftOf(role: TraegerSchoolRole): RoleDraft {
 
 function selectedIds(draft: RoleDraft): string[] {
   return Object.keys(draft.selected).filter((id) => draft.selected[id]);
-}
-
-/** „3 Personen“, „1 Person“. */
-export function holderCountLabel(count: number): string {
-  return count === 1 ? "1 Person" : `${count} Personen`;
 }
 
 function permissionHint(

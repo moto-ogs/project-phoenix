@@ -286,22 +286,29 @@ func removalVersion(removal identityaccess.TraegerSchoolRoleRemoval) string {
 // RemoveTraegerSchoolRole removes the role from every school and then from
 // the Träger. The preview is read again first: a holder set that differs
 // from the confirmed one removes nothing (ADR 0311). Each school checks its
-// own holders once more under its locks.
+// own holders once more under its locks and loses only what the preview
+// showed for it; a school that changed in that moment keeps the role, the
+// Träger keeps it too, and the answer says the state changed. No save of the
+// Träger's roles runs beside it.
 func (t *TraegerSchoolRoles) RemoveTraegerSchoolRole(ctx context.Context, actor identityaccess.TraegerSchoolRoleActor, id int64, expectedVersion string) error {
-	removal, err := t.PreviewTraegerSchoolRoleRemoval(ctx, actor, id)
-	if err != nil {
-		return err
-	}
-	if err := readstate.Check(expectedVersion, removal.Version); err != nil {
-		return err
-	}
-	for _, school := range removal.Schools {
-		if err := t.removeFromSchool(ctx, actor, id, school); err != nil {
+	return t.alone(ctx, actor, func(ctx context.Context) error {
+		removal, err := t.PreviewTraegerSchoolRoleRemoval(ctx, actor, id)
+		if err != nil {
 			return err
 		}
-	}
-	return t.inTraeger(ctx, actor, func(ctx context.Context) error {
-		return t.store.DeleteTraegerSchoolRole(ctx, actor.OrganizationID, id)
+		if err := readstate.Check(expectedVersion, removal.Version); err != nil {
+			return err
+		}
+		for _, school := range removal.Schools {
+			if err := t.removeFromSchool(ctx, actor, id, school); err != nil {
+				return err
+			}
+		}
+		// The row's deletion releases any copy the walk did not reach (the
+		// trigger of the migration), so none names a role that is gone.
+		return t.inTraeger(ctx, actor, func(ctx context.Context) error {
+			return t.store.DeleteTraegerSchoolRole(ctx, actor.OrganizationID, id)
+		})
 	})
 }
 

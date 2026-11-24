@@ -61,8 +61,9 @@ type TraegerSchoolRoleSchool struct {
 }
 
 // TraegerSchoolRoleCarry is how one school carries a Träger role. Carried is
-// false when the school has no copy: the last write failed there, or the
-// school uses the name for a role of its own (NameTaken).
+// false when the school has no copy or a copy that differs from the role:
+// the last write failed there, or the school uses the name for a role of its
+// own (NameTaken). Holders counts also for a copy that differs.
 type TraegerSchoolRoleCarry struct {
 	SchoolID   int64
 	SchoolName string
@@ -185,6 +186,10 @@ type TraegerSchoolRoleSchools interface {
 type TraegerSchoolRoleRuntime interface {
 	WithinSchool(ctx context.Context, schoolID int64, fn func(context.Context) error) error
 	WithinTraeger(ctx context.Context, organizationID int64, fn func(context.Context) error) error
+	// WithinExclusive runs fn alone for key, without a transaction of its
+	// own: the writes of one Träger's roles reach the schools one after
+	// the other, never interleaved.
+	WithinExclusive(ctx context.Context, key string, fn func(context.Context) error) error
 }
 
 // TraegerSchoolRolePeople names the persons behind accounts of the school of

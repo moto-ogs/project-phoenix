@@ -118,6 +118,12 @@ func TestSchoolErasurePlanCoversCatalogAndDeleteTriggers(t *testing.T) {
 		// #5128: records change events in active.visit_revision_events, which
 		// the plan deletes after active.visits ("after" edge).
 		"active.visits:active.record_visit_revision",
+		// #4810: releases the schools' copies of a removed Träger role
+		// (auth.roles.traeger_role_id becomes NULL). The source is Träger data
+		// (scope organization), outside the plan of a school; the sink
+		// auth.roles is updated, not deleted, so school erasure needs no
+		// ordering edge.
+		"auth.traeger_school_roles:auth.release_traeger_school_role_copies",
 		// #6087: snapshots only care intervals into existing school guest rows.
 		// The source registration is Träger data, outside the school plan; the
 		// sink enrollment.holiday_guests is already tenant-scoped in that plan.

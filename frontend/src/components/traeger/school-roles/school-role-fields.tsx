@@ -43,6 +43,11 @@ export function schoolRoleBaseLabel(baseRole: TraegerSchoolRoleBase): string {
   return SYSTEM_ROLE_LABELS[baseRole].name;
 }
 
+/** „3 Personen“, „1 Person“. */
+export function holderCountLabel(count: number): string {
+  return count === 1 ? "1 Person" : `${count} Personen`;
+}
+
 const BASE_ROLES: readonly TraegerSchoolRoleBase[] = ["user", "admin"];
 
 /** Was „Gilt als“ für die Personen mit der Rolle heißt. */

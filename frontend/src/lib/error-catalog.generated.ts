@@ -1933,7 +1933,7 @@ export const ERROR_CATALOG = {
       "traeger.school_role_name_taken":
         "Eine Rolle mit diesem Namen gibt es schon. Bitte wähle einen anderen Namen.",
       "traeger.school_role_name_used_at_school":
-        "Diesen Namen nutzt schon eine eigene Rolle an: {schools}. Bitte wähle einen anderen Namen.",
+        "Den Namen gibt es schon als eigene Rolle an: {schools}. Bitte wähle einen anderen Namen.",
       "traeger.school_role_not_found":
         "Diese Rolle gibt es nicht mehr. Bitte lade die Seite neu.",
       "traeger.second_factor_required":

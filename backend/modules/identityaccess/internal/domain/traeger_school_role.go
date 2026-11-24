@@ -66,4 +66,18 @@ type SchoolRoleState struct {
 	Name          string
 	TraegerRoleID *int64
 	Holders       int
+	// Description, BaseRole and PermissionIDs (ascending) are read for a
+	// copy only: what the school carries of the Träger role.
+	Description   string
+	BaseRole      string
+	PermissionIDs []int64
+}
+
+// Carries reports whether the copy holds exactly what the Träger role says:
+// name, description, tier and selection. A copy a failed write left behind
+// does not.
+func (s SchoolRoleState) Carries(role TraegerSchoolRole) bool {
+	return s.TraegerRoleID != nil && *s.TraegerRoleID == role.ID &&
+		s.Name == role.CopyName() && s.Description == role.Description && s.BaseRole == role.BaseRole &&
+		slices.Equal(s.PermissionIDs, role.PermissionIDs)
 }

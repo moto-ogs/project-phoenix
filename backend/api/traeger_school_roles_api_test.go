@@ -229,6 +229,34 @@ func TestTraegerSchoolRolesReachEverySchoolOfTheTraeger(t *testing.T) {
 		assert.Equal(t, 2, traegerRoleLedger(t, db, office, north, role.ID, "updated"))
 	})
 
+	t.Run("a copy that differs from the role shows as not carried until the next save", func(t *testing.T) {
+		southCopy := schoolRoleCopy(t, db, south, role.ID)
+		_, err := db.ExecContext(context.Background(), `INSERT INTO auth.role_permissions (role_id, permission_id) VALUES (?, ?)`, southCopy, int64(second))
+		require.NoError(t, err)
+		carried := func(list traegerSchoolRoleListBody) map[int64]bool {
+			result := map[int64]bool{}
+			for _, school := range list.Roles[0].Schools {
+				result[int64(school.SchoolID)] = school.Carried
+			}
+			return result
+		}
+		rec := traegerJSON(t, router, office.token, http.MethodGet, traegerSchoolRolesPath, nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		state := carried(decode[traegerSchoolRoleListBody](t, rec))
+		assert.True(t, state[north])
+		assert.False(t, state[south], "the copy holds a right the role does not give")
+		rec = traegerJSON(t, router, office.token, http.MethodPut, traegerSchoolRolePath(role.ID, ""), map[string]any{
+			"name": "Springerkraft", "description": "Hilft an allen Standorten aus", "base_role": "user",
+			"permission_ids": []wireID{first}, "expected_version": role.Version,
+		})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		role = decode[traegerSchoolRoleBody](t, rec)
+		assert.ElementsMatch(t, []wireID{first}, schoolRolePermissionIDs(t, db, southCopy), "the save brings the copy back to the role")
+		for _, school := range role.Schools {
+			assert.True(t, school.Carried, "school %d", school.SchoolID)
+		}
+	})
+
 	t.Run("a stale form, a taken name and a platform right are refused", func(t *testing.T) {
 		body := func(name, version string, permissions ...wireID) map[string]any {
 			return map[string]any{"name": name, "base_role": "user", "permission_ids": permissions, "expected_version": version}
@@ -330,6 +358,18 @@ func TestTraegerSchoolRoleStaysWhereAnInvitationNamesIt(t *testing.T) {
 	assert.Equal(t, 1, staffSchoolValue(t, db, `SELECT COUNT(*) FROM auth.roles WHERE id = ? AND traeger_role_id IS NULL`, northCopy), "the invitation keeps its role, now the school's own")
 	assert.Zero(t, schoolRoleCopy(t, db, south, role.ID))
 	assert.Equal(t, 1, traegerRoleLedger(t, db, office, north, role.ID, "released"))
+
+	// No copy names a role that is gone: a Träger role deleted without the
+	// walk through the schools (the Träger is erased) leaves its copies to
+	// the schools.
+	rec = traegerJSON(t, router, office.token, http.MethodPost, traegerSchoolRolesPath, map[string]any{"name": "Hausdienst", "base_role": "user"})
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	orphan := decode[traegerSchoolRoleBody](t, rec)
+	southCopy := schoolRoleCopy(t, db, south, orphan.ID)
+	require.NotZero(t, southCopy)
+	_, err = db.ExecContext(context.Background(), `DELETE FROM auth.traeger_school_roles WHERE id = ?`, int64(orphan.ID))
+	require.NoError(t, err)
+	assert.Equal(t, 1, staffSchoolValue(t, db, `SELECT COUNT(*) FROM auth.roles WHERE id = ? AND traeger_role_id IS NULL`, southCopy))
 }
 
 // TestTraegerSchoolRolesQueryBudget pins the statements of the list: flat in

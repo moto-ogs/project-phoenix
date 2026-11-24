@@ -3,6 +3,7 @@ package traegerportal
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -333,7 +334,14 @@ func renderSchoolRoleError(err error) render.Renderer {
 		return common.ErrorInvalidOnField(invalid, common.CodeGeneralInput, invalid.Field)
 	}
 	if used, ok := errors.AsType[*identityaccess.TraegerSchoolRoleNameUsedError](err); ok {
-		return common.ErrorConflictWithDetails(used, common.CodeTraegerSchoolRoleNameUsedAtSchool, map[string]any{"schools": joinSchoolNames(used.Schools)})
+		// At the name field, with the schools for the text of the catalog.
+		// The shared error path fills a text with strings only, so the
+		// names travel as one comma-separated value.
+		return &common.ErrResponse{
+			Err: used, HTTPStatusCode: http.StatusConflict, Detail: used.Error(), Code: common.CodeTraegerSchoolRoleNameUsedAtSchool,
+			Errors:  []common.FieldError{{Field: "name", Reason: used.Error()}},
+			Details: map[string]any{"schools": strings.Join(used.Schools, ", ")},
+		}
 	}
 	if reserved, ok := errors.AsType[*identityaccess.ReservedPermissionError](err); ok {
 		return common.ErrorInvalidRequestWithDetails(reserved, common.CodeIdentityRolePlatformPermission, map[string]any{"permission": reserved.Permission})
@@ -352,18 +360,3 @@ var schoolRoleErrors = common.RulesRenderer([]common.ErrorRule{
 		return common.ErrorConflict(readstate.ErrChanged)
 	}},
 }, common.ErrorInternalServer)
-
-// joinSchoolNames lists the schools like a sentence: „OGS Nord und OGS Süd“.
-func joinSchoolNames(names []string) string {
-	switch len(names) {
-	case 0:
-		return ""
-	case 1:
-		return names[0]
-	}
-	joined := names[0]
-	for _, name := range names[1 : len(names)-1] {
-		joined += ", " + name
-	}
-	return joined + " und " + names[len(names)-1]
-}

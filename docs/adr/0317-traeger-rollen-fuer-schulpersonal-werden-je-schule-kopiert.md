@@ -63,10 +63,19 @@ Sie führt keinen Owner und keine Policy-Regel ein.
    dieser Schule, wie bei jeder Rechteänderung einer Schulrolle. Ein neues
    Recht kommt bei der nächsten Sitzungserneuerung an.
 5. Scheitert eine Schule, bleibt sie beim alten Stand. Die Liste im
-   Träger-Portal zeigt sie als „nicht übertragen“; die nächste Änderung der
-   Rolle versucht es wieder. Teilfehler über mehrere Schulen sind nicht
+   Träger-Portal vergleicht jede Kopie mit der Träger-Rolle (Name,
+   Beschreibung, „Gilt als“, Rechte) und zeigt eine Schule, deren Kopie fehlt
+   oder abweicht, als „nicht übertragen“; das nächste Speichern der Rolle
+   bringt sie auf den Stand. Teilfehler über mehrere Schulen sind nicht
    atomar (ADR 0067).
-6. Die Schule ändert an der Kopie nichts: Stammdaten, Rechte und Löschen
+6. Anlegen, Ändern und Entfernen der Rollen eines Trägers laufen
+   nacheinander, nie nebeneinander: Eine verbindungsgebundene Sperre je Träger
+   (`tenant.WithinExclusive`, wie ADR 0195) umfasst die Träger-Transaktion und
+   alle Schul-Transaktionen eines Vorgangs. So schreibt kein langsameres
+   Speichern seinen älteren Stand nach einem neueren in eine Schule, und kein
+   Speichern legt eine Kopie neu an, während ein Entfernen durch die Schulen
+   geht.
+7. Die Schule ändert an der Kopie nichts: Stammdaten, Rechte und Löschen
    antworten 403 `identity.role_from_traeger`. Zuweisen darf sie wie jede
    eigene Rolle. Eigene Rollen legt sie weiter an.
 
@@ -81,6 +90,11 @@ von Identity & Access ab (wie ADR 0195 Abschnitt 8).
 - Wechselt eine Schule den Träger, bleiben ihre bisherigen Kopien als eigene
   Rollen der Schule stehen (`traeger_role_id` wird NULL). Niemand verliert
   durch den Wechsel ein Recht.
+- Der Trigger läuft in der Admin-Transaktion, in der das moto-Team die
+  Schule anlegt oder umhängt, nicht in einer Tenant-Transaktion: Diese
+  Anweisung ist kein Schreiben des Träger-Portals (ADR 0084 Abschnitt 2), und
+  sie steht im Operator-Audit. Das Ledger der Schule bekommt dafür keinen
+  eigenen Eintrag.
 - Hat die Schule schon eine eigene Rolle mit dem Namen, bleibt diese
   unverändert. Die Träger-Rolle gilt dort als nicht übertragen, mit dem Grund
   „Name vergeben“. Beim Anlegen und Umbenennen lehnt das Träger-Portal einen
@@ -97,9 +111,22 @@ von Identity & Access ab (wie ADR 0195 Abschnitt 8).
   unter ihren Sperren noch einmal.
 - Je Schule: Sitzungen der Personen beenden, Zuweisungen, Rechte und Kopie
   löschen. Zuletzt die Träger-Rolle in der Träger-Transaktion.
+- Ändert eine Schule ihre Zuweisungen genau in diesem Moment, behält sie die
+  Rolle, der Träger auch, und die Antwort ist `general.changed_since_read`.
+  Schulen davor haben die Rolle schon verloren, so wie die Vorschau es für
+  sie zeigte. Das Portal liest dann Liste und Vorschau neu.
+- Keine Kopie zeigt auf eine Rolle, die es nicht mehr gibt: Ein Trigger
+  `AFTER DELETE` auf `auth.traeger_school_roles` macht jede Kopie, die das
+  Entfernen nicht erreicht hat (eine vorläufig gelöschte Schule, eine eben
+  angelegte Schule, ein gelöschter Träger), zu einer eigenen Rolle der
+  Schule. Er läuft als sein Besitzer, weil die Träger-Transaktion keine
+  Schulrolle sieht.
 - Nennt eine Einladung der Schule die Rolle, lässt sie sich nicht löschen
-  (`ON DELETE RESTRICT`). Die Kopie bleibt dann als eigene Rolle der Schule
-  mit ihren Personen stehen; die Vorschau sagt das vorher.
+  (`ON DELETE RESTRICT`), auch eine eingelöste. Die Kopie bleibt dann als
+  eigene Rolle der Schule mit ihren Personen stehen; die Vorschau sagt das
+  vorher. Die Schule entscheidet danach selbst über die Rolle. Eingelöste
+  Einladungen aufzuräumen, damit auch diese Kopien verschwinden können, ist
+  eine eigene Entscheidung über das Einladungssystem.
 
 ### 5. Rechte und Katalog
 
@@ -150,8 +177,12 @@ Sitzungen stehen wie bisher als `token_revoked` mit `role_changed` daneben.
   `auth.traeger_school_roles` und `auth.traeger_school_role_permissions`.
 - `command-effects`: die Root-Bindungen der drei Ports (Schulen, Namen,
   Transaktionen) als Lesezugriffe und Plattform-Teilnahme (ADR 0098).
-- Kein neuer Eintrag in `transaction_boundaries.json`: Die Transaktionen
-  öffnet die vorhandene Root-Bindung `traegerDocumentRuntime`.
+- `transaction_boundaries.json`: eine Stelle, an der Identity & Access die
+  Träger-Transaktion über seinen Port öffnet
+  (`TraegerSchoolRoles.inTraeger`). Die Schul-Transaktionen öffnet die
+  vorhandene Root-Bindung `traegerDocumentRuntime`.
+- `trigger_ownership_test.go`: die Schreibwege des Triggers von
+  `platform.schools` nach `auth.roles` und `auth.role_permissions`.
 - Route-Golden, Analytics-Klassifikation (`notCaptured`), Abfragebudget
   `api.traeger.school_roles` und Scope-Matrix für die neuen Routen.
 - Seed: Der Demo-Träger bekommt eine Träger-Rolle.

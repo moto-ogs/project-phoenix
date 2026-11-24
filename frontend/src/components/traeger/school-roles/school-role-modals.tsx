@@ -9,10 +9,10 @@ import { useEffect, useRef, useState } from "react";
 import {
   EMPTY_SCHOOL_ROLE,
   SchoolRoleFields,
+  holderCountLabel,
   schoolRoleDraftErrors,
   type SchoolRoleMasterDraft,
 } from "~/components/traeger/school-roles/school-role-fields";
-import { holderCountLabel } from "~/components/traeger/school-roles/school-role-card";
 import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -200,11 +200,14 @@ export function RemoveSchoolRoleModal({
   role,
   onClose,
   onRemoved,
+  onFailed,
 }: Readonly<{
   /** Die Rolle, die entfernt werden soll; `null` schließt den Dialog. */
   role: TraegerSchoolRole | null;
   onClose: () => void;
   onRemoved: (role: TraegerSchoolRole) => void;
+  /** Ein Entfernen ist gescheitert: Die Liste dahinter liest neu. */
+  onFailed: () => void;
 }>) {
   // Die Vorschau nennt Personen: Sie wird bei jedem Öffnen frisch gelesen
   // und nie aus dem Speicher gezeigt.
@@ -233,7 +236,9 @@ export function RemoveSchoolRoleModal({
         error: errorMessage(err),
       });
       // Eine Schule hat die Rolle inzwischen vergeben oder genommen: Die
-      // Vorschau wird neu gelesen, entfernt ist nichts.
+      // Vorschau wird neu gelesen. Schulen davor können die Rolle schon
+      // verloren haben, deshalb liest auch die Liste dahinter neu.
+      onFailed();
       const changed = isChangedSinceRead(err);
       void errors.show(
         err,

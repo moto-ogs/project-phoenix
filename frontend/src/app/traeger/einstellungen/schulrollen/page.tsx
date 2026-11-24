@@ -57,11 +57,12 @@ const INFO = (
 );
 
 export default function TraegerSchoolRolesPage() {
-  const { data, loading, error, mutate, reloadOrThrow } = useTraegerResource(
-    traegerKeys.schoolRoles(),
-    fetchSchoolRolesPage,
-    "die Rollen für deine Schulen",
-  );
+  const { data, loading, error, mutate, reload, reloadOrThrow } =
+    useTraegerResource(
+      traegerKeys.schoolRoles(),
+      fetchSchoolRolesPage,
+      "die Rollen für deine Schulen",
+    );
   const [creating, setCreating] = useState(false);
   const [removing, setRemoving] = useState<TraegerSchoolRole | null>(null);
   const { success } = useToast();
@@ -197,6 +198,7 @@ export default function TraegerSchoolRolesPage() {
             <RemoveSchoolRoleModal
               role={removing}
               onClose={() => setRemoving(null)}
+              onFailed={() => void reload()}
               onRemoved={(removed) => {
                 setRemoving(null);
                 remove(removed);
