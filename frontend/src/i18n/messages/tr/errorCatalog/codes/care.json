@@ -77,6 +77,7 @@
   "primary_guardian_protected": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
   "remove_disabled": "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
   "request_not_found": "{object} bulunamadı. Lütfen sayfayı yenileyin.",
+  "request_feed_not_found": "RSS bağlantısı artık yok. Lütfen sayfayı yenileyin.",
   "request_not_open": "{object} artık açık değil. Lütfen ilgili kişinize danışın.",
   "request_sharing_invalid": "{object} geçersiz bilgiler içeriyor. Lütfen girdiğiniz bilgileri kontrol edin.",
   "room_history_stop_disabled": "{object} şu anda burada değiştirilemez. Lütfen ilgili kişinize danışın.",
