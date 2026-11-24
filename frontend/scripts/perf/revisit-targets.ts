@@ -230,6 +230,17 @@ function tenant(role: "admin" | "betreuer", f: RevisitFixture): Journey[] {
         ),
         backVia: home,
       },
+      flow(
+        role,
+        "tagesplan-betreuer",
+        home,
+        pageStop(
+          "/tagesplan",
+          "Planblock des laufenden Betreuungstags mit Zeitraum und Raum",
+          [text("main li", "[0-9]{2}:[0-9]{2}.*(Mittagessen|Lernzeit).*")],
+        ),
+        pool,
+      ),
       flow(role, "gruppe-navigation", groups, group, pool),
       flow(
         role,

@@ -59,7 +59,8 @@ journey names for diagnosis only. A partial result is not a baseline.
   login. Logout confirmation and a signed-out bookmark are reported separately.
 - Same-page dialogs and filters without their own history entries have no Back
   time: opening the parent absence form does **not** submit it; the caregiver's
-  read-only plan changes its day/week view with `replaceState`. Caterer has just
+  regular daily plan is measured via its sidebar entry and browser history. The
+  additional read-only weekly plan changes day/week with `replaceState`. Caterer has just
   two protected routes, orders and account. Period and school expansion operate
   on the orders page. None can supply four distinct intermediate routes.
 - Timing stops before the network diagnostic window: all non-noise requests from
