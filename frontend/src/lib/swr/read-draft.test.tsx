@@ -456,6 +456,51 @@ describe("useReadDraft", () => {
     expect(result.current.token).toBe("2");
     expect(result.current.canSubmit).toBe(true);
   });
+  it("keeps the input on the state an own write answered (adopt)", async () => {
+    const { result } = renderHook(() =>
+      useDraftOn<Stored, string, string, unknown>(
+        {
+          opening: "row-2",
+          data: { version: "1", name: "Anna" },
+          reload: async () => undefined,
+        },
+        { token: (read) => read.version, toDraft: (read) => read.name },
+      ),
+    );
+    act(() => result.current.setDraft("Hanna"));
+    // An attachment changed the stored state, not the name.
+    act(() => result.current.adopt({ version: "2", name: "Anna" }));
+    expect(result.current.draft).toBe("Hanna");
+    expect(result.current.touched).toBe(true);
+    expect(result.current.token).toBe("2");
+
+    const send = vi.fn(async () => undefined);
+    await act(async () => {
+      await result.current.submit(send);
+    });
+    expect(send).toHaveBeenCalledWith("2", "Hanna");
+  });
+
+  it("adopts nothing while a refusal waits for the stored state (adopt)", async () => {
+    const { result } = renderHook(() =>
+      useDraftOn<Stored, string, string, unknown>(
+        {
+          opening: "row-3",
+          data: { version: "1", name: "Anna" },
+          reload: () => new Promise<undefined>(() => undefined),
+        },
+        { token: (read) => read.version, toDraft: (read) => read.name },
+      ),
+    );
+    act(() => result.current.setDraft("Hanna"));
+    await act(async () => {
+      await result.current.submit(() => Promise.reject(changed()));
+    });
+    act(() => result.current.adopt({ version: "2", name: "Anna" }));
+    expect(result.current.token).toBe("1");
+    expect(result.current.canSubmit).toBe(false);
+  });
+
   it("leaves a failed reload of the list only through a newer row (useDraftOn)", async () => {
     const offline = new Error("offline");
     const reload = vi.fn(async () => {

@@ -810,7 +810,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.LockAnnouncementForAttachmentChange",
-      "binding_digest": "e3f27f13dee0e4784910c0cabcf680ec",
+      "binding_digest": "5223daad3d5a269475a12f3f2fd1ed77",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage/internal/ports.Announcements.LockAnnouncementForAttachmentChange",
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.LockAnnouncementForAttachmentChange",
@@ -818,7 +818,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.ResetAnnouncementEngagement",
-      "binding_digest": "a70817c01dea7814637b194d564567d0",
+      "binding_digest": "732173ae6b1bc5bfff995221e8700412",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage/internal/ports.Announcements.ResetAnnouncementEngagement",
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.ResetAnnouncementEngagement",

@@ -57,8 +57,8 @@ var mfaRules = []common.ErrorRule{
 }
 
 func mapOperatorMFAError(w http.ResponseWriter, r *http.Request, err error) {
-	common.RenderError(w, r, common.RenderWithRules(err, mfaRules, func(error) render.Renderer {
-		return common.OperatorInternal("MFA operation failed")
+	common.RenderError(w, r, common.RenderWithRules(err, mfaRules, func(err error) render.Renderer {
+		return common.OperatorInternal(err, "MFA operation failed")
 	}))
 }
 
@@ -268,8 +268,8 @@ func (rs *MFAResource) completeMFAExchange(w http.ResponseWriter, r *http.Reques
 		return rs.authService.IssueTokensForAuthenticatedOperator(ctx, operatorID, &proof.CredentialGeneration, ipAddress, r.UserAgent())
 	})
 	if err != nil {
-		common.RenderError(w, r, common.RenderWithRules(err, exchangeRules, func(error) render.Renderer {
-			return common.OperatorInternal("Failed to issue tokens")
+		common.RenderError(w, r, common.RenderWithRules(err, exchangeRules, func(err error) render.Renderer {
+			return common.OperatorInternal(err, "Failed to issue tokens")
 		}))
 		return
 	}

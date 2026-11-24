@@ -105,7 +105,7 @@ func (s *testSurface) surface() operator.Surface {
 		InvalidRequest: func(err error) render.Renderer {
 			return &testRenderer{status: http.StatusBadRequest, kind: "invalid", message: err.Error()}
 		},
-		Internal: func(message string) render.Renderer {
+		Internal: func(_ error, message string) render.Renderer {
 			return &testRenderer{status: http.StatusInternalServerError, kind: "internal", message: message}
 		},
 		RenderError: func(w http.ResponseWriter, r *http.Request, renderer render.Renderer) {

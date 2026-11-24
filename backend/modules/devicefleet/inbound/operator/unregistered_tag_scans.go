@@ -54,9 +54,10 @@ type Directory interface {
 // Surface is what the operator router lends the review routes.
 type Surface struct {
 	InvalidRequest func(err error) render.Renderer
-	Internal       func(message string) render.Renderer
-	RenderError    func(w http.ResponseWriter, r *http.Request, renderer render.Renderer)
-	Respond        func(w http.ResponseWriter, r *http.Request, status int, data any, message string)
+	// Internal answers a 500 for err (nil: no cause to report).
+	Internal    func(err error, message string) render.Renderer
+	RenderError func(w http.ResponseWriter, r *http.Request, renderer render.Renderer)
+	Respond     func(w http.ResponseWriter, r *http.Request, status int, data any, message string)
 	// OperatorID returns the authenticated operator, or zero.
 	OperatorID func(ctx context.Context) int64
 }
@@ -142,7 +143,7 @@ func (rs *Resource) ListUnregisteredTagScans(w http.ResponseWriter, r *http.Requ
 	}
 	scans, err := rs.listForOperator(r.Context(), query)
 	if err != nil {
-		rs.surface.RenderError(w, r, rs.surface.Internal("Failed to list unregistered RFID scans"))
+		rs.surface.RenderError(w, r, rs.surface.Internal(err, "Failed to list unregistered RFID scans"))
 		return
 	}
 	rs.surface.Respond(w, r, http.StatusOK, scans, "Unregistered RFID scans retrieved successfully")
@@ -375,12 +376,13 @@ func (rs *Resource) resolveError(err error) render.Renderer {
 		error
 		StoreFailure() bool
 	}](err); failed {
-		return rs.surface.Internal(resolveFailedMessage)
+		// No cause: a refusal text it wraps must not lift it to a 409.
+		return rs.surface.Internal(nil, resolveFailedMessage)
 	}
 	if resolveIsClientError(err) {
 		return rs.surface.InvalidRequest(tagScanRefusal{err: err})
 	}
-	return rs.surface.Internal(resolveFailedMessage)
+	return rs.surface.Internal(err, resolveFailedMessage)
 }
 
 // Registered codes of the resolution refusals (#2519). This package may not

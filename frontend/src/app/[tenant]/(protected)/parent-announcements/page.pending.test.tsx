@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { SessionProvider } from "next-auth/react";
+import { ToastProvider } from "~/contexts/ToastContext";
 import { SWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -114,7 +115,7 @@ function render(ui: ReactElement) {
       }}
     >
       <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
-        {ui}
+        <ToastProvider>{ui}</ToastProvider>
       </SWRConfig>
     </SessionProvider>,
   );
@@ -231,7 +232,7 @@ describe("Elternmitteilungen: Speichern sperrt das Panel (#6593)", () => {
       max_bytes: 1,
       editable: true,
     });
-    const answer = deferred<void>();
+    const answer = deferred<string>();
     vi.mocked(deleteAnnouncementAttachment).mockReturnValue(answer.promise);
     render(<ParentAnnouncementsPage />);
 
@@ -246,7 +247,7 @@ describe("Elternmitteilungen: Speichern sperrt das Panel (#6593)", () => {
     expect(remove).toBeDisabled();
 
     await act(async () => {
-      answer.resolve();
+      answer.resolve("v-after-removal");
     });
 
     expectSlideOverUnlocked(TITLE);

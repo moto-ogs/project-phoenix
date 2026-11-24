@@ -146,6 +146,16 @@ export interface ReadDraft<T, D, K, A> {
    * failed read only the input goes; sending still waits for a read.
    */
   readonly discard: () => void;
+  /**
+   * The surface's own write moved the stored state to `read` without
+   * touching what the draft edits (an attachment of an announcement, whose
+   * answer names the draft's new version): the draft keeps its input and
+   * rests on `read`, so the next save is not refused for that write. Only a
+   * write whose server check took the draft's token may hand its answer
+   * here; otherwise `read` could carry another person's change unseen.
+   * Ignored unless the draft is ready.
+   */
+  readonly adopt: (read: T) => void;
 }
 
 type Phase = "ready" | "saving" | "refused" | "reloading" | "loadFailed";
@@ -470,6 +480,26 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
     settle(now.key, stored);
   }, [settle, update]);
 
+  const adopt = useCallback(
+    (read: T) => {
+      const { state: now } = latest.current;
+      if (now === null) return;
+      update(now.key, (prev) =>
+        prev.phase !== "ready"
+          ? prev
+          : {
+              ...prev,
+              base: read,
+              touched: !latest.current.same(
+                prev.draft,
+                prev.saved ?? latest.current.toDraft(read),
+              ),
+            },
+      );
+    },
+    [update],
+  );
+
   const openFailed = source.error !== undefined;
   const phase: ReadDraftStatus = openFailed
     ? "loadFailed"
@@ -491,6 +521,7 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
     retryLoad,
     submit,
     discard,
+    adopt,
   };
 }
 

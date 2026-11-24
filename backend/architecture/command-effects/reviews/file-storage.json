@@ -1058,7 +1058,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage/internal/ports.Announcements.LockAnnouncementForAttachmentChange",
-      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/communication.ParentAnnouncementCapability.LockAnnouncementForAttachmentChange; modules/communication.ParentAnnouncementCapability (supplied contract method). ",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/communication.ParentAnnouncementCapability.LockAnnouncementForAttachmentChange; modules/communication.ParentAnnouncementCapability (supplied contract method). Re-reviewed with #7986: the lock now also takes the version of the draft the editor holds and refuses a changed draft with readstate.ErrChanged under the same row lock (ADR 0311); its effect (lock), target and transaction boundary are unchanged.",
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.LockAnnouncementForAttachmentChange",
       "target_owner": "communication"
@@ -1069,7 +1069,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage/internal/ports.Announcements.ResetAnnouncementEngagement",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/communication.ParentAnnouncementCapability.ResetAnnouncementEngagement; modules/communication.ParentAnnouncementCapability (supplied contract method). ",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/communication.ParentAnnouncementCapability.ResetAnnouncementEngagement; modules/communication.ParentAnnouncementCapability (supplied contract method). Re-reviewed with #7986: the reset now also stamps the locked draft's updated_at in the same Communication store write and answers the draft's new version (ADR 0311); its effect (mutation), target and transaction boundary are unchanged.",
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.ResetAnnouncementEngagement",
       "target_owner": "communication"

@@ -360,12 +360,10 @@ func AnnouncementErrorRenderer(err error) render.Renderer {
 		return common.OperatorRejection(http.StatusNotFound, common.CodeCommunicationAnnouncementNotFound, "Announcement not found")
 	case errors.As(err, &invalidData):
 		return common.OperatorInvalidRequest(err)
-	case common.IsBusinessRejection(err):
-		// A changed state (readstate.ErrChanged, ADR 0311) keeps its 409 and
-		// code; the generic 500 below would drop the error it carries.
-		return common.ErrorBusinessRejection(err)
 	default:
-		return common.OperatorInternal("An error occurred")
+		// RenderError lifts a changed state (readstate.ErrChanged, ADR 0311)
+		// to its 409 and code.
+		return common.OperatorInternal(err, "An error occurred")
 	}
 }
 

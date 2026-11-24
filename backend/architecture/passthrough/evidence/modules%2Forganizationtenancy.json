@@ -170,7 +170,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (rs *ProvisioningResource) ListSchoolRequiredDetails(w http.ResponseWriter, r *http.Request) {\n\tif rs.requiredDetails == nil {\n\t\tcommon.RenderError(w, r, common.OperatorInternal(internalErrorMessage))\n\t\treturn\n\t}\n\tdetails, err := rs.requiredDetails.ListSchoolRequiredDetails(r.Context())\n\tif err != nil {\n\t\tcommon.RenderError(w, r, ProvisioningErrorRenderer(err))\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusOK, details, \"School required details retrieved successfully\")\n}",
+      "evidence": "func (rs *ProvisioningResource) ListSchoolRequiredDetails(w http.ResponseWriter, r *http.Request) {\n\tif rs.requiredDetails == nil {\n\t\tcommon.RenderError(w, r, common.OperatorInternal(nil, internalErrorMessage))\n\t\treturn\n\t}\n\tdetails, err := rs.requiredDetails.ListSchoolRequiredDetails(r.Context())\n\tif err != nil {\n\t\tcommon.RenderError(w, r, ProvisioningErrorRenderer(err))\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusOK, details, \"School required details retrieved successfully\")\n}",
       "form": "unclassified-evidence",
       "id": "modules/organizationtenancy/inbound/operator/ProvisioningResource.ListSchoolRequiredDetails",
       "owner": "modules/organizationtenancy"

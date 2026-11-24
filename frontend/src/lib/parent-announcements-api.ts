@@ -13,6 +13,7 @@ import type {
 } from "~/lib/email-delivery-status";
 import { bffFile, bffJson } from "~/lib/bff-fetch";
 import type * as parentAnnouncementsContract from "~/lib/contract/parent-announcements.generated";
+import type * as attachmentContract from "~/lib/contract/announcement-attachments.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
 
@@ -900,10 +901,17 @@ export async function fetchAnnouncementAttachments(
   return { ...list, attachments: list.attachments ?? [] };
 }
 
+/**
+ * Lädt eine Datei an den Entwurf der Version `expectedVersion` (ADR 0311).
+ * Die Anhänge gehören zu dem Stand, den die Veröffentlichung bestätigt: die
+ * Antwort trägt die neue Version des Entwurfs, die das nächste Speichern
+ * oder Veröffentlichen schickt.
+ */
 export function uploadAnnouncementAttachment(
   announcementId: string,
   file: File,
-): Promise<sharedContract.AnnouncementAttachmentResponse> {
+  expectedVersion: string,
+): Promise<attachmentContract.UploadedAttachmentResponse> {
   const form = new FormData();
   form.append("file", file);
   return bffJson(
@@ -911,24 +919,31 @@ export function uploadAnnouncementAttachment(
     "POST /api/announcement-attachments/{announcementId}",
     {
       params: { announcementId },
+      query: { expected_version: expectedVersion },
       body: form,
       errorMessage: "Die Datei konnte nicht hochgeladen werden",
     },
   );
 }
 
+
+/** Entfernt einen Anhang vom Entwurf der Version `expectedVersion` und
+ * antwortet die neue Version des Entwurfs (ADR 0311). */
 export async function deleteAnnouncementAttachment(
   announcementId: string,
   attachmentId: string,
-): Promise<void> {
-  await bffJson(
+  expectedVersion: string,
+): Promise<string> {
+  const removed = await bffJson(
     "tenant",
     "DELETE /api/announcement-attachments/{announcementId}/{attachmentId}",
     {
       params: { announcementId, attachmentId },
+      body: { expected_version: expectedVersion },
       errorMessage: "Der Anhang konnte nicht entfernt werden",
     },
   );
+  return removed.announcement_version;
 }
 
 /** Adresse, unter der das Personal einen Anhang zur Kontrolle öffnet. */
