@@ -44,7 +44,6 @@ type ResourceConfig struct {
 	PartialAbsenceService        careplan.PartialAbsenceService
 	PeopleDirectory              peopleModule.Capability
 	Persons                      PersonRecords
-	StudentRecordEdits           StudentRecordEdits
 	PickupAdjustmentService      careplan.PickupAdjustments
 	// PickupChangeNotices serves the reader's unread markers of changed
 	// pickup times (#6855).

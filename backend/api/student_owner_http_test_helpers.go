@@ -142,7 +142,6 @@ func NewStudentHTTPTestResources(store transactionruntime.Database, unit tenant.
 			PartialAbsenceService:    svc.PartialAbsence,
 			PeopleDirectory:          peopleServices.PeopleDirectory,
 			Persons:                  peopleCompose.NewStudentRoutePersons(livePeople.Users),
-			StudentRecordEdits:       studentHTTPTestRecordEdits(peopleServices),
 			PickupAdjustmentService:  svc.PickupAdjustments,
 			PickupScheduleService:    live.PickupSchedule,
 			SettingsService:          liveSettings.Settings,
@@ -221,13 +220,6 @@ func NewStudentHTTPTestResources(store transactionruntime.Database, unit tenant.
 
 // studentHTTPTestNoteTeam binds the team notices of the child notes to the
 // owner composition, as the server does.
-func studentHTTPTestRecordEdits(people StudentTestPeople) peopledirectory.StudentRecordEdits {
-	if directory, ok := people.PeopleDirectory.(*peopleCompose.Directory); ok {
-		return directory.StudentRecordEdits
-	}
-	return nil
-}
-
 func studentHTTPTestNoteTeam(people StudentTestPeople) peopledirectory.StudentNoteTeamNotices {
 	if directory, ok := people.PeopleDirectory.(*peopleCompose.Directory); ok {
 		return directory.StudentNoteTeam

@@ -188,7 +188,7 @@ func mountStudentRoutes(
 	reports owners.PresenceReports, structureViews StructureServices, organizations organizationtenancy.Query,
 	statusDays studentpresence.StatusDays, absences deliveryCompose.AbsenceNotifier, deletion *studentdeletion.Workflow,
 	groupLive grouplive.Query, decisions enrollmentOwner.Decisions, active studentpresence.Presence, resumption careStudentsHTTP.CareResumption,
-	noteTeam peopledirectory.StudentNoteTeamNotices, recordEdits peopledirectory.StudentRecordEdits, noteTeamReach studentsAPI.StudentNoteTeamReach, cohorts timetableModule.CohortRosters,
+	noteTeam peopledirectory.StudentNoteTeamNotices, noteTeamReach studentsAPI.StudentNoteTeamReach, cohorts timetableModule.CohortRosters,
 	answers enrollmentOwner.StudentAnswers, files nativeUploads.FileKeys, uploads nativeUploads.UploadFiles, now func() time.Time,
 ) error {
 	// A direct school_class edit must resync Jahrgang-filtered offering-sourced
@@ -238,7 +238,6 @@ func mountStudentRoutes(
 			PartialAbsenceService:        schedules.PartialAbsences,
 			PeopleDirectory:              persons,
 			Persons:                      peopleCompose.NewStudentRoutePersons(services.Users),
-			StudentRecordEdits:           recordEdits,
 			PickupAdjustmentService:      requests.CareOfferings, PickupChangeNotices: requests.PickupChangeTeam,
 			PickupScheduleService: schedules.Pickups, PickupSignatureProofs: staffPickupSignatures{ledger: owners.SignatureLedger()}, Reports: newDeclarationReports(),
 			Schools: studentSchoolDirectory{schools: organizations}, SettingsService: settings,

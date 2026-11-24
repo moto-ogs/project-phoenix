@@ -17,6 +17,7 @@ import (
 	departure "github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 	securityruntime "github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -172,9 +173,8 @@ var errStudentReassigned = errors.New("caller lost write authority on this stude
 // lockStudentForUpdate takes the row lock and re-validates every precondition
 // against the LOCKED row rather than the pre-transaction snapshot, so a
 // concurrent edit cannot slip a stale decision past. It writes nothing.
-func (rs *Resource) lockStudentForUpdate(ctx context.Context, update *studentUpdate, userPermissions []string) (*peopleModule.StudentState, error) {
-	req := update.req
-	fresh, err := rs.lockStudentRecord(ctx, update)
+func (rs *Resource) lockStudentForUpdate(ctx context.Context, student *peopleModule.StudentState, req *UpdateStudentRequest, userPermissions []string) (*peopleModule.StudentState, error) {
+	fresh, err := rs.lockStudent(ctx, student.ID)
 	if err != nil {
 		if peopleModule.IsMissingStudent(err) {
 			return nil, errStudentNotFoundUnderLock
@@ -201,35 +201,37 @@ func (rs *Resource) lockStudentForUpdate(ctx context.Context, update *studentUpd
 	return fresh, nil
 }
 
-// lockStudentRecord locks the child's row for the update. A form save
-// locks it through People Directory's edit lock, which locks the child's
-// person after the row, the order every writer of a child's person takes
-// (status, import, enrollment, master-data decisions, wristband link), and
-// checks the form's version against that locked state (ADR 0311). The form
-// sends every field back, so without the check a stale save would put back a
-// colleague's change. A person write starts from the locked copy with this
-// request's fields applied: the copy read before the transaction would write
-// back a wristband or account link changed in the meantime. A pure absence
-// report reads no form, carries no version and writes no person.
-func (rs *Resource) lockStudentRecord(ctx context.Context, update *studentUpdate) (*peopleModule.StudentState, error) {
-	if update.req.isAbsenceOnly() {
-		return rs.lockStudent(ctx, update.snapshot.ID)
+// lockStudentPerson locks the child's person after the child's row, the
+// order every writer of a child's person takes (status, import, enrollment,
+// master-data decisions, wristband link), and checks the form's version
+// against the locked state (ADR 0311). The form sends every field back, so
+// without the check a stale save would put back a colleague's change. A
+// person write starts from the locked copy with this request's fields
+// applied: the copy read before the transaction would write back a wristband
+// or account link changed in the meantime. A pure absence report reads no
+// form, carries no version and writes no person.
+func (rs *Resource) lockStudentPerson(ctx context.Context, update *studentUpdate) error {
+	formSave := !update.req.isAbsenceOnly()
+	if !formSave && !update.personUpdated {
+		return nil
 	}
-	if rs.StudentRecordEdits == nil {
-		return nil, errors.New("student record edits are not configured")
-	}
-	record, person, err := rs.StudentRecordEdits.LockStudentRecordForEdit(ctx, update.snapshot.ID, update.req.ExpectedVersion)
+	locked, err := rs.PeopleDirectory.FindPersonForMutation(ctx, update.fresh.PersonID)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if update.personUpdated {
-		*update.person = person
-		// The fields passed validation before the transaction.
-		if result := applyPersonUpdates(update.req, update.person); result.err != nil {
-			return nil, result.err
+	if formSave {
+		if err := readstate.Check(update.req.ExpectedVersion, peopleModule.StudentRecordVersion(*update.fresh, locked)); err != nil {
+			return err
 		}
 	}
-	return peopleModule.StudentStateFromRecord(record), nil
+	if update.personUpdated {
+		*update.person = locked
+		// The fields passed validation before the transaction.
+		if result := applyPersonUpdates(update.req, update.person); result.err != nil {
+			return result.err
+		}
+	}
+	return nil
 }
 
 // acquirePreRowLockGates takes the advisory locks that must precede ANY
@@ -433,12 +435,12 @@ func (rs *Resource) lockStudentUpdateRows(ctx context.Context, update *studentUp
 		return err
 	}
 
-	fresh, err := rs.lockStudentForUpdate(ctx, update, userPermissions)
+	fresh, err := rs.lockStudentForUpdate(ctx, update.snapshot, update.req, userPermissions)
 	if err != nil {
 		return err
 	}
 	update.fresh = fresh
-	return nil
+	return rs.lockStudentPerson(ctx, update)
 }
 
 // writeStudentUpdate persists the patched row and everything that has to land
