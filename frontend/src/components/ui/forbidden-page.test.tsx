@@ -48,7 +48,11 @@ describe("ForbiddenPage", () => {
     // Kein Zugriff ist ein Zustand, kein Fehler: Schlosssymbol in Grau
     // statt Warndreieck in Signalrot.
     expect(container.querySelector("svg")).toBeInTheDocument();
-    expect(container.querySelector(".text-moto-red")).toBeNull();
+    // Rot als Symbolfarbe erscheint als Grundton oder als -strong-Stufe
+    // (rote IconTile seit #6666).
+    expect(
+      container.querySelector(".text-moto-red, .text-moto-red-strong"),
+    ).toBeNull();
   });
 
   it("laesst den Seitenkopf weg, wenn die Seite ihn schon hat", () => {
