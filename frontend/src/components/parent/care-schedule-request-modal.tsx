@@ -434,6 +434,7 @@ export function CareScheduleRequestModal({
       title={t("requestTitle")}
       closeLabel={t("close")}
       isDismissDisabled={form.submitting}
+      busy={form.submitting}
       footer={
         <ModalFooter
           submitting={form.submitting}

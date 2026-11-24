@@ -174,16 +174,17 @@ describe("CareScheduleRequestModal", () => {
 });
 
 describe("CareScheduleRequestModal während des Sendens (#6792)", () => {
-  it("sperrt „Abbrechen“, solange die Anfrage läuft, und schließt nicht", async () => {
-    const request = deferred();
-    const onSubmit = vi.fn(() => request.promise);
+  const { cancel: cancelName, requestTitle } =
+    deMessages.parentMasterData.careSchedule;
+
+  async function sendPickupChange(request: Promise<void>) {
+    const onSubmit = vi.fn(() => request);
     const onClose = vi.fn();
     renderModal(
       { arrival: false, pickup: true, departure_mode: false },
       onSubmit,
       onClose,
     );
-
     fireEvent.change(screen.getByRole("textbox", { name: /^Abholzeit/ }), {
       target: { value: "16:30" },
     });
@@ -191,16 +192,45 @@ describe("CareScheduleRequestModal während des Sendens (#6792)", () => {
       screen.getByRole("button", { name: "Anfrage an OGS senden" }),
     );
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    return onClose;
+  }
 
-    const cancel = screen.getByRole("button", {
-      name: deMessages.parentMasterData.careSchedule.cancel,
-    });
+  it("sperrt „Abbrechen“, solange die Anfrage läuft, und schließt nicht", async () => {
+    const request = deferred();
+    const onClose = await sendPickupChange(request.promise);
+
+    expect(screen.getByRole("dialog", { name: requestTitle })).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+    const cancel = screen.getByRole("button", { name: cancelName });
     expect(cancel).toBeDisabled();
     fireEvent.click(cancel);
     expect(onClose).not.toHaveBeenCalled();
 
     request.resolve();
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+
+  it("gibt „Abbrechen“ nach einem Fehler wieder frei", async () => {
+    const request = deferred();
+    const onClose = await sendPickupChange(request.promise);
+
+    request.reject(
+      new ApiError("pending", 409, {
+        code: "care.care_request_already_pending",
+      }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      deMessages.parentMasterData.careSchedule.requestAlreadyPending,
+    );
+    expect(
+      screen.getByRole("dialog", { name: requestTitle }),
+    ).not.toHaveAttribute("aria-busy");
+    const cancel = screen.getByRole("button", { name: cancelName });
+    expect(cancel).toBeEnabled();
+    fireEvent.click(cancel);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 
