@@ -23,9 +23,10 @@ import {
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
 import { TenantPage } from "~/components/ui/tenant-page";
-import type {
-  ActiveFilter,
-  FilterConfig,
+import {
+  restrictingFilterIds,
+  type ActiveFilter,
+  type FilterConfig,
 } from "~/components/ui/page-header/types";
 import type {
   AggregatedRequestStatus,
@@ -315,7 +316,9 @@ export default function AnfragenPage() {
 
   const activeFilters = useMemo(() => {
     const chips: ActiveFilter[] = [];
-    for (const type of typeFilter) {
+    // Alle Werte gewählt heißt „alle“ und trägt keinen Chip (#6734).
+    const restricting = restrictingFilterIds(filterConfigs);
+    for (const type of restricting.has("art") ? typeFilter : []) {
       // Eine Art, die in dieser Ansicht nicht wählbar ist, trägt auch keinen
       // Chip — in der Arbeitsliste betrifft das die Direkt-Korrekturen.
       const label = typeOptions.find((option) => option.value === type)?.label;
@@ -328,7 +331,7 @@ export default function AnfragenPage() {
       });
     }
     if (view === "history") {
-      for (const status of statusFilter) {
+      for (const status of restricting.has("status") ? statusFilter : []) {
         const label = STATUS_OPTIONS.find(
           (option) => option.value === status,
         )?.label;
@@ -349,7 +352,7 @@ export default function AnfragenPage() {
       }
     }
     return chips;
-  }, [typeOptions, typeFilter, statusFilter, dateRange, view]);
+  }, [filterConfigs, typeOptions, typeFilter, statusFilter, dateRange, view]);
 
   const staffFilterConfigs = useMemo<FilterConfig[]>(
     () => [
@@ -371,7 +374,10 @@ export default function AnfragenPage() {
 
   const staffActiveFilters = useMemo<ActiveFilter[]>(
     () =>
-      absenceTypeFilter.map((type) => ({
+      (restrictingFilterIds(staffFilterConfigs).has("abwesenheitsart")
+        ? absenceTypeFilter
+        : []
+      ).map((type) => ({
         id: `abwesenheitsart-${type}`,
         label:
           ABSENCE_TYPE_OPTIONS.find((option) => option.value === type)?.label ??
@@ -381,7 +387,7 @@ export default function AnfragenPage() {
             prev.filter((value) => value !== type),
           ),
       })),
-    [absenceTypeFilter],
+    [staffFilterConfigs, absenceTypeFilter],
   );
 
   const clearAllFilters = () => {
@@ -534,12 +540,18 @@ export default function AnfragenPage() {
         <MitarbeitendeTab
           view={view}
           filters={staffFilters}
+          filtersActive={
+            deferredSearch.trim() !== "" || staffActiveFilters.length > 0
+          }
           onCountChange={handleStaffCount}
         />
       ) : (
         <ElternTab
           view={view}
           filters={filters}
+          filtersActive={
+            deferredSearch.trim() !== "" || activeFilters.length > 0
+          }
           onCountChange={handleParentCount}
           onOpenWaitlistRequest={clearOpenParentRequestFilters}
         />
@@ -556,11 +568,13 @@ export default function AnfragenPage() {
 function ElternTab({
   view,
   filters,
+  filtersActive,
   onCountChange,
   onOpenWaitlistRequest,
 }: Readonly<{
   view: "open" | "history";
   filters: AggregatedRequestFilters;
+  filtersActive: boolean;
   onCountChange: (count: number | null, hasMore: boolean) => void;
   onOpenWaitlistRequest: () => void;
 }>) {
@@ -627,6 +641,7 @@ function ElternTab({
             key={view}
             view={view}
             filters={filters}
+            filtersActive={filtersActive}
             onCountChange={onCountChange}
             focusRequest={focusRequest}
           />
@@ -644,10 +659,12 @@ function ElternTab({
 function MitarbeitendeTab({
   view,
   filters,
+  filtersActive,
   onCountChange,
 }: Readonly<{
   view: "open" | "history";
   filters: StaffAbsenceRequestFilters;
+  filtersActive: boolean;
   onCountChange: (count: number | null) => void;
 }>) {
   return (
@@ -657,6 +674,7 @@ function MitarbeitendeTab({
         key={view}
         view={view}
         filters={filters}
+        filtersActive={filtersActive}
         onCountChange={onCountChange}
       />
     </div>

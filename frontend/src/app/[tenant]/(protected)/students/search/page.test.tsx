@@ -1682,6 +1682,31 @@ describe("StudentSearchPage", () => {
         "Jahr 3, 4",
       );
     });
+
+    it("counts every school year chosen as no filter (#6734)", async () => {
+      render(<StudentSearchPage />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("filter-year")).toBeInTheDocument();
+      });
+
+      selectFilterOptions(screen.getByTestId("filter-year"), [
+        "1",
+        "2",
+        "3",
+        "4",
+      ]);
+
+      expect(screen.getByTestId("filter-year")).toHaveValue([
+        "1",
+        "2",
+        "3",
+        "4",
+      ]);
+      expect(
+        screen.queryByTestId("active-filter-year"),
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe("Loading States", () => {

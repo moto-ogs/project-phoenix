@@ -535,6 +535,35 @@ describe("AnfragenPage", () => {
     expect(absenceProbe().filters.types).toEqual(["training"]);
   });
 
+  it("zählt alle gewählten Abwesenheitsarten nicht als Filter (#6734)", () => {
+    mockUseSession.mockReturnValue(sessionWith(["vacation:approve"]));
+
+    render(<AnfragenPage />);
+
+    const filterButton = screen.getAllByRole("button", { name: /Filter/ })[0]!;
+    fireEvent.click(filterButton);
+    fireEvent.click(screen.getAllByRole("button", { name: "Fortbildung" })[0]!);
+    // Eine Art eingeschränkt: Chip-Reihe und Filter-Ring stehen da. Den Ring
+    // trägt die Schaltfläche nur bei geschlossenem Panel.
+    fireEvent.click(filterButton);
+    expect(
+      screen.getAllByRole("button", { name: "Alle löschen" }).length,
+    ).toBeGreaterThan(0);
+    expect(filterButton).toHaveAttribute("data-filters-active");
+
+    fireEvent.click(filterButton);
+    for (const label of ["Urlaub", "Krank", "Sonstige"]) {
+      fireEvent.click(screen.getAllByRole("button", { name: label })[0]!);
+    }
+    fireEvent.click(filterButton);
+    expect(absenceProbe().filters.types).toHaveLength(4);
+    // Alle Arten gewählt heißt „alle“: kein Chip, kein Ring.
+    expect(
+      screen.queryByRole("button", { name: "Alle löschen" }),
+    ).not.toBeInTheDocument();
+    expect(filterButton).not.toHaveAttribute("data-filters-active");
+  });
+
   it("schaltet den Mitarbeitende-Reiter auf die Historie um", () => {
     mockUseSession.mockReturnValue(sessionWith(["vacation:approve"]));
 

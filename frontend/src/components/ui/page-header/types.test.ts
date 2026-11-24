@@ -1,9 +1,14 @@
 /**
  * Tests for Types and Utility Functions
- * Tests the normalizeFilterValues utility function
+ * Tests normalizeFilterValues and the active-filter rule (#6734)
  */
 import { describe, it, expect } from "vitest";
-import { normalizeFilterValues } from "./types";
+import {
+  isFilterRestricting,
+  isMultiSelectRestricting,
+  normalizeFilterValues,
+  type FilterConfig,
+} from "./types";
 
 describe("normalizeFilterValues", () => {
   it("returns array as-is when value is already an array", () => {
@@ -66,5 +71,69 @@ describe("normalizeFilterValues", () => {
     const result = normalizeFilterValues("value with spaces");
 
     expect(result).toEqual(["value with spaces"]);
+  });
+});
+
+describe("isMultiSelectRestricting", () => {
+  const options = [{ value: "3a" }, { value: "4b" }];
+
+  it("treats the empty selection as no restriction", () => {
+    expect(isMultiSelectRestricting([], options)).toBe(false);
+  });
+
+  it("treats a partial selection as a restriction", () => {
+    expect(isMultiSelectRestricting(["3a"], options)).toBe(true);
+  });
+
+  it("treats every option chosen as no restriction", () => {
+    expect(isMultiSelectRestricting(["4b", "3a"], options)).toBe(false);
+  });
+
+  it("counts a chosen value outside the options as a restriction", () => {
+    expect(isMultiSelectRestricting(["3a", "4b", "5c"], options)).toBe(true);
+    // Same length as the options, but 4b is excluded.
+    expect(isMultiSelectRestricting(["3a", "5c"], options)).toBe(true);
+  });
+});
+
+describe("isFilterRestricting", () => {
+  const base: FilterConfig = {
+    id: "f",
+    label: "F",
+    type: "dropdown",
+    value: "all",
+    onChange: () => undefined,
+    options: [
+      { value: "all", label: "Alle" },
+      { value: "x", label: "X" },
+    ],
+  };
+
+  it("compares a single choice with its first option", () => {
+    expect(isFilterRestricting(base)).toBe(false);
+    expect(isFilterRestricting({ ...base, value: "x" })).toBe(true);
+  });
+
+  it("applies the multi-select rule to a multi-select", () => {
+    const multi: FilterConfig = {
+      ...base,
+      multiSelect: true,
+      options: [
+        { value: "a", label: "A" },
+        { value: "b", label: "B" },
+      ],
+    };
+    expect(isFilterRestricting({ ...multi, value: [] })).toBe(false);
+    expect(isFilterRestricting({ ...multi, value: ["a"] })).toBe(true);
+    expect(isFilterRestricting({ ...multi, value: ["a", "b"] })).toBe(false);
+    expect(isFilterRestricting({ ...multi, value: ["a", "b", "c"] })).toBe(
+      true,
+    );
+  });
+
+  it("never reports a custom filter, whose value is a stub", () => {
+    expect(
+      isFilterRestricting({ ...base, type: "custom", value: "", options: [] }),
+    ).toBe(false);
   });
 });

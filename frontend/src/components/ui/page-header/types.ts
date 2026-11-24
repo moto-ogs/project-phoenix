@@ -192,6 +192,64 @@ export function normalizeFilterValues(
   return [];
 }
 
+/**
+ * Whether a multi-select narrows the list. Neither the empty selection nor the
+ * full option set restricts anything: both mean "alle" (#6734).
+ *
+ * Compare by MEMBERSHIP, not length: a saved selection can hold a hidden value
+ * (e.g. a group/class the current user can't see) that pads the count to
+ * `options.length` while still excluding a visible option — selected
+ * [A, hiddenC] with options [A, B] is a real restriction, not "all selected".
+ * A selected value outside the options is itself a restriction to surface
+ * (#1565 review pass 2).
+ */
+export function isMultiSelectRestricting(
+  selectedValues: readonly string[],
+  options: readonly Pick<FilterOption, "value">[],
+): boolean {
+  if (selectedValues.length === 0) return false;
+  const optionValueSet = new Set(options.map((option) => option.value));
+  const selectedValueSet = new Set(selectedValues);
+  const allOptionsSelected = options.every((option) =>
+    selectedValueSet.has(option.value),
+  );
+  const hasHiddenSelection = selectedValues.some(
+    (value) => !optionValueSet.has(value),
+  );
+  return !allOptionsSelected || hasHiddenSelection;
+}
+
+/**
+ * Whether a filter is out of its default state, i.e. narrows the list: for a
+ * multi-select see {@link isMultiSelectRestricting}, for a single choice
+ * anything other than the first (default) option. Custom filters report
+ * `false`: their `value`/`options` are unused stubs, so a custom control
+ * reports its state through `activeFilters` instead.
+ */
+export function isFilterRestricting(filter: FilterConfig): boolean {
+  if (filter.type === "custom") return false;
+  if (filter.multiSelect === true || Array.isArray(filter.value)) {
+    return isMultiSelectRestricting(
+      normalizeFilterValues(filter.value),
+      filter.options,
+    );
+  }
+  return filter.value !== filter.options[0]?.value;
+}
+
+/**
+ * The ids of the filters that narrow the list ({@link isFilterRestricting}).
+ * A page that builds its own `activeFilters` asks this set, so its chips and
+ * count follow the same rule as the filter controls (#6734).
+ */
+export function restrictingFilterIds(
+  filters: readonly FilterConfig[],
+): ReadonlySet<string> {
+  return new Set(
+    filters.filter((filter) => isFilterRestricting(filter)).map((f) => f.id),
+  );
+}
+
 export interface OverflowMenuItem {
   /** Visible label. */
   readonly label: string;

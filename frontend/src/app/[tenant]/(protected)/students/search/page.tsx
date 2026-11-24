@@ -50,10 +50,11 @@ import { useApiLoadError } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { SectionCard } from "~/components/ui/section-card";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
-import type {
-  FilterConfig,
-  ActiveFilter,
-  FilterSection,
+import {
+  restrictingFilterIds,
+  type FilterConfig,
+  type ActiveFilter,
+  type FilterSection,
 } from "~/components/ui/page-header/types";
 import { DetailIcons } from "~/components/ui/detail-modal-components";
 import {
@@ -2766,6 +2767,10 @@ function SearchPageContent() {
   // Prepare active filters for display
   const activeFilters: ActiveFilter[] = useMemo(() => {
     const filters: ActiveFilter[] = [];
+    // A multi-select with every option chosen means "alle", like an empty one,
+    // and carries no chip and no count (#6734). Read against the options the
+    // control shows, so a selected value outside them still counts.
+    const restricting = restrictingFilterIds(filterConfigs);
 
     if (searchTerm) {
       filters.push({
@@ -2789,7 +2794,7 @@ function SearchPageContent() {
 
     // One chip per filter names every selected value, so a two-class selection
     // stays readable without turning the chip row into a list of ten pills.
-    if (selectedYears.length > 0) {
+    if (restricting.has("year")) {
       filters.push({
         id: "year",
         label: `Jahr ${selectedYears.join(", ")}`,
@@ -2797,7 +2802,7 @@ function SearchPageContent() {
       });
     }
 
-    if (selectedSchoolClasses.length > 0) {
+    if (restricting.has("schoolClass")) {
       filters.push({
         id: "schoolClass",
         label: schoolClassesLabel(selectedSchoolClasses),
@@ -2805,7 +2810,7 @@ function SearchPageContent() {
       });
     }
 
-    if (selectedGroupIds.length > 0) {
+    if (restricting.has("group")) {
       const groupNames = selectedGroupIds.map(
         (groupId) => groups.find((g) => g.id === groupId)?.name ?? "Gruppe",
       );
@@ -2902,7 +2907,7 @@ function SearchPageContent() {
       });
     }
 
-    for (const time of pickupTimeFilter) {
+    for (const time of restricting.has("pickupTime") ? pickupTimeFilter : []) {
       filters.push({
         id: `pickupTime-${time}`,
         label: time === "none" ? "Keine Gehzeit" : `Gehzeit ${time} Uhr`,
@@ -2958,6 +2963,7 @@ function SearchPageContent() {
 
     return filters;
   }, [
+    filterConfigs,
     searchTerm,
     updateSearchTerm,
     selectedYears,
