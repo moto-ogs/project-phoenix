@@ -333,19 +333,16 @@ describe("BookingLeftoverHints", () => {
     expect(mocks.toastSuccess).not.toHaveBeenCalled();
   });
 
-  // ADR 0311: the gap changed since it was read; the message waits for the
-  // hints read again and names a failed read instead of the new state.
-  it.each([
-    [true, /Die Buchung wurde inzwischen geändert/],
-    [false, /Der neue Stand konnte nicht geladen werden\./],
-  ])(
-    "reads the hints again after a changed gap (read succeeds: %s)",
-    async (readSucceeds, message) => {
-      mocks.remove.mockRejectedValue(
-        new ApiError("stale", 409, {
-          code: "timetable.template_booking_gap_stale",
-        }),
-      );
+  // ADR 0311: the gap changed since it was read. The dialog's dates would
+  // be refused again, so it closes; the message waits for the hints read
+  // again (`reload`), which rejects when that read fails.
+  it.each([[true], [false]])(
+    "closes the dialog after a changed gap and reads the hints again (read succeeds: %s)",
+    async (readSucceeds) => {
+      const refusal = new ApiError("stale", 409, {
+        code: "timetable.template_booking_gap_stale",
+      });
+      mocks.remove.mockRejectedValue(refusal);
       if (!readSucceeds) {
         mocks.mutate.mockRejectedValueOnce(
           new ApiError("down", 503, { code: "general.unavailable" }),
@@ -366,12 +363,21 @@ describe("BookingLeftoverHints", () => {
         within(dialog).getByRole("button", { name: "Jetzt entfernen" }),
       );
 
-      expect(await within(dialog).findByText(message)).toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      );
+      expect(mocks.remove).toHaveBeenCalledOnce();
+      expect(mocks.showError).toHaveBeenCalledWith(
+        refusal,
+        expect.objectContaining({ reload: expect.any(Function) }),
+      );
+      const { reload } = mocks.showError.mock.calls[0]![1] as {
+        reload: () => Promise<unknown>;
+      };
+      const read = reload();
+      if (readSucceeds) await expect(read).resolves.toBeUndefined();
+      else await expect(read).rejects.toBeInstanceOf(ApiError);
       expect(mocks.mutate).toHaveBeenCalledOnce();
-      expect(
-        within(dialog).queryByRole("button", { name: "Wiederholen" }) !==
-          null,
-      ).toBe(!readSucceeds);
     },
   );
 

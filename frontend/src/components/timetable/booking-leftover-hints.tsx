@@ -38,6 +38,7 @@ import { parseISODate, formatDate, toISODate } from "~/lib/date-helpers";
 import { useAccessControlledData } from "~/lib/hooks/use-access-controlled-data";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import {
   formatRemovalSpan,
@@ -188,11 +189,20 @@ export function BookingLeftoverHints({
         template_id: removing.templateId,
         error: err instanceof Error ? err.message : String(err),
       });
-      // The gap changed since it was read (ADR 0311): the message waits for
-      // the hints read again, a failed read is named instead.
+      if (isReadStateRefusal(err)) {
+        // The gap changed since it was read (ADR 0311): the dialog's dates
+        // would be refused again. It closes; the message waits for the
+        // hints read again and names a failed read instead.
+        setRemoving(null);
+        removalErrors.clear();
+        void showActionError(err, {
+          object: "das Entfernen aus dem Regeltermin",
+          reload: readAfterWrite,
+        });
+        return;
+      }
       await removalErrors.show(err, {
         object: "das Entfernen aus dem Regeltermin",
-        reload: readAfterWrite,
       });
     } finally {
       setRemovalBusy(false);

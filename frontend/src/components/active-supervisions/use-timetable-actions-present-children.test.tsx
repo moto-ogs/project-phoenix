@@ -59,7 +59,6 @@ function setup() {
     activeTimetableInstanceId: "99",
     currentTimetableRoster: roster,
     mutateRoster: vi.fn(() => Promise.resolve(undefined)),
-    reloadRoster: vi.fn(() => Promise.resolve(undefined)),
     mutateDashboard: vi.fn(() => Promise.resolve(undefined)),
     adoptSession: vi.fn(
       (activeGroupId: string) =>

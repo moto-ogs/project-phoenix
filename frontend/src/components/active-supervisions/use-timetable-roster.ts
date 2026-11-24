@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
-import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
+import { useSWRAuth } from "~/lib/swr";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableOperationsApi } from "~/lib/timetable-operations-api";
 import type { TimetableRoster } from "~/lib/timetable-operations-types";
@@ -19,8 +19,6 @@ export interface TimetableRosterState {
     data?: TimetableRoster | null,
     opts?: { revalidate?: boolean },
   ) => Promise<unknown>;
-  /** Reads the roster again and rejects when that read fails (ADR 0311). */
-  readonly reloadRoster: () => Promise<unknown>;
 }
 
 /**
@@ -44,7 +42,12 @@ export function useTimetableRoster(options: {
     currentRoomId,
     missingRosterActiveGroupIds,
   });
-  const rosterRead = useSWRAuth<TimetableRoster | null>(
+  const {
+    data: timetableRoster,
+    error: timetableRosterError,
+    isLoading: isTimetableRosterLoading,
+    mutate: mutateRoster,
+  } = useSWRAuth<TimetableRoster | null>(
     timetableRosterKey,
     async () => {
       try {
@@ -77,12 +80,6 @@ export function useTimetableRoster(options: {
     },
     { keepPreviousData: false, revalidateOnFocus: false },
   );
-  const {
-    data: timetableRoster,
-    error: timetableRosterError,
-    isLoading: isTimetableRosterLoading,
-    mutate: mutateRoster,
-  } = rosterRead;
 
   const timetableRosterMatchesSelection =
     timetableRoster !== undefined &&
@@ -108,6 +105,5 @@ export function useTimetableRoster(options: {
       timetableRosterKey !== null && Boolean(timetableRosterError),
     rosterError: timetableRosterKey !== null ? timetableRosterError : undefined,
     mutateRoster,
-    reloadRoster: () => revalidateOrThrow(rosterRead),
   };
 }

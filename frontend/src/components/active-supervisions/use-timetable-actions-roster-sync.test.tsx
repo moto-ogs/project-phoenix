@@ -75,7 +75,6 @@ function setup(mutateRoster: () => Promise<unknown>) {
     activeTimetableInstanceId: "99",
     currentTimetableRoster: null as TimetableRoster | null,
     mutateRoster: vi.fn(mutateRoster),
-    reloadRoster: vi.fn(() => Promise.resolve(undefined)),
     mutateDashboard: vi.fn(() => Promise.resolve(undefined)),
     adoptSession: vi.fn(() => "/active-supervisions"),
     setSelectedTimetableInstanceId: vi.fn(),

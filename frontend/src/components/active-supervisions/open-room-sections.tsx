@@ -45,10 +45,7 @@ type TimetableActionsOptions = Parameters<typeof useTimetableActions>[0];
  */
 export type OpenRoomBlockContext = Omit<
   TimetableActionsOptions,
-  | "activeTimetableInstanceId"
-  | "currentTimetableRoster"
-  | "mutateRoster"
-  | "reloadRoster"
+  "activeTimetableInstanceId" | "currentTimetableRoster" | "mutateRoster"
 > & {
   readonly attendanceWebEnabled: boolean;
   readonly showTimetableCounts: boolean;
@@ -314,7 +311,6 @@ function OpenRoomBlock({
     activeTimetableInstanceId: roster.activeTimetableInstanceId,
     currentTimetableRoster: roster.currentTimetableRoster,
     mutateRoster: roster.mutateRoster,
-    reloadRoster: roster.reloadRoster,
   });
 
   const title = session.title;

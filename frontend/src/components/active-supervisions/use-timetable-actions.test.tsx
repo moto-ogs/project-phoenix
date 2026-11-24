@@ -26,6 +26,7 @@ vi.mock("~/lib/timetable-operations-api", () => ({
     complete: vi.fn(),
     createAndStartSpontaneous: vi.fn(),
     reopen: vi.fn(),
+    roster: vi.fn(),
     start: vi.fn(),
   },
   isReopenUnavailableError: vi.fn(() => false),
@@ -76,7 +77,6 @@ function setup(overrides: { mutateDashboard?: () => Promise<unknown> } = {}) {
     activeTimetableInstanceId: "99",
     currentTimetableRoster: roster,
     mutateRoster: vi.fn(() => Promise.resolve(undefined)),
-    reloadRoster: vi.fn(() => Promise.resolve(undefined)),
     mutateDashboard:
       overrides.mutateDashboard ?? vi.fn(() => Promise.resolve(undefined)),
     adoptSession: vi.fn(
@@ -174,10 +174,10 @@ describe("useTimetableActions lifecycle reload (#3888)", () => {
         code: "timetable.completion_confirmation_stale",
       }),
     );
-    const { result, options } = setup();
-    options.reloadRoster.mockRejectedValueOnce(
+    vi.mocked(timetableOperationsApi.roster).mockRejectedValueOnce(
       new ApiError("down", 503, { code: "general.unavailable" }),
     );
+    const { result, options } = setup();
 
     act(() => result.current.setShowCompleteConfirmation(true));
     await act(async () => {
@@ -189,7 +189,10 @@ describe("useTimetableActions lifecycle reload (#3888)", () => {
         /Der neue Stand konnte nicht geladen werden\./,
       ),
     );
-    expect(options.reloadRoster).toHaveBeenCalledOnce();
+    expect(timetableOperationsApi.roster).toHaveBeenCalledOnce();
+    expect(timetableOperationsApi.roster).toHaveBeenCalledWith("99");
+    // The failed read leaves the shown roster as it was.
+    expect(options.mutateRoster).not.toHaveBeenCalled();
     expect(result.current.showCompleteConfirmation).toBe(true);
   });
 
