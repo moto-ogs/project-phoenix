@@ -4,7 +4,7 @@
 @import "./nav-scenes.css";
 
 /*
- * `compact` — die Dichte-Stufe kleiner Bildschirme mit Maus (#2824, #8051).
+ * `compact` — die Dichte-Stufe kleiner Bildschirme (#2824).
  *
  * Das Portal kannte bis hierher zwei Dichten: unter `sm` (640 px) die enge
  * Telefon-Stufe, ab 640 px das Desktop-Mass — unverändert bis 2560 px. Ein
@@ -28,18 +28,12 @@
  * und die Reihenfolge im erzeugten CSS ist nie eine Ermessensfrage — genau
  * eine der beiden Stufen trifft zu, nie beide.
  *
- * Beide Engen gelten nur mit feinem Zeiger (`pointer: fine`, Maus oder
- * Trackpad als Hauptzeiger). Die Breite entscheidet die Struktur, die
- * Zeigerart die Bedienmaße (ADR 0321): Ein iPad meldet `pointer: coarse` und
- * bekommt die normale Dichte mit Fingermaßen, auch quer mit 1180 px.
- * `FINE_POINTER` in `use-media-query.ts` ist dieselbe Abfrage für JS.
- *
  * Wer eine Eigenschaft in diese Stufe aufnimmt, schreibt den Desktop-Wert
  * unvariiert als Grundwert (`p-5`), nicht als `sm:`/`lg:`-Variante — sonst
  * stehen zwei Varianten-Regeln für dieselbe Eigenschaft nebeneinander und
  * welche gewinnt, hängt an der internen Sortierung von Tailwind.
  */
-@custom-variant compact (@media (width >= 48rem) and ((width < 64rem) or (max-height: 56.25rem)) and (pointer: fine));
+@custom-variant compact (@media (width >= 48rem) and ((width < 64rem) or (max-height: 56.25rem)));
 
 /*
  * moto brand tokens

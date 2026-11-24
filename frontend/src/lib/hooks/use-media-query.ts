@@ -120,13 +120,13 @@ export const AT_LEAST_LG = atLeast("lg");
 export const AT_LEAST_XL = atLeast("xl");
 
 /*
- * Zeigerart: Sie entscheidet die Bedienmaße, die Breite die Struktur
- * (ADR 0321). Gefragt wird nach dem Hauptzeiger (`pointer`), nicht nach
+ * Zeigerart: Sie entscheidet Bedienmaße und Trefferflächen, die Breite
+ * Struktur und Seitenraster (ADR 0321). Gefragt wird nach dem Hauptzeiger (`pointer`), nicht nach
  * irgendeinem (`any-pointer`): Ein Laptop mit Touchscreen bleibt fein, ein
  * iPad grob. In CSS gelten Tailwinds `pointer-coarse:` und `pointer-fine:`.
  */
 
 /** Finger als Hauptzeiger: Telefon, iPad. Bedienelemente mit Fingermaß. */
 export const COARSE_POINTER = "(pointer: coarse)";
-/** Maus oder Trackpad als Hauptzeiger. Nur hier greift die Dichte `compact`. */
+/** Maus oder Trackpad als Hauptzeiger: Bedienelemente mit Mausmaß. */
 export const FINE_POINTER = "(pointer: fine)";
