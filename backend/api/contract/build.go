@@ -312,6 +312,12 @@ func withoutData(route *Route, rc Registration) (bool, error) {
 
 func (b *builder) responses(route *Route, rc Registration, options Options) error {
 	where := route.Key()
+	if rc.PartialError != "" {
+		if rc.Response == nil || rc.Variants != nil || rc.NoData || rc.File {
+			return fmt.Errorf("%s: a partial error requires one JSON response type", where)
+		}
+		route.PartialError = rc.PartialError
+	}
 	if handled, err := withoutData(route, rc); handled {
 		return err
 	}

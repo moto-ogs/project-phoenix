@@ -49,7 +49,8 @@ import { rolesConfig } from "~/components/database/configs/roles.config";
 import { getRoleDisplayName } from "~/lib/auth-helpers";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
-import * as importContract from "~/lib/contract/import.generated";
+import type * as importContract from "~/lib/contract/import.generated";
+import { partialResults } from "~/lib/contract/partial-results.generated";
 import { createLogger } from "~/lib/logger";
 
 /** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
@@ -286,7 +287,7 @@ export default function StaffImportPage() {
         const result = importFailureBody(error);
         const interrupted = readImportBatchFailure(
           result,
-          importContract.StaffImportResultSchema,
+          partialResults["POST /api/import/teachers/import"],
         );
         if (interrupted) {
           setImportResult(interrupted);

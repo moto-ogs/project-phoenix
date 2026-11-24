@@ -41,7 +41,8 @@ import {
   importBatchSavedCount,
   readImportBatchFailure,
 } from "~/lib/import-batch-result";
-import * as importContract from "~/lib/contract/import.generated";
+import type * as importContract from "~/lib/contract/import.generated";
+import { partialResults } from "~/lib/contract/partial-results.generated";
 import { createLogger } from "~/lib/logger";
 
 /** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
@@ -227,7 +228,7 @@ export default function ClassListImportPage() {
         const result = importFailureBody(error);
         const interrupted = readImportBatchFailure(
           result,
-          importContract.ClassListImportResultSchema,
+          partialResults["POST /api/import/class-list-entries/import"],
         );
         if (interrupted) {
           setImportResult(interrupted);

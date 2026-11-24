@@ -29,7 +29,7 @@ func TypeScript(doc Document) (map[string]string, error) {
 	for _, route := range doc.Routes {
 		resources[resourceOf(route.Pattern)] = append(resources[resourceOf(route.Pattern)], route)
 	}
-	for _, reserved := range []string{portalsFile, sharedFile, browserTraitsFile, "problem-details.generated.ts", "stream-event.generated.ts"} {
+	for _, reserved := range []string{portalsFile, sharedFile, browserTraitsFile, "problem-details.generated.ts", "stream-event.generated.ts", "partial-results.generated.ts"} {
 		if _, taken := resources[strings.TrimSuffix(reserved, ".generated.ts")]; taken {
 			return nil, fmt.Errorf("the resource name %q is taken by a generated table", strings.TrimSuffix(reserved, ".generated.ts"))
 		}
@@ -62,7 +62,24 @@ func TypeScript(doc Document) (map[string]string, error) {
 		files[sharedFile] = shared.file(nil, nil)
 	}
 	writeNonRouteFiles(files, doc, newWriter)
+	writePartialResults(files, doc.Routes, newWriter())
 	return files, nil
+}
+
+func writePartialResults(files map[string]string, routes []Route, writer *tsWriter) {
+	writer.browser = true
+	var entries strings.Builder
+	for _, route := range routes {
+		if route.PartialError == "" {
+			continue
+		}
+		writer.visit(*route.Response)
+		fmt.Fprintf(&entries, "  %q: %s,\n", route.Key(), writer.field(*route.Response))
+	}
+	if entries.Len() > 0 {
+		files["partial-results.generated.ts"] = writer.file(nil, nil) +
+			"\nexport const partialResults = {\n" + entries.String() + "} as const;\n"
+	}
 }
 
 func writeNonRouteFiles(files map[string]string, doc Document, newWriter func() *tsWriter) {

@@ -47,7 +47,8 @@ import {
   importFailureBody,
 } from "~/lib/import-request";
 import { bffJson } from "~/lib/bff-fetch";
-import * as importContract from "~/lib/contract/import.generated";
+import type * as importContract from "~/lib/contract/import.generated";
+import { partialResults } from "~/lib/contract/partial-results.generated";
 import { createLogger } from "~/lib/logger";
 
 /** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
@@ -335,7 +336,7 @@ export default function StudentImportPage() {
         const result = importFailureBody(error);
         const interrupted = readImportBatchFailure(
           result,
-          importContract.StudentImportResultSchema,
+          partialResults["POST /api/import/students/import"],
         );
         if (interrupted) {
           setImportResult(interrupted);

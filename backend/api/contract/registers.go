@@ -60,6 +60,7 @@ type Registration struct {
 	Query            []QueryParam
 	Request          any
 	Response         any
+	PartialError     string
 	Paginated        bool
 	NoData           bool
 	Variants         *VariantSpec

@@ -58,6 +58,12 @@ export const int64String = text(isInt64Decimal);
 export const safeInt = decoder((value) =>
   typeof value === "number" && Number.isSafeInteger(value) ? value : invalid,
 );
+export const num = decoder((value) =>
+  typeof value === "number" && Number.isFinite(value) ? value : invalid,
+);
+export const bool = decoder((value) =>
+  typeof value === "boolean" ? value : invalid,
+);
 export const calendarDate = text(isValidISODate);
 const rfc3339 =
   /^\d{4}-\d\d-\d\dT(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;

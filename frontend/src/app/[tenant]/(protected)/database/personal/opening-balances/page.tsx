@@ -51,7 +51,8 @@ import {
 } from "~/lib/import-batch-result";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import * as importContract from "~/lib/contract/import.generated";
+import type * as importContract from "~/lib/contract/import.generated";
+import { partialResults } from "~/lib/contract/partial-results.generated";
 import { createLogger } from "~/lib/logger";
 
 /** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
@@ -397,7 +398,7 @@ function OpeningBalanceImportPageContent() {
         const payload = importFailureBody(error);
         const interrupted = readImportBatchFailure(
           payload,
-          importContract.OpeningBalanceImportResultSchema,
+          partialResults["POST /api/import/opening-balances/import"],
         );
         if (interrupted) {
           setImportResult(interrupted);

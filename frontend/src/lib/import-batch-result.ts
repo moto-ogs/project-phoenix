@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import type { Decoder } from "~/lib/contract/browser-runtime";
 import type { ClassListImportResult } from "~/lib/contract/import.generated";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 
@@ -35,7 +35,7 @@ function rowHasAbortingWrite(entry: ImportBatchRowError): boolean {
  */
 export function readImportBatchFailure<T>(
   payload: unknown,
-  schema: z.ZodType<T>,
+  schema: Pick<Decoder<T>, "safeParse">,
 ): T | null {
   if (!isRecord(payload) || payload.code !== importBatchFailedCode) {
     return null;

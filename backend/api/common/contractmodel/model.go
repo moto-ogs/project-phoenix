@@ -82,6 +82,8 @@ type Route struct {
 	Query      []QueryParam `json:"query,omitempty"`
 	Request    *Schema      `json:"request,omitempty"`
 	Response   *Schema      `json:"response,omitempty"`
+	// PartialError names a problem whose details.result reuses Response.
+	PartialError string `json:"partial_error,omitempty"`
 	// NoData says the route answers a 204 or the envelope without data.
 	NoData   bool      `json:"no_data,omitempty"`
 	Variants *Variants `json:"variants,omitempty"`

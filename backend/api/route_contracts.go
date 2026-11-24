@@ -426,7 +426,8 @@ func contractRegistration(prefix string, route common.RouteContract) contract.Re
 	registration := contract.Registration{
 		Method: route.Method, Pattern: prefix + route.Pattern,
 		Request: route.Request, Response: route.Response, Paginated: route.Paginated, NoData: route.NoData,
-		Deprecated: route.Deprecated, DeprecatedFields: route.DeprecatedFields, Refuses: route.Refuses,
+		PartialError: route.PartialError,
+		Deprecated:   route.Deprecated, DeprecatedFields: route.DeprecatedFields, Refuses: route.Refuses,
 		NoRetryAfterRenewal: route.NoRetryAfterRenewal, MaxBodyBytes: route.MaxBodyBytes, NoCommit: route.NoCommit,
 		File: route.File, Multipart: route.Multipart, TooLargeCode: route.TooLargeCode, PublicFile: route.PublicFile, PublicUpload: route.PublicUpload,
 		FileCache: route.FileCache, ConditionalGet: route.ConditionalGet,
@@ -666,15 +667,20 @@ func importRouteContracts() []common.RouteContract {
 		route.NoCommit = "an import preview checks the file and saves no row of it; only its audit entry is written"
 		return route
 	}
+	result := func(pattern string, response any) common.RouteContract {
+		route := upload(pattern, response)
+		route.PartialError = common.CodeImportImportBatchFailed
+		return route
+	}
 	return []common.RouteContract{
 		preview("/students/preview", importAPI.StudentPreviewResponse{}),
-		upload("/students/import", importModels.StudentImportResult{}),
+		result("/students/import", importModels.StudentImportResult{}),
 		preview("/teachers/preview", importModels.StaffImportResult{}),
-		upload("/teachers/import", importModels.StaffImportResult{}),
+		result("/teachers/import", importModels.StaffImportResult{}),
 		preview("/class-list-entries/preview", importModels.ClassListImportResult{}),
-		upload("/class-list-entries/import", importModels.ClassListImportResult{}),
+		result("/class-list-entries/import", importModels.ClassListImportResult{}),
 		preview("/opening-balances/preview", importModels.OpeningBalanceImportResult{}),
-		upload("/opening-balances/import", importModels.OpeningBalanceImportResult{}),
+		result("/opening-balances/import", importModels.OpeningBalanceImportResult{}),
 	}
 }
 
