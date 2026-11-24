@@ -10,22 +10,39 @@ import { bffJson } from "~/lib/bff-fetch";
  */
 
 import { knownEnum } from "./contract/known-enum";
-import {
-  RESPONSIBILITY_AREA_VALUES,
-  RESPONSIBILITY_SOURCE_VALUES,
-  RESPONSIBLE_BODY_VALUES,
-  SCHOOL_PARTY_KIND_VALUES,
-  type ResponsibilityArea,
-  type ResponsibilitySource,
-  type ResponsibleBody,
-  type SchoolPartyKind,
-} from "./contract/traeger-master-data.generated";
 import type * as contract from "./contract/traeger-master-data.generated";
+import { RESPONSIBILITY_SETTINGS_TAB } from "./traeger-responsibility-tab";
 
-export type { ResponsibilityArea, ResponsibleBody, SchoolPartyKind };
+// The closed sets of the contract, kept here as plain lists: importing the
+// generated values would pull the whole master data contract with its
+// decoders into every page that shows a responsibility (bundle ratchet).
+// The `satisfies` lines fail the build when Go renames or drops a value.
+const RESPONSIBLE_BODY_VALUES = [
+  "traeger",
+  "schultraeger",
+  "gemeinde",
+] as const satisfies readonly contract.ResponsibleBody[];
+const SCHOOL_PARTY_KIND_VALUES = [
+  "schultraeger",
+  "gemeinde",
+] as const satisfies readonly contract.SchoolPartyKind[];
+const RESPONSIBILITY_AREA_VALUES = [
+  "contracts",
+  "billing",
+  "staff",
+] as const satisfies readonly contract.ResponsibilityArea[];
+const RESPONSIBILITY_SOURCE_VALUES = [
+  "default",
+  "traeger",
+  "school",
+] as const satisfies readonly contract.ResponsibilitySource[];
 
-/** The settings tab that holds the three responsibilities. */
-export const RESPONSIBILITY_SETTINGS_TAB = "zustaendigkeiten";
+export type ResponsibleBody = contract.ResponsibleBody;
+export type SchoolPartyKind = contract.SchoolPartyKind;
+export type ResponsibilityArea = contract.ResponsibilityArea;
+type ResponsibilitySource = contract.ResponsibilitySource;
+
+export { RESPONSIBILITY_SETTINGS_TAB };
 
 /** The areas in the order every screen lists them. */
 export const RESPONSIBILITY_AREAS: readonly ResponsibilityArea[] = [

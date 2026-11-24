@@ -40,7 +40,7 @@ import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import { useTraegerMasterData } from "~/components/traeger/use-traeger-master-data";
 import { TRAEGER_BRANDING_TAB } from "~/lib/traeger-branding";
 import { PAYROLL_SETTINGS_TAB } from "~/lib/traeger-staff-exports-api";
-import { RESPONSIBILITY_SETTINGS_TAB } from "~/lib/traeger-responsibilities-api";
+import { RESPONSIBILITY_SETTINGS_TAB } from "~/lib/traeger-responsibility-tab";
 import { metadataLoadError } from "~/components/traeger/metadata-load-error";
 import { TraegerContactSection } from "~/components/traeger/traeger-contact-section";
 import { FutureShiftsList } from "~/components/traeger/planning/future-shifts-list";
