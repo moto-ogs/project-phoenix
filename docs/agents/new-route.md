@@ -61,15 +61,18 @@ Worked example, the same route from Go to the browser:
    `int64` says so with `contract:"number"`. The generator refuses a bare
    `int64`, the json option `,string`, a number under an identifier's name
    (`id`, `*_id`, `*_ids`), a numeric identifier in an answer and an answer
-   whose shape depends on a query parameter. Outside the contract,
-   `TestNoNumericIdentifierRatchet` (`backend/test`) refuses a numeric
-   identifier in any struct of `api/` and of every `http` and `inbound`
-   role; only the kiosk device API (`/api/iot/*`, `/api/students/{id}/rfid`)
+   whose shape depends on a query parameter. Do not format database IDs into
+   Go strings. A field named like an ID that actually carries text, such as an
+   RFID tag or a SEPA creditor ID, states why with `contract_text:"reason"`.
+   The generator records the reason as `text_reason` in `contract.json`.
+   `TestNoNumericIdentifierRatchet` checks numeric types and unmarked strings
+   in the `api/`, `http` and `inbound` roles; only the kiosk device API (`/api/iot/*`, `/api/students/{id}/rfid`)
    keeps numbers and tags them `contract:"number"`, because PyrePortal
    v1.11.5 reads them. For JSON requests, `render.Bind` uses the strict
    ID decoder installed by `api/common`. A handler that reads its own JSON
    body uses `wire.Decode` or `wire.Unmarshal` (including custom request
-   readers with nested IDs). Keep `encoding/json` for stored JSON, which
+   readers with nested IDs). Use `wire.NewDecoder` when the same stream
+   must be checked for trailing data. Keep `encoding/json` for stored JSON, which
    continues to write and read numeric IDs.
    Keep IDs as strings in browser code, including when filtering or sorting;
    see [One transport](frontend-api.md#browser-calls).

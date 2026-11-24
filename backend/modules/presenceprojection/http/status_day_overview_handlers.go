@@ -6,7 +6,6 @@ import (
 	slog "log/slog"
 	http "net/http"
 	slices "slices"
-	strconv "strconv"
 	strings "strings"
 	time "time"
 
@@ -15,6 +14,7 @@ import (
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	studentpresence "github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Absence overview (#2288): one forward-looking list of every entered
@@ -39,17 +39,17 @@ type statusDayOverviewResponse struct {
 }
 
 type statusDayOverviewGroup struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 type statusDayOverviewEntry struct {
-	ID          string    `json:"id"`
-	StudentID   string    `json:"student_id"`
+	ID          ident.ID  `json:"id"`
+	StudentID   ident.ID  `json:"student_id"`
 	FirstName   string    `json:"first_name"`
 	LastName    string    `json:"last_name"`
 	SchoolClass string    `json:"school_class"`
-	GroupID     string    `json:"group_id"`
+	GroupID     ident.ID  `json:"group_id"`
 	GroupName   string    `json:"group_name"`
 	Date        string    `json:"date"`
 	Status      string    `json:"status"`
@@ -110,7 +110,7 @@ func (rs *Resource) getStudentStatusDaysOverview(w http.ResponseWriter, r *http.
 	responseGroups := make([]statusDayOverviewGroup, 0, len(groups))
 	for _, group := range groups {
 		responseGroups = append(responseGroups, statusDayOverviewGroup{
-			ID:   strconv.FormatInt(group.ID, 10),
+			ID:   ident.ID(group.ID),
 			Name: group.Name,
 		})
 	}
@@ -169,10 +169,10 @@ func mapStatusDayOverviewEntries(overview *studentpresence.StatusDayOverview) []
 	for _, row := range rows {
 		statusDay := row.StatusDay
 		entry := statusDayOverviewEntry{
-			ID:          strconv.FormatInt(statusDay.ID, 10),
-			StudentID:   strconv.FormatInt(statusDay.StudentID, 10),
+			ID:          ident.ID(statusDay.ID),
+			StudentID:   ident.ID(statusDay.StudentID),
 			SchoolClass: row.Student.SchoolClass,
-			GroupID:     strconv.FormatInt(*row.Student.GroupID, 10),
+			GroupID:     ident.ID(*row.Student.GroupID),
 			Date:        statusDay.Date.String(),
 			Status:      statusDay.Status,
 			Label:       studentpresence.StudentStatusDayLabel(statusDay.Status),

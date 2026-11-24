@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet/internal/domain"
@@ -271,7 +272,7 @@ func buildRunningActivities(
 			name = instance.Title
 		}
 		running = append(running, devicefleet.RunningActivity{
-			ID: strconv.FormatInt(session.ID, 10), Name: name, Category: category,
+			ID: ident.ID(session.ID), Name: name, Category: category,
 			RoomName: roomNames[session.RoomID], Participants: len(participants[session.ID]),
 			MaxCapacity: maxCapacity,
 		})
@@ -306,7 +307,7 @@ func buildUpcomingActivities(
 			}
 		}
 		upcoming = append(upcoming, devicefleet.UpcomingActivity{
-			ID: strconv.FormatInt(instance.ID, 10), Name: instance.Title, Category: category,
+			ID: ident.ID(instance.ID), Name: instance.Title, Category: category,
 			StartTime: instance.StartWallClock.Format("15:04"), RoomName: roomNames[instance.RoomID],
 		})
 	}

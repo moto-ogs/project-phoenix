@@ -49,7 +49,7 @@ type billingKeyDayResponse struct {
 }
 
 type billingKeyDateCountResponse struct {
-	SchoolID         string    `json:"school_id"`
+	SchoolID         ident.ID  `json:"school_id"`
 	SchoolName       string    `json:"school_name"`
 	OrganizationName string    `json:"organization_name"`
 	Period           string    `json:"period"`
@@ -79,7 +79,7 @@ func toBillingKeyDayResponse(keyDay organizationtenancy.BillingKeyDay) billingKe
 
 func toBillingKeyDateCountResponse(count organizationtenancy.BillingKeyDateCount) billingKeyDateCountResponse {
 	return billingKeyDateCountResponse{
-		SchoolID:         strconv.FormatInt(count.SchoolID, 10),
+		SchoolID:         ident.ID(count.SchoolID),
 		SchoolName:       count.SchoolName,
 		OrganizationName: count.OrganizationName,
 		Period:           count.Period,

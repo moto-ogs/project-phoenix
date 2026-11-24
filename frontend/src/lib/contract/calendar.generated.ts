@@ -4,6 +4,7 @@ import {
   arr,
   calendarDate,
   fileAnswer,
+  int64String,
   nullable,
   object,
   optional,
@@ -79,7 +80,7 @@ export interface StaffOption {
 }
 
 export const StaffOptionSchema: z.ZodType<StaffOption, unknown> = object<StaffOption>({
-  id: str,
+  id: int64String,
   name: str,
 });
 
@@ -90,7 +91,7 @@ export interface ParentOption {
 }
 
 export const ParentOptionSchema: z.ZodType<ParentOption, unknown> = object<ParentOption>({
-  id: str,
+  id: int64String,
   name: str,
 });
 
@@ -101,7 +102,7 @@ export interface GroupOption {
 }
 
 export const GroupOptionSchema: z.ZodType<GroupOption, unknown> = object<GroupOption>({
-  id: str,
+  id: int64String,
   name: str,
 });
 
@@ -114,10 +115,10 @@ export interface StudentOption {
 }
 
 export const StudentOptionSchema: z.ZodType<StudentOption, unknown> = object<StudentOption>({
-  id: str,
+  id: int64String,
   name: str,
   school_class: optional(str),
-  group_id: optional(str),
+  group_id: optional(int64String),
 });
 
 /** Go: portal.RecipientOptions */

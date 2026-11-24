@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -272,10 +273,16 @@ func (m manualEnrollmentRouter) postManualEnrollmentForm(t *testing.T, formSchem
 	if terms == "" {
 		terms = phaseTerms(t, m.requests, m.phase.ID)
 	}
+	var shown []ident.ID
+	for _, raw := range shownStudentIDs {
+		id, err := strconv.ParseInt(raw, 10, 64)
+		require.NoError(t, err)
+		shown = append(shown, ident.ID(id))
+	}
 	payload, err := wire.Marshal(enrollmentAPI.AdminManualApprovedEnrollmentRequest{
 		ExistingStudentID:       existingStudentID,
 		CreateNewStudent:        createNewStudent,
-		ShownExistingStudentIDs: shownStudentIDs,
+		ShownExistingStudentIDs: shown,
 		SubmitEnrollmentRequest: enrollmentAPI.SubmitEnrollmentRequest{
 			GuardianFirstName: "Anna", GuardianLastName: "Beispiel",
 			GuardianEmail: fmt.Sprintf("manuell-%d@example.test", testpkg.Tenant(t)),

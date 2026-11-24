@@ -115,12 +115,12 @@ export interface AdminEnrollmentDeletionImpact {
 }
 
 export const AdminEnrollmentDeletionImpactSchema: z.ZodType<AdminEnrollmentDeletionImpact, unknown> = object<AdminEnrollmentDeletionImpact>({
-  request_id: str,
-  child_id: optional(str),
+  request_id: int64String,
+  child_id: optional(int64String),
   deletes_request: bool,
   can_delete: bool,
   counts: AdminEnrollmentDeletionCountsSchema,
-  blocking_student_ids: nullable(arr(str)),
+  blocking_student_ids: nullable(arr(int64String)),
   preserved_guardian_profiles: safeInt,
   preserved_parent_accounts: safeInt,
   unlinked_guardian_profiles: safeInt,
@@ -150,7 +150,7 @@ export interface ChangeRequestOfferingDays {
 }
 
 export const ChangeRequestOfferingDaysSchema: z.ZodType<ChangeRequestOfferingDays, unknown> = object<ChangeRequestOfferingDays>({
-  offering_id: str,
+  offering_id: int64String,
   selected_days: nullable(arr(str)),
 });
 
@@ -170,7 +170,7 @@ export interface ChangeRequestChildSnapshot {
 }
 
 export const ChangeRequestChildSnapshotSchema: z.ZodType<ChangeRequestChildSnapshot, unknown> = object<ChangeRequestChildSnapshot>({
-  id: optional(str),
+  id: optional(int64String),
   status: optional(str),
   first_name: optional(str),
   last_name: optional(str),
@@ -179,7 +179,7 @@ export const ChangeRequestChildSnapshotSchema: z.ZodType<ChangeRequestChildSnaps
   target_school_class: optional(str),
   holiday_care_wish: optional(bool),
   custom_data: optional(nullable(rec(nullable(json)))),
-  offering_ids: optional(nullable(arr(str))),
+  offering_ids: optional(nullable(arr(int64String))),
   offering_days: optional(nullable(arr(ChangeRequestOfferingDaysSchema))),
 });
 
@@ -197,7 +197,7 @@ export interface ChangeRequestSnapshot {
 }
 
 export const ChangeRequestSnapshotSchema: z.ZodType<ChangeRequestSnapshot, unknown> = object<ChangeRequestSnapshot>({
-  phase_id: optional(str),
+  phase_id: optional(int64String),
   guardian_first_name: optional(str),
   guardian_last_name: optional(str),
   guardian_email: optional(nullable(str)),
@@ -267,7 +267,7 @@ export interface AdminCandidatePhaseRequest {
 }
 
 export const AdminCandidatePhaseRequestSchema: z.ZodType<AdminCandidatePhaseRequest, unknown> = object<AdminCandidatePhaseRequest>({
-  request_id: str,
+  request_id: int64String,
   child_status: str,
   guardian_first_name: str,
   guardian_last_name: str,
@@ -284,7 +284,7 @@ export interface AdminExistingChildCandidate {
 }
 
 export const AdminExistingChildCandidateSchema: z.ZodType<AdminExistingChildCandidate, unknown> = object<AdminExistingChildCandidate>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   date_of_birth: optional(str),
@@ -328,7 +328,7 @@ export interface AdminRequestChildOffering {
 }
 
 export const AdminRequestChildOfferingSchema: z.ZodType<AdminRequestChildOffering, unknown> = object<AdminRequestChildOffering>({
-  offering_id: str,
+  offering_id: int64String,
   offering_name: str,
   days_of_week_mode: str,
   selected_days: optional(arr(str)),
@@ -376,7 +376,7 @@ export interface AdminRequestChild {
 }
 
 export const AdminRequestChildSchema: z.ZodType<AdminRequestChild, unknown> = object<AdminRequestChild>({
-  id: str,
+  id: int64String,
   first_name: str,
   last_name: str,
   date_of_birth: str,
@@ -389,8 +389,8 @@ export const AdminRequestChildSchema: z.ZodType<AdminRequestChild, unknown> = ob
   reviewed_at: optional(instant),
   reviewed_by: optional(int64String),
   activation_mode: str,
-  created_student_id: optional(str),
-  matched_student_id: optional(str),
+  created_student_id: optional(int64String),
+  matched_student_id: optional(int64String),
   possible_existing_children: optional(arr(AdminExistingChildCandidateSchema)),
   existing_child_choice_required: optional(bool),
   existing_child_only: optional(bool),
@@ -413,7 +413,7 @@ export interface AdminRequestGuardian {
 }
 
 export const AdminRequestGuardianSchema: z.ZodType<AdminRequestGuardian, unknown> = object<AdminRequestGuardian>({
-  id: str,
+  id: int64String,
   first_name: str,
   last_name: str,
   email: optional(str),
@@ -443,8 +443,8 @@ export interface AdminRequestSummary {
 }
 
 export const AdminRequestSummarySchema: z.ZodType<AdminRequestSummary, unknown> = object<AdminRequestSummary>({
-  id: str,
-  phase_id: str,
+  id: int64String,
+  phase_id: int64String,
   phase_name: str,
   care_offering_selection_mode: str,
   guardian_first_name: str,
@@ -474,7 +474,7 @@ export interface ChangeRequestMessageResponse {
 }
 
 export const ChangeRequestMessageResponseSchema: z.ZodType<ChangeRequestMessageResponse, unknown> = object<ChangeRequestMessageResponse>({
-  id: str,
+  id: int64String,
   author_type: str,
   author_account_id: optional(int64String),
   body: str,
@@ -491,7 +491,7 @@ export interface enrollmentAdjustedRosterTemplateResponse {
 }
 
 export const enrollmentAdjustedRosterTemplateResponseSchema: z.ZodType<enrollmentAdjustedRosterTemplateResponse, unknown> = object<enrollmentAdjustedRosterTemplateResponse>({
-  template_id: str,
+  template_id: int64String,
   name: str,
   removed_weekdays: nullable(arr(safeInt)),
   added_weekdays: nullable(arr(safeInt)),
@@ -507,7 +507,7 @@ export interface enrollmentManualRosterTemplateResponse {
 }
 
 export const enrollmentManualRosterTemplateResponseSchema: z.ZodType<enrollmentManualRosterTemplateResponse, unknown> = object<enrollmentManualRosterTemplateResponse>({
-  template_id: str,
+  template_id: int64String,
   name: str,
   weekdays: nullable(arr(safeInt)),
   via_target: bool,
@@ -555,8 +555,8 @@ export interface enrollmentChildRosterImpactResponse {
 }
 
 export const enrollmentChildRosterImpactResponseSchema: z.ZodType<enrollmentChildRosterImpactResponse, unknown> = object<enrollmentChildRosterImpactResponse>({
-  child_id: str,
-  student_id: str,
+  child_id: int64String,
+  student_id: int64String,
   first_name: str,
   roster_impact: enrollmentRosterImpactResponseSchema,
 });
@@ -582,8 +582,8 @@ export interface ChangeRequestResponse {
 }
 
 export const ChangeRequestResponseSchema: z.ZodType<ChangeRequestResponse, unknown> = object<ChangeRequestResponse>({
-  id: str,
-  request_id: str,
+  id: int64String,
+  request_id: int64String,
   origin: str,
   status: str,
   parent_note: optional(str),
@@ -609,7 +609,7 @@ export interface ChangeRequestReviewChildEntry {
 
 export const ChangeRequestReviewChildEntrySchema: z.ZodType<ChangeRequestReviewChildEntry, unknown> = object<ChangeRequestReviewChildEntry>({
   case_id: str,
-  student_id: optional(str),
+  student_id: optional(int64String),
   name: str,
 });
 
@@ -634,12 +634,12 @@ export interface ChangeRequestReviewEntry {
 }
 
 export const ChangeRequestReviewEntrySchema: z.ZodType<ChangeRequestReviewEntry, unknown> = object<ChangeRequestReviewEntry>({
-  id: str,
-  request_id: str,
+  id: int64String,
+  request_id: int64String,
   origin: str,
   status: str,
   child_names: nullable(arr(str)),
-  child_ids: optional(arr(str)),
+  child_ids: optional(arr(int64String)),
   children: nullable(arr(ChangeRequestReviewChildEntrySchema)),
   guardian_name: optional(str),
   parent_note: optional(str),
@@ -692,7 +692,7 @@ export interface careUsagePhaseResponse {
 }
 
 export const careUsagePhaseResponseSchema: z.ZodType<careUsagePhaseResponse, unknown> = object<careUsagePhaseResponse>({
-  id: str,
+  id: int64String,
   name: str,
 });
 
@@ -709,9 +709,9 @@ export interface careUsageAppliedFiltersResponse {
 }
 
 export const careUsageAppliedFiltersResponseSchema: z.ZodType<careUsageAppliedFiltersResponse, unknown> = object<careUsageAppliedFiltersResponse>({
-  phase_id: str,
+  phase_id: int64String,
   status: str,
-  care_offering_ids: nullable(arr(str)),
+  care_offering_ids: nullable(arr(int64String)),
   day_count: optional(safeInt),
   grade_level: optional(safeInt),
   weekday: optional(str),
@@ -741,7 +741,7 @@ export interface careUsageOfferingStatResponse {
 }
 
 export const careUsageOfferingStatResponseSchema: z.ZodType<careUsageOfferingStatResponse, unknown> = object<careUsageOfferingStatResponse>({
-  offering_id: str,
+  offering_id: int64String,
   offering_name: str,
   children: safeInt,
   by_day_count: nullable(rec(safeInt)),
@@ -755,7 +755,7 @@ export interface careUsageOfferingOptionResponse {
 }
 
 export const careUsageOfferingOptionResponseSchema: z.ZodType<careUsageOfferingOptionResponse, unknown> = object<careUsageOfferingOptionResponse>({
-  id: str,
+  id: int64String,
   name: str,
   counts_as_care: bool,
 });
@@ -785,7 +785,7 @@ export interface careUsageRowOfferingResponse {
 }
 
 export const careUsageRowOfferingResponseSchema: z.ZodType<careUsageRowOfferingResponse, unknown> = object<careUsageRowOfferingResponse>({
-  id: str,
+  id: int64String,
   name: str,
   days: nullable(arr(str)),
   days_source: str,
@@ -817,8 +817,8 @@ export interface careUsageRowResponse {
 }
 
 export const careUsageRowResponseSchema: z.ZodType<careUsageRowResponse, unknown> = object<careUsageRowResponse>({
-  request_id: str,
-  child_id: str,
+  request_id: int64String,
+  child_id: int64String,
   child_first_name: str,
   child_last_name: str,
   date_of_birth: str,
@@ -930,7 +930,7 @@ export interface AdminRequestUpload {
 }
 
 export const AdminRequestUploadSchema: z.ZodType<AdminRequestUpload, unknown> = object<AdminRequestUpload>({
-  id: str,
+  id: int64String,
   field_key: str,
   filename: str,
   size_bytes: safeInt,
@@ -989,8 +989,8 @@ export interface AdminRequestDetail {
 }
 
 export const AdminRequestDetailSchema: z.ZodType<AdminRequestDetail, unknown> = object<AdminRequestDetail>({
-  id: str,
-  phase_id: str,
+  id: int64String,
+  phase_id: int64String,
   phase_name: str,
   care_offering_selection_mode: str,
   guardian_first_name: str,
@@ -1029,7 +1029,7 @@ export interface AdminOfferingAdjustmentSnapshot {
 }
 
 export const AdminOfferingAdjustmentSnapshotSchema: z.ZodType<AdminOfferingAdjustmentSnapshot, unknown> = object<AdminOfferingAdjustmentSnapshot>({
-  offering_id: str,
+  offering_id: int64String,
   offering_name: optional(str),
   days_of_week_mode: optional(str),
   selected_days: optional(arr(str)),
@@ -1056,11 +1056,11 @@ export interface AdminOfferingAdjustment {
 }
 
 export const AdminOfferingAdjustmentSchema: z.ZodType<AdminOfferingAdjustment, unknown> = object<AdminOfferingAdjustment>({
-  id: str,
-  request_id: str,
-  request_child_id: str,
-  student_id: str,
-  actor_account_id: str,
+  id: int64String,
+  request_id: int64String,
+  request_child_id: int64String,
+  student_id: int64String,
+  actor_account_id: int64String,
   actor_role: str,
   actor_name_snapshot: optional(str),
   actor_email_snapshot: optional(str),
@@ -1134,7 +1134,7 @@ export interface CareOfferingBookingStatsResponse {
 }
 
 export const CareOfferingBookingStatsResponseSchema: z.ZodType<CareOfferingBookingStatsResponse, unknown> = object<CareOfferingBookingStatsResponse>({
-  offering_id: str,
+  offering_id: int64String,
   capacity: optional(safeInt),
   booked: safeInt,
   grade_levels: nullable(rec(safeInt)),
@@ -1173,20 +1173,20 @@ export interface PhaseResponse {
 }
 
 export const PhaseResponseSchema: z.ZodType<PhaseResponse, unknown> = object<PhaseResponse>({
-  id: str,
+  id: int64String,
   name: str,
   kind: str,
   service_start_date: str,
   service_end_date: str,
   enrollment_open_at: optional(str),
   enrollment_close_at: optional(str),
-  form_schema_id: optional(str),
-  calendar_period_id: optional(str),
+  form_schema_id: optional(int64String),
+  calendar_period_id: optional(int64String),
   show_status_reason_to_parent: bool,
   care_overflow_mode: str,
   care_offering_selection_mode: str,
   is_active: bool,
-  rollover_source_phase_id: optional(str),
+  rollover_source_phase_id: optional(int64String),
   rollover_mode: optional(str),
   rollover_auto_approve: bool,
   rollover_deadline: optional(str),
@@ -1216,9 +1216,9 @@ export interface PhaseExpiryWarningResponse {
 }
 
 export const PhaseExpiryWarningResponseSchema: z.ZodType<PhaseExpiryWarningResponse, unknown> = object<PhaseExpiryWarningResponse>({
-  source_phase_id: str,
+  source_phase_id: int64String,
   source_phase_name: str,
-  successor_phase_id: optional(str),
+  successor_phase_id: optional(int64String),
   successor_phase_name: optional(str),
   first_affected_date: calendarDate,
   affected_children: safeInt,
@@ -1254,14 +1254,14 @@ export interface PhaseResponseRowResponse {
 }
 
 export const PhaseResponseRowResponseSchema: z.ZodType<PhaseResponseRowResponse, unknown> = object<PhaseResponseRowResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
   has_parent_app: bool,
   responded: bool,
-  request_id: optional(str),
-  pending_request_id: optional(str),
+  request_id: optional(int64String),
+  pending_request_id: optional(int64String),
   child_status: optional(str),
 });
 
@@ -1358,7 +1358,7 @@ export interface StatusChildResponse {
 }
 
 export const StatusChildResponseSchema: z.ZodType<StatusChildResponse, unknown> = object<StatusChildResponse>({
-  id: str,
+  id: int64String,
   first_name: str,
   last_name: str,
   status: str,
@@ -1390,7 +1390,7 @@ export interface StatusRenewalTermsResponse {
 }
 
 export const StatusRenewalTermsResponseSchema: z.ZodType<StatusRenewalTermsResponse, unknown> = object<StatusRenewalTermsResponse>({
-  form_schema_id: str,
+  form_schema_id: int64String,
   terms_fingerprint: str,
   blocks: nullable(arr(LegalBlockSchema)),
   confirmed_at: optional(instant),
@@ -1417,7 +1417,7 @@ export interface StatusResponse {
 }
 
 export const StatusResponseSchema: z.ZodType<StatusResponse, unknown> = object<StatusResponse>({
-  request_id: str,
+  request_id: int64String,
   guardian_first_name: str,
   guardian_last_name: str,
   guardian_email: str,
@@ -1459,7 +1459,7 @@ export interface EditDraftOfferingDayResponse {
 }
 
 export const EditDraftOfferingDayResponseSchema: z.ZodType<EditDraftOfferingDayResponse, unknown> = object<EditDraftOfferingDayResponse>({
-  offering_id: str,
+  offering_id: int64String,
   selected_days: nullable(arr(str)),
   manual_selected_days: optional(arr(str)),
   automatic_selected_days: optional(arr(str)),
@@ -1481,7 +1481,7 @@ export interface EditDraftChildResponse {
 }
 
 export const EditDraftChildResponseSchema: z.ZodType<EditDraftChildResponse, unknown> = object<EditDraftChildResponse>({
-  id: str,
+  id: int64String,
   first_name: str,
   last_name: str,
   date_of_birth: str,
@@ -1489,7 +1489,7 @@ export const EditDraftChildResponseSchema: z.ZodType<EditDraftChildResponse, unk
   target_school_class: optional(str),
   holiday_care_wish: optional(bool),
   custom_data: nullable(rec(nullable(json))),
-  offering_ids: nullable(arr(str)),
+  offering_ids: nullable(arr(int64String)),
   offering_days: optional(arr(EditDraftOfferingDayResponseSchema)),
   locked: bool,
 });
@@ -1512,11 +1512,11 @@ export interface EditDraftResponse {
 }
 
 export const EditDraftResponseSchema: z.ZodType<EditDraftResponse, unknown> = object<EditDraftResponse>({
-  request_id: str,
+  request_id: int64String,
   status_token: str,
-  tenant_id: str,
+  tenant_id: int64String,
   tenant_subdomain: str,
-  phase_id: str,
+  phase_id: int64String,
   guardian_first_name: str,
   guardian_last_name: str,
   guardian_email: str,
@@ -1593,7 +1593,7 @@ export interface FormSchemaResponse {
 }
 
 export const FormSchemaResponseSchema: z.ZodType<FormSchemaResponse, unknown> = object<FormSchemaResponse>({
-  id: str,
+  id: int64String,
   name: str,
   version: safeInt,
   is_active: bool,
@@ -1855,8 +1855,8 @@ export interface AdminCreateLateInviteResponse {
 }
 
 export const AdminCreateLateInviteResponseSchema: z.ZodType<AdminCreateLateInviteResponse, unknown> = object<AdminCreateLateInviteResponse>({
-  id: str,
-  phase_id: str,
+  id: int64String,
+  phase_id: int64String,
   guardian_email: str,
   guardian_first_name: optional(str),
   guardian_last_name: optional(str),
@@ -1900,9 +1900,9 @@ export interface AdminManualApprovedEnrollmentResponse {
 }
 
 export const AdminManualApprovedEnrollmentResponseSchema: z.ZodType<AdminManualApprovedEnrollmentResponse, unknown> = object<AdminManualApprovedEnrollmentResponse>({
-  request_id: str,
-  child_id: str,
-  student_id: optional(str),
+  request_id: int64String,
+  child_id: int64String,
+  student_id: optional(int64String),
   status: str,
   status_url: str,
 });
@@ -1976,7 +1976,7 @@ export interface CreateChangeRequestRequest {
 /** Go: enrollmenthttp.ConfirmRenewalRequest */
 export interface ConfirmRenewalRequest {
   consent_flags?: Record<string, boolean | null> | null;
-  form_schema_id?: string;
+  form_schema_id?: string | null;
   terms_fingerprint?: string;
 }
 
@@ -2081,7 +2081,7 @@ export interface AdminChildOfferingsResponse {
 }
 
 export const AdminChildOfferingsResponseSchema: z.ZodType<AdminChildOfferingsResponse, unknown> = object<AdminChildOfferingsResponse>({
-  id: str,
+  id: int64String,
   first_name: str,
   last_name: str,
   date_of_birth: str,
@@ -2094,8 +2094,8 @@ export const AdminChildOfferingsResponseSchema: z.ZodType<AdminChildOfferingsRes
   reviewed_at: optional(instant),
   reviewed_by: optional(int64String),
   activation_mode: str,
-  created_student_id: optional(str),
-  matched_student_id: optional(str),
+  created_student_id: optional(int64String),
+  matched_student_id: optional(int64String),
   possible_existing_children: optional(arr(AdminExistingChildCandidateSchema)),
   existing_child_choice_required: optional(bool),
   existing_child_only: optional(bool),
@@ -2120,7 +2120,7 @@ export interface CareBeyondEndResponse {
 }
 
 export const CareBeyondEndResponseSchema: z.ZodType<CareBeyondEndResponse, unknown> = object<CareBeyondEndResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
@@ -2161,20 +2161,20 @@ export interface PhaseUpdateResponse {
 }
 
 export const PhaseUpdateResponseSchema: z.ZodType<PhaseUpdateResponse, unknown> = object<PhaseUpdateResponse>({
-  id: str,
+  id: int64String,
   name: str,
   kind: str,
   service_start_date: str,
   service_end_date: str,
   enrollment_open_at: optional(str),
   enrollment_close_at: optional(str),
-  form_schema_id: optional(str),
-  calendar_period_id: optional(str),
+  form_schema_id: optional(int64String),
+  calendar_period_id: optional(int64String),
   show_status_reason_to_parent: bool,
   care_overflow_mode: str,
   care_offering_selection_mode: str,
   is_active: bool,
-  rollover_source_phase_id: optional(str),
+  rollover_source_phase_id: optional(int64String),
   rollover_mode: optional(str),
   rollover_auto_approve: bool,
   rollover_deadline: optional(str),

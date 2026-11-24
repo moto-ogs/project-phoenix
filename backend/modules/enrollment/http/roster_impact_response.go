@@ -1,9 +1,8 @@
 package enrollmenthttp
 
 import (
-	"strconv"
-
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // enrollmentRosterImpactResponse is the wire form of a booking change's effect on the
@@ -28,17 +27,17 @@ type enrollmentPickupOverrideResponse struct {
 }
 
 type enrollmentAdjustedRosterTemplateResponse struct {
-	TemplateID      string `json:"template_id"`
-	Name            string `json:"name"`
-	RemovedWeekdays []int  `json:"removed_weekdays"`
-	AddedWeekdays   []int  `json:"added_weekdays"`
+	TemplateID      ident.ID `json:"template_id"`
+	Name            string   `json:"name"`
+	RemovedWeekdays []int    `json:"removed_weekdays"`
+	AddedWeekdays   []int    `json:"added_weekdays"`
 }
 
 type enrollmentManualRosterTemplateResponse struct {
-	TemplateID string `json:"template_id"`
-	Name       string `json:"name"`
-	Weekdays   []int  `json:"weekdays"`
-	ViaTarget  bool   `json:"via_target"`
+	TemplateID ident.ID `json:"template_id"`
+	Name       string   `json:"name"`
+	Weekdays   []int    `json:"weekdays"`
+	ViaTarget  bool     `json:"via_target"`
 	// Until is the day a later booking carries the Regeltermin again
 	// (exclusive, #5497); null when none does. "Entfernen" ends there.
 	Until *string `json:"until"`
@@ -59,13 +58,13 @@ func newRosterImpactResponse(impact RosterImpact) enrollmentRosterImpactResponse
 	}
 	for _, template := range impact.Adjusted {
 		out.Adjusted = append(out.Adjusted, enrollmentAdjustedRosterTemplateResponse{
-			TemplateID: strconv.FormatInt(template.TemplateID, 10), Name: template.Name,
+			TemplateID: ident.ID(template.TemplateID), Name: template.Name,
 			RemovedWeekdays: nonNilWeekdays(template.RemovedWeekdays), AddedWeekdays: nonNilWeekdays(template.AddedWeekdays),
 		})
 	}
 	for _, template := range impact.NotAdjusted {
 		response := enrollmentManualRosterTemplateResponse{
-			TemplateID: strconv.FormatInt(template.TemplateID, 10), Name: template.Name,
+			TemplateID: ident.ID(template.TemplateID), Name: template.Name,
 			Weekdays: nonNilWeekdays(template.Weekdays), ViaTarget: template.ViaTarget,
 		}
 		if template.Until != nil {
@@ -86,8 +85,8 @@ func nonNilWeekdays(weekdays []int) []int {
 // enrollmentChildRosterImpactResponse is one child's roster impact of an approved
 // change request.
 type enrollmentChildRosterImpactResponse struct {
-	ChildID      string                         `json:"child_id"`
-	StudentID    string                         `json:"student_id"`
+	ChildID      ident.ID                       `json:"child_id"`
+	StudentID    ident.ID                       `json:"student_id"`
 	FirstName    string                         `json:"first_name"`
 	RosterImpact enrollmentRosterImpactResponse `json:"roster_impact"`
 }
@@ -99,7 +98,7 @@ func newChildRosterImpactResponses(impacts []capability.ChildRosterImpact) []enr
 	out := make([]enrollmentChildRosterImpactResponse, 0, len(impacts))
 	for _, impact := range impacts {
 		out = append(out, enrollmentChildRosterImpactResponse{
-			ChildID: strconv.FormatInt(impact.ChildID, 10), StudentID: strconv.FormatInt(impact.StudentID, 10),
+			ChildID: ident.ID(impact.ChildID), StudentID: ident.ID(impact.StudentID),
 			FirstName: impact.FirstName, RosterImpact: newRosterImpactResponse(impact.Impact),
 		})
 	}

@@ -18,7 +18,7 @@ type DirectoryPersonSnapshot struct {
 	FirstName string                 `json:"first_name"`
 	LastName  string                 `json:"last_name"`
 	Birthday  *calendar.Date         `json:"birthday,omitempty"`
-	TagID     *string                `json:"tag_id,omitempty"`
+	TagID     *string                `json:"tag_id,omitempty" contract_text:"RFID tag code"`
 	AccountID *ident.ID              `json:"account_id,omitempty"`
 	DeletedAt *time.Time             `json:"-"`
 	Account   *PersonAccountSnapshot `json:"account,omitempty"`
@@ -36,7 +36,7 @@ type PersonAccountSnapshot struct {
 	LastLogin     *time.Time `json:"last_login,omitempty"`
 }
 type PersonRFIDSnapshot struct {
-	ID        string    `json:"id"`
+	ID        string    `json:"id" contract_text:"RFID tag code"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	TenantID  ident.ID  `json:"tenant_id"`

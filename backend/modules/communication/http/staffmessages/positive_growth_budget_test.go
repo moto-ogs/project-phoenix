@@ -69,19 +69,19 @@ func TestStaffMessagePositiveGrowthQueryBudget(t *testing.T) {
 					_, foreign := testpkg.CreateTestStaffWithAccountForTenant(t, db, foreignTenant, "Foreign", fmt.Sprintf("%02d", created))
 					testpkg.EnsureAccountTenant(t, db, foreign.ID, foreignTenant)
 					opened := decodeData[staffmessaging.ThreadDetailResponse](t, request("POST", "/threads/open", fmt.Sprintf(`{"account_id":%q}`, fmt.Sprint(colleague.ID)), false).Body.Bytes())
-					threadIDs = append(threadIDs, opened.ThreadID)
+					threadIDs = append(threadIDs, opened.ThreadID.String())
 					counterpartIDs = append(counterpartIDs, fmt.Sprint(colleague.ID))
 					// Grow both the inbox and the message collection of the first thread.
-					request("POST", "/threads/"+opened.ThreadID, fmt.Sprintf(`{"body":"inbox-%02d"}`, created), false)
+					request("POST", "/threads/"+opened.ThreadID.String(), fmt.Sprintf(`{"body":"inbox-%02d"}`, created), false)
 					message := decodeData[staffmessaging.MessageResponse](t, request("POST", "/threads/"+threadIDs[0], fmt.Sprintf(`{"body":"detail-%02d"}`, created), false).Body.Bytes())
-					messageIDs = append(messageIDs, message.ID)
+					messageIDs = append(messageIDs, message.ID.String())
 					created++
 				}
 				if scope == tenant.ScopeTenant {
 					recipients := decodeData[[]staffmessaging.RecipientResponse](t, request("GET", "/recipients", "", true).Body.Bytes())
 					require.Len(t, recipients, n)
 					for i, row := range recipients {
-						require.Equal(t, counterpartIDs[i], row.AccountID)
+						require.Equal(t, counterpartIDs[i], row.AccountID.String())
 						require.Equal(t, fmt.Sprintf("Colleague %02d", i), row.Name)
 						require.Equal(t, "staff", row.RoleKind)
 					}
@@ -90,14 +90,14 @@ func TestStaffMessagePositiveGrowthQueryBudget(t *testing.T) {
 				}
 				inbox := decodeData[[]staffmessaging.InboxThreadResponse](t, request("GET", "/", "", true).Body.Bytes())
 				require.Len(t, inbox, n)
-				require.Equal(t, threadIDs[0], inbox[0].ThreadID)
+				require.Equal(t, threadIDs[0], inbox[0].ThreadID.String())
 				for i, row := range inbox {
 					expectedIndex := n - i
 					if i == 0 {
 						expectedIndex = 0
 					}
-					require.Equal(t, threadIDs[expectedIndex], row.ThreadID)
-					require.Contains(t, threadIDs, row.ThreadID)
+					require.Equal(t, threadIDs[expectedIndex], row.ThreadID.String())
+					require.Contains(t, threadIDs, row.ThreadID.String())
 					require.Equal(t, "direct", row.Kind)
 					require.True(t, row.LastMessageMine)
 					require.Zero(t, row.UnreadCount)
@@ -110,14 +110,14 @@ func TestStaffMessagePositiveGrowthQueryBudget(t *testing.T) {
 				}
 				detail := decodeData[staffmessaging.ThreadDetailResponse](t, request("GET", "/threads/"+threadIDs[0], "", true).Body.Bytes())
 				require.Len(t, detail.Messages, n+1)
-				require.Equal(t, threadIDs[0], detail.ThreadID)
+				require.Equal(t, threadIDs[0], detail.ThreadID.String())
 				require.Equal(t, counterpartIDs[0], detail.CounterpartAccountID)
 				require.Equal(t, "Colleague 00", detail.CounterpartName)
 				require.Equal(t, "inbox-00", detail.Messages[0].Body)
 				for i, id := range messageIDs {
-					require.Equal(t, id, detail.Messages[i+1].ID)
+					require.Equal(t, id, detail.Messages[i+1].ID.String())
 					require.Equal(t, fmt.Sprintf("detail-%02d", i), detail.Messages[i+1].Body)
-					require.Equal(t, fmt.Sprint(viewer.ID), detail.Messages[i+1].SenderAccountID)
+					require.Equal(t, fmt.Sprint(viewer.ID), detail.Messages[i+1].SenderAccountID.String())
 				}
 				t.Logf("MEASURE %s detail N%d=%d", prefix, n, counter.Total())
 				if scope == tenant.ScopeTenant {

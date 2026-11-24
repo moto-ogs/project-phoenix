@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -20,9 +21,9 @@ import (
 
 // GuardianPaymentMaskedResponse is the default bank read of one guardian.
 type GuardianPaymentMaskedResponse struct {
-	GuardianID    string  `json:"guardian_id"`
-	IBANMasked    *string `json:"iban_masked"`
-	AccountHolder *string `json:"account_holder"`
+	GuardianID    ident.ID `json:"guardian_id"`
+	IBANMasked    *string  `json:"iban_masked"`
+	AccountHolder *string  `json:"account_holder"`
 	// Version is the token a save of the bank section sends back as
 	// expected_version (ADR 0311): the row's change time, never bank data.
 	Version string `json:"version"`
@@ -31,9 +32,9 @@ type GuardianPaymentMaskedResponse struct {
 // GuardianPaymentRevealResponse carries the unmasked IBAN after the audited
 // reveal.
 type GuardianPaymentRevealResponse struct {
-	GuardianID    string  `json:"guardian_id"`
-	IBAN          *string `json:"iban"`
-	AccountHolder *string `json:"account_holder"`
+	GuardianID    ident.ID `json:"guardian_id"`
+	IBAN          *string  `json:"iban"`
+	AccountHolder *string  `json:"account_holder"`
 	// Version is the token of the revealed state the edit form starts from.
 	Version string `json:"version"`
 }
@@ -51,21 +52,21 @@ func (r *GuardianPaymentRequest) Bind(_ *http.Request) error { return nil }
 // StudentPayerRequest binds the per-child payer assignment; a nil
 // guardian_id clears the assignment.
 type StudentPayerRequest struct {
-	GuardianID *string `json:"guardian_id"`
+	GuardianID *string `json:"guardian_id" contract_text:"empty string clears the guardian selection"`
 }
 
 func (r *StudentPayerRequest) Bind(_ *http.Request) error { return nil }
 
 // PaymentOverviewRow is one line of the Bankverbindungen list.
 type PaymentOverviewRow struct {
-	StudentID        string  `json:"student_id"`
-	StudentName      string  `json:"student_name"`
-	SchoolClass      string  `json:"school_class"`
-	GuardianID       *string `json:"guardian_id"`
-	GuardianName     string  `json:"guardian_name"`
-	RelationshipType string  `json:"relationship_type"`
-	AccountHolder    string  `json:"account_holder"`
-	IBANMasked       string  `json:"iban_masked"`
+	StudentID        ident.ID  `json:"student_id"`
+	StudentName      string    `json:"student_name"`
+	SchoolClass      string    `json:"school_class"`
+	GuardianID       *ident.ID `json:"guardian_id"`
+	GuardianName     string    `json:"guardian_name"`
+	RelationshipType string    `json:"relationship_type"`
+	AccountHolder    string    `json:"account_holder"`
+	IBANMasked       string    `json:"iban_masked"`
 }
 
 // Export formats the renderer understands.
@@ -170,7 +171,7 @@ func (rs *GuardianResource) getGuardianPayment(w http.ResponseWriter, r *http.Re
 		return
 	}
 	rs.succeed(w, r, http.StatusOK, &GuardianPaymentMaskedResponse{
-		GuardianID: strconv.FormatInt(masked.GuardianProfileID, 10), IBANMasked: masked.IBAN, AccountHolder: masked.AccountHolder, Version: masked.Version,
+		GuardianID: ident.ID(masked.GuardianProfileID), IBANMasked: masked.IBAN, AccountHolder: masked.AccountHolder, Version: masked.Version,
 	}, "Payment data retrieved successfully")
 }
 
@@ -191,7 +192,7 @@ func (rs *GuardianResource) revealGuardianPayment(w http.ResponseWriter, r *http
 		return
 	}
 	rs.succeed(w, r, http.StatusOK, &GuardianPaymentRevealResponse{
-		GuardianID: strconv.FormatInt(plain.GuardianProfileID, 10), IBAN: plain.IBAN, AccountHolder: plain.AccountHolder, Version: plain.Version,
+		GuardianID: ident.ID(plain.GuardianProfileID), IBAN: plain.IBAN, AccountHolder: plain.AccountHolder, Version: plain.Version,
 	}, "Payment data revealed successfully")
 }
 
@@ -271,12 +272,12 @@ func (rs *GuardianResource) listPaymentOverview(w http.ResponseWriter, r *http.R
 	responses := make([]PaymentOverviewRow, 0, len(rows))
 	for _, row := range rows {
 		out := PaymentOverviewRow{
-			StudentID: strconv.FormatInt(row.StudentID, 10), StudentName: row.StudentName, SchoolClass: row.SchoolClass,
+			StudentID: ident.ID(row.StudentID), StudentName: row.StudentName, SchoolClass: row.SchoolClass,
 			GuardianName: row.GuardianName, RelationshipType: row.RelationshipType,
 			AccountHolder: row.AccountHolder, IBANMasked: row.IBANMasked,
 		}
 		if row.GuardianProfileID != nil {
-			id := strconv.FormatInt(*row.GuardianProfileID, 10)
+			id := ident.ID(*row.GuardianProfileID)
 			out.GuardianID = &id
 		}
 		responses = append(responses, out)

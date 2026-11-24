@@ -101,7 +101,7 @@ func assertReviewGrowthPage(t *testing.T, page GrowthPage, byStudent map[string]
 	t.Helper()
 	assertGrowthTypesPerChild(t, page, byStudent, GrowthRequestTypes())
 	for _, item := range page.Items {
-		require.Equal(t, byStudent[item.StudentID].GroupName, item.GroupName)
+		require.Equal(t, byStudent[item.StudentID.String()].GroupName, item.GroupName)
 	}
 }
 
@@ -109,9 +109,9 @@ func assertGrowthTypesPerChild(t *testing.T, page GrowthPage, byStudent map[stri
 	t.Helper()
 	counts := make(map[string]int)
 	for _, item := range page.Items {
-		_, ok := byStudent[item.StudentID]
+		_, ok := byStudent[item.StudentID.String()]
 		require.True(t, ok, "the page must not include another tenant's child")
-		counts[item.StudentID+":"+item.RequestType]++
+		counts[item.StudentID.String()+":"+item.RequestType]++
 	}
 	for id := range byStudent {
 		for _, typ := range types {

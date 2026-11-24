@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -222,13 +221,13 @@ func careContractChangeImpact(impact careplan.RosterImpact) *carecontract.Change
 	result := &carecontract.ChangeImpact{EffectiveFrom: impact.EffectiveFrom}
 	for _, template := range impact.Adjusted {
 		result.Adjusted = append(result.Adjusted, carecontract.ChangeAdjustedTemplate{
-			TemplateID: strconv.FormatInt(template.TemplateID, 10), Name: template.Name,
+			TemplateID: ident.ID(template.TemplateID), Name: template.Name,
 			RemovedWeekdays: template.RemovedWeekdays, AddedWeekdays: template.AddedWeekdays,
 		})
 	}
 	for _, template := range impact.NotAdjusted {
 		result.NotAdjusted = append(result.NotAdjusted, carecontract.ChangeManualTemplate{
-			TemplateID: strconv.FormatInt(template.TemplateID, 10), Name: template.Name,
+			TemplateID: ident.ID(template.TemplateID), Name: template.Name,
 			Weekdays: template.Weekdays, ViaTarget: template.ViaTarget, Until: template.Until,
 		})
 	}

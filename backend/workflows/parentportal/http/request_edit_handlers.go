@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
@@ -48,7 +48,7 @@ type EditPickupChangeRequestBody struct {
 	ExpectedVersion string `json:"expected_version"`
 	// PickupPersonGuardianProfileID names the one-day collector; Signature is
 	// needed for a collector or walking home alone (#4780).
-	PickupPersonGuardianProfileID *string                      `json:"pickup_person_guardian_profile_id"`
+	PickupPersonGuardianProfileID *string                      `json:"pickup_person_guardian_profile_id" contract_text:"empty string explicitly clears the collector; null leaves it unspecified"`
 	Signature                     *declarationSignatureRequest `json:"signature,omitempty"`
 }
 
@@ -97,17 +97,40 @@ func renderParentRequestError(w http.ResponseWriter, r *http.Request, err error)
 	}
 }
 
+// decodeCreateBody keeps the recipient-specific error after ID decoding
+// moved into wire.Decode.
+func decodeCreateBody(w http.ResponseWriter, r *http.Request, target any) bool {
+	err := wire.Decode(r.Body, target)
+	if err == nil {
+		return true
+	}
+	if wire.InvalidIDAt(err, "/offerings") {
+		renderInvalidOfferingID(w, r)
+		return false
+	}
+	if wire.InvalidIDAt(err, "/recipient_guardian_profile_ids") {
+		renderInvalidRecipients(w, r)
+		return false
+	}
+	common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
+	return false
+}
+
+func renderInvalidRecipients(w http.ResponseWriter, r *http.Request) {
+	common.RenderError(w, r, common.ErrorInvalidRequestWithCode(
+		errors.New("recipient_guardian_profile_ids must be distinct numeric guardian profile ids"),
+		common.CodeCareInvalidRecipients))
+}
+
 // parseCreateRecipients reads the recipient choice that travels WITH a request
 // creation (#2267, finding 4). Sharing used to be a second call, so a dropped
 // or refused follow-up left the request visible to nobody the family picked.
 // A non-numeric or duplicate id is refused before anything is written, with
 // its own code so the portal can say which field is wrong.
-func parseCreateRecipients(w http.ResponseWriter, r *http.Request, raw []string) ([]int64, bool) {
+func parseCreateRecipients(w http.ResponseWriter, r *http.Request, raw []ident.ID) ([]int64, bool) {
 	ids, err := parseRecipientGuardianProfileIDs(raw)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(
-			errors.New("recipient_guardian_profile_ids must be distinct numeric guardian profile ids"),
-			common.CodeCareInvalidRecipients))
+		renderInvalidRecipients(w, r)
 		return nil, false
 	}
 	return ids, true
@@ -274,7 +297,12 @@ func (rs *Resource) editOfferingChangeRequest(w http.ResponseWriter, r *http.Req
 		return
 	}
 	var body EditOfferingChangeRequestBody
-	if !decodeEditBody(w, r, &body) {
+	if err := wire.Decode(r.Body, &body); err != nil {
+		if wire.InvalidIDAt(err, "/offerings") {
+			renderInvalidOfferingID(w, r)
+		} else {
+			common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
+		}
 		return
 	}
 	effectiveFrom, err := timezone.ParseDate(strings.TrimSpace(body.EffectiveFrom))
@@ -285,10 +313,9 @@ func (rs *Resource) editOfferingChangeRequest(w http.ResponseWriter, r *http.Req
 	}
 	selections := make([]parentService.OfferingChangeSelectionSnapshot, 0, len(body.Offerings))
 	for _, entry := range body.Offerings {
-		offeringID, convErr := strconv.ParseInt(strings.TrimSpace(entry.OfferingID), 10, 64)
-		if convErr != nil || offeringID <= 0 {
-			common.RenderError(w, r, common.ErrorInvalidRequestWithCode(
-				errors.New("offering_id must be a numeric id"), common.CodeCareOfferingChangeInvalid))
+		offeringID := entry.OfferingID.Int64()
+		if offeringID <= 0 {
+			renderInvalidOfferingID(w, r)
 			return
 		}
 		selections = append(selections, parentService.OfferingChangeSelectionSnapshot{

@@ -68,7 +68,7 @@ func TestRunningOverReadsTheExecutionState(t *testing.T) {
 		assert.Equal(t, reminder.TypeActivityRunningOver, got.Type,
 			"a started block is not reported as not started")
 		require.NotNil(t, got.ActivityInstanceID)
-		assert.Equal(t, strconv.FormatInt(running.ID, 10), *got.ActivityInstanceID)
+		assert.Equal(t, strconv.FormatInt(running.ID, 10), got.ActivityInstanceID.String())
 		assert.Equal(t, "Fußball-AG", got.Title)
 		assert.Equal(t, runningRoom.Name, got.Subtitle)
 		assert.Equal(t, "16:00", got.DueTime)

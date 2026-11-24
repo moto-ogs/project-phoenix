@@ -3,7 +3,6 @@ package users
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -33,7 +32,7 @@ type bulkInviteRequest struct {
 }
 
 type bulkInviteProblemResponse struct {
-	GuardianProfileID string   `json:"guardian_profile_id"`
+	GuardianProfileID ident.ID `json:"guardian_profile_id"`
 	GuardianName      string   `json:"guardian_name"`
 	StudentNames      []string `json:"student_names"`
 	Reason            string   `json:"reason"`
@@ -134,7 +133,7 @@ func newBulkInviteResponse(dryRun bool, result GuardianBulkInviteResult) bulkInv
 			names = []string{}
 		}
 		response.Problems = append(response.Problems, bulkInviteProblemResponse{
-			GuardianProfileID: strconv.FormatInt(problem.GuardianProfileID, 10),
+			GuardianProfileID: ident.ID(problem.GuardianProfileID),
 			GuardianName:      problem.GuardianName, StudentNames: names, Reason: problem.Reason,
 		})
 	}

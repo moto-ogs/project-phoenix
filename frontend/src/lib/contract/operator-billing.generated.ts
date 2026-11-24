@@ -69,7 +69,7 @@ export interface billingKeyDateCountResponse {
 }
 
 export const billingKeyDateCountResponseSchema: z.ZodType<billingKeyDateCountResponse, unknown> = object<billingKeyDateCountResponse>({
-  school_id: str,
+  school_id: int64String,
   school_name: str,
   organization_name: str,
   period: str,

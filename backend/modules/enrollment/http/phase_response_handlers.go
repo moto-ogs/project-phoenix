@@ -4,26 +4,26 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // PhaseResponseRowResponse is one expected child of the response overview
 // (#3379). request_id is set once the family answered; pending_request_id
 // points at a rollover row that still waits for the family or the school.
 type PhaseResponseRowResponse struct {
-	StudentID        string  `json:"student_id"`
-	FirstName        string  `json:"first_name"`
-	LastName         string  `json:"last_name"`
-	SchoolClass      string  `json:"school_class"`
-	HasParentApp     bool    `json:"has_parent_app"`
-	Responded        bool    `json:"responded"`
-	RequestID        *string `json:"request_id,omitempty"`
-	PendingRequestID *string `json:"pending_request_id,omitempty"`
-	ChildStatus      string  `json:"child_status,omitempty"`
+	StudentID        ident.ID  `json:"student_id"`
+	FirstName        string    `json:"first_name"`
+	LastName         string    `json:"last_name"`
+	SchoolClass      string    `json:"school_class"`
+	HasParentApp     bool      `json:"has_parent_app"`
+	Responded        bool      `json:"responded"`
+	RequestID        *ident.ID `json:"request_id,omitempty"`
+	PendingRequestID *ident.ID `json:"pending_request_id,omitempty"`
+	ChildStatus      string    `json:"child_status,omitempty"`
 }
 
 // PhaseResponseExclusionResponse counts the children left out for one reason.
@@ -52,9 +52,9 @@ func toPhaseResponseOverviewResponse(overview *capability.PhaseResponseOverview)
 	}
 	for _, row := range overview.Rows {
 		response.Children = append(response.Children, PhaseResponseRowResponse{
-			StudentID: strconv.FormatInt(row.StudentID, 10), FirstName: row.FirstName, LastName: row.LastName,
+			StudentID: ident.ID(row.StudentID), FirstName: row.FirstName, LastName: row.LastName,
 			SchoolClass: row.SchoolClass, HasParentApp: row.HasParentApp, Responded: row.Responded,
-			RequestID: stringID(row.RequestID), PendingRequestID: stringID(row.PendingRequestID), ChildStatus: row.ChildStatus,
+			RequestID: (*ident.ID)(row.RequestID), PendingRequestID: (*ident.ID)(row.PendingRequestID), ChildStatus: row.ChildStatus,
 		})
 	}
 	for _, exclusion := range overview.Excluded {
@@ -63,14 +63,6 @@ func toPhaseResponseOverviewResponse(overview *capability.PhaseResponseOverview)
 		})
 	}
 	return response
-}
-
-func stringID(id *int64) *string {
-	if id == nil {
-		return nil
-	}
-	value := strconv.FormatInt(*id, 10)
-	return &value
 }
 
 func (rs *Resource) getPhaseResponseOverview(w http.ResponseWriter, r *http.Request) {

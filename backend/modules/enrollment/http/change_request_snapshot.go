@@ -5,13 +5,14 @@ import (
 	"sort"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ChangeRequestSnapshot is enrollment data as recorded before or after a
 // proposal. Old records can omit fields; bookkeeping such as status appears
 // only where the snapshot knew it when it was taken.
 type ChangeRequestSnapshot struct {
-	PhaseID             *string                                         `json:"phase_id,omitempty"`
+	PhaseID             *ident.ID                                       `json:"phase_id,omitempty"`
 	GuardianFirstName   *string                                         `json:"guardian_first_name,omitempty"`
 	GuardianLastName    *string                                         `json:"guardian_last_name,omitempty"`
 	GuardianEmail       common.OptionalJSON[*string]                    `json:"guardian_email,omitzero"`
@@ -30,7 +31,7 @@ type ChangeRequestGuardian struct {
 }
 
 type ChangeRequestChildSnapshot struct {
-	ID                *string                             `json:"id,omitempty"`
+	ID                *ident.ID                           `json:"id,omitempty"`
 	Status            *string                             `json:"status,omitempty"`
 	FirstName         *string                             `json:"first_name,omitempty"`
 	LastName          *string                             `json:"last_name,omitempty"`
@@ -39,12 +40,12 @@ type ChangeRequestChildSnapshot struct {
 	TargetSchoolClass *string                             `json:"target_school_class,omitempty"`
 	HolidayCareWish   *bool                               `json:"holiday_care_wish,omitempty"`
 	CustomData        common.OptionalJSON[map[string]any] `json:"custom_data,omitzero" contract_json:"Answer values follow the school's versioned form schema"`
-	OfferingIDs       []string                            `json:"offering_ids,omitzero"`
+	OfferingIDs       []ident.ID                          `json:"offering_ids,omitzero"`
 	OfferingDays      []ChangeRequestOfferingDays         `json:"offering_days,omitzero"`
 }
 
 type ChangeRequestOfferingDays struct {
-	OfferingID   string   `json:"offering_id"`
+	OfferingID   ident.ID `json:"offering_id"`
 	SelectedDays []string `json:"selected_days"`
 }
 

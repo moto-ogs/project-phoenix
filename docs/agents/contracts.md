@@ -14,6 +14,10 @@ booleans are booleans. The helpers serialize values to the URL; the catalog
 proxy filters names only and forwards every occurrence of each registered
 key to Go, which validates the values.
 
+Bigint identifiers in portal JSON use Go `ident.ID` and travel as decimal
+strings. Identically named text fields carry a `contract_text` reason.
+Stored JSON and the numeric kiosk contract are separate from this boundary.
+
 Generated JSON body field types remain optional. The Go handler validates
 required fields and field combinations, as recorded in [ADR 0270](../adr/0270-der-vertrag-zwischen-go-und-frontend-entsteht-aus-der-go-registrierung.md).
 See [the route example](new-route.md) for `from` and `to` on

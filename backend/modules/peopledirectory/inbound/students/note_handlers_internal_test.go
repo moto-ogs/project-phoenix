@@ -198,7 +198,7 @@ func TestBuildNoteSubjectsResponse(t *testing.T) {
 		{ID: 7, Name: "Fußball-AG"}, {ID: 12, Name: "Schach"},
 	})
 	assert.Equal(t, []noteSubjectActivity{
-		{ID: "7", Name: "Fußball-AG"}, {ID: "12", Name: "Schach"},
+		{ID: 7, Name: "Fußball-AG"}, {ID: 12, Name: "Schach"},
 	}, response.Activities)
 
 	// A child without enrollments still answers with an empty list, so the

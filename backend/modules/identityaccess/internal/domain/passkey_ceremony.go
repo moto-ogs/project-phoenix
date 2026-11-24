@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The passkey ceremony rules (#3331): which origin may start a ceremony,
@@ -37,7 +38,7 @@ const (
 // PasskeyCredentialSummary is what the portals list: the credential's
 // identity as a string, its label and its use.
 type PasskeyCredentialSummary struct {
-	ID         string
+	ID         ident.ID
 	Name       string
 	CreatedAt  time.Time
 	LastUsedAt *time.Time
@@ -46,7 +47,7 @@ type PasskeyCredentialSummary struct {
 // SummarizeAccountPasskey renders one stored account credential.
 func SummarizeAccountPasskey(credential AccountPasskeyCredential) PasskeyCredentialSummary {
 	return PasskeyCredentialSummary{
-		ID: strconv.FormatInt(credential.ID, 10), Name: credential.Name,
+		ID: ident.ID(credential.ID), Name: credential.Name,
 		CreatedAt: credential.CreatedAt, LastUsedAt: credential.LastUsedAt,
 	}
 }
@@ -54,7 +55,7 @@ func SummarizeAccountPasskey(credential AccountPasskeyCredential) PasskeyCredent
 // SummarizeOperatorPasskey renders one stored operator credential.
 func SummarizeOperatorPasskey(credential OperatorPasskeyCredential) PasskeyCredentialSummary {
 	return PasskeyCredentialSummary{
-		ID: strconv.FormatInt(credential.ID, 10), Name: credential.Name,
+		ID: ident.ID(credential.ID), Name: credential.Name,
 		CreatedAt: credential.CreatedAt, LastUsedAt: credential.LastUsedAt,
 	}
 }

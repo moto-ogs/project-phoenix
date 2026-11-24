@@ -5,6 +5,7 @@ import {
   bool,
   fileAnswer,
   instant,
+  int64String,
   multipart,
   nullable,
   object,
@@ -25,7 +26,7 @@ export interface FolderRemovedResponse {
 }
 
 export const FolderRemovedResponseSchema: z.ZodType<FolderRemovedResponse, unknown> = object<FolderRemovedResponse>({
-  folder_id: str,
+  folder_id: int64String,
 });
 
 /** Go: files.AudienceRoleResponse */
@@ -35,7 +36,7 @@ export interface AudienceRoleResponse {
 }
 
 export const AudienceRoleResponseSchema: z.ZodType<AudienceRoleResponse, unknown> = object<AudienceRoleResponse>({
-  id: str,
+  id: int64String,
   name: str,
 });
 
@@ -47,7 +48,7 @@ export interface AudienceAccountResponse {
 }
 
 export const AudienceAccountResponseSchema: z.ZodType<AudienceAccountResponse, unknown> = object<AudienceAccountResponse>({
-  account_id: str,
+  account_id: int64String,
   first_name: str,
   last_name: str,
 });
@@ -77,12 +78,12 @@ export interface FolderResponse {
 }
 
 export const FolderResponseSchema: z.ZodType<FolderResponse, unknown> = object<FolderResponse>({
-  id: str,
+  id: int64String,
   name: str,
   visibility: str,
   file_count: safeInt,
-  role_ids: nullable(arr(str)),
-  account_ids: nullable(arr(str)),
+  role_ids: nullable(arr(int64String)),
+  account_ids: nullable(arr(int64String)),
   created_at: instant,
   version: str,
   fingerprint: str,
@@ -120,13 +121,13 @@ export interface FileResponse {
 }
 
 export const FileResponseSchema: z.ZodType<FileResponse, unknown> = object<FileResponse>({
-  id: str,
-  folder_id: str,
+  id: int64String,
+  folder_id: int64String,
   filename: str,
   size_bytes: safeInt,
   content_type: str,
   uploaded_at: instant,
-  uploaded_by: str,
+  uploaded_by: int64String,
   can_delete: bool,
 });
 

@@ -57,15 +57,18 @@ scheiterte der zweite Weg an zwei Stellen:
    Eine Variante bekommt ein Unterscheidungsfeld oder einen eigenen Pfad.
    `GET /api/students/` ist die eine benannte Altlast; ihre Liste im Generator
    darf nur schrumpfen.
-4. **Kennungen angemeldeter Routen tragen den Go-Typ `ident.ID`.**
+4. **Bigint-Kennungen angemeldeter Routen tragen den Go-Typ `ident.ID`.**
    HTTP-Antworten schreiben Kennungen über `wire.Marshal` als
    Dezimalstrings. Der Generator lehnt ein nacktes `int64` auf einem
    angemeldeten Typ ab; ein Betrag oder Zähler nennt `contract:"number"`.
+   Text unter einem Kennungsnamen trägt `contract_text:"Begründung"`; im
+   Modell steht der Grund als `text_reason`.
 5. **HTTP-Anfragen lesen Kennungen als Dezimalstrings.** Der erzeugte
    Request-Typ schreibt Strings, der erzeugte Antwortdecoder nimmt nur
    Strings. Gespeichertes JSON verwendet weiterhin die Standardkodierung
    und bleibt numerisch. Die Geräte-API bleibt außerhalb dieses Vertrags
-   (ADR 0300).
+   (ADR 0300). Die nachträgliche Typisierung von `string` zu `id` ändert
+   keine bereits als Dezimalstring übertragenen Kennungen.
 6. **Decoder vertragen Versionsunterschiede.** Sie ignorieren unbekannte
    Felder und scheitern an fehlenden oder kaputten Pflichtfeldern. Ein
    angemeldeter Enum ist im Typ eine Vereinigung seiner bekannten Werte, der

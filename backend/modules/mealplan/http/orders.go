@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	mealplanModule "github.com/moto-ogs/project-phoenix/modules/mealplan"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
@@ -32,7 +34,7 @@ type OrderDayResponse struct {
 	Closed      bool                      `json:"closed"`
 	Deadline    time.Time                 `json:"deadline"`
 	Status      string                    `json:"status"`
-	OrderID     string                    `json:"order_id,omitempty"`
+	OrderID     ident.ID                  `json:"order_id,omitempty"`
 	ConfirmedAt *time.Time                `json:"confirmed_at,omitempty"`
 	Total       int                       `json:"total"`
 	Classes     []OrderClassCountResponse `json:"classes"`
@@ -57,7 +59,7 @@ func OrderDays(week mealplanModule.OrderWeek) []OrderDayResponse {
 			Classes: make([]OrderClassCountResponse, 0, len(day.Classes)), Changes: make([]OrderChangeResponse, 0, len(day.Changes)),
 		}
 		if day.OrderID > 0 {
-			response.OrderID = strconv.FormatInt(day.OrderID, 10)
+			response.OrderID = ident.ID(day.OrderID)
 		}
 		for _, count := range day.Classes {
 			response.Classes = append(response.Classes, OrderClassCountResponse(count))

@@ -16,6 +16,7 @@ import (
 	masterdatarequests "github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	parentrequests "github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
@@ -30,9 +31,9 @@ type resolveConflictBody struct {
 	Kind string `json:"kind"`
 	// RequestIDs and ExpectedVersions are positional pairs, echoed back from
 	// the list. Ids travel as strings like every other int64 on this API.
-	RequestIDs       []string       `json:"request_ids"`
+	RequestIDs       []ident.ID     `json:"request_ids"`
 	ExpectedVersions []string       `json:"expected_versions"`
-	ChosenRequestID  string         `json:"chosen_request_id"`
+	ChosenRequestID  string         `json:"chosen_request_id" contract_text:"empty string means no selected request"`
 	StaffValue       map[string]any `json:"staff_value" contract_json:"The conflict kind selects the staff value shape"`
 	None             bool           `json:"none"`
 	// ConflictKey is the group's key from the list. It pins WHICH part of a
@@ -104,11 +105,11 @@ func (b *resolveConflictBody) toInput() (parentrequests.ResolveConflictInput, er
 	}, nil
 }
 
-func parseConflictIDs(raw []string) ([]int64, error) {
+func parseConflictIDs(raw []ident.ID) ([]int64, error) {
 	ids := make([]int64, 0, len(raw))
 	for _, value := range raw {
-		id, err := strconv.ParseInt(value, 10, 64)
-		if err != nil || id <= 0 {
+		id := value.Int64()
+		if id <= 0 {
 			return nil, errors.New("invalid request id")
 		}
 		ids = append(ids, id)

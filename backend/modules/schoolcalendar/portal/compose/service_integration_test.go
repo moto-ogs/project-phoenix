@@ -1547,7 +1547,7 @@ func TestCalendarServiceIntegration_AttendeeOverviewVisibility(t *testing.T) {
 	ownGuardianRecipientID := findRecipientByGuardian(t, detail, parentChain.GuardianProfileID)
 	listed := make([]string, 0, len(parentOverview.Attendees))
 	for _, attendee := range parentOverview.Attendees {
-		listed = append(listed, attendee.RecipientID)
+		listed = append(listed, attendee.RecipientID.String())
 	}
 	assert.ElementsMatch(t, []string{strconv.FormatInt(ownGuardianRecipientID, 10), strconv.FormatInt(staffRecipientID, 10)}, listed)
 	assert.NotContains(t, listed, strconv.FormatInt(otherGuardianRecipientID, 10))
@@ -1785,7 +1785,7 @@ func TestCalendarServiceIntegration_RecipientOptionsAndGroupedTargets(t *testing
 func parentOptionIDs(options []calendarSvc.ParentOption) []string {
 	ids := make([]string, 0, len(options))
 	for _, option := range options {
-		ids = append(ids, option.ID)
+		ids = append(ids, option.ID.String())
 	}
 	return ids
 }

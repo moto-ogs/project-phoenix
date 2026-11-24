@@ -66,7 +66,7 @@ func TestEnrollmentAdminRouteGrowthQueryBudget(t *testing.T) {
 		require.Len(t, detail.Children, n)
 		require.Len(t, detail.Uploads, n)
 		for i, upload := range detail.Uploads {
-			require.Equal(t, uploadIDs[i], upload.ID)
+			require.Equal(t, uploadIDs[i], upload.ID.String())
 			require.Equal(t, fmt.Sprintf("proof%d.pdf", i), upload.Filename)
 			require.Equal(t, "proof", upload.FieldKey)
 			require.Equal(t, int64(12), upload.SizeBytes)
@@ -74,7 +74,7 @@ func TestEnrollmentAdminRouteGrowthQueryBudget(t *testing.T) {
 		}
 		for i, child := range detail.Children {
 			require.Equal(t, fmt.Sprintf("Child%d", i), child.FirstName)
-			require.Equal(t, fmt.Sprint(result.Children[i].ID), child.ID)
+			require.Equal(t, fmt.Sprint(result.Children[i].ID), child.ID.String())
 			require.False(t, child.OfferingsUnavailable)
 		}
 		raw, reportQ := growthGET(t, router, counter, f.token, fmt.Sprintf("/admin/reports/care-usage?phase_id=%d&status=all", phase.ID))
@@ -127,9 +127,9 @@ func TestEnrollmentAdminRouteGrowthQueryBudget(t *testing.T) {
 		require.NoError(t, json.Unmarshal(raw, &rows))
 		require.Len(t, rows, n)
 		for i, row := range rows {
-			require.Equal(t, requestIDs[n-1-i], row.ID)
+			require.Equal(t, requestIDs[n-1-i], row.ID.String())
 			require.Len(t, row.Children, 1)
-			require.Equal(t, fmt.Sprint(student.ID), row.Children[0].CreatedStudentID)
+			require.Equal(t, fmt.Sprint(student.ID), row.Children[0].CreatedStudentID.String())
 		}
 		return q
 	}

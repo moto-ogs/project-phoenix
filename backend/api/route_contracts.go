@@ -288,6 +288,7 @@ func ContractDocument() (contract.Document, error) {
 			reflect.TypeFor[devicesAPI.WireTime](): contract.KindInstant,
 		},
 		Values: map[reflect.Type]string{
+			reflect.TypeFor[enrollmentOwner.FormAttachment]():                               contract.TypedFields,
 			reflect.TypeFor[common.OptionalJSON[*string]]():                                 contract.TypedValue,
 			reflect.TypeFor[common.OptionalJSON[*int16]]():                                  contract.TypedValue,
 			reflect.TypeFor[common.OptionalJSON[map[string]any]]():                          contract.TypedValue,

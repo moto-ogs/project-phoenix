@@ -11,6 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
@@ -88,12 +91,12 @@ func TestIdentityAccountPasskeysGrowthQueryBudget(t *testing.T) {
 		for len(want) < n {
 			name := fmt.Sprintf("Budget key %d", len(want))
 			id, createdAt := testpkg.CreateTestAccountPasskey(t, f.db, f.actor, name)
-			want = append(want, identityaccess.PasskeyCredentialSummary{ID: fmt.Sprint(id), Name: name, CreatedAt: createdAt})
+			want = append(want, identityaccess.PasskeyCredentialSummary{ID: ident.ID(id), Name: name, CreatedAt: createdAt})
 		}
 		rr, queries := f.get(t, "/auth/passkeys/", f.token)
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 		// The list answers in the envelope the catalog proxy reads (#2352).
-		raw, err := json.Marshal(map[string]any{"status": "success", "data": want, "message": "Passkeys retrieved"})
+		raw, err := wire.Marshal(map[string]any{"status": "success", "data": want, "message": "Passkeys retrieved"})
 		require.NoError(t, err)
 		require.JSONEq(t, string(raw), rr.Body.String())
 		t.Logf("identity passkeys N%d statements=%d", n, len(queries.Statements))

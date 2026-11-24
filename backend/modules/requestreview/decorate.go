@@ -36,7 +36,7 @@ func (s *service) decorateStudentGroups(ctx context.Context, page *Page) error {
 		return fmt.Errorf("load students for request queue groups: %w", err)
 	}
 	for i := range page.Items {
-		page.Items[i].GroupName = names[page.Items[i].studentID]
+		page.Items[i].GroupName = names[page.Items[i].StudentID.Int64()]
 	}
 	return nil
 }
@@ -47,7 +47,7 @@ func (s *service) decorateFamilyProtection(ctx context.Context, page *Page) erro
 		return fmt.Errorf("load family protection for request queue: %w", err)
 	}
 	for i := range page.Items {
-		page.Items[i].FamilyProtected = protected[page.Items[i].studentID]
+		page.Items[i].FamilyProtected = protected[page.Items[i].StudentID.Int64()]
 	}
 	return nil
 }
@@ -67,7 +67,7 @@ func (s *service) decorateSubmitters(ctx context.Context, page *Page) error {
 	}
 	for i := range page.Items {
 		item := &page.Items[i]
-		submitter, ok := known[SubmitterKey{StudentID: item.studentID, AccountID: item.submittedBy}]
+		submitter, ok := known[SubmitterKey{StudentID: item.StudentID.Int64(), AccountID: item.submittedBy}]
 		if !ok {
 			continue
 		}
@@ -82,10 +82,10 @@ func submitterKeys(items []Item) []SubmitterKey {
 	keys := make([]SubmitterKey, 0, len(items))
 	seen := make(map[SubmitterKey]struct{}, len(items))
 	for _, item := range items {
-		if item.studentID <= 0 || item.submittedBy <= 0 {
+		if item.StudentID.Int64() <= 0 || item.submittedBy <= 0 {
 			continue
 		}
-		key := SubmitterKey{StudentID: item.studentID, AccountID: item.submittedBy}
+		key := SubmitterKey{StudentID: item.StudentID.Int64(), AccountID: item.submittedBy}
 		if _, ok := seen[key]; !ok {
 			seen[key] = struct{}{}
 			keys = append(keys, key)
@@ -99,12 +99,12 @@ func studentIDs(items []Item) []int64 {
 	ids := make([]int64, 0, len(items))
 	seen := make(map[int64]struct{}, len(items))
 	for _, item := range items {
-		if item.studentID <= 0 {
+		if item.StudentID.Int64() <= 0 {
 			continue
 		}
-		if _, ok := seen[item.studentID]; !ok {
-			seen[item.studentID] = struct{}{}
-			ids = append(ids, item.studentID)
+		if _, ok := seen[item.StudentID.Int64()]; !ok {
+			seen[item.StudentID.Int64()] = struct{}{}
+			ids = append(ids, item.StudentID.Int64())
 		}
 	}
 	return ids
@@ -154,7 +154,7 @@ func (s *service) decorateConflicts(ctx context.Context, page *Page, types []str
 	}
 	for i := range page.Items {
 		page.Items[i].ConflictKey, page.Items[i].ConflictGroupSize =
-			largestConflictGroup(keyed[page.Items[i].studentID], page.Items[i].ConflictKeys)
+			largestConflictGroup(keyed[page.Items[i].StudentID.Int64()], page.Items[i].ConflictKeys)
 	}
 	return nil
 }

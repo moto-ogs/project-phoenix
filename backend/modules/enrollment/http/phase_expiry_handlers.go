@@ -4,24 +4,24 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type PhaseExpiryWarningResponse struct {
-	SourcePhaseID      string  `json:"source_phase_id"`
-	SourcePhaseName    string  `json:"source_phase_name"`
-	SuccessorPhaseID   *string `json:"successor_phase_id,omitempty"`
-	SuccessorPhaseName *string `json:"successor_phase_name,omitempty"`
-	FirstAffectedDate  string  `json:"first_affected_date" contract:"date"`
-	AffectedChildren   int     `json:"affected_children"`
-	UnresolvedChildren int     `json:"unresolved_children"`
-	State              string  `json:"state"`
-	Overdue            bool    `json:"overdue"`
+	SourcePhaseID      ident.ID  `json:"source_phase_id"`
+	SourcePhaseName    string    `json:"source_phase_name"`
+	SuccessorPhaseID   *ident.ID `json:"successor_phase_id,omitempty"`
+	SuccessorPhaseName *string   `json:"successor_phase_name,omitempty"`
+	FirstAffectedDate  string    `json:"first_affected_date" contract:"date"`
+	AffectedChildren   int       `json:"affected_children"`
+	UnresolvedChildren int       `json:"unresolved_children"`
+	State              string    `json:"state"`
+	Overdue            bool      `json:"overdue"`
 }
 
 func (rs *Resource) listPhaseExpiryWarnings(w http.ResponseWriter, r *http.Request) {
@@ -50,7 +50,7 @@ func (rs *Resource) listPhaseExpiryWarnings(w http.ResponseWriter, r *http.Reque
 
 func toPhaseExpiryWarningResponse(warning *capability.PhaseExpiryWarning) PhaseExpiryWarningResponse {
 	response := PhaseExpiryWarningResponse{
-		SourcePhaseID:      strconv.FormatInt(warning.SourcePhaseID, 10),
+		SourcePhaseID:      ident.ID(warning.SourcePhaseID),
 		SourcePhaseName:    warning.SourcePhaseName,
 		SuccessorPhaseName: warning.SuccessorPhaseName,
 		FirstAffectedDate:  warning.FirstAffectedDate.String(),
@@ -60,7 +60,7 @@ func toPhaseExpiryWarningResponse(warning *capability.PhaseExpiryWarning) PhaseE
 		Overdue:            warning.Overdue,
 	}
 	if warning.SuccessorPhaseID != nil {
-		id := strconv.FormatInt(*warning.SuccessorPhaseID, 10)
+		id := ident.ID(*warning.SuccessorPhaseID)
 		response.SuccessorPhaseID = &id
 	}
 	return response

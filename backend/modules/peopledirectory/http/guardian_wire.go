@@ -310,10 +310,10 @@ type GuardianInvitationResponse struct {
 // GuardianDeletePreview backs GET /guardians/{id}/delete-preview. Link IDs
 // travel as strings so JavaScript never rounds them.
 type GuardianDeletePreview struct {
-	LinkedCount     int      `json:"linked_count"`
-	AffectedNames   []string `json:"affected_names"`
-	AffectedLinkIDs []string `json:"affected_link_ids"`
-	Warning         string   `json:"warning"`
+	LinkedCount     int        `json:"linked_count"`
+	AffectedNames   []string   `json:"affected_names"`
+	AffectedLinkIDs []ident.ID `json:"affected_link_ids"`
+	Warning         string     `json:"warning"`
 }
 
 func newGuardianResponse(guardian peopledirectory.Guardian) *GuardianResponse {

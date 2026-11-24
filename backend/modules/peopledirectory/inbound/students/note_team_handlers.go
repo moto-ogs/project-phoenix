@@ -56,8 +56,8 @@ type studentNoteTeamInformedResponse struct {
 }
 
 type studentNoteTeamNoticeResponse struct {
-	NoteID           string    `json:"note_id"`
-	StudentID        string    `json:"student_id"`
+	NoteID           ident.ID  `json:"note_id"`
+	StudentID        ident.ID  `json:"student_id"`
 	StudentFirstName string    `json:"student_first_name"`
 	StudentLastName  string    `json:"student_last_name"`
 	AuthorName       string    `json:"author_name,omitempty"`
@@ -163,7 +163,7 @@ func renderStudentNoteTeamNotices(notices []peopleModule.StudentNoteTeamNotice) 
 	out := make([]studentNoteTeamNoticeResponse, 0, len(notices))
 	for _, notice := range notices {
 		out = append(out, studentNoteTeamNoticeResponse{
-			NoteID: strconv.FormatInt(notice.NoteID, 10), StudentID: strconv.FormatInt(notice.StudentID, 10),
+			NoteID: ident.ID(notice.NoteID), StudentID: ident.ID(notice.StudentID),
 			StudentFirstName: notice.StudentFirstName, StudentLastName: notice.StudentLastName,
 			AuthorName: notice.AuthorName, InformedAt: notice.InformedAt,
 		})

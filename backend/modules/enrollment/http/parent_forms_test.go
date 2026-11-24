@@ -80,7 +80,7 @@ func TestParentFormsSubmitStampsGuardianAccountTenantAndEligibility(t *testing.T
 		Data SubmitEnrollmentResponse `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
-	assert.Equal(t, "99001", body.Data.RequestID)
+	assert.Equal(t, "99001", body.Data.RequestID.String())
 	assert.Equal(t, "/status/status-token", body.Data.StatusURL)
 }
 

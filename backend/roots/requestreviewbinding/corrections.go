@@ -5,8 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/auditlog"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -78,7 +79,7 @@ func (c correctionLog) History(ctx context.Context, filter requestreview.QueueFi
 		name := strings.TrimSpace(person.FirstName + " " + person.LastName)
 		diff := correctionDiff(row)
 		result = append(result, requestreview.Row{Type: requestreview.TypeDirectCorrection, SortTime: row.ChangedAt, ID: row.ID, StudentID: row.StudentID, StudentName: name, DecidedAt: row.ChangedAt,
-			Payload: requestreview.Payload{DirectCorrection: &requestreview.DirectCorrectionResponse{ID: strconv.FormatInt(row.ID, 10), StudentID: strconv.FormatInt(row.StudentID, 10), StudentName: name, ChangedAt: row.ChangedAt, ChangedByName: row.ActorName(), Reason: row.Reason, Diff: diff}},
+			Payload: requestreview.Payload{DirectCorrection: &requestreview.DirectCorrectionResponse{ID: ident.ID(row.ID), StudentID: ident.ID(row.StudentID), StudentName: name, ChangedAt: row.ChangedAt, ChangedByName: row.ActorName(), Reason: row.Reason, Diff: diff}},
 		})
 	}
 	return result, next, nil
@@ -93,7 +94,7 @@ func correctionDiff(row auditlog.DirectCorrection) []requestreview.OfferingReque
 	}
 	diff := make([]requestreview.OfferingRequestDiffResponse, 0, len(entries))
 	for _, entry := range entries {
-		diff = append(diff, requestreview.OfferingRequestDiffResponse{OfferingID: strconv.FormatInt(entry.OfferingID, 10), Label: entry.Label, Old: requestreview.GermanOfferingDiffLabel(entry.OldState, entry.OldDays), New: requestreview.GermanOfferingDiffLabel(entry.NewState, entry.NewDays)})
+		diff = append(diff, requestreview.OfferingRequestDiffResponse{OfferingID: ident.ID(entry.OfferingID), Label: entry.Label, Old: requestreview.GermanOfferingDiffLabel(entry.OldState, entry.OldDays), New: requestreview.GermanOfferingDiffLabel(entry.NewState, entry.NewDays)})
 	}
 	return diff
 }

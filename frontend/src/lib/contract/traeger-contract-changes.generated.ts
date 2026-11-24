@@ -77,7 +77,7 @@ export interface ChangeAdjustedTemplate {
 }
 
 export const ChangeAdjustedTemplateSchema: z.ZodType<ChangeAdjustedTemplate, unknown> = object<ChangeAdjustedTemplate>({
-  template_id: str,
+  template_id: int64String,
   name: str,
   removed_weekdays: nullable(arr(safeInt)),
   added_weekdays: nullable(arr(safeInt)),
@@ -93,7 +93,7 @@ export interface ChangeManualTemplate {
 }
 
 export const ChangeManualTemplateSchema: z.ZodType<ChangeManualTemplate, unknown> = object<ChangeManualTemplate>({
-  template_id: str,
+  template_id: int64String,
   name: str,
   weekdays: nullable(arr(safeInt)),
   via_target: bool,

@@ -25188,7 +25188,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -25401,6 +25401,7 @@
       "fields": [
         {
           "name": "id",
+          "text_reason": "composite log key containing event kind and source",
           "schema": {
             "kind": "string"
           }
@@ -25623,14 +25624,14 @@
           "name": "supersedes_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "superseded_by_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -26834,7 +26835,7 @@
         {
           "name": "request_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -26922,7 +26923,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -27007,14 +27008,14 @@
           "name": "created_student_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "matched_student_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -27163,13 +27164,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "phase_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -27290,6 +27291,7 @@
         {
           "name": "existing_student_id",
           "optional": true,
+          "text_reason": "empty string means no existing student selected",
           "schema": {
             "kind": "string"
           }
@@ -27308,7 +27310,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -27427,14 +27429,14 @@
         {
           "name": "request_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "child_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -27462,7 +27464,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -27505,7 +27507,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -27767,6 +27769,7 @@
         {
           "name": "existing_student_id",
           "optional": true,
+          "text_reason": "empty string means no existing student selected",
           "schema": {
             "kind": "string"
           }
@@ -27785,7 +27788,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         }
@@ -27798,20 +27801,20 @@
         {
           "name": "request_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "child_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -27835,31 +27838,31 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "request_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "request_child_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "actor_account_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -27925,7 +27928,7 @@
         {
           "name": "offering_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -27998,7 +28001,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -28083,14 +28086,14 @@
           "name": "created_student_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "matched_student_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -28189,7 +28192,7 @@
         {
           "name": "offering_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -28318,13 +28321,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "phase_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -28523,7 +28526,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -28645,13 +28648,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "phase_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -28794,7 +28797,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -29002,7 +29005,7 @@
           "name": "offering_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -29079,7 +29082,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -29223,13 +29226,13 @@
         {
           "name": "staff_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "absence_type_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -29368,7 +29371,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -29472,7 +29475,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -29502,7 +29505,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -29520,7 +29523,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -29541,7 +29544,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         }
@@ -29566,7 +29569,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -29774,7 +29777,7 @@
         {
           "name": "survey_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -30162,7 +30165,7 @@
         {
           "name": "recipient_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -30285,7 +30288,7 @@
         {
           "name": "appointment_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -31303,7 +31306,7 @@
         {
           "name": "announcement_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -31321,7 +31324,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -31482,7 +31485,7 @@
         {
           "name": "account_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -31534,7 +31537,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -32598,13 +32601,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "organization_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -34532,7 +34535,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -35984,7 +35987,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -39031,7 +39034,7 @@
         {
           "name": "offering_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -39072,7 +39075,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -39289,7 +39292,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -39358,20 +39361,20 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "phase_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "activity_group_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -39471,7 +39474,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -40045,13 +40048,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -40220,13 +40223,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -40367,13 +40370,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -41962,13 +41965,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "account_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -41998,7 +42001,7 @@
         {
           "name": "template_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -42162,7 +42165,7 @@
         {
           "name": "template_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -42354,7 +42357,7 @@
           "name": "id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -42427,7 +42430,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -42521,7 +42524,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -42564,7 +42567,7 @@
         {
           "name": "offering_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -42598,13 +42601,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "request_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -42721,6 +42724,7 @@
       "fields": [
         {
           "name": "case_id",
+          "text_reason": "composite request and child key",
           "schema": {
             "kind": "string"
           }
@@ -42729,7 +42733,7 @@
           "name": "student_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -42747,13 +42751,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "request_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -42784,7 +42788,7 @@
           "schema": {
             "kind": "array",
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -42923,7 +42927,7 @@
           "name": "phase_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -43986,13 +43990,13 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -44474,7 +44478,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -45431,7 +45435,8 @@
           "name": "form_schema_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "nullable": true
           }
         },
         {
@@ -48278,13 +48283,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "activity_group_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -48360,7 +48365,7 @@
           "name": "course_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -48379,13 +48384,13 @@
         {
           "name": "request_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -48415,7 +48420,7 @@
         {
           "name": "activity_group_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -48510,7 +48515,7 @@
           "name": "pending_request_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -48926,6 +48931,7 @@
         {
           "name": "client_message_id",
           "optional": true,
+          "text_reason": "client-supplied message deduplication key",
           "schema": {
             "kind": "string"
           }
@@ -48940,6 +48946,7 @@
         {
           "name": "target_id",
           "optional": true,
+          "text_reason": "group or activity ID, or a school class as text",
           "schema": {
             "kind": "string"
           }
@@ -48972,7 +48979,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         }
@@ -49324,7 +49331,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -49627,7 +49634,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -51070,7 +51077,7 @@
           "name": "order_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -51488,7 +51495,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -51808,6 +51815,7 @@
         },
         {
           "name": "device_id",
+          "text_reason": "device provisioning key, not the numeric device row ID",
           "schema": {
             "kind": "string"
           }
@@ -51911,6 +51919,7 @@
         {
           "name": "device_id",
           "optional": true,
+          "text_reason": "device provisioning key, not the numeric device row ID",
           "schema": {
             "kind": "string"
           }
@@ -51959,6 +51968,7 @@
         },
         {
           "name": "device_id",
+          "text_reason": "device provisioning key, not the numeric device row ID",
           "schema": {
             "kind": "string"
           }
@@ -52148,6 +52158,7 @@
         {
           "name": "device_id",
           "optional": true,
+          "text_reason": "device provisioning key, not the numeric device row ID",
           "schema": {
             "kind": "string"
           }
@@ -52198,13 +52209,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -52266,6 +52277,7 @@
         {
           "name": "tag_id",
           "optional": true,
+          "text_reason": "RFID tag code, not a database row ID",
           "schema": {
             "kind": "string"
           }
@@ -52336,6 +52348,7 @@
         {
           "name": "tag_id",
           "optional": true,
+          "text_reason": "RFID tag code",
           "schema": {
             "kind": "string"
           }
@@ -52612,7 +52625,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -52672,7 +52685,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -52734,7 +52747,7 @@
         {
           "name": "offering_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -52776,7 +52789,7 @@
         {
           "name": "request_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -52788,7 +52801,7 @@
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -52800,7 +52813,7 @@
         {
           "name": "phase_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -52977,7 +52990,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -53102,6 +53115,7 @@
         {
           "name": "pickup_person_guardian_profile_id",
           "optional": true,
+          "text_reason": "empty string explicitly clears the collector; null leaves it unspecified",
           "schema": {
             "kind": "string",
             "nullable": true
@@ -53582,6 +53596,7 @@
         {
           "name": "form_schema_id",
           "optional": true,
+          "text_reason": "empty string clears the form schema",
           "schema": {
             "kind": "string",
             "nullable": true
@@ -53590,6 +53605,7 @@
         {
           "name": "calendar_period_id",
           "optional": true,
+          "text_reason": "empty string clears the calendar period",
           "schema": {
             "kind": "string",
             "nullable": true
@@ -54193,6 +54209,7 @@
       "fields": [
         {
           "name": "id",
+          "text_reason": "composite calendar occurrence key",
           "schema": {
             "kind": "string"
           }
@@ -54207,7 +54224,7 @@
           "name": "appointment_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -54221,7 +54238,7 @@
           "name": "timetable_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -54235,7 +54252,7 @@
           "name": "student_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -54249,7 +54266,7 @@
           "name": "tenant_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -54353,14 +54370,14 @@
           "name": "recipient_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "organizer_staff_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -56109,13 +56126,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "folder_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -56145,7 +56162,7 @@
         {
           "name": "uploaded_by",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -56224,7 +56241,7 @@
         {
           "name": "folder_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         }
       ]
@@ -56286,7 +56303,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -56313,7 +56330,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -56323,7 +56340,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -56355,7 +56372,7 @@
           "name": "document_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -56381,7 +56398,7 @@
           "name": "document_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -57273,7 +57290,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -57620,7 +57637,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -57766,6 +57783,7 @@
         {
           "name": "client_message_id",
           "optional": true,
+          "text_reason": "client-supplied message deduplication key",
           "schema": {
             "kind": "string"
           }
@@ -57784,7 +57802,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         }
@@ -57797,7 +57815,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -57832,7 +57850,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -58171,7 +58189,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -58269,7 +58287,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -58280,6 +58298,7 @@
         },
         {
           "name": "target_id",
+          "text_reason": "group or activity ID, or a school class as text",
           "schema": {
             "kind": "string"
           }
@@ -58325,7 +58344,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -58404,7 +58423,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -58628,7 +58647,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -59108,7 +59127,7 @@
         {
           "name": "guardian_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -59177,7 +59196,7 @@
         {
           "name": "guardian_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -59246,7 +59265,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -59349,6 +59368,7 @@
       "fields": [
         {
           "name": "account_id",
+          "text_reason": "empty string when no guardian account is present",
           "schema": {
             "kind": "string"
           }
@@ -59858,7 +59878,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -62066,7 +62086,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -63855,13 +63875,13 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "school_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -63947,7 +63967,7 @@
         {
           "name": "guardian_profile_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -64989,7 +65009,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -66845,11 +66865,12 @@
         {
           "name": "thread_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "counterpart_account_id",
+          "text_reason": "empty string for group threads without a counterpart",
           "schema": {
             "kind": "string"
           }
@@ -67349,7 +67370,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -67676,6 +67697,7 @@
         },
         {
           "name": "creditor_id",
+          "text_reason": "SEPA creditor identifier",
           "schema": {
             "kind": "string"
           }
@@ -67760,7 +67782,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -68510,7 +68532,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -68622,6 +68644,7 @@
         {
           "name": "tag_id",
           "optional": true,
+          "text_reason": "RFID tag code, not a database row ID",
           "schema": {
             "kind": "string",
             "nullable": true
@@ -69003,7 +69026,7 @@
         {
           "name": "activity_group_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -69045,7 +69068,7 @@
           "name": "handled_up_to_message_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         }
       ]
@@ -69104,7 +69127,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         }
@@ -69117,13 +69140,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -69215,13 +69238,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -69293,7 +69316,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -69358,7 +69381,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -69416,7 +69439,7 @@
         {
           "name": "guardian_profile_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -69818,7 +69841,7 @@
         {
           "name": "account_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -69842,6 +69865,7 @@
         {
           "name": "client_message_id",
           "optional": true,
+          "text_reason": "client-supplied message deduplication key",
           "schema": {
             "kind": "string"
           }
@@ -69849,13 +69873,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "sender_account_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -69882,7 +69906,7 @@
           "schema": {
             "kind": "array",
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -69892,7 +69916,7 @@
           "schema": {
             "kind": "array",
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -69922,7 +69946,7 @@
         {
           "name": "account_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -71505,7 +71529,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -71705,7 +71729,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         }
@@ -72062,7 +72086,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -72484,7 +72508,7 @@
         {
           "name": "offering_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -72539,7 +72563,7 @@
           "schema": {
             "kind": "array",
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -72576,13 +72600,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -72747,7 +72771,7 @@
         {
           "name": "offering_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -72772,7 +72796,7 @@
         {
           "name": "offering_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -72796,13 +72820,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -72909,7 +72933,7 @@
         {
           "name": "offering_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -72933,7 +72957,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -72963,7 +72987,7 @@
           "name": "offering_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -73100,7 +73124,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -73369,14 +73393,14 @@
           "name": "student_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "guardian_account_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -74526,6 +74550,7 @@
         },
         {
           "name": "device_id",
+          "text_reason": "device provisioning key",
           "schema": {
             "kind": "string"
           }
@@ -75073,7 +75098,7 @@
           "name": "order_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -75785,13 +75810,13 @@
         {
           "name": "staff_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "absence_type_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -76162,13 +76187,13 @@
         {
           "name": "thread_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -76253,6 +76278,7 @@
         {
           "name": "client_message_id",
           "optional": true,
+          "text_reason": "client-supplied message deduplication key",
           "schema": {
             "kind": "string"
           }
@@ -76260,7 +76286,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -76341,7 +76367,7 @@
           "name": "ref_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -76383,7 +76409,7 @@
           "name": "group_thread_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -76414,6 +76440,7 @@
         {
           "name": "client_message_id",
           "optional": true,
+          "text_reason": "client-supplied message deduplication key",
           "schema": {
             "kind": "string"
           }
@@ -76428,6 +76455,7 @@
         {
           "name": "handled_up_to_message_id",
           "optional": true,
+          "text_reason": "empty string means send without confirming a message",
           "schema": {
             "kind": "string"
           }
@@ -76439,7 +76467,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         }
@@ -76452,13 +76480,13 @@
         {
           "name": "thread_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -76558,7 +76586,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -76703,7 +76731,7 @@
           "name": "student_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -76792,7 +76820,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -76894,13 +76922,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -77038,7 +77066,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -77082,6 +77110,7 @@
         {
           "name": "client_message_id",
           "optional": true,
+          "text_reason": "client-supplied message deduplication key",
           "schema": {
             "kind": "string"
           }
@@ -77089,7 +77118,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -77166,7 +77195,7 @@
           "name": "ref_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -77194,7 +77223,7 @@
           "name": "group_thread_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -77224,7 +77253,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -77557,6 +77586,7 @@
       "fields": [
         {
           "name": "session_id",
+          "text_reason": "opaque passkey ceremony key",
           "schema": {
             "kind": "string"
           }
@@ -77578,7 +77608,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -77649,6 +77679,7 @@
         {
           "name": "session_id",
           "optional": true,
+          "text_reason": "opaque passkey ceremony key",
           "schema": {
             "kind": "string"
           }
@@ -77679,6 +77710,7 @@
         {
           "name": "session_id",
           "optional": true,
+          "text_reason": "opaque passkey ceremony key",
           "schema": {
             "kind": "string"
           }
@@ -77791,7 +77823,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -77809,7 +77841,7 @@
         {
           "name": "guardian_id",
           "schema": {
-            "kind": "string",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -77848,7 +77880,7 @@
           "name": "wage_type_id",
           "optional": true,
           "schema": {
-            "kind": "string",
+            "kind": "id",
             "nullable": true
           }
         }
@@ -77861,7 +77893,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -77879,7 +77911,7 @@
         {
           "name": "wage_type_id",
           "schema": {
-            "kind": "string",
+            "kind": "id",
             "nullable": true
           }
         }
@@ -77891,6 +77923,7 @@
       "fields": [
         {
           "name": "id",
+          "text_reason": "stable payroll category slug",
           "schema": {
             "kind": "string"
           }
@@ -78303,7 +78336,7 @@
           "name": "wage_type_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         }
       ]
@@ -78315,7 +78348,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -78353,7 +78386,7 @@
         {
           "name": "wage_type_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         }
       ]
@@ -78393,7 +78426,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -78487,7 +78520,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -78528,7 +78561,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -78849,6 +78882,7 @@
       "fields": [
         {
           "name": "id",
+          "text_reason": "RFID tag code",
           "schema": {
             "kind": "string"
           }
@@ -78947,6 +78981,7 @@
         {
           "name": "tag_id",
           "optional": true,
+          "text_reason": "RFID tag code, not a database row ID",
           "schema": {
             "kind": "string"
           }
@@ -79023,6 +79058,7 @@
         {
           "name": "tag_id",
           "optional": true,
+          "text_reason": "RFID tag code",
           "schema": {
             "kind": "string"
           }
@@ -79174,7 +79210,7 @@
         {
           "name": "source_phase_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -79187,7 +79223,7 @@
           "name": "successor_phase_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -79341,7 +79377,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -79386,14 +79422,14 @@
           "name": "form_schema_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "calendar_period_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -79424,7 +79460,7 @@
           "name": "rollover_source_phase_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -79601,7 +79637,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -79638,14 +79674,14 @@
           "name": "request_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "pending_request_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -79685,7 +79721,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -79730,14 +79766,14 @@
           "name": "form_schema_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "calendar_period_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -79768,7 +79804,7 @@
           "name": "rollover_source_phase_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -80066,7 +80102,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -80155,7 +80191,7 @@
           "name": "pickup_person_guardian_profile_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -80633,7 +80669,7 @@
           "name": "care_offering_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -81544,6 +81580,7 @@
         {
           "name": "client_message_id",
           "optional": true,
+          "text_reason": "client-supplied message deduplication key",
           "schema": {
             "kind": "string"
           }
@@ -81562,13 +81599,14 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
         {
           "name": "group_thread_id",
           "optional": true,
+          "text_reason": "empty string means send without a group thread",
           "schema": {
             "kind": "string"
           }
@@ -81746,7 +81784,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -82504,7 +82542,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -82794,7 +82832,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -83026,20 +83064,20 @@
         {
           "name": "staff_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "qualification_id",
           "schema": {
-            "kind": "string",
+            "kind": "id",
             "nullable": true
           }
         },
         {
           "name": "type_id",
           "schema": {
-            "kind": "string",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -83084,20 +83122,20 @@
         {
           "name": "staff_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "qualification_id",
           "schema": {
-            "kind": "string",
+            "kind": "id",
             "nullable": true
           }
         },
         {
           "name": "type_id",
           "schema": {
-            "kind": "string",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -83198,7 +83236,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -83363,7 +83401,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         }
@@ -83726,7 +83764,7 @@
         {
           "name": "account_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -84013,6 +84051,7 @@
         {
           "name": "tag_id",
           "optional": true,
+          "text_reason": "RFID tag code, not a database row ID",
           "schema": {
             "kind": "string",
             "nullable": true
@@ -86329,7 +86368,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -86436,6 +86475,7 @@
       "fields": [
         {
           "name": "creditor_id",
+          "text_reason": "SEPA creditor identifier",
           "schema": {
             "kind": "string"
           }
@@ -86475,6 +86515,7 @@
         {
           "name": "creditor_id",
           "optional": true,
+          "text_reason": "SEPA creditor identifier",
           "schema": {
             "kind": "string"
           }
@@ -86623,6 +86664,7 @@
         {
           "name": "message_id",
           "optional": true,
+          "text_reason": "SEPA payment message identifier",
           "schema": {
             "kind": "string"
           }
@@ -86678,6 +86720,7 @@
         },
         {
           "name": "creditor_id",
+          "text_reason": "SEPA creditor identifier",
           "schema": {
             "kind": "string"
           }
@@ -86702,6 +86745,7 @@
         },
         {
           "name": "message_id",
+          "text_reason": "SEPA payment message identifier",
           "schema": {
             "kind": "string"
           }
@@ -86785,6 +86829,7 @@
         {
           "name": "message_id",
           "optional": true,
+          "text_reason": "SEPA payment message identifier",
           "schema": {
             "kind": "string"
           }
@@ -86858,6 +86903,7 @@
         },
         {
           "name": "creditor_id",
+          "text_reason": "SEPA creditor identifier",
           "schema": {
             "kind": "string"
           }
@@ -86946,6 +86992,7 @@
         },
         {
           "name": "creditor_id",
+          "text_reason": "SEPA creditor identifier",
           "schema": {
             "kind": "string"
           }
@@ -87058,6 +87105,7 @@
         },
         {
           "name": "creditor_id",
+          "text_reason": "SEPA creditor identifier",
           "schema": {
             "kind": "string"
           }
@@ -87137,6 +87185,7 @@
         },
         {
           "name": "creditor_id",
+          "text_reason": "SEPA creditor identifier",
           "schema": {
             "kind": "string"
           }
@@ -87283,6 +87332,7 @@
         },
         {
           "name": "confirmed_creditor_id",
+          "text_reason": "SEPA creditor identifier",
           "schema": {
             "kind": "string"
           }
@@ -87744,6 +87794,7 @@
         },
         {
           "name": "creditor_id",
+          "text_reason": "SEPA creditor identifier",
           "schema": {
             "kind": "string"
           }
@@ -89997,7 +90048,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -90604,7 +90655,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -92950,6 +93001,7 @@
         {
           "name": "family_id",
           "optional": true,
+          "text_reason": "refresh token family key",
           "schema": {
             "kind": "string"
           }
@@ -92971,6 +93023,7 @@
         {
           "name": "preview_id",
           "optional": true,
+          "text_reason": "session preview key",
           "schema": {
             "kind": "string"
           }
@@ -93021,6 +93074,7 @@
         },
         {
           "name": "device_id",
+          "text_reason": "device provisioning key",
           "schema": {
             "kind": "string"
           }
@@ -93363,6 +93417,7 @@
         {
           "name": "tag_id",
           "optional": true,
+          "text_reason": "RFID tag code",
           "schema": {
             "kind": "string"
           }
@@ -93656,13 +93711,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "organization_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -95526,6 +95581,13 @@
           }
         },
         {
+          "name": "absence_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
           "name": "absence_type_label",
           "optional": true,
           "schema": {
@@ -95638,13 +95700,6 @@
           "name": "duration_days",
           "schema": {
             "kind": "int"
-          }
-        },
-        {
-          "name": "absence_type_id",
-          "optional": true,
-          "schema": {
-            "kind": "string"
           }
         }
       ]
@@ -95945,13 +96000,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -96036,13 +96091,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -96161,6 +96216,7 @@
         {
           "name": "tax_id",
           "optional": true,
+          "text_reason": "statutory tax identifier",
           "schema": {
             "kind": "string",
             "nullable": true
@@ -96190,6 +96246,7 @@
         {
           "name": "client_message_id",
           "optional": true,
+          "text_reason": "client-supplied message deduplication key",
           "schema": {
             "kind": "string"
           }
@@ -96197,7 +96254,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -96238,7 +96295,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -96249,6 +96306,7 @@
         },
         {
           "name": "target_id",
+          "text_reason": "group or activity ID, or a school class as text",
           "schema": {
             "kind": "string"
           }
@@ -96430,6 +96488,7 @@
         },
         {
           "name": "tax_id",
+          "text_reason": "statutory tax identifier column mapping",
           "schema": {
             "kind": "string"
           }
@@ -96980,7 +97039,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -97056,6 +97115,7 @@
         {
           "name": "tag_id",
           "optional": true,
+          "text_reason": "RFID tag code, not a database row ID",
           "schema": {
             "kind": "string"
           }
@@ -97575,14 +97635,14 @@
           "name": "student_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "activity_instance_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -98143,6 +98203,7 @@
         {
           "name": "tax_id",
           "optional": true,
+          "text_reason": "statutory tax identifier",
           "schema": {
             "kind": "string",
             "nullable": true
@@ -98191,6 +98252,7 @@
         },
         {
           "name": "tax_id",
+          "text_reason": "statutory tax identifier",
           "schema": {
             "kind": "string",
             "nullable": true
@@ -98480,13 +98542,13 @@
           "name": "id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "type_id",
           "schema": {
-            "kind": "string",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -98870,7 +98932,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -98925,13 +98987,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -99038,7 +99100,7 @@
         {
           "name": "form_schema_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -99074,7 +99136,7 @@
         {
           "name": "request_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -99661,6 +99723,7 @@
         {
           "name": "tag_id",
           "optional": true,
+          "text_reason": "RFID tag code, not a database row ID",
           "schema": {
             "kind": "string"
           }
@@ -100350,7 +100413,7 @@
         {
           "name": "request_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -100667,6 +100730,7 @@
         {
           "name": "tag_id",
           "optional": true,
+          "text_reason": "RFID tag code",
           "schema": {
             "kind": "string"
           }
@@ -100941,7 +101005,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -100961,7 +101025,7 @@
           "name": "group_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         }
       ]
@@ -100974,6 +101038,7 @@
         {
           "name": "guardian_id",
           "optional": true,
+          "text_reason": "empty string clears the guardian selection",
           "schema": {
             "kind": "string",
             "nullable": true
@@ -101111,6 +101176,7 @@
         {
           "name": "tag_id",
           "optional": true,
+          "text_reason": "RFID tag code, not a database row ID",
           "schema": {
             "kind": "string"
           }
@@ -101325,6 +101391,7 @@
         {
           "name": "tag_id",
           "optional": true,
+          "text_reason": "RFID tag code, not a database row ID",
           "schema": {
             "kind": "string"
           }
@@ -101955,13 +102022,14 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
         {
           "name": "pickup_person_guardian_profile_id",
           "optional": true,
+          "text_reason": "empty string explicitly clears the collector; null leaves it unspecified",
           "schema": {
             "kind": "string",
             "nullable": true
@@ -102211,7 +102279,7 @@
         {
           "name": "request_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -102332,7 +102400,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         }
@@ -103664,11 +103732,12 @@
         {
           "name": "thread_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "counterpart_account_id",
+          "text_reason": "empty string for group threads without a counterpart",
           "schema": {
             "kind": "string"
           }
@@ -103751,13 +103820,13 @@
         {
           "name": "thread_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -103872,6 +103941,7 @@
       "fields": [
         {
           "name": "thread_id",
+          "text_reason": "empty string before the first message",
           "schema": {
             "kind": "string"
           }
@@ -103879,7 +103949,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -107854,6 +107924,7 @@
         },
         {
           "name": "tax_id",
+          "text_reason": "statutory tax identifier",
           "schema": {
             "kind": "string",
             "nullable": true
@@ -109570,7 +109641,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -110022,6 +110093,7 @@
         {
           "name": "tag_id",
           "optional": true,
+          "text_reason": "RFID tag code, not a database row ID",
           "schema": {
             "kind": "string",
             "nullable": true
@@ -110312,7 +110384,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -111371,6 +111443,7 @@
         {
           "name": "child_id",
           "optional": true,
+          "text_reason": "empty string or omission withdraws the whole request",
           "schema": {
             "kind": "string",
             "nullable": true
@@ -111690,7 +111763,19 @@
       "go_type": "timetracking.absenceRequestResponse",
       "fields": [
         {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
           "name": "tenant_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "staff_id",
           "schema": {
             "kind": "id"
           }
@@ -111699,6 +111784,13 @@
           "name": "absence_type",
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "absence_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
           }
         },
         {
@@ -111749,6 +111841,13 @@
           "name": "status",
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "approved_by",
+          "optional": true,
+          "schema": {
+            "kind": "id"
           }
         },
         {
@@ -111810,13 +111909,6 @@
           }
         },
         {
-          "name": "absence_type_id",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
           "name": "staff_name",
           "schema": {
             "kind": "string"
@@ -111824,25 +111916,6 @@
         },
         {
           "name": "decided_by_name",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "id",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "staff_id",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "approved_by",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -111878,7 +111951,7 @@
         {
           "name": "account_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -111930,7 +112003,7 @@
         {
           "name": "template_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -112157,7 +112230,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -112935,7 +113008,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -113018,7 +113091,7 @@
         {
           "name": "instance_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -113232,7 +113305,7 @@
         {
           "name": "school_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -113525,7 +113598,7 @@
           "name": "id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -113630,7 +113703,7 @@
         {
           "name": "guardian_profile_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -113839,7 +113912,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         }
@@ -113888,7 +113961,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -114037,7 +114110,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -114239,7 +114312,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -114377,7 +114450,7 @@
         {
           "name": "phase_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -114392,7 +114465,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -114583,7 +114656,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -114607,7 +114680,7 @@
         {
           "name": "offering_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -114641,7 +114714,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -114659,7 +114732,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -114719,13 +114792,13 @@
         {
           "name": "request_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "child_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -114919,14 +114992,14 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -115069,7 +115142,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -115223,13 +115296,13 @@
         {
           "name": "guardian_profile_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_guardian_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -116062,7 +116135,7 @@
         {
           "name": "course_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -116142,7 +116215,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -116172,7 +116245,7 @@
         {
           "name": "course_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -116367,6 +116440,7 @@
         {
           "name": "device_id",
           "optional": true,
+          "text_reason": "device provisioning key, not the numeric device row ID",
           "schema": {
             "kind": "string"
           }
@@ -117227,7 +117301,7 @@
         {
           "name": "group_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -117293,7 +117367,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -117449,7 +117523,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -117525,7 +117599,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -117633,7 +117707,7 @@
           "name": "student_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -117647,7 +117721,7 @@
           "name": "version_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -117741,7 +117815,7 @@
         {
           "name": "account_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -117905,13 +117979,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -118003,7 +118077,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -118192,7 +118266,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -118227,7 +118301,7 @@
         {
           "name": "school_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -118469,7 +118543,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -118842,7 +118916,7 @@
         {
           "name": "template_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -118880,13 +118954,13 @@
         {
           "name": "child_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -118923,7 +118997,7 @@
         {
           "name": "template_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -119089,7 +119163,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -119328,7 +119402,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         }
@@ -119341,7 +119415,7 @@
         {
           "name": "group_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -120415,7 +120489,7 @@
         {
           "name": "guardian_profile_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -120552,14 +120626,14 @@
         {
           "name": "guardian_profile_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "invitation_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -120648,7 +120722,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -120728,7 +120802,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -120767,7 +120841,7 @@
           "name": "student_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         }
       ]
@@ -121008,7 +121082,7 @@
         {
           "name": "template_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -121368,7 +121442,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -121486,7 +121560,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -122549,7 +122623,7 @@
           "name": "account_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         }
       ]
@@ -122727,7 +122801,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -122818,7 +122892,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -122897,7 +122971,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -122945,7 +123019,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -123098,7 +123172,7 @@
           "name": "question_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -123108,7 +123182,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -123156,7 +123230,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -123203,7 +123277,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -123221,7 +123295,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -123294,13 +123368,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "guardian_profile_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -123320,7 +123394,7 @@
           "name": "student_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -123386,7 +123460,7 @@
         {
           "name": "offering_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -123523,7 +123597,7 @@
         {
           "name": "phase_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -123570,7 +123644,7 @@
         {
           "name": "activity_group_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -123610,7 +123684,7 @@
         {
           "name": "offering_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -123672,7 +123746,7 @@
         {
           "name": "offering_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -123869,7 +123943,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -123957,7 +124031,7 @@
           "name": "offering_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -123980,7 +124054,7 @@
         {
           "name": "offering_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -124002,13 +124076,13 @@
         {
           "name": "request_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -124291,13 +124365,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "guardian_profile_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -124474,7 +124548,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -124527,7 +124601,7 @@
         {
           "name": "option_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -124587,6 +124661,7 @@
         {
           "name": "client_message_id",
           "optional": true,
+          "text_reason": "client-supplied message deduplication key",
           "schema": {
             "kind": "string"
           }
@@ -124605,7 +124680,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         }
@@ -124633,7 +124708,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -124706,7 +124781,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -124780,7 +124855,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -124888,7 +124963,7 @@
         {
           "name": "account_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -125023,7 +125098,7 @@
         {
           "name": "guardian_profile_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -125420,7 +125495,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -125440,7 +125515,7 @@
         {
           "name": "guardian_profile_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -125588,7 +125663,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -125606,6 +125681,7 @@
         {
           "name": "chosen_request_id",
           "optional": true,
+          "text_reason": "empty string means no selected request",
           "schema": {
             "kind": "string"
           }
@@ -125722,7 +125798,7 @@
           "name": "student_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -125732,7 +125808,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -125767,7 +125843,7 @@
         {
           "name": "room_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -126272,7 +126348,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -126327,7 +126403,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -126784,7 +126860,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -126795,7 +126871,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -127403,13 +127479,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -127433,7 +127509,7 @@
         {
           "name": "group_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -127481,7 +127557,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -127571,7 +127647,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -127625,7 +127701,7 @@
         {
           "name": "announcement_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -127802,6 +127878,7 @@
         {
           "name": "group_id",
           "optional": true,
+          "text_reason": "comma-separated list of groups or empty selection",
           "schema": {
             "kind": "string"
           }
@@ -127809,6 +127886,7 @@
         {
           "name": "room_id",
           "optional": true,
+          "text_reason": "empty string means no room filter",
           "schema": {
             "kind": "string"
           }
@@ -127922,7 +128000,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -127990,7 +128068,7 @@
         {
           "name": "announcement_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -128033,7 +128111,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         }
       ]
@@ -128082,6 +128160,7 @@
         {
           "name": "activity_group_id",
           "optional": true,
+          "text_reason": "empty string means the note has no group subject",
           "schema": {
             "kind": "string",
             "nullable": true
@@ -128090,6 +128169,7 @@
         {
           "name": "education_group_id",
           "optional": true,
+          "text_reason": "empty string means the note has no group subject",
           "schema": {
             "kind": "string",
             "nullable": true
@@ -128112,13 +128192,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -128156,7 +128236,7 @@
           "name": "author_account_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -128177,14 +128257,14 @@
           "name": "activity_group_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "education_group_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -128244,13 +128324,13 @@
         {
           "name": "note_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -128367,7 +128447,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -128392,7 +128472,7 @@
           "name": "group_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -128461,7 +128541,7 @@
           "name": "question_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -128471,7 +128551,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },
@@ -128544,7 +128624,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -128591,7 +128671,7 @@
         {
           "name": "question_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -128615,7 +128695,7 @@
         {
           "name": "option_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -128639,7 +128719,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -128696,7 +128776,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -128743,7 +128823,7 @@
         {
           "name": "question_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -128936,7 +129016,7 @@
         {
           "name": "question_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -128995,7 +129075,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -129108,7 +129188,7 @@
         {
           "name": "survey_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -129209,6 +129289,7 @@
         {
           "name": "ref_id",
           "optional": true,
+          "text_reason": "empty string means no numeric target",
           "schema": {
             "kind": "string",
             "nullable": true
@@ -129238,7 +129319,7 @@
           "name": "ref_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -129257,7 +129338,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -129397,6 +129478,7 @@
         {
           "name": "ref_id",
           "optional": true,
+          "text_reason": "empty string means no numeric target",
           "schema": {
             "kind": "string",
             "nullable": true
@@ -129426,7 +129508,7 @@
           "name": "ref_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -131116,7 +131198,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -131179,7 +131261,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -131192,7 +131274,7 @@
           "name": "group_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {

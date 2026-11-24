@@ -40,11 +40,11 @@ export interface pendingApprovalResponse {
 }
 
 export const pendingApprovalResponseSchema: z.ZodType<pendingApprovalResponse, unknown> = object<pendingApprovalResponse>({
-  id: str,
-  guardian_profile_id: str,
+  id: int64String,
+  guardian_profile_id: int64String,
   guardian_name: str,
   guardian_email: optional(str),
-  student_id: optional(str),
+  student_id: optional(int64String),
   student_name: optional(str),
   requested_by_email: optional(str),
   created_at: instant,
@@ -65,10 +65,10 @@ export interface PaymentOverviewRow {
 }
 
 export const PaymentOverviewRowSchema: z.ZodType<PaymentOverviewRow, unknown> = object<PaymentOverviewRow>({
-  student_id: str,
+  student_id: int64String,
   student_name: str,
   school_class: str,
-  guardian_id: nullable(str),
+  guardian_id: nullable(int64String),
   guardian_name: str,
   relationship_type: str,
   account_holder: str,
@@ -211,7 +211,7 @@ export interface GuardianDeletePreview {
 export const GuardianDeletePreviewSchema: z.ZodType<GuardianDeletePreview, unknown> = object<GuardianDeletePreview>({
   linked_count: safeInt,
   affected_names: nullable(arr(str)),
-  affected_link_ids: nullable(arr(str)),
+  affected_link_ids: nullable(arr(int64String)),
   warning: str,
 });
 
@@ -224,7 +224,7 @@ export interface GuardianPaymentMaskedResponse {
 }
 
 export const GuardianPaymentMaskedResponseSchema: z.ZodType<GuardianPaymentMaskedResponse, unknown> = object<GuardianPaymentMaskedResponse>({
-  guardian_id: str,
+  guardian_id: int64String,
   iban_masked: nullable(str),
   account_holder: nullable(str),
   version: str,
@@ -261,7 +261,7 @@ export interface bulkInviteProblemResponse {
 }
 
 export const bulkInviteProblemResponseSchema: z.ZodType<bulkInviteProblemResponse, unknown> = object<bulkInviteProblemResponse>({
-  guardian_profile_id: str,
+  guardian_profile_id: int64String,
   guardian_name: str,
   student_names: nullable(arr(str)),
   reason: str,
@@ -373,8 +373,8 @@ export interface inviteToStudentResponse {
 
 export const inviteToStudentResponseSchema: z.ZodType<inviteToStudentResponse, unknown> = object<inviteToStudentResponse>({
   outcome: str,
-  guardian_profile_id: str,
-  invitation_id: optional(str),
+  guardian_profile_id: int64String,
+  invitation_id: optional(int64String),
   existing_role: optional(str),
   mail_held: optional(bool),
 });
@@ -405,7 +405,7 @@ export interface GuardianPaymentRevealResponse {
 }
 
 export const GuardianPaymentRevealResponseSchema: z.ZodType<GuardianPaymentRevealResponse, unknown> = object<GuardianPaymentRevealResponse>({
-  guardian_id: str,
+  guardian_id: int64String,
   iban: nullable(str),
   account_holder: nullable(str),
   version: str,

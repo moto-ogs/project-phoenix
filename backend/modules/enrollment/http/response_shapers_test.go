@@ -39,10 +39,10 @@ func TestToCareOfferingResponse_StringifiesIDs(t *testing.T) {
 		SortOrder:           10,
 	}
 	out := toCareOfferingResponse(o)
-	assert.Equal(t, "1234", out.ID, "int64 ID stringified per CLAUDE rule 4")
-	assert.Equal(t, "5678", out.PhaseID)
+	assert.Equal(t, "1234", out.ID.String(), "int64 ID stringified per CLAUDE rule 4")
+	assert.Equal(t, "5678", out.PhaseID.String())
 	require.NotNil(t, out.ActivityGroupID)
-	assert.Equal(t, "8888", *out.ActivityGroupID)
+	assert.Equal(t, "8888", out.ActivityGroupID.String())
 	assert.Equal(t, "OGS-Nachmittag", out.Name)
 	require.NotNil(t, out.Description)
 	assert.Equal(t, desc, *out.Description)
@@ -165,7 +165,7 @@ func TestToPhaseResponse_StringifiesIDsAndFormatsDates(t *testing.T) {
 		RolloverBumpsGrade:        true,
 	}
 	out := toPhaseResponse(p)
-	assert.Equal(t, "1234", out.ID, "int64 ID stringified per CLAUDE rule 4")
+	assert.Equal(t, "1234", out.ID.String(), "int64 ID stringified per CLAUDE rule 4")
 	assert.Equal(t, "Schuljahr 2026/27", out.Name)
 	assert.Equal(t, "2026-09-01", out.ServiceStartDate, "date fields are YYYY-MM-DD")
 	assert.Equal(t, "2027-07-31", out.ServiceEndDate)
@@ -174,9 +174,9 @@ func TestToPhaseResponse_StringifiesIDsAndFormatsDates(t *testing.T) {
 	require.NotNil(t, out.EnrollmentCloseAt)
 	assert.Equal(t, "2026-08-31T23:59:00Z", *out.EnrollmentCloseAt)
 	require.NotNil(t, out.FormSchemaID)
-	assert.Equal(t, "7777", *out.FormSchemaID)
+	assert.Equal(t, "7777", out.FormSchemaID.String())
 	require.NotNil(t, out.RolloverSourcePhaseID)
-	assert.Equal(t, "4321", *out.RolloverSourcePhaseID)
+	assert.Equal(t, "4321", out.RolloverSourcePhaseID.String())
 	require.NotNil(t, out.RolloverMode)
 	assert.Equal(t, capability.PhaseRolloverModeOptOut, *out.RolloverMode)
 	assert.True(t, out.RolloverAutoApprove)
@@ -233,7 +233,7 @@ func TestToFormSchemaResponse_StringifiesIDs(t *testing.T) {
 		},
 	}
 	out := toFormSchemaResponse(s)
-	assert.Equal(t, "1234", out.ID, "int64 ID stringified")
+	assert.Equal(t, "1234", out.ID.String(), "int64 ID stringified")
 	assert.Equal(t, "4321", out.CreatedBy, "created_by also stringified — frontend treats as opaque string")
 	assert.Equal(t, "Schuljahr", out.Name)
 	assert.Equal(t, 2, out.Version)

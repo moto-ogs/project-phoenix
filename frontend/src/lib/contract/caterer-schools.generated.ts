@@ -5,6 +5,7 @@ import {
   bool,
   calendarDate,
   instant,
+  int64String,
   noData,
   nullable,
   object,
@@ -21,7 +22,7 @@ export interface SchoolResponse {
 }
 
 export const SchoolResponseSchema: z.ZodType<SchoolResponse, unknown> = object<SchoolResponse>({
-  id: str,
+  id: int64String,
   name: str,
 });
 
@@ -94,7 +95,7 @@ export const DayResponseSchema: z.ZodType<DayResponse, unknown> = object<DayResp
   closed: bool,
   deadline: instant,
   status: str,
-  order_id: optional(str),
+  order_id: optional(int64String),
   confirmed_at: optional(instant),
   total: safeInt,
   classes: nullable(arr(ClassCountResponseSchema)),

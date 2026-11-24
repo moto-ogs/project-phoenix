@@ -3,6 +3,8 @@ package display
 import (
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 )
 
@@ -33,20 +35,20 @@ type RoomOccupancy struct {
 }
 
 type RunningActivity struct {
-	ID           string `json:"id"`
-	Name         string `json:"name"`
-	Category     string `json:"category"`
-	RoomName     string `json:"room_name"`
-	Participants int    `json:"participants"`
-	MaxCapacity  *int   `json:"max_capacity,omitempty"`
+	ID           ident.ID `json:"id"`
+	Name         string   `json:"name"`
+	Category     string   `json:"category"`
+	RoomName     string   `json:"room_name"`
+	Participants int      `json:"participants"`
+	MaxCapacity  *int     `json:"max_capacity,omitempty"`
 }
 
 type UpcomingActivity struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Category  string `json:"category"`
-	StartTime string `json:"start_time"` // HH:MM wall clock
-	RoomName  string `json:"room_name"`
+	ID        ident.ID `json:"id"`
+	Name      string   `json:"name"`
+	Category  string   `json:"category"`
+	StartTime string   `json:"start_time"` // HH:MM wall clock
+	RoomName  string   `json:"room_name"`
 }
 
 type PickupBucket struct {
