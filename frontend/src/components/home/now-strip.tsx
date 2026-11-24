@@ -43,26 +43,11 @@ import { roomsConcept } from "~/lib/concepts/rooms";
 const logger = createLogger({ component: "HomeNowStrip" });
 
 /**
- * Die Jetzt-Zone der Startseite (#2180): die eine Zeile, die den Moment
- * trägt. Uhrzeit, was gerade läuft oder als Nächstes kommt, und der eine
- * Weg, der jetzt naheliegt.
- *
- * Sie steht fest über dem Brett und ist kein Baustein: „Was steht jetzt an"
- * ist die Frage, für die es die Startseite gibt, und die Antwort darf nicht
- * davon abhängen, ob jemand eine Karte entfernt hat. Alles darunter bleibt
- * frei anordenbar.
- *
- * Die Abfragen teilen ihre Schlüssel mit den Karten darunter („Mein Tag",
- * „Ablauf des Tages", Kennzahlen): steht die Karte auf der Fläche, kostet
- * die Zone keine zweite Abfrage.
+ * Die Daten der Jetzt-Zone (#2180), aus `NowStrip` gezogen, damit die
+ * App-Fassung der Startseite (#8070) dieselben Abfragen, Schlüssel und Regeln
+ * nutzt. Reines Verschieben: die Desktop-Zone rendert unverändert.
  */
-export function NowStrip({
-  access,
-  context,
-}: {
-  readonly access: HomeBlockAccess;
-  readonly context: HomeBlockContext;
-}) {
+export function useHomeNow(access: HomeBlockAccess, context: HomeBlockContext) {
   const tenantPath = useTenantAwarePath();
   const today = useBerlinToday();
   const now = useBerlinClock();
@@ -167,6 +152,57 @@ export function NowStrip({
       ? analytics.data?.studentsPresent
       : undefined;
 
+  return {
+    tenantPath,
+    today,
+    now,
+    loading,
+    state,
+    actions,
+    start,
+    busyId,
+    presentCount,
+    analytics,
+    ownSupervision: ownSupervision === true,
+    /** Der Tag laut Plan (`homeKeys.dayFlow()`), wie „Mein Tag“. */
+    dayBlocks: wantsDay && !day.error ? day.data : undefined,
+  };
+}
+
+/**
+ * Die Jetzt-Zone der Startseite (#2180): die eine Zeile, die den Moment
+ * trägt. Uhrzeit, was gerade läuft oder als Nächstes kommt, und der eine
+ * Weg, der jetzt naheliegt.
+ *
+ * Sie steht fest über dem Brett und ist kein Baustein: „Was steht jetzt an"
+ * ist die Frage, für die es die Startseite gibt, und die Antwort darf nicht
+ * davon abhängen, ob jemand eine Karte entfernt hat. Alles darunter bleibt
+ * frei anordenbar.
+ *
+ * Die Abfragen teilen ihre Schlüssel mit den Karten darunter („Mein Tag",
+ * „Ablauf des Tages", Kennzahlen): steht die Karte auf der Fläche, kostet
+ * die Zone keine zweite Abfrage.
+ */
+export function NowStrip({
+  access,
+  context,
+}: {
+  readonly access: HomeBlockAccess;
+  readonly context: HomeBlockContext;
+}) {
+  const {
+    tenantPath,
+    today,
+    now,
+    loading,
+    state,
+    actions,
+    start,
+    busyId,
+    presentCount,
+    analytics,
+  } = useHomeNow(access, context);
+
   return (
     <SectionCard testId="home-now">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -249,7 +285,7 @@ export function NowStrip({
   );
 }
 
-function NowText({
+export function NowText({
   state,
   analytics,
   today,

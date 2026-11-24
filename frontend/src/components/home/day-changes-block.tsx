@@ -106,7 +106,7 @@ function DayChangesSkeleton() {
 }
 
 /** Was die Übersicht zeigt: nur Arten, für die das Frontend einen Satz hat. */
-function shownEntries(overview: DayChangesOverview): DayChange[] {
+export function shownEntries(overview: DayChangesOverview): DayChange[] {
   return overview.entries.filter((entry) => dayChangeText(entry) !== null);
 }
 
@@ -220,16 +220,28 @@ function changeMessage(
   return "„Heute anders“ hat sich geändert.";
 }
 
-function DayChangesContent({
+export function DayChangesContent({
   overview,
   onChanged,
+  omit,
+  capSchool = true,
 }: {
   readonly overview: DayChangesOverview;
   /** Lädt die Übersicht neu, etwa nach einer Kenntnisnahme (#7667). */
   readonly onChanged: () => Promise<unknown>;
+  /**
+   * Einträge, die an anderer Stelle schon stehen. Die App-Startseite (#8070)
+   * zeigt offene Kenntnisnahmen unter „Zu erledigen“ und hier nicht noch
+   * einmal.
+   */
+  readonly omit?: (entry: DayChange) => boolean;
+  /** Im Blatt der App gibt es keine Kappung der Schule auf dem Telefon. */
+  readonly capSchool?: boolean;
 }) {
   const now = useCurrentTimestamp();
-  const shown = shownEntries(overview);
+  const shown = omit
+    ? shownEntries(overview).filter((entry) => !omit(entry))
+    : shownEntries(overview);
   const mine = shown.filter((entry) => entry.section === "you");
   const school = shown.filter((entry) => entry.section !== "you");
   const failures = overview.failedSources.map((source) => (
@@ -268,7 +280,7 @@ function DayChangesContent({
             entries={school}
             now={now}
             onChanged={onChanged}
-            capOnPhone
+            capOnPhone={capSchool}
           />
         ) : null}
       </div>
