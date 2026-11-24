@@ -3995,10 +3995,19 @@ export const invitationTopic = function invitationTopic(): HelpTopic {
 } satisfies typeof authored_invitationTopic;
 
 /**
- * Das Einladen ins Elternportal. Der Weg des Teams laeuft ueber das Kind:
+ * Das Einladen ins Elternportal. Eine Person laedt das Team beim Kind ein:
  * Reiter `Erziehungsberechtigte`, dann `Einladen` bei der Person
  * (student-guardian-manager.tsx). Ohne E-Mail-Adresse tut der Knopf nichts --
  * `handleInviteGuardian` bricht bei `!guardian.email` still ab.
+ *
+ * Die Sammeleinladung (#3378, #6601) steht in `Kinderdaten`
+ * (`/database/students`), nicht in `Alle Kinder`: `Auswählen` im
+ * Drei-Punkte-Menue braucht `users:update`, `Eltern einladen` in der Leiste
+ * `users:create` (students-list.tsx, canInviteGuardians). Das Fenster ist
+ * selection-bulk-invite-modal.tsx. `Offene Einladungen noch einmal senden`
+ * erscheint nur bei offenen Einladungen; fehlende E-Mail-Adressen nennt die
+ * Problemliste, die Zeile `Keine E-Mail-Adresse` nur mit dem Haken
+ * `Eltern mit Konto benachrichtigen`.
  *
  * Die Seite `Elternzugänge` (`/admin/guardian-approvals`) ist NICHT die
  * Warteschlange fuer Einladungen des Teams. Sie sammelt nur, was Eltern
@@ -4023,13 +4032,13 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
     title: "Eltern ins Elternportal einladen",
     question: "Wie lade ich Eltern ein?",
     summary:
-      "Du lädst jede Person beim Kind ein. Dafür brauchst du ihre E-Mail-Adresse.",
+      "Du lädst eine Person beim Kind ein oder die Eltern vieler Kinder auf einmal. Dafür braucht jede Person eine E-Mail-Adresse.",
     group: "elternarbeit",
     audience: "lead",
     icon: "KeyRound",
     requirements: [
       "Das Kind ist in moto angelegt.",
-      "Du kennst die E-Mail-Adresse der Person.",
+      "Du kennst die E-Mail-Adresse der Person, oder sie steht schon beim Kind.",
     ],
     steps: [],
     instructionGroups: [
@@ -4058,6 +4067,19 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
         ],
       },
       {
+        title: "Eltern mehrerer Kinder auf einmal einladen",
+        description:
+          "So lädst du die Eltern von Kindern ein, die du selbst auswählst. Das geht in `Kinderdaten`, nicht in `Alle Kinder`.",
+        steps: [
+          "Öffne `Datenverwaltung` und danach `Kinderdaten`.",
+          "Wähle oben rechts das Menü mit den drei Punkten und dann `Auswählen`.",
+          "Hake die Kinder an. Mit `Alle … auswählen` hakst du alle Kinder an, die die Liste gerade zeigt.",
+          "Wähle oben in der Leiste `Eltern einladen`.",
+          "Das Fenster `Eltern ins Elternportal einladen` zeigt, wie viele Eltern Zugang bekommen. Darunter steht, wer keine Einladung braucht, zum Beispiel `Nutzen das Elternportal schon`.",
+          "Wähle unten zum Beispiel `10 Eltern einladen`. moto verschickt die E-Mails sofort. Bis sie ankommen, dauert es ein paar Minuten.",
+        ],
+      },
+      {
         title: "Alle Eltern einer Klasse einladen",
         description:
           "So lädst du die Eltern aller Kinder einer Klasse auf einmal ein, auch von Kindern ohne OGS-Platz.",
@@ -4066,7 +4088,7 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
           "Ordne die Liste nach `Klasse`.",
           "Öffne bei der Klasse das Menü mit den drei Punkten.",
           "Wähle `Eltern einladen`.",
-          "Prüfe die Übersicht und bestätige.",
+          "Prüfe im Fenster `Eltern ins Elternportal einladen` die Zahlen und bestätige unten.",
         ],
       },
       {
@@ -4074,9 +4096,7 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
         description:
           "Wurden Kinder aus einem importierten Vertrag angemeldet, sehen ihre Eltern die Betreuung jetzt im Elternportal. Eltern mit Konto sagst du das mit einer kurzen E-Mail.",
         steps: [
-          "Öffne `Datenverwaltung` und danach `Kinderdaten`.",
-          "Wähle oben rechts das Menü mit den drei Punkten und dann `Auswählen`.",
-          "Hake die Kinder an und wähle `Eltern einladen`.",
+          "Wähle die Kinder aus wie unter „Eltern mehrerer Kinder auf einmal einladen“ und dann `Eltern einladen`.",
           "Setze den Haken bei `Eltern mit Konto benachrichtigen`.",
           "Prüfe die Zahlen: `Werden eingeladen`, `Bekommen die Nachricht` und `Keine E-Mail-Adresse`. Kinder, die heute keine Betreuung gebucht haben, zählt `Kinder ohne gebuchte Betreuung: keine Nachricht`.",
           "Wähle unten zum Beispiel `3 Eltern anschreiben`.",
@@ -4094,17 +4114,24 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
         ],
       },
     ],
+    image: "/help/screens/eltern-sammeleinladung.webp",
+    imageAlt:
+      "Das Fenster zum Einladen vieler Eltern mit den Zahlen der Auswahl und dem Knopf zum Einladen.",
     result:
       "Die Person bekommt eine E-Mail mit einem Link. Bei der Person siehst du, ob die Mail angekommen ist. Sobald sie ihr Passwort festlegt, sieht sie ihr Kind im Elternportal.",
     notes: [
       "Hinter dem Namen steht, wie weit die Person ist: `Kein Konto`, `Einladung offen`, `Link gilt nicht mehr` oder `Konto aktiv`.",
       "Bei `Einladung offen` heißt der Knopf `Erneut einladen`. Damit geht die E-Mail noch einmal raus.",
       "Eine Person mit mehreren Kindern lädst du nur einmal ein. Sie sieht danach alle ihre Kinder.",
+      "Sag den Eltern vorher Bescheid, dass eine E-Mail von moto kommt. Das rät auch das Fenster `Eltern ins Elternportal einladen`.",
+      "Steht im Fenster `Einladung ist noch offen`? Diese Eltern haben ihre Einladung noch nicht angenommen. Soll die E-Mail noch einmal rausgehen, setze den Haken bei `Offene Einladungen noch einmal senden`.",
+      "Hat eine Person eine eingeschränkte `Portalrolle`, etwa `Nur Abholung`, bekommt sie keine Einladung. Das Fenster zählt sie unter `Nur Kontakt, zum Beispiel abholberechtigt. Wird nicht eingeladen`.",
       "Die Nachricht geht an die E-Mail-Adresse, mit der sich die Eltern im Elternportal anmelden. Sie nennt nur die Vornamen der Kinder, die Schule und den Weg ins Elternportal. Geschwister stehen in einer Nachricht.",
       "Die Nachricht nennt nur Kinder, die heute Betreuung gebucht haben. Buchungen, die erst später beginnen, zählen nicht, ein Wochenplan allein auch nicht. Jedes Elternteil bekommt sie pro Kind nur einmal. Wurde sie schon verschickt, steht das Elternteil unter `Nachricht schon verschickt`.",
       "Holt jemand das Kind nur ab, wähle `Portalrolle` `Nur Abholung`. Dann sind `E-Mail` und Telefon freiwillig. Die Person bekommt keinen Zugang zur Eltern-App.",
     ],
     differences: [
+      "`Auswählen` oder `Eltern einladen` fehlt in `Kinderdaten`? Für `Auswählen` brauchst du das Recht `Benutzerinformationen bearbeiten`, für `Eltern einladen` das Recht `Neue Benutzer erstellen`. Frag die Person, die bei euch die Rechte vergibt.",
       "`Eltern mit Konto benachrichtigen` fehlt? Dann hat in der Auswahl niemand ein Konto. Eltern ohne Konto bekommen die Einladung.",
       "Steht bei der Person `Konto aktiv, kein Portalzugriff`, heißt der Knopf `Zugriff gewähren`.",
       "Bei einer eingeschränkten `Portalrolle` wie `Notfallkontakt` oder `Nur Abholung` fragt moto zuerst `Vollen Zugriff gewähren?`. Erst `Zugriff gewähren` erteilt den Zugang.",
@@ -4115,6 +4142,8 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
       "Jemand mit Konto bekommt keine Nachricht? Die Person darf das Kind im Elternportal nicht sehen, zum Beispiel mit `Portalrolle` `Nur Abholung`. Oder das Kind hat heute keine Betreuung gebucht. Oder die Nachricht für dieses Kind wurde schon verschickt.",
       "Ein Elternteil sagt, die Nachricht ist nicht angekommen? moto schickt sie kein zweites Mal. Bitte die Person, im Spam-Ordner nachzusehen. Sonst sag ihr selbst: Die Betreuung steht im Elternportal beim Kind unter `Betreuung & Wochenplan`.",
       "`Einladen` bewirkt nichts? Dann fehlt die `E-Mail`. Trage sie über `Bearbeiten` nach.",
+      "Im Fenster steht zum Beispiel `2 Eltern können nicht eingeladen werden`? Darunter steht bei jedem Elternteil der Grund, etwa `E-Mail-Adresse fehlt`. Trage die Adresse beim Kind unter `Erziehungsberechtigte` nach. Alle anderen Eltern lädst du trotzdem schon ein.",
+      "Im Fenster steht `Für diese Auswahl gibt es niemanden einzuladen.`? Dann braucht niemand eine Einladung. Oder es fehlt etwas, zum Beispiel die E-Mail-Adresse. Offene Einladungen schickst du mit `Offene Einladungen noch einmal senden` noch einmal.",
       "Bei der Person steht `Link gilt nicht mehr`? Zum Beispiel wurde die `E-Mail` nach der Einladung geändert. Wähle `Einladung neu senden`. Der neue Link geht an die Adresse, die jetzt eingetragen ist.",
       "Bei der Person steht `Adresse prüfen` oder `Verzögert`, und `Erneut einladen` fehlt? Der Hinweis dort sagt, was zu tun ist. Mehr dazu unter `Wenn eine E-Mail nicht ankommt`.",
       "Die Person ist schon bei einem anderen Kind eingetragen? Wähle `Vorhandene/n suchen` statt `+ Hinzufügen`. Sonst entstehen zwei Einträge für dieselbe Person.",
@@ -9505,6 +9534,12 @@ export const studentSearchTopic = function studentSearchTopic(
     presenceMode === "binary"
       ? "Bei einfacher Anwesenheit siehst du keinen Raum. Du siehst nur, ob das Kind da ist."
       : null;
+  // #6601: Die Auswahl-Leiste von `Alle Kinder` hat kein `Eltern einladen`.
+  // Die Sammeleinladung steht in `Kinderdaten` (students-list.tsx, nur mit
+  // `users:create`); der Hinweis fuehrt dorthin. Er nennt den Artikel nicht,
+  // weil `eltern-einladen` nur fuer die Leitung sichtbar ist.
+  const inviteNote =
+    "Eltern vieler Kinder auf einmal einladen geht nicht in `Alle Kinder`. Das geht nur in `Datenverwaltung` unter `Kinderdaten`.";
   // #5026: ohne Räume (Binärmodus) gibt es keine Zuweisung.
   const transitNotes =
     presenceMode === "binary"
@@ -9639,7 +9674,7 @@ export const studentSearchTopic = function studentSearchTopic(
       "Fehlt im Filter `Anmeldung`? Den Filter sehen nur Mitarbeitende, die auch die Angaben aus der Anmeldung beim Kind sehen. Er erscheint erst, wenn Eltern in der Online-Anmeldung eigene Fragen der Schule beantwortet haben.",
       ...(presenceDifference ? [presenceDifference] : []),
     ],
-    ...(transitNotes.length > 0 ? { notes: transitNotes } : {}),
+    notes: [...transitNotes, inviteNote],
     troubleshooting: HELP_TOPICS.missingChildOrGroup,
     related: [
       HELP_TOPICS.schoolSearch,
@@ -9647,6 +9682,7 @@ export const studentSearchTopic = function studentSearchTopic(
       HELP_TOPICS.webAttendance,
       HELP_TOPICS.absences,
       HELP_TOPICS.leadManageStudent,
+      HELP_TOPICS.leadInviteGuardians,
     ],
   };
 } satisfies typeof authored_studentSearchTopic;
