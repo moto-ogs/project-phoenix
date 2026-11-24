@@ -3,6 +3,7 @@
  * Tests the rendering, update functionality, and the shared error path
  */
 import {
+  act,
   render as rtlRender,
   screen,
   waitFor,
@@ -361,6 +362,36 @@ describe("ActivityManagementModal", () => {
 
     const nameInput = screen.getByLabelText(/Aktivitätsname/);
     expect(nameInput).toBeDisabled();
+  });
+
+  // ADR 0311: the form edits the activity's read. Before it arrives typed
+  // input would vanish, so the fields wait for it.
+  it("locks the fields until the activity is read", async () => {
+    let answer: (activity: Activity) => void = () => undefined;
+    vi.mocked(fetchActivity).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    render(
+      <ActivityManagementModal
+        isOpen={true}
+        onClose={mockOnClose}
+        activity={mockActivity}
+      />,
+    );
+
+    const nameInput = screen.getByLabelText(/Aktivitätsname/);
+    expect(nameInput).toBeDisabled();
+    expect(
+      screen.getByRole("checkbox", { name: "Keine Begrenzung" }),
+    ).toBeDisabled();
+
+    await act(async () => answer(storedActivity));
+    await waitFor(() => expect(nameInput).toBeEnabled());
+    fireEvent.change(nameInput, { target: { value: "Neuer Name" } });
+    expect(nameInput).toHaveValue("Neuer Name");
   });
 
   it("renders info message for read-only mode", async () => {

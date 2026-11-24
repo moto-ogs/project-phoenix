@@ -161,6 +161,8 @@ export function ActivityManagementModal({
   // Read-only, the dialog shows the list row and saves nothing.
   const form = edit.draft ?? activityForm(activity);
   const setForm = edit.setDraft;
+  // Until the first read fills the draft, typing would go nowhere.
+  const locked = readOnly || edit.draft === undefined;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -378,7 +380,7 @@ export function ActivityManagementModal({
                   placeholder="z. B. Hausaufgaben, Malen, Basteln…"
                   className="disabled:cursor-not-allowed"
                   required
-                  disabled={readOnly}
+                  disabled={locked}
                   maxLength={255}
                 />
               </div>
@@ -416,7 +418,7 @@ export function ActivityManagementModal({
                   ]}
                   placeholder="Kategorie wählen…"
                   required
-                  disabled={readOnly}
+                  disabled={locked}
                 />
               </div>
             </InsetPanel>
@@ -448,7 +450,7 @@ export function ActivityManagementModal({
                     fieldError("max_participants") ? true : undefined
                   }
                   required={Boolean(form.max_participants)}
-                  disabled={readOnly || !form.max_participants}
+                  disabled={locked || !form.max_participants}
                 />
                 <label
                   htmlFor="activity-no-participant-limit"
@@ -463,7 +465,7 @@ export function ActivityManagementModal({
                         max_participants: event.target.checked ? "" : "15",
                       }));
                     }}
-                    disabled={readOnly}
+                    disabled={locked}
                   />
                   Keine Begrenzung
                 </label>

@@ -1179,9 +1179,9 @@ export function PickupTimeModal({
   onCutoffPassed?: () => void;
   /**
    * Liest die Anfragen nach einer Ablehnung neu und lehnt ab, wenn das
-   * scheitert (ADR 0311). Ohne sie lädt der Dialog die Liste still neu.
+   * scheitert (ADR 0311): `useChildCare().reloadPickupRequests`.
    */
-  reloadRequests?: () => Promise<unknown>;
+  reloadRequests: () => Promise<unknown>;
 }>) {
   const t = useCareTermTranslations("parentChildCare");
   const tModes = useCareTermTranslations("parentMasterData");
@@ -1275,12 +1275,6 @@ export function PickupTimeModal({
       opening: editing && request ? editingRequestId : null,
       data: editing ? request : undefined,
       reload: async () => {
-        if (!reloadRequests) {
-          await invalidateFamily(
-            parentKeys.pickupChangeRequestsFamily(studentId ?? ""),
-          );
-          return undefined;
-        }
         const list = await reloadRequests();
         return Array.isArray(list)
           ? (list as parentMeContract.PickupChangeRequestResponse[]).find(
@@ -1297,6 +1291,24 @@ export function PickupTimeModal({
     },
   );
   const { setDraft: setEditDraft } = edit;
+  // A newer read refilled the untouched edit: an error about the replaced
+  // input no longer applies. After a refusal its message stays.
+  const editToken = editing ? edit.token : undefined;
+  const lastEditRef = useRef({ token: editToken, status: edit.status });
+  useEffect(() => {
+    const last = lastEditRef.current;
+    lastEditRef.current = { token: editToken, status: edit.status };
+    if (
+      last.token === undefined ||
+      editToken === undefined ||
+      last.token === editToken ||
+      last.status !== "ready"
+    ) {
+      return;
+    }
+    clearForm();
+    setInvalidField(null);
+  }, [clearForm, edit.status, editToken]);
   const fields = editing && edit.draft ? edit.draft : created;
   const { pickupTime, departureMode, pickupPersonId, signature, reason } =
     fields;
@@ -1367,7 +1379,8 @@ export function PickupTimeModal({
     canEditRequest === true,
   );
   // After a refusal the stored request is read again (`edit`).
-  const reloadingEdit = edit.status === "refused" || edit.status === "reloading";
+  const reloadingEdit =
+    edit.status === "refused" || edit.status === "reloading";
   const storedReadFailed = editing && edit.status === "loadFailed";
 
   // The pickup rules this dialog explains with its own context (the child's
