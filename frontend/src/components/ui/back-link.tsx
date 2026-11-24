@@ -3,7 +3,6 @@
 import { ArrowLeft } from "lucide-react";
 import type { MouseEvent } from "react";
 import NavigationLink from "~/components/ui/navigation-link";
-import { startPageTransition } from "~/lib/mobile-navigation/page-transition";
 import { useStackBack } from "~/lib/mobile-navigation/use-navigation-stack";
 import { cn } from "~/lib/utils";
 
@@ -51,12 +50,8 @@ export function BackLink({
         ) {
           return;
         }
-        if (stackBack()) {
-          event.preventDefault();
-          return;
-        }
         // Kein passender Eintrag: der Link ersetzt die Seite (`replace`).
-        startPageTransition("back");
+        if (stackBack()) event.preventDefault();
       }
     : undefined;
   return (
@@ -65,6 +60,7 @@ export function BackLink({
       onClick={onClick}
       // Nur in der App: der Rückweg legt keinen neuen Eintrag an.
       replace={stackBack ? true : undefined}
+      pageTransition="back"
       className={cn(BACK_CLASS_NAME, className)}
     >
       <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />

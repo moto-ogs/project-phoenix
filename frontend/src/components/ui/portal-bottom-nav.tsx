@@ -329,6 +329,8 @@ export function PortalBottomNavLink({
     <li className={shrinkActive ? bottomNavItemShrink(active) : undefined}>
       <NavigationLink
         {...linkProps}
+        // Ein Reiterwechsel schiebt nichts herein (#8070).
+        pageTransition="none"
         data-active={active ? "true" : "false"}
         aria-current={active ? "page" : undefined}
         {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
@@ -425,6 +427,8 @@ export function PortalNavSheetLink({
   return (
     <NavigationLink
       {...linkProps}
+      // Das Blatt schließt beim Wechsel; ein Schieben darunter wäre doppelt.
+      pageTransition="none"
       {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       data-active={active ? "true" : "false"}
       aria-current={active ? "page" : undefined}

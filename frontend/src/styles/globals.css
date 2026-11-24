@@ -1203,3 +1203,71 @@ html[data-chat-page-lock] body {
     animation-duration: 1ms;
   }
 }
+
+/*
+ * Seitenübergang der App (#8070, lib/mobile-navigation/page-transition.ts).
+ * Nur in der App ohne reduced-motion; der Desktop startet nie einen
+ * Übergang. Die Seite ist der Wurzel-Schnappschuss (das, was man sieht);
+ * Pill und Safe-Area-Streifen haben eigene Namen und bleiben stehen.
+ * Selektoren auf vorhandene Elemente, damit der Desktop kein neues
+ * Attribut und keine neue Klasse bekommt.
+ */
+@media (width < 64rem), (pointer: coarse) {
+  @media (prefers-reduced-motion: no-preference) {
+    nav.fixed.bottom-0 {
+      view-transition-name: moto-pill;
+    }
+    [data-staff-safe-area-top] {
+      view-transition-name: moto-safe-area-top;
+    }
+    html[data-nav-direction]::view-transition-group(root) {
+      animation-duration: 280ms;
+    }
+    html[data-nav-direction="forward"]::view-transition-old(root) {
+      animation: 280ms cubic-bezier(0.32, 0.72, 0, 1) both moto-page-out-left;
+    }
+    html[data-nav-direction="forward"]::view-transition-new(root) {
+      animation: 280ms cubic-bezier(0.32, 0.72, 0, 1) both moto-page-in-right;
+    }
+    html[data-nav-direction="back"]::view-transition-old(root) {
+      z-index: 1;
+      animation: 280ms cubic-bezier(0.32, 0.72, 0, 1) both moto-page-out-right;
+    }
+    html[data-nav-direction="back"]::view-transition-new(root) {
+      animation: 280ms cubic-bezier(0.32, 0.72, 0, 1) both moto-page-in-left;
+    }
+    /* Pill und Streifen: kein Überblenden, sie stehen einfach. */
+    html[data-nav-direction]::view-transition-old(moto-pill),
+    html[data-nav-direction]::view-transition-old(moto-safe-area-top) {
+      animation: none;
+      opacity: 0;
+    }
+    html[data-nav-direction]::view-transition-new(moto-pill),
+    html[data-nav-direction]::view-transition-new(moto-safe-area-top) {
+      animation: none;
+    }
+  }
+}
+
+@keyframes moto-page-in-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes moto-page-out-left {
+  to {
+    transform: translateX(-30%);
+    opacity: 0.6;
+  }
+}
+@keyframes moto-page-in-left {
+  from {
+    transform: translateX(-30%);
+    opacity: 0.6;
+  }
+}
+@keyframes moto-page-out-right {
+  to {
+    transform: translateX(100%);
+  }
+}

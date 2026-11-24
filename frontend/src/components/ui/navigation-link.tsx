@@ -6,6 +6,10 @@ import NextLink from "next/link.js";
 import { forwardRef, type ComponentProps } from "react";
 import { useNavigationLinkProgress } from "./use-navigation-link-progress";
 import { useLinkIntentPrefetch } from "./use-link-intent-prefetch";
+import {
+  startPageTransition,
+  type PageTransitionDirection,
+} from "~/lib/mobile-navigation/page-transition";
 
 export type NavigationLinkProps = Omit<
   ComponentProps<typeof NextLink>,
@@ -16,6 +20,12 @@ export type NavigationLinkProps = Omit<
   readonly resources?: readonly PrefetchResource[];
   /** `false` schaltet auch das Vorladen bei Absicht ab. */
   readonly prefetch?: false;
+  /**
+   * Seitlicher Übergang in der App (#8070): `forward` (Standard) schiebt die
+   * neue Seite von rechts herein, `back` von links, `none` wechselt ohne
+   * Bewegung (Reiter der Pill). Der Desktop animiert nie.
+   */
+  readonly pageTransition?: PageTransitionDirection | "none";
 };
 
 /**
@@ -54,11 +64,25 @@ const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
       onTouchCancel,
       onBlur,
       resources,
+      pageTransition = "forward",
       ...anchorProps
     },
     ref,
   ) {
-    const progress = useNavigationLinkProgress(href, onClick, onNavigate);
+    const progress = useNavigationLinkProgress(href, onClick, (event) => {
+      let cancelled = false;
+      onNavigate?.({
+        preventDefault: () => {
+          cancelled = true;
+          event.preventDefault();
+        },
+      });
+      // `onNavigate` kommt nur für einen Wechsel im Router, nicht für
+      // einen neuen Tab oder Mittelklick.
+      if (!cancelled && pageTransition !== "none") {
+        startPageTransition(pageTransition, href);
+      }
+    });
     const intent = useLinkIntentPrefetch({
       href,
       target,

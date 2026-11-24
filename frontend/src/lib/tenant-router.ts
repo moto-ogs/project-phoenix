@@ -2,6 +2,7 @@
 
 // eslint-disable-next-line no-restricted-imports -- this IS the tenant-aware wrapper
 import { useRouter } from "next/navigation";
+import { startPageTransition } from "~/lib/mobile-navigation/page-transition";
 import { useMemo } from "react";
 import {
   useTenantRoutingModeSafe,
@@ -43,7 +44,12 @@ export function useTenantRouter() {
         const full = `${prefix}${path}`;
         const navigate = () =>
           options ? router.push(full, options) : router.push(full);
-        if (!attemptNavigation(navigate, full)) navigate();
+        if (!attemptNavigation(navigate, full)) {
+          // Ein Vorwärts-Wechsel aus dem Inhalt (Zeile, Kachel): in der App
+          // schiebt sich die neue Seite herein (#8070), sonst nichts.
+          startPageTransition("forward", full);
+          navigate();
+        }
       },
       replace: (path: string) => {
         const full = `${prefix}${path}`;

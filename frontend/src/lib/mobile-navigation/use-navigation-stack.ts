@@ -4,25 +4,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useIsApp } from "~/lib/device-context";
 import { currentEntry, previousEntry, recordCommit } from "./history-stack";
-import { runPageTransition } from "./page-transition";
-
-const commitWaiters = new Set<() => void>();
-
-/**
- * Wartet auf den nächsten bestätigten Seitenwechsel (Pfad oder Query), höchstens
- * `timeoutMs`. Der seitliche Übergang hält das alte Bild so lange fest.
- */
-export function waitForRouteCommit(timeoutMs: number): Promise<void> {
-  return new Promise((resolve) => {
-    const done = () => {
-      clearTimeout(timer);
-      commitWaiters.delete(done);
-      resolve();
-    };
-    const timer = setTimeout(done, timeoutMs);
-    commitWaiters.add(done);
-  });
-}
+import { notifyRouteCommit, runPageTransition } from "./page-transition";
 
 /**
  * Meldet jeden Seitenwechsel an den Verlaufsstack. Steht einmal in der
@@ -48,7 +30,7 @@ export function useNavigationStackTracker(): void {
       traversal.current,
     );
     traversal.current = false;
-    for (const waiter of [...commitWaiters]) waiter();
+    notifyRouteCommit();
   }, [pathname, search]);
 }
 
