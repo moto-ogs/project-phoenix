@@ -34,6 +34,7 @@ import {
   formatConclusion,
   formatService,
   knownConclusionAt,
+  handedOverOnPaper,
   serviceDays,
 } from "~/components/traeger/care-contract-format";
 import { CareContractChangeCard } from "~/components/traeger/care-contract-change-card";
@@ -322,7 +323,7 @@ function TraegerVertragView() {
     if (skip) warning(`Nicht gesendet: ${SEND_SKIP_LABELS[skip.reason]}.`);
     else
       success(
-        contract.status === "entwurf"
+        contract.mailings.length === 0
           ? "Der Vertrag ist unterwegs: per Mail und in die Eltern-App."
           : "Der Vertrag ist noch einmal unterwegs.",
       );
@@ -451,6 +452,11 @@ function TraegerVertragView() {
   };
 
   const isDraft = contract?.status === "entwurf";
+  // A contract handed over on paper (#8030) is versendet without a mail:
+  // its first mail is no second send.
+  const firstMail =
+    isDraft ||
+    (contract?.status === "versendet" && handedOverOnPaper(contract));
   const canSend =
     isDraft || contract?.status === "versendet" || contract?.status === "aktiv";
   const lastMail = contract?.mailings[0];
@@ -523,9 +529,13 @@ function TraegerVertragView() {
     });
   }
   if (contract && sendInHead) {
+    // A draft's PDF is a preview that says so on every page (#8030): the
+    // parents sign only the PDF a send or the handover on paper froze.
     headMenu.push({
-      label: "PDF herunterladen",
-      description: "Speichert den Vertrag als PDF auf deinem Gerät.",
+      label: isDraft ? "Vorschau herunterladen" : "PDF herunterladen",
+      description: isDraft
+        ? "Speichert die Vorschau als PDF. Sie ist nicht zum Unterschreiben."
+        : "Speichert den Vertrag als PDF auf deinem Gerät.",
       icon: <Download className="h-4 w-4" aria-hidden="true" />,
       onClick: () => void download(),
     });
@@ -621,7 +631,7 @@ function TraegerVertragView() {
                   isLoading={sending}
                   loadingText="Wird gesendet …"
                   tooltip={
-                    isDraft
+                    firstMail
                       ? "moto fragt vorher nach, dann geht der Vertrag per E-Mail und in die Eltern-App."
                       : "moto fragt vorher nach, dann geht der Vertrag noch einmal an die Eltern."
                   }
@@ -629,7 +639,7 @@ function TraegerVertragView() {
                   onClick={() => setConfirmingSend(true)}
                 >
                   <Send className="mr-2 h-4 w-4" aria-hidden="true" />
-                  {isDraft ? "Vertrag senden" : "Erneut senden"}
+                  {firstMail ? "Vertrag senden" : "Erneut senden"}
                 </Button>
               ) : (
                 <Button
@@ -683,8 +693,10 @@ function TraegerVertragView() {
               so the button asks first and names who gets it. */}
           <ConfirmationModal
             isOpen={confirmingSend}
-            title={isDraft ? "Vertrag senden?" : "Vertrag noch einmal senden?"}
-            confirmText={isDraft ? "Vertrag senden" : "Erneut senden"}
+            title={
+              firstMail ? "Vertrag senden?" : "Vertrag noch einmal senden?"
+            }
+            confirmText={firstMail ? "Vertrag senden" : "Erneut senden"}
             isConfirmLoading={sending}
             loadingText="Wird gesendet …"
             onClose={() => setConfirmingSend(false)}
@@ -996,7 +1008,7 @@ function TraegerVertragView() {
                 description={
                   contract.mailings.length > 0
                     ? undefined
-                    : contract.signature?.method === "paper"
+                    : handedOverOnPaper(contract)
                       ? "Auf Papier übergeben, nicht per Mail."
                       : "Noch nicht gesendet."
                 }

@@ -63,6 +63,21 @@ func renderParentSignatureError(w http.ResponseWriter, r *http.Request, err erro
 	renderSignatureError(w, r, err)
 }
 
+// handOverOnPaper freezes the PDF the office prints for the parents
+// (#8030); the office then downloads it from /{id}/document.
+func (rs *Resource) handOverOnPaper(w http.ResponseWriter, r *http.Request) {
+	reviewer, id, ok := contractKey(w, r)
+	if !ok {
+		return
+	}
+	if err := rs.paper.HandOverOnPaper(r.Context(), reviewer, id); err != nil {
+		tenant.MarkRollback(r.Context())
+		renderSignatureError(w, r, err)
+		return
+	}
+	common.RespondNoContent(w, r)
+}
+
 // paperFormOverhead leaves room for the form fields beside the PDF.
 const paperFormOverhead = 64 << 10
 

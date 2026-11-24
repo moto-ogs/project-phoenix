@@ -20306,6 +20306,14 @@
     },
     {
       "method": "POST",
+      "pattern": "/traeger/contracts/{id}/paper-handover",
+      "portals": [
+        "org"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/contracts/{id}/paper-signature",
       "portals": [
         "org"

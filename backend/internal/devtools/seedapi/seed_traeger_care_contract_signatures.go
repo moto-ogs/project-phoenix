@@ -13,10 +13,10 @@ import (
 // seedTraegerCareContractSignaturesStep signs the demo care contracts
 // (#4679, ADR 0155) the way families and the Träger-Büro do: a parent with
 // an account signs a contract sent to them in the parents portal, and the
-// Träger-Büro records one draft the parents signed on paper. The contract
-// list then shows signed, sent and draft contracts side by side. Both steps
-// are idempotent: a signed contract is no longer sent, a paper contract no
-// longer a draft.
+// Träger-Büro hands one draft over on paper and records the parents' paper
+// signature. The contract list then shows signed, sent and draft contracts
+// side by side. Both steps are idempotent: a signed contract is no longer
+// sent, a paper contract no longer a draft.
 type seedTraegerCareContractSignaturesStep struct{}
 
 func (seedTraegerCareContractSignaturesStep) Name() string {
@@ -103,12 +103,18 @@ func seedPaperContracts(client *Client, auth AuthRef, school int64, minimum int)
 	return count, nil
 }
 
-// seedPaperContractSignature records the paper signature of contract id,
-// signed on signedOn. The server concludes the contract on its own clock
-// whatever day the paper names, and refuses a signing day after its today.
+// seedPaperContractSignature hands contract id over on paper, as the office
+// prints it for the parents, and records its paper signature, signed on
+// signedOn (#8030). The handover freezes the PDF the signature binds; a
+// draft takes no paper signature. The server concludes the contract on its
+// own clock whatever day the paper names, and refuses a signing day after
+// its today.
 func seedPaperContractSignature(client *Client, auth AuthRef, id int64, signer string, signedOn calendar.Date) error {
 	if signer == "" {
 		signer = "Erika Muster"
+	}
+	if _, err := client.PostWithAuth(auth, fmt.Sprintf("/traeger/contracts/%d/paper-handover", id), nil); err != nil {
+		return fmt.Errorf("hand the paper contract %d over: %w", id, err)
 	}
 	path := fmt.Sprintf("/traeger/contracts/%d/paper-signature", id)
 	if _, err := client.PostFileWithAuthAndFields(auth, path, "file", "vertrag-unterschrieben.pdf", seedPaperContractPDF,

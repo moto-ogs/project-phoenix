@@ -28,7 +28,7 @@
   "import_file_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "import_file_too_large": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "import_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
-  "letterhead_missing": "Antette gönderen bilgileri eksik. Kurumun adı ve adresi olmadan sözleşme gönderilmez. Bunları „Antet ve şablonlar” bölümüne ekleyin.",
+  "letterhead_missing": "Antette gönderen bilgileri eksik. Kurumun adı ve adresi olmadan sözleşme gönderilemez veya kağıt üzerinde teslim edilemez. Bunları „Antet ve şablonlar” bölümüne ekleyin.",
   "child_link_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "child_link_not_imported": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "child_link_refused": "{object} değiştirilemedi. Güncel durumu kontrol edin.",

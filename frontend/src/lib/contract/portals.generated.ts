@@ -372,6 +372,7 @@ export const portalRoutes = {
     traegerContracts["GET /traeger/contracts/{id}/versions/{number}/document"],
     traegerContracts["POST /traeger/contracts/"],
     traegerContracts["POST /traeger/contracts/send"],
+    traegerContracts["POST /traeger/contracts/{id}/paper-handover"],
     traegerContracts["POST /traeger/contracts/{id}/paper-signature"],
     traegerContributionRules["DELETE /traeger/contribution-rules/{id}"],
     traegerContributionRules["GET /traeger/contribution-rules/"],

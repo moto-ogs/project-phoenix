@@ -306,7 +306,7 @@ func (c *Contracts) contractDocument(ctx context.Context, reviewer carecontract.
 	if record.DocumentID != nil {
 		file, _, err = c.store.VersionDocument(ctx, reviewer.OrganizationID, record.Version.ID.Int64())
 	} else {
-		file, _, err = c.render(ctx, reviewer, record)
+		file, _, err = c.render(ctx, reviewer, record, draftPreview(record))
 	}
 	if err != nil {
 		return carecontract.File{}, 0, err
@@ -321,7 +321,10 @@ func (c *Contracts) contractDocument(ctx context.Context, reviewer carecontract.
 	return file, record.Summary.SchoolID.Int64(), nil
 }
 
-func (c *Contracts) render(ctx context.Context, reviewer carecontract.Reviewer, record ContractRecord) (carecontract.File, int, error) {
+// render lays out the contract with the current letterhead and template. A
+// preview carries the preview note; the PDF a send or handover freezes never
+// does (#8030).
+func (c *Contracts) render(ctx context.Context, reviewer carecontract.Reviewer, record ContractRecord, preview bool) (carecontract.File, int, error) {
 	head, err := c.letterheads.Letterhead(ctx, reviewer)
 	if err != nil {
 		return carecontract.File{}, 0, fmt.Errorf("care contract: letterhead: %w", err)
@@ -329,7 +332,11 @@ func (c *Contracts) render(ctx context.Context, reviewer carecontract.Reviewer, 
 	if firstText(record.Version.Terms.ContractPartner, firstLine(textLines(head.SenderText))) == "" {
 		return carecontract.File{}, 0, &carecontract.ValidationError{Fields: map[string]string{"contract_partner": "required"}}
 	}
-	file, err := c.renderer.RenderContract(contractLetter(record, head), documentFilenameBase(record))
+	letter := contractLetter(record, head)
+	if preview {
+		letter = previewLetter(letter)
+	}
+	file, err := c.renderer.RenderContract(letter, documentFilenameBase(record))
 	if err != nil {
 		return carecontract.File{}, 0, fmt.Errorf("care contract: render: %w", err)
 	}
@@ -556,18 +563,37 @@ func sameMailAddress(a, b string) bool {
 	return strings.EqualFold(strings.TrimSpace(a), strings.TrimSpace(b))
 }
 
-// frozenDocument is the stored PDF, rendered and stored at the first send.
+// frozenDocument is the stored PDF, rendered and stored at the first send
+// or the handover on paper (#8030).
 func (c *Contracts) frozenDocument(ctx context.Context, reviewer carecontract.Reviewer, record ContractRecord) (carecontract.File, int64, error) {
 	if record.DocumentID != nil {
 		file, err := c.store.Document(ctx, reviewer.OrganizationID, record.Summary.ID.Int64())
 		return file, *record.DocumentID, err
 	}
-	file, templateVersion, err := c.render(ctx, reviewer, record)
+	file, templateVersion, err := c.render(ctx, reviewer, record, false)
 	if err != nil {
 		return carecontract.File{}, 0, err
 	}
 	id, err := c.store.InsertDocument(ctx, reviewer.OrganizationID, reviewer.AccountID, record, templateVersion, file)
 	return file, id, err
+}
+
+// paperDocument freezes the PDF of a contract handed over on paper and
+// answers its ID; a frozen one stays. Like a send, a new PDF needs the
+// letterhead: its withdrawal notice names the Träger's address (#7177).
+func (c *Contracts) paperDocument(ctx context.Context, reviewer carecontract.Reviewer, record ContractRecord) (int64, error) {
+	if record.DocumentID != nil {
+		return *record.DocumentID, nil
+	}
+	head, err := c.letterheads.Letterhead(ctx, reviewer)
+	if err != nil {
+		return 0, fmt.Errorf("care contract: letterhead: %w", err)
+	}
+	if letterheadMissing(head.SenderText) {
+		return 0, carecontract.ErrLetterheadMissing
+	}
+	_, documentID, err := c.frozenDocument(ctx, reviewer, record)
+	return documentID, err
 }
 
 // DiscardContract removes a draft. The trail keeps the entry.

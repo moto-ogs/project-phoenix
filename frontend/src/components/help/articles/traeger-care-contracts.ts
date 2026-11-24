@@ -5,7 +5,8 @@ import { HELP_TOPICS } from "~/lib/help-topics";
  * `/traeger/vertraege` (#4678, #4679, #4680, #4681): festlegen, wann der
  * Vertrag gilt, Vertragsbedingungen je Angebot festlegen, Entwürfe aus
  * angenommenen Anmeldungen erstellen, prüfen und senden; die Unterschrift
- * der Eltern und den Papiervertrag erfassen; Versionen nach einer Änderung;
+ * der Eltern, die Übergabe auf Papier (#8030) und den Papiervertrag
+ * erfassen; Versionen nach einer Änderung;
  * Kündigung und Widerruf (#4682); Änderungswünsche der Eltern freigeben (#5979);
  * Kinder und bestehende Verträge aus einer Datei importieren (#4723), auch
  * ohne Mail-Adresse der Eltern (#7360), ihre Vertragsangaben aus den
@@ -92,15 +93,18 @@ export function traegerCareContractsTopic(): HelpTopic {
         ],
       },
       {
-        title: "Papiervertrag erfassen",
+        title: "Auf Papier übergeben und erfassen",
         description:
           "Für Familien ohne Internet oder einen Vertrag, den es nur auf Papier gibt.",
         steps: [
-          "Wähle oben `PDF herunterladen` und drucke den Vertrag.",
-          "Die Eltern unterschreiben ihn. Scanne den unterschriebenen Vertrag als PDF.",
-          "Wähle auf der Vertragsseite im Reiter `Unterschrift und Versand` in der Karte `Unterschrift` den Knopf `Papiervertrag erfassen`.",
+          "Öffne den Entwurf und den Reiter `Unterschrift und Versand`. Wähle in der Karte `Unterschrift` den Knopf `Auf Papier übergeben`.",
+          "Bestätige mit `Übergeben und PDF laden`. moto speichert den Vertrag so, wie er jetzt ist, und lädt das PDF herunter. Ein neuer Briefkopf ändert dieses PDF nicht mehr. Kam kein PDF an? Dann hol es oben im Menü mit `PDF herunterladen`.",
+          "Der Vertrag ist dann `Versendet`. Die Eltern bekommen keine Mail und keine Erinnerung.",
+          "Drucke das PDF und gib es den Eltern. Sie unterschreiben es. Scanne den unterschriebenen Vertrag als PDF.",
+          "Wähle in der Karte `Unterschrift` den Knopf `Papiervertrag erfassen`.",
           "Prüfe `Unterschrieben von` und `Unterschrieben am`. Wähle mit `PDF wählen` die Datei.",
           "Wähle `Vertrag abschließen`. Der Vertrag ist dann `Aktiv`. Mit `Papiervertrag laden` holst du das PDF später wieder.",
+          "Ging der Vertrag schon per Mail? Dann drucke ihn mit `PDF herunterladen` und erfasse ihn wie oben.",
         ],
       },
       {
@@ -281,12 +285,12 @@ export function traegerCareContractsTopic(): HelpTopic {
       "Ein importierter Vertrag beginnt frühestens mit dem Schuljahr seines Moduls. Er endet auch mit diesem Schuljahr, wenn das Modul ein Ende hat und die Datei kein früheres nennt. Lief der Vertrag schon vorher, steht der frühere Tag unter `Abgeschlossen`. Der Vertrag ist mit keiner Kinderakte der Schule verknüpft, bis du ihn verknüpfst: moto gleicht Kinder nicht über den Namen ab. Im Reiter `Versionen` steht bei ihm `Aus einer Datei importiert`.",
       "Hat ein Kind einen laufenden importierten Vertrag, bekommt es aus einer Anmeldung keinen zweiten Vertrag für dieselbe Zeit. Das gilt auch, solange der Vertrag noch nicht verknüpft ist: Dann zählen Name und Geburtsdatum. Das Kind steht in `Verträge erstellen` mit `Hat schon einen importierten Vertrag` und der Nummer des Vertrags. Stimmt das nicht, prüfe dort die Kinderakte und das Vertragsende. Endet der importierte Vertrag vor der gebuchten Betreuung, bekommt das Kind seinen neuen Vertrag wie sonst.",
       "Die Suche und die Filter gelten für alle Verträge. Mit `Weitere Verträge laden` zeigst du ältere Treffer an.",
-      "Beim ersten Senden hält moto das PDF fest. Änderst du danach Bedingungen oder Brieftext, bleibt der versendete Vertrag gleich.",
+      "Beim ersten Senden oder mit `Auf Papier übergeben` hält moto das PDF fest. Änderst du danach Bedingungen oder Brieftext, bleibt der versendete Vertrag gleich.",
       "Im Reiter `Unterschrift und Versand` siehst du in der Karte `Versand`, ob die Mail gesendet wurde. Mit `Versand aktualisieren` prüfst du den neuen Stand. Mit `Erneut senden` geht dasselbe PDF noch einmal an die Eltern; moto fragt vorher. Bei einem aktiven Vertrag steht `Erneut senden` im Menü mit den drei Punkten oben rechts. Eine zweite Nachricht aufs Handy gibt es dabei nicht. Nur eine korrigierte Mail-Adresse bekommt eine eigene Nachricht.",
       "Neben jedem Versand steht, was aus der Mail geworden ist: wie bei der Abrechnung. Der Hinweis oben nennt den Grund und den nächsten Schritt. Bei `Verzögert` wartest du. Hat die Schule die Mails gestoppt, kläre das mit der Schule. Bei `Gesperrt` klärt das der moto-Support. Solange das gilt, ist `Erneut senden` aus.",
       "Den Brieftext des Vertrags änderst du unter `Einstellungen` → `Briefkopf und Vorlagen` bei der Vorlage `Vertrag`.",
-      "Mit `PDF herunterladen` bekommst du den Vertrag zum Drucken, etwa für Familien ohne Mail.",
-      "Wartet ein versendeter Vertrag auf die Unterschrift, bekommen die Eltern Erinnerungen per Mail. Es gibt höchstens drei. Bereits abgeschlossene Verträge bekommen keine Erinnerung. Nach wie vielen Tagen, lege unter `Einstellungen` → `Allgemein` im Bereich `Betreuungsverträge` fest. Bei 0 gibt es keine Erinnerung.",
+      "Mit `PDF herunterladen` bekommst du den versendeten Vertrag zum Drucken. Bei einem Entwurf heißt der Eintrag `Vorschau herunterladen`. Auf jeder Seite der Vorschau steht `Vorschau, nicht zum Unterschreiben`. Für Familien ohne Mail wähle `Auf Papier übergeben`.",
+      "Wartet ein per Mail versendeter Vertrag auf die Unterschrift, bekommen die Eltern Erinnerungen per Mail. Es gibt höchstens drei. Abgeschlossene und auf Papier übergebene Verträge bekommen keine Erinnerung. Nach wie vielen Tagen, lege unter `Einstellungen` → `Allgemein` im Bereich `Betreuungsverträge` fest. Bei 0 gibt es keine Erinnerung.",
       "Der Link in der Mail gilt einmal und 30 Tage. Jede Erinnerung bringt einen neuen Link.",
       "Frühere Versionen bleiben unter `Versionen` lesbar. `Gilt jetzt` zeigt die Version von heute. Die Abrechnung nimmt für jeden Tag die Version, die an diesem Tag gilt.",
       "Bei einer außerordentlichen Kündigung steht in `Vertrag beenden` der Grund der Eltern und `Ende noch offen`. Prüfe den Grund. Bis zu deiner Entscheidung gilt der Vertrag weiter.",

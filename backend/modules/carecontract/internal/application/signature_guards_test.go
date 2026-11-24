@@ -18,8 +18,9 @@ import (
 
 // The guards of the signature (#4679) over the real store: the Träger
 // filter of the paper contract beneath RLS, the single use of a link, and
-// the races of a paper signature against the acceptance (#4680) and against
-// the discard of the draft, in two real Träger transactions.
+// the races of a paper signature against the acceptance (#4680) and of the
+// paper handover against the discard of the draft (#8030), in two real
+// Träger transactions.
 
 type guardSender struct{}
 
@@ -44,6 +45,15 @@ func paperOf(name string) carecontract.PaperInput {
 		SignedOn: calendar.NewDate(2026, 11, 2)}
 }
 
+// handOver hands the fixture's draft over on paper (#8030): its PDF is
+// frozen and it is versendet without a mail.
+func (f raceFixture) handOver(t *testing.T) {
+	t.Helper()
+	require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(txCtx context.Context) error {
+		return f.signatures().HandOverOnPaper(txCtx, f.reviewer, f.contract)
+	}))
+}
+
 func (f raceFixture) signedPapers(t *testing.T) int {
 	t.Helper()
 	var n int
@@ -54,9 +64,9 @@ func (f raceFixture) signedPapers(t *testing.T) int {
 
 // TestPaperSignatureOfAnotherTraegerFindsNothingBeneathRLS pins the Träger
 // filter of the paper contract in the application and the store, beneath
-// RLS: Träger B records a paper contract for a draft of Träger A and finds
-// nothing; A's draft keeps no PDF and no signature. It goes red when the
-// store reads the contract without its organization.
+// RLS: Träger B hands a draft of Träger A over on paper or records its paper
+// contract and finds nothing; A's draft keeps no PDF and no signature. It
+// goes red when the store reads the contract without its organization.
 func TestPaperSignatureOfAnotherTraegerFindsNothingBeneathRLS(t *testing.T) {
 	t.Parallel()
 	f := newRaceFixture(t, "Träger Papier A")
@@ -66,13 +76,20 @@ func TestPaperSignatureOfAnotherTraegerFindsNothingBeneathRLS(t *testing.T) {
 	testpkg.OwnTraegerCareContracts(t, f.db, other)
 	foreign := carecontract.Reviewer{OrganizationID: other, AccountID: f.reviewer.AccountID}
 
-	err := testpkg.WithinTraeger(f.ctx, other, func(txCtx context.Context) error {
-		// As the owner of the tables, beneath RLS: only the store's own
-		// Träger filter keeps A's contract out.
-		require.NoError(t, testpkg.WithoutRequestRole(txCtx))
-		return f.signatures().RecordPaperSignature(txCtx, foreign, f.contract, paperOf("Fremde Person"))
-	})
-	require.ErrorIs(t, err, carecontract.ErrContractNotFound, "another Träger's contract is not found")
+	for name, write := range map[string]func(context.Context) error{
+		"handover": func(txCtx context.Context) error { return f.signatures().HandOverOnPaper(txCtx, foreign, f.contract) },
+		"signature": func(txCtx context.Context) error {
+			return f.signatures().RecordPaperSignature(txCtx, foreign, f.contract, paperOf("Fremde Person"))
+		},
+	} {
+		err := testpkg.WithinTraeger(f.ctx, other, func(txCtx context.Context) error {
+			// As the owner of the tables, beneath RLS: only the store's own
+			// Träger filter keeps A's contract out.
+			require.NoError(t, testpkg.WithoutRequestRole(txCtx))
+			return write(txCtx)
+		})
+		require.ErrorIs(t, err, carecontract.ErrContractNotFound, "%s: another Träger's contract is not found", name)
+	}
 	s := f.state(t)
 	assert.Equal(t, carecontract.StatusDraft, s.status, "A's draft stays a draft")
 	assert.Zero(t, s.documents, "no PDF frozen for another Träger")
@@ -110,14 +127,16 @@ func paperLoss(err error) bool {
 }
 
 // TestPaperSignatureAgainstAcceptanceLetsOneWin is the paper contract of a
-// draft the conclusion at the acceptance concludes at the same time. The
-// acceptance holds the contract; the paper signature waits on its lock and
-// then finds a concluded contract: one conclusion, mit_anmeldung, no
-// signature, chk_contracts_active_concluded kept. It goes red when the
-// paper signature reads the contract without its row lock.
+// contract handed over on paper that the conclusion at the acceptance
+// concludes at the same time. The acceptance holds the contract; the paper
+// signature waits on its lock and then finds a concluded contract: one
+// conclusion, mit_anmeldung, no signature, chk_contracts_active_concluded
+// kept. It goes red when the paper signature reads the contract without its
+// row lock.
 func TestPaperSignatureAgainstAcceptanceLetsOneWin(t *testing.T) {
 	t.Parallel()
 	f := newRaceFixture(t, "Träger Rennen Papier Annahme")
+	f.handOver(t)
 	paper := func(txCtx context.Context) error {
 		return f.signatures().RecordPaperSignature(txCtx, f.reviewer, f.contract, paperOf("Erika Muster"))
 	}
@@ -136,23 +155,25 @@ func TestPaperSignatureAgainstAcceptanceLetsOneWin(t *testing.T) {
 	assert.Equal(t, carecontract.MethodWithApplication, method)
 }
 
-// TestPaperSignatureAgainstDiscardLetsOneWin is the paper contract of a
-// draft the Träger-Büro discards at the same time. The discard holds the
-// contract; the paper signature waits on its lock and then finds nothing:
-// no PDF, signature or conclusion of a discarded draft. It goes red when
-// the paper signature reads the contract without its row lock.
-func TestPaperSignatureAgainstDiscardLetsOneWin(t *testing.T) {
+// TestPaperHandoverAgainstDiscardLetsOneWin is the paper handover of a
+// draft the Träger-Büro discards at the same time (#8030): since only a
+// handed-over contract takes a paper signature, the handover is the write
+// that freezes a draft's PDF. The discard holds the contract; the handover
+// waits on its lock and then finds nothing: no PDF, signature or conclusion
+// of a discarded draft. It goes red when the handover reads the contract
+// without its row lock.
+func TestPaperHandoverAgainstDiscardLetsOneWin(t *testing.T) {
 	t.Parallel()
 	f := newRaceFixture(t, "Träger Rennen Papier Verwerfen")
 	discard := func(txCtx context.Context) error { return f.contracts.DiscardContract(txCtx, f.reviewer, f.contract) }
-	paper := func(txCtx context.Context) error {
-		return f.signatures().RecordPaperSignature(txCtx, f.reviewer, f.contract, paperOf("Erika Muster"))
+	handOver := func(txCtx context.Context) error {
+		return f.signatures().HandOverOnPaper(txCtx, f.reviewer, f.contract)
 	}
-	won, lost := f.race(t, discard, paper)
+	won, lost := f.race(t, discard, handOver)
 
 	require.NoError(t, won, "the discard wins")
 	require.Error(t, lost)
-	assert.True(t, paperLoss(lost), "the paper signature gets a defined error, got %v", lost)
+	assert.True(t, paperLoss(lost), "the handover gets a defined error, got %v", lost)
 	s := f.state(t)
 	assert.False(t, s.found, "the draft is gone")
 	assert.Zero(t, s.documents+s.mailings+s.conclusions, "no PDF, mail or conclusion of a discarded draft")
@@ -173,6 +194,7 @@ func TestSignatureStaysVisibleAfterAnApprovedChange(t *testing.T) {
 	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_versions SET effective_from = '2026-01-01'
 		WHERE contract_id = ?`, f.contract)
 	require.NoError(t, err)
+	f.handOver(t)
 	require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(txCtx context.Context) error {
 		return f.signatures().RecordPaperSignature(txCtx, f.reviewer, f.contract, paperOf("Erika Muster"))
 	}))
@@ -206,4 +228,57 @@ func TestSignatureStaysVisibleAfterAnApprovedChange(t *testing.T) {
 	require.NotNil(t, detail.Signature, "the signature stays visible after the change")
 	assert.Equal(t, carecontract.SignaturePaper, detail.Signature.Method)
 	assert.True(t, detail.Signature.Intact, "checked against the version and PDF it signed")
+}
+
+// TestOnlyTheDraftPreviewSaysItIsNotForSigning pins the preview note of
+// #8030: the PDF of a draft is a preview that changes with the letterhead,
+// so it says on every page that it is not for signing. The PDF frozen at the
+// handover is the one the parents sign and never carries the note. It goes
+// red when the preview looks like the contract, or the note is frozen.
+func TestOnlyTheDraftPreviewSaysItIsNotForSigning(t *testing.T) {
+	t.Parallel()
+	f := newRaceFixture(t, "Träger Vorschau Vermerk")
+	preview, err := f.contracts.ContractDocument(f.ctx, f.reviewer, f.contract)
+	require.NoError(t, err)
+	assert.Contains(t, string(preview.Data), previewNote, "the draft's preview names itself")
+	version, err := f.contracts.VersionDocument(f.ctx, f.reviewer, f.contract, 1)
+	require.NoError(t, err)
+	assert.Contains(t, string(version.Data), previewNote, "the draft's version preview too")
+
+	f.handOver(t)
+	frozen, err := f.contracts.ContractDocument(f.ctx, f.reviewer, f.contract)
+	require.NoError(t, err)
+	assert.NotContains(t, string(frozen.Data), previewNote, "the frozen PDF is for signing")
+	var stored []byte
+	require.NoError(t, f.db.NewRaw(`SELECT pdf FROM care_contract.contract_documents WHERE contract_id = ?`, f.contract).
+		Scan(context.Background(), &stored))
+	assert.NotContains(t, string(stored), previewNote, "the stored PDF carries no note")
+}
+
+// TestPaperHandoverTrailsOnlyTheHandover pins the trail of #8030: handing a
+// draft over on paper is one send via the office. Printing the contract
+// again, or handing over a contract mailed before, changes nothing and adds
+// no send to the trail. It goes red when every call writes a send.
+func TestPaperHandoverTrailsOnlyTheHandover(t *testing.T) {
+	t.Parallel()
+	sends := func(f raceFixture) int {
+		t.Helper()
+		var n int
+		require.NoError(t, f.db.NewRaw(`SELECT COUNT(*) FROM care_contract.contract_events WHERE contract_id = ? AND action = 'send'`,
+			f.contract).Scan(context.Background(), &n))
+		return n
+	}
+
+	onPaper := newRaceFixture(t, "Träger Übergabe Spur")
+	onPaper.handOver(t)
+	onPaper.handOver(t)
+	assert.Equal(t, 1, sends(onPaper), "one handover, one send")
+
+	mailed := newRaceFixture(t, "Träger Übergabe nach Mail")
+	require.NoError(t, testpkg.WithinTraeger(mailed.ctx, mailed.org, func(txCtx context.Context) error {
+		_, err := mailed.contracts.SendContracts(txCtx, mailed.reviewer, []int64{mailed.contract})
+		return err
+	}))
+	mailed.handOver(t)
+	assert.Equal(t, 1, sends(mailed), "a mailed contract handed over again is no second send")
 }

@@ -545,6 +545,12 @@ export const routes = {
     request: requestBody<SendRequest>(),
     response: success(SendResultSchema),
   },
+  "POST /traeger/contracts/{id}/paper-handover": {
+    method: "POST",
+    pattern: "/traeger/contracts/{id}/paper-handover",
+    portals: ["org"],
+    response: noData,
+  },
   "POST /traeger/contracts/{id}/paper-signature": {
     method: "POST",
     pattern: "/traeger/contracts/{id}/paper-signature",

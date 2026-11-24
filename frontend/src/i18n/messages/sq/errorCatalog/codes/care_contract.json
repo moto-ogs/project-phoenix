@@ -28,7 +28,7 @@
   "import_file_invalid": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "import_file_too_large": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "import_changed": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
-  "letterhead_missing": "Në kokën e letrës mungojnë të dhënat e dërguesit. Kontrata nuk dërgohet pa emrin dhe adresën e ofruesit. Shtojini te „Koka e letrës dhe shabllonet”.",
+  "letterhead_missing": "Në kokën e letrës mungojnë të dhënat e dërguesit. Pa emrin dhe adresën e ofruesit, kontrata nuk mund të dërgohet ose të dorëzohet në letër. Shtojini te „Koka e letrës dhe shabllonet”.",
   "child_link_changed": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "child_link_not_imported": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "child_link_refused": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",

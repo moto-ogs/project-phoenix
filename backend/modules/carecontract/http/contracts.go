@@ -59,7 +59,8 @@ func (rs *Resource) ContractRouter(protectedTraegerRoutes func(chi.Router, func(
 		inTx := r.With(rs.requireContract, withTx)
 		inTx.Post("/send", rs.send)
 		inTx.Delete("/{id}", rs.discard)
-		// The paper contract (#4679, signing.go).
+		// The paper contract (#4679, #8030, signing.go).
+		inTx.Post("/{id}/paper-handover", rs.handOverOnPaper)
 		inTx.Post("/{id}/paper-signature", rs.recordPaper)
 	})
 	return r

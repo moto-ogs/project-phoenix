@@ -414,8 +414,8 @@ type ContractDetail struct {
 	Version  Version   `json:"version"`
 	Parties  []Party   `json:"parties"`
 	Mailings []Mailing `json:"mailings"`
-	// DocumentFrozen tells that the PDF was rendered at the first send and
-	// no longer follows the template.
+	// DocumentFrozen tells that the PDF was rendered at the first send or
+	// the handover on paper (#8030) and no longer follows the template.
 	DocumentFrozen bool `json:"document_frozen"`
 	// Signature is the signature of the current version, nil until signed;
 	// Reminders the reminder mails while it waits (#4679, signature.go).
