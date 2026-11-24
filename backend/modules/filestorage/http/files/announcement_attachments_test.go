@@ -115,9 +115,10 @@ type attachmentListBody struct {
 		SizeBytes   int64  `json:"size_bytes"`
 		ContentType string `json:"content_type"`
 	} `json:"attachments"`
-	MaxCount int   `json:"max_count"`
-	MaxBytes int64 `json:"max_bytes"`
-	Editable bool  `json:"editable"`
+	MaxCount            int    `json:"max_count"`
+	MaxBytes            int64  `json:"max_bytes"`
+	Editable            bool   `json:"editable"`
+	AnnouncementVersion string `json:"announcement_version"`
 }
 
 func TestAnnouncementAttachmentLifecycle(t *testing.T) {
@@ -329,6 +330,7 @@ func TestAnnouncementAttachmentChangesCarryTheDraftVersion(t *testing.T) {
 	_, list := c.listAttachments()
 	require.Len(t, list.Attachments, 1, "the refused changes wrote nothing")
 	assert.Equal(t, afterUpload, draftVersion(t, c.db, c.announcementID), "the refused changes stamped nothing")
+	assert.Equal(t, afterUpload, list.AnnouncementVersion, "the list names the draft version it belongs to")
 
 	removed := c.deleteAttachmentAt(uploaded.Data.AnnouncementVersion, uploaded.Data.ID)
 	require.Equal(t, http.StatusOK, removed.Code, removed.Body.String())
@@ -341,4 +343,7 @@ func TestAnnouncementAttachmentChangesCarryTheDraftVersion(t *testing.T) {
 	afterDelete := draftVersion(t, c.db, c.announcementID)
 	assert.NotEqual(t, afterUpload, afterDelete, "the removal stamps the draft too")
 	assert.Equal(t, afterDelete, removal.Data.AnnouncementVersion)
+	_, list = c.listAttachments()
+	assert.Empty(t, list.Attachments)
+	assert.Equal(t, afterDelete, list.AnnouncementVersion, "the list follows the removal's version")
 }

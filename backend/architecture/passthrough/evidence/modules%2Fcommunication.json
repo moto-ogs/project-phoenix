@@ -569,7 +569,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p *parentAnnouncements) AnnouncementExists(ctx context.Context, id int64) (bool, error) {\n\texists, err := p.service.AnnouncementExists(ctx, id)\n\treturn exists, mapParentAnnouncementError(err)\n}",
+      "evidence": "func (p *parentAnnouncements) AnnouncementExists(ctx context.Context, id int64) (string, bool, error) {\n\tversion, exists, err := p.service.AnnouncementExists(ctx, id)\n\treturn version, exists, mapParentAnnouncementError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/communication/internal/application/parentAnnouncements.AnnouncementExists",
       "owner": "modules/communication"
@@ -800,7 +800,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *service) AnnouncementExists(ctx context.Context, announcementID int64) (bool, error) {\n\ta, err := s.repo.FindByID(ctx, announcementID)\n\tif err != nil {\n\t\treturn false, fmt.Errorf(\"announcement: load for attachment check: %w\", err)\n\t}\n\treturn a != nil, nil\n}",
+      "evidence": "func (s *service) AnnouncementExists(ctx context.Context, announcementID int64) (string, bool, error) {\n\ta, err := s.repo.FindByID(ctx, announcementID)\n\tif err != nil {\n\t\treturn \"\", false, fmt.Errorf(\"announcement: load for attachment check: %w\", err)\n\t}\n\tif a == nil {\n\t\treturn \"\", false, nil\n\t}\n\treturn readstate.Of(a.UpdatedAt), true, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/communication/internal/application/service.AnnouncementExists",
       "owner": "modules/communication"

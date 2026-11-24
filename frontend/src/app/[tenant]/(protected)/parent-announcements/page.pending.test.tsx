@@ -165,6 +165,7 @@ describe("Elternmitteilungen: Speichern sperrt das Panel (#6593)", () => {
       max_count: 5,
       max_bytes: 1,
       editable: true,
+      announcement_version: draft.version,
     });
   });
 
@@ -231,6 +232,7 @@ describe("Elternmitteilungen: Speichern sperrt das Panel (#6593)", () => {
       max_count: 5,
       max_bytes: 1,
       editable: true,
+      announcement_version: draft.version,
     });
     const answer = deferred<string>();
     vi.mocked(deleteAnnouncementAttachment).mockReturnValue(answer.promise);

@@ -52,6 +52,14 @@ type AnnouncementAttachmentListResponse struct {
 	Editable    bool                             `json:"editable"`
 }
 
+// StaffAttachmentListResponse is the staff side's list: the parents' list
+// with the version of the draft it belongs to (ADR 0311). The editor
+// publishes only once the list it shows belongs to the draft it sends.
+type StaffAttachmentListResponse struct {
+	AnnouncementAttachmentListResponse
+	AnnouncementVersion string `json:"announcement_version"`
+}
+
 // UploadedAttachmentResponse is a new attachment with the version the upload
 // stamped on its draft: the next save or publication of the draft sends it
 // (ADR 0311).
@@ -173,7 +181,8 @@ func (rs *Resource) listAnnouncementAttachments(w http.ResponseWriter, r *http.R
 		renderAttachmentError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, newAttachmentListResponse(list.Attachments, list.Editable), "Attachments retrieved successfully")
+	resp := StaffAttachmentListResponse{AnnouncementAttachmentListResponse: *newAttachmentListResponse(list.Attachments, list.Editable), AnnouncementVersion: list.Version}
+	common.Respond(w, r, http.StatusOK, &resp, "Attachments retrieved successfully")
 }
 
 func (rs *Resource) uploadAnnouncementAttachment(w http.ResponseWriter, r *http.Request) {

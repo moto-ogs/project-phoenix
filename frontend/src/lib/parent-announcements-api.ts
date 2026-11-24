@@ -877,11 +877,12 @@ const ATTACHMENTS_BASE = "/api/announcement-attachments";
 
 /**
  * Die Anhänge einer Mitteilung mit `max_count` (Höchstzahl je Mitteilung),
- * `max_bytes` (Größengrenze je Datei) und `editable` (false, sobald die
- * Mitteilung veröffentlicht ist).
+ * `max_bytes` (Größengrenze je Datei), `editable` (false, sobald die
+ * Mitteilung veröffentlicht ist) und `announcement_version`: der Stand des
+ * Entwurfs, zu dem die Liste gehört (ADR 0311).
  */
 export type AnnouncementAttachmentList = Omit<
-  sharedContract.AnnouncementAttachmentListResponse,
+  attachmentContract.StaffAttachmentListResponse,
   "attachments"
 > & {
   attachments: sharedContract.AnnouncementAttachmentResponse[];
@@ -925,7 +926,6 @@ export function uploadAnnouncementAttachment(
     },
   );
 }
-
 
 /** Entfernt einen Anhang vom Entwurf der Version `expectedVersion` und
  * antwortet die neue Version des Entwurfs (ADR 0311). */

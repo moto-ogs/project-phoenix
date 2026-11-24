@@ -197,9 +197,15 @@ type Attachment struct {
 // AttachmentList is the attachment list of one announcement. Editable is
 // false once the announcement is published; it stays true when only the
 // limit is reached, because removing must remain possible.
+//
+// Version is the announcement's version the list belongs to (ADR 0311). It
+// is read before the attachments: a change committed in between makes the
+// list newer than the version, never older, so a publication that sends
+// the version is refused rather than confirming files nobody saw.
 type AttachmentList struct {
 	Attachments []Attachment
 	Editable    bool
+	Version     string
 }
 
 // FolderQuery reads folders and their audience options.

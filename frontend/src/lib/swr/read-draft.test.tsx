@@ -501,6 +501,32 @@ describe("useReadDraft", () => {
     expect(result.current.canSubmit).toBe(false);
   });
 
+  it("shows the stored state after an own write was refused (refuse)", async () => {
+    // The read again also moves the list the draft rests on.
+    let row: Stored = { version: "1", name: "Anna" };
+    const reload = vi.fn(async () => {
+      row = { version: "3", name: "Anne" };
+      return row;
+    });
+    const { result } = renderHook(() =>
+      useDraftOn<Stored, string, string, unknown>(
+        { opening: "row-4", data: row, reload },
+        { token: (read) => read.version, toDraft: (read) => read.name },
+      ),
+    );
+    act(() => result.current.setDraft("Hanna"));
+    // An attachment removal on version 1 was refused: the input goes, the
+    // stored state comes, as after a refused save.
+    await act(async () => {
+      await result.current.refuse()();
+    });
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(result.current.draft).toBe("Anne");
+    expect(result.current.token).toBe("3");
+    expect(result.current.touched).toBe(false);
+    expect(result.current.canSubmit).toBe(true);
+  });
+
   it("leaves a failed reload of the list only through a newer row (useDraftOn)", async () => {
     const offline = new Error("offline");
     const reload = vi.fn(async () => {

@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -70,6 +71,9 @@ type Config struct {
 	// WithinAdmin runs the cross-school reads and the resolution. Nil uses
 	// the tenant runtime's administrative transaction.
 	WithinAdmin func(ctx context.Context, fn func(context.Context) error) error
+	// Logger records the cause of a failure the response leaves out. Nil
+	// uses slog.Default().
+	Logger *slog.Logger
 }
 
 // Resource holds the review handlers.
@@ -78,6 +82,7 @@ type Resource struct {
 	directory   Directory
 	surface     Surface
 	withinAdmin func(ctx context.Context, fn func(context.Context) error) error
+	logger      *slog.Logger
 }
 
 // NewResource binds the review handlers.
@@ -86,7 +91,11 @@ func NewResource(cfg Config) *Resource {
 	if withinAdmin == nil {
 		withinAdmin = tenant.WithinAdmin
 	}
-	return &Resource{scans: cfg.Scans, directory: cfg.Directory, surface: cfg.Surface, withinAdmin: withinAdmin}
+	logger := cfg.Logger
+	if logger == nil {
+		logger = slog.Default()
+	}
+	return &Resource{scans: cfg.Scans, directory: cfg.Directory, surface: cfg.Surface, withinAdmin: withinAdmin, logger: logger}
 }
 
 // Router serves GET / and POST /{id}/resolve. routeMiddleware runs after
@@ -167,7 +176,7 @@ func (rs *Resource) ResolveUnregisteredTagScan(w http.ResponseWriter, r *http.Re
 	}
 	scan, err := rs.resolve(r.Context(), scanID, rs.surface.OperatorID(r.Context()), note)
 	if err != nil {
-		rs.surface.RenderError(w, r, rs.resolveError(err))
+		rs.surface.RenderError(w, r, rs.resolveError(r.Context(), err))
 		return
 	}
 	rs.surface.Respond(w, r, http.StatusOK, scan, "Unregistered RFID scan resolved successfully")
@@ -369,14 +378,19 @@ const resolveFailedMessage = "Failed to resolve unregistered RFID scan"
 // resolveError renders a failed resolution (#2736). Unknown or already
 // handled scans, a missing operator, and invalid IDs stay 400 with their
 // text; everything else is internal.
-func (rs *Resource) resolveError(err error) render.Renderer {
+func (rs *Resource) resolveError(ctx context.Context, err error) render.Renderer {
 	// A retained repository error (StoreFailure) is internal even when it
 	// wraps a refusal text, as the operator surface decided before.
 	if _, failed := errors.AsType[interface {
 		error
 		StoreFailure() bool
 	}](err); failed {
-		// No cause: a refusal text it wraps must not lift it to a 409.
+		// No cause for the renderer: a refusal text it wraps must not lift
+		// it to a 409. The log keeps it, as the renderer logs every other
+		// internal cause; the error names the statement, not the scan's tag.
+		rs.logger.ErrorContext(ctx, "unregistered tag scan resolution failed",
+			"error", err,
+		)
 		return rs.surface.Internal(nil, resolveFailedMessage)
 	}
 	if resolveIsClientError(err) {

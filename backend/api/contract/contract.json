@@ -2009,7 +2009,7 @@
       ],
       "response": {
         "kind": "ref",
-        "ref": "AnnouncementAttachmentListResponse"
+        "ref": "StaffAttachmentListResponse"
       }
     },
     {
@@ -95316,6 +95316,47 @@
         {
           "name": "absence_type_id",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffAttachmentListResponse",
+      "go_type": "files.StaffAttachmentListResponse",
+      "fields": [
+        {
+          "name": "attachments",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AnnouncementAttachmentResponse"
+            }
+          }
+        },
+        {
+          "name": "max_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "editable",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "announcement_version",
           "schema": {
             "kind": "string"
           }

@@ -47,7 +47,7 @@ func AnnouncementAttachmentRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/{announcementId}/{attachmentId}/download", Portals: portals, Query: inlineQuery, File: true},
 		{Method: "DELETE", Pattern: "/{announcementId}/{attachmentId}", Portals: portals, Request: AttachmentRemovalRequest{}, Response: AttachmentRemovedResponse{}},
-		{Method: "GET", Pattern: "/{announcementId}", Portals: portals, Response: AnnouncementAttachmentListResponse{}},
+		{Method: "GET", Pattern: "/{announcementId}", Portals: portals, Response: StaffAttachmentListResponse{}},
 		{Method: "POST", Pattern: "/{announcementId}", Portals: portals, Multipart: true,
 			Query:        []common.QueryParam{{Name: "expected_version", Kind: common.QueryString}},
 			MaxBodyBytes: maxBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: UploadedAttachmentResponse{}},

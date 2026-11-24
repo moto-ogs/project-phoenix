@@ -80,7 +80,7 @@ func (s *Service) requireEditableAnnouncement(ctx context.Context, announcementI
 		}
 		exists = editable
 		if !editable {
-			if exists, err = s.deps.Announcements.AnnouncementExists(ctx, announcementID); err != nil {
+			if _, exists, err = s.deps.Announcements.AnnouncementExists(ctx, announcementID); err != nil {
 				return err
 			}
 		}
@@ -95,19 +95,19 @@ func (s *Service) requireEditableAnnouncement(ctx context.Context, announcementI
 }
 
 // requireAnnouncement refuses a read for an announcement the current tenant
-// does not have.
-func (s *Service) requireAnnouncement(ctx context.Context, announcementID int64) error {
+// does not have and answers the announcement's version.
+func (s *Service) requireAnnouncement(ctx context.Context, announcementID int64) (string, error) {
 	if s.deps.Announcements == nil {
-		return errors.New("announcement guard is not wired; refusing attachment read")
+		return "", errors.New("announcement guard is not wired; refusing attachment read")
 	}
-	exists, err := s.deps.Announcements.AnnouncementExists(ctx, announcementID)
+	version, exists, err := s.deps.Announcements.AnnouncementExists(ctx, announcementID)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if !exists {
-		return filestorage.ErrAttachmentNotFound
+		return "", filestorage.ErrAttachmentNotFound
 	}
-	return nil
+	return version, nil
 }
 
 // UploadAttachment stores one attachment: intent, object, metadata, settle.
@@ -208,14 +208,18 @@ func (s *Service) createAttachment(ctx context.Context, o *op, announcementID in
 func (s *Service) ListAttachments(ctx context.Context, announcementID int64) (filestorage.AttachmentList, error) {
 	var attachments []domain.Document
 	var editable bool
+	var version string
 	err := s.runRead(ctx, "list_attachments", func(ctx context.Context, o *op) error {
 		if announcementID <= 0 {
 			return fmt.Errorf("%w: announcement id is required", filestorage.ErrInvalid)
 		}
 		if err := s.write(ctx, o, func(txCtx context.Context, o *op) error {
-			if err := s.requireAnnouncement(txCtx, announcementID); err != nil {
+			// The version first, then the files (filestorage.AttachmentList).
+			read, err := s.requireAnnouncement(txCtx, announcementID)
+			if err != nil {
 				return err
 			}
+			version = read
 			found, stats, err := s.deps.Attachments.ListByOwner(txCtx, announcementID)
 			o.add(stats)
 			if err != nil {
@@ -242,7 +246,7 @@ func (s *Service) ListAttachments(ctx context.Context, announcementID int64) (fi
 	if err != nil {
 		return filestorage.AttachmentList{}, err
 	}
-	return filestorage.AttachmentList{Attachments: toAttachments(attachments), Editable: editable}, nil
+	return filestorage.AttachmentList{Attachments: toAttachments(attachments), Editable: editable, Version: version}, nil
 }
 
 // OpenAttachment resolves one attachment for a staff caller and opens its bytes.
@@ -251,7 +255,7 @@ func (s *Service) OpenAttachment(ctx context.Context, announcementID, attachment
 	var object ports.Object
 	err := s.run("open_attachment", func(o *op) error {
 		if err := s.write(ctx, o, func(txCtx context.Context, o *op) error {
-			if err := s.requireAnnouncement(txCtx, announcementID); err != nil {
+			if _, err := s.requireAnnouncement(txCtx, announcementID); err != nil {
 				return err
 			}
 			found, ok, stats, err := s.deps.Attachments.FindForOwner(txCtx, announcementID, attachmentID, false)

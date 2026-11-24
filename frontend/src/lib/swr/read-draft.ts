@@ -156,6 +156,13 @@ export interface ReadDraft<T, D, K, A> {
    * Ignored unless the draft is ready.
    */
   readonly adopt: (read: T) => void;
+  /**
+   * The surface's own write of that kind (`adopt`) was refused because the
+   * stored state changed: the draft takes the path of a refused save (rules
+   * 3 and 4), and the stored state read again replaces the input. Answers
+   * the reload for `show(error, { reload })`; it rejects on failure.
+   */
+  readonly refuse: () => () => Promise<unknown>;
 }
 
 type Phase = "ready" | "saving" | "refused" | "reloading" | "loadFailed";
@@ -366,6 +373,35 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
     [settle, update],
   );
 
+  /**
+   * Rule 3: the refused draft on its base waits for the stored state read
+   * again. Answers the reload: first the read started here, then a new one
+   * per call.
+   */
+  const refused = useCallback(
+    (forKey: string, draft: D, base: T) => {
+      update(forKey, (prev) => ({
+        ...prev,
+        phase: "refused",
+        refused: { draft, base },
+      }));
+      const first = readAgain(forKey);
+      // Not silent: a failure is the draft's `error` (status `loadFailed`),
+      // which the surface shows; the caller may also never ask for this
+      // promise.
+      first.catch(() => undefined);
+      let asked = false;
+      return () => {
+        if (!asked) {
+          asked = true;
+          return first;
+        }
+        return readAgain(forKey);
+      };
+    },
+    [readAgain, update],
+  );
+
   const submit = useCallback(
     async (
       send: (token: K, draft: D) => Promise<A>,
@@ -388,24 +424,7 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
         saved = await send(given.token(base), draft);
       } catch (error) {
         if ((given.isRefusal ?? isReadStateRefusal)(error)) {
-          update(forKey, (prev) => ({
-            ...prev,
-            phase: "refused",
-            refused: { draft, base },
-          }));
-          const first = readAgain(forKey);
-          // Not silent: a failure is the draft's `error` (status
-          // `loadFailed`), which the surface shows; the caller may also
-          // never ask for this promise.
-          first.catch(() => undefined);
-          let asked = false;
-          const reload = () => {
-            if (!asked) {
-              asked = true;
-              return first;
-            }
-            return readAgain(forKey);
-          };
+          const reload = refused(forKey, draft, base);
           return { ok: false, error, refused: true, reload };
         }
         update(forKey, (prev) => ({ ...prev, phase: "ready" }));
@@ -428,7 +447,7 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
       }
       return { ok: true, saved };
     },
-    [readAgain, settle, update],
+    [readAgain, refused, settle, update],
   );
 
   const setDraft = useCallback(
@@ -500,6 +519,13 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
     [update],
   );
 
+  const refuse = useCallback(() => {
+    const { state: now, source: read } = latest.current;
+    if (now !== null) return refused(now.key, now.draft, now.base);
+    // No draft yet: nothing to hold back, the stored state is read again.
+    return () => read.reload();
+  }, [refused]);
+
   const openFailed = source.error !== undefined;
   const phase: ReadDraftStatus = openFailed
     ? "loadFailed"
@@ -522,6 +548,7 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
     submit,
     discard,
     adopt,
+    refuse,
   };
 }
 

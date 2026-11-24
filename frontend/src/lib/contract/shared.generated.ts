@@ -61,21 +61,6 @@ export const AnnouncementAttachmentResponseSchema: z.ZodType<AnnouncementAttachm
   uploaded_at: instant,
 });
 
-/** Go: files.AnnouncementAttachmentListResponse */
-export interface AnnouncementAttachmentListResponse {
-  attachments: AnnouncementAttachmentResponse[] | null;
-  max_count: number;
-  max_bytes: number;
-  editable: boolean;
-}
-
-export const AnnouncementAttachmentListResponseSchema: z.ZodType<AnnouncementAttachmentListResponse, unknown> = object<AnnouncementAttachmentListResponse>({
-  attachments: nullable(arr(AnnouncementAttachmentResponseSchema)),
-  max_count: safeInt,
-  max_bytes: safeInt,
-  editable: bool,
-});
-
 /** Go: peopledirectory.BlockerSupervision */
 export interface BlockerSupervision {
   id: string;

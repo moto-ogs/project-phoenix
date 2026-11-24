@@ -802,7 +802,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.AnnouncementExists",
-      "binding_digest": "fccf292221ac94e4f0e5526c844e96e9",
+      "binding_digest": "7ad20d530e9b27b642a618c23d5336e4",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage/internal/ports.Announcements.AnnouncementExists",
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.AnnouncementExists",

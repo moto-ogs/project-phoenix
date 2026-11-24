@@ -163,7 +163,9 @@ type Events interface {
 // itself: does the announcement exist in the current tenant, and may its
 // content still be changed. Implemented by the Communication owner.
 type Announcements interface {
-	AnnouncementExists(ctx context.Context, announcementID int64) (bool, error)
+	// AnnouncementExists answers whether the announcement exists and, if so,
+	// its version (ADR 0311), which every attachment change stamps.
+	AnnouncementExists(ctx context.Context, announcementID int64) (string, bool, error)
 	AnnouncementEditable(ctx context.Context, announcementID int64) (bool, error)
 	// LockAnnouncementForAttachmentChange answers (exists, editable) while
 	// holding the announcement's row lock until the caller's transaction ends.

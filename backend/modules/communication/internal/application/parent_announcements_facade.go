@@ -246,9 +246,9 @@ func (p *parentAnnouncements) CareCancellationReachFor(ctx context.Context, stud
 	return &communication.CareCancellationReach{FamilyCount: reach.FamilyCount}, mapParentAnnouncementError(err)
 }
 
-func (p *parentAnnouncements) AnnouncementExists(ctx context.Context, id int64) (bool, error) {
-	exists, err := p.service.AnnouncementExists(ctx, id)
-	return exists, mapParentAnnouncementError(err)
+func (p *parentAnnouncements) AnnouncementExists(ctx context.Context, id int64) (string, bool, error) {
+	version, exists, err := p.service.AnnouncementExists(ctx, id)
+	return version, exists, mapParentAnnouncementError(err)
 }
 
 func (p *parentAnnouncements) AnnouncementEditable(ctx context.Context, id int64) (bool, error) {

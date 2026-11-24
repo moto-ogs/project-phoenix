@@ -64,21 +64,26 @@ func (s *service) hasAttachments(ctx context.Context, announcementID int64) bool
 // AttachmentSupport is what the file storage and the composition root need
 // from this service to serve announcement attachments (#2890).
 type AttachmentSupport interface {
-	AnnouncementExists(ctx context.Context, announcementID int64) (bool, error)
+	AnnouncementExists(ctx context.Context, announcementID int64) (string, bool, error)
 	AnnouncementEditable(ctx context.Context, announcementID int64) (bool, error)
 	LockAnnouncementForAttachmentChange(ctx context.Context, announcementID int64, expectedVersion string) (bool, bool, error)
 	ResetAnnouncementEngagement(ctx context.Context, announcementID int64) (string, error)
 }
 
 // AnnouncementExists reports whether the announcement exists in the current
-// tenant. It is the file side's 404 test: an attachment route must not
-// distinguish "no such announcement" from "no such attachment".
-func (s *service) AnnouncementExists(ctx context.Context, announcementID int64) (bool, error) {
+// tenant, with its version (ADR 0311). It is the file side's 404 test: an
+// attachment route must not distinguish "no such announcement" from "no
+// such attachment". The version is the one the draft's read and its
+// attachment changes name: every attachment change stamps it.
+func (s *service) AnnouncementExists(ctx context.Context, announcementID int64) (string, bool, error) {
 	a, err := s.repo.FindByID(ctx, announcementID)
 	if err != nil {
-		return false, fmt.Errorf("announcement: load for attachment check: %w", err)
+		return "", false, fmt.Errorf("announcement: load for attachment check: %w", err)
 	}
-	return a != nil, nil
+	if a == nil {
+		return "", false, nil
+	}
+	return readstate.Of(a.UpdatedAt), true, nil
 }
 
 // AnnouncementEditable reports whether the announcement is still a draft.

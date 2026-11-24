@@ -11,12 +11,15 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { SWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  deleteAnnouncementAttachment,
+  fetchAnnouncementAttachments,
   fetchAnnouncements,
   createAnnouncement,
   publishAnnouncement,
   updateAnnouncement,
   uploadAnnouncementAttachment,
   type Announcement,
+  type AnnouncementAttachmentList,
 } from "~/lib/parent-announcements-api";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { ApiError, unavailableApiError } from "~/lib/api-error";
@@ -132,6 +135,7 @@ vi.mock("~/lib/parent-announcements-api", async (importOriginal) => {
     updateAnnouncement: vi.fn(() => Promise.resolve({ id: "1" })),
     publishAnnouncement: vi.fn(() => Promise.resolve({ id: "1" })),
     uploadAnnouncementAttachment: vi.fn(),
+    deleteAnnouncementAttachment: vi.fn(),
     fetchAnnouncementAttachments: vi.fn(() =>
       Promise.resolve({
         attachments: [],
@@ -992,6 +996,9 @@ describe("ParentAnnouncementsPage: der gelesene Stand (ADR 0311)", () => {
     searchParams.delete("search");
     searchParams.delete("status");
     searchParams.set("bearbeiten", "1");
+    // Back to the empty list of files: a test's queued answer stays out of
+    // the next one.
+    vi.mocked(fetchAnnouncementAttachments).mockReset();
     listState.data = [base];
     listState.isLoading = false;
     listState.error = null;
@@ -1108,5 +1115,142 @@ describe("ParentAnnouncementsPage: der gelesene Stand (ADR 0311)", () => {
     expect(vi.mocked(publishAnnouncement).mock.calls[0]![1]).toBe(
       "2026-09-03T08:00:01Z",
     );
+  });
+
+  // The attachments are part of what the publication confirms: the panel
+  // shows the list of the version the draft rests on, never an older one.
+  const attachmentsOf = (
+    version: string,
+    ...filenames: string[]
+  ): AnnouncementAttachmentList => ({
+    attachments: filenames.map((filename, index) => ({
+      id: `att-${filename}`,
+      filename,
+      size_bytes: 10 + index,
+      content_type: "application/pdf",
+      uploaded_at: "2026-09-01T08:00:00Z",
+    })),
+    max_count: 5,
+    max_bytes: 1,
+    editable: true,
+    announcement_version: version,
+  });
+
+  it("publishes only once the panel shows the files of the version read after a refusal", async () => {
+    vi.mocked(fetchAnnouncementAttachments).mockResolvedValueOnce(
+      attachmentsOf(base.version, "Alt.pdf"),
+    );
+    render(<ParentAnnouncementsPage />);
+    expect(await screen.findByText("Alt.pdf")).toBeInTheDocument();
+    fireEvent.change(await titleField(), { target: { value: "Mein Titel" } });
+    fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
+
+    // A colleague removed Alt.pdf and attached Neu.pdf meanwhile.
+    vi.mocked(updateAnnouncement).mockRejectedValueOnce(changedSinceRead());
+    vi.mocked(fetchAnnouncements).mockResolvedValue([byColleague]);
+    listState.data = [byColleague];
+    let answerList: (list: AnnouncementAttachmentList) => void = () => {};
+    vi.mocked(fetchAnnouncementAttachments).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answerList = resolve;
+        }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Veröffentlichen" }));
+    await waitFor(() => expect(updateAnnouncement).toHaveBeenCalledTimes(1));
+
+    // The form shows the colleague's draft; its files are still on the way.
+    const publish = screen.getByRole("button", { name: "Veröffentlichen" });
+    await waitFor(() =>
+      expect(publish).toHaveAttribute("aria-disabled", "true"),
+    );
+    fireEvent.click(publish);
+    expect(updateAnnouncement).toHaveBeenCalledTimes(1);
+    expect(publishAnnouncement).not.toHaveBeenCalled();
+
+    answerList(attachmentsOf(byColleague.version, "Neu.pdf"));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Veröffentlichen" }),
+      ).not.toHaveAttribute("aria-disabled"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Zurück" }));
+    expect(await screen.findByText("Neu.pdf")).toBeInTheDocument();
+    expect(screen.queryByText("Alt.pdf")).not.toBeInTheDocument();
+
+    const saved: Announcement = {
+      ...byColleague,
+      version: "2026-09-03T08:00:00Z",
+    };
+    vi.mocked(updateAnnouncement).mockResolvedValueOnce(saved);
+    fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Veröffentlichen" }),
+    );
+    await waitFor(() => expect(publishAnnouncement).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(updateAnnouncement).mock.calls[1]![2]).toBe(
+      byColleague.version,
+    );
+    expect(vi.mocked(publishAnnouncement).mock.calls[0]![1]).toBe(
+      saved.version,
+    );
+  });
+
+  it("shows the stored draft at once after a refused attachment removal", async () => {
+    vi.mocked(fetchAnnouncementAttachments).mockResolvedValue(
+      attachmentsOf(base.version, "Alt.pdf"),
+    );
+    render(<ParentAnnouncementsPage />);
+    expect(await screen.findByText("Alt.pdf")).toBeInTheDocument();
+    fireEvent.change(await titleField(), { target: { value: "Mein Titel" } });
+
+    vi.mocked(deleteAnnouncementAttachment).mockRejectedValueOnce(
+      changedSinceRead(),
+    );
+    vi.mocked(fetchAnnouncements).mockResolvedValue([byColleague]);
+    listState.data = [byColleague];
+    vi.mocked(fetchAnnouncementAttachments).mockResolvedValue(
+      attachmentsOf(byColleague.version, "Alt.pdf"),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Anhang entfernen: Alt.pdf" }),
+    );
+
+    await waitFor(async () =>
+      expect(await titleField()).toHaveValue("Sommerfest am Samstag"),
+    );
+    expect(deleteAnnouncementAttachment).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(deleteAnnouncementAttachment).mock.calls[0]![2]).toBe(
+      base.version,
+    );
+  });
+
+  it("says that the picked files are not uploaded after a refused save", async () => {
+    const { container } = render(<ParentAnnouncementsPage />);
+    fireEvent.change(await titleField(), { target: { value: "Mein Titel" } });
+    const input =
+      container.ownerDocument.querySelector<HTMLInputElement>(
+        'input[type="file"]',
+      );
+    fireEvent.change(input!, {
+      target: {
+        files: [new File(["%PDF"], "Plan.pdf", { type: "application/pdf" })],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
+    vi.mocked(updateAnnouncement).mockRejectedValueOnce(changedSinceRead());
+    vi.mocked(fetchAnnouncements).mockResolvedValue([byColleague]);
+    listState.data = [byColleague];
+    await saveDraft();
+    await waitFor(() => expect(updateAnnouncement).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Zurück" }));
+    expect(await screen.findByText("Plan.pdf")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "„Plan.pdf“ ist noch nicht hochgeladen. Prüfe zuerst den gespeicherten Stand. Beim nächsten Speichern lädt moto die Datei hoch.",
+      ),
+    ).toBeInTheDocument();
+    expect(uploadAnnouncementAttachment).not.toHaveBeenCalled();
   });
 });
