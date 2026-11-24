@@ -58,6 +58,9 @@ func renderClassListEntryFailure(w http.ResponseWriter, r *http.Request, kind cl
 		apiCommon.RenderError(w, r, apiCommon.ErrorInvalidRequest(err))
 	case classListHTTP.FailureNotFound:
 		apiCommon.RenderError(w, r, apiCommon.ErrorNotFound(err))
+	case classListHTTP.FailureChanged:
+		// 409 general.changed_since_read (ADR 0311).
+		apiCommon.RenderError(w, r, apiCommon.ErrorBusinessRejection(err))
 	default:
 		apiCommon.RenderError(w, r, apiCommon.ErrorInternalServer(err))
 	}

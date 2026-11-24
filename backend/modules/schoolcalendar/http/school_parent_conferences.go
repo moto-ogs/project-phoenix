@@ -34,6 +34,13 @@ type ParentConferenceRequest struct {
 	Location    *string                 `json:"location,omitempty"`
 }
 
+// ParentConferenceUpdateRequest is the body of a change of a day: the day as
+// edited and the version of the day the Lehrkraft read (ADR 0311).
+type ParentConferenceUpdateRequest struct {
+	ParentConferenceRequest
+	ExpectedVersion string `json:"expected_version"`
+}
+
 // ParentConferenceBreak is a pause without slots.
 type ParentConferenceBreak struct {
 	StartTime string `json:"start_time"`
@@ -41,11 +48,12 @@ type ParentConferenceBreak struct {
 }
 
 func decodeParentConference(w http.ResponseWriter, r *http.Request) (calendarService.ParentConferenceRequest, bool) {
-	var req ParentConferenceRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var body ParentConferenceUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return calendarService.ParentConferenceRequest{}, false
 	}
+	req := body.ParentConferenceRequest
 	var breaks []calendarService.ParentConferenceWindow
 	if req.Breaks != nil {
 		breaks = make([]calendarService.ParentConferenceWindow, 0, len(req.Breaks))
@@ -56,6 +64,7 @@ func decodeParentConference(w http.ResponseWriter, r *http.Request) (calendarSer
 	return calendarService.ParentConferenceRequest{
 		SchoolClass: req.SchoolClass, Date: req.Date, StartTime: req.StartTime, EndTime: req.EndTime,
 		SlotMinutes: req.SlotMinutes, Breaks: breaks, Location: req.Location,
+		ExpectedVersion: body.ExpectedVersion,
 	}, true
 }
 

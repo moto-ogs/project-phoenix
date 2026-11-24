@@ -66,6 +66,7 @@ describe("devicesConfig", () => {
       is_online: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      version: "v1",
     };
 
     expect(devicesConfig.detail.header?.title(mockDevice)).toBe(
@@ -82,6 +83,7 @@ describe("devicesConfig", () => {
       is_online: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      version: "v1",
     };
 
     expect(devicesConfig.detail.header?.title(mockDevice)).toBe("RFID-001");
@@ -111,6 +113,7 @@ describe("devicesConfig", () => {
       is_online: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      version: "v1",
     };
 
     const title = devicesConfig.list.item.title(mockDevice);

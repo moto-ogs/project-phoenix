@@ -34,7 +34,8 @@ func checkClassListEntryAdministration(t *testing.T, graph *goldenRuntime) {
 	require.Equal(t, http.StatusCreated, created.Code, created.Body.String())
 	var entry struct {
 		Data struct {
-			ID ident.ID `json:"id"`
+			ID      ident.ID `json:"id"`
+			Version string   `json:"version"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(created.Body.Bytes(), &entry))
@@ -42,7 +43,7 @@ func checkClassListEntryAdministration(t *testing.T, graph *goldenRuntime) {
 
 	updated := checkpointRequest(graph, checkpointScenario{
 		Method: http.MethodPut, Path: fmt.Sprintf("/api/class-list-entries/%d", entry.Data.ID), Authenticated: true,
-		Body: fmt.Sprintf(`{"first_name":"Rosa","last_name":"Wurzel","school_class":"%s-b"}`, className),
+		Body: fmt.Sprintf(`{"first_name":"Rosa","last_name":"Wurzel","school_class":"%s-b","expected_version":%q}`, className, entry.Data.Version),
 	}, token)
 	require.Equal(t, http.StatusOK, updated.Code, updated.Body.String())
 

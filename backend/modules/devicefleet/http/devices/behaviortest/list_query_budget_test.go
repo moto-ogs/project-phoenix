@@ -36,6 +36,7 @@ type deviceListBudgetWire struct {
 	IsOnline       bool      `json:"is_online"`
 	CreatedAt      string    `json:"created_at"`
 	UpdatedAt      string    `json:"updated_at"`
+	Version        string    `json:"version"`
 }
 
 func TestDeviceListQueryBudgets(t *testing.T) {
@@ -192,7 +193,7 @@ func TestDeviceListQueryBudgets(t *testing.T) {
 }
 
 func expectedDeviceListWire(row devicefleet.Device, roomName *string, online bool) deviceListBudgetWire {
-	wire := deviceListBudgetWire{ID: ident.ID(row.ID), DeviceID: row.DeviceID, DeviceType: row.DeviceType, Name: row.Name, Status: string(row.Status), RegisteredByID: (*ident.ID)(row.RegisteredByID), RoomName: roomName, IsOnline: online, CreatedAt: row.CreatedAt.Format(time.RFC3339), UpdatedAt: row.UpdatedAt.Format(time.RFC3339)}
+	wire := deviceListBudgetWire{ID: ident.ID(row.ID), DeviceID: row.DeviceID, DeviceType: row.DeviceType, Name: row.Name, Status: string(row.Status), RegisteredByID: (*ident.ID)(row.RegisteredByID), RoomName: roomName, IsOnline: online, CreatedAt: row.CreatedAt.Format(time.RFC3339), UpdatedAt: row.UpdatedAt.Format(time.RFC3339), Version: devicefleet.DeviceVersion(&row)}
 	if row.LastSeen != nil {
 		value := row.LastSeen.Format(time.RFC3339)
 		wire.LastSeen = &value

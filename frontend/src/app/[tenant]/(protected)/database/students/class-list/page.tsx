@@ -38,7 +38,10 @@ import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { formatCount } from "~/lib/format-utils";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useReadDraftForm,
+  useSwrLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import {
   assignClassListEntry,
   createClassListEntry,
@@ -50,7 +53,8 @@ import {
 import { hasPermission } from "~/lib/auth-utils";
 import { createLogger } from "~/lib/logger";
 import { schoolClassName } from "~/lib/school-class-label";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useChildrenWithoutCarePlace } from "~/lib/tenant-context";
@@ -171,12 +175,12 @@ export default function ClassListEntriesPage() {
   const childrenWithoutCarePlace = useChildrenWithoutCarePlace();
   const canUpdate = hasPermission(session, "users:update");
   const canDelete = hasPermission(session, "users:delete");
-  const {
-    data: entries,
-    error: entriesError,
-    isLoading,
-    mutate,
-  } = useSWRAuth(SWR_KEY, fetchClassListEntries);
+  const entriesRead = useSWRAuth(SWR_KEY, fetchClassListEntries);
+  const { data: entries, error: entriesError, isLoading, mutate } = entriesRead;
+  const entriesReadRef = useRef(entriesRead);
+  useLayoutEffect(() => {
+    entriesReadRef.current = entriesRead;
+  });
   // Ladefehler mit Katalogtext und Wiederholen (#2517).
   const loadError = useSwrLoadError(entriesError, "die Klassenliste", () =>
     mutate(),
@@ -211,10 +215,58 @@ export default function ClassListEntriesPage() {
     | { kind: "assign"; entry: ClassListEntry }
     | null
   >(null);
-  const [form, setForm] = useState<EntryFormState>(EMPTY_FORM);
+  const [createForm, setCreateForm] = useState<EntryFormState>(EMPTY_FORM);
   // Fehler bleiben im offenen Dialog, Feldfehler am Feld (#2517).
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
+  // Das Bearbeiten ruht auf dem Eintrag, wie er beim Öffnen gelesen war
+  // (ADR 0311): ein neueres Lesen füllt den Entwurf nur nach, solange nichts
+  // geändert ist; nach einer Ablehnung zeigt der Dialog den gespeicherten
+  // Eintrag, und Speichern wartet, bis er gelesen ist.
+  const editingId = modal?.kind === "edit" ? modal.entry.id : null;
+  const edit = useDraftOn<
+    ClassListEntry,
+    EntryFormState,
+    string,
+    ClassListEntry
+  >(
+    {
+      opening: editingId,
+      data: entries?.find((entry) => entry.id === editingId),
+      error: entriesError,
+      reload: async () => {
+        const stored = await revalidateOrThrow(entriesReadRef.current);
+        const entry = stored.find((candidate) => candidate.id === editingId);
+        if (!entry) throw new Error("class list entry is gone");
+        return entry;
+      },
+      write: (stored) =>
+        mutate(
+          (current) =>
+            current?.map((entry) => (entry.id === stored.id ? stored : entry)),
+          { revalidate: false },
+        ),
+    },
+    {
+      token: (entry) => entry.version,
+      toDraft: (entry) => ({
+        firstName: entry.firstName,
+        lastName: entry.lastName,
+        schoolClass: entry.schoolClass,
+      }),
+      answer: (saved) => saved,
+    },
+  );
+  const editForm = useReadDraftForm(
+    modal?.kind === "edit" ? edit : null,
+    formErrors,
+    "den Eintrag",
+  );
+  const form = modal?.kind === "edit" ? (edit.draft ?? EMPTY_FORM) : createForm;
+  const setForm = (next: (current: EntryFormState) => EntryFormState) => {
+    if (modal?.kind === "edit") edit.setDraft(next);
+    else setCreateForm(next);
+  };
   const deleteErrors = useApiFormError();
   const assignErrors = useApiFormError();
   const latestSubmitRef = useRef<() => void>(() => undefined);
@@ -328,39 +380,63 @@ export default function ClassListEntriesPage() {
   const closeModal = () => {
     setModal(null);
     clearModalErrors();
-    setForm(EMPTY_FORM);
+    setCreateForm(EMPTY_FORM);
     setAssignTarget(null);
   };
 
   const openCreate = () => {
-    setForm(EMPTY_FORM);
+    setCreateForm(EMPTY_FORM);
     clearModalErrors();
     setModal({ kind: "create" });
   };
 
   const openEdit = (entry: ClassListEntry) => {
-    setForm({
-      firstName: entry.firstName,
-      lastName: entry.lastName,
-      schoolClass: entry.schoolClass,
-    });
     clearModalErrors();
     setModal({ kind: "edit", entry });
   };
 
+  // Ein bearbeiteter Eintrag geht mit dem Stand raus, auf dem der Entwurf
+  // ruht. Seit dem Lesen geändert: der Dialog zeigt den gespeicherten
+  // Eintrag, ohne „Wiederholen“ (ADR 0311).
+  const submitEdit = async (name: string) => {
+    const result = await edit.submit((version, draft) =>
+      updateClassListEntry(editingId ?? "", draft, version),
+    );
+    if (result.ok) {
+      toast.success(`Der Eintrag „${name}“ ist gespeichert.`);
+      closeModal();
+      await mutate();
+      return;
+    }
+    if (result.skipped) return;
+    logger.error("class_list_entry_save_failed", {
+      error: errorMessage(result.error),
+    });
+    void formErrors.show(
+      result.error,
+      result.refused
+        ? { object: "das Speichern des Eintrags", reload: result.reload }
+        : {
+            object: "das Speichern des Eintrags",
+            retry: () => latestSubmitRef.current(),
+          },
+    );
+  };
+
   const submitForm = async () => {
     if (modal?.kind !== "create" && modal?.kind !== "edit") return;
+    // Nichts geht raus, bevor der gespeicherte Stand gelesen ist; der
+    // gezeigte Fehler bleibt dann stehen.
+    if (!editForm.begin()) return;
     setSaving(true);
-    formErrors.clear();
     const name = `${form.firstName.trim()} ${form.lastName.trim()}`;
     try {
-      if (modal.kind === "create") {
-        await createClassListEntry(form);
-        toast.success(`Der Eintrag „${name}“ ist angelegt.`);
-      } else {
-        await updateClassListEntry(modal.entry.id, form);
-        toast.success(`Der Eintrag „${name}“ ist gespeichert.`);
+      if (modal.kind === "edit") {
+        await submitEdit(name);
+        return;
       }
+      await createClassListEntry(form);
+      toast.success(`Der Eintrag „${name}“ ist angelegt.`);
       await mutate();
       closeModal();
     } catch (err) {
@@ -621,6 +697,7 @@ export default function ClassListEntriesPage() {
           >
             <div ref={formRef} className="space-y-4">
               <FormErrorAlert message={formErrors.error} />
+              <LoadErrorAlert error={editForm.loadError} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input
                   id="entry-first-name"
@@ -680,6 +757,7 @@ export default function ClassListEntriesPage() {
                   size="md"
                   disabled={
                     saving ||
+                    editForm.waitReason !== undefined ||
                     !form.firstName.trim() ||
                     !form.lastName.trim() ||
                     !form.schoolClass.trim()
@@ -687,7 +765,8 @@ export default function ClassListEntriesPage() {
                   disabledReason={
                     saving
                       ? undefined
-                      : "Fülle zuerst Vorname, Nachname und Klasse aus."
+                      : (editForm.waitReason ??
+                        "Fülle zuerst Vorname, Nachname und Klasse aus.")
                   }
                   tooltip={
                     modal?.kind === "edit"

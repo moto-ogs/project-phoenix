@@ -36,6 +36,7 @@ const wireEntry = {
   school_class: "1a",
   created_at: "2026-08-18T10:00:00Z",
   matching_student_ids: ["7", "8"],
+  version: "v-stored",
 };
 
 beforeEach(() => {
@@ -61,6 +62,7 @@ describe("fetchClassListEntries", () => {
         schoolClass: "1a",
         createdAt: "2026-08-18T10:00:00Z",
         matchingStudentIds: ["7", "8"],
+        version: "v-stored",
       },
     ]);
   });
@@ -160,20 +162,33 @@ describe("createClassListEntry", () => {
 });
 
 describe("updateClassListEntry", () => {
-  it("PUTs the trimmed input to the entry URL", async () => {
+  it("PUTs the trimmed input with the version it was read at", async () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({ data: wireEntry }));
 
-    const entry = await updateClassListEntry("12", {
-      firstName: "Zoe",
-      lastName: "Aalders",
-      schoolClass: "1b",
-    });
+    const entry = await updateClassListEntry(
+      "12",
+      {
+        firstName: "Zoe",
+        lastName: "Aalders",
+        schoolClass: "1b",
+      },
+      "v-read",
+    );
 
     expect(mockFetch).toHaveBeenCalledWith(
       "/api/class-list-entries/12",
-      expect.objectContaining({ method: "PUT" }),
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({
+          first_name: "Zoe",
+          last_name: "Aalders",
+          school_class: "1b",
+          expected_version: "v-read",
+        }),
+      }),
     );
     expect(entry.firstName).toBe("Zoe");
+    expect(entry.version).toBe(wireEntry.version);
   });
 });
 
