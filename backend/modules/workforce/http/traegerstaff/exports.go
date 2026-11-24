@@ -64,8 +64,14 @@ func (rs *ExportsResource) payrollReport(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, http.StatusOK, report, "Payroll export check retrieved successfully")
 }
 
+// payrollFile answers one file; in the form per employer ?file= names it
+// (#8041).
 func (rs *ExportsResource) payrollFile(w http.ResponseWriter, r *http.Request) {
-	rs.download(w, r, rs.exports.PayrollFile)
+	file := r.URL.Query().Get("file")
+	rs.download(w, r, func(ctx context.Context, actor workforce.TraegerStaffActor, month workforce.TraegerExportMonth) (workforce.TraegerExportFile, error) {
+		month.File = file
+		return rs.exports.PayrollFile(ctx, actor, month)
+	})
 }
 
 func (rs *ExportsResource) payrollEmployers(w http.ResponseWriter, r *http.Request) {
@@ -156,14 +162,13 @@ func (rs *ExportsResource) download(w http.ResponseWriter, r *http.Request,
 	_, _ = w.Write(file.Data)
 }
 
-// exportRequest reads the session and ?year=&month=&format=, and for one
-// file of the form per employer &file=.
+// exportRequest reads the session and ?year=&month=&format=.
 func exportRequest(w http.ResponseWriter, r *http.Request) (workforce.TraegerStaffActor, workforce.TraegerExportMonth, bool) {
 	session, ok := actor(w, r)
 	if !ok {
 		return workforce.TraegerStaffActor{}, workforce.TraegerExportMonth{}, false
 	}
-	month := workforce.TraegerExportMonth{Format: r.URL.Query().Get("format"), File: r.URL.Query().Get("file")}
+	month := workforce.TraegerExportMonth{Format: r.URL.Query().Get("format")}
 	for _, field := range []struct {
 		name  string
 		value *int

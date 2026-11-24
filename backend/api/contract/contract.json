@@ -13045,11 +13045,26 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/staff-exports/payroll/employers",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerPayrollEmployerList"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/staff-exports/payroll/export",
       "portals": [
         "org"
       ],
       "query": [
+        {
+          "name": "file",
+          "kind": "string"
+        },
         {
           "name": "format",
           "kind": "string"
@@ -24129,6 +24144,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/traeger/staff-exports/payroll/employers/{schoolId}",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PayrollEmployerRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerPayrollEmployerValues"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/traeger/staff-planning/records/{id}/shifts/{shiftId}",
       "portals": [
         "org"
@@ -24217,6 +24247,21 @@
       "request": {
         "kind": "ref",
         "ref": "UpdateContractRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerStaffRecordDetail"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/traeger/staff-records/{id}/employer-numbers/{schoolId}",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "EmployerNumberRequest"
       },
       "response": {
         "kind": "ref",
@@ -53546,6 +53591,28 @@
       ]
     },
     {
+      "name": "EmployerNumberRequest",
+      "go_type": "traegerstaff.EmployerNumberRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "employer_personnel_number",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "Employment",
       "go_type": "staffpersonmerge.Employment",
       "fields": [
@@ -78507,6 +78574,48 @@
             "elem": {
               "kind": "int"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PayrollEmployerRequest",
+      "go_type": "traegerstaff.PayrollEmployerRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "body",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "consultant_number",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "client_number",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cost_center",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -107576,6 +107685,251 @@
       ]
     },
     {
+      "name": "TraegerPayrollDuplicate",
+      "go_type": "workforce.TraegerPayrollDuplicate",
+      "fields": [
+        {
+          "name": "number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "people",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerExportPerson"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerPayrollEmployerCheck",
+      "go_type": "workforce.TraegerPayrollEmployerCheck",
+      "fields": [
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "missing_client",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "missing_cost_center",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerPayrollEmployerList",
+      "go_type": "workforce.TraegerPayrollEmployerList",
+      "fields": [
+        {
+          "name": "employers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerPayrollEmployerValues"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerPayrollEmployerValues",
+      "go_type": "workforce.TraegerPayrollEmployerValues",
+      "fields": [
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "consultant_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "client_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cost_center",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerPayrollFile",
+      "go_type": "workforce.TraegerPayrollFile",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "employers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerPayrollFileEmployer"
+            }
+          }
+        },
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "consultant_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "client_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "people",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "line_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "missing_client",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "without_number",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerExportPerson"
+            }
+          }
+        },
+        {
+          "name": "duplicates",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerPayrollDuplicate"
+            }
+          }
+        },
+        {
+          "name": "ready",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerPayrollFileEmployer",
+      "go_type": "workforce.TraegerPayrollFileEmployer",
+      "fields": [
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "TraegerPayrollGap",
       "go_type": "workforce.TraegerPayrollGap",
       "fields": [
@@ -107635,6 +107989,12 @@
         },
         {
           "name": "format",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "form",
           "schema": {
             "kind": "string"
           }
@@ -107720,6 +108080,39 @@
         },
         {
           "name": "contract_changes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerExportPerson"
+            }
+          }
+        },
+        {
+          "name": "files",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerPayrollFile"
+            }
+          }
+        },
+        {
+          "name": "employers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerPayrollEmployerCheck"
+            }
+          }
+        },
+        {
+          "name": "in_several_files",
           "schema": {
             "kind": "array",
             "nullable": true,
@@ -108952,6 +109345,25 @@
         },
         {
           "name": "employer_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "employer_body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "employer_personnel_number",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "employer_number_version",
           "schema": {
             "kind": "string"
           }

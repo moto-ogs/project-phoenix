@@ -10438,7 +10438,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerPayrollSettingsReader.TraegerPayrollSettings",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/settings/compose.TraegerSettings.TraegerTexts: the payroll values of the session's Träger (Berater- and Mandantennummer of the Lohn, a Lohnart per category and kind of Arbeitsvertrag and the unit of each day category; its values of traeger_payroll.* or the empty registry defaults), read before the Träger's payroll file over all schools is computed (#4712).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/settings/compose.TraegerSettings.TraegerTexts: the payroll values of the session's Träger (the form of the file, one for the Träger or one per employer (#8041, ADR 0319), Berater- and Mandantennummer of the Lohn, a Lohnart per category and kind of Arbeitsvertrag and the unit of each day category; its values of traeger_payroll.* or the registry defaults), read before the Träger's payroll files over all schools are computed (#4712).",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTexts",
       "target_owner": "settings-platform"
@@ -10593,7 +10593,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffEmployers.SchoolEmployers",
-      "reason": "Read-only: Organisation \u0026 Tenancy names per Einsatzort the Schulträger or the Gemeinde that employs its staff in place of the Träger (#4811, ADR 0318), read in the caller's Träger transaction; no write, lock or scope change.",
+      "reason": "Read-only: Organisation \u0026 Tenancy names per Einsatzort the kind and the name of the Schulträger or the Gemeinde that employs its staff in place of the Träger (#4811, ADR 0318), for the Personalakte and the payroll file per employer (#8041, ADR 0319), read in the caller's Träger transaction; no write, lock or scope change.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
       "target_owner": "organization-tenancy"
@@ -10603,7 +10603,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffEmployers.SchoolEmployers",
-      "reason": "Read-only: Organisation \u0026 Tenancy names per Einsatzort the Schulträger or the Gemeinde that employs its staff in place of the Träger (#4811, ADR 0318), read in the caller's Träger transaction; no write, lock or scope change.",
+      "reason": "Read-only: Organisation \u0026 Tenancy names per Einsatzort the kind and the name of the Schulträger or the Gemeinde that employs its staff in place of the Träger (#4811, ADR 0318), for the Personalakte and the payroll file per employer (#8041, ADR 0319), read in the caller's Träger transaction; no write, lock or scope change.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
       "target_owner": "organization-tenancy"

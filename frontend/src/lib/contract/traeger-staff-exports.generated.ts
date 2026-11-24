@@ -7,6 +7,7 @@ import {
   int64String,
   nullable,
   object,
+  requestBody,
   safeInt,
   str,
   success,
@@ -49,11 +50,82 @@ export const TraegerPayrollGapSchema: z.ZodType<TraegerPayrollGap, unknown> = ob
   kind: str,
 });
 
+/** Go: workforce.TraegerPayrollFileEmployer */
+export interface TraegerPayrollFileEmployer {
+  body: string;
+  name: string;
+}
+
+export const TraegerPayrollFileEmployerSchema: z.ZodType<TraegerPayrollFileEmployer, unknown> = object<TraegerPayrollFileEmployer>({
+  body: str,
+  name: str,
+});
+
+/** Go: workforce.TraegerPayrollDuplicate */
+export interface TraegerPayrollDuplicate {
+  number: string;
+  people: TraegerExportPerson[] | null;
+}
+
+export const TraegerPayrollDuplicateSchema: z.ZodType<TraegerPayrollDuplicate, unknown> = object<TraegerPayrollDuplicate>({
+  number: str,
+  people: nullable(arr(TraegerExportPersonSchema)),
+});
+
+/** Go: workforce.TraegerPayrollFile */
+export interface TraegerPayrollFile {
+  key: string;
+  employers: TraegerPayrollFileEmployer[] | null;
+  schools: string[] | null;
+  consultant_number: string;
+  client_number: string;
+  people: number;
+  line_count: number;
+  missing_client: boolean;
+  without_number: TraegerExportPerson[] | null;
+  duplicates: TraegerPayrollDuplicate[] | null;
+  ready: boolean;
+}
+
+export const TraegerPayrollFileSchema: z.ZodType<TraegerPayrollFile, unknown> = object<TraegerPayrollFile>({
+  key: str,
+  employers: nullable(arr(TraegerPayrollFileEmployerSchema)),
+  schools: nullable(arr(str)),
+  consultant_number: str,
+  client_number: str,
+  people: safeInt,
+  line_count: safeInt,
+  missing_client: bool,
+  without_number: nullable(arr(TraegerExportPersonSchema)),
+  duplicates: nullable(arr(TraegerPayrollDuplicateSchema)),
+  ready: bool,
+});
+
+/** Go: workforce.TraegerPayrollEmployerCheck */
+export interface TraegerPayrollEmployerCheck {
+  school_id: string;
+  school_name: string;
+  body: string;
+  name: string;
+  missing_client: boolean;
+  missing_cost_center: boolean;
+}
+
+export const TraegerPayrollEmployerCheckSchema: z.ZodType<TraegerPayrollEmployerCheck, unknown> = object<TraegerPayrollEmployerCheck>({
+  school_id: int64String,
+  school_name: str,
+  body: str,
+  name: str,
+  missing_client: bool,
+  missing_cost_center: bool,
+});
+
 /** Go: workforce.TraegerPayrollReport */
 export interface TraegerPayrollReport {
   year: number;
   month: number;
   format: string;
+  form: string;
   contracts: number;
   people: number;
   schools: number;
@@ -65,6 +137,9 @@ export interface TraegerPayrollReport {
   no_wage_type: boolean;
   open_schools: string[] | null;
   contract_changes: TraegerExportPerson[] | null;
+  files: TraegerPayrollFile[] | null;
+  employers: TraegerPayrollEmployerCheck[] | null;
+  in_several_files: TraegerExportPerson[] | null;
   ready: boolean;
 }
 
@@ -72,6 +147,7 @@ export const TraegerPayrollReportSchema: z.ZodType<TraegerPayrollReport, unknown
   year: safeInt,
   month: safeInt,
   format: str,
+  form: str,
   contracts: safeInt,
   people: safeInt,
   schools: safeInt,
@@ -83,7 +159,42 @@ export const TraegerPayrollReportSchema: z.ZodType<TraegerPayrollReport, unknown
   no_wage_type: bool,
   open_schools: nullable(arr(str)),
   contract_changes: nullable(arr(TraegerExportPersonSchema)),
+  files: nullable(arr(TraegerPayrollFileSchema)),
+  employers: nullable(arr(TraegerPayrollEmployerCheckSchema)),
+  in_several_files: nullable(arr(TraegerExportPersonSchema)),
   ready: bool,
+});
+
+/** Go: workforce.TraegerPayrollEmployerValues */
+export interface TraegerPayrollEmployerValues {
+  school_id: string;
+  school_name: string;
+  body: string;
+  name: string;
+  consultant_number: string;
+  client_number: string;
+  cost_center: string;
+  version: string;
+}
+
+export const TraegerPayrollEmployerValuesSchema: z.ZodType<TraegerPayrollEmployerValues, unknown> = object<TraegerPayrollEmployerValues>({
+  school_id: int64String,
+  school_name: str,
+  body: str,
+  name: str,
+  consultant_number: str,
+  client_number: str,
+  cost_center: str,
+  version: str,
+});
+
+/** Go: workforce.TraegerPayrollEmployerList */
+export interface TraegerPayrollEmployerList {
+  employers: TraegerPayrollEmployerValues[] | null;
+}
+
+export const TraegerPayrollEmployerListSchema: z.ZodType<TraegerPayrollEmployerList, unknown> = object<TraegerPayrollEmployerList>({
+  employers: nullable(arr(TraegerPayrollEmployerValuesSchema)),
 });
 
 /** Go: workforce.TraegerTimeReport */
@@ -105,6 +216,15 @@ export const TraegerTimeReportSchema: z.ZodType<TraegerTimeReport, unknown> = ob
   without_number: nullable(arr(TraegerExportPersonSchema)),
 });
 
+/** Go: traegerstaff.PayrollEmployerRequest */
+export interface PayrollEmployerRequest {
+  body?: string;
+  consultant_number?: string;
+  client_number?: string;
+  cost_center?: string;
+  expected_version?: string;
+}
+
 export const routes = {
   "GET /traeger/staff-exports/payroll": {
     method: "GET",
@@ -117,11 +237,18 @@ export const routes = {
     },
     response: success(TraegerPayrollReportSchema),
   },
+  "GET /traeger/staff-exports/payroll/employers": {
+    method: "GET",
+    pattern: "/traeger/staff-exports/payroll/employers",
+    portals: ["org"],
+    response: success(TraegerPayrollEmployerListSchema),
+  },
   "GET /traeger/staff-exports/payroll/export": {
     method: "GET",
     pattern: "/traeger/staff-exports/payroll/export",
     portals: ["org"],
     query: {
+      "file": { kind: "string" },
       "format": { kind: "string" },
       "month": { kind: "int" },
       "year": { kind: "int" },
@@ -149,5 +276,12 @@ export const routes = {
       "year": { kind: "int" },
     },
     response: fileAnswer,
+  },
+  "PUT /traeger/staff-exports/payroll/employers/{schoolId}": {
+    method: "PUT",
+    pattern: "/traeger/staff-exports/payroll/employers/{schoolId}",
+    portals: ["org"],
+    request: requestBody<PayrollEmployerRequest>(),
+    response: success(TraegerPayrollEmployerValuesSchema),
   },
 } as const;

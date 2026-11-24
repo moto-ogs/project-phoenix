@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
 // The payroll values of the bodies that employ staff in place of the Träger
@@ -55,6 +56,9 @@ func (s *TraegerStaffStore) ListPayrollEmployers(ctx context.Context, organizati
 func (s *TraegerStaffStore) LockPayrollEmployer(ctx context.Context, organizationID, schoolID int64, body string) (*domain.TraegerPayrollEmployer, error) {
 	db, err := traegerStaffDB(ctx, organizationID)
 	if err != nil {
+		return nil, err
+	}
+	if err := tenant.OrderLock(ctx, tenant.LockLeaf, "workforce.payroll_employers"); err != nil {
 		return nil, err
 	}
 	var row payrollEmployerRow

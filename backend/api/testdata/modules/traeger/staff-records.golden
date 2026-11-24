@@ -18,6 +18,7 @@ POST /traeger/staff-records/{id}/time-account/close -> basis
 POST /traeger/staff-records/{id}/time-account/reopen -> basis
 PUT /traeger/staff-records/{id}/absence-accounts/{typeId} -> basis
 PUT /traeger/staff-records/{id}/contracts/{contractId} -> basis
+PUT /traeger/staff-records/{id}/employer-numbers/{schoolId} -> basis
 PUT /traeger/staff-records/{id}/financial -> basis
 PUT /traeger/staff-records/{id}/person -> basis
 PUT /traeger/staff-records/{id}/personnel-number -> basis

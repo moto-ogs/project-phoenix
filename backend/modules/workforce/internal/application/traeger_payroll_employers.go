@@ -49,15 +49,9 @@ func (t *TraegerStaff) PayrollEmployers(ctx context.Context, actor workforce.Tra
 func (t *TraegerStaff) SavePayrollEmployer(ctx context.Context, actor workforce.TraegerStaffActor, schoolID int64,
 	input workforce.TraegerPayrollEmployerInput,
 ) (workforce.TraegerPayrollEmployerValues, error) {
-	if input.Body != workforce.TraegerEmployerSchultraeger && input.Body != workforce.TraegerEmployerGemeinde {
-		return workforce.TraegerPayrollEmployerValues{}, &workforce.TraegerPayrollEmployerError{Field: domain.PayrollEmployerFieldBody}
-	}
-	value, field := domain.NormalizePayrollEmployer(domain.TraegerPayrollEmployer{
-		OrganizationID: actor.OrganizationID, SchoolID: schoolID, Body: input.Body,
-		ConsultantNumber: input.ConsultantNumber, ClientNumber: input.ClientNumber, CostCenter: input.CostCenter,
-	})
-	if field != "" {
-		return workforce.TraegerPayrollEmployerValues{}, &workforce.TraegerPayrollEmployerError{Field: field}
+	value, err := payrollEmployerValue(actor, schoolID, input)
+	if err != nil {
+		return workforce.TraegerPayrollEmployerValues{}, err
 	}
 	schools, err := t.ports.Schools.TraegerSchools(ctx, actor.OrganizationID)
 	if err != nil {
@@ -97,6 +91,21 @@ func (t *TraegerStaff) SavePayrollEmployer(ctx context.Context, actor workforce.
 	return saved, nil
 }
 
+// payrollEmployerValue checks the body and the numbers of a save.
+func payrollEmployerValue(actor workforce.TraegerStaffActor, schoolID int64, input workforce.TraegerPayrollEmployerInput) (domain.TraegerPayrollEmployer, error) {
+	if input.Body != workforce.TraegerEmployerSchultraeger && input.Body != workforce.TraegerEmployerGemeinde {
+		return domain.TraegerPayrollEmployer{}, &workforce.TraegerPayrollEmployerError{Field: domain.PayrollEmployerFieldBody}
+	}
+	value, field := domain.NormalizePayrollEmployer(domain.TraegerPayrollEmployer{
+		OrganizationID: actor.OrganizationID, SchoolID: schoolID, Body: input.Body,
+		ConsultantNumber: input.ConsultantNumber, ClientNumber: input.ClientNumber, CostCenter: input.CostCenter,
+	})
+	if field != "" {
+		return domain.TraegerPayrollEmployer{}, &workforce.TraegerPayrollEmployerError{Field: field}
+	}
+	return value, nil
+}
+
 // UpdateEmployerNumber sets the personnel number of the record with the
 // body that employs at its Einsatzort schoolID.
 func (t *TraegerStaff) UpdateEmployerNumber(ctx context.Context, actor workforce.TraegerStaffActor, recordID, schoolID int64,
@@ -107,45 +116,53 @@ func (t *TraegerStaff) UpdateEmployerNumber(ctx context.Context, actor workforce
 		return workforce.TraegerStaffRecordDetail{}, publicTraegerStaffError(err)
 	}
 	err = t.released(ctx, actor, func(ctx context.Context) error {
-		record, err := t.store.FindStaffRecord(ctx, actor.OrganizationID, recordID, true)
-		if err != nil {
-			return err
-		}
-		link, ok := recordLink(record, schoolID)
-		if !ok {
-			return domain.ErrTraegerStaffRecordMissing
-		}
-		employers, err := t.employers(ctx, actor.OrganizationID, record)
-		if err != nil {
-			return err
-		}
-		employer := siteEmployer(employers, link.ViaPool, schoolID)
-		current := link.EmployerNumberFor(employer.Body)
-		if err := readstate.Check(expectedVersion, employerNumberVersion(employer.Body, current)); err != nil {
-			return err
-		}
-		if employer.Body == "" {
-			return workforce.ErrTraegerStaffEmployerChanged
-		}
-		if domain.Deref(current) == domain.Deref(number) {
-			return nil
-		}
-		change, err := t.trailChange(actor.OrganizationID, domain.TraegerStaffChange{
-			RecordID: recordID, Kind: domain.StaffChangeChanged, Field: domain.StaffFieldEmployerNumber,
-			SchoolID: &schoolID, AccountID: actor.AccountID,
-		}, domain.Deref(current))
-		if err != nil {
-			return err
-		}
-		if err := t.store.SetLinkEmployerNumber(ctx, actor.OrganizationID, recordID, schoolID, employer.Body, number); err != nil {
-			return err
-		}
-		return t.store.AppendStaffChanges(ctx, actor.OrganizationID, []domain.TraegerStaffChange{change})
+		return t.setEmployerNumber(ctx, actor, recordID, schoolID, number, expectedVersion)
 	})
 	if err != nil {
 		return workforce.TraegerStaffRecordDetail{}, publicTraegerStaffError(err)
 	}
 	return t.Record(ctx, actor, recordID)
+}
+
+// setEmployerNumber writes the number and its trail entry under the lock of
+// the record, in the caller's Träger transaction.
+func (t *TraegerStaff) setEmployerNumber(ctx context.Context, actor workforce.TraegerStaffActor, recordID, schoolID int64,
+	number *string, expectedVersion string,
+) error {
+	record, err := t.store.FindStaffRecord(ctx, actor.OrganizationID, recordID, true)
+	if err != nil {
+		return err
+	}
+	link, ok := recordLink(record, schoolID)
+	if !ok {
+		return domain.ErrTraegerStaffRecordMissing
+	}
+	employers, err := t.employers(ctx, actor.OrganizationID, record)
+	if err != nil {
+		return err
+	}
+	employer := siteEmployer(employers, link.ViaPool, schoolID)
+	current := link.EmployerNumberFor(employer.Body)
+	if err := readstate.Check(expectedVersion, employerNumberVersion(employer.Body, current)); err != nil {
+		return err
+	}
+	if employer.Body == "" {
+		return workforce.ErrTraegerStaffEmployerChanged
+	}
+	if domain.Deref(current) == domain.Deref(number) {
+		return nil
+	}
+	change, err := t.trailChange(actor.OrganizationID, domain.TraegerStaffChange{
+		RecordID: recordID, Kind: domain.StaffChangeChanged, Field: domain.StaffFieldEmployerNumber,
+		SchoolID: &schoolID, AccountID: actor.AccountID,
+	}, domain.Deref(current))
+	if err != nil {
+		return err
+	}
+	if err := t.store.SetLinkEmployerNumber(ctx, actor.OrganizationID, recordID, schoolID, employer.Body, number); err != nil {
+		return err
+	}
+	return t.store.AppendStaffChanges(ctx, actor.OrganizationID, []domain.TraegerStaffChange{change})
 }
 
 // employerKey names the payroll values of one body at one school.
