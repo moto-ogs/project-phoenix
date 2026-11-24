@@ -13,7 +13,7 @@ import {
   formatBerlinTime,
   formatChatTime,
 } from "~/lib/date-helpers";
-import { type InboxThread, relationshipLabel } from "~/lib/parent-messages-api";
+import type { InboxThread } from "~/lib/parent-messages-api";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 
 /**
@@ -101,7 +101,6 @@ function InboxList({
                   </span>
                 </>
               }
-              aria-label={`${thread.guardian_name}, ${relationshipLabel(thread.relationship_type)} von ${thread.student_name}`}
               subtitle={last ?? "Noch keine Nachricht"}
               meta={
                 <span className="flex flex-col items-end gap-1">
