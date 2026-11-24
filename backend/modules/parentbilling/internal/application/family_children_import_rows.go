@@ -461,7 +461,7 @@ func (c *familyImportCheck) applicableContracts(contracts []familyImportContract
 }
 
 func (c *familyImportCheck) family(contractID int64) string {
-	return parentbilling.ContractFamilyKey(c.recipients[contractID].Email, contractID)
+	return c.recipients[contractID].FamilyOf(contractID)
 }
 
 // endedBefore tells whether every version of the contract ended before the

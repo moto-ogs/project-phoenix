@@ -305,6 +305,14 @@ func (p importPayers) countChild(payer importPayer) {
 	if current, ok := p.byChild[child]; !ok || payer.until.After(current.until) {
 		p.byChild[child] = payer
 	}
+	// A child joined to the family of another contract (#7161, ADR 0319
+	// point 6) is still named by the number stored under its own contract.
+	if own, rests := parentbilling.OwnContractFamily(payer.family, payer.contractID); rests {
+		ownChild := parentbilling.ChildDebtorNumberKey(own, key)
+		if current, ok := p.byChild[ownChild]; !ok || payer.until.After(current.until) {
+			p.byChild[ownChild] = payer
+		}
+	}
 }
 
 // importPayers indexes the contracts of the Träger in force in the import
@@ -337,7 +345,7 @@ func (m *SEPAMandates) importPayers(ctx context.Context, organizationID int64) (
 		childUntil: map[string]calendar.Date{}, byChild: map[string]importPayer{}}
 	for _, id := range ids {
 		recipient := recipients[id]
-		payer := importPayer{contractID: id, family: parentbilling.ContractFamilyKey(recipient.Email, id),
+		payer := importPayer{contractID: id, family: recipient.FamilyOf(id),
 			firstName: recipient.FirstName, lastName: recipient.LastName, until: until[id], child: children[id]}
 		payers.byContract[id] = payer
 		payers.countChild(payer)

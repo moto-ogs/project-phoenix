@@ -163,9 +163,12 @@ func noticeMonth(notice parentbilling.CareNotice, drafts map[calendar.Date]paren
 	if draft, ok := drafts[month]; ok {
 		return draft
 	}
+	family := notice.FamilyEmail
+	if family == "" {
+		family = notice.Recipient.FamilyOf(notice.ContractID.Int64())
+	}
 	return parentbilling.CareInvoice{ContractID: notice.ContractID, SchoolID: notice.SchoolID, Recipient: notice.Recipient,
-		FamilyEmail: parentbilling.ContractFamilyKey(notice.Recipient.Email, notice.ContractID.Int64()), Service: parentbilling.ServiceCare,
-		Positions: []parentbilling.CarePosition{}}
+		FamilyEmail: family, Service: parentbilling.ServiceCare, Positions: []parentbilling.CarePosition{}}
 }
 
 // noticeMonths are the months the notice assesses: those with a draft from

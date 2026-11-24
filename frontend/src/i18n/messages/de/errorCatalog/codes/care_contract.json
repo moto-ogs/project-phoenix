@@ -34,5 +34,6 @@
   "child_link_refused": "Der Vertrag kann so nicht mit dieser Kinderakte verknüpft werden. Prüfe die Angaben noch einmal.",
   "child_link_bound": "Der Vertrag ist schon an die Anmeldung des Kindes gebunden. Die Verknüpfung mit der Kinderakte lässt sich nicht mehr lösen.",
   "enrollment_preview_changed": "Die Verträge oder die Schule haben sich seit der Vorschau geändert. Lade die Vorschau neu und prüfe sie noch einmal.",
-  "enrollment_binding_changed": "Der Vertrag ist nicht mehr an diese Anmeldung gebunden. Lade die Seite neu und prüfe den Stand."
+  "enrollment_binding_changed": "Der Vertrag ist nicht mehr an diese Anmeldung gebunden. Lade die Seite neu und prüfe den Stand.",
+  "family_refused": "Diese Familie lässt sich so nicht ändern. Lade die Seite neu und prüfe die Auswahl."
 }

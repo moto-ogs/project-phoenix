@@ -11961,7 +11961,8 @@ export const traegerBriefkopfTopic =
  * Kinder und bestehende Verträge aus einer Datei importieren (#4723), auch
  * ohne Mail-Adresse der Eltern (#7360), ihre Vertragsangaben aus den
  * Originalunterlagen nachpflegen (#7767), importierte Verträge mit der
- * Kinderakte verknüpfen und ihre Anmeldungen nachtragen (#7760).
+ * Kinderakte verknüpfen und ihre Anmeldungen nachtragen (#7760) und
+ * Geschwister ohne Mail-Adresse zu einer Familie zusammenführen (#7161).
  */
 export const traegerCareContractsTopic =
   function traegerCareContractsTopic(): HelpTopic {
@@ -12082,13 +12083,31 @@ export const traegerCareContractsTopic =
             "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Pflicht sind Vorname und Nachname des Kindes.",
             "Hat deine Datei keine Spalte für die Schule, das Modul oder den Vertragsbeginn? Dann wählst du `Schule für alle Zeilen`, `Modul für alle Zeilen` und `Vertragsbeginn für alle Zeilen`.",
             "Nennt eine Zeile keine Eltern? moto übernimmt den Vertrag trotzdem. Er hat dann keinen Vertragspartner.",
-            "Steht eine Zeile auf `Bereit` und nennt die Eltern, aber keine Mail-Adresse? moto übernimmt den Vertrag trotzdem. Die Vorschau zählt diese Verträge. Unter `Ohne Mail` siehst du nur diese Zeilen. Die Familien bekommen keine Mail von moto und haben keinen Zugang zur Eltern-App. Rechnungen gibt es für sie nur auf Papier. Geschwister bleiben getrennte Familien. Hast du die Adressen? Dann trage sie in die Datei ein. Lade die Datei danach noch einmal.",
-            "Steht die `Debitorennummer` in der Datei? Ordne die Spalte zu. moto trägt die Nummer beim Zahler oder beim Kind ein, je nach deiner Einstellung. Fehlt die `E-Mail der Eltern`, gehört die Nummer zu diesem einen Vertrag. Geschwister erkennt moto nur über dieselbe E-Mail.",
+            "Steht eine Zeile auf `Bereit` und nennt die Eltern, aber keine Mail-Adresse? moto übernimmt den Vertrag trotzdem. Die Vorschau zählt diese Verträge. Unter `Ohne Mail` siehst du nur diese Zeilen. Die Familien bekommen keine Mail von moto und haben keinen Zugang zur Eltern-App. Rechnungen gibt es für sie nur auf Papier. Geschwister sind zuerst getrennte Familien. Du führst sie danach unter `Geschwister zusammenführen` zusammen. Hast du die Adressen? Dann trage sie in die Datei ein. Lade die Datei danach noch einmal.",
+            "Steht die `Debitorennummer` in der Datei? Ordne die Spalte zu. moto trägt die Nummer beim Zahler oder beim Kind ein, je nach deiner Einstellung. Fehlt die `E-Mail der Eltern`, gehört die Nummer zu diesem einen Vertrag. Geschwister erkennt moto von selbst nur über dieselbe E-Mail.",
             "Zählt deine Geschwisterregel alle Kinder der Familie? Ordne die Spalte `Kinder in der Familie` zu. Die Zahl gilt dann als bestätigt ab Vertragsbeginn. Das Feld siehst du nur mit dem Recht `Abrechnung`. Ohne das Recht trägt die Abrechnung die Zahlen später unter `Kinderzahl` nach.",
             "Prüfe die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. `Schon vorhanden` heißt: Das Kind hat an der Schule schon einen Vertrag. Bei `Fehlerhaft` steht der Grund in der Spalte `Hinweis`.",
             "Wähle unten `übernehmen`. Die Verträge stehen danach in der Liste mit dem Status `Aktiv`.",
             "Fehler in der Datei? Korrigiere die Datei und lade sie noch einmal. moto legt kein Kind doppelt an.",
-            "Danach verknüpfst du die Verträge mit der Kinderakte. Wie das geht, steht im nächsten Abschnitt.",
+            "Hat die Datei keine Mail-Adressen? Dann führe Geschwister zuerst zusammen, siehe nächster Abschnitt. Sonst zahlt jedes Kind den Preis des ersten Kindes.",
+            "Danach verknüpfst du die Verträge mit der Kinderakte. Wie das geht, steht weiter unten.",
+          ],
+        },
+        {
+          title: "Geschwister ohne Mail-Adresse zusammenführen",
+          description:
+            "Ohne Mail-Adresse kennt moto jeden Vertrag nur einzeln. Jeder ist eine eigene Familie. Dann gilt kein Geschwisterpreis, und ein Mandat für zwei Geschwister zeigt der Mandatsimport als Konflikt. Hier legst du fest, welche Kinder Geschwister sind. moto führt nichts von selbst zusammen. Das darf, wer das Recht `Verträge verwalten` oder `Abrechnung` hat.",
+          steps: [
+            "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Geschwister zusammenführen`. Nach einem Import führt dich auch `Geschwister zusammenführen` dorthin.",
+            "Die Liste zeigt jede Familie ohne Mail-Adresse, nach Nachnamen. Geschwister mit demselben Nachnamen stehen untereinander. Mit der Suche findest du Kind, Eltern oder Vertragsnummer.",
+            "Kreuze die Familien an, die zusammengehören. Unten erscheint eine Leiste. Wähle dort `Zusammenführen`.",
+            "Wähle im Fenster, welcher Vertrag die Familie führt. Von ihm kommen Debitorennummer, Zahlungsweg und SEPA-Mandat der Familie. Eine Debitorennummer je Kind bleibt beim Kind.",
+            "Wähle `Zusammenführen`. Die Spalte `Familie` zeigt jetzt zum Beispiel `2 Kinder zusammen`. Im nächsten Monatslauf zählen die Kinder als Geschwister.",
+            "Kommt danach der Mandatsimport, gilt ein Mandat mit derselben Referenz für beide Kinder.",
+            "Falsch zusammengeführt? Wähle bei der Familie das Menü mit den drei Punkten und dann zum Beispiel `Mila Schulz lösen`. Bestätige mit `Lösen`. Danach gilt für das Kind wieder, was bei seinem Vertrag gespeichert war.",
+            "Unter `Verlauf` siehst du, wer wann welche Kinder zusammengeführt oder gelöst hat.",
+            "Die Liste als Datei? Wähle oben rechts das Menü mit den drei Punkten und dann PDF, Excel oder CSV.",
+            "Ausgestellte Rechnungen ändern sich nicht. Das Zusammenführen gilt für Monatsläufe, die danach rechnen.",
           ],
         },
         {

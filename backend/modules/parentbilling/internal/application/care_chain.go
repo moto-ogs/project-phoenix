@@ -274,15 +274,13 @@ func familyOf(entry *careChainEntry) string {
 }
 
 // invoiceFamily is the family an invoice counts under: its family, else
-// the mail address of its recipient, else its contract.
+// the mail address of its recipient, else the leading contract of its
+// family (#7161), else its contract.
 func invoiceFamily(invoice parentbilling.CareInvoice) string {
 	if email := parentbilling.FamilyKey(invoice.FamilyEmail); email != "" {
 		return email
 	}
-	if email := strings.ToLower(strings.TrimSpace(invoice.Recipient.Email)); email != "" {
-		return email
-	}
-	return parentbilling.ContractFamilyKey("", invoice.ContractID.Int64())
+	return invoice.Recipient.FamilyOf(invoice.ContractID.Int64())
 }
 
 // rankedCareChild is a child of a family as a rule counts it.

@@ -36,7 +36,8 @@ const careContractSigningPath = "/public/care-contract-signing"
 // mountCareContractRoutes serves the Betreuungsvertrag (ADR 0088, ADR 0153,
 // #4678) behind the right "Verträge verwalten": the contracts at
 // /traeger/contracts, the templates of the offerings at
-// /traeger/contract-templates and withdrawal and termination at
+// /traeger/contract-templates, the families of the contracts without a mail
+// address at /traeger/contract-families (#7161) and withdrawal and termination at
 // /traeger/contract-notices (#4682). signingLink is root behind the limit of
 // the signing link.
 func mountCareContractRoutes(root, signingLink chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings,
@@ -45,6 +46,10 @@ func mountCareContractRoutes(root, signingLink chi.Router, organizations Holiday
 	resource := NewCareContractHTTP(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL, today, now)
 	root.Mount("/traeger/contracts", resource.ContractRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/contract-templates", resource.TemplateRouter(ProtectedTraegerRoutes))
+	// The families of the contracts without a mail address (#7161), for the
+	// office that imports and for the Abrechnung (ADR 0319 point 8).
+	root.Mount("/traeger/contract-families", resource.FamilyRouter(ProtectedTraegerRoutes,
+		common.RequiresAnyPermission(identityaccess.TraegerRightContractsManage, identityaccess.TraegerRightBillingManage)))
 	mountCareContractNoticeRoutes(root, organizations, settings, schoolSettings, delivery, outcomes, accessLog, addressees, holidays, parentsURL, now)
 	mountCareContractImportRoutes(root, organizations, settings, accessLog, today, now)
 	mountCareContractCorrectionRoutes(root, accessLog, today)

@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.contract_families",
+  "max": 6,
+  "exact": true,
+  "description": "modules/carecontract — GET /traeger/contract-families (#7161, ADR 0319): the Träger transaction with\nBEGIN, COMMIT and its Träger binding, one read of the contracts without a mail address with their families,\none read of the newest changes of the families and one trail entry of the read. Flat in the number of\ncontracts.",
+  "route": "GET /traeger/contract-families/"
+}
