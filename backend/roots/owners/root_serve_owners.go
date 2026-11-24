@@ -218,7 +218,7 @@ func BuildServeMealPlan(db transactionruntime.Database, settings *mealplanCompos
 		DB:       db.Pool(),
 		Settings: settings,
 		Observe: func(observation mealplanCompose.Observation) {
-			observability.ObserveMealPlanOperation(observation.Operation, observation.Duration, observation.Stats.Queries, observation.Stats.Rows, observation.Stats.StatementDuration, observation.Err)
+			observability.ObserveMealPlanOperation(observation.Operation, observation.Duration, observation.Stats.Queries, observation.Stats.Rows, observation.Stats.StatementDuration, mealplanModule.ErrorCode(observation.Err), observation.Err)
 		},
 		Now:             time.Now,
 		Participants:    mealPlanParticipantFinder(students, time.Now),

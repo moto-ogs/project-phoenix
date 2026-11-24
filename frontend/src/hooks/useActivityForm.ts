@@ -29,6 +29,35 @@ interface ActivityFormProblem {
   readonly field: keyof ActivityFormState;
 }
 
+/** The first problem of an activity form, or null: checked before sending. */
+export function activityFormProblem(
+  form: ActivityFormState,
+): ActivityFormProblem | null {
+  if (!form.name.trim()) {
+    return {
+      message: "Bitte gib einen Namen für die Aktivität ein.",
+      field: "name",
+    };
+  }
+  if (!form.category_id) {
+    return {
+      message: "Bitte wähle eine Kategorie.",
+      field: "category_id",
+    };
+  }
+  if (!form.max_participants) {
+    return null;
+  }
+  const maxParticipants = Number.parseInt(form.max_participants, 10);
+  if (Number.isNaN(maxParticipants) || maxParticipants < 1) {
+    return {
+      message: "Die Teilnehmerzahl muss mindestens 1 sein.",
+      field: "max_participants",
+    };
+  }
+  return null;
+}
+
 export function parseParticipantLimit(value: string): number | null {
   return value ? Number.parseInt(value, 10) : null;
 }
@@ -121,32 +150,10 @@ export function useActivityForm(
     [],
   );
 
-  // Validate form fields
-  const validateForm = useCallback((): ActivityFormProblem | null => {
-    if (!form.name.trim()) {
-      return {
-        message: "Bitte gib einen Namen für die Aktivität ein.",
-        field: "name",
-      };
-    }
-    if (!form.category_id) {
-      return {
-        message: "Bitte wähle eine Kategorie.",
-        field: "category_id",
-      };
-    }
-    if (!form.max_participants) {
-      return null;
-    }
-    const maxParticipants = Number.parseInt(form.max_participants, 10);
-    if (Number.isNaN(maxParticipants) || maxParticipants < 1) {
-      return {
-        message: "Die Teilnehmerzahl muss mindestens 1 sein.",
-        field: "max_participants",
-      };
-    }
-    return null;
-  }, [form.name, form.category_id, form.max_participants]);
+  const validateForm = useCallback(
+    (): ActivityFormProblem | null => activityFormProblem(form),
+    [form],
+  );
 
   return {
     form,

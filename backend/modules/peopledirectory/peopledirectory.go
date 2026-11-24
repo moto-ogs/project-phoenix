@@ -306,8 +306,6 @@ func ErrorCode(err error) string {
 		return "invalid"
 	case errors.Is(err, ErrGuardianStillLinked), errors.Is(err, ErrGuardianLinkConflict):
 		return "guardian_linked"
-	case errors.Is(err, readstate.ErrChanged):
-		return "changed_since_read"
 	case errors.Is(err, ErrGuardianForceDeleteRequiresAdmin), errors.Is(err, ErrPayerRemovalRequiresFinancial):
 		return "forbidden"
 	case errors.Is(err, ErrGuardianProviderUnbound):
@@ -319,7 +317,9 @@ func ErrorCode(err error) string {
 	case errors.Is(err, ErrPersonHasActiveProfile):
 		return "person_has_active_profile"
 	default:
-		return "internal_error"
+		// A business rejection, readstate.ErrChanged among them, is
+		// labelled with its own code like in every other owner (ADR 0311).
+		return readstate.OperationCode("internal_error", err)
 	}
 }
 

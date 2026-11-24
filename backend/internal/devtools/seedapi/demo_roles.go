@@ -160,7 +160,7 @@ func (s *FixedSeeder) grantRolePermissions(roleID int64, ids []string) error {
 	if err != nil {
 		return fmt.Errorf("read permissions: %w", err)
 	}
-	_, err = s.client.Put(fmt.Sprintf("/auth/roles/%d/permissions", roleID), map[string]any{
+	_, err = s.client.Put(fmt.Sprintf("/auth/roles/%d/permission-selection", roleID), map[string]any{
 		"permission_ids": ids, "expected_version": version,
 	})
 	return err

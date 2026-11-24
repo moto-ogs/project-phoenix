@@ -289,8 +289,10 @@ func (rs *GuardianResource) succeed(w http.ResponseWriter, r *http.Request, stat
 }
 
 func (rs *GuardianResource) fail(w http.ResponseWriter, r *http.Request, kind FailureKind, err error) {
+	code := readstate.OperationCode(string(kind), err)
+	kind = renderedKind(kind, err)
 	rs.runtime.Failure(w, r, kind, err)
-	rs.runtime.ObserveResponse(statusOf(kind), string(kind))
+	rs.runtime.ObserveResponse(statusOf(kind), code)
 }
 
 func (rs *GuardianResource) failMessage(w http.ResponseWriter, r *http.Request, kind FailureKind, message string) {
@@ -298,11 +300,12 @@ func (rs *GuardianResource) failMessage(w http.ResponseWriter, r *http.Request, 
 }
 
 // moduleFailure renders a directory error: not found, invalid input and
-// the guardian conflicts keep their status; everything else is a 500 with
-// the cause kept for the logs.
+// the guardian conflicts keep their status, a business rejection is a 409
+// (renderedKind); everything else is a 500 with the cause kept for the logs.
 func (rs *GuardianResource) moduleFailure(w http.ResponseWriter, r *http.Request, err error) {
-	rs.runtime.Failure(w, r, classifyGuardianError(err), err)
-	rs.runtime.ObserveResponse(statusOf(classifyGuardianError(err)), peopledirectory.ErrorCode(err))
+	kind := renderedKind(classifyGuardianError(err), err)
+	rs.runtime.Failure(w, r, kind, err)
+	rs.runtime.ObserveResponse(statusOf(kind), peopledirectory.ErrorCode(err))
 }
 
 func classifyGuardianError(err error) FailureKind {
@@ -316,8 +319,7 @@ func classifyGuardianError(err error) FailureKind {
 		return FailureInvalidRequest
 	case errors.Is(err, peopledirectory.ErrGuardianForceDeleteRequiresAdmin), errors.Is(err, peopledirectory.ErrPayerRemovalRequiresFinancial):
 		return FailureForbidden
-	case errors.Is(err, peopledirectory.ErrGuardianStillLinked), errors.Is(err, peopledirectory.ErrGuardianLinkConflict),
-		errors.Is(err, readstate.ErrChanged):
+	case errors.Is(err, peopledirectory.ErrGuardianStillLinked), errors.Is(err, peopledirectory.ErrGuardianLinkConflict):
 		return FailureConflict
 	default:
 		return FailureInternal

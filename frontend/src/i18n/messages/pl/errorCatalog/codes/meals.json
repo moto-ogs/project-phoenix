@@ -1,6 +1,6 @@
 {
   "child_not_enrolled": "Nie można: {object}. Dziecko nie jest tego dnia pod opieką.",
-  "day_changed": "Ktoś inny zmienił w międzyczasie jadłospis. Wybierz „Verwerfen”, aby zobaczyć nową wersję. Wybierz „Speichern”, aby zastąpić ją swoimi zmianami.",
+  "day_changed": "Ktoś inny zmienił w międzyczasie ten dzień jadłospisu. Teraz widzisz aktualny stan. Sprawdź go i zapisz ponownie.",
   "day_closed": "Nie można: {object}. Tego dnia szkoła jest zamknięta.",
   "day_past": "Już nie można: {object}. Ten dzień już minął.",
   "invalid_allergens": "Nie udało się zapisać alergenów. Prosimy wybrać je ponownie.",

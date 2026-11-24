@@ -14,7 +14,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The guardian HTTP adapter's runtime (#2663): the identity, invitation and
@@ -283,10 +282,7 @@ func guardianPaymentExport(renderer *lists.RendererService) func(rows []peopledi
 func ClassifyGuardianInvitationFailure(err error) GuardianFailureKind {
 	var validation *identityaccess.GuardianInvitationValidationError
 	switch {
-	case errors.Is(err, peopledirectory.ErrGuardianAccountConflict),
-		// A run whose facts changed since its preview (ADR 0311): a 409
-		// business rejection, counted as one, never as a server error.
-		errors.Is(err, readstate.ErrChanged):
+	case errors.Is(err, peopledirectory.ErrGuardianAccountConflict):
 		return GuardianFailureConflict
 	case errors.As(err, &validation),
 		errors.Is(err, identityaccess.ErrGuardianInvitationNotFound),

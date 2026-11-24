@@ -54,7 +54,8 @@ import { fetchCareOfferingBookingStats } from "~/lib/care-offering-booking-stats
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useInvalidateFamily, useOpeningRead, useSWRAuth } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { useReadDraft } from "~/lib/swr/read-draft";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { withLateInviteQuery } from "~/lib/enrollment-http";
 import { Loading } from "~/components/ui/loading";
@@ -226,32 +227,39 @@ export function ManualApprovedEnrollmentModal({
   phase: Phase;
   gradeLevelMax: number | null;
 }>) {
-  // A reopened panel shows the cached template while it reads again. The
-  // server checks the entry against the current offerings, and refuses a
-  // form the school changed meanwhile (ADR 0311); the form then shows the
-  // current one.
-  // The office fills the template this opening read: every opening reads it
-  // again, then a background read neither swaps it under the typed entry
-  // nor, when it fails, takes the form away. A failed first read shows its
-  // error, also over a cached template, until a retry answers.
-  const opened = useOpeningRead(
-    isOpen ? enrollmentKeys.manualEnrollmentBootstrap(phase.id) : null,
-    () => fetchManualEnrollmentBootstrap(phase.id),
-    { showCached: true },
-  );
+  // The template the office fills (ADR 0311): each opening reads it again,
+  // and a reopened panel shows the cached one until that read answers. The
+  // submit sends the template's token; the server refuses a form the school
+  // changed meanwhile, and the panel then loads the current one.
+  const form = useReadDraft<
+    ManualEnrollmentBootstrap,
+    ManualEnrollmentBootstrap,
+    ManualEnrollmentBootstrap
+  >({
+    key: isOpen ? enrollmentKeys.manualEnrollmentBootstrap(phase.id) : null,
+    fetcher: () => fetchManualEnrollmentBootstrap(phase.id),
+    // The whole template: the opening's read replaces a cached one that
+    // differs in anything, not only in its legal texts.
+    token: (read) => read,
+  });
+  // After a refusal the entry stays on screen while the current form loads;
+  // the form's own alert names a failed load, with a retry of the read.
+  const [refusedForm, setRefusedForm] = useState(false);
   const loadCurrentForm = async () => {
+    setRefusedForm(true);
     try {
-      await opened.reload();
+      await form.refuse()();
     } catch (err) {
-      // The form keeps the entry and shows this failure in place of the
-      // refusal.
       logger.warn("manual_enrollment_form_reload_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
       throw err;
     }
   };
-  const bootstrap = isOpen ? opened.data : undefined;
+  // A failed opening read shows its error, also over a cached template,
+  // until a retry answers: the server would refuse a form it cannot confirm.
+  const openFailed = form.status === "loadFailed" && !refusedForm;
+  const bootstrap = isOpen && !openFailed ? form.base : undefined;
   const prefetchedData = useMemo<EnrollmentFormPrefetchedData | null>(
     () => (bootstrap ? toManualPrefetchedData(bootstrap) : null),
     [bootstrap],
@@ -282,9 +290,9 @@ export function ManualApprovedEnrollmentModal({
   // a click on it nor the focus it hands back may close the waiting form.
   const send = useFormModalPending(isOpen, phase.id);
   const loadError = useSwrResourceLoadError(
-    [{ data: bootstrap, error: opened.error }],
+    [{ data: bootstrap, error: openFailed ? form.error : undefined }],
     "das Formular",
-    opened.retry,
+    form.retryLoad,
   );
   const loading = isOpen && !bootstrap && !loadError.failure;
   const checks = useApiFormError();
@@ -303,6 +311,7 @@ export function ManualApprovedEnrollmentModal({
     setSendNotification(false);
     setStatusUrl("");
     setRenewedChildName(null);
+    setRefusedForm(false);
     clearChecks();
   }, [isOpen, phase.id, clearChecks]);
 

@@ -639,10 +639,13 @@ export function useTimetableActions(
         status: errorStatus(err),
       });
       reloadAfterDenial(err);
-      // Der Fehler bleibt im offenen Bestätigungsdialog.
+      // Der Fehler bleibt im offenen Bestätigungsdialog. Haben sich die
+      // eingecheckten Kinder seit dem Lesen geändert, wartet er auf die neu
+      // gelesene Liste (ADR 0311).
       void showCompleteError(err, {
         object: "das Beenden der Aktivität",
         retry: () => retryRef.current.complete(),
+        reload: reloadRosterAfterRefusal,
       });
     } finally {
       setIsCompletingInstance(false);
@@ -655,6 +658,7 @@ export function useTimetableActions(
     rememberReopenable,
     reloadAfterDenial,
     reloadAfterLifecycleChange,
+    reloadRosterAfterRefusal,
     setSelectedTimetableInstanceId,
     showCompleteError,
   ]);

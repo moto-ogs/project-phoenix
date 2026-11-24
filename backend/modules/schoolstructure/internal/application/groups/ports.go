@@ -48,7 +48,9 @@ type GroupTeacherStore interface {
 	AssignTeacher(ctx context.Context, groupID, teacherID int64) error
 	// RemoveTeacherAssignment removes one assignment.
 	RemoveTeacherAssignment(ctx context.Context, assignmentID int64) error
-	// TeacherAssignmentIDs maps each teacher of the group to its assignment.
+	// TeacherAssignmentIDs locks the group's assignments in the caller's
+	// unit, so no other writer removes one until it ends, and maps each
+	// teacher of the group to its assignment. Callers hold the group row.
 	TeacherAssignmentIDs(ctx context.Context, groupID int64) (map[int64]int64, error)
 	// TeacherIDsByGroup lists the teachers of each group in assignment order;
 	// a group without teachers is absent.
