@@ -937,6 +937,7 @@ function MeinRaumPageContent() {
               <>
                 {spontaneousStartBanner}
                 {transitSection}
+                <PastBlocksSection onReopen={reopenPastBlock} />
               </>
             }
           />
@@ -1287,7 +1288,9 @@ function MeinRaumPageContent() {
           )}
 
           {/* End-of-day review of finished and expired blocks (#2335) */}
-          <PastBlocksSection onReopen={reopenPastBlock} />
+          {appHasRunningRoster && !openRoomLayout ? null : (
+            <PastBlocksSection onReopen={reopenPastBlock} />
+          )}
         </>
       )}
     </TenantPage>
