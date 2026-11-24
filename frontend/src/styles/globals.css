@@ -933,6 +933,15 @@ html[data-chat-page-lock] body {
   overflow: hidden;
 }
 
+/* Ohne Pill (#8070, `usePillHidden`, z. B. im Chat-Verlauf) hält `<main>`
+   unten nur die Safe Area frei statt der Fläche der Pill. Nur in der App;
+   der Desktop setzt das Attribut nie. */
+@media (width < 64rem), (pointer: coarse) {
+  html[data-pill-hidden] #hauptinhalt {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  }
+}
+
 /* iOS vergrößert die ganze Seite, sobald jemand in ein Feld mit Schrift unter
    16 px tippt, und lässt sie danach vergrößert stehen: Der Chat verschwand
    dabei über dem oberen Rand, jede andere Seite sprang. Auf Touch-Geräten

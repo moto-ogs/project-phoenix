@@ -48,6 +48,32 @@ const INHERIT_RULES: readonly InheritRule[] = [
   { pattern: /^\/parent-attention\/[^/]+/, defaultTab: MORE_TAB },
 ];
 
+/**
+ * Seiten, auf denen die Pill in der App ausgeblendet ist (Produktentscheid,
+ * Vorschlag #8070 „Nachrichten“): Der Chat-Verlauf braucht die ganze Höhe,
+ * das Schreibfeld klebt unten. Zurück führt zur Liste. Auf dem iPad quer
+ * (`split`) bleibt die Pill sichtbar, weil die Liste daneben steht.
+ */
+interface PillHiddenRule {
+  readonly pattern: RegExp;
+  /** Auch im `split` (iPad quer) ausblenden. */
+  readonly inSplit: boolean;
+}
+
+const PILL_HIDDEN_RULES: readonly PillHiddenRule[] = [
+  { pattern: /^\/messages\/(?!groups(?:\/|$))[^/]+\/?$/, inSplit: false },
+];
+
+/** Ob die App auf `pathname` (ohne Mandanten-Präfix) ohne Pill läuft. */
+export function hidesPill(
+  pathname: string,
+  { split }: { readonly split: boolean },
+): boolean {
+  return PILL_HIDDEN_RULES.some(
+    (rule) => rule.pattern.test(pathname) && (!split || rule.inSplit),
+  );
+}
+
 export type TabResolution =
   | { readonly kind: "tab"; readonly tab: string }
   | { readonly kind: "inherit"; readonly defaultTab: string };
