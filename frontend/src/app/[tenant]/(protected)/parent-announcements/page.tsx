@@ -1180,7 +1180,9 @@ function AnnouncementFormModal({
     attachmentsFailed,
     revalidateAttachments,
   ]);
-  // Why „Weiter“ and „Veröffentlichen“ wait for the files.
+  // Why „Veröffentlichen“ waits for the files: a publication confirms the
+  // files on screen. Saving a draft confirms none, so „Weiter“ and „Als
+  // Entwurf speichern“ do not wait.
   const attachmentsWait = !attachmentsBehind
     ? undefined
     : attachmentsFailed
@@ -1418,7 +1420,6 @@ function AnnouncementFormModal({
   };
 
   const goNext = () => {
-    if (attachmentsWait !== undefined) return;
     if (!validateContent(false)) return;
     // Clears a shown error, unless a refusal still waits for the stored
     // draft: its message and load error stay (ADR 0311).
@@ -1791,8 +1792,6 @@ function AnnouncementFormModal({
           type="button"
           size="md"
           onClick={goNext}
-          disabled={attachmentsWait !== undefined}
-          disabledReason={attachmentsWait}
           tooltip="Prüft den Inhalt und führt zur Wahl der Empfänger."
           className="grow sm:grow-0"
         >

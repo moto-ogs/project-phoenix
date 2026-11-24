@@ -1196,6 +1196,35 @@ describe("ParentAnnouncementsPage: der gelesene Stand (ADR 0311)", () => {
     );
   });
 
+  // Saving a draft confirms no files, so a failed attachment read blocks only
+  // the publication, not the way to „Als Entwurf speichern“.
+  it("saves the draft's text while the files fail to load", async () => {
+    vi.mocked(fetchAnnouncementAttachments).mockRejectedValue(
+      new ApiError("unavailable", 503, {}),
+    );
+    vi.mocked(updateAnnouncement).mockResolvedValueOnce({
+      ...base,
+      title: "Mein Titel",
+      version: "2026-09-03T08:00:00Z",
+    });
+    render(<ParentAnnouncementsPage />);
+    fireEvent.change(await titleField(), { target: { value: "Mein Titel" } });
+    fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
+
+    const publish = await screen.findByRole("button", {
+      name: "Veröffentlichen",
+    });
+    await waitFor(() =>
+      expect(publish).toHaveAttribute("aria-disabled", "true"),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Als Entwurf speichern" }),
+    );
+    await waitFor(() => expect(updateAnnouncement).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(updateAnnouncement).mock.calls[0]![2]).toBe(base.version);
+    expect(publishAnnouncement).not.toHaveBeenCalled();
+  });
+
   it("shows the stored draft at once after a refused attachment removal", async () => {
     vi.mocked(fetchAnnouncementAttachments).mockResolvedValue(
       attachmentsOf(base.version, "Alt.pdf"),
