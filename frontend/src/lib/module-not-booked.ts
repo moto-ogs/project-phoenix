@@ -25,11 +25,16 @@ export async function notBookedModuleOf(
   error: unknown,
 ): Promise<ModuleKey | null> {
   if (!isModuleNotBooked(error)) return null;
-  const { ModuleNotBookedDetailsSchema } =
-    await import("~/lib/contract/problem-details.generated");
-  const decoded = ModuleNotBookedDetailsSchema.safeParse(error.details);
-  const key = decoded.success ? decoded.data.module : undefined;
-  return isModuleKey(key) ? key : null;
+  try {
+    const { ModuleNotBookedDetailsSchema } =
+      await import("~/lib/contract/problem-details.generated");
+    const decoded = ModuleNotBookedDetailsSchema.safeParse(error.details);
+    const key = decoded.success ? decoded.data.module : undefined;
+    return isModuleKey(key) ? key : null;
+  } catch {
+    // If the chunk is unavailable, the caller still presents the refusal.
+    return null;
+  }
 }
 
 /**

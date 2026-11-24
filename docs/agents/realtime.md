@@ -13,8 +13,9 @@ frontend-relative paths start at `frontend/src/`.
 - **Tenant signals without content (#7693, [ADR 0310](../adr/0310-tenantweite-signale-ohne-inhalt-gehen-ueber-eine-gemeinsame-after-commit-stelle.md))**: a new tenant-wide staff signal that carries nothing is a `TenantSignal` value bound to one event in Delivery (`realtimeevents/tenant_signal.go`), not a new after-commit site; the owner calls its own port inside its write, the root binds it with a Delivery compose constructor (`NewCalendarAppointmentsChanged`). First user: `calendar_appointments_changed` after every appointment write (`withinAppointmentWrite`); „Heute anders“ and the own calendar reload.
 - **Event payload**: `realtime/http_stream.go` defines the browser shape;
   `events.go` defines the internal event. `gencontract` emits the TypeScript
-  type and lightweight browser decoder. Decode events before sending them to
-  subscribers; don't import the JSON-route runtime into the SSE hook.
+  type and lightweight browser decoder. The SSE hook loads the decoder when
+  it connects and decodes events before sending them to subscribers. Don't
+  import the JSON-route runtime into the SSE hook.
 - Events are notification triggers, not payloads — clients refetch via bulk endpoints.
 - **School portal** (moto schule, `/api/school/sse/events`): clients are indexed by account and by school, never by group or tenant fan-out. They get `BroadcastToSchoolAccounts` events, plus `class_day_changed`, which `Hub.BroadcastToTenant` derives from every `student_updated` at the same school (#4792). It carries only the source, never a child; open class views refetch. Every successful morning-attendance save also queues a school-scoped `student_updated` through Delivery's existing after-commit queue; the hub derives `class_day_changed` without child data. This includes corrections to present and works independently of notification settings. The notice `school_unreported_absence` (#4791, „Fehlt ohne Meldung“) separately reaches the Schulverwaltung as a `notification` event; `SchoolRealtimeBridge` also dispatches `class-day-refresh` on it.
 

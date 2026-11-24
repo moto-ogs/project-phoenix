@@ -809,7 +809,7 @@ function useApiErrorCore(
         return loadPresentation;
       }
       const notBookedModule = isModuleNotBooked(error)
-        ? await notBookedModuleOf(error).catch(() => null)
+        ? await notBookedModuleOf(error)
         : null;
       if (showVersion.current !== version) return;
       const presentation = presentError(
