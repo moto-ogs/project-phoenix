@@ -177,6 +177,7 @@ function ModalFooter({
         type="button"
         variant="outline"
         size="md"
+        disabled={submitting}
         noTooltip="Schließt den Dialog, ohne etwas zu senden."
         onClick={onClose}
       >

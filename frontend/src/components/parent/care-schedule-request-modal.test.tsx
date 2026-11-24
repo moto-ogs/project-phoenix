@@ -13,6 +13,7 @@ import { getPickupSignatureStatement } from "~/lib/parent-api";
 import { catalogText } from "~/test/error-catalog-text";
 import { CareScheduleRequestModal } from "./care-schedule-request-modal";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+import { deferred } from "~/test/helpers/form-modal-pending";
 
 vi.unmock("swr");
 
@@ -45,6 +46,7 @@ function renderModal(
     departure_mode: boolean;
   }>,
   onSubmit = vi.fn().mockResolvedValue(undefined),
+  onClose = vi.fn(),
 ) {
   render(
     <NextIntlClientProvider locale="de" messages={deMessages}>
@@ -52,7 +54,7 @@ function renderModal(
         studentId="42"
         weekdays={weekdays}
         capabilities={capabilities}
-        onClose={vi.fn()}
+        onClose={onClose}
         onSubmit={onSubmit}
       />
     </NextIntlClientProvider>,
@@ -168,6 +170,37 @@ describe("CareScheduleRequestModal", () => {
         weekdays: [{ weekday: 1, scheduled: false }],
       }),
     );
+  });
+});
+
+describe("CareScheduleRequestModal während des Sendens (#6792)", () => {
+  it("sperrt „Abbrechen“, solange die Anfrage läuft, und schließt nicht", async () => {
+    const request = deferred();
+    const onSubmit = vi.fn(() => request.promise);
+    const onClose = vi.fn();
+    renderModal(
+      { arrival: false, pickup: true, departure_mode: false },
+      onSubmit,
+      onClose,
+    );
+
+    fireEvent.change(screen.getByRole("textbox", { name: /^Abholzeit/ }), {
+      target: { value: "16:30" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Anfrage an OGS senden" }),
+    );
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+
+    const cancel = screen.getByRole("button", {
+      name: deMessages.parentMasterData.careSchedule.cancel,
+    });
+    expect(cancel).toBeDisabled();
+    fireEvent.click(cancel);
+    expect(onClose).not.toHaveBeenCalled();
+
+    request.resolve();
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   });
 });
 
