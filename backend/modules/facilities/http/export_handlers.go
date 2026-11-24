@@ -1,13 +1,13 @@
 package httpadapter
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -27,7 +27,7 @@ func (e *InvalidExportError) Unwrap() error { return e.Err }
 
 func (rs *Resource) exportSnapshot(w http.ResponseWriter, r *http.Request) {
 	var request roomSnapshotExportRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := wire.Decode(r.Body, &request); err != nil {
 		rs.runtime.Failure(w, r, FailureInvalid, err, "invalid_request")
 		return
 	}

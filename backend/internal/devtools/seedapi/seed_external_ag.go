@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -57,12 +59,12 @@ func seedExternalAGBody(today seedDate, roomID, categoryID, staffID int64, stude
 		"weekdays":          []int{calendar.ISOWeekday(calendar.NewDate(day.Year(), day.Month(), day.Day()))},
 		"start_time":        "14:00",
 		"end_time":          "15:00",
-		"room_id":           roomID,
-		"category_id":       categoryID,
+		"room_id":           ident.ID(roomID),
+		"category_id":       ident.ID(categoryID),
 		"week_pattern":      0,
-		"student_ids":       studentIDs[len(studentIDs)-seedExternalAGStudents:],
-		"staff_ids":         []int64{staffID},
-		"primary_staff_id":  staffID,
+		"student_ids":       ident.IDs(studentIDs[len(studentIDs)-seedExternalAGStudents:]),
+		"staff_ids":         []ident.ID{ident.ID(staffID)},
+		"primary_staff_id":  ident.ID(staffID),
 		"materialize_from":  today.String(),
 		"materialize_to":    today.AddDays(6).String(),
 	}

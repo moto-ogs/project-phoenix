@@ -1,6 +1,6 @@
-// Package wire encodes an answer to a client with every ident.ID as a JSON
-// string (ADR 0300, addendum). Stored JSON uses encoding/json, which writes an
-// ident.ID as a number.
+// Package wire reads and writes ident.ID as a JSON string at the HTTP
+// boundary (ADR 0300). Stored JSON uses encoding/json, which writes an
+// ident.ID as a number and also reads that form.
 package wire
 
 import (

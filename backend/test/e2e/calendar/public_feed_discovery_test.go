@@ -11,12 +11,13 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	calendarHTTP "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 // The public feed contract of ADR 0161 step 1 (#5881), observed over HTTP on
@@ -280,7 +281,7 @@ func TestPublicCalendarFeedParentHitReadsTheTokenOnce(t *testing.T) {
 	jwt := calendarToken(t, organizer.ID, permissions.CalendarManage, permissions.CalendarOwn)
 	created := doJSON(t, rig.router, http.MethodPost, "/calendar/appointments", jwt, map[string]any{
 		"title": "Elternabend Feed", "start_date": "2026-01-08", "end_date": "2026-01-08", "start_time": "18:00", "end_time": "19:00", "delivery_mode": "informational",
-		"targets": []map[string]any{{"type": "guardian_profile", "id": chain.GuardianProfileID}},
+		"targets": []map[string]any{{"type": "guardian_profile", "id": testpkg.ID(chain.GuardianProfileID)}},
 	})
 	require.Equal(t, http.StatusCreated, created.Code, created.Body.String())
 	token := feedTokenOf(t, doJSON(t, rig.router, http.MethodGet, "/parent/me/calendar/feed", parentCalendarToken(t, chain.AccountID), nil))

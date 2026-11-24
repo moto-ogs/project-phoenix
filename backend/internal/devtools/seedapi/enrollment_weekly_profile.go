@@ -420,7 +420,7 @@ func linkDeveloperAdminIdentity(ctx context.Context, primary, target *Runtime, s
 	if roleID == 0 {
 		return fmt.Errorf("target school admin role missing")
 	}
-	linked, err := target.Client.Post("/auth/link-to-tenant", map[string]any{"email": admin.Email, "role_id": roleID, "first_name": "Demo", "last_name": "Admin"})
+	linked, err := target.Client.Post("/auth/link-to-tenant", map[string]any{"email": admin.Email, "role_id": ident.ID(roleID), "first_name": "Demo", "last_name": "Admin"})
 	if err != nil {
 		return err
 	}

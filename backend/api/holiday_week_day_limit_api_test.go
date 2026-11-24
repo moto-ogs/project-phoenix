@@ -7,6 +7,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -42,7 +43,7 @@ func newWeekLimitFixture(t *testing.T, name, endsOn string, limit int) weekLimit
 		"name": "Winterferien 2027", "registration_opens_on": "2020-01-01", "registration_closes_on": "2099-12-31",
 		"binding": true, "notes": "", "max_days_per_child": limit,
 		"weeks": []map[string]any{{
-			"starts_on": limitMonday, "ends_on": endsOn, "host_school_id": office.schools[0],
+			"starts_on": limitMonday, "ends_on": endsOn, "host_school_id": fmt.Sprint(office.schools[0]),
 			"time_models": []map[string]any{{"name": "bis 13 Uhr", "starts_at": "08:00", "ends_at": "13:00", "price_cents": 4500}},
 		}},
 	}
@@ -61,7 +62,7 @@ func (w weekLimitFixture) register(t *testing.T, email string) receiptBody {
 	t.Helper()
 	d := dayFixture{holidayRegistrationFixture: w.holidayRegistrationFixture, period: w.period, offer: w.offer}
 	return d.submit(t, d.registration(email, "Mia",
-		map[string]any{"week_id": w.offer.Weeks[0].ID, "time_model_id": w.offer.Weeks[0].TimeModels[0].ID}))
+		map[string]any{"week_id": fmt.Sprint(w.offer.Weeks[0].ID), "time_model_id": fmt.Sprint(w.offer.Weeks[0].TimeModels[0].ID)}))
 }
 
 // stored reads the period as the Träger-Büro edits it.

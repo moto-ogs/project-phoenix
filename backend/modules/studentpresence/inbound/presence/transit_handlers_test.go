@@ -11,9 +11,10 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
-	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 )
 
 func TestAssignTransitStudents(t *testing.T) {
@@ -40,7 +41,7 @@ func TestAssignTransitStudents(t *testing.T) {
 		req := httptest.NewRequest(
 			testutil.MethodPost,
 			"/api/active/visits/transit/assign",
-			bytes.NewBufferString(`{"student_ids":[42,84],"active_group_id":99}`),
+			bytes.NewBufferString(`{"student_ids":["42","84"],"active_group_id":"99"}`),
 		)
 		req = withAdminMoveContext(req)
 		w := httptest.NewRecorder()
@@ -60,7 +61,7 @@ func TestAssignTransitStudents(t *testing.T) {
 		req := httptest.NewRequest(
 			testutil.MethodPost,
 			"/api/active/visits/transit/assign",
-			bytes.NewBufferString(`{"student_ids":[42]`),
+			bytes.NewBufferString(`{"student_ids":["42"]`),
 		)
 		w := httptest.NewRecorder()
 
@@ -74,7 +75,7 @@ func TestAssignTransitStudents(t *testing.T) {
 		req := httptest.NewRequest(
 			testutil.MethodPost,
 			"/api/active/visits/transit/assign",
-			bytes.NewBufferString(`{"student_ids":[],"active_group_id":99}`),
+			bytes.NewBufferString(`{"student_ids":[],"active_group_id":"99"}`),
 		)
 		w := httptest.NewRecorder()
 
@@ -94,7 +95,7 @@ func TestAssignTransitStudents(t *testing.T) {
 		req := httptest.NewRequest(
 			testutil.MethodPost,
 			"/api/active/visits/transit/assign",
-			bytes.NewBufferString(`{"student_ids":[42],"active_group_id":99}`),
+			bytes.NewBufferString(`{"student_ids":["42"],"active_group_id":"99"}`),
 		)
 		req = withAdminMoveContext(req)
 		w := httptest.NewRecorder()
@@ -123,7 +124,7 @@ func TestAssignTransitStudents(t *testing.T) {
 		req := httptest.NewRequest(
 			testutil.MethodPost,
 			"/api/active/visits/transit/assign",
-			bytes.NewBufferString(`{"student_ids":[42],"active_group_id":99}`),
+			bytes.NewBufferString(`{"student_ids":["42"],"active_group_id":"99"}`),
 		)
 		req = withStaffMoveContext(req)
 		w := httptest.NewRecorder()
@@ -159,7 +160,7 @@ func TestAssignTransitStudents(t *testing.T) {
 		req := httptest.NewRequest(
 			testutil.MethodPost,
 			"/api/active/visits/transit/assign",
-			bytes.NewBufferString(`{"student_ids":[42],"active_group_id":99}`),
+			bytes.NewBufferString(`{"student_ids":["42"],"active_group_id":"99"}`),
 		)
 		req = withStaffMoveContext(req)
 		w := httptest.NewRecorder()
@@ -187,7 +188,7 @@ func TestAssignTransitStudents(t *testing.T) {
 		req := httptest.NewRequest(
 			testutil.MethodPost,
 			"/api/active/visits/transit/assign",
-			bytes.NewBufferString(`{"student_ids":[42],"active_group_id":99}`),
+			bytes.NewBufferString(`{"student_ids":["42"],"active_group_id":"99"}`),
 		)
 		req = withStaffMoveContext(req)
 		w := httptest.NewRecorder()
@@ -219,7 +220,7 @@ func TestAssignTransitStudentsParticipantLimitWire(t *testing.T) {
 	req := httptest.NewRequest(
 		testutil.MethodPost,
 		"/api/active/visits/transit/assign",
-		bytes.NewBufferString(`{"student_ids":[42,84,85],"active_group_id":99}`),
+		bytes.NewBufferString(`{"student_ids":["42","84","85"],"active_group_id":"99"}`),
 	)
 	req = withAdminMoveContext(req)
 	w := httptest.NewRecorder()
@@ -259,7 +260,7 @@ func TestAssignTransitStudentsRoomCapacityWire(t *testing.T) {
 	req := httptest.NewRequest(
 		testutil.MethodPost,
 		"/api/active/visits/transit/assign",
-		bytes.NewBufferString(`{"student_ids":[42,84],"active_group_id":99}`),
+		bytes.NewBufferString(`{"student_ids":["42","84"],"active_group_id":"99"}`),
 	)
 	req = withAdminMoveContext(req)
 	w := httptest.NewRecorder()

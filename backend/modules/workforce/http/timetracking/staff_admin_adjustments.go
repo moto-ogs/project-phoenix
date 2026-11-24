@@ -6,9 +6,9 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 
-	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -119,7 +119,7 @@ func (rs *StaffAdminResource) createBalanceAdjustment(w http.ResponseWriter, r *
 		return
 	}
 	var req createBalanceAdjustmentRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
@@ -195,7 +195,7 @@ func (rs *StaffAdminResource) createOpeningBalance(w http.ResponseWriter, r *htt
 		return
 	}
 	var req openingBalanceRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
@@ -233,7 +233,7 @@ func (rs *StaffAdminResource) resetStaffBalance(w http.ResponseWriter, r *http.R
 		return
 	}
 	var req resetBalanceRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

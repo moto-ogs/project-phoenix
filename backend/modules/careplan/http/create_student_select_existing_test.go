@@ -3,13 +3,15 @@ package careplanhttp_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/moto-ogs/project-phoenix/api/testutil"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/api/testutil"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // seedExistingGuardian inserts a guardian profile in tenant 1 and returns its
@@ -55,7 +57,7 @@ func TestCreateStudent_SelectExistingGuardian(t *testing.T) {
 		"school_class": "3a",
 		"guardians": []map[string]interface{}{
 			{
-				"guardian_profile_id":  existingID,
+				"guardian_profile_id":  fmt.Sprint(existingID),
 				"relationship_type":    "parent",
 				"is_primary":           true,
 				"can_pickup":           true,
@@ -153,8 +155,8 @@ func TestCreateStudent_SelectExistingGuardian_DuplicateSkipped(t *testing.T) {
 		"last_name":    "Child",
 		"school_class": "3b",
 		"guardians": []map[string]interface{}{
-			{"guardian_profile_id": existingID, "relationship_type": "parent", "emergency_priority": 1},
-			{"guardian_profile_id": existingID, "relationship_type": "guardian", "emergency_priority": 2},
+			{"guardian_profile_id": fmt.Sprint(existingID), "relationship_type": "parent", "emergency_priority": 1},
+			{"guardian_profile_id": fmt.Sprint(existingID), "relationship_type": "guardian", "emergency_priority": 2},
 		},
 	}
 
@@ -189,7 +191,7 @@ func TestCreateStudent_MixedNewAndExistingGuardian(t *testing.T) {
 		"last_name":    "Child",
 		"school_class": "3c",
 		"guardians": []map[string]interface{}{
-			{"guardian_profile_id": existingID, "relationship_type": "parent", "is_primary": true, "emergency_priority": 1},
+			{"guardian_profile_id": fmt.Sprint(existingID), "relationship_type": "parent", "is_primary": true, "emergency_priority": 1},
 			{
 				"first_name":         "Brand",
 				"last_name":          "New",

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	testpkg "github.com/moto-ogs/project-phoenix/test"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,10 +18,10 @@ func TestFixedSeederSeedGroupHandover(t *testing.T) {
 	var request struct {
 		Type          string `json:"type"`
 		GroupHandover struct {
-			GroupID       int64  `json:"group_id"`
-			TargetStaffID int64  `json:"target_staff_id"`
-			StartDate     string `json:"start_date"`
-			EndDate       string `json:"end_date"`
+			GroupID       testpkg.ID `json:"group_id"`
+			TargetStaffID testpkg.ID `json:"target_staff_id"`
+			StartDate     string     `json:"start_date"`
+			EndDate       string     `json:"end_date"`
 		} `json:"group_handover"`
 	}
 	server := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
@@ -38,8 +40,8 @@ func TestFixedSeederSeedGroupHandover(t *testing.T) {
 	require.Equal(t, seedHTTPMethodPost, method)
 	require.Equal(t, "/api/substitutions", path)
 	require.Equal(t, "group_handover", request.Type)
-	require.Equal(t, int64(12), request.GroupHandover.GroupID)
-	require.Equal(t, int64(34), request.GroupHandover.TargetStaffID)
+	require.Equal(t, testpkg.ID(12), request.GroupHandover.GroupID)
+	require.Equal(t, testpkg.ID(34), request.GroupHandover.TargetStaffID)
 	start, err := parseSeedDate(request.GroupHandover.StartDate)
 	require.NoError(t, err)
 	end, err := parseSeedDate(request.GroupHandover.EndDate)

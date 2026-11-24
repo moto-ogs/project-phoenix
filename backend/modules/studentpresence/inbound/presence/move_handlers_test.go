@@ -9,16 +9,18 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 
-	tenantsettings "github.com/moto-ogs/project-phoenix/modules/settings"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	tenantsettings "github.com/moto-ogs/project-phoenix/modules/settings"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type moveAuthPersonService struct {
@@ -162,7 +164,7 @@ func TestMoveHandlerOnlyPassesSchoolWideEligibilityForTenantStaff(t *testing.T) 
 			claims := staffClaims()
 			claims.ID, claims.TenantID, claims.Scope, claims.Permissions = 2, tc.claimTenant, tc.scope, tc.permissions
 			ctx = claimsCtxWithParent(ctx, claims)
-			req := httptest.NewRequest(testutil.MethodPost, "/visits/move-to-group", bytes.NewBufferString(`{"student_ids":[123],"target_active_group_id":99}`)).WithContext(ctx)
+			req := httptest.NewRequest(testutil.MethodPost, "/visits/move-to-group", bytes.NewBufferString(`{"student_ids":["123"],"target_active_group_id":"99"}`)).WithContext(ctx)
 			rr := httptest.NewRecorder()
 			rs.moveStudentsToActiveGroup(rr, req)
 			require.True(t, called)
@@ -198,7 +200,7 @@ func TestMoveStudentsToActiveGroup(t *testing.T) {
 		req := httptest.NewRequest(
 			testutil.MethodPost,
 			"/api/active/visits/move-to-group",
-			bytes.NewBufferString(`{"student_ids":[42,84],"target_active_group_id":99}`),
+			bytes.NewBufferString(`{"student_ids":["42","84"],"target_active_group_id":"99"}`),
 		)
 		req = withAdminMoveContext(req)
 		w := httptest.NewRecorder()
@@ -218,7 +220,7 @@ func TestMoveStudentsToActiveGroup(t *testing.T) {
 		req := httptest.NewRequest(
 			testutil.MethodPost,
 			"/api/active/visits/move-to-group",
-			bytes.NewBufferString(`{"student_ids":[],"target_active_group_id":99}`),
+			bytes.NewBufferString(`{"student_ids":[],"target_active_group_id":"99"}`),
 		)
 		w := httptest.NewRecorder()
 
@@ -238,7 +240,7 @@ func TestMoveStudentsToActiveGroup(t *testing.T) {
 		req := httptest.NewRequest(
 			testutil.MethodPost,
 			"/api/active/visits/move-to-group",
-			bytes.NewBufferString(`{"student_ids":[42],"target_active_group_id":99}`),
+			bytes.NewBufferString(`{"student_ids":["42"],"target_active_group_id":"99"}`),
 		)
 		req = withAdminMoveContext(req)
 		w := httptest.NewRecorder()
@@ -274,7 +276,7 @@ func TestMoveStudentsToActiveGroup(t *testing.T) {
 		req := httptest.NewRequest(
 			testutil.MethodPost,
 			"/api/active/visits/move-to-group",
-			bytes.NewBufferString(`{"student_ids":[42],"target_active_group_id":99}`),
+			bytes.NewBufferString(`{"student_ids":["42"],"target_active_group_id":"99"}`),
 		)
 		req = withStaffMoveContext(req)
 		w := httptest.NewRecorder()
@@ -328,7 +330,7 @@ func TestMoveStudentsToActiveGroup(t *testing.T) {
 		req := httptest.NewRequest(
 			testutil.MethodPost,
 			"/api/active/visits/move-to-group",
-			bytes.NewBufferString(`{"student_ids":[42],"target_active_group_id":99}`),
+			bytes.NewBufferString(`{"student_ids":["42"],"target_active_group_id":"99"}`),
 		)
 		req = withStaffMoveContext(req)
 		w := httptest.NewRecorder()
@@ -356,7 +358,7 @@ func TestMoveStudentsToActiveGroup(t *testing.T) {
 		req := httptest.NewRequest(
 			testutil.MethodPost,
 			"/api/active/visits/move-to-group",
-			bytes.NewBufferString(`{"student_ids":[42],"target_active_group_id":99}`),
+			bytes.NewBufferString(`{"student_ids":["42"],"target_active_group_id":"99"}`),
 		)
 		req = withStaffMoveContext(req)
 		w := httptest.NewRecorder()

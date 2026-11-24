@@ -20,14 +20,15 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // acceptCareOfferingSeries is the care-offering check of a split that no
@@ -501,9 +502,9 @@ func TestTemplateUpdateHandler_IncompatibleCareLinkRollsBackOn400(t *testing.T) 
 	updateBody["weekdays"] = []int{timetableModule.WeekdayFriday}
 	updateBody["start_time"] = startTime
 	updateBody["end_time"] = endTime
-	updateBody["student_ids"] = []int64{s.studentB}
-	updateBody["staff_ids"] = []int64{s.staffA}
-	updateBody["primary_staff_id"] = s.staffA
+	updateBody["student_ids"] = []string{fmt.Sprint(s.studentB)}
+	updateBody["staff_ids"] = []string{fmt.Sprint(s.staffA)}
+	updateBody["primary_staff_id"] = fmt.Sprint(s.staffA)
 	updateW := doTemplateJSON(t, router, http.MethodPut,
 		fmt.Sprintf("/templates/%d", created.TemplateID), updateBody)
 	require.Equal(t, http.StatusBadRequest, updateW.Code, "body=%s", updateW.Body.String())

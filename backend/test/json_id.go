@@ -10,7 +10,7 @@ import (
 
 // ID is an identifier field of a test's response or request struct. It
 // reads only a decimal string, the form every registered route answers with
-// (ADR 0300), and writes a JSON number, which a request may send. A route
+// (ADR 0300), and writes the same form for requests. A route
 // outside the contract that still answers numbers is decoded into int64.
 type ID int64
 
@@ -29,9 +29,9 @@ func (id *ID) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON writes a JSON number.
+// MarshalJSON writes a decimal string.
 func (id ID) MarshalJSON() ([]byte, error) {
-	return strconv.AppendInt(nil, int64(id), 10), nil
+	return strconv.AppendQuote(nil, strconv.FormatInt(int64(id), 10)), nil
 }
 
 // IDs returns the identifiers as int64s.

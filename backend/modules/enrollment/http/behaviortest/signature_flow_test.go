@@ -275,7 +275,7 @@ func TestEnrollmentSignature_ParentEditSignsAgain(t *testing.T) {
 	before := decodeStatusSignature(t, env.do(t, http.MethodGet, "/requests/"+token, "", ""))
 	require.NotNil(t, before.Data.Signature)
 
-	edit := `{"phase_id":` + strconv.FormatInt(env.phaseID, 10) + `,"guardian_first_name":"Bea","guardian_last_name":"Beispiel",` +
+	edit := `{"phase_id":"` + strconv.FormatInt(env.phaseID, 10) + `","guardian_first_name":"Bea","guardian_last_name":"Beispiel",` +
 		`"guardian_email":"bea@example.com","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},` +
 		`"children":[{"first_name":"Lina","last_name":"Beispiel","date_of_birth":"2018-04-15","target_grade_level":1}]`
 	requireErrorCode(t, env.do(t, http.MethodPut, "/requests/"+token, "", edit+`}`), http.StatusBadRequest, capability.CodeSignatureRequired)

@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	testpkg "github.com/moto-ogs/project-phoenix/test"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,7 +27,7 @@ func TestRunFullDaySeedsStaffFeedTombstone(t *testing.T) {
 	}
 	periodEnd := periodStart.AddDate(0, 0, 6)
 
-	var createdStaffIDs []int64
+	var createdStaffIDs []testpkg.ID
 	var createdDate string
 	bootstrappedPeriods := false
 	deletedInstance := false
@@ -53,8 +55,8 @@ func TestRunFullDaySeedsStaffFeedTombstone(t *testing.T) {
 		case r.Method == simulationHTTPMethodPost && r.URL.Path == "/api/timetable/instances":
 			require.True(t, bootstrappedPeriods, "calendar periods must be bootstrapped before creating the demo cancellation")
 			var body struct {
-				StaffIDs []int64 `json:"staff_ids"`
-				Date     string  `json:"date"`
+				StaffIDs []testpkg.ID `json:"staff_ids"`
+				Date     string       `json:"date"`
 			}
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 			createdStaffIDs = body.StaffIDs
@@ -107,7 +109,7 @@ func TestRunFullDaySeedsStaffFeedTombstone(t *testing.T) {
 		Now:       func() time.Time { return now },
 	}))
 	require.True(t, bootstrappedPeriods)
-	require.Equal(t, []int64{10}, createdStaffIDs)
+	require.Equal(t, []testpkg.ID{10}, createdStaffIDs)
 	createdDay, err := time.ParseInLocation("2006-01-02", createdDate, berlin)
 	require.NoError(t, err)
 	require.True(t, createdDay.After(today), "demo cancellation must be scheduled in the future")

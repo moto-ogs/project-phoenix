@@ -25,7 +25,7 @@ func TestDecodeRebookAbsences(t *testing.T) {
 		return len(req.AbsenceIDs), err
 	}
 
-	count, err := decode(`{"absence_ids":["7",8],"absence_type":"other","absence_type_id":"9007199254740995","reason":"Kontingent angelegt","dry_run":true}`)
+	count, err := decode(`{"absence_ids":["7","8"],"absence_type":"other","absence_type_id":"9007199254740995","reason":"Kontingent angelegt","dry_run":true}`)
 	require.NoError(t, err)
 	assert.Equal(t, 2, count)
 

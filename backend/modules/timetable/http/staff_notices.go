@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Tagesinformationen (#2180) — HTTP-Fläche der Hinweise fürs Team:
@@ -391,7 +392,7 @@ func noticeIDFromURL(r *http.Request) (int64, error) {
 func decodeNoticeInput(r *http.Request) (timetable.StaffNoticeInput, error) {
 	// A new notice has no read state: its expected_version stays unused.
 	var req noticeUpdateRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		return timetable.StaffNoticeInput{}, errors.New("invalid request body")
 	}
 

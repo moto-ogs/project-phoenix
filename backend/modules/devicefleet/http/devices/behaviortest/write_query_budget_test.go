@@ -13,14 +13,15 @@ import (
 
 	answer "github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	devices "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 // Independent wire contract, not a process facade DTO or an owner composition.
@@ -87,7 +88,7 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 						method, path, permission, status = http.MethodPut, fmt.Sprintf("/%d", before.ID), "devices:manage", http.StatusOK
 					}
 					name := "After"
-					body := map[string]any{"device_id": id, "device_type": "terminal", "name": name, "status": "active", "registered_by_id": ident.ID(person.ID)}
+					body := map[string]any{"device_id": id, "device_type": "terminal", "name": name, "status": "active", "registered_by_id": fmt.Sprint(ident.ID(person.ID))}
 					if method == http.MethodPut {
 						body["expected_version"] = deviceVersion(t, router, path)
 					}

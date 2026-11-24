@@ -206,3 +206,18 @@ Ferienanmeldungen), und den Seeder, der Zahlen sendet.
 2. Ob und wo eine Zahl vom Client abgelehnt wird, entscheidet #7987.
 3. `scripts/check-contract-compat.mjs` lässt `lax_id` der Basis nicht mehr zu
    `id` werden; die Art trägt kein Release mehr.
+
+## Nachtrag vom 2026-11-24: Strenge beim Lesen der HTTP-Anfrage
+
+Dieser Nachtrag beantwortet die offene Frage aus Punkt 2 des vorigen Nachtrags (#7987).
+
+1. HTTP-Anfragen lesen `ident.ID` nur als Dezimalstring. `api/common`
+   setzt den Decoder für `render.Bind`. Handler und eigene Request-Leser,
+   die JSON selbst lesen, verwenden `wire.Decode` oder `wire.Unmarshal`.
+   Die Kiosk-Geräte-API behält ihre numerischen Felder.
+2. `encoding/json` schreibt `ident.ID` weiterhin als Zahl und liest
+   Zahlen wie Strings. Das betrifft unter anderem die gespeicherten
+   Betreuungsverträge und den Verlauf von Ferienanmeldungen.
+3. Seeder und Simulation schreiben ihre HTTP-Körper mit `wire.Marshal`.
+   Ihre Portal-Kennungen sind `ident.ID`; numerische Kiosk-Felder bleiben
+   `int64`.

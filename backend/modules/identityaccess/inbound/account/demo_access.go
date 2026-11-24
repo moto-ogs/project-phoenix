@@ -2,7 +2,6 @@ package account
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -15,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // DemoAccesses is the Identity & Access capability behind the public demo
@@ -110,7 +110,7 @@ type demoAccessRequestBody struct {
 
 func (rs *DemoResource) requestAccess(w http.ResponseWriter, r *http.Request) {
 	var body demoAccessRequestBody
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<14)).Decode(&body); err != nil {
+	if err := wire.Decode(http.MaxBytesReader(w, r.Body, 1<<14), &body); err != nil {
 		rs.renderError(w, r, identityaccess.ErrDemoAccessInvalid)
 		return
 	}
@@ -177,7 +177,7 @@ func (rs *DemoResource) createSession(w http.ResponseWriter, r *http.Request) {
 		Token string `json:"token"`
 		Role  string `json:"role"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<12)).Decode(&body); err != nil {
+	if err := wire.Decode(http.MaxBytesReader(w, r.Body, 1<<12), &body); err != nil {
 		rs.renderError(w, r, identityaccess.ErrDemoAccessUnknown)
 		return
 	}
@@ -200,7 +200,7 @@ func (rs *DemoResource) resetAccess(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Token string `json:"token"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<12)).Decode(&body); err != nil {
+	if err := wire.Decode(http.MaxBytesReader(w, r.Body, 1<<12), &body); err != nil {
 		rs.renderError(w, r, identityaccess.ErrDemoAccessUnknown)
 		return
 	}

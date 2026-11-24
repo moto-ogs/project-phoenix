@@ -13,11 +13,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/api/testutil"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
+
+	"github.com/moto-ogs/project-phoenix/api/testutil"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type rebookFixture struct {
@@ -51,12 +52,12 @@ func setupRebookFixture(t *testing.T, entitledDays float64) rebookFixture {
 	for _, day := range []int{7, 14, 21} {
 		friday := testpkg.Date(2026, time.August, day)
 		fixture.absences = append(fixture.absences, insertAbsenceRow(t, tc, map[string]any{
-			"staff_id":     subjectID,
+			"staff_id":     fmt.Sprint(subjectID),
 			"absence_type": "comp_time",
 			"date_start":   friday.String(),
 			"date_end":     friday.String(),
 			"status":       "reported",
-			"created_by":   subjectID,
+			"created_by":   fmt.Sprint(subjectID),
 			"requested_at": time.Now(),
 		}))
 	}
@@ -270,12 +271,12 @@ func TestAdminRebookAbsences_RejectsBlockingOverlap(t *testing.T) {
 	f := setupRebookFixture(t, 10)
 	friday := testpkg.Date(2026, time.August, 7)
 	insertAbsenceRow(t, f.tc, map[string]any{
-		"staff_id":     f.subjectID,
+		"staff_id":     fmt.Sprint(f.subjectID),
 		"absence_type": "training",
 		"date_start":   friday.String(),
 		"date_end":     friday.String(),
 		"status":       "reported",
-		"created_by":   f.subjectID,
+		"created_by":   fmt.Sprint(f.subjectID),
 		"requested_at": time.Now(),
 	})
 
@@ -329,12 +330,12 @@ func TestAdminRebookAbsences_RejectsSickReportsAndForeignEntries(t *testing.T) {
 
 	monday := testpkg.Date(2026, time.August, 3)
 	sickID := insertAbsenceRow(t, f.tc, map[string]any{
-		"staff_id":     f.subjectID,
+		"staff_id":     fmt.Sprint(f.subjectID),
 		"absence_type": "sick",
 		"date_start":   monday.String(),
 		"date_end":     monday.String(),
 		"status":       "reported",
-		"created_by":   f.subjectID,
+		"created_by":   fmt.Sprint(f.subjectID),
 		"requested_at": time.Now(),
 	})
 	body := f.body("Korrektur", false)
@@ -355,12 +356,12 @@ func TestAdminRebookAbsences_RejectsSickReportsAndForeignEntries(t *testing.T) {
 	// Another person's entry is not reachable through this staff member.
 	other := testpkg.CreateTestStaff(t, f.tc.db, "Rebook", fmt.Sprintf("Other-%d", time.Now().UnixNano()))
 	foreignID := insertAbsenceRow(t, f.tc, map[string]any{
-		"staff_id":     other.ID,
+		"staff_id":     fmt.Sprint(other.ID),
 		"absence_type": "comp_time",
 		"date_start":   monday.String(),
 		"date_end":     monday.String(),
 		"status":       "reported",
-		"created_by":   other.ID,
+		"created_by":   fmt.Sprint(other.ID),
 		"requested_at": time.Now(),
 	})
 	foreign := f.body("Korrektur", false)

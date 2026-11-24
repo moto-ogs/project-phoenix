@@ -98,12 +98,12 @@ func (s *bookingLeftoversSetup) handTemplateBody(name string, studentIDs []int64
 		"weekdays":           []int{1, 2, 3, 4, 5},
 		"start_time":         "14:00",
 		"end_time":           "16:00",
-		"room_id":            s.roomID,
-		"category_id":        s.category.ID,
-		"calendar_period_id": s.period.ID,
+		"room_id":            fmt.Sprint(s.roomID),
+		"category_id":        fmt.Sprint(s.category.ID),
+		"calendar_period_id": fmt.Sprint(s.period.ID),
 		"target_group_type":  timetableModule.TargetGroupTypeNone,
-		"student_ids":        studentIDs,
-		"staff_ids":          []int64{s.staffA},
+		"student_ids":        testpkg.IDsOf[testpkg.ID](studentIDs),
+		"staff_ids":          []string{fmt.Sprint(s.staffA)},
 	}
 }
 
@@ -343,7 +343,7 @@ func TestBookingLeftoversRemoveOnlyTheGapAcrossPlanningPeriods(t *testing.T) {
 	later := createTemplateTestPeriodRange(t, s.db, "Leftover-Next", rosterReviewMonday.AddDays(7), rosterReviewMonday.AddDays(120), 1, nil)
 	child := createClassStudents(t, s.db, "2h", 1)[0]
 	body := s.handTemplateBody("Hausaufgaben 2h", []int64{child})
-	body["calendar_period_id"] = later.ID
+	body["calendar_period_id"] = fmt.Sprint(later.ID)
 	w := doTemplateJSON(t, s.router, http.MethodPost, "/templates", body)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 	template := decodeTemplateData[createTemplateResponse](t, w).TemplateID
@@ -764,7 +764,7 @@ func TestBookingLeftoversProjectALaterPeriod(t *testing.T) {
 	later := createTemplateTestPeriodRange(t, s.db, "Leftover-Later", rosterReviewMonday.AddDays(140), rosterReviewMonday.AddDays(480), 1, nil)
 	children := createClassStudents(t, s.db, "2m", 2)
 	body := s.handTemplateBody("Hausaufgaben 2m", children)
-	body["calendar_period_id"] = later.ID
+	body["calendar_period_id"] = fmt.Sprint(later.ID)
 	w := doTemplateJSON(t, s.router, http.MethodPost, "/templates", body)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 	s.sources.bookings = thursdayDroppedBookings(children[0], children[1], rosterReviewMonday.AddDays(-3))

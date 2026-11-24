@@ -615,11 +615,11 @@ func seedOfferingPlanningTemplate(rt *Runtime, offeringID int64) error {
 	today := todaySeedDate()
 	_, err := rt.Client.Post("/api/timetable/templates", map[string]any{
 		"name": "Mittagessen", "type": "care", "list_kind": "mensa",
-		"target_group_type": "angebot", "source_care_offering_ids": []int64{offeringID},
+		"target_group_type": "angebot", "source_care_offering_ids": []ident.ID{ident.ID(offeringID)},
 		"weekdays": []int{1, 2, 3, 4, 5}, "start_time": "12:00", "end_time": "13:00",
-		"room_id": roomID, "category_id": categoryID, "week_pattern": 0,
+		"room_id": ident.ID(roomID), "category_id": ident.ID(categoryID), "week_pattern": 0,
 		// The visitor's caregiver eats with the children too (#3922).
-		"staff_ids": withVisitorStaff(rt.FixedSeeder, staffIDs[:1]), "primary_staff_id": staffIDs[0],
+		"staff_ids": ident.IDs(withVisitorStaff(rt.FixedSeeder, staffIDs[:1])), "primary_staff_id": ident.ID(staffIDs[0]),
 		// Two weeks, like the visitor's other blocks.
 		"materialize_from": today.String(), "materialize_to": today.AddDays(13).String(),
 	})
@@ -647,12 +647,12 @@ func seedCourseTemplate(rt *Runtime, name string, weekday int, offeringID int64,
 	today := todaySeedDate()
 	_, err := rt.Client.Post("/api/timetable/templates", map[string]any{
 		"name": name, "type": "activity", "list_kind": "activity",
-		"target_group_type": "angebot", "source_care_offering_ids": []int64{offeringID},
+		"target_group_type": "angebot", "source_care_offering_ids": []ident.ID{ident.ID(offeringID)},
 		"weekdays": []int{weekday}, "start_time": "14:00", "end_time": "15:00",
-		"room_id": roomID, "category_id": categoryID, "week_pattern": 0,
+		"room_id": ident.ID(roomID), "category_id": ident.ID(categoryID), "week_pattern": 0,
 		"max_participants": maxParticipants,
 		// The fourth caregiver: the first three run "AG Klasse 1a" at 14:00.
-		"staff_ids": staffIDs[3:4], "primary_staff_id": staffIDs[3],
+		"staff_ids": ident.IDs(staffIDs[3:4]), "primary_staff_id": ident.ID(staffIDs[3]),
 		"materialize_from": today.String(), "materialize_to": today.AddDays(6).String(),
 	})
 	if err != nil {
@@ -800,7 +800,7 @@ func (s parentEnrollmentSeedStep) createCareOfferings(rt *Runtime, auth AuthRef,
 
 func careOfferingSeedBody(offering seedCareOffering, phaseID int64) map[string]any {
 	body := map[string]any{
-		"phase_id":              phaseID,
+		"phase_id":              ident.ID(phaseID),
 		"name":                  offering.name,
 		"description":           offering.description,
 		"days_of_week_mode":     offering.daysMode,
@@ -862,12 +862,12 @@ func (s parentEnrollmentSeedStep) enrollmentSubmissionWithDays(phaseID int64, of
 			continue
 		}
 		offeringDays = append(offeringDays, map[string]any{
-			"offering_id":   offeringID,
+			"offering_id":   ident.ID(offeringID),
 			"selected_days": days,
 		})
 	}
 	return map[string]any{
-		"phase_id":            phaseID,
+		"phase_id":            ident.ID(phaseID),
 		"guardian_first_name": guardianFirstName,
 		"guardian_last_name":  guardianLastName,
 		"guardian_email":      guardianEmail,
@@ -889,7 +889,7 @@ func (s parentEnrollmentSeedStep) enrollmentSubmissionWithDays(phaseID int64, of
 				"last_name":          childLastName,
 				"date_of_birth":      dob,
 				"target_grade_level": grade,
-				"offering_ids":       withSeedCourseBookings(offerings, childFirstName, childLastName, offeringIDs),
+				"offering_ids":       ident.IDs(withSeedCourseBookings(offerings, childFirstName, childLastName, offeringIDs)),
 				"offering_days":      offeringDays,
 				// Answers to the form's questions about the child, which the
 				// decision page lists per child under "Angaben der Kinder".

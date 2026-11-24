@@ -235,10 +235,10 @@ func benefitsExemption() map[string]any {
 // "bis 16 Uhr" (67,50 €), Ben both weeks "bis 13 Uhr" (2 × 45,00 €).
 func quoteChildren(offer holidayOfferBody) []map[string]any {
 	return []map[string]any{
-		{"bookings": []map[string]any{{"week_id": offer.Weeks[0].ID, "time_model_id": offer.Weeks[0].TimeModels[1].ID}}},
+		{"bookings": []map[string]any{{"week_id": fmt.Sprint(offer.Weeks[0].ID), "time_model_id": fmt.Sprint(offer.Weeks[0].TimeModels[1].ID)}}},
 		{"bookings": []map[string]any{
-			{"week_id": offer.Weeks[0].ID, "time_model_id": offer.Weeks[0].TimeModels[0].ID},
-			{"week_id": offer.Weeks[1].ID, "time_model_id": offer.Weeks[1].TimeModels[0].ID},
+			{"week_id": fmt.Sprint(offer.Weeks[0].ID), "time_model_id": fmt.Sprint(offer.Weeks[0].TimeModels[0].ID)},
+			{"week_id": fmt.Sprint(offer.Weeks[1].ID), "time_model_id": fmt.Sprint(offer.Weeks[1].TimeModels[0].ID)},
 		}},
 	}
 }
@@ -366,7 +366,7 @@ func TestPublicHolidayFormShowsTheContributionWithItsLines(t *testing.T) {
 	assert.Equal(t, []string{"base:6750", "sibling:-3375", "benefits_exemption:-3375"}, lineKinds(freed.Children[0].Lines))
 	assert.Equal(t, "Beitragsfrei wegen Leistungsbezug (BuT)", freed.Children[0].Lines[2].Note)
 
-	foreignModel := []map[string]any{{"bookings": []map[string]any{{"week_id": f.offer.Weeks[0].ID, "time_model_id": f.offer.Weeks[1].TimeModels[0].ID}}}}
+	foreignModel := []map[string]any{{"bookings": []map[string]any{{"week_id": fmt.Sprint(f.offer.Weeks[0].ID), "time_model_id": fmt.Sprint(f.offer.Weeks[1].TimeModels[0].ID)}}}}
 	rec = quote(map[string]any{"children": foreignModel})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	code, _ := registrationRefusalOf(t, rec)

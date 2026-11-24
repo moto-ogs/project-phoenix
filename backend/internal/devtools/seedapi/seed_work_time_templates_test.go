@@ -51,6 +51,6 @@ func TestSeedWorkTimeTemplatesCreatesArchivesAndAssigns(t *testing.T) {
 		"POST /api/work-time-models/43/archive",
 		"POST /api/work-time-models/41/assignments",
 	}, calls, "the full-time template is the one in use, assigned in one request")
-	assert.Equal(t, []any{float64(3), float64(4), float64(5)}, assigned, "external staff and the person without a Soll keep their state")
+	assert.Equal(t, []any{"3", "4", "5"}, assigned, "external staff and the person without a Soll keep their state")
 	assert.Equal(t, timeTrackingDailyTargetMin, seedWorkTimeTemplates()[0].weeks[0][0], "assigning it keeps the custom Soll")
 }

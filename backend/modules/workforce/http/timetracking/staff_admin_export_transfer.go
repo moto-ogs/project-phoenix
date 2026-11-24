@@ -2,7 +2,6 @@ package timetracking
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -10,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Manual SFTP transfer of the cross-staff time export (#3050).
@@ -35,7 +35,7 @@ type TransferExportRequest struct {
 // canonical values stay in one place.
 func parseTimeExportBody(r *http.Request) (workforce.TimeExportRequest, error) {
 	var body TransferExportRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		return workforce.TimeExportRequest{}, errors.New("request body must be JSON")
 	}
 	if body.Year == 0 {

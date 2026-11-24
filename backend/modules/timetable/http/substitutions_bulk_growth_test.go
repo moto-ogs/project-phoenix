@@ -68,9 +68,9 @@ func TestBulkSubstitutionPlanningGrowth(t *testing.T) {
 		statements := map[int]int{}
 		for _, n := range []int{3, 8} {
 			days, dates := newDays(n, withSubstitute)
-			body := map[string]any{"absent_staff_id": s.staffA, "dates": dates, "reason": "krank"}
+			body := map[string]any{"absent_staff_id": fmt.Sprint(s.staffA), "dates": dates, "reason": "krank"}
 			if withSubstitute {
-				body["substitute_staff_id"] = s.staffY
+				body["substitute_staff_id"] = fmt.Sprint(s.staffY)
 			}
 			counter.Reset()
 			w := doBulk(t, router, body)

@@ -11,13 +11,14 @@ import (
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 // setupParentCalendarRoute mounts both the staff calendar router (to create
@@ -70,7 +71,7 @@ func TestParentCalendarHTTPFlow_ViewICSAndFeed(t *testing.T) {
 		"start_time":    "18:00",
 		"end_time":      "19:30",
 		"delivery_mode": "informational",
-		"targets":       []map[string]any{{"type": "guardian_profile", "id": chain.GuardianProfileID}},
+		"targets":       []map[string]any{{"type": "guardian_profile", "id": testpkg.ID(chain.GuardianProfileID)}},
 	})
 	require.Equal(t, http.StatusCreated, createRR.Code, createRR.Body.String())
 	var created createAppointmentE2EResponse
@@ -123,7 +124,7 @@ func TestParentCalendarHTTPFlow_AnswerAndRotateFeed(t *testing.T) {
 	createRR := doJSON(t, router, http.MethodPost, "/calendar/appointments", manageToken, map[string]any{
 		"title": "Sommerfest", "start_date": "2026-06-12", "end_date": "2026-06-12",
 		"start_time": "15:00", "end_time": "18:00", "delivery_mode": "rsvp_required",
-		"targets": []map[string]any{{"type": "guardian_profile", "id": chain.GuardianProfileID}},
+		"targets": []map[string]any{{"type": "guardian_profile", "id": testpkg.ID(chain.GuardianProfileID)}},
 	})
 	require.Equal(t, http.StatusCreated, createRR.Code, createRR.Body.String())
 	var created createAppointmentE2EResponse

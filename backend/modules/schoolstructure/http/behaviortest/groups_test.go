@@ -267,7 +267,7 @@ func TestCreateGroup_WithRoom(t *testing.T) {
 	uniqueName := fmt.Sprintf("GroupWithRoom-%d", time.Now().UnixNano())
 	body := map[string]interface{}{
 		"name":    uniqueName,
-		"room_id": room.ID,
+		"room_id": fmt.Sprint(room.ID),
 	}
 
 	req := newReq(t, "POST", "/groups", body, testutil.DefaultTestClaims(), "groups:create")
@@ -523,7 +523,7 @@ func TestUpdateGroup_WithRoom(t *testing.T) {
 
 	body := map[string]interface{}{
 		"name":             fmt.Sprintf("UpdatedWithRoom-%d", group.ID),
-		"room_id":          room.ID,
+		"room_id":          fmt.Sprint(room.ID),
 		"expected_version": groupVersion(t, router, group.ID, testutil.DefaultTestClaims()),
 	}
 
@@ -618,7 +618,7 @@ func TestCreateGroup_WithTeacherIDs(t *testing.T) {
 	uniqueName := fmt.Sprintf("GroupWithTeachers-%d", time.Now().UnixNano())
 	body := map[string]interface{}{
 		"name":        uniqueName,
-		"teacher_ids": []int64{teacher.ID},
+		"teacher_ids": []string{fmt.Sprint(teacher.ID)},
 	}
 
 	req := newReq(t, "POST", "/groups", body, testutil.DefaultTestClaims(), "groups:create")

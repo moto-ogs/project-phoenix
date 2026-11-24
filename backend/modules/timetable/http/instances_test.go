@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -17,13 +18,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // -----------------------------------------------------------------------------
@@ -360,7 +362,7 @@ func TestCompleteInstance_Success(t *testing.T) {
 	rs := newResourceForTest(Dependencies{InstanceService: mock})
 	router := setupLifecycleRouter(rs, "/instances/{id}/complete", rs.completeInstance)
 
-	w := doPost(t, router, "/instances/5/complete", map[string]any{"confirmed_present_student_ids": []int64{}})
+	w := doPost(t, router, "/instances/5/complete", map[string]any{"confirmed_present_student_ids": []string{}})
 
 	require.Equal(t, http.StatusOK, w.Code)
 	var resp map[string]any
@@ -383,7 +385,7 @@ func TestCompleteInstance_NoCompletedAt(t *testing.T) {
 	rs := newResourceForTest(Dependencies{InstanceService: mock})
 	router := setupLifecycleRouter(rs, "/instances/{id}/complete", rs.completeInstance)
 
-	w := doPost(t, router, "/instances/5/complete", map[string]any{"confirmed_present_student_ids": []int64{}})
+	w := doPost(t, router, "/instances/5/complete", map[string]any{"confirmed_present_student_ids": []string{}})
 
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.NotContains(t, w.Body.String(), "completed_at")
@@ -471,7 +473,7 @@ func TestCompleteInstance_NilService(t *testing.T) {
 	rs := newResourceForTest(Dependencies{})
 	router := setupLifecycleRouter(rs, "/instances/{id}/complete", rs.completeInstance)
 
-	w := doPost(t, router, "/instances/1/complete", map[string]any{"confirmed_present_student_ids": []int64{}})
+	w := doPost(t, router, "/instances/1/complete", map[string]any{"confirmed_present_student_ids": []string{}})
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
@@ -483,7 +485,7 @@ func TestCompleteInstance_NotFound(t *testing.T) {
 	rs := newResourceForTest(Dependencies{InstanceService: mock})
 	router := setupLifecycleRouter(rs, "/instances/{id}/complete", rs.completeInstance)
 
-	w := doPost(t, router, "/instances/1/complete", map[string]any{"confirmed_present_student_ids": []int64{}})
+	w := doPost(t, router, "/instances/1/complete", map[string]any{"confirmed_present_student_ids": []string{}})
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }
@@ -495,7 +497,7 @@ func TestCompleteInstance_StaleConfirmation(t *testing.T) {
 	rs := newResourceForTest(Dependencies{InstanceService: mock})
 	router := setupLifecycleRouter(rs, "/instances/{id}/complete", rs.completeInstance)
 
-	w := doPost(t, router, "/instances/1/complete", map[string]any{"confirmed_present_student_ids": []int64{7}})
+	w := doPost(t, router, "/instances/1/complete", map[string]any{"confirmed_present_student_ids": []string{fmt.Sprint(7)}})
 
 	assert.Equal(t, http.StatusConflict, w.Code)
 	assert.Contains(t, w.Body.String(), "timetable.completion_confirmation_stale")
@@ -508,7 +510,7 @@ func TestCompleteInstance_InvalidTransition(t *testing.T) {
 	rs := newResourceForTest(Dependencies{InstanceService: mock})
 	router := setupLifecycleRouter(rs, "/instances/{id}/complete", rs.completeInstance)
 
-	w := doPost(t, router, "/instances/1/complete", map[string]any{"confirmed_present_student_ids": []int64{}})
+	w := doPost(t, router, "/instances/1/complete", map[string]any{"confirmed_present_student_ids": []string{}})
 
 	assert.Equal(t, http.StatusConflict, w.Code)
 	assert.Contains(t, w.Body.String(), "timetable.invalid_transition")
@@ -521,7 +523,7 @@ func TestCompleteInstance_InternalError(t *testing.T) {
 	rs := newResourceForTest(Dependencies{InstanceService: mock})
 	router := setupLifecycleRouter(rs, "/instances/{id}/complete", rs.completeInstance)
 
-	w := doPost(t, router, "/instances/1/complete", map[string]any{"confirmed_present_student_ids": []int64{}})
+	w := doPost(t, router, "/instances/1/complete", map[string]any{"confirmed_present_student_ids": []string{}})
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
@@ -1111,7 +1113,7 @@ func TestReplanWeek_ActivityGroupIDPassThrough(t *testing.T) {
 	body := map[string]any{
 		"from_date":         "2026-04-27",
 		"to_date":           "2026-05-03",
-		"activity_group_id": 4711,
+		"activity_group_id": "4711",
 	}
 	w := doPost(t, router, "/instances/re-plan-week", body)
 	require.Equal(t, http.StatusOK, w.Code, "body: %s", w.Body.String())

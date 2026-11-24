@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -14,14 +15,15 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	staffHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // fakeMembership answers the capability calls from small in-memory maps, so
@@ -768,7 +770,7 @@ func TestCreateStaffValidatesBodyAndGrantsPermissions(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, missingPerson.Code)
 	assert.Equal(t, "person ID is required", decodeError(t, missingPerson).Detail)
 
-	unknownPerson := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": ident.ID(999)})
+	unknownPerson := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": fmt.Sprint(ident.ID(999))})
 	assert.Equal(t, http.StatusNotFound, unknownPerson.Code)
 	assert.Equal(t, "person not found", decodeError(t, unknownPerson).Detail)
 
@@ -790,17 +792,17 @@ func TestCreateStaffMapsTheTeacherOutcomes(t *testing.T) {
 		Teacher: &schoolmembership.Teacher{ID: 33, StaffID: 3},
 	}
 
-	teacher := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": ident.ID(11), "is_teacher": true})
+	teacher := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": fmt.Sprint(ident.ID(11)), "is_teacher": true})
 	require.Equal(t, http.StatusCreated, teacher.Code)
 	assert.Equal(t, "Teacher created successfully", decode(t, teacher).Message)
 
 	h.createResult = staffHTTP.CreateStaffResult{Staff: schoolmembership.Staff{ID: 3, PersonID: 11}, TeacherCreationFailed: true}
-	failed := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": ident.ID(11), "is_teacher": true})
+	failed := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": fmt.Sprint(ident.ID(11)), "is_teacher": true})
 	require.Equal(t, http.StatusCreated, failed.Code)
 	assert.Equal(t, "Staff member created successfully, but failed to create teacher record", decode(t, failed).Message)
 
 	h.createErr = errors.New("staff record already in use")
-	conflict := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": ident.ID(11)})
+	conflict := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": fmt.Sprint(ident.ID(11))})
 	assert.Equal(t, http.StatusConflict, conflict.Code, "the root's write renderer decides the status")
 	assert.Equal(t, "staff record already in use", decodeError(t, conflict).Detail)
 }

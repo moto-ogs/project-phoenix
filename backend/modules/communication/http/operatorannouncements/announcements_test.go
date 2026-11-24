@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -313,7 +314,7 @@ func TestCreateAnnouncement_Targeting(t *testing.T) {
 
 			body, _ := json.Marshal(map[string]any{
 				"title": "T", "content": "C",
-				"target_org_ids": tc.orgIDs, "target_tenant_ids": tc.tenantIDs,
+				"target_org_ids": testpkg.IDsOf[testpkg.ID](tc.orgIDs), "target_tenant_ids": testpkg.IDsOf[testpkg.ID](tc.tenantIDs),
 			})
 			req := httptest.NewRequest(http.MethodPost, "/announcements", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
@@ -343,7 +344,7 @@ func TestUpdateAnnouncement_WithOrgAndTenantTargeting(t *testing.T) {
 	body, _ := json.Marshal(map[string]any{
 		"title": "Updated", "content": "Updated",
 		"type": platform.TypeAnnouncement, "severity": platform.SeverityInfo,
-		"target_org_ids": []int64{3, 4}, "target_tenant_ids": []int64{7, 8, 9},
+		"target_org_ids": []string{fmt.Sprint(3), fmt.Sprint(4)}, "target_tenant_ids": []string{fmt.Sprint(7), fmt.Sprint(8), fmt.Sprint(9)},
 	})
 	req := httptest.NewRequest(http.MethodPut, "/announcements/1", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -374,7 +375,7 @@ func TestCreateAnnouncement_ResponseIncludesTargetingFields(t *testing.T) {
 
 	body, _ := json.Marshal(map[string]any{
 		"title": "T", "content": "C",
-		"target_org_ids": []int64{1, 2}, "target_tenant_ids": []int64{5},
+		"target_org_ids": []string{fmt.Sprint(1), fmt.Sprint(2)}, "target_tenant_ids": []string{fmt.Sprint(5)},
 		"target_roles": []string{"admin"},
 	})
 	req := httptest.NewRequest(http.MethodPost, "/announcements", bytes.NewReader(body))

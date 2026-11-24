@@ -2,13 +2,15 @@ package behaviortest
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"slices"
 	"strconv"
 	"testing"
 
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
+
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 func TestRebookingMonthReadFailureRemainsInternalError(t *testing.T) {
@@ -29,8 +31,8 @@ func TestRebookingVacationReadsUnselectedDaysLive(t *testing.T) {
 	f := setupRebookFixture(t, 30)
 	require.Equal(t, http.StatusOK, putVacationQuota(t, f.tc, f.token, f.subjectID, 2026, 30).Code)
 	insertAbsenceRow(t, f.tc, map[string]any{
-		"staff_id": f.subjectID, "absence_type": "vacation", "date_start": "2026-07-06", "date_end": "2026-07-06",
-		"working_days": 1, "status": "approved", "created_by": f.subjectID,
+		"staff_id": fmt.Sprint(f.subjectID), "absence_type": "vacation", "date_start": "2026-07-06", "date_end": "2026-07-06",
+		"working_days": 1, "status": "approved", "created_by": fmt.Sprint(f.subjectID),
 	})
 	for _, dryRun := range []bool{true, false} {
 		body := f.body("Live vacation account", dryRun)

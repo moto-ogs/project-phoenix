@@ -13,6 +13,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
@@ -25,8 +28,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestOperationsPlannedNow(t *testing.T) {
@@ -230,7 +231,7 @@ func TestOperationsInstanceEndpoints(t *testing.T) {
 	}{
 		{"roster", http.MethodGet, "/instances/230/roster", res.operationsRoster, nil},
 		{"start", http.MethodPost, "/instances/231/start", res.operationsStart, nil},
-		{"complete", http.MethodPost, "/instances/232/complete", res.operationsComplete, map[string]any{"confirmed_present_student_ids": []int64{}}},
+		{"complete", http.MethodPost, "/instances/232/complete", res.operationsComplete, map[string]any{"confirmed_present_student_ids": []string{}}},
 	}
 
 	for _, tc := range cases {
@@ -337,8 +338,8 @@ func TestOperationsCreateAndStartSpontaneous(t *testing.T) {
 
 	rr := executeOperationRequest(t, router, http.MethodPost, "/spontaneous/start", map[string]any{
 		"title":             "Freispiel",
-		"room_id":           roomID,
-		"activity_group_id": int64(71),
+		"room_id":           fmt.Sprint(roomID),
+		"activity_group_id": fmt.Sprint(int64(71)),
 		// This is above JavaScript's safe integer limit. The operation accepts
 		// the decimal string so a selected external caregiver reaches the
 		// intended staff record.
@@ -406,8 +407,8 @@ func TestOperationsCreateAndStartSpontaneousRollsBackNon5xxFailures(t *testing.T
 
 	body, err := json.Marshal(map[string]any{
 		"title":             "Freispiel",
-		"room_id":           int64(70),
-		"activity_group_id": int64(71),
+		"room_id":           fmt.Sprint(int64(70)),
+		"activity_group_id": fmt.Sprint(int64(71)),
 	})
 	require.NoError(t, err)
 	execute := func() *httptest.ResponseRecorder {
@@ -478,7 +479,7 @@ func TestOperationsCreateAndStartSpontaneousReusesActivityByName(t *testing.T) {
 
 	rr := executeOperationRequest(t, router, http.MethodPost, "/spontaneous/start", map[string]any{
 		"title":   "freispiel",
-		"room_id": int64(70),
+		"room_id": fmt.Sprint(int64(70)),
 	})
 
 	require.Equal(t, http.StatusCreated, rr.Code)
@@ -518,7 +519,7 @@ func TestOperationsCreateAndStartSpontaneousCreatesActivityForNewName(t *testing
 
 	rr := executeOperationRequest(t, router, http.MethodPost, "/spontaneous/start", map[string]any{
 		"title":   "Neue Werkstatt",
-		"room_id": int64(70),
+		"room_id": fmt.Sprint(int64(70)),
 	})
 
 	require.Equal(t, http.StatusCreated, rr.Code)
@@ -551,7 +552,7 @@ func TestOperationsCreateAndStartSpontaneousRejectsArchivedCategory(t *testing.T
 
 	rr := executeOperationRequest(t, router, http.MethodPost, "/spontaneous/start", map[string]any{
 		"title":   "Neue Werkstatt",
-		"room_id": int64(70),
+		"room_id": fmt.Sprint(int64(70)),
 	})
 
 	require.Equal(t, http.StatusConflict, rr.Code)
@@ -600,8 +601,8 @@ func TestOperationsCreateAndStartSpontaneousRejectsStudents(t *testing.T) {
 		"start_time":  "14:00",
 		"end_time":    "15:00",
 		"title":       "Freispiel",
-		"room_id":     7,
-		"student_ids": []int64{99},
+		"room_id":     "7",
+		"student_ids": []string{fmt.Sprint(99)},
 	})
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -625,7 +626,7 @@ func TestOperationsCreateAndStartSpontaneousRejectsWeekend(t *testing.T) {
 
 	rr := executeOperationRequest(t, router, http.MethodPost, "/spontaneous/start", map[string]any{
 		"title":   "Freispiel",
-		"room_id": roomID,
+		"room_id": fmt.Sprint(roomID),
 	})
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -653,7 +654,7 @@ func TestOperationsCreateAndStartSpontaneousRejectsOccupiedRoom(t *testing.T) {
 		"start_time": "14:00",
 		"end_time":   "15:00",
 		"title":      "Freispiel",
-		"room_id":    7,
+		"room_id":    "7",
 	})
 
 	assert.Equal(t, http.StatusConflict, rr.Code)
@@ -681,7 +682,7 @@ func TestOperationsCreateAndStartSpontaneousRequiresSetting(t *testing.T) {
 		"start_time": "14:00",
 		"end_time":   "15:00",
 		"title":      "Freispiel",
-		"room_id":    7,
+		"room_id":    "7",
 	})
 
 	assert.Equal(t, http.StatusForbidden, rr.Code)

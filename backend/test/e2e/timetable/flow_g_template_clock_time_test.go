@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 func TestFlowG_TemplateClockTimesStayTimezoneFree(t *testing.T) {
@@ -29,9 +30,9 @@ func TestFlowG_TemplateClockTimesStayTimezoneFree(t *testing.T) {
 		"weekdays":           []int{1},
 		"start_time":         "11:30",
 		"end_time":           "12:00",
-		"room_id":            room.ID,
-		"category_id":        category.ID,
-		"calendar_period_id": period.ID,
+		"room_id":            testpkg.ID(room.ID),
+		"category_id":        testpkg.ID(category.ID),
+		"calendar_period_id": testpkg.ID(period.ID),
 		"materialize_from":   fromS,
 		"materialize_to":     fromS,
 	}

@@ -74,7 +74,7 @@ func TestTraegerStaffTimeAccountSumsAndClosesEverySchool(t *testing.T) {
 	}
 
 	rec := traegerLink(t, router, office.token, map[string]any{
-		"members": []map[string]int64{{"school_id": north, "staff_id": miraNorth.ID}, {"school_id": south, "staff_id": miraSouth.ID}},
+		"members": []map[string]string{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID)}, {"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(miraSouth.ID)}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	recordID := decode[staffRecordBody](t, rec).ID
@@ -93,8 +93,8 @@ func TestTraegerStaffTimeAccountSumsAndClosesEverySchool(t *testing.T) {
 	rec = traegerJSON(t, router, office.token, http.MethodPost, fmt.Sprintf("/traeger/staff-records/%d/contracts", recordID), map[string]any{
 		"kind": "part_time", "starts_on": "2026-08-01",
 		"sites": []map[string]any{
-			{"school_id": north, "staff_id": miraNorth.ID, "weekday_minutes": []int{300, 300, 300, 300, 0}},
-			{"school_id": south, "staff_id": miraSouth.ID, "weekday_minutes": []int{0, 0, 0, 0, 240}},
+			{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID), "weekday_minutes": []int{300, 300, 300, 300, 0}},
+			{"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(miraSouth.ID), "weekday_minutes": []int{0, 0, 0, 0, 240}},
 		},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())

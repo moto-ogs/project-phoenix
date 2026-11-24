@@ -15,6 +15,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // PhaseResponse is the wire shape returned to admin UIs. Int64 IDs are
@@ -191,7 +192,7 @@ func (req *EnrollmentPhaseRequest) Bind(_ *http.Request) error { return nil }
 func (req *EnrollmentPhaseRequest) UnmarshalJSON(data []byte) error {
 	type phaseRequestAlias EnrollmentPhaseRequest
 	var alias phaseRequestAlias
-	if err := json.Unmarshal(data, &alias); err != nil {
+	if err := wire.Unmarshal(data, &alias); err != nil {
 		return err
 	}
 	var raw map[string]json.RawMessage

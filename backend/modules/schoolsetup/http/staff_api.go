@@ -1,13 +1,14 @@
 package schoolsetuphttp
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // StaffService is the first-steps capability of a care worker (#3748).
@@ -60,7 +61,7 @@ func (rs *StaffResource) setStepState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req stepStateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		rs.runtime.Failure(w, r, http.StatusBadRequest, err)
 		return
 	}
@@ -79,7 +80,7 @@ func (rs *StaffResource) dismiss(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req dismissalRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		rs.runtime.Failure(w, r, http.StatusBadRequest, err)
 		return
 	}

@@ -6,12 +6,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/require"
 )
 
 // correctionFixture is the approved enrollment child a booking correction acts
@@ -84,8 +85,8 @@ func insertPendingOfferingChangeRequest(
 	t.Helper()
 	payload, err := json.Marshal(map[string]any{
 		"offerings": []any{
-			map[string]any{"offering_id": fixture.ganztag.ID},
-			map[string]any{"offering_id": fixture.mittag.ID},
+			map[string]any{"offering_id": fmt.Sprint(fixture.ganztag.ID)},
+			map[string]any{"offering_id": fmt.Sprint(fixture.mittag.ID)},
 		},
 	})
 	require.NoError(t, err)

@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+
 	"github.com/go-chi/chi/v5"
 )
 
@@ -193,7 +195,7 @@ func apiLoginLabel(path string) string {
 func (a *HTTPAPIAdapter) Raw(ctx context.Context, auth APIAuth, method, path string, body any, headers map[string]string) ([]byte, int, error) {
 	var reader io.Reader
 	if body != nil {
-		encoded, err := json.Marshal(body)
+		encoded, err := wire.Marshal(body)
 		if err != nil {
 			return nil, 0, err
 		}

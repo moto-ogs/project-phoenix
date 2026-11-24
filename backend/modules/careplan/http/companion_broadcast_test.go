@@ -1,15 +1,17 @@
 package careplanhttp_test
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // accompaniedPlanBody is the departure plan the Stammdaten and personal-info
@@ -70,7 +72,7 @@ func TestUpdateStudent_CompanionEventOnlyOnEffectiveChange(t *testing.T) {
 		tc.broadcaster.Reset()
 		putStudent(t, tc, student.ID, accompaniedPlanBody(map[string]any{
 			"companions": []map[string]any{
-				{"companion_student_id": companion.ID, "weekdays": []string{"mon"}},
+				{"companion_student_id": fmt.Sprint(companion.ID), "weekdays": []string{"mon"}},
 			},
 			"companions_fingerprint": mondayLinkFingerprint(),
 		}))
@@ -93,7 +95,7 @@ func TestUpdateStudent_CompanionEventOnlyOnEffectiveChange(t *testing.T) {
 		tc.broadcaster.Reset()
 		putStudent(t, tc, student.ID, accompaniedPlanBody(map[string]any{
 			"companions": []map[string]any{
-				{"companion_student_id": companion.ID, "weekdays": []string{"mon"}},
+				{"companion_student_id": fmt.Sprint(companion.ID), "weekdays": []string{"mon"}},
 			},
 			"companions_fingerprint": mondayLinkFingerprint(companion.ID),
 		}))
@@ -127,7 +129,7 @@ func TestDeleteStudent_AnnouncesCompanionChange(t *testing.T) {
 	putStudent(t, tc, companion.ID, accompaniedPlanBody(nil))
 	putStudent(t, tc, student.ID, accompaniedPlanBody(map[string]any{
 		"companions": []map[string]any{
-			{"companion_student_id": companion.ID, "weekdays": []string{"mon"}},
+			{"companion_student_id": fmt.Sprint(companion.ID), "weekdays": []string{"mon"}},
 		},
 		"companions_fingerprint": mondayLinkFingerprint(),
 	}))

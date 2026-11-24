@@ -7,6 +7,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -31,7 +32,7 @@ func assertNothingIssued(t *testing.T, f reviewFixture, runID int64) {
 func correctChild(t *testing.T, f reviewFixture, token string, runID, registrationID, childID, totalCents int64, reason string) {
 	t.Helper()
 	rec := traegerJSON(t, f.traeger, token, http.MethodPost, billingRunPath(runID, "/corrections"),
-		map[string]any{"registration_id": registrationID, "child_id": childID, "total_cents": totalCents, "reason": reason})
+		map[string]any{"registration_id": fmt.Sprint(registrationID), "child_id": fmt.Sprint(childID), "total_cents": totalCents, "reason": reason})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 }
 

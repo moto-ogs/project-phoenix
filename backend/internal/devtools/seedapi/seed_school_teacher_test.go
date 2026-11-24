@@ -27,7 +27,7 @@ func TestSeedSchoolTeacherUsesSchoolSessionAndAssignedOGSClass(t *testing.T) {
 		switch r.URL.Path {
 		case "/auth/register":
 			assert.Equal(t, "Bearer admin", r.Header.Get("Authorization"))
-			assert.EqualValues(t, 71, body["role_id"])
+			assert.Equal(t, "71", body["role_id"])
 			assert.Equal(t, password, body["password"])
 			assert.Equal(t, password, body["confirm_password"])
 			assert.Equal(t, "lehrkraft@demo-vollbetrieb.moto-ogs.de", body["email"])
@@ -76,7 +76,7 @@ func TestSeedSchoolTeacherUsesSchoolSessionAndAssignedOGSClass(t *testing.T) {
 	assert.Equal(t, "12:00", bodies[4]["arrival_time"])
 	assert.NotEmpty(t, bodies[5]["body"])
 	assert.NotEmpty(t, bodies[6]["body"])
-	assert.Equal(t, []any{map[string]any{"student_id": float64(101), "status": "present"}}, bodies[7]["marks"])
+	assert.Equal(t, []any{map[string]any{"student_id": "101", "status": "present"}}, bodies[7]["marks"])
 	require.NotNil(t, s.schoolTeacherAccount)
 	assert.EqualValues(t, 91, s.schoolTeacherAccount.StaffID)
 	state := &SeedState{}

@@ -4,6 +4,8 @@ import (
 	json "encoding/json"
 	fmt "fmt"
 	strings "strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Refuse retired fields even when empty or null, rather than acknowledging a
@@ -27,7 +29,7 @@ func (req *StudentRequest) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	type request StudentRequest
-	return json.Unmarshal(data, (*request)(req))
+	return wire.Unmarshal(data, (*request)(req))
 }
 
 func (req *UpdateStudentRequest) UnmarshalJSON(data []byte) error {
@@ -35,5 +37,5 @@ func (req *UpdateStudentRequest) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	type request UpdateStudentRequest
-	return json.Unmarshal(data, (*request)(req))
+	return wire.Unmarshal(data, (*request)(req))
 }

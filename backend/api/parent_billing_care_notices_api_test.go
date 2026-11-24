@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -337,7 +338,7 @@ func TestCareMonthlyReleaseRefusesAfterANoticeTookTheMonth(t *testing.T) {
 
 	// The notice assesses Mia's school only; Noah stays with the monthly run.
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunsPath,
-		map[string]any{"year": 2030, "from_month": "2030-09-01", "notice_date": "2030-09-24", "school_ids": []int64{f.office.schools[0]}})
+		map[string]any{"year": 2030, "from_month": "2030-09-01", "notice_date": "2030-09-24", "school_ids": []string{fmt.Sprint(f.office.schools[0])}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	f.releaseNoticeRun(t, f.noticeRun(t, int64(decodeSchoolPortalData[careNoticeRunBody](t, rec.Body.Bytes()).ID)))
 
@@ -416,7 +417,7 @@ func TestCareNoticeCalculationFailuresKeepTheIssuedAssessment(t *testing.T) {
 				rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(f.office.schools[0], "2030-11-01", 3300))
 				require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 				december := carePriceList(f.office.schools[0], "2030-12-01", 3300)
-				december["prices"] = []map[string]any{{"care_offering_id": careModuleUntil1400, "module_name": "Betreuung bis 14:00 Uhr", "days_per_week": 2, "monthly_cents": 3300}}
+				december["prices"] = []map[string]any{{"care_offering_id": fmt.Sprint(careModuleUntil1400), "module_name": "Betreuung bis 14:00 Uhr", "days_per_week": 2, "monthly_cents": 3300}}
 				rec = putCarePriceList(t, f.traeger, f.office.token, december)
 				require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 				mixed := f.noticeRun(t, int64(preview.ID))
@@ -441,7 +442,7 @@ func TestCareNoticeEmptyRunClosesWithoutNumbersAndFreesTheYear(t *testing.T) {
 	_, err := f.db.ExecContext(context.Background(), `DELETE FROM parent_billing.number_ranges WHERE organization_id = ?`, f.office.organization)
 	require.NoError(t, err)
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunsPath,
-		map[string]any{"year": 2030, "from_month": "2030-09-01", "school_ids": []int64{f.office.schools[1]}})
+		map[string]any{"year": 2030, "from_month": "2030-09-01", "school_ids": []string{fmt.Sprint(f.office.schools[1])}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	preview := f.noticeRun(t, int64(decodeSchoolPortalData[careNoticeRunBody](t, rec.Body.Bytes()).ID))
 	require.Zero(t, preview.PreviewCount)

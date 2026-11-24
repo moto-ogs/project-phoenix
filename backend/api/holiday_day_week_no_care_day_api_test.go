@@ -6,6 +6,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -52,8 +53,8 @@ func TestHolidayWeekByDaysLeavesOutOnlyItsDaysWithoutCare(t *testing.T) {
 	school := office.schools[0]
 
 	week := func(id, model int64, unit string) map[string]any {
-		return map[string]any{"id": id, "starts_on": dayMonday, "ends_on": dayFriday, "host_school_id": school, "booking_unit": unit,
-			"time_models": []map[string]any{{"id": model, "name": "bis 13 Uhr", "starts_at": "08:00", "ends_at": "13:00", "price_cents": 1500}}}
+		return map[string]any{"id": fmt.Sprint(id), "starts_on": dayMonday, "ends_on": dayFriday, "host_school_id": fmt.Sprint(school), "booking_unit": unit,
+			"time_models": []map[string]any{{"id": fmt.Sprint(model), "name": "bis 13 Uhr", "starts_at": "08:00", "ends_at": "13:00", "price_cents": 1500}}}
 	}
 	period := func(weeks ...map[string]any) map[string]any {
 		return map[string]any{"name": "Winterferien 2099", "registration_opens_on": "2020-01-01", "registration_closes_on": "2099-12-31",

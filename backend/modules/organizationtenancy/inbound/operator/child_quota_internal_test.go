@@ -9,9 +9,10 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 )
 
 // TestProvisioningResource_UpdateSchool_ChildQuota pins the wire contract of
@@ -19,7 +20,7 @@ import (
 // it, null removes it, an object sets it with 50 as the default bundle size.
 func TestProvisioningResource_UpdateSchool_ChildQuota(t *testing.T) {
 	t.Parallel()
-	const base = `"organization_id":7,"name":"School","slug":"school","subdomain":"school","active":true`
+	const base = `"organization_id":"7","name":"School","slug":"school","subdomain":"school","active":true`
 	for name, tc := range map[string]struct {
 		field string
 		want  *organizationtenancy.ChildQuotaChange
@@ -61,7 +62,7 @@ func TestProvisioningResource_UpdateSchool_ChildQuotaMalformed(t *testing.T) {
 	t.Parallel()
 	resource := NewProvisioningResource(ProvisioningConfig{Service: &mockProvisioningService{}})
 	req := httptest.NewRequest(http.MethodPut, "/operator/schools/10",
-		bytes.NewBufferString(`{"organization_id":7,"name":"S","slug":"s","subdomain":"s","child_quota":{"bundles":"zwei"}}`))
+		bytes.NewBufferString(`{"organization_id":"7","name":"S","slug":"s","subdomain":"s","child_quota":{"bundles":"zwei"}}`))
 	req.Header.Set("Content-Type", "application/json")
 	req = withOperatorClaims(req, 42)
 	routeCtx := chi.NewRouteContext()

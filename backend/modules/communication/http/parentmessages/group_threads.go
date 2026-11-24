@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // mountGroupThreadRoutes adds the group threads (#4784): the OGS writes to a
@@ -172,7 +173,7 @@ func (rs *Resource) previewGroupAudience(w http.ResponseWriter, r *http.Request)
 
 func (rs *Resource) createGroupThread(w http.ResponseWriter, r *http.Request) {
 	var req CreateGroupThreadRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -216,7 +217,7 @@ func (rs *Resource) postGroupMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req GroupMessageRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
