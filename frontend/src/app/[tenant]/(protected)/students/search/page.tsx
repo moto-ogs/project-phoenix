@@ -2428,13 +2428,15 @@ function SearchPageContent() {
             label: schoolClass,
           })),
           // A class restored from a link may not be among today's options (it
-          // has no children right now). Keep it selectable so the restriction
-          // stays visible and can be lifted.
+          // has no children right now), and none is while the class list
+          // loads or failed to load. Keep it selectable so the restriction
+          // stays visible and can be lifted; it still counts as one.
           ...selectedSchoolClasses
             .filter((schoolClass) => !schoolClassOptions.includes(schoolClass))
             .map((schoolClass) => ({
               value: schoolClass,
               label: schoolClass,
+              outsideOptions: true,
             })),
         ],
       },

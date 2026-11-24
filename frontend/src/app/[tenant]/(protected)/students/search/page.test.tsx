@@ -1707,6 +1707,21 @@ describe("StudentSearchPage", () => {
         screen.queryByTestId("active-filter-year"),
       ).not.toBeInTheDocument();
     });
+
+    it("keeps a class from the link as a filter while no class list is there (#6734)", async () => {
+      // The class list mock resolves empty, as it is while it loads or after
+      // it failed. The restored 3a is then the only entry in the dropdown,
+      // yet the list is still narrowed to 3a and must say so.
+      mockSearchParams.set("school_class", "3a");
+
+      render(<StudentSearchPage />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("active-filter-schoolClass"),
+        ).toHaveTextContent("3a");
+      });
+    });
   });
 
   describe("Loading States", () => {

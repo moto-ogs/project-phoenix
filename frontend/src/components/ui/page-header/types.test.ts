@@ -94,6 +94,20 @@ describe("isMultiSelectRestricting", () => {
     // Same length as the options, but 4b is excluded.
     expect(isMultiSelectRestricting(["3a", "5c"], options)).toBe(true);
   });
+
+  it("counts an entry kept only to lift it as outside the options", () => {
+    // A restored class while the class list is not there yet: it is the only
+    // entry, but the list is still narrowed to it.
+    expect(
+      isMultiSelectRestricting(["3a"], [{ value: "3a", outsideOptions: true }]),
+    ).toBe(true);
+    expect(
+      isMultiSelectRestricting(
+        ["3a", "4b", "5c"],
+        [...options, { value: "5c", outsideOptions: true }],
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("isFilterRestricting", () => {

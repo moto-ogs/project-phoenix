@@ -102,6 +102,12 @@ export interface FilterOption {
   readonly label: string;
   readonly icon?: string; // SVG path data for grid-style buttons
   readonly count?: number;
+  /**
+   * Kept selectable only so a selected value outside the available options
+   * (e.g. a class restored from a link) can be lifted. Such an entry is not
+   * one of the options: selecting it still counts as a restriction.
+   */
+  readonly outsideOptions?: boolean;
 }
 
 export interface ActiveFilter {
@@ -201,13 +207,14 @@ export function normalizeFilterValues(
  * `options.length` while still excluding a visible option — selected
  * [A, hiddenC] with options [A, B] is a real restriction, not "all selected".
  * A selected value outside the options is itself a restriction to surface
- * (#1565 review pass 2).
+ * (#1565 review pass 2), including one kept selectable via `outsideOptions`.
  */
 export function isMultiSelectRestricting(
   selectedValues: readonly string[],
-  options: readonly Pick<FilterOption, "value">[],
+  allOptions: readonly Pick<FilterOption, "value" | "outsideOptions">[],
 ): boolean {
   if (selectedValues.length === 0) return false;
+  const options = allOptions.filter((option) => option.outsideOptions !== true);
   const optionValueSet = new Set(options.map((option) => option.value));
   const selectedValueSet = new Set(selectedValues);
   const allOptionsSelected = options.every((option) =>
