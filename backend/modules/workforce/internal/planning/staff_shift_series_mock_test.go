@@ -555,8 +555,8 @@ func splitInput(t *testing.T, seriesID int64) SplitSeriesInput {
 	require.NoError(t, err)
 	return SplitSeriesInput{
 		SeriesID: seriesID,
-		// The mocked series are read at mockSeriesChanged.
-		ExpectedVersion: readstate.Of(mockSeriesChanged),
+		// The version the series read answers for the mocked series.
+		ExpectedVersion: readVersion(storedSeries(t)),
 		EffectiveDate:   calendar.NewDate(2026, 8, 24).AddDays(3),
 		StartTime:       calendar.NormalizeWallClock(start),
 		EndTime:         calendar.NormalizeWallClock(end),
@@ -570,6 +570,12 @@ func storedSeries(t *testing.T) *StaffShiftSeries {
 	return series
 }
 
+// readVersion is the version the series read answers for a stored series
+// (ADR 0311): the test sends it back, never a token it builds itself.
+func readVersion(series *StaffShiftSeries) string {
+	return seriesToCapability(series).Version
+}
+
 // A series edit writes only onto the series the planner read (ADR 0311): a
 // colleague's end date that lands before the staff lock is not reverted by
 // the stale form, and an edit without a read version writes nothing.
@@ -578,13 +584,22 @@ func TestSplitSeriesUnit_RefusesASeriesChangedSinceItWasRead(t *testing.T) {
 
 	read := time.Date(2026, 8, 20, 9, 0, 0, 123000, time.UTC)
 	ended := read.Add(time.Minute)
+	stored := func(t *testing.T, endedByColleague bool) *StaffShiftSeries {
+		series := storedSeries(t)
+		series.UpdatedAt = read
+		if endedByColleague {
+			until := calendar.NewDate(2026, 8, 24).AddDays(14)
+			series.ValidUntil, series.UpdatedAt = &until, ended
+		}
+		return series
+	}
 	for name, tc := range map[string]struct {
 		expected string
 		refused  bool
 	}{
-		"edited in between": {readstate.Of(read), true},
+		"edited in between": {readVersion(stored(t, false)), true},
 		"never read":        {"", true},
-		"current version":   {readstate.Of(ended), false},
+		"current version":   {readVersion(stored(t, true)), false},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -592,14 +607,8 @@ func TestSplitSeriesUnit_RefusesASeriesChangedSinceItWasRead(t *testing.T) {
 			repo := &seriesMockRepo{
 				findByIDFn: func(context.Context, any) (*StaffShiftSeries, error) {
 					loads++
-					series := storedSeries(t)
-					series.UpdatedAt = read
-					if loads > 1 {
-						// A colleague ended the series before the lock was taken.
-						until := calendar.NewDate(2026, 8, 24).AddDays(14)
-						series.ValidUntil, series.UpdatedAt = &until, ended
-					}
-					return series, nil
+					// A colleague ended the series before the lock was taken.
+					return stored(t, loads > 1), nil
 				},
 				createFn: func(_ context.Context, successor *StaffShiftSeries) error {
 					created, successor.ID = true, 13

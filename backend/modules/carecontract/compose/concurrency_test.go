@@ -15,7 +15,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -100,7 +99,7 @@ func TestConcurrentSendsOfOneDraftLetExactlyOneTransitionWin(t *testing.T) {
 		Runtime: runtimeDouble{}, Modes: school, Mail: noMailBlocks{}, Letterheads: letterheadDouble{}, Families: familyNumbersDouble{}}, calendar.TodayDate)
 	terms := carecontract.TemplateInput{TermKind: carecontract.TermOpenEnded, NoticeMonths: 1, NoticeTo: carecontract.NoticeMonthEnd}
 	for _, offering := range []int64{school.offering, school.offering + 1, school.offering + 2} {
-		_, err := intake.SaveTemplate(ctx, reviewer, school.school.ID, offering, terms, readstate.Absent)
+		_, err := intake.SaveTemplate(ctx, reviewer, school.school.ID, offering, terms, templateVersion(t, ctx, intake, reviewer, school.school.ID, offering))
 		require.NoError(t, err)
 	}
 	created, err := intake.CreateContracts(ctx, reviewer, []carecontract.CandidateKey{{SchoolID: ident.ID(school.school.ID), RequestChildID: ident.ID(school.child)}})

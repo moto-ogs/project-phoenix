@@ -13,7 +13,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1028,7 +1027,7 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 
 		body := map[string]any{
 			"school_class":     "BAR1",
-			"expected_version": readstate.Absent,
+			"expected_version": classArrivalVersion(t, tc, "BAR1"),
 			"schedules": []map[string]any{
 				{"weekday": 1, "expected_arrival": "07:45"},
 				{"weekday": 3, "expected_arrival": "08:15"},
@@ -1050,7 +1049,7 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 			})
 			return authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
 		}
-		unstored := readstate.Absent
+		unstored := classArrivalVersion(t, tc, "BAR2")
 		require.Equal(t, http.StatusOK, save(unstored, "12:00").Code)
 
 		rr := save(unstored, "13:00")

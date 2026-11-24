@@ -63,12 +63,16 @@ func TestFirstTemplateSaveIsRefusedOnceTheRolloutInsertedOne(t *testing.T) {
 		}
 		return letterheadDouble{}.Letterhead(ctx, reviewer)
 	})
-	intake = compose.NewIntake(compose.IntakePorts{Schools: school, Applications: school, Bookings: school, Access: school,
-		Runtime: runtimeDouble{}, Modes: school, Mail: noMailBlocks{}, Letterheads: letterhead, Families: familyNumbersDouble{}}, publicContractToday)
+	ports := compose.IntakePorts{Schools: school, Applications: school, Bookings: school, Access: school,
+		Runtime: runtimeDouble{}, Modes: school, Mail: noMailBlocks{}, Letterheads: letterheadDouble{}, Families: familyNumbersDouble{}}
+	// The editor read the offering before the rollout: no template yet.
+	read := templateVersion(t, ctx, compose.NewIntake(ports, publicContractToday), reviewer, school.school.ID, school.offering)
+	ports.Letterheads = letterhead
+	intake = compose.NewIntake(ports, publicContractToday)
 
 	_, err := intake.SaveTemplate(ctx, reviewer, school.school.ID, school.offering, carecontract.TemplateInput{
 		TermKind: carecontract.TermOpenEnded, NoticeMonths: 1, NoticeTo: carecontract.NoticeMonthEnd,
-	}, readstate.Absent)
+	}, read)
 	require.True(t, rolled, "the save reached the letterhead")
 	require.NoError(t, rolloutErr, "the rollout ran inside the save")
 	require.ErrorIs(t, err, readstate.ErrChanged, "the save read no template, the rollout inserted one")

@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
 )
 
 type arrivalClassStudents struct {
@@ -56,8 +57,15 @@ func (p *arrivalClassPlansFixture) Upsert(_ context.Context, row *compose.Arriva
 	return nil
 }
 
-// unstoredClassVersion is the version a class without stored times reads.
-var unstoredClassVersion = readstate.Absent
+// classArrivalVersion is the version the class editor reads for a class
+// (ADR 0311): the save sends it back, never a token the test builds.
+func classArrivalVersion(t *testing.T, ctx context.Context, db *bun.DB, service careplan.ArrivalScheduleService, schoolClass string) string {
+	t.Helper()
+	times, err := testpkg.TenantQuery1(t, ctx, db, service.GetClassArrivalTimes, schoolClass)
+	require.NoError(t, err)
+	require.NotEmpty(t, times.Version, "the class read must carry the class times token")
+	return times.Version
+}
 
 // TestClassArrivalSaveRefusesTimesChangedSinceRead pins ADR 0311 for the
 // class editor: it sends every filled weekday back, so a save made against
@@ -117,7 +125,9 @@ func TestNativeArrivalClassUpdateAuthorizesBeforeClassLockAndPreservesDeviations
 	classes := &arrivalClassPlansFixture{events: &events, row: compose.ArrivalClassPlan{SchoolClass: "1a", UpdatedAt: stored, ArrivalTimes: map[string]string{"mon": "13:00", "tue": "12:45", "wed": "12:15"}}}
 	service, err := compose.NewArrivalSchedules(db, owner, nil, nil, compose.ArrivalScheduleDependencies{Students: directory, Classes: classes, Today: decisionTestDay})
 	require.NoError(t, err)
-	filter := careplan.ArrivalScheduleBulkFilter{SchoolClass: " 1a ", ExpectedVersion: readstate.Of(stored), Authorize: func(_ context.Context, row careplan.ScheduleStudent) (bool, error) {
+	version := classArrivalVersion(t, ctx, db, service, "1a")
+	events = nil
+	filter := careplan.ArrivalScheduleBulkFilter{SchoolClass: " 1a ", ExpectedVersion: version, Authorize: func(_ context.Context, row careplan.ScheduleStudent) (bool, error) {
 		events = append(events, "authorize")
 		return row.ID == first.ID, nil
 	}}
