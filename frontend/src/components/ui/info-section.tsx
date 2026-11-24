@@ -17,7 +17,7 @@ interface InfoSectionProps {
 export function InfoSection({ title, icon, children }: InfoSectionProps) {
   return (
     <InsetPanel framed padding="md">
-      <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold text-gray-900 md:mb-3 md:text-sm">
+      <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900 md:mb-3">
         {icon ? (
           <span className="h-3.5 w-3.5 md:h-4 md:w-4">{icon}</span>
         ) : null}

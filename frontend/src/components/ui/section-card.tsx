@@ -353,7 +353,7 @@ export function SectionCard({
   /** Schriftstufe des Titels; die Größe kommt nie über `titleClassName`. */
   titleSize?: keyof typeof TITLE_SIZES;
   titleClassName?: string;
-  /** Overrides the default `mt-4` spacing above the body. */
+  /** Overrides the default spacing above the body (`mt-4`, `compact:` and phone `mt-3`). */
   bodyClassName?: string;
   className?: string;
   overflow?: "hidden" | "visible";
@@ -424,7 +424,9 @@ export function SectionCard({
   let surfacePadding = "";
   if (padding === "default" && !zoned) surfacePadding = CARD_SURFACE_PADDING;
   const bodySpacing =
-    hasHeader && !bare ? (bodyClassName ?? "compact:mt-3 mt-4") : bodyClassName;
+    hasHeader && !bare
+      ? (bodyClassName ?? "compact:mt-3 mt-4 max-sm:mt-3")
+      : bodyClassName;
   const bodyClasses = zoned
     ? cn(
         !flush && ZONE_PADDING_X,

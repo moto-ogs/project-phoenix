@@ -438,8 +438,8 @@ const bodyCellClass =
 const denseBodyCellClass = `px-2.5 py-3 align-middle compact:py-2 ${DENSE_EDGE}`;
 const extraCellClass = "px-5 py-2 max-sm:px-3 compact:px-4";
 const denseExtraCellClass = `px-2.5 py-2 ${DENSE_EDGE}`;
-const subRowClass = `${bodyRowClass} bg-gray-50 text-xs text-gray-500`;
-const summaryRowClass = `${bodyRowClass} bg-gray-50 text-xs font-medium text-gray-600`;
+const subRowClass = `${bodyRowClass} bg-gray-50 text-sm text-gray-500`;
+const summaryRowClass = `${bodyRowClass} bg-gray-50 text-sm font-medium text-gray-600`;
 
 // Deterministic width cycle: varied line lengths read as real data without
 // Math.random() (SSR-hydration-safe). First column widest, like a name.
@@ -1179,7 +1179,7 @@ function StackedRows<T>({
                     className={
                       meta.stackedTone === "figure"
                         ? "shrink-0 text-sm font-semibold text-gray-900 tabular-nums"
-                        : "shrink-0 text-xs text-gray-500"
+                        : "shrink-0 text-sm text-gray-500"
                     }
                   >
                     {meta.render(row)}
@@ -1218,7 +1218,7 @@ function StackedRows<T>({
                 <InsetPanel
                   key={subRow.key}
                   padding="compact"
-                  className="text-xs text-gray-600"
+                  className="text-sm text-gray-600"
                 >
                   <StackedExtraRow
                     row={subRow}

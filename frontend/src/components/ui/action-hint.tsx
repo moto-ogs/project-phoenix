@@ -371,7 +371,7 @@ function HintBubble({
         // Ein Finger auf der Blase „verlässt“ sie beim Abheben.
         if (event.pointerType === "mouse") onPointerLeave();
       }}
-      className="fixed w-max max-w-xs rounded-md bg-gray-900 px-2 py-1 text-xs font-medium text-pretty text-white shadow-lg"
+      className="fixed w-max max-w-xs rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-pretty text-white shadow-lg"
       style={{
         top: position?.top ?? 0,
         left: position?.left ?? 0,

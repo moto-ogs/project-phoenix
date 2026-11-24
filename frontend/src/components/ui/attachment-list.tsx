@@ -100,7 +100,7 @@ export function AttachmentList({
             >
               {attachment.filename}
             </a>
-            <span className="shrink-0 text-xs text-gray-500">
+            <span className="shrink-0 text-sm text-gray-500">
               {formatBytes(attachment.size_bytes)}
             </span>
             {fileActions ? (

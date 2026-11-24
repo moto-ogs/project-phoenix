@@ -58,7 +58,7 @@ export function useFieldIds({
 
 const HINT_TONE_CLASS = {
   default: "text-sm text-gray-600",
-  muted: "text-xs text-gray-500",
+  muted: "text-sm text-gray-500",
 } as const;
 
 /** Die Zeile unter einem Feld, die stehen bleibt und mitgelesen wird. */

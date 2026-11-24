@@ -370,7 +370,7 @@ export function CoachMark({
         )}
         <div className="flex flex-col gap-1">
           {progress && (
-            <span className="text-xs text-gray-500">{progress}</span>
+            <span className="text-sm text-gray-500">{progress}</span>
           )}
           <p className="text-sm font-semibold text-gray-900">{title}</p>
           <p className="text-sm text-gray-700">{text}</p>

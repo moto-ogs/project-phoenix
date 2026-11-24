@@ -287,7 +287,7 @@ export function TimePickerPanel({
         />
       </div>
       {minTime && (
-        <p className="px-1 pt-2 text-center text-xs text-gray-500">
+        <p className="px-1 pt-2 text-center text-sm text-gray-500">
           {labels.minimum(minTime)}
         </p>
       )}
