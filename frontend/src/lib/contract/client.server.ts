@@ -33,7 +33,7 @@ interface ContractFailure {
   code: ErrorCode | undefined;
   /** The request ID the backend named in `instance`. */
   requestId: string | undefined;
-  /** The error to rethrow: the handler boundary forwards it unchanged. */
+  /** Rethrow this at the handler boundary to preserve the status and apply its error policy. */
   cause: ApiResponseError;
 }
 
