@@ -736,11 +736,11 @@ function RowStackedRow<T>({
       </div>
       {/* The controls stand under the meta value, on the level of the
           detail line: beside it they would narrow the title and the detail
-          that a phone line has room for (#7911). Beside a detail of several
-          lines the meta value stays at the title and the controls at the
-          last line, instead of both floating in the middle (#7913). */}
+          that a phone line has room for (#7911). The column stays at the
+          title, also beside a detail of several lines, and a framed button
+          keeps its distance to the value above it (#7913). */}
       {meta && end ? (
-        <div className="flex max-w-[9.5rem] min-w-0 flex-col items-end justify-between gap-0.5 self-stretch">
+        <div className="flex max-w-[9.5rem] min-w-0 flex-col items-end gap-1 self-start">
           {metaValue}
           {end}
         </div>
@@ -954,15 +954,21 @@ function StackedRows<T>({
         />
       </>
     ) : null;
-    // Under a "row" line's meta value the controls overhang the line by
-    // finger instead of raising it to 44 px; the other layouts keep their
-    // spacing.
+    // A "row" line's controls overhang it by finger instead of raising it
+    // to 44 px; under the meta value only downwards, so they do not touch
+    // it (#7913). The other layouts keep their spacing.
     const end =
       toggle === null && menu == null ? null : (
         <StackedRowEnd
           toggle={toggle}
           menu={menu}
-          className={layout === "row" ? "-my-1.5 pointer-coarse:-my-3" : ""}
+          className={
+            layout !== "row"
+              ? ""
+              : meta
+                ? "-mb-1.5 pointer-coarse:-mb-3"
+                : "-my-1.5 pointer-coarse:-my-3"
+          }
         />
       );
     const callerControls =
