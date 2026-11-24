@@ -33,7 +33,7 @@ func RouteContracts(shift, allowance any) []common.RouteContract {
 			{Name: "start", Kind: common.QueryDate},
 		}, Response: workforce.OwnTimePeriod{}, Enums: []common.EnumContract{
 			{Name: "OwnTimePeriodView", Fields: []string{"OwnTimePeriod.view"}, Values: []string{workforce.OwnTimeWeek, workforce.OwnTimeMonth}},
-			{Name: "OwnTimeShiftState", Fields: []string{"OwnTimeShifts.state"}, Values: []string{workforce.OwnReadReady, workforce.OwnReadNotBooked, workforce.OwnReadUnavailable}},
+			{Name: "OwnTimeShiftState", Fields: []string{"OwnTimeShifts.state", "OwnTimeMonthSummary.planned_shift_state"}, Values: []string{workforce.OwnReadReady, workforce.OwnReadNotBooked, workforce.OwnReadUnavailable}},
 			readState,
 		}},
 		{Method: "GET", Pattern: "/overview", Portals: portals, Response: workforce.OwnClockOverview{}},

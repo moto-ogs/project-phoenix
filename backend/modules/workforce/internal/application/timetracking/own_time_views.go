@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 	"time"
 
@@ -116,7 +117,8 @@ func (s ownTimeViews) summary(ctx context.Context, staffID int64, key monthKey, 
 }
 
 func (s ownTimeViews) Period(ctx context.Context, staffID int64, view string, start calendar.Date) (workforce.OwnTimePeriod, error) {
-	today, now := s.months.today(), s.months.now()
+	now := s.months.now()
+	today := calendar.DateFromTime(now)
 	key := monthOf(start)
 	end, err := ownPeriodEnd(view, start, today)
 	if err != nil {
@@ -194,7 +196,9 @@ func (s ownTimeViews) projectPeriod(ctx context.Context, staffID int64, view str
 		if err != nil {
 			return workforce.OwnTimePeriod{}, err
 		}
-		result.MonthSummary = publicMonthSummary(summary)
+		result.MonthSummary = &workforce.OwnTimeMonthSummary{
+			MonthSummary: *publicMonthSummary(summary), PlannedShiftState: shiftView.State,
+		}
 	}
 	return result, nil
 }
@@ -266,14 +270,12 @@ func restHints(sessions []*WorkSession, from, to calendar.Date) []workforce.OwnT
 		if day.After(to) {
 			break
 		}
-		if day != previousDay {
-			if !day.Before(from) && !lastEnd.IsZero() {
-				if minutes := int(session.CheckInTime.Sub(lastEnd) / time.Minute); minutes < domain.StatutoryRestMinutes {
-					hints = append(hints, workforce.OwnTimeRestHint{Date: day, RestMinutes: max(0, minutes), LimitMinutes: domain.StatutoryRestMinutes})
-				}
+		if day != previousDay && !day.Before(from) && !lastEnd.IsZero() {
+			if minutes := int(session.CheckInTime.Sub(lastEnd) / time.Minute); minutes < domain.StatutoryRestMinutes {
+				hints = append(hints, workforce.OwnTimeRestHint{Date: day, RestMinutes: max(0, minutes), LimitMinutes: domain.StatutoryRestMinutes})
 			}
-			previousDay = day
 		}
+		previousDay = day
 		if session.CheckOutTime != nil && session.CheckOutTime.After(lastEnd) {
 			lastEnd = *session.CheckOutTime
 		}
@@ -300,7 +302,7 @@ func ownBlock(block *SessionResponse) workforce.OwnTimeBlock {
 
 // Isolated reads opt out independently without returning a false empty result
 // or leaving the request transaction aborted after a PostgreSQL error.
-func optionalOwnRead[T any](ctx context.Context, read func(context.Context) (T, error)) (T, string, error) {
+func optionalOwnRead[T any](ctx context.Context, logger *slog.Logger, part string, read func(context.Context) (T, error)) (T, string, error) {
 	var result T
 	err := tenant.WithSavepoint(ctx, func(ctx context.Context) error {
 		var err error
@@ -314,5 +316,9 @@ func optionalOwnRead[T any](ctx context.Context, read func(context.Context) (T, 
 	if tenant.IsSavepointControlFailure(err) || ctx.Err() != nil {
 		return empty, workforce.OwnReadUnavailable, err
 	}
+	logger.WarnContext(ctx, "own time tracking read incomplete",
+		"part", part,
+		"error", err,
+	)
 	return empty, workforce.OwnReadUnavailable, nil
 }

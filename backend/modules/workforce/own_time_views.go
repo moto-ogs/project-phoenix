@@ -125,22 +125,29 @@ type OwnTimeClosingDay struct {
 }
 
 type OwnTimePeriod struct {
-	View            string              `json:"view"`
-	Start           calendar.Date       `json:"start"`
-	End             calendar.Date       `json:"end"`
-	WeekStart       calendar.Date       `json:"week_start"`
-	WeekEnd         calendar.Date       `json:"week_end"`
-	AccountStart    calendar.Date       `json:"account_start"`
-	Sessions        []OwnTimeBlock      `json:"sessions"`
-	LaborDays       []WorkDayLaborHint  `json:"labor_days"`
-	RestHints       []OwnTimeRestHint   `json:"rest_hints"`
-	WeeklySummaries []WorkWeekSummary   `json:"weekly_summaries"`
-	Absences        []OwnTimeAbsence    `json:"absences"`
-	Shifts          OwnTimeShifts       `json:"shifts"`
-	Holidays        []OwnTimeHoliday    `json:"holidays"`
-	ClosingDays     []OwnTimeClosingDay `json:"closing_days"`
-	Days            []OwnTimeDay        `json:"days"`
-	MonthSummary    *MonthSummary       `json:"month_summary,omitempty"`
+	View            string               `json:"view"`
+	Start           calendar.Date        `json:"start"`
+	End             calendar.Date        `json:"end"`
+	WeekStart       calendar.Date        `json:"week_start"`
+	WeekEnd         calendar.Date        `json:"week_end"`
+	AccountStart    calendar.Date        `json:"account_start"`
+	Sessions        []OwnTimeBlock       `json:"sessions"`
+	LaborDays       []WorkDayLaborHint   `json:"labor_days"`
+	RestHints       []OwnTimeRestHint    `json:"rest_hints"`
+	WeeklySummaries []WorkWeekSummary    `json:"weekly_summaries"`
+	Absences        []OwnTimeAbsence     `json:"absences"`
+	Shifts          OwnTimeShifts        `json:"shifts"`
+	Holidays        []OwnTimeHoliday     `json:"holidays"`
+	ClosingDays     []OwnTimeClosingDay  `json:"closing_days"`
+	Days            []OwnTimeDay         `json:"days"`
+	MonthSummary    *OwnTimeMonthSummary `json:"month_summary,omitempty"`
+}
+
+// OwnTimeMonthSummary distinguishes missing shift data from a month with no
+// planned shifts. PlannedShiftMinutes is authoritative only when ready.
+type OwnTimeMonthSummary struct {
+	MonthSummary
+	PlannedShiftState string `json:"planned_shift_state"`
 }
 
 type OwnTimeRestHint struct {

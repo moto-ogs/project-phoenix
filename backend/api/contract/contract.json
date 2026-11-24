@@ -79447,6 +79447,228 @@
       ]
     },
     {
+      "name": "OwnTimeMonthSummary",
+      "go_type": "workforce.OwnTimeMonthSummary",
+      "fields": [
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "year",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "month",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "carry_in_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "target_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "target_minutes_to_date",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "has_target",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "actual_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "credited_sick_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "credited_vacation_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "credited_training_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "credited_other_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "sick_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "vacation_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "training_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "sick_days_without_target",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "vacation_days_without_target",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "training_days_without_target",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "other_days_without_target",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "planned_shift_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "adjustment_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "adjustments",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "AdjustmentView"
+            }
+          }
+        },
+        {
+          "name": "balance_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "closing_balance_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "is_closed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "closed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "closed_by",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "closed_by_traeger",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "close_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "frozen_closing_balance_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "drift_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "carry_in_frozen",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "carry_in_frozen_from_month",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "planned_shift_state",
+          "schema": {
+            "kind": "enum",
+            "ref": "OwnTimeShiftState"
+          }
+        }
+      ]
+    },
+    {
       "name": "OwnTimePeriod",
       "go_type": "workforce.OwnTimePeriod",
       "fields": [
@@ -79592,7 +79814,7 @@
           "optional": true,
           "schema": {
             "kind": "ref",
-            "ref": "MonthSummary"
+            "ref": "OwnTimeMonthSummary"
           }
         }
       ]

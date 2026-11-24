@@ -58,7 +58,7 @@ func readOwnCalendar(ctx context.Context, source workforce.PlanningCalendar, fro
 
 func (s ownTimeViews) ownedShifts(ctx context.Context, staffID int64, from, to calendar.Date) ([]workforce.PlannedShift, workforce.OwnTimeShifts, error) {
 	var booked bool
-	rows, state, err := optionalOwnRead(ctx, func(ctx context.Context) ([]workforce.PlannedShift, error) {
+	rows, state, err := optionalOwnRead(ctx, s.months.getLogger(), "shifts", func(ctx context.Context) ([]workforce.PlannedShift, error) {
 		var err error
 		booked, err = s.planning.ShiftsBooked(ctx)
 		if err != nil || !booked {
@@ -89,7 +89,7 @@ func (s ownTimeViews) ownedShifts(ctx context.Context, staffID int64, from, to c
 }
 
 func (s ownTimeViews) ownedAssignments(ctx context.Context, staffID int64, day calendar.Date) (workforce.OwnTimeAssignments, error) {
-	rows, state, err := optionalOwnRead(ctx, func(ctx context.Context) ([]workforce.StaffAssignment, error) {
+	rows, state, err := optionalOwnRead(ctx, s.months.getLogger(), "assignments", func(ctx context.Context) ([]workforce.StaffAssignment, error) {
 		return s.planning.Assignments.ListStaffAssignments(ctx, staffID, day.String(), day.String())
 	})
 	result := workforce.OwnTimeAssignments{State: state}

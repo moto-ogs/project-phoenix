@@ -433,7 +433,10 @@ each read once on a live session; there is no page-specific proxy.
   can begin before either span. `days` covers every displayed day;
   `has_target: false` means the target is unknown, not zero. Observe the
   selected block's `version` when saving a correction (ADR 0311).
-  Only a month request carries `month_summary`.
+  Only a month request carries `month_summary`. Its
+  `planned_shift_state` governs `planned_shift_minutes`: show a missing
+  plan only when the state is `ready` and minutes are absent. Hide the shift
+  comparison when `not_booked`; show a load failure when `unavailable`.
 - `overview`: current Berlin day, open block with pauses, today's absence
   warning and assignments, ten weekday chart points, clock subtotals and
   current week/month figures. `as_of` timestamps the figures; the client may

@@ -19,6 +19,7 @@ import {
   type OpenEnum,
 } from "./runtime";
 import {
+  AdjustmentViewSchema,
   AllowanceCarryResponseSchema,
   DailyProjectionSchema,
   HistoryResponseSchema,
@@ -30,8 +31,8 @@ import {
   WorkSessionBreakSchema,
   WorkSessionEditViewSchema,
   WorkWeekSummarySchema,
+  type AdjustmentView,
   type AllowanceCarryResponse,
-  type MonthSummary,
   type SessionUpdateRequest,
   type WorkDayLaborHint,
   type WorkWeekSummary,
@@ -619,6 +620,81 @@ export const OwnTimeDaySchema: z.ZodType<OwnTimeDay, unknown> = object<OwnTimeDa
   balance_minutes: safeInt,
 });
 
+/** Go: workforce.OwnTimeMonthSummary */
+export interface OwnTimeMonthSummary {
+  staff_id: string;
+  year: number;
+  month: number;
+  carry_in_minutes: number;
+  target_minutes: number;
+  target_minutes_to_date: number;
+  has_target: boolean;
+  actual_minutes: number;
+  credited_sick_minutes: number;
+  credited_vacation_minutes: number;
+  credited_training_minutes: number;
+  credited_other_minutes: number;
+  sick_days: number;
+  vacation_days: number;
+  training_days: number;
+  sick_days_without_target: number;
+  vacation_days_without_target: number;
+  training_days_without_target: number;
+  other_days_without_target: number;
+  planned_shift_minutes?: number;
+  adjustment_minutes: number;
+  adjustments?: AdjustmentView[];
+  balance_minutes: number;
+  closing_balance_minutes: number;
+  is_closed: boolean;
+  closed_at?: string;
+  closed_by?: string;
+  closed_by_traeger: boolean;
+  close_reason?: string;
+  frozen_closing_balance_minutes?: number;
+  drift_minutes: number;
+  carry_in_frozen: boolean;
+  carry_in_frozen_from_month?: string;
+  planned_shift_state: OpenEnum<OwnTimeShiftState>;
+}
+
+export const OwnTimeMonthSummarySchema: z.ZodType<OwnTimeMonthSummary, unknown> = object<OwnTimeMonthSummary>({
+  staff_id: int64String,
+  year: safeInt,
+  month: safeInt,
+  carry_in_minutes: safeInt,
+  target_minutes: safeInt,
+  target_minutes_to_date: safeInt,
+  has_target: bool,
+  actual_minutes: safeInt,
+  credited_sick_minutes: safeInt,
+  credited_vacation_minutes: safeInt,
+  credited_training_minutes: safeInt,
+  credited_other_minutes: safeInt,
+  sick_days: num,
+  vacation_days: num,
+  training_days: num,
+  sick_days_without_target: num,
+  vacation_days_without_target: num,
+  training_days_without_target: num,
+  other_days_without_target: num,
+  planned_shift_minutes: optional(safeInt),
+  adjustment_minutes: safeInt,
+  adjustments: optional(arr(AdjustmentViewSchema)),
+  balance_minutes: safeInt,
+  closing_balance_minutes: safeInt,
+  is_closed: bool,
+  closed_at: optional(instant),
+  closed_by: optional(int64String),
+  closed_by_traeger: bool,
+  close_reason: optional(str),
+  frozen_closing_balance_minutes: optional(safeInt),
+  drift_minutes: safeInt,
+  carry_in_frozen: bool,
+  carry_in_frozen_from_month: optional(str),
+  planned_shift_state: str,
+});
+
 /** Go: workforce.OwnTimePeriod */
 export interface OwnTimePeriod {
   view: OpenEnum<OwnTimePeriodView>;
@@ -636,7 +712,7 @@ export interface OwnTimePeriod {
   holidays: OwnTimeHoliday[] | null;
   closing_days: OwnTimeClosingDay[] | null;
   days: OwnTimeDay[] | null;
-  month_summary?: MonthSummary;
+  month_summary?: OwnTimeMonthSummary;
 }
 
 export const OwnTimePeriodSchema: z.ZodType<OwnTimePeriod, unknown> = object<OwnTimePeriod>({
@@ -655,7 +731,7 @@ export const OwnTimePeriodSchema: z.ZodType<OwnTimePeriod, unknown> = object<Own
   holidays: nullable(arr(OwnTimeHolidaySchema)),
   closing_days: nullable(arr(OwnTimeClosingDaySchema)),
   days: nullable(arr(OwnTimeDaySchema)),
-  month_summary: optional(MonthSummarySchema),
+  month_summary: optional(OwnTimeMonthSummarySchema),
 });
 
 /** Go: timetracking.OwnAbsenceRequest */

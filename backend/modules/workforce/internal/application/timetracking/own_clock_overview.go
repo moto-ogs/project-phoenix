@@ -11,7 +11,24 @@ import (
 )
 
 func (s ownTimeViews) ClockOverview(ctx context.Context, staffID int64) (workforce.OwnClockOverview, error) {
-	today, now := s.months.today(), s.months.now()
+	now := s.months.now()
+	today := calendar.DateFromTime(now)
+	result, err := s.clockSummary(ctx, staffID, today, now)
+	if err != nil {
+		return workforce.OwnClockOverview{}, err
+	}
+	_, result.Shifts, err = s.ownedShifts(ctx, staffID, today, today)
+	if err != nil {
+		return workforce.OwnClockOverview{}, err
+	}
+	result.Assignments, err = s.ownedAssignments(ctx, staffID, today)
+	if err != nil {
+		return workforce.OwnClockOverview{}, err
+	}
+	return result, nil
+}
+
+func (s ownTimeViews) clockSummary(ctx context.Context, staffID int64, today calendar.Date, now time.Time) (workforce.OwnClockOverview, error) {
 	open, err := s.sessions.GetLatestOpenSession(ctx, staffID)
 	if err != nil {
 		return workforce.OwnClockOverview{}, err
@@ -32,39 +49,46 @@ func (s ownTimeViews) ClockOverview(ctx context.Context, staffID int64) (workfor
 	if err != nil {
 		return workforce.OwnClockOverview{}, err
 	}
-	// The first absence in the same date ordering as the old absence read
-	// triggers the warning, regardless of whether the person proceeds.
-	var currentAbsence *workforce.OwnTimeAbsence
-	for _, a := range facts.absences {
+	summary, err := s.summary(ctx, staffID, key, chain, facts, nil)
+	if err != nil {
+		return workforce.OwnClockOverview{}, err
+	}
+	currentAbsence, err := s.clockAbsence(ctx, today, facts.absences)
+	if err != nil {
+		return workforce.OwnClockOverview{}, err
+	}
+	return facts.projectClock(staffID, open, currentAbsence, chartDays, anchor, summary), nil
+}
+
+// The first absence in the same date ordering as the old absence read
+// triggers the warning, regardless of whether the person proceeds.
+func (s ownTimeViews) clockAbsence(ctx context.Context, today calendar.Date, absences []*StaffAbsence) (*workforce.OwnTimeAbsence, error) {
+	for _, a := range absences {
 		if a.DateStart.After(today) || a.DateEnd.Before(today) {
 			continue
 		}
 		rows, err := s.ownAbsenceRows(ctx, []*StaffAbsence{a})
 		if err != nil {
-			return workforce.OwnClockOverview{}, err
+			return nil, err
 		}
-		currentAbsence = &rows[0]
-		break
+		return &rows[0], nil
 	}
-	summary, err := s.summary(ctx, staffID, key, chain, facts, nil)
-	if err != nil {
-		return workforce.OwnClockOverview{}, err
-	}
-	_, shifts, err := s.ownedShifts(ctx, staffID, today, today)
-	if err != nil {
-		return workforce.OwnClockOverview{}, err
-	}
-	assignments, err := s.ownedAssignments(ctx, staffID, today)
-	if err != nil {
-		return workforce.OwnClockOverview{}, err
-	}
+	return nil, nil
+}
+
+func (facts ownTimeFacts) projectClock(staffID int64, open *WorkSession, currentAbsence *workforce.OwnTimeAbsence, chartDays [10]calendar.Date, anchor calendar.Date, summary *MonthSummary) workforce.OwnClockOverview {
+	today, now := facts.today, facts.now
+	week := today.StartOfISOWeek()
+	weekEnd := week.AddDays(6)
+	key := monthOf(today)
 	result := workforce.OwnClockOverview{
 		Today: today, AsOf: now, StaffID: ident.ID(staffID), TodayAbsence: currentAbsence,
-		Shifts: shifts, Assignments: assignments, Chart: facts.chart(chartDays),
+		Chart:     facts.chart(chartDays),
 		LaborDays: facts.laborDays(min(week, today.AddDays(-1)), today), AccountStart: anchor,
 		Week: ownWeekTotals(facts.daily(week, weekEnd, anchor)),
 		Month: workforce.OwnTimeTotals{
-			HasTarget: summary.HasTarget, TargetMinutes: summary.TargetMinutes, ActualMinutes: summary.ActualMinutes,
+			HasTarget: summary.HasTarget, HasOverride: facts.hasOverride(key.firstDay(), key.lastDay()),
+			TargetMinutes: summary.TargetMinutes, ActualMinutes: summary.ActualMinutes,
 			CreditMinutes:  summary.CreditedSickMinutes + summary.CreditedVacationMinutes + summary.CreditedTrainingMinutes + summary.CreditedOtherMinutes,
 			BalanceMinutes: summary.BalanceMinutes,
 		},
@@ -86,7 +110,16 @@ func (s ownTimeViews) ClockOverview(ctx context.Context, staffID int64) (workfor
 	for _, summary := range facts.weeklySummaries(week, weekEnd, anchor) {
 		result.IsOverWeeklyMax = result.IsOverWeeklyMax || summary.IsOverWeeklyMax
 	}
-	return result, nil
+	return result
+}
+
+func (facts ownTimeFacts) hasOverride(from, to calendar.Date) bool {
+	for day := from; !day.After(to); day = day.AddDays(1) {
+		if facts.targets.SourceFor(day) == workforce.TargetSourceOverride {
+			return true
+		}
+	}
+	return false
 }
 
 func ownWeekTotals(days []workforce.OwnTimeDay) workforce.OwnTimeTotals {
