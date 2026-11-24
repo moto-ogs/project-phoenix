@@ -333,6 +333,48 @@ describe("BookingLeftoverHints", () => {
     expect(mocks.toastSuccess).not.toHaveBeenCalled();
   });
 
+  // ADR 0311: the gap changed since it was read; the message waits for the
+  // hints read again and names a failed read instead of the new state.
+  it.each([
+    [true, /Die Buchung wurde inzwischen geändert/],
+    [false, /Der neue Stand konnte nicht geladen werden\./],
+  ])(
+    "reads the hints again after a changed gap (read succeeds: %s)",
+    async (readSucceeds, message) => {
+      mocks.remove.mockRejectedValue(
+        new ApiError("stale", 409, {
+          code: "timetable.template_booking_gap_stale",
+        }),
+      );
+      if (!readSucceeds) {
+        mocks.mutate.mockRejectedValueOnce(
+          new ApiError("down", 503, { code: "general.unavailable" }),
+        );
+      }
+      renderHints();
+
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "Entfernen: Hannah Schmitz in „Hausaufgabenbetreuung“",
+        }),
+      );
+      const dialog = await screen.findByRole("dialog");
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Entfernen" }),
+      );
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Jetzt entfernen" }),
+      );
+
+      expect(await within(dialog).findByText(message)).toBeInTheDocument();
+      expect(mocks.mutate).toHaveBeenCalledOnce();
+      expect(
+        within(dialog).queryByRole("button", { name: "Wiederholen" }) !==
+          null,
+      ).toBe(!readSucceeds);
+    },
+  );
+
   it("keeps the child with „Bleibt so“ and can show the hint again", async () => {
     renderHints();
 

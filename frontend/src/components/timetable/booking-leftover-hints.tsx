@@ -188,8 +188,11 @@ export function BookingLeftoverHints({
         template_id: removing.templateId,
         error: err instanceof Error ? err.message : String(err),
       });
+      // The gap changed since it was read (ADR 0311): the message waits for
+      // the hints read again, a failed read is named instead.
       await removalErrors.show(err, {
         object: "das Entfernen aus dem Regeltermin",
+        reload: readAfterWrite,
       });
     } finally {
       setRemovalBusy(false);

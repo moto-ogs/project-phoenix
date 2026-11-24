@@ -266,6 +266,7 @@ function MeinRaumPageContent() {
     activeTimetableInstanceId: roster.activeTimetableInstanceId,
     currentTimetableRoster,
     mutateRoster: roster.mutateRoster,
+    reloadRoster: roster.reloadRoster,
     mutateDashboard,
     adoptSession: dashboard.adoptSession,
     setSelectedTimetableInstanceId: dashboard.setSelectedTimetableInstanceId,

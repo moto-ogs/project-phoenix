@@ -78,6 +78,11 @@ interface TimetableActionsOptions {
     data?: TimetableRoster | null,
     opts?: { revalidate?: boolean },
   ) => Promise<unknown>;
+  /**
+   * Reads the roster again and rejects when that read fails: the reload of
+   * a refusal of a changed roster (ADR 0311).
+   */
+  readonly reloadRoster: () => Promise<unknown>;
   readonly mutateDashboard: () => Promise<unknown>;
   readonly adoptSession: (
     activeGroupId: string,
@@ -179,6 +184,7 @@ export function useTimetableActions(
     activeTimetableInstanceId,
     currentTimetableRoster,
     mutateRoster,
+    reloadRoster,
     mutateDashboard,
     adoptSession,
     setSelectedTimetableInstanceId,
@@ -639,10 +645,13 @@ export function useTimetableActions(
         status: errorStatus(err),
       });
       reloadAfterDenial(err);
-      // Der Fehler bleibt im offenen Bestätigungsdialog.
+      // Der Fehler bleibt im offenen Bestätigungsdialog. Haben sich die
+      // eingecheckten Kinder seit dem Lesen geändert, wartet er auf die neu
+      // gelesene Liste (ADR 0311).
       void showCompleteError(err, {
         object: "das Beenden der Aktivität",
         retry: () => retryRef.current.complete(),
+        reload: reloadRoster,
       });
     } finally {
       setIsCompletingInstance(false);
@@ -655,6 +664,7 @@ export function useTimetableActions(
     rememberReopenable,
     reloadAfterDenial,
     reloadAfterLifecycleChange,
+    reloadRoster,
     setSelectedTimetableInstanceId,
     showCompleteError,
   ]);

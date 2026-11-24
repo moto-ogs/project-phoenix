@@ -176,6 +176,7 @@ export function OwnSupervisionView() {
     activeTimetableInstanceId: roster.activeTimetableInstanceId,
     currentTimetableRoster,
     mutateRoster: roster.mutateRoster,
+    reloadRoster: roster.reloadRoster,
     mutateDashboard: reloadLists,
     adoptSession,
     setSelectedTimetableInstanceId: keepSelection,

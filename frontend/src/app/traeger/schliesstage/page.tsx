@@ -55,6 +55,7 @@ import { sendingRefreshInterval } from "~/lib/holiday-closure-notices";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { revalidateOrThrow } from "~/lib/swr";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   createTraegerClosingDay,
@@ -455,7 +456,7 @@ export default function TraegerClosingDaysPage() {
           pending={pending ?? undefined}
           loadError={pending ? null : pendingResponse.error}
           schoolName={schoolName}
-          reload={pendingResponse.mutate}
+          reload={() => revalidateOrThrow(pendingResponse)}
         />
       ) : null}
       <SectionCard
