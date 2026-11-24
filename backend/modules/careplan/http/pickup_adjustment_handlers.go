@@ -4,7 +4,6 @@ import (
 	context "context"
 	errors "errors"
 	http "net/http"
-	strconv "strconv"
 	strings "strings"
 	utf8 "unicode/utf8"
 
@@ -14,11 +13,12 @@ import (
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	securityruntime "github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
 type pickupAdjustmentSelectionRequest struct {
-	OfferingID   string   `json:"offering_id"`
+	OfferingID   ident.ID `json:"offering_id"`
 	SelectedDays []string `json:"selected_days"`
 }
 
@@ -28,7 +28,7 @@ type pickupAdjustmentRequest struct {
 	CareDays                []int                               `json:"care_days"`
 	EffectiveFrom           *calendar.Date                      `json:"effective_from,omitempty"`
 	Selections              *[]pickupAdjustmentSelectionRequest `json:"selections,omitempty"`
-	ExcludedAutoOfferingIDs []string                            `json:"excluded_auto_offering_ids,omitempty"`
+	ExcludedAutoOfferingIDs []ident.ID                          `json:"excluded_auto_offering_ids,omitempty"`
 	// ExpectedVersion is the weekly plan token of the plan the change was
 	// made on (ADR 0311); WeekdayNotes replaces the recurring pickup notes in
 	// the same apply. The preview reads neither.
@@ -64,7 +64,7 @@ func (r *pickupAdjustmentRequest) Bind(_ *http.Request) error {
 }
 
 type pickupAdjustmentMatchResponse struct {
-	OfferingID   string                              `json:"offering_id"`
+	OfferingID   ident.ID                            `json:"offering_id"`
 	Name         string                              `json:"name"`
 	SelectedDays []string                            `json:"selected_days"`
 	Selections   []pickupAdjustmentSelectionResponse `json:"selections"`
@@ -73,12 +73,12 @@ type pickupAdjustmentMatchResponse struct {
 // pickupAdjustmentSelectionResponse is a selection the preview proposes; the
 // client sends it back as a pickupAdjustmentSelectionRequest.
 type pickupAdjustmentSelectionResponse struct {
-	OfferingID   string   `json:"offering_id"`
+	OfferingID   ident.ID `json:"offering_id"`
 	SelectedDays []string `json:"selected_days"`
 }
 
 type pickupAdjustmentCatalogItemResponse struct {
-	OfferingID      string            `json:"offering_id"`
+	OfferingID      ident.ID          `json:"offering_id"`
 	Name            string            `json:"name"`
 	Description     string            `json:"description,omitempty"`
 	DaysOfWeekMode  string            `json:"days_of_week_mode"`
@@ -100,7 +100,7 @@ type pickupAdjustmentCatalogItemResponse struct {
 }
 
 type pickupAdjustmentCatalogResponse struct {
-	PhaseID               string                                `json:"phase_id"`
+	PhaseID               ident.ID                              `json:"phase_id"`
 	PhaseName             string                                `json:"phase_name"`
 	SelectionMode         string                                `json:"selection_mode"`
 	EarliestEffectiveFrom string                                `json:"earliest_effective_from"`
@@ -109,13 +109,13 @@ type pickupAdjustmentCatalogResponse struct {
 }
 
 type pickupAdjustmentConsequenceSelectionResponse struct {
-	OfferingID string   `json:"offering_id"`
+	OfferingID ident.ID `json:"offering_id"`
 	State      string   `json:"state"`
 	Days       []string `json:"days"`
 }
 
 type pickupAdjustmentConflictResponse struct {
-	ActivityGroupID   string   `json:"activity_group_id"`
+	ActivityGroupID   ident.ID `json:"activity_group_id"`
 	ActivityGroupName string   `json:"activity_group_name"`
 	Days              []string `json:"days"`
 	FirstDate         string   `json:"first_date"`
@@ -268,8 +268,8 @@ func pickupAdjustmentPreviewInput(
 	if body.Selections != nil {
 		selections = make([]careplan.OfferingChangeSelection, 0, len(*body.Selections))
 		for _, row := range *body.Selections {
-			id, err := strconv.ParseInt(strings.TrimSpace(row.OfferingID), 10, 64)
-			if err != nil || id <= 0 {
+			id := row.OfferingID.Int64()
+			if id <= 0 {
 				return careplan.PickupAdjustmentPreviewInput{}, errors.New("offering_id must be a positive number")
 			}
 			selections = append(selections, careplan.OfferingChangeSelection{
@@ -314,13 +314,13 @@ func toPickupAdjustmentPreviewResponse(preview *careplan.PickupAdjustmentPreview
 	}
 	for _, match := range preview.MatchingOfferings {
 		item := pickupAdjustmentMatchResponse{
-			OfferingID: strconv.FormatInt(match.OfferingID, 10), Name: match.Name,
+			OfferingID: ident.ID(match.OfferingID), Name: match.Name,
 			SelectedDays: match.SelectedDays,
 			Selections:   make([]pickupAdjustmentSelectionResponse, 0, len(match.Selections)),
 		}
 		for _, selection := range match.Selections {
 			item.Selections = append(item.Selections, pickupAdjustmentSelectionResponse{
-				OfferingID: strconv.FormatInt(selection.OfferingID, 10), SelectedDays: selection.SelectedDays,
+				OfferingID: ident.ID(selection.OfferingID), SelectedDays: selection.SelectedDays,
 			})
 		}
 		response.MatchingOfferings = append(response.MatchingOfferings, item)
@@ -341,14 +341,14 @@ func pickupAdjustmentCatalogResponseFrom(catalog *careplan.OfferingChangeCatalog
 		return nil
 	}
 	response := &pickupAdjustmentCatalogResponse{
-		PhaseID: strconv.FormatInt(catalog.PhaseID, 10), PhaseName: catalog.PhaseName,
+		PhaseID: ident.ID(catalog.PhaseID), PhaseName: catalog.PhaseName,
 		SelectionMode: catalog.SelectionMode, EarliestEffectiveFrom: catalog.EarliestEffectiveFrom.String(),
 		LatestEffectiveFrom: catalog.LatestEffectiveFrom.String(),
 		Items:               make([]pickupAdjustmentCatalogItemResponse, 0, len(catalog.Items)),
 	}
 	for _, item := range catalog.Items {
 		response.Items = append(response.Items, pickupAdjustmentCatalogItemResponse{
-			OfferingID: strconv.FormatInt(item.OfferingID, 10), Name: item.Name, Description: item.Description,
+			OfferingID: ident.ID(item.OfferingID), Name: item.Name, Description: item.Description,
 			DaysOfWeekMode: item.DaysOfWeekMode, AvailableDays: item.AvailableDays,
 			SelectionGroup: item.SelectionGroup, SelectionRule: item.SelectionRule, IsRequired: item.IsRequired,
 			PriceCents: item.PriceCents, IncludesLunch: item.IncludesLunch, IncludesHoliday: item.IncludesHoliday,
@@ -371,12 +371,12 @@ func pickupAdjustmentConsequencesResponseFrom(preview *careplan.OfferingChangePr
 	}
 	for _, selection := range preview.Selections {
 		response.Selections = append(response.Selections, pickupAdjustmentConsequenceSelectionResponse{
-			OfferingID: strconv.FormatInt(selection.OfferingID, 10), State: selection.State, Days: selection.Days,
+			OfferingID: ident.ID(selection.OfferingID), State: selection.State, Days: selection.Days,
 		})
 	}
 	for _, conflict := range preview.ManualPlanningConflicts {
 		response.ManualPlanningConflicts = append(response.ManualPlanningConflicts, pickupAdjustmentConflictResponse{
-			ActivityGroupID: strconv.FormatInt(conflict.ActivityGroupID, 10), ActivityGroupName: conflict.ActivityGroupName,
+			ActivityGroupID: ident.ID(conflict.ActivityGroupID), ActivityGroupName: conflict.ActivityGroupName,
 			Days: conflict.Days, FirstDate: conflict.FirstDate.String(), OccurrenceCount: conflict.OccurrenceCount,
 		})
 	}

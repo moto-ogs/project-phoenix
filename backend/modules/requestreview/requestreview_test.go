@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"net/url"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -252,13 +254,13 @@ func TestPendingCountUsesOneRequestDay(t *testing.T) {
 // markedPayload carries the row id through the merge; the merge never reads
 // the projection.
 func markedPayload(id int64) Payload {
-	return Payload{DirectCorrection: &DirectCorrectionResponse{ID: strconv.FormatInt(id, 10)}}
+	return Payload{DirectCorrection: &DirectCorrectionResponse{ID: ident.ID(id)}}
 }
 
 func itemIDs(page Page) []string {
 	ids := make([]string, 0, len(page.Items))
 	for _, item := range page.Items {
-		ids = append(ids, item.RequestType+":"+item.payload.DirectCorrection.ID)
+		ids = append(ids, item.RequestType+":"+item.payload.DirectCorrection.ID.String())
 	}
 	return ids
 }
@@ -343,7 +345,7 @@ func TestListMergesQueuesNewestFirstWithDeterministicTieBreak(t *testing.T) {
 	assert.Equal(t, []string{"offering:9", "master_data:3", "care_schedule:7", "excused:5", "excused:4", "master_data:1"}, itemIDs(page))
 	assert.Empty(t, page.NextCursor)
 	assert.Equal(t, "admin", page.ReviewAccess)
-	assert.Equal(t, "1", page.Items[1].StudentID)
+	assert.Equal(t, "1", page.Items[1].StudentID.String())
 	assert.Equal(t, "Anna Adler", page.Items[1].StudentName)
 	assert.Equal(t, base.Add(-time.Minute), page.Items[1].OccurredAt)
 	assert.Equal(t, base.Add(-time.Minute).UTC().Format(time.RFC3339Nano), page.Items[1].ExpectedVersion)
@@ -757,15 +759,15 @@ func TestItemWireShapeIsStable(t *testing.T) {
 	row.BulkEligible = true
 	row.ConflictKeys = []string{"absence:2026-08-10"}
 	row.SubmittedBy = 10
-	row.Payload = Payload{Excused: &StaffExcusedRequestResponse{ID: "1"}}
+	row.Payload = Payload{Excused: &StaffExcusedRequestResponse{ID: 1}}
 	f.excused.open = []Row{row}
 	f.submitters = &fakeSubmitters{known: map[SubmitterKey]Submitter{{StudentID: 1, AccountID: 10}: {Name: "Klaus Adler", RelationshipType: "parent"}}}
 
 	page, err := f.query().ListRequests(context.Background(), parse(t, "types=excused"))
 	require.NoError(t, err)
-	raw, err := json.Marshal(page)
+	raw, err := wire.Marshal(page)
 	require.NoError(t, err)
-	excused, err := json.Marshal(row.Payload.Excused)
+	excused, err := wire.Marshal(row.Payload.Excused)
 	require.NoError(t, err)
 	// The open projection travels in the member named like the type.
 	assert.JSONEq(t, strings.ReplaceAll(`{
@@ -810,7 +812,7 @@ func TestHistoryPageCarriesEachProjectionInItsMember(t *testing.T) {
 	history := HistoryPageOf(page)
 	require.Len(t, history.Items, len(TypeOrder))
 	for _, item := range history.Items {
-		raw, err := json.Marshal(item)
+		raw, err := wire.Marshal(item)
 		require.NoError(t, err)
 		var members map[string]json.RawMessage
 		require.NoError(t, json.Unmarshal(raw, &members))

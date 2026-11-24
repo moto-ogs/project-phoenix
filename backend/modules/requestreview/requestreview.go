@@ -13,6 +13,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ErrNotConfigured reports a missing queue or access port.
@@ -97,7 +99,7 @@ type Item struct {
 	// open view, the decision in the history. The client merges this list with
 	// the separately gated Anmeldungsänderungen (#2435) on it.
 	OccurredAt      time.Time `json:"occurred_at"`
-	StudentID       string    `json:"student_id"`
+	StudentID       ident.ID  `json:"student_id"`
 	StudentName     string    `json:"student_name"`
 	GroupName       string    `json:"group_name,omitempty"`
 	ExpectedVersion string    `json:"expected_version"`
@@ -148,10 +150,6 @@ type Item struct {
 	payload Payload
 	// canCorrect is Row.CanCorrect, kept for the history item.
 	canCorrect bool
-	// studentID is StudentID as the owner queues report it. The wire carries
-	// the string (backend int64 IDs map to frontend strings); the decorations
-	// key on this instead of parsing the string back.
-	studentID int64
 	// submittedBy is Row.SubmittedBy; the wire carries the name instead.
 	submittedBy int64
 }
@@ -162,7 +160,7 @@ type Item struct {
 type HistoryItem struct {
 	RequestType     string    `json:"request_type"`
 	OccurredAt      time.Time `json:"occurred_at"`
-	StudentID       string    `json:"student_id"`
+	StudentID       ident.ID  `json:"student_id"`
 	StudentName     string    `json:"student_name"`
 	GroupName       string    `json:"group_name,omitempty"`
 	ExpectedVersion string    `json:"expected_version"`

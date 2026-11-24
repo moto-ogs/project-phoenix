@@ -14,25 +14,26 @@ import (
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	securityruntime "github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
 type studentNoteResponse struct {
-	ID         string `json:"id"`
-	StudentID  string `json:"student_id"`
-	Kind       string `json:"kind"`
-	Visibility string `json:"visibility"`
-	Category   string `json:"category,omitempty"`
-	Body       string `json:"body"`
+	ID         ident.ID `json:"id"`
+	StudentID  ident.ID `json:"student_id"`
+	Kind       string   `json:"kind"`
+	Visibility string   `json:"visibility"`
+	Category   string   `json:"category,omitempty"`
+	Body       string   `json:"body"`
 	// Origin is "staff" or "master_data"; the latter marks the hints carried
 	// over from the former Betreuernotizen field, which have no author.
-	Origin           string `json:"origin"`
-	AuthorAccountID  string `json:"author_account_id,omitempty"`
-	AuthorName       string `json:"author_name,omitempty"`
-	SubjectDate      string `json:"subject_date,omitempty"`
-	ActivityGroupID  string `json:"activity_group_id,omitempty"`
-	EducationGroupID string `json:"education_group_id,omitempty"`
+	Origin           string    `json:"origin"`
+	AuthorAccountID  *ident.ID `json:"author_account_id,omitempty"`
+	AuthorName       string    `json:"author_name,omitempty"`
+	SubjectDate      string    `json:"subject_date,omitempty"`
+	ActivityGroupID  *ident.ID `json:"activity_group_id,omitempty"`
+	EducationGroupID *ident.ID `json:"education_group_id,omitempty"`
 	// SharedWithSchool marks a note the OGS released for the Lehrkraft of
 	// the child's class (#4797); writers and readers see it on the note.
 	SharedWithSchool bool `json:"shared_with_school"`
@@ -47,7 +48,7 @@ type studentNoteResponse struct {
 
 // studentNoteDeletedResponse names the note a delete removed.
 type studentNoteDeletedResponse struct {
-	ID string `json:"id"`
+	ID ident.ID `json:"id"`
 }
 
 type studentNoteRequestBody struct {
@@ -56,8 +57,8 @@ type studentNoteRequestBody struct {
 	Category         string  `json:"category"`
 	Body             string  `json:"body"`
 	SubjectDate      *string `json:"subject_date"`
-	ActivityGroupID  *string `json:"activity_group_id"`
-	EducationGroupID *string `json:"education_group_id"`
+	ActivityGroupID  *string `json:"activity_group_id" contract_text:"empty string means the note has no group subject"`
+	EducationGroupID *string `json:"education_group_id" contract_text:"empty string means the note has no group subject"`
 	// SharedWithSchool releases the note for the school (#4797). Omitted on
 	// create it stays off; omitted on update it keeps the stored value.
 	SharedWithSchool *bool `json:"shared_with_school"`
@@ -86,8 +87,8 @@ func (rs *Resource) listStudentNotes(w http.ResponseWriter, r *http.Request) {
 
 // noteSubjectActivity is one activity a new note may refer to.
 type noteSubjectActivity struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // noteSubjectsResponse lists what a new note of this child may refer to
@@ -119,7 +120,7 @@ func buildNoteSubjectsResponse(activities []peopleModule.StudentActivityGroup) n
 	response := noteSubjectsResponse{Activities: make([]noteSubjectActivity, 0, len(activities))}
 	for _, group := range activities {
 		response.Activities = append(response.Activities, noteSubjectActivity{
-			ID: strconv.FormatInt(group.ID, 10), Name: group.Name,
+			ID: ident.ID(group.ID), Name: group.Name,
 		})
 	}
 	return response
@@ -229,7 +230,7 @@ func (rs *Resource) deleteStudentNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	common.Respond(w, r, http.StatusOK, studentNoteDeletedResponse{
-		ID: strconv.FormatInt(noteID, 10),
+		ID: ident.ID(noteID),
 	}, "Student note deleted")
 }
 
@@ -529,14 +530,14 @@ func buildNoteResponse(
 	readerAccountID int64,
 ) studentNoteResponse {
 	response := studentNoteResponse{
-		ID: strconv.FormatInt(note.ID, 10), StudentID: strconv.FormatInt(note.StudentID, 10),
+		ID: ident.ID(note.ID), StudentID: ident.ID(note.StudentID),
 		Kind: note.Kind, Visibility: note.Visibility, Category: note.Category,
 		Body: note.Body, Origin: note.Origin, Edited: note.Edited(), SharedWithSchool: note.SharedWithSchool,
 		CreatedAt: note.CreatedAt, UpdatedAt: note.UpdatedAt,
 		CanDelete: noteCanBeDeleted(note, audience, student.GroupID),
 	}
 	if note.AuthorAccountID != nil {
-		response.AuthorAccountID = strconv.FormatInt(*note.AuthorAccountID, 10)
+		response.AuthorAccountID = (*ident.ID)(note.AuthorAccountID)
 		response.AuthorName = note.AuthorName
 		// Only the author rewords an entry, and never one that was carried
 		// over from the master-data field — that one has no author to stand
@@ -549,10 +550,10 @@ func buildNoteResponse(
 		response.SubjectDate = note.Subject.Date.String()
 	}
 	if note.Subject.ActivityGroupID != nil {
-		response.ActivityGroupID = strconv.FormatInt(*note.Subject.ActivityGroupID, 10)
+		response.ActivityGroupID = (*ident.ID)(note.Subject.ActivityGroupID)
 	}
 	if note.Subject.EducationGroupID != nil {
-		response.EducationGroupID = strconv.FormatInt(*note.Subject.EducationGroupID, 10)
+		response.EducationGroupID = (*ident.ID)(note.Subject.EducationGroupID)
 	}
 	return response
 }

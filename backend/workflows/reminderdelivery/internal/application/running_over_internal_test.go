@@ -125,7 +125,7 @@ func TestBuildRunningOverRemindersCountsReachedPickups(t *testing.T) {
 	assert.Equal(t, "11:40", got.DueTime, "the due time is the planned end")
 	assert.Equal(t, -20, got.MinutesAway)
 	require.NotNil(t, got.ActivityInstanceID)
-	assert.Equal(t, "7", *got.ActivityInstanceID)
+	assert.Equal(t, "7", got.ActivityInstanceID.String())
 	require.NotNil(t, got.PickupDueCount)
 	assert.Equal(t, 2, *got.PickupDueCount)
 	assert.Nil(t, got.StudentID, "the reminder names no child")
@@ -329,7 +329,7 @@ func TestComputeBatchRunningOverLoadsOnlyRecipientRooms(t *testing.T) {
 	batch, err := w.service().ComputeBatch(context.Background(), []reminder.BatchScope{caregiver(7)})
 	require.NoError(t, err)
 	require.Len(t, batch[7].Reminders, 1)
-	assert.Equal(t, "101", *batch[7].Reminders[0].ActivityInstanceID)
+	assert.Equal(t, "101", batch[7].Reminders[0].ActivityInstanceID.String())
 
 	_, err = w.service().ComputeBatch(context.Background(), []reminder.BatchScope{admin(1)})
 	require.Error(t, err, "an admin still needs facts for every room")

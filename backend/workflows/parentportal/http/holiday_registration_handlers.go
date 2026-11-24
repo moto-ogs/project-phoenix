@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -54,15 +53,15 @@ type HolidayRegistrationAddressResponse struct {
 // or pickup contact (#6682). email and phone are absent when the school
 // knows none.
 type HolidayRegistrationContactResponse struct {
-	GuardianProfileID string `json:"guardian_profile_id"`
-	FirstName         string `json:"first_name"`
-	LastName          string `json:"last_name"`
-	Email             string `json:"email,omitempty"`
-	Phone             string `json:"phone,omitempty"`
-	RelationshipType  string `json:"relationship_type"`
-	FullGuardian      bool   `json:"full_guardian"`
-	Emergency         bool   `json:"emergency"`
-	Pickup            bool   `json:"pickup"`
+	GuardianProfileID ident.ID `json:"guardian_profile_id"`
+	FirstName         string   `json:"first_name"`
+	LastName          string   `json:"last_name"`
+	Email             string   `json:"email,omitempty"`
+	Phone             string   `json:"phone,omitempty"`
+	RelationshipType  string   `json:"relationship_type"`
+	FullGuardian      bool     `json:"full_guardian"`
+	Emergency         bool     `json:"emergency"`
+	Pickup            bool     `json:"pickup"`
 }
 
 // HolidayRegistrationChildResponse is a child the parent may pick.
@@ -71,8 +70,8 @@ type HolidayRegistrationContactResponse struct {
 // when the period takes it into account (#4703): "yes", "no" or empty, and
 // the sealed statement the form sends back with the child.
 type HolidayRegistrationChildResponse struct {
-	StudentID        string         `json:"student_id"`
-	SchoolID         string         `json:"school_id"`
+	StudentID        ident.ID       `json:"student_id"`
+	SchoolID         ident.ID       `json:"school_id"`
 	FirstName        string         `json:"first_name"`
 	LastName         string         `json:"last_name"`
 	BirthDate        *timezone.Date `json:"birth_date,omitempty"`
@@ -155,7 +154,7 @@ func holidayRegistrationFamilyResponse(claims sessiontoken.AppClaims, family *pa
 	children := make([]HolidayRegistrationChildResponse, 0, len(family.Children))
 	for _, child := range family.Children {
 		children = append(children, HolidayRegistrationChildResponse{
-			StudentID: strconv.FormatInt(child.StudentID, 10), SchoolID: strconv.FormatInt(child.SchoolID, 10),
+			StudentID: ident.ID(child.StudentID), SchoolID: ident.ID(child.SchoolID),
 			FirstName: child.FirstName, LastName: child.LastName, BirthDate: child.BirthDate,
 			HolidayWish: child.HolidayWish, HolidayWishProof: child.HolidayWishProof,
 			Contacts: holidayRegistrationContactsResponse(child.Contacts),
@@ -168,7 +167,7 @@ func holidayRegistrationContactsResponse(contacts []parentService.HolidayRegistr
 	out := make([]HolidayRegistrationContactResponse, 0, len(contacts))
 	for _, contact := range contacts {
 		out = append(out, HolidayRegistrationContactResponse{
-			GuardianProfileID: strconv.FormatInt(contact.GuardianProfileID, 10),
+			GuardianProfileID: ident.ID(contact.GuardianProfileID),
 			FirstName:         contact.FirstName, LastName: contact.LastName, Email: contact.Email, Phone: contact.Phone,
 			RelationshipType: contact.RelationshipType, FullGuardian: contact.FullGuardian,
 			Emergency: contact.Emergency, Pickup: contact.Pickup,
@@ -187,8 +186,8 @@ func firstNonEmpty(value, fallback string) string {
 // HolidayRegistrationOfferChildResponse names a child of the account an
 // offer is for, by what the account's child list already shows.
 type HolidayRegistrationOfferChildResponse struct {
-	StudentID string `json:"student_id"`
-	FirstName string `json:"first_name"`
+	StudentID ident.ID `json:"student_id"`
+	FirstName string   `json:"first_name"`
 }
 
 // HolidayRegistrationOfferResponse is a holiday period on the start page of
@@ -244,7 +243,7 @@ func holidayRegistrationOfferResponses(offers []parentService.HolidayRegistratio
 		}
 		for _, child := range offer.Children {
 			response.Children = append(response.Children, HolidayRegistrationOfferChildResponse{
-				StudentID: strconv.FormatInt(child.StudentID, 10), FirstName: child.FirstName,
+				StudentID: ident.ID(child.StudentID), FirstName: child.FirstName,
 			})
 		}
 		responses = append(responses, response)

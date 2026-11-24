@@ -15,6 +15,7 @@ import (
 	lists "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
@@ -36,8 +37,8 @@ type studentExportRequest struct {
 
 type studentExportFilters struct {
 	Search       string `json:"search"`
-	GroupID      string `json:"group_id"`
-	RoomID       string `json:"room_id"`
+	GroupID      string `json:"group_id" contract_text:"comma-separated list of groups or empty selection"`
+	RoomID       string `json:"room_id" contract_text:"empty string means no room filter"`
 	Year         string `json:"year"`
 	SchoolClass  string `json:"school_class"`
 	Status       string `json:"status"`
@@ -66,7 +67,7 @@ type studentExportFilters struct {
 	// It narrows the result of every other filter and never widens it: an ID
 	// the caller cannot see, or that another filter drops, stays out. Empty
 	// means no selection.
-	StudentIDs []string `json:"student_ids"`
+	StudentIDs []ident.ID `json:"student_ids"`
 	// EnrollmentAnswer keeps the children with one answer to a registration
 	// question, "<key>=<value>" like the list's enrollment_answer (#6954).
 	EnrollmentAnswer string `json:"enrollment_answer"`
@@ -195,6 +196,9 @@ func (rs *Resource) prepareDatedExportResponses(r *http.Request, responses []Stu
 func decodeStudentExportRequest(r *http.Request) (studentExportRequest, error) {
 	var req studentExportRequest
 	if err := wire.Decode(r.Body, &req); err != nil {
+		if wire.InvalidIDAt(err, "/filters/student_ids") {
+			return req, fmt.Errorf("invalid student id: %w", err)
+		}
 		return req, err
 	}
 	if req.Format == "" {
@@ -224,7 +228,7 @@ func decodeStudentExportRequest(r *http.Request) (studentExportRequest, error) {
 // list means "no selection" and yields a nil set. A malformed ID is rejected
 // rather than skipped: a silently shortened selection would print a list that
 // looks complete but misses a child the user marked.
-func parseExportStudentIDs(values []string) (map[int64]bool, error) {
+func parseExportStudentIDs(values []ident.ID) (map[int64]bool, error) {
 	studentIDs, err := parseExportStudentIDList(values)
 	if err != nil || studentIDs == nil {
 		return nil, err
@@ -239,7 +243,7 @@ func parseExportStudentIDs(values []string) (map[int64]bool, error) {
 // parseExportStudentIDList turns the wire selection into IDs suitable for the
 // directory pre-filter. It retains the request order and deduplicates IDs so
 // a repeated selection cannot make downstream queries do duplicate work.
-func parseExportStudentIDList(values []string) ([]int64, error) {
+func parseExportStudentIDList(values []ident.ID) ([]int64, error) {
 	if len(values) == 0 {
 		return nil, nil
 	}
@@ -249,8 +253,8 @@ func parseExportStudentIDList(values []string) ([]int64, error) {
 	ids := make([]int64, 0, len(values))
 	seen := make(map[int64]struct{}, len(values))
 	for _, value := range values {
-		id, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
-		if err != nil || id <= 0 {
+		id := value.Int64()
+		if id <= 0 {
 			return nil, fmt.Errorf("invalid student id %q", value)
 		}
 		if _, duplicate := seen[id]; duplicate {

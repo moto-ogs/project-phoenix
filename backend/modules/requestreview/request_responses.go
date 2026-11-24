@@ -1,7 +1,7 @@
 package requestreview
 
 import (
-	"strconv"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
@@ -10,8 +10,8 @@ import (
 func ToMasterDataChangeRequestResponse(item *masterdatarequests.ReviewItem) MasterDataChangeRequestResponse {
 	r := item.Request
 	return MasterDataChangeRequestResponse{
-		ID:         strconv.FormatInt(r.ID, 10),
-		StudentID:  strconv.FormatInt(r.StudentID, 10),
+		ID:         ident.ID(r.ID),
+		StudentID:  ident.ID(r.StudentID),
 		FirstName:  item.FirstName,
 		LastName:   item.LastName,
 		Target:     r.Target,
@@ -44,8 +44,8 @@ func ToStaffExcusedRequestResponse(item *excusedrequests.ReviewItem) StaffExcuse
 		dates = append(dates, d.String())
 	}
 	return StaffExcusedRequestResponse{
-		ID:            strconv.FormatInt(r.ID, 10),
-		StudentID:     strconv.FormatInt(r.StudentID, 10),
+		ID:            ident.ID(r.ID),
+		StudentID:     ident.ID(r.StudentID),
 		FirstName:     item.FirstName,
 		LastName:      item.LastName,
 		AbsenceStatus: r.AbsenceStatus,

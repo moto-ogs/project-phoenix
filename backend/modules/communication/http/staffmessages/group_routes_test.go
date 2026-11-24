@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 
 	"github.com/go-chi/chi/v5"
@@ -113,7 +115,7 @@ func (f groupFixture) inboxRow(t *testing.T, who groupPerson, threadID string) *
 	rec := f.do(t, who, http.MethodGet, "/", "")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	for _, row := range decodeData[[]staffmessaging.InboxThreadResponse](t, rec.Body.Bytes()) {
-		if row.ThreadID == threadID {
+		if row.ThreadID.String() == threadID {
 			return &row
 		}
 	}
@@ -133,7 +135,7 @@ func TestStaffGroupChatLifecycle(t *testing.T) {
 		fmt.Sprintf(`{"name":"  Klasse 2a  ","account_ids":[%q,%q]}`, anna.idString(), lena.idString()))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	group := decodeData[staffmessaging.ThreadDetailResponse](t, rec.Body.Bytes())
-	threadID := group.ThreadID
+	threadID := group.ThreadID.String()
 	assert.Equal(t, "group", group.Kind)
 	assert.Equal(t, "Klasse 2a", group.GroupName, "the name is trimmed")
 	assert.Empty(t, group.CounterpartAccountID, "a group has no direct-chat counterpart")
@@ -152,7 +154,7 @@ func TestStaffGroupChatLifecycle(t *testing.T) {
 	sent := decodeData[staffmessaging.MessageResponse](t, rec.Body.Bytes())
 	assert.Equal(t, 2, sent.ReaderCount, "the send response includes the initial receipt")
 	assert.Empty(t, sent.ReadByAccountIDs)
-	assert.ElementsMatch(t, []string{anna.idString(), lena.idString()}, sent.EligibleReaderAccountIDs)
+	assert.ElementsMatch(t, []ident.ID{ident.ID(anna.id), ident.ID(lena.id)}, sent.EligibleReaderAccountIDs)
 
 	row = f.inboxRow(t, lena, threadID)
 	require.NotNil(t, row)
@@ -166,15 +168,15 @@ func TestStaffGroupChatLifecycle(t *testing.T) {
 	detail := decodeData[staffmessaging.ThreadDetailResponse](t, rec.Body.Bytes())
 	assert.False(t, detail.CanManage, "a Lehrkraft does not manage a group she did not start")
 	require.Len(t, detail.Messages, 1)
-	assert.Equal(t, []string{lena.idString()}, detail.Messages[0].ReadByAccountIDs, "opening the group returns the reader's advanced receipt")
+	assert.Equal(t, []ident.ID{ident.ID(lena.id)}, detail.Messages[0].ReadByAccountIDs, "opening the group returns the reader's advanced receipt")
 
 	rec = f.do(t, ben, http.MethodGet, "/threads/"+threadID, "")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail = decodeData[staffmessaging.ThreadDetailResponse](t, rec.Body.Bytes())
 	require.Len(t, detail.Messages, 1)
 	assert.Equal(t, 2, detail.Messages[0].ReaderCount, "Anna and Lena could read it, not Ben himself")
-	assert.Equal(t, []string{lena.idString()}, detail.Messages[0].ReadByAccountIDs)
-	assert.ElementsMatch(t, []string{anna.idString(), lena.idString()}, detail.Messages[0].EligibleReaderAccountIDs)
+	assert.Equal(t, []ident.ID{ident.ID(lena.id)}, detail.Messages[0].ReadByAccountIDs)
+	assert.ElementsMatch(t, []ident.ID{ident.ID(anna.id), ident.ID(lena.id)}, detail.Messages[0].EligibleReaderAccountIDs)
 
 	// The leadership joins later: no earlier history, nothing unread.
 	rec = f.do(t, ben, http.MethodPost, "/threads/"+threadID+"/members", fmt.Sprintf(`{"account_ids":[%q]}`, leitung.idString()))
@@ -202,7 +204,7 @@ func TestStaffGroupChatLifecycle(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	removed := decodeData[*staffmessaging.ThreadDetailResponse](t, rec.Body.Bytes())
 	require.NotNil(t, removed, "removing another member answers the thread")
-	assert.Equal(t, threadID, removed.ThreadID)
+	assert.Equal(t, threadID, removed.ThreadID.String())
 	for _, member := range removed.Members {
 		assert.NotEqual(t, anna.idString(), member.AccountID, "the answer no longer lists Anna")
 	}
@@ -265,7 +267,7 @@ func TestStaffGroupChatRules(t *testing.T) {
 	// A deactivated member loses access at once.
 	rec = f.do(t, ben, http.MethodPost, "/groups", fmt.Sprintf(`{"name":"Team","account_ids":[%q]}`, anna.idString()))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	threadID := decodeData[staffmessaging.ThreadDetailResponse](t, rec.Body.Bytes()).ThreadID
+	threadID := decodeData[staffmessaging.ThreadDetailResponse](t, rec.Body.Bytes()).ThreadID.String()
 	_, err := f.db.NewRaw(`UPDATE auth.accounts SET active = FALSE WHERE id = ?`, anna.id).Exec(t.Context())
 	require.NoError(t, err)
 	rec = f.do(t, anna, http.MethodGet, "/threads/"+threadID, "")

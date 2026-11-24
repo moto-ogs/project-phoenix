@@ -11,6 +11,7 @@ import (
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
@@ -52,8 +53,8 @@ type pickupSignatureStatementResponse struct {
 
 // pickupPermissionRequestResponse is one pickup permission request.
 type pickupPermissionRequestResponse struct {
-	ID                string     `json:"id"`
-	GuardianProfileID string     `json:"guardian_profile_id"`
+	ID                ident.ID   `json:"id"`
+	GuardianProfileID ident.ID   `json:"guardian_profile_id"`
 	PersonName        string     `json:"person_name"`
 	Weekdays          []int      `json:"weekdays"`
 	Status            string     `json:"status"`
@@ -114,7 +115,7 @@ func toPickupPermissionRequestResponse(req *carerequests.Request, accountID int6
 		weekdays = []int{}
 	}
 	return pickupPermissionRequestResponse{
-		ID: strconv.FormatInt(req.ID, 10), GuardianProfileID: strconv.FormatInt(permission.GuardianProfileID, 10),
+		ID: ident.ID(req.ID), GuardianProfileID: ident.ID(permission.GuardianProfileID),
 		PersonName: permission.PersonName, Weekdays: weekdays, Status: req.Status, DecisionReason: req.DecisionReason,
 		CreatedAt: req.CreatedAt, ReviewedAt: req.ReviewedAt, IsSelf: req.SubmittedBy == accountID,
 		Signed: permission.Signature != nil,

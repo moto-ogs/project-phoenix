@@ -2,7 +2,6 @@ package contracttest_test
 
 import (
 	"context"
-	"strconv"
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -59,7 +58,7 @@ func TestCareLifecycleDirectoryReadsWithoutStudentCompatibilityView(t *testing.T
 	}
 	children := blocking(ctx)
 	require.Len(t, children, 1)
-	require.Equal(t, strconv.FormatInt(inCare.ID, 10), children[0].StudentID)
+	require.Equal(t, inCare.ID, children[0].StudentID.Int64())
 	require.Equal(t, "3c", children[0].SchoolClass)
 
 	testpkg.AssertStudentProjectionTenants(t, db, func(txCtx context.Context, visible bool) {

@@ -1,8 +1,9 @@
 package requestreview
 
 import (
-	"strconv"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
@@ -38,8 +39,8 @@ func ToCareRequestDiffResponses(entries []careplan.CareRequestDiffEntry) []CareR
 func ToCareRequestResponse(item *careplan.CareScheduleReviewItem) CareRequestResponse {
 	r := item.Request
 	return CareRequestResponse{
-		ID:              strconv.FormatInt(r.ID, 10),
-		StudentID:       strconv.FormatInt(r.StudentID, 10),
+		ID:              ident.ID(r.ID),
+		StudentID:       ident.ID(r.StudentID),
 		FirstName:       item.FirstName,
 		LastName:        item.LastName,
 		Status:          r.Status,
@@ -60,7 +61,7 @@ func toAffectedCareBlocks(blocks []careplan.CareReviewBlock) []AffectedCareBlock
 	out := make([]AffectedCareBlock, 0, len(blocks))
 	for _, block := range blocks {
 		out = append(out, AffectedCareBlock{
-			ID:        strconv.FormatInt(block.ID, 10),
+			ID:        ident.ID(block.ID),
 			Title:     block.Title,
 			StartTime: block.StartTime.Format("15:04"),
 			EndTime:   block.EndTime.Format("15:04"),
@@ -78,8 +79,8 @@ func ToCareRequestHistoryResponse(item *careplan.CareScheduleHistoryItem) CareRe
 		diff = ToCareRequestDiffResponses(item.Diff)
 	}
 	return CareRequestHistoryResponse{
-		ID:             strconv.FormatInt(req.ID, 10),
-		StudentID:      strconv.FormatInt(req.StudentID, 10),
+		ID:             ident.ID(req.ID),
+		StudentID:      ident.ID(req.StudentID),
 		FirstName:      item.FirstName,
 		LastName:       item.LastName,
 		Status:         req.Status,

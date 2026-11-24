@@ -922,7 +922,7 @@ export const ERROR_CATALOG = {
       "meals.child_not_enrolled":
         "{object} geht nicht. Das Kind ist an diesem Tag nicht in der Betreuung.",
       "meals.day_changed":
-        "Jemand anderes hat den Speiseplan inzwischen geändert. Mit „Verwerfen“ siehst du den neuen Stand. Mit „Speichern“ ersetzt du ihn durch deine Änderungen.",
+        "Jemand anderes hat diesen Tag im Speiseplan inzwischen geändert. Du siehst jetzt den neuen Stand. Prüfe ihn und speichere dann noch einmal.",
       "meals.day_closed":
         "{object} geht nicht. An diesem Tag ist die Schule geschlossen.",
       "meals.day_past": "{object} geht nicht mehr. Der Tag ist schon vorbei.",
@@ -2751,7 +2751,7 @@ export const ERROR_CATALOG = {
       "meals.child_not_enrolled":
         "{object} is not possible. The child is not in care on this day.",
       "meals.day_changed":
-        "Someone else has changed the meal plan in the meantime. Choose “Verwerfen” to see the new version. Choose “Speichern” to replace it with your changes.",
+        "Someone else has changed this day of the meal plan in the meantime. You now see the current state. Check it, then save again.",
       "meals.day_closed":
         "{object} is not possible. The school is closed on this day.",
       "meals.day_past":
@@ -3483,7 +3483,7 @@ export const ERROR_CATALOG = {
       "meals.child_not_enrolled":
         "Невозможно: {object}. В этот день ребёнок не находится под присмотром.",
       "meals.day_changed":
-        "Кто-то другой уже изменил меню. Нажмите «Verwerfen», чтобы увидеть новую версию. Нажмите «Speichern», чтобы заменить её своими изменениями.",
+        "Кто-то другой уже изменил этот день в меню. Сейчас показано текущее состояние. Проверьте его и сохраните снова.",
       "meals.day_closed": "Невозможно: {object}. В этот день школа закрыта.",
       "meals.day_past": "Уже невозможно: {object}. Этот день уже прошёл.",
       "meals.delivery_range_too_long":
@@ -4147,7 +4147,7 @@ export const ERROR_CATALOG = {
       "meals.child_not_enrolled":
         "Nuk është e mundur: {object}. Fëmija nuk është në kujdes në këtë ditë.",
       "meals.day_changed":
-        "Dikush tjetër e ka ndryshuar ndërkohë planin e ushqimit. Zgjidhni „Verwerfen” për të parë versionin e ri. Zgjidhni „Speichern” për ta zëvendësuar me ndryshimet tuaja.",
+        "Dikush tjetër e ka ndryshuar ndërkohë këtë ditë të planit të ushqimit. Tani shihni gjendjen aktuale. Kontrollojeni dhe ruajeni përsëri.",
       "meals.day_closed":
         "Nuk është e mundur: {object}. Shkolla është e mbyllur në këtë ditë.",
       "meals.day_past": "Nuk është më e mundur: {object}. Dita ka kaluar.",
@@ -4801,7 +4801,7 @@ export const ERROR_CATALOG = {
       "meals.child_not_enrolled":
         "Nie można: {object}. Dziecko nie jest tego dnia pod opieką.",
       "meals.day_changed":
-        "Ktoś inny zmienił w międzyczasie jadłospis. Wybierz „Verwerfen”, aby zobaczyć nową wersję. Wybierz „Speichern”, aby zastąpić ją swoimi zmianami.",
+        "Ktoś inny zmienił w międzyczasie ten dzień jadłospisu. Teraz widzisz aktualny stan. Sprawdź go i zapisz ponownie.",
       "meals.day_closed":
         "Nie można: {object}. Tego dnia szkoła jest zamknięta.",
       "meals.day_past": "Już nie można: {object}. Ten dzień już minął.",
@@ -5460,7 +5460,7 @@ export const ERROR_CATALOG = {
       "meals.child_not_enrolled":
         "{object} mümkün değil. Çocuk bu gün bakımda değil.",
       "meals.day_changed":
-        "Başka biri yemek planını bu arada değiştirdi. Yeni hâlini görmek için “Verwerfen”i seçin. Kendi değişikliklerinizle değiştirmek için “Speichern”i seçin.",
+        "Başka biri yemek planının bu gününü bu arada değiştirdi. Şimdi güncel durumu görüyorsunuz. Kontrol edin ve tekrar kaydedin.",
       "meals.day_closed": "{object} mümkün değil. Okul bu gün kapalı.",
       "meals.day_past": "{object} artık mümkün değil. Bu gün geçti.",
       "meals.delivery_range_too_long":
@@ -6112,7 +6112,7 @@ export const ERROR_CATALOG = {
       "meals.child_not_enrolled":
         "Неможливо: {object}. Цього дня дитина не перебуває під доглядом.",
       "meals.day_changed":
-        "Хтось інший уже змінив меню. Натисніть «Verwerfen», щоб побачити нову версію. Натисніть «Speichern», щоб замінити її своїми змінами.",
+        "Хтось інший уже змінив цей день у меню. Зараз показано поточний стан. Перевірте його і збережіть знову.",
       "meals.day_closed": "Неможливо: {object}. Цього дня школа зачинена.",
       "meals.day_past": "Уже неможливо: {object}. Цей день уже минув.",
       "meals.delivery_range_too_long":

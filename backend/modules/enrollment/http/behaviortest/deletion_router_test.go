@@ -77,7 +77,7 @@ func TestEnrollmentDeletionRoutes_DeleteChildThenRequest(t *testing.T) {
 		Data enrollmentHTTP.AdminEnrollmentDeletionImpact `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(child.Body.Bytes(), &childImpact))
-	assert.Equal(t, fmt.Sprint(target.ID), childImpact.Data.ChildID)
+	assert.Equal(t, fmt.Sprint(target.ID), childImpact.Data.ChildID.String())
 	assert.False(t, childImpact.Data.DeletesRequest)
 	assert.Zero(t, tableCount(t, db, "enrollment.request_children", "id = ?", target.ID))
 	assert.Equal(t, 1, tableCount(t, db, "enrollment.request_children", "id = ?", remaining.ID))
@@ -95,7 +95,7 @@ func TestEnrollmentDeletionRoutes_DeleteChildThenRequest(t *testing.T) {
 	}
 	require.NoError(t, json.Unmarshal(whole.Body.Bytes(), &requestImpact))
 	assert.True(t, requestImpact.Data.DeletesRequest)
-	assert.Equal(t, fmt.Sprint(request.ID), requestImpact.Data.RequestID)
+	assert.Equal(t, fmt.Sprint(request.ID), requestImpact.Data.RequestID.String())
 	assert.Zero(t, tableCount(t, db, "enrollment.requests", "id = ?", request.ID))
 	assert.Equal(t, 2, tableCount(t, db, "audit.enrollment_deletions", "tenant_id = ? AND request_id = ?", f.scope.TenantID, request.ID))
 }

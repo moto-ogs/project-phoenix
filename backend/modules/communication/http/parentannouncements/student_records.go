@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	announcementService "github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Kinderakte (#4814): the letters and declarations of one child for its
@@ -19,7 +20,7 @@ import (
 var errStudentRecordsMissing = errors.New("parent announcements: student records are not composed")
 
 type studentLetterResponse struct {
-	AnnouncementID string     `json:"announcement_id"`
+	AnnouncementID ident.ID   `json:"announcement_id"`
 	Title          string     `json:"title"`
 	PublishedAt    time.Time  `json:"published_at"`
 	CanConfirm     bool       `json:"can_confirm"`
@@ -28,7 +29,7 @@ type studentLetterResponse struct {
 }
 
 type studentDeclarationResponse struct {
-	AnnouncementID string                      `json:"announcement_id"`
+	AnnouncementID ident.ID                    `json:"announcement_id"`
 	Title          string                      `json:"title"`
 	PublishedAt    time.Time                   `json:"published_at"`
 	Deadline       *time.Time                  `json:"deadline"`
@@ -49,19 +50,19 @@ func toStudentRecordsResponse(records *announcementService.StudentParentRecords)
 	}
 	for _, l := range records.Letters {
 		out.Letters = append(out.Letters, studentLetterResponse{
-			AnnouncementID: strconv.FormatInt(l.AnnouncementID, 10), Title: l.Title, PublishedAt: l.PublishedAt,
+			AnnouncementID: ident.ID(l.AnnouncementID), Title: l.Title, PublishedAt: l.PublishedAt,
 			CanConfirm: l.CanConfirm, AcknowledgedAt: l.AcknowledgedAt, AcknowledgedBy: l.AcknowledgedBy,
 		})
 	}
 	for _, d := range records.Declarations {
 		declaration := studentDeclarationResponse{
-			AnnouncementID: strconv.FormatInt(d.AnnouncementID, 10), Title: d.Title, PublishedAt: d.PublishedAt,
+			AnnouncementID: ident.ID(d.AnnouncementID), Title: d.Title, PublishedAt: d.PublishedAt,
 			Deadline: d.Deadline, VersionNo: d.VersionNo, State: d.State,
 			Signers: make([]declarationSignerResponse, 0, len(d.Signers)),
 		}
 		for _, signer := range d.Signers {
 			declaration.Signers = append(declaration.Signers, declarationSignerResponse{
-				AccountID: strconv.FormatInt(signer.AccountID, 10), FirstName: signer.FirstName,
+				AccountID: ident.ID(signer.AccountID), FirstName: signer.FirstName,
 				LastName: signer.LastName, Action: signer.Action, SubmittedAt: signer.SubmittedAt,
 			})
 		}

@@ -49,8 +49,8 @@ export interface OwnAllowanceResponse {
 
 export const OwnAllowanceResponseSchema: z.ZodType<OwnAllowanceResponse, unknown> = object<OwnAllowanceResponse>({
   name: str,
-  staff_id: str,
-  absence_type_id: str,
+  staff_id: int64String,
+  absence_type_id: int64String,
   year: safeInt,
   entitled_days: num,
   taken_days: num,

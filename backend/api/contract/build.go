@@ -457,6 +457,9 @@ func (b *builder) named(t reflect.Type, where string, request bool) (Schema, boo
 	}
 	if mode, ok := b.values[t]; ok {
 		b.used["value:"+t.String()] = true
+		if mode == TypedFields {
+			return Schema{}, false, nil
+		}
 		s, err := b.wrapped(t, where, request)
 		s.LegacyJSON = mode == LegacyValue
 		return s, true, err

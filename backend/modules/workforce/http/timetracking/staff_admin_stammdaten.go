@@ -3,7 +3,6 @@ package timetracking
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
@@ -69,8 +68,8 @@ type StammdatenQualificationPayload struct {
 // wire. PostgreSQL bigint IDs stay decimal strings so JavaScript never rounds
 // a valid row or qualification-kind ID.
 type StammdatenQualificationResponse struct {
-	ID         *string        `json:"id,omitempty"`
-	TypeID     *string        `json:"type_id"`
+	ID         *ident.ID      `json:"id,omitempty"`
+	TypeID     *ident.ID      `json:"type_id"`
 	Name       string         `json:"name"`
 	AcquiredOn *calendar.Date `json:"acquired_on"`
 	ExpiresOn  *calendar.Date `json:"expires_on"`
@@ -160,7 +159,7 @@ func (r *StammdatenQualifikationenRequest) Bind(_ *http.Request) error {
 // StammdatenFinancialRequest binds the bank & tax PUT.
 type StammdatenFinancialRequest struct {
 	IBAN                 *string `json:"iban"`
-	TaxID                *string `json:"tax_id"`
+	TaxID                *string `json:"tax_id" contract_text:"statutory tax identifier"`
 	SocialSecurityNumber *string `json:"social_security_number"`
 	SectionToken
 	Note string `json:"note"`
@@ -187,7 +186,7 @@ type StammdatenFinancialMaskedResponse struct {
 type StammdatenFinancialRevealResponse struct {
 	StaffID              ident.ID `json:"staff_id"`
 	IBAN                 *string  `json:"iban"`
-	TaxID                *string  `json:"tax_id"`
+	TaxID                *string  `json:"tax_id" contract_text:"statutory tax identifier"`
 	SocialSecurityNumber *string  `json:"social_security_number"`
 	// Version is the token the bank and tax PUT sends back.
 	Version string `json:"version"`
@@ -255,8 +254,8 @@ func newStammdatenResponse(data *workforce.StaffStammdaten, types []workforce.Qu
 			}
 		}
 		resp.Qualifikationen = append(resp.Qualifikationen, StammdatenQualificationResponse{
-			ID:         pointerToDecimalID(q.ID),
-			TypeID:     optionalDecimalID(q.TypeID),
+			ID:         new(ident.ID(q.ID)),
+			TypeID:     (*ident.ID)(q.TypeID),
 			Name:       name,
 			AcquiredOn: optionalDate(q.AcquiredOn),
 			ExpiresOn:  optionalDate(q.ExpiresOn),
@@ -391,20 +390,6 @@ func (rs *StaffAdminResource) updateStammdatenQualifikationen(w http.ResponseWri
 		}
 		return rs.PersonService.ReplaceStaffQualificationList(r.Context(), staffID, inputs, &req.ExpectedVersion, changedBy, req.Note)
 	})
-}
-
-func pointerToDecimalID(id int64) *string {
-	value := decimalID(id)
-	return &value
-}
-
-func decimalID(id int64) string { return strconv.FormatInt(id, 10) }
-
-func optionalDecimalID(id *int64) *string {
-	if id == nil {
-		return nil
-	}
-	return pointerToDecimalID(*id)
 }
 
 // financialActor pulls the acting account from the JWT for the GDPR access

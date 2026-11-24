@@ -15,7 +15,7 @@ import { type ReactNode, useCallback, useId, useState } from "react";
 
 import type { StatusBadgeTone } from "~/components/ui/status-badge";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isReadStateRefusal } from "~/lib/api-error";
 import {
   type HolidayClosureNotice,
   isNoticeDone,
@@ -111,8 +111,9 @@ function sendingToast(families: number): string {
 /**
  * Der Klick auf „Eltern informieren“: Die Zeile steht sofort auf „Wird
  * gesendet“, danach lädt die Liste den Stand vom Server. Hat sich der
- * Hinweis inzwischen geändert, sagt das die Meldung, und die Liste zeigt den
- * neuen Stand für einen erneuten Klick.
+ * Hinweis inzwischen geändert, wartet die Meldung auf den neuen Stand, den
+ * die Liste für einen erneuten Klick zeigt; scheitert dieses Laden, sagt
+ * die Meldung das (ADR 0311). `reload` lehnt ab, wenn das Laden scheitert.
  */
 export function useNoticeNotify(
   notify: (
@@ -129,6 +130,7 @@ export function useNoticeNotify(
   const run = useCallback(
     async (notice: HolidayClosureNotice) => {
       setSending((current) => new Set(current).add(notice.id));
+      let refused = false;
       try {
         const result = await notify(notice.id, notice.revision, notice.token);
         switch (result.status) {
@@ -163,15 +165,24 @@ export function useNoticeNotify(
           status: err instanceof ApiError ? err.status : undefined,
           error: err instanceof Error ? err.message : String(err),
         });
-        void showError(err, { object: "die E-Mail an die Eltern" });
+        refused = isReadStateRefusal(err);
+        // Eine Ablehnung wartet auf den neu gelesenen Stand (`reload`) und
+        // nennt einen Ladefehler, statt den neuen Stand zu behaupten.
+        void showError(err, {
+          object: "die E-Mail an die Eltern",
+          ...(refused ? { reload } : {}),
+        });
       } finally {
         // Bewusst still: Scheitert nur das Nachladen, zeigt die Liste den
-        // alten Stand; das nächste Laden der Seite holt den neuen.
-        await reload().catch((err: unknown) => {
-          logger.warn("holiday_closure_notices_reload_failed", {
-            error: err instanceof Error ? err.message : String(err),
+        // alten Stand; das nächste Laden der Seite holt den neuen. Nach
+        // einer Ablehnung lädt die Meldung selbst.
+        if (!refused) {
+          await reload().catch((err: unknown) => {
+            logger.warn("holiday_closure_notices_reload_failed", {
+              error: err instanceof Error ? err.message : String(err),
+            });
           });
-        });
+        }
         setSending((current) => {
           const next = new Set(current);
           next.delete(notice.id);

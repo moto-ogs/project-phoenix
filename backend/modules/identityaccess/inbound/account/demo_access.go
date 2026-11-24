@@ -158,7 +158,7 @@ type demoSessionResponse struct {
 }
 
 type demoSessionFacts struct {
-	AccessID string `json:"access_id"`
+	AccessID string `json:"access_id" contract_text:"opaque demo-session access key"`
 	Role     string `json:"role,omitempty"`
 	Source   string `json:"src,omitempty"`
 	// FixedRole: the standing school's session keeps all functions; the

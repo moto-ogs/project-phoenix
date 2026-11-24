@@ -60,7 +60,7 @@ func (s *operatorPasskeyServiceStub) FinishOperatorPasskeyRegistration(_ context
 	if s.finishRegistrationErr != nil {
 		return identityaccess.PasskeyCredentialSummary{}, s.finishRegistrationErr
 	}
-	return identityaccess.PasskeyCredentialSummary{ID: "9", Name: "Admin laptop", CreatedAt: time.Unix(1, 0).UTC()}, nil
+	return identityaccess.PasskeyCredentialSummary{ID: 9, Name: "Admin laptop", CreatedAt: time.Unix(1, 0).UTC()}, nil
 }
 
 func (s *operatorPasskeyServiceStub) BeginOperatorPasskeyLogin(_ context.Context, expectedOrigin string) (identityaccess.PasskeyCeremonyOptions, error) {
@@ -84,7 +84,7 @@ func (s *operatorPasskeyServiceStub) ListOperatorPasskeyCredentials(_ context.Co
 	if s.listErr != nil {
 		return nil, s.listErr
 	}
-	return []identityaccess.PasskeyCredentialSummary{{ID: "10", Name: "Phone", CreatedAt: time.Unix(2, 0).UTC()}}, nil
+	return []identityaccess.PasskeyCredentialSummary{{ID: 10, Name: "Phone", CreatedAt: time.Unix(2, 0).UTC()}}, nil
 }
 
 func (s *operatorPasskeyServiceStub) RevokeOperatorPasskeyCredential(_ context.Context, operatorID, credentialID int64) error {

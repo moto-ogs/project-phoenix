@@ -35,10 +35,10 @@ type SessionClaimsResponse struct {
 	Scope         string   `json:"scope,omitempty"`
 	TenantID      ident.ID `json:"tenant_id,omitempty"`
 	OrgID         ident.ID `json:"org_id,omitempty"`
-	FamilyID      string   `json:"family_id,omitempty"`
+	FamilyID      string   `json:"family_id,omitempty" contract_text:"refresh token family key"`
 	ReadOnly      bool     `json:"read_only,omitempty"`
 	ActingAdminID ident.ID `json:"acting_admin_id,omitempty"`
-	PreviewID     string   `json:"preview_id,omitempty"`
+	PreviewID     string   `json:"preview_id,omitempty" contract_text:"session preview key"`
 	ViaTraeger    bool     `json:"via_traeger,omitempty"`
 	ExpiresAt     int64    `json:"exp,omitempty" contract:"number"`
 }

@@ -1,18 +1,21 @@
 package files
 
-import "github.com/moto-ogs/project-phoenix/api/common"
+import (
+	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+)
 
 // FolderRemovedResponse names the folder a delete of a folder or of one of
 // its files touched.
 type FolderRemovedResponse struct {
-	FolderID string `json:"folder_id"`
+	FolderID ident.ID `json:"folder_id"`
 }
 
 // AttachmentRemovedResponse names the announcement whose attachment a delete
 // removed, with the version the removal stamped on the draft (ADR 0311).
 type AttachmentRemovedResponse struct {
-	AnnouncementID      string `json:"announcement_id"`
-	AnnouncementVersion string `json:"announcement_version"`
+	AnnouncementID      ident.ID `json:"announcement_id"`
+	AnnouncementVersion string   `json:"announcement_version"`
 }
 
 // inlineQuery asks for in-browser viewing with inline=1; serveContent

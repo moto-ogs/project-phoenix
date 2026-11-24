@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
@@ -22,9 +23,9 @@ import (
 // and the guardian's own proof.
 
 type parentDeclarationVersionResponse struct {
-	ID          string `json:"id"`
-	VersionNo   int    `json:"version_no"`
-	ContentHash string `json:"content_hash"`
+	ID          ident.ID `json:"id"`
+	VersionNo   int      `json:"version_no"`
+	ContentHash string   `json:"content_hash"`
 }
 
 type declarationSignerStateResponse struct {
@@ -35,7 +36,7 @@ type declarationSignerStateResponse struct {
 }
 
 type parentDeclarationChildResponse struct {
-	StudentID      string                           `json:"student_id"`
+	StudentID      ident.ID                         `json:"student_id"`
 	FirstName      string                           `json:"first_name"`
 	LastName       string                           `json:"last_name"`
 	CanSubmit      bool                             `json:"can_submit"`
@@ -58,11 +59,11 @@ type declarationEarlierConsentResponse struct {
 }
 
 type declarationEarlierVersionResponse struct {
-	ID          string `json:"id"`
-	VersionNo   int    `json:"version_no"`
-	ContentHash string `json:"content_hash"`
-	Title       string `json:"title"`
-	Body        string `json:"body"`
+	ID          ident.ID `json:"id"`
+	VersionNo   int      `json:"version_no"`
+	ContentHash string   `json:"content_hash"`
+	Title       string   `json:"title"`
+	Body        string   `json:"body"`
 }
 
 func toEarlierConsentResponse(c *parentService.DeclarationEarlierConsent) *declarationEarlierConsentResponse {
@@ -71,7 +72,7 @@ func toEarlierConsentResponse(c *parentService.DeclarationEarlierConsent) *decla
 	}
 	return &declarationEarlierConsentResponse{
 		Version: declarationEarlierVersionResponse{
-			ID: strconv.FormatInt(c.Version.ID, 10), VersionNo: c.Version.VersionNo, ContentHash: c.Version.ContentHash,
+			ID: ident.ID(c.Version.ID), VersionNo: c.Version.VersionNo, ContentHash: c.Version.ContentHash,
 			Title: c.Version.Title, Body: c.Version.Body,
 		},
 		SubmittedAt: c.SubmittedAt, AllowedActions: c.AllowedActions,
@@ -104,12 +105,12 @@ func toDeclarationResponse(d *parentService.AnnouncementFeedDeclaration) *Announ
 	}
 	if d.Version != nil {
 		out.Version = &parentDeclarationVersionResponse{
-			ID: strconv.FormatInt(d.Version.ID, 10), VersionNo: d.Version.VersionNo, ContentHash: d.Version.ContentHash,
+			ID: ident.ID(d.Version.ID), VersionNo: d.Version.VersionNo, ContentHash: d.Version.ContentHash,
 		}
 	}
 	for _, c := range d.Children {
 		child := parentDeclarationChildResponse{
-			StudentID: strconv.FormatInt(c.StudentID, 10), FirstName: c.FirstName, LastName: c.LastName,
+			StudentID: ident.ID(c.StudentID), FirstName: c.FirstName, LastName: c.LastName,
 			CanSubmit: c.CanSubmit, State: c.State, MyAction: c.MyAction, MySubmittedAt: c.MySubmittedAt,
 			AllowedActions: c.AllowedActions, OtherSigners: make([]declarationSignerStateResponse, 0, len(c.OtherSigners)),
 			EarlierConsent: toEarlierConsentResponse(c.EarlierConsent),
@@ -128,10 +129,10 @@ func toDeclarationResponse(d *parentService.AnnouncementFeedDeclaration) *Announ
 }
 
 type declarationRequest struct {
-	StudentID string `json:"student_id"`
-	Action    string `json:"action"`
-	VersionID string `json:"version_id"`
-	Password  string `json:"password,omitempty"`
+	StudentID ident.ID `json:"student_id"`
+	Action    string   `json:"action"`
+	VersionID ident.ID `json:"version_id"`
+	Password  string   `json:"password,omitempty"`
 	// Signature is the guardian's signature (#4785): the method, the PNG as
 	// base64 without a data: prefix and, when typed, the typed name.
 	Signature *declarationSignatureRequest `json:"signature,omitempty"`
@@ -154,7 +155,7 @@ func (s *declarationSignatureRequest) input() *parentService.DeclarationSignatur
 }
 
 type parentDeclarationSubmissionResponse struct {
-	ID                string    `json:"id"`
+	ID                ident.ID  `json:"id"`
 	Action            string    `json:"action"`
 	SubmittedAt       time.Time `json:"submitted_at"`
 	VersionNo         int       `json:"version_no"`
@@ -190,14 +191,12 @@ func (rs *Resource) submitDeclaration(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
-	studentID, okStudent := parsePositiveID(req.StudentID)
-	versionID, okVersion := parsePositiveID(req.VersionID)
-	if !okStudent || !okVersion {
+	if req.StudentID <= 0 || req.VersionID <= 0 {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("student_id and version_id are required")))
 		return
 	}
 	submission, created, err := rs.ParentService.SubmitDeclaration(r.Context(), accountID, announcementID,
-		parentService.DeclarationInput{StudentID: studentID, VersionID: versionID, Action: req.Action, Password: req.Password, Signature: req.Signature.input()},
+		parentService.DeclarationInput{StudentID: req.StudentID.Int64(), VersionID: req.VersionID.Int64(), Action: req.Action, Password: req.Password, Signature: req.Signature.input()},
 		rs.passwordConfirmer(accountID))
 	if err != nil {
 		renderDeclarationError(w, r, err)
@@ -206,7 +205,7 @@ func (rs *Resource) submitDeclaration(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, DeclarationRecordedResponse{
 		Created: created,
 		Submission: parentDeclarationSubmissionResponse{
-			ID: strconv.FormatInt(submission.ID, 10), Action: submission.Action, SubmittedAt: submission.SubmittedAt,
+			ID: ident.ID(submission.ID), Action: submission.Action, SubmittedAt: submission.SubmittedAt,
 			VersionNo: submission.VersionNo, ContentHash: submission.ContentHash, RecordHash: submission.RecordHash,
 			PasswordConfirmed: submission.PasswordConfirmed,
 		},
@@ -253,15 +252,15 @@ func renderDeclarationError(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 type proofAttachmentResponse struct {
-	ID          string `json:"id"`
-	Filename    string `json:"filename"`
-	ContentType string `json:"content_type"`
-	SizeBytes   int    `json:"size_bytes"`
-	SHA256      string `json:"sha256"`
+	ID          ident.ID `json:"id"`
+	Filename    string   `json:"filename"`
+	ContentType string   `json:"content_type"`
+	SizeBytes   int      `json:"size_bytes"`
+	SHA256      string   `json:"sha256"`
 }
 
 type proofVersionResponse struct {
-	ID          string                    `json:"id"`
+	ID          ident.ID                  `json:"id"`
 	VersionNo   int                       `json:"version_no"`
 	Title       string                    `json:"title"`
 	Body        string                    `json:"body"`
@@ -271,7 +270,7 @@ type proofVersionResponse struct {
 }
 
 type proofSubmissionResponse struct {
-	ID                string    `json:"id"`
+	ID                ident.ID  `json:"id"`
 	Action            string    `json:"action"`
 	SubmittedAt       time.Time `json:"submitted_at"`
 	SignerName        string    `json:"signer_name"`
@@ -420,7 +419,7 @@ func toDeclarationProofResponse(proof *parentService.DeclarationProof, now time.
 		}
 		declared[sub.VersionID] = true
 		out.Submissions = append(out.Submissions, proofSubmissionResponse{
-			ID: strconv.FormatInt(sub.ID, 10), Action: sub.Action, SubmittedAt: sub.SubmittedAt,
+			ID: ident.ID(sub.ID), Action: sub.Action, SubmittedAt: sub.SubmittedAt,
 			SignerName: sub.SignerName, GuardianRole: sub.GuardianRole, VersionNo: versionNo,
 			PasswordConfirmed: sub.PasswordConfirmed, Method: sub.Method,
 			ContentHash: sub.ContentHash, RecordHash: sub.RecordHash,
@@ -436,13 +435,13 @@ func toDeclarationProofResponse(proof *parentService.DeclarationProof, now time.
 	sort.Slice(versions, func(i, j int) bool { return versions[i].VersionNo > versions[j].VersionNo })
 	for _, v := range versions {
 		version := proofVersionResponse{
-			ID: strconv.FormatInt(v.ID, 10), VersionNo: v.VersionNo, Title: v.Title, Body: v.Body,
+			ID: ident.ID(v.ID), VersionNo: v.VersionNo, Title: v.Title, Body: v.Body,
 			ContentHash: v.ContentHash, PublishedAt: v.PublishedAt,
 			Attachments: make([]proofAttachmentResponse, 0, len(v.Attachments)),
 		}
 		for _, a := range v.Attachments {
 			version.Attachments = append(version.Attachments, proofAttachmentResponse{
-				ID: strconv.FormatInt(a.AttachmentID, 10), Filename: a.Filename, ContentType: a.ContentType, SizeBytes: int(a.SizeBytes), SHA256: a.SHA256,
+				ID: ident.ID(a.AttachmentID), Filename: a.Filename, ContentType: a.ContentType, SizeBytes: int(a.SizeBytes), SHA256: a.SHA256,
 			})
 		}
 		out.Versions = append(out.Versions, version)

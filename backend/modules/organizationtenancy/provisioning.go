@@ -249,7 +249,7 @@ type OrganizationAccount struct {
 // every read and transfer returns only MaskedAPIKey.
 type OperatorDevice struct {
 	ID               ident.ID   `json:"id"`
-	DeviceID         string     `json:"device_id"`
+	DeviceID         string     `json:"device_id" contract_text:"device provisioning key"`
 	DeviceType       string     `json:"device_type"`
 	Name             *string    `json:"name,omitempty"`
 	Status           string     `json:"status"`

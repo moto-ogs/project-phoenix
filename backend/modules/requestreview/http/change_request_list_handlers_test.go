@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	reviewbindings "github.com/moto-ogs/project-phoenix/roots/requestreviewbinding"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 
@@ -415,7 +417,7 @@ func assertCareAffectedBlocks(t *testing.T, data json.RawMessage) {
 	require.NoError(t, json.Unmarshal(data, &care))
 	require.Len(t, care.AffectedBlocks, 1)
 	assert.Equal(t, requestreview.AffectedCareBlock{
-		ID: "81", Title: "Nachmittags-AG", StartTime: "15:00", EndTime: "16:00",
+		ID: 81, Title: "Nachmittags-AG", StartTime: "15:00", EndTime: "16:00",
 	}, care.AffectedBlocks[0])
 	assert.Equal(t, "c3fe58ec4e34cd0f441911e13e7bcc0bca6a22cfc9fa6a231afed828fe6ed1f1", care.ImpactToken)
 }
@@ -543,7 +545,7 @@ func TestAggregatedChangeRequests_InvalidQuery(t *testing.T) {
 
 func aggDirectCorrection(id int64, name string, changedAt time.Time) requestreview.Row {
 	return requestreview.Row{Type: requestreview.TypeDirectCorrection, ID: id, StudentID: 500 + id, StudentName: name, SortTime: changedAt, DecidedAt: changedAt,
-		Payload: requestreview.Payload{DirectCorrection: &requestreview.DirectCorrectionResponse{ID: fmt.Sprint(id), StudentID: fmt.Sprint(500 + id), StudentName: name, ChangedAt: changedAt, ChangedByName: "Olga Office", Reason: "Telefonisch gemeldet", Diff: []requestreview.OfferingRequestDiffResponse{{OfferingID: "9", Label: "Mittagessen", Old: "Mo", New: "abgemeldet"}}}},
+		Payload: requestreview.Payload{DirectCorrection: &requestreview.DirectCorrectionResponse{ID: ident.ID(id), StudentID: ident.ID(500 + id), StudentName: name, ChangedAt: changedAt, ChangedByName: "Olga Office", Reason: "Telefonisch gemeldet", Diff: []requestreview.OfferingRequestDiffResponse{{OfferingID: 9, Label: "Mittagessen", Old: "Mo", New: "abgemeldet"}}}},
 	}
 }
 

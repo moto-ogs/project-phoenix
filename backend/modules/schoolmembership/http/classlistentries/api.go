@@ -11,7 +11,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -143,21 +142,21 @@ func (req *ClassListAssignRequest) Bind(_ *http.Request) error {
 // "Zuordnen" resolution, never an automatic merge. All IDs are serialized as
 // JSON strings for the same reason ClassListAssignRequest binds with `,string`.
 type ClassListEntryResponse struct {
-	ID                 ident.ID  `json:"id"`
-	FirstName          string    `json:"first_name"`
-	LastName           string    `json:"last_name"`
-	SchoolClass        string    `json:"school_class"`
-	CreatedAt          time.Time `json:"created_at"`
-	MatchingStudentIDs []string  `json:"matching_student_ids"`
+	ID                 ident.ID   `json:"id"`
+	FirstName          string     `json:"first_name"`
+	LastName           string     `json:"last_name"`
+	SchoolClass        string     `json:"school_class"`
+	CreatedAt          time.Time  `json:"created_at"`
+	MatchingStudentIDs []ident.ID `json:"matching_student_ids"`
 	// Version is the read-state token of the entry (ADR 0311): a revision
 	// sends it back as expected_version.
 	Version string `json:"version"`
 }
 
 func classListEntryResponse(entry schoolmembership.ClassListEntry, matches []int64) ClassListEntryResponse {
-	matchIDs := make([]string, 0, len(matches))
+	matchIDs := make([]ident.ID, 0, len(matches))
 	for _, id := range matches {
-		matchIDs = append(matchIDs, strconv.FormatInt(id, 10))
+		matchIDs = append(matchIDs, ident.ID(id))
 	}
 	return ClassListEntryResponse{
 		ID:                 ident.ID(entry.ID),

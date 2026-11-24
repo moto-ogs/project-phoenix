@@ -37,8 +37,8 @@ func TestEnrollmentAdminChangesPositiveGrowthQueryBudget(t *testing.T) {
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &list))
 		require.Len(t, list.Data, n)
 		for i, row := range list.Data {
-			require.Equal(t, ids[n-1-i], row.ID)
-			require.Equal(t, fmt.Sprint(env.requestID), row.RequestID)
+			require.Equal(t, ids[n-1-i], row.ID.String())
+			require.Equal(t, fmt.Sprint(env.requestID), row.RequestID.String())
 			require.Equal(t, enrollment.ChangeRequestStatusRejected, row.Status)
 		}
 		counter.Reset()
@@ -96,8 +96,8 @@ func TestEnrollmentAdminChangeDetailPositiveGrowthQueryBudget(t *testing.T) {
 			Data enrollmenthttp.ChangeRequestResponse `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
-		require.Equal(t, fmt.Sprint(row.ID), body.Data.ID)
-		require.Equal(t, fmt.Sprint(env.requestID), body.Data.RequestID)
+		require.Equal(t, fmt.Sprint(row.ID), body.Data.ID.String())
+		require.Equal(t, fmt.Sprint(env.requestID), body.Data.RequestID.String())
 		require.NotNil(t, body.Data.Request)
 		require.Len(t, body.Data.Request.Children, 2)
 		require.Len(t, body.Data.Messages, n)

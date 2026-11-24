@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Anmeldungsänderungen in the request module (#2435). The Eltern tab shows all
@@ -60,12 +61,12 @@ var historyReviewStatuses = []string{
 // ChangeRequestReviewEntry is one Anmeldungsänderung in the shared display
 // format: who filed what for which child, and who decided it when.
 type ChangeRequestReviewEntry struct {
-	ID           string                          `json:"id"`
-	RequestID    string                          `json:"request_id"`
+	ID           ident.ID                        `json:"id"`
+	RequestID    ident.ID                        `json:"request_id"`
 	Origin       string                          `json:"origin"`
 	Status       string                          `json:"status"`
 	ChildNames   []string                        `json:"child_names"`
-	ChildIDs     []string                        `json:"child_ids,omitempty"`
+	ChildIDs     []ident.ID                      `json:"child_ids,omitempty"`
 	Children     []ChangeRequestReviewChildEntry `json:"children"`
 	GuardianName string                          `json:"guardian_name,omitempty"`
 	ParentNote   *string                         `json:"parent_note,omitempty"`
@@ -84,9 +85,9 @@ type ChangeRequestReviewEntry struct {
 }
 
 type ChangeRequestReviewChildEntry struct {
-	CaseID    string  `json:"case_id"`
-	StudentID *string `json:"student_id,omitempty"`
-	Name      string  `json:"name"`
+	CaseID    string    `json:"case_id" contract_text:"composite request and child key"`
+	StudentID *ident.ID `json:"student_id,omitempty"`
+	Name      string    `json:"name"`
 }
 
 // ChangeRequestReviewItem wraps one entry in the merged list's envelope.
@@ -296,8 +297,8 @@ func orEmptySnapshot[T any](value *T) *T {
 func toChangeRequestReviewItem(item *ChangeRequestReviewRow, history bool) ChangeRequestReviewItem {
 	row := item.ChangeRequest
 	entry := ChangeRequestReviewEntry{
-		ID:               strconv.FormatInt(row.ID, 10),
-		RequestID:        strconv.FormatInt(row.RequestID, 10),
+		ID:               ident.ID(row.ID),
+		RequestID:        ident.ID(row.RequestID),
 		Origin:           row.Origin,
 		Status:           row.Status,
 		ChildNames:       item.ChildNames,
@@ -332,9 +333,9 @@ func toChangeRequestReviewItem(item *ChangeRequestReviewRow, history bool) Chang
 func formatReviewChildren(requestID int64, children []ChangeRequestReviewChild) []ChangeRequestReviewChildEntry {
 	formatted := make([]ChangeRequestReviewChildEntry, 0, len(children))
 	for _, child := range children {
-		var studentID *string
+		var studentID *ident.ID
 		if child.StudentID != nil {
-			value := strconv.FormatInt(*child.StudentID, 10)
+			value := ident.ID(*child.StudentID)
 			studentID = &value
 		}
 		formatted = append(formatted, ChangeRequestReviewChildEntry{
@@ -346,10 +347,10 @@ func formatReviewChildren(requestID int64, children []ChangeRequestReviewChild) 
 	return formatted
 }
 
-func formatReviewChildIDs(ids []int64) []string {
-	formatted := make([]string, 0, len(ids))
+func formatReviewChildIDs(ids []int64) []ident.ID {
+	formatted := make([]ident.ID, 0, len(ids))
 	for _, id := range ids {
-		formatted = append(formatted, strconv.FormatInt(id, 10))
+		formatted = append(formatted, ident.ID(id))
 	}
 	return formatted
 }

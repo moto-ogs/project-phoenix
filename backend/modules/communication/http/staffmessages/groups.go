@@ -2,9 +2,9 @@ package staffmessaging
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
@@ -12,8 +12,8 @@ import (
 // for every route, plus creator or leadership for the managing ones.
 
 type groupRequest struct {
-	Name       string   `json:"name"`
-	AccountIDs []string `json:"account_ids"`
+	Name       string     `json:"name"`
+	AccountIDs []ident.ID `json:"account_ids"`
 }
 
 // renameGroupRequest is the body of PUT /threads/{threadID}/name.
@@ -21,12 +21,12 @@ type renameGroupRequest struct {
 	Name string `json:"name"`
 }
 
-// parseAccountIDs turns the wire's string ids into account ids.
-func parseAccountIDs(raw []string) ([]int64, bool) {
+// parseAccountIDs turns the wire IDs into account ids.
+func parseAccountIDs(raw []ident.ID) ([]int64, bool) {
 	ids := make([]int64, 0, len(raw))
 	for _, value := range raw {
-		id, err := strconv.ParseInt(value, 10, 64)
-		if err != nil || id <= 0 {
+		id := value.Int64()
+		if id <= 0 {
 			return nil, false
 		}
 		ids = append(ids, id)
@@ -37,7 +37,11 @@ func parseAccountIDs(raw []string) ([]int64, bool) {
 func decodeGroupRequest(w http.ResponseWriter, r *http.Request) (groupRequest, []int64, bool) {
 	var body groupRequest
 	if err := wire.Decode(r.Body, &body); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		refusal := common.ErrorInvalidRequest(err)
+		if wire.InvalidIDAt(err, "/account_ids") {
+			refusal = common.ErrorInvalidRequestMessage("Ungültige Konto-ID.")
+		}
+		common.RenderError(w, r, refusal)
 		return body, nil, false
 	}
 	ids, ok := parseAccountIDs(body.AccountIDs)

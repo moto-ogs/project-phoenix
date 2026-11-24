@@ -21,9 +21,9 @@ import (
 // CareOfferingResponse is the wire shape for a single offering. IDs
 // stringified so the frontend keeps its int64-as-string convention.
 type CareOfferingResponse struct {
-	ID                  string                        `json:"id"`
-	PhaseID             string                        `json:"phase_id"`
-	ActivityGroupID     *string                       `json:"activity_group_id,omitempty"`
+	ID                  ident.ID                      `json:"id"`
+	PhaseID             ident.ID                      `json:"phase_id"`
+	ActivityGroupID     *ident.ID                     `json:"activity_group_id,omitempty"`
 	Name                string                        `json:"name"`
 	Description         *string                       `json:"description,omitempty"`
 	DaysOfWeekMode      string                        `json:"days_of_week_mode"`
@@ -37,7 +37,7 @@ type CareOfferingResponse struct {
 	CountsAsCare        bool                          `json:"counts_as_care"`
 	AutoAddGradeLevels  []int                         `json:"auto_add_grade_levels"`
 	AvailabilityRule    *CareOfferingAvailabilityRule `json:"availability_rule,omitempty"`
-	AutoAddTriggerIDs   []string                      `json:"auto_add_trigger_offering_ids"`
+	AutoAddTriggerIDs   []ident.ID                    `json:"auto_add_trigger_offering_ids"`
 	SortOrder           int                           `json:"sort_order"`
 	SelectionGroup      string                        `json:"selection_group,omitempty"`
 	SelectionRule       string                        `json:"selection_rule"`
@@ -100,8 +100,8 @@ var careOfferingWriteErrorRenderer = common.RulesRenderer(
 
 func toCareOfferingResponse(o *CareOffering) CareOfferingResponse {
 	resp := CareOfferingResponse{
-		ID:                  strconv.FormatInt(o.ID, 10),
-		PhaseID:             strconv.FormatInt(o.PhaseID, 10),
+		ID:                  ident.ID(o.ID),
+		PhaseID:             ident.ID(o.PhaseID),
 		Name:                o.Name,
 		Description:         o.Description,
 		DaysOfWeekMode:      o.DaysOfWeekMode,
@@ -115,7 +115,7 @@ func toCareOfferingResponse(o *CareOffering) CareOfferingResponse {
 		CountsAsCare:        o.CountsAsCare,
 		AutoAddGradeLevels:  o.AutoAddGradeLevels,
 		AvailabilityRule:    o.AvailabilityRule,
-		AutoAddTriggerIDs:   make([]string, 0, len(o.AutoAddTriggerOfferingIDs)),
+		AutoAddTriggerIDs:   make([]ident.ID, 0, len(o.AutoAddTriggerOfferingIDs)),
 		SortOrder:           o.SortOrder,
 		SelectionGroup:      o.SelectionGroup,
 		SelectionRule:       o.SelectionRule,
@@ -125,11 +125,11 @@ func toCareOfferingResponse(o *CareOffering) CareOfferingResponse {
 		Version:             o.Version,
 	}
 	if o.ActivityGroupID != nil {
-		s := strconv.FormatInt(*o.ActivityGroupID, 10)
+		s := ident.ID(*o.ActivityGroupID)
 		resp.ActivityGroupID = &s
 	}
 	for _, id := range o.AutoAddTriggerOfferingIDs {
-		resp.AutoAddTriggerIDs = append(resp.AutoAddTriggerIDs, strconv.FormatInt(id, 10))
+		resp.AutoAddTriggerIDs = append(resp.AutoAddTriggerIDs, ident.ID(id))
 	}
 	// The document is validated on every write. Should a row still fail to
 	// decode, the offering renders untranslated instead of failing the list.
@@ -211,7 +211,7 @@ type CareOfferingRequest struct {
 	CountsAsCare        *bool                                `json:"counts_as_care"`
 	AutoAddGradeLevels  []int                                `json:"auto_add_grade_levels"`
 	AvailabilityRule    *CareOfferingAvailabilityRuleRequest `json:"availability_rule,omitempty"`
-	AutoAddTriggerIDs   []string                             `json:"auto_add_trigger_offering_ids"`
+	AutoAddTriggerIDs   []ident.ID                           `json:"auto_add_trigger_offering_ids"`
 	SortOrder           int                                  `json:"sort_order"`
 	SelectionGroup      string                               `json:"selection_group,omitempty"`
 	SelectionRule       string                               `json:"selection_rule,omitempty"`
@@ -237,7 +237,7 @@ func (req *CareOfferingRequest) Bind(_ *http.Request) error {
 		req.AutoAddGradeLevels = []int{}
 	}
 	if req.AutoAddTriggerIDs == nil {
-		req.AutoAddTriggerIDs = []string{}
+		req.AutoAddTriggerIDs = []ident.ID{}
 	}
 	return nil
 }
@@ -278,7 +278,7 @@ func (req *CareOfferingRequest) toModel(existingID int64) (*CareOffering, error)
 	if req.CountsAsCare != nil {
 		countsAsCare = *req.CountsAsCare
 	}
-	triggerIDs, err := parseCareOfferingIDStrings(req.AutoAddTriggerIDs, "auto_add_trigger_offering_ids")
+	triggerIDs, err := parseCareOfferingIDs(req.AutoAddTriggerIDs, "auto_add_trigger_offering_ids")
 	if err != nil {
 		return nil, err
 	}
@@ -316,12 +316,12 @@ func (req *CareOfferingRequest) toModel(existingID int64) (*CareOffering, error)
 	return o, nil
 }
 
-func parseCareOfferingIDStrings(values []string, field string) ([]int64, error) {
+func parseCareOfferingIDs(values []ident.ID, field string) ([]int64, error) {
 	out := make([]int64, 0, len(values))
 	for _, raw := range values {
-		id, err := strconv.ParseInt(raw, 10, 64)
-		if err != nil || id <= 0 {
-			return nil, fmt.Errorf("%s contains invalid id %q", field, raw)
+		id := raw.Int64()
+		if id <= 0 {
+			return nil, fmt.Errorf("%s contains invalid id %d", field, id)
 		}
 		out = append(out, id)
 	}
@@ -380,7 +380,7 @@ func (rs *Resource) listCareOfferings(w http.ResponseWriter, r *http.Request) {
 // booking summary. GradeLevels is keyed by the grade level as a string
 // because JSON object keys are always strings.
 type CareOfferingBookingStatsResponse struct {
-	OfferingID        string         `json:"offering_id"`
+	OfferingID        ident.ID       `json:"offering_id"`
 	Capacity          *int           `json:"capacity,omitempty"`
 	Booked            int            `json:"booked"`
 	GradeLevels       map[string]int `json:"grade_levels"`
@@ -422,7 +422,7 @@ func (rs *Resource) listCareOfferingBookingStats(w http.ResponseWriter, r *http.
 			grades[strconv.Itoa(grade)] = count
 		}
 		out = append(out, CareOfferingBookingStatsResponse{
-			OfferingID:        strconv.FormatInt(stat.OfferingID, 10),
+			OfferingID:        ident.ID(stat.OfferingID),
 			Capacity:          stat.Capacity,
 			Booked:            stat.Booked,
 			GradeLevels:       grades,

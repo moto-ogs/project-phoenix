@@ -87,7 +87,7 @@ type SessionStaffPerson struct {
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
 	Birthday  *Date     `json:"birthday,omitempty"`
-	TagID     *string   `json:"tag_id,omitempty"`
+	TagID     *string   `json:"tag_id,omitempty" contract_text:"RFID tag code"`
 	AccountID *ident.ID `json:"account_id,omitempty"`
 }
 

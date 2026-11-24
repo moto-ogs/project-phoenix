@@ -905,7 +905,7 @@ func TestProjectionWireShape(t *testing.T) {
 	projection.CurrentStaffID = (*ident.ID)(int64Ptr(7))
 	projection.EducationalGroups = []EducationalGroup{{ID: 41, Name: "Bären", RoomName: "Igel"}}
 	projection.Schulhof = &SchulhofStatus{Exists: true, RoomName: "Schulhof", Supervisors: []Supervisor{{ID: 1, StaffID: 7, Name: "Erika", IsCurrentUser: true}}}
-	projection.OpenRooms = []OpenRoom{{RoomID: 31, Name: "Schulhof", IsUserSupervising: true, ActiveGroupIDs: []string{"11", "14"}, HasOccupyingSession: true, StudentCount: 1,
+	projection.OpenRooms = []OpenRoom{{RoomID: 31, Name: "Schulhof", IsUserSupervising: true, ActiveGroupIDs: []ident.ID{11, 14}, HasOccupyingSession: true, StudentCount: 1,
 		Students: []OpenRoomStudent{{Visit: Visit{StudentID: 2, StudentName: "Max Hof", ActiveGroupID: 14, CheckInTime: entry}, Independent: true}},
 		Sessions: []OpenRoomSession{
 			{ActiveGroupID: 11, Title: "Malen", IsUserSupervising: true, CanAssign: true, ParticipantLimit: intPtr(45), Supervisors: []SessionSupervisor{{StaffID: 7, Name: "Erika"}}, Block: &OpenRoomBlock{InstanceID: 5, StartTime: "14:00", EndTime: "15:00", IsUserAssigned: true, CanOperate: true}},

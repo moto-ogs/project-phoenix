@@ -15,6 +15,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
@@ -23,27 +24,27 @@ import (
 // are formatted YYYY-MM-DD; timestamps RFC3339. The frontend reverses
 // the formatting when binding the edit form.
 type PhaseResponse struct {
-	ID                        string  `json:"id"`
-	Name                      string  `json:"name"`
-	Kind                      string  `json:"kind"`
-	ServiceStartDate          string  `json:"service_start_date"`
-	ServiceEndDate            string  `json:"service_end_date"`
-	EnrollmentOpenAt          *string `json:"enrollment_open_at,omitempty"`
-	EnrollmentCloseAt         *string `json:"enrollment_close_at,omitempty"`
-	FormSchemaID              *string `json:"form_schema_id,omitempty"`
-	CalendarPeriodID          *string `json:"calendar_period_id,omitempty"`
-	ShowStatusReasonToParent  bool    `json:"show_status_reason_to_parent"`
-	CareOverflowMode          string  `json:"care_overflow_mode"`
-	CareOfferingSelectionMode string  `json:"care_offering_selection_mode"`
-	IsActive                  bool    `json:"is_active"`
+	ID                        ident.ID  `json:"id"`
+	Name                      string    `json:"name"`
+	Kind                      string    `json:"kind"`
+	ServiceStartDate          string    `json:"service_start_date"`
+	ServiceEndDate            string    `json:"service_end_date"`
+	EnrollmentOpenAt          *string   `json:"enrollment_open_at,omitempty"`
+	EnrollmentCloseAt         *string   `json:"enrollment_close_at,omitempty"`
+	FormSchemaID              *ident.ID `json:"form_schema_id,omitempty"`
+	CalendarPeriodID          *ident.ID `json:"calendar_period_id,omitempty"`
+	ShowStatusReasonToParent  bool      `json:"show_status_reason_to_parent"`
+	CareOverflowMode          string    `json:"care_overflow_mode"`
+	CareOfferingSelectionMode string    `json:"care_offering_selection_mode"`
+	IsActive                  bool      `json:"is_active"`
 	// Rollover columns (migration 1.15.61) — emitted so the admin UI
 	// can distinguish rollover phases from fresh ones and surface the
 	// review-queue link only for rolled-forward phases.
-	RolloverSourcePhaseID *string `json:"rollover_source_phase_id,omitempty"`
-	RolloverMode          *string `json:"rollover_mode,omitempty"`
-	RolloverAutoApprove   bool    `json:"rollover_auto_approve"`
-	RolloverDeadline      *string `json:"rollover_deadline,omitempty"`
-	RolloverBumpsGrade    bool    `json:"rollover_bumps_grade"`
+	RolloverSourcePhaseID *ident.ID `json:"rollover_source_phase_id,omitempty"`
+	RolloverMode          *string   `json:"rollover_mode,omitempty"`
+	RolloverAutoApprove   bool      `json:"rollover_auto_approve"`
+	RolloverDeadline      *string   `json:"rollover_deadline,omitempty"`
+	RolloverBumpsGrade    bool      `json:"rollover_bumps_grade"`
 	// Concrete-class config (migration 1.15.171, issue #1833). The pick
 	// list the public form offers for grade >= 2, and whether choosing is
 	// mandatory. Only meaningful when the tenant setting
@@ -71,7 +72,7 @@ type PhaseResponse struct {
 func toPhaseResponse(p *enrollmentOwner.Phase) PhaseResponse {
 	resp := PhaseResponse{
 		Version:                   enrollmentOwner.PhaseVersion(p),
-		ID:                        strconv.FormatInt(p.ID, 10),
+		ID:                        ident.ID(p.ID),
 		Name:                      p.Name,
 		Kind:                      p.Kind,
 		ServiceStartDate:          string(p.ServiceStartDate),
@@ -101,15 +102,15 @@ func applyPhaseLinks(resp *PhaseResponse, p *enrollmentOwner.Phase) {
 		resp.EnrollmentCloseAt = &s
 	}
 	if p.FormSchemaID != nil {
-		s := strconv.FormatInt(*p.FormSchemaID, 10)
+		s := ident.ID(*p.FormSchemaID)
 		resp.FormSchemaID = &s
 	}
 	if p.CalendarPeriodID != nil {
-		s := strconv.FormatInt(*p.CalendarPeriodID, 10)
+		s := ident.ID(*p.CalendarPeriodID)
 		resp.CalendarPeriodID = &s
 	}
 	if p.RolloverSourcePhaseID != nil {
-		s := strconv.FormatInt(*p.RolloverSourcePhaseID, 10)
+		s := ident.ID(*p.RolloverSourcePhaseID)
 		resp.RolloverSourcePhaseID = &s
 	}
 	if p.RolloverMode != nil {
@@ -155,8 +156,8 @@ type EnrollmentPhaseRequest struct {
 	ServiceEndDate            string  `json:"service_end_date"`
 	EnrollmentOpenAt          *string `json:"enrollment_open_at,omitempty"`
 	EnrollmentCloseAt         *string `json:"enrollment_close_at,omitempty"`
-	FormSchemaID              *string `json:"form_schema_id,omitempty"`
-	CalendarPeriodID          *string `json:"calendar_period_id,omitempty"`
+	FormSchemaID              *string `json:"form_schema_id,omitempty" contract_text:"empty string clears the form schema"`
+	CalendarPeriodID          *string `json:"calendar_period_id,omitempty" contract_text:"empty string clears the calendar period"`
 	ShowStatusReasonToParent  bool    `json:"show_status_reason_to_parent"`
 	CareOverflowMode          string  `json:"care_overflow_mode"`
 	CareOfferingSelectionMode string  `json:"care_offering_selection_mode"`
@@ -542,19 +543,19 @@ type PhaseUpdateResponse struct {
 // CareBeyondEndResponse is one child of PhaseUpdateResponse: its care end as
 // it stands and the phase's new end.
 type CareBeyondEndResponse struct {
-	StudentID   string `json:"student_id"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	SchoolClass string `json:"school_class"`
-	CareEnd     string `json:"care_end"`
-	PhaseEnd    string `json:"phase_end"`
+	StudentID   ident.ID `json:"student_id"`
+	FirstName   string   `json:"first_name"`
+	LastName    string   `json:"last_name"`
+	SchoolClass string   `json:"school_class"`
+	CareEnd     string   `json:"care_end"`
+	PhaseEnd    string   `json:"phase_end"`
 }
 
 func toPhaseUpdateResponse(p *enrollmentOwner.Phase, report enrollmentOwner.PhaseUpdateReport) PhaseUpdateResponse {
 	children := make([]CareBeyondEndResponse, 0, len(report.CareBeyondEnd))
 	for _, child := range report.CareBeyondEnd {
 		children = append(children, CareBeyondEndResponse{
-			StudentID: strconv.FormatInt(child.StudentID, 10), FirstName: child.FirstName, LastName: child.LastName,
+			StudentID: ident.ID(child.StudentID), FirstName: child.FirstName, LastName: child.LastName,
 			SchoolClass: child.SchoolClass, CareEnd: child.CareEnd.String(), PhaseEnd: child.PhaseEnd.String(),
 		})
 	}

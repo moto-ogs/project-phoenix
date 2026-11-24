@@ -85,7 +85,7 @@ func TestToOfferingRequestResponse_ReportsFullWithdrawalAndUntouchedBookings(t *
 	assert.True(t, resp.FullWithdrawal)
 	assert.Equal(t, "abgemeldet", resp.Diff[0].New)
 	require.Len(t, resp.Unchanged, 1)
-	assert.Equal(t, "4", resp.Unchanged[0].OfferingID)
+	assert.Equal(t, "4", resp.Unchanged[0].OfferingID.String())
 	assert.Equal(t, "Mittagessen", resp.Unchanged[0].Label)
 	assert.Equal(t, "Mo", resp.Unchanged[0].Days)
 }

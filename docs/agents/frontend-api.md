@@ -190,8 +190,9 @@ or write a `Backend*` interface for a registered route.
   another form. Closed value sets are registered in `Enums`.
 - An identifier is an `ident.ID` in every role, a count an `int`; the
   generator rejects a bare `int64` and a response shape that
-  depends on a query parameter. Every answer sends identifiers as strings,
-  and the generated decoder (`int64String`) takes nothing else (ADR 0300).
+  depends on a query parameter. Registered bigint identifiers travel as decimal strings and decode with
+  `int64String` (ADR 0300). An identifier-shaped field that carries genuine
+  text instead stays a string, with a Go `contract_text` reason.
   A sign-in step or another route its portal's route file serves is typed
   too (`RouteFile`) and stays out of every proxy allowlist. The catalog
   lines outside the contract (`Outside`: a device, webhook or protocol

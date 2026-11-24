@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -281,7 +283,7 @@ func TestUnreadEnrollments_RenewalConfirmationResets(t *testing.T) {
 	for _, block := range status.Data.RenewalTerms.Blocks {
 		flags[block.Key] = true
 	}
-	body, err := json.Marshal(map[string]any{"consent_flags": flags, "form_schema_id": status.Data.RenewalTerms.FormSchemaID, "terms_fingerprint": status.Data.RenewalTerms.TermsFingerprint})
+	body, err := wire.Marshal(map[string]any{"consent_flags": flags, "form_schema_id": status.Data.RenewalTerms.FormSchemaID, "terms_fingerprint": status.Data.RenewalTerms.TermsFingerprint})
 	require.NoError(t, err)
 
 	rec = env.do(t, http.MethodPost, "/requests/"+submitted.Request.StatusToken+"/confirm-renewal", "", string(body))
@@ -452,7 +454,7 @@ func TestAdminLateInvite_CreatesInvitationForPhase(t *testing.T) {
 		Data enrollmentAPI.AdminCreateLateInviteResponse `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
-	assert.Equal(t, strconv.FormatInt(env.phaseID, 10), body.Data.PhaseID)
+	assert.Equal(t, strconv.FormatInt(env.phaseID, 10), body.Data.PhaseID.String())
 	assert.Equal(t, "spaet@example.com", body.Data.GuardianEmail)
 	assert.NotEmpty(t, body.Data.Token)
 
