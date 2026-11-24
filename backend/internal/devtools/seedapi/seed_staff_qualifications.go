@@ -19,6 +19,8 @@ type seededQualificationType struct {
 	StandardKey    string `json:"standard_key"`
 	Name           string `json:"name"`
 	ValidityMonths *int   `json:"validity_months"`
+	// Version is what an edit of the kind sends back (ADR 0311).
+	Version string `json:"version"`
 }
 
 func (seedStaffQualificationsStep) Run(_ context.Context, rt *Runtime) error {
@@ -72,6 +74,7 @@ func seedQualificationKinds(rt *Runtime) (map[string]string, error) {
 		if kind.StandardKey == "extended_police_certificate" {
 			if _, err := rt.Client.Put(fmt.Sprintf("/api/staff/qualification-types/%s", kind.ID), map[string]any{
 				"name": kind.Name, "validity_months": kind.ValidityMonths, "reminder_lead_weeks": 8, "mandatory": true,
+				"expected_version": kind.Version,
 			}); err != nil {
 				return nil, fmt.Errorf("mark certificate mandatory: %w", err)
 			}

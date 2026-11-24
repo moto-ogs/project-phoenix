@@ -65,6 +65,16 @@ export type ActivityCategory = Pick<
    * list endpoint reports it.
    */
   usageCount?: number;
+  /**
+   * The stored state of the category's form (ADR 0311); an edit sends it
+   * back as `expected_version`. Only the category routes carry it.
+   */
+  version?: string;
+  /**
+   * The stored state of the category's link to a shift type; a shift-type
+   * edit sends it for every category it read (ADR 0311).
+   */
+  shiftTypeLinkVersion?: string;
   // Parsed instants.
   created_at: Date;
   updated_at: Date;
@@ -246,6 +256,8 @@ export function mapActivityCategoryResponse(
     isSystem: backendCategory.is_system ?? false,
     archivedAt: backendCategory.archived_at,
     usageCount: backendCategory.usage_count,
+    version: backendCategory.version,
+    shiftTypeLinkVersion: backendCategory.shift_type_link_version,
     created_at: new Date(backendCategory.created_at),
     updated_at: new Date(backendCategory.updated_at),
   };

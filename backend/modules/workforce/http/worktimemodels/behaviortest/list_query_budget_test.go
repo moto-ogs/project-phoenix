@@ -55,6 +55,7 @@ func TestWorkTimeModelsListQueryBudgetIsFlat(t *testing.T) {
 			row := map[string]any{
 				"id": strconv.FormatInt(int64(created.ID), 10), "name": name, "rotation_length": 2,
 				"rotation_anchor_date": "2026-10-26", "entries": entries, "weekly_totals": totals,
+				"version": workforce.WorkTimeModelVersion(created),
 			}
 			expected = append([]map[string]any{row}, expected...)
 		}

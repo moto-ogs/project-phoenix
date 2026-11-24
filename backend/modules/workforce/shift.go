@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Week pattern values shared with the timetable recurrence primitives.
@@ -220,6 +221,14 @@ type ShiftType struct {
 	UpdatedAt  time.Time
 }
 
+// ShiftTypeVersion is the token of a stored shift type (ADR 0311): every
+// write of the row, archiving included, moves updated_at through its
+// trigger. The categories linked to the type carry their own link token
+// (timetable.CategoryShiftTypeLinkVersion).
+func ShiftTypeVersion(t ShiftType) string {
+	return readstate.Of(t.UpdatedAt)
+}
+
 // ShiftQuery reads planned shifts, their series, the removed occurrences and
 // the tenant's shift types.
 type ShiftQuery interface {
@@ -294,7 +303,10 @@ type ShiftTypeCommand interface {
 	// CreateShiftTypeIfAbsent inserts unless a type with the same name exists
 	// in the tenant and reports whether a row was written.
 	CreateShiftTypeIfAbsent(context.Context, ShiftType) (ShiftType, bool, error)
-	UpdateShiftType(context.Context, ShiftType) (ShiftType, error)
+	// UpdateShiftType replaces the type. expectedVersion is the
+	// ShiftTypeVersion its editor read; a type changed since, and an empty
+	// version, are refused with readstate.ErrChanged.
+	UpdateShiftType(ctx context.Context, shiftType ShiftType, expectedVersion string) (ShiftType, error)
 	DeleteShiftType(context.Context, int64) error
 }
 

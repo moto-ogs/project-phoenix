@@ -1465,14 +1465,14 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *ActivityService) SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64) error {\n\tif s.timetable == nil {\n\t\treturn \u0026activityContract.ActivityError{Op: \"set category shift type links\", Err: errors.New(\"category capability is required\")}\n\t}\n\tif err := s.timetable.SetCategoryShiftTypeLinks(ctx, shiftTypeID, categoryIDs); err != nil {\n\t\treturn categoryActivityError(\"set category shift type links\", err)\n\t}\n\treturn nil\n}",
+      "evidence": "func (s *ActivityService) SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64, expected map[int64]string) error {\n\tif s.timetable == nil {\n\t\treturn \u0026activityContract.ActivityError{Op: \"set category shift type links\", Err: errors.New(\"category capability is required\")}\n\t}\n\tif err := s.timetable.SetCategoryShiftTypeLinks(ctx, shiftTypeID, categoryIDs, expected); err != nil {\n\t\treturn categoryActivityError(\"set category shift type links\", err)\n\t}\n\treturn nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/application/ActivityService.SetCategoryShiftTypeLinks",
       "owner": "modules/timetable"
     },
     {
       "build": "production",
-      "evidence": "func (s *ActivityService) UpdateCategory(ctx context.Context, id int64, input activityContract.CategoryInput) (*activityContract.Category, error) {\n\tupdated, err := s.timetable.UpdateCategory(ctx, timetable.UpdateCategory{ID: id, Name: input.Name, Description: input.Description, Color: input.Color})\n\tif err != nil {\n\t\treturn nil, categoryActivityError(opUpdateCategory, err)\n\t}\n\treturn LegacyServiceCategory(updated), nil\n}",
+      "evidence": "func (s *ActivityService) UpdateCategory(ctx context.Context, id int64, input activityContract.CategoryInput) (*activityContract.Category, error) {\n\tupdated, err := s.timetable.UpdateCategory(ctx, timetable.UpdateCategory{ID: id, Name: input.Name, Description: input.Description, Color: input.Color, ExpectedVersion: input.ExpectedVersion})\n\tif err != nil {\n\t\treturn nil, categoryActivityError(opUpdateCategory, err)\n\t}\n\treturn LegacyServiceCategory(updated), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/application/ActivityService.UpdateCategory",
       "owner": "modules/timetable"
@@ -2147,13 +2147,6 @@
       "evidence": "func (s *Service) SetCategoryShiftTypeID(ctx context.Context, id int64, shiftTypeID *int64) error {\n\tif id \u003c= 0 || (shiftTypeID != nil \u0026\u0026 *shiftTypeID \u003c= 0) {\n\t\treturn s.reject(\"set_category_shift_type_id\", timetable.ErrInvalidCategory)\n\t}\n\treturn s.runWrite(ctx, \"set_category_shift_type_id\", true, func(txCtx context.Context, stats *domain.OperationStats) error {\n\t\tqueryStats, err := s.store.SetCategoryShiftTypeID(txCtx, id, shiftTypeID)\n\t\tstats.Add(queryStats)\n\t\treturn err\n\t})\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/application/Service.SetCategoryShiftTypeID",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *Service) SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64) error {\n\tif shiftTypeID \u003c= 0 || hasInvalidID(categoryIDs) {\n\t\treturn s.reject(\"set_category_shift_type_links\", timetable.ErrInvalidCategory)\n\t}\n\treturn s.runWrite(ctx, \"set_category_shift_type_links\", true, func(txCtx context.Context, stats *domain.OperationStats) error {\n\t\tqueryStats, err := s.store.SetCategoryShiftTypeLinks(txCtx, shiftTypeID, categoryIDs)\n\t\tstats.Add(queryStats)\n\t\treturn err\n\t})\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/timetable/internal/application/Service.SetCategoryShiftTypeLinks",
       "owner": "modules/timetable"
     },
     {

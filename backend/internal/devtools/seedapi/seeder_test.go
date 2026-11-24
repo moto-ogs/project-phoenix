@@ -1072,6 +1072,9 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 	t.Helper()
 	weeklyMock := &weeklyProfileAPIMock{traces: traces}
 	idCounter := int64(0)
+	// The school's own absence types the seed creates; their list answers
+	// them with a version the seed sends back on every edit (ADR 0311).
+	var absenceTypeIDs []string
 	holidayGuestGroupID := "0"
 	// The first staff members the seed creates; the Frühbetreuung's
 	// deviation needs the second.
@@ -1290,8 +1293,20 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"available": true, "springers": []any{}}})
 			return
 		}
+		if r.Method == seedHTTPMethodPost && r.URL.Path == "/api/absence-types" {
+			idCounter++
+			absenceTypeIDs = append(absenceTypeIDs, fmt.Sprint(idCounter))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(seedHTTPStatusCreated)
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"id": fmt.Sprint(idCounter), "version": "v1"}})
+			return
+		}
 		if r.Method == seedHTTPMethodGet && r.URL.Path == "/api/absence-types" {
-			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": []any{}})
+			listed := make([]any, 0, len(absenceTypeIDs))
+			for _, id := range absenceTypeIDs {
+				listed = append(listed, map[string]any{"id": id, "kept_by_traeger": false, "version": "v1"})
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": listed})
 			return
 		}
 		// The shared document step (#4692) reads the schools with their

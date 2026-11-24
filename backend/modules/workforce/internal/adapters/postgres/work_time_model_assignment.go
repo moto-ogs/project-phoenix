@@ -83,6 +83,30 @@ func (s *Store) StaffWorkTimeFacts(ctx context.Context, today string) ([]domain.
 	return facts, stats, nil
 }
 
+// LockWorkTimeModel is the row lock an edit of the template writes under:
+// it waits for an assignment that holds the row FOR SHARE, then the edit
+// reads the template after it. FOR NO KEY UPDATE lets the FK check of a
+// staff member bound to the template meanwhile through; only a rename
+// (the name is a unique key) strengthens it, and the edit renames after it
+// has locked the bound people.
+func (s *Store) LockWorkTimeModel(ctx context.Context, id int64) (bool, domain.OperationStats, error) {
+	db, scope, err := s.database(ctx)
+	if err != nil {
+		return false, domain.OperationStats{}, err
+	}
+	if err := tenant.OrderLock(ctx, tenant.LockWorkTimeModel, tenant.LockIDKey(id)); err != nil {
+		return false, domain.OperationStats{}, err
+	}
+	row := &workTimeModelRow{}
+	query := withTenant(db.NewSelect().
+		Model(row).
+		ModelTableExpr(tableWorkTimeModels+` AS "work_time_model"`).
+		Column("work_time_model.id").
+		Where(`"work_time_model".id = ?`, id).
+		For("NO KEY UPDATE"), "work_time_model", scope)
+	return scanOne(ctx, query, "lock work-time model")
+}
+
 // ShareLockWorkTimeModel conflicts with the row lock an edit of the
 // template takes. Taken before the staff locks, it orders an assignment and
 // an edit the same way: template first, then the people.

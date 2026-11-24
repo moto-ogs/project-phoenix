@@ -21,7 +21,10 @@ package workforce
 import (
 	"context"
 	"errors"
+	"slices"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 const (
@@ -121,9 +124,33 @@ type CreateWorkTimeModel struct {
 	WorkTimeModelFields
 }
 
+// UpdateWorkTimeModel is an edit of a template. ExpectedVersion is the
+// WorkTimeModelVersion its form was filled from; an edit of a template
+// changed since, or one without a version, is refused with
+// readstate.ErrChanged.
 type UpdateWorkTimeModel struct {
 	ID int64
 	WorkTimeModelFields
+	ExpectedVersion string
+}
+
+// WorkTimeModelVersion is the token of a template as its form shows it
+// (ADR 0311): name, rotation, anchor, the slots in their canonical order
+// and whether it is offered. A fingerprint, not updated_at: the template
+// row has no trigger, and its slots live in their own rows.
+func WorkTimeModelVersion(m WorkTimeModel) string {
+	entries := slices.Clone(m.Entries)
+	slices.SortFunc(entries, func(a, b WorkTimeModelEntry) int {
+		if a.WeekIndex != b.WeekIndex {
+			return a.WeekIndex - b.WeekIndex
+		}
+		return a.DayOfWeek - b.DayOfWeek
+	})
+	slots := make([]any, 0, len(entries))
+	for _, entry := range entries {
+		slots = append(slots, []any{entry.WeekIndex, entry.DayOfWeek, entry.TargetMinutes, entry.StartTime})
+	}
+	return readstate.Fingerprint([]any{m.Name, m.RotationLength, m.RotationAnchorDate, slots, m.ArchivedAt != nil})
 }
 
 // StaffWorkSchedule is one version of a staff member's target working time for

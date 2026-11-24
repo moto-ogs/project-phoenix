@@ -68,6 +68,7 @@ func TestActivityCategoriesListQueryBudgetIsFlat(t *testing.T) {
 				"id": strconv.FormatInt(category.ID, 10), "name": category.Name, "description": category.Description,
 				"color": category.Color, "is_system": false, "usage_count": index % 3,
 				"created_at": category.CreatedAt, "updated_at": category.UpdatedAt,
+				"version": catalogCategoryVersion(category), "shift_type_link_version": catalogCategoryLinkVersion(category),
 			})
 		}
 		sort.Slice(expected, func(i, j int) bool { return expected[i]["name"].(string) < expected[j]["name"].(string) })
@@ -176,4 +177,21 @@ func logCatalogQueries(t *testing.T, scenario string, size int, queries []string
 	encoded, err := json.Marshal(queries)
 	require.NoError(t, err)
 	t.Logf("%s n=%d statements=%d queries_json=%s", scenario, size, len(queries), encoded)
+}
+
+// catalogCategoryVersion and catalogCategoryLinkVersion are the tokens the
+// list answers for a stored row (ADR 0311).
+func catalogCategoryVersion(row testpkg.ActivityCategory) string {
+	return timetable.CategoryVersion(catalogCategoryOf(row))
+}
+
+func catalogCategoryLinkVersion(row testpkg.ActivityCategory) string {
+	return timetable.CategoryShiftTypeLinkVersion(catalogCategoryOf(row))
+}
+
+func catalogCategoryOf(row testpkg.ActivityCategory) timetable.Category {
+	return timetable.Category{
+		ID: row.ID, Name: row.Name, Description: row.Description, Color: row.Color,
+		IsSystem: row.IsSystem, ShiftTypeID: row.ShiftTypeID, ArchivedAt: row.ArchivedAt,
+	}
 }

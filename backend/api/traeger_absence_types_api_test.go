@@ -187,9 +187,9 @@ func TestTraegerAbsenceTypesShareOneKontingentOverAllSchools(t *testing.T) {
 		limit := 0.5
 		require.NoError(t, inSchool(t, unit, south, func(ctx context.Context) error {
 			name := "Regeneration"
-			_, err := school.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: southType, Name: &name})
+			_, err := school.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: southType, ExpectedVersion: listedAbsenceTypeVersion(t, ctx, school, southType), Name: &name})
 			assert.ErrorIs(t, err, workforce.ErrAbsenceTypeKeptByTraeger)
-			_, err = school.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: southType, SchoolLimit: &workforce.SchoolLimitPatch{Days: &limit}})
+			_, err = school.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: southType, ExpectedVersion: listedAbsenceTypeVersion(t, ctx, school, southType), SchoolLimit: &workforce.SchoolLimitPatch{Days: &limit}})
 			require.NoError(t, err)
 			_, err = school.SetAllowance(ctx, workforce.SetAbsenceTypeAllowance{
 				StaffID: miraSouth.ID, AbsenceTypeID: southType, Year: 2027, EntitledDays: 9, Reason: "mehr", ChangedBy: miraSouth.ID,
@@ -353,4 +353,19 @@ func TestTraegerAbsenceTypesQueryBudget(t *testing.T) {
 	assert.Len(t, read(accountsPath).Statements, len(fewAccounts.Statements), "the accounts load set-based")
 	querybudgets.AssertQueryBudget(t, "api.traeger.absence_types", fewTypes)
 	querybudgets.AssertQueryBudget(t, "api.traeger.absence_accounts", fewAccounts)
+}
+
+// listedAbsenceTypeVersion reads the type from the school's list, as the
+// catalog page does, and returns the token its edit sends (ADR 0311).
+func listedAbsenceTypeVersion(t *testing.T, ctx context.Context, school workforce.AbsenceTypeAdministration, id int64) string {
+	t.Helper()
+	listed, err := school.ListAbsenceTypes(ctx)
+	require.NoError(t, err)
+	for _, value := range listed {
+		if value.ID == id {
+			return workforce.AbsenceTypeVersion(value)
+		}
+	}
+	t.Fatalf("absence type %d is not listed", id)
+	return ""
 }

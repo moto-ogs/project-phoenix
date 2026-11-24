@@ -11,6 +11,7 @@ describe("mapShiftType", () => {
         color: "#83CD2D",
         description: "Zeit am Kind",
         is_active: true,
+        version: "v3",
       }),
     ).toEqual({
       id: "5",
@@ -19,6 +20,7 @@ describe("mapShiftType", () => {
       description: "Zeit am Kind",
       isActive: true,
       archivedAt: null,
+      version: "v3",
     });
   });
 
@@ -29,6 +31,7 @@ describe("mapShiftType", () => {
         name: "Pause",
         color: "#6B7280",
         is_active: false,
+        version: "v1",
       }).description,
     ).toBe("");
   });
