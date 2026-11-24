@@ -9,11 +9,8 @@
 
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { SchoolResponsibilityTab } from "~/components/traeger/school-responsibility-tab";
-import { useTraegerResponsibilities } from "~/components/traeger/use-traeger-responsibilities";
+import dynamic from "next/dynamic";
 import { Loading } from "~/components/ui/loading";
-import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { EmptyState } from "~/components/ui/empty-state";
 import {
   SCHOOL_SWITCH_MISSING_HINT,
   useOpenTraegerSchool,
@@ -36,6 +33,16 @@ import { supervisionConcept } from "~/lib/concepts/supervision";
 import type { TraegerSchoolView } from "~/lib/traeger-api";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
+
+// The tab with the forms for Schulträger and Gemeinde loads when it opens:
+// most visits read the figures only (bundle ratchet, #2939).
+const SchoolResponsibilityPanel = dynamic(
+  () =>
+    import("~/components/traeger/school-responsibility-panel").then(
+      (module) => module.SchoolResponsibilityPanel,
+    ),
+  { ssr: false, loading: () => <Loading /> },
+);
 
 type SchoolTab = "uebersicht" | "stammdaten" | "zustaendigkeiten";
 
@@ -175,27 +182,6 @@ function MasterDataTab({
   );
 }
 
-/**
- * Who is responsible at the school, read when the tab opens: the read
- * shows bank accounts and stands in the Träger's log.
- */
-function ResponsibilityTab({ schoolId }: Readonly<{ schoolId: string }>) {
-  const { data, loading, error, reloadOrThrow } = useTraegerResponsibilities();
-  const school = data?.find((entry) => entry.schoolId === schoolId);
-  if (error) return <LoadErrorAlert error={error} />;
-  if (loading || !data) return <Loading />;
-  if (!school) {
-    return (
-      <EmptyState
-        variant="compact"
-        title="Für diese Schule gibt es keine Zuständigkeiten"
-        description="Die Schule gehört nicht mehr zu deinem Träger."
-      />
-    );
-  }
-  return <SchoolResponsibilityTab school={school} reload={reloadOrThrow} />;
-}
-
 export default function TraegerSchoolPage() {
   // `useSearchParams` braucht eine Suspense-Grenze; bis dahin lädt die Seite.
   return (
@@ -256,7 +242,7 @@ function TraegerSchoolContent() {
       ) : null}
       {tab === "stammdaten" ? <MasterDataTab school={school} /> : null}
       {tab === "zustaendigkeiten" ? (
-        <ResponsibilityTab schoolId={params?.id ?? ""} />
+        <SchoolResponsibilityPanel schoolId={params?.id ?? ""} />
       ) : null}
       <TraegerCodeStepModal {...codeStepModal} />
     </TenantPage>

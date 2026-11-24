@@ -7,11 +7,11 @@ import { useTraegerResource } from "./use-traeger-resource";
 /**
  * Who is responsible at the schools of the Träger, with the stored
  * Schulträger and Gemeinde (#4811). The read shows bank accounts, so the
- * server logs it: `enabled` false reads nothing (a tab that is not open); like every Träger read it does not read again on focus.
+ * server logs it; like every Träger read it does not read again on focus.
  */
-export function useTraegerResponsibilities(enabled = true) {
+export function useTraegerResponsibilities() {
   return useTraegerResource(
-    enabled ? traegerKeys.responsibilities() : null,
+    traegerKeys.responsibilities(),
     fetchResponsibilities,
     "die Zuständigkeiten der Schulen",
   );
