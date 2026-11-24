@@ -14,7 +14,11 @@ import {
   useWeekendFollowsFriday,
 } from "~/lib/tenant-context";
 import { fetchStudents } from "~/lib/student-api";
-import { ApiError, unavailableApiError } from "~/lib/api-error";
+import {
+  ApiError,
+  apiErrorFromResponse,
+  unavailableApiError,
+} from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { deferred } from "~/test/helpers/form-modal-pending";
@@ -2571,15 +2575,22 @@ describe("BetreuungsplanView", () => {
 
   it("names the full room from the details when reopening is refused (#3633)", async () => {
     mockReopen.mockRejectedValue(
-      new ApiError("room capacity exceeded: Turnhalle (30/30)", 409, {
-        code: "presence.room_capacity_exceeded",
-        details: {
-          room_name: "Turnhalle",
-          current_occupancy: 30,
-          max_capacity: 30,
-          incoming_students: 1,
-        },
-      }),
+      await apiErrorFromResponse(
+        Response.json(
+          {
+            code: "presence.room_capacity_exceeded",
+            details: {
+              room_id: "42",
+              room_name: "Turnhalle",
+              current_occupancy: 30,
+              max_capacity: 30,
+              incoming_students: 1,
+            },
+          },
+          { status: 409 },
+        ),
+        "room capacity exceeded: Turnhalle (30/30)",
+      ),
     );
     setUrl("view=woche&block=42");
     render(<BetreuungsplanView />);

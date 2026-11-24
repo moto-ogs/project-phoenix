@@ -380,6 +380,7 @@ import MeinRaumPage from "./page";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { errorFromProblem } from "~/test/helpers/problem-response";
 import { catalogText } from "~/test/error-catalog-text";
 import { ERROR_CATALOG } from "~/lib/error-catalog.generated";
 import {
@@ -796,6 +797,7 @@ describe("MeinRaumPage roster actions", () => {
       kind: "activity",
       code: "presence.activity_participant_limit_reached",
       details: {
+        activity_id: "99",
         activity_name: "Betreuung",
         current_occupancy: 45,
         max_participants: 45,
@@ -806,6 +808,7 @@ describe("MeinRaumPage roster actions", () => {
       kind: "room",
       code: "presence.room_capacity_exceeded",
       details: {
+        room_id: "7",
         room_name: "Turnhalle",
         current_occupancy: 30,
         max_capacity: 30,
@@ -816,7 +819,7 @@ describe("MeinRaumPage roster actions", () => {
     "says the $kind is full when the check-in is refused (#3633)",
     async ({ code, details }) => {
       vi.mocked(timetableOperationsApi.checkIn).mockRejectedValue(
-        new ApiError("capacity", 409, { code, details }),
+        await errorFromProblem("capacity", 409, { code, details }),
       );
 
       render(<MeinRaumPage />);
@@ -847,9 +850,10 @@ describe("MeinRaumPage roster actions", () => {
       JSON.stringify({ instanceId: "99", expiresAt: Date.now() + 60_000 }),
     );
     vi.mocked(timetableOperationsApi.reopen).mockRejectedValue(
-      new ApiError("room capacity exceeded: Turnhalle (30/30)", 409, {
+      await errorFromProblem("room capacity exceeded: Turnhalle (30/30)", 409, {
         code: "presence.room_capacity_exceeded",
         details: {
+          room_id: "7",
           room_name: "Turnhalle",
           current_occupancy: 29,
           max_capacity: 30,

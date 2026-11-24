@@ -17,6 +17,7 @@ import {
 } from "~/lib/student-companion-api";
 import { CompanionPlanConflictError } from "~/lib/student-update-errors";
 import { ApiError } from "~/lib/api-error";
+import { markPrivacyConsentSaved } from "~/lib/student-update-errors";
 import { catalogText } from "~/test/error-catalog-text";
 
 // The read answers the list with the fingerprint of the same read (ADR 0311);
@@ -444,10 +445,9 @@ describe("PersonalInfoEditPanel", () => {
 
     it("confirms the saved privacy consent when the rest of the save fails", async () => {
       mockOnSave.mockRejectedValue(
-        new ApiError("boom", 500, {
-          code: "general.server",
-          details: { privacy_consent_saved: true },
-        }),
+        markPrivacyConsentSaved(
+          new ApiError("boom", 500, { code: "general.server" }),
+        ),
       );
 
       render(

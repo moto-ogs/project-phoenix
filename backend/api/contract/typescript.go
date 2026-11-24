@@ -692,9 +692,13 @@ func (w *tsWriter) field(s Schema) string {
 	case KindNumber:
 		z = helper("num")
 	case KindID:
-		z = helper("int64String")
-		if s.NoID {
-			z += ".orNone"
+		switch {
+		case s.NoID && w.browser:
+			z = helper("int64String") + ".orNone"
+		case s.NoID:
+			z = helper("int64StringOrNone")
+		default:
+			z = helper("int64String")
 		}
 	case KindDate:
 		z = helper("calendarDate")

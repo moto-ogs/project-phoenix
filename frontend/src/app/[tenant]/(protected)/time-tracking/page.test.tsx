@@ -115,10 +115,8 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   })),
 }));
 
-vi.mock("~/lib/time-tracking-api", () => ({
-  DEVIATION_REASON_REQUIRED_CODE: "iot.deviation_reason_required",
-  PLANNED_START_NOT_REACHED_CODE: "iot.planned_start_not_reached",
-  REOPEN_STATUS_CONFLICT_CODE: "reopen_status_conflict",
+vi.mock("~/lib/time-tracking-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/time-tracking-api")>()),
   timeTrackingService: mockTimeTrackingService,
 }));
 
@@ -506,7 +504,7 @@ import { useRouter } from "next/navigation";
 import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
 import { SWRConfig } from "~/lib/swr/testing";
 import { ToastProvider, useToast } from "~/contexts/ToastContext";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, apiErrorFromResponse } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 
 vi.unmock("swr");
@@ -2165,13 +2163,6 @@ describe("TimeTrackingPage", () => {
   });
 
   describe("erneutes Einstempeln nach Checkout (#2402)", () => {
-    function makePlannedStartError(): ApiError {
-      return new ApiError("planned start not reached", 409, {
-        code: "iot.planned_start_not_reached",
-        details: { planned_start_time: "09:00", current_time: "08:45" },
-      });
-    }
-
     it("shows planned-start message when check-in is too early", async () => {
       const mockToast = {
         success: vi.fn(),
@@ -2183,7 +2174,16 @@ describe("TimeTrackingPage", () => {
       vi.mocked(useToast).mockReturnValue(mockToast);
       setupDefaultMocks();
       vi.mocked(timeTrackingService.checkIn).mockRejectedValueOnce(
-        makePlannedStartError(),
+        await apiErrorFromResponse(
+          Response.json(
+            {
+              code: "iot.planned_start_not_reached",
+              details: { planned_start_time: "09:00", current_time: "08:45" },
+            },
+            { status: 409 },
+          ),
+          "planned start not reached",
+        ),
       );
       render(<TimeTrackingPage />);
 
