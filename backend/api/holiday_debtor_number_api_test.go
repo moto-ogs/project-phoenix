@@ -40,7 +40,7 @@ func askForDebtorNumber(t *testing.T, f reviewFixture, on bool) {
 
 func (f reviewFixture) confirmWith(t *testing.T, id int64, body map[string]any) *httptest.ResponseRecorder {
 	t.Helper()
-	return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), id), body)
+	return confirmReadHoliday(t, f.traeger, f.office.token, int64(f.period.ID), id, body)
 }
 
 func (f reviewFixture) changeDebtorNumber(t *testing.T, token string, id int64, number string) *httptest.ResponseRecorder {

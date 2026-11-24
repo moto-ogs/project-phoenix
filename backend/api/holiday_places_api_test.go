@@ -206,7 +206,7 @@ func TestHolidayPlacesGoInOrderOfArrivalAndMoveUpOnCancellation(t *testing.T) {
 
 	// The family is confirmed with Ida still waiting: only Max's week is billed.
 	f.detail(t, f.act(t, f.siblings, "confirm"))
-	confirmed := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), int64(family.ID)), map[string]any{})
+	confirmed := confirmReadHoliday(t, f.traeger, f.office.token, int64(f.period.ID), int64(family.ID), map[string]any{})
 	require.Equal(t, http.StatusOK, confirmed.Code, confirmed.Body.String())
 	assert.Equal(t, second.TimeModels[0].PriceCents, f.contributionTotal(t, int64(family.ID)), "a waiting booking is never billed")
 	detail := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(f.siblings, ""), nil))

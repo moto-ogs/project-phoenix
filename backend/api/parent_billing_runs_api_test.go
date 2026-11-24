@@ -391,7 +391,7 @@ func TestParallelReleasesNumberInvoicesWithoutAGap(t *testing.T) {
 		require.Equal(t, http.StatusOK, f.act(t, id, "confirm").Code)
 	}
 	for _, id := range registrations {
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(second.ID), id), nil)
+		rec := confirmReadHoliday(t, f.traeger, f.office.token, int64(second.ID), id, nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
 	setNumberRange(t, f, billing, "FE-{NNNN}")

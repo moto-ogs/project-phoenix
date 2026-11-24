@@ -59,6 +59,9 @@ type contributionBody struct {
 	ConfirmedAt        *string `json:"confirmed_at"`
 	// Invoiced reports an issued invoice of the registration (#5621).
 	Invoiced bool `json:"invoiced"`
+	// Fingerprint is the token of a preview the confirmation sends back
+	// (ADR 0311).
+	Fingerprint string `json:"fingerprint"`
 }
 
 type confirmationBody struct {
@@ -117,6 +120,80 @@ func withRegistrationVersion(t *testing.T, reader http.Handler, token, path stri
 
 func holidayConfirmPath(periodID, registrationID int64) string {
 	return holidayContributionPath(periodID, registrationID) + "/confirm"
+}
+
+// confirmReadHoliday confirms a registration over the preview its caller
+// reads first with the payer of body, as the registration page does (ADR
+// 0311), and with child_debtor_numbers over the numbers it reads too. A
+// caller that may not read sends no token; its confirmation is refused for
+// the same reason.
+func confirmReadHoliday(t *testing.T, router http.Handler, token string, periodID, registrationID int64, body any) *httptest.ResponseRecorder {
+	t.Helper()
+	return traegerJSON(t, router, token, http.MethodPost, holidayConfirmPath(periodID, registrationID),
+		withHolidayPreview(t, router, token, periodID, registrationID, body))
+}
+
+// putReadChildNumbers changes the numbers of the children of a
+// registration over the version of the numbers its caller reads first, as
+// the registration page does (ADR 0311).
+func putReadChildNumbers(t *testing.T, router http.Handler, token string, periodID, registrationID int64, body any) *httptest.ResponseRecorder {
+	t.Helper()
+	return putReadChildNumbersVia(t, router, router, token, periodID, registrationID, body)
+}
+
+// putReadChildNumbersVia reads the numbers through reader and writes
+// through router.
+func putReadChildNumbersVia(t *testing.T, reader, router http.Handler, token string, periodID, registrationID int64, body any) *httptest.ResponseRecorder {
+	t.Helper()
+	encoded, err := json.Marshal(body)
+	require.NoError(t, err)
+	sent := map[string]any{}
+	require.NoError(t, json.Unmarshal(encoded, &sent))
+	if sent == nil {
+		sent = map[string]any{}
+	}
+	path := holidayContributionPath(periodID, registrationID)
+	if read := traegerJSON(t, reader, token, http.MethodGet, path+"/family-debtor-number", nil); read.Code == http.StatusOK {
+		sent["expected_version"] = decodeSchoolPortalData[struct {
+			Version string `json:"version"`
+		}](t, read.Body.Bytes()).Version
+	}
+	return traegerJSON(t, router, token, http.MethodPut, path+"/child-debtor-numbers", sent)
+}
+
+// withHolidayPreview is body with the fingerprint of the preview of its
+// payer and, when it sends the numbers of the children, the version of
+// those numbers, both read now.
+func withHolidayPreview(t *testing.T, router http.Handler, token string, periodID, registrationID int64, body any) map[string]any {
+	t.Helper()
+	sent := map[string]any{}
+	if body != nil {
+		encoded, err := json.Marshal(body)
+		require.NoError(t, err)
+		require.NoError(t, json.Unmarshal(encoded, &sent))
+	}
+	if sent == nil {
+		sent = map[string]any{}
+	}
+	exemption, _ := sent["benefits_exemption"].(bool)
+	query := fmt.Sprintf("?benefits_exemption=%t", exemption)
+	if bearer, ok := sent["cost_bearer_id"]; ok && bearer != nil && fmt.Sprint(bearer) != "" && fmt.Sprint(bearer) != "0" {
+		query = fmt.Sprintf("?benefits_exemption=false&cost_bearer_id=%v", bearer)
+	}
+	path := holidayContributionPath(periodID, registrationID)
+	if read := traegerJSON(t, router, token, http.MethodGet, path+query, nil); read.Code == http.StatusOK {
+		sent["expected_fingerprint"] = decodeSchoolPortalData[struct {
+			Fingerprint string `json:"fingerprint"`
+		}](t, read.Body.Bytes()).Fingerprint
+	}
+	if _, numbers := sent["child_debtor_numbers"]; numbers {
+		if read := traegerJSON(t, router, token, http.MethodGet, path+"/family-debtor-number", nil); read.Code == http.StatusOK {
+			sent["expected_child_debtor_numbers_version"] = decodeSchoolPortalData[struct {
+				Version string `json:"version"`
+			}](t, read.Body.Bytes()).Version
+		}
+	}
+	return sent
 }
 
 // holidayCancelPath is the cancellation, which the Elternabrechnung serves
@@ -310,7 +387,10 @@ func TestConfirmationFreezesTheContributionAgainstLaterPriceAndRuleChanges(t *te
 	assert.False(t, preview.Frozen)
 	assert.Equal(t, int64(3375+9000), preview.TotalCents)
 
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), f.siblings), map[string]any{})
+	// The confirmation freezes the preview the office read (ADR 0311).
+	require.NotEmpty(t, preview.Fingerprint)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), f.siblings),
+		map[string]any{"expected_fingerprint": preview.Fingerprint})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	confirmed := decodeSchoolPortalData[confirmationBody](t, rec.Body.Bytes())
 	assert.Equal(t, "confirmed", confirmed.Status)
@@ -342,7 +422,8 @@ func TestConfirmationFreezesTheContributionAgainstLaterPriceAndRuleChanges(t *te
 	assert.Equal(t, confirmed.Contribution.Children[0].ChildID, frozen.Children[0].ChildID)
 	assert.Equal(t, int64(9000), f.contribution(t, f.again).TotalCents, "an open registration shows the new price")
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), f.siblings), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), f.siblings),
+		map[string]any{"expected_fingerprint": preview.Fingerprint})
 	require.Equal(t, http.StatusConflict, rec.Code, "a confirmed registration is not confirmed twice: %s", rec.Body.String())
 
 	var rows int
@@ -372,7 +453,7 @@ func TestBenefitsExemptionIsFrozenWithItsNoteOnlyWithARule(t *testing.T) {
 	// Without an exemption rule the statement changes nothing, and an
 	// exemption cannot be confirmed: the registration stays received.
 	assert.Equal(t, int64(6750+9000), f.contribution(t, int64(registration)).TotalCents)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), int64(registration)), map[string]any{"benefits_exemption": true})
+	rec = confirmReadHoliday(t, f.traeger, f.office.token, int64(f.period.ID), int64(registration), map[string]any{"benefits_exemption": true})
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, _ := registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.benefits_exemption_unavailable", code)
@@ -391,7 +472,7 @@ func TestBenefitsExemptionIsFrozenWithItsNoteOnlyWithARule(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(int64(f.period.ID), int64(registration))+"?benefits_exemption=perhaps", nil)
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), int64(registration)), map[string]any{"benefits_exemption": true})
+	rec = confirmReadHoliday(t, f.traeger, f.office.token, int64(f.period.ID), int64(registration), map[string]any{"benefits_exemption": true})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	frozen := decodeSchoolPortalData[confirmationBody](t, rec.Body.Bytes()).Contribution
 	assert.True(t, frozen.BenefitsExemption)
@@ -403,7 +484,7 @@ func TestBenefitsExemptionIsFrozenWithItsNoteOnlyWithARule(t *testing.T) {
 
 	// The Träger-Büro confirms the siblings' registration without the
 	// exemption the parents did not state.
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), f.siblings), map[string]any{"benefits_exemption": false})
+	rec = confirmReadHoliday(t, f.traeger, f.office.token, int64(f.period.ID), f.siblings, map[string]any{"benefits_exemption": false})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, int64(6750+9000), decodeSchoolPortalData[confirmationBody](t, rec.Body.Bytes()).Contribution.TotalCents)
 }

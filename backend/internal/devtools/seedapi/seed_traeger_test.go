@@ -149,6 +149,9 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 			}
 			_, _ = w.Write([]byte(`{"status":"success","data":{"id":9,"preview_count":1,"preview_cents":11250,"fingerprint":"geprueft",` +
 				`"documents":[{"registration_id":9,"children":[{"child_id":91,"total_cents":4500}]}]}}`))
+		case "/traeger/holiday-contributions/5/registrations/9", "/traeger/holiday-contributions/5/registrations/10":
+			// The preview the confirmation sends back (ADR 0311).
+			_, _ = fmt.Fprintf(w, `{"status":"success","data":{"fingerprint":"vorschau-%s"}}`, strings.TrimPrefix(r.URL.Path, "/traeger/holiday-contributions/5/registrations/"))
 		case "/traeger/holiday-contributions/5/registrations/9/confirm":
 			raw, err := io.ReadAll(r.Body)
 			assert.NoError(t, err)
@@ -226,6 +229,8 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 		// A second seed run finds the five-digit format still on (#6675).
 		"PUT /traeger/settings/values/parent_billing.debtor_number_digits_only Bearer traeger-token",
 		"PUT /traeger/settings/values/parent_billing.payment_text Bearer traeger-token",
+		// The office confirms the preview it read (ADR 0311).
+		"GET /traeger/holiday-contributions/5/registrations/9 Bearer traeger-token",
 		"POST /traeger/holiday-contributions/5/registrations/9/confirm Bearer traeger-token",
 		// From now on debtor numbers have five digits (#6675).
 		"PUT /traeger/settings/values/parent_billing.debtor_number_digits_only Bearer traeger-token",
@@ -236,6 +241,7 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 		"GET /traeger/holiday-periods/5/registrations/9 Bearer traeger-token",
 		"PUT /traeger/holiday-periods/5/registrations/9/details Bearer traeger-token",
 		"POST /traeger/cost-bearers/ Bearer traeger-token",
+		"GET /traeger/holiday-contributions/5/registrations/10 Bearer traeger-token",
 		"POST /traeger/holiday-contributions/5/registrations/10/confirm Bearer traeger-token",
 		"POST /traeger/holiday-registrations/link-key ",
 		"POST /traeger/holiday-contributions/5/sibling-groups Bearer traeger-token",
@@ -257,9 +263,11 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 		// A holiday family is remembered with its debtor number and registers
 		// again; the Abrechnung sets the number of another family (#6692).
 		"POST /traeger/holiday-registrations/link-key ",
+		"GET /traeger/holiday-contributions/5/registrations/15 Bearer traeger-token",
 		"POST /traeger/holiday-contributions/5/registrations/15/confirm Bearer traeger-token",
 		"POST /traeger/holiday-registrations/link-key ",
 		"POST /traeger/holiday-registrations/link-key ",
+		"GET /traeger/holiday-contributions/5/registrations/17 Bearer traeger-token",
 		"POST /traeger/holiday-contributions/5/registrations/17/confirm Bearer traeger-token",
 		"POST /traeger/holiday-registrations/link-key ",
 		"PUT /traeger/billing-families/debtor-number Bearer traeger-token",
@@ -291,11 +299,13 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 		"reason": "Am ersten Ferientag krank, Tag wird erstattet."}, correction, "the Abrechnung lowers one child with a reason")
 	assert.Equal(t, map[string]any{"document_count": float64(1), "total_cents": float64(11250), "fingerprint": "geprueft"}, release,
 		"the release names the preview it checked")
-	assert.Equal(t, map[string]any{"benefits_exemption": false, "debtor_number": "10 4711", "family_debtor_number": "keep"}, confirmation,
+	assert.Equal(t, map[string]any{"benefits_exemption": false, "debtor_number": "10 4711", "family_debtor_number": "keep",
+		"expected_fingerprint": "vorschau-9"}, confirmation,
 		"the Träger-Büro asks for the debtor number and confirms the siblings with theirs (#5621); the family keeps its own (#6692)")
 	assert.Equal(t, "Fachdienst Jugend des Landkreises Musterstadt", costBearer["name"], "the Abrechnung keeps an invented cost bearer (#5627)")
 	assert.Equal(t, true, costBearer["active"])
-	assert.Equal(t, map[string]any{"benefits_exemption": false, "cost_bearer_id": float64(7), "debtor_number": "10472"}, takeover,
+	assert.Equal(t, map[string]any{"benefits_exemption": false, "cost_bearer_id": float64(7), "debtor_number": "10472",
+		"expected_fingerprint": "vorschau-10"}, takeover,
 		"the Träger-Büro confirms the second registration with the cost takeover by that cost bearer (#5627)")
 	weeks, ok := period["weeks"].([]any)
 	require.True(t, ok)
