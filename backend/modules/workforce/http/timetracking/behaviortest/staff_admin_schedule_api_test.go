@@ -410,11 +410,11 @@ func TestUpdateSchedule_RefusesAScheduleChangedSinceItWasRead(t *testing.T) {
 	require.Equal(t, http.StatusOK, again.Code, again.Body.String())
 }
 
-// TestUpdateSchedule_TemplateWaitsForAnEditOfTheTemplate pins the lock
-// order of a schedule save in template mode: it holds the template before
-// the person, as an edit of the template does. An edit in flight has not
-// seen the person bound, so the save waits for it and then binds the person
-// to the edited template's snapshot, never the old one.
+// TestUpdateSchedule_TemplateWaitsForAnEditOfTheTemplate proves a schedule
+// save in template mode waits for an uncommitted edit of the template and
+// then binds the person to the edited template's snapshot, never the old
+// one. It does not prove the lock order (template before person); that order
+// is enforced at runtime by tenant.OrderLock.
 func TestUpdateSchedule_TemplateWaitsForAnEditOfTheTemplate(t *testing.T) {
 	t.Parallel()
 

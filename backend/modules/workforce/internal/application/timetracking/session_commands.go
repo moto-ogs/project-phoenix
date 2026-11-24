@@ -254,36 +254,6 @@ func (s *workSessionCommands) GetStaffIDsWithSupervisionToday(ctx context.Contex
 	return
 }
 
-// AssignScheduleTemplate snapshots the template's entries as the staff
-// member's schedule and binds the template to the staff row.
-func (s *workSessionCommands) AssignScheduleTemplate(ctx context.Context, staff *StaffScheduleBinding, modelID int64) (err error) {
-	err = s.commands.runInWorkSessionTx(ctx, func(txCtx context.Context) error {
-		err = s.commands.AssignScheduleTemplate(txCtx, staff, modelID)
-		return err
-	})
-	return
-}
-
-// ApplyCustomScheduleRows replaces the schedule with custom rows and unbinds
-// any assigned template.
-func (s *workSessionCommands) ApplyCustomScheduleRows(ctx context.Context, staff *StaffScheduleBinding, entries []*WorkScheduleRow, anchor, validFrom calendar.Date) (err error) {
-	err = s.commands.runInWorkSessionTx(ctx, func(txCtx context.Context) error {
-		err = s.commands.ApplyCustomScheduleRows(txCtx, staff, entries, anchor, validFrom)
-		return err
-	})
-	return
-}
-
-// SaveCustomScheduleAsTemplate persists the rows as a new reusable work time
-// model and binds it to the staff member.
-func (s *workSessionCommands) SaveCustomScheduleAsTemplate(ctx context.Context, staff *StaffScheduleBinding, name string, rotation int, anchor calendar.Date, entries []*WorkTimeTemplateEntry) (err error) {
-	err = s.commands.runInWorkSessionTx(ctx, func(txCtx context.Context) error {
-		err = s.commands.SaveCustomScheduleAsTemplate(txCtx, staff, name, rotation, anchor, entries)
-		return err
-	})
-	return
-}
-
 // UpdateSchedule resolves the requested mode and applies the schedule change.
 func (s *workSessionCommands) UpdateSchedule(ctx context.Context, staff *StaffScheduleBinding, in ScheduleUpdateInput) (err error) {
 	err = s.commands.runInWorkSessionTx(ctx, func(txCtx context.Context) error {

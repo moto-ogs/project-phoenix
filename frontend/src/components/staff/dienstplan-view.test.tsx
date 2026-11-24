@@ -12,6 +12,10 @@ const mocks = vi.hoisted(() => ({
   // URL-State (d/view) wird über useSearchParams gelesen; der Stub liefert die
   // aktuell gesetzten Params. Ein leerer Wert bedeutet: keine Params -> Defaults.
   search: { value: "" },
+  // The shift a grid cell opens (null: an empty cell) and the reload the
+  // view hands the opened dialog.
+  cellShift: { value: null as unknown },
+  modalReload: { value: undefined as undefined | (() => Promise<unknown>) },
 }));
 
 vi.mock("next/navigation", () => ({
@@ -32,7 +36,9 @@ vi.mock("~/lib/auth-utils", () => ({
   hasPermission: mocks.hasPermission,
 }));
 
-vi.mock("~/lib/swr", () => ({
+vi.mock("~/lib/swr", async (importOriginal) => ({
+  revalidateOrThrow: (await importOriginal<typeof import("~/lib/swr")>())
+    .revalidateOrThrow,
   useSWRAuth: mocks.useSWRAuth,
   useTenantMutateMatching: () => mocks.refreshPlanCaches,
 }));
@@ -114,7 +120,7 @@ vi.mock("~/components/staff/dienstplan-resource-grid", () => ({
           onCellClick(
             { id: "7", firstName: "Ada", lastName: "Lovelace" },
             "2026-07-06",
-            null,
+            mocks.cellShift.value as null,
           )
         }
       >
@@ -176,20 +182,25 @@ vi.mock("~/components/staff/shift-edit-modal", () => ({
     onSaved,
     initialStartTime,
     initialEndTime,
+    reloadShift,
   }: {
     onSaved: () => void;
     initialStartTime?: string;
     initialEndTime?: string;
-  }) => (
-    <button
-      type="button"
-      data-testid="shift-modal"
-      data-initial={`${initialStartTime ?? ""}-${initialEndTime ?? ""}`}
-      onClick={onSaved}
-    >
-      Schicht speichern
-    </button>
-  ),
+    reloadShift?: () => Promise<unknown>;
+  }) => {
+    mocks.modalReload.value = reloadShift;
+    return (
+      <button
+        type="button"
+        data-testid="shift-modal"
+        data-initial={`${initialStartTime ?? ""}-${initialEndTime ?? ""}`}
+        onClick={onSaved}
+      >
+        Schicht speichern
+      </button>
+    );
+  },
 }));
 
 vi.mock("~/components/ui/loading", () => ({
@@ -235,6 +246,8 @@ describe("DienstplanView", () => {
     mocks.hasPermission.mockReturnValue(true);
     mocks.useBerlinToday.mockReturnValue("2026-07-05");
     mocks.search.value = "";
+    mocks.cellShift.value = null;
+    mocks.modalReload.value = undefined;
     window.history.replaceState(null, "", "/acme/dienstplan");
   });
 
@@ -551,6 +564,59 @@ describe("DienstplanView", () => {
     fireEvent.click(screen.getByRole("button", { name: "Schicht speichern" }));
 
     expect(mocks.refreshPlanCaches).toHaveBeenCalledTimes(1);
+  });
+
+  // ADR 0311: after a refusal the dialog reads its shift again. When the
+  // stored shift did not change, the props stay the same and only this
+  // answer lets the dialog's draft leave "reloading" (a split effective
+  // today refused because only the series changed).
+  it("answers the dialog's reload with the stored shift, also when unchanged", async () => {
+    mocks.useBerlinToday.mockReturnValue("2026-07-06");
+    const stored = {
+      id: "9",
+      staffId: "7",
+      date: "2026-07-06",
+      startTime: "08:00",
+      endTime: "12:00",
+      breakMinutes: 0,
+      shiftTypeId: null,
+      shiftTypeName: null,
+      shiftTypeColor: null,
+      notes: "",
+      seriesId: "5",
+      detached: false,
+      cancelled: false,
+      changeReason: null,
+      originShiftId: null,
+      version: "occurrence-v1",
+    };
+    const overview = {
+      from: "",
+      to: "",
+      dienstplanInUse: true,
+      staff: [{ id: "7", firstName: "Ada", lastName: "Lovelace" }],
+      shifts: [stored],
+      assignments: [],
+    };
+    mocks.useSWRAuth.mockImplementation((key: string | null) => {
+      if (key?.startsWith("dienstplan-overview-")) {
+        return {
+          data: overview,
+          error: undefined,
+          isLoading: false,
+          mutate: vi.fn().mockResolvedValue(overview),
+        };
+      }
+      return { data: [], error: undefined, isLoading: false, mutate: vi.fn() };
+    });
+    mocks.cellShift.value = stored;
+
+    render(<DienstplanView />);
+    fireEvent.click(screen.getByRole("button", { name: "Schicht öffnen" }));
+    const reload = mocks.modalReload.value;
+    expect(reload).toBeDefined();
+
+    await expect(reload?.()).resolves.toEqual({ shift: stored, covers: [] });
   });
 
   it("shows the KW of the week containing d for ?d=2026-09-14&view=woche", () => {
