@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 import {
   AT_LEAST_MD,
@@ -75,9 +75,14 @@ export interface DataTableColumn<T> {
   // clamp, for a title that must stay whole (an e-mail address in a log,
   // without a detail page that would show it). Defaults to true.
   stackedClamp?: boolean;
-  // What the "row" phone line shows for this column, when it needs a
-  // shorter form than the table cell ("15:30" instead of "🕒 15:30 Uhr").
+  // What the phone shows for this column, when it needs another form than
+  // the table cell ("15:30" instead of "🕒 15:30 Uhr"): the "row" line's
+  // title, meta and detail, and the head (title, meta) of a "lines" card.
   stackedRender?: (row: T) => ReactNode;
+  // "row" layout, as the `stackedDetailKey` column: true opens the full
+  // table cell in the card's details too, when the short `stackedRender`
+  // under the title drops part of it (a note, a marker; #7915).
+  stackedFullInDetails?: boolean;
   // False drops the visible header where the value names itself: in the
   // "row" phone line in front of the value (a class, a group), in the
   // "lines" layout a "field" then takes the full width (an invoice's
@@ -182,6 +187,10 @@ interface DataTableExtraCell {
   readonly columnKey: string;
   readonly colSpan?: number;
   readonly content: ReactNode;
+  // The label of this cell on a phone card, where the column header does
+  // not fit the sub row (a report time under "Ankunft"; #7915). The table
+  // keeps the column header.
+  readonly stackedLabel?: string;
 }
 
 /**
@@ -712,9 +721,11 @@ function StackedDetailsToggle({
       tooltip={open ? closeTooltip : openTooltip}
       onClick={onToggle}
     >
-      <ChevronDown
+      {/* Same chevron as an expandable table row: to the side while
+          closed, down while open (#7915). */}
+      <ChevronRight
         aria-hidden="true"
-        className={`h-4 w-4 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
+        className={`h-4 w-4 text-gray-500 transition-transform ${open ? "rotate-90" : ""}`}
       />
     </Button>
   );
@@ -770,7 +781,10 @@ function StackedExtraRow<T>({
         </div>
       ) : null}
       {cells.map((cell) => (
-        <StackedField key={cell.columnKey} label={headerOf(cell.columnKey)}>
+        <StackedField
+          key={cell.columnKey}
+          label={cell.stackedLabel ?? headerOf(cell.columnKey)}
+        >
           {cell.content}
         </StackedField>
       ))}
@@ -922,6 +936,7 @@ function StackedRows<T>({
   expandable,
   renderSubRows,
   summaryRow,
+  rowTone,
 }: Readonly<{
   columns: DataTableColumn<T>[];
   rows: T[];
@@ -948,6 +963,7 @@ function StackedRows<T>({
   expandable?: DataTableExpandable<T>;
   renderSubRows?: (row: T, expanded: boolean) => readonly DataTableExtraRow[];
   summaryRow?: (row: T) => DataTableExtraRow | null;
+  rowTone?: (row: T) => DataTableRowTone | null;
 }>) {
   const idBase = useId();
   // German defaults drop under a non-German KitLocaleProvider (#6744).
@@ -986,9 +1002,12 @@ function StackedRows<T>({
     (c) => c !== title && c !== meta && c !== rowMenu && c.stacked !== "hidden",
   );
   // "row" shows one chosen field on the card; every other one opens in the
-  // details, so no column is lost on a phone (#7911).
+  // details, so no column is lost on a phone (#7911). A chosen field whose
+  // short form drops part of the cell opens there in full too (#7915).
   const detailFields =
-    layout === "row" ? fields.filter((c) => c !== detail) : [];
+    layout === "row"
+      ? fields.filter((c) => c !== detail || c.stackedFullInDetails === true)
+      : [];
   const shownDetail =
     layout === "row" && detail && detail !== title && detail !== meta
       ? detail
@@ -1031,6 +1050,9 @@ function StackedRows<T>({
     // details have their own button (#7911).
     const rowClickable = clickable && (canClickRow?.(row) ?? true);
     const open = openKeys.has(rowKey);
+    // The card carries its row's tint like the table row (today, a total);
+    // the selected tint of the row beside the table wins.
+    const tone = active ? null : (rowTone?.(row) ?? null);
     const detailValues = detailFields
       .map((col) => ({ col, value: col.render(row) }))
       .filter((entry) => entry.value !== null);
@@ -1131,7 +1153,7 @@ function StackedRows<T>({
         }
       >
         <div
-          className={`${STACKED_ROW_PADDING[layout]} ${ROW_ACTION_FOCUS_CLASS} ${rowClickable ? "cursor-pointer" : ""} ${active ? ACTIVE_ROW_CLASS : ""} ${rowClassName ? rowClassName(row) : ""}`}
+          className={`${STACKED_ROW_PADDING[layout]} ${ROW_ACTION_FOCUS_CLASS} ${rowClickable ? "cursor-pointer" : ""} ${active ? ACTIVE_ROW_CLASS : ""} ${tone ? ROW_TONE_CLASS[tone] : ""} ${rowClassName ? rowClassName(row) : ""}`}
           tabIndex={rowKeyboardClickable ? 0 : undefined}
           role={rowKeyboardClickable ? "button" : undefined}
         >
@@ -1172,7 +1194,7 @@ function StackedRows<T>({
                 {/* Wide row actions (several text buttons) wrap below the
                     title instead of squeezing it under them. */}
                 <span id={titleId} className="min-w-32 flex-1">
-                  {title?.render(row)}
+                  {title ? (title.stackedRender ?? title.render)(row) : null}
                 </span>
                 {meta ? (
                   <span
@@ -1182,7 +1204,7 @@ function StackedRows<T>({
                         : "shrink-0 text-sm text-gray-500"
                     }
                   >
-                    {meta.render(row)}
+                    {(meta.stackedRender ?? meta.render)(row)}
                   </span>
                 ) : null}
                 {end}
@@ -1577,6 +1599,7 @@ export function DataTable<T>({
             expandable={expandable}
             renderSubRows={renderSubRows}
             summaryRow={summaryRow}
+            rowTone={rowTone}
           />
         </div>
       )}
