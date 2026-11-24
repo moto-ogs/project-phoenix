@@ -49,8 +49,8 @@ it("types the Staff bootstrap query and does not accept an address override", ()
     void contractGet(rooms, { query: { isOpenRoom: true } });
     // @ts-expect-error: the route itself owns the address
     void contractGet(rooms, { endpoint: "/api/students" });
-    // @ts-expect-error: the route does not register this variant
     void contractGet(studentRoutes["GET /api/students/"], {
+      // @ts-expect-error: the route does not register this variant
       query: { view: "compact" },
     });
   };

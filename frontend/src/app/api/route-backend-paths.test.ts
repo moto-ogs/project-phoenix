@@ -305,7 +305,8 @@ function handlerCalls(file: string, text: string) {
   const isDecoderCall = ({ expression }: ts.CallExpression) => {
     const { from, names } = binding(expression);
     return (
-      from?.endsWith("contract/client.server") &&
+      from !== undefined &&
+      from.endsWith("contract/client.server") &&
       (names[0] === "contractGet" || names[0] === "contractWrite")
     );
   };

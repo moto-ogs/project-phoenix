@@ -294,16 +294,23 @@ export async function unsubscribePush(
   const subscription = await getExistingSubscription();
   signal?.throwIfAborted();
   if (!subscription) return;
+  if (duringLogout) {
+    // Revocation already removed the server registration. Start device
+    // cleanup now: sign-out can cancel the DELETE while waiting for headers.
+    await Promise.all([
+      deleteServerSubscription(portal, subscription.endpoint, signal, true),
+      subscription.unsubscribe(),
+    ]);
+    return;
+  }
   try {
     await deleteServerSubscription(
       portal,
       subscription.endpoint,
       signal,
-      duringLogout,
+      false,
     );
   } finally {
-    // Neither a late lookup nor a late response may start device cleanup
-    // after this logout attempt has ended.
     if (!signal?.aborted) await subscription.unsubscribe();
   }
 }
