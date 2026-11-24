@@ -1,11 +1,10 @@
 package application
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
-	"slices"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -371,7 +370,10 @@ func parentConferenceVersion(conference *schoolcalendar.ParentConference, bookin
 	for _, booking := range bookings {
 		state.Bookings = append(state.Bookings, [2]int64{int64(booking.SlotStartMinute), booking.StudentID})
 	}
-	slices.SortFunc(state.Bookings, func(a, b [2]int64) int { return cmp.Or(cmp.Compare(a[0], b[0]), cmp.Compare(a[1], b[1])) })
+	sort.Slice(state.Bookings, func(i, j int) bool {
+		a, b := state.Bookings[i], state.Bookings[j]
+		return a[0] < b[0] || (a[0] == b[0] && a[1] < b[1])
+	})
 	return readstate.Fingerprint(state)
 }
 
