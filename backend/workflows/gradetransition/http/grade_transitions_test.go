@@ -1222,12 +1222,16 @@ func findTransition(t *testing.T, router chi.Router, token string, id int64) (ma
 	req := testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("/?after_id=%d&page_size=1", id-1), nil, testutil.WithJWTBearer(token))
 	rr := testutil.ExecuteRequest(router, req)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-	rows, _ := testutil.ParseJSONResponse(t, rr.Body.Bytes())["data"].([]interface{})
+	rows, isList := testutil.ParseJSONResponse(t, rr.Body.Bytes())["data"].([]interface{})
+	require.True(t, isList, "the list answers rows: %s", rr.Body.String())
 	if len(rows) == 0 {
 		return nil, false
 	}
-	row, _ := rows[0].(map[string]interface{})
-	return row, row["id"] == strconv.FormatInt(id, 10)
+	row, isRow := rows[0].(map[string]interface{})
+	require.True(t, isRow)
+	rowID, isText := row["id"].(string)
+	require.True(t, isText, "an id travels as a string")
+	return row, rowID == strconv.FormatInt(id, 10)
 }
 
 // readTransition reads a transition that exists.

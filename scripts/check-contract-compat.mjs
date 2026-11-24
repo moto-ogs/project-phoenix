@@ -14,14 +14,16 @@ export const MODEL_PATH = "backend/api/contract/contract.json";
 const describe = (schema) => schema.elem ? `${schema.kind}<${describe(schema.elem)}>`
   : schema.kind === "ref" ? "object" : schema.kind;
 
-// Go reads a request identifier as a decimal string, so a string of the base
-// may become an id. Naming the form of a string narrows the type, not the
-// wire. Typing a JSON answer or an open object does not break a reader of
-// the older schema.
+// The legacy_id decoder on a released base already accepted a decimal
+// string in answers, and Go reads a request identifier as a decimal string,
+// so a string of the base may become an id there.
+// Naming the form of a string narrows the type, not the wire. Typing a JSON
+// answer or an open object does not break a reader of the older schema.
 const openObject = (schema) => schema.kind === "map" && schema.elem.kind === "json";
 const sameKind = (before, after, request) => before.kind === after.kind
   || (before.kind === "string" && ["enum", "date", "clock"].includes(after.kind))
   || (!request && (before.kind === "json" || (openObject(before) && after.kind === "ref")))
+  || (before.kind === "legacy_id" && after.kind === "id")
   || (request && before.kind === "string" && after.kind === "id");
 
 export function breakingChanges(base, head) {

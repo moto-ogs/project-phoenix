@@ -100,7 +100,7 @@ func (s *service) UpdateSchoolParentConference(ctx context.Context, id int64, re
 	}
 	var view *ParentConferenceView
 	err = s.withinAppointmentWrite(ctx, func(txCtx context.Context) error {
-		current, err := s.loadOwnParentConference(txCtx, id, true)
+		current, err := s.loadOwnParentConference(txCtx, id)
 		if err != nil {
 			return err
 		}
@@ -140,7 +140,7 @@ func (s *service) DeleteSchoolParentConference(ctx context.Context, id int64) er
 		return err
 	}
 	return s.withinAppointmentWrite(ctx, func(txCtx context.Context) error {
-		conference, err := s.loadOwnParentConference(txCtx, id, true)
+		conference, err := s.loadOwnParentConference(txCtx, id)
 		if err != nil {
 			return err
 		}
@@ -181,10 +181,11 @@ func (s *service) followParentConferenceChange(ctx context.Context, conference *
 	return s.cfg.ParentConferences.DeleteParentConferenceBookings(ctx, gone)
 }
 
-// loadOwnParentConference loads a day the current Lehrkraft organizes.
+// loadOwnParentConference loads and locks a day the current Lehrkraft
+// organizes.
 // Another Lehrkraft's day is not found: its existence is none of her
 // business.
-func (s *service) loadOwnParentConference(ctx context.Context, id int64, lock bool) (*schoolcalendar.ParentConference, error) {
+func (s *service) loadOwnParentConference(ctx context.Context, id int64) (*schoolcalendar.ParentConference, error) {
 	store, err := s.parentConferences()
 	if err != nil {
 		return nil, err
@@ -193,7 +194,7 @@ func (s *service) loadOwnParentConference(ctx context.Context, id int64, lock bo
 	if err != nil {
 		return nil, err
 	}
-	conference, err := store.FindParentConference(ctx, id, lock)
+	conference, err := store.FindParentConference(ctx, id)
 	if err != nil {
 		return nil, mapParentConferenceError(err)
 	}

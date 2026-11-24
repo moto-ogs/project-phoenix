@@ -1158,7 +1158,7 @@ func seedWeekdayOnOrAfter(date seedDate) seedDate {
 // the decide route pins a pickup-change approval on, from the open queue the
 // staff UI reads them from.
 func loadSeedCareRequestDecisionTokens(rt *Runtime, adminAuth AuthRef, studentID, requestID int64) (impactToken, expectedVersion string, err error) {
-	raw, err := rt.Client.GetWithAuth(adminAuth, fmt.Sprintf("/api/students/change-requests?view=open&types=care_schedule&student_id=%d", studentID))
+	raw, err := rt.Client.GetWithAuth(adminAuth, fmt.Sprintf("/api/students/change-requests?types=care_schedule&student_id=%d", studentID))
 	if err != nil {
 		return "", "", fmt.Errorf("load open care requests for decision: %w", err)
 	}
@@ -1167,10 +1167,10 @@ func loadSeedCareRequestDecisionTokens(rt *Runtime, adminAuth AuthRef, studentID
 			Items []struct {
 				RequestType     string `json:"request_type"`
 				ExpectedVersion string `json:"expected_version"`
-				Data            struct {
+				CareSchedule    struct {
 					ID          string `json:"id"`
 					ImpactToken string `json:"impact_token"`
-				} `json:"data"`
+				} `json:"care_schedule"`
 			} `json:"items"`
 		} `json:"data"`
 	}
@@ -1179,8 +1179,8 @@ func loadSeedCareRequestDecisionTokens(rt *Runtime, adminAuth AuthRef, studentID
 	}
 	want := strconv.FormatInt(requestID, 10)
 	for _, item := range resp.Data.Items {
-		if item.RequestType == "care_schedule" && item.Data.ID == want {
-			return item.Data.ImpactToken, item.ExpectedVersion, nil
+		if item.RequestType == "care_schedule" && item.CareSchedule.ID == want {
+			return item.CareSchedule.ImpactToken, item.ExpectedVersion, nil
 		}
 	}
 	return "", "", fmt.Errorf("decided demo pickup request %d not found in the open queue", requestID)

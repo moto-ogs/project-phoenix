@@ -17,7 +17,8 @@ import (
 //
 // encoding/json writes an ID as a JSON number, as it writes an int64: stored
 // JSON (audit details, outbox payloads, snapshots, fingerprints) keeps the
-// form that database functions compare with numbers (ADR 0300, addendum).
+// form that database functions compare with numbers (ADR 0300, Nachtrag vom
+// 2026-11-21).
 // Only an answer to a client writes the string: package wire. In the database
 // an ID is a plain bigint.
 type ID int64
@@ -34,10 +35,11 @@ func (id ID) String() string { return strconv.FormatInt(int64(id), 10) }
 // leaves the value unchanged.
 //
 // The JSON number stays in this reader: stored JSON keeps identifiers as
-// numbers (ADR 0300, addendum) and is read back through this type, and the
-// seeder sends numbers. Refusing a number from a browser belongs to the
-// request decoder, not to this type (#7987). The kiosk device API keeps its
-// own int64 fields (contract:"number").
+// numbers (ADR 0300, Nachtrag vom 2026-11-21) and is read back through this
+// type, and the seeder sends numbers. Whether and where a number from a
+// browser is refused is open in #7987; the proposal there puts it in the
+// request decoder, not in this type. The kiosk device API keeps its own int64
+// fields (contract:"number").
 func (id *ID) UnmarshalJSON(data []byte) error {
 	trimmed := strings.TrimSpace(string(data))
 	if trimmed == "null" {

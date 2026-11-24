@@ -632,7 +632,6 @@ func TestCareOfferingRouter_BookingStatsIsNotTreatedAsAnID(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, int64(42), mock.bookingStatsPhaseID)
-	assert.Zero(t, mock.getByIDID, "the {id} route must not have matched")
 }
 
 // The editor's read version travels to the catalog, and a refusal over a

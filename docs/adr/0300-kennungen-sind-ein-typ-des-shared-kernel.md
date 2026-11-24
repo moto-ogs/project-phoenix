@@ -194,3 +194,15 @@ Entscheidung:
    vorigen Frontends senden in vielen Körpern Zahlen; ein strenger Leser
    bräche sie beim Deploy (ADR 0270, „expand, then contract“). Nach dem
    nächsten Release liest `ident.ID.UnmarshalJSON` nur noch einen String.
+
+## Nachtrag vom 2026-11-24: `ident.ID` liest weiter Zahlen
+
+Punkt 3 vom 2026-11-22 entfällt. Der strenge Leser wurde nach dem Release
+1.16.0 erprobt (#7723) und brach das Zurücklesen von gespeichertem JSON, das
+nach dem Nachtrag vom 2026-11-21 Zahlen trägt (Betreuungsverträge,
+Ferienanmeldungen), und den Seeder, der Zahlen sendet.
+
+1. `ident.ID.UnmarshalJSON` liest weiter String oder Zahl.
+2. Ob und wo eine Zahl vom Client abgelehnt wird, entscheidet #7987.
+3. `scripts/check-contract-compat.mjs` lässt in einem Request nur noch
+   `string` der Basis zu `id` werden; die Art `lax_id` trägt kein Release mehr.
