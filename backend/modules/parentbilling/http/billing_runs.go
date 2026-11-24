@@ -127,8 +127,11 @@ type BillingReleaseRequest struct {
 func (req *BillingReleaseRequest) Bind(*http.Request) error { return nil }
 
 // NumberRangeRequest is the body of PUT /traeger/number-ranges/{service}.
+// IssuerKey names the issuer whose range it is (#8040): empty for the
+// Träger, else the creditor identifier of the body.
 type NumberRangeRequest struct {
-	Pattern string `json:"pattern"`
+	Pattern   string `json:"pattern"`
+	IssuerKey string `json:"issuer_key,omitempty"`
 }
 
 // Bind accepts the body; the Owner validates the pattern.
@@ -138,7 +141,8 @@ func (req *NumberRangeRequest) Bind(*http.Request) error { return nil }
 // /traeger/number-ranges/{service}/start: the running number the next
 // invoice gets (#7358).
 type NumberRangeStartRequest struct {
-	NextNumber int64 `json:"next_number" contract:"number"`
+	NextNumber int64  `json:"next_number" contract:"number"`
+	IssuerKey  string `json:"issuer_key,omitempty"`
 }
 
 // Bind accepts the body; the Owner validates the number.
@@ -342,7 +346,7 @@ func (rs *BillingRunResource) setNumberRange(w http.ResponseWriter, r *http.Requ
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	numberRange, err := rs.runs.SetNumberRange(r.Context(), reviewer, chi.URLParam(r, "service"), req.Pattern)
+	numberRange, err := rs.runs.SetNumberRange(r.Context(), reviewer, req.IssuerKey, chi.URLParam(r, "service"), req.Pattern)
 	if err != nil {
 		renderBillingError(w, r, err)
 		return
@@ -360,7 +364,7 @@ func (rs *BillingRunResource) setNumberRangeStart(w http.ResponseWriter, r *http
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	numberRange, err := rs.starts.SetNumberRangeStart(r.Context(), reviewer, chi.URLParam(r, "service"), req.NextNumber)
+	numberRange, err := rs.starts.SetNumberRangeStart(r.Context(), reviewer, req.IssuerKey, chi.URLParam(r, "service"), req.NextNumber)
 	if err != nil {
 		renderBillingError(w, r, err)
 		return
@@ -406,6 +410,7 @@ func invalidFieldsCode(fields validation.Errors) string {
 	for _, field := range []struct{ name, code string }{
 		{"pattern", common.CodeParentBillingNumberRangeInvalid},
 		{"service", common.CodeParentBillingNumberRangeInvalid},
+		{"issuer_key", common.CodeParentBillingNumberRangeInvalid},
 		{"next_number", common.CodeParentBillingNumberRangeStartInvalid},
 		{"payment_due_on", common.CodeParentBillingBillingLettersInvalid},
 		{"notes", common.CodeParentBillingBillingLettersInvalid},
@@ -419,6 +424,18 @@ func invalidFieldsCode(fields validation.Errors) string {
 }
 
 func renderBillingConflict(w http.ResponseWriter, r *http.Request, err error) {
+	// The missing range of a body names the body (#8040).
+	if rangeMissing := (*capability.NumberRangeMissingError)(nil); errors.As(err, &rangeMissing) {
+		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeParentBillingNumberRangeMissing,
+			map[string]any{"issuer_key": rangeMissing.Issuer.Key, "issuer_name": rangeMissing.Issuer.Name, "service": rangeMissing.Service}))
+		return
+	}
+	// A body with the Träger's creditor identifier names the body (#8040).
+	if creditorConflict := (*capability.IssuerCreditorConflictError)(nil); errors.As(err, &creditorConflict) {
+		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeParentBillingIssuerCreditorIsTraegers,
+			map[string]any{"issuer_key": creditorConflict.Issuer.Key, "issuer_name": creditorConflict.Issuer.Name}))
+		return
+	}
 	for _, conflict := range []struct {
 		err  error
 		code string

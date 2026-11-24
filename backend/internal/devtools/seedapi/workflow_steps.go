@@ -324,7 +324,7 @@ func traegerSetupSteps(seeder *Seeder) []Step {
 // applications, then seed the Träger work that follows the billing in a
 // full seed. They follow the applications and the booked care.
 func traegerCareSteps(seeder *Seeder) []Step {
-	return traegerSerial(seedTraegerCareContractsStep{}, seedTraegerCareContractSignaturesStep{}, seedMealBillingStep{seeder: seeder}, seedTraegerCareMonthsStep{}, seedTraegerChildDebtorNumbersStep{}, seedTraegerCareLettersStep{}, seedParentSEPAMandateStep{}, seedParentRoomHistoryStopStep{}, seedTraegerSchoolRolesStep{}, seedTraegerDocumentsStep{}, seedTraegerBillingLettersStep{}, seedTraegerBillingReissueStep{}, seedTraegerBillingCreditStep{}, seedBelegRetentionStep{}, seedTraegerCareContractImportStep{}, seedTraegerCareContractOfferingCorrectionStep{}, seedHolidayClosuresStep{}, seedTestTraegerStep{}, seedTraegerSchoolChangeStep{}, seedHolidayGuestPhotoConsentStep{})
+	return traegerSerial(seedTraegerCareContractsStep{}, seedTraegerCareContractSignaturesStep{}, seedMealBillingStep{seeder: seeder}, seedTraegerCareMonthsStep{}, seedTraegerChildDebtorNumbersStep{}, seedTraegerCareLettersStep{}, seedParentSEPAMandateStep{}, seedParentRoomHistoryStopStep{}, seedTraegerSchoolRolesStep{}, seedTraegerDocumentsStep{}, seedTraegerBillingLettersStep{}, seedTraegerBillingReissueStep{}, seedTraegerBillingCreditStep{}, seedBelegRetentionStep{}, seedTraegerCareContractImportStep{}, seedTraegerCareContractOfferingCorrectionStep{}, seedHolidayClosuresStep{}, seedTestTraegerStep{}, seedTraegerSchoolChangeStep{}, seedGemeindeBillingStep{}, seedHolidayGuestPhotoConsentStep{})
 }
 
 func appendPayrollRuleSteps(steps []Step, seeder *Seeder) []Step {

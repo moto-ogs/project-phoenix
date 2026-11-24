@@ -26,7 +26,10 @@ type importColumnIndex struct {
 
 // importPayer is a contract of the Träger the payer column can name.
 type importPayer struct {
-	contractID          int64
+	contractID int64
+	// schoolID is the place of care of the contract, whose issuer the
+	// mandate is given to (#8040).
+	schoolID            int64
 	family              string
 	firstName, lastName string
 	until               calendar.Date
@@ -93,15 +96,18 @@ var (
 
 // importCheck checks the rows of one file in order.
 type importCheck struct {
-	columns     importColumnIndex
-	creditorID  string
-	payers      importPayers
-	byReference map[string]parentbilling.SEPAMandate
-	inForce     map[string]parentbilling.SEPAMandate
-	today       calendar.Date
-	sequences   map[int]string
-	references  map[string]bool
-	families    map[string]bool
+	columns    importColumnIndex
+	creditorID string
+	// schoolCreditors is the creditor identifier of each school a body
+	// bills (#8040); every other school's is the Träger's creditorID.
+	schoolCreditors map[int64]string
+	payers          importPayers
+	byReference     map[string]parentbilling.SEPAMandate
+	inForce         map[mandateKey]parentbilling.SEPAMandate
+	today           calendar.Date
+	sequences       map[int]string
+	references      map[string]bool
+	families        map[mandateKey]bool
 	// fileMandates is the first row the import can take over of each
 	// reference, which a sibling's row may repeat (#7009).
 	fileMandates map[string]fileMandate
@@ -119,16 +125,28 @@ func newImportCheck(columns importColumnIndex, creditorID string, payers importP
 	today calendar.Date, sequences map[int]string,
 ) *importCheck {
 	check := &importCheck{columns: columns, creditorID: creditorID, payers: payers, today: today, sequences: sequences,
-		byReference: map[string]parentbilling.SEPAMandate{}, inForce: map[string]parentbilling.SEPAMandate{},
-		references: map[string]bool{}, families: map[string]bool{}, accounts: map[int64]importAccount{},
-		fileMandates: map[string]fileMandate{}}
+		byReference: map[string]parentbilling.SEPAMandate{}, inForce: map[mandateKey]parentbilling.SEPAMandate{},
+		references: map[string]bool{}, families: map[mandateKey]bool{}, accounts: map[int64]importAccount{},
+		fileMandates: map[string]fileMandate{}, schoolCreditors: map[int64]string{}}
 	for _, mandate := range existing {
 		check.byReference[mandate.Reference] = mandate
 		if mandate.InForce() {
-			check.inForce[mandate.FamilyEmail] = mandate
+			check.inForce[mandateKey{familyEmail: mandate.FamilyEmail, creditorID: mandate.CreditorID}] = mandate
 		}
 	}
 	return check
+}
+
+// expectedCreditor is the creditor identifier the mandate of a row must be
+// given to: the issuer's of the school of its contract (#8040), else the
+// Träger's.
+func (c *importCheck) expectedCreditor(candidate *importCandidate) string {
+	if payer, ok := c.payers.byContract[candidate.row.ContractID.Int64()]; ok {
+		if creditor, body := c.schoolCreditors[payer.schoolID]; body {
+			return creditor
+		}
+	}
+	return c.creditorID
 }
 
 func (c *importCheck) cell(cells []string, field string) string {
@@ -301,17 +319,20 @@ func (c *importCheck) readPayer(candidate *importCandidate, cells []string) {
 
 // readCreditor reads the creditor identifier a mandate was given to: the
 // column, or the Träger's when the office chose that for the file. It must
-// be the Träger's.
+// be the creditor identifier of the issuer of the contract's school
+// (#8040): the Träger's, or its Schulträger's or Gemeinde's.
 func (c *importCheck) readCreditor(candidate *importCandidate, cells []string) {
 	value := sepa.Compact(c.cell(cells, parentbilling.ImportFieldCreditorID))
+	if value == "" && c.columns.creditorFromTraeger {
+		value = c.creditorID
+	}
+	expected := c.expectedCreditor(candidate)
 	switch {
-	case value == "" && c.columns.creditorFromTraeger:
-		candidate.creditorID = c.creditorID
 	case value == "":
 		addProblem(&candidate.row, parentbilling.ImportFieldCreditorID, parentbilling.ImportProblemMissing)
 	case !sepa.ValidCreditorID(value):
 		addProblem(&candidate.row, parentbilling.ImportFieldCreditorID, parentbilling.ImportProblemInvalid)
-	case value != c.creditorID:
+	case value != expected:
 		addProblem(&candidate.row, parentbilling.ImportFieldCreditorID, parentbilling.ImportProblemCreditorMismatch)
 	default:
 		candidate.creditorID = value
@@ -459,15 +480,17 @@ func (c *importCheck) checkConflicts(candidate *importCandidate) {
 	} else if c.references[row.Reference] {
 		addProblem(row, parentbilling.ImportFieldReference, parentbilling.ImportProblemReferenceRepeated)
 	}
-	if current, ok := c.inForce[candidate.family]; ok && current.Reference != row.Reference {
+	// One mandate in force per family and creditor (#8040).
+	family := mandateKey{familyEmail: candidate.family, creditorID: candidate.creditorID}
+	if current, ok := c.inForce[family]; ok && current.Reference != row.Reference {
 		addProblem(row, parentbilling.ImportFieldPayer, parentbilling.ImportProblemPayerHasMandate)
-	} else if c.families[candidate.family] {
+	} else if c.families[family] {
 		addProblem(row, parentbilling.ImportFieldPayer, parentbilling.ImportProblemPayerRepeated)
 	}
 	if !hasProblemIn(row.Problems, importConflictCodes) {
 		// Only a row the import can take over claims its reference and
 		// family against the rows after it.
-		c.references[row.Reference], c.families[candidate.family] = true, true
+		c.references[row.Reference], c.families[family] = true, true
 		c.fileMandates[row.Reference] = fileMandateOf(candidate)
 	}
 }

@@ -121,7 +121,7 @@ export const AT_LEAST_XL = atLeast("xl");
 
 /*
  * Zeigerart: Sie entscheidet Bedienmaße und Trefferflächen, die Breite
- * Struktur und Seitenraster (ADR 0322). Gefragt wird nach dem Hauptzeiger
+ * Struktur und Seitenraster (ADR 0323). Gefragt wird nach dem Hauptzeiger
  * (`pointer`), nicht nach irgendeinem (`any-pointer`): Ein Laptop mit
  * Touchscreen bleibt fein, ein iPad grob. In CSS gelten Tailwinds `pointer-coarse:` und `pointer-fine:`.
  */

@@ -90,9 +90,16 @@ vi.mock("~/lib/traeger-booked-modules", () => ({
   useTraegerModuleBooked: (module: string) =>
     mockBookedModules.current.includes(module),
 }));
+vi.mock("~/lib/traeger-billing-issuers-api", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  fetchBillingIssuerStatuses: vi.fn().mockResolvedValue([]),
+}));
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
 vi.mock("~/lib/traeger-contributions-api", () => api);
-vi.mock("~/lib/traeger-billing-api", () => billingApi);
+vi.mock("~/lib/traeger-billing-api", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  ...billingApi,
+}));
 vi.mock("~/lib/traeger-billing-terms-api", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   ...termsApi,

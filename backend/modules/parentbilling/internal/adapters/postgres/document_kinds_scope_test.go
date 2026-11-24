@@ -39,12 +39,12 @@ func TestDocumentKindFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, kinds, "DocumentKinds reads no choice of another Träger")
 
-		require.NoError(t, store.SetDocumentKind(ctx, own.organization, parentbilling.ServiceHoliday, parentbilling.DocumentKindInvoice))
+		require.NoError(t, store.SetDocumentKind(ctx, own.organization, "", parentbilling.ServiceHoliday, parentbilling.DocumentKindInvoice))
 		kinds, err = store.DocumentKinds(ctx, own.organization)
 		require.NoError(t, err)
-		require.Len(t, kinds, 1)
-		assert.Equal(t, parentbilling.DocumentKindInvoice, kinds[parentbilling.ServiceHoliday].DocumentKind)
-		assert.NotNil(t, kinds[parentbilling.ServiceHoliday].UpdatedAt)
+		require.Len(t, kinds[""], 1)
+		assert.Equal(t, parentbilling.DocumentKindInvoice, kinds[""][parentbilling.ServiceHoliday].DocumentKind)
+		assert.NotNil(t, kinds[""][parentbilling.ServiceHoliday].UpdatedAt)
 
 		var otherKind string
 		require.NoError(t, tx.NewRaw(`SELECT document_kind FROM parent_billing.document_kinds WHERE organization_id = ? AND service = 'holiday'`,
@@ -54,7 +54,7 @@ func TestDocumentKindFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		// The schema refuses a kind a service does not issue.
 		_, err = tx.ExecContext(ctx, `SAVEPOINT refused`)
 		require.NoError(t, err)
-		assert.Error(t, store.SetDocumentKind(ctx, own.organization, parentbilling.ServiceCare, parentbilling.DocumentKindConfirmation),
+		assert.Error(t, store.SetDocumentKind(ctx, own.organization, "", parentbilling.ServiceCare, parentbilling.DocumentKindConfirmation),
 			"the monthly care has no confirmation letter")
 		_, err = tx.ExecContext(ctx, `ROLLBACK TO SAVEPOINT refused`)
 		require.NoError(t, err)

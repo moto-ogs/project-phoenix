@@ -16,10 +16,12 @@ import {
   success,
 } from "./runtime";
 import {
+  BillingIssuerSchema,
   BillingLetterSeriesSchema,
   InvoicePaymentSchema,
   PostalAddressSchema,
   RunDueDateSchema,
+  type BillingIssuer,
   type InvoicePayment,
   type PostalAddress,
   type RunDueDate,
@@ -146,6 +148,7 @@ export interface BillingDocument {
   run_id: string;
   kind: string;
   document_kind?: string;
+  issuer?: BillingIssuer;
   reference_document_id: string | null;
   reference_number: string;
   reason: string;
@@ -174,6 +177,7 @@ export const BillingDocumentSchema: z.ZodType<BillingDocument, unknown> = object
   run_id: int64String,
   kind: str,
   document_kind: optional(str),
+  issuer: optional(BillingIssuerSchema),
   reference_document_id: nullable(int64String),
   reference_number: str,
   reason: str,
@@ -250,6 +254,7 @@ export interface BillingRunDetail {
   payment_text_missing_debtor_numbers: number;
   number_pattern: string;
   number_range_set: boolean;
+  number_range_missing_for?: BillingIssuer;
   billed_in_advance: boolean;
   letters: BillingLetters | null;
   due_dates: RunDueDate[] | null;
@@ -281,6 +286,7 @@ export const BillingRunDetailSchema: z.ZodType<BillingRunDetail, unknown> = obje
   payment_text_missing_debtor_numbers: safeInt,
   number_pattern: str,
   number_range_set: bool,
+  number_range_missing_for: optional(BillingIssuerSchema),
   billed_in_advance: bool,
   letters: nullable(BillingLettersSchema),
   due_dates: nullable(arr(RunDueDateSchema)),

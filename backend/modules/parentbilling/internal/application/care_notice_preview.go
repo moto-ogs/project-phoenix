@@ -71,9 +71,20 @@ func (n *CareFeeNotices) preview(ctx context.Context, organizationID int64, run 
 	if err != nil {
 		return noticePreview{}, err
 	}
+	// The issuer of the school issues the notice and collects it with the
+	// family's mandate for its creditor identifier (#8040, ADR 0322).
+	issuers, err := schoolIssuers(ctx, n.billing.kinds.templates, organizationID)
+	if err != nil {
+		return noticePreview{}, err
+	}
+	for _, invoices := range drafts {
+		for i := range invoices {
+			invoices[i].Issuer = parentbilling.IssuerOf(issuers, invoices[i].SchoolID.Int64())
+		}
+	}
 	preview.notices, preview.unchanged = assessNotices(noticeAssessment{from: run.PeriodFrom, months: in.months,
 		drafts: drafts, previous: in.previous, issuedOn: issuedOn})
-	if err := n.withPayments(ctx, organizationID, preview.notices, issuedOn); err != nil {
+	if err := n.withPayments(ctx, organizationID, preview.notices, issuedOn, issuers); err != nil {
 		return noticePreview{}, err
 	}
 	legalRemedy, legalKey, missing, err := n.legalRemedyOf(ctx, organizationID)
@@ -372,19 +383,22 @@ func appendNew[T any](list, entries []T) []T {
 // withPayments resolves recipient and payment method of every notice like
 // those of a monthly invoice (#4689): the family's deviation, else the terms
 // of the monthly care.
-func (n *CareFeeNotices) withPayments(ctx context.Context, organizationID int64, notices []parentbilling.CareNotice, issuedOn calendar.Date) error {
+func (n *CareFeeNotices) withPayments(ctx context.Context, organizationID int64, notices []parentbilling.CareNotice, issuedOn calendar.Date,
+	issuers map[int64]parentbilling.BillingIssuer,
+) error {
 	// A notice names no debtor number: the payer's terms are enough.
 	payments, err := readInvoicePayments(ctx, n.billing.store, organizationID, 0, 0, parentbilling.DebtorNumberScopePayer, false)
 	if err != nil {
 		return err
 	}
+	payments.withIssuers(issuers)
 	for i := range notices {
 		family := notices[i].FamilyEmail
 		if family == "" {
 			family = notices[i].Recipient.FamilyOf(notices[i].ContractID.Int64())
 		}
 		invoice := parentbilling.CareInvoice{Recipient: notices[i].Recipient, Service: parentbilling.ServiceCare,
-			FamilyEmail: family}
+			FamilyEmail: family, Issuer: notices[i].Issuer}
 		payments.careInvoice(&invoice, issuedOn)
 		notices[i].Recipient = invoice.Recipient
 		if invoice.Payment != nil {

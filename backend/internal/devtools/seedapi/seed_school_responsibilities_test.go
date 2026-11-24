@@ -86,3 +86,44 @@ func TestSeedSchoolResponsibilitiesStepKeepsAStoredGemeinde(t *testing.T) {
 		"PUT /operator/schools/42/settings/values/responsibility.staff",
 	}, calls, "a seed that runs again writes no second body")
 }
+
+// TestSeedGemeindeBillingStepLetsTheGemeindeOfTheManualSchoolBill (#8040):
+// the Gemeinde of the second school gets its creditor identifier and
+// account, the school's own value „Gemeinde“ for billing and number ranges
+// of its own; the seeded school keeps the Träger.
+func TestSeedGemeindeBillingStepLetsTheGemeindeOfTheManualSchoolBill(t *testing.T) {
+	t.Parallel()
+	var calls []string
+	var bodies []map[string]any
+	srv := responsibilitySeedServer(t, false, &calls, &bodies)
+	defer srv.Close()
+	rt := responsibilitySeedRuntime(srv.URL)
+	rt.Bootstrap.OrganizationID = 7
+	rt.AdditionalProfiles = map[string]*SeedProfile{ManualProfileKey: {Organization: SeedOrganizationRef{ID: 7}, School: SeedSchoolRef{ID: 42}}}
+
+	require.NoError(t, (seedGemeindeBillingStep{}).Run(context.Background(), rt))
+	assert.Equal(t, []string{
+		"POST /traeger/auth/login", "GET /traeger/master-data/responsibilities",
+		"PUT /traeger/master-data/responsibilities/schools/42/parties/gemeinde",
+		"PUT /operator/schools/42/settings/values/responsibility.billing",
+		"PUT /traeger/number-ranges/holiday", "PUT /traeger/number-ranges/care",
+	}, calls)
+	require.Len(t, bodies, 4)
+	assert.Equal(t, seedBillingGemeindeCreditor, bodies[0]["creditor_id"])
+	assert.NotEqual(t, seedSchoolGemeinde["creditor_id"], bodies[0]["creditor_id"], "a creditor identifier of its own")
+	assert.Equal(t, "gemeinde", bodies[1]["value"])
+	assert.Equal(t, seedBillingGemeindeCreditor, bodies[2]["issuer_key"])
+	assert.Equal(t, "WH-B-{JJJJ}-{NNNN}", bodies[3]["pattern"])
+}
+
+// Without a second school of the Träger the step leaves every school with
+// the Träger.
+func TestSeedGemeindeBillingStepNeedsASecondSchool(t *testing.T) {
+	t.Parallel()
+	var calls []string
+	var bodies []map[string]any
+	srv := responsibilitySeedServer(t, false, &calls, &bodies)
+	defer srv.Close()
+	require.NoError(t, (seedGemeindeBillingStep{}).Run(context.Background(), responsibilitySeedRuntime(srv.URL)))
+	assert.Empty(t, calls)
+}

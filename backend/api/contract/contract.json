@@ -12573,6 +12573,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/required-details/issuers",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "BillingIssuerOverview"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/school-roles/",
       "portals": [
         "org"
@@ -12966,6 +12977,12 @@
       "portals": [
         "org"
       ],
+      "query": [
+        {
+          "name": "issuer",
+          "kind": "string"
+        }
+      ],
       "response": {
         "kind": "ref",
         "ref": "SEPADebitRun"
@@ -12976,6 +12993,12 @@
       "pattern": "/traeger/sepa-debits/{kind}/{id}/file",
       "portals": [
         "org"
+      ],
+      "query": [
+        {
+          "name": "issuer",
+          "kind": "string"
+        }
       ],
       "file": true
     },
@@ -20987,6 +21010,12 @@
       "pattern": "/traeger/sepa-debits/{kind}/{id}/submission",
       "portals": [
         "org"
+      ],
+      "query": [
+        {
+          "name": "issuer",
+          "kind": "string"
+        }
       ],
       "request": {
         "kind": "ref",
@@ -32968,6 +32997,14 @@
           }
         },
         {
+          "name": "issuer",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "BillingIssuer"
+          }
+        },
+        {
           "name": "reference_document_id",
           "schema": {
             "kind": "id",
@@ -33762,6 +33799,116 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "BillingIssuer",
+      "go_type": "parentbilling.BillingIssuer",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BillingIssuerOverview",
+      "go_type": "parentbilling.BillingIssuerOverview",
+      "fields": [
+        {
+          "name": "issuers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BillingIssuerStatus"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "BillingIssuerStatus",
+      "go_type": "parentbilling.BillingIssuerStatus",
+      "fields": [
+        {
+          "name": "issuer",
+          "schema": {
+            "kind": "ref",
+            "ref": "BillingIssuer"
+          }
+        },
+        {
+          "name": "school_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "number_ranges",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "IssuerNumberRange"
+            }
+          }
+        },
+        {
+          "name": "document_kinds",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ServiceDocumentKind"
+            }
+          }
+        },
+        {
+          "name": "legal_remedy_missing",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "direct_debit_families",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "families_without_mandate",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "creditor_is_traegers",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -34692,6 +34839,14 @@
           "name": "number_range_set",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "number_range_missing_for",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "BillingIssuer"
           }
         },
         {
@@ -37580,6 +37735,14 @@
           }
         },
         {
+          "name": "issuer",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "BillingIssuer"
+          }
+        },
+        {
           "name": "family_email",
           "schema": {
             "kind": "string"
@@ -38545,6 +38708,14 @@
           }
         },
         {
+          "name": "issuer",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "BillingIssuer"
+          }
+        },
+        {
           "name": "payment_method",
           "schema": {
             "kind": "string"
@@ -39410,6 +39581,14 @@
           "name": "number_range_set",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "number_range_missing_for",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "BillingIssuer"
           }
         },
         {
@@ -41559,6 +41738,14 @@
           "name": "number_range_set",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "number_range_missing_for",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "BillingIssuer"
           }
         },
         {
@@ -53119,6 +53306,13 @@
       "fields": [
         {
           "name": "document_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "issuer_key",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -68772,6 +68966,24 @@
       ]
     },
     {
+      "name": "IssuerNumberRange",
+      "go_type": "parentbilling.IssuerNumberRange",
+      "fields": [
+        {
+          "name": "service",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pattern",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "Item",
       "go_type": "requestreview.Item",
       "fields": [
@@ -72321,6 +72533,13 @@
       "go_type": "parentbilling.NumberRange",
       "fields": [
         {
+          "name": "issuer",
+          "schema": {
+            "kind": "ref",
+            "ref": "BillingIssuer"
+          }
+        },
+        {
           "name": "service",
           "schema": {
             "kind": "string"
@@ -72387,6 +72606,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "issuer_key",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -72448,6 +72674,13 @@
           "optional": true,
           "schema": {
             "kind": "int"
+          }
+        },
+        {
+          "name": "issuer_key",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -87923,6 +88156,25 @@
             "kind": "instant",
             "nullable": true
           }
+        },
+        {
+          "name": "issuer",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "BillingIssuer"
+          }
+        },
+        {
+          "name": "issuers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BillingIssuer"
+            }
+          }
         }
       ]
     },
@@ -88017,6 +88269,14 @@
           "name": "creditor_current",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "issuer",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "BillingIssuer"
           }
         },
         {

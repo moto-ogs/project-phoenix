@@ -385,6 +385,10 @@ type Party struct {
 	// joined the contract to (#7161, ADR 0319), zero when it leads or is
 	// alone. Only the billing reads fill it.
 	FamilyContractID int64 `json:"-"`
+	// ContractSchoolID is the place of care of the party's contract. Only
+	// the billing reads fill it: its school's issuer takes the mandate
+	// (#8040).
+	ContractSchoolID int64 `json:"-"`
 }
 
 // Mailing is one send of the contract with the state of its mail.

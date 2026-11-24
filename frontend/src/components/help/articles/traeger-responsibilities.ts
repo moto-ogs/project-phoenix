@@ -5,7 +5,8 @@ import { HELP_TOPICS } from "~/lib/help-topics";
  * `/traeger/einstellungen/zustaendigkeiten` und der Reiter
  * „Zuständigkeiten“ einer Schule (#4811): Träger, Schulträger oder Gemeinde
  * für Verträge, Abrechnung und Personal, mit den Angaben der Stelle je
- * Schule.
+ * Schule. Beide Fälle der Abrechnung (#8040): die Stelle rechnet selbst ab,
+ * oder der Träger.
  */
 export function traegerResponsibilitiesTopic(): HelpTopic {
   return {
@@ -14,7 +15,7 @@ export function traegerResponsibilitiesTopic(): HelpTopic {
     question:
       "Wie lege ich fest, wer Verträge schließt, abrechnet und Personal anstellt?",
     summary:
-      "Je Schule ist dein Träger, der Schulträger oder die Gemeinde zuständig. Du legst das für alle Schulen fest und trägst Name und Anschrift der Stelle bei der Schule ein.",
+      "Je Schule ist dein Träger, der Schulträger oder die Gemeinde zuständig. Du legst das für alle Schulen fest und trägst die Angaben der Stelle bei der Schule ein. Rechnet eine Stelle selbst ab, stellt sie ihre Schreiben mit eigener Gläubiger-ID aus.",
     group: "konfiguration",
     audience: "traeger",
     icon: "Building2",
@@ -43,6 +44,30 @@ export function traegerResponsibilitiesTopic(): HelpTopic {
         ],
       },
       {
+        title: "Fall 1: Schulträger oder Gemeinde rechnet selbst ab",
+        description:
+          "Die Stelle stellt Rechnungen und Bescheide in eigenem Namen aus und zieht Lastschriften mit ihrer eigenen Gläubiger-ID auf ihr eigenes Konto ein.",
+        steps: [
+          "Wähle bei `Wer rechnet mit den Eltern ab?` die Stelle: für alle Schulen hier, für eine Schule in der Schul-App.",
+          "Trage bei der Schule Name, Anschrift, Gläubiger-ID und Bankverbindung der Stelle ein. Erst dann rechnet sie ab. Unter `Je Schule` steht sonst `Bankdaten fehlen`.",
+          "Unter `Abrechnung durch …` siehst du, was der Stelle noch fehlt. Jede Zeile führt dorthin, wo du es einträgst.",
+          "Lege in `Einstellungen` › `Abrechnung` die Nummernkreise der Stelle fest, je einen für Ferien und Monatsbeiträge. Nimm ein eigenes Kürzel.",
+          "Prüfe in `Einstellungen` › `Dokumentarten` das Schreiben der Stelle. Ohne deine Wahl stellt sie einen Gebührenbescheid aus. Dafür braucht die Vorlage `Bescheid` eine Rechtsbehelfsbelehrung.",
+          "Familien, die per Lastschrift zahlen, brauchen ein neues Mandat für die Stelle. Ein Mandat für deinen Träger gilt nicht für sie. Erfasse die neuen Mandate unter `Abrechnung` › `Lastschrift`.",
+          "Gib den nächsten Lauf frei. Die Schreiben der Schule nennen die Stelle als Absender, mit ihrem Konto und ihrer Gläubiger-ID.",
+          "Im Lauf steht unter `Lastschrift von …` eine eigene Datei der Stelle. Lade sie herunter und gib sie an die Stelle weiter. Die Stelle reicht sie bei ihrer Bank ein. Bestätige es danach hier.",
+        ],
+      },
+      {
+        title: "Fall 2: Dein Träger rechnet ab",
+        description: "So ist es ohne deine Wahl.",
+        steps: [
+          "Wähle bei `Wer rechnet mit den Eltern ab?` den `Träger`, oder lass die Frage beim Standard.",
+          "Dein Träger braucht Briefkopf, Bankverbindung, Gläubiger-ID und Nummernkreise in den `Einstellungen`. Die Startseite zeigt, was noch fehlt.",
+          "Die Mandate der Familien gelten für die Gläubiger-ID deines Trägers.",
+        ],
+      },
+      {
         title: "Eine Schule weicht ab",
         description:
           "Den eigenen Wert einer Schule stellst du in der Schul-App ein, nicht im Träger-Portal.",
@@ -54,16 +79,20 @@ export function traegerResponsibilitiesTopic(): HelpTopic {
       },
     ],
     result:
-      "Neue Betreuungsverträge der Schule nennen die zuständige Stelle als Absender und, wenn die Vertragsbedingungen keinen Vertragspartner nennen, als Vertragspartner. Die Personalakte nennt sie beim Einsatzort als Arbeitgeber.",
+      "Neue Betreuungsverträge der Schule nennen die zuständige Stelle als Absender und, wenn die Vertragsbedingungen keinen Vertragspartner nennen, als Vertragspartner. Neue Rechnungen und Bescheide nennen die Stelle, die abrechnet, mit ihrem Konto und ihrer Gläubiger-ID. Die Personalakte nennt die Stelle beim Einsatzort als Arbeitgeber.",
     notes: [
       "Schon verschickte Verträge bleiben, wie sie sind. Auch Erinnerungen und die Seite zum Unterschreiben nennen weiter die Stelle, die den Vertrag ausgestellt hat.",
       "Auf dem Vertrag einer anderen Stelle stehen das Logo und die Fußzeile deines Trägers nicht.",
-      "Rechnungen, Bescheide und Lastschriften stellt moto noch mit den Angaben deines Trägers aus. Die Wahl bei `Wer rechnet mit den Eltern ab?` bereitet den Wechsel vor.",
+      "Ein Wechsel gilt für Schreiben, die danach freigegeben werden. Ausgestellte Rechnungen, Bescheide und Lastschriften behalten ihren Absender und ihre Gläubiger-ID. Ein Storno nimmt den Absender seiner Rechnung.",
+      "Haben Geschwister an zwei Schulen verschiedene Stellen, bekommt die Familie zwei Schreiben und braucht zwei Mandate. In den Ferien rechnet die Stelle der Schule ab, die das Kind besucht.",
+      "Sollstellung und DATEV-Datei enthalten nur die Schreiben deines Trägers. Die Schreiben einer Stelle, die selbst abrechnet, bucht sie in ihrem eigenen Haushalt.",
       "Stellt eine Gemeinde oder ein Schulträger an, wählst du unter `Lohnexport` > `Einrichtung`: eine Lohndatei für den ganzen Träger oder eine je Arbeitgeber.",
     ],
     troubleshootingDetails: [
       "Bei einer Schule steht `Angaben fehlen`? Die gewählte Stelle hat dort noch keinen Namen und keine Anschrift. Trage sie bei der Schule ein.",
-      "Bei `Abrechnung` steht `Bankdaten fehlen`? Trage Gläubiger-ID und Bankverbindung bei der Stelle ein. Beides muss da sein.",
+      "Bei `Abrechnung` steht `Bankdaten fehlen`? Trage Gläubiger-ID und Bankverbindung bei der Stelle ein. Beides muss da sein. Bis dahin rechnet dein Träger ab.",
+      "Die Freigabe meldet einen fehlenden Nummernkreis? Die Stelle braucht ein eigenes Muster. Lege es in `Einstellungen` › `Abrechnung` fest.",
+      "moto lehnt eine Gläubiger-ID ab, weil sie schon bei einer anderen Schule steht? Eine Gläubiger-ID gehört zu genau einem Konto. Trag dort dasselbe Konto ein.",
       "Du kannst nichts ändern? Dir fehlt die Rolle `Verwaltung`.",
       "Bei einer Schule steht `Eigener Wert` und du willst den Wert deines Trägers? Den eigenen Wert ändert und entfernt nur die Schule in ihren Einstellungen.",
     ],

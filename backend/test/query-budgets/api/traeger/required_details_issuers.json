@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.required_details_issuers",
+  "max": 12,
+  "exact": true,
+  "description": "modules/parentbilling — GET /traeger/required-details/issuers (#8040, ADR 0322):\nthe Träger binding of the Träger transaction, the stored Schulträger and\nGemeinde of the Träger's schools in one statement, the settings of those\nschools in one batch read, the number ranges, the kinds of document, the\ntemplate of the fee notice, the contracts in force with their parties, the\nterms with the family deviations and the mandates in force. Flat in the\nnumber of families.",
+  "route": "GET /traeger/required-details/issuers"
+}

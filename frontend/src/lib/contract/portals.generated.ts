@@ -513,6 +513,7 @@ export const portalRoutes = {
     traegerReports["GET /traeger/reports/key-date"],
     traegerReports["GET /traeger/reports/key-date/export"],
     traegerRequiredDetails["GET /traeger/required-details/"],
+    traegerRequiredDetails["GET /traeger/required-details/issuers"],
     traegerSchoolRoles["GET /traeger/school-roles/"],
     traegerSchoolRoles["GET /traeger/school-roles/catalog"],
     traegerSchoolRoles["GET /traeger/school-roles/{id}/removal-preview"],

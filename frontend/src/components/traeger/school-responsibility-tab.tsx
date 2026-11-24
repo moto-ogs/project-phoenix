@@ -1,5 +1,7 @@
 "use client";
 
+import { useCallback } from "react";
+
 // Zuständigkeiten einer Schule im Träger-Portal (#4811): wer Verträge
 // schließt, abrechnet und Personal anstellt, und die Angaben zu Schulträger
 // und Gemeinde dieser Schule. Die Wahl selbst ist eine Einstellung: für alle
@@ -24,6 +26,9 @@ import {
   partyOf,
 } from "~/lib/traeger-responsibilities-api";
 import { traegerPath } from "~/lib/traeger-url";
+import { BillingIssuerChecklists } from "./billing-issuer-checklist";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { ResponsibilityValue } from "./responsibility-value";
 import { SchoolPartyCard } from "./school-party-card";
 
@@ -39,17 +44,27 @@ const SOURCE_NOTES: Record<AreaResponsibility["source"], string> = {
 
 export function SchoolResponsibilityTab({
   school,
+  schools,
   reload,
 }: Readonly<{
   school: SchoolResponsibility;
+  /** Every school of the Träger: a body may bill several. */
+  schools: readonly SchoolResponsibility[];
   /** Reads the schools again; rejects when the read fails (ADR 0311). */
   reload: () => Promise<readonly SchoolResponsibility[]>;
 }>) {
   const { data: session } = useSession();
   const canEdit = hasPermission(session ?? null, SETTINGS_RIGHT);
+  const invalidateFamily = useInvalidateFamily();
+  // Master data, creditor identifier and account decide whether a body
+  // bills: its checklist follows a save.
   const afterWrite = useRefreshAfterWrite(
     "die Anzeige der Zuständigkeiten",
-    reload,
+    useCallback(
+      () =>
+        Promise.all([reload(), invalidateFamily(traegerKeys.billingIssuers())]),
+      [reload, invalidateFamily],
+    ),
   );
   return (
     <>
@@ -99,6 +114,7 @@ export function SchoolResponsibilityTab({
           ))}
         </FramedList>
       </SectionCard>
+      <BillingIssuerChecklists schools={schools} schoolId={school.schoolId} />
       {SCHOOL_PARTY_KINDS.map((kind) => (
         <SchoolPartyCard
           key={kind}

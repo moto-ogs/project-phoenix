@@ -188,13 +188,13 @@ func TestCareMonthsFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		require.NoError(t, err)
 		assert.Zero(t, deleted, "DeleteCarePrices of another Träger's school")
 
-		assert.NoError(t, claimInvoiceNumbers(ctx, tx, own.organization, []string{other.number}, careNumbersTable),
+		assert.NoError(t, claimInvoiceNumbers(ctx, tx, own.organization, "", []string{other.number}, careNumbersTable),
 			"another Träger's monthly number is free here")
-		assert.NoError(t, claimInvoiceNumbers(ctx, tx, own.organization, []string{other.holiday}, holidayNumbersTable),
+		assert.NoError(t, claimInvoiceNumbers(ctx, tx, own.organization, "", []string{other.holiday}, holidayNumbersTable),
 			"another Träger's holiday number is free here")
-		assert.True(t, errors.Is(claimInvoiceNumbers(ctx, tx, own.organization, []string{own.number}, careNumbersTable),
+		assert.True(t, errors.Is(claimInvoiceNumbers(ctx, tx, own.organization, "", []string{own.number}, careNumbersTable),
 			parentbilling.ErrInvoiceNumberTaken), "the own monthly number is taken")
-		assert.True(t, errors.Is(claimInvoiceNumbers(ctx, tx, own.organization, []string{own.holiday}, holidayNumbersTable),
+		assert.True(t, errors.Is(claimInvoiceNumbers(ctx, tx, own.organization, "", []string{own.holiday}, holidayNumbersTable),
 			parentbilling.ErrInvoiceNumberTaken), "the own holiday number is taken")
 
 		var status string

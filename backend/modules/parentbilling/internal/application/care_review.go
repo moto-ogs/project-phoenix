@@ -73,13 +73,17 @@ func (c *CareBilling) reviewed(ctx context.Context, organizationID int64, run pa
 	if err := c.amendReviewed(ctx, organizationID, run, &review); err != nil {
 		return "", reviewedMonth{}, err
 	}
-	// Every draft carries the kind of document the release would freeze,
-	// so the fingerprint changes when the Abrechnung chooses another kind
-	// after the review (#4688).
-	if review.kind, review.legalRemedy, err = c.kinds.reviewed(ctx, organizationID, parentbilling.ServiceCare); err != nil {
+	// Every draft carries the kind of document its issuer's release would
+	// freeze, so the fingerprint changes when the Abrechnung chooses another
+	// kind after the review (#4688, #8040).
+	keyOf := func(invoice parentbilling.CareInvoice) string { return parentbilling.IssuerKeyOf(invoice.Issuer) }
+	kinds, err := c.kinds.reviewed(ctx, organizationID, parentbilling.ServiceCare,
+		issuerKeys(append(slices.Clone(review.invoices), review.excluded...), keyOf))
+	if err != nil {
 		return "", reviewedMonth{}, err
 	}
-	markDocumentKind(review.kind.DocumentKind, review.invoices, review.excluded)
+	review.kind, review.legalRemedy = kinds.state(), kinds.legalRemedy
+	markDocumentKind(kinds, review.invoices, review.excluded)
 	review.fingerprint = previewFingerprint(run, rule, review)
 	return rule, review, nil
 }
@@ -224,11 +228,14 @@ func uncountedInRun(families map[string][]int64, inRun func(int64) bool) int {
 
 // fingerprintInvoice is what the fingerprint covers of an invoice the
 // review shows: the invoice as shown with its positions and reductions, the
-// child record and the payable cents the rule chain allocated.
+// child record, the payable cents the rule chain allocated and, for a body
+// that issues it (#8040), what the letter prints of the body: a changed
+// account since the review makes the release refuse.
 type fingerprintInvoice struct {
 	Invoice   parentbilling.CareInvoice `json:"invoice"`
 	StudentID *int64                    `json:"student_id"`
 	Payable   []int64                   `json:"payable"`
+	Issuer    *issuerFingerprint        `json:"issuer,omitempty"`
 }
 
 func fingerprintInvoices(invoices []parentbilling.CareInvoice) []fingerprintInvoice {
@@ -238,7 +245,7 @@ func fingerprintInvoices(invoices []parentbilling.CareInvoice) []fingerprintInvo
 		for j, position := range invoice.Positions {
 			payable[j] = position.PayableCents
 		}
-		result[i] = fingerprintInvoice{Invoice: invoice, StudentID: invoice.StudentID, Payable: payable}
+		result[i] = fingerprintInvoice{Invoice: invoice, StudentID: invoice.StudentID, Payable: payable, Issuer: fingerprintIssuer(invoice.Issuer)}
 	}
 	return result
 }
@@ -615,23 +622,24 @@ func (c *CareBilling) issueReviewed(ctx context.Context, organizationID int64, r
 	if month.kind.LegalRemedyMissing {
 		return "", reviewedMonth{}, "", parentbilling.ErrLegalRemedyMissing
 	}
-	pattern, err := numberPatternOf(ctx, c.store, organizationID, parentbilling.ServiceCare)
+	patterns, err := releasePatterns(ctx, c.store, organizationID, parentbilling.ServiceCare, careIssuers(month.invoices))
 	if err != nil {
 		return "", reviewedMonth{}, "", err
 	}
-	if err := c.issue(ctx, organizationID, run, rule, pattern, issuedOn, month.invoices); err != nil {
+	if err := c.issue(ctx, organizationID, run, rule, patterns, issuedOn, month.invoices); err != nil {
 		return "", reviewedMonth{}, "", err
 	}
 	return rule, month, issuedOn, nil
 }
 
-// markDocumentKind puts the kind the release would freeze on every draft. A
-// Mensa invoice of its own stays an invoice: the kind belongs to the care
-// contribution (#4688); bundled Mensa lines go with their care invoice.
-func markDocumentKind(kind string, lists ...[]parentbilling.CareInvoice) {
+// markDocumentKind puts the kind the release of its issuer would freeze on
+// every draft. A Mensa invoice of its own stays an invoice: the kind belongs
+// to the care contribution (#4688); bundled Mensa lines go with their care
+// invoice.
+func markDocumentKind(kinds issuerKinds, lists ...[]parentbilling.CareInvoice) {
 	for _, drafts := range lists {
 		for i := range drafts {
-			drafts[i].DocumentKind = kind
+			drafts[i].DocumentKind = kinds.of(parentbilling.IssuerKeyOf(drafts[i].Issuer))
 			if drafts[i].Service == parentbilling.ServiceMeal {
 				drafts[i].DocumentKind = parentbilling.DocumentKindInvoice
 			}

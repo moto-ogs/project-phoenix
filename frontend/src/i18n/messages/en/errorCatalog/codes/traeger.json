@@ -22,6 +22,7 @@
   "logo_not_found": "There is no logo. Please reload the page.",
   "logo_too_large": "The logo is too large. Please choose an image up to 1 MB.",
   "master_data_invalid": "Some details are not correct. Please check the marked fields.",
+  "school_party_creditor_account_conflict": "This creditor identifier is already entered for {school_name} with another bank account. A creditor identifier belongs to exactly one account: enter the same account or check the creditor identifier.",
   "member_not_found": "This person no longer belongs to the Träger office. Please reload the page.",
   "no_membership": "Your account has no access to the Träger portal. Please contact the moto team.",
   "report_template_invalid": "Please check the details of the template.",

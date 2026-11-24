@@ -2,11 +2,20 @@
 import { z } from "zod";
 import {
   arr,
+  bool,
+  int64String,
   nullable,
   object,
+  safeInt,
   str,
   success,
 } from "./runtime";
+import {
+  BillingIssuerSchema,
+  ServiceDocumentKindSchema,
+  type BillingIssuer,
+  type ServiceDocumentKind,
+} from "./shared.generated";
 
 /** Go: parentbilling.RequiredDetails */
 export interface RequiredDetails {
@@ -17,11 +26,60 @@ export const RequiredDetailsSchema: z.ZodType<RequiredDetails, unknown> = object
   missing: nullable(arr(str)),
 });
 
+/** Go: parentbilling.IssuerNumberRange */
+export interface IssuerNumberRange {
+  service: string;
+  pattern: string;
+}
+
+export const IssuerNumberRangeSchema: z.ZodType<IssuerNumberRange, unknown> = object<IssuerNumberRange>({
+  service: str,
+  pattern: str,
+});
+
+/** Go: parentbilling.BillingIssuerStatus */
+export interface BillingIssuerStatus {
+  issuer: BillingIssuer;
+  school_ids: string[] | null;
+  number_ranges: IssuerNumberRange[] | null;
+  document_kinds: ServiceDocumentKind[] | null;
+  legal_remedy_missing: boolean;
+  direct_debit_families: number;
+  families_without_mandate: number;
+  creditor_is_traegers: boolean;
+}
+
+export const BillingIssuerStatusSchema: z.ZodType<BillingIssuerStatus, unknown> = object<BillingIssuerStatus>({
+  issuer: BillingIssuerSchema,
+  school_ids: nullable(arr(int64String)),
+  number_ranges: nullable(arr(IssuerNumberRangeSchema)),
+  document_kinds: nullable(arr(ServiceDocumentKindSchema)),
+  legal_remedy_missing: bool,
+  direct_debit_families: safeInt,
+  families_without_mandate: safeInt,
+  creditor_is_traegers: bool,
+});
+
+/** Go: parentbilling.BillingIssuerOverview */
+export interface BillingIssuerOverview {
+  issuers: BillingIssuerStatus[] | null;
+}
+
+export const BillingIssuerOverviewSchema: z.ZodType<BillingIssuerOverview, unknown> = object<BillingIssuerOverview>({
+  issuers: nullable(arr(BillingIssuerStatusSchema)),
+});
+
 export const routes = {
   "GET /traeger/required-details/": {
     method: "GET",
     pattern: "/traeger/required-details/",
     portals: ["org"],
     response: success(RequiredDetailsSchema),
+  },
+  "GET /traeger/required-details/issuers": {
+    method: "GET",
+    pattern: "/traeger/required-details/issuers",
+    portals: ["org"],
+    response: success(BillingIssuerOverviewSchema),
   },
 } as const;

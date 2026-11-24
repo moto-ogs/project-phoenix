@@ -288,20 +288,28 @@ func (n *CareFeeNotices) issue(ctx context.Context, organizationID int64, run pa
 	if len(notices) == 0 {
 		return nil
 	}
-	pattern, err := numberPatternOf(ctx, n.billing.store, organizationID, parentbilling.ServiceCare)
+	patterns, err := releasePatterns(ctx, n.billing.store, organizationID, parentbilling.ServiceCare, noticeIssuers(notices))
 	if err != nil {
 		return err
 	}
-	year := numberYear(pattern, issuedOn.Year())
-	first, err := n.billing.store.ReserveNumbers(ctx, organizationID, parentbilling.ServiceCare, year, len(notices))
-	if err != nil {
-		return fmt.Errorf("parent billing: reserve notice numbers: %w", err)
+	// Each issuer numbers its notices from its own range (#8040).
+	for _, group := range byIssuer(notices, func(notice parentbilling.CareNotice) string { return parentbilling.IssuerKeyOf(notice.Issuer) }) {
+		key := parentbilling.IssuerKeyOf(group[0].Issuer)
+		pattern := patterns[key]
+		year := numberYear(pattern, issuedOn.Year())
+		first, err := n.billing.store.ReserveNumbers(ctx, organizationID, key, parentbilling.ServiceCare, year, len(group))
+		if err != nil {
+			return fmt.Errorf("parent billing: reserve notice numbers: %w", err)
+		}
+		for i := range group {
+			group[i].Number = formatInvoiceNumber(pattern, issuedOn.Year(), first+int64(i))
+			group[i].IssuedOn = &issuedOn
+		}
+		if err := n.store.IssueCareNotices(ctx, organizationID, run, year, first, group); err != nil {
+			return err
+		}
 	}
-	for i := range notices {
-		notices[i].Number = formatInvoiceNumber(pattern, issuedOn.Year(), first+int64(i))
-		notices[i].IssuedOn = &issuedOn
-	}
-	return n.store.IssueCareNotices(ctx, organizationID, run, year, first, notices)
+	return nil
 }
 
 // CareNoticeLetter shows the notice of a contract in a run with the
@@ -335,6 +343,7 @@ func (n *CareFeeNotices) CareNoticeLetter(ctx context.Context, reviewer parentbi
 		return parentbilling.CareNoticeLetter{}, fmt.Errorf("parent billing: record notice letter: %w", err)
 	}
 	notice := detail.Notices[index]
+	letterhead = issuerLetterhead(letterhead, notice.Issuer)
 	notice.LegalRemedy = filledLegalRemedy(notice, letterhead)
 	return parentbilling.CareNoticeLetter{Notice: notice, SenderText: letterhead.SenderText,
 		FooterText: letterhead.FooterText, ContactName: letterhead.ContactName, ContactPhone: letterhead.ContactPhone,
@@ -437,14 +446,11 @@ func (n *CareFeeNotices) detail(ctx context.Context, organizationID int64, run p
 		detail.PreviewCents += notice.TotalCents
 		detail.PreviewDeltaCents += notice.DeltaCents
 	}
-	pattern, err := numberPatternOf(ctx, n.billing.store, organizationID, parentbilling.ServiceCare)
-	switch {
-	case errors.Is(err, parentbilling.ErrNumberRangeMissing):
-	case err != nil:
+	pattern, missing, err := numberRangeState(ctx, n.billing.store, organizationID, parentbilling.ServiceCare, noticeIssuers(detail.Notices))
+	if err != nil {
 		return parentbilling.CareNoticeRunDetail{}, err
-	default:
-		detail.NumberPattern, detail.NumberRangeSet = pattern, true
 	}
+	detail.NumberPattern, detail.NumberRangeSet, detail.NumberRangeMissingFor = pattern, missing == nil, missing
 	return detail, nil
 }
 

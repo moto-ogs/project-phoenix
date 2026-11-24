@@ -3756,6 +3756,21 @@ export interface TraegerNameRequest {
   name?: string;
 }
 
+/** Go: parentbilling.ServiceDocumentKind */
+export interface ServiceDocumentKind {
+  service: string;
+  document_kind: string;
+  choices: string[] | null;
+  updated_at: string | null;
+}
+
+export const ServiceDocumentKindSchema: z.ZodType<ServiceDocumentKind, unknown> = object<ServiceDocumentKind>({
+  service: str,
+  document_kind: str,
+  choices: nullable(arr(str)),
+  updated_at: nullable(instant),
+});
+
 /** Go: parentbilling.RunDueDate */
 export interface RunDueDate {
   payment_method: string;
@@ -3765,6 +3780,19 @@ export interface RunDueDate {
 export const RunDueDateSchema: z.ZodType<RunDueDate, unknown> = object<RunDueDate>({
   payment_method: str,
   due_on: nullable(calendarDate),
+});
+
+/** Go: parentbilling.BillingIssuer */
+export interface BillingIssuer {
+  key: string;
+  body: string;
+  name: string;
+}
+
+export const BillingIssuerSchema: z.ZodType<BillingIssuer, unknown> = object<BillingIssuer>({
+  key: str,
+  body: str,
+  name: str,
 });
 
 /** Go: parentbilling.PostalAddress */

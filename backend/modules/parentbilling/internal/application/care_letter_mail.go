@@ -74,7 +74,7 @@ func (l *CareLetters) MailCareLetters(ctx context.Context, reviewer parentbillin
 				return parentbilling.BillingLetterSeries{}, err
 			}
 		}
-		if _, err := l.send(ctx, reviewer, &current, letter, traeger); err != nil {
+		if _, err := l.send(ctx, reviewer, &current, letter, mailSenderOf(letter.invoice.Issuer, traeger)); err != nil {
 			return parentbilling.BillingLetterSeries{}, err
 		}
 		series.Queued++
@@ -125,7 +125,7 @@ func (l *CareLetters) MailCareLetter(ctx context.Context, reviewer parentbilling
 	if err != nil {
 		return parentbilling.CareLetterMailing{}, err
 	}
-	send, err := l.send(ctx, reviewer, &current, letter, traeger)
+	send, err := l.send(ctx, reviewer, &current, letter, mailSenderOf(letter.invoice.Issuer, traeger))
 	if err != nil {
 		return parentbilling.CareLetterMailing{}, err
 	}

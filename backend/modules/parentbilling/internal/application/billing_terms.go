@@ -522,11 +522,16 @@ type invoicePayments struct {
 	// used are the deviations the invoices took, by ID, for the trail.
 	used map[int64]parentbilling.FamilyBilling
 	// creditor and mandates decide a direct debit (#4695, ADR 0171); the
-	// mandates are those in force, by family. usedMandates are the ones
-	// the invoices took, by ID, for the trail.
-	creditor     parentbilling.SEPACreditor
-	mandates     map[string]*parentbilling.SEPAMandate
-	usedMandates map[int64]parentbilling.SEPAMandate
+	// mandates are those in force, by family and creditor identifier
+	// (#8040). usedMandates are the ones the invoices took, by ID, for the
+	// trail.
+	creditor parentbilling.SEPACreditor
+	mandates map[mandateKey]*parentbilling.SEPAMandate
+	// bodyCreditors are the creditor identifiers of the bodies that bill a
+	// school of the Träger now (#8040): a mandate for one of them is no
+	// earlier mandate of the Träger.
+	bodyCreditors map[string]bool
+	usedMandates  map[int64]parentbilling.SEPAMandate
 	// children are the numbers of the children by ChildDebtorNumberKey when
 	// the Träger keeps one per child (#7007), nil when it keeps one per
 	// payer; usedChildren are the ones the invoices took, by ID, for the
@@ -605,21 +610,6 @@ func (p invoicePayments) mandatesRead() []parentbilling.SEPAMandate {
 	return read
 }
 
-// debit completes a payment by direct debit with the family's mandate and
-// notes its read (ResolveDebit).
-func (p invoicePayments) debit(payment parentbilling.InvoicePayment, terms parentbilling.ServiceTerms, family *parentbilling.FamilyBilling,
-	familyEmail string, issuedOn calendar.Date,
-) parentbilling.InvoicePayment {
-	if payment.Method != parentbilling.PaymentDirectDebit {
-		return payment
-	}
-	mandate := p.mandates[familyEmail]
-	if mandate != nil {
-		p.usedMandates[mandate.ID.Int64()] = *mandate
-	}
-	return parentbilling.ResolveDebit(payment, terms, p.run, family, issuedOn, p.creditor, mandate)
-}
-
 // recordMandateReads records in the trail of each mandate that a run
 // showed its mask to the account (#4695).
 func recordMandateReads(ctx context.Context, store paymentTermsReader, reviewer parentbilling.HolidayReviewer, mandates []parentbilling.SEPAMandate) error {
@@ -693,13 +683,13 @@ func readInvoicePayments(ctx context.Context, store paymentTermsReader, organiza
 		return invoicePayments{}, fmt.Errorf("parent billing: read the SEPA mandates: %w", err)
 	}
 	payments := invoicePayments{payerNumbers: scope == parentbilling.DebtorNumberScopePayer, terms: termsSetOf(stored), run: dates, families: byFamily, used: map[int64]parentbilling.FamilyBilling{},
-		creditor: parentbilling.DefaultSEPACreditor(), mandates: make(map[string]*parentbilling.SEPAMandate, len(mandates)),
+		creditor: parentbilling.DefaultSEPACreditor(), mandates: make(map[mandateKey]*parentbilling.SEPAMandate, len(mandates)),
 		usedMandates: map[int64]parentbilling.SEPAMandate{}}
 	if creditor != nil {
 		payments.creditor = *creditor
 	}
 	for i := range mandates {
-		payments.mandates[mandates[i].FamilyEmail] = &mandates[i]
+		payments.mandates[mandateKey{familyEmail: mandates[i].FamilyEmail, creditorID: mandates[i].CreditorID}] = &mandates[i]
 	}
 	if scope == parentbilling.DebtorNumberScopeChild || childInvoices {
 		children, err := store.ChildDebtorNumbers(ctx, organizationID)
@@ -739,7 +729,7 @@ func (p invoicePayments) careInvoice(invoice *parentbilling.CareInvoice, issuedO
 		service = parentbilling.ServiceCare
 	}
 	terms := p.terms.Of(service)
-	payment := p.debit(parentbilling.ResolvePayment(terms, p.run, family, issuedOn), terms, family, invoice.FamilyEmail, issuedOn)
+	payment := p.debit(parentbilling.ResolvePayment(terms, p.run, family, issuedOn), terms, family, invoice.FamilyEmail, invoice.Issuer, issuedOn)
 	invoice.Payment = &payment
 }
 
@@ -770,6 +760,6 @@ func (p invoicePayments) holidayDocument(document *parentbilling.BillingDocument
 	document.RecipientFirstName, document.RecipientLastName, document.RecipientEmail = recipient.FirstName, recipient.LastName, recipient.Email
 	document.RecipientAddress, document.RecipientKind, document.RecipientSecondName = recipient.Address, recipient.Kind, recipient.SecondName
 	terms := p.terms.Of(parentbilling.ServiceHoliday)
-	payment := p.debit(parentbilling.ResolvePayment(terms, p.run, family, issuedOn), terms, family, document.FamilyEmail, issuedOn)
+	payment := p.debit(parentbilling.ResolvePayment(terms, p.run, family, issuedOn), terms, family, document.FamilyEmail, document.Issuer, issuedOn)
 	document.Payment = &payment
 }
