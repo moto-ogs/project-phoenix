@@ -39,7 +39,7 @@ export function groupPermissionsByResource<P extends PermissionOption>(
   );
 }
 
-export function permissionLabel(permission: PermissionOption): string {
+function permissionLabel(permission: PermissionOption): string {
   return formatPermissionDisplay(permission.resource, permission.action);
 }
 

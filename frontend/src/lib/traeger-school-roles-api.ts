@@ -65,7 +65,7 @@ export interface TraegerSchoolRoleInput {
 }
 
 /** Eine Person, die die Rolle an einer Schule hat. */
-export interface TraegerSchoolRoleHolder {
+interface TraegerSchoolRoleHolder {
   readonly accountId: string;
   /** Leer, wenn zum Konto keine Person an der Schule gehört. */
   readonly name: string;
