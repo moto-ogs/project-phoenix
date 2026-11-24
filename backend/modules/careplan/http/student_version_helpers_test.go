@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	careplanhttp "github.com/moto-ogs/project-phoenix/modules/careplan/http"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
@@ -82,17 +83,17 @@ func TestUpdateStudentRefusesMasterDataChangedSinceRead(t *testing.T) {
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 }
 
-// wristbandRaceDirectory assigns a wristband to the child the moment the
-// update takes the child's row lock: after the update read the person, before
-// it writes the person back.
-type wristbandRaceDirectory struct {
-	peopleModule.Capability
+// wristbandRaceEdits assigns a wristband to the child the moment the update
+// takes the child's row lock: after the update read the person, before it
+// writes the person back.
+type wristbandRaceEdits struct {
+	careplanhttp.StudentRecordEdits
 	assign func()
 }
 
-func (d wristbandRaceDirectory) FindStudentRecordForMutation(ctx context.Context, id int64) (peopleModule.StudentRecord, error) {
+func (d wristbandRaceEdits) LockStudentRecordForEdit(ctx context.Context, id int64, expectedVersion string) (peopleModule.StudentRecord, peopleModule.Person, error) {
 	d.assign()
-	return d.Capability.FindStudentRecordForMutation(ctx, id)
+	return d.StudentRecordEdits.LockStudentRecordForEdit(ctx, id, expectedVersion)
 }
 
 // TestUpdateStudentKeepsWristbandAssignedDuringTheSave: the form writes the
@@ -104,9 +105,9 @@ func TestUpdateStudentKeepsWristbandAssignedDuringTheSave(t *testing.T) {
 	student := testpkg.CreateTestStudent(t, tc.db, "Band", "Race", "BR1")
 	card := testpkg.CreateTestRFIDCard(t, tc.db, "BANDRACE")
 	req := studentUpdateRequest(t, tc, student.ID, map[string]any{"first_name": "Bandi"})
-	tc.resource.PeopleDirectory = wristbandRaceDirectory{
-		Capability: tc.resource.PeopleDirectory,
-		assign:     sync.OnceFunc(func() { testpkg.LinkRFIDToStudent(t, tc.db, student.PersonID, card.ID) }),
+	tc.resource.StudentRecordEdits = wristbandRaceEdits{
+		StudentRecordEdits: tc.resource.StudentRecordEdits,
+		assign:             sync.OnceFunc(func() { testpkg.LinkRFIDToStudent(t, tc.db, student.PersonID, card.ID) }),
 	}
 
 	rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})

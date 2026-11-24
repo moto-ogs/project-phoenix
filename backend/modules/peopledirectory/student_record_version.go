@@ -1,6 +1,7 @@
 package peopledirectory
 
 import (
+	"context"
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
@@ -68,6 +69,20 @@ func StudentRecordVersion(student StudentState, person Person) string {
 		}
 	}
 	return readstate.Fingerprint(current)
+}
+
+// StudentRecordEdits is the lock the child's edit form saves under (ADR
+// 0311). It stands beside the owner's facade; the child update route is its
+// only caller.
+type StudentRecordEdits interface {
+	// LockStudentRecordForEdit locks the child's row, then its person, the
+	// order every writer of a child's person takes, and compares the
+	// StudentRecordVersion of the locked state with expectedVersion. It
+	// returns ErrStudentNotFound for a child that is gone and
+	// readstate.ErrChanged for another or an empty version; the caller
+	// writes the child and the person from the returned copies in the same
+	// transaction.
+	LockStudentRecordForEdit(ctx context.Context, studentID int64, expectedVersion string) (StudentRecord, Person, error)
 }
 
 func text(value *string) string {

@@ -88,6 +88,9 @@ type Directory struct {
 	StudentDirectory peoplePorts.StudentDirectoryAccess
 	StudentNoteTeam  peopledirectory.StudentNoteTeamNotices // #6854, beside the owner's facade
 	StudentNotes     peopledirectory.StudentNoteSearch      // #7012, the note search, beside it too
+	// StudentRecordEdits is the checked lock of the child's edit form
+	// (ADR 0311), beside the facade as well.
+	StudentRecordEdits peopledirectory.StudentRecordEdits
 }
 
 // New composes the public capability and native same-owner operations. The
@@ -140,10 +143,11 @@ func New(dependencies Dependencies, memberships GuardianMembershipQuery) (*Direc
 	}, providers...)
 	return &Directory{
 		Owner: service, students: students,
-		PersonWrites:     application.NewPersonRows(service),
-		StudentDirectory: application.NewStudentDirectoryRows(students, studentPhotos),
-		StudentNoteTeam:  application.NewStudentNoteTeam(noteStore, noteStore, studentStore, persons, transaction{}, observe),
-		StudentNotes:     service,
+		PersonWrites:       application.NewPersonRows(service),
+		StudentDirectory:   application.NewStudentDirectoryRows(students, studentPhotos),
+		StudentNoteTeam:    application.NewStudentNoteTeam(noteStore, noteStore, studentStore, persons, transaction{}, observe),
+		StudentNotes:       service,
+		StudentRecordEdits: service,
 	}, nil
 }
 

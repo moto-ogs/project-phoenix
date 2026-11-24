@@ -36,6 +36,13 @@ type PersonRecords interface {
 	StaffIDForPerson(ctx context.Context, personID int64) (staffID int64, found bool, err error)
 }
 
+// StudentRecordEdits is People Directory's checked lock of the child's edit
+// form (ADR 0311): the owner locks the child and its person and compares the
+// version the form read. The root binds the owner composition's lock.
+type StudentRecordEdits interface {
+	LockStudentRecordForEdit(ctx context.Context, studentID int64, expectedVersion string) (peopleModule.StudentRecord, peopleModule.Person, error)
+}
+
 // StudentChangeHistory is the owner's per-child change history (#1455): the
 // append the student write records atomically and the history route reads.
 // The root binds the People Directory capability.
