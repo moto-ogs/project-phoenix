@@ -1088,6 +1088,9 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 	// Ids of the parent pickup changes the seeder files, served back as the
 	// open care queue so the decided demo request (#3135) finds its tokens.
 	var pickupRequestIDs []int64
+	// requestChildren keeps each request's child, as the real detail does
+	// on every read (the correction reads it again for its version).
+	requestChildren := map[string]map[string]any{}
 	// lastGuardianID is the parent-managed contact the pickup permission
 	// request of #4780 names.
 	var lastGuardianID int64
@@ -1641,6 +1644,7 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 		if strings.HasPrefix(r.URL.Path, "/api/enrollment/admin/requests/") && strings.HasSuffix(r.URL.Path, "/offerings") {
 			var body map[string]any
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			require.Equal(t, "offerings-version", body["expected_version"], "a correction sends the version it read")
 			if trace != nil && body["complete_withdrawal_confirmed"] == true {
 				if trace.withdrawalToday.IsZero() {
 					trace.withdrawalToday = todaySeedDate()
@@ -1694,14 +1698,20 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/api/enrollment/admin/requests/") {
+			child, ok := requestChildren[r.URL.Path]
+			if !ok {
+				child = map[string]any{
+					"id": fmt.Sprintf("%d", idCounter+1000), "created_student_id": fmt.Sprintf("%d", idCounter+2000),
+					"offerings_version": "offerings-version",
+				}
+				requestChildren[r.URL.Path] = child
+			}
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success",
 				"data": map[string]any{
 					"id":           fmt.Sprintf("%d", idCounter),
 					"status_token": fmt.Sprintf("status-token-%d", idCounter),
-					"children": []map[string]any{
-						{"id": fmt.Sprintf("%d", idCounter+1000), "created_student_id": fmt.Sprintf("%d", idCounter+2000)},
-					},
+					"children":     []map[string]any{child},
 				},
 			})
 			return

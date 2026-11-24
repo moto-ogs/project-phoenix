@@ -81,7 +81,7 @@ func TestUpdateChildOfferings_ReportsPickupTimesThatHideTheBooking(t *testing.T)
 
 	// A Friday ahead of today (24.08.), like the request of 30.10.
 	stichtag := calendar.NewDate(2026, 9, 11)
-	update, err := testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	update, err := testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID: requestID, ChildID: childID,
 		ActorAccountID: env.creatorID, ActorRole: "admin",
 		Reason: "Fußballtraining", EffectiveFrom: &stichtag,
@@ -112,7 +112,7 @@ func TestUpdateChildOfferings_ReportsPickupTimesFromTheFirstServiceDay(t *testin
 	env, requestID, childID, early, late := childWithEnteredPickups(t, serviceStart)
 	ctx := testpkg.Ctx(t)
 
-	update, err := testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	update, err := testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID: requestID, ChildID: childID,
 		ActorAccountID: env.creatorID, ActorRole: "admin",
 		Reason: "Fußballtraining",

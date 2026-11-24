@@ -265,6 +265,9 @@ type CareOffering struct {
 	PickupTimes               map[string]string
 	Translations              json.RawMessage
 	AutoAddTriggerOfferingIDs []int64
+	// Version is the catalog's token of the offering a save sends back
+	// (ADR 0311); only the catalog administration's reads set it.
+	Version string
 }
 
 // HasFixedDays reports whether the offering books all its available days

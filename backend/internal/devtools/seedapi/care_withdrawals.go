@@ -35,8 +35,7 @@ func seedCareWithdrawalStates(rt *Runtime, approved []SeedEnrollmentRequest) err
 func removeSeedCareBooking(
 	rt *Runtime, request SeedEnrollmentRequest, effectiveFrom seedDate,
 ) (int64, error) {
-	path := fmt.Sprintf("/api/enrollment/admin/requests/%d/children/%d/offerings", request.RequestID, request.ChildIDs[0])
-	raw, err := rt.Client.PutWithAuth(rt.TenantAuth, path, map[string]any{
+	raw, err := putReadChildOfferings(rt, rt.TenantAuth, request.RequestID, request.ChildIDs[0], map[string]any{
 		"offerings": []any{}, "reason": "Abmeldung zum Monatsende",
 		"effective_from": effectiveFrom.String(), "complete_withdrawal_confirmed": true,
 	})

@@ -372,6 +372,7 @@ export interface AdminRequestChild {
   offerings?: AdminRequestChildOffering[];
   upcoming_offerings?: AdminRequestChildOffering[];
   offerings_unavailable?: boolean;
+  offerings_version?: string;
 }
 
 export const AdminRequestChildSchema: z.ZodType<AdminRequestChild, unknown> = object<AdminRequestChild>({
@@ -399,6 +400,7 @@ export const AdminRequestChildSchema: z.ZodType<AdminRequestChild, unknown> = ob
   offerings: optional(arr(AdminRequestChildOfferingSchema)),
   upcoming_offerings: optional(arr(AdminRequestChildOfferingSchema)),
   offerings_unavailable: optional(bool),
+  offerings_version: optional(str),
 });
 
 /** Go: enrollmenthttp.AdminRequestGuardian */
@@ -1784,6 +1786,7 @@ export interface CareOfferingRequest {
   selection_rule?: string;
   pickup_times?: Record<string, string> | null;
   translations?: Record<string, Record<string, TranslatedTextInput> | null> | null;
+  expected_version?: string;
 }
 
 /** Go: enrollmenthttp.CloneCareOfferingRequest */
@@ -2044,6 +2047,7 @@ export interface AdminUpdateOfferingsRequest {
   reason?: string;
   effective_from?: string;
   complete_withdrawal_confirmed?: boolean;
+  expected_version?: string;
 }
 
 /** Go: enrollmenthttp.AdminChildOfferingsResponse */
@@ -2072,6 +2076,7 @@ export interface AdminChildOfferingsResponse {
   offerings?: AdminRequestChildOffering[];
   upcoming_offerings?: AdminRequestChildOffering[];
   offerings_unavailable?: boolean;
+  offerings_version?: string;
   roster_impact: enrollmentRosterImpactResponse;
 }
 
@@ -2100,6 +2105,7 @@ export const AdminChildOfferingsResponseSchema: z.ZodType<AdminChildOfferingsRes
   offerings: optional(arr(AdminRequestChildOfferingSchema)),
   upcoming_offerings: optional(arr(AdminRequestChildOfferingSchema)),
   offerings_unavailable: optional(bool),
+  offerings_version: optional(str),
   roster_impact: enrollmentRosterImpactResponseSchema,
 });
 

@@ -212,7 +212,7 @@ func (f divergingPeriodFixture) resyncTemplateSave(t *testing.T, effectiveFrom c
 func (f divergingPeriodFixture) correct(t *testing.T, name string, effectiveFrom *calendar.Date) {
 	t.Helper()
 	replacement := createAdjustmentCareOfferingWith(t, f.env, name, nil)
-	_, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), f.env.db, f.env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), f.env.db, correctOverRead(f.env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      f.requestID,
 		ChildID:        f.childID,
 		ActorAccountID: f.env.creatorID,

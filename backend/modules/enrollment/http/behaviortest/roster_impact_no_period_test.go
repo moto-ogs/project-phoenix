@@ -63,7 +63,7 @@ func TestUpdateChildOfferings_ReportsHandListWithoutAFuturePeriod(t *testing.T) 
 	})
 	require.NoError(t, err)
 
-	update, err := testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	update, err := testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID: submitted.Request.ID, ChildID: childID,
 		ActorAccountID: env.creatorID, ActorRole: "admin",
 		Reason: "Randstunde freitags abgemeldet", EffectiveFrom: &stichtag,

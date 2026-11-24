@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -38,6 +39,7 @@ type mockCareOfferingService struct {
 	createResult            *CareOffering
 	createErr               error
 	updateInput             *CareOffering
+	updateVersion           string
 	updateErr               error
 	deleteID                int64
 	deleteErr               error
@@ -73,8 +75,9 @@ func (m *mockCareOfferingService) Create(_ context.Context, o *CareOffering) (*C
 	m.createInput = o
 	return m.createResult, m.createErr
 }
-func (m *mockCareOfferingService) Update(_ context.Context, o *CareOffering) error {
+func (m *mockCareOfferingService) Update(_ context.Context, o *CareOffering, expectedVersion string) error {
 	m.updateInput = o
+	m.updateVersion = expectedVersion
 	return m.updateErr
 }
 func (m *mockCareOfferingService) Delete(_ context.Context, id int64) error {
@@ -677,4 +680,22 @@ func TestCareOfferingRouter_BookingStatsIsNotTreatedAsAnID(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, int64(42), mock.bookingStatsPhaseID)
 	assert.Zero(t, mock.getByIDID, "the {id} route must not have matched")
+}
+
+// The editor's read version travels to the catalog, and a refusal over a
+// changed offering answers 409 general.changed_since_read (ADR 0311).
+func TestUpdateCareOfferingHandler_SendsTheReadVersionAndAnswersAChangedOne(t *testing.T) {
+	t.Parallel()
+
+	mock := &mockCareOfferingService{getByIDResult: makeOfferingModel(1234, 5678, "X")}
+	body := validOfferingBody(5678, "X")
+	body["expected_version"] = "v1"
+	w := executeCareJSON(t, buildCareOfferingRouter(mock), http.MethodPut, "/enrollment/care-offerings/1234", body)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Equal(t, "v1", mock.updateVersion)
+
+	mock = &mockCareOfferingService{getByIDResult: makeOfferingModel(1234, 5678, "X"), updateErr: readstate.ErrChanged}
+	w = executeCareJSON(t, buildCareOfferingRouter(mock), http.MethodPut, "/enrollment/care-offerings/1234", body)
+	assert.Equal(t, http.StatusConflict, w.Code)
+	assert.Contains(t, w.Body.String(), readstate.ChangedCode)
 }

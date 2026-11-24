@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // CareOfferingCatalogDependencies are the ports the catalog reads and the
@@ -91,6 +92,7 @@ func (c *CareOfferingCatalog) FindOffering(ctx context.Context, id int64) (carep
 	if err := normalizeLoadedAvailabilityRule(&offering); err != nil {
 		return careplan.CareOffering{}, err
 	}
+	offering.Version = careplan.CareOfferingVersion(offering)
 	return offering, nil
 }
 
@@ -111,11 +113,22 @@ func (c *CareOfferingCatalog) CreateOffering(ctx context.Context, offering carep
 	return created, nil
 }
 
-func (c *CareOfferingCatalog) UpdateOffering(ctx context.Context, offering careplan.CareOffering) (careplan.CareOffering, error) {
+// UpdateOffering saves the offering over the version its author read (ADR
+// 0311): after the recurrence gate it locks the row, the order of every
+// catalog write of the school (ADR 0195 section 5), and refuses another
+// stored version before it validates anything against the stored catalog.
+func (c *CareOfferingCatalog) UpdateOffering(ctx context.Context, offering careplan.CareOffering, expectedVersion string) (careplan.CareOffering, error) {
 	if offering.ID <= 0 {
 		return careplan.CareOffering{}, careOfferingInvalidf("offering with valid id is required")
 	}
-	if err := c.prepareWrite(ctx, &offering); err != nil {
+	checkRead := func(ctx context.Context) error {
+		stored, err := c.lockedVersion(ctx, offering.ID)
+		if err != nil {
+			return err
+		}
+		return readstate.Check(expectedVersion, stored)
+	}
+	if err := c.prepareWriteAfterLock(ctx, &offering, checkRead); err != nil {
 		return careplan.CareOffering{}, err
 	}
 	updated, err := c.updateRecord(ctx, offering)
@@ -139,6 +152,12 @@ func (c *CareOfferingCatalog) UpdateOffering(ctx context.Context, offering carep
 // always applied them; the recurrence lock is taken before the timetable
 // link is read.
 func (c *CareOfferingCatalog) prepareWrite(ctx context.Context, offering *careplan.CareOffering) error {
+	return c.prepareWriteAfterLock(ctx, offering, nil)
+}
+
+// prepareWriteAfterLock is prepareWrite with afterLock run right after the
+// recurrence lock, before the stored catalog is read.
+func (c *CareOfferingCatalog) prepareWriteAfterLock(ctx context.Context, offering *careplan.CareOffering, afterLock func(context.Context) error) error {
 	if err := c.validateWrite(offering); err != nil {
 		return err
 	}
@@ -147,6 +166,11 @@ func (c *CareOfferingCatalog) prepareWrite(ctx context.Context, offering *carepl
 	}
 	if err := c.lockTemplateRecurrence(ctx); err != nil {
 		return err
+	}
+	if afterLock != nil {
+		if err := afterLock(ctx); err != nil {
+			return err
+		}
 	}
 	if err := c.validateLinkedTemplate(ctx, *offering); err != nil {
 		return err

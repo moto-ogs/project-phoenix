@@ -157,7 +157,7 @@ func TestContractEnrollmentConfirmsAProvenApplicationOnlyUnchanged(t *testing.T)
 
 	// Between the plan and the enrollment the office adds a weekday to the
 	// approved application.
-	_, err := testpkg.TenantQuery1(t, ctx, e.db, e.owner.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, ctx, e.db, correctOverRead(e.owner), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID: requestID, ChildID: childID, ActorAccountID: e.creatorID, ActorRole: "admin",
 		Reason: "Zusätzlicher Tag", Offerings: []enrollmentAPI.OfferingAdjustmentSelection{
 			{OfferingID: e.offering.ID, SelectedDays: []string{"mon", "tue"}}},

@@ -22,8 +22,20 @@ func (r *scopedCareOfferingRows) Create(ctx context.Context, row *offeringContra
 		return r.CareOfferingRows.Create(txCtx, row)
 	})
 }
+
+// Update saves row over the version a read of the stored offering answers
+// right before, as the editor sends it (ADR 0311).
 func (r *scopedCareOfferingRows) Update(ctx context.Context, row *offeringContract.CareOfferingRecord) error {
-	return fixtureEnrollmentCommand(ctx, func(txCtx context.Context) error { return r.CareOfferingRows.Update(txCtx, row) })
+	stored, err := r.GetByID(ctx, row.ID)
+	if err != nil {
+		return err
+	}
+	return r.UpdateRead(ctx, row, stored.Version)
+}
+
+// UpdateRead saves row over the version the caller read.
+func (r *scopedCareOfferingRows) UpdateRead(ctx context.Context, row *offeringContract.CareOfferingRecord, version string) error {
+	return fixtureEnrollmentCommand(ctx, func(txCtx context.Context) error { return r.CareOfferingRows.Update(txCtx, row, version) })
 }
 func (r *scopedCareOfferingRows) Delete(ctx context.Context, id int64) error {
 	return fixtureEnrollmentCommand(ctx, func(txCtx context.Context) error { return r.CareOfferingRows.Delete(txCtx, id) })

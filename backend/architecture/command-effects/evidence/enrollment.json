@@ -290,7 +290,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.UpdateOffering",
-      "binding_digest": "fa8a0ee94d3f050220f22a78f91afd6b",
+      "binding_digest": "ddf7f74d12901fc15fba169314659cba",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.UpdateOffering",
@@ -298,7 +298,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
-      "binding_digest": "fa8a0ee94d3f050220f22a78f91afd6b",
+      "binding_digest": "ddf7f74d12901fc15fba169314659cba",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.UpdateOffering",
@@ -306,7 +306,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
-      "binding_digest": "739a64f4e359e5a5b05bdc7b1d0a2924",
+      "binding_digest": "16c91672eabb794e3ed51cdd95645081",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",

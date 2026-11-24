@@ -37,7 +37,7 @@ func TestUpdateChildOfferings_AnnouncesBookingChangeToStaffingViews(t *testing.T
 	)), fixtureEnrollmentCommand)
 
 	// The child keeps only the template's source offering; the other booking ends.
-	_, err = testpkg.TenantQuery1(t, testpkg.Ctx(t), f.env.db, decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err = testpkg.TenantQuery1(t, testpkg.Ctx(t), f.env.db, correctOverRead(decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      f.requestID,
 		ChildID:        f.childID,
 		ActorAccountID: f.env.creatorID,
