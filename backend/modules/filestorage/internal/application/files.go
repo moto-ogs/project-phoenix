@@ -42,8 +42,12 @@ func (s *Service) ListFiles(ctx context.Context, folderID int64, who filestorage
 	if err != nil {
 		return filestorage.FileList{}, err
 	}
+	fileIDs := make([]int64, 0, len(files))
+	for _, file := range files {
+		fileIDs = append(fileIDs, file.ID)
+	}
 	result := filestorage.FileList{
-		Folder: toFolder(domain.FolderView{FolderListItem: domain.FolderListItem{Folder: folder, FileCount: int64(len(files))}}),
+		Folder: toFolder(domain.FolderView{FolderListItem: domain.FolderListItem{Folder: folder, FileCount: int64(len(files)), FileIDs: fileIDs}}),
 		Files:  make([]filestorage.File, 0, len(files)),
 	}
 	for _, file := range files {

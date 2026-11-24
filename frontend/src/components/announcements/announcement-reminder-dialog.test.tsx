@@ -54,6 +54,7 @@ vi.mock("~/components/ui/confirm-delete-modal", () => ({
 
 const published: Announcement = {
   id: "7",
+  version: "2026-09-01T08:00:00Z",
   title: "Betreuung endet um 13:00 Uhr",
   body: "Am letzten Schultag endet die Betreuung um 13:00 Uhr.",
   priority: "info",
@@ -138,6 +139,7 @@ describe("AnnouncementReminderDialog (#3162)", () => {
     const onClose = vi.fn();
     render(
       <AnnouncementReminderDialog
+        reload={vi.fn(() => Promise.resolve(undefined))}
         announcement={withReminder}
         onClose={onClose}
         onSaved={onSaved}
@@ -156,6 +158,7 @@ describe("AnnouncementReminderDialog (#3162)", () => {
       expect(updateMock).toHaveBeenCalledWith("7", {
         reminder_at: "2026-09-24T07:30:00.000Z",
         reminder_text: "Morgen endet die Betreuung um 13:00 Uhr.",
+        expected_version: "2026-09-01T08:00:00Z",
       }),
     );
     expect(onSaved).toHaveBeenCalled();
@@ -165,6 +168,7 @@ describe("AnnouncementReminderDialog (#3162)", () => {
   it("refuses a moment in the past before touching the backend", async () => {
     render(
       <AnnouncementReminderDialog
+        reload={vi.fn(() => Promise.resolve(undefined))}
         announcement={{ ...withReminder, reminder_at: "2026-09-01T06:00:00Z" }}
         onClose={vi.fn()}
         onSaved={vi.fn()}
@@ -183,6 +187,7 @@ describe("AnnouncementReminderDialog (#3162)", () => {
     const onSaved = vi.fn();
     render(
       <AnnouncementReminderDialog
+        reload={vi.fn(() => Promise.resolve(undefined))}
         announcement={withReminder}
         onClose={vi.fn()}
         onSaved={onSaved}
@@ -199,6 +204,7 @@ describe("AnnouncementReminderDialog (#3162)", () => {
       expect(updateMock).toHaveBeenCalledWith("7", {
         reminder_at: null,
         reminder_text: null,
+        expected_version: "2026-09-01T08:00:00Z",
       }),
     );
     expect(onSaved).toHaveBeenCalled();
@@ -207,6 +213,7 @@ describe("AnnouncementReminderDialog (#3162)", () => {
   it("asks for a day when planning a new reminder", async () => {
     render(
       <AnnouncementReminderDialog
+        reload={vi.fn(() => Promise.resolve(undefined))}
         announcement={published}
         onClose={vi.fn()}
         onSaved={vi.fn()}
@@ -246,6 +253,7 @@ describe("AnnouncementReminderDialog (#3162)", () => {
     const onClose = vi.fn();
     render(
       <AnnouncementReminderDialog
+        reload={vi.fn(() => Promise.resolve(undefined))}
         announcement={withReminder}
         onClose={onClose}
         onSaved={vi.fn()}

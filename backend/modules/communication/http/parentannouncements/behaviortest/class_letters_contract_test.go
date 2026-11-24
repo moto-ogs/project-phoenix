@@ -63,7 +63,7 @@ func (s *classLetterContract) CreateParentAnnouncement(ctx context.Context, _ in
 	return &communication.ParentAnnouncement{ID: 1, Title: in.Title, Sender: in.Sender}, nil
 }
 
-func (s *classLetterContract) PublishParentAnnouncement(ctx context.Context, id int64) (*communication.ParentAnnouncement, error) {
+func (s *classLetterContract) PublishParentAnnouncement(ctx context.Context, id int64, _ string) (*communication.ParentAnnouncement, error) {
 	s.record(ctx, "publish")
 	letter := s.letters[id]
 	return &letter, nil

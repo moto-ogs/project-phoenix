@@ -1047,7 +1047,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage/internal/ports.Announcements.AnnouncementExists",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/communication.ParentAnnouncementCapability.AnnouncementExists; modules/communication.ParentAnnouncementCapability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/communication.ParentAnnouncementCapability.AnnouncementExists; modules/communication.ParentAnnouncementCapability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed with #7986: the existence read now also answers the announcement's version (readstate.Of(updated_at), ADR 0311) from the same unlocked row read, so the staff attachment list names the draft version it belongs to; its effect (query), target and transaction boundary are unchanged.",
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.AnnouncementExists",
       "target_owner": "communication"
@@ -1058,7 +1058,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage/internal/ports.Announcements.LockAnnouncementForAttachmentChange",
-      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/communication.ParentAnnouncementCapability.LockAnnouncementForAttachmentChange; modules/communication.ParentAnnouncementCapability (supplied contract method). ",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/communication.ParentAnnouncementCapability.LockAnnouncementForAttachmentChange; modules/communication.ParentAnnouncementCapability (supplied contract method). Re-reviewed with #7986: the lock now also takes the version of the draft the editor holds and refuses a changed draft with readstate.ErrChanged under the same row lock (ADR 0311); its effect (lock), target and transaction boundary are unchanged.",
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.LockAnnouncementForAttachmentChange",
       "target_owner": "communication"
@@ -1069,7 +1069,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage/internal/ports.Announcements.ResetAnnouncementEngagement",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/communication.ParentAnnouncementCapability.ResetAnnouncementEngagement; modules/communication.ParentAnnouncementCapability (supplied contract method). ",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/communication.ParentAnnouncementCapability.ResetAnnouncementEngagement; modules/communication.ParentAnnouncementCapability (supplied contract method). Re-reviewed with #7986: the reset now also stamps the locked draft's updated_at in the same Communication store write and answers the draft's new version (ADR 0311); its effect (mutation), target and transaction boundary are unchanged.",
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.ResetAnnouncementEngagement",
       "target_owner": "communication"
@@ -1411,6 +1411,16 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage/internal/ports.FolderStore.FindByID",
       "reason": "Read-only newly exposed target: file-storage reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/filestorage/internal/adapters/postgres.FolderStore.FindByID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "source_owner": "file-storage",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/postgres.FolderStore.FindByIDForUpdate",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage/internal/ports.FolderStore.FindByIDForUpdate",
+      "reason": "Reviewed with the communication/filestorage read-state PR (#7904, ADR 0311): file-storage reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/filestorage/internal/adapters/postgres.FolderStore.FindByIDForUpdate only to take the request's tenant transaction, as FindByID does. The row lock is the owner's own documents.folders statement inside the caller's unit; no persistent or scope effect on the tenant runtime.",
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"

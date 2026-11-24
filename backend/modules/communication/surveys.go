@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Surveys (Umfragen, #4781) ask the guardians of a school or its staff a
@@ -89,6 +91,26 @@ type SurveyInput struct {
 	ClosesAt  time.Time
 	Targets   []SurveyTarget
 	Questions []SurveyQuestionInput
+	// ExpectedVersion is the SurveyVersion of the draft an edit was made on
+	// (ADR 0311); a new survey has none.
+	ExpectedVersion string
+}
+
+// SurveyVersion is the token of a stored survey (ADR 0311): the edit and the
+// publication send it back. Every write of the row stamps updated_at (the
+// table's trigger), and answers live in their own tables.
+func SurveyVersion(survey Survey) string {
+	return readstate.Of(survey.UpdatedAt)
+}
+
+// SurveyDeleteFingerprint is the token of what the delete dialog shows:
+// whether answers exist and how many took part. An answer given since the
+// dialog opened refuses the delete.
+func SurveyDeleteFingerprint(survey Survey) string {
+	return readstate.Fingerprint(struct {
+		Published    bool `json:"published"`
+		Participants int  `json:"participants"`
+	}{survey.PublishedAt != nil, survey.ParticipantCount})
 }
 
 // SurveyOption is one answer choice of a choice question.
@@ -315,8 +337,11 @@ type SurveyManagement interface {
 	GetSurvey(ctx context.Context, id int64) (*Survey, error)
 	CreateSurvey(ctx context.Context, createdBy int64, in SurveyInput) (*Survey, error)
 	UpdateSurvey(ctx context.Context, id int64, in SurveyInput) (*Survey, error)
-	DeleteSurvey(ctx context.Context, id int64) error
-	PublishSurvey(ctx context.Context, publishedBy, id int64) (*Survey, error)
+	// DeleteSurvey removes a survey whose SurveyDeleteFingerprint is
+	// expectedFingerprint.
+	DeleteSurvey(ctx context.Context, id int64, expectedFingerprint string) error
+	// PublishSurvey opens the draft whose SurveyVersion is expectedVersion.
+	PublishSurvey(ctx context.Context, publishedBy, id int64, expectedVersion string) (*Survey, error)
 	CloseSurvey(ctx context.Context, id int64) (*Survey, error)
 	// RemindSurvey notifies the audience members who have not taken part and
 	// returns how many were reached.

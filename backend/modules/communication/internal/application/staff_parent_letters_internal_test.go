@@ -122,7 +122,7 @@ func TestPublishPersonalLetterWritesOneFrozenLetterPerChild(t *testing.T) {
 	t.Parallel()
 	f := newPersonalLetterFixture(personalLetterBody)
 
-	if _, err := f.service.Publish(context.Background(), 42); err != nil {
+	if _, err := publishAsRead(context.Background(), f.service, 42); err != nil {
 		t.Fatalf("Publish: %v", err)
 	}
 	copies := f.copies.copies[42]
@@ -157,7 +157,7 @@ func TestPublishPersonalLetterMailsEachFamilyOnlyItsOwnChildren(t *testing.T) {
 	t.Parallel()
 	f := newPersonalLetterFixture(personalLetterBody)
 
-	if _, err := f.service.Publish(context.Background(), 42); err != nil {
+	if _, err := publishAsRead(context.Background(), f.service, 42); err != nil {
 		t.Fatalf("Publish: %v", err)
 	}
 	bodies := mailBodies(f.outbox)
@@ -192,7 +192,7 @@ func TestLetterWithoutPlaceholdersGoesOutAsOneTextAndPrintsPerChild(t *testing.T
 	const text = "Liebe Eltern,\n\nam Freitag ist Sommerfest."
 	f := newPersonalLetterFixture(text)
 
-	if _, err := f.service.Publish(context.Background(), 42); err != nil {
+	if _, err := publishAsRead(context.Background(), f.service, 42); err != nil {
 		t.Fatalf("Publish: %v", err)
 	}
 	for address, body := range mailBodies(f.outbox) {
@@ -224,7 +224,7 @@ func TestLetterWithoutPlaceholdersGoesOutAsOneTextAndPrintsPerChild(t *testing.T
 func TestUnpublishDropsTheLettersOfThePublication(t *testing.T) {
 	t.Parallel()
 	f := newPersonalLetterFixture(personalLetterBody)
-	if _, err := f.service.Publish(context.Background(), 42); err != nil {
+	if _, err := publishAsRead(context.Background(), f.service, 42); err != nil {
 		t.Fatalf("Publish: %v", err)
 	}
 	if _, err := f.service.Unpublish(context.Background(), 42); err != nil {
@@ -244,7 +244,7 @@ func TestPrintLettersReturnsTheSchoolAndLogsTheAccess(t *testing.T) {
 	if _, err := f.service.PrintParentLetters(context.Background(), 5, 42); !errors.Is(err, communication.ErrParentLetterNotPrintable) {
 		t.Fatalf("printing a draft: err = %v, want ErrParentLetterNotPrintable", err)
 	}
-	if _, err := f.service.Publish(context.Background(), 42); err != nil {
+	if _, err := publishAsRead(context.Background(), f.service, 42); err != nil {
 		t.Fatalf("Publish: %v", err)
 	}
 	printed, err := f.service.PrintParentLetters(context.Background(), 5, 42)
@@ -353,7 +353,7 @@ func TestPreviewLetterForATeacherShowsOnlyChildrenOfHerClasses(t *testing.T) {
 func TestPublishPersonalLetterLogsTheReadOfEveryChild(t *testing.T) {
 	t.Parallel()
 	f := newPersonalLetterFixture(personalLetterBody)
-	if _, err := f.service.Publish(context.Background(), 42); err != nil {
+	if _, err := publishAsRead(context.Background(), f.service, 42); err != nil {
 		t.Fatalf("Publish: %v", err)
 	}
 	if len(f.access.entries) != 1 || f.access.entries[0].Kind != communication.ParentLetterAccessPublish || f.access.entries[0].ChildCount != 3 {

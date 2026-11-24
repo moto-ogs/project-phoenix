@@ -41,6 +41,7 @@ func (seedAnnouncementsStep) Run(ctx context.Context, rt *Runtime) error {
 	}
 
 	var firstAnnouncementID int64
+	var firstAnnouncement []byte
 	for _, a := range announcements {
 		raw, err := rt.Client.Post("/operator/announcements", a)
 		if err != nil {
@@ -51,11 +52,12 @@ func (seedAnnouncementsStep) Run(ctx context.Context, rt *Runtime) error {
 			if err != nil {
 				return fmt.Errorf("parse operator announcement: %w", err)
 			}
+			firstAnnouncement = raw
 		}
 	}
 	if firstAnnouncementID != 0 {
-		if _, err := rt.Client.Post(fmt.Sprintf("/operator/announcements/%d/publish", firstAnnouncementID), nil); err != nil {
-			return fmt.Errorf("publish operator announcement: %w", err)
+		if err := publishOperatorAnnouncement(rt, firstAnnouncementID, firstAnnouncement); err != nil {
+			return err
 		}
 		rt.Client.BindAuth(rt.TenantAuth)
 		if _, err := rt.Client.Post(fmt.Sprintf("/api/platform/announcements/%d/dismiss", firstAnnouncementID), nil); err != nil {
@@ -346,5 +348,23 @@ func (s seedCareExitsStep) Run(_ context.Context, rt *Runtime) error {
 	}
 
 	fmt.Printf("  %d planned care exits created\n", created)
+	return nil
+}
+
+// publishOperatorAnnouncement publishes the operator announcement its create
+// answered, with that answer's edit version (ADR 0311).
+func publishOperatorAnnouncement(rt *Runtime, id int64, created []byte) error {
+	var announcement struct {
+		Data struct {
+			EditVersion string `json:"edit_version"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(created, &announcement); err != nil {
+		return fmt.Errorf("parse operator announcement: %w", err)
+	}
+	path := fmt.Sprintf("/operator/announcements/%d/publish", id)
+	if _, err := rt.Client.Post(path, map[string]any{"expected_edit_version": announcement.Data.EditVersion}); err != nil {
+		return fmt.Errorf("publish operator announcement: %w", err)
+	}
 	return nil
 }

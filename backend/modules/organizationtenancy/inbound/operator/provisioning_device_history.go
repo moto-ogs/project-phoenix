@@ -35,7 +35,7 @@ func (rs *ProvisioningResource) DeviceHistory(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if rs.deviceHistory == nil {
-		common.RenderError(w, r, common.OperatorInternal(internalErrorMessage))
+		common.RenderError(w, r, common.OperatorInternal(nil, internalErrorMessage))
 		return
 	}
 	entries, err := rs.deviceHistory.DeviceHistory(r.Context(), deviceID)

@@ -56,6 +56,9 @@ const (
 type ReminderInput struct {
 	ReminderAt   *time.Time `json:"reminder_at,omitempty"`
 	ReminderText *string    `json:"reminder_text,omitempty"`
+	// ExpectedVersion is the version of the announcement the reminder was
+	// read on (ADR 0311).
+	ExpectedVersion string `json:"-"`
 }
 
 // normalizeReminder trims and validates a draft-safe reminder representation.
@@ -122,15 +125,10 @@ func validateReminder(reminderAt, expiresAt *time.Time, now time.Time) error {
 func (s *service) UpdateReminder(ctx context.Context, id int64, in ReminderInput) (*StaffParentAnnouncement, error) {
 	// Under the row lock: the due tick claims the reminder with a guarded
 	// UPDATE, and this edit must see either the unsent row or the sent one,
-	// never an in-between.
-	a, err := s.repo.FindByIDForUpdate(ctx, id)
+	// never an in-between. The reminder the person changed is the one they
+	// read (ADR 0311).
+	a, err := s.lockAsRead(ctx, id, in.ExpectedVersion, "reminder update")
 	if err != nil {
-		return nil, fmt.Errorf("announcement: load for reminder update: %w", err)
-	}
-	if a == nil {
-		return nil, ErrNotFound
-	}
-	if err := guardClassLetterWrite(ctx, a); err != nil {
 		return nil, err
 	}
 	if !a.IsPublished() {

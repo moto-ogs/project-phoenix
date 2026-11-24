@@ -33,7 +33,7 @@ import {
   SCHOOL_PARENT_LETTERS_ROUTE,
 } from "~/lib/school-parent-letters";
 import { schoolPath } from "~/lib/school-url";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 import { StatusBadge } from "~/components/ui/status-badge";
 
@@ -51,16 +51,12 @@ export default function SchoolParentLetterPage() {
   const { success: toastSuccess } = useToast();
   const [action, setAction] = useState<LifecycleAction>(null);
 
-  const {
-    data: letter,
-    error,
-    isLoading,
-    mutate,
-  } = useSWRAuth<Announcement | undefined>(
+  const letterRead = useSWRAuth<Announcement | undefined>(
     session ? schoolPortalKeys.parentLetter(letterId) : null,
     () => fetchAnnouncement(letterId, SCHOOL_PARENT_LETTERS_BASE),
     { revalidateOnFocus: false },
   );
+  const { data: letter, error, isLoading, mutate } = letterRead;
   const notFound = error instanceof ApiError && error.status === 404;
   const loadError = useSwrLoadError(
     notFound ? undefined : error,
@@ -136,6 +132,7 @@ export default function SchoolParentLetterPage() {
             <PublishAnnouncementDialog
               announcement={letter}
               apiBase={SCHOOL_PARENT_LETTERS_BASE}
+              reload={() => revalidateOrThrow(letterRead)}
               onClose={() => setAction(null)}
               onDone={refresh}
             />

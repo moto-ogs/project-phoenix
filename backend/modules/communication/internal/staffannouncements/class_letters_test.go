@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
+
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	announcement "github.com/moto-ogs/project-phoenix/modules/communication/internal/application"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -76,7 +78,8 @@ func TestClassLetterKeepsItsSenderAndBelongsToItsAuthor(t *testing.T) {
 			_, err := svc.Update(c, id, classLetterInput("1a"))
 			return err
 		},
-		"publish":   func(c context.Context, id int64) error { _, err := svc.Publish(c, id); return err },
+		// The class letter guard refuses before any read state is compared.
+		"publish":   func(c context.Context, id int64) error { _, err := svc.Publish(c, id, ""); return err },
 		"unpublish": func(c context.Context, id int64) error { _, err := svc.Unpublish(c, id); return err },
 		"delete":    func(c context.Context, id int64) error { return svc.Delete(c, id) },
 		"remind":    func(c context.Context, id int64) error { _, err := svc.RemindOutstanding(c, id); return err },
@@ -95,7 +98,11 @@ func TestClassLetterKeepsItsSenderAndBelongsToItsAuthor(t *testing.T) {
 	var published *announcement.StaffParentAnnouncement
 	require.NoError(t, inTenant(func(c context.Context) error {
 		var err error
-		published, err = svc.Publish(asAuthor(c), letter.ID)
+		read, err := svc.Get(asAuthor(c), letter.ID)
+		if err != nil {
+			return err
+		}
+		published, err = svc.Publish(asAuthor(c), letter.ID, readstate.Of(read.UpdatedAt))
 		return err
 	}), "the author sends her letter")
 	assert.True(t, published.IsPublished())

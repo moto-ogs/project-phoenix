@@ -106,3 +106,11 @@ Variante 3.
 - Der Speiseplan (#7930) liest und schickt ein Token je Tag. Seine alten
   Routen, die den gelesenen Tag statt eines Tokens schicken (#7898), bleiben
   ein Release lang und prüfen über dieselbe Funktion.
+- Die Ankündigungen des Operator-Portals nennen ihren Token `edit_version`
+  (`expected_edit_version`), weil `version` dort die Release-Bezeichnung ist.
+- Auch die Fehlerrenderer des Operator-Portals führen keinen eigenen Fall:
+  `common.OperatorInternal` behält den Fehler, damit `common.RenderError` die
+  Ablehnung darin hebt (#7986).
+- Die Anhänge einer Elternmitteilung gehören zu dem Stand, den ihre
+  Veröffentlichung bestätigt: Hochladen und Entfernen schicken die Version
+  des Entwurfs, stempeln ihn und antworten seine neue Version (#7986).

@@ -14,6 +14,11 @@ import {
   success,
 } from "./runtime";
 
+/** Go: files.FolderRemovalRequest */
+export interface FolderRemovalRequest {
+  expected_fingerprint?: string;
+}
+
 /** Go: files.FolderRemovedResponse */
 export interface FolderRemovedResponse {
   folder_id: string;
@@ -67,6 +72,8 @@ export interface FolderResponse {
   role_ids: string[] | null;
   account_ids: string[] | null;
   created_at: string;
+  version: string;
+  fingerprint: string;
 }
 
 export const FolderResponseSchema: z.ZodType<FolderResponse, unknown> = object<FolderResponse>({
@@ -77,6 +84,8 @@ export const FolderResponseSchema: z.ZodType<FolderResponse, unknown> = object<F
   role_ids: nullable(arr(str)),
   account_ids: nullable(arr(str)),
   created_at: instant,
+  version: str,
+  fingerprint: str,
 });
 
 /** Go: files.FolderListResponse */
@@ -138,6 +147,7 @@ export interface FolderRequest {
   visibility?: string;
   role_ids?: string[] | null;
   account_ids?: string[] | null;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -145,6 +155,7 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/files/folders/{folderId}",
     portals: ["tenant"],
+    request: requestBody<FolderRemovalRequest>(),
     response: success(FolderRemovedResponseSchema),
   },
   "DELETE /api/files/folders/{folderId}/files/{fileId}": {

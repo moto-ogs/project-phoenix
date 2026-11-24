@@ -213,6 +213,6 @@ func belegRetentionError(err error) render.Renderer {
 		errors.Is(err, capability.ErrBelegClarificationNotFound):
 		return common.OperatorRejection(http.StatusNotFound, common.CodeGeneralBusinessRejection, err.Error())
 	default:
-		return common.OperatorInternal("beleg retention failed")
+		return common.OperatorInternal(err, "beleg retention failed")
 	}
 }

@@ -24,7 +24,7 @@ func (rs *ProvisioningResource) RecordTraegerStaffReleaseChange(w http.ResponseW
 		return false
 	}
 	if rs.traegerStaffReleaseAudit == nil {
-		common.RenderError(w, r, common.OperatorInternal("the staff release audit is not configured"))
+		common.RenderError(w, r, common.OperatorInternal(nil, "the staff release audit is not configured"))
 		return false
 	}
 	err := rs.traegerStaffReleaseAudit.RecordTraegerStaffReleaseChange(r.Context(), organizationtenancy.TraegerStaffReleaseChange{

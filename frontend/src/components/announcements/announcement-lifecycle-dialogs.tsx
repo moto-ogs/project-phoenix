@@ -8,6 +8,11 @@ import { ConfirmationModal } from "~/components/ui/modal";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import type { OverflowMenuItem } from "~/components/ui/page-header/types";
 import { useApiFormError } from "~/contexts/ToastContext";
+import {
+  readStateWaitReason,
+  useReadDraftForm,
+} from "~/lib/hooks/use-swr-load-error";
+import { useActionOn, type ReadAction } from "~/lib/swr/read-draft";
 import { createLogger } from "~/lib/logger";
 import {
   deleteAnnouncement,
@@ -39,7 +44,9 @@ interface LifecycleDialogProps {
 /**
  * Ein Lebenszyklus-Schritt mit Rückfrage (#2517): der Fehler bleibt im
  * offenen Dialog (Katalogtext, Wiederholen). Den Erfolg zeigt die Liste
- * selbst, die danach neu lädt.
+ * selbst, die danach neu lädt. Mit `read` schickt der Schritt den Stand, den
+ * der Dialog zeigt (ADR 0311): eine Ablehnung zeigt den neu gelesenen Stand
+ * ohne „Wiederholen“, und bis er gelesen ist, geht nichts raus.
  */
 function useLifecycleAction(
   run: () => Promise<unknown>,
@@ -48,31 +55,44 @@ function useLifecycleAction(
     onClose,
     object,
     logEvent,
+    read,
   }: {
     onDone: LifecycleDialogProps["onDone"];
     onClose: () => void;
     object: string;
     logEvent: string;
+    read?: ReadAction;
   },
 ) {
   const [pending, setPending] = useState(false);
   const errors = useApiFormError();
+  const form = useReadDraftForm(read ?? null, errors, object);
   const latestConfirmRef = useRef<() => void>(() => undefined);
 
   const confirm = async () => {
+    if (!form.begin()) return;
     setPending(true);
-    errors.clear();
-    try {
-      await run();
-    } catch (err) {
-      logger.error(logEvent, {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await errors.show(err, {
-        object,
-        retry: () => latestConfirmRef.current(),
-      });
+    const result = read
+      ? await read.submit(run)
+      : await run().then(
+          (saved) => ({ ok: true as const, saved }),
+          (error: unknown) => ({ ok: false as const, error, refused: false }),
+        );
+    if (!result.ok) {
       setPending(false);
+      if ("skipped" in result && result.skipped) return;
+      logger.error(logEvent, {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      await errors.show(
+        result.error,
+        result.refused && "reload" in result
+          ? { object, reload: result.reload }
+          : { object, retry: () => latestConfirmRef.current() },
+      );
       return;
     }
     try {
@@ -87,7 +107,13 @@ function useLifecycleAction(
     latestConfirmRef.current = () => void confirm();
   });
 
-  return { pending, error: errors.error, confirm };
+  return {
+    pending,
+    error: errors.error ?? form.loadError,
+    confirm,
+    blocked: read !== undefined && !read.canSubmit,
+    blockedReason: read ? readStateWaitReason(read.status) : undefined,
+  };
 }
 
 export function PublishAnnouncementDialog({
@@ -95,16 +121,30 @@ export function PublishAnnouncementDialog({
   onClose,
   onDone,
   apiBase,
-}: LifecycleDialogProps) {
-  const { pending, error, confirm } = useLifecycleAction(
-    () => withApiBase(publishAnnouncement, announcement.id, apiBase),
-    {
-      onDone,
-      onClose,
-      object: "das Veröffentlichen der Mitteilung",
-      logEvent: "announcement_publish_failed",
-    },
+  reload,
+}: LifecycleDialogProps & {
+  /**
+   * Liest die Mitteilung neu, nachdem der Server einen inzwischen
+   * geänderten Entwurf abgelehnt hat; lehnt bei einem Fehler ab (ADR 0311).
+   */
+  readonly reload: () => Promise<unknown>;
+}) {
+  // Veröffentlicht wird der Entwurf, den der Dialog zeigt.
+  const read = useActionOn(
+    { opening: announcement.id, data: announcement, reload },
+    { token: (shown) => shown.version },
   );
+  const { pending, error, confirm, blocked, blockedReason } =
+    useLifecycleAction(
+      () => publishAnnouncement(announcement.id, announcement.version, apiBase),
+      {
+        onDone,
+        onClose,
+        object: "das Veröffentlichen der Mitteilung",
+        logEvent: "announcement_publish_failed",
+        read,
+      },
+    );
 
   return (
     <ConfirmationModal
@@ -114,6 +154,8 @@ export function PublishAnnouncementDialog({
       title="Elternmitteilung veröffentlichen"
       confirmText="Jetzt veröffentlichen"
       cancelText="Abbrechen"
+      isConfirmDisabled={blocked}
+      confirmDisabledReason={blockedReason}
       isConfirmLoading={pending}
       loadingText="Wird veröffentlicht …"
     >

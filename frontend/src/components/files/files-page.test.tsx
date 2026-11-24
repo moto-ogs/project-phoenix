@@ -55,6 +55,8 @@ vi.mock("next-auth/react", () => ({ useSession }));
 
 const folder: FileFolder = {
   id: "1",
+  version: "2026-09-01T08:00:00Z",
+  fingerprint: "fp-1",
   name: "Konzeption",
   visibility: "all_staff",
   fileCount: 0,

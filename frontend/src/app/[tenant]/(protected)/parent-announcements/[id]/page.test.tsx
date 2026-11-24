@@ -136,6 +136,7 @@ vi.mock("~/components/ui/confirm-delete-modal", () => ({
 
 const announcement: Announcement = {
   id: "7",
+  version: "2026-09-01T08:00:00Z",
   title: "Sommerfest am Freitag",
   body: "Bitte Kuchen mitbringen.",
   priority: "important",
