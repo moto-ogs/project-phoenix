@@ -204,5 +204,5 @@ Ferienanmeldungen), und den Seeder, der Zahlen sendet.
 
 1. `ident.ID.UnmarshalJSON` liest weiter String oder Zahl.
 2. Ob und wo eine Zahl vom Client abgelehnt wird, entscheidet #7987.
-3. `scripts/check-contract-compat.mjs` lässt in einem Request nur noch
-   `string` der Basis zu `id` werden; die Art `lax_id` trägt kein Release mehr.
+3. `scripts/check-contract-compat.mjs` lässt `lax_id` der Basis nicht mehr zu
+   `id` werden; die Art trägt kein Release mehr.
