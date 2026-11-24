@@ -66,7 +66,7 @@ describe("StudentPhotoSection (controlled)", () => {
     // #8039: Am Haken steht der Wortlaut, den das Team bestätigt.
     expect(
       screen.getByText(
-        "Die Eltern erlauben: Die OGS darf das Kind fotografieren und ein Foto in moto speichern.",
+        "Mit dem Haken bestätigst du: Die Eltern erlauben, dass die OGS das Kind fotografiert und ein Foto in moto speichert.",
       ),
     ).toBeInTheDocument();
     expect(

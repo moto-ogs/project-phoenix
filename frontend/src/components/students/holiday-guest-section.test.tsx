@@ -379,7 +379,7 @@ describe("Foto-Einwilligung des Feriengasts (#4721)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Den Stopp setzen und beenden die Eltern an der Heimatschule (OGS Süd). Er gilt sofort auch hier.",
+        "Den Stopp setzt und beendet die Heimatschule (OGS Süd). Er gilt sofort auch hier.",
       ),
     ).toBeInTheDocument();
   });

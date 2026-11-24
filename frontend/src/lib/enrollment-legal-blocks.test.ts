@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { FormLegalBlock } from "~/lib/enrollment-form-schema-api";
 import {
+  hasStandardLegalBlockOverride as overrideOf,
   agbDocumentSentence,
   asksForHealthInformation,
   isStandardLegalBlock,
@@ -180,5 +181,28 @@ describe("legal decisions of #2787", () => {
       true,
     );
     expect(asksForHealthInformation(undefined)).toBe(false);
+  });
+});
+
+describe("Standardtext der Foto-Einwilligung (#8039)", () => {
+  const standard = STANDARD_LEGAL_BLOCKS.find((block) => block.key === "photo");
+  if (!standard) throw new Error("photo standard block missing");
+
+  it("wertet den Standardtext von vorher nicht als Änderung der Schule", () => {
+    const saved = {
+      ...standard,
+      label:
+        "Mein Kind darf bei Schulveranstaltungen fotografiert werden. Diese Einwilligung ist freiwillig und jederzeit mit Wirkung für die Zukunft widerrufbar.",
+    };
+    expect(overrideOf(saved, standard)).toBe(false);
+  });
+
+  it("wertet einen eigenen Text der Schule weiter als Änderung", () => {
+    expect(
+      overrideOf(
+        { ...standard, label: "Fotos nur beim Sommerfest." },
+        standard,
+      ),
+    ).toBe(true);
   });
 });

@@ -108,7 +108,7 @@ function HolidayGuestRoomHistoryStop({
           moto speichert für dieses Kind keinen Raumverlauf und fragt keine
           Stimmung ab. Du siehst weiter, in welchem Raum das Kind gerade ist.
         </InfoText>
-        <InfoText>{`Den Stopp setzen und beenden die Eltern an der ${home}. Er gilt sofort auch hier.`}</InfoText>
+        <InfoText>{`Den Stopp setzt und beendet die ${home}. Er gilt sofort auch hier.`}</InfoText>
       </div>
     </InfoSection>
   );

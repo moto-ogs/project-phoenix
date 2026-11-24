@@ -634,20 +634,13 @@ Foto-Einwilligung:
   auch sonst nicht, wann die ausrichtende Schule ein Blatt öffnet, und die
   Antwort enthält keine Angabe, die sie nicht selbst hält.
 
-Nicht Teil dieses Nachtrags, jeweils mit eigenem Ticket:
+Nicht Teil dieses Nachtrags, mit eigenem Ticket:
 
-- Der Stopp für Raumverlauf und Stimmung (#3844) gilt weiter nur für den
-  Datensatz an der Heimatschule (`docs/operations/einwilligung-widerruf-3844.md`,
-  Abschnitt 2.2;
-  [#8037](https://github.com/moto-ogs/project-phoenix/issues/8037)).
 - Die freiwilligen Einwilligungen der Ferienanmeldung selbst (Rechtstext-
   Blöcke der Art `consent`, etwa Erinnerungsfotos) sieht die ausrichtende
   OGS weiter nicht (ADR 0116 Punkt 2), und Eltern können sie im Elternportal
   weder sehen noch widerrufen
   ([#8038](https://github.com/moto-ogs/project-phoenix/issues/8038)).
-- Die Foto-Einwilligung trägt keine Textversion in
-  `audit.student_consent_changes`
-  ([#8039](https://github.com/moto-ogs/project-phoenix/issues/8039)).
 
 ### Stopp von Raumverlauf und Stimmung (#8037)
 
@@ -689,3 +682,38 @@ und Eltern hatten dort keinen Weg, ihn zu setzen.
   liefert einen Wahrheitswert. Student Presence ruft für die Stimmung eine
   Funktion aus dem Schema `enrollment` auf. Beides ist hier benannt, weil
   die Architekturprüfung es nicht sieht.
+
+
+### Wortlaut und Textversion der Foto-Einwilligung (#8039)
+
+**Status: Vorgeschlagen mit PR zu #4721; gilt mit dessen Merge.**
+Entscheidung von Yannick Wenger am 24.11.2026: Die Einwilligung mit dem
+Schlüssel `photo` umfasst beides, das Fotografieren des Kindes in der
+Betreuung und das Speichern eines Fotos in moto.
+
+- **Ein Wortlaut.** Elternportal („Die OGS darf dein Kind fotografieren und
+  ein Foto von deinem Kind in moto speichern.“), der Haken des Teams in der
+  Kindakte und der Standardtext der Online-Anmeldung sagen dasselbe. Eine
+  Formularvorlage, die noch den Standardtext von vorher speichert („bei
+  Schulveranstaltungen fotografiert“), zeigt Eltern den neuen; einen Text,
+  den die Schule selbst geschrieben hat, lässt moto stehen.
+- **Textversion.** `audit.student_consent_changes.text_version` hält bei
+  jeder Erteilung im Elternportal und im OGS-Portal `photo-1` fest. Die
+  Regel gehört People Directory (`StudentConsentTextVersion`). Für
+  Erteilungen aus Anmeldung, Import und Migration bleibt die Spalte leer:
+  Dort liegt der Wortlaut im Schnappschuss der Anmeldung
+  (`enrollment.requests.legal_blocks_snapshot`) oder im externen Nachweis.
+  Ein geänderter Wortlaut bekommt eine neue Version.
+- **Früher erteilte Einwilligungen.** moto hat den einen Zeitstempel schon
+  immer für beides genutzt: Die Anmeldung fragte nach Fotos bei
+  Schulveranstaltungen, und derselbe Haken erlaubte das Foto in moto. Das
+  Elternportal zeigt den Wortlaut deshalb an jeder bestehenden
+  Foto-Einwilligung, direkt neben dem Widerruf. Eltern sehen so, wofür die
+  Einwilligung genutzt wird, und können sie mit einem Klick beenden. Eine
+  erneute Abfrage bei allen Eltern ist nicht Teil dieser Entscheidung; ob
+  sie rechtlich nötig ist, prüft der Träger mit seiner Datenschutzberatung.
+- **Was die ausrichtende OGS ableiten darf.** „Foto-Einwilligung liegt vor“
+  am Feriengast heißt: Die Eltern haben der Heimatschule das Fotografieren
+  erlaubt. Ob das die Ferienbetreuung an einer anderen Schule desselben
+  Trägers trägt, hängt vom Text des Trägers ab; moto zeigt den Stand und
+  bittet ohne Einwilligung, nicht zu fotografieren.

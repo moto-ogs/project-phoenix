@@ -14,7 +14,7 @@ func init() {
 		Version:     studentConsentTextVersionVersion,
 		Description: "Einwilligungsverlauf: Eine Foto-Einwilligung hält die Fassung des Wortlauts fest, der ihr zugrunde lag (#8039)",
 		DependsOn: []string{
-			careContractFamiliesVersion, // the newest migration on development
+			parentStudentConsentsVersion, // creates audit.student_consent_changes
 		},
 	})
 	Migrations.MustRegister(studentConsentTextVersionUp, studentConsentTextVersionDown)

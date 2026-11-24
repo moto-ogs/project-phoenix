@@ -222,8 +222,8 @@ export function StudentPhotoSection({
               bestätigt das Team genau diesen Text; der Verlauf hält seine
               Fassung fest. */}
           <span className="mt-0.5 block text-xs text-gray-600">
-            Die Eltern erlauben: Die {careTerm} darf das Kind fotografieren und
-            ein Foto in moto speichern.
+            Mit dem Haken bestätigst du: Die Eltern erlauben, dass die{" "}
+            {careTerm} das Kind fotografiert und ein Foto in moto speichert.
           </span>
           {consentGiven && consentTimestamp ? (
             <span className="mt-0.5 block text-xs text-gray-500">

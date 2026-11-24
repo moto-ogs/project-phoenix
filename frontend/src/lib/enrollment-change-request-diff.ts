@@ -146,7 +146,7 @@ export const DEFAULT_ENROLLMENT_CHANGE_REQUEST_DIFF_COPY: EnrollmentChangeReques
       agb: "AGB der Schule",
       data_processing: "Datenschutzinformation erhalten",
       email_contact: "E-Mail-Kontakt",
-      photo: "Fotos bei Schulveranstaltungen",
+      photo: "Foto-Einwilligung",
       health_data: "Einwilligung Gesundheitsangaben",
     },
     childEntryLabel: "Kind",
