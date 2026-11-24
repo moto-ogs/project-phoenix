@@ -23,6 +23,8 @@ const (
 	seedCatererLinkMarker = "/einladung/"
 )
 
+const seedCatererAccess = "meal_caterer_access"
+
 // seedCatererInvitedAt keeps when the school invited its caterer, so the
 // meal order step reads the invitation from the mailbox after it.
 const seedCatererInvitedAt = "meal_caterer_invited_at"
@@ -97,6 +99,7 @@ func seedMealCaterer(ctx context.Context, rt *Runtime, readMailLink MailLinkRead
 	if err := confirmCatererOrder(rt, email, password, schoolID, day); err != nil {
 		return err
 	}
+	rt.Values[seedCatererAccess] = &SeedPortalCredentials{Email: email, Password: password}
 	fmt.Printf("  caterer %s connected, order of %s confirmed\n", seedCatererName, day)
 	return nil
 }
