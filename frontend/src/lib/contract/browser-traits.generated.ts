@@ -105,3 +105,17 @@ export const noCommitRoutes = new Set<string>([
   "POST /traeger/staff-record-imports/preview",
   "POST /traeger/staff-records/link-preview",
 ]);
+
+export const tenantNoRetryRoutes = new Set<string>([
+  "POST /auth/passkeys/enrollment/challenge",
+  "POST /auth/passkeys/register/options",
+  "POST /auth/password",
+]);
+
+export const publicAssetCache = "public, max-age=86400";
+
+export const fileCacheValues = new Set<string>([
+  "public, max-age=86400",
+  "private, max-age=3600",
+  "private, max-age=86400, immutable",
+]);

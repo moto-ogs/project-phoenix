@@ -1,3 +1,4 @@
+import { invalidJsonResponse } from "~/lib/route-wrapper-utils.server";
 import "server-only";
 import type { NextRequest } from "next/server";
 import { sessionMutationOriginError } from "~/server/auth/same-origin";
@@ -103,7 +104,7 @@ export function createPortalLoginRoute(
     try {
       body = await request.json();
     } catch {
-      return problemResponse(400, "Invalid JSON", request);
+      return invalidJsonResponse(request);
     }
     // A sign-in that must prove the factor by code (a school without
     // remembered devices asked for it, #6955) leaves the device cookie

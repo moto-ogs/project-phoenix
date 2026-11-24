@@ -1215,7 +1215,11 @@ reaches it too; a portal's catalog routes pass under its prefix, and a path
 outside it that a portal page calls belongs in that list.
 `[tenant]/layout.tsx` resolves slugs through the public contract entry
 `GET /auth/tenant/resolve` via `contractGet`. The per-replica cache in
-`tenant-resolve.server.ts` keeps decoded successes for 60 seconds. `POST /auth/switch-tenant` returns a tenant-session JWT
+`tenant-resolve.server.ts` keeps decoded successes and 404s for 60 seconds.
+Only missing, deleted or inactive schools return 404; lookup failures are
+not cached. Provisioning and writes to the generated lookup setting keys
+invalidate the same cache. The registry test checks that none of those keys
+can change through a Träger write. `POST /auth/switch-tenant` returns a tenant-session JWT
 for the target school, not a `scope=school` portal token.
 Verified MFA belongs to the live tenant-session family of the same account,
 not its school or organization. A permitted switch across organizations preserves

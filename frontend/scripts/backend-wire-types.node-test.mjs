@@ -89,11 +89,13 @@ test("finds renamed and merely aliased generated types", () => {
     import type { GroupResponse as GroupWire } from "./contract/groups.generated";
     import type * as roomsContract from "~/lib/contract/rooms.generated";
     export type RoomWire = roomsContract.RoomResponse;
+    type ReadOnlyRoom = Readonly<(roomsContract.RoomResponse)>;
     `,
   );
   assert.deepEqual(summary(findings), [
     ["rename", "GroupWire", ["GroupResponse"]],
     ["alias", "RoomWire", ["roomsContract.RoomResponse"]],
+    ["alias", "ReadOnlyRoom", ["Readonly<(roomsContract.RoomResponse)>"]],
   ]);
 });
 

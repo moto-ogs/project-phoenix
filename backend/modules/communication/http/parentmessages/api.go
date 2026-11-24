@@ -151,7 +151,7 @@ type ParentChatMessageResponse struct {
 	RefTable        string          `json:"ref_table,omitempty"`
 	RefID           *ident.ID       `json:"ref_id,omitempty"`
 	AppliedAt       *time.Time      `json:"applied_at,omitempty"`
-	AppliedBy       string          `json:"applied_by,omitempty"`
+	AppliedBy       *ident.ID       `json:"applied_by,omitempty"`
 	DecisionReason  string          `json:"decision_reason,omitempty"`
 	ReadByStaff     bool            `json:"read_by_staff,omitempty"`
 	ReadByGuardian  bool            `json:"read_by_guardian,omitempty"`
@@ -213,10 +213,6 @@ type OpenThreadRequest struct {
 func toMessageResponses(messages []communication.ParentMessage, viewer ...int64) []ParentChatMessageResponse {
 	out := make([]ParentChatMessageResponse, 0, len(messages))
 	for _, m := range messages {
-		appliedBy := ""
-		if m.AppliedBy != nil {
-			appliedBy = strconv.FormatInt(*m.AppliedBy, 10)
-		}
 		out = append(out, ParentChatMessageResponse{
 			ID:              ident.ID(m.ID),
 			SenderKind:      m.SenderKind,
@@ -232,7 +228,7 @@ func toMessageResponses(messages []communication.ParentMessage, viewer ...int64)
 			RefTable:         m.RefTable,
 			RefID:            (*ident.ID)(m.RefID),
 			AppliedAt:        m.AppliedAt,
-			AppliedBy:        appliedBy,
+			AppliedBy:        (*ident.ID)(m.AppliedBy),
 			DecisionReason:   m.DecisionReason,
 			ReadByStaff:      m.ReadByStaff,
 			ReadByGuardian:   m.ReadByGuardian,

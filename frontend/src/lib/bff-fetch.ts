@@ -6,6 +6,7 @@ import type { z } from "zod";
 import {
   browserRoutePaths,
   noCommitRoutes,
+  tenantNoRetryRoutes,
 } from "./contract/browser-traits.generated";
 import { commits } from "./contract/commit";
 import { DEPLOYMENT_ID_HEADER, deploymentId } from "./deployment-skew";
@@ -167,17 +168,6 @@ interface CallOptions {
 }
 
 type SendOptions = CallOptions & { noRetryAfterRenewal?: boolean };
-
-// Keep this browser policy exhaustive without shipping the server's Zod
-// catalog. The other portal rows do not replay requests after a 401.
-const TENANT_NO_RETRY: Record<
-  KeyOf<Extract<AnyRoute<"tenant">, { noRetryAfterRenewal: string }>>,
-  true
-> = {
-  "POST /auth/password": true,
-  "POST /auth/passkeys/enrollment/challenge": true,
-  "POST /auth/passkeys/register/options": true,
-};
 
 type BffOptions<R, V> = CallOptions & BodyOf<R> & ParamsOf<R> & QueryOf<R, V>;
 
@@ -532,7 +522,7 @@ export function bffJson(
     {
       ...opts,
       noRetryAfterRenewal:
-        portal === "tenant" && Object.hasOwn(TENANT_NO_RETRY, route),
+        portal === "tenant" && tenantNoRetryRoutes.has(route),
     },
     noCommitRoutes.has(route) ? route : undefined,
   );
@@ -582,11 +572,11 @@ export async function bffFile<P extends Portal, K extends FileRouteKey<P>>(
     route.slice(space + 1),
     opts.params,
     opts.query,
+    route,
   );
   return send(portal, method, url, requestInit(method, opts), {
     ...opts,
-    noRetryAfterRenewal:
-      portal === "tenant" && Object.hasOwn(TENANT_NO_RETRY, route),
+    noRetryAfterRenewal: portal === "tenant" && tenantNoRetryRoutes.has(route),
   });
 }
 

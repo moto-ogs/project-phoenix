@@ -3,6 +3,7 @@
 // catalog proxy here (#7563).
 
 import { parseAttendanceActor } from "~/lib/attendance-actor";
+import { knownEnum } from "./contract/known-enum";
 // Types only: the browser loads this module, and a value import would pull
 // every decoder of the generated module into its bundle.
 import type {
@@ -64,14 +65,6 @@ const STUDENT_CONSENT_STATE_VALUES = allOf<StudentConsentState>()([
   "not_recorded",
   "withdrawn",
 ]);
-
-/** The value of a closed set this build knows, else undefined. */
-function knownEnum<T extends string>(
-  values: readonly T[],
-  value: string | undefined,
-): T | undefined {
-  return values.find((known) => known === value);
-}
 
 /** The three projections of `GET /api/students`. */
 export type StudentView =

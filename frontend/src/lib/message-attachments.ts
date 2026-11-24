@@ -7,9 +7,6 @@
 import { bffFile, bffJson, bffFileHref } from "~/lib/bff-fetch";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 
-/** Ein Anhang, wie ihn der Upload und jede Unterhaltung liefert. */
-export type MessageAttachment = Readonly<sharedContract.UploadResponse>;
-
 export const MAX_MESSAGE_ATTACHMENTS = 5;
 export const MAX_MESSAGE_ATTACHMENT_MB = 10;
 const MAX_MESSAGE_ATTACHMENT_BYTES = MAX_MESSAGE_ATTACHMENT_MB * 1024 * 1024;
@@ -58,7 +55,7 @@ export interface MessageAttachmentRoutes {
   readonly upload: (
     file: File,
     signal?: AbortSignal,
-  ) => Promise<MessageAttachment>;
+  ) => Promise<Readonly<sharedContract.UploadResponse>>;
   /** Builds the address for saving or viewing an attachment. */
   readonly downloadUrl: (attachmentId: string, inline?: boolean) => string;
   /**
@@ -200,7 +197,7 @@ export function guardianMessageAttachments(
  * es, damit eine Nachricht nur mit Text genau wie bisher gesendet wird.
  */
 export function attachmentIdArgs(
-  attachments: readonly MessageAttachment[],
+  attachments: readonly Readonly<sharedContract.UploadResponse>[],
 ): [] | [string[]] {
   return attachments.length === 0
     ? []

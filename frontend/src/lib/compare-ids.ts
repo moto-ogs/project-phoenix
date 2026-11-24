@@ -1,3 +1,6 @@
+/** Decimal spelling shared by the wire decoder and session claim reader. */
+export const INT64_DECIMAL = /^(0|-?[1-9]\d{0,18})$/;
+
 /**
  * Exact order of two backend identifiers, which cross the wire as decimal
  * strings of int64 values (ADR 0300). `Number()` rounds anything past 2^53

@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   bool,
+  int64String,
   object,
   optional,
   requestBody,
@@ -53,7 +54,7 @@ export interface demoSessionFacts {
 }
 
 export const demoSessionFactsSchema: z.ZodType<demoSessionFacts, unknown> = object<demoSessionFacts>({
-  access_id: str,
+  access_id: int64String,
   role: optional(str),
   src: optional(str),
   fixed_role: bool,

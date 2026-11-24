@@ -177,7 +177,9 @@ Same steps; the contract names the body type, and the client sends it typed
   without a body or the success envelope without data. An empty 200 is
   not a success envelope.
 - A route whose body carries a password or a code names why it must not be
-  sent twice in `NoRetryAfterRenewal`.
+  sent twice. For catalog proxy routes, set `NoRetryAfterRenewal`. For
+  `RouteFile` routes, pass `retry: { off: "<reason>" }` to the session
+  transport; the generator rejects `NoRetryAfterRenewal` there.
 - A POST that commits nothing its caller asked for (a preview, a search)
   names why in `NoCommit`. When its answer does not match the contract, the
   proxy then offers a retry; every other write asks to reload.
@@ -252,8 +254,9 @@ Only for what belongs to the browser and cannot live in Go:
   `app/api/school/sse/events`) and the client log routes;
 - a device token in a header instead of a browser session, as in
   `frontend/src/app/api/display/dashboard/route.ts`;
-- a BFF cache or cookie the write must change: `settings/values/[key]`
-  purges the cached tenant lookup, `demo/access/sessions` sets the demo cookie;
+- a BFF cache or cookie the write must change: staff and operator writes to
+  school settings purge the tenant lookup; `gencontract` emits
+  the keys from the Go lookup's batch. `demo/access/sessions` sets the demo cookie;
 - a hand-off for a path on the catalog proxy allowlist that Next would give
   to a neighbouring route file (`catalogProxyUnder`); `app/api/catalog-route-selection.test.ts`
   fails when one is missing.

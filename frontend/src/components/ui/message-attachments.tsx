@@ -17,9 +17,6 @@ import { ActionHint } from "./action-hint";
 import { buttonClassName } from "./button";
 import { FileTypeIcon } from "./file-type-icon";
 
-/** One file of a message, in the shape every chat delivers. */
-type MessageAttachmentItem = Readonly<sharedContract.AttachmentResponse>;
-
 export interface MessageAttachmentLabels {
   /** "Bild öffnen: {name}" */
   readonly openImage: (filename: string) => string;
@@ -47,7 +44,9 @@ const GERMAN_LABELS: MessageAttachmentLabels = {
 const MAX_TILES = 4;
 
 /** A single picture keeps its own shape between portrait 3:4 and wide 16:9. */
-function singleAspect(item: MessageAttachmentItem): number {
+function singleAspect(
+  item: Readonly<sharedContract.AttachmentResponse>,
+): number {
   if (!item.width || !item.height) return 4 / 3;
   return Math.min(16 / 9, Math.max(3 / 4, item.width / item.height));
 }
@@ -66,7 +65,7 @@ export function MessageAttachments({
   loadFile,
   labels = GERMAN_LABELS,
 }: Readonly<{
-  attachments: readonly MessageAttachmentItem[];
+  attachments: readonly Readonly<sharedContract.AttachmentResponse>[];
   /** Builds the attachment address for saving or inline display. */
   downloadUrl: (attachmentId: string, inline?: boolean) => string;
   /** Which edge the block hugs: the sender's own messages sit at the end. */

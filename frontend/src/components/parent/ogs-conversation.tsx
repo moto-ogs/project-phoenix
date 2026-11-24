@@ -1,10 +1,10 @@
 "use client";
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { useParentAttachmentLabels } from "~/components/parent/messages/attachment-labels";
 import {
   attachmentIdArgs,
   guardianMessageAttachments,
-  type MessageAttachment,
 } from "~/lib/message-attachments";
 import { useMessageSendAttempt } from "~/lib/swr/optimistic";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -326,11 +326,13 @@ export function OgsConversation({
   const attempt = useMessageSendAttempt(conversationKey);
   const { run: runSend, dismiss: dismissFailedSend } = send;
   // The files of the last attempt: a retry sends them again.
-  const sentFiles = useRef<readonly MessageAttachment[]>([]);
+  const sentFiles = useRef<readonly Readonly<sharedContract.UploadResponse>[]>(
+    [],
+  );
   // Ob der letzte Versuch ankam: sonst behält das Eingabefeld die Dateien.
   const sendArrived = useRef(true);
   const handleSend = useCallback(
-    async (picked?: readonly MessageAttachment[]) => {
+    async (picked?: readonly Readonly<sharedContract.UploadResponse>[]) => {
       const attachments = picked ?? sentFiles.current;
       const body = draft.trim();
       if ((!body && attachments.length === 0) || sending) return;

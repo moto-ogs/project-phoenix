@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SessionClaimsResponse } from "~/lib/contract/auth-session.generated";
+import { INT64_DECIMAL } from "~/lib/compare-ids";
 
 // Older access tokens can name an email; refresh tokens carry the stored key.
 export type JwtPayload = Partial<SessionClaimsResponse> & {
@@ -10,7 +11,7 @@ export type JwtPayload = Partial<SessionClaimsResponse> & {
 };
 
 export function sessionIdentifier(value: unknown): string | undefined {
-  if (typeof value === "string" && /^(0|-?[1-9]\d{0,18})$/.test(value)) {
+  if (typeof value === "string" && INT64_DECIMAL.test(value)) {
     return value;
   }
   // An older token or cookie may still carry exactly representable numbers.
@@ -20,9 +21,9 @@ export function sessionIdentifier(value: unknown): string | undefined {
 }
 
 /**
- * The claims of a JWT, read without verifying it: for logging, metrics and
- * expiry checks only. Null when the token is not three parts or its payload
- * is no JSON object.
+ * Decodes claims without verifying the JWT. Callers establish trust before
+ * using them for a session. Returns null if the payload is not a JSON object
+ * or the token does not have three parts.
  */
 export function decodeJwtPayload(token: string): JwtPayload | null {
   const parts = token.split(".");

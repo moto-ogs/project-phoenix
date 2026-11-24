@@ -12,7 +12,10 @@ import {
   isApiResponseError,
   problemResponse,
 } from "~/lib/api-response-error.server";
-import { parseRequestBody } from "~/lib/route-wrapper-utils.server";
+import {
+  parseRequestBody,
+  successResponse,
+} from "~/lib/route-wrapper-utils.server";
 import type { PortalKey } from "~/lib/portal-paths";
 import { PORTALS } from "~/server/auth/portals";
 import type { ServerSession } from "~/server/auth/session-types";
@@ -140,7 +143,7 @@ export async function ingestClientLogs(
       ),
     );
   }
-  return NextResponse.json({ status: "success", processed: entries.length });
+  return NextResponse.json(successResponse({ processed: entries.length }));
 }
 
 function rateLimited(request: NextRequest) {

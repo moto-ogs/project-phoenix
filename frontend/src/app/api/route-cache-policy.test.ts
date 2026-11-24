@@ -44,11 +44,8 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
   // portal's response wrapper (makePortalHandlers).
   "~/lib/route-wrapper.server": [
     "createGetHandler",
-    "createPostHandler",
     "createPutHandler",
-    "createPatchHandler",
     "createDeleteHandler",
-    "createDeleteWithBodyHandler",
     "catalogProxy",
     "catalogProxyUnder",
     "tenant.route",
@@ -56,7 +53,6 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     "tenant.post",
   ],
   "~/lib/operator/route-wrapper.server": [
-    "createOperatorGetHandler",
     "createOperatorPostHandler",
     "createOperatorPutHandler",
     "createOperatorDeleteHandler",
@@ -69,7 +65,6 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     "parent.route",
   ],
   "~/lib/school/route-wrapper.server": [
-    "createSchoolDeleteHandler",
     "catalogProxy",
     "catalogProxyUnder",
     "school.route",

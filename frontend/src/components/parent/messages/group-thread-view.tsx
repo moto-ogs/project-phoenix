@@ -1,10 +1,10 @@
 "use client";
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { useParentAttachmentLabels } from "~/components/parent/messages/attachment-labels";
 import {
   attachmentIdArgs,
   guardianMessageAttachments,
-  type MessageAttachment,
 } from "~/lib/message-attachments";
 import { useMessageSendAttempt } from "~/lib/swr/optimistic";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -154,11 +154,13 @@ export function ParentGroupThreadView({
     `parent-group-reply:${groupThreadId}:${selected ?? ""}`,
   );
   // The files of the last attempt: a retry sends them again.
-  const sentFiles = useRef<readonly MessageAttachment[]>([]);
+  const sentFiles = useRef<readonly Readonly<sharedContract.UploadResponse>[]>(
+    [],
+  );
   // Whether the last attempt arrived: otherwise the composer keeps the files.
   const sendArrived = useRef(true);
   const handleSend = useCallback(
-    async (picked?: readonly MessageAttachment[]) => {
+    async (picked?: readonly Readonly<sharedContract.UploadResponse>[]) => {
       const attachments = picked ?? sentFiles.current;
       const body = draft.trim();
       if ((!body && attachments.length === 0) || sending || !selected) return;

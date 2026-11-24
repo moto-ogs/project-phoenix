@@ -45,7 +45,7 @@ func TestNoNumericIdentifierRatchet(t *testing.T) {
 	}
 	integers := namedScalarTypes(files, module, builtinIntegers, true)
 	textTypes := namedScalarTypes(files, module, builtinStrings, false)
-	var found []string
+	found := formattedIdentifierFields(files, module, integers, textTypes)
 	for _, file := range files {
 		if !seamPackage(file.dir) {
 			continue
@@ -121,7 +121,7 @@ func parseBackendSources(root, module string) ([]parsedSource, error) {
 			return nil
 		}
 		fset := token.NewFileSet()
-		file, err := parser.ParseFile(fset, full, nil, parser.SkipObjectResolution)
+		file, err := parser.ParseFile(fset, full, nil, 0)
 		if err != nil {
 			return err
 		}

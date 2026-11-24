@@ -1600,7 +1600,7 @@ export const FormSchemaResponseSchema: z.ZodType<FormSchemaResponse, unknown> = 
   fields: nullable(arr(FormFieldSchema)),
   core_requirements: nullable(rec(bool)),
   legal_blocks: nullable(arr(FormLegalBlockSchema)),
-  created_by: str,
+  created_by: int64String,
   created_at: instant,
 });
 
@@ -1861,7 +1861,7 @@ export const AdminCreateLateInviteResponseSchema: z.ZodType<AdminCreateLateInvit
   guardian_first_name: optional(str),
   guardian_last_name: optional(str),
   expires_at: instant,
-  created_by: str,
+  created_by: int64String,
   reason: optional(str),
   token: str,
 });

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import {
   createGetHandler,
-  createPostHandler,
+  tenant,
   createPutHandler,
   createDeleteHandler,
 } from "./route-wrapper.server";
@@ -231,10 +231,10 @@ describe("createGetHandler", () => {
 });
 
 // ============================================================================
-// Tests: createPostHandler
+// Tests: tenant.post
 // ============================================================================
 
-describe("createPostHandler", () => {
+describe("tenant.post", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuth.mockResolvedValue(defaultSession);
@@ -243,7 +243,7 @@ describe("createPostHandler", () => {
   it("returns error response for invalid JSON body", async () => {
     const mockHandler = vi.fn().mockResolvedValue({ id: 1, created: true });
 
-    const handler = createPostHandler(mockHandler);
+    const handler = tenant.post(mockHandler);
 
     // Create a request with invalid JSON body
     const url = new URL("/api/test", "http://localhost:3000");
@@ -263,7 +263,7 @@ describe("createPostHandler", () => {
   it("returns 401 when not authenticated", async () => {
     mockAuth.mockResolvedValueOnce(null);
 
-    const handler = createPostHandler(async () => ({ id: 1 }));
+    const handler = tenant.post(async () => ({ id: 1 }));
     const request = createMockRequest("/api/test", {
       method: "POST",
       body: { name: "Test" },
@@ -277,7 +277,7 @@ describe("createPostHandler", () => {
     const mockHandler = vi.fn().mockResolvedValue({ id: 1, name: "Created" });
     const body = { name: "New Item", description: "Test" };
 
-    const handler = createPostHandler(mockHandler);
+    const handler = tenant.post(mockHandler);
     const request = createMockRequest("/api/test", { method: "POST", body });
     await handler(request, createMockContext());
 
@@ -292,7 +292,7 @@ describe("createPostHandler", () => {
   it("handles empty body gracefully", async () => {
     const mockHandler = vi.fn().mockResolvedValue({ id: 1 });
 
-    const handler = createPostHandler(mockHandler);
+    const handler = tenant.post(mockHandler);
     const request = createMockRequest("/api/test", { method: "POST" });
     await handler(request, createMockContext());
 
@@ -305,7 +305,7 @@ describe("createPostHandler", () => {
   });
 
   it("wraps response in ApiResponse format", async () => {
-    const handler = createPostHandler(async () => ({ id: 1, name: "Created" }));
+    const handler = tenant.post(async () => ({ id: 1, name: "Created" }));
     const request = createMockRequest("/api/test", {
       method: "POST",
       body: { name: "Test" },

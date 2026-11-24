@@ -1,3 +1,4 @@
+import { invalidJsonResponse } from "~/lib/route-wrapper-utils.server";
 import { captureBffException } from "~/lib/sentry-bff.server";
 import type { NextRequest } from "next/server";
 import { contractWrite } from "~/lib/contract/client.server";
@@ -26,7 +27,7 @@ async function POSTHandler(request: NextRequest) {
     try {
       body = (await request.clone().json()) as AcceptInvitationBody;
     } catch {
-      return problemResponse(400, "Invalid JSON", request);
+      return invalidJsonResponse(request);
     }
     if (!body.token) {
       return problemResponse(400, "Missing invitation token", request);

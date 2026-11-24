@@ -7,7 +7,7 @@ import {
 import { withPrivateNoStore } from "~/lib/private-no-store";
 import { handleApiError } from "~/lib/api-response-error.server";
 import type { NextRequest } from "next/server";
-import { operatorJsonErrors } from "~/lib/operator/route-wrapper.server";
+import { invalidJsonResponse } from "~/lib/route-wrapper-utils.server";
 import {
   operatorInvitationCookieName,
   operatorInvitationCookieOptions,
@@ -28,7 +28,7 @@ export const POST = withPrivateNoStore(async (request: NextRequest) => {
       token: operatorInvitationToken(request),
     };
   } catch {
-    return operatorJsonErrors.invalidJsonResponse(request);
+    return invalidJsonResponse(request);
   }
   try {
     const reply = await contractWrite(

@@ -54,7 +54,6 @@ func (rs *Resource) getActivityStudents(w http.ResponseWriter, r *http.Request) 
 			ID: ident.ID(student.ID),
 			// Default name values if no person data
 			FirstName: "Student",
-			LastName:  fmt.Sprintf("%d", student.ID),
 		}
 
 		// Check if student has person data
