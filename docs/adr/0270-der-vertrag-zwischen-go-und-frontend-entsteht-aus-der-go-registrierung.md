@@ -402,7 +402,8 @@ durch die Datenbank-Dienste verlor die Seite des Backends.
    `frontend/src/lib/api-envelope.ts`; Clients führen keine eigene Hülle.
 2. **Ohne Daten.** Eine `NoData`-Route antwortet `{ status: "success",
    data: null }` mit der Nachricht des Backends; ein DELETE ohne Daten
-   antwortet weiter 204, wie bisher.
+   antwortet 204. Auch ein 204 aus Go wird geprüft. Verspricht der Vertrag
+   Daten, ist die leere Antwort ein Vertragsfehler.
 3. **Kein nacktes Payload.** Gegen eine Antwort nur aus `data` spricht, dass
    rund 130 Client-Dateien `.data` lesen und alle mitziehen müssten, ohne
    dass ein Leser etwas gewinnt; für sie spräche nur ein kürzerer Body. Die
@@ -472,3 +473,20 @@ Für [#7945](https://github.com/moto-ogs/project-phoenix/issues/7945).
    Prüfung nur teilweise abbilden und könnte davon abweichen. Go bleibt
    deshalb die einzige Quelle dafür, welche Felder der konkrete Aufruf
    braucht. Der Client erhält eine Ablehnung über den Fehlervertrag.
+
+
+## Nachtrag: Derselbe Decoder auf dem Server
+
+Für [#8003](https://github.com/moto-ogs/project-phoenix/issues/8003):
+Server-Module und Layouts lesen angemeldete JSON-Routen über `contractGet`
+und schreiben über `contractWrite`. Die Staff-Shell lässt nicht lesbare
+optionale Startdaten aus; der Browser lädt sie auf dem normalen Weg.
+Der Schul-Lookup prüft den öffentlichen Routeneintrag und cached nur
+dekodierte Treffer. Der Wächter in `route-backend-paths.test.ts` prüft
+auch Server-Module, nicht nur benannte BFF-Routen.
+
+Katalog-Proxy und Vertragsclient lesen JSON auf demselben Fehlerpfad.
+Eine unlesbare Erfolgsantwort, auch abgeschnittenes JSON, ergibt 502.
+Kann die Änderung festgeschrieben sein, lautet der Fehlercode
+`general.write_answer_unreadable`; bei GET und `NoCommit` bleibt der
+Fehler wiederholbar. Ein 204 ersetzt keine zugesagten Daten.

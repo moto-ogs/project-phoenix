@@ -150,7 +150,8 @@ or write a `Backend*` interface for a registered route.
 - A portal forwards its backend routes through one catalog proxy, so a new
   backend route needs no pass-through `route.ts`. `app/api/proxy-routes.test.ts`
   fails on a `route.ts` whose only code is `proxyGet(...)` and its siblings.
-- Read with `contractGet(entry, options)`; write with
+- In named routes, layouts and server modules, read with
+  `contractGet(entry, options)`; write with
   `contractWrite(entry, body, options)`. Import the entry from its
   generated resource file. The entry types the write body and decodes the
   full answer, with or without an envelope. A malformed answer is a 502,
@@ -236,6 +237,12 @@ The key is the scope claim of the portal's session token
   from the portal's handlers (`makePortalHandlers`). The answer is the
   backend's envelope with the decoded data: `{ status, data, message }`, a
   paginated list also `pagination`, as `common.Response` writes them.
+  A backend 204 still goes through the decoder. A NoData DELETE answers
+  204; a data-bearing DELETE with no answer fails with 502. The proxy
+  and the server contract client share JSON reading: unreadable 2xx
+  answers (including truncated JSON) are 502. After a write that may
+  have committed, they carry `general.write_answer_unreadable`; reads
+  and routes marked `NoCommit` keep the retryable error.
 - The BFF path must equal the backend path below the portal's prefix. A
   route whose BFF path differs (`/api/operator/provisioning/schools` for
   `/operator/schools`) moves its callers to the backend's path first.
@@ -371,9 +378,14 @@ sets `NoRetryAfterRenewal` for a catalog route or passes
 `retry: { off: "<reason>" }` to the named route's session transport;
 `src/app/api/credential-retry.test.ts` proves the credential goes out once
 after a 401. `contractGet` and `contractWrite` send once by default. Only a
-portal's session transport or wrapper can renew and repeat the call. The SSE stream
-and the cached tenant resolve call `sendBackend` without that wrapper; the
-stream keeps its connection open past the header timeout. A route
+portal's session transport or wrapper can renew and repeat the call.
+The Staff shell reads its startup data through the generated decoders;
+a failed optional read is left out so the browser can load it normally.
+`tenant-resolve.server.ts` uses the public `GET /auth/tenant/resolve`
+entry without a session. Its own per-replica cache coalesces concurrent
+lookups, keeps only decoded successes for 60 seconds and retains its
+explicit invalidation. The unregistered SSE stream uses `sendBackend`
+directly and keeps its connection open past the header timeout. A route
 param in a backend path is encoded (`requirePathSegmentParam`,
 `encodeURIComponent`); a query key never replaces a route param. Why and
 the full chain:

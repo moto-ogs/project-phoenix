@@ -29,9 +29,6 @@ const portal = {
   post: session,
   put: session,
   patch: session,
-  api: vi.fn(() => {
-    throw new Error("a public route reached the session client");
-  }),
 } as unknown as Parameters<typeof makeCatalogProxy>[0];
 
 const row = success(z.object({ name: z.string() }));
@@ -377,7 +374,7 @@ describe("makeCatalogProxy, public routes", () => {
       );
       // The backend's limiter of the link keys on the client address.
       expect(sentHeaders()["X-Forwarded-For"]).toBe("172.20.0.4");
-      expect(portal.api).not.toHaveBeenCalled();
+      expect(sessionReads).toBe(0);
     });
 
     it("opens a POST link without a body or idempotency key", async () => {
@@ -560,7 +557,6 @@ describe("makeCatalogProxy, public routes", () => {
       expect(names).not.toContain("idempotency-key");
       expect(sentHeaders()["X-Forwarded-For"]).toBe("172.20.0.4");
       expect(sessionReads).toBe(0);
-      expect(portal.api).not.toHaveBeenCalled();
     });
 
     it("answers a body over the limit 413 with the route's code, before the backend", async () => {

@@ -1,8 +1,8 @@
 import "server-only";
 import { revalidateTag } from "next/cache";
-import { sendBackend } from "~/lib/backend-client.server";
+import { contractGet } from "~/lib/contract/client.server";
 import type { TenantSettings } from "~/lib/tenant-api";
-import type * as authTenantContract from "~/lib/contract/auth-tenant.generated";
+import * as authTenantContract from "~/lib/contract/auth-tenant.generated";
 
 /**
  * The backend's answer to `/auth/tenant/resolve?slug=…`. The contract
@@ -46,14 +46,17 @@ async function loadTenant(
   forwardHeaders: Record<string, string>,
 ): Promise<TenantLookup> {
   // The visitor who starts the lookup supplies the forwarding headers.
-  const res = await sendBackend(
-    `/auth/tenant/resolve?slug=${encodeURIComponent(slug)}`,
-    null,
-    { headers: forwardHeaders },
-  );
-  if (!res.ok) return { ok: false, status: res.status };
-  const { data } = (await res.json()) as { data: TenantResolveResponse };
-  return { ok: true, data };
+  const route = authTenantContract.routes["GET /auth/tenant/resolve"];
+  const result = await contractGet(route, {
+    endpoint: `${route.pattern}?slug=${encodeURIComponent(slug)}`,
+    headers: forwardHeaders,
+  });
+  if (!result.ok) return { ok: false, status: result.error.status };
+  const { settings, ...tenant } = result.value.data;
+  return {
+    ok: true,
+    data: { ...tenant, settings: settings as TenantSettings | null },
+  };
 }
 
 export function invalidateTenantResolve(slug: string): void {

@@ -18,7 +18,29 @@ import {
 } from "./catalog-outside-mounts";
 import { portalRoutes } from "./portals.generated";
 
-const api = vi.fn();
+const { api } = vi.hoisted(() => ({ api: vi.fn() }));
+vi.mock("~/lib/backend-client.server", async (original) => ({
+  ...(await original<typeof import("~/lib/backend-client.server")>()),
+  sendBackend: async (
+    endpoint: string,
+    token: string,
+    {
+      method,
+      json,
+      request,
+      idempotencyKey,
+    }: import("~/lib/backend-client.server").BackendCall,
+  ) => {
+    const answer: unknown = await api(method, endpoint, token, json, {
+      request,
+      ...(idempotencyKey !== undefined && { idempotencyKey }),
+    });
+    if (answer instanceof Response) return answer;
+    return answer === undefined
+      ? new Response(null, { status: 204 })
+      : Response.json(answer);
+  },
+}));
 let sessionReads = 0;
 
 type Handler = (...args: unknown[]) => Promise<unknown>;
@@ -55,7 +77,6 @@ const portal = {
   post: withBody,
   put: withBody,
   patch: withBody,
-  api,
 } as unknown as Parameters<typeof makeCatalogProxy>[0];
 
 const row = success(z.object({ name: z.string() }));
@@ -70,6 +91,7 @@ const routes: CatalogRoute[] = [
   },
   { method: "POST", pattern: "/parent/rows/", response: row },
   { method: "DELETE", pattern: "/parent/rows/{id}", response: row },
+  { method: "DELETE", pattern: "/parent/rows/{id}/seen", response: noData },
   { method: "PUT", pattern: "/parent/rows/{id}/seen", response: noData },
   // A legacy route with response variants has no single decoder.
   { method: "GET", pattern: "/parent/variants/", response: { full: row } },
@@ -425,14 +447,32 @@ describe("makeCatalogProxy", () => {
 
   it("answers a DELETE without a body with nothing", async () => {
     api.mockResolvedValueOnce(undefined);
-    expect(await data(await call("DELETE", ["rows", "1"]))).toBeNull();
+    expect(await data(await call("DELETE", ["rows", "1", "seen"]))).toBeNull();
     expect(sessionReads).toBe(1);
     expect(api.mock.calls[0]?.[3]).toBeUndefined();
   });
 
+  it.each([
+    ["POST", ["rows"], new Response('{"status":', { status: 201 })],
+    ["DELETE", ["rows", "1"], new Response(null, { status: 204 })],
+  ] as const)(
+    "reports an unreadable %s answer after a successful write",
+    async (method, segments, upstream) => {
+      api.mockResolvedValueOnce(upstream);
+      const refusal = await call(method, [...segments]).catch(
+        (error: unknown) => error,
+      );
+      expect(refusal).toMatchObject({ status: 502 });
+      expect((refusal as ApiResponseError).body()).toMatchObject({
+        code: "general.write_answer_unreadable",
+      });
+      expect(api).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it("sends the body of a DELETE that carries one", async () => {
     api.mockResolvedValueOnce(undefined);
-    await call("DELETE", ["rows", "1"], "", { reason: "lost phone" });
+    await call("DELETE", ["rows", "1", "seen"], "", { reason: "lost phone" });
     expect(api.mock.calls[0]?.[3]).toEqual({ reason: "lost phone" });
   });
 
