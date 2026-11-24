@@ -37,10 +37,10 @@ const RESPONSIBILITY_SOURCE_VALUES = [
   "school",
 ] as const satisfies readonly contract.ResponsibilitySource[];
 
-export type ResponsibleBody = contract.ResponsibleBody;
-export type SchoolPartyKind = contract.SchoolPartyKind;
-export type ResponsibilityArea = contract.ResponsibilityArea;
-type ResponsibilitySource = contract.ResponsibilitySource;
+export type ResponsibleBody = (typeof RESPONSIBLE_BODY_VALUES)[number];
+export type SchoolPartyKind = (typeof SCHOOL_PARTY_KIND_VALUES)[number];
+export type ResponsibilityArea = (typeof RESPONSIBILITY_AREA_VALUES)[number];
+type ResponsibilitySource = (typeof RESPONSIBILITY_SOURCE_VALUES)[number];
 
 export { RESPONSIBILITY_SETTINGS_TAB };
 
