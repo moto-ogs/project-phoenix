@@ -161,6 +161,11 @@ type TraegerStaffEmployment struct {
 	StaffID    ident.ID `json:"staff_id"`
 	Active     bool     `json:"active"`
 	ViaPool    bool     `json:"via_pool"`
+	// EmployerName names the Schulträger or the Gemeinde that employs the
+	// staff of this school in place of the Träger (#4811); empty where the
+	// Träger is the employer, as for every Einsatzort of the Vertretungspool.
+	// Only the view of one record carries it.
+	EmployerName string `json:"employer_name"`
 }
 
 // TraegerStaffRecordSummary is one record in the list.
@@ -356,6 +361,15 @@ type TraegerStaffSchools interface {
 	TraegerSchools(ctx context.Context, organizationID int64) ([]TraegerStaffSchool, error)
 }
 
+// TraegerStaffEmployers names per school the body that employs its staff
+// when that is not the Träger (#4811): the school's Schulträger or Gemeinde
+// as the responsibility "Personal" names it, in the caller's Träger
+// transaction. A school whose staff the Träger employs has no entry. The
+// roots bind it to the responsibilities of Organisation & Tenancy.
+type TraegerStaffEmployers interface {
+	SchoolEmployers(ctx context.Context, organizationID int64, schoolIDs []int64) (map[int64]string, error)
+}
+
 // TraegerSchoolEmployment is one live employment of a school as School
 // Membership keeps it, with the personnel number of its profile.
 type TraegerSchoolEmployment struct {
@@ -446,4 +460,7 @@ type TraegerStaffPorts struct {
 	// Emails finds a school's accounts and invitations of an address, for
 	// the check of a hire (#7378); nil outside the records.
 	Emails TraegerSchoolEmails
+	// Employers names the employer at each Einsatzort of a record (#4811);
+	// nil where the Träger employs everywhere.
+	Employers TraegerStaffEmployers
 }

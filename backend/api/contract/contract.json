@@ -1519,6 +1519,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/traeger/master-data/responsibilities/schools/{schoolId}/parties/{kind}",
+      "portals": [
+        "org"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/traeger/report-templates/{id}",
       "portals": [
         "org"
@@ -12357,6 +12365,17 @@
       ],
       "file": true,
       "private_cache": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/master-data/responsibilities",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ResponsibilityOverview"
+      }
     },
     {
       "method": "GET",
@@ -23978,6 +23997,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/traeger/master-data/responsibilities/schools/{schoolId}/parties/{kind}",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SchoolPartyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolParty"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/traeger/master-data/withdrawal-contact",
       "portals": [
         "org"
@@ -24934,10 +24968,41 @@
       ]
     },
     {
+      "name": "ResponsibilityArea",
+      "values": [
+        "billing",
+        "contracts",
+        "staff"
+      ]
+    },
+    {
+      "name": "ResponsibilitySource",
+      "values": [
+        "default",
+        "school",
+        "traeger"
+      ]
+    },
+    {
+      "name": "ResponsibleBody",
+      "values": [
+        "gemeinde",
+        "schultraeger",
+        "traeger"
+      ]
+    },
+    {
       "name": "RoleForm",
       "values": [
         "feminine",
         "masculine"
+      ]
+    },
+    {
+      "name": "SchoolPartyKind",
+      "values": [
+        "gemeinde",
+        "schultraeger"
       ]
     },
     {
@@ -30758,6 +30823,40 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AreaResponsibility",
+      "go_type": "organizationtenancy.AreaResponsibility",
+      "fields": [
+        {
+          "name": "area",
+          "schema": {
+            "kind": "enum",
+            "ref": "ResponsibilityArea"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "enum",
+            "ref": "ResponsibleBody"
+          }
+        },
+        {
+          "name": "source",
+          "schema": {
+            "kind": "enum",
+            "ref": "ResponsibilitySource"
+          }
+        },
+        {
+          "name": "effective",
+          "schema": {
+            "kind": "enum",
+            "ref": "ResponsibleBody"
           }
         }
       ]
@@ -73340,6 +73439,12 @@
           }
         },
         {
+          "name": "issuer_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "acceptance_text",
           "schema": {
             "kind": "string"
@@ -85072,6 +85177,23 @@
       ]
     },
     {
+      "name": "ResponsibilityOverview",
+      "go_type": "organizationtenancy.ResponsibilityOverview",
+      "fields": [
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolResponsibility"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "ResubmitAbsenceRequest",
       "go_type": "timetracking.ResubmitAbsenceRequest",
       "request": true,
@@ -90844,6 +90966,215 @@
       ]
     },
     {
+      "name": "SchoolParty",
+      "go_type": "organizationtenancy.SchoolParty",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "enum",
+            "ref": "SchoolPartyKind"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "street",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "postal_code",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "city",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contact_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contact_phone",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contact_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "creditor_id",
+          "text_reason": "SEPA creditor identifier of the body, a text the bank assigns",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_holder",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "iban",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bic",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bank_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolPartyRequest",
+      "go_type": "traeger.SchoolPartyRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "street",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "postal_code",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "city",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contact_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contact_phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contact_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "creditor_id",
+          "optional": true,
+          "text_reason": "SEPA creditor identifier of the body, a text the bank assigns",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_holder",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "iban",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bic",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bank_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolPlan",
       "go_type": "traegercatalog.SchoolPlan",
       "fields": [
@@ -90962,6 +91293,46 @@
           "name": "name",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolResponsibility",
+      "go_type": "organizationtenancy.SchoolResponsibility",
+      "fields": [
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "areas",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AreaResponsibility"
+            }
+          }
+        },
+        {
+          "name": "parties",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolParty"
+            }
           }
         }
       ]
@@ -108587,6 +108958,12 @@
           "name": "via_pool",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "employer_name",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

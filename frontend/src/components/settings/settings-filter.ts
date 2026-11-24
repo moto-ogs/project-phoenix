@@ -34,6 +34,9 @@ export const TAB_LABELS: Record<string, string> = {
   // Einsatzplanung des Trägers und ihre Arbeitszeitregeln (#4708); nur im
   // Träger-Portal.
   einsatzplanung: "Einsatzplanung",
+  // Wer Verträge schließt, abrechnet und Personal anstellt (#4811):
+  // Träger-Wert, die Schule darf abweichen.
+  zustaendigkeiten: "Zuständigkeiten",
 };
 
 export function displayTabLabel(tab: SchemaTab): string {
@@ -111,6 +114,9 @@ export const categoryLabels: Record<string, string> = {
   "vertrag-bestaetigungen": "Bestätigungen und Mitteilungen an die Eltern",
   // Wann der Betreuungsvertrag gilt (#4680); Träger-Wert, Schule darf abweichen.
   vertragsabschluss: "Betreuungsvertrag",
+  // Zuständigkeiten (#4811); im Träger-Portal heißt die Karte „Für alle
+  // Schulen“ (`SettingsCategory title`), weil darunter die Schulen stehen.
+  "zustaendige-stellen": "Zuständige Stellen",
   schulstunden: "Schulstunden",
   schülerdaten: "Kinder und Familien",
   "sehen-und-bearbeiten": "Sehen und bearbeiten",

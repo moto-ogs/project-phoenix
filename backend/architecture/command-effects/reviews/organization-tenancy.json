@@ -160,6 +160,36 @@
       "target_owner": "operator-dashboard-view"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolResponsibilitySettings.SchoolResponsibilityChoices",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilitySettings.SchoolResponsibilityChoices",
+      "reason": "Read-only: read where a school's responsibility comes from (default, Träger value or school override) from the resolved settings snapshot; no database access, write, lock or scope change.",
+      "source_owner": "organization-tenancy",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsSnapshot.Layer",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolResponsibilitySettings.SchoolResponsibilityChoices",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilitySettings.SchoolResponsibilityChoices",
+      "reason": "Read-only: read the body a responsibility names from the resolved settings snapshot of a school; no database access, write, lock or scope change.",
+      "source_owner": "organization-tenancy",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsSnapshot.String",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolResponsibilitySettings.SchoolResponsibilityChoices",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilitySettings.SchoolResponsibilityChoices",
+      "reason": "Read-only: resolve the settings responsibility.* of the Träger's schools in one administrative read of its own (tenant.ContextWithoutTransaction): the Träger transaction of the caller hides school settings by row security and shares nothing with it (ADR 0105, ADR 0318); no write, lock or change of the caller's scope.",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveManyForTenants",
+      "target_owner": "settings-platform"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/cmd.tenantExportAudit.BeginTenantExport",
       "classification": "platform",

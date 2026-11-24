@@ -131,6 +131,10 @@
       "write_owner": "organization-tenancy"
     },
     {
+      "name": "platform.school_responsible_parties",
+      "write_owner": "organization-tenancy"
+    },
+    {
       "name": "platform.traeger_bank_accounts",
       "write_owner": "organization-tenancy"
     },

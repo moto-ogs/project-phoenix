@@ -294,6 +294,7 @@ const TRAEGER_TOPICS: readonly HelpTopic[] = [
   articles.traegerBriefkopfTopic(),
   articles.traegerDocumentTemplatesTopic(),
   articles.traegerDocumentKindsTopic(),
+  articles.traegerResponsibilitiesTopic(),
   articles.traegerSettingsTopic(),
   articles.traegerModulesTopic(),
 ];

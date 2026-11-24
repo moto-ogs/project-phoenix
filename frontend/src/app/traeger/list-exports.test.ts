@@ -107,6 +107,7 @@ const NOT_A_LIST: Readonly<Record<string, string>> = {
   "/einstellungen/dokumentarten": "Einstellungen",
   "/einstellungen/module": "Einstellungen",
   "/einstellungen/schulrollen": "Einstellungen",
+  "/einstellungen/zustaendigkeiten": "Einstellungen",
   "/ferien/[id]": "Einzelansicht",
   "/ferien/[id]/anmeldungen/[registrationId]": "Einzelansicht mit eigener PDF",
   "/ferien/[id]/formular": "Formular",

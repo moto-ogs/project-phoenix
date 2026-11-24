@@ -75,6 +75,9 @@ export function getTraegerHelpTopicForPath(pathname: string): HelpTopicId {
   if (onPage(page, "/einstellungen/dokumentarten")) {
     return HELP_TOPICS.traegerDocumentKinds;
   }
+  if (onPage(page, "/einstellungen/zustaendigkeiten")) {
+    return HELP_TOPICS.traegerResponsibilities;
+  }
   if (onPage(page, "/einstellungen/abrechnung")) {
     return HELP_TOPICS.traegerHolidayContribution;
   }

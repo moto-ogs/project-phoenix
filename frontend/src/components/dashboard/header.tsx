@@ -161,6 +161,7 @@ const TRAEGER_PAGE_TITLES: ReadonlyArray<
   ["/einstellungen/briefkopf", "Briefkopf und Vorlagen"],
   ["/einstellungen/abrechnung", "Abrechnungsvorgaben"],
   ["/einstellungen/dokumentarten", "Dokumentarten"],
+  ["/einstellungen/zustaendigkeiten", "Zuständigkeiten"],
   ["/einstellungen/zugriffsprotokoll", "Zugriffsprotokoll"],
   ["/einstellungen/module", "moto-Module"],
   ["/einstellungen", "Allgemein"],

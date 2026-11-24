@@ -293,6 +293,7 @@ export const HELP_TOPIC_AUDIENCE = {
   [HELP_TOPICS.traegerBriefkopf]: "traeger",
   [HELP_TOPICS.traegerDocumentTemplates]: "traeger",
   [HELP_TOPICS.traegerDocumentKinds]: "traeger",
+  [HELP_TOPICS.traegerResponsibilities]: "traeger",
   [HELP_TOPICS.traegerCareContracts]: "traeger",
   [HELP_TOPICS.traegerCareTimeOverruns]: "traeger",
   [HELP_TOPICS.traegerArrivalPickupTimes]: "traeger",

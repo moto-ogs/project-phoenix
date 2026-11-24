@@ -210,7 +210,7 @@ func (n *Notices) endNoticeMailTarget(ctx context.Context, organizationID int64,
 	if err != nil {
 		return endNoticeMailTarget{}, fmt.Errorf("care contract: letterhead: %w", err)
 	}
-	if letterheadMissing(letterhead) {
+	if letterheadMissing(issuedSender(letterhead, record)) {
 		return endNoticeMailTarget{notSentReason: carecontract.EndNoticeLetterheadMissing}, nil
 	}
 	party, _ := recipient(record.Parties)
@@ -273,7 +273,7 @@ func (n *Notices) officeTraeger(ctx context.Context, reviewer carecontract.Revie
 	if err != nil {
 		return "", err
 	}
-	return traegerName(head.SenderText, record.Version.Terms), nil
+	return traegerName(issuedSender(head.SenderText, record), record.Version.Terms), nil
 }
 
 // endNoticeText fills the Träger's template of the notice of a decided end.

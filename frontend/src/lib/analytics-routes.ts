@@ -273,6 +273,7 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/einstellungen/module",
   "/einstellungen/schulrollen",
   "/einstellungen/zugriffsprotokoll",
+  "/einstellungen/zustaendigkeiten",
   "/ferien",
   "/ferien/:id",
   "/ferien/:id/anmeldungen",

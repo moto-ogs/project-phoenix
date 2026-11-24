@@ -154,6 +154,11 @@ export interface OfferingTemplate {
   readonly priceCents: number | null;
   readonly active: boolean;
   readonly template: ContractTemplate | null;
+  /**
+   * The Schulträger or the Gemeinde that concludes the contracts of the
+   * school in place of the Träger (#4811); empty for the Träger.
+   */
+  readonly issuerName: string;
   /** The read state a save sends back (ADR 0311). */
   readonly version: string;
 }
@@ -488,6 +493,7 @@ function offeringFromBackend(
     noticeText: row.notice_text,
     schoolId: row.school_id,
     schoolName: row.school_name,
+    issuerName: row.issuer_name,
     offeringId: row.offering_id,
     offeringName: row.offering_name,
     phaseName: row.phase_name,

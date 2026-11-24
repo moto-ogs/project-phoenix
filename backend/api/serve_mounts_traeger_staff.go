@@ -33,13 +33,17 @@ import (
 // day the Kontingente default their year to.
 func mountTraegerStaffRoutes(root, tenant chi.Router, staffAdmin *workforce.StaffAdmin, months workforce.TraegerStaffMonths, organizations HolidayOrganizations,
 	persons TraegerPersons, membership TraegerStaff, accessLog owners.DataAccessAppender, sites workforce.TraegerShiftSites,
-	exports workforce.TraegerStaffExportSchool, settings TraegerBrandingSettings,
+	exports workforce.TraegerStaffExportSchool, settings TraegerBrandingSettings, schoolSettings owners.ResponsibilitySchoolSettings,
 	identity identityaccess.Owner, today func() timezone.Date,
 ) error {
-	if staffAdmin == nil || months == nil || exports == nil || settings == nil {
+	if staffAdmin == nil || months == nil || exports == nil || settings == nil || schoolSettings == nil {
 		return errors.New("traeger staff records: the personnel record, the school months and exports and the settings are required")
 	}
 	collaborators, err := traegerStaffCollaborators(months, organizations, persons, membership, accessLog, exports, settings, identity)
+	if err == nil {
+		// Who employs at each Einsatzort of a record (#4811).
+		collaborators.Employers = owners.StaffEmployers{Responsible: owners.NewSchoolResponsibilities(schoolSettings)}
+	}
 	if err != nil {
 		return err
 	}

@@ -223,6 +223,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/einstellungen/module": "moto-Module",
     "/einstellungen/schulrollen": "Rollen für Schulen",
     "/einstellungen/zugriffsprotokoll": "Zugriffsprotokoll",
+    "/einstellungen/zustaendigkeiten": "Zuständigkeiten",
     "/ferien": "Ferienbetreuung",
     "/ferien/:id": "Ferienzeitraum",
     "/ferien/:id/anmeldungen": "Ferienanmeldungen",
