@@ -245,8 +245,11 @@ func (s *Service) refuseAssignedOrReleaseRetired(ctx context.Context, id int64) 
 
 // lockAssignedStaff takes the balance lock of every staff member bound to
 // the template, ascending, so concurrent edits cannot deadlock against each
-// other. The template lock held before keeps an assignment from adding a
-// member until the edit commits.
+// other. The template lock held before conflicts with the share lock every
+// assignment takes on the template before its people (the bulk assignment
+// and the schedule save in template mode): an assignment in flight holds
+// the edit until it committed and is then read here, one after the edit
+// reads the edited template.
 func (s *Service) lockAssignedStaff(ctx context.Context, modelID int64) ([]int64, error) {
 	staffIDs, err := s.assignments.AssignedStaffIDs(ctx, modelID)
 	if err != nil {

@@ -77,7 +77,7 @@ func NewWorkSessionSide(capability workforce.Capability, ports TimeTrackingPorts
 	if capability == nil || staff == nil {
 		return nil, errors.New("time tracking: the Workforce capability and the staff lookup are required")
 	}
-	clock, err := timetracking.NewClock(timetracking.Dependencies{Rows: timetracking.TimeTrackingRows(capability, postgres.NewTraegerStaffStore()), Ports: ports})
+	clock, err := timetracking.NewClock(timetracking.Dependencies{Rows: timetracking.TimeTrackingRows(capability, postgres.NewTraegerStaffStore(), postgres.NewTemplateLocks()), Ports: ports})
 	if err != nil {
 		return nil, err
 	}
@@ -129,5 +129,5 @@ func (s *WorkSessionSide) TimeTracking() (*TimeTracking, error) {
 
 // NewEmploymentReset binds invitation resets to the ordinary audited readers.
 func NewEmploymentReset(admin workforce.StaffRecordAdmin, capability workforce.Capability, employment workforce.StaffEmployments, audit workforce.StaffAdminAudit, ports TimeTrackingPorts) workforce.EmploymentResetter {
-	return application.NewEmploymentReset(admin, capability, employment, audit, timetracking.NewEmploymentTimeReset(timetracking.Dependencies{Rows: timetracking.TimeTrackingRows(capability, postgres.NewTraegerStaffStore()), Ports: ports}, application.NewEmploymentScheduleReset(capability, employment, audit)))
+	return application.NewEmploymentReset(admin, capability, employment, audit, timetracking.NewEmploymentTimeReset(timetracking.Dependencies{Rows: timetracking.TimeTrackingRows(capability, postgres.NewTraegerStaffStore(), postgres.NewTemplateLocks()), Ports: ports}, application.NewEmploymentScheduleReset(capability, employment, audit)))
 }

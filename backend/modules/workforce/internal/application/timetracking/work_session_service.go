@@ -39,6 +39,7 @@ type workSessionService struct {
 	externalCaregivers ExternalCaregiverStaff
 	scheduleRepo       WorkSessionSchedules
 	workModelRepo      WorkSessionTimeModels
+	templateLocks      WorkTimeTemplateLocks
 	settings           settingsResolver
 	staffShiftRepo     WorkSessionShifts
 	holidayReader      HolidayDatesReader

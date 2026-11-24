@@ -1,11 +1,13 @@
 package behaviortest
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -406,4 +408,71 @@ func TestUpdateSchedule_RefusesAScheduleChangedSinceItWasRead(t *testing.T) {
 	assert.Equal(t, scheduleVersion(t, ctx, token, staff.ID), answer.Data.Version, "the save answers the version of what it stored")
 	again := put(360, answer.Data.Version)
 	require.Equal(t, http.StatusOK, again.Code, again.Body.String())
+}
+
+// TestUpdateSchedule_TemplateWaitsForAnEditOfTheTemplate proves a schedule
+// save in template mode waits for an uncommitted edit of the template and
+// then binds the person to the edited template's snapshot, never the old
+// one. It does not prove the lock order (template before person); that order
+// is enforced at runtime by tenant.OrderLock.
+func TestUpdateSchedule_TemplateWaitsForAnEditOfTheTemplate(t *testing.T) {
+	t.Parallel()
+
+	ctx := setupStaffRoute(t)
+	capability := newWorkforceCapability(t, ctx.db)
+	model, err := capability.CreateWorkTimeModel(testpkg.Ctx(t), workforce.CreateWorkTimeModel{WorkTimeModelFields: workforce.WorkTimeModelFields{
+		Name: "Vorlage im Umbau", RotationLength: 1, RotationAnchorDate: "2026-06-01",
+		Entries: []workforce.WorkTimeModelEntry{{WeekIndex: 0, DayOfWeek: dayMonday, TargetMinutes: 300}},
+	}})
+	require.NoError(t, err)
+	testpkg.OwnTestWorkTimeModel(t, ctx.db, model.ID)
+	staff := testpkg.CreateTestStaff(t, ctx.db, "TemplateRace", "Bound")
+	claims := testutil.DefaultTestClaims()
+	claims.Permissions = []string{"time_tracking:manage"}
+	token := testutil.MintTestJWT(t, claims)
+	body := map[string]any{"mode": "template", "model_id": fmt.Sprint(model.ID), "expected_version": scheduleVersion(t, ctx, token, staff.ID)}
+
+	// The edit: it holds the template as UpdateWorkTimeModel does and has
+	// written the new Soll, but not committed.
+	bg := context.Background()
+	edit, err := ctx.db.BeginTx(bg, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = edit.Rollback() })
+	var editPID int64
+	require.NoError(t, edit.NewRaw("SELECT pg_backend_pid()").Scan(bg, &editPID))
+	_, err = edit.ExecContext(bg, "SELECT id FROM config.work_time_models WHERE id = ? FOR NO KEY UPDATE", model.ID)
+	require.NoError(t, err)
+	_, err = edit.ExecContext(bg, "UPDATE config.work_time_model_entries SET target_minutes = 420 WHERE model_id = ?", model.ID)
+	require.NoError(t, err)
+
+	saved := make(chan *httptest.ResponseRecorder, 1)
+	go func() {
+		saved <- testutil.ExecuteRequest(ctx.router, testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/staff/%d/schedule", staff.ID), body, testutil.WithJWTBearer(token)))
+	}()
+	deadline := time.Now().Add(30 * time.Second)
+	for waiting := false; !waiting; {
+		select {
+		case rr := <-saved:
+			require.FailNow(t, "the schedule save did not wait for the template edit", "%d %s", rr.Code, rr.Body.String())
+		default:
+		}
+		require.True(t, time.Now().Before(deadline), "the schedule save never waited for the template edit")
+		require.NoError(t, ctx.db.NewRaw(`SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE ?::int = ANY(pg_blocking_pids(pid)))`, editPID).Scan(bg, &waiting))
+		if !waiting {
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+	require.NoError(t, edit.Commit())
+
+	var rr *httptest.ResponseRecorder
+	select {
+	case rr = <-saved:
+	case <-time.After(30 * time.Second):
+		require.FailNow(t, "the schedule save never finished")
+	}
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	rows, err := capability.CurrentStaffSchedule(testpkg.Ctx(t), staff.ID)
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	assert.Equal(t, 420, rows[0].TargetMinutes, "the person carries the edited template's Soll")
 }

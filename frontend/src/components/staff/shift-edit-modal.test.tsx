@@ -457,4 +457,75 @@ describe("ShiftEditModal", () => {
       }),
     );
   });
+
+  // ADR 0311: the form is a draft on the shift it opened with. A newer
+  // shift handed in refills only an untouched form; typed input stays and
+  // goes out with the version it was typed on, so the server refuses it
+  // instead of the save confirming a state nobody saw.
+  it("keeps typed input on the version it opened with and refills an untouched form", async () => {
+    const updateShift = vi.mocked(staffShiftService.updateShift);
+    updateShift.mockReset();
+    updateShift.mockResolvedValue(undefined as never);
+    const opened: StaffShift = {
+      ...oneHourShift,
+      id: "5",
+      startTime: "08:00",
+      endTime: "16:00",
+      version: "shift-v1",
+    };
+    const newer: StaffShift = {
+      ...opened,
+      startTime: "09:00",
+      version: "shift-v2",
+    };
+    const props = {
+      isOpen: true,
+      mode: "edit" as const,
+      staffId: "7",
+      staffName: "Ada Lovelace",
+      date: "2026-07-06",
+      shiftTypes: [],
+      staffOptions: [],
+      existingReplacements: [],
+      onClose: vi.fn(),
+      onSaved: vi.fn(),
+    };
+    const view = render(<ShiftEditModal {...props} shift={opened} />);
+    fireEvent.change(screen.getByLabelText("Ende"), {
+      target: { value: "14:00" },
+    });
+    view.rerender(<ShiftEditModal {...props} shift={newer} />);
+
+    expect(screen.getByLabelText("Beginn")).toHaveValue("08:00");
+    expect(screen.getByLabelText("Ende")).toHaveValue("14:00");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Änderungen speichern" }),
+    );
+    await waitFor(() => expect(updateShift).toHaveBeenCalledTimes(1));
+    expect(updateShift).toHaveBeenLastCalledWith(
+      "5",
+      expect.objectContaining({
+        startTime: "08:00",
+        endTime: "14:00",
+        expectedVersion: "shift-v1",
+      }),
+    );
+
+    // A new opening without input follows the newest shift.
+    view.rerender(<ShiftEditModal {...props} isOpen={false} shift={opened} />);
+    view.rerender(<ShiftEditModal {...props} shift={opened} />);
+    view.rerender(<ShiftEditModal {...props} shift={newer} />);
+    expect(screen.getByLabelText("Beginn")).toHaveValue("09:00");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Änderungen speichern" }),
+    );
+    await waitFor(() => expect(updateShift).toHaveBeenCalledTimes(2));
+    expect(updateShift).toHaveBeenLastCalledWith(
+      "5",
+      expect.objectContaining({
+        startTime: "09:00",
+        expectedVersion: "shift-v2",
+      }),
+    );
+  });
 });

@@ -5,7 +5,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import type { ReactElement, ReactNode } from "react";
+import { useState, type ReactElement, type ReactNode } from "react";
 import { SWRConfig, useSWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
@@ -1233,5 +1233,269 @@ describe("ShiftEditModal split and the rule on screen (ADR 0311)", () => {
       screen.getByRole("button", { name: "Serie bearbeiten" }),
     ).toBeDisabled();
     expect(splitSeries).toHaveBeenCalledTimes(1);
+  });
+});
+
+// A split effective today also checks the opened occurrence's version
+// (ADR 0311): after its refusal the next split waits for both reads and
+// sends the stored series and the stored occurrence.
+describe("ShiftEditModal split effective today after a refusal", () => {
+  it("waits for the series and the occurrence read and sends both new versions", async () => {
+    const today: StaffShift = { ...seriesShift, date: "2026-09-09" };
+    splitSeries
+      .mockRejectedValueOnce(
+        new ApiError("changed since it was read", 409, {
+          code: "general.changed_since_read",
+        }),
+      )
+      .mockResolvedValueOnce({ seriesId: "6", created: 1, skippedDates: [] });
+    let handOver: () => void = () => undefined;
+    const occurrenceRead = new Promise<void>((resolve) => {
+      handOver = resolve;
+    });
+    function Harness() {
+      const [shift, setShift] = useState(today);
+      return (
+        <ShiftEditModal
+          isOpen
+          mode="edit"
+          staffId="7"
+          staffName="Ada Lovelace"
+          date="2026-09-09"
+          shift={shift}
+          shiftTypes={[]}
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+          reloadShift={async () => {
+            await occurrenceRead;
+            setShift({ ...today, version: "occurrence-v2" });
+          }}
+        />
+      );
+    }
+    render(<Harness />);
+    expect(await screen.findByText(/Mo, Mi/)).toBeInTheDocument();
+    const save = () =>
+      screen.getByRole("button", { name: "Änderungen speichern" });
+    const splitFromHere = async () => {
+      fireEvent.click(save());
+      const following = await screen.findByRole("button", {
+        name: /Ab jetzt dauerhaft/,
+      });
+      await waitFor(() => expect(following).toBeEnabled());
+      fireEvent.click(following);
+    };
+    const reads = getSeries.mock.calls.length;
+    getSeries.mockResolvedValue({ ...seriesRule, version: "series-v2" });
+    await splitFromHere();
+
+    // The series is read again; the occurrence still is on its way, and
+    // nothing can go out with its refused version.
+    await waitFor(() =>
+      expect(getSeries.mock.calls.length).toBeGreaterThan(reads),
+    );
+    await waitFor(() =>
+      expect(save()).toHaveAttribute("aria-disabled", "true"),
+    );
+    fireEvent.click(save());
+    expect(
+      screen.queryByRole("button", { name: /Ab jetzt dauerhaft/ }),
+    ).not.toBeInTheDocument();
+
+    await act(async () => {
+      handOver();
+      await occurrenceRead;
+    });
+    await waitFor(() => expect(save()).not.toHaveAttribute("aria-disabled"));
+    await splitFromHere();
+    await waitFor(() => expect(splitSeries).toHaveBeenCalledTimes(2));
+    expect(splitSeries).toHaveBeenLastCalledWith(
+      "5",
+      expect.objectContaining({
+        expectedVersion: "series-v2",
+        expectedOccurrenceVersion: "occurrence-v2",
+      }),
+    );
+  });
+});
+
+// The dialog's reload answers with the stored shift (ADR 0311). An answer
+// equal to what the dialog holds changes no prop: only the answer lets the
+// day's draft settle, and only the settled draft's token goes out.
+describe("ShiftEditModal reload answered with the stored shift", () => {
+  const today: StaffShift = { ...seriesShift, date: "2026-09-09" };
+  const refusal = () =>
+    new ApiError("changed since it was read", 409, {
+      code: "general.changed_since_read",
+    });
+
+  function renderToday(reloadShift: () => Promise<unknown>) {
+    render(
+      <ShiftEditModal
+        isOpen
+        mode="edit"
+        staffId="7"
+        staffName="Ada Lovelace"
+        date="2026-09-09"
+        shift={today}
+        shiftTypes={[]}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        reloadShift={
+          reloadShift as () => Promise<{
+            shift: StaffShift;
+            covers: StaffShift[];
+          }>
+        }
+      />,
+    );
+  }
+
+  it("unlocks the split again when only the series changed", async () => {
+    splitSeries
+      .mockRejectedValueOnce(refusal())
+      .mockResolvedValueOnce({ seriesId: "6", created: 1, skippedDates: [] });
+    // The occurrence is unchanged: same version, same props.
+    renderToday(() => Promise.resolve({ shift: today, covers: [] }));
+    expect(await screen.findByText(/Mo, Mi/)).toBeInTheDocument();
+    const save = () =>
+      screen.getByRole("button", { name: "Änderungen speichern" });
+    const splitFromHere = async () => {
+      fireEvent.click(save());
+      const following = await screen.findByRole("button", {
+        name: /Ab jetzt dauerhaft/,
+      });
+      await waitFor(() => expect(following).toBeEnabled());
+      fireEvent.click(following);
+    };
+    getSeries.mockResolvedValue({ ...seriesRule, version: "series-v2" });
+    await splitFromHere();
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Serie"),
+      ),
+    ).toBeVisible();
+
+    await waitFor(() => expect(save()).not.toHaveAttribute("aria-disabled"));
+    await splitFromHere();
+    await waitFor(() => expect(splitSeries).toHaveBeenCalledTimes(2));
+    expect(splitSeries).toHaveBeenLastCalledWith(
+      "5",
+      expect.objectContaining({
+        expectedVersion: "series-v2",
+        expectedOccurrenceVersion: "occurrence-v1",
+      }),
+    );
+  });
+
+  it("keeps 'Serie speichern' locked until the occurrence is read again", async () => {
+    splitSeries
+      .mockRejectedValueOnce(refusal())
+      .mockResolvedValueOnce({ seriesId: "6", created: 1, skippedDates: [] });
+    let handOver: () => void = () => undefined;
+    const occurrenceRead = new Promise<void>((resolve) => {
+      handOver = resolve;
+    });
+    function Harness() {
+      const [shift, setShift] = useState(today);
+      return (
+        <ShiftEditModal
+          isOpen
+          mode="edit"
+          staffId="7"
+          staffName="Ada Lovelace"
+          date="2026-09-09"
+          shift={shift}
+          shiftTypes={[]}
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+          reloadShift={async () => {
+            await occurrenceRead;
+            const stored = { ...today, version: "occurrence-v2" };
+            setShift(stored);
+            return { shift: stored, covers: [] };
+          }}
+        />
+      );
+    }
+    render(<Harness />);
+    await openSeriesEditor();
+    const reads = getSeries.mock.calls.length;
+    getSeries.mockResolvedValue({ ...seriesRule, version: "series-v2" });
+    fireEvent.click(screen.getByRole("button", { name: "Serie speichern" }));
+    await waitFor(() =>
+      expect(getSeries.mock.calls.length).toBeGreaterThan(reads),
+    );
+
+    // The series is read again, the occurrence not yet: the editor opens,
+    // but nothing goes out with the refused occurrence version.
+    await openSeriesEditor();
+    const saveSeries = () =>
+      screen.getByRole("button", { name: /^Serie speichern/ });
+    expect(saveSeries()).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(saveSeries());
+    expect(splitSeries).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      handOver();
+      await occurrenceRead;
+    });
+    // The stored occurrence arrived: the dialog starts anew on it.
+    await openSeriesEditor();
+    await waitFor(() =>
+      expect(saveSeries()).not.toHaveAttribute("aria-disabled"),
+    );
+    fireEvent.click(saveSeries());
+    await waitFor(() => expect(splitSeries).toHaveBeenCalledTimes(2));
+    expect(splitSeries).toHaveBeenLastCalledWith(
+      "5",
+      expect.objectContaining({
+        expectedVersion: "series-v2",
+        expectedOccurrenceVersion: "occurrence-v2",
+      }),
+    );
+  });
+
+  it("confirms the occurrence the person edited, not a newer one in the props", async () => {
+    splitSeries.mockResolvedValue({
+      seriesId: "6",
+      created: 1,
+      skippedDates: [],
+    });
+    const props = {
+      isOpen: true,
+      mode: "edit" as const,
+      staffId: "7",
+      staffName: "Ada Lovelace",
+      date: "2026-09-09",
+      shiftTypes: [],
+      onClose: vi.fn(),
+      onSaved: vi.fn(),
+    };
+    const view = render(<ShiftEditModal {...props} shift={today} />);
+    expect(await screen.findByText(/Mo, Mi/)).toBeInTheDocument();
+    // Typed on the day: the draft keeps the occurrence it opened from.
+    fireEvent.change(screen.getByLabelText("Ende"), {
+      target: { value: "14:00" },
+    });
+    // A colleague's change of the occurrence arrives with the plan reload.
+    view.rerender(
+      <ShiftEditModal
+        {...props}
+        shift={{ ...today, version: "occurrence-v2" }}
+      />,
+    );
+    await openSeriesEditor();
+    fireEvent.click(screen.getByRole("button", { name: "Serie speichern" }));
+
+    // The server refuses instead of rewriting a day the person never saw.
+    await waitFor(() =>
+      expect(splitSeries).toHaveBeenCalledWith(
+        "5",
+        expect.objectContaining({
+          expectedOccurrenceVersion: "occurrence-v1",
+        }),
+      ),
+    );
   });
 });

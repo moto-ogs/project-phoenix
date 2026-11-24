@@ -2,6 +2,7 @@ package timetracking
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
@@ -97,9 +98,6 @@ func (s *workSessionService) SaveCustomScheduleAsTemplate(ctx context.Context, s
 }
 
 func (s *workSessionService) UpdateSchedule(ctx context.Context, staff *StaffScheduleBinding, in ScheduleUpdateInput) error {
-	if err := s.checkScheduleRead(ctx, staff, in.ExpectedVersion); err != nil {
-		return err
-	}
 	mode := in.Mode
 	if mode == "" {
 		// Backwards compatibility: missing mode + flat entries means the
@@ -109,13 +107,21 @@ func (s *workSessionService) UpdateSchedule(ctx context.Context, staff *StaffSch
 			in.RotationLength = 1
 		}
 	}
+	if mode == "template" {
+		if in.ModelID == nil || *in.ModelID == 0 {
+			return scheduleValidationErrorf("model_id is required for mode=template")
+		}
+		if err := s.lockScheduleTemplate(ctx, *in.ModelID); err != nil {
+			return err
+		}
+	}
+	if err := s.checkScheduleRead(ctx, staff, in.ExpectedVersion); err != nil {
+		return err
+	}
 
 	var err error
 	switch mode {
 	case "template":
-		if in.ModelID == nil || *in.ModelID == 0 {
-			return scheduleValidationErrorf("model_id is required for mode=template")
-		}
 		err = s.AssignScheduleTemplate(ctx, staff, *in.ModelID)
 	case "custom":
 		err = s.applyCustomSchedule(ctx, staff, in)
@@ -160,6 +166,21 @@ func (s *workSessionService) applyCustomSchedule(ctx context.Context, staff *Sta
 	}
 
 	return s.ApplyCustomScheduleRows(ctx, staff, entries, anchor, calendar.Date(in.ValidFrom))
+}
+
+// lockScheduleTemplate holds the template a person is bound to before the
+// person's gate, as an edit of the template takes it before the people it
+// refreshes. Without it the edit misses a person bound meanwhile, who keeps
+// the old template's snapshot while bound to the edited one. A missing
+// template stays the template read's not-found.
+func (s *workSessionService) lockScheduleTemplate(ctx context.Context, modelID int64) error {
+	if s.templateLocks == nil {
+		return errors.New("assign schedule template: the template lock is not composed")
+	}
+	if _, _, err := s.templateLocks.ShareLockWorkTimeModel(ctx, modelID); err != nil {
+		return fmt.Errorf("lock work time model: %w", err)
+	}
+	return nil
 }
 
 // checkScheduleRead takes the staff member's balance gate, which every

@@ -21,6 +21,12 @@ func WithWorkSessionShifts(repo WorkSessionShifts) WorkSessionOption {
 	return func(s *workSessionService) { s.staffShiftRepo = repo }
 }
 
+// WithWorkSessionTemplateLocks supplies the template lock a schedule save in
+// template mode takes before the person's gate.
+func WithWorkSessionTemplateLocks(locks WorkTimeTemplateLocks) WorkSessionOption {
+	return func(s *workSessionService) { s.templateLocks = locks }
+}
+
 // WithWorkSessionHolidays supplies the non-working-day resolver that reduces
 // the weekly Soll in the history summaries (#1418 3a).
 func WithWorkSessionHolidays(reader HolidayDatesReader) WorkSessionOption {

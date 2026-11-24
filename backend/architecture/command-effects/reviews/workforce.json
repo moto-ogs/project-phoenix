@@ -17165,7 +17165,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.ExportTransfer.Transfer",
-      "reason": "Read-only target already reviewed as query: workforce reaches *modules/documentrendering/lists.RendererService.Render (document-rendering) through api.exportTransferPort.Transfer. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: workforce reaches *modules/documentrendering/lists.RendererService.Render (document-rendering) through api.exportTransferPort.Transfer. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed with #8017: the digest moved because the unused transaction wrappers around the schedule commands were removed; the binding still only renders, no persistent, lock or scope effect.",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.RendererService.Render",
       "target_owner": "document-rendering"
@@ -17175,7 +17175,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.ExportTransfer.Transfer",
-      "reason": "Read-only target already reviewed as query: workforce reaches modules/documentrendering/lists.RenderWorkbook (document-rendering) through api.exportTransferPort.Transfer. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: workforce reaches modules/documentrendering/lists.RenderWorkbook (document-rendering) through api.exportTransferPort.Transfer. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed with #8017: the digest moved because the unused transaction wrappers around the schedule commands were removed; the binding still only renders, no persistent, lock or scope effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.RenderWorkbook",
       "target_owner": "document-rendering"

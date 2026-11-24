@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -64,4 +65,13 @@ type WorkSessionSchedules interface {
 type WorkSessionTimeModels interface {
 	FindByID(context.Context, int64) (*WorkTimeTemplate, error)
 	Create(context.Context, *WorkTimeTemplate, []*WorkTimeTemplateEntry) error
+}
+
+// WorkTimeTemplateLocks holds the template a schedule save binds a person
+// to FOR SHARE until commit. An edit of the template locks it for writing:
+// one waits for the other, so either the edit finds the person bound and
+// refreshes them, or the save reads the edited template. Held before the
+// person's gate, in the order an edit takes them (tenant.OrderLock).
+type WorkTimeTemplateLocks interface {
+	ShareLockWorkTimeModel(ctx context.Context, id int64) (bool, domain.OperationStats, error)
 }
