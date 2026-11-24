@@ -1,8 +1,6 @@
 package files
 
 import (
-	"errors"
-	"io"
 	"net/http"
 	"time"
 
@@ -222,7 +220,7 @@ func (rs *Resource) deleteFolder(w http.ResponseWriter, r *http.Request) {
 	}
 	// A DELETE without a body confirms no dialog; the owner refuses it.
 	var req FolderRemovalRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil && !errors.Is(err, io.EOF) {
+	if err := common.DecodeReadStateBody(r, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Anhänge an Elternmitteilungen (#2890) — die Seite, die dieses Paket beiträgt.
@@ -64,8 +66,8 @@ func (s *service) hasAttachments(ctx context.Context, announcementID int64) bool
 type AttachmentSupport interface {
 	AnnouncementExists(ctx context.Context, announcementID int64) (bool, error)
 	AnnouncementEditable(ctx context.Context, announcementID int64) (bool, error)
-	LockAnnouncementForAttachmentChange(ctx context.Context, announcementID int64) (bool, bool, error)
-	ResetAnnouncementEngagement(ctx context.Context, announcementID int64) error
+	LockAnnouncementForAttachmentChange(ctx context.Context, announcementID int64, expectedVersion string) (bool, bool, error)
+	ResetAnnouncementEngagement(ctx context.Context, announcementID int64) (string, error)
 }
 
 // AnnouncementExists reports whether the announcement exists in the current
@@ -110,7 +112,12 @@ func (s *service) AnnouncementEditable(ctx context.Context, announcementID int64
 // an, oder ein Upload committet hinter einer Veröffentlichung, die zwischen
 // Prüfung und INSERT durchging. Die Veröffentlichung nimmt dieselbe Zeilensperre
 // (sie schreibt published_at), damit sind beide Reihenfolgen serialisiert.
-func (s *service) LockAnnouncementForAttachmentChange(ctx context.Context, announcementID int64) (bool, bool, error) {
+//
+// expectedVersion is the version of the draft the editor holds (ADR 0311):
+// a change of the draft since then refuses the attachment change, so the
+// version it answers (ResetAnnouncementEngagement) covers nothing the editor
+// has not seen.
+func (s *service) LockAnnouncementForAttachmentChange(ctx context.Context, announcementID int64, expectedVersion string) (bool, bool, error) {
 	a, err := s.repo.FindByIDForUpdate(ctx, announcementID)
 	if err != nil {
 		return false, false, fmt.Errorf("announcement: lock for attachment change: %w", err)
@@ -119,7 +126,10 @@ func (s *service) LockAnnouncementForAttachmentChange(ctx context.Context, annou
 		return false, false, nil
 	}
 	editable, err := s.attachmentsEditable(ctx, a)
-	return true, editable, err
+	if err != nil || !editable {
+		return true, editable, err
+	}
+	return true, true, readstate.Check(expectedVersion, readstate.Of(a.UpdatedAt))
 }
 
 // attachmentsEditable: a draft accepts attachment changes, except a
@@ -144,11 +154,20 @@ func (s *service) attachmentsEditable(ctx context.Context, a *StaffParentAnnounc
 
 // ResetAnnouncementEngagement drops the reads, acknowledgements and poll
 // answers of a draft after its attachments changed.
-func (s *service) ResetAnnouncementEngagement(ctx context.Context, announcementID int64) error {
+func (s *service) ResetAnnouncementEngagement(ctx context.Context, announcementID int64) (string, error) {
 	if err := s.repo.ClearEngagement(ctx, announcementID); err != nil {
-		return fmt.Errorf("announcement: clear engagement after attachment change: %w", err)
+		return "", fmt.Errorf("announcement: clear engagement after attachment change: %w", err)
 	}
-	return nil
+	// ClearEngagement stamped the draft as changed: its attachments are
+	// part of what a publication confirms (ADR 0311).
+	a, err := s.repo.FindByID(ctx, announcementID)
+	if err != nil {
+		return "", fmt.Errorf("announcement: read version after attachment change: %w", err)
+	}
+	if a == nil {
+		return "", ErrNotFound
+	}
+	return readstate.Of(a.UpdatedAt), nil
 }
 
 // purgeAttachments queues the cleanup intents for every attachment whose bytes

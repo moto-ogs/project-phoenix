@@ -7,7 +7,6 @@ package operatorannouncements
 
 import (
 	"errors"
-	"io"
 	"net/http"
 	"time"
 
@@ -289,7 +288,7 @@ func (rs *AnnouncementsResource) PublishAnnouncement(w http.ResponseWriter, r *h
 	}
 	// A POST without a body names no state; the owner refuses it.
 	req := &PublishAnnouncementRequest{}
-	if err := render.DecodeJSON(r.Body, req); err != nil && !errors.Is(err, io.EOF) {
+	if err := common.DecodeReadStateBody(r, req); err != nil {
 		common.RenderError(w, r, common.OperatorInvalidRequest(err))
 		return
 	}

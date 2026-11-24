@@ -322,8 +322,8 @@ type CareCancellationPublisher interface {
 type ParentAnnouncementAttachmentSupport interface {
 	AnnouncementExists(context.Context, int64) (bool, error)
 	AnnouncementEditable(context.Context, int64) (bool, error)
-	LockAnnouncementForAttachmentChange(context.Context, int64) (bool, bool, error)
-	ResetAnnouncementEngagement(context.Context, int64) error
+	LockAnnouncementForAttachmentChange(context.Context, int64, string) (bool, bool, error)
+	ResetAnnouncementEngagement(context.Context, int64) (string, error)
 }
 
 type ParentAnnouncementCapability interface {

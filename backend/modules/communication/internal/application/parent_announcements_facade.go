@@ -256,13 +256,14 @@ func (p *parentAnnouncements) AnnouncementEditable(ctx context.Context, id int64
 	return editable, mapParentAnnouncementError(err)
 }
 
-func (p *parentAnnouncements) LockAnnouncementForAttachmentChange(ctx context.Context, id int64) (bool, bool, error) {
-	exists, editable, err := p.service.LockAnnouncementForAttachmentChange(ctx, id)
+func (p *parentAnnouncements) LockAnnouncementForAttachmentChange(ctx context.Context, id int64, expectedVersion string) (bool, bool, error) {
+	exists, editable, err := p.service.LockAnnouncementForAttachmentChange(ctx, id, expectedVersion)
 	return exists, editable, mapParentAnnouncementError(err)
 }
 
-func (p *parentAnnouncements) ResetAnnouncementEngagement(ctx context.Context, id int64) error {
-	return mapParentAnnouncementError(p.service.ResetAnnouncementEngagement(ctx, id))
+func (p *parentAnnouncements) ResetAnnouncementEngagement(ctx context.Context, id int64) (string, error) {
+	version, err := p.service.ResetAnnouncementEngagement(ctx, id)
+	return version, mapParentAnnouncementError(err)
 }
 
 func mapParentAnnouncementInput(input communication.ParentAnnouncementInput) Input {

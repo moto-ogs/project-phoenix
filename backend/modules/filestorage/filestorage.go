@@ -265,10 +265,13 @@ func TenantReads(files Capability) (TenantAttachmentReads, error) {
 	return reads, nil
 }
 
-// AttachmentCommand changes the attachments of a draft announcement.
+// AttachmentCommand changes the attachments of a draft announcement. Both
+// carry the version of the draft the editor holds and answer the version
+// the change stamped (ADR 0311): the attachments are part of what a
+// publication confirms.
 type AttachmentCommand interface {
-	UploadAttachment(ctx context.Context, announcementID int64, upload Upload, actor Actor) (Attachment, error)
-	DeleteAttachment(ctx context.Context, announcementID, attachmentID int64, actor Actor) error
+	UploadAttachment(ctx context.Context, announcementID int64, expectedVersion string, upload Upload, actor Actor) (Attachment, string, error)
+	DeleteAttachment(ctx context.Context, announcementID, attachmentID int64, expectedVersion string, actor Actor) (string, error)
 }
 
 // AttachmentPurger is the promise the Communication owner relies on: intents

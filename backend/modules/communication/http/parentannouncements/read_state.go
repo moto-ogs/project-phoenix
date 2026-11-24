@@ -1,9 +1,7 @@
 package announcement
 
 import (
-	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -20,10 +18,10 @@ type fingerprintRequest struct {
 	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
-// decodeReadState reads the token body of a command. A missing body is an
-// empty token, which the owner refuses as a changed state.
+// decodeReadState reads the token body of a command
+// (common.DecodeReadStateBody).
 func decodeReadState(w http.ResponseWriter, r *http.Request, dst any) bool {
-	if err := json.NewDecoder(r.Body).Decode(dst); err != nil && !errors.Is(err, io.EOF) {
+	if err := common.DecodeReadStateBody(r, dst); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return false
 	}

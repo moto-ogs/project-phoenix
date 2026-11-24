@@ -44,13 +44,36 @@ func (s *FixedSeeder) saveClassArrivalTimes(class string, schedules []map[string
 
 // publishParentAnnouncement publishes the announcement its create answered
 // as its author read it: with the version of that stored draft (ADR 0311).
-// An attachment does not change the draft's version. A nil auth uses the
-// client's bound session.
+// A nil auth uses the client's bound session.
 func publishParentAnnouncement(rt *Runtime, auth *AuthRef, id int64, created []byte) ([]byte, error) {
 	version, err := readDataVersion(func(string) ([]byte, error) { return created, nil }, "the created announcement")
 	if err != nil {
 		return nil, err
 	}
+	return publishParentAnnouncementVersion(rt, auth, id, version)
+}
+
+// attachToParentAnnouncement uploads a file to the draft of the given
+// version and answers the version the upload stamped: an attachment is part
+// of what the publication confirms (ADR 0311).
+func attachToParentAnnouncement(rt *Runtime, id int64, version, filename string, document []byte) (string, error) {
+	raw, err := rt.Client.PostFile(fmt.Sprintf("/api/announcement-attachments/%d?expected_version=%s", id, url.QueryEscape(version)), "file", filename, document)
+	if err != nil {
+		return "", err
+	}
+	var uploaded struct {
+		Data struct {
+			AnnouncementVersion string `json:"announcement_version"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &uploaded); err != nil {
+		return "", fmt.Errorf("parse attachment upload: %w", err)
+	}
+	return uploaded.Data.AnnouncementVersion, nil
+}
+
+// publishParentAnnouncementVersion publishes the draft of the given version.
+func publishParentAnnouncementVersion(rt *Runtime, auth *AuthRef, id int64, version string) ([]byte, error) {
 	path := fmt.Sprintf("/api/parent-announcements/%d/publish", id)
 	body := map[string]any{"expected_version": version}
 	if auth != nil {

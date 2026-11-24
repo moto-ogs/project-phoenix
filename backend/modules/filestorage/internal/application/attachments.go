@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/filestorage"
 	"github.com/moto-ogs/project-phoenix/modules/filestorage/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/filestorage/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Anhänge an Elternmitteilungen (#2890).
@@ -27,19 +28,20 @@ import (
 func (s *Service) AuthorizeAttachmentUpload(ctx context.Context, announcementID int64) error {
 	return s.runRead(ctx, "authorize_attachment_upload", func(ctx context.Context, o *op) error {
 		return s.write(ctx, o, func(txCtx context.Context, o *op) error {
-			return s.checkAttachmentUpload(txCtx, o, announcementID, false)
+			return s.checkAttachmentUpload(txCtx, o, announcementID, nil)
 		})
 	})
 }
 
-// checkAttachmentUpload is the upload gate. Without lock it reads without
-// locking, because it decides nothing; with lock it takes the announcement's
-// row lock, so the limit count and the draft state still hold at commit time.
-func (s *Service) checkAttachmentUpload(ctx context.Context, o *op, announcementID int64, lock bool) error {
+// checkAttachmentUpload is the upload gate. Without a lock (expectedVersion
+// nil) it reads without locking, because it decides nothing; with it, it
+// takes the announcement's row lock, so the limit count, the draft state and
+// its version still hold at commit time.
+func (s *Service) checkAttachmentUpload(ctx context.Context, o *op, announcementID int64, expectedVersion *string) error {
 	if announcementID <= 0 {
 		return fmt.Errorf("%w: announcement id is required", filestorage.ErrInvalid)
 	}
-	if err := s.requireEditableAnnouncement(ctx, announcementID, lock); err != nil {
+	if err := s.requireEditableAnnouncement(ctx, announcementID, expectedVersion); err != nil {
 		return err
 	}
 	count, stats, err := s.deps.Attachments.CountByOwner(ctx, announcementID)
@@ -56,7 +58,9 @@ func (s *Service) checkAttachmentUpload(ctx context.Context, o *op, announcement
 // requireEditableAnnouncement resolves "exists" and "editable" and turns them
 // into the caller's error. Nicht gefunden und veröffentlicht sind für den
 // Aufrufer verschieden: „gibt es nicht" ist 404, „ist schon raus" ist 409.
-func (s *Service) requireEditableAnnouncement(ctx context.Context, announcementID int64, lock bool) error {
+// expectedVersion non-nil locks the announcement and compares its version
+// (ADR 0311); nil reads without a lock.
+func (s *Service) requireEditableAnnouncement(ctx context.Context, announcementID int64, expectedVersion *string) error {
 	if s.deps.Announcements == nil {
 		return errors.New("announcement guard is not wired; refusing attachment change")
 	}
@@ -64,8 +68,8 @@ func (s *Service) requireEditableAnnouncement(ctx context.Context, announcementI
 		exists, editable bool
 		err              error
 	)
-	if lock {
-		exists, editable, err = s.deps.Announcements.LockAnnouncementForAttachmentChange(ctx, announcementID)
+	if expectedVersion != nil {
+		exists, editable, err = s.deps.Announcements.LockAnnouncementForAttachmentChange(ctx, announcementID, *expectedVersion)
 		if err != nil {
 			return err
 		}
@@ -107,16 +111,17 @@ func (s *Service) requireAnnouncement(ctx context.Context, announcementID int64)
 }
 
 // UploadAttachment stores one attachment: intent, object, metadata, settle.
-func (s *Service) UploadAttachment(ctx context.Context, announcementID int64, value filestorage.Upload, who filestorage.Actor) (filestorage.Attachment, error) {
+func (s *Service) UploadAttachment(ctx context.Context, announcementID int64, expectedVersion string, value filestorage.Upload, who filestorage.Actor) (filestorage.Attachment, string, error) {
 	upload, actor := domainUpload(value), s.actor(who)
 	var attachment domain.Document
+	var version string
 	err := s.run("upload_attachment", func(o *op) error {
 		tenantID := s.deps.Tx.TenantID(ctx)
 		if err := normalizeUpload(tenantID, actor, &upload); err != nil {
 			return err
 		}
 		if err := s.write(ctx, o, func(txCtx context.Context, o *op) error {
-			return s.checkAttachmentUpload(txCtx, o, announcementID, false)
+			return s.checkAttachmentUpload(txCtx, o, announcementID, nil)
 		}); err != nil {
 			return err
 		}
@@ -137,30 +142,31 @@ func (s *Service) UploadAttachment(ctx context.Context, announcementID int64, va
 		if err != nil {
 			return err
 		}
-		attachment, err = s.createAttachment(uploadCtx, o, announcementID, storedName, size, upload, actor)
+		attachment, version, err = s.createAttachment(uploadCtx, o, announcementID, expectedVersion, storedName, size, upload, actor)
 		if err != nil {
 			rejectedBeforeCommit := errors.Is(err, filestorage.ErrInvalid) ||
 				errors.Is(err, filestorage.ErrAttachmentNotFound) ||
 				errors.Is(err, filestorage.ErrAttachmentPublished) ||
-				errors.Is(err, filestorage.ErrAttachmentLimitReached)
+				errors.Is(err, filestorage.ErrAttachmentLimitReached) ||
+				errors.Is(err, readstate.ErrChanged)
 			s.releaseFailedUpload(ctx, k, tenantID, announcementID, storedName, rejectedBeforeCommit, err)
 			return err
 		}
 		return nil
 	})
 	if err != nil {
-		return filestorage.Attachment{}, err
+		return filestorage.Attachment{}, "", err
 	}
-	return toAttachment(attachment), nil
+	return toAttachment(attachment), version, nil
 }
 
-func (s *Service) createAttachment(ctx context.Context, o *op, announcementID int64, storedName string, size int64, upload domain.Upload, actor domain.Actor) (attachment domain.Document, err error) {
+func (s *Service) createAttachment(ctx context.Context, o *op, announcementID int64, expectedVersion, storedName string, size int64, upload domain.Upload, actor domain.Actor) (attachment domain.Document, version string, err error) {
 	err = s.write(ctx, o, func(txCtx context.Context, o *op) error {
 		// Die Prüfung wiederholt sich innerhalb der Transaktion, diesmal unter
 		// der Zeilensperre der Mitteilung: zwischen der Vorabprüfung und hier
 		// kann die Mitteilung veröffentlicht worden sein, und ein zweiter
 		// Upload kann zeitgleich denselben freien Platz sehen.
-		if err := s.checkAttachmentUpload(txCtx, o, announcementID, true); err != nil {
+		if err := s.checkAttachmentUpload(txCtx, o, announcementID, &expectedVersion); err != nil {
 			return err
 		}
 		document := domain.NewDocument{
@@ -181,14 +187,15 @@ func (s *Service) createAttachment(ctx context.Context, o *op, announcementID in
 		if err != nil {
 			return fmt.Errorf("complete attachment upload cleanup intent: %w", err)
 		}
-		if err := s.deps.Announcements.ResetAnnouncementEngagement(txCtx, announcementID); err != nil {
+		changed, err := s.deps.Announcements.ResetAnnouncementEngagement(txCtx, announcementID)
+		if err != nil {
 			return err
 		}
-		attachment = created
+		attachment, version = created, changed
 		return s.record(txCtx, actor, ports.EventAttachmentUploaded, nil, &announcementID, &created.ID,
 			fmt.Sprintf("Anhang „%s“ an Elternmitteilung gehängt (%d Bytes)", created.FilenameDisplay, created.SizeBytes))
 	})
-	return attachment, err
+	return attachment, version, err
 }
 
 // ListAttachments returns the live attachments of an announcement for a staff
@@ -221,7 +228,7 @@ func (s *Service) ListAttachments(ctx context.Context, announcementID int64) (fi
 		}
 		editable = true
 		err := s.write(ctx, o, func(txCtx context.Context, o *op) error {
-			return s.requireEditableAnnouncement(txCtx, announcementID, false)
+			return s.requireEditableAnnouncement(txCtx, announcementID, nil)
 		})
 		switch {
 		case err == nil:
@@ -271,17 +278,17 @@ func (s *Service) OpenAttachment(ctx context.Context, announcementID, attachment
 }
 
 // DeleteAttachment soft-deletes an attachment of a draft and removes its bytes
-// after commit.
-func (s *Service) DeleteAttachment(ctx context.Context, announcementID, attachmentID int64, who filestorage.Actor) error {
+// after commit. It answers the draft's new version.
+func (s *Service) DeleteAttachment(ctx context.Context, announcementID, attachmentID int64, expectedVersion string, who filestorage.Actor) (version string, err error) {
 	actor := s.actor(who)
-	return s.run("delete_attachment", func(o *op) error {
+	err = s.run("delete_attachment", func(o *op) error {
 		if err := requireActor(actor); err != nil {
 			return err
 		}
 		var deletedDocument domain.Document
 		if err := s.write(ctx, o, func(txCtx context.Context, o *op) error {
-			document, err := s.deleteAttachmentRecord(txCtx, o, announcementID, attachmentID, actor)
-			deletedDocument = document
+			document, changed, err := s.deleteAttachmentRecord(txCtx, o, announcementID, attachmentID, expectedVersion, actor)
+			deletedDocument, version = document, changed
 			return err
 		}); err != nil {
 			return err
@@ -291,6 +298,7 @@ func (s *Service) DeleteAttachment(ctx context.Context, announcementID, attachme
 		}
 		return nil
 	})
+	return version, err
 }
 
 // --- tenant-scoped reads ------------------------------------------------------
@@ -419,38 +427,39 @@ func (s *Service) CountAttachments(ctx context.Context, announcementID int64) (c
 	return count, err
 }
 
-func (s *Service) deleteAttachmentRecord(txCtx context.Context, o *op, announcementID, attachmentID int64, actor domain.Actor) (document domain.Document, err error) {
-	if err := s.requireEditableAnnouncement(txCtx, announcementID, true); err != nil {
-		return document, err
+func (s *Service) deleteAttachmentRecord(txCtx context.Context, o *op, announcementID, attachmentID int64, expectedVersion string, actor domain.Actor) (document domain.Document, version string, err error) {
+	if err := s.requireEditableAnnouncement(txCtx, announcementID, &expectedVersion); err != nil {
+		return document, "", err
 	}
 	live, found, stats, err := s.deps.Attachments.FindForOwner(txCtx, announcementID, attachmentID, false)
 	o.add(stats)
 	if err != nil {
-		return document, err
+		return document, "", err
 	}
 	if !found {
 		// Already soft-deleted: retry the byte removal instead of a
-		// 404 the caller cannot act on.
+		// 404 the caller cannot act on. The draft did not change: its
+		// version stays.
 		deleted, found, stats, err := s.deps.Attachments.FindForOwner(txCtx, announcementID, attachmentID, true)
 		o.add(stats)
 		if err != nil {
-			return document, err
+			return document, "", err
 		}
 		if !found {
-			return document, filestorage.ErrAttachmentNotFound
+			return document, "", filestorage.ErrAttachmentNotFound
 		}
-		document = deleted
-		return document, nil
+		return deleted, expectedVersion, nil
 	}
 	deleted, stats, err := s.deps.Attachments.SoftDelete(txCtx, live.ID, actor.AccountID)
 	o.add(stats)
 	if err != nil {
-		return document, err
+		return document, "", err
 	}
-	if err := s.deps.Announcements.ResetAnnouncementEngagement(txCtx, announcementID); err != nil {
-		return document, err
+	version, err = s.deps.Announcements.ResetAnnouncementEngagement(txCtx, announcementID)
+	if err != nil {
+		return document, "", err
 	}
 	document = deleted
-	return document, s.record(txCtx, actor, ports.EventAttachmentDeleted, nil, &announcementID, &deleted.ID,
+	return document, version, s.record(txCtx, actor, ports.EventAttachmentDeleted, nil, &announcementID, &deleted.ID,
 		fmt.Sprintf("Anhang „%s“ von Elternmitteilung entfernt", deleted.FilenameDisplay))
 }

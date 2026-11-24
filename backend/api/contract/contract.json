@@ -55,6 +55,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "AttachmentRemovalRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "AttachmentRemovedResponse"
@@ -13712,9 +13716,15 @@
       "portals": [
         "tenant"
       ],
+      "query": [
+        {
+          "name": "expected_version",
+          "kind": "string"
+        }
+      ],
       "response": {
         "kind": "ref",
-        "ref": "AnnouncementAttachmentResponse"
+        "ref": "UploadedAttachmentResponse"
       },
       "max_body_bytes": 26218496,
       "multipart": true,
@@ -31321,11 +31331,31 @@
       ]
     },
     {
+      "name": "AttachmentRemovalRequest",
+      "go_type": "files.AttachmentRemovalRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "AttachmentRemovedResponse",
       "go_type": "files.AttachmentRemovedResponse",
       "fields": [
         {
           "name": "announcement_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "announcement_version",
           "schema": {
             "kind": "string"
           }
@@ -109788,6 +109818,48 @@
           "optional": true,
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "UploadedAttachmentResponse",
+      "go_type": "files.UploadedAttachmentResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "filename",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "size_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "content_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "uploaded_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "announcement_version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

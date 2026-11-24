@@ -15,8 +15,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"net/url"
 	"path/filepath"
 	"testing"
+	"time"
 
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
@@ -24,9 +26,11 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	filestorageModule "github.com/moto-ogs/project-phoenix/modules/filestorage"
 	filestoreAPI "github.com/moto-ogs/project-phoenix/modules/filestorage/http/files"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
 )
 
 // attachmentContext extends the file-storage harness with the attachment
@@ -50,7 +54,21 @@ func setupAttachmentRoute(t *testing.T) *attachmentContext {
 	return &attachmentContext{apiContext: c, announcementID: announcement.ID}
 }
 
+// draftVersion is the version of the draft as its editor reads it: the
+// token every attachment change sends (ADR 0311).
+func draftVersion(t *testing.T, db bun.IDB, announcementID int64) string {
+	t.Helper()
+	var updatedAt time.Time
+	require.NoError(t, db.NewRaw(`SELECT updated_at FROM users.parent_announcements WHERE id = ?`, announcementID).Scan(testpkg.Ctx(t), &updatedAt))
+	return readstate.Of(updatedAt)
+}
+
 func (c *attachmentContext) uploadAttachment(filename string, content []byte) *httptest.ResponseRecorder {
+	return c.uploadAttachmentAt(draftVersion(c.t, c.db, c.announcementID), filename, content)
+}
+
+// uploadAttachmentAt uploads onto the draft of the given version.
+func (c *attachmentContext) uploadAttachmentAt(version, filename string, content []byte) *httptest.ResponseRecorder {
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 	part, err := writer.CreateFormFile("file", filename)
@@ -59,8 +77,22 @@ func (c *attachmentContext) uploadAttachment(filename string, content []byte) *h
 	require.NoError(c.t, err)
 	require.NoError(c.t, writer.Close())
 	return c.do(http.MethodPost,
-		fmt.Sprintf("/announcement-attachments/%d", c.announcementID),
+		fmt.Sprintf("/announcement-attachments/%d?expected_version=%s", c.announcementID, url.QueryEscape(version)),
 		&buf, writer.FormDataContentType(), c.admin, permissions.AdminWildcard)
+}
+
+func (c *attachmentContext) deleteAttachment(attachmentID string) *httptest.ResponseRecorder {
+	return c.deleteAttachmentAt(draftVersion(c.t, c.db, c.announcementID), attachmentID)
+}
+
+// deleteAttachmentAt removes an attachment from the draft of the given
+// version.
+func (c *attachmentContext) deleteAttachmentAt(version, attachmentID string) *httptest.ResponseRecorder {
+	body, err := json.Marshal(map[string]string{"expected_version": version})
+	require.NoError(c.t, err)
+	return c.do(http.MethodDelete,
+		fmt.Sprintf("/announcement-attachments/%d/%s", c.announcementID, attachmentID),
+		bytes.NewReader(body), "application/json", c.admin, permissions.AdminWildcard)
 }
 
 func (c *attachmentContext) listAttachments() (*httptest.ResponseRecorder, attachmentListBody) {
@@ -118,9 +150,7 @@ func TestAnnouncementAttachmentLifecycle(t *testing.T) {
 	assert.Contains(t, dlRec.Header().Get("Content-Disposition"), "attachment")
 	assert.Equal(t, "nosniff", dlRec.Header().Get("X-Content-Type-Options"))
 
-	delRec := c.do(http.MethodDelete,
-		fmt.Sprintf("/announcement-attachments/%d/%s", c.announcementID, attachmentID),
-		nil, "", c.admin, permissions.AdminWildcard)
+	delRec := c.deleteAttachment(attachmentID)
 	require.Equal(t, http.StatusOK, delRec.Code, delRec.Body.String())
 
 	_, afterDelete := c.listAttachments()
@@ -163,9 +193,7 @@ func TestAnnouncementAttachmentPublishedAnnouncementIsFixed(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), "zurück",
 		"the message says what to do, not just that it failed")
 
-	delRec := c.do(http.MethodDelete,
-		fmt.Sprintf("/announcement-attachments/%d/%s", c.announcementID, before.Attachments[0].ID),
-		nil, "", c.admin, permissions.AdminWildcard)
+	delRec := c.deleteAttachment(before.Attachments[0].ID)
 	assert.Equal(t, http.StatusConflict, delRec.Code)
 
 	// The file itself stays readable — immutability is not invisibility.
@@ -202,9 +230,7 @@ func TestAnnouncementAttachmentLimitKeepsDraftEditable(t *testing.T) {
 	assert.True(t, list.Editable,
 		"an der Höchstzahl darf nur das Hinzufügen enden, nicht das Entfernen")
 
-	delRec := c.do(http.MethodDelete,
-		fmt.Sprintf("/announcement-attachments/%d/%s", c.announcementID, list.Attachments[0].ID),
-		nil, "", c.admin, permissions.AdminWildcard)
+	delRec := c.deleteAttachment(list.Attachments[0].ID)
 	require.Equal(t, http.StatusOK, delRec.Code, delRec.Body.String())
 
 	// Und danach geht wieder eine dazu.
@@ -269,4 +295,50 @@ func TestAnnouncementAttachmentTenantReadsServeOnlyTheNamedSchool(t *testing.T) 
 	require.ErrorIs(t, err, filestorageModule.ErrAttachmentNotFound)
 	_, err = reads.OpenAnnouncementAttachmentInTenant(ctx, 0, c.announcementID, attachmentID)
 	require.ErrorIs(t, err, filestorageModule.ErrAttachmentNotFound)
+}
+
+// The attachments are part of what a publication confirms (ADR 0311): each
+// change carries the version of the draft its editor holds, is refused on a
+// draft changed since and then writes nothing, and answers the version it
+// stamped, which the next change and the publication send.
+func TestAnnouncementAttachmentChangesCarryTheDraftVersion(t *testing.T) {
+	t.Parallel()
+	c := setupAttachmentRoute(t)
+	opened := draftVersion(t, c.db, c.announcementID)
+
+	rec := c.uploadAttachmentAt(opened, "Brief.pdf", fakePDF)
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	var uploaded struct {
+		Data struct {
+			ID                  string `json:"id"`
+			AnnouncementVersion string `json:"announcement_version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &uploaded))
+	afterUpload := draftVersion(t, c.db, c.announcementID)
+	assert.NotEqual(t, opened, afterUpload, "the upload stamps the draft: a publication of the older version is refused")
+	assert.Equal(t, afterUpload, uploaded.Data.AnnouncementVersion, "the upload answers the version it stamped")
+
+	// A colleague's editor still holds the version before the upload.
+	stale := c.uploadAttachmentAt(opened, "Nachtrag.pdf", fakePDF)
+	assert.Equal(t, http.StatusConflict, stale.Code, stale.Body.String())
+	assert.Contains(t, stale.Body.String(), "general.changed_since_read")
+	staleDelete := c.deleteAttachmentAt(opened, uploaded.Data.ID)
+	assert.Equal(t, http.StatusConflict, staleDelete.Code, staleDelete.Body.String())
+	assert.Contains(t, staleDelete.Body.String(), "general.changed_since_read")
+	_, list := c.listAttachments()
+	require.Len(t, list.Attachments, 1, "the refused changes wrote nothing")
+	assert.Equal(t, afterUpload, draftVersion(t, c.db, c.announcementID), "the refused changes stamped nothing")
+
+	removed := c.deleteAttachmentAt(uploaded.Data.AnnouncementVersion, uploaded.Data.ID)
+	require.Equal(t, http.StatusOK, removed.Code, removed.Body.String())
+	var removal struct {
+		Data struct {
+			AnnouncementVersion string `json:"announcement_version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(removed.Body.Bytes(), &removal))
+	afterDelete := draftVersion(t, c.db, c.announcementID)
+	assert.NotEqual(t, afterUpload, afterDelete, "the removal stamps the draft too")
+	assert.Equal(t, afterDelete, removal.Data.AnnouncementVersion)
 }

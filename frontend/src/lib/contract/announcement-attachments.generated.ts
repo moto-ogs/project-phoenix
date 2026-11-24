@@ -2,23 +2,51 @@
 import { z } from "zod";
 import {
   fileAnswer,
+  instant,
   multipart,
   object,
+  requestBody,
+  safeInt,
   str,
   success,
 } from "./runtime";
 import {
   AnnouncementAttachmentListResponseSchema,
-  AnnouncementAttachmentResponseSchema,
 } from "./shared.generated";
+
+/** Go: files.AttachmentRemovalRequest */
+export interface AttachmentRemovalRequest {
+  expected_version?: string;
+}
 
 /** Go: files.AttachmentRemovedResponse */
 export interface AttachmentRemovedResponse {
   announcement_id: string;
+  announcement_version: string;
 }
 
 export const AttachmentRemovedResponseSchema: z.ZodType<AttachmentRemovedResponse, unknown> = object<AttachmentRemovedResponse>({
   announcement_id: str,
+  announcement_version: str,
+});
+
+/** Go: files.UploadedAttachmentResponse */
+export interface UploadedAttachmentResponse {
+  id: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+  uploaded_at: string;
+  announcement_version: string;
+}
+
+export const UploadedAttachmentResponseSchema: z.ZodType<UploadedAttachmentResponse, unknown> = object<UploadedAttachmentResponse>({
+  id: str,
+  filename: str,
+  size_bytes: safeInt,
+  content_type: str,
+  uploaded_at: instant,
+  announcement_version: str,
 });
 
 export const routes = {
@@ -26,6 +54,7 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/announcement-attachments/{announcementId}/{attachmentId}",
     portals: ["tenant"],
+    request: requestBody<AttachmentRemovalRequest>(),
     response: success(AttachmentRemovedResponseSchema),
   },
   "GET /api/announcement-attachments/{announcementId}": {
@@ -49,7 +78,10 @@ export const routes = {
     portals: ["tenant"],
     maxBodyBytes: 26218496,
     tooLargeCode: "files.file_too_large",
+    query: {
+      "expected_version": { kind: "string" },
+    },
     request: multipart,
-    response: success(AnnouncementAttachmentResponseSchema),
+    response: success(UploadedAttachmentResponseSchema),
   },
 } as const;

@@ -167,10 +167,13 @@ type Announcements interface {
 	AnnouncementEditable(ctx context.Context, announcementID int64) (bool, error)
 	// LockAnnouncementForAttachmentChange answers (exists, editable) while
 	// holding the announcement's row lock until the caller's transaction ends.
-	LockAnnouncementForAttachmentChange(ctx context.Context, announcementID int64) (bool, bool, error)
+	// An editable draft whose version is not expectedVersion refuses with
+	// readstate.ErrChanged (ADR 0311).
+	LockAnnouncementForAttachmentChange(ctx context.Context, announcementID int64, expectedVersion string) (bool, bool, error)
 	// ResetAnnouncementEngagement drops the read and acknowledgement rows of a
-	// draft after its attachments changed.
-	ResetAnnouncementEngagement(ctx context.Context, announcementID int64) error
+	// draft after its attachments changed, stamps the draft as changed and
+	// answers its new version.
+	ResetAnnouncementEngagement(ctx context.Context, announcementID int64) (string, error)
 }
 
 // Transaction is the tenant-runtime seam.

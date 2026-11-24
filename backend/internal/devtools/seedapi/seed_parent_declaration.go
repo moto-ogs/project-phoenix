@@ -138,14 +138,19 @@ func publishSeedDeclaration(rt *Runtime, declaration seedDeclaration) error {
 	if err != nil {
 		return fmt.Errorf("parse parent declaration response: %w", err)
 	}
+	version, err := readDataVersion(func(string) ([]byte, error) { return raw, nil }, "the created declaration")
+	if err != nil {
+		return err
+	}
 	// The document belongs to the frozen version, so it is attached before
-	// the first publication (after that the attachments are fixed).
+	// the first publication (after that the attachments are fixed); the
+	// publication confirms the draft with it.
 	if declaration.document != nil {
-		if _, err := rt.Client.PostFile(fmt.Sprintf("/api/announcement-attachments/%d", id), "file", declaration.attachment, declaration.document); err != nil {
+		if version, err = attachToParentAnnouncement(rt, id, version, declaration.attachment, declaration.document); err != nil {
 			return fmt.Errorf("attach file to parent declaration: %w", err)
 		}
 	}
-	if _, err := publishParentAnnouncement(rt, nil, id, raw); err != nil {
+	if _, err := publishParentAnnouncementVersion(rt, nil, id, version); err != nil {
 		return fmt.Errorf("publish parent declaration %q: %w", declaration.title, err)
 	}
 	return nil

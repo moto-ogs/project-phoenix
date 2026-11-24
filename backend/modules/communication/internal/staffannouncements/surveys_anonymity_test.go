@@ -69,6 +69,12 @@ func newSurveyClock() func() time.Time {
 
 func newSurveyFixture(t *testing.T, staffCount int) *surveyFixture {
 	t.Helper()
+	return newSurveyFixtureWith(t, staffCount, noticeSettings())
+}
+
+// newSurveyFixtureWith builds the fixture on the given school settings.
+func newSurveyFixtureWith(t *testing.T, staffCount int, settings *settingsDouble) *surveyFixture {
+	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	// The school projection is the production wrapper; the survey store has
 	// to come through it.
@@ -85,7 +91,7 @@ func newSurveyFixture(t *testing.T, staffCount int) *surveyFixture {
 	}
 	svc := announcement.NewService(announcement.ServiceConfig{
 		Repo:        records.NewRepository(repos.ParentAnnouncement),
-		Settings:    configModel.NewParentAnnouncementValues(noticeSettings()),
+		Settings:    configModel.NewParentAnnouncementValues(settings),
 		ParentsURL:  "https://parents.example.test",
 		Attachments: noAttachments{},
 		Logger:      logger,
