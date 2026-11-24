@@ -168,7 +168,7 @@ If none fits, add the missing primitive to `frontend/src/components/ui/` and nam
 
 ## Width and pointer
 
-[ADR 0321](../../docs/adr/0321-breite-entscheidet-struktur-und-seitenraster-zeigerart-die-bedienmasse.md): width (`sm`/`md`/`lg`) decides structure, page spacing, `compact:`; the primary pointer decides control sizes, hit areas: `pointer-coarse:`/`pointer-fine:`, in JS `COARSE_POINTER`/`FINE_POINTER`. No `any-pointer`, orientation, iPad breakpoint. No function is hover-only.
+[ADR 0321](../../docs/adr/0321-breite-entscheidet-struktur-und-seitenraster-zeigerart-die-bedienmasse.md): width (`sm`/`md`/`lg`) decides structure and page spacing (`compact:` + height); the primary pointer decides control sizes, hit areas: `pointer-coarse:`/`pointer-fine:`, JS `COARSE_POINTER`/`FINE_POINTER`. No `any-pointer`, orientation, iPad breakpoint; nothing hover-only.
 
 ## Buttons
 

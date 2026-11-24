@@ -16,11 +16,13 @@ auf dem iPad). Sie gilt für alle Portale und ist die Grundlage der Handy-Reihe
 ## Kontext
 
 - Das Personal arbeitet am Telefon und am iPad, Schulleitung und Träger am
-  Desktop. Das iPad liegt mit 744 bis 1376 CSS-Pixeln Breite zwischen beiden.
+  Desktop. Das iPad liegt mit gemessenen 756 bis 1376 CSS-Pixeln Breite
+  zwischen beiden.
 - Die Grenzen hingen bisher uneinheitlich an Breiten-Breakpoints; offen war,
   ob das iPad wie Telefon, wie Desktop oder als eigene Klasse gilt.
-- Die Stufe `compact` (#2824, `frontend/src/styles/globals.css`) greift von
-  `md` bis unter `lg` und bei höchstens 900 px Höhe. Sie verkleinert fast nur
+- Die Stufe `compact` (#2824, `frontend/src/styles/globals.css`) greift ab
+  `md`, wenn die Breite unter `lg` liegt oder die Höhe höchstens 900 px
+  beträgt. Sie verkleinert fast nur
   Abstände: Seitenrand, Kartenränder, Rumpf-Rhythmus. Bedienhöhen sind
   ausdrücklich ausgenommen
   (`frontend/src/components/ui/TENANT-PAGE-SPEC.md`, Abschnitt zur
@@ -72,9 +74,9 @@ schaltet dabei mit.
    iPad nur die breiteren Desktop-Ränder, keine größeren Bedienelemente.
    Bedienhöhen gehören nicht in `compact`.
 3. **Die Zeigerart entscheidet Bedienmaße und Trefferflächen.** Knopf- und
-   Feldhöhen, Trefferflächen und Abstände zwischen Bedienelementen richten
-   sich nach `pointer: coarse` (Finger) oder `pointer: fine` (Maus,
-   Trackpad).
+   Feldhöhen und Trefferflächen richten sich nach `pointer: coarse` (Finger)
+   oder `pointer: fine` (Maus, Trackpad). Abstände gehören zum Seitenraster
+   (Punkt 1), auch `gap` zwischen Bedienelementen.
 4. **Kriterium ist der Hauptzeiger.** `pointer`, nicht `any-pointer` und nicht
    `hover`: Ein Laptop mit Touchscreen bleibt fein, ein iPad mit Trackpad
    bleibt grob. In CSS gelten `pointer-coarse:` und `pointer-fine:`, in JS
@@ -108,5 +110,5 @@ schaltet dabei mit.
 - Neue Regeln für Bedienmaße schreiben `pointer-coarse:`/`pointer-fine:`,
   nicht `max-lg:` oder `compact:`. Neue Regeln für Ränder und Abstände
   folgen der Breite (`max-sm:`, `compact:`), nicht der Zeigerart.
-- `pointer-density.test.ts` prüft die Konstanten mit den gemessenen
-  iPad-Viewports.
+- `pointer-queries.test.ts` prüft die Abfragetexte und dass sie Finger und
+  Maus trennen, unabhängig von der Breite.

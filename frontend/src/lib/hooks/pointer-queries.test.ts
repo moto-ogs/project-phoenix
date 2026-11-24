@@ -36,20 +36,13 @@ describe("COARSE_POINTER / FINE_POINTER", () => {
     expect(FINE_POINTER).toBe("(pointer: fine)");
   });
 
-  // Viewports im iOS-Simulator gemessen (ADR 0321); die Breite ändert die
-  // Zeigerart nicht.
+  // iPad-Viewports im iOS-Simulator gemessen (ADR 0321): Ein iPad quer ist
+  // breit wie ein Laptop und bleibt trotzdem Finger.
   it.each([
     { name: "iPad (A16) quer", width: 1180, height: 688, touch: true },
     { name: "iPad mini hoch", width: 756, height: 1072, touch: true },
-    { name: "Telefon", width: 390, height: 844, touch: true },
-    { name: "13-Zoll-Laptop", width: 1440, height: 900, touch: false },
-    {
-      name: "schmales Fenster mit Maus",
-      width: 700,
-      height: 900,
-      touch: false,
-    },
-  ])("$name: grob $touch", ({ touch, ...device }) => {
+    { name: "Laptop mit Maus", width: 1180, height: 688, touch: false },
+  ])("$name: Finger = $touch", ({ touch, ...device }) => {
     setDevice({ ...device, touch });
 
     expect(window.matchMedia(COARSE_POINTER).matches).toBe(touch);
