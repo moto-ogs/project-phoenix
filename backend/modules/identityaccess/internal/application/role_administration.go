@@ -165,6 +165,9 @@ func (r *RoleAdministration) UpdateRole(ctx context.Context, id int64, change id
 		if existing.IsSystem {
 			return domain.ManagedRole{}, failed(op, identityaccess.ErrSystemRoleImmutable)
 		}
+		if existing.TraegerRoleID != nil {
+			return domain.ManagedRole{}, failed(op, identityaccess.ErrTraegerRoleImmutable)
+		}
 		if err := readstate.Check(expectedVersion, identityaccess.RoleVersion(identityaccess.Role(existing))); err != nil {
 			return domain.ManagedRole{}, failed(op, err)
 		}

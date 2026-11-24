@@ -27,18 +27,19 @@ type managedRoleRow struct {
 	IsSystem      bool      `bun:"is_system"`
 	BaseRole      *string   `bun:"base_role"`
 	SchoolPortal  bool      `bun:"school_portal"`
+	TraegerRoleID *int64    `bun:"traeger_role_id"`
 	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
 	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 func managedRoleRecord(role domain.ManagedRole) managedRoleRow {
 	return managedRoleRow{ID: role.ID, TenantID: role.TenantID, Name: role.Name, Description: role.Description,
-		IsSystem: role.IsSystem, BaseRole: role.BaseRole, SchoolPortal: role.SchoolPortal, CreatedAt: role.CreatedAt, UpdatedAt: role.UpdatedAt}
+		IsSystem: role.IsSystem, BaseRole: role.BaseRole, SchoolPortal: role.SchoolPortal, TraegerRoleID: role.TraegerRoleID, CreatedAt: role.CreatedAt, UpdatedAt: role.UpdatedAt}
 }
 
 func (role managedRoleRow) domain() domain.ManagedRole {
 	return domain.ManagedRole{ID: role.ID, TenantID: role.TenantID, Name: role.Name, Description: role.Description,
-		IsSystem: role.IsSystem, BaseRole: role.BaseRole, SchoolPortal: role.SchoolPortal, CreatedAt: role.CreatedAt, UpdatedAt: role.UpdatedAt}
+		IsSystem: role.IsSystem, BaseRole: role.BaseRole, SchoolPortal: role.SchoolPortal, TraegerRoleID: role.TraegerRoleID, CreatedAt: role.CreatedAt, UpdatedAt: role.UpdatedAt}
 }
 
 func (s *RoleStore) CreateRole(ctx context.Context, role domain.ManagedRole) (domain.ManagedRole, error) {

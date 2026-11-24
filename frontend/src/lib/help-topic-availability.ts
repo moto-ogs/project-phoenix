@@ -262,6 +262,7 @@ export const HELP_TOPIC_AUDIENCE = {
   [HELP_TOPICS.traegerTestSystem]: "traeger",
   [HELP_TOPICS.traegerInvitation]: "traeger",
   [HELP_TOPICS.traegerAccounts]: "traeger",
+  [HELP_TOPICS.traegerSchoolRoles]: "traeger",
   [HELP_TOPICS.traegerProfile]: "traeger",
   [HELP_TOPICS.traegerHolidayPeriod]: "traeger",
   [HELP_TOPICS.traegerCatalogPhases]: "traeger",

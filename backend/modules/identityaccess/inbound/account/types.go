@@ -546,9 +546,12 @@ type RoleResponse struct {
 	BaseRole    *string  `json:"base_role,omitempty"`
 	// SchoolPortal marks a school role made from the Lehrkraft template: its
 	// accounts use moto schule like the Lehrkraft role (#4574).
-	SchoolPortal bool   `json:"school_portal"`
-	CreatedAt    string `json:"created_at"`
-	UpdatedAt    string `json:"updated_at"`
+	SchoolPortal bool `json:"school_portal"`
+	// FromTraeger marks a role the Träger of the school gives (#4810): the
+	// school assigns it but does not change or delete it.
+	FromTraeger bool   `json:"from_traeger"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
 	// Version is the read-state token of the role's master data (ADR 0311):
 	// an edit sends it back as expected_version. The permission selection
 	// carries its own.

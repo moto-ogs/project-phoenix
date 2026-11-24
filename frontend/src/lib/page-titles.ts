@@ -220,6 +220,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/einstellungen/briefkopf/vorlagen/:kind": "Vorlage",
     "/einstellungen/dokumentarten": "Dokumentarten",
     "/einstellungen/mitglieder": "Mitglieder und Rollen",
+    "/einstellungen/schulrollen": "Rollen für Schulen",
     "/einstellungen/zugriffsprotokoll": "Zugriffsprotokoll",
     "/ferien": "Ferienbetreuung",
     "/ferien/:id": "Ferienzeitraum",

@@ -457,6 +457,7 @@ func traegerContractMounts() []contractMount {
 		{"/traeger/staff-records", workforceTraegerStaff.RecordRouteContracts()},
 		{"/traeger/staff-record-imports", workforceTraegerStaff.ImportRouteContracts()},
 		{"/traeger/absence-types", workforceTraegerStaff.AbsenceTypeRouteContracts()},
+		{"/traeger/school-roles", traegerPortalHTTP.SchoolRoleRouteContracts()},
 		{"/traeger/staff-proofs", workforceTraegerStaff.ProofRouteContracts()},
 		{"/traeger/staff-planning", workforceTraegerStaff.PlanningRouteContracts()},
 		{"/traeger/staff-pool", workforceTraegerStaff.PoolRouteContracts()},

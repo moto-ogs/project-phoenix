@@ -763,6 +763,7 @@ describe("getParentHelpTopicForPath", () => {
       HELP_TOPICS.traegerSchoolSwitch,
       HELP_TOPICS.traegerTestSystem,
       HELP_TOPICS.traegerAccounts,
+      HELP_TOPICS.traegerSchoolRoles,
       HELP_TOPICS.traegerHolidayPeriod,
       HELP_TOPICS.traegerClosingDays,
       HELP_TOPICS.traegerHolidayForm,

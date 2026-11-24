@@ -31,6 +31,9 @@ const CodeTraegerReportTemplateNameTaken = "traeger.report_template_name_taken"
 const CodeTraegerReportTemplateNotFound = "traeger.report_template_not_found"
 const CodeTraegerSchoolNotFound = "traeger.school_not_found"
 const CodeTraegerSchoolRequiresCode = "traeger.school_requires_code"
+const CodeTraegerSchoolRoleNameTaken = "traeger.school_role_name_taken"
+const CodeTraegerSchoolRoleNameUsedAtSchool = "traeger.school_role_name_used_at_school"
+const CodeTraegerSchoolRoleNotFound = "traeger.school_role_not_found"
 const CodeTraegerSecondFactorRequired = "traeger.second_factor_required"
 const CodeTraegerSharedDocumentNotFound = "traeger.shared_document_not_found"
 
@@ -65,6 +68,9 @@ var errorCodeClassesTraeger = []errorCodeClass{
 	{CodeTraegerReportTemplateNotFound, "input"},
 	{CodeTraegerSchoolNotFound, "permission"},
 	{CodeTraegerSchoolRequiresCode, "permission"},
+	{CodeTraegerSchoolRoleNameTaken, "business_rejection"},
+	{CodeTraegerSchoolRoleNameUsedAtSchool, "business_rejection"},
+	{CodeTraegerSchoolRoleNotFound, "input"},
 	{CodeTraegerSecondFactorRequired, "permission"},
 	{CodeTraegerSharedDocumentNotFound, "input"},
 }

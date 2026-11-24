@@ -1282,6 +1282,16 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": data})
 			return
 		}
+		// The roles of the Träger for its schools (#4810): the catalog offers
+		// the starting selection the seed gives „Springerkraft“.
+		if strings.HasPrefix(r.URL.Path, "/traeger/school-roles/") {
+			data := any(map[string]any{"id": "1", "name": seedTraegerSchoolRoleName})
+			if r.Method == seedHTTPMethodGet {
+				data = map[string]any{"templates": []any{map[string]any{"base_role": "user", "permission_ids": []string{"1", "2"}}}}
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": data})
+			return
+		}
 		// The Einsatzplanung of the Träger (#4708): the week of this fake
 		// Träger plans nobody.
 		if r.Method == seedHTTPMethodGet && r.URL.Path == "/traeger/staff-planning/" {

@@ -848,6 +848,8 @@ export const ERROR_CATALOG = {
         "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
       "identity.read_only_preview":
         "In der Vorschau kannst du nur lesen. Bitte beende die Vorschau, um etwas zu ändern.",
+      "identity.role_from_traeger":
+        "Diese Rolle gibt dein Träger vor. Ändern und löschen kann sie nur das Träger-Büro.",
       "identity.role_name_taken":
         "Eine Rolle mit diesem Namen gibt es schon. Bitte wähle einen anderen Namen.",
       "identity.role_platform_permission":
@@ -1928,6 +1930,12 @@ export const ERROR_CATALOG = {
         "Diese Schule gehört nicht zu deinem Träger. Bitte lade die Seite neu.",
       "traeger.school_requires_code":
         "Diese Schule verlangt zum Öffnen einen Code aus deiner E-Mail.",
+      "traeger.school_role_name_taken":
+        "Eine Rolle mit diesem Namen gibt es schon. Bitte wähle einen anderen Namen.",
+      "traeger.school_role_name_used_at_school":
+        "Den Namen gibt es schon als eigene Rolle an: {schools}. Bitte wähle einen anderen Namen.",
+      "traeger.school_role_not_found":
+        "Diese Rolle gibt es nicht mehr. Bitte lade die Seite neu.",
       "traeger.second_factor_required":
         "Zum Öffnen einer Schule brauchst du einen zweiten Anmeldenachweis. Bitte melde dich im Träger-Portal neu an.",
       "traeger.shared_document_not_found":
@@ -2738,6 +2746,8 @@ export const ERROR_CATALOG = {
         "You have requested a link too often. Please wait a while and then try again.",
       "identity.password_too_weak":
         "The password is too weak. It needs at least 8 characters, upper and lower case letters, a number and a special character.",
+      "identity.role_from_traeger":
+        "Your Träger provides this role. Only the Träger office can change or delete it.",
       "identity.session_account_inactive":
         "Your account is switched off. Please contact your school's management.",
       "identity.session_account_mismatch":

@@ -81,6 +81,10 @@ func mountTraegerStaffRoutes(root, tenant chi.Router, staffAdmin *workforce.Staf
 		return errors.New("traeger staff records: the Personalstamm serves no exports")
 	}
 	root.Mount("/traeger/staff-exports", traegerstaff.NewExportsResource(staffExports, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
+	// The roles the Träger gives the staff of all its schools (#4810).
+	if err := mountTraegerSchoolRoleRoutes(root, organizations, persons, identity); err != nil {
+		return err
+	}
 	return mountTraegerStaffPool(root, tenant, records, requireStaff)
 }
 

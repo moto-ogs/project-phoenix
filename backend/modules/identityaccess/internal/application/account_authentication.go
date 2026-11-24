@@ -222,6 +222,10 @@ func (a AuthAudit) RecordAuthEvent(ctx context.Context, event domain.AuthEvent) 
 		evidence := identityaccess.CompletedWipeEvidence(*event.CompletedWipe)
 		public.CompletedWipe = &evidence
 	}
+	if event.TraegerRole != nil {
+		evidence := identityaccess.TraegerRoleEvidence(*event.TraegerRole)
+		public.TraegerRole = &evidence
+	}
 	return a.Source.RecordAuthEvent(ctx, public)
 }
 

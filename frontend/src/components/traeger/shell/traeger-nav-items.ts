@@ -28,6 +28,7 @@ import { holidayWeeksConcept } from "~/lib/concepts/holidayWeeks";
 import { parentsConcept } from "~/lib/concepts/parents";
 import { payrollConcept } from "~/lib/concepts/payroll";
 import { peopleConcept } from "~/lib/concepts/people";
+import { rolesConcept } from "~/lib/concepts/roles";
 import { reportsConcept } from "~/lib/concepts/reports";
 import { schoolComparisonConcept } from "~/lib/concepts/schoolComparison";
 import { schoolsConcept } from "~/lib/concepts/schools";
@@ -61,6 +62,8 @@ const ACCESS_LOG_RIGHT = "traeger_access_log:read";
  * „Abrechnung" (#5685). Jede Rolle mit „Abrechnung" hat auch dieses Recht.
  */
 const OVERVIEW_RIGHT = "traeger_overview:read";
+/** Das Recht, das die Rollen für das Personal der Schulen öffnet (#4810). */
+const SETTINGS_RIGHT = "traeger_settings:manage";
 
 export interface TraegerNavItem {
   /** Stabiler Schlüssel für Listen und Tests. */
@@ -353,6 +356,14 @@ const TRAEGER_SETTINGS_NAV_ITEMS: readonly TraegerNavItem[] = [
     shortLabel: "Mitglieder",
     concept: peopleConcept,
     right: ACCOUNTS_RIGHT,
+  },
+  {
+    key: "schulrollen",
+    href: "/traeger/einstellungen/schulrollen",
+    label: "Rollen für Schulen",
+    shortLabel: "Rollen",
+    concept: rolesConcept,
+    right: SETTINGS_RIGHT,
   },
   {
     key: "briefkopf",

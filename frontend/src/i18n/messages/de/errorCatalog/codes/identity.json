@@ -61,5 +61,6 @@
   "invitation_mail_delayed": "Die letzte Einladung ist noch unterwegs. Bitte warte, sonst kommt sie doppelt an.",
   "mail_blocked_at_provider": "Diese Adresse ist gesperrt. Eine neue Mail hilft nicht. Der moto-Support muss das klären.",
   "mail_block_unreadable": "Ob diese Adresse gesperrt ist, lässt sich gerade nicht prüfen. Bitte versuche es später noch einmal.",
-  "logout_not_revoked": "Du bist auf diesem Gerät abgemeldet. moto konnte deine Anmeldung aber nicht ganz beenden. Sie endet später von selbst. Hast du ein fremdes Gerät benutzt? Dann ändere bitte dein Passwort."
+  "logout_not_revoked": "Du bist auf diesem Gerät abgemeldet. moto konnte deine Anmeldung aber nicht ganz beenden. Sie endet später von selbst. Hast du ein fremdes Gerät benutzt? Dann ändere bitte dein Passwort.",
+  "role_from_traeger": "Diese Rolle gibt dein Träger vor. Ändern und löschen kann sie nur das Träger-Büro."
 }
