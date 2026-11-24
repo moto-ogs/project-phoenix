@@ -1,5 +1,6 @@
 "use client";
 
+import type { ModuleKey } from "~/lib/modules";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import { Header } from "~/components/dashboard/header";
@@ -45,12 +46,18 @@ export function TraegerShell({
   children,
   testSystem = false,
   federalStates,
+  bookedModules = null,
 }: {
   readonly children: React.ReactNode;
   /** Ein Test-Träger (#4658) bekommt über der Kopfzeile einen Hinweis. */
   readonly testSystem?: boolean;
   /** Die Bundesländer der Schulen; die Tagesmeldung gibt es nur für M-V (#4717). */
   readonly federalStates?: readonly string[];
+  /**
+   * Die gebuchten moto-Module des Trägers (#6052); `null`, solange sie
+   * laden. Die Navigation zeigt die Seiten der übrigen mit Schloss.
+   */
+  readonly bookedModules?: readonly ModuleKey[] | null;
 }) {
   // Öffentliche Demo (#6193): derselbe feste Streifen wie in der OGS-App
   // (h-12). Kopfzeile und Seitenleiste rücken um seine Höhe nach unten.
@@ -58,7 +65,10 @@ export function TraegerShell({
   return (
     <TraegerNotificationFeedProvider>
       {/* Die Suche nach Seiten und Schulen mit Strg+K (#7648). */}
-      <TraegerSearchProvider federalStates={federalStates}>
+      <TraegerSearchProvider
+        federalStates={federalStates}
+        bookedModules={bookedModules}
+      >
         <div className={demoBannerShown ? "pt-12" : undefined}>
           <PortalShell
             header={<Header notificationBell={<NotificationFeedBell />} />}
@@ -69,8 +79,18 @@ export function TraegerShell({
                 {testSystem ? <TraegerTestSystemNotice /> : null}
               </>
             }
-            sidebar={<TraegerSidebar federalStates={federalStates} />}
-            bottomNav={<TraegerBottomNav federalStates={federalStates} />}
+            sidebar={
+              <TraegerSidebar
+                federalStates={federalStates}
+                bookedModules={bookedModules}
+              />
+            }
+            bottomNav={
+              <TraegerBottomNav
+                federalStates={federalStates}
+                bookedModules={bookedModules}
+              />
+            }
             // Eine Flex-Spalte bis zur Inhaltshülle, wie im Personal- und
             // Schul-Portal: die letzte Fläche einer Seite reicht dann bis zur
             // Unterkante (TENANT-PAGE-SPEC, Regel 6).

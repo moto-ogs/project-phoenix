@@ -26,11 +26,18 @@ export function notBookedModuleOf(error: unknown): ModuleKey | null {
 }
 
 /**
+ * The event of `announceModuleBookingStale`. The team portal reloads its
+ * school data on it, the Träger portal the frame with its booked modules
+ * (#6052).
+ */
+export const MODULE_BOOKING_STALE_EVENT = "phoenix:tenant-settings-stale";
+
+/**
  * The backend refused a module the navigation still showed as booked: the
  * moto team changed the booking since the school data was loaded. Reload it,
  * so navigation and the page explanation follow without a reload (#4894).
  */
 export function announceModuleBookingStale(): void {
   if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent("phoenix:tenant-settings-stale"));
+  window.dispatchEvent(new CustomEvent(MODULE_BOOKING_STALE_EVENT));
 }

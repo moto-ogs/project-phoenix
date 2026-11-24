@@ -1,2 +1,2 @@
-PUT /traeger/billing-run-due-dates/care/{id} -> basis
-PUT /traeger/billing-run-due-dates/holiday/{id} -> basis
+PUT /traeger/billing-run-due-dates/care/{id} -> elternbeitraege
+PUT /traeger/billing-run-due-dates/holiday/{id} -> elternbeitraege

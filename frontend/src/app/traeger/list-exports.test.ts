@@ -105,6 +105,7 @@ const NOT_A_LIST: Readonly<Record<string, string>> = {
   "/einstellungen/briefkopf": "Einstellungen",
   "/einstellungen/briefkopf/vorlagen/[kind]": "Einstellungen",
   "/einstellungen/dokumentarten": "Einstellungen",
+  "/einstellungen/module": "Einstellungen",
   "/einstellungen/schulrollen": "Einstellungen",
   "/einstellungen/zustaendigkeiten": "Einstellungen",
   "/ferien/[id]": "Einzelansicht",

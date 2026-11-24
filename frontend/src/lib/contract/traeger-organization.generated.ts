@@ -16,6 +16,7 @@ export interface TraegerFrame {
   name: string;
   test_system: boolean;
   federal_states: string[] | null;
+  booked_modules: string[] | null;
 }
 
 export const TraegerFrameSchema: z.ZodType<TraegerFrame, unknown> = object<TraegerFrame>({
@@ -23,6 +24,7 @@ export const TraegerFrameSchema: z.ZodType<TraegerFrame, unknown> = object<Traeg
   name: str,
   test_system: bool,
   federal_states: nullable(arr(str)),
+  booked_modules: nullable(arr(str)),
 });
 
 export const routes = {

@@ -60,8 +60,8 @@ import (
 // debit file of the issued runs at /traeger/sepa-debits (#4697), the finance
 // exports with their protocol at /traeger/finance-exports (#4693), and the
 // details the Träger still has to enter at /traeger/required-details (#7177).
-func mountParentBillingRoutes(root, publicLink chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings, schoolSettings owners.MealAttendanceSchoolSettings, marks owners.MealAttendanceMarks, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, healthData enrollmentOwner.HolidayHealthCipher, bankData parentbilling.BankDataCipher, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, today func() calendar.Date, now func() time.Time, logger *slog.Logger) {
-	rules, holiday := NewParentBillingHTTP(organizations, settings, delivery, healthData, holidayCalendar, today, now, logger)
+func mountParentBillingRoutes(root, publicLink chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings, schoolSettings owners.MealAttendanceSchoolSettings, marks owners.MealAttendanceMarks, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, healthData enrollmentOwner.HolidayHealthCipher, bankData parentbilling.BankDataCipher, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, traegerModules TraegerBookedModules, today func() calendar.Date, now func() time.Time, logger *slog.Logger) {
+	rules, holiday := NewParentBillingHTTP(organizations, settings, delivery, healthData, holidayCalendar, traegerModules, today, now, logger)
 	root.Mount("/traeger/contribution-rules", rules.TraegerRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/cost-bearers", rules.CostBearerRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/holiday-contributions", holiday.TraegerRouter(ProtectedTraegerRoutes))
@@ -514,10 +514,10 @@ func (b parentBillingLetterheads) DocumentTemplate(ctx context.Context, organiza
 // holidayCalendar names the host schools' days without care, which no
 // rebooking may book (#4702). now is the root clock of the holiday
 // registrations' links (ADR 0275), today its Berlin day.
-func NewParentBillingHTTP(organizations HolidayOrganizations, settings TraegerBrandingSettings, delivery deliveryRuntime.Capability, healthData enrollmentOwner.HolidayHealthCipher, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, today func() calendar.Date, now func() time.Time, logger *slog.Logger) (*parentBillingHTTP.RuleResource, *parentBillingHTTP.HolidayResource) {
+func NewParentBillingHTTP(organizations HolidayOrganizations, settings TraegerBrandingSettings, delivery deliveryRuntime.Capability, healthData enrollmentOwner.HolidayHealthCipher, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, traegerModules TraegerBookedModules, today func() calendar.Date, now func() time.Time, logger *slog.Logger) (*parentBillingHTTP.RuleResource, *parentBillingHTTP.HolidayResource) {
 	review, places, allocation, _ := enrollmentCompose.NewHolidayRegistrationReview(healthData, holidayTraegerMail{delivery: delivery}, newHolidayOfficeTraeger(organizations), holidayCalendar, nil, now)
 	registrations := parentBillingHolidayRegistrations{
-		links:  newHolidayRegistrations(organizations, delivery, healthData, holidayCalendar, settings, logger.With("service", "parent-billing-holiday-registrations"), now),
+		links:  newHolidayRegistrations(organizations, delivery, healthData, holidayCalendar, settings, traegerModules, logger.With("service", "parent-billing-holiday-registrations"), now),
 		review: review,
 	}
 	rules := parentBillingHTTP.NewRuleResource(parentBillingCompose.NewContributionRules(now),

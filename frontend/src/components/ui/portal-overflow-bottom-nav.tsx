@@ -42,6 +42,13 @@ export interface PortalOverflowNavItem {
   readonly newTab?: boolean;
   /** Eine Linie trennt den Eintrag im „Mehr"-Blatt von den Arbeitsbereichen. */
   readonly separated?: boolean;
+  /**
+   * Ein Zeichen hinter dem Namen im „Mehr"-Blatt, etwa das Schloss eines
+   * nicht gebuchten Moduls (#6052). Ein Eintrag mit Zeichen steht nie in
+   * der Leiste: dort trägt nur das aktive Ziel seinen Namen, das Zeichen
+   * hätte keinen Platz.
+   */
+  readonly mark?: ReactNode;
 }
 
 /**
@@ -93,9 +100,21 @@ export function PortalOverflowBottomNav({
   const [moreOpen, setMoreOpen] = useState(false);
 
   const slots = search ? MAX_SLOTS - 1 : MAX_SLOTS;
-  const crowded = items.length > slots;
-  const barItems = crowded ? items.slice(0, slots - 1) : items;
-  const moreItems = crowded ? items.slice(slots - 1) : [];
+  const marked = items.some((item) => item.mark);
+  const crowded = marked || items.length > slots;
+  // With a marked target the bar takes the first work areas without a mark;
+  // what follows the separating line (the help) never moves up for it. The
+  // sheet keeps the order of the list for everything else.
+  const separatedAt = items.findIndex((item) => item.separated);
+  const barPool = marked
+    ? items
+        .slice(0, separatedAt === -1 ? items.length : separatedAt)
+        .filter((item) => !item.mark)
+    : items;
+  const barItems = crowded ? barPool.slice(0, slots - 1) : items;
+  const moreItems = crowded
+    ? items.filter((item) => !barItems.includes(item))
+    : [];
 
   const linkProps = (item: PortalOverflowNavItem) => ({
     href: item.href,
@@ -182,6 +201,7 @@ export function PortalOverflowBottomNav({
             >
               <PortalNavSheetLink
                 {...linkProps(item)}
+                badge={item.mark}
                 onClick={() => setMoreOpen(false)}
               />
             </li>

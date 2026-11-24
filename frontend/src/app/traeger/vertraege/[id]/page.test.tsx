@@ -37,6 +37,19 @@ const links = vi.hoisted(() => ({
 }));
 
 vi.unmock("swr");
+// The booked moto modules of the Träger of the session (#6052).
+const mockBookedModules = vi.hoisted(() => ({
+  current: [
+    "traeger_uebersicht",
+    "ferienbetreuung",
+    "vertraege",
+    "elternbeitraege",
+  ] as string[],
+}));
+vi.mock("~/lib/traeger-booked-modules", () => ({
+  useTraegerModuleBooked: (module: string) =>
+    mockBookedModules.current.includes(module),
+}));
 vi.mock("~/lib/traeger-care-contracts-api", () => api);
 vi.mock("~/lib/traeger-contract-child-links-api", () => links);
 const enrollments = vi.hoisted(() => ({ unbindContractEnrollment: vi.fn() }));
@@ -901,6 +914,37 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.queryByRole("button", { name: /Vertrag senden/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("offers neither payment nor mandate without the module Elternbeiträge und Abrechnung (#6052)", async () => {
+    // Both cards read routes of that module; a Träger with Verträge alone
+    // keeps its contracts without them.
+    mockBookedModules.current = ["vertraege"];
+    try {
+      api.fetchCareContract.mockResolvedValue({
+        ...DRAFT,
+        status: "versendet",
+        documentFrozen: true,
+      });
+      renderPage();
+
+      expect(
+        await screen.findByText("E-Mail bei Vertragserstellung"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText("Empfänger und Zahlung"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("SEPA-Lastschriftmandat"),
+      ).not.toBeInTheDocument();
+    } finally {
+      mockBookedModules.current = [
+        "traeger_uebersicht",
+        "ferienbetreuung",
+        "vertraege",
+        "elternbeitraege",
+      ];
+    }
   });
 
   it("offers no payment card on a contract that is over", async () => {

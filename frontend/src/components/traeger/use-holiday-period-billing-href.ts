@@ -4,9 +4,12 @@
 // Zeitraum genau einen Abrechnungslauf, öffnet die Aktion ihn; sonst die
 // Abrechnung, gefiltert auf diesen Zeitraum. Nur mit dem Recht
 // „Abrechnung“ und nur für einen veröffentlichten Zeitraum: Ein Entwurf hat
-// keine Läufe und lässt sich nicht abrechnen.
+// keine Läufe und lässt sich nicht abrechnen. Die Läufe gehören zum
+// moto-Modul „Elternbeiträge und Abrechnung“ (#6052): Ohne es fehlt die
+// Aktion, sonst führte sie auf eine gesperrte Seite.
 
 import { useSession } from "next-auth/react";
+import { useTraegerModuleBooked } from "~/lib/traeger-booked-modules";
 import { hasPermission } from "~/lib/auth-utils";
 import { useSWRAuth } from "~/lib/swr";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
@@ -48,7 +51,9 @@ export function useHolidayPeriodBillingHref(
   period: HolidayPeriod | undefined,
 ): string | null {
   const { data: session } = useSession();
+  const billingBooked = useTraegerModuleBooked("elternbeitraege") === true;
   const allowed =
+    billingBooked &&
     hasPermission(session ?? null, TRAEGER_BILLING_RIGHT) &&
     period?.status === "published";
   // Ein Fehler beim Laden der Läufe zeigt nichts an: Die Aktion führt dann
