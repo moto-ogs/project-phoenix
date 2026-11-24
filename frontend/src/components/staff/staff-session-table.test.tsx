@@ -896,7 +896,8 @@ describe("staff-session-table.blocks", () => {
       );
 
       const stacked = screen.getByTestId("data-table-stacked");
-      const card = within(stacked.querySelector("li")!);
+      const card = within(within(stacked).getAllByRole("listitem")[0]!);
+      // Anker: die Tageskarte des 05.01. steht da, zugeklappt.
       expect(card.getByText("Mo 05.01.")).toBeInTheDocument();
       expect(card.getByText("−1h 50min")).toBeInTheDocument();
       expect(card.getByText("ab 08:00 bis 16:00")).toBeInTheDocument();
@@ -918,7 +919,8 @@ describe("staff-session-table.blocks", () => {
 
       expect(card.getByText("Block 1")).toBeInTheDocument();
       expect(card.getByText("Block 2")).toBeInTheDocument();
-      expect(card.getAllByText("Hinweis").length).toBeGreaterThan(0);
+      // Die Unterzeilen der Blöcke tragen je einen Hinweis, der Tag einen.
+      expect(card.getAllByText("Hinweis")).toHaveLength(3);
       expect(card.getByText("Gutschrift")).toBeInTheDocument();
       expect(
         await card.findByText("Keine Änderungen vorhanden"),
@@ -932,6 +934,7 @@ describe("staff-session-table.blocks", () => {
           .getByText(/Summe KW 2/)
           .closest("dl")!,
       );
+      // Anker: die Wochenkarte mit Summe und Hinweis.
       expect(week.getByText("Ist")).toBeInTheDocument();
       expect(week.getByText("49h")).toBeInTheDocument();
       expect(week.getByText("Hinweis")).toBeInTheDocument();

@@ -993,20 +993,21 @@ export function StaffSessionTable({
       header: "Soll",
       align: "right",
       className: "tabular-nums whitespace-nowrap",
-      render: (row) => (
-        <span className="text-gray-500">
-          {row.targetUnresolved ? (
-            <span title={targetPendingTitle}>{targetText(row)}</span>
-          ) : (
-            targetText(row)
-          )}
-          {overrideNote(row) && (
-            <span className="block text-xs text-gray-500">
-              {overrideNote(row)}
-            </span>
-          )}
-        </span>
-      ),
+      render: (row) => {
+        const note = overrideNote(row);
+        return (
+          <span className="text-gray-500">
+            {row.targetUnresolved ? (
+              <span title={targetPendingTitle}>{targetText(row)}</span>
+            ) : (
+              targetText(row)
+            )}
+            {note && (
+              <span className="block text-xs text-gray-500">{note}</span>
+            )}
+          </span>
+        );
+      },
     },
     {
       key: "actual",

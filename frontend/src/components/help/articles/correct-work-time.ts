@@ -28,6 +28,7 @@ export function correctWorkTimeTopic(): HelpTopic {
     differences: [
       "Einen vollständig fehlenden Arbeitstag trägt nur nach, wer die Zeiten des Teams verwalten darf.",
       "Ein abgeschlossener Monat kann nachträgliche Änderungen anzeigen, sein übertragener Saldo bleibt jedoch festgeschrieben.",
+      "Am Handy steht jeder Tag als eigene Karte. `Eintrag bearbeiten` steht rechts auf der Karte. Mit dem Pfeil daneben klappst du Hinweise und Änderungshistorie auf.",
       SIMPLE_NAV_DIFFERENCE,
     ],
     troubleshootingDetails: [

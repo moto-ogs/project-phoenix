@@ -1797,6 +1797,7 @@ export const correctWorkTimeTopic = function correctWorkTimeTopic(): HelpTopic {
     differences: [
       "Einen vollständig fehlenden Arbeitstag trägt nur nach, wer die Zeiten des Teams verwalten darf.",
       "Ein abgeschlossener Monat kann nachträgliche Änderungen anzeigen, sein übertragener Saldo bleibt jedoch festgeschrieben.",
+      "Am Handy steht jeder Tag als eigene Karte. `Eintrag bearbeiten` steht rechts auf der Karte. Mit dem Pfeil daneben klappst du Hinweise und Änderungshistorie auf.",
       SIMPLE_NAV_DIFFERENCE,
     ],
     troubleshootingDetails: [
@@ -11197,7 +11198,7 @@ export const trackWorkTimeTopic = function trackWorkTimeTopic(): HelpTopic {
       "Bei einer deutlichen Abweichung von deiner geplanten Schicht kann moto nach einem Grund fragen.",
       "Deine Schule kann das Einstempeln erst kurz vor deiner Schicht erlauben. Dann zeigt moto, ab wann es geht.",
       "Nach der gewählten Pausenlänge läuft die Arbeitszeit automatisch weiter.",
-      "Dein `Ist` ist etwas länger oder kürzer als die gestempelten Zeiten? Dann zählt deine OGS eine Wegpackzeit dazu oder rundet. Der Hinweis steht in der Zeile, zum Beispiel `+5 Min. Wegpackzeit`.",
+      "Dein `Ist` ist etwas länger oder kürzer als die gestempelten Zeiten? Dann zählt deine OGS eine Wegpackzeit dazu oder rundet. Der Hinweis steht in der Zeile, zum Beispiel `+5 Min. Wegpackzeit`. Am Handy klappst du ihn mit dem Pfeil auf der Tageskarte auf.",
       "Steht unten `Kein Soll hinterlegt`? Dann zählen Krankheit und Urlaub 0 Stunden. Die Monatskarte zeigt diese Tage mit `ohne Soll`. Das Soll trägt die Leitung ein.",
       SIMPLE_NAV_DIFFERENCE,
     ],
