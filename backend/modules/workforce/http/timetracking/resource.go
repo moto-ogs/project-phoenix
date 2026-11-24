@@ -27,6 +27,7 @@ type Resource struct {
 	AbsenceWrites       OwnAbsenceWrites
 	PersonService       workforce.StaffDirectory
 	StaffShiftService   workforce.OwnShiftQuery
+	ownViews            workforce.OwnTimeViews
 	// StaffAssignmentService backs GET /assignments — the staff member's own
 	// Betreuungsplan blocks (Ort/Aufgabe) for a day (#1844).
 	StaffAssignmentService workforce.StaffAssignmentQuery
@@ -60,6 +61,7 @@ type Dependencies struct {
 	Staff         workforce.StaffDirectory
 	WorkTimeMonth workforce.WorkTimeMonths
 	StaffShifts   workforce.OwnShiftQuery
+	OwnViews      workforce.OwnTimeViews
 	Assignments   workforce.StaffAssignmentQuery
 	Calendar      workforce.PlanningCalendar
 	Allowances    workforce.OwnAbsenceAllowances
@@ -92,6 +94,7 @@ func NewResource(deps Dependencies) *Resource {
 		AbsenceWrites:          deps.AbsenceWrites,
 		PersonService:          deps.Staff,
 		StaffShiftService:      deps.StaffShifts,
+		ownViews:               deps.OwnViews,
 		StaffAssignmentService: deps.Assignments,
 		WorkTimeMonthService:   deps.WorkTimeMonth,
 		Calendar:               deps.Calendar,

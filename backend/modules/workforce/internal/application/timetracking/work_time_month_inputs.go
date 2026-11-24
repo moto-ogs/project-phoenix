@@ -50,21 +50,13 @@ func (s *workTimeMonthService) addActualMinutes(ctx context.Context, staffID int
 	if err != nil {
 		return fmt.Errorf("failed to load work sessions: %w", err)
 	}
-	now := s.now()
 	breaksBySessionID, err := s.breaksBySessionID(ctx, sessions)
 	if err != nil {
 		return err
 	}
-	for _, session := range sessions {
-		end := balanceSessionEnd(session, now, today)
-		if !end.After(session.CheckInTime) {
-			continue
-		}
-
-		for day, minutes := range creditedNetMinutesByDate(session, breaksBySessionID[session.ID], end, first, today) {
-			if agg, ok := aggregates[monthOf(day)]; ok {
-				agg.actual += minutes
-			}
+	for day, minutes := range actualMinutesByDay(sessions, breaksBySessionID, s.now(), today, first, min(last, today)) {
+		if agg := aggregates[monthOf(day)]; agg != nil {
+			agg.actual += minutes
 		}
 	}
 	return nil
@@ -118,10 +110,11 @@ func (s *workTimeMonthService) addAbsenceCredits(ctx context.Context, staffID in
 	if err != nil {
 		return fmt.Errorf("failed to load absences: %w", err)
 	}
-	through := last
-	if today.Before(through) {
-		through = today
-	}
+	addMonthAbsenceCredits(absences, first, min(last, today), resolver, aggregates)
+	return nil
+}
+
+func addMonthAbsenceCredits(absences []*StaffAbsence, first, through calendar.Date, resolver *dailyTargetResolver, aggregates map[monthKey]*monthAggregates) {
 	walkAbsenceDayCoverage(absences, first, through, resolver.TargetFor,
 		func(d calendar.Date, absence *StaffAbsence, credit int, fraction float64) {
 			creditAbsenceDay(absence, credit, fraction, aggregates[monthOf(d)])
@@ -133,7 +126,6 @@ func (s *workTimeMonthService) addAbsenceCredits(ctx context.Context, staffID in
 			}
 			agg.daysWithoutTarget.count(absence.AbsenceType, fraction)
 		})
-	return nil
 }
 
 // absenceDayVisitor receives one effectively covered absence day together with

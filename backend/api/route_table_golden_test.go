@@ -419,6 +419,7 @@ func TestFullProductionRouterGolden(t *testing.T) {
 		// Wait for parallel contract subtests before WithRuntime closes its resources.
 		t.Run("contracts", func(t *testing.T) {
 			t.Run("student detail read budget", func(t *testing.T) { checkStudentDetailReadBudget(t, api) })
+			t.Run("own time tracking read views", func(t *testing.T) { checkOwnTimeViews(t, api) })
 			t.Run("student form saves the version its detail read", func(t *testing.T) { checkStudentFormSavesTheVersionItsDetailRead(t, api) })
 			t.Run("readiness", func(t *testing.T) {
 				rec := httptest.NewRecorder()

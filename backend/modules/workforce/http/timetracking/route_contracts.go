@@ -23,7 +23,21 @@ func RouteContracts(shift, allowance any) []common.RouteContract {
 	absences := append(param(common.QueryDate, "from", "to"), common.QueryParam{Name: "status", Kind: common.QueryString})
 	session := SessionResponse{}
 	absence := workforce.StaffAbsenceResponse{}
+	readState := common.EnumContract{
+		Name: "OwnTimeReadState", Fields: []string{"OwnTimeAssignments.state", "OwnLeaveMails.state"},
+		Values: []string{workforce.OwnReadReady, workforce.OwnReadUnavailable},
+	}
 	return []common.RouteContract{
+		{Method: "GET", Pattern: "/period", Portals: portals, Query: []common.QueryParam{
+			{Name: "view", Kind: common.QueryString, Values: []string{workforce.OwnTimeWeek, workforce.OwnTimeMonth}},
+			{Name: "start", Kind: common.QueryDate},
+		}, Response: workforce.OwnTimePeriod{}, Enums: []common.EnumContract{
+			{Name: "OwnTimePeriodView", Fields: []string{"OwnTimePeriod.view"}, Values: []string{workforce.OwnTimeWeek, workforce.OwnTimeMonth}},
+			{Name: "OwnTimeShiftState", Fields: []string{"OwnTimeShifts.state"}, Values: []string{workforce.OwnReadReady, workforce.OwnReadNotBooked, workforce.OwnReadUnavailable}},
+			readState,
+		}},
+		{Method: "GET", Pattern: "/overview", Portals: portals, Response: workforce.OwnClockOverview{}},
+		{Method: "GET", Pattern: "/leave-overview", Portals: portals, Response: workforce.OwnLeaveOverview{}},
 		{Method: "POST", Pattern: "/check-in", Portals: portals, Request: CheckInRequest{}, Response: session},
 		{Method: "POST", Pattern: "/check-out", Portals: portals, Request: CheckOutRequest{}, Response: session},
 		{Method: "GET", Pattern: "/current", Portals: portals, Response: &SessionResponse{}},

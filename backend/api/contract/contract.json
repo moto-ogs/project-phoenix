@@ -7417,6 +7417,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/time-tracking/leave-overview",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OwnLeaveOverview"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/time-tracking/month-summary",
       "portals": [
         "tenant"
@@ -7434,6 +7445,42 @@
       "response": {
         "kind": "ref",
         "ref": "MonthSummary"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/time-tracking/overview",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OwnClockOverview"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/time-tracking/period",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "start",
+          "kind": "date"
+        },
+        {
+          "name": "view",
+          "kind": "string",
+          "values": [
+            "month",
+            "week"
+          ]
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OwnTimePeriod"
       }
     },
     {
@@ -25653,6 +25700,28 @@
       "values": [
         "important",
         "info"
+      ]
+    },
+    {
+      "name": "OwnTimePeriodView",
+      "values": [
+        "month",
+        "week"
+      ]
+    },
+    {
+      "name": "OwnTimeReadState",
+      "values": [
+        "ready",
+        "unavailable"
+      ]
+    },
+    {
+      "name": "OwnTimeShiftState",
+      "values": [
+        "not_booked",
+        "ready",
+        "unavailable"
       ]
     },
     {
@@ -78477,6 +78546,1215 @@
           "name": "version",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnClockOverview",
+      "go_type": "workforce.OwnClockOverview",
+      "fields": [
+        {
+          "name": "today",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "as_of",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "session",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "OwnTimeBlock"
+          }
+        },
+        {
+          "name": "today_absence",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "OwnTimeAbsence"
+          }
+        },
+        {
+          "name": "shifts",
+          "schema": {
+            "kind": "ref",
+            "ref": "OwnTimeShifts"
+          }
+        },
+        {
+          "name": "assignments",
+          "schema": {
+            "kind": "ref",
+            "ref": "OwnTimeAssignments"
+          }
+        },
+        {
+          "name": "chart",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeChartPoint"
+            }
+          }
+        },
+        {
+          "name": "completed_today_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "completed_week_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "labor_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "WorkDayLaborHint"
+            }
+          }
+        },
+        {
+          "name": "is_over_weekly_max",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "week",
+          "schema": {
+            "kind": "ref",
+            "ref": "OwnTimeTotals"
+          }
+        },
+        {
+          "name": "month",
+          "schema": {
+            "kind": "ref",
+            "ref": "OwnTimeTotals"
+          }
+        },
+        {
+          "name": "account_start",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "account_balance_minutes",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnLeaveAllowance",
+      "go_type": "workforce.OwnLeaveAllowance",
+      "fields": [
+        {
+          "name": "absence_type_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "entitled_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "taken_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "reserved_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "remaining_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "expires_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "expired_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "carried_in",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "OwnLeaveAllowanceCarry"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnLeaveAllowanceCarry",
+      "go_type": "workforce.OwnLeaveAllowanceCarry",
+      "fields": [
+        {
+          "name": "year",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "remaining_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "expired_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "expires_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnLeaveCounts",
+      "go_type": "workforce.OwnLeaveCounts",
+      "fields": [
+        {
+          "name": "reserved",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "question",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "approved",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "declined",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnLeaveMails",
+      "go_type": "workforce.OwnLeaveMails",
+      "fields": [
+        {
+          "name": "state",
+          "schema": {
+            "kind": "enum",
+            "ref": "OwnTimeReadState"
+          }
+        },
+        {
+          "name": "absences",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "int"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnLeaveOverview",
+      "go_type": "workforce.OwnLeaveOverview",
+      "fields": [
+        {
+          "name": "year",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "quota",
+          "schema": {
+            "kind": "ref",
+            "ref": "OwnLeaveQuota"
+          }
+        },
+        {
+          "name": "counts",
+          "schema": {
+            "kind": "ref",
+            "ref": "OwnLeaveCounts"
+          }
+        },
+        {
+          "name": "recent",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeAbsence"
+            }
+          }
+        },
+        {
+          "name": "questions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeAbsence"
+            }
+          }
+        },
+        {
+          "name": "allowances",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnLeaveAllowance"
+            }
+          }
+        },
+        {
+          "name": "mails",
+          "schema": {
+            "kind": "ref",
+            "ref": "OwnLeaveMails"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnLeaveQuota",
+      "go_type": "workforce.OwnLeaveQuota",
+      "fields": [
+        {
+          "name": "entitled_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "carryover_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "taken_before_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "taken_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "reserved_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "remaining_days",
+          "schema": {
+            "kind": "number"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeAbsence",
+      "go_type": "workforce.OwnTimeAbsence",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "date_start",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "date_end",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "absence_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "absence_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "absence_type_label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "half_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "start_half_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "end_half_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "decision_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "requested_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "duration_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "working_days",
+          "optional": true,
+          "schema": {
+            "kind": "number"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeAssignment",
+      "go_type": "workforce.OwnTimeAssignment",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_spontaneous",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "cancelled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_primary",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_substitute",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_absent",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "absence_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cancel_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "understaffed_ack",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeAssignments",
+      "go_type": "workforce.OwnTimeAssignments",
+      "fields": [
+        {
+          "name": "state",
+          "schema": {
+            "kind": "enum",
+            "ref": "OwnTimeReadState"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeAssignment"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeBlock",
+      "go_type": "workforce.OwnTimeBlock",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "check_in_time",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "check_out_time",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "auto_checked_out",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "net_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "is_overtime",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_break_compliant",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "pack_up_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "rounding_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "edit_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "audit_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "breaks",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeBreak"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeBreak",
+      "go_type": "workforce.OwnTimeBreak",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "started_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "ended_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "duration_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "planned_end_time",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeChartPoint",
+      "go_type": "workforce.OwnTimeChartPoint",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "actual_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeClosingDay",
+      "go_type": "workforce.OwnTimeClosingDay",
+      "fields": [
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeDay",
+      "go_type": "workforce.OwnTimeDay",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "has_target",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "target_source",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "actual_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "credit_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "balance_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeHoliday",
+      "go_type": "workforce.OwnTimeHoliday",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimePeriod",
+      "go_type": "workforce.OwnTimePeriod",
+      "fields": [
+        {
+          "name": "view",
+          "schema": {
+            "kind": "enum",
+            "ref": "OwnTimePeriodView"
+          }
+        },
+        {
+          "name": "start",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "week_start",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "week_end",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "account_start",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "sessions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeBlock"
+            }
+          }
+        },
+        {
+          "name": "labor_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "WorkDayLaborHint"
+            }
+          }
+        },
+        {
+          "name": "rest_hints",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeRestHint"
+            }
+          }
+        },
+        {
+          "name": "weekly_summaries",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "WorkWeekSummary"
+            }
+          }
+        },
+        {
+          "name": "absences",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeAbsence"
+            }
+          }
+        },
+        {
+          "name": "shifts",
+          "schema": {
+            "kind": "ref",
+            "ref": "OwnTimeShifts"
+          }
+        },
+        {
+          "name": "holidays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeHoliday"
+            }
+          }
+        },
+        {
+          "name": "closing_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeClosingDay"
+            }
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeDay"
+            }
+          }
+        },
+        {
+          "name": "month_summary",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "MonthSummary"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeRestHint",
+      "go_type": "workforce.OwnTimeRestHint",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "rest_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "limit_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeShift",
+      "go_type": "workforce.OwnTimeShift",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "shift_type_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "shift_type_color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cancelled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "change_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "origin_shift_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeShifts",
+      "go_type": "workforce.OwnTimeShifts",
+      "fields": [
+        {
+          "name": "state",
+          "schema": {
+            "kind": "enum",
+            "ref": "OwnTimeShiftState"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeShift"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeTotals",
+      "go_type": "workforce.OwnTimeTotals",
+      "fields": [
+        {
+          "name": "has_target",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "has_override",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "target_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "actual_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "credit_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "balance_minutes",
+          "schema": {
+            "kind": "int"
           }
         }
       ]

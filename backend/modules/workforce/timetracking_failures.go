@@ -55,4 +55,5 @@ var (
 	ErrAbsenceUpdatedDatesOverlap     = errors.New("updated dates overlap")
 	ErrAbsenceInvalid                 = errors.New("invalid")
 	ErrVacationFlowRequired           = errors.New("vacation")
+	ErrInvalidOwnTimePeriod           = errors.New("expected a Monday for week or the first of a supported month for month")
 )

@@ -420,6 +420,39 @@ confirmed.
 
 Context params are async in Next.js 16: `params: Promise<...>` — always `await`.
 
+### Own time-tracking reads (#8078)
+
+Use the three tenant entries in `time-tracking.generated.ts` with `bffJson`.
+They need `time_tracking:own` and Zeiterfassung and infer the staff member
+from the session. Do not send a staff ID. The standard catalog proxy forwards
+each read once on a live session; there is no page-specific proxy.
+
+- `period?view=week|month&start=YYYY-MM-DD`: pass a Monday or month start.
+  `start` to `end` is the displayed period. `week_start` to `week_end` is
+  the full ISO-week span used for session and labor warnings. A night block
+  can begin before either span. `days` covers every displayed day;
+  `has_target: false` means the target is unknown, not zero. Observe the
+  selected block's `version` when saving a correction (ADR 0311).
+  Only a month request carries `month_summary`.
+- `overview`: current Berlin day, open block with pauses, today's absence
+  warning and assignments, ten weekday chart points, clock subtotals and
+  current week/month figures. `as_of` timestamps the figures; the client may
+  advance the live clock without fetching history. `account_balance_minutes:
+  null` means the account has not started. Do not enable stamping on a failed
+  read: a null session or absence is authoritative only in a success.
+- `leave-overview`: current Berlin year, quota, four counts, eight recent
+  non-question requests at most, all open questions, own allowances and the
+  initial mail outcomes. Load the full year's absences and the absence-type
+  catalog only when their dialogs need them; refresh pending mail through the
+  existing small mail read.
+
+For shifts, `not_booked` means Dienstplan is off; `unavailable` is a read
+failure. Assignments remain part of Basis and have a separate read status.
+For assignments and mail as well, only `ready` can mean an empty result.
+Keep the reads in separate session-bound cache families. A change of the
+selected period needs only `period`. The existing page still reads the
+narrow routes until #8081; those routes also serve other callers and details.
+
 ### Backend calls
 
 Every backend call goes through `sendBackend` (`lib/backend-client.server.ts`):

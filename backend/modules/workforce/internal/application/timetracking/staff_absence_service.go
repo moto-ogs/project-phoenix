@@ -367,6 +367,18 @@ func NewStaffAbsenceService(
 	monthService WorkTimeMonthService,
 	opts ...StaffAbsenceOption,
 ) StaffAbsenceService {
+	return newStaffAbsenceService(absenceRepo, workSessionRepo, quotaRepo, auditRepo, settings, monthService, opts...).transactional()
+}
+
+func newStaffAbsenceService(
+	absenceRepo AbsenceRequestRecords,
+	workSessionRepo WorkSessionRecords,
+	quotaRepo VacationQuotaRecords,
+	auditRepo AbsenceAuditRecords,
+	settings monthSettingsResolver,
+	monthService WorkTimeMonthService,
+	opts ...StaffAbsenceOption,
+) *staffAbsenceService {
 	service := &staffAbsenceService{
 		absenceRepo:     absenceRepo,
 		workSessionRepo: workSessionRepo,
@@ -381,10 +393,14 @@ func NewStaffAbsenceService(
 	if service.shiftPlanSyncer == nil {
 		service.shiftPlanSyncer = unplannedSickCascade{}
 	}
-	if service.runInTx != nil {
-		return &absenceCommands{service, service}
-	}
 	return service
+}
+
+func (s *staffAbsenceService) transactional() StaffAbsenceService {
+	if s.runInTx != nil {
+		return &absenceCommands{s, s}
+	}
+	return s
 }
 
 // defaultEntitledDays is the fallback when no per-staff quota row exists.

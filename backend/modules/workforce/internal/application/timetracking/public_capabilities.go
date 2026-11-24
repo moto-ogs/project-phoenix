@@ -132,8 +132,12 @@ func (c workTimeMonthCapability) MonthSummary(ctx context.Context, staffID int64
 	if err != nil {
 		return nil, mapTimeTrackingFailure(err)
 	}
+	return publicMonthSummary(summary), nil
+}
+
+func publicMonthSummary(summary *MonthSummary) *workforce.MonthSummary {
 	if summary == nil {
-		return nil, nil
+		return nil
 	}
 	result := &workforce.MonthSummary{
 		StaffID: ident.ID(summary.StaffID), Year: summary.Year, Month: summary.Month, CarryInMinutes: summary.CarryInMinutes,
@@ -158,7 +162,7 @@ func (c workTimeMonthCapability) MonthSummary(ctx context.Context, staffID int64
 			})
 		}
 	}
-	return result, nil
+	return result
 }
 
 func (c workTimeMonthCapability) DailyProjection(ctx context.Context, staffID int64, from, to string) ([]workforce.DailyProjection, error) {
