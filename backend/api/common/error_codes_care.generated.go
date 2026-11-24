@@ -79,6 +79,7 @@ const CodeCarePickupSignatureTooLarge = "care.pickup_signature_too_large"
 const CodeCarePollClosed = "care.poll_closed"
 const CodeCarePrimaryGuardianProtected = "care.primary_guardian_protected"
 const CodeCareRemoveDisabled = "care.remove_disabled"
+const CodeCareRequestFeedNotFound = "care.request_feed_not_found"
 const CodeCareRequestNotFound = "care.request_not_found"
 const CodeCareRequestNotOpen = "care.request_not_open"
 const CodeCareRequestSharingInvalid = "care.request_sharing_invalid"
@@ -165,6 +166,7 @@ var errorCodeClassesCare = []errorCodeClass{
 	{CodeCarePollClosed, "business_rejection"},
 	{CodeCarePrimaryGuardianProtected, "permission"},
 	{CodeCareRemoveDisabled, "permission"},
+	{CodeCareRequestFeedNotFound, "business_rejection"},
 	{CodeCareRequestNotFound, "business_rejection"},
 	{CodeCareRequestNotOpen, "business_rejection"},
 	{CodeCareRequestSharingInvalid, "input"},

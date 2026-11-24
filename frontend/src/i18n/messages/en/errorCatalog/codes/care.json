@@ -77,6 +77,7 @@
   "primary_guardian_protected": "You cannot access {object}. Please contact the school.",
   "remove_disabled": "{object} is not available here at the moment. Please ask your contact person.",
   "request_not_found": "{object} was not found. Please reload the page.",
+  "request_feed_not_found": "There is no RSS link any more. Please reload the page and create a new link.",
   "request_not_open": "{object} is no longer open. Please ask your contact person.",
   "request_sharing_invalid": "{object} contains invalid details. Please check your entries.",
   "room_history_stop_disabled": "You cannot change {object} here at the moment. Please ask your contact person.",

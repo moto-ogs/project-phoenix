@@ -60,7 +60,34 @@ func TestPublicFeedUsesUniformNotFoundResponse(t *testing.T) {
 	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/revoked-token", nil))
 
 	assert.Equal(t, http.StatusNotFound, recorder.Code)
-	assert.JSONEq(t, `{"status":404,"detail":"Not Found","code":"general.input"}`, recorder.Body.String())
+	assert.JSONEq(t, `{"status":404,"detail":"Not Found","code":"care.request_feed_not_found"}`, recorder.Body.String())
+}
+
+// A rotation without a feed names the missing feed, not a wrong input (#7688).
+func TestRotateWithoutFeedAnswersFeedNotFound(t *testing.T) {
+	t.Parallel()
+	router := testResource(stubEngine{err: requestfeed.ErrNotFound}).TenantRouter()
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/rotate", nil))
+
+	assert.Equal(t, http.StatusNotFound, recorder.Code)
+	assert.JSONEq(t, `{"status":404,"detail":"Not Found","code":"care.request_feed_not_found"}`, recorder.Body.String())
+}
+
+// Staff without school-wide request access is refused as such on every
+// control; only the public feed keeps its uniform 404 (#7688).
+func TestTenantControlsRefuseAccountsWithoutRequestAccess(t *testing.T) {
+	t.Parallel()
+	router := testResource(stubEngine{err: requestfeed.ErrNoAccess}).TenantRouter()
+	for _, request := range []struct{ method, path string }{
+		{http.MethodGet, "/"}, {http.MethodPost, "/"}, {http.MethodPost, "/rotate"},
+	} {
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, httptest.NewRequest(request.method, request.path, nil))
+
+		assert.Equal(t, http.StatusForbidden, recorder.Code, request.method+" "+request.path)
+		assert.JSONEq(t, `{"status":403,"detail":"Forbidden","code":"general.permission"}`, recorder.Body.String(), request.method+" "+request.path)
+	}
 }
 
 func TestPublicFeedDisablesCaching(t *testing.T) {
