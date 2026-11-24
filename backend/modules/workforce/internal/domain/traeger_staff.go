@@ -32,6 +32,9 @@ var StaffRecordFields = []string{
 	StaffFieldIBAN, StaffFieldTaxID, StaffFieldSocialSecurityNumber,
 }
 
+// FinancialStaffFields lists the bank and tax fields, the ones kept sealed.
+var FinancialStaffFields = []string{StaffFieldIBAN, StaffFieldTaxID, StaffFieldSocialSecurityNumber}
+
 // IsFinancialStaffField reports the fields kept sealed.
 func IsFinancialStaffField(field string) bool {
 	return field == StaffFieldIBAN || field == StaffFieldTaxID || field == StaffFieldSocialSecurityNumber
