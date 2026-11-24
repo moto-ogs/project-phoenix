@@ -1,11 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-// Smoke test only — full proxy behavior (body parsing, 429 handling, non-JSON
-// fallback, error forwarding, etc.) is covered by the helper tests in
-// src/lib/operator/route-wrapper.test.ts. This file exists to pin the exact
-// backend endpoint string and HTTP method that route.ts wires to, so a typo
-// or method swap is caught by CI.
+// Pin the invitation flow’s backend method and registered endpoint.
 const { mockFetch, mockGetServerApiUrl } = vi.hoisted(() => ({
   mockFetch: vi.fn(),
   mockGetServerApiUrl: vi.fn(() => "http://localhost:8080"),

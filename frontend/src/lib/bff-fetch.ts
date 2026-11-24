@@ -480,8 +480,13 @@ async function call<T>(
  */
 export function bffJson<T>(
   portal: Portal,
-  route: SessionBffRoute<T>,
-  options?: CallOptions & { body?: unknown },
+  route: SessionBffRoute<T, undefined>,
+  options?: CallOptions & { body?: undefined },
+): Promise<T>;
+export function bffJson<T, B>(
+  portal: Portal,
+  route: SessionBffRoute<T, B>,
+  options: CallOptions & { body: NoInfer<B> },
 ): Promise<T>;
 export function bffJson<
   P extends Portal,
@@ -494,7 +499,7 @@ export function bffJson<
 ): Promise<BffResult<RouteOf<P, K>, V>>;
 export function bffJson(
   portal: Portal,
-  route: string | SessionBffRoute<unknown>,
+  route: string | SessionBffRoute<unknown, unknown>,
   options?: CallOptions,
 ): Promise<unknown> {
   const space = typeof route === "string" ? route.indexOf(" ") : -1;
@@ -508,6 +513,28 @@ export function bffJson(
   const method = route.slice(0, space) as Method;
   const url = bffPath(portal, route.slice(space + 1), opts.params, opts.query);
   return call(portal, method, url, opts);
+}
+
+type FileHrefOptions<R> = ParamsOf<R> & QueryOf<R, never>;
+
+/** Same-origin address for a registered GET file route (link, image or navigation). */
+export function bffFileHref<
+  P extends Portal,
+  K extends Extract<FileRouteKey<P>, `GET ${string}`>,
+>(
+  portal: P,
+  route: K,
+  ...[options]: object extends FileHrefOptions<FileRouteOf<P, K>>
+    ? [options?: FileHrefOptions<FileRouteOf<P, K>>]
+    : [options: FileHrefOptions<FileRouteOf<P, K>>]
+): string {
+  const opts = options as
+    | {
+        params?: Record<string, string>;
+        query?: Record<string, QueryValue>;
+      }
+    | undefined;
+  return bffPath(portal, route.slice(4), opts?.params, opts?.query);
 }
 
 /**

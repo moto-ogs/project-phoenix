@@ -10,7 +10,7 @@ import type * as parentMeContract from "./contract/parent-me.generated";
 import type * as sharedContract from "./contract/shared.generated";
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
-import { bffFile, bffJson } from "./bff-fetch";
+import { bffFileHref, bffFile, bffJson } from "./bff-fetch";
 import { ApiError } from "./api-error";
 /**
  * Parent-portal client API. Symmetric to the operator-api / tenant
@@ -877,7 +877,11 @@ export function announcementAttachmentDownloadUrl(
   announcementId: string,
   attachmentId: string,
 ): string {
-  return `/api/parent/parent-news-attachments/${encodeURIComponent(announcementId)}/${encodeURIComponent(attachmentId)}/download`;
+  return bffFileHref(
+    "parent",
+    "GET /parent-news-attachments/{announcementId}/{attachmentId}/download",
+    { params: { announcementId, attachmentId } },
+  );
 }
 
 /**
@@ -1072,7 +1076,14 @@ export function declarationProofAttachmentDownloadUrl(
   studentId: string,
   attachmentId: string,
 ): string {
-  return `/api/parent/parent-news-attachments/${encodeURIComponent(announcementId)}/${encodeURIComponent(attachmentId)}/download?student_id=${encodeURIComponent(studentId)}`;
+  return bffFileHref(
+    "parent",
+    "GET /parent-news-attachments/{announcementId}/{attachmentId}/download",
+    {
+      params: { announcementId, attachmentId },
+      query: { student_id: studentId },
+    },
+  );
 }
 
 /** Portal page that shows the proof for one child. */

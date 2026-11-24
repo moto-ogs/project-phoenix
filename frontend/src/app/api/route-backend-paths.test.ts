@@ -276,7 +276,7 @@ const knownContractCall = new Set([
   "authStepProxy",
 ]);
 const rawCalls =
-  /^(?:fetch|sendBackend|readBackendJson|backendJson|backendFetch|forwardToBackend|forwardJsonRequest|create(?:Tenant|Parent|Caterer|Operator|Public)JsonProxy|jsonProxy|(?:operatorApi|api|proxy)(?:Get|Post|Put|Patch|Delete)|postForm|api)$/;
+  /^(?:fetch|sendBackend|readBackendJson|backendJson|backendFetch|api(?:Get|Post|Put|Patch|Delete)|postForm|api)$/;
 
 function handlerCalls(file: string, text: string) {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
@@ -496,18 +496,12 @@ describe("RouteFile response decoding", () => {
 });
 
 // These modules implement the transport, the contract boundary, or
-// unregistered streaming/demo routes. The legacy portal helpers are owned
-// by #8004. Each exception is scoped to an existing call name.
+// unregistered streaming/demo routes. Each exception is scoped to an
+// existing call name.
 const serverTransportExceptions: Record<string, readonly string[]> = {
   "lib/backend-client.server.ts": ["fetch", "sendBackend", "readBackendJson"],
   "lib/contract/catalog-proxy.server.ts": ["sendBackend", "backendFetch"],
   "lib/contract/client.server.ts": ["sendBackend", "readBackendJson"],
-  "lib/portal-handlers.server.ts": [
-    "api",
-    "backendFetch",
-    "forwardJsonRequest",
-  ],
-  "lib/operator/route-wrapper.server.ts": ["api"],
   "lib/sse-proxy.server.ts": ["sendBackend"],
   "app/api/demo/access/forward.ts": ["sendBackend"],
   "app/api/demo/access/handoff/route.ts": ["sendBackend"],
@@ -550,12 +544,13 @@ describe("Server response decoding", () => {
 
   it("catches a typed unchecked read in a shell helper even under an alias", () => {
     const source = `
-      import { apiGet as read } from "~/lib/api-helpers.server";
+      import { backendJson as read } from "~/lib/backend-client.server";
+      const endpoint = "/api/me/groups/supervised";
       export const load = (token: string) =>
-        read<{ data: unknown }>("/api/me/groups/supervised", token);
+        read<{ data: unknown }>("GET", endpoint, token);
     `;
     expect(
       serverTransportBypasses("lib/shell-bootstrap.server.ts", source),
-    ).toEqual(["apiGet"]);
+    ).toEqual(["backendJson"]);
   });
 });

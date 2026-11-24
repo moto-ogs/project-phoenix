@@ -141,6 +141,11 @@ a list registers a query budget scenario; a paged list answers through
 feature ships seed data; the architecture check and `check-changed.mjs` run
 before push.
 
+File links and browser navigations use `bffFileHref` with the registered GET
+file key, typed path parameters and query. Use `bffFile` when the caller
+reads the response itself; never build a file URL by hand. The BFF route
+guard checks both retired forwarding helpers and handwritten file URLs.
+
 ## Write route
 
 Same steps; the contract names the body type, and the client sends it typed

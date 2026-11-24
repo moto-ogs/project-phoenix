@@ -83,12 +83,12 @@ describe("tenant-api", () => {
       );
     });
 
-    it("returns base path for empty string", () => {
-      expect(loginImageSrc("")).toBe("/api/public/login-image/");
+    it("uses the moto logo when the stored value is empty", () => {
+      expect(loginImageSrc("")).toBe("/images/moto_transparent.webp");
     });
 
     it("returns base path for trailing slash", () => {
-      expect(loginImageSrc("/")).toBe("/api/public/login-image/");
+      expect(loginImageSrc("/")).toBe("/images/moto_transparent.webp");
     });
   });
 

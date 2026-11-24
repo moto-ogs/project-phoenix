@@ -5,7 +5,7 @@ import {
   envelopedBackendSuccess,
   forwardBackendResponse,
 } from "~/lib/backend-proxy-response.server";
-import { problemResponse } from "~/lib/api-helpers.server";
+import { problemResponse } from "~/lib/api-response-error.server";
 
 const logger = createLogger({ component: "DemoAccessRoute" });
 

@@ -186,8 +186,13 @@ describe("passkey-api", () => {
     expect(mockStartAuthentication).toHaveBeenCalledWith({
       optionsJSON: { challenge: "operator-challenge" },
     });
-    expect(vi.mocked(global.fetch).mock.calls[0]?.[0]).toBe(
+    expect(global.fetch).toHaveBeenNthCalledWith(
+      1,
       "/api/operator/auth/passkeys/login/options",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(vi.mocked(global.fetch).mock.calls[0]?.[1]).not.toHaveProperty(
+      "body",
     );
     expect(vi.mocked(global.fetch).mock.calls[1]?.[0]).toBe(
       "/api/operator/auth/passkeys/login/verify",
@@ -226,6 +231,14 @@ describe("passkey-api", () => {
       "/api/caterer/auth/passkeys/login/verify",
       "/api/caterer/auth/passkeys",
     ]);
+    expect(global.fetch).toHaveBeenNthCalledWith(
+      1,
+      "/api/caterer/auth/passkeys/login/options",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(vi.mocked(global.fetch).mock.calls[0]?.[1]).not.toHaveProperty(
+      "body",
+    );
   });
 
   it("starts authenticated enrollment without a bearer token", async () => {
