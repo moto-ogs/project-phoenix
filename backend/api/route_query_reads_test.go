@@ -131,9 +131,11 @@ import numbers "strconv"
 func endpoint(request *http.Request) {
 	values := request.URL.Query()
 	alias := values
-	const key = "hidden"
-	value := alias.Get(key)
-	consume(value)
+	keys := []string{"hidden"}
+	for _, key := range keys {
+		value := alias.Get(key)
+		consume(value)
+	}
 }
 func consume(value string) {
 	_, _ = numbers.ParseInt(value, 10, 64)
@@ -731,6 +733,15 @@ func (s *queryReadScan) recordKeyOrigin(expr ast.Expr, keys map[string]bool, par
 					keys[value] = true
 				}
 			}
+		}
+	case *ast.CompositeLit:
+		// Query names can come from a fixed collection, for example the
+		// two run kinds whose DATEV filters are read in a loop.
+		for _, element := range key.Elts {
+			if entry, ok := element.(*ast.KeyValueExpr); ok {
+				element = entry.Value
+			}
+			s.recordKeyOrigin(ast.Unparen(element), keys, params, visited)
 		}
 	}
 }
