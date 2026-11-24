@@ -78,6 +78,8 @@ export const TRACKED_TENANT_ROUTE_TEMPLATES = [
   "/info-displays",
   "/lists",
   "/meal-plan",
+  // Seite „Mehr“ der App (#8070): Ziele außerhalb der Pill.
+  "/mehr",
   "/meal-plan/freigabe",
   "/mein-dienstplan",
   "/messages",

@@ -149,6 +149,8 @@ const OHNE_BAUART: Readonly<Record<string, string>> = {
     "Startseite aus Bausteinen (ADR 0008, #2180): keine Sammlung, kein Werkzeug",
   "database/page.tsx":
     "Index der Datenverwaltung: Navigationskacheln zu den Sammlungen",
+  "mehr/page.tsx":
+    "Navigationsseite der App (#8070): Ziele außerhalb der Pill, keine Sammlung",
   "database/exports/page.tsx":
     "Export-Übersicht: Kacheln lösen Downloads aus, keine Fläche über Zeit",
 };

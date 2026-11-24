@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps, MouseEvent, ReactNode } from "react";
 import {
   Drawer,
   DrawerContent,
@@ -11,6 +11,7 @@ import {
 import {
   PortalBottomNav,
   PortalBottomNavButton,
+  PortalBottomNavLink,
 } from "~/components/ui/portal-bottom-nav";
 
 /**
@@ -51,6 +52,8 @@ export function PortalMoreBottomNav({
   sheetDescription,
   sheetMounted = true,
   sheet,
+  moreHref,
+  onMoreLinkClick,
   ...barProps
 }: Omit<ComponentProps<typeof PortalBottomNav>, "children"> & {
   /** Die Felder vor „Mehr“ (`PortalBottomNavLink`). */
@@ -70,18 +73,40 @@ export function PortalMoreBottomNav({
   readonly sheetMounted?: boolean;
   /** Der Inhalt des Blatts. */
   readonly sheet: ReactNode;
+  /**
+   * In der App (#8070): „Mehr“ ist ein Reiter mit eigener Seite statt
+   * eines Blatts. Mit Ziel wird das Feld ein Link; ohne bleibt es der Knopf.
+   */
+  readonly moreHref?: string;
+  readonly onMoreLinkClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
+  // Die Messung der gleitenden Fläche liest nur `offsetLeft`/`offsetWidth`;
+  // der Verweis des Knopfs taugt deshalb auch für den Link.
+  const { onClick: _onClick, ...moreFields } = more as PortalMoreButtonProps & {
+    onClick?: unknown;
+  };
   return (
     <>
       <PortalBottomNav {...barProps}>
         {children}
-        <PortalBottomNavButton
-          {...more}
-          active={open || moreItemActive}
-          onClick={() => onOpenChange(true)}
-          aria-haspopup="dialog"
-          aria-expanded={open}
-        />
+        {moreHref ? (
+          <PortalBottomNavLink
+            {...(moreFields as unknown as ComponentProps<
+              typeof PortalBottomNavLink
+            >)}
+            href={moreHref}
+            active={moreItemActive}
+            onClick={onMoreLinkClick}
+          />
+        ) : (
+          <PortalBottomNavButton
+            {...more}
+            active={open || moreItemActive}
+            onClick={() => onOpenChange(true)}
+            aria-haspopup="dialog"
+            aria-expanded={open}
+          />
+        )}
       </PortalBottomNav>
 
       {sheetMounted ? (

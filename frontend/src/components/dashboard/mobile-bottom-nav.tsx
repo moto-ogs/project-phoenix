@@ -124,7 +124,8 @@ import {
 } from "./staff-settings-nav";
 import { supervisionConcept } from "~/lib/concepts/supervision";
 import { usePillTabs } from "~/lib/mobile-navigation/use-pill-tabs";
-import { MORE_TAB } from "~/lib/mobile-navigation/tab-registry";
+import { MORE_PAGE_HREF, MORE_TAB } from "~/lib/mobile-navigation/tab-registry";
+import { useIsApp } from "~/lib/device-context";
 
 // Das Vollbild-Blatt der Benachrichtigungen (#7148) lädt erst im Staff-Portal
 // und nach dem ersten Zeichnen, nicht in jedem Bündel der unteren Leiste.
@@ -150,7 +151,7 @@ const Icon = ({ path, className }: { path: string; className?: string }) => (
   </svg>
 );
 
-function MobileNavIcon({
+export function MobileNavIcon({
   item,
   active,
   className,
@@ -548,7 +549,13 @@ export function MobileBottomNav(props: MobileBottomNavProps) {
   );
 }
 
-function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
+/**
+ * Das Navigationsmodell des Personal-Portals unten: Reiter der Pill und die
+ * Zeilen hinter „Mehr“, mit denselben Rechte- und Modulregeln wie die
+ * Seitenleiste. Geteilt von der Pill und der Seite „Mehr“ (#8070), damit
+ * nichts doppelt steht.
+ */
+export function useStaffBottomNavModel() {
   // Ungelesene Anmeldungen (#3778) an der Zeile „Anmeldungen" im Menü.
   const { unreadCount: enrollmentsUnreadCount } = useEnrollmentsUnread();
   // „Neu für dich“: geteilte Notizen (#6854) und geänderte Abholzeiten
@@ -578,16 +585,6 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
   // Dieselbe Hilfe-Adresse wie in der Seitenleiste: Rolle, Schuleinstellungen
   // und `return_to`, damit die Hilfe nicht erneut fragt (#3575).
   const helpHref = useHelpHref();
-  const [isOverflowMenuOpen, setIsOverflowMenuOpen] = useState(false);
-  // Unter lg gibt es keine Shell-Kopfzeile mehr (Eltern-App-Muster), also
-  // auch keinen Avatar mit Profilmenü: Profil und Abmelden wohnen hier im
-  // „Mehr"-Menü, wie in der Eltern-App.
-  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
-  const [staffPreviewModalOpen, setStaffPreviewModalOpen] = useState(false);
-
-  // Refs for sliding indicator
-  const navRefs = useRef<(HTMLAnchorElement | null)[]>([]);
-  const moreButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // Get session for role checking
   const { data: session } = useSession();
@@ -665,10 +662,6 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
     },
     [pathname, searchParams, isViewingSharedOpenRoom],
   );
-
-  const closeOverflowMenu = () => {
-    setIsOverflowMenuOpen(false);
-  };
 
   // Compute main navigation items per role and mode
   // operatorPath is deterministic for the page lifetime, memoize to avoid per-render churn.
@@ -929,10 +922,81 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
     (group) => group.items,
   );
 
+  // Zielauflösung einer Menüzeile: Hilfe mit Kontext, Mandantenseiten mit
+  // Präfix, sonst der Einstieg des Bereichs.
+  const resolveItemHref = (item: AdditionalNavItem) =>
+    item.href === STAFF_FLAT_PAGES.help.href
+      ? helpHref
+      : TENANT_SCOPED_HREFS.has(item.href)
+        ? tenantPath(navigationEntryTarget(item.href))
+        : navigationEntryTarget(item.href);
+
+  return {
+    enrollmentsUnreadCount,
+    staffNews,
+    pathname,
+    tenantPath,
+    helpHref,
+    isGroupOpen,
+    toggleGroup,
+    mode,
+    isSessionExpired,
+    canStartStaffPreview,
+    profileUrl,
+    feedUnreadCount,
+    openNotificationsSheet,
+    moreBadgeCount,
+    traegerReturnHref,
+    isActiveRoute,
+    displayMainItems,
+    visibleDrawerGroups,
+    displayAdditionalItems,
+    simpleNav,
+    resolveItemHref,
+  };
+}
+
+export type StaffBottomNavModel = ReturnType<typeof useStaffBottomNavModel>;
+
+function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
+  const {
+    enrollmentsUnreadCount,
+    staffNews,
+    tenantPath,
+    isGroupOpen,
+    toggleGroup,
+    mode,
+    isSessionExpired,
+    canStartStaffPreview,
+    profileUrl,
+    feedUnreadCount,
+    openNotificationsSheet,
+    moreBadgeCount,
+    traegerReturnHref,
+    isActiveRoute,
+    displayMainItems,
+    displayAdditionalItems,
+    visibleDrawerGroups,
+    simpleNav,
+    resolveItemHref,
+  } = useStaffBottomNavModel();
+  const [isOverflowMenuOpen, setIsOverflowMenuOpen] = useState(false);
+  // Unter lg gibt es keine Shell-Kopfzeile mehr (Eltern-App-Muster), also
+  // auch keinen Avatar mit Profilmenü: Profil und Abmelden wohnen hier im
+  // „Mehr"-Menü, wie in der Eltern-App.
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+  const [staffPreviewModalOpen, setStaffPreviewModalOpen] = useState(false);
+  // Refs for sliding indicator
+  const navRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const moreButtonRef = useRef<HTMLButtonElement | null>(null);
+  const closeOverflowMenu = () => {
+    setIsOverflowMenuOpen(false);
+  };
   // Reiter-Modell (#8070): Der aktive Reiter kommt aus dem Register und dem
   // Verlaufseintrag (ein Detail gehört zum Reiter, aus dem es kam); bis der
   // Eintrag bekannt ist, gilt die bisherige Pfad-Regel.
   const pillTabs = usePillTabs(displayMainItems);
+  const isApp = useIsApp();
   const isMainItemActive = (item: NavItem) =>
     pillTabs.activeHref === null
       ? isActiveRoute(item.href, item.activePaths)
@@ -987,6 +1051,16 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
         className={className}
         open={isOverflowMenuOpen}
         onOpenChange={setIsOverflowMenuOpen}
+        // In der App ist „Mehr“ eine eigene Seite (#8070, Vorschlag); im
+        // Operator-Portal bleibt das Blatt.
+        moreHref={
+          isApp && mode === "teacher"
+            ? tenantPath(pillTabs.hrefFor(MORE_TAB, MORE_PAGE_HREF))
+            : undefined
+        }
+        onMoreLinkClick={(event) =>
+          pillTabs.onTabClick(MORE_TAB, MORE_PAGE_HREF, event)
+        }
         moreItemActive={isAnyAdditionalNavActive}
         more={{
           ref: moreButtonRef,
@@ -1109,12 +1183,7 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
                               item.href,
                               item.activePaths,
                             );
-                            const href =
-                              item.href === STAFF_FLAT_PAGES.help.href
-                                ? helpHref
-                                : TENANT_SCOPED_HREFS.has(item.href)
-                                  ? tenantPath(navigationEntryTarget(item.href))
-                                  : navigationEntryTarget(item.href);
+                            const href = resolveItemHref(item);
 
                             return (
                               <PortalNavSheetLink
