@@ -110,8 +110,10 @@ und [ADR 0318](0318-zustaendigkeit-je-schule-ist-einstellung-die-stelle-stammdat
    `ResponsibleParties` bindet (wie `TraegerStaffEmployers`). Die Werte des
    Monats liest der Export wie bisher je Schule in ihrer Tenant-Transaktion,
    nach dem Eintrag im Zugriffsprotokoll (ADR 0250 §5). Das Abfragebudget
-   `api.traeger.staff_payroll_export` wächst um die Lesungen der Stellen und
-   ihrer Lohnwerte; es wächst mit der Zahl der Arbeitgeber nicht.
+   `api.traeger.staff_payroll_export` bleibt bei 41: Die Lohnwerte des
+   Trägers lesen in derselben Träger-Transaktion wie die Akten, und
+   Organisation & Tenancy liest Einstellungen und Schulliste nur für Schulen
+   mit gespeicherter Stelle; ohne Stelle kostet die Frage eine Anweisung.
 
 ## Verworfene Optionen
 

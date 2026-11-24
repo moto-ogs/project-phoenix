@@ -113,12 +113,16 @@ func (t *TraegerStaff) payrollRun(ctx context.Context, actor workforce.TraegerSt
 	if t.ports.Exports == nil || t.ports.Payroll == nil {
 		return payrollRun{}, errors.New("traeger payroll export: the school months and the payroll settings are required")
 	}
-	settings, err := t.ports.Payroll.TraegerPayrollSettings(ctx, actor.OrganizationID)
-	if err != nil {
-		return payrollRun{}, fmt.Errorf("read the payroll settings: %w", err)
-	}
-	targets := payrollTargets{settings: settings}
+	var settings workforce.TraegerPayrollSettings
+	targets := payrollTargets{}
 	scene, err := t.exportScene(ctx, actor, func(ctx context.Context, scene *exportScene) error {
+		// The Träger's payroll values join the Träger transaction of the
+		// scene, so the export opens it once.
+		var readErr error
+		if settings, readErr = t.ports.Payroll.TraegerPayrollSettings(ctx, actor.OrganizationID); readErr != nil {
+			return fmt.Errorf("read the payroll settings: %w", readErr)
+		}
+		targets.settings = settings
 		contracts, readErr := t.store.ListMonthContracts(ctx, actor.OrganizationID, first, last)
 		if readErr != nil {
 			return readErr

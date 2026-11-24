@@ -183,11 +183,15 @@ func (t *TraegerStaff) payrollEmployers(ctx context.Context, organizationID int6
 		}
 		employers = read
 	}
+	values := map[employerKey]*domain.TraegerPayrollEmployer{}
+	if len(employers) == 0 {
+		// Only the Träger employs: no other employer's values to read.
+		return employers, values, nil
+	}
 	stored, err := t.store.ListPayrollEmployers(ctx, organizationID)
 	if err != nil {
 		return nil, nil, err
 	}
-	values := make(map[employerKey]*domain.TraegerPayrollEmployer, len(stored))
 	for i := range stored {
 		values[employerKey{stored[i].SchoolID, stored[i].Body}] = &stored[i]
 	}
