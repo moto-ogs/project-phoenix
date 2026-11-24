@@ -18,9 +18,10 @@ export function studentSearchTopic(
       : null;
   // #6601: Die Auswahl-Leiste von `Alle Kinder` hat kein `Eltern einladen`.
   // Die Sammeleinladung steht in `Kinderdaten` (students-list.tsx, nur mit
-  // `users:create`); der Hinweis fuehrt dorthin.
+  // `users:create`); der Hinweis fuehrt dorthin. Er nennt den Artikel nicht,
+  // weil `eltern-einladen` nur fuer die Leitung sichtbar ist.
   const inviteNote =
-    "Die Eltern mehrerer Kinder lädt die Leitung nicht in `Alle Kinder` ins Elternportal ein, sondern in `Datenverwaltung` unter `Kinderdaten`. Wie es geht, steht unter „Eltern ins Elternportal einladen“.";
+    "Eltern vieler Kinder auf einmal einladen geht nicht in `Alle Kinder`. Das geht nur in `Datenverwaltung` unter `Kinderdaten`.";
   // #5026: ohne Räume (Binärmodus) gibt es keine Zuweisung.
   const transitNotes =
     presenceMode === "binary"

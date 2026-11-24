@@ -4026,13 +4026,13 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
     title: "Eltern ins Elternportal einladen",
     question: "Wie lade ich Eltern ein?",
     summary:
-      "Du lädst eine Person beim Kind ein oder die Eltern vieler Kinder auf einmal. Dafür brauchst du ihre E-Mail-Adresse.",
+      "Du lädst eine Person beim Kind ein oder die Eltern vieler Kinder auf einmal. Dafür braucht jede Person eine E-Mail-Adresse.",
     group: "elternarbeit",
     audience: "lead",
     icon: "KeyRound",
     requirements: [
       "Das Kind ist in moto angelegt.",
-      "Du kennst die E-Mail-Adresse der Person.",
+      "Du kennst die E-Mail-Adresse der Person, oder sie steht schon beim Kind.",
     ],
     steps: [],
     instructionGroups: [
@@ -4119,12 +4119,13 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
       "Eine Person mit mehreren Kindern lädst du nur einmal ein. Sie sieht danach alle ihre Kinder.",
       "Sag den Eltern vorher Bescheid, dass eine E-Mail von moto kommt. Das rät auch das Fenster `Eltern ins Elternportal einladen`.",
       "Steht im Fenster `Einladung ist noch offen`? Diese Eltern haben ihre Einladung noch nicht angenommen. Soll die E-Mail noch einmal rausgehen, setze den Haken bei `Offene Einladungen noch einmal senden`.",
-      "Personen mit eingeschränkter `Portalrolle`, etwa `Nur Abholung` oder `Notfallkontakt`, lädt die Sammeleinladung nicht ein. Das Fenster zählt sie unter `Nur Kontakt, zum Beispiel abholberechtigt. Wird nicht eingeladen`.",
+      "Hat eine Person eine eingeschränkte `Portalrolle`, etwa `Nur Abholung`, bekommt sie keine Einladung. Das Fenster zählt sie unter `Nur Kontakt, zum Beispiel abholberechtigt. Wird nicht eingeladen`.",
       "Die Nachricht geht an die E-Mail-Adresse, mit der sich die Eltern im Elternportal anmelden. Sie nennt nur die Vornamen der Kinder, die Schule und den Weg ins Elternportal. Geschwister stehen in einer Nachricht.",
       "Die Nachricht nennt nur Kinder, die heute Betreuung gebucht haben. Buchungen, die erst später beginnen, zählen nicht, ein Wochenplan allein auch nicht. Jedes Elternteil bekommt sie pro Kind nur einmal. Wurde sie schon verschickt, steht das Elternteil unter `Nachricht schon verschickt`.",
       "Holt jemand das Kind nur ab, wähle `Portalrolle` `Nur Abholung`. Dann sind `E-Mail` und Telefon freiwillig. Die Person bekommt keinen Zugang zur Eltern-App.",
     ],
     differences: [
+      "`Auswählen` oder `Eltern einladen` fehlt in `Kinderdaten`? Für `Auswählen` brauchst du das Recht `Benutzerinformationen bearbeiten`, für `Eltern einladen` das Recht `Neue Benutzer erstellen`. Frag die Person, die bei euch die Rechte vergibt.",
       "`Eltern mit Konto benachrichtigen` fehlt? Dann hat in der Auswahl niemand ein Konto. Eltern ohne Konto bekommen die Einladung.",
       "Steht bei der Person `Konto aktiv, kein Portalzugriff`, heißt der Knopf `Zugriff gewähren`.",
       "Bei einer eingeschränkten `Portalrolle` wie `Notfallkontakt` oder `Nur Abholung` fragt moto zuerst `Vollen Zugriff gewähren?`. Erst `Zugriff gewähren` erteilt den Zugang.",
@@ -4136,8 +4137,7 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
       "Ein Elternteil sagt, die Nachricht ist nicht angekommen? moto schickt sie kein zweites Mal. Bitte die Person, im Spam-Ordner nachzusehen. Sonst sag ihr selbst: Die Betreuung steht im Elternportal beim Kind unter `Betreuung & Wochenplan`.",
       "`Einladen` bewirkt nichts? Dann fehlt die `E-Mail`. Trage sie über `Bearbeiten` nach.",
       "Im Fenster steht zum Beispiel `2 Eltern können nicht eingeladen werden`? Darunter steht bei jedem Elternteil der Grund, etwa `E-Mail-Adresse fehlt`. Trage die Adresse beim Kind unter `Erziehungsberechtigte` nach. Alle anderen Eltern lädst du trotzdem schon ein.",
-      "Im Fenster steht `Für diese Auswahl gibt es niemanden einzuladen.`? Dann braucht niemand in der Auswahl eine Einladung, oder es fehlt etwas, zum Beispiel die E-Mail-Adresse. Offene Einladungen schickst du mit `Offene Einladungen noch einmal senden` erneut.",
-      "`Auswählen` oder `Eltern einladen` fehlt in `Kinderdaten`? Für `Auswählen` brauchst du das Recht `Benutzerinformationen bearbeiten`, für `Eltern einladen` das Recht `Neue Benutzer erstellen`. Frag die Person, die bei euch die Rechte vergibt.",
+      "Im Fenster steht `Für diese Auswahl gibt es niemanden einzuladen.`? Dann braucht niemand eine Einladung. Oder es fehlt etwas, zum Beispiel die E-Mail-Adresse. Offene Einladungen schickst du mit `Offene Einladungen noch einmal senden` noch einmal.",
       "Bei der Person steht `Link gilt nicht mehr`? Zum Beispiel wurde die `E-Mail` nach der Einladung geändert. Wähle `Einladung neu senden`. Der neue Link geht an die Adresse, die jetzt eingetragen ist.",
       "Bei der Person steht `Adresse prüfen` oder `Verzögert`, und `Erneut einladen` fehlt? Der Hinweis dort sagt, was zu tun ist. Mehr dazu unter `Wenn eine E-Mail nicht ankommt`.",
       "Die Person ist schon bei einem anderen Kind eingetragen? Wähle `Vorhandene/n suchen` statt `+ Hinzufügen`. Sonst entstehen zwei Einträge für dieselbe Person.",
@@ -9527,9 +9527,10 @@ export const studentSearchTopic = function studentSearchTopic(
       : null;
   // #6601: Die Auswahl-Leiste von `Alle Kinder` hat kein `Eltern einladen`.
   // Die Sammeleinladung steht in `Kinderdaten` (students-list.tsx, nur mit
-  // `users:create`); der Hinweis fuehrt dorthin.
+  // `users:create`); der Hinweis fuehrt dorthin. Er nennt den Artikel nicht,
+  // weil `eltern-einladen` nur fuer die Leitung sichtbar ist.
   const inviteNote =
-    "Die Eltern mehrerer Kinder lädt die Leitung nicht in `Alle Kinder` ins Elternportal ein, sondern in `Datenverwaltung` unter `Kinderdaten`. Wie es geht, steht unter „Eltern ins Elternportal einladen“.";
+    "Eltern vieler Kinder auf einmal einladen geht nicht in `Alle Kinder`. Das geht nur in `Datenverwaltung` unter `Kinderdaten`.";
   // #5026: ohne Räume (Binärmodus) gibt es keine Zuweisung.
   const transitNotes =
     presenceMode === "binary"
