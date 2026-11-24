@@ -488,6 +488,19 @@ describe("makeCatalogProxy", () => {
     expect(api.mock.calls[0]?.[3]).toEqual({ reason: "lost phone" });
   });
 
+  it("retains a backend 200 and its message for a NoData DELETE", async () => {
+    api.mockResolvedValueOnce(
+      Response.json({ status: "success", message: "deleted" }, { status: 200 }),
+    );
+    const response = await call("DELETE", ["rows", "1", "seen"]);
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      status: "success",
+      message: "deleted",
+      data: null,
+    });
+  });
+
   it.each([
     ["a 204", undefined],
     ["the envelope without data", { status: "success", message: "done" }],

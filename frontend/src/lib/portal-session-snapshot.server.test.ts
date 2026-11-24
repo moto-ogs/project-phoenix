@@ -353,6 +353,19 @@ describe.each(PORTALS)("$name session snapshot", (portal) => {
   });
 });
 
+it.each([
+  ["tenant", { tenantId: 3 }, { tenantId: "3" }],
+  ["school", { tenantId: 3 }, { tenantId: "3" }],
+  ["traeger", { orgId: 7 }, { orgId: "7" }],
+] as const)(
+  "hydrates a legacy %s cookie with a numeric binding",
+  async (name, legacy, binding) => {
+    const portal = PORTALS.find((entry) => entry.name === name)!;
+    await sendPortalCookie(portal, legacy);
+    await expect(portal.read()).resolves.toMatchObject({ user: binding });
+  },
+);
+
 const [tenant, , school, caterer, operator, traeger] = PORTALS as [
   Portal,
   Portal,

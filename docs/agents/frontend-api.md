@@ -269,8 +269,9 @@ The key is the scope claim of the portal's session token
   from the portal's handlers (`makePortalHandlers`). The answer is the
   backend's envelope with the decoded data: `{ status, data, message }`, a
   paginated list also `pagination`, as `common.Response` writes them.
-  A backend 204 still goes through the decoder. A NoData DELETE answers
-  204; a data-bearing DELETE with no answer fails with 502. The proxy
+  The proxy retains the backend's success status for every method. A
+  backend 204 still goes through the decoder and remains bodyless; a
+  data-bearing DELETE with no answer fails with 502. The proxy
   and the server contract client share JSON reading: unreadable 2xx
   answers (including truncated JSON) are 502. After a write that may
   have committed, they carry `general.write_answer_unreadable`; reads
@@ -341,8 +342,9 @@ The key is the scope claim of the portal's session token
   `lib/contract/shared.generated.ts`, and imported by both resource files.
 - A route that answers 204 or the envelope without data registers
   `NoData: true` in place of a response type. Its decoder (`noData`) takes
-  exactly those two answers, and the BFF answers `{ status: "success",
-  data: null }` with the backend's message (a DELETE: 204).
+  exactly those two answers. A 204 remains bodyless. Other success statuses
+  keep their status and answer `{ status: "success", data: null }` with the
+  backend's message, including for DELETE.
 - A client type reads an identifier as `string`, never `number`.
 
 The registered routes are the entries of `portals.generated.ts`.
