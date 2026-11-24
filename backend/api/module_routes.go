@@ -99,9 +99,6 @@ var moduleRouteRules = []moduleRouteRule{
 	{"/traeger/holiday-contributions", settings.ModuleFerienbetreuung},
 	{"/traeger/holiday-registrations", settings.ModuleFerienbetreuung},
 	{"/traeger/holiday-quotes", settings.ModuleFerienbetreuung},
-	// #5199: public period PDFs, no person data or school membership.
-	// Enrollment resolves the published link and its current form under Träger RLS.
-	{"/traeger/holiday-registrations/*/documents", moduleRouteBasis},
 
 	// Verträge und Dokumente: care contracts with templates, signature,
 	// notices, import and corrections.
@@ -310,7 +307,7 @@ var moduleRoutesLockedElsewhere = map[string]string{
 	// The public holiday registration carries no session: its link resolves
 	// the Träger, and holidayTraegerDirectory closes the link of a Träger
 	// none of whose schools books Ferienbetreuung (#6052). The quote of the
-	// form resolves the same link.
+	// form and the PDFs of the period (#5199) resolve the same link.
 	"/traeger/holiday-registrations": "#6052 Ferienanmeldung: der Link schließt mit dem Modul",
 	"/traeger/holiday-quotes":        "#6052 Ferienanmeldung: der Link schließt mit dem Modul",
 }

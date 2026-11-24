@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useTraegerResource } from "./use-traeger-resource";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import type { TraegerBookedModules } from "~/lib/traeger-booked-modules";
@@ -35,10 +36,10 @@ export function useTraegerBookedModules(): TraegerBookedModules {
     fetchTraegerOrganization,
     "die Angaben des Trägers",
   );
-  return {
-    modules: organization.data?.bookedModules ?? null,
-    settled: Boolean(
-      organization.data ?? organization.error ?? organization.failure,
-    ),
-  };
+  const modules = organization.data?.bookedModules ?? null;
+  const settled = Boolean(
+    organization.data ?? organization.error ?? organization.failure,
+  );
+  // One object per answer: every page and card reads it through a context.
+  return useMemo(() => ({ modules, settled }), [modules, settled]);
 }
