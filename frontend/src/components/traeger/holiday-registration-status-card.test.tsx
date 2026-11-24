@@ -1664,7 +1664,7 @@ describe("HolidayRegistrationStatusCard", () => {
         version: "kv-2",
       });
       const saved = vi.fn(() => Promise.resolve());
-      confirmedNumbers(() => Promise.resolve(), saved);
+      confirmedNumbers(() => Promise.resolve(undefined), saved);
       fireEvent.click(menuEntry("Nummern der Kinder bearbeiten"));
       fireEvent.change(screen.getByLabelText(/^Noah Muster/), {
         target: { value: "60103" },
