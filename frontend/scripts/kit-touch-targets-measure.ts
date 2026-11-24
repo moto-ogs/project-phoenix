@@ -20,6 +20,8 @@ export interface TouchTargetFinding {
    * Element. Die Ausnahme `abstand-24` aus #8059 greift nur dann.
    */
   clearance24?: boolean;
+  /** Mittelpunkt im Dokument (CSS-Pixel), für Fehlersuche und Bilder. */
+  center: { x: number; y: number };
 }
 
 export interface TouchTargetMeasureOptions {
@@ -291,10 +293,15 @@ export function measureTouchTargets({
     if (covered || ownHits === 0) continue;
 
     const target = describe(el);
+    const center = {
+      x: Math.round(rect.left + rect.width / 2 + scrollX),
+      y: Math.round(rect.top + rect.height / 2 + scrollY),
+    };
     for (const other of intruders) {
       findings.push({
         target,
         problem: "overlap",
+        center,
         detail: `die Trefferfläche von ${describe(other)} reicht in das Element`,
       });
     }
@@ -341,6 +348,7 @@ export function measureTouchTargets({
       findings.push({
         target,
         problem: "overlap",
+        center,
         detail: `die Trefferflächen von ${describe(other)} und diesem Element liegen übereinander`,
       });
     }
@@ -348,6 +356,7 @@ export function measureTouchTargets({
       findings.push({
         target,
         problem: "small",
+        center,
         detail: `${missed} von ${total} Punkten treffen nicht (Box ${Math.round(rect.width)} × ${Math.round(rect.height)} px), sondern ${[
           ...missedOn,
         ]
