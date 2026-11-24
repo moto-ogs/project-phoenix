@@ -33,7 +33,28 @@
  * stehen zwei Varianten-Regeln für dieselbe Eigenschaft nebeneinander und
  * welche gewinnt, hängt an der internen Sortierung von Tailwind.
  */
-@custom-variant compact (@media (width >= 48rem) and ((width < 64rem) or (max-height: 56.25rem)));
+@custom-variant compact (@media (width >= 48rem) and ((width < 64rem) or (max-height: 56.25rem)) and (not (pointer: coarse)));
+
+/*
+ * Gerätekontext (Prototyp Mobile-Zielbild, #8070). Ein Begriff statt
+ * verstreuter Breakpoints; JS-Gegenstück: `lib/device-context.tsx`.
+ *
+ *   - `app:`   App-Oberfläche: schmaler als `lg` ODER Finger als Hauptzeiger.
+ *              Pill, Blätter, Seitenmuster. Telefon und iPad in beiden Lagen.
+ *   - `desk:`  Desktop-Oberfläche: ab `lg` UND Maus/Trackpad. Heutiger Code.
+ *   - `phone:` App unter `sm` (640 px).
+ *   - `tablet:` App ab `sm` (iPad hoch und quer, schmale Fenster).
+ *   - `split:` App ab `lg` mit Finger (iPad quer): Liste neben Detail.
+ *
+ * Genau eine von `app:`/`desk:` trifft zu. Der Desktop sieht keine `app:`-
+ * Regel, deshalb bleibt er pixelgleich. `compact` gilt nur ohne Finger: Das
+ * iPad bekommt die App-Maße statt der dichten Desktop-Stufe.
+ */
+@custom-variant app (@media (width < 64rem), (pointer: coarse));
+@custom-variant desk (@media (width >= 64rem) and (not (pointer: coarse)));
+@custom-variant phone (@media (width < 40rem));
+@custom-variant tablet (@media (width >= 40rem) and ((width < 64rem) or (pointer: coarse)));
+@custom-variant split (@media (width >= 64rem) and (pointer: coarse));
 
 /*
  * moto brand tokens

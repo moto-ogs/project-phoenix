@@ -1,3 +1,4 @@
+import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import type { Session } from "next-auth";
@@ -21,6 +22,37 @@ import {
   resolveTenantCached,
   TenantResolveStatusError,
 } from "~/lib/tenant-resolve.server";
+
+/**
+ * Home-Screen-Betrieb des Mitarbeiter-Portals (#8070), wie im Eltern-Portal:
+ *
+ * - `viewportFit: "cover"`: Die Seite reicht unter Notch und Home-Leiste; die
+ *   Shell hält die Ränder selbst über `env(safe-area-inset-*)` frei (Pill,
+ *   Blätter, Aktionsleiste). Ohne `cover` sind diese Werte auf dem iPhone 0
+ *   und Safari setzt einen eigenen Rand.
+ * - `interactiveWidget: "resizes-visual"`: Die Tastatur verkleinert nur den
+ *   sichtbaren Bereich, nicht das Layout; Pill und Aktionsleiste folgen über
+ *   `useFixedLayersFollowViewport`. Safari wertet die Angabe nicht aus und
+ *   verhält sich ohnehin so; Chrome auf Android übernimmt sie.
+ * - Zoom bleibt frei (#2267).
+ *
+ * Desktop-Browser werten beides nicht aus.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-visual",
+};
+
+/** Start vom Home-Bildschirm ohne Browser-Rahmen, mit hellem Statusbalken. */
+export const metadata: Metadata = {
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "moto",
+  },
+};
 
 /**
  * The backend rate limit rejected the lookup (HTTP 429). Scanner bursts cause

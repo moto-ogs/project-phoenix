@@ -1,0 +1,86 @@
+"use client";
+
+/**
+ * Gerätekontext (Prototyp Mobile-Zielbild, #8070).
+ *
+ * Die Breite bestimmt den Aufbau, die Zeigerart die Bedienmaße. Daraus folgt
+ * genau eine Oberfläche:
+ *
+ *   - `desktop`: ab 1024 px mit Maus/Trackpad. Der heutige Code, unverändert.
+ *   - `tablet`:  App ab 640 px (iPad hoch, iPad quer, schmales Fenster).
+ *   - `phone`:   App unter 640 px.
+ *
+ * `split` meldet die App ab 1024 px mit Finger (iPad quer): Dort steht die
+ * Liste neben dem Detail. CSS-Gegenstücke: `app:`, `desk:`, `phone:`,
+ * `tablet:`, `split:` in `styles/globals.css`.
+ *
+ * Vor der Hydration ist der Kontext unbekannt (`resolved: false`). Bausteine
+ * schalten bis dahin per CSS (`DeviceSwitch`), damit Server- und Client-
+ * Render gleich bleiben und der Desktop nie eine App-Variante sieht.
+ */
+import type { ReactNode } from "react";
+import { useResolvedMediaQuery } from "~/lib/hooks/use-media-query";
+
+export const APP_QUERY = "(width < 64rem), (pointer: coarse)";
+export const PHONE_QUERY = "(width < 40rem)";
+export const SPLIT_QUERY = "(width >= 64rem) and (pointer: coarse)";
+export const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+export type DeviceLayout = "phone" | "tablet" | "desktop";
+
+export interface DeviceContextValue {
+  /** `false` bis zur Hydration; dann gelten die Defaults (Desktop). */
+  resolved: boolean;
+  layout: DeviceLayout;
+  /** App-Oberfläche (Telefon oder iPad). */
+  isApp: boolean;
+  /** iPad quer: Liste neben Detail. */
+  isSplit: boolean;
+  input: "touch" | "pointer";
+}
+
+export function useDeviceContext(): DeviceContextValue {
+  const app = useResolvedMediaQuery(APP_QUERY);
+  const phone = useResolvedMediaQuery(PHONE_QUERY);
+  const split = useResolvedMediaQuery(SPLIT_QUERY);
+  const coarse = useResolvedMediaQuery("(pointer: coarse)");
+  const resolved = app !== null;
+  const isApp = app === true;
+  let layout: DeviceLayout = "desktop";
+  if (isApp) layout = phone === true ? "phone" : "tablet";
+  return {
+    resolved,
+    layout,
+    isApp,
+    isSplit: isApp && split === true,
+    input: coarse === true ? "touch" : "pointer",
+  };
+}
+
+/** `true` nur, wenn sicher die App-Oberfläche gilt. */
+export function useIsApp(): boolean {
+  return useDeviceContext().isApp;
+}
+
+/**
+ * Zeigt `desktop` auf dem Desktop und `app` in der App. Vor der Hydration
+ * stehen beide im Dokument und CSS blendet um (`display: contents`, damit
+ * der Desktop-Zweig keine eigene Box bekommt); danach bleibt nur der
+ * passende Zweig, der Desktop ohne Hülle.
+ */
+export function DeviceSwitch({
+  desktop,
+  app,
+}: {
+  desktop: ReactNode;
+  app: ReactNode;
+}) {
+  const { resolved, isApp } = useDeviceContext();
+  if (resolved) return <>{isApp ? app : desktop}</>;
+  return (
+    <>
+      <div className="app:hidden contents">{desktop}</div>
+      <div className="app:contents hidden">{app}</div>
+    </>
+  );
+}
