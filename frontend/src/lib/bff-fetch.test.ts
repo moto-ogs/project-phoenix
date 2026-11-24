@@ -254,6 +254,31 @@ describe("bffJson", () => {
     expect(multipart?.headers).toBeUndefined();
   });
 
+  it("names the deployment of its bundle on every call", async () => {
+    vi.stubEnv("NEXT_DEPLOYMENT_ID", "release-a");
+    try {
+      mockFetch
+        .mockResolvedValueOnce(ok([]))
+        .mockResolvedValueOnce(ok({ id: "1", name: "A" }));
+
+      await bffJson("tenant", "GET /api/activities/categories");
+      await bffJson("tenant", "PUT /api/activities/categories/{categoryId}", {
+        params: { categoryId: "1" },
+        body: { name: "A" },
+      });
+
+      expect(mockFetch.mock.calls[0]?.[1]?.headers).toEqual({
+        "X-Moto-Deployment-ID": "release-a",
+      });
+      expect(mockFetch.mock.calls[1]?.[1]?.headers).toEqual({
+        "Content-Type": "application/json",
+        "X-Moto-Deployment-ID": "release-a",
+      });
+    } finally {
+      vi.stubEnv("NEXT_DEPLOYMENT_ID", "");
+    }
+  });
+
   it("resolves a 204 and an answer without data to null", async () => {
     mockFetch
       .mockResolvedValueOnce(new Response(null, { status: 204 }))

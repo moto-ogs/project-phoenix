@@ -330,9 +330,10 @@ function mutationOptions(options: unknown): unknown {
 const logger = createLogger({ component: "useSWRAuth" });
 
 /**
- * Safari reports `undefined is not a function` when SWR's mutate finds no
- * state for the cache it is bound to (#2459). Not reproduced locally; this
- * records whether the hook's cache was registered at that moment. The
+ * Safari 26 reported `undefined is not a function` from SWR's mutate, where
+ * it destructured its rest parameter, with the cache registered (#2459,
+ * #8031). Not reproduced locally; patches/swr@2.5.1.patch removes that
+ * destructuring. This stays as the proof: the event must not come back. The
  * error still reaches the caller.
  */
 function reportMutateTypeError<V>(cache: Cache, result: Promise<V>): void {
