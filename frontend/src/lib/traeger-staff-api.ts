@@ -84,7 +84,7 @@ interface StaffSchool {
 }
 
 /** Ein Einsatzort einer Akte: die Beschäftigung an einer Schule. */
-interface StaffEmployment {
+export interface StaffEmployment {
   readonly schoolId: string;
   readonly schoolName: string;
   readonly staffId: string;
@@ -102,6 +102,15 @@ interface StaffEmployment {
    * Ansicht einer Akte trägt ihn.
    */
   readonly employerName: string;
+  /** `schultraeger` oder `gemeinde`; leer, wenn der Träger anstellt. */
+  readonly employerBody: string;
+  /**
+   * Die Personalnummer bei diesem Arbeitgeber, wenn sein Lohnbüro eine
+   * andere als der Träger nutzt (#8041); `null` heißt: wie beim Träger.
+   */
+  readonly employerPersonnelNumber: string | null;
+  /** Der gelesene Stand, den eine Änderung mitschickt (ADR 0311). */
+  readonly employerNumberVersion: string;
 }
 
 export interface StaffRecordSummary {
@@ -309,6 +318,9 @@ function mapSummary(
       active: employment.active,
       viaPool: employment.via_pool,
       employerName: employment.employer_name,
+      employerBody: employment.employer_body,
+      employerPersonnelNumber: employment.employer_personnel_number,
+      employerNumberVersion: employment.employer_number_version,
     })),
   };
 }
@@ -522,6 +534,31 @@ export async function updateStaffPersonnelNumber(
         personnel_number: value,
       } satisfies traegerStaffRecordsContract.PersonnelNumberRequest,
     }),
+  );
+}
+
+/**
+ * Die Personalnummer der Person beim Arbeitgeber eines Einsatzorts (#8041,
+ * ADR 0319); `null` heißt wieder: wie beim Träger.
+ */
+export async function updateStaffEmployerNumber(
+  id: string,
+  schoolId: string,
+  value: string | null,
+  expectedVersion: string,
+): Promise<StaffRecordDetail> {
+  return mapDetail(
+    await bffJson(
+      "org",
+      "PUT /traeger/staff-records/{id}/employer-numbers/{schoolId}",
+      {
+        params: { id, schoolId },
+        body: {
+          employer_personnel_number: value,
+          expected_version: expectedVersion,
+        } satisfies traegerStaffRecordsContract.EmployerNumberRequest,
+      },
+    ),
   );
 }
 

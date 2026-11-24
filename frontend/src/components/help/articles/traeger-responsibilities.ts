@@ -59,7 +59,7 @@ export function traegerResponsibilitiesTopic(): HelpTopic {
       "Schon verschickte Verträge bleiben, wie sie sind. Auch Erinnerungen und die Seite zum Unterschreiben nennen weiter die Stelle, die den Vertrag ausgestellt hat.",
       "Auf dem Vertrag einer anderen Stelle stehen das Logo und die Fußzeile deines Trägers nicht.",
       "Rechnungen, Bescheide und Lastschriften stellt moto noch mit den Angaben deines Trägers aus. Die Wahl bei `Wer rechnet mit den Eltern ab?` bereitet den Wechsel vor.",
-      "Der Lohnexport bleibt eine Datei für alle Schulen.",
+      "Stellt eine Gemeinde oder ein Schulträger an, wählst du unter `Lohnexport` > `Einrichtung`: eine Lohndatei für den ganzen Träger oder eine je Arbeitgeber.",
     ],
     troubleshootingDetails: [
       "Bei einer Schule steht `Angaben fehlen`? Die gewählte Stelle hat dort noch keinen Namen und keine Anschrift. Trage sie bei der Schule ein.",
@@ -71,6 +71,7 @@ export function traegerResponsibilitiesTopic(): HelpTopic {
       HELP_TOPICS.traegerSettings,
       HELP_TOPICS.traegerCareContracts,
       HELP_TOPICS.traegerStaffRecords,
+      HELP_TOPICS.traegerPayrollExport,
       HELP_TOPICS.traegerSchoolView,
     ],
   };

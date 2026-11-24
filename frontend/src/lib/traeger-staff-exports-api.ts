@@ -62,6 +62,63 @@ export interface PayrollGap {
   readonly kind: string;
 }
 
+// Go does not register the set; the contract types it as string.
+const PAYROLL_FORM_VALUES = ["traeger", "arbeitgeber"] as const;
+
+/**
+ * Die Form der Lohndatei (#8041, ADR 0319): eine Datei für den ganzen
+ * Träger oder eine Datei je Arbeitgeber.
+ */
+export type PayrollForm = (typeof PAYROLL_FORM_VALUES)[number];
+
+const EMPLOYER_BODY_VALUES = ["traeger", "schultraeger", "gemeinde"] as const;
+
+/** Wer anstellt: der Träger, der Schulträger oder die Gemeinde. */
+type EmployerBody = (typeof EMPLOYER_BODY_VALUES)[number];
+
+export const EMPLOYER_BODY_LABELS: Record<EmployerBody, string> = {
+  traeger: "Träger",
+  schultraeger: "Schulträger",
+  gemeinde: "Gemeinde",
+};
+
+/** Ein Arbeitgeber, dessen Zeilen eine Datei trägt. */
+interface PayrollFileEmployer {
+  readonly body: EmployerBody;
+  /** Leer beim Träger. */
+  readonly name: string;
+}
+
+interface PayrollDuplicate {
+  readonly number: string;
+  readonly people: readonly ExportPerson[];
+}
+
+/** Eine Datei des Monats; `key` wählt sie beim Herunterladen. */
+export interface PayrollFile {
+  readonly key: string;
+  readonly employers: readonly PayrollFileEmployer[];
+  readonly schools: readonly string[];
+  readonly consultantNumber: string;
+  readonly clientNumber: string;
+  readonly people: number;
+  readonly lineCount: number;
+  readonly missingClient: boolean;
+  readonly withoutNumber: readonly ExportPerson[];
+  readonly duplicates: readonly PayrollDuplicate[];
+  readonly ready: boolean;
+}
+
+/** Ein anderer Arbeitgeber mit Werten im Monat und was ihm fehlt. */
+interface PayrollEmployerCheck {
+  readonly schoolId: string;
+  readonly schoolName: string;
+  readonly body: EmployerBody;
+  readonly name: string;
+  readonly missingClient: boolean;
+  readonly missingCostCenter: boolean;
+}
+
 export interface PayrollReport {
   readonly year: number;
   readonly month: number;
@@ -82,6 +139,12 @@ export interface PayrollReport {
   readonly openSchools: readonly string[];
   /** Vertragswechsel im Monat: Der neuere Vertrag bucht den ganzen Monat. */
   readonly contractChanges: readonly ExportPerson[];
+  /** undefined: eine Form, die dieser Stand nicht kennt. */
+  readonly form: PayrollForm | undefined;
+  readonly files: readonly PayrollFile[];
+  readonly employers: readonly PayrollEmployerCheck[];
+  /** Personen in mehr als einer Datei: ihre Nummer je Arbeitgeber prüfen. */
+  readonly inSeveralFiles: readonly ExportPerson[];
   readonly ready: boolean;
 }
 
@@ -125,7 +188,51 @@ function mapPayrollReport(
     noWageType: data.no_wage_type,
     openSchools: data.open_schools ?? [],
     contractChanges: (data.contract_changes ?? []).map(mapPerson),
+    form: knownEnum(PAYROLL_FORM_VALUES, data.form),
+    files: (data.files ?? []).map(mapPayrollFile),
+    // Eine Stelle, die dieser Stand nicht kennt, zeigt die Seite nicht;
+    // `ready` hält die Datei trotzdem zurück.
+    employers: (data.employers ?? []).flatMap((employer) => {
+      const body = knownEnum(EMPLOYER_BODY_VALUES, employer.body);
+      return body === undefined
+        ? []
+        : [
+            {
+              schoolId: employer.school_id,
+              schoolName: employer.school_name,
+              body,
+              name: employer.name,
+              missingClient: employer.missing_client,
+              missingCostCenter: employer.missing_cost_center,
+            },
+          ];
+    }),
+    inSeveralFiles: (data.in_several_files ?? []).map(mapPerson),
     ready: data.ready,
+  };
+}
+
+function mapPayrollFile(
+  file: traegerStaffExportsContract.TraegerPayrollFile,
+): PayrollFile {
+  return {
+    key: file.key,
+    employers: (file.employers ?? []).flatMap((employer) => {
+      const body = knownEnum(EMPLOYER_BODY_VALUES, employer.body);
+      return body === undefined ? [] : [{ body, name: employer.name }];
+    }),
+    schools: file.schools ?? [],
+    consultantNumber: file.consultant_number,
+    clientNumber: file.client_number,
+    people: file.people,
+    lineCount: file.line_count,
+    missingClient: file.missing_client,
+    withoutNumber: (file.without_number ?? []).map(mapPerson),
+    duplicates: (file.duplicates ?? []).map((duplicate) => ({
+      number: duplicate.number,
+      people: (duplicate.people ?? []).map(mapPerson),
+    })),
+    ready: file.ready,
   };
 }
 
@@ -178,17 +285,92 @@ async function download(file: Promise<Response>): Promise<ExportDownload> {
   };
 }
 
-/** Die DATEV-Lohndatei; eine noch nicht fertige Datei lehnt der Server ab. */
+/**
+ * Die DATEV-Lohndatei; eine noch nicht fertige Datei lehnt der Server ab.
+ * In der Form je Arbeitgeber wählt `file` die Datei (#8041).
+ */
 export const downloadPayrollFile = (
   year: number,
   month: number,
   format: PayrollFormat,
+  file?: string,
 ) =>
   download(
     bffFile("org", "GET /traeger/staff-exports/payroll/export", {
-      query: { year, month, format },
+      query: file ? { year, month, format, file } : { year, month, format },
     }),
   );
+
+/**
+ * Die Lohnwerte eines Arbeitgebers neben dem Träger (#8041, ADR 0319): die
+ * DATEV-Nummern seiner eigenen Datei und die Kostenstelle seiner Zeilen in
+ * der einen Datei des Trägers.
+ */
+export interface PayrollEmployer {
+  readonly schoolId: string;
+  readonly schoolName: string;
+  readonly body: EmployerBody;
+  readonly name: string;
+  readonly consultantNumber: string;
+  readonly clientNumber: string;
+  readonly costCenter: string;
+  readonly version: string;
+}
+
+export type PayrollEmployerValues = Pick<
+  PayrollEmployer,
+  "consultantNumber" | "clientNumber" | "costCenter"
+>;
+
+function mapPayrollEmployer(
+  employer: traegerStaffExportsContract.TraegerPayrollEmployerValues,
+): PayrollEmployer[] {
+  const body = knownEnum(EMPLOYER_BODY_VALUES, employer.body);
+  if (body === undefined) return [];
+  return [
+    {
+      schoolId: employer.school_id,
+      schoolName: employer.school_name,
+      body,
+      name: employer.name,
+      consultantNumber: employer.consultant_number,
+      clientNumber: employer.client_number,
+      costCenter: employer.cost_center,
+      version: employer.version,
+    },
+  ];
+}
+
+/** Jede Schule, an der eine Gemeinde oder ein Schulträger anstellt. */
+export async function fetchPayrollEmployers(): Promise<
+  readonly PayrollEmployer[]
+> {
+  const data = await bffJson(
+    "org",
+    "GET /traeger/staff-exports/payroll/employers",
+  );
+  return (data.employers ?? []).flatMap(mapPayrollEmployer);
+}
+
+export async function savePayrollEmployer(
+  employer: PayrollEmployer,
+  values: PayrollEmployerValues,
+): Promise<void> {
+  await bffJson(
+    "org",
+    "PUT /traeger/staff-exports/payroll/employers/{schoolId}",
+    {
+      params: { schoolId: employer.schoolId },
+      body: {
+        body: employer.body,
+        consultant_number: values.consultantNumber,
+        client_number: values.clientNumber,
+        cost_center: values.costCenter,
+        expected_version: employer.version,
+      } satisfies traegerStaffExportsContract.PayrollEmployerRequest,
+    },
+  );
+}
 
 /** Der Zeitexport als CSV. */
 export const downloadTimeFile = (year: number, month: number) =>
@@ -206,6 +388,7 @@ export const wageTypeKey = (category: PayrollCategory, kind: string) =>
 export const unitKey = (category: PayrollCategory) =>
   `traeger_payroll.unit.${category}`;
 
+export const FILE_FORM_KEY = "traeger_payroll.file_form";
 export const CONSULTANT_KEY = "traeger_payroll.datev_consultant_number";
 export const CLIENT_KEY = "traeger_payroll.datev_client_number";
 
