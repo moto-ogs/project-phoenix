@@ -1,8 +1,57 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "./api-error";
+import { ERROR_CATALOG } from "./error-catalog.generated";
 import { errorCodeMessage, presentError } from "./error-presentation";
 
 describe("presentError", () => {
+  describe("care term of the school (#6258)", () => {
+    const refusal = new ApiError("internal permission diagnostic", 403, {
+      code: "meals.participation_manage_denied",
+      // A backend value under the frontend's name never reaches the text.
+      details: { careTerm: "Hort" },
+    });
+
+    it("names the school's own term", () => {
+      expect(
+        presentError(refusal, "Änderung", "de", "school", "GTS").message,
+      ).toBe(
+        "Du darfst die Essensanmeldung ansehen, aber nicht ändern. Bitte wende dich an die GTS.",
+      );
+    });
+
+    it.each([undefined, "", "  "])(
+      "says OGS without a term of the school (%j)",
+      (term) => {
+        expect(
+          presentError(refusal, "Änderung", "de", "school", term).message,
+        ).toBe(
+          "Du darfst die Essensanmeldung ansehen, aber nicht ändern. Bitte wende dich an die OGS.",
+        );
+      },
+    );
+
+    it.each(["de", "en", "pl", "ru", "sq", "tr", "uk"] as const)(
+      "fills every catalog text with the term in %s",
+      (locale) => {
+        const codes = Object.entries(ERROR_CATALOG[locale].codes)
+          .filter(([, text]) => text.includes("{careTerm}"))
+          .map(([code]) => code);
+        expect(codes.length).toBeGreaterThan(0);
+        for (const code of codes) {
+          const message = presentError(
+            new ApiError("diagnostic", 409, { code }),
+            "die Änderung",
+            locale,
+            "school",
+            "GTS",
+          ).message;
+          expect(message, code).toContain("GTS");
+          expect(message, code).not.toMatch(/[{}]|OGS|Hort/);
+        }
+      },
+    );
+  });
+
   it.each(["de", "en", "pl", "ru", "sq", "tr", "uk"] as const)(
     "formats the public holiday day limit without booking totals in %s",
     (locale) => {

@@ -25,6 +25,7 @@ import {
   isOpenDeclaration,
 } from "./declaration-section";
 import { catalogText } from "~/test/error-catalog-text";
+import { CareFacilityTermScope } from "~/lib/care-facility-term";
 import * as parentApi from "~/lib/parent-api";
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
@@ -497,6 +498,43 @@ describe("Einverständnis in the detail view", () => {
       }),
     );
   });
+
+  it.each([
+    ["GTS", "GTS"],
+    [undefined, "OGS"],
+  ] as const)(
+    "names the school's care term %s in a refusal after the deadline (#6258)",
+    async (term, shown) => {
+      vi.spyOn(parentApi, "submitDeclaration").mockRejectedValue(
+        new ApiError("closed", 409, { code: "care.declaration_closed" }),
+      );
+
+      render(
+        <CareFacilityTermScope term={term}>
+          <NewsDetailModal
+            item={item()}
+            onClose={vi.fn()}
+            onUpdated={vi.fn()}
+            onStale={vi.fn()}
+          />
+        </CareFacilityTermScope>,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Zustimmen" }));
+      const dialog = await screen.findByRole("dialog", {
+        name: "Deine Antwort prüfen",
+      });
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Zustimmen" }),
+      );
+
+      expect(
+        await screen.findByText(
+          `Die Frist ist abgelaufen. Du kannst nicht mehr antworten. Bei Fragen wende dich bitte an die ${shown}.`,
+        ),
+      ).toBeInTheDocument();
+    },
+  );
 
   it("closes the confirmation, tells the parent and reloads when the text changed", async () => {
     vi.spyOn(parentApi, "submitDeclaration").mockRejectedValue(

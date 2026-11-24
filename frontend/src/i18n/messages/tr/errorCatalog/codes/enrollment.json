@@ -182,5 +182,5 @@
   "traeger_catalog_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "traeger_preview_stale": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "traeger_copy_rejected": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
-  "without_care_place_school_year_only": "OGS yeri olmayan bir çocuk, yerini okul yılı kaydıyla alır."
+  "without_care_place_school_year_only": "{careTerm} yeri olmayan bir çocuk, yerini okul yılı kaydıyla alır."
 }
