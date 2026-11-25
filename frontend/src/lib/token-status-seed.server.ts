@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
-import { routes as enrollmentRoutes } from "~/lib/contract/enrollment.generated";
-import { routes as holidayRoutes } from "~/lib/contract/traeger-holiday-registrations.generated";
+import * as enrollment from "~/lib/contract/enrollment.generated";
+import * as holidayRegistration from "~/lib/contract/traeger-holiday-registrations.generated";
 import {
   formatEnrollmentChangeRequestDiff,
   formLabelsFromContract,
@@ -58,7 +58,7 @@ export function readHolidayRegistrationStatusSeed(token: string) {
   return seedStatus(() =>
     readStatusPart("holidayRegistration.status", async (signal) => {
       const { data } = await readContract(
-        holidayRoutes[
+        holidayRegistration.routes[
           "GET /traeger/holiday-registrations/status/{statusToken}"
         ],
         { params: { statusToken: token }, signal },
@@ -84,7 +84,7 @@ function readEnrollmentStatus(token: string) {
     "enrollment.status",
     async (signal): Promise<EnrollmentStatusDisplay> => {
       const { data } = await readContract(
-        enrollmentRoutes["GET /api/enrollment/requests/{statusToken}"],
+        enrollment.routes["GET /api/enrollment/requests/{statusToken}"],
         { params: { statusToken: token }, signal },
       );
       const {
@@ -110,7 +110,7 @@ async function readEnrollmentChanges(
     "enrollment.changeRequests",
     async (signal) => {
       const { data } = await readContract(
-        enrollmentRoutes[
+        enrollment.routes[
           "GET /api/enrollment/requests/{statusToken}/change-requests"
         ],
         { params: { statusToken }, signal },
@@ -125,7 +125,7 @@ async function readEnrollmentChanges(
     getTranslations("enrollmentStatus"),
     readStatusPart("enrollment.formLabels", async (signal) => {
       const { data } = await readContract(
-        enrollmentRoutes[
+        enrollment.routes[
           "GET /api/enrollment/requests/{statusToken}/form-labels"
         ],
         { params: { statusToken }, signal },
