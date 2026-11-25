@@ -3604,7 +3604,7 @@ export const holidayGuestGroupTopic =
       result:
         "Ab dem ersten Tag der Woche stehen die Feriengäste in der Gruppe, im Check-in und unter `Alle Kinder`. Bei jedem steht seine Schule, zum Beispiel `Gast aus Grundschule am See`. Dein Team sieht Betreuung, Notfall, Abholung und die Angaben, die der Träger freigibt.",
       notes: [
-        "Feriengäste sind Kinder anderer Schulen deines Trägers und Kinder ohne Schule beim Träger. Kinder deiner OGS bleiben in ihrer Gruppe.",
+        "Feriengäste sind Kinder, die sonst nicht in deine OGS gehen. Kinder deiner OGS bleiben in ihrer Gruppe.",
         "Kinder deiner OGS plant moto von selbst ein, auch ohne Feriengruppe. Der Stand steht unter `Kinder deiner OGS`.",
         "Öffnest du die leere Feriengruppe über einen Link, steht dort, wie viele Kinder dazukommen und ab wann.",
         "Vor der Woche siehst du die Feriengäste nur hier unter `Ferienwochen`.",
@@ -14186,7 +14186,7 @@ export const traegerHolidayPeriodTopic =
       notes: [
         "Der `Text der Annahme-Mail` ist freiwillig. Ohne Text bekommen Eltern die E-Mail ohne Hinweise. Du kannst den Text bis zum Bestätigen jederzeit ändern. Schon verschickte E-Mails ändern sich nicht.",
         "Eltern mit Elternkonto sehen in der Annahme-Mail den Knopf `In der Eltern-App ansehen`.",
-        "Mit `Ferienwunsch aus der OGS-Anmeldung berücksichtigen` warten Kinder deiner Schulen ohne Ferienwunsch auf der Warteliste hinter den anderen.",
+        "Mit `Ferienwunsch aus der OGS-Anmeldung berücksichtigen` haben Kinder mit Ferienwunsch Vorrang, wenn eine Woche voll ist. Das gilt für Kinder deiner Schulen, nicht für Feriengäste.",
         "Änderst du die Zeiten eines Zeitmodells? Die neuen Zeiten gelten ab dem Änderungstag. Vergangene gebuchte Tage behalten ihre bisherigen Zeiten. Auch nach Umbuchung oder Archivierung bleiben diese Zeiten erhalten.",
         "Ein gespeicherter Ferienzeitraum ist zuerst ein Entwurf. Ein Entwurf ist nicht für die Anmeldung freigegeben.",
         "Ein veröffentlichter Ferienzeitraum wird nicht wieder zum Entwurf.",
@@ -14618,7 +14618,7 @@ export const traegerHolidayWishTopic =
         },
       ],
       result:
-        "Ist eine Woche voll, warten Kinder ohne Ferienwunsch auf der Warteliste hinter den anderen. Im Reiter `Plätze` stehen sie mit `Ohne Ferienwunsch`.",
+        "Ist eine Woche voll, haben Kinder mit Ferienwunsch Vorrang. Kinder ohne Ferienwunsch stehen auf der Warteliste hinter den anderen. Im Reiter `Plätze` stehen sie mit `Ohne Ferienwunsch`.",
       notes: [
         "Freie Plätze gehen weiter in der Reihenfolge der Anmeldung. Ein Platz, den ein Kind schon hat, bleibt.",
         "Eltern mit Elternkonto sehen den Ferienwunsch ihres Kindes vor dem Absenden. moto prüft ihn dann selbst. Bei `Nur Kinder mit Ferienwunsch können sich anmelden` geht das Absenden ohne Ferienwunsch nicht.",

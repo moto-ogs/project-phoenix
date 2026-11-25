@@ -366,7 +366,7 @@ export function HolidayPeriodForm({
               controlSize="compact"
               name="max_days_per_child"
               label="Höchstens Tage je Kind"
-              hint="Gilt für alle Wochen zusammen. Eltern dürfen die Tage verteilen. Leer lassen, wenn es keine Grenze gibt."
+              hint="Gilt für alle Wochen zusammen. Eltern dürfen die Tage verteilen. Wenn es keine Grenze gibt, lass das Feld leer."
               inputMode="numeric"
               placeholder="zum Beispiel 5"
               className="sm:max-w-xs"
@@ -380,8 +380,10 @@ export function HolidayPeriodForm({
               label="Ferienwunsch aus der OGS-Anmeldung berücksichtigen"
               description={
                 <>
-                  Kinder deiner Schulen ohne Ferienwunsch warten hinter den
-                  anderen. Was ohne Ferienwunsch gilt, legst du in den{" "}
+                  Eltern geben in der OGS-Anmeldung an, ob ihr Kind
+                  Ferienbetreuung braucht. Das ist der Ferienwunsch. Ist der
+                  Schalter an und eine Woche voll, haben Kinder mit Ferienwunsch
+                  Vorrang. In den{" "}
                   {/* In a form a link opens a new tab, so the unsaved
                       draft stays (Bauart 1 R9). */}
                   <ButtonLink
@@ -396,7 +398,9 @@ export function HolidayPeriodForm({
                   >
                     Einstellungen
                   </ButtonLink>{" "}
-                  fest. Feriengäste sind nicht betroffen.
+                  kannst du festlegen, dass sich nur Kinder mit Ferienwunsch
+                  anmelden können. Das gilt für Kinder deiner Schulen, nicht für
+                  Feriengäste.
                 </>
               }
               checked={draft.holidayWishRule}
