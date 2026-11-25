@@ -418,7 +418,12 @@ export function AppRangeBar({
 }>) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="flex items-center gap-1.5 px-1" data-app-range-bar="">
+    <div
+      // px-2: die 44-px-Trefferfläche der Pfeile ragt über den Knopf hinaus;
+      // der Kartenrand würde sie sonst abschneiden.
+      className="flex items-center gap-1.5 px-2"
+      data-app-range-bar=""
+    >
       <Button
         type="button"
         variant="ghost"
