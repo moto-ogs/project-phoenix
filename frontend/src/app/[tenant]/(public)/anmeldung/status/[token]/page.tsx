@@ -1,4 +1,5 @@
 import { messageBoundary } from "~/i18n/scoped-messages";
+import { readEnrollmentStatusSeed } from "~/lib/token-status-seed.server";
 import EnrollmentStatusPage from "./status-page";
 
 const PageMessages = messageBoundary(
@@ -10,12 +11,13 @@ const PageMessages = messageBoundary(
   "enrollmentPublic.steps",
 );
 
-export default function Page(
-  props: React.ComponentProps<typeof EnrollmentStatusPage>,
-) {
+export default function Page({
+  params,
+}: Pick<React.ComponentProps<typeof EnrollmentStatusPage>, "params">) {
+  const initial = params.then(({ token }) => readEnrollmentStatusSeed(token));
   return (
     <PageMessages>
-      <EnrollmentStatusPage {...props} />
+      <EnrollmentStatusPage params={params} initial={initial} />
     </PageMessages>
   );
 }

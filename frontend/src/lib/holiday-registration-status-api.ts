@@ -47,15 +47,13 @@ export interface HolidayRegistrationStatus {
   /** "YYYY-MM-DD": the last day parents can register. */
   readonly registrationClosesOn: string;
   readonly binding: boolean;
-  /** "criteria": the office gives the places after the window closes. */
-  readonly allocationMode: "arrival" | "criteria";
   /** RFC 3339 instant. */
   readonly submittedAt: string;
   readonly status: HolidayRegistrationEntryStatus;
   readonly children: readonly HolidayRegistrationStatusChild[];
 }
 
-function holidayRegistrationStatusFromBackend(
+export function holidayRegistrationStatusFromBackend(
   body: traegerHolidayRegistrationsContract.HolidayRegistrationStatusResponse,
 ): HolidayRegistrationStatus {
   return {
@@ -68,8 +66,6 @@ function holidayRegistrationStatusFromBackend(
       "HolidayRegistrationStatus.registration_closes_on",
     ),
     binding: body.binding,
-    allocationMode:
-      body.allocation_mode === "criteria" ? "criteria" : "arrival",
     submittedAt: body.submitted_at,
     status: entryStatus(body.status),
     children: (body.children ?? []).map((child) => ({

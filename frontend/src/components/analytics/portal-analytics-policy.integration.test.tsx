@@ -11,6 +11,9 @@ vi.unmock("~/lib/tenant-context");
 vi.unmock("swr");
 // jsdom renders the actual pages, without their server-only translation lookup.
 vi.mock("~/i18n/scoped-messages", () => ({ messageBoundary: () => Fragment }));
+vi.mock("~/lib/token-status-seed.server", () => ({
+  readEnrollmentStatusSeed: async () => undefined,
+}));
 
 const mocks = vi.hoisted(() => ({
   useSession: vi.fn(),

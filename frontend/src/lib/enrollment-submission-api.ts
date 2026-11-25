@@ -357,7 +357,17 @@ export type StatusResponse = Omit<
   renewal_terms?: StatusRenewalTerms;
 };
 
-function statusFromContract(
+export type EnrollmentStatusDisplay = Omit<
+  StatusResponse,
+  "request_id" | "signature"
+> & {
+  signature?: Pick<
+    EnrollmentSignature,
+    "method" | "typed_name" | "signer_name" | "signed_at" | "integrity_ok"
+  >;
+};
+
+export function statusFromContract(
   status: enrollmentContract.StatusResponse,
 ): StatusResponse {
   const {

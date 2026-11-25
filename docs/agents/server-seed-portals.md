@@ -17,7 +17,7 @@ An audited GET stays on its prescribed browser/opening path even if its hook cur
 | `/elternbriefe/[id]` | Letter by announcement ID, published status or declaration status, and needed placeholder labels. | Prospective draft reach, attachment files and write previews are not seeded. |
 | `/elternsprechtag` | Conference list and available classes. | `konferenz` selects the entry from that list; edits use draft state and delivery history opens on demand. |
 | `/fehlzeiten` | Assigned-class options. | The default class and school half-year select the absence report; the report and its exports write access logs. |
-| `/invite` | None. | Public invitation-token acceptance, not an authenticated school read. |
+| `/invite` | None. | Validating the token supplies the current sign-in requirement and registration defaults to the account acceptance form. |
 | `/kalender` | The initial Berlin week, same `from`/`to` as the browser. | Other windows, appointment edits and e-mail delivery reads are interaction-specific. |
 | `/klasse` | Assigned classes and permissions. | `klasse`, `tag` and `liste` choose the class/day/list. The class-day report writes an access log; exception editing opens separately. |
 | `/klasse/kind` | None. | `klasse`, `kind` and `tag`; the shared notes verify the class assignment and record access. |
@@ -38,7 +38,7 @@ An audited GET stays on its prescribed browser/opening path even if its hook cur
 | `/caterers` | None. | List access logs a disclosure; MFA administration opens on action. |
 | `/devices` | Träger options and the exact all/Träger/school device list. | `schoolId` wins over `orgId`. School options and device history are audited. Transfer/delete checks open with the dialogue; device mapping never serializes credentials. |
 | `/email-confirm` | None. | Public token confirmation changes the address. |
-| `/invite` | None. | Public token/flow-cookie validation and account enrollment. |
+| `/invite` | None. | Opening exchanges the invitation token for a flow cookie before validating the acceptance-form inputs. The exchange is not a display read. |
 | `/login` | None. | Public operator sign-in and MFA; no page SWR data. |
 | `/operators` | Operator and invitation overview. | Changes and resend/revoke act on selection. |
 | `/organizations` | Träger summaries and provisioning counts, as independent keys. | Test creation, delete and restore are explicit actions. |
@@ -56,7 +56,7 @@ An audited GET stays on its prescribed browser/opening path even if its hook cur
 | Route under `/caterer` | Seeded or already server-side | Other first readers and intentional exclusions |
 |---|---|---|
 | `/` | Compact order overview for the default Berlin date window, including all currently supplied schools. | No details are seeded. Opening a school reads its orders for this window and grant. A failed school can be retried individually; a revoked supply disappears. Exports remain actions. |
-| `/einladung/[schoolId]/[token]` | None. | Public acceptance is bound to the school and invitation token; no authenticated portal preload. |
+| `/einladung/[schoolId]/[token]` | None. | The school and token select the live inputs to the public invitation acceptance form. |
 | `/konto` | Own MFA state and passkey summaries; remembered devices only if the factor is enabled. | Uses session e-mail already in the layout. Credential changes and confirmation steps are actions. |
 | `/login` | None. | Public sign-in, including account MFA/passkey challenge. |
 | `/reset-password` | None. | Public token-gated reset flow. |
@@ -134,7 +134,7 @@ An audited GET stays on its prescribed browser/opening path even if its hook cur
 | `/ferien/[id]/vergabe` | Period and schools. | Allocation board records every read; proposal/history stays under the period policy and opening. |
 | `/ferien/kriterien` | Criteria and order. | Reordering and edits use versions/actions. |
 | `/ferien/neu` | Schools. | Blank period creation form. |
-| `/invite` | None. | Public token-bound invitation flow. |
+| `/invite` | None. | The token opens the acceptance form; validation determines whether that form asks for an existing or new password. |
 | `/konto` | Own profile, shared with the shell, then remembered devices. | Name and password updates are actions. |
 | `/login` | None. | Public login, MFA, choose organization and destination discovery for the successful session. |
 | `/nachweise` | School proof kind metadata. | Disclosed personnel proofs are audited; file and edit reads stay on action. |
