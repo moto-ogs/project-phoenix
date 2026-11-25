@@ -2153,14 +2153,6 @@
       "target_owner": "student-presence"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.Navigation",
-      "binding_digest": "191156d5b80ba40bb96364cc325f6fe9",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerReach.Navigation",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListSupervisedLiveGroups",
-      "target_owner": "student-presence"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.AcceptCatererInvitation",
       "binding_digest": "9ee77074247ace930eb9d786d2c9ee3a",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererAccessEngine.AcceptCatererInvitation",
@@ -14751,62 +14743,6 @@
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs",
       "target_owner": "school-structure"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "aaa83ebf80d633fae1429a8b5e56bc19",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "source_owner": "identity-access",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "0c7477758e55085768836182be56de81",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "563b22780feb242c70d531c83826e9c8",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaff",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "dd0cf1c4145d670da94abaea63f9a285",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaff",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "92e25360d4f56536f12b633cc93a4970",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs",
-      "target_owner": "school-structure"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "6a4e220a0383c3f49fd204b3be21676f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.SessionRecords.SessionRows",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "d964a959087deb1fc45a93b9b4041fae",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose.SessionRecords.SessionRows",
-      "target_owner": "student-presence"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.SessionRows",

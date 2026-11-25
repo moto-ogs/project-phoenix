@@ -1,3 +1,7 @@
+const refreshContext = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock("~/lib/supervision-context", () => ({
+  useOptionalSupervision: () => ({ refresh: refreshContext }),
+}));
 import {
   fireEvent,
   render,
@@ -489,21 +493,16 @@ describe("TagesplanView", () => {
       error: null,
     });
 
-    const staleEvents: Event[] = [];
-    const onStale = (event: Event) => staleEvents.push(event);
-    window.addEventListener("phoenix:supervision-stale", onStale);
-
     render(<TagesplanView />);
 
     fireEvent.click(screen.getByRole("button", { name: "Starten" }));
     await waitFor(() => {
       expect(timetableOperationsApi.start).toHaveBeenCalledWith("4");
       expect(push).toHaveBeenCalledWith("/active-supervisions?session=77");
+      expect(refreshContext).toHaveBeenCalledWith(["sessions"]);
     });
     // The sidebar learns about the new supervision without a live event
     // (role Extern has none for it, #4573).
-    expect(staleEvents).toHaveLength(1);
-    window.removeEventListener("phoenix:supervision-stale", onStale);
   });
 
   it("renders cancelled and completed blocks as plain display without actions", () => {

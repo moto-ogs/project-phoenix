@@ -4,6 +4,7 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import type { Session } from "next-auth";
 import { SessionProvider, useSession } from "next-auth/react";
 import { ProfileProvider } from "~/lib/profile-context";
+import { supervisionContextKeys } from "~/lib/swr/supervision-keys";
 import { SupervisionProvider } from "~/lib/supervision-context";
 import { PersonalStorageGuard } from "~/components/auth/personal-storage-guard";
 import {
@@ -88,7 +89,7 @@ const COUNT_KEYS: Record<keyof ShellCounts, (accountId: string) => string> = {
  * bell polls the reminders, the sidebar badge reloads today's staff notices
  * on focus and after an acknowledgement, and the home block only shows them.
  * The badge counts reload on their refresh events and on focus. The user
- * context is immutable SWR; settings changes, SSE events and the
+ * context is immutable SWR; settings changes and the
  * guardian-approval retry invalidate it.
  */
 export function shellOwnedEntries(shell: ShellBootstrap, tenantSlug: string) {
@@ -98,6 +99,10 @@ export function shellOwnedEntries(shell: ShellBootstrap, tenantSlug: string) {
   const entries: Record<string, unknown> = {};
   if (shell.userContext) {
     entries[scopedSWRKey(scope, USER_CONTEXT_SWR_KEY)] = shell.userContext;
+  }
+  if (shell.supervision) {
+    entries[scopedSWRKey(scope, supervisionContextKeys.snapshot())] =
+      shell.supervision;
   }
   if (shell.reminders) {
     entries[scopedSWRKey(scope, REMINDERS_SWR_KEY)] = shell.reminders;
@@ -250,13 +255,13 @@ export function TenantProviders({
         {/* Inside the tenant context: it reads the push key under the same
             cache scope as the guided setup and the settings card. */}
         <PushSubscriptionSync portal="tenant" />
-        <TenantAuthWrapper>
-          <ProfileProvider initialProfile={shell?.profile ?? null}>
-            <SupervisionProvider initial={shell?.supervision ?? null}>
+        <SupervisionProvider>
+          <TenantAuthWrapper>
+            <ProfileProvider initialProfile={shell?.profile ?? null}>
               {children}
-            </SupervisionProvider>
-          </ProfileProvider>
-        </TenantAuthWrapper>
+            </ProfileProvider>
+          </TenantAuthWrapper>
+        </SupervisionProvider>
       </TenantProvider>
     </ShellSeedProvider>
   );

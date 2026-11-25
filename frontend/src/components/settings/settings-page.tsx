@@ -10,7 +10,10 @@ import {
   saveSettingValue,
 } from "~/lib/settings-api";
 import { notifySettingsChanged } from "~/lib/settings-broadcast";
-import { TENANT_RESOLVE_AFFECTING_KEYS } from "~/lib/settings-keys";
+import {
+  OPERATIONAL_OVERVIEW_SETTING,
+  TENANT_RESOLVE_AFFECTING_KEYS,
+} from "~/lib/settings-keys";
 import type { SettingsSchema, SchemaTab } from "~/lib/settings-api";
 import { Button } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -49,10 +52,6 @@ import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 // Settings whose value affects the supervision context (sidebar / mobile nav)
 // and therefore require an immediate re-fetch after save/reset instead of
 // waiting for the next navigation or re-login.
-const SUPERVISION_AFFECTING_KEYS = new Set<string>([
-  "operations.operational_overview_scope",
-]);
-
 // Settings the arrival settings of the care plan forms are made of
 // (`/api/students/arrival-settings`): care days source, lesson ends, defaults.
 const ARRIVAL_SETTING_PREFIXES = [
@@ -362,13 +361,15 @@ function SettingsContent({ tabKey, highlightKey }: SettingsContentProps) {
       // Tenant-resolve-affecting keys: refresh the RSC tree so the cached
       // layout picks up the new value (BroadcastChannel only reaches OTHER
       // tabs).
-      if (TENANT_RESOLVE_AFFECTING_KEYS.has(key)) {
+      if (key === OPERATIONAL_OVERVIEW_SETTING) {
+        window.dispatchEvent(new Event("phoenix:tenant-settings-stale"));
+      } else if (TENANT_RESOLVE_AFFECTING_KEYS.has(key)) {
         router.refresh();
       }
       notifySettingsChanged();
       applyOptimistic(key, value);
-      if (SUPERVISION_AFFECTING_KEYS.has(key)) {
-        void refreshSupervision({ force: true });
+      if (key === OPERATIONAL_OVERVIEW_SETTING) {
+        await refreshSupervision(["groups", "sessions"]);
       }
       revalidateReadersOf(key);
     },
@@ -379,15 +380,17 @@ function SettingsContent({ tabKey, highlightKey }: SettingsContentProps) {
     async (key: string): Promise<void> => {
       await clearSettingValue(key);
       logger.info("setting_value_reset", { key });
-      if (TENANT_RESOLVE_AFFECTING_KEYS.has(key)) {
+      if (key === OPERATIONAL_OVERVIEW_SETTING) {
+        window.dispatchEvent(new Event("phoenix:tenant-settings-stale"));
+      } else if (TENANT_RESOLVE_AFFECTING_KEYS.has(key)) {
         router.refresh();
       }
       notifySettingsChanged();
       // Reset has no optimistic value — bridge mutate() picks up the
       // registry default on revalidation.
       void revalidate();
-      if (SUPERVISION_AFFECTING_KEYS.has(key)) {
-        void refreshSupervision({ force: true });
+      if (key === OPERATIONAL_OVERVIEW_SETTING) {
+        await refreshSupervision(["groups", "sessions"]);
       }
       revalidateReadersOf(key);
     },

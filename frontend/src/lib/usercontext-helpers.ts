@@ -1,12 +1,14 @@
 // lib/usercontext-helpers.ts
 
-import type * as studentsContract from "~/lib/contract/students.generated";
+import type { ContextNavigationGroup } from "~/lib/contract/active.generated";
 import type * as meContract from "./contract/me.generated";
-import type { EducationalGroup } from "./user-context-types";
-
-// Frontend types for UserContext (EducationalGroup is shared with the
-// user-context BFF route — single definition in user-context-types.ts)
-export type { EducationalGroup };
+export interface EducationalGroup {
+  id: string;
+  name: string;
+  roomId?: string;
+  room?: { id: string; name: string };
+  viaSubstitution?: boolean;
+}
 
 export interface ActiveGroup {
   id: string;
@@ -33,21 +35,8 @@ export interface Staff {
   person?: Person;
 }
 
-// Helper functions to transform backend data to frontend types
-export function mapEducationalGroupResponse(
-  data: meContract.CallerGroupRow,
-): EducationalGroup {
-  return {
-    id: data.id,
-    name: data.name,
-    roomId: data.room_id,
-    room: data.room ? { id: data.room.id, name: data.room.name } : undefined,
-    viaSubstitution: data.via_substitution,
-  };
-}
-
 export function mapNavigationEducationalGroupResponse(
-  data: studentsContract.NavigationGroup,
+  data: ContextNavigationGroup,
 ): EducationalGroup {
   return {
     id: data.id,

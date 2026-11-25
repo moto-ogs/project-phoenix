@@ -7,3 +7,6 @@ export const SETTINGS_KEY_SEGMENT = /^[a-z0-9_.]{1,255}$/;
 export const TENANT_RESOLVE_AFFECTING_KEYS: ReadonlySet<string> = new Set(
   tenantShellSettingKeys,
 );
+
+export const OPERATIONAL_OVERVIEW_SETTING =
+  "operations.operational_overview_scope";

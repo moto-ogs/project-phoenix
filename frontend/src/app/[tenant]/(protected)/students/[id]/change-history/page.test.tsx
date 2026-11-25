@@ -25,10 +25,7 @@ vi.mock("next-auth/react", () => ({
 
 // The child's detail also reads the account's own groups; none here.
 vi.mock("~/lib/usercontext-api", () => ({
-  userContextService: {
-    getMyEducationalGroups: () => Promise.resolve([]),
-    getMySupervisedGroups: () => Promise.resolve([]),
-  },
+  userContextService: {},
 }));
 
 // Real SWR with a fresh cache per render.

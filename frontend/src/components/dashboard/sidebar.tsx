@@ -402,7 +402,10 @@ function SidebarContent({
   // Get supervision state
   const {
     isLoadingGroups,
+    groupsLoadFailed,
     isLoadingSupervision,
+    sessionsLoadFailed,
+    releasedRoomsLoadFailed,
     groups,
     supervisedRooms,
     overviewEnabled,
@@ -1147,7 +1150,11 @@ function SidebarContent({
           pathname.startsWith("/ogs-groups") || Boolean(childGroupId)
         }
         isLoading={isLoadingGroups}
-        emptyText="Keine eigenen Gruppen"
+        emptyText={
+          groupsLoadFailed
+            ? "Gruppen gerade nicht verfügbar"
+            : "Keine eigenen Gruppen"
+        }
         hasChildren={personalGroups.length > 0 || Boolean(openForeignGroup)}
       >
         {personalGroups.map((group, index) => (
@@ -1209,7 +1216,13 @@ function SidebarContent({
               Boolean(childRoomId))
           }
           isLoading={isLoadingSupervision}
-          emptyText="Keine aktive Aufsicht"
+          emptyText={
+            sessionsLoadFailed
+              ? "Aufsichten gerade nicht verfügbar"
+              : releasedRoomsLoadFailed
+                ? "Offene Räume gerade nicht verfügbar"
+                : "Keine aktive Aufsicht"
+          }
           hasChildren={supervisionNavRooms.length > 0}
         >
           {supervisionNavRooms.map((room, index) => (

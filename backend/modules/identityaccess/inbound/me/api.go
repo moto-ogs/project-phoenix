@@ -21,9 +21,6 @@ type Rows interface {
 	StaffRow(ctx context.Context, staffID int64) (any, error)
 	EducationalGroupRows(ctx context.Context, groups []identityaccess.CallerGroup) (any, error)
 	SessionRows(ctx context.Context, ids []int64) (any, error)
-	// NavigationRow renders the navigation context with the school
-	// switches the route resolved; the root names its type in RouteContracts.
-	NavigationRow(ctx context.Context, navigation identityaccess.CallerNavigation, switches identityaccess.SchoolSwitches) (any, error)
 }
 
 // Resource handles the /api/me routes.
@@ -100,16 +97,23 @@ func (res *Resource) getNavigation(w http.ResponseWriter, r *http.Request) {
 	res.respond(w, r, navigation, err, "Navigation context retrieved successfully")
 }
 
-func (res *Resource) navigationRow(ctx context.Context) (any, error) {
-	navigation, err := res.caller.Navigation(ctx)
-	if err != nil {
-		return nil, err
+func (res *Resource) navigationRow(ctx context.Context) (identityaccess.NavigationResponse[any], error) {
+	var response identityaccess.NavigationResponse[any]
+	staffID, err := res.caller.StaffID(ctx)
+	if err != nil &&
+		!errors.Is(err, identityaccess.ErrCallerNotLinkedToStaff) &&
+		!errors.Is(err, identityaccess.ErrCallerNotLinkedToPerson) {
+		return response, err
 	}
 	switches, err := loadSchoolSwitches(ctx, res.settings)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", errSchoolSwitchesUnavailable, err)
+		return response, fmt.Errorf("%w: %w", errSchoolSwitchesUnavailable, err)
 	}
-	return res.rows.NavigationRow(ctx, navigation, switches)
+	response.SchoolSwitches = switches
+	if staffID > 0 {
+		response.CurrentStaff, err = res.rows.StaffRow(ctx, staffID)
+	}
+	return response, err
 }
 
 // getMyGroups renders the caller's educational groups. The substitution

@@ -103,15 +103,13 @@ const session = mockSessionData();
 const shell: ShellBootstrap = {
   accountId: "1",
   userContext: {
-    educationalGroups: [],
-    supervisedGroups: [],
     currentStaff: null,
-    educationalGroupIds: [],
-    educationalGroupRoomNames: [],
-    supervisedRoomNames: [],
-    incomplete: false,
-    unavailableSections: [],
-    schoolSwitches: null,
+    schoolSwitches: {
+      parentNewsEnabled: true,
+      parentInviteMode: "direct",
+      timetableDayStartTime: "08:00",
+      timetableDayEndTime: "16:00",
+    },
   },
   profile: {
     id: "1",
@@ -126,10 +124,19 @@ const shell: ShellBootstrap = {
   staffNoticesToday: [],
   announcements: [],
   supervision: {
-    groups: [],
-    supervised: [],
-    openRooms: [],
-    overviewOk: false,
+    groups: {
+      status: "ok",
+      navigation: [],
+      own_group_ids: [],
+      own_room_names: [],
+    },
+    sessions: {
+      status: "ok",
+      own_status: "ok",
+      overview_status: "forbidden",
+      items: [],
+    },
+    released_rooms: { status: "ok", items: [] },
   },
   counts: { messagesUnread: 2 },
 };
@@ -195,6 +202,7 @@ describe("TenantProviders with a server snapshot", () => {
     expect(childEffectOrder).toEqual([
       "prime",
       "seed school-a:1:user-context",
+      "seed school-a:1:staff-supervision-context",
       "seed school-a:1:reminders",
       "seed school-a:1:staff-notices-today:1",
       "seed school-a:1:badge-messages-unread:1",
@@ -217,9 +225,10 @@ describe("TenantProviders with a server snapshot", () => {
       </TenantProviders>,
     );
 
-    expect(mockSwrMutate).toHaveBeenCalledTimes(4);
+    expect(mockSwrMutate).toHaveBeenCalledTimes(5);
     for (const [key, seed] of [
       ["school-a:1:user-context", shell.userContext],
+      ["school-a:1:staff-supervision-context", shell.supervision],
       ["school-a:1:reminders", shell.reminders],
       ["school-a:1:staff-notices-today:1", shell.staffNoticesToday],
       // A badge count the server loaded; a count it left out seeds nothing.
@@ -253,6 +262,7 @@ describe("TenantProviders with a server snapshot", () => {
       expect.objectContaining({
         fallback: expect.objectContaining({
           "school-a:1:user-context": shell.userContext,
+          "school-a:1:staff-supervision-context": shell.supervision,
         }),
       }),
     );
@@ -296,7 +306,7 @@ describe("TenantProviders with a server snapshot", () => {
       fallback: {},
       cacheData: {},
     });
-    expect(mockSwrMutate).toHaveBeenCalledTimes(4);
+    expect(mockSwrMutate).toHaveBeenCalledTimes(5);
   });
 
   it("seeds SWR under the tenant-scoped keys and the providers with their slices", () => {
@@ -314,6 +324,7 @@ describe("TenantProviders with a server snapshot", () => {
 
     const entries = {
       "school-a:1:user-context": shell.userContext,
+      "school-a:1:staff-supervision-context": shell.supervision,
       "school-a:1:reminders": shell.reminders,
       // Scoped to the school and the account the snapshot was built for
       // (#4989, #5006).
@@ -333,9 +344,6 @@ describe("TenantProviders with a server snapshot", () => {
     expect(mockProfileProvider).toHaveBeenCalledWith(
       expect.objectContaining({ initialProfile: shell.profile }),
     );
-    expect(mockSupervisionProvider).toHaveBeenCalledWith(
-      expect.objectContaining({ initial: shell.supervision }),
-    );
   });
 
   it("renders without SWRConfig and with empty seeds when there is no snapshot", () => {
@@ -354,9 +362,6 @@ describe("TenantProviders with a server snapshot", () => {
     expect(mockPrimeSessionCache).toHaveBeenCalledWith(session);
     expect(mockProfileProvider).toHaveBeenCalledWith(
       expect.objectContaining({ initialProfile: null }),
-    );
-    expect(mockSupervisionProvider).toHaveBeenCalledWith(
-      expect.objectContaining({ initial: null }),
     );
   });
 });

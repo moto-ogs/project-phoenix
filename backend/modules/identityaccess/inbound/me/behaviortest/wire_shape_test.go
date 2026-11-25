@@ -136,11 +136,6 @@ func TestWireShape_GroupsAndNavigation(t *testing.T) {
 	group := testpkg.CreateTestEducationGroup(t, tc.db, "WireGroup")
 	testpkg.CreateTestGroupTeacher(t, tc.db, group.ID, teacher.ID)
 
-	activityGroup := testpkg.CreateTestActivityGroup(t, tc.db, "WireActivity")
-	room := testpkg.CreateTestRoom(t, tc.db, "WireRoom")
-	session := testpkg.CreateTestActiveGroup(t, tc.db, activityGroup.ID, room.ID)
-	testpkg.CreateTestGroupSupervisor(t, tc.db, teacher.Staff.ID, session.ID, "supervisor")
-
 	groupKeys := sorted("id", "created_at", "updated_at", "tenant_id", "name", "via_substitution")
 
 	t.Run("GET /api/me/groups", func(t *testing.T) {
@@ -158,27 +153,7 @@ func TestWireShape_GroupsAndNavigation(t *testing.T) {
 	t.Run("GET /api/me/navigation", func(t *testing.T) {
 		data, ok := getData(t, tc, "/navigation", account.ID, "Navigation context retrieved successfully").(map[string]any)
 		require.True(t, ok, "data must be an object")
-		assert.Equal(t, sorted(
-			"educational_groups", "supervised_groups", "current_staff", "incomplete", "unavailable_sections",
-			"school_switches",
-		), sortedKeys(data))
-		assert.Equal(t, false, data["incomplete"])
-		assert.Equal(t, []any{}, data["unavailable_sections"], "an empty section list renders as [], not null")
-
-		groups, ok := data["educational_groups"].([]any)
-		require.True(t, ok, "educational_groups must be an array")
-		require.Len(t, groups, 1)
-		item, ok := groups[0].(map[string]any)
-		require.True(t, ok)
-		assert.Equal(t, groupKeys, sortedKeys(item))
-		assert.Equal(t, int64(group.ID), testpkg.JSONID(t, item["id"]))
-
-		supervised, ok := data["supervised_groups"].([]any)
-		require.True(t, ok, "supervised_groups must be an array")
-		require.Len(t, supervised, 1)
-		sessionItem, ok := supervised[0].(map[string]any)
-		require.True(t, ok)
-		assert.Equal(t, int64(session.ID), testpkg.JSONID(t, sessionItem["id"]))
+		assert.Equal(t, sorted("current_staff", "school_switches"), sortedKeys(data))
 
 		staff, ok := data["current_staff"].(map[string]any)
 		require.True(t, ok, "current_staff must be an object for a staff member")
@@ -195,13 +170,6 @@ func TestWireShape_NavigationWithoutStaff(t *testing.T) {
 
 	data, ok := getData(t, tc, "/navigation", account.ID, "Navigation context retrieved successfully").(map[string]any)
 	require.True(t, ok, "data must be an object")
-	assert.Equal(t, sorted(
-		"educational_groups", "supervised_groups", "current_staff", "incomplete", "unavailable_sections",
-		"school_switches",
-	), sortedKeys(data))
-	assert.Equal(t, []any{}, data["educational_groups"])
-	assert.Equal(t, []any{}, data["supervised_groups"])
+	assert.Equal(t, sorted("current_staff", "school_switches"), sortedKeys(data))
 	assert.Nil(t, data["current_staff"], "a caller who is no staff member renders current_staff as null")
-	assert.Equal(t, false, data["incomplete"])
-	assert.Equal(t, []any{}, data["unavailable_sections"])
 }

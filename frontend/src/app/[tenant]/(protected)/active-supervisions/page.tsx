@@ -249,15 +249,7 @@ function MeinRaumPageContent() {
   // dabei steht oben im Inhalt, auch wenn der Dialog zu ist (#6652).
   const supervisorAfterWrite = useRefreshAfterWrite(
     "die Anzeige der Aufsichten",
-    mutateDashboard,
-  );
-  const handOverAfterWrite = useRefreshAfterWrite(
-    "die Anzeige der Aufsichten",
-    () =>
-      Promise.all([
-        mutateDashboard(),
-        refreshSupervision({ silent: true, force: true }),
-      ]),
+    () => Promise.all([mutateDashboard(), refreshSupervision(["sessions"])]),
   );
 
   const actions = useTimetableActions({
@@ -983,7 +975,7 @@ function MeinRaumPageContent() {
               currentStaffId={currentStaffId}
               isOpen
               onClose={() => setHandOverTarget(null)}
-              onDone={handOverAfterWrite.refresh}
+              onDone={supervisorAfterWrite.refresh}
             />
           ) : null}
         </>
@@ -995,7 +987,6 @@ function MeinRaumPageContent() {
       {!hasNoAccess ? <LoadErrorAlert error={loadError} /> : null}
       <LoadErrorAlert error={supervisorAfterWrite.error} />
       <LoadErrorAlert error={actions.reloadError} />
-      <LoadErrorAlert error={handOverAfterWrite.error} />
       {showUnclaimedOnly ? (
         <>
           {reopenBanner}

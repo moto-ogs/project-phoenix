@@ -54,5 +54,5 @@ func newCallerRowsForTests(db transactionruntime.Database, settings owners.Calle
 	if err != nil {
 		return nil, err
 	}
-	return owners.NewCallerRows(caller, owners.NewSchoolStructureSuiteRepositories(db).Group, members.Staff, presence.ActiveGroup, slog.Default())
+	return owners.NewCallerRows(caller, owners.NewSchoolStructureSuiteRepositories(db).Group, members.Staff, presence.ActiveGroup)
 }

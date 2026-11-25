@@ -1,5 +1,6 @@
 "use client";
 
+import { useOptionalSupervision } from "~/lib/supervision-context";
 import {
   useCallback,
   useEffect,
@@ -65,6 +66,7 @@ export function useSchulhofActions(
     spontaneousStartBlockedReason,
     refresh,
   } = options;
+  const { refresh: refreshSupervision } = useOptionalSupervision();
   const toast = useToast();
   const { show: showActionError } = useApiErrorDisplay();
   const releaseErrors = useApiFormError();
@@ -109,11 +111,6 @@ export function useSchulhofActions(
       } else {
         logger.warn("no active supervision found for current user");
       }
-
-      setShowReleaseModal(false);
-
-      // Refresh the page to show updated state
-      refresh();
     } catch (err) {
       logger.error("failed to release Schulhof supervision", {
         error: err instanceof Error ? err.message : String(err),
@@ -123,13 +120,20 @@ export function useSchulhofActions(
         object: "das Abgeben der Schulhof-Aufsicht",
         retry: () => retryReleaseRef.current(),
       });
+      return;
     } finally {
       setIsReleasingSupervision(false);
     }
+    setShowReleaseModal(false);
+
+    // Refresh the page to show updated state
+    refresh();
+    await refreshSupervision(["sessions"]);
   }, [
     supervisedActiveGroupId,
     currentStaffId,
     refresh,
+    refreshSupervision,
     setShowReleaseModal,
     clearReleaseError,
     showReleaseError,
@@ -198,11 +202,6 @@ export function useSchulhofActions(
         }
         await startSchulhofSpontaneously();
       }
-
-      // Refresh to get updated status
-      // Note: Don't reset isTogglingSchulhof here - let the useEffect below handle it
-      // when schulhofStatus actually updates, to avoid flickering
-      refresh();
     } catch (err) {
       logger.error("failed to toggle Schulhof supervision", {
         error: err instanceof Error ? err.message : String(err),
@@ -214,9 +213,16 @@ export function useSchulhofActions(
       });
       // Only reset loading state on error - success case handled by useEffect
       setIsTogglingSchulhof(false);
+      return;
     }
+    // Refresh to get updated status
+    // Note: Don't reset isTogglingSchulhof here - let the useEffect below handle it
+    // when schulhofStatus actually updates, to avoid flickering
+    refresh();
+    await refreshSupervision(["sessions"]);
   }, [
     refresh,
+    refreshSupervision,
     schulhofStatus,
     showActionError,
     spontaneousStartBlockedReason,

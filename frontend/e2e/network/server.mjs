@@ -295,17 +295,29 @@ const api = createServer(async (req, res) => {
   } else if (path === "/api/me/profile") data = envelope(profile);
   else if (path === "/api/me/navigation")
     data = envelope({
-      educational_groups: [],
-      supervised_groups: [],
       current_staff: null,
-      incomplete: false,
-      unavailable_sections: [],
       school_switches: {
         parent_news_enabled: false,
         parent_invite_mode: "direct",
         timetable_day_start_time: "08:00",
         timetable_day_end_time: "16:00",
       },
+    });
+  else if (path === "/api/active/supervision-context")
+    data = envelope({
+      groups: {
+        status: "ok",
+        navigation: [],
+        own_group_ids: [],
+        own_room_names: [],
+      },
+      sessions: {
+        status: "ok",
+        overview_status: "forbidden",
+        own_status: "ok",
+        items: [],
+      },
+      released_rooms: { status: "ok", items: [] },
     });
   // The school picker of the main domain (#7563).
   else if (path === "/auth/tenants")
