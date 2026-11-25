@@ -68,13 +68,17 @@ import {
 } from "~/components/ui/status-badge";
 import { Textarea } from "~/components/ui/textarea";
 import { Switch } from "~/components/ui/switch";
+import { SectionLabel } from "~/components/ui/section-label";
 import {
   formatSignedDuration,
   TargetOriginChip,
   ViewToggle,
   type ViewMode,
 } from "~/components/staff/staff-time-views";
-import { StaffSessionTable } from "~/components/staff/staff-session-table";
+import {
+  SessionEditHistory,
+  StaffSessionTable,
+} from "~/components/staff/staff-session-table";
 import { workTimeModelPath } from "~/components/staff/missing-target-notice";
 import { StaffExportButton } from "~/components/staff/staff-export-button";
 import { BetreuungsplanHeuteCard } from "~/components/time-tracking/betreuungsplan-heute-card";
@@ -182,7 +186,9 @@ import {
   AppClockPanel,
   AppDayList,
   AppRangeBar,
+  AppDayFactsPanel,
   AppTimeTrackingLayout,
+  type AppDayFacts,
 } from "~/components/time-tracking/time-tracking-app";
 
 const logger = createLogger({ component: "TimeTrackingPage" });
@@ -1019,6 +1025,40 @@ function ClockInCard({
         breakStepper={breakDurationStepper}
         breakSheetOpen={breakMenuOpen && !isOnBreak}
         onBreakSheetOpenChange={setBreakMenuOpen}
+        footer={
+          metrics ? (
+            // Die Kacheln des Desktops (Woche steht in der Kopfkarte):
+            // Monat und der Beginn des Stundenkontos, dazu die Herkunft des
+            // Solls (#8070, Runde 7).
+            <div
+              className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-gray-100 pt-3 text-sm text-gray-500 tabular-nums"
+              data-app-clock-metrics=""
+            >
+              <span>
+                Monat{" "}
+                <span className="font-semibold text-gray-900">
+                  {metrics.month === null
+                    ? "–"
+                    : formatDuration(metrics.month.ist)}
+                </span>
+                {metrics.month === null
+                  ? null
+                  : ` von ${formatDuration(metrics.month.soll)}`}
+                {" · Stundenkonto seit "}
+                {metrics.accountStart.toLocaleDateString("de-DE", {
+                  timeZone: "Europe/Berlin",
+                  day: "numeric",
+                  month: "short",
+                })}
+              </span>
+              <TargetOriginChip
+                hasTargetOverride={metrics.hasTargetOverride}
+                hasTarget={metrics.hasTarget}
+                setTargetHref={setTargetHref}
+              />
+            </div>
+          ) : undefined
+        }
       />
     );
   }
@@ -1686,6 +1726,8 @@ function OwnZeiterfassungSection({
     /** Liest die Tabelle neu, aus der der Block stammt; scheitert das
      *  Lesen, lehnt es ab (ADR 0311, Regel 6). */
     reloadDay: () => Promise<unknown>,
+    /** App (#8070): die Angaben der Tabellenzeile für das Blatt des Tages. */
+    facts?: AppDayFacts,
   ) => void;
   /** Ein offener Block verändert Tages- und Wochensummen fortlaufend. */
   readonly isSessionOpen: boolean;
@@ -1982,6 +2024,7 @@ function OwnZeiterfassungSection({
   const handleEdit = (
     date: Date,
     tableSession: { id?: string } | null = null,
+    facts?: AppDayFacts,
   ) => {
     const dateKey = toISODate(date);
     const session =
@@ -1999,8 +2042,13 @@ function OwnZeiterfassungSection({
     const laborDay = (tableData?.laborDays ?? []).find(
       (day) => day.date === workday,
     );
-    onEditDay(date, session, absence, laborDay, () =>
-      revalidateOrThrow(tableRead),
+    onEditDay(
+      date,
+      session,
+      absence,
+      laborDay,
+      () => revalidateOrThrow(tableRead),
+      facts,
     );
   };
 
@@ -2039,8 +2087,8 @@ function OwnZeiterfassungSection({
             projection={dailyProjection}
             holidays={tableHolidays}
             closingDays={tableClosingDays}
-            onEdit={(date, session) =>
-              handleEdit(date, session ? { id: session.id } : null)
+            onEdit={(date, session, facts) =>
+              handleEdit(date, session ? { id: session.id } : null, facts)
             }
           />
         )}
@@ -2355,7 +2403,11 @@ function EditSessionModal({
   ownStaffId,
   laborDay,
   app = false,
+  facts,
 }: {
+  /** App (#8070): Plan, Soll, Ist, Saldo und Quelle des Tages wie in der
+   *  Tabellenzeile des Desktops. */
+  readonly facts?: AppDayFacts;
   readonly isOpen: boolean;
   readonly onClose: () => void;
   readonly session: WorkSessionHistory | null;
@@ -2531,6 +2583,11 @@ function EditSessionModal({
         mobileSheet={app}
         footer={<BackfillFooter onClose={onClose} onBackfill={onBackfill} />}
       >
+        {app && facts ? (
+          <div className="mb-4">
+            <AppDayFactsPanel facts={facts} />
+          </div>
+        ) : null}
         <MissingSessionHint date={date} canManage={onBackfill !== null} />
       </Modal>
     );
@@ -2805,6 +2862,7 @@ function EditSessionModal({
           className="flex-1 space-y-4 overflow-y-auto px-5 py-4"
         >
           <FormErrorAlert message={formErrors.error} />
+          {app && facts ? <AppDayFactsPanel facts={facts} /> : null}
           {/* Section switcher for a session or a backfillable half-day alongside
             an absence. The kit
             SegmentedControl, NOT ui/Tabs: Radix tabs activate on mousedown, and
@@ -2985,6 +3043,19 @@ function EditSessionModal({
                   </p>
                 </div>
               )}
+
+              {/* App (#8070): die Änderungshistorie, die der Desktop beim
+                  Aufklappen der Zeile zeigt. */}
+              {app && session && session.editCount > 0 && ownStaffId ? (
+                <div className="space-y-2" data-app-edit-history="">
+                  <SectionLabel as="h3">Bisherige Änderungen</SectionLabel>
+                  <SessionEditHistory
+                    staffId={ownStaffId}
+                    sessionId={session.id}
+                    fetchEdits={fetchOwnSessionEdits}
+                  />
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -3347,8 +3418,12 @@ const TIME_TRACKING_INFO =
 
 // Dieselbe Hilfe in der App (#8070): die Stempeluhr zeigt dort nur den
 // Zustand, gestempelt wird unten über die Leiste.
+/** Eigene Änderungshistorie ohne time_tracking:manage (#1842 AC8). */
+const fetchOwnSessionEdits = (_staffId: string, sessionId: string) =>
+  timeTrackingService.getSessionEdits(sessionId);
+
 const TIME_TRACKING_APP_INFO =
-  "Hier erfasst du deine Arbeitszeit und deine Pausen. Tippe unten auf „Einstempeln“ und wähle, wo du arbeitest. Oben steht dein Stundenkonto, darunter deine Woche Tag für Tag. Tippe auf einen Tag, um ihn anzusehen oder zu korrigieren.";
+  "Hier erfasst du deine Arbeitszeit und deine Pausen. Tippe unten auf „Einstempeln“ und wähle, wo du arbeitest. Oben stehen deine Woche und dein Saldo (Stundenkonto), darunter deine Woche Tag für Tag. Tippe auf einen Tag, um ihn anzusehen oder zu korrigieren.";
 
 function TimeTrackingContent() {
   const { data: authSession, status: authStatus } = useSession({
@@ -3470,6 +3545,7 @@ function TimeTrackingContent() {
     laborDay?: WorkDayLaborHint;
     /** Die Lesung, aus der der Block stammt (ADR 0311, Regel 6). */
     reloadDay: () => Promise<unknown>;
+    facts?: AppDayFacts;
   } | null>(null);
   const [absenceModalOpen, setAbsenceModalOpen] = useState(false);
   const handleCloseEditModal = useCallback(() => setEditModal(null), []);
@@ -4221,7 +4297,10 @@ function TimeTrackingContent() {
               },
               {
                 value: formatSignedDuration(ownMetrics.accountBalanceMinutes!),
-                label: "Stundenkonto",
+                // Wie im Kopf des Desktops; „Stundenkonto“ lief am SE
+                // über den Rand (#8070, Runde 7). Die Stempeluhr nennt es
+                // „Stundenkonto seit …“.
+                label: "Saldo",
               },
             ]}
           />
@@ -4323,6 +4402,7 @@ function TimeTrackingContent() {
             ownStaffId={ownStaffId}
             laborDay={editModal?.laborDay}
             app={app}
+            facts={editModal?.facts}
           />
 
           {/* Create absence modal */}
@@ -4509,6 +4589,11 @@ function TimeTrackingContent() {
               cancelledShifts={todayCancelledShifts}
               stampingDisabled={stampingDisabled || stampAction.pending}
               saving={stampAction.pending}
+              setTargetHref={
+                canSetTarget && ownStaffId
+                  ? tenantPath(workTimeModelPath(ownStaffId))
+                  : undefined
+              }
             />
           }
           days={
@@ -4546,8 +4631,15 @@ function TimeTrackingContent() {
                   ? tenantPath(workTimeModelPath(ownStaffId))
                   : undefined
               }
-              onEditDay={(date, session, absence, laborDay, reloadDay) =>
-                setEditModal({ date, session, absence, laborDay, reloadDay })
+              onEditDay={(date, session, absence, laborDay, reloadDay, facts) =>
+                setEditModal({
+                  date,
+                  session,
+                  absence,
+                  laborDay,
+                  reloadDay,
+                  facts,
+                })
               }
             />
           }

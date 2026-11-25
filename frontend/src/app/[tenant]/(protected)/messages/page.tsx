@@ -192,6 +192,18 @@ function MessagesInboxContent() {
       />
     );
 
+  const inboxCount =
+    threads === undefined ? null : (
+      <TenantPageStats
+        items={[
+          {
+            value: threadList.length,
+            label: threadList.length === 1 ? "Unterhaltung" : "Unterhaltungen",
+          },
+        ]}
+      />
+    );
+
   // App: „Neue Nachricht“ beschriftet in Daumennähe statt als Symbol oben.
   // Auf dem Telefon und dem iPad hoch schwebt sie als ActionBar über der
   // Pill. Im Split (iPad quer) klebt sie unten in der Listenspalte, über
@@ -269,8 +281,9 @@ function MessagesInboxContent() {
       info={MESSAGES_INFO}
       title="Nachrichten"
       tabs={messagesTabs("conversations")}
-      // App: Ungelesenes zeigt jede Zeile selbst; der Kopf bleibt einzeilig.
-      stats={isApp ? undefined : inboxSummary}
+      // App: „ungelesen“ steht als Filter über der Liste; die Zahl der
+      // Unterhaltungen bleibt wie auf dem Desktop im Kopf (#8070, Runde 7).
+      stats={isApp ? inboxCount : inboxSummary}
       statsLoading={showSkeleton}
       actions={composeButton}
       overflowMenu={[

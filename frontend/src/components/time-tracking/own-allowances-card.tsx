@@ -64,26 +64,19 @@ export function OwnAllowancesCard({
   }
 
   if (app) {
-    // Nur Arten, die dich betreffen: mit Anspruch oder schon genutzt. Eine
-    // Liste aus lauter „Kein Anspruch“ sagt dir nichts.
-    const relevant = (allowances ?? []).filter(
-      ({ summary }) =>
-        summary.entitledDays > 0 ||
-        summary.takenDays > 0 ||
-        summary.reservedDays > 0,
-    );
-    if (!load.failure && relevant.length === 0) return null;
+    // Alle Arten wie auf dem Desktop, auch ohne Anspruch (#8070, Runde 7):
+    // je Art eine Zeile mit allen vier Zahlen.
     return (
       <SectionCard
-        title="Weitere freie Tage"
-        description="Den Anspruch trägt deine Leitung ein."
+        title="Kontingente"
+        description="Deine Tage je Abwesenheitsart. Den Anspruch trägt deine Leitung ein."
         bodyClassName="mt-3"
       >
         {load.failure ? (
           <LoadErrorAlert error={load.error} />
         ) : (
           <ul className="-mb-1 divide-y divide-gray-100">
-            {relevant.map((entry) => (
+            {(allowances ?? []).map((entry) => (
               <AppAllowanceRow
                 key={entry.summary.absenceTypeId}
                 entry={entry}
@@ -130,14 +123,11 @@ export function OwnAllowancesCard({
 function AppAllowanceRow({ entry }: { readonly entry: OwnAbsenceAllowance }) {
   const { summary } = entry;
   const hint = termHint(entry.name);
-  const used = [
-    summary.takenDays > 0
-      ? `${formatDayCount(summary.takenDays)} genommen`
-      : "",
-    summary.reservedDays > 0
-      ? `${formatDayCount(summary.reservedDays)} beantragt`
-      : "",
-  ].filter(Boolean);
+  const figures = [
+    `Anspruch ${formatDayCount(summary.entitledDays)}`,
+    `genommen ${formatDayCount(summary.takenDays)}`,
+    `vorgemerkt ${formatDayCount(summary.reservedDays)}`,
+  ];
   return (
     <li className="flex items-start justify-between gap-3 py-3">
       <div className="min-w-0">
@@ -145,26 +135,23 @@ function AppAllowanceRow({ entry }: { readonly entry: OwnAbsenceAllowance }) {
           {entry.name}
         </h3>
         {hint ? <p className="text-sm text-gray-500">{hint}</p> : null}
-        {used.length > 0 ? (
-          <p className="text-sm text-gray-500 tabular-nums">
-            {used.join(" · ")}
-          </p>
-        ) : null}
+        <p className="flex flex-wrap gap-x-1 text-sm text-gray-500 tabular-nums">
+          {figures.map((figure, index) => (
+            <span key={figure} className="whitespace-nowrap">
+              {index > 0 ? "· " : ""}
+              {figure}
+            </span>
+          ))}
+        </p>
         <div className="mt-0.5 empty:hidden">
           <AllowanceExpiryNote summary={summary} />
         </div>
       </div>
       <p className="shrink-0 text-right text-sm leading-6 text-gray-500 tabular-nums">
-        {summary.entitledDays > 0 ? (
-          <>
-            <span className="font-semibold text-gray-900">
-              {formatDayCount(summary.remainingDays)}
-            </span>{" "}
-            übrig
-          </>
-        ) : (
-          "Kein Anspruch"
-        )}
+        <span className="font-semibold text-gray-900">
+          {formatDayCount(summary.remainingDays)}
+        </span>{" "}
+        übrig
       </p>
     </li>
   );

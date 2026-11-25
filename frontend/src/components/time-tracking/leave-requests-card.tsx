@@ -4,6 +4,7 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { StatCard } from "~/components/ui/stat-card";
+import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import { TOUCH_HIT_AREA } from "~/components/ui/button-styles";
 import { ConfirmationModal } from "~/components/ui/modal";
@@ -321,27 +322,41 @@ export function LeaveRequestsCard({
               }
               value={loading ? "–" : formatDayCount(remainingDays)}
             />
-            {counts.reserved > 0 ? (
-              <AppFigureRow
+            {/* Wie die Kacheln des Desktops, auch bei 0 (#8070, Runde 7):
+                eine Zeile mit drei kleinen Kennzahlen statt dreier Zeilen. */}
+            <li
+              className={cn(
+                "grid gap-2 py-3",
+                counts.question > 0 ? "grid-cols-4" : "grid-cols-3",
+              )}
+              data-app-leave-counts=""
+            >
+              <StatCard
+                variant="tile"
                 label="Beantragt"
-                hint="wartet auf Antwort"
-                value={String(counts.reserved)}
+                value={loading ? "–" : counts.reserved}
+                tone={counts.reserved > 0 ? "orange" : undefined}
               />
-            ) : null}
-            {counts.approved > 0 ? (
-              <AppFigureRow
+              {counts.question > 0 ? (
+                <StatCard
+                  variant="tile"
+                  label="Rückfrage"
+                  value={counts.question}
+                  tone="orange"
+                />
+              ) : null}
+              <StatCard
+                variant="tile"
                 label="Genehmigt"
-                hint="kommende Tage"
-                value={String(counts.approved)}
+                value={loading ? "–" : counts.approved}
+                tone={counts.approved > 0 ? "green" : undefined}
               />
-            ) : null}
-            {counts.declined > 0 ? (
-              <AppFigureRow
+              <StatCard
+                variant="tile"
                 label="Abgelehnt"
-                hint="dieses Jahr"
-                value={String(counts.declined)}
+                value={loading ? "–" : counts.declined}
               />
-            ) : null}
+            </li>
             {sortedQuestionedVacations.map((vacation) => (
               <AbsenceRequestItem
                 key={vacation.id}

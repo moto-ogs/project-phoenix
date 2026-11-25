@@ -1,7 +1,8 @@
 "use client";
 
 import { Suspense, useEffect, useState, type ReactNode } from "react";
-import { Bell } from "lucide-react";
+import { Bell, RotateCw } from "lucide-react";
+import { useInvalidateMatching } from "~/lib/swr";
 import { LogoutModal } from "~/components/auth/logout-modal";
 import {
   MobileNavIcon,
@@ -27,6 +28,15 @@ import { useDeviceContext } from "~/lib/device-context";
 import { logoutConcept } from "~/lib/concepts/logout";
 import { ENROLLMENT_SECTION } from "~/lib/section-navigation";
 import { useTenantRouter } from "~/lib/tenant-router";
+import { isDemoBuild } from "~/lib/demo-access";
+import { useShellAuth } from "~/lib/shell-auth-context";
+import { useCareWithdrawalsPending } from "~/lib/hooks/use-care-withdrawals-pending";
+import { useChangeRequestsPending } from "~/lib/hooks/use-change-requests-pending";
+import { useEnrollmentRequestsPending } from "~/lib/hooks/use-enrollment-requests-pending";
+import { useMessagesUnread } from "~/lib/hooks/use-messages-unread";
+import { useStaffAbsencesPending } from "~/lib/hooks/use-staff-absences-pending";
+import { useStaffMessagesUnread } from "~/lib/hooks/use-staff-messages-unread";
+import { useStaffNoticesPending } from "~/lib/hooks/use-staff-notices-pending";
 
 /**
  * „Mehr“ als eigene Seite (Prototyp #8070, offener Produktentscheid 2):
@@ -51,34 +61,98 @@ const STAFF_FLOW_HREFS: readonly string[] = [
 
 type MenuItem = StaffBottomNavModel["displayAdditionalItems"][number];
 
+/**
+ * Zähler an den Zeilen wie in der Seitenleiste des Desktops (#8070, Runde 7):
+ * offene Anfragen, ungelesene Nachrichten (Eltern, Team-Chat) und offene
+ * Hinweise der Leitung. Dieselben Quellen und Vorlesetexte wie dort.
+ */
+interface RowCounter {
+  readonly count: number;
+  readonly tone: "staff" | "parents";
+  readonly one: string;
+  readonly noun: string;
+}
+
+function useRowCounters(): Readonly<Record<string, RowCounter>> {
+  const { unreadCount: absences } = useStaffAbsencesPending();
+  const { unreadCount: messages } = useMessagesUnread();
+  const { unreadCount: teamChat } = useStaffMessagesUnread();
+  const { unreadCount: notices } = useStaffNoticesPending();
+  const { unreadCount: changeRequests } = useChangeRequestsPending();
+  const { unreadCount: enrollmentRequests } = useEnrollmentRequestsPending();
+  const { unreadCount: withdrawals } = useCareWithdrawalsPending();
+  return {
+    "/anfragen": {
+      count: absences + changeRequests + enrollmentRequests + withdrawals,
+      tone: "staff",
+      one: "offene Anfrage",
+      noun: "offene Anfragen",
+    },
+    "/messages": {
+      count: messages,
+      tone: "parents",
+      one: "ungelesene Nachricht",
+      noun: "ungelesene Nachrichten",
+    },
+    "/team-chat": {
+      count: teamChat,
+      tone: "staff",
+      one: "ungelesene Nachricht im Team-Chat",
+      noun: "ungelesene Nachrichten im Team-Chat",
+    },
+    "/tagesinformationen": {
+      count: notices,
+      tone: "staff",
+      one: "offener Hinweis der Leitung",
+      noun: "offene Hinweise der Leitung",
+    },
+  };
+}
+
 /** Symbol einer Zeile: dieselbe Größe und Farbe in jeder Zeile. */
 const ROW_ICON = "h-5 w-5 shrink-0 text-gray-600";
 
 function MenuRows({
   items,
   model,
-}: Readonly<{ items: readonly MenuItem[]; model: StaffBottomNavModel }>) {
-  return items.map((item) => (
-    <li key={item.href}>
-      <ListRowLink
-        href={model.resolveItemHref(item)}
-        className="min-h-14"
-        icon={<MobileNavIcon item={item} active={false} className={ROW_ICON} />}
-        title={item.label}
-        badge={
-          item.locked ? (
-            <ModuleLockMark />
-          ) : item.href === ENROLLMENT_SECTION.href ? (
-            <UnreadBadge
-              count={model.enrollmentsUnreadCount}
-              tone="staff"
-              noun="ungelesene Anmeldungen"
-            />
-          ) : undefined
-        }
-      />
-    </li>
-  ));
+  counters,
+}: Readonly<{
+  items: readonly MenuItem[];
+  model: StaffBottomNavModel;
+  counters: Readonly<Record<string, RowCounter>>;
+}>) {
+  return items.map((item) => {
+    const counter = counters[item.href];
+    return (
+      <li key={item.href}>
+        <ListRowLink
+          href={model.resolveItemHref(item)}
+          className="min-h-14"
+          icon={
+            <MobileNavIcon item={item} active={false} className={ROW_ICON} />
+          }
+          title={item.label}
+          badge={
+            item.locked ? (
+              <ModuleLockMark />
+            ) : item.href === ENROLLMENT_SECTION.href ? (
+              <UnreadBadge
+                count={model.enrollmentsUnreadCount}
+                tone="staff"
+                noun="ungelesene Anmeldungen"
+              />
+            ) : counter && counter.count > 0 ? (
+              <UnreadBadge
+                count={counter.count}
+                tone={counter.tone}
+                noun={counter.count === 1 ? counter.one : counter.noun}
+              />
+            ) : undefined
+          }
+        />
+      </li>
+    );
+  });
 }
 
 interface MoreSection {
@@ -133,6 +207,23 @@ function MorePageContent() {
   const [logoutOpen, setLogoutOpen] = useState(false);
   const { resolved, isApp, layout, isSplit } = useDeviceContext();
   const router = useTenantRouter();
+  const counters = useRowCounters();
+  // „Daten aktualisieren“ steht am Desktop in der Kopfzeile, die das Telefon
+  // nicht hat (#8070, Runde 7): dieselbe Wirkung als Zeile.
+  const invalidate = useInvalidateMatching();
+  const [refresh, setRefresh] = useState<"idle" | "busy" | "done">("idle");
+  const handleRefresh = () => {
+    if (refresh === "busy") return;
+    setRefresh("busy");
+    void invalidate(() => true).finally(() => {
+      setRefresh("done");
+      setTimeout(() => setRefresh("idle"), 2000);
+    });
+  };
+  // Name und Adresse wie im Profilmenü des Desktops; die Demo zeigt keine
+  // technische Adresse (#3891).
+  const { user } = useShellAuth();
+  const userEmail = isDemoBuild() ? "" : (user?.email ?? "");
 
   // Desktop: keine eigene Seite, die Seitenleiste trägt alle Ziele.
   useEffect(() => {
@@ -194,7 +285,7 @@ function MorePageContent() {
       key: "tag",
       title: "Mein Tag",
       size: flows.length,
-      rows: <MenuRows items={flows} model={model} />,
+      rows: <MenuRows items={flows} model={model} counters={counters} />,
     });
   }
   for (const group of groups) {
@@ -202,29 +293,54 @@ function MorePageContent() {
       key: group.key,
       title: group.group?.label ?? "Weiteres",
       size: group.items.length,
-      rows: <MenuRows items={group.items} model={model} />,
+      rows: <MenuRows items={group.items} model={model} counters={counters} />,
     });
   }
   if (model.profileUrl) {
     sections.push({
       key: "konto",
       title: "Konto",
-      size: 1,
+      size: 2,
       rows: (
-        <li>
-          <ListRowLink
-            href={model.tenantPath(model.profileUrl)}
-            className="min-h-14"
-            icon={
-              <MobileNavIcon
-                item={{ iconKey: "profile" }}
-                active={false}
-                className={ROW_ICON}
-              />
-            }
-            title="Profil"
-          />
-        </li>
+        <>
+          <li>
+            <ListRowLink
+              onClick={handleRefresh}
+              className="min-h-14"
+              chevron={false}
+              icon={<RotateCw className={ROW_ICON} aria-hidden="true" />}
+              title="Daten aktualisieren"
+              meta={
+                refresh === "busy" ? (
+                  <span role="status">Lädt …</span>
+                ) : refresh === "done" ? (
+                  <span role="status">Aktualisiert</span>
+                ) : undefined
+              }
+            />
+          </li>
+          <li>
+            <ListRowLink
+              href={model.tenantPath(model.profileUrl)}
+              className="min-h-14"
+              icon={
+                <MobileNavIcon
+                  item={{ iconKey: "profile" }}
+                  active={false}
+                  className={ROW_ICON}
+                />
+              }
+              title="Profil"
+              subtitle={
+                user?.name
+                  ? userEmail
+                    ? `${user.name} · ${userEmail}`
+                    : user.name
+                  : undefined
+              }
+            />
+          </li>
+        </>
       ),
     });
   }

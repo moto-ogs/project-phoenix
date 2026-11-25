@@ -4,6 +4,8 @@ import { messageKeys } from "~/lib/swr/portal-keys";
 
 import { useCallback, useState } from "react";
 import { useSWRAuth } from "~/lib/swr";
+import { NotePencilIcon } from "@phosphor-icons/react";
+import { ActionBar } from "~/components/ui/action-bar";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { formErrorMessage } from "~/components/ui/form-error";
@@ -25,6 +27,7 @@ import {
 import { useTenant } from "~/lib/tenant-context";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { groupsConcept } from "~/lib/concepts/groups";
+import { useDeviceContext } from "~/lib/device-context";
 
 // Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
 const GROUP_MESSAGES_INFO =
@@ -41,6 +44,10 @@ function GroupMessagesContent() {
   const { tenant } = useTenant();
   const messagingEnabled = tenant?.messagingEnabled === true;
   const [composeOpen, setComposeOpen] = useState(false);
+  const { resolved, isApp } = useDeviceContext();
+  // Telefon: die Hauptaktion schwebt wie auf „Unterhaltungen“ über der Pill
+  // statt im „…“-Menü (#8070, Runde 7).
+  const app = resolved && isApp;
 
   const { data, error, isLoading, mutate } = useSWRAuth<
     messagesContract.StaffGroupThreadSummaryResponse[]
@@ -82,17 +89,33 @@ function GroupMessagesContent() {
       />
     );
 
-  const composeButton = messagingEnabled ? (
-    <Button
-      type="button"
-      variant="primary"
-      size="md"
-      onClick={() => setComposeOpen(true)}
-      tooltip="Öffnet ein Fenster für eine Nachricht an eine ganze Gruppe."
-    >
-      Neue Gruppennachricht
-    </Button>
-  ) : undefined;
+  const appComposeButton =
+    messagingEnabled && app ? (
+      <Button
+        type="button"
+        variant="primary"
+        size="md"
+        className="w-full gap-2"
+        onClick={() => setComposeOpen(true)}
+        tooltip="Öffnet ein Fenster für eine Nachricht an eine ganze Gruppe."
+      >
+        <NotePencilIcon size={18} aria-hidden="true" />
+        Neue Gruppennachricht
+      </Button>
+    ) : null;
+
+  const composeButton =
+    messagingEnabled && !app ? (
+      <Button
+        type="button"
+        variant="primary"
+        size="md"
+        onClick={() => setComposeOpen(true)}
+        tooltip="Öffnet ein Fenster für eine Nachricht an eine ganze Gruppe."
+      >
+        Neue Gruppennachricht
+      </Button>
+    ) : undefined;
 
   const loadFailed = Boolean(error);
   const bodyReplaced = !showSkeleton && threads.length === 0 && !composeOpen;
@@ -119,16 +142,19 @@ function GroupMessagesContent() {
           : null
       }
       overlays={
-        composeOpen ? (
-          <NewGroupMessageModal
-            onClose={() => setComposeOpen(false)}
-            onCreated={(detail) => {
-              setComposeOpen(false);
-              void mutate();
-              router.push(`/messages/groups/${detail.thread.id}`);
-            }}
-          />
-        ) : null
+        <>
+          {composeOpen ? (
+            <NewGroupMessageModal
+              onClose={() => setComposeOpen(false)}
+              onCreated={(detail) => {
+                setComposeOpen(false);
+                void mutate();
+                router.push(`/messages/groups/${detail.thread.id}`);
+              }}
+            />
+          ) : null}
+          {appComposeButton ? <ActionBar>{appComposeButton}</ActionBar> : null}
+        </>
       }
     >
       <>
@@ -139,9 +165,10 @@ function GroupMessagesContent() {
               <TileCard
                 onClick={() => router.push(`/messages/groups/${thread.id}`)}
               >
-                <div className="flex min-w-0 items-center gap-2">
+                <div className="phone:flex-wrap flex min-w-0 items-center gap-2">
                   <MotoConceptIcon concept={groupsConcept} size={20} />
-                  <h3 className="truncate text-base font-semibold text-gray-900">
+                  {/* Telefon: der Titel bricht um statt „Fundsach…“. */}
+                  <h3 className="phone:min-w-[calc(100%-2rem)] phone:flex-1 phone:whitespace-normal truncate text-base font-semibold text-gray-900">
                     {thread.title}
                   </h3>
                   {thread.closed_at && (

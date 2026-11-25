@@ -1274,7 +1274,7 @@ export function StaffSessionTable({
 // Lazy-loads the audit trail for one session when expanded. Kept in its own
 // component so the fetch is scoped to the row and reset cleanly when the user
 // expands a different day.
-function SessionEditHistory({
+export function SessionEditHistory({
   staffId,
   sessionId,
   onEdit,
