@@ -325,7 +325,11 @@ func (rs *Resource) getChildFeatures(w http.ResponseWriter, r *http.Request) {
 		renderParentWriteError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, ChildFeaturesResponse{
+	common.Respond(w, r, http.StatusOK, toChildFeaturesResponse(flags), "Child features retrieved")
+}
+
+func toChildFeaturesResponse(flags parentService.ChildFeatureFlags) ChildFeaturesResponse {
+	return ChildFeaturesResponse{
 		ConferenceBookAllowed:         flags.ConferenceBookAllowed,
 		CareEnded:                     flags.CareEnded,
 		WithoutCarePlace:              flags.WithoutCarePlace,
@@ -355,7 +359,7 @@ func (rs *Resource) getChildFeatures(w http.ResponseWriter, r *http.Request) {
 		NewsEnabled:                   flags.NewsEnabled,
 		ReasonRequired:                flags.ReasonRequired,
 		CareFacilityTerm:              flags.CareFacilityTerm,
-	}, "Child features retrieved")
+	}
 }
 
 // --- Meal plan (Essensplan) ---

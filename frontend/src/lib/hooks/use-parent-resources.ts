@@ -1,26 +1,22 @@
 "use client";
 
-import { isAccessRefusal } from "~/lib/access-refusal";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-} from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { berlinTodayISO } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import type {
+  FamilyFieldFailure,
+  ParentFamily,
+} from "~/lib/parent-family-cards";
 import { ApiError } from "~/lib/api-error";
-import { isRateLimitError } from "~/lib/rate-limit-backoff";
+import { remainingRateLimitMs } from "~/lib/rate-limit-backoff";
 import { useSWRAuth, useInvalidateMatching } from "~/lib/swr";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import {
-  listMyChildren,
-  getChildFeatures,
-  getChildToday,
-  UNKNOWN_CHILD_TODAY,
-} from "~/lib/parent-api";
+  narrowNextFamilyRead,
+  readParentFamily,
+} from "~/lib/parent-family-start";
 
 import {
   PARENT_ACCESS_REFUSAL_CODES as REFUSAL_CODES,
@@ -54,7 +50,7 @@ function useParentRefusal() {
         codes: REFUSAL_CODES,
         matches: parentKeys.isResource,
       });
-      if (refused) void invalidate((key) => key === parentKeys.shellChildren());
+      if (refused) void invalidate(parentKeys.isFamilyStart);
       if (refused && broadcast && account && error instanceof ApiError) {
         const channel = new BroadcastChannel(REFUSAL_SIGNAL);
         channel.postMessage({
@@ -71,6 +67,18 @@ function useParentRefusal() {
   );
 }
 
+function partialChildren(family: ParentFamily): string {
+  return [
+    ...new Set([
+      ...Object.keys(family.featureErrors),
+      ...Object.keys(family.todayErrors),
+      ...Object.keys(family.retryNotBefore),
+    ]),
+  ]
+    .sort()
+    .join(",");
+}
+
 /** Mounted once in the authenticated shell; the standard scope boundary owns logout. */
 export function useParentResourceEvents() {
   const invalidate = useInvalidateMatching();
@@ -78,11 +86,94 @@ export function useParentResourceEvents() {
   const { data: session } = useSession();
   const account =
     session?.user.scope === "parent" ? session.user.id : undefined;
-  const { data: children } = useParentChildren(!!account);
-  const relationships = children ? parentKeys.relationshipSet(children) : null;
+  const family = useParentFamily(!!account);
+
+  // Commit an authoritative removal first. If this event discovered midnight,
+  // a failed roster refresh must not restore yesterday's card or capabilities.
+  const refreshDay = family.data?.needsDayReconciliation
+    ? family.data.day
+    : null;
+  const reloadFamily = family.mutate;
+  // A fast or slow device may not roll its cache key at server midnight.
+  // If its key is already rolling, the new key itself starts that read.
+  const keyDay = family.keyDay;
+  const dayExpiry = family.data?.dayExpiry;
+  useEffect(() => {
+    if (!dayExpiry) return;
+    // A seed was stamped by Next, not by this device. A slow device must
+    // not add its clock skew to the lifetime reported by Go.
+    const timer = window.setTimeout(
+      () => {
+        if (berlinTodayISO() === keyDay) void reloadFamily();
+      },
+      Math.max(0, Math.min(dayExpiry.at - Date.now(), dayExpiry.remainingMs)),
+    );
+    return () => window.clearTimeout(timer);
+  }, [dayExpiry, keyDay, reloadFamily]);
+  useEffect(() => {
+    if (refreshDay) void reloadFamily();
+  }, [refreshDay, reloadFamily]);
+
+  const current = useRef(family);
+  useLayoutEffect(() => {
+    current.current = family;
+  });
+  // One bridge retries incomplete fields and failed events. A failed event for
+  // an unlisted child can be retried, but cannot add a card or a visible error.
+  const failedChildren = family.data ? partialChildren(family.data) : "";
+  useEffect(() => {
+    if (!failedChildren) return;
+    let stopped = false;
+    let timer: number;
+    const retry = (attempt: number) => {
+      const reader = current.current;
+      const snapshot = reader.readCurrent?.();
+      if (
+        !snapshot?.data ||
+        snapshot.error ||
+        partialChildren(snapshot.data) !== failedChildren
+      )
+        return;
+      // A sibling event or a second refusal can extend a previous cooldown.
+      // Waiting for the limiter does not consume one of the two attempts.
+      const wait = Math.max(
+        remainingRateLimitMs(),
+        ...Object.values(snapshot.data.retryNotBefore).map(
+          (deadline) => deadline - performance.now(),
+        ),
+      );
+      if (wait > 0) {
+        timer = window.setTimeout(
+          () => retry(attempt),
+          Math.min(Math.ceil(wait), 2147483647),
+        );
+        return;
+      }
+      if (!failedChildren.includes(","))
+        narrowNextFamilyRead(snapshot.data, failedChildren);
+      void reader.mutate().then(() => {
+        if (!stopped && attempt === 1)
+          timer = window.setTimeout(() => retry(2), 2000);
+      });
+    };
+    timer = window.setTimeout(() => retry(1), 1000);
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
+  }, [account, keyDay, failedChildren]);
+  const relationships = family.data
+    ? JSON.stringify(
+        Object.entries(family.data.accessVersions).sort(([a], [b]) =>
+          a.localeCompare(b),
+        ),
+      )
+    : null;
   const previous = useRef({ account, relationships });
   useLayoutEffect(() => {
     const before = previous.current;
+    // An empty cache entry during a day-key switch is not a confirmed roster.
+    if (before.account === account && relationships === null) return;
     previous.current = { account, relationships };
     if (
       before.account === account &&
@@ -93,8 +184,7 @@ export function useParentResourceEvents() {
       // A list can reveal a removed relationship without a refused endpoint.
       // Do not revive its old capabilities if that relationship is later added again.
       void invalidate(
-        (key) =>
-          parentKeys.isResource(key) && key !== parentKeys.shellChildren(),
+        (key) => parentKeys.isResource(key) && !parentKeys.isFamilyStart(key),
         { clear: true },
       );
     }
@@ -105,10 +195,12 @@ export function useParentResourceEvents() {
         .detail?.studentId;
       // Also the child's state on pages not open now: returning to them
       // within the dedupe window would show the decision's old state.
-      void invalidate(
-        (key) =>
-          parentKeys.isChildResource(key) ||
-          parentKeys.isChildStatusResource(key, studentId),
+      const reader = current.current;
+      const known = reader.readCurrent?.().data;
+      if (studentId && known) narrowNextFamilyRead(known, studentId);
+      void reader.mutate();
+      void invalidate((key) =>
+        parentKeys.isChildStatusResource(key, studentId),
       );
     };
     const refreshMessages = () => {
@@ -159,199 +251,78 @@ export function useParentResourceEvents() {
   }, [invalidate, refuse, account]);
 }
 
-export function useParentChildren(enabled = true) {
+function useParentFamily(enabled: boolean, keepRosterAcrossMidnight = false) {
+  const day = useBerlinToday();
   const { data: session } = useSession();
-  return useSWRAuth(
+  const refuse = useParentRefusal();
+  const resource = useSWRAuth<ParentFamily>(
     enabled && session?.user.scope === "parent"
-      ? parentKeys.shellChildren()
+      ? parentKeys.familyStart(day)
       : null,
-    listMyChildren,
-    { ...PARENT_RESOURCE_OPTIONS, revalidateIfStale: false },
+    (): Promise<ParentFamily> =>
+      readParentFamily(resource.readCurrent?.().data),
+    {
+      ...PARENT_RESOURCE_OPTIONS,
+      revalidateIfStale: false,
+      keepPreviousData: keepRosterAcrossMidnight,
+      onError: (error) => {
+        refuse(error);
+      },
+    },
   );
+  return { ...resource, keyDay: day };
 }
 
-// Partial responses are visible only through SWR's current-error gate (G19).
-// Deliberately not an ApiError: discarding a refusal must never restamp these
-// partial values into the new data generation as a preserved refusal error.
-class ParentResourceFailure<T> extends Error {
-  readonly status: 429 | undefined;
-
-  constructor(
-    readonly partial: Record<string, T>,
-    readonly failures: Record<string, unknown>,
-  ) {
-    super("Parent resource lookups failed");
-    // Keep the shared retry handler on the browser's quota window without
-    // making this data-bearing failure an ApiError that discard may preserve.
-    this.status = Object.values(failures).some(isRateLimitError)
-      ? 429
-      : undefined;
-  }
-}
-// Both inputs come from the wrapper's live generation gate, not a local ref.
-function parentBatchValues<T>(
-  confirmed: Record<string, T> | undefined,
-  error: unknown,
-): Record<string, T> {
-  const partial =
-    error instanceof ParentResourceFailure
-      ? (error as ParentResourceFailure<T>).partial
-      : undefined;
-  return { ...confirmed, ...partial };
+export function useParentChildren(enabled = true) {
+  const family = useParentFamily(enabled, true);
+  return { ...family, data: enabled ? family.data?.children : undefined };
 }
 
-function useParentBatchData<T>(
-  confirmed: Record<string, T> | undefined,
-  error: unknown,
-  batch: ParentResourceFailure<T> | undefined,
-) {
-  return useMemo(
-    () => (error && batch ? parentBatchValues(confirmed, batch) : confirmed),
-    [confirmed, error, batch],
-  );
+const unavailable = new ApiError("Family start data unavailable", 503, {
+  code: "general.unavailable",
+});
+function fieldError(failure?: FamilyFieldFailure) {
+  if (!failure) return undefined;
+  return failure instanceof ApiError ? failure : unavailable;
 }
 
-const NO_FEATURE_FAILURES: Readonly<Record<string, unknown>> = {};
-
-/** Every relationship is probed, including siblings at the same school. */
 export function useParentFeatures(
   children: readonly parentMeContract.ChildResponse[] | undefined,
 ) {
-  const day = useBerlinToday();
-  const refuse = useParentRefusal();
-  const { data: session } = useSession();
-  const resource = useSWRAuth(
-    session?.user.scope === "parent" && children
-      ? parentKeys.features(children, day)
-      : null,
-    async (): Promise<
-      Record<string, parentMeContract.ChildFeaturesResponse>
-    > => {
-      const current = resource.readCurrent?.();
-      const previous =
-        parentBatchValues<parentMeContract.ChildFeaturesResponse>(
-          current?.data,
-          current?.error,
-        );
-      const list = children ?? [];
-      const responses = await Promise.allSettled(
-        list.map((child) => getChildFeatures(child.student_id)),
-      );
-      const partial: Record<string, parentMeContract.ChildFeaturesResponse> = {
-        ...previous,
-      };
-      const failures: Record<string, unknown> = {};
-      responses.forEach((response, index) => {
-        const child = list[index];
-        if (!child) return;
-        if (response.status === "fulfilled")
-          partial[child.student_id] = response.value;
-        else failures[child.student_id] = response.reason;
-      });
-      if (Object.keys(failures).length > 0)
-        throw new ParentResourceFailure(partial, failures);
-      return partial;
-    },
-    {
-      ...PARENT_RESOURCE_OPTIONS,
-      onError: (error) => {
-        // Only original API errors are refusals; never preserve the batch's data-bearing error.
-        const failures =
-          error instanceof ParentResourceFailure
-            ? Object.values(error.failures)
-            : [error];
-        for (const failure of failures) if (refuse(failure)) break;
-      },
-      shouldRetryOnError: (error) =>
-        !(
-          error instanceof ParentResourceFailure &&
-          Object.values(error.failures).some(
-            (failure) =>
-              failure instanceof ApiError && isAccessRefusal(failure),
-          )
-        ),
-    },
+  const family = useParentFamily(children !== undefined);
+  const errorsByChild = Object.fromEntries(
+    Object.entries(family.data?.featureErrors ?? {}).map(
+      ([id, failure]) => [id, fieldError(failure)] as const,
+    ),
   );
-  const batch =
-    resource.error instanceof ParentResourceFailure
-      ? (resource.error as ParentResourceFailure<parentMeContract.ChildFeaturesResponse>)
-      : undefined;
-  const data = useParentBatchData(resource.data, resource.error, batch);
   return {
-    ...resource,
-    data,
-    hasConfirmedData: resource.data !== undefined,
-    error: batch ? Object.values(batch.failures)[0] : resource.error,
-    errorsByChild: batch?.failures ?? NO_FEATURE_FAILURES,
+    ...family,
+    data: family.data?.features,
+    hasConfirmedData:
+      family.data !== undefined &&
+      family.data.children.every(
+        (child) => !!family.data?.features[child.student_id],
+      ),
+    familyError: family.error,
+    error: family.error ?? Object.values(errorsByChild)[0],
+    errorsByChild,
   };
 }
 
 export function useParentToday(
   children: readonly parentMeContract.ChildResponse[] | undefined,
 ) {
-  const day = useBerlinToday();
-  const refuse = useParentRefusal();
-  const { data: session } = useSession();
-  const resource = useSWRAuth(
-    session?.user.scope === "parent" && children
-      ? parentKeys.today(children, day)
-      : null,
-    async (): Promise<Record<string, parentMeContract.TodayStatusResponse>> => {
-      const current = resource.readCurrent?.();
-      const previous = parentBatchValues<parentMeContract.TodayStatusResponse>(
-        current?.data,
-        current?.error,
-      );
-      const list = children ?? [];
-      const responses = await Promise.allSettled(
-        list.map((child) => getChildToday(child.student_id)),
-      );
-      const partial: Record<string, parentMeContract.TodayStatusResponse> = {
-        ...previous,
-      };
-      const failures: Record<string, unknown> = {};
-      responses.forEach((response, index) => {
-        const child = list[index];
-        if (!child) return;
-        if (response.status === "fulfilled") {
-          partial[child.student_id] = response.value;
-        } else {
-          partial[child.student_id] ??= UNKNOWN_CHILD_TODAY;
-          failures[child.student_id] = response.reason;
-        }
-      });
-      if (Object.keys(failures).length > 0)
-        throw new ParentResourceFailure(partial, failures);
-      return partial;
-    },
-    {
-      ...PARENT_RESOURCE_OPTIONS,
-      onError: (error) => {
-        const failures =
-          error instanceof ParentResourceFailure
-            ? Object.values(error.failures)
-            : [error];
-        for (const failure of failures) if (refuse(failure)) break;
-      },
-      shouldRetryOnError: (error) =>
-        !(
-          error instanceof ParentResourceFailure &&
-          Object.values(error.failures).some(
-            (failure) =>
-              failure instanceof ApiError && isAccessRefusal(failure),
-          )
-        ),
-    },
-  );
-  const batch =
-    resource.error instanceof ParentResourceFailure
-      ? (resource.error as ParentResourceFailure<parentMeContract.TodayStatusResponse>)
-      : undefined;
-  const data = useParentBatchData(resource.data, resource.error, batch);
+  const family = useParentFamily(children !== undefined);
   return {
-    ...resource,
-    data,
-    hasConfirmedData: resource.data !== undefined,
-    error: batch ? Object.values(batch.failures)[0] : resource.error,
+    ...family,
+    data: family.data?.today,
+    hasConfirmedData:
+      family.data !== undefined &&
+      family.data.children.every(
+        (child) => family.data?.confirmedToday[child.student_id],
+      ),
+    error:
+      family.error ??
+      fieldError(Object.values(family.data?.todayErrors ?? {})[0]),
   };
 }

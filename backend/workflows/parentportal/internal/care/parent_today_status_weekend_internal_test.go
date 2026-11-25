@@ -16,16 +16,20 @@ type weekdayArrivals struct {
 	asked   []int
 }
 
-func (w *weekdayArrivals) GetStudentArrivalExceptionForDate(context.Context, int64, calendar.Date) (*ArrivalException, error) {
+func (w *weekdayArrivals) GetStudentArrivalExceptionsForDate(context.Context, []int64, calendar.Date) (map[int64]*ArrivalException, error) {
 	return nil, nil
 }
 
-func (w *weekdayArrivals) GetStudentArrivalScheduleForWeekday(_ context.Context, studentID int64, weekday int) (*ArrivalSchedule, error) {
+func (w *weekdayArrivals) GetWeeklySchedulesByStudentIDsAndWeekday(_ context.Context, studentIDs []int64, weekday int) ([]*ArrivalSchedule, error) {
 	w.asked = append(w.asked, weekday)
 	if weekday != w.weekday {
 		return nil, nil
 	}
-	return &ArrivalSchedule{StudentID: studentID, Weekday: weekday, ExpectedArrival: time.Date(0, 1, 1, 11, 45, 0, 0, time.UTC)}, nil
+	rows := make([]*ArrivalSchedule, 0, len(studentIDs))
+	for _, studentID := range studentIDs {
+		rows = append(rows, &ArrivalSchedule{StudentID: studentID, Weekday: weekday, ExpectedArrival: time.Date(0, 1, 1, 11, 45, 0, 0, time.UTC)})
+	}
+	return rows, nil
 }
 
 // Parents see a weekend that follows Friday's plan (#3921) as Friday's care
@@ -38,10 +42,14 @@ func TestResolveExpectedArrivalOnAFollowingWeekend(t *testing.T) {
 		arrivals := &weekdayArrivals{weekday: 5}
 		svc := &Service{ArrivalSchedules: arrivals}
 		ctx := calendar.WithWeekendPlan(context.Background(), func(context.Context) (bool, error) { return follows, nil })
-		got, err := svc.resolveExpectedArrival(ctx, 7, saturday)
+		arrivals7, withoutPlan, err := svc.resolveExpectedArrivals(ctx, []int64{7}, saturday)
 		if err != nil {
 			t.Fatalf("follows=%v: %v", follows, err)
 		}
+		if len(withoutPlan) != 0 {
+			t.Fatalf("follows=%v: no child lacks a plan, got %v", follows, withoutPlan)
+		}
+		got := arrivals7[7]
 		if !got.resolved || got.isCareDay != follows {
 			t.Fatalf("follows=%v: got %+v", follows, got)
 		}

@@ -1,3 +1,4 @@
+import { parentFamilyFixture } from "~/test/parent-family-fixture";
 import {
   act,
   cleanup,
@@ -33,6 +34,8 @@ import {
 } from "~/lib/date-helpers";
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
+const family = parentFamilyFixture();
+
 vi.unmock("swr");
 
 // Real SWR with a parent session, a fresh cache per render.
@@ -64,9 +67,10 @@ vi.mock("~/lib/parent-api", async (importOriginal) => ({
 }));
 
 beforeEach(() => {
+  family.mockRead();
   // These reads also run in nested controls. Keep them local unless a test
   // supplies its own recipients, contacts or request history.
-  vi.spyOn(parentApi, "listMyChildren").mockResolvedValue([
+  family.children.mockResolvedValue([
     { student_id: "1", tenant_id: "1" } as parentMeContract.ChildResponse,
     { student_id: "2", tenant_id: "1" } as parentMeContract.ChildResponse,
   ]);
@@ -739,9 +743,7 @@ describe("PickupTimeModal — failed preload guard", () => {
     vi.spyOn(parentApi, "getChildCareSchedule").mockRejectedValue(
       new Error("no schedule"),
     );
-    vi.spyOn(parentApi, "getChildFeatures").mockRejectedValue(
-      new Error("no features"),
-    );
+    family.features.mockRejectedValue(new Error("no features"));
     const list = vi
       .spyOn(parentApi, "listPickupChangeRequests")
       .mockImplementation(async () => [current]);
@@ -839,9 +841,7 @@ describe("PickupTimeModal — failed preload guard", () => {
     vi.spyOn(parentApi, "getChildCareSchedule").mockRejectedValue(
       new Error("no schedule"),
     );
-    vi.spyOn(parentApi, "getChildFeatures").mockRejectedValue(
-      new Error("no features"),
-    );
+    family.features.mockRejectedValue(new Error("no features"));
     vi.spyOn(parentApi, "listPickupChangeRequests")
       .mockResolvedValueOnce([stored])
       .mockRejectedValue(
@@ -2588,9 +2588,7 @@ describe("useChildCare reportSick", () => {
     });
     // Reject features so the hook falls back to DEFAULT_FEATURES — avoids
     // constructing the full flag object and is irrelevant to this path.
-    vi.spyOn(parentApi, "getChildFeatures").mockRejectedValue(
-      new Error("no features"),
-    );
+    family.features.mockRejectedValue(new Error("no features"));
     const submitSickNote = vi
       .spyOn(parentApi, "submitSickNote")
       .mockResolvedValue({
@@ -2641,9 +2639,7 @@ describe("useChildCare ohne OGS-Platz", () => {
     const exceptions = vi.spyOn(parentApi, "listCareExceptions");
     const pickupRequests = vi.spyOn(parentApi, "listPickupChangeRequests");
     const schedule = vi.spyOn(parentApi, "getChildCareSchedule");
-    vi.spyOn(parentApi, "getChildFeatures").mockRejectedValue(
-      new Error("no features"),
-    );
+    family.features.mockRejectedValue(new Error("no features"));
 
     const { result } = renderHook(() =>
       useChildCare("1", { withoutCarePlace: true }),
@@ -2703,9 +2699,7 @@ describe("useChildCare studentId switch", () => {
               /* never resolves */
             }),
     );
-    vi.spyOn(parentApi, "getChildFeatures").mockRejectedValue(
-      new Error("no features"),
-    );
+    family.features.mockRejectedValue(new Error("no features"));
 
     const { result, rerender } = renderHook(({ id }) => useChildCare(id), {
       initialProps: { id: "1" },
@@ -2766,9 +2760,7 @@ describe("useChildCare studentId switch", () => {
           today_absent: false,
         }),
     );
-    vi.spyOn(parentApi, "getChildFeatures").mockRejectedValue(
-      new Error("no features"),
-    );
+    family.features.mockRejectedValue(new Error("no features"));
     // Defer the sick-note resolution so we can switch children mid-submit.
     let resolveSubmit!: (v: {
       pending_request: null;
@@ -2983,12 +2975,15 @@ describe("Fehlerweg der Dialoge (#2518)", () => {
       null as never,
     );
     const failure = new ApiError("diag", 503, { code: "general.unavailable" });
-    vi.spyOn(parentApi, "getChildFeatures").mockRejectedValue(failure);
+    family.features.mockRejectedValue(failure);
 
     const { result } = renderHook(() => useChildCare("1"));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.loadError).toBe(failure);
+    expect(result.current.loadError).toMatchObject({
+      code: failure.code,
+      status: failure.status,
+    });
   });
 
   it("überlässt einen fehlgeschlagenen Wochenplan seinen eigenen Hinweisen", async () => {
@@ -2999,7 +2994,7 @@ describe("Fehlerweg der Dialoge (#2518)", () => {
     vi.spyOn(parentApi, "getChildCareSchedule").mockRejectedValue(
       new ApiError("diag", 503, { code: "general.unavailable" }),
     );
-    vi.spyOn(parentApi, "getChildFeatures").mockResolvedValue({
+    family.features.mockResolvedValue({
       conference_book_allowed: false,
       care_ended: false,
       sick_requires_approval: false,

@@ -14,6 +14,9 @@ const (
 	StatusDone       = "done"
 	StatusCareEnded  = "care_ended"
 	KindPickupChange = "pickup_change"
+	// KindWeeklySchedule asks for a new weekly plan; a child has at most one
+	// pending.
+	KindWeeklySchedule = "weekly_schedule"
 )
 
 // LedgerRequestType maps a request kind onto the request type of the parent

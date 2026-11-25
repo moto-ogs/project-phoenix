@@ -5,9 +5,15 @@ import { describe, expect, it, vi } from "vitest";
 import { ParentRealtimeBridge } from "./parent-realtime-bridge";
 import type { SSEHookOptions } from "~/lib/sse-types";
 
-vi.mock("~/lib/parent-api", () => ({ listMyChildren: async () => [] }));
+vi.mock("~/lib/parent-api", () => ({
+  getFamilyStart: async () => ({
+    day_remaining_seconds: 86400,
+    day: new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" }),
+    cards: [],
+  }),
+}));
 
-const useSSE = vi.hoisted(() => vi.fn());
+const useSSE = vi.hoisted(() => vi.fn().mockReturnValue({ isConnected: true }));
 
 vi.mock("~/lib/hooks/use-sse", () => ({ useSSE }));
 

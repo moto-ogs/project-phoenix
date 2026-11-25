@@ -192,6 +192,25 @@ describe("SWRServerSeed", () => {
     expect(gaps).toHaveBeenCalledTimes(1);
   });
 
+  it("shares a single recovery GET when shell and page readers receive no seed", async () => {
+    const fetcher = vi.fn(async () => "browser family");
+    render(
+      <SWRServerSeed seed={Promise.resolve(null)} claims={[GRID]}>
+        <Reader name="shell" resourceKey={GRID} fetcher={fetcher} />
+        <SWRServerSeed seed={Promise.resolve(null)} claims={[GRID]} render>
+          <Reader name="cards" resourceKey={GRID} fetcher={fetcher} />
+          <Reader name="navigation" resourceKey={GRID} fetcher={fetcher} />
+        </SWRServerSeed>
+      </SWRServerSeed>,
+    );
+    for (const name of ["shell", "cards", "navigation"]) {
+      expect(
+        await screen.findByText(name + ": browser family"),
+      ).toBeInTheDocument();
+    }
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps the browser's error path when its own load fails", async () => {
     const fetcher = vi.fn(async (): Promise<string> => {
       throw new Error("offline");

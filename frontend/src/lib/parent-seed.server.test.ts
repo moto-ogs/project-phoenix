@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TEST_CLOCK_TODAY } from "~/test/clock";
 import type { ServerSeed } from "~/lib/swr/server-seed";
 
-const { answers, snapshot } = vi.hoisted(() => ({
+const { answers, requests, snapshot } = vi.hoisted(() => ({
+  requests: [] as string[],
   answers: new Map<string, { status: number; body: unknown }>(),
   snapshot: {
     current: null as null | {
@@ -17,6 +18,7 @@ const { answers, snapshot } = vi.hoisted(() => ({
 vi.mock("~/lib/backend-client.server", async (original) => ({
   ...(await original<typeof import("~/lib/backend-client.server")>()),
   sendBackend: async (endpoint: string) => {
+    requests.push(endpoint);
     const answer = answers.get(endpoint);
     if (!answer) throw new Error(`unrouted ${endpoint}`);
     return Response.json(answer.body, { status: answer.status });
@@ -26,11 +28,7 @@ vi.mock("~/lib/portal-session-snapshot.server", () => ({
   readPortalSessionSnapshot: async () => snapshot.current,
 }));
 
-import {
-  isProtectedParentPath,
-  loadParentPageSeed,
-  loadParentShellSeed,
-} from "./parent-seed.server";
+import { isProtectedParentPath, parentSeedProps } from "./parent-seed.server";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import { sessionGeneration } from "~/lib/swr/session-generation";
 
@@ -91,16 +89,15 @@ const ok = (data: unknown) => ({
   body: { status: "success", data },
 });
 
-function routeFamily() {
-  answers.set("/parent/me/children", ok(children));
-  for (const { student_id: id } of children) {
-    answers.set(`/parent/me/children/${id}/features`, ok(features));
-    answers.set(
-      `/parent/me/children/${id}/today`,
-      ok({ at_ogs: true, state: "present" }),
-    );
-  }
-}
+const endpoint = "/parent/me/family-start";
+const key = parentKeys.familyStart(TEST_CLOCK_TODAY);
+const cards = children.map((child) => ({
+  child,
+  access_version: "v1",
+  features,
+  today: { at_ogs: true, state: "present" },
+}));
+const response = { day: TEST_CLOCK_TODAY, day_remaining_seconds: 3600, cards };
 
 async function valuesOf(seed: ServerSeed | null) {
   expect(seed).not.toBeNull();
@@ -114,74 +111,51 @@ async function valuesOf(seed: ServerSeed | null) {
 beforeEach(() => {
   answers.clear();
   snapshot.current = { session: parent, accessToken: "t", notBooked: false };
-  routeFamily();
+  requests.length = 0;
+  answers.set(endpoint, ok(response));
 });
 
 describe("parent page seeds", () => {
-  it("seeds the start page per relationship under the readers' keys", async () => {
-    const seed = await loadParentPageSeed({ kind: "start" });
+  it.each([true, false])(
+    "offers one family read with render=%s, independent of the URL",
+    async (render) => {
+      const seed = await parentSeedProps(render).seed;
+      expect(seed?.generation).toBe(sessionGeneration(parent));
+      expect(seed?.entries.map((entry) => [entry.key, entry.render])).toEqual([
+        [key, render],
+      ]);
+      expect((await valuesOf(seed))[key]).toMatchObject({
+        children,
+        features: { "7": features, "8": features },
+        confirmedToday: { "7": true, "8": true },
+      });
+      // No child from the URL, and no individual child read.
+      expect(requests).toEqual([endpoint]);
+    },
+  );
 
-    expect(seed?.generation).toBe(sessionGeneration(parent));
-    const values = await valuesOf(seed);
-    const featureKey = parentKeys.features(children, TEST_CLOCK_TODAY);
-    const todayKey = parentKeys.today(children, TEST_CLOCK_TODAY);
-    expect(Object.keys(values).sort()).toEqual(
-      [parentKeys.shellChildren(), featureKey, todayKey].sort(),
+  it("seeds successful siblings and serializable partial errors, not a second read", async () => {
+    answers.set(
+      endpoint,
+      ok({ ...response, cards: [cards[0], { ...cards[1], today: null }] }),
     );
-    expect(values[featureKey]).toEqual({ "7": features, "8": features });
-    expect(seed?.entries.every((entry) => entry.render)).toBe(true);
+    const values = await valuesOf(await parentSeedProps(true).seed);
+    expect(values[key]).toMatchObject({
+      today: { "7": { state: "present" }, "8": { state: "unknown" } },
+      todayErrors: { "8": { status: 503, code: "general.unavailable" } },
+      features: { "7": features, "8": features },
+      confirmedToday: { "7": true, "8": false },
+    });
+    expect(JSON.parse(JSON.stringify(values[key]))).toEqual(values[key]);
+    expect(requests).toEqual([endpoint]);
   });
 
-  it("drops only a collection one relationship fails in", async () => {
-    // Permission for one relationship only: its status read is refused.
-    answers.set("/parent/me/children/8/today", {
-      status: 403,
-      body: { status: "error", code: "care.guardian_permission_denied" },
-    });
-
-    const values = await valuesOf(await loadParentPageSeed({ kind: "start" }));
-
+  it("leaves a failed read unseeded rather than confirming an empty family", async () => {
+    answers.set(endpoint, { status: 503, body: { status: "error" } });
     expect(
-      values[parentKeys.today(children, TEST_CLOCK_TODAY)],
+      (await valuesOf(await parentSeedProps(true).seed))[key],
     ).toBeUndefined();
-    expect(values[parentKeys.features(children, TEST_CLOCK_TODAY)]).toEqual({
-      "7": features,
-      "8": features,
-    });
-    expect(values[parentKeys.shellChildren()]).toEqual(children);
-  });
-
-  it("reads nothing beyond the list for a child the list does not name", async () => {
-    answers.delete("/parent/me/children/7/features");
-    answers.delete("/parent/me/children/8/features");
-    answers.delete("/parent/me/children/7/today");
-    answers.delete("/parent/me/children/8/today");
-
-    const seed = await loadParentPageSeed({ kind: "child", studentId: "99" });
-
-    expect(seed?.entries.map((entry) => entry.key)).toEqual([
-      parentKeys.shellChildren(),
-    ]);
-  });
-
-  it("waits in the child page's server render for the list only", async () => {
-    const seed = await loadParentPageSeed({ kind: "child", studentId: "8" });
-
-    expect(seed?.entries.map((entry) => [entry.key, entry.render])).toEqual([
-      [parentKeys.shellChildren(), true],
-      [parentKeys.features(children, TEST_CLOCK_TODAY), false],
-      [parentKeys.today(children, TEST_CLOCK_TODAY), false],
-    ]);
-  });
-
-  it("gives the shell the list and features without waiting", async () => {
-    const seed = await loadParentShellSeed();
-
-    expect(seed?.entries.map((entry) => entry.key)).toEqual([
-      parentKeys.shellChildren(),
-      parentKeys.features(children, TEST_CLOCK_TODAY),
-    ]);
-    expect(seed?.entries.some((entry) => entry.render)).toBe(false);
+    expect(requests).toEqual([endpoint]);
   });
 
   it.each([
@@ -201,8 +175,9 @@ describe("parent page seeds", () => {
   ])("seeds nothing for %s", async (_, current) => {
     snapshot.current = current;
 
-    expect(await loadParentPageSeed({ kind: "start" })).toBeNull();
-    expect(await loadParentShellSeed()).toBeNull();
+    expect(await parentSeedProps(true).seed).toBeNull();
+    expect(await parentSeedProps(false).seed).toBeNull();
+    expect(requests).toEqual([]);
   });
 
   it("classifies the parents' public pages like the auth guard", () => {
