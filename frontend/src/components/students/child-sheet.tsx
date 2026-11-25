@@ -35,6 +35,7 @@ import {
 } from "~/lib/student-helpers";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { useAttendanceWebEnabled } from "~/lib/tenant-context";
+import { cn } from "~/lib/utils";
 
 export interface ChildSheetProps {
   /** Das Kind aus der Liste; `null` schließt das Blatt. */
@@ -93,16 +94,32 @@ export function ChildSheet({
       Ganze Akte öffnen
     </ButtonLink>
   ) : null;
+  const footerQuickActions =
+    student && isToday && quickActions && href ? (
+      <ChildQuickActions student={student} href={href} replaceEntry />
+    ) : null;
   return (
     <OverlaySheet
       open={student !== null}
       onOpenChange={onOpenChange}
       title={student ? studentName(student) : "Kind"}
       closeLabel="Kind-Blatt schließen"
+      // Alle Aktionen im Fuß, in Daumennähe, wie im Kind-Blatt der
+      // Aufsicht: die Aktionen der Liste bzw. die Schnellaktionen der Akte
+      // zuerst, die Akte als Nebenweg darunter.
       footer={
-        footerActions ? (
-          <div className="flex w-full flex-col gap-2">
+        footerActions || footerQuickActions ? (
+          <div
+            className={cn(
+              "flex w-full flex-col gap-2",
+              // Die App legt Fußknöpfe in eine Reihe; drei Schnellaktionen
+              // und die Akte passen nicht nebeneinander, sie stehen darum
+              // untereinander (Hauptaktion oben, Akte als Nebenweg unten).
+              footerQuickActions && "app:flex-col!",
+            )}
+          >
             {footerActions}
+            {footerQuickActions}
             {akteLink}
           </div>
         ) : (
@@ -117,7 +134,7 @@ export function ChildSheet({
           isToday={isToday}
           classLabel={classLabel}
           contextActions={contextActions}
-          quickActions={quickActions}
+          quickActions={false}
           status={status}
           replaceEntry
         />

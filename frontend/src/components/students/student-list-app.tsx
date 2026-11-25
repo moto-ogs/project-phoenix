@@ -230,17 +230,18 @@ export function StudentListApp({
                 classLabel={classLabel(selectedStudent)}
                 header
                 actionsLast
-                headerAction={
-                  <ButtonLink
-                    href={studentHref(selectedStudent)}
-                    variant="outline"
-                    size="md"
-                    tooltip="Öffnet die ganze Akte mit allen Angaben."
-                  >
-                    Ganze Akte öffnen
-                  </ButtonLink>
-                }
               />
+              {/* Wie im Blatt und in der Aufsicht: alle Aktionen unten
+                  gebündelt, die Akte als Nebenweg darunter. */}
+              <ButtonLink
+                href={studentHref(selectedStudent)}
+                variant="outline"
+                size="md"
+                className="mt-2 w-full"
+                tooltip="Öffnet die ganze Akte mit allen Angaben."
+              >
+                Ganze Akte öffnen
+              </ButtonLink>
             </SectionCard>
           ) : null
         }
