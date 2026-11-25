@@ -6,8 +6,14 @@ import {
   CollectionList,
   CollectionRow,
 } from "~/components/ui/collection";
+import { Z_LAYER } from "~/components/ui/overlay-styles";
+import { SectionCard } from "~/components/ui/section-card";
 import { SplitView, useSplitSelection } from "~/components/ui/split-view";
 import { UnreadBadge } from "~/components/messaging/unread-badge";
+import { Avatar } from "~/components/ui/avatar";
+import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
+import { childrenConcept } from "~/lib/concepts/children";
+import { useDeviceContext } from "~/lib/device-context";
 import {
   formatBerlinTime,
   formatChatTime,
@@ -21,11 +27,12 @@ export const INBOX_SELECTION_PARAM = "unterhaltung";
 
 /**
  * Posteingang der Elternnachrichten in der App (#8070, Flow „Nachrichten“):
- * eine Liste in einer Karte. Jede Zeile nennt die Person, ihre Beziehung zum
- * Kind („Elternteil von Johanna Mores“, wie auf dem Desktop) und die letzte
- * Nachricht, rechts Zeit und Ungelesen-Zahl. Auf dem iPad quer steht der
- * Verlauf rechts daneben (⅓ : ⅔), sonst führt die Zeile auf die Seite des
- * Verlaufs.
+ * eine Liste in einer Karte, Zeilen zweizeilig wie in Chat-Apps (56–64 px):
+ * Avatar, Person und Kind (am iPad hoch mit Beziehung, „Elternteil von
+ * Johanna Mores“), darunter die letzte Nachricht; rechts Zeit und
+ * Ungelesen-Zahl. Auf dem iPad quer steht der Verlauf rechts daneben
+ * (⅓ : ⅔), „Neue Nachricht“ klebt unten in der Listenspalte; sonst führt die
+ * Zeile auf die Seite des Verlaufs.
  *
  * Nutzt die Inbox der Seite; lädt nichts selbst.
  */
@@ -33,8 +40,11 @@ export function MessagesInboxApp(
   props: Readonly<{
     threads: readonly InboxThread[];
     renderDetail: (threadId: string) => ReactNode;
-    /** Nur im Split: über der Liste, in der Listenspalte. */
-    listHeader?: ReactNode;
+    /**
+     * Nur im Split: die Hauptaktion unten in der Listenspalte, in
+     * Daumennähe wie die ActionBar am Telefon.
+     */
+    listAction?: ReactNode;
   }>,
 ) {
   // `useSearchParams` in der Auswahl braucht eine Suspense-Grenze.
@@ -59,11 +69,11 @@ function defaultThreadId(threads: readonly InboxThread[]): string | null {
 function InboxSplit({
   threads,
   renderDetail,
-  listHeader,
+  listAction,
 }: Readonly<{
   threads: readonly InboxThread[];
   renderDetail: (threadId: string) => ReactNode;
-  listHeader?: ReactNode;
+  listAction?: ReactNode;
 }>) {
   // `selected` gibt es nur im Split; die Vorwahl wirkt auch nur dort, denn
   // ohne Split zeigt `SplitView` allein die Liste.
@@ -84,8 +94,19 @@ function InboxSplit({
     <SplitView
       list={
         <div ref={listRef}>
-          {listHeader}
           <InboxList threads={threads} rowProps={rowProps} active={active} />
+          {listAction ? (
+            // Klebt unten in der eigenen Scroll-Spalte der Liste: über der
+            // Pill, nie über dem Schreibfeld des Verlaufs rechts.
+            <div
+              data-split-list-action=""
+              className={`moto-app-backdrop sticky bottom-0 ${Z_LAYER.sticky} pt-2`}
+            >
+              <SectionCard padding="none" className="p-2">
+                {listAction}
+              </SectionCard>
+            </div>
+          ) : null}
         </div>
       }
       detail={active ? renderDetail(active) : null}
@@ -122,6 +143,9 @@ function InboxList({
   active?: string | null;
 }>) {
   const tenantPath = useTenantAwarePath();
+  const { layout, isSplit } = useDeviceContext();
+  // Am iPad hoch passt „Elternteil von Johanna Mores“ ganz in die Zeile.
+  const wide = layout === "tablet" && !isSplit;
   return (
     <Collection label="Unterhaltungen">
       <CollectionList>
@@ -136,38 +160,67 @@ function InboxList({
             ? `${thread.last_sender_kind === "staff" ? "Du: " : ""}${thread.last_message_body}`
             : "Noch keine Nachricht";
           const unread = thread.unread_count > 0;
+          const relation = `${relationshipLabel(thread.relationship_type)} von ${thread.student_name}`;
           return (
             <CollectionRow
               key={thread.thread_id}
               {...shownTarget}
-              title={
-                <span className={unread ? "font-semibold" : undefined}>
-                  {thread.guardian_name}
-                </span>
+              aria-label={`${thread.guardian_name}, ${relation}${
+                unread ? `, ${thread.unread_count} ungelesen` : ""
+              }`}
+              leading={
+                <Avatar
+                  name={thread.guardian_name}
+                  size={layout === "phone" ? "sm" : "md"}
+                  tone="neutral"
+                  decorative
+                />
               }
-              subtitle={
+              // Zwei Zeilen wie in Chat-Apps: Person samt Beziehung zum Kind,
+              // darunter die letzte Nachricht. Rechts Zeit und Ungelesen-Zahl.
+              title={
                 <>
-                  <span className="block truncate text-gray-700">
-                    {relationshipLabel(thread.relationship_type)} von{" "}
-                    {thread.student_name}
+                  <span className={unread ? "font-semibold" : undefined}>
+                    {thread.guardian_name}
                   </span>
-                  <span
-                    className={
-                      unread ? "block truncate text-gray-900" : "block truncate"
-                    }
-                  >
-                    {last}
+                  <span className="font-normal text-gray-500">
+                    {" · "}
+                    {wide ? (
+                      relation
+                    ) : (
+                      // Schmal: das Kind mit seinem Symbol (ein Kopf = Kind),
+                      // die Beziehung steht im Kopf des Verlaufs.
+                      <>
+                        <MotoConceptIcon
+                          concept={childrenConcept}
+                          size={14}
+                          className="mr-0.5 inline-block align-[-1px]"
+                        />
+                        {thread.student_name}
+                      </>
+                    )}
                   </span>
                 </>
               }
+              subtitle={
+                <span className={unread ? "text-gray-900" : undefined}>
+                  {last}
+                </span>
+              }
               meta={
-                <span className="flex flex-col items-end gap-1 self-start">
+                <span className="flex flex-col items-end gap-1">
                   {thread.last_message_at ? (
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs leading-5 text-gray-500">
                       {shortChatTime(thread.last_message_at)}
                     </span>
                   ) : null}
-                  <UnreadBadge count={thread.unread_count} />
+                  {unread ? (
+                    <UnreadBadge count={thread.unread_count} />
+                  ) : (
+                    // Gleiche Höhe mit und ohne Zahl, damit die Zeit in
+                    // jeder Zeile auf derselben Linie steht.
+                    <span aria-hidden="true" className="h-5" />
+                  )}
                 </span>
               }
             />

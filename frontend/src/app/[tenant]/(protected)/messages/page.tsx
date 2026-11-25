@@ -193,9 +193,9 @@ function MessagesInboxContent() {
 
   // App: „Neue Nachricht“ beschriftet in Daumennähe statt als Symbol oben.
   // Auf dem Telefon und dem iPad hoch schwebt sie als ActionBar über der
-  // Pill. Im Split (iPad quer) steht sie über der Liste in deren Spalte:
-  // unten mittig läge die Leiste über dem Schreibfeld des Verlaufs rechts,
-  // unten links unter der Pill.
+  // Pill. Im Split (iPad quer) klebt sie unten in der Listenspalte, über
+  // der Pill: unten mittig läge die Leiste über dem Schreibfeld des
+  // Verlaufs rechts.
   const appComposeButton = messagingEnabled ? (
     <Button
       type="button"
@@ -355,11 +355,7 @@ function MessagesInboxContent() {
         {isApp ? (
           <MessagesInboxApp
             threads={filteredThreads}
-            listHeader={
-              isSplit && appComposeButton ? (
-                <div className="mb-2">{appComposeButton}</div>
-              ) : null
-            }
+            listAction={isSplit ? appComposeButton : null}
             renderDetail={(threadId) => (
               <MessageThreadContent
                 key={threadId}
