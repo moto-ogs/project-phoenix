@@ -3125,7 +3125,7 @@ function SearchPageContent() {
     const total = students.length;
     if (!isToday) {
       if (appView)
-        return <TenantPageStats items={[{ value: total, label: "gesamt" }]} />;
+        return <TenantPageStats items={[{ value: total, label: "" }]} />;
       return `${total} ${total === 1 ? "Kind" : "Kinder"}`;
     }
     // Ein eingechecktes Kind zählt „in der OGS“, auch wenn es krank gemeldet
@@ -3165,13 +3165,14 @@ function SearchPageContent() {
       }
     }
     // App (#8070): Die Chips stehen in der Titelzeile neben „Kinder“, also
-    // kurz: „118 gesamt · 16 da · 0 krank“ („da“ wie in den Zeilen).
+    // kurz: „Kinder 118 · 16 da · 0 krank“ („da“ wie in den Zeilen).
     return (
       <TenantPageStats
         items={
           appView
             ? [
-                { value: total, label: "gesamt" },
+                // Nur die Zahl: Sie steht direkt hinter dem Titel „Kinder“.
+                { value: total, label: "" },
                 { value: inCare, label: "da" },
                 { value: sick, label: "krank" },
               ]
