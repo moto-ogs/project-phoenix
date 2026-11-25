@@ -470,7 +470,10 @@ Projektion nutzt „change“.
   `class_day_changed` an die Schul-Clients derselben Schule weiter. Ein
   geänderter Unterrichtsschluss, ein Schließtag der Schule und eine
   Vertretung an einem Termin erreichen den Block damit ohne neue
-  After-Commit-Stelle. Ein Schließtag des Trägers hat weiter kein Signal.
+  After-Commit-Stelle, ebenso ein Schließtag des Trägers (er meldet
+  `staffing_deviation_changed` an jede betroffene Schule). Jedes dieser
+  Events lädt die offenen Startseiten der Schule neu, auch wenn es eine
+  andere Lehrkraft betrifft; der bestehende Debounce bündelt Serien.
 - **Nicht in diesem Schritt (Folge-Ticket):** Der Klassenausflug als
   Klassen-Eintrag und die Termine der Lehrkraft (`calendar:school`). Beide
   brauchen eigene Lesungen anderer Owner (Ankunfts-Ausnahmen je Kind bei

@@ -55,6 +55,11 @@ func TestSchoolDayChangesSupervisions(t *testing.T) {
 	lernzeit := block("Lernzeit", "13:00", "14:00", "", 0)
 	staff(lernzeit, teacher.ID, testpkg.InstanceStaffOpts{IsPrimary: true})
 	staff(lernzeit, colleague.ID, testpkg.InstanceStaffOpts{IsAbsent: true})
+	// She is on a block a colleague's cover takes: no Vertretung for her.
+	werken := block("Werken", "13:30", "14:00", "", 0)
+	staff(werken, teacher.ID, testpkg.InstanceStaffOpts{IsPrimary: true})
+	staff(werken, colleague.ID, testpkg.InstanceStaffOpts{IsAbsent: true})
+	staff(werken, cover.ID, testpkg.InstanceStaffOpts{IsSubstitute: true})
 	// A cover on a block she is not on.
 	chor := block("Chor", "14:00", "15:00", "", 0)
 	staff(chor, colleague.ID, testpkg.InstanceStaffOpts{IsPrimary: true, IsAbsent: true})
@@ -82,7 +87,7 @@ func TestSchoolDayChangesSupervisions(t *testing.T) {
 			"you block_substitution Pausenaufsicht Hof 09:30-09:50 /substitute(du) ->school_supervisions",
 			"you block_substitution Mittagsaufsicht 12:00-12:30 /substitute /replaced(du) ->school_supervisions",
 		}, activityLines(t, body))
-		for _, leak := range []string{"Zahnarzt", "Ben", "Kollege", "Sara", "Springer", "Lernzeit", "Chor", "Abgesagt", "Morgen", "Fremd"} {
+		for _, leak := range []string{"Zahnarzt", "Ben", "Kollege", "Sara", "Springer", "Lernzeit", "Werken", "Chor", "Abgesagt", "Morgen", "Fremd"} {
 			assert.NotContains(t, body, leak, "no colleague, reason, other block, other day or other school")
 		}
 		for _, id := range []int64{colleague.ID, cover.ID} {
