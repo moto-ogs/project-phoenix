@@ -210,8 +210,9 @@ export function AppTenantHead({
         )}
       </header>
 
-      {/* Deckende Zone hinter Leiste und schmaler Kopfkarte bis zum oberen
-          Rand: Darüber scheint keine Liste durch. */}
+      {/* Deckend nur hinter der Statusleiste (Safe Area): Wie unten an Pill
+          und Aktionsleiste läuft der Inhalt sichtbar unter der schwebenden
+          Kopfkarte weiter, statt an einer Kante abgeschnitten zu werden. */}
       <div
         aria-hidden="true"
         data-app-page-backdrop=""
@@ -220,7 +221,7 @@ export function AppTenantHead({
           !veiled && "hidden",
           printHideHeader && "print:hidden",
         )}
-        style={{ height: "var(--app-sticky-offset, 0px)" }}
+        style={{ height: "env(safe-area-inset-top, 0px)" }}
       />
 
       {hasToolbar && (
