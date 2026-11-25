@@ -37,6 +37,7 @@ import {
   stampSWRError,
 } from "./generation";
 import { hasSessionAccess } from "~/lib/session-access";
+import { sessionGeneration } from "./session-generation";
 
 type MaybeSession = Session | null | undefined;
 
@@ -50,17 +51,8 @@ export function authGeneration(session: MaybeSession): string | null {
   if (!hasSessionAccess(session)) return null;
   const known = generations.get(session);
   if (known !== undefined) return known;
-  const user = session.user;
-  const generation = JSON.stringify([
-    user.scope ?? "",
-    user.tenantId ?? null,
-    user.orgId ?? null,
-    user.id,
-    user.previewTargetAccountId ?? null,
-    user.roles ?? [],
-    user.permissions ?? [],
-  ]);
-  generations.set(session, generation);
+  const generation = sessionGeneration(session);
+  if (generation !== null) generations.set(session, generation);
   return generation;
 }
 

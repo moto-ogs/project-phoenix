@@ -154,6 +154,10 @@ const PUBLIC_MODULES = new Set(
     "room-derived-caches",
     // #5011: optimistic overlays; commits go through the locked writers.
     "optimistic",
+    // #8077: page seeds of the server; they hand values only to the locked
+    // intent preload and the stamped fallback.
+    "server-seed",
+    "session-generation",
   ].map((name) => (name ? `${SWR_DIR}/${name}` : SWR_DIR)),
 );
 const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs"];

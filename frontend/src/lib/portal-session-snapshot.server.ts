@@ -2,6 +2,7 @@ import type { Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import { getToken } from "next-auth/jwt";
 import { headers } from "next/headers";
+import { cache } from "react";
 import { env } from "~/env";
 import { tenantSessionCookieName } from "~/lib/session-cookie-exit.server";
 import { toBrowserSession } from "~/server/auth/browser-session";
@@ -109,9 +110,12 @@ async function readFreshPortalToken(
 /**
  * The layout snapshot of a portal: the same projection the session route
  * answers with (serverSessionFromJwt, then toBrowserSession), so the first
- * render shows what the provider's poll later confirms.
+ * render shows what the provider's poll later confirms. One read per server
+ * render: a page loader (#8077) shares the layout's family check.
  */
-export async function readPortalSessionSnapshot(
+export const readPortalSessionSnapshot = cache(readSnapshot);
+
+async function readSnapshot(
   key: PortalKey,
 ): Promise<PortalSessionSnapshot | null> {
   const fresh = await readFreshPortalToken(key);

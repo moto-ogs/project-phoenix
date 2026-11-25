@@ -91,12 +91,20 @@ export function subscribeSWRDataGeneration(listener: () => void): () => void {
   };
 }
 
+// When recent data bumps happened, by the browser's clock (#8077): a server
+// seed loaded before a drop (a refused child, a changed relationship) must not
+// fill the dropped key afterwards. A session boundary forgets them with every other
+// generation record. Kept as long as a seed may stand in.
+const DROP_MEMORY_MS = 60_000;
+let recentDrops: { at: number; matches: (key: string) => boolean }[] = [];
+
 /** Session boundary: no earlier answer or value of any key counts. */
 export function bumpScopeGeneration(): void {
   counter += 1;
   releaseStamps();
   scopeGeneration = counter;
   dataBumps = [];
+  recentDrops = [];
   requestBumps = new Map();
   moveData();
 }
@@ -105,7 +113,17 @@ export function bumpScopeGeneration(): void {
 export function bumpDataGeneration(matches: (key: string) => boolean): void {
   counter += 1;
   dataBumps.push({ generation: counter, matches });
+  const now = Date.now();
+  recentDrops = recentDrops.filter((drop) => drop.at > now - DROP_MEMORY_MS);
+  recentDrops.push({ at: now, matches });
   moveData();
+}
+
+/** Whether a data bump hit `key` within the last `ms` (at most a minute). */
+export function wasDroppedWithin(key: string, ms: number): boolean {
+  const since = Date.now() - ms;
+  const plain = plainSWRKey(key);
+  return recentDrops.some((drop) => drop.at >= since && drop.matches(plain));
 }
 
 /** Earlier answers of `keys` stop counting; their values stay visible. */
