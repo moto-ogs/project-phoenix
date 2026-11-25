@@ -2852,10 +2852,17 @@ function EditSessionModal({
                       label="Pause (Min)"
                       value={breakMins}
                       onChange={setBreakMins}
-                      options={[0, 15, 30, 45, 60].map((m) => ({
-                        value: m.toString(),
-                        label: `${m} min`,
-                      }))}
+                      // Eine gestempelte Pause wie 38 min steht nicht in der
+                      // Auswahl; ohne eigene Option zeigte das Feld „Bitte
+                      // wählen“, obwohl die Pause gespeichert ist.
+                      options={[
+                        ...new Set([0, 15, 30, 45, 60, Number(breakMins) || 0]),
+                      ]
+                        .sort((a, b) => a - b)
+                        .map((m) => ({
+                          value: m.toString(),
+                          label: `${m} min`,
+                        }))}
                     />
                   )}
                 </div>
