@@ -240,14 +240,16 @@ const SUMMARY_LABEL_COUNT = 3;
 
 /**
  * One line that says what a collapsed category contains, built from the
- * setting labels: "Krankmeldung, Nachrichten, Essensplan und 4 weitere".
+ * setting labels: "Krankmeldung · Nachrichten · Essensplan · 4 weitere". The labels start
+ * with a capital, so a comma between them reads like a spelling mistake.
  */
 export function categorySummary(items: readonly ResolvedSetting[]): string {
   const labels = items.map((item) => item.label);
-  if (labels.length <= SUMMARY_LABEL_COUNT) return labels.join(", ");
-  const shown = labels.slice(0, SUMMARY_LABEL_COUNT).join(", ");
+  if (labels.length <= SUMMARY_LABEL_COUNT) return labels.join(" · ");
   const rest = labels.length - SUMMARY_LABEL_COUNT;
-  return `${shown} und ${rest} weitere`;
+  return [...labels.slice(0, SUMMARY_LABEL_COUNT), `${rest} weitere`].join(
+    " · ",
+  );
 }
 
 /** How many settings in the list carry a value other than the default. */

@@ -1407,7 +1407,7 @@ describe("SettingsField", () => {
     expect(queryByRole("button", { name: "Entfernen" })).toBeNull();
     expect(
       getByText(
-        "PDF-Dateien können nur im Schulportal hochgeladen oder entfernt werden.",
+        "PDF-Dateien können nur in der Schul-App hochgeladen oder entfernt werden.",
       ),
     ).toBeDefined();
   });

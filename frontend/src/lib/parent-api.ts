@@ -505,10 +505,16 @@ export async function getChildMealPlan(
       query: { week_start: weekStart },
     }),
   );
-  return (entries ?? []).map((entry) => ({
+  return (entries ?? []).map(parentMealPlanEntry);
+}
+
+export function parentMealPlanEntry(
+  entry: parentMeContract.MealPlanEntryResponse,
+): MealPlanEntry {
+  return {
     ...entry,
     allergens: normalizeMealAllergens(entry.allergens),
-  }));
+  };
 }
 
 export type MealParticipation = Omit<
@@ -736,8 +742,14 @@ export async function listHolidayOffers(): Promise<HolidayOffer[]> {
   const offers = await parentCall(
     bffJson("parent", "GET /parent/me/holiday-registrations"),
   );
+  return (offers ?? []).map(parentHolidayOffer);
+}
+
+export function parentHolidayOffer(
+  offer: parentMeContract.HolidayRegistrationOfferResponse,
+): HolidayOffer {
   // Go always sets the registration window of an offer.
-  return (offers ?? []).map((offer) => ({
+  return {
     ...offer,
     registration_opens_on: requiredDay(
       offer.registration_opens_on,
@@ -747,7 +759,7 @@ export async function listHolidayOffers(): Promise<HolidayOffer[]> {
       offer.registration_closes_on,
       "holiday_offer.registration_closes_on",
     ),
-  }));
+  };
 }
 
 /**
@@ -1180,7 +1192,7 @@ function parentMessageOf(
   return fields ? { ...raw, ...fields } : null;
 }
 
-function threadSummaryOf(
+export function threadSummaryOf(
   raw: parentMeContract.ThreadSummaryResponse,
 ): ThreadSummary {
   const senderKind = knownSenderKind(raw.last_sender_kind);
@@ -1209,7 +1221,7 @@ function threadViewOf(raw: parentMeContract.ThreadViewResponse): ThreadView {
   };
 }
 
-function groupThreadSummaryOf(
+export function groupThreadSummaryOf(
   raw: parentMeContract.GroupThreadSummaryResponse,
 ): GroupThreadSummary {
   return {

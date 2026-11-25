@@ -1,3 +1,5 @@
+import { ParentPageSkeleton } from "~/components/parent/parent-page";
+import { ParentPageSeed } from "~/app/parents/parent-page-seed";
 import { messageBoundary } from "~/i18n/scoped-messages";
 import { Suspense } from "react";
 import { ParentNewsPage } from "~/components/parent/news/parent-news-page";
@@ -13,8 +15,10 @@ const PageMessages = messageBoundary(
 export default function ParentsNewsPage() {
   return (
     <PageMessages>
-      <Suspense>
-        <ParentNewsPage />
+      <Suspense fallback={<ParentPageSkeleton rows={2} />}>
+        <ParentPageSeed page={{ kind: "news" }}>
+          <ParentNewsPage />
+        </ParentPageSeed>
       </Suspense>
     </PageMessages>
   );

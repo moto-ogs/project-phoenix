@@ -42,6 +42,7 @@ import { pollsConcept } from "~/lib/concepts/polls";
 import { parentMessagesConcept } from "~/lib/concepts/parentMessages";
 
 import { useSWRAuth, useInvalidateMatching } from "~/lib/swr";
+import { PARENT_START_CALENDAR_DAYS } from "~/lib/parent-page-seed-keys";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 import {
@@ -57,8 +58,6 @@ import {
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 /** Wie weit nach vorn Termineinladungen fuer "Zu erledigen" gesucht werden. */
-
-const APPOINTMENT_LOOKAHEAD_DAYS = 90;
 
 const TODO_TIME_FORMATTERS = new Map<string, Intl.DateTimeFormat>();
 const TODO_DATE_FORMATTERS = new Map<string, Intl.DateTimeFormat>();
@@ -397,11 +396,11 @@ function StartTodoSection() {
     PARENT_RESOURCE_OPTIONS,
   );
   const calendar = useSWRAuth(
-    parentKeys.calendar(today),
+    parentKeys.calendar(today, PARENT_START_CALENDAR_DAYS),
     async () => {
       const from = parseISODate(today);
       const to = new Date(from);
-      to.setDate(to.getDate() + APPOINTMENT_LOOKAHEAD_DAYS);
+      to.setDate(to.getDate() + PARENT_START_CALENDAR_DAYS);
       return getParentCalendar(from, to);
     },
     PARENT_RESOURCE_OPTIONS,

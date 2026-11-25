@@ -297,7 +297,7 @@ describe("SettingsCategory collapsible (#2830)", () => {
     );
     const heading = getByRole("button", { name: /Test Category/ });
     expect(heading.getAttribute("aria-expanded")).toBe("false");
-    expect(getByText("Enabled, Name")).toBeDefined();
+    expect(getByText("Enabled · Name")).toBeDefined();
     expect(getByText("1 geändert")).toBeDefined();
     expect(queryByText("Toggle")).toBeNull();
     expect(queryByText("A name")).toBeNull();
@@ -343,7 +343,7 @@ describe("SettingsCategory collapsible (#2830)", () => {
         onReset={vi.fn().mockResolvedValue(null)}
       />,
     );
-    expect(getByText("A, B, C und 2 weitere")).toBeDefined();
+    expect(getByText("A · B · C · 2 weitere")).toBeDefined();
   });
 
   it("filterQuery keeps only matching settings and shows the tab label", () => {
