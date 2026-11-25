@@ -73,16 +73,28 @@ interface ResponsivePanelProps {
  * Escape und Tippen daneben schließen nur das Blatt, nicht das Fenster
  * darunter; dessen Fokusfalle ruht, solange das Blatt offen ist.
  */
-export function ResponsivePanel({
+export function ResponsivePanel({ trigger, ...panel }: ResponsivePanelProps) {
+  return (
+    <>
+      {trigger}
+      {/* A grid can have dozens of triggers. Closed ones don't need another
+          media-query subscriber or panel lifecycle until the first opening. */}
+      <MountOnFirstOpen open={panel.open}>
+        <ResponsivePanelContent {...panel} />
+      </MountOnFirstOpen>
+    </>
+  );
+}
+
+function ResponsivePanelContent({
   open,
   onOpenChange,
   label,
   sheetId,
-  trigger,
   returnFocusRef,
   initialFocus,
   children,
-}: ResponsivePanelProps) {
+}: Omit<ResponsivePanelProps, "trigger">) {
   // `null`, solange die Breite unbekannt ist (Server, Hydration).
   const sheetState = useResolvedMediaQuery(BELOW_SM);
   const asSheet = sheetState === true;
@@ -103,25 +115,21 @@ export function ResponsivePanel({
     if (rotated && open) onOpenChange(false);
   }, [sheetState, open, onOpenChange]);
 
-  return (
-    <>
-      {trigger}
-      {asSheet ? (
-        <MountOnFirstOpen open={sheetOpen}>
-          <ResponsivePanelSheet
-            id={dialogId}
-            open={sheetOpen}
-            onOpenChange={onOpenChange}
-            label={label}
-            returnFocusRef={returnFocusRef}
-            initialFocus={initialFocus}
-          >
-            {children(true)}
-          </ResponsivePanelSheet>
-        </MountOnFirstOpen>
-      ) : open ? (
-        children(false)
-      ) : null}
-    </>
-  );
+  if (asSheet) {
+    return (
+      <MountOnFirstOpen open={sheetOpen}>
+        <ResponsivePanelSheet
+          id={dialogId}
+          open={sheetOpen}
+          onOpenChange={onOpenChange}
+          label={label}
+          returnFocusRef={returnFocusRef}
+          initialFocus={initialFocus}
+        >
+          {children(true)}
+        </ResponsivePanelSheet>
+      </MountOnFirstOpen>
+    );
+  }
+  return open ? children(false) : null;
 }
