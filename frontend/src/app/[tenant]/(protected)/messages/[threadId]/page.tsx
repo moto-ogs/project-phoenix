@@ -61,6 +61,7 @@ import { useTenant } from "~/lib/tenant-context";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { ListRowLink } from "~/components/ui/list-row-link";
+import { ChevronRight } from "lucide-react";
 import { INBOX_SELECTION_PARAM } from "~/components/messaging/messages-inbox-app";
 import {
   type InboxThread,
@@ -615,13 +616,35 @@ export function MessageThreadContent({
     );
   }
 
-  // App: Beziehung und Kind stehen als beschriftete Zeile zum Kinderprofil
-  // oben im Verlauf (`childRow`); der Kopf bleibt einzeilig. Nur eine
-  // Leitungs-Unterhaltung trägt das als Chip im Kopf.
-  const appStatusLine =
-    thread?.audience === "leadership" ? (
-      <TenantPageStats items={[{ label: LEADERSHIP_AUDIENCE_LABEL }]} />
-    ) : null;
+  // App: Beziehung und Kind stehen als beschrifteter Weg zum Kinderprofil
+  // in der Kopfkarte unter dem Namen, nicht als Zeile im Verlauf. Eine
+  // Leitungs-Unterhaltung trägt dazu ihren Chip.
+  const appStatusLine = thread ? (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      {thread.audience === "leadership" ? (
+        <TenantPageStats items={[{ label: LEADERSHIP_AUDIENCE_LABEL }]} />
+      ) : null}
+      <Button
+        type="button"
+        variant="link"
+        // 44 px hoch: Die Zeile der Kopfkarte schneidet eine Trefferfläche
+        // über den Knopf hinaus ab.
+        touchTarget
+        className="min-w-0 gap-1.5"
+        onClick={() =>
+          router.push(`/students/${thread.student_id}?from=/messages`)
+        }
+        tooltip="Öffnet das Kinderprofil."
+      >
+        <MotoConceptIcon concept={childrenConcept} size={18} />
+        <span className="truncate">
+          {relationshipLabel(thread.relationship_type)} von{" "}
+          {thread.student_name}
+        </span>
+        <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+      </Button>
+    </div>
+  ) : null;
 
   const markUnreadMenu = (
     <OverflowMenu
@@ -635,12 +658,11 @@ export function MessageThreadContent({
       ]}
     />
   );
-  // App und eingebetteter Verlauf: Der Weg zum Kind ist eine beschriftete
-  // Zeile über dem Verlauf statt eines Symbols im Kopf, das niemand als
-  // „Kinderprofil“ las (Jury #8070). Sie nennt zugleich, wessen Elternteil
-  // hier schreibt.
+  // Eingebetteter Verlauf (iPad quer): Der Weg zum Kind ist eine
+  // beschriftete Zeile über dem Verlauf, denn dort gibt es keine eigene
+  // Kopfkarte. Sie nennt zugleich, wessen Elternteil hier schreibt.
   const childRow =
-    isApp && thread ? (
+    isApp && embedded && thread ? (
       <ListRowLink
         onClick={() =>
           router.push(`/students/${thread.student_id}?from=/messages`)

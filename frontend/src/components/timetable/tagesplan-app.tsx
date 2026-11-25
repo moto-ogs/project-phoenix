@@ -291,6 +291,8 @@ interface Entry {
   state: BlockState;
   /** Die anderen Blöcke derselben Gruppe „Gleichzeitig“. */
   parallel: readonly PlannedTimetableInstance[];
+  /** Die späteren Blöcke des Tages im selben Raum, nach Beginn. */
+  sameRoom: readonly PlannedTimetableInstance[];
 }
 
 export function TagesplanApp(props: TagesplanAppProps) {
@@ -312,6 +314,11 @@ export function TagesplanApp(props: TagesplanAppProps) {
 
   const entries = useMemo(() => {
     const map = new Map<string, Entry>();
+    const all = groups.flatMap((group) =>
+      group.cells.map((cell) => cell.instance),
+    );
+    const roomOf = (instance: PlannedTimetableInstance) =>
+      instance.roomId && instance.roomId !== "0" ? instance.roomId : null;
     for (const group of groups) {
       for (const cell of group.cells) {
         map.set(cell.instance.id, {
@@ -320,6 +327,16 @@ export function TagesplanApp(props: TagesplanAppProps) {
           parallel: group.cells
             .filter((other) => other.instance.id !== cell.instance.id)
             .map((other) => other.instance),
+          sameRoom: roomOf(cell.instance)
+            ? all
+                .filter(
+                  (other) =>
+                    other.id !== cell.instance.id &&
+                    other.startTime > cell.instance.startTime &&
+                    roomOf(other) === roomOf(cell.instance),
+                )
+                .sort((a, b) => a.startTime.localeCompare(b.startTime))
+            : [],
           state: blockState(cell.instance, cell.effectiveEndTime, {
             isToday,
             dayIsPast: day < today,
@@ -438,7 +455,9 @@ export function TagesplanApp(props: TagesplanAppProps) {
 
   // Gleichzeitige Blöcke stehen auf jedem Gerät untereinander in einer
   // eingefärbten Gruppe mit Klammer links. Die Gruppe endet sichtbar: der
-  // nächste Block steht wieder auf Weiß.
+  // nächste Block steht wieder auf Weiß. Ihr Kopf klebt nicht: eine Gruppe
+  // ist höchstens ein paar Zeilen hoch, und ein klebender Kopf stünde am
+  // Ende der Gruppe über dem nächsten Block (falsche Zuordnung).
   const list = (
     <Collection label="Blöcke des Tages">
       {groups.map((group, index) => (
@@ -451,7 +470,7 @@ export function TagesplanApp(props: TagesplanAppProps) {
           ) : (
             <div
               data-tagesplan-parallel=""
-              className="relative border-gray-200 bg-gray-50 before:absolute before:top-10 before:bottom-3 before:left-1.5 before:w-1 before:rounded-full before:bg-gray-300 before:content-[''] [&_[data-collection-group]>div:first-child]:bg-gray-100 [&:not(:first-child)]:border-t [&:not(:last-child)]:border-b"
+              className="relative border-gray-200 bg-gray-50 before:absolute before:top-10 before:bottom-3 before:left-1.5 before:w-1 before:rounded-full before:bg-gray-300 before:content-[''] [&_[data-collection-group]>div:first-child]:static [&_[data-collection-group]>div:first-child]:bg-gray-100 [&:not(:first-child)]:border-t [&:not(:last-child)]:border-b"
             >
               <CollectionGroup
                 title={
@@ -626,8 +645,8 @@ function SplitListColumn({
 }
 
 /**
- * Rechte Spalte: der gewählte Block in einer Karte so hoch wie die Liste.
- * Die Angaben scrollen, die Hauptaktion steht unten in Daumennähe.
+ * Rechte Spalte: der gewählte Block in einer Karte, höchstens so hoch wie
+ * die Liste. Die Angaben scrollen, die Hauptaktion steht unter ihnen.
  */
 function SplitDetail({
   entry,
@@ -647,9 +666,11 @@ function SplitDetail({
       testId="tagesplan-detail"
       className="sticky flex flex-col"
       bodyClassName="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain"
+      // So hoch wie die Angaben, höchstens so hoch wie die Liste: Die
+      // Aktion steht direkt unter den Angaben statt unter einer leeren Fläche.
       style={{
         top: "var(--app-sticky-offset, 1rem)",
-        height: "var(--tagesplan-split-height)",
+        maxHeight: "var(--tagesplan-split-height)",
       }}
       footer={action ?? undefined}
     >
@@ -748,6 +769,45 @@ function childrenPart(entry: Entry): string | null {
   return blockChildrenLabel(entry.instance);
 }
 
+/**
+ * Kinderzahl rechts in der Zeile, kurz: „19 Kinder“, laufend „13 da“. Ohne
+ * Kinder (Teamsitzung) steht nichts; die volle Angabe steht im Blatt.
+ */
+function rowChildren(entry: Entry): string | null {
+  if (entry.state.cancelled || entry.state.isDuty) return null;
+  const { instance } = entry;
+  if (instance.status === "active") {
+    const current =
+      instance.currentStudentsCount ?? instance.presentStudentsCount;
+    return `${current} da`;
+  }
+  const count =
+    instance.status === "completed"
+      ? instance.presentStudentsCount
+      : instance.expectedStudentsCount;
+  if (count <= 0) return null;
+  return count === 1 ? "1 Kind" : `${count} Kinder`;
+}
+
+/**
+ * Personal kurz für die Zeile: der erste Name, weitere als „+2“. Alle Namen
+ * samt Vertretung stehen im Blatt.
+ */
+function rowStaff(instance: PlannedTimetableInstance): string | null {
+  const names = instance.staffNames ?? [];
+  const first = names[0];
+  if (!first) return null;
+  return names.length > 1
+    ? `${first.displayName} +${names.length - 1}`
+    : first.displayName;
+}
+
+/**
+ * Eine Zeile, 56–64 px wie jede Liste der App: Beginn und Ende links, Titel,
+ * darunter eine Zeile mit Zustand, Raum, Gruppe und Personal (am Telefon
+ * gekürzt),
+ * rechts die Kinderzahl. Alle Angaben stehen vollständig im Blatt.
+ */
 function BlockRow({
   entry,
   next,
@@ -765,30 +825,48 @@ function BlockRow({
   const quiet = state.over ? "text-gray-600" : "text-gray-900";
   const staff = blockStaffNames(instance);
   const chips = blockChips(state, next, mine);
-  // Erste Unterzeile: Zustand (vorbei, Dienst), Raum, Gruppe.
+  const children = childrenPart(entry);
+  const openEnd = hasOpenEnd(instance);
+  // Am iPad hoch ist die Zeile breit genug für alle Namen.
+  const { layout, isSplit } = useDeviceContext();
+  const wide = layout === "tablet" && !isSplit;
+  // Unterzeile: Zustand (vorbei, Dienst), Raum, Gruppe, Personal.
   const place = [
     state.over || (state.cancelled && chips.length === 0) ? state.label : null,
     state.isDuty && !state.over ? "Dienst" : null,
     state.room,
     instance.groupName,
+    state.cancelled ? null : wide ? staff : rowStaff(instance),
   ]
     .filter(Boolean)
     .join(" · ");
-  // Zweite Unterzeile: Kinderzahl und Personal (wie am Desktop).
-  const people = [childrenPart(entry), state.cancelled ? null : staff]
-    .filter(Boolean)
-    .join(" · ");
+  const count = rowChildren(entry);
   return (
     <CollectionRow
       onClick={onOpen}
       selected={selected}
       // Beginnt mit dem sichtbaren Text des Ziels (Titel), damit
-      // Sprachsteuerung den Block beim Namen findet.
-      aria-label={`${instance.title}, ${blockTimeRange(instance)}${
-        state.label ? `, ${state.label}` : ""
-      }${next ? ", als Nächstes" : ""}${mine ? ", mit dir" : ""}`}
+      // Sprachsteuerung den Block beim Namen findet. Die gekürzten Angaben
+      // stehen hier vollständig.
+      aria-label={[
+        instance.title,
+        blockTimeRange(instance),
+        state.label,
+        next ? "als Nächstes" : null,
+        mine ? "mit dir" : null,
+        state.room,
+        instance.groupName,
+        children,
+        state.cancelled ? null : staff,
+      ]
+        .filter(Boolean)
+        .join(", ")}
       leading={
-        <span className="w-11 self-start pt-0.5 text-sm leading-5 tabular-nums">
+        <span className="tablet:text-[0.9375rem] w-11 self-start text-sm leading-5 tabular-nums">
+          {openEnd ? (
+            // Ein spontaner Block hat noch kein Ende: „seit 00:03“.
+            <span className="block text-gray-600">seit</span>
+          ) : null}
           <span
             className={cn(
               "block font-semibold",
@@ -797,18 +875,14 @@ function BlockRow({
           >
             {instance.startTime}
           </span>
-          <span className="block text-gray-600">
-            {/* Ein spontaner Block hat noch kein Ende. */}
-            {hasOpenEnd(instance) ? "offen" : instance.endTime}
-          </span>
+          {openEnd ? null : (
+            <span className="block text-gray-600">{instance.endTime}</span>
+          )}
         </span>
       }
       title={
-        // Kein Kürzen und keine Kennzeichnung daneben: der Titel hat die
-        // volle Breite und bleibt meist einzeilig.
         <span
           className={cn(
-            "block whitespace-normal",
             state.over && "text-gray-600",
             state.running && "font-semibold",
             state.cancelled && "line-through decoration-gray-400",
@@ -818,24 +892,25 @@ function BlockRow({
         </span>
       }
       subtitle={
-        <span className="block whitespace-normal">
-          {chips.length > 0 || place ? (
-            <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-              {chips}
-              {place ? (
-                <span
-                  className={cn(
-                    state.cancelled && !state.over && "text-moto-red-strong",
-                  )}
-                >
-                  {place}
-                </span>
-              ) : null}
-            </span>
-          ) : null}
-          {people ? <span className="block">{people}</span> : null}
-        </span>
+        chips.length > 0 || place ? (
+          <span className="flex min-w-0 items-center gap-1.5">
+            {chips.length > 0 ? (
+              <span className="flex shrink-0 items-center gap-1">{chips}</span>
+            ) : null}
+            {place ? (
+              <span
+                className={cn(
+                  "min-w-0 truncate",
+                  state.cancelled && !state.over && "text-moto-red-strong",
+                )}
+              >
+                {place}
+              </span>
+            ) : null}
+          </span>
+        ) : undefined
       }
+      meta={count ? <span className={quiet}>{count}</span> : undefined}
     />
   );
 }
@@ -873,14 +948,13 @@ function BlockDetail({
   next,
   mine,
 }: Readonly<{ entry: Entry; next: boolean; mine: boolean }>) {
-  const { instance, state, parallel } = entry;
+  const { instance, state, parallel, sameRoom } = entry;
   const staff = instance.staffNames ?? [];
   const chips = blockChips(state, next, mine);
   const duration = durationLabel(instance);
   const startWindow = state.isDuty ? null : startWindowLabel(instance);
   const children = childrenPart(entry);
-  // Am Telefon zwei Spalten, damit das Blatt halb hoch bleibt.
-  const { layout } = useDeviceContext();
+  // Am Telefon als Liste (Label links, Wert rechts), sonst zwei Spalten.
   return (
     <div className="space-y-4">
       {chips.length > 0 ||
@@ -897,7 +971,7 @@ function BlockDetail({
           Grund: {instance.cancelReason}
         </p>
       ) : null}
-      <DataGrid columns={layout === "phone" ? 4 : 2}>
+      <DataGrid columns={2} appRows>
         <DataField label="Zeit">
           <span className="tabular-nums">
             {blockTimeRange(instance)} Uhr
@@ -956,6 +1030,21 @@ function BlockDetail({
                     {[other.roomName, blockTimeRange(other)]
                       .filter(Boolean)
                       .join(" · ")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </DataField>
+        ) : null}
+        {sameRoom.length > 0 && state.room ? (
+          <DataField label={`Danach in ${state.room}`} fullWidth>
+            <ul>
+              {sameRoom.map((other) => (
+                <li key={other.id} className="tabular-nums">
+                  {blockTimeRange(other)}
+                  <span className="font-normal text-gray-600">
+                    {" · "}
+                    {other.title}
                   </span>
                 </li>
               ))}
