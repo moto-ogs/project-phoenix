@@ -9,6 +9,7 @@ import {
   useRef,
   useSyncExternalStore,
 } from "react";
+import { markSheetHistoryEvent } from "~/lib/sheet-history-events";
 
 /**
  * Blätter in der App (#8070): immer nur eins offen, und Zurück schließt es.
@@ -55,7 +56,6 @@ let sessions: readonly SheetSession[] = [];
 const listeners = new Set<() => void>();
 /** Eigene `history.back()`, deren `popstate` niemand anderem gehört. */
 let expectedPops = 0;
-const handledEvents = new WeakSet<Event>();
 let listening = false;
 
 function emit() {
@@ -95,7 +95,7 @@ function isAncestor(candidate: SheetSession, of: SheetSession): boolean {
 function onPopState(event: PopStateEvent) {
   if (expectedPops > 0) {
     expectedPops -= 1;
-    handledEvents.add(event);
+    markSheetHistoryEvent(event);
     return;
   }
   if (sessions.length === 0) return;
@@ -105,7 +105,7 @@ function onPopState(event: PopStateEvent) {
   // Alles über dem Eintrag, auf dem der Verlauf jetzt steht, schließt.
   const closing = sessions.slice(index + 1).filter((s) => s.ownsEntry);
   if (closing.length === 0) return;
-  handledEvents.add(event);
+  markSheetHistoryEvent(event);
   for (const session of [...closing].reverse()) {
     session.closedExternally = true;
     session.close();
@@ -117,14 +117,6 @@ function ensureListening() {
   listening = true;
   // Capture: läuft vor den Zuhörern ohne Capture am selben Ziel (Wächter).
   window.addEventListener("popstate", onPopState, { capture: true });
-}
-
-/**
- * Ob dieses `popstate` nur ein Blatt geschlossen hat oder von einem Blatt
- * selbst ausgelöst wurde. Andere Zuhörer (Wächter) lassen es dann liegen.
- */
-export function isSheetHistoryEvent(event: Event): boolean {
-  return handledEvents.has(event);
 }
 
 function open(session: SheetSession) {

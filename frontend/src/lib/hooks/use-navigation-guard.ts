@@ -7,7 +7,7 @@ import {
   isUnloadConfirmed,
   registerNavigationBlocker,
 } from "~/lib/hooks/navigation-guard-store";
-import { isSheetHistoryEvent } from "~/components/ui/sheet-session";
+import { isSheetHistoryEvent } from "~/lib/sheet-history-events";
 
 interface NavigationGuard {
   /** The destination of an intercepted navigation, or null when none is pending. */

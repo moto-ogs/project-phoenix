@@ -2756,6 +2756,8 @@ const KIT_PURE_LIB_MODULES = new Set([
   "src/lib/mobile-navigation/page-transition",
   "src/lib/mobile-navigation/use-navigation-stack",
   "src/lib/search-fold",
+  // Blatt-Verlauf (#8070): nur eine Ereignis-Markierung, kein Fachwissen.
+  "src/lib/sheet-history-events",
   "src/lib/use-clipboard-copy",
   "src/lib/utils",
 ]);
