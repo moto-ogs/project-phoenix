@@ -37,6 +37,14 @@ export const TAB_LABELS: Record<string, string> = {
   // Wer Verträge schließt, abrechnet und Personal anstellt (#4811):
   // Träger-Wert, die Schule darf abweichen.
   zustaendigkeiten: "Zuständigkeiten",
+  // Lohnarten und DATEV-Nummern des Trägers (#4712); Schulen sehen sie nur
+  // lesend, das Träger-Portal pflegt sie auf der Seite „Lohnexport“.
+  lohnexport: "Lohnexport",
+  // Lohnarten der Schule (#1417); gepflegt auf der Seite „Abrechnung“.
+  abrechnung: "Abrechnung",
+  // Geburtstage auf der Startseite (#3737); gepflegt unter „Startseite für
+  // alle“.
+  startseite: "Startseite für alle",
 };
 
 export function displayTabLabel(tab: SchemaTab): string {
@@ -73,8 +81,11 @@ export const categoryLabels: Record<string, string> = {
   dateien: "Dateien",
   datenbereinigung: "Automatisch löschen",
   datev_mandant: "DATEV-Mandant",
+  // Berater- und Mandantennummer des Lohnbüros (#4712).
+  "datev-lohn": "DATEV-Nummern für den Lohn",
   "datev-buchungen": "Buchungen",
   "e-mail": "E-Mail",
+  einheiten: "Einheiten",
   einladungen: "Einladungen",
   elternmeldungen: "Meldungen von Eltern",
   elternportal: "Elternportal",
@@ -102,6 +113,7 @@ export const categoryLabels: Record<string, string> = {
   "kinder-ohne-ogs-platz": "Kinder ohne OGS-Platz",
   lockout: "Sperre nach Fehlversuchen",
   lohnarten: "Lohnarten",
+  lohndatei: "Lohndatei",
   mfa: "Zwei-Faktor-Authentifizierung",
   monitoring: "Geräte überwachen",
   "nach-hause": "„Nach Hause“ am Tablet",

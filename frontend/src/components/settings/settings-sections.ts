@@ -1,5 +1,7 @@
 import { accountsConcept } from "~/lib/concepts/accounts";
 import { calendarConcept } from "~/lib/concepts/calendar";
+import { careContractsConcept } from "~/lib/concepts/careContracts";
+import { contributionsConcept } from "~/lib/concepts/contributions";
 import { dashboardConcept } from "~/lib/concepts/dashboard";
 import { devicesConcept } from "~/lib/concepts/devices";
 import { documentsConcept } from "~/lib/concepts/documents";
@@ -8,9 +10,12 @@ import { organizationsConcept } from "~/lib/concepts/organizations";
 import { listsConcept } from "~/lib/concepts/lists";
 import { mealPlanConcept } from "~/lib/concepts/mealPlan";
 import { notificationsConcept } from "~/lib/concepts/notifications";
+import { payrollConcept } from "~/lib/concepts/payroll";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 import { privacyConcept } from "~/lib/concepts/privacy";
+import { reportsConcept } from "~/lib/concepts/reports";
 import { settingsConcept } from "~/lib/concepts/settings";
+import { staffPlanConcept } from "~/lib/concepts/staffPlan";
 import type { MotoConcept } from "~/lib/moto-concepts";
 import type { SchemaTab, SettingsSchema } from "~/lib/settings-api";
 import {
@@ -44,23 +49,32 @@ const NFC_ONLY_TABS = new Set(["devices"]);
 
 /**
  * In der Seitenleiste stehen die Bereiche untereinander: jeder trägt ein
- * eigenes Symbol, auf dem Telefon ist es sogar der einzige Hinweis.
+ * eigenes Symbol, auf dem Telefon ist es sogar der einzige Hinweis. Das
+ * Zahnrad gehört „Betrieb“ allein (#8132). Ein Bereich des Trägers trägt das
+ * Symbol, unter dem ihn das Träger-Portal führt; nur „Dashboard“ weicht ab,
+ * weil das Haus hier schon die Startseite meint. Wer in der Registry einen
+ * Bereich anlegt, trägt ihn hier und in `TAB_LABELS` ein, sonst schlägt
+ * `settings-nav-items.test.ts` fehl.
  */
 const TAB_CONCEPTS: Record<string, MotoConcept> = {
   operations: settingsConcept,
   meals: mealPlanConcept,
   reminders: notificationsConcept,
-  notifications: notificationsConcept,
   gdpr: privacyConcept,
   devices: devicesConcept,
   enrollment: enrollmentsConcept,
   system: calendarConcept,
-  general: settingsConcept,
   security: permissionsConcept,
   modules: listsConcept,
   branding: documentsConcept,
   // Wer Verträge schließt, abrechnet und Personal anstellt (#4811).
   zustaendigkeiten: organizationsConcept,
+  // Der Bereich legt fest, ab wann eine Kennzahl auffällt: daher das Diagramm.
+  dashboard: reportsConcept,
+  einsatzplanung: staffPlanConcept,
+  lohnexport: payrollConcept,
+  monatsbeitrag: contributionsConcept,
+  vertraege: careContractsConcept,
 };
 
 // A tab whose settings are all hidden (DependsOn, access) would open onto the
@@ -167,7 +181,7 @@ const PERSONALIZATION_TAB: SettingsSection = {
 };
 
 /** Das Symbol eines Bereichs aus dem Schema. */
-function settingsTabConcept(key: string): MotoConcept {
+export function settingsTabConcept(key: string): MotoConcept {
   return TAB_CONCEPTS[key] ?? settingsConcept;
 }
 
