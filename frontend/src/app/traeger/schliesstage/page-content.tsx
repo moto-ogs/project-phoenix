@@ -14,6 +14,7 @@ import { useSession } from "next-auth/react";
 import {
   calendarDayMarks,
   closingDaySchoolsLabel,
+  closingDayYears,
   dayCountLabel,
   formatClosingRange,
   formatDayWithWeekday,
@@ -75,7 +76,7 @@ const logger = createLogger({ component: "TraegerClosingDaysPage" });
 const SETTINGS_RIGHT = "traeger_settings:manage";
 
 const INFO =
-  "Hier planst du Schließtage für deine Schulen, zum Beispiel einen Brückentag. An einem Schließtag ist die OGS zu: keine Ferienbetreuung, keine Termine, kein Soll. Die Feiertage kommen aus dem Bundesland der Schule. Das Bundesland legt das moto-Team fest.";
+  "Hier planst du Schließtage für deine Schulen, zum Beispiel einen Brückentag. An einem Schließtag hat die OGS geschlossen: keine Ferienbetreuung, keine Termine, kein Soll. Die Feiertage kommen aus dem Bundesland der Schule. Das Bundesland legt das moto-Team fest.";
 
 export default function TraegerClosingDaysPage() {
   const { data: session } = useSession();
@@ -276,10 +277,10 @@ export default function TraegerClosingDaysPage() {
     [beginEdit, canManage, schools],
   );
 
-  const yearItems = [
-    { value: String(thisYear), label: String(thisYear) },
-    { value: String(thisYear + 1), label: String(thisYear + 1) },
-  ];
+  const yearItems = closingDayYears(thisYear).map((value) => ({
+    value: String(value),
+    label: String(value),
+  }));
   const exportItems = useTraegerListExportItems({
     download: (format) =>
       downloadTraegerList(
@@ -460,9 +461,18 @@ export default function TraegerClosingDaysPage() {
         />
       ) : null}
       <SectionCard
+        title={`Jahresübersicht ${year}`}
+        concept={calendarConcept}
+        description="Feiertage und Schließtage aller Schulen auf einen Blick."
+        loading={calendarLoading}
+      >
+        <TraegerYearCalendar year={year} marks={marks} todayISO={today} />
+      </SectionCard>
+
+      <SectionCard
         title="Schließtage des Trägers"
         concept={closingDaysConcept}
-        description="An diesen Tagen ist die OGS der genannten Schulen zu."
+        description="An diesen Tagen hat die OGS der genannten Schulen geschlossen."
         loading={calendarLoading}
       >
         {closingDays.length === 0 ? (
@@ -471,7 +481,7 @@ export default function TraegerClosingDaysPage() {
             title={`Keine Schließtage in ${year}`}
             description={
               canManage
-                ? "Lege oben einen Schließtag an, zum Beispiel einen Brückentag."
+                ? "Du kannst oben rechts Schließtage anlegen, zum Beispiel Brückentage."
                 : "Das Träger-Büro hat für dieses Jahr keine Schließtage geplant."
             }
           />
@@ -484,15 +494,6 @@ export default function TraegerClosingDaysPage() {
             defaultSortDirection="asc"
           />
         )}
-      </SectionCard>
-
-      <SectionCard
-        title={`Jahresübersicht ${year}`}
-        concept={calendarConcept}
-        description="Feiertage und Schließtage aller Schulen auf einen Blick."
-        loading={calendarLoading}
-      >
-        <TraegerYearCalendar year={year} marks={marks} todayISO={today} />
       </SectionCard>
 
       <SectionCard
