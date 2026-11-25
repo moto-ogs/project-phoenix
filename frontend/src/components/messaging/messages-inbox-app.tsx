@@ -224,12 +224,14 @@ function InboxList({
                   <span className={unread ? "font-semibold" : undefined}>
                     {thread.guardian_name}
                   </span>
-                  {wide ? (
-                    <span className="font-normal text-gray-500">
-                      {" · "}
-                      {relation}
-                    </span>
-                  ) : null}
+                  {/* Die Beziehung wie in der Liste des Desktops; schmal
+                      ohne „von …“, das Kind steht in der Zeile darunter. */}
+                  <span className="font-normal text-gray-500">
+                    {" · "}
+                    {wide
+                      ? relation
+                      : relationshipLabel(thread.relationship_type)}
+                  </span>
                 </>
               }
               subtitle={
@@ -239,8 +241,7 @@ function InboxList({
                   </span>
                 ) : (
                   <span className="flex min-w-0 items-baseline gap-1">
-                    {/* Ein Kopf = Kind; die Beziehung steht im Kopf des
-                        Verlaufs. */}
+                    {/* Ein Kopf = Kind. */}
                     <span className="flex shrink-0 items-baseline font-medium text-gray-700">
                       <MotoConceptIcon
                         concept={childrenConcept}
