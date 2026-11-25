@@ -1970,10 +1970,19 @@ export async function listMyDocuments(): Promise<ParentDocumentInbox> {
   ) {
     throw letters.reason;
   }
-  const documents = parentDocumentsInDisplayOrder([
+  const documents = [
     ...(letters.status === "fulfilled" ? (letters.value ?? []) : []),
     ...(contracts.status === "fulfilled" ? (contracts.value ?? []) : []),
-  ]);
+  ]
+    // Go always sets the first day a document covers.
+    .map((document) => ({
+      ...document,
+      service_from: requiredDay(document.service_from, "document.service_from"),
+    }))
+    .sort(
+      (a, b) =>
+        Date.parse(b.sent_at) - Date.parse(a.sent_at) || compareIds(b.id, a.id),
+    );
   const failed = [
     ["letters", letters],
     ["contracts", contracts],
@@ -1991,21 +2000,6 @@ export async function listMyDocuments(): Promise<ParentDocumentInbox> {
         ? firstFailure[1].reason
         : null,
   };
-}
-
-export function parentDocumentsInDisplayOrder(
-  documents: readonly parentMeContract.BillingDocumentResponse[],
-): ParentDocument[] {
-  // Go always sets the first day a document covers.
-  return documents
-    .map((document) => ({
-      ...document,
-      service_from: requiredDay(document.service_from, "document.service_from"),
-    }))
-    .sort(
-      (a, b) =>
-        Date.parse(b.sent_at) - Date.parse(a.sent_at) || compareIds(b.id, a.id),
-    );
 }
 
 /**

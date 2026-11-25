@@ -11,7 +11,7 @@ export const PARENT_START_CALENDAR_DAYS = 90;
 export const PARENT_CALENDAR_DAYS = 91;
 
 export type ParentSeedPage =
-  | { kind: "start" | "children" | "calendar" | "documents" | "enrollment" }
+  | { kind: "start" | "children" | "calendar" | "enrollment" }
   | { kind: "holiday" | "messages" | "groupThread" | "news" }
   | { kind: "child" | "conference" | "conversation"; studentId: string }
   | { kind: "proof"; announcementId: string; studentId: string }
@@ -55,8 +55,6 @@ export function parentPageSeedKeys(
       ];
     case "calendar":
       return [parentKeys.calendar(day, PARENT_CALENDAR_DAYS)];
-    case "documents":
-      return [parentInboxKeys.documents()];
     case "enrollment":
       return [parentInboxKeys.enrollableSchools()];
     case "holiday":

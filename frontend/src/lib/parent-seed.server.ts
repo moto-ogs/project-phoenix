@@ -3,11 +3,9 @@ import { cache } from "react";
 import * as parentMeContract from "~/lib/contract/parent-me.generated";
 import {
   groupThreadSummaryOf,
-  parentDocumentsInDisplayOrder,
   parentHolidayOffer,
   parentMealPlanEntry,
   threadSummaryOf,
-  type ParentDocumentInbox,
 } from "~/lib/parent-api";
 import { mapParentConferenceOffer } from "~/lib/parent-conferences";
 import { holidayRegistrationEntriesFromBackend } from "~/lib/parent-holiday-registration-entries";
@@ -176,38 +174,6 @@ function loadCalendar(token: string, from: string, days: number) {
       query: { from, to: toISODate(end) },
     });
     return calendarResponse(data);
-  });
-}
-
-function loadDocuments(
-  token: string,
-): Promise<ParentDocumentInbox | undefined> {
-  // The existing browser reader can show a partial inbox and retry it. A
-  // partial answer is not a complete value for its single aggregate key.
-  return seedRead("parentDocuments", async (signal) => {
-    const [letters, contracts, shared] = await Promise.allSettled([
-      readContract(routes["GET /parent/me/documents"], { token, signal }),
-      readContract(routes["GET /parent/me/documents/contracts"], {
-        token,
-        signal,
-      }),
-      readContract(routes["GET /parent/me/documents/shared"], {
-        token,
-        signal,
-      }),
-    ]);
-    if (letters.status === "rejected") throw letters.reason;
-    if (contracts.status === "rejected") throw contracts.reason;
-    if (shared.status === "rejected") throw shared.reason;
-    return {
-      documents: parentDocumentsInDisplayOrder([
-        ...letters.value.data,
-        ...contracts.value.data,
-      ]),
-      shared: shared.value.data,
-      failedSource: null,
-      error: null,
-    };
   });
 }
 
@@ -417,14 +383,6 @@ function pageEntries(
         {
           key: parentKeys.calendar(day, PARENT_CALENDAR_DAYS),
           value: loadCalendar(token, day, PARENT_CALENDAR_DAYS),
-          render: true,
-        },
-      ];
-    case "documents":
-      return [
-        {
-          key: parentInboxKeys.documents(),
-          value: loadDocuments(token),
           render: true,
         },
       ];
