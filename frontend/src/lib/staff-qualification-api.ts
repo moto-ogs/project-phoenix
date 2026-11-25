@@ -11,6 +11,7 @@ import type {
   QualificationEntryResponse,
   QualificationOverviewResponse,
   QualificationTypeResponse,
+  TraegerProofResponse,
 } from "./contract/staff.generated";
 
 export type QualificationStatus =
@@ -118,6 +119,16 @@ export function mapQualificationOverviewRow(
   };
 }
 
+export function mapTraegerProof(
+  proof: TraegerProofResponse,
+): TraegerProofStatus {
+  return {
+    typeName: proof.type_name,
+    status: status(proof.status),
+    expiresOn: proof.expires_on ?? "",
+  };
+}
+
 function typeBody(input: QualificationTypeInput) {
   return {
     name: input.name,
@@ -198,11 +209,7 @@ class StaffQualificationService {
         errorMessage: "Nachweise des Trägers konnten nicht geladen werden",
       },
     );
-    return proofs.map((proof) => ({
-      typeName: proof.type_name,
-      status: status(proof.status),
-      expiresOn: proof.expires_on ?? "",
-    }));
+    return proofs.map(mapTraegerProof);
   }
 
   async ownEntries(): Promise<QualificationEntry[]> {

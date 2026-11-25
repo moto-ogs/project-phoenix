@@ -60,7 +60,7 @@ import {
   useTenantMutate,
   useTenantMutateMatching,
 } from "~/lib/swr";
-import { hasPermission, isAdmin } from "~/lib/auth-utils";
+import { hasPermission } from "~/lib/auth-utils";
 import {
   loadAccountRoleAssignment,
   replaceAccountRole,
@@ -105,9 +105,16 @@ import {
 } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { staffAbsenceService } from "~/lib/staff-api";
-import { formatDate, isValidISODate, berlinTodayISO } from "~/lib/date-helpers";
+import { formatDate, berlinTodayISO } from "~/lib/date-helpers";
 import { DetailSkeleton } from "~/components/ui/page-skeletons";
 import { StaffDetailSkeleton } from "./page-skeleton";
+
+import {
+  initialStaffTab,
+  initialStaffTrackingDate,
+  isVisibleStaffTab,
+  staffDetailAccess,
+} from "./staff-detail-tabs";
 
 const logger = createLogger({ component: "StaffDetailPage" });
 
@@ -150,56 +157,24 @@ export default function StaffDetailContent() {
   const recordService = useMemo(() => createCrudService(teachersConfig), []);
   const tenantMutate = useTenantMutate();
   const refreshStaffFamily = useTenantMutateMatching([staffKeys.family]);
-  // Effective admin: the backend grants everything to `admin:*` / `*:*`
-  // holders regardless of the role name, so a custom role carrying the
-  // wildcard must see the same admin-gated UI as the literal admin role
-  // (mirrors the staff list).
-  const canEdit = isAdmin(session) || hasPermission(session, "admin:*");
-  const canManageTimeTracking = hasPermission(session, "time_tracking:manage");
-  const canManageAbsences =
-    canEdit ||
-    canManageTimeTracking ||
-    hasPermission(session, "vacation:approve");
-  // Urlaubsanspruch (#2906): Spiegel des Backend-Gates auf
-  // PUT /{id}/vacation/quota — time_tracking:manage. Bewusst nicht
-  // staff:manage: wer nur das hält, sieht weder den Anspruch (GET ist
-  // vacation:approve / time_tracking:manage) noch den Abwesenheiten-Reiter.
+  const bookedModules = useBookedModules();
+  const {
+    admin: canEdit,
+    documents: canViewDocuments,
+    editStammdaten: canEditStammdaten,
+    financial: canViewFinancial,
+    limitedProfile,
+    manageAbsences: canManageAbsences,
+    manageTimeTracking: canManageTimeTracking,
+    tabs,
+    viewRecord: canViewRecord,
+    viewSections: canViewStammdatenSections,
+    viewTimeTracking: canViewTimeTracking,
+  } = staffDetailAccess(session, bookedModules);
+  const canViewStammdaten = canViewStammdatenSections || canViewFinancial;
   const canEditVacationQuota = canEdit || canManageTimeTracking;
   const canManagePayrollSettings = hasPermission(session, "config:manage");
-  const canViewTimeTracking = canEdit || canManageTimeTracking;
-  const bookedModules = useBookedModules();
-  const canEditStammdaten = hasPermission(session, "staff:stammdaten");
-  // Deliberately NOT users:read or users:update: the sections carry HR-file
-  // data (birthday, private address, contract terms). users:read is held by
-  // everyone who may see the staff list at all, users:update by the
-  // Betreuer-Standardrolle for the child data (#2906) — mirrors the backend
-  // route gate.
-  const canViewStammdatenSections =
-    canEdit || canManageTimeTracking || canEditStammdaten;
-  // Klassen-Zuweisung (#1772): Spiegel der Backend-Gates — Lesen users:read,
-  // Ersetzen users:manage (hasPermission ist wildcard-aware, admin:* matcht).
-  const canViewKlassen = canEdit || hasPermission(session, "users:read");
   const canEditKlassen = canEdit || hasPermission(session, "users:manage");
-  const canViewFinancial = hasPermission(session, "staff:financial");
-  const canViewStammdaten = canViewStammdatenSections || canViewFinancial;
-  // Dokumente (#1424): mirrors the backend route gate — any of the three
-  // category permissions opens the tab; the backend then filters the list
-  // to exactly the categories the caller may see.
-  const canViewDocuments =
-    canEdit ||
-    hasPermission(session, "staff:documents") ||
-    canViewFinancial ||
-    hasPermission(session, "staff_documents:health");
-  // Der Personal-Datensatz (Reiter „Konto", #3115): Spiegel des Backend-Gates
-  // auf GET /api/staff/{id} — users:read, staff:manage, staff:stammdaten oder
-  // time_tracking:manage. Das ist der Kreis, der vorher das Pane der
-  // Datenverwaltung sah.
-  const canViewRecord =
-    canEdit ||
-    canManageTimeTracking ||
-    canEditStammdaten ||
-    hasPermission(session, "users:read") ||
-    hasPermission(session, "staff:manage");
   // Bearbeiten (Name, Position, Notizen) geht über PUT /api/staff/{id} und
   // braucht staff:manage; Vorname und Nachname zusätzlich users:update am
   // Personen-Datensatz (#2906).
@@ -210,12 +185,10 @@ export default function StaffDetailContent() {
   const canManageUsers = hasPermission(session, "users:manage");
   const requestedTab = searchParams.get("tab");
   const requestedDate = searchParams.get("date");
-  const initialTimeTrackingDate =
-    requestedTab === "zeiterfassung" &&
-    requestedDate !== null &&
-    isValidISODate(requestedDate)
-      ? requestedDate
-      : undefined;
+  const initialTimeTrackingDate = initialStaffTrackingDate(
+    requestedTab,
+    requestedDate,
+  );
 
   // Vom Benutzer gewählter Reiter. Solange niemand gewechselt hat, entscheidet
   // die Berechtigung bzw. der Deep-Link — das kann erst gelten, wenn die
@@ -223,14 +196,6 @@ export default function StaffDetailContent() {
   // bestimmt statt einmalig im useState-Initialwert eingefroren.
   const [selectedTab, setSelectedTab] = useState<string | null>(null);
 
-  // Wer nur das Finanz- oder Dokumentprofil sehen darf, bekommt dessen
-  // schmalen Endpunkt; alle anderen den vollen Datensatz.
-  const limitedProfile =
-    canViewFinancial && !canViewStammdatenSections
-      ? "financial"
-      : canViewDocuments && !canViewTimeTracking && !canViewStammdaten
-        ? "document"
-        : null;
   const profileRequest = useSWRAuth<Staff>(
     limitedProfile ? staffKeys.profileKey(staffId) : null,
     () =>
@@ -247,7 +212,7 @@ export default function StaffDetailContent() {
   // Konto-ID), damit beide Seiten dieselben Felder kennen. Neben einem
   // schmalen Profil lädt er nur für den Reiter „Konto".
   const recordRequest = useSWRAuth<StaffRecordResponse>(
-    limitedProfile === null || (canViewRecord && profile && !profile.endedOn)
+    canViewRecord && (limitedProfile === null || (profile && !profile.endedOn))
       ? staffKeys.recordKey(staffId)
       : null,
     () => staffService.getStaffRecord(staffId),
@@ -668,11 +633,14 @@ export default function StaffDetailContent() {
   // Arbeitszeitmodell und Abwesenheiten gehören zur Zeiterfassung,
   // Stammdaten und Dokumente zur Personalakte (Modul-Register). Ein Reiter
   // trägt kein Schloss: die Navigation zeigt der Leitung das Modul.
-  const showTimeTracking = canViewTimeTracking && tabBooked("zeiterfassung");
-  const showWorkTimeModel = canEdit && tabBooked("arbeitszeitmodell");
-  const showAbsences = canManageAbsences && tabBooked("abwesenheiten");
-  const showStammdaten = canViewStammdaten && tabBooked("stammdaten");
-  const showDocuments = canViewDocuments && tabBooked("dokumente");
+  const {
+    zeiterfassung: showTimeTracking,
+    arbeitszeitmodell: showWorkTimeModel,
+    abwesenheiten: showAbsences,
+    stammdaten: showStammdaten,
+    dokumente: showDocuments,
+    klassen: canViewKlassen,
+  } = tabs;
 
   // Seitenreiter: berechtigungsgesteuert, nicht datengesteuert. Die Flags
   // kommen aus der Sitzung, die hier bereits aufgelöst ist — die Reiterleiste
@@ -704,22 +672,10 @@ export default function StaffDetailContent() {
     ...(canViewRecord ? [{ value: "konto", label: "Konto" }] : []),
   ];
 
-  const hasVisibleTab = (tab: string | null): tab is string =>
-    tab !== null && tabItems.some((item) => item.value === tab);
-  const defaultTab = hasVisibleTab(requestedTab)
-    ? requestedTab
-    : showTimeTracking
-      ? "uebersicht"
-      : showStammdaten
-        ? "stammdaten"
-        : showDocuments
-          ? "dokumente"
-          : canViewRecord
-            ? "konto"
-            : (tabItems[0]?.value ?? "konto");
-  // Eine nachträglich entfernte Berechtigung oder Modulbuchung darf keinen
-  // leeren Bereich hinterlassen. Der erste noch sichtbare Reiter übernimmt.
-  const activeTab = hasVisibleTab(selectedTab) ? selectedTab : defaultTab;
+  // A removed right or module must not leave the selected tab empty.
+  const activeTab = isVisibleStaffTab(tabs, selectedTab)
+    ? selectedTab
+    : initialStaffTab(tabs, requestedTab);
 
   // Aktionen im Kebab der Kopfkarte (Bauart 2 Regel 1): die Kontoaktionen
   // mit eigenem Ablauf (#3116) und das Löschen. Bearbeitet wird im Reiter

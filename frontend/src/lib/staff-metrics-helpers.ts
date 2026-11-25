@@ -131,7 +131,10 @@ export function isEffectiveAbsenceStatus(status: string): boolean {
 }
 
 export function isHalfAbsenceBoundary(
-  absence: StaffAbsenceRow,
+  absence: Pick<
+    StaffAbsenceRow,
+    "half_day" | "start_half_day" | "end_half_day"
+  >,
   key: string,
   startKey: string,
   endKey: string,

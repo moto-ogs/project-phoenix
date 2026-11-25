@@ -31,11 +31,9 @@ import {
   type RefreshAfterWrite,
 } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
+import type { StaffBalanceEntry } from "~/lib/staff-tab-projections";
 import { staffBalanceAdjustmentService } from "~/lib/staff-api";
-import {
-  balanceAdjustmentTypeLabel,
-  type BalanceAdjustment,
-} from "~/lib/time-tracking-helpers";
+import { balanceAdjustmentTypeLabel } from "~/lib/time-tracking-helpers";
 
 const DECIMAL_INPUT_PATTERN = /^[+-]?(?:\d+(?:[,.]\d+)?|[,.]\d+)$/;
 
@@ -62,7 +60,7 @@ interface StundenkontoPanelProps {
   readonly accountStartKey: string;
   /** Heutiges Datum in Berlin ("YYYY-MM-DD"). */
   readonly todayKey: string;
-  readonly adjustments: readonly BalanceAdjustment[];
+  readonly adjustments: readonly StaffBalanceEntry[];
   readonly onChanged: () => void | Promise<unknown>;
 }
 
@@ -77,7 +75,7 @@ export function StundenkontoPanel({
   const [activeModal, setActiveModal] = useState<
     "payout" | "comp_time" | "reset" | "opening" | null
   >(null);
-  const [deleteTarget, setDeleteTarget] = useState<BalanceAdjustment | null>(
+  const [deleteTarget, setDeleteTarget] = useState<StaffBalanceEntry | null>(
     null,
   );
   const [deleting, setDeleting] = useState(false);
