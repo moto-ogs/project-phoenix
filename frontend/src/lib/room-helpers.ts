@@ -21,7 +21,7 @@ const ROOM_CATEGORY_COLORS: Record<string, string> = {
 const ROOM_CATEGORY_FALLBACK_COLOR = MOTO_COLOR_PALETTE.neutral.base;
 
 /** The backend's code for a room history the school switched off. */
-export const ROOM_HISTORY_DISABLED_CODE = "attendance.log_disabled";
+const ROOM_HISTORY_DISABLED_CODE = "attendance.log_disabled";
 
 export function getRoomCategoryColor(
   category: string | null | undefined,

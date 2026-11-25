@@ -100,7 +100,7 @@ export function maxPlanningIso(todayIso: string): string {
   return toISODate(day);
 }
 
-export function initialPlanningDate(value: string | null, today: string) {
+function initialPlanningDate(value: string | null, today: string) {
   return value &&
     isValidISODate(value) &&
     value > today &&
