@@ -289,16 +289,23 @@ export function NowText({
   state,
   analytics,
   today,
+  wrap = false,
 }: {
   readonly state: HomeNowState;
   readonly analytics: DashboardAnalytics | undefined;
   readonly today: string;
+  /**
+   * App (#8070): nie kürzen; die Angaben brechen nur zwischen den Teilen um
+   * („Aula · Ende offen ·“ / „danach 12:00 Mittagessen“).
+   */
+  readonly wrap?: boolean;
 }) {
   switch (state.kind) {
     case "own_running": {
       const { block, next } = state;
       return (
         <Lines
+          wrap={wrap}
           headline={block.title}
           badges={
             <>
@@ -340,6 +347,7 @@ export function NowText({
       const { block, minutesAhead } = state;
       return (
         <Lines
+          wrap={wrap}
           headline={`Als Nächstes: ${block.title}`}
           badges={
             <>
@@ -371,6 +379,7 @@ export function NowText({
     case "own_done":
       return (
         <Lines
+          wrap={wrap}
           headline="Für heute ist alles erledigt"
           detail={[
             state.count === 1
@@ -396,6 +405,7 @@ export function NowText({
               : "Heute ist keine Betreuung geplant";
       return (
         <Lines
+          wrap={wrap}
           headline={headline}
           badges={
             notStarted > 0 ? (
@@ -418,6 +428,7 @@ export function NowText({
     case "plain":
       return (
         <Lines
+          wrap={wrap}
           headline={formatStatusDate(today)}
           detail={
             analytics
@@ -446,13 +457,40 @@ function Lines({
   headline,
   badges,
   detail,
+  wrap = false,
 }: {
+  readonly wrap?: boolean;
   readonly headline: string;
   readonly badges?: ReactNode;
   // Raumangaben tragen ihr Symbol wie in den Blockzeilen (#4350).
   readonly detail: readonly ReactNode[];
 }) {
   const parts = detail.filter(Boolean);
+  if (wrap) {
+    return (
+      <div className="min-w-0 flex-1">
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-base font-semibold text-gray-900">
+            {headline}
+          </span>
+          {badges}
+        </p>
+        {parts.length > 0 ? (
+          <p className="text-sm text-gray-500">
+            {parts.map((part, index) => (
+              <Fragment key={index}>
+                {index > 0 ? " " : null}
+                <span className="inline-block max-w-full">
+                  {part}
+                  {index < parts.length - 1 ? " ·" : null}
+                </span>
+              </Fragment>
+            ))}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
   const text =
     parts.length > 0
       ? parts.flatMap((part, index) => (index === 0 ? [part] : [" · ", part]))
