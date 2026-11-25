@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import identity from "~/i18n/messages/de/errorCatalog/codes/identity.json";
 import { PasswordLoginForm } from "./password-login-form";
@@ -24,6 +24,9 @@ describe("login without the error presenter", () => {
     await vi.dynamicImportSettled();
     expect(loadPresenter).not.toHaveBeenCalled();
     expect(sessionStorage.getItem("logoutNotRevoked")).toBeNull();
+    fireEvent.focusIn(screen.getByLabelText("E-Mail-Adresse"));
+    await vi.dynamicImportSettled();
+    expect(loadPresenter).toHaveBeenCalledOnce();
     unmount();
 
     render(

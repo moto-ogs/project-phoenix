@@ -90,7 +90,9 @@ export function ParentLocaleProvider({
     fetchParentProfile,
     { keepPreviousData: false },
   );
-  const { show: showError } = useApiErrorDisplay();
+  const { show: showError } = useApiErrorDisplay(undefined, {
+    preloadPresenter: authenticated,
+  });
   const router = useRouter();
   const t = useTranslations("language");
   // Server-resolved locale: the cookie if present, else Accept-Language. This

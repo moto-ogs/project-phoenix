@@ -143,12 +143,15 @@ function GuardedTenant({
   const [recheck, setRecheck] = useState(0);
   // Why the switch failed, from the shared error path (#2517). Empty when
   // the switch went through but the old school kept coming back.
+  const preloadPresenter = status === "authenticated" && !onLoginEntry;
   const {
     error: switchError,
     show: showSwitchError,
     clear: clearSwitchError,
-  } = useApiLoadError();
-  const { show: showActionError } = useApiErrorDisplay();
+  } = useApiLoadError({ preloadPresenter });
+  const { show: showActionError } = useApiErrorDisplay(undefined, {
+    preloadPresenter,
+  });
   const [signingOutOperator, setSigningOutOperator] = useState(false);
   const [signingOutExpiredSession, setSigningOutExpiredSession] =
     useState(false);

@@ -26,7 +26,10 @@ import { FieldLabel } from "~/components/ui/field-label";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import { useApiFormError } from "~/contexts/ToastContext";
+import {
+  prepareErrorPresenter,
+  useApiFormError,
+} from "~/contexts/ToastContext";
 import { ApiError, unavailableApiError } from "~/lib/api-error";
 import { passkeysConcept } from "~/lib/concepts/passkeys";
 import type { ErrorCode } from "~/lib/error-codes.generated";
@@ -143,6 +146,7 @@ export function useLoginAttempt(
     object: string,
     retry: () => void,
   ) => {
+    prepareErrorPresenter();
     setPending(true);
     errors.clear();
     setPasswordRefused(false);
@@ -182,7 +186,7 @@ export function useLoginAttempt(
           err.code !== undefined &&
           (INVALID_CREDENTIALS as readonly ErrorCode[]).includes(err.code),
       );
-      void errors.show(
+      await errors.show(
         err instanceof ApiError
           ? credentialError(err, refusals, LOGIN_CREDENTIAL_FIELDS)
           : unavailableApiError(err),
@@ -299,6 +303,7 @@ export function PasswordLoginForm({
     <>
       <form
         ref={formRef}
+        onFocusCapture={prepareErrorPresenter}
         onSubmit={(event) => {
           event.preventDefault();
           void submit();

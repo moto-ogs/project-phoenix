@@ -619,7 +619,8 @@ clears the cookie and the login page says the session ends at its expiry
 (#7209). The password form receives that notice as ready-to-display copy:
 the generated German sentence for `identity.logout_not_revoked`, or the parents
 login's scoped translation. Opening a login must not load the full error
-presenter; a refused request still uses it. Only a logout without any answer
+presenter. Focusing the password form or starting an attempt warms it for a
+refusal without holding up the request. Only a logout without any answer
 (offline, timeout) keeps the session and shows the error with a retry. The tenant relogin action keeps
 the session on every failure and offers a retry: it moves to another
 school's host, where no notice could follow. All six routes

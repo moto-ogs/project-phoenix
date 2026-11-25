@@ -238,6 +238,11 @@ function loadErrorPresenter() {
   return errorPresenterPromise;
 }
 
+/** Speculative load only. The first error retries a failed chunk request. */
+export function prepareErrorPresenter(): void {
+  void loadErrorPresenter().catch(() => undefined);
+}
+
 export function useToast() {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error("useToast must be used within ToastProvider");
@@ -669,7 +674,7 @@ function useApiErrorCore(
     // Keep the catalog in its own chunk, but start loading it while the form
     // or action is mounted so a failed submit can mark and focus its fields
     // without waiting for that chunk first.
-    if (preloadPresenter) void loadErrorPresenter().catch(() => undefined);
+    if (preloadPresenter) prepareErrorPresenter();
   }, [preloadPresenter]);
 
   useEffect(() => {
@@ -933,7 +938,10 @@ function moduleRefusalExplanation(
 }
 
 /** Opt-in display path for actions without a form (#2510). */
-export function useApiErrorDisplay(formRef?: RefObject<HTMLElement | null>) {
+export function useApiErrorDisplay(
+  formRef?: RefObject<HTMLElement | null>,
+  { preloadPresenter = true } = {},
+) {
   const toast = useToast();
   const seesLocked = useContext(ModuleBookingAudienceContext);
   const portal = useModulePortal();
@@ -979,7 +987,7 @@ export function useApiErrorDisplay(formRef?: RefObject<HTMLElement | null>) {
     },
     [toast, seesLocked, portal, fixTarget, inOverlay],
   );
-  const core = useApiErrorCore(formRef, deliver, "toast");
+  const core = useApiErrorCore(formRef, deliver, "toast", preloadPresenter);
   /**
    * A failure the screen found itself, without an API answer: copying
    * failed, the file is too large, the browser blocked a window. The text is
@@ -1080,7 +1088,7 @@ export function useApiFormError(
  * `LoadErrorAlert` or pass it to `TenantPage error`. Fields of the
  * surrounding page are neither marked nor focused.
  */
-export function useApiLoadError() {
+export function useApiLoadError({ preloadPresenter = true } = {}) {
   const [error, setError] = useFormError();
   const deliver = useCallback(
     (shown: DisplayedError, locale: AppLocale) =>
@@ -1091,6 +1099,7 @@ export function useApiLoadError() {
     undefined,
     deliver,
     "load",
+    preloadPresenter,
   );
   const clear = useCallback(() => {
     invalidatePendingShow();
