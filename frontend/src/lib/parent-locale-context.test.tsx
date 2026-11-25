@@ -12,6 +12,7 @@ import { fetchParentProfile, updateParentPortalLocale } from "./parent-api";
 import { useSession } from "next-auth/react";
 import { useLocale } from "next-intl";
 import { writeLocaleCookie } from "~/i18n/locales";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { ApiError, unavailableApiError } from "~/lib/api-error";
 
 // A language change refreshes the server tree instead of loading the
@@ -37,7 +38,7 @@ vi.mock("next-intl", () => ({
 const showErrorMock = vi.hoisted(() => vi.fn());
 const errorDisplay = vi.hoisted(() => ({ show: showErrorMock }));
 vi.mock("~/contexts/ToastContext", () => ({
-  useApiErrorDisplay: () => errorDisplay,
+  useApiErrorDisplay: vi.fn(() => errorDisplay),
 }));
 
 // The profile API is exercised through the provider, never hit for real.
@@ -124,6 +125,9 @@ describe("ParentLocaleProvider — anonymous", () => {
 
     expect(screen.getByTestId("auth").textContent).toBe("false");
     expect(screen.getByTestId("locale").textContent).toBe("en");
+    expect(useApiErrorDisplay).toHaveBeenCalledWith(undefined, {
+      preloadPresenter: false,
+    });
     // Anonymous surfaces have no profile to sync.
     expect(mockedFetchProfile).not.toHaveBeenCalled();
   });
