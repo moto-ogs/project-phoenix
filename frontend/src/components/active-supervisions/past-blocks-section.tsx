@@ -66,10 +66,16 @@ interface PastBlocksSectionProps {
    * review stays display only.
    */
   readonly onReopen?: (block: PlannedTimetableInstance) => Promise<void>;
+  /**
+   * App (#8070): Kopf in derselben Stufe wie die Nachbarkarte „Kinder
+   * unterwegs“ und ohne eigenen Abstand nach oben (die Liste setzt ihn).
+   */
+  readonly app?: boolean;
 }
 
 export function PastBlocksSection({
   onReopen,
+  app = false,
 }: Readonly<PastBlocksSectionProps> = {}) {
   const [expanded, setExpanded] = useState(false);
   // Lazy: the list loads when the section opens, and revalidates on every
@@ -112,7 +118,10 @@ export function PastBlocksSection({
       collapsible
       defaultCollapsed
       onCollapsedChange={(collapsed) => setExpanded(!collapsed)}
-      className="mt-5"
+      {...(app
+        ? { titleSize: "sm" as const, titleClassName: "text-gray-700" }
+        : {})}
+      className={app ? undefined : "mt-5"}
       flush
       bodyClassName="compact:p-4 mt-5 border-t border-gray-100 bg-gray-50/50 p-5 max-sm:p-4"
     >
