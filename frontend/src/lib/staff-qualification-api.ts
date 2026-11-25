@@ -9,7 +9,6 @@ import { bffJson } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
 import type {
   QualificationEntryResponse,
-  QualificationOverviewResponse,
   QualificationTypeResponse,
   TraegerProofResponse,
 } from "./contract/staff.generated";
@@ -79,7 +78,7 @@ function status(value: string): QualificationStatus {
   return knownEnum(STATUSES, value) ?? "missing";
 }
 
-export function mapQualificationType(
+function mapQualificationType(
   data: QualificationTypeResponse,
 ): QualificationType {
   return {
@@ -94,9 +93,7 @@ export function mapQualificationType(
   };
 }
 
-export function mapQualificationEntry(
-  data: QualificationEntryResponse,
-): QualificationEntry {
+function mapEntry(data: QualificationEntryResponse): QualificationEntry {
   return {
     staffId: data.staff_id,
     qualificationId: data.qualification_id,
@@ -106,16 +103,6 @@ export function mapQualificationEntry(
     expiresOn: data.expires_on,
     status: status(data.status),
     mandatory: data.mandatory,
-  };
-}
-
-export function mapQualificationOverviewRow(
-  row: QualificationOverviewResponse,
-): QualificationOverviewRow {
-  return {
-    ...mapQualificationEntry(row),
-    firstName: row.first_name,
-    lastName: row.last_name,
   };
 }
 
@@ -185,7 +172,11 @@ class StaffQualificationService {
     const rows = await bffJson("tenant", "GET /api/staff/qualifications", {
       errorMessage: "Nachweise konnten nicht geladen werden",
     });
-    return rows.map(mapQualificationOverviewRow);
+    return rows.map((row) => ({
+      ...mapEntry(row),
+      firstName: row.first_name,
+      lastName: row.last_name,
+    }));
   }
 
   async staffEntries(staffId: string): Promise<QualificationEntry[]> {
@@ -197,7 +188,7 @@ class StaffQualificationService {
         errorMessage: "Nachweise konnten nicht geladen werden",
       },
     );
-    return entries.map(mapQualificationEntry);
+    return entries.map(mapEntry);
   }
 
   async traegerProofs(staffId: string): Promise<TraegerProofStatus[]> {
@@ -220,7 +211,7 @@ class StaffQualificationService {
         errorMessage: "Nachweise konnten nicht geladen werden",
       },
     );
-    return entries.map(mapQualificationEntry);
+    return entries.map(mapEntry);
   }
 }
 

@@ -29,8 +29,8 @@ jedes Abrufs. Ein fehlender Seed lässt den bestehenden Leser nachladen.
 | `database/personal/import` | Rollen für die Importhinweise | Vorlagendownload und Dateivorschau erst auf Aktion |
 | `database/personal/opening-balances` | Statisches Importformular | Vorlagendownload und Dateivorschau erst auf Aktion |
 | `database/planning-tracks` | Planungsspuren, wenn der Betreuungsplan aktiv ist | Schreiben erst auf Aktion |
-| `database/qualification-types` | Qualifikationsarten | Schreiben erst auf Aktion |
-| `database/qualifications` | Übersicht über Qualifikationen | Bearbeitung erst auf Aktion |
+| `database/qualification-types` | Kein Seed | Der GET legt fehlende Standardarten an (`QualificationTypes.ListQualificationTypes`). |
+| `database/qualifications` | Kein Seed | Der Übersichts-GET legt fehlende Standardarten an (`qualificationRecords.load`). |
 | `database/roles` | Rollenliste und freigegebenes Rollendetail bei URL-Auswahl | Kein Detail für ausgeblendete Systemrollen oder IDs außerhalb der Liste |
 | `database/rooms` | Erste Raumliste inklusive Systemräumen | Schreiben erst auf Aktion |
 | `database/shift-types` | Schichtarten mit Nutzung und Kategorien | Schreiben erst auf Aktion |

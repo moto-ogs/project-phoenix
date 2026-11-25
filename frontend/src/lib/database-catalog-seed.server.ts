@@ -45,15 +45,7 @@ import { isHiddenSystemRole } from "~/lib/role-labels";
 import { mapRoomsResponse } from "~/lib/room-helpers";
 import { mapShiftType } from "~/lib/shift-type-helpers";
 import { mapWorkTimeModel } from "~/lib/staff-api";
-import {
-  mapQualificationOverviewRow,
-  mapQualificationType,
-} from "~/lib/staff-qualification-api";
-import {
-  staffKeys,
-  staffQualificationKeys,
-  workTimeModelKeys,
-} from "~/lib/swr/staff-keys";
+import { staffKeys, workTimeModelKeys } from "~/lib/swr/staff-keys";
 import { groupKeys } from "~/lib/swr/groups-keys";
 import { databaseKeys, holidayKeys } from "~/lib/swr/portal-keys";
 import { roomKeys } from "~/lib/swr/rooms-keys";
@@ -273,28 +265,6 @@ const catalogReads = {
           signal,
         })
       ).data.map(mapPermissionResponse),
-  },
-  "qualification-types": {
-    key: staffQualificationKeys.types(),
-    allowed: ({ session }) => hasPermission(session, "staff:stammdaten"),
-    read: async (token, signal) =>
-      (
-        await readContract(staff.routes["GET /api/staff/qualification-types"], {
-          token,
-          signal,
-        })
-      ).data.map(mapQualificationType),
-  },
-  qualifications: {
-    key: staffQualificationKeys.overview(),
-    allowed: ({ session }) => hasPermission(session, "staff:stammdaten"),
-    read: async (token, signal) =>
-      (
-        await readContract(staff.routes["GET /api/staff/qualifications"], {
-          token,
-          signal,
-        })
-      ).data.map(mapQualificationOverviewRow),
   },
   "planning-tracks": {
     key: tenantAdminKeys.planningTracks(),

@@ -212,7 +212,7 @@ export default function StaffDetailContent() {
   // Konto-ID), damit beide Seiten dieselben Felder kennen. Neben einem
   // schmalen Profil lädt er nur für den Reiter „Konto".
   const recordRequest = useSWRAuth<StaffRecordResponse>(
-    canViewRecord && (limitedProfile === null || (profile && !profile.endedOn))
+    limitedProfile === null || (canViewRecord && profile && !profile.endedOn)
       ? staffKeys.recordKey(staffId)
       : null,
     () => staffService.getStaffRecord(staffId),

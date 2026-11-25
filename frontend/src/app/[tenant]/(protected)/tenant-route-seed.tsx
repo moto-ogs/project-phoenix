@@ -34,7 +34,6 @@ export async function TenantRouteSeed({
     })
     .catch(() => null);
   const input = claims ? seed : await seed;
-  if (!input) return children;
 
   // Loaders that resolve dependent keys pass their known initial keys as
   // claims. Navigation can then commit the page while the seed is streaming.

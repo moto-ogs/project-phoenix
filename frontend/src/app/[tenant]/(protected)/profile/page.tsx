@@ -5,13 +5,10 @@ import * as passkeys from "~/lib/contract/auth-passkeys.generated";
 import * as birthdays from "~/lib/contract/birthdays.generated";
 import * as messages from "~/lib/contract/messages.generated";
 import * as notifications from "~/lib/contract/notifications.generated";
-import * as staff from "~/lib/contract/staff.generated";
 import { mapNotificationPreferences } from "~/lib/notification-preferences-api";
 import { mapMessageCountSetting } from "~/lib/parent-messages-api";
 import { readContract, seedRead } from "~/lib/server-seed.server";
-import { mapQualificationEntry } from "~/lib/staff-qualification-api";
 import type { ServerSeedEntry } from "~/lib/swr/server-seed";
-import { staffQualificationKeys } from "~/lib/swr/staff-keys";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import PageContent from "./page-content";
 
@@ -26,19 +23,6 @@ export default async function ProfilePage({
       slug={slug}
       load={({ token, session, tenant }) => {
         const entries: ServerSeedEntry[] = [
-          {
-            key: staffQualificationKeys.own(),
-            value: seedRead(
-              "GET /api/staff/me/qualifications",
-              async (signal) => {
-                const { data } = await readContract(
-                  staff.routes["GET /api/staff/me/qualifications"],
-                  { token, signal },
-                );
-                return data.map(mapQualificationEntry);
-              },
-            ),
-          },
           {
             key: tenantAdminKeys.notificationPreferences("tenant"),
             value: seedRead(

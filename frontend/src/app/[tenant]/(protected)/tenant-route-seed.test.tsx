@@ -67,7 +67,7 @@ async function readSeed(
     route.props as ComponentProps<typeof TenantRouteSeed>,
   );
   return isValidElement<{ seed?: ServerSeed }>(result)
-    ? result.props.seed
+    ? (result.props.seed ?? undefined)
     : undefined;
 }
 

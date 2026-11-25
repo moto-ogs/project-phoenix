@@ -79,10 +79,24 @@ it("does not restore the parallel browser route-prefetch path", () => {
 });
 
 it("keeps known audit-producing and side-effecting GETs out of page and shell seeds", () => {
-  // Read trails, mark-as-read, and deferred staff-document deletion.
+  // Read trails, mark-as-read, and GETs that can change backend state.
   const openingOnly = [
     "GET /api/students/{id}",
+    "GET /api/students/day-log",
+    "GET /api/statistics/report",
+    "GET /api/week-protocols/{protocolId}",
+    "GET /api/enrollment/admin/requests/{id}/",
+    "GET /api/messages/threads/{threadId}",
+    "GET /api/staff-messages/threads/{threadID}",
     "GET /api/staff/documents-directory",
+    "GET /api/staff/{id}/qualifications",
+    "GET /api/staff/me/qualifications",
+    "GET /api/staff/qualifications",
+    "GET /api/staff/qualification-types",
+    "GET /api/staff/{id}/stammdaten",
+    "GET /api/staff/{id}/stammdaten/bank-steuer",
+    "GET /parent/me/messages/children/{studentId}",
+    "GET /parent/me/messages/group-threads/{groupThreadId}",
     "GET /parent/me/documents",
     "GET /parent/me/documents/contracts",
     "GET /traeger/master-data/",

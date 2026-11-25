@@ -13,7 +13,7 @@ import CategoriesPage from "~/app/[tenant]/(protected)/database/categories/page-
 import PlanningTracksPage from "~/app/[tenant]/(protected)/database/planning-tracks/page-content";
 import ShiftTypesPage from "~/app/[tenant]/(protected)/database/shift-types/page-content";
 import AbsenceTypesPage from "~/app/[tenant]/(protected)/database/absence-types/page-content";
-import QualificationTypesPage from "~/app/[tenant]/(protected)/database/qualification-types/page-content";
+import QualificationTypesPage from "~/app/[tenant]/(protected)/database/qualification-types/page";
 import WorkTimeModelsPage from "~/app/[tenant]/(protected)/database/work-time-models/page-content";
 
 vi.unmock("swr");

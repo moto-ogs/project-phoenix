@@ -9,8 +9,7 @@ names below are inputs, not authorization.
 
 **Seeded** means the server runs the same generated GET and puts its
 browser projection under the existing reader key. A failed seed leaves the
-browser's original error and retry path in charge. **Open** means not
-converted in this slice; it does not mean ineligible. **Deferred** means an
+browser's original error and retry path in charge. **Deferred** means an
 opening, audit, side effect, write draft, later interaction or download makes
 speculative reads wrong. Nothing below changes #8085's supervision cache or
 #8082's protected-tree lifecycle.
@@ -61,13 +60,13 @@ speculative reads wrong. Nothing below changes #8085's supervision cache or
 | `@parentAttention/default.tsx` | Empty parallel-route fallback. | No page resource. |
 | `@parentAttention/(.)parent-attention/[studentId]` | Overlay reads selected child's data only with the local card-attention snapshot. Parent thread details mark the shown messages read; requests only open when the snapshot says they are pending. | **Deferred**: no server substitute for the clicked card and no speculative mark-read. |
 | `/payroll` | Status, latest dispatch, payroll rules and missing-target coverage for current month; Zeiterfassung and `config:manage`. | **Seeded** status, latest dispatch, rules, target coverage and SFTP status only for the selected SFTP channel with export authority. Preview, export and transfer stay explicit. |
-| `/profile` | Own auth profile is already in session; preference/device/passkey lists, own qualifications, birthday and parent message-count preferences use account keys and feature gates. | **Seeded** the own preferences, qualifications, birthday switch, passkeys, trusted devices and message-count setting under its feature and permission gate. Enrollment, revocation, push/device inspection and writes stay client-owned. |
+| `/profile` | Own auth profile is already in session; preference/device/passkey lists, own qualifications, birthday and parent message-count preferences use account keys and feature gates. | **Seeded** the own preferences, birthday switch, passkeys, trusted devices and message-count setting under its feature and permission gate. The own qualifications GET can insert standard types and stays on the existing browser path, as do enrollment, revocation, push/device inspection and writes. |
 | `/reminders` | Reminders from the same users:read shell slot as the bell. | Already shell-seeded; keep timer, focus and SSE policy. |
 | `/rooms` | Room list (includes system rooms) and dashboard counts in detailed mode; `rooms:read` and `groups:read`, respectively. Filters apply to the existing list. | **Seeded** list and analytics under separate keys. |
 | `/rooms/[id]` | Room and room history form one reader; history uses the school retention window and has its own disabled/refused state; room plan has its own tab/date/window. | **Seeded** room with its own history and explicit plan window. See the planning inventory for the room roster and action-dependent reads. |
 | `/rooms/unterwegs` | Transit roster with optional day status from validated return URL; detailed presence. Check-in destinations depend on staff and target mode. | **Seeded** the slim transit roster with exact referrer filters. The full response can log a health read and is not needed here. |
 | `/settings` | Role-projected settings schema; selected tab from URL. | **Seeded** the role-projected schema and login image metadata when the resolved initial tab is Personalisierung. The home-policy editor is a write draft; secret reveal and writes stay explicit. |
-| `/staff` | Staff + live supervision projection, former staff, document-directory, pending absences and time accounts based on tab and roles. | **Seeded** the role-projected staff directory, applicable former staff and document directory, and the selected time-account month. See the planning inventory for dependent reads. |
+| `/staff` | Staff + live supervision projection, former staff, document-directory, pending absences and time accounts based on tab and roles. | **Seeded** the role-projected staff directory, applicable former staff and the selected time-account month. The documents directory GET retries queued file deletions, so it stays at the intended opening. See the planning inventory for dependent reads. |
 | `/staff/[id]` | Profile/record selected by staff ID, role and tab; document/financial and attendance readers are differently scoped. | **Seeded** full or reduced identity as required by the tab and rights. See the planning inventory for dependent/opening reads. |
 | `/statistics` | Dated 30-day initial report, group/class catalog and optional report sections; per-role and group reach. | **Deferred**: statistics report records audit (see `ErrStatisticsAuditFailed` in Student Presence); exports separate. |
 | `/students/[id]` | Composite child detail, per-child access flags, plus gated arrival/pickup, absences, group options and tab-specific data. | **Seeded** separate arrival, pickup, dated statuses, partial absences and the open withdrawal. The Kindakte GET may write a health-audit entry and remains at its current opening. |
