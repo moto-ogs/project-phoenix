@@ -201,8 +201,8 @@ export function AppTenantHead({
         </div>
         {statusLine != null && !statsInline && (
           <AppHeadStatsContext.Provider value={true}>
-            {/* Chips beginnen an der Titelkante (ohne Pfeil 16 px, nach
-                dem Pfeil 52 px vom Kartenrand). */}
+            {/* Chips beginnen auf jeder Seite 16 px vom Kartenrand, wie der
+                Inhalt der Karten darunter; auch mit Zurück-Pfeil. */}
             {/* Scrollt die Zeile seitlich, erreicht man sie auch per Tastatur
                 (axe `scrollable-region-focusable`). */}
             <div
@@ -213,7 +213,7 @@ export function AppTenantHead({
               tabIndex={statsScroll ? 0 : undefined}
               className={cn(
                 "-mx-2 [scrollbar-width:none] overflow-x-auto pr-2 pb-1.5 text-sm text-gray-600 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none",
-                backLink ? "pl-13" : "pl-4",
+                "pl-4",
               )}
             >
               {statusLine}
