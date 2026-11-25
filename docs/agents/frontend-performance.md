@@ -121,7 +121,9 @@ Page traversals, in-page actions and device/input variants have separate budget 
   page seed starts on navigation; valid SWR data can render immediately
   without waiting for it. Where a route needs a request-bound payload,
   a route-local stale time may reuse that payload in the same document;
-  it does not extend the seed's validity or change SWR revalidation.
+  it does not extend the seed's validity or change when its data is withdrawn.
+  Cached mount revalidation runs after the browser has had a paint opportunity.
+  Missing data and readers that opt out of deduplication still load at once.
   The #8080 build instead started full route prefetch
   on keyboard focus or after an 80 ms hover hold. The direct click has no
   dwell. Compare like inputs, not click against keyboard.
