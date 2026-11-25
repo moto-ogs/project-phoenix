@@ -33,6 +33,7 @@ import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
   TagesplanApp,
   TagesplanDayBar,
+  tagesplanAppStats,
   tagesplanAppTitle,
 } from "~/components/timetable/tagesplan-app";
 import { useDeviceContext } from "~/lib/device-context";
@@ -496,7 +497,7 @@ export function TagesplanView() {
   const weekendOpen = useWeekendFollowsFriday();
   const now = useMinuteClock();
   // App (Telefon, iPad): eigene Tagesliste, Desktop unverändert (#8070).
-  const { isApp } = useDeviceContext();
+  const { isApp, isSplit } = useDeviceContext();
 
   const today = useBerlinToday();
   const dayParam = searchParams.get("d");
@@ -665,28 +666,30 @@ export function TagesplanView() {
       : listLoadError;
 
   if (isApp) {
-    // Der Tag steht im Titel; die Statuszeile trägt nur die eingeschränkte
-    // Sicht. Der Tageswechsel klebt als Leiste unter dem Kopf.
+    // Der Titel nennt den Tag in Worten („Heute“), das Datum steht nur in
+    // der Tagesleiste. Die Chips zählen die Blöcke des Tages. Am iPad quer
+    // steht die Leiste über der Listenspalte (in `TagesplanApp`), damit sie
+    // die Detailspalte nie verdeckt; ohne Blöcke bleibt sie im Kopf.
+    const showMine = overviewScope === "all_staff";
+    const appStats = tagesplanAppStats(instances ?? [], showMine, scopeHint);
+    const dayBar = (
+      <TagesplanDayBar
+        day={day}
+        today={today}
+        onSelect={goToDay}
+        onPrevious={() => goToDay(previousCareDayISO(day, weekendOpen, today))}
+        onNext={() => goToDay(nextCareDayISO(day, weekendOpen, today))}
+      />
+    );
+    const barInList = isSplit && groups.length > 0;
     return (
       <TenantPage
         title={tagesplanAppTitle(day, today)}
         info={TAGESPLAN_INFO}
         stats={
-          scopeHint ? (
-            <TenantPageStats items={[{ label: scopeHint }]} />
-          ) : undefined
+          appStats.length > 0 ? <TenantPageStats items={appStats} /> : undefined
         }
-        searchSlot={
-          <TagesplanDayBar
-            day={day}
-            today={today}
-            onSelect={goToDay}
-            onPrevious={() =>
-              goToDay(previousCareDayISO(day, weekendOpen, today))
-            }
-            onNext={() => goToDay(nextCareDayISO(day, weekendOpen, today))}
-          />
-        }
+        searchSlot={barInList ? undefined : dayBar}
         searchSlotHeight="natural"
         loading={showSkeleton}
         error={pageError}
@@ -711,10 +714,11 @@ export function TagesplanView() {
           now={now}
           groups={groups}
           nowIndex={nowIndex}
-          showMine={overviewScope === "all_staff"}
+          showMine={showMine}
           startBusyId={startBusyId}
           onOpenSession={openSession}
           onStart={(entry) => void handleStart(entry)}
+          dayBar={dayBar}
         />
       </TenantPage>
     );
