@@ -1731,6 +1731,17 @@ export async function updateOfferingChangeRequest(
 }
 
 /** Returns the school's courses with this child's state. */
+/** „Heute anders“ eines Kindes (#7671): was heute für das Kind anders ist. */
+export async function getChildDayChanges(
+  studentId: string,
+): Promise<parentMeContract.ChildDayChangesResponse> {
+  return parentCall(
+    bffJson("parent", "GET /parent/me/children/{studentId}/day-changes", {
+      params: { studentId },
+    }),
+  );
+}
+
 export async function getChildCourses(
   studentId: string,
 ): Promise<parentMeContract.CoursesResponse> {

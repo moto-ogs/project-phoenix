@@ -98,6 +98,9 @@ export const parentKeys = {
     `parent-child-${encodeURIComponent(studentId)}-status-pickup-change-requests-${day}`,
   pickupChangeRequestsFamily: (studentId: string) =>
     `parent-child-${encodeURIComponent(studentId)}-status-pickup-change-requests-`,
+  /** „Heute anders“ of the child on the Berlin `day` (#7671). */
+  dayChanges: (studentId: string, day: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-status-day-changes-${day}`,
   careSchedule: (studentId: string, day: string) =>
     `parent-child-${encodeURIComponent(studentId)}-status-care-schedule-${day}`,
   careOfferings: (studentId: string) =>

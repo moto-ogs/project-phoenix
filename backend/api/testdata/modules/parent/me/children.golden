@@ -11,6 +11,7 @@ GET /parent/me/children/{studentId}/care-offerings/catalog -> eltern_app  (#4895
 GET /parent/me/children/{studentId}/care-schedule -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
 GET /parent/me/children/{studentId}/consents -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
 GET /parent/me/children/{studentId}/courses -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
+GET /parent/me/children/{studentId}/day-changes -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
 GET /parent/me/children/{studentId}/excused-requests -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
 GET /parent/me/children/{studentId}/features -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
 GET /parent/me/children/{studentId}/guardians -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)

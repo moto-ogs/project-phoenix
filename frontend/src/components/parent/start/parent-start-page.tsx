@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Skeleton } from "~/components/ui/skeleton";
 import { ChildDayCard } from "~/components/parent/child/child-day-card";
+import { ChildDayChanges } from "~/components/parent/child/child-day-changes";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import {
   NewsDetailModal,
@@ -292,6 +293,12 @@ function StartChildCard({
         today={today}
         features={features}
         statusAside={pickupAside}
+        dayChanges={
+          <ChildDayChanges
+            studentId={child.student_id}
+            firstName={child.first_name}
+          />
+        }
         actionDisplay="compact"
       />
     </ParentChildCareTermScope>

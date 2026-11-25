@@ -635,6 +635,7 @@ export const portalRoutes = {
     parentMe["GET /parent/me/children/{studentId}/care-schedule"],
     parentMe["GET /parent/me/children/{studentId}/consents"],
     parentMe["GET /parent/me/children/{studentId}/courses"],
+    parentMe["GET /parent/me/children/{studentId}/day-changes"],
     parentMe["GET /parent/me/children/{studentId}/excused-requests"],
     parentMe["GET /parent/me/children/{studentId}/features"],
     parentMe["GET /parent/me/children/{studentId}/guardians"],

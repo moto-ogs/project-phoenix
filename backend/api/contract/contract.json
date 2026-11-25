@@ -9750,6 +9750,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/parent/me/children/{studentId}/day-changes",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ChildDayChangesResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/parent/me/children/{studentId}/excused-requests",
       "portals": [
         "parent"
@@ -25652,6 +25663,44 @@
       "values": [
         "organization",
         "school"
+      ]
+    },
+    {
+      "name": "ChildDayChangeKind",
+      "values": [
+        "activity_cancelled",
+        "activity_lead_changed",
+        "activity_reinstated",
+        "activity_room_changed",
+        "child_absent",
+        "child_goes_alone",
+        "child_pickup_changed",
+        "class_dismissal_changed",
+        "class_trip",
+        "closing_day"
+      ]
+    },
+    {
+      "name": "ChildDaySource",
+      "values": [
+        "activities",
+        "children",
+        "classes",
+        "closing_days"
+      ]
+    },
+    {
+      "name": "ChildDaySourceState",
+      "values": [
+        "failed",
+        "loaded"
+      ]
+    },
+    {
+      "name": "ChildDayStatus",
+      "values": [
+        "excused",
+        "sick"
       ]
     },
     {
@@ -44999,6 +45048,157 @@
       ]
     },
     {
+      "name": "ChildDayChangeEntry",
+      "go_type": "parent.ChildDayChangeEntry",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "enum",
+            "ref": "ChildDayChangeKind"
+          }
+        },
+        {
+          "name": "all_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "since",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "until",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "starts_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ends_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "entered_by_you",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "child_status",
+          "schema": {
+            "kind": "enum",
+            "nullable": true,
+            "ref": "ChildDayStatus"
+          }
+        },
+        {
+          "name": "pickup_time",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "activity_title",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "room_name",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "previous_room_name",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "closing_name",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "closing_traeger",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "class_name",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "class_time",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildDayChangesResponse",
+      "go_type": "parent.ChildDayChangesResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "sources",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ChildDaySourceStatus"
+            }
+          }
+        },
+        {
+          "name": "entries",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ChildDayChangeEntry"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "ChildDayRequest",
       "go_type": "mealplan.ChildDayRequest",
       "request": true,
@@ -45045,6 +45245,26 @@
           "name": "cancel_until",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildDaySourceStatus",
+      "go_type": "parent.ChildDaySourceStatus",
+      "fields": [
+        {
+          "name": "source",
+          "schema": {
+            "kind": "enum",
+            "ref": "ChildDaySource"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "enum",
+            "ref": "ChildDaySourceState"
           }
         }
       ]
