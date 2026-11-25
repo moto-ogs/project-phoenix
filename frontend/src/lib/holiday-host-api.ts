@@ -398,15 +398,38 @@ export interface HolidayGuestBadge {
  * Die Hinweise aller Feriengäste, die die Schule heute betreut (#5630).
  * Vor und nach ihrer Woche stehen Gäste in keiner Liste und haben keinen.
  */
-export async function fetchHolidayGuestBadges(): Promise<HolidayGuestBadge[]> {
+export function holidayGuestIds(
+  students: readonly {
+    readonly id: string;
+    readonly school_class?: string | null;
+  }[],
+): string[] {
+  return students
+    .filter((student) => student.school_class === HOLIDAY_GUEST_SCHOOL_CLASS)
+    .map((student) => student.id);
+}
+
+export function mapHolidayGuestBadges(
+  badges: readonly wire.HolidayGuestBadge[],
+  studentIds: readonly string[],
+): HolidayGuestBadge[] {
+  const visible = new Set(studentIds);
+  return badges
+    .filter((badge) => visible.has(badge.student_id))
+    .map((badge) => ({
+      studentId: badge.student_id,
+      schoolName: badge.school_name,
+    }));
+}
+
+export async function fetchHolidayGuestBadges(
+  studentIds: readonly string[],
+): Promise<HolidayGuestBadge[]> {
   const badges = await bffJson("tenant", "GET /api/holiday-guests/", {
     errorMessage:
       "Die Hinweise zu den Feriengästen konnten nicht geladen werden",
   });
-  return badges.map((badge) => ({
-    studentId: badge.student_id,
-    schoolName: badge.school_name,
-  }));
+  return mapHolidayGuestBadges(badges, studentIds);
 }
 
 /** Was die Wahl der Feriengruppe bewirkt hat. */

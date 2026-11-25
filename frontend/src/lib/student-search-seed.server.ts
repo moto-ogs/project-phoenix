@@ -4,6 +4,8 @@ import * as groupsContract from "~/lib/contract/groups.generated";
 import * as roomsContract from "~/lib/contract/rooms.generated";
 import * as studentsContract from "~/lib/contract/students.generated";
 import { berlinTodayISO } from "~/lib/date-helpers";
+import { holidayGuestBadgeSeed } from "~/lib/holiday-guest-badge-seed.server";
+import { holidayGuestIds } from "~/lib/holiday-host-api";
 import { mapGroupsResponse } from "~/lib/group-helpers";
 import { mapRoomsResponse } from "~/lib/room-helpers";
 import { readContract, seedOf, seedRead } from "~/lib/server-seed.server";
@@ -88,6 +90,7 @@ export async function loadStudentSearchSeed(
   const requiresAnswerAccess =
     answer !== "" && hasPermission(session, "users:read");
   let serverAnswerFilter = "";
+  let answerChildren: ReadonlySet<string> | null = null;
   if (hasPermission(session, "users:read")) {
     const options = seedRead("studentEnrollmentAnswers", async (signal) =>
       (
@@ -113,38 +116,44 @@ export async function loadStudentSearchSeed(
       // Never release a broad list in place of a filter awaiting approval.
       // The regular reader can handle refusal and retry, including a 403.
       if (!permitted) return seedOf(snapshot, entries, builtAt);
-      if (!enrollmentAnswerChildrenOf(permitted, answer))
-        serverAnswerFilter = answer;
+      answerChildren = enrollmentAnswerChildrenOf(permitted, answer);
+      if (!answerChildren) serverAnswerFilter = answer;
     }
   }
   const input = { ...initial, enrollmentAnswer: serverAnswerFilter };
-  entries.push({
-    key: studentKeys.search(input),
-    render: true,
-    value: seedRead("studentSearch", (signal) =>
-      fetchStudentSearch(
-        buildStudentSearchFilters(input),
-        input.date,
-        input.isToday,
-        async (filters) => {
-          const read = await contractGet(
-            studentsContract.routes["GET /api/students/"],
-            {
-              token,
-              signal,
-              query: { ...studentQuery(filters), view: "slim" },
-            },
-          );
-          if (!read.ok) throw read.error.cause;
-          return {
-            students: read.value.data.map((row) =>
-              mapStudentListRow(row, "slim"),
-            ),
-            pagination: read.value.pagination,
-          };
-        },
-      ),
+  const search = seedRead("studentSearch", (signal) =>
+    fetchStudentSearch(
+      buildStudentSearchFilters(input),
+      input.date,
+      input.isToday,
+      async (filters) => {
+        const read = await contractGet(
+          studentsContract.routes["GET /api/students/"],
+          {
+            token,
+            signal,
+            query: { ...studentQuery(filters), view: "slim" },
+          },
+        );
+        if (!read.ok) throw read.error.cause;
+        return {
+          students: read.value.data.map((row) =>
+            mapStudentListRow(row, "slim"),
+          ),
+          pagination: read.value.pagination,
+        };
+      },
     ),
-  });
+  );
+  entries.push({ key: studentKeys.search(input), render: true, value: search });
+  if (hasPermission(session, "students:read")) {
+    const result = await search;
+    const rows = result?.students ?? [];
+    const visible = answerChildren
+      ? rows.filter((student) => answerChildren.has(student.id))
+      : rows;
+    const guestIds = holidayGuestIds(visible);
+    if (guestIds.length) entries.push(holidayGuestBadgeSeed(token, guestIds));
+  }
   return seedOf(snapshot, entries, builtAt);
 }

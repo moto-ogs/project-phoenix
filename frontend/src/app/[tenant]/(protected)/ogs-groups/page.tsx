@@ -7,6 +7,9 @@ import {
   hasPermission,
   isCaregiver,
 } from "~/lib/auth-utils";
+import { holidayGuestBadgeSeed } from "~/lib/holiday-guest-badge-seed.server";
+import { holidayGuestIds } from "~/lib/holiday-host-api";
+import type { ServerSeedEntry } from "~/lib/swr/server-seed";
 import { isPositiveInt64Id } from "~/lib/compare-ids";
 import { mapOgsGroupLiveResponse } from "~/lib/ogs-group-live-api";
 import { groupKeys } from "~/lib/swr/groups-keys";
@@ -25,7 +28,8 @@ export default async function OGSGroupPage({
   return (
     <TenantRouteSeed
       slug={tenant}
-      load={({ token, session, tenant: school }) => {
+      claims={group ? [groupKeys.live(group)] : []}
+      load={async ({ token, session, tenant: school }) => {
         if (
           !group ||
           !isPositiveInt64Id(group) ||
@@ -41,23 +45,30 @@ export default async function OGSGroupPage({
           )
         )
           return [];
-        // A missing group is not a default on this route: a browser may have
-        // an account-scoped browser selection that the server cannot see.
-        return [
-          {
-            key: groupKeys.live(group),
-            value: seedRead(
-              "GET /api/students/ogs-group-live",
-              async (signal) => {
-                const { data } = await readContract(
-                  contract.routes["GET /api/students/ogs-group-live"],
-                  { token, signal, query: { group_id: group } },
-                );
-                return mapOgsGroupLiveResponse(data);
-              },
-            ),
+        // Never infer a group from a URL without an ID: the browser may have
+        // an account-local selection the server cannot see.
+        const live = seedRead(
+          "GET /api/students/ogs-group-live",
+          async (signal) => {
+            const { data } = await readContract(
+              contract.routes["GET /api/students/ogs-group-live"],
+              { token, signal, query: { group_id: group } },
+            );
+            return mapOgsGroupLiveResponse(data);
           },
+        );
+        const entries: ServerSeedEntry[] = [
+          { key: groupKeys.live(group), value: live },
         ];
+        if (hasPermission(session, "students:read")) {
+          const roster = await live;
+          if (roster?.groupId === group) {
+            const guestIds = holidayGuestIds(roster.students);
+            if (guestIds.length)
+              entries.push(holidayGuestBadgeSeed(token, guestIds));
+          }
+        }
+        return entries;
       }}
     >
       <PageContent />

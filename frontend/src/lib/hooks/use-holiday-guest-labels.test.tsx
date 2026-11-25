@@ -1,11 +1,14 @@
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ useSWRAuth: vi.fn() }));
+const mocks = vi.hoisted(() => ({ useSWRAuth: vi.fn(), fetchBadges: vi.fn() }));
 
 vi.mock("~/lib/swr", () => mocks);
 
-import { fetchHolidayGuestBadges } from "~/lib/holiday-host-api";
+vi.mock("~/lib/holiday-host-api", async (original) => ({
+  ...(await original<typeof import("~/lib/holiday-host-api")>()),
+  fetchHolidayGuestBadges: mocks.fetchBadges,
+}));
 import {
   type HolidayGuestCandidate,
   useHolidayGuestLabels,
@@ -17,6 +20,7 @@ const lia = { id: "7", school_class: "2a" };
 
 describe("useHolidayGuestLabels (#5630)", () => {
   beforeEach(() => {
+    mocks.fetchBadges.mockReset();
     mocks.useSWRAuth.mockReset().mockReturnValue({ data: undefined });
   });
 
@@ -24,16 +28,20 @@ describe("useHolidayGuestLabels (#5630)", () => {
     renderHook(() => useHolidayGuestLabels([lia]));
     expect(mocks.useSWRAuth).toHaveBeenLastCalledWith(
       null,
-      fetchHolidayGuestBadges,
+      expect.any(Function),
       expect.anything(),
     );
 
     renderHook(() => useHolidayGuestLabels([lia, ben]));
     expect(mocks.useSWRAuth).toHaveBeenLastCalledWith(
       "holiday-guest-badges:5",
-      fetchHolidayGuestBadges,
+      expect.any(Function),
       expect.anything(),
     );
+    const fetcher = mocks.useSWRAuth.mock.lastCall?.[1];
+    expect(fetcher).toBeTypeOf("function");
+    fetcher();
+    expect(mocks.fetchBadges).toHaveBeenCalledExactlyOnceWith(["5"]);
   });
 
   it("asks again when a live refresh brings another holiday guest (review #5642)", () => {

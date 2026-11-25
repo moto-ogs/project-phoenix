@@ -33,6 +33,7 @@ interface Target {
   from: string;
   ready(page: Page): Locator;
   link(page: Page): Locator;
+  fromReady?(page: Page): Locator;
   prepare?(page: Page): Promise<void>;
   revealLink?(page: Page): Promise<void>;
   warmDeparture?(page: Page): Promise<void>;
@@ -283,6 +284,9 @@ async function measure(browser: Browser, target: Target, mode: Mode) {
       }
       await page.waitForURL((url) => url.pathname === target.from);
       await page.waitForLoadState("load");
+      if (target.fromReady) {
+        await expect(target.fromReady(page)).toBeVisible({ timeout: 15_000 });
+      }
       await recorder.waitForQuiet(quiet);
       await target.revealLink?.(page);
       await expect(target.link(page)).toBeVisible();

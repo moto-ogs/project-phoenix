@@ -66,8 +66,10 @@ async function readSeed(
   const result = await TenantRouteSeed(
     route.props as ComponentProps<typeof TenantRouteSeed>,
   );
-  return isValidElement<{ seed?: ServerSeed }>(result)
-    ? (result.props.seed ?? undefined)
+  return isValidElement<{ seed?: ServerSeed | Promise<ServerSeed | null> }>(
+    result,
+  )
+    ? ((await result.props.seed) ?? undefined)
     : undefined;
 }
 

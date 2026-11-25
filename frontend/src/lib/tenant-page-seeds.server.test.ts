@@ -2,6 +2,7 @@ import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadTimeTrackingSeed } from "~/app/[tenant]/(protected)/time-tracking/page-seed.server";
 import { buildSupervisionDashboardWire } from "~/test/fixtures/supervision-dashboard";
+import { buildBackendStudent } from "~/test/fixtures/students";
 import { testClockDay } from "~/test/clock";
 import { loadActiveSupervisionsSeed } from "./active-supervisions-seed.server";
 import { loadHomeSeed } from "./home-seed.server";
@@ -10,6 +11,7 @@ import { loadStudentSearchSeed } from "./student-search-seed.server";
 import { initialStudentSearch } from "./student-search-url";
 import type { TenantInfo } from "./tenant-api";
 import {
+  holidayKeys,
   homeKeys,
   homeLayoutKeys,
   studentKeys,
@@ -216,6 +218,38 @@ describe("first tenant page reads", () => {
     expect(
       source.send.mock.calls.every(([, token]) => token === "tenant-a-token"),
     ).toBe(true);
+  });
+
+  it("seeds holiday badge data only for guest IDs in the confirmed student list", async () => {
+    authenticate(["students:read"]);
+    source.response.mockImplementation((url) => {
+      if (url.pathname === "/api/students/") {
+        return Response.json({
+          status: "success",
+          data: [buildBackendStudent({ id: "11", school_class: "Feriengast" })],
+          pagination: {
+            current_page: 1,
+            page_size: 1000,
+            total_pages: 1,
+            total_records: 1,
+          },
+        });
+      }
+      if (url.pathname === "/api/holiday-guests/") {
+        return success([
+          { student_id: "11", school_name: "Heimatschule" },
+          { student_id: "12", school_name: "Andere Schule" },
+        ]);
+      }
+      return success([]);
+    });
+    const seed = await loadStudentSearchSeed("school-a", new URLSearchParams());
+
+    await expect(
+      seed?.entries.find(
+        (entry) => entry.key === holidayKeys.guestBadges(["11"]),
+      )?.value,
+    ).resolves.toEqual([{ studentId: "11", schoolName: "Heimatschule" }]);
   });
 
   it("never asks for an unfiltered child list while enrollment-answer access is refused", async () => {

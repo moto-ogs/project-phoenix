@@ -13,6 +13,7 @@ import { useCallback, useMemo } from "react";
 
 import {
   fetchHolidayGuestBadges,
+  holidayGuestIds,
   HOLIDAY_GUEST_SCHOOL_CLASS,
   holidayGuestLabel,
 } from "~/lib/holiday-host-api";
@@ -44,16 +45,14 @@ export interface HolidayGuestCandidate {
 export function useHolidayGuestLabels(
   students: readonly HolidayGuestCandidate[],
 ): (student: HolidayGuestCandidate) => string | undefined {
-  const guestIds = students
-    .filter((student) => student.school_class === HOLIDAY_GUEST_SCHOOL_CLASS)
-    .map((student) => student.id);
+  const guestIds = holidayGuestIds(students);
   const hasGuest = guestIds.length > 0;
   // Scheitert das Laden (etwa ohne das Recht der Kinderliste), bleibt die
   // Zeile bei „Feriengast“ wie vor #5630: die Liste selbst ist geladen, der
   // Hinweis ergänzt sie nur, eine eigene Fehlermeldung hülfe niemandem.
   const { data } = useSWRAuth(
     hasGuest ? holidayKeys.guestBadges(guestIds) : null,
-    fetchHolidayGuestBadges,
+    () => fetchHolidayGuestBadges(guestIds),
     HOLIDAY_GUEST_BADGES_OPTIONS,
   );
   const schools = useMemo(
