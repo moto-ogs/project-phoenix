@@ -18,12 +18,7 @@ export const HOVER_PREFETCH_DELAY_MS = 80;
 
 type IntentPrefetchProps = Pick<
   ComponentProps<"a">,
-  | "target"
-  | "onPointerEnter"
-  | "onPointerLeave"
-  | "onFocus"
-  | "onTouchStart"
-  | "onBlur"
+  "target" | "onPointerEnter" | "onPointerLeave" | "onFocus" | "onBlur"
 > & {
   readonly href: string;
   readonly prefetch?: boolean | "auto" | null;
@@ -37,7 +32,6 @@ export function useLinkIntentPrefetch({
   onPointerEnter,
   onPointerLeave,
   onFocus,
-  onTouchStart,
   onBlur,
 }: IntentPrefetchProps) {
   const [intent, setIntent] = useState({ href, target, prefetch: false });
@@ -68,23 +62,13 @@ export function useLinkIntentPrefetch({
     onPointerEnter: (event: PointerEvent<HTMLAnchorElement>) => {
       onPointerEnter?.(event);
       if (event.defaultPrevented || !canPrefetch) return;
-      if (prefetch) return;
-      if (event.pointerType === "mouse") {
-        cancelHover();
-        hoverTimer.current = setTimeout(startPrefetch, HOVER_PREFETCH_DELAY_MS);
-      } else {
-        startPrefetch();
-      }
+      if (prefetch || event.pointerType === "touch") return;
+      cancelHover();
+      hoverTimer.current = setTimeout(startPrefetch, HOVER_PREFETCH_DELAY_MS);
     },
     onPointerLeave: (event: PointerEvent<HTMLAnchorElement>) => {
       onPointerLeave?.(event);
       cancelHover();
-    },
-    onTouchStart: (event: React.TouchEvent<HTMLAnchorElement>) => {
-      onTouchStart?.(event);
-      if (!event.defaultPrevented && canPrefetch) {
-        startPrefetch();
-      }
     },
     onBlur: (event: FocusEvent<HTMLAnchorElement>) => {
       onBlur?.(event);

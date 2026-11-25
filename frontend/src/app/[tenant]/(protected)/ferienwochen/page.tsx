@@ -16,6 +16,7 @@ export default async function FerienwochenPage({
   return (
     <TenantRouteSeed
       slug={tenant}
+      claims={[holidayKeys.hostedWeeks()]}
       load={async ({ token, session }) => {
         if (!hasPermission(session, "config:read")) return [];
         const hosted = seedRead("hostedHolidayWeeks", async (signal) => {

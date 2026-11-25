@@ -26,12 +26,17 @@ export default async function CalendarPeriodsPage({
   params: Promise<{ tenant: string }>;
 }) {
   const { tenant } = await params;
+  const today = berlinTodayISO();
   return (
     <TenantRouteSeed
       slug={tenant}
+      claims={[
+        timetableKeys.schoolVacationHints(today),
+        closingDayKeys.list(),
+        databaseKeys.calendarPeriods(),
+      ]}
       load={async ({ token, session }) => {
         if (!hasPermission(session, "schedules:manage")) return [];
-        const today = berlinTodayISO();
         const entries: ServerSeedEntry[] = [
           {
             key: timetableKeys.schoolVacationHints(today),

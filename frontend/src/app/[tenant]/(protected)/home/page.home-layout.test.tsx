@@ -156,6 +156,7 @@ vi.mock("~/lib/dashboard-helpers", () => ({
 
 vi.mock("~/lib/swr/hooks", () => ({
   useSWRAuth: vi.fn(),
+  useOpeningRead: () => ({ data: undefined, error: undefined }),
   useScopedSWRKey: () => null,
 }));
 vi.mock("~/lib/birthdays-api", () => ({

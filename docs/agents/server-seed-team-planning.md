@@ -26,8 +26,7 @@ The route seed owns `/ogs-groups?group=<positive-id>`; links no longer
 start a separate BFF preload. With no explicit group, the browser selects
 from the shell's confirmed groups and its local preference.
 
-#8105 touches the client bodies for `rooms/[id]` (supervision refresh after
-writes) and `staff` (time-account key invalidation). When integrating after
-#8105, keep those edits in the corresponding `page-content.tsx`; the new
-server wrappers do not replace them. Do not move Group Live into a second
-navigation cache.
+#8105 moved personal live sessions into the shell cache. The supervision
+page now seeds only planned reads in its personal view, and the room pages
+keep the shared refresh after writes. Child search takes group choices from
+the same shell cache. Group Live is a page read, not a second navigation cache.

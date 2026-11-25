@@ -11,28 +11,29 @@ type TenantContext = NonNullable<
 export async function TenantRouteSeed({
   slug,
   module,
+  claims,
   load,
   children,
 }: {
   slug: string;
   module?: ModuleScope;
+  claims?: readonly string[];
   load: (
     context: TenantContext,
   ) => readonly ServerSeedEntry[] | Promise<readonly ServerSeedEntry[]>;
   children: ReactNode;
 }) {
   const builtAt = Date.now();
-  const context = await readTenantPageContext(slug, module).catch(() => null);
-  if (!context) return children;
+  const seed = readTenantPageContext(slug, module)
+    .then(async (context) =>
+      context ? seedOf(context.snapshot, await load(context), builtAt) : null,
+    )
+    .catch(() => null);
 
-  const entries = await load(context);
-  const seed = seedOf(context.snapshot, entries, builtAt);
-  if (entries.length === 0 || !seed) return children;
-
-  // Offer the exact keys before the client readers mount, even when the
-  // page's individual response promises are still in flight.
+  // Loaders that resolve dependent keys pass their known initial keys as
+  // claims. Navigation can then commit the page while the seed is streaming.
   return (
-    <SWRServerSeed seed={seed} render>
+    <SWRServerSeed seed={claims ? seed : await seed} claims={claims} render>
       {children}
     </SWRServerSeed>
   );

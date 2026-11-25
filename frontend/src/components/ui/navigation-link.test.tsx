@@ -201,6 +201,24 @@ describe.each([
     expect(currentPrefetch()).toBe(true);
   });
 
+  it("does not prefetch a link touched during a scroll", () => {
+    vi.useFakeTimers();
+    const onTouchStart = vi.fn();
+    render(
+      <Link href="/rooms" onTouchStart={onTouchStart}>
+        Räume
+      </Link>,
+    );
+    const link = screen.getByRole("link", { name: "Räume" });
+    fireEvent.pointerEnter(link, { pointerType: "touch" });
+    fireEvent.touchStart(link);
+    fireEvent.touchMove(link);
+    fireEvent.touchCancel(link);
+    act(() => vi.advanceTimersByTime(HOVER_PREFETCH_DELAY_MS));
+    expect(onTouchStart).toHaveBeenCalledOnce();
+    expect(currentPrefetch()).toBe(false);
+  });
+
   it("never prefetches links that open a new tab", () => {
     vi.useFakeTimers();
     render(

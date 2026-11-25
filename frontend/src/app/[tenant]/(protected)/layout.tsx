@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { ParentAttentionOverlayProvider } from "~/lib/parent-attention-overlay";
 import { BreadcrumbProvider } from "~/lib/breadcrumb-context";
 import { SessionEndBarrier } from "~/components/auth/session-end-barrier";
@@ -43,7 +44,7 @@ export default function ProtectedLayout({
                     {/* Fehler führen zur Stelle, an der man sie behebt (#7092). */}
                     <ErrorFixTargetsProvider>
                       <ParentAttentionOverlayProvider>
-                        {children}
+                        <Suspense>{children}</Suspense>
                         {parentAttention}
                       </ParentAttentionOverlayProvider>
                     </ErrorFixTargetsProvider>
