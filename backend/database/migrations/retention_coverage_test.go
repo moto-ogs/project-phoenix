@@ -298,6 +298,7 @@ var tableRetentions = map[string]tableRetention{
 	"enrollment.request_uploads":                            own("nightly retention step enrollment_upload_retention, RequestUploads.DeleteExpiredUploads (unclaimed after 24 hours, a decided request's files after enrollment.upload_retention_days); also go with their request or phase"),
 	"enrollment.requests":                                   own("nightly retention step settled_enrollment_retention (withdrawn and lapsed, CleanupSettledEnrollments) and the rejected cleanup (CleanupRejectedEnrollments); accepted requests go with the child (#3962)"),
 	"enrollment.submission_rate_limits":                     own("nightly retention step submission_rate_limit_retention, DeleteExpiredSubmissionRateLimits -> Store.CleanupExpired (24 hours after window_start)"),
+	"facilities.room_closures":                              notPersonal("room closure: room, period and reason (#7653); names no person"),
 	"facilities.rooms":                                      notPersonal("room catalog"),
 	"feedback.entries":                                      own("nightly visit-cleanup run, FeedbackCleaner.DeleteExpired -> Cleanup -> DeleteOlderThan"),
 	"iot.devices":                                           notPersonal("device registry (registered_by person FK SET NULL)"),

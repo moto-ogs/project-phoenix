@@ -320,6 +320,8 @@ AS $function$
     UNION ALL
     SELECT 1 FROM enrollment.submission_rate_limits AS r WHERE r.tenant_id = p_school_id
     UNION ALL
+    SELECT 1 FROM facilities.room_closures AS r WHERE r.tenant_id = p_school_id
+    UNION ALL
     SELECT 1 FROM facilities.rooms AS r WHERE r.tenant_id = p_school_id
     UNION ALL
     SELECT 1 FROM feedback.entries AS r WHERE r.tenant_id = p_school_id

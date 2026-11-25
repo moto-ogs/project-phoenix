@@ -71,6 +71,7 @@ func TestRoomHistoryStopsGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.Equal(t, "db_done", result.Status, "preflight, deletion and residual checks pass: %v", result.ErrorCode)
 	assert.EqualValues(t, 1, result.RowCounts["active.room_history_stops"], "the one stop of the school")
 
+	require.NoError(t, roomClosuresDown(ctx, db))
 	require.NoError(t, roomHistoryStopsDown(ctx, db))
 	var exists bool
 	require.NoError(t, db.NewRaw(`SELECT to_regclass('active.room_history_stops') IS NOT NULL`).Scan(ctx, &exists))

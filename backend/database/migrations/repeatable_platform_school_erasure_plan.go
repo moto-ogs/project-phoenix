@@ -170,6 +170,7 @@ AS $function$ SELECT $manifest$[
   {"name": "enrollment.request_uploads","predicate": "r.tenant_id = $1"},
   {"name": "enrollment.requests","predicate": "r.tenant_id = $1"},
   {"name": "enrollment.submission_rate_limits","predicate": "r.tenant_id = $1"},
+  {"name": "facilities.room_closures","predicate": "r.tenant_id = $1"},
   {"name": "facilities.rooms","predicate": "r.tenant_id = $1"},
   {"name": "feedback.entries","predicate": "r.tenant_id = $1"},
   {"name": "iot.devices","predicate": "r.tenant_id = $1"},
