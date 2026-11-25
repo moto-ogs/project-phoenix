@@ -5162,7 +5162,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentDeliveryAdapter.RelatedEmailOutcomes",
-      "binding_digest": "f7eb835ef556e6eca2513492d4977853",
+      "binding_digest": "06baf626579eb960260a4ff2d7b418bf",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.EnrollmentDeletionDelivery.RelatedEmailOutcomes",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
@@ -5170,7 +5170,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentDeliveryAdapter.RelatedEmailOutcomes",
-      "binding_digest": "e72ba8755c124c1a3be014ab21b1e447",
+      "binding_digest": "3b5c4e64c58723272cbad8653498be21",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.EnrollmentDeletionDelivery.RelatedEmailOutcomes",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
@@ -5178,7 +5178,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentDeliveryAdapter.RelatedEmailOutcomes",
-      "binding_digest": "4ce62489884b0470355f34549a9737b5",
+      "binding_digest": "3ee52d9b87226706eb407d7c8da6ff2f",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.EnrollmentDeletionDelivery.RelatedEmailOutcomes",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",

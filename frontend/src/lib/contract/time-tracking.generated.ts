@@ -66,10 +66,12 @@ export const OwnAllowanceResponseSchema: z.ZodType<OwnAllowanceResponse, unknown
 
 /** Go: timetracking.AbsenceRequestMailsResponse */
 export interface AbsenceRequestMailsResponse {
+  awaiting_feedback: boolean;
   absences: Record<string, Record<string, number> | null> | null;
 }
 
 export const AbsenceRequestMailsResponseSchema: z.ZodType<AbsenceRequestMailsResponse, unknown> = object<AbsenceRequestMailsResponse>({
+  awaiting_feedback: bool,
   absences: nullable(rec(nullable(rec(safeInt)))),
 });
 

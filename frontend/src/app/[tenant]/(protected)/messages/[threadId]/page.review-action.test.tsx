@@ -36,6 +36,10 @@ vi.mock("swr", () => ({
   useSWRConfig: () => ({ cache: new Map() }),
 }));
 
+vi.mock("~/lib/hooks/use-message-mails", () => ({
+  useThreadMails: () => ({ mails: {}, refresh: vi.fn() }),
+}));
+
 vi.mock("~/lib/swr", () => ({
   useSWRAuth: (key: string | null, ...args: unknown[]) =>
     key?.includes("message-thread-")

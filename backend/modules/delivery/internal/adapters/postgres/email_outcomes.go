@@ -13,7 +13,8 @@ import (
 // caller's tenant transaction, without payload. The address of a mail is compared
 // in the list's form, which idx_email_outbox_school_kind_address serves.
 const emailOutcomeColumns = `outbox.id, outbox.kind, outbox.related_entity_type, outbox.related_entity_id,
-		outbox.status, outbox.delivery_state, COALESCE(outbox.delivery_state_at, outbox.sent_at) AS outcome_at,
+		(outbox.provider_message_id IS NOT NULL AND outbox.fallback_requested_at IS NULL) AS provider_tracked,
+		outbox.created_at, outbox.status, outbox.delivery_state, COALESCE(outbox.delivery_state_at, outbox.sent_at) AS outcome_at,
 		COALESCE(outbox.delivery_state_recorded_at, outbox.delivery_state_at) AS state_age_from, outbox.attempts, outbox.last_error, LOWER(TRIM(outbox.recipient->>'address')) AS address,
 		suppression.reason AS address_mark,
 		EXISTS (SELECT 1 FROM platform.delivery_guardian_contacts AS contact
@@ -26,19 +27,21 @@ const emailOutcomeColumns = `outbox.id, outbox.kind, outbox.related_entity_type,
 		AND suppression.address = LOWER(TRIM(outbox.recipient->>'address'))`
 
 type emailOutcomeRow struct {
-	ID            int64      `bun:"id"`
-	Kind          string     `bun:"kind"`
-	RelatedType   *string    `bun:"related_entity_type"`
-	RelatedID     *int64     `bun:"related_entity_id"`
-	Status        string     `bun:"status"`
-	DeliveryState *string    `bun:"delivery_state"`
-	OutcomeAt     *time.Time `bun:"outcome_at"`
-	StateAgeFrom  *time.Time `bun:"state_age_from"`
-	Stopped       bool       `bun:"stopped"`
-	Attempts      int        `bun:"attempts"`
-	LastError     *string    `bun:"last_error"`
-	Address       string     `bun:"address"`
-	AddressMark   *string    `bun:"address_mark"`
+	ProviderTracked bool       `bun:"provider_tracked"`
+	CreatedAt       time.Time  `bun:"created_at"`
+	ID              int64      `bun:"id"`
+	Kind            string     `bun:"kind"`
+	RelatedType     *string    `bun:"related_entity_type"`
+	RelatedID       *int64     `bun:"related_entity_id"`
+	Status          string     `bun:"status"`
+	DeliveryState   *string    `bun:"delivery_state"`
+	OutcomeAt       *time.Time `bun:"outcome_at"`
+	StateAgeFrom    *time.Time `bun:"state_age_from"`
+	Stopped         bool       `bun:"stopped"`
+	Attempts        int        `bun:"attempts"`
+	LastError       *string    `bun:"last_error"`
+	Address         string     `bun:"address"`
+	AddressMark     *string    `bun:"address_mark"`
 }
 
 func (row emailOutcomeRow) report(now time.Time) deliveryContract.EmailOutcomeReport {
@@ -55,6 +58,7 @@ func (row emailOutcomeRow) report(now time.Time) deliveryContract.EmailOutcomeRe
 		report.Mark = deliveryContract.EmailAddressMark(*row.AddressMark)
 	}
 	report.Outcome = deliveryContract.EmailOutcomeAt(deliveryContract.EmailOutcomeOf(row.Status, row.DeliveryState, row.LastError, report.Mark), row.StateAgeFrom, now)
+	report.AwaitingFeedback = report.Outcome.AwaitingFeedback(row.CreatedAt, row.OutcomeAt, row.StateAgeFrom, row.ProviderTracked, now)
 	return report
 }
 

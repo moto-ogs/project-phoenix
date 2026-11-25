@@ -134,10 +134,12 @@ export const StaffRecordResponseSchema: z.ZodType<StaffRecordResponse, unknown> 
 
 /** Go: timetracking.AbsenceDecisionMailsResponse */
 export interface AbsenceDecisionMailsResponse {
+  awaiting_feedback: boolean;
   absences: Record<string, string> | null;
 }
 
 export const AbsenceDecisionMailsResponseSchema: z.ZodType<AbsenceDecisionMailsResponse, unknown> = object<AbsenceDecisionMailsResponse>({
+  awaiting_feedback: bool,
   absences: nullable(rec(str)),
 });
 

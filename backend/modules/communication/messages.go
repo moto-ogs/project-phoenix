@@ -124,18 +124,18 @@ type ParentMessage struct {
 type ParentMessageMails interface {
 	// ParentMessageMailOutcomes reports the outcome of the one mail of each
 	// conversation message; a message without a mail has no key.
-	ParentMessageMailOutcomes(ctx context.Context, messageIDs []int64) (map[int64]string, error)
+	ParentMessageMailOutcomes(ctx context.Context, messageIDs []int64) (map[int64]string, bool, error)
 	// ParentGroupMessageMailOutcomes counts the outcomes of the mails of each
 	// group message, one mail per family; a message without a mail has no key.
-	ParentGroupMessageMailOutcomes(ctx context.Context, messageIDs []int64) (map[int64]map[string]int, error)
+	ParentGroupMessageMailOutcomes(ctx context.Context, messageIDs []int64) (map[int64]map[string]int, bool, error)
 }
 
 // ParentMessageMailStatus tells the OGS what became of the e-mails of its
 // messages (#7058). Both reads check access like the conversation itself and
 // advance no read state; a message without a mail has no key.
 type ParentMessageMailStatus interface {
-	ParentMessageThreadMails(ctx context.Context, threadID int64) (map[int64]string, error)
-	ParentGroupThreadMails(ctx context.Context, groupThreadID int64) (map[int64]map[string]int, error)
+	ParentMessageThreadMails(ctx context.Context, threadID int64) (map[int64]string, bool, error)
+	ParentGroupThreadMails(ctx context.Context, groupThreadID int64) (map[int64]map[string]int, bool, error)
 }
 
 type ParentMessageInboxThread struct {

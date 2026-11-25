@@ -6875,7 +6875,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.EnrollmentDeletionDelivery.RelatedEmailOutcomes",
-      "reason": "Read-only delivery state: enrollment reads what became of a mail or address through runtime.EmailOutcomes.EmailOutcomes in its tenant transaction (#5934). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag when projecting the existing reports for parent mails. Delivery still reads only the requested mails in the caller’s tenant transaction. (#8094)",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
       "target_owner": "delivery-platform"
@@ -6885,7 +6885,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.EnrollmentDeletionDelivery.RelatedEmailOutcomes",
-      "reason": "Read-only delivery state: enrollment reads what became of a mail or address through tenant.TenantFromContext in its tenant transaction (#5934). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag when projecting the existing reports for parent mails. The binding reads the tenant from the existing context; it does not open or change a scope. (#8094)",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -6895,7 +6895,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.EnrollmentDeletionDelivery.RelatedEmailOutcomes",
-      "reason": "Read-only delivery state: enrollment reads what became of a mail or address through tenant.TenantID.Int64 in its tenant transaction (#5934). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag when projecting the existing reports for parent mails. Converting the scoped tenant ID to the delivery query argument neither writes nor changes scope. (#8094)",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
       "target_owner": "tenant-runtime"

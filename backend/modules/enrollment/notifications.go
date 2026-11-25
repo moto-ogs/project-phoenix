@@ -212,11 +212,12 @@ type CaptchaVerifier interface {
 // RequestMailOutcome is what became of one mail to the family of an application
 // (#5934). Kind is one of the MailKind values.
 type RequestMailOutcome struct {
-	Kind        string     `json:"kind"`
-	Outcome     string     `json:"outcome"`
-	AddressMark string     `json:"address_mark,omitempty"`
-	Stopped     bool       `json:"stopped,omitempty"`
-	OutcomeAt   *time.Time `json:"outcome_at,omitempty"`
+	AwaitingFeedback bool       `json:"awaiting_feedback,omitempty"`
+	Kind             string     `json:"kind"`
+	Outcome          string     `json:"outcome"`
+	AddressMark      string     `json:"address_mark,omitempty"`
+	Stopped          bool       `json:"stopped,omitempty"`
+	OutcomeAt        *time.Time `json:"outcome_at,omitempty"`
 	// CreatedAt is when the mail came about; the mails of a holiday
 	// registration carry it, so two mails of one kind stay apart (#6976).
 	CreatedAt *time.Time `json:"created_at,omitempty"`

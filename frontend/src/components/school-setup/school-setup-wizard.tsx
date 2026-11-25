@@ -110,7 +110,7 @@ function SchoolSetupWizardForAdmin({
   // beide zurück.
   const chatOpen = useMessageComposerOnScreen();
   const { state, accountID, refresh, replace } = useSchoolSetup(
-    view === "checklist",
+    view === "checklist" && !chatOpen,
   );
   const [expanded, setExpanded] = useState<SchoolSetupStepKey | null>(null);
   const [expandedByPerson, setExpandedByPerson] = useState(false);
