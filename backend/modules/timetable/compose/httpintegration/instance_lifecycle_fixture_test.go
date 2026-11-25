@@ -542,7 +542,7 @@ func plannerVersion(t *testing.T, ctx context.Context, data timetable.TimetableD
 	t.Helper()
 	inst, err := data.FindScheduledInstance(ctx, instanceID)
 	require.NoError(t, err)
-	rows, err := data.ListScheduledInstanceRows(ctx, []timetable.ScheduledInstance{inst})
+	rows, err := data.ListScheduledInstanceRows(ctx, []timetable.ScheduledInstance{inst}, timetable.PlannerGrid)
 	require.NoError(t, err)
 	return timetable.ScheduledInstanceVersion(inst, rows.Staff[instanceID], rows.Participants[instanceID])
 }

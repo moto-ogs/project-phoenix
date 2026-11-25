@@ -12,6 +12,7 @@ GET /api/timetable/gaps
 GET /api/timetable/holidays
 GET /api/timetable/instances/
 GET /api/timetable/instances/edited-in-window
+GET /api/timetable/instances/{id}/attendance
 GET /api/timetable/instances/{id}/guardian-notice
 GET /api/timetable/instances/{id}/participants
 GET /api/timetable/instances/{id}/staff-pool

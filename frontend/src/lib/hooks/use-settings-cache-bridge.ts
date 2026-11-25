@@ -32,6 +32,8 @@ export function useSettingsCacheBridge(): void {
     "timetable-roster-",
     "timetable-day-",
     "timetable-week-",
+    "timetable-month-",
+    "timetable-detail-",
     "active-supervision-dashboard-",
     homeKeys.dayFlow(),
   ]);

@@ -24,12 +24,12 @@ func (d *timetableCommands) ListScheduledInstances(ctx context.Context, from, to
 }
 
 // ListScheduledInstanceRows loads the rows of the listed blocks with one
-// batched read per kind plus one cutoff read per distinct date, instead of
+// batched read per kind and, for details, one pickup cutoff read, instead of
 // three reads per block (#2940). Participant rows keep the created_at order
 // of the single-block read.
-func (d *timetableCommands) ListScheduledInstanceRows(ctx context.Context, instances []timetable.ScheduledInstance) (value0 *timetable.ScheduledInstanceRows, err error) {
+func (d *timetableCommands) ListScheduledInstanceRows(ctx context.Context, instances []timetable.ScheduledInstance, projection timetable.PlannerProjection) (value0 *timetable.ScheduledInstanceRows, err error) {
 	err = d.commands.deps.RunInTx(ctx, func(txCtx context.Context) error {
-		value0, err = d.commands.ListScheduledInstanceRows(txCtx, instances)
+		value0, err = d.commands.ListScheduledInstanceRows(txCtx, instances, projection)
 		return err
 	})
 	return
