@@ -33,6 +33,13 @@ func TestListInstances_SlimViewDropsOnlyTheAttendanceRows(t *testing.T) {
 	testpkg.CreateTestInstanceStudent(t, s.db, inst.ID, student1.ID, timetable.SlotAttendanceExpected)
 	testpkg.CreateTestInstanceStudent(t, s.db, inst.ID, student2.ID, timetable.SlotAttendancePresent)
 
+	staff := testpkg.CreateTestStaff(t, s.db, "Pickup", "Schedule")
+	pickup := testpkg.CreateTestPickupException(t, s.db, student1.ID, fromDate, staff.ID, "13:45", "Pickup")
+	_, err := s.db.NewUpdate().TableExpr("schedule.student_pickup_exceptions").
+		Set("excused_auto = TRUE, excused_from = pickup_time").
+		Where("tenant_id = ? AND id = ?", testpkg.Tenant(t), pickup.ID).Exec(s.ctx)
+	require.NoError(t, err)
+
 	router := listRouter(s.ctx, s.res)
 	window := fmt.Sprintf("/instances?from=%s&to=%s", from, to)
 	fullRR := doList(t, router, window)
@@ -55,11 +62,11 @@ func TestListInstances_SlimViewDropsOnlyTheAttendanceRows(t *testing.T) {
 	assert.Equal(t, 1, slimItem.ExpectedStudentsCount)
 	assert.Equal(t, 1, slimItem.PresentStudentsCount)
 
-	detail := doList(t, router, fmt.Sprintf("/instances/%d/attendance", inst.ID))
-	require.Equal(t, http.StatusOK, detail.Code)
-	var attendance instanceAttendanceResponse
-	decodeEnvelope(t, detail, &attendance)
-	assert.Equal(t, full.Instances[0].Students, attendance.Students)
+	attendance := readTestAttendance(t, router, inst.ID)
+	require.Equal(t, full.Instances[0].Students, attendance)
+	require.Equal(t, student1.ID, attendance[0].StudentID.Int64())
+	require.NotNil(t, attendance[0].EarlyPickupTime)
+	assert.Equal(t, "13:45", *attendance[0].EarlyPickupTime)
 
 	var raw struct {
 		Data struct {
@@ -83,4 +90,13 @@ func TestListInstances_RejectsAnUnknownView(t *testing.T) {
 
 	w := doList(t, listRouter(s.ctx, s.res), fmt.Sprintf("/instances?from=%s&to=%s&view=compact", from, to))
 	assert.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
+}
+
+func readTestAttendance(t *testing.T, router http.Handler, id int64) []instanceStudentSummary {
+	t.Helper()
+	response := doList(t, router, fmt.Sprintf("/instances/%d/attendance", id))
+	require.Equal(t, http.StatusOK, response.Code)
+	var detail instanceAttendanceResponse
+	decodeEnvelope(t, response, &detail)
+	return detail.Students
 }

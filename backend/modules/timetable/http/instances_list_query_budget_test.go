@@ -42,10 +42,10 @@ func TestListInstancesQueryBudget(t *testing.T) {
 	// days and the count must stay flat as instances per day grow.
 	var firstID int64
 	created := 0
-	addInstances := func(n int) {
+	addInstances := func(n, dayOffset int) {
 		for range n {
 			startHour := 13 + created/3
-			inst := testpkg.CreateTestActivityInstance(t, s.db, fromDate.AddDays(created%3), s.roomID, testpkg.ActivityInstanceOpts{
+			inst := testpkg.CreateTestActivityInstance(t, s.db, fromDate.AddDays(dayOffset+created%3), s.roomID, testpkg.ActivityInstanceOpts{
 				ActivityGroupID: &template.ID,
 				StartHHMM:       fmt.Sprintf("%02d:00", startHour),
 				EndHHMM:         fmt.Sprintf("%02d:00", startHour+1),
@@ -73,7 +73,7 @@ func TestListInstancesQueryBudget(t *testing.T) {
 		return counter.Total()
 	}
 
-	addInstances(3)
+	addInstances(3, 0)
 	smallCount := run()
 	filteredSmallCount := func() int {
 		counter.Reset()
@@ -83,7 +83,7 @@ func TestListInstancesQueryBudget(t *testing.T) {
 		return counter.Total()
 	}()
 
-	addInstances(5)
+	addInstances(5, 0)
 	largeCount := run()
 	querybudgets.AssertQueryBudget(t, "api.timetable.instances.list", counter.Measurement(counter.Queries()))
 	filteredLargeCount := func() int {
@@ -102,11 +102,15 @@ func TestListInstancesQueryBudget(t *testing.T) {
 		"group-filter query count must be independent of the instance count")
 	querybudgets.AssertQueryBudget(t, "api.timetable.instances.list.group_filter", counter.Measurement(counter.Queries()))
 
-	for _, n := range []int{7, 30} {
+	// The last two blocks belong only to the month; widening the window
+	// must not add a pickup read, even when it loads additional assignments.
+	addInstances(2, 27)
+	for _, window := range []struct{ days, blocks int }{{7, 8}, {30, 10}} {
 		counter.Reset()
-		w := doList(t, testpkg.MountedQueryBudgetRouter("/api/timetable", router), fmt.Sprintf("/instances?from=%s&to=%s&view=slim", from, fromDate.AddDays(n-1)))
+		w := doList(t, testpkg.MountedQueryBudgetRouter("/api/timetable", router), fmt.Sprintf("/instances?from=%s&to=%s&view=slim", from, fromDate.AddDays(window.days-1)))
 		require.Equal(t, http.StatusOK, w.Code)
-		t.Logf("slim days=%d blocks=%d selects=%d bytes=%d", n, created, counter.Total(), w.Body.Len())
+		require.Len(t, decodeList(t, w).Instances, window.blocks)
+		t.Logf("slim days=%d blocks=%d selects=%d bytes=%d", window.days, window.blocks, counter.Total(), w.Body.Len())
 		querybudgets.AssertQueryBudget(t, "api.timetable.instances.list.slim", counter.Measurement(counter.Queries()))
 		assert.Empty(t, counter.Selects("schedule.student_pickup_exceptions"), "the grid must not load detail-only pickup cutoffs")
 	}

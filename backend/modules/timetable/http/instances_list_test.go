@@ -513,6 +513,7 @@ func TestListInstances_CompletedExpectedRowStaysNotScheduled(t *testing.T) {
 	// The per-child rows must carry the same verdict the counts used, or the
 	// planner lists a child under "Erwartet" that its own header count leaves
 	// out — and offers "abmelden" for a day that was never care (#1747 review).
+	assert.Equal(t, item.Students, readTestAttendance(t, router, inst.ID))
 	careDayByStudent := map[int64]careplan.CareDayStatus{}
 	for _, row := range item.Students {
 		careDayByStudent[row.StudentID.Int64()] = row.CareDayStatus
