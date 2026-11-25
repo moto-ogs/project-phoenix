@@ -2,6 +2,6 @@
   "scenario": "school.day_changes.today",
   "max": 10,
   "exact": false,
-  "description": "GET /school/day-changes/today (#7670) for a Lehrkraft with calendar:school and classes that end at another time today: the school's and its Träger's closing days, the class-wide arrival exceptions of the day, and the caller's classes (person, staff record and class assignments of the Identity & Access caller chain), each in one batched read, inside the savepoint the sources share (SAVEPOINT and RELEASE count), plus the transaction frame. The children of the classes are not read: they stay in the class-day view. TestSchoolDayChangesQueryBudget compares one with four classes.",
+  "description": "GET /school/day-changes/today (#7670) for a Lehrkraft with calendar:school and classes that end at another time today: the school's and its Träger's closing days; the class-wide arrival exceptions of the day together with the changed blocks of the caller's own Aufsichten (#8148, one statement of Timetable that the sources classes and supervisions share); and the caller's classes (person, staff record and class assignments of the Identity & Access caller chain), each in one batched read, inside the savepoint the sources share (SAVEPOINT and RELEASE count), plus the transaction frame. The children of the classes are not read: they stay in the class-day view. TestSchoolDayChangesQueryBudget compares one with four classes, with a cover on one of the caller's Aufsichten.",
   "route": "GET /school/day-changes/today"
 }

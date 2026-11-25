@@ -24,7 +24,7 @@ func NewSchoolDayChangesTestResource(db transactionruntime.Database, unit tenant
 		return nil, err
 	}
 	return NewSchoolDayChanges(SchoolDayChangesSources{
-		Caller: caller, ClassArrivals: classArrivals, ClosingDays: owners.NewSchoolClosingDayReads(),
+		Caller: caller.Caller(), ClassArrivals: classArrivals, ClosingDays: owners.NewSchoolClosingDayReads(),
 		Today: func() calendar.Date { return today }, Logger: slog.Default(),
 	})
 }
