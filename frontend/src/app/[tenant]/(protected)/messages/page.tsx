@@ -218,7 +218,10 @@ function MessagesInboxContent() {
       <SearchBar
         value={searchTerm}
         onChange={setSearchTerm}
-        placeholder="Person oder Kind suchen…"
+        // Kurz, damit er neben „Ungelesen“ auch auf 320–375 px ganz steht;
+        // gesucht wird im Namen der Person und des Kindes.
+        placeholder="Name suchen…"
+        inputProps={{ "aria-label": "Person oder Kind suchen" }}
         className="min-w-0 flex-1"
       />
       <ToggleChip pressed={onlyUnread} onPressedChange={setOnlyUnread}>

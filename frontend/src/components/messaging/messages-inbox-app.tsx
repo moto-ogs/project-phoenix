@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, type ReactNode } from "react";
+import { Suspense, useEffect, useRef, type ReactNode } from "react";
 import {
   Collection,
   CollectionList,
@@ -69,13 +69,24 @@ function InboxSplit({
   // ohne Split zeigt `SplitView` allein die Liste.
   const { selected, rowProps } = useSplitSelection(INBOX_SELECTION_PARAM);
   const active = selected ?? defaultThreadId(threads);
+  // Öffnet die Seite mit einer Auswahl (direkter Aufruf, Mitteilung), steht
+  // deren Zeile in der Listenspalte in Sicht, auch weit unten.
+  const listRef = useRef<HTMLDivElement>(null);
+  const hasThreads = threads.length > 0;
+  useEffect(() => {
+    if (!selected || !hasThreads) return;
+    listRef.current
+      ?.querySelector('[data-selected="true"]')
+      ?.scrollIntoView({ block: "nearest" });
+    // Nur beim Öffnen und bei neuer Auswahl, nicht bei jedem Neuladen.
+  }, [selected, hasThreads]);
   return (
     <SplitView
       list={
-        <>
+        <div ref={listRef}>
           {listHeader}
           <InboxList threads={threads} rowProps={rowProps} active={active} />
-        </>
+        </div>
       }
       detail={active ? renderDetail(active) : null}
       empty="Wähle links eine Unterhaltung."
