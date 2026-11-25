@@ -57,7 +57,13 @@ func (s *Store) SchoolDayChangeRecords(ctx context.Context, day calendar.Date, s
 		return nil, nil, domain.OperationStats{}, err
 	}
 	dayString := day.String()
-	blockQuery := filterInstanceStaff(instanceStaffSelect(db, &[]instanceStaffRow{}, tenantID), timetable.InstanceStaffFilter{
+	// Only the columns the overview needs: no absence reason, room or role
+	// leaves the database.
+	blockQuery := filterInstanceStaff(db.NewSelect().
+		ModelTableExpr(`schedule.instance_staff AS "instance_staff"`).
+		ColumnExpr(`"instance_staff".id, "instance_staff".instance_id, "instance_staff".staff_id`).
+		ColumnExpr(`"instance_staff".is_substitute, "instance_staff".is_absent, "instance_staff".sick_absence_id`).
+		Where(`"instance_staff".tenant_id = ?`, tenantID), timetable.InstanceStaffFilter{
 		Date: &dayString, StaffChangesOnly: true,
 	}).Where(`EXISTS (SELECT 1 FROM schedule.instance_staff AS "mine"
 		WHERE "mine".tenant_id = "instance_staff".tenant_id
@@ -108,7 +114,7 @@ func decodeClassArrivalExceptions(raw string) ([]timetable.ClassArrivalException
 		}
 		result = append(result, timetable.ClassArrivalException{
 			ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-			SchoolClass: row.SchoolClass, Date: row.Date, ArrivalTime: arrival,
+			SchoolClass: row.SchoolClass, Date: row.Date, ArrivalTime: calendar.NormalizeWallClock(arrival),
 			Reason: row.Reason, CreatedBy: row.CreatedBy, Origin: row.Origin,
 		})
 	}
