@@ -3,6 +3,7 @@ import type { Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import { getToken } from "next-auth/jwt";
 import { headers } from "next/headers";
+import { connection } from "next/server";
 import { cache } from "react";
 import { env } from "~/env";
 import { tenantSessionCookieName } from "~/lib/session-cookie-exit.server";
@@ -119,6 +120,9 @@ export const readPortalSessionSnapshot = cache(readSnapshot);
 async function readSnapshot(
   key: PortalKey,
 ): Promise<PortalSessionSnapshot | null> {
+  // Headers alone are available in a runtime shell prefetch. Wait for a real
+  // navigation before resolving a family or starting any authenticated seed.
+  await connection();
   const fresh = await readFreshPortalToken(key);
   if (!fresh?.token.token) return null;
   const { token, notBooked } = fresh;

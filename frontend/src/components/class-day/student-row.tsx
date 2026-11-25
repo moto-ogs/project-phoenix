@@ -155,6 +155,7 @@ export function StudentRow({
         {notesHref ? (
           <NavigationLink
             href={notesHref}
+            prefetch={false}
             className="text-xs font-medium text-gray-700 underline underline-offset-2 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none"
           >
             Beobachtungen der OGS

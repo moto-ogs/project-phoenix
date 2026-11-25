@@ -72,10 +72,11 @@ export CHROME_DIR="$PWD/chrome-linux64"
 On `rechenzentrum`, the single measurement command from the repository root is
 `bwrap --dev-bind / / --tmpfs /opt --dir /opt/google --ro-bind "$CHROME_DIR" /opt/google/chrome devbox run -- scripts/perf-revisit.sh`.
 The host's **bubblewrap** package exposes this Chrome only inside the benchmark
-process. For #8083, run flags off and on on **the same Berlin calendar day**,
-against the same prepared database and day receipt. If the comparison moves to
-a later day, start a new pair on a fresh seed and simulate once; do not append a
-second simulated day and compare it to the previous day's results.
+process. Compare modes or builds in a new paired study on **the same Berlin
+calendar day**, against the same database and day receipt. If that study
+crosses midnight, start with a fresh seed and simulate once. Use the #8080
+archive for a product comparison as long as the journeys, inputs and profile
+still match; name product changes that landed between the two observations.
 
 ### Prepare the fixture and repeat
 
@@ -97,9 +98,15 @@ port free. Check `uptime` and, if installed, `~/bin/agent-heavy --status` before
 From the repository root, **`devbox run -- scripts/perf-revisit.sh`** runs the
 existing `pnpm run perf:nav` Revisit test. Playwright builds and starts Next in
 production mode on the worktree port and stops it afterward. Do not substitute
-a dev server, a remote backend, a nightly trace or a CI runner. The test runs
-serially; allow time for all three rounds. `PERF_REVISIT` can select comma-separated
-journey names for diagnosis only. A partial result is not a baseline. The report identifies the measured checkout,
+a dev server, a remote backend, a nightly trace or a CI runner.
+`PERF_REVISIT=ziel,ziel PERF_REVISIT_REPEATS=1` runs a diagnosis with one round.
+Omit the repeat override to compare medians on a selection. Omit both for the
+full matrix (159 trials, three rounds). A partial result is not a baseline.
+`PERF_REVISIT_MODE=parallel` on Linux runs each measured role on its own Next
+process and browser, using the same build, public URLs and seed. Authentication
+setup and tests that change a relationship stay serial. Compare a representative
+selection in both modes before using parallel results as release evidence; use
+serial if the difference is material. The report identifies the measured checkout,
 its frontend and backend trees, its merge base and whether it was dirty.
 Page traversals, in-page actions and device/input variants have separate budget counts.
 
@@ -109,11 +116,11 @@ Page traversals, in-page actions and device/input variants have separate budget 
   authenticated accounts, real entity IDs and expected content; session cookies
   stay out of the reports. The source page settles before the first action.
   “First” means first visit to the target from a running app, not a hard document
-  load. The harness leaves the application's prefetch rules in place.
-  A `NavigationLink` does not prefetch on viewport entry. The direct click
-  has no hover dwell: pointer-down cancels its 80 ms hover timer. Visible
-  keyboard focus, by contrast, can start prefetch before Enter starts the
-  clock. Compare like inputs across revisions, not click against keyboard.
+  load. The harness leaves the application's prefetch rules in place. Links
+  can prefetch a reusable route shell on viewport entry; SWR reads still
+  require data intent. The #8080 build instead started full route prefetch
+  on keyboard focus or after an 80 ms hover hold. The direct click has no
+  dwell. Compare like inputs, not click against keyboard.
 - Desktop: CPU ×4, 150 ms latency, 3 Mbit/s down, 1 Mbit/s up. Parents also use
   Pixel 7 touch at 1.6 Mbit/s down. Time starts at the browser event timestamp, including input queueing, for pointer-down,
   touch-start, Enter or the actual history traversal. No synthetic hover or
@@ -148,7 +155,7 @@ Page traversals, in-page actions and device/input variants have separate budget 
   action preparation through 1.5 s quiet (25 s cap) are counted, including runs
   below budget. RSC/JS/BFF are request counts, not necessarily transferred bodies.
   Visible loading indicators are recorded separately. Host load averages and
-  CPU idle percentage describe the shared machine, not just Chromium. Before the series and each individual trial, the harness waits for a five-second window with at least 50% CPU idle;
+  CPU idle percentage describe the shared machine, not just Chromium. Before the series and each individual trial, the harness measures a one-second window with at least 50% CPU idle;
   contention during a trial is recorded and marked, never used to discard slow values. A median within 20 ms of the budget is flagged, not evidence of a code-level difference. Host-admission waits do not use the four-hour browser budget. A run crossing Berlin midnight fails rather than mixing seed days.
 
 ### Coverage and evidence
@@ -185,7 +192,8 @@ For the #8080 baseline, see the [per-journey results](../perf/revisit-8080/resul
 This run on `rechenzentrum` (Linux x86_64, Intel Core i9-14900K, 32 logical CPUs, 62 GiB RAM) used the product code at `development@764c20585d` and harness
 `50e3dfe271`. Across trials the shared host had
 96–98% idle CPU (median 97%); every trial began after a five-second window with at least 50% idle CPU. Contention during a trial is flagged in the results; it is not a code-level effect.
-The measured build includes the parent family-start, other portals’ server seeds and Caterer order overview (#8106, #8110, #8113), the care-plan reads (#8115) and provider KPIs (#8116). The login catalog and school class-count changes (#8117, #8118) landed later and are not measured here. For #8083, run the same command on `rechenzentrum` on its rollout revision before and after enabling the flags, with the same prepared fixture.
+The measured build includes the parent family-start, other portals’ server seeds and Caterer order overview (#8106, #8110, #8113), the care-plan reads (#8115) and provider KPIs (#8116). The login catalog and school class-count changes (#8117, #8118) landed later and are not measured here. Run the final revision on
+`rechenzentrum` with both Cache Components and Partial Prefetching enabled.
 
 Local outputs in `frontend/perf-results/navigation/`: `revisit.json` (per-run
 observations, profile, load, diagnostics and separate confirmation/denial),

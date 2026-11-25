@@ -8,6 +8,7 @@ export interface Stop {
   link: (page: Page) => Locator;
   selectContent?: (page: Page) => Promise<Content>;
   rememberHeading?: boolean;
+  auditedRead?: RegExp;
   prepare?: (page: Page) => Promise<void>;
 }
 export interface Journey {
@@ -568,6 +569,7 @@ function portals(f: RevisitFixture): Journey[] {
     [exact("main h2,main h3", "Beobachtungen der OGS")],
     noteLink,
   );
+  sharedNote.auditedRead = /^\/api\/school\/class-day\/shared-notes\//;
   sharedNote.selectContent = async (p: Page) => {
     const url = new URL((await noteLink(p).getAttribute("href"))!, p.url());
     const student = f.students.find(

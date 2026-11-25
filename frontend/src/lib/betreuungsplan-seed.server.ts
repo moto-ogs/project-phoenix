@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { connection } from "next/server";
 import { hasPermission } from "~/lib/auth-utils";
 import {
   planGapsKey,
@@ -62,7 +63,7 @@ export async function loadBetreuungsplanSeed(
   slug: string,
   searchParams: SearchParams,
 ): Promise<ServerSeed | null> {
-  const builtAt = Date.now();
+  await connection();
   const [snapshot, tenant, host] = await Promise.all([
     readPortalSessionSnapshot("tenant"),
     tenantOf(slug),
@@ -86,6 +87,7 @@ export async function loadBetreuungsplanSeed(
     return null;
   }
 
+  const builtAt = Date.now();
   const params: PlanWindowParams = {
     d: first(searchParams.d),
     view: first(searchParams.view),

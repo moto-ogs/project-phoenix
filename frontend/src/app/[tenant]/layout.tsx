@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { connection } from "next/server";
 import type { Session } from "next-auth";
 import { TenantGuard } from "~/components/tenant/tenant-guard";
 import { PathModeRedirect } from "~/components/tenant/path-mode-redirect";
@@ -178,6 +179,9 @@ export default async function TenantLayout({
     notFound();
   }
 
+  // A shell prefetch can supply a slug and headers, but must not resolve
+  // school-specific settings or use the tenant lookup's request budget.
+  await connection();
   const tenant = await fetchTenantInfo(tenantSlug);
 
   if (tenant === TENANT_RATE_LIMITED) {
