@@ -25834,6 +25834,7 @@
         "own_shift_plan",
         "school_calendar",
         "school_class",
+        "school_supervisions",
         "shift_plan",
         "staff_absences",
         "staff_list",
@@ -25982,7 +25983,8 @@
         "closing_days",
         "meal_plan",
         "notices",
-        "staff"
+        "staff",
+        "supervisions"
       ]
     },
     {

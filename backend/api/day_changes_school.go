@@ -30,9 +30,12 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// schoolDayChangesCaller is Identity & Access's read of the caller's classes.
+// schoolDayChangesCaller is Identity & Access's read of the caller's classes
+// and staff record.
 type schoolDayChangesCaller interface {
 	MySchoolClasses(ctx context.Context) ([]string, error)
+	// StaffID is the caller's staff record; the request memoizes it.
+	StaffID(ctx context.Context) (int64, error)
 }
 
 // SchoolDayChangesSources are the owner reads of the school portal's
@@ -50,16 +53,18 @@ func NewSchoolDayChanges(sources SchoolDayChangesSources) (*dayChangesHTTP.Schoo
 	if sources.Caller == nil || sources.ClassArrivals == nil || sources.ClosingDays == nil {
 		return nil, fmt.Errorf("%w: school sources", daychangesview.ErrDependencies)
 	}
-	classDay, err := timetable.ClassArrivalDayOf(sources.ClassArrivals)
+	schoolDay, err := timetable.SchoolDayChangesOf(sources.ClassArrivals)
 	if err != nil {
 		return nil, err
 	}
+	day := schoolDayChangesRead{caller: sources.Caller, query: schoolDay}
 	view, err := daychangesview.NewSchool(daychangesview.SchoolDependencies{
-		Today:     sources.Today,
-		Isolation: dayChangesSavepoints{},
-		Closing:   schoolDayChangesClosingDays{reads: sources.ClosingDays},
-		Classes:   schoolDayChangesClasses{caller: sources.Caller, classDay: classDay},
-		Logger:    sources.Logger,
+		Today:        sources.Today,
+		Isolation:    schoolDayChangesSavepoints{},
+		Closing:      schoolDayChangesClosingDays{reads: sources.ClosingDays},
+		Classes:      schoolDayChangesClasses{caller: sources.Caller, day: day},
+		Supervisions: schoolDayChangesSupervisions{day: day},
+		Logger:       sources.Logger,
 	})
 	if err != nil {
 		return nil, err
@@ -71,15 +76,16 @@ func NewSchoolDayChanges(sources SchoolDayChangesSources) (*dayChangesHTTP.Schoo
 // classes. A caller reaching every class (Schulverwaltung) sees every class
 // under "Schule"; a Lehrkraft only her own, under "Betrifft dich".
 type schoolDayChangesClasses struct {
-	caller   schoolDayChangesCaller
-	classDay dayChangesClassArrivals
+	caller schoolDayChangesCaller
+	day    schoolDayChangesRead
 }
 
 func (s schoolDayChangesClasses) ClassChanges(ctx context.Context, day calendar.Date) ([]daychangesview.SourceEntry, error) {
-	rows, err := s.classDay.ListClassArrivalExceptionsOn(ctx, day)
+	changes, _, err := s.day.read(ctx, day)
 	if err != nil {
-		return nil, fmt.Errorf("list class arrival exceptions: %w", err)
+		return nil, err
 	}
+	rows := changes.Classes
 	if len(rows) == 0 {
 		return nil, nil
 	}

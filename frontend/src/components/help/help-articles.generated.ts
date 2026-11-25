@@ -10297,6 +10297,7 @@ export const teacherClassDayTopic = function teacherClassDayTopic(): HelpTopic {
     result: "Du siehst, wer heute bleibt und wer nach Hause geht.",
     notes: [
       "Ganz oben steht `Heute anders`. Dort siehst du, was heute für deine Klassen und die Schule anders ist. Zum Beispiel ein früherer Unterrichtsschluss oder ein Schließtag.",
+      "Übernimmst du heute eine Aufsicht, oder übernimmt jemand deine? Auch das steht unter `Heute anders`. Ein Tipp darauf öffnet `Aufsichten`.",
       "Wähle unter `Heute anders` eine Klasse mit Kindern. Dann springst du in der Liste zum ersten Kind, das heute anders ist.",
       "Namen von Kolleginnen und Kollegen und Gründe stehen bei `Heute anders` nicht. Du siehst nur deine Klassen und die ganze Schule.",
       "Hinweise der Leitung liest und bestätigst du unter `Hinweise der Leitung`.",
