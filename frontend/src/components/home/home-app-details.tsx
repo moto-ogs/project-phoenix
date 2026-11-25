@@ -22,9 +22,11 @@ import {
   CollectionRow,
 } from "~/components/ui/collection";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { blockTimeRange } from "~/lib/block-children";
+import { dayChangesConcept } from "~/lib/concepts/dayChanges";
 import type {
   DayChange,
   DayChangeNotice,
@@ -113,10 +115,80 @@ export function DayChangesList({
   );
 }
 
+/**
+ * „Heute anders“ auf der Startseite der App (#8070): dieselbe Karte wie am
+ * Desktop, damit man sie wiedererkennt, aber als Liste: die ersten offenen
+ * Änderungen als ganze Sätze, zuerst was dich betrifft. Der Rest steht im
+ * Blatt hinter „Alle anzeigen“.
+ */
+export function DayChangesPreview({
+  overview,
+  include,
+  limit = 3,
+  onShowAll,
+}: {
+  readonly overview: DayChangesOverview;
+  readonly include: (entry: DayChange) => boolean;
+  /** So viele Änderungen stehen auf der Startseite. */
+  readonly limit?: number;
+  readonly onShowAll: () => void;
+}) {
+  const now = useCurrentTimestamp();
+  const entries = overview.entries.filter(
+    (entry) => dayChangeText(entry) !== null && include(entry),
+  );
+  const open = entries.filter((entry) => !isDone(entry, now));
+  const ordered = [
+    ...open.filter((entry) => entry.section === "you"),
+    ...open.filter((entry) => entry.section !== "you"),
+  ];
+  const shown = ordered.slice(0, limit);
+  const rest = entries.length - shown.length;
+  return (
+    <>
+      {overview.failedSources.map((source) => (
+        <Alert
+          key={source}
+          type="warning"
+          size="compact"
+          message={sourceFailureText(source)}
+        />
+      ))}
+      <Collection label="Heute anders">
+        <CollectionGroup
+          title={
+            <span className="inline-flex items-center gap-2 align-middle">
+              <MotoConceptIcon concept={dayChangesConcept} size={18} />
+              Heute anders
+            </span>
+          }
+          count={open.length > 0 ? open.length : undefined}
+        >
+          {shown.length > 0 ? (
+            <DayChangeRows entries={shown} brief />
+          ) : (
+            <CollectionRow title="Heute läuft alles wie geplant." />
+          )}
+          {rest > 0 ? (
+            <CollectionRow
+              title="Alle anzeigen"
+              meta={rest === 1 ? "1 weitere" : `${rest} weitere`}
+              onClick={onShowAll}
+            />
+          ) : null}
+        </CollectionGroup>
+      </Collection>
+    </>
+  );
+}
+
 function DayChangeRows({
   entries,
+  brief = false,
 }: {
   readonly entries: readonly DayChange[];
+  /** Vorschau der Startseite: Hinweise nur mit Titel, der Text steht im Blatt. */
+  readonly brief?: boolean;
 }) {
   const tenantPath = useTenantAwarePath();
   const dayPlanHref = useDayPlanHref();
@@ -128,7 +200,7 @@ function DayChangeRows({
           key={key}
           wrap
           title={entry.notice.title}
-          subtitle={entry.notice.body || undefined}
+          subtitle={brief ? undefined : entry.notice.body || undefined}
           meta={
             entry.notice.important ? (
               <StatusBadge label="Wichtig" tone="warning" size="xs" />
