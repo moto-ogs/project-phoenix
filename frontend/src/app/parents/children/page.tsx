@@ -1,3 +1,4 @@
+import { ParentPageSeed } from "~/app/parents/parent-page-seed";
 import { ChildProfileMessages } from "~/i18n/shared-page-messages";
 import { Suspense } from "react";
 import { ChildPage } from "~/components/parent/child/child-page";
@@ -12,7 +13,9 @@ export default function ParentsChildrenPage() {
   return (
     <ChildProfileMessages>
       <Suspense fallback={<ParentPageSkeleton rows={2} />}>
-        <ChildPage />
+        <ParentPageSeed page={{ kind: "children" }}>
+          <ChildPage />
+        </ParentPageSeed>
       </Suspense>
     </ChildProfileMessages>
   );

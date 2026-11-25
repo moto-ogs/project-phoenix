@@ -1,9 +1,10 @@
 import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TEST_CLOCK_TODAY } from "~/test/clock";
+import { testClockDay, TEST_CLOCK_TODAY } from "~/test/clock";
 import type { ServerSeed } from "~/lib/swr/server-seed";
 
-const { answers, snapshot } = vi.hoisted(() => ({
+const { answers, calls, snapshot } = vi.hoisted(() => ({
+  calls: [] as string[],
   answers: new Map<string, { status: number; body: unknown }>(),
   snapshot: {
     current: null as null | {
@@ -17,6 +18,7 @@ const { answers, snapshot } = vi.hoisted(() => ({
 vi.mock("~/lib/backend-client.server", async (original) => ({
   ...(await original<typeof import("~/lib/backend-client.server")>()),
   sendBackend: async (endpoint: string) => {
+    calls.push(endpoint);
     const answer = answers.get(endpoint);
     if (!answer) throw new Error(`unrouted ${endpoint}`);
     return Response.json(answer.body, { status: answer.status });
@@ -31,6 +33,11 @@ import {
   loadParentPageSeed,
   loadParentShellSeed,
 } from "./parent-seed.server";
+import {
+  parentInitialMealMonday,
+  parentShellSeedKeys,
+} from "~/lib/parent-page-seed-keys";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import { sessionGeneration } from "~/lib/swr/session-generation";
 
@@ -112,6 +119,7 @@ async function valuesOf(seed: ServerSeed | null) {
 }
 
 beforeEach(() => {
+  calls.length = 0;
   answers.clear();
   snapshot.current = { session: parent, accessToken: "t", notBooked: false };
   routeFamily();
@@ -125,11 +133,10 @@ describe("parent page seeds", () => {
     const values = await valuesOf(seed);
     const featureKey = parentKeys.features(children, TEST_CLOCK_TODAY);
     const todayKey = parentKeys.today(children, TEST_CLOCK_TODAY);
-    expect(Object.keys(values).sort()).toEqual(
-      [parentKeys.shellChildren(), featureKey, todayKey].sort(),
-    );
     expect(values[featureKey]).toEqual({ "7": features, "8": features });
-    expect(seed?.entries.every((entry) => entry.render)).toBe(true);
+    expect(
+      seed?.entries.filter((entry) => entry.render).map(({ key }) => key),
+    ).toEqual([parentKeys.shellChildren(), featureKey, todayKey]);
   });
 
   it("drops only a collection one relationship fails in", async () => {
@@ -162,26 +169,123 @@ describe("parent page seeds", () => {
     expect(seed?.entries.map((entry) => entry.key)).toEqual([
       parentKeys.shellChildren(),
     ]);
+    expect(calls).toEqual(["/parent/me/children"]);
   });
 
   it("waits in the child page's server render for the list only", async () => {
     const seed = await loadParentPageSeed({ kind: "child", studentId: "8" });
 
-    expect(seed?.entries.map((entry) => [entry.key, entry.render])).toEqual([
-      [parentKeys.shellChildren(), true],
-      [parentKeys.features(children, TEST_CLOCK_TODAY), false],
-      [parentKeys.today(children, TEST_CLOCK_TODAY), false],
-    ]);
+    expect(
+      seed?.entries.filter((entry) => entry.render).map(({ key }) => key),
+    ).toEqual([parentKeys.shellChildren()]);
+    expect(seed?.entries.map(({ key }) => key)).toContain(
+      parentKeys.careSchedule("8", TEST_CLOCK_TODAY),
+    );
   });
 
   it("gives the shell the list and features without waiting", async () => {
     const seed = await loadParentShellSeed();
 
     expect(seed?.entries.map((entry) => entry.key)).toEqual([
-      parentKeys.shellChildren(),
+      ...parentShellSeedKeys,
       parentKeys.features(children, TEST_CLOCK_TODAY),
     ]);
     expect(seed?.entries.some((entry) => entry.render)).toBe(false);
+  });
+
+  it("starts the selected child's first-display care reads, but not deferred reads", async () => {
+    const prefix = "/parent/me/children/8";
+    answers.set(`${prefix}/sick-note`, ok([]));
+    answers.set(`${prefix}/excused-requests`, {
+      status: 403,
+      body: { status: "error", code: "care.guardian_permission_denied" },
+    });
+    answers.set(`${prefix}/parent-conferences`, ok([]));
+
+    const seed = await loadParentPageSeed({ kind: "child", studentId: "8" });
+    const values = await valuesOf(seed);
+
+    expect(values[parentKeys.sickDays("8", TEST_CLOCK_TODAY)]).toEqual([]);
+    expect(values[parentKeys.conferences("8")]).toEqual([]);
+    expect(
+      values[parentKeys.excusedRequests("8", TEST_CLOCK_TODAY)],
+    ).toBeUndefined();
+    expect(calls).toEqual(
+      expect.arrayContaining([
+        `${prefix}/care-exception`,
+        `${prefix}/care-schedule`,
+        `${prefix}/pickup-change-requests`,
+        `${prefix}/care-offerings`,
+        `${prefix}/courses`,
+      ]),
+    );
+    expect(
+      calls.filter((path) => path.startsWith("/parent/me/children/7/")),
+    ).toEqual([
+      "/parent/me/children/7/features",
+      "/parent/me/children/7/today",
+    ]);
+    expect(calls).not.toContain(`${prefix}/guardians`);
+    expect(calls).not.toContain(`${prefix}/care-offerings/catalog`);
+  });
+
+  it("uses the authorized school's relationship and the selected Berlin week for the meal plan", async () => {
+    const monday = parentInitialMealMonday(TEST_CLOCK_TODAY, testClockDay(7));
+    const plan = "/parent/me/children/8/meal-plan?week_start=" + monday;
+    answers.set(
+      "/parent/me/children/8/features",
+      ok({ ...features, meal_plan_enabled: true }),
+    );
+    answers.set(plan, ok([]));
+
+    const seed = await loadParentPageSeed({
+      kind: "meal",
+      week: monday,
+      school: "99",
+    });
+    const values = await valuesOf(seed);
+
+    expect(values[parentInboxKeys.mealPlan("8", monday)]).toEqual([]);
+    expect(calls.filter((path) => path.includes("/meal-plan"))).toEqual([plan]);
+  });
+
+  it("does not seed either message-opening GET that marks a thread read", async () => {
+    answers.set("/parent/me/messages/children/7/threads", ok([]));
+    const conversation = await valuesOf(
+      await loadParentPageSeed({ kind: "conversation", studentId: "7" }),
+    );
+    await valuesOf(await loadParentPageSeed({ kind: "groupThread" }));
+
+    expect(conversation[parentInboxKeys.childThreads("7")]).toEqual([]);
+    expect(calls).not.toContain("/parent/me/messages/children/7");
+    expect(
+      calls.filter((path) =>
+        path.startsWith("/parent/me/messages/group-threads/"),
+      ),
+    ).toEqual([]);
+  });
+
+  it("keeps the document inbox on its partial-failure browser path", async () => {
+    answers.set("/parent/me/documents", ok([]));
+    answers.set("/parent/me/documents/contracts", ok([]));
+    answers.set("/parent/me/documents/shared", ok([]));
+
+    const success = await valuesOf(
+      await loadParentPageSeed({ kind: "documents" }),
+    );
+    const key = parentInboxKeys.documents();
+    expect(success[key]).toEqual({
+      documents: [],
+      shared: [],
+      failedSource: null,
+      error: null,
+    });
+
+    answers.set("/parent/me/documents/contracts", { status: 503, body: {} });
+    const partial = await valuesOf(
+      await loadParentPageSeed({ kind: "documents" }),
+    );
+    expect(partial[key]).toBeUndefined();
   });
 
   it.each([

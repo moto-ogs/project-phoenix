@@ -91,10 +91,10 @@ import { childrenConcept } from "~/lib/concepts/children";
 import { StatusDot } from "~/components/ui/status-dot";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 import { useParentCareTerms } from "~/lib/parent-care-term";
+import { PARENT_CALENDAR_DAYS as MAX_CALENDAR_WINDOW_OFFSET } from "~/lib/parent-page-seed-keys";
 
 const logger = createLogger({ component: "ParentCalendarPage" });
 const NO_EVENTS: CalendarEvent[] = [];
-const MAX_CALENDAR_WINDOW_OFFSET = 91;
 const MAX_VISIBLE_EVENTS = 2;
 
 type EventState =

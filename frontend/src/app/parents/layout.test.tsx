@@ -49,12 +49,11 @@ vi.mock("~/lib/portal-session-snapshot.server", () => ({
 }));
 
 const { default: ParentLayout } = await import("./layout");
-const { ParentServerSeed } =
-  await import("~/components/parent/parent-server-seed");
 const { ParentAuthGuard } = await import("./auth-guard");
 
 type ProvidersElement = ReactElement<{
   session: unknown;
+  shellSeed: unknown;
   children: ReactElement<{ notBooked: boolean }>;
 }>;
 
@@ -115,17 +114,14 @@ describe("ParentLayout", () => {
       user: { id: "41", scope: "parent" },
     };
 
-    it("starts the seed for a protected page and wraps the guard in it", async () => {
+    it("starts the seed for a protected page and hands it to the providers", async () => {
       readParentSessionSnapshotMock.mockResolvedValue(parentSession);
       requestPath.current = "/children/7?tab=angaben";
 
       const providers = await renderedProviders();
 
-      const seed = providers.props.children as unknown as ReactElement<{
-        children: ReactElement;
-      }>;
-      expect(seed.type).toBe(ParentServerSeed);
-      expect(seed.props.children.type).toBe(ParentAuthGuard);
+      expect(providers.props.shellSeed).toBeInstanceOf(Promise);
+      expect(providers.props.children.type).toBe(ParentAuthGuard);
       expect(loadShellSeedMock).toHaveBeenCalledTimes(1);
     });
 
@@ -137,7 +133,7 @@ describe("ParentLayout", () => {
 
         const providers = await renderedProviders();
 
-        expect(providers.props.children.type).toBe(ParentAuthGuard);
+        expect(providers.props.shellSeed).toBeNull();
         expect(loadShellSeedMock).not.toHaveBeenCalled();
       },
     );

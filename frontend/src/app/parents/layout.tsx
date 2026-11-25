@@ -6,7 +6,6 @@ import { getLocale } from "next-intl/server";
 import { getParentAppMetadata } from "~/i18n/parent-app-metadata";
 import type { AppLocale } from "~/i18n/locales";
 import { readPortalSessionSnapshot } from "~/lib/portal-session-snapshot.server";
-import { ParentServerSeed } from "~/components/parent/parent-server-seed";
 import {
   isProtectedParentPath,
   loadParentShellSeed,
@@ -84,30 +83,21 @@ export default async function ParentLayout({
     readPortalSessionSnapshot("parent"),
     parentRequestPath(),
   ]);
-  const guarded = (
-    <ParentAuthGuard notBooked={snapshot?.notBooked ?? false}>
-      {children}
-    </ParentAuthGuard>
-  );
+  // A public page, also with a parent cookie, gets no personal seed.
+  const shellSeed =
+    snapshot && !snapshot.notBooked && isProtectedParentPath(path)
+      ? loadParentShellSeed().catch(() => null)
+      : null;
   return (
     <ParentShellMessages>
-      <ParentProviders session={snapshot?.session ?? null}>
-        {/* The shell's children list and features (#8077), started now and
-            not awaited. A public page, also with a parent cookie, gets no
-            personal seed and no extra read. */}
-        {snapshot && !snapshot.notBooked && isProtectedParentPath(path) ? (
-          <ParentServerSeed
-            seed={loadParentShellSeed().catch(() => null)}
-            details={SHELL_SEED_DETAILS}
-          >
-            {guarded}
-          </ParentServerSeed>
-        ) : (
-          guarded
-        )}
+      <ParentProviders
+        session={snapshot?.session ?? null}
+        shellSeed={shellSeed}
+      >
+        <ParentAuthGuard notBooked={snapshot?.notBooked ?? false}>
+          {children}
+        </ParentAuthGuard>
       </ParentProviders>
     </ParentShellMessages>
   );
 }
-
-const SHELL_SEED_DETAILS = ["features"] as const;
