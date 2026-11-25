@@ -2451,35 +2451,37 @@ function TimetablesContent() {
         />
       </MountOnFirstOpen>
 
-      <ConfirmationModal
-        isOpen={archivingTemplate !== null}
-        onClose={() => {
-          if (!archiveLoading) setArchivingTemplate(null);
-        }}
-        onConfirm={() => void handleArchiveTemplate()}
-        title="Regeltermin archivieren?"
-        confirmText="Archivieren"
-        cancelText="Abbrechen"
-        isConfirmLoading={archiveLoading}
-        loadingText="Wird archiviert…"
-      >
-        <div ref={archiveRef}>
-          <FormErrorAlert message={archiveErrors.error} className="mb-3" />
-        </div>
-        <p className="text-sm leading-relaxed text-gray-600">
-          Der Regeltermin
-          {archivingTemplate ? (
-            <>
-              {" "}
-              <span className="font-semibold text-gray-900">
-                „{archivingTemplate.name}“
-              </span>
-            </>
-          ) : null}{" "}
-          verschwindet aus der Liste. Bereits eingetragene Termine bleiben im
-          Betreuungsplan erhalten.
-        </p>
-      </ConfirmationModal>
+      <MountOnFirstOpen open={archivingTemplate !== null}>
+        <ConfirmationModal
+          isOpen={archivingTemplate !== null}
+          onClose={() => {
+            if (!archiveLoading) setArchivingTemplate(null);
+          }}
+          onConfirm={() => void handleArchiveTemplate()}
+          title="Regeltermin archivieren?"
+          confirmText="Archivieren"
+          cancelText="Abbrechen"
+          isConfirmLoading={archiveLoading}
+          loadingText="Wird archiviert…"
+        >
+          <div ref={archiveRef}>
+            <FormErrorAlert message={archiveErrors.error} className="mb-3" />
+          </div>
+          <p className="text-sm leading-relaxed text-gray-600">
+            Der Regeltermin
+            {archivingTemplate ? (
+              <>
+                {" "}
+                <span className="font-semibold text-gray-900">
+                  „{archivingTemplate.name}“
+                </span>
+              </>
+            ) : null}{" "}
+            verschwindet aus der Liste. Bereits eingetragene Termine bleiben im
+            Betreuungsplan erhalten.
+          </p>
+        </ConfirmationModal>
+      </MountOnFirstOpen>
     </>
   );
 

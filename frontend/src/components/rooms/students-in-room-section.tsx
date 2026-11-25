@@ -68,6 +68,7 @@ import { createLogger } from "~/lib/logger";
 import { useAttendanceWebEnabled, usePresenceMode } from "~/lib/tenant-context";
 import { canCheckInToRooms } from "~/lib/student-access";
 import { RoomCheckinDialog } from "~/components/rooms/room-checkin-dialog";
+import { MountOnFirstOpen } from "~/components/ui/mount-on-first-open";
 import {
   useSwrLoadError,
   useSwrResourceLoadError,
@@ -284,18 +285,18 @@ export function StudentsInRoomSection({
     canCheckInToRooms(session);
   const roomCheckinTarget = useMemo((): TargetRoomOption | null => {
     const here = buildTargetRoomOptions(
-      activeGroups,
-      rooms,
+      sourceGroups,
+      rooms.filter((room) => room.id === roomId),
       "",
       // An arriving child needs a running supervision, also for admins.
       "supervised",
       supervisedTargetGroupIds,
-    ).filter((option) => option.roomId === roomId);
+    );
     return (
       here.find((option) => option.kind === "openRoom") ??
       (here.length === 1 ? (here[0] ?? null) : null)
     );
-  }, [activeGroups, rooms, roomId, supervisedTargetGroupIds]);
+  }, [sourceGroups, rooms, roomId, supervisedTargetGroupIds]);
   // Pulling present children out of their rooms needs the move rights over
   // them: an administrator, or the supervisor of this room's session.
   const canPullIntoRoom =
@@ -549,14 +550,16 @@ export function StudentsInRoomSection({
     // aria-label keep the named landmark the tests and a11y tooling expect.
     <section aria-label="Kinder im Raum">
       {showRoomCheckin && roomCheckinTarget ? (
-        <RoomCheckinDialog
-          isOpen={roomCheckinOpen}
-          onClose={() => setRoomCheckinOpen(false)}
-          roomName={roomName}
-          target={roomCheckinTarget}
-          canPullPresent={canPullIntoRoom}
-          onDone={moveAfterWrite.refresh}
-        />
+        <MountOnFirstOpen open={roomCheckinOpen}>
+          <RoomCheckinDialog
+            isOpen={roomCheckinOpen}
+            onClose={() => setRoomCheckinOpen(false)}
+            roomName={roomName}
+            target={roomCheckinTarget}
+            canPullPresent={canPullIntoRoom}
+            onDone={moveAfterWrite.refresh}
+          />
+        </MountOnFirstOpen>
       ) : null}
       <SectionCard
         overflow="visible"

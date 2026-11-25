@@ -37,6 +37,13 @@ const GERMAN_BERLIN_DATE = new Intl.DateTimeFormat(
   "de-DE",
   BERLIN_DATE_FORMAT_OPTIONS,
 );
+const GERMAN_BERLIN_WEEKDAY_DATE = new Intl.DateTimeFormat("de-DE", {
+  timeZone: SCHOOL_TIME_ZONE,
+  weekday: "long",
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
 
 function berlinDateFormatter(locale: string): Intl.DateTimeFormat {
   return locale === "de-DE"
@@ -447,8 +454,11 @@ export function formatDate(
     return formatDateFields(parseISODate(dateString), includeWeekday, locale);
   }
   const date = new Date(dateString);
-  if (!includeWeekday && locale === "de-DE" && !Number.isNaN(date.getTime())) {
-    return GERMAN_BERLIN_DATE.format(date);
+  if (locale === "de-DE" && !Number.isNaN(date.getTime())) {
+    const formatter = includeWeekday
+      ? GERMAN_BERLIN_WEEKDAY_DATE
+      : GERMAN_BERLIN_DATE;
+    return formatter.format(date);
   }
   return formatDateFields(date, includeWeekday, locale, SCHOOL_TIME_ZONE);
 }
