@@ -509,9 +509,10 @@ export function AppTenantTabs({
     <nav
       ref={navRef}
       aria-label={label}
-      // `py-1.5 -my-1`: Die Leiste schneidet senkrecht mit ab; so bleibt die
-      // 44-px-Trefferfläche der 32 px hohen Reiter ganz.
-      className="-mx-2 -my-1 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-2 py-1.5"
+      // `py-1.5 -mt-1`: Die Leiste schneidet senkrecht mit ab; so bleibt die
+      // 44-px-Trefferfläche der 32 px hohen Reiter ganz. Unten kein
+      // negativer Rand: Sonst ragt das Suchfeld darunter in sie hinein.
+      className="-mx-2 -mt-1 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-2 py-1.5"
       style={edgeMask(edges)}
     >
       {items.map((item) => {
