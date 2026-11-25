@@ -10619,7 +10619,7 @@ export const teacherLoginProblemTopic =
       audience: "teacher",
       icon: "ShieldAlert",
       steps: [
-        "Prüfe, ob oben `Willkommen im Schulportal` steht.",
+        "Prüfe, ob oben `Willkommen bei moto schule` steht.",
         "Steht dort etwas anderes, nutze die Adresse von moto schule.",
         "Prüfe E-Mail-Adresse und Passwort.",
         "Nutze sonst `Passwort vergessen?`.",
@@ -10629,7 +10629,7 @@ export const teacherLoginProblemTopic =
         "Der Link aus der Einladungs-E-Mail führt immer zur richtigen Adresse.",
       ],
       differences: [
-        "`Dieses Konto hat keinen Zugang zum Schul-Portal.` Dann fehlt deinem Konto die Rolle. Wende dich an die OGS-Verwaltung.",
+        "`Dieses Konto hat keinen Zugang zu moto schule.` Dann fehlt deinem Konto die Rolle. Wende dich an die OGS-Verwaltung.",
         "`Die E-Mail-Adresse oder das Passwort stimmt nicht.` Prüfe beides.",
       ],
       troubleshootingDetails: [
@@ -10672,13 +10672,13 @@ export const teacherLoginTopic = function teacherLoginTopic(): HelpTopic {
       "Gemerkte Geräte stehen unter `Einstellungen` im Bereich `Vertraute Geräte`. Dort entfernst du ein Gerät wieder.",
     ],
     differences: [
-      "Oben steht `Willkommen im Schulportal`. So erkennst du, dass du richtig bist.",
+      "Oben steht `Willkommen bei moto schule`. So erkennst du, dass du richtig bist.",
       "Auf dem Knopf steht eine andere Zahl als 90? Deine Schule legt fest, wie viele Tage moto ein Gerät merkt.",
       "Du siehst keine zwei Knöpfe? Dann merkt deine Schule keine Geräte. moto prüft den Code, sobald er vollständig ist.",
       "Für Verwaltung ist ein zweiter Nachweis immer Pflicht. Ebenso für Personalstammdaten, Personaldokumente und Personalfinanzen. Das gilt auch für Einkommensnachweise der Eltern. Ebenso für Gesundheitsdokumente und das Verwalten fremder Arbeitszeiten. Ebenso, wenn du Urlaub genehmigen darfst. Gesundheitshinweise der Kinder allein lösen diese Pflicht nicht aus.",
     ],
     troubleshootingDetails: [
-      "moto sagt, das Konto habe keinen Zugang zum Schul-Portal? Dann fehlt dir die Rolle. Wende dich an die OGS-Verwaltung.",
+      "moto sagt, das Konto habe keinen Zugang zu moto schule? Dann fehlt dir die Rolle. Wende dich an die OGS-Verwaltung.",
       "moto sagt, deine Schule nutze moto schule zurzeit nicht? Dann bietet deine Schule moto schule nicht an. Wende dich an die OGS-Verwaltung.",
       "moto sagt `Die E-Mail-Adresse oder das Passwort stimmt nicht.`? Prüfe beides und versuche es erneut.",
     ],

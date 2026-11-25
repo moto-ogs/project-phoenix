@@ -30,7 +30,7 @@ var analytics_init_nutzungsanalyse_0Definitions = []config.Definition{
 		Key:             config.KeyAnalyticsFreigabe,
 		DependsOn:       config.DependsOnEq(config.KeyAnalyticsEnabled, true),
 		Label:           "Analyse-Freigabe",
-		Description:     "Nur einschalten, wenn die Schule oder ihr Träger schriftlich zugestimmt hat. Dann zeichnet moto im OGS-Portal dieser Schule Sitzungen auf. Texte, Eingaben und Bilder sind dabei ausgeblendet. Wer wiederkommt, wird an einer Kennung ohne Namen erkannt. Das Personal sieht dazu einen Hinweis. Eltern-Portal und Schul-Portal werden nie aufgezeichnet.",
+		Description:     "Nur einschalten, wenn die Schule oder ihr Träger schriftlich zugestimmt hat. Dann zeichnet moto im OGS-Portal dieser Schule Sitzungen auf. Texte, Eingaben und Bilder sind dabei ausgeblendet. Wer wiederkommt, wird an einer Kennung ohne Namen erkannt. Das Personal sieht dazu einen Hinweis. Eltern-Portal und moto schule werden nie aufgezeichnet.",
 		Type:            config.FieldBoolean,
 		Default:         false,
 		ReadPermission:  "config:read",
