@@ -39,10 +39,7 @@ vi.mock("~/lib/student-api", async (importOriginal) => ({
   fetchStudent: state.detail,
 }));
 vi.mock("~/lib/usercontext-api", () => ({
-  userContextService: {
-    getMyEducationalGroups: async () => [],
-    getMySupervisedGroups: async () => [],
-  },
+  userContextService: {},
 }));
 vi.mock("~/lib/pickup-schedule-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/pickup-schedule-api")>()),

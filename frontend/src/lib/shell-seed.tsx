@@ -5,7 +5,7 @@ import type * as platformContract from "~/lib/contract/platform.generated";
 import type { Profile } from "~/lib/profile-helpers";
 import type { RemindersResult } from "~/lib/reminders-api";
 import type { StaffNotice } from "~/lib/staff-notices-api";
-import type { SupervisionSnapshot } from "~/lib/supervision-derive";
+import type { NavigationContext } from "~/lib/contract/active.generated";
 import type { TenantSummary } from "~/lib/tenant-api";
 import type { UserContextResponse } from "~/lib/user-context-types";
 
@@ -40,7 +40,7 @@ export interface ShellBootstrap {
   /** Today's staff notices; the badge counts the pending acknowledgements. */
   staffNoticesToday?: StaffNotice[];
   announcements?: platformContract.PlatformAnnouncementResponse[];
-  supervision?: SupervisionSnapshot;
+  supervision?: NavigationContext;
   counts: ShellCounts;
 }
 

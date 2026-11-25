@@ -522,7 +522,8 @@ Erklärung. Der Nachtrag vom 03.11.2026 bleibt unverändert; dazu gilt:
 
 - **Tageslisten.** Die Gruppenlisten von Group Live, also die
   Gruppenauswahl der Seite „OGS-Gruppen“ mit ihrer Navigation
-  (`GET /api/students/ogs-group-navigation`) und die Reiter der
+  (Abschnitt `groups` im [Aufsichtskontext](../agents/contracts.md#staff-supervision-context-8084-8085))
+  und die Reiter der
   Live-Ansicht (`GET /api/students/ogs-group-live`), lassen eine Gruppe weg,
   solange sie die Feriengruppe einer ausgerichteten Woche ist, die nach dem
   Kalendertag des Lesers beginnt, sie die Feriengruppe keiner heute

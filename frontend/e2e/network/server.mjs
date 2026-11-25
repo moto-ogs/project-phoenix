@@ -26,24 +26,28 @@ const schools = ["school-a", "school-b"].map((subdomain, index) => ({
 
 // Only synthetic fixtures. This is not a backend/authentication test.
 const envelope = (data) => ({ status: "success", data });
-const claims = (scope = "") => ({
-  id: 1,
-  sub: "1",
-  scope,
-  tenant_id: scope === "parent" ? undefined : 1,
-  org_id: 1,
-  first_name: "Test",
-  last_name: "Fixture",
-  email: "fixture@example.invalid",
-  roles: [
-    scope === "school" ? "lehrkraft" : scope === "parent" ? "guardian" : "user",
-  ],
-  permissions: [],
-  exp:
-    Math.floor(
-      realClock("der Next-Server prüft exp gegen seine Wanduhr") / 1000,
-    ) + 3600,
-});
+function claims(scope = "") {
+  const issuedAt = Math.floor(
+    realClock("der Next-Server prüft exp gegen seine Wanduhr") / 1000,
+  );
+  return {
+    id: 1,
+    sub: "1",
+    scope,
+    tenant_id: scope === "parent" ? undefined : 1,
+    org_id: 1,
+    first_name: "Test",
+    last_name: "Fixture",
+    email: "fixture@example.invalid",
+    roles: [
+      scope === "school" ? "lehrkraft" : scope === "parent" ? "guardian" : "user",
+    ],
+    role_is_system: null,
+    permissions: [],
+    iat: issuedAt,
+    exp: issuedAt + 3600,
+  };
+}
 // Shared-cookie mode models the server-side session family (#5194): login
 // opens a family, logout revokes it, and session routes refuse a token whose
 // family is gone although it has not expired.
@@ -78,9 +82,11 @@ const familyRoutes = (path) =>
 // One protected read per other portal, through its BFF (the operator's
 // through the catalog proxy, #2352).
 const portalReads = new Set(["/operator/organizations"]);
-const refuse = (res, body) => {
-  res.writeHead(401, { "Content-Type": "application/problem+json" });
-  res.end(JSON.stringify(body));
+const refuse = (res, { status, code, detail = "The session is not valid" }) => {
+  res.writeHead(status, { "Content-Type": "application/problem+json" });
+  res.end(
+    JSON.stringify({ type: "about:blank", title: "Unauthorized", status, code, detail }),
+  );
 };
 const api = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${apiPort}`);
@@ -212,10 +218,11 @@ const api = createServer(async (req, res) => {
     data = { switchRequests, logoutRequests, liveFamilies: liveFamilies.size };
   } else if (sharedTenantCookie && path === "/auth/switch-tenant") {
     switchRequests++;
-    res.writeHead(401, { "Content-Type": "application/problem+json" });
-    res.end(
-      JSON.stringify({ status: 401, code: "identity.mfa_session_required" }),
-    );
+    refuse(res, {
+      status: 401,
+      code: "identity.mfa_session_required",
+      detail: "The target school requires a second factor",
+    });
     return;
   } else if (sharedTenantCookie && path === "/auth/logout") {
     // Like the backend: 204 only after the family is revoked.
@@ -258,12 +265,14 @@ const api = createServer(async (req, res) => {
       : undefined;
     if (family) liveFamilies.add(family);
     const token = fixtureToken({ ...claims(scope), family_id: family });
-    const pair = { access_token: token, refresh_token: token };
+    const login = {
+      status: "authenticated",
+      access_token: token,
+      refresh_token: token,
+    };
     data = ["parent", "platform", "caterer"].includes(scope)
-      ? envelope(pair)
-      : scope === "school"
-        ? { status: "authenticated", ...pair }
-        : pair;
+      ? envelope(login)
+      : login;
   } else if (path === "/auth/session/validate") {
     let body = "";
     for await (const chunk of req) body += chunk;
@@ -288,24 +297,41 @@ const api = createServer(async (req, res) => {
       });
       return;
     }
+    const session = claims(portal === "tenant" ? "" : portal);
     data = {
-      ...claims(portal === "tenant" ? "" : portal),
+      ...session,
+      id: String(session.id),
+      tenant_id:
+        session.tenant_id === undefined ? undefined : String(session.tenant_id),
+      org_id: String(session.org_id),
       family_id: family,
     };
   } else if (path === "/api/me/profile") data = envelope(profile);
   else if (path === "/api/me/navigation")
     data = envelope({
-      educational_groups: [],
-      supervised_groups: [],
       current_staff: null,
-      incomplete: false,
-      unavailable_sections: [],
       school_switches: {
         parent_news_enabled: false,
         parent_invite_mode: "direct",
         timetable_day_start_time: "08:00",
         timetable_day_end_time: "16:00",
       },
+    });
+  else if (path === "/api/active/supervision-context")
+    data = envelope({
+      groups: {
+        status: "ok",
+        navigation: [],
+        own_group_ids: [],
+        own_room_names: [],
+      },
+      sessions: {
+        status: "ok",
+        overview_status: "forbidden",
+        own_status: "ok",
+        items: [],
+      },
+      released_rooms: { status: "ok", items: [] },
     });
   // The school picker of the main domain (#7563).
   else if (path === "/auth/tenants")

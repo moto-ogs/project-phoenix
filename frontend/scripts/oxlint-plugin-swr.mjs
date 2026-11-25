@@ -140,6 +140,8 @@ const PUBLIC_MODULES = new Set(
     "tenant-contact-keys",
     "tenant-list-keys",
     "shell-keys",
+    "supervision-keys",
+    "supervision",
     "parent-keys",
     "parent-inbox-keys",
     "rooms-keys",

@@ -1,3 +1,4 @@
+import { deriveSupervision } from "~/lib/supervision-derive";
 /**
  * Tests for the Active Supervisions page with the supervision context and a
  * block-aware timetable roster stub: action buttons, released rooms and their
@@ -22,6 +23,12 @@ const navigationMockState = vi.hoisted(() => ({
 }));
 
 const defaultSupervisionState = vi.hoisted(() => ({
+  ownSupervision: false,
+  ownSupervisedRooms: [],
+  ownSessions: [],
+  ownSessionRoomNames: [],
+  ownGroupIds: [],
+  ownGroupRoomNames: [],
   supervisedRooms: [],
   isLoadingSupervision: false,
   overviewEnabled: false,
@@ -2004,6 +2011,7 @@ describe("RoleGuard integration", () => {
     // which is the explicit signal that the admin_supervision_overview
     // setting is enabled on the backend.
     vi.mocked(useOptionalSupervision).mockReturnValue({
+      ...deriveSupervision(),
       supervisedRooms: [{ id: "10", name: "Admin Room", groupId: "1" }],
       isLoadingSupervision: false,
       overviewEnabled: true,
@@ -2033,6 +2041,7 @@ describe("RoleGuard integration", () => {
     } as never);
 
     vi.mocked(useOptionalSupervision).mockReturnValue({
+      ...deriveSupervision(),
       supervisedRooms: [{ id: "10", name: "Raum", groupId: "1" }],
       isLoadingSupervision: false,
       overviewEnabled: true,
@@ -2062,6 +2071,7 @@ describe("RoleGuard integration", () => {
     } as never);
 
     vi.mocked(useOptionalSupervision).mockReturnValue({
+      ...deriveSupervision(),
       supervisedRooms: [
         {
           id: "schulhof",
@@ -2092,6 +2102,7 @@ describe("RoleGuard integration", () => {
     } as never);
 
     vi.mocked(useOptionalSupervision).mockReturnValue({
+      ...deriveSupervision(),
       supervisedRooms: [],
       isLoadingSupervision: true,
       overviewEnabled: false,
@@ -2122,6 +2133,7 @@ describe("Aggregate fetcher error contract", () => {
     } as never);
 
     vi.mocked(useOptionalSupervision).mockReturnValue({
+      ...deriveSupervision(),
       supervisedRooms: [{ id: "10", name: "Admin Room", groupId: "1" }],
       isLoadingSupervision: false,
       overviewEnabled: true,

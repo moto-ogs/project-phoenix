@@ -441,14 +441,12 @@ test("Schule: the catalog proxy forwards a query and a write without data", asyn
       });
       return {
         status: response.status,
-        body: (await response.json().catch(() => null)) as {
-          data?: unknown;
-        } | null,
+        body: await response.json().catch(() => null),
       };
     }, path);
   const saved = await write("/api/school/notifications/preferences/absence");
-  expect(saved.status).toBe(200);
-  expect(saved.body?.data).toBeNull();
+  expect(saved.status).toBe(204);
+  expect(saved.body).toBeNull();
   // The same path under a method the contract does not register.
   expect((await write("/api/school/notifications/feed/read-all")).status).toBe(
     404,

@@ -1,3 +1,4 @@
+import { useOptionalSupervision } from "~/lib/supervision-context";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
@@ -30,6 +31,7 @@ export function useStartOwnBlock({
 }: {
   readonly onFailure: () => Promise<unknown>;
 }) {
+  const { refresh: refreshSupervision } = useOptionalSupervision();
   const router = useTenantRouter();
   const { show } = useApiErrorDisplay();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -41,27 +43,31 @@ export function useStartOwnBlock({
     async (instance: PlannedTimetableInstance) => {
       setBusyId(instance.id);
       try {
-        const result = await timetableOperationsApi.start(instance.id);
+        const result = await timetableOperationsApi
+          .start(instance.id)
+          .catch(async (err: unknown) => {
+            logger.error("home_block_start_failed", {
+              instance_id: instance.id,
+              error: err instanceof Error ? err.message : String(err),
+              status: errorStatus(err),
+            });
+            void show(err, {
+              object: "das Starten des Blocks",
+              retry: () => startRef.current(instance),
+            });
+            await onFailure();
+            return undefined;
+          });
+        if (!result) return;
         // Die Seitenleiste soll die neue Aufsicht sofort zeigen, auch ohne
         // Live-Ereignis (etwa für die AG-Leitung, #4573).
-        window.dispatchEvent(new CustomEvent("phoenix:supervision-stale"));
+        await refreshSupervision(["sessions"]);
         router.push(`/active-supervisions?session=${result.activeGroupId}`);
-      } catch (err) {
-        logger.error("home_block_start_failed", {
-          instance_id: instance.id,
-          error: err instanceof Error ? err.message : String(err),
-          status: errorStatus(err),
-        });
-        void show(err, {
-          object: "das Starten des Blocks",
-          retry: () => startRef.current(instance),
-        });
-        await onFailure();
       } finally {
         setBusyId(null);
       }
     },
-    [onFailure, router, show],
+    [onFailure, refreshSupervision, router, show],
   );
 
   // Wiederholen startet mit dem aktuellen Stand des Hooks.

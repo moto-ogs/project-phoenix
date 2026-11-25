@@ -1,3 +1,4 @@
+import { deriveSupervision } from "~/lib/supervision-derive";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ApiError } from "~/lib/api-error";
@@ -9,6 +10,7 @@ import { useOptionalSupervision } from "~/lib/supervision-context";
 
 /** Default supervision context: no school-wide overview (#2380). */
 const EMPTY_SUPERVISION = {
+  ...deriveSupervision(),
   hasGroups: false,
   isLoadingGroups: false,
   groups: [],

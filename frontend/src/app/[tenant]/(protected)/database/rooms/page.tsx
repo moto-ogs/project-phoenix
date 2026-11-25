@@ -1,5 +1,7 @@
 "use client";
 
+import { useOptionalSupervision } from "~/lib/supervision-context";
+
 import { rooms as roomsKeys } from "~/lib/swr/rooms";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -259,6 +261,7 @@ function RoomsPageContent() {
     "Räume",
   );
 
+  const { refresh: refreshSupervision } = useOptionalSupervision();
   const handleCreateRoom = useCallback(
     async (data: Partial<Room>) => {
       // Ein Fehler bleibt im Dialog: DatabaseForm zeigt ihn über errorPath,
@@ -269,9 +272,12 @@ function RoomsPageContent() {
       const created = await service.create(payload);
       toastSuccess(`Der Raum „${created.name}“ ist angelegt.`);
       setShowCreateModal(false);
-      await refreshRoomLists();
+      await Promise.all([
+        refreshRoomLists(),
+        created.isOpenRoom ? refreshSupervision(["released-rooms"]) : undefined,
+      ]);
     },
-    [service, refreshRoomLists, toastSuccess],
+    [service, refreshRoomLists, refreshSupervision, toastSuccess],
   );
 
   const canShowList = !loading && filteredRooms.length > 0;
