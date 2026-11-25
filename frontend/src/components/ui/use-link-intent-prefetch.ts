@@ -18,7 +18,12 @@ export const HOVER_PREFETCH_DELAY_MS = 80;
 
 type IntentPrefetchProps = Pick<
   ComponentProps<"a">,
-  "target" | "onPointerEnter" | "onPointerLeave" | "onFocus" | "onBlur"
+  | "target"
+  | "onPointerDown"
+  | "onPointerEnter"
+  | "onPointerLeave"
+  | "onFocus"
+  | "onBlur"
 > & {
   readonly href: string;
   readonly prefetch?: boolean | "auto" | null;
