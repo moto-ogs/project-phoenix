@@ -84,6 +84,8 @@ type ClassListEntryFilter struct {
 	FirstName   string
 	LastName    string
 	SchoolClass string
+	// SchoolClasses selects a set; nil leaves it unconstrained, empty matches none.
+	SchoolClasses []string
 }
 
 // The audited class-list administration (#2382): the Klassenliste screen's

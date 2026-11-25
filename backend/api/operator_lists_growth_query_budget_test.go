@@ -309,3 +309,54 @@ func assertOperatorListBudget(t *testing.T, scenario string, statements querybud
 		t.Fatalf("unknown operator list scenario: %s", scenario)
 	}
 }
+
+func TestOperatorAccountPagesRefuseUnauthenticatedAndAuditScopedReadsAfterCreate(t *testing.T) {
+	t.Parallel()
+
+	db := testpkg.SetupTestDB(t)
+	router, _, token, operatorID := operatorListBudgetRouter(t, db)
+	service := buildOperatorProvisioning(t, db)
+	org, school := provisionTestSchool(t, db, service, operatorID, "account-page-audit")
+	ctx := provisioningContext(t, db)
+	email := fmt.Sprintf("page-audit-%d@example.test", school)
+	paths := []struct {
+		path, view, scopeKey string
+		scopeID              int64
+	}{
+		{path: "/operator/accounts", view: "accounts"},
+		{fmt.Sprintf("/operator/organizations/%d/accounts", org), "organization_accounts", "organization_id", org},
+		{fmt.Sprintf("/operator/schools/%d/accounts", school), "school_accounts", "school_id", school},
+	}
+	for _, route := range paths {
+		path := route.path + "?search=" + email
+		request := httptest.NewRequest(http.MethodGet, path, nil).WithContext(ctx)
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, request)
+		require.Equal(t, http.StatusUnauthorized, response.Code, route.path)
+		require.Empty(t, operatorBudgetRows(t, ctx, router, token, path))
+	}
+
+	input := schoolScopedInput(service.CreateSchoolAccount)
+	input.Email, input.Password = email, testpkg.NewTestPassword()
+	input.FirstName, input.LastName = "Rita", "Seite"
+	created, err := service.CreateSchoolAccount(ctx, school, operatorID, provisioningTestClientIP, input)
+	require.NoError(t, err)
+	require.Equal(t, 1, countOperatorAudit(t, db, "create", "account", created.ID.Int64()))
+
+	for _, route := range paths {
+		rows := operatorBudgetRows(t, ctx, router, token, route.path+"?search="+email)
+		require.Equal(t, []string{created.ID.String()}, operatorBudgetIDs(t, rows, "account_id"), route.path)
+		readAudit := db.NewSelect().TableExpr("platform.operator_audit_log").
+			Where("operator_id = ? AND action = 'view' AND resource_type = 'account'", operatorID).
+			Where("changes->>'view' = ?", route.view)
+		if route.scopeKey != "" {
+			readAudit.Where("changes->>? = ?", route.scopeKey, fmt.Sprint(route.scopeID))
+		}
+		count, err := readAudit.Count(ctx)
+		require.NoError(t, err)
+		require.Equal(t, int64(2), int64(count), route.path)
+		unexpected, err := readAudit.Where("changes::text LIKE ?", "%"+email+"%").Count(ctx)
+		require.NoError(t, err)
+		require.Zero(t, unexpected, "audit does not retain the search term")
+	}
+}

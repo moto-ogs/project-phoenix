@@ -1679,6 +1679,55 @@ describe("StudentSearchPage", () => {
         "Jahr 3, 4",
       );
     });
+
+    it("counts every school year chosen as no filter (#6734)", async () => {
+      const { fetchStudents } = await import("~/lib/student-api");
+      const swrModule = await import("~/lib/swr");
+      const fetcher = captureStudentsFetcher(swrModule);
+
+      render(<StudentSearchPage />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("filter-year")).toBeInTheDocument();
+      });
+
+      selectFilterOptions(screen.getByTestId("filter-year"), [
+        "1",
+        "2",
+        "3",
+        "4",
+      ]);
+
+      expect(screen.getByTestId("filter-year")).toHaveValue([
+        "1",
+        "2",
+        "3",
+        "4",
+      ]);
+      expect(
+        screen.queryByTestId("active-filter-year"),
+      ).not.toBeInTheDocument();
+      // "Alle" narrows nothing: the list loads without a school year.
+      await fetcher.current!();
+      expect(fetchStudents).toHaveBeenLastCalledWith(
+        expect.objectContaining({ gradeLevel: [] }),
+      );
+    });
+
+    it("keeps a class from the link as a filter while no class list is there (#6734)", async () => {
+      // The class list mock resolves empty, as it is while it loads or after
+      // it failed. The restored 3a is then the only entry in the dropdown,
+      // yet the list is still narrowed to 3a and must say so.
+      mockSearchParams.set("school_class", "3a");
+
+      render(<StudentSearchPage />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("active-filter-schoolClass"),
+        ).toHaveTextContent("3a");
+      });
+    });
   });
 
   describe("Loading States", () => {
@@ -3404,6 +3453,18 @@ describe("StudentSearchPage", () => {
           current_location: "Raum 102",
           has_full_access: false,
         },
+        // With a second pickup time, "Keine Gehzeit" alone is a real
+        // restriction, not every option (#6734).
+        {
+          id: "12",
+          first_name: "Timed",
+          second_name: "Student",
+          school_class: "1a",
+          group_name: "Gruppe A",
+          current_location: "Raum 101",
+          pickup_time: "15:30",
+          has_full_access: true,
+        },
       ];
 
       const swrModule = await import("~/lib/swr");
@@ -3434,6 +3495,20 @@ describe("StudentSearchPage", () => {
           screen.queryByText(new RegExp(`^Redacted\\b`)),
         ).not.toBeInTheDocument();
       });
+
+      // Every pickup time chosen is "alle" (#6734): no child is left out,
+      // also not the one without full access, and no chip says otherwise.
+      selectFilterOptions(pickupFilter, ["15:30", "none"]);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(new RegExp(`^Redacted\\b`)),
+        ).toBeInTheDocument();
+      });
+      expect(screen.getByText(new RegExp(`^Timed\\b`))).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("active-filter-pickupTime-none"),
+      ).not.toBeInTheDocument();
     });
 
     it("shows active filter chips with correct labels and clears via chip click or clear-all", async () => {

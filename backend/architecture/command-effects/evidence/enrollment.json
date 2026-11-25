@@ -4778,7 +4778,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classListEntryRosterReader.ListClassListEntries",
-      "binding_digest": "b8a0d43486c7e4e2c42e9614cb62a453",
+      "binding_digest": "a75ada4314480fbf93f220a01fe21073",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ClassListEntries.ListClassListEntries",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListClassListEntriesInDisplayOrder",
@@ -4786,7 +4786,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classListEntryRosterReader.ListClassListEntries",
-      "binding_digest": "9252d6f34722233d106a643f40435245",
+      "binding_digest": "dbb3f7a9bacff31c6bbffd7952a71125",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ClassListEntries.ListClassListEntries",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.ListClassListEntriesInDisplayOrder",
@@ -4794,7 +4794,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classListEntryRosterReader.ListClassListEntries",
-      "binding_digest": "125976c4480b3bbb01809f14ce19561a",
+      "binding_digest": "836019ed0dd48422c93ef533bccc8afa",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ClassListEntries.ListClassListEntries",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListClassListEntriesInDisplayOrder",
@@ -6418,7 +6418,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
-      "binding_digest": "2a3efe118f6b6a128203881d879b7631",
+      "binding_digest": "30476e2089ed4fc3b4dc887e189c8bbd",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.ClassMemberFrom",
@@ -6426,7 +6426,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
-      "binding_digest": "3543c4f482d81a5b92624ae32ebd3b3d",
+      "binding_digest": "a2afe48a99e9b0e1d14cad46fbd820d9",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.ClassTimeBeforeCare",
@@ -6434,7 +6434,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
-      "binding_digest": "db928a1d335cb47d53823f8c6b6ce47a",
+      "binding_digest": "1d7893daf0ae0ec534344da202578a5e",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.LeftSchool",
@@ -6442,7 +6442,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
-      "binding_digest": "6515b8c935ac9de7acc3800cb09244da",
+      "binding_digest": "5530dfbb833a6cd9f88fd48a431cdc8a",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.ListClassRoster",

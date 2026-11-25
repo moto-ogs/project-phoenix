@@ -365,7 +365,7 @@ func TestClassListConversionKeepsTheClassTimeOfAChildWhoseCareStartsLater(t *tes
 
 	// The Klassentag roster reads the same class time.
 	suite := NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
-	roster, err := testpkg.TenantQuery1(t, ctx, db, suite.Student.ListClassRoster, "1c")
+	roster, err := testpkg.TenantQuery1(t, ctx, db, suite.Student.ListClassRoster, []string{"1c"})
 	require.NoError(t, err)
 	require.Len(t, roster, 1)
 	from, until, ok := roster[0].ClassTimeBeforeCare()

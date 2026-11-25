@@ -143,6 +143,9 @@ var moduleSQLClockBudget = map[string]int{
 	// download only while expires_at > now() (1), and finishDownload stamps
 	// finished_at like the started_at default (1).
 	"modules/organizationtenancy": 14,
+	// ADR 0324: count and sort the same redeemable school invitations on the
+	// database clock that stamps and validates them (ADR 0285).
+	"modules/operatoraccountdirectory": 1,
 	// Named exceptions on the database clock (ADR 0281): the family children
 	// statement and confirmation (5), ordered against the statement time
 	// enrollment stamps with clock_timestamp(); the download of a PAIN.008

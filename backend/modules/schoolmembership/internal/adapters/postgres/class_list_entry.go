@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
@@ -71,6 +72,16 @@ func (s *Store) ListClassListEntries(ctx context.Context, filter schoolmembershi
 	}
 	if filter.SchoolClass != "" {
 		query = query.Where(`LOWER(BTRIM("class_list_entry".school_class)) = LOWER(BTRIM(?))`, filter.SchoolClass)
+	}
+	if filter.SchoolClasses != nil {
+		if len(filter.SchoolClasses) == 0 {
+			return []schoolmembership.ClassListEntry{}, domain.OperationStats{}, nil
+		}
+		classes := make([]string, len(filter.SchoolClasses))
+		for i, class := range filter.SchoolClasses {
+			classes[i] = strings.ToLower(strings.TrimSpace(class))
+		}
+		query = query.Where(`LOWER(BTRIM("class_list_entry".school_class)) IN (?)`, bun.List(classes))
 	}
 	query = query.OrderExpr(`LOWER("class_list_entry".last_name) ASC, LOWER("class_list_entry".first_name) ASC, "class_list_entry".id ASC`)
 	stats, err := scanAll(ctx, query, "list class list entries")

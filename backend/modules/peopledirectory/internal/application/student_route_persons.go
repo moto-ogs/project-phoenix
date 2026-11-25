@@ -86,7 +86,7 @@ func (p StudentRoutePersons) ListStudentsForDay(ctx context.Context, groupIDs []
 // The unfiltered class roster is every child of the school, graduates
 // included, and the group roster's participation rule decides them.
 func (p StudentRoutePersons) ListSchoolStudentsForDay(ctx context.Context, date, today calendar.Date) ([]peopleModule.StudentRecord, error) {
-	candidates, err := p.persons.StudentRows().ListClassRoster(ctx, "")
+	candidates, err := p.persons.StudentRows().ListClassRoster(ctx, nil)
 	if err != nil {
 		return nil, err
 	}

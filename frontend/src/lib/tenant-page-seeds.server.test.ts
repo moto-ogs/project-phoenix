@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadTimeTrackingSeed } from "~/app/[tenant]/(protected)/time-tracking/page-seed.server";
 import { buildSupervisionDashboardWire } from "~/test/fixtures/supervision-dashboard";
 import { buildBackendStudent } from "~/test/fixtures/students";
+import { buildBackendGroup } from "~/test/fixtures/groups";
 import { testClockDay } from "~/test/clock";
 import { loadActiveSupervisionsSeed } from "./active-supervisions-seed.server";
 import { loadHomeSeed } from "./home-seed.server";
@@ -55,6 +56,19 @@ vi.mock("~/lib/backend-client.server", async (original) => ({
 
 function success(data: unknown) {
   return Response.json({ status: "success", data });
+}
+
+function pageSuccess(data: unknown[]) {
+  return Response.json({
+    status: "success",
+    data,
+    pagination: {
+      current_page: 1,
+      page_size: 1000,
+      total_pages: 1,
+      total_records: data.length,
+    },
+  });
 }
 
 function entries(paths: readonly [path: string, token: string][]) {
@@ -176,17 +190,9 @@ describe("first tenant page reads", () => {
     source.response.mockImplementation((url) => {
       if (url.pathname === "/api/rooms/")
         return new Response(null, { status: 503 });
-      if (url.pathname !== "/api/students/") return success([]);
-      return Response.json({
-        status: "success",
-        data: [],
-        pagination: {
-          current_page: 1,
-          page_size: 1000,
-          total_pages: 1,
-          total_records: 0,
-        },
-      });
+      if (url.pathname === "/api/groups/" || url.pathname === "/api/students/")
+        return pageSuccess([]);
+      return success([]);
     });
     const seed = await loadStudentSearchSeed("school-a", params);
     const key = studentKeys.search(
@@ -250,6 +256,41 @@ describe("first tenant page reads", () => {
         (entry) => entry.key === holidayKeys.guestBadges(["11"]),
       )?.value,
     ).resolves.toEqual([{ studentId: "11", schoolName: "Heimatschule" }]);
+  });
+
+  it("uses the unfiltered key when a link selects every offered grade, class and group", async () => {
+    source.response.mockImplementation((url) => {
+      if (url.pathname === "/api/students/school-classes")
+        return success(["2a", "2b"]);
+      if (url.pathname === "/api/groups/") {
+        return pageSuccess([
+          buildBackendGroup({ id: "4" }),
+          buildBackendGroup({ id: "8" }),
+        ]);
+      }
+      if (url.pathname === "/api/rooms/" || url.pathname === "/api/students/")
+        return pageSuccess([]);
+      return success([]);
+    });
+    const params = new URLSearchParams({
+      year: "1,2,3,4",
+      school_class: "2a,2b",
+      group_id: "4,8",
+    });
+    const seed = await loadStudentSearchSeed("school-a", params);
+    const defaultKey = studentKeys.search(
+      initialStudentSearch(new URLSearchParams(), testClockDay(0), false),
+    );
+    await expect(
+      seed?.entries.find(({ key }) => key === defaultKey)?.value,
+    ).resolves.toMatchObject({ students: [], truncatedTotal: null });
+    const list = entries(source.send.mock.calls).find(
+      ({ pathname }) => pathname === "/api/students/",
+    );
+    expect(list?.searchParams.toString()).toContain("view=slim");
+    for (const filter of ["grade_level", "school_class", "group_id"]) {
+      expect(list?.searchParams.has(filter)).toBe(false);
+    }
   });
 
   it("never asks for an unfiltered child list while enrollment-answer access is refused", async () => {

@@ -51,9 +51,7 @@ const TONES: Record<IconTileTone, string> = {
   green: `${TINT_CLASSES.green.surface} ${TINT_CLASSES.green.text}`,
   greenFill: "bg-moto-green-fill text-white",
   orange: `${TINT_CLASSES.orange.surface} ${TINT_CLASSES.orange.text}`,
-  // Symbol im Grundton, nicht in der -strong-Stufe der übrigen Töne: so
-  // bisher, eine Angleichung wäre sichtbar und gehört nicht in den Umbau.
-  red: `${TINT_CLASSES.red.surface} text-moto-red`,
+  red: `${TINT_CLASSES.red.surface} ${TINT_CLASSES.red.text}`,
 };
 
 interface IconTileProps extends Omit<

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/classday"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
@@ -153,6 +154,7 @@ type (
 		// SchoolRosterDay is the roster of every class of the day, built
 		// once for the school-wide overview (#4802).
 		SchoolRosterDay(ctx context.Context, date calendar.Date) (*DayRoster, error)
+		AssignedClassRoster(ctx context.Context, classes []string, date calendar.Date, weekday string) (classday.AssignedRoster, error)
 	}
 	// StatusDays reads the scheduled day statuses that stand for the day:
 	// active, or archived at the end of their day (#6291).

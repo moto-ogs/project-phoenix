@@ -8845,6 +8845,25 @@
       "portals": [
         "platform"
       ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "direction",
+          "kind": "string"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "sort",
+          "kind": "string"
+        }
+      ],
       "response": {
         "kind": "array",
         "elem": {
@@ -9113,6 +9132,25 @@
       "portals": [
         "platform"
       ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "direction",
+          "kind": "string"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "sort",
+          "kind": "string"
+        }
+      ],
       "response": {
         "kind": "array",
         "elem": {
@@ -9308,6 +9346,25 @@
       "pattern": "/operator/schools/{id}/accounts",
       "portals": [
         "platform"
+      ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "direction",
+          "kind": "string"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "sort",
+          "kind": "string"
+        }
       ],
       "response": {
         "kind": "array",
@@ -10631,6 +10688,23 @@
       "response": {
         "kind": "ref",
         "ref": "ArrivalExceptionBlockStartResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/class-day/assigned-classes",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AssignedClassesReport"
       }
     },
     {
@@ -32494,6 +32568,48 @@
       ]
     },
     {
+      "name": "AssignedClassesReport",
+      "go_type": "classday.AssignedClassesReport",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "weekday",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "enrollment_known",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ClassSummary"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "AssignmentRequest",
       "go_type": "exporttransferhttp.AssignmentRequest",
       "request": true,
@@ -46270,6 +46386,31 @@
               "kind": "ref",
               "ref": "ClassListImportError"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassSummary",
+      "go_type": "classday.ClassSummary",
+      "fields": [
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "totals",
+          "schema": {
+            "kind": "ref",
+            "ref": "DayTotals"
+          }
+        },
+        {
+          "name": "changes",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -78270,6 +78411,13 @@
           }
         },
         {
+          "name": "invitation_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
           "name": "email",
           "schema": {
             "kind": "string"
@@ -94246,6 +94394,13 @@
       "fields": [
         {
           "name": "account_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "invitation_id",
+          "optional": true,
           "schema": {
             "kind": "id"
           }

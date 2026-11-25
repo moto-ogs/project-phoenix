@@ -246,7 +246,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0246: the report templates and their projection read (+5).
 	// ADR 0268: the clock fields and their imports (+10).
 	// ADR 0318: the constructor of the responsibilities at the schools (+5).
-	"modules/organizationtenancy/compose": 385,
+	"modules/organizationtenancy/compose": 384,
 	// Added by ADR 0115: the Elternabrechnung's construction only.
 	// Raised by ADR 0119: the billing run constructor (+7).
 	// Raised by ADR 0121: the confirmation letter constructor (+8).

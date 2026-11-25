@@ -318,6 +318,36 @@ export const ArrivalExceptionBlockStartResponseSchema: z.ZodType<ArrivalExceptio
   start: str,
 });
 
+/** Go: classday.ClassSummary */
+export interface ClassSummary {
+  school_class: string;
+  totals: DayTotals;
+  changes: number;
+}
+
+export const ClassSummarySchema: z.ZodType<ClassSummary, unknown> = object<ClassSummary>({
+  school_class: str,
+  totals: DayTotalsSchema,
+  changes: safeInt,
+});
+
+/** Go: classday.AssignedClassesReport */
+export interface AssignedClassesReport {
+  date: string | null;
+  weekday: string;
+  school_day: boolean;
+  enrollment_known: boolean;
+  classes: ClassSummary[] | null;
+}
+
+export const AssignedClassesReportSchema: z.ZodType<AssignedClassesReport, unknown> = object<AssignedClassesReport>({
+  date: nullable(calendarDate),
+  weekday: str,
+  school_day: bool,
+  enrollment_known: bool,
+  classes: nullable(arr(ClassSummarySchema)),
+});
+
 /** Go: classdayhttp.ClassesResponse */
 export interface ClassesResponse {
   classes: string[] | null;
@@ -633,6 +663,15 @@ export const routes = {
       "date": { kind: "date" },
     },
     response: success(ArrivalExceptionBlockStartResponseSchema),
+  },
+  "GET /school/class-day/assigned-classes": {
+    method: "GET",
+    pattern: "/school/class-day/assigned-classes",
+    portals: ["school"],
+    query: {
+      "date": { kind: "date" },
+    },
+    response: success(AssignedClassesReportSchema),
   },
   "GET /school/class-day/classes": {
     method: "GET",

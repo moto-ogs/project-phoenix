@@ -173,29 +173,6 @@ type SchoolIdentityRequest struct {
 	CaregiverUpgrade bool
 }
 
-// SchoolAccount is one account with access to a school.
-type SchoolAccount struct {
-	AccountID           ident.ID
-	Email               string
-	Active              bool
-	FirstName           string
-	LastName            string
-	RoleName            string
-	PedagogicRole       string
-	Status              string
-	HasAdminRole        bool
-	HasUserRole         bool
-	HasCaregiverProfile bool
-	IsActiveCaregiver   bool
-}
-
-// OrganizationAccount is a school account with its school.
-type OrganizationAccount struct {
-	SchoolAccount
-	SchoolID   int64
-	SchoolName string
-}
-
 // Device is one fleet device with every column provisioning writes.
 type Device struct {
 	ID                    int64

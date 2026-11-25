@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 import { loadAccess, perfPort, tenantBaseUrl } from "./scripts/perf/access";
@@ -20,7 +23,7 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   reporter: "list",
-  outputDir: "perf-results/navigation/test-output",
+  outputDir: "../tmp/perf-navigation-test-output",
   use: {
     ...devices["Desktop Chrome"],
     ...secureChromeUse(),
@@ -28,7 +31,9 @@ export default defineConfig({
     headless: true,
   },
   webServer: {
-    command: "pnpm run build && pnpm run start",
+    command: existsSync(join(homedir(), "bin", "agent-heavy"))
+      ? '"$HOME/bin/agent-heavy" -- pnpm run build && pnpm run start --hostname 127.0.0.1'
+      : "pnpm run build && pnpm run start --hostname 127.0.0.1",
     env: { ...env, PORT: perfPort() },
     url: `http://localhost:${perfPort()}/help`,
     reuseExistingServer: false,

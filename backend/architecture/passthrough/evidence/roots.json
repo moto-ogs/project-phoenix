@@ -3271,27 +3271,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (p ProvisioningIdentity) ListAllAccounts(ctx context.Context) ([]organizationCompose.OrganizationAccount, error) {\n\taccounts, err := p.Accounts.ListAllAccounts(ctx)\n\tif err != nil || accounts == nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]organizationCompose.OrganizationAccount, 0, len(accounts))\n\tfor _, account := range accounts {\n\t\tresult = append(result, organizationCompose.OrganizationAccount{SchoolAccount: organizationCompose.SchoolAccount(account.TenantAccountInfo), SchoolID: account.SchoolID, SchoolName: account.SchoolName})\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ProvisioningIdentity.ListAllAccounts",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p ProvisioningIdentity) ListOrganizationAccounts(ctx context.Context, organizationID int64) ([]organizationCompose.OrganizationAccount, error) {\n\taccounts, err := p.Accounts.ListAccountsByOrganizationID(ctx, organizationID)\n\tif err != nil || accounts == nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]organizationCompose.OrganizationAccount, 0, len(accounts))\n\tfor _, account := range accounts {\n\t\tresult = append(result, organizationCompose.OrganizationAccount{SchoolAccount: organizationCompose.SchoolAccount(account.TenantAccountInfo), SchoolID: account.SchoolID, SchoolName: account.SchoolName})\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ProvisioningIdentity.ListOrganizationAccounts",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p ProvisioningIdentity) ListSchoolAccounts(ctx context.Context, tenantID int64) ([]organizationCompose.SchoolAccount, error) {\n\taccounts, err := p.Accounts.ListAccountsByTenantID(ctx, tenantID)\n\tif err != nil || accounts == nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]organizationCompose.SchoolAccount, 0, len(accounts))\n\tfor _, account := range accounts {\n\t\tresult = append(result, organizationCompose.SchoolAccount(account))\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ProvisioningIdentity.ListSchoolAccounts",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (p ProvisioningIdentity) ListTraegerAccounts(ctx context.Context, organizationID int64, accountIDs []int64) ([]organizationtenancy.TraegerAccount, error) {\n\taccounts, err := p.Traeger.ListTraegerAccounts(ctx, organizationID, accountIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]organizationtenancy.TraegerAccount, 0, len(accounts))\n\tfor _, account := range accounts {\n\t\tresult = append(result, organizationtenancy.TraegerAccount(account))\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/ProvisioningIdentity.ListTraegerAccounts",
@@ -5105,7 +5084,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r classListEntryRosterReader) ListClassListEntries(ctx context.Context, schoolClass string) ([]enrollmentCompose.ClassListEntry, error) {\n\tvalues, err := r.entries.ListClassListEntriesInDisplayOrder(ctx, schoolmembership.ClassListEntryFilter{SchoolClass: schoolClass})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]enrollmentCompose.ClassListEntry, 0, len(values))\n\tfor _, value := range values {\n\t\tresult = append(result, enrollmentCompose.ClassListEntry{ID: value.ID, FirstName: value.FirstName, LastName: value.LastName, SchoolClass: value.SchoolClass})\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (r classListEntryRosterReader) ListClassListEntries(ctx context.Context, classes []string) ([]enrollmentCompose.ClassListEntry, error) {\n\tvalues, err := r.entries.ListClassListEntriesInDisplayOrder(ctx, schoolmembership.ClassListEntryFilter{SchoolClasses: classes})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]enrollmentCompose.ClassListEntry, 0, len(values))\n\tfor _, value := range values {\n\t\tresult = append(result, enrollmentCompose.ClassListEntry{ID: value.ID, FirstName: value.FirstName, LastName: value.LastName, SchoolClass: value.SchoolClass})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/classListEntryRosterReader.ListClassListEntries",
       "owner": "roots"

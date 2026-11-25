@@ -11,6 +11,7 @@ import {
   nullable,
   object,
   optional,
+  paginated,
   requestBody,
   safeInt,
   str,
@@ -51,6 +52,7 @@ export const SchoolRequiredDetailsSchema: z.ZodType<SchoolRequiredDetails, unkno
 /** Go: organizationtenancy.SchoolAccount */
 export interface SchoolAccount {
   account_id: string;
+  invitation_id?: string;
   email: string;
   active: boolean;
   first_name: string;
@@ -66,6 +68,7 @@ export interface SchoolAccount {
 
 export const SchoolAccountSchema: z.ZodType<SchoolAccount, unknown> = object<SchoolAccount>({
   account_id: int64String,
+  invitation_id: optional(int64String),
   email: str,
   active: bool,
   first_name: str,
@@ -338,7 +341,13 @@ export const routes = {
     method: "GET",
     pattern: "/operator/schools/{id}/accounts",
     portals: ["platform"],
-    response: success(z.array(SchoolAccountSchema)),
+    query: {
+      "cursor": { kind: "string" },
+      "direction": { kind: "string" },
+      "search": { kind: "string" },
+      "sort": { kind: "string" },
+    },
+    response: paginated(z.array(SchoolAccountSchema)),
   },
   "GET /operator/schools/{id}/accounts/{accountId}/caregiver-capability/": {
     method: "GET",

@@ -22,16 +22,38 @@ export function StudentSearchSeed({
   const { data: session } = useSession();
   const initial = initialStudentSearch(query, berlinTodayISO(), enabled);
   const answer = query.get("enrollment_answer");
+  const canReadGroups = hasPermission(session, "groups:read");
+  // The browser may already have the option lists. Claim the possible list
+  // keys while the server resolves its options; only the matching key receives
+  // a value. A full option selection is equivalent to no selection.
+  const groupSelections =
+    canReadGroups && initial.groupIds.length
+      ? [initial.groupIds, []]
+      : [initial.groupIds];
+  const classSelections = initial.schoolClasses.length
+    ? [initial.schoolClasses, []]
+    : [initial.schoolClasses];
+  const answers =
+    answer && hasPermission(session, "users:read") ? ["", answer] : [""];
+  const listClaims = groupSelections.flatMap((groupIds) =>
+    classSelections.flatMap((schoolClasses) =>
+      answers.map((enrollmentAnswer) =>
+        studentKeys.search({
+          ...initial,
+          groupIds,
+          schoolClasses,
+          enrollmentAnswer,
+        }),
+      ),
+    ),
+  );
   const claims = [
-    studentKeys.search(initial),
-    answer
-      ? studentKeys.search({ ...initial, enrollmentAnswer: answer })
-      : null,
+    ...listClaims,
     studentKeys.schoolClasses(),
     hasPermission(session, "users:read")
       ? tenantListKeys.enrollmentAnswerFilters(initial.date)
       : null,
-    hasPermission(session, "groups:read") ? groupKeys.key() : null,
+    canReadGroups ? groupKeys.key() : null,
     hasPermission(session, "rooms:read")
       ? roomKeys.key({ page: 1, pageSize: 1000 })
       : null,

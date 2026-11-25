@@ -608,3 +608,13 @@ Plain SMTP or fallback acceptance stays **accepted**, not delivered, and uses
 the slow cadence. A tracked provider acceptance waits up to 24 hours; a
 provider-reported delay follows Delivery's five-day limit. Settled chats stop
 polling; new messages refresh their mail status.
+
+### Operator account pages
+
+The three account GETs (platform, organization, school) answer a single
+50-row page through the generated paginated envelope (ADR 0324). Keep the
+first-page key scoped by filter and sort; pass `pagination.next_cursor`
+unchanged for “Mehr laden”. A new scope, order, search or successful write
+invalidates the continuation. Do not sort or truncate the loaded rows a
+second time in the table. Seed only the first page for the initial URL, with
+the same key and query the browser uses.

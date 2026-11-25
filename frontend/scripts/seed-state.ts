@@ -10,18 +10,37 @@ export interface SeedAccess {
 }
 
 interface SeedProfile {
-  entities?: { enrollment?: { requests?: Array<{ status_token?: string }> } };
-  school?: { tenant_slug?: string };
+  school?: { id?: number; name?: string; slug?: string; tenant_slug?: string };
+  organization?: { name?: string; slug?: string };
+  entities?: {
+    enrollment?: { requests?: Array<{ status_token?: string }> };
+    rooms?: Record<string, { id: number; name: string }>;
+    students?: Record<
+      string,
+      { id: number; first_name: string; last_name: string }
+    >;
+  };
   credentials?: {
+    operator?: { email: string; password: string };
+    caterer?: { email: string; password: string };
     /** Der schuleigene Admin, nur in dieser Schule (nicht `demo1`). */
     school_admin?: { email?: string; password?: string };
     accounts?: Partial<
-      Record<SeedAccountRole, Array<{ email?: string; password?: string }>>
+      Record<
+        SeedAccountRole,
+        Array<{
+          email?: string;
+          password?: string;
+          name?: string;
+          staff_id?: number;
+        }>
+      >
     >;
     parents?: Array<{
       email?: string;
       password?: string;
-      student_ids?: unknown[];
+      student_ids?: number[];
+      guardian_id?: number;
     }>;
   };
 }
@@ -42,6 +61,8 @@ type SeedAccountRole = "admin" | "betreuer" | "lehrkraft";
 export type SeedRole = SeedAccountRole | "school_admin";
 
 interface SeedState {
+  base_url?: string;
+  created_at?: string;
   version?: string;
   default_profile?: string;
   profiles?: Record<string, SeedProfile>;
@@ -66,9 +87,12 @@ function isMissingFile(error: unknown): boolean {
 }
 
 /** Liest das Seed-Profil; null ohne Seed-Datei. */
-function readSeedProfile(
-  options: LoadSeedAccessOptions,
-): { key: string; profile: SeedProfile } | null {
+export function readSeedProfile(options: LoadSeedAccessOptions): {
+  key: string;
+  profile: SeedProfile;
+  baseUrl?: string;
+  createdAt?: string;
+} | null {
   const statePath = options.statePath ?? defaultSeedStatePath();
   let raw: string;
   try {
@@ -97,7 +121,12 @@ function readSeedProfile(
       `Unknown demo school profile ${JSON.stringify(profileKey)}; available profiles: ${available}`,
     );
   }
-  return { key: profileKey, profile };
+  return {
+    key: profileKey,
+    profile,
+    baseUrl: state.base_url,
+    createdAt: state.created_at,
+  };
 }
 
 /** Stand einer im Seed vorhandenen Anmeldung, ohne eine Anmeldung im Test zu schreiben. */

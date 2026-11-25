@@ -9,9 +9,33 @@ import {
 } from "~/lib/student-helpers";
 import type { StudentSearchFilterInput } from "~/lib/student-search-resource";
 import { normalizeSearchStudentsGroupId } from "~/lib/swr/search-students-key";
+import { sameSetMembers } from "~/lib/utils";
 
 export const DATE_QUERY_PARAM = "date";
 export const SEARCH_QUERY_PARAM = "search";
+export const STUDENT_SEARCH_YEAR_OPTIONS = SCHOOL_YEAR_FILTER_OPTIONS.filter(
+  ({ value }) => value !== "all",
+);
+const STUDENT_SEARCH_YEARS = STUDENT_SEARCH_YEAR_OPTIONS.map(
+  ({ value }) => value,
+);
+const NO_RESTRICTION: readonly string[] = [];
+
+/** A full selection and no selection both mean "all" (#6734). */
+export function searchSelection(
+  selected: readonly string[],
+  options: readonly string[],
+): readonly string[] {
+  return selected.length > 0 && !sameSetMembers(selected, options)
+    ? selected
+    : NO_RESTRICTION;
+}
+
+export function searchYearSelection(
+  selected: readonly string[],
+): readonly string[] {
+  return searchSelection(selected, STUDENT_SEARCH_YEARS);
+}
 export const FILTER_QUERY_PARAMS = [
   "year",
   "school_class",
@@ -72,10 +96,8 @@ export function validQueryValue<T extends string>(
 }
 
 export function keepOfferedYears(values: readonly string[]): string[] {
-  return normalizeMultiValues(values).filter(
-    (year) =>
-      year !== "all" &&
-      SCHOOL_YEAR_FILTER_OPTIONS.some(({ value }) => value === year),
+  return normalizeMultiValues(values).filter((year) =>
+    STUDENT_SEARCH_YEAR_OPTIONS.some(({ value }) => value === year),
   );
 }
 
@@ -151,6 +173,7 @@ export function initialStudentSearch(
   const { explicitDate, ...filters } = studentSearchUrl(params, today);
   return {
     ...filters,
+    years: searchYearSelection(filters.years),
     date: explicitDate ?? today,
     isToday: explicitDate === null,
     roomId: explicitDate ? "" : filters.roomId,

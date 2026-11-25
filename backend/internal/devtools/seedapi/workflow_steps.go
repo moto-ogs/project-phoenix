@@ -163,10 +163,11 @@ func (s buildStateStep) Run(ctx context.Context, rt *Runtime) error {
 	if virtual, ok := rt.Values["profile.virtual_device"].(SeedDevice); ok {
 		state.Devices[virtual.DeviceID] = virtual
 	}
-	state.Credentials.Operator = &SeedOperatorCredentials{
+	state.Credentials.Operator = &SeedPortalCredentials{
 		Email:    rt.OperatorEmail,
 		Password: rt.OperatorPassword,
 	}
+	state.Credentials.Caterer, _ = rt.Values[seedCatererAccess].(*SeedPortalCredentials)
 	state.Topology.Organizations = 1
 	state.Topology.Schools = 1 + len(rt.AdditionalProfiles)
 

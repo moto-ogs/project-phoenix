@@ -18,6 +18,7 @@ import {
 import {
   enrollmentAnswerChildrenOf,
   initialStudentSearch,
+  searchSelection,
 } from "~/lib/student-search-url";
 import { mapStudentListRow } from "~/lib/student-wire";
 import { groupKeys } from "~/lib/swr/groups-keys";
@@ -40,25 +41,25 @@ export async function loadStudentSearchSeed(
     berlinTodayISO(),
     tenant.studentPhotosEnabled === true,
   );
+  const schoolClasses = seedRead(
+    "studentSchoolClasses",
+    async (signal) =>
+      (
+        await readContract(
+          studentsContract.routes["GET /api/students/school-classes"],
+          { token, signal },
+        )
+      ).data,
+  );
   const entries: ServerSeedEntry[] = [
     {
       key: studentKeys.schoolClasses(),
-      value: seedRead(
-        "studentSchoolClasses",
-        async (signal) =>
-          (
-            await readContract(
-              studentsContract.routes["GET /api/students/school-classes"],
-              { token, signal },
-            )
-          ).data,
-      ),
+      value: schoolClasses,
+      render: initial.schoolClasses.length > 0,
     },
   ];
-  if (hasPermission(session, "groups:read")) {
-    entries.push({
-      key: groupKeys.key(),
-      value: seedRead("studentSearchGroups", async (signal) =>
+  const groups = hasPermission(session, "groups:read")
+    ? seedRead("studentSearchGroups", async (signal) =>
         mapGroupsResponse(
           (
             await readContract(groupsContract.routes["GET /api/groups/"], {
@@ -67,7 +68,13 @@ export async function loadStudentSearchSeed(
             })
           ).data,
         ),
-      ),
+      )
+    : undefined;
+  if (groups) {
+    entries.push({
+      key: groupKeys.key(),
+      value: groups,
+      render: initial.groupIds.length > 0,
     });
   }
   if (hasPermission(session, "rooms:read")) {
@@ -120,7 +127,22 @@ export async function loadStudentSearchSeed(
       if (!answerChildren) serverAnswerFilter = answer;
     }
   }
-  const input = { ...initial, enrollmentAnswer: serverAnswerFilter };
+  // An explicit selection of every offered group or class means no filter.
+  // If the option read failed, leave the list to the browser that retries it.
+  const [classOptions, groupOptions] = await Promise.all([
+    initial.schoolClasses.length > 0 ? schoolClasses : [],
+    initial.groupIds.length > 0 && groups ? groups : [],
+  ]);
+  if (!classOptions || !groupOptions) return seedOf(snapshot, entries, builtAt);
+  const input = {
+    ...initial,
+    schoolClasses: searchSelection(initial.schoolClasses, classOptions),
+    groupIds: searchSelection(
+      initial.groupIds,
+      groupOptions.map(({ id }) => id),
+    ),
+    enrollmentAnswer: serverAnswerFilter,
+  };
   const search = seedRead("studentSearch", (signal) =>
     fetchStudentSearch(
       buildStudentSearchFilters(input),

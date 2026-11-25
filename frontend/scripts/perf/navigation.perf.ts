@@ -6,19 +6,31 @@ import {
   dismissNotificationHint,
   gotoTolerant,
   loadAccess,
-  loadRoleAccess,
   login,
   tenantBaseUrl,
 } from "./access";
+import {
+  OUT_DIR,
+  REPEATS,
+  CPU_THROTTLE,
+  NETWORK,
+  QUIET,
+  armProbe,
+  readProbe,
+  requestCost,
+  median,
+  type RequestCost,
+} from "./navigation-probe";
+import { measureRevisits } from "./revisit";
+import { revisitFixture } from "./revisit-access";
+import { installContentProbe } from "./revisit-content";
+import { revisitTargets } from "./revisit-targets";
 import { RequestRecorder } from "./recorder";
 import {
   INTENT_HOPS,
   NAVIGATION_HOPS,
-  REVISIT_TARGETS,
   type IntentHop,
   type NavigationHop,
-  type PerfRole,
-  type RevisitTarget,
 } from "./targets";
 
 // Seitenwechsel-Messung (#2828). Der kalte Aufruf ist in measure.perf.ts
@@ -38,17 +50,6 @@ import {
 //                     danach weg, hat React sie neu aufgebaut.
 //   fallbacks       — welche Ladehüllen zwischendurch sichtbar waren.
 //   toContentMs     — Klick bis der Zielinhalt steht.
-
-const OUT_DIR = join(process.cwd(), "perf-results", "navigation");
-const REPEATS = 3;
-const CPU_THROTTLE = 4;
-/** Schul-WLAN gegen einen entfernten Server: 150 ms RTT, 3 Mbit/s. */
-const NETWORK = {
-  latency: 150,
-  downloadThroughput: (3 * 1024 * 1024) / 8,
-  uploadThroughput: (1 * 1024 * 1024) / 8,
-} as const;
-const QUIET = { quietMs: 1500, capMs: 25_000 } as const;
 
 const access = loadAccess();
 const base = tenantBaseUrl(access);
@@ -81,10 +82,6 @@ const ALLOWED_NAVIGATION_SHELL_ENDPOINTS = new Set([
   "/api/settings/schema",
 ]);
 
-interface NavProbeWindow {
-  __navProbe?: { fallbacks: string[]; observer: MutationObserver | null };
-}
-
 interface HopResult {
   from: string;
   to: string;
@@ -92,6 +89,7 @@ interface HopResult {
   toContentMs: number;
   settleMs: number;
   shellSurvived: boolean;
+  mountedLoading: boolean;
   documents: number;
   rsc: number;
   api: number;
@@ -114,77 +112,9 @@ function expectNavigationInvariants(result: HopResult): void {
     `${transition}: keine wiederholten Hüllen-Endpunkte`,
   ).toEqual([]);
   expect(
-    result.fallbacks.filter((fallback) => fallback.startsWith("loading:")),
+    result.mountedLoading,
     `${transition}: kein allgemeiner Ladeplatzhalter`,
-  ).toEqual([]);
-}
-
-/**
- * Markiert die Hülle und beobachtet, welche Ladehüllen auftauchen. Beides
- * direkt vor dem Klick; die Marke ist ein Attribut auf einem DOM-Knoten, den
- * React nur bei einem Neuaufbau ersetzt.
- */
-async function armProbe(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    const probeWindow = window as NavProbeWindow;
-    probeWindow.__navProbe?.observer?.disconnect();
-    const state = {
-      fallbacks: [] as string[],
-      observer: null as MutationObserver | null,
-    };
-    probeWindow.__navProbe = state;
-
-    document
-      .querySelector("[data-portal-background]")
-      ?.setAttribute("data-nav-probe", "armed");
-
-    const note = (element: Element) => {
-      if (element.matches('output[aria-busy="true"]')) {
-        state.fallbacks.push(
-          `loading:${element.getAttribute("aria-label") ?? ""}`,
-        );
-      } else if (element.matches(".animate-pulse")) {
-        state.fallbacks.push("skeleton");
-      } else if (element.matches(".moto-nav-progress")) {
-        state.fallbacks.push("progress-bar");
-      } else {
-        return;
-      }
-    };
-
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const node of mutation.addedNodes) {
-          if (!(node instanceof Element)) continue;
-          note(node);
-          for (const child of node.querySelectorAll(
-            'output[aria-busy="true"], .animate-pulse, .moto-nav-progress',
-          )) {
-            note(child);
-          }
-        }
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    state.observer = observer;
-  });
-}
-
-async function readProbe(
-  page: Page,
-): Promise<{ shellSurvived: boolean; fallbacks: string[] }> {
-  return page.evaluate(() => {
-    const probeWindow = window as NavProbeWindow;
-    const state = probeWindow.__navProbe;
-    state?.observer?.disconnect();
-    const shellSurvived =
-      document
-        .querySelector("[data-portal-background]")
-        ?.getAttribute("data-nav-probe") === "armed";
-    // Mehrfach dasselbe Skelett zählt einmal; interessant ist, WAS zu sehen war.
-    const fallbacks = [...new Set(state?.fallbacks ?? [])];
-    return { shellSurvived, fallbacks };
-  });
+  ).toBe(false);
 }
 
 /** „3x /api/…“ je Pfad, absteigend — die Rohliste eines Wechsels. */
@@ -264,6 +194,7 @@ async function measureHop(
     toContentMs: Math.round(toContentMs),
     settleMs: Math.round(settleMs),
     shellSurvived: probe.shellSurvived,
+    mountedLoading: probe.mountedLoading,
     fallbacks: probe.fallbacks,
     documents: records.filter((record) => record.resourceType === "document")
       .length,
@@ -282,17 +213,21 @@ test.beforeAll(() => {
   mkdirSync(OUT_DIR, { recursive: true });
 });
 
-test("login", async ({ page }) => {
-  await login(page, access);
-  await dismissNotificationHint(page, base);
-  await page
-    .context()
-    .storageState({ path: join(OUT_DIR, "storage-state.json") });
-});
+async function navigationSession(browser: import("@playwright/test").Browser) {
+  const context = await browser.newContext();
+  try {
+    const page = await context.newPage();
+    await login(page, access);
+    await dismissNotificationHint(page, base);
+    return await context.storageState();
+  } finally {
+    await context.close();
+  }
+}
 
 test("measure sidebar navigation", async ({ browser }) => {
   test.setTimeout(REPEATS * 180_000);
-  const storageState = join(OUT_DIR, "storage-state.json");
+  const storageState = await navigationSession(browser);
 
   for (let repeat = 0; repeat < REPEATS; repeat += 1) {
     const context = await browser.newContext({
@@ -355,14 +290,6 @@ const INTENT_SETTLE = { quietMs: 3000, capMs: 30_000 } as const;
 /** Nach dem Klick reicht ein kürzeres Fenster: gezählt wird nur der Wechsel. */
 const INTENT_QUIET = { quietMs: 1500, capMs: 10_000 } as const;
 
-interface RequestCost {
-  requests: number;
-  rsc: number;
-  scripts: number;
-  api: number;
-  kB: number;
-}
-
 interface IntentResult {
   name: string;
   mode: (typeof INTENT_MODES)[number];
@@ -384,34 +311,6 @@ interface IntentResult {
   afterClickPaths: string[];
   /** RSC und JS relativ zum Klick: „start..ende pfad“ in ms. */
   timeline: string[];
-}
-
-function requestCost(
-  records: readonly {
-    path: string;
-    resourceType: string;
-    bytes: number | null;
-  }[],
-): RequestCost {
-  return {
-    requests: records.length,
-    rsc: records.filter((record) => record.path.includes("_rsc=")).length,
-    scripts: records.filter((record) => record.resourceType === "script")
-      .length,
-    api: records.filter((record) => record.path.startsWith("/api/")).length,
-    kB:
-      Math.round(
-        records.reduce((sum, record) => sum + (record.bytes ?? 0), 0) / 102.4,
-      ) / 10,
-  };
-}
-
-function median(values: readonly number[]): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2
-    ? sorted[middle]!
-    : Math.round((sorted[middle - 1]! + sorted[middle]!) / 2);
 }
 
 async function measureIntent(
@@ -492,16 +391,8 @@ async function measureIntent(
 
 test("measure cold click after intent", async ({ browser }) => {
   test.setTimeout(REPEATS * INTENT_HOPS.length * INTENT_MODES.length * 180_000);
-  const loginState = join(OUT_DIR, "storage-state.json");
-  const storageState = join(OUT_DIR, "storage-state-intent.json");
 
-  // Der Hinweis zu Browser-Benachrichtigungen legt sich sonst über die
-  // Seitenleiste. Er merkt sich das Schließen im localStorage.
-  const setup = await browser.newContext({ storageState: loginState });
-  const setupPage = await setup.newPage();
-  await dismissNotificationHint(setupPage, base);
-  await setup.storageState({ path: storageState });
-  await setup.close();
+  const storageState = await navigationSession(browser);
 
   const results: IntentResult[] = [];
   for (let repeat = 0; repeat < REPEATS; repeat += 1) {
@@ -583,168 +474,65 @@ test("measure cold click after intent", async ({ browser }) => {
   );
 });
 
-// Rückweg und erneuter Besuch (#4988). Je Ziel und Lauf ein frischer Kontext:
-// Ziel öffnen („kalt“), Zwischenseite, Ziel erneut über die Seitenleiste
-// („warm“), Zwischenseite, Browser-Zurück („rueckweg“). Liegen die Daten im
-// Cache, darf weder warm noch Rückweg auf denselben Abruf warten.
-// PERF_REVISIT=name1,name2 begrenzt die Ziele.
-const REVISIT_STEPS = ["kalt", "warm", "rueckweg"] as const;
-
-interface RevisitResult {
-  name: string;
-  step: (typeof REVISIT_STEPS)[number];
-  repeat: number;
-  toContentMs: number;
-  settleMs: number;
-  documents: number;
-  fallbacks: string[];
-  paths: string[];
-}
-
-async function revisitStep(
-  page: Page,
-  recorder: RecorderLike,
-  target: RevisitTarget,
-  action: () => Promise<unknown>,
-): Promise<Omit<RevisitResult, "name" | "step" | "repeat">> {
-  await armProbe(page);
-  recorder.start();
-  const started = performance.now();
-  await action();
-  await page.waitForURL((url) => url.pathname === target.path, {
-    timeout: 30_000,
-    waitUntil: "commit",
-  });
-  await expect(target.ready(page)).toBeVisible({ timeout: 30_000 });
-  const toContentMs = performance.now() - started;
-  await recorder.waitForQuiet(QUIET);
-  const settleMs = performance.now() - started;
-  const probe = await readProbe(page);
-  const records = recorder.records.filter((record) => !record.noise);
-  return {
-    toContentMs: Math.round(toContentMs),
-    settleMs: Math.round(settleMs),
-    documents: records.filter((record) => record.resourceType === "document")
-      .length,
-    fallbacks: probe.fallbacks,
-    paths: countByPath(records),
-  };
-}
-
-type RecorderLike = Pick<RequestRecorder, "start" | "waitForQuiet" | "records">;
-
-async function openVia(
-  page: Page,
-  recorder: RecorderLike,
-  target: RevisitTarget,
-): Promise<void> {
-  await target.via.link(page).click({ timeout: 15_000 });
-  await page.waitForURL((url) => url.pathname === target.via.path, {
-    timeout: 30_000,
-    waitUntil: "commit",
-  });
-  await expect(target.via.ready(page)).toBeVisible({ timeout: 30_000 });
-  recorder.start();
-  await recorder.waitForQuiet(QUIET);
-}
-
-test("measure revisit", async ({ browser }) => {
-  const only = process.env.PERF_REVISIT?.split(",").filter(Boolean);
-  const targets = REVISIT_TARGETS.filter(
-    (target) => !only || only.includes(target.name),
+test("measure revisit: delayed loading probe", async ({ page }) => {
+  await page.setContent(
+    "<style>.moto-nav-progress{opacity:0;animation:appear 1ms 180ms forwards}@keyframes appear{to{opacity:1}}</style><main></main>",
   );
-  test.setTimeout(REPEATS * targets.length * 180_000 + 120_000);
+  await armProbe(page);
+  await page.evaluate(() => {
+    const bar = document.createElement("div");
+    bar.className = "moto-nav-progress";
+    bar.textContent = "Lädt";
+    const placeholder = document.createElement("output");
+    placeholder.setAttribute("aria-busy", "true");
+    placeholder.hidden = true;
+    document.querySelector("main")!.append(bar, placeholder);
+  });
+  await page.waitForFunction(
+    () =>
+      getComputedStyle(document.querySelector(".moto-nav-progress")!)
+        .opacity === "1",
+  );
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+  const probe = await readProbe(page);
+  expect(probe.fallbacks).toEqual(["progress-bar"]);
+  expect(probe.mountedLoading).toBe(true);
+});
 
-  // Je Rolle einmal anmelden; der Hinweis zu Benachrichtigungen legt sich
-  // sonst über die Seitenleiste und merkt sich das Schließen im localStorage.
-  const states = new Map<PerfRole, { storageState: string; baseUrl: string }>();
-  for (const role of new Set(targets.map((target) => target.role))) {
-    const roleAccess = loadRoleAccess(role);
-    const baseUrl = tenantBaseUrl(roleAccess);
-    const state = join(OUT_DIR, `storage-state-revisit-${role}.json`);
-    const setup = await browser.newContext();
-    const setupPage = await setup.newPage();
-    await login(setupPage, roleAccess);
-    await dismissNotificationHint(setupPage, baseUrl);
-    await setup.storageState({ path: state });
-    await setup.close();
-    states.set(role, { storageState: state, baseUrl });
-  }
-
-  const results: RevisitResult[] = [];
-  for (let repeat = 0; repeat < REPEATS; repeat += 1) {
-    for (const target of targets) {
-      const roleState = states.get(target.role)!;
-      const context = await browser.newContext({
-        storageState: roleState.storageState,
-        serviceWorkers: "block",
-      });
-      const page = await context.newPage();
-      const cdp = await context.newCDPSession(page);
-      await cdp.send("Emulation.setCPUThrottlingRate", { rate: CPU_THROTTLE });
-      await cdp.send("Network.emulateNetworkConditions", {
-        offline: false,
-        ...NETWORK,
-      });
-      const recorder = new RequestRecorder(page);
-      try {
-        await gotoTolerant(page, `${roleState.baseUrl}${target.via.path}`);
-        await expect(target.via.ready(page)).toBeVisible({ timeout: 30_000 });
-        recorder.start();
-        await recorder.waitForQuiet(INTENT_SETTLE);
-
-        const steps: Record<RevisitResult["step"], () => Promise<unknown>> = {
-          kalt: () => target.link(page).click({ timeout: 15_000 }),
-          warm: () => target.link(page).click({ timeout: 15_000 }),
-          rueckweg: () => page.goBack({ waitUntil: "commit" }),
-        };
-        for (const step of REVISIT_STEPS) {
-          const result = await revisitStep(page, recorder, target, steps[step]);
-          expect(result.documents, `${target.name} ${step}: kein Reload`).toBe(
-            0,
-          );
-          results.push({ name: target.name, step, repeat, ...result });
-          console.log(
-            `${target.name} ${step} #${repeat}: ${result.toContentMs} ms, Ladehüllen ${result.fallbacks.join(",") || "-"}`,
-          );
-          if (step !== "rueckweg") await openVia(page, recorder, target);
-        }
-      } finally {
-        writeFileSync(
-          join(OUT_DIR, "revisit.json"),
-          JSON.stringify(results, null, 2),
-        );
-        await context.close();
-      }
-    }
-  }
-
-  const rows = targets.flatMap((target) =>
-    REVISIT_STEPS.map((step) => {
-      const runs = results.filter(
-        (result) => result.name === target.name && result.step === step,
-      );
-      return {
-        ziel: target.name,
-        schritt: step,
-        bisInhaltMs: median(runs.map((run) => run.toContentMs)),
-        laeufe: runs.map((run) => run.toContentMs).join("/"),
-        ladehuellen: [...new Set(runs.flatMap((run) => run.fallbacks))].join(
-          ",",
-        ),
-        api: [
-          ...new Set(
-            runs.flatMap((run) =>
-              run.paths.filter((path) => path.includes("/api/")),
-            ),
-          ),
-        ].join(" "),
-      };
+test("measure revisit: reject a failed Caterer order row", async ({ page }) => {
+  const fixture = { ...revisitFixture(), schoolName: "Testschule" };
+  const orders = revisitTargets(fixture).find(
+    (journey) => journey.name === "konto-bestellungen",
+  )!.target.content;
+  await installContentProbe(page);
+  await page.route("http://localhost/", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: `<main><table>
+        <thead><tr><th>Schule</th><th>Summe</th></tr></thead>
+        <tbody><tr><td>Testschule</td><td id="sum">Nicht geladen</td></tr>
+        <tr><td>Andere Schule</td><td>12</td></tr></tbody>
+      </table></main>`,
     }),
   );
-  console.table(rows.map(({ api: _api, ...row }) => row));
-  writeFileSync(
-    join(OUT_DIR, "revisit.summary.json"),
-    JSON.stringify(rows, null, 2),
+  await page.goto("http://localhost/");
+  const ready = () =>
+    page.evaluate((content) => window.__revisit.matches(content), orders);
+  expect(await ready()).toBe(false);
+  await page.locator("#sum").evaluate((cell) => (cell.textContent = "0"));
+  expect(await ready()).toBe(true);
+});
+
+// Revisit shares the production server, throttle, network recorder and visible loading probe.
+test("measure revisit", async ({ browser }, testInfo) => {
+  // This serial, three-round study is local only; individual actions have short deadlines.
+  test.setTimeout(4 * 60 * 60_000);
+  await measureRevisits(browser, (ms) =>
+    testInfo.setTimeout(testInfo.timeout + ms),
   );
 });

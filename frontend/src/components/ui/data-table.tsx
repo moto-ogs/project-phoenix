@@ -58,6 +58,8 @@ export interface DataTableColumn<T> {
   // null is a missing value and sorts after all present values, independent
   // of direction.
   sortValue?: (row: T) => string | number | null;
+  /** This column is sorted by the server, without a local value comparator. */
+  serverSortable?: boolean;
   // Role this column plays in the stacked phone layout (below md, unless
   // the table sets `mobileScroll`).
   // A "field" whose render returns null for a row has no line in that row.
@@ -235,6 +237,11 @@ interface DataTableProps<T> {
   rowClassName?: (row: T) => string;
   defaultSortKey?: string;
   defaultSortDirection?: SortDirection;
+  serverSort?: {
+    key: string;
+    direction: SortDirection;
+    onChange: (sort: { key: string; direction: SortDirection }) => void;
+  };
   // When set, only the first N sorted rows render; a footer button reveals
   // another N per click. Use on tables whose row count is unbounded
   // (persons, accounts) — leave undefined on bounded views (orgs, devices).
@@ -1389,6 +1396,7 @@ export function DataTable<T>({
   rowClassName,
   defaultSortKey,
   defaultSortDirection = "asc",
+  serverSort,
   pageSize,
   loadMoreTooltip,
   pageNoun,
@@ -1444,7 +1452,7 @@ export function DataTable<T>({
   // it scrolls away (comparison tables carry no selection).
   const pinStartKey = stackedOnMobile ? undefined : shownColumns[0]?.key;
 
-  const [sort, setSort] = useState<{
+  const [localSort, setLocalSort] = useState<{
     key: string;
     direction: SortDirection;
   } | null>(
@@ -1453,16 +1461,21 @@ export function DataTable<T>({
       : null,
   );
 
-  const toggleSort = useCallback((key: string) => {
-    setSort((prev) =>
-      prev?.key === key
-        ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
-        : { key, direction: "asc" },
-    );
-  }, []);
+  const sort = serverSort ?? localSort;
+  const toggleSort = (key: string) => {
+    const nextSort = (current: typeof sort) => ({
+      key,
+      direction:
+        current?.key === key && current.direction === "asc"
+          ? ("desc" as const)
+          : ("asc" as const),
+    });
+    if (serverSort) serverSort.onChange(nextSort(serverSort));
+    else setLocalSort(nextSort);
+  };
 
   const sortedRows = useMemo(() => {
-    if (!sort) return rows;
+    if (serverSort || !sort) return rows;
     const col = columns.find((c) => c.key === sort.key);
     if (!col?.sortValue) return rows;
     const getValue = col.sortValue;
@@ -1480,7 +1493,7 @@ export function DataTable<T>({
       }
       return String(av).localeCompare(String(bv)) * dir;
     });
-  }, [rows, sort, columns]);
+  }, [rows, sort, columns, serverSort]);
 
   const [visibleCount, setVisibleCount] = useState(
     pageSize ?? Number.POSITIVE_INFINITY,
@@ -1656,7 +1669,9 @@ export function DataTable<T>({
                     ) : null}
                     {shownColumns.map((col) => {
                       const align = alignClass[col.align ?? "left"];
-                      const sortable = Boolean(col.sortValue);
+                      const sortable = serverSort
+                        ? col.serverSortable
+                        : Boolean(col.sortValue);
                       const active = sort?.key === col.key;
                       const pinned = pinnedHeadCellClass(
                         pinEdgeOf(col.key, pinStartKey),
