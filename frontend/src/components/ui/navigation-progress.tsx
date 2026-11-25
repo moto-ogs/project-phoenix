@@ -39,9 +39,8 @@ import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
  * Woher der Zustand kommt: `NavigationLink` meldet jeden tatsächlich
  * gestarteten clientseitigen Link-Wechsel vor dem Router-Dispatch. Der
  * Anbieter fängt außerdem `push` und `replace` des App-Routers ab, weil einige
- * Seiten per Schaltfläche wechseln. Für vorgeladene Ziele (`NavigationLink`
- * lädt bei Hover, Fokus oder Touch-Beginn vor) ist der Wechsel oft sofort fertig und
- * der Balken bleibt unsichtbar.
+ * Seiten per Schaltfläche wechseln. Für Ziele mit vorgeladener Hülle und
+ * gültigen Sitzungsdaten ist der Wechsel oft fertig, bevor der Balken erscheint.
  *
  * Warum ein eigener Store statt `useState`: der Anbieter umschließt die
  * gesamte Hülle. Ein State-Wechsel dort würde Kopfzeile, Seitenleiste und

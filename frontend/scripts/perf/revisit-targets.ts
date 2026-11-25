@@ -359,7 +359,10 @@ function tenant(role: "admin" | "betreuer", f: RevisitFixture): Journey[] {
       },
     };
     const roomChildLink = (p: Page) =>
-      p.getByRole("button", { name: / Profil öffnen$/ }).first();
+      p
+        .locator('main [aria-label$=" Profil öffnen"]')
+        .filter({ visible: true })
+        .first();
     const roomStudent = {
       ...student,
       link: roomChildLink,

@@ -630,8 +630,8 @@ function OGSGroupPageContent() {
   );
   const groupTransfer = useGroupTransferModal(
     currentGroup,
-    liveData && liveData.groupId === currentGroup?.id
-      ? liveData.transfers
+    displayed && displayed.groupId === currentGroup?.id
+      ? displayed.transfers
       : EMPTY_GROUP_TRANSFERS,
   );
 
@@ -644,7 +644,7 @@ function OGSGroupPageContent() {
 
   // Tracking indicators come straight from the aggregated live response; they
   // are display-only and need no local state.
-  const trackingIndicators = liveData?.trackingIndicators;
+  const trackingIndicators = displayed?.trackingIndicators;
 
   // Ref to track current group without triggering unnecessary re-renders
   const currentGroupRef = useRef<OGSGroup | null>(null);

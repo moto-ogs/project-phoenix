@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRightLeft, Repeat, TriangleAlert } from "lucide-react";
+import { useAfterInitialPaint } from "~/lib/hooks/use-after-initial-paint";
 import {
   useEffect,
   useId,
@@ -752,6 +753,12 @@ export function DienstplanResourceGrid({
   // Baum, Screenreader läsen den Plan zweimal vor und die Tabulator-Reihenfolge
   // liefe durch eine unsichtbare Kopie.
   const isCompact = useMediaQuery(BELOW_LG);
+  const showAllRows = useAfterInitialPaint();
+  // Each week row has at least the grid's 64px cell height. On a client
+  // remount finish the viewport before building the rest of the roster.
+  const visibleStaff = showAllRows
+    ? staff
+    : staff.slice(0, Math.ceil(window.innerHeight / 64));
   const mobileCare =
     mobileColumn && stripMarkers.has(mobileColumn.key)
       ? holidayCare?.get(mobileColumn.key)
@@ -798,7 +805,7 @@ export function DienstplanResourceGrid({
             )}
 
             <ul className="divide-y divide-gray-100">
-              {staff.map((member) => (
+              {visibleStaff.map((member) => (
                 <li key={member.id} className="px-3 py-2.5">
                   {renderRowHeader(member)}
                   <div className="mt-1.5">
@@ -844,7 +851,7 @@ export function DienstplanResourceGrid({
           </p>
           <ResourceGrid
             columns={columns}
-            rows={staff}
+            rows={visibleStaff}
             getRowKey={(member) => member.id}
             renderRowHeader={renderRowHeader}
             renderCell={renderCell}

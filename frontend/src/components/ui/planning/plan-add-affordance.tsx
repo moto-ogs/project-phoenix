@@ -1,7 +1,5 @@
 "use client";
 
-import { Plus } from "lucide-react";
-
 /**
  * PlanAddAffordance ist DIE Anlege-Geste aller Planungsraster (#2031).
  * Betreuungsplan (Stundenraster), Dienstplan (gefüllte Zellen) und jede leere
@@ -64,16 +62,16 @@ export function PlanAddAffordance({
       className={[
         // pointer-events-none: das umschließende Element des Aufrufers trägt
         // den Klick, die Fläche darf ihn nie abfangen.
-        "pointer-events-none flex w-full items-center justify-center rounded-md border border-dashed border-gray-200 text-gray-500 transition group-hover:border-gray-300 group-hover:text-gray-600",
+        "pointer-events-none relative flex w-full items-center justify-center rounded-md border border-dashed border-gray-200 text-gray-500 transition group-hover:border-gray-300 group-hover:text-gray-600",
+        // A decorative plus needs no SVG subtree in each timetable slot.
+        "before:absolute before:h-[1.33px] before:w-[0.583rem] before:rounded-full before:bg-current after:absolute after:h-[0.583rem] after:w-[1.33px] after:rounded-full after:bg-current",
         SIZE_CLASS[size],
         REVEAL_CLASS,
         className ?? "",
       ]
         .filter(Boolean)
         .join(" ")}
-    >
-      <Plus className="h-4 w-4" />
-    </span>
+    />
   );
 }
 

@@ -2,6 +2,8 @@ import { loadHomePlanningSeed, loadHomeSeed } from "~/lib/home-seed.server";
 import HomeContent from "./page-content";
 import { HomeSeed } from "./page-seed";
 
+export const unstable_dynamicStaleTime = 60;
+
 export default async function HomePage({
   params,
 }: {

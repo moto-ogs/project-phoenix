@@ -246,6 +246,12 @@ export function WeeklyCalendarGrid({
     (_, i) => renderStartHour + i,
   );
   const gridHeightPx = (renderEndHour - renderStartHour) * hourHeightPx;
+  const halfHourHeight = hourHeightPx / 2;
+  // The evenly spaced lines are decoration, not one DOM node per line and day.
+  const gridLines = `repeating-linear-gradient(to bottom,
+    var(--color-gray-50) 0 1px, transparent 1px ${halfHourHeight}px,
+    var(--color-gray-100) ${halfHourHeight}px ${halfHourHeight + 1}px,
+    transparent ${halfHourHeight + 1}px ${hourHeightPx}px)`;
 
   // Re-render every minute so the now-line moves smoothly.
   const [nowTick, setNowTick] = useState(() => Date.now());
@@ -575,6 +581,7 @@ export function WeeklyCalendarGrid({
               {/* Day columns */}
               {weekDays.map((day, dayIndex) => {
                 const iso = toISODate(day);
+                const dayLabel = formatDayHeader(day);
                 const isToday = iso === todayISO;
                 const dayInstances = grouped.get(iso) ?? [];
                 const closingReason = closingDays?.get(iso);
@@ -612,31 +619,14 @@ export function WeeklyCalendarGrid({
                     className={`relative min-w-0 border-l border-gray-200 ${backgroundClass} ${dayIndex === safeSelectedIndex ? "" : "hidden sm:block"}`}
                     style={{ height: `${gridHeightPx}px` }}
                   >
-                    {/* Hour grid lines */}
-                    {hours.slice(1, -1).map((hour) => {
-                      const top = (hour - renderStartHour) * hourHeightPx;
-                      return (
-                        <div
-                          key={hour}
-                          className="pointer-events-none absolute right-0 left-0 border-t border-gray-100"
-                          style={{ top: `${top}px` }}
-                        />
-                      );
-                    })}
-
-                    {/* Half-hour grid lines (lighter) */}
-                    {hours.slice(0, -1).map((hour) => {
-                      const top =
-                        (hour - renderStartHour) * hourHeightPx +
-                        hourHeightPx / 2;
-                      return (
-                        <div
-                          key={`half-${hour}`}
-                          className="pointer-events-none absolute right-0 left-0 border-t border-gray-50"
-                          style={{ top: `${top}px` }}
-                        />
-                      );
-                    })}
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-x-0 bottom-0"
+                      style={{
+                        top: halfHourHeight,
+                        backgroundImage: gridLines,
+                      }}
+                    />
 
                     {/* Betreuungszeit der Ferienbetreuung: unter den Klickflächen
                     und Terminen, damit beide bedienbar bleiben. */}
@@ -663,7 +653,7 @@ export function WeeklyCalendarGrid({
                           // users create events via the "Neu" menu instead.
                           tabIndex={-1}
                           onClick={() => onSlotClick(iso, hour)}
-                          aria-label={`Neuen Termin anlegen: ${formatDayHeader(day)}, ${String(hour).padStart(2, "0")}:00 Uhr`}
+                          aria-label={`Neuen Termin anlegen: ${dayLabel}, ${String(hour).padStart(2, "0")}:00 Uhr`}
                           className="group absolute inset-x-0 flex items-center justify-center p-0.5 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none focus-visible:ring-inset"
                           style={{
                             top: `${(hour - renderStartHour) * hourHeightPx}px`,

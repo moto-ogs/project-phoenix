@@ -20,6 +20,8 @@ import { mapRoomPlanBlocks } from "~/lib/room-plan-api";
 import type { ServerSeedEntry } from "~/lib/swr/server-seed";
 import PageContent from "./page-content";
 
+export const unstable_dynamicStaleTime = 60;
+
 export default async function RoomDetailPage({
   params,
   searchParams,

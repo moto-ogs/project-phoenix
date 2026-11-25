@@ -31,8 +31,9 @@ import { ExternalLink, UserPlus } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTenantRouter } from "~/lib/tenant-router";
+import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
-import { Button } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import { FormRow } from "~/components/ui/form-row";
 import { SelectionBar } from "~/components/ui/selection-bar";
 import { ChoiceTile } from "~/components/ui/choice-tile";
@@ -649,7 +650,6 @@ export function StudentsInRoomSection({
             selectableStudentIds={selectableStudentIds}
             selectedStudentIds={selectedStudentIds}
             onToggleStudentSelection={toggleStudentSelection}
-            router={router}
           />
         </div>
       </SectionCard>
@@ -799,7 +799,6 @@ interface StudentsInRoomBodyProps {
   readonly selectableStudentIds: ReadonlySet<string>;
   readonly selectedStudentIds: ReadonlySet<string>;
   readonly onToggleStudentSelection: (studentId: string) => void;
-  readonly router: ReturnType<typeof useTenantRouter>;
 }
 
 function StudentsInRoomBody({
@@ -811,8 +810,8 @@ function StudentsInRoomBody({
   selectableStudentIds,
   selectedStudentIds,
   onToggleStudentSelection,
-  router,
 }: StudentsInRoomBodyProps) {
+  const tenantPath = useTenantAwarePath();
   const { enabled: photosEnabled } = useStudentPhotosEnabled();
   if (loadError) {
     return <LoadErrorAlert error={loadError} />;
@@ -861,11 +860,9 @@ function StudentsInRoomBody({
           }
           isSelected={selectedStudentIds.has(String(student.id))}
           onToggleSelection={() => onToggleStudentSelection(String(student.id))}
-          onOpen={() =>
-            router.push(
-              `/students/${student.id}?from=${encodeURIComponent(fromReferrer)}`,
-            )
-          }
+          href={tenantPath(
+            `/students/${student.id}?from=${encodeURIComponent(fromReferrer)}`,
+          )}
         />
       ))}
     </div>
@@ -877,13 +874,13 @@ function SelectableStudentRow({
   selectable,
   isSelected,
   onToggleSelection,
-  onOpen,
+  href,
 }: {
   readonly student: RoomStudent;
   readonly selectable: boolean;
   readonly isSelected: boolean;
   readonly onToggleSelection: () => void;
-  readonly onOpen: () => void;
+  readonly href: string;
 }) {
   const fullName =
     `${student.first_name ?? ""} ${student.second_name ?? ""}`.trim() || "Kind";
@@ -920,18 +917,17 @@ function SelectableStudentRow({
           {studentCard}
         </div>
       )}
-      <Button
-        type="button"
+      <ButtonLink
+        href={href}
         variant="outline"
         size="compact"
-        onClick={onOpen}
         aria-label={`${fullName} Profil öffnen`}
         tooltip="Öffnet die Akte des Kindes."
         className="shrink-0"
       >
         Profil
         <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-      </Button>
+      </ButtonLink>
     </ChoiceTile>
   );
 }
