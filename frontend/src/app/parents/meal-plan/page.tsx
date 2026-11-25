@@ -1,3 +1,4 @@
+import { messageBoundary } from "~/i18n/scoped-messages";
 import { ParentMealPlanPage } from "~/components/parent/parent-meal-plan-page";
 
 interface PageProps {
@@ -9,12 +10,20 @@ interface PageProps {
   }>;
 }
 
+const PageMessages = messageBoundary(
+  "mealAllergens",
+  "parentMealPlan",
+  "parentNav",
+);
+
 export default async function ParentsMealPlanPage({ searchParams }: PageProps) {
   const { week, school } = await searchParams;
   return (
-    <ParentMealPlanPage
-      initialWeek={typeof week === "string" ? week : undefined}
-      initialSchool={typeof school === "string" ? school : undefined}
-    />
+    <PageMessages>
+      <ParentMealPlanPage
+        initialWeek={typeof week === "string" ? week : undefined}
+        initialSchool={typeof school === "string" ? school : undefined}
+      />
+    </PageMessages>
   );
 }

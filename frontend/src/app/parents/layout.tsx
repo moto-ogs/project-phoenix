@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { NextIntlClientProvider } from "next-intl";
+import { messageBoundary } from "~/i18n/scoped-messages";
 import { ParentProviders } from "./providers";
 import { ParentAuthGuard } from "./auth-guard";
 import { getLocale } from "next-intl/server";
@@ -17,6 +17,19 @@ export const viewport: Viewport = {
   // Schreibfeld rutscht unter die Tastatur (#3664).
   interactiveWidget: "resizes-visual",
 };
+
+const ParentShellMessages = messageBoundary(
+  "language",
+  "analyticsConsent",
+  "parentNav",
+  "parentFirstSteps",
+  "parentNotificationFeed",
+  "parentNotificationSetup",
+  "pushNotifications",
+  "parentCrash",
+  "errorCatalog.actions.crash",
+  "errorCatalog.actions.retry",
+);
 
 /**
  * Erlaubt iOS, die Eltern-App ausserhalb des Browser-Rahmens zu starten.
@@ -55,13 +68,6 @@ export async function generateMetadata(): Promise<Metadata> {
  * (#4990), so the guard renders the page without first fetching the session.
  * Never call parentPortal.auth() here: its refresh callback could rotate the token
  * in a Server Component that cannot persist the new cookie (#1938).
- *
- * The whole parents subtree is localized, so it carries the full
- * NextIntlClientProvider. Rendered in a Server Component, it auto-inherits the
- * resolved locale + message catalog from request.ts (the proxy flags the
- * parents subdomain as localized). This is the only place — together with the
- * public enrollment layout — that ships the parent message catalog to the
- * client; the German-only staff/operator portals never mount it.
  */
 export default async function ParentLayout({
   children,
@@ -70,12 +76,12 @@ export default async function ParentLayout({
 }) {
   const snapshot = await readPortalSessionSnapshot("parent");
   return (
-    <NextIntlClientProvider>
+    <ParentShellMessages>
       <ParentProviders session={snapshot?.session ?? null}>
         <ParentAuthGuard notBooked={snapshot?.notBooked ?? false}>
           {children}
         </ParentAuthGuard>
       </ParentProviders>
-    </NextIntlClientProvider>
+    </ParentShellMessages>
   );
 }
