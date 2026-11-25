@@ -90,6 +90,10 @@ func (f *fakeOrders) CatererOrders(_ context.Context, since time.Time, _, _ meal
 	}
 	return mealplan.OrderWeek{Rhythm: "daily"}, f.err
 }
+func (f *fakeOrders) CatererOrderSummary(_ context.Context, since time.Time, _, _ mealplan.Date) (mealplan.OrderSummary, error) {
+	f.since = since
+	return mealplan.OrderSummary{}, f.err
+}
 func (f *fakeOrders) Orders(context.Context, mealplan.Date, mealplan.Date) (mealplan.OrderWeek, error) {
 	f.ordersRead = true
 	return f.week, f.err
@@ -112,7 +116,7 @@ func (s *schoolsOpened) within(ctx context.Context, schoolID int64, fn func(cont
 func newTestPortal(t *testing.T, caterers *fakeCaterers, orders *fakeOrders, opened *schoolsOpened) *Portal {
 	t.Helper()
 	portal, err := New(Dependencies{
-		Caterers: caterers, Orders: orders, WithinSchool: opened.within,
+		Caterers: caterers, Orders: orders, Summaries: orders, WithinSchool: opened.within,
 		CurrentSchool: func(context.Context) int64 { return 11 },
 		Lock: func(_ context.Context, key string) error {
 			caterers.steps.add("lock:" + key)
@@ -158,9 +162,12 @@ func TestPortalReadsOnlySuppliedSchools(t *testing.T) {
 	require.NoError(t, portal.ConfirmOrder(context.Background(), 3, 11, 5))
 	assert.Equal(t, int64(3), orders.confirmedBy, "the caterer's account confirms")
 
-	schools, err := portal.Schools(context.Background(), 3)
+	schools, err := portal.OrderOverview(context.Background(), 3, 0, "2026-09-07", "2026-09-11")
 	require.NoError(t, err)
-	assert.Equal(t, catererportal.CatererSchools{CatererName: "Küche", Schools: []catererportal.School{{ID: 11, Name: "Schule"}, {ID: 12, Name: "Schule"}}}, schools)
+	assert.Equal(t, "Küche", schools.CatererName)
+	require.Len(t, schools.Schools, 2)
+	assert.Equal(t, int64(11), schools.Schools[0].ID)
+	assert.Equal(t, int64(12), schools.Schools[1].ID)
 }
 
 // ADR 0077: the school's transaction checks the supply again; a caterer
@@ -402,12 +409,13 @@ func TestPortalRejectsDeletedSchools(t *testing.T) {
 	require.ErrorIs(t, portal.ConfirmOrder(context.Background(), 3, 12, 5), catererportal.ErrSchoolNotSupplied)
 	assert.Empty(t, opened, "a deleted school is never opened")
 	assert.Zero(t, orders.confirmedBy)
-	schools, err := portal.Schools(context.Background(), 3)
+	schools, err := portal.OrderOverview(context.Background(), 3, 0, "2026-09-07", "2026-09-11")
 	require.NoError(t, err)
-	assert.Equal(t, []catererportal.School{{ID: 11, Name: "Schule"}}, schools.Schools)
+	require.Len(t, schools.Schools, 1)
+	assert.Equal(t, catererportal.School{ID: 11, Name: "Schule"}, schools.Schools[0].School)
 	export, err := portal.DeliveryExport(context.Background(), 3, "2026-09-07", "2026-09-11")
 	require.NoError(t, err)
-	assert.Equal(t, schoolsOpened{11}, opened)
+	assert.Equal(t, schoolsOpened{11, 11}, opened, "overview and export each open only the live school")
 	assert.Len(t, export.Lines, 1, "only the live school's delivery is exported")
 }
 
@@ -423,4 +431,38 @@ func TestPortalRejectsOrdersWhenSchoolLookupFails(t *testing.T) {
 	require.ErrorIs(t, portal.ConfirmOrder(context.Background(), 3, 11, 5), lookupErr)
 	assert.Empty(t, opened)
 	assert.Zero(t, orders.confirmedBy)
+}
+
+func TestOrderOverviewKeepsPartialFailuresAndRechecksEachSupply(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	caterers := &fakeCaterers{caterer: identityaccess.Caterer{ID: 7}, schools: []int64{11, 12, 13}, supply: supplying(7)}
+	var opened schoolsOpened
+	p := newTestPortal(t, caterers, &fakeOrders{}, &opened)
+	unavailable := errors.New("unavailable")
+	p.deps.WithinSchool = func(ctx context.Context, id int64, fn func(context.Context) error) error {
+		opened = append(opened, id)
+		if id == 12 {
+			return unavailable
+		}
+		caterers.active = id != 13
+		return fn(ctx)
+	}
+	read := func(id int64) (catererportal.CatererSchools, error) {
+		return p.OrderOverview(ctx, 3, id, "2026-09-07", "2026-09-11")
+	}
+	rows, err := read(0)
+	require.NoError(t, err)
+	require.Len(t, rows.Schools, 2)
+	assert.NoError(t, rows.Schools[0].Failure)
+	assert.Equal(t, int64(12), rows.Schools[1].ID)
+	assert.ErrorIs(t, rows.Schools[1].Failure, unavailable)
+	assert.Equal(t, schoolsOpened{11, 12, 13}, opened)
+	_, err = read(12)
+	require.ErrorIs(t, err, unavailable)
+	_, err = read(13)
+	require.ErrorIs(t, err, catererportal.ErrSchoolNotSupplied)
+	_, err = read(99)
+	require.ErrorIs(t, err, catererportal.ErrSchoolNotSupplied)
+	assert.Equal(t, schoolsOpened{11, 12, 13, 12, 13}, opened)
 }

@@ -39,7 +39,7 @@ type catererIdentity interface {
 // caterer under /api/meal-caterer and the caterer's own routes under
 // /caterer, where the auth rate limiter guards the sign-in and the
 // invitation.
-func mountCatererPortal(root, tenantRouter chi.Router, limiters authRateLimiters, identity catererIdentity, mealPlan mealplanModule.Capability, schools organizationtenancy.Capability) error {
+func mountCatererPortal(root, tenantRouter chi.Router, limiters authRateLimiters, identity catererIdentity, mealPlan mealplanModule.Capability, summaries mealplanModule.CatererSummaries, schools organizationtenancy.Capability) error {
 	caterers := identity.Caterers()
 	if caterers == nil {
 		return errors.New("caterer portal: identity access composed no caterer flows")
@@ -47,6 +47,7 @@ func mountCatererPortal(root, tenantRouter chi.Router, limiters authRateLimiters
 	portal, err := catererPortalCompose.New(catererPortalCompose.Dependencies{
 		Caterers:    caterers,
 		Orders:      mealPlan,
+		Summaries:   summaries,
 		SchoolNames: schoolNames(schools),
 	})
 	if err != nil {

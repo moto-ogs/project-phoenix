@@ -58,7 +58,7 @@ const portals = [
     scope: "caterer",
     cookie: "caterer.session-token",
     logout: "/api/caterer/auth/logout",
-    read: "/api/caterer/schools",
+    read: "/api/caterer/schools?from=2026-09-07&to=2026-09-11",
   },
 ] as const;
 type Portal = (typeof portals)[number];
@@ -373,7 +373,7 @@ const catalogReads = {
     },
   },
   Caterer: {
-    registered: "/api/caterer/schools",
+    registered: "/api/caterer/schools?from=2026-09-07&to=2026-09-11",
     unregistered: "/api/caterer/billing/key-day",
     data: { caterer_name: "Fixture-Küche", schools: [] },
   },

@@ -46,7 +46,6 @@ import (
 	filestorageModule "github.com/moto-ogs/project-phoenix/modules/filestorage"
 	"github.com/moto-ogs/project-phoenix/modules/grouplive"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
-	mealplanModule "github.com/moto-ogs/project-phoenix/modules/mealplan"
 	mealplanCompose "github.com/moto-ogs/project-phoenix/modules/mealplan/compose"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
@@ -117,7 +116,7 @@ func composeServeRoot(
 		operatorAuditLog owners.OperatorAuditEntries
 		communication    communicationModule.Capability
 		mealPlanSettings *mealplanCompose.Settings
-		mealPlan         mealplanModule.Capability
+		mealPlan         mealplanCompose.Plan
 		feedbackSettings *feedbackCompose.Settings
 		feedback         feedbackModule.Capability
 		structure        owners.StructureRows
@@ -426,7 +425,7 @@ func composeServeRoot(
 		},
 		func() (err error) {
 			parent, err = owners.BuildParentPortal(db, env, hub, settings.Service, people, portalReads, messaging, presence, carePlanRows,
-				carePlan, persons, mealPlan, schedules, requests, services, emitter, notifications, identity, enrollment, notices, announcements, audit, organizations, owners.NewParentContractNotices(settings.Traeger, owners.DeliveryModuleOf(delivery), owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Now), careContractCompose.NewInboxSigning(careContractSignaturePorts(organizations, settings.Traeger, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Links.ParentsURL), env.Now), owners.NewCareContractSchoolHolidays(settings.Service, calendar), owners.NewParentSEPAMandates(settings.Traeger, settings.Service, env.BankData, env.Today, env.Now))
+				carePlan, persons, mealPlan.Capability, schedules, requests, services, emitter, notifications, identity, enrollment, notices, announcements, audit, organizations, owners.NewParentContractNotices(settings.Traeger, owners.DeliveryModuleOf(delivery), owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Now), careContractCompose.NewInboxSigning(careContractSignaturePorts(organizations, settings.Traeger, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Links.ParentsURL), env.Now), owners.NewCareContractSchoolHolidays(settings.Service, calendar), owners.NewParentSEPAMandates(settings.Traeger, settings.Service, env.BankData, env.Today, env.Now))
 			return
 		},
 		func() (err error) {
@@ -555,11 +554,11 @@ func composeServeRoot(
 			mountSchoolRoutes(tenant, db, logger, appUploads, facilities, facilitiesRooms, settings.Service, caller, active, services.Users,
 				structureViews.Education, renderer, activities, timetableOwner, iot, settingsWrites, organizations, people.Students, carePlan, audit.Persistence.DataAccessLog,
 				membership, classListEntries, databaseStats, dataImports, persons, gradeTransition, enrollmentResource, env.Config.AppEnv, weekProtocolSeed, env.HealthData, owners.NewHolidayHostCalendar(settings.Service, calendar), env.Now)
-			mountPeopleRoutes(tenant, db, logger, appUploads, reports, renderer, persons, services.Guardian, identity, caller, feedback, mealPlan,
+			mountPeopleRoutes(tenant, db, logger, appUploads, reports, renderer, persons, services.Guardian, identity, caller, feedback, mealPlan.Capability,
 				birthdays, emergency, settings.Service, GuardianEmailDelivery{Outcomes: delivery.Runtime.EmailOutcomes, Suppressions: delivery.Runtime.EmailReconciliation}, audit.Persistence.DataAccessLog, hub, env.Now)
 			mountCalendarRoutes(router, tenant, logger, calendarApp)
-			return errors.Join(mountMealBillingMonths(tenant, mealPlan, calendar, presence.Presence, settings.Service), mountCommunicationRoutes(tenant, logger, appUploads, chat, announcements, reminders, deliveryDevices, communication),
-				mountDeliveryRoutes(router, tenant, logger, fileStore, parent, hub, caller, identity), mountCatererPortal(router, tenant, limiters, identity, mealPlan, organizations))
+			return errors.Join(mountMealBillingMonths(tenant, mealPlan.Capability, calendar, presence.Presence, settings.Service), mountCommunicationRoutes(tenant, logger, appUploads, chat, announcements, reminders, deliveryDevices, communication),
+				mountDeliveryRoutes(router, tenant, logger, fileStore, parent, hub, caller, identity), mountCatererPortal(router, tenant, limiters, identity, mealPlan.Capability, mealPlan.Summaries, organizations))
 		},
 		func() error {
 			operator, err := newOperatorRouter(db, logger, sessionAuth, limiters, iot, organizations, settings.Service, hub,
@@ -585,7 +584,7 @@ func composeServeRoot(
 	worker, err := owners.NewWorker(db, env.Logger, env.Now, appUploads, tracer, hub, settings.Service, audit.Command, audit.Persistence.DataAccessLog, deviceFleet, carePlan, persons, people,
 		organizations, identity, facilities, timetableRepos, workTime, staffAdmin, workforce, active, reports, lifecycle, days,
 		materialization, schedules, requests.Documents, services, persons.Owner, studentAudit, notices, flows, studentDeletion, feedback, calendarApp,
-		notifications, deliveryDevices.PWAUsage, chat.StaffMessaging, outbox, reminders, fileStore, announcements, mealPlan, analyticsSchoolNames(tracker), PlannedStaffExitsJob(db, hub, env.Logger, env.Now), WeekProtocolDayLog(env.Now), env.HealthData, owners.CareContractRemindersJob(db.UnitOfWork(), organizations, settings.Traeger, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, env.Links.ParentsURL, env.Now), CareContractConclusionJob(env.Logger, env.Now)(organizations, settings, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, audit.Persistence.DataAccessLog, owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Links.ParentsURL), owners.HolidayClosureNotificationsJob(db.UnitOfWork(), owners.NewHolidaySchoolCalendar(settings.Service, calendar, organizations), calendar, organizations, owners.HolidayClosureMail{Delivery: delivery.Runtime.Module, TraegerMails: delivery.Runtime.TraegerMails}, env.Logger, env.Now))
+		notifications, deliveryDevices.PWAUsage, chat.StaffMessaging, outbox, reminders, fileStore, announcements, mealPlan.Capability, analyticsSchoolNames(tracker), PlannedStaffExitsJob(db, hub, env.Logger, env.Now), WeekProtocolDayLog(env.Now), env.HealthData, owners.CareContractRemindersJob(db.UnitOfWork(), organizations, settings.Traeger, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, env.Links.ParentsURL, env.Now), CareContractConclusionJob(env.Logger, env.Now)(organizations, settings, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, audit.Persistence.DataAccessLog, owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Links.ParentsURL), owners.HolidayClosureNotificationsJob(db.UnitOfWork(), owners.NewHolidaySchoolCalendar(settings.Service, calendar, organizations), calendar, organizations, owners.HolidayClosureMail{Delivery: delivery.Runtime.Module, TraegerMails: delivery.Runtime.TraegerMails}, env.Logger, env.Now))
 	if err != nil {
 		return nil, nil, err
 	}

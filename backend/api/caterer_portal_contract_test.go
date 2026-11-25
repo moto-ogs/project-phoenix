@@ -131,7 +131,7 @@ func checkCatererPortal(t *testing.T, graph *goldenRuntime) {
 	decodeCatererResponse(t, body, &tokens)
 	catererToken := tokens.AccessToken
 
-	status, body = request(http.MethodGet, "/caterer/schools", "", catererToken)
+	status, body = request(http.MethodGet, "/caterer/schools?from=2026-09-07&to=2026-09-11", "", catererToken)
 	require.Equal(t, http.StatusOK, status, string(body))
 	var schools struct {
 		CatererName string `json:"caterer_name"`
@@ -143,6 +143,9 @@ func checkCatererPortal(t *testing.T, graph *goldenRuntime) {
 	assert.Equal(t, "Küche am Markt", schools.CatererName)
 	require.Len(t, schools.Schools, 1)
 	assert.Equal(t, schoolID, schools.Schools[0].ID)
+	for _, field := range []string{"children", "changes", "classes", "first_name", "last_name", "school_class"} {
+		assert.NotContains(t, string(body), fmt.Sprintf("%q:", field))
+	}
 
 	// #4496: the caterer changes its own password in its portal.
 	status, body = request(http.MethodPost, "/caterer/account/password", fmt.Sprintf(`{"current_password":"falsch","new_password":%q,"confirm_password":%q}`, catererRenewedPassword, catererRenewedPassword), catererToken)
@@ -166,7 +169,7 @@ func checkCatererPortal(t *testing.T, graph *goldenRuntime) {
 	assert.Equal(t, http.StatusNotFound, status)
 	assert.Equal(t, "meals.order_not_found", decodeCatererResponse(t, body, nil))
 
-	status, _ = request(http.MethodGet, "/caterer/schools", "", staffToken)
+	status, _ = request(http.MethodGet, "/caterer/schools?from=2026-09-07&to=2026-09-11", "", staffToken)
 	assert.Equal(t, http.StatusUnauthorized, status, "a school session never opens the caterer portal")
 	status, _ = request(http.MethodGet, "/api/meal-caterer/", "", catererToken)
 	assert.Equal(t, http.StatusUnauthorized, status, "a caterer session never opens the school's API")
@@ -225,7 +228,7 @@ func checkCatererPortal(t *testing.T, graph *goldenRuntime) {
 	// tenant, even while the supply and identity link still exist.
 	_, err = db.ExecContext(t.Context(), `UPDATE platform.schools SET deleted_at = NOW() WHERE id = ?`, school)
 	require.NoError(t, err)
-	status, body = request(http.MethodGet, "/caterer/schools", "", catererToken)
+	status, body = request(http.MethodGet, "/caterer/schools?from=2026-09-07&to=2026-09-11", "", catererToken)
 	require.Equal(t, http.StatusOK, status, string(body))
 	decodeCatererResponse(t, body, &schools)
 	assert.Empty(t, schools.Schools, "a deleted school is not supplied through the portal")

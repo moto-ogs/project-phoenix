@@ -280,6 +280,12 @@ type Registration interface {
 	WeeklyList(context.Context, Date) (WeeklyList, error)
 }
 
+// CatererSummaries is the compact, read-only projection beside the Meal Plan facade.
+type CatererSummaries interface {
+	// CatererOrderSummary reads only daily totals, not class or child rows.
+	CatererOrderSummary(ctx context.Context, since time.Time, from, to Date) (OrderSummary, error)
+}
+
 // Ordering is the school's meal orders and what its caterer reads of them
 // (ADR 0077, #3873). Who supplies the school is no Meal Plan data: the
 // caterer portal hands in the start of the running supply.
@@ -369,6 +375,25 @@ type OrderDay struct {
 	Classes     []ClassCount
 	Children    []OrderChild
 	Changes     []OrderChange
+}
+
+// OrderSummary carries the current detail grants so a client cannot reopen
+// details cached under a wider grant.
+type OrderSummary struct {
+	Names   bool
+	ByClass bool
+	Days    []OrderDaySummary
+}
+
+type OrderDaySummary struct {
+	Date     calendar.Date
+	Closed   bool
+	Deadline time.Time
+	Status   OrderStatus
+	OrderID  int64
+	Total    int
+	Added    int
+	Removed  int
 }
 
 // OrderWeek is the orders of a window with the school's rhythm and detail.
