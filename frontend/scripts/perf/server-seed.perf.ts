@@ -18,7 +18,7 @@ import {
   perfPort,
   tenantBaseUrl,
 } from "./access";
-import { metricsBearerToken } from "./env.mjs";
+import { metricsBearerToken, perfServerEnv } from "./env.mjs";
 import { RequestRecorder } from "./recorder";
 import { INTENT_HOPS, type IntentHop } from "./targets";
 
@@ -40,6 +40,13 @@ interface Target {
 
 const access = loadAccess();
 const port = perfPort();
+const backend = new URL(perfServerEnv().API_URL);
+if (
+  backend.protocol !== "http:" ||
+  !["localhost", "127.0.0.1", "[::1]"].includes(backend.hostname)
+) {
+  throw new Error("The server-seed benchmark requires a localhost Go backend.");
+}
 const quiet = { quietMs: 700, capMs: 8_000 };
 const repeats = Number(process.env.PERF_SEED_REPEATS ?? 3);
 const out =
@@ -191,7 +198,7 @@ async function signIn(page: Page, portal: Portal) {
 
 async function goReads(page: Page) {
   const response = await page.request.get(
-    `${tenantBaseUrl(access)}/api/internal/metrics`,
+    new URL("/internal/metrics", backend).href,
     { headers: { Authorization: `Bearer ${metricsBearerToken()}` } },
   );
   expect(response.ok(), "local Go metrics").toBe(true);
@@ -205,6 +212,9 @@ async function goReads(page: Page) {
       counts.set(route, (counts.get(route) ?? 0) + count);
     }
   }
+  expect(counts.size, "Go GET counters in the metrics scrape").toBeGreaterThan(
+    0,
+  );
   return counts;
 }
 

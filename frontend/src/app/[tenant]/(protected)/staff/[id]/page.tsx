@@ -2,8 +2,10 @@ import { TenantRouteSeed } from "../../tenant-route-seed";
 import { readContract, seedRead } from "~/lib/server-seed.server";
 import * as contract from "~/lib/contract/staff.generated";
 import { hasPermission, isAdmin } from "~/lib/auth-utils";
+import { berlinTodayISO } from "~/lib/date-helpers";
 import { minimalProfile } from "~/lib/staff-api";
-import { staffKeys } from "~/lib/swr/staff-keys";
+import type { ServerSeedEntry } from "~/lib/swr/server-seed";
+import { staffAbsenceKeys, staffKeys } from "~/lib/swr/staff-keys";
 import PageContent from "./page-content";
 
 export default async function StaffDetailPage({
@@ -40,6 +42,43 @@ export default async function StaffDetailPage({
           canViewStammdatenSections ||
           hasPermission(session, "users:read") ||
           hasPermission(session, "staff:manage");
+        const canManageAbsences =
+          canViewTimeTracking || hasPermission(session, "vacation:approve");
+        const pendingAbsenceBadge = (
+          active: Promise<boolean>,
+        ): ServerSeedEntry[] =>
+          canManageAbsences
+            ? [
+                {
+                  key: staffAbsenceKeys.pendingForStaff(id),
+                  value: active.then((isActive) => {
+                    if (!isActive) return undefined;
+                    const year = berlinTodayISO().slice(0, 4);
+                    return seedRead(
+                      "staff pending absence count",
+                      async (signal) => {
+                        const { data } = await readContract(
+                          contract.routes["GET /api/staff/{id}/absences"],
+                          {
+                            token,
+                            signal,
+                            params: { id },
+                            query: {
+                              from: `${year}-01-01`,
+                              to: `${year}-12-31`,
+                            },
+                          },
+                        );
+                        return (data ?? []).filter(
+                          ({ status }) =>
+                            status === "requested" || status === "question",
+                        ).length;
+                      },
+                    );
+                  }),
+                },
+              ]
+            : [];
         const readRecord = () =>
           seedRead(
             "staff record",
@@ -66,6 +105,9 @@ export default async function StaffDetailPage({
           });
           return [
             { key: staffKeys.profileKey(id), render: true, value: profile },
+            ...pendingAbsenceBadge(
+              profile.then((person) => !!person && !person.endedOn),
+            ),
             ...(canViewRecord
               ? [
                   {
@@ -78,15 +120,14 @@ export default async function StaffDetailPage({
               : []),
           ];
         }
-        return canViewRecord
-          ? [
-              {
-                key: staffKeys.recordKey(id),
-                render: true,
-                value: readRecord(),
-              },
-            ]
-          : [];
+        if (!canViewRecord) return [];
+        const record = readRecord();
+        return [
+          { key: staffKeys.recordKey(id), render: true, value: record },
+          ...pendingAbsenceBadge(
+            record.then((person) => !!person && !person.ended_on),
+          ),
+        ];
       }}
     >
       <PageContent />
