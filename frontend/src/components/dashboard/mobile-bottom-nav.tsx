@@ -1092,10 +1092,10 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
                 size="sm"
                 max={NOTIFICATIONS_BADGE_MAX}
                 ariaLabel={`${moreBadgeCount} neu für dich`}
-                // Am Telefon außen oben rechts am Symbol: auch „9+“ lässt die
-                // Striche frei, im aktiven Reiter steht es über dem Wort.
-                // iPad und Desktop behalten die heutige Lage.
-                className="app:-top-3.5 app:right-auto app:left-4 absolute -top-1 -right-2"
+                // Am Telefon oben rechts am Symbol, an derselben Stelle wie
+                // im aktiven Reiter und ganz innerhalb der Leiste. iPad und
+                // Desktop behalten die heutige Lage.
+                className="app:-top-2.5 app:right-auto app:left-3 absolute -top-1 -right-2"
               />
             ) : null,
           paddingClassName: ITEM_PADDING,
