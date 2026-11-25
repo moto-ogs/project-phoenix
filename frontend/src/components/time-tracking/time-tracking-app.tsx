@@ -15,6 +15,7 @@
 
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import { ActionBar } from "~/components/ui/action-bar";
 import { Button } from "~/components/ui/button";
@@ -34,6 +35,7 @@ import {
 } from "~/components/ui/status-badge";
 import { SectionCard } from "~/components/ui/section-card";
 import { SpinnerIcon } from "~/components/ui/icons";
+import { SplitView } from "~/components/ui/split-view";
 import { formatSignedDuration } from "~/components/staff/staff-time-views";
 import type { LaborHint } from "~/lib/labor-time-hints";
 import type { StaffShift } from "~/lib/shift-helpers";
@@ -178,13 +180,20 @@ export function AppClockPanel(props: AppClockPanelProps) {
   }
 
   const pending = busy || saving;
-  // Telefon, noch nichts gestempelt: der Zustand steht in der Aktionsleiste
-  // („Dienst 08:00–16:30 · Einstempeln“), die Karte entfällt. Die Zeile von
-  // heute in der Liste nennt den Plan ebenfalls; so passen mehr Tage ins
-  // erste Bild. Mit Hinweisen, beim Speichern und am iPad bleibt die Karte.
-  const { layout } = useDeviceContext();
+  // iPad quer: Die Leiste gehört zur linken Spalte der `SplitView`, steht
+  // aber außerhalb von ihr; die Spalte scrollt und blendet unten aus und
+  // würde eine Leiste in ihr abschneiden.
+  const { isSplit } = useDeviceContext();
+  const portalBars = (bars: ReactNode) =>
+    isSplit && typeof document !== "undefined"
+      ? createPortal(bars, document.body)
+      : bars;
+  // Noch nichts gestempelt: der Zustand steht in der Aktionsleiste
+  // („Dienst 08:00–16:30 · Einstempeln“), die Karte entfällt – auf jedem
+  // Gerät gleich. Die Zeile von heute in der Liste nennt den Plan ebenfalls;
+  // so passen mehr Tage ins erste Bild. Mit Hinweisen und beim Speichern
+  // bleibt die Karte.
   const foldIntoBar =
-    layout === "phone" &&
     state === "idle" &&
     todayMinutes === 0 &&
     laborHints.length === 0 &&
@@ -242,66 +251,74 @@ export function AppClockPanel(props: AppClockPanelProps) {
         ) : null}
       </SectionCard>
 
-      {state === "idle" ? (
-        <ActionBar status={foldIntoBar ? headline : undefined}>
-          <Button
-            type="button"
-            variant="success"
-            size="md"
-            disabled={disabled || pending}
-            onClick={() => setStatusSheetOpen(true)}
-            tooltip="Öffnet die Auswahl, wo du heute arbeitest."
-            // Ohne Karte zeigt die Einführung auf den Knopf.
-            data-setup-tour={foldIntoBar ? "time-clock" : undefined}
-          >
-            {spinner}
-            Einstempeln
-          </Button>
-        </ActionBar>
-      ) : null}
-      {state === "working" ? (
-        <ActionBar
-          secondary={
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              disabled={disabled || pending}
-              onClick={() => props.onBreakSheetOpenChange(true)}
-              tooltip="Öffnet die Auswahl, wie lange die Pause dauert."
+      {portalBars(
+        <>
+          {state === "idle" ? (
+            <ActionBar
+              column="list"
+              status={foldIntoBar ? headline : undefined}
             >
-              Pause
-            </Button>
-          }
-        >
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            disabled={disabled || pending}
-            onClick={props.onCheckOut}
-            tooltip="Stempelt dich aus und beendet deine Arbeitszeit."
-          >
-            {spinner}
-            Ausstempeln
-          </Button>
-        </ActionBar>
-      ) : null}
-      {state === "break" ? (
-        <ActionBar status={headline}>
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            disabled={disabled || pending}
-            onClick={props.onEndBreak}
-            tooltip="Beendet die Pause sofort, deine Arbeitszeit läuft weiter."
-          >
-            {spinner}
-            Pause beenden
-          </Button>
-        </ActionBar>
-      ) : null}
+              <Button
+                type="button"
+                variant="success"
+                size="md"
+                disabled={disabled || pending}
+                onClick={() => setStatusSheetOpen(true)}
+                tooltip="Öffnet die Auswahl, wo du heute arbeitest."
+                // Ohne Karte zeigt die Einführung auf den Knopf.
+                data-setup-tour={foldIntoBar ? "time-clock" : undefined}
+              >
+                {spinner}
+                Einstempeln
+              </Button>
+            </ActionBar>
+          ) : null}
+          {state === "working" ? (
+            <ActionBar
+              column="list"
+              secondary={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  disabled={disabled || pending}
+                  onClick={() => props.onBreakSheetOpenChange(true)}
+                  tooltip="Öffnet die Auswahl, wie lange die Pause dauert."
+                >
+                  Pause
+                </Button>
+              }
+            >
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                disabled={disabled || pending}
+                onClick={props.onCheckOut}
+                tooltip="Stempelt dich aus und beendet deine Arbeitszeit."
+              >
+                {spinner}
+                Ausstempeln
+              </Button>
+            </ActionBar>
+          ) : null}
+          {state === "break" ? (
+            <ActionBar column="list" status={headline}>
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                disabled={disabled || pending}
+                onClick={props.onEndBreak}
+                tooltip="Beendet die Pause sofort, deine Arbeitszeit läuft weiter."
+              >
+                {spinner}
+                Pause beenden
+              </Button>
+            </ActionBar>
+          ) : null}
+        </>,
+      )}
 
       <OverlaySheet
         open={statusSheetOpen}
@@ -414,7 +431,12 @@ export function AppRangeBar({
 }>) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="flex items-center gap-1.5 px-1" data-app-range-bar="">
+    <div
+      // px-2: die 44-px-Trefferfläche der Pfeile ragt über den Knopf hinaus;
+      // der Kartenrand würde sie sonst abschneiden.
+      className="flex items-center gap-1.5 px-2"
+      data-app-range-bar=""
+    >
       <Button
         type="button"
         variant="ghost"
@@ -536,6 +558,8 @@ export interface AppDayListProps {
   readonly closingDays: ReadonlyMap<string, string> | undefined;
   /** Tag oder Block bearbeiten (das Formular der Seite). */
   readonly onEdit: (date: Date, session: WorkSessionHistory | null) => void;
+  /** Kopf der Karte: die Wahl von Woche oder Monat. */
+  readonly header?: ReactNode;
 }
 
 /**
@@ -554,6 +578,7 @@ export function AppDayList({
   holidays,
   closingDays,
   onEdit,
+  header,
 }: AppDayListProps) {
   const todayKey = toISODate(today);
   const weeks = useMemo(() => {
@@ -606,29 +631,81 @@ export function AppDayList({
   }, [from, to, sessions, absences, shifts, projection, holidays, closingDays]);
 
   return (
-    <Collection label="Erfasste Zeiten" className="app-time-days">
+    <Collection
+      label="Erfasste Zeiten"
+      // Tage und Zeilen rasten nicht ein: über der ersten Woche stehen Kopfkarte
+      // und Wochenwahl, und das Einrasten zöge die Seite schon beim Laden
+      // an ihnen vorbei.
+      // (Regel unlayered in globals.css, darum mit !).
+      className="app-time-days [&_*]:[scroll-snap-align:none]!"
+    >
+      {header ? (
+        <div className="border-b border-gray-100 py-1">{header}</div>
+      ) : null}
       {weeks.map(({ week, days }) => {
         const ist = days.reduce(
           (sum, d) => sum + (d.projection?.actualMinutes ?? 0),
           0,
         );
-        const balance = days.reduce(
+        // Ein laufender oder noch nicht begonnener Tag zählt erst mit, wenn
+        // er abgeschlossen ist: sonst stünde die Woche schon morgens mit dem
+        // ganzen Soll von heute im Minus.
+        const counted = days.filter(
+          (d) => d.key < todayKey || (d.key === todayKey && dayClosed(d)),
+        );
+        const partial =
+          counted.length < days.filter((d) => d.key <= todayKey).length;
+        const balance = counted.reduce(
           (sum, d) => sum + (d.projection?.balanceMinutes ?? 0),
           0,
         );
+        // Wochenansicht: der Zeitraum steht schon im Kopf der Karte und die
+        // Stunden der Woche in der Kopfkarte; die Gruppe nennt nur den Saldo.
+        const single = weeks.length === 1 && header !== undefined;
+        const saldoLabel = partial ? "Saldo bis gestern" : "Wochensaldo";
+        if (single) {
+          return (
+            <CollectionGroup
+              key={week}
+              title={
+                counted.length === 0
+                  ? `${formatDuration(ist)} gearbeitet`
+                  : saldoLabel
+              }
+              meta={
+                counted.length === 0 ? null : (
+                  <span
+                    className={cn(
+                      "font-semibold tabular-nums",
+                      balanceClass(balance),
+                    )}
+                  >
+                    {formatSignedDuration(balance)}
+                  </span>
+                )
+              }
+            >
+              {days.flatMap((d) => dayRows(d, todayKey, onEdit))}
+            </CollectionGroup>
+          );
+        }
         return (
           <CollectionGroup
             key={week}
             title={`KW ${week}`}
             meta={
-              // Der Saldo dieser Woche, beschriftet: er ist nicht das
-              // Stundenkonto im Kopf (das zählt alle Wochen zusammen).
-              <span className="tabular-nums">
-                {formatDuration(ist)} · Wochensaldo{" "}
-                <span className={balanceClass(balance)}>
-                  {formatSignedDuration(balance)}
+              counted.length === 0 ? (
+                <span className="tabular-nums">{formatDuration(ist)}</span>
+              ) : (
+                // Der Saldo dieser Woche, beschriftet: er ist nicht das
+                // Stundenkonto im Kopf (das zählt alle Wochen zusammen).
+                <span className="tabular-nums">
+                  {formatDuration(ist)} · {saldoLabel}{" "}
+                  <span className={balanceClass(balance)}>
+                    {formatSignedDuration(balance)}
+                  </span>
                 </span>
-              </span>
+              )
             }
           >
             {days.flatMap((d) => dayRows(d, todayKey, onEdit))}
@@ -636,6 +713,13 @@ export function AppDayList({
         );
       })}
     </Collection>
+  );
+}
+
+/** Heute ist abgeschlossen: gestempelt und kein Block läuft mehr. */
+function dayClosed(d: DayEntry): boolean {
+  return (
+    d.sessions.length > 0 && d.sessions.every((s) => s.checkOutTime !== null)
   );
 }
 
@@ -672,12 +756,15 @@ function dayRows(
   const isFuture = d.key > todayKey;
   const leading = <DayBadge day={d.day} isToday={isToday} />;
   const balance = d.projection?.balanceMinutes;
+  // Heute zeigt den Saldo erst, wenn der Tag abgeschlossen ist; vorher
+  // stünde schon morgens das ganze Soll als Minus da.
   const hasBalance =
     d.projection !== undefined &&
     (d.sessions.length > 0 ||
       d.projection.targetMinutes > 0 ||
       d.projection.creditMinutes > 0) &&
-    !isFuture;
+    !isFuture &&
+    (!isToday || dayClosed(d));
   const plannedText =
     d.shifts.length > 0
       ? `Geplant ${d.shifts.map((s) => `${s.startTime}–${s.endTime}`).join(", ")}`
@@ -722,7 +809,7 @@ function dayRows(
         title={title}
         subtitle={subtitle}
         meta={
-          isFuture
+          isFuture || (isToday && !d.absence && !d.special)
             ? d.projection && d.projection.targetMinutes > 0
               ? `Soll ${formatDuration(d.projection.targetMinutes)}`
               : undefined
@@ -777,10 +864,10 @@ function dayRows(
 
 /**
  * Telefon und iPad hoch: Stempeluhr, die Tage, dann Heute geplant, Urlaub
- * und Kontingente. iPad quer (`split`): links der Tag (Stempeluhr mit ihrer
- * Aktionsleiste, Heute geplant, Urlaub), rechts die Tage und Kontingente.
- * Die Aktionsleiste steht dort in der linken Spalte unter der Stempeluhr,
- * statt mittig über der rechten Spalte zu schweben.
+ * und Kontingente. iPad quer (`split`): `SplitView` – links der Tag
+ * (Stempeluhr, Heute geplant, Urlaub) mit der Aktionsleiste darunter, in
+ * Daumennähe; rechts die Tage und Kontingente. Beide Spalten scrollen für
+ * sich, die Kopfkarte bleibt stehen.
  */
 export function AppTimeTrackingLayout({
   split,
@@ -803,24 +890,22 @@ export function AppTimeTrackingLayout({
     return (
       <div className="space-y-4" data-app-time-tracking="split">
         {errors}
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] items-start gap-4">
-          <div
-            className={cn(
-              "flex min-w-0 flex-col gap-4 [&>*]:shrink-0 [&>section]:h-auto",
-              // Die Leiste im Fluss der Spalte: kein Schweben, kein Polster.
-              "[&>[aria-hidden=true]:has(+[data-action-bar])]:hidden",
-              "[&>[data-action-bar]]:static [&>[data-action-bar]]:mx-0 [&>[data-action-bar]]:max-w-none [&>[data-action-bar]]:translate-y-0",
-            )}
-          >
-            {clock}
-            {today}
-            {leave}
-          </div>
-          <div className="flex min-w-0 flex-col gap-4 [&>*]:shrink-0 [&>section]:h-auto">
-            {days}
-            {allowances}
-          </div>
-        </div>
+        <SplitView
+          list={
+            <div className={SPLIT_STACK}>
+              {clock}
+              {today}
+              {leave}
+            </div>
+          }
+          detail={
+            <div className={SPLIT_STACK}>
+              {days}
+              {allowances}
+            </div>
+          }
+          empty={null}
+        />
       </div>
     );
   }
@@ -840,3 +925,7 @@ export function AppTimeTrackingLayout({
     </div>
   );
 }
+
+/** Karten einer Spalte untereinander, jede so hoch wie ihr Inhalt. */
+const SPLIT_STACK =
+  "flex min-w-0 flex-col gap-4 [&>*]:shrink-0 [&>section]:h-auto";

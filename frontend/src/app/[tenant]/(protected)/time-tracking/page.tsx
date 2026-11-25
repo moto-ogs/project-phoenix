@@ -1634,7 +1634,13 @@ function OwnZeiterfassungSection({
   monthAnchor,
   setTargetHref,
   app = false,
+  rangeBar,
 }: {
+  /**
+   * App (#8070): die Wochen- bzw. Monatswahl als Kopf der Tagesliste, in
+   * derselben Karte statt als eigene Karte darüber.
+   */
+  readonly rangeBar?: React.ReactNode;
   readonly ownStaffId: string | null;
   readonly schedule: import("~/lib/staff-api").StaffSchedule | null;
   readonly onEditDay: (
@@ -1979,12 +1985,16 @@ function OwnZeiterfassungSection({
         {loadErrors}
         {loading ? (
           <SectionCard>
+            {rangeBar}
             <SkeletonRegion label="Einträge werden geladen…">
               <TableSkeleton rows={7} columns={2} />
             </SkeletonRegion>
           </SectionCard>
-        ) : tableError && tableData === undefined ? null : (
+        ) : tableError && tableData === undefined ? (
+          <SectionCard padding="none">{rangeBar}</SectionCard>
+        ) : (
           <AppDayList
+            header={rangeBar}
             from={visibleFrom}
             to={visibleTo}
             today={today}
@@ -2161,7 +2171,13 @@ function ModalActions({
   confirmDisabled = false,
   confirmDisabledReason,
   cancelDisabled = false,
+  hideCancel = false,
 }: {
+  /**
+   * App (#8070): das Blatt schließt über sein X im Kopf; im Fuß steht nur
+   * die Hauptaktion.
+   */
+  readonly hideCancel?: boolean;
   readonly onCancel: () => void;
   readonly onConfirm: () => void;
   readonly confirmLabel: string;
@@ -2175,17 +2191,19 @@ function ModalActions({
 }) {
   return (
     <div className="flex w-full flex-col-reverse gap-3 sm:flex-row">
-      <Button
-        type="button"
-        variant="outline"
-        size="md"
-        onClick={onCancel}
-        disabled={cancelDisabled}
-        noTooltip="Schließt nur das Fenster, ohne etwas zu speichern."
-        className="flex-1"
-      >
-        {cancelLabel}
-      </Button>
+      {hideCancel ? null : (
+        <Button
+          type="button"
+          variant="outline"
+          size="md"
+          onClick={onCancel}
+          disabled={cancelDisabled}
+          noTooltip="Schließt nur das Fenster, ohne etwas zu speichern."
+          className="flex-1"
+        >
+          {cancelLabel}
+        </Button>
+      )}
       <Button
         type="button"
         variant="primary"
@@ -2673,6 +2691,7 @@ function EditSessionModal({
   // Footer: tab-aware for dual-section, standard for single-section
   const sessionFooter = (
     <ModalActions
+      hideCancel={app}
       onCancel={onClose}
       onConfirm={handleSave}
       confirmLabel={saving ? "Speichern…" : "Speichern"}
@@ -2694,6 +2713,7 @@ function EditSessionModal({
 
   const absenceFooter = (
     <ModalActions
+      hideCancel={app}
       onCancel={onClose}
       onConfirm={handleAbsenceSave}
       confirmLabel={absenceSaving ? "Speichern…" : "Speichern"}
@@ -4210,23 +4230,7 @@ function TimeTrackingContent() {
       // Bauart 3, Regel 1: eine Zeitnavigation im Bedienband der Kopfkarte,
       // dieselbe wie in Dienstplan, Vertretung und Betreuungsplan.
       searchSlot={
-        app ? (
-          <AppRangeBar
-            label={rangeLabel.replace(/\.(\d{4})$/, ".")}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            onPrevious={goToPreviousRange}
-            onNext={goToNextRange}
-            previousLabel={
-              viewMode === "month" ? "Vorheriger Monat" : "Vorherige Woche"
-            }
-            nextLabel={
-              viewMode === "month" ? "Nächster Monat" : "Nächste Woche"
-            }
-            onToday={isOnCurrentRange ? undefined : goToCurrentRange}
-            todayLabel={viewMode === "month" ? "Dieser Monat" : "Diese Woche"}
-          />
-        ) : (
+        app ? undefined : (
           <PlanningContextBar
             withoutContextRow
             dateLabel={rangeLabel}
@@ -4473,6 +4477,27 @@ function TimeTrackingContent() {
               viewMode={viewMode}
               weekAnchor={weekAnchor}
               monthAnchor={monthAnchor}
+              rangeBar={
+                <AppRangeBar
+                  label={rangeLabel.replace(/\.(\d{4})$/, ".")}
+                  viewMode={viewMode}
+                  onViewModeChange={setViewMode}
+                  onPrevious={goToPreviousRange}
+                  onNext={goToNextRange}
+                  previousLabel={
+                    viewMode === "month"
+                      ? "Vorheriger Monat"
+                      : "Vorherige Woche"
+                  }
+                  nextLabel={
+                    viewMode === "month" ? "Nächster Monat" : "Nächste Woche"
+                  }
+                  onToday={isOnCurrentRange ? undefined : goToCurrentRange}
+                  todayLabel={
+                    viewMode === "month" ? "Dieser Monat" : "Diese Woche"
+                  }
+                />
+              }
               setTargetHref={
                 canSetTarget && ownStaffId
                   ? tenantPath(workTimeModelPath(ownStaffId))

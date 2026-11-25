@@ -47,6 +47,18 @@ function formatRange(start: string, end: string): string {
   return formatAbsenceRange(start, end);
 }
 
+/**
+ * App: kurzer Zeitraum („21.09.–13.10.2026“), damit er auch am kleinen
+ * Telefon in eine Zeile passt. Über Jahresgrenzen bleibt die lange Form.
+ */
+function formatRangeShort(start: string, end: string): string {
+  const [sy, sm, sd] = start.slice(0, 10).split("-");
+  const [ey, em, ed] = end.slice(0, 10).split("-");
+  if (!sy || !ey || sy !== ey) return formatRange(start, end);
+  if (start.slice(0, 10) === end.slice(0, 10)) return `${sd}.${sm}.${sy}`;
+  return `${sd}.${sm}.–${ed}.${em}.${ey}`;
+}
+
 function dayCountFor(a: StaffAbsence): number {
   return sharedDayCountFor({
     workingDays: a.workingDays,
@@ -539,14 +551,24 @@ function AbsenceRequestItem({
         flat ? "py-3" : "moto-content-surface rounded-xl border px-4 py-3"
       }
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div
+        className={`flex items-center justify-between gap-3 ${
+          // App: der Zustand bleibt rechts neben dem Zeitraum, statt als
+          // eigene Zeile darunter zu rutschen.
+          flat ? "" : "flex-wrap"
+        }`}
+      >
         <div className="min-w-0">
           <p className="text-sm font-medium text-gray-800">
             {absence.absenceType !== "vacation" && (
               <span className="mr-2">{absenceDisplayLabel(absence)} ·</span>
             )}
-            {formatRange(absence.dateStart, absence.dateEnd)}
-            <span className="ml-2 text-xs text-gray-500">
+            {flat
+              ? formatRangeShort(absence.dateStart, absence.dateEnd)
+              : formatRange(absence.dateStart, absence.dateEnd)}
+            <span
+              className={`ml-2 text-xs text-gray-500 ${flat ? "whitespace-nowrap" : ""}`}
+            >
               · {formatDayCount(dayCountFor(absence))}
             </span>
           </p>
@@ -565,7 +587,7 @@ function AbsenceRequestItem({
           )}
           <AbsenceRequestMails counts={mailCounts} />
         </div>
-        <div className="flex items-center gap-3">
+        <div className={`flex items-center gap-3 ${flat ? "shrink-0" : ""}`}>
           <StatusColorBadge label={meta.label} color={meta.color} />
           {cancelable && (
             <Button
