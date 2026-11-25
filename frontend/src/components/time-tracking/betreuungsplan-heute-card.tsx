@@ -217,7 +217,8 @@ export function BetreuungsplanHeuteCard({
   return (
     <SectionCard
       title={title}
-      concept={carePlanConcept}
+      // App: schmaler Kopf ohne Symbolkachel, die Einsätze stehen einzeilig.
+      concept={app ? undefined : carePlanConcept}
       {...CARD_LAYOUT}
       inlineActions
       actions={
@@ -297,7 +298,7 @@ function AssignmentRow({
   // Höhe — zweizeilige Einträge lassen dort nur einen ganz hineinpassen, und
   // ein einzelner Einsatz ist kein Tag.
   const rowClass = inline
-    ? "flex flex-row items-start gap-3 py-3 first:pt-0 last:pb-0"
+    ? "flex flex-row items-baseline gap-3 py-2.5 first:pt-0 last:pb-0"
     : "flex flex-col gap-1 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:gap-4";
   const secondary = [
     block.roomName,
@@ -308,13 +309,13 @@ function AssignmentRow({
   const content = (
     <>
       <span
-        className={`${dense ? "w-24" : "w-28"} flex-shrink-0 text-sm font-medium tabular-nums ${
+        className={`${dense || inline ? "w-24" : "w-28"} flex-shrink-0 text-sm font-medium tabular-nums ${
           dimmed ? "text-gray-500 line-through" : "text-gray-900"
         }`}
       >
         {block.startTime}–{block.endTime}
       </span>
-      {dense ? (
+      {dense || inline ? (
         <p className="min-w-0 flex-1 truncate text-sm">
           <span
             className={`font-medium ${dimmed ? "text-gray-500" : "text-gray-900"}`}
@@ -353,8 +354,8 @@ function AssignmentRow({
           tone; they never appear on the same block. */}
       <div
         className={`flex flex-wrap items-center gap-1.5 ${
-          dense ? "shrink-0 justify-end" : ""
-        } ${tile ? "empty:hidden" : ""}`}
+          dense || inline ? "shrink-0 justify-end" : ""
+        } ${tile || inline ? "empty:hidden" : ""}`}
       >
         {block.isSubstitute && <StatusBadge tone="blue" label="Vertretung" />}
         {/* Dieselben Wörter wie im Tagesplan und in der Jetzt-Zone: „Läuft"
