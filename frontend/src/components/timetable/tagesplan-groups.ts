@@ -41,6 +41,13 @@ interface Window {
 
 const MINUTES_PER_DAY = 24 * 60;
 
+/**
+ * Wie ein spontaner, laufender Block ohne Ende in die Überlappung eingeht:
+ * `until_now` (Desktop) streckt ihn bis jetzt, `point` (App) zählt nur
+ * seinen Beginn.
+ */
+type OpenEndMode = "until_now" | "point";
+
 function formatMinutes(total: number): string {
   const clamped = Math.min(total, MINUTES_PER_DAY);
   const h = Math.floor(clamped / 60);
@@ -59,7 +66,17 @@ function endTimeToMinutes(endTime: string): number {
 function effectiveEnd(
   instance: PlannedTimetableInstance,
   nowHHMM: string | null,
+  openEnd: OpenEndMode,
 ): Pick<Window, "endTime" | "endMinute"> {
+  if (openEnd === "point" && hasOpenEnd(instance)) {
+    // App (#8070): ein spontaner Block ohne Ende zählt nur bei seinem Beginn.
+    // Bis jetzt gestreckt fasste er sonst alles seit Tagesbeginn zu einer
+    // Gruppe „Gleichzeitig“ zusammen.
+    return {
+      endTime: instance.startTime,
+      endMinute: parseTimeToMinutes(instance.startTime),
+    };
+  }
   const endsAtMidnight =
     instance.endTime === "00:00" && instance.startTime > instance.endTime;
   const end =
@@ -127,10 +144,11 @@ function placeRows(
 export function groupParallelBlocks(
   instances: readonly PlannedTimetableInstance[],
   nowHHMM: string | null,
+  openEnd: OpenEndMode = "until_now",
 ): TagesplanGroup[] {
   const windows: Window[] = instances.map((instance) => ({
     startTime: instance.startTime,
-    ...effectiveEnd(instance, nowHHMM),
+    ...effectiveEnd(instance, nowHHMM, openEnd),
     instance,
   }));
   const laned = assignBlockLanes(windows, compareWindows);
