@@ -3,6 +3,7 @@
 import {
   startTransition,
   useEffect,
+  useLayoutEffect,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -25,13 +26,19 @@ function browserViewport() {
 /** Keep document markup complete, but let below-the-fold work on a client
  * navigation follow the first commit. The browser can paint and respond to
  * inputs between the primary content and the interruptible second render. */
-export function useAfterInitialPaint(): boolean {
+export function useAfterInitialPaint(restageWhenHidden = false): boolean {
   const isDocument = useSyncExternalStore(
     subscribe,
     clientSnapshot,
     documentSnapshot,
   );
   const [ready, setReady] = useState(isDocument);
+  useLayoutEffect(() => {
+    if (!restageWhenHidden) return;
+    // Activity disconnects layout effects while hiding the page. Prepare the
+    // next reveal while there is no roster to lay out on screen.
+    return () => setReady(false);
+  }, [restageWhenHidden]);
   useEffect(() => {
     if (ready) return;
     // Effects from a navigation can run before its paint. The first frame
@@ -47,8 +54,8 @@ export function useAfterInitialPaint(): boolean {
 }
 
 /** Layout bounds only for the opening render of a client navigation. */
-export function useInitialPaintViewport() {
-  const ready = useAfterInitialPaint();
+export function useInitialPaintViewport(restageWhenHidden = false) {
+  const ready = useAfterInitialPaint(restageWhenHidden);
   return useSyncExternalStore(
     subscribe,
     ready ? noViewport : browserViewport,

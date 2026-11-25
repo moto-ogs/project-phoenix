@@ -743,11 +743,11 @@ export function DienstplanResourceGrid({
   // Baum, Screenreader läsen den Plan zweimal vor und die Tabulator-Reihenfolge
   // liefe durch eine unsichtbare Kopie.
   const isCompact = useMediaQuery(BELOW_LG);
-  const viewport = useInitialPaintViewport();
+  const viewport = useInitialPaintViewport(true);
   // A desktop roster starts below the portal header, page heading, week
   // controls and column headings. Even in compact density these occupy
-  // more than 160px, and each row needs at least 72px. On a fresh client
-  // mount, build the visible rows before the lower part of the roster.
+  // more than 160px, and each row needs at least 72px. On a client mount or
+  // Activity reveal, build the visible rows before the lower roster.
   const initialRows = !viewport
     ? staff.length
     : isCompact

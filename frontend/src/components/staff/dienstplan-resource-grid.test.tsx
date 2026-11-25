@@ -1,10 +1,12 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
+import { Activity } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
@@ -177,6 +179,51 @@ function shiftMap(
 ): Map<string, Map<string, StaffShift[]>> {
   return new Map([[staffId, new Map([[date, shifts]])]]);
 }
+
+describe("DienstplanResourceGrid warm reveal", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("shows the opening rows immediately and restores the full roster after paint", () => {
+    vi.useFakeTimers({
+      toFake: ["requestAnimationFrame", "cancelAnimationFrame"],
+    });
+    const staff = Array.from({ length: 30 }, (_, index) => ({
+      ...member,
+      id: String(index),
+      lastName: `Person ${index + 1}`,
+    }));
+    const page = (mode: "visible" | "hidden") => (
+      <Activity mode={mode}>
+        <DienstplanResourceGrid
+          staff={staff}
+          shiftsByStaff={new Map()}
+          assignmentsByStaff={new Map()}
+          summaryByStaff={new Map()}
+          weekDays={WEEK_DAYS}
+          todayIso={TODAY}
+          typesById={new Map()}
+          shiftTypes={[]}
+          onCellClick={vi.fn()}
+        />
+      </Activity>
+    );
+    const { rerender } = render(page("visible"));
+    function paint() {
+      act(() => vi.advanceTimersToNextFrame());
+      act(() => vi.advanceTimersToNextFrame());
+    }
+    paint();
+    expect(screen.getByText("Person 30, Ada")).toBeVisible();
+
+    rerender(page("hidden"));
+    rerender(page("visible"));
+    expect(screen.getByText("Person 1, Ada")).toBeVisible();
+    expect(screen.queryByText("Person 30, Ada")).not.toBeInTheDocument();
+
+    paint();
+    expect(screen.getByText("Person 30, Ada")).toBeVisible();
+  });
+});
 
 describe("DienstplanResourceGrid stacking", () => {
   beforeEach(() => {
