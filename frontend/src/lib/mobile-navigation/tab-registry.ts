@@ -78,7 +78,7 @@ export function hidesPill(
   );
 }
 
-export type TabResolution =
+type TabResolution =
   | { readonly kind: "tab"; readonly tab: string }
   | { readonly kind: "inherit"; readonly defaultTab: string };
 
@@ -88,7 +88,7 @@ function matchesRoot(root: string, pathname: string): boolean {
 }
 
 /** Der Reiter eines Pfads (ohne Mandanten-Präfix) laut Register. */
-export function resolveTab(pathname: string): TabResolution {
+function resolveTab(pathname: string): TabResolution {
   for (const rule of INHERIT_RULES) {
     if (rule.pattern.test(pathname)) {
       return { kind: "inherit", defaultTab: rule.defaultTab };

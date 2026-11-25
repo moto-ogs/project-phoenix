@@ -220,7 +220,7 @@ function changeMessage(
   return "„Heute anders“ hat sich geändert.";
 }
 
-export function DayChangesContent({
+function DayChangesContent({
   overview,
   onChanged,
   omit,

@@ -10,7 +10,7 @@ import { notifyRouteCommit, runPageTransition } from "./page-transition";
  * Meldet jeden Seitenwechsel an den Verlaufsstack. Steht einmal in der
  * Portalhülle (`PortalShell`), vor dem Seiteninhalt.
  */
-export function useNavigationStackTracker(): void {
+function useNavigationStackTracker(): void {
   const pathname = usePathname();
   const search = useSearchParams()?.toString() ?? "";
   const traversal = useRef(false);
@@ -39,7 +39,7 @@ export function useNavigationStackTracker(): void {
  * App und im selben Reiter. Ohne Reiter (Portale ohne Pill) genügt „in der
  * App“.
  */
-export function canStepBack(): boolean {
+function canStepBack(): boolean {
   const previous = previousEntry();
   if (!previous) return false;
   const current = currentEntry();

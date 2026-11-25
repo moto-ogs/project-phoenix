@@ -16,7 +16,7 @@ import { hidesPill } from "./tab-registry";
  * `useChatViewportLock` liest diesen Abstand und lässt das Schreibfeld unten
  * kleben.
  */
-export const PILL_HIDDEN_ATTRIBUTE = "data-pill-hidden";
+const PILL_HIDDEN_ATTRIBUTE = "data-pill-hidden";
 
 /**
  * Ob die Pill auf der aktuellen Seite ausgeblendet ist (Register

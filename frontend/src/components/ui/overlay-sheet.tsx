@@ -21,7 +21,7 @@ import { SCROLL_AREA_PROPS, SHEET_SCOPE_PROPS } from "./overlay-stack";
  * (höchstens voll), ohne Rastpunkte – für kurze Inhalte wie einen Hinweis,
  * die in halber Höhe ein halb leeres Blatt ergäben.
  */
-export type OverlaySheetSize = "half" | "full" | "fit";
+type OverlaySheetSize = "half" | "full" | "fit";
 
 /** Die beiden Rastpunkte am Telefon: halbe und volle Höhe. */
 const SNAP_HALF = 0.55;

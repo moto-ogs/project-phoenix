@@ -10,7 +10,7 @@ import { useEffect, useRef } from "react";
 
 export const STUDENT_QUICK_ACTION_PARAM = "aktion";
 
-export const STUDENT_QUICK_ACTIONS = [
+const STUDENT_QUICK_ACTIONS = [
   "abmelden",
   "anmelden",
   "krank",

@@ -25,7 +25,7 @@ const ABOVE_PILL = "calc(env(safe-area-inset-bottom) + 5.75rem)";
  * CSS-Variable am Dokument. Seiteninhalt (`PortalShell`), Listen der
  * `SplitView` und Toasts halten ihn frei; ohne Leiste fehlt sie (`0px`).
  */
-export const ACTION_BAR_SPACE_VAR = "--app-action-bar-space";
+const ACTION_BAR_SPACE_VAR = "--app-action-bar-space";
 
 /**
  * Die Hauptaktion einer Aufgabe in Daumennähe (#8070): schwebt in der App

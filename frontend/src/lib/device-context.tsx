@@ -51,11 +51,11 @@ function useResolvedMediaQuery(query: string): boolean | null {
 }
 
 export const APP_QUERY = "(width < 64rem), (pointer: coarse)";
-export const PHONE_QUERY = "(width < 40rem)";
-export const SPLIT_QUERY = "(width >= 64rem) and (pointer: coarse)";
+const PHONE_QUERY = "(width < 40rem)";
+const SPLIT_QUERY = "(width >= 64rem) and (pointer: coarse)";
 export const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
-export type DeviceLayout = "phone" | "tablet" | "desktop";
+type DeviceLayout = "phone" | "tablet" | "desktop";
 
 export interface DeviceContextValue {
   /** `false` bis zur Hydration; dann gelten die Defaults (Desktop). */

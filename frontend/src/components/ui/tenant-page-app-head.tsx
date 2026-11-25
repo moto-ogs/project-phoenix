@@ -36,15 +36,15 @@ import { SectionLabel } from "./section-label";
  */
 
 /** In der Statuszeile des App-Kopfs: `TenantPageStats` rendert Chips. */
-export const AppHeadStatsContext = createContext(false);
+const AppHeadStatsContext = createContext(false);
 
 export function useInAppHeadStats(): boolean {
   return useContext(AppHeadStatsContext);
 }
 
 /** Hooks für View Transitions: Kopf und schmale Kopfkarte bleiben stehen. */
-export const APP_HEAD_ATTR = { "data-app-page-head": "" } as const;
-export const APP_HEAD_COMPACT_ATTR = {
+const APP_HEAD_ATTR = { "data-app-page-head": "" } as const;
+const APP_HEAD_COMPACT_ATTR = {
   "data-app-page-head-compact": "",
 } as const;
 

@@ -182,13 +182,6 @@ export function previousEntry(): StackEntry | null {
   return entryAt(-1);
 }
 
-/** Schlüssel des aktuellen Eintrags für Scroll-Positionen. */
-export function currentEntryKey(): string | null {
-  const nav = navigationApi();
-  if (nav?.currentEntry) return nav.currentEntry.key;
-  return currentEntry()?.id ?? null;
-}
-
 /** Ordnet dem aktuellen Eintrag seinen Reiter zu (einmal, dann fest). */
 export function setEntryTab(id: string, tab: string): void {
   const current = load();

@@ -54,7 +54,7 @@ import { cn } from "~/lib/utils";
 
 // ─── Stempeluhr ──────────────────────────────────────────────────────────────
 
-export type AppClockState = "idle" | "working" | "break" | "done";
+type AppClockState = "idle" | "working" | "break" | "done";
 type CheckInMode = "present" | "home_office";
 
 export interface AppClockPanelProps {

@@ -42,7 +42,7 @@ const DENSITY_CLASSES: Record<ListRowDensity, string> = {
  * Rückmeldung beim Antippen einer Zeile (#7794): per Finger tönt sie grau,
  * der graue iOS-Blitz bleibt aus. Mit Maus ändert sich nichts.
  */
-export const ROW_TAP_FEEDBACK =
+const ROW_TAP_FEEDBACK =
   "[-webkit-tap-highlight-color:transparent] pointer-coarse:active:bg-gray-200/70";
 
 /** Fläche einer Listenzeile, geteilt von `ListRow` und `ListRowSkeleton`. */
