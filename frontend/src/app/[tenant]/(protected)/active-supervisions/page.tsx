@@ -34,6 +34,7 @@ import {
 } from "~/components/ui/page-header/OverflowMenu";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { Button } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
 import { StatusBadge } from "~/components/ui/status-badge";
 import {
   formatChildCount,
@@ -968,20 +969,38 @@ function MeinRaumPageContent() {
         // Leiser Knopf mit Fingermaß; der Pfeil schließt bündig mit den
         // Knöpfen der Zeilen darunter ab.
         className="-mr-3 gap-1.5"
-        tooltip="Klappt die Kinder ohne Raum am Ende der Liste auf."
+        tooltip={
+          appTransitExpanded
+            ? "Blendet die Kinder ohne Raum am Ende der Liste aus."
+            : "Zeigt die Kinder ohne Raum am Ende der Liste."
+        }
+        aria-expanded={appTransitExpanded}
         onClick={() => {
+          if (appTransitExpanded) {
+            setAppTransitExpanded(false);
+            return;
+          }
           setAppTransitExpanded(true);
-          appTransitRef.current?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
+          // Erst nach dem Aufklappen hat die Karte eine Lage.
+          requestAnimationFrame(() =>
+            appTransitRef.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            }),
+          );
         }}
       >
         <MotoConceptIcon concept={transitConcept} size={16} />
         {`${appTransitCount} unterwegs`}
         {/* Der Pfeil zeigt, dass hier etwas aufgeht: ohne ihn läse sich
             die Zahl wie die Anzeige daneben. */}
-        <ChevronDown className="size-4 text-gray-500" aria-hidden="true" />
+        <ChevronDown
+          className={cn(
+            "size-4 text-gray-500",
+            appTransitExpanded && "rotate-180",
+          )}
+          aria-hidden="true"
+        />
       </Button>
     ) : null;
 
@@ -1096,7 +1115,19 @@ function MeinRaumPageContent() {
               <>
                 {spontaneousStartBanner}
                 {transitSection ? (
-                  <div ref={appTransitRef} className="scroll-mt-24">
+                  // Zu ist die Karte nur eine Wiederholung der Zahl im
+                  // Listenkopf: Sie steht erst da, wenn der Kopf sie
+                  // aufklappt (ohne Kinder unterwegs wie am Computer).
+                  // Ausgeblendet bleibt sie geladen, sonst kennt der Kopf
+                  // die Zahl nicht.
+                  <div
+                    ref={appTransitRef}
+                    className={
+                      appTransitExpanded || appTransitCount === 0
+                        ? "scroll-mt-24"
+                        : "hidden"
+                    }
+                  >
                     {transitSection}
                   </div>
                 ) : null}

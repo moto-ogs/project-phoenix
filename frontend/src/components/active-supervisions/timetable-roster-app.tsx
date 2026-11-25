@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, Plus, StickyNote } from "lucide-react";
-import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Alert } from "~/components/ui/alert";
 import { ActionBar } from "~/components/ui/action-bar";
@@ -29,9 +29,11 @@ import {
 } from "~/lib/student-search-resource";
 import { useSWRAuth } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
+import { getAccessibleTextColor } from "~/lib/kit-palette";
 import { useMinuteClock } from "~/lib/pickup-helpers";
 import { schoolClassName } from "~/lib/school-class-label";
 import type { Student } from "~/lib/student-helpers";
+import { getStudentTimeStatus } from "~/lib/student-time-status";
 import { useNFCEnabled } from "~/lib/tenant-context";
 import {
   canCompleteInstance,
@@ -321,12 +323,8 @@ function rowNotice(row: TimetableRosterRow): ReactNode {
   }
   if (label) {
     return (
-      <span className="text-moto-amber-strong flex max-w-full min-w-0 shrink-0 items-center gap-1 font-medium">
-        {/* Am SE reicht die Breite neben „Raum verlassen“ nur für das Wort. */}
-        <AlertTriangle
-          className="size-3.5 shrink-0 max-[24rem]:hidden"
-          aria-hidden="true"
-        />
+      <span className="text-moto-amber-strong flex min-w-0 items-center gap-0.5 font-medium">
+        <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
         <span className="truncate">{label}</span>
       </span>
     );
@@ -340,6 +338,42 @@ function rowNotice(row: TimetableRosterRow): ReactNode {
     );
   }
   return null;
+}
+
+/**
+ * Farbe einer heute überschrittenen Gehzeit eines Kindes, das noch im Raum
+ * ist, wie in der Kindersuche (orange kurz danach, dann rot); sonst `null`.
+ */
+function overduePickupColor(
+  row: TimetableRosterRow,
+  now: Date,
+  rosterDate: string,
+): string | null {
+  if (!row.currentlyPresent || !row.pickupTime) return null;
+  if (rosterDate !== berlinTodayISO(now)) return null;
+  const status = getStudentTimeStatus({
+    plannedTime: row.pickupTime,
+    now,
+    kind: "pickup",
+  });
+  const late =
+    status.state === "very-overdue" || status.state === "slightly-overdue";
+  return late && status.textColor
+    ? getAccessibleTextColor(status.textColor)
+    : null;
+}
+
+/**
+ * Eine Angabe der zweiten Zeile. Der Punkt davor steht links außerhalb und
+ * wird am Zeilenanfang abgeschnitten: Bricht die Zeile um, beginnt die neue
+ * Zeile ohne „·“.
+ */
+function SubtitlePart({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <span className="flex max-w-full min-w-0 shrink-0 items-center before:w-2 before:shrink-0 before:text-center before:text-gray-500 before:content-['·']">
+      {children}
+    </span>
+  );
 }
 
 export function TimetableRosterApp({
@@ -521,65 +555,95 @@ export function TimetableRosterApp({
   const sharedGroup = groupNames.size === 1;
 
   const subtitleFor = (row: TimetableRosterRow, key: SectionKey): ReactNode => {
-    // Zuerst, was die Aufsicht jetzt braucht (Ankunft, Gehzeit, Grund),
-    // dann Klasse und Gruppe. Die Gehzeit steht wie am Computer bei jedem
-    // Kind, das heute noch geht.
-    const parts: string[] = [];
+    // Zuerst, was die Aufsicht jetzt braucht (Hinweis, Ankunft, Gehzeit,
+    // Grund), dann die Gruppe; die Klasse steht neben dem Namen. Die
+    // Gehzeit steht wie am Computer bei jedem Kind, das heute noch geht.
+    const parts: { key: string; node: ReactNode }[] = [];
+    const text = (value: string) => parts.push({ key: value, node: value });
+    const notice = rowNotice(row);
     const pickup = rosterPickupTimeLabel(
       row.pickupTime,
       roster.pickupTimesLoaded,
       roster.pickupTimesRedacted,
     );
-    const pickupPart = pickup && pickup !== "–" ? `geht ${pickup}` : null;
+    const pickupPart = () => {
+      if (!pickup || pickup === "–") return;
+      const overdue = overduePickupColor(row, now, roster.instance.date);
+      parts.push({
+        key: "pickup",
+        // Überfällig wie in der Kindersuche: Warnzeichen und Farbe.
+        node: overdue ? (
+          <span
+            className="flex items-center gap-0.5 font-medium"
+            style={{ color: overdue }}
+          >
+            <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
+            geht {pickup}
+            <span className="sr-only">, überfällig</span>
+          </span>
+        ) : (
+          `geht ${pickup}`
+        ),
+      });
+    };
+    if (key !== "gone" && notice) parts.push({ key: "notice", node: notice });
     if (key === "missing") {
       const arrival = upcomingArrivalTime(
         row.warnings,
         now,
         roster.instance.date,
       );
-      if (arrival) parts.push(`kommt ${arrival}`);
-      if (pickupPart) parts.push(pickupPart);
+      if (arrival) text(`kommt ${arrival}`);
+      pickupPart();
     } else if (key === "present") {
-      if (pickupPart) parts.push(pickupPart);
-    } else if (row.status === "absent") {
-      parts.push(
-        row.substatus ? ATTENDANCE_SUBSTATUS_LABELS[row.substatus] : "Abwesend",
-      );
-    } else if (!row.currentlyPresent && row.status === "present") {
-      // Am Computer „Nicht mehr im Raum“: Das Kind hat den Raum verlassen,
-      // ist aber nicht unbedingt nach Hause gegangen.
-      parts.push("nicht im Raum");
-      if (pickupPart) parts.push(pickupPart);
+      pickupPart();
     } else {
-      parts.push("heute nicht eingeplant");
+      // Unter „Gegangen oder abgemeldet“ steht zuerst der Grund (nicht im
+      // Raum, krank …), dann die Gehzeit, zuletzt ein Hinweis.
+      if (row.status === "absent") {
+        text(
+          row.substatus
+            ? ATTENDANCE_SUBSTATUS_LABELS[row.substatus]
+            : "Abwesend",
+        );
+      } else if (!row.currentlyPresent && row.status === "present") {
+        // Am Computer „Nicht mehr im Raum“: Das Kind hat den Raum verlassen,
+        // ist aber nicht unbedingt nach Hause gegangen.
+        text("nicht im Raum");
+      } else {
+        text("heute nicht eingeplant");
+      }
+      if (!row.currentlyPresent && row.status === "present") pickupPart();
+      if (notice) parts.push({ key: "notice", node: notice });
     }
-    const klass = schoolClassName(row.schoolClass ?? "");
-    if (klass) parts.push(klass);
     if (!sharedGroup && row.groupName && row.groupName !== row.schoolClass)
-      parts.push(row.groupName);
-    const notice = rowNotice(row);
-    if (!notice && parts.length === 0) return null;
-    // Jede Angabe ganz oder gar nicht: Was in der Zeile keinen Platz hat,
-    // rutscht in eine verdeckte zweite Zeile, statt mitten in der Uhrzeit
-    // abgeschnitten zu werden („geht 16:…“). Das Kind-Blatt zeigt alles.
+      text(row.groupName);
+    if (parts.length === 0) return null;
+    // Jede Angabe ganz oder gar nicht und auf jedem Telefon dieselben: Was
+    // nicht mehr in die Zeile passt, bricht als Ganzes in eine weitere Zeile
+    // um, statt abgeschnitten („geht 16:…“) oder weggelassen zu werden. Der
+    // linke Rand schneidet den Punkt vor der ersten Angabe jeder Zeile ab.
     return (
-      <span className="flex h-5 min-w-0 flex-wrap items-center gap-x-1 overflow-hidden">
-        {/* Unter „Gegangen oder abgemeldet“ steht zuerst der Grund
-            (nicht im Raum, krank …), dann ein Hinweis. */}
-        {key === "gone" ? null : notice}
-        {parts.map((part, index) => (
-          <Fragment key={part}>
-            <span className="shrink-0">
-              {index > 0 || (notice && key !== "gone") ? "· " : ""}
-              {part}
-            </span>
-            {index === 0 && key === "gone" && notice ? (
-              <span className="flex min-w-0 shrink items-center gap-1">
-                · {notice}
-              </span>
-            ) : null}
-          </Fragment>
+      <span className="-ml-2 flex min-w-0 flex-wrap items-center">
+        {parts.map((part) => (
+          <SubtitlePart key={part.key}>{part.node}</SubtitlePart>
         ))}
+      </span>
+    );
+  };
+
+  // Die Klasse neben dem Namen: Sie ist kurz, und die zweite Zeile behält
+  // Platz für Gehzeit und Hinweise. Ein langer Name kürzt sich, die Klasse
+  // bleibt.
+  const titleFor = (row: TimetableRosterRow): ReactNode => {
+    const klass = schoolClassName(row.schoolClass ?? "");
+    if (!klass) return childName(row);
+    return (
+      <span className="flex min-w-0 items-baseline gap-1">
+        <span className="truncate">{childName(row)}</span>{" "}
+        <span className="shrink-0 text-xs font-normal text-gray-500">
+          {klass}
+        </span>
       </span>
     );
   };
@@ -651,9 +715,11 @@ export function TimetableRosterApp({
                 key={`${row.studentId}-${row.status}-${row.visitId ?? "planned"}`}
                 onClick={() => openChild(row)}
                 selected={isSplit && splitRow?.studentId === row.studentId}
-                aria-label={`${childName(row)} öffnen`}
+                // Beginnt mit dem sichtbaren Text (Name, Klasse), damit
+                // Sprachsteuerung die Zeile beim gelesenen Namen findet.
+                aria-label={`${[childName(row), schoolClassName(row.schoolClass ?? "")].filter(Boolean).join(" ")} öffnen`}
                 leading={<Avatar name={childName(row)} size="sm" decorative />}
-                title={childName(row)}
+                title={titleFor(row)}
                 subtitle={subtitleFor(row, key)}
                 action={rowAction(row)}
               />
@@ -833,6 +899,11 @@ export function TimetableRosterApp({
 
       <SupervisionChildSheet
         row={sheetRow}
+        pickupOverdue={
+          sheetRow
+            ? overduePickupColor(sheetRow, now, roster.instance.date) !== null
+            : false
+        }
         href={sheetRow ? studentProfileHref?.(sheetRow) : undefined}
         lines={sheetRow ? linesFor(sheetRow) : null}
         actions={sheetRow ? contextFor(sheetRow, true) : null}
@@ -986,12 +1057,14 @@ function useRosterStudent(
  */
 function SupervisionChildSheet({
   row,
+  pickupOverdue,
   href,
   lines,
   actions,
   onClose,
 }: Readonly<{
   row: TimetableRosterRow | null;
+  pickupOverdue: boolean;
   href?: string;
   lines: ReactNode;
   actions: ReactNode;
@@ -1006,7 +1079,11 @@ function SupervisionChildSheet({
       }}
       href={href}
       quickActions={false}
-      status={loaded ? undefined : NO_STATUS}
+      status={
+        // „Da bis 15:30“ grün neben „Geht 15:30, überfällig“ rot widersprach
+        // sich: Ist die Gehzeit vorbei, sagt das Abzeichen es.
+        loaded ? (pickupOverdue ? PICKUP_OVERDUE_STATUS : undefined) : NO_STATUS
+      }
       contextActions={lines}
       // Die Aktionen stehen gebündelt in der Fußleiste über der Akte.
       footerActions={actions}
@@ -1019,6 +1096,11 @@ function SupervisionChildSheet({
  * kennt nur den Stand in diesem Block.
  */
 const NO_STATUS: ChildDayStatus | null = null;
+
+const PICKUP_OVERDUE_STATUS: ChildDayStatus = {
+  value: "Abholung überfällig",
+  tone: "absent",
+};
 
 /** Dasselbe Kind rechts neben der Liste (iPad quer). */
 function SupervisionChildDetail({
@@ -1114,7 +1196,15 @@ function SupervisionChildActions({
           key={`${action}-${label}`}
           type="button"
           size="md"
-          variant={index === 0 && action === "check-in" ? "success" : "outline"}
+          // Im Blatt ist die erste Aufsicht-Aktion die Hauptaktion; neben ihr
+          // steht „Ganze Akte öffnen“ als Nebenweg.
+          variant={
+            index === 0 && action === "check-in"
+              ? "success"
+              : index === 0 && inSheet
+                ? "primary"
+                : "outline"
+          }
           className="flex-1"
           isLoading={busy === `${row.studentId}:${action}`}
           disabled={busy !== null}
