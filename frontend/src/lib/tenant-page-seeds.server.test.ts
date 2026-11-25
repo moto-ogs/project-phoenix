@@ -263,12 +263,14 @@ describe("first tenant page reads", () => {
     expect(seed?.entries.map(({ key }) => key)).toEqual([
       ownSupervisionKeys.day(),
       ownSupervisionKeys.plannedNow(),
-      ownSupervisionKeys.sessions(),
     ]);
     await Promise.all(seed?.entries.map(({ value }) => value) ?? []);
     expect(
       entries(source.send.mock.calls).map(({ pathname }) => pathname),
-    ).not.toContain("/api/active/supervision-dashboard");
+    ).toEqual([
+      "/api/timetable/operations/planned-now",
+      "/api/timetable/operations/planned-now",
+    ]);
   });
 
   it("keeps the saved home layout when a NowStrip resource fails and does not load disabled cards", async () => {

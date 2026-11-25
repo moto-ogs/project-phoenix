@@ -354,7 +354,7 @@ export async function readGradeTransitions(
   let afterID = "0";
 
   for (let window = 0; window < LIST_PAGE_LIMIT; window++) {
-    const data = await readPage(afterID, LIST_PAGE_SIZE);
+    const data = (await readPage(afterID, LIST_PAGE_SIZE)) ?? [];
     for (const transition of data) {
       byID.set(transition.id, transition);
     }

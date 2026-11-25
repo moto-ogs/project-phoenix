@@ -7,7 +7,7 @@ jedes Abrufs. Ein fehlender Seed lässt den bestehenden Leser nachladen.
 | Seite (`page.tsx`) | Erste serverseitige Antworten | Nicht vorgezogen |
 | --- | --- | --- |
 | `students/search` | Schlanke Kindersuche mit URL- und Berlin-Tagesfiltern; Klassen, Gruppen, Räume und zulässige Anmeldeantwortfilter | Nur lokal bekannte Ansichten, Tracking- und Detailanforderungen nach Auswahl; keine breite Ersatzliste bei verweigerter Filterfreigabe |
-| `active-supervisions` | Standard-Auswahl des Aufsichtsdashboards oder persönliche laufende, geplante und Tagesaufsichten | Kein abweichender Raum oder Termin unter dem Standardschlüssel |
+| `active-supervisions` | Standard-Auswahl des Aufsichtsdashboards oder persönliche geplante und Tagesaufsichten; laufende eigene Aufsichten kommen aus dem vorhandenen Cache der Hülle (#8085) | Kein abweichender Raum oder Termin unter dem Standardschlüssel |
 | `anfragen` | Aktueller Zugang zur Prüfung; erste Seite der sichtbaren offenen Anfragen mit ihren aktiven Quellen | Andere Tabs, Folgeseiten, Entscheidungsdetails und Vorschauen |
 | `home` | Gespeichertes Brett, Kennzahlen, Tagesablauf, eigene Dienste, sichtbare Karten sowie Hinweise zum Phasenende, zur Geräte-PIN und zu Ferien; Planungszeitraum und Zähler für Buchungsreste und Abweichungen | Vollständige Buchungsreste und Abweichungen bleiben im Plan; die Startseite erhält nur die Zähler |
 | `time-tracking` | Eigene Übersicht, laufende Berliner Woche und Urlaubsübersicht des laufenden Jahres über die drei Verträge aus #8104 | Andere Zeiträume, persönliche Bearbeitung sowie Downloads erst auf Aktion; Kalendertage bleiben bis zur Darstellung Strings |

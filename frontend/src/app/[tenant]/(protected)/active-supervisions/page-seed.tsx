@@ -18,7 +18,6 @@ export function ActiveSupervisionsSeed({
         accountId ? dashboardKeys.supervision(accountId) : null,
         ownSupervisionKeys.day(),
         ownSupervisionKeys.plannedNow(),
-        ownSupervisionKeys.sessions(),
       ]}
       render
     >

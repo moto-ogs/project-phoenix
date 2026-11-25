@@ -1,13 +1,11 @@
 import { canReadSupervisionData, hasPermission } from "~/lib/auth-utils";
 import { routes } from "~/lib/contract/active.generated";
-import * as meContract from "~/lib/contract/me.generated";
 import * as timetableContract from "~/lib/contract/timetable.generated";
 import { readContract, seedOf, seedRead } from "~/lib/server-seed.server";
 import { mapSupervisionDashboard } from "~/lib/supervision-dashboard-wire";
 import { dashboardKeys, ownSupervisionKeys } from "~/lib/swr/shell-keys";
 import { readTenantPageContext } from "~/lib/tenant-page-seed.server";
 import { mapPlannedInstance } from "~/lib/timetable-operations-types";
-import { mapActiveGroupResponse } from "~/lib/usercontext-helpers";
 
 export async function loadActiveSupervisionsSeed(slug: string) {
   const builtAt = Date.now();
@@ -48,17 +46,6 @@ export async function loadActiveSupervisionsSeed(slug: string) {
           value: seedRead("ownSupervisionUpcoming", (signal) =>
             planned(signal, { include_roster: true }),
           ),
-        },
-        {
-          key: ownSupervisionKeys.sessions(),
-          render: true,
-          value: seedRead("ownSupervisionSessions", async (signal) => {
-            const answer = await readContract(
-              meContract.routes["GET /api/me/groups/supervised"],
-              { token, signal },
-            );
-            return answer.data.map(mapActiveGroupResponse);
-          }),
         },
       ],
       builtAt,
