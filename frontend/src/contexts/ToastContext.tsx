@@ -621,6 +621,7 @@ function useApiErrorCore(
   formRef: RefObject<HTMLElement | null> | undefined,
   deliver: (shown: DisplayedError, locale: AppLocale) => void,
   surface: ErrorSurface,
+  preloadPresenter = true,
 ) {
   const markFields = surface !== "load";
   const contact = useErrorContact();
@@ -668,8 +669,8 @@ function useApiErrorCore(
     // Keep the catalog in its own chunk, but start loading it while the form
     // or action is mounted so a failed submit can mark and focus its fields
     // without waiting for that chunk first.
-    void loadErrorPresenter().catch(() => undefined);
-  }, []);
+    if (preloadPresenter) void loadErrorPresenter().catch(() => undefined);
+  }, [preloadPresenter]);
 
   useEffect(() => {
     const failed = new Set(Object.keys(fieldErrors));
@@ -726,8 +727,7 @@ function useApiErrorCore(
       const readState = isReadStateRefusal(error);
       const reloaded =
         readState && options.reload ? settleReload(options.reload) : undefined;
-      // The presenter remains a separate chunk. The mounted error path starts
-      // its load ahead of time, and concurrent failures share that request.
+      // Concurrent failures share the same presenter request.
       let presenter: typeof import("~/lib/error-presentation");
       try {
         presenter = await loadErrorPresenter();
@@ -1022,7 +1022,10 @@ function toFormErrorDetail(
  * to the form's `FormErrorAlert`, never to a toast; field errors stay at the
  * field. Render `error` in the alert and `fieldError(name)` at each field.
  */
-export function useApiFormError(formRef?: RefObject<HTMLElement | null>) {
+export function useApiFormError(
+  formRef?: RefObject<HTMLElement | null>,
+  { preloadPresenter = true } = {},
+) {
   const [error, setError] = useFormError();
   const deliver = useCallback(
     (shown: DisplayedError, locale: AppLocale) =>
@@ -1035,7 +1038,7 @@ export function useApiFormError(formRef?: RefObject<HTMLElement | null>) {
     clearFieldErrors,
     setFieldErrors,
     invalidatePendingShow,
-  } = useApiErrorCore(formRef, deliver, "form");
+  } = useApiErrorCore(formRef, deliver, "form", preloadPresenter);
   const clear = useCallback(() => {
     invalidatePendingShow();
     setError(null);

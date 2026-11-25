@@ -195,6 +195,18 @@ describe("ParentLoginPage i18n", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("shows the translated logout notice until the next failed login", async () => {
+    sessionStorage.setItem("logoutNotRevoked", "1");
+    render(<ParentLoginPage />);
+    const notice = enMessages.errorCatalog.codes.identity.logout_not_revoked;
+    expect(screen.getByText(notice)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      enMessages.parentLogin.errors.missingCredentials,
+    );
+    expect(screen.queryByText(notice)).not.toBeInTheDocument();
+  });
+
   it("keeps the auth shell and language switcher stable while the session loads", () => {
     mocks.useSession.mockReturnValue({
       status: "loading",
