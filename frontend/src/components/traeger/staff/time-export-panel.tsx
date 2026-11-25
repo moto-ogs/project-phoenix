@@ -1,14 +1,15 @@
 "use client";
 
 // Der Zeitexport des Trägers (#4712, ADR 0250 Punkt 8): ein festes CSV für
-// Träger mit eigenem Zeiterfassungssystem, eine Zeile je Person, Tag und
+// Träger mit eigenem Zeiterfassungssystem, eine Zeile pro Person, Tag und
 // Schule. Die Spalten stehen hier und in der Hilfe; Personen ohne
 // Personalnummer fehlen in der Datei, die Seite nennt sie.
 
-import { DownloadSimpleIcon } from "@phosphor-icons/react";
+import { ArrowRightIcon, DownloadSimpleIcon } from "@phosphor-icons/react";
 
 import { Button, ButtonLink } from "~/components/ui/button";
 import { FramedList } from "~/components/ui/framed-list";
+import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
 import {
@@ -17,37 +18,66 @@ import {
   ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
+import type { AbsenceType } from "~/lib/time-tracking-helpers";
 import type { TimeReport } from "~/lib/traeger-staff-exports-api";
 import { traegerPath } from "~/lib/traeger-url";
+
+/** Die festen Codes der Spalte `Abwesenheit`, je Grundart einer. */
+const ABSENCE_CODE_MEANINGS = {
+  vacation: "Urlaub",
+  sick: "Krank",
+  training: "Fortbildung",
+  comp_time: "Freizeitausgleich",
+  other: "Sonstige Abwesenheit",
+} as const satisfies Record<AbsenceType, string>;
+
+/** Ein fester Wert einer Spalte und was er bedeutet. */
+interface ColumnValue {
+  readonly code: string;
+  readonly meaning: string;
+}
 
 /** Die Spalten der Datei, in ihrer Reihenfolge. */
 const TIME_EXPORT_COLUMNS: readonly {
   name: string;
   meaning: string;
+  /** Feste Werte, die die Spalte annehmen kann. */
+  values?: readonly ColumnValue[];
 }[] = [
-  { name: "Personalnummer", meaning: "Die Nummer aus der Personalakte." },
-  { name: "Nachname", meaning: "Der Nachname der Person." },
-  { name: "Vorname", meaning: "Der Vorname der Person." },
-  { name: "Datum", meaning: "Der Tag, zum Beispiel 2026-10-05." },
-  { name: "Einsatzort", meaning: "Der Name der Schule." },
-  { name: "Beginn", meaning: "Das erste Einstempeln, zum Beispiel 08:00." },
+  { name: "Personalnummer", meaning: "Nummer aus der Personalakte." },
+  { name: "Nachname", meaning: "Nachname der Person." },
+  { name: "Vorname", meaning: "Vorname der Person." },
+  {
+    name: "Datum",
+    meaning: "Tag als Jahr-Monat-Tag, zum Beispiel 2026-10-05.",
+  },
+  { name: "Einsatzort", meaning: "Name der Schule." },
+  { name: "Beginn", meaning: "Erstes Einstempeln, zum Beispiel 08:00." },
   {
     name: "Ende",
-    meaning: "Das letzte Ausstempeln. Leer, solange jemand arbeitet.",
+    meaning:
+      "Letztes Ausstempeln, zum Beispiel 16:30. Leer, solange die Person noch arbeitet.",
   },
   {
     name: "Pause_Minuten",
-    meaning: "Pausen und Lücken zwischen zwei Zeiten, in Minuten.",
+    meaning:
+      "Pausen und Lücken, in Minuten. Eine Lücke ist die Zeit zwischen Ausstempeln und dem nächsten Einstempeln am selben Tag.",
   },
-  { name: "Ist_Minuten", meaning: "Die angerechnete Arbeitszeit, in Minuten." },
+  {
+    name: "Ist_Minuten",
+    meaning: "Angerechnete Arbeitszeit ohne Pausen, in Minuten.",
+  },
   {
     name: "Abwesenheit",
-    meaning:
-      "Ein fester Code: vacation heißt Urlaub, sick krank, training Fortbildung, comp_time Freizeitausgleich, other sonstige.",
+    meaning: "Fester Code der Abwesenheit. Leer an Tagen ohne Abwesenheit.",
+    values: Object.entries(ABSENCE_CODE_MEANINGS).map(([code, meaning]) => ({
+      code,
+      meaning,
+    })),
   },
   {
     name: "Abwesenheitsart",
-    meaning: "Der Name der Abwesenheit an der Schule.",
+    meaning: "Name der Abwesenheit, so wie die Schule sie nennt.",
   },
 ];
 
@@ -68,7 +98,7 @@ export function TimeExportPanel({
       <SectionCard
         concept={timeTrackingConcept}
         title="Zeitexport"
-        description={`${monthLabel} · Für dein eigenes Zeiterfassungssystem. Eine Zeile je Person, Tag und Schule.`}
+        description={`${monthLabel} · Für dein eigenes Zeiterfassungssystem. Eine Zeile pro Person, Tag und Schule.`}
         actions={
           <Button
             type="button"
@@ -155,13 +185,37 @@ export function TimeExportPanel({
           {TIME_EXPORT_COLUMNS.map((column, index) => (
             <li
               key={column.name}
-              className="grid grid-cols-[2rem_minmax(0,9rem)_minmax(0,1fr)] items-baseline gap-3 px-4 py-2.5 text-sm"
+              className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-3 gap-y-1 px-4 py-3 text-sm sm:grid-cols-[1.5rem_10rem_minmax(0,1fr)] sm:items-baseline"
             >
               <span className="text-gray-500 tabular-nums">{index + 1}</span>
-              <code className="truncate font-mono text-gray-900">
+              <code className="font-mono font-medium break-words text-gray-900">
                 {column.name}
               </code>
-              <span className="text-gray-600">{column.meaning}</span>
+              <div className="col-start-2 text-gray-600 sm:col-start-3">
+                {column.meaning}
+                {column.values ? (
+                  <InsetPanel
+                    as="ul"
+                    padding="compact"
+                    aria-label={`Codes der Spalte ${column.name}`}
+                    className="mt-2 space-y-1"
+                  >
+                    {column.values.map((value) => (
+                      <li key={value.code} className="flex items-center gap-2">
+                        <code className="w-24 shrink-0 font-mono text-gray-900">
+                          {value.code}
+                        </code>
+                        <span className="sr-only"> bedeutet </span>
+                        <ArrowRightIcon
+                          className="h-3.5 w-3.5 shrink-0 text-gray-400"
+                          aria-hidden="true"
+                        />
+                        <span className="text-gray-700">{value.meaning}</span>
+                      </li>
+                    ))}
+                  </InsetPanel>
+                ) : null}
+              </div>
             </li>
           ))}
         </FramedList>
