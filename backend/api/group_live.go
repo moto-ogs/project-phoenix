@@ -242,6 +242,24 @@ func (d groupLiveDirectory) SupervisedGroups(ctx context.Context) ([]grouplive.G
 	return d.userContext.MyGroupRecords(ctx)
 }
 
+func (d groupLiveDirectory) SupervisedGroupsWithRooms(ctx context.Context) ([]grouplive.GroupRecord, error) {
+	ids, err := d.userContext.MyGroupIDs(ctx)
+	if err != nil || len(ids) == 0 {
+		return nil, err
+	}
+	groups, err := d.education.GetGroupsWithRoomsByIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	records := make([]grouplive.GroupRecord, 0, len(groups))
+	for _, id := range ids {
+		if group := groups[id]; group != nil {
+			records = append(records, navigationGroupRecord(group))
+		}
+	}
+	return records, nil
+}
+
 // SupervisedGroupIDs marks the caller's groups from the IDs the identity
 // chain holds, without reading their rows again.
 func (d groupLiveDirectory) SupervisedGroupIDs(ctx context.Context) (map[int64]bool, error) {
@@ -286,10 +304,18 @@ func (d groupLiveDirectory) TenantGroups(ctx context.Context) ([]grouplive.Group
 	records := make([]grouplive.GroupRecord, 0, len(groups))
 	for _, group := range groups {
 		if group != nil {
-			records = append(records, grouplive.GroupRecord{ID: group.ID, Name: group.Name, RoomID: group.RoomID})
+			records = append(records, navigationGroupRecord(group))
 		}
 	}
 	return records, nil
+}
+
+func navigationGroupRecord(group *educationService.Group) grouplive.GroupRecord {
+	result := grouplive.GroupRecord{ID: group.ID, Name: group.Name, RoomID: group.RoomID}
+	if group.Room != nil {
+		result.RoomName = group.Room.Name
+	}
+	return result
 }
 
 func (d groupLiveDirectory) SubstitutedGroupIDs(ctx context.Context) (map[int64]bool, error) {

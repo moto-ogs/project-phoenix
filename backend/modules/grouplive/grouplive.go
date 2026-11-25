@@ -27,6 +27,7 @@ var ErrForbiddenGroup = errors.New("caller cannot view the requested group")
 type Query interface {
 	LiveGroup(ctx context.Context, requestedGroupID int64) (*Projection, error)
 	ListGroups(ctx context.Context) ([]NavigationGroup, error)
+	NavigationContext(ctx context.Context) (NavigationContext, error)
 	AtSchoolCounter
 }
 
@@ -87,6 +88,14 @@ type NavigationGroup struct {
 	// selection (#4351). Only the navigation list fills it; the assignment
 	// is optional, so it is often empty.
 	Leaders []string `json:"leaders,omitempty"`
+}
+
+// NavigationContext pairs the visible navigation with the caller's own
+// filters, which also include assigned holiday groups still awaiting their week.
+type NavigationContext struct {
+	Groups       []NavigationGroup
+	OwnGroupIDs  []ident.ID
+	OwnRoomNames []string
 }
 
 type Student struct {

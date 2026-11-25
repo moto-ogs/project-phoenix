@@ -58,6 +58,13 @@ func TestSupervisedLiveGroupsApplyTheOwnersSupervisionRule(t *testing.T) {
 	// One supervision read and one batched session read, however many rows.
 	require.Equal(t, 2, observation.Queries)
 
+	assignments, err := studentpresence.StaffSupervisionAssignmentsOf(module)
+	require.NoError(t, err)
+	ids, err := assignments.StaffSupervisionSessionIDs(ctx, staff.ID)
+	require.NoError(t, err)
+	require.ElementsMatch(t, []int64{current.ID, endedSession.ID}, ids, "callers of the assignment-only port separately filter open sessions")
+	require.Equal(t, 1, observation.Queries)
+
 	otherTenant := testpkg.UniqueTestTenantID(t)
 	testpkg.EnsureTestTenant(t, db, otherTenant)
 	require.NoError(t, testpkg.WithinTenantContext(t, context.Background(), db, otherTenant, func(otherCtx context.Context) error {

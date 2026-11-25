@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -84,6 +85,26 @@ func TestAwaitingHolidayGroupsLeaveTheDailyGroupList(t *testing.T) {
 		"the empty Feriengruppe of a later week waits outside the list; a regular group that is also Feriengruppe stays")
 	assert.Equal(t, 1, holiday.calls, "one read of the Feriengruppen per list")
 	assert.Equal(t, [][]int64{{31}}, f.participantsCalled, "only the waiting groups' children are asked for care, in one read")
+}
+
+func TestNavigationContextKeepsAwaitingHolidayGroupsInPersonalFilters(t *testing.T) {
+	t.Parallel()
+	f, holiday := holidayGroupFixture(futureWeek(2))
+	readTenantGroups := f.tenantGroups
+	f.tenantGroups = func(ctx context.Context) ([]GroupRecord, error) {
+		groups, err := readTenantGroups(ctx)
+		groups[1].RoomID = new(int64(20))
+		groups[1].RoomName = "Ferienraum"
+		return groups, err
+	}
+	f.supervisedGroups = func(context.Context) ([]GroupRecord, error) {
+		return []GroupRecord{{ID: 2}}, nil
+	}
+	got, err := holidayGroupService(f, holiday).NavigationContext(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, []int64{1, 3}, groupIDs(got.Groups))
+	assert.Equal(t, []ident.ID{2}, got.OwnGroupIDs)
+	assert.Equal(t, []string{"Ferienraum"}, got.OwnRoomNames)
 }
 
 func TestHolidayGroupWithAChildInCareTodayStays(t *testing.T) {

@@ -2272,6 +2272,29 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/active/supervision-context",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "section",
+          "kind": "string",
+          "repeated": true,
+          "values": [
+            "groups",
+            "released-rooms",
+            "sessions"
+          ]
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "NavigationContext"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/active/supervision-dashboard",
       "portals": [
         "tenant"
@@ -25523,6 +25546,14 @@
       ]
     },
     {
+      "name": "ContextStatus",
+      "values": [
+        "forbidden",
+        "ok",
+        "unavailable"
+      ]
+    },
+    {
       "name": "DayPlanningReason",
       "values": [
         "arrival_exception",
@@ -47165,6 +47196,221 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContextGroups",
+      "go_type": "supervisiondashboard.ContextGroups",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "enum",
+            "ref": "ContextStatus"
+          }
+        },
+        {
+          "name": "navigation",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ContextNavigationGroup"
+            }
+          }
+        },
+        {
+          "name": "own_group_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "own_room_names",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContextNavigationGroup",
+      "go_type": "supervisiondashboard.ContextNavigationGroup",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "via_substitution",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_personal",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "leaders",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContextRoom",
+      "go_type": "supervisiondashboard.ContextRoom",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContextRooms",
+      "go_type": "supervisiondashboard.ContextRooms",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "enum",
+            "ref": "ContextStatus"
+          }
+        },
+        {
+          "name": "items",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ContextRoom"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContextSession",
+      "go_type": "supervisiondashboard.ContextSession",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "room_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "activity_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_own",
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContextSessions",
+      "go_type": "supervisiondashboard.ContextSessions",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "enum",
+            "ref": "ContextStatus"
+          }
+        },
+        {
+          "name": "overview_status",
+          "schema": {
+            "kind": "enum",
+            "ref": "ContextStatus"
+          }
+        },
+        {
+          "name": "own_status",
+          "schema": {
+            "kind": "enum",
+            "ref": "ContextStatus"
+          }
+        },
+        {
+          "name": "items",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ContextSession"
+            }
           }
         }
       ]
@@ -73179,6 +73425,36 @@
           "name": "last_name",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "NavigationContext",
+      "go_type": "supervisiondashboard.NavigationContext",
+      "fields": [
+        {
+          "name": "groups",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ContextGroups"
+          }
+        },
+        {
+          "name": "sessions",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ContextSessions"
+          }
+        },
+        {
+          "name": "released_rooms",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ContextRooms"
           }
         }
       ]

@@ -17,6 +17,9 @@ frontend-relative paths start at `frontend/src/`.
   it connects and decodes events before sending them to subscribers. Don't
   import the JSON-route runtime into the SSE hook.
 - Events are notification triggers, not payloads — clients refetch via bulk endpoints.
+- The staff supervision context (#8084) is a bulk read, not an SSE topic.
+  It can read just the affected sections through its [generated contract](contracts.md#staff-supervision-context-8084).
+  This route adds no event or refetch; #8085 switches the staff consumers.
 - **School portal** (moto schule, `/api/school/sse/events`): clients are indexed by account and by school, never by group or tenant fan-out. They get `BroadcastToSchoolAccounts` events, plus `class_day_changed`, which `Hub.BroadcastToTenant` derives from every `student_updated` at the same school (#4792). It carries only the source, never a child; open class views refetch. Every successful morning-attendance save also queues a school-scoped `student_updated` through Delivery's existing after-commit queue; the hub derives `class_day_changed` without child data. This includes corrections to present and works independently of notification settings. The notice `school_unreported_absence` (#4791, „Fehlt ohne Meldung“) separately reaches the Schulverwaltung as a `notification` event; `SchoolRealtimeBridge` also dispatches `class-day-refresh` on it.
 
 ## Frontend

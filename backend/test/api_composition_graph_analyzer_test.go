@@ -48,7 +48,7 @@ func TestRouteSizedBuilderAnalyzerRejectsBroadInitializer(t *testing.T) {
 	t.Parallel()
 	root := writeRouteBuilderFixture(t, "api/sample/sample_test.go", `package sample_test
 import "github.com/moto-ogs/project-phoenix/api"
-var hidden = api.newRuntime(nil)
+var hidden = api.composeProcess(nil)
 `)
 	violations, err := routeSizedBuilderViolations(root)
 	require.NoError(t, err)

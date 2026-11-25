@@ -2,6 +2,7 @@ GET /api/active/analytics/dashboard
 GET /api/active/groups/
 GET /api/active/groups/{id}/supervisors
 GET /api/active/schulhof/status
+GET /api/active/supervision-context
 GET /api/active/supervision-dashboard
 GET /api/active/supervisors/all
 GET /api/active/supervisors/staff/{staffId}/active

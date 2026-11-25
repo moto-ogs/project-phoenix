@@ -2,6 +2,7 @@ package studentpresence
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -30,6 +31,25 @@ type LiveGroupFilter struct {
 type SupervisedLiveGroupQuery interface {
 	ListSupervisedLiveGroups(context.Context, int64) ([]LiveGroup, error)
 	ListOpenLiveGroupsForActivities(context.Context, []int64) ([]LiveGroup, error)
+}
+
+// StaffSupervisionAssignments reads session IDs assigned to a staff member
+// on the owner's current school day. Callers intersect these IDs with open
+// sessions; an assignment alone does not mean its session is still running.
+type StaffSupervisionAssignments interface {
+	StaffSupervisionSessionIDs(context.Context, int64) ([]int64, error)
+}
+
+// StaffSupervisionAssignmentsOf narrows an existing supervision reader without
+// widening the large owner facade.
+func StaffSupervisionAssignmentsOf(query interface {
+	QueryGroupSupervisions(context.Context, GroupSupervisionFilter) ([]GroupSupervision, error)
+}) (StaffSupervisionAssignments, error) {
+	assignments, ok := query.(StaffSupervisionAssignments)
+	if !ok {
+		return nil, errors.New("student presence: staff supervision assignments are required")
+	}
+	return assignments, nil
 }
 
 // SupervisionStaffIncludesRemoved states that a supervision row keeps

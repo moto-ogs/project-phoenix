@@ -905,7 +905,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (d groupLiveDirectory) TenantGroups(ctx context.Context) ([]grouplive.GroupRecord, error) {\n\tgroups, err := d.education.ListGroups(ctx, nil)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\trecords := make([]grouplive.GroupRecord, 0, len(groups))\n\tfor _, group := range groups {\n\t\tif group != nil {\n\t\t\trecords = append(records, grouplive.GroupRecord{ID: group.ID, Name: group.Name, RoomID: group.RoomID})\n\t\t}\n\t}\n\treturn records, nil\n}",
+      "evidence": "func (d groupLiveDirectory) TenantGroups(ctx context.Context) ([]grouplive.GroupRecord, error) {\n\tgroups, err := d.education.ListGroups(ctx, nil)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\trecords := make([]grouplive.GroupRecord, 0, len(groups))\n\tfor _, group := range groups {\n\t\tif group != nil {\n\t\t\trecords = append(records, navigationGroupRecord(group))\n\t\t}\n\t}\n\treturn records, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/groupLiveDirectory.TenantGroups",
       "owner": "roots"
