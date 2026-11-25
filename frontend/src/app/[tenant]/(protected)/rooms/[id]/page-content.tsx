@@ -23,6 +23,7 @@ import {
   RoomDetailSkeleton,
   useRoomDetail,
 } from "~/components/rooms/room-detail-content";
+import { RoomClosuresSection } from "~/components/rooms/room-closures-section";
 import { RoomStammdatenTab } from "~/components/rooms/room-stammdaten-tab";
 import {
   parseRoomPlanView,
@@ -586,6 +587,15 @@ function RoomDetailPageContent() {
           roomId={room.id}
           view={planView}
           anchorISO={planAnchorISO}
+        />
+      ) : null}
+      {activeTab === "stammdaten" && canUpdate ? (
+        <RoomClosuresSection
+          roomId={room.id}
+          canReadPlan={canReadPlan}
+          planHref={(day) =>
+            tenantPath(`/rooms/${room.id}?tab=plan&d=${day}&view=tag`)
+          }
         />
       ) : null}
       {activeTab === "stammdaten" && canUpdate ? (

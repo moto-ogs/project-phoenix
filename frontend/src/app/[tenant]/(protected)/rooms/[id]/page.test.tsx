@@ -136,6 +136,11 @@ vi.mock("~/components/rooms/room-detail-content", () => ({
   RoomDetailSkeleton: () => <div data-testid="room-detail-skeleton" />,
 }));
 
+// Die Sperren (#7653) haben ihren eigenen Test; hier zählt nur der Reiter.
+vi.mock("~/components/rooms/room-closures-section", () => ({
+  RoomClosuresSection: () => null,
+}));
+
 vi.mock("~/components/rooms/room-stammdaten-tab", () => ({
   RoomStammdatenTab: ({
     onSave,

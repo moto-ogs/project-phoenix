@@ -18,6 +18,9 @@ import { activityService } from "~/lib/activity-service";
 import type { Activity } from "~/lib/activity-helpers";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { fetchPlannerRooms } from "~/lib/planner-reference-api";
+import { useClosedRoomsOn } from "~/lib/hooks/use-closed-rooms";
+import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import { roomClosureHint } from "~/lib/room-closures-api";
 import type { Staff } from "~/lib/staff-api";
 import { useSWRAuth } from "~/lib/swr";
 import { staff as staffResource } from "~/lib/swr/staff";
@@ -130,9 +133,13 @@ export function SpontaneousActivityStart({
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { clear: clearFormErrors } = formErrors;
+  // Ein heute gesperrter Raum (#7653) ist nicht wählbar, wie ein belegter;
+  // die Auswahl nennt den Grund.
+  const today = useBerlinToday();
+  const closedRooms = useClosedRoomsOn(isOpen ? today : null);
   const occupiedRoomIdSet = useMemo(
-    () => new Set(occupiedRoomIds),
-    [occupiedRoomIds],
+    () => new Set([...occupiedRoomIds, ...closedRooms.keys()]),
+    [occupiedRoomIds, closedRooms],
   );
 
   // Auswahllisten (Aktivitäten, Räume, Personal): jede Liste füllt, was sie
@@ -223,14 +230,20 @@ export function SpontaneousActivityStart({
   );
   const roomOptions = useMemo(
     () =>
-      rooms.map((room) => ({
-        value: room.id,
-        label: `${room.building ? `${room.building} - ` : ""}${room.name}${
-          isRoomOccupied(room, occupiedRoomIdSet) ? " (belegt)" : ""
-        }`,
-        disabled: isRoomOccupied(room, occupiedRoomIdSet),
-      })),
-    [rooms, occupiedRoomIdSet],
+      rooms.map((room) => {
+        const closure = closedRooms.get(room.id);
+        const state = closure
+          ? ` (${roomClosureHint(closure)})`
+          : isRoomOccupied(room, occupiedRoomIdSet)
+            ? " (belegt)"
+            : "";
+        return {
+          value: room.id,
+          label: `${room.building ? `${room.building} - ` : ""}${room.name}${state}`,
+          disabled: isRoomOccupied(room, occupiedRoomIdSet),
+        };
+      }),
+    [rooms, occupiedRoomIdSet, closedRooms],
   );
 
   function toggleStaff(staffId: string) {
@@ -405,7 +418,11 @@ export function SpontaneousActivityStart({
             disabled={isLoadingRefs}
             required
             error={
-              isSelectedRoomOccupied ? "Dieser Raum ist bereits belegt." : null
+              selectedRoom && closedRooms.has(selectedRoom.id)
+                ? "Dieser Raum ist heute gesperrt."
+                : isSelectedRoomOccupied
+                  ? "Dieser Raum ist bereits belegt."
+                  : null
             }
             errorLive
             placeholder={isLoadingRefs ? "Lade Räume ..." : "Raum auswählen"}
