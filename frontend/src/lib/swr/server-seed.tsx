@@ -26,6 +26,8 @@
  */
 
 import { useSession } from "next-auth/react";
+// swr/no-direct-import permits package imports inside this shared wrapper only.
+import { useSWRConfig } from "swr";
 import {
   use,
   useLayoutEffect,
@@ -38,6 +40,7 @@ import {
 import { SWRSeedBoundary } from "./config-boundaries";
 import {
   DiscardedAnswer,
+  isCurrentSWRValue,
   wasDroppedInScope,
   wasDroppedWithin,
 } from "./generation";
@@ -62,6 +65,16 @@ export interface ServerSeed {
   readonly entries: readonly ServerSeedEntry[];
 }
 
+/**
+ * Keys a page derives from a value the cache already holds (a client
+ * navigation): the derived keys are claimed like `claims`. Read once when
+ * the seed is offered; nothing loads or subscribes for it.
+ */
+export interface ServerSeedClaimsFrom<T> {
+  readonly key: string;
+  readonly derive: (cached: T) => readonly string[];
+}
+
 export type ServerSeedInput =
   ServerSeed | Promise<ServerSeed | null> | null | undefined;
 
@@ -78,7 +91,7 @@ const isServer = typeof window === "undefined";
 // navigation from the router cache, a remount after a scope change) offers
 // nothing again and shows no fallback.
 const offered = new WeakSet<object>();
-// Claims and streamed entries may offer the same key; offer it only once.
+// Static claims, derived claims and streamed entries offer each key only once.
 const offeredKeys = new WeakMap<object, Set<string>>();
 // The fallback built for a seed, per scope prefix, so every render of the
 // boundary hands SWR the same object.
@@ -140,16 +153,19 @@ function SeedHandoff({
   seed,
   resolved,
   claims,
+  claimsFrom,
   generation,
 }: Readonly<{
   seed: ServerSeed | PromiseLike<ServerSeed | null> | null;
   /** The seed as hydration read it: its keys are offered before any reader mounts. */
   resolved: ServerSeed | null;
   claims: readonly (string | null)[];
+  claimsFrom: ServerSeedClaimsFrom<never> | undefined;
   generation: string | null;
 }>) {
   const preload = useSWRPreload();
   const scoped = useSWRCacheKey();
+  const { cache } = useSWRConfig();
   useLayoutEffect(() => {
     if (!seed || generation === null) return;
     offered.add(seed);
@@ -169,6 +185,13 @@ function SeedHandoff({
     };
     for (const key of claims) if (key !== null) offer(key);
     resolved?.entries.forEach((entry) => offer(entry.key));
+    const source = claimsFrom ? scoped(claimsFrom.key) : null;
+    if (claimsFrom && source !== null) {
+      const cached = (cache.get(source) as { data?: unknown } | undefined)
+        ?.data;
+      if (cached !== undefined && isCurrentSWRValue(source, cached) === true)
+        claimsFrom.derive(cached as never).forEach(offer);
+    }
     if (isThenable(seed)) {
       void Promise.resolve(seed).then(
         (resolved) => resolved?.entries.forEach((entry) => offer(entry.key)),
@@ -177,7 +200,7 @@ function SeedHandoff({
     } else {
       seed.entries.forEach((entry) => offer(entry.key));
     }
-  }, [seed, resolved, claims, generation, preload, scoped]);
+  }, [seed, resolved, claims, claimsFrom, generation, preload, scoped, cache]);
   return null;
 }
 
@@ -188,14 +211,16 @@ function SeedHandoff({
  * hydration) waits for the entries marked `render`: place it inside the
  * page's Suspense boundary. Without it (a shell), nothing waits.
  */
-export function SWRServerSeed({
+export function SWRServerSeed<T = never>({
   seed,
   claims = NO_CLAIMS,
+  claimsFrom,
   render = false,
   children,
 }: Readonly<{
   seed: ServerSeedInput;
   claims?: readonly (string | null)[];
+  claimsFrom?: ServerSeedClaimsFrom<T>;
   render?: boolean;
   children: ReactNode;
 }>) {
@@ -272,6 +297,7 @@ export function SWRServerSeed({
         seed={current.fresh ? current.seed : null}
         resolved={resolved}
         claims={claims}
+        claimsFrom={claimsFrom as ServerSeedClaimsFrom<never> | undefined}
         generation={generation}
       />
       {children}

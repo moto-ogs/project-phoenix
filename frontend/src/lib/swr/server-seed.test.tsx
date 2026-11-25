@@ -170,6 +170,33 @@ describe("SWRServerSeed", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
+  it("claims a dependent reader from its cached source before the seed arrives", async () => {
+    const source = render(
+      <Reader name="source" resourceKey={GRID} fetcher={async () => GAPS} />,
+    );
+    expect(await screen.findByText("source: " + GAPS)).toBeInTheDocument();
+    source.unmount();
+
+    const fetcher = vi.fn(async () => "browser");
+    let resolve!: (seed: ServerSeed) => void;
+    const promise = new Promise<ServerSeed>((done) => {
+      resolve = done;
+    });
+    render(
+      <SWRServerSeed
+        seed={promise}
+        claimsFrom={{ key: GRID, derive: (key: string) => [key] }}
+      >
+        <Reader name="gaps" resourceKey={GAPS} fetcher={fetcher} />
+      </SWRServerSeed>,
+    );
+    await act(async () => {
+      resolve(seedOf([{ key: GAPS, value: Promise.resolve("server gaps") }]));
+    });
+    expect(await screen.findByText("gaps: server gaps")).toBeInTheDocument();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it("loads only the key the server could not read, through the browser", async () => {
     const grid = vi.fn(async () => "browser grid");
     const gaps = vi.fn(async () => "browser gaps");
