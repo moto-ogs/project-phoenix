@@ -83,6 +83,8 @@ const PUBLIC_SURFACE: Record<string, () => Promise<object>> = {
   "search-students-key": () => import("./search-students-key"),
   "room-derived-caches": () => import("./room-derived-caches"),
   optimistic: () => import("./optimistic"),
+  "server-seed": () => import("./server-seed"),
+  "session-generation": () => import("./session-generation"),
 };
 const REVIEWED_EXPORTS: Record<string, string[]> = {
   index: [
@@ -225,6 +227,8 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
   ],
   "room-derived-caches": ["ROOM_DERIVED_CACHE_KEY_FRAGMENTS"],
   optimistic: ["useMessageSendAttempt", "useOptimisticAction"],
+  "server-seed": ["SERVER_SEED_MAX_AGE_MS", "SWRServerSeed"],
+  "session-generation": ["sessionGeneration"],
 };
 
 // #5007: outside ~/lib/swr no cache access bypasses the generation lock.

@@ -19,11 +19,7 @@ import {
 } from "~/lib/change-request-access";
 import { createLogger } from "~/lib/logger";
 import { mapProfileResponse } from "~/lib/profile-helpers";
-import {
-  contractGet,
-  type ContractOptions,
-} from "~/lib/contract/client.server";
-import type { z } from "zod";
+import { readContract, withRequestBudget } from "~/lib/server-seed.server";
 import * as authAccountContract from "~/lib/contract/auth-account.generated";
 import * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import * as meContract from "~/lib/contract/me.generated";
@@ -43,53 +39,26 @@ import { loadUserContext } from "~/lib/user-context.server";
 const logger = createLogger({ component: "ShellBootstrap" });
 
 /**
- * Upper bound per backend call. The layout must never hang on one slow
- * counter: past the budget the field stays undefined and the browser fetches
- * it as it always did.
- */
-const REQUEST_BUDGET_MS = 1500;
-
-/**
  * Resolves to the loaded value, or undefined when the request failed or ran
- * out of budget. Failures are expected (a 403 for a feature this school keeps
- * off, a 404 for an unconfigured integration) and never block the page.
+ * out of budget (REQUEST_BUDGET_MS). Failures are expected (a 403 for a
+ * feature this school keeps off, a 404 for an unconfigured integration) and
+ * never block the page.
  */
-async function optional<T>(
+function optional<T>(
   name: string,
   load: (signal: AbortSignal) => Promise<T>,
 ): Promise<T | undefined> {
-  const controller = new AbortController();
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<undefined>((resolve) => {
-    timer = setTimeout(() => {
-      logger.warn("shell_bootstrap_timeout", { field: name });
-      controller.abort();
-      resolve(undefined);
-    }, REQUEST_BUDGET_MS);
+  return withRequestBudget(load, {
+    timeout: () => logger.warn("shell_bootstrap_timeout", { field: name }),
+    failed: (error) =>
+      logger.debug("shell_bootstrap_skipped", {
+        field: name,
+        error: error instanceof Error ? error.message : String(error),
+      }),
   });
-  try {
-    return await Promise.race([load(controller.signal), timeout]);
-  } catch (error) {
-    logger.debug("shell_bootstrap_skipped", {
-      field: name,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return undefined;
-  } finally {
-    if (timer !== undefined) clearTimeout(timer);
-  }
 }
 
-async function readShell<
-  R extends { method: "GET"; pattern: string; response: z.ZodType },
->(
-  route: R,
-  ...options: ContractOptions<NoInfer<R>>
-): Promise<z.output<R["response"]>> {
-  const result = await contractGet(route, ...options);
-  if (!result.ok) throw result.error.cause;
-  return result.value;
-}
+const readShell = readContract;
 
 async function loadSupervision(
   session: Session,
