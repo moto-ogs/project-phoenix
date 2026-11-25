@@ -87,6 +87,8 @@ const EMPTY_STUDENTS: RoomStudent[] = [];
 const NO_ACTIVE_GROUPS: ActiveGroup[] = [];
 const NO_SUPERVISIONS: Supervisor[] = [];
 const NO_ROOMS: Room[] = [];
+const NO_SELECTION: ReadonlySet<string> = new Set();
+const IDLE_MOVE = { type: "idle" } as const;
 
 interface StudentsInRoomSectionProps {
   readonly roomId: string;
@@ -120,15 +122,14 @@ export function StudentsInRoomSection({
     "die Anzeige der Kinder im Raum",
     refreshRoomConsumers,
   );
-  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [selectedStudentIds, setSelectedStudentIds] =
+    useState<ReadonlySet<string>>(NO_SELECTION);
   // The chosen target's option value: a session ID or `room:<id>` for a
   // released room.
   const [targetValue, setTargetValue] = useState("");
   const [bulkMoveState, setBulkMoveState] = useState<
     { type: "idle" } | { type: "loading" }
-  >({ type: "idle" });
+  >(IDLE_MOVE);
   // „In Raum setzen“ ist ein kleines Formular: Fehler stehen in seiner Leiste,
   // der Zielraum wird markiert (#2517).
   const moveToolbarRef = useRef<HTMLDivElement>(null);
@@ -137,7 +138,7 @@ export function StudentsInRoomSection({
   // „Wiederholen“ setzt die aktuell gewählten Kinder in den aktuellen Zielraum.
   const retryMoveRef = useRef<() => void>(() => undefined);
   const resetBulkMove = () => {
-    setBulkMoveState({ type: "idle" });
+    setBulkMoveState(IDLE_MOVE);
     clearMoveErrors();
   };
   const sectionSearchParams = useSearchParams();
@@ -383,9 +384,9 @@ export function StudentsInRoomSection({
   const hiddenCount = Math.max(0, totalCount - students.length);
 
   useEffect(() => {
-    setSelectedStudentIds(new Set());
+    setSelectedStudentIds(NO_SELECTION);
     setTargetValue("");
-    setBulkMoveState({ type: "idle" });
+    setBulkMoveState(IDLE_MOVE);
     clearMoveErrors();
   }, [roomId, clearMoveErrors]);
 
@@ -420,7 +421,7 @@ export function StudentsInRoomSection({
   };
 
   const clearSelection = () => {
-    setSelectedStudentIds(new Set());
+    setSelectedStudentIds(NO_SELECTION);
     resetBulkMove();
   };
 
@@ -495,7 +496,7 @@ export function StudentsInRoomSection({
           ...targetLog,
           skipped_reasons: result.skipped.map((item) => item.reason),
         });
-        setBulkMoveState({ type: "idle" });
+        setBulkMoveState(IDLE_MOVE);
         // Teilerfolg, kein API-Fehler: die übrigen Kinder sind bewegt.
         moveErrors.invalid(
           `${skipped} von ${studentIds.length} Kindern konnten nicht bewegt werden.`,
@@ -504,9 +505,9 @@ export function StudentsInRoomSection({
         return;
       }
 
-      setSelectedStudentIds(new Set());
+      setSelectedStudentIds(NO_SELECTION);
       setTargetValue("");
-      setBulkMoveState({ type: "idle" });
+      setBulkMoveState(IDLE_MOVE);
       const successCount = summarizeStudentMoveResult(result).successCount;
       toastSuccess(
         successCount === 1
@@ -529,7 +530,7 @@ export function StudentsInRoomSection({
         setTargetValue("");
         await refreshMoveRooms();
       }
-      setBulkMoveState({ type: "idle" });
+      setBulkMoveState(IDLE_MOVE);
       // Katalogtext; ein voller Raum oder eine volle Aktivität nennt sich
       // selbst über Code und Details (#3633).
       void moveErrors.show(err, {

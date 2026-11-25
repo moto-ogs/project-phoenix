@@ -172,8 +172,11 @@ export function ResourceGrid<TRow>({
   className,
 }: ResourceGridProps<TRow>) {
   const columnMinWidth = COLUMN_MIN_WIDTH_CLASS[columnMode];
-  // Leave room for child focus rings at the cell edge when paint is contained.
-  const cellClass = `flex ${RESOURCE_GRID_METRICS.cellMinHeightClass[columnMode]} w-full [contain-intrinsic-block-size:auto_none] supports-[overflow-clip-margin:4px]:[content-visibility:auto] [overflow-clip-margin:4px] print:[content-visibility:visible]`;
+  const cellClass = `flex ${RESOURCE_GRID_METRICS.cellMinHeightClass[columnMode]} w-full`;
+  // Only populated cells have descendants worth skipping off-screen. Leave
+  // room for their focus rings when paint is contained.
+  const populatedCellClass =
+    "[contain-intrinsic-block-size:auto_none] [overflow-clip-margin:4px] supports-[overflow-clip-margin:4px]:[content-visibility:auto] print:[content-visibility:visible]";
 
   return (
     // Radius, Rand und Ausschnitt sitzen auf der Fläche, gescrollt wird im
@@ -287,7 +290,11 @@ export function ResourceGrid<TRow>({
                             className={`${cellClass} relative rounded-md before:inset-0 focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none ${PLAN_ADD_AFFORDANCE}`}
                           />
                         ) : (
-                          <div className={`${cellClass} flex-col`}>{cell}</div>
+                          <div
+                            className={`${cellClass} flex-col ${cell == null ? "" : populatedCellClass}`}
+                          >
+                            {cell}
+                          </div>
                         )}
                       </td>
                     );

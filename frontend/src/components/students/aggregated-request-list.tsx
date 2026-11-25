@@ -503,7 +503,9 @@ export function AggregatedRequestList({
     loading || withdrawalsLoading
       ? null
       : items.length + visibleWithdrawals.length;
-  useEffect(() => {
+  // The parent shows the count in its header. A warm remount already has it;
+  // report it before paint so that header does not flash a loading bar.
+  useLayoutEffect(() => {
     onCountChange?.(visibleCount, hasMore);
   }, [onCountChange, visibleCount, hasMore]);
 
