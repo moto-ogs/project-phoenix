@@ -1,7 +1,15 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, type CSSProperties, type ReactNode } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+} from "react";
 
 import { useDeviceContext } from "~/lib/device-context";
 import { cn } from "~/lib/utils";
@@ -16,7 +24,7 @@ import { cn } from "~/lib/utils";
  * damit Zurück, Neuladen und Teilen sie behalten.
  *
  * ```tsx
- * const { selected, select } = useSplitSelection("kind");
+ * const { selected, select } = useSplitSelection("kind", { defaultId: firstId });
  * <SplitView list={<Collection …/>} detail={selected ? <KindDetail id={selected} /> : null}
  *   empty="Wähle links ein Kind, um seine Angaben zu sehen." />
  * ```
@@ -35,16 +43,24 @@ export function SplitView({
   className?: string;
 }>) {
   const { isSplit } = useDeviceContext();
+  const listRef = useRef<HTMLDivElement>(null);
+  const restTop = useRestTop(listRef, isSplit);
   if (!isSplit) return <>{list}</>;
   return (
     <div
       data-split-view=""
       className={cn("grid grid-cols-[1fr_2fr] items-start gap-4", className)}
     >
+      {/* Die Liste endet über Pill und ActionBar, schon bevor die Seite
+          scrollt (Höhe ab ihrer Ruhelage). */}
       <div
+        ref={listRef}
         data-split-list=""
-        className="sticky max-h-[calc(100dvh-var(--app-sticky-offset,1rem)-7rem)] overflow-y-auto overscroll-contain rounded-2xl"
-        style={{ top: "var(--app-sticky-offset, 1rem)" }}
+        className="sticky overflow-y-auto overscroll-contain rounded-2xl"
+        style={{
+          top: "var(--app-sticky-offset, 1rem)",
+          maxHeight: `calc(100dvh - ${restTop === null ? "var(--app-sticky-offset, 1rem)" : `${restTop}px`} - 7rem - var(--app-action-bar-space, 0px))`,
+        }}
       >
         {/* Im eigenen Scroll kleben Gruppenköpfe oben an der Liste. */}
         <div style={{ "--app-sticky-offset": "0px" } as CSSProperties}>
@@ -62,18 +78,46 @@ export function SplitView({
   );
 }
 
+/** Abstand der Liste vom Seitenanfang, solange die Seite oben steht. */
+function useRestTop(
+  ref: RefObject<HTMLDivElement | null>,
+  active: boolean,
+): number | null {
+  const [top, setTop] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!active || node === null) return undefined;
+    const update = () => {
+      // Kleben greift erst darunter: Ruhelage im Dokument, höchstens das
+      // Fenster hoch.
+      const rest = node.getBoundingClientRect().top + window.scrollY;
+      setTop(Math.round(Math.min(rest, window.innerHeight / 2)));
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [ref, active]);
+  return top;
+}
+
 /**
  * Die Auswahl einer `SplitView` in der Adresse. `select(id)` ersetzt den
  * Parameter (kein neuer Verlaufsschritt je Tipp), `select(null)` entfernt ihn.
  * `rowProps(id, href)` liefert einer `CollectionRow` das passende Ziel: im
  * Split die Auswahl, sonst den Link auf die Detailseite.
+ *
+ * `defaultId` wählt im Split vor, solange die Adresse nichts nennt (etwa die
+ * erste Zeile), damit die Detailspalte nie leer steht.
  */
-export function useSplitSelection(param = "kind") {
+export function useSplitSelection(
+  param = "kind",
+  options: Readonly<{ defaultId?: string | null }> = {},
+) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { isSplit } = useDeviceContext();
-  const selected = searchParams.get(param);
+  const selected = searchParams.get(param) ?? options.defaultId ?? null;
 
   const select = useCallback(
     (id: string | null) => {
