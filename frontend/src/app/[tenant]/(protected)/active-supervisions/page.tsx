@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, Suspense, useMemo, useCallback } from "react";
-import { Search, Sparkles, UserPlus } from "lucide-react";
+import { useState, Suspense, useMemo, useCallback, useRef } from "react";
+import { ChevronDown, Search, Sparkles, UserPlus } from "lucide-react";
 import { ActiveFilterChips } from "~/components/ui/page-header/ActiveFilterChips";
 import { OverlaySheet } from "~/components/ui/overlay-sheet";
 import { TenantPageSearchRow } from "~/components/ui/tenant-page-search-row";
@@ -89,6 +89,7 @@ import { TimetableRosterContent } from "~/components/active-supervisions/timetab
 import {
   rosterAppCanAddUnplanned,
   TimetableRosterApp,
+  rosterAppEndEntry,
 } from "~/components/active-supervisions/timetable-roster-app";
 import { ActionBar } from "~/components/ui/action-bar";
 import { useDeviceContext } from "~/lib/device-context";
@@ -132,6 +133,7 @@ import {
 import { OwnSupervisionView } from "~/components/active-supervisions/own-supervision-view";
 import { useSidebarMemory } from "~/lib/sidebar-memory";
 import { roomsConcept } from "~/lib/concepts/rooms";
+import { transitConcept } from "~/lib/concepts/transit";
 
 const ACTIVE_SUPERVISIONS_INFO =
   "Hier führst du die Kinderliste deiner laufenden Aufsicht. Starte zuerst deinen Termin unter „Als Nächstes“ oder übernimm einen Raum. Halte die Liste aktuell, wenn Kinder kommen oder gehen.";
@@ -161,6 +163,9 @@ function MeinRaumPageContent() {
   });
   const memory = useSidebarMemory();
   const [searchSheetOpen, setSearchSheetOpen] = useState(false);
+  const [appTransitExpanded, setAppTransitExpanded] = useState(false);
+  const [appTransitCount, setAppTransitCount] = useState<number | null>(null);
+  const appTransitRef = useRef<HTMLDivElement>(null);
   // App: „Kind suchen und hinzufügen“ öffnet sich aus dem „…“-Menü.
   const [appAddStudentOpen, setAppAddStudentOpen] = useState(false);
   // App mit laufender Liste: „Spontane Aktivität starten“ steht im „…“-Menü.
@@ -442,26 +447,34 @@ function MeinRaumPageContent() {
     supervisionOccupancy,
     nfcEnabled,
   );
-  // In der App: Chips „13 / 20 da“, Raum, Betreuende.
-  const appSupervisionSummary = supervisionName ? (
-    <TenantPageStats
-      items={[
-        {
-          label:
-            supervisionOccupancy.limit != null && supervisionOccupancy.limit > 0
-              ? `${supervisionCount} / ${supervisionOccupancy.limit} da`
-              : `${supervisionCount} da`,
-        },
-        ...(supervisionOverbookedHint ? [{ label: OVERBOOKED_LABEL }] : []),
-        ...(headFacts.roomName ? [{ label: headFacts.roomName }] : []),
-        ...(headFacts.supervisorNames.length > 0
-          ? [{ label: headFacts.supervisorNames.join(", ") }]
-          : []),
-      ]}
-    />
-  ) : (
-    "Keine Aufsicht aktiv"
-  );
+  // In der App: Abzeichen (Aktiv, Eigene Aufsicht) und Chips „13 / 20 da“,
+  // Raum, Betreuende in einer Zeile unter dem Titel, wie heute in der
+  // Kopfkarte, nur kompakt. Steht dort „Eigene Aufsicht“ und gibt es nur
+  // eine Betreuung, ist das die angemeldete Person: Ihr Name entfällt, damit
+  // die Zeile auch am kleinen Telefon nicht abgeschnitten wird.
+  const appSupervisionSummaryFor = (hideSoleOwnSupervisor: boolean) =>
+    supervisionName ? (
+      <TenantPageStats
+        items={[
+          {
+            label:
+              supervisionOccupancy.limit != null &&
+              supervisionOccupancy.limit > 0
+                ? `${supervisionCount} / ${supervisionOccupancy.limit} da`
+                : `${supervisionCount} da`,
+          },
+          ...(supervisionOverbookedHint ? [{ label: OVERBOOKED_LABEL }] : []),
+          ...(headFacts.roomName ? [{ label: headFacts.roomName }] : []),
+          ...(headFacts.supervisorNames.length > 0 &&
+          !(hideSoleOwnSupervisor && headFacts.supervisorNames.length === 1)
+            ? [{ label: headFacts.supervisorNames.join(", ") }]
+            : []),
+        ]}
+      />
+    ) : (
+      "Keine Aufsicht aktiv"
+    );
+  const appSupervisionSummary = appSupervisionSummaryFor(false);
   const supervisionSummary = appMode ? (
     appSupervisionSummary
   ) : supervisionName ? (
@@ -758,6 +771,31 @@ function MeinRaumPageContent() {
       <StatusBadge label="Nicht deine Aufsicht" tone="gray" />
     ) : null;
 
+  // In der App stehen die Abzeichen vorn in der Chipzeile der Kopfkarte
+  // (heute: eigene Zeile unter den Angaben). Im „…“-Blatt stünden sie wie
+  // Knöpfe; dort bleibt nur, was man tippt.
+  const appHeadBadges =
+    runStateBadge ||
+    openRoomBadge ||
+    ownSupervisionBadge ||
+    foreignSupervisionBadge ? (
+      <>
+        {runStateBadge}
+        {openRoomBadge}
+        {ownSupervisionBadge}
+        {foreignSupervisionBadge}
+      </>
+    ) : null;
+  const appStats =
+    appHeadBadges && supervisionName ? (
+      <span className="flex items-center gap-1.5 whitespace-nowrap">
+        {appHeadBadges}
+        {appSupervisionSummaryFor(ownSupervisionBadge !== null)}
+      </span>
+    ) : (
+      supervisionSummary
+    );
+
   // „Beaufsichtigen" steht als Kopf-Aktion dort, wo sonst „Aufsicht abgeben"
   // steht (#2161).
   const superviseDisabled =
@@ -897,13 +935,52 @@ function MeinRaumPageContent() {
   // offenen Raum oder eine fremde Sitzung zu sehen verleiht sie
   // nicht (#3065, #5035); wer dort die Aufsicht hat, behält sie,
   // die Verwaltung auch auf fremden Sitzungen (canAssign).
-  const transitSection = (
-    currentOpenRoom ? currentOpenRoom.isUserSupervising : currentRoom?.canAssign
-  ) ? (
+  const showTransit = Boolean(
+    currentOpenRoom
+      ? currentOpenRoom.isUserSupervising
+      : currentRoom?.canAssign,
+  );
+  const transitSection = showTransit ? (
     <Suspense fallback={null}>
-      <TransitStudentsSection fromReferrer="/active-supervisions" collapsible />
+      <TransitStudentsSection
+        fromReferrer="/active-supervisions"
+        collapsible
+        {...(appHasRunningRoster
+          ? {
+              expanded: appTransitExpanded,
+              onExpandedChange: setAppTransitExpanded,
+              onTotalCountChange: setAppTransitCount,
+            }
+          : {})}
+      />
     </Suspense>
   ) : null;
+  // „Kinder unterwegs“ war heute die erste Karte unter dem Kopf. In der App
+  // steht die Karte hinter der Liste; die Zahl steht trotzdem im ersten
+  // Bild, rechts im ersten Abschnittskopf, und führt aufgeklappt dorthin.
+  const appTransitLink =
+    appHasRunningRoster && showTransit && (appTransitCount ?? 0) > 0 ? (
+      <Button
+        type="button"
+        variant="link"
+        size="md"
+        className="gap-1.5"
+        tooltip="Klappt die Kinder ohne Raum am Ende der Liste auf."
+        onClick={() => {
+          setAppTransitExpanded(true);
+          appTransitRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }}
+      >
+        <MotoConceptIcon concept={transitConcept} size={16} />
+        {`${appTransitCount} unterwegs`}
+        {/* Der Pfeil zeigt, dass hier etwas aufgeht: ohne ihn läse sich
+            die Zahl wie die Anzeige daneben. */}
+        <ChevronDown className="size-4 text-gray-500" aria-hidden="true" />
+      </Button>
+    ) : null;
 
   // Render helper for student grid content
   const renderStudentContent = (
@@ -999,10 +1076,26 @@ function MeinRaumPageContent() {
             rowFilter={filters.rosterRowFilter}
             addStudentOpen={appAddStudentOpen}
             onAddStudentOpenChange={setAppAddStudentOpen}
+            leadGroupMeta={appTransitLink}
             listFooter={
               <>
                 {spontaneousStartBanner}
-                {transitSection}
+                {transitSection ? (
+                  <div ref={appTransitRef} className="scroll-mt-24">
+                    {transitSection}
+                  </div>
+                ) : null}
+                {/* „Als Nächstes“ wie heute, nur hinter der Liste: oben
+                    stünde es zwischen Kopf und Kindern. */}
+                <PlannedNowSection
+                  plannedNow={plannedNow}
+                  hasActiveTimetableSession
+                  isStartingInstance={actions.isStartingInstance}
+                  onStart={(instance) =>
+                    void actions.handleStartPlannedInstance(instance)
+                  }
+                  flush
+                />
                 <PastBlocksSection onReopen={reopenPastBlock} app />
               </>
             }
@@ -1076,8 +1169,21 @@ function MeinRaumPageContent() {
     );
   };
 
+  // Beenden ist selten und endgültig: in der App im „…“-Blatt, mit
+  // Rückfrage, nicht neben der Hauptaktion über der Pill.
+  const appEndEntry =
+    appHasRunningRoster && currentTimetableRoster
+      ? rosterAppEndEntry({
+          roster: currentTimetableRoster,
+          attendanceWebEnabled,
+          now,
+          isCompleting: actions.isCompletingInstance,
+          onComplete: () => void actions.handleCompleteTimetableInstance(),
+        })
+      : null;
   const headMenuEntries: OverflowMenuEntry[] = [
     ...addSupervisorEntries,
+    ...(appEndEntry ? [appEndEntry] : []),
     ...(showTable
       ? isPhone
         ? phoneDetailMenuEntries(
@@ -1100,7 +1206,7 @@ function MeinRaumPageContent() {
       // nennt deshalb nur den Namen statt die Aufsicht ein zweites Mal (#3312).
       title={supervisionName ?? "Aktuelle Aufsicht"}
       info={ACTIVE_SUPERVISIONS_INFO}
-      stats={supervisionSummary}
+      stats={appMode ? appStats : supervisionSummary}
       back={isSharedRoomView}
       backHref={
         currentOpenRoom ? `/rooms/${currentOpenRoom.roomId}` : undefined
@@ -1132,10 +1238,11 @@ function MeinRaumPageContent() {
             {/* Die Abzeichen sind eine Zeile: das Gerüst gibt unter sm jedem
                 Kopf-Element eine eigene volle Zeile, zwei gestreckte Pillen
                 untereinander läsen sich wie zwei Knöpfe. */}
-            {runStateBadge ||
-            openRoomBadge ||
-            ownSupervisionBadge ||
-            foreignSupervisionBadge ? (
+            {!appMode &&
+            (runStateBadge ||
+              openRoomBadge ||
+              ownSupervisionBadge ||
+              foreignSupervisionBadge) ? (
               <span className="flex items-center gap-2">
                 {runStateBadge}
                 {openRoomBadge}
