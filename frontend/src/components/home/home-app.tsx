@@ -315,6 +315,9 @@ export function HomeApp({
   }
 
   // ── Überblick ──
+  // iPad hoch zeigt Gruppe und Tag daneben als ganze Liste; die
+  // Kurzzeilen im Überblick wiederholten sie nur.
+  const inlineDetails = layout === "tablet" && !isSplit;
   const overviewEntries: HomeEntry[] = [];
   const running = (now.dayBlocks ?? []).find(
     (block) => block.isAssigned && block.status === "active",
@@ -332,7 +335,7 @@ export function HomeApp({
         : dayPlanHref,
     });
   }
-  if (showGroup && group.group) {
+  if (showGroup && group.group && !inlineDetails) {
     overviewEntries.push({
       id: "gruppe",
       row: {
@@ -353,22 +356,26 @@ export function HomeApp({
         .filter((block) => block.isAssigned && !block.isDuty)
         .sort((a, b) => a.startTime.localeCompare(b.startTime))
     : [];
-  if (mine.length > 0) {
-    const next = mine.find(
-      (block) => block.status !== "active" && block.startTime > clock,
-    );
+  if (mine.length > 0 && !inlineDetails) {
+    // Der nächste Block steht schon in der Jetzt-Karte; die Zeile nennt
+    // den ganzen Tag.
+    const coming = mine.filter(
+      (block) =>
+        block.status !== "active" &&
+        block.status !== "completed" &&
+        block.startTime > clock,
+    ).length;
+    const total =
+      mine.length === 1 ? "1 Einsatz heute" : `${mine.length} Einsätze heute`;
     overviewEntries.push({
       id: "tag",
       row: {
         leading: <Icon concept={carePlanConcept} />,
-        title: next
-          ? `Als Nächstes: ${next.startTime} ${next.title}`
-          : "Mein Tag",
-        subtitle: next
-          ? (next.roomName ?? undefined)
-          : mine.length === 1
-            ? "1 Einsatz heute, alle vorbei"
-            : `${mine.length} Einsätze heute, alle vorbei`,
+        title: "Mein Tag",
+        subtitle:
+          coming === 0
+            ? `${total}, alle vorbei`
+            : `${total}, ${coming === 1 ? "1 kommt" : `${coming} kommen`} noch`,
       },
       href: dayPlanHref,
       detail: <DayDetail blocks={mine} />,
