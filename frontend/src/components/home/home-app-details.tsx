@@ -126,7 +126,10 @@ export function DayChangesPreview({
   include,
   limit = 3,
   onShowAll,
+  lead,
 }: {
+  /** Zeilen vor den Änderungen: Hinweise zur Kenntnisnahme, wie am Desktop. */
+  readonly lead?: ReactNode;
   readonly overview: DayChangesOverview;
   readonly include: (entry: DayChange) => boolean;
   /** So viele Änderungen stehen auf der Startseite. */
@@ -164,9 +167,10 @@ export function DayChangesPreview({
           }
           count={open.length > 0 ? open.length : undefined}
         >
+          {lead}
           {shown.length > 0 ? (
             <DayChangeRows entries={shown} brief />
-          ) : (
+          ) : lead ? null : (
             <CollectionRow title="Heute läuft alles wie geplant." />
           )}
           {rest > 0 ? (

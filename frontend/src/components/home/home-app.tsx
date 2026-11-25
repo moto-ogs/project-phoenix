@@ -508,27 +508,16 @@ function HomeLists({
     return <CollectionRow key={entry.id} {...entry.row} />;
   };
 
-  let todoBlock: ReactNode = null;
-  if (loadError) {
-    todoBlock = <LoadErrorAlert error={loadError} />;
-  } else if (todoLoading) {
-    todoBlock = (
-      <Collection label="Zu erledigen">
-        <CollectionGroup title="Zu erledigen">
-          <li className="space-y-2 p-4" aria-hidden="true">
-            <Skeleton className="h-4 w-3/5" />
-            <Skeleton className="h-4 w-2/5" />
-          </li>
-        </CollectionGroup>
-      </Collection>
-    );
-  } else if (showTodo && todo.length > 0) {
-    // Ohne offene Aufgabe entfällt die Karte; „Heute anders“ darunter sagt
-    // dann, dass alles wie geplant läuft.
-    todoBlock = (
-      <Collection label="Zu erledigen">
-        <CollectionGroup title="Zu erledigen" count={todo.length}>
-          {todo.map(row)}
+  // Wie am Desktop: Hinweise zur Kenntnisnahme stehen oben in „Heute
+  // anders“, offene Anfragen als eigene Karte. Kein „Zu erledigen“.
+  const notices = todo.filter((entry) => entry.sheet?.kind === "notice");
+  const requestRows = todo.filter((entry) => entry.sheet?.kind !== "notice");
+  let requestBlock: ReactNode = null;
+  if (showTodo && requestRows.length > 0) {
+    requestBlock = (
+      <Collection label="Offene Anfragen">
+        <CollectionGroup title="Offene Anfragen" count={requestRows.length}>
+          {requestRows.map(row)}
         </CollectionGroup>
       </Collection>
     );
@@ -536,14 +525,26 @@ function HomeLists({
 
   return (
     <>
-      {todoBlock}
+      {loadError ? <LoadErrorAlert error={loadError} /> : null}
+      {todoLoading && !loadError ? (
+        <Collection label="Heute anders">
+          <CollectionGroup title="Heute anders">
+            <li className="space-y-2 p-4" aria-hidden="true">
+              <Skeleton className="h-4 w-3/5" />
+              <Skeleton className="h-4 w-2/5" />
+            </li>
+          </CollectionGroup>
+        </Collection>
+      ) : null}
       {dayChanges && !loadError ? (
         <DayChangesPreview
           overview={dayChanges.overview}
           include={isDayChange}
+          lead={notices.length > 0 ? notices.map(row) : undefined}
           onShowAll={() => setSheetId(dayChanges.entry.id)}
         />
       ) : null}
+      {requestBlock}
       {overviewEntries.length > 0 ? (
         <Collection label="Überblick">
           <CollectionGroup title="Überblick">
