@@ -106,6 +106,12 @@ today's denominators. Unpublished entries, directions and frequencies cannot be
 assigned a time by subtraction. Do not compare the new matrix as a paired
 24-row series. Its supplementary routes and short/long excursions are explicit.
 
+For the #8080 baseline, see the [per-journey results](../perf/revisit-8080/results.md),
+[raw observations](../perf/revisit-8080/observations.json), and [route catalog](../perf/revisit-8080/catalog.json).
+This run used the product code at `development@de207b1c8f` and harness
+`3d15b19eee`. Across trials the shared host had
+0–71% idle CPU (median 20%); cross-worktree load was not controlled.
+
 Local outputs in `frontend/perf-results/navigation/`: `revisit.json` (per-run
 observations, profile, load, diagnostics and separate confirmation/denial),
 `revisit.summary.json` (per-step medians, samples and range), `revisit.md`
