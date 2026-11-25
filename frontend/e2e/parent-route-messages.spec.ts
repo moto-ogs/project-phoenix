@@ -43,9 +43,13 @@ test("keeps login messages scoped on direct entry, language change and client na
   ).toBeVisible();
   const html = await response!.text();
   expect(html).toContain("Willkommen im Eltern-Portal");
+  // Inline Flight escapes its JSON. A navigation label named enrollmentForm
+  // may be present; its unrelated catalog object must not be.
+  const flight = html.replaceAll('\\"', '"');
+  expect(flight).toContain('"parentLogin":{');
   expect(
     ["careContractSigning", "parentChildDetail", "enrollmentForm"].filter(
-      (key) => html.includes(key),
+      (key) => flight.includes(`"${key}":{`),
     ),
   ).toEqual([]);
 
