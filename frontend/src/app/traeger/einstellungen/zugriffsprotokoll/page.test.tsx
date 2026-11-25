@@ -64,7 +64,7 @@ vi.mock("~/components/ui/date-range-picker", async (importOriginal) => {
   };
 });
 
-import TraegerAccessLogPage from "./page";
+import TraegerAccessLogPage from "./page-content";
 
 const AS_OF = "2026-09-09T10:00:00Z";
 

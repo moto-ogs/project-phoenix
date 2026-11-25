@@ -176,7 +176,7 @@ function groupFromBackend(
   };
 }
 
-function reportFromBackend(
+export function reportFromBackend(
   body: traegerReportsContract.KeyDateReport,
 ): KeyDateReport {
   const window = body.absence_window;
@@ -243,7 +243,7 @@ function templateToBackend(
   };
 }
 
-function reportQuery(keyDate: string, templateId: string | null) {
+export function reportQuery(keyDate: string, templateId: string | null) {
   return { key_date: keyDate, template: templateId || undefined };
 }
 
@@ -280,7 +280,14 @@ export async function downloadKeyDateReport(
 
 /** Die Vorlagen des Trägers, nach Namen. */
 export async function fetchReportTemplates(): Promise<ReportTemplate[]> {
-  const body = await bffJson("org", "GET /traeger/report-templates/");
+  return mapReportTemplates(
+    await bffJson("org", "GET /traeger/report-templates/"),
+  );
+}
+
+export function mapReportTemplates(
+  body: traegerReportTemplatesContract.TraegerReportTemplate[],
+): ReportTemplate[] {
   return body.map(templateFromBackend);
 }
 

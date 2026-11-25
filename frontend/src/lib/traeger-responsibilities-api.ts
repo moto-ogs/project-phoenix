@@ -175,10 +175,14 @@ function present<T>(value: T | null): value is T {
 
 /** Every school of the Träger with its responsibilities, by name. */
 export async function fetchResponsibilities(): Promise<SchoolResponsibility[]> {
-  const overview = await bffJson(
-    "org",
-    "GET /traeger/master-data/responsibilities",
+  return mapResponsibilities(
+    await bffJson("org", "GET /traeger/master-data/responsibilities"),
   );
+}
+
+export function mapResponsibilities(
+  overview: contract.ResponsibilityOverview,
+): SchoolResponsibility[] {
   return (overview.schools ?? []).map((school) => ({
     schoolId: school.school_id,
     schoolName: school.school_name,

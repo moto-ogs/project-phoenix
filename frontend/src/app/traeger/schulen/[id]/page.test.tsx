@@ -50,7 +50,7 @@ vi.mock("~/env.client", () => ({
   },
 }));
 
-import TraegerSchoolPage from "./page";
+import TraegerSchoolPage from "./page-content";
 
 const SCHOOL = {
   id: "2",

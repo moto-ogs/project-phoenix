@@ -723,7 +723,7 @@ export function moduleFromBackend(
   };
 }
 
-function tariffsFromBackend(
+export function tariffsFromBackend(
   body: traegerCareTariffsContract.CareTariffs,
 ): CareTariffs {
   return {
@@ -995,7 +995,12 @@ export async function deleteCarePriceList(
 }
 
 export async function fetchCareRuns(): Promise<CareRunList> {
-  const body = await bffJson("org", "GET /traeger/care-billing-runs/");
+  return mapCareRuns(await bffJson("org", "GET /traeger/care-billing-runs/"));
+}
+
+export function mapCareRuns(
+  body: traegerCareBillingRunsContract.CareRunList,
+): CareRunList {
   return {
     runs: (body.runs ?? []).map(runFromBackend),
     suggestedMonth: requiredDay(

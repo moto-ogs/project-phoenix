@@ -90,7 +90,7 @@ vi.mock("~/components/ui/tenant-page", async (original) => ({
 }));
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
 
-import AllocationPage from "./page";
+import AllocationPage from "./page-content";
 
 const CRITERIA_PERIOD: HolidayPeriod = {
   ...HOLIDAY_PERIOD,

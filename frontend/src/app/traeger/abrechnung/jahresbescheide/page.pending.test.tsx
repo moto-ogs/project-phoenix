@@ -47,7 +47,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/abrechnung/jahresbescheide",
 }));
 
-import TraegerJahresbescheidePage from "./page";
+import TraegerJahresbescheidePage from "./page-content";
 
 const TITLE = "Jahreslauf starten";
 

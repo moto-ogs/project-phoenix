@@ -1248,10 +1248,17 @@ export interface HolidayConfirmationSettings {
 }
 
 export async function fetchHolidayConfirmationSettings(): Promise<HolidayConfirmationSettings> {
-  const settings = await bffJson(
-    "org",
-    "GET /traeger/holiday-contributions/confirmation-settings",
+  return mapHolidayConfirmationSettings(
+    await bffJson(
+      "org",
+      "GET /traeger/holiday-contributions/confirmation-settings",
+    ),
   );
+}
+
+export function mapHolidayConfirmationSettings(
+  settings: traegerHolidayContributionsContract.HolidayConfirmationSettings,
+): HolidayConfirmationSettings {
   return {
     debtorNumberRequired: settings.debtor_number_required,
     debtorNumberFormat: debtorNumberFormatOf(settings.debtor_number_format),
@@ -1304,11 +1311,16 @@ export interface HolidayWeekPlaces {
 export async function fetchHolidayWeekPlaces(
   periodId: string,
 ): Promise<readonly HolidayWeekPlaces[]> {
-  const weeks = await bffJson(
-    "org",
-    "GET /traeger/holiday-periods/{id}/places",
-    { params: { id: periodId } },
+  return mapHolidayWeekPlaces(
+    await bffJson("org", "GET /traeger/holiday-periods/{id}/places", {
+      params: { id: periodId },
+    }),
   );
+}
+
+export function mapHolidayWeekPlaces(
+  weeks: traegerHolidayPeriodsContract.HolidayWeekPlaces[],
+): readonly HolidayWeekPlaces[] {
   return weeks.map((week) => ({
     weekId: week.week_id,
     startsOn: requiredDay(week.starts_on, "holiday_week_places.starts_on"),
