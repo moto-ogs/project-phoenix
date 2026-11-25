@@ -144,6 +144,37 @@ describe("ClassDayOverview on the weekend", () => {
   });
 });
 
+describe("ClassDayOverview day selection", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    navigation.search = "tag=2026-09-08";
+    navigation.admin = false;
+  });
+
+  it("passes the day from the address to notices and class cards", async () => {
+    const fetchAssignedClasses = vi.fn(async (date: string) =>
+      assignedClasses(date),
+    );
+    const notices = vi.fn((date: string) => (
+      <output data-testid="class-day-notices-date">{date}</output>
+    ));
+
+    render(
+      <ClassDayOverview
+        fetchClasses={vi.fn()}
+        fetchAssignedClasses={fetchAssignedClasses}
+        notices={notices}
+      />,
+    );
+
+    expect(
+      await screen.findByTestId("class-day-notices-date"),
+    ).toHaveTextContent("2026-09-08");
+    expect(notices).toHaveBeenLastCalledWith("2026-09-08");
+    expect(fetchAssignedClasses).toHaveBeenCalledExactlyOnceWith("2026-09-08");
+  });
+});
+
 const schoolTotals = {
   students: 0,
   missing: 0,

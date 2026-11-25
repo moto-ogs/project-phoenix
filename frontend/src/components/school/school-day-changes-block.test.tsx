@@ -15,6 +15,7 @@ const reloadClasses = vi.hoisted(() => vi.fn());
 const requestedChangeKeys = vi.hoisted(() => vi.fn());
 const state = vi.hoisted(() => ({
   today: "2026-09-09",
+  selectedDate: "2026-09-09",
   overview: undefined as DayChangesOverview | undefined,
   classes: undefined as
     | {
@@ -68,7 +69,12 @@ function change(overrides: Partial<DayChange>): DayChange {
 }
 
 function renderBlock() {
-  return render(<SchoolDayChangesBlock fetchAssignedClasses={vi.fn()} />);
+  return render(
+    <SchoolDayChangesBlock
+      selectedDate={state.selectedDate}
+      fetchAssignedClasses={vi.fn()}
+    />,
+  );
 }
 
 describe("SchoolDayChangesBlock", () => {
@@ -77,6 +83,7 @@ describe("SchoolDayChangesBlock", () => {
     reloadClasses.mockReset();
     requestedChangeKeys.mockReset();
     state.today = "2026-09-09";
+    state.selectedDate = "2026-09-09";
     state.permissions = ["class_day:read"];
     state.classes = {
       school_day: true,
@@ -188,11 +195,26 @@ describe("SchoolDayChangesBlock", () => {
     );
 
     state.today = "2026-09-10";
-    rerender(<SchoolDayChangesBlock fetchAssignedClasses={vi.fn()} />);
+    state.selectedDate = "2026-09-10";
+    rerender(
+      <SchoolDayChangesBlock
+        selectedDate={state.selectedDate}
+        fetchAssignedClasses={vi.fn()}
+      />,
+    );
 
     expect(requestedChangeKeys).toHaveBeenLastCalledWith(
       "school-day-changes-2026-09-10",
     );
+  });
+
+  it("zeigt keine heutigen Änderungen neben einem anderen Klassentag", () => {
+    state.selectedDate = "2026-09-08";
+
+    const { container } = renderBlock();
+
+    expect(container.firstChild).toBeNull();
+    expect(requestedChangeKeys).not.toHaveBeenCalled();
   });
 });
 

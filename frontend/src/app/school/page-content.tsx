@@ -15,6 +15,18 @@ import {
   withdrawAbsenceReportSchool,
 } from "~/lib/school-class-day-api";
 
+function schoolHomeNotices(date: string) {
+  return (
+    <>
+      <SchoolDayChangesBlock
+        selectedDate={date}
+        fetchAssignedClasses={fetchAssignedClassesSchool}
+      />
+      <TodayNoticesCard />
+    </>
+  );
+}
+
 export default function SchoolHomePage() {
   return (
     <ClassDayOverview
@@ -26,14 +38,7 @@ export default function SchoolHomePage() {
       // „Heute anders“ (#7670) direkt unter dem Kopf, darunter die Hinweise
       // der OGS-Leitung für heute (#2208); ohne Hinweis rendert die Karte
       // nichts.
-      notices={
-        <>
-          <SchoolDayChangesBlock
-            fetchAssignedClasses={fetchAssignedClassesSchool}
-          />
-          <TodayNoticesCard />
-        </>
-      }
+      notices={schoolHomeNotices}
     />
   );
 }

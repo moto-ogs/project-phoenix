@@ -65,6 +65,8 @@ function childChangesText(klass: string, count: number): string {
 }
 
 export interface SchoolDayChangesBlockProps {
+  /** Der in der Klassenübersicht ausgewählte Tag. */
+  readonly selectedDate: string;
   /** Der Bericht der eigenen Klassen, wie ihn die Startseite lädt. */
   readonly fetchAssignedClasses: (
     date: string,
@@ -72,22 +74,26 @@ export interface SchoolDayChangesBlockProps {
 }
 
 export function SchoolDayChangesBlock({
+  selectedDate,
   fetchAssignedClasses,
 }: SchoolDayChangesBlockProps) {
   const { data: session } = useSession();
   const today = useBerlinToday();
+  const isToday = selectedDate === today;
   // Wer alle Klassen sieht (Schulverwaltung), hat die Zahlen der ganzen
   // Schule direkt darunter; der Block zählt nur eigene Klassen.
   const ownClassesOnly = !hasPermission(session, "class_day:all_classes");
   const changes = useSWRAuth<DayChangesOverview>(
-    session ? schoolPortalKeys.dayChanges(today) : null,
+    session && isToday ? schoolPortalKeys.dayChanges(today) : null,
     fetchSchoolDayChanges,
     { revalidateOnFocus: true },
   );
   // Derselbe Schlüssel wie die Klassenübersicht: an heute liest die Seite
   // den Bericht nur einmal.
   const classes = useSWRAuth(
-    session && ownClassesOnly ? schoolPortalKeys.assignedClasses(today) : null,
+    session && ownClassesOnly && isToday
+      ? schoolPortalKeys.assignedClasses(today)
+      : null,
     () => fetchAssignedClasses(today),
     { revalidateOnFocus: true },
   );
@@ -96,15 +102,17 @@ export function SchoolDayChangesBlock({
   // Eine Krankmeldung oder ein anderer Status an dieser Schule (#4792).
   useClassDayRefresh(
     useCallback(() => {
+      if (!isToday) return;
       void reloadChanges();
       void reloadClasses();
-    }, [reloadChanges, reloadClasses]),
+    }, [isToday, reloadChanges, reloadClasses]),
   );
   const loadError = useSwrLoadError(
     changes.error,
     "die Übersicht „Heute anders“",
     () => reloadChanges(),
   );
+  if (!isToday) return null;
 
   const overview = changes.data;
   const classLines = (classes.data?.classes ?? []).filter(
