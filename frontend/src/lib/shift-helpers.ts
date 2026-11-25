@@ -250,7 +250,9 @@ export interface OwnAssignment {
   understaffedAck: boolean;
 }
 
-export function mapOwnAssignment(data: assignmentResponse): OwnAssignment {
+export function mapOwnAssignment(
+  data: Omit<assignmentResponse, "date"> & { date: string },
+): OwnAssignment {
   return {
     instanceId: data.instance_id,
     title: data.title,

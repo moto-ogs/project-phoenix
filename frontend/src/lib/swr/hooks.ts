@@ -1369,6 +1369,44 @@ export function useSWRPreload() {
   );
 }
 
+interface InvalidationBurst {
+  readonly matches: ((key: string) => boolean)[];
+  readonly done: Promise<unknown[]>;
+}
+
+const invalidationBursts = new WeakMap<Cache, Map<string, InvalidationBurst>>();
+
+function coalesceInvalidation(
+  cache: Cache,
+  channel: string,
+  matches: (key: string) => boolean,
+  run: (match: (key: string) => boolean) => Promise<unknown[]>,
+): Promise<unknown[]> {
+  const bursts =
+    invalidationBursts.get(cache) ?? new Map<string, InvalidationBurst>();
+  invalidationBursts.set(cache, bursts);
+  const pending = bursts.get(channel);
+  if (pending) {
+    pending.matches.push(matches);
+    return pending.done;
+  }
+  const batch = [matches];
+  const done = new Promise<unknown[]>((resolve, reject) => {
+    setTimeout(() => {
+      bursts.delete(channel);
+      if (isSWRSessionPending() || !SWRGlobalState.has(cache)) {
+        resolve([]);
+        return;
+      }
+      const finish = async () =>
+        run((key) => batch.some((match) => match(key)));
+      void finish().then(resolve, reject);
+    }, 350);
+  });
+  bursts.set(channel, { matches: batch, done });
+  return done;
+}
+
 /**
  * Invalidate every entry of the session's scope whose resource key `matches`,
  * wherever SWR keeps it (invalidateSWRKeys). `matches` gets the key without
@@ -1382,14 +1420,36 @@ export function useInvalidateMatching() {
   const { prefix } = useSWRScope();
   const { cache } = useSWRConfig();
   return useCallback(
-    (matches: (key: string) => boolean, options?: { clear?: boolean }) => {
+    (
+      matches: (key: string) => boolean,
+      options?: {
+        clear?: boolean;
+        expireInactive?: boolean;
+        /** Union local and SSE invalidations for this channel in one short burst. */
+        coalesce?: string;
+      },
+    ) => {
       if (prefix === null || isSWRSessionPending()) return Promise.resolve([]);
       const scope = scopedSWRKey(prefix, "");
-      return invalidateSWRKeys(
-        cache,
-        (key) => key.startsWith(scope) && matches(key.slice(scope.length)),
-        options?.clear ? "clear" : "revalidate",
-      );
+      const mode = options?.clear
+        ? "clear"
+        : options?.expireInactive
+          ? "expire-inactive"
+          : "revalidate";
+      const run = (match: (key: string) => boolean) =>
+        invalidateSWRKeys(
+          cache,
+          (key) => key.startsWith(scope) && match(key.slice(scope.length)),
+          mode,
+        );
+      return options?.coalesce
+        ? coalesceInvalidation(
+            cache,
+            `${scope}${options.coalesce}:${mode}`,
+            matches,
+            run,
+          )
+        : run(matches);
     },
     [prefix, cache],
   );

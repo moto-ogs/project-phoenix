@@ -1,6 +1,5 @@
 // Time tracking API service for check-in/out and history management
 
-import type * as shared from "~/lib/contract/shared.generated";
 import type * as tt from "~/lib/contract/time-tracking.generated";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { ApiError } from "~/lib/api-error";
@@ -14,14 +13,8 @@ import {
   type MailOutcomeCounts,
 } from "~/lib/email-delivery-status";
 import { bffJson } from "./bff-fetch";
-import {
-  mapAllowance,
-  type AbsenceTypeAllowanceSummary,
-} from "./absence-type-api";
 import type {
   DayProjection,
-  HistoryResult,
-  MonthSummary,
   StaffAbsence,
   WorkSession,
   WorkSessionBreak,
@@ -30,9 +23,7 @@ import type {
 import {
   mapClosingDaysResponse,
   mapDailyProjectionResponse,
-  mapHistoryResponse,
   mapHolidaysResponse,
-  mapMonthSummaryResponse,
   mapStaffAbsenceResponse,
   mapWorkSessionResponse,
   mapWorkSessionBreakResponse,
@@ -106,6 +97,20 @@ interface TimeTrackingConfig {
  * Service class for time tracking API operations
  */
 class TimeTrackingService {
+  getPeriod(view: tt.OwnTimePeriodView, start: string) {
+    return bffJson("tenant", "GET /api/time-tracking/period", {
+      query: { view, start },
+    });
+  }
+
+  getOverview() {
+    return bffJson("tenant", "GET /api/time-tracking/overview");
+  }
+
+  getLeaveOverview() {
+    return bffJson("tenant", "GET /api/time-tracking/leave-overview");
+  }
+
   async checkIn(
     status: "present" | "home_office",
     reason?: string,
@@ -130,37 +135,11 @@ class TimeTrackingService {
     return mapWorkSessionResponse(session);
   }
 
-  async getCurrentSession(): Promise<WorkSession | null> {
-    const session = await bffJson("tenant", "GET /api/time-tracking/current", {
-      errorMessage: "Failed to get current session",
-    });
-    return session ? mapWorkSessionResponse(session) : null;
-  }
-
   async getConfig(): Promise<TimeTrackingConfig> {
     const config = await bffJson("tenant", "GET /api/time-tracking/config", {
       errorMessage: "Failed to get time tracking config",
     });
     return { accountStartDate: config.account_start_date };
-  }
-
-  async getHistory(from: string, to: string): Promise<HistoryResult> {
-    return mapHistoryResponse(
-      await bffJson("tenant", "GET /api/time-tracking/history", {
-        query: { from, to },
-        errorMessage: "Failed to get history",
-      }),
-    );
-  }
-
-  // Own Monatskarte (#1842): Summe Soll/Ist, Gutschriften, Übertrag, Saldo.
-  async getMonthSummary(year: number, month: number): Promise<MonthSummary> {
-    return mapMonthSummaryResponse(
-      await bffJson("tenant", "GET /api/time-tracking/month-summary", {
-        query: { year, month },
-        errorMessage: "Failed to get month summary",
-      }),
-    );
   }
 
   // Vollständige Tagesprojektion desselben Endpunkts (#2443): Soll, Gutschrift,
@@ -261,15 +240,6 @@ class TimeTrackingService {
     return mapWorkSessionResponse(session);
   }
 
-  async getSessionBreaks(sessionId: string): Promise<WorkSessionBreak[]> {
-    const breaks = await bffJson(
-      "tenant",
-      "GET /api/time-tracking/breaks/{sessionId}",
-      { params: { sessionId }, errorMessage: "Failed to get breaks" },
-    );
-    return (breaks ?? []).map(mapWorkSessionBreakResponse);
-  }
-
   async getSessionEdits(sessionId: string): Promise<WorkSessionEdit[]> {
     const edits = await bffJson("tenant", "GET /api/time-tracking/{id}/edits", {
       params: { id: sessionId },
@@ -287,18 +257,6 @@ class TimeTrackingService {
     return (absences ?? []).map(mapStaffAbsenceResponse);
   }
 
-  async getQuestionedAbsences(): Promise<StaffAbsence[]> {
-    const absences = await bffJson(
-      "tenant",
-      "GET /api/time-tracking/absences",
-      {
-        query: { status: "question" },
-        errorMessage: "Failed to get questioned absences",
-      },
-    );
-    return (absences ?? []).map(mapStaffAbsenceResponse);
-  }
-
   /**
    * Ob die Leitung die eigenen offenen Anträge per Mail bekam (#7058): je
    * Antrag die Mails der letzten Meldung, nach Ergebnis gezählt. Ein Antrag
@@ -310,18 +268,7 @@ class TimeTrackingService {
       "GET /api/time-tracking/absences/mails",
       { errorMessage: "Failed to get absence request mails" },
     );
-    // Counts per outcome; an outcome this build does not know is left out.
-    const byAbsence: Record<string, MailOutcomeCounts> = {};
-    for (const [id, counts] of Object.entries(mails?.absences ?? {})) {
-      if (!counts) continue;
-      const known: Partial<Record<MailOutcome, number>> = {};
-      for (const [key, count] of Object.entries(counts)) {
-        const outcome = knownMailOutcome(key);
-        if (outcome) known[outcome] = count;
-      }
-      byAbsence[id] = known;
-    }
-    return { mails: byAbsence, awaitingFeedback: mails.awaiting_feedback };
+    return mapOwnLeaveMails(mails);
   }
 
   async createAbsence(req: CreateAbsenceRequest): Promise<StaffAbsence> {
@@ -380,36 +327,22 @@ class TimeTrackingService {
       errorMessage: "Antrag konnte nicht erneut eingereicht werden",
     });
   }
-
-  async getVacationQuota(year?: number): Promise<shared.VacationQuotaSummary> {
-    return bffJson("tenant", "GET /api/time-tracking/vacation/quota", {
-      query: { year },
-      errorMessage: "Urlaubskontingent konnte nicht geladen werden",
-    });
-  }
-
-  /**
-   * The staff member's own Kontingente of the school's absence types (#4971),
-   * read-only. The backend takes the person from the session and the current
-   * Berlin year when none is given.
-   */
-  async getOwnAbsenceAllowances(): Promise<OwnAbsenceAllowance[]> {
-    const allowances = await bffJson(
-      "tenant",
-      "GET /api/time-tracking/absence-allowances",
-      { errorMessage: "Kontingente konnten nicht geladen werden" },
-    );
-    return (allowances ?? []).map((entry) => ({
-      name: entry.name,
-      summary: mapAllowance(entry),
-    }));
-  }
-}
-
-/** One school-defined absence type with an allowance and its yearly account. */
-export interface OwnAbsenceAllowance {
-  readonly name: string;
-  readonly summary: AbsenceTypeAllowanceSummary;
 }
 
 export const timeTrackingService = new TimeTrackingService();
+
+export function mapOwnLeaveMails(
+  data: Pick<tt.OwnLeaveMails, "absences" | "awaiting_feedback">,
+) {
+  const mails: Record<string, MailOutcomeCounts> = {};
+  for (const [id, counts] of Object.entries(data.absences ?? {})) {
+    if (!counts) continue;
+    const known: Partial<Record<MailOutcome, number>> = {};
+    for (const [key, count] of Object.entries(counts)) {
+      const outcome = knownMailOutcome(key);
+      if (outcome) known[outcome] = count;
+    }
+    mails[id] = known;
+  }
+  return { mails, awaitingFeedback: data.awaiting_feedback };
+}

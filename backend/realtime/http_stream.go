@@ -92,6 +92,7 @@ func EventTypeValues() []string {
 		string(EventDashboardCountsChanged),
 		string(EventGroupAccessChanged),
 		string(EventStaffTimeTrackingChanged),
+		string(EventStaffLeaveChanged),
 		string(EventActiveSupervisionChanged),
 		string(EventArrivalScheduleChanged),
 		string(EventPickupScheduleChanged),

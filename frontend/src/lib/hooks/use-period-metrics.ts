@@ -65,14 +65,9 @@ export interface PeriodMetrics {
  *             longer credit an absence differently than the month (#6847).
  * - Saldo  -> `useAccountBalance`
  *
- * Pass a `staffId` for the admin (`time_tracking:manage`) endpoints; omit it to
- * read the caller's own figures. Keys deliberately match the ones the
- * Zeiterfassung table and Monatskarte already use, so SWR dedupes the overlap
- * into one request and the existing save/check-in invalidation patterns
- * ("staff-schedule-targets-", "time-tracking-schedule-targets-", …) refresh
- * these cards too.
+ * This hook is for the personnel administration. Own time tracking uses the Go overview.
  */
-export function usePeriodMetrics(staffId?: string): PeriodMetrics {
+export function usePeriodMetrics(staffId: string): PeriodMetrics {
   const todayISO = useBerlinToday();
   const today = useMemo(() => parseISODate(todayISO), [todayISO]);
   const year = Number(todayISO.slice(0, 4));
@@ -90,13 +85,8 @@ export function usePeriodMetrics(staffId?: string): PeriodMetrics {
     error: monthSummaryError,
     mutate: mutateMonthSummary,
   } = useSWRAuth<MonthSummary>(
-    staffId
-      ? staffMonthSummaryKeys.month(staffId, year, monthNumber)
-      : timeTrackingKeys.monthSummary(year, monthNumber),
-    () =>
-      staffId
-        ? staffMonthSummaryService.getMonthSummary(staffId, year, monthNumber)
-        : timeTrackingService.getMonthSummary(year, monthNumber),
+    staffMonthSummaryKeys.month(staffId, year, monthNumber),
+    () => staffMonthSummaryService.getMonthSummary(staffId, year, monthNumber),
     // The current month is always open: a running session grows Ist
     // server-side, so the card has to keep up.
     { refreshInterval: openMonthRefreshMs },
@@ -115,17 +105,13 @@ export function usePeriodMetrics(staffId?: string): PeriodMetrics {
     error: weekProjectionError,
     mutate: mutateWeekProjection,
   } = useSWRAuth<ReadonlyMap<string, DayProjection>>(
-    staffId
-      ? staffTimeKeys.scheduleTargets(staffId, weekFromKey, weekToKey)
-      : timeTrackingKeys.scheduleTargets(weekFromKey, weekToKey),
+    staffTimeKeys.scheduleTargets(staffId, weekFromKey, weekToKey),
     () =>
-      staffId
-        ? staffMonthSummaryService.getDailyProjection(
-            staffId,
-            weekFromKey,
-            weekToKey,
-          )
-        : timeTrackingService.getDailyProjection(weekFromKey, weekToKey),
+      staffMonthSummaryService.getDailyProjection(
+        staffId,
+        weekFromKey,
+        weekToKey,
+      ),
     // The current week is always open: a running session grows the day's Ist
     // server-side, and the month card and the Stundenkonto beside this card
     // poll at the same cadence.

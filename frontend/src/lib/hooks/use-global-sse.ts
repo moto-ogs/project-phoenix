@@ -35,6 +35,7 @@ import {
   usePublishLiveChannel,
 } from "~/lib/swr";
 import { mutate } from "~/lib/swr/mutate";
+import { useOwnTimeRefresh } from "./use-own-time-refresh";
 import {
   SWR_FAMILIES,
   dashboardKeys,
@@ -120,14 +121,7 @@ const STAFF_TIME_TRACKING_CACHE_KEY_PARTS = [
   "staff-balance-adjustments-",
   "staff-schedule-",
   "staff-shifts-visible-",
-  "time-tracking-current",
-  "time-tracking-history-",
-  "time-tracking-absences-",
-  "time-tracking-table-",
-  "time-tracking-month-summary-",
   "time-tracking-schedule-targets-",
-  "time-tracking-own-schedule-",
-  "time-tracking-own-shifts-today-",
   "time-tracking-own-shifts-week-",
 ] as const;
 
@@ -318,6 +312,7 @@ function currentStudentDetailId(): string | null {
 export function useGlobalSSE(): SSEHookState {
   const { data: session, status: sessionStatus } = useSession();
   const invalidateFamily = useInvalidateFamily();
+  const refreshOwnTime = useOwnTimeRefresh();
   const tenantID = session?.user?.tenantId;
   const tenant = useTenantSafe()?.tenant;
   const [groupAccessRevision, setGroupAccessRevision] = useState(0);
@@ -1336,7 +1331,11 @@ export function useGlobalSSE(): SSEHookState {
           break;
         }
 
-        case "staff_time_tracking_changed": {
+        case "staff_time_tracking_changed":
+        case "staff_leave_changed": {
+          void refreshOwnTime(
+            event.type === "staff_leave_changed" ? "leave" : "time",
+          );
           hasPendingStaffTimeTrackingEvent.current = true;
           scheduleFlush();
           break;
@@ -1401,6 +1400,9 @@ export function useGlobalSSE(): SSEHookState {
         // change is_absent/is_substitute/understaffed_ack without any
         // lifecycle transition — same caches go stale, same invalidation.
         case "staffing_deviation_changed": {
+          void refreshOwnTime(
+            event.data.source === "closing_days" ? "time" : "assignments",
+          );
           hasPendingTimetableEvent.current = true;
           scheduleFlush();
           break;
@@ -1511,13 +1513,19 @@ export function useGlobalSSE(): SSEHookState {
         }
       }
     },
-    [scheduleFlush, collectEduGroupScope, collectActiveSupervisionChange],
+    [
+      scheduleFlush,
+      collectEduGroupScope,
+      collectActiveSupervisionChange,
+      refreshOwnTime,
+    ],
   );
 
   // Whether this binding's stream was open before, and whether it may have
   // missed events since (reconcile below).
   const hasConnectedRef = useRef(false);
   const missedEventsPossibleRef = useRef(false);
+  const pendingOwnTimeReconcile = useRef(false);
 
   // A new school or account drops what the previous binding collected.
   useLayoutEffect(() => {
@@ -1636,6 +1644,10 @@ export function useGlobalSSE(): SSEHookState {
     }
     burstScopeRef.current = boundScopeRef.current;
     reconcilingRef.current = pendingSidebarEvents;
+    if (pendingOwnTimeReconcile.current) {
+      pendingOwnTimeReconcile.current = false;
+      void refreshOwnTime("leave");
+    }
     try {
       flushInvalidations();
     } finally {
@@ -1645,7 +1657,7 @@ export function useGlobalSSE(): SSEHookState {
     window.dispatchEvent(new CustomEvent("team-messages-unread-refresh"));
     window.dispatchEvent(new CustomEvent(NOTIFICATION_FEED_REFRESH_EVENT));
     announceChangeRequestsChanged();
-  }, [accepts, flushInvalidations]);
+  }, [accepts, flushInvalidations, refreshOwnTime]);
   useLayoutEffect(() => {
     reconcileRef.current = reconcile;
   }, [reconcile]);
@@ -1686,6 +1698,7 @@ export function useGlobalSSE(): SSEHookState {
     // connection reconciles nothing. The status of this render still
     // describes the replaced stream.
     if (connectedScopeRef.current !== boundScope) {
+      pendingOwnTimeReconcile.current = false;
       connectedScopeRef.current = boundScope;
       connectedReconnectKeyRef.current = reconnectKey;
       hasConnectedRef.current = false;
@@ -1708,6 +1721,7 @@ export function useGlobalSSE(): SSEHookState {
     }
     if (sseState.status === "connected") {
       if (hasConnectedRef.current && missedEventsPossibleRef.current) {
+        pendingOwnTimeReconcile.current = true;
         reconcileRef.current();
       } else if (!hasConnectedRef.current && !startupReconcileTimer.current) {
         // Math.random is fine here: load-spreading jitter, no security context.

@@ -140,7 +140,7 @@ func (s *staffAbsenceService) SetVacationOpening(ctx context.Context, staffID, d
 		}
 		return nil, fmt.Errorf("failed to create vacation opening: %w", err)
 	}
-	s.broadcastTimeTrackingChanged(ctx)
+	s.broadcastLeaveChanged(ctx)
 	return opening, nil
 }
 
@@ -240,7 +240,7 @@ func (s *staffAbsenceService) DeleteVacationOpening(ctx context.Context, staffID
 		err = workSessionWriteError("delete", err)
 		return fmt.Errorf("failed to delete vacation opening: %w", err)
 	}
-	s.broadcastTimeTrackingChanged(ctx)
+	s.broadcastLeaveChanged(ctx)
 	return nil
 }
 

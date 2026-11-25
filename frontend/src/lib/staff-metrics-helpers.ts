@@ -284,7 +284,10 @@ export function resolveAccountStartDate(
 // both portals instead of a second camelCase copy.
 
 export function adaptHistorySessionForMetrics(
-  session: WorkSessionHistory,
+  session: Omit<
+    WorkSessionHistory,
+    "staffId" | "createdBy" | "updatedBy" | "createdAt" | "updatedAt"
+  >,
 ): StaffHistorySession {
   return {
     id: session.id || undefined,
@@ -308,7 +311,18 @@ export function adaptHistorySessionForMetrics(
   };
 }
 
-export function adaptAbsenceForMetrics(absence: StaffAbsence): StaffAbsenceRow {
+export function adaptAbsenceForMetrics(
+  absence: Omit<
+    StaffAbsence,
+    | "approvedBy"
+    | "approvedAt"
+    | "createdBy"
+    | "createdAt"
+    | "updatedAt"
+    | "substituteStaffId"
+  > &
+    Partial<Pick<StaffAbsence, "approvedBy" | "approvedAt">>,
+): StaffAbsenceRow {
   return {
     id: String(absence.id),
     staff_id: String(absence.staffId),

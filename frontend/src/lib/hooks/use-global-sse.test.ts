@@ -53,7 +53,8 @@ vi.mock("~/lib/swr", async (importOriginal) => ({
       (key: unknown) => typeof key === "string" && key.includes(`:${family}`),
     ),
 }));
-vi.mock("swr", () => ({
+vi.mock("swr", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   default: vi.fn(() => ({
     data: undefined,
     error: undefined,

@@ -56,7 +56,7 @@ func (s *staffAbsenceService) UpdateAbsence(ctx context.Context, staffID int64, 
 		return nil, err
 	}
 
-	s.broadcastTimeTrackingChanged(ctx)
+	s.broadcastLeaveChanged(ctx)
 	return s.withLabel(ctx, toAbsenceResponse(absence)), nil
 }
 
@@ -343,7 +343,7 @@ func (s *staffAbsenceService) deleteAbsenceFor(ctx context.Context, subjectStaff
 		return fmt.Errorf("failed to delete absence: %w", err)
 	}
 
-	s.broadcastTimeTrackingChanged(ctx)
+	s.broadcastLeaveChanged(ctx)
 	return nil
 }
 

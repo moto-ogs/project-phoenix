@@ -2,26 +2,30 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SSEEvent, SSEHookOptions, SSEHookState } from "~/lib/sse-types";
 
-const { session, sse, invalidatedFamilies, useSSESpy } = vi.hoisted(() => ({
-  session: {
-    current: { id: "account-7", tenantId: "1", roles: ["user"] } as {
-      id: string;
-      tenantId: string;
-      roles: string[];
+const { session, sse, invalidatedFamilies, invalidateMatching, useSSESpy } =
+  vi.hoisted(() => ({
+    session: {
+      current: { id: "account-7", tenantId: "1", roles: ["user"] } as {
+        id: string;
+        tenantId: string;
+        roles: string[];
+      },
     },
-  },
-  sse: {
-    state: {
-      status: "connected",
-      isConnected: true,
-      error: null,
-      reconnectAttempts: 0,
-    } as SSEHookState,
-    handlers: [] as ((event: SSEEvent) => void)[],
-  },
-  invalidatedFamilies: [] as string[],
-  useSSESpy: { lastReconnectKey: undefined as string | number | undefined },
-}));
+    sse: {
+      state: {
+        status: "connected",
+        isConnected: true,
+        error: null,
+        reconnectAttempts: 0,
+      } as SSEHookState,
+      handlers: [] as ((event: SSEEvent) => void)[],
+    },
+    invalidatedFamilies: [] as string[],
+    invalidateMatching: vi.fn((_matches: (key: string) => boolean) =>
+      Promise.resolve([]),
+    ),
+    useSSESpy: { lastReconnectKey: undefined as string | number | undefined },
+  }));
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
@@ -48,6 +52,7 @@ vi.mock("~/lib/swr", async (importOriginal) => ({
     invalidatedFamilies.push(family);
     return Promise.resolve([]);
   },
+  useInvalidateMatching: () => invalidateMatching,
 }));
 vi.mock("~/lib/swr/mutate", () => ({
   mutate: vi.fn(() => Promise.resolve()),
@@ -74,7 +79,7 @@ const OWN = ownSupervisionKeys.family;
 // Keys of the scoped cache as SWR's global mutate sees them.
 const INVENTORY = [
   "school-a:account-7:active-supervision-dashboard-0-224",
-  "school-a:account-7:time-tracking-month-summary-2026-9",
+  "school-a:account-7:time-tracking-schedule-targets-2026-09-07-2026-09-13",
   "school-a:account-7:staff-dashboard-summary-month",
   "school-a:account-7:ogs-students-3",
   "school-a:account-7:timetable-week-2026-09-07",
@@ -140,6 +145,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.spyOn(Math, "random").mockReturnValue(0);
   vi.mocked(mutate).mockClear();
+  invalidateMatching.mockClear();
   invalidatedFamilies.length = 0;
   sse.handlers = [];
   session.current = { id: "account-7", tenantId: "1", roles: ["user"] };
@@ -226,7 +232,7 @@ describe("useGlobalSSE: own supervision family (#5017)", () => {
     fire(event("staff_time_tracking_changed"));
     act(() => vi.advanceTimersByTime(MAX_FLUSH_WAIT_MS));
     expect(matchedKeys()).toEqual([
-      "school-a:account-7:time-tracking-month-summary-2026-9",
+      "school-a:account-7:time-tracking-schedule-targets-2026-09-07-2026-09-13",
       "school-a:account-7:staff-dashboard-summary-month",
     ]);
   });
@@ -410,6 +416,57 @@ describe("useGlobalSSE: reconcile after a reconnect (#5017)", () => {
     setStatus("reconnecting");
     view.rerender();
     expect(view.result.current).toBe(LIVE_FALLBACK_INTERVAL_MS);
+  });
+});
+
+describe("useGlobalSSE: own time-tracking reads (#8081)", () => {
+  const keys = {
+    overview: "time-tracking-overview-2026-09-09",
+    period: "time-tracking-period-week-2026-09-07",
+    leave: "time-tracking-leave-overview-2026",
+    vacationDialog: "time-tracking-absences-2026-01-01-2026-12-31",
+    unrelated: "time-tracking-config",
+  };
+
+  function refreshedReads() {
+    expect(invalidateMatching).toHaveBeenCalledTimes(1);
+    const [matches] = invalidateMatching.mock.calls[0]!;
+    return Object.entries(keys)
+      .filter(([, key]) => matches(key))
+      .map(([name]) => name);
+  }
+
+  it.each([
+    [event("staff_time_tracking_changed"), ["overview", "period"]],
+    [
+      event("staff_leave_changed"),
+      ["overview", "period", "leave", "vacationDialog"],
+    ],
+    [
+      event("staffing_deviation_changed", { source: "closing_days" }),
+      ["overview", "period"],
+    ],
+    [
+      event("staffing_deviation_changed", { source: "instance_update" }),
+      ["overview"],
+    ],
+    [event("instance_started"), ["overview"]],
+  ])("refreshes only the affected reads for %j", (event, expected) => {
+    renderConnected();
+    fire(event);
+    expect(refreshedReads()).toEqual(expected);
+  });
+
+  it("reloads all own reads after a reconnect, but not on initial connect", () => {
+    const view = renderConnected();
+    expect(invalidateMatching).not.toHaveBeenCalled();
+    reconnect(view);
+    expect(refreshedReads()).toEqual([
+      "overview",
+      "period",
+      "leave",
+      "vacationDialog",
+    ]);
   });
 });
 
