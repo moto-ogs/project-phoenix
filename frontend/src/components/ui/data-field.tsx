@@ -39,15 +39,16 @@ interface DataGridProps {
    */
   readonly columns?: 1 | 2 | 4;
   /**
-   * App (#8070): die Felder als Liste mit Trennlinien, Label links und Wert
-   * rechts; breite Felder (`fullWidth`) bleiben zweizeilig. Desktop wie
-   * `columns`.
+   * App am Telefon (#8070): die Felder als Liste mit Trennlinien, Label
+   * links und Wert rechts; breite Felder (`fullWidth`) bleiben zweizeilig.
+   * iPad und Desktop wie `columns`: zwei Spalten, Wert direkt unter dem
+   * Label (kurzer Blickweg).
    */
   readonly appRows?: boolean;
 }
 
 const APP_ROWS =
-  "app:flex! app:flex-col app:gap-0! app:divide-y app:divide-gray-100 app:[&>div]:py-2.5 app:[&>div:first-child]:pt-0 app:[&>div:not([class*=col-span])]:flex app:[&>div:not([class*=col-span])]:items-baseline app:[&>div:not([class*=col-span])]:justify-between app:[&>div:not([class*=col-span])]:gap-4 app:[&>div:not([class*=col-span])>dd]:mt-0 app:[&>div:not([class*=col-span])>dd]:text-right";
+  "phone:flex! phone:flex-col phone:gap-0! phone:divide-y phone:divide-gray-100 phone:[&>div]:py-2.5 phone:[&>div:first-child]:pt-0 phone:[&>div:not([class*=col-span])]:flex phone:[&>div:not([class*=col-span])]:items-baseline phone:[&>div:not([class*=col-span])]:justify-between phone:[&>div:not([class*=col-span])]:gap-4 phone:[&>div:not([class*=col-span])>dd]:mt-0 phone:[&>div:not([class*=col-span])>dd]:text-right";
 
 const gridColumnClasses: Record<
   NonNullable<DataGridProps["columns"]>,

@@ -87,11 +87,25 @@ export function VisibilityBadge({
 export function ParentVisibilityLegend({
   hint,
   className,
+  appShort = false,
 }: Readonly<{
   /** Tooltip of the marker, e.g. `PARENT_VISIBLE_DEFAULT_HINT`. */
   hint: string;
   className?: string;
+  /** App (#8070): kurzer Satz, der neben dem Merkmal in eine Zeile passt. */
+  appShort?: boolean;
 }>) {
+  if (appShort) {
+    return (
+      <p className={cn("text-sm leading-relaxed text-gray-500", className)}>
+        <VisibilityBadge hint={hint} className="mr-1.5" />
+        <span className="app:hidden">
+          Nicht gekennzeichnete Angaben bleiben intern.
+        </span>
+        <span className="app:inline hidden">Alles andere bleibt intern.</span>
+      </p>
+    );
+  }
   return (
     // Inline flow rather than flex, so a narrow container wraps the sentence
     // around the marker instead of stranding it on a line of its own.
