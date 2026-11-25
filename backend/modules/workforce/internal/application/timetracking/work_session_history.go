@@ -161,8 +161,11 @@ func sessionHistoryResponses(sessions []*WorkSession, breaksBySession map[int64]
 // asked about — including ISO weeks with no visible row to explain them — so
 // only the days inside the range are counted (#2402).
 func (s *workSessionService) buildWeeklySummaries(sessions []*SessionResponse, targetsByWeek map[summaryWeekKey]int, from, to calendar.Date) []WeeklySummary {
+	return weeklyWorkSummaries(sessions, targetsByWeek, from, to, s.now())
+}
+
+func weeklyWorkSummaries(sessions []*SessionResponse, targetsByWeek map[summaryWeekKey]int, from, to calendar.Date, now time.Time) []WeeklySummary {
 	weeks := weeklySummaryAccumulator{weekMap: make(map[summaryWeekKey]*WeeklySummary), targetsByWeek: targetsByWeek}
-	now := s.now()
 	stampedMinutesByWeek := make(map[summaryWeekKey]int)
 
 	for _, session := range sessions {

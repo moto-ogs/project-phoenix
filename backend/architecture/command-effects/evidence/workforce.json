@@ -4033,6 +4033,38 @@
       "target_owner": ""
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.ClockOverview",
+      "binding_digest": "e253335389d4dbad77f7622179bb2494",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.ClockOverview",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.ClockOverview",
+      "binding_digest": "acf9337ef92d198462edacc638f735f2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.ClockOverview",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.Period",
+      "binding_digest": "e253335389d4dbad77f7622179bb2494",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.Period",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.Period",
+      "binding_digest": "acf9337ef92d198462edacc638f735f2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.Period",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce.WorkSessions.ExportSessions",
       "binding_digest": "7b9a7992c1bf7e1518e493fdc8385f9b",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnWorkSessions.ExportSessions",

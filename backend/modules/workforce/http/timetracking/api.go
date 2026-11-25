@@ -35,6 +35,11 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Post("/check-in", rs.checkIn)
 		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Post("/check-out", rs.checkOut)
 		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Get("/current", rs.getCurrent)
+		if rs.ownViews != nil {
+			r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Get("/period", rs.getOwnPeriod)
+			r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Get("/overview", rs.getOwnOverview)
+			r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Get("/leave-overview", rs.getOwnLeaveOverview)
+		}
 		// The Stundenkonto anchor is a tenant-wide setting, not caller-scoped
 		// data. Admin views resolve a staff member's Monatskarte from it, so a
 		// manage-only role must be able to read it — the staff summary

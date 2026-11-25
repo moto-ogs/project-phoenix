@@ -1,0 +1,7 @@
+{
+  "scenario": "workforce.own_time_views.leave_overview",
+  "max": 25,
+  "exact": false,
+  "description": "Production tenant GET for leave, measured at three and nine pending requests with mail, an open question outside the year and a custom allowance. Includes booking, transactions and savepoints.",
+  "route": "GET /api/time-tracking/leave-overview"
+}
