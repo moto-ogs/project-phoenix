@@ -82,9 +82,11 @@ const familyRoutes = (path) =>
 // One protected read per other portal, through its BFF (the operator's
 // through the catalog proxy, #2352).
 const portalReads = new Set(["/operator/organizations"]);
-const refuse = (res, body) => {
-  res.writeHead(401, { "Content-Type": "application/problem+json" });
-  res.end(JSON.stringify(body));
+const refuse = (res, { status, code, detail = "The session is not valid" }) => {
+  res.writeHead(status, { "Content-Type": "application/problem+json" });
+  res.end(
+    JSON.stringify({ type: "about:blank", title: "Unauthorized", status, code, detail }),
+  );
 };
 const api = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${apiPort}`);
@@ -216,10 +218,11 @@ const api = createServer(async (req, res) => {
     data = { switchRequests, logoutRequests, liveFamilies: liveFamilies.size };
   } else if (sharedTenantCookie && path === "/auth/switch-tenant") {
     switchRequests++;
-    res.writeHead(401, { "Content-Type": "application/problem+json" });
-    res.end(
-      JSON.stringify({ status: 401, code: "identity.mfa_session_required" }),
-    );
+    refuse(res, {
+      status: 401,
+      code: "identity.mfa_session_required",
+      detail: "The target school requires a second factor",
+    });
     return;
   } else if (sharedTenantCookie && path === "/auth/logout") {
     // Like the backend: 204 only after the family is revoked.
