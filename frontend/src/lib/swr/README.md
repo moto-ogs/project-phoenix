@@ -370,8 +370,9 @@ timers were suspended. Timer cleanup requires the original promise identity,
 and an expired pending request cannot trigger a handoff fallback. Expiry only
 evicts intent registry entries, never response data. General preloads retain
 their existing contract.
-The protected tenant shell shares thin fetchers, not page hooks, so data
-intent does not wait for another code chunk. It starts data only after intent. Its queue runs at most three resources concurrently
-and holds at most twelve waiting resources. New intent replaces older queued
-work and unresolved resource selection; queued work waits at most 5 s. Account/school/generation changes
-invalidate the captured writer even while code is loading or work is queued.
+Protected page data travels with the route's server seed, not a second
+browser BFF prefetch. The RSC intent prefetch waits for hover or keyboard
+focus; contact during scrolling does not load a page. Keep audited openings
+and any GET with a side effect out of that payload. When a page claims a key,
+the generation-locked handoff suppresses a duplicate browser load; a missing,
+failed or expired seed leaves the original retry path in charge.
