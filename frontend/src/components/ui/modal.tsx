@@ -239,12 +239,11 @@ export function Modal({
 
   // In der App ist das Blatt ein Schritt im Verlauf: Zurück schließt es, und
   // ein zweites Blatt ersetzt es (#8070). Auf dem Desktop bleibt es aus.
+  // In der App wird auch ein mittiges Fenster zum Blatt: am Telefon von
+  // unten, am iPad als Karte unten in der Mitte (wie `OverlaySheet`).
   const isApp = useIsApp();
-  const sheetSessionId = useSheetSession(
-    isOpen,
-    handleClose,
-    isApp && mobileSheet,
-  );
+  const appSheet = isApp;
+  const sheetSessionId = useSheetSession(isOpen, handleClose, appSheet);
 
   // Cancel an in-flight dismissal as soon as dismissal gets locked, and bring
   // the dialog back from its exit animation.
@@ -339,7 +338,7 @@ export function Modal({
     // trap). Without this, taps on inputs inside this modal are stolen back
     // by the drawer because the modal is portaled to document.body and counts
     // as "outside" the drawer's scope.
-    <SheetSessionProvider value={isApp && mobileSheet ? sheetSessionId : null}>
+    <SheetSessionProvider value={appSheet ? sheetSessionId : null}>
       <InOverlayContext.Provider value={true}>
         <FocusScope
           asChild
@@ -362,7 +361,11 @@ export function Modal({
           <div
             {...MODAL_SCOPE_PROPS}
             className={`fixed inset-0 ${Z_LAYER.modal} ${FIXED_LAYER_SHIFT_INSET} ${suspended ? "hidden" : "flex"} justify-center ${
-              mobileSheet ? "items-end sm:items-center" : "items-center"
+              appSheet
+                ? "items-end"
+                : mobileSheet
+                  ? "items-end sm:items-center"
+                  : "items-center"
             }`}
             aria-hidden={suspended || undefined}
             // pointerEvents: 'auto' is required when this modal is rendered while
@@ -397,9 +400,11 @@ export function Modal({
             {/* Dialog container */}
             <div
               className={`relative flex transform flex-col overflow-hidden overscroll-contain border border-gray-200/50 shadow-2xl outline-none ${
-                mobileSheet
-                  ? `max-h-[calc(100dvh-3rem-env(safe-area-inset-top))] w-full rounded-t-2xl max-sm:max-w-none sm:mx-4 sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100%-2rem)] sm:rounded-2xl ${MODAL_MAX_WIDTH[size]}`
-                  : `mx-4 w-[calc(100%-2rem)] ${MODAL_MAX_WIDTH[size]} max-h-[calc(100dvh-2rem)] rounded-2xl`
+                appSheet
+                  ? `tablet:mx-4 tablet:mb-[calc(1rem+env(safe-area-inset-bottom))] tablet:w-[calc(100%-2rem)] tablet:max-w-[35rem] tablet:rounded-2xl max-h-[calc(100dvh-3rem-env(safe-area-inset-top))] w-full rounded-t-2xl`
+                  : mobileSheet
+                    ? `max-h-[calc(100dvh-3rem-env(safe-area-inset-top))] w-full rounded-t-2xl max-sm:max-w-none sm:mx-4 sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100%-2rem)] sm:rounded-2xl ${MODAL_MAX_WIDTH[size]}`
+                    : `mx-4 w-[calc(100%-2rem)] ${MODAL_MAX_WIDTH[size]} max-h-[calc(100dvh-2rem)] rounded-2xl`
               } ${getModalAnimationClass(isAnimating, isExiting)}`}
               {...dialogAriaProps}
               ref={panelRef}
@@ -481,7 +486,7 @@ export function Modal({
               {footer && (
                 <div
                   className={`flex shrink-0 gap-3 border-t border-gray-100 bg-gray-50/50 p-4 sm:p-6 ${getModalFooterClass(
-                    mobileSheet ? sheetFooter : null,
+                    appSheet || mobileSheet ? sheetFooter : null,
                   )}`}
                 >
                   <ModalFrameContext.Provider value={frame}>
