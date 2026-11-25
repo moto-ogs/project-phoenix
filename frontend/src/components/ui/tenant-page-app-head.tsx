@@ -8,6 +8,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type KeyboardEvent,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -121,8 +122,10 @@ export function AppTenantHead({
   const hasMenu = hasMenuEntries || info != null || actions != null;
   const hasToolbar = tabs != null || toolbar != null;
   useStickyOffset(toolbarRef, scrolledAway);
+  // Die Leiste hängt beim Scrollen ohne Fuge an der schmalen Kopfkarte:
+  // eine Karte wie oben auf der Seite, kein Spalt, durch den Inhalt blitzt.
   let stickyTop = scrolledAway
-    ? `calc(${TOP_GAP} + ${COMPACT_HEIGHT_PX + 8}px)`
+    ? `calc(${TOP_GAP} + ${COMPACT_HEIGHT_PX}px)`
     : TOP_GAP;
   if (inSplitDetail) stickyTop = `${splitHeadHeight + 6}px`;
 
@@ -234,7 +237,7 @@ export function AppTenantHead({
             // Telefon: unten an der Kopfkarte, solange sie steht; klebt die
             // Leiste allein, ist sie wieder eine ganze Karte.
             "phone:mt-0",
-            !veiled && "phone:rounded-t-none phone:border-t-0 phone:pt-0",
+            "phone:rounded-t-none phone:border-t-0 phone:pt-0",
             printHideHeader && "print:hidden",
           )}
           style={{ top: stickyTop }}
@@ -254,6 +257,8 @@ export function AppTenantHead({
         className={cn(
           `tablet:inset-x-8 fixed inset-x-3 ${Z_LAYER.nav} ${FIXED_LAYER_SHIFT} flex items-center gap-1 px-1.5 transition-[opacity,transform] duration-200 motion-reduce:transition-none`,
           FLOATING_CARD,
+          // Mit Leiste bilden schmale Kopfkarte und Leiste eine Karte.
+          hasToolbar && "phone:rounded-b-none phone:border-b-0",
           scrolledAway
             ? "translate-y-0 opacity-100"
             : "pointer-events-none -translate-y-2 opacity-0",
@@ -533,6 +538,25 @@ export function AppTenantTabs({
 }: AppTabsProps) {
   const navRef = useRef<HTMLElement>(null);
   const edges = useScrollEdges(navRef, value);
+  // Reiter ohne eigene Adresse sind echte Reiter (`tablist`): Pfeiltasten
+  // wechseln reihum, nur der gewählte liegt in der Tab-Reihenfolge (#6579).
+  const asTabs = items.every((item) => !item.href);
+  const enabled = items.filter((item) => !item.disabled);
+  const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+    event.preventDefault();
+    const current = event.currentTarget.dataset.tabValue;
+    const index = enabled.findIndex((item) => item.value === current);
+    const step = event.key === "ArrowRight" ? 1 : -1;
+    const next = enabled[(index + step + enabled.length) % enabled.length];
+    if (!next) return;
+    onChange(next.value);
+    navRef.current
+      ?.querySelector<HTMLButtonElement>(
+        `[data-tab-value="${CSS.escape(next.value)}"]`,
+      )
+      ?.focus();
+  };
   const scrollOn = () => {
     const node = navRef.current;
     if (!node) return;
@@ -543,6 +567,7 @@ export function AppTenantTabs({
       <nav
         ref={navRef}
         aria-label={label}
+        role={asTabs ? "tablist" : undefined}
         // `py-1.5 -mt-1`: Die Leiste schneidet senkrecht mit ab; so bleibt die
         // 44-px-Trefferfläche der 32 px hohen Reiter ganz. Unten kein
         // negativer Rand: Sonst ragt das Suchfeld darunter in sie hinein.
@@ -579,7 +604,15 @@ export function AppTenantTabs({
               type="button"
               variant="chip"
               size="md"
-              aria-pressed={active}
+              {...(asTabs
+                ? {
+                    role: "tab",
+                    "aria-selected": active,
+                    tabIndex: active ? 0 : -1,
+                    "data-tab-value": item.value,
+                    onKeyDown: onTabKeyDown,
+                  }
+                : { "aria-pressed": active })}
               disabled={item.disabled}
               onClick={() => onChange(item.value)}
               noTooltip="Reiter: der Name sagt, was er zeigt."

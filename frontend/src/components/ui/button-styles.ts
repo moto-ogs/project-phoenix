@@ -158,11 +158,11 @@ export function buttonStyles({
     // (per Finger 44 px wie jeder Kit-Knopf).
     // Der gewählte Tag (`aria-pressed`) ist dunkel gefüllt.
     day_chip:
-      "h-9 gap-1 rounded-md px-2.5 py-0 text-sm font-normal bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-gray-900 aria-pressed:bg-gray-900 aria-pressed:text-white aria-pressed:hover:bg-gray-900 aria-pressed:hover:text-white",
+      "h-9 gap-1 rounded-md px-2.5 py-0 text-sm font-normal bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-gray-900 aria-pressed:bg-gray-900 aria-pressed:text-white aria-selected:border-gray-900 aria-selected:bg-gray-900 aria-selected:text-white aria-pressed:hover:bg-gray-900 aria-pressed:hover:text-white",
     // Derselbe Tag zweizeilig im Tagesstreifen am Telefon (`PlanningDayChip
     // stacked`): Kürzel, Datum und Zustand untereinander.
     day_chip_stacked:
-      "h-auto flex-col justify-start gap-0.5 rounded-lg px-1 py-1.5 text-sm font-normal bg-transparent text-gray-600 hover:bg-gray-100 aria-pressed:bg-gray-900 aria-pressed:text-white aria-pressed:hover:bg-gray-900",
+      "h-auto flex-col justify-start gap-0.5 rounded-lg px-1 py-1.5 text-sm font-normal bg-transparent text-gray-600 hover:bg-gray-100 aria-pressed:bg-gray-900 aria-pressed:text-white aria-selected:border-gray-900 aria-selected:bg-gray-900 aria-selected:text-white aria-pressed:hover:bg-gray-900",
     // Zahl an der Ecke einer Kachel, die etwas öffnet (#6486): die Fläche ist
     // durchsichtig, die sichtbare Zahl ist ein `NotificationBadge` im Knopf.
     // 32 px Trefferfläche, per Finger 44 px. Bringt sein Maß selbst mit.
@@ -170,7 +170,7 @@ export function buttonStyles({
       "h-8 min-w-8 rounded-full p-0 bg-transparent shadow-none pointer-coarse:min-w-11 hover:opacity-90 focus-visible:ring-moto-blue",
     // Reiter-Chip der App-Leiste (#8070): runde 32-px-Pille (Trefferfläche 44 px), gewählt
     // (`aria-pressed`, `aria-current`) dunkel gefüllt. Bringt sein Maß mit.
-    chip: "h-8 shrink-0 gap-1.5 rounded-full px-3.5 py-0 whitespace-nowrap border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 aria-pressed:border-gray-900 aria-[current=page]:border-gray-900 aria-pressed:bg-gray-900 aria-pressed:text-white aria-[current=page]:bg-gray-900 aria-[current=page]:text-white",
+    chip: "h-8 shrink-0 gap-1.5 rounded-full px-3.5 py-0 whitespace-nowrap border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 aria-pressed:border-gray-900 aria-[current=page]:border-gray-900 aria-pressed:bg-gray-900 aria-pressed:text-white aria-selected:border-gray-900 aria-selected:bg-gray-900 aria-selected:text-white aria-[current=page]:bg-gray-900 aria-[current=page]:text-white",
   };
   // Fingerregel (#5531): Bei Bedienung per Finger ist jeder Kit-Knopf
   // mindestens 44 px hoch (Apple HIG 44 pt), `icon` auch 44 px breit. Mit Maus
