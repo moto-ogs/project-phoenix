@@ -321,12 +321,17 @@ export default function TraegerClosingDaysPage() {
       statsLoading={calendarLoading}
       error={loadError}
       searchSlot={
-        <SegmentedControl
-          ariaLabel="Jahr"
-          items={yearItems}
-          value={String(year)}
-          onChange={(next) => setYear(Number(next))}
-        />
+        // Am Telefon teilen sich die fünf Jahre die volle Breite; ab sm ist
+        // die Auswahl so breit wie ihre Segmente.
+        <div className="sm:w-fit">
+          <SegmentedControl
+            ariaLabel="Jahr"
+            items={yearItems}
+            value={String(year)}
+            onChange={(next) => setYear(Number(next))}
+            fullWidth
+          />
+        </div>
       }
       overflowMenu={exportItems}
       actions={

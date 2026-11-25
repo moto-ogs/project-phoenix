@@ -92,3 +92,24 @@ export const FullWidth: Story = {
     </div>
   ),
 };
+
+/**
+ * Volle Breite mit fünf kurzen Werten (Jahre, #8128): am Telefon teilen
+ * sich die Segmente die Breite, statt über den Rand zu ragen.
+ */
+export const FullWidthManyOptions: Story = {
+  render: () => (
+    <div className="w-80">
+      <SegmentedControl
+        fullWidth
+        items={["2025", "2026", "2027", "2028", "2029"].map((year) => ({
+          value: year,
+          label: year,
+        }))}
+        value="2026"
+        onChange={noop}
+        ariaLabel="Jahr"
+      />
+    </div>
+  ),
+};
