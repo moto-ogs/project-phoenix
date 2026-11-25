@@ -787,9 +787,7 @@ function setupDefaultMocks(overrides?: {
               assignmentsUnavailable: false,
               week: emptyTotals,
               month: emptyTotals,
-              accountStart: parseISODate(
-                `${berlinTodayISO().slice(0, 4)}-01-01`,
-              ),
+              accountStart: `${berlinTodayISO().slice(0, 4)}-01-01`,
               accountBalanceMinutes: 0,
             },
         error,
@@ -821,8 +819,8 @@ function setupDefaultMocks(overrides?: {
           ? undefined
           : {
               staffId: mockOwnStaff.id,
-              from,
-              to,
+              from: toISODate(from),
+              to: toISODate(to),
               sessions: history,
               rows: history.map(adaptHistorySessionForMetrics),
               absences: overrides?.tableAbsencesError ? [] : absences,

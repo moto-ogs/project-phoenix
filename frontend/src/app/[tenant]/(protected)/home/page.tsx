@@ -1,4 +1,4 @@
-import { loadHomeSeed } from "~/lib/home-seed.server";
+import { loadHomePlanningSeed, loadHomeSeed } from "~/lib/home-seed.server";
 import HomeContent from "./page-content";
 import { HomeSeed } from "./page-seed";
 
@@ -9,8 +9,9 @@ export default async function HomePage({
 }) {
   const { tenant } = await params;
   const seed = loadHomeSeed(tenant).catch(() => null);
+  const planningSeed = loadHomePlanningSeed(tenant).catch(() => null);
   return (
-    <HomeSeed seed={seed}>
+    <HomeSeed seed={seed} planningSeed={planningSeed}>
       <HomeContent />
     </HomeSeed>
   );

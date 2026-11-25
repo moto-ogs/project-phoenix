@@ -65,7 +65,7 @@ import {
 import { TEST_CLOCK_TODAY } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 
-import SlotListsPage from "./page";
+import SlotListsPage from "./page-content";
 
 function Providers({ children }: Readonly<{ children: ReactNode }>) {
   return (

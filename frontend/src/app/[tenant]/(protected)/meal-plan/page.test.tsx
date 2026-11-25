@@ -16,7 +16,7 @@ import type { MealPlanDay } from "~/lib/meal-plan-api";
 
 import { SWRConfig } from "~/lib/swr/testing";
 
-import MealPlanPage from "./page";
+import MealPlanPage from "./page-content";
 
 vi.unmock("swr");
 

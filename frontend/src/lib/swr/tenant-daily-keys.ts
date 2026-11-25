@@ -202,6 +202,8 @@ export const tenantDailyKeys = {
    */
   rosterDeviations: (periodId: string, freshReadID?: string | null) =>
     `roster-deviations-${periodId}${freshReadID ? `-connect-${freshReadID}` : ""}`,
+  rosterDeviationCount: (periodId: string) =>
+    `${tenantDailyKeys.rosterDeviations(periodId)}-count`,
   /** Vertretungsansicht: Termine, Lücken und Personal einer Woche. */
   vertretungWeekFamily: "vertretung-week-",
   vertretungWeek: (from: string, to: string): string =>

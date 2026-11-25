@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { cache } from "react";
 import { incomingClientForwardHeaders } from "~/lib/client-headers.server";
 import { isScopeBooked, type ModuleScope } from "~/lib/module-register";
 import { readPortalSessionSnapshot } from "~/lib/portal-session-snapshot.server";
@@ -7,7 +8,7 @@ import { tenantSlugFromHost } from "~/lib/tenant-host";
 import { resolveTenantCached } from "~/lib/tenant-resolve.server";
 
 /** The same host and school binding as a tenant BFF read. */
-export async function readTenantPageContext(
+export const readTenantPageContext = cache(async function (
   slug: string,
   module?: ModuleScope,
 ) {
@@ -38,4 +39,4 @@ export async function readTenantPageContext(
     return null;
   }
   return { snapshot, session, tenant, token: snapshot.accessToken };
-}
+});

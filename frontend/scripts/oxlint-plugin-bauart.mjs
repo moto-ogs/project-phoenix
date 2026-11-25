@@ -316,7 +316,7 @@ const ROW_ACTION_BASELINE = new Map(
       "aus Zielen entfernen@864",
       "aus Zielen entfernen@897",
     ],
-    "src/app/[tenant]/(protected)/meal-plan/page.tsx": [
+    "src/app/[tenant]/(protected)/meal-plan/page-content.tsx": [
       "Gericht entfernen@1006",
     ],
     "src/app/[tenant]/(protected)/parent-announcements/page.tsx": [

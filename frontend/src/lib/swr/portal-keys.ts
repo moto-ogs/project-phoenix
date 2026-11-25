@@ -261,6 +261,8 @@ export const timetableKeys = {
     `${timetableKeys.schoolVacationsFamily}${from}-${to}`,
   bookingLeftovers: (periodId: string) =>
     `booking-leftovers-${encodeURIComponent(periodId)}`,
+  bookingLeftoverCount: (periodId: string) =>
+    `${timetableKeys.bookingLeftovers(periodId)}-count`,
   // Elternhinweise zu eigenen Schließtagen in Ferienwochen (ADR 0196):
   // Grund, Tage, Stand und eine Zahl, keine Namen.
   holidayClosureNotices: () => "timetable-holiday-closure-notices",

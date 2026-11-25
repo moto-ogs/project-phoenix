@@ -48,6 +48,17 @@ export function mapBookingLeftovers(
   }));
 }
 
+/** The Team start page needs a count, not the named booking rows. */
+export function countOpenBookingChildren(
+  leftovers: readonly BookingLeftover[],
+): number {
+  return new Set(
+    leftovers
+      .filter((leftover) => !leftover.kept)
+      .map((leftover) => leftover.studentId),
+  ).size;
+}
+
 /** One row per child, Regeltermin, start and end; stable across reloads. */
 export function bookingLeftoverKey(leftover: BookingLeftover): string {
   return `${leftover.templateId}-${leftover.studentId}-${leftover.from}-${leftover.until ?? "open"}`;

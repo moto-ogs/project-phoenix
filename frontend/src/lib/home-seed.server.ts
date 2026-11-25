@@ -1,5 +1,10 @@
 import { leadsSchool } from "~/lib/auth-utils";
 import { mapBirthdayOverview } from "~/lib/birthdays-api";
+import {
+  countOpenBookingChildren,
+  mapBookingLeftovers,
+} from "~/lib/booking-leftover";
+import { findPeriodForDate, mapPeriods } from "~/lib/calendar-period-helpers";
 import * as active from "~/lib/contract/active.generated";
 import * as birthdays from "~/lib/contract/birthdays.generated";
 import * as dayChanges from "~/lib/contract/day-changes.generated";
@@ -22,10 +27,12 @@ import {
 } from "~/lib/redirect-utils";
 import { readContract, seedOf, seedRead } from "~/lib/server-seed.server";
 import { mapSchoolVacationHints } from "~/lib/school-vacations-api";
+import { mapRosterDeviations } from "~/lib/roster-deviation";
 import { mapDevicePinSetupReason } from "~/lib/settings-api";
 import { mapOwnAssignment } from "~/lib/shift-helpers";
 import { mapDashboardSummary } from "~/lib/staff-overview-api";
 import {
+  databaseKeys,
   devicePinKeys,
   homeKeys,
   homeLayoutKeys,
@@ -35,6 +42,7 @@ import {
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import type { ServerSeedEntry } from "~/lib/swr/server-seed";
 import { dashboardKeys } from "~/lib/swr/shell-keys";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { readTenantPageContext } from "~/lib/tenant-page-seed.server";
 import { mapPlannedInstance } from "~/lib/timetable-operations-types";
 
@@ -238,6 +246,76 @@ export async function loadHomeSeed(slug: string) {
         ),
       ),
     });
+  }
+  return seedOf(snapshot, entries, builtAt);
+}
+
+/** The optional planning notices never delay the board and its layout. */
+export async function loadHomePlanningSeed(slug: string) {
+  const builtAt = Date.now();
+  const context = await readTenantPageContext(slug);
+  if (
+    !context ||
+    context.tenant.timetableEnabled === false ||
+    !homeBlockAccess(context.session, false).has("schedules:manage") ||
+    isSchoolPortalHandoffPath(getSmartRedirectPath(context.session))
+  )
+    return null;
+  const { snapshot, token } = context;
+  const today = berlinTodayISO();
+  const periods = seedRead("homePlanningPeriods", async (signal) =>
+    mapPeriods(
+      (
+        await readContract(timetable.routes["GET /api/timetable/periods/"], {
+          token,
+          signal,
+        })
+      ).data,
+    ),
+  );
+  const entries: ServerSeedEntry[] = [
+    { key: databaseKeys.calendarPeriods(), value: periods },
+  ];
+  const list = await periods;
+  const period = list && findPeriodForDate(list, today);
+  if (period) {
+    const query = { period_id: period.id };
+    entries.push(
+      {
+        key: timetableKeys.bookingLeftoverCount(period.id),
+        value: seedRead("homeBookingLeftoverCount", async (signal) =>
+          countOpenBookingChildren(
+            mapBookingLeftovers(
+              (
+                await readContract(
+                  timetable.routes[
+                    "GET /api/timetable/templates/booking-leftovers"
+                  ],
+                  { query, token, signal },
+                )
+              ).data,
+            ),
+          ),
+        ),
+      },
+      {
+        key: tenantDailyKeys.rosterDeviationCount(period.id),
+        value: seedRead(
+          "homeRosterDeviationCount",
+          async (signal) =>
+            mapRosterDeviations(
+              (
+                await readContract(
+                  timetable.routes[
+                    "GET /api/timetable/templates/roster-deviations"
+                  ],
+                  { query, token, signal },
+                )
+              ).data,
+            ).length,
+        ),
+      },
+    );
   }
   return seedOf(snapshot, entries, builtAt);
 }

@@ -19,7 +19,7 @@ const FEEDBACK_VALUES: readonly FeedbackEntry["feedbackType"][] = [
   "negative",
 ];
 
-function mapFeedbackResponse(entry: FeedbackResponse): FeedbackEntry {
+export function mapFeedbackResponse(entry: FeedbackResponse): FeedbackEntry {
   // Combine day + time into a timestamp
   // day is "2026-04-06", time is "15:30:23"
   const timestamp = `${entry.day}T${entry.time}`;

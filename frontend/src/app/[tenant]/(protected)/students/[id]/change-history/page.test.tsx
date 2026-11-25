@@ -12,7 +12,7 @@ import { useInvalidateFamily } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
-import StudentChangeHistoryPage from "./page";
+import StudentChangeHistoryPage from "./page-content";
 
 vi.unmock("swr");
 
