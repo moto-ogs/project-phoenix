@@ -14,8 +14,6 @@ import { readContract, seedOf, seedRead } from "~/lib/server-seed.server";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import type { ServerSeed, ServerSeedEntry } from "~/lib/swr/server-seed";
 
-type Child = parentMeContract.ChildResponse;
-
 /**
  * The authorized children of the account, once per server render (#8077):
  * the layout's shell seed and the page's seed share this read. The backend
@@ -38,7 +36,7 @@ const loadChildren = cache((token: string) =>
  */
 async function perChild<T>(
   name: string,
-  children: readonly Child[],
+  children: readonly parentMeContract.ChildResponse[],
   load: (studentId: string, signal: AbortSignal) => Promise<T>,
 ): Promise<Record<string, T> | undefined> {
   const values = await Promise.all(
