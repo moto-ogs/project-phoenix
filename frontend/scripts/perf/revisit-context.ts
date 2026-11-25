@@ -3,7 +3,7 @@ import { gotoTolerant } from "./access";
 import { CPU_THROTTLE, NETWORK, requestCost } from "./navigation-probe";
 import { RequestRecorder } from "./recorder";
 import { openRevisitSession, type RevisitFixture } from "./revisit-access";
-import { installContentProbe } from "./revisit-content";
+import { armContentClock, installContentProbe } from "./revisit-content";
 import { parentStops } from "./revisit-targets";
 
 /** Not warm reads: a logout requires confirmation, then the former account's bookmark requires a new login. */
@@ -71,24 +71,40 @@ export async function measureParentSwitch(
       };
     };
     recorder.start();
-    let start = performance.now();
-    await page
+    await armContentClock(
+      page,
+      {
+        path: before.home.content.path,
+        markers: [
+          {
+            css: '[role="dialog"] p',
+            exact: "Möchtest du dich wirklich von deinem Konto abmelden?",
+          },
+          { css: '[role="dialog"] button', exact: "Abmelden" },
+        ],
+        criterion: "Bedienbare Abmeldebestätigung",
+      },
+      mobile ? "touchstart" : "pointerdown",
+    );
+    const logout = page
       .getByRole("dialog", { name: mobile ? "Mehr" : /Profilmenü/ })
-      .getByRole("button", { name: "Abmelden", exact: true })
-      .click();
+      .getByRole("button", { name: "Abmelden", exact: true });
+    if (mobile) await logout.tap();
+    else await logout.click();
     const confirm = page
       .getByRole("dialog", { name: "Abmelden", exact: true })
       .getByRole("button", { name: "Abmelden", exact: true });
+    await page.waitForFunction(() => window.__revisit.elapsed !== null);
     await confirm.waitFor();
     const confirmation = {
-      ms: Math.round(performance.now() - start),
+      ms: await page.evaluate(() => Math.round(window.__revisit.elapsed!)),
       ...diagnostic(),
     };
     await confirm.click();
     const email = page.locator('input[type="email"]');
     await email.waitFor();
     recorder.start();
-    start = performance.now();
+    const start = performance.now();
     await gotoTolerant(page, origin + before.child.content.path);
     await email.waitFor();
     await page.locator('input[type="password"]').waitFor();

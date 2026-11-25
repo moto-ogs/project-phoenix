@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 
 import { loginToLocalMfaPortal } from "../../e2e/local-tenant-login";
@@ -13,6 +14,39 @@ export type RevisitRole =
   | "traeger"
   | "operator"
   | "caterer";
+
+/** Only numeric output from a successful full-day simulation may enter a report. */
+export function readDayEvidence(seedCreatedAt?: string) {
+  const [seed, day, ...rows] = readFileSync(
+    "../tmp/dev-native/revisit-day.txt",
+    "utf8",
+  )
+    .trim()
+    .split("\n");
+  const today = new Date().toLocaleDateString("sv-SE", {
+    timeZone: "Europe/Berlin",
+  });
+  if (!seed || seed !== seedCreatedAt || day !== today)
+    throw new Error(
+      "Tagesbeleg passt nicht zu Seed und Messtag: scripts/perf-revisit.sh --prepare-day",
+    );
+  const counts = Object.fromEntries(
+    rows.map((row) => {
+      const match =
+        /^ *(Sessions started|Attendance records|Students checked in|Early pickups|Messages written): +(\d+)$/.exec(
+          row,
+        );
+      if (!match) throw new Error("Ungültiger Tagesbeleg");
+      return [match[1]!, Number(match[2])];
+    }),
+  );
+  if (
+    Object.keys(counts).length !== 5 ||
+    Object.values(counts).some((n) => n <= 0)
+  )
+    throw new Error("Unvollständige Vollbetriebs-Simulation");
+  return { day, counts };
+}
 
 export function revisitFixture() {
   const state = readSeedProfile({ profile: "vollbetrieb" });

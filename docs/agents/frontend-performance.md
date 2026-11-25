@@ -19,8 +19,8 @@ Paths below are relative to `frontend/` except `.github/` and `docs/`.
 
 On a configured native worktree, start only the backend and its database/Mailpit.
 Use the seeded `vollbetrieb` school and run
-`scripts/dev-native.sh backend go run ./cmd/devtools simulate full-day --profile vollbetrieb`
-on the measurement day ([seed instructions](../getting-started.md)). The seeder
+`devbox run -- scripts/perf-revisit.sh --prepare-day`
+once on the measurement day ([seed instructions](../getting-started.md)). This runs the full-day simulation without a clock override and records only its aggregate counts, bound to the seed timestamp and Berlin date. The benchmark requires that receipt. The seeder
 must have written the local Caterer login to its private v3 state. Do not copy
 credentials into environment examples or results. Leave the worktree frontend
 port free. Check `uptime` and `~/bin/agent-heavy --status` before measuring.
@@ -66,16 +66,15 @@ journey names for diagnosis only. A partial result is not a baseline.
 - Same-page dialogs and filters without their own history entries have no Back
   time: opening the parent absence form does **not** submit it; the caregiver's
   regular daily plan is measured via its sidebar entry and browser history. The
-  additional read-only weekly plan changes day/week with `replaceState`. Caterer has just
+  additional read-only weekly plan changes day/week with `replaceState`. For the day view the first usable blocks must match the full set of titles and times after the target request settles; no block content is archived. Caterer has just
   two protected routes, orders and account. Period and school expansion operate
   on the orders page. None can supply four distinct intermediate routes.
 - Timing stops before the network diagnostic window: after the intervening pages have settled, all non-noise requests from
   action preparation through 1.5 s quiet (25 s cap) are counted, including runs
   below budget. RSC/JS/BFF are request counts, not necessarily transferred bodies.
   Visible loading indicators are recorded separately. Host load averages and
-  CPU idle percentage describe the shared machine, not just Chromium. After
-  the build, the series waits for a five-second window with at least 50% CPU idle;
-  later contention is recorded per sample, never used to discard slow values.
+  CPU idle percentage describe the shared machine, not just Chromium. Before the series and each individual trial, the harness waits for a five-second window with at least 50% CPU idle;
+  contention during a trial is recorded and marked, never used to discard slow values. A median within 20 ms of the budget is flagged, not evidence of a code-level difference.
 
 ### Coverage and evidence
 

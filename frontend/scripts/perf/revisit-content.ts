@@ -12,10 +12,14 @@ export interface Content {
   query?: Record<string, string>;
   markers: Marker[];
   criterion: string;
+  /** Compare the visible plan blocks at first paint with the settled day response. Never serialize titles. */
+  confirmTitles?: string;
 }
 type Probe = {
   matches: (content: Content) => boolean;
   elapsed: number | null;
+  firstTitles: string[];
+  titles: (selector: string) => string[];
   start: (event?: Event) => void;
 };
 declare global {
@@ -33,6 +37,12 @@ export async function installContentProbe(page: Page) {
       node.checkVisibility({ opacityProperty: true, visibilityProperty: true });
     window.__revisit = {
       elapsed: null,
+      firstTitles: [],
+      titles: (selector) =>
+        Array.from(document.querySelectorAll<HTMLElement>(selector))
+          .filter(visible)
+          .map((el) => el.title)
+          .sort(),
       start: () => {},
       matches({ path, numericDetail, query, markers }) {
         if (
@@ -92,6 +102,8 @@ export async function armContentClock(
           // frame; a transient or unmounted target cannot finish the clock.
           if (matched && matchedLastFrame) {
             probe.elapsed = performance.now() - start;
+            if (content.confirmTitles)
+              probe.firstTitles = probe.titles(content.confirmTitles);
             return;
           }
           matchedLastFrame = matched;

@@ -15,6 +15,7 @@ export interface Observation {
   criterion: string;
   load: number[];
   idlePercent: number;
+  startIdlePercent: number;
   protocol: string;
   step: Step;
   ms: number;
@@ -56,7 +57,16 @@ export function saveObservations(
 }
 
 export function writeReport(
-  metadata: { revision: string; started: string; browser: string },
+  metadata: {
+    revision: string;
+    development: string;
+    started: string;
+    browser: string;
+    cpuThrottle: number;
+    rttMs: number;
+    desktopMbit: number;
+    mobileMbit: number;
+  },
   switches: Switch[],
   results: Observation[],
   permission: Awaited<ReturnType<typeof measurePermissionChange>>,
@@ -72,11 +82,16 @@ export function writeReport(
   const lines = [
     "# Revisit: Fachinhalt nach Navigation",
     "",
-    metadata.revision +
+    "development@" +
+      metadata.development +
+      " · Harness " +
+      metadata.revision +
       " · " +
       metadata.started +
       " · Chromium " +
       metadata.browser,
+    "",
+    `CPU ×${metadata.cpuThrottle}, ${metadata.rttMs} ms RTT, Desktop ${metadata.desktopMbit} Mbit/s, Pixel 7 ${metadata.mobileMbit} Mbit/s. Abweichungen: „nah“ = Median 130–170 ms; „Last“ = mindestens ein Durchgang im Mittel unter 50 % freier Host-CPU. Kein kausaler Vergleich bei unterschiedlicher Last.`,
     "",
     "Millisekunden: Median [Minimum–Maximum] aus drei Läufen. Ziel: je gültigem warmen bzw. Rückweg-Median < 150 ms. · = kein solcher History-Weg. Pro Zelle folgen RSC/JS/BFF (jeweils Median) und die tatsächlich sichtbaren Ladeanzeigen dieser Richtung. Einzelwerte und Ladeanzeigen je Lauf stehen im JSON.",
     "",
@@ -101,7 +116,18 @@ export function writeReport(
         .join("/");
       const loading =
         [...new Set(runs.flatMap((r) => r.loading))].join(", ") || "keine";
-      cells.push(interval(ms) + "<br>" + net + " · " + loading);
+      const nearBudget =
+        step !== "kalt" && median(ms) >= 130 && median(ms) <= 170;
+      const loadNote = runs.some((r) => r.idlePercent < 50) ? " · Last" : "";
+      cells.push(
+        interval(ms) +
+          (nearBudget ? " · nah" : "") +
+          loadNote +
+          "<br>" +
+          net +
+          " · " +
+          loading,
+      );
       summary.push({
         role: first.role,
         name: first.name,
@@ -128,6 +154,13 @@ export function writeReport(
           first.criterion,
         ].join(" | ") +
         " |",
+    );
+  }
+  lines.push("", "## Gültige Mediane unter 150 ms", "");
+  for (const step of steps.filter((s) => s !== "kalt")) {
+    const eligible = summary.filter((row) => row.step === step);
+    lines.push(
+      `- ${step}: ${eligible.filter((row) => row.median < 150).length}/${eligible.length}`,
     );
   }
   if (switches.length) {

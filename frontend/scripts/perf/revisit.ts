@@ -30,7 +30,11 @@ import { measurePermissionChange } from "./revisit-permission";
 import { measureParentSwitch } from "./revisit-context";
 import { routeCatalog } from "./revisit-catalog";
 import { RequestRecorder } from "./recorder";
-import { openRevisitSession, revisitFixture } from "./revisit-access";
+import {
+  openRevisitSession,
+  readDayEvidence,
+  revisitFixture,
+} from "./revisit-access";
 import {
   armContentClock,
   installContentProbe,
@@ -102,6 +106,21 @@ async function measure(
   );
   const ms = await page.evaluate(() => Math.round(window.__revisit.elapsed!));
   const settle = await recorder.waitForQuiet(QUIET);
+  if (stop.content.confirmTitles) {
+    const confirmed = await page.evaluate((selector) => {
+      const { firstTitles, titles } = window.__revisit;
+      const settled = titles(selector);
+      return (
+        firstTitles.length > 0 &&
+        firstTitles.length === settled.length &&
+        firstTitles.every((title, index) => title === settled[index])
+      );
+    }, stop.content.confirmTitles);
+    if (settle !== "quiet" || !confirmed)
+      throw new Error(
+        "Erster Tagesplan und bestätigter Tagesinhalt unterscheiden sich.",
+      );
+  }
   const records = recorder.records.filter((record) => !record.noise);
   const documents = records.filter(
     (record) => record.resourceType === "document",
@@ -192,7 +211,10 @@ async function runJourney(
           )[0] as PerformanceNavigationTiming
         ).nextHopProtocol,
     );
-    await recorder.waitForQuiet({ quietMs: 3000, capMs: 30000 });
+    if (
+      (await recorder.waitForQuiet({ quietMs: 3000, capMs: 30000 })) !== "quiet"
+    )
+      throw new Error("Ausgangsseite nicht ruhig: " + journey.name);
     let documentRequests = 0;
     page.on("request", (request) => {
       if (request.resourceType() === "document") documentRequests++;
@@ -285,7 +307,7 @@ function idleSince(before: ReturnType<typeof cpuTimes>) {
 }
 
 /** Do not begin a timing series while another local build occupies the machine. */
-async function initialIdleWindow() {
+async function waitForIdleWindow() {
   for (;;) {
     const before = cpuTimes();
     await delay(5000);
@@ -329,7 +351,7 @@ export async function measureRevisits(browser: Browser) {
   const results: Observation[] = [];
   let permission: Awaited<ReturnType<typeof measurePermissionChange>> = [];
   const metadata = {
-    initialIdlePercent: await initialIdleWindow(),
+    initialIdlePercent: await waitForIdleWindow(),
     revision: execFileSync("git", ["rev-parse", "HEAD"], {
       encoding: "utf8",
     }).trim(),
@@ -343,7 +365,13 @@ export async function measureRevisits(browser: Browser) {
     desktopMbit: 3,
     mobileMbit: 1.6,
     selection: selected ?? "all",
-    seed: "vollbetrieb + simulate full-day",
+    seed: "vollbetrieb",
+    simulation: readDayEvidence(fixture.seedCreatedAt),
+    development: execFileSync(
+      "git",
+      ["merge-base", "HEAD", "origin/development"],
+      { encoding: "utf8" },
+    ).trim(),
     seedCreatedAt: fixture.seedCreatedAt,
     seedStudents: fixture.seedStudents,
     viewport: {
@@ -390,6 +418,7 @@ export async function measureRevisits(browser: Browser) {
           const key = [role, journey.name, profile].join("/");
           if (failures.has(key)) continue;
           console.log(role, journey.name, profile, repeat);
+          const startIdlePercent = await waitForIdleWindow();
           const load = loadavg();
           const before = cpuTimes();
           let samples: Sample[];
@@ -413,6 +442,7 @@ export async function measureRevisits(browser: Browser) {
               repeat,
               load,
               idlePercent,
+              startIdlePercent,
               criterion: journey.target.content.criterion,
             });
           save();

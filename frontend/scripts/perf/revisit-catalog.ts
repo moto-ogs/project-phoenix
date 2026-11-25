@@ -53,7 +53,7 @@ const portalGroups: Record<string, Array<[RegExp, Group]>> = {
       group(
         "Fachlisten und Verwaltung",
         "anfragen-admin",
-        "Geschützte Fachansichten mit eigener Datenquelle; Liste, Detail, Konfiguration oder Postfach.",
+        "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars.",
       ),
     ],
   ],
@@ -99,7 +99,7 @@ const portalGroups: Record<string, Array<[RegExp, Group]>> = {
       group(
         "Trägerverwaltung",
         "schulen-ferien, ferien-zeitraum",
-        "Wiederkehrende Listen mit Drilldown, Auswertungen und Einstellungen. Bestätigungen und Schreibaktionen sind kein warmer Lesezugriff.",
+        "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten.",
       ),
     ],
   ],

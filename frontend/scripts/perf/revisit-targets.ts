@@ -268,7 +268,11 @@ function tenant(role: "admin" | "betreuer", f: RevisitFixture): Journey[] {
       link: (p) => p.getByRole("button", { name, exact: true }),
       content: {
         ...plan.content,
-        criterion: "Gewählte Leseansicht mit belegtem Betreuungsblock",
+        criterion:
+          name === "Tag"
+            ? "Aktive Tagesansicht mit den fachlich gleichen Terminblöcken wie nach der Tagesantwort"
+            : "Aktive Wochenansicht mit belegtem Betreuungsblock",
+        confirmTitles: name === "Tag" ? 'main button[title*=" – "]' : undefined,
         markers: [
           exact('button[aria-pressed="true"]', name),
           text("main button", "Frühbetreuung|Lernzeit Jahrgang"),
@@ -449,7 +453,7 @@ function portals(f: RevisitFixture): Journey[] {
   const { home, child, list } = parentStops(f.first);
   const messages = pageStop(
     "/messages",
-    "Konversation des Kindes oder bestätigter leerer Posteingang",
+    "Auswählbare Unterhaltung des ausgewählten Kindes",
     [css('main a[href="/messages/' + f.first.childId + '"]')],
   );
   const calendar = pageStop(
