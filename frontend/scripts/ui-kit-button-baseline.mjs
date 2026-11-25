@@ -34,7 +34,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/ui/page-header/FilterPanel.tsx",
-    lines: [240],
+    lines: [241],
     reason: "Auswahloptionen eines Filters, kein Knopf",
   },
   {

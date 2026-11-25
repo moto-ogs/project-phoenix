@@ -21,6 +21,7 @@ import { CustomSelect } from "../custom-select";
 import { FieldLabel } from "../field-label";
 import { MultiSelect } from "../multi-select";
 import { InfoSection } from "../info-section";
+import { SectionLabel } from "../section-label";
 import { Button } from "../button";
 import { cn } from "~/lib/utils";
 import { FIXED_LAYER_SHIFT } from "../hooks/useFixedLayersFollowViewport";
@@ -396,19 +397,41 @@ export function FilterPanel({
     // Sectioned layout reuses the detail-modal InfoSection so the filter
     // panel speaks the same calm visual language as the room/enrollment
     // detail views — no bespoke section chrome.
-    <div className="space-y-4">
-      {filterSections.map((section) => (
-        <InfoSection
-          key={section.title}
-          title={section.title}
-          icon={section.icon}
-        >
-          <div className="grid gap-3 md:grid-cols-2">
-            {section.filters.map(renderFilterField)}
-          </div>
-        </InfoSection>
-      ))}
-    </div>
+    asSheet ? (
+      // Im Blatt: Abschnitte als Gruppen mit Trennlinie, keine Karte im Blatt.
+      <div className="divide-y divide-gray-100">
+        {filterSections.map((section) => (
+          <section
+            key={section.title}
+            className="space-y-3 px-2 py-4 first:pt-1"
+          >
+            <SectionLabel as="h3" className="flex items-center gap-2">
+              {section.icon ? (
+                <span className="h-4 w-4">{section.icon}</span>
+              ) : null}
+              {section.title}
+            </SectionLabel>
+            <div className="grid gap-3 md:grid-cols-2">
+              {section.filters.map(renderFilterField)}
+            </div>
+          </section>
+        ))}
+      </div>
+    ) : (
+      <div className="space-y-4">
+        {filterSections.map((section) => (
+          <InfoSection
+            key={section.title}
+            title={section.title}
+            icon={section.icon}
+          >
+            <div className="grid gap-3 md:grid-cols-2">
+              {section.filters.map(renderFilterField)}
+            </div>
+          </InfoSection>
+        ))}
+      </div>
+    )
   ) : (
     <div className="space-y-4">{filters.map(renderFilterField)}</div>
   );

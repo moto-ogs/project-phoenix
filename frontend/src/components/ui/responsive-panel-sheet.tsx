@@ -144,10 +144,14 @@ export function ResponsivePanelSheet({
           event.stopPropagation();
         }}
       >
-        <DrawerTitle className="sr-only">{label}</DrawerTitle>
+        <DrawerTitle className="tablet:text-lg px-4 pt-1 pb-1 text-base leading-6">
+          {label}
+        </DrawerTitle>
+        {/* Eine klebende Fußleiste schließt bündig unten ab: Darunter läuft
+            kein Inhalt mehr durch. */}
         <div
           {...SCROLL_AREA_PROPS}
-          className="min-h-0 overflow-y-auto overscroll-contain px-2 pt-2 pb-4"
+          className="min-h-0 overflow-y-auto overscroll-contain px-2 pt-1 pb-4 has-[.sticky.bottom-0]:pb-0"
         >
           <ParentSheetContext.Provider value={ownSheet}>
             {children}
