@@ -207,6 +207,8 @@ services:
   # Web UI: http://localhost:8025 — API: http://localhost:8025/api/v1/messages
   mailpit:
     image: axllent/mailpit:latest
+    # Local SMTP peers do not need reverse DNS before the MFA message is accepted.
+    command: ["--smtp-disable-rdns"]
     mem_limit: 256m
     ports:
       - "${MAILPIT_HOST_PORT}:8025"   # Web UI

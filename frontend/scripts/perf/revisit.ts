@@ -379,6 +379,8 @@ export async function measureRevisits(
       encoding: "utf8",
     }).trim(),
     browser: browser.version(),
+    platform: process.platform,
+    architecture: process.arch,
     cpu: cpus()[0]?.model,
     cores: cpus().length,
     loadStart: loadavg(),
