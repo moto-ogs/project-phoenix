@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Check, LogOut } from "lucide-react";
 
 import { Alert } from "~/components/ui/alert";
 import { ActionBar } from "~/components/ui/action-bar";
@@ -14,6 +13,7 @@ import {
   CollectionGroup,
   CollectionRow,
 } from "~/components/ui/collection";
+import type { OverflowMenuItem } from "~/components/ui/page-header/types";
 import { SectionCard } from "~/components/ui/section-card";
 import { SplitView, useSplitSelection } from "~/components/ui/split-view";
 import { EmptyStudentResults } from "~/components/students/empty-student-results";
@@ -84,6 +84,11 @@ export type TimetableRosterAppProps = Omit<
   /** Weitere Einträge am Listenende (Kinder unterwegs, spontaner Start). */
   readonly listFooter?: ReactNode;
   /**
+   * Rechts im ersten Abschnittskopf, etwa „3 unterwegs“: führt zur Karte am
+   * Listenende, ohne dass sie die Kinder aus dem ersten Bild schiebt.
+   */
+  readonly leadGroupMeta?: ReactNode;
+  /**
    * „Kind suchen und hinzufügen“ steht im „…“-Menü der Seite, nicht als
    * zweiter Hinzufügen-Knopf am Listenende: die Seite öffnet es hierüber.
    */
@@ -103,6 +108,38 @@ export function rosterAppCanAddUnplanned(
     attendanceWebEnabled &&
     (roster.canEditAttendance ?? roster.canOperate ?? true) !== false
   );
+}
+
+/**
+ * „Beenden“ der App-Aufsicht als Eintrag im „…“-Blatt der Seite: selten
+ * gebraucht und endgültig, darum nicht neben der Hauptaktion über der Pill.
+ * Gleiche Rechte und Sperrzeit wie der Knopf am Computer; die Rückfrage
+ * stellt `CompleteInstanceModal` der Seite.
+ */
+export function rosterAppEndEntry(options: {
+  readonly roster: TimetableRosterAppProps["roster"];
+  readonly attendanceWebEnabled: boolean;
+  readonly now: Date;
+  readonly isCompleting: boolean;
+  readonly onComplete: () => void;
+}): OverflowMenuItem | null {
+  const { roster, attendanceWebEnabled, now, isCompleting, onComplete } =
+    options;
+  if (!attendanceWebEnabled || (roster.canEnd ?? roster.canOperate) === false)
+    return null;
+  const available = canCompleteInstance(
+    roster.instance.canComplete,
+    roster.instance.completeAvailableAt,
+    now,
+  );
+  return {
+    label: "Aktivität beenden",
+    description: available
+      ? "Beendet die Aktivität für alle Kinder. moto fragt vorher nach."
+      : `Die Aktivität lässt sich erst ab ${completeAvailableClock(roster.instance.completeAvailableAt, roster.instance.endTime)} Uhr beenden.`,
+    disabled: isCompleting || !available,
+    onClick: onComplete,
+  };
 }
 
 type SectionKey = "missing" | "present" | "gone";
@@ -262,7 +299,6 @@ export function TimetableRosterApp({
   addStudentSearch,
   attendanceWebEnabled,
   isAddingStudent,
-  isCompletingInstance,
   isConfirmingExpected,
   roster,
   occupancy,
@@ -273,7 +309,6 @@ export function TimetableRosterApp({
   addUnplannedStudentModal: AddUnplannedStudentModal,
   presentPickerAutoOpen = false,
   onPresentPickerAutoOpened,
-  onComplete,
   onConfirmExpected,
   onRosterAction,
   onExcuseRestOfDay,
@@ -284,6 +319,7 @@ export function TimetableRosterApp({
   rowFilter = null,
   addStudentError,
   listFooter,
+  leadGroupMeta,
   addStudentOpen: addStudentOpenProp,
   onAddStudentOpenChange,
 }: TimetableRosterAppProps) {
@@ -476,31 +512,37 @@ export function TimetableRosterApp({
     const action = primaryRowAction(row, access);
     if (action !== "check-in" && action !== "check-out") return undefined;
     const isBusy = busy === `${row.studentId}:${action}`;
-    const Icon = action === "check-in" ? Check : LogOut;
-    // Ein Symbol statt eines Worts: Die Zeile behält die Breite für Namen
-    // und Gehzeit. Der Name der Aktion steht im Tooltip und für
-    // Vorleseprogramme; das Kind-Blatt nennt sie ausgeschrieben.
+    // Ausgeschrieben statt als Symbol: Ein Pfeil allein las sich als
+    // „Abmelden“, ein Haken gar nicht. Ein gegangenes Kind ist „Wieder da“.
+    const label =
+      action === "check-out"
+        ? ROW_ACTION_LABELS["check-out"]
+        : row.status === "expected"
+          ? CHECK_IN_WORDING.expected
+          : CHECK_IN_WORDING.returned;
     return (
       <Button
         type="button"
-        size="icon"
-        // Leise wie „Raum verlassen“: Die Hauptaktion steht in der Leiste.
+        size="compact"
+        // Leise: Die Hauptaktion der Seite steht in der Leiste.
         variant="outline"
         isLoading={isBusy}
         disabled={busy !== null && !isBusy}
-        aria-label={`${ROW_ACTION_LABELS[action]}: ${childName(row)}`}
+        aria-label={`${label}: ${childName(row)}`}
         tooltip={
           action === "check-in"
-            ? `${ROW_ACTION_LABELS[action]}: ${CHECK_IN_TOOLTIP}`
+            ? `${label}: ${CHECK_IN_TOOLTIP}`
             : "Raum verlassen: Trägt das Kind sofort aus diesem Raum aus."
         }
         onClick={() => void runAction(action, row)}
       >
-        <Icon className="size-5" aria-hidden="true" />
+        {label}
       </Button>
     );
   };
 
+  const leadSectionKey =
+    sections.find((section) => section.rows.length > 0)?.key ?? null;
   const list = hasNoMatch ? (
     <SectionCard>
       <EmptyStudentResults totalCount={roster.rows.length} filteredCount={0} />
@@ -523,6 +565,7 @@ export function TimetableRosterApp({
             key={key}
             title={SECTION_TITLES[key]}
             count={rows.length}
+            meta={key === leadSectionKey ? leadGroupMeta : undefined}
           >
             {rows.map((row) => (
               <CollectionRow
@@ -571,35 +614,14 @@ export function TimetableRosterApp({
   );
 
   // Hauptaktion der Aufgabe: zuerst die erwarteten Kinder bestätigen, sonst
-  // Kinder hinzufügen. Beenden ist die Nebenaktion und fragt vorher nach.
-  const completeEnabled = canCompleteInstance(
-    roster.instance.canComplete,
-    roster.instance.completeAvailableAt,
-    now,
-  );
-  const endButton = endEnabled ? (
-    <Button
-      type="button"
-      variant="outline"
-      size="md"
-      disabled={isCompletingInstance || !completeEnabled}
-      disabledReason={
-        isCompletingInstance
-          ? undefined
-          : `Die Aktivität lässt sich erst ab ${completeAvailableClock(roster.instance.completeAvailableAt, roster.instance.endTime)} Uhr beenden.`
-      }
-      tooltip="Beendet die Aktivität für alle Kinder. moto fragt vorher nach."
-      onClick={() => void onComplete()}
-    >
-      Beenden
-    </Button>
-  ) : null;
+  // Kinder hinzufügen. Beenden ist selten und steht im „…“-Blatt der Seite
+  // (`rosterAppEndEntry`), nicht neben der Hauptaktion im Daumenbereich.
   let primary: ReactNode = null;
   if (actionsEnabled && confirmableExpectedRows.length > 0) {
     primary = (
       <Button
         type="button"
-        variant="success"
+        variant="primary"
         size="md"
         isLoading={isConfirmingExpected}
         loadingText="Bestätigt…"
@@ -613,7 +635,7 @@ export function TimetableRosterApp({
     primary = (
       <Button
         type="button"
-        variant="success"
+        variant="primary"
         size="md"
         tooltip="Öffnet eine Liste der anwesenden Kinder zum Hinzufügen."
         onClick={() => setPresentPickerOpen(true)}
@@ -625,7 +647,7 @@ export function TimetableRosterApp({
     primary = (
       <Button
         type="button"
-        variant="success"
+        variant="primary"
         size="md"
         tooltip="Öffnet ein Fenster, um ein ungeplantes Kind einzutragen."
         onClick={() => setAddStudentOpen(true)}
@@ -675,7 +697,7 @@ export function TimetableRosterApp({
 
   const footer =
     moreAdd.length > 0 || listFooter ? (
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         {moreAdd}
         {listFooter}
       </div>
@@ -728,11 +750,7 @@ export function TimetableRosterApp({
         onClose={() => setSheetChildId(null)}
       />
 
-      {primary || endButton ? (
-        <ActionBar secondary={primary ? endButton : undefined}>
-          {primary ?? endButton}
-        </ActionBar>
-      ) : null}
+      {primary ? <ActionBar>{primary}</ActionBar> : null}
 
       {addStudentEnabled && AddUnplannedStudentModal ? (
         <AddUnplannedStudentModal
