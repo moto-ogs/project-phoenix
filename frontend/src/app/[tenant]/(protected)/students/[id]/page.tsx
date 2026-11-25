@@ -94,6 +94,8 @@ import { StudentConsentsReadOnly } from "~/components/students/student-consents-
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useDeviceContext } from "~/lib/device-context";
+import { StudentAppActionBar } from "~/components/students/student-app-action-bar";
+import { StudentSplitFrame } from "~/components/students/student-split-frame";
 import {
   RequestedQuickAction,
   STUDENT_QUICK_ACTION_PARAM,
@@ -359,8 +361,19 @@ const PARENT_DATA_TABS: ReadonlySet<StudentTabId> = new Set<StudentTabId>([
  * Reiter der Kindakte für die Kopfkarte. Alle Reiter stehen nebeneinander;
  * was nicht in die Zeile passt, räumt das Seitengerüst gemessen unter „Mehr".
  */
-function buildStudentTabItems(tabs: StudentTabId[]) {
-  return tabs.map((tab) => ({ value: tab as string, label: TAB_LABELS[tab] }));
+// App (#8070): kürzere, alltagsnahe Namen für die Reiterleiste am Telefon.
+const APP_TAB_LABELS: Partial<Record<StudentTabId, string>> = {
+  stammdaten: "Angaben",
+  erziehungsberechtigte: "Eltern",
+  aenderungsprotokoll: "Änderungen",
+  historie: "Verlauf",
+};
+
+function buildStudentTabItems(tabs: StudentTabId[], app = false) {
+  return tabs.map((tab) => ({
+    value: tab as string,
+    label: (app ? APP_TAB_LABELS[tab] : undefined) ?? TAB_LABELS[tab],
+  }));
 }
 
 // Shared classes for every tab panel. Every panel stays mounted; the inactive
@@ -1532,7 +1545,7 @@ function StudentDetailPageContent() {
     />
   ) : undefined;
 
-  return (
+  const page = (
     /* Der Entitätskopf IST die Kopfkarte der Seite: Foto, Name, Statuszeile
           mit Klasse, Gruppe und den Zeiten des heutigen Tages, der aktuelle
           Aufenthaltsort als Aktion und die Schnellaktionen darunter. */
@@ -1574,7 +1587,6 @@ function StudentDetailPageContent() {
             pickup={student.actual_pickup_time ?? todayPickup.time}
             pickedUp={Boolean(student.actual_pickup_time)}
             group={student.group_name}
-            actions={quickActions}
           />
         ) : (
           // Der Aufenthaltsort ist Status, keine Aktion: er steht in der
@@ -1622,12 +1634,37 @@ function StudentDetailPageContent() {
               value: activeTab,
               onChange: handleTabChange,
               inUrl: true,
-              items: buildStudentTabItems(visibleTabs),
+              items: buildStudentTabItems(visibleTabs, appHead),
               label: "Bereiche der Kindakte",
             }
       }
       overlays={
         <>
+          {/* App (#8070): die Schnellaktionen in Daumennähe über der
+              Pill statt als Kachelreihe im Kopf. */}
+          {appHead ? (
+            <StudentAppActionBar
+              showCheckout={showCheckout}
+              showCheckin={showCheckin}
+              canSickExcused={hasSickExcusedWriteAccess}
+              canPlanAbsence={hasAbsenceWriteAccess}
+              isSick={student.sick ?? false}
+              isExcused={isQuickExcused}
+              isClassTrip={student.class_trip ?? false}
+              onCheckout={() => {
+                setCheckoutNote("");
+                setCheckoutIsEarly(isEarlyCheckout(todayPickup.time));
+                setShowConfirmCheckout(true);
+              }}
+              onCheckin={() => setShowConfirmCheckin(true)}
+              onSick={handleSickClick}
+              onExcused={handleExcusedClick}
+              onClassTrip={() => setPlannedStatusModal("class_trip")}
+              sickLoading={sickLoading}
+              excusedLoading={excusedLoading}
+              plannedStatusLoading={plannedStatusLoading}
+            />
+          ) : null}
           {/* Aktion aus dem Kind-Blatt der Liste (#8070): öffnet hier
               denselben Dialog wie die Kachel. */}
           {requestedAction && isStudentQuickAction(requestedAction) ? (
@@ -1992,6 +2029,12 @@ function StudentDetailPageContent() {
       )}
     </TenantPage>
   );
+  // iPad quer (#8070): Kinderliste ⅓ links, Akte ⅔ rechts.
+  return (
+    <StudentSplitFrame studentId={studentId} from={searchParams.get("from")}>
+      {page}
+    </StudentSplitFrame>
+  );
 }
 
 // =============================================================================
@@ -2089,7 +2132,8 @@ function StudentQuickActions({
 
 /**
  * Kopf der Kindakte in der App (#8070): Aufenthaltsort und die Zeiten des
- * Tages als Chips, darunter die Schnellaktionen als eine Leiste.
+ * Tages als Chips, die umbrechen statt rechts abgeschnitten zu werden. Die
+ * Schnellaktionen stehen in der Aktionsleiste über der Pill.
  */
 function AppStudentHeadStatus({
   location,
@@ -2098,7 +2142,6 @@ function AppStudentHeadStatus({
   pickup,
   pickedUp,
   group,
-  actions,
 }: Readonly<{
   location: ReactNode;
   arrival?: string;
@@ -2106,7 +2149,6 @@ function AppStudentHeadStatus({
   pickup?: string;
   pickedUp: boolean;
   group?: string;
-  actions: ReactNode;
 }>) {
   const items: { label: string }[] = [];
   if (arrival)
@@ -2115,12 +2157,9 @@ function AppStudentHeadStatus({
     items.push({ label: `${pickedUp ? "Gegangen" : "Geht"} ${pickup}` });
   if (group) items.push({ label: group });
   return (
-    <span className="flex flex-col gap-2 pt-0.5">
-      <span className="flex items-center gap-2 whitespace-nowrap">
-        <span className="shrink-0">{location}</span>
-        {items.length > 0 ? <TenantPageStats items={items} /> : null}
-      </span>
-      {actions}
+    <span className="flex flex-wrap items-center gap-1.5 pt-0.5 [&_*]:whitespace-nowrap [&>span:last-child]:contents">
+      <span className="shrink-0">{location}</span>
+      {items.length > 0 ? <TenantPageStats items={items} /> : null}
     </span>
   );
 }

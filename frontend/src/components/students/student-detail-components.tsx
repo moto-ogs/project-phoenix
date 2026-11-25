@@ -14,7 +14,7 @@ import { schoolClassLabel } from "~/lib/school-class-label";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
-import { AlertTriangle, Check, Clock, Info } from "lucide-react";
+import { AlertTriangle, Check, Clock, Info, Pencil } from "lucide-react";
 import { LocationBadge } from "@/components/students/presence/location-badge";
 import type { Student } from "~/lib/student-helpers";
 import { isNotCheckedInLocation } from "~/lib/location-helper";
@@ -67,6 +67,7 @@ import {
 } from "~/lib/student-companion-api";
 import { Avatar } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
+import { useDeviceContext } from "~/lib/device-context";
 import {
   VisibilityBadge,
   ParentVisibilityLegend,
@@ -837,6 +838,8 @@ export function PersonalInfoReadOnly({
   onEditClick,
   showCompanions = true,
 }: Readonly<PersonalInfoReadOnlyProps>) {
+  const device = useDeviceContext();
+  const appLayout = device.resolved && device.isApp;
   const enrollmentExtraLoadError = useSwrLoadError(
     enrollmentExtraError,
     "die Angaben aus der Anmeldung",
@@ -904,17 +907,33 @@ export function PersonalInfoReadOnly({
     <SectionCard
       title="Persönliche Informationen"
       leading={<IconTile tone="green" icon={<PersonIcon />} />}
+      inlineActions={appLayout}
       action={
         showEditButton && onEditClick ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="md"
-            onClick={onEditClick}
-            tooltip="Öffnet die persönlichen Angaben des Kindes zum Ändern."
-          >
-            Bearbeiten
-          </Button>
+          appLayout ? (
+            // App (#8070): ein Stift neben dem Titel statt einer eigenen
+            // Knopfzeile mitten im Fluss.
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Angaben bearbeiten"
+              onClick={onEditClick}
+              tooltip="Öffnet die persönlichen Angaben des Kindes zum Ändern."
+            >
+              <Pencil className="size-5" aria-hidden="true" />
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={onEditClick}
+              tooltip="Öffnet die persönlichen Angaben des Kindes zum Ändern."
+            >
+              Bearbeiten
+            </Button>
+          )
         ) : (
           <ViewOnlyBadge />
         )
@@ -923,6 +942,7 @@ export function PersonalInfoReadOnly({
       <ParentVisibilityLegend
         hint={PARENT_VISIBLE_DEFAULT_HINT}
         className="mb-4"
+        appShort
       />
       {/* Feldgitter aus dem Kit (`DataGrid`/`DataField`), kein eigenes
           Feldraster: dieselbe Anatomie wie in jeder anderen Objektansicht. */}
@@ -1260,6 +1280,8 @@ export function StudentHistorySection({
   canManageRoomHistoryStop = false,
   onNavigate,
 }: Readonly<StudentHistorySectionProps>) {
+  const device = useDeviceContext();
+  const appLayout = device.resolved && device.isApp;
   const attendanceDisabled = readOnly || !attendanceLogEnabled;
   const feedbackDisabled = readOnly || !feedbackEnabled;
   const changeHistoryDisabled = readOnly || !canViewChangeHistory;
@@ -1290,9 +1312,74 @@ export function StudentHistorySection({
       )
     ) : undefined;
 
+  const historyRows = (
+    <>
+      <HistoryButton
+        concept={roomsConcept}
+        title="Anwesenheitsprotokoll"
+        description={
+          readOnly
+            ? "Nur für Gruppenbetreuer"
+            : !attendanceLogEnabled
+              ? "Für deine Schule deaktiviert"
+              : stop.stopped
+                ? "Anwesenheit je Betreuungsangebot, ohne Räume"
+                : "Anwesenheit je Betreuungsangebot und besuchte Räume"
+        }
+        disabled={attendanceDisabled}
+        onClick={
+          !attendanceDisabled
+            ? () => onNavigate(`/students/${studentId}/room-history`)
+            : undefined
+        }
+      />
+      <HistoryButton
+        concept={feedbackConcept}
+        title="Feedbackhistorie"
+        description={
+          readOnly
+            ? "Nur für Gruppenbetreuer"
+            : !feedbackEnabled
+              ? "Für deine Schule deaktiviert"
+              : stop.stopped
+                ? "Neue Stimmung wird nicht gespeichert"
+                : "Feedback und Bewertungen"
+        }
+        disabled={feedbackDisabled}
+        onClick={
+          !feedbackDisabled
+            ? () => onNavigate(`/students/${studentId}/feedback-history`)
+            : undefined
+        }
+      />
+      <HistoryButton
+        concept={mealPlanConcept}
+        title="Mensaverlauf"
+        description="Mahlzeiten und Bestellungen"
+        disabled
+      />
+      <HistoryButton
+        concept={changeHistoryConcept}
+        title="Änderungsverlauf"
+        description={
+          changeHistoryDisabled
+            ? "Nur für Gruppenbetreuer"
+            : "Wer hat was geändert"
+        }
+        disabled={changeHistoryDisabled}
+        onClick={
+          !changeHistoryDisabled
+            ? () => onNavigate(`/students/${studentId}/change-history`)
+            : undefined
+        }
+      />
+    </>
+  );
+
   return (
     <SectionCard
-      title="Historien"
+      // App (#8070): „Verlauf“ statt des Fachworts, wie der Reiter.
+      title={appLayout ? "Verlauf" : "Historien"}
       concept={changeHistoryConcept}
       action={stopAction}
     >
@@ -1308,67 +1395,12 @@ export function StudentHistorySection({
           />
         </div>
       ) : null}
-      <FramedList>
-        <HistoryButton
-          concept={roomsConcept}
-          title="Anwesenheitsprotokoll"
-          description={
-            readOnly
-              ? "Nur für Gruppenbetreuer"
-              : !attendanceLogEnabled
-                ? "Für deine Schule deaktiviert"
-                : stop.stopped
-                  ? "Anwesenheit je Betreuungsangebot, ohne Räume"
-                  : "Anwesenheit je Betreuungsangebot und besuchte Räume"
-          }
-          disabled={attendanceDisabled}
-          onClick={
-            !attendanceDisabled
-              ? () => onNavigate(`/students/${studentId}/room-history`)
-              : undefined
-          }
-        />
-        <HistoryButton
-          concept={feedbackConcept}
-          title="Feedbackhistorie"
-          description={
-            readOnly
-              ? "Nur für Gruppenbetreuer"
-              : !feedbackEnabled
-                ? "Für deine Schule deaktiviert"
-                : stop.stopped
-                  ? "Neue Stimmung wird nicht gespeichert"
-                  : "Feedback und Bewertungen"
-          }
-          disabled={feedbackDisabled}
-          onClick={
-            !feedbackDisabled
-              ? () => onNavigate(`/students/${studentId}/feedback-history`)
-              : undefined
-          }
-        />
-        <HistoryButton
-          concept={mealPlanConcept}
-          title="Mensaverlauf"
-          description="Mahlzeiten und Bestellungen"
-          disabled
-        />
-        <HistoryButton
-          concept={changeHistoryConcept}
-          title="Änderungsverlauf"
-          description={
-            changeHistoryDisabled
-              ? "Nur für Gruppenbetreuer"
-              : "Wer hat was geändert"
-          }
-          disabled={changeHistoryDisabled}
-          onClick={
-            !changeHistoryDisabled
-              ? () => onNavigate(`/students/${studentId}/change-history`)
-              : undefined
-          }
-        />
-      </FramedList>
+      {/* App (#8070): die Zeilen direkt in der Karte, ohne zweiten Rahmen. */}
+      {appLayout ? (
+        <ul className="-mx-2 divide-y divide-gray-100">{historyRows}</ul>
+      ) : (
+        <FramedList>{historyRows}</FramedList>
+      )}
       {stop.confirming ? (
         // Der bisherige Raumverlauf ist danach unwiderruflich weg:
         // Texteingabe-Stufe (BAUARTEN-SPEC Bauart 2 Regel 6).
