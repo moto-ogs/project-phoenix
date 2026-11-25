@@ -1,134 +1,62 @@
-import type { Session } from "next-auth";
 import { beforeEach, expect, it, vi } from "vitest";
-import { loadCatererPageSeed } from "./page-seed.server";
-import { defaultPeriod, periodDays } from "~/lib/caterer-period";
+import type { Session } from "next-auth";
+import { loadCatererOverviewSeed } from "./page-seed.server";
 import { catererKeys } from "~/lib/swr/portal-keys";
-import { sessionGeneration } from "~/lib/swr/session-generation";
-import { TEST_CLOCK_TODAY } from "~/test/clock";
 
-const { snapshot, sendBackend } = vi.hoisted(() => ({
+const { snapshot, send } = vi.hoisted(() => ({
   snapshot: vi.fn(),
-  sendBackend: vi.fn(),
+  send: vi.fn(),
 }));
-
 vi.mock("~/lib/portal-session-snapshot.server", () => ({
   readPortalSessionSnapshot: snapshot,
 }));
 vi.mock("~/lib/backend-client.server", async (original) => ({
   ...(await original<typeof import("~/lib/backend-client.server")>()),
-  sendBackend,
+  sendBackend: send,
 }));
 
+const from = "2026-09-07";
+const to = "2026-09-11";
+const key = catererKeys.overview(from, to);
 const session: Session = {
   user: { id: "7", scope: "caterer" },
   expires: "2099-01-01",
 };
-const signedIn = {
-  session,
-  accessToken: "server-only-token",
-  notBooked: false,
-};
-const schools = [
-  { id: "4", name: "Schule Vier" },
-  { id: "6", name: "Schule Sechs" },
-];
-const days = periodDays(defaultPeriod(TEST_CLOCK_TODAY), TEST_CLOCK_TODAY);
-const from = days[0]!;
-const to = days[days.length - 1]!;
-const ordersKey = catererKeys.orders(["4", "6"], from, to);
+beforeEach(() => vi.resetAllMocks());
 
-beforeEach(() => {
-  snapshot.mockReset().mockResolvedValue(signedIn);
-  sendBackend.mockReset();
-});
-
-function answerSchoolsAndOrders(refusedSchool?: string) {
-  sendBackend.mockImplementation(async (path: string) => {
-    if (path === "/caterer/schools") {
-      return Response.json({
-        status: "success",
-        data: { caterer_name: "Küche", schools },
-      });
-    }
-    const school = schools.find(
-      ({ id }) =>
-        path === `/caterer/schools/${id}/orders?from=${from}&to=${to}`,
-    );
-    if (!school) throw new Error(`Unexpected read: ${path}`);
-    if (school.id === refusedSchool) return new Response(null, { status: 403 });
-    return Response.json({
+it("seeds the selected window with one compact read, even with no schools", async () => {
+  snapshot.mockResolvedValue({
+    session,
+    accessToken: "test",
+    notBooked: false,
+  });
+  send.mockResolvedValue(
+    Response.json({
       status: "success",
-      data: {
-        school,
-        delivery_address: "",
-        format_version: 1,
-        rhythm: "weekly",
-        detail: "total",
-        days: null,
-      },
-    });
-  });
-}
-
-it("seeds the default window only for the schools in the current supply list", async () => {
-  answerSchoolsAndOrders();
-  const seed = await loadCatererPageSeed();
+      data: { caterer_name: "Küche", schools: [] },
+    }),
+  );
+  const seed = await loadCatererOverviewSeed(from, to, key);
   expect(snapshot).toHaveBeenCalledWith("caterer");
-  expect(seed?.generation).toBe(sessionGeneration(session));
-  expect(seed?.entries.map((entry) => entry.key)).toEqual([
-    catererKeys.schools(),
-    ordersKey,
-  ]);
+  expect(seed?.entries.map((entry) => entry.key)).toEqual([key]);
   expect(await seed?.entries[0]?.value).toEqual({
     catererName: "Küche",
-    schools,
+    schools: [],
   });
-  expect(await seed?.entries[1]?.value).toMatchObject({
-    orders: { "4": { school: schools[0] }, "6": { school: schools[1] } },
-    failures: {},
-  });
-  expect(sendBackend.mock.calls.map(([path, token]) => [path, token])).toEqual([
-    ["/caterer/schools", signedIn.accessToken],
-    [`/caterer/schools/4/orders?from=${from}&to=${to}`, signedIn.accessToken],
-    [`/caterer/schools/6/orders?from=${from}&to=${to}`, signedIn.accessToken],
+  expect(send.mock.calls.map(([path]) => path)).toEqual([
+    "/caterer/schools?from=2026-09-07&to=2026-09-11",
   ]);
 });
 
-it("leaves only the orders window for the browser after a supply refusal", async () => {
-  answerSchoolsAndOrders("6");
-  const seed = await loadCatererPageSeed();
-  expect(seed?.entries.map((entry) => entry.key)).toEqual([
-    catererKeys.schools(),
-    ordersKey,
-  ]);
-  expect(await seed?.entries[0]?.value).toEqual({
-    catererName: "Küche",
-    schools,
-  });
-  expect(await seed?.entries[1]?.value).toBeUndefined();
-});
-
-it("never starts order reads when the supply list could not be authorized", async () => {
-  sendBackend.mockImplementation(
-    async () => new Response(null, { status: 403 }),
-  );
-  const seed = await loadCatererPageSeed();
-  expect(seed?.entries.map((entry) => entry.key)).toEqual([
-    catererKeys.schools(),
-  ]);
-  expect(await seed?.entries[0]?.value).toBeUndefined();
-  expect(sendBackend).toHaveBeenCalledExactlyOnceWith(
-    "/caterer/schools",
-    signedIn.accessToken,
-    expect.anything(),
-  );
-});
-
-it("ignores a non-caterer session before any read", async () => {
-  snapshot.mockResolvedValueOnce({
-    ...signedIn,
-    session: { ...session, user: { id: "7", scope: "school", tenantId: "4" } },
-  });
-  expect(await loadCatererPageSeed()).toBeNull();
-  expect(sendBackend).not.toHaveBeenCalled();
+it.each([
+  null,
+  {
+    session: { ...session, user: { id: "7", scope: "parent" } },
+    accessToken: "test",
+  },
+  { session: { ...session, error: "RefreshTokenError" }, accessToken: "test" },
+])("does not seed outside a live caterer session", async (state) => {
+  snapshot.mockResolvedValue(state);
+  expect(await loadCatererOverviewSeed(from, to, key)).toBeNull();
+  expect(send).not.toHaveBeenCalled();
 });

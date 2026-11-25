@@ -29,7 +29,7 @@ func BuildMealPlanAtForTests(db transactionruntime.Database, settings settingsCo
 	if err != nil {
 		return nil, err
 	}
-	return mealplanCompose.New(mealplanCompose.Dependencies{
+	plan, err := mealplanCompose.New(mealplanCompose.Dependencies{
 		DB: db.Pool(), Settings: mealSettings, Observe: func(mealplanCompose.Observation) {}, Now: now,
 		Participants:    mealPlanParticipantFinder(students, now),
 		ParticipantDays: mealPlanParticipantDaysFinder(names, now),
@@ -38,4 +38,5 @@ func BuildMealPlanAtForTests(db transactionruntime.Database, settings settingsCo
 		Calendar:        mealPlanCalendar(calendarRecords),
 		Notices:         notices,
 	})
+	return plan.Capability, err
 }

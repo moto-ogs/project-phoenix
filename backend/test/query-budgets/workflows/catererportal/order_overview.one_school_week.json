@@ -1,0 +1,7 @@
+{
+  "scenario": "workflows.catererportal.order_overview.one_school_week",
+  "max": 24,
+  "exact": true,
+  "description": "One currently supplied school and eight children over five open weekdays. The overview reads the live relationship and the compact projection under school RLS.",
+  "route": "GET /caterer/schools"
+}
