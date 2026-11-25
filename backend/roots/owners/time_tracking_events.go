@@ -20,6 +20,6 @@ type timeTrackingEventPublisher struct {
 	broadcaster realtime.Broadcaster
 }
 
-func (e timeTrackingEventPublisher) QueueStaffTimeTrackingChanged(ctx context.Context, logger *slog.Logger) {
-	deliveryCompose.QueueStaffTimeTrackingChanged(ctx, e.broadcaster, logger)
+func (e timeTrackingEventPublisher) QueueStaffTimeTrackingChanged(ctx context.Context, logger *slog.Logger, reason string) {
+	deliveryCompose.QueueStaffTimeTrackingChanged(ctx, e.broadcaster, logger, reason)
 }

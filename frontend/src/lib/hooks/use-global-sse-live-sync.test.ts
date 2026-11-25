@@ -74,7 +74,7 @@ const OWN = ownSupervisionKeys.family;
 // Keys of the scoped cache as SWR's global mutate sees them.
 const INVENTORY = [
   "school-a:account-7:active-supervision-dashboard-0-224",
-  "school-a:account-7:time-tracking-month-summary-2026-9",
+  "school-a:account-7:time-tracking-schedule-targets-2026-09-07-2026-09-13",
   "school-a:account-7:staff-dashboard-summary-month",
   "school-a:account-7:ogs-students-3",
   "school-a:account-7:timetable-week-2026-09-07",
@@ -226,7 +226,7 @@ describe("useGlobalSSE: own supervision family (#5017)", () => {
     fire(event("staff_time_tracking_changed"));
     act(() => vi.advanceTimersByTime(MAX_FLUSH_WAIT_MS));
     expect(matchedKeys()).toEqual([
-      "school-a:account-7:time-tracking-month-summary-2026-9",
+      "school-a:account-7:time-tracking-schedule-targets-2026-09-07-2026-09-13",
       "school-a:account-7:staff-dashboard-summary-month",
     ]);
   });

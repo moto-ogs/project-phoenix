@@ -354,7 +354,7 @@ func (s *staffAbsenceService) withLabel(ctx context.Context, response *StaffAbse
 }
 
 func (s *staffAbsenceService) broadcastTimeTrackingChanged(ctx context.Context) {
-	queueStaffTimeTrackingChanged(ctx, s.broadcaster, nil)
+	queueStaffTimeTrackingChanged(ctx, s.broadcaster, nil, "absence")
 }
 
 func newStaffAbsenceService(

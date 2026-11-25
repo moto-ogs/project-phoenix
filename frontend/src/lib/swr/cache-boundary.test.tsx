@@ -2,6 +2,8 @@ import { act, render, renderHook } from "@testing-library/react";
 import { waitFor } from "~/test/wait-for-state";
 import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { SWRConfig, useSWRConfig, type Middleware } from "swr";
+import { useOwnTimeRefresh } from "~/lib/hooks/use-own-time-refresh";
+import { timeTrackingKeys } from "./portal-keys";
 import { SWRSeedBoundary } from "./config-boundaries";
 import {
   MUTATION_OPTION_KEYS,
@@ -338,6 +340,43 @@ describe("useInvalidateMatching", () => {
     });
     expect(rooms).toHaveBeenCalledTimes(2);
     expect(inbox).toHaveBeenCalledTimes(2);
+  });
+
+  it("unites a time write with its SSE echo, expiring only affected inactive keys", async () => {
+    const overview = vi.fn(async () => ({ ready: true }));
+    const period = vi.fn(async () => ({ ready: true }));
+    const leave = vi.fn(async () => ({ ready: true }));
+    const active = timeTrackingKeys.period("week", "2026-11-23");
+    const inactive = timeTrackingKeys.period("month", "2026-10-01");
+
+    const readers = renderHook(() => ({
+      cache: useSWRConfig().cache,
+      overview: useSWRAuth(timeTrackingKeys.overview("2026-11-25"), overview),
+      period: useSWRAuth(active, period),
+      leave: useSWRAuth(timeTrackingKeys.leaveOverview(2026), leave),
+      localWrite: useOwnTimeRefresh(),
+      sse: useOwnTimeRefresh(),
+    }));
+    await waitFor(() =>
+      expect(readers.result.current.period.data).toBeDefined(),
+    );
+    const cache = readers.result.current.cache;
+    cache.set(own(inactive), { data: { old: true } });
+    cache.set(`school-b:account-7:${inactive}`, { data: { other: true } });
+
+    await act(async () => {
+      const write = readers.result.current.localWrite("time");
+      const echo = readers.result.current.sse("time");
+      expect(write).toBe(echo);
+      await write;
+    });
+    expect(overview).toHaveBeenCalledTimes(2);
+    expect(period).toHaveBeenCalledTimes(2);
+    expect(leave).toHaveBeenCalledTimes(1);
+    expect(cache.get(own(inactive))?.data).toBeUndefined();
+    expect(cache.get(`school-b:account-7:${inactive}`)?.data).toEqual({
+      other: true,
+    });
   });
 
   it("matches nothing while the session is being confirmed", async () => {

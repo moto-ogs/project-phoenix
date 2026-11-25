@@ -66,7 +66,10 @@ void invalidateFamily(rooms.family);
    `useTenantMutateMatching([factory.family])` remains available for combined
    invalidations, `useInvalidateMatching()` for a predicate over the unscoped
    key (`() => true` refreshes the whole session). Session boundaries also
-   clear all list overlays.
+   clear all list overlays. For a read shared by local writes and SSE,
+   pass the same `coalesce` channel to union invalidations in one burst.
+   With `expireInactive`, mounted readers refresh and unmounted matching
+   entries are evicted without a request.
 5. Keys describe the **response**, not its screen. Different parameters or
    projections stay separate: system rooms, paginated room lists, the staff
    directory and its teacher projection must not overwrite one another.

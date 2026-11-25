@@ -15,6 +15,6 @@ type recordingTimeTrackingPublisher struct {
 	tenants []int64
 }
 
-func (r *recordingTimeTrackingPublisher) QueueStaffTimeTrackingChanged(ctx context.Context, _ *slog.Logger) {
+func (r *recordingTimeTrackingPublisher) QueueStaffTimeTrackingChanged(ctx context.Context, _ *slog.Logger, _ string) {
 	r.tenants = append(r.tenants, tenant.FromContext(ctx))
 }

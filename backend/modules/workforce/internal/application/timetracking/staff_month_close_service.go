@@ -136,7 +136,7 @@ func (s *staffMonthCloseService) getLogger() *slog.Logger {
 }
 
 func (s *staffMonthCloseService) broadcastTimeTrackingChanged(ctx context.Context) {
-	queueStaffTimeTrackingChanged(ctx, s.broadcaster, s.getLogger())
+	queueStaffTimeTrackingChanged(ctx, s.broadcaster, s.getLogger(), "")
 }
 
 func calendarMonthHasEnded(key monthKey, today calendar.Date) bool {

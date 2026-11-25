@@ -19,7 +19,7 @@ const access = loadAccess();
 export default defineConfig({
   globalSetup: SECURE_CHROME_SETUP,
   testDir: "./scripts/perf",
-  testMatch: "react-scan.perf.ts",
+  testMatch: ["react-scan.perf.ts", "time-tracking.perf.ts"],
   timeout: 240_000,
   workers: 1,
   retries: 0,

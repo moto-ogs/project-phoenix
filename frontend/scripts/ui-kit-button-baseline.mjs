@@ -93,8 +93,8 @@ export const buttonRatchetAllowlist = [
   },
   {
     rule: "no-button-override",
-    file: "src/app/[tenant]/(protected)/time-tracking/page.tsx",
-    lines: [841, 878, 984, 1172],
+    file: "src/app/[tenant]/(protected)/time-tracking/own-clock.tsx",
+    lines: [700, 737, 843, 1031],
     reason:
       "Pausen-Stepper −/+ und Stempelknöpfe Abwesenheit/Ausstempeln der Zeiterfassung (#5529: nicht angleichen)",
   },

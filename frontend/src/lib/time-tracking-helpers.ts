@@ -466,28 +466,6 @@ export function mapWorkSessionBreakResponse(
 }
 
 /**
- * Maps backend work session history response to frontend type
- */
-export function mapWorkSessionHistoryResponse(
-  data: shared.HistorySessionResponse,
-): WorkSessionHistory {
-  return {
-    ...mapWorkSessionResponse(data),
-    netMinutes: data.net_minutes,
-    isOvertime: data.is_overtime,
-    isBreakCompliant: data.is_break_compliant,
-    breaks: (data.breaks ?? [])
-      .filter((entry): entry is shared.WorkSessionBreak => entry !== null)
-      .map(mapWorkSessionBreakResponse),
-    editCount: data.edit_count ?? 0,
-    auditCount: data.audit_count ?? 0,
-    packUpMinutes: data.pack_up_minutes ?? 0,
-    roundingMinutes: data.rounding_minutes ?? 0,
-    version: data.version,
-  };
-}
-
-/**
  * Maps backend weekly summary to frontend type
  */
 function mapWeeklySummaryResponse(data: shared.WorkWeekSummary): WeeklySummary {
@@ -517,27 +495,6 @@ export function mapWorkDayLaborHint(
     overDailyMaxAt: data.over_daily_max_at ?? null,
     breakTooShortAt: data.break_too_short_at ?? null,
     breakTooShortRequiredMinutes: data.break_too_short_required_minutes,
-  };
-}
-
-export interface HistoryResult {
-  sessions: WorkSessionHistory[];
-  weeklySummaries: WeeklySummary[];
-  laborDays: WorkDayLaborHint[];
-}
-
-/**
- * Maps the full history response (sessions, weekly summaries, ArbZG hints)
- */
-export function mapHistoryResponse(
-  data: shared.HistoryResponse,
-): HistoryResult {
-  return {
-    sessions: (data.sessions ?? []).map(mapWorkSessionHistoryResponse),
-    weeklySummaries: (data.weekly_summaries ?? []).map(
-      mapWeeklySummaryResponse,
-    ),
-    laborDays: (data.labor_days ?? []).map(mapWorkDayLaborHint),
   };
 }
 
@@ -702,6 +659,7 @@ export interface DayProjection {
   readonly balanceMinutes: number;
   /** Eine Sonderarbeitszeit setzt das Soll dieses Tages (#3259). */
   readonly isOverride?: boolean;
+  readonly hasTarget?: boolean;
 }
 
 /**

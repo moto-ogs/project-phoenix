@@ -438,7 +438,7 @@ describe("/staff — Berechtigungs-Split", () => {
     ) => boolean;
     expect(isAffectedKey("tenant:staff-time-accounts-2026-8")).toBe(true);
     expect(isAffectedKey("tenant:staff-month-summary-12-2026-8")).toBe(true);
-    expect(isAffectedKey("tenant:time-tracking-month-summary-2026-8")).toBe(
+    expect(isAffectedKey("tenant:time-tracking-period-month-2026-08-01")).toBe(
       true,
     );
     expect(isAffectedKey("tenant:staff-list")).toBe(false);

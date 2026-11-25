@@ -13,6 +13,6 @@ import (
 // adapter, which must not reach the realtime platform itself.
 func staffTimeTrackingNotifier(broadcaster realtime.Broadcaster) func(context.Context) {
 	return func(ctx context.Context) {
-		deliveryCompose.QueueStaffTimeTrackingChanged(ctx, broadcaster, nil)
+		deliveryCompose.QueueStaffTimeTrackingChanged(ctx, broadcaster, nil, "")
 	}
 }

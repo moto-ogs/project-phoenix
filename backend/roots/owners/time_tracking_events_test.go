@@ -23,13 +23,15 @@ func TestTimeTrackingEventsBroadcastAfterCommit(t *testing.T) {
 	events := TimeTrackingEvents(broadcaster)
 	ctx, commit := testpkg.WithAfterCommitHooks(testpkg.TenantContext(42))
 
-	events.QueueStaffTimeTrackingChanged(ctx, nil)
+	events.QueueStaffTimeTrackingChanged(ctx, nil, "absence")
 	assert.Empty(t, broadcaster.Events(),
 		"the invalidation must not precede the surrounding transaction commit")
 
 	commit()
 
-	require.Len(t, broadcaster.EventsOfType(staffTimeTrackingChanged), 1)
+	announced := broadcaster.EventsOfType(staffTimeTrackingChanged)
+	require.Len(t, announced, 1)
+	assert.Equal(t, "absence", *announced[0].Data.Reason)
 	calls := broadcaster.CallsByMethod("tenant")
 	require.Len(t, calls, 1)
 	assert.Equal(t, int64(42), calls[0].TenantID)
@@ -42,7 +44,7 @@ func TestTimeTrackingEventsIgnoreContextsWithoutTenant(t *testing.T) {
 	events := TimeTrackingEvents(broadcaster)
 	ctx, commit := testpkg.WithAfterCommitHooks(context.Background())
 
-	events.QueueStaffTimeTrackingChanged(ctx, nil)
+	events.QueueStaffTimeTrackingChanged(ctx, nil, "")
 	commit()
 
 	assert.Empty(t, broadcaster.Events())

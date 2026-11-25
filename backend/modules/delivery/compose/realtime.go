@@ -9,8 +9,8 @@ import (
 )
 
 // QueueStaffTimeTrackingChanged emits the time-tracking invalidation after the commit (Workforce port).
-func QueueStaffTimeTrackingChanged(ctx context.Context, broadcaster realtime.Broadcaster, logger *slog.Logger) {
-	realtimeevents.QueueStaffTimeTrackingChanged(ctx, broadcaster, logger)
+func QueueStaffTimeTrackingChanged(ctx context.Context, broadcaster realtime.Broadcaster, logger *slog.Logger, reason string) {
+	realtimeevents.QueueStaffTimeTrackingChanged(ctx, broadcaster, logger, reason)
 }
 
 // StartedInstance names the timetable instance a kiosk session started.

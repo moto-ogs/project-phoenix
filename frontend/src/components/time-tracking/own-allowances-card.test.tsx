@@ -1,62 +1,28 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { SessionProvider } from "next-auth/react";
-import { SWRConfig } from "~/lib/swr/testing";
-
-vi.unmock("swr");
-
-import { ABSENCES_REFRESH_EVENT } from "~/lib/absence-helpers";
-import { ApiError } from "~/lib/api-error";
-import type { OwnAbsenceAllowance } from "~/lib/time-tracking-api";
-import { catalogText } from "~/test/error-catalog-text";
-
+import { render, screen, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import type { OwnLeaveAllowance } from "~/lib/contract/time-tracking.generated";
 import { OwnAllowancesCard } from "./own-allowances-card";
 
-const mocks = vi.hoisted(() => ({
-  getOwnAbsenceAllowances: vi.fn(),
-}));
-
-vi.mock("~/lib/time-tracking-api", () => ({
-  timeTrackingService: {
-    getOwnAbsenceAllowances: mocks.getOwnAbsenceAllowances,
+const regeneration = {
+  absence_type_id: "42",
+  name: "Regenerationstag",
+  entitled_days: 3,
+  taken_days: 1,
+  reserved_days: 0.5,
+  remaining_days: 1.5,
+  expires_on: "2027-03-31",
+  expired_days: 0,
+  carried_in: {
+    year: 2025,
+    remaining_days: 1,
+    expired_days: 0,
+    expires_on: "2026-03-31",
   },
-}));
-
-function regeneration(): OwnAbsenceAllowance {
-  return {
-    name: "Regenerationstag",
-    summary: {
-      staffId: "42",
-      absenceTypeId: "4",
-      year: 2026,
-      entitledDays: 3,
-      takenDays: 1,
-      reservedDays: 0.5,
-      remainingDays: 1.5,
-      expiresOn: "2027-03-31",
-      expiredDays: 0,
-      bookingDays: 0,
-      carriedIn: {
-        year: 2025,
-        remainingDays: 1,
-        expiredDays: 0,
-        expiresOn: "2026-03-31",
-      },
-      keptByTraeger: false,
-      version: "v-claim",
-    },
-  };
-}
+} satisfies OwnLeaveAllowance;
 
 describe("OwnAllowancesCard", () => {
-  beforeEach(() => {
-    mocks.getOwnAbsenceAllowances.mockReset();
-  });
-
   it("shows each Kontingent read-only with who changes the claim", async () => {
-    mocks.getOwnAbsenceAllowances.mockResolvedValue([regeneration()]);
-
-    renderWithCache(<OwnAllowancesCard />);
+    render(<OwnAllowancesCard allowances={[regeneration]} year={2026} />);
 
     const card = await screen.findByRole("region", {
       name: "Regenerationstag 2026",
@@ -81,77 +47,10 @@ describe("OwnAllowancesCard", () => {
     expect(within(card).queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("stays away when the school has no type with an allowance", async () => {
-    mocks.getOwnAbsenceAllowances.mockResolvedValue([]);
-    const { container } = renderWithCache(<OwnAllowancesCard />);
-    await waitFor(() =>
-      expect(mocks.getOwnAbsenceAllowances).toHaveBeenCalledTimes(1),
+  it("stays away when the school has no type with an allowance", () => {
+    const { container } = render(
+      <OwnAllowancesCard allowances={[]} year={2026} />,
     );
-    await act(async () => undefined);
     expect(container).toBeEmptyDOMElement();
-
-    // Dieselbe Karte erscheint, sobald die Schule eine Art mit Kontingent
-    // hat: sie war geladen und leer, nicht im Ladezustand hängen geblieben.
-    mocks.getOwnAbsenceAllowances.mockResolvedValue([regeneration()]);
-    act(() => {
-      window.dispatchEvent(new Event(ABSENCES_REFRESH_EVENT));
-    });
-    expect(await screen.findByText("Kontingente")).toBeInTheDocument();
-  });
-
-  it("shows a failed load in the card instead of zero days", async () => {
-    mocks.getOwnAbsenceAllowances.mockRejectedValue(
-      new ApiError("down", 503, {
-        code: "general.unavailable",
-        instance: "req-allowances",
-      }),
-    );
-
-    renderWithCache(<OwnAllowancesCard />);
-
-    expect(
-      await screen.findByText(
-        catalogText("general.unavailable", "die Übersicht der Kontingente"),
-      ),
-    ).toBeInTheDocument();
-    // Anker: der Fehler steht im Block; Zahlen erscheinen nicht.
-    expect(screen.getByText("Kontingente")).toBeInTheDocument();
-    expect(screen.queryByText("Übrig")).not.toBeInTheDocument();
-  });
-
-  it("reloads when an absence changed", async () => {
-    mocks.getOwnAbsenceAllowances.mockResolvedValue([regeneration()]);
-    renderWithCache(<OwnAllowancesCard />);
-    expect(await screen.findByText("1,5 Tage")).toBeInTheDocument();
-
-    const changed = regeneration();
-    mocks.getOwnAbsenceAllowances.mockResolvedValue([
-      { ...changed, summary: { ...changed.summary, remainingDays: 2 } },
-    ]);
-    act(() => {
-      window.dispatchEvent(new Event(ABSENCES_REFRESH_EVENT));
-    });
-
-    expect(await screen.findByText("2 Tage")).toBeInTheDocument();
   });
 });
-
-// Echter SWR-Cache je Render und eine Sitzung mit Konto, sonst liest
-// useSWRAuth nichts.
-function TenantSWR({ children }: { children: React.ReactNode }) {
-  return (
-    <SessionProvider
-      session={{
-        user: { id: "staff-test", tenantId: "1" },
-        expires: "2099-01-01",
-      }}
-      refetchOnWindowFocus={false}
-    >
-      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
-        {children}
-      </SWRConfig>
-    </SessionProvider>
-  );
-}
-const renderWithCache = (ui: React.ReactElement) =>
-  render(ui, { wrapper: TenantSWR });

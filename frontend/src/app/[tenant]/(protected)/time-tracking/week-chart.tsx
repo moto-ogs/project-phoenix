@@ -14,13 +14,9 @@ import {
 import type { FormErrorInput } from "~/components/ui/form-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
-import { parseISODate, toISODate } from "~/lib/date-helpers";
-import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import { parseISODate } from "~/lib/date-helpers";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
-import {
-  indexWorkSessionMinutesByBerlinDate,
-  type WorkSessionHistory,
-} from "~/lib/time-tracking-helpers";
+import type { OwnTimeChartPoint } from "~/lib/contract/time-tracking.generated";
 
 const DAY_NAMES = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 
@@ -53,43 +49,21 @@ function useMobileViewport(): boolean {
   return useMediaQuery(BELOW_MD);
 }
 
-function useWeekChartData({
-  history,
-  weekOffset,
-}: {
-  readonly history: WorkSessionHistory[];
-  readonly weekOffset: number;
-}): WeekChartPoint[] {
-  // The chart's date axis is keyed by Berlin calendar days. Keeping that day as
-  // an explicit dependency makes the memo accurate and rolls an open tab over
-  // at Berlin midnight without rebuilding it for every render.
-  const todayISO = useBerlinToday();
-
-  return useMemo(() => {
-    const referenceDate = parseISODate(todayISO);
-    referenceDate.setDate(referenceDate.getDate() + weekOffset * 7);
-    const allDays: Date[] = [];
-    const day = new Date(referenceDate);
-    while (allDays.length < 10) {
-      if (day.getDay() !== 0 && day.getDay() !== 6) {
-        allDays.unshift(new Date(day));
-      }
-      day.setDate(day.getDate() - 1);
-    }
-    const minutesByDate = indexWorkSessionMinutesByBerlinDate(history);
-    return allDays.map((date) => {
-      const dayKey = toISODate(date);
-      const dayMinutes = minutesByDate.get(dayKey);
-      const dayShort = DAY_NAMES[(date.getDay() + 6) % 7] ?? "";
-      return {
-        dayKey,
+function chartPoints(points: readonly OwnTimeChartPoint[]): WeekChartPoint[] {
+  return points.flatMap((point) => {
+    if (!point.date) return [];
+    const date = parseISODate(point.date);
+    const dayShort = DAY_NAMES[(date.getDay() + 6) % 7] ?? "";
+    return [
+      {
+        dayKey: point.date,
         dayShort,
         label: `${dayShort} ${formatDateShort(date)}`,
-        netMinutes: dayMinutes?.netMinutes ?? 0,
-        breakMinutes: dayMinutes?.breakMinutes ?? 0,
-      };
-    });
-  }, [history, todayISO, weekOffset]);
+        netMinutes: point.actual_minutes,
+        breakMinutes: point.break_minutes,
+      },
+    ];
+  });
 }
 
 function tooltipLabelFormatter(
@@ -210,18 +184,16 @@ function WeekChartHeader({
 }
 
 const WeekChart = memo(function WeekChart({
-  history,
-  weekOffset,
+  points,
   error,
 }: {
-  readonly history: WorkSessionHistory[];
-  readonly weekOffset: number;
+  readonly points: readonly OwnTimeChartPoint[];
   /** A failed history load replaces the chart: empty bars would read as a
    *  week without work (#2514). */
   readonly error?: FormErrorInput;
 }) {
   const isMobile = useMobileViewport();
-  const chartData = useWeekChartData({ history, weekOffset });
+  const chartData = useMemo(() => chartPoints(points), [points]);
 
   return (
     <SectionCard

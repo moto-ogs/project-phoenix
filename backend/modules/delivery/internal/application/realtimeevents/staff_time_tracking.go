@@ -10,7 +10,7 @@ import (
 
 // QueueStaffTimeTrackingChanged emits a tenant-wide invalidation after the
 // surrounding transaction commits.
-func QueueStaffTimeTrackingChanged(ctx context.Context, broadcaster Publisher, logger *slog.Logger) {
+func QueueStaffTimeTrackingChanged(ctx context.Context, broadcaster Publisher, logger *slog.Logger, reason string) {
 	if broadcaster == nil {
 		return
 	}
@@ -22,7 +22,11 @@ func QueueStaffTimeTrackingChanged(ctx context.Context, broadcaster Publisher, l
 		logger = slog.Default()
 	}
 	tenant.RegisterAfterCommit(ctx, func() {
-		event := realtime.NewEvent(realtime.EventStaffTimeTrackingChanged, "", realtime.EventData{})
+		data := realtime.EventData{}
+		if reason != "" {
+			data.Reason = &reason
+		}
+		event := realtime.NewEvent(realtime.EventStaffTimeTrackingChanged, "", data)
 		if err := broadcaster.BroadcastToTenant(tenantID, event); err != nil {
 			logger.Warn("SSE staff time-tracking broadcast failed",
 				slog.String("error", err.Error()),
