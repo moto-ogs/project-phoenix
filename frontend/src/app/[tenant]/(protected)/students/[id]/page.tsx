@@ -2261,8 +2261,8 @@ function AppStudentHeadStatus({
         type="button"
         onClick={() => setDetailsOpen(true)}
         aria-haspopup="dialog"
-        aria-label="Heute: alle Angaben zu Ort und Zeiten"
-        className="-ml-9 flex w-[calc(100%+2.25rem)] min-w-0 cursor-pointer items-center gap-1.5 pt-0.5 text-left [&_*]:whitespace-nowrap"
+        // 44 px hoch: die Zeile ist die Trefferfläche für „Heute“.
+        className="-ml-9 flex min-h-11 w-[calc(100%+2.25rem)] min-w-0 cursor-pointer items-center gap-1.5 text-left [&_*]:whitespace-nowrap"
       >
         <span className="shrink-0">{location}</span>
         {late ? (
@@ -2279,6 +2279,7 @@ function AppStudentHeadStatus({
             <TenantPageStats items={items} />
           </span>
         ) : null}
+        <span className="sr-only">, alle Angaben zu heute öffnen</span>
         <ChevronRight
           className="ml-auto size-4 shrink-0 text-gray-500"
           aria-hidden="true"
