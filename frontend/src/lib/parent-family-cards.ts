@@ -10,7 +10,7 @@ export const UNKNOWN_CHILD_TODAY: contract.TodayStatusResponse = {
 export interface ParentFamily {
   day: string;
   needsDayReconciliation: boolean;
-  dayExpiresAt: number;
+  dayExpiry: { at: number; remainingMs: number };
   children: contract.ChildResponse[];
   features: Record<string, contract.ChildFeaturesResponse>;
   today: Record<string, contract.TodayStatusResponse>;
@@ -35,7 +35,7 @@ export function applyCards(
   const narrowed = roster?.day === day ? roster : undefined;
   const family: ParentFamily = {
     day,
-    dayExpiresAt: response.dayExpiresAt,
+    dayExpiry: response.dayExpiry,
     needsDayReconciliation:
       !!roster && (roster.day !== day || roster.needsDayReconciliation),
     children: roster ? [...roster.children] : [],
@@ -100,9 +100,10 @@ export function familyCards(result: contract.FamilyStartResponse, id?: string) {
   if (!result.cards) throw new Error("Missing family start cards");
   if (id && result.cards.some((card) => card.child.student_id !== id))
     throw new Error("Unexpected family start child");
+  const remainingMs = result.day_remaining_seconds * 1000;
   return {
     day: result.day,
     cards: result.cards,
-    dayExpiresAt: Date.now() + result.day_remaining_seconds * 1000,
+    dayExpiry: { at: Date.now() + remainingMs, remainingMs },
   };
 }

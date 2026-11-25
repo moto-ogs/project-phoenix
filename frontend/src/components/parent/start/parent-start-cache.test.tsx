@@ -2,6 +2,10 @@ import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 import { parentFamilyFixture } from "~/test/parent-family-fixture";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { applyCards, familyCards } from "~/lib/parent-family-cards";
+import { ParentServerSeed } from "~/components/parent/parent-server-seed";
+import { sessionGeneration } from "~/lib/swr/session-generation";
+import { berlinTodayISO } from "~/lib/date-helpers";
 import { setTestClock } from "~/test/clock";
 import { Profiler } from "react";
 import type { Session } from "next-auth";
@@ -143,6 +147,72 @@ describe("parent start cache isolation", () => {
       expect(vi.mocked(getFamilyStart).mock.calls).toEqual([[undefined]]);
     },
   );
+
+  it("retries a partial card without reloading its successful sibling, then stops", async () => {
+    vi.useFakeTimers();
+    const [first] = await family.children();
+    if (!first) throw new Error("Missing test child");
+    family.children.mockResolvedValue([
+      first,
+      { ...first, student_id: "43", first_name: "Geschwister" },
+    ]);
+    family.today.mockRejectedValueOnce(new Error("temporarily unavailable"));
+    mount();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByText("Geschwister Test")).toBeInTheDocument();
+    expect(getFamilyStart).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1001);
+    });
+    expect(vi.mocked(getFamilyStart).mock.calls).toEqual([[undefined], ["42"]]);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10000);
+    });
+    expect(getFamilyStart).toHaveBeenCalledTimes(2);
+  });
+
+  it("reconciles at server midnight after a seed even when the device clock is slow", async () => {
+    vi.useFakeTimers();
+    const builtAt = Date.now();
+    const cards = await family.read();
+    const seeded = structuredClone(
+      applyCards(
+        undefined,
+        familyCards({ ...cards, day_remaining_seconds: 3 }),
+      ),
+    );
+    const key = parentKeys.familyStart(berlinTodayISO());
+    setTestClock(new Date(builtAt - 20000));
+    const seed = {
+      builtAt,
+      generation: sessionGeneration({
+        user: { id: "A", scope: "parent" },
+        expires: "2099-01-01",
+      })!,
+      entries: [{ key, render: true, value: Promise.resolve(seeded) }],
+    };
+    const cache = new Map();
+    render(
+      <SWRConfig value={{ provider: () => cache }}>
+        <ParentServerSeed seed={seed} render>
+          <Fixture />
+        </ParentServerSeed>
+      </SWRConfig>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByText("Kind A Test")).toBeInTheDocument();
+    expect(getFamilyStart).not.toHaveBeenCalled();
+    family.children.mockResolvedValue([]);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3010);
+    });
+    expect(getFamilyStart).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Kind A Test")).not.toBeInTheDocument();
+  });
 
   it("discards day-independent child details when the first new-day roster removes the relationship", async () => {
     vi.useFakeTimers();

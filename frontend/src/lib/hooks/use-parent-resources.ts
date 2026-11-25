@@ -66,6 +66,14 @@ function useParentRefusal() {
   );
 }
 
+function partialChildren(family: ParentFamily): string {
+  return family.children
+    .map((child) => child.student_id)
+    .filter((id) => family.featureErrors[id] || family.todayErrors[id])
+    .sort()
+    .join(",");
+}
+
 /** Mounted once in the authenticated shell; the standard scope boundary owns logout. */
 export function useParentResourceEvents() {
   const invalidate = useInvalidateMatching();
@@ -84,17 +92,19 @@ export function useParentResourceEvents() {
   // A fast or slow device may not roll its cache key at server midnight.
   // If its key is already rolling, the new key itself starts that read.
   const keyDay = family.keyDay;
-  const dayExpiresAt = family.data?.dayExpiresAt;
+  const dayExpiry = family.data?.dayExpiry;
   useEffect(() => {
-    if (dayExpiresAt === undefined) return;
+    if (!dayExpiry) return;
+    // A seed was stamped by Next, not by this device. A slow device must
+    // not add its clock skew to the lifetime reported by Go.
     const timer = window.setTimeout(
       () => {
         if (berlinTodayISO() === keyDay) void reloadFamily();
       },
-      Math.max(0, dayExpiresAt - Date.now()),
+      Math.max(0, Math.min(dayExpiry.at - Date.now(), dayExpiry.remainingMs)),
     );
     return () => window.clearTimeout(timer);
-  }, [dayExpiresAt, keyDay, reloadFamily]);
+  }, [dayExpiry, keyDay, reloadFamily]);
   useEffect(() => {
     if (refreshDay) void reloadFamily();
   }, [refreshDay, reloadFamily]);
@@ -103,6 +113,36 @@ export function useParentResourceEvents() {
   useLayoutEffect(() => {
     current.current = family;
   });
+  // A 200 response can contain a failed card. SWR retries transport errors
+  // itself; retry only the missing fields' owner(s) here, in the single bridge.
+  const failedChildren = family.data ? partialChildren(family.data) : "";
+  useEffect(() => {
+    if (!failedChildren) return;
+    let stopped = false;
+    let timer: number;
+    const retryAfter = (ms: number) => {
+      timer = window.setTimeout(() => {
+        const reader = current.current;
+        const snapshot = reader.readCurrent?.();
+        if (
+          !snapshot?.data ||
+          snapshot.error ||
+          partialChildren(snapshot.data) !== failedChildren
+        )
+          return;
+        if (!failedChildren.includes(","))
+          narrowNextFamilyRead(snapshot.data, failedChildren);
+        void reader.mutate().then(() => {
+          if (!stopped && ms === 1000) retryAfter(2000);
+        });
+      }, ms);
+    };
+    retryAfter(1000);
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
+  }, [account, keyDay, failedChildren]);
   const relationships = family.data
     ? JSON.stringify(
         Object.entries(family.data.accessVersions).sort(([a], [b]) =>

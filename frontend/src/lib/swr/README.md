@@ -244,21 +244,27 @@ shared with the panel, so mounting it does not repeat the request.
 
 The shell, start cards, navigation and child pages read projections of one
 account-scoped `parentKeys.familyStart(berlinDay)` snapshot. Cold entry needs
-one `GET /parent/me/family-start`. The profile and unrelated feeds are
-independent. Warm mounts do not fetch again. The server authorizes each child
-and shares school settings and attendance facts only within the request.
+one `GET /parent/me/family-start`. On a protected document navigation, the
+layout and page share the server read; the browser claims its result on mount.
+The profile and unrelated feeds are independent. Warm mounts do not fetch
+again. The server authorizes each child separately.
 
 A child event narrows that read with `student_id`; an empty answer removes
 only that card. A reconnect or event without an ID replaces the whole roster.
-Child detail resources keep their own keys. The device's Berlin day triggers a fresh read. The server day governs
-which fields can be reused, even with a misconfigured clock. An event
-first seen on a new server day reconciles the whole roster. The server supplies the time remaining until Berlin midnight so an open tab
-refreshes even when its clock rolls the date early or late. A failed list is not an empty
-family. A null card field represents a failed read: show the error and use a
-previously confirmed field only for the same relationship version, care state
-and day. Other children take their fresh values. Without a confirmed value,
-features stay off and status is unknown. The SWR scope and generation guard
-covers every projection; no persistent cache holds family data.
+Child detail resources keep their own keys. The device's Berlin day triggers a
+fresh read. Until it arrives, the roster may stay visible but yesterday's flags
+and statuses do not. The server day governs which fields can be reused. An
+event first seen on a new server day reconciles the whole roster. The server
+supplies the time remaining until Berlin midnight, so an open tab also
+refreshes with a fast or slow clock.
+
+A failed list is not an empty family. A null card field represents a failed
+read: show the error and reuse confirmed values only for the same relationship
+version, care state and day. Other children keep their fresh values. Without a
+confirmed value, features stay off and status is unknown. The shell retries
+partial reads with backoff, for the affected child alone if there is only
+one. The SWR scope and generation guard covers every projection; no persistent
+cache holds family data.
 
 The parent API reports `care.child_not_linked` (401/403/404) to the
 authenticated bridge. `care.guardian_permission_denied` triggers eviction only
