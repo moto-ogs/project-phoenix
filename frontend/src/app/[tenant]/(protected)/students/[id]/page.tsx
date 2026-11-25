@@ -96,6 +96,11 @@ import type { OverflowMenuEntry } from "~/components/ui/page-header/types";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { AlertTriangle, ChevronRight } from "lucide-react";
+import {
+  attendanceActorLabel,
+  type AttendanceActor,
+} from "~/lib/attendance-actor";
+import { schoolClassLabel } from "~/lib/school-class-label";
 import { OverlaySheet } from "~/components/ui/overlay-sheet";
 import { useMinuteClock } from "~/lib/pickup-helpers";
 import { getStudentTimeStatus } from "~/lib/student-time-status";
@@ -2242,18 +2247,34 @@ function AppStudentHeadStatus({
   const pickupLate = pickedUp ? null : overdue("pickup", plannedPickup);
   const late = pickupLate ?? arrivalLate;
 
-  // Eine rote Zeit verdrängt die übrigen Zeit-Chips: Die Zeile bleibt eine
-  // Zeile auch am iPhone SE, und das Wichtige steht allein.
+  // Erste Zeile: Ort, dann eine rote Zeit oder die geplanten Zeiten des
+  // Tages. Eine rote Zeit verdrängt die übrigen Zeit-Chips, damit die Zeile
+  // auch am iPhone SE eine Zeile bleibt.
   const items: { label: string }[] = [];
-  if (!late && arrival)
-    items.push({ label: `${arrived ? "Da seit" : "Kommt"} ${arrival}` });
+  if (!late && !arrived && arrival) items.push({ label: `Kommt ${arrival}` });
   if (!late && pickup)
     items.push({ label: `${pickedUp ? "Gegangen" : "Geht"} ${pickup}` });
-  // Die Gruppe steht in den Stammdaten, nicht im Kopf: sonst bricht die
-  // Chip-Zeile am Telefon um. `-ml-9`: Die Chips beginnen an derselben
-  // Kante wie der Zurück-Pfeil und der Inhalt der Karten darunter, nicht
-  // eingerückt unter dem Namen.
-  // Ein Tipp auf die Zeile öffnet „Heute“ mit allem, was der Desktop unter
+  // Zweite Zeile (#8070): wann das Kind kam und wer es angemeldet hat, wie
+  // „Heutige Ankunft“ und „Angemeldet: am Gerät“ am Desktop, dazu Klasse und
+  // Gruppe. Was nicht ganz passt, rutscht in eine verborgene Folgezeile statt
+  // mitten im Wort abgeschnitten zu werden; alles steht im Blatt „Heute“.
+  const actor = (value: AttendanceActor | null | undefined) => {
+    const label = attendanceActorLabel(value ?? null);
+    if (!label) return "";
+    return value?.kind === "staff" ? ` von ${label}` : ` ${label}`;
+  };
+  const facts = [
+    pickedUp
+      ? `Abgemeldet ${student.actual_pickup_time}${actor(student.actual_pickup_by)}`
+      : arrived
+        ? `Angemeldet ${student.actual_arrival_time}${actor(student.actual_arrival_by)}`
+        : null,
+    student.school_class ? schoolClassLabel(student.school_class) : null,
+    student.group_name,
+  ].filter((fact): fact is string => Boolean(fact));
+  // Die Chips beginnen an derselben Kante wie der Zurück-Pfeil und der
+  // Inhalt der Karten darunter (`-ml-9`), nicht eingerückt unter dem Namen.
+  // Ein Tipp auf die Zeilen öffnet „Heute“ mit allem, was der Desktop unter
   // dem Namen zeigt; der Pfeil am Ende sagt, dass es dort mehr gibt.
   return (
     <>
@@ -2261,27 +2282,46 @@ function AppStudentHeadStatus({
         type="button"
         onClick={() => setDetailsOpen(true)}
         aria-haspopup="dialog"
-        // 44 px hoch: die Zeile ist die Trefferfläche für „Heute“.
-        className="-ml-9 flex min-h-11 w-[calc(100%+2.25rem)] min-w-0 cursor-pointer items-center gap-1.5 text-left [&_*]:whitespace-nowrap"
+        // Mindestens 44 px hoch: die Zeilen sind die Trefferfläche für „Heute“.
+        className="-ml-9 flex min-h-11 w-[calc(100%+2.25rem)] min-w-0 cursor-pointer items-center gap-1.5 py-1 text-left"
       >
-        <span className="shrink-0">{location}</span>
-        {late ? (
-          <span className="shrink-0">
-            <StatusBadge
-              tone={late.state === "very-overdue" ? "red" : "orange"}
-              icon={<AlertTriangle className="size-3.5" aria-hidden="true" />}
-              label={`${late === pickupLate ? "Abholung" : "Ankunft"} überfällig ${late.displayTime}`}
-            />
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="flex min-w-0 items-center gap-1.5 [&_*]:whitespace-nowrap">
+            <span className="shrink-0">{location}</span>
+            {late ? (
+              <span className="shrink-0">
+                <StatusBadge
+                  tone={late.state === "very-overdue" ? "red" : "orange"}
+                  icon={
+                    <AlertTriangle className="size-3.5" aria-hidden="true" />
+                  }
+                  label={`${late === pickupLate ? "Abholung" : "Ankunft"} überfällig ${late.displayTime}`}
+                />
+              </span>
+            ) : null}
+            {items.length > 0 ? (
+              <span className="contents [&>*]:contents">
+                <TenantPageStats items={items} />
+              </span>
+            ) : null}
           </span>
-        ) : null}
-        {items.length > 0 ? (
-          <span className="contents [&>*]:contents">
-            <TenantPageStats items={items} />
-          </span>
-        ) : null}
+          {facts.length > 0 ? (
+            <span
+              data-testid="app-head-facts"
+              className="flex h-5 flex-wrap gap-x-1 overflow-hidden text-sm leading-5 text-gray-600"
+            >
+              {facts.map((fact, index) => (
+                <span key={fact} className="whitespace-nowrap">
+                  {index > 0 ? "· " : ""}
+                  {fact}
+                </span>
+              ))}
+            </span>
+          ) : null}
+        </span>
         <span className="sr-only">, alle Angaben zu heute öffnen</span>
         <ChevronRight
-          className="ml-auto size-4 shrink-0 text-gray-500"
+          className="size-4 shrink-0 text-gray-500"
           aria-hidden="true"
         />
       </button>
