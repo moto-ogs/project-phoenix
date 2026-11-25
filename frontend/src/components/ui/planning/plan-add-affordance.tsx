@@ -1,100 +1,29 @@
 "use client";
 
 /**
- * PlanAddAffordance ist DIE Anlege-Geste aller Planungsraster (#2031).
- * Betreuungsplan (Stundenraster), Dienstplan (gefüllte Zellen) und jede leere
- * ResourceGrid-Zelle rendern exakt dieses Bild, damit die Geste überall gleich
- * aussieht — leer wie gefüllt. Vorher hatte jedes Raster seine eigene Variante
- * (Textpille "+ Termin", gestrichelter Plus-Button, flächiger Plus-Button).
- *
- * Es ist ein <span>, kein <button>: jedes Raster besitzt bereits sein eigenes
- * interaktives Element (der Leerzellen-Button der ResourceGrid, der
- * Hinzufügen-Button in der gefüllten Dienstplan-Zelle, der absolut
- * positionierte Stunden-Slot im Wochenraster), und ein Button im Button ist
- * ungültiges HTML. Das interaktive Element des Aufrufers MUSS die Klasse
- * `group` tragen, weil die Einblendung daran hängt.
- *
- * Sichtbarkeit: auf Zeigegeräten mit echtem Hover erscheint die Fläche erst
- * bei Hover oder Tastaturfokus, damit ein dichtes Raster nicht zum Plus-Teppich
- * wird. Auf Touch (kein Hover) ist sie dauerhaft sichtbar, weil es dort keinen
- * Hover-Zustand gibt, über den man sie sonst entdecken könnte.
+ * Gemeinsame Anlege-Geste der Planungsraster (#2031). Die gestrichelte
+ * Fläche und das Plus werden auf dem Knopf gezeichnet, ohne einen
+ * zusätzlichen Knoten je leerer Rasterzelle oder Stunde.
  */
+export const PLAN_ADD_AFFORDANCE =
+  "before:pointer-events-none before:absolute before:rounded-md before:border before:border-dashed before:border-gray-200 before:text-gray-500 before:transition hover:before:border-gray-300 hover:before:text-gray-600 before:bg-center before:bg-no-repeat before:[background-image:linear-gradient(currentColor,currentColor),linear-gradient(currentColor,currentColor)] before:[background-size:0.583rem_1.33px,1.33px_0.583rem] [@media(hover:hover)_and_(pointer:fine)]:before:opacity-0 [@media(hover:hover)_and_(pointer:fine)]:hover:before:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:focus-visible:before:opacity-100";
 
-type PlanAddAffordanceSize = "fill" | "inline";
-
-const SIZE_CLASS: Record<PlanAddAffordanceSize, string> = {
-  /**
-   * Füllt den Platz, den der Aufrufer vorgibt (leere Rasterzelle,
-   * Stunden-Slot). BEWUSST ohne eigene Mindesthöhe: die Zeilenhöhe des
-   * ResourceGrid kommt aus dessen Zellen-Wrapper (Issue #2026), eine zweite
-   * Mindesthöhe hier würde leere Zeilen wieder höher machen als gefüllte.
-   */
-  // self-stretch statt h-full: die Fläche ist ein Flex-Kind des Aufrufers, und
-  // eine Prozenthöhe greift dort nicht zuverlässig (in der Rasterzelle blieb
-  // sie 18px hoch statt 64px). Über die Querachse zu strecken ist der Weg, der
-  // in beiden Aufrufern funktioniert — auch im Stunden-Slot mit items-center.
-  fill: "self-stretch",
-  /** Schmale Zeile unter vorhandenem Zelleninhalt. */
-  inline: "h-7",
-};
-
-// Der Hover-Zweig hängt komplett an `(hover: hover) and (pointer: fine)`:
-// Standard ist sichtbar, ausgeblendet wird nur dort, wo es Hover wirklich gibt.
-const REVEAL_CLASS = [
-  "opacity-100",
-  "[@media(hover:hover)_and_(pointer:fine)]:opacity-0",
-  "[@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100",
-  "[@media(hover:hover)_and_(pointer:fine)]:group-focus-visible:opacity-100",
-].join(" ");
-
-interface PlanAddAffordanceProps {
-  readonly size?: PlanAddAffordanceSize;
-  readonly className?: string;
-}
-
-export function PlanAddAffordance({
-  size = "fill",
-  className,
-}: PlanAddAffordanceProps) {
-  return (
-    <span
-      aria-hidden="true"
-      className={[
-        // pointer-events-none: das umschließende Element des Aufrufers trägt
-        // den Klick, die Fläche darf ihn nie abfangen.
-        "pointer-events-none relative flex w-full items-center justify-center rounded-md border border-dashed border-gray-200 text-gray-500 transition group-hover:border-gray-300 group-hover:text-gray-600",
-        // A decorative plus needs no SVG subtree in each timetable slot.
-        "before:absolute before:h-[1.33px] before:w-[0.583rem] before:rounded-full before:bg-current after:absolute after:h-[0.583rem] after:w-[1.33px] after:rounded-full after:bg-current",
-        SIZE_CLASS[size],
-        REVEAL_CLASS,
-        className ?? "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    />
-  );
-}
-
-interface PlanAddButtonProps {
-  /** Vorlesbarer Name: was angelegt wird, für wen und wann. */
-  readonly label: string;
-  readonly onClick: () => void;
-}
-
-/**
- * Die Anlege-Geste als eigener Knopf, unter den Einträgen einer gefüllten
- * Zelle oder in der Tagesliste am Handy (`ResourceDayList`). Einsatzplanung
- * und Vertretungspool teilen ihn (#7415).
- */
-export function PlanAddButton({ label, onClick }: PlanAddButtonProps) {
+export function PlanAddButton({
+  label,
+  onClick,
+  disabled,
+}: Readonly<{
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}>) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="group flex w-full rounded-md focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none"
-    >
-      <PlanAddAffordance size="inline" />
-    </button>
+      disabled={disabled}
+      className={`relative flex h-7 w-full rounded-md before:inset-0 focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none disabled:cursor-wait disabled:opacity-40 ${PLAN_ADD_AFFORDANCE}`}
+    />
   );
 }

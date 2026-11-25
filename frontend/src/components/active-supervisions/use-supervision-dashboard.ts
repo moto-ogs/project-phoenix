@@ -250,7 +250,14 @@ export function useSupervisionDashboard(
   const [restoredSessionId] = useState(() => cachedSessionId(dashboardData));
 
   // Selection state — genuine UI state, not a copy of server data.
-  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [selectedRoomId, setSelectedRoomId] = useState(() =>
+    restoredSessionId &&
+    !roomParam &&
+    (!sessionParam || sessionParam === restoredSessionId) &&
+    memory.read("supervision-last-session") === restoredSessionId
+      ? restoredSessionId
+      : null,
+  );
   const [selectedOpenRoomId, setSelectedOpenRoomId] = useState<string | null>(
     null,
   );

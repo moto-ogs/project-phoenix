@@ -16,6 +16,7 @@ import {
   TenantPageStats,
   type TenantPageTab,
 } from "~/components/ui/tenant-page";
+import { MountOnFirstOpen } from "~/components/ui/mount-on-first-open";
 import { RoomRemovalModal } from "~/components/rooms/room-removal-modal";
 import { RoomStatusBadge } from "~/components/rooms/room-status-badge";
 import {
@@ -555,7 +556,7 @@ function RoomDetailPageContent() {
         ) : undefined
       }
       overlays={
-        <>
+        <MountOnFirstOpen open={showDeleteModal}>
           <RoomRemovalModal
             isOpen={showDeleteModal}
             roomId={room.id}
@@ -563,7 +564,7 @@ function RoomDetailPageContent() {
             onClose={() => setShowDeleteModal(false)}
             onRemoved={handleRoomRemoved}
           />
-        </>
+        </MountOnFirstOpen>
       }
     >
       <LoadErrorAlert error={roomAfterWrite.error} />

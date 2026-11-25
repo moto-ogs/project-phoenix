@@ -4,7 +4,7 @@
 
 import type { ReactNode } from "react";
 
-import { PlanAddAffordance } from "~/components/ui/planning/plan-add-affordance";
+import { PLAN_ADD_AFFORDANCE } from "~/components/ui/planning/plan-add-affordance";
 import { Z_LAYER } from "../overlay-styles";
 
 /**
@@ -283,10 +283,8 @@ export function ResourceGrid<TRow>({
                             type="button"
                             onClick={() => onEmptyCellClick(row, column)}
                             aria-label={emptyCellLabel(row, column)}
-                            className={`${cellClass} group rounded-md focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none`}
-                          >
-                            <PlanAddAffordance />
-                          </button>
+                            className={`${cellClass} relative rounded-md before:inset-0 focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none ${PLAN_ADD_AFFORDANCE}`}
+                          />
                         ) : (
                           <div className={`${cellClass} flex-col`}>{cell}</div>
                         )}

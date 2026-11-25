@@ -24,7 +24,7 @@ import {
   OverflowMenu,
   type OverflowMenuEntry,
 } from "~/components/ui/page-header/OverflowMenu";
-import { PlanAddAffordance } from "~/components/ui/planning/plan-add-affordance";
+import { PlanAddButton } from "~/components/ui/planning/plan-add-affordance";
 import { PlanBlock } from "~/components/ui/planning/plan-block";
 import {
   PlanLegend,
@@ -685,21 +685,11 @@ export function DienstplanResourceGrid({
             assignment={assignment}
           />
         ))}
-        {/* Anlege-Geste in einer GEFÜLLTEN Zelle: dieselbe Fläche wie in einer
-            leeren Zelle und im Stundenraster des Betreuungsplans (#2031), nur
-            schmaler, weil darüber schon Inhalt steht. Ein- und Ausblendung
-            steckt in PlanAddAffordance; `group` hier am Button, damit auch
-            Tastaturfokus die Fläche zeigt (die Zelle selbst ist nicht
-            fokussierbar). */}
-        <button
-          type="button"
+        <PlanAddButton
           disabled={closingDaysLoading}
           onClick={() => openCell(member, date, null)}
-          aria-label={createShiftAriaLabel(member, column)}
-          className="group flex w-full rounded-md focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none disabled:cursor-wait disabled:opacity-40"
-        >
-          <PlanAddAffordance size="inline" />
-        </button>
+          label={createShiftAriaLabel(member, column)}
+        />
       </div>
     );
   };
@@ -813,15 +803,11 @@ export function DienstplanResourceGrid({
                       // Leerer Tag: dieselbe Anlege-Fläche, die das Raster in
                       // einer leeren Zelle rendert — ohne sie ließe sich mobil
                       // keine Schicht anlegen.
-                      <button
-                        type="button"
+                      <PlanAddButton
                         disabled={closingDaysLoading}
                         onClick={() => openCell(member, mobileColumn.key, null)}
-                        aria-label={createShiftAriaLabel(member, mobileColumn)}
-                        className="group flex w-full rounded-md focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none disabled:cursor-wait disabled:opacity-40"
-                      >
-                        <PlanAddAffordance size="inline" />
-                      </button>
+                        label={createShiftAriaLabel(member, mobileColumn)}
+                      />
                     )}
                   </div>
                 </li>

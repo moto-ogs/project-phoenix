@@ -37,7 +37,7 @@ import {
 import { Alert } from "~/components/ui/alert";
 import { CapacityStrip } from "~/components/ui/planning/capacity-strip";
 import { EmptyState } from "~/components/ui/empty-state";
-import { PlanAddAffordance } from "~/components/ui/planning/plan-add-affordance";
+import { PLAN_ADD_AFFORDANCE } from "~/components/ui/planning/plan-add-affordance";
 import { SectionCard } from "~/components/ui/section-card";
 import {
   assignBlockLanes,
@@ -289,29 +289,24 @@ export function WeeklyCalendarGrid({
   // Scrollleiste sitzt am Fuß des Rasters, oft unter dem Bildschirmrand,
   // und macOS blendet sie ohnehin aus.
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [scrollEdges, setScrollEdges] = useState({
-    left: false,
-    right: false,
-    // Breite einer sichtbaren senkrechten Scrollleiste (Windows, Linux):
-    // der rechte Schatten steht davor, nicht darauf.
-    scrollbarPx: 0,
-  });
+  const leftShadowRef = useRef<HTMLDivElement>(null);
+  const rightShadowRef = useRef<HTMLDivElement>(null);
   const updateScrollEdges = useCallback(() => {
     const scroller = scrollRef.current;
-    if (!scroller) return;
-    const next = {
-      left: scroller.scrollLeft > 0,
-      right:
-        scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1,
-      scrollbarPx: scroller.offsetWidth - scroller.clientWidth,
-    };
-    setScrollEdges((prev) =>
-      prev.left === next.left &&
-      prev.right === next.right &&
-      prev.scrollbarPx === next.scrollbarPx
-        ? prev
-        : next,
-    );
+    const leftShadow = leftShadowRef.current;
+    const rightShadow = rightShadowRef.current;
+    if (!scroller || !leftShadow || !rightShadow) return;
+    const { scrollLeft, scrollWidth, clientWidth, offsetWidth } = scroller;
+    // These measurements affect only decoration, not the rows and blocks.
+    // Updating the shadows directly keeps a scroll or resize from rendering
+    // the entire calendar again before the browser can paint.
+    const hideLeft = scrollLeft <= 0;
+    const hideRight = scrollLeft + clientWidth >= scrollWidth - 1;
+    if (leftShadow.hidden !== hideLeft) leftShadow.hidden = hideLeft;
+    if (rightShadow.hidden !== hideRight) rightShadow.hidden = hideRight;
+    // A visible vertical scrollbar (Windows/Linux) sits beside the shadow.
+    const right = `${offsetWidth - clientWidth}px`;
+    if (rightShadow.style.right !== right) rightShadow.style.right = right;
   }, []);
 
   // Liegt heute außerhalb des sichtbaren Ausschnitts (breite Tage davor),
@@ -662,17 +657,12 @@ export function WeeklyCalendarGrid({
                           tabIndex={-1}
                           onClick={() => onSlotClick(iso, hour)}
                           aria-label={`Neuen Termin anlegen: ${dayLabel}, ${String(hour).padStart(2, "0")}:00 Uhr`}
-                          className="group absolute inset-x-0 flex items-center justify-center p-0.5 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none focus-visible:ring-inset"
+                          className={`absolute inset-x-0 before:inset-0.5 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none focus-visible:ring-inset ${PLAN_ADD_AFFORDANCE}`}
                           style={{
                             top: `${(hour - renderStartHour) * hourHeightPx}px`,
                             height: `${hourHeightPx}px`,
                           }}
-                        >
-                          {/* Dieselbe Anlege-Geste wie in den Zellen von Dienstplan
-                          und ResourceGrid (#2031) statt der früheren Textpille
-                          "+ Termin". */}
-                          <PlanAddAffordance />
-                        </button>
+                        />
                       ))}
 
                     {/* Event blocks */}
@@ -760,19 +750,18 @@ export function WeeklyCalendarGrid({
             </div>
           )}
         </div>
-        {scrollEdges.left && (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-y-0 left-10 z-40 w-4 bg-linear-to-r from-gray-900/10 to-transparent sm:left-16"
-          />
-        )}
-        {scrollEdges.right && (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-y-0 z-40 w-4 bg-linear-to-l from-gray-900/10 to-transparent"
-            style={{ right: scrollEdges.scrollbarPx }}
-          />
-        )}
+        <div
+          ref={leftShadowRef}
+          aria-hidden
+          hidden
+          className="pointer-events-none absolute inset-y-0 left-10 z-40 w-4 bg-linear-to-r from-gray-900/10 to-transparent sm:left-16"
+        />
+        <div
+          ref={rightShadowRef}
+          aria-hidden
+          hidden
+          className="pointer-events-none absolute inset-y-0 z-40 w-4 bg-linear-to-l from-gray-900/10 to-transparent"
+        />
       </div>
 
       {legend ? (
