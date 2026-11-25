@@ -26,11 +26,13 @@ import { FieldLabel } from "~/components/ui/field-label";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import { useApiFormError } from "~/contexts/ToastContext";
+import {
+  prepareErrorPresenter,
+  useApiFormError,
+} from "~/contexts/ToastContext";
 import { ApiError, unavailableApiError } from "~/lib/api-error";
 import { passkeysConcept } from "~/lib/concepts/passkeys";
 import type { ErrorCode } from "~/lib/error-codes.generated";
-import { errorCodeMessage } from "~/lib/error-presentation";
 import { errorStatus } from "~/lib/expected-failure";
 import { FORGOT_PASSWORD_PARAM } from "~/lib/login-params";
 import {
@@ -39,6 +41,7 @@ import {
   useSessionExpiredNotice,
 } from "~/lib/login-session-notice";
 import { createLogger } from "~/lib/logger";
+import { LOGOUT_NOT_REVOKED_NOTICE } from "~/lib/logout-notice.generated";
 import {
   isPasskeyCeremonyIncompleteError,
   isPasskeySupported,
@@ -74,18 +77,12 @@ export interface PasswordLoginCopy {
    */
   readonly rateLimited: string;
   readonly sessionExpired: string;
-  /**
-   * The last logout ended the session on this device only (#7209). Defaults
-   * to the German catalog text of identity.logout_not_revoked.
-   */
-  readonly logoutNotRevoked?: string;
+  /** The catalog text for a logout that ended this device's session only. */
+  readonly logoutNotRevoked: string;
   /** The person changed their password, which signed them out. */
   readonly passwordChanged?: string;
   readonly reset?: PasswordResetModalCopy;
 }
-
-/** The logout ended the session on this device only (#7209). */
-const LOGOUT_NOT_REVOKED: ErrorCode = "identity.logout_not_revoked";
 
 const DEFAULT_COPY = {
   emailLabel: "E-Mail-Adresse",
@@ -101,6 +98,7 @@ const DEFAULT_COPY = {
   missingCredentials: "Bitte gib E-Mail-Adresse und Passwort ein.",
   rateLimited: "Zu viele Anmeldeversuche. Bitte versuche es später erneut.",
   sessionExpired: "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
+  logoutNotRevoked: LOGOUT_NOT_REVOKED_NOTICE,
   passwordChanged:
     "Dein Passwort ist geändert. Melde dich jetzt mit dem neuen Passwort an.",
 } as const satisfies PasswordLoginCopy &
@@ -138,7 +136,7 @@ export function useLoginAttempt(
   rateLimited: string = DEFAULT_COPY.rateLimited,
 ) {
   const formRef = useRef<HTMLFormElement>(null);
-  const errors = useApiFormError(formRef);
+  const errors = useApiFormError(formRef, { preloadPresenter: false });
   const [pending, setPending] = useState(false);
   const [passwordRefused, setPasswordRefused] = useState(false);
 
@@ -148,6 +146,7 @@ export function useLoginAttempt(
     object: string,
     retry: () => void,
   ) => {
+    prepareErrorPresenter();
     setPending(true);
     errors.clear();
     setPasswordRefused(false);
@@ -187,7 +186,7 @@ export function useLoginAttempt(
           err.code !== undefined &&
           (INVALID_CREDENTIALS as readonly ErrorCode[]).includes(err.code),
       );
-      void errors.show(
+      await errors.show(
         err instanceof ApiError
           ? credentialError(err, refusals, LOGIN_CREDENTIAL_FIELDS)
           : unavailableApiError(err),
@@ -304,6 +303,7 @@ export function PasswordLoginForm({
     <>
       <form
         ref={formRef}
+        onFocusCapture={prepareErrorPresenter}
         onSubmit={(event) => {
           event.preventDefault();
           void submit();
@@ -338,10 +338,7 @@ export function PasswordLoginForm({
         {!failed && logoutNotRevoked ? (
           <Alert
             type="warning"
-            message={
-              copy.logoutNotRevoked ??
-              errorCodeMessage(LOGOUT_NOT_REVOKED, "die Abmeldung")
-            }
+            message={copy.logoutNotRevoked}
             data-testid="logout-not-revoked-notice"
           />
         ) : null}

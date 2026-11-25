@@ -492,7 +492,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r nativeStudentRepository) ListClassRoster(ctx context.Context, schoolClass string) ([]*directory.StudentState, error) {\n\tout0, out1 := r.rawStudentRepository.ListClassRoster(ctx, schoolClass)\n\treturn mapRecordSlice(out0, func(value *models.Student) *directory.StudentState {\n\t\treturn NativeStudentState(value)\n\t}), out1\n}",
+      "evidence": "func (r nativeStudentRepository) ListClassRoster(ctx context.Context, classes []string) ([]*directory.StudentState, error) {\n\tout0, out1 := r.rawStudentRepository.ListClassRoster(ctx, classes)\n\treturn mapRecordSlice(out0, func(value *models.Student) *directory.StudentState {\n\t\treturn NativeStudentState(value)\n\t}), out1\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/adapters/peoplepostgres/nativeStudentRepository.ListClassRoster",
       "owner": "modules/peopledirectory"

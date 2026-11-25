@@ -20,7 +20,7 @@ export const CLASS_DAY_REFRESH_DEBOUNCE_MS = 1000;
  *
  * Mehrere Änderungen kurz hintereinander laden einmal. Ein verdeckter Tab
  * lädt erst, wenn er wieder sichtbar ist (`marksRead` hält das Ereignis bis
- * dahin zurück): die Übersicht lädt jede Klasse neu, und niemand sieht hin.
+ * dahin zurück): niemand sieht im Hintergrund auf die Übersicht.
  */
 export function useClassDayRefresh(onRefresh: () => void): void {
   useMessagesActivity({

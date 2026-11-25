@@ -1,3 +1,5 @@
+import type { Session } from "next-auth";
+import { hasPermission } from "~/lib/auth-utils";
 import {
   schoolLetterDetailKeys,
   schoolLetterDetails,
@@ -39,6 +41,7 @@ interface SchoolPageRead {
   key: string;
   load: (token: string) => Promise<unknown>;
   render?: boolean;
+  when?: (session: Session) => boolean;
 }
 
 async function schoolSnapshot() {
@@ -64,11 +67,13 @@ export function schoolPageSeed(
       if (!snapshot) return null;
       const token = snapshot.accessToken;
       const entries = (items: readonly SchoolPageRead[]) =>
-        items.map(({ key, load, render = true }) => ({
-          key,
-          value: load(token),
-          render,
-        }));
+        items
+          .filter(({ when }) => when?.(snapshot.session) ?? true)
+          .map(({ key, load, render = true }) => ({
+            key,
+            value: load(token),
+            render,
+          }));
       const independent = entries(reads);
       const additional = dependent ? entries(await dependent(token)) : [];
       return seedOf(snapshot, [...independent, ...additional], builtAt);
@@ -104,6 +109,27 @@ export const schoolClasses = {
       return { ...data, classes: data.classes ?? [] };
     }),
 };
+
+export function schoolHomeSeed(date: string) {
+  const canViewSchoolDay = (session: Session) =>
+    hasPermission(session, "class_day:all_classes");
+  return schoolPageSeed([
+    schoolNotices,
+    { ...schoolClasses, when: canViewSchoolDay },
+    {
+      key: schoolPortalKeys.assignedClasses(date),
+      when: (session) => !canViewSchoolDay(session),
+      load: (token) =>
+        seedRead("schoolAssignedClasses", async (signal) => {
+          const { data } = await readContract(
+            classesContract.routes["GET /school/class-day/assigned-classes"],
+            { token, signal, query: { date } },
+          );
+          return data;
+        }),
+    },
+  ]);
+}
 
 export const schoolLetters = {
   key: schoolPortalKeys.parentLetters(),

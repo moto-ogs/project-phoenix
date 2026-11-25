@@ -616,8 +616,12 @@ pass alone is not confirmation. Every portal shell revokes through its BFF logou
 Auth.js clears the cookie. When the route answers with an error (the
 backend's `identity.logout_not_revoked`, or a BFF 503), the browser still
 clears the cookie and the login page says the session ends at its expiry
-(#7209); only a logout without any answer (offline, timeout) keeps the
-session and shows the error with a retry. The tenant relogin action keeps
+(#7209). The password form receives that notice as ready-to-display copy:
+the generated German sentence for `identity.logout_not_revoked`, or the parents
+login's scoped translation. Opening a login must not load the full error
+presenter. Focusing the password form or starting an attempt warms it for a
+refusal without holding up the request. Only a logout without any answer
+(offline, timeout) keeps the session and shows the error with a retry. The tenant relogin action keeps
 the session on every failure and offers a retry: it moves to another
 school's host, where no notice could follow. All six routes
 come from one factory (`frontend/src/lib/logout-route.server.ts`); the
@@ -1295,6 +1299,15 @@ coordinate producer and consumer changes.
 Class-day is mounted only at `/school/class-day`; `/api/class-day` and the
 tenant `/klassen` page were removed. Its frontend uses `app/school/*`, shared
 `components/class-day`, and `server/auth/school*.ts` (under `frontend/src/`).
+The teacher's home uses one `GET /school/class-day/assigned-classes?date=…`
+with `class_day:read`. Go resolves the class assignments in the school
+transaction, reads those rosters together and returns totals only, including
+the number of children with a reported status or a changed pickup. The report
+follows Berlin's day and the school's Friday-plan setting. The administration's
+audited `/school-day` with child lists still requires `class_day:all_classes`.
+The class sheet still checks the class and logs disclosure when opened;
+`/classes` remains the class/options read on the screens that need it.
+
 The PWA identity is moto schule (`schule` / `schule-staging` favicon variants).
 Lehrkraft invitations link to `SCHOOL_URL/invite`, not `FRONTEND_URL/invite`.
 

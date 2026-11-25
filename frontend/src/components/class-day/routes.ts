@@ -72,8 +72,8 @@ export function classDayOverviewPath(dateISO: string): string {
 }
 
 /**
- * Samstag und Sonntag haben keine Übergabe — client-seitig erkennbar, also
- * gar nicht erst laden (spart pro Klasse den vollen Report samt GDPR-Logzeile).
+ * Samstag und Sonntag brauchen nur dann einen Detailbogen, wenn die Schule
+ * am Wochenende nach Freitagsplan arbeitet.
  */
 export function isWeekendISO(dateISO: string): boolean {
   const day = parseISODate(dateISO).getDay();

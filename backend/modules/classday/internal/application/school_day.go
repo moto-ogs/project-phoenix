@@ -163,7 +163,7 @@ func schoolDayChild(row classday.DayRow, schoolDay, enrollmentKnown bool) classd
 	child.Missing = row.MorningAttendance != nil && row.MorningAttendance.Status == classday.MorningAttendanceAbsent
 	child.Unreported = row.Unreported
 	child.StatusBySchool = row.StatusBySchool
-	child.Changed = !row.ListEntry && (row.Status != "" || row.PickupChanged)
+	child.Changed = dayRowChanged(row)
 	if row.NoCare() || row.Status != "" || !enrollmentKnown {
 		return child
 	}

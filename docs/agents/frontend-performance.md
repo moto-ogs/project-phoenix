@@ -194,6 +194,26 @@ Do not publish Playwright error contexts, seed state, per-request URLs, session
 files or browser screenshots. A median must be **strictly below 150 ms** to
 meet the target; slow results remain valid evidence.
 
+## School: assigned-class cards
+
+On an authenticated cold document, the teacher's assigned-class totals use
+one Go GET and no browser GET. The SWR seed contains totals only. A visible
+burst of school-day changes causes one browser and Go GET; a hidden tab waits
+until visible. The first class sheet is a separate audited browser read.
+The query budget, including the school's transaction, is independent of
+whether the caller has one, three or six classes
+(scenario `modules.classday.assigned_classes`).
+
+For the local browser measurement, run `school-class-counts.perf.ts` with
+`playwright.perf-dev.config.ts`, `PERF_PORT` for the seeded native stack
+and `PERF_SCHOOL_FIXTURE` for the executable fixture command. The command
+receives `1`, `3` or `6` to set the seeded teacher's class assignments, or
+`event` to emit a child change for that school. Use only the isolated local
+database. The recorder reports encoded browser response bodies; match its
+time windows to the backend's tenant request log for Go GETs and body bytes.
+The route test measures SQL statements for the old and new read paths over
+the same fixture. `PERF_BASELINE=1` compares against a checkout before #8092.
+
 ## Parents: start cards
 
 Measure the children, feature flags and today's statuses together, separately
