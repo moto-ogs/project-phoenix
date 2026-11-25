@@ -39,7 +39,6 @@ import { blockChildrenLabel } from "~/lib/block-children";
 import { supervisionConcept } from "~/lib/concepts/supervision";
 import { birthdaysConcept } from "~/lib/concepts/birthdays";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
-import { childrenConcept } from "~/lib/concepts/children";
 import { dayChangesConcept } from "~/lib/concepts/dayChanges";
 import { groupsConcept } from "~/lib/concepts/groups";
 import { announcementsConcept } from "~/lib/concepts/announcements";
@@ -98,6 +97,11 @@ function isChildChange(entry: DayChange): boolean {
 /** Alles Übrige aus „Heute anders“: Team, Räume, die Schule. */
 function isTeamOrSchool(entry: DayChange): boolean {
   return !openNotice(entry) && !isChildChange(entry);
+}
+
+/** Alles aus „Heute anders“ außer offenen Hinweisen (die stehen einzeln). */
+function isDayChange(entry: DayChange): boolean {
+  return !openNotice(entry);
 }
 
 /** „1 krank, 2 mit anderer Abholzeit“: dieselben Wörter wie am Desktop. */
@@ -229,7 +233,6 @@ export function HomeApp({
   const openNotices = shown.filter(openNotice);
   const children = shown.filter(isChildChange);
   const teamAndSchool = shown.filter(isTeamOrSchool);
-  const teamMine = teamAndSchool.filter((entry) => entry.section === "you");
   const todo: HomeEntry[] = [];
   for (const entry of openNotices) {
     todo.push({
@@ -264,53 +267,40 @@ export function HomeApp({
       href: tenantPath(request.href),
     });
   }
-  if (overview && children.length > 0) {
-    // „Kinder heute anders“ und „Team und Schule“ teilen kein Wort: zwei
-    // Zeilen mit „Heute anders“ hielt man für dasselbe.
+  if (overview && has("section.day_changes")) {
+    // Ein Eintrag „Heute anders“ wie am Desktop: Kinder, Team und Schule in
+    // einer Liste. Er steht auch, wenn heute alles nach Plan läuft, damit
+    // man ihn immer an derselben Stelle findet.
+    const changes = children.length + teamAndSchool.length;
     const list = (
       <DayChangesList
         overview={overview}
-        include={isChildChange}
-        label="Kinder heute anders"
-        mineTitle="Aus deinen Gruppen"
+        include={isDayChange}
+        label="Heute anders"
       />
     );
     todo.push({
-      id: "kinder",
-      row: {
-        leading: <Icon concept={childrenConcept} />,
-        title: "Kinder heute anders",
-        subtitle: childCounts(children),
-        meta: <CountBadge count={children.length} />,
-      },
-      detail: list,
-      sheet: { kind: "list", title: "Kinder heute anders", body: list },
-    });
-  }
-  if (overview && teamAndSchool.length > 0) {
-    const school = teamAndSchool.length - teamMine.length;
-    const list = (
-      <DayChangesList
-        overview={overview}
-        include={isTeamOrSchool}
-        label="Team und Schule"
-      />
-    );
-    todo.push({
-      id: "team",
+      id: "heute-anders",
       row: {
         leading: <Icon concept={dayChangesConcept} />,
-        title: "Team und Schule",
-        subtitle: [
-          teamMine.length > 0 ? `${teamMine.length} für dich` : null,
-          school > 0 ? `${school} in der Schule` : null,
-        ]
-          .filter(Boolean)
-          .join(" · "),
-        meta: <CountBadge count={teamAndSchool.length} />,
+        title: "Heute anders",
+        subtitle:
+          changes === 0
+            ? "Alles wie geplant"
+            : children.length > 0
+              ? [
+                  childCounts(children),
+                  teamAndSchool.length > 0
+                    ? `${teamAndSchool.length} weitere`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+              : `${teamAndSchool.length} in Team und Schule`,
+        meta: changes > 0 ? <CountBadge count={changes} /> : undefined,
       },
       detail: list,
-      sheet: { kind: "list", title: "Team und Schule", body: list },
+      sheet: { kind: "list", title: "Heute anders", body: list },
     });
   }
 
@@ -454,9 +444,8 @@ export function HomeApp({
       !groupDetail && overview && children.length > 0 ? (
         <DayChangesList
           overview={overview}
-          include={isChildChange}
-          label="Kinder heute anders"
-          mineTitle="Aus deinen Gruppen"
+          include={isDayChange}
+          label="Heute anders"
         />
       ) : null;
     return (
