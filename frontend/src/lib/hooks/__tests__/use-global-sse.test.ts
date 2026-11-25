@@ -1262,6 +1262,8 @@ describe("useGlobalSSE", () => {
         "my-tenant:timetable-week-2026-08-17-2026-08-21",
         "my-tenant:timetable-day-2026-08-17-2026-08-17",
         "my-tenant:timetable-roster-42",
+        "my-tenant:timetable-month-2026-08-01-2026-08-31",
+        "my-tenant:timetable-detail-42-2026-08-17",
       ] as const;
       const unrelatedTimetableKeys = [
         "my-tenant:timetable-templates-7",

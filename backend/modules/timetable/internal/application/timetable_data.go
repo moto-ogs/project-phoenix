@@ -65,11 +65,10 @@ func (d *timetableData) ListScheduledInstances(ctx context.Context, from, to cal
 	return scheduledInstancesOf(rows), nil
 }
 
-func (d *timetableData) ListScheduledInstanceRows(ctx context.Context, instances []timetable.ScheduledInstance) (*timetable.ScheduledInstanceRows, error) {
+func (d *timetableData) ListScheduledInstanceRows(ctx context.Context, instances []timetable.ScheduledInstance, projection timetable.PlannerProjection) (*timetable.ScheduledInstanceRows, error) {
 	rows := &timetable.ScheduledInstanceRows{
 		Staff:        make(map[int64][]timetable.InstanceStaff, len(instances)),
 		Participants: make(map[int64][]timetable.ScheduledParticipant, len(instances)),
-		Cutoffs:      make(map[calendar.Date]map[int64]time.Time),
 	}
 	if len(instances) == 0 {
 		return rows, nil
@@ -78,12 +77,14 @@ func (d *timetableData) ListScheduledInstanceRows(ctx context.Context, instances
 	for _, instance := range instances {
 		ids = append(ids, instance.ID.Int64())
 	}
-	staffRows, err := staffOfInstances(ctx, d.deps.InstanceStaff, ids)
-	if err != nil {
-		return nil, fmt.Errorf("load staff for instances: %w", err)
-	}
-	for _, row := range staffRows {
-		rows.Staff[row.InstanceID] = append(rows.Staff[row.InstanceID], instanceStaffOf(row))
+	if projection != timetable.PlannerAttendance {
+		staffRows, err := staffOfInstances(ctx, d.deps.InstanceStaff, ids)
+		if err != nil {
+			return nil, fmt.Errorf("load staff for instances: %w", err)
+		}
+		for _, row := range staffRows {
+			rows.Staff[row.InstanceID] = append(rows.Staff[row.InstanceID], instanceStaffOf(row))
+		}
 	}
 	participantRows, err := participantsOfInstances(ctx, d.deps.Participants.Reads, ids)
 	if err != nil {
@@ -103,6 +104,9 @@ func (d *timetableData) ListScheduledInstanceRows(ctx context.Context, instances
 	})
 	for _, row := range participantRows {
 		rows.Participants[row.InstanceID] = append(rows.Participants[row.InstanceID], ScheduledParticipantOf(row))
+	}
+	if projection == timetable.PlannerGrid {
+		return rows, nil
 	}
 	rows.Cutoffs, err = d.instancePickupCutoffs(ctx, studentIDsByDate(instances, rows.Participants))
 	if err != nil {

@@ -49,15 +49,9 @@ describe("factory keys of the staff, time tracking and plan readers", () => {
     expect(
       tenantDailyKeys.planInstances("week", "a", "b", NO_PLAN_FILTER),
     ).toBe("timetable-week-a-b");
-    expect(
-      tenantDailyKeys.planInstanceDetail(
-        "week",
-        "a",
-        "b",
-        { groupId: "3", staffId: null, roomId: "4" },
-        "a",
-      ),
-    ).toBe("timetable-week-a-b-g3-p-r4-detail-a");
+    expect(tenantDailyKeys.planInstanceDetail("42", "2026-11-25")).toBe(
+      "timetable-detail-42-2026-11-25",
+    );
     expect(tenantDailyKeys.dienstplanOverview("a", "b")).toBe(
       "dienstplan-overview-a-b",
     );
