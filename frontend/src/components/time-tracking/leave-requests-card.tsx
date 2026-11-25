@@ -322,40 +322,44 @@ export function LeaveRequestsCard({
               }
               value={loading ? "–" : formatDayCount(remainingDays)}
             />
-            {/* Wie die Kacheln des Desktops, auch bei 0 (#8070, Runde 7):
-                eine Zeile mit drei kleinen Kennzahlen statt dreier Zeilen. */}
+            {/* Die Kacheln des Desktops, auch bei 0 (#8070, Runde 7), als
+                eine Zeile statt Karten in der Karte (Runde 9). */}
             <li
-              className={cn(
-                "grid gap-2 py-3",
-                counts.question > 0 ? "grid-cols-4" : "grid-cols-3",
-              )}
+              className="flex flex-wrap gap-x-1 py-3 text-sm text-gray-500 tabular-nums"
               data-app-leave-counts=""
             >
-              <StatCard
-                variant="tile"
-                label="Beantragt"
-                value={loading ? "–" : counts.reserved}
-                tone={counts.reserved > 0 ? "orange" : undefined}
-              />
-              {counts.question > 0 ? (
-                <StatCard
-                  variant="tile"
-                  label="Rückfrage"
-                  value={counts.question}
-                  tone="orange"
-                />
-              ) : null}
-              <StatCard
-                variant="tile"
-                label="Genehmigt"
-                value={loading ? "–" : counts.approved}
-                tone={counts.approved > 0 ? "green" : undefined}
-              />
-              <StatCard
-                variant="tile"
-                label="Abgelehnt"
-                value={loading ? "–" : counts.declined}
-              />
+              {[
+                {
+                  label: "beantragt",
+                  value: counts.reserved,
+                  tone: counts.reserved > 0 ? "text-moto-orange-strong" : "",
+                },
+                ...(counts.question > 0
+                  ? [
+                      {
+                        label: "mit Rückfrage",
+                        value: counts.question,
+                        tone: "text-moto-orange-strong",
+                      },
+                    ]
+                  : []),
+                {
+                  label: "genehmigt",
+                  value: counts.approved,
+                  tone: counts.approved > 0 ? "text-moto-green-strong" : "",
+                },
+                { label: "abgelehnt", value: counts.declined, tone: "" },
+              ].map((item, index) => (
+                <span key={item.label} className="whitespace-nowrap">
+                  {index > 0 ? "· " : ""}
+                  <span
+                    className={cn("font-semibold text-gray-900", item.tone)}
+                  >
+                    {loading ? "–" : item.value}
+                  </span>{" "}
+                  {item.label}
+                </span>
+              ))}
             </li>
             {sortedQuestionedVacations.map((vacation) => (
               <AbsenceRequestItem

@@ -65,11 +65,27 @@ export function OwnAllowancesCard({
 
   if (app) {
     // Alle Arten wie auf dem Desktop, auch ohne Anspruch (#8070, Runde 7):
-    // je Art eine Zeile mit allen vier Zahlen.
+    // je Art eine Zeile mit allen vier Zahlen. Steht überall 0, ist die
+    // Karte zugeklappt und sagt das im Untertitel (Runde 9).
+    const empty =
+      !load.failure &&
+      (allowances ?? []).every(
+        ({ summary }) =>
+          summary.entitledDays === 0 &&
+          summary.takenDays === 0 &&
+          summary.reservedDays === 0 &&
+          summary.remainingDays === 0,
+      );
     return (
       <SectionCard
         title="Kontingente"
-        description="Deine Tage je Abwesenheitsart. Den Anspruch trägt deine Leitung ein."
+        description={
+          empty
+            ? "Für dich ist noch kein Anspruch eingetragen. Das macht deine Leitung."
+            : "Deine Tage je Abwesenheitsart. Den Anspruch trägt deine Leitung ein."
+        }
+        collapsible={empty}
+        defaultCollapsed={empty}
         bodyClassName="mt-3"
       >
         {load.failure ? (
@@ -129,30 +145,30 @@ function AppAllowanceRow({ entry }: { readonly entry: OwnAbsenceAllowance }) {
     `vorgemerkt ${formatDayCount(summary.reservedDays)}`,
   ];
   return (
-    <li className="flex items-start justify-between gap-3 py-3">
-      <div className="min-w-0">
-        <h3 className="text-base leading-6 font-medium text-gray-900">
+    <li className="py-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 className="min-w-0 text-base leading-6 font-medium text-gray-900">
           {entry.name}
         </h3>
-        {hint ? <p className="text-sm text-gray-500">{hint}</p> : null}
-        <p className="flex flex-wrap gap-x-1 text-sm text-gray-500 tabular-nums">
-          {figures.map((figure, index) => (
-            <span key={figure} className="whitespace-nowrap">
-              {index > 0 ? "· " : ""}
-              {figure}
-            </span>
-          ))}
+        <p className="shrink-0 text-right text-sm leading-6 text-gray-500 tabular-nums">
+          <span className="font-semibold text-gray-900">
+            {formatDayCount(summary.remainingDays)}
+          </span>{" "}
+          übrig
         </p>
-        <div className="mt-0.5 empty:hidden">
-          <AllowanceExpiryNote summary={summary} />
-        </div>
       </div>
-      <p className="shrink-0 text-right text-sm leading-6 text-gray-500 tabular-nums">
-        <span className="font-semibold text-gray-900">
-          {formatDayCount(summary.remainingDays)}
-        </span>{" "}
-        übrig
+      {hint ? <p className="text-sm text-gray-500">{hint}</p> : null}
+      <p className="flex flex-wrap gap-x-1 text-sm text-gray-500 tabular-nums">
+        {figures.map((figure, index) => (
+          <span key={figure} className="whitespace-nowrap">
+            {index > 0 ? "· " : ""}
+            {figure}
+          </span>
+        ))}
       </p>
+      <div className="mt-0.5 empty:hidden">
+        <AllowanceExpiryNote summary={summary} />
+      </div>
     </li>
   );
 }
