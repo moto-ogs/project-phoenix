@@ -116,7 +116,7 @@ func (s *schoolsOpened) within(ctx context.Context, schoolID int64, fn func(cont
 func newTestPortal(t *testing.T, caterers *fakeCaterers, orders *fakeOrders, opened *schoolsOpened) *Portal {
 	t.Helper()
 	portal, err := New(Dependencies{
-		Caterers: caterers, Orders: orders, Summaries: orders, WithinSchool: opened.within,
+		Caterers: caterers, Orders: orders, Summary: orders.CatererOrderSummary, WithinSchool: opened.within,
 		CurrentSchool: func(context.Context) int64 { return 11 },
 		Lock: func(_ context.Context, key string) error {
 			caterers.steps.add("lock:" + key)

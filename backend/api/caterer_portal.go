@@ -47,7 +47,7 @@ func mountCatererPortal(root, tenantRouter chi.Router, limiters authRateLimiters
 	portal, err := catererPortalCompose.New(catererPortalCompose.Dependencies{
 		Caterers:    caterers,
 		Orders:      mealPlan,
-		Summaries:   summaries,
+		Summary:     summaries.CatererOrderSummary,
 		SchoolNames: schoolNames(schools),
 	})
 	if err != nil {

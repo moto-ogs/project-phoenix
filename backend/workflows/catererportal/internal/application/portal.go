@@ -19,7 +19,7 @@ import (
 type Dependencies struct {
 	Caterers      ports.Caterers
 	Orders        ports.MealOrders
-	Summaries     mealplan.CatererSummaries
+	Summary       ports.OrderSummary
 	SchoolNames   ports.SchoolNames
 	CurrentSchool ports.CurrentSchool
 	Lock          ports.Lock
@@ -43,7 +43,7 @@ var _ catererportal.Portal = (*Portal)(nil)
 
 // New builds the portal; every dependency is required.
 func New(deps Dependencies) (*Portal, error) {
-	if deps.Caterers == nil || deps.Orders == nil || deps.Summaries == nil || deps.SchoolNames == nil || deps.CurrentSchool == nil || deps.Lock == nil || deps.WithinSchool == nil {
+	if deps.Caterers == nil || deps.Orders == nil || deps.Summary == nil || deps.SchoolNames == nil || deps.CurrentSchool == nil || deps.Lock == nil || deps.WithinSchool == nil {
 		return nil, errors.New("caterer portal: all dependencies are required")
 	}
 	return &Portal{identityFlows: deps.Caterers, deps: deps}, nil
@@ -203,7 +203,7 @@ func (p *Portal) schoolSummary(ctx context.Context, catererID int64, school cate
 			return err
 		}
 		row.StartedAt, row.DeliveryAddress = supply.StartedAt, supply.DeliveryAddress
-		row.Summary, err = p.deps.Summaries.CatererOrderSummary(txCtx, supply.StartedAt, from, to)
+		row.Summary, err = p.deps.Summary(txCtx, supply.StartedAt, from, to)
 		return err
 	})
 	return row, err

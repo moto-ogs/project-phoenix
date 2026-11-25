@@ -5,8 +5,6 @@ package compose
 import (
 	"context"
 
-	"github.com/moto-ogs/project-phoenix/modules/mealplan"
-
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/workflows/catererportal"
 	"github.com/moto-ogs/project-phoenix/workflows/catererportal/internal/application"
@@ -17,7 +15,7 @@ import (
 type Dependencies struct {
 	Caterers    ports.Caterers
 	Orders      ports.MealOrders
-	Summaries   mealplan.CatererSummaries
+	Summary     ports.OrderSummary
 	SchoolNames ports.SchoolNames
 }
 
@@ -26,7 +24,7 @@ func New(deps Dependencies) (catererportal.Portal, error) {
 	return application.New(application.Dependencies{
 		Caterers:      deps.Caterers,
 		Orders:        deps.Orders,
-		Summaries:     deps.Summaries,
+		Summary:       deps.Summary,
 		SchoolNames:   deps.SchoolNames,
 		CurrentSchool: tenant.FromContext,
 		Lock:          func(ctx context.Context, key string) error { return tenant.AcquireLock(ctx, key, false) },
