@@ -7,7 +7,13 @@ import dynamic from "next/dynamic";
 import { Alert } from "~/components/ui/alert";
 import { SectionLabel } from "~/components/ui/section-label";
 import { ListGroupHeader } from "~/components/ui/list-group-header";
-import React, { useRef, useCallback, useState, useMemo } from "react";
+import React, {
+  useRef,
+  useCallback,
+  useState,
+  useMemo,
+  useEffect,
+} from "react";
 import {
   PortalBottomNavLink,
   PortalNavSheetLink,
@@ -126,6 +132,7 @@ import { supervisionConcept } from "~/lib/concepts/supervision";
 import { usePillTabs } from "~/lib/mobile-navigation/use-pill-tabs";
 import { MORE_PAGE_HREF, MORE_TAB } from "~/lib/mobile-navigation/tab-registry";
 import { usePillHidden } from "~/lib/mobile-navigation/use-pill-hidden";
+import { setUnderMore } from "~/lib/mobile-navigation/more-parent";
 import { useIsApp } from "~/lib/device-context";
 
 // Das Vollbild-Blatt der Benachrichtigungen (#7148) lädt erst im Staff-Portal
@@ -980,6 +987,7 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
     visibleDrawerGroups,
     simpleNav,
     resolveItemHref,
+    pathname,
   } = useStaffBottomNavModel();
   const [isOverflowMenuOpen, setIsOverflowMenuOpen] = useState(false);
   // Unter lg gibt es keine Shell-Kopfzeile mehr (Eltern-App-Muster), also
@@ -1015,6 +1023,18 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
           isActiveRoute(item.href, item.activePaths),
         )
       : activeTab === MORE_TAB;
+
+  // Seiten hinter „Mehr“ (nicht „Mehr“ selbst) bekommen im Seitenkopf den
+  // Zurück-Pfeil zu „Mehr“ (#8070).
+  const underMore =
+    isApp &&
+    mode === "teacher" &&
+    isAnyAdditionalNavActive &&
+    !pathname.endsWith(MORE_PAGE_HREF);
+  useEffect(() => {
+    setUnderMore(underMore);
+    return () => setUnderMore(false);
+  }, [underMore]);
 
   // Die Fläche liegt unter dem aktiven Reiter oder, wenn das Ziel im Menü
   // steht, unter „Mehr"; ohne aktives Ziel fehlt sie.

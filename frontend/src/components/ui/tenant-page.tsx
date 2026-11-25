@@ -48,6 +48,10 @@ import {
 } from "./control-geometry";
 import { cn } from "~/lib/utils";
 import { DeviceSwitch } from "~/lib/device-context";
+import { useUnderMore } from "~/lib/mobile-navigation/more-parent";
+
+/** Rückweg der Seiten hinter „Mehr“ in der App (#8070). */
+const MORE_BACK_HREF = "/mehr";
 import {
   AppTenantHead,
   AppTenantTabs,
@@ -671,6 +675,7 @@ function TenantPageView({
   testId,
 }: TenantPageProps) {
   usePageTitleSection(addressedTabLabel(tabs));
+  const underMore = useUnderMore();
   const hasOverflowMenu = (overflowMenu?.length ?? 0) > 0;
   const titleHasLongWord = hasLongTitleWord(title);
   const searchRowHasControls =
@@ -891,6 +896,8 @@ function TenantPageView({
             backLink={
               back ? (
                 <TenantBackLink href={backHref} label={backLabel} />
+              ) : underMore ? (
+                <TenantBackLink href={MORE_BACK_HREF} label="Zurück zu Mehr" />
               ) : undefined
             }
             leading={leading}
