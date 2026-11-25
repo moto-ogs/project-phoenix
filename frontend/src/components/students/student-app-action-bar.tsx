@@ -1,9 +1,10 @@
 "use client";
 
-// Schnellaktionen der Kindakte in der App (#8070): Die Hauptaktion steht in
-// Daumennähe über der Pill (An- oder Abmelden), „Krank melden“ daneben, alles
-// Seltenere (Entschuldigen, Klassenfahrt) im einen „···“ der Kopfkarte. Die
-// Kopfkarte bleibt so eine Zeile Name plus Statuschips.
+// Schnellaktionen der Kindakte in der App (#8070): Die Leiste über der Pill
+// trägt, was zum Zustand des Kindes passt. Ist es da, ist das Abmelden die
+// eine Aktion; „Krank melden“ wäre neben einem anwesenden Kind falsch. Ist es
+// nicht da, stehen Anmelden und „Krank melden“ nebeneinander. Alles Seltenere
+// (Entschuldigen, Klassenfahrt) steht im einen „···“ der Kopfkarte.
 //
 // Die Handler sind dieselben wie die der Kacheln am Desktop: Rückfragen,
 // Rechte und Fehlerwege gibt es nur einmal.
@@ -98,11 +99,22 @@ export function studentAppQuickActions(
   return entries;
 }
 
+/**
+ * Wie viele der Tagesaktionen in der Leiste stehen: eine, wenn das Kind da
+ * ist (Abmelden), sonst zwei. Der Rest gehört ins „···“ der Kopfkarte.
+ */
+export function studentAppBarCount(
+  entries: readonly StudentQuickAction[],
+): number {
+  return entries[0]?.key === "abmelden" ? 1 : Math.min(2, entries.length);
+}
+
 export function StudentAppActionBar({
   entries,
 }: Readonly<{ entries: readonly StudentQuickAction[] }>) {
-  const [primary, second] = entries;
+  const [primary, maybeSecond] = entries;
   if (!primary) return null;
+  const second = studentAppBarCount(entries) > 1 ? maybeSecond : undefined;
 
   // Die Seite reicht die Leiste in ihre Spalte; am iPad quer ist das die
   // Detailspalte mit eigenem Scroll und Ausblend-Maske. Die Maske gilt auch

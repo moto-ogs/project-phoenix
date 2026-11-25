@@ -94,9 +94,14 @@ import { StudentConsentsReadOnly } from "~/components/students/student-consents-
 import { SectionCard } from "~/components/ui/section-card";
 import type { OverflowMenuEntry } from "~/components/ui/page-header/types";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { StatusBadge } from "~/components/ui/status-badge";
+import { AlertTriangle } from "lucide-react";
+import { useMinuteClock } from "~/lib/pickup-helpers";
+import { getStudentTimeStatus } from "~/lib/student-time-status";
 import { useDeviceContext } from "~/lib/device-context";
 import {
   StudentAppActionBar,
+  studentAppBarCount,
   studentAppQuickActions,
 } from "~/components/students/student-app-action-bar";
 import { StudentSplitFrame } from "~/components/students/student-split-frame";
@@ -368,19 +373,13 @@ const PARENT_DATA_TABS: ReadonlySet<StudentTabId> = new Set<StudentTabId>([
 /**
  * Reiter der Kindakte für die Kopfkarte. Alle Reiter stehen nebeneinander;
  * was nicht in die Zeile passt, räumt das Seitengerüst gemessen unter „Mehr".
+ * Die App (#8070) behält die Namen von heute („Stammdaten“ …): Wer die Akte
+ * kennt, findet sie am Telefon wieder.
  */
-// App (#8070): kürzere, alltagsnahe Namen für die Reiterleiste am Telefon.
-const APP_TAB_LABELS: Partial<Record<StudentTabId, string>> = {
-  stammdaten: "Angaben",
-  erziehungsberechtigte: "Eltern",
-  aenderungsprotokoll: "Änderungen",
-  historie: "Verlauf",
-};
-
-function buildStudentTabItems(tabs: StudentTabId[], app = false) {
+function buildStudentTabItems(tabs: StudentTabId[]) {
   return tabs.map((tab) => ({
     value: tab as string,
-    label: (app ? APP_TAB_LABELS[tab] : undefined) ?? TAB_LABELS[tab],
+    label: TAB_LABELS[tab],
   }));
 }
 
@@ -1583,16 +1582,18 @@ function StudentDetailPageContent() {
   // nur Info und Hilfe. Die Tagesaktionen stehen in der Aktionsleiste.
   const fullRecord = hasFullAccess && !isHolidayGuest;
   const appMenuEntries: OverflowMenuEntry[] = [
-    // Was nicht in die Aktionsleiste passt (ab der dritten Tagesaktion).
-    ...appQuickActions.slice(2).map((action) => ({
-      label: action.label,
-      description: action.hint,
-      onClick: action.run,
-    })),
+    // Was nicht in die Aktionsleiste gehört (Kind da: alles außer Abmelden).
+    ...appQuickActions
+      .slice(studentAppBarCount(appQuickActions))
+      .map((action) => ({
+        label: action.label,
+        description: action.hint,
+        onClick: action.run,
+      })),
     ...(fullRecord && hasWriteAccess
       ? [
           {
-            label: "Angaben bearbeiten",
+            label: "Stammdaten bearbeiten",
             description: "Name, Klasse, Gruppe, Heimwege und Gesundheit.",
             onClick: () => {
               handleTabChange("stammdaten");
@@ -1601,17 +1602,8 @@ function StudentDetailPageContent() {
           },
         ]
       : []),
-    ...(fullRecord && attendanceLogEnabled
-      ? [
-          {
-            label: "Anwesenheit",
-            description: "Angebote und besuchte Räume, Tag für Tag.",
-            onClick: () =>
-              tenantRouter.push(`/students/${studentId}/room-history`),
-          },
-        ]
-      : []),
-    // „Änderungsverlauf“ steht nur unter „Verlauf“: ein Ort, ein Name.
+    // Anwesenheitsprotokoll und Änderungsverlauf stehen nur unter
+    // „Historien“: ein Ort, ein Name.
   ];
 
   const page = (
@@ -1654,10 +1646,9 @@ function StudentDetailPageContent() {
                 showLocationSince={false}
               />
             }
-            arrival={student.actual_arrival_time ?? todayArrival.time}
-            arrived={Boolean(student.actual_arrival_time)}
-            pickup={student.actual_pickup_time ?? todayPickup.time}
-            pickedUp={Boolean(student.actual_pickup_time)}
+            student={student}
+            plannedArrival={todayArrival.time}
+            plannedPickup={todayPickup.time}
           />
         ) : (
           // Der Aufenthaltsort ist Status, keine Aktion: er steht in der
@@ -1705,7 +1696,7 @@ function StudentDetailPageContent() {
               value: activeTab,
               onChange: handleTabChange,
               inUrl: true,
-              items: buildStudentTabItems(visibleTabs, appHead),
+              items: buildStudentTabItems(visibleTabs),
               label: "Bereiche der Kindakte",
             }
       }
@@ -2186,27 +2177,80 @@ function StudentQuickActions({
  */
 function AppStudentHeadStatus({
   location,
-  arrival,
-  arrived,
-  pickup,
-  pickedUp,
+  student,
+  plannedArrival,
+  plannedPickup,
 }: Readonly<{
   location: ReactNode;
-  arrival?: string;
-  arrived: boolean;
-  pickup?: string;
-  pickedUp: boolean;
+  student: Student;
+  plannedArrival?: string;
+  plannedPickup?: string;
 }>) {
+  const now = useMinuteClock();
+  const arrived = Boolean(student.actual_arrival_time);
+  const pickedUp = Boolean(student.actual_pickup_time);
+  const arrival = student.actual_arrival_time ?? plannedArrival;
+  const pickup = student.actual_pickup_time ?? plannedPickup;
+  // Wie heute rot im Kopf (#8070): eine überschrittene Ankunft oder
+  // Abholung. Dieselbe Rechnung wie „Heutige Abholung … (Überfällig …)“ am
+  // Desktop; ein krankes oder entschuldigtes Kind ist nie überfällig.
+  const day = {
+    plannedArrival,
+    actualArrival: student.actual_arrival_time,
+    plannedPickup,
+    actualPickup: student.actual_pickup_time,
+    checkedIn: !isNotCheckedInLocation(student.current_location),
+  };
+  const absence = {
+    sick: student.sick,
+    classTrip: student.class_trip,
+    excused: student.excused,
+    currentLocation: student.current_location,
+  };
+  const overdue = (kind: "arrival" | "pickup", plannedTime?: string) => {
+    const status = getStudentTimeStatus({
+      plannedTime,
+      actualTime:
+        kind === "arrival"
+          ? student.actual_arrival_time
+          : student.actual_pickup_time,
+      now,
+      kind,
+      day,
+      ...absence,
+    });
+    return status.state === "very-overdue" ||
+      status.state === "slightly-overdue"
+      ? status
+      : null;
+  };
+  const arrivalLate = arrived ? null : overdue("arrival", plannedArrival);
+  const pickupLate = pickedUp ? null : overdue("pickup", plannedPickup);
+  const late = pickupLate ?? arrivalLate;
+
+  // Eine rote Zeit verdrängt die übrigen Zeit-Chips: Die Zeile bleibt eine
+  // Zeile auch am iPhone SE, und das Wichtige steht allein.
   const items: { label: string }[] = [];
-  if (arrival)
+  if (!late && arrival)
     items.push({ label: `${arrived ? "Da seit" : "Kommt"} ${arrival}` });
-  if (pickup)
+  if (!late && pickup)
     items.push({ label: `${pickedUp ? "Gegangen" : "Geht"} ${pickup}` });
-  // Die Gruppe steht in den Angaben, nicht im Kopf: sonst bricht die
-  // Chip-Zeile am Telefon um.
+  // Die Gruppe steht in den Stammdaten, nicht im Kopf: sonst bricht die
+  // Chip-Zeile am Telefon um. `-ml-9`: Die Chips beginnen an derselben
+  // Kante wie der Zurück-Pfeil und der Inhalt der Karten darunter, nicht
+  // eingerückt unter dem Namen.
   return (
-    <span className="flex items-center gap-1.5 pt-0.5 [&_*]:whitespace-nowrap [&>span:last-child]:contents">
+    <span className="-ml-9 flex items-center gap-1.5 pt-0.5 [&_*]:whitespace-nowrap [&>span:last-child]:contents">
       <span className="shrink-0">{location}</span>
+      {late ? (
+        <span className="shrink-0">
+          <StatusBadge
+            tone={late.state === "very-overdue" ? "red" : "orange"}
+            icon={<AlertTriangle className="size-3.5" aria-hidden="true" />}
+            label={`${late === pickupLate ? "Abholung" : "Ankunft"} überfällig ${late.displayTime}`}
+          />
+        </span>
+      ) : null}
       {items.length > 0 ? <TenantPageStats items={items} /> : null}
     </span>
   );
