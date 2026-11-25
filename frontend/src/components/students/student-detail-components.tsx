@@ -1422,7 +1422,8 @@ export function StudentHistorySection({
     <SectionCard
       // App (#8070): „Verlauf“ statt des Fachworts, wie der Reiter.
       title={appLayout ? "Verlauf" : "Historien"}
-      concept={changeHistoryConcept}
+      // App (#8070): schmaler Kopf ohne Symbolkachel, wie „Persönliches“.
+      concept={appLayout ? undefined : changeHistoryConcept}
       action={stopAction}
     >
       {stop.loadError ? <LoadErrorAlert error={stop.loadError} /> : null}
