@@ -484,18 +484,23 @@ export function RosterStudentDetailLines({
   rosterDate,
   pickupTimesLoaded,
   pickupTimesRedacted,
+  showPickupTime = true,
 }: Readonly<{
   row: TimetableRosterRow;
   now: Date;
   rosterDate: string;
   pickupTimesLoaded?: boolean;
   pickupTimesRedacted?: boolean;
+  /** `false`, wo die Gehzeit schon als eigenes Feld steht (Kind-Blatt). */
+  showPickupTime?: boolean;
 }>) {
-  const pickupTimeLabel = rosterPickupTimeLabel(
-    row.pickupTime,
-    pickupTimesLoaded,
-    pickupTimesRedacted,
-  );
+  const pickupTimeLabel = showPickupTime
+    ? rosterPickupTimeLabel(
+        row.pickupTime,
+        pickupTimesLoaded,
+        pickupTimesRedacted,
+      )
+    : null;
   const attendanceDetail = [
     row.substatus ? ATTENDANCE_SUBSTATUS_LABELS[row.substatus] : null,
     row.note,
