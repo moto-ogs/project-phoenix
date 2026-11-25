@@ -649,7 +649,6 @@ export function MessageThreadContent({
         icon={<MotoConceptIcon concept={childrenConcept} size={20} />}
         title={`${relationshipLabel(thread.relationship_type)} von ${thread.student_name}`}
         subtitle="Zum Kinderprofil"
-        aria-label={`Kinderprofil von ${thread.student_name} öffnen`}
       />
     ) : null;
 
