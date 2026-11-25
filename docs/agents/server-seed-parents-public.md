@@ -30,7 +30,7 @@ All portal seeds use the fresh **parent** snapshot, generated Go GET contracts, 
 
 ## Parents: public and token pages
 
-An authenticated parent's cache is not an authority for an invitation, enrollment or contract token. Where the token is the credential and can expire, be revoked or be consumed independently of the session, keep the authorization at the actual opening and out of the signed-in seed. The guardian invitation already has a server read.
+An authenticated parent's cache is not an authority for an invitation, enrollment or contract token. A read-only status page can load on the server at its actual opening, never in a prefetch or under an account key. The token remains the credential checked by Go with the existing client-IP read limits. Drafts, downloads and any read with a side effect remain at their designated opening.
 
 | Route | First display and disposition |
 | --- | --- |
@@ -39,11 +39,11 @@ An authenticated parent's cache is not an authority for an invitation, enrollmen
 | `/parents/reset-password` | **Unchanged:** reset form from the link inputs; consumption/validation of the credential takes place with the password change, not in a seed. |
 | `/parents/demo` | **Unchanged:** demo entry progress; demo start/advance and sign-in create state and must not run on prefetch. |
 | `/parents/accept-guardian-invite/[token]` | **Already server-side:** invitation summary and school branding from `GET /auth/guardian-invitations/{token}` with same-token authorization. Accepting it is a distinct action. |
-| `/parents/anmeldung/status/[token]` | **Unchanged:** token-authorized enrollment status and change request list. Sensitive enrollment outcome belongs to the opening's token, not an account SWR seed. |
+| `/parents/anmeldung/status/[token]` | **Seeded at opening:** token-authorized JSON status and change requests in parallel; form labels follow a nonempty list. Only visible status fields and formatted changes cross RSC. The family-children GET takes row locks and stays at its card opening; signature proof, edit/adjust and writes remain separate. The Team route `/anmeldung/status/[token]` follows the same rule. |
 | `/parents/anmeldung/status/[token]/edit` | **Unchanged:** token-authorized edit bootstrap belongs to its write form. |
 | `/parents/anmeldung/status/[token]/adjust` | **Unchanged:** same bootstrap path with the adjustment form mode, read for that opening. |
 | `/parents/ferienanmeldung/[token]` | **Unchanged:** offer/form bootstrap by token and separately authorized parent family prefill. Go logs family-prefill access; neither draft inputs nor the audited read run on prefetch. |
-| `/parents/ferienanmeldung/status/[token]` | **Unchanged:** status and placement of the corresponding registration; the link authorizes each open independently of the parent's account. |
+| `/parents/ferienanmeldung/status/[token]` | **Seeded at opening:** token-authorized status and placement, independent of the parent's account. No unused allocation mode or account key in the payload. |
 | `/parents/ferienkonto/[token]` | **Unchanged:** account setup data by one-time holiday registration proof. Setup actions need that live proof. |
 | `/parents/vertrag-unterschreiben/[link]` | **Unchanged:** signing view and PDF from the mail credential, or the family/mandate operation offered by the link. Reauthorization, file read and write inputs stay on the current opening. |
 
