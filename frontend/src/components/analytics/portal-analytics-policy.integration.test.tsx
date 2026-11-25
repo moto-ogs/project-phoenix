@@ -925,7 +925,7 @@ describe("embedded enrollment analytics policy", () => {
     const { PortalAnalyticsSession } =
       await import("./portal-analytics-session");
     const { default: ParentEnrollmentStatusPage } =
-      await import("~/app/parents/anmeldung/status/[token]/page");
+      await import("~/app/parents/anmeldung/status/[token]/status-page");
     const { initializePostHog, capturePostHog } =
       await import("~/lib/posthog-client");
     const view = render(

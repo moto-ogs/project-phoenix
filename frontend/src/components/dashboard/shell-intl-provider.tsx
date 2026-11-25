@@ -17,8 +17,7 @@ import surveyForm from "~/i18n/messages/de/surveyForm.json";
 import { DEFAULT_LOCALE } from "~/i18n/locales";
 
 // Shared shell components call next-intl hooks, which throw without a
-// NextIntlClientProvider. The parents portal carries the full provider from its
-// layout. The German-only staff + operator shells get only the namespaces used
+// NextIntlClientProvider. The parents portal selects its messages in server layouts and pages. The German-only staff + operator shells get only the namespaces used
 // by their shell instead of shipping the complete parent message catalog.
 //
 // Besides the shell itself it carries the namespaces of staff-facing shared

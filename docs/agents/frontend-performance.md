@@ -14,3 +14,19 @@ Paths below are relative to `frontend/` except `.github/` and `docs/`.
 
 - **Render budget** (Vitest, blocking): `expectIdleRenderBudget` from `src/test/render-budget.tsx` counts `<Profiler>` commits over 5 s of fake-timer idle and caps them at 20; `mobile-bottom-nav.test.tsx` and `sidebar.test.tsx` use it. A new effect loop in the shell trips this regardless of runner speed. Keep the cap; fix the loop. Reuse the helper for any new always-mounted component.
 - **Nightly counters** (`.github/workflows/perf-nightly.yml`, non-blocking): runs `pnpm run perf:trace` and `pnpm run perf:render` against a seeded backend on weeknights and via `workflow_dispatch`; the report lands in the job summary and as a 30-day artifact. Compare counters (requests per screen, duplicates, longest chain, renders per interaction) with `docs/perf/frontend-baseline-2026.md`; runner timings are not comparable across machines. Timing-based numbers (LCP, Lighthouse) are deliberately not gates.
+
+## Parents and public enrollment: message payload
+
+The request catalog is complete on the server, including the German fallback.
+On these two surfaces, pass formatted strings to client components when possible.
+For interactive translations, declare a `messageBoundary(...paths)` in the
+server page or a layout shared by exactly those routes. List the controls and
+dialogs rendered there too: nested next-intl providers replace their parent's
+messages. Select individual paths when only a few labels of a namespace are
+used. Dynamic API errors still go through the shared error display path.
+
+Measure a cold login's encoded document (includes inline RSC) separately from
+its JavaScript. A standalone Flight response is an alternative request, not
+additional bytes on the document load. Use the Pixel 7 profile from #4986:
+4× CPU, 150 ms latency, 1.6 Mbit/s down, median of three cold contexts, until
+the sign-in button is visible.
