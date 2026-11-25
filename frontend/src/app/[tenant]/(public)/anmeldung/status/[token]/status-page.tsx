@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { EnrollmentStatusView } from "~/components/enrollment/enrollment-status-view";
 import {
   PublicEnrollmentBrand,
+  PublicEnrollmentContentSkeleton,
   PublicEnrollmentLocaleSwitcher,
   PublicEnrollmentPageShell,
   PublicEnrollmentSteps,
@@ -12,22 +13,29 @@ import {
 import { useOneTimeQueryFlag } from "~/lib/hooks/use-one-time-query-flag";
 import { useAnalyticsSchoolPolicy } from "~/lib/hooks/use-analytics-school-policy";
 import { useTenant } from "~/lib/tenant-context";
+import type {
+  EnrollmentStatusSeedData,
+  TokenStatusSeed,
+} from "~/lib/token-status-seed";
 
 interface PageProps {
   readonly params: Promise<{ tenant: string; token: string }>;
+  readonly initial: Promise<
+    TokenStatusSeed<EnrollmentStatusSeedData> | undefined
+  >;
 }
 
-export default function EnrollmentStatusPage({ params }: PageProps) {
+export default function EnrollmentStatusPage(props: PageProps) {
   // The token may belong to another school; host permission is not enough.
   useAnalyticsSchoolPolicy("", false);
   return (
     <Suspense fallback={null}>
-      <EnrollmentStatusPageContent params={params} />
+      <EnrollmentStatusPageContent {...props} />
     </Suspense>
   );
 }
 
-function EnrollmentStatusPageContent({ params }: PageProps) {
+function EnrollmentStatusPageContent({ params, initial }: PageProps) {
   const { token } = use(params);
   const searchParams = useSearchParams();
   const { tenant } = useTenant();
@@ -45,11 +53,23 @@ function EnrollmentStatusPageContent({ params }: PageProps) {
           <PublicEnrollmentLocaleSwitcher />
         </div>
       </div>
-      <EnrollmentStatusView
-        token={token}
-        justSubmitted={justSubmitted}
-        duplicateWarning={duplicateWarning}
-      />
+      <Suspense fallback={<PublicEnrollmentContentSkeleton sections={2} />}>
+        <SeededStatusView
+          token={token}
+          initial={initial}
+          justSubmitted={justSubmitted}
+          duplicateWarning={duplicateWarning}
+        />
+      </Suspense>
     </PublicEnrollmentPageShell>
   );
+}
+
+function SeededStatusView({
+  initial,
+  ...props
+}: Omit<React.ComponentProps<typeof EnrollmentStatusView>, "initial"> &
+  Pick<PageProps, "initial">) {
+  const seed = use(initial);
+  return <EnrollmentStatusView key={props.token} {...props} initial={seed} />;
 }

@@ -29,6 +29,10 @@ import {
   type HolidayRegistrationStatusWeek,
 } from "~/lib/holiday-registration-status-api";
 import { createLogger } from "~/lib/logger";
+import {
+  useTokenStatusSeed,
+  type TokenStatusSeed,
+} from "~/lib/token-status-seed";
 import { HolidayPlacementBadge } from "./holiday-placement-badge";
 import { HOLIDAY_REGISTRATION_STATUS_TONES } from "./holiday-registration-badges";
 
@@ -39,9 +43,30 @@ const STATUS_NOT_FOUND = "enrollment.holiday_registration_status_not_found";
 
 export function HolidayRegistrationStatusView({
   token,
-}: Readonly<{ token: string }>) {
+  initial,
+}: Readonly<{
+  token: string;
+  initial?: TokenStatusSeed<HolidayRegistrationStatus>;
+}>) {
+  const seeded = useTokenStatusSeed(initial);
+  return (
+    <HolidayRegistrationStatusContent
+      key={seeded === undefined ? "live" : "seeded"}
+      token={token}
+      seeded={seeded}
+    />
+  );
+}
+
+function HolidayRegistrationStatusContent({
+  token,
+  seeded,
+}: Readonly<{
+  token: string;
+  seeded: HolidayRegistrationStatus | undefined;
+}>) {
   const t = useTranslations("holidayRegistrationStatus");
-  const [status, setStatus] = useState<HolidayRegistrationStatus | null>(null);
+  const [status, setStatus] = useState(seeded);
   const [notFound, setNotFound] = useState(false);
   const loadError = useApiLoadError();
   const { show, clear } = loadError;
@@ -67,19 +92,22 @@ export function HolidayRegistrationStatusView({
 
   // oxlint-disable-next-line swr/no-effect-load -- status-link token page, open without a session; the shared cache reads only with a session, by design
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (seeded === undefined) void load();
+  }, [load, seeded]);
 
   if (notFound) return <StatusNotFound />;
   if (loadError.error) return <LoadErrorAlert error={loadError.error} />;
-  if (!status) {
-    return (
-      <div role="status" aria-label={t("loading")}>
-        <PublicEnrollmentContentSkeleton sections={1} />
-      </div>
-    );
-  }
+  if (!status) return <HolidayRegistrationStatusLoading />;
   return <StatusContent status={status} />;
+}
+
+export function HolidayRegistrationStatusLoading() {
+  const t = useTranslations("holidayRegistrationStatus");
+  return (
+    <div role="status" aria-label={t("loading")}>
+      <PublicEnrollmentContentSkeleton sections={1} />
+    </div>
+  );
 }
 
 function StatusContent({

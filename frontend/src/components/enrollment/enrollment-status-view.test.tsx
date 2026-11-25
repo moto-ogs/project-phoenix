@@ -154,6 +154,49 @@ describe("EnrollmentStatusView", () => {
     expect(await screen.findByText("Status-Link ungültig")).toBeInTheDocument();
   });
 
+  it("shows the seeded status and changed fields without mount requests", () => {
+    const { request_id: _requestID, ...display } = status();
+    render(
+      <EnrollmentStatusView
+        token="tok"
+        initial={{
+          builtAt: Date.now(),
+          data: {
+            status: display,
+            changes: [
+              {
+                id: "42",
+                origin: "parent",
+                status: "pending_review",
+                created_at: "2026-06-28T11:09:00.000Z",
+                groups: [
+                  {
+                    key: "guardian_first_name",
+                    label: "Vorname",
+                    rows: [
+                      {
+                        id: "name",
+                        label: "Vorname",
+                        before: "Daniela",
+                        after: "Danielaaaa",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Lina Muster")).toBeInTheDocument();
+    expect(screen.getByText("Danielaaaa")).toBeInTheDocument();
+    expect(mockFetchStatus).not.toHaveBeenCalled();
+    expect(mockListEnrollmentChangeRequests).not.toHaveBeenCalled();
+    expect(mockGetEnrollmentFormLabels).not.toHaveBeenCalled();
+  });
+
   it("renders editable submitted requests and saves contact changes", async () => {
     mockFetchStatus
       .mockResolvedValueOnce(status())
