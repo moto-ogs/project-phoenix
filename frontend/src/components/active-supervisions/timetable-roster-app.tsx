@@ -370,7 +370,7 @@ function overduePickupColor(
  */
 function SubtitlePart({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <span className="relative flex max-w-full min-w-0 shrink-0 items-center pl-2 before:absolute before:left-0 before:w-2 before:text-center before:text-gray-500 before:content-['·']">
+    <span className="flex max-w-full min-w-0 shrink-0 items-center before:w-2 before:shrink-0 before:text-center before:text-gray-500 before:content-['·']">
       {children}
     </span>
   );
@@ -640,7 +640,7 @@ export function TimetableRosterApp({
     if (!klass) return childName(row);
     return (
       <span className="flex min-w-0 items-baseline gap-1">
-        <span className="truncate">{childName(row)}</span>
+        <span className="truncate">{childName(row)}</span>{" "}
         <span className="shrink-0 text-xs font-normal text-gray-500">
           {klass}
         </span>
@@ -715,7 +715,9 @@ export function TimetableRosterApp({
                 key={`${row.studentId}-${row.status}-${row.visitId ?? "planned"}`}
                 onClick={() => openChild(row)}
                 selected={isSplit && splitRow?.studentId === row.studentId}
-                aria-label={`${childName(row)} öffnen`}
+                // Beginnt mit dem sichtbaren Text (Name, Klasse), damit
+                // Sprachsteuerung die Zeile beim gelesenen Namen findet.
+                aria-label={`${[childName(row), schoolClassName(row.schoolClass ?? "")].filter(Boolean).join(" ")} öffnen`}
                 leading={<Avatar name={childName(row)} size="sm" decorative />}
                 title={titleFor(row)}
                 subtitle={subtitleFor(row, key)}
