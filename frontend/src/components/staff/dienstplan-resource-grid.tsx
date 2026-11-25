@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRightLeft, Repeat, TriangleAlert } from "lucide-react";
-import { useAfterInitialPaint } from "~/lib/hooks/use-after-initial-paint";
+import { useInitialPaintViewport } from "~/lib/hooks/use-after-initial-paint";
 import {
   useEffect,
   useId,
@@ -743,16 +743,16 @@ export function DienstplanResourceGrid({
   // Baum, Screenreader läsen den Plan zweimal vor und die Tabulator-Reihenfolge
   // liefe durch eine unsichtbare Kopie.
   const isCompact = useMediaQuery(BELOW_LG);
-  const showAllRows = useAfterInitialPaint();
+  const viewport = useInitialPaintViewport();
   // A desktop roster starts below the portal header, page heading, week
   // controls and column headings. Even in compact density these occupy
   // more than 160px, and each row needs at least 72px. On a fresh client
   // mount, build the visible rows before the lower part of the roster.
-  const initialRows = showAllRows
+  const initialRows = !viewport
     ? staff.length
     : isCompact
-      ? Math.ceil(window.innerHeight / 64)
-      : Math.max(1, Math.ceil((window.innerHeight - 160) / 72));
+      ? Math.ceil(viewport.height / 64)
+      : Math.max(1, Math.ceil((viewport.height - 160) / 72));
   const showFooter = initialRows >= staff.length;
   const visibleStaff = showFooter ? staff : staff.slice(0, initialRows);
   const mobileCare =

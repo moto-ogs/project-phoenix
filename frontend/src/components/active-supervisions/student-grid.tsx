@@ -1,6 +1,6 @@
 "use client";
 
-import { useAfterInitialPaint } from "~/lib/hooks/use-after-initial-paint";
+import { useInitialPaintViewport } from "~/lib/hooks/use-after-initial-paint";
 import { teacherHintKey, teacherHintText } from "~/lib/student-helpers";
 import { StickyNote } from "lucide-react";
 import {
@@ -207,14 +207,19 @@ export function SupervisionStudentGrid({
   table,
 }: SupervisionStudentGridProps) {
   const holidayGuestLabel = useHolidayGuestLabels(students);
-  const showAllCards = useAfterInitialPaint();
-  // These cards are at least 112px high. Start with enough rows for the whole
-  // viewport even when the room's header and filters are scrolled out of view.
+  const viewport = useInitialPaintViewport();
+  // The room controls and portal header take up at least 128px on desktop.
+  // Render enough rows to cover the opening viewport; the rest follow paint.
   const initialCardCount =
-    showAllCards || table
+    !viewport || table
       ? filteredStudents.length
-      : Math.min(3, Math.max(1, Math.floor(window.innerWidth / 320))) *
-        Math.ceil(window.innerHeight / 112);
+      : Math.min(3, Math.max(1, Math.floor(viewport.width / 320))) *
+        Math.max(
+          1,
+          Math.ceil(
+            (viewport.height - (viewport.width >= 1024 ? 128 : 0)) / 112,
+          ),
+        );
   const cards = filteredStudents.slice(0, initialCardCount);
   // Leer- und Filterzustand sitzen auf derselben Fläche wie die Karten, die
   // sie ersetzen: freier Text auf dem gemusterten Grund liest sich als Lücke,

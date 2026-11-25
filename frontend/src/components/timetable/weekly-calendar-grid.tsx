@@ -56,7 +56,7 @@ import type { EnrichedInstance } from "~/lib/timetable-types";
 
 import { InstanceBlock, type BlockStaffing } from "./instance-block";
 import { StatusDot } from "~/components/ui/status-dot";
-import { useAfterInitialPaint } from "~/lib/hooks/use-after-initial-paint";
+import { useInitialPaintViewport } from "~/lib/hooks/use-after-initial-paint";
 import { PlanningDayChip } from "~/components/ui/planning/planning-context-bar";
 
 // Grid template columns: narrow time gutter + day columns. Mobile shows a
@@ -247,11 +247,13 @@ export function WeeklyCalendarGrid({
     (_, i) => renderStartHour + i,
   );
   const gridHeightPx = (renderEndHour - renderStartHour) * hourHeightPx;
-  const showEntireGrid = useAfterInitialPaint();
+  const viewport = useInitialPaintViewport();
   // A fresh scroller begins at its top. No slot or block farther down than
   // the whole viewport can be visible on that first paint. Reserve the full
-  // grid height and build those controls after the visible part.
-  const initialGridBottom = showEntireGrid ? Infinity : window.innerHeight;
+  // grid height and add those empty-slot controls after the visible part.
+  // Render a single day's complete, usable plan in one commit.
+  const initialGridBottom =
+    !viewport || weekDays.length === 1 ? Infinity : viewport.height;
   const slotHours = hours.slice(
     0,
     Math.min(hours.length - 1, Math.ceil(initialGridBottom / hourHeightPx)),

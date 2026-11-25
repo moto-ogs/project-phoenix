@@ -102,7 +102,7 @@ import {
 import { countedDayStatus, dayStatusLabel } from "~/lib/presence-status";
 import { useMinuteClock } from "~/lib/pickup-helpers";
 import { useLatest } from "~/lib/hooks/use-latest";
-import { useAfterInitialPaint } from "~/lib/hooks/use-after-initial-paint";
+import { useInitialPaintViewport } from "~/lib/hooks/use-after-initial-paint";
 import {
   SearchStudentCard,
   SearchStudentStatusBadge,
@@ -3283,12 +3283,19 @@ function SearchPageContent() {
   // Build the first viewport before the rest of a long card list on a
   // client remount. The opening document still renders the complete list;
   // grouping and bulk selection always use and render the complete result.
-  const allCards = useAfterInitialPaint();
+  const viewport = useInitialPaintViewport();
+  const desktopViewport = viewport && viewport.width >= 1024;
+  // On desktop the shell, page heading and search controls consume at least
+  // 160px vertically. The shell and main padding leave at least 64px outside
+  // the grid horizontally. Keep a full row at the lower edge as well.
   const initialCardCount =
-    allCards || schoolCheckin.isActive
+    !viewport || schoolCheckin.isActive
       ? Infinity
-      : Math.max(1, Math.floor(window.innerWidth / 320)) *
-        Math.ceil(window.innerHeight / 112);
+      : desktopViewport
+        ? Math.max(1, Math.floor((viewport.width - 64) / 320)) *
+          Math.max(1, Math.ceil((viewport.height - 160) / 96))
+        : Math.max(1, Math.floor(viewport.width / 320)) *
+          Math.ceil(viewport.height / 112);
   const renderMemoizedStudentCard = (student: Student) => {
     const studentIdStr = student.id.toString();
     return (

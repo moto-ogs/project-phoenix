@@ -10,6 +10,17 @@ import {
 const subscribe = () => () => undefined;
 const clientSnapshot = () => false;
 const documentSnapshot = () => true;
+const noViewport = () => null;
+
+let viewport: Readonly<{ width: number; height: number }> | null = null;
+
+function browserViewport() {
+  const { innerWidth: width, innerHeight: height } = window;
+  if (viewport?.width !== width || viewport.height !== height) {
+    viewport = { width, height };
+  }
+  return viewport;
+}
 
 /** Keep document markup complete, but let below-the-fold work on a client
  * navigation follow the first commit. The browser can paint and respond to
@@ -33,4 +44,14 @@ export function useAfterInitialPaint(): boolean {
     return () => cancelAnimationFrame(frame);
   }, [ready]);
   return ready;
+}
+
+/** Layout bounds only for the opening render of a client navigation. */
+export function useInitialPaintViewport() {
+  const ready = useAfterInitialPaint();
+  return useSyncExternalStore(
+    subscribe,
+    ready ? noViewport : browserViewport,
+    noViewport,
+  );
 }
