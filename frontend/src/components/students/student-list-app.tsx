@@ -154,7 +154,9 @@ export function StudentListApp({
         meta={
           <>
             <span className="tablet:hidden">{badge}</span>
-            {homeway ? <span className="phone:hidden">{homeway}</span> : null}
+            {homeway ? (
+              <span className="phone:hidden split:hidden">{homeway}</span>
+            ) : null}
           </>
         }
         selected={selected === id}
