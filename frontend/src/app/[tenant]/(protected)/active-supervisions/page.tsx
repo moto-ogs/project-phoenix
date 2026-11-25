@@ -962,9 +962,11 @@ function MeinRaumPageContent() {
     appHasRunningRoster && showTransit && (appTransitCount ?? 0) > 0 ? (
       <Button
         type="button"
-        variant="link"
-        size="md"
-        className="gap-1.5"
+        variant="ghost"
+        size="compact"
+        // Leiser Knopf mit Fingermaß; der Pfeil schließt bündig mit den
+        // Knöpfen der Zeilen darunter ab.
+        className="-mr-3 gap-1.5"
         tooltip="Klappt die Kinder ohne Raum am Ende der Liste auf."
         onClick={() => {
           setAppTransitExpanded(true);
