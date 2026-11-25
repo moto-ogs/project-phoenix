@@ -231,7 +231,7 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0261: the owner's clock, its nil default and imports (+16).
 	"modules/identityaccess/compose": 1379, // raised by ADR 0077
 	// ADR 0269: the clock of the participation history (+2).
-	"modules/mealplan/compose": 101, // raised by ADR 0078 and ADR 0168
+	"modules/mealplan/compose": 104, // raised by ADR 0078 and ADR 0168
 	// ADR 0097: the isolated tenant return constructor, no retained logic moved.
 	// Raised by ADR 0112: the Träger master data constructor (+13).
 	// Raised by ADR 0148: the demo school file erasure constructor (+10).

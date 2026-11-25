@@ -23,8 +23,12 @@ type Observation = ports.Observation
 type OrderingSettings = ports.OrderingSettings // the school's meal ordering settings as stored
 
 type Dependencies struct {
-	DB              *bun.DB
-	Settings        ports.Settings
+	DB       *bun.DB
+	Settings interface {
+		MealPlanEnabled(context.Context) (bool, error)
+		MealRegistrationEnabled(context.Context) (bool, error)
+		MealOrderingSettings(context.Context) (OrderingSettings, error)
+	}
 	Observe         func(Observation)
 	Now             func() time.Time
 	Participants    mealplan.ParticipantFinder
@@ -39,8 +43,7 @@ func New(dependencies Dependencies) (mealplan.Services, error) {
 	if dependencies.DB == nil || dependencies.Settings == nil || dependencies.Observe == nil || dependencies.Now == nil || dependencies.Participants == nil || dependencies.ParticipantDays == nil || dependencies.StudentNames == nil || dependencies.LockStudent == nil || dependencies.Calendar == nil {
 		return mealplan.Services{}, errors.New("meal plan compose: all dependencies are required")
 	}
-	service := application.New(postgres.New(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext)), application.NewParticipantDirectory(dependencies.Participants, dependencies.StudentNames, dependencies.ParticipantDays, dependencies.LockStudent), application.NewSchoolCalendar(dependencies.Calendar), dependencies.Settings, transaction{}, dependencies.Observe, dependencies.Now, dependencies.Notices)
-	return mealplan.Services{Capability: service, Summaries: service}, nil
+	return application.New(postgres.New(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext)), application.NewParticipantDirectory(dependencies.Participants, dependencies.StudentNames, dependencies.ParticipantDays, dependencies.LockStudent), application.NewSchoolCalendar(dependencies.Calendar), dependencies.Settings, transaction{}, dependencies.Observe, dependencies.Now, dependencies.Notices), nil
 }
 
 type Settings = application.Settings // the application-owned bound resolvers
