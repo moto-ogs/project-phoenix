@@ -1,5 +1,6 @@
 "use client";
 
+import type { PrefetchResource } from "./data-prefetch-intent";
 // `.js`: Die Layouttests rendern ButtonLink in Node ohne Bundler (#6570).
 import NextLink from "next/link.js";
 import { forwardRef, type ComponentProps } from "react";
@@ -11,6 +12,8 @@ export type NavigationLinkProps = Omit<
   "href" | "prefetch"
 > & {
   readonly href: string;
+  /** Daten, die der Link bei Absicht zusätzlich zur Seite vorlädt. */
+  readonly resources?: readonly PrefetchResource[];
   /** `false` schaltet auch das Vorladen bei Absicht ab. */
   readonly prefetch?: false;
 };
@@ -46,7 +49,12 @@ const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
       onPointerEnter,
       onPointerLeave,
       onFocus,
+      onTouchStart,
+      onTouchMove,
+      onTouchEnd,
+      onTouchCancel,
       onBlur,
+      resources,
       ...anchorProps
     },
     ref,
@@ -56,11 +64,17 @@ const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
       href,
       target,
       prefetch: allowPrefetch,
+      onClick: progress.onClick,
       onPointerDown,
       onPointerEnter,
       onPointerLeave,
       onFocus,
+      onTouchStart,
+      onTouchMove,
+      onTouchEnd,
+      onTouchCancel,
       onBlur,
+      resources,
     });
 
     // Jeder Handler steht hier genau einmal; `anchorProps` enthält keinen von
@@ -72,12 +86,16 @@ const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
         href={href}
         target={target}
         prefetch={intent.prefetch}
-        onClick={progress.onClick}
+        onClick={intent.onClick}
         onNavigate={progress.onNavigate}
         onPointerDown={intent.onPointerDown}
         onPointerEnter={intent.onPointerEnter}
         onPointerLeave={intent.onPointerLeave}
         onFocus={intent.onFocus}
+        onTouchStart={intent.onTouchStart}
+        onTouchMove={intent.onTouchMove}
+        onTouchEnd={intent.onTouchEnd}
+        onTouchCancel={intent.onTouchCancel}
         onBlur={intent.onBlur}
       />
     );

@@ -6,8 +6,13 @@ import {
   useState,
   type ComponentProps,
   type FocusEvent,
+  type MouseEvent,
   type PointerEvent,
 } from "react";
+import {
+  useDataPrefetchIntent,
+  type PrefetchResource,
+} from "./data-prefetch-intent";
 import { isInternalPath } from "./navigation-url";
 
 /**
@@ -18,22 +23,39 @@ export const HOVER_PREFETCH_DELAY_MS = 80;
 
 type IntentPrefetchProps = Pick<
   ComponentProps<"a">,
-  "target" | "onPointerEnter" | "onPointerLeave" | "onFocus" | "onBlur"
+  | "onClick"
+  | "target"
+  | "onPointerDown"
+  | "onPointerEnter"
+  | "onPointerLeave"
+  | "onFocus"
+  | "onTouchStart"
+  | "onTouchMove"
+  | "onTouchEnd"
+  | "onTouchCancel"
+  | "onBlur"
 > & {
   readonly href: string;
   readonly prefetch?: boolean | "auto" | null;
+  readonly resources?: readonly PrefetchResource[];
 };
 
 /** Shared intent policy, without portal progress or router dependencies. */
 export function useLinkIntentPrefetch({
   href,
+  onClick,
   target,
   prefetch: allowed,
   onPointerDown,
   onPointerEnter,
   onPointerLeave,
   onFocus,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
+  onTouchCancel,
   onBlur,
+  resources,
 }: IntentPrefetchProps) {
   const [intent, setIntent] = useState({ href, target, prefetch: false });
   const sameDestination = intent.href === href && intent.target === target;
@@ -43,6 +65,11 @@ export function useLinkIntentPrefetch({
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canPrefetch =
     allowed !== false && target !== "_blank" && isInternalPath(href);
+
+  const dataIntent = useDataPrefetchIntent(
+    canPrefetch ? href : null,
+    resources,
+  );
 
   const cancelHover = () => {
     if (hoverTimer.current === null) return;
@@ -60,15 +87,20 @@ export function useLinkIntentPrefetch({
 
   return {
     prefetch: prefetch && canPrefetch,
+    onClick: (event: MouseEvent<HTMLAnchorElement>) => {
+      dataIntent.onClick();
+      onClick?.(event);
+    },
     onPointerDown: (event: PointerEvent<HTMLAnchorElement>) => {
       onPointerDown?.(event);
-      // A click is already navigating. Its focus and the remaining hover hold
-      // must not begin a second RSC request for the same page.
+      // A click is already navigating; the remaining hover hold must not
+      // begin another RSC request.
       cancelHover();
     },
     onPointerEnter: (event: PointerEvent<HTMLAnchorElement>) => {
       onPointerEnter?.(event);
       if (event.defaultPrevented || !canPrefetch) return;
+      dataIntent.onPointerEnter(event);
       if (prefetch || event.pointerType === "touch") return;
       cancelHover();
       hoverTimer.current = setTimeout(startPrefetch, HOVER_PREFETCH_DELAY_MS);
@@ -76,19 +108,38 @@ export function useLinkIntentPrefetch({
     onPointerLeave: (event: PointerEvent<HTMLAnchorElement>) => {
       onPointerLeave?.(event);
       cancelHover();
+      dataIntent.onPointerLeave();
+    },
+    onTouchStart: (event: React.TouchEvent<HTMLAnchorElement>) => {
+      onTouchStart?.(event);
+      if (!event.defaultPrevented && canPrefetch) {
+        dataIntent.onTouchStart(event);
+      }
+    },
+    onTouchMove: (event: React.TouchEvent<HTMLAnchorElement>) => {
+      onTouchMove?.(event);
+      if (event.defaultPrevented) dataIntent.onTouchCancel();
+      else dataIntent.onTouchMove(event);
+    },
+    onTouchEnd: (event: React.TouchEvent<HTMLAnchorElement>) => {
+      onTouchEnd?.(event);
+      if (!event.defaultPrevented && canPrefetch) dataIntent.onTouchEnd(event);
+      else dataIntent.onTouchCancel();
+    },
+    onTouchCancel: (event: React.TouchEvent<HTMLAnchorElement>) => {
+      onTouchCancel?.(event);
+      dataIntent.onTouchCancel();
     },
     onBlur: (event: FocusEvent<HTMLAnchorElement>) => {
       onBlur?.(event);
       cancelHover();
+      dataIntent.onBlur();
     },
     onFocus: (event: FocusEvent<HTMLAnchorElement>) => {
       onFocus?.(event);
-      if (
-        event.defaultPrevented ||
-        !event.currentTarget.matches(":focus-visible")
-      )
-        return;
-      startPrefetch();
+      if (event.defaultPrevented) return;
+      if (event.currentTarget.matches(":focus-visible")) startPrefetch();
+      dataIntent.onFocus();
     },
   };
 }
