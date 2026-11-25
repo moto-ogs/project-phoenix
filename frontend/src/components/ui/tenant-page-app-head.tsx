@@ -149,6 +149,8 @@ export function AppTenantHead({
           // Abgelöst von der schmalen Kopfkarte: kein Rest bleibt stehen.
           scrolledAway &&
             "opacity-0 transition-opacity duration-200 motion-reduce:transition-none",
+          // Telefon: Kopf und Leiste bilden eine Karte (spart Fuge und Rand).
+          hasToolbar && "phone:rounded-b-none phone:border-b-0",
           // Die Fuge zur Leiste darunter deckt der Seitengrund.
           inSplitDetail &&
             `sticky top-0 ${Z_LAYER.nav} after:absolute after:inset-x-0 after:top-full after:h-2 after:bg-gray-50! after:content-['']`,
@@ -228,6 +230,10 @@ export function AppTenantHead({
           className={cn(
             `sticky ${Z_LAYER.nav} mt-1.5 -mb-1 space-y-1.5 px-1.5 py-1`,
             FLOATING_CARD,
+            // Telefon: unten an der Kopfkarte, solange sie steht; klebt die
+            // Leiste allein, ist sie wieder eine ganze Karte.
+            "phone:mt-0",
+            !veiled && "phone:rounded-t-none phone:border-t-0 phone:pt-0",
             printHideHeader && "print:hidden",
           )}
           style={{ top: stickyTop }}
