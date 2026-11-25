@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
+	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -69,18 +70,27 @@ type StudentGuardianReads interface {
 	ListLinkedChildrenForGuardians(ctx context.Context, guardianProfileIDs []int64) ([]*GuardianLinkedChild, error)
 }
 
-// DataRequestReads reads the child's Stammdaten change requests.
+// DataRequestReads reads the children's change requests from Care Plan's
+// request query: the Stammdaten requests and the open weekly-plan requests.
 type DataRequestReads interface {
 	FindByID(ctx context.Context, id int64) (*StudentDataChangeRequest, error)
 	FindByIDForUpdate(ctx context.Context, id int64) (*StudentDataChangeRequest, error)
 	HasPendingForField(ctx context.Context, studentID int64, target, fieldKey string) (bool, error)
-	ListByStudent(ctx context.Context, studentID int64, statuses []string, limit int) ([]*StudentDataChangeRequest, error)
+	// ListByStudents reads the Stammdaten requests of the children in one
+	// statement; limit bounds the whole result.
+	ListByStudents(ctx context.Context, studentIDs []int64, statuses []string, limit int) ([]*StudentDataChangeRequest, error)
 	ListParentVisibleByStudent(ctx context.Context, studentID int64, limit int) ([]*StudentDataChangeRequest, error)
+	// ListPendingWeeklyCareRequests reads the open weekly-plan requests of the
+	// children in one statement; a child has at most one.
+	ListPendingWeeklyCareRequests(ctx context.Context, studentIDs []int64) ([]carerequests.Request, error)
 }
 
 // StatusDayReads reads the child's active status days.
 type StatusDayReads interface {
 	FindActiveByStudentAndDateRange(ctx context.Context, studentID int64, startDate, endDate calendar.Date) ([]*absencerecords.StudentStatusDay, error)
+	// FindActiveByStudentIDsAndDate reads the active status days of several
+	// children on one date in one statement.
+	FindActiveByStudentIDsAndDate(ctx context.Context, studentIDs []int64, date calendar.Date) ([]*absencerecords.StudentStatusDay, error)
 }
 
 // CareOfferingReads reads care offerings by ID.

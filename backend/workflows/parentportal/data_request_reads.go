@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
+
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal/internal/care"
 )
 
@@ -11,7 +13,9 @@ type DataRequestSnapshot care.StudentDataChangeRequest
 type DataRequestReadCallbacks struct {
 	Find    func(context.Context, int64, bool) (*DataRequestSnapshot, error)
 	Pending func(context.Context, int64, string, string) (bool, error)
-	List    func(context.Context, int64, []string, int, bool) ([]*DataRequestSnapshot, error)
+	List    func(context.Context, []int64, []string, int, bool) ([]*DataRequestSnapshot, error)
+	// PendingWeekly reads the open weekly-plan requests of the children.
+	PendingWeekly func(context.Context, []int64) ([]carerequests.Request, error)
 }
 type DataRequestReads interface{ care.DataRequestReads }
 
@@ -42,11 +46,14 @@ func nativeDataRequestRows(rows []*DataRequestSnapshot, err error) ([]*care.Stud
 	}
 	return result, err
 }
-func (r dataRequestReads) ListByStudent(ctx context.Context, id int64, statuses []string, limit int) ([]*care.StudentDataChangeRequest, error) {
-	return nativeDataRequestRows(r.callbacks.List(ctx, id, statuses, limit, false))
+func (r dataRequestReads) ListByStudents(ctx context.Context, ids []int64, statuses []string, limit int) ([]*care.StudentDataChangeRequest, error) {
+	return nativeDataRequestRows(r.callbacks.List(ctx, ids, statuses, limit, false))
 }
 func (r dataRequestReads) ListParentVisibleByStudent(ctx context.Context, id int64, limit int) ([]*care.StudentDataChangeRequest, error) {
-	return nativeDataRequestRows(r.callbacks.List(ctx, id, nil, limit, true))
+	return nativeDataRequestRows(r.callbacks.List(ctx, []int64{id}, nil, limit, true))
+}
+func (r dataRequestReads) ListPendingWeeklyCareRequests(ctx context.Context, ids []int64) ([]carerequests.Request, error) {
+	return r.callbacks.PendingWeekly(ctx, ids)
 }
 
 type DataRequestCommandCallbacks struct {

@@ -425,6 +425,12 @@ func (s *requestStore) ListCareScheduleRequests(ctx context.Context, filter care
 	if filter.StudentID > 0 {
 		query = query.Where(`"care_schedule_change_request".student_id = ?`, filter.StudentID)
 	}
+	if filter.StudentIDs != nil {
+		if len(filter.StudentIDs) == 0 {
+			return []careplan.CareScheduleChangeRequest{}, carePlanCompose.RequestStoreStats{}, nil
+		}
+		query = query.Where(`"care_schedule_change_request".student_id IN (?)`, bun.List(filter.StudentIDs))
+	}
 	if len(filter.IDs) > 0 {
 		query = query.Where(`"care_schedule_change_request".id IN (?)`, bun.List(filter.IDs))
 	}
@@ -615,6 +621,12 @@ func (s *requestStore) ListStudentDataRequests(ctx context.Context, filter carep
 	}
 	if filter.StudentID > 0 {
 		query = query.Where(`"student_data_change_request".student_id = ?`, filter.StudentID)
+	}
+	if filter.StudentIDs != nil {
+		if len(filter.StudentIDs) == 0 {
+			return []careplan.StudentDataChangeRequest{}, carePlanCompose.RequestStoreStats{}, nil
+		}
+		query = query.Where(`"student_data_change_request".student_id IN (?)`, bun.List(filter.StudentIDs))
 	}
 	if len(filter.Statuses) > 0 {
 		query = query.Where(`"student_data_change_request".status IN (?)`, bun.List(filter.Statuses))

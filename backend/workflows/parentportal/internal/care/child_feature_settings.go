@@ -191,13 +191,8 @@ func (r childSettingResolver) resolveRelatedAccountAndMasterDataSettings(out *ch
 
 func (s *Service) resolveMealSettings(ctx context.Context, tenantID int64, out *childFeatureSettings) error {
 	var err error
-	if out.mealPlan, err = s.mealPlanAvailableForTenant(ctx, tenantID); err != nil {
-		return fmt.Errorf("parent: resolve meal-plan setting: %w", err)
-	}
-	if out.mealRegistration, err = s.mealRegistrationAvailableForTenant(ctx, tenantID); err != nil {
-		return fmt.Errorf("parent: resolve meal-registration setting: %w", err)
-	}
-	return nil
+	out.mealPlan, out.mealRegistration, err = s.mealAvailabilityForTenant(ctx, tenantID)
+	return err
 }
 
 func (r childSettingResolver) resolvePortalSettings(out *childFeatureSettings) error {

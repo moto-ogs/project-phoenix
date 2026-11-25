@@ -21,22 +21,18 @@ type FamilyStartCard struct {
 	Today    *TodayStatus
 }
 
-// schoolFact lives only for this sequential read of a single school. Keep a
-// failed result too: a sibling must not retry the same failed school query.
-type schoolFact[T any] struct {
-	loaded bool
-	value  T
-	err    error
+// familySchool is the authorized children of one school in one family read.
+type familySchool struct {
+	tenantID int64
+	children []schoolChild
 }
 
-func (f *schoolFact[T]) read(load func() (T, error)) (T, error) {
-	if !f.loaded {
-		f.value, f.err = load()
-		f.loaded = true
-	}
-	return f.value, f.err
-}
-
+// FamilyStart reads the start cards of the account's children. Each child is
+// checked against its own relationship; the reads of one school then run as
+// set reads for all of its children: one settings snapshot, one tenant
+// transaction for the open requests and one for the day. The statement count
+// grows with the schools, not with the children of a school. A failure keeps
+// its field and its school: the other schools' cards stay complete.
 func (s *Service) FamilyStart(ctx context.Context, accountID int64, studentID *int64) (*FamilyStart, error) {
 	children, err := s.familyStartChildren(ctx, accountID, studentID)
 	if err != nil {
@@ -48,40 +44,58 @@ func (s *Service) FamilyStart(ctx context.Context, accountID int64, studentID *i
 		Day:                 day,
 		DayRemainingSeconds: int(math.Ceil(day.AddDays(1).BerlinMidnight().Sub(now).Seconds())),
 	}
-	type schoolReads struct {
-		features schoolFact[childFeatureSettings]
-		day      schoolDayReads
+	schools := familySchools(children, day)
+	features := make(map[int64]ChildFeatureFlags, len(children))
+	today := make(map[int64]*TodayStatus, len(children))
+	for _, school := range schools {
+		if settings, err := s.resolveChildFeatureSettings(ctx, school.tenantID, now); err != nil {
+			s.Logger.Warn("parent_family_features_unavailable",
+				"school_id", school.tenantID,
+				"error", err.Error(),
+			)
+		} else {
+			for id, flags := range s.featuresForSchool(ctx, accountID, school.tenantID, school.children, settings) {
+				features[id] = flags
+			}
+		}
+		if statuses, err := s.todayForSchool(ctx, school.tenantID, school.children, now); err == nil {
+			for id, status := range statuses {
+				today[id] = status
+			}
+		}
 	}
-	schools := map[int64]*schoolReads{}
 	for _, summary := range children {
 		if !childHasPermission(summary, GuardianPermissionPortalAccess) {
 			continue
 		}
-		child := summary.resolved(result.Day)
-		school := schools[child.TenantID]
-		if school == nil {
-			school = &schoolReads{}
-			schools[child.TenantID] = school
-		}
-		card := FamilyStartCard{Child: summary}
-		settings, err := school.features.read(func() (childFeatureSettings, error) {
-			settings, err := s.resolveChildFeatureSettings(ctx, child.TenantID, now)
-			if err != nil {
-				s.Logger.Warn("parent_family_features_unavailable",
-					"school_id", child.TenantID,
-					"error", err.Error(),
-				)
-			}
-			return settings, err
-		})
-		if err == nil {
-			flags := s.featuresForChild(ctx, accountID, summary.StudentID, child, settings)
+		card := FamilyStartCard{Child: summary, Today: today[summary.StudentID]}
+		if flags, ok := features[summary.StudentID]; ok {
 			card.Features = &flags
 		}
-		card.Today, _ = s.todayForChild(ctx, summary.StudentID, child, now, &school.day)
 		result.Cards = append(result.Cards, card)
 	}
 	return result, nil
+}
+
+// familySchools groups the children the account may see by school, in the
+// order of the child list. A child without parent_portal.access is no card.
+func familySchools(children []*ChildSummary, day calendar.Date) []familySchool {
+	var schools []familySchool
+	index := map[int64]int{}
+	for _, summary := range children {
+		if !childHasPermission(summary, GuardianPermissionPortalAccess) {
+			continue
+		}
+		child := summary.resolved(day)
+		at, ok := index[child.TenantID]
+		if !ok {
+			at = len(schools)
+			index[child.TenantID] = at
+			schools = append(schools, familySchool{tenantID: child.TenantID})
+		}
+		schools[at].children = append(schools[at].children, schoolChild{id: summary.StudentID, child: child})
+	}
+	return schools
 }
 
 // An event can narrow the account's visible children, never widen them.

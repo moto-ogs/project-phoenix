@@ -30,7 +30,19 @@ func (s *familySettings) ResolveManyForTenant(ctx context.Context, id int64, key
 
 type familyAttendance struct {
 	portal.AttendanceReader
-	calls map[int64]int
+	calls       map[int64]int
+	unavailable int64
+}
+
+func (a *familyAttendance) ListAttendance(ctx context.Context, f portal.AttendanceFilter) ([]portal.Attendance, error) {
+	id, err := tenant.TenantFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if id.Int64() == a.unavailable {
+		return nil, errors.New("attendance unavailable")
+	}
+	return a.AttendanceReader.ListAttendance(ctx, f)
 }
 
 func (a *familyAttendance) HasAttendance(ctx context.Context, f portal.AttendanceFilter) (bool, error) {
@@ -133,6 +145,26 @@ func TestFamilyStartUsesSchoolFactsButNeverSiblingPermissions(t *testing.T) {
 			assert.NotNil(t, card.Today)
 		}
 	}
+	// A failed day keeps its school: the features stay, the other school's
+	// day stays, and the child's own route answers unknown, never "absent".
+	settings.unavailable = 0
+	attendance.unavailable = family.TenantID
+	snapshot, err = svc.FamilyStart(ctx, family.AccountID, nil)
+	require.NoError(t, err)
+	require.Len(t, snapshot.Cards, 2)
+	for _, card := range snapshot.Cards {
+		require.NotNil(t, card.Features, "child %d", card.Child.StudentID)
+		if card.Child.StudentID == third.ID {
+			require.NotNil(t, card.Today)
+			assert.Equal(t, portal.DayStateNoCare, card.Today.State)
+		} else {
+			assert.Nil(t, card.Today, "a failed read is no day")
+			single, err := svc.GetChildTodayStatus(ctx, family.AccountID, card.Child.StudentID)
+			require.NoError(t, err)
+			assert.Equal(t, portal.DayStateUnknown, single.State)
+		}
+	}
+	attendance.unavailable = 0
 	empty, err := svc.FamilyStart(ctx, testpkg.CreateTestAccount(t, db, "empty-parent").ID, nil)
 	require.NoError(t, err)
 	assert.Empty(t, empty.Cards)

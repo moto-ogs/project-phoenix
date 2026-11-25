@@ -288,10 +288,11 @@ func (s *Service) requestSharingState(
 	ctx context.Context, studentID int64, requestType string, requestID int64,
 	protected bool, protectedAt time.Time, recipients []RequestSharingRecipient,
 ) (*RequestSharingState, error) {
-	current, err := s.ledger().currentRequestShares(ctx, studentID)
+	shares, err := s.ledger().currentRequestShares(ctx, []int64{studentID})
 	if err != nil {
 		return nil, err
 	}
+	current := shares[studentID]
 	selected := effectiveRecipientSet(s.SharePolicy, current[requestShareKey{typ: requestType, id: requestID}], protected, protectedAt)
 	for i := range recipients {
 		recipients[i].Selected = selected[recipients[i].accountID]
@@ -348,17 +349,23 @@ func (s *Service) ledger() shareLedger {
 	return shareLedger{shares: s.ParentRequestShares, protection: s.FamilyProtectionEvents, policy: s.SharePolicy}
 }
 
-func (l shareLedger) currentRequestShares(ctx context.Context, studentID int64) (map[requestShareKey]*ParentRequestShareEvent, error) {
-	if l.shares == nil {
-		return map[requestShareKey]*ParentRequestShareEvent{}, nil
+// currentRequestShares reads the effective share of every request of the
+// children in one statement, keyed by child. A child without a share has no
+// entry; reading a missing entry yields the empty share set.
+func (l shareLedger) currentRequestShares(ctx context.Context, studentIDs []int64) (map[int64]map[requestShareKey]*ParentRequestShareEvent, error) {
+	result := make(map[int64]map[requestShareKey]*ParentRequestShareEvent, len(studentIDs))
+	if l.shares == nil || len(studentIDs) == 0 {
+		return result, nil
 	}
-	rows, err := l.shares.CurrentForStudent(ctx, studentID)
+	rows, err := l.shares.CurrentForStudents(ctx, studentIDs)
 	if err != nil {
 		return nil, err
 	}
-	result := make(map[requestShareKey]*ParentRequestShareEvent, len(rows))
 	for _, row := range rows {
-		result[requestShareKey{typ: row.RequestType, id: row.RequestID}] = row
+		if result[row.StudentID] == nil {
+			result[row.StudentID] = map[requestShareKey]*ParentRequestShareEvent{}
+		}
+		result[row.StudentID][requestShareKey{typ: row.RequestType, id: row.RequestID}] = row
 	}
 	return result, nil
 }
@@ -601,16 +608,41 @@ func (s *Service) LoadRequestShareVisibility(ctx context.Context, studentID int6
 	return s.ledger().visibility(ctx, studentID)
 }
 
+// LoadRequestShareVisibilities reads the share visibility of several children
+// of one school with two statements, whatever their number. Each child keeps
+// its own shares and its own Familienschutz.
+func (s *Service) LoadRequestShareVisibilities(ctx context.Context, studentIDs []int64) (map[int64]*RequestShareVisibility, error) {
+	return s.ledger().visibilities(ctx, studentIDs)
+}
+
 func (l shareLedger) visibility(ctx context.Context, studentID int64) (*RequestShareVisibility, error) {
-	current, err := l.currentRequestShares(ctx, studentID)
+	visibilities, err := l.visibilities(ctx, []int64{studentID})
 	if err != nil {
 		return nil, err
 	}
-	protected, protectedAt, err := l.currentFamilyProtection(ctx, studentID)
+	return visibilities[studentID], nil
+}
+
+func (l shareLedger) visibilities(ctx context.Context, studentIDs []int64) (map[int64]*RequestShareVisibility, error) {
+	current, err := l.currentRequestShares(ctx, studentIDs)
 	if err != nil {
 		return nil, err
 	}
-	return &RequestShareVisibility{current: current, protected: protected, protectedAt: protectedAt, policy: l.policy}, nil
+	protection := map[int64]*FamilyProtectionEvent{}
+	if l.protection != nil && len(studentIDs) > 0 {
+		if protection, err = l.protection.CurrentForStudents(ctx, studentIDs); err != nil {
+			return nil, err
+		}
+	}
+	out := make(map[int64]*RequestShareVisibility, len(studentIDs))
+	for _, studentID := range studentIDs {
+		visibility := &RequestShareVisibility{current: current[studentID], policy: l.policy}
+		if event := protection[studentID]; event != nil {
+			visibility.protected, visibility.protectedAt = event.Enabled, event.CreatedAt
+		}
+		out[studentID] = visibility
+	}
+	return out, nil
 }
 
 func (v *RequestShareVisibility) Allows(requestType string, requestID, accountID, submittedBy int64) bool {
@@ -674,4 +706,16 @@ func (c childFlowSharing) LoadRequestShareVisibility(ctx context.Context, studen
 		return nil, err
 	}
 	return visibility, nil
+}
+
+func (c childFlowSharing) LoadRequestShareVisibilities(ctx context.Context, studentIDs []int64) (map[int64]care.RequestShareVisibility, error) {
+	visibilities, err := c.Service.LoadRequestShareVisibilities(ctx, studentIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[int64]care.RequestShareVisibility, len(visibilities))
+	for studentID, visibility := range visibilities {
+		out[studentID] = visibility
+	}
+	return out, nil
 }

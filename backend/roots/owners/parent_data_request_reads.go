@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -23,8 +24,8 @@ func NewParentDataRequestReads(source careplan.CareRequestsQuery) parentportal.D
 			return &value, nil
 		},
 		Pending: source.HasPendingStudentDataRequest,
-		List: func(ctx context.Context, id int64, statuses []string, limit int, visible bool) ([]*parentportal.DataRequestSnapshot, error) {
-			rows, err := source.ListStudentDataRequests(ctx, careplan.StudentDataRequestFilter{StudentID: id, Statuses: statuses, Limit: limit, ParentVisible: visible})
+		List: func(ctx context.Context, ids []int64, statuses []string, limit int, visible bool) ([]*parentportal.DataRequestSnapshot, error) {
+			rows, err := source.ListStudentDataRequests(ctx, careplan.StudentDataRequestFilter{StudentIDs: ids, Statuses: statuses, Limit: limit, ParentVisible: visible})
 			if err != nil {
 				return nil, err
 			}
@@ -34,6 +35,11 @@ func NewParentDataRequestReads(source careplan.CareRequestsQuery) parentportal.D
 				result[i] = &value
 			}
 			return result, nil
+		},
+		PendingWeekly: func(ctx context.Context, ids []int64) ([]careplan.CareScheduleChangeRequest, error) {
+			return source.ListCareScheduleRequests(ctx, careplan.CareScheduleRequestFilter{
+				StudentIDs: ids, RequestKinds: []string{carerequests.KindWeeklySchedule}, Statuses: []string{carerequests.StatusPending},
+			})
 		},
 	})
 }
