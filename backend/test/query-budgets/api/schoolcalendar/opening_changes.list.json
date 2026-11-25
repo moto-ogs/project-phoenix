@@ -1,0 +1,7 @@
+{
+  "scenario": "api.opening_changes.list",
+  "max": 4,
+  "exact": true,
+  "description": "School Calendar opening-change route (#7654): populated N3/N8 including the HTTP tenant transaction, excluding outer server/session liveness.",
+  "route": "GET /api/opening-changes/"
+}

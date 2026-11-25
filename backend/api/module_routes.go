@@ -189,6 +189,8 @@ var moduleRouteRules = []moduleRouteRule{
 	// Staff and parent surveys (#4781); see docs/reference/modulschalter.md.
 	{"/api/surveys", moduleRouteBasis},
 	{"/api/timetable", moduleRouteBasis},
+	// Changed opening hours (#7654) belong to the closing days of the timetable page.
+	{"/api/opening-changes", moduleRouteBasis},
 	// The notices of changed school closing days (ADR 0196) belong to the
 	// closing days of the timetable page.
 	{"/api/holiday-closure-notices", moduleRouteBasis},

@@ -281,6 +281,12 @@ export const staffRecordKeys = {
  * Alle gespeicherten Schließtag-Zeiträume (#2032). Derselbe Schlüssel wie in
  * `useClosingDaysState`, damit Editor und Planraster eine Antwort teilen.
  */
+/** Geänderte Öffnungszeiten der Schule im Fenster der Seite (#7654). */
+export const openingChangeKeys = {
+  list: (fromISO: string, toISO: string) =>
+    `planning-opening-changes-${fromISO}-${toISO}`,
+} as const;
+
 export const closingDayKeys = {
   list: () => "planning-closing-days",
   /** Das Fenster des Zeiterfassungs-Endpunkts ohne `schedules:read`. */

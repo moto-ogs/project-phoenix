@@ -368,6 +368,8 @@ AS $function$
     UNION ALL
     SELECT 1 FROM schedule.closing_days AS r WHERE r.tenant_id = p_school_id
     UNION ALL
+    SELECT 1 FROM schedule.opening_changes AS r WHERE r.tenant_id = p_school_id
+    UNION ALL
     SELECT 1 FROM schedule.dateframes AS r WHERE r.tenant_id = p_school_id
     UNION ALL
     SELECT 1 FROM schedule.grade_transition_roster_removals AS r WHERE r.tenant_id = p_school_id
