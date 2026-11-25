@@ -3,7 +3,6 @@ import { TenantRouteSeed } from "../tenant-route-seed";
 import { readContract, seedRead } from "~/lib/server-seed.server";
 import * as staffContract from "~/lib/contract/staff.generated";
 import { hasPermission } from "~/lib/auth-utils";
-import { isAdmin } from "~/lib/auth-utils";
 import { mapFormerStaff } from "~/lib/staff-api";
 import { staffRecordKeys, traegerMonthStaffKeys } from "~/lib/swr/staff-keys";
 import { berlinTodayISO } from "~/lib/date-helpers";
@@ -33,11 +32,6 @@ export default async function StaffPage({
           hasPermission(session, "users:read") ||
           hasPermission(session, "staff:manage") ||
           hasPermission(session, "staff:stammdaten");
-        const canReadDocuments = [
-          "staff:documents",
-          "staff:financial",
-          "staff_documents:health",
-        ].some((permission) => hasPermission(session, permission));
         const canReadTimeAccounts =
           hasPermission(session, "time_tracking:manage") &&
           (view === "accounts" || !canReadStaff) &&
@@ -122,29 +116,6 @@ export default async function StaffPage({
                           a.firstName.localeCompare(b.firstName, "de-DE"),
                       );
                   }),
-                },
-              ]
-            : []),
-          ...(canReadDocuments &&
-          !canReadStaff &&
-          !isAdmin(session) &&
-          !hasPermission(session, "time_tracking:manage")
-            ? [
-                {
-                  key: staffRecordKeys.documentDirectory(),
-                  render: true,
-                  value: seedRead(
-                    "GET /api/staff/documents-directory",
-                    async (signal) => {
-                      const { data } = await readContract(
-                        staffContract.routes[
-                          "GET /api/staff/documents-directory"
-                        ],
-                        { token, signal },
-                      );
-                      return data;
-                    },
-                  ),
                 },
               ]
             : []),
