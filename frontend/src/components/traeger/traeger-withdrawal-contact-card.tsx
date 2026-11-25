@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { useRef, useState } from "react";
+import { ExternalLink } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Alert } from "~/components/ui/alert";
+import { ButtonLink } from "~/components/ui/button";
 import { JumpButton } from "~/components/ui/jump-button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
@@ -33,21 +34,36 @@ import { traegerPath } from "~/lib/traeger-url";
 import {
   withdrawalAddressee,
   withdrawalReach,
+  withdrawalSender,
   type WithdrawalReachSource,
   type WithdrawalReachValue,
+  type WithdrawalSender,
+  type WithdrawalSenderSource,
 } from "~/lib/traeger-withdrawal-contact";
 import { TRAEGER_CONTACT_FIELD_IDS } from "./traeger-contact-card";
 
 const logger = createLogger({ component: "TraegerWithdrawalContactCard" });
 
-const SOURCE_BADGES: Record<
-  WithdrawalReachSource,
-  { readonly label: string; readonly tone: StatusBadgeTone }
-> = {
+interface SourceBadge {
+  readonly label: string;
+  readonly tone: StatusBadgeTone;
+}
+
+const SOURCE_BADGES: Record<WithdrawalReachSource, SourceBadge> = {
   own: { label: "Eigene Angabe", tone: "green" },
-  contact: { label: "Von der Ansprechperson", tone: "gray" },
+  // Framed, so a borrowed value reads on the gray preview panel.
+  contact: { label: "Von der Ansprechperson", tone: "outline" },
   missing: { label: "Fehlt", tone: "warning" },
 };
+
+// Name and address have one origin, the letterhead (#8131).
+const SENDER_BADGES: Record<WithdrawalSenderSource, SourceBadge> = {
+  letterhead: { label: "Aus dem Briefkopf", tone: "outline" },
+  incomplete: { label: "Anschrift fehlt", tone: "warning" },
+  missing: { label: "Fehlt", tone: "warning" },
+};
+
+const LETTERHEAD_PATH = "/traeger/einstellungen/briefkopf";
 
 function sameReach(
   a: TraegerWithdrawalContact,
@@ -62,20 +78,98 @@ function fallbackHint(contactValue: string, what: string): string {
     : `Leer lassen: Dann steht hier ${contactValue} von der Ansprechperson.`;
 }
 
+/**
+ * One value of the notice with its origin under it, and where present the
+ * place to change it, so nobody looks for it in the wrong card (#8131).
+ */
+function SourceField({
+  label,
+  badge,
+  action,
+  fullWidth,
+  children,
+}: Readonly<{
+  label: string;
+  badge: SourceBadge;
+  action?: ReactNode;
+  fullWidth?: boolean;
+  children: ReactNode;
+}>) {
+  return (
+    <DataField label={label} fullWidth={fullWidth}>
+      <span className="block min-w-0 wrap-anywhere">{children}</span>
+      <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <StatusBadge label={badge.label} tone={badge.tone} size="xs" />
+        {action}
+      </span>
+    </DataField>
+  );
+}
+
 function ReachField({
   label,
   reach,
 }: Readonly<{ label: string; reach: WithdrawalReachValue }>) {
-  const badge = SOURCE_BADGES[reach.source];
   return (
-    <DataField label={label}>
-      <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="min-w-0 wrap-anywhere">
-          {reach.value === "" ? "–" : reach.value}
-        </span>
-        <StatusBadge label={badge.label} tone={badge.tone} size="xs" />
-      </span>
-    </DataField>
+    <SourceField label={label} badge={SOURCE_BADGES[reach.source]}>
+      {reach.value === "" ? "–" : reach.value}
+    </SourceField>
+  );
+}
+
+/**
+ * Name and address of the addressee, from the letterhead. The link opens a
+ * new tab: leaving the page would drop what is typed in this form.
+ */
+function SenderField({
+  sender,
+  canEdit,
+  onOpenLetterhead,
+}: Readonly<{
+  sender: WithdrawalSender;
+  canEdit: boolean;
+  onOpenLetterhead: () => void;
+}>) {
+  const label =
+    sender.source === "letterhead"
+      ? "Im Briefkopf ändern"
+      : "Im Briefkopf eintragen";
+  return (
+    <SourceField
+      label="Name und Anschrift"
+      badge={SENDER_BADGES[sender.source]}
+      fullWidth
+      action={
+        canEdit ? (
+          <ButtonLink
+            href={traegerPath(LETTERHEAD_PATH)}
+            newTab
+            variant="link"
+            size="compact"
+            className="gap-1 underline"
+            aria-label={label}
+            tooltip="Öffnet Briefkopf und Vorlagen in einem neuen Tab."
+            onClick={onOpenLetterhead}
+          >
+            {label}
+            <ExternalLink className="size-3.5" aria-hidden="true" />
+          </ButtonLink>
+        ) : undefined
+      }
+    >
+      {sender.name === "" ? (
+        "–"
+      ) : (
+        <>
+          {sender.name}
+          {sender.address.length > 0 ? (
+            <span className="block font-normal text-gray-700">
+              {sender.address.join(", ")}
+            </span>
+          ) : null}
+        </>
+      )}
+    </SourceField>
   );
 }
 
@@ -84,13 +178,15 @@ function ReachField({
  * care contract names them, on the PDF, the signing page, in the mail and in
  * the text the school copies into its enrollment form.
  * An empty field takes the contact person's. The preview shows the notice's
- * sentence as parents read it, with where each value comes from.
+ * sentence as parents read it, with where each value comes from: name and
+ * address from the letterhead, never from the contact person (#8131).
  */
 export function TraegerWithdrawalContactCard({
   withdrawal,
   version,
   contact,
   letterheadText,
+  refreshLetterhead,
   canEdit,
   reload,
   write,
@@ -101,6 +197,11 @@ export function TraegerWithdrawalContactCard({
   version: string;
   contact: TraegerContact;
   letterheadText: string;
+  /**
+   * Reads the letterhead again. Runs when the person comes back from the
+   * letterhead tab, so the preview shows what they changed there.
+   */
+  refreshLetterhead?: () => Promise<unknown>;
   canEdit: boolean;
   /** Reads the section again after a refused save; rejects on failure. */
   reload: () => Promise<TraegerSection<TraegerWithdrawalContact>>;
@@ -153,6 +254,20 @@ export function TraegerWithdrawalContactCard({
   );
   const reach = withdrawalReach(contact, draft);
   const addressee = withdrawalAddressee(letterheadText, reach);
+  const sender = withdrawalSender(letterheadText);
+  // Set by the letterhead link; the next focus of this tab reads it again.
+  const letterheadOpened = useRef(false);
+  useEffect(() => {
+    if (!refreshLetterhead) return;
+    const reread = () => {
+      if (!letterheadOpened.current) return;
+      letterheadOpened.current = false;
+      // The settings read shows its own load error and retry on the page.
+      void refreshLetterhead().catch(() => undefined);
+    };
+    globalThis.addEventListener("focus", reread);
+    return () => globalThis.removeEventListener("focus", reread);
+  }, [refreshLetterhead]);
   const missing = [
     reach.phone.source === "missing" ? "Telefonnummer" : null,
     reach.email.source === "missing" ? "E-Mail-Adresse" : null,
@@ -265,26 +380,29 @@ export function TraegerWithdrawalContactCard({
               Vertrag zu widerrufen, informieren.
             </blockquote>
             <DataGrid>
+              <SenderField
+                sender={sender}
+                canEdit={canEdit}
+                onOpenLetterhead={() => {
+                  letterheadOpened.current = true;
+                }}
+              />
               <ReachField label="Telefon" reach={reach.phone} />
               <ReachField label="E-Mail" reach={reach.email} />
             </DataGrid>
-            <p className="text-sm text-gray-600">
-              Name und Anschrift kommen aus dem{" "}
-              {/* A new tab keeps what is typed in the contact form beside
-                  this text; leaving the page would drop it. */}
-              <Link
-                href={traegerPath("/traeger/einstellungen/briefkopf")}
-                target="_blank"
-                rel="noopener"
-                className="font-medium underline"
-              >
-                Briefkopf
-                <span className="sr-only"> (öffnet in einem neuen Tab)</span>
-              </Link>
-              . Nennen die Vertragsbedingungen einen anderen Vertragspartner,
-              steht er davor. Nach einer Änderung kopiert die Schule die
-              Belehrung neu ins Anmeldeformular.
-            </p>
+            <div className="space-y-1 border-t border-gray-200 pt-3 text-sm text-pretty text-gray-600">
+              <p>
+                Eltern schicken den Widerruf an deinen Träger. Darum stehen hier
+                Name und Anschrift aus dem Briefkopf. Der Name der
+                Ansprechperson steht nicht darin.
+              </p>
+              <p>
+                Hat eine Schule in den Vertragsbedingungen einen anderen
+                Vertragspartner, steht er in ihren Verträgen zuerst. Nach einer
+                Änderung kopiert die Schule die Belehrung neu ins
+                Anmeldeformular.
+              </p>
+            </div>
           </InsetPanel>
         </figure>
 

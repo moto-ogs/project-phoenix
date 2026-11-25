@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   withdrawalAddressee,
   withdrawalReach,
+  withdrawalSender,
 } from "./traeger-withdrawal-contact";
 
 const CONTACT = {
@@ -74,5 +75,35 @@ describe("withdrawalAddressee", () => {
         ),
       ),
     ).toEqual(["dem Träger"]);
+  });
+});
+
+describe("withdrawalSender", () => {
+  it("splits the letterhead into the name and the address lines", () => {
+    expect(
+      withdrawalSender(
+        " Ganztag im Quartier e.V.\nAm Markt 4\n\n40210 Düsseldorf ",
+      ),
+    ).toEqual({
+      name: "Ganztag im Quartier e.V.",
+      address: ["Am Markt 4", "40210 Düsseldorf"],
+      source: "letterhead",
+    });
+  });
+
+  it("marks a letterhead with a name but no address as incomplete", () => {
+    expect(withdrawalSender("Ganztag im Quartier e.V.")).toEqual({
+      name: "Ganztag im Quartier e.V.",
+      address: [],
+      source: "incomplete",
+    });
+  });
+
+  it("marks an empty letterhead as missing", () => {
+    expect(withdrawalSender(" \n ")).toEqual({
+      name: "",
+      address: [],
+      source: "missing",
+    });
   });
 });
