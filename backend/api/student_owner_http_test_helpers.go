@@ -62,6 +62,12 @@ func NewStudentHTTPTestResources(store transactionruntime.Database, unit tenant.
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, err
 	}
+	// The pickup person of a day decides on the suite's clock (#7655).
+	clockedCarePlan, err := NewClockedCarePlanForTests(store, clock)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, nil, err
+	}
+	pickupPersons := mustCarePlanPickupPersons(clockedCarePlan)
 	repoFactoryTimetable := NewEnrollmentTimetableRows(store)
 	repoFactoryCare := NewEnrollmentCarePlanRows(store)
 	repoFactoryRooms := MustNewTimetableRoomRows(store)
@@ -144,6 +150,7 @@ func NewStudentHTTPTestResources(store transactionruntime.Database, unit tenant.
 			Persons:                  peopleCompose.NewStudentRoutePersons(livePeople.Users),
 			PickupAdjustmentService:  svc.PickupAdjustments,
 			PickupScheduleService:    live.PickupSchedule,
+			PickupPersons:            pickupPersons,
 			SettingsService:          liveSettings.Settings,
 			StudentAuditService:      peopleServices.PeopleDirectory,
 			StudentConsents:          NewStudentHTTPTestConsents(store),
@@ -356,4 +363,14 @@ func studentHTTPTestRoomNames(rows owners.TimetableRoomRows) func(context.Contex
 		}
 		return names, nil
 	}
+}
+
+// mustCarePlanPickupPersons binds the pickup person of a day (#7655) from the
+// test's Care Plan owner like the root does.
+func mustCarePlanPickupPersons(owner careplan.Capability) careplan.PickupPersons {
+	persons, err := owners.CarePlanPickupPersons(owner)
+	if err != nil {
+		panic(err)
+	}
+	return persons
 }

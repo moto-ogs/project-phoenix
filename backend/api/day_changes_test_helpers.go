@@ -62,10 +62,20 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	if err != nil {
 		return nil, err
 	}
+	// The pickup person of a day shows only on its day and later (#7655):
+	// that read decides on the overview's day.
+	dayCarePlan, err := NewClockedCarePlanForTests(db, func() time.Time { return today.BerlinMidnight().Add(12 * time.Hour) })
+	if err != nil {
+		return nil, err
+	}
+	dayPickups, err := owners.CarePlanPickupPersons(dayCarePlan)
+	if err != nil {
+		return nil, err
+	}
 	view, err := NewDayChanges(DayChangesSources{
 		Assignments: membership, ClassArrivals: classArrivals,
 		Caller: caller, Workforce: owners.MustNewWorkforce(db),
-		CarePlan: carePlan, Students: owners.MustNewPeopleDirectory(db), Blocks: blocks, BlockStaff: blockStaff,
+		CarePlan: carePlan, DayPickups: dayPickups, Students: owners.MustNewPeopleDirectory(db), Blocks: blocks, BlockStaff: blockStaff,
 		Names: newDayChangesStaffNames(people), Groups: owners.NewSchoolStructureSuiteRepositories(db).Group,
 		// Without calendar periods every notice applies in every week; the
 		// weekdays and the validity still decide.

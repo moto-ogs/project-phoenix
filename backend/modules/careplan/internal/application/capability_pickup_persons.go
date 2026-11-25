@@ -1,0 +1,115 @@
+package application
+
+import (
+	"context"
+	"strings"
+	"time"
+	"unicode/utf8"
+
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+)
+
+// The pickup person of one day (#7655). Service serves careplan.PickupPersons;
+// the root binds it from the composed owner.
+var _ careplan.PickupPersons = (*Service)(nil)
+
+// ListDayPickups reads the Abholart and pickup person of the days from from
+// to to. A nil studentIDs reads the whole school, an empty one reads
+// nothing. A past day never shows a pickup person, also before the nightly
+// retention removed it: the name is kept for its day only (#7655).
+func (s *Service) ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, error) {
+	if from.IsZero() || !to.IsZero() && to.Before(from) {
+		return nil, scheduleInvalid()
+	}
+	if studentIDs != nil {
+		studentIDs = uniquePositive(studentIDs)
+	}
+	started := time.Now()
+	rows, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) ([]careplan.DayPickup, domain.OperationStats, error) {
+		return s.statusQueries.ListDayPickups(txCtx, from, to, studentIDs)
+	})
+	s.observeRequest("list_day_pickups", time.Since(started), stats, err)
+	if err != nil {
+		return nil, err
+	}
+	today, kept := s.today(), rows[:0]
+	for _, row := range rows {
+		if string(row.Date) < today.String() {
+			row.Person = nil
+		}
+		if row.Departure != nil || row.Person != nil {
+			kept = append(kept, row)
+		}
+	}
+	return kept, nil
+}
+
+// SetPickupPerson validates the value, takes the care-day lock every writer
+// of the child's day shares and replaces the day's pickup person.
+func (s *Service) SetPickupPerson(ctx context.Context, person careplan.PickupPerson, staffID int64) (careplan.PickupPerson, error) {
+	date, err := s.pickupPersonDay(ctx, person.StudentID, person.ExceptionDate)
+	if err != nil {
+		return careplan.PickupPerson{}, err
+	}
+	person.Name = strings.Join(strings.Fields(person.Name), " ")
+	if person.Name == "" || utf8.RuneCountInString(person.Name) > careplan.PickupPersonNameMaxLength ||
+		person.GuardianProfileID != nil && *person.GuardianProfileID <= 0 {
+		return careplan.PickupPerson{}, careplan.ErrPickupPersonInvalid
+	}
+	person.CreatedBy = optionalStaff(staffID)
+	started := time.Now()
+	var saved careplan.PickupPerson
+	var stats domain.OperationStats
+	err = s.withinTenant(ctx, func(txCtx context.Context) error {
+		if err := s.DayLocks.LockStudentAndExceptionDay(txCtx, person.StudentID, date.String()); err != nil {
+			return err
+		}
+		saved, stats, err = s.statusQueries.SavePickupPerson(txCtx, person)
+		return err
+	})
+	s.observeRequest("save_pickup_person", time.Since(started), stats, err)
+	return saved, err
+}
+
+// DeletePickupPerson removes the day's pickup person under the care-day
+// lock. A past day is refused like a write: its value is gone or about to be.
+func (s *Service) DeletePickupPerson(ctx context.Context, studentID int64, date calendar.Date) (bool, error) {
+	if _, err := s.pickupPersonDay(ctx, studentID, careplan.Date(date)); err != nil {
+		return false, err
+	}
+	started := time.Now()
+	deleted := false
+	var stats domain.OperationStats
+	err := s.withinTenant(ctx, func(txCtx context.Context) error {
+		if err := s.DayLocks.LockStudentAndExceptionDay(txCtx, studentID, date.String()); err != nil {
+			return err
+		}
+		var err error
+		deleted, stats, err = s.statusQueries.DeletePickupPerson(txCtx, studentID, date)
+		return err
+	})
+	s.observeRequest("delete_pickup_person", time.Since(started), stats, err)
+	return deleted, err
+}
+
+// pickupPersonDay checks the child and the day: today or later, and a care
+// weekday of the school.
+func (s *Service) pickupPersonDay(ctx context.Context, studentID int64, day careplan.Date) (calendar.Date, error) {
+	date, err := calendar.ParseDate(string(day))
+	if studentID <= 0 || err != nil {
+		return "", careplan.ErrPickupPersonInvalid
+	}
+	if date.Before(s.today()) {
+		return "", careplan.ErrPickupPersonPastDate
+	}
+	careDay, err := calendar.IsCareWeekday(ctx, date)
+	if err != nil {
+		return "", &careplan.ScheduleError{Op: "pickup person day", Err: err}
+	}
+	if !careDay {
+		return "", careplan.ErrPickupPersonNotCareDay
+	}
+	return date, nil
+}

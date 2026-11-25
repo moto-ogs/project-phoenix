@@ -68,6 +68,7 @@
   "pickup_change_disabled": "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
   "pickup_permission_request_required": "Nowa zgoda na odbiór wymaga Państwa podpisu. {careTerm} ją potem potwierdzi.",
   "pickup_permission_unchanged": "Ta osoba już może odbierać dziecko w te dni.",
+  "pickup_person_not_authorized": "Ta osoba nie może odebrać dziecka w tym dniu. Wybierz inną osobę lub wpisz imię i nazwisko.",
   "pickup_person_not_linked": "Ta osoba nie jest kontaktem Państwa dziecka. Proszę najpierw dodać ją do kontaktów.",
   "pickup_proof_not_found": "Dla tej prośby nie ma potwierdzenia z Państwa podpisem.",
   "pickup_signature_invalid": "Podpis jest nieczytelny. Proszę podpisać się jeszcze raz.",

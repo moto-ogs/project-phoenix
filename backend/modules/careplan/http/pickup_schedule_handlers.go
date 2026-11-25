@@ -169,7 +169,7 @@ func (rs *Resource) getStudentPickupSchedules(w http.ResponseWriter, r *http.Req
 	}
 
 	response := buildPickupDataResponse(data)
-	response.DepartureExceptions, err = rs.listDepartureExceptions(r.Context(), student.ID, from, to, hasRange)
+	response.DepartureExceptions, response.PickupPersons, err = rs.listDayPickups(r.Context(), student.ID, from, to, hasRange)
 	if err != nil {
 		renderError(w, r, common.ErrorInternalServer(err))
 		return

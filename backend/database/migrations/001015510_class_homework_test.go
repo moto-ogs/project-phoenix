@@ -157,6 +157,8 @@ func TestClassHomeworkRollbackPreservesSchoolErasure(t *testing.T) {
 	// The letter copies (#4813) follow the notification feed at the head; they go first.
 	// The device history (#2321) follows the letter copies at the head; it goes first.
 	// The room history stops (#3844) follow the device history at the head; they go first.
+	// The pickup persons (#7655) follow the room history stops at the head; they go first.
+	require.NoError(t, studentPickupPersonsDown(t.Context(), db))
 	require.NoError(t, roomHistoryStopsDown(t.Context(), db))
 	require.NoError(t, deviceLifecycleEventsDown(t.Context(), db))
 	require.NoError(t, parentLetterCopiesDown(t.Context(), db))

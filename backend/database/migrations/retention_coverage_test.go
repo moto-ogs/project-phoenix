@@ -461,6 +461,7 @@ var tableRetentions = map[string]tableRetention{
 	"schedule.student_departure_exceptions":                 parent("users.student_profiles"),
 	"schedule.student_pickup_exceptions":                    parent("users.student_profiles"),
 	"schedule.student_pickup_notes":                         parent("users.student_profiles"),
+	"schedule.student_pickup_persons":                       own("nightly retention step pickup_person_retention, CleanupRetention.DeletePastPickupPersons (every row of a day before today, #7655)"),
 	"schedule.student_pickup_schedules":                     parent("users.student_profiles"),
 	"schedule.timeframes":                                   notPersonal("timeframe catalog"),
 	"schedule.timetable_conflict_acks":                      parent("auth.accounts"),

@@ -40,6 +40,7 @@ func RouteContracts() []common.RouteContract {
 				string(daychangesview.KindShiftChanged), string(daychangesview.KindShiftCancelled), string(daychangesview.KindShiftReplacement),
 				string(daychangesview.KindChildAbsent), string(daychangesview.KindChildPickupChanged),
 				string(daychangesview.KindChildGoesAlone), string(daychangesview.KindChildPickupNote),
+				string(daychangesview.KindChildPickupPerson),
 				string(daychangesview.KindChildSummary),
 				string(daychangesview.KindStaffNotice),
 				string(daychangesview.KindClosingDay),

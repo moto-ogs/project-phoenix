@@ -61,25 +61,28 @@ func mapDepartureExceptionToResponse(value careplan.DepartureException) Departur
 	}
 }
 
-// listDepartureExceptions reads the day values the pickup data response
-// carries next to the pickup exceptions: the requested range, or today and
-// later without one, matching the pickup exceptions of the same response.
-func (rs *Resource) listDepartureExceptions(ctx context.Context, studentID int64, from, to calendar.Date, hasRange bool) ([]DepartureExceptionResponse, error) {
-	out := []DepartureExceptionResponse{}
-	filter := careplan.StudentScheduleFilter{StudentIDs: []int64{studentID}}
-	if hasRange {
-		filter.From, filter.To = careplan.Date(from), careplan.Date(to)
-	} else {
-		filter.UpcomingFrom = careplan.Date(rs.today())
+// listDayPickups reads the day values the pickup data response carries next
+// to the pickup exceptions: the Abholart and the pickup person (#7655) of
+// the requested range, or of today and later without one, matching the
+// pickup exceptions of the same response. Both come from one statement.
+func (rs *Resource) listDayPickups(ctx context.Context, studentID int64, from, to calendar.Date, hasRange bool) ([]DepartureExceptionResponse, []PickupPersonResponse, error) {
+	departures, persons := []DepartureExceptionResponse{}, []PickupPersonResponse{}
+	if !hasRange {
+		from, to = rs.today(), ""
 	}
-	rows, err := rs.PickupScheduleService.ListDayDepartures(ctx, filter)
+	rows, err := rs.PickupPersons.ListDayPickups(ctx, from, to, []int64{studentID})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	for _, row := range rows {
-		out = append(out, mapDepartureExceptionToResponse(row))
+		if row.Departure != nil {
+			departures = append(departures, mapDepartureExceptionToResponse(*row.Departure))
+		}
+		if row.Person != nil {
+			persons = append(persons, mapPickupPersonToResponse(*row.Person))
+		}
 	}
-	return out, nil
+	return departures, persons, nil
 }
 
 // putStudentDepartureException handles

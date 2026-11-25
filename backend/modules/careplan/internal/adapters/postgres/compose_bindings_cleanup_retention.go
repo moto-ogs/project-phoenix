@@ -19,6 +19,10 @@ func (r CleanupRetention) DeleteFinishedStudentDocumentCleanups(ctx context.Cont
 func (r CleanupRetention) DeleteFinishedWithdrawalCompletions(ctx context.Context) (int, int, error) {
 	return r.deleteFinished(ctx, domain.WithdrawalCompletionRetentionWindow, r.Store.DeleteFinishedWithdrawalCompletions)
 }
+func (r CleanupRetention) DeletePastPickupPersons(ctx context.Context) (int, int, error) {
+	deleted, err := r.Store.DeletePastPickupPersons(ctx)
+	return deleted, 0, err
+}
 func (r CleanupRetention) deleteFinished(ctx context.Context, window time.Duration, deleteBefore func(context.Context, time.Duration) (int, error)) (int, int, error) {
 	deleted, err := deleteBefore(ctx, window)
 	if err != nil {

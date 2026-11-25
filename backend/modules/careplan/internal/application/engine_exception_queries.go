@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // StatusQueries are the schedule, exception, note and status-day reads and
@@ -32,6 +33,10 @@ type StatusQueries interface {
 	ListPickupSchedules(ctx context.Context, f careplan.StudentScheduleFilter) ([]careplan.PickupSchedule, domain.OperationStats, error)
 	ListStudentStatusDays(ctx context.Context, filter careplan.StudentStatusDayFilter) ([]careplan.StudentStatusDay, domain.RequestStoreStats, error)
 	SaveDepartureException(ctx context.Context, v careplan.DepartureException) (careplan.DepartureException, domain.OperationStats, error)
+	// The pickup person of one day (#7655).
+	ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, domain.OperationStats, error)
+	SavePickupPerson(ctx context.Context, v careplan.PickupPerson) (careplan.PickupPerson, domain.OperationStats, error)
+	DeletePickupPerson(ctx context.Context, studentID int64, date calendar.Date) (bool, domain.OperationStats, error)
 }
 
 // ExceptionStore is the Care Plan store behind the exception queries: the

@@ -71,6 +71,9 @@ type PickupDataResponse struct {
 	// DepartureExceptions is the Abholart of single days (#3945) in the same
 	// window as Exceptions.
 	DepartureExceptions []DepartureExceptionResponse `json:"departure_exceptions"`
+	// PickupPersons is who collects the child on single days (#7655), in
+	// the same window as Exceptions.
+	PickupPersons []PickupPersonResponse `json:"pickup_persons"`
 	// WeeklyPlanVersion is the token of the child's weekly plan the weekly
 	// editor sends back with its save (ADR 0311); only the read sets it.
 	WeeklyPlanVersion string `json:"weekly_plan_version,omitempty"`
