@@ -223,8 +223,9 @@ export function LeaveRequestsCard() {
         }
         bodyClassName="compact:mt-4 mt-5 max-sm:mt-4"
       >
-        <LoadErrorAlert error={afterWrite.error} />
-        <LoadErrorAlert error={loadError} />
+        <LoadErrorAlert
+          error={afterWrite.error ?? (error ? loadError : null)}
+        />
         {(data || loading) && (
           <>
             <div
