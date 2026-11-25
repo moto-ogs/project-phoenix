@@ -9,6 +9,7 @@ import { rmSync, writeFileSync } from "node:fs";
 import { cpus, loadavg } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import { berlinTodayISO } from "../../src/lib/date-helpers";
 import { gotoTolerant, PERF_ACTION_TIMEOUT } from "./access";
 import {
   armProbe,
@@ -306,19 +307,40 @@ function idleSince(before: ReturnType<typeof cpuTimes>) {
   );
 }
 
-/** Do not begin a timing series while another local build occupies the machine. */
-async function waitForIdleWindow() {
+function assertMeasurementDay(day: string) {
+  if (berlinTodayISO() !== day)
+    throw new Error(
+      "Messtag gewechselt. Vollständige Serie mit aktuellem Tagesbeleg erneut starten.",
+    );
+}
+
+/** Only the admission wait is outside the four-hour browser budget. A different fixture day never qualifies. */
+async function waitForIdleWindow(
+  day: string,
+  accountWait: (ms: number) => void,
+) {
   for (;;) {
+    assertMeasurementDay(day);
+    const start = performance.now();
     const before = cpuTimes();
     await delay(5000);
     const idle = idleSince(before);
-    if (idle >= 50) return idle;
-    console.log("Warte auf eine ruhige Maschine: " + idle + " % CPU frei.");
-    await delay(10000);
+    if (idle < 50) {
+      console.log("Warte auf eine ruhige Maschine: " + idle + " % CPU frei.");
+      await delay(10000);
+    }
+    accountWait(performance.now() - start);
+    if (idle >= 50) {
+      assertMeasurementDay(day);
+      return idle;
+    }
   }
 }
 
-export async function measureRevisits(browser: Browser) {
+export async function measureRevisits(
+  browser: Browser,
+  accountWait: (ms: number) => void,
+) {
   const catalogRows = routeCatalog();
   for (const file of ["revisit.json", "revisit.summary.json", "revisit.md"]) {
     rmSync(join(OUT_DIR, file), { force: true });
@@ -328,6 +350,7 @@ export async function measureRevisits(browser: Browser) {
     JSON.stringify(catalogRows, null, 2) + "\n",
   );
   const fixture = revisitFixture();
+  const simulation = readDayEvidence(fixture.seedCreatedAt);
   const catalog = revisitTargets(fixture);
   const names = new Set(catalog.map((j) => j.name));
   for (const row of catalogRows) {
@@ -351,7 +374,7 @@ export async function measureRevisits(browser: Browser) {
   const results: Observation[] = [];
   let permission: Awaited<ReturnType<typeof measurePermissionChange>> = [];
   const metadata = {
-    initialIdlePercent: await waitForIdleWindow(),
+    initialIdlePercent: await waitForIdleWindow(simulation.day, accountWait),
     revision: execFileSync("git", ["rev-parse", "HEAD"], {
       encoding: "utf8",
     }).trim(),
@@ -366,7 +389,7 @@ export async function measureRevisits(browser: Browser) {
     mobileMbit: 1.6,
     selection: selected ?? "all",
     seed: "vollbetrieb",
-    simulation: readDayEvidence(fixture.seedCreatedAt),
+    simulation,
     development: execFileSync(
       "git",
       ["merge-base", "HEAD", "origin/development"],
@@ -418,7 +441,10 @@ export async function measureRevisits(browser: Browser) {
           const key = [role, journey.name, profile].join("/");
           if (failures.has(key)) continue;
           console.log(role, journey.name, profile, repeat);
-          const startIdlePercent = await waitForIdleWindow();
+          const startIdlePercent = await waitForIdleWindow(
+            simulation.day,
+            accountWait,
+          );
           const load = loadavg();
           const before = cpuTimes();
           let samples: Sample[];
@@ -464,6 +490,7 @@ export async function measureRevisits(browser: Browser) {
       [...failures.values()],
       "Keine vollständige Baseline: " + [...failures.keys()].join(", "),
     );
+  assertMeasurementDay(simulation.day);
   writeReport(metadata, switches, results, permission);
   save(true);
 }

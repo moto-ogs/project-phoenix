@@ -502,8 +502,10 @@ test("measure revisit: delayed loading probe", async ({ page }) => {
 });
 
 // Revisit shares the production server, throttle, network recorder and visible loading probe.
-test("measure revisit", async ({ browser }) => {
+test("measure revisit", async ({ browser }, testInfo) => {
   // This serial, three-round study is local only; individual actions have short deadlines.
   test.setTimeout(4 * 60 * 60_000);
-  await measureRevisits(browser);
+  await measureRevisits(browser, (ms) =>
+    testInfo.setTimeout(testInfo.timeout + ms),
+  );
 });

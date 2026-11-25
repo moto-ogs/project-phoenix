@@ -74,7 +74,7 @@ journey names for diagnosis only. A partial result is not a baseline.
   below budget. RSC/JS/BFF are request counts, not necessarily transferred bodies.
   Visible loading indicators are recorded separately. Host load averages and
   CPU idle percentage describe the shared machine, not just Chromium. Before the series and each individual trial, the harness waits for a five-second window with at least 50% CPU idle;
-  contention during a trial is recorded and marked, never used to discard slow values. A median within 20 ms of the budget is flagged, not evidence of a code-level difference.
+  contention during a trial is recorded and marked, never used to discard slow values. A median within 20 ms of the budget is flagged, not evidence of a code-level difference. Host-admission waits do not use the four-hour browser budget. A run crossing Berlin midnight fails rather than mixing seed days.
 
 ### Coverage and evidence
 

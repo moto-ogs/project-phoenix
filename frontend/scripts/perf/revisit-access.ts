@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
+import { berlinTodayISO } from "../../src/lib/date-helpers";
 
 import { loginToLocalMfaPortal } from "../../e2e/local-tenant-login";
 import { readSeedAccess, readSeedProfile } from "../seed-state";
@@ -23,9 +24,7 @@ export function readDayEvidence(seedCreatedAt?: string) {
   )
     .trim()
     .split("\n");
-  const today = new Date().toLocaleDateString("sv-SE", {
-    timeZone: "Europe/Berlin",
-  });
+  const today = berlinTodayISO();
   if (!seed || seed !== seedCreatedAt || day !== today)
     throw new Error(
       "Tagesbeleg passt nicht zu Seed und Messtag: scripts/perf-revisit.sh --prepare-day",
