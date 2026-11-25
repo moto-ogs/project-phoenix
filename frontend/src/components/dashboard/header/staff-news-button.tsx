@@ -6,7 +6,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Newspaper } from "lucide-react";
+import { Clock, Newspaper, StickyNote } from "lucide-react";
 import { AnchoredPopover } from "~/components/ui/anchored-popover";
 import { Button } from "~/components/ui/button";
 import { ListRowLink } from "~/components/ui/list-row-link";
@@ -76,37 +76,51 @@ function itemKey(item: StaffNewsItem): string {
 export function StaffNewsList({
   items,
   onNavigate,
+  rows = false,
 }: {
   readonly items: readonly StaffNewsItem[];
   readonly onNavigate?: () => void;
+  /**
+   * Nur die Zeilen (`<li>`) mit Symbol, für eine Liste, in der jede Zeile
+   * ein Symbol trägt (Seite „Mehr“ der App, #8070). Ohne: eigene Liste.
+   */
+  readonly rows?: boolean;
 }) {
   const tenantPath = useTenantAwarePath();
   const today = useBerlinToday();
+  const icon = (Glyph: typeof Clock) =>
+    rows ? (
+      <Glyph className="h-5 w-5 shrink-0 text-gray-600" aria-hidden="true" />
+    ) : undefined;
+  const lines = items.map((item) => {
+    const studentPath = `/students/${encodeURIComponent(item.notice.studentId)}`;
+    return (
+      <li key={itemKey(item)}>
+        {item.kind === "note" ? (
+          <ListRowLink
+            href={tenantPath(`${studentPath}?tab=notizen`)}
+            icon={icon(StickyNote)}
+            title={`${item.notice.studentFirstName} ${item.notice.studentLastName}`}
+            subtitle={noteSubtitle(item.notice)}
+            unread
+          />
+        ) : (
+          <ListRowLink
+            href={tenantPath(studentPath)}
+            icon={icon(Clock)}
+            title={item.notice.studentFirstName}
+            subtitle={pickupSubtitle(item.notice, today)}
+            unread
+          />
+        )}
+      </li>
+    );
+  });
+  if (rows) return <>{lines}</>;
   return (
     // Schließt das Menü, wenn eine Zeile den Seitenwechsel startet.
     <ul className="divide-y divide-gray-100" onClickCapture={onNavigate}>
-      {items.map((item) => {
-        const studentPath = `/students/${encodeURIComponent(item.notice.studentId)}`;
-        return (
-          <li key={itemKey(item)}>
-            {item.kind === "note" ? (
-              <ListRowLink
-                href={tenantPath(`${studentPath}?tab=notizen`)}
-                title={`${item.notice.studentFirstName} ${item.notice.studentLastName}`}
-                subtitle={noteSubtitle(item.notice)}
-                unread
-              />
-            ) : (
-              <ListRowLink
-                href={tenantPath(studentPath)}
-                title={item.notice.studentFirstName}
-                subtitle={pickupSubtitle(item.notice, today)}
-                unread
-              />
-            )}
-          </li>
-        );
-      })}
+      {lines}
     </ul>
   );
 }
