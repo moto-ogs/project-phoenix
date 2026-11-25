@@ -70,7 +70,7 @@ export function CollectionGroup({
       className="border-gray-100 [&+&]:border-t"
     >
       <div
-        className={`sticky ${Z_LAYER.sticky} flex min-h-9 items-center justify-between gap-3 border-b border-gray-100 bg-gray-50/95 px-4 py-1.5`}
+        className={`sticky ${Z_LAYER.sticky} app:bg-gray-50 flex min-h-9 items-center justify-between gap-3 border-b border-gray-100 bg-gray-50/95 px-4 py-1.5`}
         style={{ top: "var(--app-sticky-offset, 0px)" }}
       >
         <h3 className="text-sm font-semibold text-gray-700">
