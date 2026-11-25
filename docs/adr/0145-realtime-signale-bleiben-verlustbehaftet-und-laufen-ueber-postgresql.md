@@ -131,3 +131,16 @@ Aktivgruppen-ID oder `edu:<ID>` normalisiert; anderes wird verworfen. Eine
 volle Queue zählt verworfene Signale und warnt höchstens alle 30 Sekunden,
 statt pro Signal einen Fehler an den Aufrufer zu geben. Transport- und
 Empfangsfehler werden mit Ursache, aber ohne Payload protokolliert.
+
+
+## Ergänzung: Aufsichtskontext der Staff-Navigation (#8085)
+
+Die [Staff-Ansichten](../agents/contracts.md#staff-supervision-context-8084-8085)
+teilen einen schul- und kontogebundenen SWR-Eintrag. Der Stream liefert weiter
+nur Signale. Eine Gruppe oder Sitzung im Signal gibt kein Zugriffsrecht.
+Der Browser vereinigt die betroffenen Abschnitte pro Burst; ein Reconnect
+nach einer Unterbrechung ersetzt den vollständigen Stand. Beim ersten
+Connect gilt der frische Shell-Seed. Die Erneuerung der SSE-Themen nach einer
+Gruppenänderung ist davon unabhängig. Verweigerte Abschnitte werden
+ausgeblendet; ein nicht bestätigter Übersichtsumfang zeigt keine fremden
+Sitzungen.

@@ -89,7 +89,8 @@ export function isStaleAfterMonthReopen(
   return (
     typeof key === "string" &&
     (key.includes(`staff-month-summary-${staffId}-`) ||
-      key.includes("time-tracking-month-summary-") ||
+      key.includes(timeTrackingKeys.periodFamily) ||
+      key.includes(timeTrackingKeys.overviewFamily) ||
       key.includes("staff-time-accounts") ||
       key.includes("staff-dashboard-summary-") ||
       key.includes("staff-month-close"))

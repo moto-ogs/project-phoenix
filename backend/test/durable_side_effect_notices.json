@@ -179,10 +179,6 @@
     "fingerprint": "40c922510f35c65b137d60d4f4e8fa1f",
     "reason": "Realtime SSE invalidation only, assembled from already committed school state. Loss may delay an open tab; reconnect/refetch reconstructs the state without this notice."
   },
-  "modules/delivery/internal/application/realtimeevents/staff_time_tracking.go:QueueStaffTimeTrackingChanged:RegisterAfterCommit@10a27cb9d276d6f9d3c11ba14eb054ba#1": {
-    "fingerprint": "10a27cb9d276d6f9d3c11ba14eb054ba",
-    "reason": "Realtime SSE invalidation only, assembled from already committed school state. Loss may delay an open tab; reconnect/refetch reconstructs the state without this notice."
-  },
   "modules/delivery/internal/notifications/service.go:router.Notify:RegisterAfterCommit@51e8d1e27e96b31a9cb74dd4047fd7ed#1": {
     "fingerprint": "51e8d1e27e96b31a9cb74dd4047fd7ed",
     "reason": "Fan-out to non-durable in-process channels only after durable channels have enqueued in the transaction. Production binds realtime SSE here; lost wakes recover from committed records/outbox on reconnect."

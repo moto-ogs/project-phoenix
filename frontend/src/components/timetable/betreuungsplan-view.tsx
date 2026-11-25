@@ -23,6 +23,7 @@
  * bleibt reiner Component-State.
  */
 
+import { useOptionalSupervision } from "~/lib/supervision-context";
 import { staff as staffKeys } from "~/lib/swr/staff";
 import {
   Suspense,
@@ -107,6 +108,7 @@ import { useTimetableDayHours } from "~/lib/hooks/use-timetable-day-hours";
 import { useUrlParams } from "~/lib/hooks/use-url-params";
 import { createLogger } from "~/lib/logger";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { SWRServerSeed, type ServerSeedInput } from "~/lib/swr/server-seed";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { databaseKeys } from "~/lib/swr/portal-keys";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
@@ -121,11 +123,16 @@ import {
   fetchPlannerGroups,
   fetchPlannerRooms,
 } from "~/lib/planner-reference-api";
+import { isPlanFilterActive, type PlanFilter } from "~/lib/plan-filter";
 import {
-  isPlanFilterActive,
-  parsePlanFilterId,
-  type PlanFilter,
-} from "~/lib/plan-filter";
+  planGapsKey,
+  planInstancesKey,
+  planWindowFilter,
+  resolvePlanWindow,
+  type PlanWindow,
+  type PlanWindowInput,
+  type PlanWindowParams,
+} from "~/lib/betreuungsplan-window";
 import { substitutionService } from "~/lib/substitution-api";
 import { listPhases } from "~/lib/enrollment-phase-api";
 import {
@@ -151,7 +158,6 @@ import {
   formatWeekLabel,
   formatMonthLabel,
   getMonthDays,
-  getMonthRange,
   getWeekRange,
   getWeekdays,
   careDayISO,
@@ -245,18 +251,6 @@ const FILTERED_EMPTY_STATE = {
     "Stelle die Filter wieder auf „Alle“, um den ganzen Plan zu sehen.",
 };
 type PeriodCoverage = "none" | "partial" | "full";
-
-/**
- * Übersetzt den `view`-URL-Wert in den internen Ansichts-Typ. Ungültige Werte
- * fallen still auf die Woche zurück; die Jahresansicht ist nicht mehr
- * verlinkbar (kein `view`-Wert erzeugt sie).
- */
-function parseViewParam(raw: string | null): TimetableView {
-  if (raw === "tag") return "day";
-  if (raw === "monat") return "month";
-  if (raw === "serien") return "series";
-  return "week";
-}
 
 /** Segmentschalter-Wert (deutsches Vokabular) aus dem internen Ansichts-Typ. */
 function viewToTab(view: TimetableView): ViewParam {
@@ -352,25 +346,32 @@ function TimetablesContent() {
   const tenantPath = useTenantAwarePath();
   const todayISO = useBerlinToday();
 
-  // Sichtbares Datum, Ansicht und geöffneter Block werden bei jedem Render aus
-  // den Search-Params abgeleitet (keine Offset-Arithmetik, kein weekOffset-State
-  // mehr). Ein ungültiges `d` fällt still auf heute zurück, ein unbekanntes
-  // `view` auf die Woche.
-  const rawDay = params.d;
-  const requestedDayISO =
-    rawDay !== null && isValidISODate(rawDay) ? rawDay : todayISO;
-  // Leseansicht (#2283, #2621): Nicht-Planende sehen Tag und Woche — ein
-  // ?view=monat/serien-Deeplink fällt still auf die Woche zurück.
-  const requestedView = parseViewParam(params.view);
-  const view: TimetableView =
-    canManageSchedules || requestedView === "day" ? requestedView : "week";
-  // The monthly calendar and series period lookup retain their requested
-  // calendar date. Only the workweek and the single school day snap weekend
-  // anchors to Monday.
-  const dayISO =
-    view === "week" || view === "day"
-      ? careDayISO(requestedDayISO, weekendOpen, todayISO)
-      : requestedDayISO;
+  // Sichtbares Datum, Ansicht, Filter und Abruffenster werden bei jedem Render
+  // aus den Search-Params abgeleitet, mit derselben Funktion wie der
+  // Server-Seed (#8077). Ein ungültiges `d` fällt still auf heute zurück, ein
+  // unbekanntes `view` auf die Woche; Leseansicht (#2283, #2621): Nicht-
+  // Planende sehen Tag und Woche.
+  const planWindow = usePlanWindow(params, {
+    todayISO,
+    weekendOpen,
+    canManageSchedules,
+    canFilterByGroup,
+    canFilterByRoom,
+  });
+  const {
+    requestedDayISO,
+    view,
+    dayISO,
+    todayTargetISO,
+    groupFilterId,
+    staffFilterId,
+    roomFilterId,
+    fetchFromISO,
+    fetchToISO,
+    gapsFromISO,
+    shouldLoadInstances,
+    shouldLoadGaps,
+  } = planWindow;
   const selectedInstanceId = params.block;
   // Die URL-Auswahl bleibt bestehen, wenn die Aktualisierung den gelöschten
   // Termin entfernt. Ein Wechsel oder erneutes Öffnen beginnt eine neue Auswahl.
@@ -381,16 +382,9 @@ function TimetablesContent() {
       selectedInstanceRef.current = null;
     };
   }, [selectedInstanceId, requestedDayISO]);
-  // Gruppen- und Personenfilter (#4766). Ungültige Werte fallen still weg;
-  // ohne Gruppenliste gibt es keine Auswahl und damit auch keinen
-  // unsichtbaren Gruppenfilter aus einem geteilten Link.
-  const groupFilterId = canFilterByGroup
-    ? parsePlanFilterId(params.group)
-    : null;
-  const staffFilterId = parsePlanFilterId(params.staff);
-  // Raumfilter (#4768): ein Link von der Raumseite öffnet den Plan des
-  // Raums. Ohne Raumliste gilt dasselbe wie beim Gruppenfilter.
-  const roomFilterId = canFilterByRoom ? parsePlanFilterId(params.room) : null;
+  // Gruppen-, Personen- und Raumfilter (#4766, #4768). Ungültige Werte fallen
+  // still weg; ohne Gruppen- oder Raumliste gibt es keine Auswahl und damit
+  // auch keinen unsichtbaren Filter aus einem geteilten Link.
   const planFilter = useMemo<PlanFilter>(
     () => ({
       groupId: groupFilterId,
@@ -402,10 +396,6 @@ function TimetablesContent() {
   const planFilterActive = isPlanFilterActive(planFilter);
 
   const visibleDate = useMemo(() => parseISODate(dayISO), [dayISO]);
-  const todayTargetISO = useMemo(
-    () => careDayISO(todayISO, weekendOpen, todayISO),
-    [todayISO, weekendOpen],
-  );
 
   const [eventModalOpen, setEventModalOpen] = useState(false);
   // Drucken/Exportieren der angezeigten Woche (#2079).
@@ -584,7 +574,6 @@ function TimetablesContent() {
   // Fetch-Fenster. Woche/Monat leiten ihr Fenster aus `d` ab; die Serienansicht
   // lädt keine Instanzen. Die Jahresansicht ist ersatzlos entfallen.
   const fromISO = toISODate(weekRange.from);
-  const monthRange = useMemo(() => getMonthRange(visibleDate), [visibleDate]);
   const monthDays = useMemo(() => getMonthDays(visibleDate), [visibleDate]);
   // Der Betreuungsplan folgt derselben Betriebswoche wie Dienstplan und
   // Vertretung: geplant und angezeigt wird nur Mo–Fr, außer die Schule
@@ -601,21 +590,9 @@ function TimetablesContent() {
   );
   const weekDayISOs = useMemo(() => weekDays.map(toISODate), [weekDays]);
   const workweekToISO = weekDayISOs[weekDayISOs.length - 1]!;
-  // Die Tagesansicht lädt genau ihren Tag — ein Wochenfenster würde Blöcke
-  // holen, die sie gar nicht zeigt, und den Konfliktbanner mit fremden Tagen
-  // füllen.
-  const fetchFromISO =
-    view === "month"
-      ? toISODate(monthRange.from)
-      : view === "day"
-        ? dayISO
-        : fromISO;
-  const fetchToISO =
-    view === "month"
-      ? toISODate(monthRange.to)
-      : view === "day"
-        ? dayISO
-        : workweekToISO;
+  // Das Abruffenster (fetchFromISO/fetchToISO) kommt aus resolvePlanWindow:
+  // die Tagesansicht lädt genau ihren Tag, die Woche Mo–Fr bzw. bis zum
+  // Betreuungs-Wochenende, der Monat seinen Kalender.
   const dayOnly = useMemo(() => [visibleDate], [visibleDate]);
   const periodContextDays =
     view === "month" ? monthDays : view === "day" ? dayOnly : weekDays;
@@ -669,27 +646,16 @@ function TimetablesContent() {
     ? tenantPath("/ferienwochen")
     : undefined;
 
+  // Dieselben Fabrikschlüssel wie planInstancesKey/planGapsKey des Seeds.
   const swrKey = tenantDailyKeys.planInstances(
     view,
     fetchFromISO,
     fetchToISO,
     planFilter,
   );
-  const shouldLoadInstances = view !== "series";
-  // Lücken sind vorwärtsgerichtet: der Endpunkt lehnt ein vergangenes `date`
-  // ab, also den Fensterstart auf heute klemmen und vollständig vergangene
-  // Fenster überspringen. Nur die Wochenansicht lädt Lücken ("wie heute",
-  // Spec 06 §5.2): GET /gaps begrenzt das Fenster hart auf 14 Tage und lehnt
-  // das Monatsfenster mit 400 ab — ein leerer Zähler wäre in der
-  // Monatsansicht eine falsche "Keine Lücken"-Aussage.
-  // The workweek has no Saturday/Sunday destination. On weekends, start at
-  // Monday so the gap list cannot offer a retained legacy weekend block that
-  // the week view deliberately does not expose.
-  const gapsFromISO =
-    fetchFromISO < todayTargetISO ? todayTargetISO : fetchFromISO;
-  // Lücken sind Planungswerkzeug — in der Leseansicht weder Chip noch Fetch.
-  const shouldLoadGaps =
-    canManageSchedules && view === "week" && fetchToISO >= todayTargetISO;
+  // Lücken sind vorwärtsgerichtet und Planungswerkzeug: nur die Wochenansicht
+  // mit schedules:manage lädt sie, ab dem heutigen Betreuungstag
+  // (resolvePlanWindow; GET /gaps lehnt vergangene Tage und Monatsfenster ab).
   const gapsSWRKey = tenantDailyKeys.planGaps(gapsFromISO, fetchToISO);
   // Schlank (#4996): das Raster zeigt Zahlen, keine Kinderzeilen. Die
   // Kinderzeilen des geöffneten Termins lädt das Detailpanel nach.
@@ -1536,6 +1502,7 @@ function TimetablesContent() {
   // Rückfrage ist dann schon zu, also meldet ein Toast den Fehler (#2516).
   // Der Katalog nennt volle Räume mit Namen und Belegung aus den Details
   // (#3633). Wiederholen trifft denselben Termin mit derselben Absage-Notiz.
+  const { refresh: refreshSupervision } = useOptionalSupervision();
   const latestLifecycleRef = useRef<
     (
       instanceId: string,
@@ -1583,8 +1550,6 @@ function TimetablesContent() {
             cancelledToast("Die Aktivität ist abgesagt.", res.guardianNotice),
           );
         }
-        await tenantMutate(swrKey);
-        await tenantMutate(gapsSWRKey);
       } catch (err) {
         logger.error("lifecycle_action_failed", {
           action,
@@ -1602,8 +1567,19 @@ function TimetablesContent() {
         });
         throw err;
       }
+
+      await refreshSupervision(["sessions"]);
+      await tenantMutate(swrKey);
+      await tenantMutate(gapsSWRKey);
     },
-    [gapsSWRKey, showActionError, swrKey, tenantMutate, toast],
+    [
+      gapsSWRKey,
+      refreshSupervision,
+      showActionError,
+      swrKey,
+      tenantMutate,
+      toast,
+    ],
   );
 
   useLayoutEffect(() => {
@@ -2828,10 +2804,101 @@ function TimetablesContent() {
 
 // BetreuungsplanView is the embeddable Betreuungsplan surface, hosted by
 // /planung (#1886 Konsolidierung); formerly the /timetables page.
-export function BetreuungsplanView() {
+/** Das Abruffenster der URL, gemerkt über seine Eingaben. */
+function usePlanWindow(
+  params: PlanWindowParams,
+  context: Omit<PlanWindowInput, "params">,
+): PlanWindow {
+  const { d, view, group, staff, room } = params;
+  const {
+    todayISO,
+    weekendOpen,
+    canManageSchedules,
+    canFilterByGroup,
+    canFilterByRoom,
+  } = context;
+  return useMemo(
+    () =>
+      resolvePlanWindow({
+        params: { d, view, group, staff, room },
+        todayISO,
+        weekendOpen,
+        canManageSchedules,
+        canFilterByGroup,
+        canFilterByRoom,
+      }),
+    [
+      d,
+      view,
+      group,
+      staff,
+      room,
+      todayISO,
+      weekendOpen,
+      canManageSchedules,
+      canFilterByGroup,
+      canFilterByRoom,
+    ],
+  );
+}
+
+/**
+ * Der Server-Seed der Seite (#8077): Raster und Lücken, die der Server schon
+ * beim Rendern geladen hat. Die Leser der Ansicht übernehmen sie unter
+ * denselben Schlüsseln, statt selbst zu laden; fehlt ein Wert, laden sie wie
+ * bisher im Browser.
+ */
+function PlanServerSeed({
+  seed,
+  children,
+}: Readonly<{ seed: ServerSeedInput; children: React.ReactNode }>) {
+  const { params } = useUrlParams(ALLOWED_URL_PARAMS);
+  const { data: session, status } = useSession();
+  const planWindow = usePlanWindow(params, {
+    todayISO: useBerlinToday(),
+    weekendOpen: useWeekendFollowsFriday(),
+    canManageSchedules: hasPermission(session, "schedules:manage"),
+    canFilterByGroup: hasPermission(session, "groups:read"),
+    canFilterByRoom: hasPermission(session, "rooms:read"),
+  });
+  const authenticated = status === "authenticated";
+  const claims = useMemo(
+    () =>
+      authenticated
+        ? [
+            PERIODS_SWR_KEY,
+            planWindow.shouldLoadInstances
+              ? planInstancesKey(planWindow, planWindowFilter(planWindow))
+              : null,
+            planWindow.shouldLoadGaps ? planGapsKey(planWindow) : null,
+          ]
+        : [],
+    [authenticated, planWindow],
+  );
+  return (
+    <SWRServerSeed seed={seed} claims={claims} render>
+      {children}
+    </SWRServerSeed>
+  );
+}
+
+export function BetreuungsplanView({
+  seed,
+}: Readonly<{ seed?: ServerSeedInput }> = {}) {
   return (
     <Suspense fallback={<TimetablePageSkeleton />}>
-      <TimetablesContent />
+      {seed ? (
+        // While the server waits for the grid, its HTML shows the plan with
+        // its loading grid: header and controls do not wait. A client
+        // navigation never suspends here.
+        <Suspense fallback={<TimetablesContent />}>
+          <PlanServerSeed seed={seed}>
+            <TimetablesContent />
+          </PlanServerSeed>
+        </Suspense>
+      ) : (
+        <TimetablesContent />
+      )}
     </Suspense>
   );
 }

@@ -137,6 +137,7 @@ function absenceRowHint(row: AbsenceRow): string | undefined {
 }
 
 export interface MonatskarteProps {
+  readonly plannedShiftState?: string;
   readonly summary: MonthSummary | null;
   readonly isLoading: boolean;
   /** The failed load from `useApiLoadError` (with retry and request ID) or
@@ -184,6 +185,7 @@ function formatIsoDateGerman(iso: string): string {
 
 export function Monatskarte({
   summary,
+  plannedShiftState = "ready",
   isLoading,
   error,
   isCurrentMonth = false,
@@ -342,16 +344,18 @@ export function Monatskarte({
             valueClass={deltaClass(adjustment.minutesDelta)}
           />
         ))}
-        <SummaryRow
-          label="Dienstplan geplant"
-          hint={planCoverage.hint}
-          value={planCoverage.value}
-          valueClass={
-            summary.plannedShiftMinutes === null
-              ? "text-gray-500"
-              : "text-gray-900"
-          }
-        />
+        {plannedShiftState === "ready" && (
+          <SummaryRow
+            label="Dienstplan geplant"
+            hint={planCoverage.hint}
+            value={planCoverage.value}
+            valueClass={
+              summary.plannedShiftMinutes === null
+                ? "text-gray-500"
+                : "text-gray-900"
+            }
+          />
+        )}
         <SummaryRow
           label={isCurrentMonth ? "Saldo Monat (bis heute)" : "Saldo Monat"}
           value={formatSignedDuration(summary.balanceMinutes)}

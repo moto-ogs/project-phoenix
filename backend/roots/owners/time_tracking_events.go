@@ -21,5 +21,9 @@ type timeTrackingEventPublisher struct {
 }
 
 func (e timeTrackingEventPublisher) QueueStaffTimeTrackingChanged(ctx context.Context, logger *slog.Logger) {
-	deliveryCompose.QueueStaffTimeTrackingChanged(ctx, e.broadcaster, logger)
+	deliveryCompose.NewTenantSignal(e.broadcaster, logger, realtime.EventStaffTimeTrackingChanged).Announce(ctx)
+}
+
+func (e timeTrackingEventPublisher) QueueStaffLeaveChanged(ctx context.Context, logger *slog.Logger) {
+	deliveryCompose.NewTenantSignal(e.broadcaster, logger, realtime.EventStaffLeaveChanged).Announce(ctx)
 }

@@ -12,20 +12,22 @@ import (
 // Each signal is bound to exactly one event; the values below are the whole
 // set. A new signal is a new value here and an event in realtime/events.go,
 // never a new after-commit site.
-type TenantSignal uint8
+type TenantSignal realtime.EventType
 
 // The signals that leave through the shared after-commit site.
 const (
 	// CalendarAppointmentsChanged: an appointment of the school was written
 	// (#7693).
-	CalendarAppointmentsChanged TenantSignal = iota + 1
+	CalendarAppointmentsChanged = TenantSignal(realtime.EventCalendarAppointmentsChanged)
+	StaffTimeTrackingChanged    = TenantSignal(realtime.EventStaffTimeTrackingChanged)
+	StaffLeaveChanged           = TenantSignal(realtime.EventStaffLeaveChanged)
 )
 
 // event is the one event a signal is bound to; false for an unknown value.
 func (signal TenantSignal) event() (realtime.EventType, bool) {
 	switch signal {
-	case CalendarAppointmentsChanged:
-		return realtime.EventCalendarAppointmentsChanged, true
+	case CalendarAppointmentsChanged, StaffTimeTrackingChanged, StaffLeaveChanged:
+		return realtime.EventType(signal), true
 	default:
 		return "", false
 	}
@@ -57,7 +59,7 @@ func (s BoundTenantSignal) Announce(ctx context.Context) {
 	kind, ok := signal.event()
 	if !ok {
 		logger.Warn("skipping unknown tenant signal",
-			"signal", int(signal),
+			"signal", string(signal),
 		)
 		return
 	}

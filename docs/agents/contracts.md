@@ -351,7 +351,7 @@ school, omits the field; their `school_class` stays as before („Feriengast“
 for a guest). The kiosk shows „Gast aus <Schule>“ when the field is set and
 the class otherwise, so either side can deploy first.
 
-## Staff supervision context (#8084)
+## Staff supervision context (#8084, #8085)
 
 `GET /api/active/supervision-context` is a staff-portal read. Omit `section`
 for the full projection, or repeat it for any union of `groups`, `sessions`
@@ -385,8 +385,15 @@ ordinary HTTP error path. Calendar View composes owner reads using savepoints
 in one RLS school transaction, not a fixed snapshot across statements. The
 HTTP host checks the session family in its existing separate transaction.
 
-The route is additive: the old staff calls remain until #8085 migrates their
-consumers. Do not retry a failed overview via the old endpoint.
+The tenant shell seeds the full projection under one in-memory SWR key for
+the staff school/account binding. If any section is missing or unavailable,
+the browser replaces the seed with a full read. Section refreshes replace only
+the requested sections, including `forbidden` or `unavailable` results. The
+shell, child navigation hints and own running supervision share this entry;
+it confers no read or write permissions. `GET /api/me/navigation` carries the
+current staff profile and school switches, not groups or running sessions.
+Other consumers of the general groups, rooms and sessions endpoints still use
+their own contracts. Do not retry a failed overview via an older endpoint.
 
 ## Tenant boundary
 

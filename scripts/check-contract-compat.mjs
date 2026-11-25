@@ -25,6 +25,14 @@ const sameKind = (before, after, request) => before.kind === after.kind
   || (!request && (before.kind === "json" || (openObject(before) && after.kind === "ref")))
   || (before.kind === "legacy_id" && after.kind === "id");
 
+// ADR 0270, #8085: the old staff-shell projection and its only field readers
+// are cut over together. Match the old Go instantiation, not future versions
+// of the same route. All retained fields still go through the normal checks.
+const OLD_STAFF_NAVIGATION = "identityaccess.NavigationResponse[github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff,*github.com/moto-ogs/project-phoenix/roots/owners.CallerGroupRow,*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.ActiveGroup]";
+const RETIRED_STAFF_NAVIGATION_FIELDS = new Set([
+  "educational_groups", "incomplete", "supervised_groups", "unavailable_sections",
+]);
+
 export function breakingChanges(base, head) {
   const breaking = [];
   const baseTypes = new Map(base.types.map((type) => [type.name, type]));
@@ -60,7 +68,10 @@ export function breakingChanges(base, head) {
       const at = `${where}.${field.name}`;
       if (!next) {
         // A bound body may drop a field: Go ignores what an older client sends.
-        if (!field.deprecated && !beforeType.request) breaking.push(`${at}: removed without a release as deprecated`);
+        const staffNavigationCutover = where === "GET /api/me/navigation"
+          && beforeType.go_type === OLD_STAFF_NAVIGATION
+          && RETIRED_STAFF_NAVIGATION_FIELDS.has(field.name);
+        if (!field.deprecated && !beforeType.request && !staffNavigationCutover) breaking.push(`${at}: removed without a release as deprecated`);
         continue;
       }
       if (!beforeType.request && !field.optional && next.optional) breaking.push(`${at}: may now be absent`);

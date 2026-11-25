@@ -25,8 +25,8 @@ import { useTimetableActions } from "~/components/active-supervisions/use-timeta
 import { useTimetableRoster } from "~/components/active-supervisions/use-timetable-roster";
 import { usePlannedWindowRefresh } from "~/components/active-supervisions/planned-window";
 import { rosterRunState } from "~/components/active-supervisions/view-model";
-import type { ActiveGroup } from "~/lib/usercontext-helpers";
-import { userContextService } from "~/lib/usercontext-api";
+import type { ContextSession } from "~/lib/contract/active.generated";
+import { useOptionalSupervision } from "~/lib/supervision-context";
 import { formatChildCount } from "~/lib/activity-occupancy";
 import { BELOW_LG, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { hasPermission } from "~/lib/auth-utils";
@@ -55,15 +55,13 @@ function sessionHref(activeGroupId: string): string {
 /** Eigene laufende Blöcke und tatsächlich übernommene zusätzliche Aufsichten. */
 function ownRunningBlocks(
   day: readonly PlannedTimetableInstance[],
-  sessions: readonly ActiveGroup[],
+  sessions: readonly ContextSession[],
 ): {
   id: string | null;
   title: string;
   activeGroupId?: string | null;
 }[] {
-  // Der eigene Endpunkt liefert ausschließlich offene, selbst beaufsichtigte Sessions.
-  const ownSessions = sessions;
-  const ownIds = new Set(ownSessions.map((session) => session.id));
+  const ownIds = new Set(sessions.map((session) => session.id));
   const planned = day
     .filter(
       (block) =>
@@ -75,11 +73,11 @@ function ownRunningBlocks(
   const plannedIds = new Set(planned.map((block) => block.activeGroupId));
   return [
     ...planned,
-    ...ownSessions
+    ...sessions
       .filter((session) => !plannedIds.has(session.id))
       .map((session) => ({
         id: null,
-        title: session.room?.name ?? "Aktuelle Aufsicht",
+        title: session.room_name,
         activeGroupId: session.id,
       })),
   ];
@@ -117,17 +115,13 @@ export function OwnSupervisionView() {
     () => timetableOperationsApi.plannedNow({ includeRoster: true }),
     { refreshInterval },
   );
-  const ownSessions = useSWRAuth<ActiveGroup[]>(
-    ownSupervisionKeys.sessions(),
-    () => userContextService.getMySupervisedGroups(),
-    { refreshInterval },
-  );
-  const { mutate: mutateOwnSessions } = ownSessions;
+  const { ownSessions, ownSessionsError, isLoadingSupervision, refresh } =
+    useOptionalSupervision();
   const { mutate: mutateDay } = day;
   const { mutate: mutateUpcoming } = upcoming;
   const running = useMemo(
-    () => ownRunningBlocks(day.data ?? [], ownSessions.data ?? []),
-    [day.data, ownSessions.data],
+    () => ownRunningBlocks(day.data ?? [], ownSessions),
+    [day.data, ownSessions],
   );
   const selected =
     running.find((block) => block.activeGroupId === sessionParam) ??
@@ -140,21 +134,21 @@ export function OwnSupervisionView() {
   });
   const { currentTimetableRoster } = roster;
   const loadError = useSwrLoadError(
-    day.error ?? upcoming.error ?? ownSessions.error ?? roster.rosterError,
+    day.error ?? upcoming.error ?? ownSessionsError ?? roster.rosterError,
     "Deine Aufsicht",
     () =>
       Promise.all([
         mutateDay(),
         mutateUpcoming(),
-        mutateOwnSessions(),
+        refresh(["sessions"]),
         roster.mutateRoster(),
       ]),
   );
   const reopen = useReopenBanner();
 
   const reloadLists = useCallback(
-    () => Promise.all([mutateDay(), mutateUpcoming(), mutateOwnSessions()]),
-    [mutateDay, mutateUpcoming, mutateOwnSessions],
+    () => Promise.all([mutateDay(), mutateUpcoming()]),
+    [mutateDay, mutateUpcoming],
   );
   // „Als Nächstes“ follows the clock: reload when the next block enters or
   // leaves the start window instead of waiting for the reconcile (#5017).
@@ -193,7 +187,7 @@ export function OwnSupervisionView() {
 
   const isLoading =
     (day.data === undefined && !day.error) ||
-    (ownSessions.data === undefined && !ownSessions.error) ||
+    isLoadingSupervision ||
     roster.isWaitingForTimetableRoster;
   const presentCount =
     currentTimetableRoster?.rows.filter((row) => row.currentlyPresent).length ??
@@ -231,7 +225,11 @@ export function OwnSupervisionView() {
       title={title}
       info={ACTIVE_SUPERVISIONS_INFO}
       stats={
-        selected ? formatChildCount(presentCount, null) : "Keine Aufsicht aktiv"
+        selected
+          ? formatChildCount(presentCount, null)
+          : ownSessionsError
+            ? undefined
+            : "Keine Aufsicht aktiv"
       }
       statsLoading={isLoading}
       loading={isLoading}
@@ -318,7 +316,8 @@ export function OwnSupervisionView() {
         </>
       ) : selected === null &&
         day.data !== undefined &&
-        ownSessions.data !== undefined ? (
+        !isLoadingSupervision &&
+        !ownSessionsError ? (
         <SectionCard>
           <EmptyState
             icon={<MotoConceptIcon concept={roomsConcept} size={48} />}

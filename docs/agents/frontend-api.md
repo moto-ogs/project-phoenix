@@ -420,7 +420,7 @@ confirmed.
 
 Context params are async in Next.js 16: `params: Promise<...>` — always `await`.
 
-### Own time-tracking reads (#8078)
+### Own time-tracking reads (#8078, #8081)
 
 Use the three tenant entries in `time-tracking.generated.ts` with `bffJson`.
 They need `time_tracking:own` and Zeiterfassung and infer the staff member
@@ -453,9 +453,31 @@ each read once on a live session; there is no page-specific proxy.
 For shifts, `not_booked` means Dienstplan is off; `unavailable` is a read
 failure. Assignments remain part of Basis and have a separate read status.
 For assignments and mail as well, only `ready` can mean an empty result.
-Keep the reads in separate session-bound cache families. A change of the
-selected period needs only `period`. The existing page still reads the
-narrow routes until #8081; those routes also serve other callers and details.
+The page opens the three RAM-only `useSWRAuth` families in parallel. The
+period key uses the view and its canonical Berlin start, never previous data.
+The clock and leave keys use the Berlin day and year. The page uses the shell's
+known missing-profile state to avoid any own reads; a real authorization failure
+is not the missing-profile state.
+
+On a write, one short invalidation burst combines the local response and SSE
+echo. Its predicate refreshes mounted readers and expires affected cached
+periods without fetching them. `staff_leave_changed` invalidates the same
+time views as `staff_time_tracking_changed`, plus leave and the open vacation
+form's year list. Both are contentless tenant signals (ADR 0310). Timetable
+events update the clock's assignments; a closing-day change also affects the
+period. A reconnect reconciles all three. No historic period polls. The chart
+and clock advance today's actual time from the snapshot and its open block,
+not a second history reader. Only advance the week and month totals when
+`today_counts_in_totals` is true.
+
+The Admin table and the home assignment card still have their original reads.
+The session editor receives the selected block and the rejecting
+`revalidateOrThrow` of that period (ADR 0311). Action-bound reads keep their
+existing routes: audit history, export, annual absence overlap and the
+absence-type catalog. Run the seeded GET budget with
+`PERF_PORT=<native-frontend-port> pnpm run perf:render time-tracking.perf.ts`
+in `frontend/`; only the seeded measurement accepts `PERF_BASELINE=1` for
+the pre-#8081 page.
 
 ### Backend calls
 

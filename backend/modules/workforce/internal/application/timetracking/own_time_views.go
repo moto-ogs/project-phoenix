@@ -184,7 +184,8 @@ func (s ownTimeViews) projectPeriod(ctx context.Context, staffID int64, view str
 		return workforce.OwnTimePeriod{}, err
 	}
 	result := workforce.OwnTimePeriod{
-		View: view, Start: start, End: end, WeekStart: weekStart, WeekEnd: weekEnd, AccountStart: anchor,
+		StaffID: ident.ID(staffID),
+		View:    view, Start: start, End: end, WeekStart: weekStart, WeekEnd: weekEnd, AccountStart: anchor,
 		Sessions: history, LaborDays: facts.laborDays(weekStart, weekEnd),
 		RestHints:       restHints(facts.sessions, weekStart, weekEnd),
 		WeeklySummaries: facts.weeklySummaries(weekStart, weekEnd, anchor),

@@ -2,6 +2,8 @@ import { act, render, renderHook } from "@testing-library/react";
 import { waitFor } from "~/test/wait-for-state";
 import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { SWRConfig, useSWRConfig, type Middleware } from "swr";
+import { useOwnTimeRefresh } from "~/lib/hooks/use-own-time-refresh";
+import { timeTrackingKeys } from "./portal-keys";
 import { SWRSeedBoundary } from "./config-boundaries";
 import {
   MUTATION_OPTION_KEYS,
@@ -70,6 +72,8 @@ const PUBLIC_SURFACE: Record<string, () => Promise<object>> = {
   "tenant-contact-keys": () => import("./tenant-contact-keys"),
   "tenant-list-keys": () => import("./tenant-list-keys"),
   "shell-keys": () => import("./shell-keys"),
+  "supervision-keys": () => import("./supervision-keys"),
+  supervision: () => import("./supervision"),
   "parent-keys": () => import("./parent-keys"),
   "parent-inbox-keys": () => import("./parent-inbox-keys"),
   "rooms-keys": () => import("./rooms-keys"),
@@ -83,6 +87,8 @@ const PUBLIC_SURFACE: Record<string, () => Promise<object>> = {
   "search-students-key": () => import("./search-students-key"),
   "room-derived-caches": () => import("./room-derived-caches"),
   optimistic: () => import("./optimistic"),
+  "server-seed": () => import("./server-seed"),
+  "session-generation": () => import("./session-generation"),
 };
 const REVIEWED_EXPORTS: Record<string, string[]> = {
   index: [
@@ -193,6 +199,8 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
     "ownSupervisionKeys",
     "shellResourceKeys",
   ],
+  "supervision-keys": ["supervisionContextKeys"],
+  supervision: ["useSupervisionSnapshot"],
   "parent-keys": ["parentKeys"],
   "parent-inbox-keys": ["parentInboxKeys"],
   "rooms-keys": ["checkinTargetKeys", "roomKeys"],
@@ -225,6 +233,8 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
   ],
   "room-derived-caches": ["ROOM_DERIVED_CACHE_KEY_FRAGMENTS"],
   optimistic: ["useMessageSendAttempt", "useOptimisticAction"],
+  "server-seed": ["SERVER_SEED_MAX_AGE_MS", "SWRServerSeed"],
+  "session-generation": ["sessionGeneration"],
 };
 
 // #5007: outside ~/lib/swr no cache access bypasses the generation lock.
@@ -336,6 +346,43 @@ describe("useInvalidateMatching", () => {
     expect(inbox).toHaveBeenCalledTimes(2);
   });
 
+  it("unites a time write with its SSE echo, expiring only affected inactive keys", async () => {
+    const overview = vi.fn(async () => ({ ready: true }));
+    const period = vi.fn(async () => ({ ready: true }));
+    const leave = vi.fn(async () => ({ ready: true }));
+    const active = timeTrackingKeys.period("week", "2026-11-23");
+    const inactive = timeTrackingKeys.period("month", "2026-10-01");
+
+    const readers = renderHook(() => ({
+      cache: useSWRConfig().cache,
+      overview: useSWRAuth(timeTrackingKeys.overview("2026-11-25"), overview),
+      period: useSWRAuth(active, period),
+      leave: useSWRAuth(timeTrackingKeys.leaveOverview(2026), leave),
+      localWrite: useOwnTimeRefresh(),
+      sse: useOwnTimeRefresh(),
+    }));
+    await waitFor(() =>
+      expect(readers.result.current.period.data).toBeDefined(),
+    );
+    const cache = readers.result.current.cache;
+    cache.set(own(inactive), { data: { old: true } });
+    cache.set(`school-b:account-7:${inactive}`, { data: { other: true } });
+
+    await act(async () => {
+      const write = readers.result.current.localWrite("time");
+      const echo = readers.result.current.sse("time");
+      expect(write).toBe(echo);
+      await write;
+    });
+    expect(overview).toHaveBeenCalledTimes(2);
+    expect(period).toHaveBeenCalledTimes(2);
+    expect(leave).toHaveBeenCalledTimes(1);
+    expect(cache.get(own(inactive))?.data).toBeUndefined();
+    expect(cache.get(`school-b:account-7:${inactive}`)?.data).toEqual({
+      other: true,
+    });
+  });
+
   it("matches nothing while the session is being confirmed", async () => {
     const { result } = renderHook(() => ({
       cache: useSWRConfig().cache,
@@ -415,6 +462,7 @@ describe("option allowlists of ~/lib/swr", () => {
       "focusThrottleInterval",
       "isPaused",
       "keepPreviousData",
+      "onDiscarded",
       "onError",
       "onSuccess",
       "refreshInterval",

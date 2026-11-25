@@ -125,6 +125,7 @@ type OwnTimeClosingDay struct {
 }
 
 type OwnTimePeriod struct {
+	StaffID         ident.ID             `json:"staff_id"`
 	View            string               `json:"view"`
 	Start           calendar.Date        `json:"start"`
 	End             calendar.Date        `json:"end"`
@@ -198,22 +199,23 @@ type OwnTimeAssignments struct {
 // OwnClockOverview is priced as of AsOf on the current Berlin day. Only a
 // successful response establishes that Session or TodayAbsence is absent.
 type OwnClockOverview struct {
-	Today           calendar.Date       `json:"today"`
-	AsOf            time.Time           `json:"as_of"`
-	StaffID         ident.ID            `json:"staff_id"`
-	Session         *OwnTimeBlock       `json:"session"`
-	TodayAbsence    *OwnTimeAbsence     `json:"today_absence"`
-	Shifts          OwnTimeShifts       `json:"shifts"`
-	Assignments     OwnTimeAssignments  `json:"assignments"`
-	Chart           []OwnTimeChartPoint `json:"chart"`
-	CompletedToday  int                 `json:"completed_today_minutes"`
-	CompletedWeek   int                 `json:"completed_week_minutes"`
-	LaborDays       []WorkDayLaborHint  `json:"labor_days"`
-	IsOverWeeklyMax bool                `json:"is_over_weekly_max"`
-	Week            OwnTimeTotals       `json:"week"`
-	Month           OwnTimeTotals       `json:"month"`
-	AccountStart    calendar.Date       `json:"account_start"`
-	AccountBalance  *int                `json:"account_balance_minutes"`
+	Today               calendar.Date       `json:"today"`
+	AsOf                time.Time           `json:"as_of"`
+	StaffID             ident.ID            `json:"staff_id"`
+	Session             *OwnTimeBlock       `json:"session"`
+	TodayAbsence        *OwnTimeAbsence     `json:"today_absence"`
+	Shifts              OwnTimeShifts       `json:"shifts"`
+	Assignments         OwnTimeAssignments  `json:"assignments"`
+	Chart               []OwnTimeChartPoint `json:"chart"`
+	CompletedToday      int                 `json:"completed_today_minutes"`
+	CompletedWeek       int                 `json:"completed_week_minutes"`
+	TodayCountsInTotals bool                `json:"today_counts_in_totals"`
+	LaborDays           []WorkDayLaborHint  `json:"labor_days"`
+	IsOverWeeklyMax     bool                `json:"is_over_weekly_max"`
+	Week                OwnTimeTotals       `json:"week"`
+	Month               OwnTimeTotals       `json:"month"`
+	AccountStart        calendar.Date       `json:"account_start"`
+	AccountBalance      *int                `json:"account_balance_minutes"`
 }
 
 type OwnLeaveCounts struct {

@@ -6,6 +6,7 @@ import { redirect, usePathname } from "next/navigation";
 import { PORTAL_FRAME } from "~/components/auth/portal-frame";
 import { Loading } from "~/components/ui/loading";
 import { PORTAL_ROUTES, type HostedPortalKey } from "~/lib/portal-paths";
+import { isPortalPublicPath } from "~/lib/portal-public-pages";
 
 export function FullPageLoading({ message }: { readonly message?: string }) {
   return (
@@ -55,11 +56,7 @@ export function PortalAuthGuard({
   const { data: session, status } = useSession();
   const frame = PORTAL_FRAME[portal];
   const prefix = PORTAL_ROUTES[portal].appPrefix;
-  const isPublicPage = publicPages.some((page) =>
-    [page, `${prefix}${page}`].some(
-      (p) => pathname === p || pathname.startsWith(`${p}/`),
-    ),
-  );
+  const isPublicPage = isPortalPublicPath(portal, publicPages, pathname);
 
   if (isPublicPage) {
     return <>{children}</>;

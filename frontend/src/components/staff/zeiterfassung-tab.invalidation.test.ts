@@ -11,7 +11,7 @@ describe("isStaleAfterMonthReopen", () => {
   it("invalidates staff, self-service, overview, dashboard, and close-status caches", () => {
     for (const key of [
       "phoenix:staff-month-summary-42-2026-7",
-      "phoenix:time-tracking-month-summary-2026-7",
+      "phoenix:time-tracking-period-month-2026-07-01",
       "phoenix:staff-time-accounts-2026-7",
       "phoenix:staff-dashboard-summary-month",
       "phoenix:staff-month-close-2026-7",

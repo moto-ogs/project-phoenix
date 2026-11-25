@@ -1660,7 +1660,7 @@ describe("staff-session-table.invalidation", () => {
         // Own-service portal keys (no staff id): a manager correcting their OWN
         // days also has the self-service table and weekly KPI open, which key
         // without an id and read the same projection.
-        "phoenix:time-tracking-month-summary-2026-8",
+        "phoenix:time-tracking-period-month-2026-08-01",
         "phoenix:time-tracking-schedule-targets-2026-08-01-2026-08-31",
       ]) {
         expect(isStaleAfterSessionSave(key, "42")).toBe(true);

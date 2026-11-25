@@ -25879,6 +25879,7 @@
         "parent_message_read",
         "parent_message_unread_changed",
         "pickup_schedule_changed",
+        "staff_leave_changed",
         "staff_message",
         "staff_notices_changed",
         "staff_time_tracking_changed",
@@ -73515,7 +73516,7 @@
     },
     {
       "name": "NavigationResponse",
-      "go_type": "identityaccess.NavigationResponse[github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff,*github.com/moto-ogs/project-phoenix/roots/owners.CallerGroupRow,*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.ActiveGroup]",
+      "go_type": "identityaccess.NavigationResponse[*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff]",
       "fields": [
         {
           "name": "current_staff",
@@ -73526,50 +73527,10 @@
           }
         },
         {
-          "name": "educational_groups",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "nullable": true,
-              "ref": "CallerGroupRow"
-            }
-          }
-        },
-        {
-          "name": "incomplete",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
           "name": "school_switches",
           "schema": {
             "kind": "ref",
             "ref": "SchoolSwitches"
-          }
-        },
-        {
-          "name": "supervised_groups",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "nullable": true,
-              "ref": "ActiveGroup"
-            }
-          }
-        },
-        {
-          "name": "unavailable_sections",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "string"
-            }
           }
         }
       ]
@@ -78928,6 +78889,12 @@
           }
         },
         {
+          "name": "today_counts_in_totals",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "labor_days",
           "schema": {
             "kind": "array",
@@ -79979,6 +79946,12 @@
       "name": "OwnTimePeriod",
       "go_type": "workforce.OwnTimePeriod",
       "fields": [
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
         {
           "name": "view",
           "schema": {

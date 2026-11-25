@@ -82,6 +82,10 @@ Variante 3.
   `useDraftOn`, und `show(error, { reload })` zeigt eine Ablehnung erst mit
   dem neu gelesenen Stand oder mit dessen Ladefehler
   (`frontend/src/lib/swr/README.md`, „Reading and saving“).
+- Die eigene Zeiterfassung (#8081) nimmt `version` aus dem gewählten Block
+  des `period`-Reads. Bei einer Ablehnung lädt genau dieser Zeitraum mit
+  `revalidateOrThrow` neu. Die Stempeluhr kann den Tabellen-Lesestand nicht
+  ersetzen und liest unabhängig davon weiter.
 - Die Elternanfragen verlieren ihre vier Fehlerwerte und den leeren Token, der
   die Prüfung übersprang. Ihr Token ist `readstate.Of(updated_at)` ohne
   eigene Funktion; ein Stand ohne Zeile (Ankunftszeiten einer Klasse) hat den

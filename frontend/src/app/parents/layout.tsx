@@ -6,6 +6,12 @@ import { getLocale } from "next-intl/server";
 import { getParentAppMetadata } from "~/i18n/parent-app-metadata";
 import type { AppLocale } from "~/i18n/locales";
 import { readPortalSessionSnapshot } from "~/lib/portal-session-snapshot.server";
+import { ParentServerSeed } from "~/components/parent/parent-server-seed";
+import {
+  isProtectedParentPath,
+  loadParentShellSeed,
+  parentRequestPath,
+} from "~/lib/parent-seed.server";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -74,14 +80,34 @@ export default async function ParentLayout({
 }: {
   readonly children: React.ReactNode;
 }) {
-  const snapshot = await readPortalSessionSnapshot("parent");
+  const [snapshot, path] = await Promise.all([
+    readPortalSessionSnapshot("parent"),
+    parentRequestPath(),
+  ]);
+  const guarded = (
+    <ParentAuthGuard notBooked={snapshot?.notBooked ?? false}>
+      {children}
+    </ParentAuthGuard>
+  );
   return (
     <ParentShellMessages>
       <ParentProviders session={snapshot?.session ?? null}>
-        <ParentAuthGuard notBooked={snapshot?.notBooked ?? false}>
-          {children}
-        </ParentAuthGuard>
+        {/* The shell's children list and features (#8077), started now and
+            not awaited. A public page, also with a parent cookie, gets no
+            personal seed and no extra read. */}
+        {snapshot && !snapshot.notBooked && isProtectedParentPath(path) ? (
+          <ParentServerSeed
+            seed={loadParentShellSeed().catch(() => null)}
+            details={SHELL_SEED_DETAILS}
+          >
+            {guarded}
+          </ParentServerSeed>
+        ) : (
+          guarded
+        )}
       </ParentProviders>
     </ParentShellMessages>
   );
 }
+
+const SHELL_SEED_DETAILS = ["features"] as const;

@@ -78,9 +78,6 @@ describe("useStudentData", () => {
         },
         hasFullAccess: true,
         supervisors: [],
-        myGroups: ["group1"],
-        myGroupRooms: ["Raum 101"],
-        mySupervisedRooms: [],
       };
 
       vi.mocked(useSWRAuth).mockReturnValue({
@@ -96,7 +93,7 @@ describe("useStudentData", () => {
       expect(result.current.loading).toBe(false);
       expect(result.current.student).toEqual(mockStudentData.student);
       expect(result.current.hasFullAccess).toBe(true);
-      expect(result.current.myGroups).toEqual(["group1"]);
+      expect(result.current.myGroups).toEqual([]);
     });
 
     it("returns error state on fetch failure", () => {
@@ -169,41 +166,6 @@ describe("useStudentData additional scenarios", () => {
     expect(result.current.mySupervisedRooms).toEqual([]);
   });
 
-  it("returns all group rooms from data", () => {
-    const mockStudentData = {
-      student: {
-        id: "123",
-        first_name: "Max",
-        second_name: "Mustermann",
-        name: "Max Mustermann",
-        school_class: "3a",
-        group_id: "group1",
-        group_name: "Group 1",
-        current_location: "Raum 101",
-        bus: false,
-      },
-      hasFullAccess: true,
-      supervisors: [],
-      myGroups: ["group1", "group2"],
-      myGroupRooms: ["Raum 101", "Raum 202"],
-      mySupervisedRooms: ["Schulhof"],
-    };
-
-    vi.mocked(useSWRAuth).mockReturnValue({
-      data: mockStudentData,
-      isLoading: false,
-      error: null,
-      mutate: vi.fn(() => Promise.resolve()),
-      isValidating: false,
-    });
-
-    const { result } = renderHook(() => useStudentData("123"));
-
-    expect(result.current.myGroupRooms).toEqual(["Raum 101", "Raum 202"]);
-    expect(result.current.mySupervisedRooms).toEqual(["Schulhof"]);
-    expect(result.current.myGroups).toEqual(["group1", "group2"]);
-  });
-
   it("returns supervisor contacts from data", () => {
     const mockStudentData = {
       student: {
@@ -234,9 +196,6 @@ describe("useStudentData additional scenarios", () => {
           role: "staff",
         },
       ],
-      myGroups: ["group1"],
-      myGroupRooms: ["Raum 101"],
-      mySupervisedRooms: [],
     };
 
     vi.mocked(useSWRAuth).mockReturnValue({
@@ -268,9 +227,6 @@ describe("useStudentData additional scenarios", () => {
       },
       hasFullAccess: false, // Limited access
       supervisors: [],
-      myGroups: [],
-      myGroupRooms: [],
-      mySupervisedRooms: [],
     };
 
     vi.mocked(useSWRAuth).mockReturnValue({
@@ -284,57 +240,6 @@ describe("useStudentData additional scenarios", () => {
     const { result } = renderHook(() => useStudentData("123"));
 
     expect(result.current.hasFullAccess).toBe(false);
-  });
-});
-
-describe("extractRoomNames helper", () => {
-  // Test the room extraction logic directly
-  it("extracts room names from groups with rooms", () => {
-    const groups = [
-      { id: "1", room: { name: "Raum 101" } },
-      { id: "2", room: { name: "Raum 202" } },
-      { id: "3", room: { name: "Schulhof" } },
-    ];
-
-    const roomNames = groups.map((group) => group.room?.name).filter(Boolean);
-
-    expect(roomNames).toEqual(["Raum 101", "Raum 202", "Schulhof"]);
-  });
-
-  it("filters out groups without rooms", () => {
-    const groups = [
-      { id: "1", room: { name: "Raum 101" } },
-      { id: "2", room: undefined },
-      { id: "3", room: { name: undefined } },
-      { id: "4", room: { name: "Raum 404" } },
-    ];
-
-    const roomNames = groups
-      .map((group) => group.room?.name)
-      .filter(Boolean) as string[];
-
-    expect(roomNames).toEqual(["Raum 101", "Raum 404"]);
-  });
-
-  it("returns empty array for empty groups", () => {
-    const groups: Array<{ id: string; room?: { name?: string } }> = [];
-
-    const roomNames = groups
-      .map((group) => group.room?.name)
-      .filter(Boolean) as string[];
-
-    expect(roomNames).toEqual([]);
-  });
-
-  it("handles groups with null room names", () => {
-    const groups = [
-      { id: "1", room: { name: null as unknown as string } },
-      { id: "2", room: { name: "Valid Room" } },
-    ];
-
-    const roomNames = groups.map((group) => group.room?.name).filter(Boolean);
-
-    expect(roomNames).toEqual(["Valid Room"]);
   });
 });
 

@@ -16,17 +16,20 @@ import {
   expectSlideOverUnlocked,
 } from "~/test/helpers/form-modal-pending";
 
+vi.mock("~/lib/hooks/use-own-time-refresh", () => ({
+  useOwnTimeRefresh: () => async () => undefined,
+}));
+
 vi.mock("vaul", () => import("~/test/mocks/vaul"));
 
 const { service, mockMutate, mockToastSuccess } = vi.hoisted(() => ({
   service: {
     checkIn: vi.fn(),
     checkOut: vi.fn(),
-    getCurrentSession: vi.fn(),
-    getHistory: vi.fn(),
+
     startBreak: vi.fn(),
     endBreak: vi.fn(),
-    getSessionBreaks: vi.fn(),
+
     getSessionEdits: vi.fn(),
     updateSession: vi.fn(),
     getAbsences: vi.fn(),
@@ -35,9 +38,7 @@ const { service, mockMutate, mockToastSuccess } = vi.hoisted(() => ({
     deleteAbsence: vi.fn(),
     requestVacation: vi.fn(),
     cancelAbsence: vi.fn(),
-    getVacationQuota: vi.fn(),
-    getQuestionedAbsences: vi.fn(),
-    getOwnAbsenceAllowances: vi.fn(),
+
     exportSessions: vi.fn(),
   },
   mockMutate: vi.fn(),
@@ -82,8 +83,8 @@ vi.mock("~/lib/swr", async (importOriginal) => {
     useLiveRefreshInterval: (fallbackMs = 60_000) => fallbackMs,
     useSWRAuth: routedSWRAuth(actual.useSWRAuth),
     useTenantMutate: () => vi.fn(),
-    useTenantMutateMatching: () => vi.fn(),
-    useInvalidateMatching: () => vi.fn(),
+    useSWRCacheKey: () => (key: string) => `scope:${key}`,
+    useInvalidateMatching: () => vi.fn(async () => []),
   };
 });
 vi.mock("~/lib/hooks/use-user-context", () => ({
@@ -175,6 +176,7 @@ vi.mock("~/components/help/context-help-link", () => ({
 import { SWRConfig } from "~/lib/swr/testing";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { adaptHistorySessionForMetrics } from "~/lib/staff-metrics-helpers";
 import { useSWRAuth } from "~/lib/swr";
 import type {
   StaffAbsence,
@@ -246,7 +248,6 @@ const absence: StaffAbsence = {
 };
 
 function mockData(absences: StaffAbsence[]) {
-  const history = { sessions: [session], weeklySummaries: [], laborDays: [] };
   vi.mocked(useSWRAuth).mockImplementation(((key: string | null) => {
     const answer = (data: unknown) => ({
       data,
@@ -256,61 +257,66 @@ function mockData(absences: StaffAbsence[]) {
       error: undefined,
     });
     if (key === null) return answer(undefined);
-    if (key === "time-tracking-current") return answer(null);
-    if (key === "time-tracking-config") {
-      return answer({ accountStartDate: "" });
-    }
-    if (key.startsWith("time-tracking-schedule-targets")) {
-      return answer(new Map<string, number>());
-    }
-    if (key.startsWith("time-tracking-month-summary")) return answer(undefined);
-    if (key.startsWith("time-tracking-table-absences")) return answer(absences);
-    // The leave and allowance cards: the fixtures of the service mocks below.
-    if (
-      key === "time-tracking-absences-questioned" ||
-      key === "time-tracking-absences-allowances"
-    ) {
-      return answer([]);
-    }
-    if (key.startsWith("time-tracking-absences-quota-")) {
+    if (key.startsWith("time-tracking-overview-")) {
+      const totals = {
+        has_target: true,
+        has_override: false,
+        actual_minutes: 0,
+        credit_minutes: 0,
+        target_minutes: 0,
+      };
       return answer({
-        staff_id: 10,
-        year: 2026,
-        entitled_days: 30,
-        carryover_days: 0,
-        taken_days: 0,
-        reserved_days: 0,
-        remaining_days: 30,
+        asOf: "2026-09-09T10:00:00Z",
+        staffId: "10",
+        session: null,
+        breaks: [],
+        absence: null,
+        chart: [],
+        completedToday: 0,
+        todayCountsInTotals: true,
+        laborDays: [],
+        plannedShifts: [],
+        cancelledShifts: [],
+        assignments: [],
+        week: totals,
+        month: totals,
+        accountStart: null,
+        accountBalanceMinutes: 0,
       });
     }
-    if (key.startsWith("time-tracking-absences-")) return answer(absences);
-    if (
-      key.startsWith("time-tracking-history") ||
-      key.startsWith("time-tracking-table-") ||
-      key.startsWith("time-tracking-own-history")
-    ) {
-      return answer(history);
+    if (key.startsWith("time-tracking-period-")) {
+      return answer({
+        staffId: "10",
+        from: new Date(2026, 8, 7),
+        to: new Date(2026, 8, 13),
+        sessions: [session],
+        rows: [adaptHistorySessionForMetrics(session)],
+        absences,
+        laborDays: [],
+        weeklySummaries: [],
+        dailyProjection: new Map(),
+        accountStart: "",
+        holidays: new Map(),
+        closingDays: new Map(),
+        shifts: [],
+      });
     }
-    if (key.startsWith("me-staff")) return answer({ id: "10" });
-    if (key.startsWith("time-tracking-own-schedule")) return answer(null);
-    if (key.startsWith("time-tracking-own-absences")) return answer([]);
-    if (key === "staff-absence-types") return answer([]);
-    return answer(absences);
+    if (key.startsWith("time-tracking-leave-overview-")) {
+      return answer({
+        year: 2026,
+        quota: { entitled_days: 30, carryover_days: 0, remaining_days: 30 },
+        counts: { question: 0, reserved: 0, approved: 0, declined: 0 },
+        recent: [],
+        questions: [],
+        allowances: [],
+        mails: { state: "ready" },
+      });
+    }
+    return answer([]);
   }) as never);
-  service.getSessionBreaks.mockResolvedValue([]);
+
   service.getSessionEdits.mockResolvedValue([]);
   service.getAbsences.mockResolvedValue(absences);
-  service.getQuestionedAbsences.mockResolvedValue([]);
-  service.getOwnAbsenceAllowances.mockResolvedValue([]);
-  service.getVacationQuota.mockResolvedValue({
-    staff_id: 10,
-    year: 2026,
-    entitled_days: 30,
-    carryover_days: 0,
-    taken_days: 0,
-    reserved_days: 0,
-    remaining_days: 30,
-  });
 }
 
 async function openPanel(title: string) {

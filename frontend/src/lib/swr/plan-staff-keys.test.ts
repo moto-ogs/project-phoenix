@@ -37,8 +37,8 @@ describe("factory keys of the staff, time tracking and plan readers", () => {
     );
     expect(staffKeys.stammdaten("7")).toBe("staff-stammdaten-7");
     expect(staffNoticeKeys.today("9")).toBe("staff-notices-today:9");
-    expect(timeTrackingKeys.monthSummary(2026, 9)).toBe(
-      "time-tracking-month-summary-2026-9",
+    expect(timeTrackingKeys.period("month", "2026-09-01")).toBe(
+      "time-tracking-period-month-2026-09-01",
     );
     expect(timeTrackingKeys.ownAssignmentsToday("2026-09-09")).toBe(
       "time-tracking-own-assignments-today-2026-09-09",

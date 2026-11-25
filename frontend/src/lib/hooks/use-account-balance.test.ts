@@ -68,22 +68,10 @@ describe("useAccountBalance", () => {
       summary: { closingBalanceMinutes: 90 },
     });
 
-    const { result } = renderHook(() => useAccountBalance());
-
-    expect(swr.summaryKey()).toBe("time-tracking-month-summary-2026-8");
-    expect(result.current.balanceMinutes).toBe(90);
-  });
-
-  it("uses the admin key when a staffId is passed", () => {
-    const swr = mockSWR({
-      config: { accountStartDate: "" },
-      summary: { closingBalanceMinutes: -30 },
-    });
-
     const { result } = renderHook(() => useAccountBalance("42"));
 
     expect(swr.summaryKey()).toBe("staff-month-summary-42-2026-8");
-    expect(result.current.balanceMinutes).toBe(-30);
+    expect(result.current.balanceMinutes).toBe(90);
   });
 
   it("reports no balance when the account starts later within the current month", () => {
@@ -96,7 +84,7 @@ describe("useAccountBalance", () => {
       summary: { closingBalanceMinutes: 0 },
     });
 
-    const { result } = renderHook(() => useAccountBalance());
+    const { result } = renderHook(() => useAccountBalance("42"));
 
     expect(swr.summaryKey()).toBeNull();
     expect(result.current.balanceMinutes).toBeNull();
@@ -111,9 +99,9 @@ describe("useAccountBalance", () => {
       summary: { closingBalanceMinutes: 120 },
     });
 
-    const { result } = renderHook(() => useAccountBalance());
+    const { result } = renderHook(() => useAccountBalance("42"));
 
-    expect(swr.summaryKey()).toBe("time-tracking-month-summary-2026-8");
+    expect(swr.summaryKey()).toBe("staff-month-summary-42-2026-8");
     expect(result.current.balanceMinutes).toBe(120);
   });
 
@@ -125,7 +113,7 @@ describe("useAccountBalance", () => {
       summary: { closingBalanceMinutes: 480 },
     });
 
-    const { result } = renderHook(() => useAccountBalance());
+    const { result } = renderHook(() => useAccountBalance("42"));
 
     expect(swr.summaryKey()).toBeNull();
     expect(result.current.balanceMinutes).toBeNull();
@@ -139,7 +127,7 @@ describe("useAccountBalance", () => {
       summary: { closingBalanceMinutes: 480 },
     });
 
-    const { result } = renderHook(() => useAccountBalance());
+    const { result } = renderHook(() => useAccountBalance("42"));
 
     expect(swr.summaryKey()).toBeNull();
     expect(result.current.balanceMinutes).toBeNull();
@@ -149,7 +137,7 @@ describe("useAccountBalance", () => {
   it("waits for the anchor before fetching a balance", () => {
     const swr = mockSWR({ configLoading: true });
 
-    const { result } = renderHook(() => useAccountBalance());
+    const { result } = renderHook(() => useAccountBalance("42"));
 
     expect(swr.summaryKey()).toBeNull();
     expect(result.current.isLoading).toBe(true);
