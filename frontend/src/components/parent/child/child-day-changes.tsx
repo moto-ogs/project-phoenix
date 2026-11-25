@@ -27,7 +27,7 @@ type DayChangesTranslator = ReturnType<
  * Schließtags; der Text nennt nur das Kind, Angebot, Raum, Klasse und Zeit.
  * Eine Art, die diese Version noch nicht kennt, ergibt null und bleibt weg.
  */
-export function childDayChangeText(
+function childDayChangeText(
   entry: parentMeContract.ChildDayChangeEntry,
   firstName: string,
   t: DayChangesTranslator,
