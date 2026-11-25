@@ -6,6 +6,13 @@
 // neben der Liste. Andere Listen (Aufsicht, Gruppen) nutzen es mit eigenen
 // Kontext-Aktionen.
 
+import { AlertTriangle } from "lucide-react";
+import { getAccessibleTextColor } from "~/lib/kit-palette";
+import { useMinuteClock } from "~/lib/pickup-helpers";
+import {
+  getStudentDayTimes,
+  getStudentTimeStatus,
+} from "~/lib/student-time-status";
 import { useSession } from "next-auth/react";
 import type { ReactNode } from "react";
 
@@ -257,8 +264,16 @@ export function ChildSummary({
         <DataField label="Gruppe">{student.group_name || "–"}</DataField>
         {fullAccess ? (
           <>
-            <DataField label="Ankunft heute">{arrivalText(student)}</DataField>
-            <DataField label="Gehen heute">{pickupText(student)}</DataField>
+            <DataField label="Ankunft heute">
+              <OverdueTime student={student} kind="arrival" isToday={isToday}>
+                {arrivalText(student)}
+              </OverdueTime>
+            </DataField>
+            <DataField label="Gehen heute">
+              <OverdueTime student={student} kind="pickup" isToday={isToday}>
+                {pickupText(student)}
+              </OverdueTime>
+            </DataField>
             <DataField label="Heimweg">
               {dailyDepartureLabelForStudent(student)}
             </DataField>
@@ -279,6 +294,54 @@ export function ChildSummary({
         <div className="space-y-2 border-t border-gray-100 pt-3">{actions}</div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Rot (bzw. orange), wenn die geplante Ankunft oder Abholung heute
+ * überschritten ist, wie auf der Karte der Kindersuche; sonst der Text.
+ */
+function OverdueTime({
+  student,
+  kind,
+  isToday,
+  children,
+}: Readonly<{
+  student: Student;
+  kind: "arrival" | "pickup";
+  isToday: boolean;
+  children: ReactNode;
+}>) {
+  const now = useMinuteClock();
+  if (!isToday) return <>{children}</>;
+  const status = getStudentTimeStatus({
+    plannedTime:
+      kind === "arrival"
+        ? student.arrival_time
+        : (student.pickup_time ?? undefined),
+    actualTime:
+      kind === "arrival"
+        ? student.actual_arrival_time
+        : student.actual_pickup_time,
+    now,
+    kind,
+    day: getStudentDayTimes(student),
+    sick: student.sick,
+    classTrip: student.class_trip,
+    excused: student.excused,
+    currentLocation: student.current_location,
+  });
+  const late =
+    status.state === "very-overdue" || status.state === "slightly-overdue";
+  if (!late || !status.textColor) return <>{children}</>;
+  return (
+    <span
+      className="inline-flex items-center gap-1.5"
+      style={{ color: getAccessibleTextColor(status.textColor) }}
+    >
+      <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
+      {children}, überfällig
+    </span>
   );
 }
 
@@ -335,47 +398,51 @@ function ChildQuickActions({
       ? router.replace(studentQuickActionHref(href, action))
       : router.push(studentQuickActionHref(href, action));
   const isQuickExcused = (student.excused ?? false) && !student.class_trip;
-  // Knöpfe statt hoher Kacheln: Das Blatt bleibt kompakt. Die Hauptaktion
-  // (An- oder Abmelden) steht voll breit, die beiden Meldungen darunter.
+  // Knöpfe statt hoher Kacheln: Das Blatt bleibt kompakt. Wie die
+  // Aktionsleiste der Akte nach dem Zustand des Kindes: Ist es da, ist das
+  // Abmelden die eine Aktion („Krank melden“ passte nicht zu einem Kind, das
+  // da ist). Ist es nicht da, stehen Anmelden und „Krank melden“
+  // nebeneinander. Entschuldigen und alles Weitere stehen in der Akte.
+  const sickButton = (
+    <Button
+      type="button"
+      variant="outline"
+      size="md"
+      className="flex-1"
+      onClick={open("krank")}
+      tooltip="Öffnet die Akte und fragt dort vor dem Speichern nach."
+    >
+      {student.sick ? "Gesund melden" : "Krank melden"}
+    </Button>
+  );
   return (
-    <div className="flex flex-wrap gap-2" aria-label="Schnellaktionen">
+    <div className="flex gap-2" aria-label="Schnellaktionen">
       {showCheckout ? (
         <Button
           type="button"
           variant="primary"
           size="md"
-          className="w-full"
+          className="flex-1"
           onClick={open("abmelden")}
           tooltip="Öffnet die Akte und fragt dort vor dem Abmelden nach."
         >
           Abmelden
         </Button>
       ) : null}
+      {!showCheckout && sickExcused ? sickButton : null}
       {showCheckin ? (
         <Button
           type="button"
           variant="primary"
           size="md"
-          className="w-full"
+          className="flex-1"
           onClick={open("anmelden")}
           tooltip="Öffnet die Akte und fragt dort vor dem Anmelden nach."
         >
           Anmelden
         </Button>
       ) : null}
-      {sickExcused ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="md"
-          className="flex-1"
-          onClick={open("krank")}
-          tooltip="Öffnet die Akte und fragt dort vor dem Speichern nach."
-        >
-          {student.sick ? "Gesund melden" : "Krank melden"}
-        </Button>
-      ) : null}
-      {sickExcused ? (
+      {!showCheckout && !showCheckin && sickExcused ? (
         <Button
           type="button"
           variant="outline"
