@@ -1064,6 +1064,18 @@ function MeinRaumPageContent() {
             }
             onPresentPickerAutoOpened={actions.clearPresentPickerAutoOpen}
             onComplete={actions.handleCompleteTimetableInstance}
+            onHandOver={
+              handOverActiveGroupId
+                ? () => setHandOverTarget(handOverActiveGroupId)
+                : undefined
+            }
+            endEntry={rosterAppEndEntry({
+              roster: currentTimetableRoster,
+              attendanceWebEnabled,
+              now,
+              isCompleting: actions.isCompletingInstance,
+              onComplete: () => void actions.handleCompleteTimetableInstance(),
+            })}
             onConfirmExpected={actions.handleConfirmExpectedStudents}
             onRosterAction={actions.handleRosterAction}
             onSaveHomeworkFeedback={actions.handleSaveHomeworkFeedback}

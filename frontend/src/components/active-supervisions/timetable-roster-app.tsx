@@ -83,6 +83,10 @@ export type TimetableRosterAppProps = Omit<
   ) => Promise<boolean>;
   /** Weitere Einträge am Listenende (Kinder unterwegs, spontaner Start). */
   readonly listFooter?: ReactNode;
+  /** Öffnet „Aufsicht übergeben“, wenn die Person die Aufsicht abgeben darf. */
+  readonly onHandOver?: () => void;
+  /** „Aktivität beenden“ mit Sperrzeit und Rückfrage (`rosterAppEndEntry`). */
+  readonly endEntry?: OverflowMenuItem | null;
   /**
    * Rechts im ersten Abschnittskopf, etwa „3 unterwegs“: führt zur Karte am
    * Listenende, ohne dass sie die Kinder aus dem ersten Bild schiebt.
@@ -319,6 +323,8 @@ export function TimetableRosterApp({
   rowFilter = null,
   addStudentError,
   listFooter,
+  onHandOver,
+  endEntry,
   leadGroupMeta,
   addStudentOpen: addStudentOpenProp,
   onAddStudentOpenChange,
@@ -695,10 +701,47 @@ export function TimetableRosterApp({
     );
   }
 
+  // Übergeben und Beenden sichtbar auf der Seite (nicht nur im „…“-Blatt):
+  // eine Karte am Listenende mit beiden Knöpfen nebeneinander.
+  const superviseCard =
+    onHandOver || endEntry ? (
+      <SectionCard title="Aufsicht">
+        <div className="flex gap-2 [&>*]:flex-1">
+          {onHandOver ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              tooltip="Öffnet die Übergabe an eine andere Betreuungsperson."
+              onClick={onHandOver}
+            >
+              Übergeben
+            </Button>
+          ) : null}
+          {endEntry ? (
+            <Button
+              type="button"
+              variant="outline_danger"
+              size="md"
+              disabled={endEntry.disabled}
+              disabledReason={
+                endEntry.disabled ? endEntry.description : undefined
+              }
+              tooltip="Beendet die Aktivität für alle Kinder. moto fragt vorher nach."
+              onClick={endEntry.onClick}
+            >
+              Beenden
+            </Button>
+          ) : null}
+        </div>
+      </SectionCard>
+    ) : null;
+
   const footer =
-    moreAdd.length > 0 || listFooter ? (
+    moreAdd.length > 0 || listFooter || superviseCard ? (
       <div className="flex flex-col gap-4">
         {moreAdd}
+        {superviseCard}
         {listFooter}
       </div>
     ) : null;
@@ -750,7 +793,25 @@ export function TimetableRosterApp({
         onClose={() => setSheetChildId(null)}
       />
 
-      {primary ? <ActionBar>{primary}</ActionBar> : null}
+      {primary ? (
+        <ActionBar
+          secondary={
+            onHandOver ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                tooltip="Öffnet die Übergabe an eine andere Betreuungsperson."
+                onClick={onHandOver}
+              >
+                Übergeben
+              </Button>
+            ) : undefined
+          }
+        >
+          {primary}
+        </ActionBar>
+      ) : null}
 
       {addStudentEnabled && AddUnplannedStudentModal ? (
         <AddUnplannedStudentModal
