@@ -6,6 +6,7 @@ import { ActiveFilterChips } from "~/components/ui/page-header/ActiveFilterChips
 import { OverlaySheet } from "~/components/ui/overlay-sheet";
 import { TenantPageSearchRow } from "~/components/ui/tenant-page-search-row";
 import { useSession } from "next-auth/react";
+import { blockTimeRange } from "~/lib/block-children";
 import { sessionIdentityKey } from "~/lib/session-access";
 import { useSearchParams } from "next/navigation";
 import { redirect } from "next/navigation";
@@ -1229,6 +1230,19 @@ function MeinRaumPageContent() {
       actions={
         hasHeadActions || tableApplies ? (
           <>
+            {appHasRunningRoster && currentTimetableRoster ? (
+              // Wie am Computer in der Karte des Blocks: seit wann er läuft
+              // oder von wann bis wann er geht. Die Chipzeile darunter ist am
+              // Telefon schon voll; in der Titelzeile ist Platz. Die Kopfkarte
+              // zeigt in der Titelzeile nur `data-icon-only`-Elemente, im
+              // „…“-Blatt keine: die Zeit steht nur hier.
+              <span
+                data-icon-only=""
+                className="shrink-0 text-sm text-gray-600 tabular-nums"
+              >
+                {blockTimeRange(currentTimetableRoster.instance)}
+              </span>
+            ) : null}
             {appHasRunningRoster ? (
               <Button
                 type="button"

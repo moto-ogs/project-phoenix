@@ -1,7 +1,7 @@
 "use client";
 
-import { Plus } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { AlertTriangle, Plus, StickyNote } from "lucide-react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 
 import { Alert } from "~/components/ui/alert";
 import { ActionBar } from "~/components/ui/action-bar";
@@ -298,6 +298,50 @@ function feedbackFor(
   }
 }
 
+/**
+ * Was am Computer unter dem Kind farbig steht (Hinweis der Planung, zugleich
+ * in einem anderen Block, Hinweis der Lehrkraft), kurz vorn in der zweiten
+ * Zeile. Den ganzen Satz zeigt das Kind-Blatt.
+ */
+function rowNotice(row: TimetableRosterRow): ReactNode {
+  const planning = (row.warnings ?? []).find(
+    (warning) =>
+      (warning.kind !== "arrival_after_slot_start" ||
+        !warning.expectedArrival) &&
+      warning.kind !== "class_arrival_exception",
+  );
+  let label: string | null = null;
+  if (planning) {
+    label =
+      planning.kind === "missing_arrival_schedule"
+        ? "Keine Ankunftszeit"
+        : planning.message;
+  } else if (row.parallelPresentIn) {
+    label = `Auch in „${row.parallelPresentIn.title}“`;
+  }
+  if (label) {
+    return (
+      <span className="text-moto-amber-strong flex max-w-full min-w-0 shrink-0 items-center gap-1 font-medium">
+        {/* Am SE reicht die Breite neben „Raum verlassen“ nur für das Wort. */}
+        <AlertTriangle
+          className="size-3.5 shrink-0 max-[24rem]:hidden"
+          aria-hidden="true"
+        />
+        <span className="truncate">{label}</span>
+      </span>
+    );
+  }
+  if ((row.teacherHints ?? []).length > 0) {
+    return (
+      <span className="flex shrink-0 items-center gap-1 font-medium text-gray-700">
+        <StickyNote className="size-3.5 shrink-0" aria-hidden="true" />
+        Hinweis
+      </span>
+    );
+  }
+  return null;
+}
+
 export function TimetableRosterApp({
   addStudentSearch,
   attendanceWebEnabled,
@@ -476,10 +520,17 @@ export function TimetableRosterApp({
   const groupNames = new Set(roster.rows.map((row) => row.groupName));
   const sharedGroup = groupNames.size === 1;
 
-  const subtitleFor = (row: TimetableRosterRow, key: SectionKey): string => {
+  const subtitleFor = (row: TimetableRosterRow, key: SectionKey): ReactNode => {
     // Zuerst, was die Aufsicht jetzt braucht (Ankunft, Gehzeit, Grund),
-    // dann Klasse und Gruppe.
+    // dann Klasse und Gruppe. Die Gehzeit steht wie am Computer bei jedem
+    // Kind, das heute noch geht.
     const parts: string[] = [];
+    const pickup = rosterPickupTimeLabel(
+      row.pickupTime,
+      roster.pickupTimesLoaded,
+      roster.pickupTimesRedacted,
+    );
+    const pickupPart = pickup && pickup !== "–" ? `geht ${pickup}` : null;
     if (key === "missing") {
       const arrival = upcomingArrivalTime(
         row.warnings,
@@ -487,19 +538,18 @@ export function TimetableRosterApp({
         roster.instance.date,
       );
       if (arrival) parts.push(`kommt ${arrival}`);
+      if (pickupPart) parts.push(pickupPart);
     } else if (key === "present") {
-      const pickup = rosterPickupTimeLabel(
-        row.pickupTime,
-        roster.pickupTimesLoaded,
-        roster.pickupTimesRedacted,
-      );
-      if (pickup && pickup !== "–") parts.push(`geht ${pickup}`);
+      if (pickupPart) parts.push(pickupPart);
     } else if (row.status === "absent") {
       parts.push(
         row.substatus ? ATTENDANCE_SUBSTATUS_LABELS[row.substatus] : "Abwesend",
       );
     } else if (!row.currentlyPresent && row.status === "present") {
-      parts.push("gegangen");
+      // Am Computer „Nicht mehr im Raum“: Das Kind hat den Raum verlassen,
+      // ist aber nicht unbedingt nach Hause gegangen.
+      parts.push("nicht im Raum");
+      if (pickupPart) parts.push(pickupPart);
     } else {
       parts.push("heute nicht eingeplant");
     }
@@ -507,7 +557,31 @@ export function TimetableRosterApp({
     if (klass) parts.push(klass);
     if (!sharedGroup && row.groupName && row.groupName !== row.schoolClass)
       parts.push(row.groupName);
-    return parts.join(" · ");
+    const notice = rowNotice(row);
+    if (!notice && parts.length === 0) return null;
+    // Jede Angabe ganz oder gar nicht: Was in der Zeile keinen Platz hat,
+    // rutscht in eine verdeckte zweite Zeile, statt mitten in der Uhrzeit
+    // abgeschnitten zu werden („geht 16:…“). Das Kind-Blatt zeigt alles.
+    return (
+      <span className="flex h-5 min-w-0 flex-wrap items-center gap-x-1 overflow-hidden">
+        {/* Unter „Gegangen oder abgemeldet“ steht zuerst der Grund
+            (nicht im Raum, krank …), dann ein Hinweis. */}
+        {key === "gone" ? null : notice}
+        {parts.map((part, index) => (
+          <Fragment key={part}>
+            <span className="shrink-0">
+              {index > 0 || (notice && key !== "gone") ? "· " : ""}
+              {part}
+            </span>
+            {index === 0 && key === "gone" && notice ? (
+              <span className="flex min-w-0 shrink items-center gap-1">
+                · {notice}
+              </span>
+            ) : null}
+          </Fragment>
+        ))}
+      </span>
+    );
   };
 
   const rowAction = (row: TimetableRosterRow) => {
@@ -648,8 +722,10 @@ export function TimetableRosterApp({
         className="gap-1.5"
       >
         {/* Neben Übergeben und Beenden reicht die Breite am Telefon nur für
-            das kurze Wort; der volle Name steht im Vorleseprogramm. */}
-        <Plus aria-hidden="true" className="size-4" />
+            das kurze Wort; der volle Name steht im Vorleseprogramm. Am
+            Telefon bis 408 px (SE, iPhone 15) ragte der Knopf mit dem Plus über
+            die Leiste: dort steht nur das Wort. */}
+        <Plus aria-hidden="true" className="size-4 max-[25.5rem]:hidden" />
         Hinzufügen
       </Button>
     );
@@ -664,7 +740,7 @@ export function TimetableRosterApp({
         aria-label="Kind hinzufügen"
         className="gap-1.5"
       >
-        <Plus aria-hidden="true" className="size-4" />
+        <Plus aria-hidden="true" className="size-4 max-[25.5rem]:hidden" />
         Hinzufügen
       </Button>
     );
