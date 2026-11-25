@@ -744,8 +744,8 @@ export function DienstplanResourceGrid({
   // liefe durch eine unsichtbare Kopie.
   const isCompact = useMediaQuery(BELOW_LG);
   const showAllRows = useAfterInitialPaint();
-  // Each week row has at least the grid's 64px cell height. On a client
-  // remount finish the viewport before building the rest of the roster.
+  // The desktop row has a 64px cell and 8px of vertical padding. On a
+  // client remount finish the viewport before building the rest of the roster.
   const visibleStaff = showAllRows
     ? staff
     : staff.slice(0, Math.ceil(window.innerHeight / (isCompact ? 64 : 72)));
