@@ -21,7 +21,7 @@ export function holidayWeeksTopic(): HelpTopic {
     icon: "SunHorizon",
     image: "/help/screens/ferienwochen-freigegebene-antworten.webp",
     imageAlt:
-      "Die Liste der Kinder mit der zweiten sorgeberechtigten Person, den freigegebenen Antworten und der Spalte Gesundheit.",
+      "Zahlen pro Zeitmodell, Heimatschule und Tag. Darunter steht die Kinderliste mit den freigegebenen Antworten.",
     requirements: [
       "Der Träger hat deine OGS für eine Ferienwoche eingetragen.",
       "Der Träger hat Anmeldungen für diese Woche bestätigt.",
