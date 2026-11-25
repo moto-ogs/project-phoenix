@@ -15,8 +15,7 @@ import (
 )
 
 // The slim view (#4996) drops only the per-child attendance rows: the
-// Betreuungsplan grid renders counts and IDs, and the block detail loads its
-// day in the full view when it opens.
+// Betreuungsplan grid renders counts and IDs; the panel reads the selected block.
 func TestListInstances_SlimViewDropsOnlyTheAttendanceRows(t *testing.T) {
 	t.Parallel()
 
@@ -55,6 +54,12 @@ func TestListInstances_SlimViewDropsOnlyTheAttendanceRows(t *testing.T) {
 	assert.ElementsMatch(t, []int64{student1.ID, student2.ID}, ident.Int64s(slimItem.StudentIDs))
 	assert.Equal(t, 1, slimItem.ExpectedStudentsCount)
 	assert.Equal(t, 1, slimItem.PresentStudentsCount)
+
+	detail := doList(t, router, fmt.Sprintf("/instances/%d/attendance", inst.ID))
+	require.Equal(t, http.StatusOK, detail.Code)
+	var attendance instanceAttendanceResponse
+	decodeEnvelope(t, detail, &attendance)
+	assert.Equal(t, full.Instances[0].Students, attendance.Students)
 
 	var raw struct {
 		Data struct {

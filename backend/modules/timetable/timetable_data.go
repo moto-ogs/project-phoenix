@@ -44,6 +44,15 @@ type ScheduledParticipant struct {
 	PickupExceptionID  *int64
 }
 
+// PlannerProjection selects the row data required by a planner read.
+type PlannerProjection uint8
+
+const (
+	PlannerGrid       PlannerProjection = iota // staff and raw participants, no detail-only reads
+	PlannerFull                                // complete list or write response
+	PlannerAttendance                          // participants and pickup cutoffs, no staff
+)
+
 // ScheduledInstanceRows are the rows of a list window: staff and
 // participants keyed by block, the auto-excusal pickup cutoffs keyed by date
 // and child.
@@ -79,9 +88,9 @@ type ScheduledBlockQuery interface {
 	// ListScheduledInstances reads the blocks of an inclusive date window.
 	ListScheduledInstances(ctx context.Context, from, to calendar.Date) ([]ScheduledInstance, error)
 	// ListScheduledInstanceRows loads the rows of the listed blocks with one
-	// read per kind plus one cutoff read per distinct date (#2940).
+	// read per kind and, only for attendance details, one cutoff read.
 	// Participants keep their creation order.
-	ListScheduledInstanceRows(ctx context.Context, instances []ScheduledInstance) (*ScheduledInstanceRows, error)
+	ListScheduledInstanceRows(ctx context.Context, instances []ScheduledInstance, projection PlannerProjection) (*ScheduledInstanceRows, error)
 	ListBlockStaff(ctx context.Context, instanceID int64) ([]InstanceStaff, error)
 	ListBlockParticipants(ctx context.Context, instanceID int64) ([]ScheduledParticipant, error)
 	// ListCareDayCandidates returns the participants whose care-day verdict

@@ -181,7 +181,10 @@ func listRouter(parentCtx context.Context, res *Resource) chi.Router {
 			next.ServeHTTP(w, req.WithContext(ctx))
 		})
 	})
-	r.Route("/instances", func(r chi.Router) { r.Get("/", res.listInstances) })
+	r.Route("/instances", func(r chi.Router) {
+		r.Get("/", res.listInstances)
+		r.Get("/{id}/attendance", res.getInstanceAttendance)
+	})
 	return r
 }
 
@@ -652,6 +655,8 @@ func TestListInstances_IncludesWindowConflictWarnings(t *testing.T) {
 	testpkg.CreateTestInstanceStudent(t, s.db, instA.ID, student.ID, "")
 	testpkg.CreateTestInstanceStudent(t, s.db, instB.ID, student.ID, "")
 
+	staff := testpkg.CreateTestStaff(t, s.db, "Conflict", "Filter")
+	testpkg.CreateTestInstanceStaff(t, s.db, instA.ID, staff.ID, testpkg.InstanceStaffOpts{})
 	router := listRouter(s.ctx, s.res)
 	w := doList(t, router, fmt.Sprintf("/instances?from=%s&to=%s", from, to))
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
@@ -680,6 +685,15 @@ func TestListInstances_IncludesWindowConflictWarnings(t *testing.T) {
 
 	assert.Empty(t, byTitle["Window-Adjacent"].ConflictWarnings,
 		"adjacency and a shared room alone must not warn")
+
+	filtered := doList(t, router, fmt.Sprintf("/instances?from=%s&to=%s&staff_id=%d&view=slim", from, to, staff.ID))
+	require.Equal(t, http.StatusOK, filtered.Code)
+	slim := decodeList(t, filtered)
+	require.Len(t, slim.Instances, 1)
+	full := byTitle["Window-Conflict-A"]
+	full.Students = nil
+	assert.Equal(t, full, slim.Instances[0], "hidden blocks still contribute to conflicts; filtering must not change the read-state token")
+
 }
 
 func TestListInstances_DateValidation(t *testing.T) {

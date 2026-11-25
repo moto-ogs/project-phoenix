@@ -7796,6 +7796,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/timetable/instances/{id}/attendance",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "instanceAttendanceResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/timetable/instances/{id}/guardian-notice",
       "portals": [
         "tenant"
@@ -127178,6 +127189,29 @@
             "elem": {
               "kind": "ref",
               "ref": "homeLayoutBlockRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "instanceAttendanceResponse",
+      "go_type": "timetablehttp.instanceAttendanceResponse",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "students",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "instanceStudentSummary"
             }
           }
         }

@@ -44,3 +44,14 @@ its JavaScript. A standalone Flight response is an alternative request, not
 additional bytes on the document load. Use the Pixel 7 profile from #4986:
 4× CPU, 150 ms latency, 1.6 Mbit/s down, median of three cold contexts, until
 the sign-in button is visible.
+
+## Betreuungsplan: grid and attendance
+
+The server seed and the browser both request `GET /api/timetable/instances?view=slim`
+with the grid window and filters. Slim keeps student IDs, counts, conflicts and
+the block version; it skips the child DTOs and pickup cutoffs. Omitting `view`
+still returns the full list. Opening a block reads only
+`GET /api/timetable/instances/{id}/attendance`. The SWR key includes the block
+ID and planned date inside the school/account scope. The separate
+`/participants` route applies name visibility; attendance contains no names.
+Measure seeded document navigation separately from the first and repeated click.

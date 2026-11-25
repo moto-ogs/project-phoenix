@@ -40,6 +40,7 @@ func TestListInstancesQueryBudget(t *testing.T) {
 
 	// Pickup cutoffs use one window read. Both runs cover three distinct
 	// days and the count must stay flat as instances per day grow.
+	var firstID int64
 	created := 0
 	addInstances := func(n int) {
 		for range n {
@@ -50,6 +51,9 @@ func TestListInstancesQueryBudget(t *testing.T) {
 				EndHHMM:         fmt.Sprintf("%02d:00", startHour+1),
 				Title:           fmt.Sprintf("Budget-Block-%d", created),
 			})
+			if created == 0 {
+				firstID = inst.ID
+			}
 			staff := testpkg.CreateTestStaff(t, s.db, "InstancesBudget", fmt.Sprintf("Staff%d", created))
 			student := testpkg.CreateTestStudent(t, s.db, "InstancesBudget", fmt.Sprintf("Kind%d", created), "1a")
 			testpkg.CreateTestInstanceStaff(t, s.db, inst.ID, staff.ID, testpkg.InstanceStaffOpts{IsPrimary: true})
@@ -97,4 +101,21 @@ func TestListInstancesQueryBudget(t *testing.T) {
 	assert.Equal(t, filteredSmallCount, filteredLargeCount,
 		"group-filter query count must be independent of the instance count")
 	querybudgets.AssertQueryBudget(t, "api.timetable.instances.list.group_filter", counter.Measurement(counter.Queries()))
+
+	for _, n := range []int{7, 30} {
+		counter.Reset()
+		w := doList(t, testpkg.MountedQueryBudgetRouter("/api/timetable", router), fmt.Sprintf("/instances?from=%s&to=%s&view=slim", from, fromDate.AddDays(n-1)))
+		require.Equal(t, http.StatusOK, w.Code)
+		t.Logf("slim days=%d blocks=%d selects=%d bytes=%d", n, created, counter.Total(), w.Body.Len())
+		querybudgets.AssertQueryBudget(t, "api.timetable.instances.list.slim", counter.Measurement(counter.Queries()))
+		assert.Empty(t, counter.Selects("schedule.student_pickup_exceptions"), "the grid must not load detail-only pickup cutoffs")
+	}
+	counter.Reset()
+	w := doList(t, testpkg.MountedQueryBudgetRouter("/api/timetable", router), fmt.Sprintf("/instances/%d/attendance", firstID))
+	require.Equal(t, http.StatusOK, w.Code)
+	var got instanceAttendanceResponse
+	decodeEnvelope(t, w, &got)
+	require.Equal(t, firstID, got.InstanceID.Int64())
+	require.Len(t, got.Students, 1)
+	querybudgets.AssertQueryBudget(t, "api.timetable.instance_attendance.list", counter.Measurement(counter.Queries()))
 }
