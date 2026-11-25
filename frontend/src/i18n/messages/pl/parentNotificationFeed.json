@@ -1,6 +1,6 @@
 {
   "bell": "Komunikaty",
-  "bellCount": "Komunikaty ({count})",
+  "bellCount": "Komunikaty: {count}",
   "badge": "Nowe komunikaty: {count}",
   "bellTooltip": "Pokazuje komunikaty szkoły dotyczące Państwa dzieci.",
   "description": "Komunikaty szkoły dotyczące Państwa dzieci, na przykład gdy opieka zostaje odwołana.",

@@ -1,6 +1,6 @@
 {
   "bell": "Notices",
-  "bellCount": "Notices ({count})",
+  "bellCount": "Notices: {count}",
   "badge": "{count} new notices",
   "bellTooltip": "Shows notices from the school about your children.",
   "description": "Notices from the school about your children, for example when care is cancelled.",

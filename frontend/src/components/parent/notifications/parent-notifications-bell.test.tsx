@@ -155,7 +155,7 @@ describe("ParentNotificationsBell", () => {
     state.unread = 12;
     renderBell();
     const bell = await screen.findByRole("button", {
-      name: "9+: Hinweise (12)",
+      name: "9+: Hinweise: 12",
     });
     expect(bell).toHaveTextContent("9+");
     expect(staffApi.fetchNotificationFeedUnreadCount).not.toHaveBeenCalled();
@@ -163,9 +163,7 @@ describe("ParentNotificationsBell", () => {
 
   it("opens without reading, and a click reads the notice and opens its link", async () => {
     renderBell();
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Hinweise (1)" }),
-    );
+    fireEvent.click(await screen.findByRole("button", { name: "Hinweise: 1" }));
 
     const row = await screen.findByText("Fußball-AG am Dienstag entfällt");
     expect(
@@ -189,9 +187,7 @@ describe("ParentNotificationsBell", () => {
 
   it("marks all as read and reloads on a live change", async () => {
     renderBell();
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Hinweise (1)" }),
-    );
+    fireEvent.click(await screen.findByRole("button", { name: "Hinweise: 1" }));
     fireEvent.click(
       await screen.findByRole("button", { name: "Alle als gelesen markieren" }),
     );

@@ -1,6 +1,6 @@
 {
   "bell": "Hinweise",
-  "bellCount": "Hinweise ({count})",
+  "bellCount": "Hinweise: {count}",
   "badge": "{count} neue Hinweise",
   "bellTooltip": "Zeigt Hinweise der Schule zu deinen Kindern.",
   "description": "Hinweise der Schule zu deinen Kindern, zum Beispiel wenn eine Betreuung ausfällt.",

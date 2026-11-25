@@ -1,6 +1,6 @@
 {
   "bell": "Lajmërime",
-  "bellCount": "Lajmërime ({count})",
+  "bellCount": "Lajmërime: {count}",
   "badge": "{count} lajmërime të reja",
   "bellTooltip": "Tregon lajmërimet e shkollës për fëmijët tuaj.",
   "description": "Lajmërimet e shkollës për fëmijët tuaj, për shembull kur kujdesi anulohet.",
