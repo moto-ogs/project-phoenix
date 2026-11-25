@@ -38,7 +38,7 @@ export async function fetchTraegerSchoolsDayChanges(): Promise<TraegerSchoolsDay
   );
 }
 
-export function mapTraegerSchoolsDayChanges(
+function mapTraegerSchoolsDayChanges(
   changes: traegerSchoolsContract.SchoolsDayChanges,
 ): TraegerSchoolsDayChanges {
   return {
