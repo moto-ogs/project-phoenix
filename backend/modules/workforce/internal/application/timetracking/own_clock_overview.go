@@ -104,6 +104,10 @@ func (facts ownTimeFacts) projectClock(staffID int64, open *WorkSession, current
 	}
 	closed := slices.DeleteFunc(slices.Clone(facts.sessions), func(row *WorkSession) bool { return row.CheckOutTime == nil })
 	result.CompletedToday = actualMinutesByDay(closed, facts.breaks, now, today, today, today)[today]
+	result.CompletedWeek = result.CompletedToday
+	for day := week; day.Before(today); day = day.AddDays(1) {
+		result.CompletedWeek += facts.actual[day]
+	}
 	for _, summary := range facts.weeklySummaries(week, weekEnd, anchor) {
 		result.IsOverWeeklyMax = result.IsOverWeeklyMax || summary.IsOverWeeklyMax
 	}

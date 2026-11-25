@@ -13786,18 +13786,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timeTrackingEventPublisher.QueueStaffLeaveChanged",
-      "binding_digest": "94caed85a5cd48c4953f8024ff8c599b",
+      "binding_digest": "1606ce29971f1bf931b4889191d882bf",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.EventPublisher.QueueStaffLeaveChanged",
       "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.QueueStaffLeaveChanged",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/application/realtimeevents.BoundTenantSignal.Announce",
       "target_owner": "delivery-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timeTrackingEventPublisher.QueueStaffTimeTrackingChanged",
-      "binding_digest": "ab05ebb5920be0af943d110f6bc15b8e",
+      "binding_digest": "03a002265be832790a7839a485ad0f4d",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.EventPublisher.QueueStaffTimeTrackingChanged",
       "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.QueueStaffTimeTrackingChanged",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/application/realtimeevents.BoundTenantSignal.Announce",
       "target_owner": "delivery-platform"
     },
     {

@@ -78923,6 +78923,12 @@
           }
         },
         {
+          "name": "completed_week_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
           "name": "today_counts_in_totals",
           "schema": {
             "kind": "bool"

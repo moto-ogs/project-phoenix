@@ -208,6 +208,7 @@ type OwnClockOverview struct {
 	Assignments         OwnTimeAssignments  `json:"assignments"`
 	Chart               []OwnTimeChartPoint `json:"chart"`
 	CompletedToday      int                 `json:"completed_today_minutes"`
+	CompletedWeek       int                 `json:"completed_week_minutes"`
 	TodayCountsInTotals bool                `json:"today_counts_in_totals"`
 	LaborDays           []WorkDayLaborHint  `json:"labor_days"`
 	IsOverWeeklyMax     bool                `json:"is_over_weekly_max"`

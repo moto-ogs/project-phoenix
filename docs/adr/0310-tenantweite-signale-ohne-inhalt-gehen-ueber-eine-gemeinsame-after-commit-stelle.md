@@ -46,9 +46,10 @@ Variante 2.
    Ein neues Signal ist ein neuer Wert dort und ein Event in
    `realtime/events.go`, keine neue After-Commit-Stelle und kein neuer
    Registereintrag.
-3. Owner erreichen die Stelle über einen eigenen Port. Die Wurzel bindet ihn mit
-   `deliveryCompose.NewCalendarAppointmentsChanged(hub, logger)`, je Signal ein solcher Konstruktor; der Owner ruft ihn in
-   seiner Transaktion. Der Kalender ist der erste Nutzer:
+3. Owner erreichen die Stelle über einen eigenen Port. Die Wurzel bindet ihn
+   über `deliveryCompose.NewTenantSignal(hub, logger, event)`. Delivery prüft,
+   ob das Event als inhaltsloses Signal zugelassen ist. Der Owner ruft den Port
+   in seiner Transaktion. Der Kalender ist der erste Nutzer:
    `calendar_appointments_changed` nach jeder Termin-Schreibung
    (`withinAppointmentWrite`: Anlegen, Ändern, Absagen, Löschen, Absage eines
    einzelnen Termins einer Serie, Schultermine, Elternsprechtag-Buchungen).
