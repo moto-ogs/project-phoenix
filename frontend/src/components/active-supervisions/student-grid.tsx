@@ -1,5 +1,6 @@
 "use client";
 
+import { useAfterInitialPaint } from "~/lib/hooks/use-after-initial-paint";
 import { teacherHintKey, teacherHintText } from "~/lib/student-helpers";
 import { StickyNote } from "lucide-react";
 import {
@@ -206,6 +207,15 @@ export function SupervisionStudentGrid({
   table,
 }: SupervisionStudentGridProps) {
   const holidayGuestLabel = useHolidayGuestLabels(students);
+  const showAllCards = useAfterInitialPaint();
+  // These cards are at least 112px high. Start with enough rows for the whole
+  // viewport even when the room's header and filters are scrolled out of view.
+  const initialCardCount =
+    showAllCards || table
+      ? filteredStudents.length
+      : Math.min(3, Math.max(1, Math.floor(window.innerWidth / 320))) *
+        Math.ceil(window.innerHeight / 112);
+  const cards = filteredStudents.slice(0, initialCardCount);
   // Leer- und Filterzustand sitzen auf derselben Fläche wie die Karten, die
   // sie ersetzen: freier Text auf dem gemusterten Grund liest sich als Lücke,
   // nicht als Zustand.
@@ -249,7 +259,7 @@ export function SupervisionStudentGrid({
   return (
     <div>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3">
-        {filteredStudents.map((student) => {
+        {cards.map((student) => {
           const studentPickup = pickupTimesData?.get(student.id.toString());
           const studentArrival = arrivalTimesData?.get(student.id.toString());
           const presentStudent = withActiveSupervisionPresence(student);
