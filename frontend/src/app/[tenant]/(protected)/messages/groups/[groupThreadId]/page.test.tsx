@@ -65,7 +65,7 @@ vi.mock("~/lib/parent-group-threads-api", async (importOriginal) => ({
   ...(await importOriginal()),
   ...api,
 }));
-import GroupMessagePage from "./page";
+import GroupMessagePage from "./page-content";
 
 /**
  * Findet die Statuszeile aus genau diesen Angaben. Die Angaben stehen ohne

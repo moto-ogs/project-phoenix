@@ -1,5 +1,9 @@
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
-import type { Translations } from "~/lib/enrollment-translations";
+import {
+  localizeFormFields,
+  translatedText,
+  type Translations,
+} from "~/lib/enrollment-translations";
 import { translationsFromContract } from "~/lib/enrollment-form-schema-api";
 import { WEEKDAY_CODES, weekdayShortLabel } from "~/lib/weekdays";
 
@@ -68,6 +72,19 @@ export function formLabelsFromContract(
   };
 }
 
+export function localizeEnrollmentFormLabels(
+  labels: EnrollmentFormLabels,
+  locale: string,
+): EnrollmentFormLabels {
+  return {
+    fields: localizeFormFields(labels.fields, locale),
+    legal_blocks: labels.legal_blocks.map((block) => ({
+      ...block,
+      title: translatedText(block, "title", block.title, locale),
+    })),
+  };
+}
+
 interface EnrollmentChangeRequestDiffRow {
   readonly id: string;
   readonly label: string;
@@ -79,6 +96,33 @@ export interface EnrollmentChangeRequestDiffGroup {
   readonly key: string;
   readonly label: string;
   readonly rows: EnrollmentChangeRequestDiffRow[];
+}
+
+export interface FormattedChangeRequestDiffGroup {
+  readonly key: string;
+  readonly label: string;
+  readonly rows: readonly (Omit<
+    EnrollmentChangeRequestDiffRow,
+    "before" | "after"
+  > & {
+    readonly before: string;
+    readonly after: string;
+  })[];
+}
+
+export function formatEnrollmentChangeRequestDiff(
+  input: EnrollmentChangeRequestDiffInput,
+): FormattedChangeRequestDiffGroup[] {
+  const copy = input.copy ?? DEFAULT_ENROLLMENT_CHANGE_REQUEST_DIFF_COPY;
+  return buildEnrollmentChangeRequestDiffGroups(input).map((group) => ({
+    ...group,
+    rows: group.rows.map(({ id, label, before, after }) => ({
+      id,
+      label,
+      before: formatEnrollmentChangeRequestValue(before, copy.emptyLabel, copy),
+      after: formatEnrollmentChangeRequestValue(after, copy.emptyLabel, copy),
+    })),
+  }));
 }
 
 export interface EnrollmentChangeRequestDiffCopy {

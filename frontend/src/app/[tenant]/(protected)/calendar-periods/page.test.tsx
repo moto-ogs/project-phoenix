@@ -49,7 +49,7 @@ vi.mock("~/components/ui/loading", () => ({
   Loading: () => <div data-testid="loading" />,
 }));
 
-import CalendarPeriodsPage from "./page";
+import CalendarPeriodsPage from "./page-content";
 
 describe("CalendarPeriodsPage", () => {
   beforeEach(() => {

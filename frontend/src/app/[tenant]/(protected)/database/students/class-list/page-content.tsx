@@ -1,0 +1,880 @@
+"use client";
+
+// Klassenlisten-Verwaltung (#2382): der vollständige Klassenverband aus
+// Admin-Sicht. Reguläre Kinder erscheinen read-only ("In moto angelegt",
+// gepflegt werden sie in der Kinder-Datenbank); Klassenlisteneinträge, also
+// Kinder OHNE OGS-Datensatz mit nur Vorname, Nachname und Klasse, werden hier
+// angelegt, verschoben, gelöscht und bei Dubletten bewusst einem regulären
+// Kind zugeordnet. Nur so sieht die Pflegekraft pro Klasse, welche Kinder
+// schon erfasst sind und welche noch fehlen.
+//
+// Design follows the Anmeldungen/Planung surface language: calm content
+// section without a kicker, gray-50 stats, no colored dashboards.
+
+import Link from "~/components/ui/navigation-link";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
+import { Pencil, Trash2, Upload, UserRoundCheck } from "lucide-react";
+import { DatabaseCreateAction } from "~/components/database/database-create-action";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
+import { Button, ButtonLink } from "~/components/ui/button";
+import { ConfirmationModal, Modal } from "~/components/ui/modal";
+import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
+import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
+import { EmptyState } from "~/components/ui/empty-state";
+import { Input } from "~/components/ui/input";
+import { SuggestInput } from "~/components/ui/suggest-input";
+import { Radio } from "~/components/ui/radio";
+import {
+  OverflowMenu,
+  type OverflowMenuEntry,
+} from "~/components/ui/page-header/OverflowMenu";
+import type { FilterConfig } from "~/components/ui/page-header/types";
+import { SectionCard } from "~/components/ui/section-card";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { formatCount } from "~/lib/format-utils";
+import { StatusBadge } from "~/components/ui/status-badge";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import {
+  useReadDraftForm,
+  useSwrLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import {
+  assignClassListEntry,
+  createClassListEntry,
+  deleteClassListEntry,
+  fetchClassListEntries,
+  updateClassListEntry,
+  type ClassListEntry,
+} from "~/lib/class-list-entries-api";
+import { hasPermission } from "~/lib/auth-utils";
+import { createLogger } from "~/lib/logger";
+import { schoolClassName } from "~/lib/school-class-label";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
+import { useDraftOn } from "~/lib/swr/read-draft";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
+import { useTenantAwarePath } from "~/lib/tenant-path";
+import { useChildrenWithoutCarePlace } from "~/lib/tenant-context";
+import { Alert } from "~/components/ui/alert";
+import { fetchSchoolClasses } from "~/lib/student-api";
+import {
+  fetchRosterStudents,
+  type RosterStudent,
+} from "~/lib/class-roster-resource";
+import { ChoiceTile } from "~/components/ui/choice-tile";
+
+/** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
+const CLASS_LIST_INFO =
+  "Hier siehst du alle Kinder im Klassenverband, nach Klassen sortiert. So sind die Klassenlisten vollständig. Über „Alle Klassen“ wählst du eine einzelne Klasse.";
+
+const logger = createLogger({ component: "ClassListEntriesPage" });
+
+const SWR_KEY = tenantStudentKeys.classListEntries();
+
+interface EntryFormState {
+  firstName: string;
+  lastName: string;
+  schoolClass: string;
+}
+
+const EMPTY_FORM: EntryFormState = {
+  firstName: "",
+  lastName: "",
+  schoolClass: "",
+};
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+// Bewusst still: die Klassen sind nur Vorschläge im Eingabefeld. Ohne sie
+// tippt man die Klasse selbst; Speichern und Liste hängen nicht daran.
+async function fetchClassSuggestions(): Promise<string[]> {
+  return fetchSchoolClasses().catch(() => []);
+}
+
+// One row of the combined roster: a regular student (read-only) or a
+// class-list-only entry (editable).
+type RosterRow =
+  | { kind: "student"; student: RosterStudent }
+  | { kind: "entry"; entry: ClassListEntry };
+
+function rowName(row: RosterRow): { firstName: string; lastName: string } {
+  return row.kind === "student" ? row.student : row.entry;
+}
+
+function rowClass(row: RosterRow): string {
+  return row.kind === "student"
+    ? row.student.schoolClass
+    : row.entry.schoolClass;
+}
+
+// Sort key that keeps "Klasse 1a" ≡ "1a" together and orders grades
+// numerically (1a before 10a) — the same equivalence the exports use.
+function classSortKey(schoolClass: string): string {
+  const normalized = schoolClassName(schoolClass).toLowerCase();
+  return normalized.replace(/^\d+/, (digits) => digits.padStart(3, "0"));
+}
+
+function rowSortKey(row: RosterRow): string {
+  const { firstName, lastName } = rowName(row);
+  return `${classSortKey(rowClass(row))} ${lastName.toLowerCase()} ${firstName.toLowerCase()}`;
+}
+
+export default function ClassListEntriesPage() {
+  const tenantPath = useTenantAwarePath();
+  const toast = useToast();
+  const { data: session } = useSession();
+  // Mirror the backend route gates (api/classlistentries): create needs
+  // users:create (der Sammelimport ebenso), edit users:update, delete und
+  // Zuordnen users:delete. Ohne das Recht gibt es keinen Einstieg in den
+  // Dialog; der Backend-403 bleibt Defense-in-Depth, keine UX.
+  const canCreate = hasPermission(session, "users:create");
+  // Führt die Schule Kinder ohne OGS-Platz als eigene Kinder (#4803), legt
+  // sie hier keine Einträge mehr an: ein Import wird sofort zu Kindern.
+  const childrenWithoutCarePlace = useChildrenWithoutCarePlace();
+  const canUpdate = hasPermission(session, "users:update");
+  const canDelete = hasPermission(session, "users:delete");
+  const entriesRead = useSWRAuth(SWR_KEY, fetchClassListEntries);
+  const { data: entries, error: entriesError, isLoading, mutate } = entriesRead;
+  const entriesReadRef = useRef(entriesRead);
+  useLayoutEffect(() => {
+    entriesReadRef.current = entriesRead;
+  });
+  // Ladefehler mit Katalogtext und Wiederholen (#2517).
+  const loadError = useSwrLoadError(entriesError, "die Klassenliste", () =>
+    mutate(),
+  );
+  const { data: classSuggestions } = useSWRAuth(
+    tenantStudentKeys.classListClassSuggestions(),
+    fetchClassSuggestions,
+  );
+  // Die regulären Kinder gehören mit auf diese Seite: ohne sie kann niemand
+  // beurteilen, welche Kinder einer Klasse schon erfasst sind und welche
+  // fehlen. Nach jeder Eintrags-Änderung mit-revalidiert (Zuordnen ersetzt
+  // einen Eintrag durch das reguläre Kind).
+  const {
+    data: students,
+    error: studentsError,
+    mutate: mutateStudents,
+  } = useSWRAuth(tenantStudentKeys.classListRosterStudents(), () =>
+    fetchRosterStudents(),
+  );
+  const studentsLoadError = useSwrLoadError(
+    studentsError,
+    "die Liste der angelegten Kinder",
+    () => mutateStudents(),
+  );
+  const [classFilter, setClassFilter] = useState("all");
+
+  const [modal, setModal] = useState<
+    | { kind: "create" }
+    | { kind: "edit"; entry: ClassListEntry }
+    | { kind: "delete"; entry: ClassListEntry }
+    | { kind: "assign"; entry: ClassListEntry }
+    | null
+  >(null);
+  const [createForm, setCreateForm] = useState<EntryFormState>(EMPTY_FORM);
+  // Fehler bleiben im offenen Dialog, Feldfehler am Feld (#2517).
+  const formRef = useRef<HTMLDivElement>(null);
+  const formErrors = useApiFormError(formRef);
+  // Das Bearbeiten ruht auf dem Eintrag, wie er beim Öffnen gelesen war
+  // (ADR 0311): ein neueres Lesen füllt den Entwurf nur nach, solange nichts
+  // geändert ist; nach einer Ablehnung zeigt der Dialog den gespeicherten
+  // Eintrag, und Speichern wartet, bis er gelesen ist.
+  const editingId = modal?.kind === "edit" ? modal.entry.id : null;
+  const edit = useDraftOn<
+    ClassListEntry,
+    EntryFormState,
+    string,
+    ClassListEntry
+  >(
+    {
+      opening: editingId,
+      data: entries?.find((entry) => entry.id === editingId),
+      error: entriesError,
+      reload: async () => {
+        const stored = await revalidateOrThrow(entriesReadRef.current);
+        const entry = stored.find((candidate) => candidate.id === editingId);
+        if (!entry) throw new Error("class list entry is gone");
+        return entry;
+      },
+      write: (stored) =>
+        mutate(
+          (current) =>
+            current?.map((entry) => (entry.id === stored.id ? stored : entry)),
+          { revalidate: false },
+        ),
+    },
+    {
+      token: (entry) => entry.version,
+      toDraft: (entry) => ({
+        firstName: entry.firstName,
+        lastName: entry.lastName,
+        schoolClass: entry.schoolClass,
+      }),
+      answer: (saved) => saved,
+    },
+  );
+  const editForm = useReadDraftForm(
+    modal?.kind === "edit" ? edit : null,
+    formErrors,
+    "den Eintrag",
+  );
+  const form = modal?.kind === "edit" ? (edit.draft ?? EMPTY_FORM) : createForm;
+  const setForm = (next: (current: EntryFormState) => EntryFormState) => {
+    if (modal?.kind === "edit") edit.setDraft(next);
+    else setCreateForm(next);
+  };
+  const deleteErrors = useApiFormError();
+  const assignErrors = useApiFormError();
+  const latestSubmitRef = useRef<() => void>(() => undefined);
+  const latestDeleteRef = useRef<() => void>(() => undefined);
+  const latestAssignRef = useRef<() => void>(() => undefined);
+  const [saving, setSaving] = useState(false);
+  // Das Zuordnungs-Ziel: bei genau einem Kandidaten vorbelegt, bei mehreren
+  // gleichnamigen Kindern MUSS die Person bewusst wählen, sonst könnte der
+  // Eintrag dem falschen Kind zugeschlagen und dabei gelöscht werden.
+  const [assignTarget, setAssignTarget] = useState<string | null>(null);
+
+  const entryRows = useMemo(() => entries ?? [], [entries]);
+  const duplicateCount = useMemo(
+    () =>
+      entryRows.filter((entry) => entry.matchingStudentIds.length > 0).length,
+    [entryRows],
+  );
+
+  const allRows = useMemo<RosterRow[]>(
+    () => [
+      ...(students ?? []).map((student): RosterRow => ({
+        kind: "student",
+        student,
+      })),
+      ...entryRows.map((entry): RosterRow => ({ kind: "entry", entry })),
+    ],
+    [students, entryRows],
+  );
+
+  // Klassenoptionen aus BEIDEN Quellen, dedupliziert über dieselbe
+  // Normalisierung wie die Sortierung (erste Schreibweise gewinnt).
+  const classOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const row of allRows) {
+      const display = rowClass(row).trim();
+      if (display === "") continue;
+      const key = classSortKey(display);
+      if (!seen.has(key)) seen.set(key, display);
+    }
+    return [...seen.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, display]) => ({ key, display }));
+  }, [allRows]);
+
+  const rows = useMemo(
+    () =>
+      classFilter === "all"
+        ? allRows
+        : allRows.filter((row) => classSortKey(rowClass(row)) === classFilter),
+    [allRows, classFilter],
+  );
+
+  const classCount = classOptions.length;
+  // Statuszeile des Seitenkopfs aus den bereits geladenen Zeilen. Ohne
+  // geladene Einträge steht keine "0 Kinder" neben dem Ladefehler; fehlen
+  // nur die angelegten Kinder, entfällt die Gesamtzahl, statt sie still
+  // auszulassen (#2517).
+  const statusLine =
+    entries === undefined ? null : (
+      <TenantPageStats
+        items={[
+          ...(students === undefined
+            ? []
+            : [
+                {
+                  value: formatCount(allRows.length),
+                  label: allRows.length === 1 ? "Kind" : "Kinder",
+                },
+              ]),
+          {
+            value: formatCount(entryRows.length),
+            label: "ohne Betreuung",
+          },
+          {
+            value: formatCount(duplicateCount),
+            label: `mögliche ${duplicateCount === 1 ? "Dublette" : "Dubletten"}`,
+          },
+        ]}
+      />
+    );
+  const rosterSummary =
+    students === undefined
+      ? ""
+      : ` ${formatCount(students.length)} davon sind in moto angelegt und verteilen sich auf ${formatCount(classCount)} ${classCount === 1 ? "Klasse" : "Klassen"}.`;
+
+  // Klassenfilter der Kopfkarte: dieselbe Bauart wie auf jeder anderen
+  // Tenant-Seite.
+  const filterConfigs: FilterConfig[] = [
+    {
+      id: "school-class",
+      label: "Klasse",
+      type: "dropdown",
+      value: classFilter,
+      onChange: (value) => setClassFilter(value as string),
+      options: [
+        { value: "all", label: "Alle Klassen" },
+        ...classOptions.map((option) => ({
+          value: option.key,
+          label: option.display,
+        })),
+      ],
+    },
+  ];
+
+  const clearModalErrors = () => {
+    formErrors.clear();
+    deleteErrors.clear();
+    assignErrors.clear();
+  };
+
+  const closeModal = () => {
+    setModal(null);
+    clearModalErrors();
+    setCreateForm(EMPTY_FORM);
+    setAssignTarget(null);
+  };
+
+  const openCreate = () => {
+    setCreateForm(EMPTY_FORM);
+    clearModalErrors();
+    setModal({ kind: "create" });
+  };
+
+  const openEdit = (entry: ClassListEntry) => {
+    clearModalErrors();
+    setModal({ kind: "edit", entry });
+  };
+
+  // Ein bearbeiteter Eintrag geht mit dem Stand raus, auf dem der Entwurf
+  // ruht. Seit dem Lesen geändert: der Dialog zeigt den gespeicherten
+  // Eintrag, ohne „Wiederholen“ (ADR 0311).
+  const submitEdit = async (name: string) => {
+    const result = await edit.submit((version, draft) =>
+      updateClassListEntry(editingId ?? "", draft, version),
+    );
+    if (result.ok) {
+      toast.success(`Der Eintrag „${name}“ ist gespeichert.`);
+      closeModal();
+      await mutate();
+      return;
+    }
+    if (result.skipped) return;
+    logger.error("class_list_entry_save_failed", {
+      error: errorMessage(result.error),
+    });
+    void formErrors.show(
+      result.error,
+      result.refused
+        ? { object: "das Speichern des Eintrags", reload: result.reload }
+        : {
+            object: "das Speichern des Eintrags",
+            retry: () => latestSubmitRef.current(),
+          },
+    );
+  };
+
+  const submitForm = async () => {
+    if (modal?.kind !== "create" && modal?.kind !== "edit") return;
+    // Nichts geht raus, bevor der gespeicherte Stand gelesen ist; der
+    // gezeigte Fehler bleibt dann stehen.
+    if (!editForm.begin()) return;
+    setSaving(true);
+    const name = `${form.firstName.trim()} ${form.lastName.trim()}`;
+    try {
+      if (modal.kind === "edit") {
+        await submitEdit(name);
+        return;
+      }
+      await createClassListEntry(form);
+      toast.success(`Der Eintrag „${name}“ ist angelegt.`);
+      await mutate();
+      closeModal();
+    } catch (err) {
+      logger.error("class_list_entry_save_failed", {
+        error: errorMessage(err),
+      });
+      void formErrors.show(err, {
+        object: "das Speichern des Eintrags",
+        retry: () => latestSubmitRef.current(),
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (modal?.kind !== "delete") return;
+    setSaving(true);
+    deleteErrors.clear();
+    try {
+      await deleteClassListEntry(modal.entry.id);
+      toast.success(
+        `Der Eintrag „${modal.entry.firstName} ${modal.entry.lastName}“ ist gelöscht.`,
+      );
+      await mutate();
+      closeModal();
+    } catch (err) {
+      logger.error("class_list_entry_delete_failed", {
+        error: errorMessage(err),
+      });
+      void deleteErrors.show(err, {
+        object: "das Löschen des Eintrags",
+        retry: () => latestDeleteRef.current(),
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmAssign = async () => {
+    if (modal?.kind !== "assign") return;
+    const studentId = assignTarget;
+    if (!studentId) return;
+    setSaving(true);
+    assignErrors.clear();
+    try {
+      await assignClassListEntry(modal.entry.id, studentId);
+      toast.success(
+        "Der Eintrag ist dem Kind zugeordnet und steht nicht mehr extra auf der Klassenliste.",
+      );
+      await Promise.all([mutate(), mutateStudents()]);
+      closeModal();
+    } catch (err) {
+      logger.error("class_list_entry_assign_failed", {
+        error: errorMessage(err),
+      });
+      void assignErrors.show(err, {
+        object: "das Zuordnen des Eintrags",
+        retry: () => latestAssignRef.current(),
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Wiederholen sendet den Stand, der dann im Dialog steht.
+  useLayoutEffect(() => {
+    latestSubmitRef.current = () => void submitForm();
+    latestDeleteRef.current = () => void confirmDelete();
+    latestAssignRef.current = () => void confirmAssign();
+  });
+
+  const columns: DataTableColumn<RosterRow>[] = [
+    {
+      key: "name",
+      header: "Name",
+      render: (row) => {
+        const { firstName, lastName } = rowName(row);
+        return (
+          <span
+            className={
+              row.kind === "student"
+                ? "text-gray-700"
+                : "font-medium text-gray-900"
+            }
+          >
+            {lastName}, {firstName}
+          </span>
+        );
+      },
+      sortValue: (row) => {
+        const { firstName, lastName } = rowName(row);
+        return `${lastName.toLowerCase()} ${firstName.toLowerCase()}`;
+      },
+    },
+    {
+      key: "schoolClass",
+      header: "Klasse",
+      render: (row) => <span className="text-gray-700">{rowClass(row)}</span>,
+      sortValue: rowSortKey,
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (row) => {
+        if (row.kind === "student") {
+          return (
+            <StatusBadge
+              tone="green"
+              label="In moto angelegt"
+              title="Reguläres Kind mit vollständigem Datensatz. Gepflegt wird es in der Kinder-Datenbank."
+            />
+          );
+        }
+        return row.entry.matchingStudentIds.length > 0 ? (
+          <StatusBadge
+            tone="warning"
+            label="Mögliche Dublette"
+            title="Ein regulär angelegtes Kind trägt denselben Namen in derselben Klasse. Bitte prüfen und bewusst zuordnen."
+          />
+        ) : (
+          <StatusBadge tone="gray" label="Keine Betreuung" />
+        );
+      },
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      render: (row) => {
+        if (row.kind === "student") {
+          return (
+            <div className="flex items-center justify-end">
+              <ButtonLink
+                href={tenantPath(`/students/${row.student.id}`)}
+                tooltip="Öffnet die Akte des Kindes."
+                variant="ghost"
+                size="compact"
+              >
+                Öffnen
+              </ButtonLink>
+            </div>
+          );
+        }
+        if (!canUpdate && !canDelete) return null;
+        const entry = row.entry;
+        // Zeilenaktionen nur im Kebab der Zeile (BAUARTEN-SPEC Bauart 1
+        // Regel 4); die Rückfragen bleiben in den bestehenden Dialogen.
+        const items: OverflowMenuEntry[] = [
+          ...(canDelete && entry.matchingStudentIds.length > 0
+            ? [
+                {
+                  label: "Zuordnen",
+                  description:
+                    "Entfernt den Eintrag, das angelegte Kind bleibt. moto fragt vorher nach.",
+                  icon: <UserRoundCheck className="h-4 w-4" aria-hidden />,
+                  onClick: () => {
+                    clearModalErrors();
+                    setAssignTarget(
+                      entry.matchingStudentIds.length === 1
+                        ? (entry.matchingStudentIds[0] ?? null)
+                        : null,
+                    );
+                    setModal({ kind: "assign", entry });
+                  },
+                },
+              ]
+            : []),
+          ...(canUpdate
+            ? [
+                {
+                  label: "Bearbeiten",
+                  description: "Ändert Name oder Klasse des Eintrags.",
+                  icon: <Pencil className="h-4 w-4" aria-hidden />,
+                  onClick: () => openEdit(entry),
+                },
+              ]
+            : []),
+          ...(canDelete
+            ? [
+                {
+                  label: "Löschen",
+                  description:
+                    "Nimmt den Eintrag von allen Klassenlisten. moto fragt vorher nach.",
+                  icon: <Trash2 className="h-4 w-4" aria-hidden />,
+                  destructive: true,
+                  onClick: () => {
+                    clearModalErrors();
+                    setModal({ kind: "delete", entry });
+                  },
+                },
+              ]
+            : []),
+        ];
+        return (
+          <div className="flex items-center justify-end">
+            <OverflowMenu
+              ariaLabel={`Aktionen für ${entry.firstName} ${entry.lastName}`}
+              items={items}
+            />
+          </div>
+        );
+      },
+    },
+  ];
+
+  return (
+    <TenantPage
+      title="Klassenliste"
+      info={CLASS_LIST_INFO}
+      stats={statusLine}
+      statsLoading={isLoading && entries === undefined}
+      // Ein Ladefehler ist ein Fehlerzustand des Geruests, kein Kasten im
+      // Inhalt (BAUARTEN-SPEC, Querregel „Zustaende").
+      error={loadError}
+      filters={filterConfigs}
+      actions={
+        canCreate ? (
+          <>
+            {childrenWithoutCarePlace ? null : (
+              <DatabaseCreateAction
+                label="Eintrag"
+                ariaLabel="Klassenlisteneintrag anlegen"
+                onClick={openCreate}
+              />
+            )}
+            <OverflowMenu
+              ariaLabel="Weitere Aktionen"
+              items={[
+                {
+                  label: "Sammelimport",
+                  description: childrenWithoutCarePlace
+                    ? "Legt viele Kinder ohne OGS-Platz aus einer Datei an."
+                    : "Legt viele Einträge aus einer Datei an.",
+                  icon: <Upload className="h-4 w-4" aria-hidden />,
+                  href: tenantPath("/database/students/class-list/import"),
+                  // Navigation only: OverflowMenu verlangt onClick auch bei href.
+                  onClick: () => undefined,
+                },
+              ]}
+            />
+          </>
+        ) : undefined
+      }
+      back
+      backHref="/database/students"
+      backLabel="Zurück zu den Kinderdaten"
+      overlays={
+        <>
+          <Modal
+            isOpen={modal?.kind === "create" || modal?.kind === "edit"}
+            onClose={closeModal}
+            title={
+              modal?.kind === "edit"
+                ? "Eintrag bearbeiten"
+                : "Klassenlisteneintrag anlegen"
+            }
+          >
+            <div ref={formRef} className="space-y-4">
+              <FormErrorAlert message={formErrors.error} />
+              <LoadErrorAlert error={editForm.loadError} />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  id="entry-first-name"
+                  name="first_name"
+                  label="Vorname"
+                  error={formErrors.fieldError("first_name")}
+                  value={form.firstName}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      firstName: e.target.value,
+                    }))
+                  }
+                  placeholder="z.B. Lena"
+                />
+                <Input
+                  id="entry-last-name"
+                  name="last_name"
+                  label="Nachname"
+                  error={formErrors.fieldError("last_name")}
+                  value={form.lastName}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, lastName: e.target.value }))
+                  }
+                  placeholder="z.B. Beispiel"
+                />
+              </div>
+              <div>
+                <SuggestInput
+                  id="entry-school-class"
+                  name="school_class"
+                  label="Klasse"
+                  hint="Genau wie bei den regulären Kindern geschrieben, damit der Eintrag in derselben Klassenliste landet."
+                  error={formErrors.fieldError("school_class")}
+                  value={form.schoolClass}
+                  onValueChange={(schoolClass) =>
+                    setForm((prev) => ({ ...prev, schoolClass }))
+                  }
+                  suggestions={classSuggestions ?? []}
+                  listLabel="Vorschläge für die Klasse"
+                  placeholder="z.B. 1a"
+                />
+              </div>
+              <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  noTooltip="Abbrechen schließt nur das Fenster, ohne etwas zu ändern."
+                  onClick={closeModal}
+                >
+                  Abbrechen
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  disabled={
+                    saving ||
+                    editForm.waitReason !== undefined ||
+                    !form.firstName.trim() ||
+                    !form.lastName.trim() ||
+                    !form.schoolClass.trim()
+                  }
+                  disabledReason={
+                    saving
+                      ? undefined
+                      : (editForm.waitReason ??
+                        "Fülle zuerst Vorname, Nachname und Klasse aus.")
+                  }
+                  tooltip={
+                    modal?.kind === "edit"
+                      ? "Speichert Name und Klasse des Eintrags."
+                      : "Setzt das Kind ohne OGS-Betreuung auf die Klassenliste."
+                  }
+                  onClick={() => void submitForm()}
+                >
+                  {saving
+                    ? "Speichern…"
+                    : modal?.kind === "edit"
+                      ? "Speichern"
+                      : "Anlegen"}
+                </Button>
+              </div>
+            </div>
+          </Modal>
+
+          <ConfirmDeleteModal
+            isOpen={modal?.kind === "delete"}
+            onClose={closeModal}
+            onConfirm={() => void confirmDelete()}
+            title="Eintrag löschen?"
+            description={
+              modal?.kind === "delete" ? (
+                <>
+                  Soll der Eintrag{" "}
+                  <span className="font-medium text-gray-900">
+                    {modal.entry.firstName} {modal.entry.lastName} (
+                    {modal.entry.schoolClass})
+                  </span>{" "}
+                  gelöscht werden? Er verschwindet damit von allen
+                  Klassenlisten.
+                </>
+              ) : null
+            }
+            gate={{ mode: "twoStep" }}
+            loading={saving}
+            error={deleteErrors.error}
+          />
+
+          <ConfirmationModal
+            isOpen={modal?.kind === "assign"}
+            onClose={closeModal}
+            onConfirm={() => void confirmAssign()}
+            title="Eintrag zuordnen"
+            confirmText="Zuordnen"
+            isConfirmLoading={saving}
+            loadingText="Wird zugeordnet …"
+            isConfirmDisabled={!assignTarget}
+          >
+            {modal?.kind === "assign" ? (
+              <div className="space-y-3">
+                <FormErrorAlert message={assignErrors.error} />
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium text-gray-900">
+                    {modal.entry.firstName} {modal.entry.lastName} (
+                    {modal.entry.schoolClass})
+                  </span>{" "}
+                  ist inzwischen als reguläres Kind angelegt. Beim Zuordnen wird
+                  der Klassenlisteneintrag entfernt, das Kind steht dann nur
+                  noch über seinen regulären Datensatz auf der Klassenliste.
+                </p>
+                {modal.entry.matchingStudentIds.length > 1 ? (
+                  <fieldset className="space-y-2">
+                    <legend className="text-sm font-medium text-gray-900">
+                      Mehrere Kinder tragen diesen Namen in dieser Klasse. Bitte
+                      den richtigen Datensatz auswählen:
+                    </legend>
+                    {modal.entry.matchingStudentIds.map((studentId) => (
+                      <ChoiceTile
+                        key={studentId}
+                        htmlFor={`assign-target-${studentId}`}
+                        selected={assignTarget === studentId}
+                        className="justify-between gap-2 py-2 font-normal"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Radio
+                            id={`assign-target-${studentId}`}
+                            name="assign-target"
+                            checked={assignTarget === studentId}
+                            onChange={() => setAssignTarget(studentId)}
+                          />
+                          Kind-Datensatz #{studentId}
+                        </span>
+                        <Link
+                          href={tenantPath(`/students/${studentId}`)}
+                          target="_blank"
+                          className="text-xs font-medium text-gray-600 underline hover:text-gray-900"
+                        >
+                          Öffnen
+                        </Link>
+                      </ChoiceTile>
+                    ))}
+                  </fieldset>
+                ) : null}
+                <p className="text-xs text-gray-500">
+                  Die Zuordnung passiert nie automatisch: Bitte nur bestätigen,
+                  wenn es sich wirklich um dasselbe Kind handelt.
+                </p>
+              </div>
+            ) : null}
+          </ConfirmationModal>
+        </>
+      }
+    >
+      <SectionCard
+        title="Kinder im Klassenverband"
+        description={`${childrenWithoutCarePlace ? "Alle Kinder werden in den Kinderdaten gepflegt." : "Reguläre Kinder werden in der Kinder-Datenbank gepflegt. Hier kommen nur Kinder ohne OGS-Betreuung dazu."}${rosterSummary}`}
+      >
+        {childrenWithoutCarePlace ? (
+          <Alert
+            type="info"
+            announce="off"
+            className="mb-4"
+            message="Deine Schule führt Kinder ohne OGS-Platz als eigene Kinder. Sie stehen in den Kinderdaten. Ihre Eltern können die Eltern-App nutzen. Neue Kinder legst du in den Kinderdaten mit „Ohne OGS-Platz“ an."
+          />
+        ) : null}
+        {/* Ohne die angelegten Kinder ist die Liste unvollständig: der Fehler
+            steht über ihr, mit Wiederholen. */}
+        <LoadErrorAlert error={studentsLoadError} className="mb-4" />
+
+        <DataTable
+          columns={columns}
+          rows={rows}
+          getRowKey={(row) =>
+            row.kind === "student"
+              ? `student-${row.student.id}`
+              : `entry-${row.entry.id}`
+          }
+          isLoading={isLoading && entries === undefined}
+          defaultSortKey="schoolClass"
+          pageSize={50}
+          paginationResetKey={classFilter}
+          emptyState={
+            <EmptyState
+              title={
+                classFilter === "all"
+                  ? "Noch keine Kinder erfasst"
+                  : "Keine Kinder in dieser Klasse"
+              }
+              description="Lege Kinder ohne OGS-Betreuung mit Name und Klasse an, damit Klassenlisten den vollständigen Klassenverband zeigen."
+            />
+          }
+        />
+      </SectionCard>
+    </TenantPage>
+  );
+}

@@ -207,17 +207,27 @@ describe("TraegerStaffProofsPage", () => {
     ]);
     renderPage();
     fireEvent.click(
-      await screen.findByRole("tab", { name: "Arten der Schulen" }),
+      await screen.findByRole("tab", { name: "Zuordnung der Schulen" }),
     );
     const card = (
       await screen.findByText("OGS Nord", { selector: "h2" })
     ).closest("section");
     expect(card).not.toBeNull();
-    fireEvent.click(
-      within(card!).getByRole("combobox", {
-        name: "Art des Trägers für Erweitertes Führungszeugnis",
-      }),
+    // #8129: the card says why it maps, and each row reads as
+    // „Nachweisart der Schule → Nachweisart deines Trägers“, so the kind
+    // that also stands under „Nachweisarten“ does not look like a duplicate.
+    expect(card).toHaveTextContent(
+      "gibt es für Personen mit Personalakte keine doppelte Erinnerung",
     );
+    const row = within(card!)
+      .getByText("Erweitertes Führungszeugnis")
+      .closest("li");
+    expect(row).toHaveTextContent("Nachweisart der Schule");
+    const select = within(card!).getByRole("combobox", {
+      name: "Nachweisart deines Trägers für Erweitertes Führungszeugnis",
+    });
+    expect(select).toHaveAccessibleDescription("Nachweisart deines Trägers");
+    fireEvent.click(select);
     fireEvent.click(
       await screen.findByRole("option", {
         name: "Erweitertes Führungszeugnis",
@@ -239,7 +249,7 @@ describe("TraegerStaffProofsPage", () => {
     ]);
     renderPage();
     fireEvent.click(
-      await screen.findByRole("tab", { name: "Arten der Schulen" }),
+      await screen.findByRole("tab", { name: "Zuordnung der Schulen" }),
     );
     await screen.findByText("OGS Nord", { selector: "h2" });
     const cards = ["OGS Nord", "OGS Süd"].map((name) =>

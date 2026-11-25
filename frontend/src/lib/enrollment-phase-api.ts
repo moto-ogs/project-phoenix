@@ -69,7 +69,9 @@ export type Phase = Omit<
  * a kind, mode or audience this build does not know fails the read instead
  * of saving a guess.
  */
-function phaseFromContract(phase: enrollmentContract.PhaseResponse): Phase {
+export function phaseFromContract(
+  phase: enrollmentContract.PhaseResponse,
+): Phase {
   const { rollover_mode, translations, ...rest } = phase;
   const mode = knownEnum(ROLLOVER_MODES, rollover_mode);
   const named = translationsFromContract(translations);
@@ -204,10 +206,16 @@ export async function listPhaseExpiryWarnings(): Promise<PhaseExpiryWarning[]> {
     "GET /api/enrollment/phases/expiry-warnings",
     { errorMessage: "Hinweise zum Phasenende konnten nicht geladen werden" },
   );
-  return warnings.map((warning) => ({
+  return warnings.map(mapPhaseExpiryWarning);
+}
+
+export function mapPhaseExpiryWarning(
+  warning: enrollmentContract.PhaseExpiryWarningResponse,
+): PhaseExpiryWarning {
+  return {
     ...warning,
     state: knownEnum(EXPIRY_STATES, warning.state),
-  }));
+  };
 }
 
 export async function createPhase(input: PhaseInput): Promise<Phase> {
@@ -472,4 +480,9 @@ export async function getPhaseResponseOverview(
       errorMessage: "Rücklauf konnte nicht geladen werden",
     }),
   );
+}
+
+/** The first phase shown by the offering catalog, in the list's server order. */
+export function initialOfferingPhaseId(phases: readonly Phase[]): string {
+  return (phases.find((phase) => phase.is_active) ?? phases[0])?.id ?? "";
 }

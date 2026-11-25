@@ -4,7 +4,6 @@
 import type * as studentsContract from "~/lib/contract/students.generated";
 import { ParentAttentionBadge } from "~/components/students/parent-attention-badge";
 import { useParentAttentionEnabled } from "~/lib/hooks/use-parent-attention";
-import { useDataPrefetchIntent } from "~/components/ui/data-prefetch-intent";
 import type { ReactNode } from "react";
 import { tileCardSurface } from "~/components/ui/tile-card";
 import {
@@ -252,20 +251,13 @@ export function StudentCard({
       }
     : undefined;
   const hasTapStrip = checkinMode && !selectMode;
-  const dataIntent = useDataPrefetchIntent(
-    checkinMode || selectMode ? null : `/students/${studentId}`,
-  );
   const parentAttentionEnabled = useParentAttentionEnabled();
 
   const card = (
     <button
       key={studentId}
       type="button"
-      {...dataIntent}
-      onClick={() => {
-        dataIntent.onClick();
-        activeHandler();
-      }}
+      onClick={activeHandler}
       disabled={isCheckinPending}
       aria-busy={isCheckinPending}
       aria-pressed={selectMode ? isCheckinSelected : undefined}

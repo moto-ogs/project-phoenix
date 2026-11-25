@@ -355,6 +355,17 @@ interface TimetableTarget {
   educationGroupName?: string;
 }
 
+/** Period-free planner metadata used to label and validate an offering's linked template. */
+export type OfferingTemplate = Pick<
+  TimetableTemplate,
+  "id" | "name" | "calendarPeriodId"
+> & {
+  schedules: Pick<
+    TimetableTemplate["schedules"][number],
+    "weekday" | "startTime" | "endTime" | "calendarPeriodId"
+  >[];
+};
+
 export interface TimetableTemplate {
   id: string;
   /**

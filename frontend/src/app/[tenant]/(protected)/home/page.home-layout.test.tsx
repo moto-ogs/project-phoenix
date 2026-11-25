@@ -8,7 +8,7 @@ import {
 import type { ReactElement } from "react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import HomePage from "./page";
+import HomePage from "./page-content";
 import { preloadHomeBoardEditor } from "~/components/home/home-board";
 import { ToastProvider } from "~/contexts/ToastContext";
 
@@ -156,6 +156,7 @@ vi.mock("~/lib/dashboard-helpers", () => ({
 
 vi.mock("~/lib/swr/hooks", () => ({
   useSWRAuth: vi.fn(),
+  useOpeningRead: () => ({ data: undefined, error: undefined }),
   useScopedSWRKey: () => null,
 }));
 vi.mock("~/lib/birthdays-api", () => ({

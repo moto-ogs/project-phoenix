@@ -15,7 +15,7 @@ import {
 import type { ParentConferenceOffer } from "~/lib/parent-conferences";
 import { catalogText } from "~/test/error-catalog-text";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
-import ParentConferencePage from "./page";
+import ParentConferencePage from "./conference-content";
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const family = parentFamilyFixture();

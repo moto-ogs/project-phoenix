@@ -6,7 +6,11 @@
 // Eingetragen wird ein Nachweis in der Personalakte. Jedes Anzeigen der
 // Liste und jeder Export steht im Zugriffsprotokoll der Einsatzorte.
 
-import { CertificateIcon, PlusIcon } from "@phosphor-icons/react";
+import {
+  ArrowRightIcon,
+  CertificateIcon,
+  PlusIcon,
+} from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import {
   StaffProofTypeModal,
@@ -436,7 +440,10 @@ function SchoolKinds({
 
   const options = useMemo(
     () => [
-      { value: NO_MAPPING, label: "Keine Zuordnung, die Schule erinnert" },
+      {
+        value: NO_MAPPING,
+        label: "Keine, die Schule erinnert selbst",
+      },
       ...types
         .filter((type) => !type.archived)
         .map((type) => ({ value: type.id, label: type.name })),
@@ -478,7 +485,7 @@ function SchoolKinds({
       title={school.schoolName}
       description={
         school.kinds.length > 0
-          ? "Ordne jede Nachweisart der Schule einer Art deines Trägers zu. Für Personen mit Akte erinnert dann nur noch der Nachweis des Trägers."
+          ? "Die Schule hat eigene Nachweisarten. Ordnest du sie zu, gibt es für Personen mit Personalakte keine doppelte Erinnerung."
           : undefined
       }
       footer={
@@ -488,7 +495,7 @@ function SchoolKinds({
             onSave={() => void save()}
             saving={saving}
             saveLabel="Zuordnung speichern"
-            saveTooltip="Speichert die Zuordnung. Die Schule erinnert danach nicht mehr doppelt."
+            saveTooltip="Speichert die Zuordnung und vermeidet doppelte Erinnerungen."
           />
         ) : undefined
       }
@@ -498,14 +505,25 @@ function SchoolKinds({
         <ResponsiveActionList>
           {school.kinds.map((kind) => (
             <ResponsiveActionRow key={kind.schoolTypeId}>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold wrap-anywhere text-gray-900">
-                  {kind.name}
-                </p>
+              {/* #8129: Nachweisart der Schule → Nachweisart deines Trägers. */}
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold wrap-anywhere text-gray-900">
+                    {kind.name}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Nachweisart der Schule
+                  </p>
+                </div>
+                <ArrowRightIcon
+                  className="size-4 shrink-0 text-gray-500 max-sm:hidden"
+                  aria-hidden="true"
+                />
               </div>
               <ResponsiveRowActions field>
                 <CustomSelect
-                  ariaLabel={`Art des Trägers für ${kind.name}`}
+                  ariaLabel={`Nachweisart deines Trägers für ${kind.name}`}
+                  hint="Nachweisart deines Trägers"
                   value={draft[kind.schoolTypeId] ?? NO_MAPPING}
                   options={options}
                   onChange={(value) =>
@@ -592,7 +610,7 @@ export default function TraegerStaffProofsPage() {
         items: [
           { value: "ablaufliste", label: "Ablaufliste", badge: open },
           { value: "arten", label: "Nachweisarten" },
-          { value: "schulen", label: "Arten der Schulen" },
+          { value: "schulen", label: "Zuordnung der Schulen" },
         ],
       }}
       search={tab === "ablaufliste" && list ? listView.search : undefined}

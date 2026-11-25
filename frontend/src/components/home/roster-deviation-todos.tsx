@@ -30,13 +30,11 @@ export function RosterDeviationTodos({
     () => calendarPeriodService.list(),
   );
   const period = periods ? findPeriodForDate(periods, berlinTodayISO()) : null;
-  // Same cache entry as the Betreuungsplan, so both show the same count.
-  const { data: deviations } = useSWRAuth(
-    enabled && period ? tenantDailyKeys.rosterDeviations(period.id) : null,
-    () => timetableService.getRosterDeviations(period?.id ?? ""),
+  const { data: count = 0 } = useSWRAuth(
+    enabled && period ? tenantDailyKeys.rosterDeviationCount(period.id) : null,
+    async () =>
+      (await timetableService.getRosterDeviations(period?.id ?? "")).length,
   );
-
-  const count = deviations?.length ?? 0;
   if (!enabled || count === 0) return null;
   return (
     <Alert

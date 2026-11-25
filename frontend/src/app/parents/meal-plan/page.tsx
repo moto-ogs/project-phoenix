@@ -1,3 +1,6 @@
+import { ParentPageSkeleton } from "~/components/parent/parent-page";
+import { Suspense } from "react";
+import { ParentPageSeed } from "~/app/parents/parent-page-seed";
 import { messageBoundary } from "~/i18n/scoped-messages";
 import { ParentMealPlanPage } from "~/components/parent/parent-meal-plan-page";
 
@@ -18,12 +21,20 @@ const PageMessages = messageBoundary(
 
 export default async function ParentsMealPlanPage({ searchParams }: PageProps) {
   const { week, school } = await searchParams;
+  const initialWeek = typeof week === "string" ? week : undefined;
+  const initialSchool = typeof school === "string" ? school : undefined;
   return (
     <PageMessages>
-      <ParentMealPlanPage
-        initialWeek={typeof week === "string" ? week : undefined}
-        initialSchool={typeof school === "string" ? school : undefined}
-      />
+      <Suspense fallback={<ParentPageSkeleton rows={2} />}>
+        <ParentPageSeed
+          page={{ kind: "meal", week: initialWeek, school: initialSchool }}
+        >
+          <ParentMealPlanPage
+            initialWeek={initialWeek}
+            initialSchool={initialSchool}
+          />
+        </ParentPageSeed>
+      </Suspense>
     </PageMessages>
   );
 }

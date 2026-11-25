@@ -67,7 +67,7 @@ const STATUSES: readonly MealBillingStatus[] = [
 const status = (value: string): MealBillingStatus =>
   knownEnum(STATUSES, value) ?? "expired";
 
-function monthFromBackend(
+export function monthFromBackend(
   body: wire.BillingMonthState & { current?: wire.BillingMonthState },
 ): MealBillingMonth {
   return {
@@ -105,13 +105,29 @@ export async function fetchMealBillingMonths(): Promise<MealBillingSummary[]> {
   const body = await bffJson("tenant", "GET /api/meal-billing-months/", {
     errorMessage: "meal billing request failed",
   });
-  return body.map((summary) => ({
+  return body.map(mapMealBillingSummary);
+}
+
+export function mapMealBillingSummary(
+  summary: wire.BillingMonthSummary,
+): MealBillingSummary {
+  return {
     month: summary.month,
     status: status(summary.status),
     releasedAt: summary.released_at,
     childCount: summary.child_count,
     mealCount: summary.meal_count,
-  }));
+  };
+}
+
+export function initialMealBillingMonth(
+  months: readonly MealBillingSummary[] | undefined,
+): string {
+  return (
+    months?.find((entry) => entry.status !== "running")?.month ??
+    months?.[0]?.month ??
+    ""
+  );
 }
 
 export async function fetchMealBillingMonth(

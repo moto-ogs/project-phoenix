@@ -267,6 +267,8 @@ export const timetableKeys = {
     `${timetableKeys.schoolVacationsFamily}${from}-${to}`,
   bookingLeftovers: (periodId: string) =>
     `booking-leftovers-${encodeURIComponent(periodId)}`,
+  bookingLeftoverCount: (periodId: string) =>
+    `${timetableKeys.bookingLeftovers(periodId)}-count`,
   // Elternhinweise zu eigenen Schließtagen in Ferienwochen (ADR 0196):
   // Grund, Tage, Stand und eine Zahl, keine Namen.
   holidayClosureNotices: () => "timetable-holiday-closure-notices",
@@ -423,6 +425,9 @@ export const parentAnnouncementKeys = {
     `parent-letter-preview-children-${encodeURIComponent(scope)}`,
   /** Activities a parent announcement can target. */
   targetActivities: () => "parent-announcements-activities",
+  /** Name-only lookups on the detail page; never cache catalog personnel here. */
+  detailGroupNames: () => "groups-announcement-target-names",
+  detailActivityNames: () => "parent-announcements-activity-names",
   /** School classes a parent announcement can target. */
   targetClasses: () => "parent-announcements-classes",
   /** Child search by name in the target picker. */

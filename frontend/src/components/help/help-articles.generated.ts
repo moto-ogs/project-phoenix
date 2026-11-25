@@ -10619,7 +10619,7 @@ export const teacherLoginProblemTopic =
       audience: "teacher",
       icon: "ShieldAlert",
       steps: [
-        "Prüfe, ob oben `Willkommen im Schulportal` steht.",
+        "Prüfe, ob oben `Willkommen bei moto schule` steht.",
         "Steht dort etwas anderes, nutze die Adresse von moto schule.",
         "Prüfe E-Mail-Adresse und Passwort.",
         "Nutze sonst `Passwort vergessen?`.",
@@ -10629,7 +10629,7 @@ export const teacherLoginProblemTopic =
         "Der Link aus der Einladungs-E-Mail führt immer zur richtigen Adresse.",
       ],
       differences: [
-        "`Dieses Konto hat keinen Zugang zum Schul-Portal.` Dann fehlt deinem Konto die Rolle. Wende dich an die OGS-Verwaltung.",
+        "`Dieses Konto hat keinen Zugang zu moto schule.` Dann fehlt deinem Konto die Rolle. Wende dich an die OGS-Verwaltung.",
         "`Die E-Mail-Adresse oder das Passwort stimmt nicht.` Prüfe beides.",
       ],
       troubleshootingDetails: [
@@ -10672,13 +10672,13 @@ export const teacherLoginTopic = function teacherLoginTopic(): HelpTopic {
       "Gemerkte Geräte stehen unter `Einstellungen` im Bereich `Vertraute Geräte`. Dort entfernst du ein Gerät wieder.",
     ],
     differences: [
-      "Oben steht `Willkommen im Schulportal`. So erkennst du, dass du richtig bist.",
+      "Oben steht `Willkommen bei moto schule`. So erkennst du, dass du richtig bist.",
       "Auf dem Knopf steht eine andere Zahl als 90? Deine Schule legt fest, wie viele Tage moto ein Gerät merkt.",
       "Du siehst keine zwei Knöpfe? Dann merkt deine Schule keine Geräte. moto prüft den Code, sobald er vollständig ist.",
       "Für Verwaltung ist ein zweiter Nachweis immer Pflicht. Ebenso für Personalstammdaten, Personaldokumente und Personalfinanzen. Das gilt auch für Einkommensnachweise der Eltern. Ebenso für Gesundheitsdokumente und das Verwalten fremder Arbeitszeiten. Ebenso, wenn du Urlaub genehmigen darfst. Gesundheitshinweise der Kinder allein lösen diese Pflicht nicht aus.",
     ],
     troubleshootingDetails: [
-      "moto sagt, das Konto habe keinen Zugang zum Schul-Portal? Dann fehlt dir die Rolle. Wende dich an die OGS-Verwaltung.",
+      "moto sagt, das Konto habe keinen Zugang zu moto schule? Dann fehlt dir die Rolle. Wende dich an die OGS-Verwaltung.",
       "moto sagt, deine Schule nutze moto schule zurzeit nicht? Dann bietet deine Schule moto schule nicht an. Wende dich an die OGS-Verwaltung.",
       "moto sagt `Die E-Mail-Adresse oder das Passwort stimmt nicht.`? Prüfe beides und versuche es erneut.",
     ],
@@ -12107,7 +12107,7 @@ export const traegerCareContractsTopic =
             "Trage den Namen des `Vertragspartners` ein, wenn er nicht im Briefkopf steht.",
             "Wähle `Bedingungen speichern`.",
             "Unter `Widerrufsbelehrung für das Anmeldeformular` und `Häkchen „Betreuung vor Ende der Widerrufsfrist“` stehen zwei weitere Texte. Die Schule kopiert beide als eigene Rechtstexte ins Anmeldeformular. Die Belehrung muss bestätigt werden, das Häkchen nicht.",
-            "Die Widerrufsbelehrung ist das gesetzliche Muster. Sie gilt in jedem Bundesland gleich. Dieselbe Belehrung steht im Vertrag, auf der Seite zum Unterschreiben und in der Bestätigung per Mail. Die Anschrift kommt aus deinem Briefkopf, Telefon und E-Mail aus `Allgemein` › `Kontakt` › `Kontakt für Widerrufe`. Der Text für das Anmeldeformular und das PDF enthalten auch das Muster-Widerrufsformular.",
+            "Die Widerrufsbelehrung ist das gesetzliche Muster. Sie gilt in jedem Bundesland gleich. Dieselbe Belehrung steht im Vertrag, auf der Seite zum Unterschreiben und in der Bestätigung per Mail. Name und Anschrift kommen aus deinem Briefkopf, nicht von der Ansprechperson. Telefon und E-Mail kommen aus `Allgemein` › `Kontakt` › `Kontakt für Widerrufe`. Der Text für das Anmeldeformular und das PDF enthalten auch das Muster-Widerrufsformular.",
             "Für `Bei der Annahme`: Trage den `Vertragspartner` immer ein. Speichere die Bedingungen. Kopiere den Text aus `Gespeicherter Text für das Anmeldeformular` unverändert. Die Schule wählt im Anmeldeformular `Eigene Zustimmung hinzufügen`. Sie trägt ihn unter `Rechtstext / Erklärung` ein. Sie setzt `Muss bestätigt werden` und behält bestehende Rechtstexte bei. Bei mehreren Modulen müssen deren Bedingungen übereinstimmen.",
           ],
         },
@@ -15620,7 +15620,7 @@ export const traegerSettingsTopic = function traegerSettingsTopic(): HelpTopic {
       "Eine Schule kann einen eigenen Wert eintragen. Dann gilt dort ihr Wert.",
       "Den eigenen Wert einer Schule kann nur die Schule selbst zurücksetzen.",
       "Im Bereich `Kontakt` trägst du die `Ansprechperson` deines Trägers ein. Sie steht auf allen Briefen und Rechnungen.",
-      "Darunter steht `Kontakt für Widerrufe`. Diese Telefonnummer und E-Mail-Adresse nennt die Widerrufsbelehrung jedes Betreuungsvertrags. Ein leeres Feld nimmt die Angabe der Ansprechperson. Die Vorschau zeigt den Satz so, wie Eltern ihn lesen. Nach einer Änderung kopiert die Schule die Widerrufsbelehrung neu ins Anmeldeformular.",
+      "Darunter steht `Kontakt für Widerrufe`. Diese Telefonnummer und E-Mail-Adresse nennt die Widerrufsbelehrung jedes Betreuungsvertrags. Ein leeres Feld nimmt die Angabe der Ansprechperson. Die Vorschau zeigt den Satz so, wie Eltern ihn lesen. Name und Anschrift darin kommen aus dem Briefkopf, nicht von der Ansprechperson. `Im Briefkopf ändern` öffnet ihn in einem neuen Tab. Nach einer Änderung kopiert die Schule die Widerrufsbelehrung neu ins Anmeldeformular.",
       "Mit `Zurück zur App` oben in der Navigation kommst du zur zuletzt geöffneten Seite zurück.",
       "Im Bereich `Ferienbetreuung` legst du fest, ob du beim Bestätigen einer Ferienanmeldung die Debitorennummer der Familie abfragst. Diese Einstellung gilt nur im Träger-Büro.",
       "Ebenfalls dort wählst du bei `Debitorennummer zuordnen`, wen eine Nummer meint. `Zahler (Rechnungsempfänger)` heißt: Jeder Empfänger von Rechnungen hat eine Nummer, Geschwister teilen sie. Zahlen die Eltern getrennt, hat jeder Elternteil seine Nummer. `Kind` heißt: Jedes Kind hat eine eigene Nummer. Wenn du umstellst, bleiben alle gespeicherten Nummern erhalten. Ausgestellte Rechnungen behalten ihre Nummer, neue Rechnungen nehmen die Nummer nach der neuen Einstellung.",
@@ -16003,7 +16003,8 @@ export const traegerStaffPoolTopic =
 /**
  * `/traeger/nachweise` (#4707, ADR 0238): Nachweise der Personalakten mit
  * Ablaufwarnung. Nachweisarten einstellen, Nachweise in der Akte eintragen,
- * die Ablaufliste lesen und herunterladen, die Arten der Schulen zuordnen.
+ * die Ablaufliste lesen und herunterladen, die Nachweisarten der Schulen
+ * zuordnen.
  */
 export const traegerStaffProofsTopic =
   function traegerStaffProofsTopic(): HelpTopic {
@@ -16056,10 +16057,11 @@ export const traegerStaffProofsTopic =
         {
           title: "Die Nachweisarten der Schulen zuordnen",
           description:
-            "So erinnert moto nur einmal an dasselbe Führungszeugnis: vom Träger, nicht noch einmal von der Schule.",
+            "Jede Schule hat eigene Nachweisarten, oft mit demselben Namen wie deine. Ordnest du sie zu, erinnert bei Personen mit Personalakte nur dein Träger. Die Schule erinnert dann nicht noch einmal.",
           steps: [
-            "Öffne den Reiter `Arten der Schulen`.",
-            "Wähle bei jeder Art der Schule die passende Art deines Trägers.",
+            "Wähle in der Navigation `Personalnachweise`.",
+            "Öffne den Reiter `Zuordnung der Schulen`.",
+            "Wähle bei jeder `Nachweisart der Schule` die passende `Nachweisart deines Trägers`.",
             "Wähle `Zuordnung speichern`.",
           ],
         },
@@ -16075,7 +16077,7 @@ export const traegerStaffProofsTopic =
       ],
       differences: [
         "Du siehst `Personalnachweise` nicht in der Navigation: dir fehlt die Rolle `Personal`.",
-        "Im Reiter `Arten der Schulen` steht bei einer Schule keine Art: Die Schule hat noch keine Nachweisarten angelegt.",
+        "Im Reiter `Zuordnung der Schulen` steht bei einer Schule keine Art: Die Schule hat noch keine Nachweisarten angelegt.",
       ],
       troubleshootingDetails: [
         "„Eine Nachweisart mit diesem Namen gibt es schon“: Wähle einen anderen Namen, oder hole die archivierte Art zurück.",

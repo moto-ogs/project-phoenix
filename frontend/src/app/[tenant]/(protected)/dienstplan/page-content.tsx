@@ -1,0 +1,26 @@
+"use client";
+
+// Eigenständiger Dienstplan-Bereich (Planung-Redesign, docs/planung-
+// redesign/docs/03). Rendert übergangsweise die unveränderte Bestands-View;
+// der inhaltliche Umbau (ResourceGrid, d/view-Schema) folgt mit docs/05.
+
+import { Suspense } from "react";
+
+import { DIENSTPLAN_INFO } from "~/components/staff/dienstplan-info";
+import { DienstplanView } from "~/components/staff/dienstplan-view";
+import { DienstplanPageSkeleton } from "~/components/staff/dienstplan-skeleton";
+import { ModuleRouteGuard } from "~/components/tenant/module-route-guard";
+
+export default function DienstplanPage() {
+  return (
+    <ModuleRouteGuard
+      module="dienstplan"
+      title="Dienstplan"
+      info={DIENSTPLAN_INFO}
+    >
+      <Suspense fallback={<DienstplanPageSkeleton />}>
+        <DienstplanView />
+      </Suspense>
+    </ModuleRouteGuard>
+  );
+}

@@ -72,8 +72,6 @@ describe("StundenkontoPanel", () => {
             minutesDelta: -120,
             effectiveDate: "2026-08-15",
             note: "Augustgehalt",
-            decidedBy: "9",
-            decidedAt: "2026-07-24T08:00:00Z",
           },
         ]}
         onChanged={vi.fn()}
@@ -358,8 +356,6 @@ describe("StundenkontoPanel", () => {
             minutesDelta: 180,
             effectiveDate: "2026-01-01",
             note: "Übernahme Altsystem",
-            decidedBy: "9",
-            decidedAt: "2026-01-02T08:00:00Z",
           },
         ]}
         onChanged={vi.fn()}

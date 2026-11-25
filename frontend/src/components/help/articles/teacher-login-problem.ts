@@ -12,7 +12,7 @@ export function teacherLoginProblemTopic(): HelpTopic {
     audience: "teacher",
     icon: "ShieldAlert",
     steps: [
-      "Prüfe, ob oben `Willkommen im Schulportal` steht.",
+      "Prüfe, ob oben `Willkommen bei moto schule` steht.",
       "Steht dort etwas anderes, nutze die Adresse von moto schule.",
       "Prüfe E-Mail-Adresse und Passwort.",
       "Nutze sonst `Passwort vergessen?`.",
@@ -22,7 +22,7 @@ export function teacherLoginProblemTopic(): HelpTopic {
       "Der Link aus der Einladungs-E-Mail führt immer zur richtigen Adresse.",
     ],
     differences: [
-      "`Dieses Konto hat keinen Zugang zum Schul-Portal.` Dann fehlt deinem Konto die Rolle. Wende dich an die OGS-Verwaltung.",
+      "`Dieses Konto hat keinen Zugang zu moto schule.` Dann fehlt deinem Konto die Rolle. Wende dich an die OGS-Verwaltung.",
       "`Die E-Mail-Adresse oder das Passwort stimmt nicht.` Prüfe beides.",
     ],
     troubleshootingDetails: [

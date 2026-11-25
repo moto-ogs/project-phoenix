@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { usePresenceMode } from "~/lib/tenant-context";
-import TagesplanPage from "./page";
+import TagesplanPage from "./page-content";
 
 describe("TagesplanPage", () => {
   it("shows binary-mode-specific page information", () => {

@@ -1,0 +1,655 @@
+"use client";
+
+import { rooms as roomKeys } from "~/lib/swr/rooms";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  Suspense,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+} from "react";
+import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+import { CollectionGrid } from "~/components/ui/collection-grid";
+import { Button } from "~/components/ui/button";
+import { useTenantRouter } from "~/lib/tenant-router";
+import { useTenantAwarePath } from "~/lib/tenant-path";
+import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { TileCard } from "~/components/ui/tile-card";
+import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
+import type {
+  FilterConfig,
+  ActiveFilter,
+  OverflowMenuItem,
+} from "~/components/ui/page-header/types";
+import { formatFloor, getRoomCategoryColor } from "~/lib/room-helpers";
+import { useSWRAuth } from "~/lib/swr";
+import { dashboardKeys } from "~/lib/swr/shell-keys";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { ChevronRight, FileSpreadsheet, FileText } from "lucide-react";
+import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
+import { SectionCard } from "~/components/ui/section-card";
+import { StatusBadge } from "~/components/ui/status-badge";
+import { RoomStatusBadge } from "~/components/rooms/room-status-badge";
+import { TransitAssignmentCard } from "~/components/rooms/transit-assignment-card";
+
+import { BinaryModeGuard } from "~/components/tenant/binary-mode-guard";
+import { fetchDashboardAnalyticsClient } from "~/lib/dashboard-api";
+import type { DashboardAnalytics } from "~/lib/dashboard-helpers";
+import {
+  exportRoomSnapshot,
+  type RoomSnapshotExportFormat,
+} from "~/lib/room-export-api";
+import { RoomsGridSkeleton } from "./page-skeleton";
+import { childrenConcept } from "~/lib/concepts/children";
+import { roomsConcept } from "~/lib/concepts/rooms";
+import { staffConcept } from "~/lib/concepts/staff";
+import { foldForSearch } from "~/lib/search-fold";
+
+// Room interface - entspricht der BackendRoom-Struktur aus den API-Dateien
+interface Room {
+  id: string;
+  name: string;
+  building?: string;
+  floor?: number; // Optional (nullable in DB)
+  capacity?: number; // Optional (nullable in DB)
+  category?: string; // Optional (nullable in DB)
+  color?: string; // Optional (nullable in DB)
+  isOccupied: boolean;
+  groupName?: string;
+  activityName?: string;
+  supervisorName?: string;
+  deviceId?: string;
+  studentCount?: number;
+  /** Freigegeben als offener Raum (#3065), unabhängig von der Belegung. */
+  isOpenRoom?: boolean;
+}
+
+/** Die Sammlung dieser Seite, für den Rückweg aus der Raumseite (`?from=`). */
+const COLLECTION_PATH = "/rooms";
+const TRANSIT_PATH = "/rooms/unterwegs";
+const ROOMS_INFO =
+  "Hier siehst du, welche Räume frei oder belegt sind. Wähle einen Raum, um zu sehen, welche Kinder dort sind.";
+
+function RoomTile({
+  room,
+  href,
+}: {
+  readonly room: Room;
+  readonly href: string;
+}) {
+  return (
+    <TileCard href={href} ariaLabel={room.name} padding="none">
+      <div className="relative p-4 sm:p-5">
+        <div className="relative flex min-h-[120px] flex-col">
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="truncate text-base font-bold text-gray-900">
+                  {room.name}
+                </h3>
+                <ChevronRight
+                  className="h-4 w-4 flex-shrink-0 text-gray-300 transition-colors duration-200 md:group-hover:text-gray-500"
+                  aria-hidden="true"
+                />
+              </div>
+              {(room.building !== undefined || room.floor !== undefined) && (
+                <p className="mt-0.5 truncate text-xs text-gray-500">
+                  {room.building &&
+                    room.floor !== undefined &&
+                    `${room.building} · ${formatFloor(room.floor)}`}
+                  {room.building && room.floor === undefined && room.building}
+                  {!room.building &&
+                    room.floor !== undefined &&
+                    formatFloor(room.floor)}
+                </p>
+              )}
+            </div>
+            <RoomStatusBadge isOccupied={room.isOccupied} />
+          </div>
+          <div className="flex-1 space-y-2">
+            {room.isOccupied && room.groupName && (
+              <div className="text-sm text-gray-700">
+                <span className="font-medium">Aktuelle Aktivität:</span>{" "}
+                {room.groupName}
+              </div>
+            )}
+            {room.isOccupied &&
+              ((room.studentCount !== undefined && room.studentCount > 0) ||
+                room.supervisorName) && (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
+                  {room.studentCount !== undefined && room.studentCount > 0 && (
+                    <span className="flex items-center gap-1">
+                      <MotoConceptIcon concept={childrenConcept} size={16} />
+                      {room.studentCount}{" "}
+                      {room.studentCount === 1 ? "Kind" : "Kinder"}
+                    </span>
+                  )}
+                  {room.supervisorName && (
+                    <span className="flex items-center gap-1">
+                      <MotoConceptIcon concept={staffConcept} size={16} />
+                      {room.supervisorName}
+                    </span>
+                  )}
+                </div>
+              )}
+            {!room.isOccupied && (
+              <>
+                <div className="text-sm text-gray-600">
+                  Für Aktivitäten buchbar
+                </div>
+                {room.capacity !== undefined && room.capacity > 0 && (
+                  <div className="text-sm text-gray-600">
+                    Kapazität: {room.capacity} Plätze
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </TileCard>
+  );
+}
+
+function RoomTileGrid({
+  rooms,
+  roomHref,
+}: {
+  readonly rooms: readonly Room[];
+  readonly roomHref: (roomId: string) => string;
+}) {
+  return (
+    <CollectionGrid>
+      {rooms.map((room) => (
+        <RoomTile key={room.id} room={room} href={roomHref(room.id)} />
+      ))}
+    </CollectionGrid>
+  );
+}
+
+/**
+ * Eine Raumgruppe der Übersicht: offene Räume oben, die übrigen darunter.
+ * Beide lassen sich einklappen, damit eine lange Liste übersichtlich bleibt.
+ * Mit eigener Fläche, weil die Gruppe Titel und Text trägt (BAUARTEN-SPEC,
+ * Teil 3 §1: kein `bare` mit Titel).
+ */
+function RoomGroup({
+  title,
+  rooms,
+  roomHref,
+}: {
+  readonly title: string;
+  readonly rooms: readonly Room[];
+  readonly roomHref: (roomId: string) => string;
+}) {
+  return (
+    <SectionCard
+      collapsible
+      title={title}
+      titleBadge={<StatusBadge label={String(rooms.length)} tone="gray" />}
+    >
+      <RoomTileGrid rooms={rooms} roomHref={roomHref} />
+    </SectionCard>
+  );
+}
+
+function RoomsPageContent() {
+  const { status } = useSession({
+    required: true,
+    onUnauthenticated() {
+      router.push("/");
+    },
+  });
+  const router = useTenantRouter();
+  const tenantPath = useTenantAwarePath();
+  const searchParams = useSearchParams();
+  const updateUrlParams = useUpdateUrlParams();
+
+  // Filters are local React state for snappy UI, but their initial
+  // value comes from the URL so they SURVIVE a remount when the user
+  // drills through /rooms/X or /students/X and returns with browser back.
+  // The object pages push back to /rooms with the params we tucked into
+  // ?from=, so on remount the URL re-hydrates the React state.
+  const [searchTerm, setSearchTerm] = useState(
+    () => searchParams.get("search") ?? "",
+  );
+  const [buildingFilter, setBuildingFilter] = useState(
+    () => searchParams.get("building") ?? "all",
+  );
+  const [occupiedFilter, setOccupiedFilter] = useState(
+    () => searchParams.get("status") ?? "all",
+  );
+  const [isExporting, setIsExporting] = useState(false);
+  const { show: showError } = useApiErrorDisplay();
+
+  // Mirror local filter state into the URL so the current history entry
+  // always reflects the user's view: a refresh, a shared link or the way
+  // back from a room page lands on the same narrowed grid. router.replace
+  // keeps the entry count unchanged. The early-return guards against the
+  // searchParams → updateUrlParams identity churn that would otherwise
+  // re-fire this effect after each replace.
+  useEffect(() => {
+    const currentSearch = searchParams.get("search") ?? "";
+    const currentBuilding = searchParams.get("building") ?? "all";
+    const currentStatus = searchParams.get("status") ?? "all";
+    if (
+      currentSearch === searchTerm &&
+      currentBuilding === buildingFilter &&
+      currentStatus === occupiedFilter
+    ) {
+      return;
+    }
+    updateUrlParams({
+      search: searchTerm || null,
+      building: buildingFilter !== "all" ? buildingFilter : null,
+      status: occupiedFilter !== "all" ? occupiedFilter : null,
+    });
+  }, [
+    searchTerm,
+    buildingFilter,
+    occupiedFilter,
+    searchParams,
+    updateUrlParams,
+  ]);
+
+  // Fetch rooms with SWR (automatic caching, deduplication, revalidation)
+  // Global SSE in TenantAuthWrapper handles cache invalidation automatically
+  const {
+    data: rawRoomsData,
+    isLoading: loading,
+    error: roomsError,
+    mutate: reloadRooms,
+  } = useSWRAuth<Room[]>(
+    roomKeys.key({ includeSystem: true }),
+    () => roomKeys.fetcher({ includeSystem: true }),
+    {
+      keepPreviousData: true,
+      revalidateOnFocus: false,
+    },
+  );
+  const roomsData = useMemo(
+    () =>
+      rawRoomsData?.map((room) => ({
+        ...room,
+        color: room.color ?? getRoomCategoryColor(room.category),
+      })),
+    [rawRoomsData],
+  );
+
+  const { data: dashboardData } = useSWRAuth<DashboardAnalytics>(
+    dashboardKeys.analytics(),
+    fetchDashboardAnalyticsClient,
+    { refreshInterval: 5 * 60 * 1000 },
+  );
+
+  // Ladefehler mit Katalogtext, Wiederholen und Vorgangskennung (#2517).
+  const error = useSwrLoadError(roomsError, "die Liste der Räume", () =>
+    reloadRooms(),
+  );
+
+  // Apply filters
+  const filteredRooms = useMemo(() => {
+    const rooms = roomsData ?? [];
+    let filtered = [...rooms];
+
+    // Search filter
+    if (searchTerm) {
+      const searchLower = foldForSearch(searchTerm);
+      filtered = filtered.filter((room) => {
+        const checks = [
+          foldForSearch(room.name).includes(searchLower),
+          foldForSearch(room.groupName).includes(searchLower),
+          foldForSearch(room.activityName).includes(searchLower),
+        ];
+        return checks.some(Boolean);
+      });
+    }
+
+    // Building filter
+    if (buildingFilter !== "all") {
+      filtered = filtered.filter((room) => room.building === buildingFilter);
+    }
+
+    // Occupied filter
+    if (occupiedFilter !== "all") {
+      const isOccupied = occupiedFilter === "occupied";
+      filtered = filtered.filter((room) => room.isOccupied === isOccupied);
+    }
+
+    // Sort by name
+    filtered.sort((a, b) => a.name.localeCompare(b.name, "de"));
+
+    return filtered;
+  }, [roomsData, searchTerm, buildingFilter, occupiedFilter]);
+
+  // Offene Räume stehen oben und hervorgehoben, die übrigen darunter
+  // (#4372, Punkt 01.14). „Offen“ ist die Freigabe, nicht die Belegung.
+  const [openRooms, otherRooms] = useMemo(() => {
+    const open: Room[] = [];
+    const other: Room[] = [];
+    for (const room of filteredRooms) {
+      (room.isOpenRoom ? open : other).push(room);
+    }
+    return [open, other];
+  }, [filteredRooms]);
+
+  const exportRoomIds = useMemo(() => {
+    return filteredRooms.map((room) => room.id);
+  }, [filteredRooms]);
+
+  // „Wiederholen“ exportiert mit den aktuell gefilterten Räumen.
+  const exportRoomIdsRef = useRef(exportRoomIds);
+  useLayoutEffect(() => {
+    exportRoomIdsRef.current = exportRoomIds;
+  });
+  const handleExport = useCallback(
+    async (format: RoomSnapshotExportFormat) => {
+      setIsExporting(true);
+      try {
+        await exportRoomSnapshot({
+          format,
+          title: "Wer ist wo",
+          roomIds: exportRoomIdsRef.current,
+          includeTransit: true,
+        });
+      } catch (exportError) {
+        void showError(exportError, {
+          object: "die Liste „Wer ist wo“",
+          retry: () => void handleExport(format),
+        });
+      } finally {
+        setIsExporting(false);
+      }
+    },
+    [showError],
+  );
+
+  // Der Rückweg trägt die Filter mit, damit „Zurück" aus der Raumseite
+  // dieselbe eingegrenzte Übersicht zeigt, die man verlassen hat.
+  const fromReferrer = useMemo(() => {
+    const next = new URLSearchParams();
+    if (searchTerm) next.set("search", searchTerm);
+    if (buildingFilter !== "all") next.set("building", buildingFilter);
+    if (occupiedFilter !== "all") next.set("status", occupiedFilter);
+    const query = next.toString();
+    return query ? `${COLLECTION_PATH}?${query}` : COLLECTION_PATH;
+  }, [buildingFilter, occupiedFilter, searchTerm]);
+  // Jede Kachel führt auf die Raumseite: eine Objektansicht je Typ, immer auf
+  // demselben Weg (BAUARTEN-SPEC Bauart 1 Regel 2, #3115).
+  const roomHref = useCallback(
+    (roomId: string) =>
+      tenantPath(`/rooms/${roomId}?from=${encodeURIComponent(fromReferrer)}`),
+    [fromReferrer, tenantPath],
+  );
+
+  // Get unique values for filters
+  const uniqueBuildings = useMemo(() => {
+    const rooms = roomsData ?? [];
+    return Array.from(
+      new Set(rooms.map((room) => room.building).filter(Boolean)),
+    );
+  }, [roomsData]);
+
+  // Prepare filter configurations
+  const filterConfigs: FilterConfig[] = useMemo(
+    () => [
+      {
+        id: "building",
+        label: "Gebäude",
+        type: "dropdown",
+        value: buildingFilter,
+        onChange: (value) => setBuildingFilter(value as string),
+        options: [
+          { value: "all", label: "Alle Gebäude" },
+          ...uniqueBuildings.map((building) => ({
+            value: building!,
+            label: building!,
+          })),
+        ],
+      },
+      {
+        id: "occupied",
+        label: "Status",
+        type: "buttons",
+        value: occupiedFilter,
+        onChange: (value) => setOccupiedFilter(value as string),
+        options: [
+          { value: "all", label: "Alle" },
+          { value: "occupied", label: "Belegt" },
+          { value: "free", label: "Frei" },
+        ],
+      },
+    ],
+    [buildingFilter, occupiedFilter, uniqueBuildings],
+  );
+
+  // Prepare active filters
+  const activeFilters: ActiveFilter[] = useMemo(() => {
+    const filters: ActiveFilter[] = [];
+
+    if (searchTerm) {
+      filters.push({
+        id: "search",
+        label: `"${searchTerm}"`,
+        onRemove: () => setSearchTerm(""),
+      });
+    }
+
+    if (buildingFilter !== "all") {
+      filters.push({
+        id: "building",
+        label: buildingFilter,
+        onRemove: () => setBuildingFilter("all"),
+      });
+    }
+
+    if (occupiedFilter !== "all") {
+      const statusLabels = {
+        occupied: "Belegt",
+        free: "Frei",
+      };
+      filters.push({
+        id: "occupied",
+        label:
+          statusLabels[occupiedFilter as keyof typeof statusLabels] ??
+          occupiedFilter,
+        onRemove: () => setOccupiedFilter("all"),
+      });
+    }
+
+    return filters;
+  }, [searchTerm, buildingFilter, occupiedFilter]);
+
+  const transitCount = dashboardData?.studentsInTransit ?? 0;
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+  const showTransitAssignment =
+    transitCount > 0 ||
+    (normalizedSearchTerm.length > 0 &&
+      "unterwegs".includes(normalizedSearchTerm));
+  const exportTargetCount = filteredRooms.length + 1;
+  const overflowItems = useMemo<OverflowMenuItem[]>(
+    () => [
+      {
+        label: "Wer ist wo als PDF",
+        icon: <FileText className="size-4" aria-hidden />,
+        badge: exportTargetCount,
+        disabled: loading || isExporting,
+        description:
+          "Speichert als PDF, wer in den gezeigten Räumen oder unterwegs ist.",
+        onClick: () => {
+          void handleExport("pdf");
+        },
+      },
+      {
+        label: "Wer ist wo als Word",
+        icon: <FileText className="size-4" aria-hidden />,
+        badge: exportTargetCount,
+        disabled: loading || isExporting,
+        description:
+          "Speichert als Word-Datei, wer in den gezeigten Räumen oder unterwegs ist.",
+        onClick: () => {
+          void handleExport("docx");
+        },
+      },
+      {
+        label: "Wer ist wo als Excel",
+        icon: <FileSpreadsheet className="size-4" aria-hidden />,
+        badge: exportTargetCount,
+        disabled: loading || isExporting,
+        description:
+          "Speichert als Excel-Datei, wer in den gezeigten Räumen oder unterwegs ist.",
+        onClick: () => {
+          void handleExport("xlsx");
+        },
+      },
+    ],
+    [exportTargetCount, handleExport, isExporting, loading],
+  );
+
+  // Auth-loading joins the data-loading condition below instead of an early
+  // return before the header, so the real TenantPage head (title,
+  // search field, static tabs) renders immediately and only the room-card
+  // grid skeletonizes. The `useSession({ required: true })` callback
+  // redirects on unauthenticated.
+  const showSkeleton = status === "loading" || loading;
+
+  // Leerzustand kommt aus dem Gerüst (`empty`), nicht als handgebauter
+  // Block im Inhalt. Er bleibt aus, solange die Übergangsliste steht: dann
+  // ist die Seite nicht leer.
+  const hasActiveFilters =
+    searchTerm !== "" || buildingFilter !== "all" || occupiedFilter !== "all";
+  const resetFilters = useCallback(() => {
+    setSearchTerm("");
+    setBuildingFilter("all");
+    setOccupiedFilter("all");
+  }, []);
+  const emptyState =
+    !showSkeleton && !showTransitAssignment && filteredRooms.length === 0
+      ? hasActiveFilters
+        ? {
+            icon: <MotoConceptIcon concept={roomsConcept} size={48} />,
+            title: "Keine Räume gefunden",
+            description:
+              "Zu Suche und Filtern passt kein Raum. Setze die Filter zurück, um alle Räume zu sehen.",
+            action: (
+              <Button
+                type="button"
+                size="md"
+                onClick={resetFilters}
+                tooltip="Leert Suche und Filter und zeigt wieder alle Einträge."
+              >
+                Filter zurücksetzen
+              </Button>
+            ),
+          }
+        : {
+            icon: <MotoConceptIcon concept={roomsConcept} size={48} />,
+            title: "Keine Räume gefunden",
+            description:
+              "Für diese Schule ist noch kein Raum angelegt. Räume legst du in der Datenverwaltung an.",
+          }
+      : null;
+
+  // Statuszeile unter dem Seitentitel, allein aus der geladenen Raumliste.
+  // Ohne geladene Liste steht keine "0 Räume" da (#2517).
+  const roomSummary = (() => {
+    if (!roomsData) return null;
+    const occupied = roomsData.filter((room) => room.isOccupied).length;
+    return (
+      <TenantPageStats
+        items={[
+          {
+            value: roomsData.length,
+            label: roomsData.length === 1 ? "Raum" : "Räume",
+          },
+          { value: occupied, label: "belegt" },
+        ]}
+      />
+    );
+  })();
+
+  return (
+    <TenantPage
+      title="Räume"
+      info={ROOMS_INFO}
+      stats={roomSummary}
+      statsLoading={showSkeleton}
+      // Das Exportmenü ist eine Aktion der Seite und sitzt deshalb im Kopf,
+      // damit es auch mobil erreichbar bleibt.
+      actions={<OverflowMenu items={overflowItems} />}
+      search={{
+        value: searchTerm,
+        onChange: setSearchTerm,
+        placeholder: "Raum suchen…",
+      }}
+      filters={filterConfigs}
+      activeFilters={activeFilters}
+      onClearAllFilters={resetFilters}
+      error={error}
+      empty={emptyState}
+    >
+      {/* Room Cards Grid, skeleton mirrors the populated grid's column
+          breakpoints and per-card shape (rounded-2xl, min-h-[180px],
+          header row + meta line + status pill, middle content rows,
+          footer hint) so the grid area doesn't visibly resize when real
+          data arrives. Review feedback (#1323): a generic spinner
+          collapsed the header row into a tiny payload, then the layout
+          jumped open when rooms loaded. */}
+      {showSkeleton ? (
+        <RoomsGridSkeleton />
+      ) : (
+        <>
+          {showTransitAssignment ? (
+            <TransitAssignmentCard
+              count={transitCount}
+              href={tenantPath(
+                `${TRANSIT_PATH}?from=${encodeURIComponent(fromReferrer)}`,
+              )}
+            />
+          ) : null}
+
+          {openRooms.length > 0 ? (
+            // Als Gitter wächst die letzte Gruppe nicht bis zur Unterkante
+            // (TENANT-PAGE-SPEC Regel 6): eingeklappt bliebe sonst eine
+            // leere weiße Fläche über den halben Bildschirm stehen.
+            <div className="compact:gap-4 grid gap-6 max-sm:gap-3">
+              <RoomGroup
+                title="Offene Räume"
+                rooms={openRooms}
+                roomHref={roomHref}
+              />
+              {otherRooms.length > 0 ? (
+                <RoomGroup
+                  title="Weitere Räume"
+                  rooms={otherRooms}
+                  roomHref={roomHref}
+                />
+              ) : null}
+            </div>
+          ) : null}
+          {openRooms.length === 0 && filteredRooms.length > 0 ? (
+            <RoomTileGrid rooms={filteredRooms} roomHref={roomHref} />
+          ) : null}
+        </>
+      )}
+    </TenantPage>
+  );
+}
+
+// Main component with Suspense wrapper + binary-mode feature-off guard.
+// Binary-mode tenants don't track room occupancy, so the concepts this page
+// surfaces don't apply. The guard handles direct URL entry.
+export default function RoomsPage() {
+  return (
+    <BinaryModeGuard title="Räume" info={ROOMS_INFO}>
+      <Suspense fallback={<RoomsGridSkeleton />}>
+        <RoomsPageContent />
+      </Suspense>
+    </BinaryModeGuard>
+  );
+}

@@ -491,7 +491,7 @@ export interface PendingApproval {
   roleUpgrade: boolean;
 }
 
-function mapPendingApproval(
+export function mapPendingApproval(
   data: guardiansContract.pendingApprovalResponse,
 ): PendingApproval {
   return {

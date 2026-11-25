@@ -3,7 +3,7 @@ import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "StudentSearch" });
 
-/** UI selections shared by the reader and navigation intent. */
+/** UI selections shared by the reader and the server seed. */
 export interface StudentSearchFilterInput {
   search: string;
   groupIds: readonly string[];
@@ -21,7 +21,7 @@ export interface StudentSearchFilterInput {
   enrollmentAnswer?: string;
 }
 
-/** The search filters, identical for the page and its navigation intent. */
+/** The search filters, identical for the browser and server reads. */
 export function buildStudentSearchFilters(
   params: StudentSearchFilterInput,
 ): StudentFilters {
@@ -50,13 +50,14 @@ export function buildStudentSearchFilters(
 
 const MAX_STUDENT_SEARCH_PAGES = 20;
 
-/** Same bounded page walk for the destination and navigation intent. */
+/** Same bounded page walk on the server and in the browser. */
 export async function fetchStudentSearch(
   filters: StudentFilters,
   requestDate: string,
   requestIsToday: boolean,
+  fetchPage: typeof fetchStudents = fetchStudents,
 ) {
-  const result = await fetchStudents(filters);
+  const result = await fetchPage(filters);
   const students = [...result.students];
 
   // Walk the remaining pages when the selection is larger than one page.
@@ -71,7 +72,7 @@ export async function fetchStudentSearch(
   const totalPages = result.pagination?.total_pages ?? 1;
   const lastPage = Math.min(totalPages, MAX_STUDENT_SEARCH_PAGES);
   for (let page = 2; page <= lastPage; page++) {
-    const nextPage = await fetchStudents({ ...filters, page });
+    const nextPage = await fetchPage({ ...filters, page });
     students.push(...nextPage.students);
   }
   // Past the bound the list is incomplete, and everything downstream — the

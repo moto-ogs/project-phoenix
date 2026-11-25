@@ -75,8 +75,8 @@ import {
 } from "~/components/students/requests/use-request-feed";
 import { useWithdrawalDialogs } from "~/components/students/requests/withdrawal-cards";
 
-export type { AggregatedRequestFilters } from "~/components/students/requests/filters";
-import type { AggregatedRequestFilters } from "~/components/students/requests/filters";
+export type { AggregatedRequestFilters } from "~/lib/request-feed-filters";
+import type { AggregatedRequestFilters } from "~/lib/request-feed-filters";
 
 const logger = createLogger({ component: "AggregatedRequestList" });
 

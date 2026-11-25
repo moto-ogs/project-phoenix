@@ -237,8 +237,8 @@ export function summarizeTargets(targets: AnnouncementTarget[]): string {
 /** Die Zielgruppen mit echten Namen, für die Objektseite. */
 export function targetChips(
   targets: AnnouncementTarget[],
-  groups: Group[],
-  activities: Activity[],
+  groups: readonly Pick<Group, "id" | "name">[],
+  activities: readonly Pick<Activity, "id" | "name">[],
 ): string[] {
   if (targets.some((t) => t.target_type === "school_all")) {
     // Whole-school subsumes class/group/student targets; pending enrollments

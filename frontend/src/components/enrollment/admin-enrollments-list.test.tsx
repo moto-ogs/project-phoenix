@@ -45,7 +45,7 @@ const mocks = vi.hoisted(() => ({
   fetchSettingsSchema: vi.fn(),
   listAdminEnrollmentChangeRequests: vi.fn(),
   listAdminRequests: vi.fn(),
-  listCareOfferings: vi.fn(),
+  fetchCareOfferingCounts: vi.fn(),
   listPhases: vi.fn(),
   listSchemas: vi.fn(),
 }));
@@ -60,7 +60,7 @@ vi.mock("~/lib/enrollment-phase-api", () => ({
 }));
 
 vi.mock("~/lib/care-offering-api", () => ({
-  listCareOfferings: mocks.listCareOfferings,
+  fetchCareOfferingCounts: mocks.fetchCareOfferingCounts,
 }));
 
 vi.mock("~/lib/enrollment-form-schema-api", async (importOriginal) => {
@@ -150,14 +150,14 @@ beforeEach(() => {
   mocks.fetchSettingsSchema.mockReset();
   mocks.listAdminEnrollmentChangeRequests.mockReset();
   mocks.listAdminRequests.mockReset();
-  mocks.listCareOfferings.mockReset();
+  mocks.fetchCareOfferingCounts.mockReset();
   mocks.listPhases.mockReset();
   mocks.listSchemas.mockReset();
 
   mocks.fetchSettingsSchema.mockResolvedValue(settingsSchema(false));
   mocks.listAdminEnrollmentChangeRequests.mockResolvedValue([]);
   mocks.listAdminRequests.mockResolvedValue([]);
-  mocks.listCareOfferings.mockResolvedValue([]);
+  mocks.fetchCareOfferingCounts.mockResolvedValue({});
   mocks.listPhases.mockResolvedValue([]);
   mocks.listSchemas.mockResolvedValue([]);
 });

@@ -41,7 +41,7 @@ vi.mock("~/contexts/ToastContext", () => ({
   useApiErrorDisplay: () => ({ show: mocks.showActionError }),
 }));
 
-import AdminEnrollmentsPage from "./page";
+import AdminEnrollmentsPage from "./page-content";
 
 function Page({ children }: Readonly<{ children?: ReactNode }>) {
   return (

@@ -13,7 +13,7 @@ import {
   setViewportWidth,
 } from "~/test/helpers/viewport";
 
-import PayrollPage from "./page";
+import PayrollPage from "./page-content";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 

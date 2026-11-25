@@ -30,10 +30,10 @@ import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
 import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
 import { timeTrackingKeys } from "~/lib/swr/portal-keys";
-import { mapOwnAbsence, type OwnAbsence } from "~/lib/own-time-tracking-view";
+import type { OwnAbsence } from "~/lib/own-time-tracking-view";
+import { mapOwnLeave } from "~/lib/own-leave-resource";
 import { useOwnTimeRefresh } from "~/lib/hooks/use-own-time-refresh";
 import { OwnAllowancesCard } from "./own-allowances-card";
-import { ApiError } from "~/lib/api-error";
 import { VacationRequestModal } from "./vacation-request-modal";
 import {
   AbsenceRequestMails,
@@ -75,17 +75,7 @@ function decisionNoteLabel(status: string): string {
 }
 
 async function readLeave(year: number) {
-  const overview = await timeTrackingService.getLeaveOverview();
-  if (overview.year !== year) {
-    throw new ApiError("Own leave year changed", undefined, {
-      code: "general.unavailable",
-    });
-  }
-  return {
-    ...overview,
-    recent: (overview.recent ?? []).map(mapOwnAbsence),
-    questions: (overview.questions ?? []).map(mapOwnAbsence),
-  };
+  return mapOwnLeave(await timeTrackingService.getLeaveOverview(), year);
 }
 
 export function LeaveRequestsCard() {

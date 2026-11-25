@@ -8,7 +8,7 @@ import {
 } from "~/components/ui/data-table";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { ProgressBar } from "~/components/ui/progress-bar";
-import type { CareOffering } from "~/lib/care-offering-api";
+import type { PhaseOccupancyOffering } from "~/lib/care-offering-api";
 import {
   type OfferingOccupancy,
   offeringOccupancy,
@@ -96,7 +96,7 @@ function formatOfferingCapacity(capacity: number | null | undefined): string {
   return capacity === 1 ? "1 Platz" : `${capacity} Plätze`;
 }
 
-export function offeringCapacityColumn(): DataTableColumn<CareOffering> {
+export function offeringCapacityColumn(): DataTableColumn<PhaseOccupancyOffering> {
   return {
     key: "capacity",
     header: "Kapazität",
@@ -111,7 +111,7 @@ export function offeringCapacityColumn(): DataTableColumn<CareOffering> {
 
 export function offeringOccupancyColumn(
   stats: StatsById,
-): DataTableColumn<CareOffering> {
+): DataTableColumn<PhaseOccupancyOffering> {
   return {
     key: "occupancy",
     header: "Belegt",
@@ -128,7 +128,7 @@ export function offeringOccupancyColumn(
 /** Aktiv oder Inaktiv, dazu „Voll“ für ein Angebot ohne freien Platz. */
 export function offeringStatusColumn(
   stats: StatsById,
-): DataTableColumn<CareOffering> {
+): DataTableColumn<PhaseOccupancyOffering> {
   return {
     key: "status",
     header: "Status",

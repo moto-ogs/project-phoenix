@@ -365,7 +365,7 @@ function headViolations(source: string): string[] {
  * Eintrag braucht die Zustimmung im PR (Regel „When to deviate“).
  */
 const MEHR_ALS_EINE_AKTION: Readonly<Record<string, string>> = {
-  "app/[tenant]/(protected)/home/page.tsx":
+  "app/[tenant]/(protected)/home/page-content.tsx":
     "Bearbeitungszustand: „Abbrechen“ und „Fertig“ sind eine Entscheidung, wie EditActions; vom Product Owner am 08.11.2026 freigegeben (#5605)",
 };
 

@@ -2,8 +2,7 @@ import { Suspense } from "react";
 import { ChildProfileMessages } from "~/i18n/shared-page-messages";
 import { ChildPage } from "~/components/parent/child/child-page";
 import { ParentPageSkeleton } from "~/components/parent/parent-page";
-import { ParentServerSeed } from "~/components/parent/parent-server-seed";
-import { parentSeedProps } from "~/lib/parent-seed.server";
+import { ParentPageSeed } from "~/app/parents/parent-page-seed";
 
 /**
  * Derselbe Kinderbereich, mit dem Kind aus der Adresse vorausgewaehlt. Die
@@ -19,9 +18,9 @@ export default async function ParentChildPage({
   return (
     <ChildProfileMessages>
       <Suspense fallback={<ParentPageSkeleton rows={2} />}>
-        <ParentServerSeed {...parentSeedProps(true)}>
+        <ParentPageSeed page={{ kind: "child", studentId: id }}>
           <ChildPage studentId={id} />
-        </ParentServerSeed>
+        </ParentPageSeed>
       </Suspense>
     </ChildProfileMessages>
   );

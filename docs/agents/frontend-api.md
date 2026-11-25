@@ -570,6 +570,28 @@ Inspect the domain's existing mapper, such as
 [room response mapping](../../frontend/src/lib/room-helpers.ts), rather than
 copying a generic mapper. Preserve nullability and date-vs-instant semantics.
 
+### First display in a protected page
+
+Load eligible first-display reads in the server page, not in a link handler
+or on the first browser mount. Use
+[`SWRServerSeed`](../../frontend/src/lib/swr/server-seed.tsx) with the existing
+reader's key and mapper. Resolve the fresh snapshot for the actual portal
+before the reads. In a tenant page, use `readTenantPageContext` to bind the
+cookie to the host and resolved school. Go still checks the resource's
+permissions and relationships. Keep any server fetches out of shared caches.
+
+Use `seedRead` and `readContract` for each independently retriable answer.
+Mark only entries needed for initial HTML as `render` and keep the seed
+under the page's loading boundary. Use `claims` for known keys so a client
+navigation waits for the same answer instead of starting a second GET.
+Missing, refused and timed-out entries fall back to their existing browser
+reader and its error UI. Pass only the displayed projection across RSC.
+Keep bearer tokens and raw backend errors on the server.
+
+The shell seeds only its own readers. An audited opening, a read with side
+effects, a write preview, an edit, a download or a read for later local
+interaction is not a seed. See [ADR 0311](../adr/0311-ein-speichern-traegt-den-gelesenen-stand.md).
+
 ### Auth Token Flow
 
 Go sends the access and refresh tokens to the BFF, not to the browser.

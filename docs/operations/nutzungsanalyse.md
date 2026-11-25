@@ -477,5 +477,5 @@ team switches it on for a school.
 > aus Schule und Benutzerkonto berechnet wird und keinen Namen enthält; zu
 > dieser Kennung speichern wir nur die Rolle. Das Personal sieht in seinem
 > Profil einen Hinweis, solange die Freigabe gilt. Eltern-Portal und
-> Schul-Portal werden nie aufgezeichnet. Rechtsgrundlage ist die Vereinbarung
+> moto schule werden nie aufgezeichnet. Rechtsgrundlage ist die Vereinbarung
 > mit der Schule bzw. dem Träger.

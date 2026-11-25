@@ -1,90 +1,139 @@
-"use client";
-
+import { TenantRouteSeed } from "../tenant-route-seed";
+import { readContract, seedRead } from "~/lib/server-seed.server";
+import { routes } from "~/lib/contract/timetable.generated";
+import { hasPermission } from "~/lib/auth-utils";
+import { databaseKeys, timetableKeys } from "~/lib/swr/portal-keys";
+import { closingDayKeys } from "~/lib/swr/staff-keys";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
+import type { ServerSeedEntry } from "~/lib/swr/server-seed";
+import { holidayWindow, mapPeriods } from "~/lib/calendar-period-helpers";
+import { mapClosingDays } from "~/lib/closing-day-helpers";
+import { berlinTodayISO } from "~/lib/date-helpers";
 import {
-  CalendarPeriodsActions,
-  CalendarPeriodsEditor,
-  useCalendarPeriods,
-} from "~/components/planning/calendar-periods-editor";
-import { ClosingDaysEditor } from "~/components/planning/closing-days-editor";
-import { SchoolHolidaysList } from "~/components/planning/school-holidays-list";
-import { SchoolVacationsList } from "~/components/planning/school-vacations-list";
-import { SchoolVacationHints } from "~/components/timetable/school-vacation-hints";
-import { TenantPage } from "~/components/ui/tenant-page";
-import { useRequirePermission } from "~/lib/hooks/use-require-permission";
+  holidayWindows,
+  mapSchoolHolidays,
+  mergeSchoolHolidayWindows,
+} from "~/lib/school-holidays-api";
+import {
+  mapSchoolVacationHints,
+  mapSchoolVacations,
+} from "~/lib/school-vacations-api";
+import PageContent from "./page-content";
 
-/**
- * Bewusst KEIN timetable.enabled-Route-Gate wie auf den übrigen
- * Planungsseiten: Kalenderzeiträume sind eine geteilte Ressource, die
- * Anmeldephasen (Anmeldungen-Bereich) verknüpfen sich mit ihnen, auch wenn
- * der Planungsbereich für die Schule abgeschaltet ist.
- *
- * Ebenso bewusst KEIN DesktopOnlyNotice wie im Anmeldungsbereich (#2033):
- * beide Editoren sind Tabelle plus Modal und damit mobil bedienbar. Bei
- * abgeschaltetem Planungsbereich ist dies zudem der einzige verbleibende
- * Eintrag der Planungsgruppe, eine Desktop-Sperre wäre dort eine Sackgasse.
- */
-// Info-Knopf am Titel (#7579): wofür die Seite da ist und was man zuerst tut.
-const CALENDAR_PERIODS_INFO =
-  "Hier legst du das Schuljahr, Halbjahre und Ferien als Zeiträume an. Hat die OGS geschlossen, trägst du unter „Schließtage“ einen Schließtag ein. Gesetzliche Feiertage musst du nicht eintragen.";
-
-export default function CalendarPeriodsPage() {
-  // Dasselbe Recht wie der Eintrag in der Planungsgruppe (#3469): Zeiträume
-  // und Schließtage pflegt, wer den Betreuungsplan verwaltet.
-  const { isReady } = useRequirePermission("schedules:manage");
-
-  // Solange die Rechteprüfung läuft, steht hier das Seitengerüst mit seinem
-  // Ladezustand; die Zeiträume werden erst danach abgerufen.
-  if (!isReady) {
-    return (
-      <TenantPage
-        title="Schuljahr und Kalender"
-        info={CALENDAR_PERIODS_INFO}
-        loading
-        testId="loading"
-      />
-    );
-  }
-
-  return <CalendarPeriodsPageContent />;
-}
-
-/**
- * Der Kopf gehört der Seite: Titel, Statuszeile und die beiden
- * Anlegen-Aktionen. Leer- und Fehlerzustand bleiben in den beiden
- * Inhaltsblöcken, damit die Schließtage auch dann erreichbar sind, wenn die
- * Zeiträume leer sind oder nicht geladen werden konnten.
- */
-function CalendarPeriodsPageContent() {
-  const state = useCalendarPeriods();
-
+export default async function CalendarPeriodsPage({
+  params,
+}: {
+  params: Promise<{ tenant: string }>;
+}) {
+  const { tenant } = await params;
+  const today = berlinTodayISO();
   return (
-    <TenantPage
-      title="Schuljahr und Kalender"
-      info={CALENDAR_PERIODS_INFO}
-      stats={state.statusLine}
-      statsLoading={state.loading}
-      actions={<CalendarPeriodsActions state={state} />}
+    <TenantRouteSeed
+      slug={tenant}
+      claims={[
+        timetableKeys.schoolVacationHints(today),
+        closingDayKeys.list(),
+        databaseKeys.calendarPeriods(),
+      ]}
+      load={async ({ token, session }) => {
+        if (!hasPermission(session, "schedules:manage")) return [];
+        const entries: ServerSeedEntry[] = [
+          {
+            key: timetableKeys.schoolVacationHints(today),
+            value: seedRead("school vacation hints", async (signal) =>
+              mapSchoolVacationHints(
+                (
+                  await readContract(
+                    routes["GET /api/timetable/school-vacation-hints"],
+                    { token, signal },
+                  )
+                ).data,
+              ),
+            ),
+          },
+        ];
+
+        const canReadSchedules = hasPermission(session, "schedules:read");
+        if (canReadSchedules) {
+          entries.push({
+            key: closingDayKeys.list(),
+            value: seedRead("school closing days", async (signal) =>
+              mapClosingDays(
+                (
+                  await readContract(
+                    routes["GET /api/timetable/closing-days/"],
+                    { token, signal },
+                  )
+                ).data,
+              ),
+            ),
+          });
+        }
+
+        if (
+          !canReadSchedules &&
+          !hasPermission(session, "time_tracking:manage")
+        )
+          return entries;
+        const periods = seedRead("calendar periods", async (signal) =>
+          mapPeriods(
+            (
+              await readContract(routes["GET /api/timetable/periods/"], {
+                token,
+                signal,
+              })
+            ).data,
+          ),
+        );
+        entries.push({
+          key: databaseKeys.calendarPeriods(),
+          render: true,
+          value: periods,
+        });
+
+        if (!canReadSchedules && !hasPermission(session, "calendar:own"))
+          return entries;
+        // Both calendars use the actual current period, not a guessed week.
+        const loadedPeriods = await periods;
+        if (!loadedPeriods) return entries;
+        const { from, to } = holidayWindow(loadedPeriods, today);
+        entries.push(
+          {
+            key: tenantDailyKeys.schoolHolidays(from, to),
+            value: seedRead("school holidays", async (signal) => {
+              const windows = await Promise.all(
+                holidayWindows(from, to).map(async (query) =>
+                  mapSchoolHolidays(
+                    (
+                      await readContract(
+                        routes["GET /api/timetable/holidays"],
+                        { token, signal, query },
+                      )
+                    ).data,
+                  ),
+                ),
+              );
+              return mergeSchoolHolidayWindows(windows);
+            }),
+          },
+          {
+            key: timetableKeys.schoolVacations(from, to),
+            value: seedRead("school vacations", async (signal) =>
+              mapSchoolVacations(
+                (
+                  await readContract(
+                    routes["GET /api/timetable/school-vacations"],
+                    { token, signal, query: { from, to } },
+                  )
+                ).data,
+              ),
+            ),
+          },
+        );
+        return entries;
+      }}
     >
-      {/* Regeltermine in den nächsten Ferien (#5345): die Schließtage
-          stehen auf dieser Seite, deshalb ohne Link dorthin. */}
-      <SchoolVacationHints
-        enabled
-        showClosingDaysLink={false}
-        onAppointmentsCancelled={() => void state.reload()}
-      />
-      <CalendarPeriodsEditor state={state} />
-      {/* Abgesagte Termine ändern die Spalte „Verwendung“ (#3594). */}
-      <ClosingDaysEditor onAppointmentsCancelled={() => void state.reload()} />
-      {/* Feiertage berechnet moto aus dem Bundesland der Schule (#4775). */}
-      <SchoolHolidaysList
-        periods={state.periods}
-        periodsLoading={state.loading}
-      />
-      {/* Schulferien des Bundeslands aus OpenHolidays (#5345). */}
-      <SchoolVacationsList
-        periods={state.periods}
-        periodsLoading={state.loading}
-      />
-    </TenantPage>
+      <PageContent />
+    </TenantRouteSeed>
   );
 }

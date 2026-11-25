@@ -5,6 +5,7 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import deMessages from "~/i18n/messages/de.generated";
 import { ApiError } from "~/lib/api-error";
 import type { HolidayRegistrationStatus } from "~/lib/holiday-registration-status-api";
+import type { TokenStatusSeed } from "~/lib/token-status-seed";
 import { setTestClock } from "~/test/clock";
 import { HolidayRegistrationStatusView } from "./holiday-registration-status-view";
 
@@ -24,7 +25,6 @@ const received: HolidayRegistrationStatus = {
   lastDay: "2027-01-08",
   registrationClosesOn: "2026-12-01",
   binding: true,
-  allocationMode: "arrival",
   submittedAt: "2026-11-16T09:30:00Z",
   status: "received",
   children: [
@@ -59,11 +59,11 @@ const received: HolidayRegistrationStatus = {
   ],
 };
 
-function renderView() {
+function renderView(initial?: TokenStatusSeed<HolidayRegistrationStatus>) {
   return render(
     <NextIntlClientProvider locale="de" messages={deMessages}>
       <ToastProvider>
-        <HolidayRegistrationStatusView token="t0ken" />
+        <HolidayRegistrationStatusView token="t0ken" initial={initial} />
       </ToastProvider>
     </NextIntlClientProvider>,
   );
@@ -75,6 +75,26 @@ describe("HolidayRegistrationStatusView (#6676)", () => {
     // Fixed fixture world: the registration window for the Christmas holidays
     // 2026/27 is still open on this day (closes 2026-12-01).
     setTestClock("2026-09-09T12:00:00+02:00");
+  });
+
+  it("shows the seed on mount, but rechecks a restored token page", async () => {
+    const first = { builtAt: Date.now(), data: received };
+    const view = renderView(first);
+    expect(screen.getByText(received.periodName)).toBeInTheDocument();
+    expect(mockFetch).not.toHaveBeenCalled();
+    view.unmount();
+
+    mockFetch.mockResolvedValue({ ...received, periodName: "Neuer Zeitraum" });
+    renderView(first);
+    expect(await screen.findByText("Neuer Zeitraum")).toBeInTheDocument();
+    expect(mockFetch).toHaveBeenCalledExactlyOnceWith("t0ken");
+  });
+
+  it("does not show a seed that is already stale on navigation", async () => {
+    mockFetch.mockResolvedValue({ ...received, periodName: "Neuer Zeitraum" });
+    renderView({ builtAt: Date.now() - 31_000, data: received });
+    expect(await screen.findByText("Neuer Zeitraum")).toBeInTheDocument();
+    expect(mockFetch).toHaveBeenCalledExactlyOnceWith("t0ken");
   });
 
   it("shows the state, the next steps and every child's weeks with their place", async () => {

@@ -16,6 +16,19 @@ import {
 
 const logger = createLogger({ component: "MealPlanAPI" });
 
+export function isMealWeekendDay(date: Date): boolean {
+  return date.getDay() === 0 || date.getDay() === 6;
+}
+
+/** The daily kitchen list opens on today or the first weekday after it. */
+export function mealParticipantDate(today: string): string {
+  const candidate = parseISODate(today);
+  while (isMealWeekendDay(candidate)) {
+    candidate.setDate(candidate.getDate() + 1);
+  }
+  return toISODate(candidate);
+}
+
 /** One dish on a day of the meal plan as used by the UI. */
 export interface MealPlanDish {
   dish: string;
@@ -72,7 +85,7 @@ export interface WeeklyMealList {
   }>;
 }
 
-function mapDay(day: wire.MealPlanDayResponse): MealPlanDay {
+export function mapMealPlanDay(day: wire.MealPlanDayResponse): MealPlanDay {
   return {
     date: day.date,
     version: day.version,
@@ -92,7 +105,7 @@ export async function getMealPlanWeek(
     query: { week_start: weekStart },
     errorMessage: "meal plan load failed",
   });
-  return days.map(mapDay);
+  return days.map(mapMealPlanDay);
 }
 
 /**
@@ -113,7 +126,7 @@ export async function setDay(
       body: { dishes, expected_version: expectedVersion },
       errorMessage: "meal plan day save failed",
     });
-    return mapDay(day);
+    return mapMealPlanDay(day);
   } catch (error) {
     logger.error("meal_set_day_failed", {
       status: error instanceof ApiError ? error.status : undefined,
@@ -143,6 +156,10 @@ export async function getDailyMealParticipants(
     query: { date, include: includeOthers ? "all" : undefined },
     errorMessage: "meal participants load failed",
   });
+  return mapDailyMealList(data);
+}
+
+export function mapDailyMealList(data: wire.DailyListResponse): DailyMealList {
   return {
     date: data.date,
     cutoffTime: data.cutoff_time,
@@ -331,7 +348,7 @@ export interface MealOrders {
   days: MealOrderDay[];
 }
 
-/** The school's orders of [from, to]; reading fixes every due order. */
+/** The school's display of orders for [from, to]; only the worker and writes settle orders. */
 export async function getMealOrders(
   from: string,
   to: string,
@@ -340,6 +357,10 @@ export async function getMealOrders(
     query: { from, to },
     errorMessage: "meal orders load failed",
   });
+  return mapMealOrders(data);
+}
+
+export function mapMealOrders(data: wire.OrdersResponse): MealOrders {
   return {
     rhythm: knownEnum(RHYTHMS, data.rhythm) ?? "daily",
     detail: knownEnum(DETAILS, data.detail) ?? "total",

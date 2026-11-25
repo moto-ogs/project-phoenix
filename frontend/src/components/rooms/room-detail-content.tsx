@@ -30,7 +30,6 @@ import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { roomKeys } from "~/lib/swr/rooms-keys";
 import { ApiError } from "~/lib/api-error";
 import { bffJson } from "~/lib/bff-fetch";
-import type * as roomsContract from "~/lib/contract/rooms.generated";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
   berlinTodayISO,
@@ -42,7 +41,9 @@ import {
 import {
   formatFloor,
   mapRoomResponse,
-  ROOM_HISTORY_DISABLED_CODE,
+  mapRoomHistoryEntry,
+  isRoomHistoryDisabled,
+  type RoomHistoryEntry,
   type Room,
 } from "~/lib/room-helpers";
 import { createLogger } from "~/lib/logger";
@@ -51,50 +52,9 @@ import { StudentsInRoomSection } from "./students-in-room-section";
 
 const logger = createLogger({ component: "RoomDetailContent" });
 
-// One row in the room occupancy history. Issue #1425 moved this from
-// per-student-visit rows to one row per active.groups session — no student
-// IDs or names by design. Per-child detail lives behind
-// /students/{id}/attendance-history under its own GDPR gates.
-interface RoomHistoryEntry {
-  sessionId: string;
-  startedAt: string; // RFC3339
-  endedAt: string | null; // RFC3339 or null while session is open
-  durationMinutes: number | null;
-  activityName: string;
-  supervisorName: string;
-  studentCount: number;
-}
-
 interface DateGroup {
   date: string;
   entries: RoomHistoryEntry[];
-}
-
-/** Maps one session of the contract (`RoomSessionEntry`). */
-function mapRoomHistoryEntry(
-  entry: roomsContract.RoomSessionEntry,
-): RoomHistoryEntry {
-  return {
-    sessionId: entry.session_id,
-    startedAt: entry.started_at,
-    endedAt: entry.ended_at ?? null,
-    durationMinutes: entry.duration_minutes ?? null,
-    activityName: entry.activity_name,
-    supervisorName: entry.supervisor_name,
-    studentCount: entry.student_count,
-  };
-}
-
-/**
- * A switched-off history (gdpr.attendance_log_enabled, #1425) arrives as the
- * backend's 403 with its code (#7563).
- */
-function isRoomHistoryDisabled(failure: unknown): boolean {
-  return (
-    typeof failure === "object" &&
-    failure !== null &&
-    (failure as { code?: unknown }).code === ROOM_HISTORY_DISABLED_CODE
-  );
 }
 
 function groupByDate(entries: readonly RoomHistoryEntry[]): DateGroup[] {

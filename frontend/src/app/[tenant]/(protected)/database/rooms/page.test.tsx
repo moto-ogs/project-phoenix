@@ -3,7 +3,7 @@ import type { TenantPageSearchRowProps } from "~/components/ui/tenant-page-searc
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import RoomsPage from "./page";
+import RoomsPage from "./page-content";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 

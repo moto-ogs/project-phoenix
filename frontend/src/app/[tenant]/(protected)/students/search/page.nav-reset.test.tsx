@@ -188,7 +188,7 @@ vi.mock("~/components/students/student-card", () => ({
 
 import { ApiError } from "~/lib/api-error";
 import { releaseFakeTimers } from "~/test/clock";
-import StudentSearchPage from "./page";
+import StudentSearchPage from "./page-content";
 
 const STORAGE_KEY = "student-search:last-filters:tenant-2:3";
 const STALL_MESSAGE =

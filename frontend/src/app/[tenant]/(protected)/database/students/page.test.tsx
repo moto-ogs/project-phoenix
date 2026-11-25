@@ -9,7 +9,7 @@ import type { TenantPageSearchRowProps } from "~/components/ui/tenant-page-searc
 import type { ReactNode } from "react";
 import type { FormErrorDetail } from "~/components/ui/form-error";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import StudentsPage from "./page";
+import StudentsPage from "./page-content";
 import { useSession } from "next-auth/react";
 import { useToast } from "~/contexts/ToastContext";
 import { deferred } from "~/test/helpers/form-modal-pending";

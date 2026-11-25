@@ -1,11 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { BookingLeftover } from "~/lib/booking-leftover";
+import {
+  countOpenBookingChildren,
+  type BookingLeftover,
+} from "~/lib/booking-leftover";
 import { testClockDay } from "~/test/clock";
 
 const state = vi.hoisted(() => ({
-  leftovers: [] as unknown[],
+  leftovers: [] as BookingLeftover[],
   keys: [] as Array<string | null>,
 }));
 
@@ -15,7 +18,8 @@ vi.mock("~/lib/swr", () => ({
   useSWRAuth: (key: string | null) => {
     state.keys.push(key);
     if (key === null) return {};
-    if (key.startsWith("booking-leftovers-")) return { data: state.leftovers };
+    if (key.startsWith("booking-leftovers-"))
+      return { data: countOpenBookingChildren(state.leftovers) };
     return {
       data: [
         {
@@ -61,7 +65,7 @@ describe("BookingLeftoverTodos (#5102)", () => {
     state.leftovers = [leftover("1"), leftover("2"), leftover("3", true)];
     render(<BookingLeftoverTodos enabled />);
 
-    expect(state.keys).toContain("booking-leftovers-4");
+    expect(state.keys).toContain("booking-leftovers-4-count");
     expect(
       screen.getByText(
         "2 Kinder stehen noch von Hand im Plan, obwohl ihre Buchung weggefallen ist.",

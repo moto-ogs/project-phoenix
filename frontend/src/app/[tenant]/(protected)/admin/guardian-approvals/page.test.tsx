@@ -41,7 +41,7 @@ vi.mock("~/components/ui/tenant-page-search-row", () => ({
   TenantPageSearchRow: ({ title }: { title: string }) => <h1>{title}</h1>,
 }));
 
-import GuardianApprovalsPage from "./page";
+import GuardianApprovalsPage from "./page-content";
 
 function setInviteMode({
   mode,

@@ -1,6 +1,6 @@
 import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TEST_CLOCK_TODAY } from "~/test/clock";
+import { setTestClock, TEST_CLOCK_TODAY } from "~/test/clock";
 import type { ServerSeed } from "~/lib/swr/server-seed";
 
 const { answers, requests, snapshot } = vi.hoisted(() => ({
@@ -29,6 +29,7 @@ vi.mock("~/lib/portal-session-snapshot.server", () => ({
 }));
 
 import { isProtectedParentPath, parentSeedProps } from "./parent-seed.server";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import { sessionGeneration } from "~/lib/swr/session-generation";
 
@@ -119,7 +120,10 @@ describe("parent page seeds", () => {
   it.each([true, false])(
     "offers one family read with render=%s, independent of the URL",
     async (render) => {
-      const seed = await parentSeedProps(render).seed;
+      const seed = await parentSeedProps(render, {
+        kind: "child",
+        studentId: "99",
+      }).seed;
       expect(seed?.generation).toBe(sessionGeneration(parent));
       expect(seed?.entries.map((entry) => [entry.key, entry.render])).toEqual([
         [key, render],
@@ -134,12 +138,25 @@ describe("parent page seeds", () => {
     },
   );
 
+  it("seeds only news availability for the shell, not the feed", async () => {
+    answers.set("/parent/me/news", ok([]));
+    const shell = await valuesOf(await parentSeedProps(false).seed);
+    expect(shell[parentKeys.newsAvailable()]).toBe(false);
+    expect(shell[parentKeys.announcements()]).toBeUndefined();
+
+    answers.set("/parent/me/news", { status: 503, body: { status: "error" } });
+    const refused = await valuesOf(await parentSeedProps(false).seed);
+    expect(refused[parentKeys.newsAvailable()]).toBeUndefined();
+  });
+
   it("seeds successful siblings and serializable partial errors, not a second read", async () => {
     answers.set(
       endpoint,
       ok({ ...response, cards: [cards[0], { ...cards[1], today: null }] }),
     );
-    const values = await valuesOf(await parentSeedProps(true).seed);
+    const values = await valuesOf(
+      await parentSeedProps(true, { kind: "child", studentId: "99" }).seed,
+    );
     expect(values[key]).toMatchObject({
       today: { "7": { state: "present" }, "8": { state: "unknown" } },
       todayErrors: { "8": { status: 503, code: "general.unavailable" } },
@@ -153,7 +170,11 @@ describe("parent page seeds", () => {
   it("leaves a failed read unseeded rather than confirming an empty family", async () => {
     answers.set(endpoint, { status: 503, body: { status: "error" } });
     expect(
-      (await valuesOf(await parentSeedProps(true).seed))[key],
+      (
+        await valuesOf(
+          await parentSeedProps(true, { kind: "child", studentId: "99" }).seed,
+        )
+      )[key],
     ).toBeUndefined();
     expect(requests).toEqual([endpoint]);
   });
@@ -175,9 +196,85 @@ describe("parent page seeds", () => {
   ])("seeds nothing for %s", async (_, current) => {
     snapshot.current = current;
 
-    expect(await parentSeedProps(true).seed).toBeNull();
+    expect(
+      await parentSeedProps(true, { kind: "child", studentId: "99" }).seed,
+    ).toBeNull();
     expect(await parentSeedProps(false).seed).toBeNull();
     expect(requests).toEqual([]);
+  });
+
+  it("loads only the confirmed child's care keys and keeps independent successes", async () => {
+    const prefix = "/parent/me/children/8";
+    answers.set(`${prefix}/sick-note`, ok([]));
+    answers.set(`${prefix}/excused-requests`, {
+      status: 403,
+      body: { status: "error", code: "care.guardian_permission_denied" },
+    });
+    answers.set(`${prefix}/parent-conferences`, ok([]));
+
+    const values = await valuesOf(
+      await parentSeedProps(true, { kind: "child", studentId: "8" }).seed,
+    );
+    expect(values[parentKeys.sickDays("8", TEST_CLOCK_TODAY)]).toEqual([]);
+    expect(values[parentKeys.conferences("8")]).toEqual([]);
+    expect(
+      values[parentKeys.excusedRequests("8", TEST_CLOCK_TODAY)],
+    ).toBeUndefined();
+    expect(requests).toEqual(
+      expect.arrayContaining([
+        endpoint,
+        `${prefix}/care-exception`,
+        `${prefix}/care-schedule`,
+        `${prefix}/pickup-change-requests`,
+        `${prefix}/care-offerings`,
+        `${prefix}/courses`,
+      ]),
+    );
+    expect(
+      requests.some((path) => path.startsWith("/parent/me/children/7/")),
+    ).toBe(false);
+    expect(requests).not.toContain(`${prefix}/guardians`);
+    expect(requests).not.toContain(`${prefix}/care-offerings/catalog`);
+  });
+
+  it("selects the eligible family school's meal plan for the rendered week", async () => {
+    setTestClock(new Date("2026-09-10T10:00:00.000Z"));
+    const monday = "2026-09-14";
+    const plan = `/parent/me/children/8/meal-plan?week_start=${monday}`;
+    answers.set(
+      endpoint,
+      ok({
+        ...response,
+        cards: [
+          cards[0],
+          { ...cards[1], features: { ...features, meal_plan_enabled: true } },
+        ],
+      }),
+    );
+    answers.set(plan, ok([]));
+
+    const values = await valuesOf(
+      await parentSeedProps(true, { kind: "meal", week: monday, school: "99" })
+        .seed,
+    );
+    expect(values[parentInboxKeys.mealPlan("8", monday)]).toEqual([]);
+    expect(requests).toEqual([endpoint, plan]);
+  });
+
+  it("loads conversation summaries without opening either thread", async () => {
+    answers.set("/parent/me/messages/children/7/threads", ok([]));
+    const conversation = await valuesOf(
+      await parentSeedProps(false, { kind: "conversation", studentId: "7" })
+        .seed,
+    );
+    await valuesOf(await parentSeedProps(false, { kind: "groupThread" }).seed);
+    expect(conversation[parentInboxKeys.childThreads("7")]).toEqual([]);
+    expect(requests).not.toContain("/parent/me/messages/children/7");
+    expect(
+      requests.some((path) =>
+        path.startsWith("/parent/me/messages/group-threads/"),
+      ),
+    ).toBe(false);
   });
 
   it("classifies the parents' public pages like the auth guard", () => {

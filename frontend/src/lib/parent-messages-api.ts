@@ -96,7 +96,7 @@ function toReaders(readers: messagesContract.ReadersResponse): ThreadReaders {
   };
 }
 
-function toInboxThread(
+export function toInboxThread(
   thread: messagesContract.ParentChatInboxThreadResponse,
 ): InboxThread {
   return {
@@ -341,7 +341,14 @@ function toCountScope(value: unknown): MessageCountScope {
 export async function fetchMessageCountSetting(): Promise<MessageCountSetting> {
   // Own error path (#2517): the settings card shows the catalog text, so the
   // ApiError keeps code and request ID instead of a fixed sentence.
-  const result = await bffJson("tenant", "GET /api/messages/count-scope");
+  return mapMessageCountSetting(
+    await bffJson("tenant", "GET /api/messages/count-scope"),
+  );
+}
+
+export function mapMessageCountSetting(
+  result: messagesContract.CountScopeResponse,
+): MessageCountSetting {
   return {
     scope: toCountScope(result.scope),
     hasOwnGroups: result.has_own_groups,

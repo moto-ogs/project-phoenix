@@ -72,6 +72,12 @@ Variante 3.
 
 ## Folgen
 
+- Beim ersten Anzeigen einer Seite darf ihr Server-Render den vorhandenen
+  Leseschlüssel mit einem Seed füllen (#8077, #8079). Der Seed gehört zur
+  frischen Portal-Sitzung mit ihrem Schul- bzw. Trägerkontext. Er ersetzt
+  keinen neueren Stand. Ohne brauchbaren Seed lädt derselbe Leser normal
+  nach. Protokollierte Öffnungen, GETs mit Seiteneffekt und Schreibvorschauen
+  bleiben an die jeweilige Aktion gebunden, auch wenn der Link vorgeladen wird.
 - `useFreshSWR` gilt nur noch als Übergang. Jede Stelle wird nach Punkt 1, 2
   oder 5 eingeordnet und umgestellt; danach bleibt nur das Lesen bei jedem
   Öffnen für protokollierte Zugriffe.

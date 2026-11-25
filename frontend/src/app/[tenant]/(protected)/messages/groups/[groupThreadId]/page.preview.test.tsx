@@ -4,7 +4,7 @@ import { SWRConfig } from "~/lib/swr/testing";
 import { useSWRAuth } from "~/lib/swr";
 import { messageKeys } from "~/lib/swr/portal-keys";
 import { ToastProvider } from "~/contexts/ToastContext";
-import GroupMessagePage from "./page";
+import GroupMessagePage from "./page-content";
 
 vi.unmock("swr");
 vi.mock(

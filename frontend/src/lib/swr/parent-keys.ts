@@ -70,7 +70,8 @@ export const parentKeys = {
     key === "parent-messages" ||
     key === "parent-group-threads" ||
     key.startsWith(CHILD_THREADS_FAMILY),
-  isNewsResource: (key: string) => key === "parent-announcements",
+  isNewsResource: (key: string) =>
+    key === "parent-announcements" || key === "parent-news-available",
   isResource: (key: string) =>
     key.startsWith("parent-") && !key.startsWith("parent-profile"),
   relationshipSet: (children: readonly parentMeContract.ChildResponse[]) =>
@@ -141,6 +142,7 @@ export const parentKeys = {
   messages: () => "parent-messages",
   groupThreads: () => "parent-group-threads",
   announcements: () => "parent-announcements",
+  newsAvailable: () => "parent-news-available",
   /** The holiday periods the start page announces (#6671). */
   holidayOffers: () => "parent-holiday-offers",
   /** The holiday registrations linked to the account (#6673). */
