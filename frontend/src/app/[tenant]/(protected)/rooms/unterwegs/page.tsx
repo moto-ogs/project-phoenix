@@ -46,13 +46,14 @@ export default async function TransitPage({
                     location_state: "transit",
                     day_status: dayStatus,
                     page_size: 200,
+                    view: "slim",
                   },
                 },
               );
               if (!read.ok) throw read.error.cause;
               return {
                 students: read.value.data.map((row) =>
-                  mapStudentListRow(row, "full"),
+                  mapStudentListRow(row, "slim"),
                 ),
                 pagination: read.value.pagination,
               };

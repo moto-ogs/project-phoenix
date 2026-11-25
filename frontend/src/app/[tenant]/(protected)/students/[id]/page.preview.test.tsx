@@ -4,7 +4,7 @@ import { SWRConfig } from "~/lib/swr/testing";
 import { useSWRAuth } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { ToastProvider } from "~/contexts/ToastContext";
-import StudentDetailPage from "./page";
+import StudentDetailPage from "./page-content";
 
 vi.unmock("swr");
 const state = vi.hoisted(() => ({

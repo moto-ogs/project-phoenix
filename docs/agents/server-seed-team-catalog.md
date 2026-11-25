@@ -41,5 +41,9 @@ jedes Abrufs. Ein fehlender Seed lässt den bestehenden Leser nachladen.
 | `database/students/import` | Statisches Importformular | Vorlagendownload und Dateivorschau erst auf Aktion |
 | `database/work-time-models` | Arbeitszeitmodelle mit Nutzung | Schreiben erst auf Aktion |
 
-`/students/[id]`: Der GET kann einen Gesundheitszugriff protokollieren.
-Weder ein Seiten-Seed noch Link-Intent darf ihn starten.
+`/students/[id]`: Der GET der Kindakte kann einen Gesundheitszugriff
+protokollieren. Weder ein Seiten-Seed noch Link-Intent startet ihn. Die
+unabhängigen Ankunfts-, Abhol- und Statusdaten sowie die offene Abmeldung
+nutzen ihre jeweiligen Go-Rechte für dieses Kind und denselben Zeitraum und
+Schlüssel wie der Browser. Editoren und auf Wunsch geöffnete Dokumente sind
+keine Seeds.

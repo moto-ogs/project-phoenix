@@ -31,7 +31,7 @@ function mapStatusDay(row: StudentStatusDayResponse): StudentStatusDay | null {
   return status ? { ...row, status } : null;
 }
 
-function mapStatusDays(
+export function mapStatusDays(
   rows: readonly StudentStatusDayResponse[],
 ): StudentStatusDay[] {
   return rows.flatMap((row) => {

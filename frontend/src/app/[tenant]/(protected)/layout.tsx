@@ -1,7 +1,6 @@
 "use client";
 
 import { ParentAttentionOverlayProvider } from "~/lib/parent-attention-overlay";
-import { TenantDataPrefetch } from "~/components/tenant/tenant-data-prefetch";
 import { BreadcrumbProvider } from "~/lib/breadcrumb-context";
 import { SessionEndBarrier } from "~/components/auth/session-end-barrier";
 import { GroupAttendanceCountProvider } from "~/lib/group-attendance-count-context";
@@ -36,23 +35,21 @@ export default function ProtectedLayout({
         <SchoolSearchProvider>
           <BreadcrumbProvider>
             <GroupAttendanceCountProvider>
-              <TenantDataPrefetch>
-                <AppShell>
-                  {/* Seiten nicht gebuchter Module erklären sich im Gerüst
+              <AppShell>
+                {/* Seiten nicht gebuchter Module erklären sich im Gerüst
                     (#4894); der Rückweg des Gerüsts führt in die Schule. */}
-                  <TenantPagePathProvider>
-                    <NotBookedPageProvider>
-                      {/* Fehler führen zur Stelle, an der man sie behebt (#7092). */}
-                      <ErrorFixTargetsProvider>
-                        <ParentAttentionOverlayProvider>
-                          {children}
-                          {parentAttention}
-                        </ParentAttentionOverlayProvider>
-                      </ErrorFixTargetsProvider>
-                    </NotBookedPageProvider>
-                  </TenantPagePathProvider>
-                </AppShell>
-              </TenantDataPrefetch>
+                <TenantPagePathProvider>
+                  <NotBookedPageProvider>
+                    {/* Fehler führen zur Stelle, an der man sie behebt (#7092). */}
+                    <ErrorFixTargetsProvider>
+                      <ParentAttentionOverlayProvider>
+                        {children}
+                        {parentAttention}
+                      </ParentAttentionOverlayProvider>
+                    </ErrorFixTargetsProvider>
+                  </NotBookedPageProvider>
+                </TenantPagePathProvider>
+              </AppShell>
             </GroupAttendanceCountProvider>
             <AnnouncementModal />
             {/* Erste Schritte für neue Schulen (#2832). Nur für Personen, die

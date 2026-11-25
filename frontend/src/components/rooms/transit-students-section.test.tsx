@@ -327,6 +327,7 @@ describe("TransitStudentsSection", () => {
 
     expect(fetchStudents).toHaveBeenCalledWith({
       locationState: "transit",
+      view: "slim",
       dayStatus: "comes_today",
       pageSize: 200,
     });

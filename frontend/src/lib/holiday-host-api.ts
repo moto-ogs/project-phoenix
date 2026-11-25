@@ -652,11 +652,17 @@ export async function fetchHolidayOwnChildAssignments(
         "Die eigenen Kinder der Ferienwoche konnten nicht geladen werden",
     },
   );
-  return entries.map((entry) => ({
+  return entries.map(mapHolidayOwnChildAssignment);
+}
+
+export function mapHolidayOwnChildAssignment(
+  entry: weeks.HolidayOwnChildAssignment,
+): HolidayOwnChildAssignment {
+  return {
     childId: entry.child_id,
     assignment: assignmentState(entry.assignment),
     studentId: entry.student_id,
-  }));
+  };
 }
 
 // ─── Eigene Kinder in Ferienwochen anderer OGS (#6679) ──────────────────────

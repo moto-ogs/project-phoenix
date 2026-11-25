@@ -188,7 +188,7 @@ export async function fetchArrivalData(
   return mapArrivalData(data);
 }
 
-function mapArrivalData(data: ArrivalDataResponse): ArrivalData {
+export function mapArrivalData(data: ArrivalDataResponse): ArrivalData {
   return {
     schedules: (data.schedules ?? []).map(mapArrivalSchedule),
     exceptions: (data.exceptions ?? []).map(mapArrivalException),
@@ -246,9 +246,7 @@ export async function updateArrivalSchedules(
       body: {
         schedules,
         expected_version: plan.expectedVersion,
-        ...(plan.weekdayNotes
-          ? { weekday_notes: [...plan.weekdayNotes] }
-          : {}),
+        ...(plan.weekdayNotes ? { weekday_notes: [...plan.weekdayNotes] } : {}),
       },
     },
   );
