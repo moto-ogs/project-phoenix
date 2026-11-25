@@ -909,7 +909,7 @@ export function PersonalInfoReadOnly({
 
   return (
     <SectionCard
-      title={appLayout ? "Persönliches" : "Persönliche Informationen"}
+      title="Persönliche Informationen"
       // App (#8070): ohne Symbolkachel, der Kopf bleibt eine schmale Zeile.
       leading={
         appLayout ? undefined : <IconTile tone="green" icon={<PersonIcon />} />
@@ -1350,7 +1350,7 @@ export function StudentHistorySection({
     <>
       <HistoryButton
         concept={roomsConcept}
-        title={appLayout ? "Anwesenheit" : "Anwesenheitsprotokoll"}
+        title="Anwesenheitsprotokoll"
         description={
           readOnly
             ? "Nur für Gruppenbetreuer"
@@ -1373,7 +1373,7 @@ export function StudentHistorySection({
       />
       <HistoryButton
         concept={feedbackConcept}
-        title={appLayout ? "Feedback" : "Feedbackhistorie"}
+        title="Feedbackhistorie"
         description={
           readOnly
             ? "Nur für Gruppenbetreuer"
@@ -1420,9 +1420,9 @@ export function StudentHistorySection({
 
   return (
     <SectionCard
-      // App (#8070): „Verlauf“ statt des Fachworts, wie der Reiter.
-      title={appLayout ? "Verlauf" : "Historien"}
-      // App (#8070): schmaler Kopf ohne Symbolkachel, wie „Persönliches“.
+      title="Historien"
+      // App (#8070): schmaler Kopf ohne Symbolkachel, wie „Persönliche
+      // Informationen“; Titel wie heute.
       concept={appLayout ? undefined : changeHistoryConcept}
       action={stopAction}
     >
