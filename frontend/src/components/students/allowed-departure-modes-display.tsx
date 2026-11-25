@@ -19,16 +19,32 @@ import { StatusBadge } from "~/components/ui/status-badge";
  */
 export function AllowedDepartureModesDisplay({
   value,
-}: Readonly<{ value?: AllowedDepartureModes | null }>) {
+  grouped = false,
+}: Readonly<{
+  value?: AllowedDepartureModes | null;
+  /**
+   * App (#8070): Aufeinanderfolgende Tage mit gleichen Heimwegen stehen in
+   * einer Zeile („Mo–Fr Bus“) statt fünf gleicher Zeilen.
+   */
+  grouped?: boolean;
+}>) {
   if (!hasAnyDepartureArrangement(value)) {
     return <span className="text-gray-900">Geht immer alleine</span>;
   }
 
+  const rows = departureMatrixRows(value);
+  const shown = grouped ? groupEqualDays(rows) : rows;
   return (
     <div className="space-y-1.5">
-      {departureMatrixRows(value).map((row) => (
+      {shown.map((row) => (
         <div key={row.key} className="flex items-center gap-3">
-          <span className="w-7 shrink-0 text-xs font-semibold text-gray-500">
+          <span
+            className={
+              grouped
+                ? "min-w-7 shrink-0 text-xs font-semibold text-gray-500"
+                : "w-7 shrink-0 text-xs font-semibold text-gray-500"
+            }
+          >
             {row.short}
           </span>
           <div className="flex flex-wrap gap-1">
@@ -44,5 +60,24 @@ export function AllowedDepartureModesDisplay({
         </div>
       ))}
     </div>
+  );
+}
+
+type MatrixRow = ReturnType<typeof departureMatrixRows>[number];
+
+function groupEqualDays(rows: readonly MatrixRow[]): MatrixRow[] {
+  const out: { first: MatrixRow; last: MatrixRow }[] = [];
+  for (const row of rows) {
+    const current = out.at(-1);
+    if (current && current.last.modes.join() === row.modes.join()) {
+      current.last = row;
+    } else {
+      out.push({ first: row, last: row });
+    }
+  }
+  return out.map(({ first, last }) =>
+    first === last
+      ? first
+      : { ...first, short: `${first.short}–${last.short}` },
   );
 }

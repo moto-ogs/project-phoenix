@@ -3116,10 +3116,16 @@ function SearchPageContent() {
   // Zahl ist sicherheitsrelevant und steht sonst nirgends ohne Weiteres. In
   // der Schule, im Unterricht und zuhause zählt die Liste selbst: gruppiert
   // „Nach Status“ steht die Zahl an jeder Gruppe.
+  // App (#8070): Kinder als Zeilenliste mit Kind-Blatt. Der An- und
+  // Abmeldemodus behält seine Karten; die Ansichtswahl gilt nur am Desktop.
+  const device = useDeviceContext();
+  const appView = device.resolved && device.isApp;
   const studentSummary = useMemo(() => {
     if (!rowsLoaded) return null;
     const total = students.length;
     if (!isToday) {
+      if (appView)
+        return <TenantPageStats items={[{ value: total, label: "" }]} />;
       return `${total} ${total === 1 ? "Kind" : "Kinder"}`;
     }
     // Ein eingechecktes Kind zählt „in der OGS“, auch wenn es krank gemeldet
@@ -3158,16 +3164,27 @@ function SearchPageContent() {
         inCare += 1;
       }
     }
+    // App (#8070): Die Chips stehen in der Titelzeile neben „Kinder“, also
+    // kurz: „Kinder 118 · 16 da · 0 krank“ („da“ wie in den Zeilen).
     return (
       <TenantPageStats
-        items={[
-          { value: total, label: total === 1 ? "Kind" : "Kinder" },
-          { value: inCare, label: "in der OGS" },
-          { value: sick, label: "krank" },
-        ]}
+        items={
+          appView
+            ? [
+                // Nur die Zahl: Sie steht direkt hinter dem Titel „Kinder“.
+                { value: total, label: "" },
+                { value: inCare, label: "da" },
+                { value: sick, label: "krank" },
+              ]
+            : [
+                { value: total, label: total === 1 ? "Kind" : "Kinder" },
+                { value: inCare, label: "in der OGS" },
+                { value: sick, label: "krank" },
+              ]
+        }
       />
     );
-  }, [isToday, students, rowsLoaded]);
+  }, [isToday, students, rowsLoaded, appView]);
 
   const selectedStudentsForBulk = useMemo(
     () =>
@@ -3375,10 +3392,6 @@ function SearchPageContent() {
   // Die Spaltenwahl wirkt nur am Computer: auf dem Handy zeigt die Liste
   // je Kind eine Zeile mit Name, Status und Gehzeit (#3834).
   const isPhone = useMediaQuery(BELOW_MD);
-  // App (#8070): Kinder als Zeilenliste mit Kind-Blatt. Der An- und
-  // Abmeldemodus behält seine Karten; die Ansichtswahl gilt nur am Desktop.
-  const device = useDeviceContext();
-  const appView = device.resolved && device.isApp;
   const appList = appView && !(checkinModeAvailable && schoolCheckin.isActive);
   const changeView = useCallback(
     (next: "tiles" | "table") => {
@@ -3459,7 +3472,8 @@ function SearchPageContent() {
       {/* Kopfkarte wie auf jeder Tenant-Seite: Titel, Statuszeile, Aktionen,
           darunter Suche und Filter. */}
       <TenantPage
-        title="Alle Kinder"
+        title={appView ? "Kinder" : "Alle Kinder"}
+        appStatsInline
         info="Hier findest du jedes Kind deiner OGS. Gib zuerst den Namen in die Suche ein. Wähle dann die Karte des Kindes, um seine Angaben zu sehen."
         tabs={childScope.tabs}
         stats={studentSummary}

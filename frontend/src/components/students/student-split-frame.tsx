@@ -6,7 +6,7 @@
 // Unter `split:` (Telefon, iPad hoch, Desktop) rendert der Rahmen nur die
 // Akte, unverändert.
 
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { Avatar } from "~/components/ui/avatar";
 import {
@@ -14,6 +14,8 @@ import {
   CollectionList,
   CollectionRow,
 } from "~/components/ui/collection";
+import { SearchBar } from "~/components/ui/page-header/SearchBar";
+import { Z_LAYER } from "~/components/ui/overlay-styles";
 import { SplitView } from "~/components/ui/split-view";
 import { StatusBadge } from "~/components/ui/status-badge";
 import {
@@ -91,6 +93,16 @@ function SplitStudentList({
       ),
     [data],
   );
+  // Eigene Suche der Spalte: Ein anderes Kind ist zwei Buchstaben entfernt,
+  // ohne zurück zur Kindersuche zu gehen.
+  const [query, setQuery] = useState("");
+  const shown = useMemo(() => {
+    const needle = query.trim().toLocaleLowerCase("de");
+    if (!needle) return students;
+    return students.filter((student) =>
+      studentName(student).toLocaleLowerCase("de").includes(needle),
+    );
+  }, [students, query]);
   const listRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const row = listRef.current?.querySelector<HTMLElement>(
@@ -99,14 +111,29 @@ function SplitStudentList({
     row?.scrollIntoView({ block: "center" });
   }, [studentId, students.length]);
 
-  const query = from ? `?from=${encodeURIComponent(from)}` : "";
+  const fromQuery = from ? `?from=${encodeURIComponent(from)}` : "";
   return (
     <div ref={listRef}>
       <Collection label="Kinder">
+        {/* Kopf der Spalte: klebt oben in ihrem eigenen Scroll. */}
+        <div
+          className={`sticky top-0 ${Z_LAYER.sticky} border-b border-gray-100 bg-white p-2`}
+        >
+          <SearchBar
+            value={query}
+            onChange={setQuery}
+            placeholder="Kind suchen…"
+            size="sm"
+          />
+        </div>
         <CollectionList>
-          {students.map((student) => {
+          {shown.map((student) => {
             const id = student.id.toString();
             const status = childDayStatus(student, true);
+            const klass = student.school_class?.replace(/^Klasse\s+/, "");
+            const subtitle = [klass, student.group_name]
+              .filter(Boolean)
+              .join(" · ");
             return (
               <CollectionRow
                 key={id}
@@ -118,16 +145,23 @@ function SplitStudentList({
                     decorative
                   />
                 }
-                title={studentName(student)}
-                subtitle={
-                  <StatusBadge
-                    label={status.value}
-                    tone={CHILD_DAY_TONE_BADGE[status.tone]}
-                    compact
-                  />
+                // Dieselbe Zeile wie in der Kindersuche: Status hinter dem
+                // Namen, Klasse und Gruppe darunter.
+                title={
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate">{studentName(student)}</span>
+                    <span className="shrink-0">
+                      <StatusBadge
+                        label={status.value}
+                        tone={CHILD_DAY_TONE_BADGE[status.tone]}
+                        compact
+                      />
+                    </span>
+                  </span>
                 }
+                subtitle={subtitle || undefined}
                 selected={id === studentId}
-                onClick={() => router.replace(`/students/${id}${query}`)}
+                onClick={() => router.replace(`/students/${id}${fromQuery}`)}
               />
             );
           })}

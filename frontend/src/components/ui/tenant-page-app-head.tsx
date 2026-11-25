@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
+import { ChevronRight, MoreHorizontal } from "lucide-react";
 import {
   createContext,
   useContext,
@@ -72,6 +72,8 @@ export interface AppHeadProps {
   readonly actions?: ReactNode;
   readonly overflowMenu?: readonly OverflowMenuEntry[];
   readonly statusLine?: ReactNode;
+  /** Kennzahlen in der Titelzeile statt darunter (`appStatsInline`). */
+  readonly statsInline?: boolean;
   /** Reiter als Chips. */
   readonly tabs?: ReactNode;
   /** Suche, Filter oder ein Bedienband (`searchSlot`). */
@@ -100,6 +102,7 @@ export function AppTenantHead({
   actions,
   overflowMenu,
   statusLine,
+  statsInline = false,
   tabs,
   toolbar,
   printHideHeader = false,
@@ -165,7 +168,8 @@ export function AppTenantHead({
           <h1
             suppressHydrationWarning
             className={cn(
-              "tablet:text-xl min-w-0 flex-1 truncate text-lg leading-7 font-semibold tracking-tight text-gray-900",
+              "tablet:text-xl min-w-0 truncate text-lg leading-7 font-semibold tracking-tight text-gray-900",
+              statsInline && statusLine != null ? "shrink-0" : "flex-1",
               // Bündig: ohne Zurück-Pfeil 16 px vom Rand wie die Chips, nach
               // dem Pfeil ohne zusätzlichen Einzug.
               backLink
@@ -175,10 +179,17 @@ export function AppTenantHead({
           >
             {title}
           </h1>
+          {statsInline && statusLine != null ? (
+            <AppHeadStatsContext.Provider value={true}>
+              <div className="flex min-w-0 flex-1 [scrollbar-width:none] overflow-x-auto text-sm text-gray-600">
+                {statusLine}
+              </div>
+            </AppHeadStatsContext.Provider>
+          ) : null}
           <div className={ICON_ACTIONS_ONLY}>{actions}</div>
           {menuButton}
         </div>
-        {statusLine != null && (
+        {statusLine != null && !statsInline && (
           <AppHeadStatsContext.Provider value={true}>
             {/* Chips beginnen an der Titelkante (ohne Pfeil 16 px, nach
                 dem Pfeil 52 px vom Kartenrand). */}
@@ -277,7 +288,10 @@ export function AppTenantHead({
               </div>
             </section>
           )}
-          <div className="hidden items-center justify-between gap-3 text-sm font-medium text-gray-900 has-[a]:flex has-[button]:flex">
+          {/* Nur das Hilfe-Symbol, auf jeder App-Breite (der Link blendet
+              sich sonst ab lg aus): Die Suche hat ihren Platz unter „Mehr“
+              und stünde hier ohne Beschriftung. */}
+          <div className="hidden items-center justify-between gap-3 text-sm font-medium text-gray-900 has-[a]:flex has-[button]:flex [&_.lg\:hidden]:inline-flex [&_span.lg\:hidden>:not(:last-child)]:hidden">
             <span>Hilfe zu dieser Seite</span>
             <MobilePageHelpTarget />
           </div>
@@ -505,56 +519,79 @@ export function AppTenantTabs({
 }: AppTabsProps) {
   const navRef = useRef<HTMLElement>(null);
   const edges = useScrollEdges(navRef, value);
+  const scrollOn = () => {
+    const node = navRef.current;
+    if (!node) return;
+    node.scrollBy({ left: node.clientWidth * 0.7, behavior: "smooth" });
+  };
   return (
-    <nav
-      ref={navRef}
-      aria-label={label}
-      // `py-1.5 -mt-1`: Die Leiste schneidet senkrecht mit ab; so bleibt die
-      // 44-px-Trefferfläche der 32 px hohen Reiter ganz. Unten kein
-      // negativer Rand: Sonst ragt das Suchfeld darunter in sie hinein.
-      className="-mx-2 -mt-1 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-2 py-1.5"
-      style={edgeMask(edges)}
-    >
-      {items.map((item) => {
-        const active = item.value === value;
-        const content = (
-          <>
-            {item.label}
-            {item.badge ? (
-              <span className="tabular-nums opacity-80">{item.badge}</span>
-            ) : null}
-          </>
-        );
-        if (item.href && !item.disabled) {
+    <div className="relative">
+      <nav
+        ref={navRef}
+        aria-label={label}
+        // `py-1.5 -mt-1`: Die Leiste schneidet senkrecht mit ab; so bleibt die
+        // 44-px-Trefferfläche der 32 px hohen Reiter ganz. Unten kein
+        // negativer Rand: Sonst ragt das Suchfeld darunter in sie hinein.
+        className="-mx-2 -mt-1 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-2 py-1.5"
+        style={edgeMask(edges)}
+      >
+        {items.map((item) => {
+          const active = item.value === value;
+          const content = (
+            <>
+              {item.label}
+              {item.badge ? (
+                <span className="tabular-nums opacity-80">{item.badge}</span>
+              ) : null}
+            </>
+          );
+          if (item.href && !item.disabled) {
+            return (
+              <ButtonLink
+                key={item.value}
+                href={item.href}
+                variant="chip"
+                size="md"
+                aria-current={active ? "page" : undefined}
+                noTooltip="Reiter: der Name sagt, wohin er führt."
+              >
+                {content}
+              </ButtonLink>
+            );
+          }
           return (
-            <ButtonLink
+            <Button
               key={item.value}
-              href={item.href}
+              type="button"
               variant="chip"
               size="md"
-              aria-current={active ? "page" : undefined}
-              noTooltip="Reiter: der Name sagt, wohin er führt."
+              aria-pressed={active}
+              disabled={item.disabled}
+              onClick={() => onChange(item.value)}
+              noTooltip="Reiter: der Name sagt, was er zeigt."
             >
               {content}
-            </ButtonLink>
+            </Button>
           );
-        }
-        return (
+        })}
+      </nav>
+      {/* Pfeil am Ende: Die Reihe geht sichtbar weiter, ein Tipp schiebt
+        die nächsten Reiter herein. */}
+      {edges.end ? (
+        <span className="absolute inset-y-0 -right-1 flex items-center">
           <Button
-            key={item.value}
             type="button"
-            variant="chip"
-            size="md"
-            aria-pressed={active}
-            disabled={item.disabled}
-            onClick={() => onChange(item.value)}
-            noTooltip="Reiter: der Name sagt, was er zeigt."
+            variant="ghost"
+            size="icon"
+            aria-label="Weitere Bereiche zeigen"
+            tooltip="Schiebt die Reiterleiste weiter nach rechts."
+            onClick={scrollOn}
           >
-            {content}
+            <ChevronRight className="size-5" aria-hidden="true" />
           </Button>
-        );
-      })}
-    </nav>
+        </span>
+      ) : null}
+    </div>
   );
 }
 
@@ -563,7 +600,7 @@ function edgeMask(edges: { start: boolean; end: boolean }) {
   if (!edges.start && !edges.end) return undefined;
   const mask = `linear-gradient(to right, ${
     edges.start ? "transparent 0, #000 2.5rem" : "#000 0"
-  }, ${edges.end ? "#000 calc(100% - 2.5rem), transparent 100%" : "#000 100%"})`;
+  }, ${edges.end ? "#000 calc(100% - 5rem), transparent calc(100% - 2.75rem)" : "#000 100%"})`;
   return { maskImage: mask, WebkitMaskImage: mask };
 }
 
