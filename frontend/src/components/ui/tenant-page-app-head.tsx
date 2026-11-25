@@ -409,10 +409,14 @@ export function AppTenantTabs({
   items,
   label = "Seitenbereiche",
 }: AppTabsProps) {
+  const navRef = useRef<HTMLElement>(null);
+  const edges = useScrollEdges(navRef, value);
   return (
     <nav
+      ref={navRef}
       aria-label={label}
       className="-mx-2 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-2 py-0.5"
+      style={edgeMask(edges)}
     >
       {items.map((item) => {
         const active = item.value === value;
@@ -455,4 +459,48 @@ export function AppTenantTabs({
       })}
     </nav>
   );
+}
+
+/** Weiche Kante, wo die Reihe weitergeht: Ein Reiter ist nie hart abgeschnitten. */
+function edgeMask(edges: { start: boolean; end: boolean }) {
+  if (!edges.start && !edges.end) return undefined;
+  const mask = `linear-gradient(to right, ${
+    edges.start ? "transparent 0, #000 2.5rem" : "#000 0"
+  }, ${edges.end ? "#000 calc(100% - 2.5rem), transparent 100%" : "#000 100%"})`;
+  return { maskImage: mask, WebkitMaskImage: mask };
+}
+
+/**
+ * Ob links bzw. rechts noch Reiter verborgen sind. Der aktive Reiter wird
+ * beim Wechsel in den sichtbaren Bereich geschoben.
+ */
+function useScrollEdges(ref: RefObject<HTMLElement | null>, active: string) {
+  const [edges, setEdges] = useState({ start: false, end: false });
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return undefined;
+    const update = () => {
+      const max = node.scrollWidth - node.clientWidth;
+      setEdges({ start: node.scrollLeft > 2, end: node.scrollLeft < max - 2 });
+    };
+    const current = node.querySelector<HTMLElement>(
+      "[aria-pressed='true'],[aria-current='page']",
+    );
+    if (current && node.scrollWidth > node.clientWidth) {
+      const left = current.offsetLeft - node.offsetLeft;
+      const right = left + current.offsetWidth;
+      if (left < node.scrollLeft || right > node.scrollLeft + node.clientWidth)
+        node.scrollLeft = Math.max(0, left - 40);
+    }
+    update();
+    node.addEventListener("scroll", update, { passive: true });
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    observer?.observe(node);
+    return () => {
+      node.removeEventListener("scroll", update);
+      observer?.disconnect();
+    };
+  }, [ref, active]);
+  return edges;
 }
