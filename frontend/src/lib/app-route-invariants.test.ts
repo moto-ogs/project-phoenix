@@ -105,11 +105,11 @@ it("keeps known audit-producing and side-effecting GETs out of page and shell se
       ) {
         continue;
       }
-      const path = path.join(file.parentPath, file.name);
-      const source = readFileSync(path, "utf8");
+      const filePath = path.join(file.parentPath, file.name);
+      const source = readFileSync(filePath, "utf8");
       for (const route of openingOnly) {
         if (source.includes(JSON.stringify(route))) {
-          violations.push(`${path.relative(sourceRoot, path)}: ${route}`);
+          violations.push(`${path.relative(sourceRoot, filePath)}: ${route}`);
         }
       }
     }
