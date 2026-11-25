@@ -1,11 +1,13 @@
 "use client";
 
 // Tagesplan in der App (#8070, #7795): eine Tagesliste statt Spuren
-// nebeneinander. Gleichzeitige Blöcke stehen untereinander in einer Gruppe
-// „Gleichzeitig“; am iPad hoch dürfen sie nebeneinander stehen, wenn Platz
-// ist. Ein Tipp auf einen Block öffnet seine Angaben mit den Aktionen, die
-// der Tagesplan heute schon anbietet (Kinderliste öffnen, Aufsicht starten).
-// Am iPad quer steht die Liste links (⅓), der gewählte Block rechts (⅔).
+// nebeneinander. Gleichzeitige Blöcke stehen untereinander in einer
+// eingefärbten Gruppe „Gleichzeitig“, die sichtbar endet; auf jedem Gerät
+// gleich. Jede Zeile nennt Zeit, Raum, Gruppe, Kinderzahl und Personal. Ein
+// Tipp auf einen Block öffnet seine Angaben mit den Aktionen, die der
+// Tagesplan heute schon anbietet (Kinderliste öffnen, Aufsicht starten).
+// Am iPad quer steht die Liste samt Tagesleiste links (⅓), der gewählte
+// Block rechts (⅔) mit der Aktion unten in Daumennähe.
 //
 // Daten, Tageswechsel, Start und Öffnen kommen aus `TagesplanView`; dieser
 // Baustein lädt nichts selbst.
@@ -16,6 +18,7 @@ import {
   Fragment,
   type ReactNode,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -24,7 +27,6 @@ import {
 import { blockStaffNames } from "~/components/timetable/block-row-parts";
 import type { TagesplanGroup } from "~/components/timetable/tagesplan-groups";
 import { Button } from "~/components/ui/button";
-import { ColorBar } from "~/components/ui/color-bar";
 import {
   Collection,
   CollectionGroup,
@@ -33,17 +35,23 @@ import {
 } from "~/components/ui/collection";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { OverlaySheet } from "~/components/ui/overlay-sheet";
+import { Z_LAYER } from "~/components/ui/overlay-styles";
 import { PlanningDayChip } from "~/components/ui/planning/planning-context-bar";
 import { SectionCard } from "~/components/ui/section-card";
 import { SplitView, useSplitSelection } from "~/components/ui/split-view";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
-import { blockChildrenLabel, blockTimeRange } from "~/lib/block-children";
+import {
+  blockChildrenLabel,
+  blockTimeRange,
+  hasOpenEnd,
+} from "~/lib/block-children";
 import { parseISODate, toISODate } from "~/lib/date-helpers";
 import { useDeviceContext } from "~/lib/device-context";
+import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import { GROUP_ROOM_SHADES, LOCATION_COLORS } from "~/lib/location-helper";
 import {
-  formatDayHeader,
   getGermanWeekdayShort,
+  parseTimeToMinutes,
 } from "~/lib/timetable-helpers";
 import { canStartPlannedInstance } from "~/lib/timetable-lifecycle";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
@@ -58,13 +66,15 @@ function shiftISO(iso: string, days: number): string {
   return toISODate(d);
 }
 
-/** „Heute, Di 24.11.“, „Morgen, Mi 25.11.“ oder „Do 26.11.“ */
+/**
+ * Titel des Kopfs: „Heute“, „Morgen“, „Gestern“, sonst „Tagesplan“. Das
+ * Datum steht nur in der Tagesleiste, nicht doppelt im Titel.
+ */
 export function tagesplanAppTitle(day: string, today: string): string {
-  const label = formatDayHeader(parseISODate(day));
-  if (day === today) return `Heute, ${label}`;
-  if (day === shiftISO(today, 1)) return `Morgen, ${label}`;
-  if (day === shiftISO(today, -1)) return `Gestern, ${label}`;
-  return label;
+  if (day === today) return "Heute";
+  if (day === shiftISO(today, 1)) return "Morgen";
+  if (day === shiftISO(today, -1)) return "Gestern";
+  return "Tagesplan";
 }
 
 /** Montag bis Freitag der Woche von `day`; ein Wochenendtag kommt dazu. */
@@ -78,9 +88,9 @@ function weekDays(day: string): string[] {
 }
 
 /**
- * Klebende Tagesleiste: Pfeile für den vorigen und nächsten Betreuungstag,
- * dazwischen die Tage der Woche. „Heute“ erscheint, sobald heute nicht in
- * der Leiste steht.
+ * Tagesleiste: Pfeile für den vorigen und nächsten Betreuungstag,
+ * dazwischen die Tage der Woche mit Datum. „Heute“ erscheint, sobald heute
+ * nicht in der Leiste steht.
  */
 export function TagesplanDayBar({
   day,
@@ -97,12 +107,12 @@ export function TagesplanDayBar({
 }>) {
   const days = weekDays(day);
   const todayInStrip = days.includes(today);
+  // Mit Monat nur, wo die Leiste breit ist (iPad hoch); am Telefon und in
+  // der Listenspalte reicht der Tag, der Monat stünde gedrängt.
+  const { layout, isSplit } = useDeviceContext();
+  const withMonth = layout === "tablet" && !isSplit;
   return (
-    <div
-      // Am iPad bleibt die Leiste so breit wie am Telefon gedacht, mittig.
-      className="tablet:mx-auto tablet:max-w-xl flex items-center gap-1"
-      data-tagesplan-day-bar=""
-    >
+    <div className="flex items-center gap-1" data-tagesplan-day-bar="">
       <Button
         type="button"
         variant="ghost"
@@ -110,12 +120,12 @@ export function TagesplanDayBar({
         aria-label="Vorheriger Tag"
         tooltip="Zeigt den Plan des vorherigen Betreuungstags."
         // Abstand zum Rand der Leiste, sonst schneidet sie die 44-px-Fläche.
-        className="ml-1"
+        className="ml-1 shrink-0"
         onClick={onPrevious}
       >
         <ChevronLeft className="size-5" aria-hidden="true" />
       </Button>
-      <div className="mx-1.5 flex min-w-0 flex-1 gap-0.5">
+      <div className="mx-1 flex min-w-0 flex-1 gap-0.5">
         {days.map((iso) => {
           const date = parseISODate(iso);
           const weekday = getGermanWeekdayShort(date);
@@ -124,7 +134,11 @@ export function TagesplanDayBar({
               key={iso}
               stacked
               weekdayLabel={weekday}
-              dateLabel={`${String(date.getDate()).padStart(2, "0")}.`}
+              dateLabel={`${String(date.getDate()).padStart(2, "0")}.${
+                withMonth
+                  ? `${String(date.getMonth() + 1).padStart(2, "0")}.`
+                  : ""
+              }`}
               selected={iso === day}
               today={iso === today}
               onClick={() => onSelect(iso)}
@@ -138,6 +152,7 @@ export function TagesplanDayBar({
         size="icon"
         aria-label="Nächster Tag"
         tooltip="Zeigt den Plan des nächsten Betreuungstags."
+        className="shrink-0"
         onClick={onNext}
       >
         <ChevronRight className="size-5" aria-hidden="true" />
@@ -147,6 +162,7 @@ export function TagesplanDayBar({
           type="button"
           variant="outline"
           size="compact"
+          className="mr-1 shrink-0"
           tooltip="Zeigt den Plan von heute."
           onClick={() => onSelect(today)}
         >
@@ -155,6 +171,35 @@ export function TagesplanDayBar({
       )}
     </div>
   );
+}
+
+/**
+ * Kennzahlen des Tages für die Chip-Leiste im Kopf: Blöcke, davon deine,
+ * und was gerade läuft. Höchstens drei.
+ */
+export function tagesplanAppStats(
+  instances: readonly PlannedTimetableInstance[],
+  showMine: boolean,
+  scopeHint: string | null,
+): { value?: number; label: string }[] {
+  const blocks = instances.length;
+  const items: { value?: number; label: string }[] = [];
+  if (blocks > 0) {
+    items.push({ value: blocks, label: blocks === 1 ? "Block" : "Blöcke" });
+  }
+  if (scopeHint) {
+    items.push({ label: scopeHint });
+  } else if (showMine) {
+    const mine = instances.filter((instance) => instance.isAssigned).length;
+    if (mine > 0) items.push({ value: mine, label: "mit dir" });
+  }
+  const running = instances.filter(
+    (instance) => instance.status === "active",
+  ).length;
+  if (running > 0) {
+    items.push({ value: running, label: running === 1 ? "läuft" : "laufen" });
+  }
+  return items;
 }
 
 // ---------------------------------------------------------------------------
@@ -233,12 +278,19 @@ export interface TagesplanAppProps {
   startBusyId: string | null;
   onOpenSession: (activeGroupId: string) => void;
   onStart: (instance: PlannedTimetableInstance) => void;
+  /**
+   * Die Tagesleiste. Am iPad quer steht sie über der Listenspalte statt
+   * über der ganzen Breite, damit sie die Detailspalte nie verdeckt.
+   */
+  dayBar: ReactNode;
 }
 
 interface Entry {
   instance: PlannedTimetableInstance;
   effectiveEndTime: string;
   state: BlockState;
+  /** Die anderen Blöcke derselben Gruppe „Gleichzeitig“. */
+  parallel: readonly PlannedTimetableInstance[];
 }
 
 export function TagesplanApp(props: TagesplanAppProps) {
@@ -253,8 +305,9 @@ export function TagesplanApp(props: TagesplanAppProps) {
     startBusyId,
     onOpenSession,
     onStart,
+    dayBar,
   } = props;
-  const { layout, isSplit } = useDeviceContext();
+  const { isSplit } = useDeviceContext();
   const isToday = day === today;
 
   const entries = useMemo(() => {
@@ -264,6 +317,9 @@ export function TagesplanApp(props: TagesplanAppProps) {
         map.set(cell.instance.id, {
           instance: cell.instance,
           effectiveEndTime: cell.effectiveEndTime,
+          parallel: group.cells
+            .filter((other) => other.instance.id !== cell.instance.id)
+            .map((other) => other.instance),
           state: blockState(cell.instance, cell.effectiveEndTime, {
             isToday,
             dayIsPast: day < today,
@@ -352,6 +408,8 @@ export function TagesplanApp(props: TagesplanAppProps) {
     pane.scrollTop += offset - pane.clientHeight / 3;
   }, [isSplit, splitId, day]);
 
+  const splitTop = useSplitTop(isSplit);
+
   const openEntry = (id: string) => {
     if (isSplit) select(id);
     else setSheetId(id);
@@ -372,17 +430,15 @@ export function TagesplanApp(props: TagesplanAppProps) {
     );
   };
 
-  // iPad hoch: zwei gleichzeitige Blöcke stehen nebeneinander. Ab drei
-  // würde jede Spalte so schmal, dass Raum und Titel umbrechen („OGS-
-  // Raum 1“); dann, am Telefon und neben dem Detail untereinander.
-  const sideBySide = layout === "tablet" && !isSplit;
-
   const nowLine = (
     <div ref={nowRef} style={NOW_SCROLL_MARGIN}>
       <NowLine nowHHMM={nowHHMM} />
     </div>
   );
 
+  // Gleichzeitige Blöcke stehen auf jedem Gerät untereinander in einer
+  // eingefärbten Gruppe mit Klammer links. Die Gruppe endet sichtbar: der
+  // nächste Block steht wieder auf Weiß.
   const list = (
     <Collection label="Blöcke des Tages">
       {groups.map((group, index) => (
@@ -394,14 +450,8 @@ export function TagesplanApp(props: TagesplanAppProps) {
             </div>
           ) : (
             <div
-              className={cn(
-                "border-gray-100 [&:not(:first-child)]:border-t",
-                sideBySide &&
-                  group.laneCount === 2 &&
-                  group.cells.length === 2 &&
-                  "[&_ul]:grid [&_ul]:[grid-template-columns:repeat(var(--lanes),minmax(0,1fr))] [&_ul]:divide-x [&_ul]:divide-y-0",
-              )}
-              style={{ "--lanes": group.laneCount } as CSSProperties}
+              data-tagesplan-parallel=""
+              className="relative border-gray-200 bg-gray-50 before:absolute before:top-10 before:bottom-3 before:left-1.5 before:w-1 before:rounded-full before:bg-gray-300 before:content-[''] [&_[data-collection-group]>div:first-child]:bg-gray-100 [&:not(:first-child)]:border-t [&:not(:last-child)]:border-b"
             >
               <CollectionGroup
                 title={
@@ -412,7 +462,7 @@ export function TagesplanApp(props: TagesplanAppProps) {
                       : `${group.startTime}–${group.endTime}`}
                   </span>
                 }
-                count={group.cells.length}
+                meta={`${group.cells.length} Blöcke`}
               >
                 {group.cells.map((cell) => renderRow(cell))}
               </CollectionGroup>
@@ -424,18 +474,10 @@ export function TagesplanApp(props: TagesplanAppProps) {
     </Collection>
   );
 
-  const detailFor = (entry: Entry) => (
-    <BlockDetail
-      entry={entry}
-      next={entry.instance.startTime === nextStart && !entry.state.over}
-      mine={showMine && entry.instance.isAssigned}
-    />
-  );
-  const actionFor = (entry: Entry, fullWidth: boolean) => (
+  const actionFor = (entry: Entry) => (
     <BlockAction
       entry={entry}
       busy={startBusyId === entry.instance.id}
-      fullWidth={fullWidth}
       onOpenSession={onOpenSession}
       onStart={onStart}
     />
@@ -443,21 +485,38 @@ export function TagesplanApp(props: TagesplanAppProps) {
 
   if (isSplit) {
     return (
-      <SplitView
-        // Unten Platz, damit der letzte Block über die Pill scrollen kann.
-        list={<div className="pb-24">{list}</div>}
-        detail={
-          splitEntry ? (
-            <SectionCard
-              title={splitEntry.instance.title}
-              action={actionFor(splitEntry, false)}
-            >
-              {detailFor(splitEntry)}
-            </SectionCard>
-          ) : null
+      <div
+        style={
+          {
+            "--tagesplan-split-top": splitTop,
+            "--tagesplan-split-height": SPLIT_PANE_HEIGHT,
+          } as CSSProperties
         }
-        empty="Wähle links einen Block, um seine Angaben zu sehen."
-      />
+      >
+        <SplitView
+          // Die Listenspalte endet wie die Detailspalte über der Pill.
+          className="[&>[data-split-list]]:max-h-(--tagesplan-split-height)"
+          list={<SplitListColumn dayBar={dayBar} list={list} />}
+          detail={
+            splitEntry ? (
+              <SplitDetail
+                entry={splitEntry}
+                next={
+                  splitEntry.instance.startTime === nextStart &&
+                  !splitEntry.state.over
+                }
+                mine={showMine && splitEntry.instance.isAssigned}
+                action={
+                  splitEntry.state.openable || splitEntry.state.startable
+                    ? actionFor(splitEntry)
+                    : null
+                }
+              />
+            ) : null
+          }
+          empty="Wähle links einen Block, um seine Angaben zu sehen."
+        />
+      </div>
     );
   }
 
@@ -473,15 +532,134 @@ export function TagesplanApp(props: TagesplanAppProps) {
         footer={
           sheetEntry &&
           (sheetEntry.state.openable || sheetEntry.state.startable)
-            ? actionFor(sheetEntry, true)
+            ? actionFor(sheetEntry)
             : undefined
         }
       >
-        {sheetEntry ? detailFor(sheetEntry) : null}
+        {sheetEntry ? (
+          <BlockDetail
+            entry={sheetEntry}
+            next={
+              sheetEntry.instance.startTime === nextStart &&
+              !sheetEntry.state.over
+            }
+            mine={showMine && sheetEntry.instance.isAssigned}
+          />
+        ) : null}
       </OverlaySheet>
     </>
   );
 }
+
+// ---------------------------------------------------------------------------
+// iPad quer
+
+/**
+ * Höhe beider Spalten: vom Beginn der Spalten bis über die Pill (6,5 rem
+ * samt Abstand). So passt die Seite ins Bild, nichts scrollt unter die Pill
+ * und die Aktion unten in der Detailspalte bleibt frei.
+ */
+const SPLIT_PANE_HEIGHT = "calc(100dvh - var(--tagesplan-split-top) - 6.5rem)";
+
+/** Abstand der Spalten vom Seitenanfang, als CSS-Variable am Split. */
+function useSplitTop(active: boolean): string {
+  const [top, setTop] = useState(0);
+  useLayoutEffect(() => {
+    if (!active) return;
+    const measure = () => {
+      const split = document.querySelector<HTMLElement>("[data-split-view]");
+      if (!split) return;
+      setTop(Math.round(split.getBoundingClientRect().top + window.scrollY));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(measure);
+    const head = document.querySelector("[data-app-page-head]");
+    if (head) observer?.observe(head);
+    return () => {
+      window.removeEventListener("resize", measure);
+      observer?.disconnect();
+    };
+  }, [active]);
+  return `${top}px`;
+}
+
+/**
+ * Linke Spalte: die Tagesleiste klebt oben in der Spalte, die Gruppenköpfe
+ * der Liste kleben darunter. Unten bleibt Platz, damit der letzte Block über
+ * die Pill scrollen kann.
+ */
+function SplitListColumn({
+  dayBar,
+  list,
+}: Readonly<{ dayBar: ReactNode; list: ReactNode }>) {
+  const barRef = useRef<HTMLDivElement>(null);
+  const [barHeight, setBarHeight] = useState(0);
+  useLayoutEffect(() => {
+    const bar = barRef.current;
+    if (!bar) return;
+    const update = () => setBarHeight(bar.offsetHeight);
+    update();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(update);
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <>
+      <div ref={barRef} className={`sticky top-0 ${Z_LAYER.nav}`}>
+        <SectionCard padding="none" className="py-1.5">
+          {dayBar}
+        </SectionCard>
+      </div>
+      <div
+        className="mt-2"
+        style={{ "--app-sticky-offset": `${barHeight}px` } as CSSProperties}
+      >
+        {list}
+      </div>
+    </>
+  );
+}
+
+/**
+ * Rechte Spalte: der gewählte Block in einer Karte so hoch wie die Liste.
+ * Die Angaben scrollen, die Hauptaktion steht unten in Daumennähe.
+ */
+function SplitDetail({
+  entry,
+  next,
+  mine,
+  action,
+}: Readonly<{
+  entry: Entry;
+  next: boolean;
+  mine: boolean;
+  action: ReactNode;
+}>) {
+  return (
+    <SectionCard
+      title={entry.instance.title}
+      namedRegion
+      testId="tagesplan-detail"
+      className="sticky flex flex-col"
+      bodyClassName="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain"
+      style={{
+        top: "var(--app-sticky-offset, 1rem)",
+        height: "var(--tagesplan-split-height)",
+      }}
+      footer={action ?? undefined}
+    >
+      <BlockDetail entry={entry} next={next} mine={mine} />
+    </SectionCard>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Zeile und Angaben
 
 // Die Jetzt-Linie bleibt beim Hinscrollen unter der klebenden Tagesleiste.
 const NOW_SCROLL_MARGIN: CSSProperties = {
@@ -514,35 +692,60 @@ function NowLine({ nowHHMM }: Readonly<{ nowHHMM: string }>) {
   );
 }
 
-function statusChip(state: BlockState, next: boolean): ReactNode {
+/** Farbe der Kennzeichnung „Mit dir“: eigene Farbe, kein Zustand. */
+const MINE_COLOR = MOTO_COLOR_PALETTE.indigo.base;
+
+/**
+ * Kennzeichnungen in Worten statt Farbcode: Zustand („Läuft jetzt“,
+ * „Fällt aus“, „Als Nächstes“) und „Mit dir“ für die eigenen Blöcke.
+ */
+function blockChips(state: BlockState, next: boolean, mine: boolean) {
+  const chips: ReactNode[] = [];
   if (state.running) {
-    return (
+    chips.push(
       <StatusColorBadge
+        key="state"
         label="Läuft jetzt"
         color={LOCATION_COLORS.GROUP_ROOM}
         compact
-      />
+      />,
     );
-  }
-  if (state.cancelled) {
-    return (
+  } else if (state.cancelled) {
+    chips.push(
       <StatusColorBadge
+        key="state"
         label="Fällt aus"
         color={LOCATION_COLORS.DANGER}
         compact
-      />
+      />,
     );
-  }
-  if (next) {
-    return (
+  } else if (next) {
+    chips.push(
       <StatusColorBadge
+        key="state"
         label="Als Nächstes"
         color={LOCATION_COLORS.OTHER_ROOM}
         compact
-      />
+      />,
     );
   }
-  return null;
+  if (mine) {
+    chips.push(
+      <StatusColorBadge
+        key="mine"
+        label="Mit dir"
+        color={MINE_COLOR}
+        compact
+      />,
+    );
+  }
+  return chips;
+}
+
+/** „19 Kinder“ bzw. „13 von 16 da“; ein Dienst und ein Ausfall ohne Zahl. */
+function childrenPart(entry: Entry): string | null {
+  if (entry.state.cancelled || entry.state.isDuty) return null;
+  return blockChildrenLabel(entry.instance);
 }
 
 function BlockRow({
@@ -560,90 +763,109 @@ function BlockRow({
 }>) {
   const { instance, state } = entry;
   const quiet = state.over ? "text-gray-600" : "text-gray-900";
-  // Unterzeile: Raum und Gruppe; vorbei oder abgesagt steht der Zustand
-  // vorn. Kinderzahl und Personal stehen im Blatt.
-  const sub = [
-    state.over || state.cancelled ? state.label : null,
+  const staff = blockStaffNames(instance);
+  const chips = blockChips(state, next, mine);
+  // Erste Unterzeile: Zustand (vorbei, Dienst), Raum, Gruppe.
+  const place = [
+    state.over || (state.cancelled && chips.length === 0) ? state.label : null,
     state.isDuty && !state.over ? "Dienst" : null,
     state.room,
     instance.groupName,
   ]
     .filter(Boolean)
     .join(" · ");
+  // Zweite Unterzeile: Kinderzahl und Personal (wie am Desktop).
+  const people = [childrenPart(entry), state.cancelled ? null : staff]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <CollectionRow
       onClick={onOpen}
       selected={selected}
-      // Beginnt mit dem sichtbaren Text des Ziels (Titel, „Mein Block“),
-      // damit Sprachsteuerung den Block beim Namen findet.
-      aria-label={`${instance.title}${mine ? " Mein Block" : ""}, ${blockTimeRange(
-        instance,
-      )}${state.label ? `, ${state.label}` : ""}${next ? ", als Nächstes" : ""}`}
+      // Beginnt mit dem sichtbaren Text des Ziels (Titel), damit
+      // Sprachsteuerung den Block beim Namen findet.
+      aria-label={`${instance.title}, ${blockTimeRange(instance)}${
+        state.label ? `, ${state.label}` : ""
+      }${next ? ", als Nächstes" : ""}${mine ? ", mit dir" : ""}`}
       leading={
-        <span className="flex items-center gap-2.5">
-          <ColorBar
-            color={
-              state.over ? LOCATION_COLORS.UNKNOWN : blockEdgeOrRunning(entry)
-            }
-            size="lg"
-          />
-          <span className="w-11 text-sm leading-5 tabular-nums">
-            <span
-              className={cn(
-                "block font-semibold",
-                state.running ? "text-moto-green-strong" : quiet,
-              )}
-            >
-              {instance.startTime}
-            </span>
-            <span className="block text-gray-600">
-              {/* Ein spontaner Block hat noch kein Ende. */}
-              {blockTimeRange(instance).startsWith("seit")
-                ? "offen"
-                : instance.endTime}
-            </span>
+        <span className="w-11 self-start pt-0.5 text-sm leading-5 tabular-nums">
+          <span
+            className={cn(
+              "block font-semibold",
+              state.running ? "text-moto-green-strong" : quiet,
+            )}
+          >
+            {instance.startTime}
+          </span>
+          <span className="block text-gray-600">
+            {/* Ein spontaner Block hat noch kein Ende. */}
+            {hasOpenEnd(instance) ? "offen" : instance.endTime}
           </span>
         </span>
       }
       title={
-        // Kein Kürzen: der Titel bricht lieber um, als „Ran…“ zu zeigen.
+        // Kein Kürzen und keine Kennzeichnung daneben: der Titel hat die
+        // volle Breite und bleibt meist einzeilig.
         <span
           className={cn(
             "block whitespace-normal",
             state.over && "text-gray-600",
             state.running && "font-semibold",
+            state.cancelled && "line-through decoration-gray-400",
           )}
         >
           {instance.title}
-          {mine ? " " : null}
-          {mine ? (
-            <span className="ml-1 text-xs font-normal whitespace-nowrap text-gray-600">
-              Mein Block
-            </span>
-          ) : null}
         </span>
       }
       subtitle={
-        sub ? (
-          <span
-            className={cn(
-              "block whitespace-normal",
-              state.cancelled && !state.over && "text-moto-red-strong",
-            )}
-          >
-            {sub}
-          </span>
-        ) : undefined
+        <span className="block whitespace-normal">
+          {chips.length > 0 || place ? (
+            <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+              {chips}
+              {place ? (
+                <span
+                  className={cn(
+                    state.cancelled && !state.over && "text-moto-red-strong",
+                  )}
+                >
+                  {place}
+                </span>
+              ) : null}
+            </span>
+          ) : null}
+          {people ? <span className="block">{people}</span> : null}
+        </span>
       }
-      meta={statusChip(state, next)}
     />
   );
 }
 
-function blockEdgeOrRunning(entry: Entry): string {
-  if (entry.state.cancelled) return LOCATION_COLORS.DANGER;
-  if (entry.state.running) return LOCATION_COLORS.GROUP_ROOM;
-  return entry.instance.planningTrackColor ?? LOCATION_COLORS.UNKNOWN;
+/** „1 Std. 30 Min.“, „45 Min.“; `null` ohne festes Ende. */
+function durationLabel(instance: PlannedTimetableInstance): string | null {
+  if (hasOpenEnd(instance)) return null;
+  const end =
+    instance.endTime === "00:00"
+      ? 24 * 60
+      : parseTimeToMinutes(instance.endTime);
+  const minutes = end - parseTimeToMinutes(instance.startTime);
+  if (minutes <= 0) return null;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m} Min.`;
+  return m === 0 ? `${h} Std.` : `${h} Std. ${m} Min.`;
+}
+
+/** Ab wann ein geplanter Block startbar ist: „ab 06:45 Uhr“. */
+function startWindowLabel(instance: PlannedTimetableInstance): string | null {
+  if (instance.status !== "planned" || !instance.startAvailableAt) return null;
+  const at = new Date(instance.startAvailableAt);
+  if (Number.isNaN(at.getTime())) return null;
+  const hhmm = at.toLocaleTimeString("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Berlin",
+  });
+  return `ab ${hhmm} Uhr`;
 }
 
 function BlockDetail({
@@ -651,39 +873,95 @@ function BlockDetail({
   next,
   mine,
 }: Readonly<{ entry: Entry; next: boolean; mine: boolean }>) {
-  const { instance, state } = entry;
-  const staff = blockStaffNames(instance);
-  const chip = statusChip(state, next);
+  const { instance, state, parallel } = entry;
+  const staff = instance.staffNames ?? [];
+  const chips = blockChips(state, next, mine);
+  const duration = durationLabel(instance);
+  const startWindow = state.isDuty ? null : startWindowLabel(instance);
+  const children = childrenPart(entry);
+  // Am Telefon zwei Spalten, damit das Blatt halb hoch bleibt.
+  const { layout } = useDeviceContext();
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
-        <span className="font-semibold tabular-nums">
-          {blockTimeRange(instance)} Uhr
-        </span>
-        {chip}
-        {!state.running && !state.cancelled && state.label ? (
-          <span className="text-gray-600">{state.label}</span>
-        ) : null}
-        {mine ? <span className="text-gray-600">Mein Block</span> : null}
-      </div>
+      {chips.length > 0 ||
+      (!state.running && !state.cancelled && state.label) ? (
+        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
+          {chips}
+          {!state.running && !state.cancelled && state.label ? (
+            <span className="text-gray-600">{state.label}</span>
+          ) : null}
+        </div>
+      ) : null}
       {state.cancelled && instance.cancelReason ? (
         <p className="text-moto-red-strong text-sm">
-          Fällt aus: {instance.cancelReason}
+          Grund: {instance.cancelReason}
         </p>
       ) : null}
-      <DataGrid>
+      <DataGrid columns={layout === "phone" ? 4 : 2}>
+        <DataField label="Zeit">
+          <span className="tabular-nums">
+            {blockTimeRange(instance)} Uhr
+            {duration ? (
+              <span className="font-normal text-gray-600"> · {duration}</span>
+            ) : null}
+          </span>
+        </DataField>
         {state.room ? <DataField label="Raum">{state.room}</DataField> : null}
+        {children ? (
+          <DataField label="Kinder">
+            {children}
+            {instance.notScheduledStudentsCount > 0 &&
+            instance.status !== "active" ? (
+              <span className="block text-xs font-normal text-gray-600">
+                {instance.notScheduledStudentsCount} heute nicht eingeplant
+              </span>
+            ) : null}
+          </DataField>
+        ) : null}
         {instance.groupName ? (
           <DataField label="Gruppe">{instance.groupName}</DataField>
         ) : null}
-        {state.cancelled || state.isDuty ? null : (
-          <DataField label="Kinder">{blockChildrenLabel(instance)}</DataField>
-        )}
-        {staff ? <DataField label="Personal">{staff}</DataField> : null}
+        {staff.length > 0 ? (
+          <DataField label="Personal">
+            <ul>
+              {staff.map((person) => (
+                <li key={person.staffId}>
+                  {person.displayName}
+                  {person.isSubstitute ? (
+                    <span className="font-normal text-gray-600">
+                      {" "}
+                      (Vertretung)
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </DataField>
+        ) : null}
         {instance.planningTrackName ? (
           <DataField label="Bereich">{instance.planningTrackName}</DataField>
         ) : null}
         {state.isDuty ? <DataField label="Art">Dienst</DataField> : null}
+        {startWindow && !state.startable && !state.over ? (
+          <DataField label="Starten">{startWindow}</DataField>
+        ) : null}
+        {parallel.length > 0 ? (
+          <DataField label="Gleichzeitig" fullWidth>
+            <ul>
+              {parallel.map((other) => (
+                <li key={other.id}>
+                  {other.title}
+                  <span className="font-normal text-gray-600">
+                    {" · "}
+                    {[other.roomName, blockTimeRange(other)]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </DataField>
+        ) : null}
       </DataGrid>
     </div>
   );
@@ -691,18 +969,16 @@ function BlockDetail({
 
 /**
  * Nur die Aktionen, die der Tagesplan heute schon hat: einen laufenden
- * Block öffnen, einen eigenen, startbereiten Block starten.
+ * Block öffnen, einen eigenen, startbereiten Block starten. Volle Breite.
  */
 function BlockAction({
   entry,
   busy,
-  fullWidth,
   onOpenSession,
   onStart,
 }: Readonly<{
   entry: Entry;
   busy: boolean;
-  fullWidth: boolean;
   onOpenSession: (activeGroupId: string) => void;
   onStart: (instance: PlannedTimetableInstance) => void;
 }>) {
@@ -713,7 +989,7 @@ function BlockAction({
         type="button"
         variant="primary"
         size="md"
-        className={fullWidth ? "w-full" : undefined}
+        className="w-full"
         tooltip="Öffnet die Kinderliste dieser Aufsicht."
         onClick={() => onOpenSession(instance.activeGroupId as string)}
       >
@@ -727,7 +1003,7 @@ function BlockAction({
         type="button"
         variant="success"
         size="md"
-        className={fullWidth ? "w-full" : undefined}
+        className="w-full"
         disabled={busy}
         tooltip="Startet die Aufsicht für diesen Termin und öffnet sie."
         onClick={() => onStart(instance)}
