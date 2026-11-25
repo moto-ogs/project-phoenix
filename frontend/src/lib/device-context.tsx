@@ -52,7 +52,7 @@ function useResolvedMediaQuery(query: string): boolean | null {
 export const APP_QUERY = "(width < 40rem)";
 const PHONE_QUERY = "(width < 40rem)";
 // Das iPad behält die heutige Oberfläche: kein `split`, kein `tablet`.
-const SPLIT_QUERY = "(width < 0px)";
+const SPLIT_QUERY = "not all";
 export const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 type DeviceLayout = "phone" | "tablet" | "desktop";

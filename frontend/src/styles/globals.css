@@ -56,8 +56,8 @@
 @custom-variant in-flow (&:where(:not(.absolute, .fixed, .sticky)));
 @custom-variant desk (@media (width >= 40rem));
 @custom-variant phone (@media (width < 40rem));
-@custom-variant tablet (@media (width < 0px));
-@custom-variant split (@media (width < 0px));
+@custom-variant tablet (@media not all);
+@custom-variant split (@media not all);
 
 /*
  * moto brand tokens
