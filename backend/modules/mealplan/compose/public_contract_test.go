@@ -24,8 +24,8 @@ func TestPublicMealPlanContractPersistsNormalizedDishes(t *testing.T) {
 			return nil, nil, nil
 		}})
 	require.NoError(t, err)
-	require.NoError(t, compose.SaveDay(t, module, testpkg.Ctx(t), mealplan.ReplaceDay{Date: "2026-09-07", Dishes: []mealplan.Dish{{Dish: "  Suppe  "}, {Dish: "  "}}}))
-	entries, err := module.Week(testpkg.Ctx(t), "2026-09-07")
+	require.NoError(t, compose.SaveDay(t, module.Capability, testpkg.Ctx(t), mealplan.ReplaceDay{Date: "2026-09-07", Dishes: []mealplan.Dish{{Dish: "  Suppe  "}, {Dish: "  "}}}))
+	entries, err := module.Capability.Week(testpkg.Ctx(t), "2026-09-07")
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
 	require.Equal(t, "Suppe", entries[0].Dish)
