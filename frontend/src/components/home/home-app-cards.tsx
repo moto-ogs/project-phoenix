@@ -8,7 +8,7 @@ import {
   describeCelebration,
 } from "~/components/dashboard/birthday-list";
 import { useBirthdayWeek } from "~/components/home/birthdays-block";
-import { BlockState } from "~/components/home/day-flow-block";
+import { BlockState, blockStateLabel } from "~/components/home/day-flow-block";
 import {
   upcomingFirst,
   useBerlinClock,
@@ -261,6 +261,11 @@ function MyDayRow({
           : "Nicht gestartet"
         : null;
   const tone = over ? "text-gray-600" : "text-gray-900";
+  const stateText = startable
+    ? null
+    : block.isAbsent
+      ? "Du fehlst"
+      : (overLabel ?? blockStateLabel(block, now));
   const state = startable ? null : block.isAbsent ? (
     <StatusBadge tone="gray" label="Du fehlst" size="xs" />
   ) : overLabel ? (
@@ -274,7 +279,7 @@ function MyDayRow({
       <CollectionRow
         wrap
         href={href}
-        aria-label={`${block.title} ${hasOpenEnd(block) ? `seit ${block.startTime}` : `${block.startTime} bis ${block.endTime}`}: ${running ? "Kinderliste öffnen" : "unter Heute öffnen"}`}
+        aria-label={`${block.title}${block.isSubstitute ? " Vertretung" : ""}${stateText ? ` ${stateText}` : ""}, ${hasOpenEnd(block) ? `seit ${block.startTime}` : `${block.startTime} bis ${block.endTime}`}: ${running ? "Kinderliste öffnen" : "unter Heute öffnen"}`}
         leading={
           <span className="w-11 self-start text-sm leading-5 tabular-nums">
             {hasOpenEnd(block) ? (
@@ -311,9 +316,12 @@ function MyDayRow({
             {/* Der Zustand steht hinter dem Titel, nicht rechts daneben:
                 so bleibt der Angabenzeile die ganze Breite. */}
             {state ? (
-              <span className="ml-1.5 inline-flex align-[1px] font-normal no-underline">
-                {state}
-              </span>
+              <>
+                {" "}
+                <span className="ml-0.5 inline-flex align-[1px] font-normal no-underline">
+                  {state}
+                </span>
+              </>
             ) : null}
           </span>
         }

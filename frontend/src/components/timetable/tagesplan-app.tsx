@@ -45,7 +45,7 @@ import {
   blockTimeRange,
   hasOpenEnd,
 } from "~/lib/block-children";
-import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
+import { parseISODate, toISODate } from "~/lib/date-helpers";
 import { useDeviceContext } from "~/lib/device-context";
 import { useMediaQuery } from "~/lib/hooks/use-media-query";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
@@ -112,7 +112,7 @@ export function TagesplanDayBar({
   // über den Monatswechsel eindeutig bleibt. Nur in der schmalen
   // Listenspalte (iPad quer) reicht der Tag.
   // Am schmalen Telefon (SE) stießen „23.11. 24.11.“ aneinander: dort
-  // steht nur der Tag, das ganze Datum im zugänglichen Namen.
+  // steht nur der Tag.
   const { isSplit } = useDeviceContext();
   const narrow = useMediaQuery("(max-width: 389px)");
   const withMonth = !isSplit && !narrow;
@@ -144,11 +144,6 @@ export function TagesplanDayBar({
                   ? `${String(date.getMonth() + 1).padStart(2, "0")}.`
                   : ""
               }`}
-              aria-label={
-                withMonth
-                  ? undefined
-                  : `${weekday} ${formatDate(iso)}${iso === today ? ", heute" : ""}`
-              }
               selected={iso === day}
               today={iso === today}
               onClick={() => onSelect(iso)}
@@ -840,6 +835,20 @@ function blockChips(state: BlockState, next: boolean, mine: boolean) {
   return chips;
 }
 
+/** Die Wörter der Abzeichen von `blockChips`, in derselben Reihenfolge. */
+function chipLabels(state: BlockState, next: boolean, mine: boolean) {
+  return [
+    state.running
+      ? "Läuft jetzt"
+      : state.cancelled
+        ? "Fällt aus"
+        : next
+          ? "Als Nächstes"
+          : null,
+    mine ? "Mit dir" : null,
+  ];
+}
+
 /** „19 Kinder“ bzw. „13 von 16 da“; ein Dienst und ein Ausfall ohne Zahl. */
 function childrenPart(entry: Entry): string | null {
   if (entry.state.cancelled || entry.state.isDuty) return null;
@@ -931,11 +940,16 @@ function BlockRow({
       aria-label={[
         // Titel und Bereich wie sichtbar, damit der Name mit der Zeile
         // beginnt (WCAG 2.5.3).
-        [instance.title, instance.planningTrackName].filter(Boolean).join(" "),
+        // Die Abzeichen hinter dem Titel gehören zum sichtbaren Namen.
+        [
+          instance.title,
+          instance.planningTrackName,
+          ...chipLabels(state, next, mine),
+        ]
+          .filter(Boolean)
+          .join(" "),
         blockTimeRange(instance),
-        state.label,
-        next ? "als Nächstes" : null,
-        mine ? "mit dir" : null,
+        state.running || state.cancelled ? null : state.label,
         state.cancelled ? instance.cancelReason : null,
         state.room,
         instance.groupName,
@@ -988,8 +1002,15 @@ function BlockRow({
           {chips.length > 0 ? (
             <>
               {" "}
-              <span className="inline-flex items-center gap-1 align-[1px] font-normal no-underline">
-                {chips}
+              {/* Leerzeichen zwischen den Abzeichen: der sichtbare Text
+                  muss zum zugänglichen Namen passen (WCAG 2.5.3). */}
+              <span className="font-normal no-underline">
+                {chips.map((chip, index) => (
+                  <Fragment key={index}>
+                    {index > 0 ? " " : null}
+                    <span className="inline-flex align-[1px]">{chip}</span>
+                  </Fragment>
+                ))}
               </span>
             </>
           ) : null}

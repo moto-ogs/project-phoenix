@@ -203,6 +203,42 @@ export function DayFlowBlock() {
  * die Zeit bis zum Beginn statt eines „Geplant", das nichts sagt. „Mein Tag"
  * nutzt dieselbe Marke, damit beide Karten dieselbe Sprache sprechen.
  */
+/**
+ * Das Wort des Zustands, wie `BlockState` es zeigt; `null`, wo es kein
+ * Abzeichen gibt. Für zugängliche Namen, die das Abzeichen mitnennen.
+ */
+export function blockStateLabel(
+  block: PlannedTimetableInstance,
+  now: string,
+): string | null {
+  return blockStateBadge(block, now)?.label ?? null;
+}
+
+function blockStateBadge(
+  block: PlannedTimetableInstance,
+  now: string,
+): {
+  tone: "red" | "green" | "gray" | "warning" | "blue";
+  label: string;
+} | null {
+  if (block.status === "cancelled") return { tone: "red", label: "Fällt aus" };
+  if (block.status === "active") return { tone: "green", label: "Läuft" };
+  if (block.status === "completed") return { tone: "gray", label: "Beendet" };
+  // Ein Dienst (#3822) wird nie gestartet; "Nicht gestartet" wäre falsch.
+  if (block.isDuty === true && (block.isOverdue || block.startTime <= now)) {
+    return null;
+  }
+  if (block.isOverdue || (now !== "" && block.startTime <= now)) {
+    return { tone: "warning", label: "Nicht gestartet" };
+  }
+  // Ohne Uhr (vor dem ersten Rendern im Browser) gibt es keinen Abstand.
+  if (now === "") return null;
+  return {
+    tone: "blue",
+    label: formatMinutesAhead(minutesBetween(now, block.startTime)),
+  };
+}
+
 export function BlockState({
   block,
   now,
@@ -213,29 +249,7 @@ export function BlockState({
   /** App (#8070): kleines Abzeichen hinter dem Titel. */
   readonly size?: "xs";
 }) {
-  if (block.status === "cancelled") {
-    return <StatusBadge size={size} tone="red" label="Fällt aus" />;
-  }
-  if (block.status === "active") {
-    return <StatusBadge size={size} tone="green" label="Läuft" />;
-  }
-  if (block.status === "completed") {
-    return <StatusBadge size={size} tone="gray" label="Beendet" />;
-  }
-  // Ein Dienst (#3822) wird nie gestartet; "Nicht gestartet" wäre falsch.
-  if (block.isDuty === true && (block.isOverdue || block.startTime <= now)) {
-    return null;
-  }
-  if (block.isOverdue || (now !== "" && block.startTime <= now)) {
-    return <StatusBadge size={size} tone="warning" label="Nicht gestartet" />;
-  }
-  // Ohne Uhr (vor dem ersten Rendern im Browser) gibt es keinen Abstand.
-  if (now === "") return null;
-  return (
-    <StatusBadge
-      size={size}
-      tone="blue"
-      label={formatMinutesAhead(minutesBetween(now, block.startTime))}
-    />
-  );
+  const badge = blockStateBadge(block, now);
+  if (!badge) return null;
+  return <StatusBadge size={size} tone={badge.tone} label={badge.label} />;
 }
