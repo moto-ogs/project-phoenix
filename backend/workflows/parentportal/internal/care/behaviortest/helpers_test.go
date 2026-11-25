@@ -59,6 +59,10 @@ func (unusedRequestSharer) LoadRequestShareVisibility(context.Context, int64) (p
 	panic("messaging tests: child resolution must not read request shares")
 }
 
+func (unusedRequestSharer) LoadRequestShareVisibilities(context.Context, []int64) (map[int64]parentportal.RequestShareVisibility, error) {
+	panic("messaging tests: child resolution must not read request shares")
+}
+
 // messagingSettingsStub answers ResolveBoolForTenant / ResolveStringForTenant
 // from maps; every other SettingsService method panics via the embedded nil
 // interface. Test-only copy of the workflows/parentportal behaviour-test stub.

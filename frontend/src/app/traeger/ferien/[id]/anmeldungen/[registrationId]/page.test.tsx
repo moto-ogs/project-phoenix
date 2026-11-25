@@ -139,7 +139,7 @@ vi.mock("~/lib/traeger-sibling-groups-api", () => ({
     mockSplit(periodId, registrationId),
 }));
 
-import TraegerHolidayRegistrationPage from "./page";
+import TraegerHolidayRegistrationPage from "./page-content";
 
 /** Opens the page on its tab `tab`, as a bookmark does (#7410). */
 function onTab(tab: "kind" | "eltern" | "nachweise") {

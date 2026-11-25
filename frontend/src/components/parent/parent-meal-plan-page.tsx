@@ -1369,10 +1369,7 @@ export function ParentMealPlanPage({
     useSwrResourceLoadError(
       [children, features],
       tSchools("errorObjectSchools"),
-      () => {
-        void children.mutate();
-        void features.mutate();
-      },
+      () => children.mutate(),
     );
   const loadingSchools = !schoolsFailure && !resolved && !knownSchools;
   const [participationEditing, setParticipationEditing] = useState(false);

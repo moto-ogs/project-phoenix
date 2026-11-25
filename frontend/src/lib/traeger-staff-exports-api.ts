@@ -331,7 +331,7 @@ export type PayrollEmployerValues = Pick<
   "consultantNumber" | "clientNumber" | "costCenter"
 >;
 
-function mapPayrollEmployer(
+export function mapPayrollEmployer(
   employer: traegerStaffExportsContract.TraegerPayrollEmployerValues,
 ): PayrollEmployer[] {
   const body = knownEnum(EMPLOYER_BODY_VALUES, employer.body);

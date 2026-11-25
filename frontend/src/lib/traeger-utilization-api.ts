@@ -94,11 +94,11 @@ export interface UtilizationWindow {
   readonly to: string;
 }
 
-function windowQuery(window: UtilizationWindow, schoolId?: string) {
+export function windowQuery(window: UtilizationWindow, schoolId?: string) {
   return { from: window.from, to: window.to, school: schoolId || undefined };
 }
 
-function utilizationFromBackend(
+export function utilizationFromBackend(
   body: traegerSchoolsContract.Utilization,
 ): TraegerUtilization {
   return {

@@ -578,20 +578,26 @@ export type SchoolAppointmentRequest =
     readonly parents: SchoolAppointmentParents;
   };
 
+export function mapSchoolCalendar(
+  answer: schoolCalendarContract.SchoolCalendarResponse,
+): SchoolCalendarResponse {
+  return {
+    from: answer.from,
+    to: answer.to,
+    events: calendarEvents(answer.events),
+    closing_days: answer.closing_days ?? [],
+    holidays: answer.holidays ?? [],
+    classes: answer.classes ?? [],
+  };
+}
+
 export function getSchoolCalendar(
   from: Date,
   to: Date,
 ): Promise<SchoolCalendarResponse> {
   const route = "GET /school/calendar/my";
   return bffJson("school", route, { query: range(from, to) }).then(
-    (answer) => ({
-      from: answer.from,
-      to: answer.to,
-      events: calendarEvents(answer.events),
-      closing_days: answer.closing_days ?? [],
-      holidays: answer.holidays ?? [],
-      classes: answer.classes ?? [],
-    }),
+    mapSchoolCalendar,
     failed(route),
   );
 }

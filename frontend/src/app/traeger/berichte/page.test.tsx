@@ -66,7 +66,7 @@ vi.mock("~/env.client", () => ({
   },
 }));
 
-import TraegerReportsPage from "./page";
+import TraegerReportsPage from "./page-content";
 
 function figures(overrides: Partial<ReportFigures>): ReportFigures {
   return {

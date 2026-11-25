@@ -1,5 +1,14 @@
+import { headers } from "next/headers";
+import { SWRServerSeed } from "~/lib/swr/server-seed";
+import { isPortalPublicPath } from "~/lib/portal-public-pages";
 import { TraegerProviders } from "./providers";
 import { TraegerAuthGuard } from "./auth-guard";
+import {
+  organization,
+  profile,
+  traegerPageSeed,
+} from "~/lib/traeger/page-seed.server";
+import { TRAEGER_PUBLIC_PAGES } from "./public-pages";
 import { readPortalSessionSnapshot } from "~/lib/portal-session-snapshot.server";
 
 /**
@@ -17,10 +26,29 @@ export default async function TraegerLayout({
 }: {
   readonly children: React.ReactNode;
 }) {
-  const session = (await readPortalSessionSnapshot("traeger"))?.session ?? null;
+  const [snapshot, request] = await Promise.all([
+    readPortalSessionSnapshot("traeger"),
+    headers(),
+  ]);
+  const path = request.get("x-moto-original-path")?.split("?")[0];
+  const guarded = <TraegerAuthGuard>{children}</TraegerAuthGuard>;
+  const shellReads =
+    snapshot &&
+    !snapshot.notBooked &&
+    path &&
+    !isPortalPublicPath("traeger", TRAEGER_PUBLIC_PAGES, path)
+      ? traegerPageSeed([organization, profile])
+      : null;
+
   return (
-    <TraegerProviders session={session}>
-      <TraegerAuthGuard>{children}</TraegerAuthGuard>
+    <TraegerProviders session={snapshot?.session ?? null}>
+      {shellReads ? (
+        <SWRServerSeed seed={shellReads.seed} claims={shellReads.claims}>
+          {guarded}
+        </SWRServerSeed>
+      ) : (
+        guarded
+      )}
     </TraegerProviders>
   );
 }

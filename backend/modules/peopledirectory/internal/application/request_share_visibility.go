@@ -22,7 +22,7 @@ func NewRequestShareRecipients(shares peopledirectory.ParentRequestShares, prote
 }
 
 func (r *RequestShareRecipients) SharedRecipientAccountIDs(ctx context.Context, studentID int64, requestType string, requestID int64) ([]int64, error) {
-	shares, err := r.shares.ParentRequestSharesForStudent(ctx, studentID)
+	shares, err := r.shares.ParentRequestSharesForStudents(ctx, []int64{studentID})
 	if err != nil {
 		return nil, err
 	}

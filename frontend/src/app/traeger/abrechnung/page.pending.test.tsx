@@ -49,7 +49,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import TraegerAbrechnungPage from "./page";
+import TraegerAbrechnungPage from "./page-content";
 
 vi.unmock("swr");
 

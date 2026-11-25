@@ -39,7 +39,7 @@ vi.mock("~/env.client", () => ({
   },
 }));
 
-import TraegerOccupancyPage from "./page";
+import TraegerOccupancyPage from "./page-content";
 
 const OCCUPANCY: TraegerOccupancy = {
   day: "2026-09-09",

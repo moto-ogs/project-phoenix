@@ -10,7 +10,7 @@ import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { BookingAccounts } from "~/lib/traeger-finance-exports-api";
 import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
-import TraegerBookingAccountsPage from "./page";
+import TraegerBookingAccountsPage from "./page-content";
 
 vi.unmock("swr");
 

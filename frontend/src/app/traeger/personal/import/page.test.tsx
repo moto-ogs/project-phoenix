@@ -7,7 +7,7 @@ import type {
   StaffImportResult,
   StaffImportRow,
 } from "~/lib/traeger-staff-import-api";
-import TraegerStaffImportPage from "./page";
+import TraegerStaffImportPage from "./page-content";
 
 vi.unmock("swr");
 

@@ -41,7 +41,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
-import TraegerPreislistePage from "./page";
+import TraegerPreislistePage from "./page-content";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 

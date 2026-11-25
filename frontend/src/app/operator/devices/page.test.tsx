@@ -140,7 +140,7 @@ vi.mock("~/components/ui/skeleton", () => ({
   ),
 }));
 
-import OperatorDevicesPage from "./page";
+import OperatorDevicesPage from "./page-content";
 import {
   mockSchool,
   setupSWR,

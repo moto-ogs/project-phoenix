@@ -1,3 +1,4 @@
+import type * as seedOrganizationContract from "./contract/traeger-organization.generated";
 import { parseBookedModules, type ModuleKey } from "~/lib/modules";
 import { bffFile, bffFileHref, bffJson } from "~/lib/bff-fetch";
 /**
@@ -148,7 +149,7 @@ export async function fetchTraegerSchools(): Promise<TraegerSchool[]> {
   return (schools ?? []).map(toTraegerSchool);
 }
 
-function toTraegerSchool(
+export function toTraegerSchool(
   school: traegerSchoolsContract.TraegerSchool,
 ): TraegerSchool {
   return {
@@ -179,7 +180,14 @@ function toSchoolFigures(
  * (#4675): numbers only, no names.
  */
 export async function fetchTraegerSchoolsAlerts(): Promise<TraegerSchoolsAlerts> {
-  const alerts = await bffJson("org", "GET /traeger/schools/alerts");
+  return mapTraegerSchoolsAlerts(
+    await bffJson("org", "GET /traeger/schools/alerts"),
+  );
+}
+
+export function mapTraegerSchoolsAlerts(
+  alerts: traegerSchoolsContract.SchoolsAlerts,
+): TraegerSchoolsAlerts {
   return {
     thresholds: {
       childrenPerStaff: alerts.thresholds.children_per_staff,
@@ -203,9 +211,16 @@ export async function fetchTraegerSchoolsAlerts(): Promise<TraegerSchoolsAlerts>
 export async function fetchTraegerSchool(
   id: string,
 ): Promise<TraegerSchoolView> {
-  const school = await bffJson("org", "GET /traeger/schools/{id}", {
-    params: { id },
-  });
+  return mapTraegerSchool(
+    await bffJson("org", "GET /traeger/schools/{id}", {
+      params: { id },
+    }),
+  );
+}
+
+export function mapTraegerSchool(
+  school: traegerSchoolsContract.SchoolView,
+): TraegerSchoolView {
   return {
     ...toTraegerSchool(school),
     address: school.address,
@@ -385,7 +400,7 @@ function noCareDaysFromBackend(
   }));
 }
 
-function holidayPeriodFromBackend(
+export function holidayPeriodFromBackend(
   period: traegerHolidayPeriodsContract.HolidayPeriod,
 ): HolidayPeriod {
   return {
@@ -705,7 +720,7 @@ export interface TraegerProfile {
   readonly name: string;
 }
 
-function mapProfile(
+export function mapProfile(
   profile: traegerProfileContract.TraegerProfileResponse,
 ): TraegerProfile {
   return {
@@ -731,7 +746,15 @@ export async function changeTraegerProfileName(
 
 /** Every holiday period of the signed-in person's Träger, newest first. */
 export async function fetchHolidayPeriods(): Promise<HolidayPeriod[]> {
-  const periods = (await bffJson("org", "GET /traeger/holiday-periods/")) ?? [];
+  return mapHolidayPeriods(
+    await bffJson("org", "GET /traeger/holiday-periods/"),
+  );
+}
+
+export function mapHolidayPeriods(
+  wire: traegerHolidayPeriodsContract.HolidayPeriod[],
+): HolidayPeriod[] {
+  const periods = wire ?? [];
   return periods.map(holidayPeriodFromBackend);
 }
 
@@ -950,7 +973,14 @@ export interface TraegerOrganization {
 
 /** The Träger of the signed-in person's session. */
 export async function fetchTraegerOrganization(): Promise<TraegerOrganization> {
-  const organization = await bffJson("org", "GET /traeger/organization/");
+  return mapTraegerOrganization(
+    await bffJson("org", "GET /traeger/organization/"),
+  );
+}
+
+export function mapTraegerOrganization(
+  organization: seedOrganizationContract.TraegerFrame,
+): TraegerOrganization {
   if (!organization) {
     throw apiErrorFromBody("Träger response without data", 502, organization);
   }
@@ -1077,7 +1107,14 @@ export function traegerLogoSrc(logo: TraegerLogo): string {
 
 /** Reads the master data of the Träger. The read is logged. */
 export async function fetchTraegerMasterData(): Promise<TraegerMasterData> {
-  const data = await bffJson("org", "GET /traeger/master-data/");
+  return mapTraegerMasterData(
+    await bffJson("org", "GET /traeger/master-data/"),
+  );
+}
+
+function mapTraegerMasterData(
+  data: traegerMasterDataContract.TraegerProfile,
+): TraegerMasterData {
   return {
     contact: { ...data.contact },
     withdrawal: { ...data.withdrawal },

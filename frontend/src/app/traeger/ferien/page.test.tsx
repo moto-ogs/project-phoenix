@@ -25,7 +25,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-import TraegerHolidayPeriodsPage from "./page";
+import TraegerHolidayPeriodsPage from "./page-content";
 
 const period: HolidayPeriod = {
   id: "5",

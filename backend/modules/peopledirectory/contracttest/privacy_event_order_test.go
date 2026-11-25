@@ -75,7 +75,7 @@ func TestRequestSharingCurrentUsesAppendOrderNotTransactionTimestamp(t *testing.
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, repos.ParentRequestShare.AppendParentRequestShare, newer))
 	invertPrivacyEventTimestamps(t, db, ctx, "users.parent_request_share_events", older.ID, newer.ID)
 
-	current, err := testpkg.TenantQuery1(t, ctx, db, repos.ParentRequestShare.ParentRequestSharesForStudent, chain.StudentID)
+	current, err := testpkg.TenantQuery1(t, ctx, db, repos.ParentRequestShare.ParentRequestSharesForStudents, []int64{chain.StudentID})
 	require.NoError(t, err)
 	require.Len(t, current, 1)
 	assert.Equal(t, []int64{newerRecipient.ID}, current[0].RecipientAccountIDs)

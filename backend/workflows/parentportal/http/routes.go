@@ -39,6 +39,7 @@ func (rs *Resource) mountAccountRoutes(r chi.Router, authRateLimiter func(http.H
 	r.Get("/me/profile", rs.getMyProfile)
 	r.Put("/me/profile", rs.updateMyProfile)
 	r.Get("/me/children", rs.listMyChildren)
+	r.Get("/me/family-start", rs.familyStart)
 
 	// Cross-tenant enrollable schools list — every (school, open
 	// phase) the parent could enroll a new child at, with a flag

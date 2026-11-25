@@ -19,7 +19,10 @@ import { formatDate } from "~/lib/date-helpers";
 import { useTimeBasedGreeting } from "~/lib/greeting";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
-import { startProximityLabel, summarizeDay } from "./view-model";
+import {
+  startProximityLabel,
+  summarizeDay,
+} from "~/lib/school/supervision-view-model";
 
 // Nur abweichende Zustände tragen ein Etikett. "Noch nicht gestartet" ist im
 // Tagesüberblick der Normalfall — ihn zu beschriften, klebt an jede Zeile ein

@@ -3,6 +3,7 @@ package care
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 )
@@ -93,7 +94,7 @@ func (r childSettingResolver) resolveString(key string) (string, error) {
 
 // resolveChildFeatureSettings resolves every setting ChildFeatures needs, in
 // a fixed order, for the child's tenant.
-func (s *Service) resolveChildFeatureSettings(ctx context.Context, tenantID int64) (childFeatureSettings, error) {
+func (s *Service) resolveChildFeatureSettings(ctx context.Context, tenantID int64, now time.Time) (childFeatureSettings, error) {
 	var out childFeatureSettings
 	r, err := s.newChildSettingResolver(ctx, tenantID)
 	if err != nil {
@@ -102,7 +103,7 @@ func (s *Service) resolveChildFeatureSettings(ctx context.Context, tenantID int6
 	if err := r.resolveAbsenceAndNoteSettings(&out); err != nil {
 		return out, err
 	}
-	if out.pickupChange, out.pickupCutoff, err = s.resolvePickupChangeSettings(r); err != nil {
+	if out.pickupChange, out.pickupCutoff, err = resolvePickupChangeSettings(r, now); err != nil {
 		return out, err
 	}
 	// Today's pickup closes for guardians at the school's care day end (#5710).
@@ -152,7 +153,7 @@ func (r childSettingResolver) resolveAbsenceAndNoteSettings(out *childFeatureSet
 
 // resolvePickupChangeSettings resolves the one-day pickup change switch and the
 // school's same-day cutoff; a switched-off change has no cutoff.
-func (s *Service) resolvePickupChangeSettings(r childSettingResolver) (bool, SameDayCutoff, error) {
+func resolvePickupChangeSettings(r childSettingResolver, now time.Time) (bool, SameDayCutoff, error) {
 	enabled, err := r.resolveBool(KeyParentPickupChangeEnabled)
 	if err != nil {
 		return false, SameDayCutoff{}, fmt.Errorf("parent: resolve pickup-change setting: %w", err)
@@ -164,7 +165,7 @@ func (s *Service) resolvePickupChangeSettings(r childSettingResolver) (bool, Sam
 	if !enabled {
 		pickupCutoffClock = ""
 	}
-	cutoff, err := carerequests.NewSameDayCutoff(pickupCutoffClock, s.now())
+	cutoff, err := carerequests.NewSameDayCutoff(pickupCutoffClock, now)
 	if err != nil {
 		return false, SameDayCutoff{}, fmt.Errorf("parent: %w", err)
 	}
@@ -190,13 +191,8 @@ func (r childSettingResolver) resolveRelatedAccountAndMasterDataSettings(out *ch
 
 func (s *Service) resolveMealSettings(ctx context.Context, tenantID int64, out *childFeatureSettings) error {
 	var err error
-	if out.mealPlan, err = s.mealPlanAvailableForTenant(ctx, tenantID); err != nil {
-		return fmt.Errorf("parent: resolve meal-plan setting: %w", err)
-	}
-	if out.mealRegistration, err = s.mealRegistrationAvailableForTenant(ctx, tenantID); err != nil {
-		return fmt.Errorf("parent: resolve meal-registration setting: %w", err)
-	}
-	return nil
+	out.mealPlan, out.mealRegistration, err = s.mealAvailabilityForTenant(ctx, tenantID)
+	return err
 }
 
 func (r childSettingResolver) resolvePortalSettings(out *childFeatureSettings) error {

@@ -1,4 +1,8 @@
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
+import { parentFamilyFixture } from "~/test/parent-family-fixture";
 import { IsolatedSWRCache } from "~/lib/swr";
+const family = parentFamilyFixture();
+
 vi.unmock("swr");
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
@@ -21,7 +25,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import deMessages from "~/i18n/messages/de.generated";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
-import { getChildToday, listMyChildren } from "~/lib/parent-api";
 import { ChildPage } from "./child-page";
 
 let mockSearchParams = new URLSearchParams();
@@ -40,9 +43,7 @@ vi.mock("~/lib/parent-url", () => ({
 }));
 
 vi.mock("~/lib/parent-api", () => ({
-  listMyChildren: vi.fn(),
-  getChildFeatures: vi.fn().mockResolvedValue({}),
-  getChildToday: vi.fn().mockResolvedValue({ at_ogs: null, state: "unknown" }),
+  getFamilyStart: vi.fn(),
   UNKNOWN_CHILD_TODAY: { at_ogs: null, state: "unknown" },
   // Elternsprechtag (#4801): without a day the entry stays hidden.
   fetchChildParentConferences: vi.fn().mockResolvedValue([]),
@@ -148,8 +149,8 @@ function buildCare(
   };
 }
 
-const mockedChildren = vi.mocked(listMyChildren);
-const mockedToday = vi.mocked(getChildToday);
+const mockedChildren = family.children;
+const mockedToday = family.today;
 
 const felix = {
   student_id: "42",
@@ -160,7 +161,7 @@ const felix = {
   status: "active",
   school_name: "Schule am Berg",
   school_slug: "berg",
-} as unknown as Awaited<ReturnType<typeof listMyChildren>>[number];
+} as unknown as parentMeContract.ChildResponse;
 
 const mia = { ...felix, student_id: "43", first_name: "Mia" };
 
@@ -176,6 +177,8 @@ function renderPage(studentId?: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+
+  family.mockRead();
   mockSearchParams = new URLSearchParams();
   careMock.value = buildCare();
   mockedChildren.mockResolvedValue([felix]);
@@ -299,21 +302,18 @@ describe("ChildPage", () => {
   });
 
   it("zeigt Heute und standardmaessig die Betreuung", async () => {
-    let resolveToday!: (
-      value: Awaited<ReturnType<typeof getChildToday>>,
-    ) => void;
+    let resolveToday!: (value: parentMeContract.TodayStatusResponse) => void;
     mockedToday.mockReturnValue(
       new Promise((resolve) => {
         resolveToday = resolve;
       }),
     );
     renderPage();
-    await screen.findByRole("heading", { level: 1, name: "Felix Schneider" });
-
     expect(
       screen.queryByTestId("child-day-state-icon"),
     ).not.toBeInTheDocument();
     resolveToday({ at_ogs: null, state: "unknown" });
+    await screen.findByRole("heading", { level: 1, name: "Felix Schneider" });
     expect(
       await screen.findByTestId("child-day-state-icon"),
     ).toBeInTheDocument();

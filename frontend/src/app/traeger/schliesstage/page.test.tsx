@@ -57,7 +57,7 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 
-import TraegerClosingDaysPage from "./page";
+import TraegerClosingDaysPage from "./page-content";
 
 const calendar: TraegerCalendar = {
   schools: [

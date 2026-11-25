@@ -38,8 +38,9 @@ export async function createOperatorInvitation(
   });
 }
 
-export async function listOperatorInvitations(): Promise<OperatorInvitationsData> {
-  const raw = await bffJson("platform", "GET /operator/invitations/");
+export function mapOperatorInvitations(
+  raw: operatorInvitationsContract.InvitationsListResponse,
+): OperatorInvitationsData {
   // Go lists pointers; the contract types an entry nullable.
   return {
     invitations: (raw.invitations ?? [])
@@ -49,6 +50,12 @@ export async function listOperatorInvitations(): Promise<OperatorInvitationsData
       .filter((entry) => entry !== null)
       .map(mapOperatorInfo),
   };
+}
+
+export async function listOperatorInvitations(): Promise<OperatorInvitationsData> {
+  return mapOperatorInvitations(
+    await bffJson("platform", "GET /operator/invitations/"),
+  );
 }
 
 export async function resendOperatorInvitation(id: string): Promise<void> {

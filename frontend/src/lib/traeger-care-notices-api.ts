@@ -284,7 +284,14 @@ function detailFromBackend(
 }
 
 export async function fetchCareNoticeRuns(): Promise<CareNoticeRunList> {
-  const body = await bffJson("org", "GET /traeger/care-notice-runs/");
+  return mapCareNoticeRuns(
+    await bffJson("org", "GET /traeger/care-notice-runs/"),
+  );
+}
+
+export function mapCareNoticeRuns(
+  body: traegerCareNoticeRunsContract.CareNoticeRunList,
+): CareNoticeRunList {
   return {
     runs: (body.runs ?? []).map(runFromBackend),
     suggestedYear: body.suggested_year,

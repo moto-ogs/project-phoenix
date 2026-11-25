@@ -74,6 +74,7 @@ func buildCareScheduleService(t *testing.T) (*parentService.Portal, *bun.DB) {
 		PickupSchedules:        owners.NewParentPickupSchedules(schedules.Pickups),
 		CareRequests:           sfRequests.CareRequests,
 		CareRequestRepo:        owners.NewParentCareRequestReads(repos.CarePlan()),
+		ChangeRequestRepo:      owners.NewParentDataRequestReads(repos.CarePlan()),
 		FamilyProtectionEvents: owners.BindParentFamilyProtectionReads(reposPeople.FamilyProtection),
 		ParentRequestShares:    owners.BindParentRequestShareRecords(reposPeople.ParentRequestShare),
 		StatusDayRepo:          repos.StudentStatusDay,

@@ -12,12 +12,12 @@ import type {
   OrganizationSummary,
   SchoolSummary,
 } from "~/lib/operator/provisioning-helpers";
-import AccountsPage from "./accounts/page";
-import DevicesPage from "./devices/page";
-import PersonsPage from "./persons/page";
-import TagsPage from "./unregistered-tags/page";
-import OrganizationPage from "./organizations/[slug]/page";
-import SchoolPage from "./organizations/[slug]/schools/[schoolSlug]/page";
+import AccountsPage from "./accounts/page-content";
+import DevicesPage from "./devices/page-content";
+import PersonsPage from "./persons/page-content";
+import TagsPage from "./unregistered-tags/page-content";
+import OrganizationPage from "./organizations/[slug]/page-content";
+import SchoolPage from "./organizations/[slug]/schools/[schoolSlug]/page-content";
 
 vi.unmock("swr");
 const { state, api } = vi.hoisted(() => ({

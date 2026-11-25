@@ -8,7 +8,7 @@ import {
   summarizeDay,
   supervisionStartState,
   upcomingAfter,
-} from "./view-model";
+} from "./supervision-view-model";
 
 function instance(
   id: string,

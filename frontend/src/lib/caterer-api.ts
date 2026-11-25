@@ -89,7 +89,7 @@ function mapChild(
   };
 }
 
-function mapCatererOrders(
+export function mapCatererOrders(
   data: catererSchoolsContract.SchoolOrdersResponse,
 ): CatererOrders {
   return {
@@ -120,12 +120,14 @@ function mapCatererOrders(
   };
 }
 
+export function mapCatererSchools(
+  data: catererSchoolsContract.SchoolsResponse,
+): CatererSchools {
+  return { catererName: data.caterer_name, schools: data.schools ?? [] };
+}
+
 export async function fetchCatererSchools(): Promise<CatererSchools> {
-  const data = await bffJson("caterer", "GET /caterer/schools");
-  return {
-    catererName: data.caterer_name,
-    schools: data.schools ?? [],
-  };
+  return mapCatererSchools(await bffJson("caterer", "GET /caterer/schools"));
 }
 
 export async function fetchCatererOrders(
