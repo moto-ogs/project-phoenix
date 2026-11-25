@@ -616,8 +616,12 @@ pass alone is not confirmation. Every portal shell revokes through its BFF logou
 Auth.js clears the cookie. When the route answers with an error (the
 backend's `identity.logout_not_revoked`, or a BFF 503), the browser still
 clears the cookie and the login page says the session ends at its expiry
-(#7209); only a logout without any answer (offline, timeout) keeps the
-session and shows the error with a retry. The tenant relogin action keeps
+(#7209). The password form receives that notice as ready-to-display copy:
+the generated German sentence for `identity.logout_not_revoked`, or the parents
+login's scoped translation. Opening a login must not load the full error
+presenter. Focusing the password form or starting an attempt warms it for a
+refusal without holding up the request. Only a logout without any answer
+(offline, timeout) keeps the session and shows the error with a retry. The tenant relogin action keeps
 the session on every failure and offers a retry: it moves to another
 school's host, where no notice could follow. All six routes
 come from one factory (`frontend/src/lib/logout-route.server.ts`); the

@@ -151,7 +151,7 @@ function ParentLoginForm() {
   const [email, setEmail] = useState("");
   const [refusal, setRefusal] = useState<ParentRefusal | null>(null);
   // A stale session that could not be ended keeps the form locked.
-  const cleanupErrors = useApiFormError();
+  const cleanupErrors = useApiFormError(undefined, { preloadPresenter: false });
   const { show: showCleanupError } = cleanupErrors;
   const locale = normalizeLocale(useLocale());
   const searchParams = useSearchParams();
