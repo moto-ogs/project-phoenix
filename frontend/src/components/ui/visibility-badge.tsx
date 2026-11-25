@@ -105,7 +105,9 @@ export function ParentVisibilityLegend({
         <span className="app:hidden">
           Nicht gekennzeichnete Angaben bleiben intern.
         </span>
-        <span className="app:inline hidden">Alles andere bleibt intern.</span>
+        <span className="app:inline hidden whitespace-nowrap">
+          Der Rest bleibt intern.
+        </span>
       </p>
     );
   }
