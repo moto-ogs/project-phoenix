@@ -14,13 +14,8 @@
  */
 
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
-import {
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import { ActionBar } from "~/components/ui/action-bar";
 import { Button } from "~/components/ui/button";
@@ -40,6 +35,7 @@ import {
 } from "~/components/ui/status-badge";
 import { SectionCard } from "~/components/ui/section-card";
 import { SpinnerIcon } from "~/components/ui/icons";
+import { SplitView } from "~/components/ui/split-view";
 import { formatSignedDuration } from "~/components/staff/staff-time-views";
 import type { LaborHint } from "~/lib/labor-time-hints";
 import type { StaffShift } from "~/lib/shift-helpers";
@@ -53,6 +49,7 @@ import {
   type StaffAbsence,
   type WorkSessionHistory,
 } from "~/lib/time-tracking-helpers";
+import { useDeviceContext } from "~/lib/device-context";
 import { cn } from "~/lib/utils";
 
 // ─── Stempeluhr ──────────────────────────────────────────────────────────────
@@ -183,6 +180,14 @@ export function AppClockPanel(props: AppClockPanelProps) {
   }
 
   const pending = busy || saving;
+  // iPad quer: Die Leiste gehört zur linken Spalte der `SplitView`, steht
+  // aber außerhalb von ihr; die Spalte scrollt und blendet unten aus und
+  // würde eine Leiste in ihr abschneiden.
+  const { isSplit } = useDeviceContext();
+  const portalBars = (bars: ReactNode) =>
+    isSplit && typeof document !== "undefined"
+      ? createPortal(bars, document.body)
+      : bars;
   // Noch nichts gestempelt: der Zustand steht in der Aktionsleiste
   // („Dienst 08:00–16:30 · Einstempeln“), die Karte entfällt – auf jedem
   // Gerät gleich. Die Zeile von heute in der Liste nennt den Plan ebenfalls;
@@ -246,66 +251,74 @@ export function AppClockPanel(props: AppClockPanelProps) {
         ) : null}
       </SectionCard>
 
-      {state === "idle" ? (
-        <ActionBar status={foldIntoBar ? headline : undefined}>
-          <Button
-            type="button"
-            variant="success"
-            size="md"
-            disabled={disabled || pending}
-            onClick={() => setStatusSheetOpen(true)}
-            tooltip="Öffnet die Auswahl, wo du heute arbeitest."
-            // Ohne Karte zeigt die Einführung auf den Knopf.
-            data-setup-tour={foldIntoBar ? "time-clock" : undefined}
-          >
-            {spinner}
-            Einstempeln
-          </Button>
-        </ActionBar>
-      ) : null}
-      {state === "working" ? (
-        <ActionBar
-          secondary={
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              disabled={disabled || pending}
-              onClick={() => props.onBreakSheetOpenChange(true)}
-              tooltip="Öffnet die Auswahl, wie lange die Pause dauert."
+      {portalBars(
+        <>
+          {state === "idle" ? (
+            <ActionBar
+              column="list"
+              status={foldIntoBar ? headline : undefined}
             >
-              Pause
-            </Button>
-          }
-        >
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            disabled={disabled || pending}
-            onClick={props.onCheckOut}
-            tooltip="Stempelt dich aus und beendet deine Arbeitszeit."
-          >
-            {spinner}
-            Ausstempeln
-          </Button>
-        </ActionBar>
-      ) : null}
-      {state === "break" ? (
-        <ActionBar status={headline}>
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            disabled={disabled || pending}
-            onClick={props.onEndBreak}
-            tooltip="Beendet die Pause sofort, deine Arbeitszeit läuft weiter."
-          >
-            {spinner}
-            Pause beenden
-          </Button>
-        </ActionBar>
-      ) : null}
+              <Button
+                type="button"
+                variant="success"
+                size="md"
+                disabled={disabled || pending}
+                onClick={() => setStatusSheetOpen(true)}
+                tooltip="Öffnet die Auswahl, wo du heute arbeitest."
+                // Ohne Karte zeigt die Einführung auf den Knopf.
+                data-setup-tour={foldIntoBar ? "time-clock" : undefined}
+              >
+                {spinner}
+                Einstempeln
+              </Button>
+            </ActionBar>
+          ) : null}
+          {state === "working" ? (
+            <ActionBar
+              column="list"
+              secondary={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  disabled={disabled || pending}
+                  onClick={() => props.onBreakSheetOpenChange(true)}
+                  tooltip="Öffnet die Auswahl, wie lange die Pause dauert."
+                >
+                  Pause
+                </Button>
+              }
+            >
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                disabled={disabled || pending}
+                onClick={props.onCheckOut}
+                tooltip="Stempelt dich aus und beendet deine Arbeitszeit."
+              >
+                {spinner}
+                Ausstempeln
+              </Button>
+            </ActionBar>
+          ) : null}
+          {state === "break" ? (
+            <ActionBar column="list" status={headline}>
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                disabled={disabled || pending}
+                onClick={props.onEndBreak}
+                tooltip="Beendet die Pause sofort, deine Arbeitszeit läuft weiter."
+              >
+                {spinner}
+                Pause beenden
+              </Button>
+            </ActionBar>
+          ) : null}
+        </>,
+      )}
 
       <OverlaySheet
         open={statusSheetOpen}
@@ -844,11 +857,10 @@ function dayRows(
 
 /**
  * Telefon und iPad hoch: Stempeluhr, die Tage, dann Heute geplant, Urlaub
- * und Kontingente. iPad quer (`split`): links der Tag (Stempeluhr, Heute
- * geplant, Urlaub) als eigene Spalte, die bis über die Pill reicht und für
- * sich scrollt; die Aktionsleiste steht unten in dieser Spalte, in
- * Daumennähe, statt mittig über beiden Spalten zu schweben. Rechts die Tage
- * und Kontingente; sie scrollen mit der Seite.
+ * und Kontingente. iPad quer (`split`): `SplitView` – links der Tag
+ * (Stempeluhr, Heute geplant, Urlaub) mit der Aktionsleiste darunter, in
+ * Daumennähe; rechts die Tage und Kontingente. Beide Spalten scrollen für
+ * sich, die Kopfkarte bleibt stehen.
  */
 export function AppTimeTrackingLayout({
   split,
@@ -871,17 +883,22 @@ export function AppTimeTrackingLayout({
     return (
       <div className="space-y-4" data-app-time-tracking="split">
         {errors}
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] items-start gap-4">
-          <SplitDayColumn>
-            {clock}
-            {today}
-            {leave}
-          </SplitDayColumn>
-          <div className="flex min-w-0 flex-col gap-4 [&>*]:shrink-0 [&>section]:h-auto">
-            {days}
-            {allowances}
-          </div>
-        </div>
+        <SplitView
+          list={
+            <div className={SPLIT_STACK}>
+              {clock}
+              {today}
+              {leave}
+            </div>
+          }
+          detail={
+            <div className={SPLIT_STACK}>
+              {days}
+              {allowances}
+            </div>
+          }
+          empty={null}
+        />
       </div>
     );
   }
@@ -902,54 +919,6 @@ export function AppTimeTrackingLayout({
   );
 }
 
-/** Abstand der Spalte vom unteren Rand: Pill samt Safe Area (wie die ActionBar). */
-const COLUMN_BOTTOM = "calc(env(safe-area-inset-bottom) + 6.5rem)";
-
-/**
- * Linke Spalte am iPad quer: klebt an ihrer Startposition und reicht bis über
- * die Pill. Ihr Inhalt scrollt für sich; die Aktionsleiste klebt unten in ihr.
- */
-function SplitDayColumn({ children }: Readonly<{ children: ReactNode }>) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [top, setTop] = useState<number | null>(null);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (el === null) return undefined;
-    const measure = () => {
-      // Abstand zum Dokumentanfang: so weit unten beginnt die Spalte, und
-      // dort bleibt sie auch beim Scrollen der rechten Spalte stehen.
-      const sticky = el.style.position;
-      el.style.position = "static";
-      const offset = el.getBoundingClientRect().top + window.scrollY;
-      el.style.position = sticky;
-      setTop(Math.max(Math.round(offset), 0));
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-  return (
-    <div
-      ref={ref}
-      data-app-time-day-column=""
-      className={cn(
-        "sticky flex min-w-0 flex-col gap-4 overflow-y-auto overscroll-contain rounded-2xl",
-        "[&>*]:shrink-0 [&>section]:h-auto",
-        // Die Leiste im Fluss der Spalte, unten klebend: kein Schweben,
-        // keine eigene Deckzone.
-        "[&>[aria-hidden=true]:has(+[data-action-bar])]:hidden",
-        "[&>[data-action-bar]]:sticky [&>[data-action-bar]]:bottom-0! [&>[data-action-bar]]:order-last [&>[data-action-bar]]:mx-0 [&>[data-action-bar]]:mt-auto [&>[data-action-bar]]:max-w-none [&>[data-action-bar]]:translate-y-0",
-      )}
-      style={
-        top === null
-          ? undefined
-          : {
-              top,
-              height: `calc(100dvh - ${top}px - ${COLUMN_BOTTOM})`,
-            }
-      }
-    >
-      {children}
-    </div>
-  );
-}
+/** Karten einer Spalte untereinander, jede so hoch wie ihr Inhalt. */
+const SPLIT_STACK =
+  "flex min-w-0 flex-col gap-4 [&>*]:shrink-0 [&>section]:h-auto";
