@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
+import { ChevronRight, MoreHorizontal } from "lucide-react";
 import {
   createContext,
   useContext,
@@ -278,7 +278,10 @@ export function AppTenantHead({
               </div>
             </section>
           )}
-          <div className="hidden items-center justify-between gap-3 text-sm font-medium text-gray-900 has-[a]:flex has-[button]:flex">
+          {/* Nur das Hilfe-Symbol, auf jeder App-Breite (der Link blendet
+              sich sonst ab lg aus): Die Suche hat ihren Platz unter „Mehr“
+              und stünde hier ohne Beschriftung. */}
+          <div className="hidden items-center justify-between gap-3 text-sm font-medium text-gray-900 has-[a]:flex has-[button]:flex [&_.lg\:hidden]:inline-flex [&_span.lg\:hidden>:not(:last-child)]:hidden">
             <span>Hilfe zu dieser Seite</span>
             <MobilePageHelpTarget />
           </div>
@@ -482,55 +485,78 @@ export function AppTenantTabs({
 }: AppTabsProps) {
   const navRef = useRef<HTMLElement>(null);
   const edges = useScrollEdges(navRef, value);
+  const scrollOn = () => {
+    const node = navRef.current;
+    if (!node) return;
+    node.scrollBy({ left: node.clientWidth * 0.7, behavior: "smooth" });
+  };
   return (
-    <nav
-      ref={navRef}
-      aria-label={label}
-      // `py-1.5 -my-1`: Die Leiste schneidet senkrecht mit ab; so bleibt die
-      // 44-px-Trefferfläche der 32 px hohen Reiter ganz.
-      className="-mx-2 -my-1 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-2 py-1.5"
-      style={edgeMask(edges)}
-    >
-      {items.map((item) => {
-        const active = item.value === value;
-        const content = (
-          <>
-            {item.label}
-            {item.badge ? (
-              <span className="tabular-nums opacity-80">{item.badge}</span>
-            ) : null}
-          </>
-        );
-        if (item.href && !item.disabled) {
+    <div className="relative">
+      <nav
+        ref={navRef}
+        aria-label={label}
+        // `py-1.5 -my-1`: Die Leiste schneidet senkrecht mit ab; so bleibt die
+        // 44-px-Trefferfläche der 32 px hohen Reiter ganz.
+        className="-mx-2 -my-1 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-2 py-1.5"
+        style={edgeMask(edges)}
+      >
+        {items.map((item) => {
+          const active = item.value === value;
+          const content = (
+            <>
+              {item.label}
+              {item.badge ? (
+                <span className="tabular-nums opacity-80">{item.badge}</span>
+              ) : null}
+            </>
+          );
+          if (item.href && !item.disabled) {
+            return (
+              <ButtonLink
+                key={item.value}
+                href={item.href}
+                variant="chip"
+                size="md"
+                aria-current={active ? "page" : undefined}
+                noTooltip="Reiter: der Name sagt, wohin er führt."
+              >
+                {content}
+              </ButtonLink>
+            );
+          }
           return (
-            <ButtonLink
+            <Button
               key={item.value}
-              href={item.href}
+              type="button"
               variant="chip"
               size="md"
-              aria-current={active ? "page" : undefined}
-              noTooltip="Reiter: der Name sagt, wohin er führt."
+              aria-pressed={active}
+              disabled={item.disabled}
+              onClick={() => onChange(item.value)}
+              noTooltip="Reiter: der Name sagt, was er zeigt."
             >
               {content}
-            </ButtonLink>
+            </Button>
           );
-        }
-        return (
+        })}
+      </nav>
+      {/* Pfeil am Ende: Die Reihe geht sichtbar weiter, ein Tipp schiebt
+        die nächsten Reiter herein. */}
+      {edges.end ? (
+        <span className="absolute inset-y-0 -right-1 flex items-center">
           <Button
-            key={item.value}
             type="button"
-            variant="chip"
-            size="md"
-            aria-pressed={active}
-            disabled={item.disabled}
-            onClick={() => onChange(item.value)}
-            noTooltip="Reiter: der Name sagt, was er zeigt."
+            variant="ghost"
+            size="icon"
+            aria-label="Weitere Bereiche zeigen"
+            tooltip="Schiebt die Reiterleiste weiter nach rechts."
+            onClick={scrollOn}
           >
-            {content}
+            <ChevronRight className="size-5" aria-hidden="true" />
           </Button>
-        );
-      })}
-    </nav>
+        </span>
+      ) : null}
+    </div>
   );
 }
 
@@ -539,7 +565,7 @@ function edgeMask(edges: { start: boolean; end: boolean }) {
   if (!edges.start && !edges.end) return undefined;
   const mask = `linear-gradient(to right, ${
     edges.start ? "transparent 0, #000 2.5rem" : "#000 0"
-  }, ${edges.end ? "#000 calc(100% - 2.5rem), transparent 100%" : "#000 100%"})`;
+  }, ${edges.end ? "#000 calc(100% - 4rem), transparent calc(100% - 1.5rem)" : "#000 100%"})`;
   return { maskImage: mask, WebkitMaskImage: mask };
 }
 
