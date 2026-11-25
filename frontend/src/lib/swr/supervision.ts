@@ -109,6 +109,7 @@ class SupervisionReads {
     batch: Batch;
     answer: Promise<NavigationContext>;
     full: boolean;
+    discarded: boolean;
   };
   private pending?: Batch;
   private revalidate?: () => Promise<unknown>;
@@ -179,24 +180,44 @@ class SupervisionReads {
         ...answer,
       })),
       full: sections.length === ALL_SECTIONS.length,
+      discarded: false,
     };
     this.active = active;
     const settle = () => {
-      // SWR can discard a read (e.g. a concurrent shell seed or refusal
-      // eviction) without calling onSuccess or onError. Release the queue
-      // once the fetch settles, after SWR has had its turn to store it.
+      // Let SWR commit or discard the response before draining the queue.
       setTimeout(() => {
         if (this.active !== active) return;
         this.active = undefined;
-        if (active.full && isStillCurrent(key, active.start))
+        const current = isStillCurrent(key, active.start);
+        if (
+          active.discarded &&
+          current &&
+          this.mounted &&
+          batch.sections.size
+        ) {
+          // A shell seed or refusal eviction can win the cache write
+          // without satisfying awaited refreshes. Keep their waiters
+          // and combine the discarded sections with any pending work.
+          const pending = (this.pending ??= batch);
+          if (pending !== batch) {
+            for (const section of batch.sections) pending.sections.add(section);
+            void pending.done.then(batch.resolve);
+          }
+        } else {
+          batch.resolve();
+        }
+        if (active.full && !active.discarded && current)
           this.lastFullAt = Date.now();
-        active.batch.resolve();
         this.drain();
       }, 0);
     };
     void active.answer.then(settle, settle);
     return active.answer;
   }
+
+  discard = () => {
+    if (this.active) this.active.discarded = true;
+  };
 
   private drain = () => {
     const { pending, active, revalidate } = this;
@@ -227,6 +248,7 @@ export function useSupervisionSnapshot(
   >(undefined);
   const read = useSWRAuth(key, () => queue.read(readCurrent.current?.()), {
     keepPreviousData: false,
+    onDiscarded: queue.discard,
     revalidateIfStale: false,
     revalidateOnReconnect: false,
     shouldRetryOnError: false,

@@ -462,6 +462,7 @@ describe("option allowlists of ~/lib/swr", () => {
       "focusThrottleInterval",
       "isPaused",
       "keepPreviousData",
+      "onDiscarded",
       "onError",
       "onSuccess",
       "refreshInterval",

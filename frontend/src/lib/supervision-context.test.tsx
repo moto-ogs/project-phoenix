@@ -251,9 +251,10 @@ describe("staff supervision SWR binding", () => {
     },
   );
 
-  it("continues after SWR discards a read overtaken by a shell seed", async () => {
+  it("retries an awaited read if a shell seed makes SWR discard it", async () => {
     const first = deferred<NavigationContext>();
-    bff.mockReturnValueOnce(first.promise).mockResolvedValueOnce(noSessions);
+    const retry = deferred<NavigationContext>();
+    bff.mockReturnValueOnce(first.promise).mockReturnValueOnce(retry.promise);
     const { result } = renderHook(useSupervision, {
       wrapper: withSeed(snapshot),
     });
@@ -262,9 +263,11 @@ describe("staff supervision SWR binding", () => {
       supervisionContextKeys.snapshot(),
     );
     let running = Promise.resolve();
-    let waiting = Promise.resolve();
+    let confirmed = false;
     act(() => {
-      running = result.current.refresh(["sessions"]);
+      running = result.current.refresh(["sessions"]).then(() => {
+        confirmed = true;
+      });
     });
     await waitFor(() => expect(bff).toHaveBeenCalledTimes(1));
     await act(async () => {
@@ -272,14 +275,20 @@ describe("staff supervision SWR binding", () => {
       stampSWRSeeds(seed);
       writeSWRSeeds(seed);
     });
-    act(() => {
-      waiting = result.current.refresh(["sessions"]);
-    });
     await act(async () => {
       first.resolve(noSessions);
-      await Promise.all([running, waiting]);
     });
+    await waitFor(() => expect(bff).toHaveBeenCalledTimes(2));
+    expect(confirmed).toBe(false);
+    await act(async () => {
+      retry.resolve(noSessions);
+      await running;
+    });
+    expect(confirmed).toBe(true);
     expect(bff).toHaveBeenCalledTimes(2);
+    expect(bff).toHaveBeenLastCalledWith("tenant", route, {
+      query: { section: ["sessions"] },
+    });
     expect(result.current.ownSupervision).toBe(false);
   });
 
@@ -297,7 +306,6 @@ describe("staff supervision SWR binding", () => {
       supervisionContextKeys.snapshot(),
     );
     let queued = Promise.resolve();
-    let trailing = Promise.resolve();
     act(() => {
       void result.current.refresh(["sessions"]);
     });
@@ -313,12 +321,9 @@ describe("staff supervision SWR binding", () => {
     await act(async () => {
       await mutate(key, undefined, { revalidate: false });
     });
-    act(() => {
-      trailing = result.current.refresh(["sessions"]);
-    });
     await act(async () => {
       recovery.resolve(noSessions);
-      await Promise.all([queued, trailing]);
+      await queued;
     });
     expect(bff).toHaveBeenCalledTimes(3);
     expect(bff).toHaveBeenLastCalledWith("tenant", route, undefined);
