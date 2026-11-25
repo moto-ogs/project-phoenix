@@ -57,12 +57,19 @@ func (s *Service) FamilyStart(ctx context.Context, accountID int64, studentID *i
 			schools[child.TenantID] = school
 		}
 		card := FamilyStartCard{Child: summary}
-		settings, err := school.features.read(func() (childFeatureSettings, error) { return s.resolveChildFeatureSettings(ctx, child.TenantID, now) })
+		settings, err := school.features.read(func() (childFeatureSettings, error) {
+			settings, err := s.resolveChildFeatureSettings(ctx, child.TenantID, now)
+			if err != nil {
+				s.Logger.Warn("parent_family_features_unavailable",
+					"school_id", child.TenantID,
+					"error", err.Error(),
+				)
+			}
+			return settings, err
+		})
 		if err == nil {
 			flags := s.featuresForChild(ctx, accountID, summary.StudentID, child, settings)
 			card.Features = &flags
-		} else {
-			s.Logger.Warn("parent_family_features_unavailable", "school_id", child.TenantID, "error", err.Error())
 		}
 		card.Today, _ = s.todayForChild(ctx, summary.StudentID, child, now, &school.day)
 		result.Cards = append(result.Cards, card)

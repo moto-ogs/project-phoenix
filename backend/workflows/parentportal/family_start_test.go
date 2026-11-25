@@ -63,7 +63,7 @@ func TestFamilyStartUsesSchoolFactsButNeverSiblingPermissions(t *testing.T) {
 	settings := &familySettings{batchSettingsStub: batchSettingsStub{parentSettingsStub{boolDefault: true}}, calls: map[int64]int{}}
 	attendance := &familyAttendance{AttendanceReader: parentAttendance(t, db), calls: map[int64]int{}}
 	svc.ChildFlows.Settings = settings
-	svc.ChildFlows.Attendance = attendance
+	svc.Attendance = attendance
 	counter := testpkg.CaptureQueriesForContext(t, db)
 	ctx = counter.Context(ctx)
 	children, err := svc.ListChildrenForAccount(ctx, family.AccountID)
