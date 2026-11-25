@@ -1112,7 +1112,7 @@ export async function fetchTraegerMasterData(): Promise<TraegerMasterData> {
   );
 }
 
-export function mapTraegerMasterData(
+function mapTraegerMasterData(
   data: traegerMasterDataContract.TraegerProfile,
 ): TraegerMasterData {
   return {

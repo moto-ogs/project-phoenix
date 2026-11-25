@@ -1318,7 +1318,7 @@ export async function fetchHolidayWeekPlaces(
   );
 }
 
-export function mapHolidayWeekPlaces(
+function mapHolidayWeekPlaces(
   weeks: traegerHolidayPeriodsContract.HolidayWeekPlaces[],
 ): readonly HolidayWeekPlaces[] {
   return weeks.map((week) => ({

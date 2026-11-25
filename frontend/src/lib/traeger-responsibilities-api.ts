@@ -180,7 +180,7 @@ export async function fetchResponsibilities(): Promise<SchoolResponsibility[]> {
   );
 }
 
-export function mapResponsibilities(
+function mapResponsibilities(
   overview: contract.ResponsibilityOverview,
 ): SchoolResponsibility[] {
   return (overview.schools ?? []).map((school) => ({

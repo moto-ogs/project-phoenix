@@ -1,6 +1,5 @@
 import { isDocumentTemplateKind } from "~/lib/traeger-document-templates";
 import { documentTemplate } from "~/lib/traeger/administration-seed-reads.server";
-import { masterData } from "~/lib/traeger/settings-seed-reads.server";
 import { Suspense } from "react";
 import { SWRServerSeed } from "~/lib/swr/server-seed";
 import { traegerPageSeed } from "~/lib/traeger/page-seed.server";
@@ -13,7 +12,7 @@ export default async function Page({
 }) {
   const { kind } = await params;
   const { seed, claims } = traegerPageSeed(
-    isDocumentTemplateKind(kind) ? [documentTemplate(kind), masterData] : [],
+    isDocumentTemplateKind(kind) ? [documentTemplate(kind)] : [],
   );
   return (
     <Suspense fallback={null}>

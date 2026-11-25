@@ -134,3 +134,17 @@ it("does not start a dependent billing read when the module is not booked", asyn
   expect(after).not.toHaveBeenCalled();
   expect(load).not.toHaveBeenCalled();
 });
+
+it("does not start a permission-gated read when the snapshot lacks the grant", async () => {
+  const load = vi.fn(async () => "unexpected");
+  const seed = await traegerPageSeed([
+    {
+      key: traegerKeys.billingTerms(),
+      permission: "traeger_billing:manage",
+      load,
+    },
+  ]).seed;
+  expect(seed?.entries).toEqual([]);
+  expect(load).not.toHaveBeenCalled();
+  expect(sendBackend).not.toHaveBeenCalled();
+});

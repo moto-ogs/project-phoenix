@@ -17,10 +17,7 @@ import {
 } from "~/lib/traeger-closing-days";
 import { criteriaReadFromBackend } from "~/lib/traeger-holiday-allocation-api";
 import { formFromBackend } from "~/lib/traeger-holiday-form-api";
-import {
-  mapHolidayConfirmationSettings,
-  mapHolidayWeekPlaces,
-} from "~/lib/traeger-holiday-registrations-api";
+import { mapHolidayConfirmationSettings } from "~/lib/traeger-holiday-registrations-api";
 
 export const holidayPeriods = traegerRead(
   traegerKeys.periods(),
@@ -139,19 +136,3 @@ export const holidayConfirmationSettings = traegerRead(
     return mapHolidayConfirmationSettings(data);
   },
 );
-
-export function holidayPlaces(periodId: string) {
-  return traegerRead(
-    traegerKeys.holidayPlaces(periodId),
-    "holidayPlaces",
-    async (token, signal) => {
-      const { data } = await readContract(
-        holidayPeriodsContract.routes[
-          "GET /traeger/holiday-periods/{id}/places"
-        ],
-        { token, signal, params: { id: periodId } },
-      );
-      return mapHolidayWeekPlaces(data);
-    },
-  );
-}

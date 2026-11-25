@@ -1,7 +1,4 @@
-import {
-  holidayPeriod,
-  holidayPlaces,
-} from "~/lib/traeger/holiday-seed-reads.server";
+import { holidayPeriod } from "~/lib/traeger/holiday-seed-reads.server";
 import { Suspense } from "react";
 import { SWRServerSeed } from "~/lib/swr/server-seed";
 import {
@@ -16,11 +13,7 @@ export default async function Page({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { seed, claims } = traegerPageSeed([
-    holidayPeriod(id),
-    holidayPlaces(id),
-    traegerSchools,
-  ]);
+  const { seed, claims } = traegerPageSeed([holidayPeriod(id), traegerSchools]);
   return (
     <Suspense fallback={null}>
       <SWRServerSeed seed={seed} claims={claims} render>

@@ -10,13 +10,11 @@ import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { traegerReportKeys } from "~/lib/swr/traeger-report-keys";
 import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import { mapTraegerAbsenceTypes } from "~/lib/traeger-absence-api";
-import { mapTraegerMasterData } from "~/lib/traeger-api";
 import {
   mapConclusionModes,
   mapContractTemplates,
 } from "~/lib/traeger-care-contracts-api";
 import { mapDocumentTemplates } from "~/lib/traeger-document-templates";
-import { mapResponsibilities } from "~/lib/traeger-responsibilities-api";
 import { mapSchoolKinds } from "~/lib/traeger-staff-proofs-api";
 
 export const absenceTypes = traegerRead(
@@ -28,18 +26,6 @@ export const absenceTypes = traegerRead(
       { token, signal },
     );
     return mapTraegerAbsenceTypes(data);
-  },
-);
-
-export const masterData = traegerRead(
-  traegerKeys.masterData(),
-  "masterData",
-  async (token, signal) => {
-    const { data } = await readContract(
-      masterDataContract.routes["GET /traeger/master-data/"],
-      { token, signal },
-    );
-    return mapTraegerMasterData(data);
   },
 );
 
@@ -76,18 +62,6 @@ export const documentTemplates = traegerRead(
       { token, signal },
     );
     return mapDocumentTemplates(data);
-  },
-);
-
-export const responsibilities = traegerRead(
-  traegerKeys.responsibilities(),
-  "responsibilities",
-  async (token, signal) => {
-    const { data } = await readContract(
-      masterDataContract.routes["GET /traeger/master-data/responsibilities"],
-      { token, signal },
-    );
-    return mapResponsibilities(data);
   },
 );
 

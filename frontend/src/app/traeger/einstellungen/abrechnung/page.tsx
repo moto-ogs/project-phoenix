@@ -14,7 +14,6 @@ import {
   sepaCreditor,
 } from "~/lib/traeger/billing-seed-reads.server";
 import { traegerPageSeed } from "~/lib/traeger/page-seed.server";
-import { masterData } from "~/lib/traeger/settings-seed-reads.server";
 import TraegerAbrechnungsvorgabenPage from "./page-content";
 
 const BILLING_DEFAULTS = [
@@ -32,7 +31,6 @@ const BILLING_DEFAULTS = [
 
 export default function Page() {
   const { seed, claims } = traegerPageSeed([
-    masterData,
     settingsSchema,
     ...BILLING_DEFAULTS,
     {

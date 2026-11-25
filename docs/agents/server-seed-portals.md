@@ -115,22 +115,22 @@ An audited GET stays on its prescribed browser/opening path even if its hook cur
 | `/dokumente` | Document and release metadata, and schools. | Upload/release actions and file downloads stay out of the seed. |
 | `/dokumente/[id]` | Document list, schools and authorized release audiences. | Client locates ID in the same list. File reads and release changes stay on action. |
 | `/einstellungen` | Organization settings schema. | `bereich` selects the section; contact uses the master-data response (see below); future shifts appear in the disable confirmation only. |
-| `/einstellungen/abrechnung` | Master data, settings schema, issuers; billing defaults and number ranges under existing module/right gates. | Issuer ranges require nonempty issuer metadata. Edits still use saved versions and explicit actions. |
-| `/einstellungen/briefkopf` | Master data and settings schema. | Logo file handling and editing use their existing routes. |
+| `/einstellungen/abrechnung` | Settings schema and issuers; billing defaults and number ranges under existing module/right gates. | The master-data GET writes a read audit. Issuer ranges require nonempty issuer metadata. Edits still use saved versions and explicit actions. |
+| `/einstellungen/briefkopf` | Settings schema. | Master data writes a read audit. Logo file handling and editing use their existing routes. |
 | `/einstellungen/briefkopf/vorlagen` | Template summaries. | Form previews occur on opening the appropriate editor. |
-| `/einstellungen/briefkopf/vorlagen/[kind]` | Saved template and master data for a supported kind. | Version-bound draft/visual preview goes through the existing editor, not the server seed. |
+| `/einstellungen/briefkopf/vorlagen/[kind]` | Saved template for a supported kind. | Master data writes a read audit. Version-bound draft/visual preview goes through the existing editor, not the server seed. |
 | `/einstellungen/dokumentarten` | Document kinds and issuers, only for a billing manager. | Editing kinds/issuers and previews stay on action. |
 | `/einstellungen/mitglieder` | None. | Office members and invitations use a fresh opening read; account history stays in its audit context. |
 | `/einstellungen/module` | Current organization and booked modules (also used by shell). | Module booking controls remain unchanged. |
 | `/einstellungen/schulrollen` | Roles and permission catalog as one complete key. | Removal impact is a fresh opening preview. |
 | `/einstellungen/zugriffsprotokoll` | Schools. | The audit log page and identity-filter options both log access; local window/as-of and paging remain client-owned. |
-| `/einstellungen/zustaendigkeiten` | Settings schema, responsibilities, billing issuer statuses. | Changes stay in their versioned editors. |
+| `/einstellungen/zustaendigkeiten` | Settings schema. | The responsibilities GET writes a read audit; issuer status depends on that opening. Changes stay in their versioned editors. |
 | `/ferien` | Period summaries. | Downloads and creation are actions. |
 | `/ferien/[id]` | Period and schools. | Calendar/draft editing and links stay client-side. |
 | `/ferien/[id]/anmeldungen` | Period, schools and confirmation settings. | Registration list, sibling/look-up and named entries follow reviewed/audited paths; filter and retry actions are not seeded. |
 | `/ferien/[id]/anmeldungen/[registrationId]` | Period and confirmation settings. | Registration detail, contribution/debtor reads, health, known children and documents stay on audited/opening paths. |
 | `/ferien/[id]/formular` | Period and saved form. | Draft editing, files and test/preview remain interaction-specific. |
-| `/ferien/[id]/plaetze` | Period, schools and counts by holiday week. | Exports and edits remain explicit. |
+| `/ferien/[id]/plaetze` | Period and schools. | Counts write a holiday read audit. Exports and edits remain explicit. |
 | `/ferien/[id]/vergabe` | Period and schools. | Allocation board records every read; proposal/history stays under the period policy and opening. |
 | `/ferien/kriterien` | Criteria and order. | Reordering and edits use versions/actions. |
 | `/ferien/neu` | Schools. | Blank period creation form. |
@@ -166,7 +166,7 @@ An audited GET stays on its prescribed browser/opening path even if its hook cur
 ## Projection boundaries and verification
 
 - The Operator school drill-in resolves the school via audited summaries; device and PWA reads stay after that authorization chain. The server does not resolve it from an untrusted slug alone.
-- The Träger school responsibility tab uses the organization-wide responsibility/issuer payload. It stays in the client: it would serialize contacts for schools not displayed on that route. The contact-only settings tab also keeps its master-data read in the client rather than embedding the bank account payload in HTML. The existing keys require the full values.
+- The Träger school responsibility tab uses the organization-wide responsibility/issuer payload. It stays in the client: it would serialize contacts for schools not displayed on that route. The master-data GET also writes a read audit; on the contact-only settings tab the full payload would embed unused bank data. The existing keys require the full values.
 - Browser/performance and live session invalidation are integration checks, not proven by loader tests alone.
 
 ## Local performance candidates
