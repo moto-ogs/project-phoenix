@@ -9,8 +9,9 @@ import (
 
 type PickupSchedules interface{ care.PickupSchedules }
 type PickupSchedulesCallbacks struct {
-	GetEffectivePickupTimeForDate func(ctx context.Context, id int64, date calendar.Date) (*EffectivePickupTimeSnapshot, error)
-	GetStudentPickupSchedules     func(ctx context.Context, id int64) ([]*PickupScheduleSnapshot, error)
+	GetEffectivePickupTimeForDate      func(ctx context.Context, id int64, date calendar.Date) (*EffectivePickupTimeSnapshot, error)
+	GetBulkEffectivePickupTimesForDate func(ctx context.Context, ids []int64, date calendar.Date) (map[int64]*EffectivePickupTimeSnapshot, error)
+	GetStudentPickupSchedules          func(ctx context.Context, id int64) ([]*PickupScheduleSnapshot, error)
 }
 
 func NewPickupSchedules(callbacks PickupSchedulesCallbacks) PickupSchedules {
@@ -21,6 +22,9 @@ type pickupSchedules struct{ callbacks PickupSchedulesCallbacks }
 
 func (a pickupSchedules) GetEffectivePickupTimeForDate(ctx context.Context, id int64, date calendar.Date) (*care.EffectivePickupTime, error) {
 	return a.callbacks.GetEffectivePickupTimeForDate(ctx, id, date)
+}
+func (a pickupSchedules) GetBulkEffectivePickupTimesForDate(ctx context.Context, ids []int64, date calendar.Date) (map[int64]*care.EffectivePickupTime, error) {
+	return a.callbacks.GetBulkEffectivePickupTimesForDate(ctx, ids, date)
 }
 func (a pickupSchedules) GetStudentPickupSchedules(ctx context.Context, id int64) ([]*care.PickupSchedule, error) {
 	return a.callbacks.GetStudentPickupSchedules(ctx, id)

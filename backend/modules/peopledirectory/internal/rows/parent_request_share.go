@@ -18,5 +18,5 @@ type ParentRequestShareEvent struct {
 
 type ParentRequestShareEventRepository interface {
 	Create(context.Context, *ParentRequestShareEvent) error
-	CurrentForStudent(context.Context, int64) ([]*ParentRequestShareEvent, error)
+	CurrentForStudents(context.Context, []int64) ([]*ParentRequestShareEvent, error)
 }

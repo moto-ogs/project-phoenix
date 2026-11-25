@@ -46,8 +46,8 @@ func (r *ParentRequestShareEventRepository) AppendParentRequestShare(ctx context
 	}
 	return err
 }
-func (r *ParentRequestShareEventRepository) ParentRequestSharesForStudent(ctx context.Context, id int64) ([]*directory.ParentRequestShareRecord, error) {
-	rows, err := r.CurrentForStudent(ctx, id)
+func (r *ParentRequestShareEventRepository) ParentRequestSharesForStudents(ctx context.Context, ids []int64) ([]*directory.ParentRequestShareRecord, error) {
+	rows, err := r.CurrentForStudents(ctx, ids)
 	if rows == nil {
 		return nil, err
 	}
