@@ -18,7 +18,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { AlertTriangle, StickyNote } from "lucide-react";
+import { AlertTriangle, Clock, Route, StickyNote } from "lucide-react";
 
 import { Avatar } from "~/components/ui/avatar";
 import { ButtonLink } from "~/components/ui/button";
@@ -32,7 +32,16 @@ import { IndexRail } from "~/components/ui/index-rail";
 import { SectionCard } from "~/components/ui/section-card";
 import { SplitView, useSplitSelection } from "~/components/ui/split-view";
 import { ChildSheet, ChildSummary } from "~/components/students/child-sheet";
-import { SearchStudentStatusBadge } from "~/components/students/search-student-card";
+import {
+  SearchStudentStatusBadge,
+  searchStudentDay,
+} from "~/components/students/search-student-card";
+import { dayHomeChange } from "~/components/students/student-table";
+import { NotificationBadge } from "~/components/ui/notification-badge";
+import { COUNTER_TONE } from "~/lib/counter-tones";
+import { useStudentParentAttention } from "~/lib/hooks/use-parent-attention";
+import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
+import type { TrackingIndicatorsResponse } from "~/lib/active-helpers";
 import { useRowClock } from "~/components/students/student-card-clock";
 import { useDeviceContext } from "~/lib/device-context";
 import { getAccessibleTextColor } from "~/lib/kit-palette";
@@ -89,6 +98,10 @@ function RowLine({
     .filter(Boolean)
     .join(" · ");
   const now = useRowClock(undefined);
+  const dayChange =
+    isToday && student.has_full_access !== false
+      ? dayHomeChange(searchStudentDay(student, isToday))
+      : undefined;
   let lead: ReactNode = null;
   // Neben einer Warnung nur, was zu ihr gehört, damit nichts abgeschnitten
   // wird: zur Ankunft die Klasse, zur Gehzeit der Heimweg.
@@ -106,6 +119,27 @@ function RowLine({
         </span>
       );
       rest = (overdue.kind === "pickup" ? homeway : klass) ?? "";
+    } else if (dayChange) {
+      // Wie der orange Streifen der Karte (#3946): heute anders als sonst.
+      const time = dayChange.time ? (student.pickup_time ?? null) : null;
+      const mode = dayChange.mode
+        ? SHORT_DEPARTURE_LABELS[dayChange.mode]
+        : null;
+      lead = (
+        <span
+          className="flex shrink-0 items-center gap-1 font-medium"
+          style={{ color: MOTO_COLOR_PALETTE.orange.strong }}
+        >
+          {dayChange.mode ? (
+            <Route className="size-3.5 shrink-0" aria-hidden="true" />
+          ) : (
+            <Clock className="size-3.5 shrink-0" aria-hidden="true" />
+          )}
+          Heute{" "}
+          {[mode, time ? `geht ${time}` : null].filter(Boolean).join(", ")}
+        </span>
+      );
+      rest = klass ?? "";
     } else if (student.teacher_hints?.length) {
       lead = (
         <span className="flex shrink-0 items-center gap-1 font-medium text-gray-700">
@@ -121,6 +155,25 @@ function RowLine({
       {lead}
       {rest ? <span className="truncate">· {rest}</span> : null}
     </span>
+  );
+}
+
+/**
+ * Neue Nachrichten und offene Anfragen der Eltern als Zahl am Namen, wie an
+ * der Ecke der Kinderkarte (#6486). In der Zeile nur Anzeige: Ein Tipp
+ * öffnet das Kind-Blatt, dort steht der Knopf zu den Nachrichten.
+ */
+function RowParentAttention({ studentId }: Readonly<{ studentId: string }>) {
+  const attention = useStudentParentAttention(studentId);
+  if (!attention) return null;
+  return (
+    <NotificationBadge
+      count={attention.total}
+      tone={COUNTER_TONE.parents}
+      size="sm"
+      ariaLabel={`${attention.total} neu von den Eltern`}
+      className="shrink-0"
+    />
   );
 }
 
@@ -213,6 +266,7 @@ export function StudentListApp({
   userGroups,
   groupRooms,
   supervisedRooms,
+  trackingData,
 }: Readonly<{
   /** Sortiert, gefiltert: genau die Kinder der Seite. */
   students: readonly Student[];
@@ -227,6 +281,8 @@ export function StudentListApp({
   userGroups: string[];
   groupRooms: string[];
   supervisedRooms: string[];
+  /** Merkpunkte der Schule, wie auf der Karte; das Blatt zeigt sie. */
+  trackingData?: TrackingIndicatorsResponse;
 }>) {
   const { selected, select } = useSplitSelection("kind");
   const [sheetId, setSheetId] = useState<string | null>(null);
@@ -282,6 +338,7 @@ export function StudentListApp({
         title={
           <span className="flex min-w-0 items-center gap-2">
             <span className="truncate">{studentName(student)}</span>
+            <RowParentAttention studentId={id} />
             <span className="ml-auto shrink-0">{badge}</span>
           </span>
         }
@@ -351,6 +408,15 @@ export function StudentListApp({
 
   const selectedStudent = selected ? (byId.get(selected) ?? null) : null;
   const sheetStudent = sheetId ? (byId.get(sheetId) ?? null) : null;
+  // Alles, was die Karte am Desktop zeigt, steht im Blatt (#8070).
+  const cardFactsOf = (student: Student) => ({
+    tracking: trackingData?.labels?.length
+      ? {
+          labels: trackingData.labels,
+          results: trackingData.results[student.id] ?? [],
+        }
+      : undefined,
+  });
 
   return (
     <>
@@ -366,6 +432,7 @@ export function StudentListApp({
                 classLabel={classLabel(selectedStudent)}
                 header
                 actionsLast
+                cardFacts={cardFactsOf(selectedStudent)}
               />
               {/* Wie im Blatt und in der Aufsicht: alle Aktionen unten
                   gebündelt, die Akte als Nebenweg darunter. */}
@@ -391,6 +458,7 @@ export function StudentListApp({
         href={sheetStudent ? studentHref(sheetStudent) : "/students/search"}
         isToday={isToday}
         classLabel={sheetStudent ? classLabel(sheetStudent) : null}
+        cardFacts={sheetStudent ? cardFactsOf(sheetStudent) : undefined}
       />
     </>
   );
