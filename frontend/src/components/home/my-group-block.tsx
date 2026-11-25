@@ -339,7 +339,7 @@ function AwayRow({
 }
 
 /** Warum das Kind fehlt — dieselben Wörter wie auf „Meine Gruppen". */
-function AwayBadge({
+export function AwayBadge({
   student,
   onlyIfLessonCancelled,
 }: {

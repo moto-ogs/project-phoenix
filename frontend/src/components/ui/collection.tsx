@@ -118,6 +118,11 @@ export type CollectionRowProps = RowTarget & {
   readonly selected?: boolean;
   /** Zugänglicher Name des Ziels, wenn der Titel allein nicht reicht. */
   readonly "aria-label"?: string;
+  /**
+   * Titel und Unterzeile brechen um statt gekürzt zu werden: für Sätze
+   * („Mia geht heute um 13:30 Uhr.“), nicht für Namen in langen Listen.
+   */
+  readonly wrap?: boolean;
 };
 
 /**
@@ -135,13 +140,19 @@ export function CollectionRow({
   href,
   onClick,
   "aria-label": ariaLabel,
+  wrap = false,
 }: CollectionRowProps) {
   // Das Ziel spannt sich über die ganze Zeile (Pseudo-Element), damit die
   // Hauptaktion kein Kind des Links ist.
   const stretch =
     "after:absolute after:inset-0 after:content-[''] focus-visible:outline-none";
   const titleNode = (
-    <span className="tablet:text-base tablet:leading-6 block truncate text-[0.9375rem] leading-5 font-medium text-gray-900">
+    <span
+      className={cn(
+        "tablet:text-base tablet:leading-6 block text-[0.9375rem] leading-5 font-medium text-gray-900",
+        wrap ? "break-words" : "truncate",
+      )}
+    >
       {title}
     </span>
   );
@@ -191,7 +202,12 @@ export function CollectionRow({
       <span className="min-w-0 flex-1">
         {target}
         {subtitle ? (
-          <span className="tablet:text-[0.9375rem] mt-0.5 block truncate text-sm leading-5 text-gray-500">
+          <span
+            className={cn(
+              "tablet:text-[0.9375rem] mt-0.5 block text-sm leading-5 text-gray-500",
+              wrap ? "break-words whitespace-pre-line" : "truncate",
+            )}
+          >
             {subtitle}
           </span>
         ) : null}
