@@ -50,9 +50,13 @@ const INHERIT_RULES: readonly InheritRule[] = [
 
 /**
  * Seiten, auf denen die Pill in der App ausgeblendet ist (Produktentscheid,
- * Vorschlag #8070 „Nachrichten“): Der Chat-Verlauf braucht die ganze Höhe,
- * das Schreibfeld klebt unten. Zurück führt zur Liste. Auf dem iPad quer
- * (`split`) bleibt die Pill sichtbar, weil die Liste daneben steht.
+ * Vorschlag #8070 „Nachrichten“). Eine Regel für alle Geräte: Die Pill fehlt,
+ * solange der Chat-Verlauf allein den Bildschirm füllt, wie in Chat-Apps. Er
+ * braucht die Höhe, das Schreibfeld klebt unten, und Zurück führt zur Liste,
+ * also zum Reiter. Das gilt auf dem Telefon und dem iPad hoch. Auf dem iPad
+ * quer (`split`) steht der Verlauf nie allein: `/messages/<id>` öffnet dort
+ * die Liste mit dem Verlauf rechts daneben, und diese Ansicht ist die Wurzel
+ * des Reiters, also mit Pill.
  */
 interface PillHiddenRule {
   readonly pattern: RegExp;

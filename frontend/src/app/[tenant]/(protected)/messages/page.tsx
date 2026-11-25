@@ -36,6 +36,9 @@ import { parentsConcept } from "~/lib/concepts/parents";
 import { foldForSearch } from "~/lib/search-fold";
 import { useDeviceContext } from "~/lib/device-context";
 import { MessagesInboxApp } from "~/components/messaging/messages-inbox-app";
+import { ActionBar } from "~/components/ui/action-bar";
+import { SearchBar } from "~/components/ui/page-header/SearchBar";
+import { ToggleChip } from "~/components/ui/toggle-chip";
 import { MessageThreadContent } from "./[threadId]/page";
 
 // Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
@@ -65,7 +68,7 @@ function MessagesInboxContent() {
   const messagingEnabled = tenant?.messagingEnabled === true;
   // App (#8070): Liste in einer Karte, „Neu“ als Symbol, iPad quer mit
   // Verlauf daneben. Der Desktop-Zweig bleibt unverändert.
-  const { isApp } = useDeviceContext();
+  const { isApp, isSplit } = useDeviceContext();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [onlyUnread, setOnlyUnread] = useState(false);
@@ -188,28 +191,57 @@ function MessagesInboxContent() {
       />
     );
 
-  const composeButton = !messagingEnabled ? undefined : isApp ? (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      onClick={() => setComposeOpen(true)}
-      tooltip="Öffnet ein Fenster, in dem du Kind und Eltern wählst."
-      aria-label="Neue Nachricht"
-    >
-      <NotePencilIcon size={22} aria-hidden="true" />
-    </Button>
-  ) : (
+  // App: „Neue Nachricht“ beschriftet in Daumennähe statt als Symbol oben.
+  // Auf dem Telefon und dem iPad hoch schwebt sie als ActionBar über der
+  // Pill. Im Split (iPad quer) steht sie über der Liste in deren Spalte:
+  // unten mittig läge die Leiste über dem Schreibfeld des Verlaufs rechts,
+  // unten links unter der Pill.
+  const appComposeButton = messagingEnabled ? (
     <Button
       type="button"
       variant="primary"
       size="md"
+      className="w-full gap-2"
       onClick={() => setComposeOpen(true)}
       tooltip="Öffnet ein Fenster, in dem du Kind und Eltern wählst."
     >
+      <NotePencilIcon size={18} aria-hidden="true" />
       Neue Nachricht
     </Button>
+  ) : null;
+
+  // App: eine Bauart auf jedem Gerät. Suche und „Ungelesen“ stehen
+  // nebeneinander; die Dropdown-Zeile des Desktops schaltete sonst ab
+  // 1024 px Breite auch am iPad quer um, darunter war es ein Filtersymbol.
+  const appToolbar = (
+    <div className="flex items-center gap-2">
+      <SearchBar
+        value={searchTerm}
+        onChange={setSearchTerm}
+        // Kurz, damit er neben „Ungelesen“ auch auf 320–375 px ganz steht;
+        // gesucht wird im Namen der Person und des Kindes.
+        placeholder="Name suchen…"
+        inputProps={{ "aria-label": "Person oder Kind suchen" }}
+        className="min-w-0 flex-1"
+      />
+      <ToggleChip pressed={onlyUnread} onPressedChange={setOnlyUnread}>
+        Ungelesen
+      </ToggleChip>
+    </div>
   );
+
+  const composeButton =
+    !messagingEnabled || isApp ? undefined : (
+      <Button
+        type="button"
+        variant="primary"
+        size="md"
+        onClick={() => setComposeOpen(true)}
+        tooltip="Öffnet ein Fenster, in dem du Kind und Eltern wählst."
+      >
+        Neue Nachricht
+      </Button>
+    );
 
   // Der Fehler ersetzt den Inhalt nur, wenn nichts anzuzeigen ist. Liegt noch
   // eine (möglicherweise veraltete) Liste vor, bleibt sie stehen und der
@@ -256,6 +288,7 @@ function MessagesInboxContent() {
             ]
           : []),
       ]}
+      searchSlot={isApp ? appToolbar : undefined}
       search={{
         value: searchTerm,
         onChange: setSearchTerm,
@@ -299,12 +332,21 @@ function MessagesInboxContent() {
       // im Inhalt.
       loading={showSkeleton}
       overlays={
-        composeOpen ? (
-          <NewMessageModal
-            onClose={() => setComposeOpen(false)}
-            onOpened={(thread) => router.push(`/messages/${thread.thread_id}`)}
-          />
-        ) : null
+        <>
+          {composeOpen ? (
+            <NewMessageModal
+              onClose={() => setComposeOpen(false)}
+              onOpened={(thread) =>
+                router.push(`/messages/${thread.thread_id}`)
+              }
+            />
+          ) : null}
+          {/* Im Split steht der Knopf über der Liste; ohne Liste (leer,
+              Fehler) braucht er auch dort die Leiste. */}
+          {isApp && appComposeButton && (!isSplit || bodyReplaced) ? (
+            <ActionBar>{appComposeButton}</ActionBar>
+          ) : null}
+        </>
       }
     >
       <>
@@ -313,6 +355,11 @@ function MessagesInboxContent() {
         {isApp ? (
           <MessagesInboxApp
             threads={filteredThreads}
+            listHeader={
+              isSplit && appComposeButton ? (
+                <div className="mb-2">{appComposeButton}</div>
+              ) : null
+            }
             renderDetail={(threadId) => (
               <MessageThreadContent
                 key={threadId}

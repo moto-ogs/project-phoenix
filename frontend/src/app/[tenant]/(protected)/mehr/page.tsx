@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { Bell } from "lucide-react";
 import { LogoutModal } from "~/components/auth/logout-modal";
 import {
@@ -20,7 +20,7 @@ import { UnreadBadge } from "~/components/messaging/unread-badge";
 import { ListRowLink } from "~/components/ui/list-row-link";
 import { ModuleLockMark } from "~/components/ui/module-lock-mark";
 import { NotificationBadge } from "~/components/ui/notification-badge";
-import { SectionCard } from "~/components/ui/section-card";
+import { Collection, CollectionGroup } from "~/components/ui/collection";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useDeviceContext } from "~/lib/device-context";
 import { logoutConcept } from "~/lib/concepts/logout";
@@ -50,48 +50,72 @@ const STAFF_FLOW_HREFS: readonly string[] = [
 
 type MenuItem = StaffBottomNavModel["displayAdditionalItems"][number];
 
+/** Symbol einer Zeile: dieselbe Größe und Farbe in jeder Zeile. */
+const ROW_ICON = "h-5 w-5 shrink-0 text-gray-600";
+
 function MenuRows({
   items,
   model,
 }: Readonly<{ items: readonly MenuItem[]; model: StaffBottomNavModel }>) {
-  return (
-    <ul className="divide-y divide-gray-100">
-      {items.map((item) => (
-        <li key={item.href}>
-          <ListRowLink
-            href={model.resolveItemHref(item)}
-            className="min-h-14"
-            icon={
-              <MobileNavIcon
-                item={item}
-                active={false}
-                className="h-5 w-5 shrink-0 text-gray-600"
-              />
-            }
-            title={item.label}
-            badge={
-              item.locked ? (
-                <ModuleLockMark />
-              ) : item.href === ENROLLMENT_SECTION.href ? (
-                <UnreadBadge
-                  count={model.enrollmentsUnreadCount}
-                  tone="staff"
-                  noun="ungelesene Anmeldungen"
-                />
-              ) : undefined
-            }
-          />
-        </li>
-      ))}
-    </ul>
-  );
+  return items.map((item) => (
+    <li key={item.href}>
+      <ListRowLink
+        href={model.resolveItemHref(item)}
+        className="min-h-14"
+        icon={<MobileNavIcon item={item} active={false} className={ROW_ICON} />}
+        title={item.label}
+        badge={
+          item.locked ? (
+            <ModuleLockMark />
+          ) : item.href === ENROLLMENT_SECTION.href ? (
+            <UnreadBadge
+              count={model.enrollmentsUnreadCount}
+              tone="staff"
+              noun="ungelesene Anmeldungen"
+            />
+          ) : undefined
+        }
+      />
+    </li>
+  ));
+}
+
+interface MoreSection {
+  readonly key: string;
+  readonly title: string;
+  /** Zahl der Zeilen, für die Verteilung auf Spalten. */
+  readonly size: number;
+  readonly rows: ReactNode;
+}
+
+/**
+ * Verteilt die Abschnitte der Reihe nach auf `columns` Spalten: jeder kommt
+ * in die bisher kürzeste. So stehen die Spalten etwa gleich hoch, und die
+ * Lesereihenfolge bleibt je Spalte erhalten.
+ */
+function balanceColumns(
+  sections: readonly MoreSection[],
+  columns: number,
+): MoreSection[][] {
+  const result: MoreSection[][] = Array.from({ length: columns }, () => []);
+  const heights: number[] = Array.from({ length: columns }, () => 0);
+  for (const section of sections) {
+    let shortest = 0;
+    for (let index = 1; index < columns; index += 1) {
+      if ((heights[index] ?? 0) < (heights[shortest] ?? 0)) shortest = index;
+    }
+    result[shortest]?.push(section);
+    // Der Gruppenkopf zählt wie eine knappe Zeile.
+    heights[shortest] = (heights[shortest] ?? 0) + section.size + 0.7;
+  }
+  return result.filter((column) => column.length > 0);
 }
 
 function MorePageContent() {
   const model = useStaffBottomNavModel();
   const openNotificationsSheet = useOpenNotificationsSheet();
   const [logoutOpen, setLogoutOpen] = useState(false);
-  const { resolved, isApp } = useDeviceContext();
+  const { resolved, isApp, layout, isSplit } = useDeviceContext();
   const router = useTenantRouter();
 
   // Desktop: keine eigene Seite, die Seitenleiste trägt alle Ziele.
@@ -113,6 +137,110 @@ function MorePageContent() {
     }))
     .filter((group) => group.items.length > 0);
 
+  const isTeacher = model.mode === "teacher";
+  const news = isTeacher ? model.staffNews : [];
+
+  const sections: MoreSection[] = [];
+  // Oben, was auf die Person wartet: Benachrichtigungen mit ihrem Zähler
+  // (derselbe rote Zähler steht am Reiter „Mehr“) und die neuen Hinweise
+  // zu Kindern.
+  if (isTeacher) {
+    sections.push({
+      key: "neu",
+      title: STAFF_NEWS_TITLE,
+      size: 1 + news.length * 1.3,
+      rows: (
+        <>
+          <li>
+            <ListRowLink
+              onClick={openNotificationsSheet}
+              className="min-h-14"
+              icon={<Bell className={ROW_ICON} aria-hidden="true" />}
+              title="Benachrichtigungen"
+              badge={
+                <NotificationBadge
+                  count={model.feedUnreadCount}
+                  tone="red"
+                  size="md"
+                  max={NOTIFICATIONS_BADGE_MAX}
+                  ariaLabel={`${model.feedUnreadCount} neue Hinweise`}
+                />
+              }
+            />
+          </li>
+          {news.length > 0 ? <StaffNewsList items={news} rows /> : null}
+        </>
+      ),
+    });
+  }
+  if (flows.length > 0) {
+    sections.push({
+      key: "tag",
+      title: "Mein Tag",
+      size: flows.length,
+      rows: <MenuRows items={flows} model={model} />,
+    });
+  }
+  for (const group of groups) {
+    sections.push({
+      key: group.key,
+      title: group.group?.label ?? "Weiteres",
+      size: group.items.length,
+      rows: <MenuRows items={group.items} model={model} />,
+    });
+  }
+  sections.push({
+    key: "konto",
+    title: "Konto",
+    size: model.profileUrl ? 2 : 1,
+    rows: (
+      <>
+        {model.profileUrl ? (
+          <li>
+            <ListRowLink
+              href={model.tenantPath(model.profileUrl)}
+              className="min-h-14"
+              icon={
+                <MobileNavIcon
+                  item={{ iconKey: "profile" }}
+                  active={false}
+                  className={ROW_ICON}
+                />
+              }
+              title="Profil"
+            />
+          </li>
+        ) : null}
+        <li>
+          <ListRowLink
+            onClick={() => setLogoutOpen(true)}
+            className="min-h-14"
+            chevron={false}
+            icon={
+              <MobileNavIcon
+                item={{ iconKey: "profile", concept: logoutConcept }}
+                active={false}
+                className={ROW_ICON}
+              />
+            }
+            title="Abmelden"
+          />
+        </li>
+      </>
+    ),
+  });
+
+  const group = (section: MoreSection) => (
+    <CollectionGroup key={section.key} title={section.title}>
+      {section.rows}
+    </CollectionGroup>
+  );
+
+  // Telefon: EINE Liste, die Abschnitte als Gruppenköpfe darin. iPad: die
+  // Abschnitte als Karten in zwei (hoch) oder drei (quer) Spalten, damit
+  // keine Zeile 750–1100 px breit wird und der Pfeil nah am Text steht.
+  const columns = layout === "tablet" ? (isSplit ? 3 : 2) : 1;
+
   return (
     <TenantPage
       title="Mehr"
@@ -121,85 +249,23 @@ function MorePageContent() {
         <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} />
       }
     >
-      {/* Hierher führt der rote Zähler am Reiter „Mehr“. */}
-      {model.mode === "teacher" && model.staffNews.length > 0 ? (
-        <SectionCard title={STAFF_NEWS_TITLE}>
-          <StaffNewsList items={model.staffNews} />
-        </SectionCard>
-      ) : null}
-      {flows.length > 0 ? (
-        <SectionCard title="Mein Tag" flush>
-          <MenuRows items={flows} model={model} />
-        </SectionCard>
-      ) : null}
-      {groups.map((group) => (
-        <SectionCard
-          key={group.key}
-          title={group.group?.label ?? "Weiteres"}
-          flush
+      {columns === 1 ? (
+        <Collection label="Mehr">{sections.map(group)}</Collection>
+      ) : (
+        <div
+          className={`grid items-start gap-4 ${columns === 3 ? "grid-cols-3" : "grid-cols-2"}`}
         >
-          <MenuRows items={group.items} model={model} />
-        </SectionCard>
-      ))}
-      <SectionCard title="Konto" flush>
-        <ul className="divide-y divide-gray-100">
-          {model.mode === "teacher" ? (
-            <li>
-              <ListRowLink
-                onClick={openNotificationsSheet}
-                className="min-h-14"
-                icon={
-                  <Bell
-                    className="h-5 w-5 shrink-0 text-gray-600"
-                    aria-hidden="true"
-                  />
-                }
-                title="Benachrichtigungen"
-                badge={
-                  <NotificationBadge
-                    count={model.feedUnreadCount}
-                    tone="red"
-                    size="md"
-                    max={NOTIFICATIONS_BADGE_MAX}
-                    ariaLabel={`${model.feedUnreadCount} neue Hinweise`}
-                  />
-                }
-              />
-            </li>
-          ) : null}
-          {model.profileUrl ? (
-            <li>
-              <ListRowLink
-                href={model.tenantPath(model.profileUrl)}
-                className="min-h-14"
-                icon={
-                  <MobileNavIcon
-                    item={{ iconKey: "profile" }}
-                    active={false}
-                    className="h-5 w-5 shrink-0 text-gray-600"
-                  />
-                }
-                title="Profil"
-              />
-            </li>
-          ) : null}
-          <li>
-            <ListRowLink
-              onClick={() => setLogoutOpen(true)}
-              className="min-h-14"
-              chevron={false}
-              icon={
-                <MobileNavIcon
-                  item={{ iconKey: "profile", concept: logoutConcept }}
-                  active={false}
-                  className="h-5 w-5 shrink-0 text-gray-600"
-                />
-              }
-              title="Abmelden"
-            />
-          </li>
-        </ul>
-      </SectionCard>
+          {balanceColumns(sections, columns).map((column) => (
+            <div key={column[0]?.key} className="flex flex-col gap-4">
+              {column.map((section) => (
+                <Collection key={section.key} label={section.title}>
+                  {group(section)}
+                </Collection>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </TenantPage>
   );
 }
