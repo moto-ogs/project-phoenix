@@ -50,6 +50,8 @@
   "session_note_required": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "session_not_found": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "session_not_owned": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
+  "terminal_only_stamping": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
+  "terminal_only_time_edit": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
   "session_check_in_in_future": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "session_times_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "shift_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",

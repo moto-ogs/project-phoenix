@@ -2112,6 +2112,10 @@ export const ERROR_CATALOG = {
         "Das Ende liegt vor dem Anfang. Bitte prüfe den Zeitraum.",
       "workforce.target_override_too_long":
         "Der Zeitraum ist zu lang. Erlaubt sind höchstens {max_days} Tage.",
+      "workforce.terminal_only_stamping":
+        "Du stempelst nur am NFC-Tablet. Halte dort dein Armband an das Tablet.",
+      "workforce.terminal_only_time_edit":
+        "Deine Zeiten ändert nur die Leitung. Bitte frage die Leitung.",
       "workforce.traeger_absence_allowance_below_booked":
         "Der Anspruch ist zu klein. An den Schulen sind schon mehr Tage eingetragen oder beantragt.",
       "workforce.traeger_absence_type_in_use":

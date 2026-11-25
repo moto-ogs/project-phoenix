@@ -13,6 +13,9 @@ import (
 )
 
 func (s *workSessionService) StartBreak(ctx context.Context, staffID int64, plannedDurationMinutes *int) (*WorkSessionBreak, error) {
+	if err := s.ensureAppStampAllowed(ctx, staffID); err != nil {
+		return nil, err
+	}
 	day, err := s.openBlockDay(ctx, staffID)
 	if err != nil {
 		return nil, err
@@ -94,6 +97,9 @@ func (s *workSessionService) startSessionBreak(ctx context.Context, sessionID in
 }
 
 func (s *workSessionService) EndBreak(ctx context.Context, staffID int64) (*WorkSession, error) {
+	if err := s.ensureAppStampAllowed(ctx, staffID); err != nil {
+		return nil, err
+	}
 	day, err := s.openBlockDay(ctx, staffID)
 	if err != nil {
 		return nil, err

@@ -80,6 +80,9 @@ import type { ClockSession, PlanShift } from "~/lib/own-time-tracking-view";
 import { createLogger } from "~/lib/logger";
 import { errorStatus } from "~/lib/expected-failure";
 import { IconTile } from "~/components/ui/icon-tile";
+import { EmptyState } from "~/components/ui/empty-state";
+import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
+import { rfidConcept } from "~/lib/concepts/rfid";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { ModalActions } from "./absence-and-session-dialogs";
 import { clockMetrics, readOwnClock } from "./own-clock-read";
@@ -438,6 +441,7 @@ function ClockInCard({
   plannedShifts,
   cancelledShifts,
   stampingDisabled,
+  terminalOnly = false,
   saving = false,
   laborDays,
   setTargetHref,
@@ -455,6 +459,12 @@ function ClockInCard({
   readonly cancelledShifts?: readonly PlanShift[];
   /** Session and absence data must be current before a stamp is allowed. */
   readonly stampingDisabled: boolean;
+  /**
+   * Die Schule lässt diese Person nur mit dem eigenen Chip am NFC-Terminal
+   * stempeln (#8024): Die Karte zeigt Stand und Hinweis, aber keine
+   * Stempelknöpfe. Der Server lehnt jeden Stempel aus der App ohnehin ab.
+   */
+  readonly terminalOnly?: boolean;
   /**
    * A stamp is on its way (#5012): the card already shows its expected
    * result, the header says it is not confirmed yet.
@@ -572,6 +582,8 @@ function ClockInCard({
     if (
       shouldAutoEndBreak(countdownRemainingSecs, isOnBreak, actionLoading) &&
       !stampingDisabled &&
+      // Am Terminal gestempelte Pausen beendet das Terminal oder der Server.
+      !terminalOnly &&
       !autoEndInFlightRef.current &&
       activeBreak?.id !== autoEndAttemptedBreakIdRef.current
     ) {
@@ -593,6 +605,7 @@ function ClockInCard({
     isOnBreak,
     actionLoading,
     stampingDisabled,
+    terminalOnly,
     activeBreak?.id,
     onEndBreak,
   ]);
@@ -821,8 +834,30 @@ function ClockInCard({
           cancelledShifts={cancelledShifts}
         />
 
+        {/* ── Not checked in, terminal only: where to stamp instead ── */}
+        {!isCheckedIn && !isCheckedOut && terminalOnly && (
+          <EmptyState
+            tone="neutral"
+            icon={<MotoConceptIcon concept={rfidConcept} />}
+            title="Du stempelst am NFC-Tablet"
+            description="Halte dein Armband an das Tablet. In der App kannst du nicht stempeln."
+            action={
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={onAddAbsence}
+                tooltip="Öffnet ein Fenster, um eine Abwesenheit einzutragen."
+              >
+                Abwesenheit melden
+              </Button>
+            }
+            className="py-4"
+          />
+        )}
+
         {/* ── Not checked in: start controls ── */}
-        {!isCheckedIn && !isCheckedOut && (
+        {!isCheckedIn && !isCheckedOut && !terminalOnly && (
           <div className="flex flex-col items-center gap-5">
             {/* Mode toggle */}
             <SegmentedControl
@@ -903,71 +938,80 @@ function ClockInCard({
         {/* ── Checked in: timer controls ── */}
         {isCheckedIn && (
           <>
-            {/* Control row: pause | timer | stop */}
-            <div className="mb-5 flex items-center justify-between">
+            {/* Control row: pause | timer | stop. Terminal only: the timer
+                alone, the stamps happen at the terminal. */}
+            <div
+              className={
+                terminalOnly
+                  ? "mb-3 flex items-center justify-center"
+                  : "mb-5 flex items-center justify-between"
+              }
+            >
               {/* Pause button (opens menu) or End Break button */}
-              <div>
-                {isOnBreak ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={handleEndBreakEarly}
-                    disabled={stampingDisabled || actionLoading}
-                    className={getBreakButtonClassName(true, breakMins)}
-                    aria-label="Pause beenden"
-                    tooltip="Beendet die Pause sofort, deine Arbeitszeit läuft weiter."
-                  >
-                    <svg
-                      className="h-5 w-5"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
+              {!terminalOnly && (
+                <div>
+                  {isOnBreak ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={handleEndBreakEarly}
+                      disabled={stampingDisabled || actionLoading}
+                      className={getBreakButtonClassName(true, breakMins)}
+                      aria-label="Pause beenden"
+                      tooltip="Beendet die Pause sofort, deine Arbeitszeit läuft weiter."
                     >
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </Button>
-                ) : (
-                  // The outside click is consumed so that dismissing this
-                  // picker cannot also trigger an action behind it.
-                  <AnchoredPopover
-                    open={showBreakDurationPicker && !isMobileViewport}
-                    onOpenChange={setBreakMenuOpen}
-                    ariaLabel="Pause stempeln"
-                    preferredWidth={288}
-                    focusPanelOnOpen
-                    swallowOutsideClick
-                    className="p-3"
-                    renderTrigger={({ ref, panelId }) => (
-                      <Button
-                        ref={ref}
-                        type="button"
-                        variant="ghost"
-                        onClick={() => setBreakMenuOpen(!breakMenuOpen)}
-                        disabled={stampingDisabled || actionLoading}
-                        className={getBreakButtonClassName(false, breakMins)}
-                        aria-label="Pause starten"
-                        tooltip="Öffnet die Auswahl, wie lange die Pause dauert."
-                        aria-expanded={breakMenuOpen}
-                        aria-haspopup="dialog"
-                        aria-controls={
-                          showBreakDurationPicker && !isMobileViewport
-                            ? panelId
-                            : undefined
-                        }
+                      <svg
+                        className="h-5 w-5"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        <svg
-                          className="h-5 w-5"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </Button>
+                  ) : (
+                    // The outside click is consumed so that dismissing this
+                    // picker cannot also trigger an action behind it.
+                    <AnchoredPopover
+                      open={showBreakDurationPicker && !isMobileViewport}
+                      onOpenChange={setBreakMenuOpen}
+                      ariaLabel="Pause stempeln"
+                      preferredWidth={288}
+                      focusPanelOnOpen
+                      swallowOutsideClick
+                      className="p-3"
+                      renderTrigger={({ ref, panelId }) => (
+                        <Button
+                          ref={ref}
+                          type="button"
+                          variant="ghost"
+                          onClick={() => setBreakMenuOpen(!breakMenuOpen)}
+                          disabled={stampingDisabled || actionLoading}
+                          className={getBreakButtonClassName(false, breakMins)}
+                          aria-label="Pause starten"
+                          tooltip="Öffnet die Auswahl, wie lange die Pause dauert."
+                          aria-expanded={breakMenuOpen}
+                          aria-haspopup="dialog"
+                          aria-controls={
+                            showBreakDurationPicker && !isMobileViewport
+                              ? panelId
+                              : undefined
+                          }
                         >
-                          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                        </svg>
-                      </Button>
-                    )}
-                  >
-                    {() => breakDurationControls}
-                  </AnchoredPopover>
-                )}
-              </div>
+                          <svg
+                            className="h-5 w-5"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                          </svg>
+                        </Button>
+                      )}
+                    >
+                      {() => breakDurationControls}
+                    </AnchoredPopover>
+                  )}
+                </div>
+              )}
 
               {showBreakDurationPicker && isMobileViewport && (
                 <Drawer
@@ -1028,29 +1072,42 @@ function ClockInCard({
               </div>
 
               {/* Stop / check-out button */}
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleCheckOut}
-                disabled={stampingDisabled || actionLoading || isOnBreak}
-                disabledReason={reasonOnceReady("Beende zuerst die Pause.")}
-                tooltip="Stempelt dich aus und beendet deine Arbeitszeit."
-                className={`${STAMP_BUTTON_BASE} hover:border-moto-red hover:text-moto-red h-12 w-12 border-gray-300 text-gray-500 disabled:opacity-50`}
-                aria-label="Ausstempeln"
-              >
-                {actionLoading ? (
-                  <SpinnerIcon className="h-4 w-4" />
-                ) : (
-                  <svg
-                    className="h-4 w-4"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <rect x="6" y="6" width="12" height="12" rx="1" />
-                  </svg>
-                )}
-              </Button>
+              {!terminalOnly && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleCheckOut}
+                  disabled={stampingDisabled || actionLoading || isOnBreak}
+                  disabledReason={reasonOnceReady("Beende zuerst die Pause.")}
+                  tooltip="Stempelt dich aus und beendet deine Arbeitszeit."
+                  className={`${STAMP_BUTTON_BASE} hover:border-moto-red hover:text-moto-red h-12 w-12 border-gray-300 text-gray-500 disabled:opacity-50`}
+                  aria-label="Ausstempeln"
+                >
+                  {actionLoading ? (
+                    <SpinnerIcon className="h-4 w-4" />
+                  ) : (
+                    <svg
+                      className="h-4 w-4"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <rect x="6" y="6" width="12" height="12" rx="1" />
+                    </svg>
+                  )}
+                </Button>
+              )}
             </div>
+
+            {terminalOnly && (
+              <p className="mb-5 flex items-center justify-center gap-1.5 text-center text-sm text-gray-500">
+                <MotoConceptIcon
+                  concept={rfidConcept}
+                  className="h-4 w-4 shrink-0"
+                  aria-hidden
+                />
+                Pause und Ausstempeln machst du am NFC-Tablet.
+              </p>
+            )}
 
             {/* ── Activity log rows ── */}
             <div className="border-t border-gray-100">
@@ -1806,6 +1863,7 @@ export function OwnClockCards({
               plannedShifts={data.plannedShifts}
               cancelledShifts={data.cancelledShifts}
               stampingDisabled={!clock.canStamp}
+              terminalOnly={data.terminalOnlyStamping}
               saving={clock.saving}
               setTargetHref={setTargetHref}
             />

@@ -377,6 +377,20 @@ var operations_init_zeiterfassung_7Definitions = []config.Definition{
 		SortOrder:       1,
 	},
 	{
+		Key:             config.KeyTimeTrackingTerminalOnlyStamping,
+		Label:           "Betreuer stempeln nur am NFC-Tablet",
+		Description:     "Wer keine Zeiten anderer verwalten darf, stempelt nur noch mit dem eigenen Armband am NFC-Tablet. In der App stempeln diese Personen nicht mehr und ändern ihre Zeiten nicht selbst. Die Leitung stempelt weiter in der App und korrigiert Zeiten. Jede Person braucht ein eigenes Armband. Zeiten für unterwegs trägt die Leitung nach.",
+		Type:            config.FieldBoolean,
+		Default:         false,
+		ReadPermission:  "config:read",
+		WritePermission: "config:update",
+		Tab:             "operations",
+		Category:        "zeiterfassung",
+		SortOrder:       3,
+		// Without a terminal nobody could stamp (#4896).
+		DependsOn: config.DependsOnEq(config.KeyModuleNFCAnwesenheit, true),
+	},
+	{
 		Key:             config.KeyTimeTrackingEnforcePlannedStart,
 		Label:           "Einstempeln erst kurz vor Schichtbeginn",
 		Description:     "Mitarbeitende können erst kurz vor ihrer ersten Schicht im Dienstplan einstempeln. Zu spät einstempeln geht immer. Tage ohne Schicht sind nicht betroffen.",

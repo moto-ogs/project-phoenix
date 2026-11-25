@@ -278,9 +278,15 @@ export function EditSessionModal({
   onUpdateAbsence,
   onDeleteAbsence,
   canManage,
+  timesLocked = false,
   ownStaffId,
   laborDay,
 }: {
+  /**
+   * Die Schule lässt diese Person nur am NFC-Terminal stempeln (#8024): Start,
+   * Ende und Pause ändert dann nur die Leitung, Ort und Grund bleiben offen.
+   */
+  readonly timesLocked?: boolean;
   readonly isOpen: boolean;
   readonly onClose: () => void;
   readonly session: OwnBlock | null;
@@ -748,6 +754,12 @@ export function EditSessionModal({
           {/* ── Session section ──────────────────────────────────────────── */}
           {hasSession && effectiveTab === "session" && (
             <div className="space-y-4">
+              {timesLocked && (
+                <Alert
+                  type="info"
+                  message="Start, Ende und Pause ändert nur die Leitung. Bitte melde dich dort, wenn eine Zeit nicht stimmt."
+                />
+              )}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
                   id="edit-start"
@@ -755,6 +767,7 @@ export function EditSessionModal({
                   label="Start"
                   controlSize="compact"
                   type="time"
+                  disabled={timesLocked}
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
                   error={
@@ -769,6 +782,7 @@ export function EditSessionModal({
                   label="Ende"
                   controlSize="compact"
                   type="time"
+                  disabled={timesLocked}
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
                   error={
@@ -800,6 +814,7 @@ export function EditSessionModal({
                             <div className="flex-1">
                               <CustomSelect
                                 ariaLabel={`Pausendauer ab ${formatTime(brk.startedAt)}`}
+                                disabled={timesLocked}
                                 value={(
                                   breakDurations.get(brk.id) ??
                                   brk.durationMinutes
@@ -832,6 +847,7 @@ export function EditSessionModal({
                     <CustomSelect
                       id="edit-break"
                       label="Pause (Min)"
+                      disabled={timesLocked}
                       value={breakMins}
                       onChange={setBreakMins}
                       options={[0, 15, 30, 45, 60].map((m) => ({

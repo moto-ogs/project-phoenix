@@ -726,6 +726,7 @@ function setupDefaultMocks(overrides?: {
   monthSummary?: MonthSummary;
   laborDays?: WorkDayLaborHint[];
   completedToday?: number;
+  terminalOnlyStamping?: boolean;
 }) {
   vi.mocked(useSession).mockReturnValue({
     data: {
@@ -779,6 +780,7 @@ function setupDefaultMocks(overrides?: {
               chart: [],
               completedToday: overrides?.completedToday ?? 0,
               todayCountsInTotals: true,
+              terminalOnlyStamping: overrides?.terminalOnlyStamping ?? false,
               laborDays,
               plannedShifts: [],
               cancelledShifts: [],
@@ -1028,6 +1030,64 @@ describe("TimeTrackingPage", () => {
       expect(screen.queryByText("Saldo")).not.toBeInTheDocument();
       expect(screen.queryByText("0min")).not.toBeInTheDocument();
       expect(screen.queryByText(/^von \d/)).not.toBeInTheDocument();
+    });
+  });
+
+  // ── Terminal-only stamping (#8024) ──────────────────────────────────────
+
+  describe("terminal-only stamping", () => {
+    it("names the terminal instead of offering a check-in", () => {
+      setupDefaultMocks({ terminalOnlyStamping: true });
+      render(<TimeTrackingPage />);
+
+      expect(
+        screen.getByText("Du stempelst am NFC-Tablet"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Stempeluhr")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Einstempeln" }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText("Bitte Status wählen")).not.toBeInTheDocument();
+    });
+
+    it("still opens the absence dialog", async () => {
+      setupDefaultMocks({ terminalOnlyStamping: true });
+      render(<TimeTrackingPage />);
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Abwesenheit melden" }),
+      );
+      expect(await screen.findByTestId("modal")).toBeInTheDocument();
+    });
+
+    it("shows the running block without pause and check-out buttons", () => {
+      setupDefaultMocks({
+        terminalOnlyStamping: true,
+        currentSession: mockActiveSession,
+      });
+      render(<TimeTrackingPage />);
+
+      expect(
+        screen.getByText("Pause und Ausstempeln machst du am NFC-Tablet."),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Ausstempeln" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Pause starten" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("keeps the stamp buttons while the school leaves the app open", () => {
+      setupDefaultMocks({ currentSession: mockActiveSession });
+      render(<TimeTrackingPage />);
+
+      expect(
+        screen.getByRole("button", { name: "Ausstempeln" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText("Pause und Ausstempeln machst du am NFC-Tablet."),
+      ).not.toBeInTheDocument();
     });
   });
 

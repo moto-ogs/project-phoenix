@@ -273,6 +273,12 @@ type StaffRepository interface {
 	// FindReachableSchoolCalendarStaffIDs keeps accounts with calendar:school.
 	FindReachableSchoolCalendarStaffIDs(ctx context.Context, ids []int64) (map[int64]bool, error)
 
+	// FindTimeTrackingManagerStaffIDs keeps the given staff whose active
+	// account holds time_tracking:manage in the current tenant, resolved like
+	// auth (role grants, wildcard-aware): the leadership that terminal-only
+	// stamping exempts (#8024).
+	FindTimeTrackingManagerStaffIDs(ctx context.Context, ids []int64) (map[int64]bool, error)
+
 	// FindWithPerson retrieves a staff member with their associated person data
 	FindWithPerson(ctx context.Context, id int64) (*peopledirectory.Staff, error)
 

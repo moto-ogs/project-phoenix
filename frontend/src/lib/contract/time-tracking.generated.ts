@@ -546,6 +546,7 @@ export interface OwnClockOverview {
   month: OwnTimeTotals;
   account_start: string | null;
   account_balance_minutes: number | null;
+  terminal_only_stamping: boolean;
 }
 
 export const OwnClockOverviewSchema: z.ZodType<OwnClockOverview, unknown> = object<OwnClockOverview>({
@@ -566,6 +567,7 @@ export const OwnClockOverviewSchema: z.ZodType<OwnClockOverview, unknown> = obje
   month: OwnTimeTotalsSchema,
   account_start: nullable(calendarDate),
   account_balance_minutes: nullable(safeInt),
+  terminal_only_stamping: bool,
 });
 
 /** Go: workforce.OwnTimeRestHint */

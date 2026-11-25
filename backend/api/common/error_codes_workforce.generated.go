@@ -87,6 +87,8 @@ const CodeWorkforceTargetOverrideHoursInvalid = "workforce.target_override_hours
 const CodeWorkforceTargetOverrideOverlap = "workforce.target_override_overlap"
 const CodeWorkforceTargetOverrideRangeInvalid = "workforce.target_override_range_invalid"
 const CodeWorkforceTargetOverrideTooLong = "workforce.target_override_too_long"
+const CodeWorkforceTerminalOnlyStamping = "workforce.terminal_only_stamping"
+const CodeWorkforceTerminalOnlyTimeEdit = "workforce.terminal_only_time_edit"
 const CodeWorkforceTraegerAbsenceAllowanceBelowBooked = "workforce.traeger_absence_allowance_below_booked"
 const CodeWorkforceTraegerAbsenceTypeInUse = "workforce.traeger_absence_type_in_use"
 const CodeWorkforceTraegerAbsenceTypeInvalid = "workforce.traeger_absence_type_invalid"
@@ -221,6 +223,8 @@ var errorCodeClassesWorkforce = []errorCodeClass{
 	{CodeWorkforceTargetOverrideOverlap, "business_rejection"},
 	{CodeWorkforceTargetOverrideRangeInvalid, "input"},
 	{CodeWorkforceTargetOverrideTooLong, "input"},
+	{CodeWorkforceTerminalOnlyStamping, "permission"},
+	{CodeWorkforceTerminalOnlyTimeEdit, "permission"},
 	{CodeWorkforceTraegerAbsenceAllowanceBelowBooked, "business_rejection"},
 	{CodeWorkforceTraegerAbsenceTypeInUse, "business_rejection"},
 	{CodeWorkforceTraegerAbsenceTypeInvalid, "input"},

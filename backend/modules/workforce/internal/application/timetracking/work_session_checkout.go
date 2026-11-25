@@ -18,6 +18,9 @@ import (
 )
 
 func (s *workSessionService) CheckOut(ctx context.Context, staffID int64, reason string) (*WorkSession, error) {
+	if err := s.ensureAppStampAllowed(ctx, staffID); err != nil {
+		return nil, err
+	}
 	day, err := s.openBlockDay(ctx, staffID)
 	if err != nil {
 		return nil, err

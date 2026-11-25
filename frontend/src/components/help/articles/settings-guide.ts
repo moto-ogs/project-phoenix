@@ -36,6 +36,7 @@ export function settingsGuideTopic(): HelpTopic {
           "`Kinderfotos`: Fotos bei den Kindern. Nur mit Einwilligung der Eltern. Beim Ausschalten löscht moto alle Fotos sofort. Auch alle Foto-Einwilligungen enden. Nach dem Wiedereinschalten braucht jedes Foto eine neue Einwilligung.",
           "`Angebote auf der Kinderkarte`: Die Kinderkarten unter `Gruppen` zeigen die Angebote des Tages mit Uhrzeit.",
           "`Automatisch ausstempeln`: moto wartet nach Dienstende die eingestellte Zeit. Dann stempelt es aus. Das gilt nur bei einem geplanten Dienst.",
+          "`Betreuer stempeln nur am NFC-Tablet`: Wer keine Zeiten anderer verwalten darf, stempelt nur noch mit dem eigenen Armband am Tablet. In der App geht das für diese Personen nicht mehr. Die Leitung stempelt weiter in der App und trägt fehlende Zeiten nach, zum Beispiel für `Unterwegs`. Den Schalter gibt es nur mit NFC-Tablets.",
           "`Wegpackzeit beim Ausstempeln (Minuten)`: Diese Minuten zählt moto bei jedem Ausstempeln dazu, etwa für das Aufräumen. Nicht beim Pausenbeginn und nicht beim automatischen Ausstempeln.",
           "`Arbeitszeit runden` und `Wie gerundet wird`: moto rundet die Dauer jedes Arbeitsblocks. Die Reihenfolge: gestempelte Dauer, plus Wegpackzeit, dann runden, dann Pause abziehen. Die gestempelten Uhrzeiten bleiben sichtbar.",
           "Wegpackzeit und Rundung gelten für Arbeitsblöcke, die nach der Änderung enden. Frühere Tage bleiben, wie sie sind.",
