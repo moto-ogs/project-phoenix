@@ -696,14 +696,15 @@ function NowCard({
   return (
     <SectionCard testId="home-now" padding="none">
       <div className="p-4">
-        <div className="flex items-center gap-4">
+        {/* Uhrzeit klein vor dem Block, auf Höhe seines Titels: wie heute
+            erkennbar, ohne dass die Karte eine halbe Bildschirmhöhe frisst. */}
+        <div className="flex items-start gap-3">
           <time
             dateTime={`${now.today}T${now.now}`}
-            className="shrink-0 text-3xl font-semibold text-gray-900 tabular-nums"
+            className="shrink-0 rounded-lg bg-gray-100 px-2 py-0.5 text-base leading-6 font-semibold text-gray-900 tabular-nums"
           >
             {now.now}
           </time>
-          <span aria-hidden="true" className="h-10 w-px shrink-0 bg-gray-200" />
           {now.loading ? (
             <div className="min-w-0 flex-1 space-y-2" aria-hidden="true">
               <Skeleton className="h-4 w-3/5" />
