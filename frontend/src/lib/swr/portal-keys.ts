@@ -504,38 +504,20 @@ function searchKey(params: {
   return `${SEARCH_STUDENTS_KEY_PREFIX}${searchStudentsGroupScope(params.groupIds)}-${params.search}-${encodeMultiValueParam([...params.schoolClasses])}-${params.roomId}-${params.dayStatus}-${params.date}-${params.isToday ? "today" : "planning"}-${params.photoState}-${params.bus}-${params.photoConsent}-${params.companions}-${encodeMultiValueParam([...params.years])}-${params.pickupStatus}${params.enrollmentAnswer ? `-a${params.enrollmentAnswer}` : ""}`;
 }
 
-const catererOrdersFamily = "caterer-orders-";
+const catererOverviewFamily = "caterer-overview-";
+const catererDetailFamily = "caterer-orders-";
 
-/** Caterer sessions span schools; every order response still names its school. */
+/** The authenticated scope supplies the account part of each key. */
 export const catererKeys = {
-  family: catererOrdersFamily,
-  containsSchool(key: string, schoolId: string): boolean {
-    if (!key.startsWith(catererOrdersFamily)) return false;
-    try {
-      const params: unknown = JSON.parse(key.slice(catererOrdersFamily.length));
-      return (
-        params !== null &&
-        typeof params === "object" &&
-        "schoolIds" in params &&
-        Array.isArray(params.schoolIds) &&
-        params.schoolIds.includes(schoolId)
-      );
-    } catch {
-      // Not a factory-built order window.
-      return false;
-    }
-  },
-  schools: () => "caterer-schools",
-  // Die Glocke des Caterer-Portals (#7147): Zähler und erste Seite der
-  // Hinweise aller belieferten Schulen.
+  overviewFamily: catererOverviewFamily,
+  overview: (from: string, to: string) =>
+    resourceKey(catererOverviewFamily, { from, to }),
+  detailFamily: catererDetailFamily,
+  schoolDetails: (id: string) => `${catererDetailFamily}${id}:`,
+  orders: (id: string, grant: string, from: string, to: string) =>
+    resourceKey(`${catererDetailFamily}${id}:${grant}:`, { from, to }),
   notificationFeedFirstPage: () => "caterer-notification-feed-first-page",
   notificationFeedUnread: () => "caterer-notification-feed-unread",
-  orders: (schoolIds: readonly string[], from: string, to: string) =>
-    resourceKey(catererOrdersFamily, {
-      schoolIds: [...schoolIds].sort(),
-      from,
-      to,
-    }),
 } as const;
 
 /**

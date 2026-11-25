@@ -12,29 +12,57 @@ import (
 // ErrOrderNotFound: the school has no such order.
 var ErrOrderNotFound = errors.New("meal order not found")
 
-// catererOrders is the school's orders of [from, to] as its caterer reads
-// them: laid out like every other read, without a write or a lock, the
-// delivery days from the start of its supply on, and cut down to what the
-// caterer may see. Who supplies the school is no Meal Plan data (ADR 0077);
-// the caterer portal checks it in the same school transaction and hands in
-// when the supply started.
-func (s *Service) catererOrders(ctx context.Context, since time.Time, from, to string) (mealplan.OrderWeek, error) {
+// catererOrderView shares the date, supply-start and provisional-order
+// rules. Only a detail read needs named rows.
+func (s *Service) catererOrderView(ctx context.Context, since time.Time, from, to mealplan.Date, details bool) (domain.OrderView, error) {
+	start, end, err := readWindow(from, to)
+	if err != nil {
+		return domain.OrderView{}, err
+	}
 	var view domain.OrderView
-	err := s.run(ctx, "read_caterer_orders", func(txCtx context.Context) (domain.OperationStats, error) {
-		rules, rulesErr := s.requireRegistration(txCtx)
-		if rulesErr != nil {
-			return domain.OperationStats{}, rulesErr
+	err = s.run(ctx, "read_caterer_orders", func(txCtx context.Context) (domain.OperationStats, error) {
+		rules, err := s.requireRegistration(txCtx)
+		if err != nil {
+			return domain.OperationStats{}, err
 		}
 		var stats domain.OperationStats
-		var err error
-		view, stats, err = s.provisionalOrders(txCtx, rules, domain.Date(from), domain.Date(to))
+		view, stats, err = s.provisionalOrders(txCtx, rules, start, end, details)
 		return stats, err
 	})
 	if err != nil {
-		return mealplan.OrderWeek{}, mapPublicError(err)
+		return domain.OrderView{}, mapPublicError(err)
 	}
 	view.Days = daysSince(view.Days, since)
+	return view, nil
+}
+
+func (s *Service) CatererOrders(ctx context.Context, since time.Time, from, to mealplan.Date) (mealplan.OrderWeek, error) {
+	view, err := s.catererOrderView(ctx, since, from, to, true)
+	if err != nil {
+		return mealplan.OrderWeek{}, err
+	}
 	return catererWeek(publicOrderWeek(view), view.Rules), nil
+}
+
+func (s *Service) CatererOrderSummary(ctx context.Context, since time.Time, from, to mealplan.Date) (mealplan.OrderSummary, error) {
+	view, err := s.catererOrderView(ctx, since, from, to, false)
+	if err != nil {
+		return mealplan.OrderSummary{}, err
+	}
+	summary := mealplan.OrderSummary{Names: view.Rules.CatererNames, ByClass: view.Rules.Detail == domain.DetailByClass, Days: make([]mealplan.OrderDaySummary, 0, len(view.Days))}
+	for _, day := range view.Days {
+		header := orderDayHeader(day)
+		row := mealplan.OrderDaySummary{Date: day.Date, Closed: day.Closed, Deadline: day.Deadline, Status: header.Status, OrderID: header.OrderID, Total: header.Total}
+		for _, change := range day.Changes {
+			if change.Delta > 0 {
+				row.Added += change.Delta
+			} else {
+				row.Removed -= change.Delta
+			}
+		}
+		summary.Days = append(summary.Days, row)
+	}
+	return summary, nil
 }
 
 // daysSince keeps the delivery days from the start of the supply on (ADR

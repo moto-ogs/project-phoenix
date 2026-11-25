@@ -28,7 +28,7 @@ var errorRules = []common.ErrorRule{
 	{Target: mealplan.ErrOrderNotFound, Render: common.FixedCodedRenderer(common.ErrorNotFoundWithCode, errors.New(mealplan.ErrOrderNotFound.Detail), common.CodeMealsOrderNotFound)},
 	{Target: mealplan.ErrDisabled, Render: common.FixedCodedRenderer(common.ErrorForbiddenWithCode, errors.New(mealplan.ErrDisabled.Detail), common.CodeMealsPlanDisabled)},
 	{Target: mealplan.ErrRegistrationDisabled, Render: common.FixedCodedRenderer(common.ErrorForbiddenWithCode, errors.New(mealplan.ErrRegistrationDisabled.Detail), common.CodeMealsRegistrationDisabled)},
-	{Target: mealplan.ErrInvalidParticipation, Render: common.FixedRenderer(common.ErrorInvalidRequest, errors.New("the window must be at most six weeks"))},
+	{Target: mealplan.ErrInvalidParticipation, Render: common.FixedRenderer(common.ErrorInvalidRequest, errors.New("invalid order window"))},
 	{Target: identityaccess.ErrCatererAddressTaken, Render: common.FixedCodedRenderer(common.ErrorConflictWithCode, identityaccess.ErrCatererAddressTaken, common.CodeIdentityCatererAddressTaken)},
 	{Target: identityaccess.ErrCatererWithoutSchool, Render: common.FixedCodedRenderer(common.ErrorForbiddenWithCode, identityaccess.ErrCatererWithoutSchool, common.CodeIdentityCatererWithoutSchool)},
 	{Target: identityaccess.ErrInvalidCatererInvitation, Render: common.FixedRenderer(common.ErrorInvalidRequest, identityaccess.ErrInvalidCatererInvitation)},

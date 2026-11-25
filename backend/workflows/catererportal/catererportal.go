@@ -49,16 +49,25 @@ type SchoolSupply struct {
 	StartedAt       time.Time
 }
 
-// CatererSchools is the caterer and the schools it supplies now.
+// CatererSchools is the compact order overview for the current supplies.
 type CatererSchools struct {
 	CatererName string
-	Schools     []School
+	Schools     []SchoolSummary
 }
 
 // School is a school the caterer supplies.
 type School struct {
 	ID   int64
 	Name string
+}
+
+// SchoolSummary is one isolated result. A failed read is not a zero order.
+type SchoolSummary struct {
+	School
+	DeliveryAddress string
+	StartedAt       time.Time
+	Summary         mealplan.OrderSummary
+	Failure         error
 }
 
 // SchoolOrders is a school's orders as its caterer reads them, with the
@@ -95,7 +104,7 @@ type Public interface {
 
 // CatererSide is what a signed-in caterer reads and does.
 type CatererSide interface {
-	Schools(ctx context.Context, accountID int64) (CatererSchools, error)
+	OrderOverview(ctx context.Context, accountID, onlySchool int64, from, to mealplan.Date) (CatererSchools, error)
 	SchoolOrders(ctx context.Context, accountID, schoolID int64, from, to mealplan.Date) (SchoolOrders, error)
 	ConfirmOrder(ctx context.Context, accountID, schoolID, orderID int64) error
 	// DeliveryExport is the delivery list of [from, to] of every school the

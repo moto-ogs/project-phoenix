@@ -2,6 +2,7 @@ package catererportalhttp
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -94,4 +95,21 @@ func TestConfirmOrderHandsTheCatererAndTheOrderOn(t *testing.T) {
 
 	require.Equal(t, http.StatusNoContent, recorder.Code, recorder.Body.String())
 	assert.Equal(t, [3]int64{42, 11, 7}, [3]int64{portal.accountID, portal.schoolID, portal.orderID})
+}
+
+func TestSummaryFailureUsesTheDetailErrorCodeWithoutDiagnostics(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		cause  error
+		status int
+		code   string
+	}{
+		{mealplan.ErrDisabled, http.StatusForbidden, "meals.plan_disabled"},
+		{mealplan.ErrRegistrationDisabled, http.StatusForbidden, "meals.registration_disabled"},
+		{errors.New("unavailable database"), http.StatusInternalServerError, "general.server"},
+	} {
+		request := httptest.NewRequest(http.MethodGet, "/schools", nil)
+		failure := summaryFailure(request, catererportal.SchoolSummary{Failure: tc.cause})
+		require.Equal(t, &SummaryFailureResponse{Status: tc.status, Code: tc.code}, failure)
+	}
 }
