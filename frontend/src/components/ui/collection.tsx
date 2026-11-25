@@ -1,6 +1,13 @@
 "use client";
 
-import type { MouseEventHandler, ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEventHandler,
+  type RefObject,
+  type ReactNode,
+} from "react";
 
 import { cn } from "~/lib/utils";
 import NavigationLink from "./navigation-link";
@@ -54,24 +61,41 @@ export function CollectionGroup({
   title,
   count,
   meta,
+  sticky = true,
   children,
 }: Readonly<{
   title: ReactNode;
+  /**
+   * Kopf klebt beim Scrollen (Standard). Aus für kurze Gruppen in eigenen
+   * Karten (iPad-Spalten von „Mehr“): Dort bliebe sonst nur ein Kopf mit
+   * Zeilenresten stehen.
+   */
+  sticky?: boolean;
   /** Anzahl der Einträge, steht neben dem Namen. */
   count?: number;
   /** Rechts im Kopf, etwa eine Aktion für die ganze Gruppe. */
   meta?: ReactNode;
   children: ReactNode;
 }>) {
+  const headRef = useRef<HTMLDivElement>(null);
+  const stuck = useHeadStuck(headRef, sticky);
   return (
     <div
       role="group"
       data-collection-group=""
-      className="border-gray-100 [&+&]:border-t"
+      className="app:overflow-clip border-gray-100 [&+&]:border-t"
     >
       <div
-        className={`sticky ${Z_LAYER.sticky} app:bg-gray-50 flex min-h-9 items-center justify-between gap-3 border-b border-gray-100 bg-gray-50/95 px-4 py-1.5`}
-        style={{ top: "var(--app-sticky-offset, 0px)" }}
+        ref={headRef}
+        className={cn(
+          sticky ? `sticky ${Z_LAYER.sticky}` : "relative",
+          "app:bg-gray-50 flex min-h-9 items-center justify-between gap-3 border-b border-gray-100 bg-gray-50/95 px-4 py-1.5",
+          // App: Zeilen, die unter dem klebenden Kopf verschwinden, laufen
+          // weich aus statt hart angeschnitten stehen zu bleiben.
+          stuck &&
+            "app:after:pointer-events-none app:after:absolute app:after:inset-x-0 app:after:top-full app:after:h-8 app:after:bg-linear-to-b app:after:from-white app:after:to-white/0 app:after:content-['']",
+        )}
+        style={sticky ? { top: "var(--app-sticky-offset, 0px)" } : undefined}
       >
         <h3 className="tablet:text-[0.9375rem] text-sm font-semibold text-gray-700">
           {title}
@@ -88,6 +112,42 @@ export function CollectionGroup({
       <ul className="divide-y divide-gray-100">{children}</ul>
     </div>
   );
+}
+
+/**
+ * Ob der klebende Kopf gerade klebt (unter ihm laufen Zeilen weg). Prüft bei
+ * jedem Scrollen, auch in Spalten mit eigenem Scroll (`SplitView`).
+ */
+function useHeadStuck(
+  ref: RefObject<HTMLDivElement | null>,
+  active: boolean,
+): boolean {
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    const head = ref.current;
+    const group = head?.parentElement;
+    if (!active || !head || !group) return undefined;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const offset =
+        head.getBoundingClientRect().top - group.getBoundingClientRect().top;
+      setStuck(offset > 1);
+    };
+    const schedule = () => {
+      if (frame === 0) frame = requestAnimationFrame(update);
+    };
+    update();
+    document.addEventListener("scroll", schedule, {
+      capture: true,
+      passive: true,
+    });
+    return () => {
+      if (frame !== 0) cancelAnimationFrame(frame);
+      document.removeEventListener("scroll", schedule, { capture: true });
+    };
+  }, [ref, active]);
+  return stuck;
 }
 
 /** Zeilen ohne Gruppe. */

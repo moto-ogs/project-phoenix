@@ -252,8 +252,8 @@ function MorePageContent() {
     </Collection>
   );
 
-  const group = (section: MoreSection) => (
-    <CollectionGroup key={section.key} title={section.title}>
+  const group = (section: MoreSection, sticky = true) => (
+    <CollectionGroup key={section.key} title={section.title} sticky={sticky}>
       {section.rows}
     </CollectionGroup>
   );
@@ -272,7 +272,9 @@ function MorePageContent() {
     >
       {columns === 1 ? (
         <div className="flex flex-col gap-6">
-          <Collection label="Mehr">{sections.map(group)}</Collection>
+          <Collection label="Mehr">
+            {sections.map((section) => group(section))}
+          </Collection>
           {logout}
         </div>
       ) : (
@@ -283,7 +285,7 @@ function MorePageContent() {
             <div key={column[0]?.key} className="flex flex-col gap-4">
               {column.map((section) => (
                 <Collection key={section.key} label={section.title}>
-                  {group(section)}
+                  {group(section, false)}
                 </Collection>
               ))}
               {index === all.length - 1 ? (
