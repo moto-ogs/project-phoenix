@@ -160,6 +160,7 @@ function EnrollmentStatusViewContent({
   const [requestsReloadFailed, setRequestsReloadFailed] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const latestRequest = useRef(0);
+  const postWriteRequest = useRef<number | null>(null);
   // One display path for every failure (#2515): loads stay where the data
   // is missing, the two forms report in their own alert, the buttons
   // without a form (confirm, withdraw) in a toast.
@@ -191,9 +192,13 @@ function EnrollmentStatusViewContent({
   >(null);
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
 
-  const [editFirstName, setEditFirstName] = useState("");
-  const [editLastName, setEditLastName] = useState("");
-  const [editPhone, setEditPhone] = useState("");
+  const [editFirstName, setEditFirstName] = useState(
+    seed?.status.guardian_first_name ?? "",
+  );
+  const [editLastName, setEditLastName] = useState(
+    seed?.status.guardian_last_name ?? "",
+  );
+  const [editPhone, setEditPhone] = useState(seed?.status.guardian_phone ?? "");
   const editingRef = useRef(editing);
   useLayoutEffect(() => {
     editingRef.current = editing;
@@ -220,6 +225,8 @@ function EnrollmentStatusViewContent({
 
   const load = useCallback(
     async (seed?: EnrollmentStatusSeedData) => {
+      // Reloading after a write already includes the locale-independent list.
+      if (postWriteRequest.current !== null) return;
       const request = ++latestRequest.current;
       setLoading(seed === undefined);
       setRequestsPending(seed !== undefined);
@@ -290,17 +297,18 @@ function EnrollmentStatusViewContent({
   const invalidateRequest = useCallback(() => {
     latestRequest.current++;
   }, []);
+  useEffect(() => invalidateRequest, [invalidateRequest]);
   // oxlint-disable-next-line swr/no-effect-load -- status-link token page, open without a session; the shared cache reads only with a session, by design
   useEffect(() => {
     if (!seed?.changes || staleChanges) void load(seed);
-    return invalidateRequest;
-  }, [load, invalidateRequest, seed, staleChanges]);
+  }, [load, seed, staleChanges]);
 
   // The reload after a confirmed write (#6652) only reads and sets: the shown
   // status stays while it runs, and a failure rejects, so the hook reports it
   // as a load error that says the change is saved.
   const readStatus = useCallback(async () => {
     const request = ++latestRequest.current;
+    postWriteRequest.current = request;
     try {
       const [statusResult, requestChanges] = await Promise.allSettled([
         fetchStatus(token),
@@ -330,6 +338,8 @@ function EnrollmentStatusViewContent({
     } catch (error) {
       if (request !== latestRequest.current) return;
       throw error;
+    } finally {
+      if (postWriteRequest.current === request) postWriteRequest.current = null;
     }
   }, [token, applyStatus, clearLoadError, clearRequestsLoadError]);
   const afterWrite = useRefreshAfterWrite(t("reloadObject"), readStatus, {
