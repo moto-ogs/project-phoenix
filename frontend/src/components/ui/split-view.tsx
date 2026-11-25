@@ -15,8 +15,12 @@ import { useDeviceContext } from "~/lib/device-context";
 import { cn } from "~/lib/utils";
 
 /**
- * Liste neben Detail (#8070): unter `split:` (iPad quer) steht die Liste in
- * einem Drittel links mit eigenem Scroll, das Detail in zwei Dritteln rechts.
+ * Liste neben Detail (#8070): unter `split:` (iPad quer) stehen Liste (⅓)
+ * und Detail (⅔) als zwei eigenständige Spalten. Die Seite selbst scrollt
+ * dann nicht mehr: Beide Spalten füllen den Platz zwischen ihrer Ruhelage
+ * unter der Kopfkarte und der Pill und scrollen je für sich. So bleibt die
+ * Kopfkarte stehen, und nichts rutscht unter sie. Eine `ActionBar` steht in
+ * der Spalte, zu der sie gehört (`column`); diese Spalte endet über ihr.
  * Darunter (Telefon, iPad hoch, Desktop) zeigt der Baustein nur die Liste;
  * die Zeile führt dort wie heute auf die Detailseite.
  *
@@ -43,31 +47,36 @@ export function SplitView({
   className?: string;
 }>) {
   const { isSplit } = useDeviceContext();
-  const listRef = useRef<HTMLDivElement>(null);
-  const restTop = useRestTop(listRef, isSplit);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const restTop = useRestTop(rootRef, isSplit);
+  useSplitPageLock(isSplit);
+  useMoreBelow(rootRef, isSplit);
   if (!isSplit) return <>{list}</>;
   return (
     <div
+      ref={rootRef}
       data-split-view=""
       className={cn("grid grid-cols-[1fr_2fr] items-start gap-4", className)}
+      style={{
+        // Von der Ruhelage bis über die Pill (ihre Höhe samt Abstand).
+        height: `max(20rem, calc(100dvh - ${restTop ?? 0}px - ${SPLIT_BOTTOM}))`,
+      }}
     >
-      {/* Die Liste endet über Pill und ActionBar, schon bevor die Seite
-          scrollt (Höhe ab ihrer Ruhelage). */}
       <div
-        ref={listRef}
         data-split-list=""
-        className="sticky overflow-y-auto overscroll-contain rounded-2xl"
-        style={{
-          top: "var(--app-sticky-offset, 1rem)",
-          maxHeight: `calc(100dvh - ${restTop === null ? "var(--app-sticky-offset, 1rem)" : `${restTop}px`} - 7rem - var(--app-action-bar-space, 0px))`,
-        }}
+        data-action-bar-column="list"
+        className={SPLIT_COLUMN}
       >
-        {/* Im eigenen Scroll kleben Gruppenköpfe oben an der Liste. */}
+        {/* Im eigenen Scroll kleben Gruppenköpfe oben an der Spalte. */}
         <div style={{ "--app-sticky-offset": "0px" } as CSSProperties}>
           {list}
         </div>
       </div>
-      <div data-split-detail="" className="min-w-0">
+      <div
+        data-split-detail=""
+        data-action-bar-column="detail"
+        className={cn(SPLIT_COLUMN, "min-w-0")}
+      >
         {detail ?? (
           <div className="moto-content-surface flex min-h-64 items-center justify-center rounded-2xl border p-8 text-center text-sm text-gray-500">
             {empty}
@@ -78,7 +87,74 @@ export function SplitView({
   );
 }
 
-/** Abstand der Liste vom Seitenanfang, solange die Seite oben steht. */
+/** Abstand der Spalten vom unteren Rand: Pill, Safe Area und Luft. */
+const SPLIT_BOTTOM = "(6.5rem + env(safe-area-inset-bottom))";
+
+/**
+ * Eine Spalte mit eigenem Scroll. Höchstens so hoch wie der Split; die
+ * Spalte der `ActionBar` endet über ihr (Regel in `globals.css`).
+ */
+const SPLIT_COLUMN =
+  "max-h-full min-h-0 overflow-y-auto overscroll-contain rounded-2xl [scrollbar-width:none] data-more-below:[mask-image:linear-gradient(to_bottom,black_calc(100%-2.5rem),transparent)]";
+
+/**
+ * Solange der Split steht, scrollt die Seite nicht: Sie steht oben, damit
+ * die Kopfkarte ganz sichtbar bleibt; gescrollt wird in den Spalten.
+ */
+function useSplitPageLock(active: boolean) {
+  useLayoutEffect(() => {
+    if (!active) return undefined;
+    const root = document.documentElement;
+    window.scrollTo(0, 0);
+    root.setAttribute("data-split-page", "");
+    // `scrollIntoView` in einer Spalte schiebt sonst auch die Seite.
+    const keepTop = () => {
+      if (window.scrollY !== 0) window.scrollTo(0, 0);
+    };
+    window.addEventListener("scroll", keepTop, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", keepTop);
+      root.removeAttribute("data-split-page");
+    };
+  }, [active]);
+}
+
+/**
+ * Markiert eine Spalte mit `data-more-below`, solange unter ihr noch Inhalt
+ * folgt; sie läuft dann unten weich aus statt hart zu enden.
+ */
+function useMoreBelow(ref: RefObject<HTMLDivElement | null>, active: boolean) {
+  useLayoutEffect(() => {
+    const root = ref.current;
+    if (!active || root === null) return undefined;
+    const columns = [...root.children].filter(
+      (child): child is HTMLElement => child instanceof HTMLElement,
+    );
+    const update = () => {
+      for (const column of columns) {
+        const more =
+          column.scrollHeight - column.scrollTop - column.clientHeight > 2;
+        column.toggleAttribute("data-more-below", more);
+      }
+    };
+    update();
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    for (const column of columns) {
+      column.addEventListener("scroll", update, { passive: true });
+      observer?.observe(column);
+      if (column.firstElementChild) observer?.observe(column.firstElementChild);
+    }
+    return () => {
+      observer?.disconnect();
+      for (const column of columns) {
+        column.removeEventListener("scroll", update);
+      }
+    };
+  }, [ref, active]);
+}
+
+/** Abstand des Splits vom Seitenanfang, solange die Seite oben steht. */
 function useRestTop(
   ref: RefObject<HTMLDivElement | null>,
   active: boolean,
@@ -88,14 +164,19 @@ function useRestTop(
     const node = ref.current;
     if (!active || node === null) return undefined;
     const update = () => {
-      // Kleben greift erst darunter: Ruhelage im Dokument, höchstens das
-      // Fenster hoch.
       const rest = node.getBoundingClientRect().top + window.scrollY;
       setTop(Math.round(Math.min(rest, window.innerHeight / 2)));
     };
     update();
+    // Kopf und Hinweise darüber ändern ihre Höhe (Chips laden nach).
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    observer?.observe(document.body);
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", update);
+    };
   }, [ref, active]);
   return top;
 }

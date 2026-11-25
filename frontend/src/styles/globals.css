@@ -429,6 +429,19 @@
   background-size: 14px 14px;
 }
 
+/* Liste neben Detail am iPad quer (#8070, `SplitView`): Die Seite steht,
+   die Spalten scrollen je für sich. Die Spalte, in der die ActionBar steht,
+   endet über ihr; ohne Zuordnung enden beide Spalten über ihr. */
+html[data-split-page] {
+  overflow: hidden;
+}
+
+html[data-action-bar-column="list"] [data-split-view] > [data-split-list],
+html[data-action-bar-column="detail"] [data-split-view] > [data-split-detail],
+html[data-action-bar-column="all"] [data-split-view] > * {
+  max-height: calc(100% - var(--app-action-bar-space, 0px));
+}
+
 /* Deckende Zonen der App (#8070): hinter der schmalen Kopfkarte, der
    klebenden Leiste und zwischen ActionBar und Pill. Gleicher Grund wie die
    Seite; das Muster hängt am Fenster und läuft so mit dem Seitenmuster. */
