@@ -72,7 +72,8 @@ export function readEnrollmentStatusSeed(token: string) {
   return seedStatus<EnrollmentStatusSeedData>(async () => {
     const [status, changes] = await Promise.all([
       readEnrollmentStatus(token),
-      readEnrollmentChanges(token),
+      // Formatting the optional diff must not discard a valid status.
+      readEnrollmentChanges(token).catch(() => undefined),
     ]);
     return status === undefined ? undefined : { status, changes };
   });

@@ -131,7 +131,6 @@ export function EnrollmentStatusView(props: Props) {
 function EnrollmentStatusViewContent({
   token,
   seed,
-  initial,
   justSubmitted = false,
   duplicateWarning = false,
   parentAppHref,
@@ -509,11 +508,7 @@ function EnrollmentStatusViewContent({
   return (
     <>
       <EnrollmentStatusContent
-        changeRequests={
-          changeRequests === seed?.changes
-            ? (initial?.data.changes ?? changeRequests)
-            : changeRequests
-        }
+        changeRequests={changeRequests}
         requestsPending={requestsPending}
         confirmingRenewal={confirmingRenewal}
         duplicateWarning={duplicateWarning}
