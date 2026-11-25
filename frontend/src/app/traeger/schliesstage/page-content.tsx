@@ -481,7 +481,7 @@ export default function TraegerClosingDaysPage() {
             title={`Keine Schließtage in ${year}`}
             description={
               canManage
-                ? "Du kannst oben rechts Schließtage anlegen, zum Beispiel Brückentage."
+                ? "Du kannst oben mit „Schließtag anlegen“ Schließtage planen, zum Beispiel Brückentage."
                 : "Das Träger-Büro hat für dieses Jahr keine Schließtage geplant."
             }
           />

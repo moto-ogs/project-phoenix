@@ -332,7 +332,7 @@ describe("TraegerClosingDaysPage (#4702)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Du kannst oben rechts Schließtage anlegen, zum Beispiel Brückentage.",
+        "Du kannst oben mit „Schließtag anlegen“ Schließtage planen, zum Beispiel Brückentage.",
       ),
     ).toBeInTheDocument();
   });
