@@ -1,26 +1,28 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { ArrowUpRightIcon } from "@phosphor-icons/react";
 
 import { Alert } from "~/components/ui/alert";
 import { ActionBar } from "~/components/ui/action-bar";
 import { Avatar } from "~/components/ui/avatar";
 import { Button, ButtonLink } from "~/components/ui/button";
+import type { ChildDayStatus } from "~/components/students/child-day-status";
+import { ChildSheet, ChildSummary } from "~/components/students/child-sheet";
 import {
   Collection,
   CollectionGroup,
   CollectionRow,
 } from "~/components/ui/collection";
-import { OverlaySheet } from "~/components/ui/overlay-sheet";
 import { SectionCard } from "~/components/ui/section-card";
 import { SplitView, useSplitSelection } from "~/components/ui/split-view";
 import { EmptyStudentResults } from "~/components/students/empty-student-results";
 import { useToast } from "~/contexts/ToastContext";
 import { overbookedHintFor } from "~/lib/activity-occupancy";
 import { useDeviceContext } from "~/lib/device-context";
+import { useStudentData } from "~/lib/hooks/use-student-data";
 import { useMinuteClock } from "~/lib/pickup-helpers";
-import { schoolClassLabel, schoolClassName } from "~/lib/school-class-label";
+import { schoolClassName } from "~/lib/school-class-label";
+import type { Student } from "~/lib/student-helpers";
 import { useNFCEnabled } from "~/lib/tenant-context";
 import {
   canCompleteInstance,
@@ -73,7 +75,27 @@ export type TimetableRosterAppProps = Omit<
   ) => Promise<boolean>;
   /** Weitere Einträge am Listenende (Kinder unterwegs, spontaner Start). */
   readonly listFooter?: ReactNode;
+  /**
+   * „Kind suchen und hinzufügen“ steht im „…“-Menü der Seite, nicht als
+   * zweiter Hinzufügen-Knopf am Listenende: die Seite öffnet es hierüber.
+   */
+  readonly addStudentOpen?: boolean;
+  readonly onAddStudentOpenChange?: (open: boolean) => void;
 };
+
+/**
+ * Ob die App-Aufsicht ein ungeplantes Kind per Suche hinzufügen lässt: mit
+ * denselben Rechten wie der Hinzufügen-Knopf am Computer.
+ */
+export function rosterAppCanAddUnplanned(
+  roster: TimetableRosterAppProps["roster"],
+  attendanceWebEnabled: boolean,
+): boolean {
+  return (
+    attendanceWebEnabled &&
+    (roster.canEditAttendance ?? roster.canOperate ?? true) !== false
+  );
+}
 
 type SectionKey = "missing" | "present" | "gone";
 
@@ -229,10 +251,12 @@ export function TimetableRosterApp({
   rowFilter = null,
   addStudentError,
   listFooter,
+  addStudentOpen: addStudentOpenProp,
+  onAddStudentOpenChange,
 }: TimetableRosterAppProps) {
   const now = useMinuteClock();
   const toast = useToast();
-  const { isSplit } = useDeviceContext();
+  const { isSplit, layout } = useDeviceContext();
   const split = useSplitSelection("kind");
   const nfcEnabled = useNFCEnabled();
 
@@ -260,7 +284,12 @@ export function TimetableRosterApp({
     ? overbookedHintFor(occupancy, nfcEnabled)
     : null;
 
-  const [addStudentOpen, setAddStudentOpen] = useState(false);
+  const [addStudentOpenOwn, setAddStudentOpenOwn] = useState(false);
+  const addStudentOpen = addStudentOpenProp ?? addStudentOpenOwn;
+  const setAddStudentOpen = (open: boolean) => {
+    setAddStudentOpenOwn(open);
+    onAddStudentOpenChange?.(open);
+  };
   const [presentPickerOpen, setPresentPickerOpen] = useState(false);
   const addStudentEnabled =
     actionsEnabled && canAddUnplanned && AddUnplannedStudentModal !== undefined;
@@ -292,8 +321,6 @@ export function TimetableRosterApp({
   const [busy, setBusy] = useState<string | null>(null);
   const sheetRow =
     roster.rows.find((row) => row.studentId === sheetChildId) ?? null;
-  const splitRow =
-    roster.rows.find((row) => row.studentId === split.selected) ?? null;
 
   const runAction = async (action: RosterAction, row: TimetableRosterRow) => {
     if (action === "excused" && onExcuseRestOfDay) {
@@ -362,6 +389,19 @@ export function TimetableRosterApp({
     },
   ];
 
+  // Am iPad quer bleibt die Detailspalte nie leer: ohne Auswahl steht dort
+  // das erste Kind der Liste.
+  const firstListed =
+    sections.find((section) => section.rows.length > 0)?.rows[0] ?? null;
+  const splitRow =
+    (split.selected
+      ? roster.rows.find((row) => row.studentId === split.selected)
+      : null) ?? firstListed;
+  // Eine Gruppe, die alle Kinder teilen, sagt in der Zeile nichts; dann
+  // bleibt Platz für Gehzeit und Klasse.
+  const groupNames = new Set(roster.rows.map((row) => row.groupName));
+  const sharedGroup = groupNames.size === 1;
+
   const subtitleFor = (row: TimetableRosterRow, key: SectionKey): string => {
     // Zuerst, was die Aufsicht jetzt braucht (Ankunft, Gehzeit, Grund),
     // dann Klasse und Gruppe.
@@ -391,7 +431,7 @@ export function TimetableRosterApp({
     }
     const klass = schoolClassName(row.schoolClass ?? "");
     if (klass) parts.push(klass);
-    if (row.groupName && row.groupName !== row.schoolClass)
+    if (!sharedGroup && row.groupName && row.groupName !== row.schoolClass)
       parts.push(row.groupName);
     return parts.join(" · ");
   };
@@ -425,7 +465,16 @@ export function TimetableRosterApp({
       <EmptyStudentResults totalCount={roster.rows.length} filteredCount={0} />
     </SectionCard>
   ) : (
-    <Collection label={`Kinder in ${roster.instance.title}`}>
+    <Collection
+      label={`Kinder in ${roster.instance.title}`}
+      // iPad hoch: die Kinder fließen in zwei Spalten, damit die Aktion nah
+      // am Namen steht statt am anderen Ende einer 800 px breiten Zeile.
+      className={
+        layout === "tablet" && !isSplit
+          ? "[&_ul]:columns-2 [&_ul]:gap-0 [&_ul>li]:break-inside-avoid"
+          : undefined
+      }
+    >
       {sections.map(({ key, rows }) =>
         rows.length === 0 ? null : (
           <CollectionGroup
@@ -437,7 +486,7 @@ export function TimetableRosterApp({
               <CollectionRow
                 key={`${row.studentId}-${row.status}-${row.visitId ?? "planned"}`}
                 onClick={() => openChild(row)}
-                selected={isSplit && split.selected === row.studentId}
+                selected={isSplit && splitRow?.studentId === row.studentId}
                 aria-label={`${childName(row)} öffnen`}
                 leading={<Avatar name={childName(row)} size="sm" decorative />}
                 title={childName(row)}
@@ -451,17 +500,13 @@ export function TimetableRosterApp({
     </Collection>
   );
 
-  const detailFor = (row: TimetableRosterRow, inSheet: boolean) => (
-    <SupervisionChildDetail
+  const contextFor = (row: TimetableRosterRow, inSheet: boolean) => (
+    <SupervisionChildActions
       row={row}
       access={access}
       now={now}
       rosterDate={roster.instance.date}
-      pickupTimesLoaded={roster.pickupTimesLoaded}
-      pickupTimesRedacted={roster.pickupTimesRedacted}
       busy={busy}
-      framed={!inSheet}
-      profileHref={studentProfileHref?.(row)}
       onAction={(action) => {
         if (inSheet) setSheetChildId(null);
         void runAction(action, row);
@@ -541,7 +586,8 @@ export function TimetableRosterApp({
       </Button>
     );
   }
-  // Die übrigen Wege, ein Kind dazuzuholen, stehen am Listenende.
+  // Solange erwartete Kinder warten, steht „Anwesende Kinder hinzufügen“
+  // am Listenende statt in der Leiste.
   const moreAdd: ReactNode[] = [];
   if (presentPickerEnabled && confirmableExpectedRows.length > 0) {
     moreAdd.push(
@@ -557,9 +603,13 @@ export function TimetableRosterApp({
       </Button>,
     );
   }
+  // „Kind suchen und hinzufügen“ steht mit der Liste der Anwesenden im
+  // „…“-Menü der Seite. Ohne sie ist es die Hauptaktion oder, solange
+  // Erwartete warten, der Knopf am Listenende.
   if (
     addStudentEnabled &&
-    (presentPickerEnabled || confirmableExpectedRows.length > 0)
+    !presentPickerEnabled &&
+    confirmableExpectedRows.length > 0
   ) {
     moreAdd.push(
       <Button
@@ -601,25 +651,30 @@ export function TimetableRosterApp({
             {isSplit ? <div aria-hidden="true" className="h-40" /> : null}
           </>
         }
-        detail={splitRow ? detailFor(splitRow, false) : null}
+        detail={
+          splitRow ? (
+            <SupervisionChildDetail
+              row={splitRow}
+              href={studentProfileHref?.(splitRow)}
+              context={contextFor(splitRow, false)}
+            />
+          ) : null
+        }
         empty="Tippe links auf ein Kind, um es hier zu sehen."
       />
       {moreAdd.length > 0 || listFooter ? (
-        <div className="tablet:max-w-[35rem] flex flex-col gap-3">
+        <div className="flex flex-col gap-3">
           {moreAdd}
           {listFooter}
         </div>
       ) : null}
 
-      <OverlaySheet
-        open={sheetRow !== null}
-        onOpenChange={(open) => {
-          if (!open) setSheetChildId(null);
-        }}
-        title={sheetRow ? childName(sheetRow) : "Kind"}
-      >
-        {sheetRow ? detailFor(sheetRow, true) : null}
-      </OverlaySheet>
+      <SupervisionChildSheet
+        row={sheetRow}
+        href={sheetRow ? studentProfileHref?.(sheetRow) : undefined}
+        context={sheetRow ? contextFor(sheetRow, true) : null}
+        onClose={() => setSheetChildId(null)}
+      />
 
       {primary || endButton ? (
         <ActionBar secondary={primary ? endButton : undefined}>
@@ -672,20 +727,130 @@ export function TimetableRosterApp({
 }
 
 /**
- * Inhalt des Aufsicht-Kind-Blatts: was die Aufsicht über das Kind wissen
- * muss und alle Aktionen für dieses Kind im Block. Am iPad quer dieselbe
- * Fläche rechts neben der Liste.
+ * Das Kind aus der Aufsicht als `Student` für das Kind-Blatt: zuerst aus der
+ * Zeile, dann aus der Akte, sobald sie geladen ist (gleicher Cache wie die
+ * Akte; ohne Leserecht bleibt es bei der Zeile).
  */
+function useRosterStudent(
+  row: TimetableRosterRow | null,
+  canRead: boolean,
+): { student: Student | null; loaded: boolean } {
+  const detail = useStudentData(row && canRead ? row.studentId : "");
+  if (!row) return { student: null, loaded: false };
+  if (detail.student && detail.student.id === row.studentId) {
+    // Die Gehzeit des Tages kennt die Aufsicht; die Akte liefert sie nicht
+    // immer mit.
+    const pickup =
+      detail.student.pickup_time ??
+      (row.pickupTime && row.pickupTime !== "–" ? row.pickupTime : undefined);
+    return {
+      student: { ...detail.student, pickup_time: pickup },
+      loaded: true,
+    };
+  }
+  const [first, ...rest] = childName(row).split(" ");
+  return {
+    student: {
+      id: row.studentId,
+      name: childName(row),
+      first_name: first,
+      second_name: rest.join(" "),
+      school_class: row.schoolClass,
+      group_name: row.groupName,
+      current_location: "",
+      // Zeiten erst mit der Akte: sie kennt die Rechte am Kind.
+      has_full_access: false,
+      teacher_hints: row.teacherHints,
+    },
+    loaded: false,
+  };
+}
+
+/**
+ * Kind-Blatt der Aufsicht: dasselbe Blatt wie in der Kindersuche, mit den
+ * Aufsicht-Aktionen statt der Schnellaktionen der Akte (sonst stünden
+ * „Raum verlassen“ und „Abmelden“ nebeneinander).
+ */
+function SupervisionChildSheet({
+  row,
+  href,
+  context,
+  onClose,
+}: Readonly<{
+  row: TimetableRosterRow | null;
+  href?: string;
+  context: ReactNode;
+  onClose: () => void;
+}>) {
+  const { student, loaded } = useRosterStudent(row, href !== undefined);
+  return (
+    <ChildSheet
+      student={student}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      href={href}
+      quickActions={false}
+      status={loaded ? undefined : NO_STATUS}
+      contextActions={context}
+    />
+  );
+}
+
+/**
+ * Ohne geladene Akte kein Tagesstatus: er kommt aus der Akte, die Zeile
+ * kennt nur den Stand in diesem Block.
+ */
+const NO_STATUS: ChildDayStatus | null = null;
+
+/** Dasselbe Kind rechts neben der Liste (iPad quer). */
 function SupervisionChildDetail({
+  row,
+  href,
+  context,
+}: Readonly<{
+  row: TimetableRosterRow;
+  href?: string;
+  context: ReactNode;
+}>) {
+  const { student, loaded } = useRosterStudent(row, href !== undefined);
+  if (!student) return null;
+  return (
+    <SectionCard>
+      <ChildSummary
+        student={student}
+        href={href}
+        quickActions={false}
+        status={loaded ? undefined : NO_STATUS}
+        contextActions={context}
+        header
+      />
+      {href ? (
+        <div className="mt-5 flex">
+          <ButtonLink
+            href={href}
+            variant="primary"
+            size="md"
+            tooltip="Öffnet die ganze Akte mit allen Angaben."
+          >
+            Ganze Akte öffnen
+          </ButtonLink>
+        </div>
+      ) : null}
+    </SectionCard>
+  );
+}
+
+/**
+ * Was nur die Aufsicht über das Kind weiß (Ankunft, Hinweise der Planung,
+ * Grund der Abwesenheit) und alle Aktionen für das Kind in diesem Block.
+ */
+function SupervisionChildActions({
   row,
   access,
   now,
   rosterDate,
-  pickupTimesLoaded,
-  pickupTimesRedacted,
   busy,
-  framed,
-  profileHref,
   onAction,
   onHomework,
 }: Readonly<{
@@ -693,60 +858,35 @@ function SupervisionChildDetail({
   access: RosterActionAccess;
   now: Date;
   rosterDate: string;
-  pickupTimesLoaded?: boolean;
-  pickupTimesRedacted?: boolean;
   busy: string | null;
-  /** Als eigene Karte (iPad quer), sonst im Blatt. */
-  framed: boolean;
-  profileHref?: string;
   onAction: (action: RosterAction) => void;
   onHomework?: () => void;
 }>) {
   const actions = sheetActions(row, access);
-  const meta = [
-    row.schoolClass ? schoolClassLabel(row.schoolClass) : null,
-    row.groupName && row.groupName !== row.schoolClass ? row.groupName : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  const body = (
-    <div className="space-y-4">
-      {framed ? (
-        <div className="flex items-center gap-3">
-          <Avatar name={childName(row)} size="md" decorative />
-          <div className="min-w-0">
-            <h2 className="truncate text-lg font-semibold text-gray-900">
-              {childName(row)}
-            </h2>
-            {meta ? <p className="text-sm text-gray-600">{meta}</p> : null}
-          </div>
-        </div>
-      ) : meta ? (
-        <p className="text-sm text-gray-600">{meta}</p>
-      ) : null}
+  return (
+    <>
       <div className="text-sm text-gray-700 empty:hidden">
         <RosterStudentDetailLines
           row={row}
           now={now}
           rosterDate={rosterDate}
-          pickupTimesLoaded={pickupTimesLoaded}
-          pickupTimesRedacted={pickupTimesRedacted}
+          showPickupTime={false}
         />
       </div>
       {actions.length > 0 || onHomework ? (
-        <div className="flex flex-col gap-2">
+        <div
+          className="flex flex-wrap gap-2"
+          aria-label="Aktionen in der Aufsicht"
+        >
           {actions.map(({ action, label, tooltip }, index) => (
             <Button
               key={`${action}-${label}`}
               type="button"
               size="md"
               variant={
-                index === 0 && (action === "check-in" || action === "check-out")
-                  ? action === "check-in"
-                    ? "success"
-                    : "primary"
-                  : "outline"
+                index === 0 && action === "check-in" ? "success" : "outline"
               }
+              className="flex-1"
               isLoading={busy === `${row.studentId}:${action}`}
               disabled={busy !== null}
               tooltip={tooltip}
@@ -760,6 +900,7 @@ function SupervisionChildDetail({
               type="button"
               size="md"
               variant="outline"
+              className="flex-1"
               tooltip="Öffnet ein Fenster für die Rückmeldung zu den Hausaufgaben."
               onClick={onHomework}
             >
@@ -768,24 +909,6 @@ function SupervisionChildDetail({
           ) : null}
         </div>
       ) : null}
-      {profileHref ? (
-        <ButtonLink
-          href={profileHref}
-          variant="ghost"
-          size="md"
-          tooltip="Öffnet die Seite des Kindes mit allen Angaben."
-          className="w-full"
-        >
-          Ganze Akte öffnen
-          <ArrowUpRightIcon
-            className="size-4"
-            weight="bold"
-            aria-hidden="true"
-          />
-        </ButtonLink>
-      ) : null}
-    </div>
+    </>
   );
-  if (!framed) return body;
-  return <SectionCard>{body}</SectionCard>;
 }
