@@ -13532,6 +13532,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/schools/day-changes",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolsDayChanges"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/schools/export",
       "portals": [
         "org"
@@ -95073,6 +95084,59 @@
       ]
     },
     {
+      "name": "SchoolDayChanges",
+      "go_type": "traegerview.SchoolDayChanges",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slug",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "subdomain",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "city",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closing_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolDayClosing"
+            }
+          }
+        },
+        {
+          "name": "cancelled_blocks",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolDayChild",
       "go_type": "classday.SchoolDayChild",
       "fields": [
@@ -95186,6 +95250,38 @@
               "kind": "ref",
               "ref": "SchoolDayChild"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolDayClosing",
+      "go_type": "traegerview.SchoolDayClosing",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "traeger",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "since",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "until",
+          "schema": {
+            "kind": "date",
+            "nullable": true
           }
         }
       ]
@@ -97464,6 +97560,36 @@
             "elem": {
               "kind": "ref",
               "ref": "SchoolAlerts"
+            }
+          }
+        },
+        {
+          "name": "as_of",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolsDayChanges",
+      "go_type": "traegerview.SchoolsDayChanges",
+      "fields": [
+        {
+          "name": "day",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolDayChanges"
             }
           }
         },

@@ -103,6 +103,7 @@ type Reports interface {
 	ArrivalPickupReport
 	SchoolComparisons
 	DailyAttendanceReport
+	DayChangesReport
 }
 
 // SchoolComparisons answers the comparison of the schools of a Träger.

@@ -27,6 +27,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/observability"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -53,11 +54,16 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 	delivery deliveryRuntime.Capability, closureMail owners.HolidayClosureMail, outcomes deliveryRuntime.EmailOutcomes, keys TurnstileKeys,
 	healthData enrollmentOwner.HolidayHealthCipher, bankData parentbilling.BankDataCipher, statistics studentpresence.StatisticsReports, changes careplan.OfferingChangeCapability, contractHolidays carecontract.SchoolHolidays,
 	holidayCalendar enrollmentOwner.HolidaySchoolCalendar, closureHolidays owners.HolidayClosureHolidays, calendarSchools traegercalendar.Schools, schoolPhases *enrollmentCompose.Phases, schoolCatalog careplan.CareOfferingCatalogCapability, lockRecurrence func(context.Context) error,
-	staffing schoolCalendarHTTP.StaffingChangeQueue, contractEnrollments enrollmentOwner.ContractEnrollments, traegerModules TraegerBookedModules, today func() calendar.Date, now func() time.Time, parentsURL string, logger *slog.Logger) error {
+	staffing schoolCalendarHTTP.StaffingChangeQueue, contractEnrollments enrollmentOwner.ContractEnrollments, traegerModules TraegerBookedModules, timetableOwner timetable.Owner, today func() calendar.Date, now func() time.Time, parentsURL string, logger *slog.Logger) error {
 	if _, ok := identity.(identityaccess.TraegerMemberProfiles); !ok {
 		return errors.New("traeger portal: identity does not serve the names of the Träger-Büro")
 	}
-	if err := mountTraegerPortalRoutes(root, limiters, identity, organizations, persons, staff, audit, settings, schoolSettings, healthData, holidayCalendar, holidayTraegerMail{delivery: delivery}, holidayMailStates{mails: closureMail.TraegerMails}, newHolidayOfficeTraeger(organizations), statistics, traegerModules, today, now, calendarSchools); err != nil {
+	closingDays := mountTraegerClosingDayRoutes(root, calendarSchools, organizations, closureMail, holidayCalendar, closureHolidays, staffing, now)
+	dayChanges, err := traegerDayChangePorts(closingDays, timetableOwner)
+	if err != nil {
+		return err
+	}
+	if err := mountTraegerPortalRoutes(root, limiters, identity, organizations, persons, staff, audit, settings, schoolSettings, healthData, holidayCalendar, holidayTraegerMail{delivery: delivery}, holidayMailStates{mails: closureMail.TraegerMails}, newHolidayOfficeTraeger(organizations), statistics, traegerModules, today, now, calendarSchools, dayChanges); err != nil {
 		return err
 	}
 	setups, ok := identity.(identityaccess.HolidayParentSetups)
@@ -70,7 +76,6 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 		publicLink = root.With(limit)
 	}
 	publicLink.Mount(holidayRegistrationPath, NewHolidayRegistrationHTTP(organizations, delivery, keys, "", healthData, holidayCalendar, settings, traegerModules, accountLinks, viper.GetString("app_env"), logger, now).Router())
-	mountTraegerClosingDayRoutes(root, calendarSchools, organizations, closureMail, holidayCalendar, closureHolidays, staffing, now)
 	mountHolidayClosureNotificationRoutes(root, tenant, organizations, closureMail, holidayCalendar, closureHolidays, logger, now)
 	mountParentBillingRoutes(root, publicLink, organizations, settings, schoolSettings, attendanceMarks, delivery, outcomes, healthData, bankData, holidayCalendar, traegerModules, today, now, logger)
 	signingLink := root

@@ -6,7 +6,8 @@ import { bffFile } from "~/lib/bff-fetch";
 // des Trägers auf einer Seite, oben die Summe, darunter je Schule eine Zeile.
 // Nur Zahlen, keine Namen. Eine Zeile führt in die Ansicht der Schule (#5686);
 // wer das Recht „In OGS wechseln" hat, öffnet von hier auch die Schul-App.
-// Zwischen Summe und Tabelle stehen die Auffälligkeiten (#4675); in der
+// Zwischen Summe und Tabelle stehen „Heute anders“ (#7672) und die
+// Auffälligkeiten (#4675); in der
 // Tabelle ist jede Zahl hervorgehoben, die eine Grenze des Trägers erreicht.
 
 import { type MouseEvent, useId, useMemo, useState } from "react";
@@ -36,6 +37,7 @@ import {
   SCHOOL_SWITCH_MISSING_HINT,
   useOpenTraegerSchool,
 } from "~/components/traeger/use-open-traeger-school";
+import { TraegerDayChangesCard } from "~/components/traeger/traeger-day-changes-card";
 import { TraegerCodeStepModal } from "~/components/traeger/traeger-code-step-modal";
 import { TraegerRequiredDetailsNotice } from "~/components/traeger/traeger-required-details-notice";
 import {
@@ -578,6 +580,8 @@ export default function TraegerDashboardPage() {
         total={snapshot?.total ?? null}
         schoolCount={schools.length}
       />
+      {/* „Heute anders“ über den Auffälligkeiten (#7672). */}
+      {alerts?.schools.length === 0 ? null : <TraegerDayChangesCard />}
       {alerts?.schools.length === 0 ? null : (
         <SectionCard
           title="Auffälligkeiten"

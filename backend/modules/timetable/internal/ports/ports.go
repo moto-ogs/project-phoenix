@@ -11,6 +11,9 @@ import (
 
 type Store interface {
 	WeekProtocolStore
+	// CountCancelledInstancesByTenant counts the day's cancelled instances
+	// per school in the caller's administrative transaction (#7672).
+	CountCancelledInstancesByTenant(context.Context, []int64, calendar.Date) (map[int64]int, domain.OperationStats, error)
 	ListReplannableActivityInstanceIDs(context.Context, string, *string, *int64, bool) ([]int64, domain.OperationStats, error)
 	DeleteActivityInstancesByID(context.Context, []int64) (int64, domain.OperationStats, error)
 	ListRemovedWeekendActivityInstanceIDs(context.Context, int64, []int, string) ([]int64, domain.OperationStats, error)
