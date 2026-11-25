@@ -266,6 +266,7 @@ function MorePageContent() {
   return (
     <TenantPage
       title="Mehr"
+      info="Hier stehen alle Bereiche, die nicht in der unteren Leiste sind, dazu dein Profil und Abmelden."
       overlays={
         <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} />
       }
