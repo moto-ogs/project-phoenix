@@ -1,5 +1,6 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { Alert } from "~/components/ui/alert";
@@ -188,9 +189,7 @@ const CHECK_IN_WORDING = {
   returned: "Wieder da",
   absent: "Doch da",
   bulk: (count: number) =>
-    count === 1
-      ? "1 Erwartetes Kind ist da"
-      : `Alle ${count} Erwarteten sind da`,
+    count === 1 ? "1 Kind ist da" : `Alle ${count} sind da`,
   done: (name: string) => `${name} ist da.`,
   doneAgain: (name: string) => `${name} ist wieder da.`,
 } as const;
@@ -645,8 +644,13 @@ export function TimetableRosterApp({
         size="md"
         tooltip="Öffnet eine Liste der anwesenden Kinder zum Hinzufügen."
         onClick={() => setPresentPickerOpen(true)}
+        aria-label="Kinder hinzufügen"
+        className="gap-1.5"
       >
-        Kinder hinzufügen
+        {/* Neben Übergeben und Beenden reicht die Breite am Telefon nur für
+            das kurze Wort; der volle Name steht im Vorleseprogramm. */}
+        <Plus aria-hidden="true" className="size-4" />
+        Hinzufügen
       </Button>
     );
   } else if (addStudentEnabled) {
@@ -657,8 +661,11 @@ export function TimetableRosterApp({
         size="md"
         tooltip="Öffnet ein Fenster, um ein ungeplantes Kind einzutragen."
         onClick={() => setAddStudentOpen(true)}
+        aria-label="Kind hinzufügen"
+        className="gap-1.5"
       >
-        Kind hinzufügen
+        <Plus aria-hidden="true" className="size-4" />
+        Hinzufügen
       </Button>
     );
   }
@@ -701,47 +708,10 @@ export function TimetableRosterApp({
     );
   }
 
-  // Übergeben und Beenden sichtbar auf der Seite (nicht nur im „…“-Blatt):
-  // eine Karte am Listenende mit beiden Knöpfen nebeneinander.
-  const superviseCard =
-    onHandOver || endEntry ? (
-      <SectionCard title="Aufsicht">
-        <div className="flex gap-2 [&>*]:flex-1">
-          {onHandOver ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              tooltip="Öffnet die Übergabe an eine andere Betreuungsperson."
-              onClick={onHandOver}
-            >
-              Übergeben
-            </Button>
-          ) : null}
-          {endEntry ? (
-            <Button
-              type="button"
-              variant="outline_danger"
-              size="md"
-              disabled={endEntry.disabled}
-              disabledReason={
-                endEntry.disabled ? endEntry.description : undefined
-              }
-              tooltip="Beendet die Aktivität für alle Kinder. moto fragt vorher nach."
-              onClick={endEntry.onClick}
-            >
-              Beenden
-            </Button>
-          ) : null}
-        </div>
-      </SectionCard>
-    ) : null;
-
   const footer =
-    moreAdd.length > 0 || listFooter || superviseCard ? (
+    moreAdd.length > 0 || listFooter ? (
       <div className="flex flex-col gap-4">
         {moreAdd}
-        {superviseCard}
         {listFooter}
       </div>
     ) : null;
@@ -796,16 +766,37 @@ export function TimetableRosterApp({
       {primary ? (
         <ActionBar
           secondary={
-            onHandOver ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                tooltip="Öffnet die Übergabe an eine andere Betreuungsperson."
-                onClick={onHandOver}
-              >
-                Übergeben
-              </Button>
+            onHandOver || endEntry ? (
+              // Übergeben und Beenden sichtbar neben der Hauptaktion; Beenden
+              // fragt vorher nach, ein versehentlicher Tipp beendet nichts.
+              <div className="flex gap-2">
+                {onHandOver ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="md"
+                    tooltip="Öffnet die Übergabe an eine andere Betreuungsperson."
+                    onClick={onHandOver}
+                  >
+                    Übergeben
+                  </Button>
+                ) : null}
+                {endEntry ? (
+                  <Button
+                    type="button"
+                    variant="outline_danger"
+                    size="md"
+                    disabled={endEntry.disabled}
+                    disabledReason={
+                      endEntry.disabled ? endEntry.description : undefined
+                    }
+                    tooltip="Beendet die Aktivität für alle Kinder. moto fragt vorher nach."
+                    onClick={endEntry.onClick}
+                  >
+                    Beenden
+                  </Button>
+                ) : null}
+              </div>
             ) : undefined
           }
         >
