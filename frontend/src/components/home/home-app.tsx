@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, type ReactNode } from "react";
+import { ArrowRight } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 import {
@@ -20,14 +21,19 @@ import {
 import { shownEntries } from "~/components/home/day-changes-block";
 import { useNoticeAcknowledge } from "~/components/home/day-notice-row";
 import { useBerlinClock } from "~/components/home/home-card-rows";
-import { NowText, useHomeNow } from "~/components/home/now-strip";
+import { STUDENT_SEARCH_LINK_TOOLTIP } from "~/components/home/home-link-tooltips";
+import {
+  NowRunningText,
+  NowText,
+  useHomeNow,
+} from "~/components/home/now-strip";
 import {
   useHomeStamp,
   type HomeStampState,
 } from "~/components/home/use-home-stamp";
 import { START_OWN_BLOCK_TOOLTIP } from "~/components/home/use-start-own-block";
 import { ActionBar } from "~/components/ui/action-bar";
-import { Button } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import {
   Collection,
   CollectionGroup,
@@ -48,7 +54,6 @@ import { supervisionConcept } from "~/lib/concepts/supervision";
 import { birthdaysConcept } from "~/lib/concepts/birthdays";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { groupsConcept } from "~/lib/concepts/groups";
-import { announcementsConcept } from "~/lib/concepts/announcements";
 import { requestsConcept } from "~/lib/concepts/requests";
 import {
   fetchDayChanges,
@@ -76,6 +81,8 @@ import type { MotoConcept } from "~/lib/moto-concepts";
 import { useSWRAuth } from "~/lib/swr";
 import { homeKeys } from "~/lib/swr/portal-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
+import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
+import { cn } from "~/lib/utils";
 
 /** Kinder-Arten von „Heute anders“, die „Zu erledigen“ zusammenfasst. */
 const CHILD_KINDS = new Set([
@@ -223,8 +230,9 @@ export function HomeApp({
   for (const entry of openNotices) {
     todo.push({
       id: `hinweis-${entry.notice.id}`,
+      // Ohne eigenes Symbol: die Zeile steht bündig mit den übrigen
+      // Einträgen von „Heute anders“, deren Kopf das Symbol trägt.
       row: {
-        leading: <Icon concept={announcementsConcept} />,
         title: entry.notice.title,
         subtitle: "Zur Kenntnis nehmen",
         meta: entry.notice.important ? (
@@ -282,7 +290,16 @@ export function HomeApp({
   const running = (now.dayBlocks ?? []).find(
     (block) => block.isAssigned && block.status === "active",
   );
-  if (running) {
+  // Am Telefon trägt die Jetzt-Karte den laufenden Block mit „Zur
+  // Aufsicht“; die Zeile im Überblick wiederholte ihn nur.
+  const nowShowsSupervision =
+    layout === "phone" &&
+    now.actions.some(
+      (action) =>
+        action.kind === "link" &&
+        action.href === tenantPath("/active-supervisions"),
+    );
+  if (running && !nowShowsSupervision) {
     overviewEntries.push({
       id: "aufsicht",
       row: {
@@ -358,7 +375,13 @@ export function HomeApp({
     });
   }
 
-  const nowCard = <NowCard now={now} stamp={stamp} />;
+  const nowCard = (
+    <NowCard
+      now={now}
+      stamp={stamp}
+      running={layout === "phone" ? running : undefined}
+    />
+  );
   const actionBar = <HomeActionBar stamp={stamp} />;
   const extra =
     rest.length > 0 ? (
@@ -730,15 +753,20 @@ function stampLabel(state: HomeStampState): string | null {
 function NowCard({
   now,
   stamp,
+  running,
 }: {
   readonly now: ReturnType<typeof useHomeNow>;
   readonly stamp: ReturnType<typeof useHomeStamp>;
+  /** Der eigene Block, der laut Tagesplan gerade läuft (nur Telefon). */
+  readonly running?: PlannedTimetableInstance;
 }) {
-  const start = now.actions.find((entry) => entry.kind === "start");
+  const tenantPath = useTenantAwarePath();
   const stamped = stamp.state.kind === "in" || stamp.state.kind === "done";
   const stampText = stamped ? stampLabel(stamp.state) : null;
-  const footer =
-    !now.loading && (start !== undefined || stamp.state.kind === "in");
+  const checkOut = stamp.state.kind === "in";
+  // Wie am Desktop: die Wege des Moments („Zur Aufsicht“ bzw. „Aufsicht
+  // starten“, „Alle Kinder“) stehen in der Karte, Ausstempeln daneben.
+  const footer = !now.loading && (now.actions.length > 0 || checkOut);
   // Zwei Zeilen: Uhrzeit klein vor dem Blocktitel, darunter Zustand, Raum,
   // Ende und die Kinder da. Keine eigene Zeile je Angabe.
   const time = (
@@ -759,6 +787,70 @@ function NowCard({
         {now.presentCount === 1 ? "Kind da" : "Kinder da"}
       </span>
     ) : null;
+  const extra = (
+    <>
+      {present}
+      {stampText ? (
+        <StatusBadge
+          tone={stamp.state.kind === "in" ? "green" : "gray"}
+          label={stampText}
+        />
+      ) : null}
+    </>
+  );
+  // Läuft ein eigener Block, der in den Einsätzen fehlt (spontan gestartet),
+  // nennt die Karte ihn statt „alles erledigt“ oder „Als Nächstes“.
+  const runningOverride =
+    running && now.state.kind !== "own_running" ? running : null;
+  const buttons = [
+    ...now.actions.map((action, index) =>
+      action.kind === "start" ? (
+        <Button
+          key={`start-${action.block.id}`}
+          type="button"
+          variant={index === 0 ? "primary" : "outline"}
+          size="md"
+          className="w-full whitespace-nowrap"
+          disabled={now.busyId !== null}
+          onClick={() => void now.start(action.block)}
+          tooltip={START_OWN_BLOCK_TOOLTIP}
+        >
+          {now.busyId === action.block.id ? "Startet..." : action.label}
+        </Button>
+      ) : (
+        <ButtonLink
+          key={action.href}
+          href={action.href}
+          variant={index === 0 ? "primary" : "outline"}
+          size="md"
+          className="w-full gap-2 whitespace-nowrap"
+          tooltip={
+            action.href === tenantPath("/active-supervisions")
+              ? "Öffnet deine laufende Aufsicht."
+              : STUDENT_SEARCH_LINK_TOOLTIP
+          }
+        >
+          {action.label}
+          <ArrowRight className="size-4" aria-hidden="true" />
+        </ButtonLink>
+      ),
+    ),
+    checkOut ? (
+      // Stempel-Knöpfe sind überall grün (Kit-Ausnahme der Zeiterfassung).
+      <Button
+        key="ausstempeln"
+        type="button"
+        variant="success"
+        size="md"
+        className="w-full whitespace-nowrap"
+        disabled={stamp.disabled}
+        onClick={stamp.checkOut}
+        tooltip="Stempelt dich sofort aus und beendet deine Arbeitszeit."
+      >
+        Ausstempeln
+      </Button>
+    ) : null,
+  ].filter(Boolean);
   return (
     <SectionCard testId="home-now" padding="none">
       <div className="px-4 py-3">
@@ -767,6 +859,13 @@ function NowCard({
             <Skeleton className="h-4 w-3/5" />
             <Skeleton className="h-3 w-4/5" />
           </div>
+        ) : runningOverride ? (
+          <NowRunningText
+            block={runningOverride}
+            next={now.state.kind === "own_next" ? now.state.block : null}
+            lead={time}
+            extra={extra}
+          />
         ) : (
           <NowText
             state={now.state}
@@ -775,46 +874,19 @@ function NowCard({
             wrap
             withoutDate
             lead={time}
-            extra={
-              <>
-                {present}
-                {stampText ? (
-                  <StatusBadge
-                    tone={stamp.state.kind === "in" ? "green" : "gray"}
-                    label={stampText}
-                  />
-                ) : null}
-              </>
-            }
+            extra={extra}
           />
         )}
         {footer ? (
-          <div className="mt-3 flex items-center gap-3">
-            {start?.kind === "start" ? (
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                className="flex-1 whitespace-nowrap"
-                disabled={now.busyId !== null}
-                onClick={() => void now.start(start.block)}
-                tooltip={START_OWN_BLOCK_TOOLTIP}
-              >
-                {now.busyId === start.block.id ? "Startet..." : start.label}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                className="ml-auto whitespace-nowrap"
-                disabled={stamp.disabled}
-                onClick={stamp.checkOut}
-                tooltip="Stempelt dich sofort aus und beendet deine Arbeitszeit."
-              >
-                Ausstempeln
-              </Button>
+          <div
+            className={cn(
+              "mt-3 grid gap-2",
+              buttons.length > 1 ? "grid-cols-2" : "grid-cols-1",
+              // Drei Knöpfe: der dritte (Ausstempeln) über die ganze Breite.
+              buttons.length === 3 && "[&>*:last-child]:col-span-2",
             )}
+          >
+            {buttons}
           </div>
         ) : null}
       </div>
@@ -840,7 +912,8 @@ function HomeActionBar({
     <ActionBar>
       <Button
         type="button"
-        variant="primary"
+        // Stempel-Knöpfe sind überall grün (Kit-Ausnahme der Zeiterfassung).
+        variant="success"
         size="md"
         className="whitespace-nowrap"
         disabled={stamp.disabled}

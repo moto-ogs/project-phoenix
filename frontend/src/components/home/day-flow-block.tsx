@@ -203,35 +203,53 @@ export function DayFlowBlock() {
  * die Zeit bis zum Beginn statt eines „Geplant", das nichts sagt. „Mein Tag"
  * nutzt dieselbe Marke, damit beide Karten dieselbe Sprache sprechen.
  */
-export function BlockState({
-  block,
-  now,
-}: {
-  readonly block: PlannedTimetableInstance;
-  readonly now: string;
-}) {
-  if (block.status === "cancelled") {
-    return <StatusBadge tone="red" label="Fällt aus" />;
-  }
-  if (block.status === "active") {
-    return <StatusBadge tone="green" label="Läuft" />;
-  }
-  if (block.status === "completed") {
-    return <StatusBadge tone="gray" label="Beendet" />;
-  }
+/**
+ * Das Wort des Zustands, wie `BlockState` es zeigt; `null`, wo es kein
+ * Abzeichen gibt. Für zugängliche Namen, die das Abzeichen mitnennen.
+ */
+export function blockStateLabel(
+  block: PlannedTimetableInstance,
+  now: string,
+): string | null {
+  return blockStateBadge(block, now)?.label ?? null;
+}
+
+function blockStateBadge(
+  block: PlannedTimetableInstance,
+  now: string,
+): {
+  tone: "red" | "green" | "gray" | "warning" | "blue";
+  label: string;
+} | null {
+  if (block.status === "cancelled") return { tone: "red", label: "Fällt aus" };
+  if (block.status === "active") return { tone: "green", label: "Läuft" };
+  if (block.status === "completed") return { tone: "gray", label: "Beendet" };
   // Ein Dienst (#3822) wird nie gestartet; "Nicht gestartet" wäre falsch.
   if (block.isDuty === true && (block.isOverdue || block.startTime <= now)) {
     return null;
   }
   if (block.isOverdue || (now !== "" && block.startTime <= now)) {
-    return <StatusBadge tone="warning" label="Nicht gestartet" />;
+    return { tone: "warning", label: "Nicht gestartet" };
   }
   // Ohne Uhr (vor dem ersten Rendern im Browser) gibt es keinen Abstand.
   if (now === "") return null;
-  return (
-    <StatusBadge
-      tone="blue"
-      label={formatMinutesAhead(minutesBetween(now, block.startTime))}
-    />
-  );
+  return {
+    tone: "blue",
+    label: formatMinutesAhead(minutesBetween(now, block.startTime)),
+  };
+}
+
+export function BlockState({
+  block,
+  now,
+  size,
+}: {
+  readonly block: PlannedTimetableInstance;
+  readonly now: string;
+  /** App (#8070): kleines Abzeichen hinter dem Titel. */
+  readonly size?: "xs";
+}) {
+  const badge = blockStateBadge(block, now);
+  if (!badge) return null;
+  return <StatusBadge size={size} tone={badge.tone} label={badge.label} />;
 }

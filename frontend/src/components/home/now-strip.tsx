@@ -475,6 +475,56 @@ export function NowText({
   }
 }
 
+/**
+ * App (#8070): der eigene Block, der laut Tagesplan gerade läuft, auch wenn
+ * er in den Einsätzen des Dienstplans fehlt (ein spontan gestarteter Block
+ * „seit 00:03“). Sonst sagte die Karte „Für heute ist alles erledigt“,
+ * während „Mein Tag“ darunter „Läuft“ zeigt.
+ */
+export function NowRunningText({
+  block,
+  next,
+  lead,
+  extra,
+}: {
+  readonly block: PlannedTimetableInstance;
+  /** Der nächste eigene Einsatz, falls einer kommt. */
+  readonly next: { readonly startTime: string; readonly title: string } | null;
+  readonly lead?: ReactNode;
+  readonly extra?: ReactNode;
+}) {
+  return (
+    <Lines
+      wrap
+      lead={lead}
+      extra={extra}
+      headline={block.title}
+      badges={
+        <>
+          <StatusBadge tone="green" label="Läuft" />
+          {block.isSubstitute ? (
+            <StatusBadge tone="blue" label="Vertretung" />
+          ) : null}
+        </>
+      }
+      detail={[
+        block.roomName ? (
+          <Fragment key="room">
+            <MotoConceptIcon
+              concept={roomsConcept}
+              size={14}
+              className="mr-1 inline-block align-[-2px]"
+            />
+            {block.roomName}
+          </Fragment>
+        ) : null,
+        blockEndLine(block),
+        next ? `danach ${next.startTime} ${next.title}` : null,
+      ]}
+    />
+  );
+}
+
 function childrenPresent(count: number): string {
   return count === 1 ? "1 Kind da" : `${count} Kinder da`;
 }

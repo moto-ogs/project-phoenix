@@ -47,6 +47,7 @@ import {
 } from "~/lib/block-children";
 import { parseISODate, toISODate } from "~/lib/date-helpers";
 import { useDeviceContext } from "~/lib/device-context";
+import { useMediaQuery } from "~/lib/hooks/use-media-query";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import { GROUP_ROOM_SHADES, LOCATION_COLORS } from "~/lib/location-helper";
 import {
@@ -110,8 +111,11 @@ export function TagesplanDayBar({
   // Mit Monat wie das Datum am Desktop („25.11.“), damit der Tag auch
   // über den Monatswechsel eindeutig bleibt. Nur in der schmalen
   // Listenspalte (iPad quer) reicht der Tag.
+  // Am schmalen Telefon (SE) stießen „23.11. 24.11.“ aneinander: dort
+  // steht nur der Tag.
   const { isSplit } = useDeviceContext();
-  const withMonth = !isSplit;
+  const narrow = useMediaQuery("(max-width: 389px)");
+  const withMonth = !isSplit && !narrow;
   return (
     <div className="flex items-center gap-1" data-tagesplan-day-bar="">
       <Button
@@ -394,20 +398,43 @@ export function TagesplanApp(props: TagesplanAppProps) {
   // gemerkte Position wieder her.
   const nowRef = useRef<HTMLDivElement>(null);
   const scrolledForDay = useRef<string | null>(null);
+  // Ziel ist der laufende Block, sonst der nächste; erst wenn keiner mehr
+  // kommt, die Jetzt-Linie. Sonst öffnete die Seite abends am Listenende,
+  // während ein spontaner Block („seit 00:03“) ganz oben läuft.
+  const scrollTargetId = useMemo(() => {
+    const all = [...entries.values()];
+    return (
+      all.find((entry) => entry.state.running)?.instance.id ??
+      all.find(
+        (entry) => entry.instance.startTime === nextStart && !entry.state.over,
+      )?.instance.id ??
+      null
+    );
+  }, [entries, nextStart]);
   useEffect(() => {
     if (!isToday || scrolledForDay.current === day || isSplit) return;
     if (groups.length === 0) return;
     scrolledForDay.current = day;
-    const marker = nowRef.current;
+    const row = scrollTargetId
+      ? document
+          .querySelector(`[data-tagesplan-row="${scrollTargetId}"]`)
+          ?.closest<HTMLElement>("[data-collection-row]")
+      : null;
+    const marker = row ?? nowRef.current;
     if (!marker) return;
     const top = marker.getBoundingClientRect().top;
-    // Nur scrollen, wenn die Linie unterhalb der ersten Bildschirmhälfte
+    // Nur scrollen, wenn das Ziel unterhalb der ersten Bildschirmhälfte
     // steht; sonst bleibt der Kopf im Bild.
-    // Mittig, damit über der Linie sichtbar bleibt, was gerade läuft.
-    if (top > window.innerHeight * 0.5) {
+    if (top <= window.innerHeight * 0.5) return;
+    if (row) {
+      // Der Block steht oben unter der klebenden Kopfkarte.
+      row.style.scrollMarginTop = NOW_SCROLL_MARGIN.scrollMarginTop as string;
+      row.scrollIntoView({ block: "start" });
+    } else {
+      // Mittig, damit über der Linie sichtbar bleibt, was zuletzt lief.
       marker.scrollIntoView({ block: "center" });
     }
-  }, [isToday, day, groups.length, isSplit]);
+  }, [isToday, day, groups.length, isSplit, scrollTargetId]);
 
   // Am iPad quer steht die vorgewählte Zeile (meist der laufende Block)
   // im eigenen Scroll der Liste im Bild, einmal je Tag.
@@ -504,7 +531,7 @@ export function TagesplanApp(props: TagesplanAppProps) {
           ) : (
             <div
               data-tagesplan-parallel=""
-              className="relative border-gray-200 bg-gray-50 before:absolute before:top-10 before:bottom-3 before:left-1.5 before:w-1 before:rounded-full before:bg-gray-300 before:content-[''] [&_[data-collection-group]>div:first-child]:bg-gray-100 [&:not(:first-child)]:border-t [&:not(:last-child)]:border-b"
+              className="relative border-gray-200 before:absolute before:top-10 before:bottom-3 before:left-1.5 before:w-1 before:rounded-full before:bg-gray-300 before:content-[''] [&_[data-collection-group]>div:first-child]:bg-gray-100 [&:not(:first-child)]:border-t [&:not(:last-child)]:border-b"
             >
               <CollectionGroup
                 title={
@@ -808,6 +835,20 @@ function blockChips(state: BlockState, next: boolean, mine: boolean) {
   return chips;
 }
 
+/** Die Wörter der Abzeichen von `blockChips`, in derselben Reihenfolge. */
+function chipLabels(state: BlockState, next: boolean, mine: boolean) {
+  return [
+    state.running
+      ? "Läuft jetzt"
+      : state.cancelled
+        ? "Fällt aus"
+        : next
+          ? "Als Nächstes"
+          : null,
+    mine ? "Mit dir" : null,
+  ];
+}
+
 /** „19 Kinder“ bzw. „13 von 16 da“; ein Dienst und ein Ausfall ohne Zahl. */
 function childrenPart(entry: Entry): string | null {
   if (entry.state.cancelled || entry.state.isDuty) return null;
@@ -833,23 +874,9 @@ function rowChildren(entry: Entry): string | null {
 }
 
 /**
- * Personal kurz für die Zeile: der erste Name, weitere als „+2“. Alle Namen
- * samt Vertretung stehen im Blatt.
- */
-function rowStaff(instance: PlannedTimetableInstance): string | null {
-  const names = instance.staffNames ?? [];
-  const first = names[0];
-  if (!first) return null;
-  return names.length > 1
-    ? `${first.displayName} +${names.length - 1}`
-    : first.displayName;
-}
-
-/**
  * Eine Zeile, 56–64 px wie jede Liste der App: Beginn und Ende links, Titel,
- * darunter eine Zeile mit Zustand, Raum, Gruppe und Personal (am Telefon
- * gekürzt),
- * rechts die Kinderzahl. Alle Angaben stehen vollständig im Blatt.
+ * darunter eine Angabenzeile mit Zustand, Raum und Kinderzahl. Gruppe,
+ * Personal und alle übrigen Angaben stehen vollständig im Blatt.
  */
 function BlockRow({
   entry,
@@ -896,8 +923,12 @@ function BlockRow({
   if (state.isDuty && !state.over) push("duty", "Dienst");
   push("room", state.room);
   push("count", count);
-  push("group", instance.groupName);
-  if (!state.cancelled) push("staff", wide ? staff : rowStaff(instance));
+  // Am Telefon eine Angabenzeile (Zeile 56–64 px): Gruppe und Personal
+  // stehen vollständig im Blatt, das die Zeile öffnet.
+  if (wide) {
+    push("group", instance.groupName);
+    if (!state.cancelled) push("staff", staff);
+  }
   return (
     <CollectionRow
       onClick={onOpen}
@@ -909,11 +940,16 @@ function BlockRow({
       aria-label={[
         // Titel und Bereich wie sichtbar, damit der Name mit der Zeile
         // beginnt (WCAG 2.5.3).
-        [instance.title, instance.planningTrackName].filter(Boolean).join(" "),
+        // Die Abzeichen hinter dem Titel gehören zum sichtbaren Namen.
+        [
+          instance.title,
+          instance.planningTrackName,
+          ...chipLabels(state, next, mine),
+        ]
+          .filter(Boolean)
+          .join(" "),
         blockTimeRange(instance),
-        state.label,
-        next ? "als Nächstes" : null,
-        mine ? "mit dir" : null,
+        state.running || state.cancelled ? null : state.label,
         state.cancelled ? instance.cancelReason : null,
         state.room,
         instance.groupName,
@@ -923,7 +959,10 @@ function BlockRow({
         .filter(Boolean)
         .join(", ")}
       leading={
-        <span className="tablet:text-[0.9375rem] w-11 self-start text-sm leading-5 tabular-nums">
+        <span
+          data-tagesplan-row={instance.id}
+          className="tablet:text-[0.9375rem] w-11 self-start text-sm leading-5 tabular-nums"
+        >
           {openEnd ? (
             // Ein spontaner Block hat noch kein Ende: „seit 00:03“.
             <span className="block text-gray-600">seit</span>
@@ -958,16 +997,28 @@ function BlockRow({
               </span>
             </>
           ) : null}
+          {/* Zustand und „Mit dir“ hinter dem Titel: die Angabenzeile
+              darunter bleibt einzeilig. */}
+          {chips.length > 0 ? (
+            <>
+              {" "}
+              {/* Leerzeichen zwischen den Abzeichen: der sichtbare Text
+                  muss zum zugänglichen Namen passen (WCAG 2.5.3). */}
+              <span className="font-normal no-underline">
+                {chips.map((chip, index) => (
+                  <Fragment key={index}>
+                    {index > 0 ? " " : null}
+                    <span className="inline-flex align-[1px]">{chip}</span>
+                  </Fragment>
+                ))}
+              </span>
+            </>
+          ) : null}
         </span>
       }
       subtitle={
-        chips.length > 0 || parts.length > 0 ? (
+        parts.length > 0 ? (
           <span className="block">
-            {chips.length > 0 ? (
-              <span className="mr-1.5 inline-flex items-center gap-1 align-middle">
-                {chips}
-              </span>
-            ) : null}
             {parts.map((part, index) => (
               <Fragment key={part.key}>
                 {index > 0 ? " " : null}
