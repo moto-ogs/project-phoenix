@@ -80,7 +80,7 @@ export function SchoolDayChangesBlock({
   // Schule direkt darunter; der Block zählt nur eigene Klassen.
   const ownClassesOnly = !hasPermission(session, "class_day:all_classes");
   const changes = useSWRAuth<DayChangesOverview>(
-    session ? schoolPortalKeys.dayChanges() : null,
+    session ? schoolPortalKeys.dayChanges(today) : null,
     fetchSchoolDayChanges,
     { revalidateOnFocus: true },
   );

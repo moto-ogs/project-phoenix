@@ -12,7 +12,9 @@ import { SchoolDayChangesBlock } from "./school-day-changes-block";
 
 const reloadChanges = vi.hoisted(() => vi.fn());
 const reloadClasses = vi.hoisted(() => vi.fn());
+const requestedChangeKeys = vi.hoisted(() => vi.fn());
 const state = vi.hoisted(() => ({
+  today: "2026-09-09",
   overview: undefined as DayChangesOverview | undefined,
   classes: undefined as
     | {
@@ -29,9 +31,14 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 
+vi.mock("~/lib/hooks/use-berlin-today", () => ({
+  useBerlinToday: () => state.today,
+}));
+
 vi.mock("~/lib/swr", () => ({
   useSWRAuth: (key: string | null) => {
-    if (key === "school-day-changes") {
+    if (key?.startsWith("school-day-changes-")) {
+      requestedChangeKeys(key);
       return { data: state.overview, error: undefined, mutate: reloadChanges };
     }
     if (key?.startsWith("school-assigned-classes-")) {
@@ -68,6 +75,8 @@ describe("SchoolDayChangesBlock", () => {
   beforeEach(() => {
     reloadChanges.mockReset();
     reloadClasses.mockReset();
+    requestedChangeKeys.mockReset();
+    state.today = "2026-09-09";
     state.permissions = ["class_day:read"];
     state.classes = {
       school_day: true,
@@ -170,6 +179,20 @@ describe("SchoolDayChangesBlock", () => {
       timeout: 3000,
     });
     expect(reloadClasses).toHaveBeenCalled();
+  });
+
+  it("liest nach Berliner Mitternacht eine neue Übersicht", () => {
+    const { rerender } = renderBlock();
+    expect(requestedChangeKeys).toHaveBeenLastCalledWith(
+      "school-day-changes-2026-09-09",
+    );
+
+    state.today = "2026-09-10";
+    rerender(<SchoolDayChangesBlock fetchAssignedClasses={vi.fn()} />);
+
+    expect(requestedChangeKeys).toHaveBeenLastCalledWith(
+      "school-day-changes-2026-09-10",
+    );
   });
 });
 
