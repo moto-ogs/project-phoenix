@@ -250,8 +250,9 @@ and shares school settings and attendance facts only within the request.
 
 A child event narrows that read with `student_id`; an empty answer removes
 only that card. A reconnect or event without an ID replaces the whole roster.
-Child detail resources keep their own keys. The date key prevents reuse of a
-previous Berlin day's capabilities or status. A failed list is not an empty
+Child detail resources keep their own keys. The device's Berlin day triggers a fresh read. The server day governs
+which fields can be reused, even with a misconfigured clock. An event
+first seen on a new server day reconciles the whole roster. A failed list is not an empty
 family. A null card field represents a failed read: show the error and use a
 previously confirmed field only for the same relationship version, care state
 and day. Other children take their fresh values. Without a confirmed value,

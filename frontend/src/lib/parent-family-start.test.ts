@@ -29,20 +29,20 @@ beforeEach(() => {
 describe("family card updates", () => {
   it("reads only the event child, removes it on revocation, and replaces the family on reconciliation", async () => {
     read.mockResolvedValueOnce({ day, cards: [card("1"), card("2")] });
-    const family = await readParentFamily(undefined, day);
+    const family = await readParentFamily(undefined);
     narrowNextFamilyRead(family, "2");
     read.mockResolvedValueOnce({ day, cards: [] });
-    const updated = await readParentFamily(family, day);
+    const updated = await readParentFamily(family);
     expect(updated.children).toEqual([card("1").child]);
     expect(updated.features).not.toHaveProperty("2");
     expect(updated.today).not.toHaveProperty("2");
     read.mockResolvedValueOnce({ day, cards: [] });
-    expect((await readParentFamily(updated, day)).children).toEqual([]);
+    expect((await readParentFamily(updated)).children).toEqual([]);
     expect(read.mock.calls).toEqual([[undefined], ["2"], [undefined]]);
   });
   it("does not restore previous permissions from a partial response after a relationship change", async () => {
     read.mockResolvedValueOnce({ day, cards: [card("1"), card("2")] });
-    const family = await readParentFamily(undefined, day);
+    const family = await readParentFamily(undefined);
     read.mockResolvedValueOnce({
       day,
       cards: [
@@ -50,22 +50,43 @@ describe("family card updates", () => {
         card("2"),
       ],
     });
-    const updated = await readParentFamily(family, day);
+    const updated = await readParentFamily(family);
     expect(updated.features["1"]).toBeUndefined();
     expect(updated.today["1"]?.state).toBe("unknown");
     expect(updated.featureErrors["1"]).toMatchObject({ status: 503 });
     expect(updated.features["2"]?.notes_enabled).toBe(true);
   });
+  it("reconciles the family at server midnight and does not carry a prior day's partial fields", async () => {
+    read.mockResolvedValueOnce({ day, cards: [card("1"), card("2")] });
+    const family = await readParentFamily(undefined);
+    const tomorrow = "2026-11-26";
+    narrowNextFamilyRead(family, "1");
+    read.mockResolvedValueOnce({ day: tomorrow, cards: [card("1")] });
+    read.mockResolvedValueOnce({
+      day: tomorrow,
+      cards: [card("1"), { ...card("2"), features: null, today: null }],
+    });
+    const rollover = await readParentFamily(family);
+    expect(rollover.needsDayReconciliation).toBe(true);
+    expect(rollover.features["2"]).toBeUndefined();
+    expect(rollover.today["2"]).toBeUndefined();
+    const current = await readParentFamily(rollover);
+    expect(current.needsDayReconciliation).toBe(false);
+    expect(current.day).toBe(tomorrow);
+    expect(current.features["2"]).toBeUndefined();
+    expect(current.today["2"]?.state).toBe("unknown");
+    expect(read.mock.calls).toEqual([[undefined], ["1"], [undefined]]);
+  });
   it("keeps a concurrent sibling success when another card read fails", async () => {
     read.mockResolvedValueOnce({ day, cards: [card("1"), card("2")] });
-    const family = await readParentFamily(undefined, day);
+    const family = await readParentFamily(undefined);
     narrowNextFamilyRead(family, "1");
     const failure = new ApiError("unavailable", 503);
     read.mockRejectedValueOnce(failure);
-    const first = readParentFamily(family, day);
+    const first = readParentFamily(family);
     narrowNextFamilyRead(family, "2");
     read.mockResolvedValueOnce({ day, cards: [] });
-    const updated = await readParentFamily(family, day);
+    const updated = await readParentFamily(family);
     await first;
     expect(updated.featureErrors["1"]).toBe(failure);
     expect(updated.children).toEqual([card("1").child]);
@@ -73,19 +94,19 @@ describe("family card updates", () => {
   });
   it("applies a later card to an in-flight authoritative roster, not to the old family", async () => {
     read.mockResolvedValueOnce({ day, cards: [card("1"), card("2")] });
-    const family = await readParentFamily(undefined, day);
+    const family = await readParentFamily(undefined);
     read.mockResolvedValueOnce({ day, cards: [card("2")] });
-    const full = readParentFamily(family, day);
+    const full = readParentFamily(family);
     narrowNextFamilyRead(family, "2");
     read.mockResolvedValueOnce({ day, cards: [card("2", "v2", false)] });
-    const updated = await readParentFamily(family, day);
+    const updated = await readParentFamily(family);
     await full;
     expect(updated.children).toEqual([card("2").child]);
     expect(updated.features["2"]?.notes_enabled).toBe(false);
   });
   it("keeps the newer child update when the older reply arrives last", async () => {
     read.mockResolvedValueOnce({ day, cards: [card("1")] });
-    const family = await readParentFamily(undefined, day);
+    const family = await readParentFamily(undefined);
     let finish!: (response: {
       day: string;
       cards: FamilyStartCardResponse[];
@@ -96,10 +117,10 @@ describe("family card updates", () => {
       }),
     );
     narrowNextFamilyRead(family, "1");
-    const first = readParentFamily(family, day);
+    const first = readParentFamily(family);
     read.mockResolvedValueOnce({ day, cards: [card("1", "v2", false)] });
     narrowNextFamilyRead(family, "1");
-    const second = readParentFamily(family, day);
+    const second = readParentFamily(family);
     expect((await second).features["1"]?.notes_enabled).toBe(false);
     finish({ day, cards: [card("1")] });
     await first;

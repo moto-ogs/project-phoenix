@@ -118,6 +118,52 @@ function mount(onCommit?: () => void) {
 }
 
 describe("parent start cache isolation", () => {
+  it.each([1, 2, 3])(
+    "shows %i children in one GET even when the device has the wrong date",
+    async (count) => {
+      const [first] = await family.children();
+      if (!first) throw new Error("Missing test child");
+      family.children.mockResolvedValue(
+        Array.from({ length: count }, (_, i) => ({
+          ...first,
+          student_id: String(42 + i),
+          first_name: "Kind " + String(i + 1),
+        })),
+      );
+      vi.mocked(getFamilyStart).mockImplementation(async () => ({
+        ...(await family.read()),
+        day: "2030-01-01",
+      }));
+      mount();
+      expect(
+        await screen.findByText("Kind " + String(count) + " Test"),
+      ).toBeInTheDocument();
+      expect(vi.mocked(getFamilyStart).mock.calls).toEqual([[undefined]]);
+    },
+  );
+
+  it("keeps a revocation at server midnight even when the ensuing family read fails", async () => {
+    mount();
+    expect(await screen.findByText("Kind A Test")).toBeInTheDocument();
+    vi.mocked(getFamilyStart)
+      .mockResolvedValueOnce({ day: "2030-01-01", cards: [] })
+      .mockRejectedValue(new ApiError("offline", 503));
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent("parent-child-status-refresh", {
+          detail: { studentId: "42" },
+        }),
+      );
+    });
+    await waitFor(() =>
+      expect(vi.mocked(getFamilyStart).mock.calls).toEqual([
+        [undefined],
+        ["42"],
+        [undefined],
+      ]),
+    );
+    expect(screen.queryByText("Kind A Test")).not.toBeInTheDocument();
+  });
   it("narrows child events, reconciles missing IDs and reconnects, and ignores a late card after revocation", async () => {
     const rows = await family.children();
     const child = rows[0]!;

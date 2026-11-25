@@ -71,6 +71,16 @@ export function useParentResourceEvents() {
     session?.user.scope === "parent" ? session.user.id : undefined;
   const family = useParentFamily(!!account);
 
+  // Commit an authoritative removal first. If this event discovered midnight,
+  // a failed roster refresh must not restore yesterday's card or capabilities.
+  const refreshDay = family.data?.needsDayReconciliation
+    ? family.data.day
+    : null;
+  const reloadFamily = family.mutate;
+  useEffect(() => {
+    if (refreshDay) void reloadFamily();
+  }, [refreshDay, reloadFamily]);
+
   const current = useRef(family);
   useLayoutEffect(() => {
     current.current = family;
@@ -171,7 +181,7 @@ function useParentFamily(enabled: boolean, keepRosterAcrossMidnight = false) {
       ? parentKeys.familyStart(day)
       : null,
     (): Promise<ParentFamily> =>
-      readParentFamily(resource.readCurrent?.().data, day),
+      readParentFamily(resource.readCurrent?.().data),
     {
       ...PARENT_RESOURCE_OPTIONS,
       revalidateIfStale: false,
@@ -218,7 +228,9 @@ export function useParentToday(
     data: family.data?.today,
     hasConfirmedData:
       family.data !== undefined &&
-      Object.values(family.data.confirmedToday).every(Boolean),
+      family.data.children.every(
+        (child) => family.data?.confirmedToday[child.student_id],
+      ),
     error:
       family.error ?? Object.values(family.data?.todayErrors ?? NO_FAILURES)[0],
   };

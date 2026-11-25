@@ -2,6 +2,7 @@ package care
 
 import (
 	"context"
+	"errors"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
@@ -83,14 +84,12 @@ func (s *Service) familyStartChildren(ctx context.Context, accountID int64, stud
 	if studentID == nil {
 		return s.ListChildrenForAccount(ctx, accountID)
 	}
-	var child *ChildSummary
-	err := s.Runtime.WithinAdmin(ctx, func(txCtx context.Context) error {
-		var err error
-		child, err = s.ChildRepo.FindForAccount(txCtx, accountID, *studentID)
-		return err
-	})
-	if err != nil || child == nil {
+	child, err := s.ResolvePermittedChild(ctx, accountID, *studentID, GuardianPermissionPortalAccess)
+	if errors.Is(err, ErrChildNotLinked) || errors.Is(err, ErrGuardianPermissionDenied) {
+		return nil, nil
+	}
+	if err != nil {
 		return nil, err
 	}
-	return []*ChildSummary{child}, nil
+	return []*ChildSummary{child.summary}, nil
 }

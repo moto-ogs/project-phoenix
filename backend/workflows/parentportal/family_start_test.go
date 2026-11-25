@@ -88,7 +88,9 @@ func TestFamilyStartUsesSchoolFactsButNeverSiblingPermissions(t *testing.T) {
 	require.Len(t, snapshot.Cards, 3)
 	t.Logf("same three children across two schools: individual statements=%d, family statements=%d", oldQueries, len(counter.Queries()))
 	assert.Less(t, len(counter.Queries()), oldQueries)
-	require.Equal(t, map[int64]int{family.TenantID: 1, otherSchool: 1}, settings.calls)
+	require.Len(t, settings.calls, 2)
+	require.Equal(t, 1, settings.calls[family.TenantID])
+	require.Equal(t, 1, settings.calls[otherSchool])
 	require.Equal(t, settings.calls, attendance.calls)
 	for _, card := range snapshot.Cards {
 		require.NotEqual(t, foreign.StudentID, card.Child.StudentID)
