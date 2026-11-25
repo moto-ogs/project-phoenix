@@ -49,6 +49,7 @@ vi.mock("~/lib/traeger/page-seed.server", () => ({
 }));
 
 vi.mock("~/lib/portal-session-snapshot.server", () => ({
+  readRenderedSessionMark: async () => "",
   readPortalSessionSnapshot: async (key: keyof typeof readers) => {
     const session = await readers[key]();
     return session ? { session, accessToken: "server-only" } : null;
@@ -103,6 +104,7 @@ const { TraegerProviders } = await import("./traeger/providers");
 type Providers = (props: {
   children: ReactNode;
   session?: Session | null;
+  sessionMark: string;
 }) => ReactNode;
 
 interface Portal {
@@ -244,7 +246,7 @@ describe.each(PORTALS)("$name providers", (portal) => {
 
   it("starts authenticated from the server snapshot without a session request", async () => {
     render(
-      <Providers session={portal.snapshot}>
+      <Providers session={portal.snapshot} sessionMark="">
         <SessionProbe />
       </Providers>,
     );
@@ -257,7 +259,7 @@ describe.each(PORTALS)("$name providers", (portal) => {
 
   it("fetches the session in the browser when the server has no snapshot", async () => {
     render(
-      <Providers session={null}>
+      <Providers session={null} sessionMark="">
         <SessionProbe />
       </Providers>,
     );

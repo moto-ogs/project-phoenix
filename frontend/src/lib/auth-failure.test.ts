@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { handleAuthFailure, refreshToken } from "./auth-failure";
 import { runTenantSessionEnd } from "./tenant-session-end";
 
-// Mock next-auth/react
-vi.mock("next-auth/react", () => ({
-  signOut: vi.fn(),
+// The tree's session ends through Auth.js' protocol (#8082).
+vi.mock("~/lib/tenant-session-cookie", () => ({
+  signOutSession: vi.fn(),
 }));
 
 // Helper to setup browser environment
@@ -313,8 +313,9 @@ describe("auth-failure", () => {
           status: 401,
         });
 
-        const { signOut } = await import("next-auth/react");
-        vi.mocked(signOut).mockResolvedValue({ url: "/" });
+        const { signOutSession: signOut } =
+          await import("~/lib/tenant-session-cookie");
+        vi.mocked(signOut).mockResolvedValue(undefined);
 
         vi.spyOn(console, "warn").mockImplementation(() => undefined);
         vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -322,8 +323,56 @@ describe("auth-failure", () => {
         const result = await handleAuthFailure();
 
         expect(result).toBe(false);
-        expect(signOut).toHaveBeenCalledWith({ redirect: false });
+        expect(signOut).toHaveBeenCalledWith("tenant", expect.any(String));
         expect(globalThis.window.location.href).toBe("/");
+      } finally {
+        restore();
+      }
+    });
+
+    it("leads to the login once a second signout deleted the cookie (#8082)", async () => {
+      const restore = setupBrowserEnv();
+      try {
+        Object.defineProperty(globalThis, "sessionStorage", {
+          value: { getItem: vi.fn(), setItem: vi.fn(), clear: vi.fn() },
+          writable: true,
+        });
+        global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 401 });
+        const { signOutSession: signOut } =
+          await import("~/lib/tenant-session-cookie");
+        // The first signout breaks before its deletion; the second deletes.
+        vi.mocked(signOut)
+          .mockRejectedValueOnce(new Error("signout failed"))
+          .mockResolvedValueOnce(undefined);
+        vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+        expect(await handleAuthFailure()).toBe(false);
+        expect(signOut).toHaveBeenCalledTimes(2);
+        expect(globalThis.window.location.href).toBe("/");
+      } finally {
+        restore();
+      }
+    });
+
+    it("keeps the page when no signout deletes the cookie", async () => {
+      const restore = setupBrowserEnv();
+      try {
+        Object.defineProperty(globalThis, "sessionStorage", {
+          value: { getItem: vi.fn(), setItem: vi.fn(), clear: vi.fn() },
+          writable: true,
+        });
+        global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 401 });
+        const { signOutSession: signOut } =
+          await import("~/lib/tenant-session-cookie");
+        vi.mocked(signOut).mockRejectedValue(new Error("signout failed"));
+        vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        vi.spyOn(console, "error").mockImplementation(() => undefined);
+        const before = globalThis.window.location.href;
+
+        expect(await handleAuthFailure()).toBe(false);
+        expect(signOut).toHaveBeenCalledTimes(2);
+        expect(globalThis.window.location.href).toBe(before);
       } finally {
         restore();
       }
@@ -344,8 +393,9 @@ describe("auth-failure", () => {
           writable: true,
         });
 
-        const { signOut } = await import("next-auth/react");
-        vi.mocked(signOut).mockResolvedValue({ url: "/" });
+        const { signOutSession: signOut } =
+          await import("~/lib/tenant-session-cookie");
+        vi.mocked(signOut).mockResolvedValue(undefined);
 
         vi.spyOn(console, "error").mockImplementation(() => undefined);
         const result = await handleAuthFailure();

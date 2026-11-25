@@ -38,6 +38,7 @@ export default function CatererLoginPage() {
   const [mfaStep, setMfaStep] = useState<MFAStep | null>(null);
   const isCheckingAuth = useLoginSessionCheck({
     logger,
+    portal: "caterer",
     onAccess: openCatererPortal,
   });
 

@@ -62,6 +62,11 @@ export function PersonalStorageGuard({
     // Während die Sitzung lädt, bleibt alles stehen: ein Abruf ist kein
     // Kontowechsel.
     if (status === "loading") return;
+    // Eine Seite, deren Sitzungscookie sich seit dem Rendern geändert hat
+    // (#8082), bindet nichts: Ihre Sitzung ist nicht mehr die des Browsers,
+    // und sie würde die Tabs der neuen Sitzung umbinden.
+    if (document.documentElement.hasAttribute("data-session-mark-stale"))
+      return;
     if (owner === null) {
       clearPersonalStorage();
       return;

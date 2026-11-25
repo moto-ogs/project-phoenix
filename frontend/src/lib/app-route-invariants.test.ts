@@ -57,7 +57,6 @@ const seededEntrypoints = [
   ["traeger", "SWRServerSeed"],
   ["operator/organizations", "SWRServerSeed"],
   ["caterer", "SWRServerSeed"],
-  ["parents", "ParentServerSeed"],
 ] as const;
 
 it.each(seededEntrypoints)(
@@ -71,6 +70,21 @@ it.each(seededEntrypoints)(
     expect(source).toContain(`<${boundary} `);
   },
 );
+
+it("starts parents through its server seed", () => {
+  const parents = path.join(sourceRoot, "app", "parents");
+  const page = readFileSync(path.join(parents, "page.tsx"), "utf8");
+  expect(page).not.toMatch(/^["']use client["']/);
+  if (page.includes("<ParentPageSeed ")) {
+    const wrapper = readFileSync(
+      path.join(parents, "parent-page-seed.tsx"),
+      "utf8",
+    );
+    expect(wrapper).toContain("<ParentServerSeed ");
+  } else {
+    expect(page).toContain("<ParentServerSeed ");
+  }
+});
 
 it("does not restore the parallel browser route-prefetch path", () => {
   for (const file of [

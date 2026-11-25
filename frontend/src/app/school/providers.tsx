@@ -16,9 +16,19 @@ import { ModulePortalProvider } from "~/lib/module-portal-context";
 export function SchoolProviders({
   children,
   session,
-}: Readonly<{ children: React.ReactNode; session?: Session | null }>) {
+  sessionMark,
+}: Readonly<{
+  children: React.ReactNode;
+  session?: Session | null;
+  /** The session mark the page was rendered with (#8082). */
+  sessionMark: string;
+}>) {
   return (
-    <PortalProviders portal="school" session={session}>
+    <PortalProviders
+      portal="school"
+      session={session}
+      sessionMark={sessionMark}
+    >
       {/* Rebinds an existing browser push subscription to the current school
           session (#2208) — the tenant and parents portals do the same. */}
       <PushSubscriptionSync portal="school" />

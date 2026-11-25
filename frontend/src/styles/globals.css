@@ -1176,3 +1176,9 @@ html[data-chat-page-lock] body {
     animation-duration: 1ms;
   }
 }
+
+/* A page whose session cookie changed after the server rendered it (#8082):
+   hidden from the parse of its HTML until SessionTreeBoundary decides. */
+html[data-session-mark-stale] body {
+  visibility: hidden;
+}

@@ -43,6 +43,7 @@ vi.mock("~/server/auth/parent", async () =>
 );
 
 vi.mock("~/lib/portal-session-snapshot.server", () => ({
+  readRenderedSessionMark: async () => "",
   readPortalSessionSnapshot: async (key: string) => {
     const session =
       key === "parent" ? await readParentSessionSnapshotMock() : null;

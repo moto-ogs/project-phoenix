@@ -901,6 +901,211 @@ and the other portals' providers; the fetch observer applies it once
 installed. Other tabs, a tab started during a logout and the public tenant
 pages need no barrier: their answers pass the same server gates.
 
+### Protected tree per session (#8082)
+
+What a document still shows is the browser's part; the server gates above
+stay the guarantee. Every portal renders its pages, parallel slots,
+overlays and person-bound providers under one `SessionTreeBoundary`
+(`frontend/src/components/auth/session-tree-boundary.tsx`), mounted in
+`PortalProviders` and `TenantProviders`. A document renders one tree for
+one session; when it ends (invariant 4) nothing of it renders again, also
+not of routes React keeps hidden (`Activity`), and a new document shows
+the next session.
+
+One mechanism decides which session an answer, a deletion and a tree
+belong to: the **session mark** (`frontend/src/lib/session-mark.ts`), an
+HMAC under `NEXTAUTH_SECRET` of the session's refresh-token family and, for
+a staff preview, its preview, kept in a script-readable cookie beside every
+portal's session cookie. It names no person, school or token and opens
+nothing. Invariants:
+
+1. **The exit writes the mark with the session.** `gateSessionCookieWrites`
+   writes it with every session it lets go, with the session cookie's
+   lifetime, and deletes it with the session; a rotation keeps it.
+2. **Every answer names its session.** The exit answers
+   `X-Moto-Presented-Session-Mark` with the marks the request carried and
+   `X-Moto-Session-Mark` with those the request itself changed (sign-in,
+   school switch, second factor, preview; every deletion, also of a session
+   without a mark; not a rotation). The session route also names the
+   presented mark in its body (`Session.sessionMark`), bound to that answer.
+   The fetch observer hands both headers of every own-origin answer to the
+   boundary at their arrival, before any body (`noteSessionAnswer`): the
+   marks it wrote are recorded as the tab's own first, and the mark it
+   carried is read against the tree's mark from before the answer; another
+   one that the tree never had counts like a reported cookie value (a late
+   answer of the tree's own former session does not).
+3. **Nothing ends another session.** Every exit names the session it ends
+   (`X-Moto-End-Session`: portal and mark): the tree's mark
+   (`shownSessionMark`) for a logout or recovery, the errored answer's
+   `sessionMark` for a cleanup, the cookie's mark when the request left for
+   a refused school switch. All go through `signOutSession` /
+   `signOutPortal` / `signOutTenant`; a source test fails on the SDK's
+   `signOut`, which names none. The logout routes revoke nothing and answer
+   401, and the exit deletes nothing and answers `X-Moto-Session-Replaced`,
+   when the request carries another mark: another tab's sign-in of the
+   meantime stays, and the document loads it. This device's data of the
+   account (the shared owner of personal storage) goes only once the
+   session is revoked or its cookie gone, never for a replacing session.
+4. **A document shows one session; a change ends its tree for good.**
+   The page's HTML carries the mark it was rendered with; an inline check
+   hides it before its first paint when the cookie differs (the value it
+   saw counts at hydration, also if a late write restored the rendered
+   mark) and removes its body on a `pagehide` before hydration. The tree is **confirmed** while
+   the session keeps its identity: its mark, its auth generation (account,
+   school or Träger, preview, scope, roles, permissions) and whether the
+   school books the portal (`notBooked`, in the layout snapshot as in the
+   session route). A token rotation and a revalidation keep it and are no
+   event; so does the first mark of a session from before marks, once the
+   server confirms the same identity. Every event that shows another
+   identity or leaves it unconfirmed **ends** the tree at once: its DOM,
+   state, drafts, effects, SWR cache, toasts and overlays go, nothing of
+   the document brings it back (a lock holds for the whole document, also
+   for a boundary a soft navigation mounts later), and late answers change
+   nothing. A new document confirms the session on the server: an exit of
+   the document navigates (`beginSessionExit`: the school switcher,
+   `TenantGuard`'s switch back to the tab's own school, a signout), this
+   tab's own change without an exit reloads it, a session that ended
+   (another tab's signout, an answer the server ends) reloads it into the
+   login (an empty cookie proves a signout only for a marked tree), and another tab's session (or a session the server could not
+   confirm) waits for `Seite neu laden`, so no tab takes the shared cookie
+   back and forth by itself. A resumed document (`resume`, or
+   `visibilitychange` after its heartbeat stood still for at least two
+   minutes, for browsers without `resume`; a tab that was only hidden
+   returns at once), an unmarked session's first mark and another tab's cleared
+   owner hide the tree, with its drafts, until a direct read of the
+   session route (`getSession`; the provider unchanged) answers; it shows
+   again only for the same identity confirmed by Identity & Access
+   (`sessionConfirmed`); a confirmation after another tab cleared the owner
+   also lets the paused reads go on. A cookie change event hides it until, 250 ms
+   later, it is decided whose change it was. The table-driven test in
+   `session-tree-boundary.test.tsx` runs every row through the real
+   boundary and fails when this table and its own differ.
+
+   States: **shown** (confirmed; **unmarked** for a session from before
+   marks), **resuming** (hidden after `resume` or a suspension),
+   **checking a signout** (hidden after another tab cleared the owner),
+   **locked** (ended; `Seite neu laden`, saying either that another tab
+   changed the sign-in or, when it **fails**, that moto cannot check it
+   now), **leaving** (ended; an exit
+   navigates or the document reloads), **signed out** (no session shown).
+
+   Events: **own step** — an answer of this tab wrote another mark (school
+   switch, preview, second factor; **of an exit** while one runs; also
+   **one a late write undid** in the cookie since); **own
+   deletion** — an answer of this tab deleted the session (of an exit, or
+   **of a lookup** that cleaned up an unreadable cookie); **own first
+   mark** — an own answer gave an unmarked session its first mark, read by
+   the server as the same identity (or **of another identity**, such as a
+   staff preview); **other mark** — the cookie (hydration, the listeners'
+   first look, focus, `visibilitychange`, `resume`) or an answer (the mark
+   it carried) names a mark no own answer wrote; **other deletion** — the
+   cookie holds no session and no own answer deleted it; **reported other
+   value** — a cookie event reported one (decided 250 ms later);
+   **rotation**; **new claims** — the provider answers another auth
+   generation (with another mark in the cookie: locked); **module
+   withdrawn** — the provider answers that the school no longer books the
+   portal; **ended answer** — the provider answers the session ended (a
+   portal with an expiry notice leads to its login with it); **failed
+   provider lookup** — the provider answers no session while the cookie
+   still holds the tree's (Auth.js answers so for a failed request);
+   **owner change** — another tab of this origin bound a new owner
+   (`SWRScopeBoundary`; **of a signout** when it cleared the owner, also
+   before its cookie went or after its own lookup failed); **resume** and
+   **return after a suspension**, and the read: **same session**, **new
+   claims**, **ended** (the server ends the session), **no session** (no
+   answer, which may be a failed request, or not confirmed), **signed
+   out** (no answer, and the cookie holds none); **boundary
+   mounted again** (a soft navigation back into the tree); **pagehide**,
+   **pageshow restored**, **exit** (`discardSessionTree`).
+
+   | Tree state | Event | Outcome |
+   | --- | --- | --- |
+   | shown | own step | reloads |
+   | shown | own step of an exit | leaves |
+   | shown | own step a late write undid | reloads |
+   | shown | own deletion of an exit | leaves |
+   | shown | own deletion of a lookup | reloads |
+   | shown | other mark | locks |
+   | shown | other deletion | reloads |
+   | shown | reported other value | hides |
+   | shown | rotation | stays |
+   | shown | new claims | reloads |
+   | shown | module withdrawn | reloads |
+   | shown | ended answer | reloads |
+   | shown | failed provider lookup | fails |
+   | shown | owner change | locks |
+   | shown | owner change of a signout | stays |
+   | shown | resume | hides |
+   | shown | return after a suspension | hides |
+   | shown | pagehide | leaves |
+   | shown | pageshow restored | restarts |
+   | shown | exit | leaves |
+   | unmarked | own first mark | stays |
+   | unmarked | own first mark of another identity | reloads |
+   | resuming | same session read | stays |
+   | resuming | new claims read | reloads |
+   | resuming | no session read | fails |
+   | resuming | ended read | reloads |
+   | resuming | signed out read | reloads |
+   | resuming | other mark | locks |
+   | resuming | other deletion | reloads |
+   | resuming | own step | reloads |
+   | resuming | pagehide | leaves |
+   | checking a signout | same session read | stays |
+   | checking a signout | ended read | reloads |
+   | checking a signout | no session read | fails |
+   | checking a signout | signed out read | reloads |
+   | checking a signout | new claims | reloads |
+   | locked | own step | locks |
+   | locked | new claims | locks |
+   | locked | resume | locks |
+   | locked | pageshow restored | restarts |
+   | locked | boundary mounted again | locks |
+   | leaving | own step | leaves |
+   | leaving | other mark | leaves |
+   | leaving | pageshow restored | restarts |
+   | signed out | own step | adopts |
+   | signed out | other mark | ignores |
+
+   In every state `pagehide` leaves and a restored `pageshow` reloads; in
+   an ended state every other event keeps it; any other pair the table does
+   not list keeps the state. A sign-in on a page without a session takes
+   its own mark and the new generation. An exit that fails after its
+   cookie went loads the document; the switcher's school switch refused
+   after the staff preview ended takes its refusal's way (the target's
+   login, the sign-in with code, moto schule), `TenantGuard`'s loads the
+   document. An automatic switch of `TenantGuard` loads the document too,
+   at most three times in a row per tab and school within a minute; then
+   it offers its way out.
+5. **A document's payloads belong to its one tree.** The shell snapshot and
+   the page seeds (`SWRServerSeed`) of a document serve the tree of that
+   document; no tree of another session renders in it.
+6. **Leaving ends the tree.** Logouts drop the tree once the family is
+   revoked, before cleanup and the cookie deletion that may stall; without
+   a revocation (#7209) the deletion decides: its failure keeps the page
+   and its retry, a failure after the cookie went loads the document. The
+   hosted portals sign out through Auth.js' protocol without the SDK's
+   trailing session lookup; an Auth.js refusal (also with
+   200) counts as a failure. `pagehide` drops the tree synchronously and a
+   page restored from the back-forward cache loads again. Every portal's
+   sign-in, the school switcher and `leaveForAnotherAccount` open a new
+   document; a document that leaves its session also drops the SWR scope,
+   so no running read or seed writes into the cache. Toasts are cleared at
+   every discard, and a tree's late answers raise none from then on
+   (`ToastSessionScope`).
+
+Limits: a session from before the deploy has no mark until its first
+rotation, after which other tabs load again once; `PersonalStorageGuard`
+above the tree acts on the provider's answers, not on marks; a sign-in after a
+request left and before the browser applies its answer cannot be told
+apart; a focus check can come before the tab's own answer was noted and
+then asks it to load again; a browser without `cookieStore` compares only
+on the listed events; a refused school switch ends the session the cookie
+held right before its request, also if the transport's session gate held
+the request a moment longer. The parents' shell also discards its pages when the
+set of linked children or the access of one changes (`parent-shell.tsx`,
+the family read's `access_version` per child); a new order alone keeps them.
+
 ### Login, refresh, and MFA
 
 All six portals use generated `RouteFile` entries for session calls to Go.

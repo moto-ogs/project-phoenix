@@ -1,0 +1,8 @@
+{
+  "checking": "Sprawdzanie logowania...",
+  "leaving": "Ponowne ładowanie strony...",
+  "changed": "Twoje logowanie zmieniło się w innej karcie lub oknie. Odśwież stronę, aby kontynuować.",
+  "unconfirmed": "moto nie może teraz sprawdzić, czy nadal jesteś zalogowany. Za chwilę odśwież stronę.",
+  "reload": "Odśwież stronę",
+  "reloadHint": "Ładuje stronę ponownie z Twoim aktualnym logowaniem."
+}

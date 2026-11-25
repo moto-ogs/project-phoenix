@@ -8,7 +8,7 @@
  * preview restores the parked admin state.
  */
 
-import { signOut } from "next-auth/react";
+import { signOutSession } from "~/lib/tenant-session-cookie";
 
 import { createLogger } from "~/lib/logger";
 import { bffJson } from "~/lib/bff-fetch";
@@ -64,7 +64,8 @@ function readPreviewTarget(result: unknown): string | null {
  */
 async function signOutAfterFailedRestore(): Promise<void> {
   try {
-    await signOut({ redirect: false });
+    // The tree's session only: another tab's sign-in stays (#8082).
+    await signOutSession("tenant");
   } catch (err) {
     logger.error("staff_preview_signout_failed", {
       error: err instanceof Error ? err.message : String(err),

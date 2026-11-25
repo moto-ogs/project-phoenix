@@ -117,6 +117,7 @@ function LoginForm() {
       void signOutStaleSession({
         status,
         session,
+        portal: "traeger",
         started: isCleaningSessionRef,
         logger,
       });

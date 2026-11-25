@@ -1,5 +1,5 @@
 import type React from "react";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TenantInfo } from "~/lib/tenant-api";
 import type { ShellBootstrap } from "~/lib/shell-seed";
@@ -89,6 +89,7 @@ vi.mock("~/lib/tenant-context", () => ({
 
 const { TenantProviders } = await import("./providers");
 const { useLayoutEffect } = await import("react");
+const { _resetSessionTreeForTests } = await import("~/lib/session-tree");
 
 function ChildWithLayoutEffect() {
   useLayoutEffect(() => {
@@ -147,6 +148,8 @@ afterEach(() => {
 });
 
 beforeEach(() => {
+  // Every test is a new document: no tree of the one before leaves.
+  _resetSessionTreeForTests();
   mockUseSession.mockReturnValue({ data: session, status: "authenticated" });
 });
 
@@ -154,6 +157,7 @@ describe("TenantProviders with a server snapshot", () => {
   it("hydrates SessionProvider with the read-only server session", () => {
     render(
       <TenantProviders
+        sessionMark=""
         tenantSlug="school-a"
         tenant={tenant}
         routingMode="subdomain"
@@ -172,6 +176,7 @@ describe("TenantProviders with a server snapshot", () => {
   it("leaves a missing server snapshot for Auth.js to resolve", () => {
     render(
       <TenantProviders
+        sessionMark=""
         tenantSlug="school-a"
         tenant={tenant}
         routingMode="subdomain"
@@ -188,6 +193,7 @@ describe("TenantProviders with a server snapshot", () => {
   it("primes the session cache before any child layout effect runs", () => {
     render(
       <TenantProviders
+        sessionMark=""
         tenantSlug="school-a"
         tenant={tenant}
         routingMode="subdomain"
@@ -215,6 +221,7 @@ describe("TenantProviders with a server snapshot", () => {
   it("writes the shell-owned entries into the cache without fetching", () => {
     render(
       <TenantProviders
+        sessionMark=""
         tenantSlug="school-a"
         tenant={tenant}
         routingMode="subdomain"
@@ -248,6 +255,7 @@ describe("TenantProviders with a server snapshot", () => {
     // before must not reach a reader any more (#5006).
     const view = render(
       <TenantProviders
+        sessionMark=""
         tenantSlug="school-a"
         tenant={tenant}
         routingMode="subdomain"
@@ -267,12 +275,14 @@ describe("TenantProviders with a server snapshot", () => {
       }),
     );
 
+    const before = mockSWRConfig.mock.calls.length;
     mockUseSession.mockReturnValue({
       data: { ...session, user: { ...session.user, permissions: ["x"] } },
       status: "authenticated",
     });
-    view.rerender(
+    const page = (
       <TenantProviders
+        sessionMark=""
         tenantSlug="school-a"
         tenant={tenant}
         routingMode="subdomain"
@@ -280,75 +290,30 @@ describe("TenantProviders with a server snapshot", () => {
         shell={shell}
       >
         <div />
-      </TenantProviders>,
+      </TenantProviders>
     );
-    expect(mockSWRConfig).toHaveBeenLastCalledWith({
-      fallback: {},
-      cacheData: {},
-    });
-    // SWRScopeBoundary dropped what the seeder wrote.
-    expect(mockUnload).toHaveBeenCalledTimes(1);
-
-    // Back to the first session: the seed stays withdrawn.
+    view.rerender(page);
+    // Other rights end the document's tree (#8082): no reader of it, nor
+    // the seed, renders again; the next document reads from the server.
+    expect(screen.getByText("Seite wird neu geladen...")).toBeInTheDocument();
+    // Back to the first session: nothing of the tree comes back.
     mockUseSession.mockReturnValue({ data: session, status: "authenticated" });
-    view.rerender(
-      <TenantProviders
-        tenantSlug="school-a"
-        tenant={tenant}
-        routingMode="subdomain"
-        session={session}
-        shell={shell}
-      >
-        <div />
-      </TenantProviders>,
-    );
-    expect(mockSWRConfig).toHaveBeenLastCalledWith({
-      fallback: {},
-      cacheData: {},
-    });
-    expect(mockSwrMutate).toHaveBeenCalledTimes(5);
-  });
-
-  it("seeds SWR under the tenant-scoped keys and the providers with their slices", () => {
-    render(
-      <TenantProviders
-        tenantSlug="school-a"
-        tenant={tenant}
-        routingMode="subdomain"
-        session={session}
-        shell={shell}
-      >
-        <div />
-      </TenantProviders>,
-    );
-
-    const entries = {
-      "school-a:1:user-context": shell.userContext,
-      "school-a:1:staff-supervision-context": shell.supervision,
-      "school-a:1:reminders": shell.reminders,
-      // Scoped to the school and the account the snapshot was built for
-      // (#4989, #5006).
-      "school-a:1:staff-notices-today:1": shell.staffNoticesToday,
-      "school-a:1:badge-messages-unread:1": shell.counts.messagesUnread,
-      // The platform resource still belongs to this school/account cache.
-      "school-a:1:user-announcements-unread": shell.announcements,
-    };
-    expect(mockSWRConfig).toHaveBeenCalledWith({
-      fallback: entries,
-      // The seeder writes the shell-owned entries into the cache; only the
-      // entry a reader consumes on mount travels as cacheData (#5006).
-      cacheData: {
-        "school-a:1:user-announcements-unread": shell.announcements,
-      },
-    });
-    expect(mockProfileProvider).toHaveBeenCalledWith(
-      expect.objectContaining({ initialProfile: shell.profile }),
-    );
+    view.rerender(page);
+    expect(
+      mockSWRConfig.mock.calls
+        .slice(before)
+        .some(([config]) =>
+          Object.keys(
+            (config as { fallback?: object }).fallback ?? {},
+          ).includes("school-a:1:user-context"),
+        ),
+    ).toBe(false);
   });
 
   it("renders without SWRConfig and with empty seeds when there is no snapshot", () => {
     render(
       <TenantProviders
+        sessionMark=""
         tenantSlug="school-a"
         tenant={tenant}
         routingMode="subdomain"

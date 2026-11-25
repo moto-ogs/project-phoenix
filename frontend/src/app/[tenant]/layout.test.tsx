@@ -50,6 +50,7 @@ vi.mock("~/lib/shell-bootstrap.server", () => ({
 }));
 
 vi.mock("~/lib/portal-session-snapshot.server", () => ({
+  readRenderedSessionMark: async () => "",
   readPortalSessionSnapshot: readPortalSessionSnapshotMock,
 }));
 
