@@ -34,7 +34,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import StaffPoolPage from "./page";
+import StaffPoolPage from "./page-content";
 
 // The fixture week is fixed around Wednesday 2026-09-09 (week from 2026-09-07);
 // every test pins the clock to that day.

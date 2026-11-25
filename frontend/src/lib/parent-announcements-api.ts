@@ -373,7 +373,7 @@ export function withApiBase<T>(
   return base === undefined ? call(id) : call(id, base);
 }
 
-function toAnnouncement(
+export function toAnnouncement(
   announcement: sharedContract.announcementResponse,
 ): Announcement {
   // The backend writes the enum values listed above.

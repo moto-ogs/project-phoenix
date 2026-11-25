@@ -319,7 +319,7 @@ const ROW_ACTION_BASELINE = new Map(
     "src/app/[tenant]/(protected)/meal-plan/page-content.tsx": [
       "Gericht entfernen@1006",
     ],
-    "src/app/[tenant]/(protected)/parent-announcements/page.tsx": [
+    "src/app/[tenant]/(protected)/parent-announcements/page-content.tsx": [
       "Antwort entfernen@1960",
       "Entfernen@2375",
     ],
@@ -1576,7 +1576,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
     // Abschlüsse („Als Entwurf speichern“ und „Veröffentlichen“) und behält
     // seinen eigenen Fuß (BAUARTEN-SPEC Bauart 2 Regel 4, #3115); die Anzeige
     // liegt auf der Route `parent-announcements/[id]`.
-    "src/app/[tenant]/(protected)/parent-announcements/page.tsx": [
+    "src/app/[tenant]/(protected)/parent-announcements/page-content.tsx": [
       "Umfrage bearbeiten Neue Umfrage Elternbrief bearbeiten Neuer Elternbrief Einverständnis bearbeiten Neues Einverständnis Elternmitteilung bearbeiten Neue Elternmitteilung@1853",
     ],
     // Einträge ohne eigene Objektansicht (Termin, Schließtag,

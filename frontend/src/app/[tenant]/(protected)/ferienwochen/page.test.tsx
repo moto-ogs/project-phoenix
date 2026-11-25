@@ -9,7 +9,7 @@ import type { ReactElement } from "react";
 import { SWRConfig, type Cache } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import FerienwochenPage from "./page";
+import FerienwochenPage from "./page-content";
 import { ToastProvider } from "~/contexts/ToastContext";
 import type {
   HolidayHomeSchoolBooking,

@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import RoomsPage from "./page";
+import RoomsPage from "./page-content";
 
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(),

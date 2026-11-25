@@ -206,7 +206,7 @@ export function formatHolidayHostAnswer(
   return answer.value;
 }
 
-function mapWeek(week: weeks.HostedHolidayWeek): HostedHolidayWeek {
+export function mapWeek(week: weeks.HostedHolidayWeek): HostedHolidayWeek {
   return {
     id: week.id,
     periodName: week.period_name,

@@ -1,160 +1,117 @@
-"use client";
-
-import { useCallback, useState } from "react";
-import {
-  AdminEnrollmentsList,
-  type AdminEnrollmentsSummary,
-} from "~/components/enrollment/admin-enrollments-list";
-import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { DesktopOnlyNotice } from "~/components/ui/desktop-only-notice";
-import { useRequirePermission } from "~/lib/hooks/use-require-permission";
-import { PhaseExpiryWarnings } from "~/components/enrollment/phase-expiry-warnings";
-import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
-import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
-import { markAllAdminRequestsRead } from "~/lib/enrollment-admin-api";
-import {
-  fetchEmailSubscription,
-  setEmailSubscription,
-} from "~/lib/notification-preferences-api";
-import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { TenantRouteSeed } from "../../tenant-route-seed";
+import { readContract, seedRead } from "~/lib/server-seed.server";
+import { routes } from "~/lib/contract/enrollment.generated";
+import { hasPermission } from "~/lib/auth-utils";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
+import { phaseFromContract } from "~/lib/enrollment-phase-api";
+import { formSchemaFromContract } from "~/lib/enrollment-form-schema-api";
+import { toSettingsSchema } from "~/lib/settings-api";
+import { shellResourceKeys } from "~/lib/swr/shell-keys";
+import {
+  requestSummaryFromContract,
+  adminChangeRequestFromContract,
+} from "~/lib/enrollment-admin-api";
+import * as settingContract from "~/lib/contract/settings.generated";
+import * as notificationContract from "~/lib/contract/notifications.generated";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
+import PageContent from "./page-content";
 
-/** E-Mail „Neue Anmeldung" an die Person selbst, zum Einschalten (#3780). */
-const ENROLLMENT_EMAIL = "enrollment_submitted";
-
-const ENROLLMENTS_OVERVIEW_INFO =
-  "Hier siehst du alle Anmeldephasen mit ihren Anmeldungen. Wähle bei einer Phase „Anmeldungen ansehen“, um die Anmeldungen zu prüfen.";
-
-export default function AdminEnrollmentsPage() {
-  // Jede Anmeldungsroute verlangt config:manage (#3469).
-  const { isReady } = useRequirePermission("config:manage");
-  // Statuszeile des Seitenkopfs: die Zahlen, die die Liste ohnehin lädt.
-  const [summary, setSummary] = useState<
-    AdminEnrollmentsSummary | "unavailable" | null
-  >(null);
-  const { success: toastSuccess } = useToast();
-  const { show: showError } = useApiErrorDisplay();
-  // Lesestatus pro Person (#3778): markiert die ungelesenen Anmeldungen der
-  // aktiven Phasen für die angemeldete Person.
-  const invalidateFamily = useInvalidateFamily();
-  const handleMarkAllRead = useCallback(() => {
-    markAllAdminRequestsRead()
-      .then(() => {
-        void invalidateFamily(enrollmentKeys.adminRequestsFamily);
-        toastSuccess("Alle Anmeldungen sind als gelesen markiert.");
-      })
-      .catch((err: unknown) => {
-        void showError(err, { object: "die Markierung als gelesen" });
-      });
-  }, [invalidateFamily, toastSuccess, showError]);
-  // Eigener Stand der E-Mail bei neuer Anmeldung. Lässt er sich nicht laden,
-  // fehlt der Eintrag, statt einen falschen Haken zu zeigen.
-  const subscription = useSWRAuth(
-    isReady ? tenantAdminKeys.emailSubscription(ENROLLMENT_EMAIL) : null,
-    () => fetchEmailSubscription(ENROLLMENT_EMAIL),
-  );
-  // The value being saved; the menu shows it until the save settles.
-  const [saving, setSaving] = useState<boolean | null>(null);
-  const emailSaving = saving !== null;
-  const enabled = saving ?? subscription.data;
-  const emailState =
-    enabled !== undefined
-      ? enabled
-        ? "on"
-        : "off"
-      : subscription.error
-        ? "unavailable"
-        : "loading";
-  const { mutate: mutateSubscription } = subscription;
-  const handleToggleEmail = useCallback(async () => {
-    if (emailSaving || (emailState !== "on" && emailState !== "off")) return;
-    const next = emailState === "off";
-    setSaving(next);
-    try {
-      await setEmailSubscription(ENROLLMENT_EMAIL, next);
-    } catch (err) {
-      void showError(err, { object: "die E-Mail-Einstellung" });
-      setSaving(null);
-      return;
-    }
-    await mutateSubscription(next, { revalidate: false });
-    setSaving(null);
-    toastSuccess(
-      next
-        ? "Du bekommst jetzt bei jeder neuen Anmeldung eine E-Mail."
-        : "Du bekommst keine E-Mail mehr bei neuen Anmeldungen.",
-    );
-  }, [emailState, emailSaving, mutateSubscription, toastSuccess, showError]);
-  const handleSummaryChange = useCallback(
-    (next: AdminEnrollmentsSummary | "unavailable" | null) => setSummary(next),
-    [],
-  );
-  const statusLine =
-    summary && summary !== "unavailable" ? (
-      <TenantPageStats
-        items={[
-          {
-            value: summary.activePhases,
-            label: `${summary.activePhases === 1 ? "Phase" : "Phasen"} aktiv`,
-          },
-          {
-            value: summary.requests,
-            label: summary.requests === 1 ? "Anmeldung" : "Anmeldungen",
-          },
-          ...(summary.openChangeRequests !== null &&
-          summary.openChangeRequests > 0
-            ? [
-                {
-                  value: summary.openChangeRequests,
-                  label: `offene ${summary.openChangeRequests === 1 ? "Änderungsanfrage" : "Änderungsanfragen"}`,
-                },
-              ]
-            : []),
-        ]}
-      />
-    ) : null;
-
+export default async function AdminEnrollmentsPage({
+  params,
+}: {
+  params: Promise<{ tenant: string }>;
+}) {
+  const { tenant } = await params;
   return (
-    <TenantPage
-      title="Überblick"
-      info={ENROLLMENTS_OVERVIEW_INFO}
-      stats={statusLine}
-      statsLoading={summary === null}
-      loading={!isReady}
-      actions={
-        <OverflowMenu
-          ariaLabel="Weitere Aktionen für Anmeldungen"
-          items={[
-            {
-              label: "Alle als gelesen markieren",
-              description:
-                "Markiert alle Anmeldungen nur für dich als gelesen.",
-              onClick: handleMarkAllRead,
-            },
-            ...(emailState === "unavailable"
-              ? []
-              : [
-                  { kind: "separator" } as const,
-                  {
-                    kind: "checkbox" as const,
-                    label: "E-Mail an mich bei neuer Anmeldung",
-                    checked: emailState === "on",
-                    disabled: emailState === "loading" || emailSaving,
-                    onClick: () => void handleToggleEmail(),
-                  },
-                ]),
-          ]}
-        />
-      }
+    <TenantRouteSeed
+      slug={tenant}
+      module="online_anmeldung"
+      load={({ token, session }) => {
+        if (!hasPermission(session, "config:manage")) return [];
+        const type = "enrollment_submitted";
+        return [
+          {
+            key: enrollmentKeys.phases(),
+            render: true,
+            value: seedRead("GET /api/enrollment/phases/", async (signal) => {
+              const { data } = await readContract(
+                routes["GET /api/enrollment/phases/"],
+                { token, signal },
+              );
+              return data.map(phaseFromContract);
+            }),
+          },
+          {
+            key: enrollmentKeys.formSchemas(),
+            render: true,
+            value: seedRead(
+              "GET /api/enrollment/schema/versions",
+              async (signal) => {
+                const { data } = await readContract(
+                  routes["GET /api/enrollment/schema/versions"],
+                  { token, signal },
+                );
+                return data.map(formSchemaFromContract);
+              },
+            ),
+          },
+          {
+            key: shellResourceKeys.settingsSchema(),
+            render: true,
+            value: seedRead("GET /api/settings/schema", async (signal) => {
+              const { data } = await readContract(
+                settingContract.routes["GET /api/settings/schema"],
+                { token, signal },
+              );
+              return toSettingsSchema(data);
+            }),
+          },
+          {
+            key: enrollmentKeys.adminRequests(),
+            render: true,
+            value: seedRead(
+              "GET /api/enrollment/admin/requests/",
+              async (signal) => {
+                const { data } = await readContract(
+                  routes["GET /api/enrollment/admin/requests/"],
+                  { token, signal },
+                );
+                return data.map(requestSummaryFromContract);
+              },
+            ),
+          },
+          {
+            key: enrollmentKeys.changeRequests(),
+            value: seedRead(
+              "GET /api/enrollment/admin/change-requests/",
+              async (signal) => {
+                const { data } = await readContract(
+                  routes["GET /api/enrollment/admin/change-requests/"],
+                  { token, signal },
+                );
+                return data.map(adminChangeRequestFromContract);
+              },
+            ),
+          },
+          {
+            key: tenantAdminKeys.emailSubscription(type),
+            value: seedRead(
+              "GET /api/notifications/email-subscriptions/{type}",
+              async (signal) => {
+                const { data } = await readContract(
+                  notificationContract.routes[
+                    "GET /api/notifications/email-subscriptions/{type}"
+                  ],
+                  { token, signal, params: { type } },
+                );
+                return data.enabled;
+              },
+            ),
+          },
+        ];
+      }}
     >
-      <DesktopOnlyNotice />
-      <PhaseExpiryWarnings />
-      {/* Flex-Spalte, damit die letzte Fläche bis zur Unterkante wächst
-          (`.moto-tenant-body`). */}
-      <div className="hidden lg:flex lg:flex-col">
-        <AdminEnrollmentsList onSummaryChange={handleSummaryChange} />
-      </div>
-    </TenantPage>
+      <PageContent />
+    </TenantRouteSeed>
   );
 }

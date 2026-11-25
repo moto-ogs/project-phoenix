@@ -113,7 +113,7 @@ function toQuestion(
   };
 }
 
-function toSurvey(survey: surveysContract.surveyResponse): Survey {
+export function toSurvey(survey: surveysContract.surveyResponse): Survey {
   return {
     ...survey,
     // The backend writes the values listed above.

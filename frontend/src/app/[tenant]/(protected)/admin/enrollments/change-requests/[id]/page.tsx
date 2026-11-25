@@ -1,42 +1,42 @@
-"use client";
-
-import { use } from "react";
-import { AdminEnrollmentChangeRequestDetail } from "~/components/enrollment/admin-enrollment-change-requests";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantRouteSeed } from "../../../../tenant-route-seed";
+import { readContract, seedRead } from "~/lib/server-seed.server";
+import { routes } from "~/lib/contract/enrollment.generated";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
+import { adminChangeRequestFromContract } from "~/lib/enrollment-admin-api";
 import { canReviewEnrollmentChangeRequests } from "~/lib/change-request-access";
-import { useRequirePermission } from "~/lib/hooks/use-require-permission";
+import PageContent from "./page-content";
 
-const CHANGE_REQUEST_INFO =
-  "Hier siehst du eine Änderung an einer Anmeldung und die Nachrichten dazu. Kommt sie von den Eltern, entscheidest du mit „Freigeben“ oder „Ablehnen“.";
-
-interface PageProps {
-  readonly params: Promise<{ tenant: string; id: string }>;
-}
-
-export default function AdminEnrollmentChangeRequestDetailPage({
+export default async function AdminEnrollmentChangeRequestPage({
   params,
-}: PageProps) {
-  const { id } = use(params);
-  const { isReady } = useRequirePermission(canReviewEnrollmentChangeRequests);
-
-  if (!isReady) {
-    return (
-      <TenantPage
-        title="Änderungsanfrage"
-        info={CHANGE_REQUEST_INFO}
-        back
-        backHref="/admin/enrollments"
-        backLabel="Zurück zur Anmeldungs-Übersicht"
-        statsLoading
-        loading
-      />
-    );
-  }
-
+}: {
+  params: Promise<{ tenant: string; id: string }>;
+}) {
+  const { tenant, id } = await params;
   return (
-    <AdminEnrollmentChangeRequestDetail
-      changeRequestId={id}
-      info={CHANGE_REQUEST_INFO}
-    />
+    <TenantRouteSeed
+      slug={tenant}
+      module="online_anmeldung"
+      load={({ token, session }) => {
+        if (!canReviewEnrollmentChangeRequests(session)) return [];
+        return [
+          {
+            key: enrollmentKeys.changeRequest(id),
+            render: true,
+            value: seedRead(
+              "GET /api/enrollment/admin/change-requests/{id}/",
+              async (signal) => {
+                const { data } = await readContract(
+                  routes["GET /api/enrollment/admin/change-requests/{id}/"],
+                  { token, signal, params: { id } },
+                );
+                return adminChangeRequestFromContract(data);
+              },
+            ),
+          },
+        ];
+      }}
+    >
+      <PageContent params={params} />
+    </TenantRouteSeed>
   );
 }

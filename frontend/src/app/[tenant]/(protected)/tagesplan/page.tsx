@@ -1,27 +1,53 @@
-"use client";
+import { TenantRouteSeed } from "../tenant-route-seed";
+import { readContract, seedRead } from "~/lib/server-seed.server";
+import { routes } from "~/lib/contract/timetable.generated";
+import { hasPermission } from "~/lib/auth-utils";
+import { berlinTodayISO, isValidISODate } from "~/lib/date-helpers";
+import { mapPlannedInstance } from "~/lib/timetable-operations-types";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
+import PageContent from "./page-content";
 
-// Tages-Betreuungsplan (#2383): mobiler Einstieg der Betreuungskräfte in den
-// laufenden Betreuungstag. Im binären Anwesenheitsmodus gibt es keine Raum-
-// oder Modulsteuerung, deshalb greift der BinaryModeGuard vor allem anderen.
-
-import { Suspense } from "react";
-
-import { BinaryModeGuard } from "~/components/tenant/binary-mode-guard";
-import { TagesplanView } from "~/components/timetable/tagesplan-view";
-import { STAFF_FLAT_PAGES } from "~/lib/section-navigation";
-
-const TAGESPLAN_BINARY_MODE_INFO =
-  "Hier wäre der Betreuungsplan deiner Schule. Deine Schule nutzt ihn zurzeit nicht.";
-
-export default function TagesplanPage() {
+export default async function TagesplanPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ tenant: string }>;
+  searchParams: Promise<{ d?: string | string[] }>;
+}) {
+  const { tenant } = await params;
+  const { d } = await searchParams;
   return (
-    <BinaryModeGuard
-      title={STAFF_FLAT_PAGES.tagesplan.label}
-      info={TAGESPLAN_BINARY_MODE_INFO}
+    <TenantRouteSeed
+      slug={tenant}
+      load={({ token, session, tenant: school }) => {
+        if (
+          school.presenceMode === "binary" ||
+          school.timetableEnabled === false ||
+          !hasPermission(session, "schedules:read")
+        )
+          return [];
+        const requested = Array.isArray(d) ? d[0] : d;
+        const day =
+          requested && isValidISODate(requested) ? requested : berlinTodayISO();
+        return [
+          {
+            key: tenantDailyKeys.dayPlan(day),
+            render: true,
+            value: seedRead(
+              "GET /api/timetable/operations/planned-now",
+              async (signal) => {
+                const { data } = await readContract(
+                  routes["GET /api/timetable/operations/planned-now"],
+                  { token, signal, query: { date: day, scope: "day" } },
+                );
+                return (data.instances ?? []).map(mapPlannedInstance);
+              },
+            ),
+          },
+        ];
+      }}
     >
-      <Suspense fallback={null}>
-        <TagesplanView />
-      </Suspense>
-    </BinaryModeGuard>
+      <PageContent />
+    </TenantRouteSeed>
   );
 }

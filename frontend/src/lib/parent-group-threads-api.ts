@@ -32,7 +32,7 @@ export interface GroupTarget {
   label: string;
 }
 
-function withLists(
+export function withLists(
   detail: messagesContract.GroupThreadDetailResponse,
 ): GroupThreadDetail {
   return {

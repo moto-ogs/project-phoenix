@@ -94,7 +94,7 @@ function mapPoolBlock(block: wire.PoolBlock): PoolBlock {
   };
 }
 
-function mapPoolWeek(week: wire.PoolWeek): PoolWeek {
+export function mapPoolWeek(week: wire.PoolWeek): PoolWeek {
   return {
     weekStart: day(week.week_start),
     today: day(week.today),

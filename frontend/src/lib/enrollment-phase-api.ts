@@ -69,7 +69,9 @@ export type Phase = Omit<
  * a kind, mode or audience this build does not know fails the read instead
  * of saving a guess.
  */
-function phaseFromContract(phase: enrollmentContract.PhaseResponse): Phase {
+export function phaseFromContract(
+  phase: enrollmentContract.PhaseResponse,
+): Phase {
   const { rollover_mode, translations, ...rest } = phase;
   const mode = knownEnum(ROLLOVER_MODES, rollover_mode);
   const named = translationsFromContract(translations);

@@ -33,6 +33,7 @@ import { Loading } from "~/components/ui/loading";
 import { SectionCard } from "~/components/ui/section-card";
 import { TileCard } from "~/components/ui/tile-card";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import { SERVER_SEED_MAX_AGE_MS } from "~/lib/swr/server-seed";
 
 const logger = createLogger({ component: "EnrollPhasePicker" });
 
@@ -43,14 +44,20 @@ const logger = createLogger({ component: "EnrollPhasePicker" });
  * previously a school-year dropdown above the form; PR B's phase
  * model splits the picker out so each phase carries its own form.
  */
-export default function EnrollPhasePickerPage() {
+export default function EnrollPhasePickerPage({
+  initial,
+}: {
+  initial?: { phases: PublicPhase[]; builtAt: number };
+}) {
   const t = useCareTermTranslations("enrollmentPublic");
   const loadErrorObject = t("errorObjectPhases");
   const locale = useLocale();
   const { tenantSlug, tenant } = useTenant();
   const tenantPath = useTenantAwarePath();
-  const [phases, setPhases] = useState<PublicPhase[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [phases, setPhases] = useState<PublicPhase[] | null>(
+    initial?.phases ?? null,
+  );
+  const [loading, setLoading] = useState(initial === undefined);
   const [enrollmentDisabled, setEnrollmentDisabled] = useState(false);
   // A failed load replaces the list (#2515): "no open phase" would be a
   // wrong answer while the phases simply did not arrive.
@@ -63,6 +70,15 @@ export default function EnrollPhasePickerPage() {
 
   // oxlint-disable-next-line swr/no-effect-load -- public enrollment for families without a session; the shared cache reads only with a session, by design
   useEffect(() => {
+    if (
+      loadAttempt === 0 &&
+      initial &&
+      Math.abs(Date.now() - initial.builtAt) <= SERVER_SEED_MAX_AGE_MS
+    ) {
+      setPhases(initial.phases);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     async function load() {
       setLoading(true);
@@ -97,7 +113,14 @@ export default function EnrollPhasePickerPage() {
     return () => {
       cancelled = true;
     };
-  }, [tenantSlug, loadErrorObject, loadAttempt, clearLoadError, showLoadError]);
+  }, [
+    tenantSlug,
+    initial,
+    loadErrorObject,
+    loadAttempt,
+    clearLoadError,
+    showLoadError,
+  ]);
 
   if (loading) {
     return (

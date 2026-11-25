@@ -1,67 +1,59 @@
-"use client";
+import { TenantRouteSeed } from "../tenant-route-seed";
+import { readContract, seedRead } from "~/lib/server-seed.server";
+import { routes } from "~/lib/contract/enrollment.generated";
+import { hasPermission } from "~/lib/auth-utils";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
+import { phaseFromContract } from "~/lib/enrollment-phase-api";
+import { databaseKeys } from "~/lib/swr/portal-keys";
+import { mapPeriods } from "~/lib/calendar-period-helpers";
+import * as timetableContract from "~/lib/contract/timetable.generated";
+import PageContent from "./page-content";
 
-import { useCallback, useState } from "react";
-import { CareOfferingsEditor } from "~/components/enrollment/care-offerings-editor";
-import { SkeletonRegion } from "~/components/ui/page-skeletons";
-import { DataTableSkeleton as TableSkeleton } from "~/components/ui/data-table";
-import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { DesktopOnlyNotice } from "~/components/ui/desktop-only-notice";
-import { useRequirePermission } from "~/lib/hooks/use-require-permission";
-
-const CARE_OFFERINGS_INFO =
-  "Hier legst du fest, was Eltern bei der Anmeldung buchen können. Angebote gehören immer zu einer Anmeldephase. Wähle oben die Phase und dann „Neues Betreuungsangebot“.";
-
-export default function CareOfferingsPage() {
-  const { isReady } = useRequirePermission("config:manage");
-  // Statuszeile des Seitenkopfs: der Editor meldet die Zahlen seines
-  // Katalogs, damit die Kopfkarte ohne zweiten Request auskommt.
-  // "unavailable": der Katalog lädt nicht, der Kopf zählt dann nichts
-  // (#2517).
-  const [summary, setSummary] = useState<
-    { total: number; active: number } | "unavailable" | null
-  >(null);
-  const handleSummaryChange = useCallback(
-    (next: { total: number; active: number } | "unavailable" | null) =>
-      setSummary(next),
-    [],
-  );
-
+export default async function CareOfferingsPage({
+  params,
+}: {
+  params: Promise<{ tenant: string }>;
+}) {
+  const { tenant } = await params;
   return (
-    <TenantPage
-      title="Angebote"
-      info={CARE_OFFERINGS_INFO}
-      stats={
-        summary && summary !== "unavailable" ? (
-          <TenantPageStats
-            items={[
-              {
-                value: summary.total,
-                label: summary.total === 1 ? "Angebot" : "Angebote",
-              },
-              { value: summary.active, label: "aktiv" },
-            ]}
-          />
-        ) : null
-      }
-      statsLoading={summary === null}
+    <TenantRouteSeed
+      slug={tenant}
+      module="online_anmeldung"
+      load={({ token, session }) => {
+        if (!hasPermission(session, "config:manage")) return [];
+        return [
+          {
+            key: enrollmentKeys.phases(),
+            render: true,
+            value: seedRead("GET /api/enrollment/phases/", async (signal) => {
+              const { data } = await readContract(
+                routes["GET /api/enrollment/phases/"],
+                { token, signal },
+              );
+              return data.map(phaseFromContract);
+            }),
+          },
+          ...(hasPermission(session, "schedules:read")
+            ? [
+                {
+                  key: databaseKeys.calendarPeriods(),
+                  value: seedRead(
+                    "GET /api/timetable/periods/",
+                    async (signal) => {
+                      const { data } = await readContract(
+                        timetableContract.routes["GET /api/timetable/periods/"],
+                        { token, signal },
+                      );
+                      return mapPeriods(data);
+                    },
+                  ),
+                },
+              ]
+            : []),
+        ];
+      }}
     >
-      {/* Der Editor darunter ist auf den Desktop beschränkt; die Kopfkarte
-          gilt auf allen Breakpoints. */}
-      <DesktopOnlyNotice />
-      {isReady ? (
-        // Flex-Spalte, damit die Tabelle des Editors als letzte Fläche bis
-        // zur Unterkante wächst (`.moto-tenant-body`).
-        <div className="hidden lg:flex lg:flex-col">
-          <CareOfferingsEditor onSummaryChange={handleSummaryChange} />
-        </div>
-      ) : (
-        <SkeletonRegion
-          label="Angebote werden geladen"
-          className="hidden w-full lg:block"
-        >
-          <TableSkeleton rows={5} columns={4} />
-        </SkeletonRegion>
-      )}
-    </TenantPage>
+      <PageContent />
+    </TenantRouteSeed>
   );
 }

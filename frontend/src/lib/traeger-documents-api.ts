@@ -118,7 +118,7 @@ function mapDocument(
   };
 }
 
-function mapSharedDocument(
+export function mapSharedDocument(
   document: traegerDocumentsContract.SharedDocument,
 ): SharedTraegerDocument {
   return {

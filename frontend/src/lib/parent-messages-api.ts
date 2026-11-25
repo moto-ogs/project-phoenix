@@ -96,7 +96,7 @@ function toReaders(readers: messagesContract.ReadersResponse): ThreadReaders {
   };
 }
 
-function toInboxThread(
+export function toInboxThread(
   thread: messagesContract.ParentChatInboxThreadResponse,
 ): InboxThread {
   return {
