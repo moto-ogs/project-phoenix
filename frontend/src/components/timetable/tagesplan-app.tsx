@@ -907,7 +907,9 @@ function BlockRow({
       // Beginnt mit dem sichtbaren Text des Ziels (Titel), damit
       // Sprachsteuerung den Block beim Namen findet.
       aria-label={[
-        instance.title,
+        // Titel und Bereich wie sichtbar, damit der Name mit der Zeile
+        // beginnt (WCAG 2.5.3).
+        [instance.title, instance.planningTrackName].filter(Boolean).join(" "),
         blockTimeRange(instance),
         state.label,
         next ? "als Nächstes" : null,
@@ -949,9 +951,12 @@ function BlockRow({
         >
           {instance.title}
           {instance.planningTrackName ? (
-            <span className="ml-1.5 inline-block text-xs font-normal text-gray-600">
-              {instance.planningTrackName}
-            </span>
+            <>
+              {" "}
+              <span className="inline-block text-xs font-normal text-gray-600">
+                {instance.planningTrackName}
+              </span>
+            </>
           ) : null}
         </span>
       }

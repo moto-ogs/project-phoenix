@@ -576,7 +576,7 @@ export function BirthdaysCard({
         title={<Head concept={birthdaysConcept}>Geburtstage</Head>}
       >
         {hasBar ? (
-          <li className="flex min-h-14 items-center gap-2 px-4 py-2">
+          <li className="flex min-h-14 items-center gap-3 px-4 py-2">
             <span className="min-w-0 flex-1 text-[0.9375rem] leading-5 font-medium text-gray-900">
               {week.weekLabel}
             </span>
