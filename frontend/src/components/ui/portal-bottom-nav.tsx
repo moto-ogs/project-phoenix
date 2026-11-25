@@ -283,7 +283,7 @@ export function PortalBottomNav({
           className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-gray-50 via-gray-50/90 to-transparent"
         />
       ) : null}
-      <div className={card ? "relative px-3 pb-4" : "relative px-4 pb-4"}>
+      <div className="relative px-4 pb-4">
         <div
           className={
             card

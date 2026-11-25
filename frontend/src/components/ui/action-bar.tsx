@@ -77,7 +77,7 @@ export function ActionBar({
       data-action-bar=""
       className={cn(
         `app:flex fixed hidden ${Z_LAYER.nav} ${FIXED_LAYER_SHIFT}`,
-        !anchor && "tablet:mx-auto tablet:max-w-[42.5rem] inset-x-3",
+        !anchor && "tablet:mx-auto tablet:max-w-[42.5rem] inset-x-4",
         "moto-content-surface items-center gap-2 rounded-2xl border p-2",
       )}
       style={
