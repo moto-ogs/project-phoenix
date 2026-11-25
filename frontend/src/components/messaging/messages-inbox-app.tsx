@@ -21,6 +21,7 @@ import {
 } from "~/lib/date-helpers";
 import { type InboxThread, relationshipLabel } from "~/lib/parent-messages-api";
 import { useTenantAwarePath } from "~/lib/tenant-path";
+import { cn } from "~/lib/utils";
 
 /** Parameter der Auswahl in der Adresse (`/messages?unterhaltung=<id>`). */
 export const INBOX_SELECTION_PARAM = "unterhaltung";
@@ -45,11 +46,26 @@ export function MessagesInboxApp(
      * Daumennähe wie die ActionBar am Telefon.
      */
     listAction?: ReactNode;
+    /**
+     * Telefon: Suche und „Ungelesen“ als Kopf der Liste (in der Karte); so
+     * bleibt die Kopfkarte der Seite am kleinen Telefon flach.
+     */
+    header?: ReactNode;
+    /** Steht in der Karte, wenn Suche oder Filter nichts finden. */
+    empty?: ReactNode;
   }>,
 ) {
   // `useSearchParams` in der Auswahl braucht eine Suspense-Grenze.
   return (
-    <Suspense fallback={<InboxList threads={props.threads} />}>
+    <Suspense
+      fallback={
+        <InboxList
+          threads={props.threads}
+          header={props.header}
+          empty={props.empty}
+        />
+      }
+    >
       <InboxSplit {...props} />
     </Suspense>
   );
@@ -70,10 +86,14 @@ function InboxSplit({
   threads,
   renderDetail,
   listAction,
+  header,
+  empty,
 }: Readonly<{
   threads: readonly InboxThread[];
   renderDetail: (threadId: string) => ReactNode;
   listAction?: ReactNode;
+  header?: ReactNode;
+  empty?: ReactNode;
 }>) {
   // `selected` gibt es nur im Split; die Vorwahl wirkt auch nur dort, denn
   // ohne Split zeigt `SplitView` allein die Liste.
@@ -94,7 +114,13 @@ function InboxSplit({
     <SplitView
       list={
         <div ref={listRef}>
-          <InboxList threads={threads} rowProps={rowProps} active={active} />
+          <InboxList
+            threads={threads}
+            rowProps={rowProps}
+            active={active}
+            header={header}
+            empty={empty}
+          />
           {listAction ? (
             // Klebt unten in der eigenen Scroll-Spalte der Liste: über der
             // Pill, nie über dem Schreibfeld des Verlaufs rechts.
@@ -136,8 +162,12 @@ function InboxList({
   threads,
   rowProps,
   active = null,
+  header,
+  empty,
 }: Readonly<{
   threads: readonly InboxThread[];
+  header?: ReactNode;
+  empty?: ReactNode;
   rowProps?: RowProps;
   /** Im Split: die Unterhaltung, die rechts steht (auch vorgewählt). */
   active?: string | null;
@@ -148,6 +178,10 @@ function InboxList({
   const wide = layout === "tablet" && !isSplit;
   return (
     <Collection label="Unterhaltungen">
+      {header ? (
+        <div className="border-b border-gray-100 px-4 py-3">{header}</div>
+      ) : null}
+      {threads.length === 0 && empty ? empty : null}
       <CollectionList>
         {threads.map((thread) => {
           const href = tenantPath(`/messages/${thread.thread_id}`);
@@ -180,36 +214,51 @@ function InboxList({
                   decorative
                 />
               }
-              // Zwei Zeilen wie in Chat-Apps: Person samt Beziehung zum Kind,
-              // darunter die letzte Nachricht. Rechts Zeit und Ungelesen-Zahl.
+              // Zwei Zeilen wie in Chat-Apps. Breit (iPad hoch): Person samt
+              // Beziehung zum Kind, darunter die letzte Nachricht. Schmal
+              // (Telefon): die Person allein, darunter das Kind ganz und
+              // danach die gekürzte Nachricht – so bleibt die Zuordnung
+              // Eltern → Kind auch am kleinen Telefon lesbar.
               title={
                 <>
                   <span className={unread ? "font-semibold" : undefined}>
                     {thread.guardian_name}
                   </span>
-                  <span className="font-normal text-gray-500">
-                    {" · "}
-                    {wide ? (
-                      relation
-                    ) : (
-                      // Schmal: das Kind mit seinem Symbol (ein Kopf = Kind),
-                      // die Beziehung steht im Kopf des Verlaufs.
-                      <>
-                        <MotoConceptIcon
-                          concept={childrenConcept}
-                          size={14}
-                          className="mr-0.5 inline-block align-[-1px]"
-                        />
-                        {thread.student_name}
-                      </>
-                    )}
-                  </span>
+                  {wide ? (
+                    <span className="font-normal text-gray-500">
+                      {" · "}
+                      {relation}
+                    </span>
+                  ) : null}
                 </>
               }
               subtitle={
-                <span className={unread ? "text-gray-900" : undefined}>
-                  {last}
-                </span>
+                wide ? (
+                  <span className={unread ? "text-gray-900" : undefined}>
+                    {last}
+                  </span>
+                ) : (
+                  <span className="flex min-w-0 items-baseline gap-1">
+                    {/* Ein Kopf = Kind; die Beziehung steht im Kopf des
+                        Verlaufs. */}
+                    <span className="flex shrink-0 items-baseline font-medium text-gray-700">
+                      <MotoConceptIcon
+                        concept={childrenConcept}
+                        size={14}
+                        className="mr-0.5 inline-block self-center"
+                      />
+                      {thread.student_name}
+                    </span>
+                    <span
+                      className={cn(
+                        "min-w-0 truncate",
+                        unread && "text-gray-900",
+                      )}
+                    >
+                      · {last}
+                    </span>
+                  </span>
+                )
               }
               meta={
                 <span className="flex flex-col items-end gap-1">
