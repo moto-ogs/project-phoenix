@@ -18,7 +18,7 @@ export const CARD_SURFACE_PADDING = "compact:p-4 p-5 max-sm:p-4";
  * beim Antippen kurz ab (#7794), ohne den grauen iOS-Blitz.
  */
 export const CARD_HOVER =
-  "moto-hover-elevated [-webkit-tap-highlight-color:transparent] pointer-coarse:active:opacity-80";
+  "moto-hover-elevated app:[-webkit-tap-highlight-color:transparent] app:active:opacity-80";
 
 /**
  * Fokusring einer klickbaren Karte, in moto-blue für 3:1 Kontrast (#6565).

@@ -43,7 +43,7 @@ const DENSITY_CLASSES: Record<ListRowDensity, string> = {
  * der graue iOS-Blitz bleibt aus. Mit Maus ändert sich nichts.
  */
 const ROW_TAP_FEEDBACK =
-  "[-webkit-tap-highlight-color:transparent] pointer-coarse:active:bg-gray-200/70";
+  "app:[-webkit-tap-highlight-color:transparent] app:active:bg-gray-200/70";
 
 /** Fläche einer Listenzeile, geteilt von `ListRow` und `ListRowSkeleton`. */
 export function listRowClasses({
