@@ -170,6 +170,34 @@ describe("SWRServerSeed", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
+  it("loads in the browser when a claimed seed expires while its value is in flight", async () => {
+    const fetcher = vi.fn(async () => "browser grid");
+    let resolveValue!: (value: string) => void;
+    const value = new Promise<string>((resolve) => {
+      resolveValue = resolve;
+    });
+    const seed = seedOf([{ key: GRID, value }], {
+      builtAt: Date.now() - SERVER_SEED_MAX_AGE_MS + 1,
+    });
+
+    await act(async () => {
+      render(
+        <SWRServerSeed seed={seed} claims={[GRID]}>
+          <Reader name="grid" resourceKey={GRID} fetcher={fetcher} />
+        </SWRServerSeed>,
+      );
+    });
+    expect(fetcher).not.toHaveBeenCalled();
+
+    await act(async () => {
+      setTestClock(new Date(Date.now() + 2));
+      resolveValue("expired grid");
+    });
+
+    expect(await screen.findByText("grid: browser grid")).toBeInTheDocument();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it("claims a dependent reader from its cached source before the seed arrives", async () => {
     const source = render(
       <Reader name="source" resourceKey={GRID} fetcher={async () => GAPS} />,
