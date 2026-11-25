@@ -25,6 +25,9 @@ import { timeTrackingService } from "~/lib/time-tracking-api";
 const TERM_HINTS: Readonly<Record<string, string>> = {
   regenerationstag: "Zusätzlicher freier Tag zur Erholung",
   umwandlungstag: "Freier Tag statt eines Teils deiner Zulage",
+  // Wer im Urlaub krank wird, bekommt die Krankheitstage als Urlaub zurück.
+  "krank-urlaubstag": "Urlaubstag zurück, weil du im Urlaub krank warst",
+  "krank-urlaub": "Urlaubstage zurück, weil du im Urlaub krank warst",
 };
 
 function termHint(name: string): string | undefined {
@@ -61,6 +64,15 @@ export function OwnAllowancesCard({
   }
 
   if (app) {
+    // Nur Arten, die dich betreffen: mit Anspruch oder schon genutzt. Eine
+    // Liste aus lauter „Kein Anspruch“ sagt dir nichts.
+    const relevant = (allowances ?? []).filter(
+      ({ summary }) =>
+        summary.entitledDays > 0 ||
+        summary.takenDays > 0 ||
+        summary.reservedDays > 0,
+    );
+    if (!load.failure && relevant.length === 0) return null;
     return (
       <SectionCard
         title="Weitere freie Tage"
@@ -71,7 +83,7 @@ export function OwnAllowancesCard({
           <LoadErrorAlert error={load.error} />
         ) : (
           <ul className="-mb-1 divide-y divide-gray-100">
-            {(allowances ?? []).map((entry) => (
+            {relevant.map((entry) => (
               <AppAllowanceRow
                 key={entry.summary.absenceTypeId}
                 entry={entry}
