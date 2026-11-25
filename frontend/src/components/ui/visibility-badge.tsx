@@ -6,6 +6,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { Tooltip } from "~/components/ui/tooltip";
 import { TINT_CLASSES } from "~/lib/kit-palette";
 import { cn } from "~/lib/utils";
+import { TOUCH_HIT_AREA } from "./button-styles";
 
 const AUDIENCES = {
   parents: {
@@ -58,7 +59,9 @@ export function VisibilityBadge({
   return (
     <Tooltip
       content={hint}
-      className={cn("align-middle", className)}
+      // Am Finger (#8070) 44 × 44 px Trefferfläche für den Hinweis; mit der
+      // Maus ändert sich nichts.
+      className={cn("align-middle", TOUCH_HIT_AREA, className)}
       bubbleClassName={bubbleClassName}
     >
       {compact ? (
