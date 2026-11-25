@@ -420,6 +420,7 @@ func TestFullProductionRouterGolden(t *testing.T) {
 		t.Run("contracts", func(t *testing.T) {
 			t.Run("student detail read budget", func(t *testing.T) { checkStudentDetailReadBudget(t, api) })
 			t.Run("own time tracking read views", func(t *testing.T) { checkOwnTimeViews(t, api) })
+			t.Run("terminal-only stamping", func(t *testing.T) { checkTerminalOnlyStamping(t, api) })
 			t.Run("supervision context", func(t *testing.T) { checkSupervisionContext(t, api) })
 			t.Run("student form saves the version its detail read", func(t *testing.T) { checkStudentFormSavesTheVersionItsDetailRead(t, api) })
 			t.Run("readiness", func(t *testing.T) {

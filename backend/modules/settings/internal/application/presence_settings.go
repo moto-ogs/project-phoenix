@@ -48,6 +48,18 @@ func (s PresenceSettings) EnforcePlannedStart(ctx context.Context) (bool, error)
 	return s.source.ResolveBool(ctx, configModels.KeyTimeTrackingEnforcePlannedStart)
 }
 
+// TerminalOnlyStamping reports whether staff without the right to manage
+// working time stamp only with their chip at the NFC terminal (#8024). The
+// switch has no effect while the school has not booked NFC-Anwesenheit:
+// without a terminal it would leave these staff members no way to stamp.
+func (s PresenceSettings) TerminalOnlyStamping(ctx context.Context) (bool, error) {
+	enabled, err := s.source.ResolveBool(ctx, configModels.KeyTimeTrackingTerminalOnlyStamping)
+	if err != nil || !enabled {
+		return false, err
+	}
+	return s.source.ResolveBool(ctx, configModels.KeyModuleNFCAnwesenheit)
+}
+
 // PlannedStartToleranceMinutes is how many minutes before the planned shift
 // start a check-in opens while the planned start is enforced.
 func (s PresenceSettings) PlannedStartToleranceMinutes(ctx context.Context) (int, error) {

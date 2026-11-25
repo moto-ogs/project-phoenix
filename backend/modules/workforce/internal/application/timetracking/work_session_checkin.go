@@ -31,7 +31,7 @@ func (s *workSessionService) CheckInOn(ctx context.Context, staffID int64, _ cal
 // the daily history, in shift and deviation lookups, and in every total built
 // from the date column.
 func (s *workSessionService) checkIn(ctx context.Context, staffID int64, status, source, reason string, enforceDeviationGate bool) (*WorkSession, error) {
-	if err := validateCheckInChannel(status, source); err != nil {
+	if err := s.admitCheckInChannel(ctx, staffID, status, source); err != nil {
 		return nil, err
 	}
 	if err := s.lockStaffBalanceWrites(ctx, staffID); err != nil {
@@ -87,6 +87,19 @@ func (s *workSessionService) checkIn(ctx context.Context, staffID int64, status,
 
 	s.broadcastTimeTrackingChanged(ctx)
 	return session, nil
+}
+
+// admitCheckInChannel validates status and channel and closes the app channel
+// for terminal-only staff (#8024). The automatic check-in never gets here for
+// them: EnsureCheckedIn skips it.
+func (s *workSessionService) admitCheckInChannel(ctx context.Context, staffID int64, status, source string) error {
+	if err := validateCheckInChannel(status, source); err != nil {
+		return err
+	}
+	if source != WorkSessionSourceApp {
+		return nil
+	}
+	return s.ensureAppStampAllowed(ctx, staffID)
 }
 
 // validateCheckInChannel accepts the two work statuses and the two stamping
@@ -293,6 +306,18 @@ func (s *workSessionService) EnsureCheckedIn(ctx context.Context, staffID int64,
 		return nil, fmt.Errorf("failed to check external caregiver: %w", err)
 	}
 	if external {
+		return nil, nil
+	}
+
+	// Terminal-only staff get a block only by scanning their own chip (#8024).
+	// A supervision or attendance action is no such scan, neither in the app
+	// nor at a kiosk that only authenticated the device, so it opens none;
+	// the action itself goes on. Asked last, like the external caregiver.
+	restricted, err := s.TerminalOnlyStamping(ctx, staffID)
+	if err != nil {
+		return nil, err
+	}
+	if restricted {
 		return nil, nil
 	}
 

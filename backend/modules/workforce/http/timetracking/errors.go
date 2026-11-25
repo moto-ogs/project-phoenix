@@ -76,6 +76,10 @@ var serviceErrorRules = []common.ErrorRule{
 	{Target: workforce.ErrNoSessionForToday, Render: notFoundWithCode(common.CodeWorkforceNoSessionForToday)},
 	{Target: workforce.ErrSessionNotFound, Render: notFoundWithCode(common.CodeWorkforceSessionNotFound)},
 	{Match: isAny(workforce.ErrSessionUpdateNotOwned, workforce.ErrSessionNotOwned), Render: forbiddenWithCode(common.CodeWorkforceSessionNotOwned)},
+	// Terminal-only stamping (#8024): the school keeps stamps and changes of
+	// recorded times away from the app for this staff member.
+	{Target: workforce.ErrTerminalOnlyStamping, Render: forbiddenWithCode(common.CodeWorkforceTerminalOnlyStamping)},
+	{Target: workforce.ErrTerminalOnlyTimeEdit, Render: forbiddenWithCode(common.CodeWorkforceTerminalOnlyTimeEdit)},
 	// Only these Validate() failures describe the recorded times; a missing
 	// staff ID or creator is a server fault and stays a 500.
 	{Match: isAny(workforce.ErrSessionTimeOrder, workforce.ErrBreakMinutesNegative, workforce.ErrSessionCheckoutOrder, workforce.ErrBreakDurationNegative), Render: invalidWithCode(common.CodeWorkforceSessionTimesInvalid)},

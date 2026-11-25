@@ -5804,9 +5804,10 @@ export const nfcWorkTimeTopic = function nfcWorkTimeTopic(
       "Kinderarmbänder und nicht zugewiesene Armbänder funktionieren für die persönliche Arbeitszeit nicht.",
       "Eine laufende Pause wird als `In Pause` angezeigt.",
       "Deine Schule kann das Einstempeln erst kurz vor deiner Schicht erlauben. Dann zeigt das Tablet, ab wann es geht.",
+      "Deine Schule kann das Stempeln in der moto-App ausschalten. Dann stempelst du nur hier am Tablet. Die Leitung stempelt weiter in der App.",
     ],
     notes: [
-      "Am Tablet gibt es keine Wahl des Arbeitsorts. Wer dort einstempelt, ist in der OGS. Arbeitest du unterwegs, stemple in der moto-App unter `Zeiterfassung` ein.",
+      "Am Tablet gibt es keine Wahl des Arbeitsorts. Wer dort einstempelt, ist in der OGS. Arbeitest du unterwegs, stemple in der moto-App unter `Zeiterfassung` ein. Geht das an deiner Schule nicht, trägt die Leitung die Zeit nach.",
     ],
     troubleshooting: HELP_TOPICS.nfcProblem,
     related: [HELP_TOPICS.trackWorkTime, HELP_TOPICS.tagAssignment],
@@ -8762,6 +8763,7 @@ export const settingsGuideTopic = function settingsGuideTopic(): HelpTopic {
           "`Kinderfotos`: Fotos bei den Kindern. Nur mit Einwilligung der Eltern. Beim Ausschalten löscht moto alle Fotos sofort. Auch alle Foto-Einwilligungen enden. Nach dem Wiedereinschalten braucht jedes Foto eine neue Einwilligung.",
           "`Angebote auf der Kinderkarte`: Die Kinderkarten unter `Gruppen` zeigen die Angebote des Tages mit Uhrzeit.",
           "`Automatisch ausstempeln`: moto wartet nach Dienstende die eingestellte Zeit. Dann stempelt es aus. Das gilt nur bei einem geplanten Dienst.",
+          "`Betreuer stempeln nur am NFC-Tablet`: Wer keine Zeiten anderer verwalten darf, stempelt nur noch mit dem eigenen Armband am Tablet. In der App geht das für diese Personen nicht mehr. Die Leitung stempelt weiter in der App und trägt fehlende Zeiten nach, zum Beispiel für `Unterwegs`. Den Schalter gibt es nur mit NFC-Tablets.",
           "`Wegpackzeit beim Ausstempeln (Minuten)`: Diese Minuten zählt moto bei jedem Ausstempeln dazu, etwa für das Aufräumen. Nicht beim Pausenbeginn und nicht beim automatischen Ausstempeln.",
           "`Arbeitszeit runden` und `Wie gerundet wird`: moto rundet die Dauer jedes Arbeitsblocks. Die Reihenfolge: gestempelte Dauer, plus Wegpackzeit, dann runden, dann Pause abziehen. Die gestempelten Uhrzeiten bleiben sichtbar.",
           "Wegpackzeit und Rundung gelten für Arbeitsblöcke, die nach der Änderung enden. Frühere Tage bleiben, wie sie sind.",
@@ -11293,6 +11295,7 @@ export const trackWorkTimeTopic = function trackWorkTimeTopic(): HelpTopic {
     ],
     differences: [
       "Steht dort `Bitte Status wählen`? Dann fehlt noch der Arbeitsort. Wähle zuerst `In der OGS` oder `Unterwegs`.",
+      "Steht in der `Stempeluhr` `Du stempelst am NFC-Tablet`? Dann stempelst du an deiner Schule nur mit deinem Armband am Tablet. Deine Zeiten siehst du weiter hier. Eine falsche Zeit korrigiert die Leitung.",
       "Eine geplante Schicht steht oberhalb der Stempeluhr. Sie startet die Zeiterfassung nicht automatisch.",
       "Bei einer deutlichen Abweichung von deiner geplanten Schicht kann moto nach einem Grund fragen.",
       "Deine Schule kann das Einstempeln erst kurz vor deiner Schicht erlauben. Dann zeigt moto, ab wann es geht.",

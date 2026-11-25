@@ -50,6 +50,7 @@ export function trackWorkTimeTopic(): HelpTopic {
     ],
     differences: [
       "Steht dort `Bitte Status wählen`? Dann fehlt noch der Arbeitsort. Wähle zuerst `In der OGS` oder `Unterwegs`.",
+      "Steht in der `Stempeluhr` `Du stempelst am NFC-Tablet`? Dann stempelst du an deiner Schule nur mit deinem Armband am Tablet. Deine Zeiten siehst du weiter hier. Eine falsche Zeit korrigiert die Leitung.",
       "Eine geplante Schicht steht oberhalb der Stempeluhr. Sie startet die Zeiterfassung nicht automatisch.",
       "Bei einer deutlichen Abweichung von deiner geplanten Schicht kann moto nach einem Grund fragen.",
       "Deine Schule kann das Einstempeln erst kurz vor deiner Schicht erlauben. Dann zeigt moto, ab wann es geht.",
