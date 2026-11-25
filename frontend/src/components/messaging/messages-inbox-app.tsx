@@ -77,7 +77,7 @@ function InboxSplit({
     if (!selected || !hasThreads) return;
     listRef.current
       ?.querySelector('[data-selected="true"]')
-      ?.scrollIntoView({ block: "nearest" });
+      ?.scrollIntoView({ block: "center" });
     // Nur beim Öffnen und bei neuer Auswahl, nicht bei jedem Neuladen.
   }, [selected, hasThreads]);
   return (
