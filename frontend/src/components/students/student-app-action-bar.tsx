@@ -99,6 +99,7 @@ export function StudentAppActionBar(props: StudentAppActionBarProps) {
   return (
     <>
       <ActionBar
+        column="detail"
         secondary={
           second || rest.length > 0 ? (
             <div className="flex gap-2">

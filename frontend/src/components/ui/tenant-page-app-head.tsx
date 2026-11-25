@@ -5,6 +5,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -104,7 +105,12 @@ export function AppTenantHead({
   printHideHeader = false,
 }: AppHeadProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const scrolledAway = useScrolledAway(headRef);
+  // In der Detailspalte einer `SplitView` (iPad quer) scrollt die Spalte,
+  // nicht die Seite: Kopfkarte und Leiste kleben oben an der Spalte, die
+  // schmale Kopfkarte über die ganze Breite entfällt.
+  const splitHeadHeight = useSplitDetailHeadHeight(headRef);
+  const inSplitDetail = splitHeadHeight !== null;
+  const scrolledAway = useScrolledAway(headRef) && !inSplitDetail;
   const toolbarRef = useRef<HTMLDivElement>(null);
   const veiled = useStuck(toolbarRef, scrolledAway);
   const hasMenuEntries = (overflowMenu?.length ?? 0) > 0;
@@ -112,9 +118,10 @@ export function AppTenantHead({
   const hasMenu = hasMenuEntries || info != null || actions != null;
   const hasToolbar = tabs != null || toolbar != null;
   useStickyOffset(toolbarRef, scrolledAway);
-  const stickyTop = scrolledAway
+  let stickyTop = scrolledAway
     ? `calc(${TOP_GAP} + ${COMPACT_HEIGHT_PX + 8}px)`
     : TOP_GAP;
+  if (inSplitDetail) stickyTop = `${splitHeadHeight + 6}px`;
 
   const menuButton = hasMenu ? (
     <Button
@@ -136,6 +143,9 @@ export function AppTenantHead({
         {...APP_HEAD_ATTR}
         className={cn(
           "moto-content-surface rounded-2xl border px-2 py-0.5",
+          // Die Fuge zur Leiste darunter deckt der Seitengrund.
+          inSplitDetail &&
+            `sticky top-0 ${Z_LAYER.nav} after:absolute after:inset-x-0 after:top-full after:h-2 after:bg-gray-50! after:content-['']`,
           printHideHeader && "print:hidden",
         )}
       >
@@ -334,6 +344,30 @@ function useStuck(
     return () => window.removeEventListener("scroll", update);
   }, [toolbarRef]);
   return stuck || scrolledAway;
+}
+
+/**
+ * Höhe der Kopfkarte, wenn sie in der Detailspalte einer `SplitView` steht
+ * (sonst `null`). Darunter klebt die Leiste.
+ */
+function useSplitDetailHeadHeight(
+  ref: RefObject<HTMLElement | null>,
+): number | null {
+  const [height, setHeight] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (node?.closest("[data-split-detail]") == null) {
+      setHeight(null);
+      return undefined;
+    }
+    const update = () => setHeight(node.offsetHeight);
+    update();
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    observer?.observe(node);
+    return () => observer?.disconnect();
+  }, [ref]);
+  return height;
 }
 
 /** Ob die Kopfkarte ganz aus dem Bild gescrollt ist. */
