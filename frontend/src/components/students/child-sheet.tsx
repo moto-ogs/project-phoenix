@@ -25,6 +25,7 @@ import { dailyDepartureLabelForStudent } from "~/components/students/search-stud
 import {
   CHILD_DAY_TONE_BADGE,
   childDayStatus,
+  type ChildDayStatus,
 } from "~/components/students/child-day-status";
 import {
   studentQuickActionHref,
@@ -44,14 +45,24 @@ export interface ChildSheetProps {
   /** Das Kind aus der Liste; `null` schließt das Blatt. */
   readonly student: Student | null;
   readonly onOpenChange: (open: boolean) => void;
-  /** Adresse der Akte samt Rückweg (`/students/7?from=…`). */
-  readonly href: string;
+  /**
+   * Adresse der Akte samt Rückweg (`/students/7?from=…`). Ohne Adresse (kein
+   * Recht, die Akte zu lesen) fehlen der Weg zur Akte und die Schnellaktionen.
+   */
+  readonly href?: string;
   /** `false` zeigt die Planung eines anderen Tages statt des Orts. */
   readonly isToday?: boolean;
   /** Klasse, wie die Liste sie nennt (Feriengäste). */
   readonly classLabel?: string | null | undefined;
   /** Aktionen der aufrufenden Liste (z. B. „Raum verlassen“). */
   readonly contextActions?: ReactNode;
+  /**
+   * Schnellaktionen der Akte (Anmelden, Abmelden, Krank, Entschuldigt).
+   * `false`, wenn die Liste eigene Aktionen für denselben Schritt hat.
+   */
+  readonly quickActions?: boolean;
+  /** Eigener Status statt des Tagesstatus; `null` blendet ihn aus (lädt noch). */
+  readonly status?: ChildDayStatus | null;
 }
 
 /** Das Blatt: halbe Höhe am Telefon, Karte am iPad. */
@@ -62,6 +73,8 @@ export function ChildSheet({
   isToday = true,
   classLabel,
   contextActions,
+  quickActions = true,
+  status,
 }: ChildSheetProps) {
   return (
     <OverlaySheet
@@ -70,20 +83,22 @@ export function ChildSheet({
       title={student ? studentName(student) : "Kind"}
       closeLabel="Kind-Blatt schließen"
       footer={
-        <ButtonLink
-          href={href}
-          // Das Blatt trägt einen eigenen Verlaufseintrag (gleiche Adresse
-          // wie die Liste). Die Akte ersetzt ihn: Zurück führt dann direkt
-          // auf die Liste mit ihrer Scroll-Position, nicht auf einen leeren
-          // Blatt-Eintrag.
-          replace
-          variant="primary"
-          size="md"
-          className="flex-1"
-          tooltip="Öffnet die ganze Akte mit allen Angaben."
-        >
-          Ganze Akte öffnen
-        </ButtonLink>
+        href ? (
+          <ButtonLink
+            href={href}
+            // Das Blatt trägt einen eigenen Verlaufseintrag (gleiche Adresse
+            // wie die Liste). Die Akte ersetzt ihn: Zurück führt dann direkt
+            // auf die Liste mit ihrer Scroll-Position, nicht auf einen leeren
+            // Blatt-Eintrag.
+            replace
+            variant="primary"
+            size="md"
+            className="flex-1"
+            tooltip="Öffnet die ganze Akte mit allen Angaben."
+          >
+            Ganze Akte öffnen
+          </ButtonLink>
+        ) : undefined
       }
     >
       {student ? (
@@ -93,6 +108,8 @@ export function ChildSheet({
           isToday={isToday}
           classLabel={classLabel}
           contextActions={contextActions}
+          quickActions={quickActions}
+          status={status}
           replaceEntry
         />
       ) : null}
@@ -117,20 +134,30 @@ export function ChildSummary({
   isToday = true,
   classLabel,
   contextActions,
+  quickActions = true,
+  status: statusOverride,
   header = false,
   replaceEntry = false,
 }: Readonly<{
   student: Student;
-  href: string;
+  /** Ohne Adresse keine Schnellaktionen (sie öffnen die Akte). */
+  href?: string;
   isToday?: boolean;
   classLabel?: string | null;
   contextActions?: ReactNode;
+  /** Schnellaktionen der Akte zeigen (siehe `ChildSheet`). */
+  quickActions?: boolean;
+  /** Eigener Status statt des Tagesstatus; `null` blendet ihn aus. */
+  status?: ChildDayStatus | null;
   /** Name und Foto oben (Detail neben der Liste; das Blatt hat einen Titel). */
   header?: boolean;
   /** Im Blatt: Die Akte ersetzt dessen Verlaufseintrag (siehe `ChildSheet`). */
   replaceEntry?: boolean;
 }>) {
-  const status = childDayStatus(student, isToday);
+  const status =
+    statusOverride === undefined
+      ? childDayStatus(student, isToday)
+      : statusOverride;
   const fullAccess = student.has_full_access !== false;
   // Der Raum steht in der Liste nicht (dort zählt die Gehzeit), hier schon.
   const room = isToday
@@ -160,12 +187,14 @@ export function ChildSummary({
           </h2>
         </div>
       ) : null}
-      <StatusBadge
-        label={status.value}
-        tone={CHILD_DAY_TONE_BADGE[status.tone]}
-      />
+      {status ? (
+        <StatusBadge
+          label={status.value}
+          tone={CHILD_DAY_TONE_BADGE[status.tone]}
+        />
+      ) : null}
       {contextActions}
-      {isToday ? (
+      {isToday && quickActions && href ? (
         <ChildQuickActions
           student={student}
           href={href}
