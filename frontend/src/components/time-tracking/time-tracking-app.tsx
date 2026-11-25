@@ -145,7 +145,14 @@ export function AppClockPanel(props: AppClockPanelProps) {
   let detail: string | null = planned;
   if (state === "working" && checkInTime) {
     headline = `Seit ${formatTime(checkInTime)}`;
-    detail = breakMinutes > 0 ? `Pause bisher ${breakMinutes} min` : planned;
+    // Kurz, damit es auch am kleinen Telefon in die Zeile passt.
+    const lastShift = plannedShifts[plannedShifts.length - 1];
+    detail =
+      breakMinutes > 0
+        ? `Pause bisher ${breakMinutes} min`
+        : lastShift
+          ? `Dienst bis ${lastShift.endTime}`
+          : null;
   } else if (state === "break") {
     headline =
       breakCountdownSecs === null
