@@ -116,6 +116,8 @@ export function AppTenantHead({
   const inSplitDetail = splitHeadHeight !== null;
   const scrolledAway = useScrolledAway(headRef) && !inSplitDetail;
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const statsRef = useRef<HTMLDivElement>(null);
+  const statsScroll = useScrollsSideways(statsRef);
   const veiled = useStuck(toolbarRef, scrolledAway);
   const hasMenuEntries = (overflowMenu?.length ?? 0) > 0;
   // „…“ nur, wenn das Blatt etwas zeigt: Aktionen, Menüeinträge oder Info.
@@ -204,10 +206,11 @@ export function AppTenantHead({
             {/* Scrollt die Zeile seitlich, erreicht man sie auch per Tastatur
                 (axe `scrollable-region-focusable`). */}
             <div
-              role="region"
-              aria-label="Kennzahlen"
-              // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the horizontally scrolling chip row holds no control and must be reachable by keyboard (axe scrollable-region-focusable); it is a labelled region
-              tabIndex={0}
+              ref={statsRef}
+              role={statsScroll ? "region" : undefined}
+              aria-label={statsScroll ? "Kennzahlen" : undefined}
+              // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the chip row holds no control; only while it scrolls sideways it joins the tab order as a labelled region (axe scrollable-region-focusable)
+              tabIndex={statsScroll ? 0 : undefined}
               className={cn(
                 "-mx-2 [scrollbar-width:none] overflow-x-auto pr-2 pb-1.5 text-sm text-gray-600 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none",
                 backLink ? "pl-13" : "pl-4",
@@ -692,4 +695,21 @@ function useScrollEdges(ref: RefObject<HTMLElement | null>, active: string) {
     };
   }, [ref, active]);
   return edges;
+}
+
+/** Ob ein Element seitlich scrollt (Inhalt breiter als die Fläche). */
+function useScrollsSideways(ref: RefObject<HTMLElement | null>): boolean {
+  const [scrolls, setScrolls] = useState(false);
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element || typeof ResizeObserver === "undefined") return undefined;
+    const measure = () =>
+      setScrolls(element.scrollWidth > element.clientWidth + 1);
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    if (element.firstElementChild) observer.observe(element.firstElementChild);
+    measure();
+    return () => observer.disconnect();
+  }, [ref]);
+  return scrolls;
 }
