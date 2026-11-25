@@ -1000,18 +1000,21 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
   const isApp = useIsApp();
   // Im Chat-Verlauf ohne Pill (#8070, Register `hidesPill`).
   const pillHidden = usePillHidden();
+  // Das Reiter-Gedächtnis gilt nur am Telefon; iPad und Desktop behalten die
+  // heutige Pfad-Regel.
+  const activeTab = isApp ? pillTabs.activeHref : null;
   const isMainItemActive = (item: NavItem) =>
-    pillTabs.activeHref === null
+    activeTab === null
       ? isActiveRoute(item.href, item.activePaths)
-      : pillTabs.activeHref === item.href;
+      : activeTab === item.href;
 
   // Check if any additional nav item is active
   const isAnyAdditionalNavActive =
-    pillTabs.activeHref === null
+    activeTab === null
       ? displayAdditionalItems.some((item) =>
           isActiveRoute(item.href, item.activePaths),
         )
-      : pillTabs.activeHref === MORE_TAB;
+      : activeTab === MORE_TAB;
 
   // Die Fläche liegt unter dem aktiven Reiter oder, wenn das Ziel im Menü
   // steht, unter „Mehr"; ohne aktives Ziel fehlt sie.
@@ -1088,9 +1091,10 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
                 size="sm"
                 max={NOTIFICATIONS_BADGE_MAX}
                 ariaLabel={`${moreBadgeCount} neu für dich`}
-                // Außen oben rechts am Symbol: auch „9+“ lässt die Striche
-                // frei, im aktiven Reiter steht es über dem Wort.
-                className="absolute -top-3.5 left-4"
+                // Am Telefon außen oben rechts am Symbol: auch „9+“ lässt die
+                // Striche frei, im aktiven Reiter steht es über dem Wort.
+                // iPad und Desktop behalten die heutige Lage.
+                className="app:-top-3.5 app:right-auto app:left-4 absolute -top-1 -right-2"
               />
             ) : null,
           paddingClassName: ITEM_PADDING,
@@ -1377,9 +1381,11 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
           return (
             <PortalBottomNavLink
               key={item.href}
-              href={pillTabs.hrefFor(item.href, rootHref)}
-              onClick={(event) =>
-                pillTabs.onTabClick(item.href, rootHref, event)
+              href={isApp ? pillTabs.hrefFor(item.href, rootHref) : rootHref}
+              onClick={
+                isApp
+                  ? (event) => pillTabs.onTabClick(item.href, rootHref, event)
+                  : undefined
               }
               ref={(el: HTMLAnchorElement | null) => {
                 navRefs.current[index] = el;
