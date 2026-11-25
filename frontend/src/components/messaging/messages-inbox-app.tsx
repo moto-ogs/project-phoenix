@@ -100,7 +100,7 @@ function InboxSplit({
             // Pill, nie über dem Schreibfeld des Verlaufs rechts.
             <div
               data-split-list-action=""
-              className={`moto-app-backdrop sticky bottom-0 ${Z_LAYER.sticky} pt-2`}
+              className={`sticky bottom-0 ${Z_LAYER.sticky} pt-2`}
             >
               <SectionCard padding="none" className="p-2">
                 {listAction}

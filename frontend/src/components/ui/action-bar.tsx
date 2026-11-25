@@ -72,52 +72,38 @@ export function ActionBar({
   const anchor = useColumnAnchor(column, isSplit);
   if (resolved && !isApp) return null;
   return (
-    <>
-      {/* Deckende Zone von der Leiste bis zum unteren Rand: Zwischen Leiste
-          und Pill scheint keine Liste durch. Oben läuft sie weich aus. */}
-      <div
-        aria-hidden="true"
-        data-action-bar-backdrop=""
-        className={`moto-app-backdrop ${anchor ? "" : "app:block"} pointer-events-none fixed inset-x-0 -bottom-8 hidden ${Z_LAYER.nav} ${FIXED_LAYER_SHIFT} [mask-image:linear-gradient(to_bottom,transparent,black_0.75rem)]`}
-        style={{
-          // 2 rem unter den Rand: Die Zone reicht auch bei verschobenem
-          // Fenster (Tastatur, Ansicht) bis ganz unten.
-          height: `calc(${ABOVE_PILL} + var(${ACTION_BAR_SPACE_VAR}, 4.5rem) + 2.5rem)`,
-        }}
-      />
-      <div
-        ref={barRef}
-        data-action-bar=""
-        className={cn(
-          `app:flex fixed hidden ${Z_LAYER.nav} ${FIXED_LAYER_SHIFT}`,
-          !anchor && "tablet:mx-auto tablet:max-w-[35rem] inset-x-3",
-          "moto-content-surface items-center gap-2 rounded-2xl border p-2",
-        )}
-        style={
-          anchor
-            ? { bottom: ABOVE_PILL, left: anchor.left, width: anchor.width }
-            : { bottom: ABOVE_PILL }
-        }
-      >
-        {status ? (
-          <span
-            role="status"
-            className="tablet:text-base min-w-0 flex-1 truncate px-2 text-sm font-medium text-gray-700"
-          >
-            {status}
-          </span>
-        ) : null}
-        {secondary ? <div className="flex shrink-0">{secondary}</div> : null}
-        <div
-          className={cn(
-            "flex min-w-0 gap-2 [&>*]:flex-1",
-            status ? "shrink-0" : "flex-1",
-          )}
+    <div
+      ref={barRef}
+      data-action-bar=""
+      className={cn(
+        `app:flex fixed hidden ${Z_LAYER.nav} ${FIXED_LAYER_SHIFT}`,
+        !anchor && "tablet:mx-auto tablet:max-w-[42.5rem] inset-x-3",
+        "moto-content-surface items-center gap-2 rounded-2xl border p-2",
+      )}
+      style={
+        anchor
+          ? { bottom: ABOVE_PILL, left: anchor.left, width: anchor.width }
+          : { bottom: ABOVE_PILL }
+      }
+    >
+      {status ? (
+        <span
+          role="status"
+          className="tablet:text-base min-w-0 flex-1 truncate px-2 text-sm font-medium text-gray-700"
         >
-          {children}
-        </div>
+          {status}
+        </span>
+      ) : null}
+      {secondary ? <div className="flex shrink-0">{secondary}</div> : null}
+      <div
+        className={cn(
+          "flex min-w-0 gap-2 [&>*]:flex-1",
+          status ? "shrink-0" : "flex-1",
+        )}
+      >
+        {children}
       </div>
-    </>
+    </div>
   );
 }
 
