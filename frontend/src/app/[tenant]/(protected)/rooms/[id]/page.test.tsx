@@ -8,7 +8,6 @@ import RoomDetailPage from "./page-content";
 const {
   searchParams,
   pushMock,
-  replaceMock,
   useRoomDetailMock,
   presenceModeState,
   serviceUpdateMock,
@@ -25,7 +24,6 @@ const {
 } = vi.hoisted(() => ({
   searchParams: new URLSearchParams(),
   pushMock: vi.fn(),
-  replaceMock: vi.fn(),
   useRoomDetailMock: vi.fn(),
   presenceModeState: { mode: "detailed" as string },
   serviceUpdateMock: vi.fn(() => Promise.resolve({})),
@@ -46,7 +44,7 @@ vi.mock("next-auth/react", () => ({ useSession: vi.fn() }));
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "7" }),
   usePathname: () => "/rooms/7",
-  useRouter: () => ({ replace: replaceMock }),
+  useRouter: () => ({ replace: vi.fn() }),
   useSearchParams: () => {
     if (suspendSearchParamsState.value) throw new Promise(() => {});
     return searchParams;
@@ -274,6 +272,7 @@ function mockSession(permissions: string[], roles: string[] = []) {
 describe("RoomDetailPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.history.replaceState(null, "", "/rooms/7");
     searchParams.delete("from");
     searchParams.delete("tab");
     searchParams.delete("d");
@@ -420,9 +419,9 @@ describe("RoomDetailPage", () => {
     render(<RoomDetailPage />);
 
     fireEvent.click(screen.getByRole("tab", { name: "Stammdaten" }));
-    expect(replaceMock).toHaveBeenCalledWith("/rooms/7?tab=stammdaten", {
-      scroll: false,
-    });
+    expect(window.location.pathname + window.location.search).toBe(
+      "/rooms/7?tab=stammdaten",
+    );
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() => {
@@ -498,9 +497,8 @@ describe("RoomDetailPage", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "Stammdaten" }));
 
-    expect(replaceMock).toHaveBeenCalledWith(
+    expect(window.location.pathname + window.location.search).toBe(
       "/rooms/7?from=%2Fdatabase%2Frooms%3FgroupBy%3Dfloor&tab=stammdaten",
-      { scroll: false },
     );
   });
 
@@ -680,9 +678,9 @@ describe("RoomDetailPage", () => {
     render(<RoomDetailPage />);
 
     fireEvent.click(screen.getByRole("tab", { name: "Plan" }));
-    expect(replaceMock).toHaveBeenCalledWith("/rooms/7?tab=plan", {
-      scroll: false,
-    });
+    expect(window.location.pathname + window.location.search).toBe(
+      "/rooms/7?tab=plan",
+    );
   });
 
   it("hides the Plan tab without schedules:read", () => {
@@ -729,9 +727,9 @@ describe("RoomDetailPage", () => {
     render(<RoomDetailPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Tag" }));
-    expect(replaceMock).toHaveBeenCalledWith("/rooms/7?tab=plan&view=tag", {
-      scroll: false,
-    });
+    expect(window.location.pathname + window.location.search).toBe(
+      "/rooms/7?tab=plan&view=tag",
+    );
   });
 
   it("drops the plan parameters when leaving the Plan tab", () => {
@@ -742,9 +740,9 @@ describe("RoomDetailPage", () => {
     render(<RoomDetailPage />);
 
     fireEvent.click(screen.getByRole("tab", { name: "Stammdaten" }));
-    expect(replaceMock).toHaveBeenCalledWith("/rooms/7?tab=stammdaten", {
-      scroll: false,
-    });
+    expect(window.location.pathname + window.location.search).toBe(
+      "/rooms/7?tab=stammdaten",
+    );
   });
 
   it("downloads the room's plan of the shown week as PDF", async () => {

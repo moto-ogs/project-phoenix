@@ -7,8 +7,11 @@ import type { PortalSessionSnapshot } from "~/lib/portal-session-snapshot.server
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { messageKeys, weekProtocolKeys } from "~/lib/swr/portal-keys";
 import { groupKeys } from "~/lib/swr/groups-keys";
+import { roomKeys } from "~/lib/swr/rooms-keys";
 import type { ServerSeed } from "~/lib/swr/server-seed";
 import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock-instant";
+import { buildRoomResponse } from "~/test/fixtures/rooms";
+import { buildBackendStudent } from "~/test/fixtures/students";
 
 const state = vi.hoisted(() => ({
   snapshot: null as PortalSessionSnapshot | null,
@@ -45,10 +48,12 @@ vi.mock("./care-offerings/page-content", () => ({ default: () => null }));
 vi.mock("./messages/groups/page-content", () => ({ default: () => null }));
 vi.mock("./wochenprotokolle/page-content", () => ({ default: () => null }));
 vi.mock("./ogs-groups/page-content", () => ({ default: () => null }));
+vi.mock("./rooms/[id]/page-content", () => ({ default: () => null }));
 
 import CareOfferingsPage from "./care-offerings/page";
 import GroupMessagesPage from "./messages/groups/page";
 import OGSGroupPage from "./ogs-groups/page";
+import RoomDetailPage from "./rooms/[id]/page";
 import { TenantRouteSeed } from "./tenant-route-seed";
 import WeekProtocolsPage from "./wochenprotokolle/page";
 
@@ -94,6 +99,61 @@ beforeEach(() => {
 });
 
 describe("tenant route seeds", () => {
+  it("loads the room's slim student roster after room confirmation and only sends card fields", async () => {
+    setSession(["rooms:read", "users:read"]);
+    state.send.mockImplementation(async (path: string) => {
+      if (path === "/api/rooms/7") {
+        return Response.json({
+          status: "success",
+          data: buildRoomResponse({ id: "7" }),
+        });
+      }
+      if (path === "/api/rooms/7/history") {
+        return Response.json({ status: "success", data: [] });
+      }
+      const url = new URL(path, "http://localhost");
+      expect(url.pathname).toBe("/api/students/");
+      expect(Object.fromEntries(url.searchParams)).toEqual({
+        room_id: "7",
+        view: "slim",
+        page_size: "200",
+      });
+      return Response.json({
+        status: "success",
+        data: [buildBackendStudent({ id: "4", sick: true })],
+        pagination: {
+          current_page: 1,
+          page_size: 200,
+          total_pages: 1,
+          total_records: 1,
+        },
+      });
+    });
+    const seed = await readSeed(
+      RoomDetailPage({
+        params: Promise.resolve({ tenant: "school-a", id: "7" }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+    const roster = seed?.entries.find(
+      ({ key }) => key === roomKeys.students("7"),
+    );
+    const value = await roster?.value;
+    expect(value).toMatchObject({
+      students: [
+        {
+          id: "4",
+          first_name: "Max",
+          second_name: "Mustermann",
+          school_class: "3a",
+        },
+      ],
+      pagination: { total_records: 1 },
+    });
+    expect(JSON.stringify(value)).not.toContain("sick");
+    expect(state.send).toHaveBeenCalledTimes(3);
+  });
+
   it("starts only the requested group and leaves a refusal to the browser", async () => {
     setSession(["users:read", "groups:read"]);
     state.send.mockResolvedValueOnce(new Response(null, { status: 403 }));

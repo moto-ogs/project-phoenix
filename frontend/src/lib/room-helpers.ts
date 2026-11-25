@@ -4,6 +4,28 @@ import type { RoomSessionEntry } from "~/lib/contract/rooms.generated";
 
 import type { RoomRequest, RoomResponse } from "~/lib/contract/rooms.generated";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
+import type { Student } from "~/lib/student-helpers";
+
+export type RoomStudent = Pick<
+  Student,
+  | "id"
+  | "first_name"
+  | "second_name"
+  | "school_class"
+  | "group_name"
+  | "photo_url"
+>;
+
+export function roomStudentCard({
+  id,
+  first_name,
+  second_name,
+  school_class,
+  group_name,
+  photo_url,
+}: Student): RoomStudent {
+  return { id, first_name, second_name, school_class, group_name, photo_url };
+}
 
 // Accent per room category — used by the rooms grid card and the
 // room-detail history timeline so a category reads the same way in both
