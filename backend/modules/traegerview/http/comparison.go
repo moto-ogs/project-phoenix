@@ -120,17 +120,17 @@ type comparisonColumn struct {
 var comparisonColumns = map[string]comparisonColumn{
 	traegerview.ComparisonPlaces:         {head: "Plätze"},
 	traegerview.ComparisonPlacesRate:     {head: "Plätze belegt (%)", decimal: true, percent: true},
-	traegerview.ComparisonFreePlaces:     {head: "Freie Plätze (Ø je Tag)", decimal: true},
-	traegerview.ComparisonBooked:         {head: "Kinder gebucht (Ø je Tag)", decimal: true},
+	traegerview.ComparisonFreePlaces:     {head: "Freie Plätze (Ø pro Tag)", decimal: true},
+	traegerview.ComparisonBooked:         {head: "Kinder gebucht (Ø pro Tag)", decimal: true},
 	traegerview.ComparisonBookedChange:   {head: "Veränderung gebucht"},
-	traegerview.ComparisonPresent:        {head: "Kinder anwesend (Ø je Tag)", decimal: true},
+	traegerview.ComparisonPresent:        {head: "Kinder anwesend (Ø pro Tag)", decimal: true},
 	traegerview.ComparisonPresentPeak:    {head: "Höchstens anwesend"},
 	traegerview.ComparisonActiveStudents: {head: "Aktive Kinder am letzten Tag"},
 }
 
 // The names of the two rows under the schools.
 const (
-	comparisonRowAverage  = "Schnitt je Schule"
+	comparisonRowAverage  = "Schnitt pro Schule"
 	comparisonRowTogether = "Alle zusammen"
 )
 

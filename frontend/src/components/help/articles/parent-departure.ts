@@ -13,7 +13,7 @@ export function parentDepartureTopic(): HelpTopic {
     id: HELP_TOPICS.parentDeparture,
     title: "Den Weg nach Hause ändern",
     question: "Wie ändere ich, wie mein Kind nach Hause geht?",
-    summary: "Du siehst den Weg je Wochentag und fragst eine Änderung an.",
+    summary: "Du siehst den Weg pro Wochentag und fragst eine Änderung an.",
     group: "mein-kind",
     audience: "parent",
     icon: "Repeat",
@@ -22,7 +22,7 @@ export function parentDepartureTopic(): HelpTopic {
       "Wähle den Reiter `Betreuung`.",
       "Gehe ganz nach unten zum Abschnitt `So geht ... nach Hause`. Dort steht der Name deines Kindes. Du siehst für jeden Wochentag, wie dein Kind nach Hause geht.",
       "Tippe auf `Bearbeiten`.",
-      "Setze je Wochentag einen Haken bei `Geht allein`, `Bus` oder `Wird abgeholt`.",
+      "Setze pro Wochentag einen Haken bei `Geht allein`, `Bus` oder `Wird abgeholt`.",
       "Tippe auf `Änderung anfragen`.",
     ],
     result:

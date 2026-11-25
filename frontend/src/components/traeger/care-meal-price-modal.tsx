@@ -260,8 +260,8 @@ export function CareMealPriceModal({
           name="amount_cents"
           label={
             mode === "per_meal"
-              ? "Preis je Essen in €"
-              : "Betrag je Kind und Monat in €"
+              ? "Preis pro Essen in €"
+              : "Betrag pro Kind und Monat in €"
           }
           inputMode="decimal"
           placeholder={mode === "per_meal" ? "4,80" : "55,00"}

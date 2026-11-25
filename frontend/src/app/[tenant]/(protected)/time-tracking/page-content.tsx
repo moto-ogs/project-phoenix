@@ -216,6 +216,7 @@ function TimeTrackingContent() {
               onUpdateAbsence={updateAbsence}
               onDeleteAbsence={deleteAbsence}
               canManage={canManage}
+              timesLocked={clock.data?.terminalOnlyStamping ?? false}
               ownStaffId={edit.staffId}
               laborDay={edit.laborDay}
             />

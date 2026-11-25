@@ -30,7 +30,7 @@ const documentDirectory = "DOKUMENTE"
 
 const documentIndex = documentDirectory + "/index.jsonl"
 
-const documentNotice = "Gespeicherte Dokumente der Tabellen dieses Trägers als Dateien (Schreiben, Bescheide, Vertragsfassungen, Papierverträge, Unterschriften, Nachweise); index.jsonl nennt je Datei Tabelle, Zeile, Spalte, SHA-256 und Größe."
+const documentNotice = "Gespeicherte Dokumente der Tabellen dieses Trägers als Dateien (Schreiben, Bescheide, Vertragsfassungen, Papierverträge, Unterschriften, Nachweise); index.jsonl nennt pro Datei Tabelle, Zeile, Spalte, SHA-256 und Größe."
 
 const documentReadme = `Dieser Ordner enthält die bei moto gespeicherten Dokumente dieses Trägers
 als einzelne Dateien: Schreiben und Bestätigungen, Bescheide, alle Fassungen
@@ -38,7 +38,7 @@ der Betreuungsverträge, Papierverträge, Unterschriftsbilder, hochgeladene
 Nachweise und weitere Dateien des Trägers.
 
 Jede Datei liegt unter <Tabelle>/<Zeilen-ID>-<Spalte>.<Endung>.
-index.jsonl nennt je Datei Tabelle, Zeile (row_id und row_key), Spalte,
+index.jsonl nennt pro Datei Tabelle, Zeile (row_id und row_key), Spalte,
 Medientyp, SHA-256 und Größe in Bytes. Dieselbe Zeile steht in
 <Tabelle>.jsonl; dort steht das Dokument zusätzlich als Hex-Wert.
 `

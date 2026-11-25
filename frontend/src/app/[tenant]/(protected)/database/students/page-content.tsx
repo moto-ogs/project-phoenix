@@ -590,7 +590,7 @@ function StudentsPageContent() {
                   : []),
                 {
                   label: "Klassenliste",
-                  description: "Zeigt alle Kinder je Klasse, auch ohne OGS.",
+                  description: "Zeigt alle Kinder pro Klasse, auch ohne OGS.",
                   icon: <ClipboardList className="h-4 w-4" aria-hidden />,
                   href: tenantPath("/database/students/class-list"),
                   onClick: () => undefined,

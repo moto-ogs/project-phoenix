@@ -79193,6 +79193,12 @@
             "kind": "int",
             "nullable": true
           }
+        },
+        {
+          "name": "terminal_only_stamping",
+          "schema": {
+            "kind": "bool"
+          }
         }
       ]
     },

@@ -25,6 +25,12 @@ func (s ownTimeViews) ClockOverview(ctx context.Context, staffID int64) (workfor
 	if err != nil {
 		return workforce.OwnClockOverview{}, err
 	}
+	// The clock shows the terminal notice instead of stamp buttons (#8024). A
+	// failed read fails the overview: an unknown rule must not offer stamps.
+	result.TerminalOnlyStamping, err = s.sessions.TerminalOnlyStamping(ctx, staffID)
+	if err != nil {
+		return workforce.OwnClockOverview{}, err
+	}
 	return result, nil
 }
 

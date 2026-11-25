@@ -326,7 +326,7 @@ export function ChildDebtorNumbersField({
       </DataGrid>
       <p>
         {invoiced
-          ? "Ausgestellte Rechnungen behalten ihre Nummer. Eine geänderte Nummer gilt für neue Rechnungen je Kind."
+          ? "Ausgestellte Rechnungen behalten ihre Nummer. Eine geänderte Nummer gilt für neue Rechnungen pro Kind."
           : "Jedes Kind bekommt eine eigene Rechnung. Sie nennt seine Nummer als Verwendungszweck."}
       </p>
     </div>

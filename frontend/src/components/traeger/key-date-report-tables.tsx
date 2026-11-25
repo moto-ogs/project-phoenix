@@ -177,7 +177,7 @@ export function staffColumns(header: string): DataTableColumn<ReportRow>[] {
     countColumn("children", "Kinder", (row) => row.figures.children),
     {
       key: "ratio",
-      header: "Kinder je Person",
+      header: "Kinder pro Person",
       headerTitle: "Kinder geteilt durch Personal am Stichtag",
       align: "right",
       render: (row) =>

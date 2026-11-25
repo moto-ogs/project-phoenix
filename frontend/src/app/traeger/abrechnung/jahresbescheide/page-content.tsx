@@ -168,7 +168,7 @@ export default function TraegerJahresbescheidePage() {
   return (
     <TenantPage
       title="Abrechnung"
-      info="Hier setzt du den Beitrag für mehrere Monate eines Jahres in einem Bescheid fest. Jede Familie bekommt je Vertrag einen Bescheid mit Monatsraten. Für diese Monate berechnet der Monatslauf keine Betreuung erneut. Essen rechnet er weiterhin ab."
+      info="Hier setzt du den Beitrag für mehrere Monate eines Jahres in einem Bescheid fest. Jede Familie bekommt pro Vertrag einen Bescheid mit Monatsraten. Für diese Monate berechnet der Monatslauf keine Betreuung erneut. Essen rechnet er weiterhin ab."
       stats={
         runs.length > 0 ? (
           <TenantPageStats

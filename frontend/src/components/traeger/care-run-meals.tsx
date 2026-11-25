@@ -36,8 +36,8 @@ export function MealPositionLine({
       )}
       detail={
         position.mode === "per_meal"
-          ? `Mensa · je ${formatEuro(position.unitCents)}`
-          : "Mensa · fester Betrag je Monat"
+          ? `Mensa · ${formatEuro(position.unitCents)} pro Essen`
+          : "Mensa · fester Betrag pro Monat"
       }
       amount={formatEuro(position.amountCents)}
     />

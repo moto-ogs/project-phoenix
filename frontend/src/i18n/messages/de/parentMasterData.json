@@ -263,5 +263,5 @@
   "errorNoEnrollment": "Für dein Kind gibt es keine gültige Anmeldung mehr. Bitte wende dich an die Schule.",
   "identityRequestButtonTooltip": "Öffnet ein Formular, um geänderte Angaben anzufragen.",
   "requestEditTooltip": "Öffnet deine offene Anfrage zum Ändern.",
-  "departureEditTooltip": "Öffnet die Abholung je Wochentag. Änderungen prüft die {careTerm}."
+  "departureEditTooltip": "Öffnet die Abholung pro Wochentag. Änderungen prüft die {careTerm}."
 }

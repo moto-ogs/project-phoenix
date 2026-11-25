@@ -57,7 +57,7 @@ func buildSectionDocument(report *studentpresence.StatisticsReport, section stri
 	case sectionCourses:
 		return buildCourseExportDocument(report), "kurse"
 	case sectionCourseStudents:
-		return buildCourseStudentExportDocument(report), "kurse-je-kind"
+		return buildCourseStudentExportDocument(report), "kurse-pro-kind"
 	case sectionOccupancy:
 		return buildOccupancyExportDocument(report), "belegung-nach-uhrzeit"
 	default:
@@ -81,7 +81,7 @@ func courseExportFilters(report *studentpresence.StatisticsReport) []string {
 func buildCourseExportDocument(report *studentpresence.StatisticsReport) ExportDocument {
 	doc := ExportDocument{
 		Title:    "Kursteilnahme",
-		Subtitle: fmt.Sprintf("Teilnahme je Kurs vom %s bis %s", report.From.Format("02.01.2006"), report.To.Format("02.01.2006")),
+		Subtitle: fmt.Sprintf("Teilnahme pro Kurs vom %s bis %s", report.From.Format("02.01.2006"), report.To.Format("02.01.2006")),
 		Columns: []ExportColumn{
 			{ID: columnCourse, Label: "Kurs"},
 			{ID: columnCategory, Label: "Kategorie"},
@@ -120,8 +120,8 @@ func buildCourseExportDocument(report *studentpresence.StatisticsReport) ExportD
 // grouped by child so a family sees its own block in one place.
 func buildCourseStudentExportDocument(report *studentpresence.StatisticsReport) ExportDocument {
 	doc := ExportDocument{
-		Title:    "Kursteilnahme je Kind",
-		Subtitle: fmt.Sprintf("Teilnahme je Kind vom %s bis %s", report.From.Format("02.01.2006"), report.To.Format("02.01.2006")),
+		Title:    "Kursteilnahme pro Kind",
+		Subtitle: fmt.Sprintf("Teilnahme pro Kind vom %s bis %s", report.From.Format("02.01.2006"), report.To.Format("02.01.2006")),
 		Columns: []ExportColumn{
 			{ID: columnName, Label: "Name"},
 			{ID: columnSchoolClass, Label: "Klasse"},
@@ -171,7 +171,7 @@ func buildRoomExportDocument(report *studentpresence.StatisticsReport) ExportDoc
 			{ID: columnUtilization, Label: "Auslastung"},
 		},
 		Filters: []string{
-			fmt.Sprintf("Raumdaten können höchstens %d Tage zurückreichen (ab %s). Je Kind kann die Frist kürzer sein.", report.RoomDataDays, report.RoomDataFrom.Format("02.01.2006")),
+			fmt.Sprintf("Raumdaten können höchstens %d Tage zurückreichen (ab %s). Pro Kind kann die Frist kürzer sein.", report.RoomDataDays, report.RoomDataFrom.Format("02.01.2006")),
 			"Spitze = die meisten Kinder gleichzeitig im Raum",
 			"Auslastung = Spitze im Verhältnis zu den Plätzen",
 		},

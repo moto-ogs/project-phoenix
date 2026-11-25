@@ -53,7 +53,7 @@ export const IMPORT_FIELD_HINTS: Partial<Record<ImportField, string>> = {
   sequence: "Zum Beispiel FRST und RCUR oder Erst- und Folgelastschrift.",
   last_collected_on: "Belegt, dass schon abgebucht wurde.",
   debtor_number:
-    "Gilt für den Zahler oder für das Kind, wie unter „Debitorennummer gilt je“ eingestellt. moto überschreibt keine Nummer, die schon eingetragen ist.",
+    "Gilt für den Zahler oder für das Kind, wie unter „Debitorennummer zuordnen“ eingestellt. moto überschreibt keine Nummer, die schon eingetragen ist.",
 };
 
 /**

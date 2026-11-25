@@ -69,6 +69,8 @@ export function mapOwnClock(overview: OwnClockOverview, today: string) {
     accountStart: overview.account_start,
     accountBalanceMinutes: overview.account_balance_minutes,
     todayCountsInTotals: overview.today_counts_in_totals,
+    // Die Schule lässt diese Person nur am NFC-Terminal stempeln (#8024).
+    terminalOnlyStamping: overview.terminal_only_stamping,
   };
 }
 

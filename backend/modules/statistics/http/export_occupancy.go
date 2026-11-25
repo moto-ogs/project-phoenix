@@ -53,7 +53,7 @@ func occupancyExportFrame(report *studentpresence.StatisticsReport, singleDay bo
 		Footer: exportConfidentialityNote,
 	}
 	if singleDay {
-		doc.Subtitle = "Kinder je halbe Stunde am " + report.From.Format("02.01.2006")
+		doc.Subtitle = "Kinder pro halbe Stunde am " + report.From.Format("02.01.2006")
 		doc.Columns = []ExportColumn{
 			{ID: columnSlot, Label: "Uhrzeit"},
 			{ID: columnPlanned, Label: "Geplant"},
@@ -61,7 +61,7 @@ func occupancyExportFrame(report *studentpresence.StatisticsReport, singleDay bo
 		}
 		return doc
 	}
-	doc.Subtitle = fmt.Sprintf("Kinder je halbe Stunde vom %s bis %s", report.From.Format("02.01.2006"), report.To.Format("02.01.2006"))
+	doc.Subtitle = fmt.Sprintf("Kinder pro halbe Stunde vom %s bis %s", report.From.Format("02.01.2006"), report.To.Format("02.01.2006"))
 	doc.Columns = []ExportColumn{
 		{ID: columnSlot, Label: "Uhrzeit"},
 		{ID: columnPlannedAverage, Label: "Geplant Ø"},

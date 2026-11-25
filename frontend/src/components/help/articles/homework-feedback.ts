@@ -13,7 +13,7 @@ export function homeworkFeedbackTopic(): HelpTopic {
     question:
       "Wie melde ich zurück, ob ein Kind die Hausaufgaben geschafft hat?",
     summary:
-      "In der Lernzeit siehst du die Hausaufgaben jeder Klasse und gibst je Kind eine Rückmeldung.",
+      "In der Lernzeit siehst du die Hausaufgaben jeder Klasse und gibst pro Kind eine Rückmeldung.",
     group: "gruppen",
     audience: ["caregiver", "lead"],
     icon: "ListChecks",

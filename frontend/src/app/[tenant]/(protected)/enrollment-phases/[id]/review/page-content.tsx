@@ -6,7 +6,7 @@ import { TenantPage } from "~/components/ui/tenant-page";
 import { useRequirePermission } from "~/lib/hooks/use-require-permission";
 
 const ROLLOVER_REVIEW_INFO =
-  "Hier stehen Kinder, die moto nicht selbst in die nächste Phase übernehmen konnte. Du entscheidest je Kind. Ist die Liste leer, gibt es nichts zu tun.";
+  "Hier stehen Kinder, die moto nicht selbst in die nächste Phase übernehmen konnte. Du entscheidest pro Kind. Ist die Liste leer, gibt es nichts zu tun.";
 
 interface PageProps {
   readonly params: Promise<{ tenant: string; id: string }>;

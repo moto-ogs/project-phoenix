@@ -12,7 +12,7 @@ export function traegerStaffContractsTopic(): HelpTopic {
     title: "Arbeitsvertrag und Soll",
     question: "Wie trage ich Vertrag, Soll und Ferien-Soll ein?",
     summary:
-      "Im Arbeitsvertrag stehen die Stunden je Schule und Wochentag. Die Schulen rechnen damit in ihrer Zeiterfassung.",
+      "Im Arbeitsvertrag stehen die Stunden pro Schule und Wochentag. Die Schulen rechnen damit in ihrer Zeiterfassung.",
     group: "personal",
     audience: "traeger",
     icon: "Hourglass",
@@ -29,7 +29,7 @@ export function traegerStaffContractsTopic(): HelpTopic {
           "Wähle bei `Arbeitsverträge` den Knopf `Vertrag anlegen`.",
           "Wähle die Art: `Teilzeit`, `Vollzeit`, `Minijob`, `Übungsleiter` oder `Ehrenamt`.",
           "Wähle den `Ersten Tag`. Den `Letzten Tag` lässt du leer, wenn der Vertrag unbefristet ist.",
-          "Trage je Schule die Stunden von Montag bis Freitag ein. Ein leeres Feld ist ein freier Tag.",
+          "Trage pro Schule die Stunden von Montag bis Freitag ein. Ein leeres Feld ist ein freier Tag.",
           "Wähle `Vertrag anlegen`.",
         ],
       },

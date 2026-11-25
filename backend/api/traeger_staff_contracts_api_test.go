@@ -156,7 +156,7 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 		assert.Equal(t, scheduleVersion{ValidFrom: "2026-11-01", ValidUntil: new("2026-12-01"), Minutes: []int{300, 300, 300, 300, 0}}, versions[1])
 		assert.Equal(t, scheduleVersion{ValidFrom: "2026-12-01", Minutes: []int{480, 480, 480, 480, 480}}, versions[2])
 		changes := decode[contractRecordBody](t, rec).Changes
-		assert.Equal(t, "ab 01.12.2026: Mo–Fr je 8 Std. (40 Std. pro Woche)", changes[0].Value)
+		assert.Equal(t, "ab 01.12.2026: Mo–Fr 8 Std. pro Tag (40 Std. pro Woche)", changes[0].Value)
 	})
 
 	// ADR 0311: both dialogs save only over the contract they opened on;

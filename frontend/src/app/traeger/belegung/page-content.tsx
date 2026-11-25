@@ -475,7 +475,7 @@ function ViewContent({
     return (
       <DataTable
         heading={{
-          title: "Kinder je Gruppe",
+          title: "Kinder pro Gruppe",
           count: groupRows.length,
           level: 2,
         }}
@@ -510,7 +510,7 @@ function ViewContent({
         ) : null}
         <DataTable
           heading={{
-            title: "Kinder je Betreuungsform und Schule",
+            title: "Kinder pro Betreuungsform und Schule",
             count: formRows.length,
             level: 2,
           }}
@@ -529,7 +529,7 @@ function ViewContent({
   }
   return (
     <DataTable
-      heading={{ title: "Kinder je Schule", count: schools.length, level: 2 }}
+      heading={{ title: "Kinder pro Schule", count: schools.length, level: 2 }}
       columns={SCHOOL_COLUMNS}
       rows={[...schools]}
       getRowKey={(school) => school.id}
@@ -606,7 +606,7 @@ export default function TraegerOccupancyPage() {
       info={
         <>
           Hier siehst du, wie viele Kinder deine Schulen heute betreuen. Die
-          Zahlen stehen je Schule, je OGS-Gruppe und je Betreuungsform. Eine
+          Zahlen stehen pro Schule, pro OGS-Gruppe und pro Betreuungsform. Eine
           Betreuungsform ist ein Betreuungsangebot der Schule, das als Betreuung
           zählt, zum Beispiel „OGS bis 16 Uhr“. Mittagessen zählt nicht. Jedes
           Angebot, das heute läuft, steht hier, auch ohne Buchung. Daneben

@@ -64,14 +64,14 @@ export interface ComposerAttachmentLabels {
 
 const GERMAN_ATTACHMENT_LABELS: ComposerAttachmentLabels = {
   attach: "Foto oder Datei anhängen",
-  attachHint: `Bis zu ${MAX_MESSAGE_ATTACHMENTS} Dateien, je höchstens ${MAX_MESSAGE_ATTACHMENT_MB} MB: Fotos, PDF, Word, Excel, PowerPoint`,
+  attachHint: `Bis zu ${MAX_MESSAGE_ATTACHMENTS} Dateien mit höchstens ${MAX_MESSAGE_ATTACHMENT_MB} MB pro Datei: Fotos, PDF, Word, Excel, PowerPoint`,
   drop: "Dateien hier ablegen",
   remove: (filename) => `Anhang entfernen: ${filename}`,
   uploading: (filename) => `${filename} wird hochgeladen`,
   open: (filename) => `Anhang öffnen: ${filename}`,
   tooMany: `Eine Nachricht kann höchstens ${MAX_MESSAGE_ATTACHMENTS} Dateien haben.`,
   tooLarge: (filename) =>
-    `„${filename}“ ist zu groß. Erlaubt sind bis zu ${MAX_MESSAGE_ATTACHMENT_MB} MB je Datei.`,
+    `„${filename}“ ist zu groß. Erlaubt sind bis zu ${MAX_MESSAGE_ATTACHMENT_MB} MB pro Datei.`,
   wrongType: (filename) =>
     `„${filename}“ kann nicht angehängt werden. Erlaubt sind Fotos, PDF, Word, Excel und PowerPoint.`,
   fileObject: "die Datei",

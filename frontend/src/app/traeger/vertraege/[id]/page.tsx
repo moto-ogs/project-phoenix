@@ -881,8 +881,8 @@ function TraegerVertragView() {
                 title="Gebuchte Betreuung"
                 description={
                   contract.versions.length > 1
-                    ? `Je Wochentag das Modul und bis wann das Kind betreut wird. So gilt es in Version ${contract.version.number}.`
-                    : "Je Wochentag das Modul und bis wann das Kind betreut wird."
+                    ? `Pro Wochentag das Modul und bis wann das Kind betreut wird. So gilt es in Version ${contract.version.number}.`
+                    : "Pro Wochentag das Modul und bis wann das Kind betreut wird."
                 }
               >
                 <DataGrid>

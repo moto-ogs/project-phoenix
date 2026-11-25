@@ -1828,8 +1828,8 @@ function CareOfferingWeekdayFields({
         <div className="mt-4">
           <FieldLabel>
             {pickupTimesRequired
-              ? "Gehzeit je Betreuungstag"
-              : "Gehzeit je Wochentag (optional)"}
+              ? "Gehzeit pro Betreuungstag"
+              : "Gehzeit pro Wochentag (optional)"}
           </FieldLabel>
           <p className="text-xs text-gray-500">
             Diese Zeiten gelten automatisch für gebuchte Kinder. Von Hand

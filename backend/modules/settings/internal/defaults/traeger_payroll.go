@@ -53,11 +53,11 @@ func traegerPayrollDefinitions() []config.Definition {
 		"Deine Nummer beim Lohnbüro in DATEV, 1 bis 5 Ziffern. Sie steht oben in der LODAS-Datei. Lohn und Gehalt braucht sie nicht.")
 	client.Validation = &config.ValidationRules{Pattern: &mandantPattern, AllowEmpty: true}
 	form := traegerPayrollDefinition(config.KeyTraegerPayrollFileForm, "lohndatei", 5, "Wie viele Lohndateien?",
-		"Eine Datei für den ganzen Träger, oder eine Datei je Arbeitgeber mit seinen eigenen DATEV-Nummern.")
+		"Eine Datei für den ganzen Träger, oder eine Datei pro Arbeitgeber mit seinen eigenen DATEV-Nummern.")
 	form.Type, form.Default = config.FieldSelect, config.TraegerPayrollFileFormTraeger
 	form.Options = &config.SelectOptions{Static: []config.SelectOption{
 		{Label: "Eine Datei für den ganzen Träger", Value: config.TraegerPayrollFileFormTraeger},
-		{Label: "Eine Datei je Arbeitgeber", Value: config.TraegerPayrollFileFormArbeitgeber},
+		{Label: "Eine Datei pro Arbeitgeber", Value: config.TraegerPayrollFileFormArbeitgeber},
 	}}
 	definitions := []config.Definition{form, consultant, client}
 

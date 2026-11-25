@@ -143,7 +143,7 @@ function exportOptions(
       key: HOLIDAY_PDF_ZIP_KEY,
       format: "pdf",
       label: `${scope} als PDF (ZIP)`,
-      description: "Eine PDF je Anmeldung, zum Ablegen",
+      description: "Eine PDF pro Anmeldung, zum Ablegen",
     },
     ...(canSeeHealth
       ? [
@@ -151,7 +151,7 @@ function exportOptions(
             key: HOLIDAY_PDF_HEALTH_KEY,
             format: "pdf" as const,
             label: `${scope} als PDF mit Gesundheitsangaben (ZIP)`,
-            description: "Eine PDF je Anmeldung, mit Gesundheitsangaben",
+            description: "Eine PDF pro Anmeldung, mit Gesundheitsangaben",
           },
         ]
       : []),

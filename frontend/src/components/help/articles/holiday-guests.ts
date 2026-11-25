@@ -20,7 +20,7 @@ export function holidayGuestsTopic(): HelpTopic {
     title: "Feriengäste betreuen",
     question: "Wo sehe ich Notfall und Abholung eines Feriengasts?",
     summary:
-      "In den Ferien kommen Kinder anderer Schulen in deine OGS. Sie stehen in der Feriengruppe.",
+      "In den Ferien kommen Kinder in deine OGS, die sonst nicht hierher gehen. Sie stehen in der Feriengruppe.",
     group: "gruppen",
     audience: ["caregiver", "lead"],
     icon: "SunHorizon",

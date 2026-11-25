@@ -602,7 +602,7 @@ function TraegerZeitvergleichContent() {
       <Figures evaluation={evaluation ?? null} loading={loading} />
       <DataTable
         heading={{
-          title: "Je Schule",
+          title: "Pro Schule",
           count: evaluation?.schools.length,
           level: 2,
           action: (
@@ -615,9 +615,9 @@ function TraegerZeitvergleichContent() {
                 )
               }
               scope={exportScope}
-              ariaLabel="Zahlen je Schule herunterladen"
+              ariaLabel="Zahlen pro Schule herunterladen"
               fallbackName={`laenger-als-gebucht-${range.from}-bis-${range.to}`}
-              errorObject="die Zahlen je Schule"
+              errorObject="die Zahlen pro Schule"
               unavailable={!evaluation}
             />
           ),

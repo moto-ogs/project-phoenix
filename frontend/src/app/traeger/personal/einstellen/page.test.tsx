@@ -186,7 +186,9 @@ describe("TraegerStaffHirePage", () => {
       screen.getByText("Teilzeit, ab 01.12.2026, unbefristet"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Mo–Di je 5 Std\. · Mi–Fr frei \(10 Std\. pro Woche\)/),
+      screen.getByText(
+        /Mo–Di 5 Std\. pro Tag · Mi–Fr frei \(10 Std\. pro Woche\)/,
+      ),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Person einstellen" }));

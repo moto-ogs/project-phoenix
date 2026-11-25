@@ -17,7 +17,7 @@ func TestCareReviewTableNamesMissingScaleSteps(t *testing.T) {
 		{ModuleName: "Modul 4", DaysPerWeek: ptr(3)},
 		{ModuleName: "Modul 1", Weekday: "mon"},
 	}})
-	assert.Contains(t, table.Rows[0]["position"], "3 Tage je Woche")
+	assert.Contains(t, table.Rows[0]["position"], "3 Tage pro Woche")
 	assert.Equal(t, "Mo", table.Rows[1]["weekdays"])
 }
 

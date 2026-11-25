@@ -29,7 +29,7 @@ export function targetOverrideTopic(): HelpTopic {
       "Wähle `Sonderarbeitszeit anlegen`.",
       "Trage `Erster Tag` und `Letzter Tag` ein.",
       "Trage bei `Stunden pro Tag` die Stunden ein, zum Beispiel `8,5`.",
-      "Wähle `Je Wochentag`, wenn die Stunden unterschiedlich sind.",
+      "Wähle `Pro Wochentag`, wenn die Stunden unterschiedlich sind.",
       "Trage die Stunden für Montag bis Freitag ein.",
       "Wähle `Speichern`.",
     ],
@@ -38,7 +38,7 @@ export function targetOverrideTopic(): HelpTopic {
     notes: [
       "Die Stunden gelten Montag bis Freitag, auch an Schließtagen. Gesetzliche Feiertage bleiben frei.",
       "Mit `0` Stunden muss die Person an diesen Tagen nicht arbeiten.",
-      "Bei `Je Wochentag` zeigt moto unter den Feldern die Summe für die Woche.",
+      "Bei `Pro Wochentag` zeigt moto unter den Feldern die Summe für die Woche.",
       "Ändern geht nicht. Lösche den Eintrag über die drei Punkte und lege ihn neu an.",
     ],
     troubleshootingDetails: [

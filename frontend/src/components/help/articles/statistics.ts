@@ -20,7 +20,7 @@ export function statisticsTopic(): HelpTopic {
     ],
     result: "Die Zahlen gelten für den gewählten Bereich und Zeitraum.",
     notes: [
-      "Bei `Kurse` wählst du zusätzlich zwischen `Je Kurs` und `Je Kind`.",
+      "Bei `Kurse` wählst du zusätzlich zwischen `Pro Kurs` und `Pro Kind`.",
       "`Uhrzeit` zeigt, wie viele Kinder in jeder halben Stunde da sind: `Geplant` und `Da`. Für einen Tag siehst du die Zahlen dieses Tages. Für einen Zeitraum wählst du den Wochentag und siehst Durchschnitt und Höchstwert.",
       "Bei `Geplant` zählen kranke und entschuldigte Kinder nicht mit, Kinder mit „Kommt heute nicht“ auch nicht.",
       "Mit `Alle Klassen` und `Alle Gruppen` grenzt du die Kinder ein.",

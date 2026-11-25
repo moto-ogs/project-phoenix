@@ -573,14 +573,14 @@ function ParticipantList({
             : "grid grid-cols-1 gap-6 lg:grid-cols-2"
         }
       >
-        <SectionCard title="Je Zeitmodell">
+        <SectionCard title="Pro Zeitmodell">
           <DataTable
             columns={timeModelColumns}
             rows={list.timeModels}
             getRowKey={(model) => model.id}
           />
         </SectionCard>
-        <SectionCard title="Je Heimatschule">
+        <SectionCard title="Pro Heimatschule">
           <DataTable
             columns={homeSchoolColumns}
             rows={list.homeSchools}
@@ -592,7 +592,7 @@ function ParticipantList({
         </SectionCard>
         {list.week.lunchOffered ? (
           <SectionCard
-            title="Mittagessen je Tag"
+            title="Mittagessen pro Tag"
             description={lunchTotalText(list.week.lunches ?? [])}
           >
             <DataTable

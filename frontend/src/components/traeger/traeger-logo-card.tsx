@@ -99,7 +99,7 @@ export function TraegerLogoCard({
   return (
     <SectionCard
       title="Logo"
-      description="Das Logo steht oben links auf jedem Brief. PNG oder JPG, bis 1 MB und 2000 Pixel je Seite."
+      description="Das Logo steht oben links auf jedem Brief. PNG oder JPG, bis 1 MB und 2000 Pixel pro Seite."
       actions={
         canEdit ? (
           <div className="flex flex-wrap gap-2">

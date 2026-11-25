@@ -104,10 +104,10 @@ func TestTraegerComparisonComparesTheChosenSchools(t *testing.T) {
 	assert.Contains(t, export.Header().Get("Content-Disposition"), fmt.Sprintf("standortvergleich-%s-bis-%s.csv", day, utilizationFriday))
 	csv := strings.TrimPrefix(export.Body.String(), "\xEF\xBB\xBF")
 	for _, line := range []string{
-		"Schule;Ort;Plätze belegt (%);Kinder gebucht (Ø je Tag);Aktive Kinder am letzten Tag",
+		"Schule;Ort;Plätze belegt (%);Kinder gebucht (Ø pro Tag);Aktive Kinder am letzten Tag",
 		"OGS Am Bach;;50,0;2,0;2",
 		"OGS Lindenweg;;;1,0;2",
-		"Schnitt je Schule;;50,0;1,5;2",
+		"Schnitt pro Schule;;50,0;1,5;2",
 		"Alle zusammen;;50,0;3,0;4",
 	} {
 		assert.Contains(t, csv, line+"\n")

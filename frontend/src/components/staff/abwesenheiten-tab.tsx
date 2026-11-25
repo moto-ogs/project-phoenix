@@ -586,7 +586,7 @@ export function AbwesenheitenTab({
       <SectionCard
         title="Kontingente"
         headingLevel={3}
-        description="Wie viele Tage diese Person je Art hat und noch übrig sind."
+        description="Wie viele Tage diese Person pro Art hat und noch übrig sind."
         actions={
           canManageSickReports && staff ? (
             <div className="flex flex-wrap items-center gap-2">

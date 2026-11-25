@@ -194,7 +194,7 @@ function notBilledLabel(children: number, released = false): string {
 
 /** Was die Seite ist und was man dort zuerst tut (#7596). */
 const CARE_RUN_INFO =
-  "Hier findest du die Rechnungen dieses Monats. Betreuungsmodule rechnet moto nach dem Vertrag ab. Bei „Je Essen“ rechnet moto die Mensa nach den gemeldeten Essen ab.";
+  "Hier findest du die Rechnungen dieses Monats. Betreuungsmodule rechnet moto nach dem Vertrag ab. Bei „Pro Essen“ rechnet moto die Mensa nach den gemeldeten Essen ab.";
 
 export default function TraegerCareRunPage() {
   const params = useParams<{ id: string }>();

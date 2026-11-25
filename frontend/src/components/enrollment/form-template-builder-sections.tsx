@@ -49,8 +49,8 @@ const targetSuggestionDescriptions: Record<
     "Für wichtige Hinweise, die im Alltag der Betreuung sichtbar sein sollen.",
   "student.allowed_departure_modes":
     "Für Betreuungstage festlegen, welche Heimwege erlaubt sind: zu Fuß, Bus, Abholung oder mit anderem Kind. Mit Betreuungsangeboten sehen Eltern nur die gewählten Betreuungstage; als Pflichtfrage ist pro Betreuungstag mindestens ein Heimweg nötig.",
-  "schedule.pickup": "Für regelmäßige Abholzeiten je Wochentag.",
-  "schedule.arrival": "Für regelmäßige Ankunftszeiten je Wochentag.",
+  "schedule.pickup": "Für regelmäßige Abholzeiten pro Wochentag.",
+  "schedule.arrival": "Für regelmäßige Ankunftszeiten pro Wochentag.",
   "student.contacts":
     "Für weitere Kontakte, Abholberechtigte oder Notfallkontakte.",
 };

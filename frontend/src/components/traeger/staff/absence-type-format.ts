@@ -11,7 +11,7 @@ import type { StatusBadgeTone } from "~/components/ui/status-badge";
 export function absenceTypeSummary(type: TraegerAbsenceType): string {
   const parts = type.allowanceEnabled
     ? [
-        `${formatDayCount(type.standardDays)} je Person und Jahr`,
+        `${formatDayCount(type.standardDays)} pro Person und Jahr`,
         carryoverRuleLabel(type.carryoverUntil),
       ]
     : ["Ohne Kontingent"];

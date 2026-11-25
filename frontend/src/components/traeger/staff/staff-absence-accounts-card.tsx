@@ -319,7 +319,7 @@ export function StaffAbsenceAccountsCard({
     <SectionCard
       concept={timeTrackingConcept}
       title="Kontingente"
-      description="Tage je Abwesenheitsart über alle Schulen der Person. Jede Buchung und jeder offene Antrag an jeder Schule zählt hier mit."
+      description="Tage pro Abwesenheitsart über alle Schulen der Person. Jede Buchung und jeder offene Antrag an jeder Schule zählt hier mit."
       action={
         <SegmentedControl
           ariaLabel="Jahr der Kontingente"

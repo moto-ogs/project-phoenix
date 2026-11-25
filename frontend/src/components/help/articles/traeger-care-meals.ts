@@ -9,9 +9,9 @@ export function traegerCareMealsTopic(): HelpTopic {
   return {
     id: HELP_TOPICS.traegerCareMeals,
     title: "Mensa abrechnen",
-    question: "Wie rechne ich das Essen ab, je Essen oder als Pauschale?",
+    question: "Wie rechne ich das Essen ab, pro Essen oder als Pauschale?",
     summary:
-      "Du legst je Schule fest, wie die Mensa abgerechnet wird. Der Monatslauf setzt freigegebene Monate auf die Rechnung des Kindes.",
+      "Du legst pro Schule fest, wie die Mensa abgerechnet wird. Der Monatslauf setzt freigegebene Monate auf die Rechnung des Kindes.",
     group: "anmeldeverwaltung",
     audience: "traeger",
     icon: "UtensilsCrossed",
@@ -27,15 +27,15 @@ export function traegerCareMealsTopic(): HelpTopic {
           "Wähle `Preise und Ermäßigungen` und dann den Reiter `Mensa`.",
           "Wähle bei der Schule `Preis festlegen`.",
           "Wähle bei `Gültig ab` den ersten Monat.",
-          "Wähle die Abrechnungsart: `Je Essen` oder `Pauschale`.",
-          "Trage den Betrag ein, zum Beispiel 4,80 je Essen.",
+          "Wähle die Abrechnungsart: `Pro Essen` oder `Pauschale`.",
+          "Trage den Betrag ein, zum Beispiel 4,80 pro Essen.",
           "Wähle `Preis speichern`.",
         ],
       },
       {
         title: "Im Monatslauf",
         description:
-          "Die Mensa steht im Monatslauf als eigene Zeile je Monat auf der Rechnung des Kindes, zum Beispiel „2 Mittagessen im Januar 2026“.",
+          "Die Mensa steht im Monatslauf als eigene Zeile pro Monat auf der Rechnung des Kindes, zum Beispiel „2 Mittagessen im Januar 2026“.",
         steps: [
           "Wähle `Abrechnungsläufe` und dann den Reiter `Monatsbeiträge`.",
           "Starte oder öffne den Lauf eines Monats.",

@@ -576,7 +576,7 @@ describe("FerienwochenPage", () => {
 
     expect(
       await screen.findByText(
-        /Noch keine Gruppe gewählt\. Erst mit einer Gruppe/,
+        /Noch keine Gruppe gewählt\. Wähle eine Gruppe, damit/,
       ),
     ).toBeInTheDocument();
     const take = screen.getByRole("button", { name: "Feriengäste übernehmen" });

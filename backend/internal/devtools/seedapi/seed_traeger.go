@@ -751,7 +751,7 @@ func seedHolidayPeriodShifted(today calendar.Date, host int64, shift int) map[st
 		"name":                   fmt.Sprintf("Ferienbetreuung Herbstferien %d", firstMonday.Year()),
 		"registration_opens_on":  today.String(),
 		"registration_closes_on": firstMonday.AddDays(-7).String(), "binding": true,
-		"notes": "Mittagessen können Sie je Woche dazu buchen. Bitte geben Sie Ihrem Kind ein Frühstück und etwas zu trinken mit.",
+		"notes": "Mittagessen kannst du pro Woche dazu buchen. Gib deinem Kind bitte ein Frühstück und etwas zu trinken mit.",
 		// The text of the acceptance mail a confirmation sends (#6672).
 		"acceptance_mail_text": seedHolidayAcceptanceMailText,
 		"weeks":                weeks,

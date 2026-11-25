@@ -226,7 +226,7 @@ it("keeps the card inset around the run table and the protocol table", async () 
     await screen.findAllByRole("button", { name: "Ältere anzeigen" }),
   ).toHaveLength(2);
 
-  for (const title of ["Dateien je Lauf", "Exportprotokoll"]) {
+  for (const title of ["Dateien pro Lauf", "Exportprotokoll"]) {
     const card = screen
       .getByRole("heading", { name: title })
       .closest("section")!;

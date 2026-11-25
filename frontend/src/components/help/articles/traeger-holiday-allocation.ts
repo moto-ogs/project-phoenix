@@ -44,7 +44,7 @@ export function traegerHolidayAllocationTopic(): HelpTopic {
         title: "Plätze vergeben",
         steps: [
           "Öffne den Ferienzeitraum und wähle den Reiter `Vergabe`.",
-          "Je Woche stehen die offenen Anmeldungen in der Reihenfolge des Vorschlags. Die Zeile mit „ab hier schlägt moto die Warteliste vor“ zeigt, wo die freien Plätze enden.",
+          "Pro Woche stehen die offenen Anmeldungen in der Reihenfolge des Vorschlags. Die Zeile mit „ab hier schlägt moto die Warteliste vor“ zeigt, wo die freien Plätze enden.",
           "Wähle bei einem Kind `Platz geben` oder `Auf die Warteliste`. Weicht das vom Vorschlag ab, schreibe eine `Begründung`.",
           "Oder wähle bei der Woche `Vorschlag übernehmen`. Mit mehreren Wochen gibt es oben `Vorschlag für alle Wochen übernehmen`.",
           "Bestätige im Fenster.",
@@ -64,7 +64,7 @@ export function traegerHolidayAllocationTopic(): HelpTopic {
         steps: [
           "Öffne die Anmeldung.",
           "Wähle bei `Angaben für die Vergabe` den Knopf `Prüfen`.",
-          "Wähle je Kriterium `Trifft zu`, `Trifft nicht zu` oder `Nicht geprüft`.",
+          "Wähle pro Kriterium `Trifft zu`, `Trifft nicht zu` oder `Nicht geprüft`.",
           "Wähle `Prüfung speichern`.",
         ],
       },

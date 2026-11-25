@@ -87,7 +87,7 @@ describe("TraegerAbsenceTypesPage", () => {
     if (!card) throw new Error("card missing");
     expect(
       within(card).getByText(
-        "2 Tage je Person und Jahr · Rest verfällt am 31.12. · Betreuungskräfte beantragen",
+        "2 Tage pro Person und Jahr · Rest verfällt am 31.12. · Betreuungskräfte beantragen",
       ),
     ).toBeInTheDocument();
     expect(within(card).getByText("Angeboten")).toBeInTheDocument();
@@ -118,7 +118,7 @@ describe("TraegerAbsenceTypesPage", () => {
     fireEvent.change(within(dialog).getByLabelText(/^Name/), {
       target: { value: "Umwandlungstag" },
     });
-    fireEvent.change(within(dialog).getByLabelText(/^Tage je Jahr/), {
+    fireEvent.change(within(dialog).getByLabelText(/^Tage pro Jahr/), {
       target: { value: "3" },
     });
     fireEvent.click(within(dialog).getByRole("button", { name: "Anlegen" }));
@@ -198,7 +198,7 @@ describe("TraegerAbsenceTypesPage", () => {
     renderPage();
     const card = await typeCard();
     fireEvent.click(within(card).getByRole("button", { name: /Bearbeiten/ }));
-    fireEvent.change(within(card).getByLabelText(/^Tage je Jahr/), {
+    fireEvent.change(within(card).getByLabelText(/^Tage pro Jahr/), {
       target: { value: "3" },
     });
     api.fetchTraegerAbsenceTypes.mockResolvedValue(storedList);
@@ -213,11 +213,11 @@ describe("TraegerAbsenceTypesPage", () => {
       "regeneration-v1",
     );
     await vi.waitFor(() =>
-      expect(within(card).getByLabelText(/^Tage je Jahr/)).toHaveValue(4),
+      expect(within(card).getByLabelText(/^Tage pro Jahr/)).toHaveValue(4),
     );
 
     api.updateTraegerAbsenceType.mockResolvedValue(storedList.types[0]);
-    fireEvent.change(within(card).getByLabelText(/^Tage je Jahr/), {
+    fireEvent.change(within(card).getByLabelText(/^Tage pro Jahr/), {
       target: { value: "5" },
     });
     fireEvent.click(within(card).getByRole("button", { name: "Speichern" }));
@@ -252,7 +252,7 @@ describe("TraegerAbsenceTypesPage", () => {
       "regeneration-v1",
     );
     expect(
-      await within(card).findByText(/4 Tage je Person und Jahr/),
+      await within(card).findByText(/4 Tage pro Person und Jahr/),
     ).toBeInTheDocument();
   });
 });

@@ -19,7 +19,7 @@ export function traegerReportsTopic(): HelpTopic {
       "Wähle in der Navigation `Berichte`.",
       "Wähle oben eine Vorlage. Ohne Vorlage zeigt moto alle Abschnitte.",
       "Prüfe den Stichtag. moto schlägt den letzten 15. Oktober vor. Mit den Pfeilen springst du ein Jahr vor oder zurück.",
-      "Hat die Vorlage Sozialräume, wähle `Je Schule` oder `Je Sozialraum`.",
+      "Hat die Vorlage Sozialräume, wähle `Pro Schule` oder `Pro Sozialraum`.",
       "Wähle in der Tabelle der Kinder eine Zeile, um die Betreuungsformen zu sehen.",
       "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
     ],
@@ -50,13 +50,13 @@ export function traegerReportsTopic(): HelpTopic {
       "Der Bericht enthält nur Zahlen, keine Namen von Kindern oder Personal.",
     ],
     differences: [
-      "Fehlt der Reiter `Je Sozialraum`, hat die Vorlage keine Sozialräume. Trage sie in der Vorlage ein.",
+      "Fehlt der Reiter `Pro Sozialraum`, hat die Vorlage keine Sozialräume. Trage sie in der Vorlage ein.",
       "Fehlt der Knopf `Neue Vorlage`, hast du nicht die Rolle Verwaltung. Du kannst Berichte trotzdem ansehen und herunterladen.",
       "Steht `Bei einer Schule gibt es Check-ins erst ab …`, hat die Schule für die Tage davor keine Check-ins. Dann zählt moto für diese Tage keine Anwesenheit.",
     ],
     image: "/help/screens/traeger-berichte.webp",
     imageAlt:
-      "Die Seite Berichte: oben Stichtag und Vorlage, darunter Kennzahlen und die Tabelle der Kinder je Schule.",
+      "Die Seite Berichte: oben Stichtag und Vorlage, darunter Kennzahlen und die Tabelle der Kinder pro Schule.",
     related: [HELP_TOPICS.traegerOccupancy, HELP_TOPICS.traegerUtilization],
   };
 }

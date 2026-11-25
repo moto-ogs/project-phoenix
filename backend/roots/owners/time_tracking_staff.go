@@ -162,6 +162,9 @@ func (q externalCaregiverStaff) IsExternalCaregiver(ctx context.Context, staffID
 
 type workSessionStaffRecords interface {
 	staffNameRecords
+	// FindTimeTrackingManagerStaffIDs keeps the staff whose account holds
+	// time_tracking:manage in the request's school (#8024).
+	FindTimeTrackingManagerStaffIDs(ctx context.Context, ids []int64) (map[int64]bool, error)
 }
 
 // staffScheduleBinder is School Membership's schedule binding command.
