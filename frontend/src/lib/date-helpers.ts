@@ -26,13 +26,22 @@ const BERLIN_DATE_TIME_PARTS_FORMATTER = new Intl.DateTimeFormat("en-US", {
   hourCycle: "h23",
 });
 
+const BERLIN_DATE_FORMAT_OPTIONS = {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  timeZone: SCHOOL_TIME_ZONE,
+} satisfies Intl.DateTimeFormatOptions;
+
+const GERMAN_BERLIN_DATE = new Intl.DateTimeFormat(
+  "de-DE",
+  BERLIN_DATE_FORMAT_OPTIONS,
+);
+
 function berlinDateFormatter(locale: string): Intl.DateTimeFormat {
-  return new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: SCHOOL_TIME_ZONE,
-  });
+  return locale === "de-DE"
+    ? GERMAN_BERLIN_DATE
+    : new Intl.DateTimeFormat(locale, BERLIN_DATE_FORMAT_OPTIONS);
 }
 
 function chatDayMonthFormatter(locale: string): Intl.DateTimeFormat {
@@ -43,12 +52,21 @@ function chatDayMonthFormatter(locale: string): Intl.DateTimeFormat {
   });
 }
 
+const BERLIN_TIME_FORMAT_OPTIONS = {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: SCHOOL_TIME_ZONE,
+} satisfies Intl.DateTimeFormatOptions;
+
+const GERMAN_BERLIN_TIME = new Intl.DateTimeFormat(
+  "de-DE",
+  BERLIN_TIME_FORMAT_OPTIONS,
+);
+
 function berlinTimeFormatter(locale: string): Intl.DateTimeFormat {
-  return new Intl.DateTimeFormat(locale, {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: SCHOOL_TIME_ZONE,
-  });
+  return locale === "de-DE"
+    ? GERMAN_BERLIN_TIME
+    : new Intl.DateTimeFormat(locale, BERLIN_TIME_FORMAT_OPTIONS);
 }
 
 /**
@@ -428,12 +446,11 @@ export function formatDate(
     // Local midnight of the day: its local fields are the calendar day itself.
     return formatDateFields(parseISODate(dateString), includeWeekday, locale);
   }
-  return formatDateFields(
-    new Date(dateString),
-    includeWeekday,
-    locale,
-    SCHOOL_TIME_ZONE,
-  );
+  const date = new Date(dateString);
+  if (!includeWeekday && locale === "de-DE" && !Number.isNaN(date.getTime())) {
+    return GERMAN_BERLIN_DATE.format(date);
+  }
+  return formatDateFields(date, includeWeekday, locale, SCHOOL_TIME_ZONE);
 }
 
 function formatDateFields(

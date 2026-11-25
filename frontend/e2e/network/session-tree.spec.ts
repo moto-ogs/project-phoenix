@@ -301,6 +301,28 @@ test("another account in another tab: A to B never shows A again", async ({
   await context.close();
 });
 
+test("returning from public help after another tab signs out never restores the portal", async ({
+  browser,
+}) => {
+  const context = await newContext(browser);
+  const app = await context.newPage();
+  await login(app, "a");
+  await app.goto(`${schoolA}/students/search`);
+  await expectShowsAccount(app, "a");
+  await app.getByRole("link", { name: "Hilfe zu dieser Seite" }).click();
+  await expect(app).toHaveURL(/\/help\/kindersuche\?/);
+  await expectNothingOf(app, "a");
+
+  const other = await context.newPage();
+  await openHome(other, "a");
+  await logout(other);
+  await expectNothingOf(app, "a");
+  await app.goBack();
+  await expectDroppedTree(app);
+  await expectNothingOf(app, "a");
+  await context.close();
+});
+
 test("another account replaces a live session: A to B without a logout never shows A again", async ({
   browser,
 }) => {

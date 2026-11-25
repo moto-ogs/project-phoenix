@@ -115,7 +115,7 @@ export function TopicList({
       <ul className="flex flex-col gap-2">
         {topics.map((topic) => (
           <li key={topic.title}>
-            <TileCard href={hrefFor(topic)}>
+            <TileCard href={hrefFor(topic)} nativeAnchor>
               <span className="block text-sm font-semibold text-gray-900">
                 {topic.title}
               </span>
@@ -365,6 +365,7 @@ export function SetupChecklist<K extends string>({
                         {step.helpTopic && (
                           <ButtonLink
                             href={helpHref(step.helpTopic)}
+                            nativeAnchor
                             variant="outline"
                             size="compact"
                             tooltip="Öffnet die Anleitung zu diesem Schritt in der Hilfe."

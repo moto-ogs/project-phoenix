@@ -108,6 +108,7 @@ function WeekChartAxes({
         axisLine={false}
         tickMargin={4}
         fontSize={isMobile ? 10 : 12}
+        interval={0}
         tickFormatter={(value: number) => `${Math.round(value / 60)}h`}
         domain={[0, "auto"]}
       />

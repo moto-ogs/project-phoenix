@@ -13,6 +13,8 @@ export type NavigationLinkProps = Omit<
   readonly href: string;
   /** `false` schaltet das Vorladen der Hülle ab. */
   readonly prefetch?: false;
+  /** Verlässt das App-Dokument, etwa für die öffentliche Hilfe. */
+  readonly nativeAnchor?: boolean;
 };
 
 /**
@@ -25,10 +27,33 @@ export type NavigationLinkProps = Omit<
  */
 const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
   function NavigationLink(
-    { href, target, prefetch, onClick, onNavigate, ...anchorProps },
+    {
+      href,
+      target,
+      prefetch,
+      nativeAnchor,
+      onClick,
+      onNavigate,
+      children,
+      ...anchorProps
+    },
     ref,
   ) {
     const progress = useNavigationLinkProgress(href, onClick, onNavigate);
+    if (nativeAnchor) {
+      return (
+        <a
+          {...anchorProps}
+          ref={ref}
+          href={href}
+          target={target}
+          onClick={onClick}
+        >
+          {children}
+        </a>
+      );
+    }
+
     const canPrefetch =
       prefetch !== false &&
       (!target || target === "_self") &&
@@ -43,7 +68,9 @@ const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
         prefetch={canPrefetch ? "auto" : false}
         onClick={progress.onClick}
         onNavigate={progress.onNavigate}
-      />
+      >
+        {children}
+      </NextLink>
     );
   },
 );

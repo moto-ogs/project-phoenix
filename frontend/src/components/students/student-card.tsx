@@ -270,7 +270,7 @@ export function StudentCard({
       className={`${tileCardSurface({ padding: "none" })} flex cursor-pointer flex-col disabled:cursor-wait disabled:opacity-70 ${parentAttentionEnabled ? "h-full" : ""}`}
     >
       <div
-        className={`relative ${hasTapStrip || dayChangeLabel ? "p-3 pb-0 sm:p-5 sm:pb-0" : "p-3 sm:p-5"}`}
+        className={`relative [contain-intrinsic-block-size:auto_12rem] [content-visibility:auto] ${hasTapStrip || dayChangeLabel ? "p-3 pb-0 sm:p-5 sm:pb-0" : "p-3 sm:p-5"}`}
       >
         {/* Card body content */}
         <div className="relative">
