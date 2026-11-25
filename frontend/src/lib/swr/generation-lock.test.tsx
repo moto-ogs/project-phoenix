@@ -378,8 +378,7 @@ describe.each([
       "leer",
     );
     expect(seen["student-7-unseen-dropped"]).not.toContain("veraltet");
-    await flush();
-    expect(fetcher).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
   });
 
   it("rejects a tenant write from a passive effect after the boundary reset", async () => {

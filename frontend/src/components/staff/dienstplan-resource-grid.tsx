@@ -748,7 +748,7 @@ export function DienstplanResourceGrid({
   // remount finish the viewport before building the rest of the roster.
   const visibleStaff = showAllRows
     ? staff
-    : staff.slice(0, Math.ceil(window.innerHeight / 64));
+    : staff.slice(0, Math.ceil(window.innerHeight / (isCompact ? 64 : 72)));
   const mobileCare =
     mobileColumn && stripMarkers.has(mobileColumn.key)
       ? holidayCare?.get(mobileColumn.key)

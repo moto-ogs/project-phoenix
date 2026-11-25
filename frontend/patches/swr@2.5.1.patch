@@ -55,7 +55,7 @@ index 4edf4e5da9a7e219ecc59744761a27d13c2eb25a..84ffc23fe6a2fa3595a37282314d6dad
 diff --git a/dist/use-swr-emll9s78.mjs b/dist/use-swr-emll9s78.mjs
 --- a/dist/use-swr-emll9s78.mjs
 +++ b/dist/use-swr-emll9s78.mjs
-@@ -586,9 +586,9 @@
+@@ -586,9 +586,11 @@
                      // Revalidate immediately.
                      softRevalidate();
                  } else {
@@ -64,14 +64,16 @@ diff --git a/dist/use-swr-emll9s78.mjs b/dist/use-swr-emll9s78.mjs
 -                    rAF(softRevalidate);
 +                    // A frame callback runs before paint. Move cached-data revalidation
 +                    // into a task after that frame; a missing value still loads immediately.
-+                    rAF(()=>setTimeout(softRevalidate, 0));
++                    // Reads that opt out of deduplication validate their opening immediately.
++                    if (config.dedupingInterval === 0) softRevalidate();
++                    else rAF(()=>setTimeout(softRevalidate, 0));
                  }
              }
          }
 diff --git a/dist/use-swr-guqrv3k1.js b/dist/use-swr-guqrv3k1.js
 --- a/dist/use-swr-guqrv3k1.js
 +++ b/dist/use-swr-guqrv3k1.js
-@@ -590,9 +590,9 @@
+@@ -590,9 +590,11 @@
                      // Revalidate immediately.
                      softRevalidate();
                  } else {
@@ -80,7 +82,9 @@ diff --git a/dist/use-swr-guqrv3k1.js b/dist/use-swr-guqrv3k1.js
 -                    bunchee_group_0.rAF(softRevalidate);
 +                    // A frame callback runs before paint. Move cached-data revalidation
 +                    // into a task after that frame; a missing value still loads immediately.
-+                    bunchee_group_0.rAF(()=>setTimeout(softRevalidate, 0));
++                    // Reads that opt out of deduplication validate their opening immediately.
++                    if (config.dedupingInterval === 0) softRevalidate();
++                    else bunchee_group_0.rAF(()=>setTimeout(softRevalidate, 0));
                  }
              }
          }
