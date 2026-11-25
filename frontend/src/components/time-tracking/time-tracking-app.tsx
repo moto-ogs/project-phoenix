@@ -47,6 +47,7 @@ import {
   type StaffAbsence,
   type WorkSessionHistory,
 } from "~/lib/time-tracking-helpers";
+import { useDeviceContext } from "~/lib/device-context";
 import { cn } from "~/lib/utils";
 
 // ─── Stempeluhr ──────────────────────────────────────────────────────────────
@@ -170,6 +171,17 @@ export function AppClockPanel(props: AppClockPanelProps) {
   }
 
   const pending = busy || saving;
+  // Telefon, noch nichts gestempelt: der Zustand steht in der Aktionsleiste
+  // („Dienst 08:00–16:30 · Einstempeln“), die Karte entfällt. Die Zeile von
+  // heute in der Liste nennt den Plan ebenfalls; so passen mehr Tage ins
+  // erste Bild. Mit Hinweisen, beim Speichern und am iPad bleibt die Karte.
+  const { layout } = useDeviceContext();
+  const foldIntoBar =
+    layout === "phone" &&
+    state === "idle" &&
+    todayMinutes === 0 &&
+    laborHints.length === 0 &&
+    !saving;
   const spinner = pending ? <SpinnerIcon className="mr-1.5 h-4 w-4" /> : null;
 
   return (
@@ -177,7 +189,10 @@ export function AppClockPanel(props: AppClockPanelProps) {
       {/* Kompakt (#8070): Zustand und heutige Zeit in einer Zeile, Dienst
           und Pause in der zweiten. So bleibt am kleinen Telefon Platz für
           die Tage darunter. */}
-      <SectionCard padding="none" className="px-4 py-3">
+      <SectionCard
+        padding="none"
+        className={cn("px-4 py-3", foldIntoBar && "hidden")}
+      >
         <div data-setup-tour="time-clock" data-app-clock="">
           <div className="flex items-center justify-between gap-3">
             <span role="status" className="min-w-0">
@@ -221,7 +236,7 @@ export function AppClockPanel(props: AppClockPanelProps) {
       </SectionCard>
 
       {state === "idle" ? (
-        <ActionBar>
+        <ActionBar status={foldIntoBar ? headline : undefined}>
           <Button
             type="button"
             variant="success"
@@ -229,6 +244,8 @@ export function AppClockPanel(props: AppClockPanelProps) {
             disabled={disabled || pending}
             onClick={() => setStatusSheetOpen(true)}
             tooltip="Öffnet die Auswahl, wo du heute arbeitest."
+            // Ohne Karte zeigt die Einführung auf den Knopf.
+            data-setup-tour={foldIntoBar ? "time-clock" : undefined}
           >
             {spinner}
             Einstempeln
