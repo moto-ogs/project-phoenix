@@ -178,12 +178,10 @@ assigned a time by subtraction. Do not compare the new matrix as a paired
 
 For the #8080 baseline, see the [per-journey results](../perf/revisit-8080/results.md),
 [raw observations](../perf/revisit-8080/observations.json), and [route catalog](../perf/revisit-8080/catalog.json).
-This run used the product code at `development@de207b1c8f` and harness
-`3d15b19eee`. Across trials the shared host had
-0–71% idle CPU (median 20%); cross-worktree load was not controlled.
-#8099, #8100, #8098 and #8102 landed during this run. The numbers predate
-those changes. For a paired cache-flag comparison on a later revision, run the
-same command on that revision before and after enabling the flags.
+This run on `rechenzentrum` (Linux x86_64, Intel Core i9-14900K, 32 logical CPUs, 62 GiB RAM) used the product code at `development@764c20585d` and harness
+`50e3dfe271`. Across trials the shared host had
+96–98% idle CPU (median 97%); every trial began after a five-second window with at least 50% idle CPU. Contention during a trial is flagged in the results; it is not a code-level effect.
+The measured build includes the parent family-start, other portals’ server seeds and Caterer order overview (#8106, #8110, #8113), the care-plan reads (#8115) and provider KPIs (#8116). The login catalog and school class-count changes (#8117, #8118) landed later and are not measured here. For #8083, run the same command on `rechenzentrum` on its rollout revision before and after enabling the flags, with the same prepared fixture.
 
 Local outputs in `frontend/perf-results/navigation/`: `revisit.json` (per-run
 observations, profile, load, diagnostics and separate confirmation/denial),
