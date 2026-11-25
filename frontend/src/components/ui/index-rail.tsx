@@ -13,7 +13,9 @@ import { Z_LAYER } from "./overlay-styles";
  *
  * Eine reine Finger-Abkürzung: Vorleseprogramme und Tastatur springen über
  * die Gruppenköpfe (Überschriften), darum ist die Leiste `aria-hidden`.
- * Sichtbar ist sie 20 px breit, ihre Fläche reicht 28 px weit.
+ * Sichtbar ist sie 20 px breit, ihre Fläche reicht 28 px weit. Sie steht
+ * innen am rechten Rand der Listenkarte (Seitenrand 16 px), nicht auf dem
+ * Kartenrahmen; die Liste lässt ihr rechts Platz.
  */
 export function IndexRail({
   letters,
@@ -64,7 +66,7 @@ export function IndexRail({
     <div
       aria-hidden="true"
       data-index-rail=""
-      className={`fixed right-0 ${Z_LAYER.raised} ${FIXED_LAYER_SHIFT} flex w-7 touch-none items-center justify-end select-none`}
+      className={`fixed right-4 ${Z_LAYER.raised} ${FIXED_LAYER_SHIFT} flex w-7 touch-none items-center justify-end select-none`}
       style={{
         // Nie über der Such- und Filterleiste, auch solange die Seite oben steht.
         top: "max(calc(var(--app-sticky-offset, 1rem) + 0.5rem), 9.5rem)",
