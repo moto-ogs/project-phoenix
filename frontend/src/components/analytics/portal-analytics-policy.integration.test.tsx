@@ -1,4 +1,4 @@
-import { Suspense, useInsertionEffect } from "react";
+import { Fragment, Suspense, useInsertionEffect } from "react";
 import type { BeforeSendFn, PostHogConfig } from "posthog-js";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { AnalyticsConsentCopy } from "~/components/analytics/analytics-consent-copy";
@@ -9,6 +9,8 @@ import { SWRConfig } from "~/lib/swr/testing";
 vi.unmock("~/lib/tenant-context");
 // The parent enrollment page loads its form through real SWR.
 vi.unmock("swr");
+// jsdom renders the actual pages, without their server-only translation lookup.
+vi.mock("~/i18n/scoped-messages", () => ({ messageBoundary: () => Fragment }));
 
 const mocks = vi.hoisted(() => ({
   useSession: vi.fn(),
@@ -925,7 +927,7 @@ describe("embedded enrollment analytics policy", () => {
     const { PortalAnalyticsSession } =
       await import("./portal-analytics-session");
     const { default: ParentEnrollmentStatusPage } =
-      await import("~/app/parents/anmeldung/status/[token]/status-page");
+      await import("~/app/parents/anmeldung/status/[token]/page");
     const { initializePostHog, capturePostHog } =
       await import("~/lib/posthog-client");
     const view = render(

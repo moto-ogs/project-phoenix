@@ -52,6 +52,12 @@ export function ParentNotificationsBell() {
   );
   const close = useCallback(() => setIsOpen(false), []);
 
+  const countLabel = t("bellCount", { count: unreadCount });
+  const bellLabel =
+    unreadCount > NOTIFICATIONS_BADGE_MAX
+      ? `${NOTIFICATIONS_BADGE_MAX}+: ${countLabel}`
+      : countLabel;
+
   return (
     <AnchoredPopover
       open={isOpen}
@@ -68,9 +74,7 @@ export function ParentNotificationsBell() {
           variant="ghost"
           size="icon"
           onClick={toggle}
-          aria-label={
-            unreadCount > 0 ? t("bellCount", { count: unreadCount }) : t("bell")
-          }
+          aria-label={unreadCount > 0 ? bellLabel : t("bell")}
           aria-expanded={isOpen}
           aria-haspopup="dialog"
           aria-controls={isOpen ? panelId : undefined}
@@ -83,7 +87,7 @@ export function ParentNotificationsBell() {
             tone={COUNTER_TONE.parents}
             size="sm"
             max={NOTIFICATIONS_BADGE_MAX}
-            ariaLabel={t("badge", { count: unreadCount })}
+            ariaLabel=""
             className="absolute -top-0.5 -right-0.5"
           />
         </Button>

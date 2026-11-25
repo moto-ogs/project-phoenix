@@ -10,6 +10,7 @@ export interface SeedAccess {
 }
 
 interface SeedProfile {
+  entities?: { enrollment?: { requests?: Array<{ status_token?: string }> } };
   school?: { tenant_slug?: string };
   credentials?: {
     /** Der schuleigene Admin, nur in dieser Schule (nicht `demo1`). */
@@ -97,6 +98,14 @@ function readSeedProfile(
     );
   }
   return { key: profileKey, profile };
+}
+
+/** Stand einer im Seed vorhandenen Anmeldung, ohne eine Anmeldung im Test zu schreiben. */
+export function readSeedEnrollmentToken(): string | null {
+  const requests = readSeedProfile({})?.profile.entities?.enrollment?.requests;
+  return (
+    requests?.find((request) => request.status_token)?.status_token ?? null
+  );
 }
 
 /** Vollständige Eltern-Logins des Profils; leer ohne Seed-Datei. */

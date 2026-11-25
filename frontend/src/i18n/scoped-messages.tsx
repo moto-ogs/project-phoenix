@@ -18,10 +18,11 @@ function selectMessages(
   function copy(
     source: AbstractIntlMessages,
     target: AbstractIntlMessages,
+    path: MessagePath,
     [key, ...rest]: string[],
   ) {
     if (!key || source[key] === undefined)
-      throw new Error(`Missing catalog path: ${paths.join(", ")}`);
+      throw new Error(`Missing catalog path: ${path}`);
     const value = source[key];
     if (rest.length === 0) {
       target[key] = value;
@@ -31,10 +32,10 @@ function selectMessages(
       const branch: AbstractIntlMessages =
         (target[key] as AbstractIntlMessages | undefined) ?? {};
       target[key] = branch;
-      copy(value, branch, rest);
+      copy(value, branch, path, rest);
     }
   }
-  for (const path of paths) copy(catalog, selected, path.split("."));
+  for (const path of paths) copy(catalog, selected, path, path.split("."));
   return selected;
 }
 
