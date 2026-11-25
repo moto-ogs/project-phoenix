@@ -135,6 +135,10 @@ type Config struct {
 	MealPlan MealPlan
 	Locales  Locales
 
+	// DayChanges is "Heute anders" of one child (#7671), bound by the root
+	// to the day changes projection. Nil answers the read with an error.
+	DayChanges ChildDayChanges
+
 	// Best-effort notifiers, called after the commit only.
 	AbsenceNotifier AbsenceNotifier
 	Emitter         ChildEvents

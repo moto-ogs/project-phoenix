@@ -1,0 +1,7 @@
+{
+  "scenario": "parent.children.day_changes.http_positive_growth",
+  "max": 23,
+  "exact": false,
+  "description": "GET /parent/me/children/{studentId}/day-changes (#7671): the guardian's relationship check in an administrative transaction (school discovery, relationship, child, person), then one school transaction with the savepoint the sources share: Care Plan's status days, pickup exceptions, day departures and arrival exceptions of the child, the school's closing days, Timetable's planned rows of the child with its blocks, their staff, the day's protocol and the room names, and the class arrival exceptions of the day. TestChildDayChangesQueryBudget compares one against three changed blocks of the child.",
+  "route": "GET /parent/me/children/{studentId}/day-changes"
+}

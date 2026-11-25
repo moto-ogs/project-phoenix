@@ -11,6 +11,7 @@ GET /parent/me/children/{studentId}/care-offerings/catalog
 GET /parent/me/children/{studentId}/care-schedule
 GET /parent/me/children/{studentId}/consents
 GET /parent/me/children/{studentId}/courses
+GET /parent/me/children/{studentId}/day-changes
 GET /parent/me/children/{studentId}/excused-requests
 GET /parent/me/children/{studentId}/features
 GET /parent/me/children/{studentId}/guardians

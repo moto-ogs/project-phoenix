@@ -161,6 +161,7 @@ func childStatusRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: child + "/features", Portals: portals, Response: ChildFeaturesResponse{}},
 		{Method: "GET", Pattern: child + "/today", Portals: portals, Response: TodayStatusResponse{}},
+		{Method: "GET", Pattern: child + "/day-changes", Portals: portals, Response: ChildDayChangesResponse{}, Enums: childDayChangesEnums()},
 		{Method: "GET", Pattern: child + "/consents", Portals: portals, Response: []ChildConsentResponse{}},
 		{
 			Method: "GET", Pattern: child + "/meal-plan", Portals: portals,

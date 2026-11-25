@@ -29,6 +29,11 @@ import { ParentRealtimeBridge } from "./parent-realtime-bridge";
 const family = parentFamilyFixture();
 
 vi.unmock("swr");
+// „Heute anders“ (#7671) reads its own route; child-day-changes.test.tsx
+// covers it, these tests count the reads of the start cards.
+vi.mock("~/components/parent/child/child-day-changes", () => ({
+  ChildDayChanges: () => null,
+}));
 vi.mock("~/lib/tenant-context", () => ({
   useTenantSlugSafe: () => null,
   useTenantSafe: () => null,

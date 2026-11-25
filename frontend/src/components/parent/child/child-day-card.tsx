@@ -90,6 +90,7 @@ export function ChildDayCard({
   onSick,
   onPickup,
   statusAside,
+  dayChanges,
   actionDisplay = "detailed",
   hideIdentity = false,
   loading = false,
@@ -104,6 +105,8 @@ export function ChildDayCard({
   onPickup?: () => void;
   /** Zusaetzlicher Tageskontext, auf breiten Karten rechts vom Status. */
   statusAside?: ReactNode;
+  /** „Heute anders“ des Kindes (#7671), unter dem Status. */
+  dayChanges?: ReactNode;
   /** Kompakte Aktionen fuer Uebersichten, ausfuehrliche fuer die Kinderseite. */
   actionDisplay?: "compact" | "detailed";
   /**
@@ -268,6 +271,8 @@ export function ChildDayCard({
               </div>
             ))}
         </div>
+
+        {!loading && dayChanges}
 
         {loading ? (
           <div className="grid gap-2 @md:grid-cols-2" aria-hidden="true">
