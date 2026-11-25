@@ -4,7 +4,10 @@
 // Proxy: /api/timetable/school-vacations und /school-vacation-hints.
 
 import { bffJson } from "~/lib/bff-fetch";
-import type { SchoolVacationHintsResponse } from "~/lib/contract/timetable.generated";
+import type {
+  SchoolVacationHintsResponse,
+  SchoolVacationsResponse,
+} from "~/lib/contract/timetable.generated";
 
 import { timetableKeys } from "~/lib/swr/portal-keys";
 
@@ -45,6 +48,12 @@ export async function getSchoolVacations(
   const data = await bffJson("tenant", "GET /api/timetable/school-vacations", {
     query: { from: fromISO, to: toISO },
   });
+  return mapSchoolVacations(data);
+}
+
+export function mapSchoolVacations(
+  data: SchoolVacationsResponse,
+): SchoolVacations {
   return {
     federalState: data.federal_state,
     federalStateName: data.federal_state_name,
@@ -59,9 +68,11 @@ export async function getSchoolVacations(
 }
 
 export async function getSchoolVacationHints(): Promise<SchoolVacationHint[]> {
-  return mapSchoolVacationHints(
-    await bffJson("tenant", "GET /api/timetable/school-vacation-hints"),
+  const data = await bffJson(
+    "tenant",
+    "GET /api/timetable/school-vacation-hints",
   );
+  return mapSchoolVacationHints(data);
 }
 
 export function mapSchoolVacationHints(

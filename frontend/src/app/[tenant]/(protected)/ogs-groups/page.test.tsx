@@ -565,7 +565,7 @@ import { ApiError, unavailableApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import type { OgsLiveViewData } from "~/lib/ogs-group-live-api";
 import type { PresenceStudent } from "~/lib/presence-status";
-import OGSGroupPage from "./page";
+import OGSGroupPage from "./page-content";
 
 /** A cache of its own per render, so no dialog data leaks between tests. */
 function FreshSwrCache({ children }: { children: React.ReactNode }) {

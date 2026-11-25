@@ -16,14 +16,16 @@ export async function TenantRouteSeed({
 }: {
   slug: string;
   module?: ModuleScope;
-  load: (context: TenantContext) => readonly ServerSeedEntry[];
+  load: (
+    context: TenantContext,
+  ) => readonly ServerSeedEntry[] | Promise<readonly ServerSeedEntry[]>;
   children: ReactNode;
 }) {
   const builtAt = Date.now();
   const context = await readTenantPageContext(slug, module).catch(() => null);
   if (!context) return children;
 
-  const entries = load(context);
+  const entries = await load(context);
   const seed = seedOf(context.snapshot, entries, builtAt);
   if (entries.length === 0 || !seed) return children;
 

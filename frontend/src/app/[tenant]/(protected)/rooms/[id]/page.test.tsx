@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useSession } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { roomKeys } from "~/lib/swr/rooms-keys";
-import RoomDetailPage from "./page";
+import RoomDetailPage from "./page-content";
 
 const {
   searchParams,

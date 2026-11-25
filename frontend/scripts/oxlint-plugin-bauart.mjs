@@ -1584,7 +1584,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
     // Anmeldephase, Betreuungsangebot, Ordner, Tagesinformation): die Spec
     // kennt für sie noch keine Bauart (Entscheidung in #3119 offen gelassen).
     // Bis sie eine bekommen, bleibt der Bestand stehen und wächst nicht.
-    "src/app/[tenant]/(protected)/calendar/page.tsx": [
+    "src/app/[tenant]/(protected)/calendar/page-content.tsx": [
       "Termin bearbeiten Termin erstellen@1065",
     ],
     "src/app/[tenant]/(protected)/database/students/class-list/page-content.tsx": [

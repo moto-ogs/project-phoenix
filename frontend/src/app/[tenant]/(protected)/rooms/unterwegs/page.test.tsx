@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import TransitPage from "./page";
+import TransitPage from "./page-content";
 
 const { presenceModeState, searchParams } = vi.hoisted(() => ({
   presenceModeState: { mode: "detailed" as string },

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ModuleKey } from "~/lib/modules";
 import type { PortalSessionSnapshot } from "~/lib/portal-session-snapshot.server";
 import { messageKeys, weekProtocolKeys } from "~/lib/swr/portal-keys";
+import { groupKeys } from "~/lib/swr/groups-keys";
 import type { ServerSeed } from "~/lib/swr/server-seed";
 
 const state = vi.hoisted(() => ({
@@ -12,6 +13,7 @@ const state = vi.hoisted(() => ({
   host: "",
   schoolId: "",
   send: vi.fn(),
+  openCare: false,
 }));
 
 vi.mock("next/headers", () => ({
@@ -29,6 +31,7 @@ vi.mock("~/lib/tenant-api", async (original) => ({
     tenantId: state.schoolId,
     subdomain: "school-a",
     bookedModules: state.modules,
+    groupMode: state.openCare ? "open_care" : "fixed_groups",
   }),
 }));
 vi.mock("~/lib/backend-client.server", async (original) => ({
@@ -37,8 +40,10 @@ vi.mock("~/lib/backend-client.server", async (original) => ({
 }));
 vi.mock("./messages/groups/page-content", () => ({ default: () => null }));
 vi.mock("./wochenprotokolle/page-content", () => ({ default: () => null }));
+vi.mock("./ogs-groups/page-content", () => ({ default: () => null }));
 
 import GroupMessagesPage from "./messages/groups/page";
+import OGSGroupPage from "./ogs-groups/page";
 import { TenantRouteSeed } from "./tenant-route-seed";
 import WeekProtocolsPage from "./wochenprotokolle/page";
 
@@ -76,6 +81,7 @@ beforeEach(() => {
   state.modules = ["eltern_app"];
   state.host = "school-a.localhost:3000";
   state.schoolId = "1";
+  state.openCare = false;
   state.send.mockReset();
   state.send.mockImplementation(async () =>
     Response.json({ status: "success", data: [] }),
@@ -83,6 +89,45 @@ beforeEach(() => {
 });
 
 describe("tenant route seeds", () => {
+  it("starts only the requested group and leaves a refusal to the browser", async () => {
+    setSession(["users:read", "groups:read"]);
+    state.send.mockResolvedValueOnce(new Response(null, { status: 403 }));
+    const seed = await readSeed(
+      OGSGroupPage({
+        params,
+        searchParams: Promise.resolve({ group: ["11", "22"] }),
+      }),
+    );
+    expect(seed?.entries.map((entry) => entry.key)).toEqual([
+      groupKeys.live("11"),
+    ]);
+    expect(await seed?.entries[0]?.value).toBeUndefined();
+    expect(state.send).toHaveBeenCalledExactlyOnceWith(
+      "/api/students/ogs-group-live?group_id=11",
+      "test",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("does not guess the stored group or seed when an open-care school redirects", async () => {
+    setSession(["users:read", "groups:read"]);
+    expect(
+      await readSeed(
+        OGSGroupPage({ params, searchParams: Promise.resolve({}) }),
+      ),
+    ).toBeUndefined();
+    state.openCare = true;
+    expect(
+      await readSeed(
+        OGSGroupPage({
+          params,
+          searchParams: Promise.resolve({ group: "11" }),
+        }),
+      ),
+    ).toBeUndefined();
+    expect(state.send).not.toHaveBeenCalled();
+  });
+
   it("starts the group inbox read under the exact reader key", async () => {
     const seed = await readSeed(GroupMessagesPage({ params }));
     expect(seed?.entries.map((entry) => entry.key)).toEqual([

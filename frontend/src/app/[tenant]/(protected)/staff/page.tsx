@@ -1,1331 +1,157 @@
-"use client";
-
-import { timeTrackingKeys } from "~/lib/swr/portal-keys";
-import { ListRowLink } from "~/components/ui/list-row-link";
-import { FramedList } from "~/components/ui/framed-list";
-import { COUNTER_TONE } from "~/lib/counter-tones";
-import { staff as staffKeys } from "~/lib/swr/staff";
+import { staffDirectorySeed } from "~/lib/staff-directory-seed.server";
+import { TenantRouteSeed } from "../tenant-route-seed";
+import { readContract, seedRead } from "~/lib/server-seed.server";
+import * as staffContract from "~/lib/contract/staff.generated";
+import { hasPermission } from "~/lib/auth-utils";
+import { isAdmin } from "~/lib/auth-utils";
+import { mapFormerStaff } from "~/lib/staff-api";
 import { staffRecordKeys, traegerMonthStaffKeys } from "~/lib/swr/staff-keys";
-import { Suspense, useState, useMemo, type ReactNode } from "react";
-import { useSession } from "next-auth/react";
-import { redirect, useSearchParams } from "next/navigation";
-import { BellSimpleRingingIcon, CaretRightIcon } from "@phosphor-icons/react";
-import { CollectionGrid } from "~/components/ui/collection-grid";
-import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { TileCard } from "~/components/ui/tile-card";
-import { StatusBadge } from "~/components/ui/status-badge";
-import { formatDate } from "~/lib/date-helpers";
-import { StatusColorBadge } from "~/components/ui/status-color-badge";
-import { EmptyState } from "~/components/ui/empty-state";
-import type { FormErrorInput } from "~/components/ui/form-error";
-import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { Alert } from "~/components/ui/alert";
-import { SectionCard } from "~/components/ui/section-card";
-import { NotificationBadge } from "~/components/ui/notification-badge";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import type {
-  FilterConfig,
-  ActiveFilter,
-} from "~/components/ui/page-header/types";
-import {
-  staffMonthCloseService,
-  staffService,
-  type StaffDocumentDirectoryEntry,
-  type Staff,
-  type FormerStaff,
-} from "~/lib/staff-api";
-import {
-  getStaffDisplayType,
-  getStaffCardInfo,
-  formatStaffNotes,
-  sortStaff,
-  getStaffLocationStatus,
-} from "~/lib/staff-helpers";
-import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
-import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import { useTenantRouter } from "~/lib/tenant-router";
-import { useTenantAwarePath } from "~/lib/tenant-path";
-import { workTimeModelPath } from "~/components/staff/missing-target-notice";
-import { isAdmin, hasPermission } from "~/lib/auth-utils";
-import { useStaffPendingAbsences } from "~/lib/hooks/use-staff-pending-absences";
-import { SchoolOverviewSection } from "~/components/staff/school-overview-section";
-import { StaffAuditLog } from "~/components/staff/staff-audit-log";
-import { FormerStaffCards } from "~/components/staff/former-staff-cards";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import {
-  StaffTimeAccountsTable,
-  saldoPresets,
-  type SaldoPresetId,
-} from "~/components/staff/staff-time-accounts-table";
-import { MonthCloseReasonModal } from "~/components/staff/month-close-modal";
-import { StaffTimeExportModal } from "~/components/staff/staff-time-export-modal";
-import { ForbiddenPage } from "~/components/ui/forbidden-page";
-import { staffOverviewService } from "~/lib/staff-overview-api";
-import { employmentTypeLabels } from "~/lib/staff-helpers";
-import { StaffCardsSkeleton } from "./page-skeleton";
-import { staffConcept } from "~/lib/concepts/staff";
-import { foldForSearch } from "~/lib/search-fold";
+import { berlinTodayISO } from "~/lib/date-helpers";
+import { isScopeBooked } from "~/lib/module-register";
+import { mapTimeAccountRow } from "~/lib/staff-overview-api";
+import { mapMonthCloseSnapshotResponse } from "~/lib/time-tracking-helpers";
+import { linkedMonth } from "./staff-month";
+import PageContent from "./page-content";
 
-/**
- * Die Personenkarte: eine Kachel, wenn sie weiterführt, sonst eine reine
- * Anzeige. Ohne Ziel trägt sie weder Schaltfläche noch Zeiger, Hover-Anhebung
- * oder Ausgrauen; vorher sah eine gesperrte Karte klickbar aus und reagierte
- * nicht (#3926).
- */
-function StaffCardSurface({
-  onClick,
-  ariaLabel,
-  children,
-}: Readonly<{
-  onClick?: () => void;
-  ariaLabel: string;
-  children: ReactNode;
-}>) {
-  if (!onClick) return <SectionCard>{children}</SectionCard>;
-  return (
-    <TileCard onClick={onClick} ariaLabel={ariaLabel}>
-      {children}
-    </TileCard>
-  );
-}
-
-// Info-Knopf am Titel (#7566). Wer Zeitkonten prüft, sieht mehr Reiter und
-// öffnet die Personalakte; ohne diese Rechte führt nicht jede Karte weiter.
-// Ohne Zugriff auf die Liste startet die Seite in den Zeitkonten.
-const STAFF_INFO =
-  "Hier siehst du alle Personen aus deinem Team und wer da ist. Suche nach einem Namen oder filtere nach dem Status.";
-const STAFF_MANAGE_INFO =
-  "Hier siehst du alle Personen aus deinem Team und wer da ist. Unter „Zeitkonten“ prüfst du ihre Stunden. Wähle eine Person, um ihre Personalakte zu öffnen.";
-const STAFF_ACCOUNTS_INFO =
-  "Hier prüfst du die Arbeitsstunden deines Teams. Wähle oben den Bereich, den du brauchst.";
-const STAFF_DOCUMENTS_INFO =
-  "Hier findest du freigegebene Unterlagen aus deinem Team. Wähle eine Person, um ihre Dokumente zu öffnen.";
-
-function DocumentDirectory({
-  entries,
-  failed,
-  error,
-  embedded = false,
+export default async function StaffPage({
+  params,
+  searchParams,
 }: {
-  readonly entries: readonly StaffDocumentDirectoryEntry[];
-  /** The load failed; the list must not read as „Keine Personen gefunden“. */
-  readonly failed: boolean;
-  /** The failed load from `useApiLoadError`, with retry and request ID. */
-  readonly error: FormErrorInput;
-  readonly embedded?: boolean;
+  params: Promise<{ tenant: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const router = useTenantRouter();
-  const [search, setSearch] = useState("");
-  const normalizedSearch = foldForSearch(search.trim());
-  const filteredEntries = entries.filter((entry) =>
-    foldForSearch(entry.name).includes(normalizedSearch),
-  );
-
-  const card = (
-    // Der Erklärtext ist die description der Karte, die die Personenliste
-    // trägt. Eingebettet steht der Titel „Personalunterlagen" schon auf dem
-    // Reiter, dort benennt die Karte ihren Inhalt (kein doppelter Titel).
-    <SectionCard
-      title={embedded ? "Personen" : "Personalunterlagen"}
-      description="Wähle eine Person, um die für dich freigegebenen Dokumente zu sehen."
-    >
-      {embedded && (
-        <div className="mb-4">
-          <Input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Person suchen…"
-            className="w-full"
-          />
-        </div>
-      )}
-      {failed ? (
-        <LoadErrorAlert error={error} />
-      ) : (
-        <FramedList>
-          {filteredEntries.map((entry) => (
-            <li key={entry.id}>
-              <ListRowLink
-                title={entry.name}
-                onClick={() => router.push(`/staff/${entry.id}?tab=dokumente`)}
-              />
-            </li>
-          ))}
-          {filteredEntries.length === 0 ? (
-            <li>
-              <EmptyState
-                variant="compact"
-                className="px-4 py-6"
-                title="Keine Personen gefunden."
-                description="Passe die Suche an."
-              />
-            </li>
-          ) : null}
-        </FramedList>
-      )}
-    </SectionCard>
-  );
-
-  // Eingebettet steht das Verzeichnis schon im Seitengerüst des Reiters.
-  if (embedded) return card;
-
+  const { tenant } = await params;
+  const query = await searchParams;
+  const view = Array.isArray(query.view) ? query.view[0] : query.view;
+  const status = Array.isArray(query.status) ? query.status[0] : query.status;
+  const month = Array.isArray(query.month) ? query.month[0] : query.month;
   return (
-    <TenantPage
-      title="Personalunterlagen"
-      info={STAFF_DOCUMENTS_INFO}
-      // Ohne geladene Liste keine "0 Personen" neben dem Ladefehler (#2517).
-      stats={
-        failed
-          ? null
-          : `${entries.length} ${entries.length === 1 ? "Person" : "Personen"} mit Unterlagen`
-      }
-      search={{
-        value: search,
-        onChange: setSearch,
-        placeholder: "Person suchen…",
-      }}
-    >
-      {card}
-    </TenantPage>
-  );
-}
-
-function StaffPageContent() {
-  const { data: session, status } = useSession({
-    required: true,
-    onUnauthenticated() {
-      redirect("/");
-    },
-  });
-
-  const router = useTenantRouter();
-  const tenantPath = useTenantAwarePath();
-  // Custom roles can carry the same wildcard permissions as the built-in
-  // admin role. Keep the client-side navigation model aligned with backend
-  // authorization, which treats both forms as full access.
-  const userIsAdmin = isAdmin(session) || hasPermission(session, "admin:*");
-
-  // Die Zeitkonten-Ansicht ist an time_tracking:manage gebunden, nicht an
-  // users:read: sie zeigt Arbeitszeitdaten identifizierbarer Personen.
-  const canManageTimeTracking = hasPermission(session, "time_tracking:manage");
-  const canReadUsers = hasPermission(session, "users:read");
-  // Personalstammdaten und Mitarbeiter-Datensatz (#2906). Beide Rechte
-  // beziehen sich auf eine bestimmte Person, sind also nur zu gebrauchen,
-  // wenn man diese Person auch finden kann — deshalb öffnen sie wie
-  // users:read die Mitarbeiterliste. Das Backend gatet GET /api/staff
-  // seit #2906 identisch.
-  const canEditStammdaten = hasPermission(session, "staff:stammdaten");
-  const canManageStaffRecords = hasPermission(session, "staff:manage");
-  const canListStaff =
-    canReadUsers || canEditStammdaten || canManageStaffRecords;
-  // Personalunterlagen hängen an staff:documents, nicht mehr an users:update
-  // (#2906): users:update hält die Betreuer-Standardrolle für die Kinderdaten.
-  const canAccessDocuments =
-    userIsAdmin ||
-    hasPermission(session, "staff:documents") ||
-    hasPermission(session, "staff:financial") ||
-    hasPermission(session, "staff_documents:health");
-  // Document-only roles have no other staff view to navigate from. Roles that
-  // can already manage staff stay in their established view; its entries link
-  // directly to the documents tab below.
-  const documentDirectoryOnly =
-    canAccessDocuments &&
-    !userIsAdmin &&
-    !canListStaff &&
-    !canManageTimeTracking;
-  // Die Personenkarte führt nur dann weiter, wenn dort auch etwas
-  // freigeschaltet ist: das Profil mit Unterlagen oder Stammdaten, oder der
-  // Personal-Datensatz (Reiter „Konto", users:read oder staff:manage,
-  // #2906). Seit #3115 ist die Personalakte die einzige Objektansicht; das
-  // Pane der Datenverwaltung gibt es nicht mehr.
-  const profileTabAvailable =
-    userIsAdmin || canAccessDocuments || canEditStammdaten;
-  const canNavigateToStaff =
-    canReadUsers || profileTabAvailable || canManageStaffRecords;
-
-  const searchParams = useSearchParams();
-  // State variables for filters
-  const [searchTerm, setSearchTerm] = useState(
-    searchParams.get("search") ?? "",
-  );
-  const [locationFilter, setLocationFilter] = useState(
-    searchParams.get("status") === "ehemalige" ? "ehemalige" : "all",
-  );
-  // `?view=accounts` öffnet die Zeitkonten, `&filter=ohne-soll` gleich mit
-  // dem Filter auf Personen ohne Soll und `&month=JJJJ-MM` im geprüften
-  // Monat: so führt die Vollständigkeit unter Abrechnung zu den Betroffenen
-  // (#6890).
-  const [selectedView, setSelectedView] = useState<
-    "status" | "accounts" | "audit" | "documents"
-  >(() => (searchParams.get("view") === "accounts" ? "accounts" : "status"));
-  const [employmentFilter, setEmploymentFilter] = useState("all");
-  // Angezeigter Monat der Zeitkonten (#1417): Default ist der laufende Monat;
-  // zurückblättern erlaubt der Endpoint seit #1988, vorwärts über heute hinaus
-  // lehnt er ab (Zukunftsmonat = volles Soll gegen null Ist).
-  const berlinToday = useBerlinToday();
-  const currentYear = Number(berlinToday.slice(0, 4));
-  const currentMonth = Number(berlinToday.slice(5, 7));
-  const [monthAnchor, setMonthAnchor] = useState<{
-    year: number;
-    month: number;
-  }>(() => linkedMonth(searchParams.get("month"), berlinToday));
-  const [showCloseModal, setShowCloseModal] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [saldoPreset, setSaldoPreset] = useState<SaldoPresetId>("all");
-  const [customSaldoHours, setCustomSaldoHours] = useState("");
-  const [showCustomSaldo, setShowCustomSaldo] = useState(false);
-  // Ohne Zugriff auf die Mitarbeiterliste ist die Statusansicht nicht
-  // erlaubt. Zeitkonten-Konten landen deshalb direkt in den Zeitkonten,
-  // können aber zwischen Zeitkonten und Änderungsprotokoll wechseln.
-  const view =
-    canListStaff || selectedView === "audit" || selectedView === "documents"
-      ? selectedView
-      : "accounts";
-  const showDocumentDirectory =
-    documentDirectoryOnly ||
-    (canManageTimeTracking && canAccessDocuments && view === "documents");
-
-  // Fetch staff data with SWR (automatic caching, deduplication, revalidation)
-  // Global SSE in TenantAuthWrapper handles cache invalidation automatically
-  const {
-    data: allStaffData,
-    isLoading,
-    error: staffError,
-    mutate: mutateStaff,
-  } = useSWRAuth<Staff[]>(
-    canListStaff ? staffKeys.key() : null,
-    staffKeys.fetcher,
-    {
-      keepPreviousData: true,
-      revalidateOnFocus: false,
-    },
-  );
-  // External people remain in the shared directory, not in the attendance view.
-  const staffData = useMemo(
-    () =>
-      allStaffData &&
-      sortStaff(allStaffData.filter((member) => !member.isExternal)),
-    [allStaffData],
-  );
-
-  const staff = staffData ?? [];
-  // Ladefehler stehen dort, wo die Daten fehlen, mit Wiederholen und
-  // Vorgangskennung (#2514).
-  const staffLoadError = useSwrLoadError(
-    staffError,
-    "die Personalliste",
-    mutateStaff,
-  );
-
-  // Ehemalige (#3403): eine Option im Status-Filter statt einer zweiten
-  // Liste. Geladen wird nur, wenn sie gewählt ist; ohne sie zeigt die Liste
-  // wie bisher nur aktives Personal.
-  const showFormer = view === "status" && locationFilter === "ehemalige";
-  const {
-    data: formerData,
-    isLoading: isFormerLoading,
-    error: formerError,
-    mutate: mutateFormer,
-  } = useSWRAuth<FormerStaff[]>(
-    canListStaff && showFormer ? staffRecordKeys.former() : null,
-    async () =>
-      (await staffService.getFormerStaff()).sort(
-        (a, b) =>
-          a.lastName.localeCompare(b.lastName, "de-DE") ||
-          a.firstName.localeCompare(b.firstName, "de-DE"),
-      ),
-    { revalidateOnFocus: false },
-  );
-  const formerLoadError = useSwrLoadError(
-    formerError,
-    "die Liste der Ehemaligen",
-    mutateFormer,
-  );
-  const filteredFormer = (formerData ?? []).filter((member) =>
-    foldForSearch(`${member.firstName} ${member.lastName}`).includes(
-      foldForSearch(searchTerm.trim()),
-    ),
-  );
-
-  const {
-    data: documentDirectory,
-    error: documentDirectoryError,
-    isLoading: isDocumentDirectoryLoading,
-    mutate: mutateDocumentDirectory,
-  } = useSWRAuth<StaffDocumentDirectoryEntry[]>(
-    showDocumentDirectory ? staffRecordKeys.documentDirectory() : null,
-    () => staffService.getDocumentDirectory(),
-    { revalidateOnFocus: false },
-  );
-  const documentDirectoryLoadError = useSwrLoadError(
-    documentDirectoryError,
-    "das Personalverzeichnis",
-    mutateDocumentDirectory,
-  );
-
-  // Zeitkonten (#1417 Tranche 2a). Beschäftigungstyp und Saldo-Grenzen gehen
-  // an den Server — der Beschäftigungstyp spart dort die Rechnung pro Person,
-  // die Saldo-Grenzen verkleinern die Antwort. Sortiert und nach Namen
-  // gefiltert wird im Client, das spart bei jedem Spaltenklick einen Roundtrip.
-  const saldoBounds =
-    saldoPresets.find((preset) => preset.id === saldoPreset) ?? saldoPresets[0];
-  const customSaldoMinutes =
-    customSaldoHours.trim() === "" || Number.isNaN(Number(customSaldoHours))
-      ? undefined
-      : Math.round(Number(customSaldoHours) * 60);
-  // Eine eigene Untergrenze ersetzt das Preset vollständig, statt sich mit
-  // dessen Obergrenze zu einem Bereich zu vermischen, den niemand so gewählt
-  // hat.
-  const saldoMin = customSaldoMinutes ?? saldoBounds.min ?? undefined;
-  const saldoMax =
-    customSaldoMinutes !== undefined
-      ? undefined
-      : (saldoBounds.max ?? undefined);
-
-  const needsAuditStaffOptions =
-    canManageTimeTracking && view === "audit" && !canListStaff;
-  const accountsKey =
-    canManageTimeTracking && view === "accounts"
-      ? staffRecordKeys.timeAccounts(
-          monthAnchor.year,
-          monthAnchor.month,
-          employmentFilter,
-          saldoMin,
-          saldoMax,
-        )
-      : needsAuditStaffOptions
-        ? staffRecordKeys.auditOptions(monthAnchor.year, monthAnchor.month)
-        : null;
-  const {
-    data: accounts,
-    isLoading: accountsLoading,
-    error: accountsError,
-    mutate: mutateAccounts,
-  } = useSWRAuth(
-    accountsKey,
-    () => {
-      const month = {
-        year: monthAnchor.year,
-        month: monthAnchor.month,
-      };
-      if (needsAuditStaffOptions) {
-        return staffOverviewService.getTimeAccounts(month);
-      }
-      return staffOverviewService.getTimeAccounts({
-        ...month,
-        employmentType:
-          employmentFilter === "all" ? undefined : employmentFilter,
-        saldoMin,
-        saldoMax,
-      });
-    },
-    // Filters update immediately. Keep the old rows out of the table until
-    // the response for the active filter key arrives.
-    { keepPreviousData: false, revalidateOnFocus: false },
-  );
-
-  // Abschluss-Status des angezeigten Monats (#1417). Leeres Array = offen.
-  const monthCloseKey =
-    canManageTimeTracking && view === "accounts"
-      ? staffRecordKeys.monthClose(monthAnchor.year, monthAnchor.month)
-      : null;
-  const {
-    data: monthCloseSnapshots,
-    error: monthCloseStatusError,
-    mutate: mutateMonthClose,
-  } = useSWRAuth(
-    monthCloseKey,
-    () => staffMonthCloseService.getStatus(monthAnchor.year, monthAnchor.month),
-    { keepPreviousData: false, revalidateOnFocus: false },
-  );
-  // Personen mit Vertrag beim Träger (#4711): ihren Monat schließt die
-  // Personalverwaltung ab, der Abschluss der Schule lässt sie aus. Ohne
-  // Antwort zeigt die Tabelle nur keinen Hinweis.
-  const { data: traegerStaffIds } = useSWRAuth(
-    monthCloseKey
-      ? traegerMonthStaffKeys.month(monthAnchor.year, monthAnchor.month)
-      : null,
-    () =>
-      staffMonthCloseService.getTraegerStaff(
-        monthAnchor.year,
-        monthAnchor.month,
-      ),
-    { keepPreviousData: false, revalidateOnFocus: false },
-  );
-  const traegerStaff = useMemo(
-    () => new Set(traegerStaffIds ?? []),
-    [traegerStaffIds],
-  );
-  const accountsLoadError = useSwrLoadError(
-    accountsError,
-    "die Liste der Zeitkonten",
-    mutateAccounts,
-  );
-  const monthCloseLoadError = useSwrLoadError(
-    monthCloseStatusError,
-    "die Anzeige des Monatsabschlusses",
-    mutateMonthClose,
-  );
-  // Abschlüsse des Trägers (#4711) gehören nicht zum Abschluss der Schule:
-  // Sie betreffen nur Personen mit Vertrag beim Träger.
-  const schoolSnapshots = monthCloseSnapshots?.filter(
-    (snapshot) => snapshot.source !== "traeger",
-  );
-  const monthClose =
-    !monthCloseStatusError && schoolSnapshots
-      ? {
-          closed: schoolSnapshots.length > 0,
-          closedAt: schoolSnapshots[0]?.closedAt ?? "",
-          closedCount: schoolSnapshots.length,
-        }
-      : null;
-
-  const isCurrentOrFutureMonth =
-    monthAnchor.year > currentYear ||
-    (monthAnchor.year === currentYear && monthAnchor.month >= currentMonth);
-  const shiftMonth = (delta: number) => {
-    setMonthAnchor((anchor) => {
-      const date = new Date(anchor.year, anchor.month - 1 + delta, 1);
-      return { year: date.getFullYear(), month: date.getMonth() + 1 };
-    });
-  };
-
-  // Folgemonate rechnen ab jetzt vom eingefrorenen Übertrag — die schulweite
-  // Tabelle und beide Monatskarten-Familien sind potenziell veraltet.
-  const invalidate = useInvalidateMatching();
-  const refreshAfterMonthClose = () =>
-    invalidate(
-      (key) =>
-        key.includes("staff-time-accounts") ||
-        key.includes("staff-month-summary-") ||
-        key.includes(timeTrackingKeys.periodFamily) ||
-        key.includes(timeTrackingKeys.overviewFamily),
-    );
-  const handleCloseMonth = async (reason: string) => {
-    await staffMonthCloseService.closeMonth({
-      year: monthAnchor.year,
-      month: monthAnchor.month,
-      reason,
-    });
-    await mutateMonthClose();
-    await refreshAfterMonthClose();
-  };
-
-  const accountRows = useMemo(() => {
-    const rows = accounts?.rows ?? [];
-    if (!searchTerm) return rows;
-    const needle = foldForSearch(searchTerm);
-    return rows.filter((row) => foldForSearch(row.name).includes(needle));
-  }, [accounts, searchTerm]);
-  const auditStaffOptions = useMemo(
-    () =>
-      canListStaff
-        ? (staffData ?? []).map((row) => ({ id: row.id, name: row.name }))
-        : (accounts?.rows ?? []).map((row) => ({
-            id: row.staffId,
-            name: row.name,
-          })),
-    [accounts?.rows, canListStaff, staffData],
-  );
-
-  // Open absence requests (#1419): feeds the per-card pending indicators and
-  // the counter on the pointer to the Anfragen module (#2433). Fetches only
-  // with vacation:approve.
-  const { rows: pendingAbsences, canReview: canReviewAbsences } =
-    useStaffPendingAbsences();
-  const pendingByStaff = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const row of pendingAbsences) {
-      map.set(row.staff_id, (map.get(row.staff_id) ?? 0) + 1);
-    }
-    return map;
-  }, [pendingAbsences]);
-
-  // Known non-room locations for the "Im Raum" filter
-  const nonRoomLocations = new Set([
-    "Zuhause",
-    "Anwesend",
-    "Schulhof",
-    "Unterwegs",
-    "Krank",
-    "Urlaub",
-    "Fortbildung",
-    "Freizeitausgleich",
-    "Abwesend",
-  ]);
-
-  // All absence location labels for the unified "Abwesend" filter
-  const absenceLocations = new Set([
-    "Krank",
-    "Urlaub",
-    "Fortbildung",
-    "Freizeitausgleich",
-    "Abwesend",
-  ]);
-
-  // Helper to check if location matches filter
-  const matchesLocationFilter = (location: string, filter: string): boolean => {
-    if (filter === "all") return true;
-    // "abwesend_nicht_eingecheckt" - not clocked in (Zuhause or Abwesend)
-    if (filter === "abwesend_nicht_eingecheckt")
-      return location === "Zuhause" || location === "Abwesend";
-    if (filter === "anwesend") return location === "Anwesend";
-    if (filter === "homeoffice") return location === "Unterwegs";
-    // "abwesend" - all absence types.
-    if (filter === "abwesend") return absenceLocations.has(location);
-    if (filter === "im_raum") {
-      // Staff actively supervising in a room
-      return !nonRoomLocations.has(location);
-    }
-    return true;
-  };
-
-  // Apply client-side filters
-  const filteredStaff = staff.filter((staffMember) => {
-    // Search filter
-    if (searchTerm) {
-      const searchLower = foldForSearch(searchTerm);
-      const matchesSearch =
-        foldForSearch(staffMember.firstName).includes(searchLower) ||
-        foldForSearch(staffMember.lastName).includes(searchLower) ||
-        foldForSearch(staffMember.name).includes(searchLower);
-
-      if (!matchesSearch) return false;
-    }
-
-    // Location filter
-    const location = staffMember.currentLocation ?? "Abwesend";
-    return matchesLocationFilter(location, locationFilter);
-  });
-
-  // Prepare filter configurations for the TenantPage search row. Der Status-Filter
-  // gehört zur Karten-Ansicht, der Beschäftigungstyp zur Zeitkonten-Tabelle —
-  // beide gleichzeitig anzuzeigen würde Filter anbieten, die auf die sichtbare
-  // Ansicht nicht wirken.
-  const employmentFilterConfig: FilterConfig = useMemo(
-    () => ({
-      id: "employment",
-      label: "Beschäftigung",
-      type: "grid",
-      value: employmentFilter,
-      onChange: (value) => setEmploymentFilter(value as string),
-      options: [
-        { value: "all", label: "Alle", icon: "M4 6h16M4 12h16M4 18h16" },
-        ...Object.entries(employmentTypeLabels).map(([value, label]) => ({
-          value,
-          label,
-          icon: "M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0",
-        })),
-      ],
-    }),
-    [employmentFilter],
-  );
-
-  const locationFilterConfig: FilterConfig = useMemo(
-    () => ({
-      id: "location",
-      label: "Status",
-      type: "grid",
-      value: locationFilter,
-      onChange: (value) => setLocationFilter(value as string),
-      options: [
-        { value: "all", label: "Alle", icon: "M4 6h16M4 12h16M4 18h16" },
-        {
-          value: "anwesend",
-          label: "Anwesend",
-          icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
-        },
-        {
-          value: "abwesend_nicht_eingecheckt",
-          label: "Abwesend",
-          icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6",
-        },
-        {
-          value: "im_raum",
-          label: "Im Raum",
-          icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4",
-        },
-        {
-          value: "homeoffice",
-          label: "Unterwegs",
-          icon: "M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z",
-        },
-        {
-          value: "abwesend",
-          label: "Krank/Urlaub",
-          icon: "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636",
-        },
-        {
-          value: "ehemalige",
-          label: "Ehemalige",
-          icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
-        },
-      ],
-    }),
-    [locationFilter],
-  );
-
-  // Das Änderungsprotokoll bringt seine eigenen Filter mit (MA, Editor,
-  // Bereich, Zeitraum) — Header-Filter würden dort ins Leere laufen.
-  const filterConfigs: FilterConfig[] =
-    view === "audit" || view === "documents"
-      ? []
-      : view === "accounts"
-        ? [employmentFilterConfig]
-        : [locationFilterConfig];
-
-  // Prepare active filters for display
-  const activeFilters: ActiveFilter[] = useMemo(() => {
-    const filters: ActiveFilter[] = [];
-
-    if (searchTerm) {
-      filters.push({
-        id: "search",
-        label: `"${searchTerm}"`,
-        onRemove: () => setSearchTerm(""),
-      });
-    }
-
-    if (view === "accounts") {
-      if (employmentFilter !== "all") {
-        filters.push({
-          id: "employment",
-          label: employmentTypeLabels[employmentFilter] ?? employmentFilter,
-          onRemove: () => setEmploymentFilter("all"),
-        });
-      }
-      if (customSaldoHours.trim() !== "") {
-        filters.push({
-          id: "saldo",
-          label: `Saldo ab ${customSaldoHours} Std.`,
-          onRemove: () => {
-            setCustomSaldoHours("");
-            setShowCustomSaldo(false);
-          },
-        });
-      } else if (saldoPreset !== "all") {
-        const preset = saldoPresets.find((entry) => entry.id === saldoPreset);
-        filters.push({
-          id: "saldo",
-          label: preset?.label ?? saldoPreset,
-          onRemove: () => setSaldoPreset("all"),
-        });
-      }
-      return filters;
-    }
-
-    if (locationFilter !== "all") {
-      const locationLabels: Record<string, string> = {
-        anwesend: "Anwesend",
-        abwesend_nicht_eingecheckt: "Abwesend",
-        im_raum: "Im Raum",
-        homeoffice: "Unterwegs",
-        abwesend: "Krank/Urlaub",
-        ehemalige: "Ehemalige",
-      };
-      filters.push({
-        id: "location",
-        label: locationLabels[locationFilter] ?? locationFilter,
-        onRemove: () => setLocationFilter("all"),
-      });
-    }
-
-    return filters;
-  }, [
-    searchTerm,
-    locationFilter,
-    employmentFilter,
-    saldoPreset,
-    customSaldoHours,
-    view,
-  ]);
-
-  // Statuszeile unter dem Seitentitel: nur aus den Daten, die die Seite
-  // ohnehin lädt (Personalliste bzw. Zeitkonten-Tabelle).
-  const staffSummary = (() => {
-    // Die Zeile beschreibt, was gerade zu sehen ist: in den Personalunterlagen
-    // also die Zahl der Personen mit Unterlagen, nicht die Personalliste.
-    // Ohne geladene Daten gibt es nichts zu zählen: „0 Personen“ läse sich
-    // wie eine leere Schule, der Ladefehler steht darunter (#2514).
-    if (showFormer) {
-      if (formerError || formerData === undefined) return undefined;
-      const count = filteredFormer.length;
-      return `${count} ehemalige ${count === 1 ? "Person" : "Personen"}`;
-    }
-    if (
-      (view === "status" && staffError) ||
-      (view === "documents" && documentDirectoryError) ||
-      (view === "accounts" && accountsError)
-    ) {
-      return undefined;
-    }
-    if (view === "documents") {
-      const count = documentDirectory?.length ?? 0;
-      return `${count} ${count === 1 ? "Person" : "Personen"} mit Unterlagen`;
-    }
-    if (view === "accounts") {
-      const count = accounts?.rows?.length ?? 0;
-      return `${count} ${count === 1 ? "Zeitkonto" : "Zeitkonten"}`;
-    }
-    if (canReadUsers) {
-      // Dieselben Zustände wie die Badges auf den Karten: "Abwesend" ist der
-      // Standard für "nicht eingestempelt", gemeldete Arten (Krank, Urlaub …)
-      // tragen ihren eigenen Namen. So passt die Zeile zu dem, was man sieht.
-      // Die Statuszeile trägt höchstens drei Angaben (#7402); die gemeldeten
-      // Arten zeigen die Badges der Karten und der Filter „Status“.
-      let clockedIn = 0;
-      let absent = 0;
-      for (const member of filteredStaff) {
-        // Die Kopfkarte zählt die Bezeichnungen der Karten. Dadurch ist etwa
-        // „Zuhause“ wie auf der Karte „Anwesend“ und verschwindet nicht aus
-        // der Zusammenfassung.
-        const location = getStaffLocationStatus(member).label;
-        if (location === "Anwesend") clockedIn += 1;
-        else if (location === "Abwesend") absent += 1;
-      }
-      return (
-        <TenantPageStats
-          items={[
-            {
-              value: filteredStaff.length,
-              label: filteredStaff.length === 1 ? "Person" : "Personen",
-            },
-            { value: clockedIn, label: "anwesend" },
-            { value: absent, label: "abwesend" },
-          ]}
-        />
-      );
-    }
-    if (documentDirectory === undefined) return undefined;
-    const count = documentDirectory.length;
-    return `${count} ${count === 1 ? "Person" : "Personen"} mit Unterlagen`;
-  })();
-
-  const showSkeleton =
-    status === "loading" || isLoading || isDocumentDirectoryLoading;
-
-  if (!showSkeleton) {
-    if (!canListStaff && !canManageTimeTracking && !canAccessDocuments) {
-      return <ForbiddenPage />;
-    }
-
-    if (documentDirectoryOnly) {
-      return (
-        <DocumentDirectory
-          entries={documentDirectory ?? []}
-          failed={Boolean(documentDirectoryError)}
-          error={documentDirectoryLoadError}
-        />
-      );
-    }
-  }
-
-  // Leerzustand der Karten-Ansicht: Er nennt den nächsten Schritt, nicht nur
-  // die Feststellung. Filtert die Suche alles weg, ist der nächste Schritt das
-  // Zurücksetzen; ist wirklich niemand angelegt, führt er in die Stammdaten,
-  // wo Mitarbeitende entstehen. Eine noch nicht geladene
-  // Liste (staffData === undefined) ist kein Leerzustand.
-  const staffFilterActive = searchTerm !== "" || locationFilter !== "all";
-  const formerEmptyState =
-    showFormer &&
-    !showSkeleton &&
-    !formerError &&
-    formerData !== undefined &&
-    filteredFormer.length === 0
-      ? {
-          title: "Keine Ehemaligen gefunden",
-          description: searchTerm
-            ? "Zu dieser Suche gibt es keine Person. Setze die Suche zurück, um alle zu sehen."
-            : "Hier erscheint, wer die Schule verlassen hat.",
-          icon: <MotoConceptIcon concept={staffConcept} size={48} />,
-          action: searchTerm ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              onClick={() => setSearchTerm("")}
-              tooltip="Leert die Suche und zeigt wieder alle Ehemaligen."
-            >
-              Suche zurücksetzen
-            </Button>
-          ) : undefined,
-        }
-      : null;
-  const statusEmptyState =
-    view === "status" &&
-    !showFormer &&
-    !showSkeleton &&
-    !staffError &&
-    staffData !== undefined &&
-    filteredStaff.length === 0
-      ? {
-          title: "Kein Personal gefunden",
-          description: staffFilterActive
-            ? "Zu dieser Suche gibt es keine Person. Setze die Suche zurück, um alle zu sehen."
-            : "Es ist noch niemand angelegt. Mitarbeitende legst du im Reiter „Stammdaten“ an.",
-          icon: <MotoConceptIcon concept={staffConcept} size={48} />,
-          action: staffFilterActive ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              onClick={() => {
-                setSearchTerm("");
-                setLocationFilter("all");
-              }}
-              tooltip="Leert Suche und Ortsfilter und zeigt wieder alle Personen."
-            >
-              Suche zurücksetzen
-            </Button>
-          ) : userIsAdmin ? (
-            <Button
-              type="button"
-              variant="primary"
-              size="md"
-              onClick={() => router.push("/database/personal")}
-              tooltip="Öffnet das Personal in der Datenverwaltung, dort legst du Personen an."
-            >
-              Zur Datenverwaltung
-            </Button>
-          ) : undefined,
-        }
-      : null;
-
-  // Seitenreiter: Status (Karten), Zeitkonten (Tabelle), Änderungsprotokoll
-  // und Personalunterlagen beantworten verschiedene Fragen. Nur mit
-  // time_tracking:manage gibt es überhaupt etwas zu wechseln.
-  // Was man selten braucht, steht gebündelt hinter „Verwaltung": Protokoll
-  // und Unterlagen sind Verwaltungsflächen und gehören nicht gleichrangig
-  // neben die tägliche Ansicht.
-  const tabItems = [
-    ...(canListStaff ? [{ value: "status", label: "Status" }] : []),
-    { value: "accounts", label: "Zeitkonten" },
-    { value: "audit", label: "Änderungsprotokoll" },
-    ...(canAccessDocuments
-      ? [{ value: "documents", label: "Personalunterlagen" }]
-      : []),
-  ];
-
-  return (
-    <TenantPage
-      title="Mitarbeitende"
-      info={
-        canListStaff
-          ? canManageTimeTracking
-            ? STAFF_MANAGE_INFO
-            : STAFF_INFO
-          : STAFF_ACCOUNTS_INFO
-      }
-      stats={staffSummary}
-      statsLoading={showSkeleton}
-      search={
-        // Im Änderungsprotokoll und in den Personalunterlagen filtern die
-        // Ansichten selbst; ein wirkungsloses Suchfeld wäre irreführend.
-        view === "audit" || view === "documents"
-          ? undefined
-          : {
-              value: searchTerm,
-              onChange: setSearchTerm,
-              placeholder: "Name suchen…",
-            }
-      }
-      filters={filterConfigs}
-      activeFilters={activeFilters}
-      onClearAllFilters={() => {
-        setSearchTerm("");
-        setLocationFilter("all");
-        setEmploymentFilter("all");
-        setSaldoPreset("all");
-        setCustomSaldoHours("");
-        setShowCustomSaldo(false);
-      }}
-      tabs={
-        canManageTimeTracking
-          ? {
-              value: view,
-              onChange: (value) => {
-                setSelectedView(
-                  value as "status" | "accounts" | "audit" | "documents",
-                );
-              },
-              items: tabItems,
-            }
-          : undefined
-      }
-      // Der Ladefehler der Personalliste gehört ins Gerüst. Ihr Leerzustand
-      // bleibt dagegen bei den Karten, damit unabhängige Bereiche sichtbar
-      // bleiben.
-      error={
-        showFormer ? formerLoadError : view === "status" ? staffLoadError : null
-      }
-      overlays={
-        <>
-          {showCloseModal && (
-            <MonthCloseReasonModal
-              title={`Monat abschließen: ${String(monthAnchor.month).padStart(2, "0")}/${monthAnchor.year}`}
-              description={
-                <>
-                  <p>
-                    Der Abschluss friert den Saldo zum Monatsende für{" "}
-                    <strong>alle Mitarbeitenden</strong> ein. Spätere Monate
-                    rechnen ab dann mit diesem eingefrorenen Übertrag weiter.
-                  </p>
-                  <p>
-                    Werden danach noch Zeiten in diesem Monat geändert, bleibt
-                    der Übertrag stehen; die Abweichung wird auf der Monatskarte
-                    der Person angezeigt.
-                  </p>
-                  <p>
-                    Bereits abgeschlossene Konten bleiben unverändert; nur
-                    offene Konten werden eingefroren.
-                  </p>
-                  {traegerStaff.size > 0 ? (
-                    <p>
-                      {traegerStaff.size === 1
-                        ? "1 Person hat"
-                        : `${traegerStaff.size} Personen haben`}{" "}
-                      einen Arbeitsvertrag beim Träger. Ihren Monat schließt die
-                      Personalverwaltung des Trägers ab. Dieser Abschluss lässt
-                      sie aus.
-                    </p>
-                  ) : null}
-                </>
-              }
-              submitLabel="Monat abschließen"
-              submitTooltip="Schreibt das Stundenkonto aller Mitarbeitenden zum Monatsende fest."
-              successMessage="Der Monat ist abgeschlossen."
-              onSubmit={handleCloseMonth}
-              onClose={() => setShowCloseModal(false)}
-            />
-          )}
-
-          {/* Cross-MA-Export (#1417 2b): Query-Bau im Dialog, Zahlen und Datei
-              komplett aus dem Backend. */}
-          <StaffTimeExportModal
-            isOpen={showExportModal}
-            onClose={() => setShowExportModal(false)}
-            year={accounts?.year ?? monthAnchor.year}
-            month={accounts?.month ?? monthAnchor.month}
-            canOpenSettings={hasPermission(session, "config:manage")}
-          />
-        </>
-      }
-    >
-      {/* Verweis auf die Anfragen (#2433): Urlaub, Krank und Fortbildung
-          werden dort entschieden, nicht hier. */}
-      {!showSkeleton && canReviewAbsences && (
-        <TileCard
-          href={tenantPath("/anfragen")}
-          className="flex items-center justify-between gap-3"
-        >
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-gray-900">
-              Anträge von Mitarbeitenden
-            </p>
-            <p className="text-sm text-gray-600">
-              Urlaub, Krank und Fortbildung entscheidest du unter Anfragen.
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <NotificationBadge
-              count={pendingAbsences.length}
-              tone={COUNTER_TONE.staff}
-              ariaLabel={`${pendingAbsences.length} ${pendingAbsences.length === 1 ? "offener Antrag" : "offene Anträge"}`}
-            />
-            <CaretRightIcon
-              size={18}
-              className="text-gray-400"
-              aria-hidden="true"
-            />
-          </div>
-        </TileCard>
-      )}
-
-      {showSkeleton ? (
-        <StaffCardsSkeleton />
-      ) : (
-        <>
-          {/* Sektion 2: Einrichtungs-Übersicht (#1417 Tranche 2a), läuft mit users:read */}
-          {canReadUsers && <SchoolOverviewSection />}
-
-          {/* Änderungsprotokoll (#1417): cross-MA audit feed, eigene Filter in der
-              Komponente. Nur mit time_tracking:manage erreichbar (Tab-Gate oben). */}
-          {view === "audit" && canManageTimeTracking && (
-            <StaffAuditLog staffOptions={auditStaffOptions} />
-          )}
-
-          {view === "documents" &&
-            canManageTimeTracking &&
-            canAccessDocuments && (
-              <DocumentDirectory
-                entries={documentDirectory ?? []}
-                failed={Boolean(documentDirectoryError)}
-                error={documentDirectoryLoadError}
-                embedded
-              />
-            )}
-
-          {view === "accounts" && (
-            <StaffTimeAccountsTable
-              rows={accountRows}
-              year={accounts?.year ?? monthAnchor.year}
-              month={accounts?.month ?? monthAnchor.month}
-              onPrevMonth={() => shiftMonth(-1)}
-              onNextMonth={() => shiftMonth(1)}
-              canGoNextMonth={!isCurrentOrFutureMonth}
-              monthClose={monthClose}
-              traegerStaff={traegerStaff}
-              monthCloseError={monthCloseLoadError}
-              onRetryMonthClose={() => void mutateMonthClose()}
-              monthIsOver={!isCurrentOrFutureMonth}
-              onCloseMonth={() => setShowCloseModal(true)}
-              onExport={() => setShowExportModal(true)}
-              onOpeningBalances={
-                userIsAdmin
-                  ? () => router.push("/database/personal/opening-balances")
-                  : undefined
-              }
-              isLoading={accountsLoading && !accounts}
-              error={accountsLoadError}
-              onRowClick={(row) =>
-                router.push(
-                  // Ohne Soll führt die Zeile dorthin, wo es fehlt (#6887);
-                  // den Reiter sieht nur die Leitung.
-                  !row.hasTarget && userIsAdmin
-                    ? workTimeModelPath(row.staffId)
-                    : `/staff/${row.staffId}${canAccessDocuments && !userIsAdmin ? "?tab=dokumente" : ""}`,
-                )
-              }
-              canSetTarget={userIsAdmin}
-              initialOnlyWithoutTarget={
-                searchParams.get("filter") === "ohne-soll"
-              }
-              saldoPreset={saldoPreset}
-              onSaldoPresetChange={setSaldoPreset}
-              customSaldoHours={customSaldoHours}
-              onCustomSaldoHoursChange={setCustomSaldoHours}
-              showCustomSaldo={showCustomSaldo}
-              onShowCustomSaldoChange={setShowCustomSaldo}
-              paginationResetKey={`${accountsKey ?? "inactive"}:${searchTerm}`}
-            />
-          )}
-
-          {/* Ohne Recht auf die Personalakte sind die Karten reine Anzeige. Der
-              Grund steht einmal über der Liste statt auf jeder Karte (#3926). */}
-          {view === "status" &&
-            !showFormer &&
-            !canNavigateToStaff &&
-            !staffError &&
-            filteredStaff.length > 0 && (
-              <Alert
-                type="info"
-                announce="off"
-                message="Die Karten zeigen nur, wo jemand gerade ist. Personalakten sind für dein Konto nicht freigegeben. Frage bei Bedarf deine Leitung."
-              />
-            )}
-
-          {/* Frühere Beschäftigungen öffnen dieselbe Personalakte im Lesemodus. */}
-          {showFormer &&
-            (isFormerLoading && !formerData ? (
-              <StaffCardsSkeleton />
-            ) : formerEmptyState ? (
-              <EmptyState {...formerEmptyState} />
-            ) : filteredFormer.length > 0 ? (
-              <>
-                <Alert
-                  type="info"
-                  announce="off"
-                  message={
-                    canNavigateToStaff
-                      ? "Hier stehen Personen, die früher bei dir gearbeitet haben. Öffne eine Karte für die Angaben von damals."
-                      : "Hier stehen Personen, die früher bei dir gearbeitet haben. Personalakten sind für dein Konto nicht freigegeben."
-                  }
-                />
-                <FormerStaffCards
-                  members={filteredFormer}
-                  referrer={`/staff?${new URLSearchParams({ status: "ehemalige", ...(searchTerm ? { search: searchTerm } : {}) })}`}
-                  canOpen={canNavigateToStaff}
-                />
-              </>
-            ) : null)}
-
-          {/* Staff Grid */}
-          {view === "status" &&
-            !showFormer &&
-            (statusEmptyState ? (
-              <EmptyState {...statusEmptyState} />
-            ) : filteredStaff.length > 0 ? (
-              <div>
-                <CollectionGrid>
-                  {filteredStaff.map((staffMember) => {
-                    const locationStatus = getStaffLocationStatus(staffMember);
-                    const displayType = getStaffDisplayType(staffMember);
-                    const cardInfo = getStaffCardInfo(staffMember);
-                    const notes = formatStaffNotes(staffMember.staffNotes, 80);
-                    const supervisions = staffMember.supervisions ?? [];
-                    const pendingRequestCount =
-                      pendingByStaff.get(String(staffMember.id)) ?? 0;
-
-                    const navigateToStaff = () => {
-                      if (!profileTabAvailable) {
-                        router.push(`/staff/${staffMember.id}?tab=konto`);
-                        return;
-                      }
-                      router.push(
-                        `/staff/${staffMember.id}${canAccessDocuments && !userIsAdmin ? "?tab=dokumente" : ""}`,
-                      );
-                    };
-
-                    return (
-                      <StaffCardSurface
-                        key={staffMember.id}
-                        onClick={
-                          canNavigateToStaff ? navigateToStaff : undefined
-                        }
-                        ariaLabel={`${staffMember.firstName} ${staffMember.lastName} - ${
-                          userIsAdmin
-                            ? "Details öffnen"
-                            : "Personalunterlagen öffnen"
-                        }`}
-                      >
-                        <div className="relative">
-                          <div className="relative flex min-h-[104px] flex-col">
-                            <div className="mb-3 flex items-start justify-between gap-3">
-                              <div className="min-w-0 flex-1">
-                                {/* Ein Name, eine Zeile: der Umbruch zwischen Vor-
-                                und Nachname ließ jede Karte wie zwei Personen
-                                aussehen. Wohin die Kachel führt, sagt ihr
-                                aria-label, kein Pfeil-Ornament. */}
-                                <h3 className="truncate text-base font-bold text-gray-900">
-                                  {staffMember.firstName} {staffMember.lastName}
-                                </h3>
-                                <p className="mt-0.5 truncate text-xs text-gray-500">
-                                  {staffMember.specialization ?? displayType}
-                                </p>
-                              </div>
-
-                              <span className="flex flex-shrink-0 flex-col items-end gap-1.5">
-                                {/* Dieselbe Pille wie beim Kind: helle Fläche,
-                                dunkle farbige Schrift. Vollflächige Badges in
-                                Signalfarbe waren auf einer Liste mit 24
-                                Personen eine Wand aus Rot. */}
-                                <StatusColorBadge
-                                  label={locationStatus.label}
-                                  color={locationStatus.customBgColor}
-                                />
-                                {/* Geplanter Austritt (#4809): bis zum letzten
-                                Arbeitstag arbeitet die Person normal. */}
-                                {staffMember.plannedExitDate ? (
-                                  <StatusBadge
-                                    label={`Austritt am ${formatDate(staffMember.plannedExitDate)}`}
-                                    tone="warning"
-                                  />
-                                ) : null}
-                              </span>
-                            </div>
-
-                            <div className="flex-1 space-y-2">
-                              {pendingRequestCount > 0 && (
-                                <div className="text-moto-orange-strong flex items-center gap-1.5 text-xs font-medium">
-                                  <BellSimpleRingingIcon
-                                    className="text-moto-orange h-[18px] w-[18px] shrink-0"
-                                    aria-hidden="true"
-                                  />
-                                  <span>
-                                    <span className="font-semibold">
-                                      {pendingRequestCount}
-                                    </span>{" "}
-                                    {pendingRequestCount === 1
-                                      ? "offener Abwesenheitsantrag"
-                                      : "offene Abwesenheitsanträge"}
-                                  </span>
-                                </div>
-                              )}
-
-                              {supervisions.length > 0 && (
-                                <div className="text-sm text-gray-600">
-                                  <span className="font-medium">
-                                    Aktuelle Aufsicht:
-                                  </span>
-                                  <ul className="mt-0.5 list-inside">
-                                    {supervisions.map((supervision) => (
-                                      <li
-                                        key={`${supervision.roomId}-${supervision.activeGroupId}`}
-                                      >
-                                        • {supervision.roomName}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-
-                              {cardInfo.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                  {cardInfo.map((info) => (
-                                    <StatusBadge
-                                      key={info}
-                                      label={info}
-                                      tone="gray"
-                                      compact
-                                      wrap
-                                    />
-                                  ))}
-                                </div>
-                              )}
-
-                              {notes && (
-                                <p className="text-xs text-gray-500">{notes}</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </StaffCardSurface>
+    <TenantRouteSeed
+      slug={tenant}
+      load={({ token, session, tenant: school }) => {
+        const canReadStaff =
+          hasPermission(session, "users:read") ||
+          hasPermission(session, "staff:manage") ||
+          hasPermission(session, "staff:stammdaten");
+        const canReadDocuments = [
+          "staff:documents",
+          "staff:financial",
+          "staff_documents:health",
+        ].some((permission) => hasPermission(session, permission));
+        const canReadTimeAccounts =
+          hasPermission(session, "time_tracking:manage") &&
+          (view === "accounts" || !canReadStaff) &&
+          isScopeBooked("zeiterfassung", school.bookedModules);
+        const window = linkedMonth(month ?? null, berlinTodayISO());
+        return [
+          ...(canReadTimeAccounts
+            ? [
+                {
+                  key: staffRecordKeys.timeAccounts(
+                    window.year,
+                    window.month,
+                    "all",
+                    undefined,
+                    undefined,
+                  ),
+                  render: true,
+                  value: seedRead("staff time accounts", async (signal) => {
+                    const { data } = await readContract(
+                      staffContract.routes[
+                        "GET /api/staff/time-tracking/overview"
+                      ],
+                      { token, signal, query: window },
                     );
-                  })}
-                </CollectionGrid>
-              </div>
-            ) : null)}
-        </>
-      )}
-    </TenantPage>
-  );
-}
-
-export default function StaffPage() {
-  return (
-    <Suspense
-      fallback={
-        <TenantPage title="Mitarbeitende" info={STAFF_INFO} statsLoading>
-          <StaffCardsSkeleton />
-        </TenantPage>
-      }
+                    return {
+                      year: data.year,
+                      month: data.month,
+                      rows: (data.rows ?? []).map(mapTimeAccountRow),
+                    };
+                  }),
+                },
+                {
+                  key: staffRecordKeys.monthClose(window.year, window.month),
+                  value: seedRead("staff month close", async (signal) =>
+                    (
+                      (
+                        await readContract(
+                          staffContract.routes[
+                            "GET /api/staff/time-tracking/month-close"
+                          ],
+                          { token, signal, query: window },
+                        )
+                      ).data ?? []
+                    ).map(mapMonthCloseSnapshotResponse),
+                  ),
+                },
+                {
+                  key: traegerMonthStaffKeys.month(window.year, window.month),
+                  value: seedRead(
+                    "staff month close responsibility",
+                    async (signal) =>
+                      (
+                        await readContract(
+                          staffContract.routes[
+                            "GET /api/staff/time-tracking/month-close/traeger-staff"
+                          ],
+                          { token, signal, query: window },
+                        )
+                      ).data.staff_ids ?? [],
+                  ),
+                },
+              ]
+            : []),
+          ...(canReadStaff
+            ? [staffDirectorySeed(token, hasPermission(session, "groups:read"))]
+            : []),
+          ...(canReadStaff && view !== "accounts" && status === "ehemalige"
+            ? [
+                {
+                  key: staffRecordKeys.former(),
+                  render: true,
+                  value: seedRead("GET /api/staff/former", async (signal) => {
+                    const { data } = await readContract(
+                      staffContract.routes["GET /api/staff/former"],
+                      { token, signal },
+                    );
+                    return data
+                      .map(mapFormerStaff)
+                      .sort(
+                        (a, b) =>
+                          a.lastName.localeCompare(b.lastName, "de-DE") ||
+                          a.firstName.localeCompare(b.firstName, "de-DE"),
+                      );
+                  }),
+                },
+              ]
+            : []),
+          ...(canReadDocuments &&
+          !canReadStaff &&
+          !isAdmin(session) &&
+          !hasPermission(session, "time_tracking:manage")
+            ? [
+                {
+                  key: staffRecordKeys.documentDirectory(),
+                  render: true,
+                  value: seedRead(
+                    "GET /api/staff/documents-directory",
+                    async (signal) => {
+                      const { data } = await readContract(
+                        staffContract.routes[
+                          "GET /api/staff/documents-directory"
+                        ],
+                        { token, signal },
+                      );
+                      return data;
+                    },
+                  ),
+                },
+              ]
+            : []),
+        ];
+      }}
     >
-      <StaffPageContent />
-    </Suspense>
+      <PageContent />
+    </TenantRouteSeed>
   );
-}
-
-/**
- * Der Monat aus `?month=JJJJ-MM` (#6890), sonst der laufende. Ein Monat nach
- * heute gilt nicht: die Zeitkonten kennen keine Zukunft.
- */
-function linkedMonth(
-  param: string | null,
-  today: string,
-): { year: number; month: number } {
-  const current = {
-    year: Number(today.slice(0, 4)),
-    month: Number(today.slice(5, 7)),
-  };
-  const match = /^(\d{4})-(\d{2})$/.exec(param ?? "");
-  if (!match) return current;
-  const linked = { year: Number(match[1]), month: Number(match[2]) };
-  const valid =
-    linked.month >= 1 &&
-    linked.month <= 12 &&
-    linked.year * 12 + linked.month <= current.year * 12 + current.month;
-  return valid ? linked : current;
 }

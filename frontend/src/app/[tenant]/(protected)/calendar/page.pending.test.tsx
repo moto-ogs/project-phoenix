@@ -77,7 +77,7 @@ import type {
   CalendarRecipientOptions,
   CalendarResponse,
 } from "~/lib/personal-calendar-api";
-import StaffCalendarPage from "./page";
+import StaffCalendarPage from "./page-content";
 
 const TITLE = "Termin erstellen";
 const FOOTER = ["Abbrechen", /Speichert/];

@@ -14,8 +14,13 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
-import type { CalendarPeriod } from "~/lib/calendar-period-helpers";
-import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
+import {
+  holidayWindow,
+  type CalendarPeriod,
+  type HolidayWindow,
+} from "~/lib/calendar-period-helpers";
+export { holidayWindow } from "~/lib/calendar-period-helpers";
+import { berlinTodayISO, parseISODate } from "~/lib/date-helpers";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
   getSchoolHolidays,
@@ -24,41 +29,6 @@ import {
 } from "~/lib/school-holidays-api";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
-
-export interface HolidayWindow {
-  readonly from: string;
-  readonly to: string;
-  /** Name des laufenden Schuljahres, null ohne laufendes Schuljahr. */
-  readonly schoolYearName: string | null;
-}
-
-/**
- * Das Fenster der Liste: das laufende aktive Schuljahr. Ohne eines zeigt die
- * Liste die nächsten zwölf Monate ab heute.
- */
-export function holidayWindow(
-  periods: readonly CalendarPeriod[],
-  todayISO: string,
-): HolidayWindow {
-  const schoolYear = periods.find(
-    (period) =>
-      period.isActive &&
-      period.periodType === "school_year" &&
-      period.startDate <= todayISO &&
-      todayISO <= period.endDate,
-  );
-  if (schoolYear) {
-    return {
-      from: schoolYear.startDate,
-      to: schoolYear.endDate,
-      schoolYearName: schoolYear.name,
-    };
-  }
-  const end = parseISODate(todayISO);
-  end.setFullYear(end.getFullYear() + 1);
-  end.setDate(end.getDate() - 1);
-  return { from: todayISO, to: toISODate(end), schoolYearName: null };
-}
 
 function formatHolidayDate(iso: string): string {
   return parseISODate(iso).toLocaleDateString("de-DE", {

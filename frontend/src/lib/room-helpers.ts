@@ -1,3 +1,4 @@
+import type { RoomSessionEntry } from "~/lib/contract/rooms.generated";
 // lib/room-helpers.ts
 // Type definitions and helper functions for rooms
 
@@ -209,4 +210,43 @@ export function formatFloor(floor: number | undefined): string {
   if (floor === undefined) return "Etage nicht angegeben";
   if (floor === 0) return "Erdgeschoss";
   return `Etage ${floor}`;
+}
+
+// One row in the room occupancy history. Issue #1425 moved this from
+// per-student-visit rows to one row per active.groups session — no student
+// IDs or names by design. Per-child detail lives behind
+// /students/{id}/attendance-history under its own GDPR gates.
+export interface RoomHistoryEntry {
+  sessionId: string;
+  startedAt: string; // RFC3339
+  endedAt: string | null; // RFC3339 or null while session is open
+  durationMinutes: number | null;
+  activityName: string;
+  supervisorName: string;
+  studentCount: number;
+}
+
+/** Maps one session of the contract (`RoomSessionEntry`). */
+export function mapRoomHistoryEntry(entry: RoomSessionEntry): RoomHistoryEntry {
+  return {
+    sessionId: entry.session_id,
+    startedAt: entry.started_at,
+    endedAt: entry.ended_at ?? null,
+    durationMinutes: entry.duration_minutes ?? null,
+    activityName: entry.activity_name,
+    supervisorName: entry.supervisor_name,
+    studentCount: entry.student_count,
+  };
+}
+
+/**
+ * A switched-off history (gdpr.attendance_log_enabled, #1425) arrives as the
+ * backend's 403 with its code (#7563).
+ */
+export function isRoomHistoryDisabled(failure: unknown): boolean {
+  return (
+    typeof failure === "object" &&
+    failure !== null &&
+    (failure as { code?: unknown }).code === ROOM_HISTORY_DISABLED_CODE
+  );
 }

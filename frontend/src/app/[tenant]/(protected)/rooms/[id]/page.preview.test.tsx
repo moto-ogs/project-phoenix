@@ -10,7 +10,7 @@ import { SWRConfig } from "~/lib/swr/testing";
 import { useSWRAuth } from "~/lib/swr";
 import { roomKeys } from "~/lib/swr/rooms-keys";
 import { ToastProvider } from "~/contexts/ToastContext";
-import RoomDetailPage from "./page";
+import RoomDetailPage from "./page-content";
 
 vi.unmock("swr");
 vi.mock("~/lib/session-cache", async (importOriginal) => {

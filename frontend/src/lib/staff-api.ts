@@ -403,8 +403,16 @@ export function mapStaffRecord(staff: StaffRecordResponse): Staff {
   };
 }
 
+export function mapStaffList(
+  staff: readonly StaffRecord[],
+  activeGroups: readonly ActiveGroupResponse[],
+): Staff[] {
+  const staffGroupsMap = buildStaffGroupsMap(activeGroups);
+  return staff.map((entry) => mapStaffMember(entry, staffGroupsMap));
+}
+
 /** A former employment of the Ehemalige filter (#3403). */
-function mapFormerStaff(entry: FormerStaffResponse): FormerStaff {
+export function mapFormerStaff(entry: FormerStaffResponse): FormerStaff {
   return {
     id: entry.id,
     firstName: entry.first_name,
@@ -433,13 +441,7 @@ class StaffService {
       bffJson("tenant", "GET /api/staff/"),
       fetchActiveGroups(),
     ]);
-    const staffGroupsMap = buildStaffGroupsMap(activeGroups);
-
-    const mappedStaff = staffList.map((staff) =>
-      mapStaffMember(staff, staffGroupsMap),
-    );
-
-    return applyStaffFilters(mappedStaff, filters);
+    return applyStaffFilters(mapStaffList(staffList, activeGroups), filters);
   }
 
   // Records an external caregiver (#3823) with the chosen access (ADR 0091);
@@ -502,7 +504,7 @@ class StaffService {
   }
 }
 
-function minimalProfile(
+export function minimalProfile(
   profile: MinimalStaffProfileResponse,
   profileType: "financial" | "document",
 ): Staff {
