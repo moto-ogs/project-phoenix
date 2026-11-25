@@ -86,7 +86,10 @@ import { useSchulhofActions } from "~/components/active-supervisions/use-schulho
 import { AddUnplannedStudentModal } from "~/components/active-supervisions/add-unplanned-student-modal";
 import { PresentChildrenPicker } from "~/components/active-supervisions/present-children-picker";
 import { TimetableRosterContent } from "~/components/active-supervisions/timetable-roster";
-import { TimetableRosterApp } from "~/components/active-supervisions/timetable-roster-app";
+import {
+  rosterAppCanAddUnplanned,
+  TimetableRosterApp,
+} from "~/components/active-supervisions/timetable-roster-app";
 import { ActionBar } from "~/components/ui/action-bar";
 import { useDeviceContext } from "~/lib/device-context";
 import {
@@ -158,6 +161,8 @@ function MeinRaumPageContent() {
   });
   const memory = useSidebarMemory();
   const [searchSheetOpen, setSearchSheetOpen] = useState(false);
+  // App: „Kind suchen und hinzufügen“ öffnet sich aus dem „…“-Menü.
+  const [appAddStudentOpen, setAppAddStudentOpen] = useState(false);
   // App-Oberfläche (#8070): eigene Liste, Kopf und Aktionsleiste. Der
   // Desktop-Zweig bleibt der heutige Code.
   const device = useDeviceContext();
@@ -660,8 +665,23 @@ function MeinRaumPageContent() {
   ) : null;
 
   // Im Kebab (Spec R4): sichtbar steht das Übergeben oder Abgeben.
-  const addSupervisorEntries: OverflowMenuEntry[] =
-    additionalSupervisionActiveGroupId
+  // Suchblatt der App: Der Knopf sagt, was danach in der Liste steht.
+  const searchSheetHits =
+    currentTimetableRoster && filters.rosterRowFilter
+      ? currentTimetableRoster.rows
+          .filter(filters.rosterRowFilter)
+          .map((row) => row.studentName || `Kind ${row.studentId}`)
+      : null;
+  const searchSheetMatches = searchSheetHits?.length ?? null;
+  let searchSheetDoneLabel = "Zur Liste";
+  if (searchSheetMatches === 1) searchSheetDoneLabel = "1 Kind zeigen";
+  else if (searchSheetMatches === 0)
+    searchSheetDoneLabel = "Zur Liste: kein Treffer";
+  else if (searchSheetMatches !== null)
+    searchSheetDoneLabel = `${searchSheetMatches} Kinder zeigen`;
+
+  const addSupervisorEntries: OverflowMenuEntry[] = [
+    ...(additionalSupervisionActiveGroupId
       ? [
           {
             label: "Betreuer hinzufügen",
@@ -671,7 +691,23 @@ function MeinRaumPageContent() {
               setAddSupervisorTarget(additionalSupervisionActiveGroupId),
           },
         ]
-      : [];
+      : []),
+    // In der App fügt die Leiste anwesende Kinder hinzu; ein Kind, das
+    // noch nicht da ist, findet die Suche hier im Menü.
+    ...(appHasRunningRoster &&
+    currentTimetableRoster &&
+    hasPermission(session, "users:read") &&
+    rosterAppCanAddUnplanned(currentTimetableRoster, attendanceWebEnabled)
+      ? [
+          {
+            label: "Kind suchen und hinzufügen",
+            description: "Auch Kinder, die noch nicht da sind.",
+            icon: <Search className="h-4 w-4" aria-hidden="true" />,
+            onClick: () => setAppAddStudentOpen(true),
+          },
+        ]
+      : []),
+  ];
 
   // Abzeichen in der Kopfkarte: ein offener Raum heißt dort „Offener Raum",
   // die eigene Aufsicht „Eigene Aufsicht" (#3065). Keine Erklärzeile.
@@ -939,6 +975,8 @@ function MeinRaumPageContent() {
             studentProfileHref={studentProfileHref}
             onSearchChange={actions.handleAddStudentSearchChange}
             rowFilter={filters.rosterRowFilter}
+            addStudentOpen={appAddStudentOpen}
+            onAddStudentOpenChange={setAppAddStudentOpen}
             listFooter={
               <>
                 {spontaneousStartBanner}
@@ -1016,6 +1054,23 @@ function MeinRaumPageContent() {
     );
   };
 
+  const headMenuEntries: OverflowMenuEntry[] = [
+    ...addSupervisorEntries,
+    ...(showTable
+      ? isPhone
+        ? phoneDetailMenuEntries(
+            tableColumns,
+            collectionView.phoneDetail,
+            collectionView.setPhoneDetail,
+          )
+        : columnMenuEntries(
+            tableColumns,
+            collectionView.hiddenColumns,
+            collectionView.setColumnVisible,
+          )
+      : []),
+  ];
+
   return (
     <TenantPage
       // Der offene Raum oder die eigene Aufsicht ist das Objekt der Seite.
@@ -1071,28 +1126,18 @@ function MeinRaumPageContent() {
             {releaseAction}
             {/* Die Spaltenwahl der Liste (#3834) im ⋮-Menü, nicht als
                 eigener Knopf neben dem Umschalter. */}
-            <OverflowMenu
-              items={[
-                ...addSupervisorEntries,
-                ...(showTable
-                  ? isPhone
-                    ? phoneDetailMenuEntries(
-                        tableColumns,
-                        collectionView.phoneDetail,
-                        collectionView.setPhoneDetail,
-                      )
-                    : columnMenuEntries(
-                        tableColumns,
-                        collectionView.hiddenColumns,
-                        collectionView.setColumnVisible,
-                      )
-                  : []),
-              ]}
-              ariaLabel="Weitere Aktionen"
-            />
+            {/* In der App stehen die Einträge direkt im „…“-Blatt des
+                Kopfs (`overflowMenu`), nicht hinter einem zweiten Menü. */}
+            {appMode ? null : (
+              <OverflowMenu
+                items={headMenuEntries}
+                ariaLabel="Weitere Aktionen"
+              />
+            )}
           </>
         ) : undefined
       }
+      overflowMenu={appMode ? headMenuEntries : undefined}
       tabs={supervisionTabs}
       {...(appMode && appHasList && !appHasRunningRoster
         ? {
@@ -1227,10 +1272,10 @@ function MeinRaumPageContent() {
                     variant="primary"
                     size="md"
                     className="w-full"
-                    noTooltip="Schließt nur das Blatt, die Liste bleibt gefiltert."
+                    tooltip="Schließt die Suche und zeigt die passenden Kinder in der Liste."
                     onClick={() => setSearchSheetOpen(false)}
                   >
-                    Fertig
+                    {searchSheetDoneLabel}
                   </Button>
                 }
               >
@@ -1246,6 +1291,13 @@ function MeinRaumPageContent() {
                     onClearAllFilters={filters.clearAllFilters}
                   />
                 </div>
+                <p className="mt-4 text-sm text-gray-600" aria-live="polite">
+                  {searchSheetHits === null
+                    ? "Die Liste zeigt danach nur die Kinder, die passen."
+                    : searchSheetHits.length === 0
+                      ? "Kein Kind in dieser Aufsicht passt."
+                      : `Passend: ${searchSheetHits.join(", ")}`}
+                </p>
               </OverlaySheet>
             </>
           ) : null}
