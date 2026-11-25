@@ -39,6 +39,7 @@ import { getGreetingName, hasPermission } from "~/lib/auth-utils";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import { useTimeBasedGreeting } from "~/lib/greeting";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
+import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import type {
@@ -220,7 +221,7 @@ function absenceReportMenu(
 
 export interface ClassDayOverviewProps {
   /** Fläche direkt unter der Kopfkarte, über den Klassen. */
-  readonly notices?: ReactNode;
+  readonly notices?: (date: string) => ReactNode;
   /** Klassenliste und Wochenendplan der angemeldeten Lehrkraft. */
   readonly fetchClasses: () => Promise<ClassDayClasses>;
   readonly fetchAssignedClasses: (
@@ -248,8 +249,12 @@ export interface ClassDayOverviewProps {
   ) => Promise<void>;
 }
 
+function useSelectedClassDayDate(rawDate: string | null): string {
+  return classDayDateParam(rawDate, useBerlinToday());
+}
+
 function ClassDayOverviewInfo() {
-  const dateISO = classDayDateParam(useSearchParams().get("tag"));
+  const dateISO = useSelectedClassDayDate(useSearchParams().get("tag"));
 
   return (
     <p>
@@ -263,7 +268,7 @@ function ClassDayOverviewInfo() {
 function ClassDayOverviewActions() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const dateISO = classDayDateParam(searchParams.get("tag"));
+  const dateISO = useSelectedClassDayDate(searchParams.get("tag"));
   const openList = schoolDayListParam(searchParams.get("liste"));
   const selectedDate = parseISODate(dateISO);
 
@@ -346,24 +351,44 @@ export function ClassDayOverview({ notices, ...props }: ClassDayOverviewProps) {
         </Suspense>
       }
     >
-      {notices}
       <Suspense fallback={<ClassDayOverviewLoading />}>
-        {hasPermission(session, "class_day:all_classes") ? (
-          <SchoolDayOverviewContent {...props} />
-        ) : (
-          <AssignedClassesContent
-            fetchAssignedClasses={props.fetchAssignedClasses}
-          />
-        )}
+        <ClassDayOverviewBody notices={notices} {...props} />
       </Suspense>
     </TenantPage>
   );
 }
 
+function ClassDayOverviewBody({ notices, ...props }: ClassDayOverviewProps) {
+  const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const dateISO = useSelectedClassDayDate(searchParams.get("tag"));
+  const openList = schoolDayListParam(searchParams.get("liste"));
+
+  return (
+    <>
+      {notices?.(dateISO)}
+      {hasPermission(session, "class_day:all_classes") ? (
+        <SchoolDayOverviewContent
+          {...props}
+          dateISO={dateISO}
+          openList={openList}
+        />
+      ) : (
+        <AssignedClassesContent
+          dateISO={dateISO}
+          fetchAssignedClasses={props.fetchAssignedClasses}
+        />
+      )}
+    </>
+  );
+}
+
 function AssignedClassesContent({
+  dateISO,
   fetchAssignedClasses,
-}: Pick<ClassDayOverviewProps, "fetchAssignedClasses">) {
-  const dateISO = classDayDateParam(useSearchParams().get("tag"));
+}: Pick<ClassDayOverviewProps, "fetchAssignedClasses"> & {
+  readonly dateISO: string;
+}) {
   const key = schoolPortalKeys.assignedClasses(dateISO);
   const { data, error, isLoading, mutate } = useSWRAuth(
     key,
@@ -439,16 +464,18 @@ function NoSchoolDay() {
 }
 
 function SchoolDayOverviewContent({
+  dateISO,
+  openList,
   fetchClasses,
   fetchSchoolDay,
   reportAbsence,
   withdrawAbsenceReport,
-}: Omit<ClassDayOverviewProps, "notices" | "fetchAssignedClasses">) {
-  const searchParams = useSearchParams();
+}: Omit<ClassDayOverviewProps, "notices" | "fetchAssignedClasses"> & {
+  readonly dateISO: string;
+  readonly openList: SchoolDayListKey | null;
+}) {
   // Der Tag steht in der Adresse, nicht nur im Zustand: nur so führt der
   // Zurück-Weg aus einer Klasse auf denselben Tag zurück.
-  const dateISO = classDayDateParam(searchParams.get("tag"));
-  const openList = schoolDayListParam(searchParams.get("liste"));
   const {
     data: classList,
     error: classesError,

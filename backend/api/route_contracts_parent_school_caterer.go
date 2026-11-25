@@ -8,6 +8,7 @@ import (
 	messageAttachmentsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/messageattachments"
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
 	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
+	dayChangesHTTP "github.com/moto-ogs/project-phoenix/modules/daychangesview/http"
 	enrollmentHTTP "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	catererAuthHTTP "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/catererauth"
 	parentAuthHTTP "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/parentauth"
@@ -48,6 +49,7 @@ func schoolContractMounts() []contractMount {
 		{"/school/class-day", classdayHTTP.RouteContracts()},
 		{"/school/notifications", notificationRouteContracts(common.PortalSchool)},
 		{"/school/parent-letters", announcementAPI.RouteContracts(common.PortalSchool)},
+		{"/school/day-changes", dayChangesHTTP.SchoolRouteContracts()},
 		// The school portal’s chat files are mounted beside /school.
 		{"/school-staff-messages", messageAttachmentsHTTP.RouteContracts(common.PortalSchool)},
 		{"/school/calendar", calendarAPI.SchoolRouteContracts()},

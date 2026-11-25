@@ -82,6 +82,9 @@ type Resource struct {
 	// ParentLetters are the class letters of a Lehrkraft to the parents of
 	// her classes (#4800); nil leaves them unmounted.
 	ParentLetters SchoolRouter
+	// DayChanges is "Heute anders" of moto schule (#7670); nil leaves it
+	// unmounted.
+	DayChanges SchoolRouter
 }
 
 // NewResource builds the school-portal resource.
@@ -153,6 +156,13 @@ func (rs *Resource) RouterWithAuthRateLimiter(authRateLimiter func(http.Handler)
 		r.Mount("/notifications", rs.Notifications.SchoolRouter())
 	}
 
+	rs.mountOptionalSurfaces(r, protectedSchoolRoutes)
+
+	return r
+}
+
+// mountOptionalSurfaces mounts the surfaces a nil field leaves unmounted.
+func (rs *Resource) mountOptionalSurfaces(r chi.Router, protectedSchoolRoutes func(chi.Router, func(chi.Router, common.Middleware))) {
 	// The shared calendar (#4798): appointments for Lehrkräfte, closing days
 	// and holidays, the own Schultermine and the subscription feed, behind
 	// calendar:school. Same calendar service as /api/calendar.
@@ -167,7 +177,11 @@ func (rs *Resource) RouterWithAuthRateLimiter(authRateLimiter func(http.Handler)
 		r.Mount("/parent-letters", rs.ParentLetters.SchoolRouter(protectedSchoolRoutes))
 	}
 
-	return r
+	// "Heute anders" (#7670): the changes of the day for the caller's
+	// classes and the whole school, behind class_day:read.
+	if rs.DayChanges != nil {
+		r.Mount("/day-changes", rs.DayChanges.SchoolRouter(protectedSchoolRoutes))
+	}
 }
 
 func (rs *Resource) mountAuthRoutes(r chi.Router, authRateLimiter func(http.Handler) http.Handler, configureSession func(chi.Router)) {
