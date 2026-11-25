@@ -68,7 +68,7 @@ export interface PlanWindow {
  * The `view` URL value as the internal view. Invalid values fall back to the
  * week; the year view is not linkable.
  */
-export function parsePlanViewParam(raw: string | null): TimetableView {
+function parsePlanViewParam(raw: string | null): TimetableView {
   if (raw === "tag") return "day";
   if (raw === "monat") return "month";
   if (raw === "serien") return "series";

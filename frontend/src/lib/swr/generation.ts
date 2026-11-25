@@ -119,6 +119,12 @@ export function bumpDataGeneration(matches: (key: string) => boolean): void {
   moveData();
 }
 
+/** Whether any data bump of the current scope hit `key`. */
+export function wasDroppedInScope(key: string): boolean {
+  const plain = plainSWRKey(key);
+  return dataBumps.some((bump) => bump.matches(plain));
+}
+
 /** Whether a data bump hit `key` within the last `ms` (at most a minute). */
 export function wasDroppedWithin(key: string, ms: number): boolean {
   const since = Date.now() - ms;

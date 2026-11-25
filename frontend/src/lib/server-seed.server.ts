@@ -13,7 +13,7 @@ import type { ServerSeed, ServerSeedEntry } from "~/lib/swr/server-seed";
  * shell must never hang on one slow read: past the budget the value stays
  * undefined and the browser fetches it as it always did.
  */
-export const REQUEST_BUDGET_MS = 1500;
+const REQUEST_BUDGET_MS = 1500;
 
 /** What a budgeted load reports instead of throwing. */
 export interface BudgetReport {

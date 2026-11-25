@@ -41,6 +41,7 @@ import { SWRSeedBoundary } from "./config-boundaries";
 import {
   DiscardedAnswer,
   isCurrentSWRValue,
+  wasDroppedInScope,
   wasDroppedWithin,
 } from "./generation";
 import { useSWRCacheKey, useSWRPreload } from "./hooks";
@@ -316,10 +317,10 @@ function fallbackFor(
   const built: Record<string, unknown> = {};
   for (const [key, value] of values) {
     const full = scoped(key);
-    // A key dropped since the server read it (another boundary hydrated
-    // first and was refused) shows nothing old, also not for one render.
-    if (full !== null && !wasDroppedWithin(full, SERVER_SEED_MAX_AGE_MS))
-      built[full] = value;
+    // The server HTML is as old as the page: a key dropped at any time since
+    // (another boundary hydrated first and was refused) shows nothing old,
+    // also not for one render.
+    if (full !== null && !wasDroppedInScope(full)) built[full] = value;
   }
   // The fallback belongs to the generation it was shown in (#5006): after a
   // drop of one of its keys no reader shows it.

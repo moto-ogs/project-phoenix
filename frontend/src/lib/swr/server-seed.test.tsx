@@ -3,6 +3,7 @@ import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { act } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { setTestClock } from "~/test/clock";
 import { _resetSWRFallbacksForTests, bumpDataGeneration } from "./generation";
 import { mutate, useSWRAuth } from "./index";
 import { resetSWRScope, resumeSWRSession } from "./scope";
@@ -111,35 +112,42 @@ describe("SWRServerSeed", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
-  it("hydrates no fallback of a key dropped before the boundary hydrated", async () => {
-    const seed = seedOf([
-      { key: GRID, value: delivered("server grid"), render: true },
-    ]);
-    const tree = (fetcher: () => Promise<string>) => (
-      <SWRServerSeed seed={delivered(seed)} render>
-        <Reader name="grid" resourceKey={GRID} fetcher={fetcher} />
-      </SWRServerSeed>
-    );
-    const container = document.createElement("div");
-    container.innerHTML = renderToString(tree(async () => "unused"));
-    document.body.append(container);
-    expect(container.textContent).toBe("grid: server grid");
-    // Another boundary hydrated first and its read was refused.
-    act(() => bumpDataGeneration((key) => key === own(GRID)));
-    const fetcher = vi.fn(async () => "browser grid");
+  it.each([
+    ["just before", 0],
+    ["long before", 2 * SERVER_SEED_MAX_AGE_MS],
+  ])(
+    "hydrates no fallback of a key dropped %s the boundary hydrated",
+    async (_, later) => {
+      const seed = seedOf([
+        { key: GRID, value: delivered("server grid"), render: true },
+      ]);
+      const tree = (fetcher: () => Promise<string>) => (
+        <SWRServerSeed seed={delivered(seed)} render>
+          <Reader name="grid" resourceKey={GRID} fetcher={fetcher} />
+        </SWRServerSeed>
+      );
+      const container = document.createElement("div");
+      container.innerHTML = renderToString(tree(async () => "unused"));
+      document.body.append(container);
+      expect(container.textContent).toBe("grid: server grid");
+      // Another boundary hydrated first and its read was refused.
+      act(() => bumpDataGeneration((key) => key === own(GRID)));
+      setTestClock(new Date(Date.now() + later));
+      const fetcher = vi.fn(async () => "browser grid");
 
-    const root = await act(async () =>
-      hydrateRoot(container, tree(fetcher), {
-        // The server HTML shows a value the browser may no longer show.
-        onRecoverableError: () => undefined,
-      }),
-    );
+      const root = await act(async () =>
+        hydrateRoot(container, tree(fetcher), {
+          // The server HTML shows a value the browser may no longer show.
+          onRecoverableError: () => undefined,
+        }),
+      );
 
-    expect(await screen.findByText("grid: browser grid")).toBeInTheDocument();
-    expect(fetcher).toHaveBeenCalledTimes(1);
-    act(() => root.unmount());
-    container.remove();
-  });
+      expect(await screen.findByText("grid: browser grid")).toBeInTheDocument();
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      act(() => root.unmount());
+      container.remove();
+    },
+  );
 
   it("hands a claimed key the server value instead of a browser request", async () => {
     const fetcher = vi.fn(async () => "browser");
