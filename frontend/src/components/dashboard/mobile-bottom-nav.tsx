@@ -1088,7 +1088,7 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
                 ariaLabel={`${moreBadgeCount} neu für dich`}
                 // Außen oben rechts am Symbol: auch „9+“ lässt die Striche
                 // frei, im aktiven Reiter steht es über dem Wort.
-                className="absolute -top-3 left-3.5"
+                className="absolute -top-3.5 left-4"
               />
             ) : null,
           paddingClassName: ITEM_PADDING,
