@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createRef, type ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { releaseFakeTimers } from "~/test/clock";
 import { HomeCardLink } from "../home/home-card-rows";
 import { ButtonLink } from "./button";
 
@@ -59,7 +61,9 @@ describe("ButtonLink intent prefetch", () => {
     expect(vi.getTimerCount()).toBe(timersBefore);
   });
 
-  it("prefetches the HomeCardLink destination on focus without changing its accessible name", () => {
+  it("prefetches the HomeCardLink destination on keyboard focus without changing its accessible name", async () => {
+    releaseFakeTimers();
+    const user = userEvent.setup();
     render(
       <HomeCardLink
         href="/ogs-groups"
@@ -73,7 +77,8 @@ describe("ButtonLink intent prefetch", () => {
     expect(link).toHaveAttribute("href", "/ogs-groups");
     expect(link).toHaveTextContent("Zur Gruppe");
     expect(link).toHaveAttribute("data-prefetch", "false");
-    fireEvent.focus(link);
+    await user.tab();
+    expect(link).toHaveFocus();
     expect(link).toHaveAttribute("data-prefetch", "true");
   });
 });
