@@ -66,7 +66,7 @@ export function traegerClosingDaysTopic(): HelpTopic {
         steps: [
           "Wähle in der Navigation `Schließtage`.",
           "Oben wählst du das Jahr: das letzte Jahr, dieses Jahr oder eines der nächsten drei Jahre.",
-          "Ganz oben steht die `Jahresübersicht`. Dort sind Feiertage blau und Schließtage orange.",
+          "In der `Jahresübersicht` sind Feiertage blau und Schließtage orange.",
           "Unter `Feiertage nach Bundesland` stehen die Feiertage und die Schulen dazu.",
         ],
       },

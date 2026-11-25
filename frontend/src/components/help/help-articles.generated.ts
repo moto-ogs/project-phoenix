@@ -13178,7 +13178,7 @@ export const traegerClosingDaysTopic =
       title: "Schließtage für Schulen planen",
       question: "Wie plane ich einen Brückentag für mehrere Schulen?",
       summary:
-        "Ein Schließtag gilt für die Schulen, die du wählst. An diesem Tag ist die OGS zu. Die Feiertage kommen aus dem Bundesland der Schule.",
+        "Ein Schließtag gilt für die Schulen, die du wählst. An diesem Tag hat die OGS geschlossen. Die Feiertage kommen aus dem Bundesland der Schule.",
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "CalendarSlash",
@@ -13235,7 +13235,7 @@ export const traegerClosingDaysTopic =
           title: "Feiertage prüfen",
           steps: [
             "Wähle in der Navigation `Schließtage`.",
-            "Oben wählst du das Jahr.",
+            "Oben wählst du das Jahr: das letzte Jahr, dieses Jahr oder eines der nächsten drei Jahre.",
             "In der `Jahresübersicht` sind Feiertage blau und Schließtage orange.",
             "Unter `Feiertage nach Bundesland` stehen die Feiertage und die Schulen dazu.",
           ],
