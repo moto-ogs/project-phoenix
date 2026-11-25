@@ -321,7 +321,10 @@ describe("TraegerClosingDaysPage (#4702)", () => {
   it("points an empty year to the create button in the head (#8128)", async () => {
     setTestClock("2026-09-09T12:00:00+02:00");
     session.permissions = ["traeger_overview:read", "traeger_settings:manage"];
-    api.fetchTraegerCalendar.mockResolvedValue({ ...calendar, closingDays: [] });
+    api.fetchTraegerCalendar.mockResolvedValue({
+      ...calendar,
+      closingDays: [],
+    });
     render(<TraegerClosingDaysPage />);
 
     expect(
