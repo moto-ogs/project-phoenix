@@ -326,7 +326,7 @@ func TestOperatorAccountDirectorySortsRolesAndKeepsCaregiverFactsAtTheirSchool(t
 	teacher, account := testpkg.CreateTestTeacherWithAccount(t, db, "Ada", "Listing")
 	testpkg.MapAccountToTenant(t, db, account.ID, otherSchool)
 
-	plain := testpkg.CreateTestAccount(t, db, "plain-listing-account")
+	_, plain := testpkg.CreateTestStaffWithAccount(t, db, "Kette", "Ohne Profil")
 	localRole := testpkg.CreateTestRole(t, db, "Alpha")
 	foreignRole := testpkg.CreateTestRoleForTenant(t, db, "Foreign", otherSchool)
 	userRole := testpkg.GetOrCreateTestRole(t, db, "user")
@@ -343,6 +343,8 @@ func TestOperatorAccountDirectorySortsRolesAndKeepsCaregiverFactsAtTheirSchool(t
 	require.Len(t, byRole.Rows, 2)
 	assert.Equal(t, ident.ID(plain.ID), byRole.Rows[0].AccountID)
 	assert.Equal(t, localRole.Name, byRole.Rows[0].RoleName)
+	assert.False(t, byRole.Rows[0].HasCaregiverProfile, "staff without a teacher profile is not a caregiver")
+	assert.False(t, byRole.Rows[0].IsActiveCaregiver)
 	assert.Equal(t, ident.ID(account.ID), byRole.Rows[1].AccountID)
 	assert.Equal(t, userRole.Name, byRole.Rows[1].RoleName)
 
