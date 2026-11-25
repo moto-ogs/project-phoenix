@@ -1,6 +1,6 @@
 import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TEST_CLOCK_TODAY } from "~/test/clock";
+import { setTestClock, TEST_CLOCK_TODAY } from "~/test/clock";
 import type { ServerSeed } from "~/lib/swr/server-seed";
 
 const { answers, requests, snapshot } = vi.hoisted(() => ({
@@ -227,6 +227,7 @@ describe("parent page seeds", () => {
   });
 
   it("selects the eligible family school's meal plan for the rendered week", async () => {
+    setTestClock(new Date("2026-09-10T10:00:00.000Z"));
     const monday = "2026-09-14";
     const plan = `/parent/me/children/8/meal-plan?week_start=${monday}`;
     answers.set(
