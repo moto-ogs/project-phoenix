@@ -15,6 +15,26 @@ Paths below are relative to `frontend/` except `.github/` and `docs/`.
 - **Render budget** (Vitest, blocking): `expectIdleRenderBudget` from `src/test/render-budget.tsx` counts `<Profiler>` commits over 5 s of fake-timer idle and caps them at 20; `mobile-bottom-nav.test.tsx` and `sidebar.test.tsx` use it. A new effect loop in the shell trips this regardless of runner speed. Keep the cap; fix the loop. Reuse the helper for any new always-mounted component.
 - **Nightly counters** (`.github/workflows/perf-nightly.yml`, non-blocking): runs `pnpm run perf:trace` and `pnpm run perf:render` against a seeded backend on weeknights and via `workflow_dispatch`; the report lands in the job summary and as a 30-day artifact. Compare counters (requests per screen, duplicates, longest chain, renders per interaction) with `docs/perf/frontend-baseline-2026.md`; runner timings are not comparable across machines. Timing-based numbers (LCP, Lighthouse) are deliberately not gates.
 
+## School: assigned-class cards
+
+On an authenticated cold document, the teacher's assigned-class totals use
+one Go GET and no browser GET. The SWR seed contains totals only. A visible
+burst of school-day changes causes one browser and Go GET; a hidden tab waits
+until visible. The first class sheet is a separate audited browser read.
+The query budget, including the school's transaction, is independent of
+whether the caller has one, three or six classes
+(scenario `modules.classday.assigned_classes`).
+
+For the local browser measurement, run `school-class-counts.perf.ts` with
+`playwright.perf-dev.config.ts`, `PERF_PORT` for the seeded native stack
+and `PERF_SCHOOL_FIXTURE` for the executable fixture command. The command
+receives `1`, `3` or `6` to set the seeded teacher's class assignments, or
+`event` to emit a child change for that school. Use only the isolated local
+database. The recorder reports encoded browser response bodies; match its
+time windows to the backend's tenant request log for Go GETs and body bytes.
+The route test measures SQL statements for the old and new read paths over
+the same fixture. `PERF_BASELINE=1` compares against a checkout before #8092.
+
 ## Parents: start cards
 
 Measure the children, feature flags and today's statuses together, separately

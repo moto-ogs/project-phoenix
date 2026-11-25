@@ -10,7 +10,7 @@ An audited GET stays on its prescribed browser/opening path even if its hook cur
 
 | Route under `/school` | Seeded or already server-side | Other first readers and intentional exclusions |
 |---|---|---|
-| `/` | Assigned classes and leadership notices. | `tag` and `liste` choose the day and expanded list. Class and school day reports log disclosures; their HTTP reads stay client-side. |
+| `/` | Leadership notices and assigned-class totals for the selected Berlin day. For school administration, the class options instead. | `tag` selects the day; `liste` selects the expanded list. The audited school-wide report stays client-side. The audited class sheet loads only after a class opens. |
 | `/aufsichten` | Today's assigned blocks; the roster of the running block if one automatically opens. | Other rosters need a selected block. The child information sheet is an audited opening read. |
 | `/einstellungen` | Preferences on the notification tab; remembered devices on the device tab. | `tab` selects the panel. Privacy uses the existing consent state. Push key/setup depend on local device support, permission and subscription. |
 | `/elternbriefe` | Own letters and assigned-class options. | Compose, placeholder resolution, personalised preview and release checks remain in the editor; export downloads on action. |

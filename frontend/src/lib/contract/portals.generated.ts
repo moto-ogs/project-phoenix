@@ -944,6 +944,7 @@ export const portalRoutes = {
     schoolClassDay["GET /school/class-day/absence-list/export"],
     schoolClassDay["GET /school/class-day/arrival-exceptions"],
     schoolClassDay["GET /school/class-day/arrival-exceptions/block-start"],
+    schoolClassDay["GET /school/class-day/assigned-classes"],
     schoolClassDay["GET /school/class-day/classes"],
     schoolClassDay["GET /school/class-day/school-day"],
     schoolClassDay["GET /school/class-day/shared-notes/{schoolClass}/students/{studentId}"],

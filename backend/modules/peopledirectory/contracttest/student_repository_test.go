@@ -454,7 +454,7 @@ func TestStudentRepository_ClassRoster(t *testing.T) {
 		class := fmt.Sprintf("RosterClass%d", time.Now().UnixNano())
 		student := testpkg.CreateTestStudent(t, db, "Roster", "Test", class)
 
-		students, err := testpkg.TenantQuery1(t, ctx, db, repo.ListClassRoster, class)
+		students, err := testpkg.TenantQuery1(t, ctx, db, repo.ListClassRoster, []string{class})
 		require.NoError(t, err)
 		require.Len(t, students, 1)
 		assert.Equal(t, student.ID, students[0].ID)
@@ -463,9 +463,9 @@ func TestStudentRepository_ClassRoster(t *testing.T) {
 	t.Run("every class", func(t *testing.T) {
 		testpkg.CreateTestStudent(t, db, "RosterAll", "Test", "1a")
 
-		students, err := testpkg.TenantQuery1(t, ctx, db, repo.ListClassRoster, "")
+		students, err := testpkg.TenantQuery1(t, ctx, db, repo.ListClassRoster, nil)
 		require.NoError(t, err)
-		assert.NotEmpty(t, students, "an empty class name spans the whole school")
+		assert.NotEmpty(t, students, "a nil class filter spans the whole school")
 	})
 }
 

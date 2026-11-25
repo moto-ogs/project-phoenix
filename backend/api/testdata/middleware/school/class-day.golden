@@ -9,6 +9,7 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	DELETE /school/class-day/homework/{schoolClass}/{homeworkId}
 	GET /school/class-day/absence-list
 	GET /school/class-day/absence-list/export
+	GET /school/class-day/assigned-classes
 	GET /school/class-day/shared-notes/{schoolClass}/students/{studentId}
 	POST /school/class-day/class-trips/{schoolClass}
 	POST /school/class-day/homework/{schoolClass}
