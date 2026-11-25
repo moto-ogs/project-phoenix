@@ -66,7 +66,8 @@ export function IndexRail({
       data-index-rail=""
       className={`fixed right-0 ${Z_LAYER.raised} ${FIXED_LAYER_SHIFT} flex w-7 touch-none items-center justify-end select-none`}
       style={{
-        top: "calc(var(--app-sticky-offset, 1rem) + 0.5rem)",
+        // Nie über der Such- und Filterleiste, auch solange die Seite oben steht.
+        top: "max(calc(var(--app-sticky-offset, 1rem) + 0.5rem), 9.5rem)",
         bottom:
           "calc(env(safe-area-inset-bottom) + 6.5rem + var(--app-action-bar-space, 0px))",
       }}
