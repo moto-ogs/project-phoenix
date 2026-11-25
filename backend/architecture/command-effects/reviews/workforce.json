@@ -17225,7 +17225,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.ExportTransfer.Transfer",
-      "reason": "Read-only target already reviewed as query: workforce reaches *modules/documentrendering/lists.RendererService.Render (document-rendering) through api.exportTransferPort.Transfer. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed with #8017: the digest moved because the unused transaction wrappers around the schedule commands were removed; the binding still only renders, no persistent, lock or scope effect.",
+      "reason": "Read-only target already reviewed as query: workforce reaches *modules/documentrendering/lists.RendererService.Render (document-rendering) through api.exportTransferPort.Transfer. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed with #8017: the digest moved because the unused transaction wrappers around the schedule commands were removed; the binding still only renders, no persistent, lock or scope effect. Re-reviewed with #8024: the digest moved because the work session service gained the read-only TerminalOnlyStamping question; the binding still only renders, no persistent, lock or scope effect.",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.RendererService.Render",
       "target_owner": "document-rendering"
@@ -17235,7 +17235,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.ExportTransfer.Transfer",
-      "reason": "Read-only target already reviewed as query: workforce reaches modules/documentrendering/lists.RenderWorkbook (document-rendering) through api.exportTransferPort.Transfer. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed with #8017: the digest moved because the unused transaction wrappers around the schedule commands were removed; the binding still only renders, no persistent, lock or scope effect.",
+      "reason": "Read-only target already reviewed as query: workforce reaches modules/documentrendering/lists.RenderWorkbook (document-rendering) through api.exportTransferPort.Transfer. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed with #8017: the digest moved because the unused transaction wrappers around the schedule commands were removed; the binding still only renders, no persistent, lock or scope effect. Re-reviewed with #8024: the digest moved because the work session service gained the read-only TerminalOnlyStamping question; the binding still only renders, no persistent, lock or scope effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.RenderWorkbook",
       "target_owner": "document-rendering"
@@ -19850,6 +19850,16 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.TerminalOnlyStamping",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.Settings.TerminalOnlyStamping",
+      "reason": "Read-only target added for terminal-only stamping (#8024): workforce reaches modules/settings/internal/application.PresenceSettings.TerminalOnlyStamping (settings-platform) through modules/settings/internal/application.PresenceSettings.TerminalOnlyStamping. Reads the school's setting or the staff accounts' effective permissions; no persistent, lock or scope effect.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.TerminalOnlyStamping",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.TimeTrackingRetentionDays",
       "classification": "query",
       "effect": "query",
@@ -20278,6 +20288,36 @@
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.TimeTrackingDeletionRepository.Create",
       "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.TimeTrackingStaffRecords.FindTimeTrackingManagerStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.TimeTrackingManagerStaff.FindTimeTrackingManagerStaffIDs",
+      "reason": "Read-only target added for terminal-only stamping (#8024): workforce reaches modules/staffdirectoryview.Directory.ReachableStaffIDs (staff-directory-view) through roots/owners.TimeTrackingStaffRecords.FindTimeTrackingManagerStaffIDs. Reads the school's setting or the staff accounts' effective permissions; no persistent, lock or scope effect.",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.Directory.ReachableStaffIDs",
+      "target_owner": "staff-directory-view"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.TimeTrackingStaffRecords.FindTimeTrackingManagerStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.TimeTrackingManagerStaff.FindTimeTrackingManagerStaffIDs",
+      "reason": "Read-only target added for terminal-only stamping (#8024): workforce reaches modules/peopledirectory/ports.StaffRepository.FindTimeTrackingManagerStaffIDs (people-directory) through roots/owners.TimeTrackingStaffRecords.FindTimeTrackingManagerStaffIDs. Reads the school's setting or the staff accounts' effective permissions; no persistent, lock or scope effect.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindTimeTrackingManagerStaffIDs",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.TimeTrackingStaffRecords.FindTimeTrackingManagerStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.TimeTrackingManagerStaff.FindTimeTrackingManagerStaffIDs",
+      "reason": "Read-only target added for terminal-only stamping (#8024): workforce reaches modules/staffdirectoryview.New (staff-directory-view) through roots/owners.TimeTrackingStaffRecords.FindTimeTrackingManagerStaffIDs. Reads the school's setting or the staff accounts' effective permissions; no persistent, lock or scope effect.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.New",
+      "target_owner": "staff-directory-view"
     },
     {
       "adr": "0083",
@@ -21725,6 +21765,16 @@
       "reason": "Read-only newly exposed target: workforce reaches modules/settings/internal/application.PresenceSettings.RequireDeviationReason (settings-platform) through modules/workforce/internal/application/timetracking.Settings.RequireDeviationReason. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.RequireDeviationReason",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.Settings.TerminalOnlyStamping",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.settingsResolver.TerminalOnlyStamping",
+      "reason": "Read-only target added for terminal-only stamping (#8024): workforce reaches modules/settings/internal/application.PresenceSettings.TerminalOnlyStamping (settings-platform) through modules/workforce/internal/application/timetracking.Settings.TerminalOnlyStamping. Reads the school's setting or the staff accounts' effective permissions; no persistent, lock or scope effect.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.TerminalOnlyStamping",
       "target_owner": "settings-platform"
     },
     {

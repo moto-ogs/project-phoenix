@@ -386,7 +386,7 @@ var operations_init_zeiterfassung_7Definitions = []config.Definition{
 		WritePermission: "config:update",
 		Tab:             "operations",
 		Category:        "zeiterfassung",
-		SortOrder:       3,
+		SortOrder:       12,
 		// Without a terminal nobody could stamp (#4896).
 		DependsOn: config.DependsOnEq(config.KeyModuleNFCAnwesenheit, true),
 	},
