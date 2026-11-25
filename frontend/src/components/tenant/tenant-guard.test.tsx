@@ -67,10 +67,15 @@ vi.mock("~/lib/tenant-api", () => ({
 // Toast (#2517). Der Grund eines gescheiterten Wechsels läuft über den echten
 // Ladefehler-Weg.
 const showActionError = vi.hoisted(() => vi.fn());
-vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
-  useApiErrorDisplay: () => ({ show: showActionError }),
-}));
+vi.mock("~/contexts/ToastContext", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/contexts/ToastContext")>();
+  return {
+    ...actual,
+    useApiLoadError: vi.fn(actual.useApiLoadError),
+    useApiErrorDisplay: vi.fn(() => ({ show: showActionError })),
+  };
+});
 
 vi.mock("~/lib/swr", () => ({
   mutate: mockMutate,
@@ -80,6 +85,7 @@ vi.mock("~/lib/session-cache", () => ({
   clearSessionCache: mockClearSessionCache,
 }));
 
+import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
 import { TenantGuard } from "./tenant-guard";
 
 // ============================================================================
@@ -184,6 +190,10 @@ describe("TenantGuard", () => {
       </TenantGuard>,
     );
 
+    expect(useApiLoadError).toHaveBeenCalledWith({ preloadPresenter: false });
+    expect(useApiErrorDisplay).toHaveBeenCalledWith(undefined, {
+      preloadPresenter: false,
+    });
     // Children render during loading to avoid layout flicker;
     // individual pages handle their own loading states
     expect(screen.getByText("Protected Content")).toBeInTheDocument();
