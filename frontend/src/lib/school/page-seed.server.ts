@@ -8,7 +8,7 @@ import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import {
   AUTO_VIEW,
   resolveSupervisionView,
-} from "~/components/school/supervisions/view-model";
+} from "~/lib/school/supervision-view-model";
 import type { ServerSeedEntry } from "~/lib/swr/server-seed";
 import * as calendarContract from "~/lib/contract/school-calendar.generated";
 import * as classesContract from "~/lib/contract/school-class-day.generated";

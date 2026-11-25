@@ -1,7 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AUTO_VIEW, resolveSupervisionView } from "./view-model";
+import {
+  AUTO_VIEW,
+  resolveSupervisionView,
+} from "~/lib/school/supervision-view-model";
 import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 import { SWRServerSeed, type ServerSeedInput } from "~/lib/swr/server-seed";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
