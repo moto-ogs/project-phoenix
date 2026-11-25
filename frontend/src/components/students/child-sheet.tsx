@@ -6,7 +6,7 @@
 // neben der Liste. Andere Listen (Aufsicht, Gruppen) nutzen es mit eigenen
 // Kontext-Aktionen.
 
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Clock, Route } from "lucide-react";
 import { getAccessibleTextColor } from "~/lib/kit-palette";
 import { useMinuteClock } from "~/lib/pickup-helpers";
 import {
@@ -41,6 +41,16 @@ import {
   type Student,
 } from "~/lib/student-helpers";
 import { useTenantRouter } from "~/lib/tenant-router";
+import { ParentAttentionButton } from "~/components/students/parent-attention-badge";
+import { TrackingIndicators } from "~/components/students/tracking-indicators";
+import { dayHomeChange } from "~/components/students/student-table";
+import { searchStudentDay } from "~/components/students/search-student-card";
+import { DEPARTURE_MODE_LABELS } from "~/lib/departure-plan";
+import {
+  HANDOVER_ABSENT_WORDING,
+  handoverDetail,
+  handoverLine,
+} from "~/lib/class-handover";
 import { useAttendanceWebEnabled } from "~/lib/tenant-context";
 import { cn } from "~/lib/utils";
 
@@ -71,6 +81,18 @@ export interface ChildSheetProps {
    * (z. B. „Raum verlassen“). Dann ist die Akte der Nebenweg.
    */
   readonly footerActions?: ReactNode;
+  /**
+   * Alles, was die Kinderkarte der Kindersuche am Desktop zeigt (#8070, kein
+   * Informationsverlust am Handy): Tagesänderung, Elternnachrichten,
+   * Übergabe, ausstehende Entschuldigung, Ankunftsnotiz, Merkpunkte.
+   */
+  readonly cardFacts?: ChildCardFacts;
+}
+
+/** Was die Kinderkarte zusätzlich zeigt (siehe `ChildSheetProps.cardFacts`). */
+export interface ChildCardFacts {
+  /** Merkpunkte der Schule (Räume/Angebote heute besucht), wie auf der Karte. */
+  readonly tracking?: { labels: string[]; results: boolean[] };
 }
 
 /** Das Blatt: halbe Höhe am Telefon, Karte am iPad. */
@@ -84,6 +106,7 @@ export function ChildSheet({
   quickActions = true,
   status,
   footerActions,
+  cardFacts,
 }: ChildSheetProps) {
   const akteLink = href ? (
     <ButtonLink
@@ -144,6 +167,7 @@ export function ChildSheet({
           quickActions={false}
           status={status}
           replaceEntry
+          cardFacts={cardFacts}
         />
       ) : null}
     </OverlaySheet>
@@ -173,6 +197,7 @@ export function ChildSummary({
   headerAction,
   replaceEntry = false,
   actionsLast = false,
+  cardFacts,
 }: Readonly<{
   student: Student;
   /** Ohne Adresse keine Schnellaktionen (sie öffnen die Akte). */
@@ -195,6 +220,8 @@ export function ChildSummary({
    * stehen dann wie im Blatt am Fuß, nahe der Aktionsleiste.
    */
   actionsLast?: boolean;
+  /** Angaben der Kinderkarte (siehe `ChildSheetProps.cardFacts`). */
+  cardFacts?: ChildCardFacts;
 }>) {
   const status =
     statusOverride === undefined
@@ -213,7 +240,12 @@ export function ChildSummary({
     ...(fullAccess && student.pickup_notes
       ? [{ key: "pickup-notes", text: student.pickup_notes }]
       : []),
+    ...(cardFacts ? cardFactHints(student, fullAccess) : []),
   ];
+  const dayChange =
+    cardFacts && isToday && fullAccess
+      ? dayHomeChange(searchStudentDay(student, isToday))
+      : undefined;
   const actions = (
     <>
       {contextActions}
@@ -255,6 +287,32 @@ export function ChildSummary({
           tone={CHILD_DAY_TONE_BADGE[status.tone]}
         />
       ) : null}
+      {dayChange ? (
+        // Eigene Zeile unter dem Status, wie der Streifen unten an der Karte.
+        <div>
+          <StatusBadge
+            tone="orange"
+            icon={
+              dayChange.mode ? (
+                <Route className="size-3.5" aria-hidden="true" />
+              ) : (
+                <Clock className="size-3.5" aria-hidden="true" />
+              )
+            }
+            label={
+              dayChange.mode
+                ? `${dayChange.time ? "Gehzeit und Abholart" : "Abholart"} heute geändert: ${DEPARTURE_MODE_LABELS[dayChange.mode]}`
+                : "Gehzeit heute geändert"
+            }
+          />
+        </div>
+      ) : null}
+      {cardFacts ? (
+        <ParentAttentionButton
+          studentId={student.id.toString()}
+          studentName={studentName(student)}
+        />
+      ) : null}
       {actionsLast ? null : actions}
       <DataGrid columns={2} appRows>
         {room ? <DataField label="Raum">{room}</DataField> : null}
@@ -280,6 +338,13 @@ export function ChildSummary({
           </>
         ) : null}
       </DataGrid>
+      {cardFacts?.tracking && isToday && fullAccess ? (
+        <TrackingIndicators
+          labels={cardFacts.tracking.labels}
+          results={cardFacts.tracking.results}
+          layout="inline"
+        />
+      ) : null}
       {hints.length > 0 ? (
         <section className="space-y-1.5">
           <SectionLabel as="h3">Hinweise</SectionLabel>
@@ -295,6 +360,42 @@ export function ChildSummary({
       ) : null}
     </div>
   );
+}
+
+/**
+ * Hinweise, die die Kinderkarte zusätzlich zeigt: Übergabe aus dem
+ * Unterricht, eine Entschuldigung, die auf Freigabe wartet, und die Notiz zur
+ * Ankunft (die zur Abholung steht schon oben).
+ */
+function cardFactHints(
+  student: Student,
+  fullAccess: boolean,
+): { key: string; text: string }[] {
+  if (!fullAccess) return [];
+  const hints: { key: string; text: string }[] = [];
+  if (student.arrival_notes) {
+    hints.push({
+      key: "arrival-notes",
+      text: `Zur Ankunft: ${student.arrival_notes}`,
+    });
+  }
+  if (student.class_handover) {
+    hints.push({
+      key: "class-handover",
+      text: student.class_handover.absent
+        ? `${HANDOVER_ABSENT_WORDING} (${handoverDetail(student.class_handover)})`
+        : handoverLine(student.class_handover),
+    });
+  }
+  if (student.pending_excused_note !== undefined) {
+    hints.push({
+      key: "pending-excused",
+      text: student.pending_excused_note
+        ? `Entschuldigung wartet auf Freigabe: ${student.pending_excused_note}`
+        : "Entschuldigung wartet auf Freigabe",
+    });
+  }
+  return hints;
 }
 
 /**

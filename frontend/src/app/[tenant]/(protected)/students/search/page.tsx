@@ -3905,6 +3905,7 @@ function SearchPageContent() {
                         userGroups={myGroups}
                         groupRooms={myGroupRooms}
                         supervisedRooms={mySupervisedRooms}
+                        trackingData={trackingData}
                       />
                       {/* App (#8070): An- und Abmelden als beschriftete
                           Aktion in Daumennähe. */}

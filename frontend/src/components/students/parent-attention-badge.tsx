@@ -79,3 +79,63 @@ export function ParentAttentionBadge({
     </>
   );
 }
+
+/** Sichtbarer Text der Zahl: „1 neue Nachricht und 1 offene Anfrage“. */
+function parentAttentionText(attention: ParentAttention): string {
+  const parts: string[] = [];
+  if (attention.messages > 0) {
+    parts.push(
+      attention.messages === 1
+        ? "1 neue Nachricht"
+        : `${attention.messages} neue Nachrichten`,
+    );
+  }
+  if (attention.requests > 0) {
+    parts.push(
+      attention.requests === 1
+        ? "1 offene Anfrage"
+        : `${attention.requests} offene Anfragen`,
+    );
+  }
+  return parts.join(" und ");
+}
+
+/**
+ * Dieselbe Zahl als beschrifteter Knopf im Kind-Blatt (#8070): Die
+ * Kinderliste am Handy hat keine Kachel, an deren Ecke die Zahl tippbar
+ * stünde; die Zeile zeigt sie nur an, das Blatt öffnet sie.
+ */
+export function ParentAttentionButton({
+  studentId,
+  studentName,
+}: Readonly<{ studentId: string; studentName: string }>) {
+  const attention = useStudentParentAttention(studentId);
+  const { select } = useParentAttentionOverlay();
+  const router = useTenantRouter();
+  if (!attention) return null;
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="md"
+      className="w-full justify-between gap-2"
+      tooltip="Öffnet neue Nachrichten und offene Anfragen der Eltern."
+      onClick={() => {
+        select({ studentId, studentName, attention });
+        router.push(
+          `/parent-attention/${encodeURIComponent(studentId)}${window.location.search}`,
+          { scroll: false },
+        );
+      }}
+    >
+      <span className="truncate">
+        {parentAttentionText(attention)} der Eltern
+      </span>
+      <NotificationBadge
+        count={attention.total}
+        tone={COUNTER_TONE.parents}
+        ariaLabel=""
+      />
+    </Button>
+  );
+}

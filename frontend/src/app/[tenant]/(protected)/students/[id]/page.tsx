@@ -95,7 +95,8 @@ import { SectionCard } from "~/components/ui/section-card";
 import type { OverflowMenuEntry } from "~/components/ui/page-header/types";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ChevronRight } from "lucide-react";
+import { OverlaySheet } from "~/components/ui/overlay-sheet";
 import { useMinuteClock } from "~/lib/pickup-helpers";
 import { getStudentTimeStatus } from "~/lib/student-time-status";
 import { useDeviceContext } from "~/lib/device-context";
@@ -1606,6 +1607,43 @@ function StudentDetailPageContent() {
     // „Historien“: ein Ort, ein Name.
   ];
 
+  // Die ganze Statuszeile des Desktops (Klasse, Gruppe, geplante und
+  // tatsächliche Zeiten, wer an- und abgemeldet hat, Gründe). Die App zeigt
+  // sie im Blatt „Heute“ hinter der Chip-Zeile (#8070, kein
+  // Informationsverlust am Handy).
+  const headStatus = (
+    <span className="block">
+      <span className="mb-1 flex flex-wrap items-center gap-2">
+        <StudentHeaderLocation
+          student={student}
+          myGroups={myGroups}
+          myGroupRooms={myGroupRooms}
+          mySupervisedRooms={mySupervisedRooms}
+          todayArrivalPlannedTime={todayArrival.time}
+          isArrivalException={todayArrival.isException}
+          todayArrivalNote={todayArrival.note}
+          isArrivalAbsent={todayArrival.isAbsent}
+        />
+      </span>
+      <StudentHeaderStats
+        student={student}
+        todayPickupPlannedTime={todayPickup.time}
+        todayPickupActualTime={student.actual_pickup_time}
+        todayPickupNote={todayPickup.note}
+        todayCheckoutNote={student.actual_pickup_note}
+        isPickupException={todayPickup.isException}
+        todayArrivalPlannedTime={todayArrival.time}
+        todayArrivalActualTime={student.actual_arrival_time}
+        isArrivalException={todayArrival.isException}
+        todayArrivalNote={todayArrival.note}
+        isArrivalAbsent={todayArrival.isAbsent}
+        sickReason={currentSickReason}
+        todayArrivalBy={student.actual_arrival_by}
+        todayPickupBy={student.actual_pickup_by}
+      />
+    </span>
+  );
+
   const page = (
     /* Der Entitätskopf IST die Kopfkarte der Seite: Foto, Name, Statuszeile
           mit Klasse, Gruppe und den Zeiten des heutigen Tages, der aktuelle
@@ -1649,41 +1687,13 @@ function StudentDetailPageContent() {
             student={student}
             plannedArrival={todayArrival.time}
             plannedPickup={todayPickup.time}
+            details={headStatus}
           />
         ) : (
           // Der Aufenthaltsort ist Status, keine Aktion: er steht in der
           // Statuszeile des Identitätskopfes und nicht im Aktionsplatz, wo er
           // wie eine Schaltfläche gelesen würde.
-          <span className="block">
-            <span className="mb-1 flex flex-wrap items-center gap-2">
-              <StudentHeaderLocation
-                student={student}
-                myGroups={myGroups}
-                myGroupRooms={myGroupRooms}
-                mySupervisedRooms={mySupervisedRooms}
-                todayArrivalPlannedTime={todayArrival.time}
-                isArrivalException={todayArrival.isException}
-                todayArrivalNote={todayArrival.note}
-                isArrivalAbsent={todayArrival.isAbsent}
-              />
-            </span>
-            <StudentHeaderStats
-              student={student}
-              todayPickupPlannedTime={todayPickup.time}
-              todayPickupActualTime={student.actual_pickup_time}
-              todayPickupNote={todayPickup.note}
-              todayCheckoutNote={student.actual_pickup_note}
-              isPickupException={todayPickup.isException}
-              todayArrivalPlannedTime={todayArrival.time}
-              todayArrivalActualTime={student.actual_arrival_time}
-              isArrivalException={todayArrival.isException}
-              todayArrivalNote={todayArrival.note}
-              isArrivalAbsent={todayArrival.isAbsent}
-              sickReason={currentSickReason}
-              todayArrivalBy={student.actual_arrival_by}
-              todayPickupBy={student.actual_pickup_by}
-            />
-          </span>
+          headStatus
         )
       }
       searchSlotHeight="natural"
@@ -2180,13 +2190,17 @@ function AppStudentHeadStatus({
   student,
   plannedArrival,
   plannedPickup,
+  details,
 }: Readonly<{
   location: ReactNode;
   student: Student;
   plannedArrival?: string;
   plannedPickup?: string;
+  /** Die ganze Statuszeile des Desktops, im Blatt „Heute“. */
+  details: ReactNode;
 }>) {
   const now = useMinuteClock();
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const arrived = Boolean(student.actual_arrival_time);
   const pickedUp = Boolean(student.actual_pickup_time);
   const arrival = student.actual_arrival_time ?? plannedArrival;
@@ -2239,20 +2253,47 @@ function AppStudentHeadStatus({
   // Chip-Zeile am Telefon um. `-ml-9`: Die Chips beginnen an derselben
   // Kante wie der Zurück-Pfeil und der Inhalt der Karten darunter, nicht
   // eingerückt unter dem Namen.
+  // Ein Tipp auf die Zeile öffnet „Heute“ mit allem, was der Desktop unter
+  // dem Namen zeigt; der Pfeil am Ende sagt, dass es dort mehr gibt.
   return (
-    <span className="-ml-9 flex items-center gap-1.5 pt-0.5 [&_*]:whitespace-nowrap [&>span:last-child]:contents">
-      <span className="shrink-0">{location}</span>
-      {late ? (
-        <span className="shrink-0">
-          <StatusBadge
-            tone={late.state === "very-overdue" ? "red" : "orange"}
-            icon={<AlertTriangle className="size-3.5" aria-hidden="true" />}
-            label={`${late === pickupLate ? "Abholung" : "Ankunft"} überfällig ${late.displayTime}`}
-          />
-        </span>
-      ) : null}
-      {items.length > 0 ? <TenantPageStats items={items} /> : null}
-    </span>
+    <>
+      <button
+        type="button"
+        onClick={() => setDetailsOpen(true)}
+        aria-haspopup="dialog"
+        // 44 px hoch: die Zeile ist die Trefferfläche für „Heute“.
+        className="-ml-9 flex min-h-11 w-[calc(100%+2.25rem)] min-w-0 cursor-pointer items-center gap-1.5 text-left [&_*]:whitespace-nowrap"
+      >
+        <span className="shrink-0">{location}</span>
+        {late ? (
+          <span className="shrink-0">
+            <StatusBadge
+              tone={late.state === "very-overdue" ? "red" : "orange"}
+              icon={<AlertTriangle className="size-3.5" aria-hidden="true" />}
+              label={`${late === pickupLate ? "Abholung" : "Ankunft"} überfällig ${late.displayTime}`}
+            />
+          </span>
+        ) : null}
+        {items.length > 0 ? (
+          <span className="contents [&>*]:contents">
+            <TenantPageStats items={items} />
+          </span>
+        ) : null}
+        <span className="sr-only">, alle Angaben zu heute öffnen</span>
+        <ChevronRight
+          className="ml-auto size-4 shrink-0 text-gray-500"
+          aria-hidden="true"
+        />
+      </button>
+      <OverlaySheet
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        title="Heute"
+        closeLabel="Heute schließen"
+      >
+        <div className="text-sm text-gray-700">{details}</div>
+      </OverlaySheet>
+    </>
   );
 }
 
