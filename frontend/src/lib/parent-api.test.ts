@@ -245,6 +245,7 @@ describe("getFamilyStart", () => {
     async (id) => {
       const data = {
         day: "2026-09-09",
+        day_remaining_seconds: 3600,
         cards: [
           {
             child: mkChild("1234", "OGS A"),

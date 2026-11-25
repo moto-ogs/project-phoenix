@@ -58437,6 +58437,12 @@
           }
         },
         {
+          "name": "day_remaining_seconds",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
           "name": "cards",
           "schema": {
             "kind": "array",

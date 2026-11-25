@@ -27,6 +27,7 @@ vi.mock("~/lib/parent-api", async (importOriginal) => ({
   // Side-load of the child's other conversations; none in these tests.
   listChildThreads: vi.fn(() => Promise.resolve([])),
   getFamilyStart: vi.fn(async () => ({
+    day_remaining_seconds: 86400,
     day: new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" }),
     cards: [],
   })),

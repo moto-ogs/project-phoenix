@@ -36,6 +36,7 @@ it("withdraws the family snapshot after a real detail access refusal and reconci
       if (url.endsWith("/family-start"))
         return Response.json({
           data: {
+            day_remaining_seconds: 86400,
             day: berlinTodayISO(),
             cards: refused
               ? []

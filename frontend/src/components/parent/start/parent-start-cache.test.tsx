@@ -16,6 +16,8 @@ import {
   listMessageThreads,
   listAnnouncements,
 } from "~/lib/parent-api";
+import { useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import { ParentStartPage } from "./parent-start-page";
 import type { SSEHookOptions } from "~/lib/sse-types";
 
@@ -142,11 +144,80 @@ describe("parent start cache isolation", () => {
     },
   );
 
+  it("discards day-independent child details when the first new-day roster removes the relationship", async () => {
+    vi.useFakeTimers();
+    const detail = vi.fn(async () => "old detail");
+    function Detail() {
+      const read = useSWRAuth(parentKeys.masterData("42"), detail);
+      return <output>{read.data}</output>;
+    }
+    render(
+      <>
+        <Fixture />
+        <Detail />
+      </>,
+      {
+        wrapper: ({ children }) => (
+          <SWRConfig value={{ provider: () => new Map() }}>
+            {children}
+          </SWRConfig>
+        ),
+      },
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByText("old detail")).toBeInTheDocument();
+    expect(screen.getByText("Kind A Test")).toBeInTheDocument();
+    family.children.mockResolvedValue([]);
+    detail.mockImplementation(() => new Promise(() => undefined));
+    setTestClock("2026-09-10T00:00:01+02:00");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_010);
+    });
+    expect(screen.queryByText("Kind A Test")).not.toBeInTheDocument();
+    expect(screen.queryByText("old detail")).not.toBeInTheDocument();
+  });
+  it("refreshes at server midnight if the device is ahead, without a focus or child event", async () => {
+    vi.useFakeTimers();
+    const response = await family.read();
+    vi.mocked(getFamilyStart)
+      .mockResolvedValueOnce({
+        ...response,
+        day: "2026-09-08",
+        day_remaining_seconds: 3,
+      })
+      .mockResolvedValue({
+        ...response,
+        day: "2026-09-09",
+        day_remaining_seconds: 86400,
+        cards: [],
+      });
+    mount();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByText("Kind A Test")).toBeInTheDocument();
+    expect(getFamilyStart).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3010);
+    });
+    expect(screen.queryByText("Kind A Test")).not.toBeInTheDocument();
+    expect(getFamilyStart).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(120000);
+    });
+    expect(getFamilyStart).toHaveBeenCalledTimes(2);
+  });
   it("keeps a revocation at server midnight even when the ensuing family read fails", async () => {
     mount();
     expect(await screen.findByText("Kind A Test")).toBeInTheDocument();
     vi.mocked(getFamilyStart)
-      .mockResolvedValueOnce({ day: "2030-01-01", cards: [] })
+      .mockResolvedValueOnce({
+        day: "2030-01-01",
+        day_remaining_seconds: 86400,
+        cards: [],
+      })
       .mockRejectedValue(new ApiError("offline", 503));
     await act(async () => {
       window.dispatchEvent(

@@ -122,6 +122,7 @@ func TestFamilyStartUsesSchoolFactsButNeverSiblingPermissions(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, snapshot.Cards, 2)
 	assert.Equal(t, calendar.NewDate(2026, 11, 25), snapshot.Day)
+	assert.Equal(t, 24*60*60-60, snapshot.DayRemainingSeconds)
 	for _, card := range snapshot.Cards {
 		if card.Child.StudentID == third.ID {
 			require.NotNil(t, card.Features)

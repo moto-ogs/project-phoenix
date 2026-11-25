@@ -36,6 +36,7 @@ export function parentFamilyFixture(currentDay = berlinTodayISO) {
     );
     return {
       day: currentDay(),
+      day_remaining_seconds: 86400,
       cards: await Promise.all(
         rows.map(async (child) => ({
           child: {

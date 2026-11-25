@@ -17,7 +17,7 @@ func (f *fakeParentService) FamilyStart(_ context.Context, accountID int64, stud
 	if studentID != nil {
 		f.gotTodayStudent = *studentID
 	}
-	return &parentService.FamilyStart{Day: calendar.NewDate(2026, 11, 24)}, nil
+	return &parentService.FamilyStart{Day: calendar.NewDate(2026, 11, 24), DayRemainingSeconds: 3600}, nil
 }
 
 func TestFamilyStartRoute(t *testing.T) {
@@ -38,6 +38,7 @@ func TestFamilyStartRoute(t *testing.T) {
 		require.Equal(t, tc.want, w.Code)
 		if w.Code == 200 {
 			require.Contains(t, w.Body.String(), `"cards":[]`)
+			require.Contains(t, w.Body.String(), `"day_remaining_seconds":3600`)
 			require.EqualValues(t, 7777, svc.gotTodayAccount)
 		}
 	}

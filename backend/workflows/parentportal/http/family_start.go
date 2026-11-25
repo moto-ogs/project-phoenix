@@ -10,8 +10,9 @@ import (
 )
 
 type FamilyStartResponse struct {
-	Day   calendar.Date             `json:"day"`
-	Cards []FamilyStartCardResponse `json:"cards"`
+	Day                 calendar.Date             `json:"day"`
+	DayRemainingSeconds int                       `json:"day_remaining_seconds"`
+	Cards               []FamilyStartCardResponse `json:"cards"`
 }
 
 type FamilyStartCardResponse struct {
@@ -41,7 +42,7 @@ func (rs *Resource) familyStart(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	out := FamilyStartResponse{Day: family.Day, Cards: make([]FamilyStartCardResponse, 0, len(family.Cards))}
+	out := FamilyStartResponse{Day: family.Day, DayRemainingSeconds: family.DayRemainingSeconds, Cards: make([]FamilyStartCardResponse, 0, len(family.Cards))}
 	for _, card := range family.Cards {
 		item := FamilyStartCardResponse{
 			Child:         toChildResponse(card.Child, family.Day),

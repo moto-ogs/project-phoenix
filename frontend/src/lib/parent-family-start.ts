@@ -6,6 +6,7 @@ import { getFamilyStart, UNKNOWN_CHILD_TODAY } from "~/lib/parent-api";
 export interface ParentFamily {
   day: string;
   needsDayReconciliation: boolean;
+  dayExpiresAt: number;
   children: contract.ChildResponse[];
   features: Record<string, contract.ChildFeaturesResponse>;
   today: Record<string, contract.TodayStatusResponse>;
@@ -29,6 +30,7 @@ function applyCards(
   const narrowed = roster?.day === day ? roster : undefined;
   const family: ParentFamily = {
     day,
+    dayExpiresAt: response.dayExpiresAt,
     needsDayReconciliation:
       !!roster && (roster.day !== day || roster.needsDayReconciliation),
     children: roster ? [...roster.children] : [],
@@ -100,10 +102,19 @@ async function readCards(id?: string) {
   const result = await getFamilyStart(id);
   if (!result.day || !isValidISODate(result.day))
     throw new Error("Missing or invalid family start day");
+  if (
+    !Number.isInteger(result.day_remaining_seconds) ||
+    result.day_remaining_seconds <= 0
+  )
+    throw new Error("Invalid family start day lifetime");
   if (!result.cards) throw new Error("Missing family start cards");
   if (id && result.cards.some((card) => card.child.student_id !== id))
     throw new Error("Unexpected family start child");
-  return { day: result.day, cards: result.cards };
+  return {
+    day: result.day,
+    cards: result.cards,
+    dayExpiresAt: performance.now() + result.day_remaining_seconds * 1000,
+  };
 }
 
 async function reconcileChildren(read: FamilyRead) {

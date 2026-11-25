@@ -3,13 +3,15 @@ package care
 import (
 	"context"
 	"errors"
+	"math"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 type FamilyStart struct {
-	Day   calendar.Date
-	Cards []FamilyStartCard
+	Day                 calendar.Date
+	DayRemainingSeconds int
+	Cards               []FamilyStartCard
 }
 
 type FamilyStartCard struct {
@@ -41,7 +43,11 @@ func (s *Service) FamilyStart(ctx context.Context, accountID int64, studentID *i
 		return nil, err
 	}
 	now := s.now()
-	result := &FamilyStart{Day: calendar.DateFromTime(now)}
+	day := calendar.DateFromTime(now)
+	result := &FamilyStart{
+		Day:                 day,
+		DayRemainingSeconds: int(math.Ceil(day.AddDays(1).BerlinMidnight().Sub(now).Seconds())),
+	}
 	type schoolReads struct {
 		features schoolFact[childFeatureSettings]
 		day      schoolDayReads

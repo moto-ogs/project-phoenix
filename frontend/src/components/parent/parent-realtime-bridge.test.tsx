@@ -7,6 +7,7 @@ import type { SSEHookOptions } from "~/lib/sse-types";
 
 vi.mock("~/lib/parent-api", () => ({
   getFamilyStart: async () => ({
+    day_remaining_seconds: 86400,
     day: new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" }),
     cards: [],
   }),

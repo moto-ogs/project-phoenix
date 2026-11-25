@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { berlinTodayISO } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { ApiError } from "~/lib/api-error";
 import { useSWRAuth, useInvalidateMatching } from "~/lib/swr";
@@ -77,6 +78,20 @@ export function useParentResourceEvents() {
     ? family.data.day
     : null;
   const reloadFamily = family.mutate;
+  // A fast or slow device may not roll its cache key at server midnight.
+  // If its key is already rolling, the new key itself starts that read.
+  const keyDay = family.keyDay;
+  const dayExpiresAt = family.data?.dayExpiresAt;
+  useEffect(() => {
+    if (dayExpiresAt === undefined) return;
+    const timer = window.setTimeout(
+      () => {
+        if (berlinTodayISO() === keyDay) void reloadFamily();
+      },
+      Math.max(0, dayExpiresAt - performance.now()),
+    );
+    return () => window.clearTimeout(timer);
+  }, [dayExpiresAt, keyDay, reloadFamily]);
   useEffect(() => {
     if (refreshDay) void reloadFamily();
   }, [refreshDay, reloadFamily]);
@@ -95,6 +110,8 @@ export function useParentResourceEvents() {
   const previous = useRef({ account, relationships });
   useLayoutEffect(() => {
     const before = previous.current;
+    // An empty cache entry during a day-key switch is not a confirmed roster.
+    if (before.account === account && relationships === null) return;
     previous.current = { account, relationships };
     if (
       before.account === account &&
@@ -191,7 +208,7 @@ function useParentFamily(enabled: boolean, keepRosterAcrossMidnight = false) {
       },
     },
   );
-  return resource;
+  return { ...resource, keyDay: day };
 }
 
 export function useParentChildren(enabled = true) {

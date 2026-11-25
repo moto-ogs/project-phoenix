@@ -1332,11 +1332,13 @@ export const FamilyStartCardResponseSchema: z.ZodType<FamilyStartCardResponse, u
 /** Go: parent.FamilyStartResponse */
 export interface FamilyStartResponse {
   day: string | null;
+  day_remaining_seconds: number;
   cards: FamilyStartCardResponse[] | null;
 }
 
 export const FamilyStartResponseSchema: z.ZodType<FamilyStartResponse, unknown> = object<FamilyStartResponse>({
   day: nullable(calendarDate),
+  day_remaining_seconds: safeInt,
   cards: nullable(arr(FamilyStartCardResponseSchema)),
 });
 

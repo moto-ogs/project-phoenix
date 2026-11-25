@@ -191,6 +191,7 @@ function mockParentMealPlan({
       return jsonResponse({
         data: {
           day: berlinTodayISO(storyNow()),
+          day_remaining_seconds: 86400,
           cards: childrenData
             .filter((child) => !studentId || child.student_id === studentId)
             .map((child) => ({
