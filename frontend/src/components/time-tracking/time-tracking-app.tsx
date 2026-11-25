@@ -631,7 +631,14 @@ export function AppDayList({
   }, [from, to, sessions, absences, shifts, projection, holidays, closingDays]);
 
   return (
-    <Collection label="Erfasste Zeiten" className="app-time-days">
+    <Collection
+      label="Erfasste Zeiten"
+      // Tage und Zeilen rasten nicht ein: über der ersten Woche stehen Kopfkarte
+      // und Wochenwahl, und das Einrasten zöge die Seite schon beim Laden
+      // an ihnen vorbei.
+      // (Regel unlayered in globals.css, darum mit !).
+      className="app-time-days [&_*]:[scroll-snap-align:none]!"
+    >
       {header ? (
         <div className="border-b border-gray-100 py-1">{header}</div>
       ) : null}
