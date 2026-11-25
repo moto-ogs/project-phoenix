@@ -11,11 +11,14 @@ const ports = networkPorts("sessionTree");
  * Chrome keeps its back-forward cache, which Playwright switches off by
  * default, so a restored page shows the real `pageshow.persisted` path.
  */
+// The network suite ignores this spec; this config runs only it.
+const shared = { ...network };
+delete shared.testIgnore;
+
 export default defineConfig({
-  ...network,
+  ...shared,
   testDir: "./e2e/network",
   testMatch: "session-tree.spec.ts",
-  testIgnore: [],
   outputDir: "test-results/session-tree",
   use: {
     ...network.use,

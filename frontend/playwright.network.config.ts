@@ -13,12 +13,12 @@ export default defineConfig({
   globalSetup: SECURE_CHROME_SETUP,
   testDir: "./e2e/network",
   testMatch: "*.spec.ts",
-  // The shared-cookie scenario needs its own domain and fixture server mode.
+  // The shared-cookie scenario needs its own domain and fixture server mode;
+  // the session boundary suite needs a production build of its own.
   testIgnore: [
     "tenant-mfa-switch.spec.ts",
     "late-session-cookie.spec.ts",
     "late-portal-cookie.spec.ts",
-    // The session boundary suite needs a production build of its own.
     "session-tree.spec.ts",
   ],
   workers: 1,
