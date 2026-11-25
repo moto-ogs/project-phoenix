@@ -66,10 +66,22 @@ function useParentRefusal() {
   );
 }
 
+// A failed payload field is retried with backoff. Do not turn a client
+// error or a server-imposed wait into an automatic one-second retry.
+function canRetryField(failure?: FamilyFieldFailure) {
+  if (!failure) return false;
+  if (!(failure instanceof ApiError)) return true;
+  return (failure.status ?? 0) >= 500 && !failure.retryAfterSeconds;
+}
+
 function partialChildren(family: ParentFamily): string {
   return family.children
     .map((child) => child.student_id)
-    .filter((id) => family.featureErrors[id] || family.todayErrors[id])
+    .filter(
+      (id) =>
+        canRetryField(family.featureErrors[id]) ||
+        canRetryField(family.todayErrors[id]),
+    )
     .sort()
     .join(",");
 }
@@ -284,6 +296,7 @@ export function useParentFeatures(
       family.data.children.every(
         (child) => !!family.data?.features[child.student_id],
       ),
+    familyError: family.error,
     error: family.error ?? Object.values(errorsByChild)[0],
     errorsByChild,
   };

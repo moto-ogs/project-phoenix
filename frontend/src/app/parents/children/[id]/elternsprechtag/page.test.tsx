@@ -10,6 +10,7 @@ import { ApiError } from "~/lib/api-error";
 import {
   bookChildParentConference,
   fetchChildParentConferences,
+  getFamilyStart,
 } from "~/lib/parent-api";
 import type { ParentConferenceOffer } from "~/lib/parent-conferences";
 import { catalogText } from "~/test/error-catalog-text";
@@ -168,6 +169,19 @@ describe("Elternsprechtag in der Eltern-App (#4801)", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Elternsprechtag")).toBeInTheDocument();
+  });
+
+  it("retries the conference and the shared family resource once each", async () => {
+    vi.mocked(fetchChildParentConferences)
+      .mockRejectedValueOnce(new ApiError("offline", 503))
+      .mockResolvedValue([offer]);
+    await renderPage();
+    const retry = await screen.findByRole("button", { name: "Wiederholen" });
+    vi.mocked(getFamilyStart).mockClear();
+    await userEvent.click(retry);
+    expect(await screen.findByRole("button", { name: "14:00" })).toBeVisible();
+    expect(getFamilyStart).toHaveBeenCalledTimes(1);
+    expect(fetchChildParentConferences).toHaveBeenCalledTimes(2);
   });
 
   it("keeps this child's page when only a sibling's features fail", async () => {

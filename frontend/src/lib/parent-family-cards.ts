@@ -22,8 +22,11 @@ export interface ParentFamily {
 
 // This marker can cross the Server Component boundary. Transport errors on
 // a later browser refresh keep their full ApiError.
-const unavailable = { status: 503, code: "general.unavailable" } as const;
-export type FamilyFieldFailure = typeof unavailable | ApiError;
+export const FAMILY_FIELD_UNAVAILABLE = {
+  status: 503,
+  code: "general.unavailable",
+} as const;
+export type FamilyFieldFailure = typeof FAMILY_FIELD_UNAVAILABLE | ApiError;
 
 export function applyCards(
   previous: ParentFamily | undefined,
@@ -80,8 +83,8 @@ export function applyCards(
     const flags = card.features ?? known?.features[id];
     if (flags) family.features[id] = flags;
     family.today[id] = card.today ?? known?.today[id] ?? UNKNOWN_CHILD_TODAY;
-    if (!card.features) family.featureErrors[id] = unavailable;
-    if (!card.today) family.todayErrors[id] = unavailable;
+    if (!card.features) family.featureErrors[id] = FAMILY_FIELD_UNAVAILABLE;
+    if (!card.today) family.todayErrors[id] = FAMILY_FIELD_UNAVAILABLE;
     family.confirmedToday[id] = Boolean(
       card.today || known?.confirmedToday[id],
     );

@@ -1,6 +1,8 @@
+import { isAccessRefusal, isRefusal } from "~/lib/access-refusal";
 import { ApiError } from "~/lib/api-error";
 import { getFamilyStart } from "~/lib/parent-api";
 import {
+  FAMILY_FIELD_UNAVAILABLE,
   applyCards,
   familyCards,
   type ParentFamily,
@@ -32,9 +34,13 @@ async function reconcileChildren(read: FamilyRead) {
         try {
           return { id, response: await request };
         } catch (error) {
-          if (!(error instanceof ApiError) || (error.status ?? 0) < 500)
-            throw error;
-          return { id, error };
+          // Access decisions belong to the shared refusal boundary. Other
+          // failures describe this card, not a successful sibling update.
+          if (isRefusal(error) || isAccessRefusal(error)) throw error;
+          return {
+            id,
+            error: error instanceof ApiError ? error : FAMILY_FIELD_UNAVAILABLE,
+          };
         }
       }),
     ),
@@ -43,7 +49,7 @@ async function reconcileChildren(read: FamilyRead) {
   for (const update of updates) {
     if (update.response) {
       family = applyCards(family, update.response, update.id);
-    } else {
+    } else if (Object.hasOwn(family.accessVersions, update.id)) {
       // The server did not confirm a removal. Preserve the last confirmed
       // card and report the failure without dropping a successful sibling.
       family = {

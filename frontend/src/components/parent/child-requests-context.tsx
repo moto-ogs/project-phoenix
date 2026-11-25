@@ -45,7 +45,7 @@ export function useChildFeatures(studentId: string, enabled = true) {
   const features = resource.data?.[studentId];
   const failure =
     resource.errorsByChild[studentId] ??
-    (!features ? (resource.error ?? children.error) : undefined);
+    (!features ? (resource.familyError ?? children.error) : undefined);
   return {
     features,
     failure: enabled ? failure : undefined,
