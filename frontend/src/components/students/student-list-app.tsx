@@ -10,7 +10,14 @@
 // Ein Tipp öffnet das Kind-Blatt (Telefon, iPad hoch), im iPad-Querformat
 // steht das Kind rechts neben der Liste (`?kind=<id>`).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { AlertTriangle, StickyNote } from "lucide-react";
 
 import { Avatar } from "~/components/ui/avatar";
@@ -30,7 +37,7 @@ import { useRowClock } from "~/components/students/student-card-clock";
 import { useDeviceContext } from "~/lib/device-context";
 import { getAccessibleTextColor } from "~/lib/kit-palette";
 import type { DepartureMode } from "~/lib/departure-plan";
-import { teacherHintText, type Student } from "~/lib/student-helpers";
+import type { Student } from "~/lib/student-helpers";
 import {
   getStudentDayTimes,
   getStudentTimeStatus,
@@ -61,80 +68,106 @@ function shortDepartureLabel(student: Student): string | null {
 }
 
 /**
- * Dritte Zeile, nur wenn es etwas zu sagen gibt (wie heute auf der Karte):
- * eine überschrittene Ankunfts- oder Gehzeit in Rot bzw. Orange, sonst der
- * Hinweis der Lehrkraft. Eine Zeile, damit die Liste dicht bleibt; alles
- * Weitere steht im Kind-Blatt.
+ * Zweite Zeile (#8070): vorn, was heute auf der Karte rot steht (eine
+ * überschrittene Ankunfts- oder Gehzeit) oder ein Hinweis der Lehrkraft,
+ * dahinter Klasse, Gruppe und Heimweg. Jede Zeile bleibt zweizeilig, damit
+ * die Liste auch nachmittags mit vielen Warnungen dicht bleibt; den ganzen
+ * Hinweis zeigt das Kind-Blatt.
  */
-function RowHint({
+function RowLine({
   student,
   isToday,
-}: Readonly<{ student: Student; isToday: boolean }>) {
+  klass,
+  homeway,
+}: Readonly<{
+  student: Student;
+  isToday: boolean;
+  klass: string | undefined;
+  homeway: string | null;
+}>) {
+  const subtitle = [klass, student.group_name, homeway]
+    .filter(Boolean)
+    .join(" · ");
   const now = useRowClock(undefined);
-  if (student.has_full_access === false) return null;
-  if (isToday) {
-    const day = getStudentDayTimes(student);
-    const absence = {
-      sick: student.sick,
-      classTrip: student.class_trip,
-      excused: student.excused,
-      currentLocation: student.current_location,
-    };
-    const overdue = (
-      [
-        [
-          "Ankunftszeit",
-          "arrival",
-          student.arrival_time,
-          student.actual_arrival_time,
-        ],
-        [
-          "Gehzeit",
-          "pickup",
-          student.pickup_time ?? undefined,
-          student.actual_pickup_time,
-        ],
-      ] as const
-    )
-      .map(([label, kind, plannedTime, actualTime]) => ({
-        label,
-        status: getStudentTimeStatus({
-          plannedTime,
-          actualTime,
-          now,
-          kind,
-          day,
-          ...absence,
-        }),
-      }))
-      .find(
-        ({ status }) =>
-          status.state === "very-overdue" ||
-          status.state === "slightly-overdue",
-      );
-    if (overdue?.status.textColor) {
-      const color = getAccessibleTextColor(overdue.status.textColor);
-      return (
+  let lead: ReactNode = null;
+  // Neben einer Warnung nur, was zu ihr gehört, damit nichts abgeschnitten
+  // wird: zur Ankunft die Klasse, zur Gehzeit der Heimweg.
+  let rest = subtitle;
+  if (student.has_full_access !== false) {
+    const overdue = isToday ? overdueTime(student, now) : null;
+    if (overdue) {
+      lead = (
         <span
-          className="mt-0.5 flex min-w-0 items-center gap-1 text-xs leading-4"
-          style={{ color }}
+          className="flex shrink-0 items-center gap-1 font-medium"
+          style={{ color: overdue.color }}
         >
           <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
-          <span className="truncate font-medium">
-            {overdue.label}: {overdue.status.displayTime} Uhr
-          </span>
+          {overdue.label} {overdue.time}
+        </span>
+      );
+      rest = (overdue.kind === "pickup" ? homeway : klass) ?? "";
+    } else if (student.teacher_hints?.length) {
+      lead = (
+        <span className="flex shrink-0 items-center gap-1 font-medium text-gray-700">
+          <StickyNote className="size-3.5 shrink-0" aria-hidden="true" />
+          Hinweis
         </span>
       );
     }
   }
-  const hint = student.teacher_hints?.[0];
-  if (!hint) return null;
+  if (!lead) return subtitle ? <>{subtitle}</> : null;
   return (
-    <span className="mt-0.5 flex min-w-0 items-center gap-1 text-xs leading-4 text-gray-600">
-      <StickyNote className="size-3.5 shrink-0" aria-hidden="true" />
-      <span className="truncate">{teacherHintText(hint)}</span>
+    <span className="flex min-w-0 items-center gap-1">
+      {lead}
+      {rest ? <span className="truncate">· {rest}</span> : null}
     </span>
   );
+}
+
+/** Die überschrittene Ankunfts- oder Gehzeit eines Kindes, wie auf der Karte. */
+function overdueTime(student: Student, now: Date) {
+  const day = getStudentDayTimes(student);
+  const absence = {
+    sick: student.sick,
+    classTrip: student.class_trip,
+    excused: student.excused,
+    currentLocation: student.current_location,
+  };
+  const candidates = [
+    {
+      label: "Ankunftszeit",
+      kind: "arrival",
+      plannedTime: student.arrival_time,
+      actualTime: student.actual_arrival_time,
+    },
+    {
+      label: "Gehzeit",
+      kind: "pickup",
+      plannedTime: student.pickup_time ?? undefined,
+      actualTime: student.actual_pickup_time,
+    },
+  ] as const;
+  for (const { label, kind, plannedTime, actualTime } of candidates) {
+    const status = getStudentTimeStatus({
+      plannedTime,
+      actualTime,
+      now,
+      kind,
+      day,
+      ...absence,
+    });
+    const late =
+      status.state === "very-overdue" || status.state === "slightly-overdue";
+    if (late && status.textColor && status.displayTime) {
+      return {
+        label,
+        kind,
+        time: status.displayTime,
+        color: getAccessibleTextColor(status.textColor),
+      };
+    }
+  }
+  return null;
 }
 
 function studentName(student: Student): string {
@@ -222,9 +255,6 @@ export function StudentListApp({
       "",
     );
     const homeway = shortDepartureLabel(student);
-    const subtitle = [klass, student.group_name, homeway]
-      .filter(Boolean)
-      .join(" · ");
     // Telefon: dasselbe farbige Orts-Abzeichen wie auf der Karte von heute
     // („Zuhause“, „Kommt heute nicht“, Raumname), in der Namenszeile, damit
     // die zweite Zeile die ganze Breite hat.
@@ -256,12 +286,12 @@ export function StudentListApp({
           </span>
         }
         subtitle={
-          <>
-            {subtitle ? (
-              <span className="block truncate">{subtitle}</span>
-            ) : null}
-            <RowHint student={student} isToday={isToday} />
-          </>
+          <RowLine
+            student={student}
+            isToday={isToday}
+            klass={klass}
+            homeway={homeway}
+          />
         }
         selected={selected === id}
         onClick={() => (isSplit ? select(id) : setSheetId(id))}
