@@ -97,9 +97,7 @@ export async function fetchGroupThread(id: string): Promise<GroupThreadDetail> {
  * message id. A message without a mail has no key; an outcome this build does
  * not know is not counted.
  */
-export async function fetchGroupThreadMails(
-  id: string,
-): Promise<Readonly<Record<string, MailOutcomeCounts>>> {
+export async function fetchGroupThreadMails(id: string) {
   const data = await bffJson(
     "tenant",
     "GET /api/messages/group-threads/{groupThreadId}/mails",
@@ -117,7 +115,7 @@ export async function fetchGroupThreadMails(
     }
     mails[messageId] = known;
   }
-  return mails;
+  return { mails: mails, awaitingFeedback: data.awaiting_feedback };
 }
 
 export async function postGroupMessage(

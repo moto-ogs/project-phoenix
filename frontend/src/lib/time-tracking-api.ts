@@ -304,7 +304,7 @@ class TimeTrackingService {
    * Antrag die Mails der letzten Meldung, nach Ergebnis gezählt. Ein Antrag
    * ohne Mail fehlt.
    */
-  async getAbsenceRequestMails(): Promise<Record<string, MailOutcomeCounts>> {
+  async getAbsenceRequestMails() {
     const mails = await bffJson(
       "tenant",
       "GET /api/time-tracking/absences/mails",
@@ -321,7 +321,7 @@ class TimeTrackingService {
       }
       byAbsence[id] = known;
     }
-    return byAbsence;
+    return { mails: byAbsence, awaitingFeedback: mails.awaiting_feedback };
   }
 
   async createAbsence(req: CreateAbsenceRequest): Promise<StaffAbsence> {

@@ -96,3 +96,19 @@ func TestDistributionMailsAreParentMailsWithoutTheIndividualOnes(t *testing.T) {
 		assert.False(t, IsDistributionMail(template), template)
 	}
 }
+
+func TestAwaitingFeedbackUsesTheClockOfTheCurrentDeliveryStage(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 11, 6, 12, 0, 0, 0, time.UTC)
+	old := now.Add(-EmailDelayLimit - time.Minute)
+	silent := now.Add(-EmailFeedbackWindow)
+	assert.True(t, EmailQueued.AwaitingFeedback(now, nil, nil, true, now))
+	assert.False(t, EmailQueued.AwaitingFeedback(silent, nil, nil, true, now))
+	assert.True(t, EmailAccepted.AwaitingFeedback(old, &now, nil, true, now))
+	assert.False(t, EmailAccepted.AwaitingFeedback(old, &silent, nil, true, now))
+	assert.False(t, EmailAccepted.AwaitingFeedback(old, &now, nil, false, now))
+	assert.False(t, EmailAccepted.AwaitingFeedback(old, nil, nil, true, now))
+	assert.True(t, EmailDelayed.AwaitingFeedback(old, &old, &silent, true, now))
+	assert.False(t, EmailDelayed.AwaitingFeedback(old, &old, &old, true, now))
+	assert.False(t, EmailDelivered.AwaitingFeedback(now, &now, &now, true, now))
+}

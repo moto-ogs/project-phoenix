@@ -37,9 +37,11 @@ export const staffKeys = {
  * Anträge; Konto und Schule ergänzen die Hooks. Die Leitung liest die Mails
  * zu ihren Entscheidungen, die Person die Meldung ihrer wartenden Anträge.
  */
+const decisionMailFamily = "staff-absence-mails-";
 export const absenceMailKeys = {
+  decisionsFamily: decisionMailFamily,
   decisions: (absenceIds: readonly string[]) =>
-    `staff-absence-mails-${absenceIds.join(",")}`,
+    `${decisionMailFamily}${absenceIds.join(",")}`,
   ownRequests: (waitingIds: readonly string[]) =>
     `own-absence-request-mails-${waitingIds.join(",")}`,
 } as const;

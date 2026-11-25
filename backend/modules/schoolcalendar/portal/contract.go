@@ -94,14 +94,16 @@ type StaffAppointmentMails interface {
 // them, as far as their current address still matches; it carries no
 // address. A kind without a mail is absent.
 type AppointmentMails struct {
-	Kinds      map[string]map[string]int `json:"kinds"`
-	NotArrived map[string][]string       `json:"not_arrived"`
+	AwaitingFeedback bool                      `json:"awaiting_feedback,omitempty"`
+	Kinds            map[string]map[string]int `json:"kinds"`
+	NotArrived       map[string][]string       `json:"not_arrived"`
 }
 
 // AppointmentMail is one guardian e-mail of an appointment as Delivery
 // reports it (#7058): its kind, the recipient address in normalized form
 // (lower case, trimmed) and the outcome.
 type AppointmentMail struct {
+	AwaitingFeedback       bool
 	ID                     int64
 	Kind, Address, Outcome string
 }

@@ -5276,7 +5276,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
-      "reason": "Read-only delivery state: workforce reads what became of its payroll and absence mails through runtime.EmailOutcomes.EmailOutcomes in its tenant transaction (#7058). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag from each existing transactional mail report for the requested entities. Delivery still reads only the requested mails in the caller’s tenant transaction. (#8094)",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
       "target_owner": "delivery-platform"
@@ -5286,7 +5286,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
-      "reason": "Read-only delivery state: workforce reads what became of its payroll and absence mails through tenant.TenantFromContext in its tenant transaction (#7058). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag from each existing transactional mail report for the requested entities. The binding reads the tenant from the existing context; it does not open or change a scope. (#8094)",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -5296,7 +5296,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
-      "reason": "Read-only delivery state: workforce reads what became of its payroll and absence mails through tenant.TenantID.Int64 in its tenant transaction (#7058). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag from each existing transactional mail report for the requested entities. Converting the scoped tenant ID to the delivery query argument neither writes nor changes scope. (#8094)",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
       "target_owner": "tenant-runtime"

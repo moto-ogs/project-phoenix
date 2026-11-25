@@ -24,7 +24,13 @@ it("recovers its polling after the retry budget is exhausted", async () => {
   vi.useFakeTimers();
   vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
   read
-    .mockResolvedValueOnce([{ kind: "enrollment_approved", outcome: "queued" }])
+    .mockResolvedValueOnce([
+      {
+        kind: "enrollment_approved",
+        outcome: "queued",
+        awaiting_feedback: true,
+      },
+    ])
     .mockRejectedValue(new Error("offline"));
   const view = renderHook(() => useRequestMails("request-1"), {
     wrapper: Providers,
@@ -42,6 +48,34 @@ it("recovers its polling after the retry budget is exhausted", async () => {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(15_000);
   });
+  expect(view.result.current.mails[0]?.outcome).toBe("delivered");
+  view.unmount();
+  releaseFakeTimers();
+});
+
+it("checks a quiet request on focus without waiting for reconciliation", async () => {
+  vi.useFakeTimers();
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  read
+    .mockReset()
+    .mockResolvedValueOnce([])
+    .mockResolvedValueOnce([
+      {
+        kind: "enrollment_approved",
+        outcome: "accepted",
+        awaiting_feedback: true,
+      },
+    ])
+    .mockResolvedValue([{ kind: "enrollment_approved", outcome: "delivered" }]);
+  const view = renderHook(() => useRequestMails("focus"), {
+    wrapper: Providers,
+  });
+  await act(() => vi.advanceTimersByTimeAsync(6_000));
+  expect(read).toHaveBeenCalledTimes(1);
+  window.dispatchEvent(new Event("focus"));
+  await act(() => vi.advanceTimersByTimeAsync(1));
+  expect(view.result.current.mails[0]?.outcome).toBe("accepted");
+  await act(() => vi.advanceTimersByTimeAsync(15_000));
   expect(view.result.current.mails[0]?.outcome).toBe("delivered");
   view.unmount();
   releaseFakeTimers();

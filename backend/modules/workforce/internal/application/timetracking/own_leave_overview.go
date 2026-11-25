@@ -153,12 +153,16 @@ func (s ownTimeViews) ownLeaveMailStatus(ctx context.Context, absences []*StaffA
 	if s.mails == nil {
 		return workforce.OwnLeaveMails{State: workforce.OwnReadUnavailable}, nil
 	}
+	var awaitingFeedback bool
 	counts, state, err := optionalOwnRead(ctx, s.months.getLogger(), "absence_mails", func(ctx context.Context) (map[int64]map[string]int, error) {
-		return s.mails.AbsenceRequestMails(ctx, waiting)
+		counts, active, err := s.mails.AbsenceRequestMails(ctx, waiting)
+		awaitingFeedback = active
+		return counts, err
 	})
 	if state != workforce.OwnReadReady {
 		return workforce.OwnLeaveMails{State: state}, err
 	}
+	result.AwaitingFeedback = awaitingFeedback
 	for id, count := range counts {
 		result.Absences[ident.ID(id)] = count
 	}

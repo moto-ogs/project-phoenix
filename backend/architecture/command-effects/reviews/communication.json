@@ -790,7 +790,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentGroupMessageMailOutcomes",
-      "reason": "Read-only delivery state: communication reads what became of the e-mails of OGS messages (#7058) through runtime.EmailOutcomes.EmailOutcomes; no write, no lock.",
+      "reason": "Counts group mails by result and combines their feedback flags in memory. Delivery still reads only the requested mails in the caller’s tenant transaction. (#8094)",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
       "target_owner": "delivery-platform"
@@ -800,7 +800,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentGroupMessageMailOutcomes",
-      "reason": "Read-only delivery state: communication reads what became of the e-mails of OGS messages (#7058) through tenant.TenantFromContext; no write, no lock.",
+      "reason": "Counts group mails by result and combines their feedback flags in memory. The binding reads the tenant from the existing context; it does not open or change a scope. (#8094)",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -810,7 +810,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentGroupMessageMailOutcomes",
-      "reason": "Read-only delivery state: communication reads what became of the e-mails of OGS messages (#7058) through tenant.TenantID.Int64; no write, no lock.",
+      "reason": "Counts group mails by result and combines their feedback flags in memory. Converting the scoped tenant ID to the delivery query argument neither writes nor changes scope. (#8094)",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
       "target_owner": "tenant-runtime"
@@ -820,7 +820,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentMessageMailOutcomes",
-      "reason": "Read-only delivery state: communication reads what became of the e-mails of OGS messages (#7058) through runtime.EmailOutcomes.EmailOutcomes; no write, no lock.",
+      "reason": "Maps each conversation message to its mail outcome and combines the feedback flags in memory. Delivery still reads only the requested mails in the caller’s tenant transaction. (#8094)",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
       "target_owner": "delivery-platform"
@@ -830,7 +830,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentMessageMailOutcomes",
-      "reason": "Read-only delivery state: communication reads what became of the e-mails of OGS messages (#7058) through tenant.TenantFromContext; no write, no lock.",
+      "reason": "Maps each conversation message to its mail outcome and combines the feedback flags in memory. The binding reads the tenant from the existing context; it does not open or change a scope. (#8094)",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -840,7 +840,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentMessageMailOutcomes",
-      "reason": "Read-only delivery state: communication reads what became of the e-mails of OGS messages (#7058) through tenant.TenantID.Int64; no write, no lock.",
+      "reason": "Maps each conversation message to its mail outcome and combines the feedback flags in memory. Converting the scoped tenant ID to the delivery query argument neither writes nor changes scope. (#8094)",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
       "target_owner": "tenant-runtime"

@@ -252,8 +252,9 @@ type OwnLeaveAllowanceCarry struct {
 }
 
 type OwnLeaveMails struct {
-	State    string                      `json:"state"`
-	Absences map[ident.ID]map[string]int `json:"absences"`
+	State            string                      `json:"state"`
+	AwaitingFeedback bool                        `json:"awaiting_feedback"`
+	Absences         map[ident.ID]map[string]int `json:"absences"`
 }
 
 type OwnLeaveOverview struct {

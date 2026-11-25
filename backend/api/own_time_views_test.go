@@ -229,6 +229,7 @@ func checkOwnTimeViews(t *testing.T, api *goldenRuntime) {
 	require.Len(t, leave.Allowances, 1)
 	require.Equal(t, ident.ID(custom.ID), leave.Allowances[0].AbsenceTypeID)
 	require.Equal(t, map[string]int{"queued": 1}, leave.Mails.Absences[ident.ID(waiting)])
+	require.True(t, leave.Mails.AwaitingFeedback, "the first read reports whether the remaining mail needs polling")
 	require.NotContains(t, leaveRec.Body.String(), "Other request is private")
 
 	checkOwnTimeViewAccess(t, api, fixture, account.ID, otherAccount.ID, today, token)

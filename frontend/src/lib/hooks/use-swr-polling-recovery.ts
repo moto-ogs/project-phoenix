@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { ApiError } from "~/lib/api-error";
 import { remainingRateLimitMs } from "~/lib/rate-limit-backoff";
 
@@ -13,6 +14,7 @@ export function useSwrPollingRecovery(
   useEffect(() => {
     if (
       !error ||
+      isAccessRefusal(error) ||
       (error instanceof ApiError &&
         error.status !== undefined &&
         error.status >= 400 &&
@@ -23,6 +25,7 @@ export function useSwrPollingRecovery(
     const timer = setInterval(() => {
       if (
         document.visibilityState === "visible" &&
+        navigator.onLine &&
         remainingRateLimitMs("GET") === 0
       )
         void reload();
