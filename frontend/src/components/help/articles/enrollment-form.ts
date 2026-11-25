@@ -78,7 +78,7 @@ export function enrollmentFormTopic(): HelpTopic {
           "Wähle `+ Freie Zusatzfrage` und schreibe die Frage.",
           "Stelle bei `Typ` die Option `Datei` ein.",
           "Wähle bei `Erlaubte Dateiarten` aus `PDF`, `JPG` und `PNG`.",
-          "Wähle bei `Höchstens pro Datei` eine Größe von 1 bis 10 MB.",
+          "Wähle bei `Maximale Größe pro Datei` eine Größe von 1 bis 10 MB.",
           "Sollen Eltern mehrere Dateien schicken? Wähle `Mehrere Dateien erlauben`. Dann sind bis zu 5 Dateien möglich.",
         ],
       },

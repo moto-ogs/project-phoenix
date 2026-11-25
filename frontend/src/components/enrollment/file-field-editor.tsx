@@ -154,7 +154,7 @@ export function FileFieldOptionsEditor({
             id={sizeLabelId}
             className="block text-xs font-medium text-gray-700"
           >
-            Höchstens pro Datei
+            Maximale Größe pro Datei
           </span>
           <CustomSelect
             ariaLabelledBy={sizeLabelId}

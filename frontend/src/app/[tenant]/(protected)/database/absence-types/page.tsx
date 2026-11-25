@@ -114,7 +114,8 @@ function traegerSections(type: AbsenceType): SectionConfig[] {
             fields: [
               {
                 name: "schoolLimitDays",
-                label: "Höchstens Tage pro Person und Jahr an dieser Schule",
+                label:
+                  "Höchstzahl an Tagen pro Person und Jahr an dieser Schule",
                 type: "number" as const,
                 colSpan: 2 as const,
                 min: 0,

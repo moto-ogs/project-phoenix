@@ -161,7 +161,7 @@
   "holiday_child_day_limit": "In these holidays a child can come on at most {limit} days. The total would be {days} days. Days in other registrations: {elsewhere}. Please choose fewer days.",
   "holiday_child_day_limit_public": "A child can book at most {limit} days during these holidays. This limit applies across all registrations for the child. Please select fewer days or contact the provider’s office.",
   "holiday_weeks_booked_together": "A child is already registered for both weeks. That is why the weeks cannot fall on the same days.",
-  "holiday_week_day_limit": "A child is already registered for this week. With the new days, the child would have more days than allowed. Keep the days as they are or raise “Höchstzahl an Tagen pro Kind”.",
+  "holiday_week_day_limit": "A child is already registered for this week. With the new days, the child would have more days than allowed. Keep the days as they are or enter a higher number in “Höchstzahl an Tagen pro Kind”.",
   "hosted_holiday_week_not_found": "There is no participant list for this week any more. It is only available until the last day of the week.",
   "holiday_guest_not_found": "The details of this holiday guest are no longer available. They are kept only until 7 days after the holiday week.",
   "holiday_guest_group_invalid": "This group no longer exists. Please choose another group.",

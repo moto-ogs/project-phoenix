@@ -19,7 +19,7 @@ export function teacherMessagesTopic(): HelpTopic {
     ],
     result: "Das OGS-Team bekommt deine Nachricht sofort.",
     notes: [
-      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint, mit höchstens 10 MB pro Datei. Ein Foto öffnest du mit einem Tipp groß.",
+      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint. Pro Datei sind höchstens 10 MB erlaubt. Ein Foto öffnest du mit einem Tipp groß.",
       "Vor deiner eigenen Nachricht steht `Du:`.",
       "Hier meldest du, was die OGS wissen muss, zum Beispiel eine falsche Abholzeit.",
       "Die OGS kann dich in einen Gruppenchat aufnehmen. Er steht dann mit seinem Namen in deiner Liste. Mit `Mitglieder` und `Gruppenchat verlassen` gehst du wieder heraus.",

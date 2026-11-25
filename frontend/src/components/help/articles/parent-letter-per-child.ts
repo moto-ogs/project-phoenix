@@ -41,7 +41,7 @@ export function parentLetterPerChildTopic(): HelpTopic {
       },
     ],
     result:
-      "Jede Familie bekommt einen Brief pro Kind, mit den Angaben ihres eigenen Kindes. Geschwister bekommen pro Kind einen Brief.",
+      "Jede Familie bekommt pro Kind einen eigenen Brief. Darin stehen nur die Angaben dieses Kindes.",
     notes: [
       "moto schreibt den Brief beim Veröffentlichen fest. Ändern sich danach Gruppe oder Abholzeit, bleibt der Brief, wie er war.",
       "Fehlt bei einem Kind eine Angabe, bleibt die Stelle leer. Steht in einer Zeile nur diese Angabe, zum Beispiel `Abholzeit:`, lässt moto die ganze Zeile weg.",

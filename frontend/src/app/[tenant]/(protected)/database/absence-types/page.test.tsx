@@ -88,7 +88,7 @@ describe("AbsenceTypesPage", () => {
     expect(screen.getByText("Pro Person über alle Schulen")).toBeVisible();
     expect(
       screen.getByLabelText(
-        "Höchstens Tage pro Person und Jahr an dieser Schule",
+        "Höchstzahl an Tagen pro Person und Jahr an dieser Schule",
       ),
     ).toHaveValue(2);
     expect(screen.queryByLabelText(/^Name/)).not.toBeInTheDocument();
@@ -115,7 +115,7 @@ describe("AbsenceTypesPage", () => {
     );
     fireEvent.change(
       screen.getByLabelText(
-        "Höchstens Tage pro Person und Jahr an dieser Schule",
+        "Höchstzahl an Tagen pro Person und Jahr an dieser Schule",
       ),
       { target: { value: "3" } },
     );

@@ -111,7 +111,7 @@ export function traegerHolidayRegistrationReviewTopic(): HelpTopic {
         steps: [
           "Wähle im Reiter `Kind` beim Kind `Umbuchen`.",
           "Wähle pro Woche ein Zeitmodell oder `Nicht angemeldet`. Gibt es eine Woche an mehreren Schulen, wähle auch die Schule.",
-          "Wird die Woche tageweise gebucht, wähle darunter die Tage. Mehr Tage als `Höchstzahl an Tagen pro Kind` nimmt moto nicht an.",
+          "Wird die Woche tageweise gebucht, wähle darunter die Tage. Die Tage dürfen die `Höchstzahl an Tagen pro Kind` nicht überschreiten.",
           "Bietet die Woche Mittagessen an, steht darunter `Mit Mittagessen`. Setze oder entferne den Haken.",
           "Wähle `Speichern`.",
           "Eine Woche, die das Kind nicht mehr bucht, gibt ihren Platz frei. Das nächste Kind der Warteliste rückt sofort nach. Eine neue Woche bekommt einen Platz, wenn einer frei ist. Sonst kommt das Kind dort auf die Warteliste.",

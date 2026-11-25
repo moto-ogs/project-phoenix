@@ -103,7 +103,7 @@ export function traegerHolidayPeriodTopic(): HelpTopic {
       "`Veröffentlichen` lässt sich nicht wählen? Speichere zuerst deine Änderungen. Jede Woche braucht mindestens ein Zeitmodell, das nicht archiviert ist.",
       "Eine Schule fehlt bei `Ausrichtende OGS`? Das moto-Team ordnet die Schulen deinem Träger zu.",
       "Die Woche lässt sich nicht speichern, weil keine Betreuung ist? Eine ganze Woche mit Feiertag oder Schließtag kann niemand buchen. Wähle bei `Buchung` `Einzelne Tage`. Dann fällt nur dieser Tag weg. Oder lass den Tag aus der Woche.",
-      "Eine Woche lässt sich nicht verlängern? Ein Kind ist schon für die ganze Woche angemeldet. Mit mehr Tagen hätte es mehr als `Höchstzahl an Tagen pro Kind`. Lass die Woche so oder erhöhe die Zahl.",
+      "Eine Woche lässt sich nicht verlängern? Ein Kind ist schon für die ganze Woche angemeldet. Mehr Tage würden die Höchstzahl pro Kind überschreiten. Lass die Woche so oder erhöhe die Zahl.",
     ],
     related: [
       HELP_TOPICS.traegerLogin,
