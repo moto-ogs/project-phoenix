@@ -95,7 +95,7 @@ const SPLIT_BOTTOM = "(6.5rem + env(safe-area-inset-bottom))";
  * Spalte der `ActionBar` endet über ihr (Regel in `globals.css`).
  */
 const SPLIT_COLUMN =
-  "max-h-full min-h-0 overflow-y-auto overscroll-contain rounded-2xl [scrollbar-width:none] data-more-below:[mask-image:linear-gradient(to_bottom,black_calc(100%-2.5rem),transparent)]";
+  "max-h-full min-h-0 overflow-y-auto overscroll-contain rounded-2xl [scrollbar-width:none]";
 
 /**
  * Solange der Split steht, scrollt die Seite nicht: Sie steht oben, damit
@@ -121,7 +121,8 @@ function useSplitPageLock(active: boolean) {
 
 /**
  * Markiert eine Spalte mit `data-more-below`, solange unter ihr noch Inhalt
- * folgt; sie läuft dann unten weich aus statt hart zu enden.
+ * folgt; sie läuft dann unten weich aus statt hart zu enden (`globals.css`).
+ * Eine unten klebende Aktion (`data-split-list-action`) bleibt unverblasst.
  */
 function useMoreBelow(ref: RefObject<HTMLDivElement | null>, active: boolean) {
   useLayoutEffect(() => {
@@ -135,6 +136,19 @@ function useMoreBelow(ref: RefObject<HTMLDivElement | null>, active: boolean) {
         const more =
           column.scrollHeight - column.scrollTop - column.clientHeight > 2;
         column.toggleAttribute("data-more-below", more);
+        // Eine unten klebende Aktion der Spalte bleibt außerhalb der
+        // Ausblendung: Sie endet direkt über ihr.
+        const footer = column.querySelector<HTMLElement>(
+          "[data-split-list-action]",
+        );
+        if (footer) {
+          column.style.setProperty(
+            "--split-fade-inset",
+            `${footer.offsetHeight}px`,
+          );
+        } else {
+          column.style.removeProperty("--split-fade-inset");
+        }
       }
     };
     update();

@@ -436,6 +436,19 @@ html[data-split-page] {
   overflow: hidden;
 }
 
+/* Eine Spalte, unter der noch Inhalt folgt, läuft unten auf 2,5 rem weich
+   aus; nur der Inhalt, nicht eine unten klebende Aktion der Spalte
+   (`--split-fade-inset` = deren Höhe, gesetzt von `SplitView`). */
+[data-split-view] > [data-more-below] {
+  --split-fade-end: calc(100% - var(--split-fade-inset, 0px));
+  mask-image: linear-gradient(
+    to bottom,
+    black calc(var(--split-fade-end) - 2.5rem),
+    transparent var(--split-fade-end),
+    black var(--split-fade-end)
+  );
+}
+
 html[data-action-bar-column="list"] [data-split-view] > [data-split-list],
 html[data-action-bar-column="detail"] [data-split-view] > [data-split-detail],
 html[data-action-bar-column="all"] [data-split-view] > * {
