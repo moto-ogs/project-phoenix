@@ -94,6 +94,7 @@ import { routes as rooms } from "./rooms.generated";
 import { routes as schoolAuth } from "./school-auth.generated";
 import { routes as schoolCalendar } from "./school-calendar.generated";
 import { routes as schoolClassDay } from "./school-class-day.generated";
+import { routes as schoolDayChanges } from "./school-day-changes.generated";
 import { routes as schoolNotifications } from "./school-notifications.generated";
 import { routes as schoolParentLetters } from "./school-parent-letters.generated";
 import { routes as schoolSetup } from "./school-setup.generated";
@@ -957,6 +958,7 @@ export const portalRoutes = {
     schoolClassDay["PUT /school/class-day/handover/{schoolClass}/{date}"],
     schoolClassDay["PUT /school/class-day/homework/{schoolClass}/{homeworkId}"],
     schoolClassDay["PUT /school/class-day/morning-attendance/{schoolClass}/{date}"],
+    schoolDayChanges["GET /school/day-changes/today"],
     schoolNotifications["DELETE /school/notifications/preferences/"],
     schoolNotifications["DELETE /school/notifications/push/subscriptions"],
     schoolNotifications["GET /school/notifications/feed/"],

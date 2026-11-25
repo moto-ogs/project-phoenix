@@ -411,3 +411,37 @@ Projektion nutzt „change“.
   `api.day_changes.today_activities` von 20 auf 19. Das Szenario
   `today_appointments` bleibt: Es misst die Sitzung ohne Gruppe mit
   engerer Obergrenze.
+
+## Nachtrag 2026-11-25: Heute anders im Schulportal (#7670)
+
+- Die Route ist `GET /school/day-changes/today` (Schulportal, nur
+  Schul-Sitzungen) hinter `class_day:read`. Dieselbe Projektion
+  (`daychangesview.NewSchool`) liest mit eigenen Quellen; Savepoint, Status
+  pro Quelle und Sortierung bleiben gleich. Die Root bindet die Ports in
+  `backend/api/day_changes_school.go`. Die Sichtregeln gelten für das
+  Schulportal eigenständig und kommen nicht aus denen des Staff-Portals.
+- **Abgrenzung zu `class-day-view`.** Die Kinder der eigenen Klassen
+  (Krankmeldung, Abholzeit, Ausflug eines Kindes) liest die Projektion
+  nicht. Sie stehen in den Zeilen des Klassentags, und die Startseite lädt
+  dessen Klassenbericht (`assigned-classes`) ohnehin. Der Block zählt die
+  geänderten Kinder pro Klasse aus diesem Bericht und springt zur ersten
+  geänderten Zeile. So werden Kinderdaten nicht doppelt gelesen, und ihre
+  Regel bleibt die des Klassentags (`education.class_teachers`).
+- Quellen in diesem Schritt:
+  - `classes`: geänderter Unterrichtsschluss der eigenen Klassen, unter
+    „Betrifft dich“. Ein Konto mit `class_day:all_classes`
+    (Schulverwaltung) sieht alle Klassen unter „Schule“. Kein Grund.
+  - `closing_days`: Schließtage der Schule und ihres Trägers, mit
+    `calendar:school`, dem Recht des Kalenders in moto schule, der sie
+    schon zeigt. Link auf diesen Kalender.
+- Neue Link-Ziele: `school_class` (Klassenseite, Klasse aus `class`) und
+  `school_calendar`.
+- Live: Der Block lädt bei `class_day_changed` und beim Fokus neu. Ein
+  geänderter Unterrichtsschluss und ein Schließtag senden heute kein
+  Ereignis an das Schulportal; der Abgleich beim Fokus holt sie.
+- Budget: `school.day_changes.today` mit 10 Anweisungen, gleich bei einer
+  und vier Klassen.
+- Noch offen (Folge-Ticket): Klassenausflug als Klassen-Eintrag,
+  Vertretungen bei den eigenen Aufsichten und Termine der Lehrkraft.
+  Verkürzte Öffnung, Essensausfall, Raumsperren und Abholperson folgen mit
+  #7654, #7656, #7653 und #7655.

@@ -294,6 +294,8 @@ export const schoolPortalKeys = {
     resourceKey("school-class-day-report-", { schoolClass, date }),
   assignedClasses: (date: string) => `school-assigned-classes-${date}`,
   schoolDay: (date: string) => `school-day-${date}`,
+  // „Heute anders“ (#7670): nur heute, ohne Tag im Schlüssel.
+  dayChanges: () => "school-day-changes",
   parentConferences: () => "school-parent-conferences",
   absenceList: (schoolClass: string, from = "", to = "") =>
     `school-absence-list-${schoolClass}-${from}-${to}`,

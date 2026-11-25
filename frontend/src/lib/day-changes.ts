@@ -16,7 +16,7 @@ import type {
   PersonRole,
   Section,
   Source,
-} from "~/lib/contract/day-changes.generated";
+} from "~/lib/contract/shared.generated";
 
 export interface DayChangePerson {
   readonly staffId: string;
@@ -272,4 +272,14 @@ function mapDayChanges(overview: Overview): DayChangesOverview {
 /** Liest die Übersicht der Sitzung über den Proxy des Staff-Portals. */
 export async function fetchDayChanges(): Promise<DayChangesOverview> {
   return mapDayChanges(await bffJson("tenant", "GET /api/day-changes/today"));
+}
+
+/**
+ * Liest die Übersicht von moto schule (#7670): Unterrichtsschluss der
+ * eigenen Klassen und Schließtage. Die Kinder stehen im Klassentag.
+ */
+export async function fetchSchoolDayChanges(): Promise<DayChangesOverview> {
+  return mapDayChanges(
+    await bffJson("school", "GET /school/day-changes/today"),
+  );
 }

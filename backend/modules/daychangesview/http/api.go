@@ -62,6 +62,7 @@ func RouteContracts() []common.RouteContract {
 				string(daychangesview.LinkOwnShiftPlan), string(daychangesview.LinkShiftPlan), string(daychangesview.LinkStudent),
 				string(daychangesview.LinkStaffNotices), string(daychangesview.LinkCalendarPeriods), string(daychangesview.LinkDayPlan),
 				string(daychangesview.LinkSubstitutionPlan), string(daychangesview.LinkCalendar), string(daychangesview.LinkMealPlan),
+				string(daychangesview.LinkSchoolClass), string(daychangesview.LinkSchoolCalendar),
 			}},
 			{Type: daychangesview.NoticePriority(""), Values: []string{
 				string(daychangesview.NoticeInfo), string(daychangesview.NoticeImportant),

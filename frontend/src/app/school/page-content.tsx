@@ -5,6 +5,7 @@
 // (#2294), eine Klasse pro Seite.
 
 import { ClassDayOverview } from "~/components/class-day/class-day-overview";
+import { SchoolDayChangesBlock } from "~/components/school/school-day-changes-block";
 import { TodayNoticesCard } from "~/components/school/today-notices-card";
 import {
   fetchAssignedClassesSchool,
@@ -22,9 +23,17 @@ export default function SchoolHomePage() {
       fetchSchoolDay={fetchSchoolDaySchool}
       reportAbsence={reportAbsenceSchool}
       withdrawAbsenceReport={withdrawAbsenceReportSchool}
-      // Hinweise der OGS-Leitung für heute (#2208): direkt unter dem Kopf;
-      // ohne Hinweis rendert die Karte nichts.
-      notices={<TodayNoticesCard />}
+      // „Heute anders“ (#7670) direkt unter dem Kopf, darunter die Hinweise
+      // der OGS-Leitung für heute (#2208); ohne Hinweis rendert die Karte
+      // nichts.
+      notices={
+        <>
+          <SchoolDayChangesBlock
+            fetchAssignedClasses={fetchAssignedClassesSchool}
+          />
+          <TodayNoticesCard />
+        </>
+      }
     />
   );
 }

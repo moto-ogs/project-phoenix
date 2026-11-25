@@ -10296,6 +10296,10 @@ export const teacherClassDayTopic = function teacherClassDayTopic(): HelpTopic {
     ],
     result: "Du siehst, wer heute bleibt und wer nach Hause geht.",
     notes: [
+      "Ganz oben steht `Heute anders`. Dort siehst du, was heute für deine Klassen und die Schule anders ist. Zum Beispiel ein früherer Unterrichtsschluss oder ein Schließtag.",
+      "Wähle unter `Heute anders` eine Klasse mit Kindern. Dann springst du in der Liste zum ersten Kind, das heute anders ist.",
+      "Namen von Kolleginnen und Kollegen und Gründe stehen bei `Heute anders` nicht. Du siehst nur deine Klassen und die ganze Schule.",
+      "Hinweise der Leitung liest und bestätigst du unter `Hinweise der Leitung`.",
       "Steht bei einer Klasse `4 Kinder anders als sonst`, weicht dort heute etwas vom üblichen Plan ab.",
       "Mit den Pfeilen siehst du den vorherigen oder nächsten Tag.",
       "Betreut deine OGS am Wochenende? Dann siehst du auch Samstag und Sonntag. Dort gilt der Freitagsplan.",

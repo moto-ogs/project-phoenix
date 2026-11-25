@@ -21449,6 +21449,14 @@
       "target_owner": "communication"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/daychangesview/http.SchoolResource.SchoolRouter",
+      "binding_digest": "9a9d175cf4e24d2204ebaa55d783882e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolportal.SchoolRouter.SchoolRouter",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/daychangesview/http.SchoolResource.SchoolRouter",
+      "target_owner": "day-changes-view"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http.Resource.SchoolRouter",
       "binding_digest": "8a64b03bf8bc9773c2a10f5fbef247bc",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolportal.SchoolRouter.SchoolRouter",

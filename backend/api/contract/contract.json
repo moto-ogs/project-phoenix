@@ -10748,6 +10748,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/school/day-changes/today",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "Overview"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/school/notifications/feed/",
       "portals": [
         "school"
@@ -25810,6 +25821,8 @@
         "meal_plan",
         "own_absences",
         "own_shift_plan",
+        "school_calendar",
+        "school_class",
         "shift_plan",
         "staff_absences",
         "staff_list",

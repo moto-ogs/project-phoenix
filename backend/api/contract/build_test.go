@@ -610,6 +610,16 @@ func TestTypeScriptWritesATypeOfTwoResourcesOnce(t *testing.T) {
 	assert.NotContains(t, shared, "interface inner ")
 }
 
+// A shared name inside a string literal or a comment is no use: the file
+// imports it only where its code names it.
+func TestTypeScriptImportsASharedNameOnlyFromCode(t *testing.T) {
+	t.Parallel()
+	shared := &tsWriter{enumOrder: []string{"Kind"}}
+	assert.Empty(t, shared.namedIn(`/** Go: x.Kind */
+export const PICKUP_VALUES = ["Geht mit anderem Kind", "Wird \"Kind\" abgeholt"] as const; // Kind`))
+	assert.Equal(t, []string{"type Kind"}, shared.namedIn(`  kind: OpenEnum<Kind>; // "x"`))
+}
+
 func TestTypeScriptImportsOpenEnumForASharedRequest(t *testing.T) {
 	t.Parallel()
 	type enumBody struct {

@@ -23,6 +23,7 @@ import (
 	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
 	dataImportCompose "github.com/moto-ogs/project-phoenix/modules/dataimport/compose"
 	importAPI "github.com/moto-ogs/project-phoenix/modules/dataimport/http"
+	dayChangesHTTP "github.com/moto-ogs/project-phoenix/modules/daychangesview/http"
 	devicefleetCompose "github.com/moto-ogs/project-phoenix/modules/devicefleet/compose"
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -178,12 +179,11 @@ func mountSchoolPortalRoutes(
 	// /api/calendar, behind calendar:school and the school-portal mantle.
 	schoolCalendar := calendarAPI.NewResource(calendarApp, nil, logger.With("handler", "school-calendar"))
 	school := NewSchoolPortalHTTP(SchoolPortalAuth(identity), SchoolPortalMFA(identity), portalauth.PasswordResetRoutes(identity, identityaccess.PasswordResetScopeSchool), classDayResource, timetableResource, staffMessaging, staffNotices, notificationRoutes, schoolCalendar)
-	// Parent letters of a Lehrkraft to her classes (#4800): the OGS's
-	// announcement resource, narrowed by the caller's class reach.
-	parentLetters := announcementAPI.NewResource(announcements, newDeclarationReports(), time.Now)
-	parentLetters.Classes = classLetterCaller{caller.Caller()}
-	parentLetters.Letters = owners.NewParentLetterPrinter()
-	school.ParentLetters = parentLetters
+	parentLetters, dayChanges, err := schoolClassSurfaces(announcements, caller, classArrivals, calendar, classDay.Today, logger)
+	if err != nil {
+		return err
+	}
+	school.ParentLetters, school.DayChanges = parentLetters, dayChanges
 	tenant.Mount("/staff-messages", staffMessaging.Router(ProtectedTenantRoutesWith(staffAttachments.Register)))
 	tenant.Mount("/staff-notices", staffNotices.Router(ProtectedTenantRoutes))
 	tenant.Mount("/timetable", timetableResource.Router(ProtectedTenantRoutesWith(classdayHTTP.NewSlotListResource(classDay.SlotLists).Register)))
@@ -191,6 +191,26 @@ func mountSchoolPortalRoutes(
 	root.Mount("/school-staff-messages", schoolMessageAttachmentRouter(staffAttachments))
 	root.Mount("/school", school.RouterWithAuthRateLimiter(limiters.authMiddleware(), SchoolSessionChain, ProtectedSchoolRoutes))
 	return nil
+}
+
+// schoolClassSurfaces builds the class-bound surfaces of a Lehrkraft in
+// moto schule: her parent letters and "Heute anders".
+func schoolClassSurfaces(
+	announcements communicationModule.ParentAnnouncementCapability, caller *owners.CallerRows,
+	classArrivals timetableModule.ClassArrivalQuery, calendar schoolcalendar.Calendar, today func() timezone.Date, logger *slog.Logger,
+) (*announcementAPI.Resource, *dayChangesHTTP.SchoolResource, error) {
+	// Parent letters of a Lehrkraft to her classes (#4800): the OGS's
+	// announcement resource, narrowed by the caller's class reach.
+	parentLetters := announcementAPI.NewResource(announcements, newDeclarationReports(), time.Now)
+	parentLetters.Classes = classLetterCaller{caller.Caller()}
+	parentLetters.Letters = owners.NewParentLetterPrinter()
+	// "Heute anders" of moto schule (#7670) reads the class arrivals and
+	// the closing days already built for the timetable.
+	dayChanges, err := NewSchoolDayChanges(SchoolDayChangesSources{
+		Caller: caller.Caller(), ClassArrivals: classArrivals, ClosingDays: calendar,
+		Today: today, Logger: logger.With("service", "school-day-changes"),
+	})
+	return parentLetters, dayChanges, err
 }
 
 // mountNotificationRoutes mounts the notification routes of the OGS portal,
