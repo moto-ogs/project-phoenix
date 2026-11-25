@@ -275,23 +275,23 @@ export function LeaveRequestsCard({
         // Ohne shrink-0 staucht die Flex-Spalte der Seite die Karte auf die
         // Kopfhöhe: unten fehlt der Innenabstand und die Kacheln (#4363).
         className="shrink-0"
-        inlineActions={app}
         actions={
-          // min-h-13 ist die Höhe von Titel und Untertitel; so steht der
-          // Knopf auf deren Mitte statt an der Oberkante.
-          <div className="flex items-center sm:min-h-13">
-            <Button
-              type="button"
-              variant="primary"
-              size="md"
-              onClick={() => setModalOpen(true)}
-              disabled={loading || Boolean(load.failure)}
-              className={app ? TOUCH_HIT_AREA : undefined}
-              tooltip="Öffnet ein Formular für einen neuen Urlaubsantrag."
-            >
-              {app ? "Beantragen" : "Urlaub beantragen"}
-            </Button>
-          </div>
+          app ? undefined : (
+            // min-h-13 ist die Höhe von Titel und Untertitel; so steht der
+            // Knopf auf deren Mitte statt an der Oberkante.
+            <div className="flex items-center sm:min-h-13">
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                onClick={() => setModalOpen(true)}
+                disabled={loading || Boolean(load.failure)}
+                tooltip="Öffnet ein Formular für einen neuen Urlaubsantrag."
+              >
+                Urlaub beantragen
+              </Button>
+            </div>
+          )
         }
         bodyClassName={app ? "mt-3" : "compact:mt-4 mt-5 max-sm:mt-4"}
       >
@@ -363,6 +363,21 @@ export function LeaveRequestsCard({
                 }
               />
             ))}
+            {/* App: die Aktion als breite Zeile am Ende der Liste, gut mit
+                dem Daumen zu treffen, statt klein oben rechts. */}
+            <li className="pt-3 pb-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                className="w-full"
+                onClick={() => setModalOpen(true)}
+                disabled={loading}
+                tooltip="Öffnet ein Formular für einen neuen Urlaubsantrag."
+              >
+                Urlaub beantragen
+              </Button>
+            </li>
           </ul>
         ) : (
           <>
