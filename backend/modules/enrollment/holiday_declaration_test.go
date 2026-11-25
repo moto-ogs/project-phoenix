@@ -53,7 +53,7 @@ func TestConsentTextsGiveTheNameSentenceInDuFromVersionSix(t *testing.T) {
 	for _, version := range []int{3, 4, 5} {
 		texts, ok := enrollment.HolidayConsentTextsOf(version, 365)
 		require.True(t, ok)
-		assert.Equal(t, "Mit Ihrem Namen geben Sie die Erklärungen oben ab.", texts.DeclarationName, // sie-anrede-erlaubt (ADR 0294): Wortlaut der Versionen 3 bis 5
+		assert.Equal(t, "Mit Ihrem Namen geben Sie die Erklärungen oben ab.", texts.DeclarationName,
 			"version %d keeps its wording", version)
 	}
 	_, ok = enrollment.HolidayConsentTextsOf(7, 365)
