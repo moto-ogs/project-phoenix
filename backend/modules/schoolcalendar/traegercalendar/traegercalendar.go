@@ -151,3 +151,36 @@ type Schools interface {
 type HolidayNotices interface {
 	NotifyHolidayBookings(ctx context.Context, organizationID int64, day ClosingDayInput) (int, error)
 }
+
+// SchoolClosing is a closing day that closes a school of the Träger on the
+// day "Heute anders" reads (#7672): one the school entered or one the Träger
+// planned for it. Reason is the name the school or the Träger gave it, not a
+// reason of a person.
+type SchoolClosing struct {
+	StartDate calendar.Date
+	EndDate   calendar.Date
+	Reason    string
+	Traeger   bool
+}
+
+// SchoolClosings reads the closing days of the Träger's schools on one day,
+// keyed by school; a school without one is missing. A Träger closing day
+// counts only for the schools it names that belong to organizationID now
+// (ADR 0194). The caller runs it in the administrative transaction of the
+// Träger projection and passes the Träger's schools; it reads no other.
+type SchoolClosings interface {
+	SchoolClosingsOn(ctx context.Context, organizationID int64, schools []int64, day calendar.Date) (map[int64][]SchoolClosing, error)
+}
+
+// ErrNoSchoolClosings reports Träger closing days without the read.
+var ErrNoSchoolClosings = errors.New("school calendar: the Träger closing days read no school closings")
+
+// SchoolClosingsOf is the read of the schools' closing days the Träger
+// closing days composed; they read their own rows.
+func SchoolClosingsOf(days ClosingDays) (SchoolClosings, error) {
+	closings, ok := days.(SchoolClosings)
+	if !ok {
+		return nil, ErrNoSchoolClosings
+	}
+	return closings, nil
+}

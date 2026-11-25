@@ -38,6 +38,12 @@ vi.mock("~/lib/traeger-required-details-api", () => ({
   fetchTraegerRequiredDetails: () => mockFetchRequiredDetails(),
 }));
 
+// „Heute anders“ (#7672) has its own card test; here it answers empty.
+vi.mock("~/lib/traeger-day-changes-api", () => ({
+  fetchTraegerSchoolsDayChanges: () =>
+    Promise.resolve({ day: "", schools: [], asOf: "" }),
+}));
+
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path,
 }));

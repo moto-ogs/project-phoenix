@@ -82,6 +82,7 @@ var moduleRouteRules = []moduleRouteRule{
 	// Träger-Übersicht: the dashboard, occupancy, utilization, arrival and
 	// pickup, the comparison of schools, the daily report and the reports.
 	{"/traeger/schools/alerts", settings.ModuleTraegerUebersicht},
+	{"/traeger/schools/day-changes", settings.ModuleTraegerUebersicht},
 	{"/traeger/schools/occupancy", settings.ModuleTraegerUebersicht},
 	{"/traeger/schools/utilization", settings.ModuleTraegerUebersicht},
 	{"/traeger/schools/*/utilization", settings.ModuleTraegerUebersicht},
