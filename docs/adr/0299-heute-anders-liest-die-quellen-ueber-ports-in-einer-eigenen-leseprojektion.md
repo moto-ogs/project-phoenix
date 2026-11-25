@@ -445,3 +445,37 @@ Projektion nutzt „change“.
   Vertretungen bei den eigenen Aufsichten und Termine der Lehrkraft.
   Verkürzte Öffnung, Essensausfall, Raumsperren und Abholperson folgen mit
   #7654, #7656, #7653 und #7655.
+
+## Nachtrag 2026-11-25: Aufsichten und Live-Signal im Schulportal (#8148)
+
+- **Quelle `supervisions`:** Vertretungen bei den eigenen Aufsichten der
+  Lehrkraft. Ein Eintrag `block_substitution` entsteht, wenn sie einen
+  Termin übernimmt oder jemand ihren Termin übernimmt. Er steht unter
+  „Betrifft dich“ und verlinkt auf die Aufsichten (`school_supervisions`).
+  Die einzige Person eines Eintrags ist sie selbst; wer sie vertritt oder
+  wen sie vertritt, steht ohne Namen und ohne Personal-ID in der Antwort,
+  einen Grund gibt es nicht. Fehlt ein Kollege bei ihrem Termin ohne
+  Vertretung, oder fehlt sie ohne Vertretung, ist das kein Eintrag.
+- Rechte-Regel: `supervision:own`, das Recht der Seite Aufsichten, und eine
+  eigene Zeile der Lehrkraft am Termin. Ohne Recht oder ohne
+  Personaldatensatz bleibt die Quelle „geladen“ und leer.
+- **Budget:** Timetable liest die klassenweiten Ankunfts-Ausnahmen des Tages
+  und die geänderten Termine, an denen die Lehrkraft eingeteilt ist, in
+  einer Anweisung (`timetable.SchoolDayChangeQuery`, zwei JSON-Listen in
+  einem Select). Die Quellen `classes` und `supervisions` teilen sich das
+  Ergebnis im Savepoint. `school.day_changes.today` bleibt bei 10
+  Anweisungen, gemessen mit Klassen-Ausnahmen und einer Vertretung.
+- **Live:** Der Hub leitet `arrival_schedule_changed` und
+  `staffing_deviation_changed` wie `student_updated` inhaltslos als
+  `class_day_changed` an die Schul-Clients derselben Schule weiter. Ein
+  geänderter Unterrichtsschluss, ein Schließtag der Schule und eine
+  Vertretung an einem Termin erreichen den Block damit ohne neue
+  After-Commit-Stelle, ebenso ein Schließtag des Trägers (er meldet
+  `staffing_deviation_changed` an jede betroffene Schule). Jedes dieser
+  Events lädt die offenen Startseiten der Schule neu, auch wenn es eine
+  andere Lehrkraft betrifft; der bestehende Debounce bündelt Serien.
+- **Nicht in diesem Schritt (Folge-Ticket):** Der Klassenausflug als
+  Klassen-Eintrag und die Termine der Lehrkraft (`calendar:school`). Beide
+  brauchen eigene Lesungen anderer Owner (Ankunfts-Ausnahmen je Kind bei
+  Care Plan, Status-Tage, Klassen der Kinder; Termine bei Appointments),
+  für die es im Budget keine Einsparung gibt.

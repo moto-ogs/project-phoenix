@@ -224,7 +224,8 @@ func (h *Hub) RegisterParent(client *Client) {
 // BroadcastToTenant/BroadcastToGroup carry staff-only refresh triggers the
 // Lehrkraft role has no surface for. The only exception is
 // class_day_changed, which BroadcastToTenant derives from student_updated
-// for the school clients of the same tenant (#4792).
+// and the events relaysClassDayChanged names for the school clients of the
+// same tenant (#4792, #8148).
 func (h *Hub) RegisterSchool(client *Client, tenantID int64) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -448,14 +449,30 @@ func (h *Hub) localBroadcastToTenant(tenantID int64, event Event) error {
 		slog.Int("recipient_count", recipients),
 	)
 	h.observeDelivery(tenantID, string(event.Type), "tenant", droppedCount)
-	if event.Type == EventStudentUpdated {
+	if relaysClassDayChanged(event.Type) {
 		h.relayClassDayChanged(tenantID, event)
 	}
 	return nil
 }
 
-// relayClassDayChanged wakes the open class views of moto schule at the same
-// school after a student update (#4792). The caller holds h.mu. Only the
+// relaysClassDayChanged names the tenant events moto schule hears as
+// class_day_changed: a student update (#4792), and since #8148 a changed
+// arrival schedule (a class's Unterrichtsschluss) and a staffing change (a
+// closing day, a cover on a block), which "Heute anders" of moto schule
+// shows. The relay adds no after-commit site: it rides on the source
+// event's own.
+func relaysClassDayChanged(eventType EventType) bool {
+	switch eventType {
+	case EventStudentUpdated, EventArrivalScheduleChanged, EventStaffingDeviationChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// relayClassDayChanged wakes the open class views and the start page of
+// moto schule at the same school after a student update (#4792) or another
+// relayed change (relaysClassDayChanged). The caller holds h.mu. Only the
 // source travels on: the school clients of a school include teachers of
 // other classes, so the event names no child.
 func (h *Hub) relayClassDayChanged(tenantID int64, update Event) {

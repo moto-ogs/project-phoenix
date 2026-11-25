@@ -221,3 +221,36 @@ func nativeClassArrivalPlan(row timetable.ClassArrivalPlan) timetable.ClassArriv
 	return timetable.ClassArrivalPlan{ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 		SchoolClass: row.SchoolClass, ArrivalTimes: row.ArrivalTimes, UpdatedBy: row.UpdatedBy}
 }
+
+// SchoolDayRecords is the one-statement read behind SchoolDayChanges
+// (#8148): the class-wide arrival exceptions of the day and the staff rows
+// of the changed blocks the staff member is on.
+type SchoolDayRecords interface {
+	SchoolDayChangeRecords(ctx context.Context, day calendar.Date, staffID int64) ([]timetable.ClassArrivalException, []timetable.InstanceStaff, domain.OperationStats, error)
+}
+
+// SchoolDayChanges reads the class-wide Unterrichtsschluss changes of every
+// class and the changed blocks the staff member is on, in one statement, for
+// "Heute anders" in moto schule (#8148).
+func (q classArrivalQueries) SchoolDayChanges(ctx context.Context, day calendar.Date, staffID int64) (timetable.SchoolDayChanges, error) {
+	if !timetable.ValidDate(day.String()) {
+		return timetable.SchoolDayChanges{}, timetable.ErrInvalidClassArrivalExceptionRange
+	}
+	commands, ok := q.store.(classArrivalCommands)
+	if !ok {
+		return timetable.SchoolDayChanges{}, timetable.ErrNoSchoolDayChanges
+	}
+	records, ok := commands.ClassArrivalRecords.(SchoolDayRecords)
+	if !ok {
+		return timetable.SchoolDayChanges{}, timetable.ErrNoSchoolDayChanges
+	}
+	// The read runs in the caller's school transaction (the savepoint of
+	// "Heute anders"); it opens no boundary of its own.
+	started := time.Now()
+	classes, staff, stats, err := records.SchoolDayChangeRecords(ctx, day, staffID)
+	q.observe(internalports.Observation{Operation: "school_day_changes", Duration: time.Since(started), Stats: stats, Err: err})
+	if err != nil {
+		return timetable.SchoolDayChanges{}, err
+	}
+	return timetable.SchoolDayChanges{Classes: classes, Blocks: groupBlockStaffChanges(staff)}, nil
+}
