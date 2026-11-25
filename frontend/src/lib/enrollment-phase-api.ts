@@ -204,10 +204,16 @@ export async function listPhaseExpiryWarnings(): Promise<PhaseExpiryWarning[]> {
     "GET /api/enrollment/phases/expiry-warnings",
     { errorMessage: "Hinweise zum Phasenende konnten nicht geladen werden" },
   );
-  return warnings.map((warning) => ({
+  return warnings.map(mapPhaseExpiryWarning);
+}
+
+export function mapPhaseExpiryWarning(
+  warning: enrollmentContract.PhaseExpiryWarningResponse,
+): PhaseExpiryWarning {
+  return {
     ...warning,
     state: knownEnum(EXPIRY_STATES, warning.state),
-  }));
+  };
 }
 
 export async function createPhase(input: PhaseInput): Promise<Phase> {

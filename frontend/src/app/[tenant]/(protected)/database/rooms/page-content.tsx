@@ -1,0 +1,373 @@
+"use client";
+
+import { rooms as roomsKeys } from "~/lib/swr/rooms";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
+import { redirect, useSearchParams } from "next/navigation";
+import { DatabaseCreateAction } from "~/components/database/database-create-action";
+import { DatabaseGroupingToggle } from "~/components/database/database-grouping-toggle";
+import { DatabasePageLayout } from "~/components/database/database-page-layout";
+import { formatCount } from "~/lib/format-utils";
+import {
+  useGroupedItems,
+  type Grouper,
+} from "~/components/database/use-grouped-items";
+import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
+import type {
+  FilterConfig,
+  ActiveFilter,
+} from "~/components/ui/page-header/types";
+import { createCrudService } from "@/lib/database/service-factory";
+import { roomsConfig } from "@/components/database/configs/rooms.config";
+import { formatFloor, type Room } from "@/lib/room-helpers";
+import { DatabaseFormModal } from "~/components/database/database-form-modal";
+import { RoomsList } from "@/components/rooms/rooms-list";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { BELOW_MD, useMediaQuery } from "~/lib/hooks/use-media-query";
+import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
+import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
+import { useTenantAwarePath } from "~/lib/tenant-path";
+import { roomsConcept } from "~/lib/concepts/rooms";
+import { foldForSearch } from "~/lib/search-fold";
+import { TenantPageStats } from "~/components/ui/tenant-page";
+
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const ROOMS_INFO =
+  "Hier legst du jeden Raum deiner OGS einmal an. Danach kannst du den Raum einer Gruppe zuweisen. Wähle einen Raum, um seine Angaben zu ändern.";
+
+type RoomsGroupingMode = "none" | "building" | "floor";
+
+const ROOMS_GROUPING_DEFAULT: RoomsGroupingMode = "building";
+
+const ROOMS_GROUPING_OPTIONS: { value: RoomsGroupingMode; label: string }[] = [
+  { value: "building", label: "Gebäude" },
+  { value: "floor", label: "Etage" },
+  { value: "none", label: "Keine" },
+];
+
+/** Die Sammlung dieser Seite, für den Rückweg aus der Raumseite (`?from=`). */
+const COLLECTION_PATH = "/database/rooms";
+
+function parseRoomsGrouping(value: string | null): RoomsGroupingMode {
+  if (value === "floor" || value === "none") return value;
+  return ROOMS_GROUPING_DEFAULT;
+}
+
+export default function RoomsPage() {
+  return (
+    <Suspense fallback={null}>
+      <RoomsPageContent />
+    </Suspense>
+  );
+}
+
+/**
+ * Räume (BAUARTEN-SPEC Bauart 1): die Sammlung mit Anlegen, Gruppierung,
+ * Suche und Filter. Jede Zeile führt auf die Raumseite `/rooms/[id]`, die
+ * einzige Objektansicht eines Raums (#3115); Stammdaten und Löschen liegen
+ * dort.
+ */
+function RoomsPageContent() {
+  const tenantPath = useTenantAwarePath();
+  const searchParams = useSearchParams();
+  const updateUrlParams = useUpdateUrlParams();
+
+  const grouping = parseRoomsGrouping(searchParams.get("groupBy"));
+  const [searchTerm, setSearchTerm] = useState(
+    () => searchParams.get("search") ?? "",
+  );
+  const [categoryFilter, setCategoryFilter] = useState<string>(
+    () => searchParams.get("category") ?? "all",
+  );
+  const isMobile = useMediaQuery(BELOW_MD);
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const { success: toastSuccess } = useToast();
+  // Ein Fehler beim Anlegen bleibt im Dialog (#2517).
+  const createErrors = useApiFormError();
+  const { clear: clearCreateErrors } = createErrors;
+  // Ein neu geöffnetes Anlegen beginnt ohne den Fehler des vorigen Versuchs.
+  useEffect(() => {
+    if (showCreateModal) clearCreateErrors();
+  }, [showCreateModal, clearCreateErrors]);
+
+  const { status } = useSession({
+    required: true,
+    onUnauthenticated() {
+      redirect("/");
+    },
+  });
+
+  const service = useMemo(() => createCrudService(roomsConfig), []);
+  const refreshRoomLists = useTenantMutateMatching([roomsKeys.family]);
+
+  const {
+    data: roomsData,
+    isLoading: swrLoading,
+    error: roomsError,
+    mutate: mutateRooms,
+  } = useSWRAuth(
+    roomsKeys.key({ page: 1, pageSize: 500, includeSystem: true }),
+    () => roomsKeys.fetcher({ page: 1, pageSize: 500, includeSystem: true }),
+  );
+
+  const error = useSwrLoadError(roomsError, "die Liste der Räume", () =>
+    mutateRooms(),
+  );
+  // Bis der Katalogtext des Ladefehlers da ist, bleibt das Skelett stehen.
+  const loading = swrLoading || (Boolean(roomsError) && error === null);
+
+  // Statuszeile des Seitenkopfs aus der bereits geladenen Raumliste.
+  const statusLine = useMemo(() => {
+    const rooms = roomsData ?? [];
+    const occupied = rooms.filter((r) => r.isOccupied).length;
+    return (
+      <TenantPageStats
+        items={[
+          {
+            value: formatCount(rooms.length),
+            label: rooms.length === 1 ? "Raum" : "Räume",
+          },
+          { value: formatCount(occupied), label: "belegt" },
+        ]}
+      />
+    );
+  }, [roomsData]);
+
+  const uniqueCategories = useMemo(() => {
+    const rooms = roomsData ?? [];
+    const set = new Set<string>();
+    rooms.forEach((r) => {
+      if (r.category) set.add(r.category);
+    });
+    return Array.from(set)
+      .sort((a, b) => a.localeCompare(b, "de"))
+      .map((c) => ({ value: c, label: c }));
+  }, [roomsData]);
+
+  const filters: FilterConfig[] = useMemo(
+    () => [
+      {
+        id: "category",
+        label: "Kategorie",
+        type: "dropdown",
+        value: categoryFilter,
+        onChange: (v) => setCategoryFilter(v as string),
+        options: [
+          { value: "all", label: "Alle Kategorien" },
+          ...uniqueCategories,
+        ],
+      },
+    ],
+    [categoryFilter, uniqueCategories],
+  );
+
+  const activeFilters: ActiveFilter[] = useMemo(() => {
+    const list: ActiveFilter[] = [];
+    if (searchTerm)
+      list.push({
+        id: "search",
+        label: `"${searchTerm}"`,
+        onRemove: () => setSearchTerm(""),
+      });
+    if (categoryFilter !== "all")
+      list.push({
+        id: "category",
+        label: categoryFilter,
+        onRemove: () => setCategoryFilter("all"),
+      });
+    return list;
+  }, [searchTerm, categoryFilter]);
+
+  const filteredRooms = useMemo(() => {
+    const rooms = roomsData ?? [];
+    let arr = [...rooms];
+    if (searchTerm) {
+      const q = foldForSearch(searchTerm);
+      arr = arr.filter(
+        (r) =>
+          foldForSearch(r.name).includes(q) ||
+          foldForSearch(r.building).includes(q) ||
+          foldForSearch(r.category).includes(q),
+      );
+    }
+    if (categoryFilter !== "all") {
+      arr = arr.filter((r) => r.category === categoryFilter);
+    }
+    arr.sort((a, b) => a.name.localeCompare(b.name, "de"));
+    return arr;
+  }, [roomsData, searchTerm, categoryFilter]);
+
+  // Der Rückweg trägt den tatsächlichen Such- und Filterzustand mit. Die
+  // Werte stehen beim Zurückkehren wieder in der Adresse und werden oben als
+  // Anfangszustand gelesen.
+  const collectionReferrer = useMemo(() => {
+    const query = new URLSearchParams(searchParams);
+    if (searchTerm) query.set("search", searchTerm);
+    else query.delete("search");
+    if (categoryFilter !== "all") query.set("category", categoryFilter);
+    else query.delete("category");
+    const serialized = query.toString();
+    return serialized ? `${COLLECTION_PATH}?${serialized}` : COLLECTION_PATH;
+  }, [categoryFilter, searchParams, searchTerm]);
+  const objectHref = useCallback(
+    (room: Room) => {
+      return tenantPath(
+        `/rooms/${room.id}?tab=stammdaten&from=${encodeURIComponent(collectionReferrer)}`,
+      );
+    },
+    [collectionReferrer, tenantPath],
+  );
+
+  const handleGroupingChange = useCallback(
+    (next: RoomsGroupingMode) => {
+      updateUrlParams({
+        groupBy: next === ROOMS_GROUPING_DEFAULT ? null : next,
+      });
+    },
+    [updateUrlParams],
+  );
+
+  const groupers = useMemo<Partial<Record<RoomsGroupingMode, Grouper<Room>>>>(
+    () => ({
+      building: (room) => {
+        const id = room.building?.trim() || "__no_building__";
+        const title = room.building?.trim() || "Ohne Gebäude";
+        return { id, title };
+      },
+      floor: (room) => {
+        if (room.floor === undefined || room.floor === null) {
+          return { id: "__no_floor__", title: "Ohne Etage", sortKey: "zzz" };
+        }
+        // Offset to keep negative floors (basement) ordered before positives.
+        return {
+          id: `floor:${room.floor}`,
+          title: formatFloor(room.floor),
+          sortKey: String(room.floor + 1000).padStart(5, "0"),
+        };
+      },
+    }),
+    [],
+  );
+
+  const groupDefinitions = useGroupedItems(
+    filteredRooms,
+    grouping,
+    groupers,
+    "Räume",
+  );
+
+  const handleCreateRoom = useCallback(
+    async (data: Partial<Room>) => {
+      // Ein Fehler bleibt im Dialog: DatabaseForm zeigt ihn über errorPath,
+      // eine vergebene Farbe (rooms.color_already_in_use) mit eigenem Text.
+      const payload = roomsConfig.form.transformBeforeSubmit
+        ? roomsConfig.form.transformBeforeSubmit(data)
+        : data;
+      const created = await service.create(payload);
+      toastSuccess(`Der Raum „${created.name}“ ist angelegt.`);
+      setShowCreateModal(false);
+      await refreshRoomLists();
+    },
+    [service, refreshRoomLists, toastSuccess],
+  );
+
+  const canShowList = !loading && filteredRooms.length > 0;
+
+  return (
+    <DatabasePageLayout
+      loading={loading}
+      sessionLoading={status === "loading"}
+      error={error}
+      empty={
+        filteredRooms.length === 0
+          ? {
+              title:
+                searchTerm || categoryFilter !== "all"
+                  ? "Keine Räume gefunden"
+                  : "Keine Räume vorhanden",
+              description:
+                searchTerm || categoryFilter !== "all"
+                  ? "Versuche andere Suchkriterien oder Filter."
+                  : "Lege den ersten Raum an, damit Gruppen einen Ort haben.",
+              icon: (
+                <MotoDuotoneIcon
+                  icon={roomsConcept.icon}
+                  tone={roomsConcept.tone}
+                  size={48}
+                />
+              ),
+            }
+          : null
+      }
+      overlays={
+        <DatabaseFormModal<Room>
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          mode="create"
+          config={roomsConfig}
+          onSubmit={handleCreateRoom}
+          errorPath={createErrors}
+          errorObject="das Speichern des Raums"
+        />
+      }
+      className="flex w-full flex-col"
+      intro={{
+        title: "Räume",
+        info: ROOMS_INFO,
+        description: statusLine,
+        actions: (
+          <div className="flex items-center gap-2">
+            {!isMobile ? (
+              <DatabaseGroupingToggle
+                value={grouping}
+                options={ROOMS_GROUPING_OPTIONS}
+                onChange={handleGroupingChange}
+              />
+            ) : null}
+            <DatabaseCreateAction
+              label="Raum"
+              ariaLabel="Raum erstellen"
+              onClick={() => setShowCreateModal(true)}
+            />
+          </div>
+        ),
+      }}
+      searchRow={{
+        badge: {
+          icon: (
+            <MotoDuotoneIcon
+              icon={roomsConcept.icon}
+              tone={roomsConcept.tone}
+              size={20}
+            />
+          ),
+          count: filteredRooms.length,
+          label: "Räume",
+        },
+        search: {
+          value: searchTerm,
+          onChange: setSearchTerm,
+          placeholder: "Räume suchen…",
+        },
+        filters,
+        activeFilters,
+        onClearAllFilters: () => {
+          setSearchTerm("");
+          setCategoryFilter("all");
+        },
+      }}
+    >
+      {canShowList ? (
+        <div className="min-h-0 flex-1 pb-4">
+          <RoomsList
+            groupDefinitions={groupDefinitions}
+            objectHref={objectHref}
+          />
+        </div>
+      ) : null}
+    </DatabasePageLayout>
+  );
+}

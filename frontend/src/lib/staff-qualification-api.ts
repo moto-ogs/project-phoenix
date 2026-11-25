@@ -9,6 +9,7 @@ import { bffJson } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
 import type {
   QualificationEntryResponse,
+  QualificationOverviewResponse,
   QualificationTypeResponse,
 } from "./contract/staff.generated";
 
@@ -77,7 +78,7 @@ function status(value: string): QualificationStatus {
   return knownEnum(STATUSES, value) ?? "missing";
 }
 
-function mapQualificationType(
+export function mapQualificationType(
   data: QualificationTypeResponse,
 ): QualificationType {
   return {
@@ -102,6 +103,16 @@ function mapEntry(data: QualificationEntryResponse): QualificationEntry {
     expiresOn: data.expires_on,
     status: status(data.status),
     mandatory: data.mandatory,
+  };
+}
+
+export function mapQualificationOverviewRow(
+  row: QualificationOverviewResponse,
+): QualificationOverviewRow {
+  return {
+    ...mapEntry(row),
+    firstName: row.first_name,
+    lastName: row.last_name,
   };
 }
 
@@ -161,11 +172,7 @@ class StaffQualificationService {
     const rows = await bffJson("tenant", "GET /api/staff/qualifications", {
       errorMessage: "Nachweise konnten nicht geladen werden",
     });
-    return rows.map((row) => ({
-      ...mapEntry(row),
-      firstName: row.first_name,
-      lastName: row.last_name,
-    }));
+    return rows.map(mapQualificationOverviewRow);
   }
 
   async staffEntries(staffId: string): Promise<QualificationEntry[]> {

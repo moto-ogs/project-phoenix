@@ -1,6 +1,7 @@
 import { knownEnum } from "./contract/known-enum";
 import { ApiError } from "./api-error";
 import { bffJson } from "./bff-fetch";
+import type { DevicePINStatus } from "./contract/settings.generated";
 import type * as wire from "./contract/shared.generated";
 import { createLogger } from "./logger";
 import { shellResourceKeys } from "./swr/shell-keys";
@@ -351,7 +352,14 @@ export type DevicePinSetupReason = "missing" | "too_simple";
  * never sends the PIN itself.
  */
 export async function fetchDevicePinSetupReason(): Promise<DevicePinSetupReason | null> {
-  const status = await bffJson("tenant", "GET /api/settings/device-pin-status");
+  return mapDevicePinSetupReason(
+    await bffJson("tenant", "GET /api/settings/device-pin-status"),
+  );
+}
+
+export function mapDevicePinSetupReason(
+  status: DevicePINStatus,
+): DevicePinSetupReason | null {
   if (status.setup_required !== true) return null;
   // An unknown reason from a newer backend still asks for a PIN.
   return status.reason === "too_simple" ? "too_simple" : "missing";

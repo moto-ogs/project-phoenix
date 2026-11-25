@@ -236,7 +236,7 @@ vi.mock("~/lib/swr", () => ({
 
 import { useImmutableSWR, useSWRAuth } from "~/lib/swr";
 import { useAttendanceWebEnabled } from "~/lib/tenant-context";
-import StudentSearchPage from "./page";
+import StudentSearchPage from "./page-content";
 
 // One student per relevant location shape: in a room (needs confirmation),
 // present without a room, and gone home.

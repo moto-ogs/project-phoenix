@@ -9,12 +9,12 @@ import { staffQualificationKeys } from "~/lib/swr/staff-keys";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import type { FormErrorInput } from "~/components/ui/form-error";
-import CategoriesPage from "~/app/[tenant]/(protected)/database/categories/page";
-import PlanningTracksPage from "~/app/[tenant]/(protected)/database/planning-tracks/page";
-import ShiftTypesPage from "~/app/[tenant]/(protected)/database/shift-types/page";
-import AbsenceTypesPage from "~/app/[tenant]/(protected)/database/absence-types/page";
-import QualificationTypesPage from "~/app/[tenant]/(protected)/database/qualification-types/page";
-import WorkTimeModelsPage from "~/app/[tenant]/(protected)/database/work-time-models/page";
+import CategoriesPage from "~/app/[tenant]/(protected)/database/categories/page-content";
+import PlanningTracksPage from "~/app/[tenant]/(protected)/database/planning-tracks/page-content";
+import ShiftTypesPage from "~/app/[tenant]/(protected)/database/shift-types/page-content";
+import AbsenceTypesPage from "~/app/[tenant]/(protected)/database/absence-types/page-content";
+import QualificationTypesPage from "~/app/[tenant]/(protected)/database/qualification-types/page-content";
+import WorkTimeModelsPage from "~/app/[tenant]/(protected)/database/work-time-models/page-content";
 
 vi.unmock("swr");
 vi.mock("next-auth/react", () => ({

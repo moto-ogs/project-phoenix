@@ -15,7 +15,7 @@ import {
   vi,
 } from "vitest";
 
-import HomePage from "./page";
+import HomePage from "./page-content";
 import { preloadHomeBoardEditor } from "~/components/home/home-board";
 import { ToastProvider } from "~/contexts/ToastContext";
 

@@ -11,7 +11,7 @@ import {
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SWRConfig } from "~/lib/swr/testing";
-import PermissionsPage from "./page";
+import PermissionsPage from "./page-content";
 
 vi.unmock("swr");
 

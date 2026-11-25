@@ -26,7 +26,7 @@ vi.mock("~/lib/swr", () => ({
 }));
 
 import { absenceTypeService, type AbsenceType } from "~/lib/absence-type-api";
-import AbsenceTypesPage from "./page";
+import AbsenceTypesPage from "./page-content";
 
 const FROM_TRAEGER: AbsenceType = {
   id: "3",

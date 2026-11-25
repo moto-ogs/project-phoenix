@@ -12,7 +12,7 @@ import "@testing-library/jest-dom/vitest";
 import type { EndedCarePage } from "~/lib/care-exit-api";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
-import Page from "./page";
+import Page from "./page-content";
 
 const { mockFetchEndedCare, mockResumeCare, mockHasPermission } = vi.hoisted(
   () => ({

@@ -331,7 +331,7 @@ vi.mock("~/components/students/student-search-transit-card", () => ({
   ),
 }));
 
-import StudentSearchPage from "./page";
+import StudentSearchPage from "./page-content";
 
 vi.unmock("swr");
 

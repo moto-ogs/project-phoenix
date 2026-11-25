@@ -701,7 +701,7 @@ function workTimeModelBody(input: WorkTimeModelInput) {
   };
 }
 
-function mapWorkTimeModel(m: ModelResponse): WorkTimeModel {
+export function mapWorkTimeModel(m: ModelResponse): WorkTimeModel {
   return {
     id: m.id,
     name: m.name,

@@ -1,11 +1,7 @@
 import type { Session } from "next-auth";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { tenantPrefetchResources } from "./tenant-prefetch-resources";
-import { studentKeys } from "~/lib/swr/portal-keys";
 import { groups } from "~/lib/swr/groups";
-import { dashboardKeys } from "~/lib/swr/shell-keys";
-import { berlinTodayISO } from "~/lib/date-helpers";
-import { buildSupervisionDashboardWire } from "~/test/fixtures/supervision-dashboard";
 
 function context(permissions: string[], scope = "") {
   const session: Session = {
@@ -17,62 +13,24 @@ function context(permissions: string[], scope = "") {
     slug: "school-a",
     groupId: "7",
     groups: ["7"],
-    hasSupervision: true,
-    detailedMode: true,
-    photoState: "photos-disabled" as const,
   };
 }
 
-vi.mock("~/lib/session-cache", async (importOriginal) => {
-  const plain = await import("~/test/mocks/plain-session-fetch");
-  return {
-    ...(await importOriginal<typeof import("~/lib/session-cache")>()),
-    requireTenantSession: plain.requireTenantSession,
-    renewTenantSession: plain.renewTenantSession,
-  };
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
-  vi.unstubAllGlobals();
-});
-
 describe("tenant destination resources", () => {
-  it.each(["", "tenant"])(
-    "uses the destination's exact unfiltered search key for scope %j",
-    async (scope) => {
-      const resources = await tenantPrefetchResources(
-        "/school-a/students/search",
-        context(["users:read", "groups:read", "rooms:read"], scope),
-      );
-      expect(resources.map((resource) => resource.key)).toContain(
-        studentKeys.search({
-          groupIds: [],
-          search: "",
-          schoolClasses: [],
-          roomId: "",
-          dayStatus: "all",
-          date: berlinTodayISO(),
-          isToday: true,
-          photoState: "photos-disabled",
-          bus: "all",
-          photoConsent: "all",
-          companions: false,
-          years: [],
-          pickupStatus: "all",
-        }),
-      );
-      expect(resources).toHaveLength(4);
-    },
-  );
-  it("does not guess a main-list key for filtered search", async () => {
-    const resources = await tenantPrefetchResources(
-      "/students/search?group_id=7",
-      context(["students:read"]),
-    );
-    expect(resources.map((resource) => resource.key)).toEqual([
-      studentKeys.schoolClasses(),
-    ]);
+  it.each([
+    "/students/search",
+    "/school-a/students/search",
+    "/students/search?group_id=7",
+    "/active-supervisions",
+    "/active-supervisions?session=9",
+    "/active-supervisions?room=5",
+  ])("leaves data for %s to its server page", async (href) => {
+    expect(
+      await tenantPrefetchResources(
+        href,
+        context(["users:read", "groups:read", "rooms:read"]),
+      ),
+    ).toEqual([]);
   });
   it("preloads only a shell-confirmed OGS group", async () => {
     const allowed = context(["users:read"]);
@@ -100,56 +58,20 @@ describe("tenant destination resources", () => {
       }),
     ).toEqual([]);
   });
-  it("shares the exact complete child-detail key, never an inferred permission flag", async () => {
-    expect(
-      (
-        await tenantPrefetchResources(
-          "/students/123?from=/students/search",
-          context(["students:read"]),
-        )
-      ).map((resource) => resource.key),
-    ).toEqual([studentKeys.detail("123")]);
-    expect(await tenantPrefetchResources("/students/123", context([]))).toEqual(
-      [],
-    );
-  });
-  it("shares the supervision aggregate key only for confirmed supervision", async () => {
-    const allowed = context(["groups:read"]);
-    expect(
-      (await tenantPrefetchResources("/active-supervisions", allowed)).map(
-        (resource) => resource.key,
-      ),
-    ).toEqual([dashboardKeys.supervision("42")]);
-    expect(
-      await tenantPrefetchResources("/active-supervisions", {
-        ...allowed,
-        hasSupervision: false,
-      }),
-    ).toEqual([]);
-    expect(
-      (
-        await tenantPrefetchResources("/active-supervisions?session=9", allowed)
-      ).map((resource) => resource.key),
-    ).toEqual([dashboardKeys.supervision("42")]);
-    expect(
-      (
-        await tenantPrefetchResources("/active-supervisions?room=5", allowed)
-      ).map((resource) => resource.key),
-    ).toEqual([dashboardKeys.supervision("42")]);
-    expect(
-      await tenantPrefetchResources("/active-supervisions", {
-        ...allowed,
-        detailedMode: false,
-      }),
-    ).toEqual([]);
-  });
-  it("keeps the wave's other measured links outside the first destination catalog", async () => {
+  it.each([
+    "/students/123",
+    "/school-a/students/123",
+    "/students/123?from=/students/search",
+  ])(
+    "does not perform the audited child read for %s on intent",
+    async (href) => {
+      expect(
+        await tenantPrefetchResources(href, context(["users:read"])),
+      ).toEqual([]);
+    },
+  );
+  it("leaves other server-page data to the destination", async () => {
     const allowed = context(["users:read", "users:update"]);
-    expect(
-      (await tenantPrefetchResources("/students/123", allowed)).map(
-        (resource) => resource.key,
-      ),
-    ).toEqual([studentKeys.detail("123")]);
     expect(await tenantPrefetchResources("/home", allowed)).toEqual([]);
     expect(await tenantPrefetchResources("/anfragen", allowed)).toEqual([]);
   });
@@ -177,28 +99,5 @@ describe("tenant destination resources", () => {
         ),
       ).toEqual([]);
     },
-  );
-});
-
-it("uses the cold destination's exact entry fetcher for a parameterized supervision link", async () => {
-  const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
-    new Response(
-      JSON.stringify({
-        data: buildSupervisionDashboardWire({ selected_group_id: "first" }),
-      }),
-    ),
-  );
-  vi.stubGlobal("fetch", fetchMock);
-  const resources = await tenantPrefetchResources(
-    "/active-supervisions?session=9",
-    context(["groups:read"]),
-  );
-  expect(resources).toHaveLength(1);
-  await expect(resources[0]!.fetcher()).resolves.toMatchObject({
-    selectedGroupId: "first",
-  });
-  expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
-    "/api/active/supervision-dashboard",
-    expect.objectContaining({ method: "GET" }),
   );
 });

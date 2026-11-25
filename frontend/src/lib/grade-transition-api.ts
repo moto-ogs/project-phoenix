@@ -322,7 +322,22 @@ function compareByIdDesc(
 // revertable transition, or point the dialog at an applied row that is not the
 // latest — which 409s, refreshes the same truncated window, and re-picks the
 // same dead target (#405 review).
-export async function listGradeTransitions(): Promise<GradeTransition[]> {
+export function listGradeTransitions(): Promise<GradeTransition[]> {
+  return readGradeTransitions((afterID, pageSize) =>
+    bffJson("tenant", "GET /api/admin/grade-transitions/", {
+      query: { after_id: afterID, page_size: pageSize },
+    })
+      .then(({ data }) => data)
+      .catch(statusMessage),
+  );
+}
+
+export async function readGradeTransitions(
+  readPage: (
+    afterID: string,
+    pageSize: number,
+  ) => Promise<adminContract.TransitionResponse[]>,
+): Promise<GradeTransition[]> {
   // Keyset windows (`after_id`, id ASC) instead of page offsets: offset pages
   // re-slice the whole result on every request, so a row created or deleted
   // between two requests shifts the slicing and a survivor can fall between
@@ -339,10 +354,7 @@ export async function listGradeTransitions(): Promise<GradeTransition[]> {
   let afterID = "0";
 
   for (let window = 0; window < LIST_PAGE_LIMIT; window++) {
-    const page = await bffJson("tenant", "GET /api/admin/grade-transitions/", {
-      query: { after_id: afterID, page_size: LIST_PAGE_SIZE },
-    }).catch(statusMessage);
-    const data = page.data ?? [];
+    const data = await readPage(afterID, LIST_PAGE_SIZE);
     for (const transition of data) {
       byID.set(transition.id, transition);
     }

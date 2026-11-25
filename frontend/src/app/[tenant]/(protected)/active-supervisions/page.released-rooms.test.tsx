@@ -343,7 +343,7 @@ import { useSession } from "next-auth/react";
 import { useOptionalSupervision } from "~/lib/supervision-context";
 import { TenantPageSearchRow } from "~/components/ui/tenant-page-search-row";
 import type { TimetableRosterRow } from "~/lib/timetable-operations-types";
-import MeinRaumPage from "./page";
+import MeinRaumPage from "./page-content";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import {

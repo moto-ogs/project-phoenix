@@ -15,7 +15,7 @@ import { catalogText } from "~/test/error-catalog-text";
 import { takeAnnouncementStudents } from "~/lib/announcement-prefill";
 import { PersonalStorageGuard } from "~/components/auth/personal-storage-guard";
 import { _resetPersonalStorageLeave } from "~/lib/personal-storage";
-import StudentSearchPage from "./page";
+import StudentSearchPage from "./page-content";
 
 const STUDENT_SEARCH_FILTER_STORAGE_KEY =
   "student-search:last-filters:tenant-7:user-1";

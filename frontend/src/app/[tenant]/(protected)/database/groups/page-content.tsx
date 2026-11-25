@@ -1,0 +1,458 @@
+"use client";
+
+import { isAccessRefusal } from "~/lib/access-refusal";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
+import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
+import { groups as groupsKeys } from "~/lib/swr/groups";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useSession } from "next-auth/react";
+import { redirect, useSearchParams } from "next/navigation";
+import { DatabaseCreateAction } from "~/components/database/database-create-action";
+import { DatabasePageLayout } from "~/components/database/database-page-layout";
+import { formatCount } from "~/lib/format-utils";
+import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
+import type {
+  ActiveFilter,
+  FilterConfig,
+} from "~/components/ui/page-header/types";
+import { createCrudService } from "@/lib/database/service-factory";
+import { groupsConfig } from "@/components/database/configs/groups.config";
+import type { Group } from "@/lib/group-helpers";
+import { DatabaseFormModal } from "~/components/database/database-form-modal";
+import { GroupsMasterDetail } from "@/components/groups/groups-master-detail";
+import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  STALE_DATA_SUFFIX,
+  useRefreshAfterWrite,
+} from "~/lib/hooks/use-refresh-after-write";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { useDeleteConfirmation } from "~/hooks/useDeleteConfirmation";
+import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
+import { createLogger } from "~/lib/logger";
+import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
+import { groupsConcept } from "~/lib/concepts/groups";
+import { foldForSearch } from "~/lib/search-fold";
+import {
+  fetchHolidayGuestGroups,
+  type HolidayGuestGroup,
+} from "~/lib/holiday-host-api";
+import { holidayKeys } from "~/lib/swr/portal-keys";
+
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const GROUPS_INFO =
+  "Hier legst du die Gruppen deiner OGS an, mit Gruppenraum und Gruppenleitung. Die Kinder trägst du beim Kind ein, nicht hier.";
+
+const logger = createLogger({ component: "DatabaseGroupsPage" });
+
+export default function GroupsPage() {
+  return (
+    <Suspense fallback={null}>
+      <GroupsPageContent />
+    </Suspense>
+  );
+}
+
+function GroupsPageContent() {
+  const searchParams = useSearchParams();
+  const updateUrlParams = useUpdateUrlParams();
+
+  const selectedId = searchParams.get("group");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roomFilter, setRoomFilter] = useState<string>("all");
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const {
+    showConfirmModal: showDeleteConfirmModal,
+    handleDeleteClick,
+    handleDeleteCancel,
+  } = useDeleteConfirmation();
+
+  const { success: toastSuccess } = useToast();
+  // Schreibfehler bleiben im jeweiligen Dialog (#2517).
+  const createErrors = useApiFormError();
+  const deleteErrors = useApiFormError();
+  const [deletePending, setDeletePending] = useState(false);
+  const latestDeleteRef = useRef<() => void>(() => undefined);
+  const { clear: clearCreateErrors } = createErrors;
+  // Ein neu geöffnetes Anlegen beginnt ohne den Fehler des vorigen Versuchs.
+  useEffect(() => {
+    if (showCreateModal) clearCreateErrors();
+  }, [showCreateModal, clearCreateErrors]);
+
+  const { status } = useSession({
+    required: true,
+    onUnauthenticated() {
+      redirect("/");
+    },
+  });
+
+  const service = useMemo(() => createCrudService(groupsConfig), []);
+  const refreshGroups = useTenantMutateMatching([groupsKeys.family]);
+
+  const {
+    data: cachedGroups,
+    isLoading: swrLoading,
+    error: groupsError,
+    mutate: mutateGroups,
+  } = useSWRAuth(groupsKeys.key({ page: 1, pageSize: 500 }), () =>
+    groupsKeys.fetcher({ page: 1, pageSize: 500 }),
+  );
+
+  // Feriengruppen erklären eine Gruppe, die vor ihrer Woche leer dasteht
+  // (ADR 0120, Nachtrag 2026-11-11). Der Hinweis ergänzt die Liste nur:
+  // scheitert das Laden, bleibt die Liste wie sie ist, ohne eigene Meldung.
+  const { data: holidayGroupList } = useSWRAuth(
+    holidayKeys.guestGroups,
+    fetchHolidayGuestGroups,
+    { revalidateOnFocus: false },
+  );
+  const holidayGroups = useMemo(() => {
+    const byGroup = new Map<string, HolidayGuestGroup>();
+    for (const week of holidayGroupList ?? []) {
+      // Die Liste kommt nach dem ersten Tag geordnet: die nächste Woche zählt.
+      if (!byGroup.has(week.groupId)) byGroup.set(week.groupId, week);
+    }
+    return byGroup;
+  }, [holidayGroupList]);
+
+  const accessRefused =
+    groupsError instanceof ApiError && isAccessRefusal(groupsError);
+  const groupsData = accessRefused ? undefined : cachedGroups;
+  const discardRefused = useDiscardRefusedEntity();
+  useLayoutEffect(() => {
+    if (!accessRefused) return;
+    discardRefused(groupsError, {
+      codes: [groupsError.code ?? "general.permission"],
+      matches: (key) => key.startsWith(groupsKeys.family),
+    });
+    setShowCreateModal(false);
+    handleDeleteCancel();
+  }, [accessRefused, groupsError, discardRefused, handleDeleteCancel]);
+
+  const error = useSwrLoadError(
+    groupsError,
+    "die Liste der Gruppen",
+    () => mutateGroups(),
+    groupsData === undefined ? undefined : STALE_DATA_SUFFIX,
+  );
+  // A write's reload stands above the list as a load error, never as an
+  // error of the form or the deletion (#6652).
+  const afterWrite = useRefreshAfterWrite(
+    "die Anzeige der Gruppen",
+    refreshGroups,
+  );
+  // Bis der Katalogtext des Ladefehlers da ist, bleibt das Skelett stehen.
+  const loading = swrLoading || (Boolean(groupsError) && error === null);
+
+  // Statuszeile des Seitenkopfs aus der bereits geladenen Gruppenliste.
+  const statusLine = useMemo(() => {
+    if (groupsData === undefined) return undefined;
+    const groups = groupsData;
+    return `${formatCount(groups.length)} ${groups.length === 1 ? "Gruppe" : "Gruppen"}`;
+  }, [groupsData]);
+
+  const uniqueRooms = useMemo(() => {
+    const groups = groupsData ?? [];
+    const set = new Set<string>();
+    groups.forEach((g) => {
+      if (g.room_name) set.add(g.room_name);
+    });
+    return Array.from(set)
+      .sort((a, b) => a.localeCompare(b, "de"))
+      .map((r) => ({ value: r, label: r }));
+  }, [groupsData]);
+
+  const filters: FilterConfig[] = useMemo(
+    () => [
+      {
+        id: "room",
+        label: "Raum",
+        type: "dropdown",
+        value: roomFilter,
+        onChange: (v) => setRoomFilter(v as string),
+        options: [{ value: "all", label: "Alle Räume" }, ...uniqueRooms],
+      },
+    ],
+    [roomFilter, uniqueRooms],
+  );
+
+  const activeFilters: ActiveFilter[] = useMemo(() => {
+    const list: ActiveFilter[] = [];
+    if (searchTerm)
+      list.push({
+        id: "search",
+        label: `"${searchTerm}"`,
+        onRemove: () => setSearchTerm(""),
+      });
+    if (roomFilter !== "all")
+      list.push({
+        id: "room",
+        label: roomFilter,
+        onRemove: () => setRoomFilter("all"),
+      });
+    return list;
+  }, [searchTerm, roomFilter]);
+
+  const filteredGroups = useMemo(() => {
+    const groups = groupsData ?? [];
+    let arr = [...groups];
+    if (searchTerm) {
+      const q = foldForSearch(searchTerm);
+      arr = arr.filter(
+        (g) =>
+          foldForSearch(g.name).includes(q) ||
+          foldForSearch(g.room_name).includes(q) ||
+          foldForSearch(g.representative_name).includes(q),
+      );
+    }
+    if (roomFilter !== "all") {
+      arr = arr.filter((g) => g.room_name === roomFilter);
+    }
+    arr.sort((a, b) => a.name.localeCompare(b.name, "de"));
+    return arr;
+  }, [groupsData, searchTerm, roomFilter]);
+
+  // Resolve against the unfiltered list so the detail panel survives a search
+  // narrowing the visible rows.
+  const selectedGroup = useMemo(
+    () =>
+      selectedId
+        ? ((groupsData ?? []).find((group) => group.id === selectedId) ?? null)
+        : null,
+    [groupsData, selectedId],
+  );
+
+  const handleSelectGroup = useCallback(
+    (id: string | null) => {
+      updateUrlParams({ group: id });
+    },
+    [updateUrlParams],
+  );
+
+  const handleCreateGroup = useCallback(
+    async (data: Partial<Group>) => {
+      // Ein Fehler bleibt im Dialog: DatabaseForm zeigt ihn über errorPath.
+      const payload = groupsConfig.form.transformBeforeSubmit
+        ? groupsConfig.form.transformBeforeSubmit(data)
+        : data;
+      const created = await service.create(payload);
+      toastSuccess(`Die Gruppe „${created.name}“ ist angelegt.`);
+      setShowCreateModal(false);
+      await afterWrite.refresh();
+    },
+    [service, afterWrite, toastSuccess],
+  );
+
+  const handleUpdateGroup = useCallback(
+    async (data: Partial<Group>) => {
+      if (!selectedGroup) return;
+      // Ein Fehler bleibt im Formular (errorPath im Stammdaten-Reiter).
+      const payload = groupsConfig.form.transformBeforeSubmit
+        ? groupsConfig.form.transformBeforeSubmit(data)
+        : data;
+      let saved: Group | null;
+      try {
+        saved = await service.update(selectedGroup.id, payload);
+      } catch (err) {
+        // Jemand hat die Gruppe seit dem Lesen geändert: das Formular zeigt
+        // den gespeicherten Stand, sobald er gelesen ist (ADR 0311).
+        if (isChangedSinceRead(err)) void afterWrite.refresh();
+        throw err;
+      }
+      toastSuccess(
+        `Die Gruppe „${data.name ?? selectedGroup.name}“ ist gespeichert.`,
+      );
+      // Die Antwort trägt den gespeicherten Stand: ein zweites Speichern
+      // schickt ihn, auch wenn das Nachladen fehlschlägt.
+      if (saved) {
+        const stored = saved;
+        await mutateGroups(
+          (groups) =>
+            groups?.map((group) =>
+              group.id === stored.id ? { ...group, ...stored } : group,
+            ),
+          { revalidate: false },
+        );
+      }
+      await afterWrite.refresh();
+    },
+    [selectedGroup, service, afterWrite, toastSuccess, mutateGroups],
+  );
+
+  const handleDeleteGroup = useCallback(async () => {
+    if (!selectedGroup) return;
+    setDeletePending(true);
+    deleteErrors.clear();
+    try {
+      const deleted = await service.remove(selectedGroup.id);
+      if (!deleted) {
+        setDeletePending(false);
+        return;
+      }
+    } catch (err) {
+      logger.warn("group_delete_failed", {
+        group_id: selectedGroup.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      // Der Bestätigungsdialog bleibt offen und nennt den Grund.
+      void deleteErrors.show(err, {
+        object: "das Löschen der Gruppe",
+        retry: () => latestDeleteRef.current(),
+      });
+      setDeletePending(false);
+      return;
+    }
+    setDeletePending(false);
+    toastSuccess(`Die Gruppe „${selectedGroup.name}“ ist gelöscht.`);
+    handleDeleteCancel();
+    handleSelectGroup(null);
+    await afterWrite.refresh();
+  }, [
+    selectedGroup,
+    service,
+    toastSuccess,
+    handleDeleteCancel,
+    handleSelectGroup,
+    afterWrite,
+    deleteErrors,
+  ]);
+
+  useLayoutEffect(() => {
+    latestDeleteRef.current = () => void handleDeleteGroup();
+  });
+
+  const canShowDetail =
+    !loading && (filteredGroups.length > 0 || selectedGroup !== null);
+
+  return (
+    <DatabasePageLayout
+      loading={loading}
+      sessionLoading={status === "loading"}
+      error={groupsData === undefined ? error : null}
+      empty={
+        filteredGroups.length === 0 &&
+        selectedGroup === null &&
+        !error &&
+        !afterWrite.error
+          ? {
+              title:
+                searchTerm || roomFilter !== "all"
+                  ? "Keine Gruppen gefunden"
+                  : "Keine Gruppen vorhanden",
+              description:
+                searchTerm || roomFilter !== "all"
+                  ? "Versuche andere Suchkriterien oder Filter."
+                  : "Lege die erste Gruppe an, um Kinder zuzuordnen.",
+              icon: (
+                <MotoDuotoneIcon
+                  icon={groupsConcept.icon}
+                  tone={groupsConcept.tone}
+                  size={48}
+                />
+              ),
+            }
+          : null
+      }
+      overlays={
+        <>
+          <DatabaseFormModal<Group>
+            isOpen={showCreateModal && !accessRefused}
+            onClose={() => setShowCreateModal(false)}
+            mode="create"
+            config={groupsConfig}
+            onSubmit={handleCreateGroup}
+            errorPath={createErrors}
+            errorObject="die Gruppe"
+          />
+
+          {selectedGroup && (
+            <ConfirmDeleteModal
+              isOpen={showDeleteConfirmModal}
+              onClose={() => {
+                deleteErrors.clear();
+                handleDeleteCancel();
+              }}
+              onConfirm={() => void handleDeleteGroup()}
+              title="Gruppe löschen?"
+              description={
+                <>
+                  Möchtest du die Gruppe{" "}
+                  <span className="font-medium">{selectedGroup.name}</span>{" "}
+                  wirklich löschen? Diese Aktion kann nicht rückgängig gemacht
+                  werden.
+                </>
+              }
+              gate={{ mode: "twoStep" }}
+              loading={deletePending}
+              error={deleteErrors.error}
+            />
+          )}
+        </>
+      }
+      className="flex w-full flex-col"
+      intro={{
+        title: "Gruppendaten",
+        info: GROUPS_INFO,
+        description: statusLine,
+        actions: accessRefused ? undefined : (
+          <DatabaseCreateAction
+            label="Gruppe"
+            ariaLabel="Gruppe erstellen"
+            onClick={() => setShowCreateModal(true)}
+          />
+        ),
+      }}
+      searchRow={{
+        badge: {
+          icon: (
+            <MotoDuotoneIcon
+              icon={groupsConcept.icon}
+              tone={groupsConcept.tone}
+              size={20}
+            />
+          ),
+          count: filteredGroups.length,
+          label: "Gruppen",
+        },
+        search: {
+          value: searchTerm,
+          onChange: setSearchTerm,
+          placeholder: "Gruppen suchen…",
+        },
+        filters,
+        activeFilters,
+        onClearAllFilters: () => {
+          setSearchTerm("");
+          setRoomFilter("all");
+        },
+      }}
+    >
+      <LoadErrorAlert error={groupsData === undefined ? null : error} />
+      <LoadErrorAlert error={afterWrite.error} />
+      {canShowDetail ? (
+        <div className="min-h-0 flex-1 pb-4">
+          <GroupsMasterDetail
+            groups={filteredGroups}
+            selectedId={selectedId}
+            selectedGroup={selectedGroup}
+            onSelect={handleSelectGroup}
+            onSaveGroup={handleUpdateGroup}
+            onDeleteClick={handleDeleteClick}
+            holidayGroups={holidayGroups}
+          />
+        </div>
+      ) : null}
+    </DatabasePageLayout>
+  );
+}

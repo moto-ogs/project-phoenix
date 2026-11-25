@@ -1,3 +1,4 @@
+import type * as wire from "~/lib/contract/holiday-guests.generated";
 /**
  * Client der Teilnehmerliste für die ausrichtende OGS (#4665). Spricht mit
  * den Next.js-Routen unter /api/holiday-weeks, die mit dem Mitarbeiter-JWT an
@@ -439,13 +440,19 @@ export async function fetchHolidayGuestGroups(): Promise<HolidayGuestGroup[]> {
   const groups = await bffJson("tenant", "GET /api/holiday-guests/groups", {
     errorMessage: "Die Feriengruppen konnten nicht geladen werden",
   });
-  return groups.map((group) => ({
+  return groups.map(mapHolidayGuestGroup);
+}
+
+export function mapHolidayGuestGroup(
+  group: wire.HolidayGuestGroup,
+): HolidayGuestGroup {
+  return {
     groupId: group.group_id,
     weekId: group.week_id,
     startsOn: day(group.starts_on),
     endsOn: day(group.ends_on),
     guests: group.guests,
-  }));
+  };
 }
 
 /** „04.–08.01.2027“, über Monate „29.06.–03.07.2027“, über Jahre ganz. */
