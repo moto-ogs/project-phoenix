@@ -13235,14 +13235,15 @@ export const traegerClosingDaysTopic =
           title: "Feiertage prüfen",
           steps: [
             "Wähle in der Navigation `Schließtage`.",
-            "Oben wählst du das Jahr: das letzte Jahr, dieses Jahr oder eines der nächsten drei Jahre.",
+            "Oben wählst du das Jahr.",
+            "Du siehst das letzte Jahr, dieses Jahr und die nächsten drei Jahre.",
             "In der `Jahresübersicht` sind Feiertage blau und Schließtage orange.",
             "Unter `Feiertage nach Bundesland` stehen die Feiertage und die Schulen dazu.",
           ],
         },
       ],
       result:
-        "Die gewählten Schulen haben an diesem Tag zu. Ferienwochen mit diesem Tag sind nicht mehr buchbar. Termine fallen aus, und Mitarbeitende haben kein Soll. Eltern mit einer Buchung in der Woche bekommen eine E-Mail mit den geschlossenen Tagen.",
+        "Die gewählten Schulen haben an diesem Tag geschlossen. Ferienwochen mit diesem Tag sind nicht mehr buchbar. Termine fallen aus, und Mitarbeitende haben kein Soll. Eltern mit einer Buchung in der Woche bekommen eine E-Mail mit den geschlossenen Tagen.",
       notes: [
         "Die Schulen sehen den Schließtag in ihrem Kalender mit `Vom Träger`. Ändern kann ihn nur das Träger-Büro.",
         "Der Elternbeitrag ändert sich durch einen Schließtag nicht, auch nicht bei tageweise gebuchten Wochen. Das steht auch in der E-Mail an die Eltern.",

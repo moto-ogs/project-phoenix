@@ -83,7 +83,11 @@ export default function TraegerClosingDaysPage() {
   const canManage = hasPermission(session ?? null, SETTINGS_RIGHT);
   const today = useBerlinToday();
   const thisYear = Number(today.slice(0, 4));
-  const [year, setYear] = useState(thisYear);
+  const years = closingDayYears(thisYear);
+  // Ohne Wahl gilt dieses Jahr. Fällt die Wahl nach einem Jahreswechsel aus
+  // den wählbaren Jahren, gilt wieder dieses Jahr.
+  const [picked, setPicked] = useState<number | null>(null);
+  const year = picked !== null && years.includes(picked) ? picked : thisYear;
   const from = `${year}-01-01`;
   const to = `${year}-12-31`;
 
@@ -277,7 +281,7 @@ export default function TraegerClosingDaysPage() {
     [beginEdit, canManage, schools],
   );
 
-  const yearItems = closingDayYears(thisYear).map((value) => ({
+  const yearItems = years.map((value) => ({
     value: String(value),
     label: String(value),
   }));
@@ -328,7 +332,7 @@ export default function TraegerClosingDaysPage() {
             ariaLabel="Jahr"
             items={yearItems}
             value={String(year)}
-            onChange={(next) => setYear(Number(next))}
+            onChange={(next) => setPicked(Number(next))}
             fullWidth
           />
         </div>
@@ -417,7 +421,9 @@ export default function TraegerClosingDaysPage() {
             reasonMaxLength={120}
             initial={editing}
             schools={schools}
-            defaultDate={year === thisYear ? today : from}
+            // In einem kommenden Jahr beginnt der Dialog am 1. Januar, sonst
+            // heute: nie an einem vergangenen Tag.
+            defaultDate={year > thisYear ? from : today}
           />
           <ConfirmDeleteModal
             isOpen={deleting !== null}

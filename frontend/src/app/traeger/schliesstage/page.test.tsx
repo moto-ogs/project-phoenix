@@ -311,9 +311,13 @@ describe("TraegerClosingDaysPage (#4702)", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Schließtag anlegen" }));
-    expect(
-      await screen.findByRole("dialog", { name: "Schließtag anlegen" }),
-    ).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog", {
+      name: "Schließtag anlegen",
+    });
+    // Im Vorjahr beginnt der Dialog heute, nicht am vergangenen 1. Januar.
+    expect(dialog.querySelector('input[name="start_date"]')).toHaveValue(
+      "2026-09-09",
+    );
     expect(
       screen.getByRole("checkbox", { name: "Alle Schulen" }),
     ).toBeChecked();

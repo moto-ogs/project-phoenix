@@ -131,6 +131,8 @@ export function SegmentedControl<T extends string>({
   // dürfen die Segmente gemeinsam höher machen, statt aus ihnen zu ragen.
   // Schriftgröße `text-sm`, nicht `text-xs`: ein Bedienelement ist kein
   // Kleingedrucktes (Typo-Boden, TENANT-PAGE-SPEC).
+  // Ausnahme: Bei voller Breite gilt die Mindestbreite am Telefon nicht, die
+  // Segmente teilen sich dort die Breite (#8128).
   const height =
     fullWidth && !iconOnly
       ? "h-auto min-h-8 py-1 max-sm:min-h-9 pointer-coarse:min-h-9"
