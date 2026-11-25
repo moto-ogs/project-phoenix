@@ -16,6 +16,8 @@ export interface ParentFamily {
   today: Record<string, contract.TodayStatusResponse>;
   featureErrors: Record<string, FamilyFieldFailure>;
   todayErrors: Record<string, FamilyFieldFailure>;
+  // Browser-only deadlines for failed targeted reads, including newly signalled IDs.
+  retryNotBefore: Record<string, number>;
   confirmedToday: Record<string, boolean>;
   accessVersions: Record<string, string>;
 }
@@ -46,6 +48,7 @@ export function applyCards(
     today: { ...narrowed?.today },
     featureErrors: { ...narrowed?.featureErrors },
     todayErrors: { ...narrowed?.todayErrors },
+    retryNotBefore: { ...narrowed?.retryNotBefore },
     confirmedToday: { ...narrowed?.confirmedToday },
     accessVersions: { ...roster?.accessVersions },
   };
@@ -54,6 +57,7 @@ export function applyCards(
     delete family.today[studentId];
     delete family.featureErrors[studentId];
     delete family.todayErrors[studentId];
+    delete family.retryNotBefore[studentId];
     delete family.confirmedToday[studentId];
     delete family.accessVersions[studentId];
     if (!cards.length)

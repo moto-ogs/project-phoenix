@@ -127,7 +127,10 @@ describe("family card updates", () => {
     narrowNextFamilyRead(family, "9");
     read.mockRejectedValueOnce(new ApiError("unavailable", 503));
     const updated = await readParentFamily(family);
-    expect(updated).toEqual(family);
+    expect(updated.children).toEqual(family.children);
+    expect(updated.featureErrors).toEqual({});
+    expect(updated.todayErrors).toEqual({});
+    expect(updated.retryNotBefore).toHaveProperty("9");
   });
 
   it("keeps confirmed data if the child response is malformed, but propagates access refusals", async () => {

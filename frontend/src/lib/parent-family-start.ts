@@ -49,7 +49,17 @@ async function reconcileChildren(read: FamilyRead) {
   for (const update of updates) {
     if (update.response) {
       family = applyCards(family, update.response, update.id);
-    } else if (Object.hasOwn(family.accessVersions, update.id)) {
+    } else {
+      const wait =
+        update.error instanceof ApiError ? update.error.retryAfterSeconds : 0;
+      family = {
+        ...family,
+        retryNotBefore: {
+          ...family.retryNotBefore,
+          [update.id]: performance.now() + (wait ?? 0) * 1000,
+        },
+      };
+      if (!Object.hasOwn(family.accessVersions, update.id)) continue;
       // The server did not confirm a removal. Preserve the last confirmed
       // card and report the failure without dropping a successful sibling.
       family = {

@@ -268,8 +268,10 @@ A failed list is not an empty family. A null card field represents a failed
 read: show the error and reuse confirmed values only for the same relationship
 version, care state and day. Other children keep their fresh values. Without a
 confirmed value, features stay off and status is unknown. The shell retries
-partial reads with backoff, for the affected child alone if there is only
-one. The SWR scope and generation guard covers every projection; no persistent
+partial reads at most twice, for the affected child alone if there is only
+one. A targeted read respects Retry-After and the active read-rate limit. A
+failed event for an unlisted child can be retried, but cannot add a card or
+surface a sibling error. The SWR scope and generation guard covers every projection; no persistent
 cache holds family data.
 
 The parent API reports `care.child_not_linked` (401/403/404) to the

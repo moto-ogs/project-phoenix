@@ -9,6 +9,7 @@ import type {
   ParentFamily,
 } from "~/lib/parent-family-cards";
 import { ApiError } from "~/lib/api-error";
+import { remainingRateLimitMs } from "~/lib/rate-limit-backoff";
 import { useSWRAuth, useInvalidateMatching } from "~/lib/swr";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { parentKeys } from "~/lib/swr/parent-keys";
@@ -66,22 +67,14 @@ function useParentRefusal() {
   );
 }
 
-// A failed payload field is retried with backoff. Do not turn a client
-// error or a server-imposed wait into an automatic one-second retry.
-function canRetryField(failure?: FamilyFieldFailure) {
-  if (!failure) return false;
-  if (!(failure instanceof ApiError)) return true;
-  return (failure.status ?? 0) >= 500 && !failure.retryAfterSeconds;
-}
-
 function partialChildren(family: ParentFamily): string {
-  return family.children
-    .map((child) => child.student_id)
-    .filter(
-      (id) =>
-        canRetryField(family.featureErrors[id]) ||
-        canRetryField(family.todayErrors[id]),
-    )
+  return [
+    ...new Set([
+      ...Object.keys(family.featureErrors),
+      ...Object.keys(family.todayErrors),
+      ...Object.keys(family.retryNotBefore),
+    ]),
+  ]
     .sort()
     .join(",");
 }
@@ -125,31 +118,45 @@ export function useParentResourceEvents() {
   useLayoutEffect(() => {
     current.current = family;
   });
-  // A 200 response can contain a failed card. SWR retries transport errors
-  // itself; retry only the missing fields' owner(s) here, in the single bridge.
+  // One bridge retries incomplete fields and failed events. A failed event for
+  // an unlisted child can be retried, but cannot add a card or a visible error.
   const failedChildren = family.data ? partialChildren(family.data) : "";
   useEffect(() => {
     if (!failedChildren) return;
     let stopped = false;
     let timer: number;
-    const retryAfter = (ms: number) => {
-      timer = window.setTimeout(() => {
-        const reader = current.current;
-        const snapshot = reader.readCurrent?.();
-        if (
-          !snapshot?.data ||
-          snapshot.error ||
-          partialChildren(snapshot.data) !== failedChildren
-        )
-          return;
-        if (!failedChildren.includes(","))
-          narrowNextFamilyRead(snapshot.data, failedChildren);
-        void reader.mutate().then(() => {
-          if (!stopped && ms === 1000) retryAfter(2000);
-        });
-      }, ms);
+    const retry = (attempt: number) => {
+      const reader = current.current;
+      const snapshot = reader.readCurrent?.();
+      if (
+        !snapshot?.data ||
+        snapshot.error ||
+        partialChildren(snapshot.data) !== failedChildren
+      )
+        return;
+      // A sibling event or a second refusal can extend a previous cooldown.
+      // Waiting for the limiter does not consume one of the two attempts.
+      const wait = Math.max(
+        remainingRateLimitMs(),
+        ...Object.values(snapshot.data.retryNotBefore).map(
+          (deadline) => deadline - performance.now(),
+        ),
+      );
+      if (wait > 0) {
+        timer = window.setTimeout(
+          () => retry(attempt),
+          Math.min(Math.ceil(wait), 2147483647),
+        );
+        return;
+      }
+      if (!failedChildren.includes(","))
+        narrowNextFamilyRead(snapshot.data, failedChildren);
+      void reader.mutate().then(() => {
+        if (!stopped && attempt === 1)
+          timer = window.setTimeout(() => retry(2), 2000);
+      });
     };
-    retryAfter(1000);
+    timer = window.setTimeout(() => retry(1), 1000);
     return () => {
       stopped = true;
       window.clearTimeout(timer);

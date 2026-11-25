@@ -176,6 +176,86 @@ describe("parent start cache isolation", () => {
     expect(getFamilyStart).toHaveBeenCalledTimes(2);
   });
 
+  it.each(["42", "43"])(
+    "retries a throttled child %s only after Retry-After, including a newly linked child",
+    async (id) => {
+      vi.useFakeTimers();
+      mount();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      const [first] = await family.children();
+      if (!first) throw new Error("Missing test child");
+      family.children.mockResolvedValue([
+        { ...first, student_id: id, first_name: "Aktuell" },
+      ]);
+      const throttled = new ApiError("wait", 429);
+      throttled.retryAfterSeconds = 5;
+      vi.mocked(getFamilyStart).mockRejectedValueOnce(throttled);
+      await act(async () => {
+        window.dispatchEvent(
+          new CustomEvent("parent-child-status-refresh", {
+            detail: { studentId: id },
+          }),
+        );
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(4999);
+      });
+      expect(vi.mocked(getFamilyStart).mock.calls).toEqual([[undefined], [id]]);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1);
+      });
+      expect(vi.mocked(getFamilyStart).mock.calls).toEqual([
+        [undefined],
+        [id],
+        [id],
+      ]);
+      expect(screen.getByText("Aktuell Test")).toBeInTheDocument();
+    },
+  );
+
+  it("stops after two targeted retries even when each response asks for a different wait", async () => {
+    vi.useFakeTimers();
+    mount();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    const unavailable = new ApiError("wait", 503);
+    unavailable.retryAfterSeconds = 4;
+    vi.mocked(getFamilyStart)
+      .mockRejectedValueOnce(new ApiError("input", 400))
+      .mockRejectedValue(unavailable);
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent("parent-child-status-refresh", {
+          detail: { studentId: "42" },
+        }),
+      );
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    expect(getFamilyStart).toHaveBeenCalledTimes(3);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3999);
+    });
+    expect(getFamilyStart).toHaveBeenCalledTimes(3);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(getFamilyStart).toHaveBeenCalledTimes(4);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60000);
+    });
+    expect(vi.mocked(getFamilyStart).mock.calls).toEqual([
+      [undefined],
+      ["42"],
+      ["42"],
+      ["42"],
+    ]);
+  });
+
   it("reconciles at server midnight after a seed even when the device clock is slow", async () => {
     vi.useFakeTimers();
     const builtAt = Date.now();
