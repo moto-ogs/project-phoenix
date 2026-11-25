@@ -56,6 +56,7 @@ import type { EnrichedInstance } from "~/lib/timetable-types";
 
 import { InstanceBlock, type BlockStaffing } from "./instance-block";
 import { StatusDot } from "~/components/ui/status-dot";
+import { useAfterInitialPaint } from "~/lib/hooks/use-after-initial-paint";
 import { PlanningDayChip } from "~/components/ui/planning/planning-context-bar";
 
 // Grid template columns: narrow time gutter + day columns. Mobile shows a
@@ -246,6 +247,15 @@ export function WeeklyCalendarGrid({
     (_, i) => renderStartHour + i,
   );
   const gridHeightPx = (renderEndHour - renderStartHour) * hourHeightPx;
+  const showEntireGrid = useAfterInitialPaint();
+  // A fresh scroller begins at its top. No slot or block farther down than
+  // the whole viewport can be visible on that first paint. Reserve the full
+  // grid height and build those controls after the visible part.
+  const initialGridBottom = showEntireGrid ? Infinity : window.innerHeight;
+  const slotHours = hours.slice(
+    0,
+    Math.min(hours.length - 1, Math.ceil(initialGridBottom / hourHeightPx)),
+  );
   const halfHourHeight = hourHeightPx / 2;
   // The evenly spaced lines are decoration, not one DOM node per line and day.
   const gridLines = `linear-gradient(to bottom,
@@ -617,7 +627,7 @@ export function WeeklyCalendarGrid({
                   <div
                     key={iso}
                     data-today-column={isToday ? "" : undefined}
-                    className={`relative min-w-0 border-l border-gray-200 [content-visibility:auto] print:[content-visibility:visible] ${backgroundClass} ${dayIndex === safeSelectedIndex ? "" : "hidden sm:block"}`}
+                    className={`relative min-w-0 border-l border-gray-200 ${backgroundClass} ${dayIndex === safeSelectedIndex ? "" : "hidden sm:block"}`}
                     style={{ height: `${gridHeightPx}px` }}
                   >
                     <div
@@ -647,7 +657,7 @@ export function WeeklyCalendarGrid({
                     handlers without z-index tricks. */}
                     {onSlotClick &&
                       !planningDisabled &&
-                      hours.slice(0, -1).map((hour) => (
+                      slotHours.map((hour) => (
                         <button
                           key={`slot-${hour}`}
                           type="button"
@@ -673,6 +683,7 @@ export function WeeklyCalendarGrid({
                         hourHeightPx,
                         renderStartHour,
                       );
+                      if (top >= initialGridBottom) return null;
                       const widthPct = 100 / laneCount;
                       return (
                         <InstanceBlock

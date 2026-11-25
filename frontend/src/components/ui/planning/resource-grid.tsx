@@ -172,7 +172,7 @@ export function ResourceGrid<TRow>({
   className,
 }: ResourceGridProps<TRow>) {
   const columnMinWidth = COLUMN_MIN_WIDTH_CLASS[columnMode];
-  const cellClass = `flex ${RESOURCE_GRID_METRICS.cellMinHeightClass[columnMode]} w-full [contain-intrinsic-block-size:auto_none] [content-visibility:auto] print:[content-visibility:visible]`;
+  const cellClass = `flex ${RESOURCE_GRID_METRICS.cellMinHeightClass[columnMode]} w-full`;
 
   return (
     // Radius, Rand und Ausschnitt sitzen auf der Fläche, gescrollt wird im

@@ -295,10 +295,7 @@ export function RoomDetailContent({
         <SectionCard title="Belegungshistorie">
           <div className="space-y-6">
             {groupedSessions.map((dateGroup) => (
-              <div
-                key={dateGroup.date}
-                className="[contain-intrinsic-block-size:auto_12rem] [content-visibility:auto] print:[content-visibility:visible]"
-              >
+              <div key={dateGroup.date}>
                 <h3 className="mb-3 text-sm font-semibold text-gray-700">
                   {dateGroup.entries[0]?.startedAt
                     ? formatDate(dateGroup.entries[0].startedAt, true)

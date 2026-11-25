@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 import { isEnrollmentPath } from "~/lib/section-navigation";
 
@@ -66,42 +66,33 @@ export function useSidebarAccordion(
   fromParam?: string | null,
   defaultSection: AccordionSection = null,
 ) {
-  // Initialize from pathname only (safe for SSR — no localStorage during render)
-  const [expanded, setExpanded] = useState<AccordionSection>(
-    () => sectionFromPathname(pathname, fromParam) ?? defaultSection,
-  );
-  const hasAppliedInitialRoute = useRef(false);
+  // Use the destination's section in the route commit, instead of committing
+  // the old section and forcing another sidebar render from an effect.
+  const routeKey = pathname + "\0" + (fromParam ?? "");
+  const routeSection = sectionFromPathname(pathname, fromParam);
+  const [selection, setSelection] = useState(() => ({
+    routeKey,
+    expanded: routeSection ?? defaultSection,
+  }));
+  let expanded = selection.expanded;
+  if (selection.routeKey !== routeKey) {
+    expanded = routeSection;
+    setSelection({ routeKey, expanded });
+  }
 
   // Restore from localStorage on mount when pathname doesn't determine a section.
   // This runs client-only after hydration, avoiding SSR/client mismatches.
   useEffect(() => {
-    if (sectionFromPathname(pathname, fromParam)) return; // pathname already decided
+    if (routeSection) return;
     const stored = localStorage.getItem(STORAGE_KEY);
     // Alte Werte aus der Zeit vor #2826 ("planning", "eltern",
     // "kommunikation") fallen hier durch: die Bereiche sind jetzt Gruppen.
     if (isAccordionSection(stored)) {
-      setExpanded(stored);
+      setSelection((current) => ({ ...current, expanded: stored }));
     }
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Auto-expand/collapse when navigating:
-  // - Navigate to accordion page → expand that section
-  // - Navigate to child page with ?from= → keep that section open
-  // - Navigate to unrelated page → collapse all
-  useEffect(() => {
-    if (!hasAppliedInitialRoute.current) {
-      hasAppliedInitialRoute.current = true;
-      return;
-    }
-    const fromPath = sectionFromPathname(pathname, fromParam);
-    if (fromPath !== expanded) {
-      setExpanded(fromPath);
-    }
-    // Only react to pathname/fromParam changes, not expanded changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, fromParam]);
 
   // Persist to localStorage whenever expanded changes
   useEffect(() => {
@@ -113,7 +104,10 @@ export function useSidebarAccordion(
   }, [expanded]);
 
   const toggle = useCallback((section: AccordionSection) => {
-    setExpanded((prev) => (prev === section ? null : section));
+    setSelection((current) => ({
+      ...current,
+      expanded: current.expanded === section ? null : section,
+    }));
   }, []);
 
   return { expanded, toggle };
