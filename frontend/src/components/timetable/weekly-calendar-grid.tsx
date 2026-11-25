@@ -248,7 +248,7 @@ export function WeeklyCalendarGrid({
   const gridHeightPx = (renderEndHour - renderStartHour) * hourHeightPx;
   const halfHourHeight = hourHeightPx / 2;
   // The evenly spaced lines are decoration, not one DOM node per line and day.
-  const gridLines = `repeating-linear-gradient(to bottom,
+  const gridLines = `linear-gradient(to bottom,
     var(--color-gray-50) 0 1px, transparent 1px ${halfHourHeight}px,
     var(--color-gray-100) ${halfHourHeight}px ${halfHourHeight + 1}px,
     transparent ${halfHourHeight + 1}px ${hourHeightPx}px)`;
@@ -631,6 +631,8 @@ export function WeeklyCalendarGrid({
                       style={{
                         top: halfHourHeight,
                         backgroundImage: gridLines,
+                        backgroundSize: `100% ${hourHeightPx}px`,
+                        backgroundRepeat: "repeat-y",
                       }}
                     />
 

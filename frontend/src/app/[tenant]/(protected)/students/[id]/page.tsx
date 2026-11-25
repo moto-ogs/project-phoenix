@@ -1,4 +1,3 @@
-import { connection } from "next/server";
 import { hasPermission } from "~/lib/auth-utils";
 import { canReviewCareWithdrawals } from "~/lib/change-request-access";
 import { mapCareWithdrawalPage } from "~/lib/care-exit-api";
@@ -10,23 +9,21 @@ import { mapArrivalData } from "~/lib/student-arrival-api";
 import { mapPartialAbsence } from "~/lib/student-partial-absences-api";
 import { mapStatusDays } from "~/lib/student-status-days-api";
 import { studentKeys } from "~/lib/swr/portal-keys";
-import { SWRServerSeed, type ServerSeedEntry } from "~/lib/swr/server-seed";
+import type { ServerSeedEntry } from "~/lib/swr/server-seed";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { readTenantPageContext } from "~/lib/tenant-page-seed.server";
 import StudentDetailContent from "./page-content";
-import { getStatusDayRange, type StatusDayRange } from "./status-day-range";
+import { StudentRecordSeed } from "./page-seed";
+import { getStatusDayRange } from "./status-day-range";
 
 // The cached payload does not carry the audited record. Its existing
 // session-scoped reader and all permission checks remain in charge.
 export const unstable_dynamicStaleTime = 60;
 
-async function loadStudentRecordSeed(
-  slug: string,
-  id: string,
-  window: StatusDayRange,
-) {
+async function loadStudentRecordSeed(slug: string, id: string) {
   const context = await readTenantPageContext(slug);
   if (!context || !isPositiveInt64Id(id)) return null;
+  const window = getStatusDayRange();
   const builtAt = Date.now();
   const { snapshot, session, token } = context;
   const entries: ServerSeedEntry[] = [];
@@ -123,19 +120,10 @@ export default async function StudentDetailPage({
   params: Promise<{ tenant: string; id: string }>;
 }) {
   const { tenant, id } = await params;
-  await connection();
-  const window = getStatusDayRange();
-  const seed = loadStudentRecordSeed(tenant, id, window).catch(() => null);
-  const claims = [
-    studentKeys.pickupData(id),
-    studentKeys.arrivalData(id),
-    studentKeys.partialAbsences(id, window.from, window.to),
-    studentKeys.statusDays(id, window.from, window.to),
-    tenantStudentKeys.careWithdrawal(id),
-  ];
+  const seed = loadStudentRecordSeed(tenant, id).catch(() => null);
   return (
-    <SWRServerSeed seed={seed} claims={claims}>
+    <StudentRecordSeed id={id} seed={seed}>
       <StudentDetailContent />
-    </SWRServerSeed>
+    </StudentRecordSeed>
   );
 }
