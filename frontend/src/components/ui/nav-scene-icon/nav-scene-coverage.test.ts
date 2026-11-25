@@ -25,7 +25,11 @@ const SCENES_CSS = readFileSync(
 
 /** Dateien, aus denen die Seitenleisten ihre Einträge und Icons beziehen. */
 function sidebarSourceFiles(): string[] {
-  const out: string[] = [path.join(SRC_DIR, "lib", "staff-navigation.ts")];
+  const out: string[] = [
+    path.join(SRC_DIR, "lib", "staff-navigation.ts"),
+    // Die Bereiche der Einstellungen und ihre Symbole (#8132).
+    path.join(SRC_DIR, "components", "settings", "settings-sections.ts"),
+  ];
   const walk = (directory: string) => {
     for (const entry of readdirSync(directory)) {
       const entryPath = path.join(directory, entry);

@@ -150,6 +150,7 @@ const guards = [
   "src/components/timetable/timetable-design-guards.test.ts",
   "src/components/staff/dienstplan-design-guards.test.ts",
   "src/components/settings/settings-filter.test.ts",
+  "src/components/settings/settings-nav-items.test.ts",
   "src/components/school-setup/setup-tour-targets.test.ts",
   "src/components/auth/session-end-barrier.test.tsx",
   "src/components/auth/session-tree-boundary.test.tsx",

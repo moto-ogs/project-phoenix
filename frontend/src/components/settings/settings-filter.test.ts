@@ -107,6 +107,12 @@ describe("displayCategoryLabel", () => {
       for (const match of source.matchAll(/Category:\s*"([^"]+)"/g)) {
         backendCategoryKeys.add(match[1]!);
       }
+      // Die Lohnwerte des Trägers nennen ihre Kategorie als Argument (#8132).
+      for (const match of source.matchAll(
+        /traegerPayrollDefinition\([^,()]+(?:\([^()]*\))?,\s*"([^"]+)"/g,
+      )) {
+        backendCategoryKeys.add(match[1]!);
+      }
     }
 
     expect(Object.keys(categoryLabels).sort()).toEqual(
