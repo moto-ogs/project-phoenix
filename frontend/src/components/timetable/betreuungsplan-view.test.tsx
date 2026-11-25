@@ -1913,18 +1913,16 @@ describe("BetreuungsplanView", () => {
     expect(screen.getByText("add-series")).toBeDisabled();
   });
 
-  it("behält einen nur am Wochenende liegenden Zeitraum als deaktivierten Fallback bei", () => {
+  it("bietet für einen reinen Wochenendzeitraum keinen Anlege-Dialog an", () => {
     setUrl("view=monat&d=2026-05-09");
     setupSWR({
       periods: [{ ...period, startDate: "2026-05-09", endDate: "2026-05-09" }],
     });
     render(<BetreuungsplanView />);
 
-    expect(mockEventModalProps).toHaveBeenLastCalledWith(
-      expect.objectContaining({ defaultDate: "2026-05-09" }),
-    );
     expect(screen.getByText("add-instance")).toBeDisabled();
     expect(screen.getByText("add-series")).toBeDisabled();
+    expect(mockEventModalProps).not.toHaveBeenCalled();
   });
 
   it("navigiert in der Tagesansicht von Schultag zu Schultag", () => {

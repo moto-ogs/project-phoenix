@@ -17,6 +17,7 @@
 
 import {
   useCallback,
+  useId,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -165,6 +166,7 @@ export function AggregatedRequestList({
   const [bulkSaving, setBulkSaving] = useState(false);
   const wide = useViewportAtLeast(SPLIT_VIEW_FROM);
   const returnFocus = useReturnFocus();
+  const requestListId = useId();
   // Set while THIS list announces a change, so its own listener doesn't
   // refetch: it already removed the decided row optimistically. The window
   // event dispatches synchronously.
@@ -321,10 +323,10 @@ export function AggregatedRequestList({
 
   const selectCase = useCallback(
     (childCase: OpenCase) => {
-      returnFocus.remember(caseRowID(childCase.key));
+      returnFocus.remember(caseRowID(requestListId, childCase.key));
       setSelectedCaseKey(childCase.key);
     },
-    [returnFocus],
+    [requestListId, returnFocus],
   );
 
   // Ein Sprung aus der Warteliste wählt das Kind und holt die Liste in den
@@ -557,6 +559,7 @@ export function AggregatedRequestList({
             {showList && (
               <RequestCaseList
                 buckets={buckets}
+                prefix={requestListId}
                 selectedKey={selectedCase?.key ?? null}
                 onSelect={selectCase}
               />
