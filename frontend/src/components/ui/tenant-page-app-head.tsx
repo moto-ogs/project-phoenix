@@ -145,7 +145,12 @@ export function AppTenantHead({
         <div className="flex min-h-11 items-center gap-3">
           {backLink ? <span className={ICON_BACK}>{backLink}</span> : null}
           {leading ? (
-            <span className="flex shrink-0 items-center pl-1">{leading}</span>
+            <span
+              data-app-head-leading=""
+              className="flex shrink-0 items-center pl-1 empty:hidden"
+            >
+              {leading}
+            </span>
           ) : null}
           <h1
             suppressHydrationWarning
@@ -153,7 +158,9 @@ export function AppTenantHead({
               "tablet:text-xl min-w-0 flex-1 truncate text-lg leading-7 font-semibold tracking-tight text-gray-900",
               // Bündig: ohne Zurück-Pfeil 16 px vom Rand wie die Chips, nach
               // dem Pfeil ohne zusätzlichen Einzug.
-              backLink && !leading ? "-ml-3" : !backLink && "pl-2",
+              backLink
+                ? "-ml-3 [[data-app-head-leading]:not(:empty)+&]:ml-0"
+                : "pl-2",
             )}
           >
             {title}
@@ -168,7 +175,7 @@ export function AppTenantHead({
             <div
               className={cn(
                 "-mx-2 [scrollbar-width:none] overflow-x-auto pr-2 pb-1.5 text-sm text-gray-600",
-                backLink && !leading ? "pl-13" : "pl-4",
+                backLink ? "pl-13" : "pl-4",
               )}
             >
               {statusLine}
@@ -195,7 +202,7 @@ export function AppTenantHead({
           ref={toolbarRef}
           data-app-page-toolbar=""
           className={cn(
-            `sticky ${Z_LAYER.nav} mt-1.5 space-y-1.5 px-1.5 py-1`,
+            `sticky ${Z_LAYER.nav} mt-1.5 -mb-1 space-y-1.5 px-1.5 py-1`,
             FLOATING_CARD,
             printHideHeader && "print:hidden",
           )}
