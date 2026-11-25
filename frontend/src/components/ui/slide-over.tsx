@@ -690,7 +690,7 @@ const SlideOverHeader = ({
 }: SlideOverHeaderProps) => (
   <div
     className={cn(
-      "flex flex-row items-start justify-between gap-3 border-b border-slate-200 px-5 py-4",
+      "app:border-b-0 app:px-4 app:pb-1 flex flex-row items-start justify-between gap-3 border-b border-slate-200 px-5 py-4",
       className,
     )}
     {...props}
@@ -731,7 +731,7 @@ const SlideOverBody = React.forwardRef<HTMLDivElement, SlideOverBodyProps>(
         // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling body without focusable content must be reachable by keyboard; it joins the tab order only while it scrolls
         tabIndex={scrolls ? 0 : undefined}
         className={cn(
-          "flex-1 overflow-y-auto px-5 py-4 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-600",
+          "app:px-4 flex-1 overflow-y-auto px-5 py-4 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-600",
           className,
         )}
         {...props}
@@ -761,7 +761,7 @@ const SlideOverFooter = ({
       {...props}
       locked={busy || !open}
       className={cn(
-        "flex-row border-t border-slate-200 bg-slate-50 px-5 py-4",
+        "app:px-4 flex-row border-t border-slate-200 bg-slate-50 px-5 py-4",
         className,
         APP_FOOTER_ROW,
       )}
@@ -776,7 +776,10 @@ const SlideOverTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Title
     ref={ref}
-    className={cn("text-lg leading-tight font-bold text-slate-900", className)}
+    className={cn(
+      "app:text-base app:font-semibold text-lg leading-tight font-bold text-slate-900",
+      className,
+    )}
     {...props}
   />
 ));

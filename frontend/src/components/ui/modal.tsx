@@ -327,7 +327,7 @@ export function Modal({
       id={titleId}
       ref={titleRef}
       tabIndex={focusTitleOnOpen ? -1 : undefined}
-      className="min-w-0 flex-1 py-0.5 text-lg font-semibold wrap-anywhere text-gray-900 outline-none sm:text-xl pointer-coarse:py-2"
+      className="app:text-base min-w-0 flex-1 py-0.5 text-lg font-semibold wrap-anywhere text-gray-900 outline-none sm:text-xl pointer-coarse:py-2"
     >
       {title}
     </TitleHeading>
@@ -422,7 +422,7 @@ export function Modal({
             >
               {/* Header with close button - only show border if title exists */}
               {title ? (
-                <div className="flex shrink-0 items-start gap-4 border-b border-gray-100 p-4 sm:p-6">
+                <div className="app:border-b-0 app:pb-1 flex shrink-0 items-start gap-4 border-b border-gray-100 p-4 sm:p-6">
                   {icon ? <div className="shrink-0">{icon}</div> : null}
                   {/* Das Polster hebt die 28-px-Zeile auf die Höhe des X (32 px
                   mit Maus, 44 px unter Fingerbedienung): eine Zeile steht

@@ -2859,7 +2859,7 @@ function EditSessionModal({
         </SlideOverHeader>
         <div
           ref={formAreaRef}
-          className="flex-1 space-y-4 overflow-y-auto px-5 py-4"
+          className="app:px-4 flex-1 space-y-4 overflow-y-auto px-5 py-4"
         >
           <FormErrorAlert message={formErrors.error} />
           {app && facts ? <AppDayFactsPanel facts={facts} /> : null}
