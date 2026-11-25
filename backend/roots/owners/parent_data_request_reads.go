@@ -36,10 +36,18 @@ func NewParentDataRequestReads(source careplan.CareRequestsQuery) parentportal.D
 			}
 			return result, nil
 		},
-		PendingWeekly: func(ctx context.Context, ids []int64) ([]careplan.CareScheduleChangeRequest, error) {
-			return source.ListCareScheduleRequests(ctx, careplan.CareScheduleRequestFilter{
+		PendingWeekly: func(ctx context.Context, ids []int64) ([]parentportal.OpenWeeklyRequest, error) {
+			rows, err := source.ListCareScheduleRequests(ctx, careplan.CareScheduleRequestFilter{
 				StudentIDs: ids, RequestKinds: []string{carerequests.KindWeeklySchedule}, Statuses: []string{carerequests.StatusPending},
 			})
+			if err != nil {
+				return nil, err
+			}
+			pending := make([]parentportal.OpenWeeklyRequest, len(rows))
+			for i, row := range rows {
+				pending[i] = parentportal.OpenWeeklyRequest{ID: row.ID, StudentID: row.StudentID, SubmittedBy: row.SubmittedBy}
+			}
+			return pending, nil
 		},
 	})
 }

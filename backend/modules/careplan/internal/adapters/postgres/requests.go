@@ -422,14 +422,9 @@ func (s *requestStore) ListCareScheduleRequests(ctx context.Context, filter care
 	rows := []careScheduleRequestRow{}
 	query := withTenant(db.NewSelect().Model(&rows).
 		ModelTableExpr(`schedule.care_schedule_change_requests AS "care_schedule_change_request"`), "care_schedule_change_request", tenantID)
-	if filter.StudentID > 0 {
-		query = query.Where(`"care_schedule_change_request".student_id = ?`, filter.StudentID)
-	}
-	if filter.StudentIDs != nil {
-		if len(filter.StudentIDs) == 0 {
-			return []careplan.CareScheduleChangeRequest{}, carePlanCompose.RequestStoreStats{}, nil
-		}
-		query = query.Where(`"care_schedule_change_request".student_id IN (?)`, bun.List(filter.StudentIDs))
+	query, none := whereRequestStudents(query, "care_schedule_change_request", filter.StudentID, filter.StudentIDs)
+	if none {
+		return []careplan.CareScheduleChangeRequest{}, carePlanCompose.RequestStoreStats{}, nil
 	}
 	if len(filter.IDs) > 0 {
 		query = query.Where(`"care_schedule_change_request".id IN (?)`, bun.List(filter.IDs))
@@ -619,14 +614,9 @@ func (s *requestStore) ListStudentDataRequests(ctx context.Context, filter carep
 	if none {
 		return []careplan.StudentDataChangeRequest{}, carePlanCompose.RequestStoreStats{}, nil
 	}
-	if filter.StudentID > 0 {
-		query = query.Where(`"student_data_change_request".student_id = ?`, filter.StudentID)
-	}
-	if filter.StudentIDs != nil {
-		if len(filter.StudentIDs) == 0 {
-			return []careplan.StudentDataChangeRequest{}, carePlanCompose.RequestStoreStats{}, nil
-		}
-		query = query.Where(`"student_data_change_request".student_id IN (?)`, bun.List(filter.StudentIDs))
+	query, none = whereRequestStudents(query, "student_data_change_request", filter.StudentID, filter.StudentIDs)
+	if none {
+		return []careplan.StudentDataChangeRequest{}, carePlanCompose.RequestStoreStats{}, nil
 	}
 	if len(filter.Statuses) > 0 {
 		query = query.Where(`"student_data_change_request".status IN (?)`, bun.List(filter.Statuses))
@@ -654,6 +644,22 @@ func (s *requestStore) ListStudentDataRequests(ctx context.Context, filter carep
 		return nil, stats, requestDBError("list student data change requests", err)
 	}
 	return studentDataRequestsToPublic(rows), stats, nil
+}
+
+// whereRequestStudents restricts a request listing to one child or a set of
+// children. A nil set leaves the query unchanged; an empty one matches no row,
+// reported as none.
+func whereRequestStudents(query *bun.SelectQuery, alias string, studentID int64, studentIDs []int64) (*bun.SelectQuery, bool) {
+	if studentID > 0 {
+		query = query.Where("?.student_id = ?", bun.Ident(alias), studentID)
+	}
+	if studentIDs == nil {
+		return query, false
+	}
+	if len(studentIDs) == 0 {
+		return query, true
+	}
+	return query.Where("?.student_id IN (?)", bun.Ident(alias), bun.List(studentIDs)), false
 }
 
 // whereRequestIDs restricts a request listing to exact rows. A nil filter

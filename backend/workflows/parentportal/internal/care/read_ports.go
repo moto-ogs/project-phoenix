@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
-	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -82,7 +81,15 @@ type DataRequestReads interface {
 	ListParentVisibleByStudent(ctx context.Context, studentID int64, limit int) ([]*StudentDataChangeRequest, error)
 	// ListPendingWeeklyCareRequests reads the open weekly-plan requests of the
 	// children in one statement; a child has at most one.
-	ListPendingWeeklyCareRequests(ctx context.Context, studentIDs []int64) ([]carerequests.Request, error)
+	ListPendingWeeklyCareRequests(ctx context.Context, studentIDs []int64) ([]OpenWeeklyRequest, error)
+}
+
+// OpenWeeklyRequest is what the overview badge needs of an open weekly-plan
+// request: whose it is and who may see it.
+type OpenWeeklyRequest struct {
+	ID          int64
+	StudentID   int64
+	SubmittedBy int64
 }
 
 // StatusDayReads reads the child's active status days.

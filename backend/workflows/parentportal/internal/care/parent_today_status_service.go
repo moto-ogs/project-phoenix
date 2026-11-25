@@ -52,8 +52,10 @@ type schoolChild struct {
 
 // todayForSchool derives the day of the children of one school from one
 // tenant transaction. Its statement count does not grow with the children:
-// every read takes the whole set (Rule 15). A read error fails the whole
-// school's day, which the caller shows as unknown, never as "not arrived".
+// every read takes the whole set (Rule 15). A read error fails the day of the
+// children it read, which the caller shows as unknown, never as "not
+// arrived"; the returned map still holds what needs no read, the no-care day
+// of a child without an OGS place.
 func (s *Service) todayForSchool(ctx context.Context, tenantID int64, children []schoolChild, now time.Time) (map[int64]*TodayStatus, error) {
 	out := make(map[int64]*TodayStatus, len(children))
 	today := calendar.DateFromTime(now)
@@ -81,7 +83,7 @@ func (s *Service) todayForSchool(ctx context.Context, tenantID int64, children [
 			"student_ids", ids,
 			"error", txErr.Error(),
 		)
-		return nil, txErr
+		return out, txErr
 	}
 	for id, f := range facts {
 		status := deriveTodayStatus(*f)
@@ -158,28 +160,47 @@ func (s *Service) loadTodayPlan(txCtx context.Context, ids []int64, today calend
 		}
 	}
 	pickups, pickupErr := s.todayPickups(txCtx, slices.Concat(departing, withoutPlan), today)
+	s.applyTodayPickups(departing, pickups, pickupErr, facts)
+	if planErr != nil {
+		// What was read stays: a child's own day exception holds even when
+		// the weekly plan of its siblings could not be read. The others keep
+		// CareDayResolved false.
+		s.Logger.Warn("parent_today_status_care_plan_unreadable",
+			"student_ids", ids,
+			"error", planErr.Error(),
+		)
+	} else {
+		s.arrivalsWithoutPlan(withoutPlan, pickups, pickupErr, arrivals)
+	}
+	for id, f := range facts {
+		expected := arrivals[id]
+		f.CareDayResolved = expected.resolved
+		f.IsCareDay = expected.isCareDay
+		f.ExpectedArrival = expected.hhmm
+	}
+}
+
+// applyTodayPickups shows the pickup time of the children still in care. An
+// unreadable pickup only leaves the time out.
+func (s *Service) applyTodayPickups(departing []int64, pickups map[int64]*EffectivePickupTime, pickupErr error, facts map[int64]*todayStatusFacts) {
 	if pickupErr != nil {
 		s.Logger.Warn("parent_today_status_pickup_unreadable",
 			"student_ids", departing,
 			"error", pickupErr.Error(),
 		)
-	} else {
-		for _, id := range departing {
-			if pickup := pickups[id]; pickup != nil && pickup.PickupTime != nil {
-				facts[id].PickupTime = hhmm(*pickup.PickupTime)
-			}
-		}
-	}
-	if planErr != nil {
-		s.Logger.Warn("parent_today_status_care_plan_unreadable",
-			"student_ids", ids,
-			"error", planErr.Error(),
-		)
 		return
 	}
+	for _, id := range departing {
+		if pickup := pickups[id]; pickup != nil && pickup.PickupTime != nil {
+			facts[id].PickupTime = hhmm(*pickup.PickupTime)
+		}
+	}
+}
+
+// arrivalsWithoutPlan beantwortet Tage ohne Ankunftsplan: Eine Abholzeit fuer
+// heute macht sie trotzdem zum Betreuungstag.
+func (s *Service) arrivalsWithoutPlan(withoutPlan []int64, pickups map[int64]*EffectivePickupTime, pickupErr error, arrivals map[int64]expectedArrival) {
 	for _, id := range withoutPlan {
-		// Ein Tag ohne Ankunftsplan: eine Abholzeit fuer heute macht ihn
-		// trotzdem zum Betreuungstag.
 		switch {
 		case s.PickupSchedules == nil:
 			arrivals[id] = expectedArrival{resolved: true}
@@ -193,12 +214,6 @@ func (s *Service) loadTodayPlan(txCtx context.Context, ids []int64, today calend
 			pickup := pickups[id]
 			arrivals[id] = expectedArrival{resolved: true, isCareDay: pickup != nil && pickup.PickupTime != nil}
 		}
-	}
-	for id, f := range facts {
-		expected := arrivals[id]
-		f.CareDayResolved = expected.resolved
-		f.IsCareDay = expected.isCareDay
-		f.ExpectedArrival = expected.hhmm
 	}
 }
 
@@ -227,6 +242,8 @@ type expectedArrival struct {
 // resolveExpectedArrivals liest den Betreuungsplan der Kinder fuer heute. Eine
 // Ausnahme fuer den Tag schlaegt den Wochenplan. withoutPlan names the
 // children with neither: their pickup decides whether today is a care day.
+// On an error the map keeps every child already resolved; a child missing
+// from it is unresolved.
 func (s *Service) resolveExpectedArrivals(ctx context.Context, ids []int64, today calendar.Date) (map[int64]expectedArrival, []int64, error) {
 	out := make(map[int64]expectedArrival, len(ids))
 	if s.ArrivalSchedules == nil {
@@ -242,7 +259,7 @@ func (s *Service) resolveExpectedArrivals(ctx context.Context, ids []int64, toda
 	// gilt der Wochenplan vom Freitag.
 	planWeekday, careWeekday, err := planWeekdayOf(ctx, today)
 	if err != nil {
-		return nil, nil, err
+		return out, nil, err
 	}
 	if !careWeekday {
 		for _, id := range ids {
@@ -250,10 +267,23 @@ func (s *Service) resolveExpectedArrivals(ctx context.Context, ids []int64, toda
 		}
 		return out, nil, nil
 	}
+	planned, err := s.arrivalExceptionsToday(ctx, ids, today, out)
+	if err != nil || len(planned) == 0 {
+		return out, nil, err
+	}
+	withoutPlan, err := s.weeklyArrivals(ctx, planned, planWeekday, out)
+	if err != nil {
+		return out, nil, err
+	}
+	return out, withoutPlan, nil
+}
 
+// arrivalExceptionsToday applies today's exceptions and returns the children
+// without one: for them the weekly plan applies.
+func (s *Service) arrivalExceptionsToday(ctx context.Context, ids []int64, today calendar.Date, out map[int64]expectedArrival) ([]int64, error) {
 	exceptions, err := s.ArrivalSchedules.GetStudentArrivalExceptionsForDate(ctx, ids, today)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	planned := make([]int64, 0, len(ids))
 	for _, id := range ids {
@@ -267,12 +297,15 @@ func (s *Service) resolveExpectedArrivals(ctx context.Context, ids []int64, toda
 			out[id] = expectedArrival{resolved: true, isCareDay: true, hhmm: hhmm(*exception.ExpectedArrival)}
 		}
 	}
-	if len(planned) == 0 {
-		return out, nil, nil
-	}
+	return planned, nil
+}
+
+// weeklyArrivals applies the weekly plan of planWeekday and returns the
+// children without one.
+func (s *Service) weeklyArrivals(ctx context.Context, planned []int64, planWeekday int, out map[int64]expectedArrival) ([]int64, error) {
 	rows, err := s.ArrivalSchedules.GetWeeklySchedulesByStudentIDsAndWeekday(ctx, planned, planWeekday)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	plans := make(map[int64]*ArrivalSchedule, len(rows))
 	for _, row := range rows {
@@ -288,7 +321,7 @@ func (s *Service) resolveExpectedArrivals(ctx context.Context, ids []int64, toda
 		}
 		withoutPlan = append(withoutPlan, id)
 	}
-	return out, withoutPlan, nil
+	return withoutPlan, nil
 }
 
 // planWeekdayOf liefert den Wochentag, dessen Wochenplan heute gilt, und ob

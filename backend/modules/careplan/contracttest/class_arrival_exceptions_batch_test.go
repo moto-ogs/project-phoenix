@@ -158,9 +158,8 @@ func TestClassArrivalBatchHandlesEachChildBeforeLockingTheNext(t *testing.T) {
 	for range ids {
 		want = append(want, perChild...)
 	}
-	// report's own check reads each child's day once more afterwards.
-	for range ids {
-		want = append(want, "read")
-	}
+	// report's own check reads the children's day once more afterwards, in
+	// one set read.
+	want = append(want, "read")
 	assert.Equal(t, want, steps)
 }

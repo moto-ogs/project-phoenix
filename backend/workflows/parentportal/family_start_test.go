@@ -146,16 +146,25 @@ func TestFamilyStartUsesSchoolFactsButNeverSiblingPermissions(t *testing.T) {
 		}
 	}
 	// A failed day keeps its school: the features stay, the other school's
-	// day stays, and the child's own route answers unknown, never "absent".
+	// day stays, a sibling without an OGS place keeps its no-care day (it
+	// needs no read), and the child's own route answers unknown, never
+	// "absent".
+	require.NoError(t, testpkg.SetTestStudentGuardianPermissions(ctx, db, link.ID, map[string]interface{}{"parent_portal.access": true}))
+	changed, err = db.ExecContext(ctx, `UPDATE users.student_school_memberships SET without_care_place=true, group_id=NULL
+ WHERE tenant_id=? AND student_profile_id=? AND deleted_at IS NULL`, family.TenantID, sibling.ID)
+	require.NoError(t, err)
+	rows, err = changed.RowsAffected()
+	require.NoError(t, err)
+	require.EqualValues(t, 1, rows)
 	settings.unavailable = 0
 	attendance.unavailable = family.TenantID
 	snapshot, err = svc.FamilyStart(ctx, family.AccountID, nil)
 	require.NoError(t, err)
-	require.Len(t, snapshot.Cards, 2)
+	require.Len(t, snapshot.Cards, 3)
 	for _, card := range snapshot.Cards {
 		require.NotNil(t, card.Features, "child %d", card.Child.StudentID)
-		if card.Child.StudentID == third.ID {
-			require.NotNil(t, card.Today)
+		if card.Child.StudentID == third.ID || card.Child.StudentID == sibling.ID {
+			require.NotNil(t, card.Today, "child %d", card.Child.StudentID)
 			assert.Equal(t, portal.DayStateNoCare, card.Today.State)
 		} else {
 			assert.Nil(t, card.Today, "a failed read is no day")
