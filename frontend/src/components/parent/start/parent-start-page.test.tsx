@@ -61,6 +61,10 @@ vi.mock("~/lib/personal-calendar-api", () => ({
   getParentCalendar: vi.fn(),
 }));
 
+vi.mock("~/components/parent/child/child-day-changes", () => ({
+  ChildDayChanges: () => <div data-testid="child-day-changes" />,
+}));
+
 vi.mock("~/lib/shell-auth-context", () => ({
   useShellAuth: () => ({ profile: { firstName: "Sabine" } }),
   useShellAuthSafe: () => undefined,
@@ -558,6 +562,14 @@ describe("ParentStartPage", () => {
     expect(screen.getByText("Mia Schneider")).toBeInTheDocument();
     expect(screen.getAllByTestId("child-card-profile-icon")).toHaveLength(2);
     expect(screen.getAllByText("Donnerstag, 14. Mai 2026")).toHaveLength(2);
+  });
+
+  it("zeigt Heute anders nicht fuer ein Kind ohne OGS-Platz", async () => {
+    mockedChildren.mockResolvedValue([{ ...felix, without_care_place: true }]);
+    renderPage();
+
+    await screen.findByTestId("child-day-card");
+    expect(screen.queryByTestId("child-day-changes")).not.toBeInTheDocument();
   });
 
   it("zeigt die heutige Abholzeit nur fuer ein Kind in der OGS", async () => {

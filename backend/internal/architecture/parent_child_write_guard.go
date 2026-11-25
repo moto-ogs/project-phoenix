@@ -140,6 +140,7 @@ var portClasses = map[string]string{
 	"care.CarePeriodReads":                                          "read",
 	"care.CarePlanPolicy":                                           "read",
 	"care.ChildDataAccessLog":                                       "write",
+	"care.ChildDayChanges":                                          "read",
 	"care.ChildEvents":                                              "notice",
 	"care.ChildReads":                                               "read",
 	"care.ContractDocuments.ContractDocumentFile":                   "read",

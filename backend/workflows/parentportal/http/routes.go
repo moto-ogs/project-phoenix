@@ -137,6 +137,7 @@ func (rs *Resource) mountChildStatusRoutes(r chi.Router) {
 	//   - care-exception: set or clear a one-day pickup time
 	r.Get("/me/children/{studentId}/features", rs.getChildFeatures)
 	r.Get("/me/children/{studentId}/today", rs.getChildTodayStatus)
+	r.Get("/me/children/{studentId}/day-changes", rs.getChildDayChanges)
 	r.Get("/me/children/{studentId}/consents", rs.getChildConsents)
 	r.Put("/me/children/{studentId}/consents/photo", rs.grantPhotoConsent)
 	r.Delete("/me/children/{studentId}/consents/photo", rs.withdrawPhotoConsent)

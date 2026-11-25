@@ -132,6 +132,10 @@ type (
 	RequestSharingState              = messaging.RequestSharingState
 	StudentPhotoUnlinker             = care.StudentPhotoUnlinker
 	TodayStatus                      = care.TodayStatus
+	ChildDayChanges                  = care.ChildDayChanges
+	ChildDay                         = care.ChildDay
+	ChildDaySource                   = care.ChildDaySource
+	ChildDayChange                   = care.ChildDayChange
 )
 
 const (

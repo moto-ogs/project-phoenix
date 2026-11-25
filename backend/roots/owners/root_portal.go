@@ -50,7 +50,7 @@ func BuildParentPortal(
 	enrollment EnrollmentRows, notices EnrollmentNotices, announcements communication.ParentAnnouncementCapability, audit AuditOwner,
 	organizations organizationtenancy.Query, contractNotices parentportal.ContractNoticesPort, contractSigning carecontract.InboxSigning,
 	contractHolidays carecontract.SchoolHolidays,
-	mandates parentportal.SEPAMandatesPort,
+	mandates parentportal.SEPAMandatesPort, dayChanges parentportal.ChildDayChanges,
 ) (*parentportal.Portal, error) {
 	surveys, err := communication.SurveysOf(announcements)
 	if err != nil {
@@ -79,7 +79,7 @@ func BuildParentPortal(
 		CareProfiles:    profiles, ChildRepo: children, EnrollablePhaseRepo: NewParentPhaseReads(carePlanCompose.NewParentPhaseQueries(portal.ParentEnrollablePhase)),
 		EnrollmentSettings: settings, EnrollmentRequestRepo: NewParentEnrollmentReads(carePlanCompose.NewParentEnrollmentQueries(portal.ParentEnrollmentRequest)),
 		GuardianProfileRepo: NewParentGuardianProfileReads(people.GuardianProfiles), Attendance: BindParentAttendance(presence.Presence), StatusDayRepo: carePlanRows.StatusDays,
-		MealPlan: mealPlan, StudentRepo: NewParentStudentReads(people.Students), CarePlan: NewParentCarePlanCommands(carePlan, schedules.AutoExcusal), DataRequests: NewParentDataRequestCommands(carePlan), People: persons,
+		MealPlan: mealPlan, DayChanges: dayChanges, StudentRepo: NewParentStudentReads(people.Students), CarePlan: NewParentCarePlanCommands(carePlan, schedules.AutoExcusal), DataRequests: NewParentDataRequestCommands(carePlan), People: persons,
 		Settings: BindParentSettings(settings), StudentUpdates: BindParentStudentUpdates(hub),
 		PersonRepo: NewParentPersonReads(people.Persons), ChangeRequestRepo: NewParentDataRequestReads(carePlan),
 		CareRequestRepo: NewParentCareRequestReads(carePlan), ExcusedRequestRepo: NewParentExcusedRequestReads(carePlanRows.ExcusedRequestRows),

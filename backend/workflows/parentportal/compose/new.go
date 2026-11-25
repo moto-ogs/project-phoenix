@@ -98,8 +98,9 @@ type Dependencies struct {
 	OfferingChangeRequestRepo messaging.OfferingChangeRequestReads
 	FamilyProtectionEvents    messaging.FamilyProtectionReads
 	ParentRequestShares       messaging.RequestShareRecords
-	// Platform: the meal plan, live events and notifiers.
+	// Platform: the meal plan, "Heute anders" of a child (#7671), live events and notifiers.
 	MealPlan              MealPlanProvider
+	DayChanges            care.ChildDayChanges
 	StudentUpdates        care.StudentUpdates
 	AbsenceNotifier       care.AbsenceNotifier
 	ParentMessageNotifier care.StaffParentMessageNotifier
@@ -107,8 +108,7 @@ type Dependencies struct {
 }
 
 // New composes the guardian portal on deps.Now (the real clock when unset).
-// Messaging resolves children through the child flows, which share requests
-// through messaging, so the resolver reaches the child flows once both exist.
+// The flows share requests both ways: the resolver reaches them once both exist.
 func New(deps Dependencies) *parentportal.Portal {
 	if deps.Now == nil {
 		deps.Now = time.Now
@@ -142,7 +142,7 @@ func careConfig(deps Dependencies, bound owners, messagingFlows *messaging.Servi
 		Memberships: deps.Memberships, InvitationAccounts: deps.InvitationAccounts, GuardianHold: GuardianHold, GuardianInvites: deps.GuardianInvites, GuardianInvitations: deps.GuardianInvitations,
 		InvalidateInvites: deps.InvalidateInvites,
 		Locales:           deps.Locales, StudentUpdates: deps.StudentUpdates, GuardianPolicy: deps.GuardianPolicy, DeparturePolicy: deps.DeparturePolicy,
-		AbsenceNotifier: deps.AbsenceNotifier, Emitter: deps.Emitter,
+		AbsenceNotifier: deps.AbsenceNotifier, Emitter: deps.Emitter, DayChanges: deps.DayChanges,
 		SelfService:    messagingFlows,
 		RequestSharing: messagingFlows.ChildFlowSharing(),
 	}

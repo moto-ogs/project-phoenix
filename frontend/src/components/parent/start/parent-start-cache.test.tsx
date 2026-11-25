@@ -32,6 +32,11 @@ const family = parentFamilyFixture();
 
 vi.unmock("swr");
 const useSSE = vi.hoisted(() => vi.fn().mockReturnValue({ isConnected: true }));
+// „Heute anders“ (#7671) reads its own route; child-day-changes.test.tsx
+// covers it, these tests count the reads of the start cards.
+vi.mock("~/components/parent/child/child-day-changes", () => ({
+  ChildDayChanges: () => null,
+}));
 vi.mock("~/lib/hooks/use-sse", () => ({ useSSE }));
 const state = vi.hoisted(() => ({ account: "A" as string | null }));
 vi.mock("next-auth/react", () => ({

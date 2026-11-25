@@ -355,6 +355,9 @@ type SourceEntry struct {
 	Class *DayClass
 	// Appointment is set on the appointment kinds only (#7663).
 	Appointment *DayAppointment
+	// EnteredByYou marks a change the reading guardian entered itself, in
+	// the child's day of the parents portal (#7671).
+	EnteredByYou bool
 }
 
 // Entry is one change to regular operation of the day.
@@ -388,6 +391,8 @@ type Entry struct {
 	Class *DayClass `json:"class"`
 	// Appointment is set on the appointment kinds only (#7663).
 	Appointment *DayAppointment `json:"appointment"`
+	// EnteredByYou: see SourceEntry. Never set in the staff overview.
+	EnteredByYou bool `json:"-"`
 }
 
 // SourceStatus reports one source.
@@ -656,7 +661,7 @@ func toEntry(entry SourceEntry) Entry {
 		People: people, Group: entry.Group, Link: entry.Link, Count: entry.Count, Notice: entry.Notice,
 		Closing: entry.Closing, Child: entry.Child, ChildSummary: entry.ChildSummary,
 		Activity: entry.Activity, Room: entry.Room, PreviousRoom: entry.PreviousRoom,
-		Class: entry.Class, Appointment: entry.Appointment,
+		Class: entry.Class, Appointment: entry.Appointment, EnteredByYou: entry.EnteredByYou,
 	}
 }
 

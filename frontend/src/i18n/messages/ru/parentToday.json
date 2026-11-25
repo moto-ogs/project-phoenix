@@ -39,5 +39,26 @@
     "pickupTooltip": "Открывает форму запроса другого времени забора.",
     "pickupWithModeTooltip": "Открывает форму запроса изменения забора.",
     "messageTooltip": "Открывает сообщения с {careTerm} о вашем ребёнке."
+  },
+  "changes": {
+    "title": "Сегодня иначе",
+    "allAsPlanned": "Сегодня всё идёт по плану.",
+    "partial": "Не все изменения удалось загрузить. Проверь позже ещё раз.",
+    "loadObject": "изменения на сегодня",
+    "enteredByYou": "Внесено тобой",
+    "sick": "{name} сегодня болеет.",
+    "excused": "{name} сегодня отсутствует по уважительной причине.",
+    "pickupAt": "{name} сегодня заберут в {time}.",
+    "notComing": "{name} сегодня не придёт.",
+    "goesAlone": "{name} сегодня возвращается домой самостоятельно.",
+    "classTrip": "Класс {class} сегодня на экскурсии.",
+    "classTripBack": "Класс {class} сегодня на экскурсии. Вернётся в {time}.",
+    "classDismissal": "Уроки класса {class} сегодня заканчиваются в {time}.",
+    "closingDay": "{careTerm} сегодня закрыта: {name}.",
+    "closingDayUntil": "{careTerm} закрыта до {date}: {name}.",
+    "activityCancelled": "{title} в {time} сегодня отменяется.",
+    "activityReinstated": "{title} в {time} сегодня всё-таки состоится.",
+    "activityRoomChanged": "{title} в {time} сегодня проходит в {room}.",
+    "activityLeadChanged": "{title} в {time} сегодня ведёт замена."
   }
 }
