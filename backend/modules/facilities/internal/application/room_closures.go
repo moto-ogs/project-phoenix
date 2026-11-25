@@ -103,6 +103,24 @@ func (c *Closures) ListRoomClosures(ctx context.Context, filter facilities.RoomC
 	return result, err
 }
 
+// RoomClosedOn reports whether the school closed the room on the day: the
+// kiosk's session start refuses such a room (#7653).
+func (c *Closures) RoomClosedOn(ctx context.Context, roomID int64, day calendar.Date) (closed bool, err error) {
+	if err := c.service.requireTenant(ctx, "room_closed_on"); err != nil {
+		return false, err
+	}
+	if roomID <= 0 || day.IsZero() {
+		return false, nil
+	}
+	err = c.service.runWrite(ctx, "room_closed_on", func(txCtx context.Context, stats *domain.OperationStats) error {
+		closures, queryStats, err := c.store.ListClosures(txCtx, facilities.RoomClosureFilter{RoomID: &roomID, From: day, Until: day})
+		stats.Add(queryStats)
+		closed = len(closures) > 0
+		return err
+	})
+	return closed, err
+}
+
 func validateClosure(input facilities.CloseRoom, today calendar.Date) error {
 	switch {
 	case input.RoomID <= 0:

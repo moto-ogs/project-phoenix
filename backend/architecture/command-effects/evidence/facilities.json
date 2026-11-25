@@ -425,6 +425,38 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.CloseRoom",
+      "binding_digest": "af68292ba2ffea03dd10ccc591ae6324",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.CloseRoom",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.ListRoomClosures",
+      "binding_digest": "af68292ba2ffea03dd10ccc591ae6324",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.ListRoomClosures",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.ReopenRoom",
+      "binding_digest": "af68292ba2ffea03dd10ccc591ae6324",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.ReopenRoom",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.RoomClosedOn",
+      "binding_digest": "af68292ba2ffea03dd10ccc591ae6324",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosedOn",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.CreateRoom",
       "binding_digest": "0f5c726f93909b594bdeb12d4e6f97c4",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Command.CreateRoom",

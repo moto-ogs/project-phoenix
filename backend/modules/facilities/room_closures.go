@@ -65,6 +65,8 @@ type Closures interface {
 	CloseRoom(context.Context, CloseRoom) (RoomClosure, error)
 	ReopenRoom(ctx context.Context, roomID, closureID int64) error
 	ListRoomClosures(context.Context, RoomClosureFilter) ([]RoomClosure, error)
+	// RoomClosedOn reports whether a closure closes the room on the day.
+	RoomClosedOn(ctx context.Context, roomID int64, day calendar.Date) (bool, error)
 }
 
 // ClosedRoomsOn maps each room closed on the day to the closure that closes
