@@ -129,7 +129,6 @@ export function MessageThreadContent({
   // App (#8070): einzeiliger Kopf, Kinderprofil als Symbol, Pill aus.
   const { isApp } = useDeviceContext();
   const router = useTenantRouter();
-  const tenantPath = useTenantAwarePath();
   const { data: session } = useSession();
   // The Änderungsanfragen queue is gated on users:update (backend + page guard),
   // scoped per child in the service. One who lacks users:update sees the plain
@@ -643,7 +642,9 @@ export function MessageThreadContent({
   const childRow =
     isApp && thread ? (
       <ListRowLink
-        href={tenantPath(`/students/${thread.student_id}?from=/messages`)}
+        onClick={() =>
+          router.push(`/students/${thread.student_id}?from=/messages`)
+        }
         className="mb-2 border-b border-gray-100 px-1 py-2"
         icon={<MotoConceptIcon concept={childrenConcept} size={20} />}
         title={`${relationshipLabel(thread.relationship_type)} von ${thread.student_name}`}
