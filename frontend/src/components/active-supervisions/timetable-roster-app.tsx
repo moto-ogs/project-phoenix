@@ -19,7 +19,14 @@ import { EmptyStudentResults } from "~/components/students/empty-student-results
 import { useToast } from "~/contexts/ToastContext";
 import { overbookedHintFor } from "~/lib/activity-occupancy";
 import { useDeviceContext } from "~/lib/device-context";
-import { useStudentData } from "~/lib/hooks/use-student-data";
+import { berlinTodayISO } from "~/lib/date-helpers";
+import {
+  buildStudentSearchFilters,
+  fetchStudentSearch,
+  type StudentSearchFilterInput,
+} from "~/lib/student-search-resource";
+import { useSWRAuth } from "~/lib/swr";
+import { studentKeys } from "~/lib/swr/portal-keys";
 import { useMinuteClock } from "~/lib/pickup-helpers";
 import { schoolClassName } from "~/lib/school-class-label";
 import type { Student } from "~/lib/student-helpers";
@@ -257,7 +264,6 @@ export function TimetableRosterApp({
   const now = useMinuteClock();
   const toast = useToast();
   const { isSplit, layout } = useDeviceContext();
-  const split = useSplitSelection("kind");
   const nfcEnabled = useNFCEnabled();
 
   // Rechte wie in der Liste am Computer (#3167, #3622).
@@ -393,10 +399,11 @@ export function TimetableRosterApp({
   // das erste Kind der Liste.
   const firstListed =
     sections.find((section) => section.rows.length > 0)?.rows[0] ?? null;
+  const split = useSplitSelection("kind", {
+    defaultId: firstListed?.studentId ?? null,
+  });
   const splitRow =
-    (split.selected
-      ? roster.rows.find((row) => row.studentId === split.selected)
-      : null) ?? firstListed;
+    roster.rows.find((row) => row.studentId === split.selected) ?? null;
   // Eine Gruppe, die alle Kinder teilen, sagt in der Zeile nichts; dann
   // bleibt Platz für Gehzeit und Klasse.
   const groupNames = new Set(roster.rows.map((row) => row.groupName));
@@ -643,14 +650,7 @@ export function TimetableRosterApp({
         />
       ) : null}
       <SplitView
-        list={
-          <>
-            {list}
-            {/* Die Liste scrollt am iPad quer für sich: Polster, damit die
-                letzten Kinder über Aktionsleiste und Pill erreichbar sind. */}
-            {isSplit ? <div aria-hidden="true" className="h-40" /> : null}
-          </>
-        }
+        list={list}
         detail={
           splitRow ? (
             <SupervisionChildDetail
@@ -727,27 +727,42 @@ export function TimetableRosterApp({
 }
 
 /**
- * Das Kind aus der Aufsicht als `Student` für das Kind-Blatt: zuerst aus der
- * Zeile, dann aus der Akte, sobald sie geladen ist (gleicher Cache wie die
- * Akte; ohne Leserecht bleibt es bei der Zeile).
+ * Das Kind aus der Aufsicht als `Student` für das Kind-Blatt: dieselbe
+ * schlanke Zeile, die die Kindersuche lädt (Ankunft, Gehzeit, Heimweg des
+ * Tages), damit beide Blätter dasselbe zeigen. Bis sie da ist (und ohne
+ * Leserecht) steht, was die Aufsicht selbst weiß.
  */
 function useRosterStudent(
   row: TimetableRosterRow | null,
   canRead: boolean,
 ): { student: Student | null; loaded: boolean } {
-  const detail = useStudentData(row && canRead ? row.studentId : "");
+  const today = berlinTodayISO();
+  const search: StudentSearchFilterInput = {
+    search: row ? childName(row) : "",
+    groupIds: [],
+    schoolClasses: [],
+    years: [],
+    roomId: "",
+    dayStatus: "all",
+    date: today,
+    isToday: true,
+    bus: "all",
+    photoConsent: "all",
+    pickupStatus: "all",
+    companions: false,
+  };
+  const slim = useSWRAuth(
+    row && canRead
+      ? studentKeys.search({ ...search, photoState: "aufsicht" })
+      : null,
+    () => fetchStudentSearch(buildStudentSearchFilters(search), today, true),
+    { revalidateOnFocus: false },
+  );
   if (!row) return { student: null, loaded: false };
-  if (detail.student && detail.student.id === row.studentId) {
-    // Die Gehzeit des Tages kennt die Aufsicht; die Akte liefert sie nicht
-    // immer mit.
-    const pickup =
-      detail.student.pickup_time ??
-      (row.pickupTime && row.pickupTime !== "–" ? row.pickupTime : undefined);
-    return {
-      student: { ...detail.student, pickup_time: pickup },
-      loaded: true,
-    };
-  }
+  const match = slim.data?.students.find(
+    (student) => student.id === row.studentId,
+  );
+  if (match) return { student: match, loaded: true };
   const [first, ...rest] = childName(row).split(" ");
   return {
     student: {
@@ -758,7 +773,7 @@ function useRosterStudent(
       school_class: row.schoolClass,
       group_name: row.groupName,
       current_location: "",
-      // Zeiten erst mit der Akte: sie kennt die Rechte am Kind.
+      // Zeiten erst mit der Zeile der Kindersuche: sie kennt die Rechte.
       has_full_access: false,
       teacher_hints: row.teacherHints,
     },
