@@ -8,7 +8,7 @@ export function traegerCareCostSharesTopic(): HelpTopic {
     question:
       "Wie trage ich ein, dass Bildung und Teilhabe oder das Jugendamt mitzahlt?",
     summary:
-      "Du trägst je Kind ein, wer wie viel vom Monatsbeitrag übernimmt. Die Familie bekommt nur den Rest in Rechnung. Den Teil des Kostenträgers lädst du als eigene Liste herunter.",
+      "Du trägst pro Kind ein, wer wie viel vom Monatsbeitrag übernimmt. Die Familie bekommt nur den Rest in Rechnung. Den Teil des Kostenträgers lädst du als eigene Liste herunter.",
     group: "anmeldeverwaltung",
     audience: "traeger",
     icon: "HandCoins",

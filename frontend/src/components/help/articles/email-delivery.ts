@@ -28,7 +28,7 @@ export function emailDeliveryTopic(): HelpTopic {
         steps: [
           "Elternbrief: im geöffneten Brief bei jeder Person.",
           "Nachricht an Eltern: unter deiner Nachricht hinter `E-Mail`.",
-          "Gruppennachricht: unter jeder Nachricht hinter `E-Mails`, gezählt je Ergebnis.",
+          "Gruppennachricht: unter jeder Nachricht hinter `E-Mails`, gezählt pro Ergebnis.",
           "Termin mit Eltern: im Termin unter `E-Mails an die Eltern`. Das sieht, wer den Termin angelegt hat.",
           "Einladung der Eltern: beim Kind unter `Erziehungsberechtigte`.",
           "Einladung ins Personal und des Caterers: unter `Offene Einladungen`.",

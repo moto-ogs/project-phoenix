@@ -213,7 +213,7 @@ function TotalFigures({
               ? undefined
               : ratio === null
                 ? "Gerade ist an keiner Schule eine Betreuungskraft in der Zeiterfassung angemeldet."
-                : "Anwesende Kinder je anwesender Betreuungskraft."
+                : "Anwesende Kinder pro anwesender Betreuungskraft."
           }
           icon={<MotoConceptIcon concept={supervisionConcept} />}
           loading={loading}
@@ -743,7 +743,7 @@ export default function TraegerDashboardPage() {
 
       <DataTable
         heading={{
-          title: "Zahlen je Schule",
+          title: "Zahlen pro Schule",
           count: loading ? undefined : rows.length,
           level: 2,
         }}

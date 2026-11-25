@@ -12,7 +12,7 @@ export function ownShiftPlanTopic(): HelpTopic {
     title: "Eigenen Dienstplan ansehen",
     question: "Wo sehe ich meinen Dienstplan für die Woche?",
     summary:
-      "Sieh deine Schichten der Woche, die Stunden je Dienstart und dein Soll.",
+      "Sieh deine Schichten der Woche, die Stunden pro Dienstart und dein Soll.",
     group: "arbeitszeit",
     audience: ["caregiver", "lead"],
     icon: "CalendarCheck",
@@ -21,7 +21,7 @@ export function ownShiftPlanTopic(): HelpTopic {
       "Wechsle mit den Pfeilen zur gewünschten Woche. `Diese Woche` bringt dich zurück.",
     ],
     result:
-      "Du siehst jede Schicht im Wochenraster. Darunter stehen die Stunden je Tag und je Dienstart.",
+      "Du siehst jede Schicht im Wochenraster. Darunter stehen die Stunden pro Tag und pro Dienstart.",
     notes: [
       "Oben stehen die geplanten Stunden, dein `Soll` und die `Differenz`.",
       "In der `Zeiterfassung` führt oben der Knopf `Mein Dienstplan` ebenfalls hierher.",
@@ -29,7 +29,7 @@ export function ownShiftPlanTopic(): HelpTopic {
       "Ist eine Woche leer, nennt die Seite deine nächste Schicht. `Zur nächsten Schicht` bringt dich zu dieser Woche.",
     ],
     differences: [
-      "Auf dem Handy findest du `Mein Dienstplan` unten unter `Mehr`. Dort stehen die Schichten als Liste je Tag statt im Wochenraster.",
+      "Auf dem Handy findest du `Mein Dienstplan` unten unter `Mehr`. Dort stehen die Schichten als Liste pro Tag statt im Wochenraster.",
       "Du kannst den Plan hier nur ansehen. Änderungen trägt die Leitung im Dienstplan ein.",
       "Auf dem Handy erscheinen Samstag und Sonntag nur mit einer Schicht. Bei einem Sonntagsdienst kann im Wochenraster auch der Samstag erscheinen.",
       SIMPLE_NAV_DIFFERENCE,

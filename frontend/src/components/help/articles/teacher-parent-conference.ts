@@ -8,7 +8,7 @@ export function teacherParentConferenceTopic(): HelpTopic {
     title: "Einen Elternsprechtag anbieten",
     question: "Wie biete ich den Eltern meiner Klasse Gesprächstermine an?",
     summary:
-      "Du legst einen Tag mit Zeitfenstern an. Die Eltern buchen in der Eltern-App ein Zeitfenster je Kind.",
+      "Du legst einen Tag mit Zeitfenstern an. Die Eltern buchen in der Eltern-App ein Zeitfenster pro Kind.",
     group: "nachrichten",
     audience: "teacher",
     icon: "CalendarCheck",
@@ -18,11 +18,11 @@ export function teacherParentConferenceTopic(): HelpTopic {
       "Wähle `Elternsprechtag`.",
       "Wähle `Neuer Elternsprechtag`.",
       "Wähle die Klasse und den Tag.",
-      "Gib `Beginn`, `Ende` und die `Dauer je Gespräch` an. Eine Pause und den Raum kannst du dazuschreiben.",
+      "Gib `Beginn`, `Ende` und die `Dauer pro Gespräch` an. Eine Pause und den Raum kannst du dazuschreiben.",
       "Wähle `Speichern`.",
     ],
     result:
-      "Die Eltern der Klasse sehen die freien Zeitfenster in der Eltern-App und buchen eines je Kind. Jede Buchung steht in deinem Kalender und im Kalender der Eltern.",
+      "Die Eltern der Klasse sehen die freien Zeitfenster in der Eltern-App und buchen eines pro Kind. Jede Buchung steht in deinem Kalender und im Kalender der Eltern.",
     notes: [
       "Wähle den Tag in der Liste. Dort siehst du, welches Kind wann kommt. Mit `Drucken` druckst du die Liste.",
       "Eltern buchen, verschieben oder sagen ab, bis 24 Stunden vor dem Termin. Danach melden sie sich bei dir.",

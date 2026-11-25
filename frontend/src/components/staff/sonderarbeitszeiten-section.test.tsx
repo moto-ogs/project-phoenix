@@ -295,10 +295,10 @@ describe("SonderarbeitszeitenSection", () => {
     render(<SonderarbeitszeitenSection staffId="42" canEdit />);
 
     expect(
-      screen.getByText("Mo 3,5 Std. · Di–Fr je 0,5 Std."),
+      screen.getByText("Mo 3,5 Std. · Di–Fr 0,5 Std. pro Tag"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Mo–Di je 4 Std. · Mi 0 Std. · Do 4 Std. · Fr 2 Std."),
+      screen.getByText("Mo–Di 4 Std. pro Tag · Mi 0 Std. · Do 4 Std. · Fr 2 Std."),
     ).toBeInTheDocument();
   });
 
@@ -311,7 +311,7 @@ describe("SonderarbeitszeitenSection", () => {
     });
     openCreate();
     fillRange("0,5");
-    fireEvent.click(screen.getByRole("button", { name: "Je Wochentag" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pro Wochentag" }));
 
     expect(screen.queryByLabelText("Stunden pro Tag")).toBeNull();
     for (const day of [
@@ -344,7 +344,7 @@ describe("SonderarbeitszeitenSection", () => {
     mocks.rows = [];
     openCreate();
     fillRange("1");
-    fireEvent.click(screen.getByRole("button", { name: "Je Wochentag" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pro Wochentag" }));
     fireEvent.change(screen.getByLabelText("Stunden am Mittwoch"), {
       target: { value: "13" },
     });
@@ -366,7 +366,7 @@ describe("SonderarbeitszeitenSection", () => {
   it("keeps equal weekday hours when switching back to the same hours every day", () => {
     mocks.rows = [];
     openCreate();
-    fireEvent.click(screen.getByRole("button", { name: "Je Wochentag" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pro Wochentag" }));
     for (const day of [
       "Montag",
       "Dienstag",
@@ -386,7 +386,7 @@ describe("SonderarbeitszeitenSection", () => {
   it("keeps equal weekday hours with different decimal spellings", () => {
     mocks.rows = [];
     openCreate();
-    fireEvent.click(screen.getByRole("button", { name: "Je Wochentag" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pro Wochentag" }));
     const values = ["1", "1,0", "1.00", "1", "1"];
     for (const [index, day] of [
       "Montag",

@@ -1440,14 +1440,14 @@ function AnnouncementFormModal({
     const problems: string[] = [];
     if (picked.length > room) {
       problems.push(
-        `Es sind höchstens ${MAX_ATTACHMENTS} Dateien je Mitteilung möglich.`,
+        `Es sind höchstens ${MAX_ATTACHMENTS} Dateien pro Mitteilung möglich.`,
       );
     }
     const accepted: File[] = [];
     for (const file of picked.slice(0, Math.max(room, 0))) {
       if (file.size > MAX_ATTACHMENT_BYTES) {
         problems.push(
-          `Die Datei „${file.name}“ ist zu groß. Erlaubt sind bis zu ${MAX_ATTACHMENT_MB} MB je Datei.`,
+          `Die Datei „${file.name}“ ist zu groß. Erlaubt sind bis zu ${MAX_ATTACHMENT_MB} MB pro Datei.`,
         );
         continue;
       }
@@ -2330,7 +2330,7 @@ function AnnouncementFormModal({
                     </p>
                     <p className="mt-1 text-xs text-gray-500">
                       Erlaubt sind PDF, DOCX, XLSX, PPTX, PNG und JPEG. Bis zu{" "}
-                      {MAX_ATTACHMENT_MB} MB je Datei, höchstens{" "}
+                      {MAX_ATTACHMENT_MB} MB pro Datei, höchstens{" "}
                       {MAX_ATTACHMENTS} Dateien.
                     </p>
                   </div>

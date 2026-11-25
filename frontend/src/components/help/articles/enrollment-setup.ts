@@ -91,7 +91,7 @@ export function enrollmentSetupTopic(): HelpTopic {
       "Du ziehst das `Ende` der Phase vor? Dann nennt moto nach dem Speichern die Kinder, die schon betreut werden. Ihre Betreuung bleibt eingetragen, bis du sie beendest. Wähle dafür `Betreuung beenden`. moto schlägt das neue Ende der Phase als letzten Betreuungstag vor. Bei mehr als 500 Kindern bestätigst du mehrere Gruppen einzeln. Die übrigen Kinder bleiben bis dahin in der Liste.",
       "Bei `Betreuungsangebote` steht in der Spalte `Belegt`, wie viele Plätze gebucht sind. Bei Angeboten mit Kapazität steht auch, wie viele Plätze frei sind. Ein volles Angebot ist mit `Voll` markiert.",
       "Du hast Varianten wie „bis 13 Uhr“ und „bis 17 Uhr“? Gib ihnen bei `Pflichtauswahl` dieselbe `Gruppe (optional)` und die `Regel` `Höchstens eines pro Tag`. Dann mischen Eltern die Varianten über die Woche, aber wählen pro Tag nur eine.",
-      "Trage bei jeder Variante unter `Gehzeit je Betreuungstag` ihre Uhrzeit ein. Nach der Zusage steht sie beim Kind. Bucht ein Kind an einem Tag zwei Angebote, gilt die spätere Gehzeit.",
+      "Trage bei jeder Variante unter `Gehzeit pro Betreuungstag` ihre Uhrzeit ein. Nach der Zusage steht sie beim Kind. Bucht ein Kind an einem Tag zwei Angebote, gilt die spätere Gehzeit.",
       "Ein Angebot nur für eine Klassenstufe, zum Beispiel Klasse 1: Setze den Haken bei `Nur für bestimmte Klassenstufen anbieten` und wähle `Klasse 1`. Ohne Haken können alle Kinder das Angebot wählen.",
       "Manche Phasen und Angebote legt dein Träger für mehrere Schulen an. Du darfst alles daran ändern oder sie ausschalten. Deine Änderungen bleiben, auch wenn der Träger später etwas ändert.",
     ],

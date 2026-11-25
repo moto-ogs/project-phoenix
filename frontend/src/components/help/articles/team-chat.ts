@@ -60,7 +60,7 @@ export function teamChatTopic(): HelpTopic {
       SIMPLE_NAV_DIFFERENCE,
     ],
     notes: [
-      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint, je höchstens 10 MB. Ein Foto öffnest du mit einem Tipp groß.",
+      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint, mit höchstens 10 MB pro Datei. Ein Foto öffnest du mit einem Tipp groß.",
       "Unter deiner Nachricht in einem Gruppenchat steht, wie viele sie gelesen haben. Tippe darauf, dann siehst du die Namen.",
       "Eltern können den Team-Chat nicht sehen. Für Eltern nutzt du `Nachrichten` im Bereich `Eltern`.",
       "Mit `Nur ungelesen` siehst du nur Unterhaltungen mit neuen Nachrichten.",

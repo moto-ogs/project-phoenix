@@ -171,7 +171,7 @@ export function DienstplanHoursCard({
   return (
     <SectionCard
       title="Stunden der Woche"
-      description="Geplante Stunden je Dienstart, ohne Pausen. Ausgefallene Dienste zählen nicht. Das Soll kommt aus dem Arbeitszeitmodell."
+      description="Geplante Stunden pro Dienstart, ohne Pausen. Ausgefallene Dienste zählen nicht. Das Soll kommt aus dem Arbeitszeitmodell."
       testId="dienstplan-hours-card"
     >
       <DataTable

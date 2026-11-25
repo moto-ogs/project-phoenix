@@ -475,7 +475,7 @@ export function SectionCard({
               Textblocks. */}
           {/* Mindestbreite 12rem: in einer schmalen Karte (Seitenspalte)
               rutschen die Aktionen unter den Titel, statt Titel und
-              Beschreibung auf wenige Wörter je Zeile zusammenzudrücken. Der
+              Beschreibung auf wenige Wörter pro Zeile zusammenzudrücken. Der
               Einklapp-Pfeil passt auch auf 320 px noch daneben. */}
           <div
             className={cn(

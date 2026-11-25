@@ -124,7 +124,7 @@ function OverviewTab({
           hint={
             ratio === null
               ? "Gerade ist keine Betreuungskraft in der Zeiterfassung angemeldet."
-              : "Anwesende Kinder je anwesender Betreuungskraft."
+              : "Anwesende Kinder pro anwesender Betreuungskraft."
           }
           icon={<MotoConceptIcon concept={supervisionConcept} />}
           loading={loading}

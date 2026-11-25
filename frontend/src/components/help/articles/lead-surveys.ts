@@ -51,7 +51,7 @@ export function leadSurveysTopic(): HelpTopic {
         steps: [
           "Öffne die Umfrage in der Liste.",
           "Bei einer anonymen Umfrage erscheint die Auswertung, sobald die Umfrage beendet ist.",
-          "Im Reiter `Auswertung` siehst du je Frage die Verteilung: bei der Skala den Durchschnitt, den höchsten und den niedrigsten Wert, bei Auswahlfragen die am häufigsten und am seltensten gewählte Antwort, dazu die Freitexte.",
+          "Im Reiter `Auswertung` siehst du pro Frage die Verteilung: bei der Skala den Durchschnitt, den höchsten und den niedrigsten Wert, bei Auswahlfragen die am häufigsten und am seltensten gewählte Antwort, dazu die Freitexte.",
           "Oben stehen `Stärken und Verbesserungsbedarf`: die Skalenfragen mit dem höchsten und dem niedrigsten Durchschnitt.",
           "Für eine Datei öffnest du das Menü mit den drei Punkten und wählst `Auswertung als PDF`.",
         ],
@@ -67,13 +67,13 @@ export function leadSurveysTopic(): HelpTopic {
       },
     ],
     result:
-      "Die Eltern finden die Umfrage unter `Elternbriefe`, das Team unter `Umfragen`. Jede Person antwortet einmal, Eltern einmal je Elternkonto, nicht je Kind.",
+      "Die Eltern finden die Umfrage unter `Elternbriefe`, das Team unter `Umfragen`. Jede Person antwortet einmal, Eltern einmal pro Elternkonto, nicht pro Kind.",
     notes: [
       "Anonym heißt: Du siehst nicht, wer was geantwortet hat. Du siehst auch nicht, wer noch nicht teilgenommen hat. Die Auswertung zeigt nur Summen.",
       "Die Auswertung einer anonymen Umfrage erscheint erst nach dem Ende und ab 5 Antworten. So ist niemand an seinen Antworten erkennbar. Bis dahin siehst du nur, wie viele teilgenommen haben.",
       "Auch einzelne Fragen einer anonymen Umfrage zeigen ihr Ergebnis erst ab 5 Antworten. Bei weniger steht dort nur die Zahl.",
       "Freitexte stehen ohne Namen und ohne Uhrzeit, in zufälliger Reihenfolge. Die PDF-Datei enthält dieselben Summen wie der Bildschirm.",
-      "Bei einer Umfrage, die nicht anonym ist, siehst du im Reiter `Antworten je Person` jede Antwort mit Namen.",
+      "Bei einer Umfrage, die nicht anonym ist, siehst du im Reiter `Antworten pro Person` jede Antwort mit Namen.",
       "Befragst du Mitarbeitende? Ein Fragebogen an Beschäftigte kann mitbestimmungspflichtig sein. Kläre das vorher mit deinem Betriebsrat oder Personalrat. moto prüft das nicht.",
       "Nur eine kurze Frage zu jedem Kind, zum Beispiel zum Sommerfest? Dafür gibt es die Umfrage unter `Eltern` › `Mitteilungen`.",
     ],
@@ -83,7 +83,7 @@ export function leadSurveysTopic(): HelpTopic {
     ],
     image: "/help/screens/umfrage-auswertung.webp",
     imageAlt:
-      "Auswertung einer beendeten anonymen Umfrage mit Stärken, Verbesserungsbedarf und der Verteilung je Frage.",
+      "Auswertung einer beendeten anonymen Umfrage mit Stärken, Verbesserungsbedarf und der Verteilung pro Frage.",
     related: [
       HELP_TOPICS.leadParentSurvey,
       HELP_TOPICS.staffSurveys,

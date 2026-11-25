@@ -10,7 +10,7 @@ export function enrollmentReviewTopic(): HelpTopic {
     id: HELP_TOPICS.enrollments,
     title: "Eingegangene Anmeldungen prüfen",
     question: "Wie prüfe ich eine neue Anmeldung?",
-    summary: "Du prüfst die Angaben und entscheidest je Kind.",
+    summary: "Du prüfst die Angaben und entscheidest pro Kind.",
     group: "anmeldeverwaltung",
     audience: "lead",
     icon: "ListChecks",
@@ -25,7 +25,7 @@ export function enrollmentReviewTopic(): HelpTopic {
     result:
       "Die Eltern sehen die Entscheidung bei ihrer Anmeldung. Bei `Bestätigen` wird das Kind übernommen.",
     notes: [
-      "Du entscheidest je Kind. Eine Anmeldung kann mehrere Kinder enthalten.",
+      "Du entscheidest pro Kind. Eine Anmeldung kann mehrere Kinder enthalten.",
       // #6053, #6148 (manuelle Anmeldung)
       "Ist schon ein Kind mit diesem Namen und Geburtsdatum angemeldet, fragt moto beim `Bestätigen` nach. Wähle `Bestehendes Kind verwenden`, verlängert moto nur die Anmeldung dieses Kindes. Die Eltern aus der Anmeldung bekommen dadurch keinen Zugang. Ist es ein anderes Kind, wähle `Als neues Kind anlegen`. Dieselbe Frage kommt, wenn du ein Kind selbst mit `Kind anlegen und freigeben` anmeldest.",
       // #6247: dasselbe Kind von beiden Eltern angemeldet.
@@ -38,11 +38,11 @@ export function enrollmentReviewTopic(): HelpTopic {
       "Wird ein Kind schon betreut und beginnt die Anmeldung später? Dann gelten Abholzeiten, Betreuungstage und Heimweg daraus erst ab dem Start. Bis dahin bleiben die bisherigen. Das Datum steht beim Kind. Steht der Hinweis nach dem Start noch da, gelten weiter die bisherigen. Melde dich dann beim moto-Team.",
       // #5934
       "Unter `E-Mails an die Familie` siehst du, ob die Mails zu dieser Anmeldung angekommen sind. Steht dort `Adresse prüfen`, sprich die Familie direkt an.",
-      "Auf der Seite der Phase steht unter `Freie Plätze je Angebot`, wie viele Plätze noch frei sind. `Belegt` zählt die Kinder am vollsten Tag bis zum Ende der Phase.",
+      "Auf der Seite der Phase steht unter `Freie Plätze pro Angebot`, wie viele Plätze noch frei sind. `Belegt` zählt die Kinder am vollsten Tag bis zum Ende der Phase.",
       "Hochgeladene Nachweise stehen bei `Zusatzfragen (Eltern)`. Mit `Öffnen` siehst du die Datei in einem neuen Tab.",
       "Hat die Vorlage `Unterschrift erforderlich`, steht die Unterschrift der Eltern im Abschnitt `Unterschrift`. Mit `Nachweis als PDF` lädst du den Anmeldenachweis mit der Unterschrift herunter.",
       // #4788: Vertragsstand je Kind, nur lesend.
-      "Hat der Träger aus der Anmeldung einen Betreuungsvertrag gemacht, steht er unter `Betreuungsverträge`. Dort siehst du je Kind den Stand und die gebuchten Tage mit Uhrzeit. Ändern kann den Vertrag nur der Träger.",
+      "Hat der Träger aus der Anmeldung einen Betreuungsvertrag gemacht, steht er unter `Betreuungsverträge`. Dort siehst du pro Kind den Stand und die gebuchten Tage mit Uhrzeit. Ändern kann den Vertrag nur der Träger.",
       "Unter `Rechtstexte und Antworten` findest du die Texte und Antworten jeder Einreichung. Öffne einen Text, um den Wortlaut zu lesen.",
       "Mit `Statusseite öffnen` siehst du, was die Eltern sehen.",
       // #5102: Auswirkung nach einer Korrektur unter `Nachbearbeitung`.
@@ -69,7 +69,7 @@ export function enrollmentReviewTopic(): HelpTopic {
       "Die E-Mail geht an deine E-Mail-Adresse in moto.",
     ],
     differences: [
-      "Der Überblick zählt je Phase, wie viele Eingänge offen, bestätigt und abgelehnt sind.",
+      "Der Überblick zählt pro Phase, wie viele Eingänge offen, bestätigt und abgelehnt sind.",
       "Auf dem Handy erscheint nur ein Hinweis. Die Prüfung läuft am Computer.",
     ],
     troubleshootingDetails: [

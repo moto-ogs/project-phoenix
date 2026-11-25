@@ -491,7 +491,7 @@ var enrollment_registerEnrollmentNotifications_benachrichtigung_0Definitions = [
 	{
 		Key:             config.KeyEnrollmentNotifyPerDecision,
 		Label:           "E-Mail an Eltern zur Entscheidung",
-		Description:     "Gilt, wenn eine Anmeldung mehrere Kinder enthält: eine E-Mail, wenn über alle entschieden ist, oder sofort eine E-Mail je Entscheidung.",
+		Description:     "Gilt, wenn eine Anmeldung mehrere Kinder enthält: eine E-Mail, wenn über alle entschieden ist, oder sofort eine E-Mail pro Entscheidung.",
 		Type:            config.FieldSelect,
 		Default:         config.EnrollmentNotifyPerDecisionDigest,
 		ReadPermission:  "config:read",

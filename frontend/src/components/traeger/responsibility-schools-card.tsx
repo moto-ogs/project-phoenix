@@ -58,7 +58,7 @@ export function ResponsibilitySchoolsCard({
   const router = useRouter();
   return (
     <SectionCard
-      title="Je Schule"
+      title="Pro Schule"
       description="Wer an jeder Schule zuständig ist. Name und Anschrift von Schulträger und Gemeinde trägst du bei der Schule ein. Solange sie fehlen, bleibt dein Träger zuständig."
     >
       <DataTable

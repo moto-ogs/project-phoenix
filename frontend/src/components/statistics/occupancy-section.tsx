@@ -228,7 +228,7 @@ export function OccupancySection({
       <DataTable
         columns={columns}
         mobileScroll={{
-          reason: "Geplante und anwesende Kinder je Uhrzeit zum Vergleichen",
+          reason: "Geplante und anwesende Kinder pro Uhrzeit zum Vergleichen",
         }}
         rows={current.slots}
         getRowKey={(row) => row.start}

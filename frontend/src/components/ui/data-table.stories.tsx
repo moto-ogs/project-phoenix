@@ -352,6 +352,6 @@ export const PhoneComparisonScroll: StoryObj<typeof DataTable<GroupFigures>> = {
     ],
     rows: groupFigures,
     getRowKey: (row) => row.id,
-    mobileScroll: { reason: "Anwesenheitszahlen je Gruppe zum Vergleichen" },
+    mobileScroll: { reason: "Anwesenheitszahlen pro Gruppe zum Vergleichen" },
   },
 };

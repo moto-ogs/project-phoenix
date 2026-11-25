@@ -63,7 +63,7 @@ export function traegerStaffRecordsTopic(): HelpTopic {
         description:
           "Für den Start mit moto: du übernimmst dein Personal aus dem Lohnprogramm oder aus einer Liste. moto erkennt jede Person an der Personalnummer.",
         steps: [
-          "Speichere dein Personal als CSV-Datei. Eine Zeile je Person, Überschriften in der ersten Zeile. Pflicht sind Personalnummer, Vorname und Nachname. Eine Vorlage bekommst du mit `Beispieldatei`.",
+          "Speichere dein Personal als CSV-Datei. Eine Zeile pro Person, Überschriften in der ersten Zeile. Pflicht sind Personalnummer, Vorname und Nachname. Eine Vorlage bekommst du mit `Beispieldatei`.",
           "Wähle in der Navigation `Personalakten`. Wähle oben rechts das Menü mit den drei Punkten und dann `Personal importieren`.",
           "Wähle bei `Datei wählen` deine Datei.",
           "Prüfe bei `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt.",

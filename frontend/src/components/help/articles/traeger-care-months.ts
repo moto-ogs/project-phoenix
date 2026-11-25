@@ -7,7 +7,7 @@ export function traegerCareMonthsTopic(): HelpTopic {
     title: "Monatsbeiträge abrechnen",
     question: "Wie rechne ich die Betreuung jeden Monat ab?",
     summary:
-      "Ein Monatslauf rechnet einen Monat für die gewählten Schulen nach den gültigen Verträgen ab. Der Beitrag eines Kindes kommt aus der Preisliste: als Summe der gebuchten Wochentage oder als Staffel nach Tagen je Woche. Es zählt der Vertrag, nicht die Anwesenheit. Vor der Freigabe prüfst du die Vorschau, änderst einzelne Rechnungen und schließt Rechnungen aus, die noch nicht stimmen. Nach der Freigabe erstellst du die Schreiben, sendest sie an die Familien und stornierst eine falsche Rechnung.",
+      "Ein Monatslauf rechnet einen Monat für die gewählten Schulen nach den gültigen Verträgen ab. Der Beitrag eines Kindes kommt aus der Preisliste: als Summe der gebuchten Wochentage oder als Staffel nach Tagen pro Woche. Es zählt der Vertrag, nicht die Anwesenheit. Vor der Freigabe prüfst du die Vorschau, änderst einzelne Rechnungen und schließt Rechnungen aus, die noch nicht stimmen. Nach der Freigabe erstellst du die Schreiben, sendest sie an die Familien und stornierst eine falsche Rechnung.",
     group: "anmeldeverwaltung",
     audience: "traeger",
     icon: "CalendarCheck",
@@ -20,13 +20,13 @@ export function traegerCareMonthsTopic(): HelpTopic {
       {
         title: "Preise festlegen",
         description:
-          "Jede Schule hat eigene Preise. Jedes Modul hat eine Preisform. `Je Wochentag`: Jeder gebuchte Tag hat einen Monatspreis, der Beitrag ist die Summe. `Nach Tagen je Woche`: Der Beitrag hängt nur von der Zahl der gebuchten Tage ab, zum Beispiel 3 Tage = 60,00 €.",
+          "Jede Schule hat eigene Preise. Jedes Modul hat eine Preisform. `Pro Wochentag`: Jeder gebuchte Tag hat einen Monatspreis, der Beitrag ist die Summe. `Nach Tagen pro Woche`: Der Beitrag hängt nur von der Zahl der gebuchten Tage ab, zum Beispiel 3 Tage = 60,00 €.",
         steps: [
           "Wähle `Preise und Ermäßigungen`. Der Reiter `Preisliste` ist schon offen.",
           "Wähle bei der Schule `Neue Preise`.",
           "Wähle bei `Gültig ab` den Monat, ab dem die Preise gelten.",
           "Wähle bei `Beitragsfreie Monate` die Monate ohne Beitrag, zum Beispiel `Aug`. Dann stellt der Monatslauf für diese Schule im August keine Rechnung aus.",
-          "Wähle je Modul `Je Wochentag` oder `Nach Tagen je Woche`.",
+          "Wähle pro Modul `Pro Wochentag` oder `Nach Tagen pro Woche`.",
           "Trage unter `1. Kind` die Monatspreise ein, zum Beispiel 16,00. Ein leeres Feld setzt keinen Preis. Dann gilt der Preis davor.",
           "Hat jedes weitere Kind einen eigenen Preis, trage ihn unter `Jedes weitere Kind` ein, zum Beispiel 12,50. Leer heißt: gleicher Preis wie beim 1. Kind. Lege unter `Ermäßigungen` eine Geschwisterregel mit `Preis laut Preisliste` an.",
           "Kostet ein Modul an jedem Tag gleich viel, trage nur Montag ein. Wähle dann `Mo-Preise für alle Tage übernehmen`.",
@@ -64,8 +64,8 @@ export function traegerCareMonthsTopic(): HelpTopic {
           "Wähle bei `Schulen` die Schulen. Alle sind schon gewählt. Eine Schule, die schon in einem offenen Lauf dieses Monats ist, lässt sich nicht wählen.",
           "Wähle bei `Rechnungsdatum` das Datum, das auf jeder Rechnung steht, zum Beispiel den 30.10. für Oktober. Lässt du das Feld leer, gilt der Tag der Freigabe.",
           "Wähle `Vorschau öffnen`.",
-          "Prüfe die Rechnungen. Je Schule steht eine Karte. Jede Rechnung hat je Modul eine Zeile mit den gebuchten Wochentagen.",
-          "Steht oben `Ohne Preis`, fehlt für einen gebuchten Wochentag oder eine Zahl von Tagen je Woche ein Preis. Wähle `Preis eintragen`. Danach kommt das Kind in den Lauf.",
+          "Prüfe die Rechnungen. Pro Schule steht eine Karte. Jede Rechnung hat pro Modul eine Zeile mit den gebuchten Wochentagen.",
+          "Steht oben `Ohne Preis`, fehlt für einen gebuchten Wochentag oder eine Zahl von Tagen pro Woche ein Preis. Wähle `Preis eintragen`. Danach kommt das Kind in den Lauf.",
           "Steht oben `Doppelter Vertrag – bitte prüfen`, rechnen zwei Verträge eines Kindes am selben Tag dasselbe Modul ab. Die Freigabe rechnet dieses Kind mit allen seinen Verträgen nicht ab, alle anderen Kinder schon. Nach der Freigabe steht es unter `Nicht abgerechnet – Doppelter Vertrag`. Beende oder ändere einen der Verträge. Starte dann einen neuen Monatslauf für diesen Monat. Er rechnet nur dieses Kind ab.",
           "Steht `Ein Kind an zwei Schulen`, hat ein Kind die Schule gewechselt und an jeder Schule eine eigene Kinderakte. Name, Geburtstag und Familie sind gleich, die Verträge laufen nacheinander. moto rechnet beide Verträge darum ab wie die eines Kindes. Sind es doch zwei Kinder, gib den Lauf nicht frei und schreib dem moto-Support.",
           "Steht `Kind hat schon eine Rechnung – bitte prüfen`, ist der Monat für das Kind schon abgerechnet: durch eine Rechnung oder einen Jahresbescheid eines anderen Vertrags. Der Lauf stellt keine zweite Rechnung aus. Wähle `Rechnung öffnen`, `Bescheid öffnen` oder `Jahresbescheid öffnen` und prüfe das Dokument. Stimmt es, musst du nichts tun. Eine falsche Rechnung stornierst du. Einen falschen Jahresbescheid änderst du mit einem neuen Jahreslauf. Öffne danach den Monatslauf wieder. Er rechnet das Kind jetzt ab.",
@@ -77,7 +77,7 @@ export function traegerCareMonthsTopic(): HelpTopic {
         description:
           "Du kannst eine Rechnung aus diesem Lauf nehmen. Sie kommt im nächsten Lauf dieses Monats wieder. Hat ein Kind eine Rechnung für die Betreuung und eine eigene `Mensa-Rechnung`, schließe jede für sich aus.",
         steps: [
-          "Wähle bei `Monatslauf` den Knopf `Prüfliste` und dann `PDF`, `Excel` oder `CSV`. Die Liste hat je Position eine Zeile. Rechnungsnummern stehen noch nicht darin.",
+          "Wähle bei `Monatslauf` den Knopf `Prüfliste` und dann `PDF`, `Excel` oder `CSV`. Die Liste hat pro Position eine Zeile. Rechnungsnummern stehen noch nicht darin.",
           "Nach der Freigabe heißt der Knopf bei `Monatslauf` `Herunterladen`. Die Datei enthält alle Rechnungen des Laufs mit ihren Nummern.",
           "Stimmt eine Rechnung noch nicht, wähle in ihrer Zeile das Menü mit den drei Punkten und dann `Ausschließen`.",
           "Prüfe im Fenster, welche Rechnung du ausschließt. Dort steht zum Beispiel `Mensa-Rechnung` und darunter, ob die Betreuungsrechnung des Kindes im Lauf bleibt. Steht die Mensa auf der Rechnung der Betreuung, wird sie mit ausgeschlossen.",

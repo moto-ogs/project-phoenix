@@ -236,7 +236,7 @@ function Figures({
             ? "–"
             : `Ø ${formatMetric("booked", together.booked)}`
         }
-        hint="alle gewählten Schulen, je Tag"
+        hint="alle gewählten Schulen, pro Tag"
         tone="blue"
         icon={<MotoConceptIcon concept={childrenConcept} />}
         loading={loading}
@@ -251,7 +251,7 @@ function Figures({
         hint={
           together.present === undefined
             ? "Keine Check-ins im Zeitraum"
-            : "mit Check-in, je Tag"
+            : "mit Check-in, pro Tag"
         }
         tone="blue"
         icon={<MotoConceptIcon concept={presentConcept} />}
@@ -356,7 +356,7 @@ function TraegerComparisonContent() {
       info={
         <>
           Hier vergleichst du deine Schulen über einen Zeitraum. moto zählt die
-          Wochentage im Zeitraum. „Ø“ ist der Durchschnitt je Tag. Unter den
+          Wochentage im Zeitraum. „Ø“ ist der Durchschnitt pro Tag. Unter den
           Schulen stehen der Schnitt der Schulen und alle Schulen zusammen. Eine
           Schule ohne Zahl hat „–“, etwa ohne Platzgrenze oder ohne Check-in. Im
           Drei-Punkte-Menü unter „Herunterladen“ bekommst du die Tabelle mit den
@@ -535,7 +535,7 @@ function TraegerComparisonContent() {
       </SectionCard>
       <DataTable
         heading={{
-          title: "Kennzahlen je Schule",
+          title: "Kennzahlen pro Schule",
           level: 2,
           action: (
             <MultiSelect

@@ -34,7 +34,7 @@
     "consentDescription": "Bitte lies die Zustimmungen sorgfältig. Erforderliche Zustimmungen müssen aktiv ausgewählt werden.",
     "offeringsOnlyKicker": "Betreuung",
     "offeringsOnlyTitle": "Angebote pro Kind",
-    "offeringsOnlyDescription": "Wähle je Kind die Betreuungsangebote und Wochentage für den neuen Zeitraum."
+    "offeringsOnlyDescription": "Wähle pro Kind die Betreuungsangebote und Wochentage für den neuen Zeitraum."
   },
   "fields": {
     "firstName": "Vorname",
@@ -195,7 +195,7 @@
     "weekdayMultiModeUniform": "Gleiche Heimwege für alle Betreuungstage",
     "weekdayMultiModeUniformHint": "Triff die Auswahl einmal; sie gilt dann für jeden Betreuungstag.",
     "weekdayMultiModeUniformConfirmTitle": "Auswahl für alle Tage übernehmen?",
-    "weekdayMultiModeUniformConfirmBody": "Du hast bisher unterschiedliche Heimwege je Betreuungstag gewählt. Wenn du eine gemeinsame Auswahl aktivierst, werden diese tageweisen Angaben gelöscht und du triffst die Auswahl neu.",
+    "weekdayMultiModeUniformConfirmBody": "Du hast bisher unterschiedliche Heimwege pro Betreuungstag gewählt. Wenn du eine gemeinsame Auswahl aktivierst, werden diese tageweisen Angaben gelöscht und du triffst die Auswahl neu.",
     "weekdayMultiModeUniformConfirmCta": "Löschen und fortfahren",
     "weekdayMultiModeUniformConfirmCancel": "Abbrechen",
     "departureCompanionLabel": "Mit welchem Kind?",
@@ -257,7 +257,7 @@
     "errorObject": "die Datei",
     "choose": "Datei auswählen",
     "chooseMore": "Weitere Datei auswählen",
-    "allowed": "Erlaubt: {types}, höchstens {max} MB je Datei.",
+    "allowed": "Erlaubt: {types}, höchstens {max} MB pro Datei.",
     "upTo": "Bis zu {count} Dateien.",
     "camera": "Auf dem Handy kannst du auch ein Foto machen.",
     "uploading": "Wird hochgeladen …",

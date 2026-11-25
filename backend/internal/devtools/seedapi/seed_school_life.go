@@ -65,7 +65,7 @@ func seedTeamWeekAppointments(rt *Runtime) error {
 	}{
 		{"Absprache Ferienprogramm", "OGS-Büro", "Ausflüge und Angebote für die Weihnachtsferien festlegen.", 0, "08:30", "09:15"},
 		{"Hospitation in der Klasse 2b", "Klasse 2b", "Gemeinsamer Blick auf die Lernzeit mit der Klassenlehrerin.", 1, "10:00", "11:00"},
-		{"Elterngespräche Sternengruppe", "Gruppenraum", "Drei Gespräche zur Eingewöhnung, je 20 Minuten.", 3, "15:30", "16:30"},
+		{"Elterngespräche Sternengruppe", "Gruppenraum", "Drei Gespräche zur Eingewöhnung. Jedes dauert 20 Minuten.", 3, "15:30", "16:30"},
 	}
 	for _, a := range appointments {
 		day := monday.AddDays(a.day).String()

@@ -65,7 +65,7 @@ func TestKeyDateReportRecordsPrintACardPerSchoolDistrictAndTotal(t *testing.T) {
 		lines[field.Label] = field.Value
 	}
 	assert.Equal(t, "10 von 40 belegt · 30 frei", lines["Plätze"])
-	assert.Equal(t, "2 · – Kinder je Person", lines["Personal"], "no ratio without the figure")
+	assert.Equal(t, "2 · – Kinder pro Person", lines["Personal"], "no ratio without the figure")
 	require.Len(t, school.Subs, 1)
 	require.Len(t, school.Subs[0].Fields, 1)
 	assert.Equal(t, "Bis 16 Uhr", school.Subs[0].Fields[0].Label)
@@ -109,7 +109,7 @@ func TestKeyDateExportIncludesReferenceDatesAndAttendanceCoverage(t *testing.T) 
 	for _, column := range doc.Columns {
 		labels[column.Label] = true
 	}
-	assert.True(t, labels["Kinder je Person"])
+	assert.True(t, labels["Kinder pro Person"])
 	var found bool
 	for _, row := range doc.Rows {
 		if len(row.Values) == 0 {
@@ -162,7 +162,7 @@ func TestKeyDateExportIncludesReferenceDatesAndAttendanceCoverage(t *testing.T) 
 	defer func() { require.NoError(t, shared.Close()) }()
 	content, err := io.ReadAll(shared)
 	require.NoError(t, err)
-	for _, value := range []string{"2026-10-15", "2026-11-15", "2026-08-01", "2026-09-01", "Frühere Tage fehlen.", "Kinder je Person"} {
+	for _, value := range []string{"2026-10-15", "2026-11-15", "2026-08-01", "2026-09-01", "Frühere Tage fehlen.", "Kinder pro Person"} {
 		assert.Contains(t, string(content), value)
 	}
 }

@@ -11,7 +11,7 @@ export function traegerHolidayWishTopic(): HelpTopic {
     title: "Ferienwunsch aus der OGS-Anmeldung",
     question: "Wie bekommen Kinder mit Ferienwunsch Vorrang?",
     summary:
-      "Eltern geben in der OGS-Anmeldung an, ob ihr Kind in den Ferien Betreuung braucht. Du schaltest je Ferienzeitraum ein, dass dieser Ferienwunsch zählt.",
+      "Eltern geben in der OGS-Anmeldung an, ob ihr Kind in den Ferien Betreuung braucht. Du schaltest pro Ferienzeitraum ein, dass dieser Ferienwunsch zählt.",
     group: "anmeldeverwaltung",
     audience: "traeger",
     icon: "Sun",

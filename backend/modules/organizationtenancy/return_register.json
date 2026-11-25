@@ -13,7 +13,7 @@
     {
       "name": "JSON Lines",
       "reference": "https://jsonlines.org",
-      "use": "Eine Datei \u003cSchema\u003e.\u003cTabelle\u003e.jsonl je Tabelle, ein JSON-Objekt je Zeile"
+      "use": "Eine Datei \u003cSchema\u003e.\u003cTabelle\u003e.jsonl pro Tabelle, ein JSON-Objekt pro Zeile"
     },
     {
       "name": "UTF-8",
@@ -52,7 +52,7 @@
   "packages": [
     {
       "kind": "school",
-      "description": "Alle Daten einer Schule und die Daten ihres Trägers. Eine Datei je Tabelle."
+      "description": "Alle Daten einer Schule und die Daten ihres Trägers. Eine Datei pro Tabelle."
     },
     {
       "kind": "organization",
@@ -90,7 +90,7 @@
         "school",
         "organization"
       ],
-      "description": "Die Zeilen einer Tabelle. Ein JSON-Objekt je Zeile, die Schlüssel sind die Felder aus model.json."
+      "description": "Die Zeilen einer Tabelle. Ein JSON-Objekt pro Zeile, die Schlüssel sind die Felder aus model.json."
     },
     {
       "path": "objects/\u003cNummer\u003e",
@@ -120,7 +120,7 @@
       "packages": [
         "organization"
       ],
-      "description": "Die eingereichten SEPA-Lastschriftdateien (PAIN.008), je Datei Original oder rekonstruiert."
+      "description": "Die eingereichten SEPA-Lastschriftdateien (PAIN.008). Jede Datei ist entweder das Original oder wurde rekonstruiert."
     }
   ],
   "values": [

@@ -103,8 +103,8 @@ const OCCUPANCY_SECTIONS: readonly StatisticsReportSection[] = ["occupancy"];
 type CourseView = "by-course" | "by-child";
 
 const COURSE_VIEW_ITEMS: readonly { value: CourseView; label: string }[] = [
-  { value: "by-course", label: "Je Kurs" },
-  { value: "by-child", label: "Je Kind" },
+  { value: "by-course", label: "Pro Kurs" },
+  { value: "by-child", label: "Pro Kind" },
 ];
 
 /** Fehlendes Recht ist ein Zustand mit eigener Seite, kein Ladefehler. */
@@ -131,8 +131,8 @@ function retainAvailableValues(
 const EXPORT_CONTENT: Record<StatisticsExportSection, string> = {
   attendance: "die Kinder- und Gruppenzahlen",
   rooms: "die Auslastung der Räume",
-  courses: "die Teilnahme je Kurs",
-  "course-students": "die Kurse je Kind",
+  courses: "die Teilnahme pro Kurs",
+  "course-students": "die Kurse pro Kind",
   occupancy: "die Zahlen nach Uhrzeit",
 };
 
@@ -815,8 +815,8 @@ export default function StatisticsPage() {
       title: "Kurse",
       hint:
         courseView === "by-course"
-          ? "Eine Zeile je Kurs. Offen sind Termine, die noch nicht abgeschlossen wurden; sie verändern die Quote nicht. Nur zur Information, hier wird nichts geändert."
-          : "Eine Zeile je Kind und Kurs. Offen sind Termine, die noch nicht abgeschlossen wurden. Ein Klick auf den Namen öffnet die Detailseite des Kindes.",
+          ? "Eine Zeile pro Kurs. Offen sind Termine, die noch nicht abgeschlossen wurden; sie verändern die Quote nicht. Nur zur Information, hier wird nichts geändert."
+          : "Eine Zeile pro Kind und Kurs. Offen sind Termine, die noch nicht abgeschlossen wurden. Ein Klick auf den Namen öffnet die Detailseite des Kindes.",
     },
     "care-times": { title: "Soll und Ist", hint: "" },
     occupancy: {
@@ -827,7 +827,7 @@ export default function StatisticsPage() {
       title: "Räume",
       hint:
         data && !data.room_history_disabled
-          ? `Raumdaten können höchstens ${data.room_data_days} Tage zurückreichen (ab ${formatDate(data.room_data_from)}). Je Kind kann die Frist kürzer sein.`
+          ? `Raumdaten können höchstens ${data.room_data_days} Tage zurückreichen (ab ${formatDate(data.room_data_from)}). Pro Kind kann die Frist kürzer sein.`
           : "",
     },
   }[view];
@@ -1134,7 +1134,7 @@ export default function StatisticsPage() {
               <DataTable
                 columns={groupColumns}
                 mobileScroll={{
-                  reason: "Anwesenheitszahlen je Gruppe zum Vergleichen",
+                  reason: "Anwesenheitszahlen pro Gruppe zum Vergleichen",
                 }}
                 rows={data.groups}
                 getRowKey={(row) => row.group_id}
@@ -1152,7 +1152,7 @@ export default function StatisticsPage() {
               <DataTable
                 columns={studentColumns}
                 mobileScroll={{
-                  reason: "Anwesenheitszahlen je Kind zum Vergleichen",
+                  reason: "Anwesenheitszahlen pro Kind zum Vergleichen",
                 }}
                 rows={data.students}
                 getRowKey={(row) => row.student_id}
@@ -1188,7 +1188,7 @@ export default function StatisticsPage() {
                     <DataTable
                       columns={courseColumns}
                       mobileScroll={{
-                        reason: "Termine und Teilnahme je Kurs zum Vergleichen",
+                        reason: "Termine und Teilnahme pro Kurs zum Vergleichen",
                       }}
                       rows={data.courses}
                       getRowKey={(row) => row.course_id}
@@ -1206,7 +1206,7 @@ export default function StatisticsPage() {
                     <DataTable
                       columns={courseStudentColumns}
                       mobileScroll={{
-                        reason: "Teilnahme je Kind und Kurs zum Vergleichen",
+                        reason: "Teilnahme pro Kind und Kurs zum Vergleichen",
                       }}
                       rows={data.course_students}
                       getRowKey={(row) => `${row.student_id}-${row.course_id}`}
@@ -1241,14 +1241,14 @@ export default function StatisticsPage() {
                     <div className="mb-3">
                       <Alert
                         type="info"
-                        message={`Raumdaten können erst ab ${formatDate(data.room_data_from)} vorhanden sein. Je Kind kann die Frist kürzer sein.`}
+                        message={`Raumdaten können erst ab ${formatDate(data.room_data_from)} vorhanden sein. Pro Kind kann die Frist kürzer sein.`}
                       />
                     </div>
                   )}
                   <DataTable
                     columns={roomColumns}
                     mobileScroll={{
-                      reason: "Nutzung und Auslastung je Raum zum Vergleichen",
+                      reason: "Nutzung und Auslastung pro Raum zum Vergleichen",
                     }}
                     rows={data.rooms}
                     getRowKey={(row) => row.room_id}

@@ -27,7 +27,7 @@ export function dataManagementTopic(): HelpTopic {
       "In der Seitenleiste erreichst du jeden Bereich auch direkt unter `Datenverwaltung`.",
       "Der Info-Knopf neben dem Seitennamen erklärt kurz, was hierher gehört.",
       "Die Kacheln `Terminkategorien`, `Planungsspuren`, `Dienstarten` und `Abwesenheitsarten` sind kurze Stammdaten-Listen.",
-      "Unter `Abwesenheitsarten` stehen Arten mit `Vom Träger`. Name, Kontingent und Verfall legt dein Träger fest. Deine Schule kann so eine Art mit `Nicht mehr anbieten` ausschalten. Oder sie erlaubt hier weniger Tage je Person und Jahr.",
+      "Unter `Abwesenheitsarten` stehen Arten mit `Vom Träger`. Name, Kontingent und Verfall legt dein Träger fest. Deine Schule kann so eine Art mit `Nicht mehr anbieten` ausschalten. Oder sie erlaubt hier weniger Tage pro Person und Jahr.",
     ],
     differences: [
       "Du siehst weniger Kacheln als eine Kollegin? Jede Kachel hängt an einem eigenen Recht.",

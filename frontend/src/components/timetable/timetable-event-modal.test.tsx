@@ -2259,7 +2259,7 @@ describe("TimetableEventModal", () => {
       ),
     );
     expect(
-      screen.queryByText("Besetzung je Wochentag wird ersetzt"),
+      screen.queryByText("Besetzung pro Wochentag wird ersetzt"),
     ).not.toBeInTheDocument();
   });
 

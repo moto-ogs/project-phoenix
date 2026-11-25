@@ -173,7 +173,7 @@ function PriceListPage() {
   return (
     <TenantPage
       title={billingAreaTitle("preise")}
-      info="Hier legst du die Monatspreise fest. Jede Schule hat eigene Preise, je Modul und gebuchtem Wochentag. Neue Preise gelten ab dem 1. eines Monats. Ferienpreise legst du im Ferienzeitraum fest."
+      info="Hier legst du die Monatspreise fest. Jede Schule hat eigene Preise, pro Modul und gebuchtem Wochentag. Neue Preise gelten ab dem 1. eines Monats. Ferienpreise legst du im Ferienzeitraum fest."
       stats={
         data && modules > 0 ? (
           <TenantPageStats

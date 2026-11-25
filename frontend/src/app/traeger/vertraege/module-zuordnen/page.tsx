@@ -249,7 +249,7 @@ export default function TraegerOfferingCorrectionPage() {
                     : file.name}
                 </span>
               ) : (
-                "Eine CSV-Datei mit einer Zeile je Vertrag, Wochentag und bisherigem Modul."
+                "Eine CSV-Datei mit einer Zeile pro Vertrag, Wochentag und bisherigem Modul."
               )
             }
             action={

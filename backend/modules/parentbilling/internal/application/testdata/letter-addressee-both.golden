@@ -459,7 +459,7 @@ Telefon: 07231 1234
 E-Mail: abrechnung@example.org
 für die Betreuung von Mia Beispiel an der Grundschule Ispringen setzen wir den Beitrag für 01.08.2030 bis 31.07.2031 fest.
 I. Berechnung
-Je Berechnungsgrundlage und Zeitraum mit gleichem Monatsbetrag eine Zeile.
+Pro Berechnungsgrundlage und Zeitraum mit gleichem Monatsbetrag eine Zeile.
 Betreuung bis 16:30 Uhr (Di), 01.08.2030 bis 31.07.2031, 12 × 45,50 € = 546,00 €
 Gesamtbetrag = 546,00 €
 II. Abrechnung
@@ -487,7 +487,7 @@ Telefon: 07231 1234
 E-Mail: abrechnung@example.org
 für die Betreuung von Mia Beispiel an der Grundschule Ispringen ändern wir den Bescheid MB-2030-0000 vom 20.08.2030. Dieser Bescheid gilt ab jetzt für die genannten Monate. Die Spalte „bisher“ zeigt, was der Bescheid MB-2030-0000 festgesetzt hat.
 I. Berechnung
-Je Berechnungsgrundlage und Zeitraum mit gleichem Monatsbetrag eine Zeile.
+Pro Berechnungsgrundlage und Zeitraum mit gleichem Monatsbetrag eine Zeile.
 Betreuung bis 16:30 Uhr (Di), 01.08.2030 bis 31.07.2031, 12 × 45,50 €, bisher 12 × 0,00 € = bisher 0,00 €, neu 546,00 €, 0,00 €
 Bisher festgesetzt = 0,00 €
 Zu-/Abgang = 0,00 €

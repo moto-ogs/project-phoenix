@@ -993,9 +993,9 @@ function VertretungContent() {
         >
           {/* Die Tagesleiste steht in der Kontextzeile, nicht zwischen den
             Pfeilen: sie wählt einen Tag INNERHALB der Woche, die oben schon
-            benannt ist, und trägt je Tag die offenen Lücken. In der
+            benannt ist, und trägt pro Tag die offenen Lücken. In der
             Wochenansicht entfällt die Zeile: eine Tagesauswahl hätte dort
-            keine sichtbare Wirkung, die Lücken je Tag zeigen die Kopfzeilen
+            keine sichtbare Wirkung, die Lücken pro Tag zeigen die Kopfzeilen
             der Wochenliste. */}
           {weekDays.map((day) => {
             const iso = toISODate(day);
@@ -1124,7 +1124,7 @@ function VertretungContent() {
             WeeklyCalendarGrid bringt die mobile Tagesauswahl selbst mit
             (eigener Tagesstreifen, alle übrigen Spalten unter sm verborgen),
             deshalb braucht es hier keine zweite Umschaltmechanik. In der
-            Wochenansicht bekommt es eine Spalte je Betreuungstag. */}
+            Wochenansicht bekommt es eine Spalte pro Betreuungstag. */}
         {/* Der Dienstplan-Hinweis steht über dem Raster: er betrifft den Plan,
             nicht eine Lücke der Liste, und bleibt so am Rechner sichtbar,
             ohne die Liste nach unten zu schieben. Am Telefon folgt er der

@@ -239,7 +239,7 @@ export default function TraegerContractChildLinkPage() {
             <div ref={focusOn(0)}>
               <SectionCard
                 title="Datei wählen"
-                description="Eine CSV-Datei mit einer Zeile je Vertrag und zwei Spalten: Vertragsnummer und Nummer der Kinderakte."
+                description="Eine CSV-Datei mit einer Zeile pro Vertrag und zwei Spalten: Vertragsnummer und Nummer der Kinderakte."
                 action={
                   <Button
                     type="button"

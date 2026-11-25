@@ -26,6 +26,8 @@ Diese Zielgruppenbeschreibung ist intern. Sie taucht nie in Commits, PR-Texten, 
    `scripts/check-du-form.mjs` (in `pnpm run check` und `check-changed.mjs`) meldet „Sie“, „Ihnen“ und „Ihr…“ im Satz. Nur ein Wortlaut, den die Ausnahmen der ADR binden, bekommt direkt am Text den Kommentar `sie-anrede-erlaubt (ADR 0294): <Grund>`; ein JSON-Schlüssel einen Eintrag in `JSON_EXCEPTIONS` des Skripts.
 8. **Weglassen schlägt Erklären.** Erklärtext, der keine Entscheidung oder Handlung verändert, fliegt raus. Eine Karte braucht selten mehr als einen Satz unter der Überschrift.
 
+9. **„Pro“ bei Mengen und Aufteilungen.** Schreibe „pro Kind“, „pro Schule“ und „pro Tag“. „Je nach“, „jeweils“ und „je …, desto …“ bleiben grammatisch richtig.
+
 ## Selbsttest vor dem Abschluss
 
 Würde eine gestresste Betreuungskraft mit dem Handy in der Hand nach 3 Sekunden wissen, (a) was los ist und (b) was sie jetzt tippen soll? Wenn nein: kürzen und vereinfachen.

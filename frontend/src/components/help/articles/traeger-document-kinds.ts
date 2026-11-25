@@ -13,7 +13,7 @@ export function traegerDocumentKindsTopic(): HelpTopic {
     question:
       "Wie lege ich fest, ob Familien eine Rechnung oder einen Bescheid bekommen?",
     summary:
-      "Je Leistung wählst du das Schreiben: Rechnung, Gebührenbescheid oder bei den Ferien die Bestätigung und Rechnung. Ein Gebührenbescheid braucht deine Rechtsbehelfsbelehrung.",
+      "Pro Leistung wählst du das Schreiben: Rechnung, Gebührenbescheid oder bei den Ferien die Bestätigung und Rechnung. Ein Gebührenbescheid braucht deine Rechtsbehelfsbelehrung.",
     group: "konfiguration",
     audience: "traeger",
     icon: "ClipboardList",
