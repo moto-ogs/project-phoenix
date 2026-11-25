@@ -5,6 +5,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { StatCard } from "~/components/ui/stat-card";
 import { Button } from "~/components/ui/button";
+import { TOUCH_HIT_AREA } from "~/components/ui/button-styles";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
@@ -80,7 +81,15 @@ function isRequestFlowAbsence(absence: StaffAbsence): boolean {
   );
 }
 
-export function LeaveRequestsCard() {
+export function LeaveRequestsCard({
+  app = false,
+}: {
+  /**
+   * App (#8070): Zahlen und Anträge als Liste in der Karte statt Kacheln
+   * und Karten in der Karte; Zahlen ohne Antrag bleiben weg.
+   */
+  readonly app?: boolean;
+} = {}) {
   const currentTimestamp = useCurrentTimestamp();
   const [modalOpen, setModalOpen] = useState(false);
   const toast = useToast();
@@ -258,10 +267,15 @@ export function LeaveRequestsCard() {
     <>
       <SectionCard
         title="Urlaub"
-        description="Urlaubsanträge stellen, Status verfolgen und stornieren."
+        description={
+          app
+            ? undefined
+            : "Urlaubsanträge stellen, Status verfolgen und stornieren."
+        }
         // Ohne shrink-0 staucht die Flex-Spalte der Seite die Karte auf die
         // Kopfhöhe: unten fehlt der Innenabstand und die Kacheln (#4363).
         className="shrink-0"
+        inlineActions={app}
         actions={
           // min-h-13 ist die Höhe von Titel und Untertitel; so steht der
           // Knopf auf deren Mitte statt an der Oberkante.
@@ -272,17 +286,84 @@ export function LeaveRequestsCard() {
               size="md"
               onClick={() => setModalOpen(true)}
               disabled={loading || Boolean(load.failure)}
+              className={app ? TOUCH_HIT_AREA : undefined}
               tooltip="Öffnet ein Formular für einen neuen Urlaubsantrag."
             >
-              Urlaub beantragen
+              {app ? "Beantragen" : "Urlaub beantragen"}
             </Button>
           </div>
         }
-        bodyClassName="compact:mt-4 mt-5 max-sm:mt-4"
+        bodyClassName={app ? "mt-3" : "compact:mt-4 mt-5 max-sm:mt-4"}
       >
         <LoadErrorAlert error={afterWrite.error} />
         {load.failure ? (
           <LoadErrorAlert error={load.error} />
+        ) : app ? (
+          <ul className="-mb-1 divide-y divide-gray-100">
+            <AppFigureRow
+              label="Resturlaub"
+              hint={
+                quota
+                  ? `von ${quota.entitled_days + quota.carryover_days} Tagen für ${year}`
+                  : undefined
+              }
+              value={loading ? "–" : formatDayCount(remainingDays)}
+            />
+            {counts.reserved > 0 ? (
+              <AppFigureRow
+                label="Beantragt"
+                hint="wartet auf Antwort"
+                value={String(counts.reserved)}
+              />
+            ) : null}
+            {counts.approved > 0 ? (
+              <AppFigureRow
+                label="Genehmigt"
+                hint="kommende Tage"
+                value={String(counts.approved)}
+              />
+            ) : null}
+            {counts.declined > 0 ? (
+              <AppFigureRow
+                label="Abgelehnt"
+                hint="dieses Jahr"
+                value={String(counts.declined)}
+              />
+            ) : null}
+            {sortedQuestionedVacations.map((vacation) => (
+              <AbsenceRequestItem
+                key={vacation.id}
+                flat
+                absence={vacation}
+                currentTimestamp={currentTimestamp}
+                onCancel={handleCancel}
+                onResubmitted={handleResubmitted}
+                showResubmit
+              />
+            ))}
+            {requestMails.loadError ? (
+              <li className="py-3">
+                <LoadErrorAlert
+                  error={requestMails.loadError}
+                  actionLayout="responsive"
+                />
+              </li>
+            ) : null}
+            {recentVacations.map((vacation) => (
+              <AbsenceRequestItem
+                key={vacation.id}
+                flat
+                absence={vacation}
+                currentTimestamp={currentTimestamp}
+                onCancel={handleCancel}
+                mailCounts={
+                  vacation.status === "requested"
+                    ? requestMails.mails[vacation.id]
+                    : undefined
+                }
+              />
+            ))}
+          </ul>
         ) : (
           <>
             <div
@@ -418,7 +499,10 @@ function AbsenceRequestItem({
   onResubmitted,
   showResubmit = false,
   mailCounts,
+  flat = false,
 }: {
+  /** App: eine Zeile der Liste statt einer Karte in der Karte. */
+  readonly flat?: boolean;
   readonly absence: StaffAbsence;
   readonly currentTimestamp: number;
   readonly onCancel: (absence: StaffAbsence) => void;
@@ -435,7 +519,11 @@ function AbsenceRequestItem({
       new Date(absence.dateStart).getTime() > currentTimestamp);
 
   return (
-    <li className="moto-content-surface rounded-xl border px-4 py-3">
+    <li
+      className={
+        flat ? "py-3" : "moto-content-surface rounded-xl border px-4 py-3"
+      }
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-medium text-gray-800">
@@ -469,6 +557,7 @@ function AbsenceRequestItem({
               type="button"
               variant="ghost_danger"
               size="compact"
+              className={flat ? TOUCH_HIT_AREA : undefined}
               onClick={() => onCancel(absence)}
               tooltip="Zieht den Antrag zurück, auch genehmigten Urlaub. moto fragt vorher nach."
             >
@@ -560,5 +649,28 @@ function ResubmitAbsenceForm({
         </Button>
       </div>
     </div>
+  );
+}
+
+/** App: eine Zahl der Urlaubskarte als Listenzeile, Wert rechts. */
+function AppFigureRow({
+  label,
+  hint,
+  value,
+}: {
+  readonly label: string;
+  readonly hint?: string;
+  readonly value: string;
+}) {
+  return (
+    <li className="flex items-center justify-between gap-3 py-3">
+      <div className="min-w-0">
+        <p className="text-base leading-6 font-medium text-gray-900">{label}</p>
+        {hint ? <p className="text-sm text-gray-500">{hint}</p> : null}
+      </div>
+      <p className="shrink-0 text-base font-semibold text-gray-900 tabular-nums">
+        {value}
+      </p>
+    </li>
   );
 }
