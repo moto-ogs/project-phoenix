@@ -53,10 +53,10 @@ docker compose ps  # All three published ports must show 127.0.0.1
 If the Docker subnet pool is exhausted, use the
 [worktree-only network procedure](operations.md#new-managed-worktree).
 Install the frontend dependencies (`cd frontend && pnpm install --frozen-lockfile` inside Devbox).
-Start the native API in the foreground from the repository root:
+In a Devbox shell (`devbox shell`), start the native API in the foreground from the repository root:
 
 ```sh
-devbox run -- scripts/dev-native.sh backend sh -c 'mkdir -p ../tmp && go build -o ../tmp/revisit-api . && ../tmp/revisit-api migrate && PORT="127.0.0.1:$SERVER_HOST_PORT" exec ../tmp/revisit-api serve'
+scripts/dev-native.sh backend sh -c 'mkdir -p ../tmp && go build -o ../tmp/revisit-api . && ../tmp/revisit-api migrate && PORT="127.0.0.1:$SERVER_HOST_PORT" exec ../tmp/revisit-api serve'
 ```
 
 The reference browser is sandboxed **Google Chrome for Testing 158.0.8127.88**.
@@ -77,11 +77,11 @@ process. Keep the same prepared fixture and browser for the two sides of #8083.
 ### Prepare the fixture and repeat
 
 In a fresh stack, create the [standard seed](../getting-started.md). From the
-repository root with the local API running:
+repository root in another Devbox shell with the local API running:
 
 ```sh
-(umask 077; devbox run -- scripts/dev-native.sh backend sh -c 'go run ./cmd/devtools seed --email "$OPERATOR_EMAIL" --password "$OPERATOR_PASSWORD" --pin "$OGS_DEVICE_PIN" --url "$API_URL"' >tmp/revisit-seed.log 2>&1)
-devbox run -- scripts/perf-revisit.sh --prepare-day
+(umask 077; scripts/dev-native.sh backend sh -c 'go run ./cmd/devtools seed --email "$OPERATOR_EMAIL" --password "$OPERATOR_PASSWORD" --pin "$OGS_DEVICE_PIN" --url "$API_URL"' >tmp/revisit-seed.log 2>&1)
+scripts/perf-revisit.sh --prepare-day
 ```
 
 Prepare the day once. This simulates a full day in `vollbetrieb` without a clock

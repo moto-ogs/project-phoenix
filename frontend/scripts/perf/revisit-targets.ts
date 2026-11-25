@@ -676,8 +676,11 @@ function portals(f: RevisitFixture): Journey[] {
     [text("main tr,main li", "Frischeküche")],
   );
   const operatorPool = [orgs, schools, accounts, caterers];
+  // A partial failure still renders the school's row and the Summe header.
+  // Only the loaded row ends in its numeric total (including a genuine zero).
+  const schoolName = f.schoolName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const orders = pageStop("/", "Bestellzahlen der belieferten Schule", [
-    text("tbody tr", f.schoolName),
+    text("main tbody tr", `^${schoolName}\\s.*\\b\\d+$`),
     text("main th", "^Summe$"),
   ]);
   const account = pageStop(

@@ -22,6 +22,9 @@ import {
   type RequestCost,
 } from "./navigation-probe";
 import { measureRevisits } from "./revisit";
+import { revisitFixture } from "./revisit-access";
+import { installContentProbe } from "./revisit-content";
+import { revisitTargets } from "./revisit-targets";
 import { RequestRecorder } from "./recorder";
 import {
   INTENT_HOPS,
@@ -499,6 +502,30 @@ test("measure revisit: delayed loading probe", async ({ page }) => {
   const probe = await readProbe(page);
   expect(probe.fallbacks).toEqual(["progress-bar"]);
   expect(probe.mountedLoading).toBe(true);
+});
+
+test("measure revisit: reject a failed Caterer order row", async ({ page }) => {
+  const fixture = { ...revisitFixture(), schoolName: "Testschule" };
+  const orders = revisitTargets(fixture).find(
+    (journey) => journey.name === "konto-bestellungen",
+  )!.target.content;
+  await installContentProbe(page);
+  await page.route("http://localhost/", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: `<main><table>
+        <thead><tr><th>Schule</th><th>Summe</th></tr></thead>
+        <tbody><tr><td>Testschule</td><td id="sum">Nicht geladen</td></tr>
+        <tr><td>Andere Schule</td><td>12</td></tr></tbody>
+      </table></main>`,
+    }),
+  );
+  await page.goto("http://localhost/");
+  const ready = () =>
+    page.evaluate((content) => window.__revisit.matches(content), orders);
+  expect(await ready()).toBe(false);
+  await page.locator("#sum").evaluate((cell) => (cell.textContent = "0"));
+  expect(await ready()).toBe(true);
 });
 
 // Revisit shares the production server, throttle, network recorder and visible loading probe.
