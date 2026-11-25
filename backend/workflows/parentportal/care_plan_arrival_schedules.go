@@ -9,9 +9,9 @@ import (
 
 type ArrivalSchedules interface{ care.ArrivalSchedules }
 type ArrivalSchedulesCallbacks struct {
-	GetStudentArrivalExceptionForDate   func(ctx context.Context, id int64, date calendar.Date) (*ArrivalExceptionSnapshot, error)
-	GetStudentArrivalScheduleForWeekday func(ctx context.Context, id int64, weekday int) (*ArrivalScheduleSnapshot, error)
-	GetStudentArrivalSchedules          func(ctx context.Context, id int64) ([]*ArrivalScheduleSnapshot, error)
+	GetStudentArrivalExceptionsForDate       func(ctx context.Context, ids []int64, date calendar.Date) (map[int64]*ArrivalExceptionSnapshot, error)
+	GetWeeklySchedulesByStudentIDsAndWeekday func(ctx context.Context, ids []int64, weekday int) ([]*ArrivalScheduleSnapshot, error)
+	GetStudentArrivalSchedules               func(ctx context.Context, id int64) ([]*ArrivalScheduleSnapshot, error)
 }
 
 func NewArrivalSchedules(callbacks ArrivalSchedulesCallbacks) ArrivalSchedules {
@@ -20,11 +20,11 @@ func NewArrivalSchedules(callbacks ArrivalSchedulesCallbacks) ArrivalSchedules {
 
 type arrivalSchedules struct{ callbacks ArrivalSchedulesCallbacks }
 
-func (a arrivalSchedules) GetStudentArrivalExceptionForDate(ctx context.Context, id int64, date calendar.Date) (*care.ArrivalException, error) {
-	return a.callbacks.GetStudentArrivalExceptionForDate(ctx, id, date)
+func (a arrivalSchedules) GetStudentArrivalExceptionsForDate(ctx context.Context, ids []int64, date calendar.Date) (map[int64]*care.ArrivalException, error) {
+	return a.callbacks.GetStudentArrivalExceptionsForDate(ctx, ids, date)
 }
-func (a arrivalSchedules) GetStudentArrivalScheduleForWeekday(ctx context.Context, id int64, weekday int) (*care.ArrivalSchedule, error) {
-	return a.callbacks.GetStudentArrivalScheduleForWeekday(ctx, id, weekday)
+func (a arrivalSchedules) GetWeeklySchedulesByStudentIDsAndWeekday(ctx context.Context, ids []int64, weekday int) ([]*care.ArrivalSchedule, error) {
+	return a.callbacks.GetWeeklySchedulesByStudentIDsAndWeekday(ctx, ids, weekday)
 }
 func (a arrivalSchedules) GetStudentArrivalSchedules(ctx context.Context, id int64) ([]*care.ArrivalSchedule, error) {
 	return a.callbacks.GetStudentArrivalSchedules(ctx, id)

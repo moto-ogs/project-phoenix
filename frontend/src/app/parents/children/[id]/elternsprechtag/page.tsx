@@ -82,7 +82,6 @@ export default function ParentConferencePage({
     t("errorObject"),
     () => {
       void children.mutate();
-      void childFeatures.reload();
       void mutateConferences();
     },
   );

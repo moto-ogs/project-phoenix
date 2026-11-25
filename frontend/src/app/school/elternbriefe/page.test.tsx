@@ -49,7 +49,7 @@ vi.mock("~/lib/parent-announcements-api", async (importOriginal) => ({
 import { unavailableApiError } from "~/lib/api-error";
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { Announcement } from "~/lib/parent-announcements-api";
-import SchoolParentLettersPage from "./page";
+import SchoolParentLettersPage from "./page-content";
 import { SCHOOL_PARENT_LETTERS_BASE } from "~/lib/parent-announcements-api";
 import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
 

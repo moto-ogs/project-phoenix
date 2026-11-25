@@ -68,7 +68,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => navigation.params,
 }));
 
-import TraegerPayrollExportPage from "./page";
+import TraegerPayrollExportPage from "./page-content";
 
 // The month `back` months before the month of the test day.
 function monthBefore(back: number): { year: number; month: number } {

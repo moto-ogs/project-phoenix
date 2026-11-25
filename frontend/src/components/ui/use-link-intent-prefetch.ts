@@ -25,6 +25,7 @@ type IntentPrefetchProps = Pick<
   ComponentProps<"a">,
   | "onClick"
   | "target"
+  | "onPointerDown"
   | "onPointerEnter"
   | "onPointerLeave"
   | "onFocus"
@@ -45,6 +46,7 @@ export function useLinkIntentPrefetch({
   onClick,
   target,
   prefetch: allowed,
+  onPointerDown,
   onPointerEnter,
   onPointerLeave,
   onFocus,
@@ -89,17 +91,19 @@ export function useLinkIntentPrefetch({
       dataIntent.onClick();
       onClick?.(event);
     },
+    onPointerDown: (event: PointerEvent<HTMLAnchorElement>) => {
+      onPointerDown?.(event);
+      // A click is already navigating; the remaining hover hold must not
+      // begin another RSC request.
+      cancelHover();
+    },
     onPointerEnter: (event: PointerEvent<HTMLAnchorElement>) => {
       onPointerEnter?.(event);
       if (event.defaultPrevented || !canPrefetch) return;
       dataIntent.onPointerEnter(event);
-      if (prefetch) return;
-      if (event.pointerType === "mouse") {
-        cancelHover();
-        hoverTimer.current = setTimeout(startPrefetch, HOVER_PREFETCH_DELAY_MS);
-      } else {
-        startPrefetch();
-      }
+      if (prefetch || event.pointerType === "touch") return;
+      cancelHover();
+      hoverTimer.current = setTimeout(startPrefetch, HOVER_PREFETCH_DELAY_MS);
     },
     onPointerLeave: (event: PointerEvent<HTMLAnchorElement>) => {
       onPointerLeave?.(event);
@@ -110,7 +114,6 @@ export function useLinkIntentPrefetch({
       onTouchStart?.(event);
       if (!event.defaultPrevented && canPrefetch) {
         dataIntent.onTouchStart(event);
-        startPrefetch();
       }
     },
     onTouchMove: (event: React.TouchEvent<HTMLAnchorElement>) => {
@@ -135,7 +138,7 @@ export function useLinkIntentPrefetch({
     onFocus: (event: FocusEvent<HTMLAnchorElement>) => {
       onFocus?.(event);
       if (event.defaultPrevented) return;
-      startPrefetch();
+      if (event.currentTarget.matches(":focus-visible")) startPrefetch();
       dataIntent.onFocus();
     },
   };

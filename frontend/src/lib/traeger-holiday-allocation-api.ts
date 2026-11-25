@@ -84,7 +84,7 @@ export interface HolidayCriteriaRead {
   readonly version: string;
 }
 
-function criteriaReadFromBackend(
+export function criteriaReadFromBackend(
   data: traegerHolidayPeriodsContract.HolidayCriteriaCatalog,
 ): HolidayCriteriaRead {
   return { criteria: criteriaFromBackend(data), version: data.version };

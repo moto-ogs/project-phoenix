@@ -130,7 +130,7 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 
-import TraegerAbrechnungsvorgabenPage from "./page";
+import TraegerAbrechnungsvorgabenPage from "./page-content";
 
 const SIBLING: ContributionRule = {
   version: "v1",

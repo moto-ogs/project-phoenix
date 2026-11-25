@@ -62,4 +62,7 @@ type RequestShareVisibility interface {
 type RequestSharer interface {
 	ShareRequestInTx(ctx context.Context, accountID, studentID int64, requestType string, requestID int64, recipientProfileIDs []int64) error
 	LoadRequestShareVisibility(ctx context.Context, studentID int64) (RequestShareVisibility, error)
+	// LoadRequestShareVisibilities is the set read for children of one school:
+	// every child keeps its own shares and Familienschutz.
+	LoadRequestShareVisibilities(ctx context.Context, studentIDs []int64) (map[int64]RequestShareVisibility, error)
 }

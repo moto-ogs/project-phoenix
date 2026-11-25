@@ -657,7 +657,7 @@ export function TraegerShellProvider({
 // parent-scope NextAuth session. Used by app/parents/auth-guard.tsx
 // to feed the AppShell user/profile/logout machinery on the parent
 // portal. Cross-tenant ChildSummary data isn't carried here — the
-// dashboard fetches it directly via /api/parent/me/children.
+// dashboard reads it from the shared family-start snapshot.
 export function ParentShellProvider({
   children,
   accountName,

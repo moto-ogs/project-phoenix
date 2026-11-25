@@ -232,7 +232,14 @@ export async function downloadContractCorrectionList(): Promise<ContractCorrecti
 export async function fetchContractCorrectionLog(): Promise<
   ContractCorrectionLogEntry[]
 > {
-  const entries = await bffJson("org", "GET /traeger/contract-corrections/");
+  return mapContractCorrectionLog(
+    await bffJson("org", "GET /traeger/contract-corrections/"),
+  );
+}
+
+export function mapContractCorrectionLog(
+  entries: traegerContractCorrectionsContract.ContractCorrectionEntry[],
+): ContractCorrectionLogEntry[] {
   return (entries ?? []).map((entry) => ({
     file: entry.file,
     accountId: entry.account_id,

@@ -189,6 +189,20 @@ Do not publish Playwright error contexts, seed state, per-request URLs, session
 files or browser screenshots. A median must be **strictly below 150 ms** to
 meet the target; slow results remain valid evidence.
 
+## Parents: start cards
+
+Measure the children, feature flags and today's statuses together, separately
+from the profile, message counts and feeds. A cold, unseeded start reads
+`GET /parent/me/family-start` once at the browser and Go boundaries regardless
+of family size. Behind it, Go reads each school's children as one set: the
+statement count grows with the schools, not with the children of a school,
+pinned by the query budget `parent.me.family_start.http_positive_growth`.
+On a seeded document navigation, the protected layout and page
+share one Go read; hydration uses that family snapshot without a browser GET.
+Public pages receive no family seed. A child event narrows that request by `student_id`; a reconnect
+or an unqualified event reloads the family. Compare response-body bytes on the
+same seeded families, not the number of children returned by unrelated feeds.
+
 ## Parents and public enrollment: message payload
 
 The request catalog is complete on the server, including the German fallback.

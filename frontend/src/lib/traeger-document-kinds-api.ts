@@ -49,7 +49,7 @@ export const BILLING_SERVICE_LABEL: Readonly<Record<BillingService, string>> = {
 
 // A service this build does not know has no card and is left out; a choice
 // it does not know is left out of the choices.
-function overviewFromBackend(
+export function overviewFromBackend(
   body: traegerBillingDocumentKindsContract.DocumentKindOverview,
 ): DocumentKindOverview {
   return {

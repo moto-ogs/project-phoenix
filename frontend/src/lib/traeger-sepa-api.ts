@@ -111,7 +111,7 @@ export interface SepaMandateEvent {
   readonly importLine: number | null;
 }
 
-function creditorFromBackend(
+export function creditorFromBackend(
   creditor: traegerSepaCreditorContract.SEPACreditor,
 ): SepaCreditor {
   return {

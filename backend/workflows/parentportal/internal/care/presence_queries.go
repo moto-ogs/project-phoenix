@@ -8,6 +8,8 @@ import (
 // Attendance contains only the school-stay times visible to a guardian.
 // Device, staff, room and movement facts never cross this port.
 type Attendance struct {
+	// StudentID assigns the row of a set read to its child.
+	StudentID    int64
 	CheckInTime  time.Time
 	CheckOutTime *time.Time
 	// LeftForClass reports that this stay ended with "Geht zum Unterricht"

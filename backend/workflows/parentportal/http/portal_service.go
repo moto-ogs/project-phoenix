@@ -19,6 +19,8 @@ type PortalService interface {
 	// attachments this account may download, or 0 when it may not (#2890).
 	GuardianAnnouncementTenant(ctx context.Context, accountID, announcementID int64) (int64, error)
 
+	FamilyStart(ctx context.Context, accountID int64, studentID *int64) (*parentService.FamilyStart, error)
+
 	// ListChildrenForAccount returns every child linked to any
 	// guardian profile owned by the account, across every active
 	// tenant mapping. Sorted by school then by name.

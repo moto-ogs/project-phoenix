@@ -1,95 +1,21 @@
-"use client";
+import { catalogPhase } from "~/lib/traeger/holiday-seed-reads.server";
+import { Suspense } from "react";
+import { SWRServerSeed } from "~/lib/swr/server-seed";
+import { traegerPageSeed } from "~/lib/traeger/page-seed.server";
+import TraegerCatalogOfferingPage from "./page-content";
 
-// Ein Betreuungsangebot einer Anmeldephase des Trägers ändern (#4704).
-
-import { useParams, useRouter } from "next/navigation";
-import { CatalogOfferingForm } from "~/components/traeger/catalog-offering-form";
-import { phaseStatusBadge } from "~/components/traeger/catalog-format";
-import {
-  CatalogOfferingSummary,
-  offeringStatus,
-} from "~/components/traeger/catalog-phase-cards";
-import { useTraegerCatalogPhase } from "~/components/traeger/use-traeger-catalog";
-import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
-import { useToast } from "~/contexts/ToastContext";
-import { revalidateOrThrow, useInvalidateFamily } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/traeger-keys";
-import { updateTraegerOffering } from "~/lib/traeger-catalog-api";
-import { traegerPath } from "~/lib/traeger-url";
-
-export default function TraegerCatalogOfferingPage() {
-  const router = useRouter();
-  const params = useParams<{ id: string; offeringId: string }>();
-  const id = params?.id ?? "";
-  const offeringId = params?.offeringId ?? "";
-  const phaseRead = useTraegerCatalogPhase(id);
-  const { data: phase, loadError } = phaseRead;
-  const invalidate = useInvalidateFamily();
-  const { success } = useToast();
-  const phaseHref = traegerPath(`/traeger/anmeldephasen/${id}`);
-  const offering = phase?.offerings.find((entry) => entry.id === offeringId);
-  const editable = Boolean(
-    offering && !offering.withdrawnAt && !phase?.withdrawnAt,
-  );
-
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const { seed, claims } = traegerPageSeed([catalogPhase(id)]);
   return (
-    <TenantPage
-      title={offering?.draft.fields.name ?? "Betreuungsangebot"}
-      info="Deine Änderung erreicht die Schulen erst, wenn du überträgst. Hat eine Schule ein Feld selbst geändert, behält sie ihren Wert."
-      back
-      backHref={phaseHref}
-      backLabel={
-        phase ? `Zurück zu „${phase.draft.name}“` : "Zurück zur Anmeldephase"
-      }
-      actions={
-        phase && offering && !editable ? (
-          // A withdrawn phase withdraws its offerings too.
-          <StatusBadge
-            {...(offering.withdrawnAt
-              ? offeringStatus(offering)
-              : phaseStatusBadge(phase))}
-          />
-        ) : null
-      }
-      error={loadError}
-      loading={!loadError && !phase}
-      empty={
-        phase && !offering ? { title: "Dieses Angebot gibt es nicht." } : null
-      }
-    >
-      {phase && offering && editable ? (
-        <CatalogOfferingForm
-          key={offering.id}
-          source={{
-            opening: offering.id,
-            data: offering,
-            // Reads the phase again and rejects when that fails (ADR 0311).
-            reload: async () =>
-              (await revalidateOrThrow(phaseRead)).offerings.find(
-                (entry) => entry.id === offering.id,
-              ),
-          }}
-          saveLabel="Speichern"
-          onSave={(draft, version) =>
-            updateTraegerOffering(offering.id, draft, version ?? "")
-          }
-          onCancel={() => router.push(phaseHref)}
-          onSaved={() => {
-            void invalidate(traegerKeys.catalogFamily);
-            success(
-              "Gespeichert. Die Schulen bekommen die Änderung, wenn du überträgst.",
-            );
-            router.push(phaseHref);
-          }}
-        />
-      ) : null}
-      {phase && offering && !editable ? (
-        <CatalogOfferingSummary
-          offering={offering}
-          phaseWithdrawn={Boolean(phase.withdrawnAt)}
-        />
-      ) : null}
-    </TenantPage>
+    <Suspense fallback={null}>
+      <SWRServerSeed seed={seed} claims={claims} render>
+        <TraegerCatalogOfferingPage />
+      </SWRServerSeed>
+    </Suspense>
   );
 }

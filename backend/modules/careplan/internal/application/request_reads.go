@@ -18,7 +18,7 @@ type RequestReads struct {
 }
 
 func (s *RequestReads) GetPendingForStudent(ctx context.Context, studentID int64) (*carerequests.Request, []carerequests.DiffEntry, error) {
-	rows, err := s.Records.ListCareRequests(ctx, studentID, []string{"weekly_schedule"}, []string{"pending"}, time.Time{})
+	rows, err := s.Records.ListCareRequests(ctx, studentID, []string{carerequests.KindWeeklySchedule}, []string{carerequests.StatusPending}, time.Time{})
 	if err != nil || len(rows) == 0 {
 		return nil, nil, err
 	}

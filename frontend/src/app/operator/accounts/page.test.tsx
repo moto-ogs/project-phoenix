@@ -106,7 +106,7 @@ vi.mock("~/components/teachers/caregiver-capability-modal", () => ({
     ) : null,
 }));
 
-import OperatorAccountsPage from "./page";
+import OperatorAccountsPage from "./page-content";
 import {
   mockOrg,
   mockSchool,

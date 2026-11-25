@@ -292,10 +292,14 @@ export async function setFamilyDebtorNumber(
  * and check it before the backend does, and whom they name (#7007).
  */
 export async function fetchDebtorNumberSettings(): Promise<DebtorNumberSettings> {
-  const raw = await bffJson(
-    "org",
-    "GET /traeger/billing-families/debtor-number-format",
+  return mapDebtorNumberSettings(
+    await bffJson("org", "GET /traeger/billing-families/debtor-number-format"),
   );
+}
+
+export function mapDebtorNumberSettings(
+  raw: traegerBillingFamiliesContract.debtorNumberSettings,
+): DebtorNumberSettings {
   return {
     format: debtorNumberFormatOf(raw),
     // "payer" is the backend's default scope (DebtorNumberScopePayer).

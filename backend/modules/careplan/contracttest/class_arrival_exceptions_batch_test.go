@@ -55,10 +55,10 @@ func (f *classArrivalBatchFixture) report(t *testing.T, ctx context.Context, cla
 	var reportErr error
 	_ = testpkg.TenantCommand0(t, ctx, f.db, func(txCtx context.Context) error {
 		reportErr = f.service.CreateOrReclaimExceptionsForClass(txCtx, class, studentIDs, f.date, &f.clock, nil, f.staffID, func() (int64, error) { return f.staffID, nil })
+		rows, err := f.service.GetStudentArrivalExceptionsForDate(txCtx, studentIDs, f.date)
+		require.NoError(t, err)
 		for _, id := range studentIDs {
-			row, err := f.service.GetStudentArrivalExceptionForDate(txCtx, id, f.date)
-			require.NoError(t, err)
-			written[id] = row != nil
+			written[id] = rows[id] != nil
 		}
 		return errRollback
 	})
@@ -158,9 +158,8 @@ func TestClassArrivalBatchHandlesEachChildBeforeLockingTheNext(t *testing.T) {
 	for range ids {
 		want = append(want, perChild...)
 	}
-	// report's own check reads each child's day once more afterwards.
-	for range ids {
-		want = append(want, "read")
-	}
+	// report's own check reads the children's day once more afterwards, in
+	// one set read.
+	want = append(want, "read")
 	assert.Equal(t, want, steps)
 }

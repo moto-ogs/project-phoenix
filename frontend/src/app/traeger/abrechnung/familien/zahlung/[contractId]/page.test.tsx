@@ -57,7 +57,7 @@ vi.mock("~/components/traeger/family-billing-form", () => ({
     );
   },
 }));
-import Page from "./page";
+import Page from "./page-content";
 
 const family: FamilyBilling = {
   id: "5",

@@ -32,7 +32,8 @@ export const parentKeys = {
   ) =>
     `parent-meal-participation-${encodeURIComponent(schoolId)}-${encodeURIComponent(studentId)}-${from}-${to}-${asOf}`,
 
-  shellChildren: () => "parent-shell-children",
+  familyStart: (day: string) => `parent-family-start-${day}`,
+  isFamilyStart: (key: string) => key.startsWith("parent-family-start-"),
   // Badges of the parents shell (useUnreadCount).
   messagesUnreadCount: () => "parent-messages-unread-count",
   newsUnreadCount: () => "parent-news-unread-count",
@@ -41,10 +42,6 @@ export const parentKeys = {
     firstPage: () => "parent-notification-feed-first-page",
     unreadCount: () => "parent-notification-feed-unread",
   },
-  isChildResource: (key: string) =>
-    key === "parent-shell-children" ||
-    key.startsWith("parent-features-") ||
-    key.startsWith("parent-today-"),
   /**
    * What a staff decision or a parent write on a child changes besides the
    * shared child resources: its care state and offerings, its courses and
@@ -78,12 +75,6 @@ export const parentKeys = {
     key.startsWith("parent-") && !key.startsWith("parent-profile"),
   relationshipSet: (children: readonly parentMeContract.ChildResponse[]) =>
     relationships(children),
-  features: (
-    children: readonly parentMeContract.ChildResponse[],
-    day: string,
-  ) => `parent-features-${relationships(children)}-${day}`,
-  today: (children: readonly parentMeContract.ChildResponse[], day: string) =>
-    `parent-today-${relationships(children)}-${day}`,
   /** Appointments from `day` over `days` days; the start page reads 90. */
   calendar: (day: string, days = 90) => `parent-calendar-${day}-${days}`,
   calendarFamily: "parent-calendar-",
