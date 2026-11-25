@@ -44,6 +44,7 @@ function card(
         withdrawal={withdrawal}
         contact={contact}
         letterheadText={letterheadText}
+        refreshLetterhead={vi.fn()}
         canEdit={canEdit}
         onSaved={() => Promise.resolve()}
       />
@@ -73,6 +74,7 @@ function Page({
         }}
         contact={CONTACT}
         letterheadText={LETTERHEAD}
+        refreshLetterhead={vi.fn()}
         canEdit
         onSaved={onSaved}
       />
@@ -129,7 +131,9 @@ describe("TraegerWithdrawalContactCard", () => {
     // The contact person's name is not the addressee, and the card says so.
     expect(preview().queryByText("Petra Lindner")).not.toBeInTheDocument();
     expect(
-      preview().getByText(/Der Name der Ansprechperson steht nicht darin\./),
+      preview().getByText(
+        /Der Name der Ansprechperson steht nicht in der Belehrung\./,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -159,8 +163,10 @@ describe("TraegerWithdrawalContactCard", () => {
     link.addEventListener("click", (event) => event.preventDefault());
     fireEvent.click(link);
     globalThis.dispatchEvent(new Event("focus"));
-    globalThis.dispatchEvent(new Event("focus"));
     expect(refreshLetterhead).toHaveBeenCalledTimes(1);
+    // Back before saving there: the next return reads it again.
+    globalThis.dispatchEvent(new Event("focus"));
+    expect(refreshLetterhead).toHaveBeenCalledTimes(2);
   });
 
   it("asks for the letterhead when it holds no name or no address", () => {

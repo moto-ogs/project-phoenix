@@ -128,6 +128,7 @@ function SenderField({
 }: Readonly<{
   sender: WithdrawalSender;
   canEdit: boolean;
+  /** Marks that the letterhead tab was opened, by click or middle click. */
   onOpenLetterhead: () => void;
 }>) {
   const label =
@@ -150,6 +151,7 @@ function SenderField({
             aria-label={label}
             tooltip="Öffnet Briefkopf und Vorlagen in einem neuen Tab."
             onClick={onOpenLetterhead}
+            onAuxClick={onOpenLetterhead}
           >
             {label}
             <ExternalLink className="size-3.5" aria-hidden="true" />
@@ -157,7 +159,7 @@ function SenderField({
         ) : undefined
       }
     >
-      {sender.name === "" ? (
+      {sender.source === "missing" ? (
         "–"
       ) : (
         <>
@@ -201,7 +203,7 @@ export function TraegerWithdrawalContactCard({
    * Reads the letterhead again. Runs when the person comes back from the
    * letterhead tab, so the preview shows what they changed there.
    */
-  refreshLetterhead?: () => Promise<unknown>;
+  refreshLetterhead: () => Promise<unknown>;
   canEdit: boolean;
   /** Reads the section again after a refused save; rejects on failure. */
   reload: () => Promise<TraegerSection<TraegerWithdrawalContact>>;
@@ -255,13 +257,12 @@ export function TraegerWithdrawalContactCard({
   const reach = withdrawalReach(contact, draft);
   const addressee = withdrawalAddressee(letterheadText, reach);
   const sender = withdrawalSender(letterheadText);
-  // Set by the letterhead link; the next focus of this tab reads it again.
+  // Set by the letterhead link. From then on every return to this tab reads
+  // the letterhead again: the person may come back before saving there.
   const letterheadOpened = useRef(false);
   useEffect(() => {
-    if (!refreshLetterhead) return;
     const reread = () => {
       if (!letterheadOpened.current) return;
-      letterheadOpened.current = false;
       // The settings read shows its own load error and retry on the page.
       void refreshLetterhead().catch(() => undefined);
     };
@@ -392,15 +393,17 @@ export function TraegerWithdrawalContactCard({
             </DataGrid>
             <div className="space-y-1 border-t border-gray-200 pt-3 text-sm text-pretty text-gray-600">
               <p>
-                Eltern schicken den Widerruf an deinen Träger. Darum stehen hier
-                Name und Anschrift aus dem Briefkopf. Der Name der
-                Ansprechperson steht nicht darin.
-              </p>
-              <p>
-                Hat eine Schule in den Vertragsbedingungen einen anderen
-                Vertragspartner, steht er in ihren Verträgen zuerst. Nach einer
+                Eltern widerrufen beim Vertragspartner. Das ist dein Träger,
+                darum stehen hier Name und Anschrift aus dem Briefkopf. Der Name
+                der Ansprechperson steht nicht in der Belehrung. Nach einer
                 Änderung kopiert die Schule die Belehrung neu ins
                 Anmeldeformular.
+              </p>
+              <p>
+                Ausnahmen: Nennen die Vertragsbedingungen eines Angebots einen
+                anderen Vertragspartner, steht er zuerst. Schließt laut
+                „Zuständigkeiten“ eine andere Stelle die Verträge einer Schule,
+                nennt die Belehrung dort deren Angaben.
               </p>
             </div>
           </InsetPanel>
