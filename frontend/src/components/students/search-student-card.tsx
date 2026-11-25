@@ -77,12 +77,15 @@ export function SearchStudentStatusBadge({
   userGroups,
   groupRooms,
   supervisedRooms,
+  compact = false,
 }: Readonly<{
   student: Student;
   isToday: boolean;
   userGroups: string[];
   groupRooms: string[];
   supervisedRooms: string[];
+  /** Schmale Pille für die Zeilenliste der App (#8070). */
+  compact?: boolean;
 }>) {
   return isToday ? (
     <StudentPresenceBadge
@@ -91,7 +94,7 @@ export function SearchStudentStatusBadge({
       userGroups={userGroups}
       groupRooms={groupRooms}
       supervisedRooms={supervisedRooms}
-      variant="modern"
+      variant={compact ? "simple" : "modern"}
       size="md"
       // „seit“ nennt, wann das Kind zum Unterricht ging, wie in der Kindakte (#5710).
       showLocationSince={isInClassLocation(student.current_location)}

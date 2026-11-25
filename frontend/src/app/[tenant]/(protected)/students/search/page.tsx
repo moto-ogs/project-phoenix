@@ -3124,8 +3124,9 @@ function SearchPageContent() {
     if (!rowsLoaded) return null;
     const total = students.length;
     if (!isToday) {
-      if (appView)
-        return <TenantPageStats items={[{ value: total, label: "" }]} />;
+      // App (#8070): Die Gesamtzahl steht wie am Desktop als Zähler in der
+      // Suchzeile; ohne Tageszahlen bleibt die Titelzeile frei.
+      if (appView) return null;
       return `${total} ${total === 1 ? "Kind" : "Kinder"}`;
     }
     // Ein eingechecktes Kind zählt „in der OGS“, auch wenn es krank gemeldet
@@ -3164,15 +3165,14 @@ function SearchPageContent() {
         inCare += 1;
       }
     }
-    // App (#8070): Die Chips stehen in der Titelzeile neben „Kinder“, also
-    // kurz: „Kinder 118 · 16 da · 0 krank“ („da“ wie in den Zeilen).
+    // App (#8070): Die Chips stehen in der Titelzeile neben „Alle Kinder“,
+    // also kurz: „16 da · 0 krank“. Die Gesamtzahl steht wie am Desktop als
+    // Zähler neben dem Filter.
     return (
       <TenantPageStats
         items={
           appView
             ? [
-                // Nur die Zahl: Sie steht direkt hinter dem Titel „Kinder“.
-                { value: total, label: "" },
                 { value: inCare, label: "da" },
                 { value: sick, label: "krank" },
               ]
@@ -3472,7 +3472,7 @@ function SearchPageContent() {
       {/* Kopfkarte wie auf jeder Tenant-Seite: Titel, Statuszeile, Aktionen,
           darunter Suche und Filter. */}
       <TenantPage
-        title={appView ? "Kinder" : "Alle Kinder"}
+        title="Alle Kinder"
         appStatsInline
         info="Hier findest du jedes Kind deiner OGS. Gib zuerst den Namen in die Suche ein. Wähle dann die Karte des Kindes, um seine Angaben zu sehen."
         tabs={childScope.tabs}
@@ -3562,9 +3562,8 @@ function SearchPageContent() {
         }
         // Der Zähler ändert sich mit der Filterung und gehört deshalb in
         // die Filterzeile, nicht in die Titelzeile.
-        // App (#8070): Die Zahl steht schon im Kopf („118 Kinder“).
         badge={
-          rowsLoaded && !appView
+          rowsLoaded
             ? {
                 count: filteredStudents.length,
                 icon: <MotoConceptIcon concept={childrenConcept} size={20} />,
@@ -3903,6 +3902,9 @@ function SearchPageContent() {
                           `/students/${student.id}?from=${fromParam}`
                         }
                         classLabel={holidayGuestLabel}
+                        userGroups={myGroups}
+                        groupRooms={myGroupRooms}
+                        supervisedRooms={mySupervisedRooms}
                       />
                       {/* App (#8070): An- und Abmelden als beschriftete
                           Aktion in Daumennähe. */}

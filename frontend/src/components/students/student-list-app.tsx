@@ -11,6 +11,7 @@
 // steht das Kind rechts neben der Liste (`?kind=<id>`).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, StickyNote } from "lucide-react";
 
 import { Avatar } from "~/components/ui/avatar";
 import { ButtonLink } from "~/components/ui/button";
@@ -23,20 +24,117 @@ import {
 import { IndexRail } from "~/components/ui/index-rail";
 import { SectionCard } from "~/components/ui/section-card";
 import { SplitView, useSplitSelection } from "~/components/ui/split-view";
-import { StatusBadge } from "~/components/ui/status-badge";
 import { ChildSheet, ChildSummary } from "~/components/students/child-sheet";
-import { dailyDepartureLabelForStudent } from "~/components/students/search-student-card";
-import {
-  CHILD_DAY_TONE_BADGE,
-  childDayStatus,
-} from "~/components/students/child-day-status";
+import { SearchStudentStatusBadge } from "~/components/students/search-student-card";
+import { useRowClock } from "~/components/students/student-card-clock";
 import { useDeviceContext } from "~/lib/device-context";
-import type { Student } from "~/lib/student-helpers";
+import { getAccessibleTextColor } from "~/lib/kit-palette";
+import type { DepartureMode } from "~/lib/departure-plan";
+import { teacherHintText, type Student } from "~/lib/student-helpers";
+import {
+  getStudentDayTimes,
+  getStudentTimeStatus,
+} from "~/lib/student-time-status";
 
 export interface StudentListAppGroup {
   readonly key: string;
   readonly label: string;
   readonly items: readonly Student[];
+}
+
+// Heimweg in der zweiten Zeile: kurz genug, dass Klasse und Gruppe daneben
+// stehen bleiben („2b · Mondgruppe · Bus“).
+const SHORT_DEPARTURE_LABELS: Record<DepartureMode, string> = {
+  alone: "Geht alleine",
+  bus: "Bus",
+  pickup: "Abholung",
+  accompanied: "Mit Kind",
+};
+
+function shortDepartureLabel(student: Student): string | null {
+  if (student.has_full_access === false) return null;
+  const legacy = student.departure_label?.trim();
+  if (legacy) return legacy;
+  const modes = student.departure_modes ?? [];
+  if (modes.length === 0) return null;
+  return modes.map((mode) => SHORT_DEPARTURE_LABELS[mode]).join(", ");
+}
+
+/**
+ * Dritte Zeile, nur wenn es etwas zu sagen gibt (wie heute auf der Karte):
+ * eine überschrittene Ankunfts- oder Gehzeit in Rot bzw. Orange, sonst der
+ * Hinweis der Lehrkraft. Eine Zeile, damit die Liste dicht bleibt; alles
+ * Weitere steht im Kind-Blatt.
+ */
+function RowHint({
+  student,
+  isToday,
+}: Readonly<{ student: Student; isToday: boolean }>) {
+  const now = useRowClock(undefined);
+  if (student.has_full_access === false) return null;
+  if (isToday) {
+    const day = getStudentDayTimes(student);
+    const absence = {
+      sick: student.sick,
+      classTrip: student.class_trip,
+      excused: student.excused,
+      currentLocation: student.current_location,
+    };
+    const overdue = (
+      [
+        [
+          "Ankunftszeit",
+          "arrival",
+          student.arrival_time,
+          student.actual_arrival_time,
+        ],
+        [
+          "Gehzeit",
+          "pickup",
+          student.pickup_time ?? undefined,
+          student.actual_pickup_time,
+        ],
+      ] as const
+    )
+      .map(([label, kind, plannedTime, actualTime]) => ({
+        label,
+        status: getStudentTimeStatus({
+          plannedTime,
+          actualTime,
+          now,
+          kind,
+          day,
+          ...absence,
+        }),
+      }))
+      .find(
+        ({ status }) =>
+          status.state === "very-overdue" ||
+          status.state === "slightly-overdue",
+      );
+    if (overdue?.status.textColor) {
+      const color = getAccessibleTextColor(overdue.status.textColor);
+      return (
+        <span
+          className="mt-0.5 flex min-w-0 items-center gap-1 text-xs leading-4"
+          style={{ color }}
+        >
+          <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
+          <span className="truncate font-medium">
+            {overdue.label}: {overdue.status.displayTime} Uhr
+          </span>
+        </span>
+      );
+    }
+  }
+  const hint = student.teacher_hints?.[0];
+  if (!hint) return null;
+  return (
+    <span className="mt-0.5 flex min-w-0 items-center gap-1 text-xs leading-4 text-gray-600">
+      <StickyNote className="size-3.5 shrink-0" aria-hidden="true" />
+      <span className="truncate">{teacherHintText(hint)}</span>
+    </span>
+  );
 }
 
 function studentName(student: Student): string {
@@ -79,6 +177,9 @@ export function StudentListApp({
   isToday,
   studentHref,
   classLabel,
+  userGroups,
+  groupRooms,
+  supervisedRooms,
 }: Readonly<{
   /** Sortiert, gefiltert: genau die Kinder der Seite. */
   students: readonly Student[];
@@ -89,6 +190,10 @@ export function StudentListApp({
   isToday: boolean;
   studentHref: (student: Student) => string;
   classLabel: (student: Student) => string | null | undefined;
+  /** Für das Orts-Abzeichen wie auf der Karte (eigene Räume grün). */
+  userGroups: string[];
+  groupRooms: string[];
+  supervisedRooms: string[];
 }>) {
   const { selected, select } = useSplitSelection("kind");
   const [sheetId, setSheetId] = useState<string | null>(null);
@@ -110,23 +215,26 @@ export function StudentListApp({
 
   const row = (student: Student) => {
     const id = student.id.toString();
-    const status = childDayStatus(student, isToday);
     // „1b · Sternengruppe“: Das Wort „Klasse“ kostet am schmalen Telefon
     // den Platz, an dem sonst der Gruppenname abgeschnitten würde.
     const klass = (classLabel(student) ?? student.school_class)?.replace(
       /^Klasse\s+/,
       "",
     );
-    const subtitle = [klass, student.group_name].filter(Boolean).join(" · ");
-    const departure =
-      student.has_full_access === false
-        ? null
-        : dailyDepartureLabelForStudent(student);
-    const homeway = departure && departure !== "–" ? departure : null;
+    const homeway = shortDepartureLabel(student);
+    const subtitle = [klass, student.group_name, homeway]
+      .filter(Boolean)
+      .join(" · ");
+    // Telefon: dasselbe farbige Orts-Abzeichen wie auf der Karte von heute
+    // („Zuhause“, „Kommt heute nicht“, Raumname), in der Namenszeile, damit
+    // die zweite Zeile die ganze Breite hat.
     const badge = (
-      <StatusBadge
-        label={status.value}
-        tone={CHILD_DAY_TONE_BADGE[status.tone]}
+      <SearchStudentStatusBadge
+        student={student}
+        isToday={isToday}
+        userGroups={userGroups}
+        groupRooms={groupRooms}
+        supervisedRooms={supervisedRooms}
         compact
       />
     );
@@ -141,22 +249,18 @@ export function StudentListApp({
             decorative
           />
         }
-        // iPad: Der Status steht direkt hinter dem Namen statt am rechten
-        // Rand der breiten Zeile (kurzer Blickweg).
         title={
           <span className="flex min-w-0 items-center gap-2">
             <span className="truncate">{studentName(student)}</span>
-            <span className="phone:hidden shrink-0">{badge}</span>
+            <span className="ml-auto shrink-0">{badge}</span>
           </span>
         }
-        subtitle={subtitle || undefined}
-        // iPad: rechts der Heimweg statt einer leeren halben Zeile.
-        meta={
+        subtitle={
           <>
-            <span className="tablet:hidden">{badge}</span>
-            {homeway ? (
-              <span className="phone:hidden split:hidden">{homeway}</span>
+            {subtitle ? (
+              <span className="block truncate">{subtitle}</span>
             ) : null}
+            <RowHint student={student} isToday={isToday} />
           </>
         }
         selected={selected === id}
@@ -205,7 +309,9 @@ export function StudentListApp({
   );
   const listWithRail =
     railLetters.length > 0 ? (
-      <div ref={listRef}>
+      // Die Leiste steht innen am rechten Kartenrand; die Zeilen lassen ihr
+      // Platz, damit kein Abzeichen unter ihr liegt.
+      <div ref={listRef} className="[&_[data-collection-row]]:pr-9">
         {list}
         <IndexRail letters={railLetters} onJump={scrollToLetter} />
       </div>
