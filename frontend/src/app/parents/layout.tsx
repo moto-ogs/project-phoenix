@@ -9,7 +9,7 @@ import { readPortalSessionSnapshot } from "~/lib/portal-session-snapshot.server"
 import { ParentServerSeed } from "~/components/parent/parent-server-seed";
 import {
   isProtectedParentPath,
-  loadParentShellSeed,
+  loadParentSeed,
   parentRequestPath,
 } from "~/lib/parent-seed.server";
 
@@ -92,14 +92,11 @@ export default async function ParentLayout({
   return (
     <ParentShellMessages>
       <ParentProviders session={snapshot?.session ?? null}>
-        {/* The shell's children list and features (#8077), started now and
+        {/* The shell's family cards (#8077), started now and
             not awaited. A public page, also with a parent cookie, gets no
             personal seed and no extra read. */}
         {snapshot && !snapshot.notBooked && isProtectedParentPath(path) ? (
-          <ParentServerSeed
-            seed={loadParentShellSeed().catch(() => null)}
-            details={SHELL_SEED_DETAILS}
-          >
+          <ParentServerSeed seed={loadParentSeed(false).catch(() => null)}>
             {guarded}
           </ParentServerSeed>
         ) : (
@@ -109,5 +106,3 @@ export default async function ParentLayout({
     </ParentShellMessages>
   );
 }
-
-const SHELL_SEED_DETAILS = ["features"] as const;

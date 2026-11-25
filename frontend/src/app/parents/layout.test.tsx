@@ -29,7 +29,7 @@ vi.mock("next/headers", () => ({
 
 vi.mock("~/lib/parent-seed.server", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/parent-seed.server")>()),
-  loadParentShellSeed: loadShellSeedMock,
+  loadParentSeed: loadShellSeedMock,
 }));
 
 vi.mock("~/server/auth/parent", async () =>

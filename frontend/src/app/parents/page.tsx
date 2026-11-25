@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { messageBoundary } from "~/i18n/scoped-messages";
 import { ParentServerSeed } from "~/components/parent/parent-server-seed";
 import { ParentStartPage } from "~/components/parent/start/parent-start-page";
-import { loadParentPageSeed } from "~/lib/parent-seed.server";
+import { loadParentSeed } from "~/lib/parent-seed.server";
 
 const PageMessages = messageBoundary(
   "holidayRegistration.weekRange",
@@ -18,22 +18,20 @@ const PageMessages = messageBoundary(
   "surveyForm",
 );
 
-const START_SEED_DETAILS = ["features", "today"] as const;
-
 /**
  * Die Startseite. Kinderliste, Funktionen und Tagesstatus laedt der Server
  * schon beim Rendern (#8077); beim ersten Aufruf stehen die Kinderkarten im
  * HTML, bei einem Wechsel uebernehmen die Leser die Werte statt neu zu laden.
  */
 export default function ParentsStartPage() {
-  const seed = loadParentPageSeed({ kind: "start" }).catch(() => null);
+  const seed = loadParentSeed(true).catch(() => null);
   // Until the seed is there, the server HTML shows the page itself with its
   // card skeleton: greeting, holiday offers and to-dos do not wait for it.
   // A client navigation never suspends here.
   return (
     <PageMessages>
       <Suspense fallback={<ParentStartPage />}>
-        <ParentServerSeed seed={seed} details={START_SEED_DETAILS} render>
+        <ParentServerSeed seed={seed} render>
           <ParentStartPage />
         </ParentServerSeed>
       </Suspense>

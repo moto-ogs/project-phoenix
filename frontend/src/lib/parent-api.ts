@@ -488,11 +488,7 @@ export async function listExcusedRequests(
   );
 }
 
-/** Was angezeigt wird, solange oder falls der Endpunkt nichts liefert. */
-export const UNKNOWN_CHILD_TODAY: parentMeContract.TodayStatusResponse = {
-  at_ogs: null,
-  state: "unknown",
-};
+export { UNKNOWN_CHILD_TODAY } from "~/lib/parent-family-cards";
 
 /**
  * Fetches the Monday-Friday meal plan for the child's school for the week

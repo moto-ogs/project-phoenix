@@ -4,6 +4,10 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import type {
+  FamilyFieldFailure,
+  ParentFamily,
+} from "~/lib/parent-family-cards";
 import { ApiError } from "~/lib/api-error";
 import { useSWRAuth, useInvalidateMatching } from "~/lib/swr";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
@@ -11,7 +15,6 @@ import { parentKeys } from "~/lib/swr/parent-keys";
 import {
   narrowNextFamilyRead,
   readParentFamily,
-  type ParentFamily,
 } from "~/lib/parent-family-start";
 
 import {
@@ -88,7 +91,7 @@ export function useParentResourceEvents() {
       () => {
         if (berlinTodayISO() === keyDay) void reloadFamily();
       },
-      Math.max(0, dayExpiresAt - performance.now()),
+      Math.max(0, dayExpiresAt - Date.now()),
     );
     return () => window.clearTimeout(timer);
   }, [dayExpiresAt, keyDay, reloadFamily]);
@@ -216,13 +219,23 @@ export function useParentChildren(enabled = true) {
   return { ...family, data: enabled ? family.data?.children : undefined };
 }
 
-const NO_FAILURES: Readonly<Record<string, Error>> = {};
+const unavailable = new ApiError("Family start data unavailable", 503, {
+  code: "general.unavailable",
+});
+function fieldError(failure?: FamilyFieldFailure) {
+  if (!failure) return undefined;
+  return failure instanceof ApiError ? failure : unavailable;
+}
 
 export function useParentFeatures(
   children: readonly parentMeContract.ChildResponse[] | undefined,
 ) {
   const family = useParentFamily(children !== undefined);
-  const errorsByChild = family.data?.featureErrors ?? NO_FAILURES;
+  const errorsByChild = Object.fromEntries(
+    Object.entries(family.data?.featureErrors ?? {}).map(
+      ([id, failure]) => [id, fieldError(failure)] as const,
+    ),
+  );
   return {
     ...family,
     data: family.data?.features,
@@ -249,6 +262,7 @@ export function useParentToday(
         (child) => family.data?.confirmedToday[child.student_id],
       ),
     error:
-      family.error ?? Object.values(family.data?.todayErrors ?? NO_FAILURES)[0],
+      family.error ??
+      fieldError(Object.values(family.data?.todayErrors ?? {})[0]),
   };
 }

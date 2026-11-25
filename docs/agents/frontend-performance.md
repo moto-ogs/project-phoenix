@@ -20,7 +20,9 @@ Paths below are relative to `frontend/` except `.github/` and `docs/`.
 Measure the children, feature flags and today's statuses together, separately
 from the profile, message counts and feeds. A cold, unseeded start reads
 `GET /parent/me/family-start` once at the browser and Go boundaries regardless
-of family size. A child event narrows that request by `student_id`; a reconnect
+of family size. On a seeded document navigation, the protected layout and page
+share one Go read; hydration uses that family snapshot without a browser GET.
+Public pages receive no family seed. A child event narrows that request by `student_id`; a reconnect
 or an unqualified event reloads the family. Compare response-body bytes on the
 same seeded families, not the number of children returned by unrelated feeds.
 
