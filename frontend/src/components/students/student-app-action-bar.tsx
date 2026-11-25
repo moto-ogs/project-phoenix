@@ -40,6 +40,8 @@ interface Entry {
   readonly label: string;
   readonly run: () => void;
   readonly loading?: boolean;
+  /** Eine Zeile im Blatt „Weitere Aktionen“: was die Aktion bewirkt. */
+  readonly hint: string;
 }
 
 export function StudentAppActionBar(props: StudentAppActionBarProps) {
@@ -48,19 +50,35 @@ export function StudentAppActionBar(props: StudentAppActionBarProps) {
   const attendanceWebEnabled = useAttendanceWebEnabled();
   const entries: Entry[] = [];
   if (props.showCheckout && attendanceWebEnabled)
-    entries.push({ key: "abmelden", label: "Abmelden", run: props.onCheckout });
+    entries.push({
+      key: "abmelden",
+      label: "Abmelden",
+      run: props.onCheckout,
+      hint: "Meldet das Kind ab, moto fragt vorher nach.",
+    });
   if (props.showCheckin && attendanceWebEnabled)
-    entries.push({ key: "anmelden", label: "Anmelden", run: props.onCheckin });
+    entries.push({
+      key: "anmelden",
+      label: "Anmelden",
+      run: props.onCheckin,
+      hint: "Meldet das Kind für heute an, moto fragt vorher nach.",
+    });
   if (props.canSickExcused) {
     entries.push({
       key: "krank",
       label: props.isSick ? "Gesund melden" : "Krank melden",
+      hint: props.isSick
+        ? "Beendet die Krankmeldung, moto fragt vorher nach."
+        : "Meldet das Kind krank, moto fragt vorher nach.",
       run: props.onSick,
       loading: props.sickLoading,
     });
     entries.push({
       key: "entschuldigen",
       label: props.isExcused ? "Entschuldigung aufheben" : "Entschuldigen",
+      hint: props.isExcused
+        ? "Nimmt die Entschuldigung zurück, moto fragt vorher nach."
+        : "Markiert das Kind als entschuldigt, moto fragt vorher nach.",
       run: props.onExcused,
       loading: props.excusedLoading,
     });
@@ -71,6 +89,7 @@ export function StudentAppActionBar(props: StudentAppActionBarProps) {
       label: props.isClassTrip
         ? "Klassenfahrt bearbeiten"
         : "Klassenfahrt planen",
+      hint: "Setzt einen Zeitraum, in dem das Kind nicht kommt.",
       run: props.onClassTrip,
       loading: props.plannedStatusLoading,
     });
@@ -90,7 +109,7 @@ export function StudentAppActionBar(props: StudentAppActionBarProps) {
                   size="md"
                   onClick={second.run}
                   isLoading={second.loading}
-                  noTooltip="Der Name sagt, was der Knopf tut."
+                  tooltip={second.hint}
                 >
                   {second.label}
                 </Button>
@@ -117,7 +136,7 @@ export function StudentAppActionBar(props: StudentAppActionBarProps) {
           size="md"
           onClick={primary.run}
           isLoading={primary.loading}
-          noTooltip="Der Name sagt, was der Knopf tut."
+          tooltip={primary.hint}
         >
           {primary.label}
         </Button>
@@ -138,7 +157,10 @@ export function StudentAppActionBar(props: StudentAppActionBarProps) {
                   entry.run();
                 }}
               >
-                {entry.label}
+                <span className="flex flex-col">
+                  <span>{entry.label}</span>
+                  <span className="text-sm text-gray-500">{entry.hint}</span>
+                </span>
               </ListRow>
             ))}
           </div>

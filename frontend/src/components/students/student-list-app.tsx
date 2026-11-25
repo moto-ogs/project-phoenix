@@ -145,7 +145,6 @@ export function StudentListApp({
         subtitle={subtitle || undefined}
         meta={<span className="tablet:hidden">{badge}</span>}
         selected={selected === id}
-        aria-label={`${studentName(student)}, ${status.value}`}
         onClick={() => (isSplit ? select(id) : setSheetId(id))}
       />
     );

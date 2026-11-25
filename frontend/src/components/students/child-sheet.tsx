@@ -74,7 +74,7 @@ export function ChildSheet({
           replace
           variant="primary"
           size="md"
-          className="flex-1"
+          className="w-full"
           tooltip="Öffnet die ganze Akte mit allen Angaben."
         >
           Ganze Akte öffnen
@@ -259,8 +259,8 @@ function ChildQuickActions({
       ? router.replace(studentQuickActionHref(href, action))
       : router.push(studentQuickActionHref(href, action));
   const isQuickExcused = (student.excused ?? false) && !student.class_trip;
-  // Eine Knopfzeile statt hoher Kacheln: Das Blatt bleibt kompakt, die
-  // Hauptaktion (An- oder Abmelden) ist dunkel.
+  // Knöpfe statt hoher Kacheln: Das Blatt bleibt kompakt. Die Hauptaktion
+  // (An- oder Abmelden) steht voll breit, die beiden Meldungen darunter.
   return (
     <div className="flex flex-wrap gap-2" aria-label="Schnellaktionen">
       {showCheckout ? (
@@ -268,7 +268,7 @@ function ChildQuickActions({
           type="button"
           variant="primary"
           size="md"
-          className="flex-1"
+          className="w-full"
           onClick={open("abmelden")}
           tooltip="Öffnet die Akte und fragt dort vor dem Abmelden nach."
         >
@@ -280,7 +280,7 @@ function ChildQuickActions({
           type="button"
           variant="primary"
           size="md"
-          className="flex-1"
+          className="w-full"
           onClick={open("anmelden")}
           tooltip="Öffnet die Akte und fragt dort vor dem Anmelden nach."
         >

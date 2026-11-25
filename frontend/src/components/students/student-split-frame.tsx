@@ -96,7 +96,7 @@ function SplitStudentList({
     const row = listRef.current?.querySelector<HTMLElement>(
       "[aria-current='true'],[data-selected='true']",
     );
-    row?.scrollIntoView({ block: "nearest" });
+    row?.scrollIntoView({ block: "center" });
   }, [studentId, students.length]);
 
   const query = from ? `?from=${encodeURIComponent(from)}` : "";
@@ -127,7 +127,6 @@ function SplitStudentList({
                   />
                 }
                 selected={id === studentId}
-                aria-label={`${studentName(student)}, ${status.value}`}
                 onClick={() => router.replace(`/students/${id}${query}`)}
               />
             );
