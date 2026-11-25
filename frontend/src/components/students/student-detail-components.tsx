@@ -1438,9 +1438,13 @@ export function StudentHistorySection({
           />
         </div>
       ) : null}
-      {/* App (#8070): die Zeilen direkt in der Karte, ohne zweiten Rahmen. */}
+      {/* App (#8070): die Zeilen direkt in der Karte, ohne zweiten Rahmen,
+          mit demselben Rand wie Titel und Feldlisten der anderen Karten:
+          Symbol und Trennlinien beginnen an der Inhaltskante. */}
       {appLayout ? (
-        <ul className="-mx-2 divide-y divide-gray-100">{historyRows}</ul>
+        <ul className="divide-y divide-gray-100 [&>li>*]:px-0">
+          {historyRows}
+        </ul>
       ) : (
         <FramedList>{historyRows}</FramedList>
       )}
