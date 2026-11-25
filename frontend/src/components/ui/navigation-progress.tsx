@@ -9,9 +9,9 @@ import {
   Suspense,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
-  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import {
@@ -42,9 +42,9 @@ import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
  * Seiten per Schaltfläche wechseln. Für Ziele mit vorgeladener Hülle und
  * gültigen Sitzungsdaten ist der Wechsel oft fertig, bevor der Balken erscheint.
  *
- * Warum ein eigener Store statt `useState`: der Anbieter umschließt die
- * gesamte Hülle. Ein State-Wechsel dort würde Kopfzeile, Seitenleiste und
- * Inhalt bei jedem Klick neu rendern. So rendert nur der Balken selbst neu.
+ * Der Store hält den Stand unabhängig vom Router. Der Balken aktualisiert
+ * seine beiden DOM-Knoten, ohne eine synchrone React-Aktualisierung vor
+ * dem parallelen Seitenwechsel einzuplanen.
  */
 
 const NAVIGATION_TIMEOUT_MS = 10_000;
@@ -205,18 +205,6 @@ function createStore(): NavigationProgressStore {
   };
 }
 
-const NOT_PENDING = () => false;
-const NO_SUBSCRIPTION = () => () => undefined;
-
-function useNavigationProgressPending() {
-  const store = useContext(NavigationProgressContext);
-  return useSyncExternalStore(
-    store?.subscribe ?? NO_SUBSCRIPTION,
-    store?.isPending ?? NOT_PENDING,
-    NOT_PENDING,
-  );
-}
-
 /**
  * Umschließt die Hülle eines Portals. Außerhalb davon melden weder
  * `NavigationLink`s noch programmgesteuerte Wechsel etwas und der Balken
@@ -354,23 +342,38 @@ function NavigationProgressCompletion({
  * ruhig, statt kurz aufzublitzen.
  */
 export function NavigationProgressBar() {
-  const pending = useNavigationProgressPending();
+  const store = useContext(NavigationProgressContext);
+  const statusRef = useRef<HTMLSpanElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const status = statusRef.current;
+    const bar = barRef.current;
+    if (!store || !status || !bar) return;
+    const update = () => {
+      const pending = store.isPending();
+      status.textContent = pending ? "Seite wird geladen" : "";
+      bar.hidden = !pending;
+    };
+    update();
+    return store.subscribe(update);
+  }, [store]);
 
   return (
     <>
-      {/* Dauerhaft im Baum, damit Screenreader die Änderung überhaupt
-          vorlesen; ein erst beim Wechsel eingehängter Bereich wird nicht
-          angesagt. */}
-      <span role="status" aria-live="polite" className="sr-only">
-        {pending ? "Seite wird geladen" : ""}
-      </span>
-      {pending ? (
-        <div
-          data-testid="navigation-progress"
-          className={`moto-nav-progress ${FIXED_LAYER_SHIFT}`}
-          aria-hidden="true"
-        />
-      ) : null}
+      {/* Dauerhaft im Baum, damit Screenreader die Änderung vorlesen. */}
+      <span
+        ref={statusRef}
+        role="status"
+        aria-live="polite"
+        className="sr-only"
+      />
+      <div
+        ref={barRef}
+        data-testid="navigation-progress"
+        className={`moto-nav-progress ${FIXED_LAYER_SHIFT}`}
+        aria-hidden="true"
+        hidden
+      />
     </>
   );
 }

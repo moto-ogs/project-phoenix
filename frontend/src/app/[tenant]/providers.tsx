@@ -113,6 +113,10 @@ export function shellOwnedEntries(shell: ShellBootstrap, tenantSlug: string) {
   if (shell.reminders) {
     entries[scopedSWRKey(scope, REMINDERS_SWR_KEY)] = shell.reminders;
   }
+  if (shell.announcements) {
+    entries[scopedSWRKey(scope, announcementKeys.unread())] =
+      shell.announcements;
+  }
   if (shell.staffNoticesToday) {
     entries[scopedSWRKey(scope, staffNoticesTodayKey(shell.accountId))] =
       shell.staffNoticesToday;
@@ -126,28 +130,14 @@ export function shellOwnedEntries(shell: ShellBootstrap, tenantSlug: string) {
   return entries;
 }
 
-/**
- * SWR entries the server preloaded, under the tenant-scoped keys useSWRAuth
- * produces. `fallback` lets the first (server and hydration) render show the
- * data; `cacheData` makes SWR consume it as the mount revalidation instead of
- * fetching, after which it is an ordinary cache entry.
- *
- * The shell-owned entries stay out of `cacheData`: ShellCacheSeeder writes
- * them into the cache, so no reader ever consumes them there, and SWR keeps
- * a hook's `cacheData` in its revalidation for the hook's lifetime. After
- * the cache reset of a rights change under the same key (#5006), that
- * revalidation answered with the seed instead of the server.
- */
+const NO_ENTRIES: Record<string, unknown> = {};
+const NO_SEED = { fallback: NO_ENTRIES, cacheData: NO_ENTRIES };
+
+/** Fallback for server render/hydration; ShellCacheSeeder owns the cache write. */
 export function shellSwrConfig(shell: ShellBootstrap, tenantSlug: string) {
-  const consumed: Record<string, unknown> = {};
-  const scope = tenantSWRScope(tenantSlug, shell.accountId);
-  if (shell.announcements) {
-    consumed[scopedSWRKey(scope, announcementKeys.unread())] =
-      shell.announcements;
-  }
   return {
-    fallback: { ...shellOwnedEntries(shell, tenantSlug), ...consumed },
-    cacheData: consumed,
+    fallback: shellOwnedEntries(shell, tenantSlug),
+    cacheData: NO_ENTRIES,
   };
 }
 
@@ -169,9 +159,6 @@ export function ShellCacheSeeder({
   return null;
 }
 
-const NO_SEED = { fallback: {}, cacheData: {} };
-const NO_ENTRIES: Record<string, unknown> = {};
-
 /**
  * The server preload, only while the session is the one it was built for
  * (#5006). After a change of rights or preview, even under the same keys, no
@@ -184,10 +171,7 @@ function ShellSwrSeed({
   generation,
   children,
 }: Readonly<{
-  seed: {
-    config: ReturnType<typeof shellSwrConfig>;
-    owned: Record<string, unknown>;
-  };
+  seed: ReturnType<typeof shellSwrConfig>;
   generation: string | null;
   children: React.ReactNode;
 }>) {
@@ -203,8 +187,8 @@ function ShellSwrSeed({
     if (invalidated || current !== generation) left.current = true;
   }, [invalidated, current, generation]);
   return (
-    <SWRSeedBoundary seed={active ? seed.config : NO_SEED}>
-      <ShellCacheSeeder entries={active ? seed.owned : NO_ENTRIES} />
+    <SWRSeedBoundary seed={active ? seed : NO_SEED}>
+      <ShellCacheSeeder entries={active ? seed.fallback : NO_ENTRIES} />
       {children}
     </SWRSeedBoundary>
   );
@@ -250,7 +234,7 @@ export function TenantProviders({
     // The seed belongs to the generation it was built in (#5006): after a
     // drop of one of its keys no reader shows it, also not as fallback.
     stampSWRSeeds(config.fallback);
-    return { config, owned: shellOwnedEntries(shell, tenantSlug) };
+    return config;
   }, [shell, tenantSlug]);
   // The seed belongs to the session the server rendered with.
   const seedGeneration = authGeneration(session);

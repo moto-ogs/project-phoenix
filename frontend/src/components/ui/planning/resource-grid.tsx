@@ -172,7 +172,8 @@ export function ResourceGrid<TRow>({
   className,
 }: ResourceGridProps<TRow>) {
   const columnMinWidth = COLUMN_MIN_WIDTH_CLASS[columnMode];
-  const cellClass = `flex ${RESOURCE_GRID_METRICS.cellMinHeightClass[columnMode]} w-full`;
+  // Leave room for child focus rings at the cell edge when paint is contained.
+  const cellClass = `flex ${RESOURCE_GRID_METRICS.cellMinHeightClass[columnMode]} w-full [contain-intrinsic-block-size:auto_none] supports-[overflow-clip-margin:4px]:[content-visibility:auto] [overflow-clip-margin:4px] print:[content-visibility:visible]`;
 
   return (
     // Radius, Rand und Ausschnitt sitzen auf der Fläche, gescrollt wird im

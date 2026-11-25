@@ -118,7 +118,7 @@ describe("NavigationProgress", () => {
   it("shows nothing while no navigation is pending", () => {
     renderShell();
 
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
     expect(screen.getByRole("status")).toHaveTextContent("");
   });
 
@@ -128,9 +128,9 @@ describe("NavigationProgress", () => {
     );
     fireEvent.click(screen.getByRole("link", { name: "Planungszeiträume" }));
 
-    expect(screen.getByTestId("navigation-progress")).toHaveClass(
-      "moto-nav-progress",
-    );
+    const bar = screen.getByTestId("navigation-progress");
+    expect(bar).toBeVisible();
+    expect(bar).toHaveClass("moto-nav-progress");
     expect(screen.getByRole("status")).toHaveTextContent("Seite wird geladen");
 
     navigateTo("/calendar-periods");
@@ -143,7 +143,7 @@ describe("NavigationProgress", () => {
       </AppRouterContext.Provider>,
     );
 
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("tracks a ButtonLink before its route commits", () => {
@@ -153,9 +153,9 @@ describe("NavigationProgress", () => {
 
     fireEvent.click(screen.getByRole("link", { name: "Planungszeiträume" }));
 
-    expect(screen.getByTestId("navigation-progress")).toHaveClass(
-      "moto-nav-progress",
-    );
+    const bar = screen.getByTestId("navigation-progress");
+    expect(bar).toBeVisible();
+    expect(bar).toHaveClass("moto-nav-progress");
   });
 
   it("cancels ButtonLink progress when onNavigate blocks the link", () => {
@@ -170,7 +170,7 @@ describe("NavigationProgress", () => {
 
     fireEvent.click(screen.getByRole("link", { name: "Planungszeiträume" }));
 
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("does not start progress when a Link click is cancelled", () => {
@@ -186,7 +186,7 @@ describe("NavigationProgress", () => {
     );
     fireEvent.click(screen.getByRole("link", { name: "Planungszeiträume" }));
 
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("cancels progress when a later capture guard blocks a NavigationLink", () => {
@@ -198,7 +198,7 @@ describe("NavigationProgress", () => {
 
     fireEvent.click(screen.getByRole("link", { name: "Planungszeiträume" }));
 
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("completes a redirected Link without a second pending entry", () => {
@@ -208,7 +208,7 @@ describe("NavigationProgress", () => {
     );
     fireEvent.click(screen.getByRole("link", { name: "Zum Dienstplan" }));
 
-    expect(screen.getByTestId("navigation-progress")).toBeInTheDocument();
+    expect(screen.getByTestId("navigation-progress")).toBeVisible();
 
     navigateTo("/dienstplan");
     rendered.rerender(
@@ -220,7 +220,7 @@ describe("NavigationProgress", () => {
       </AppRouterContext.Provider>,
     );
 
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("reuses a Link's progress entry when its click also calls router.push", () => {
@@ -241,7 +241,7 @@ describe("NavigationProgress", () => {
     fireEvent.click(screen.getByRole("link", { name: "Zum Dienstplan" }));
 
     expect(router.push).toHaveBeenCalledWith("/staff/dienstplan");
-    expect(screen.getByTestId("navigation-progress")).toBeInTheDocument();
+    expect(screen.getByTestId("navigation-progress")).toBeVisible();
 
     navigateTo("/dienstplan");
     rendered.rerender(
@@ -253,7 +253,7 @@ describe("NavigationProgress", () => {
       </AppRouterContext.Provider>,
     );
 
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it.each(["push", "replace"] as const)(
@@ -281,7 +281,7 @@ describe("NavigationProgress", () => {
       );
 
       expect(router[method]).toHaveBeenCalledWith("/calendar-periods");
-      expect(screen.getByTestId("navigation-progress")).toBeInTheDocument();
+      expect(screen.getByTestId("navigation-progress")).toBeVisible();
 
       navigateTo("/calendar-periods");
       rendered.rerender(
@@ -293,7 +293,7 @@ describe("NavigationProgress", () => {
         </AppRouterContext.Provider>,
       );
 
-      expect(screen.queryByTestId("navigation-progress")).toBeNull();
+      expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
     },
   );
 
@@ -328,7 +328,7 @@ describe("NavigationProgress", () => {
         </NavigationProgressProvider>
       </AppRouterContext.Provider>,
     );
-    expect(screen.getByTestId("navigation-progress")).toBeInTheDocument();
+    expect(screen.getByTestId("navigation-progress")).toBeVisible();
 
     navigateTo("/calendar-periods");
     rendered.rerender(
@@ -339,7 +339,7 @@ describe("NavigationProgress", () => {
         </NavigationProgressProvider>
       </AppRouterContext.Provider>,
     );
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("keeps progress for repeated targets until every navigation commits", () => {
@@ -375,7 +375,7 @@ describe("NavigationProgress", () => {
       </AppRouterContext.Provider>,
     );
 
-    expect(screen.getByTestId("navigation-progress")).toBeInTheDocument();
+    expect(screen.getByTestId("navigation-progress")).toBeVisible();
 
     navigateTo("/calendar-periods");
     rendered.rerender(
@@ -387,7 +387,7 @@ describe("NavigationProgress", () => {
       </AppRouterContext.Provider>,
     );
 
-    expect(screen.getByTestId("navigation-progress")).toBeInTheDocument();
+    expect(screen.getByTestId("navigation-progress")).toBeVisible();
 
     navigateTo("/first");
     rendered.rerender(
@@ -399,7 +399,7 @@ describe("NavigationProgress", () => {
       </AppRouterContext.Provider>,
     );
 
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("does not start progress when a native Link click is cancelled", () => {
@@ -416,7 +416,7 @@ describe("NavigationProgress", () => {
 
     fireEvent.click(screen.getByRole("link", { name: "Planungszeiträume" }));
 
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("does not show progress when router.back cannot traverse history", () => {
@@ -431,7 +431,7 @@ describe("NavigationProgress", () => {
 
     renderShell(<ProgrammaticNavigation />);
     fireEvent.click(screen.getByRole("button", { name: "Zurück" }));
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("does not show progress when popstate keeps the current URL", () => {
@@ -443,7 +443,7 @@ describe("NavigationProgress", () => {
 
     // Anker: Balken und Ansagebereich der Shell sind gerendert.
     expect(screen.getByRole("status")).toHaveTextContent("");
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("shows progress for a browser history navigation", () => {
@@ -455,7 +455,7 @@ describe("NavigationProgress", () => {
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
 
-    expect(screen.getByTestId("navigation-progress")).toBeInTheDocument();
+    expect(screen.getByTestId("navigation-progress")).toBeVisible();
 
     route.pathname = "/calendar-periods";
     rendered.rerender(
@@ -466,7 +466,7 @@ describe("NavigationProgress", () => {
       </AppRouterContext.Provider>,
     );
 
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("completes a history navigation when its query uses encoded spaces", () => {
@@ -479,7 +479,7 @@ describe("NavigationProgress", () => {
     });
 
     // Anker: die Verlaufsnavigation hat den Balken gestartet.
-    expect(screen.getByTestId("navigation-progress")).toBeInTheDocument();
+    expect(screen.getByTestId("navigation-progress")).toBeVisible();
 
     route.pathname = "/calendar-periods";
     route.search = "?q=a+b";
@@ -491,7 +491,7 @@ describe("NavigationProgress", () => {
       </AppRouterContext.Provider>,
     );
 
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("completes a redirected history navigation at its canonical URL", () => {
@@ -503,7 +503,7 @@ describe("NavigationProgress", () => {
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
 
-    expect(screen.getByTestId("navigation-progress")).toBeInTheDocument();
+    expect(screen.getByTestId("navigation-progress")).toBeVisible();
 
     navigateTo("/dienstplan");
     rendered.rerender(
@@ -514,7 +514,7 @@ describe("NavigationProgress", () => {
       </AppRouterContext.Provider>,
     );
 
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("does not start progress when a history sentinel preserves an encoded URL", () => {
@@ -527,7 +527,7 @@ describe("NavigationProgress", () => {
 
     // Anker: Balken und Ansagebereich der Shell sind gerendert.
     expect(screen.getByRole("status")).toHaveTextContent("");
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("keeps progress visible until the final rapid history destination commits", () => {
@@ -550,7 +550,7 @@ describe("NavigationProgress", () => {
       </AppRouterContext.Provider>,
     );
 
-    expect(screen.getByTestId("navigation-progress")).toBeInTheDocument();
+    expect(screen.getByTestId("navigation-progress")).toBeVisible();
 
     route.pathname = "/staff";
     rendered.rerender(
@@ -561,7 +561,7 @@ describe("NavigationProgress", () => {
       </AppRouterContext.Provider>,
     );
 
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("completes a history navigation to a previously requested target", () => {
@@ -577,7 +577,7 @@ describe("NavigationProgress", () => {
     navigateTo("/rooms");
     const rendered = renderShell(<ProgrammaticNavigation />);
     fireEvent.click(screen.getByRole("button", { name: "Erstes Ziel" }));
-    expect(screen.getByTestId("navigation-progress")).toBeInTheDocument();
+    expect(screen.getByTestId("navigation-progress")).toBeVisible();
 
     act(() => {
       window.history.replaceState({}, "", "/first");
@@ -593,7 +593,7 @@ describe("NavigationProgress", () => {
       </AppRouterContext.Provider>,
     );
 
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("ends a programmatic navigation after a redirected destination is active", () => {
@@ -612,7 +612,7 @@ describe("NavigationProgress", () => {
     navigateTo("/rooms");
     const rendered = renderShell(<ProgrammaticNavigation />);
     fireEvent.click(screen.getByRole("button", { name: "Zum Dienstplan" }));
-    expect(screen.getByTestId("navigation-progress")).toBeInTheDocument();
+    expect(screen.getByTestId("navigation-progress")).toBeVisible();
 
     navigateTo("/dienstplan");
     rendered.rerender(
@@ -624,7 +624,7 @@ describe("NavigationProgress", () => {
       </AppRouterContext.Provider>,
     );
 
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("clears queued navigations after a redirected destination is active", () => {
@@ -654,7 +654,7 @@ describe("NavigationProgress", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Zu den Planungszeiträumen" }),
     );
-    expect(screen.getByTestId("navigation-progress")).toBeInTheDocument();
+    expect(screen.getByTestId("navigation-progress")).toBeVisible();
 
     navigateTo("/dienstplan");
     rendered.rerender(
@@ -666,7 +666,7 @@ describe("NavigationProgress", () => {
       </AppRouterContext.Provider>,
     );
 
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("ends an aborted programmatic navigation after the fallback timeout", () => {
@@ -687,13 +687,13 @@ describe("NavigationProgress", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Zu den Planungszeiträumen" }),
     );
-    expect(screen.getByTestId("navigation-progress")).toBeInTheDocument();
+    expect(screen.getByTestId("navigation-progress")).toBeVisible();
 
     act(() => {
       vi.advanceTimersByTime(10_000);
     });
 
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("keeps the announcement region mounted so it can be read out at all", () => {
@@ -709,7 +709,7 @@ describe("NavigationProgress", () => {
 
     // Anker: der Balken rendert seinen Ansagebereich ohne Provider.
     expect(screen.getByRole("status")).toHaveTextContent("");
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 });
 
@@ -776,7 +776,7 @@ describe.each([
     fireEvent.click(screen.getByRole("link", { name: "Planungszeiträume" }));
 
     expect(screen.getByRole("status")).toHaveTextContent("");
-    expect(screen.queryByTestId("navigation-progress")).toBeNull();
+    expect(screen.getByTestId("navigation-progress")).not.toBeVisible();
   });
 
   it("discards the report when onNavigate cancels", () => {

@@ -39,7 +39,9 @@ export function useAnnouncements() {
       // an idle tab only reconciles every five minutes (#5017).
       refreshInterval: LIVE_RECONCILE_INTERVAL_MS,
       revalidateOnFocus: false, // Don't revalidate on window focus to avoid showing dismissed items again
-      revalidateOnMount: true, // Always fetch fresh data on component mount
+      // The scoped shell already seeded the opening document. With no
+      // seed SWR still loads on mount; explicit refresh always reads anew.
+      revalidateIfStale: false,
       dedupingInterval: 5000, // Prevent rapid refetches
     },
   );
