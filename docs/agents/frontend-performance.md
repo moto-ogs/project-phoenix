@@ -109,7 +109,11 @@ Page traversals, in-page actions and device/input variants have separate budget 
   authenticated accounts, real entity IDs and expected content; session cookies
   stay out of the reports. The source page settles before the first action.
   “First” means first visit to the target from a running app, not a hard document
-  load. Ordinary viewport prefetch is not disabled.
+  load. The harness leaves the application's prefetch rules in place.
+  A `NavigationLink` does not prefetch on viewport entry. The direct click
+  has no hover dwell: pointer-down cancels its 80 ms hover timer. Visible
+  keyboard focus, by contrast, can start prefetch before Enter starts the
+  clock. Compare like inputs across revisions, not click against keyboard.
 - Desktop: CPU ×4, 150 ms latency, 3 Mbit/s down, 1 Mbit/s up. Parents also use
   Pixel 7 touch at 1.6 Mbit/s down. Time starts at the browser event timestamp, including input queueing, for pointer-down,
   touch-start, Enter or the actual history traversal. No synthetic hover or
