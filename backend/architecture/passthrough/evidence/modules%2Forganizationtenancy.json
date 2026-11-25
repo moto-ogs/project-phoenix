@@ -142,13 +142,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (rs *ProvisioningResource) ListAllAccounts(w http.ResponseWriter, r *http.Request) {\n\taccounts, err := rs.service.ListAllAccounts(r.Context())\n\tif err != nil {\n\t\tcommon.RenderError(w, r, ProvisioningErrorRenderer(err))\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusOK, accounts, \"All accounts retrieved successfully\")\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/organizationtenancy/inbound/operator/ProvisioningResource.ListAllAccounts",
-      "owner": "modules/organizationtenancy"
-    },
-    {
-      "build": "production",
       "evidence": "func (rs *ProvisioningResource) ListAllDevices(w http.ResponseWriter, r *http.Request) {\n\tdevices, err := rs.service.ListAllDevices(r.Context())\n\tif err != nil {\n\t\tcommon.RenderError(w, r, ProvisioningErrorRenderer(err))\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusOK, devices, \"All devices retrieved successfully\")\n}",
       "form": "unclassified-evidence",
       "id": "modules/organizationtenancy/inbound/operator/ProvisioningResource.ListAllDevices",
@@ -488,13 +481,6 @@
       "evidence": "func (s *DemoStateStore) Return(ctx context.Context, name string) error {\n\t_, err := s.db.NewRaw(`UPDATE platform.demo_school_states SET claimed_at = NULL, attempts = GREATEST(attempts - 1, 0)\n\t\tWHERE name = ? AND status = 'preparing'`, name).Exec(ctx)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"return demo school order: %w\", err)\n\t}\n\treturn nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/organizationtenancy/internal/adapters/postgres/DemoStateStore.Return",
-      "owner": "modules/organizationtenancy"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p *Provisioning) ListAllAccounts(ctx context.Context) ([]organizationtenancy.OrganizationAccount, error) {\n\treturn adminValue(ctx, p, func(adminCtx context.Context) ([]organizationtenancy.OrganizationAccount, error) {\n\t\taccounts, err := p.identity.ListAllAccounts(adminCtx)\n\t\treturn organizationAccounts(accounts), err\n\t})\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/organizationtenancy/internal/application/Provisioning.ListAllAccounts",
       "owner": "modules/organizationtenancy"
     },
     {

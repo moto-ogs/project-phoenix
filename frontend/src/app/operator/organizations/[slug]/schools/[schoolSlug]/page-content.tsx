@@ -1,5 +1,7 @@
 "use client";
 
+import { useOperatorAccountPages } from "~/lib/operator/use-account-pages";
+
 import { useAccessControlledData } from "~/lib/hooks/use-access-controlled-data";
 import { operatorProvisioningKeys } from "~/lib/swr/portal-keys";
 import { useActionOn } from "~/lib/swr/read-draft";
@@ -273,27 +275,17 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
   const accountsActive =
     activeTab === "konten" && isAuthenticated && school != null;
   const {
-    data: cachedSchoolAccounts,
+    rows: schoolAccounts,
     error: accountsError,
     isLoading: accountsLoading,
-    mutate: mutateSchoolAccounts,
-  } = useSWRAuth(
-    accountsActive ? operatorProvisioningKeys.schoolAccounts(school?.id) : null,
-    () => operatorProvisioningService.listSchoolAccounts(school?.id ?? ""),
-    {
-      keepPreviousData: false,
-      revalidateOnFocus: false,
-      dedupingInterval: 5000,
-    },
+    accessRefused: schoolAccountsAccessRefused,
+    refresh: mutateSchoolAccounts,
+    serverSort: accountsSort,
+    moreAction: moreAccounts,
+  } = useOperatorAccountPages(
+    { kind: "school", id: school?.id ?? "" },
+    accountsActive,
   );
-  const { data: schoolAccounts, accessRefused: schoolAccountsAccessRefused } =
-    useAccessControlledData(
-      accountsActive
-        ? operatorProvisioningKeys.schoolAccounts(school?.id)
-        : null,
-      cachedSchoolAccounts,
-      accountsError,
-    );
 
   const devicesActive =
     activeTab === "geraete" && isAuthenticated && school != null;
@@ -1037,6 +1029,8 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
           ) : (
             <AccountsTable
               accounts={schoolAccounts ?? []}
+              serverSort={accountsSort}
+              moreAction={moreAccounts}
               isLoading={accountsLoading}
               selectedSchool={selectedSchoolForTable}
               onManageCaregiver={openCaregiverModal}

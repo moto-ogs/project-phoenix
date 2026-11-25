@@ -24,6 +24,7 @@ export default defineConfig({
     "time-tracking.perf.ts",
     "caterer-orders.perf.ts",
     "school-class-counts.perf.ts",
+    "operator-accounts.perf.ts",
   ],
   timeout: 240_000,
   workers: 1,

@@ -924,10 +924,10 @@ func TestOperatorProvisioningIntegration_CreateSchoolAccount_BuildsIdentityChain
 	require.NoError(t, err)
 	assert.Equal(t, 1, int(staffCount), "admin account must get a staff record")
 
-	accounts, err := service.ListSchoolAccounts(ctx, schoolID)
+	page, err := service.ListAccountPage(ctx, organizationtenancy.AccountScope{SchoolID: schoolID}, organizationtenancy.AccountPageQuery{})
 	require.NoError(t, err)
 	var listed bool
-	for _, listedAccount := range accounts {
+	for _, listedAccount := range page.Rows {
 		if listedAccount.AccountID == account.ID {
 			listed = true
 			assert.True(t, listedAccount.HasAdminRole, "default role is the school admin role")
@@ -959,10 +959,10 @@ func TestOperatorProvisioningIntegration_CreateSchoolAccount_CaregiverUpgradeAss
 	require.NoError(t, err)
 	require.NotNil(t, account)
 
-	accounts, err := service.ListSchoolAccounts(ctx, schoolID)
+	page, err := service.ListAccountPage(ctx, organizationtenancy.AccountScope{SchoolID: schoolID}, organizationtenancy.AccountPageQuery{})
 	require.NoError(t, err)
 	var listed bool
-	for _, listedAccount := range accounts {
+	for _, listedAccount := range page.Rows {
 		if listedAccount.AccountID == account.ID {
 			listed = true
 			assert.True(t, listedAccount.HasAdminRole, "the requested admin role stays")

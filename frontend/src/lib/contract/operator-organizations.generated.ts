@@ -10,6 +10,7 @@ import {
   nullable,
   object,
   optional,
+  paginated,
   requestBody,
   safeInt,
   str,
@@ -498,7 +499,13 @@ export const routes = {
     method: "GET",
     pattern: "/operator/organizations/{id}/accounts",
     portals: ["platform"],
-    response: success(z.array(OrganizationAccountSchema)),
+    query: {
+      "cursor": { kind: "string" },
+      "direction": { kind: "string" },
+      "search": { kind: "string" },
+      "sort": { kind: "string" },
+    },
+    response: paginated(z.array(OrganizationAccountSchema)),
   },
   "GET /operator/organizations/{id}/beleg-retention": {
     method: "GET",

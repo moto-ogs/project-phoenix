@@ -1,5 +1,6 @@
 "use client";
 
+import { initialAccountQuery } from "~/lib/operator/account-pages";
 import type { ReactNode } from "react";
 import type { OrganizationSummary } from "~/lib/operator/provisioning-helpers";
 import { operatorProvisioningKeys } from "~/lib/swr/portal-keys";
@@ -16,7 +17,7 @@ export function OrganizationSeed({
 }: Readonly<{
   seed: ServerSeedInput;
   slug: string;
-  tab: "geraete" | "loeschauftrag" | null;
+  tab: "geraete" | "loeschauftrag" | "konten" | null;
   children: ReactNode;
 }>) {
   return (
@@ -29,6 +30,15 @@ export function OrganizationSeed({
               key: SUMMARIES_KEY,
               derive: (summaries: readonly OrganizationSummary[]) => {
                 const id = summaries.find((entry) => entry.slug === slug)?.id;
+                if (id && tab === "konten") {
+                  const scope = { kind: "organization", id } as const;
+                  return [
+                    operatorProvisioningKeys.accountPage(
+                      scope,
+                      initialAccountQuery(scope),
+                    ),
+                  ];
+                }
                 return id
                   ? [
                       tab === "geraete"

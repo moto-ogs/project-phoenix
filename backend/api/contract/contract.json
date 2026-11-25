@@ -8845,6 +8845,25 @@
       "portals": [
         "platform"
       ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "direction",
+          "kind": "string"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "sort",
+          "kind": "string"
+        }
+      ],
       "response": {
         "kind": "array",
         "elem": {
@@ -9113,6 +9132,25 @@
       "portals": [
         "platform"
       ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "direction",
+          "kind": "string"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "sort",
+          "kind": "string"
+        }
+      ],
       "response": {
         "kind": "array",
         "elem": {
@@ -9308,6 +9346,25 @@
       "pattern": "/operator/schools/{id}/accounts",
       "portals": [
         "platform"
+      ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "direction",
+          "kind": "string"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "sort",
+          "kind": "string"
+        }
       ],
       "response": {
         "kind": "array",
@@ -78354,6 +78411,13 @@
           }
         },
         {
+          "name": "invitation_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
           "name": "email",
           "schema": {
             "kind": "string"
@@ -94330,6 +94394,13 @@
       "fields": [
         {
           "name": "account_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "invitation_id",
+          "optional": true,
           "schema": {
             "kind": "id"
           }

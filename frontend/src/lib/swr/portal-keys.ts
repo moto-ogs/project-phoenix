@@ -1,3 +1,7 @@
+import type {
+  AccountPageQuery,
+  AccountScope,
+} from "~/lib/operator/account-pages";
 import { encodeMultiValueParam } from "~/lib/multi-value-param";
 import { compareIds } from "~/lib/compare-ids";
 import {
@@ -53,11 +57,13 @@ export const operatorProvisioningKeys = {
   schoolRequiredDetails: () => "operator-school-required-details",
   schoolPersons: (id: string | undefined) =>
     `operator-school-persons-${encodeURIComponent(id ?? "")}`,
-  schoolAccounts: (id: string | undefined) =>
-    `operator-school-accounts-${encodeURIComponent(id ?? "")}`,
-  orgAccounts: (id: string | undefined) =>
-    `operator-org-accounts-${encodeURIComponent(id ?? "")}`,
-  allAccounts: () => "operator-all-accounts",
+  accountPage: (scope: AccountScope, query: AccountPageQuery) => {
+    const base =
+      scope.kind === "all"
+        ? "operator-all-accounts"
+        : `operator-${scope.kind === "school" ? "school" : "org"}-accounts-${encodeURIComponent(scope.id)}`;
+    return `${base}:${query.sort ?? ""}:${query.direction ?? ""}:${encodeURIComponent(query.search ?? "")}`;
+  },
   schools: () => "operator-schools",
   organizationSummaries: () => "operator-organization-summaries",
   organizationSchoolSummaries: (id: string | undefined) =>

@@ -1,5 +1,7 @@
 "use client";
 
+import { useOperatorAccountPages } from "~/lib/operator/use-account-pages";
+
 import { isAccessRefusal } from "~/lib/access-refusal";
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
@@ -327,32 +329,17 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
   const accountsActive =
     activeTab === "konten" && isAuthenticated && organization != null;
   const {
-    data: cachedOrgAccounts,
+    rows: orgAccounts,
     error: accountsError,
     isLoading: accountsLoading,
-    mutate: mutateOrgAccounts,
-  } = useSWRAuth(
-    accountsActive
-      ? operatorProvisioningKeys.orgAccounts(organization?.id)
-      : null,
-    () =>
-      operatorProvisioningService.listOrganizationAccounts(
-        organization?.id ?? "",
-      ),
-    {
-      keepPreviousData: false,
-      revalidateOnFocus: false,
-      dedupingInterval: 5000,
-    },
+    accessRefused: orgAccountsAccessRefused,
+    refresh: mutateOrgAccounts,
+    serverSort: accountsSort,
+    moreAction: moreAccounts,
+  } = useOperatorAccountPages(
+    { kind: "organization", id: organization?.id ?? "" },
+    accountsActive,
   );
-  const { data: orgAccounts, accessRefused: orgAccountsAccessRefused } =
-    useAccessControlledData(
-      accountsActive
-        ? operatorProvisioningKeys.orgAccounts(organization?.id)
-        : null,
-      cachedOrgAccounts,
-      accountsError,
-    );
 
   const devicesActive =
     activeTab === "geraete" && isAuthenticated && organization != null;
@@ -578,16 +565,7 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
   );
   const accountsAfterWrite = useRefreshAfterWrite(
     "die Anzeige der Konten",
-    () =>
-      mutateOrgAccounts(
-        () =>
-          operatorProvisioningService.listOrganizationAccounts(
-            organizationId ?? "",
-          ),
-        { revalidate: false },
-      ).catch((error: unknown) =>
-        rejectRead(operatorProvisioningKeys.orgAccounts(organizationId), error),
-      ),
+    mutateOrgAccounts,
   );
   const devicesAfterWrite = useRefreshAfterWrite("die Anzeige der Geräte", () =>
     Promise.all([
@@ -1222,6 +1200,8 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
           ) : (
             <AccountsTable
               accounts={orgAccounts ?? []}
+              serverSort={accountsSort}
+              moreAction={moreAccounts}
               showSchool
               isLoading={accountsLoading}
               onManageCaregiver={openCaregiverModal}

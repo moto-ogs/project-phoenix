@@ -43,6 +43,7 @@ const pagination = z.object({
   page_size: safeInt,
   total_pages: safeInt,
   total_records: safeInt,
+  next_cursor: z.string().optional(),
 });
 
 /** The page of a paginated list (`common.Pagination`). */
