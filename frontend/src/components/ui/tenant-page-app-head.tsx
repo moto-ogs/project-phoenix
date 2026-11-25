@@ -146,6 +146,9 @@ export function AppTenantHead({
         {...APP_HEAD_ATTR}
         className={cn(
           "moto-content-surface rounded-2xl border px-2 py-0.5",
+          // Abgelöst von der schmalen Kopfkarte: kein Rest bleibt stehen.
+          scrolledAway &&
+            "opacity-0 transition-opacity duration-200 motion-reduce:transition-none",
           // Die Fuge zur Leiste darunter deckt der Seitengrund.
           inSplitDetail &&
             `sticky top-0 ${Z_LAYER.nav} after:absolute after:inset-x-0 after:top-full after:h-2 after:bg-gray-50! after:content-['']`,
@@ -384,7 +387,7 @@ function useSplitDetailHeadHeight(
   return height;
 }
 
-/** Ob die Kopfkarte ganz aus dem Bild gescrollt ist. */
+/** Ob die Kopfkarte oben aus dem Bild gescrollt ist, auch nur teilweise. */
 function useScrolledAway(ref: RefObject<HTMLElement | null>): boolean {
   const [away, setAway] = useState(false);
   useEffect(() => {
@@ -395,9 +398,13 @@ function useScrolledAway(ref: RefObject<HTMLElement | null>): boolean {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry === undefined) return;
-        setAway(!entry.isIntersecting && entry.boundingClientRect.bottom <= 0);
+        // Schon angeschnitten zählt als weg: Die schmale Kopfkarte löst
+        // die Kopfkarte ab, statt sie oben abgeschnitten stehen zu lassen.
+        setAway(
+          entry.intersectionRatio < 0.98 && entry.boundingClientRect.top < 0,
+        );
       },
-      { threshold: 0 },
+      { threshold: [0, 0.98, 1] },
     );
     observer.observe(node);
     return () => observer.disconnect();
