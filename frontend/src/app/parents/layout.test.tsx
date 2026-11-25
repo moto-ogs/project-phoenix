@@ -10,7 +10,11 @@ const {
   loadShellSeedMock,
 } = vi.hoisted(() => ({
   requestPath: { current: null as string | null },
-  loadShellSeedMock: vi.fn(async () => null),
+  loadShellSeedMock: vi.fn(() => ({
+    day: "2026-09-09",
+    seed: null,
+    render: false,
+  })),
   notBooked: { current: false },
   parentAuthMock: vi.fn(async () => null),
   readParentSessionSnapshotMock: vi.fn<() => Promise<Session | null>>(
@@ -29,7 +33,7 @@ vi.mock("next/headers", () => ({
 
 vi.mock("~/lib/parent-seed.server", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/parent-seed.server")>()),
-  loadParentSeed: loadShellSeedMock,
+  parentSeedProps: loadShellSeedMock,
 }));
 
 vi.mock("~/server/auth/parent", async () =>

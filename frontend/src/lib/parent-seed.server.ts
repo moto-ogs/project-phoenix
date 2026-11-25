@@ -57,22 +57,27 @@ export function isProtectedParentPath(path: string | null): path is string {
   );
 }
 
-/** The URL never supplies child IDs to the seed. */
-export async function loadParentSeed(
-  render: boolean,
-): Promise<ServerSeed | null> {
+const renderDay = cache(() => berlinTodayISO());
+
+/** The URL never supplies child IDs to the seed. The day travels with the HTML. */
+export function parentSeedProps(render: boolean) {
+  const day = renderDay();
   const builtAt = Date.now();
-  const snapshot = await parentSnapshot();
-  if (!snapshot) return null;
-  return seedOf(
-    snapshot,
-    [
-      {
-        key: parentKeys.familyStart(berlinTodayISO()),
-        value: loadFamily(snapshot.accessToken),
-        render,
-      },
-    ],
-    builtAt,
-  );
+  const seed = parentSnapshot()
+    .then((snapshot): ServerSeed | null => {
+      if (!snapshot) return null;
+      return seedOf(
+        snapshot,
+        [
+          {
+            key: parentKeys.familyStart(day),
+            value: loadFamily(snapshot.accessToken),
+            render,
+          },
+        ],
+        builtAt,
+      );
+    })
+    .catch(() => null);
+  return { day, seed, render };
 }

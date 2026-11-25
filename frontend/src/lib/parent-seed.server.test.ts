@@ -28,7 +28,7 @@ vi.mock("~/lib/portal-session-snapshot.server", () => ({
   readPortalSessionSnapshot: async () => snapshot.current,
 }));
 
-import { isProtectedParentPath, loadParentSeed } from "./parent-seed.server";
+import { isProtectedParentPath, parentSeedProps } from "./parent-seed.server";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import { sessionGeneration } from "~/lib/swr/session-generation";
 
@@ -119,7 +119,7 @@ describe("parent page seeds", () => {
   it.each([true, false])(
     "offers one family read with render=%s, independent of the URL",
     async (render) => {
-      const seed = await loadParentSeed(render);
+      const seed = await parentSeedProps(render).seed;
       expect(seed?.generation).toBe(sessionGeneration(parent));
       expect(seed?.entries.map((entry) => [entry.key, entry.render])).toEqual([
         [key, render],
@@ -139,7 +139,7 @@ describe("parent page seeds", () => {
       endpoint,
       ok({ ...response, cards: [cards[0], { ...cards[1], today: null }] }),
     );
-    const values = await valuesOf(await loadParentSeed(true));
+    const values = await valuesOf(await parentSeedProps(true).seed);
     expect(values[key]).toMatchObject({
       today: { "7": { state: "present" }, "8": { state: "unknown" } },
       todayErrors: { "8": { status: 503, code: "general.unavailable" } },
@@ -152,7 +152,9 @@ describe("parent page seeds", () => {
 
   it("leaves a failed read unseeded rather than confirming an empty family", async () => {
     answers.set(endpoint, { status: 503, body: { status: "error" } });
-    expect((await valuesOf(await loadParentSeed(true)))[key]).toBeUndefined();
+    expect(
+      (await valuesOf(await parentSeedProps(true).seed))[key],
+    ).toBeUndefined();
     expect(requests).toEqual([endpoint]);
   });
 
@@ -173,8 +175,8 @@ describe("parent page seeds", () => {
   ])("seeds nothing for %s", async (_, current) => {
     snapshot.current = current;
 
-    expect(await loadParentSeed(true)).toBeNull();
-    expect(await loadParentSeed(false)).toBeNull();
+    expect(await parentSeedProps(true).seed).toBeNull();
+    expect(await parentSeedProps(false).seed).toBeNull();
     expect(requests).toEqual([]);
   });
 

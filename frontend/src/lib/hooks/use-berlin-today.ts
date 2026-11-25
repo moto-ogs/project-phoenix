@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 import { berlinTodayISO } from "~/lib/date-helpers";
+
+// A seed boundary supplies the day of its HTML for hydration only.
+export const RenderedBerlinDay = createContext<string | undefined>(undefined);
 
 /**
  * The current Berlin calendar day as "YYYY-MM-DD", re-rendering the caller when
@@ -25,5 +28,6 @@ export function useBerlinToday(): string {
     }, 60_000);
     return () => clearInterval(id);
   }, []);
-  return today;
+  const renderedDay = useContext(RenderedBerlinDay);
+  return renderedDay ?? today;
 }

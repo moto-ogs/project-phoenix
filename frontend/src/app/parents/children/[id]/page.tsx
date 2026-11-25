@@ -3,7 +3,7 @@ import { ChildProfileMessages } from "~/i18n/shared-page-messages";
 import { ChildPage } from "~/components/parent/child/child-page";
 import { ParentPageSkeleton } from "~/components/parent/parent-page";
 import { ParentServerSeed } from "~/components/parent/parent-server-seed";
-import { loadParentSeed } from "~/lib/parent-seed.server";
+import { parentSeedProps } from "~/lib/parent-seed.server";
 
 /**
  * Derselbe Kinderbereich, mit dem Kind aus der Adresse vorausgewaehlt. Die
@@ -16,11 +16,10 @@ export default async function ParentChildPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const seed = loadParentSeed(true).catch(() => null);
   return (
     <ChildProfileMessages>
       <Suspense fallback={<ParentPageSkeleton rows={2} />}>
-        <ParentServerSeed seed={seed} render>
+        <ParentServerSeed {...parentSeedProps(true)}>
           <ChildPage studentId={id} />
         </ParentServerSeed>
       </Suspense>

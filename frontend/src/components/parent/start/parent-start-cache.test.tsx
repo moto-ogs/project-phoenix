@@ -8,6 +8,9 @@ import { sessionGeneration } from "~/lib/swr/session-generation";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { setTestClock } from "~/test/clock";
 import { Profiler } from "react";
+import { renderToString } from "react-dom/server";
+import { hydrateRoot } from "react-dom/client";
+import { useParentChildren } from "~/lib/hooks/use-parent-resources";
 import type { Session } from "next-auth";
 import { SWRConfig } from "~/lib/swr/testing";
 import { SWRScopeBoundary } from "~/lib/swr/scope-boundary";
@@ -196,7 +199,7 @@ describe("parent start cache isolation", () => {
     const cache = new Map();
     render(
       <SWRConfig value={{ provider: () => cache }}>
-        <ParentServerSeed seed={seed} render>
+        <ParentServerSeed day={seeded.day} seed={seed} render>
           <Fixture />
         </ParentServerSeed>
       </SWRConfig>,
@@ -212,6 +215,56 @@ describe("parent start cache isolation", () => {
     });
     expect(getFamilyStart).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("Kind A Test")).not.toBeInTheDocument();
+  });
+
+  it("hydrates the roster sent before Berlin midnight, then reads the device's new key", async () => {
+    setTestClock("2026-09-09T23:59:58+02:00");
+    const seeded = applyCards(undefined, familyCards(await family.read()));
+    const key = parentKeys.familyStart(berlinTodayISO());
+    const seed = {
+      builtAt: Date.now(),
+      generation: sessionGeneration({
+        user: { id: "A", scope: "parent" },
+        expires: "2099-01-01",
+      })!,
+      entries: [
+        {
+          key,
+          render: true,
+          value: Object.assign(Promise.resolve(seeded), {
+            status: "fulfilled",
+            value: seeded,
+          }),
+        },
+      ],
+    };
+    function Roster() {
+      return (
+        <output>
+          {useParentChildren()
+            .data?.map((child) => child.first_name)
+            .join(",") ?? "loading"}
+        </output>
+      );
+    }
+    const tree = (
+      <ParentServerSeed day={seeded.day} seed={seed} render>
+        <Roster />
+      </ParentServerSeed>
+    );
+    const host = document.createElement("div");
+    host.innerHTML = renderToString(tree);
+    expect(host.textContent).toBe("Kind A");
+    setTestClock("2026-09-10T00:00:01+02:00");
+    const recover = vi.fn();
+    const root = hydrateRoot(host, tree, { onRecoverableError: recover });
+    try {
+      await waitFor(() => expect(getFamilyStart).toHaveBeenCalledTimes(1));
+      expect(host.textContent).toBe("Kind A");
+      expect(recover).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+    }
   });
 
   it("discards day-independent child details when the first new-day roster removes the relationship", async () => {

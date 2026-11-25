@@ -70,7 +70,12 @@ export function readParentFamily(previous: ParentFamily | undefined) {
   let result: Promise<ParentFamily>;
   if (previous && id) {
     const updates = new Map(prior?.updates);
-    updates.set(id, readCards(id));
+    // A full read may be deciding a revocation. Do not obtain a card
+    // before that read settles and then apply its older access to the roster.
+    const request = prior
+      ? prior.roster.then(() => readCards(id))
+      : readCards(id);
+    updates.set(id, request);
     read = { roster: prior?.roster ?? Promise.resolve(previous), updates };
     result = reconcileChildren(read);
   } else {

@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { messageBoundary } from "~/i18n/scoped-messages";
 import { ParentServerSeed } from "~/components/parent/parent-server-seed";
 import { ParentStartPage } from "~/components/parent/start/parent-start-page";
-import { loadParentSeed } from "~/lib/parent-seed.server";
+import { parentSeedProps } from "~/lib/parent-seed.server";
 
 const PageMessages = messageBoundary(
   "holidayRegistration.weekRange",
@@ -24,14 +24,13 @@ const PageMessages = messageBoundary(
  * HTML, bei einem Wechsel uebernehmen die Leser die Werte statt neu zu laden.
  */
 export default function ParentsStartPage() {
-  const seed = loadParentSeed(true).catch(() => null);
   // Until the seed is there, the server HTML shows the page itself with its
   // card skeleton: greeting, holiday offers and to-dos do not wait for it.
   // A client navigation never suspends here.
   return (
     <PageMessages>
       <Suspense fallback={<ParentStartPage />}>
-        <ParentServerSeed seed={seed} render>
+        <ParentServerSeed {...parentSeedProps(true)}>
           <ParentStartPage />
         </ParentServerSeed>
       </Suspense>

@@ -9,7 +9,7 @@ import { readPortalSessionSnapshot } from "~/lib/portal-session-snapshot.server"
 import { ParentServerSeed } from "~/components/parent/parent-server-seed";
 import {
   isProtectedParentPath,
-  loadParentSeed,
+  parentSeedProps,
   parentRequestPath,
 } from "~/lib/parent-seed.server";
 
@@ -96,7 +96,7 @@ export default async function ParentLayout({
             not awaited. A public page, also with a parent cookie, gets no
             personal seed and no extra read. */}
         {snapshot && !snapshot.notBooked && isProtectedParentPath(path) ? (
-          <ParentServerSeed seed={loadParentSeed(false).catch(() => null)}>
+          <ParentServerSeed {...parentSeedProps(false)}>
             {guarded}
           </ParentServerSeed>
         ) : (

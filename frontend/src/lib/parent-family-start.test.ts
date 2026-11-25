@@ -139,6 +139,29 @@ describe("family card updates", () => {
     expect(updated.children).toEqual([card("2").child]);
     expect(updated.features["2"]?.notes_enabled).toBe(false);
   });
+  it("does not read a targeted card ahead of a concurrent roster decision", async () => {
+    read.mockResolvedValueOnce({ ...serverDay, cards: [card("1")] });
+    const family = await readParentFamily(undefined);
+    let linked = true;
+    let confirmRemoval!: () => void;
+    const roster = new Promise<void>((resolve) => {
+      confirmRemoval = resolve;
+    });
+    read.mockImplementation(async (id) => {
+      if (!id) {
+        await roster;
+        linked = false;
+      }
+      return { ...serverDay, cards: linked ? [card("1")] : [] };
+    });
+    const full = readParentFamily(family);
+    narrowNextFamilyRead(family, "1");
+    const targeted = readParentFamily(family);
+    confirmRemoval();
+    await full;
+    expect((await targeted).children).toEqual([]);
+  });
+
   it("keeps the newer child update when the older reply arrives last", async () => {
     read.mockResolvedValueOnce({
       ...serverDay,
