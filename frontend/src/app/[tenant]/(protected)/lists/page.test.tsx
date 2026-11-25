@@ -431,6 +431,7 @@ describe("SlotListsPage error paths (#2516)", () => {
 
   it("rejects a corrupted filter link and offers to reset the filters", async () => {
     mocks.search.value = "datum=2026-09-09&gruppen=-1";
+    const historyReplace = vi.spyOn(window.history, "replaceState");
 
     render(<SlotListsPage />);
 
@@ -448,8 +449,8 @@ describe("SlotListsPage error paths (#2516)", () => {
       screen.getByRole("button", { name: "Filter zurücksetzen" }),
     );
 
-    expect(mocks.replace).toHaveBeenCalledWith(
-      expect.not.stringContaining("gruppen"),
-    );
+    expect(historyReplace).toHaveBeenCalledOnce();
+    expect(window.location.search).not.toContain("gruppen");
+    expect(mocks.replace).not.toHaveBeenCalled();
   });
 });

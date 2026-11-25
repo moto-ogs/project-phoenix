@@ -78,15 +78,16 @@ describe.each([
   });
 
   it.each(["touch", "pen"])(
-    "prefetches at once when %s starts on the link",
+    "does not prefetch immediately when %s contacts the link",
     (pointerType) => {
+      vi.useFakeTimers();
       render(<Link href="/rooms">Räume</Link>);
 
       fireEvent.pointerEnter(screen.getByRole("link", { name: "Räume" }), {
         pointerType,
       });
 
-      expect(currentPrefetch()).toBe(true);
+      expect(currentPrefetch()).toBe(false);
     },
   );
 

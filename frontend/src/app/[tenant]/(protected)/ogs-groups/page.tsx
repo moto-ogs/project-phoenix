@@ -42,7 +42,7 @@ export default async function OGSGroupPage({
         )
           return [];
         // A missing group is not a default on this route: a browser may have
-        // an account-scoped selection in localStorage that the server cannot see.
+        // an account-scoped browser selection that the server cannot see.
         return [
           {
             key: groupKeys.live(group),

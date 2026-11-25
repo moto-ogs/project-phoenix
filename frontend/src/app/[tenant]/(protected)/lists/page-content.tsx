@@ -48,7 +48,6 @@ import type {
   ActiveFilter,
   FilterConfig,
 } from "~/components/ui/page-header/types";
-import { useTenantRouter } from "~/lib/tenant-router";
 import { useTimetableEnabled } from "~/lib/tenant-context";
 import {
   berlinTodayISO,
@@ -658,7 +657,6 @@ function serializeListState(
 export default function SlotListsPage() {
   const { status: authStatus } = useSession({ required: true });
   const searchParams = useSearchParams();
-  const router = useTenantRouter();
   // Route guard: Tageslisten are part of the timetable feature, so an explicit
   // timetable.enabled=false hides the page just like the Betreuungsplan/Vertretung
   // guards and the sidebar (#1565 review). The flag comes from the tenant
@@ -947,7 +945,9 @@ export default function SlotListsPage() {
         selectedClasses,
         ...next,
       });
-      router.replace(`/lists?${query}`);
+      const url = new URL(window.location.href);
+      url.search = query.toString();
+      window.history.replaceState(null, "", url);
     },
     [
       target,
@@ -959,7 +959,6 @@ export default function SlotListsPage() {
       selectedSlotIds,
       selectedGroupIds,
       selectedClasses,
-      router,
     ],
   );
 
@@ -973,7 +972,7 @@ export default function SlotListsPage() {
     setDateISO(next.dateISO);
     // Keep the previous reference when the URL round-trip yields an equal
     // selection. A slot/group/class change first updates local state (firing
-    // the preview), then router.replace re-parses searchParams into fresh
+    // the preview), then the URL replacement re-parses searchParams into fresh
     // arrays here; installing them would recompute `request` and fire a second,
     // redundant BuildList for the same selection (#1565 review).
     setSelectedSlotIds((prev) =>

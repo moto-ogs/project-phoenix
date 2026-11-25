@@ -3,12 +3,7 @@
 import { roomKeys } from "~/lib/swr/rooms-keys";
 
 import { Suspense, useCallback, useMemo, useState } from "react";
-import {
-  useParams,
-  usePathname,
-  useRouter,
-  useSearchParams,
-} from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { FileDown, Trash2 } from "lucide-react";
 import { ButtonLink } from "~/components/ui/button";
@@ -124,8 +119,6 @@ export default function RoomDetailPage() {
  */
 function RoomDetailPageContent() {
   const params = useParams();
-  const pathname = usePathname();
-  const navRouter = useRouter();
   const searchParams = useSearchParams();
   const router = useTenantRouter();
   const tenantPath = useTenantAwarePath();
@@ -227,12 +220,11 @@ function RoomDetailPageContent() {
       if (nextTab !== "plan") {
         for (const key of PLAN_TAB_PARAMS) query.delete(key);
       }
-      const queryString = query.toString();
-      navRouter.replace(queryString ? `${pathname}?${queryString}` : pathname, {
-        scroll: false,
-      });
+      const url = new URL(window.location.href);
+      url.search = query.toString();
+      window.history.replaceState(null, "", url);
     },
-    [navRouter, pathname, searchParams],
+    [searchParams],
   );
 
   // Zeitraum des Reiters „Plan“: ein ungültiges `d` fällt still auf heute.
@@ -260,9 +252,11 @@ function RoomDetailPageContent() {
       query.set("tab", "plan");
       if (next.d) query.set("d", next.d);
       if (next.view) query.set("view", next.view);
-      navRouter.replace(`${pathname}?${query.toString()}`, { scroll: false });
+      const url = new URL(window.location.href);
+      url.search = query.toString();
+      window.history.replaceState(null, "", url);
     },
-    [navRouter, pathname, searchParams],
+    [searchParams],
   );
   // „Raumplan als PDF“ (#4768): der Aushang der angezeigten Woche, mit dem
   // Raumfilter des Betreuungsplan-Exports. Bewusst ohne den Druckdialog des

@@ -18,7 +18,7 @@ import {
   perfPort,
   tenantBaseUrl,
 } from "./access";
-import { metricsBearerToken, perfServerEnv } from "./env.mjs";
+import { metricsBearerToken, perfBackendUrl } from "./env.mjs";
 import { RequestRecorder } from "./recorder";
 import { INTENT_HOPS, type IntentHop } from "./targets";
 
@@ -40,7 +40,7 @@ interface Target {
 
 const access = loadAccess();
 const port = perfPort();
-const backend = new URL(perfServerEnv().API_URL);
+const backend = new URL(perfBackendUrl());
 if (
   backend.protocol !== "http:" ||
   !["localhost", "127.0.0.1", "[::1]"].includes(backend.hostname)
@@ -199,7 +199,10 @@ async function signIn(page: Page, portal: Portal) {
 async function goReads(page: Page) {
   const response = await page.request.get(
     new URL("/internal/metrics", backend).href,
-    { headers: { Authorization: `Bearer ${metricsBearerToken()}` } },
+    {
+      headers: { Authorization: `Bearer ${metricsBearerToken()}` },
+      maxRedirects: 0,
+    },
   );
   expect(response.ok(), "local Go metrics").toBe(true);
   const counts = new Map<string, number>();

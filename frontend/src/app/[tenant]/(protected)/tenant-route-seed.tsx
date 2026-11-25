@@ -25,15 +25,21 @@ export async function TenantRouteSeed({
 }) {
   const builtAt = Date.now();
   const seed = readTenantPageContext(slug, module)
-    .then(async (context) =>
-      context ? seedOf(context.snapshot, await load(context), builtAt) : null,
-    )
+    .then(async (context) => {
+      if (!context) return null;
+      const entries = await load(context);
+      return entries.length > 0
+        ? seedOf(context.snapshot, entries, builtAt)
+        : null;
+    })
     .catch(() => null);
+  const input = claims ? seed : await seed;
+  if (!input) return children;
 
   // Loaders that resolve dependent keys pass their known initial keys as
   // claims. Navigation can then commit the page while the seed is streaming.
   return (
-    <SWRServerSeed seed={claims ? seed : await seed} claims={claims} render>
+    <SWRServerSeed seed={input} claims={claims} render>
       {children}
     </SWRServerSeed>
   );
