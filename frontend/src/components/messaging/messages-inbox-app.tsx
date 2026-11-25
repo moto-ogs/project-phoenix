@@ -212,24 +212,21 @@ function InboxList({
                   decorative
                 />
               }
-              // Zwei Zeilen wie in Chat-Apps. Breit (iPad hoch): Person samt
-              // Beziehung zum Kind, darunter die letzte Nachricht. Schmal
-              // (Telefon): die Person allein, darunter das Kind ganz und
-              // danach die gekürzte Nachricht – so bleibt die Zuordnung
-              // Eltern → Kind auch am kleinen Telefon lesbar.
+              // Breit (iPad hoch): Person samt Beziehung zum Kind, darunter
+              // die letzte Nachricht. Schmal (Telefon, Runde 9): die Person,
+              // darunter das Kind mit der Beziehung und die letzte Nachricht
+              // in einer eigenen Zeile – vorher brach sie nach ~15 Zeichen ab.
               title={
                 <>
                   <span className={unread ? "font-semibold" : undefined}>
                     {thread.guardian_name}
                   </span>
-                  {/* Die Beziehung wie in der Liste des Desktops; schmal
-                      ohne „von …“, das Kind steht in der Zeile darunter. */}
-                  <span className="font-normal text-gray-500">
-                    {" · "}
-                    {wide
-                      ? relation
-                      : relationshipLabel(thread.relationship_type)}
-                  </span>
+                  {wide ? (
+                    <span className="font-normal text-gray-500">
+                      {" · "}
+                      {relation}
+                    </span>
+                  ) : null}
                 </>
               }
               subtitle={
@@ -238,25 +235,30 @@ function InboxList({
                     {last}
                   </span>
                 ) : (
-                  <span className="flex min-w-0 items-baseline gap-1">
-                    {/* Ein Kopf = Kind. */}
-                    <span className="flex shrink-0 items-baseline font-medium text-gray-700">
-                      <MotoConceptIcon
-                        concept={childrenConcept}
-                        size={14}
-                        className="mr-0.5 inline-block self-center"
-                      />
-                      {thread.student_name}
+                  <>
+                    <span className="flex min-w-0 items-baseline gap-1">
+                      {/* Ein Kopf = Kind. */}
+                      <span className="flex min-w-0 items-baseline truncate font-medium text-gray-700">
+                        <MotoConceptIcon
+                          concept={childrenConcept}
+                          size={14}
+                          className="mr-0.5 inline-block shrink-0 self-center"
+                        />
+                        <span className="truncate">{thread.student_name}</span>
+                      </span>
+                      <span className="shrink-0">
+                        · {relationshipLabel(thread.relationship_type)}
+                      </span>
                     </span>
                     <span
                       className={cn(
-                        "min-w-0 truncate",
+                        "block truncate",
                         unread && "text-gray-900",
                       )}
                     >
-                      · {last}
+                      {last}
                     </span>
-                  </span>
+                  </>
                 )
               }
               meta={

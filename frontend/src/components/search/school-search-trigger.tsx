@@ -1,9 +1,17 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 
 import { Button } from "~/components/ui/button";
+import { SearchBar } from "~/components/ui/page-header/SearchBar";
+import { useIsApp } from "~/lib/device-context";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import {
   useSearchShortcut,
@@ -60,6 +68,32 @@ function SchoolSearchButton({
   onOpen,
 }: Readonly<SchoolSearchButtonProps>) {
   const shortcut = useSearchShortcutLabel();
+  const isApp = useIsApp();
+  if (placement === "moreSheet" && isApp) {
+    // Telefon (#8070, Runde 9): dasselbe Suchfeld wie in der Kindersuche,
+    // nur lesend; ein Tipp öffnet die Suche, dort tippt man.
+    const open = (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        onOpen();
+      }
+    };
+    return (
+      <SearchBar
+        value=""
+        onChange={onOpen}
+        placeholder="Überall suchen"
+        size="sm"
+        inputProps={{
+          readOnly: true,
+          "aria-label": "Überall suchen",
+          "aria-haspopup": "dialog",
+          onClick: onOpen,
+          onKeyDown: open,
+        }}
+      />
+    );
+  }
   if (placement === "moreSheet") {
     return (
       <Button

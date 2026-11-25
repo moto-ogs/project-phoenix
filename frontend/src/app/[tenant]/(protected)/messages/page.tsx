@@ -4,7 +4,11 @@ import { messageKeys } from "~/lib/swr/portal-keys";
 
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSWRAuth } from "~/lib/swr";
-import { NotePencilIcon } from "@phosphor-icons/react";
+import {
+  CheckIcon,
+  FunnelSimpleIcon,
+  NotePencilIcon,
+} from "@phosphor-icons/react";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -243,6 +247,13 @@ function MessagesInboxContent() {
         onPressedChange={setOnlyUnread}
         className="shrink-0 whitespace-nowrap tabular-nums"
       >
+        {/* Ein Filter, keine Kennzahl (Runde 9): das Symbol zeigt, dass er
+            die Liste einschränkt, der Haken, dass er gerade wirkt. */}
+        {onlyUnread ? (
+          <CheckIcon size={16} weight="bold" className="mr-1.5" aria-hidden />
+        ) : (
+          <FunnelSimpleIcon size={16} className="mr-1.5" aria-hidden />
+        )}
         {unreadThreads > 0 ? `${unreadThreads} ungelesen` : "Ungelesen"}
       </ToggleChip>
     </div>
@@ -311,8 +322,9 @@ function MessagesInboxContent() {
             ]
           : []),
       ]}
-      // App: Suche und Filter stehen als Kopf der Liste in der Karte; die
-      // Kopfkarte trägt nur Titel und Reiter und bleibt am SE flach.
+      // App: Suche und Filter in der Leiste der Kopfkarte wie in der
+      // Kindersuche; sie klebt beim Scrollen (Runde 9).
+      searchSlot={isApp ? appToolbar : undefined}
       search={
         isApp
           ? undefined
@@ -388,7 +400,6 @@ function MessagesInboxContent() {
           <MessagesInboxApp
             threads={filteredThreads}
             listAction={isSplit ? appComposeButton : null}
-            header={appToolbar}
             empty={
               <EmptyState
                 variant="compact"

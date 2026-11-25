@@ -8,6 +8,7 @@ import {
   buildDefaultPresets,
   RangeCalendarInline,
 } from "~/components/ui/date-range-picker";
+import { Button } from "~/components/ui/button";
 import { ExportDialog } from "~/components/ui/export-dialog";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { useExportRun } from "~/hooks/use-export-run";
@@ -50,9 +51,15 @@ function defaultRange(yearStart: Date): DateRange {
 export function StaffExportButton({
   staffId,
   yearStart,
+  asButton = false,
 }: {
   readonly staffId: string;
   readonly yearStart: Date;
+  /**
+   * App (#8070): ein sichtbarer Export-Knopf statt des Kebabs, das am
+   * Telefon im „…“ der Kopfkarte verschwand.
+   */
+  readonly asButton?: boolean;
 }) {
   const yearStartISO = toISODate(yearStart);
   const [open, setOpen] = useState(false);
@@ -98,18 +105,31 @@ export function StaffExportButton({
 
   return (
     <>
-      <OverflowMenu
-        ariaLabel="Menü öffnen"
-        items={[
-          {
-            label: "Exportieren",
-            description:
-              "Öffnet die Auswahl von Zeitraum und Format für den Zeitnachweis.",
-            icon: <Download className="h-4 w-4" />,
-            onClick: () => setOpen(true),
-          },
-        ]}
-      />
+      {asButton ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label="Zeitnachweis exportieren"
+          onClick={() => setOpen(true)}
+          tooltip="Öffnet die Auswahl von Zeitraum und Format für den Zeitnachweis."
+        >
+          <Download className="size-5" aria-hidden />
+        </Button>
+      ) : (
+        <OverflowMenu
+          ariaLabel="Menü öffnen"
+          items={[
+            {
+              label: "Exportieren",
+              description:
+                "Öffnet die Auswahl von Zeitraum und Format für den Zeitnachweis.",
+              icon: <Download className="h-4 w-4" />,
+              onClick: () => setOpen(true),
+            },
+          ]}
+        />
+      )}
       <ExportDialog
         isOpen={open}
         onClose={() => setOpen(false)}

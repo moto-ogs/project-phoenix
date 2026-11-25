@@ -186,6 +186,7 @@ import {
   AppClockPanel,
   AppDayList,
   AppRangeBar,
+  AppAccountCard,
   AppDayFactsPanel,
   AppTimeTrackingLayout,
   type AppDayFacts,
@@ -220,6 +221,12 @@ const DAY_NAMES_LONG = [
 ];
 
 // ─── ClockInCard ──────────────────────────────────────────────────────────────
+
+/** App (#8070): Woche/Monat in der Leiste der Kopfkarte. */
+const APP_VIEW_MODE_ITEMS: readonly SegmentedControlItem<ViewMode>[] = [
+  { value: "week", label: "Woche" },
+  { value: "month", label: "Monat" },
+];
 
 // Renders today's planned Dienstplan shifts under the Stempeluhr title: each
 // active shift with its Schichtart chip, a "Vertretung" tag for replacement
@@ -1025,40 +1032,6 @@ function ClockInCard({
         breakStepper={breakDurationStepper}
         breakSheetOpen={breakMenuOpen && !isOnBreak}
         onBreakSheetOpenChange={setBreakMenuOpen}
-        footer={
-          metrics ? (
-            // Die Kacheln des Desktops (Woche steht in der Kopfkarte):
-            // Monat und der Beginn des Stundenkontos, dazu die Herkunft des
-            // Solls (#8070, Runde 7).
-            <div
-              className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-gray-100 pt-3 text-sm text-gray-500 tabular-nums"
-              data-app-clock-metrics=""
-            >
-              <span>
-                Monat{" "}
-                <span className="font-semibold text-gray-900">
-                  {metrics.month === null
-                    ? "–"
-                    : formatDuration(metrics.month.ist)}
-                </span>
-                {metrics.month === null
-                  ? null
-                  : ` von ${formatDuration(metrics.month.soll)}`}
-                {" · Stundenkonto seit "}
-                {metrics.accountStart.toLocaleDateString("de-DE", {
-                  timeZone: "Europe/Berlin",
-                  day: "numeric",
-                  month: "short",
-                })}
-              </span>
-              <TargetOriginChip
-                hasTargetOverride={metrics.hasTargetOverride}
-                hasTarget={metrics.hasTarget}
-                setTargetHref={setTargetHref}
-              />
-            </div>
-          ) : undefined
-        }
       />
     );
   }
@@ -3008,17 +2981,38 @@ function EditSessionModal({
                 >
                   Grund der Änderung
                 </FieldLabel>
-                <div className="mb-2 flex flex-wrap gap-1.5">
-                  {EDIT_REASON_PRESETS.map((reason) => (
-                    <ToggleChip
-                      key={reason}
-                      pressed={notes === reason}
-                      onPressedChange={() => setNotes(reason)}
-                    >
-                      {reason}
-                    </ToggleChip>
-                  ))}
-                </div>
+                {app ? (
+                  // App (#8070, Runde 9): eine Auswahl wie Pause und Ort
+                  // darüber statt Chips, die am Telefon ungleich umbrachen.
+                  <CustomSelect
+                    id="edit-reason-preset"
+                    ariaLabel="Häufiger Grund"
+                    placeholder="Häufigen Grund wählen"
+                    value={
+                      (EDIT_REASON_PRESETS as readonly string[]).includes(notes)
+                        ? notes
+                        : ""
+                    }
+                    onChange={setNotes}
+                    options={EDIT_REASON_PRESETS.map((reason) => ({
+                      value: reason,
+                      label: reason,
+                    }))}
+                    className="mb-2 w-full"
+                  />
+                ) : (
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {EDIT_REASON_PRESETS.map((reason) => (
+                      <ToggleChip
+                        key={reason}
+                        pressed={notes === reason}
+                        onPressedChange={() => setNotes(reason)}
+                      >
+                        {reason}
+                      </ToggleChip>
+                    ))}
+                  </div>
+                )}
                 <Textarea
                   id="edit-notes"
                   name="notes"
@@ -4326,7 +4320,7 @@ function TimeTrackingContent() {
       // Bauart 3, Regel 4: Exportieren steht im Kebab der Kopfkarte, nicht
       // mitten in einer Inhaltskarte.
       actions={
-        ownStaffId ? (
+        ownStaffId && !app ? (
           <>
             {dienstplanBooked && (
               <ButtonLink
@@ -4352,7 +4346,41 @@ function TimeTrackingContent() {
       // Bauart 3, Regel 1: eine Zeitnavigation im Bedienband der Kopfkarte,
       // dieselbe wie in Dienstplan, Vertretung und Betreuungsplan.
       searchSlot={
-        app ? undefined : (
+        app ? (
+          // App (#8070, Runde 9): Woche/Monat, Dienstplan und Export sichtbar
+          // in der Leiste der Kopfkarte statt im „…“ bzw. hinter dem Zeitraum.
+          <div className="flex items-center gap-2" data-app-tt-toolbar="">
+            <SegmentedControl
+              ariaLabel="Zeitraum-Ansicht"
+              items={APP_VIEW_MODE_ITEMS}
+              value={viewMode}
+              onChange={setViewMode}
+              className="flex-1"
+              fullWidth
+            />
+            {ownStaffId && dienstplanBooked ? (
+              <ButtonLink
+                href={tenantPath("/mein-dienstplan")}
+                variant="outline"
+                size="md"
+                tooltip="Öffnet deine geplanten Schichten der Woche."
+              >
+                <CalendarRange
+                  className="mr-1.5 h-4 w-4 shrink-0"
+                  aria-hidden
+                />
+                <span className="whitespace-nowrap">Dienstplan</span>
+              </ButtonLink>
+            ) : null}
+            {ownStaffId ? (
+              <StaffExportButton
+                asButton
+                staffId={ownStaffId}
+                yearStart={startOfYear(parseISODate(todayISO))}
+              />
+            ) : null}
+          </div>
+        ) : (
           <PlanningContextBar
             withoutContextRow
             dateLabel={rangeLabel}
@@ -4608,8 +4636,6 @@ function TimeTrackingContent() {
               rangeBar={
                 <AppRangeBar
                   label={rangeLabel.replace(/\.(\d{4})$/, ".")}
-                  viewMode={viewMode}
-                  onViewModeChange={setViewMode}
                   onPrevious={goToPreviousRange}
                   onNext={goToNextRange}
                   previousLabel={
@@ -4642,6 +4668,34 @@ function TimeTrackingContent() {
                 })
               }
             />
+          }
+          account={
+            metricsPending || metricsLoad.error ? undefined : (
+              <AppAccountCard
+                monthIst={ownMetrics.month?.ist ?? null}
+                monthSoll={ownMetrics.month?.soll ?? null}
+                accountBalanceMinutes={ownMetrics.accountBalanceMinutes}
+                accountStart={ownMetrics.accountStart}
+                origin={
+                  ownMetrics.hasTarget === false ? (
+                    <TargetOriginChip
+                      hasTarget={false}
+                      setTargetHref={
+                        canSetTarget && ownStaffId
+                          ? tenantPath(workTimeModelPath(ownStaffId))
+                          : undefined
+                      }
+                    />
+                  ) : ownMetrics.hasTargetOverride ? (
+                    // Der Text des Herkunfts-Chips am Desktop; am Telefon
+                    // gibt es keinen Hover, also steht er da.
+                    "An manchen Tagen dieser Woche gilt eine Sonderarbeitszeit statt des Arbeitszeitmodells."
+                  ) : (
+                    "Das Soll kommt aus deinem Arbeitszeitmodell."
+                  )
+                }
+              />
+            )
           }
           today={<BetreuungsplanHeuteCard app />}
           leave={<LeaveRequestsCard app />}

@@ -13,7 +13,7 @@
  * Desktop rendert nichts hiervon.
  */
 
-import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
@@ -26,15 +26,10 @@ import {
 } from "~/components/ui/collection";
 import { OverlaySheet } from "~/components/ui/overlay-sheet";
 import {
-  SegmentedControl,
-  type SegmentedControlItem,
-} from "~/components/ui/segmented-control";
-import {
   StatusBadge,
   type StatusBadgeTone,
 } from "~/components/ui/status-badge";
 import { DataField } from "~/components/ui/data-field";
-import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionCard } from "~/components/ui/section-card";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { SplitView } from "~/components/ui/split-view";
@@ -92,8 +87,6 @@ export interface AppClockPanelProps {
   readonly breakStepper: ReactNode;
   readonly breakSheetOpen: boolean;
   readonly onBreakSheetOpenChange: (open: boolean) => void;
-  /** Monat, Beginn des Stundenkontos und Herkunft des Solls. */
-  readonly footer?: ReactNode;
 }
 
 function formatClock(totalSecs: number): string {
@@ -271,7 +264,6 @@ export function AppClockPanel(props: AppClockPanelProps) {
             ))}
           </ul>
         ) : null}
-        {props.footer}
       </SectionCard>
 
       {portalBars(
@@ -415,21 +407,13 @@ export function AppClockPanel(props: AppClockPanelProps) {
 
 // ─── Zeitraum ────────────────────────────────────────────────────────────────
 
-type RangeMode = "week" | "month";
-
-const RANGE_ITEMS: readonly SegmentedControlItem<RangeMode>[] = [
-  { value: "week", label: "Woche" },
-  { value: "month", label: "Monat" },
-];
-
 /**
- * Eine Zeile in der klebenden Leiste: Pfeile, der Zeitraum (öffnet die Wahl
- * Woche/Monat im Blatt) und „Diese Woche“, solange eine andere gezeigt wird.
+ * Eine Zeile über den Tagen: Pfeile, der Zeitraum und „Diese Woche“, solange
+ * eine andere gezeigt wird. Woche/Monat wählt man in der Leiste der
+ * Kopfkarte (#8070, Runde 9).
  */
 export function AppRangeBar({
   label,
-  viewMode,
-  onViewModeChange,
   onPrevious,
   onNext,
   previousLabel,
@@ -438,8 +422,6 @@ export function AppRangeBar({
   todayLabel,
 }: Readonly<{
   label: string;
-  viewMode: RangeMode;
-  onViewModeChange: (mode: RangeMode) => void;
   onPrevious: () => void;
   onNext: () => void;
   previousLabel: string;
@@ -447,12 +429,12 @@ export function AppRangeBar({
   onToday?: () => void;
   todayLabel: string;
 }>) {
-  const [open, setOpen] = useState(false);
   return (
     <div
       // px-2: die 44-px-Trefferfläche der Pfeile ragt über den Knopf hinaus;
-      // der Kartenrand würde sie sonst abschneiden.
-      className="flex items-center gap-1.5 px-2"
+      // der Kartenrand würde sie sonst abschneiden. min-h-11: Ohne den
+      // Zeitraum-Knopf wäre die Zeile niedriger als die Trefferfläche.
+      className="flex min-h-11 items-center gap-1.5 px-2"
       data-app-range-bar=""
     >
       <Button
@@ -465,21 +447,12 @@ export function AppRangeBar({
       >
         <ChevronLeft className="size-5" aria-hidden="true" />
       </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="md"
-        className="min-w-0 flex-1 justify-center"
-        onClick={() => setOpen(true)}
-        tooltip="Öffnet die Wahl zwischen Woche und Monat."
-        aria-haspopup="dialog"
+      <p
+        className="min-w-0 flex-1 truncate text-center text-sm font-medium text-gray-900 tabular-nums"
+        aria-live="polite"
       >
-        <span className="truncate tabular-nums">{label}</span>
-        <ChevronDown
-          className="ml-1 size-4 shrink-0 text-gray-500"
-          aria-hidden="true"
-        />
-      </Button>
+        {label}
+      </p>
       {onToday ? (
         <Button
           type="button"
@@ -501,36 +474,6 @@ export function AppRangeBar({
       >
         <ChevronRight className="size-5" aria-hidden="true" />
       </Button>
-
-      <OverlaySheet open={open} onOpenChange={setOpen} title="Zeitraum">
-        <div className="space-y-4 pt-1">
-          <SegmentedControl
-            ariaLabel="Zeitraum"
-            items={RANGE_ITEMS}
-            value={viewMode}
-            onChange={(mode) => {
-              onViewModeChange(mode);
-              setOpen(false);
-            }}
-            fullWidth
-          />
-          {onToday ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              className="w-full"
-              onClick={() => {
-                onToday();
-                setOpen(false);
-              }}
-              tooltip={`Springt zurück zu ${todayLabel === "Dieser Monat" ? "diesem Monat" : "dieser Woche"}.`}
-            >
-              {todayLabel}
-            </Button>
-          ) : null}
-        </div>
-      </OverlaySheet>
     </div>
   );
 }
@@ -854,11 +797,10 @@ function dayRows(
     } else if (d.special) {
       title = d.special;
       subtitle = "Kein Dienst";
-    } else if (isFuture) {
+    } else if (isFuture || isToday) {
+      // Heute wie die kommenden Tage: der Zustand steht schon in der
+      // Stempeluhr („Nicht eingestempelt“), die Zeile nennt nur den Plan.
       title = plannedText ?? "Nichts geplant";
-    } else if (isToday) {
-      title = "Noch nicht gestempelt";
-      subtitle = plannedText ?? undefined;
     } else {
       title = "Nicht erfasst";
       subtitle = plannedText ?? undefined;
@@ -923,6 +865,69 @@ function dayRows(
   });
 }
 
+// ─── Stundenkonto ────────────────────────────────────────────────────────────
+
+/**
+ * Die Kacheln „Dieser Monat“ und „Stundenkonto“ des Desktops mit der Herkunft
+ * des Solls (#8070, Runde 9). Vorher standen sie als Fußzeile in der
+ * Stempeluhr und schoben die Tage aus dem ersten Bild; die Woche steht in
+ * der Kopfkarte.
+ */
+export function AppAccountCard({
+  monthIst,
+  monthSoll,
+  accountBalanceMinutes,
+  accountStart,
+  origin,
+}: Readonly<{
+  monthIst: number | null;
+  monthSoll: number | null;
+  accountBalanceMinutes: number | null;
+  accountStart: Date;
+  /** Woher das Soll kommt, oder was fehlt (mit Link zum Eintragen). */
+  origin: ReactNode;
+}>) {
+  const since = accountStart.toLocaleDateString("de-DE", {
+    timeZone: "Europe/Berlin",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  return (
+    <SectionCard title="Stundenkonto" bodyClassName="mt-1">
+      <div className="divide-y divide-gray-100 text-sm tabular-nums">
+        <div className="flex items-baseline justify-between gap-3 py-2.5">
+          <span className="text-gray-600">Dieser Monat</span>
+          <span className="text-right text-gray-500">
+            <span className="font-semibold text-gray-900">
+              {monthIst === null ? "–" : formatDuration(monthIst)}
+            </span>
+            {monthSoll === null ? null : ` von ${formatDuration(monthSoll)}`}
+          </span>
+        </div>
+        <div className="flex items-baseline justify-between gap-3 py-2.5">
+          <span className="text-gray-600">Saldo seit {since}</span>
+          <span
+            className={cn(
+              "font-semibold",
+              accountBalanceMinutes === null
+                ? "text-gray-900"
+                : balanceClass(accountBalanceMinutes),
+            )}
+          >
+            {accountBalanceMinutes === null
+              ? "–"
+              : formatSignedDuration(accountBalanceMinutes)}
+          </span>
+        </div>
+      </div>
+      <div className="border-t border-gray-100 pt-2.5 text-sm text-gray-500">
+        {origin}
+      </div>
+    </SectionCard>
+  );
+}
+
 // ─── Aufbau ──────────────────────────────────────────────────────────────────
 
 /**
@@ -937,6 +942,7 @@ export function AppTimeTrackingLayout({
   errors,
   clock,
   days,
+  account,
   today,
   leave,
   allowances,
@@ -945,6 +951,8 @@ export function AppTimeTrackingLayout({
   errors: ReactNode;
   clock: ReactNode;
   days: ReactNode;
+  /** Monat, Stundenkonto und Herkunft des Solls (Kacheln des Desktops). */
+  account?: ReactNode;
   today: ReactNode;
   leave: ReactNode;
   allowances: ReactNode;
@@ -964,6 +972,7 @@ export function AppTimeTrackingLayout({
           detail={
             <div className={SPLIT_STACK}>
               {days}
+              {account}
               {allowances}
             </div>
           }
@@ -982,6 +991,7 @@ export function AppTimeTrackingLayout({
       {errors}
       {clock}
       {days}
+      {account}
       {today}
       {leave}
       {allowances}
@@ -1003,11 +1013,10 @@ export function AppDayFactsPanel({ facts }: { readonly facts: AppDayFacts }) {
   const p = facts.projection;
   const credit = p?.creditMinutes ?? 0;
   return (
-    <InsetPanel
-      as="dl"
-      framed
-      padding="md"
-      className="grid grid-cols-3 gap-x-3 gap-y-2 text-sm tabular-nums"
+    // Ohne eigene Fläche (Runde 9): eine Karte in der Karte las sich wie
+    // ein zweites Blatt; eine Linie trennt die Angaben vom Formular.
+    <dl
+      className="grid grid-cols-3 gap-x-3 gap-y-2 border-b border-gray-100 pb-4 text-sm tabular-nums"
       data-app-day-facts=""
     >
       <DataField label="Plan">{facts.plan ?? "–"}</DataField>
@@ -1030,6 +1039,6 @@ export function AppDayFactsPanel({ facts }: { readonly facts: AppDayFacts }) {
         )}
       </DataField>
       <DataField label="Quelle">{facts.source ?? "–"}</DataField>
-    </InsetPanel>
+    </dl>
   );
 }

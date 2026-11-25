@@ -387,7 +387,13 @@ function MorePageContent() {
   return (
     <TenantPage
       title="Mehr"
-      info="Hier stehen alle Bereiche, die nicht in der unteren Leiste sind, dazu dein Profil und Abmelden."
+      // Telefon (Runde 9): kein „…“ auf einer Seite, die selbst das Menü
+      // ist; der Satz sagt dort nichts, was die Liste nicht zeigt.
+      info={
+        isApp
+          ? undefined
+          : "Hier stehen alle Bereiche, die nicht in der unteren Leiste sind, dazu dein Profil und Abmelden."
+      }
       // Wiedererkennbar: „Überall suchen“ stand im heutigen Blatt „Mehr“
       // ganz oben; am Telefon trägt sonst keine Kopfkarte die Suche.
       searchSlot={<SchoolSearchSlot placement="moreSheet" />}
