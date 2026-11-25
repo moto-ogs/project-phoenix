@@ -1,0 +1,7 @@
+{
+  "scenario": "workforce.own_time_views.week",
+  "max": 25,
+  "exact": false,
+  "description": "Production tenant GET for a week, measured with three and nine work blocks plus the fixed night and day blocks. Includes the booking and tenant transaction.",
+  "route": "GET /api/time-tracking/period"
+}

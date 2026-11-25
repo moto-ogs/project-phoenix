@@ -365,6 +365,7 @@ const KEYED_HOOKS = new Set([
   "useSWRAuth",
   "useOpeningRead",
   "useConfirmedSWR",
+  "useMailStatusRead",
   "useImmutableSWR",
   "useTraegerResource",
   "useFreshTraegerResource",
@@ -374,6 +375,7 @@ const KEYED_HOOKS = new Set([
 const KEY_FORWARDERS = new Set([
   "src/components/traeger/use-traeger-resource.ts",
   "src/lib/hooks/use-confirmed-resource.ts",
+  "src/lib/hooks/use-mail-status-read.ts",
   "src/lib/hooks/use-unread-count.ts",
 ]);
 

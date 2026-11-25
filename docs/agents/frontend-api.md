@@ -420,6 +420,43 @@ confirmed.
 
 Context params are async in Next.js 16: `params: Promise<...>` — always `await`.
 
+### Own time-tracking reads (#8078)
+
+Use the three tenant entries in `time-tracking.generated.ts` with `bffJson`.
+They need `time_tracking:own` and Zeiterfassung and infer the staff member
+from the session. Do not send a staff ID. The standard catalog proxy forwards
+each read once on a live session; there is no page-specific proxy.
+
+- `period?view=week|month&start=YYYY-MM-DD`: pass a Monday or month start.
+  `start` to `end` is the displayed period. `week_start` to `week_end` is
+  the full ISO-week span used for session and labor warnings. A night block
+  can begin before either span. `days` covers every displayed day;
+  `has_target: false` means the target is unknown, not zero. Observe the
+  selected block's `version` when saving a correction (ADR 0311).
+  Only a month request carries `month_summary`. Its
+  `planned_shift_state` governs `planned_shift_minutes`: show a missing
+  plan only when the state is `ready` and minutes are absent. Hide the shift
+  comparison when `not_booked`; show a load failure when `unavailable`.
+- `overview`: current Berlin day, open block with pauses, today's absence
+  warning and assignments, ten weekday chart points, clock subtotals and
+  current week/month figures. `as_of` timestamps the figures; the client may
+  advance the live clock without fetching history. `account_balance_minutes:
+  null` means the account has not started. Do not enable stamping on a failed
+  read: a null session or absence is authoritative only in a success.
+- `leave-overview`: current Berlin year, quota, four counts, eight recent
+  non-question requests at most, all open questions, own allowances and the
+  initial mail outcomes. When `mails.state` is `ready`, use
+  `mails.awaiting_feedback` to decide if fast polling of the existing small
+  mail read is needed (#8094). Load the full year's absences and the
+  absence-type catalog only when their dialogs need them.
+
+For shifts, `not_booked` means Dienstplan is off; `unavailable` is a read
+failure. Assignments remain part of Basis and have a separate read status.
+For assignments and mail as well, only `ready` can mean an empty result.
+Keep the reads in separate session-bound cache families. A change of the
+selected period needs only `period`. The existing page still reads the
+narrow routes until #8081; those routes also serve other callers and details.
+
 ### Backend calls
 
 Every backend call goes through `sendBackend` (`lib/backend-client.server.ts`):
@@ -517,3 +554,13 @@ Go sends the access and refresh tokens to the BFF, not to the browser.
 Auth.js stores them in the encrypted httpOnly cookie. Server handlers forward
 the bearer to Go and renew it as needed. For password, MFA, and passkey
 steps, see [Login, refresh, and MFA](contracts.md#login-refresh-and-mfa). Invitation/password-reset token flows live at `app/invite/`, `app/[tenant]/(public)/invite/`, `app/reset-password/`, with API clients in `lib/invitation-api.ts` / `lib/invitation-helpers.ts` — use these instead of hitting backend routes directly.
+
+### Mail delivery polling
+
+Enrollment, appointment and absence readers reconcile quiet results every five
+minutes and when the tab regains focus. Delivery's `awaiting_feedback` keeps
+the 15-second cadence (30 seconds for absences) only while a send is active.
+Plain SMTP or fallback acceptance stays **accepted**, not delivered, and uses
+the slow cadence. A tracked provider acceptance waits up to 24 hours; a
+provider-reported delay follows Delivery's five-day limit. Settled chats stop
+polling; new messages refresh their mail status.

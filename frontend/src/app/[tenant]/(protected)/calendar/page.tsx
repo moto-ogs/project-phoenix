@@ -103,7 +103,12 @@ import {
   holidaysAsCalendarEvents,
   type SchoolHolidays,
 } from "~/lib/school-holidays-api";
-import { revalidateOrThrow, useSWRAuth, useSWRPreload } from "~/lib/swr";
+import {
+  revalidateOrThrow,
+  useSWRAuth,
+  useSWRPreload,
+  useTenantMutate,
+} from "~/lib/swr";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { useCalDAVEnabled } from "~/lib/tenant-context";
@@ -456,6 +461,7 @@ function hasSchoolPlanParams(params: URLSearchParams | null): boolean {
 type CalendarTab = "meine" | "schule";
 
 function StaffCalendarPageInner() {
+  const refreshMailStatus = useTenantMutate();
   const searchParams = useSearchParams();
   const toast = useToast();
   const { data: session } = useSession();
@@ -836,6 +842,8 @@ function StaffCalendarPageInner() {
       } else {
         await deleteStaffAppointment(appointmentId);
       }
+      if (scope === "occurrence" || mode === "cancel")
+        void refreshMailStatus(tenantDailyKeys.appointmentMails(appointmentId));
       toast.success(scopeSuccessMessage(event, mode, scope));
       setDeleteTarget(null);
       setCancelTarget(null);
@@ -1036,7 +1044,11 @@ function StaffCalendarPageInner() {
           ),
         ),
       );
-      if (changed) await refreshCalendar();
+      if (changed)
+        await Promise.all([
+          refreshCalendar(),
+          refreshMailStatus(tenantDailyKeys.appointmentMails(appointmentId)),
+        ]);
       return;
     }
     const saved = await save.run(async (op) => {

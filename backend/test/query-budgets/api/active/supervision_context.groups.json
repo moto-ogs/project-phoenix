@@ -1,0 +1,7 @@
+{
+  "scenario": "api.active.supervision_context.groups",
+  "max": 25,
+  "exact": false,
+  "description": "Only groups (school-wide scope), including own filters. No session or room release query. Includes session validation.",
+  "route": "GET /api/active/supervision-context"
+}

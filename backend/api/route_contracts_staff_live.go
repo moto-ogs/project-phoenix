@@ -19,6 +19,7 @@ func tenantLiveContractMounts() []contractMount {
 		{"/api/active", openRoomMoveHTTP.RouteContracts()},
 		{"/api/active", supervisionDashboardHTTP.SchulhofRouteContracts()},
 		{"/api/active", supervisionDashboardHTTP.DashboardRouteContracts()},
+		{"/api/active", supervisionDashboardHTTP.RouteContracts()},
 		{"/api/timetable", classdayHTTP.SlotListRouteContracts()},
 		// The root loads the caller's rows; it names their types.
 		{"/api/me", meAPI.RouteContracts(&peopleValues.Staff{}, []owners.CallerGroupRow{}, []presenceCompose.SessionRow{}, owners.CallerNavigationRow{})},

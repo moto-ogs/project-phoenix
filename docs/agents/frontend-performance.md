@@ -120,3 +120,19 @@ diagnostics and fixture-independent labels belong in published evidence.
 Do not publish Playwright error contexts, seed state, per-request URLs, session
 files or browser screenshots. A median must be **strictly below 150 ms** to
 meet the target; slow results remain valid evidence.
+
+## Parents and public enrollment: message payload
+
+The request catalog is complete on the server, including the German fallback.
+On these two surfaces, pass formatted strings to client components when possible.
+For interactive translations, declare a `messageBoundary(...paths)` in the
+server page or a layout shared by exactly those routes. List the controls and
+dialogs rendered there too: nested next-intl providers replace their parent's
+messages. Select individual paths when only a few labels of a namespace are
+used. Dynamic API errors still go through the shared error display path.
+
+Measure a cold login's encoded document (includes inline RSC) separately from
+its JavaScript. A standalone Flight response is an alternative request, not
+additional bytes on the document load. Use the Pixel 7 profile from #4986:
+4× CPU, 150 ms latency, 1.6 Mbit/s down, median of three cold contexts, until
+the sign-in button is visible.

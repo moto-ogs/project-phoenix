@@ -1,50 +1,19 @@
-"use client";
+import { messageBoundary } from "~/i18n/scoped-messages";
+import ParentEnrollmentStatusPage from "./status-page";
 
-import { Suspense, use } from "react";
-import { useSearchParams } from "next/navigation";
-import { EnrollmentStatusView } from "~/components/enrollment/enrollment-status-view";
-import {
-  PublicEnrollmentContentSkeleton,
-  PublicEnrollmentPageShell,
-} from "~/components/enrollment/public-enrollment-shell";
-import { useOneTimeQueryFlag } from "~/lib/hooks/use-one-time-query-flag";
-import { useAnalyticsSchoolPolicy } from "~/lib/hooks/use-analytics-school-policy";
-import { parentPath } from "~/lib/parent-url";
+const PageMessages = messageBoundary(
+  "enrollmentForm.attachments",
+  "enrollmentStatus",
+  "language",
+  "parentFamilyChildren",
+);
 
-interface PageProps {
-  readonly params: Promise<{ token: string }>;
-}
-
-export default function ParentEnrollmentStatusPage({ params }: PageProps) {
-  // The token status contract cannot establish the target school's permission.
-  useAnalyticsSchoolPolicy("", false);
+export default function Page(
+  props: React.ComponentProps<typeof ParentEnrollmentStatusPage>,
+) {
   return (
-    <Suspense
-      fallback={
-        <PublicEnrollmentPageShell>
-          <PublicEnrollmentContentSkeleton sections={2} />
-        </PublicEnrollmentPageShell>
-      }
-    >
-      <ParentEnrollmentStatusPageContent params={params} />
-    </Suspense>
-  );
-}
-
-function ParentEnrollmentStatusPageContent({ params }: PageProps) {
-  const { token } = use(params);
-  const searchParams = useSearchParams();
-  // One-time: the flag hides the withdraw controls, so it must not survive a
-  // refresh or a bookmarked/shared URL (#2156 review).
-  const justSubmitted = useOneTimeQueryFlag("submitted");
-  return (
-    <PublicEnrollmentPageShell>
-      <EnrollmentStatusView
-        token={token}
-        justSubmitted={justSubmitted}
-        duplicateWarning={searchParams.get("duplicate_warning") === "1"}
-        parentAppHref={parentPath("/parents")}
-      />
-    </PublicEnrollmentPageShell>
+    <PageMessages>
+      <ParentEnrollmentStatusPage {...props} />
+    </PageMessages>
   );
 }

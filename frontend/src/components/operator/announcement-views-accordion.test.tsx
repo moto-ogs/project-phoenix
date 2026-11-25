@@ -1,3 +1,4 @@
+import { releaseFakeTimers } from "~/test/clock";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { resumeSWRSession } from "~/lib/swr/scope";
 import { SWRConfig } from "~/lib/swr/testing";
@@ -90,6 +91,23 @@ describe("AnnouncementViewsAccordion", () => {
     // Anker: the same card remains present after closing.
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(toggle).not.toHaveTextContent(`(${count})`);
+  });
+
+  it("loads expired announcements when opened but does not poll them", async () => {
+    vi.useFakeTimers();
+    mockOperatorAnnouncementsService.fetchViewDetails.mockResolvedValue([]);
+    const view = render(
+      <AnnouncementViewsAccordion announcementId="42" expired />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Lesebestätigungen" }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(screen.getByText("(3)")).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(60_000));
+    expect(mockOperatorAnnouncementsService.fetchStats).toHaveBeenCalledTimes(
+      1,
+    );
+    view.unmount();
+    releaseFakeTimers();
   });
 
   it("toggles accordion on header click", async () => {

@@ -40,18 +40,10 @@ func (s *Service) QueryLiveGroups(ctx context.Context, filter studentpresence.Li
 // counts a supervision from its start date up to, not including, its end date.
 // Room display facts stay with Facilities; the session carries its RoomID.
 func (s *Service) ListSupervisedLiveGroups(ctx context.Context, staffID int64) (result []studentpresence.LiveGroup, err error) {
-	date := calendar.DateFromTime(s.now())
 	err = s.runWrite(ctx, "list_supervised_live_groups", func(ctx context.Context) (ports.Stats, error) {
-		if staffID <= 0 {
-			return ports.Stats{}, errors.New("student presence: invalid staff ID")
-		}
-		supervisions, stats, err := s.store.QueryGroupSupervisions(ctx, ports.GroupSupervisionFilter{StaffID: &staffID, ActiveOn: &date})
+		groupIDs, stats, err := s.staffSupervisionSessionIDs(ctx, staffID)
 		if err != nil {
 			return stats, err
-		}
-		groupIDs := make([]int64, 0, len(supervisions))
-		for _, supervision := range supervisions {
-			groupIDs = append(groupIDs, supervision.GroupID)
 		}
 		var sessionStats ports.Stats
 		result, sessionStats, err = s.store.QueryLiveGroups(ctx, studentpresence.LiveGroupFilter{IDs: groupIDs, OpenOnly: true})
@@ -61,6 +53,31 @@ func (s *Service) ListSupervisedLiveGroups(ctx context.Context, staffID int64) (
 		return stats, err
 	})
 	return listResult(result, err)
+}
+
+func (s *Service) StaffSupervisionSessionIDs(ctx context.Context, staffID int64) (ids []int64, err error) {
+	err = s.runWrite(ctx, "staff_supervision_session_ids", func(ctx context.Context) (ports.Stats, error) {
+		var stats ports.Stats
+		ids, stats, err = s.staffSupervisionSessionIDs(ctx, staffID)
+		return stats, err
+	})
+	return listResult(ids, err)
+}
+
+func (s *Service) staffSupervisionSessionIDs(ctx context.Context, staffID int64) ([]int64, ports.Stats, error) {
+	if staffID <= 0 {
+		return nil, ports.Stats{}, errors.New("student presence: invalid staff ID")
+	}
+	date := calendar.DateFromTime(s.now())
+	supervisions, stats, err := s.store.QueryGroupSupervisions(ctx, ports.GroupSupervisionFilter{StaffID: &staffID, ActiveOn: &date})
+	if err != nil {
+		return nil, stats, err
+	}
+	ids := make([]int64, 0, len(supervisions))
+	for _, supervision := range supervisions {
+		ids = append(ids, supervision.GroupID)
+	}
+	return ids, stats, nil
 }
 
 // ListOpenLiveGroupsForActivities returns the open room sessions of the given

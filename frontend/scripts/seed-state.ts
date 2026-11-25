@@ -13,6 +13,7 @@ interface SeedProfile {
   school?: { id?: number; name?: string; slug?: string; tenant_slug?: string };
   organization?: { name?: string; slug?: string };
   entities?: {
+    enrollment?: { requests?: Array<{ status_token?: string }> };
     rooms?: Record<string, { id: number; name: string }>;
     students?: Record<
       string,
@@ -126,6 +127,16 @@ export function readSeedProfile(options: LoadSeedAccessOptions): {
     baseUrl: state.base_url,
     createdAt: state.created_at,
   };
+}
+
+/** Stand einer im Seed vorhandenen Anmeldung, ohne eine Anmeldung im Test zu schreiben. */
+export function readSeedEnrollment(): { slug: string; token: string } | null {
+  const profile = readSeedProfile({})?.profile;
+  const slug = profile?.school?.tenant_slug;
+  const token = profile?.entities?.enrollment?.requests?.find(
+    (request) => request.status_token,
+  )?.status_token;
+  return slug && token ? { slug, token } : null;
 }
 
 /** Vollständige Eltern-Logins des Profils; leer ohne Seed-Datei. */

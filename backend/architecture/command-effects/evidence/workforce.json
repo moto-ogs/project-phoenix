@@ -3794,7 +3794,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.WorkforceMails.MailOutcomes",
-      "binding_digest": "62bdbbd69e68e5fa2331a5e6554d83af",
+      "binding_digest": "8cf078967402d1cebae6b039ac47b2ef",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
@@ -3802,7 +3802,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.WorkforceMails.MailOutcomes",
-      "binding_digest": "98267df5e11be362f17c48190fc9281b",
+      "binding_digest": "646713b7da3f2d5cfcb24d156b4d80f9",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
@@ -3810,7 +3810,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.WorkforceMails.MailOutcomes",
-      "binding_digest": "d245d08f804a70941b32798e3be8de61",
+      "binding_digest": "ac01156587aa792857c1e08ecc83b357",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
@@ -4031,6 +4031,38 @@
       "source_owner": "workforce",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
       "target_owner": ""
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.ClockOverview",
+      "binding_digest": "e253335389d4dbad77f7622179bb2494",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.ClockOverview",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.ClockOverview",
+      "binding_digest": "acf9337ef92d198462edacc638f735f2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.ClockOverview",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.Period",
+      "binding_digest": "e253335389d4dbad77f7622179bb2494",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.Period",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.Period",
+      "binding_digest": "acf9337ef92d198462edacc638f735f2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.Period",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce.WorkSessions.ExportSessions",

@@ -1154,6 +1154,10 @@ function AnnouncementCard({
   readonly onPublish: (a: Announcement) => void;
 }) {
   const currentTimestamp = useCurrentTimestamp();
+  const expired =
+    announcement.status === "expired" ||
+    (!!announcement.expiresAt &&
+      Date.parse(announcement.expiresAt) <= currentTimestamp);
   const [expanded, setExpanded] = useState(false);
   const [isClamped, setIsClamped] = useState(false);
   const contentRef = useRef<HTMLParagraphElement>(null);
@@ -1335,7 +1339,7 @@ function AnnouncementCard({
             <>
               <span className="text-gray-300">·</span>
               <span>
-                {new Date(announcement.expiresAt).getTime() < currentTimestamp
+                {expired
                   ? `Abgelaufen ${getRelativeTime(announcement.expiresAt)}`
                   : `Läuft ab am ${new Date(announcement.expiresAt).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}`}
               </span>
@@ -1346,7 +1350,10 @@ function AnnouncementCard({
 
       {/* Views accordion at the bottom */}
       {announcement.status !== "draft" && (
-        <AnnouncementViewsAccordion announcementId={announcement.id} />
+        <AnnouncementViewsAccordion
+          announcementId={announcement.id}
+          expired={expired}
+        />
       )}
     </SectionCard>
   );

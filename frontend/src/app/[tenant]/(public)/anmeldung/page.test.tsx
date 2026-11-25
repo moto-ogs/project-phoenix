@@ -51,7 +51,7 @@ vi.mock("~/components/enrollment/public-enrollment-shell", () => ({
   ),
 }));
 
-import EnrollPhasePickerPage from "./page";
+import EnrollPhasePickerPage from "./enrollment-start-page";
 
 describe("EnrollPhasePickerPage", () => {
   beforeEach(() => {

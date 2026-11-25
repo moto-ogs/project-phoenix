@@ -35,7 +35,7 @@ vi.mock("~/lib/swr", async (importOriginal) => ({
   useSWRAuth: (key: string | null) =>
     key?.startsWith("group-message-mails-")
       ? {
-          data: state.mails,
+          data: { mails: state.mails, awaitingFeedback: false },
           error: undefined,
           isLoading: false,
           mutate: mailsMutate,

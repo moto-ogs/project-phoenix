@@ -351,6 +351,43 @@ school, omits the field; their `school_class` stays as before („Feriengast“
 for a guest). The kiosk shows „Gast aus <Schule>“ when the field is set and
 the class otherwise, so either side can deploy first.
 
+## Staff supervision context (#8084)
+
+`GET /api/active/supervision-context` is a staff-portal read. Omit `section`
+for the full projection, or repeat it for any union of `groups`, `sessions`
+and `released-rooms`. Unknown values return 400. Unrequested sections are
+absent and their section-specific reads do not run. Use the generated
+`active` contract for server and tenant BFF calls; no school, account or
+session ID comes from the caller.
+
+- `groups.navigation` is the Group Live navigation, including leadership and
+  substitution. `own_group_ids` and `own_room_names` are personal filters,
+  not all visible groups; a waiting holiday group can appear in the personal
+  filters without appearing in the navigation.
+- `sessions.items` contains one entry per open session, even when several
+  share a room. `overview_status: ok` means school-wide scope even if the
+  list is empty. `forbidden` or `unavailable` there leaves only known own
+  sessions. `own_status: unavailable` makes `is_own` null on overview rows;
+  do not treat these assignments as true or false. The section is `ok` when
+  the overview or the own list loaded; clients still check both statuses.
+  Released rooms never grant supervision. Overview requires `groups:read`
+  as well as the canonical operational overview rule; own sessions need neither.
+  Student Presence uses the same school-day assignment rule here and in the
+  existing own-session read. Only open sessions appear in this response.
+- `released_rooms.items` needs `rooms:read` and lists permanently released,
+  non-archived rooms. The Schulhof stays; WC and other system rooms are
+  excluded. The list is not paged and has no occupancy data.
+
+Each requested section reports `ok`, `forbidden` or `unavailable`. An empty
+list with `ok` is authoritative; independent successful sections survive
+recoverable SQL errors. A failed session family or transaction takes the
+ordinary HTTP error path. Calendar View composes owner reads using savepoints
+in one RLS school transaction, not a fixed snapshot across statements. The
+HTTP host checks the session family in its existing separate transaction.
+
+The route is additive: the old staff calls remain until #8085 migrates their
+consumers. Do not retry a failed overview via the old endpoint.
+
 ## Tenant boundary
 
 Platform operator → organization (`platform.organizations`) → school
