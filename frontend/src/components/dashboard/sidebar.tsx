@@ -1219,9 +1219,7 @@ function SidebarContent({
           emptyText={
             sessionsLoadFailed
               ? "Aufsichten gerade nicht verfügbar"
-              : releasedRoomsLoadFailed
-                ? "Offene Räume gerade nicht verfügbar"
-                : "Keine aktive Aufsicht"
+              : "Keine aktive Aufsicht"
           }
           hasChildren={supervisionNavRooms.length > 0}
         >
@@ -1243,6 +1241,11 @@ function SidebarContent({
               )}
             />
           ))}
+          {releasedRoomsLoadFailed && (
+            <p className="py-2 pr-3 pl-11 text-sm text-gray-500">
+              Offene Räume sind hier gerade nicht markiert.
+            </p>
+          )}
         </SidebarAccordionSection>
       </>
     ) : null;

@@ -73,6 +73,7 @@ vi.mock("~/lib/tenant-path", () => ({
 const supervision = vi.hoisted(() => ({
   ownSupervision: false,
   hasGroups: true,
+  refresh: vi.fn(() => Promise.resolve()),
 }));
 vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: () => supervision,

@@ -2868,6 +2868,31 @@ describe("Sidebar", () => {
       expect(screen.queryByText("Offene Räume")).not.toBeInTheDocument();
     });
 
+    it.each([
+      [true, "Kreativraum"],
+      [false, "Keine aktive Aufsicht"],
+    ])(
+      "explains missing room labels only when there is an active supervision (%s)",
+      (hasSession, expectedText) => {
+        mockUseSupervision.mockReturnValue({
+          ...supervision(
+            hasSession ? [{ id: "7", name: "Kreativraum", groupId: "8" }] : [],
+          ),
+          releasedRoomsLoadFailed: true,
+        });
+        mockUsePathname.mockReturnValue("/active-supervisions");
+
+        render(<Sidebar />);
+
+        expect(screen.getByText(expectedText)).toBeInTheDocument();
+        expect(
+          screen.queryAllByText(
+            "Offene Räume sind hier gerade nicht markiert.",
+          ),
+        ).toHaveLength(Number(hasSession));
+      },
+    );
+
     it("lists an own supervision in a released room under Aktuelle Aufsicht (#4349)", () => {
       mockUseSupervision.mockReturnValue(
         supervision([

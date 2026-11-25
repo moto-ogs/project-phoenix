@@ -58,6 +58,7 @@ vi.mock("~/lib/tenant-router", () => ({
 vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: () => ({
     overviewEnabled: supervisionState.overviewEnabled,
+    refresh: vi.fn(() => Promise.resolve()),
   }),
 }));
 
