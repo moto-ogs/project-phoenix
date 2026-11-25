@@ -171,6 +171,7 @@ describe("NowStrip (#2180)", () => {
     router.push.mockReset();
     supervision.ownSupervision = false;
     supervision.hasGroups = true;
+    supervision.refresh.mockClear();
     ownStaff.present = true;
   });
 
@@ -247,6 +248,7 @@ describe("NowStrip (#2180)", () => {
       ),
     );
     expect(api.start).toHaveBeenCalledWith("4");
+    expect(supervision.refresh).toHaveBeenCalledWith(["sessions"]);
   });
 
   it("sagt es, wenn das Starten scheitert, und lädt den Tag neu", async () => {
