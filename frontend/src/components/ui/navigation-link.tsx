@@ -24,7 +24,7 @@ export type NavigationLinkProps = Omit<
  * oder `onNavigate` den Klick abbricht.
  *
  * Vorladen erst bei Absicht (#2976, #4987): Ein sichtbarer Link lädt nichts.
- * Bleibt der Zeiger kurz auf ihm oder bekommt er den Fokus, schaltet er
+ * Bleibt der Zeiger kurz auf ihm oder bekommt er Tastaturfokus, schaltet er
  * `prefetch` auf `true`. Eine Berührung beim Scrollen lädt nichts. Next lädt dann die volle
  * Zielseite samt ihrer JS-Module, nicht nur bis zur Ladehülle; der Klick
  * danach wartet nicht mehr auf den Code der Seite. Der Router hält diese
@@ -42,6 +42,7 @@ const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
       prefetch: allowPrefetch,
       onClick,
       onNavigate,
+      onPointerDown,
       onPointerEnter,
       onPointerLeave,
       onFocus,
@@ -55,6 +56,7 @@ const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
       href,
       target,
       prefetch: allowPrefetch,
+      onPointerDown,
       onPointerEnter,
       onPointerLeave,
       onFocus,
@@ -72,6 +74,7 @@ const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
         prefetch={intent.prefetch}
         onClick={progress.onClick}
         onNavigate={progress.onNavigate}
+        onPointerDown={intent.onPointerDown}
         onPointerEnter={intent.onPointerEnter}
         onPointerLeave={intent.onPointerLeave}
         onFocus={intent.onFocus}

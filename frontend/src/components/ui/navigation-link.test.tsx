@@ -25,6 +25,17 @@ vi.mock("next/link", () => ({
 }));
 
 /** The `prefetch` value next/link received on its latest render. */
+function focusLink(link: HTMLElement, keyboard = true) {
+  const nativeMatches = link.matches.bind(link);
+  const matches = vi
+    .spyOn(link, "matches")
+    .mockImplementation((selector) =>
+      selector === ":focus-visible" ? keyboard : nativeMatches(selector),
+    );
+  fireEvent.focus(link);
+  matches.mockRestore();
+}
+
 function currentPrefetch(): boolean | null | undefined {
   const calls = linkProps.mock.calls;
   return (calls.at(-1)?.[0] as { prefetch?: boolean | null } | undefined)
@@ -91,10 +102,27 @@ describe.each([
     },
   );
 
+  it("does not start another request when a pointer click focuses the link", () => {
+    vi.useFakeTimers();
+    const onPointerDown = vi.fn();
+    render(
+      <Link href="/rooms" onPointerDown={onPointerDown}>
+        Räume
+      </Link>,
+    );
+    const link = screen.getByRole("link", { name: "Räume" });
+    fireEvent.pointerEnter(link, { pointerType: "mouse" });
+    fireEvent.pointerDown(link, { pointerType: "mouse" });
+    focusLink(link, false);
+    act(() => vi.advanceTimersByTime(HOVER_PREFETCH_DELAY_MS));
+    expect(onPointerDown).toHaveBeenCalledOnce();
+    expect(currentPrefetch()).toBe(false);
+  });
+
   it("prefetches when the link receives keyboard focus", () => {
     render(<Link href="/staff">Mitarbeitende</Link>);
 
-    fireEvent.focus(screen.getByRole("link", { name: "Mitarbeitende" }));
+    focusLink(screen.getByRole("link", { name: "Mitarbeitende" }));
 
     expect(linkProps).toHaveBeenLastCalledWith({
       href: "/staff",
@@ -109,7 +137,7 @@ describe.each([
       const { rerender } = render(<Link href="/rooms">Ziel</Link>);
       const link = screen.getByRole("link", { name: "Ziel" });
       if (intent === "focus") {
-        fireEvent.focus(link);
+        focusLink(link);
       } else {
         fireEvent.pointerEnter(link, { pointerType: "mouse" });
         act(() => vi.advanceTimersByTime(HOVER_PREFETCH_DELAY_MS));
@@ -125,7 +153,7 @@ describe.each([
 
       rerender(<Link href="/rooms">Ziel</Link>);
       expect(currentPrefetch()).toBe(false);
-      fireEvent.focus(link);
+      focusLink(link);
       expect(currentPrefetch()).toBe(true);
     },
   );
@@ -163,7 +191,7 @@ describe.each([
     expect(currentPrefetch()).toBe(false);
 
     rerender(<Link href="/rooms">Ziel</Link>);
-    fireEvent.focus(link);
+    focusLink(link);
     expect(currentPrefetch()).toBe(true);
     rerender(
       <Link href="/rooms" target="_blank">
@@ -194,7 +222,7 @@ describe.each([
     const link = screen.getByRole("link", { name: "Räume" });
     fireEvent.pointerEnter(link, { pointerType: "touch" });
     fireEvent.pointerLeave(link, { pointerType: "touch" });
-    fireEvent.focus(link);
+    focusLink(link);
 
     expect(onPointerEnter).toHaveBeenCalledTimes(1);
     expect(onPointerLeave).toHaveBeenCalledTimes(1);
@@ -232,7 +260,7 @@ describe.each([
     fireEvent.pointerEnter(link, { pointerType: "mouse" });
     act(() => vi.advanceTimersByTime(HOVER_PREFETCH_DELAY_MS * 2));
     fireEvent.pointerEnter(link, { pointerType: "touch" });
-    fireEvent.focus(link);
+    focusLink(link);
 
     expect(link).toHaveAttribute("target", "_blank");
     expect(currentPrefetch()).toBe(false);
@@ -250,7 +278,7 @@ describe.each([
     for (const name of ["Extern", "Protokollrelativ", "Mail"]) {
       const link = screen.getByRole("link", { name });
       fireEvent.pointerEnter(link, { pointerType: "touch" });
-      fireEvent.focus(link);
+      focusLink(link);
     }
 
     expect(linkProps).not.toHaveBeenCalledWith(

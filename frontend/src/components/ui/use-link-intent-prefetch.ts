@@ -29,6 +29,7 @@ export function useLinkIntentPrefetch({
   href,
   target,
   prefetch: allowed,
+  onPointerDown,
   onPointerEnter,
   onPointerLeave,
   onFocus,
@@ -59,6 +60,12 @@ export function useLinkIntentPrefetch({
 
   return {
     prefetch: prefetch && canPrefetch,
+    onPointerDown: (event: PointerEvent<HTMLAnchorElement>) => {
+      onPointerDown?.(event);
+      // A click is already navigating. Its focus and the remaining hover hold
+      // must not begin a second RSC request for the same page.
+      cancelHover();
+    },
     onPointerEnter: (event: PointerEvent<HTMLAnchorElement>) => {
       onPointerEnter?.(event);
       if (event.defaultPrevented || !canPrefetch) return;
@@ -76,7 +83,11 @@ export function useLinkIntentPrefetch({
     },
     onFocus: (event: FocusEvent<HTMLAnchorElement>) => {
       onFocus?.(event);
-      if (event.defaultPrevented) return;
+      if (
+        event.defaultPrevented ||
+        !event.currentTarget.matches(":focus-visible")
+      )
+        return;
       startPrefetch();
     },
   };

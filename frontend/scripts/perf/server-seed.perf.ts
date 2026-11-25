@@ -264,9 +264,15 @@ async function measure(browser: Browser, target: Target, mode: Mode) {
     const base = origin(target.portal);
     const recorder = new RequestRecorder(page);
     await throttle(page);
+    recorder.start();
     if (mode === "warm") {
       await gotoTolerant(page, base + target.path);
       await expect(target.ready(page)).toBeVisible({ timeout: 15_000 });
+      // A seeded document can show its content before the destination's
+      // JavaScript loads. Wait for hydration's requests before leaving, or
+      // the return would be counted as warm with a cold client chunk.
+      await page.waitForLoadState("load");
+      await recorder.waitForQuiet(quiet);
     }
     if (mode !== "document") {
       if (mode === "warm") {
@@ -276,10 +282,10 @@ async function measure(browser: Browser, target: Target, mode: Mode) {
         await gotoTolerant(page, base + target.from);
       }
       await page.waitForURL((url) => url.pathname === target.from);
+      await page.waitForLoadState("load");
+      await recorder.waitForQuiet(quiet);
       await target.revealLink?.(page);
       await expect(target.link(page)).toBeVisible();
-      recorder.start();
-      await recorder.waitForQuiet(quiet);
     }
     const before = await goReads(page);
     recorder.start();
@@ -310,6 +316,9 @@ async function measure(browser: Browser, target: Target, mode: Mode) {
     const document = records.find(
       (record) => record.resourceType === "document",
     );
+    if (mode !== "document") {
+      expect(document, `expected a soft ${mode} navigation`).toBeUndefined();
+    }
     const rsc = records.filter((record) => record.path.includes("_rsc="));
     const firstResponse =
       document ??
