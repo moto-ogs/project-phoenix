@@ -293,10 +293,12 @@ function StartChildCard({
         features={features}
         statusAside={pickupAside}
         dayChanges={
-          <ChildDayChanges
-            studentId={child.student_id}
-            firstName={child.first_name}
-          />
+          child.without_care_place ? undefined : (
+            <ChildDayChanges
+              studentId={child.student_id}
+              firstName={child.first_name}
+            />
+          )
         }
         actionDisplay="compact"
       />

@@ -87,7 +87,7 @@ func readChildDay(t *testing.T, router chi.Router, token string, studentID int64
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope), rec.Body.String())
 	if rec.Code != http.StatusOK {
-		assert.Contains(t, []string{"care.child_not_linked", "care.guardian_permission_denied"}, envelope.Code, rec.Body.String())
+		assert.Contains(t, []string{"care.child_not_linked", "care.guardian_permission_denied", "care.child_without_care_place"}, envelope.Code, rec.Body.String())
 	}
 	return rec.Code, envelope.Data, rec.Body.String()
 }
@@ -141,6 +141,10 @@ func TestChildDayChanges(t *testing.T) {
 	lenaLink := testpkg.CreateTestStudentGuardianLink(t, db, lena.ID, chain.GuardianProfileID, "pickup_only")
 	require.NoError(t, testpkg.SetTestStudentGuardianPermissions(ctx, db, lenaLink.ID, map[string]interface{}{"parent_portal.access": false}))
 	testpkg.CreateTestStudentStatusDay(t, db, lena.ID, day, "sick")
+	noCarePlace := testpkg.CreateTestStudent(t, db, "Noah", "Ohneplatz", "4a")
+	testpkg.CreateTestStudentGuardianLink(t, db, noCarePlace.ID, chain.GuardianProfileID, "primary_guardian")
+	testpkg.MarkTestStudentWithoutCarePlace(t, db, noCarePlace.ID)
+	testpkg.CreateTestStudentStatusDay(t, db, noCarePlace.ID, day, "sick")
 
 	// Schule: today's closing day; Stundenplan: Felix's blocks.
 	testpkg.CreateTestClosingDay(t, db, testpkg.CalendarDate(day), testpkg.CalendarDate(day), "Pädagogischer Tag")
@@ -238,6 +242,13 @@ func TestChildDayChanges(t *testing.T) {
 			assert.Contains(t, []int{http.StatusForbidden, http.StatusNotFound}, code, body)
 			assert.NotContains(t, body, "child_absent")
 		}
+	})
+
+	t.Run("a child without an OGS place has no day changes", func(t *testing.T) {
+		code, _, body := readChildDay(t, router, token, noCarePlace.ID)
+		assert.Equal(t, http.StatusForbidden, code, body)
+		assert.Contains(t, body, "care.child_without_care_place")
+		assert.NotContains(t, body, "child_absent")
 	})
 
 	t.Run("another school's guardian sees nothing of the child", func(t *testing.T) {

@@ -66,25 +66,27 @@ type ChildDayChange struct {
 // ErrDayChangesUnavailable reports a composition without the day changes.
 var ErrDayChangesUnavailable = errors.New("parent: day changes capability is required")
 
-// GetChildDayChanges reads "Heute anders" of a child the guardian may see
-// (parent_portal.access). Revoking the permission ends the read; another
-// school's child is no child of the account.
+// GetChildDayChanges reads "Heute anders" of a child with an OGS place the
+// guardian may see (parent_portal.access). The relationship authorization and
+// tenant-scoped read share one transaction, so a revoked permission cannot
+// authorize a later read.
 func (s *Service) GetChildDayChanges(ctx context.Context, accountID, studentID int64) (ChildDay, error) {
-	child, err := s.ResolvePermittedChild(ctx, accountID, studentID, GuardianPermissionPortalAccess)
-	if err != nil {
-		return ChildDay{}, err
-	}
-	if s.DayChanges == nil {
-		return ChildDay{}, ErrDayChangesUnavailable
-	}
 	var day ChildDay
-	txErr := s.Runtime.WithinTenant(ctx, child.TenantID, func(txCtx context.Context) error {
+	err := s.WithPermittedChild(ctx, accountID, studentID, GuardianPermissionPortalAccess, func(child *Child) error {
+		if err := child.RequireCarePlace(); err != nil {
+			return err
+		}
+		if s.DayChanges == nil {
+			return ErrDayChangesUnavailable
+		}
+		return nil
+	}, func(txCtx context.Context, _ *Child) error {
 		read, readErr := s.DayChanges.ChildDayChanges(txCtx, studentID, accountID)
 		day = read
 		return readErr
 	})
-	if txErr != nil {
-		return ChildDay{}, fmt.Errorf("parent: child day changes: %w", txErr)
+	if err != nil {
+		return ChildDay{}, fmt.Errorf("parent: child day changes: %w", err)
 	}
 	return day, nil
 }

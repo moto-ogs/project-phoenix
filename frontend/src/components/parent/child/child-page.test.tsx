@@ -95,6 +95,9 @@ vi.mock("~/components/parent/child/child-consents-section", () => ({
     return <div data-testid="section-consents">Einwilligungen</div>;
   },
 }));
+vi.mock("~/components/parent/child/child-day-changes", () => ({
+  ChildDayChanges: () => <div data-testid="child-day-changes" />,
+}));
 vi.mock("~/components/parent/guardians-panel", () => ({
   default: () => {
     useEffect(() => {
@@ -511,6 +514,7 @@ describe("ChildPage Fehlerweg (#2518)", () => {
     ).toBeInTheDocument();
     expect(screen.queryByTestId("section-care")).not.toBeInTheDocument();
     expect(screen.queryByTestId("section-departure")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("child-day-changes")).not.toBeInTheDocument();
     expect(
       screen.queryByText("Abholung heute um 15:00 Uhr"),
     ).not.toBeInTheDocument();

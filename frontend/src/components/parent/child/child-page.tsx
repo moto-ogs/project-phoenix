@@ -321,10 +321,12 @@ function ChildSections({
         today={today ?? UNKNOWN_CHILD_TODAY}
         loading={today === null || care.loading}
         dayChanges={
-          <ChildDayChanges
-            studentId={child.student_id}
-            firstName={child.first_name}
-          />
+          withoutCarePlace ? undefined : (
+            <ChildDayChanges
+              studentId={child.student_id}
+              firstName={child.first_name}
+            />
+          )
         }
         hideIdentity
         features={
