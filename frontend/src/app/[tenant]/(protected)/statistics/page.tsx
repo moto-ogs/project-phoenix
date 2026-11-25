@@ -1188,7 +1188,8 @@ export default function StatisticsPage() {
                     <DataTable
                       columns={courseColumns}
                       mobileScroll={{
-                        reason: "Termine und Teilnahme pro Kurs zum Vergleichen",
+                        reason:
+                          "Termine und Teilnahme pro Kurs zum Vergleichen",
                       }}
                       rows={data.courses}
                       getRowKey={(row) => row.course_id}

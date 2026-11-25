@@ -298,7 +298,9 @@ describe("SonderarbeitszeitenSection", () => {
       screen.getByText("Mo 3,5 Std. · Di–Fr 0,5 Std. pro Tag"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Mo–Di 4 Std. pro Tag · Mi 0 Std. · Do 4 Std. · Fr 2 Std."),
+      screen.getByText(
+        "Mo–Di 4 Std. pro Tag · Mi 0 Std. · Do 4 Std. · Fr 2 Std.",
+      ),
     ).toBeInTheDocument();
   });
 

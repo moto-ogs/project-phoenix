@@ -1220,7 +1220,8 @@ export function ClassDayClass({
                     Hausaufgaben
                   </h3>
                   <p className="text-sm text-gray-600">
-                    Die OGS sieht sie in der Lernzeit und meldet pro Kind zurück.
+                    Die OGS sieht sie in der Lernzeit und meldet pro Kind
+                    zurück.
                   </p>
                 </div>
                 {canWriteHomework ? (

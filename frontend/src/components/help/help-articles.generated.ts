@@ -2848,7 +2848,7 @@ export const enrollmentFormTopic = function enrollmentFormTopic(): HelpTopic {
           "Wähle `+ Freie Zusatzfrage` und schreibe die Frage.",
           "Stelle bei `Typ` die Option `Datei` ein.",
           "Wähle bei `Erlaubte Dateiarten` aus `PDF`, `JPG` und `PNG`.",
-          "Wähle bei `Höchstens pro Datei` eine Größe von 1 bis 10 MB.",
+          "Wähle bei `Maximale Größe pro Datei` eine Größe von 1 bis 10 MB.",
           "Sollen Eltern mehrere Dateien schicken? Wähle `Mehrere Dateien erlauben`. Dann sind bis zu 5 Dateien möglich.",
         ],
       },
@@ -6956,7 +6956,7 @@ export const parentGroupMessageTopic =
         "Steht bei einem Kind `Kein Eltern-Zugang`? Dann bekommt diese Familie die Nachricht nicht.",
       ],
       notes: [
-        "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du an eine weitere Nachricht bis zu 5 Dateien an, mit höchstens 10 MB pro Datei. Alle Eltern der Gruppennachricht sehen die Datei.",
+        "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du an eine weitere Nachricht bis zu 5 Dateien an. Pro Datei sind höchstens 10 MB erlaubt. Alle Eltern der Gruppennachricht sehen die Datei.",
         "Keine Familie sieht, wer die Nachricht noch bekommt oder wer geantwortet hat.",
         "moto ermittelt die Empfänger bei jeder Nachricht neu. Wer später in die Gruppe kommt, liest nur die neuen Nachrichten.",
         "Unter `Gelesen` siehst du für jedes Kind, ob die Eltern die neueste Nachricht gelesen haben.",
@@ -7341,7 +7341,7 @@ export const parentLetterPerChildTopic =
         },
       ],
       result:
-        "Jede Familie bekommt einen Brief pro Kind, mit den Angaben ihres eigenen Kindes. Geschwister bekommen pro Kind einen Brief.",
+        "Jede Familie bekommt pro Kind einen eigenen Brief. Darin stehen nur die Angaben dieses Kindes.",
       notes: [
         "moto schreibt den Brief beim Veröffentlichen fest. Ändern sich danach Gruppe oder Abholzeit, bleibt der Brief, wie er war.",
         "Fehlt bei einem Kind eine Angabe, bleibt die Stelle leer. Steht in einer Zeile nur diese Angabe, zum Beispiel `Abholzeit:`, lässt moto die ganze Zeile weg.",
@@ -7623,7 +7623,7 @@ export const parentMessageTopic = function parentMessageTopic(): HelpTopic {
       "Eltern können nur an die Leitung schreiben, wenn unter `Einstellungen` der Schalter `Nachrichten nur an die Leitung (Eltern)` an ist und jemand das Recht `Vertrauliche Elternnachrichten lesen` hat. Das Recht vergibst du unter `Rollen`.",
     ],
     notes: [
-      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint, mit höchstens 10 MB pro Datei. Ein Foto öffnest du mit einem Tipp groß. Die Eltern sehen die Dateien in der Eltern-App.",
+      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint. Pro Datei sind höchstens 10 MB erlaubt. Ein Foto öffnest du mit einem Tipp groß. Die Eltern sehen die Dateien in der Eltern-App.",
       "Über dem Schreibfeld steht, wer die Unterhaltung lesen kann: die eine Bezugsperson und alle Mitarbeitenden oder nur die Leitung. Andere Bezugspersonen des Kindes lesen nicht mit.",
       "Schreibe persönliche Angaben nur in die Unterhaltung der richtigen Bezugsperson.",
       "Mit `Nur ungelesen` siehst du nur neue Unterhaltungen.",
@@ -7659,7 +7659,7 @@ export const parentMessagesTopic = function parentMessagesTopic(): HelpTopic {
     ],
     result: "Die OGS bekommt deine Nachricht sofort.",
     notes: [
-      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint, mit höchstens 10 MB pro Datei. Ein Foto öffnest du mit einem Tipp groß.",
+      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint. Pro Datei sind höchstens 10 MB erlaubt. Ein Foto öffnest du mit einem Tipp groß.",
       "Jedes Kind hat eine eigene Unterhaltung. Oben steht, für welches Kind sie gilt.",
       "Über dem Schreibfeld steht, wer mitliest, zum Beispiel `Lesen können: du und alle Mitarbeitenden der OGS.` Auf einem großen Bildschirm steht es auch oben. Andere Bezugspersonen deines Kindes lesen deine Unterhaltung nicht.",
       "Unter deiner Nachricht steht `Gesendet` und später `Von der OGS gelesen`.",
@@ -10708,7 +10708,7 @@ export const teacherMessagesTopic = function teacherMessagesTopic(): HelpTopic {
     ],
     result: "Das OGS-Team bekommt deine Nachricht sofort.",
     notes: [
-      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint, mit höchstens 10 MB pro Datei. Ein Foto öffnest du mit einem Tipp groß.",
+      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint. Pro Datei sind höchstens 10 MB erlaubt. Ein Foto öffnest du mit einem Tipp groß.",
       "Vor deiner eigenen Nachricht steht `Du:`.",
       "Hier meldest du, was die OGS wissen muss, zum Beispiel eine falsche Abholzeit.",
       "Die OGS kann dich in einen Gruppenchat aufnehmen. Er steht dann mit seinem Namen in deiner Liste. Mit `Mitglieder` und `Gruppenchat verlassen` gehst du wieder heraus.",
@@ -11241,7 +11241,7 @@ export const teamChatTopic = function teamChatTopic(): HelpTopic {
       SIMPLE_NAV_DIFFERENCE,
     ],
     notes: [
-      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint, mit höchstens 10 MB pro Datei. Ein Foto öffnest du mit einem Tipp groß.",
+      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint. Pro Datei sind höchstens 10 MB erlaubt. Ein Foto öffnest du mit einem Tipp groß.",
       "Unter deiner Nachricht in einem Gruppenchat steht, wie viele sie gelesen haben. Tippe darauf, dann siehst du die Namen.",
       "Eltern können den Team-Chat nicht sehen. Für Eltern nutzt du `Nachrichten` im Bereich `Eltern`.",
       "Mit `Nur ungelesen` siehst du nur Unterhaltungen mit neuen Nachrichten.",
@@ -14208,7 +14208,7 @@ export const traegerHolidayPeriodTopic =
         "`Veröffentlichen` lässt sich nicht wählen? Speichere zuerst deine Änderungen. Jede Woche braucht mindestens ein Zeitmodell, das nicht archiviert ist.",
         "Eine Schule fehlt bei `Ausrichtende OGS`? Das moto-Team ordnet die Schulen deinem Träger zu.",
         "Die Woche lässt sich nicht speichern, weil keine Betreuung ist? Eine ganze Woche mit Feiertag oder Schließtag kann niemand buchen. Wähle bei `Buchung` `Einzelne Tage`. Dann fällt nur dieser Tag weg. Oder lass den Tag aus der Woche.",
-        "Eine Woche lässt sich nicht verlängern? Ein Kind ist schon für die ganze Woche angemeldet. Mit mehr Tagen hätte es mehr als `Höchstzahl an Tagen pro Kind`. Lass die Woche so oder erhöhe die Zahl.",
+        "Eine Woche lässt sich nicht verlängern? Ein Kind ist schon für die ganze Woche angemeldet. Mehr Tage würden die Höchstzahl pro Kind überschreiten. Lass die Woche so oder erhöhe die Zahl.",
       ],
       related: [
         HELP_TOPICS.traegerLogin,
@@ -14420,7 +14420,7 @@ export const traegerHolidayRegistrationReviewTopic =
           steps: [
             "Wähle im Reiter `Kind` beim Kind `Umbuchen`.",
             "Wähle pro Woche ein Zeitmodell oder `Nicht angemeldet`. Gibt es eine Woche an mehreren Schulen, wähle auch die Schule.",
-            "Wird die Woche tageweise gebucht, wähle darunter die Tage. Mehr Tage als `Höchstzahl an Tagen pro Kind` nimmt moto nicht an.",
+            "Wird die Woche tageweise gebucht, wähle darunter die Tage. Die Tage dürfen die `Höchstzahl an Tagen pro Kind` nicht überschreiten.",
             "Bietet die Woche Mittagessen an, steht darunter `Mit Mittagessen`. Setze oder entferne den Haken.",
             "Wähle `Speichern`.",
             "Eine Woche, die das Kind nicht mehr bucht, gibt ihren Platz frei. Das nächste Kind der Warteliste rückt sofort nach. Eine neue Woche bekommt einen Platz, wenn einer frei ist. Sonst kommt das Kind dort auf die Warteliste.",
