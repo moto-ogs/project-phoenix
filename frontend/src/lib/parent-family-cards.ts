@@ -16,14 +16,19 @@ export interface ParentFamily {
   today: Record<string, contract.TodayStatusResponse>;
   featureErrors: Record<string, FamilyFieldFailure>;
   todayErrors: Record<string, FamilyFieldFailure>;
+  // Browser-only deadlines for failed targeted reads, including newly signalled IDs.
+  retryNotBefore: Record<string, number>;
   confirmedToday: Record<string, boolean>;
   accessVersions: Record<string, string>;
 }
 
 // This marker can cross the Server Component boundary. Transport errors on
 // a later browser refresh keep their full ApiError.
-const unavailable = { status: 503, code: "general.unavailable" } as const;
-export type FamilyFieldFailure = typeof unavailable | ApiError;
+export const FAMILY_FIELD_UNAVAILABLE = {
+  status: 503,
+  code: "general.unavailable",
+} as const;
+export type FamilyFieldFailure = typeof FAMILY_FIELD_UNAVAILABLE | ApiError;
 
 export function applyCards(
   previous: ParentFamily | undefined,
@@ -43,6 +48,7 @@ export function applyCards(
     today: { ...narrowed?.today },
     featureErrors: { ...narrowed?.featureErrors },
     todayErrors: { ...narrowed?.todayErrors },
+    retryNotBefore: { ...narrowed?.retryNotBefore },
     confirmedToday: { ...narrowed?.confirmedToday },
     accessVersions: { ...roster?.accessVersions },
   };
@@ -51,6 +57,7 @@ export function applyCards(
     delete family.today[studentId];
     delete family.featureErrors[studentId];
     delete family.todayErrors[studentId];
+    delete family.retryNotBefore[studentId];
     delete family.confirmedToday[studentId];
     delete family.accessVersions[studentId];
     if (!cards.length)
@@ -80,8 +87,8 @@ export function applyCards(
     const flags = card.features ?? known?.features[id];
     if (flags) family.features[id] = flags;
     family.today[id] = card.today ?? known?.today[id] ?? UNKNOWN_CHILD_TODAY;
-    if (!card.features) family.featureErrors[id] = unavailable;
-    if (!card.today) family.todayErrors[id] = unavailable;
+    if (!card.features) family.featureErrors[id] = FAMILY_FIELD_UNAVAILABLE;
+    if (!card.today) family.todayErrors[id] = FAMILY_FIELD_UNAVAILABLE;
     family.confirmedToday[id] = Boolean(
       card.today || known?.confirmedToday[id],
     );

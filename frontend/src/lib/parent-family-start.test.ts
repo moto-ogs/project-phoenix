@@ -97,27 +97,56 @@ describe("family card updates", () => {
     expect(current.today["2"]?.state).toBe("unknown");
     expect(read.mock.calls).toEqual([[undefined], ["1"], [undefined]]);
   });
-  it("keeps a concurrent sibling success when another card read fails", async () => {
-    read.mockResolvedValueOnce({
-      ...serverDay,
-      cards: [card("1"), card("2")],
-    });
+  it.each([503, 429, 400])(
+    "keeps a concurrent sibling success when another read fails with %i",
+    async (status) => {
+      read.mockResolvedValueOnce({
+        ...serverDay,
+        cards: [card("1"), card("2")],
+      });
+      const family = await readParentFamily(undefined);
+      narrowNextFamilyRead(family, "1");
+      const failure = new ApiError("failed", status);
+      read.mockRejectedValueOnce(failure);
+      const first = readParentFamily(family);
+      narrowNextFamilyRead(family, "2");
+      read.mockResolvedValueOnce({
+        ...serverDay,
+        cards: [],
+      });
+      const updated = await readParentFamily(family);
+      await first;
+      expect(updated.featureErrors["1"]).toBe(failure);
+      expect(updated.children).toEqual([card("1").child]);
+      expect(updated.features["1"]).toEqual(card("1").features);
+    },
+  );
+  it("does not attach a failed event for an absent child to the family", async () => {
+    read.mockResolvedValueOnce({ ...serverDay, cards: [card("1")] });
+    const family = await readParentFamily(undefined);
+    narrowNextFamilyRead(family, "9");
+    read.mockRejectedValueOnce(new ApiError("unavailable", 503));
+    const updated = await readParentFamily(family);
+    expect(updated.children).toEqual(family.children);
+    expect(updated.featureErrors).toEqual({});
+    expect(updated.todayErrors).toEqual({});
+    expect(updated.retryNotBefore).toHaveProperty("9");
+  });
+
+  it("keeps confirmed data if the child response is malformed, but propagates access refusals", async () => {
+    read.mockResolvedValueOnce({ ...serverDay, cards: [card("1")] });
     const family = await readParentFamily(undefined);
     narrowNextFamilyRead(family, "1");
-    const failure = new ApiError("unavailable", 503);
-    read.mockRejectedValueOnce(failure);
-    const first = readParentFamily(family);
-    narrowNextFamilyRead(family, "2");
-    read.mockResolvedValueOnce({
-      ...serverDay,
-      cards: [],
-    });
+    read.mockResolvedValueOnce({ ...serverDay, cards: [card("9")] });
     const updated = await readParentFamily(family);
-    await first;
-    expect(updated.featureErrors["1"]).toBe(failure);
-    expect(updated.children).toEqual([card("1").child]);
-    expect(updated.features["1"]).toEqual(card("1").features);
+    expect(updated.children).toEqual(family.children);
+    expect(updated.featureErrors["1"]).toMatchObject({ status: 503 });
+    const refusal = new ApiError("forbidden", 403);
+    narrowNextFamilyRead(updated, "1");
+    read.mockRejectedValueOnce(refusal);
+    await expect(readParentFamily(updated)).rejects.toBe(refusal);
   });
+
   it("applies a later card to an in-flight authoritative roster, not to the old family", async () => {
     read.mockResolvedValueOnce({
       ...serverDay,
