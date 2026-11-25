@@ -57,6 +57,7 @@ import {
 } from "~/components/ui/page-header/OverflowMenu";
 import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { MountOnFirstOpen } from "~/components/ui/mount-on-first-open";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { PlanLegend } from "~/components/ui/planning/plan-legend";
 import { SegmentedControl } from "~/components/ui/segmented-control";
@@ -179,18 +180,6 @@ import {
   TimetablePageSkeleton,
 } from "./betreuungsplan-skeleton";
 import { closingDaysConcept } from "~/lib/concepts/closingDays";
-
-// Avoid setting up the forms and their subscriptions on every planner mount.
-// After a dialog has opened, keep it mounted so its exit animation and
-// close/reopen lifecycle still run normally.
-function MountOnFirstOpen({
-  open,
-  children,
-}: Readonly<{ open: boolean; children: React.ReactNode }>) {
-  const [opened, setOpened] = useState(open);
-  if (open && !opened) setOpened(true);
-  return open || opened ? children : null;
-}
 
 const logger = createLogger({ component: "TimetablesPage" });
 

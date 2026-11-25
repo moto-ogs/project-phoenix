@@ -132,12 +132,11 @@ describe("tenant route seeds", () => {
         },
       });
     });
-    const seed = await readSeed(
-      RoomDetailPage({
-        params: Promise.resolve({ tenant: "school-a", id: "7" }),
-        searchParams: Promise.resolve({}),
-      }),
-    );
+    const page = RoomDetailPage({
+      params: Promise.resolve({ tenant: "school-a", id: "7" }),
+      searchParams: Promise.resolve({}),
+    });
+    const seed = await page.props.seed;
     const roster = seed?.entries.find(
       ({ key }) => key === roomKeys.students("7"),
     );

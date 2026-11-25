@@ -41,7 +41,6 @@ import {
 import { countedDayStatus } from "~/lib/presence-status";
 import { useStudentData } from "~/lib/hooks/use-student-data";
 import { useStudentEnrollmentExtraFields } from "~/lib/hooks/use-student-enrollment-extra-fields";
-import { useScrollToTop } from "~/lib/hooks/use-scroll-to-top";
 import { useLocalStorageValue } from "~/lib/hooks/use-local-storage-value";
 import { useSidebarMemory } from "~/lib/sidebar-memory";
 import { useSWRAuth, useTenantMutate, useSWRSeedFrom } from "~/lib/swr";
@@ -473,10 +472,6 @@ function StudentDetailPageContent() {
     },
     [pathname, searchParams],
   );
-
-  // Start at the top instead of inheriting the search list's scroll position
-  // (Next App Router maintains scroll when the new page is already in view).
-  useScrollToTop(studentId);
 
   // Use custom hook for data fetching
   const {

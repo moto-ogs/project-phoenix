@@ -270,7 +270,9 @@ export function useSupervisionDashboard(
   // "derive, don't copy": ONE snapshot adjusted during render (the React
   // "storing information from previous renders" pattern), replacing the
   // former dozen per-field setState copies.
-  const [snapshot, setSnapshot] = useState<BFFDashboardResponse | null>(null);
+  const [snapshot, setSnapshot] = useState<BFFDashboardResponse | null>(() =>
+    isDashboardLoading ? null : (dashboardData ?? null),
+  );
   const [snapshotSessionKey, setSnapshotSessionKey] = useState(sessionKey);
   if (snapshotSessionKey !== sessionKey) {
     // Another account or set of rights on this tenant. Do not retain the

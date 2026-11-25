@@ -23,9 +23,13 @@ export function useAfterInitialPaint(): boolean {
   const [ready, setReady] = useState(isDocument);
   useEffect(() => {
     if (ready) return;
-    const frame = requestAnimationFrame(() =>
-      startTransition(() => setReady(true)),
-    );
+    // Effects from a navigation can run before its paint. The first frame
+    // gives the browser a chance to paint before scheduling the remaining work.
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() =>
+        startTransition(() => setReady(true)),
+      );
+    });
     return () => cancelAnimationFrame(frame);
   }, [ready]);
   return ready;

@@ -11,6 +11,7 @@
 
 "use client";
 
+import { useMemo } from "react";
 import { BuildingsIcon, StackSimpleIcon, TagIcon } from "@phosphor-icons/react";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import type { FormError, FormErrorInput } from "~/components/ui/form-error";
@@ -207,7 +208,7 @@ export function RoomDetailContent({
   historyError = null,
   showOccupancy = true,
 }: RoomDetailContentProps) {
-  const groupedSessions = groupByDate(history);
+  const groupedSessions = useMemo(() => groupByDate(history), [history]);
   const hasHistory = !historyDisabled && groupedSessions.length > 0;
 
   return (
@@ -294,7 +295,10 @@ export function RoomDetailContent({
         <SectionCard title="Belegungshistorie">
           <div className="space-y-6">
             {groupedSessions.map((dateGroup) => (
-              <div key={dateGroup.date}>
+              <div
+                key={dateGroup.date}
+                className="[contain-intrinsic-block-size:auto_12rem] [content-visibility:auto] print:[content-visibility:visible]"
+              >
                 <h3 className="mb-3 text-sm font-semibold text-gray-700">
                   {dateGroup.entries[0]?.startedAt
                     ? formatDate(dateGroup.entries[0].startedAt, true)

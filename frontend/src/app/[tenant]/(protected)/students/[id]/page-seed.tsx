@@ -1,16 +1,17 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { useParams } from "next/navigation";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { SWRServerSeed, type ServerSeedInput } from "~/lib/swr/server-seed";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { getStatusDayRange } from "./status-day-range";
 
 export function StudentRecordSeed({
-  id,
   seed,
   children,
-}: Readonly<{ id: string; seed: ServerSeedInput; children: ReactNode }>) {
+}: Readonly<{ seed: ServerSeedInput; children: ReactNode }>) {
+  const { id } = useParams<{ id: string }>();
   const [{ from, to }] = useState(getStatusDayRange);
   const claims = useMemo(() => {
     return [

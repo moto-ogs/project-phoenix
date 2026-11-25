@@ -878,6 +878,7 @@ function TenantPageTabs({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
 
   const updateScrollHint = useCallback(() => {
+    if (!isPhone) return;
     const tablist = tablistRef.current;
     if (!tablist) return;
     // The band's inner padding scrolls with it: a rest no wider than the
@@ -891,7 +892,7 @@ function TenantPageTabs({
         padEnd + 1,
     );
     setCanScrollLeft(tablist.scrollLeft > padStart + 1);
-  }, []);
+  }, [isPhone]);
 
   const measure = useCallback(() => {
     const row = rowRef.current;
@@ -934,20 +935,24 @@ function TenantPageTabs({
   }, [items.length]);
 
   useLayoutEffect(() => {
-    measure();
-    updateScrollHint();
     const row = rowRef.current;
     const tablist = tablistRef.current;
     if (!row || !tablist) return;
     tablist.addEventListener("scroll", updateScrollHint, { passive: true });
     let observer: ResizeObserver | undefined;
     if (typeof ResizeObserver !== "undefined") {
+      // The initial observer callback runs after layout. Reading the hidden
+      // measurement row in this effect would synchronously lay out the page.
       observer = new ResizeObserver(() => {
         measure();
         updateScrollHint();
       });
       observer.observe(row);
       observer.observe(tablist);
+      if (measureRef.current) observer.observe(measureRef.current);
+    } else {
+      measure();
+      updateScrollHint();
     }
     return () => {
       tablist.removeEventListener("scroll", updateScrollHint);
@@ -960,12 +965,13 @@ function TenantPageTabs({
   // nicht an den Rand: am rechten Rand laege er unter dem Verlauf, der
   // weitere Reiter ankuendigt.
   useEffect(() => {
+    if (!isPhone) return;
     const active = tablistRef.current?.querySelector<HTMLElement>(
       '[role="tab"][aria-selected="true"]',
     );
     if (typeof active?.scrollIntoView !== "function") return;
     active.scrollIntoView({ inline: "center", block: "nearest" });
-  }, [value]);
+  }, [isPhone, value]);
 
   const visible = items.slice(0, visibleCount);
   const hidden = items.slice(visibleCount);

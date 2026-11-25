@@ -63,6 +63,7 @@ import {
   useTenantMutateMatching,
   useSWRSeedFrom,
 } from "~/lib/swr";
+import { SWRServerSeed, type ServerSeedInput } from "~/lib/swr/server-seed";
 import { ROOM_DERIVED_CACHE_KEY_FRAGMENTS } from "~/lib/swr/room-derived-caches";
 import { usePresenceMode, useWeekendFollowsFriday } from "~/lib/tenant-context";
 import { resolveDetailReferrer, useTenantAwarePath } from "~/lib/tenant-path";
@@ -90,14 +91,29 @@ function backLabelFor(referrer: string): string {
     : "Zurück zu den Räumen";
 }
 
-export default function RoomDetailPage() {
+export default function RoomDetailPage({
+  seed,
+}: Readonly<{ seed?: ServerSeedInput }>) {
   const roomInfo =
     usePresenceMode() === "binary" ? ROOM_RECORD_INFO : ROOM_INFO;
 
   return (
     <Suspense fallback={<RoomDetailLoadingPage info={roomInfo} />}>
-      <RoomDetailPageContent />
+      <RoomDetailSeed seed={seed} />
     </Suspense>
+  );
+}
+
+function RoomDetailSeed({ seed }: Readonly<{ seed: ServerSeedInput }>) {
+  const { id } = useParams<{ id: string }>();
+  const claims = useMemo(
+    () => [roomKeys.detailKey(id), roomKeys.students(id)],
+    [id],
+  );
+  return (
+    <SWRServerSeed seed={seed} claims={claims} render>
+      <RoomDetailPageContent />
+    </SWRServerSeed>
   );
 }
 

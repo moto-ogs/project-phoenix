@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -504,6 +505,18 @@ describe("TenantPage", () => {
     const offsetWidth = vi
       .spyOn(HTMLElement.prototype, "offsetWidth", "get")
       .mockReturnValue(100);
+    const deliveries: (() => void)[] = [];
+    const resizeObserver = vi
+      .spyOn(globalThis, "ResizeObserver")
+      .mockImplementation(function (callback) {
+        const observer = {
+          observe: vi.fn(),
+          unobserve: vi.fn(),
+          disconnect: vi.fn(),
+        };
+        deliveries.push(() => callback([], observer));
+        return observer;
+      });
 
     try {
       render(
@@ -523,13 +536,16 @@ describe("TenantPage", () => {
           }}
         />,
       );
+      act(() => deliveries.forEach((deliver) => deliver()));
 
       const tablist = screen.getByRole("tablist", {
         name: "Seitenbereiche",
       });
       // The active tab sits under „Mehr“: the trigger shows its label, so
       // its name carries that label too (WCAG 2.5.3, label in name).
-      const moreButton = screen.getByRole("tab", { name: "Mehr: Personal" });
+      const moreButton = screen.getByRole("tab", {
+        name: "Mehr: Personal",
+      });
 
       expect(moreButton).toHaveAttribute("role", "tab");
       expect(moreButton).toHaveAttribute("aria-selected", "true");
@@ -554,6 +570,7 @@ describe("TenantPage", () => {
     } finally {
       clientWidth.mockRestore();
       offsetWidth.mockRestore();
+      resizeObserver.mockRestore();
     }
   });
 

@@ -33,6 +33,7 @@ import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { MountOnFirstOpen } from "~/components/ui/mount-on-first-open";
 import { OGS_GROUPS_LABEL } from "~/lib/ogs-groups-navigation";
 import {
   OverflowMenu,
@@ -395,7 +396,6 @@ function OGSGroupPageContent() {
     }
     return null;
   });
-  const [lastDisplayed, setLastDisplayed] = useState<OgsLiveViewData>();
   const [searchTerm, setSearchTerm] = useState("");
   const [attendanceFilter, setAttendanceFilter] = useState("all");
 
@@ -492,6 +492,7 @@ function OGSGroupPageContent() {
     liveData && (!selectedGroupExists || selectedGroupId === dataGroupId)
       ? liveData
       : undefined;
+  const [lastDisplayed, setLastDisplayed] = useState(matching);
   const displayed =
     matching ??
     (lastDisplayed?.groupId === selectedGroupId ? lastDisplayed : undefined);
@@ -1470,24 +1471,26 @@ function OGSGroupPageContent() {
           <>
             {earlyCheckout.dialog}
             {/* Group Transfer Modal */}
-            <GroupTransferModal
-              isOpen={groupTransfer.open}
-              onClose={() => groupTransfer.setOpen(false)}
-              group={
-                currentGroup
-                  ? {
-                      id: currentGroup.id,
-                      name: currentGroup.name,
-                      studentCount: currentGroup.studentCount,
-                    }
-                  : null
-              }
-              availableUsers={groupTransfer.users}
-              loadError={groupTransfer.loadError}
-              onTransfer={groupTransfer.transfer}
-              existingTransfers={groupTransfer.transfers}
-              onCancelTransfer={groupTransfer.cancel}
-            />
+            <MountOnFirstOpen open={groupTransfer.open}>
+              <GroupTransferModal
+                isOpen={groupTransfer.open}
+                onClose={() => groupTransfer.setOpen(false)}
+                group={
+                  currentGroup
+                    ? {
+                        id: currentGroup.id,
+                        name: currentGroup.name,
+                        studentCount: currentGroup.studentCount,
+                      }
+                    : null
+                }
+                availableUsers={groupTransfer.users}
+                loadError={groupTransfer.loadError}
+                onTransfer={groupTransfer.transfer}
+                existingTransfers={groupTransfer.transfers}
+                onCancelTransfer={groupTransfer.cancel}
+              />
+            </MountOnFirstOpen>
           </>
         }
       >

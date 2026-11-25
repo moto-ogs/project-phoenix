@@ -622,7 +622,7 @@ export function WeeklyCalendarGrid({
                   <div
                     key={iso}
                     data-today-column={isToday ? "" : undefined}
-                    className={`relative min-w-0 border-l border-gray-200 ${backgroundClass} ${dayIndex === safeSelectedIndex ? "" : "hidden sm:block"}`}
+                    className={`relative min-w-0 border-l border-gray-200 [content-visibility:auto] print:[content-visibility:visible] ${backgroundClass} ${dayIndex === safeSelectedIndex ? "" : "hidden sm:block"}`}
                     style={{ height: `${gridHeightPx}px` }}
                   >
                     <div

@@ -172,7 +172,7 @@ export function ResourceGrid<TRow>({
   className,
 }: ResourceGridProps<TRow>) {
   const columnMinWidth = COLUMN_MIN_WIDTH_CLASS[columnMode];
-  const cellWrapperClass = `flex ${RESOURCE_GRID_METRICS.cellMinHeightClass[columnMode]} w-full flex-col [contain-intrinsic-block-size:auto_none] [content-visibility:auto] print:[content-visibility:visible]`;
+  const cellClass = `flex ${RESOURCE_GRID_METRICS.cellMinHeightClass[columnMode]} w-full [contain-intrinsic-block-size:auto_none] [content-visibility:auto] print:[content-visibility:visible]`;
 
   return (
     // Radius, Rand und Ausschnitt sitzen auf der Fläche, gescrollt wird im
@@ -275,27 +275,21 @@ export function ResourceGrid<TRow>({
                           "bg-gray-50",
                         )}`}
                       >
-                        {/* The height floor sits on the wrapper, not on the
-                            cell content: an empty cell, a bare cell without an
-                            empty-cell affordance and a filled one all get the
-                            same row height (issue #2026). */}
-                        <div className={cellWrapperClass}>
-                          {cell != null ? (
-                            cell
-                          ) : showEmptyButton ? (
-                            <button
-                              type="button"
-                              onClick={() => onEmptyCellClick(row, column)}
-                              aria-label={emptyCellLabel(row, column)}
-                              // Ohne items-center: die Anlege-Fläche dehnt sich
-                              // über die ganze Zelle (#2031), die Zeilenhöhe
-                              // bleibt die des Wrappers (#2026).
-                              className="group flex w-full flex-1 rounded-md focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none"
-                            >
-                              <PlanAddAffordance />
-                            </button>
-                          ) : null}
-                        </div>
+                        {/* The first child sets the same height floor for
+                            empty and filled cells (#2026). A button can set
+                            that floor directly without a wrapper. */}
+                        {showEmptyButton ? (
+                          <button
+                            type="button"
+                            onClick={() => onEmptyCellClick(row, column)}
+                            aria-label={emptyCellLabel(row, column)}
+                            className={`${cellClass} group rounded-md focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none`}
+                          >
+                            <PlanAddAffordance />
+                          </button>
+                        ) : (
+                          <div className={`${cellClass} flex-col`}>{cell}</div>
+                        )}
                       </td>
                     );
                   })}

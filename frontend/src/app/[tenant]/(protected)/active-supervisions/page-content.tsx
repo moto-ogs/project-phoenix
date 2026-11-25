@@ -1,5 +1,6 @@
 "use client";
 
+import { MountOnFirstOpen } from "~/components/ui/mount-on-first-open";
 import { useState, Suspense, useMemo, useCallback } from "react";
 import { UserPlus } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -938,24 +939,28 @@ function MeinRaumPageContent() {
       }
       overlays={
         <>
-          <CompleteInstanceModal
-            isOpen={actions.showCompleteConfirmation}
-            roster={currentTimetableRoster}
-            isCompleting={actions.isCompletingInstance}
-            error={actions.completeError}
-            onClose={() => actions.setShowCompleteConfirmation(false)}
-            onConfirm={() => void actions.confirmCompleteTimetableInstance()}
-          />
+          <MountOnFirstOpen open={actions.showCompleteConfirmation}>
+            <CompleteInstanceModal
+              isOpen={actions.showCompleteConfirmation}
+              roster={currentTimetableRoster}
+              isCompleting={actions.isCompletingInstance}
+              error={actions.completeError}
+              onClose={() => actions.setShowCompleteConfirmation(false)}
+              onConfirm={() => void actions.confirmCompleteTimetableInstance()}
+            />
+          </MountOnFirstOpen>
           {/* Schulhof Release Supervision Modal */}
-          <ReleaseSupervisionModal
-            isOpen={schulhof.showReleaseModal}
-            onClose={() => schulhof.setShowReleaseModal(false)}
-            onConfirm={() =>
-              schulhof.handleReleaseSupervision().catch(() => undefined)
-            }
-            isConfirmLoading={schulhof.isReleasingSupervision}
-            error={schulhof.releaseError}
-          />
+          <MountOnFirstOpen open={schulhof.showReleaseModal}>
+            <ReleaseSupervisionModal
+              isOpen={schulhof.showReleaseModal}
+              onClose={() => schulhof.setShowReleaseModal(false)}
+              onConfirm={() =>
+                schulhof.handleReleaseSupervision().catch(() => undefined)
+              }
+              isConfirmLoading={schulhof.isReleasingSupervision}
+              error={schulhof.releaseError}
+            />
+          </MountOnFirstOpen>
           {addSupervisorTarget ? (
             <AddSupervisorModal
               activeGroupId={addSupervisorTarget}

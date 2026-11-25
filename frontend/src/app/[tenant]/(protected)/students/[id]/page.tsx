@@ -114,15 +114,18 @@ async function loadStudentRecordSeed(slug: string, id: string) {
   return seedOf(snapshot, entries, builtAt);
 }
 
-export default async function StudentDetailPage({
+export default function StudentDetailPage({
   params,
 }: {
   params: Promise<{ tenant: string; id: string }>;
 }) {
-  const { tenant, id } = await params;
-  const seed = loadStudentRecordSeed(tenant, id).catch(() => null);
+  // The URL parameters are needed by the authorized seed, not by the
+  // reusable page shell. The mounted view reads the active URL itself.
+  const seed = params
+    .then(({ tenant, id }) => loadStudentRecordSeed(tenant, id))
+    .catch(() => null);
   return (
-    <StudentRecordSeed id={id} seed={seed}>
+    <StudentRecordSeed seed={seed}>
       <StudentDetailContent />
     </StudentRecordSeed>
   );
