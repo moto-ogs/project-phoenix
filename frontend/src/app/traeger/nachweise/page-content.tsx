@@ -485,7 +485,7 @@ function SchoolKinds({
       title={school.schoolName}
       description={
         school.kinds.length > 0
-          ? "Die Schule hat eigene Nachweisarten. Ordnest du sie zu, kommt für Personen mit Personalakte nur die Erinnerung deines Trägers."
+          ? "Die Schule hat eigene Nachweisarten. Ordnest du sie zu, gibt es für Personen mit Personalakte keine doppelte Erinnerung."
           : undefined
       }
       footer={
@@ -495,7 +495,7 @@ function SchoolKinds({
             onSave={() => void save()}
             saving={saving}
             saveLabel="Zuordnung speichern"
-            saveTooltip="Speichert die Zuordnung. Danach kommt nur noch die Erinnerung deines Trägers."
+            saveTooltip="Speichert die Zuordnung und vermeidet doppelte Erinnerungen."
           />
         ) : undefined
       }
@@ -505,7 +505,7 @@ function SchoolKinds({
         <ResponsiveActionList>
           {school.kinds.map((kind) => (
             <ResponsiveActionRow key={kind.schoolTypeId}>
-              {/* #8129: Nachweisart der Schule → Nachweisart des Trägers. */}
+              {/* #8129: Nachweisart der Schule → Nachweisart deines Trägers. */}
               <div className="flex min-w-0 items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold wrap-anywhere text-gray-900">

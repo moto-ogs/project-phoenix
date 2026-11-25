@@ -217,7 +217,7 @@ describe("TraegerStaffProofsPage", () => {
     // „Nachweisart der Schule → Nachweisart deines Trägers“, so the kind
     // that also stands under „Nachweisarten“ does not look like a duplicate.
     expect(card).toHaveTextContent(
-      "kommt für Personen mit Personalakte nur die Erinnerung deines Trägers",
+      "gibt es für Personen mit Personalakte keine doppelte Erinnerung",
     );
     const row = within(card!)
       .getByText("Erweitertes Führungszeugnis")
