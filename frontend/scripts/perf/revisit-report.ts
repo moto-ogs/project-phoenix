@@ -62,6 +62,10 @@ export function writeReport(
     development: string;
     started: string;
     browser: string;
+    platform: string;
+    architecture: string;
+    cpu?: string;
+    cores: number;
     cpuThrottle: number;
     rttMs: number;
     desktopMbit: number;
@@ -89,7 +93,8 @@ export function writeReport(
       " · " +
       metadata.started +
       " · Chromium " +
-      metadata.browser,
+      metadata.browser +
+      ` · ${metadata.platform}/${metadata.architecture}, ${metadata.cpu ?? "CPU unbekannt"} (${metadata.cores} logische CPUs)`,
     "",
     `CPU ×${metadata.cpuThrottle}, ${metadata.rttMs} ms RTT, Desktop ${metadata.desktopMbit} Mbit/s, Pixel 7 ${metadata.mobileMbit} Mbit/s. Abweichungen: „nah“ = Median 130–170 ms; „Last“ = mindestens ein Durchgang im Mittel unter 50 % freier Host-CPU. Kein kausaler Vergleich bei unterschiedlicher Last.`,
     "",

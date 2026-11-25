@@ -22,23 +22,72 @@ Use that same machine and browser version for both sides of a performance compar
 a Mac run is a smoke test, not its counterpart. Use a private clone, its own native
 backend bound to loopback (`PORT=127.0.0.1:<port>` for the server), and separate
 loopback-only Postgres/Mailpit Compose ports. The benchmark binds Next to loopback.
-Use a new Compose project, free ports and fresh local configuration from
-`scripts/setup-dev.sh`; do not copy another checkout's credentials. On Linux the
-container's PostgreSQL user must be able to read the two public config files and
-own its private 0600 server key. For an exhausted Docker subnet pool use the
-[worktree-only network procedure](operations.md#new-managed-worktree).
-Start the native binary from the configured clone with
-`devbox run -- scripts/dev-native.sh backend sh -c 'mkdir -p ../tmp && go build -o ../tmp/revisit-api . && ../tmp/revisit-api migrate && PORT="127.0.0.1:$SERVER_HOST_PORT" exec ../tmp/revisit-api serve'`
-after its own Postgres and Mailpit are healthy.
-The reference browser is sandboxed Google Chrome for Testing 158.0.8127.88.
-If it is not installed globally, unpack the [official Linux build](https://storage.googleapis.com/chrome-for-testing-public/158.0.8127.88/linux64/chrome-linux64.zip) (SHA-256 `59e3b43f8b3aaa292238fbdcfb36a93127debd53e212510dcdc2cc8812b4b57e`) under the
-private checkout and expose it only inside the benchmark's mount namespace:
-`bwrap --dev-bind / / --tmpfs /opt --dir /opt/google --ro-bind "$CHROME_DIR" /opt/google/chrome devbox run -- scripts/perf-revisit.sh`.
 
-Use the seeded `vollbetrieb` school and run
-`devbox run -- scripts/perf-revisit.sh --prepare-day`
-once on the measurement day ([seed instructions](../getting-started.md)). This runs the full-day simulation without a clock override and records only its aggregate counts, bound to the seed timestamp and Berlin date. The benchmark requires that receipt. The seeder
-must have written the local Caterer login to its private v3 state. Do not copy
+### Set up the reference host
+
+In a fresh, private clone, fetch the intended `development` and feature refs.
+The report records their merge base and `HEAD:frontend/src`; compare the latter
+to the product revision under test. Use `scripts/setup-dev.sh` to generate local
+credentials and certificates (keep setup and seed output private). In the private `.env`, choose a unique
+`COMPOSE_PROJECT_NAME` and five free ports (reference: frontend 14280, API 14281,
+Postgres 14282, Mailpit UI 14283 and SMTP 14284). Update the localhost URLs
+in `.env`, `backend/dev.env` and `frontend/.env.local` for these ports.
+Set `AUTH_TRUST_HOST=true` for the localhost production build, and keep analytics
+and error reporting disabled. Use a four-digit local `OGS_DEVICE_PIN`.
+
+In the generated **private** `docker-compose.yml`, prefix each of the three
+Postgres/Mailpit port mappings with `127.0.0.1:`. On Linux, prepare the key and
+public files in this clone, then start **only** its two infrastructure services:
+
+```sh
+sed -i -E 's/"(\$\{(POSTGRES_HOST_PORT|MAILPIT_HOST_PORT|MAILPIT_SMTP_HOST_PORT)\}:)/"127.0.0.1:\1/' docker-compose.yml
+chmod 644 config/ssl/postgres/{postgresql.conf,pg_hba.conf,certs/server.crt,certs/ca.crt}
+chmod 600 config/ssl/postgres/certs/server.key
+docker run --rm --network none --user 0 --entrypoint chown \
+  -v "$PWD/config/ssl/postgres/certs/server.key:/server.key" \
+  "$(docker compose config --images postgres)" postgres:postgres /server.key
+docker compose up -d --wait postgres mailpit
+docker compose ps  # All three published ports must show 127.0.0.1
+```
+
+If the Docker subnet pool is exhausted, use the
+[worktree-only network procedure](operations.md#new-managed-worktree).
+Install the frontend dependencies (`cd frontend && pnpm install --frozen-lockfile` inside Devbox).
+Start the native API in the foreground from the repository root:
+
+```sh
+devbox run -- scripts/dev-native.sh backend sh -c 'mkdir -p ../tmp && go build -o ../tmp/revisit-api . && ../tmp/revisit-api migrate && PORT="127.0.0.1:$SERVER_HOST_PORT" exec ../tmp/revisit-api serve'
+```
+
+The reference browser is sandboxed **Google Chrome for Testing 158.0.8127.88**.
+With no matching system Chrome, download the [official Linux archive](https://storage.googleapis.com/chrome-for-testing-public/158.0.8127.88/linux64/chrome-linux64.zip)
+into a private directory, verify it and unpack it there:
+
+```sh
+echo '59e3b43f8b3aaa292238fbdcfb36a93127debd53e212510dcdc2cc8812b4b57e  chrome-linux64.zip' | sha256sum -c -
+unzip -q chrome-linux64.zip
+export CHROME_DIR="$PWD/chrome-linux64"
+```
+
+On `rechenzentrum`, the single measurement command from the repository root is
+`bwrap --dev-bind / / --tmpfs /opt --dir /opt/google --ro-bind "$CHROME_DIR" /opt/google/chrome devbox run -- scripts/perf-revisit.sh`.
+The host's **bubblewrap** package exposes this Chrome only inside the benchmark
+process. Keep the same prepared fixture and browser for the two sides of #8083.
+
+### Prepare the fixture and repeat
+
+In a fresh stack, create the [standard seed](../getting-started.md). From the
+repository root with the local API running:
+
+```sh
+(umask 077; devbox run -- scripts/dev-native.sh backend sh -c 'go run ./cmd/devtools seed --email "$OPERATOR_EMAIL" --password "$OPERATOR_PASSWORD" --pin "$OGS_DEVICE_PIN" --url "$API_URL"' >tmp/revisit-seed.log 2>&1)
+devbox run -- scripts/perf-revisit.sh --prepare-day
+```
+
+Prepare the day once. This simulates a full day in `vollbetrieb` without a clock
+override and records only aggregate counts, bound to the seed timestamp and
+Berlin date. The benchmark requires that receipt and the private v3 seed state
+with the confirmed Caterer login. Do not copy
 credentials into environment examples or results. Leave the worktree frontend
 port free. Check `uptime` and, if installed, `~/bin/agent-heavy --status` before measuring.
 
