@@ -1055,7 +1055,10 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
     <>
       {/* Spacer to prevent content from being hidden behind fixed nav */}
       {/* `split:block`: das iPad quer bekommt die Pill der App (#8070). */}
-      {pillHidden ? null : <div className="split:block h-16 lg:hidden" />}
+      {/* Am Telefon hält `PortalShell` den Platz der Pill frei (#8070). */}
+      {pillHidden ? null : (
+        <div className="split:block app:hidden h-16 lg:hidden" />
+      )}
 
       <LogoutModal
         isOpen={logoutModalOpen}

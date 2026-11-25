@@ -119,7 +119,7 @@ function useActionBarSpace(
     const update = () => {
       const height = bar.offsetHeight;
       if (height > 0) {
-        root.style.setProperty(ACTION_BAR_SPACE_VAR, `${height + 8}px`);
+        root.style.setProperty(ACTION_BAR_SPACE_VAR, `${height + 16}px`);
       } else {
         root.style.removeProperty(ACTION_BAR_SPACE_VAR);
       }
