@@ -237,7 +237,9 @@ export function AppTenantHead({
             // Telefon: unten an der Kopfkarte, solange sie steht; klebt die
             // Leiste allein, ist sie wieder eine ganze Karte.
             "phone:mt-0 phone:mb-0",
-            "phone:rounded-t-none phone:border-t-0 phone:pt-0",
+            // Unten und seitlich 8 px wie zwischen Kopfzeile und Leiste: Das
+            // Suchfeld sitzt nicht auf der Kartenkante.
+            "phone:rounded-t-none phone:border-t-0 phone:px-2 phone:pt-0 phone:pb-2",
             printHideHeader && "print:hidden",
           )}
           style={{ top: stickyTop }}
