@@ -12,6 +12,8 @@ import {
   type RefObject,
 } from "react";
 
+import { Button } from "./button";
+import { CloseIcon } from "./close-icon";
 import { Drawer, DrawerContent, DrawerNested, DrawerTitle } from "./drawer";
 import { FOCUSABLE_SELECTOR } from "./hooks/useScrollRegion";
 import {
@@ -62,6 +64,7 @@ export function ResponsivePanelSheet({
   children,
 }: ResponsivePanelSheetProps) {
   const sheetRef = useRef<HTMLDivElement | null>(null);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   // Die Abdunklung gehört zum Blatt: Ein Tipp darauf schließt nur das Blatt,
   // nicht auch den Kalender oder das Popover, aus dem es aufging.
@@ -118,8 +121,10 @@ export function ResponsivePanelSheet({
           event.preventDefault();
           const sheet = sheetRef.current;
           if (sheet === null) return;
+          // Der erste Eintrag im Inhalt, nicht das X im Kopf.
           const target =
             initialFocus?.(sheet) ??
+            bodyRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR) ??
             sheet.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
           (target ?? sheet).focus({ preventScroll: true });
         }}
@@ -144,12 +149,26 @@ export function ResponsivePanelSheet({
           event.stopPropagation();
         }}
       >
-        <DrawerTitle className="tablet:text-lg px-4 pt-1 pb-1 text-base leading-6">
-          {label}
-        </DrawerTitle>
+        {/* Jedes Blatt der App hat ein X (#8070). */}
+        <div className="flex items-center gap-3 pr-2 pl-4">
+          <DrawerTitle className="tablet:text-lg min-w-0 flex-1 truncate text-base leading-6">
+            {label}
+          </DrawerTitle>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Blatt schließen"
+            tooltip="Schließt das Blatt."
+            onClick={() => onOpenChange(false)}
+          >
+            <CloseIcon />
+          </Button>
+        </div>
         {/* Eine klebende Fußleiste schließt bündig unten ab: Darunter läuft
             kein Inhalt mehr durch. */}
         <div
+          ref={bodyRef}
           {...SCROLL_AREA_PROPS}
           className="min-h-0 overflow-y-auto overscroll-contain px-2 pt-1 pb-4 has-[.sticky.bottom-0]:pb-0"
         >
