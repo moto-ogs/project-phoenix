@@ -34,6 +34,7 @@ import { useCurrentTimestamp } from "~/lib/hooks/use-current-timestamp";
 import { useDayPlanHref } from "~/lib/hooks/use-day-plan-href";
 import type { HomeGroupSnapshot } from "~/lib/hooks/use-home-group";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
+import { useDeviceContext } from "~/lib/device-context";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 
 /**
@@ -222,6 +223,10 @@ export function NoticeDetail({
 
 // ─── Meine Gruppe ──────────────────────────────────────────────────────────
 
+/** Zwei Spalten, zeilenweise gefüllt, ohne leere Zelle neben einem Kind. */
+const WIDE_DETAIL_COLUMNS =
+  "[&_ul]:grid [&_ul]:grid-cols-2 [&_ul]:divide-y-0 [&_ul>li]:border-b [&_ul>li]:border-gray-100 [&_ul>li:nth-child(odd)]:border-r [&_ul>li:last-child]:border-b-0 [&_ul>li:nth-last-child(2):nth-child(odd)]:border-b-0";
+
 /**
  * Die eigene Gruppe mit ihren Kindern: wer fehlt noch, wer wird abgeholt,
  * wer ist heute nicht da. Dieselben Daten und Wörter wie „Meine Gruppe
@@ -233,6 +238,7 @@ export function GroupDetail({
   readonly snapshot: HomeGroupSnapshot;
 }) {
   const tenantPath = useTenantAwarePath();
+  const { isSplit } = useDeviceContext();
   const href = tenantPath("/ogs-groups");
   const { group, present, total, missing, pickups, away } = snapshot;
   if (!group) return null;
@@ -248,7 +254,12 @@ export function GroupDetail({
     : group.name;
 
   return (
-    <Collection label={`Meine Gruppe: ${label}`}>
+    <Collection
+      label={`Meine Gruppe: ${label}`}
+      // iPad quer: Das Detail ist ⅔ breit. Die Kinder stehen zeilenweise in
+      // zwei Spalten, damit die Abholzeit nah am Namen steht.
+      className={isSplit ? WIDE_DETAIL_COLUMNS : undefined}
+    >
       <CollectionGroup title={label} meta={`${present} von ${total} da`}>
         {missing.length + pickups.length + awayRest.length === 0 ? (
           <CollectionRow

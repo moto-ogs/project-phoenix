@@ -66,6 +66,12 @@ interface SpontaneousActivityStartProps {
     open: () => void;
     disabled: boolean;
   }) => ReactNode;
+  /**
+   * Von außen geöffnet (App, #8070): der Auslöser steht im „…“-Menü der
+   * Seite. Ohne die beiden Props hält die Komponente den Zustand selbst.
+   */
+  readonly open?: boolean;
+  readonly onOpenChange?: (open: boolean) => void;
 }
 
 function normalizeRooms(rooms: roomsContract.RoomResponse[]): RoomOption[] {
@@ -131,8 +137,12 @@ export function SpontaneousActivityStart({
   occupiedRoomIds = EMPTY_OCCUPIED_ROOM_IDS,
   onStart,
   renderTrigger,
+  open: openProp,
+  onOpenChange,
 }: SpontaneousActivityStartProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpenState, setIsOpenState] = useState(false);
+  const isOpen = openProp ?? isOpenState;
+  const setIsOpen = onOpenChange ?? setIsOpenState;
   const [activityInput, setActivityInput] = useState("");
   const [roomId, setRoomId] = useState("");
   const [additionalStaffIds, setAdditionalStaffIds] = useState<string[]>([]);
@@ -306,6 +316,7 @@ export function SpontaneousActivityStart({
         })
       ) : (
         <SectionCard className="mb-4">
+          {/* oxlint-disable-next-line ui-kit/no-hand-rolled-button -- bestehende Desktop-Karte, im Prototyp #8070 unverändert */}
           <button
             type="button"
             disabled={disabled || isStarting}

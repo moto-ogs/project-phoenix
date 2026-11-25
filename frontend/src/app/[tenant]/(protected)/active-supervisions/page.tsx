@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, Suspense, useMemo, useCallback } from "react";
-import { Search, UserPlus } from "lucide-react";
+import { Search, Sparkles, UserPlus } from "lucide-react";
 import { ActiveFilterChips } from "~/components/ui/page-header/ActiveFilterChips";
 import { OverlaySheet } from "~/components/ui/overlay-sheet";
 import { TenantPageSearchRow } from "~/components/ui/tenant-page-search-row";
@@ -163,6 +163,8 @@ function MeinRaumPageContent() {
   const [searchSheetOpen, setSearchSheetOpen] = useState(false);
   // App: „Kind suchen und hinzufügen“ öffnet sich aus dem „…“-Menü.
   const [appAddStudentOpen, setAppAddStudentOpen] = useState(false);
+  // App mit laufender Liste: „Spontane Aktivität starten“ steht im „…“-Menü.
+  const [appSpontaneousOpen, setAppSpontaneousOpen] = useState(false);
   // App-Oberfläche (#8070): eigene Liste, Kopf und Aktionsleiste. Der
   // Desktop-Zweig bleibt der heutige Code.
   const device = useDeviceContext();
@@ -585,7 +587,9 @@ function MeinRaumPageContent() {
         Spontane Aktivität starten
       </Button>
     );
-    if (appHasRunningRoster) return button;
+    // Während eine Liste läuft, steht der Start im „…“-Menü der Kopfkarte,
+    // nicht als breiter Knopf unter den Kindern.
+    if (appHasRunningRoster) return null;
     if (appStartablePlanned) return button;
     return <ActionBar>{button}</ActionBar>;
   };
@@ -603,6 +607,9 @@ function MeinRaumPageContent() {
         void actions.handleStartSpontaneousActivity(payload)
       }
       renderTrigger={appMode ? renderAppSpontaneousTrigger : undefined}
+      {...(appMode && appHasRunningRoster
+        ? { open: appSpontaneousOpen, onOpenChange: setAppSpontaneousOpen }
+        : {})}
     />
   ) : null;
   // Das Banner steht über jeder Aufsicht, die nach dem Beenden offen ist. Es
@@ -704,6 +711,21 @@ function MeinRaumPageContent() {
             description: "Auch Kinder, die noch nicht da sind.",
             icon: <Search className="h-4 w-4" aria-hidden="true" />,
             onClick: () => setAppAddStudentOpen(true),
+          },
+        ]
+      : []),
+    ...(appHasRunningRoster && dashboard.webSpontaneousActivitiesEnabled
+      ? [
+          {
+            label: "Spontane Aktivität starten",
+            description:
+              spontaneousStartBlockedReason ??
+              "Aktivität wählen, Raum belegen, Kinder danach hinzufügen.",
+            icon: <Sparkles className="h-4 w-4" aria-hidden="true" />,
+            disabled:
+              dashboard.spontaneousStartAvailability?.available === false ||
+              actions.isStartingSpontaneous,
+            onClick: () => setAppSpontaneousOpen(true),
           },
         ]
       : []),
@@ -981,7 +1003,7 @@ function MeinRaumPageContent() {
               <>
                 {spontaneousStartBanner}
                 {transitSection}
-                <PastBlocksSection onReopen={reopenPastBlock} />
+                <PastBlocksSection onReopen={reopenPastBlock} app />
               </>
             }
           />

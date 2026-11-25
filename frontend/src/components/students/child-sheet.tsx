@@ -58,6 +58,11 @@ export interface ChildSheetProps {
   readonly quickActions?: boolean;
   /** Eigener Status statt des Tagesstatus; `null` blendet ihn aus (lädt noch). */
   readonly status?: ChildDayStatus | null;
+  /**
+   * Knöpfe der aufrufenden Liste in der Fußleiste, über „Ganze Akte öffnen“
+   * (z. B. „Raum verlassen“). Dann ist die Akte der Nebenweg.
+   */
+  readonly footerActions?: ReactNode;
 }
 
 /** Das Blatt: halbe Höhe am Telefon, Karte am iPad. */
@@ -70,7 +75,24 @@ export function ChildSheet({
   contextActions,
   quickActions = true,
   status,
+  footerActions,
 }: ChildSheetProps) {
+  const akteLink = href ? (
+    <ButtonLink
+      href={href}
+      // Das Blatt trägt einen eigenen Verlaufseintrag (gleiche Adresse
+      // wie die Liste). Die Akte ersetzt ihn: Zurück führt dann direkt
+      // auf die Liste mit ihrer Scroll-Position, nicht auf einen leeren
+      // Blatt-Eintrag.
+      replace
+      variant={footerActions ? "outline" : "primary"}
+      size="md"
+      className="w-full"
+      tooltip="Öffnet die ganze Akte mit allen Angaben."
+    >
+      Ganze Akte öffnen
+    </ButtonLink>
+  ) : null;
   return (
     <OverlaySheet
       open={student !== null}
@@ -78,22 +100,14 @@ export function ChildSheet({
       title={student ? studentName(student) : "Kind"}
       closeLabel="Kind-Blatt schließen"
       footer={
-        href ? (
-          <ButtonLink
-            href={href}
-            // Das Blatt trägt einen eigenen Verlaufseintrag (gleiche Adresse
-            // wie die Liste). Die Akte ersetzt ihn: Zurück führt dann direkt
-            // auf die Liste mit ihrer Scroll-Position, nicht auf einen leeren
-            // Blatt-Eintrag.
-            replace
-            variant="primary"
-            size="md"
-            className="w-full"
-            tooltip="Öffnet die ganze Akte mit allen Angaben."
-          >
-            Ganze Akte öffnen
-          </ButtonLink>
-        ) : undefined
+        footerActions ? (
+          <div className="flex w-full flex-col gap-2">
+            {footerActions}
+            {akteLink}
+          </div>
+        ) : (
+          (akteLink ?? undefined)
+        )
       }
     >
       {student ? (
@@ -237,14 +251,16 @@ export function ChildSummary({
   );
 }
 
-// „Gekommen 00:03 · geplant 07:30“: Was tatsächlich war, steht vorn, der
-// Plan als Zusatz; ohne Ankunft nur der Plan.
+// „07:40, später als geplant (07:30)“: Was tatsächlich war, steht
+// vorn, der Plan ordnet es ein; ohne Ankunft nur der Plan.
 function arrivalText(student: Student): string {
-  if (student.actual_arrival_time) {
-    return student.arrival_time &&
-      student.arrival_time !== student.actual_arrival_time
-      ? `Gekommen ${student.actual_arrival_time} · geplant ${student.arrival_time}`
-      : `Gekommen ${student.actual_arrival_time}`;
+  const actual = student.actual_arrival_time;
+  const planned = student.arrival_time;
+  if (actual) {
+    if (!planned || planned === actual) return `Gekommen ${actual}`;
+    // Uhrzeiten als „HH:MM“ lassen sich als Text vergleichen.
+    const relation = actual < planned ? "früher" : "später";
+    return `${actual}, ${relation} als geplant (${planned})`;
   }
   return student.arrival_time ? `Kommt ${student.arrival_time}` : "–";
 }

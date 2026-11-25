@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { Check, LogOut } from "lucide-react";
 
 import { Alert } from "~/components/ui/alert";
 import { ActionBar } from "~/components/ui/action-bar";
@@ -133,8 +134,28 @@ function primaryRowAction(
   return "check-in";
 }
 
+/**
+ * VORSCHLAG (Prototyp #8070, Runde 3), noch kein Produktentscheid: Die Jury
+ * fand „Einchecken“ in beiden Runden schwer verständlich. Die App-Fassung
+ * der Aufsicht sagt deshalb, was die Person sieht: Das Kind „ist da“. Die
+ * Aktion und ihre Wirkung bleiben gleich; Desktop, Kiosk und Hilfe
+ * sagen weiter „Einchecken“, bis über das Wort entschieden ist.
+ */
+const CHECK_IN_WORDING = {
+  row: "Ist da",
+  expected: "Ist da",
+  returned: "Wieder da",
+  absent: "Doch da",
+  bulk: (count: number) =>
+    count === 1
+      ? "1 Erwartetes Kind ist da"
+      : `Alle ${count} Erwarteten sind da`,
+  done: (name: string) => `${name} ist da.`,
+  doneAgain: (name: string) => `${name} ist wieder da.`,
+} as const;
+
 const ROW_ACTION_LABELS: Record<"check-in" | "check-out", string> = {
-  "check-in": "Einchecken",
+  "check-in": CHECK_IN_WORDING.row,
   "check-out": "Raum verlassen",
 };
 
@@ -147,14 +168,17 @@ function sheetActions(
   if (access.attendance && !row.currentlyPresent && row.status !== "absent") {
     list.push({
       action: "check-in",
-      label: row.status === "expected" ? "Einchecken" : "Wieder einchecken",
+      label:
+        row.status === "expected"
+          ? CHECK_IN_WORDING.expected
+          : CHECK_IN_WORDING.returned,
       tooltip: CHECK_IN_TOOLTIP,
     });
   }
   if (access.attendance && !row.currentlyPresent && row.status === "absent") {
     list.push({
       action: "check-in",
-      label: "Doch da: einchecken",
+      label: CHECK_IN_WORDING.absent,
       tooltip: CHECK_IN_TOOLTIP,
     });
   }
@@ -215,7 +239,9 @@ function feedbackFor(
   switch (action) {
     case "check-in":
       return {
-        message: `${name} ist eingecheckt.`,
+        message: wasGone
+          ? CHECK_IN_WORDING.doneAgain(name)
+          : CHECK_IN_WORDING.done(name),
         undo: wasGone ? "check-out" : null,
       };
     case "check-out":
@@ -444,25 +470,33 @@ export function TimetableRosterApp({
   };
 
   const rowAction = (row: TimetableRosterRow) => {
+    // Am iPad quer steht das Kind rechts mit allen Aktionen; in der Zeile
+    // stünde dieselbe Aktion doppelt.
+    if (isSplit) return undefined;
     const action = primaryRowAction(row, access);
     if (action !== "check-in" && action !== "check-out") return undefined;
     const isBusy = busy === `${row.studentId}:${action}`;
+    const Icon = action === "check-in" ? Check : LogOut;
+    // Ein Symbol statt eines Worts: Die Zeile behält die Breite für Namen
+    // und Gehzeit. Der Name der Aktion steht im Tooltip und für
+    // Vorleseprogramme; das Kind-Blatt nennt sie ausgeschrieben.
     return (
       <Button
         type="button"
-        size="compact"
-        variant={action === "check-in" ? "success" : "outline"}
+        size="icon"
+        // Leise wie „Raum verlassen“: Die Hauptaktion steht in der Leiste.
+        variant="outline"
         isLoading={isBusy}
         disabled={busy !== null && !isBusy}
         aria-label={`${ROW_ACTION_LABELS[action]}: ${childName(row)}`}
         tooltip={
           action === "check-in"
-            ? CHECK_IN_TOOLTIP
-            : "Trägt das Kind sofort aus diesem Raum aus."
+            ? `${ROW_ACTION_LABELS[action]}: ${CHECK_IN_TOOLTIP}`
+            : "Raum verlassen: Trägt das Kind sofort aus diesem Raum aus."
         }
         onClick={() => void runAction(action, row)}
       >
-        {ROW_ACTION_LABELS[action]}
+        <Icon className="size-5" aria-hidden="true" />
       </Button>
     );
   };
@@ -474,11 +508,12 @@ export function TimetableRosterApp({
   ) : (
     <Collection
       label={`Kinder in ${roster.instance.title}`}
-      // iPad hoch: die Kinder fließen in zwei Spalten, damit die Aktion nah
-      // am Namen steht statt am anderen Ende einer 800 px breiten Zeile.
+      // iPad hoch: die Kinder stehen zeilenweise in zwei Spalten (links,
+      // rechts, nächste Zeile), damit die Aktion nah am Namen steht und keine
+      // Zelle neben einem Kind leer bleibt.
       className={
         layout === "tablet" && !isSplit
-          ? "[&_ul]:columns-2 [&_ul]:gap-0 [&_ul>li]:break-inside-avoid"
+          ? "[&_ul]:grid [&_ul]:grid-cols-2 [&_ul]:divide-y-0 [&_ul>li]:border-b [&_ul>li]:border-gray-100 [&_ul>li:last-child]:border-b-0 [&_ul>li:nth-child(odd)]:border-r [&_ul>li:nth-last-child(2):nth-child(odd)]:border-b-0"
           : undefined
       }
     >
@@ -507,12 +542,18 @@ export function TimetableRosterApp({
     </Collection>
   );
 
+  const linesFor = (row: TimetableRosterRow) => (
+    <SupervisionChildLines
+      row={row}
+      now={now}
+      rosterDate={roster.instance.date}
+    />
+  );
   const contextFor = (row: TimetableRosterRow, inSheet: boolean) => (
     <SupervisionChildActions
       row={row}
       access={access}
-      now={now}
-      rosterDate={roster.instance.date}
+      inSheet={inSheet}
       busy={busy}
       onAction={(action) => {
         if (inSheet) setSheetChildId(null);
@@ -565,7 +606,7 @@ export function TimetableRosterApp({
         tooltip="Trägt alle erwarteten Kinder sofort als anwesend ein."
         onClick={() => void onConfirmExpected(confirmableExpectedRows)}
       >
-        {`${confirmableExpectedRows.length} Erwartete einchecken`}
+        {CHECK_IN_WORDING.bulk(confirmableExpectedRows.length)}
       </Button>
     );
   } else if (presentPickerEnabled) {
@@ -668,7 +709,8 @@ export function TimetableRosterApp({
               <SupervisionChildDetail
                 row={splitRow}
                 href={studentProfileHref?.(splitRow)}
-                context={contextFor(splitRow, false)}
+                lines={linesFor(splitRow)}
+                actions={contextFor(splitRow, false)}
               />
               {footer}
             </div>
@@ -681,7 +723,8 @@ export function TimetableRosterApp({
       <SupervisionChildSheet
         row={sheetRow}
         href={sheetRow ? studentProfileHref?.(sheetRow) : undefined}
-        context={sheetRow ? contextFor(sheetRow, true) : null}
+        lines={sheetRow ? linesFor(sheetRow) : null}
+        actions={sheetRow ? contextFor(sheetRow, true) : null}
         onClose={() => setSheetChildId(null)}
       />
 
@@ -798,12 +841,14 @@ function useRosterStudent(
 function SupervisionChildSheet({
   row,
   href,
-  context,
+  lines,
+  actions,
   onClose,
 }: Readonly<{
   row: TimetableRosterRow | null;
   href?: string;
-  context: ReactNode;
+  lines: ReactNode;
+  actions: ReactNode;
   onClose: () => void;
 }>) {
   const { student, loaded } = useRosterStudent(row, href !== undefined);
@@ -816,7 +861,9 @@ function SupervisionChildSheet({
       href={href}
       quickActions={false}
       status={loaded ? undefined : NO_STATUS}
-      contextActions={context}
+      contextActions={lines}
+      // Die Aktionen stehen gebündelt in der Fußleiste über der Akte.
+      footerActions={actions}
     />
   );
 }
@@ -831,11 +878,13 @@ const NO_STATUS: ChildDayStatus | null = null;
 function SupervisionChildDetail({
   row,
   href,
-  context,
+  lines,
+  actions,
 }: Readonly<{
   row: TimetableRosterRow;
   href?: string;
-  context: ReactNode;
+  lines: ReactNode;
+  actions: ReactNode;
 }>) {
   const { student, loaded } = useRosterStudent(row, href !== undefined);
   if (!student) return null;
@@ -846,93 +895,101 @@ function SupervisionChildDetail({
         href={href}
         quickActions={false}
         status={loaded ? undefined : NO_STATUS}
-        contextActions={context}
+        contextActions={lines}
         header
       />
-      {href ? (
-        <div className="mt-5 flex">
+      {/* Alle Aktionen in einer Reihe am Ende, gleich gebaut wie im Blatt:
+          die Aufsicht-Aktionen zuerst, die Akte als Nebenweg. */}
+      <div className="mt-5 flex flex-col gap-2">
+        {actions}
+        {href ? (
           <ButtonLink
             href={href}
-            variant="primary"
+            variant="outline"
             size="md"
+            className="w-full"
             tooltip="Öffnet die ganze Akte mit allen Angaben."
           >
             Ganze Akte öffnen
           </ButtonLink>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </SectionCard>
   );
 }
 
 /**
  * Was nur die Aufsicht über das Kind weiß (Ankunft, Hinweise der Planung,
- * Grund der Abwesenheit) und alle Aktionen für das Kind in diesem Block.
+ * Grund der Abwesenheit).
  */
+function SupervisionChildLines({
+  row,
+  now,
+  rosterDate,
+}: Readonly<{ row: TimetableRosterRow; now: Date; rosterDate: string }>) {
+  return (
+    <div className="text-sm text-gray-700 empty:hidden">
+      <RosterStudentDetailLines
+        row={row}
+        now={now}
+        rosterDate={rosterDate}
+        showPickupTime={false}
+      />
+    </div>
+  );
+}
+
+/** Alle Aktionen für das Kind in diesem Block, als eine Knopfreihe. */
 function SupervisionChildActions({
   row,
   access,
-  now,
-  rosterDate,
+  inSheet,
   busy,
   onAction,
   onHomework,
 }: Readonly<{
   row: TimetableRosterRow;
   access: RosterActionAccess;
-  now: Date;
-  rosterDate: string;
+  inSheet: boolean;
   busy: string | null;
   onAction: (action: RosterAction) => void;
   onHomework?: () => void;
 }>) {
   const actions = sheetActions(row, access);
+  if (actions.length === 0 && !onHomework) return null;
   return (
-    <>
-      <div className="text-sm text-gray-700 empty:hidden">
-        <RosterStudentDetailLines
-          row={row}
-          now={now}
-          rosterDate={rosterDate}
-          showPickupTime={false}
-        />
-      </div>
-      {actions.length > 0 || onHomework ? (
-        <div
-          className="flex flex-wrap gap-2"
-          aria-label="Aktionen in der Aufsicht"
+    <div
+      role="group"
+      className={inSheet ? "flex gap-2" : "flex flex-wrap gap-2"}
+      aria-label="Aktionen in der Aufsicht"
+    >
+      {actions.map(({ action, label, tooltip }, index) => (
+        <Button
+          key={`${action}-${label}`}
+          type="button"
+          size="md"
+          variant={index === 0 && action === "check-in" ? "success" : "outline"}
+          className="flex-1"
+          isLoading={busy === `${row.studentId}:${action}`}
+          disabled={busy !== null}
+          tooltip={tooltip}
+          onClick={() => onAction(action)}
         >
-          {actions.map(({ action, label, tooltip }, index) => (
-            <Button
-              key={`${action}-${label}`}
-              type="button"
-              size="md"
-              variant={
-                index === 0 && action === "check-in" ? "success" : "outline"
-              }
-              className="flex-1"
-              isLoading={busy === `${row.studentId}:${action}`}
-              disabled={busy !== null}
-              tooltip={tooltip}
-              onClick={() => onAction(action)}
-            >
-              {label}
-            </Button>
-          ))}
-          {onHomework ? (
-            <Button
-              type="button"
-              size="md"
-              variant="outline"
-              className="flex-1"
-              tooltip="Öffnet ein Fenster für die Rückmeldung zu den Hausaufgaben."
-              onClick={onHomework}
-            >
-              Hausaufgaben
-            </Button>
-          ) : null}
-        </div>
+          {label}
+        </Button>
+      ))}
+      {onHomework ? (
+        <Button
+          type="button"
+          size="md"
+          variant="outline"
+          className="flex-1"
+          tooltip="Öffnet ein Fenster für die Rückmeldung zu den Hausaufgaben."
+          onClick={onHomework}
+        >
+          Hausaufgaben
+        </Button>
       ) : null}
-    </>
+    </div>
   );
 }
