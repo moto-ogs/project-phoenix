@@ -1719,6 +1719,7 @@ export const portalRoutes = {
     timetable["GET /api/timetable/holidays"],
     timetable["GET /api/timetable/instances/"],
     timetable["GET /api/timetable/instances/edited-in-window"],
+    timetable["GET /api/timetable/instances/{id}/attendance"],
     timetable["GET /api/timetable/instances/{id}/guardian-notice"],
     timetable["GET /api/timetable/instances/{id}/participants"],
     timetable["GET /api/timetable/instances/{id}/staff-pool"],

@@ -202,27 +202,44 @@ func countStudents(roster map[int64]int64, ids []int64) int {
 // (#6371), as on the school's dashboard: a present child counts as present
 // only, its sick mark is no sick figure.
 func countSick(students map[int64]int64, sickDays, sickFlags, present []int64) int {
-	sick := 0
-	for student, membership := range students {
-		if slices.Contains(present, student) {
-			continue
-		}
-		if slices.Contains(sickDays, student) || slices.Contains(sickFlags, membership) {
-			sick++
+	sick := make(map[int64]struct{}, len(sickDays))
+	for _, student := range sickDays {
+		if _, active := students[student]; active {
+			sick[student] = struct{}{}
 		}
 	}
-	return sick
+	if len(sickFlags) > 0 {
+		flagged := figureIDSet(sickFlags)
+		for student, membership := range students {
+			if _, ok := flagged[membership]; ok {
+				sick[student] = struct{}{}
+			}
+		}
+	}
+	for _, student := range present {
+		delete(sick, student)
+	}
+	return len(sick)
 }
 
-// countMembers counts the IDs that are on the roster.
+// countMembers counts each occurrence in ids, not each distinct roster entry.
 func countMembers(roster, ids []int64) int {
+	members := figureIDSet(roster)
 	count := 0
 	for _, id := range ids {
-		if slices.Contains(roster, id) {
+		if _, ok := members[id]; ok {
 			count++
 		}
 	}
 	return count
+}
+
+func figureIDSet(ids []int64) map[int64]struct{} {
+	set := make(map[int64]struct{}, len(ids))
+	for _, id := range ids {
+		set[id] = struct{}{}
+	}
+	return set
 }
 
 // read runs fn with the school set of the Träger in the projection's

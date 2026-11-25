@@ -605,6 +605,23 @@ function mapConflictWarning(
   };
 }
 
+export function mapInstanceStudent(
+  s: timetableContract.instanceStudentSummary,
+): InstanceStudentSummary {
+  return {
+    studentId: s.student_id,
+    status: knownEnum(ATTENDANCE_STATUS_VALUES, s.status),
+    substatus: attendanceSubstatus(s.substatus),
+    note: s.note,
+    checkedInAt: s.checked_in_at,
+    // Go's own fallback for a day the plan says nothing about
+    // (backend/modules/timetable/care_days.go:19); it keeps the child expected.
+    careDayStatus:
+      knownEnum(CARE_DAY_STATUS_VALUES, s.care_day_status) ?? "unknown",
+    earlyPickupTime: s.early_pickup_time,
+  };
+}
+
 /**
  * Contract → frontend mapping. snake_case → camelCase; conflict_warnings
  * always present (defaults to []).
@@ -620,18 +637,7 @@ export function mapInstance(
     isSickAbsence: s.is_sick_absence,
     absenceReason: s.absence_reason,
   }));
-  const students: InstanceStudentSummary[] = (raw.students ?? []).map((s) => ({
-    studentId: s.student_id,
-    status: knownEnum(ATTENDANCE_STATUS_VALUES, s.status),
-    substatus: attendanceSubstatus(s.substatus),
-    note: s.note,
-    checkedInAt: s.checked_in_at,
-    // Go's own fallback for a day the plan says nothing about
-    // (backend/modules/timetable/care_days.go:19); it keeps the child expected.
-    careDayStatus:
-      knownEnum(CARE_DAY_STATUS_VALUES, s.care_day_status) ?? "unknown",
-    earlyPickupTime: s.early_pickup_time,
-  }));
+  const students = (raw.students ?? []).map(mapInstanceStudent);
   const studentIds =
     students.length > 0
       ? students.map((student) => student.studentId)
