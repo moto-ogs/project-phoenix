@@ -14,7 +14,13 @@
  */
 
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { ActionBar } from "~/components/ui/action-bar";
 import { Button } from "~/components/ui/button";
@@ -47,7 +53,6 @@ import {
   type StaffAbsence,
   type WorkSessionHistory,
 } from "~/lib/time-tracking-helpers";
-import { useDeviceContext } from "~/lib/device-context";
 import { cn } from "~/lib/utils";
 
 // ─── Stempeluhr ──────────────────────────────────────────────────────────────
@@ -178,13 +183,12 @@ export function AppClockPanel(props: AppClockPanelProps) {
   }
 
   const pending = busy || saving;
-  // Telefon, noch nichts gestempelt: der Zustand steht in der Aktionsleiste
-  // („Dienst 08:00–16:30 · Einstempeln“), die Karte entfällt. Die Zeile von
-  // heute in der Liste nennt den Plan ebenfalls; so passen mehr Tage ins
-  // erste Bild. Mit Hinweisen, beim Speichern und am iPad bleibt die Karte.
-  const { layout } = useDeviceContext();
+  // Noch nichts gestempelt: der Zustand steht in der Aktionsleiste
+  // („Dienst 08:00–16:30 · Einstempeln“), die Karte entfällt – auf jedem
+  // Gerät gleich. Die Zeile von heute in der Liste nennt den Plan ebenfalls;
+  // so passen mehr Tage ins erste Bild. Mit Hinweisen und beim Speichern
+  // bleibt die Karte.
   const foldIntoBar =
-    layout === "phone" &&
     state === "idle" &&
     todayMinutes === 0 &&
     laborHints.length === 0 &&
@@ -536,6 +540,8 @@ export interface AppDayListProps {
   readonly closingDays: ReadonlyMap<string, string> | undefined;
   /** Tag oder Block bearbeiten (das Formular der Seite). */
   readonly onEdit: (date: Date, session: WorkSessionHistory | null) => void;
+  /** Kopf der Karte: die Wahl von Woche oder Monat. */
+  readonly header?: ReactNode;
 }
 
 /**
@@ -554,6 +560,7 @@ export function AppDayList({
   holidays,
   closingDays,
   onEdit,
+  header,
 }: AppDayListProps) {
   const todayKey = toISODate(today);
   const weeks = useMemo(() => {
@@ -607,28 +614,73 @@ export function AppDayList({
 
   return (
     <Collection label="Erfasste Zeiten" className="app-time-days">
+      {header ? (
+        <div className="border-b border-gray-100 py-1">{header}</div>
+      ) : null}
       {weeks.map(({ week, days }) => {
         const ist = days.reduce(
           (sum, d) => sum + (d.projection?.actualMinutes ?? 0),
           0,
         );
-        const balance = days.reduce(
+        // Ein laufender oder noch nicht begonnener Tag zählt erst mit, wenn
+        // er abgeschlossen ist: sonst stünde die Woche schon morgens mit dem
+        // ganzen Soll von heute im Minus.
+        const counted = days.filter(
+          (d) => d.key < todayKey || (d.key === todayKey && dayClosed(d)),
+        );
+        const partial =
+          counted.length < days.filter((d) => d.key <= todayKey).length;
+        const balance = counted.reduce(
           (sum, d) => sum + (d.projection?.balanceMinutes ?? 0),
           0,
         );
+        // Wochenansicht: der Zeitraum steht schon im Kopf der Karte und die
+        // Stunden der Woche in der Kopfkarte; die Gruppe nennt nur den Saldo.
+        const single = weeks.length === 1 && header !== undefined;
+        const saldoLabel = partial ? "Saldo bis gestern" : "Wochensaldo";
+        if (single) {
+          return (
+            <CollectionGroup
+              key={week}
+              title={
+                counted.length === 0
+                  ? `${formatDuration(ist)} gearbeitet`
+                  : saldoLabel
+              }
+              meta={
+                counted.length === 0 ? null : (
+                  <span
+                    className={cn(
+                      "font-semibold tabular-nums",
+                      balanceClass(balance),
+                    )}
+                  >
+                    {formatSignedDuration(balance)}
+                  </span>
+                )
+              }
+            >
+              {days.flatMap((d) => dayRows(d, todayKey, onEdit))}
+            </CollectionGroup>
+          );
+        }
         return (
           <CollectionGroup
             key={week}
             title={`KW ${week}`}
             meta={
-              // Der Saldo dieser Woche, beschriftet: er ist nicht das
-              // Stundenkonto im Kopf (das zählt alle Wochen zusammen).
-              <span className="tabular-nums">
-                {formatDuration(ist)} · Wochensaldo{" "}
-                <span className={balanceClass(balance)}>
-                  {formatSignedDuration(balance)}
+              counted.length === 0 ? (
+                <span className="tabular-nums">{formatDuration(ist)}</span>
+              ) : (
+                // Der Saldo dieser Woche, beschriftet: er ist nicht das
+                // Stundenkonto im Kopf (das zählt alle Wochen zusammen).
+                <span className="tabular-nums">
+                  {formatDuration(ist)} · {saldoLabel}{" "}
+                  <span className={balanceClass(balance)}>
+                    {formatSignedDuration(balance)}
+                  </span>
                 </span>
-              </span>
+              )
             }
           >
             {days.flatMap((d) => dayRows(d, todayKey, onEdit))}
@@ -636,6 +688,13 @@ export function AppDayList({
         );
       })}
     </Collection>
+  );
+}
+
+/** Heute ist abgeschlossen: gestempelt und kein Block läuft mehr. */
+function dayClosed(d: DayEntry): boolean {
+  return (
+    d.sessions.length > 0 && d.sessions.every((s) => s.checkOutTime !== null)
   );
 }
 
@@ -672,12 +731,15 @@ function dayRows(
   const isFuture = d.key > todayKey;
   const leading = <DayBadge day={d.day} isToday={isToday} />;
   const balance = d.projection?.balanceMinutes;
+  // Heute zeigt den Saldo erst, wenn der Tag abgeschlossen ist; vorher
+  // stünde schon morgens das ganze Soll als Minus da.
   const hasBalance =
     d.projection !== undefined &&
     (d.sessions.length > 0 ||
       d.projection.targetMinutes > 0 ||
       d.projection.creditMinutes > 0) &&
-    !isFuture;
+    !isFuture &&
+    (!isToday || dayClosed(d));
   const plannedText =
     d.shifts.length > 0
       ? `Geplant ${d.shifts.map((s) => `${s.startTime}–${s.endTime}`).join(", ")}`
@@ -722,7 +784,7 @@ function dayRows(
         title={title}
         subtitle={subtitle}
         meta={
-          isFuture
+          isFuture || (isToday && !d.absence && !d.special)
             ? d.projection && d.projection.targetMinutes > 0
               ? `Soll ${formatDuration(d.projection.targetMinutes)}`
               : undefined
@@ -777,10 +839,11 @@ function dayRows(
 
 /**
  * Telefon und iPad hoch: Stempeluhr, die Tage, dann Heute geplant, Urlaub
- * und Kontingente. iPad quer (`split`): links der Tag (Stempeluhr mit ihrer
- * Aktionsleiste, Heute geplant, Urlaub), rechts die Tage und Kontingente.
- * Die Aktionsleiste steht dort in der linken Spalte unter der Stempeluhr,
- * statt mittig über der rechten Spalte zu schweben.
+ * und Kontingente. iPad quer (`split`): links der Tag (Stempeluhr, Heute
+ * geplant, Urlaub) als eigene Spalte, die bis über die Pill reicht und für
+ * sich scrollt; die Aktionsleiste steht unten in dieser Spalte, in
+ * Daumennähe, statt mittig über beiden Spalten zu schweben. Rechts die Tage
+ * und Kontingente; sie scrollen mit der Seite.
  */
 export function AppTimeTrackingLayout({
   split,
@@ -804,18 +867,11 @@ export function AppTimeTrackingLayout({
       <div className="space-y-4" data-app-time-tracking="split">
         {errors}
         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] items-start gap-4">
-          <div
-            className={cn(
-              "flex min-w-0 flex-col gap-4 [&>*]:shrink-0 [&>section]:h-auto",
-              // Die Leiste im Fluss der Spalte: kein Schweben, kein Polster.
-              "[&>[aria-hidden=true]:has(+[data-action-bar])]:hidden",
-              "[&>[data-action-bar]]:static [&>[data-action-bar]]:mx-0 [&>[data-action-bar]]:max-w-none [&>[data-action-bar]]:translate-y-0",
-            )}
-          >
+          <SplitDayColumn>
             {clock}
             {today}
             {leave}
-          </div>
+          </SplitDayColumn>
           <div className="flex min-w-0 flex-col gap-4 [&>*]:shrink-0 [&>section]:h-auto">
             {days}
             {allowances}
@@ -837,6 +893,58 @@ export function AppTimeTrackingLayout({
       {today}
       {leave}
       {allowances}
+    </div>
+  );
+}
+
+/** Abstand der Spalte vom unteren Rand: Pill samt Safe Area (wie die ActionBar). */
+const COLUMN_BOTTOM = "calc(env(safe-area-inset-bottom) + 6.5rem)";
+
+/**
+ * Linke Spalte am iPad quer: klebt an ihrer Startposition und reicht bis über
+ * die Pill. Ihr Inhalt scrollt für sich; die Aktionsleiste klebt unten in ihr.
+ */
+function SplitDayColumn({ children }: Readonly<{ children: ReactNode }>) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [top, setTop] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (el === null) return undefined;
+    const measure = () => {
+      // Abstand zum Dokumentanfang: so weit unten beginnt die Spalte, und
+      // dort bleibt sie auch beim Scrollen der rechten Spalte stehen.
+      const sticky = el.style.position;
+      el.style.position = "static";
+      const offset = el.getBoundingClientRect().top + window.scrollY;
+      el.style.position = sticky;
+      setTop(Math.max(Math.round(offset), 0));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+  return (
+    <div
+      ref={ref}
+      data-app-time-day-column=""
+      className={cn(
+        "sticky flex min-w-0 flex-col gap-4 overflow-y-auto overscroll-contain rounded-2xl",
+        "[&>*]:shrink-0 [&>section]:h-auto",
+        // Die Leiste im Fluss der Spalte, unten klebend: kein Schweben,
+        // keine eigene Deckzone.
+        "[&>[aria-hidden=true]:has(+[data-action-bar])]:hidden",
+        "[&>[data-action-bar]]:sticky [&>[data-action-bar]]:bottom-0! [&>[data-action-bar]]:order-last [&>[data-action-bar]]:mx-0 [&>[data-action-bar]]:mt-auto [&>[data-action-bar]]:max-w-none [&>[data-action-bar]]:translate-y-0",
+      )}
+      style={
+        top === null
+          ? undefined
+          : {
+              top,
+              height: `calc(100dvh - ${top}px - ${COLUMN_BOTTOM})`,
+            }
+      }
+    >
+      {children}
     </div>
   );
 }
