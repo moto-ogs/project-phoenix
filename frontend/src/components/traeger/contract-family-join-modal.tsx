@@ -109,7 +109,7 @@ export function ContractFamilyJoinModal({
               Was bei den anderen Verträgen steht, bleibt gespeichert. Es gilt
               wieder, wenn du ein Kind aus der Familie löst.
             </li>
-            <li>Eine Debitorennummer je Kind bleibt beim Kind.</li>
+            <li>Eine Debitorennummer pro Kind bleibt beim Kind.</li>
             <li>Ausgestellte Rechnungen ändern sich nicht.</li>
           </ul>
         </InsetPanel>

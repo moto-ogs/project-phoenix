@@ -302,7 +302,7 @@ function SurveyDetail({ surveyId }: Readonly<{ surveyId: string }>) {
           { value: "fragebogen", label: "Fragebogen" },
           ...(survey.anonymous
             ? []
-            : [{ value: "personen", label: "Antworten je Person" }]),
+            : [{ value: "personen", label: "Antworten pro Person" }]),
         ],
         label: "Bereiche der Umfrage",
       }
@@ -391,7 +391,7 @@ function SurveyDetail({ surveyId }: Readonly<{ surveyId: string }>) {
             respondents={respondents.data}
           />
         ) : (
-          <SectionCard title="Antworten je Person" loading />
+          <SectionCard title="Antworten pro Person" loading />
         ))}
 
       {tab === "fragebogen" ? (

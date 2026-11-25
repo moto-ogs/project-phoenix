@@ -92,8 +92,8 @@ const TABS: readonly { value: Tab; label: string }[] = [
 ];
 
 const GROUPINGS: readonly { value: ReportGrouping; label: string }[] = [
-  { value: "schools", label: "Je Schule" },
-  { value: "districts", label: "Je Sozialraum" },
+  { value: "schools", label: "Pro Schule" },
+  { value: "districts", label: "Pro Sozialraum" },
 ];
 
 /** Statische Spaltenklassen, damit Tailwind sie findet. */
@@ -165,7 +165,7 @@ function Figures({ report }: Readonly<{ report: KeyDateReport }>) {
         hint={
           total.childrenPerStaff === null
             ? "Kein Personal am Stichtag"
-            : `${formatRatio(total.childrenPerStaff)} Kinder je Person`
+            : `${formatRatio(total.childrenPerStaff)} Kinder pro Person`
         }
         tone="neutral"
         icon={<MotoConceptIcon concept={staffConcept} />}

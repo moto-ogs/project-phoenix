@@ -34,9 +34,9 @@ export function mealOrderingTopic(): HelpTopic {
       "An Schließtagen und Feiertagen isst niemand. In den Ferien gelten die festen Tage nicht, einzeln angemeldete Tage zählen.",
       "`Entschuldigt` und `Klassenfahrt` melden das Essen ab wie eine Krankmeldung.",
       "Für die Küche legst du eine Rolle mit den Rechten unter `Mittagessen` an. Sie braucht keinen Zugriff auf alle Kinderdaten.",
-      "Zur Frist friert moto die Bestellung ein. Unter `Speiseplan` zeigt `Bestellung` je Tag `Offen`, `Bestellt` oder `Vom Caterer bestätigt`, dazu die `Frist`, die Zahl der Essen und die `Nachmeldungen` danach.",
+      "Zur Frist friert moto die Bestellung ein. Unter `Speiseplan` zeigt `Bestellung` pro Tag `Offen`, `Bestellt` oder `Vom Caterer bestätigt`, dazu die `Frist`, die Zahl der Essen und die `Nachmeldungen` danach.",
       "Tage vor dem Start der Bestellung stehen auf `Nicht bestellt`. Sie zählen nicht.",
-      "Die bestellten Essen je Kind für einen Monat bekommst du bei `Bestellung` über das Menü mit den drei Punkten, zum Beispiel für die Essenspauschale. Wähle unter `Monatsübersicht` den Eintrag `PDF` oder `Excel`. Liegt die Woche in zwei Monaten, steht dort `Exportieren…`: Wähle dann den Monat, `PDF` oder `Excel` und `Herunterladen`.",
+      "Die bestellten Essen pro Kind für einen Monat bekommst du bei `Bestellung` über das Menü mit den drei Punkten, zum Beispiel für die Essenspauschale. Wähle unter `Monatsübersicht` den Eintrag `PDF` oder `Excel`. Liegt die Woche in zwei Monaten, steht dort `Exportieren…`: Wähle dann den Monat, `PDF` oder `Excel` und `Herunterladen`.",
     ],
     differences: [
       "Wochenenden zählen bei `Tage vorher` mit. 1 heißt immer: am Tag davor.",

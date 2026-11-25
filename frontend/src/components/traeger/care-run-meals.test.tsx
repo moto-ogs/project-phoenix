@@ -20,7 +20,7 @@ describe("MealPositionLine", () => {
     expect(
       screen.getByText("2 Mittagessen im Januar 2026"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Mensa · je 4,80 €")).toBeInTheDocument();
+    expect(screen.getByText("Mensa · 4,80 € pro Essen")).toBeInTheDocument();
     expect(screen.getByText("9,60 €")).toBeInTheDocument();
   });
 

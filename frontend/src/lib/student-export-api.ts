@@ -174,7 +174,7 @@ export const STUDENT_EXPORT_COLUMNS: StudentExportColumnOption[] = [
     label: "Geh-/Abholweise",
     group: "base",
     description:
-      "Wie das Kind je Wochentag nach Hause geht: geht alleine, fährt Bus oder wird abgeholt.",
+      "Wie das Kind pro Wochentag nach Hause geht: geht alleine, fährt Bus oder wird abgeholt.",
   },
   {
     id: "daily_notes",
@@ -220,7 +220,7 @@ export const STUDENT_EXPORT_PRESETS: Array<{
   {
     id: "ogs_weekly",
     label: "OGS Wochenliste",
-    description: "Wochenmatrix mit Ankunft und Abholung je Wochentag.",
+    description: "Wochenmatrix mit Ankunft und Abholung pro Wochentag.",
     columns: [
       "name",
       "school_class",
@@ -249,7 +249,7 @@ export const STUDENT_EXPORT_PRESETS: Array<{
     id: "class_roster",
     label: "Klassenliste",
     description:
-      "Ganze Klasse mit Anmeldestatus und Abholangaben je Wochentag.",
+      "Ganze Klasse mit Anmeldestatus und Abholangaben pro Wochentag.",
     // Same columns and weekday cell as the Klassenliste of an enrollment
     // phase (#4749): "14:30 Uhr, wird abgeholt".
     columns: [

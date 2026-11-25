@@ -21,7 +21,7 @@ function KitTooltipDefaults() {
     <div className="flex max-w-xl flex-col gap-6">
       <SectionCard title="Notizen" collapsible>
         <p className="text-sm text-gray-600">
-          Auf-/Zuklappen erklärt sich je Zustand.
+          Auf-/Zuklappen erklärt sich pro Zustand.
         </p>
       </SectionCard>
       <div className="flex items-center gap-3">

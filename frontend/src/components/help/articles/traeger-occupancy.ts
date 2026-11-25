@@ -8,7 +8,7 @@ export function traegerOccupancyTopic(): HelpTopic {
     title: "Belegung der Schulen",
     question: "Wie viele Kinder hat jede Schule, Gruppe und Betreuungsform?",
     summary:
-      "Die Belegung zeigt, wie viele Kinder deine Schulen heute betreuen: je Schule, je OGS-Gruppe und je Betreuungsform.",
+      "Die Belegung zeigt, wie viele Kinder deine Schulen heute betreuen: pro Schule, pro OGS-Gruppe und pro Betreuungsform.",
     group: "einstieg",
     audience: "traeger",
     icon: "ChartLine",

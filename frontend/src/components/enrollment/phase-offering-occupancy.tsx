@@ -69,14 +69,14 @@ export function PhaseOfferingOccupancy({
   return (
     <SectionCard
       bare
-      title="Freie Plätze je Angebot"
+      title="Freie Plätze pro Angebot"
       titleBadge={
         freePlaces == null ? undefined : (
           <StatusBadge label={`${freePlaces} frei`} tone="gray" />
         )
       }
       description={
-        "Hier siehst du Kapazität, Belegung, freie Plätze und Status je Angebot. „Belegt“ zählt die Kinder am vollsten Tag bis zum Ende der Phase. Anmeldungen prüfst du in der Liste darunter."
+        "Hier siehst du Kapazität, Belegung, freie Plätze und Status pro Angebot. „Belegt“ zählt die Kinder am vollsten Tag bis zum Ende der Phase. Anmeldungen prüfst du in der Liste darunter."
       }
     >
       <DataTable

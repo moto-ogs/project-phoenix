@@ -151,7 +151,7 @@ var enrollmentColumnLabels = map[lists.ColumnID]string{
 	"child_offerings":         "Betreuungsangebote",
 	"child_companion_note":    departureCompanionLabelDE,
 	"offerings":               "Betreuungsangebote",
-	"offering_days":           "Tage je Angebot",
+	"offering_days":           "Tage pro Angebot",
 	"effective_days":          "Effektive Betreuungstage",
 	"day_count":               "Anzahl Tage",
 	"pickup_mon":              "Mo Gehzeit",

@@ -97,7 +97,7 @@ export function OwnWeekHoursCard({
   return (
     <SectionCard
       title="Stunden der Woche"
-      description="Geplante Stunden je Dienstart, ohne Pausen. Ausgefallene Dienste zählen nicht."
+      description="Geplante Stunden pro Dienstart, ohne Pausen. Ausgefallene Dienste zählen nicht."
       testId="own-week-hours-card"
     >
       <DataTable columns={columns} rows={rows} getRowKey={(row) => row.key} />

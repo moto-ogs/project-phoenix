@@ -420,7 +420,7 @@ func dayRunText(first, last string, single bool, minutes int) string {
 	case minutes == 0:
 		return first + "–" + last + " frei"
 	default:
-		return first + "–" + last + " je " + hoursText(minutes)
+		return first + "–" + last + " " + hoursText(minutes) + " pro Tag"
 	}
 }
 

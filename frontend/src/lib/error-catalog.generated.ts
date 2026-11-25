@@ -577,7 +577,7 @@ export const ERROR_CATALOG = {
       "enrollment.holiday_week_booked":
         "Für diese Woche gibt es schon Anmeldungen. Darum lassen sich die Woche und ihre gebuchten Zeitmodelle nicht entfernen. Ein gebuchtes Zeitmodell kannst du archivieren. Dann kann es niemand mehr neu buchen.",
       "enrollment.holiday_week_day_limit":
-        "Ein Kind ist schon für diese Woche angemeldet. Mit den neuen Tagen hätte es mehr Tage als erlaubt. Lass die Tage so oder erhöhe „Höchstens Tage je Kind“.",
+        "Ein Kind ist schon für diese Woche angemeldet. Mit den neuen Tagen hätte es mehr Tage als erlaubt. Lass die Tage so. Oder trage unter „Höchstzahl an Tagen pro Kind“ eine höhere Zahl ein.",
       "enrollment.holiday_week_no_care_day":
         "Am {date} gibt es keine Betreuung ({name}). Diese Woche kann man nicht buchen. Wähle eine andere Woche.",
       "enrollment.holiday_week_not_found":
@@ -2633,7 +2633,7 @@ export const ERROR_CATALOG = {
       "enrollment.holiday_week_booked":
         "This week already has registrations. That is why the week and its booked time models cannot be removed. You can archive a booked time model instead. Then nobody can book it any more.",
       "enrollment.holiday_week_day_limit":
-        "A child is already registered for this week. With the new days, the child would have more days than allowed. Keep the days as they are or raise “Höchstens Tage je Kind”.",
+        "A child is already registered for this week. With the new days, the child would have more days than allowed. Keep the days as they are or enter a higher number in “Höchstzahl an Tagen pro Kind”.",
       "enrollment.holiday_week_no_care_day":
         "There is no care on {date} ({name}). This week cannot be booked.",
       "enrollment.holiday_week_not_found":

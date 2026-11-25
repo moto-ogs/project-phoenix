@@ -157,7 +157,7 @@ func (rs *Resource) buildAttendanceExportDocument(
 	if err != nil {
 		return lists.Document{}, err
 	}
-	title, columns := "Anwesenheit je Betreuungsangebot", attendanceExportColumns()
+	title, columns := "Anwesenheit pro Betreuungsangebot", attendanceExportColumns()
 	if !expectSlots {
 		title, columns = "Anwesenheit", attendanceSessionExportColumns()
 	}

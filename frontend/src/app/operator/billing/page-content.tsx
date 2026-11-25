@@ -371,8 +371,8 @@ function OperatorBillingPageContent() {
         title="Erfasste Zahlen"
         description={
           pending.length > 0
-            ? "Je Schule, so wie moto sie am Stichtag erfasst hat. Schulen ohne Zahlen stehen mit ihrem Stichtag dabei."
-            : "Je Schule, so wie moto sie am Stichtag erfasst hat."
+            ? "Pro Schule, so wie moto sie am Stichtag erfasst hat. Schulen ohne Zahlen stehen mit ihrem Stichtag dabei."
+            : "Pro Schule, so wie moto sie am Stichtag erfasst hat."
         }
         action={
           hasCounts ? (

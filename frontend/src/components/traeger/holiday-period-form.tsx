@@ -365,7 +365,7 @@ export function HolidayPeriodForm({
             <Input
               controlSize="compact"
               name="max_days_per_child"
-              label="Höchstens Tage je Kind"
+              label="Höchstzahl an Tagen pro Kind"
               hint="Gilt für alle Wochen zusammen. Eltern dürfen die Tage verteilen. Wenn es keine Grenze gibt, lass das Feld leer."
               inputMode="numeric"
               placeholder="zum Beispiel 5"
@@ -436,7 +436,7 @@ export function HolidayPeriodForm({
               <SectionLabel as="h3">Wochen</SectionLabel>
               <p className="text-sm text-gray-600">
                 Jede Woche findet an einer Schule deines Trägers statt. Willst
-                du dieselben Tage an mehreren Schulen anbieten? Lege dafür je
+                du dieselben Tage an mehreren Schulen anbieten? Lege dafür pro
                 Schule eine Woche an. Eltern wählen dann eine Schule.
               </p>
               {/* What a booked time model allows is said only where one

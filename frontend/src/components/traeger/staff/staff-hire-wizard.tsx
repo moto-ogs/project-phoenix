@@ -83,7 +83,7 @@ const CHECK_FIELDS = "Bitte prüfe die markierten Felder.";
 /** Ein Satz je Schritt, unter dem Stepper der Schritt-Karte. */
 const HIRE_STEP_DESCRIPTIONS = [
   "Diese Angaben stehen danach in der Personalakte.",
-  "Art und Laufzeit. Die Stunden trägst du im nächsten Schritt je Schule ein.",
+  "Art und Laufzeit. Die Stunden trägst du im nächsten Schritt pro Schule ein.",
   "An jeder gewählten Schule legt moto die Person an. Dort kann die Schule sie danach planen.",
   "Stimmt alles? Mit „Zurück“ änderst du eine Angabe.",
 ] as const;
@@ -281,7 +281,7 @@ function SitesStep({
         {draft.sites.length > 0 ? (
           <div className="space-y-4">
             <div className="space-y-1">
-              <SectionLabel as="h3">Soll je Schule</SectionLabel>
+              <SectionLabel as="h3">Soll pro Schule</SectionLabel>
               <p className="text-sm text-gray-500">
                 Stunden pro Tag. Ein leeres Feld ist ein freier Tag.
               </p>

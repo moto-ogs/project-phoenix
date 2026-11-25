@@ -64,7 +64,7 @@ func (e *tenantExporter) exportAudited(ctx context.Context, options organization
 // sepaDebitFileDirectory holds the PAIN.008 files of a Träger package.
 const sepaDebitFileDirectory = "SEPA-LASTSCHRIFTDATEIEN"
 
-const sepaDebitFileNotice = "PAIN.008-Dateien der eingereichten Lastschriften mit vollständigen Bankdaten (IBAN, Kontoinhaber); je Datei Original oder rekonstruiert."
+const sepaDebitFileNotice = "PAIN.008-Dateien der eingereichten Lastschriften mit vollständigen Bankdaten (IBAN, Kontoinhaber). Jede Datei ist entweder das Original oder wurde rekonstruiert."
 
 // sepaDebitFileReadme is the head of LIESMICH.txt in the directory;
 // sepaDebitFileReadmeFiles adds the origin of each file.
@@ -74,7 +74,7 @@ Trägers mit vollständigen Bankdaten der Familien: IBAN und Kontoinhaber.
 Die Mandate und Lastschriften selbst stehen mit IBAN und Kontoinhaber in
 parent_billing.sepa_mandates.jsonl und parent_billing.sepa_debits.jsonl.
 
-Je eingereichte Lastschriftdatei liegt hier die Datei mit derselben
+Pro eingereichter Lastschriftdatei liegt hier die Datei mit derselben
 Nachrichten-ID. "Original" ist die bei moto gespeicherte Datei des letzten
 Downloads vor der Einreichung. "rekonstruiert" ist aus den gespeicherten
 Lastschriften neu erzeugt; der Grund steht bei der Datei.

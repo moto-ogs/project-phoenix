@@ -101,7 +101,7 @@ function formatOverrideHours(row: StaffTargetOverride): string {
     parts.push(
       end === start
         ? `${WEEKDAYS[start]?.short} ${hours}`
-        : `${WEEKDAYS[start]?.short}–${WEEKDAYS[end]?.short} je ${hours}`,
+        : `${WEEKDAYS[start]?.short}–${WEEKDAYS[end]?.short} ${hours} pro Tag`,
     );
     start = end + 1;
   }
@@ -472,7 +472,7 @@ export function SonderarbeitszeitenSection({
               fullWidth
               items={[
                 { value: "uniform", label: "Jeden Tag gleich" },
-                { value: "weekdays", label: "Je Wochentag" },
+                { value: "weekdays", label: "Pro Wochentag" },
               ]}
               value={draft.mode}
               onChange={changeMode}
@@ -506,7 +506,7 @@ export function SonderarbeitszeitenSection({
             ) : (
               <fieldset>
                 <legend className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Stunden je Wochentag
+                  Stunden pro Wochentag
                 </legend>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                   {WEEKDAYS.map((day, index) => {

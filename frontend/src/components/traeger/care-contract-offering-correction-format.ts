@@ -117,7 +117,7 @@ function problemSentence(problem: OfferingCorrectionProblem): string {
     case "repeated":
       return "Diese Buchung steht schon in einer anderen Zeile.";
     case "overlapping":
-      return "Ein Modul ist an diesem Tag zugleich bisheriges und neues Modul. Nenne je Buchung nur ihr Ziel.";
+      return "Ein Modul ist an diesem Tag zugleich bisheriges und neues Modul. Nenne pro Buchung nur ihr Ziel.";
     case "inactive":
       return "Das neue Modul ist ausgeschaltet.";
     case "outside_phase":

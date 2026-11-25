@@ -36,7 +36,7 @@ import { TenantPageStats } from "~/components/ui/tenant-page";
 
 /** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
 const PLANNING_TRACKS_INFO =
-  "Hier legst du Planungsspuren an, zum Beispiel eine je Jahrgang. Jede Planungsspur hat eine Farbe. Im Betreuungsplan erkennst du daran, zu welcher Planungsspur ein Regeltermin gehört.";
+  "Hier legst du Planungsspuren an, zum Beispiel eine pro Jahrgang. Jede Planungsspur hat eine Farbe. Im Betreuungsplan erkennst du daran, zu welcher Planungsspur ein Regeltermin gehört.";
 
 const CACHE_KEY = tenantAdminKeys.planningTracks();
 const DEFAULT_COLOR: string = LOCATION_COLORS.OTHER_ROOM;

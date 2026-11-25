@@ -31,7 +31,7 @@ export function editStudentTopic(): HelpTopic {
           "Öffne beim Kind den Reiter `Betreuungszeiten`.",
           "Wähle oben rechts `Wochenplan`.",
           "Setze bei den Betreuungstagen einen Haken.",
-          "Trage je Tag `Ankunft` und `Abholung` ein.",
+          "Trage pro Tag `Ankunft` und `Abholung` ein.",
           "Kommt das Kind an einem Betreuungstag nicht? Lass `Abholung` leer.",
           "Öffne `Notizen`. Trage den Hinweis unter `Notiz zum Tag (jede Woche)` ein.",
           "Wähle `Speichern`.",

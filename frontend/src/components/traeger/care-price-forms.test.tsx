@@ -176,7 +176,7 @@ describe("CarePriceListModal", () => {
     });
     expect(
       await screen.findByRole("textbox", {
-        name: "Modul 4 mit Mittagessen, 7 Tage je Woche, Jedes weitere Kind, Monatspreis in Euro",
+        name: "Modul 4 mit Mittagessen, 7 Tage pro Woche, Jedes weitere Kind, Monatspreis in Euro",
       }),
     ).toHaveValue("105,00");
     fireEvent.click(screen.getByRole("button", { name: "Preise speichern" }));
@@ -208,7 +208,7 @@ describe("CarePriceListModal", () => {
   it("saves the scale with sibling steps, the meal note and the free months", async () => {
     open();
     const sibling = await screen.findByRole("textbox", {
-      name: "Modul 4 mit Mittagessen, 3 Tage je Woche, Jedes weitere Kind, Monatspreis in Euro",
+      name: "Modul 4 mit Mittagessen, 3 Tage pro Woche, Jedes weitere Kind, Monatspreis in Euro",
     });
     expect(sibling).toHaveValue("45,00");
     fireEvent.click(screen.getByRole("button", { name: "Juli beitragsfrei" }));
@@ -260,7 +260,7 @@ describe("CarePriceListModal", () => {
     );
     const { rerender } = render(modal({ ...data, versions: { "12": "v-1" } }));
     const label =
-      "Modul 4 mit Mittagessen, 3 Tage je Woche, Jedes weitere Kind, Monatspreis in Euro";
+      "Modul 4 mit Mittagessen, 3 Tage pro Woche, Jedes weitere Kind, Monatspreis in Euro";
     fireEvent.change(await screen.findByRole("textbox", { name: label }), {
       target: { value: "40,00" },
     });
@@ -344,7 +344,7 @@ describe("CarePriceListModal", () => {
       ),
     });
     const label =
-      "Modul 4 mit Mittagessen, 3 Tage je Woche, Jedes weitere Kind, Monatspreis in Euro";
+      "Modul 4 mit Mittagessen, 3 Tage pro Woche, Jedes weitere Kind, Monatspreis in Euro";
     const { rerender } = render(modal(read("v-1", 4500)));
     expect(await screen.findByRole("textbox", { name: label })).toHaveValue(
       "45,00",
@@ -371,7 +371,7 @@ describe("CarePriceListModal", () => {
   it("refuses a sibling price above the first child's", async () => {
     open();
     const sibling = await screen.findByRole("textbox", {
-      name: "Modul 4 mit Mittagessen, 1 Tag je Woche, Jedes weitere Kind, Monatspreis in Euro",
+      name: "Modul 4 mit Mittagessen, 1 Tag pro Woche, Jedes weitere Kind, Monatspreis in Euro",
     });
     fireEvent.change(sibling, { target: { value: "25,00" } });
     fireEvent.click(screen.getByRole("button", { name: "Preise speichern" }));
@@ -384,7 +384,7 @@ describe("CarePriceListModal", () => {
   it("copies Monday's blank sibling price to every day as well", async () => {
     open();
     const forms = await screen.findAllByRole("button", {
-      name: "Je Wochentag",
+      name: "Pro Wochentag",
     });
     fireEvent.click(forms[1]!);
     const field = (day: string, row: string) =>

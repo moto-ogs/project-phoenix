@@ -102,7 +102,7 @@ export default function TraegerCatalogPreviewPage() {
       back
       backHref={phaseHref}
       backLabel="Zurück zur Anmeldephase"
-      info="Die Vorschau zeigt je Schule, was das Übertragen ändert. Erst mit „Freigeben und übertragen“ ändert sich etwas in den Schulen. Neue Preise gelten ab Monatsbeginn; ausgestellte Verträge und Rechnungen bleiben, wie sie sind."
+      info="Die Vorschau zeigt pro Schule, was das Übertragen ändert. Erst mit „Freigeben und übertragen“ ändert sich etwas in den Schulen. Neue Preise gelten ab Monatsbeginn; ausgestellte Verträge und Rechnungen bleiben, wie sie sind."
       stats={
         preview && !rollout ? (
           <TenantPageStats

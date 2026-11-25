@@ -644,7 +644,7 @@ describe("TraegerPayrollExportPage", () => {
     renderPage();
     expect(await screen.findByText("Kostenstelle fehlt")).toBeInTheDocument();
     fireEvent.click(
-      screen.getByRole("radio", { name: /Eine Datei je Arbeitgeber/ }),
+      screen.getByRole("radio", { name: /Eine Datei pro Arbeitgeber/ }),
     );
     expect(
       await screen.findByText("Berater- und Mandantennummer fehlen"),

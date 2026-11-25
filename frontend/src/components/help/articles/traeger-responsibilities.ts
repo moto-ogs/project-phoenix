@@ -15,7 +15,7 @@ export function traegerResponsibilitiesTopic(): HelpTopic {
     question:
       "Wie lege ich fest, wer Verträge schließt, abrechnet und Personal anstellt?",
     summary:
-      "Je Schule ist dein Träger, der Schulträger oder die Gemeinde zuständig. Du legst das für alle Schulen fest und trägst die Angaben der Stelle bei der Schule ein. Rechnet eine Stelle selbst ab, stellt sie ihre Schreiben mit eigener Gläubiger-ID aus.",
+      "Pro Schule ist dein Träger, der Schulträger oder die Gemeinde zuständig. Du legst das für alle Schulen fest und trägst die Angaben der Stelle bei der Schule ein. Rechnet eine Stelle selbst ab, stellt sie ihre Schreiben mit eigener Gläubiger-ID aus.",
     group: "konfiguration",
     audience: "traeger",
     icon: "Building2",
@@ -27,8 +27,8 @@ export function traegerResponsibilitiesTopic(): HelpTopic {
         description: "Ohne deine Wahl ist dein Träger für alles zuständig.",
         steps: [
           "Wähle unten in der Navigation `Einstellungen` und dann `Zuständigkeiten`.",
-          "In der Karte `Für alle Schulen` wählst du je Frage eine Stelle: `Träger`, `Schulträger` oder `Gemeinde`.",
-          "moto speichert die Wahl sofort. Unter `Je Schule` siehst du, wer an jeder Schule zuständig ist.",
+          "In der Karte `Für alle Schulen` wählst du pro Frage eine Stelle: `Träger`, `Schulträger` oder `Gemeinde`.",
+          "moto speichert die Wahl sofort. Unter `Pro Schule` siehst du, wer an jeder Schule zuständig ist.",
         ],
       },
       {
@@ -36,7 +36,7 @@ export function traegerResponsibilitiesTopic(): HelpTopic {
         description:
           "Eine Stelle ist erst zuständig, wenn ihr Name und ihre Anschrift bei der Schule stehen. Bis dahin bleibt dein Träger zuständig.",
         steps: [
-          "Wähle unter `Je Schule` die Schule. Der Reiter `Zuständigkeiten` der Schule öffnet sich.",
+          "Wähle unter `Pro Schule` die Schule. Der Reiter `Zuständigkeiten` der Schule öffnet sich.",
           "Wähle in der Karte `Schulträger` oder `Gemeinde` den Knopf `Angaben eintragen`.",
           "Trage Name, Straße, Postleitzahl und Ort ein. Die Ansprechperson ist freiwillig.",
           "Rechnet die Stelle mit den Eltern ab? Dann trage auch Gläubiger-ID und Bankverbindung ein.",
@@ -49,9 +49,9 @@ export function traegerResponsibilitiesTopic(): HelpTopic {
           "Die Stelle stellt Rechnungen und Bescheide in eigenem Namen aus und zieht Lastschriften mit ihrer eigenen Gläubiger-ID auf ihr eigenes Konto ein.",
         steps: [
           "Wähle bei `Wer rechnet mit den Eltern ab?` die Stelle: für alle Schulen hier, für eine Schule in der Schul-App.",
-          "Trage bei der Schule Name, Anschrift, Gläubiger-ID und Bankverbindung der Stelle ein. Erst dann rechnet sie ab. Unter `Je Schule` steht sonst `Bankdaten fehlen`.",
+          "Trage bei der Schule Name, Anschrift, Gläubiger-ID und Bankverbindung der Stelle ein. Erst dann rechnet sie ab. Unter `Pro Schule` steht sonst `Bankdaten fehlen`.",
           "Unter `Abrechnung durch …` siehst du, was der Stelle noch fehlt. Jede Zeile führt dorthin, wo du es einträgst.",
-          "Lege in `Einstellungen` › `Abrechnung` die Nummernkreise der Stelle fest, je einen für Ferien und Monatsbeiträge. Nimm ein eigenes Kürzel.",
+          "Lege in `Einstellungen` › `Abrechnung` die Nummernkreise der Stelle fest. Lege einen für Ferien und einen für Monatsbeiträge an. Nimm ein eigenes Kürzel.",
           "Prüfe in `Einstellungen` › `Dokumentarten` das Schreiben der Stelle. Ohne deine Wahl stellt sie einen Gebührenbescheid aus. Dafür braucht die Vorlage `Bescheid` eine Rechtsbehelfsbelehrung.",
           "Familien, die per Lastschrift zahlen, brauchen ein neues Mandat für die Stelle. Ein Mandat für deinen Träger gilt nicht für sie. Erfasse die neuen Mandate unter `Abrechnung` › `Lastschrift`.",
           "Gib den nächsten Lauf frei. Die Schreiben der Schule nennen die Stelle als Absender, mit ihrem Konto und ihrer Gläubiger-ID.",
@@ -86,7 +86,7 @@ export function traegerResponsibilitiesTopic(): HelpTopic {
       "Ein Wechsel gilt für Schreiben, die danach freigegeben werden. Ausgestellte Rechnungen, Bescheide und Lastschriften behalten ihren Absender und ihre Gläubiger-ID. Ein Storno nimmt den Absender seiner Rechnung.",
       "Haben Geschwister an zwei Schulen verschiedene Stellen, bekommt die Familie zwei Schreiben und braucht zwei Mandate. In den Ferien rechnet die Stelle der Schule ab, die das Kind besucht.",
       "Sollstellung und DATEV-Datei enthalten nur die Schreiben deines Trägers. Die Schreiben einer Stelle, die selbst abrechnet, bucht sie in ihrem eigenen Haushalt.",
-      "Stellt eine Gemeinde oder ein Schulträger an, wählst du unter `Lohnexport` > `Einrichtung`: eine Lohndatei für den ganzen Träger oder eine je Arbeitgeber.",
+      "Stellt eine Gemeinde oder ein Schulträger an, wählst du unter `Lohnexport` > `Einrichtung`: eine Lohndatei für den ganzen Träger oder eine pro Arbeitgeber.",
     ],
     troubleshootingDetails: [
       "Bei einer Schule steht `Angaben fehlen`? Die gewählte Stelle hat dort noch keinen Namen und keine Anschrift. Trage sie bei der Schule ein.",

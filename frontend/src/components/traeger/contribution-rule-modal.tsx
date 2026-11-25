@@ -338,7 +338,7 @@ export function ContributionRuleModal({
                   label={
                     draft.mode === "share"
                       ? "Anteil in Prozent"
-                      : "Betrag in Euro je Kind"
+                      : "Betrag in Euro pro Kind"
                   }
                   inputMode="decimal"
                   placeholder={draft.mode === "share" ? "50" : "10,00"}

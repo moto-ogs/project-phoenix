@@ -6,7 +6,7 @@ import { TenantPage } from "~/components/ui/tenant-page";
 import { useRequirePermission } from "~/lib/hooks/use-require-permission";
 
 const PHASE_DETAIL_INFO =
-  "Hier siehst du alle Anmeldungen einer Anmeldephase und die freien Plätze je Angebot. Öffne eine Anmeldung aus der Liste, um sie zu prüfen.";
+  "Hier siehst du alle Anmeldungen einer Anmeldephase und die freien Plätze pro Angebot. Öffne eine Anmeldung aus der Liste, um sie zu prüfen.";
 
 interface PageProps {
   readonly params: Promise<{ tenant: string; phaseId: string }>;

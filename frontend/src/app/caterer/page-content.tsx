@@ -751,7 +751,7 @@ export default function CatererOverviewPage() {
             getRowKey={(row) => row.key}
             isLoading={loading}
             loadingRowCount={3}
-            caption="Essen je Schule und Tag im gewählten Zeitraum"
+            caption="Essen pro Schule und Tag im gewählten Zeitraum"
           />
         )}
       </SectionCard>

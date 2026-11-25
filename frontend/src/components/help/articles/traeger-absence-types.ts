@@ -14,7 +14,7 @@ export function traegerAbsenceTypesTopic(): HelpTopic {
     question:
       "Wie lege ich Abwesenheitsarten und Kontingente für alle Schulen an?",
     summary:
-      "Du legst Arten wie Regenerationstag einmal für den Träger an. Jede Person hat je Art ein Kontingent über alle ihre Schulen.",
+      "Du legst Arten wie Regenerationstag einmal für den Träger an. Jede Person hat pro Art ein Kontingent über alle ihre Schulen.",
     group: "personal",
     audience: "traeger",
     icon: "CalendarSlash",
@@ -29,7 +29,7 @@ export function traegerAbsenceTypesTopic(): HelpTopic {
           "Wähle in der Navigation `Abwesenheitsarten`.",
           "Wähle oben `Abwesenheitsart anlegen`.",
           "Gib einen Namen ein, zum Beispiel Regenerationstag.",
-          "Lasse `Tage je Person zählen (Kontingent)` an und trage die Tage je Jahr ein.",
+          "Lasse `Tage pro Person zählen (Kontingent)` an und trage die Tage pro Jahr ein.",
           "Wähle bei `Rest verfällt`, wie lange ein Rest ins neue Jahr geht.",
           "Schalte `Betreuungskräfte dürfen beantragen` an, wenn sie die Art selbst beantragen sollen.",
           "Wähle `Anlegen`.",

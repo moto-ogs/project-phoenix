@@ -17,7 +17,7 @@ export function traegerDashboardTopic(): HelpTopic {
       "Lies oben die Summe für alle Schulen.",
       "Prüfe unter `Auffälligkeiten`, an welcher Schule etwas deine Grenzen erreicht.",
       "Wähle dort `Zur Schule`, um die Schule anzusehen.",
-      "Lies unter `Zahlen je Schule` die Zahlen jeder Schule.",
+      "Lies unter `Zahlen pro Schule` die Zahlen jeder Schule.",
       "Wähle eine Schule, um ihre Zahlen und Stammdaten zu sehen.",
       "Öffne das Drei-Punkte-Menü rechts neben der Suche, bei nur einer Schule rechts neben dem Titel. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Hast du bei `Auffälligkeiten` eine Schule gewählt, enthält die Datei nur diese Schule.",
     ],

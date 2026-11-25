@@ -389,7 +389,7 @@ function SchoolParentConferences() {
       printHideHeader
       info={
         <p>
-          Eltern buchen in der Eltern-App ein Zeitfenster je Kind. Hier siehst
+          Eltern buchen in der Eltern-App ein Zeitfenster pro Kind. Hier siehst
           du, wer wann kommt.
         </p>
       }
@@ -497,7 +497,7 @@ function SchoolParentConferences() {
                       <CustomSelect
                         id="parent-conference-slot"
                         name="slot_minutes"
-                        label="Dauer je Gespräch"
+                        label="Dauer pro Gespräch"
                         value={draft.slotMinutes}
                         onChange={(next) => update({ slotMinutes: next })}
                         disabled={submitting}
@@ -560,7 +560,7 @@ function SchoolParentConferences() {
                       <p className="text-sm text-gray-600">
                         {editing
                           ? "Die Eltern mit Buchung bekommen eine Nachricht. Fällt ein gebuchtes Zeitfenster weg, ist die Buchung abgesagt."
-                          : "Die Eltern der Klasse sehen die freien Zeitfenster in der Eltern-App und buchen eines je Kind."}
+                          : "Die Eltern der Klasse sehen die freien Zeitfenster in der Eltern-App und buchen eines pro Kind."}
                       </p>
                     </div>
                   </div>

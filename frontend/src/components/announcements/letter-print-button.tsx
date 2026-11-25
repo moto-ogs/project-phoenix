@@ -42,7 +42,7 @@ export function LetterPrintButton({
       onClick={() => void print()}
       isLoading={busy}
       loadingText="PDF wird erstellt…"
-      tooltip="Lädt alle Briefe als PDF, ein Brief je Kind zum Ausdrucken."
+      tooltip="Lädt alle Briefe als PDF, ein Brief pro Kind zum Ausdrucken."
       className="gap-2"
     >
       <Printer className="h-4 w-4" aria-hidden />

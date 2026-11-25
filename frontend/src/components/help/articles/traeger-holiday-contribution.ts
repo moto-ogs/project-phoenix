@@ -21,7 +21,7 @@ export function traegerHolidayContributionTopic(): HelpTopic {
         title: "Preis festlegen",
         steps: [
           "Den Preis jeder Woche legst du im Ferienzeitraum fest. Jedes Zeitmodell hat einen `Preis in Euro`.",
-          "Wird eine Woche tageweise gebucht, ist es ein `Preis je Tag in Euro`. Der Beitrag ist dann der Tagespreis mal die gebuchten Tage. Danach rechnet moto Geschwister und Befreiung wie bei ganzen Wochen.",
+          "Wird eine Woche tageweise gebucht, ist es ein `Preis pro Tag in Euro`. Der Beitrag ist dann der Tagespreis mal die gebuchten Tage. Danach rechnet moto Geschwister und Befreiung wie bei ganzen Wochen.",
         ],
       },
       {

@@ -86,7 +86,7 @@ export function AbsenceTypeFields({
         onChange={(event) => set({ name: event.target.value })}
       />
       <SwitchRow
-        label="Tage je Person zählen (Kontingent)"
+        label="Tage pro Person zählen (Kontingent)"
         description="Über alle Schulen einer Person. Mehr als das Kontingent lässt sich an keiner Schule eintragen."
         checked={draft.allowanceEnabled}
         onCheckedChange={(checked) => set({ allowanceEnabled: checked })}
@@ -102,7 +102,7 @@ export function AbsenceTypeFields({
             min={0}
             max={366}
             step={0.5}
-            label="Tage je Jahr"
+            label="Tage pro Jahr"
             hint="Gilt für jede Person. In der Personalakte setzt du für einzelne Personen einen anderen Wert."
             value={
               Number.isFinite(draft.standardDays)

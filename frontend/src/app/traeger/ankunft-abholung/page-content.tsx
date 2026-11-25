@@ -194,7 +194,7 @@ function KindCard({
       }
     >
       <Heatmap
-        caption={`${words.title} je Wochentag und halbe Stunde`}
+        caption={`${words.title} pro Wochentag und halbe Stunde`}
         columns={columns}
         rows={rows}
         tone={words.tone}
@@ -580,7 +580,7 @@ export default function TraegerArrivalPickupPage() {
       )}
       {schools.length > 1 && !selected ? (
         <DataTable
-          heading={{ title: "Je Schule", count: schools.length, level: 2 }}
+          heading={{ title: "Pro Schule", count: schools.length, level: 2 }}
           columns={columns}
           rows={[...schools]}
           getRowKey={(school) => school.id}

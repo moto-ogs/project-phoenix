@@ -644,7 +644,7 @@ function EnrollmentSetupGuide({
     },
     {
       title: "Betreuungsangebote ergänzen",
-      description: "Eltern wählen daraus die passende Betreuung je Kind.",
+      description: "Eltern wählen daraus die passende Betreuung pro Kind.",
       href: tenantPath("/care-offerings"),
       action:
         careOfferingCount > 0

@@ -303,7 +303,7 @@ function StaffImportContent() {
                     <div>
                       <SectionLabel as="h2">Datei wählen</SectionLabel>
                       <p className="mt-1 text-sm text-gray-600">
-                        Eine CSV-Datei mit einer Zeile je Person und
+                        Eine CSV-Datei mit einer Zeile pro Person und
                         Überschriften in der ersten Zeile. Pflicht sind
                         Personalnummer, Vorname und Nachname.
                       </p>

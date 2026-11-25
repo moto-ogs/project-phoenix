@@ -51,7 +51,7 @@ import { useTenant } from "~/lib/tenant-context";
 
 // Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
 const GROUP_THREAD_INFO =
-  "Hier liest du die Nachricht an alle Eltern dieser Gruppe. Solange sie offen ist und Eltern-Nachrichten eingeschaltet sind, kannst du etwas dazuschreiben. Unter „Gelesen“ siehst du je Kind, ob ein Elternteil die neueste Nachricht gelesen hat.";
+  "Hier liest du die Nachricht an alle Eltern dieser Gruppe. Solange sie offen ist und Eltern-Nachrichten eingeschaltet sind, kannst du etwas dazuschreiben. Unter „Gelesen“ siehst du pro Kind, ob ein Elternteil die neueste Nachricht gelesen hat.";
 
 const logger = createLogger({ component: "GroupMessagePage" });
 
@@ -398,7 +398,7 @@ function GroupMessageContent() {
 
       <SectionCard
         title="Gelesen"
-        description="Je Kind: Hat ein Elternteil die neueste Nachricht gelesen?"
+        description="Pro Kind: Hat ein Elternteil die neueste Nachricht gelesen?"
       >
         {children.length === 0 ? (
           <EmptyState title="Noch keine Familien" />

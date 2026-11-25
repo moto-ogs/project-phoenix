@@ -566,7 +566,7 @@ export function StaffTimeAccountsTable({
           // Soll, Ist, Saldo und Resturlaub liest die Leitung über alle
           // Mitarbeitenden hinweg; bearbeitet wird im Konto der Person.
           mobileScroll={{
-            reason: "Stunden und Resturlaub je Person zum Vergleichen",
+            reason: "Stunden und Resturlaub pro Person zum Vergleichen",
           }}
           onRowClick={onRowClick}
           isLoading={isLoading}

@@ -181,8 +181,8 @@ export function daysLabel(days: number): string {
 
 /** The two price forms as the price list names them (#6196). */
 export const PRICE_FORM_LABELS: Record<CarePriceForm, string> = {
-  weekday: "Preis je Wochentag",
-  days_per_week: "Staffel nach Tagen je Woche",
+  weekday: "Preis pro Wochentag",
+  days_per_week: "Staffel nach Tagen pro Woche",
 };
 
 const MONTH_SHORT = [

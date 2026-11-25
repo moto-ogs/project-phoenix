@@ -1185,7 +1185,7 @@ export const bankDetailsTopic = function bankDetailsTopic(): HelpTopic {
     id: HELP_TOPICS.leadBankDetails,
     title: "Bankverbindungen einsehen",
     question: "Wo finde ich die Bankverbindungen der Familien?",
-    summary: "Du siehst je Kind die hinterlegte IBAN und kannst sie ausgeben.",
+    summary: "Du siehst pro Kind die hinterlegte IBAN und kannst sie ausgeben.",
     group: "elternarbeit",
     audience: "lead",
     icon: "Landmark",
@@ -1436,7 +1436,7 @@ export const careTimeComparisonTopic =
             "Öffne das Kind und wähle den Bereich `Betreuungszeiten`.",
             "Scrolle nach unten zu `Soll und Ist`.",
             "Wähle den Zeitraum. Am Anfang ist es der laufende Monat.",
-            "Lies je Tag `Gebucht`, `Tatsächlich` und `Abweichung`.",
+            "Lies pro Tag `Gebucht`, `Tatsächlich` und `Abweichung`.",
           ],
         },
         {
@@ -1965,7 +1965,7 @@ export const dataManagementTopic = function dataManagementTopic(): HelpTopic {
       "In der Seitenleiste erreichst du jeden Bereich auch direkt unter `Datenverwaltung`.",
       "Der Info-Knopf neben dem Seitennamen erklärt kurz, was hierher gehört.",
       "Die Kacheln `Terminkategorien`, `Planungsspuren`, `Dienstarten` und `Abwesenheitsarten` sind kurze Stammdaten-Listen.",
-      "Unter `Abwesenheitsarten` stehen Arten mit `Vom Träger`. Name, Kontingent und Verfall legt dein Träger fest. Deine Schule kann so eine Art mit `Nicht mehr anbieten` ausschalten. Oder sie erlaubt hier weniger Tage je Person und Jahr.",
+      "Unter `Abwesenheitsarten` stehen Arten mit `Vom Träger`. Name, Kontingent und Verfall legt dein Träger fest. Deine Schule kann so eine Art mit `Nicht mehr anbieten` ausschalten. Oder sie erlaubt hier weniger Tage pro Person und Jahr.",
     ],
     differences: [
       "Du siehst weniger Kacheln als eine Kollegin? Jede Kachel hängt an einem eigenen Recht.",
@@ -2324,8 +2324,8 @@ export const dutyRosterTopic = function dutyRosterTopic(): HelpTopic {
       "Löschst du eine Dienstart, die geplante Dienste tragen, behalten diese Dienste sie. Sie verschwindet nur aus der Auswahl für neue Dienste.",
       // ADR 0116: die ausgerichtete Ferienwoche im Dienstplan.
       "Richtet deine OGS eine Ferienwoche für den Träger aus, steht im Kopf jedes Tages `Ferienbetreuung`. Darunter stehen die Zahl der Kinder und die Betreuungszeit. Plane dafür Schichten. In der Ansicht `Halbjahr` zeigt eine Sonne die Woche.",
-      "Unter dem Plan steht `Stunden der Woche`. Dort siehst du je Person die Stunden je Dienstart und das Soll.",
-      "Unter `Person` siehst du die Woche einer Person in Viertelstunden. Darunter stehen die Stunden je Tag und Dienstart.",
+      "Unter dem Plan steht `Stunden der Woche`. Dort siehst du pro Person die Stunden pro Dienstart und das Soll.",
+      "Unter `Person` siehst du die Woche einer Person in Viertelstunden. Darunter stehen die Stunden pro Tag und Dienstart.",
       "Ziehe dort über die Viertelstunden, um eine Schicht anzulegen.",
       "Wähle im Drei-Punkte-Menü `Drucken oder exportieren`. Wähle Vorlage, Fassung und Zeitraum. `Drucken` öffnet die Druckansicht. Für eine Datei wähle das Format und `Herunterladen`.",
       "Die Vorlage `Stundenübersicht` druckt diese Stunden als Liste.",
@@ -2388,7 +2388,7 @@ export const editStudentTopic = function editStudentTopic(): HelpTopic {
           "Öffne beim Kind den Reiter `Betreuungszeiten`.",
           "Wähle oben rechts `Wochenplan`.",
           "Setze bei den Betreuungstagen einen Haken.",
-          "Trage je Tag `Ankunft` und `Abholung` ein.",
+          "Trage pro Tag `Ankunft` und `Abholung` ein.",
           "Kommt das Kind an einem Betreuungstag nicht? Lass `Abholung` leer.",
           "Öffne `Notizen`. Trage den Hinweis unter `Notiz zum Tag (jede Woche)` ein.",
           "Wähle `Speichern`.",
@@ -2486,7 +2486,7 @@ export const emailDeliveryTopic = function emailDeliveryTopic(): HelpTopic {
         steps: [
           "Elternbrief: im geöffneten Brief bei jeder Person.",
           "Nachricht an Eltern: unter deiner Nachricht hinter `E-Mail`.",
-          "Gruppennachricht: unter jeder Nachricht hinter `E-Mails`, gezählt je Ergebnis.",
+          "Gruppennachricht: unter jeder Nachricht hinter `E-Mails`, gezählt pro Ergebnis.",
           "Termin mit Eltern: im Termin unter `E-Mails an die Eltern`. Das sieht, wer den Termin angelegt hat.",
           "Einladung der Eltern: beim Kind unter `Erziehungsberechtigte`.",
           "Einladung ins Personal und des Caterers: unter `Offene Einladungen`.",
@@ -2848,7 +2848,7 @@ export const enrollmentFormTopic = function enrollmentFormTopic(): HelpTopic {
           "Wähle `+ Freie Zusatzfrage` und schreibe die Frage.",
           "Stelle bei `Typ` die Option `Datei` ein.",
           "Wähle bei `Erlaubte Dateiarten` aus `PDF`, `JPG` und `PNG`.",
-          "Wähle bei `Höchstens je Datei` eine Größe von 1 bis 10 MB.",
+          "Wähle bei `Maximale Größe pro Datei` eine Größe von 1 bis 10 MB.",
           "Sollen Eltern mehrere Dateien schicken? Wähle `Mehrere Dateien erlauben`. Dann sind bis zu 5 Dateien möglich.",
         ],
       },
@@ -2918,7 +2918,7 @@ export const enrollmentFormTopic = function enrollmentFormTopic(): HelpTopic {
       "Mit `Vorschau öffnen` siehst du den Entwurf in einem neuen Tab, bevor du speicherst.",
       "Die Vorschau zeigt nur deine Fragen, keine Betreuungsangebote. Unter `Angebote prüfen` öffnest du die Vorschau jeder Phase, die die Vorlage nutzt. Dort stehen die Angebote, auch wenn die Phase noch nicht aktiv ist.",
       "Haben deine Betreuungsangebote eine Gehzeit, brauchst du keine Frage nach `Abholzeiten`. Eine Antwort darauf ersetzt die Gehzeit des Angebots beim Kind.",
-      "Die Zustimmungen `Datenschutzinformation`, `Fotoeinwilligung` und `E-Mail-Kontakt` tragen `Aus Einstellungen übernommen`. Sie kommen aus deinen Einstellungen und lassen sich je Vorlage ausblenden.",
+      "Die Zustimmungen `Datenschutzinformation`, `Fotoeinwilligung` und `E-Mail-Kontakt` tragen `Aus Einstellungen übernommen`. Sie kommen aus deinen Einstellungen und lassen sich pro Vorlage ausblenden.",
       "Über `+ Eigene Zustimmung hinzufügen` ergänzt du einen Text, der nur in dieser Vorlage steht.",
       "Die `Datenschutzinformation` hat kein Häkchen. Eltern sehen den Text und können ihn öffnen. moto speichert bei jeder Anmeldung, welche Fassung das Formular gezeigt hat.",
       "Für Fotos im Internet schaltest du bei der Zustimmung `Einvernehmen aller Sorgeberechtigten abfragen` ein. Mit dem Häkchen bestätigen Eltern dann auch, dass alle anderen Sorgeberechtigten einverstanden sind.",
@@ -2965,7 +2965,7 @@ export const enrollmentReviewTopic =
       id: HELP_TOPICS.enrollments,
       title: "Eingegangene Anmeldungen prüfen",
       question: "Wie prüfe ich eine neue Anmeldung?",
-      summary: "Du prüfst die Angaben und entscheidest je Kind.",
+      summary: "Du prüfst die Angaben und entscheidest pro Kind.",
       group: "anmeldeverwaltung",
       audience: "lead",
       icon: "ListChecks",
@@ -2980,7 +2980,7 @@ export const enrollmentReviewTopic =
       result:
         "Die Eltern sehen die Entscheidung bei ihrer Anmeldung. Bei `Bestätigen` wird das Kind übernommen.",
       notes: [
-        "Du entscheidest je Kind. Eine Anmeldung kann mehrere Kinder enthalten.",
+        "Du entscheidest pro Kind. Eine Anmeldung kann mehrere Kinder enthalten.",
         // #6053, #6148 (manuelle Anmeldung)
         "Ist schon ein Kind mit diesem Namen und Geburtsdatum angemeldet, fragt moto beim `Bestätigen` nach. Wähle `Bestehendes Kind verwenden`, verlängert moto nur die Anmeldung dieses Kindes. Die Eltern aus der Anmeldung bekommen dadurch keinen Zugang. Ist es ein anderes Kind, wähle `Als neues Kind anlegen`. Dieselbe Frage kommt, wenn du ein Kind selbst mit `Kind anlegen und freigeben` anmeldest.",
         // #6247: dasselbe Kind von beiden Eltern angemeldet.
@@ -2993,11 +2993,11 @@ export const enrollmentReviewTopic =
         "Wird ein Kind schon betreut und beginnt die Anmeldung später? Dann gelten Abholzeiten, Betreuungstage und Heimweg daraus erst ab dem Start. Bis dahin bleiben die bisherigen. Das Datum steht beim Kind. Steht der Hinweis nach dem Start noch da, gelten weiter die bisherigen. Melde dich dann beim moto-Team.",
         // #5934
         "Unter `E-Mails an die Familie` siehst du, ob die Mails zu dieser Anmeldung angekommen sind. Steht dort `Adresse prüfen`, sprich die Familie direkt an.",
-        "Auf der Seite der Phase steht unter `Freie Plätze je Angebot`, wie viele Plätze noch frei sind. `Belegt` zählt die Kinder am vollsten Tag bis zum Ende der Phase.",
+        "Auf der Seite der Phase steht unter `Freie Plätze pro Angebot`, wie viele Plätze noch frei sind. `Belegt` zählt die Kinder am vollsten Tag bis zum Ende der Phase.",
         "Hochgeladene Nachweise stehen bei `Zusatzfragen (Eltern)`. Mit `Öffnen` siehst du die Datei in einem neuen Tab.",
         "Hat die Vorlage `Unterschrift erforderlich`, steht die Unterschrift der Eltern im Abschnitt `Unterschrift`. Mit `Nachweis als PDF` lädst du den Anmeldenachweis mit der Unterschrift herunter.",
         // #4788: Vertragsstand je Kind, nur lesend.
-        "Hat der Träger aus der Anmeldung einen Betreuungsvertrag gemacht, steht er unter `Betreuungsverträge`. Dort siehst du je Kind den Stand und die gebuchten Tage mit Uhrzeit. Ändern kann den Vertrag nur der Träger.",
+        "Hat der Träger aus der Anmeldung einen Betreuungsvertrag gemacht, steht er unter `Betreuungsverträge`. Dort siehst du pro Kind den Stand und die gebuchten Tage mit Uhrzeit. Ändern kann den Vertrag nur der Träger.",
         "Unter `Rechtstexte und Antworten` findest du die Texte und Antworten jeder Einreichung. Öffne einen Text, um den Wortlaut zu lesen.",
         "Mit `Statusseite öffnen` siehst du, was die Eltern sehen.",
         // #5102: Auswirkung nach einer Korrektur unter `Nachbearbeitung`.
@@ -3024,7 +3024,7 @@ export const enrollmentReviewTopic =
         "Die E-Mail geht an deine E-Mail-Adresse in moto.",
       ],
       differences: [
-        "Der Überblick zählt je Phase, wie viele Eingänge offen, bestätigt und abgelehnt sind.",
+        "Der Überblick zählt pro Phase, wie viele Eingänge offen, bestätigt und abgelehnt sind.",
         "Auf dem Handy erscheint nur ein Hinweis. Die Prüfung läuft am Computer.",
       ],
       troubleshootingDetails: [
@@ -3136,7 +3136,7 @@ export const enrollmentSetupTopic = function enrollmentSetupTopic(): HelpTopic {
       "Du ziehst das `Ende` der Phase vor? Dann nennt moto nach dem Speichern die Kinder, die schon betreut werden. Ihre Betreuung bleibt eingetragen, bis du sie beendest. Wähle dafür `Betreuung beenden`. moto schlägt das neue Ende der Phase als letzten Betreuungstag vor. Bei mehr als 500 Kindern bestätigst du mehrere Gruppen einzeln. Die übrigen Kinder bleiben bis dahin in der Liste.",
       "Bei `Betreuungsangebote` steht in der Spalte `Belegt`, wie viele Plätze gebucht sind. Bei Angeboten mit Kapazität steht auch, wie viele Plätze frei sind. Ein volles Angebot ist mit `Voll` markiert.",
       "Du hast Varianten wie „bis 13 Uhr“ und „bis 17 Uhr“? Gib ihnen bei `Pflichtauswahl` dieselbe `Gruppe (optional)` und die `Regel` `Höchstens eines pro Tag`. Dann mischen Eltern die Varianten über die Woche, aber wählen pro Tag nur eine.",
-      "Trage bei jeder Variante unter `Gehzeit je Betreuungstag` ihre Uhrzeit ein. Nach der Zusage steht sie beim Kind. Bucht ein Kind an einem Tag zwei Angebote, gilt die spätere Gehzeit.",
+      "Trage bei jeder Variante unter `Gehzeit pro Betreuungstag` ihre Uhrzeit ein. Nach der Zusage steht sie beim Kind. Bucht ein Kind an einem Tag zwei Angebote, gilt die spätere Gehzeit.",
       "Ein Angebot nur für eine Klassenstufe, zum Beispiel Klasse 1: Setze den Haken bei `Nur für bestimmte Klassenstufen anbieten` und wähle `Klasse 1`. Ohne Haken können alle Kinder das Angebot wählen.",
       "Manche Phasen und Angebote legt dein Träger für mehrere Schulen an. Du darfst alles daran ändern oder sie ausschalten. Deine Änderungen bleiben, auch wenn der Träger später etwas ändert.",
     ],
@@ -3762,7 +3762,7 @@ export const holidayWeeksTopic = function holidayWeeksTopic(): HelpTopic {
     icon: "SunHorizon",
     image: "/help/screens/ferienwochen-freigegebene-antworten.webp",
     imageAlt:
-      "Die Liste der Kinder mit der zweiten sorgeberechtigten Person, den freigegebenen Antworten und der Spalte Gesundheit.",
+      "Zahlen pro Zeitmodell, Heimatschule und Tag. Darunter steht die Kinderliste mit den freigegebenen Antworten.",
     requirements: [
       "Der Träger hat deine OGS für eine Ferienwoche eingetragen.",
       "Der Träger hat Anmeldungen für diese Woche bestätigt.",
@@ -3771,8 +3771,8 @@ export const holidayWeeksTopic = function holidayWeeksTopic(): HelpTopic {
       "Klappe in der Seitenleiste `Eltern` auf.",
       "Öffne `Ferienwochen`.",
       "Richtet deine OGS mehrere Wochen aus, wähle oben die Woche.",
-      "Lies unter `Je Zeitmodell` und `Je Heimatschule` die Zahlen.",
-      "Gibt es in der Woche Mittagessen, steht unter `Mittagessen je Tag`, wie viele Essen für jeden Tag gebucht sind. Tage ohne Betreuung stehen nicht in der Liste, zum Beispiel ein Schließtag.",
+      "Lies unter `Pro Zeitmodell` und `Pro Heimatschule` die Zahlen.",
+      "Gibt es in der Woche Mittagessen, steht unter `Mittagessen pro Tag`, wie viele Essen für jeden Tag gebucht sind. Tage ohne Betreuung stehen nicht in der Liste, zum Beispiel ein Schließtag.",
       "Kommen Kinder deiner OGS? Dann steht unter `Kinder deiner OGS`, ob sie eingeplant sind.",
       "Unter `Kinder` steht jedes Kind mit Geburtsdatum, Heimatschule und Zeitmodell.",
       "Bei einem Kind deiner OGS öffnest du mit `Akte öffnen` seine Kinderakte.",
@@ -3831,7 +3831,7 @@ export const homeworkFeedbackTopic =
       question:
         "Wie melde ich zurück, ob ein Kind die Hausaufgaben geschafft hat?",
       summary:
-        "In der Lernzeit siehst du die Hausaufgaben jeder Klasse und gibst je Kind eine Rückmeldung.",
+        "In der Lernzeit siehst du die Hausaufgaben jeder Klasse und gibst pro Kind eine Rückmeldung.",
       group: "gruppen",
       audience: ["caregiver", "lead"],
       icon: "ListChecks",
@@ -4673,7 +4673,7 @@ export const leadSurveysTopic = function leadSurveysTopic(): HelpTopic {
         steps: [
           "Öffne die Umfrage in der Liste.",
           "Bei einer anonymen Umfrage erscheint die Auswertung, sobald die Umfrage beendet ist.",
-          "Im Reiter `Auswertung` siehst du je Frage die Verteilung: bei der Skala den Durchschnitt, den höchsten und den niedrigsten Wert, bei Auswahlfragen die am häufigsten und am seltensten gewählte Antwort, dazu die Freitexte.",
+          "Im Reiter `Auswertung` siehst du pro Frage die Verteilung: bei der Skala den Durchschnitt, den höchsten und den niedrigsten Wert, bei Auswahlfragen die am häufigsten und am seltensten gewählte Antwort, dazu die Freitexte.",
           "Oben stehen `Stärken und Verbesserungsbedarf`: die Skalenfragen mit dem höchsten und dem niedrigsten Durchschnitt.",
           "Für eine Datei öffnest du das Menü mit den drei Punkten und wählst `Auswertung als PDF`.",
         ],
@@ -4689,13 +4689,13 @@ export const leadSurveysTopic = function leadSurveysTopic(): HelpTopic {
       },
     ],
     result:
-      "Die Eltern finden die Umfrage unter `Elternbriefe`, das Team unter `Umfragen`. Jede Person antwortet einmal, Eltern einmal je Elternkonto, nicht je Kind.",
+      "Die Eltern finden die Umfrage unter `Elternbriefe`, das Team unter `Umfragen`. Jede Person antwortet einmal, Eltern einmal pro Elternkonto, nicht pro Kind.",
     notes: [
       "Anonym heißt: Du siehst nicht, wer was geantwortet hat. Du siehst auch nicht, wer noch nicht teilgenommen hat. Die Auswertung zeigt nur Summen.",
       "Die Auswertung einer anonymen Umfrage erscheint erst nach dem Ende und ab 5 Antworten. So ist niemand an seinen Antworten erkennbar. Bis dahin siehst du nur, wie viele teilgenommen haben.",
       "Auch einzelne Fragen einer anonymen Umfrage zeigen ihr Ergebnis erst ab 5 Antworten. Bei weniger steht dort nur die Zahl.",
       "Freitexte stehen ohne Namen und ohne Uhrzeit, in zufälliger Reihenfolge. Die PDF-Datei enthält dieselben Summen wie der Bildschirm.",
-      "Bei einer Umfrage, die nicht anonym ist, siehst du im Reiter `Antworten je Person` jede Antwort mit Namen.",
+      "Bei einer Umfrage, die nicht anonym ist, siehst du im Reiter `Antworten pro Person` jede Antwort mit Namen.",
       "Befragst du Mitarbeitende? Ein Fragebogen an Beschäftigte kann mitbestimmungspflichtig sein. Kläre das vorher mit deinem Betriebsrat oder Personalrat. moto prüft das nicht.",
       "Nur eine kurze Frage zu jedem Kind, zum Beispiel zum Sommerfest? Dafür gibt es die Umfrage unter `Eltern` › `Mitteilungen`.",
     ],
@@ -4705,7 +4705,7 @@ export const leadSurveysTopic = function leadSurveysTopic(): HelpTopic {
     ],
     image: "/help/screens/umfrage-auswertung.webp",
     imageAlt:
-      "Auswertung einer beendeten anonymen Umfrage mit Stärken, Verbesserungsbedarf und der Verteilung je Frage.",
+      "Auswertung einer beendeten anonymen Umfrage mit Stärken, Verbesserungsbedarf und der Verteilung pro Frage.",
     related: [
       HELP_TOPICS.leadParentSurvey,
       HELP_TOPICS.staffSurveys,
@@ -5083,7 +5083,7 @@ export const mealCatererTopic = function mealCatererTopic(): HelpTopic {
       "Der Caterer bekommt eine E-Mail mit einem Link. Damit legt er sein Passwort fest. Danach sieht er die Bestellungen deiner Schule.",
     notes: [
       "Den Link sieht nur der Caterer. Er gilt 14 Tage.",
-      "Der Caterer sieht nur Zahlen: je Tag und, wenn du so bestellst, je Klasse. Namen sieht er nur, wenn du unter `Einstellungen` → `Datenschutz` `Namen der Kinder für den Caterer` einschaltest.",
+      "Der Caterer sieht nur Zahlen: pro Tag und, wenn du so bestellst, pro Klasse. Namen sieht er nur, wenn du unter `Einstellungen` → `Datenschutz` `Namen der Kinder für den Caterer` einschaltest.",
       "Der Caterer kann eine Bestellung nur bestätigen. Dann steht bei dir `Vom Caterer bestätigt`.",
       "Ändert sich das Essen eines Tages, an dem Kinder ein Essen gebucht haben, sieht dein Caterer einen Hinweis in seiner Glocke oben rechts. Das gilt auch für jeden neuen, geänderten oder gelöschten Schließtag. So plant er die Mengen. Die Schalter `Hinweis bei geändertem Speiseplan` und `Benachrichtigung bei Schließtagen` unter `Einstellungen` gelten auch für ihn.",
       "Beliefert der Caterer schon andere Schulen, bestätigt er mit seinem Passwort. Deine Schule kommt dann zu seinen Schulen dazu.",
@@ -5135,9 +5135,9 @@ export const mealOrderingTopic = function mealOrderingTopic(): HelpTopic {
       "An Schließtagen und Feiertagen isst niemand. In den Ferien gelten die festen Tage nicht, einzeln angemeldete Tage zählen.",
       "`Entschuldigt` und `Klassenfahrt` melden das Essen ab wie eine Krankmeldung.",
       "Für die Küche legst du eine Rolle mit den Rechten unter `Mittagessen` an. Sie braucht keinen Zugriff auf alle Kinderdaten.",
-      "Zur Frist friert moto die Bestellung ein. Unter `Speiseplan` zeigt `Bestellung` je Tag `Offen`, `Bestellt` oder `Vom Caterer bestätigt`, dazu die `Frist`, die Zahl der Essen und die `Nachmeldungen` danach.",
+      "Zur Frist friert moto die Bestellung ein. Unter `Speiseplan` zeigt `Bestellung` pro Tag `Offen`, `Bestellt` oder `Vom Caterer bestätigt`, dazu die `Frist`, die Zahl der Essen und die `Nachmeldungen` danach.",
       "Tage vor dem Start der Bestellung stehen auf `Nicht bestellt`. Sie zählen nicht.",
-      "Die bestellten Essen je Kind für einen Monat bekommst du bei `Bestellung` über das Menü mit den drei Punkten, zum Beispiel für die Essenspauschale. Wähle unter `Monatsübersicht` den Eintrag `PDF` oder `Excel`. Liegt die Woche in zwei Monaten, steht dort `Exportieren…`: Wähle dann den Monat, `PDF` oder `Excel` und `Herunterladen`.",
+      "Die bestellten Essen pro Kind für einen Monat bekommst du bei `Bestellung` über das Menü mit den drei Punkten, zum Beispiel für die Essenspauschale. Wähle unter `Monatsübersicht` den Eintrag `PDF` oder `Excel`. Liegt die Woche in zwei Monaten, steht dort `Exportieren…`: Wähle dann den Monat, `PDF` oder `Excel` und `Herunterladen`.",
     ],
     differences: [
       "Wochenenden zählen bei `Tage vorher` mit. 1 heißt immer: am Tag davor.",
@@ -5161,7 +5161,7 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
     id: HELP_TOPICS.leadMealPlan,
     title: "Einen Speiseplan veröffentlichen",
     question: "Wie zeige ich den Eltern den Speiseplan?",
-    summary: "Trage die Gerichte je Tag ein. Eltern sehen den Plan sofort.",
+    summary: "Trage die Gerichte pro Tag ein. Eltern sehen den Plan sofort.",
     group: "elternarbeit",
     audience: "lead",
     icon: "UtensilsCrossed",
@@ -5187,7 +5187,7 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
       "Der heutige Tag trägt das Kennzeichen `Heute`.",
       "Die Woche oben gilt für den Plan und für die `Bestellung` darunter.",
       "Ganz unten steht die Liste für die Küche. Mit `Tag` und `Woche` wechselst du die Ansicht.",
-      "Die Wochenliste zeigt jedes angemeldete Kind mit einem Haken je Tag. Darüber steht, wie viele Kinder an jedem Tag essen.",
+      "Die Wochenliste zeigt jedes angemeldete Kind mit einem Haken pro Tag. Darüber steht, wie viele Kinder an jedem Tag essen.",
       "Öffne `Tagesliste herunterladen` oder `Wochenliste herunterladen`. Wähle `PDF` oder `Excel`.",
       "Bis wann Eltern ändern können, legst du unter `Einstellungen` im Bereich `Mittagessen` fest.",
       "An Feiertagen und Schließtagen gibt es kein Essen. Die Wochenliste zeigt dort `kein Essen`.",
@@ -5986,7 +5986,7 @@ export const ownShiftPlanTopic = function ownShiftPlanTopic(): HelpTopic {
     title: "Eigenen Dienstplan ansehen",
     question: "Wo sehe ich meinen Dienstplan für die Woche?",
     summary:
-      "Sieh deine Schichten der Woche, die Stunden je Dienstart und dein Soll.",
+      "Sieh deine Schichten der Woche, die Stunden pro Dienstart und dein Soll.",
     group: "arbeitszeit",
     audience: ["caregiver", "lead"],
     icon: "CalendarCheck",
@@ -5995,7 +5995,7 @@ export const ownShiftPlanTopic = function ownShiftPlanTopic(): HelpTopic {
       "Wechsle mit den Pfeilen zur gewünschten Woche. `Diese Woche` bringt dich zurück.",
     ],
     result:
-      "Du siehst jede Schicht im Wochenraster. Darunter stehen die Stunden je Tag und je Dienstart.",
+      "Du siehst jede Schicht im Wochenraster. Darunter stehen die Stunden pro Tag und pro Dienstart.",
     notes: [
       "Oben stehen die geplanten Stunden, dein `Soll` und die `Differenz`.",
       "In der `Zeiterfassung` führt oben der Knopf `Mein Dienstplan` ebenfalls hierher.",
@@ -6003,7 +6003,7 @@ export const ownShiftPlanTopic = function ownShiftPlanTopic(): HelpTopic {
       "Ist eine Woche leer, nennt die Seite deine nächste Schicht. `Zur nächsten Schicht` bringt dich zu dieser Woche.",
     ],
     differences: [
-      "Auf dem Handy findest du `Mein Dienstplan` unten unter `Mehr`. Dort stehen die Schichten als Liste je Tag statt im Wochenraster.",
+      "Auf dem Handy findest du `Mein Dienstplan` unten unter `Mehr`. Dort stehen die Schichten als Liste pro Tag statt im Wochenraster.",
       "Du kannst den Plan hier nur ansehen. Änderungen trägt die Leitung im Dienstplan ein.",
       "Auf dem Handy erscheinen Samstag und Sonntag nur mit einer Schicht. Bei einem Sonntagsdienst kann im Wochenraster auch der Samstag erscheinen.",
       SIMPLE_NAV_DIFFERENCE,
@@ -6207,7 +6207,7 @@ export const parentCareChangeTopic =
             "Tippe unten auf `Mein Kind`.",
             "Wähle den Reiter `Betreuung`.",
             "Tippe bei `Dein OGS Wochenplan` auf `Änderungen anfragen`.",
-            "Schalte je Tag `Betreuung an diesem Tag` ein oder aus.",
+            "Schalte pro Tag `Betreuung an diesem Tag` ein oder aus.",
             "Wählst du bei einem Tag `Geht allein`? Dann unterschreibe die Erlaubnis im Feld und tippe auf `Unterschrift bestätigen`.",
             "Tippe auf `Anfrage an OGS senden`.",
           ],
@@ -6450,7 +6450,7 @@ export const parentConferenceTopic =
       result:
         "Der Termin ist gebucht. Er steht in deinem Kalender, und du bekommst eine Nachricht.",
       notes: [
-        "Du buchst einen Termin je Kind. Hast du zwei Kinder in der Klasse, buche für jedes Kind einzeln.",
+        "Du buchst einen Termin pro Kind. Hast du zwei Kinder in der Klasse, buche für jedes Kind einzeln.",
         "Tippe auf eine andere Zeit, um deinen Termin zu verschieben. Mit `Termin absagen` sagst du ab.",
       ],
       differences: [
@@ -6500,7 +6500,7 @@ export const parentDeclarationTopic =
         "Wähle `Veröffentlichen`.",
       ],
       result:
-        "Die Eltern sehen die Anfrage im Eltern-Portal. Den Stand je Kind siehst du beim Öffnen unter `Stand der Antworten`.",
+        "Die Eltern sehen die Anfrage im Eltern-Portal. Den Stand pro Kind siehst du beim Öffnen unter `Stand der Antworten`.",
       notes: [
         "Eltern können eine Zustimmung jederzeit widerrufen. Das geht auch nach der Frist, nach dem Zurückziehen und wenn `Elternmitteilungen (Neuigkeiten)` aus ist.",
         "Mit `Mit Unterschrift` unterschreiben Eltern ihre Zustimmung mit dem Finger oder der Maus. Ablehnen geht ohne Unterschrift. Die Unterschrift steht im Nachweis der Eltern und in `Bericht als PDF`.",
@@ -6540,7 +6540,7 @@ export const parentDepartureTopic = function parentDepartureTopic(): HelpTopic {
     id: HELP_TOPICS.parentDeparture,
     title: "Den Weg nach Hause ändern",
     question: "Wie ändere ich, wie mein Kind nach Hause geht?",
-    summary: "Du siehst den Weg je Wochentag und fragst eine Änderung an.",
+    summary: "Du siehst den Weg pro Wochentag und fragst eine Änderung an.",
     group: "mein-kind",
     audience: "parent",
     icon: "Repeat",
@@ -6549,7 +6549,7 @@ export const parentDepartureTopic = function parentDepartureTopic(): HelpTopic {
       "Wähle den Reiter `Betreuung`.",
       "Gehe ganz nach unten zum Abschnitt `So geht ... nach Hause`. Dort steht der Name deines Kindes. Du siehst für jeden Wochentag, wie dein Kind nach Hause geht.",
       "Tippe auf `Bearbeiten`.",
-      "Setze je Wochentag einen Haken bei `Geht allein`, `Bus` oder `Wird abgeholt`.",
+      "Setze pro Wochentag einen Haken bei `Geht allein`, `Bus` oder `Wird abgeholt`.",
       "Tippe auf `Änderung anfragen`.",
     ],
     result:
@@ -6738,7 +6738,7 @@ export const parentEnrollStatusTopic =
       result:
         "Sobald die OGS entschieden hat, siehst du das unter `Kinder` und bekommst eine E-Mail.",
       notes: [
-        "Nach einer Verlängerung kann das Formular nach dem Ferienwunsch fragen. Wähle je Kind `Ja` oder `Nein`.",
+        "Nach einer Verlängerung kann das Formular nach dem Ferienwunsch fragen. Wähle pro Kind `Ja` oder `Nein`.",
         "Zurückziehen kannst du nicht selbst rückgängig machen. Wende dich dann an die OGS.",
         "Bei Rückfragen meldet sich die OGS über die angegebene E-Mail-Adresse.",
         "Die Kinderzahl kannst du ändern, bis ein Kind angenommen ist. Sie kommt dann mit in deinen Betreuungsvertrag. Dort änderst du sie später.",
@@ -6956,7 +6956,7 @@ export const parentGroupMessageTopic =
         "Steht bei einem Kind `Kein Eltern-Zugang`? Dann bekommt diese Familie die Nachricht nicht.",
       ],
       notes: [
-        "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du an eine weitere Nachricht bis zu 5 Dateien an, je höchstens 10 MB. Alle Eltern der Gruppennachricht sehen die Datei.",
+        "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du an eine weitere Nachricht bis zu 5 Dateien an. Pro Datei sind höchstens 10 MB erlaubt. Alle Eltern der Gruppennachricht sehen die Datei.",
         "Keine Familie sieht, wer die Nachricht noch bekommt oder wer geantwortet hat.",
         "moto ermittelt die Empfänger bei jeder Nachricht neu. Wer später in die Gruppe kommt, liest nur die neuen Nachrichten.",
         "Unter `Gelesen` siehst du für jedes Kind, ob die Eltern die neueste Nachricht gelesen haben.",
@@ -7180,7 +7180,7 @@ export const parentHolidayRegistrationTopic =
         "Trage unter `Kinder` Vorname, Nachname und Geburtsdatum ein.",
         "Wähle die `Schule` deines Kindes. Steht sie nicht in der Liste? Wähle `Eine andere Schule`.",
         "Wähle unter `Wochen` für jede Woche, wie lange dein Kind bleibt. Bei jeder Zeit steht der Preis pro Woche. Gibt es eine Woche an mehreren Schulen, wähle auch die Schule.",
-        "Steht bei der Zeit „je Tag“? Dann wähle darunter die Tage, an denen dein Kind kommt. Der Preis gilt je Tag.",
+        "Steht bei der Zeit „pro Tag“? Dann wähle darunter die Tage, an denen dein Kind kommt. Der Preis gilt pro Tag.",
         "Steht unter der Woche `Mit Mittagessen`? Setze den Haken, wenn dein Kind dort essen soll. Darunter steht, was das Essen kostet.",
         "Weitere Kinder fügst du mit `Geschwisterkind hinzufügen` hinzu.",
         "Trage `Deine Angaben` ein.",
@@ -7214,7 +7214,7 @@ export const parentHolidayRegistrationTopic =
         "Die OGS, die dein Kind in einer Ferienwoche betreut, sieht Name und Telefon der zweiten sorgeberechtigten Person. Sie sieht auch die Antworten, die der Träger für sie freigibt. Zum Beispiel, ob dein Kind allein nach Hause gehen darf.",
         "Die OGS sieht diese Angaben schon vor der Ferienwoche. So kann sie sich vorbereiten. Die Liste der Kinder sieht sie bis zum letzten Tag der Woche. Name, Telefon und Antworten kann sie danach höchstens 7 Tage lesen. Dann werden sie gelöscht. Gesundheitsangaben sieht sie nur bis zum letzten Tag der Woche.",
         "Ein Kind von einer anderen Schule kommt als Feriengast.",
-        "Manche Ferien haben eine Grenze, zum Beispiel höchstens 5 Tage je Kind. Dann steht sie über den Wochen. Eine ganze Woche zählt mit allen Tagen von Montag bis Freitag. Meldest du dein Kind ein zweites Mal an, zählen die Tage beider Anmeldungen zusammen.",
+        "Manche Ferien haben eine Grenze, zum Beispiel höchstens 5 Tage pro Kind. Dann steht sie über den Wochen. Eine ganze Woche zählt mit allen Tagen von Montag bis Freitag. Meldest du dein Kind ein zweites Mal an, zählen die Tage beider Anmeldungen zusammen.",
         "Ein Feiertag oder Schließtag ist bei den Tagen durchgestrichen. An diesem Tag ist keine Betreuung, du kannst ihn nicht wählen.",
         "Steht unter den Tagen `Schon voll`? An diesen Tagen sind alle Plätze vergeben. Wählst du einen davon, kommt dein Kind für diese Woche auf die Warteliste.",
         "Mit `Mit Mittagessen` isst dein Kind an jedem gebuchten Tag der Woche. Einzelne Essen abwählen geht nicht. Das Essen steht unter `Beitrag` als eigener Betrag. Ermäßigung und Befreiung gelten nur für die Betreuung, nicht für das Essen.",
@@ -7236,7 +7236,7 @@ export const parentHolidayRegistrationTopic =
       ],
       troubleshootingDetails: [
         "Du siehst in der Eltern-App keine `Ferienbetreuung`? Dann läuft gerade keine Anmeldung für die Schule deines Kindes. Oder die Frist ist vorbei. Hast du einen Link vom Träger, nutze den Link.",
-        "moto meldet zu viele Tage je Kind? Die Grenze gilt für alle Anmeldungen des Kindes zusammen. Bitte wähle weniger Tage oder frage das Träger-Büro. Der Hinweis zeigt keine Tage aus anderen Anmeldungen.",
+        "moto meldet zu viele Tage pro Kind? Die Grenze gilt für alle Anmeldungen des Kindes zusammen. Bitte wähle weniger Tage oder frage das Träger-Büro. Der Hinweis zeigt keine Tage aus anderen Anmeldungen.",
         "moto sagt, die Anmeldung sei nicht offen? Oben auf der Seite stehen die Tage, an denen du anmelden kannst.",
         "moto sagt, den Anmeldelink gebe es nicht? Frage den Träger nach dem richtigen Link.",
         "Steht vor dem Absenden `Die Sicherheitsprüfung lädt nicht`? Oft blockiert ein Werbeblocker die Prüfung. Schalte ihn für die Seite aus und wähle `Prüfung neu starten`. Hilft das nicht, wähle `Link kopieren` und öffne den Link in einem anderen Browser, zum Beispiel Chrome.",
@@ -7341,12 +7341,12 @@ export const parentLetterPerChildTopic =
         },
       ],
       result:
-        "Jede Familie bekommt einen Brief je Kind, mit den Angaben ihres eigenen Kindes. Geschwister bekommen je Kind einen Brief.",
+        "Jede Familie bekommt pro Kind einen eigenen Brief. Darin stehen nur die Angaben dieses Kindes.",
       notes: [
         "moto schreibt den Brief beim Veröffentlichen fest. Ändern sich danach Gruppe oder Abholzeit, bleibt der Brief, wie er war.",
         "Fehlt bei einem Kind eine Angabe, bleibt die Stelle leer. Steht in einer Zeile nur diese Angabe, zum Beispiel `Abholzeit:`, lässt moto die ganze Zeile weg.",
         "Gesundheitsangaben gibt es als Platzhalter nicht.",
-        "Briefe ohne Platzhalter druckt moto genauso, einen je Kind.",
+        "Briefe ohne Platzhalter druckt moto genauso, einen pro Kind.",
       ],
       troubleshootingDetails: [
         "Fehlt die Auswahl der Kinder für die Vorschau? Klicke bei der Fehlermeldung auf `Wiederholen`.",
@@ -7492,7 +7492,7 @@ export const parentMealPlanTopic = function parentMealPlanTopic(): HelpTopic {
         ],
       },
     ],
-    result: "Du siehst je Tag das Gericht und ob dein Kind mitisst.",
+    result: "Du siehst pro Tag das Gericht und ob dein Kind mitisst.",
     notes: [
       "Steht am Gericht zum Beispiel `Allergene: A, G`, enthält es diese Allergene. Unter dem Plan steht, was die Buchstaben bedeuten.",
       "Die Angaben kommen von der Schule oder vom Caterer. Ein Gericht ohne Buchstaben ist nicht sicher frei von Allergenen. Frage im Zweifel die OGS.",
@@ -7623,7 +7623,7 @@ export const parentMessageTopic = function parentMessageTopic(): HelpTopic {
       "Eltern können nur an die Leitung schreiben, wenn unter `Einstellungen` der Schalter `Nachrichten nur an die Leitung (Eltern)` an ist und jemand das Recht `Vertrauliche Elternnachrichten lesen` hat. Das Recht vergibst du unter `Rollen`.",
     ],
     notes: [
-      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint, je höchstens 10 MB. Ein Foto öffnest du mit einem Tipp groß. Die Eltern sehen die Dateien in der Eltern-App.",
+      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint. Pro Datei sind höchstens 10 MB erlaubt. Ein Foto öffnest du mit einem Tipp groß. Die Eltern sehen die Dateien in der Eltern-App.",
       "Über dem Schreibfeld steht, wer die Unterhaltung lesen kann: die eine Bezugsperson und alle Mitarbeitenden oder nur die Leitung. Andere Bezugspersonen des Kindes lesen nicht mit.",
       "Schreibe persönliche Angaben nur in die Unterhaltung der richtigen Bezugsperson.",
       "Mit `Nur ungelesen` siehst du nur neue Unterhaltungen.",
@@ -7659,7 +7659,7 @@ export const parentMessagesTopic = function parentMessagesTopic(): HelpTopic {
     ],
     result: "Die OGS bekommt deine Nachricht sofort.",
     notes: [
-      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint, je höchstens 10 MB. Ein Foto öffnest du mit einem Tipp groß.",
+      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint. Pro Datei sind höchstens 10 MB erlaubt. Ein Foto öffnest du mit einem Tipp groß.",
       "Jedes Kind hat eine eigene Unterhaltung. Oben steht, für welches Kind sie gilt.",
       "Über dem Schreibfeld steht, wer mitliest, zum Beispiel `Lesen können: du und alle Mitarbeitenden der OGS.` Auf einem großen Bildschirm steht es auch oben. Andere Bezugspersonen deines Kindes lesen deine Unterhaltung nicht.",
       "Unter deiner Nachricht steht `Gesendet` und später `Von der OGS gelesen`.",
@@ -8001,7 +8001,7 @@ export const parentRequestsTopic = function parentRequestsTopic(
       "Plant ein Regeltermin alle Kinder einer Klasse, eines Jahrgangs oder einer Gruppe, steht dort `Mit Angebot verbinden`. Nur so fehlt das Kind dauerhaft.",
       // #4767: Warteliste je AG; Nachrücken ist die normale Freigabe.
       "Fragen Eltern einen Platz in einer vollen AG an? Dann zeigt die Anfrage zum Beispiel `Warteliste Platz 2`. Die älteste Anfrage ist zuerst dran.",
-      "Oben steht die Karte `Wartelisten`. Sie zeigt je AG die belegten Plätze und die wartenden Kinder in Reihenfolge. `Zur Anfrage` öffnet die Anfrage des Kindes.",
+      "Oben steht die Karte `Wartelisten`. Sie zeigt pro AG die belegten Plätze und die wartenden Kinder in Reihenfolge. `Zur Anfrage` öffnet die Anfrage des Kindes.",
       "Ist in einer AG ein Platz frei, steht dort `Platz frei` und beim ersten Kind `Als Nächstes dran`. Wähle bei seiner Anfrage `Freigeben`, dann rückt es nach.",
       "Anmeldungsänderungen öffnest du über `Prüfen`. Dafür brauchst du ein zusätzliches Recht.",
       // Ohne feste Gruppen gibt es keine Gruppenleitung, an der die
@@ -9295,7 +9295,7 @@ export const staffRecordTopic = function staffRecordTopic(): HelpTopic {
           "Wähle `Vorlage zuweisen` für ein Modell, das mehrere Personen teilen. Vorlagen legst du unter `Datenverwaltung` › `Arbeitszeitmodelle` an. Dort ordnest du eine Vorlage auch mehreren Personen auf einmal zu.",
           "Oder wähle `Eigenes Modell` nur für diese Person.",
           "Wähle bei `Rotation` zum Beispiel `Standard (1 Woche)` oder `A/B-Wochen (2 Wochen)`.",
-          "Trage je Wochentag die Stunden ein, zum Beispiel `4,45`.",
+          "Trage pro Wochentag die Stunden ein, zum Beispiel `4,45`.",
           "Wähle `Speichern`.",
         ],
       },
@@ -9307,7 +9307,7 @@ export const staffRecordTopic = function staffRecordTopic(): HelpTopic {
           "`Zeiterfassung`: die einzelnen Buchungen dieser Person.",
           "`Abwesenheiten`: unter `Kontingente` der Resturlaub und die Tage eigener Abwesenheitsarten, dazu `Krank melden` und `Freizeitausgleich eintragen`.",
           "`Stammdaten`: Person, Kontakt, Arbeitsvertrag, Qualifikationen und Personalnummer.",
-          "`Dokumente`: Dateien zur Akte, je mit Kategorie und Frist.",
+          "`Dokumente`: Dateien zur Akte. Jede Datei hat eine Kategorie und eine Frist.",
           "`Klassen`: nur bei Lehrkräften.",
         ],
       },
@@ -9427,7 +9427,7 @@ export const statisticsTopic = function statisticsTopic(): HelpTopic {
     ],
     result: "Die Zahlen gelten für den gewählten Bereich und Zeitraum.",
     notes: [
-      "Bei `Kurse` wählst du zusätzlich zwischen `Je Kurs` und `Je Kind`.",
+      "Bei `Kurse` wählst du zusätzlich zwischen `Pro Kurs` und `Pro Kind`.",
       "`Uhrzeit` zeigt, wie viele Kinder in jeder halben Stunde da sind: `Geplant` und `Da`. Für einen Tag siehst du die Zahlen dieses Tages. Für einen Zeitraum wählst du den Wochentag und siehst Durchschnitt und Höchstwert.",
       "Bei `Geplant` zählen kranke und entschuldigte Kinder nicht mit, Kinder mit „Kommt heute nicht“ auch nicht.",
       "Mit `Alle Klassen` und `Alle Gruppen` grenzt du die Kinder ein.",
@@ -9561,7 +9561,7 @@ export const studentNotesTopic = function studentNotesTopic(): HelpTopic {
       "Die `Bemerkung` an der Anwesenheit eines Angebots ist nur ein kurzer Satz zur Anwesenheit. Beobachtungen wie Verhalten oder einen Vorfall schreibst du als Notiz, mit dem Angebot als `Bezug`.",
     ],
     differences: [
-      "Du siehst weniger Notizen als eine Kollegin? Dann hat sie das Kind, du nicht. Die Reichweite entscheidet das je Notiz.",
+      "Du siehst weniger Notizen als eine Kollegin? Dann hat sie das Kind, du nicht. Die Reichweite entscheidet das pro Notiz.",
       "Ein Hinweis trägt `Übernommen aus den Betreuernotizen`? Der stammt aus dem früheren Textfeld und hat deshalb keinen Verfasser.",
       "Auf dem Handy gibt es keine Kopfzeile. Dort trägt `Mehr` unten den roten Zähler, und im Menü steht die Liste `Neu für dich`.",
     ],
@@ -9699,7 +9699,7 @@ export const studentSearchTopic = function studentSearchTopic(
         steps: [
           "Wähle oben rechts das Listensymbol (drei Striche). Mit dem Kachelsymbol (vier Kästchen) kommen die Karten zurück.",
           "Spalten ein- oder ausblenden? Öffne oben rechts das Menü mit den drei Punkten. Wähle unter `Spalten in der Liste` die Spalten.",
-          "Auf dem Handy zeigt die Liste je Kind eine Zeile. Was unter dem Namen steht, wählst du im Menü mit den drei Punkten unter `In der Zeile zeigen`, zum Beispiel `Gehzeit` oder `Gruppe`. Die übrigen Angaben siehst du mit dem Pfeil rechts in der Zeile.",
+          "Auf dem Handy zeigt die Liste pro Kind eine Zeile. Was unter dem Namen steht, wählst du im Menü mit den drei Punkten unter `In der Zeile zeigen`, zum Beispiel `Gehzeit` oder `Gruppe`. Die übrigen Angaben siehst du mit dem Pfeil rechts in der Zeile.",
           "Kreuze links in der Zeile Kinder an. Oben erscheint eine Leiste mit `Exportieren`, `Anmelden` und `Abmelden`.",
           "Wähle `Aufheben`, um alle Kreuze zu entfernen.",
         ],
@@ -9983,7 +9983,7 @@ export const targetOverrideTopic = function targetOverrideTopic(): HelpTopic {
       "Wähle `Sonderarbeitszeit anlegen`.",
       "Trage `Erster Tag` und `Letzter Tag` ein.",
       "Trage bei `Stunden pro Tag` die Stunden ein, zum Beispiel `8,5`.",
-      "Wähle `Je Wochentag`, wenn die Stunden unterschiedlich sind.",
+      "Wähle `Pro Wochentag`, wenn die Stunden unterschiedlich sind.",
       "Trage die Stunden für Montag bis Freitag ein.",
       "Wähle `Speichern`.",
     ],
@@ -9992,7 +9992,7 @@ export const targetOverrideTopic = function targetOverrideTopic(): HelpTopic {
     notes: [
       "Die Stunden gelten Montag bis Freitag, auch an Schließtagen. Gesetzliche Feiertage bleiben frei.",
       "Mit `0` Stunden muss die Person an diesen Tagen nicht arbeiten.",
-      "Bei `Je Wochentag` zeigt moto unter den Feldern die Summe für die Woche.",
+      "Bei `Pro Wochentag` zeigt moto unter den Feldern die Summe für die Woche.",
       "Ändern geht nicht. Lösche den Eintrag über die drei Punkte und lege ihn neu an.",
     ],
     troubleshootingDetails: [
@@ -10019,7 +10019,7 @@ export const teacherAbsenceListTopic =
       title: "Fehlzeiten einer Klasse ansehen",
       question: "Wie viele Tage hat ein Kind gefehlt?",
       summary:
-        "Unter `Fehlzeiten` stehen die Fehltage je Kind, für Klassenbuch und Zeugnis.",
+        "Unter `Fehlzeiten` stehen die Fehltage pro Kind, für Klassenbuch und Zeugnis.",
       group: "klasse",
       audience: "teacher",
       icon: "ClipboardList",
@@ -10027,7 +10027,7 @@ export const teacherAbsenceListTopic =
         "Öffne `Fehlzeiten`.",
         "Wähle die Klasse.",
         "Prüfe `Von` und `Bis`. Vorgewählt ist das laufende Halbjahr.",
-        "Lies je Kind die Fehltage, davon entschuldigt und unentschuldigt.",
+        "Lies pro Kind die Fehltage, davon entschuldigt und unentschuldigt.",
         "Wähle bei Bedarf `Exportieren`. Wähle `PDF` oder `Excel`.",
       ],
       result: "Du siehst die Fehltage jedes Kindes im gewählten Zeitraum.",
@@ -10556,7 +10556,7 @@ export const teacherHomeworkTopic = function teacherHomeworkTopic(): HelpTopic {
     title: "Hausaufgaben eintragen",
     question: "Wie trage ich Hausaufgaben für meine Klasse ein?",
     summary:
-      "Du trägst ein, was die Klasse an einem Tag tun soll. Die OGS meldet je Kind zurück.",
+      "Du trägst ein, was die Klasse an einem Tag tun soll. Die OGS meldet pro Kind zurück.",
     group: "klasse",
     audience: "teacher",
     icon: "NotePencil",
@@ -10591,7 +10591,7 @@ export const teacherHomeworkTopic = function teacherHomeworkTopic(): HelpTopic {
     result:
       "Die OGS sieht die Hausaufgaben in der Lernzeit bei jedem Kind der Klasse.",
     notes: [
-      "Für einen Tag kannst du mehrere Einträge machen, zum Beispiel einen je Fach.",
+      "Für einen Tag kannst du mehrere Einträge machen, zum Beispiel einen pro Fach.",
       "Jede Lehrkraft der Klasse kann alle Einträge ändern oder löschen. Auch die Einträge der anderen.",
       "Führst du selbst eine Lernzeit unter `Meine Aufsichten`? Dann gibst du die Rückmeldung dort mit `Hausaufgaben`.",
       "Eltern sehen weder die Hausaufgaben noch die Rückmeldung.",
@@ -10708,7 +10708,7 @@ export const teacherMessagesTopic = function teacherMessagesTopic(): HelpTopic {
     ],
     result: "Das OGS-Team bekommt deine Nachricht sofort.",
     notes: [
-      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint, je höchstens 10 MB. Ein Foto öffnest du mit einem Tipp groß.",
+      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint. Pro Datei sind höchstens 10 MB erlaubt. Ein Foto öffnest du mit einem Tipp groß.",
       "Vor deiner eigenen Nachricht steht `Du:`.",
       "Hier meldest du, was die OGS wissen muss, zum Beispiel eine falsche Abholzeit.",
       "Die OGS kann dich in einen Gruppenchat aufnehmen. Er steht dann mit seinem Namen in deiner Liste. Mit `Mitglieder` und `Gruppenchat verlassen` gehst du wieder heraus.",
@@ -10902,7 +10902,7 @@ export const teacherParentConferenceTopic =
       title: "Einen Elternsprechtag anbieten",
       question: "Wie biete ich den Eltern meiner Klasse Gesprächstermine an?",
       summary:
-        "Du legst einen Tag mit Zeitfenstern an. Die Eltern buchen in der Eltern-App ein Zeitfenster je Kind.",
+        "Du legst einen Tag mit Zeitfenstern an. Die Eltern buchen in der Eltern-App ein Zeitfenster pro Kind.",
       group: "nachrichten",
       audience: "teacher",
       icon: "CalendarCheck",
@@ -10912,11 +10912,11 @@ export const teacherParentConferenceTopic =
         "Wähle `Elternsprechtag`.",
         "Wähle `Neuer Elternsprechtag`.",
         "Wähle die Klasse und den Tag.",
-        "Gib `Beginn`, `Ende` und die `Dauer je Gespräch` an. Eine Pause und den Raum kannst du dazuschreiben.",
+        "Gib `Beginn`, `Ende` und die `Dauer pro Gespräch` an. Eine Pause und den Raum kannst du dazuschreiben.",
         "Wähle `Speichern`.",
       ],
       result:
-        "Die Eltern der Klasse sehen die freien Zeitfenster in der Eltern-App und buchen eines je Kind. Jede Buchung steht in deinem Kalender und im Kalender der Eltern.",
+        "Die Eltern der Klasse sehen die freien Zeitfenster in der Eltern-App und buchen eines pro Kind. Jede Buchung steht in deinem Kalender und im Kalender der Eltern.",
       notes: [
         "Wähle den Tag in der Liste. Dort siehst du, welches Kind wann kommt. Mit `Drucken` druckst du die Liste.",
         "Eltern buchen, verschieben oder sagen ab, bis 24 Stunden vor dem Termin. Danach melden sie sich bei dir.",
@@ -10968,7 +10968,7 @@ export const teacherParentLettersTopic =
       notes: [
         "Wähle den Brief in der Liste. Dort siehst du, wer gelesen, bestätigt oder zugestimmt hat.",
         "Bei `Mit Lesebestätigung` setzt du unter `Für jedes Kind einsetzen` Angaben wie den Vornamen in den Text. Jede Familie liest dann den Brief mit den Angaben ihres Kindes. Unter `So liest die Familie den Brief` siehst du ihn vorher.",
-        "Für Familien ohne moto wählst du im gesendeten Brief `Briefe drucken`. Das PDF hat einen Brief je Kind.",
+        "Für Familien ohne moto wählst du im gesendeten Brief `Briefe drucken`. Das PDF hat einen Brief pro Kind.",
         "Ein gesendeter Brief lässt sich nicht mehr ändern. Du kannst ihn über `Zurückziehen` zurücknehmen.",
         "Die OGS sieht deine Briefe in ihrer Übersicht. Ändern kannst nur du sie.",
         "Unter `Empfänger` steht bei jeder Mail, was aus ihr geworden ist. Steht dort `Adresse prüfen`, sage der OGS Bescheid. Sie korrigiert die Adresse.",
@@ -11241,7 +11241,7 @@ export const teamChatTopic = function teamChatTopic(): HelpTopic {
       SIMPLE_NAV_DIFFERENCE,
     ],
     notes: [
-      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint, je höchstens 10 MB. Ein Foto öffnest du mit einem Tipp groß.",
+      "Mit `Foto oder Datei anhängen` (Büroklammer neben dem Textfeld) hängst du bis zu 5 Dateien an eine Nachricht: Fotos, PDF, Word, Excel oder PowerPoint. Pro Datei sind höchstens 10 MB erlaubt. Ein Foto öffnest du mit einem Tipp groß.",
       "Unter deiner Nachricht in einem Gruppenchat steht, wie viele sie gelesen haben. Tippe darauf, dann siehst du die Namen.",
       "Eltern können den Team-Chat nicht sehen. Für Eltern nutzt du `Nachrichten` im Bereich `Eltern`.",
       "Mit `Nur ungelesen` siehst du nur Unterhaltungen mit neuen Nachrichten.",
@@ -11323,7 +11323,7 @@ export const traegerAbsenceTypesTopic =
       question:
         "Wie lege ich Abwesenheitsarten und Kontingente für alle Schulen an?",
       summary:
-        "Du legst Arten wie Regenerationstag einmal für den Träger an. Jede Person hat je Art ein Kontingent über alle ihre Schulen.",
+        "Du legst Arten wie Regenerationstag einmal für den Träger an. Jede Person hat pro Art ein Kontingent über alle ihre Schulen.",
       group: "personal",
       audience: "traeger",
       icon: "CalendarSlash",
@@ -11338,7 +11338,7 @@ export const traegerAbsenceTypesTopic =
             "Wähle in der Navigation `Abwesenheitsarten`.",
             "Wähle oben `Abwesenheitsart anlegen`.",
             "Gib einen Namen ein, zum Beispiel Regenerationstag.",
-            "Lasse `Tage je Person zählen (Kontingent)` an und trage die Tage je Jahr ein.",
+            "Lasse `Tage pro Person zählen (Kontingent)` an und trage die Tage pro Jahr ein.",
             "Wähle bei `Rest verfällt`, wie lange ein Rest ins neue Jahr geht.",
             "Schalte `Betreuungskräfte dürfen beantragen` an, wenn sie die Art selbst beantragen sollen.",
             "Wähle `Anlegen`.",
@@ -11558,10 +11558,10 @@ export const traegerArrivalPickupTimesTopic =
       title: "Ankunft und Abholung",
       question: "Wann kommen die Kinder an und wann gehen sie?",
       summary:
-        "Farbige Felder zeigen je Wochentag und halbe Stunde, wie viele Kinder ankommen und gehen. So planst du Personal für die vollen Zeiten.",
+        "Farbige Felder zeigen pro Wochentag und halbe Stunde, wie viele Kinder ankommen und gehen. So planst du Personal für die vollen Zeiten.",
       image: "/help/screens/ankunft-und-abholung.webp",
       imageAlt:
-        "Oben die Hauptzeiten Meiste Ankünfte und Meiste Abholungen. Darunter die grünen Felder der Ankunft mit einer Zeile je Wochentag und einem Feld je halbe Stunde.",
+        "Oben die Hauptzeiten Meiste Ankünfte und Meiste Abholungen. Darunter die grünen Felder der Ankunft mit einer Zeile pro Wochentag und einem Feld pro halbe Stunde.",
       group: "auswertung",
       audience: "traeger",
       icon: "ClockAfternoon",
@@ -11574,7 +11574,7 @@ export const traegerArrivalPickupTimesTopic =
         "Lies oben die Hauptzeiten: `Meiste Ankünfte` und `Meiste Abholungen`.",
         "Lies die Felder unter `Ankunft` und `Abholung`. Je dunkler ein Feld, desto mehr Kinder. Die Zahl im Feld ist der Durchschnitt eines Tages.",
         "Zeige auf ein Feld oder tippe darauf. Darunter steht dann die genaue Zahl.",
-        "Wähle unter `Je Schule` eine Schule oder oben neben dem Zeitraum eine Schule. Dann siehst du nur diese Schule.",
+        "Wähle unter `Pro Schule` eine Schule oder oben neben dem Zeitraum eine Schule. Dann siehst du nur diese Schule.",
         "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Mit einer gewählten Schule enthält die Datei nur diese Schule.",
       ],
       result:
@@ -11608,7 +11608,7 @@ export const traegerBillingRunTopic =
       title: "Ferien abrechnen",
       question: "Wie stelle ich die Rechnungen für die Ferien aus?",
       summary:
-        "Ein Abrechnungslauf erstellt die Rechnungen für einen Ferienzeitraum. Du prüfst die Vorschau, korrigierst einzelne Beträge, gibst den Lauf frei und erstellst die Schreiben an die Familien. Eine ausgestellte Rechnung stornierst du oder schreibst einen Betrag gut. Unter `Familien` siehst du je Familie alle Rechnungen und die offene Forderung vor Zahlungseingang.",
+        "Ein Abrechnungslauf erstellt die Rechnungen für einen Ferienzeitraum. Du prüfst die Vorschau, korrigierst einzelne Beträge, gibst den Lauf frei und erstellst die Schreiben an die Familien. Eine ausgestellte Rechnung stornierst du oder schreibst einen Betrag gut. Unter `Familien` siehst du pro Familie alle Rechnungen und die offene Forderung vor Zahlungseingang.",
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "FileText",
@@ -11650,8 +11650,8 @@ export const traegerBillingRunTopic =
             "Wähle in der Navigation `Abrechnungsläufe`. Der Reiter `Ferien` ist schon offen.",
             "Wähle `Lauf starten`.",
             "Wähle den Ferienzeitraum und dann `Lauf starten`.",
-            "Prüfe die Vorschau unter `Rechnungen`. Je Familie steht dort eine Rechnung.",
-            "Die Beträge je Kind blendest du mit `Aufschlüsselung zeigen` unter allen Rechnungen ein. Auf dem Handy findest du `Aufschlüsselung zeigen` im Menü mit den drei Punkten.",
+            "Prüfe die Vorschau unter `Rechnungen`. Pro Familie steht dort eine Rechnung.",
+            "Die Beträge pro Kind blendest du mit `Aufschlüsselung zeigen` unter allen Rechnungen ein. Auf dem Handy findest du `Aufschlüsselung zeigen` im Menü mit den drei Punkten.",
           ],
         },
         {
@@ -11703,7 +11703,7 @@ export const traegerBillingRunTopic =
             "Wähle im freigegebenen Lauf bei `Bestätigungsschreiben` den Knopf `Schreiben erstellen`.",
             "Prüfe die `Fälligkeiten`. Sie stehen auf den Rechnungen fest. Nur ältere Rechnungen haben noch das Feld `Zahlen bis`.",
             "Schreibe bei `Hinweise für die Eltern` zum Beispiel die Packliste und was bei Krankheit gilt.",
-            "Trage bei `Notfallnummern der Betreuung` je Betreuung den Namen und die Telefonnummer ein.",
+            "Trage bei `Notfallnummern der Betreuung` pro Betreuung den Namen und die Telefonnummer ein.",
             "Wähle `Vorschau ansehen`. Du siehst das Schreiben der ersten Familie.",
             "Wähle `Schreiben erstellen`.",
             "Das Schreiben einer Familie lädst du über das Menü mit den drei Punkten bei ihrer Rechnung herunter: `Schreiben herunterladen`.",
@@ -11789,10 +11789,10 @@ export const traegerBillingRunTopic =
             "Das geht, sobald der Lauf freigegeben ist und ein Kostenträger Beiträge übernimmt.",
           steps: [
             "Öffne den freigegebenen Lauf.",
-            "Die Karte `Kostenübernahme` zeigt je Kostenträger die Zahl der Rechnungen und den Betrag.",
+            "Die Karte `Kostenübernahme` zeigt pro Kostenträger die Zahl der Rechnungen und den Betrag.",
             "Wähle in der Zeile des Kostenträgers das Menü mit den drei Punkten.",
             "Wähle unter `Liste für die Erstattung` das Format: `PDF`, `Excel` oder `CSV`.",
-            "Schicke die Liste an den Kostenträger. Sie nennt je Kind die Wochen, den Grundbetrag, die Geschwisterermäßigung, den übernommenen Betrag, ob ein Nachweis vorlag und den Tag der Bestätigung.",
+            "Schicke die Liste an den Kostenträger. Sie nennt pro Kind die Wochen, den Grundbetrag, die Geschwisterermäßigung, den übernommenen Betrag, ob ein Nachweis vorlag und den Tag der Bestätigung.",
           ],
         },
         {
@@ -11805,7 +11805,7 @@ export const traegerBillingRunTopic =
             "Suche die Familie nach Name, E-Mail oder Debitorennummer. Mit dem Filter `Mit offener Forderung` siehst du nur Familien, deren Rechnungen noch Geld verlangen. Ob gezahlt wurde, sieht moto nicht. Mit `Ohne Debitorennummer` siehst du Familien ohne Nummer. Denselben Filter setzt ein Klick auf `ohne Debitorennummer` oben in der Zeile mit den Zahlen.",
             "Unter `Debitorennummer` steht die Nummer der Familie. Steht auf älteren Rechnungen eine andere, siehst du sie darunter. `Nur Ferien` heißt: Die Familie hat keinen Betreuungsvertrag.",
             "Öffne das Drei-Punkte-Menü neben der Nummer. Wähle `Debitorennummer ändern` oder `Debitorennummer eintragen`. Trage die Nummer ein und wähle `Speichern`. Ausgestellte Rechnungen behalten ihre Nummer.",
-            "Führt dein Träger die Debitorennummer je Kind, heißt die Spalte `Nummern der Kinder`. Dort steht jedes Kind mit seiner Nummer. Familien mit Betreuungsvertrag stehen dann schon vor der ersten Rechnung in der Liste. Im Drei-Punkte-Menü wählst du `Nummern der Kinder eintragen` oder `Nummern der Kinder ändern`. Jedes Kind hat ein eigenes Feld. Wähle `Speichern`. Die nächste Monatsrechnung eines Kindes nimmt seine Nummer.",
+            "Führt dein Träger die Debitorennummer pro Kind, heißt die Spalte `Nummern der Kinder`. Dort steht jedes Kind mit seiner Nummer. Familien mit Betreuungsvertrag stehen dann schon vor der ersten Rechnung in der Liste. Im Drei-Punkte-Menü wählst du `Nummern der Kinder eintragen` oder `Nummern der Kinder ändern`. Jedes Kind hat ein eigenes Feld. Wähle `Speichern`. Die nächste Monatsrechnung eines Kindes nimmt seine Nummer.",
             "Wähle die Familie. Du siehst ihre Summen, wer zahlt, den Zahlungsweg und jedes Dokument mit Ferienzeitraum, Kindern, Betrag und Stand. Eine Familie ohne Rechnung öffnet sich nicht.",
             "Wähle ein Dokument, um seinen Abrechnungslauf zu öffnen. Dort stornierst du oder schreibst gut.",
           ],
@@ -11822,14 +11822,14 @@ export const traegerBillingRunTopic =
         },
       ],
       result:
-        "Jede Rechnung hat ihre Nummer. Die Nummern sind lückenlos. Ausgestellte Rechnungen und ihre Schreiben lassen sich nicht mehr ändern. Die Übersicht zeigt jede Position je Familie, die Summe jeder Rechnung und die Gesamtsumme. Storno und Gutschrift stehen dort als eigene Zeilen mit Minusbetrag und der Nummer der Rechnung.",
+        "Jede Rechnung hat ihre Nummer. Die Nummern sind lückenlos. Ausgestellte Rechnungen und ihre Schreiben lassen sich nicht mehr ändern. Die Übersicht zeigt jede Position pro Familie, die Summe jeder Rechnung und die Gesamtsumme. Storno und Gutschrift stehen dort als eigene Zeilen mit Minusbetrag und der Nummer der Rechnung.",
       notes: [
-        "Bezahlt ein Kostenträger, bekommt die Familie eine Rechnung über 0 €. Im Schreiben steht, wer die Kosten übernimmt. Die Übersicht für die Kämmerei nennt unter der Gesamtsumme je Kostenträger den Betrag, den er übernimmt.",
+        "Bezahlt ein Kostenträger, bekommt die Familie eine Rechnung über 0 €. Im Schreiben steht, wer die Kosten übernimmt. Die Übersicht für die Kämmerei nennt unter der Gesamtsumme pro Kostenträger den Betrag, den er übernimmt.",
         "Ferien werden im Voraus abgerechnet. Grundlage ist der Beitrag, den moto beim Bestätigen der Anmeldung festgehalten hat.",
         "Jede Korrektur steht als eigene Position auf der Rechnung. Unter der Rechnung siehst du alle Korrekturen mit Datum und Begründung.",
         "Wird nach dem Start noch eine Anmeldung bestätigt, kommt sie bis zur Freigabe in den Lauf. Nach der Freigabe startest du für sie einen neuen Lauf.",
         "Logo, Farbe, Absender und Fußzeile im Schreiben kommen aus `Briefkopf und Vorlagen`. Die Ansprechperson kommt aus `Allgemein`, die Bankverbindung aus `Abrechnungsvorgaben`. Als Verwendungszweck steht im Schreiben die Debitorennummer der Rechnung. Hat die Rechnung keine, steht dort die Rechnungsnummer. Einen eigenen Zahlungstext schreibst du in den Einstellungen unter `Allgemein` im Bereich `Ferienbetreuung`.",
-        "Die Rechnung übernimmt die Debitorennummer der Anmeldung. Hat die Anmeldung keine, nimmt sie die Nummer der Familie aus dem Reiter `Familien`. Führt dein Träger die Nummer je Kind, bekommt jedes Kind eine eigene Rechnung mit seiner Nummer. Geschwister einer Anmeldung haben dann mehrere Rechnungen. Wurde die Anmeldung vor der Umstellung schon mit einer Rechnung abgerechnet, bleibt es bei einer Rechnung, auch nach einem Storno. Die Nummer steht im Schreiben unter der Rechnungsnummer und in der Übersicht für die Kämmerei in der Spalte `Debitorennummer`.",
+        "Die Rechnung übernimmt die Debitorennummer der Anmeldung. Hat die Anmeldung keine, nimmt sie die Nummer der Familie aus dem Reiter `Familien`. Führt dein Träger die Nummer pro Kind, bekommt jedes Kind eine eigene Rechnung mit seiner Nummer. Geschwister einer Anmeldung haben dann mehrere Rechnungen. Wurde die Anmeldung vor der Umstellung schon mit einer Rechnung abgerechnet, bleibt es bei einer Rechnung, auch nach einem Storno. Die Nummer steht im Schreiben unter der Rechnungsnummer und in der Übersicht für die Kämmerei in der Spalte `Debitorennummer`.",
         "Storno und Gutschrift bekommen ihre Nummer aus demselben Nummernkreis wie die Rechnungen. In der Aufschlüsselung einer Rechnung steht unter `Verlauf` ihr Storno, ihre Gutschriften und die neue Rechnung.",
         "Sind die Schreiben des Laufs schon erstellt, bekommen Storno und Gutschrift ihr Schreiben sofort. Du sendest es wie die anderen Schreiben unter `Versand per Mail`.",
         "Nach einem Storno lässt sich die Debitorennummer der Anmeldung wieder ändern. Die neue Rechnung übernimmt sie.",
@@ -11878,7 +11878,7 @@ export const traegerBillingTermsTopic =
       title: "Zahlung und Empfänger der Rechnungen",
       question: "Wie lege ich fest, wie und bis wann Familien zahlen?",
       summary:
-        "Je Leistung legst du den Zahlungsweg und das Zahlungsziel fest. Das Mittagessen steht auf der Rechnung der Betreuung oder auf einer eigenen Rechnung. Für eine einzelne Familie legst du einen anderen Empfänger, einen eigenen Zahlungsweg oder einen eigenen Zahltag fest.",
+        "Pro Leistung legst du den Zahlungsweg und das Zahlungsziel fest. Das Mittagessen steht auf der Rechnung der Betreuung oder auf einer eigenen Rechnung. Für eine einzelne Familie legst du einen anderen Empfänger, einen eigenen Zahlungsweg oder einen eigenen Zahltag fest.",
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "Users",
@@ -11886,12 +11886,12 @@ export const traegerBillingTermsTopic =
       steps: [],
       instructionGroups: [
         {
-          title: "Zahlung je Leistung festlegen",
+          title: "Zahlung pro Leistung festlegen",
           description:
             "Ohne deine Wahl zahlen alle Familien per Überweisung, innerhalb von 14 Tagen.",
           steps: [
             "Wähle unten in der Navigation `Einstellungen` und dann `Abrechnungsvorgaben`.",
-            "In der Karte `Zahlung und Rechnungen` steht je Leistung eine Zeile: `Monatsbeitrag Betreuung`, `Mittagessen` und `Ferienbetreuung`.",
+            "In der Karte `Zahlung und Rechnungen` steht pro Leistung eine Zeile: `Monatsbeitrag Betreuung`, `Mittagessen` und `Ferienbetreuung`.",
             "Wähle die Zeile der Leistung. Oder wähle das Menü mit den drei Punkten und dann `Bearbeiten`.",
             "Wähle den `Zahlungsweg`: `Überweisung` oder `Lastschrift`.",
             "Trage das `Zahlungsziel in Tagen` ein. Das sind die Tage nach dem Rechnungsdatum.",
@@ -11906,7 +11906,7 @@ export const traegerBillingTermsTopic =
           steps: [
             "Öffne den Lauf unter `Abrechnungsläufe`, im Reiter `Monatsbeiträge` oder `Ferien`.",
             "Wähle im Monatslauf in der Karte `Monatslauf`, im Ferienlauf in der Karte `Abrechnungslauf` den Knopf `Fälligkeiten bearbeiten`. Es öffnet sich eine eigene Seite.",
-            "Wähle je Zahlungsweg ein Datum. Ohne Datum gilt das Zahlungsziel der Leistung.",
+            "Wähle pro Zahlungsweg ein Datum. Ohne Datum gilt das Zahlungsziel der Leistung.",
             "Wähle `Speichern`. Du kommst zurück zum Lauf. Bei `Fällig` steht jetzt das Datum.",
           ],
         },
@@ -12077,7 +12077,7 @@ export const traegerCareContractsTopic =
       title: "Betreuungsverträge erstellen und senden",
       question: "Wie schicke ich den Eltern den Betreuungsvertrag?",
       summary:
-        "Aus jeder angenommenen Anmeldung entsteht ein Vertrag mit den gebuchten Modulen je Wochentag. Entweder gilt er gleich bei der Annahme, oder du prüfst den Entwurf und sendest ihn per Mail und in die Eltern-App. Die Eltern unterschreiben ihn dann online oder auf Papier.",
+        "Aus jeder angenommenen Anmeldung entsteht ein Vertrag mit den gebuchten Modulen pro Wochentag. Entweder gilt er gleich bei der Annahme, oder du prüfst den Entwurf und sendest ihn per Mail und in die Eltern-App. Die Eltern unterschreiben ihn dann online oder auf Papier.",
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "Signature",
@@ -12125,7 +12125,7 @@ export const traegerCareContractsTopic =
           steps: [
             "Wähle den Reiter `Verträge`.",
             "Wähle `Verträge erstellen`. Die Zahl dahinter nennt die Kinder ohne Vertrag. Kann ein Kind noch keinen Entwurf bekommen, steht im Fenster der Grund.",
-            "Prüfe die Liste. moto übernimmt Kind, Eltern, Beginn und je Wochentag die gebuchten Module mit ihrer Endzeit, zum Beispiel `Mo bis 14:00 · Di bis 16:30`.",
+            "Prüfe die Liste. moto übernimmt Kind, Eltern, Beginn und pro Wochentag die gebuchten Module mit ihrer Endzeit, zum Beispiel `Mo bis 14:00 · Di bis 16:30`.",
             "Wähle die Kinder aus. Ein Vertrag umfasst alle Module eines Kindes. Fehlen bei einem Modul die Bedingungen, oder weichen sie zwischen den Modulen ab, lege sie zuerst fest.",
             "Wähle `Entwürfe erstellen`.",
           ],
@@ -12207,7 +12207,7 @@ export const traegerCareContractsTopic =
             "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Geschwister zusammenführen`. Nach einem Import führt dich auch `Geschwister zusammenführen` dorthin.",
             "Die Liste zeigt jede Familie ohne Mail-Adresse, nach Nachnamen. Geschwister mit demselben Nachnamen stehen untereinander. Mit der Suche findest du Kind, Eltern oder Vertragsnummer.",
             "Kreuze die Familien an, die zusammengehören. Unten erscheint eine Leiste. Wähle dort `Zusammenführen`.",
-            "Wähle im Fenster, welcher Vertrag die Familie führt. Von ihm kommen Debitorennummer, Zahlungsweg und SEPA-Mandat der Familie. Eine Debitorennummer je Kind bleibt beim Kind.",
+            "Wähle im Fenster, welcher Vertrag die Familie führt. Von ihm kommen Debitorennummer, Zahlungsweg und SEPA-Mandat der Familie. Eine Debitorennummer pro Kind bleibt beim Kind.",
             "Wähle `Zusammenführen`. Die Spalte `Familie` zeigt jetzt zum Beispiel `2 Kinder zusammen`. Im nächsten Monatslauf zählen die Kinder als Geschwister.",
             "Kommt danach der Mandatsimport, gilt ein Mandat mit derselben Referenz für beide Kinder.",
             "Falsch zusammengeführt? Wähle bei der Familie das Menü mit den drei Punkten und dann zum Beispiel `Mila Schulz lösen`. Bestätige mit `Lösen`. Danach gilt für das Kind wieder, was bei seinem Vertrag gespeichert war.",
@@ -12224,7 +12224,7 @@ export const traegerCareContractsTopic =
             "Stimmt bei einem Vertrag das Angebot nicht? Korrigiere das zuerst. Verknüpfe danach.",
             "Die Vertragsnummer steht auf der Seite des Vertrags unter `Vertragsangaben`, im Feld `Vertrag Nr.` Alle Nummern auf einmal bekommst du in der Vertragsliste im Menü unter `Herunterladen`: Die Datei hat die Spalten `Vertrag Nr.` und `Kinderakte`.",
             "Die Nummer der Kinderakte steht im OGS-Portal der Schule. Öffne dort `Datenverwaltung` › `Kinderdaten` und das Kind. Die Zahl am Ende der Adresse ist die Nummer, zum Beispiel …/students/123. Hast du keinen Zugang, frag die Schule.",
-            "Lege eine CSV-Datei an: eine Zeile je Vertrag, eine Spalte `Vertrag Nr.` und eine Spalte `Kinderakte`, wie im Export. Mit `Beispieldatei` bekommst du den Aufbau.",
+            "Lege eine CSV-Datei an: eine Zeile pro Vertrag, eine Spalte `Vertrag Nr.` und eine Spalte `Kinderakte`, wie im Export. Mit `Beispieldatei` bekommst du den Aufbau.",
             "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Mit Kinderakten verknüpfen`. Nach einem Import führt dich auch `Mit Kinderakten verknüpfen` dorthin.",
             "Ziehe die Datei in das Feld oder wähle `Datei wählen`. Erkennt moto die Spalten nicht, wählst du sie unter `Spalten zuordnen`.",
             "Prüfe die Zeilen unter `Prüfen und verknüpfen`. `Bereit` verknüpft moto. `Schon verknüpft` ist schon erledigt. `Unklar` und `Nicht möglich` bleiben, wie sie sind. Den Grund nennt die Spalte `Hinweis`.",
@@ -12253,7 +12253,7 @@ export const traegerCareContractsTopic =
             "Ein importierter Vertrag hat an der Schule noch keine Anmeldung. moto legt sie aus dem Vertrag an, schon genehmigt, und bindet den Vertrag daran. Die Kinder stehen dann in den Gruppenlisten. Eltern bekommen keine Mail und keine Einladung, die Kinderakte bleibt, wie sie ist. Die Reihenfolge: falls nötig `Module neu zuordnen`, dann `Mit Kinderakten verknüpfen`, dann `Anmeldungen nachtragen`.",
           steps: [
             "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Anmeldungen nachtragen`.",
-            "Hat dein Träger mehrere Schulen, wähle unter `Schule wählen` die Schule. moto trägt je Schule nach.",
+            "Hat dein Träger mehrere Schulen, wähle unter `Schule wählen` die Schule. moto trägt pro Schule nach.",
             "Prüfe unter `Vorschau prüfen` jede Zeile. Bei `Vertrag` steht das Kind, wie der Vertrag es nennt, bei `Kinderakte` das Kind der Schule. Steht dort `Name weicht ab`, prüfe zuerst die Verknüpfung.",
             "Bei `Betreuung` stehen Modul, Wochentage mit Endzeit und Zeitraum. So bucht die Anmeldung das Kind.",
             "`Bereit` trägt moto nach. Hat das Kind schon eine passende Anmeldung, bindet moto den Vertrag nur daran. `Erledigt` ist schon gebunden. Bei `Zurückgestellt` und `Hängt` steht in der Spalte `Hinweis`, was fehlt und wer es klärt. `Ohne Kinderakte` verknüpfst du zuerst.",
@@ -12294,7 +12294,7 @@ export const traegerCareContractsTopic =
           steps: [
             "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Module neu zuordnen`.",
             "Du kennst den Aufbau noch nicht? Wähle `Beispieldatei`. Die Datei hat die Spalten `Vertrag`, `Wochentag`, `Bisheriges_Modul` und `Neues_Modul`.",
-            "Schreibe je Vertrag, Wochentag und bisherigem Modul eine Zeile. Bei `Vertrag` steht die Vertragsnummer aus moto. Bei `Wochentag` geht zum Beispiel `Mo`, `Mo-Fr` oder `Montag`.",
+            "Schreibe pro Vertrag, Wochentag und bisherigem Modul eine Zeile. Bei `Vertrag` steht die Vertragsnummer aus moto. Bei `Wochentag` geht zum Beispiel `Mo`, `Mo-Fr` oder `Montag`.",
             "Weißt du das neue Modul noch nicht? Lass `Neues_Modul` leer. moto stellt den ganzen Vertrag dann zurück und ändert ihn nicht.",
             "Wähle bei `Gilt ab` den Tag, ab dem die neuen Module gelten. Vorgeschlagen ist der Erste des nächsten Monats. Frühestens geht heute.",
             "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
@@ -12311,11 +12311,11 @@ export const traegerCareContractsTopic =
           steps: [
             "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Vertragsangaben nachpflegen`.",
             "Wähle bei `1. Liste herunterladen` den Knopf `Liste herunterladen`. Die Liste enthält jeden importierten Vertrag mit seinen Angaben in moto.",
-            "Ergänze die Liste. `Vertragsparteien`: Namen als „Nachname, Vorname“, getrennt mit „ | “. Ein weiterer Name kommt dazu. Schreibst du einen Namen anders, ändert moto die Schreibweise. Vor- oder Nachname muss dabei gleich bleiben. Ändere je Liste nur einen Namen pro Vertrag. Keine Partei fällt weg. Mail-Adresse und Elternkonto bleiben.",
+            "Ergänze die Liste. `Vertragsparteien`: Namen als „Nachname, Vorname“, getrennt mit „ | “. Ein weiterer Name kommt dazu. Schreibst du einen Namen anders, ändert moto die Schreibweise. Vor- oder Nachname muss dabei gleich bleiben. Ändere in der Liste nur einen Namen pro Vertrag. Keine Partei fällt weg. Mail-Adresse und Elternkonto bleiben.",
             "`Abschlussart`: „online“ oder „papier“. `Abschlussdatum`: ein Datum wie 12.03.2026, oder „unbekannt“, wenn du den Tag nicht belegen kannst.",
             "Trage bei `Beleg` in jeder geänderten Zeile ein, woher die Angabe stammt, zum Beispiel den Namen der PDF mit dem Vertrag. Eine leere Zelle ändert nichts. `Vertrag-ID` und `Kind` änderst du nicht.",
             "Speichere die Liste als CSV-Datei. Ziehe sie bei `2. Ausgefüllte Liste hochladen` in das Feld oder wähle `Datei wählen`.",
-            "Prüfe die Vorschau. Je Zeile steht der alte Wert durchgestrichen und daneben der neue. `Wird geändert` ändert moto. `Bereits aktuell` bleibt, wie es ist. Bei `Fehler` steht der Grund in der Spalte, zu der er gehört.",
+            "Prüfe die Vorschau. Pro Zeile steht der alte Wert durchgestrichen und daneben der neue. `Wird geändert` ändert moto. `Bereits aktuell` bleibt, wie es ist. Bei `Fehler` steht der Grund in der Spalte, zu der er gehört.",
             "Wähle unten zum Beispiel `3 Verträge ändern`. moto fragt noch einmal. Bestätige.",
             "Auf der Vertragsseite steht danach die Karte `Nachgepflegte Angaben` mit dem Tag, dem Beleg und der Änderung. Lädst du dieselbe Liste noch einmal hoch, ändert sich nichts.",
           ],
@@ -12325,7 +12325,7 @@ export const traegerCareContractsTopic =
           steps: [
             "Die Eltern beantragen in der Eltern-App andere Tage oder Module. Du oder die Schule entscheidet.",
             "Wähle in der Liste das Kind. Im Reiter `Unterschrift und Versand` steht die Karte `Änderungswunsch der Eltern`. Wartet ein Wunsch, zeigt der Reiter eine Zahl.",
-            "Je Modul siehst du die bisherige und die gewünschte Buchung. Bei festen Tagen steht dort `Gebucht (feste Tage)`.",
+            "Pro Modul siehst du die bisherige und die gewünschte Buchung. Bei festen Tagen steht dort `Gebucht (feste Tage)`.",
             "Module, die gleich bleiben, stehen darunter bei `Bleibt gebucht`.",
             "Wähle `Freigeben`. Prüfe `Gilt ab` und die angezeigten Änderungen. Wähle noch einmal `Freigeben`.",
             "Oder wähle `Ablehnen`. Schreibe eine Begründung für die Eltern und wähle `Ablehnen`.",
@@ -12440,7 +12440,7 @@ export const traegerCareCostSharesTopic =
       question:
         "Wie trage ich ein, dass Bildung und Teilhabe oder das Jugendamt mitzahlt?",
       summary:
-        "Du trägst je Kind ein, wer wie viel vom Monatsbeitrag übernimmt. Die Familie bekommt nur den Rest in Rechnung. Den Teil des Kostenträgers lädst du als eigene Liste herunter.",
+        "Du trägst pro Kind ein, wer wie viel vom Monatsbeitrag übernimmt. Die Familie bekommt nur den Rest in Rechnung. Den Teil des Kostenträgers lädst du als eigene Liste herunter.",
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "HandCoins",
@@ -12526,9 +12526,9 @@ export const traegerCareMealsTopic =
     return {
       id: HELP_TOPICS.traegerCareMeals,
       title: "Mensa abrechnen",
-      question: "Wie rechne ich das Essen ab, je Essen oder als Pauschale?",
+      question: "Wie rechne ich das Essen ab, pro Essen oder als Pauschale?",
       summary:
-        "Du legst je Schule fest, wie die Mensa abgerechnet wird. Der Monatslauf setzt freigegebene Monate auf die Rechnung des Kindes.",
+        "Du legst pro Schule fest, wie die Mensa abgerechnet wird. Der Monatslauf setzt freigegebene Monate auf die Rechnung des Kindes.",
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "UtensilsCrossed",
@@ -12544,15 +12544,15 @@ export const traegerCareMealsTopic =
             "Wähle `Preise und Ermäßigungen` und dann den Reiter `Mensa`.",
             "Wähle bei der Schule `Preis festlegen`.",
             "Wähle bei `Gültig ab` den ersten Monat.",
-            "Wähle die Abrechnungsart: `Je Essen` oder `Pauschale`.",
-            "Trage den Betrag ein, zum Beispiel 4,80 je Essen.",
+            "Wähle die Abrechnungsart: `Pro Essen` oder `Pauschale`.",
+            "Trage den Betrag ein, zum Beispiel 4,80 pro Essen.",
             "Wähle `Preis speichern`.",
           ],
         },
         {
           title: "Im Monatslauf",
           description:
-            "Die Mensa steht im Monatslauf als eigene Zeile je Monat auf der Rechnung des Kindes, zum Beispiel „2 Mittagessen im Januar 2026“.",
+            "Die Mensa steht im Monatslauf als eigene Zeile pro Monat auf der Rechnung des Kindes, zum Beispiel „2 Mittagessen im Januar 2026“.",
           steps: [
             "Wähle `Abrechnungsläufe` und dann den Reiter `Monatsbeiträge`.",
             "Starte oder öffne den Lauf eines Monats.",
@@ -12585,7 +12585,7 @@ export const traegerCareMonthsTopic =
       title: "Monatsbeiträge abrechnen",
       question: "Wie rechne ich die Betreuung jeden Monat ab?",
       summary:
-        "Ein Monatslauf rechnet einen Monat für die gewählten Schulen nach den gültigen Verträgen ab. Der Beitrag eines Kindes kommt aus der Preisliste: als Summe der gebuchten Wochentage oder als Staffel nach Tagen je Woche. Es zählt der Vertrag, nicht die Anwesenheit. Vor der Freigabe prüfst du die Vorschau, änderst einzelne Rechnungen und schließt Rechnungen aus, die noch nicht stimmen. Nach der Freigabe erstellst du die Schreiben, sendest sie an die Familien und stornierst eine falsche Rechnung.",
+        "Ein Monatslauf rechnet einen Monat für die gewählten Schulen nach den gültigen Verträgen ab. Der Beitrag eines Kindes kommt aus der Preisliste: als Summe der gebuchten Wochentage oder als Staffel nach Tagen pro Woche. Es zählt der Vertrag, nicht die Anwesenheit. Vor der Freigabe prüfst du die Vorschau, änderst einzelne Rechnungen und schließt Rechnungen aus, die noch nicht stimmen. Nach der Freigabe erstellst du die Schreiben, sendest sie an die Familien und stornierst eine falsche Rechnung.",
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "CalendarCheck",
@@ -12598,13 +12598,13 @@ export const traegerCareMonthsTopic =
         {
           title: "Preise festlegen",
           description:
-            "Jede Schule hat eigene Preise. Jedes Modul hat eine Preisform. `Je Wochentag`: Jeder gebuchte Tag hat einen Monatspreis, der Beitrag ist die Summe. `Nach Tagen je Woche`: Der Beitrag hängt nur von der Zahl der gebuchten Tage ab, zum Beispiel 3 Tage = 60,00 €.",
+            "Jede Schule hat eigene Preise. Jedes Modul hat eine Preisform. `Pro Wochentag`: Jeder gebuchte Tag hat einen Monatspreis, der Beitrag ist die Summe. `Nach Tagen pro Woche`: Der Beitrag hängt nur von der Zahl der gebuchten Tage ab, zum Beispiel 3 Tage = 60,00 €.",
           steps: [
             "Wähle `Preise und Ermäßigungen`. Der Reiter `Preisliste` ist schon offen.",
             "Wähle bei der Schule `Neue Preise`.",
             "Wähle bei `Gültig ab` den Monat, ab dem die Preise gelten.",
             "Wähle bei `Beitragsfreie Monate` die Monate ohne Beitrag, zum Beispiel `Aug`. Dann stellt der Monatslauf für diese Schule im August keine Rechnung aus.",
-            "Wähle je Modul `Je Wochentag` oder `Nach Tagen je Woche`.",
+            "Wähle pro Modul `Pro Wochentag` oder `Nach Tagen pro Woche`.",
             "Trage unter `1. Kind` die Monatspreise ein, zum Beispiel 16,00. Ein leeres Feld setzt keinen Preis. Dann gilt der Preis davor.",
             "Hat jedes weitere Kind einen eigenen Preis, trage ihn unter `Jedes weitere Kind` ein, zum Beispiel 12,50. Leer heißt: gleicher Preis wie beim 1. Kind. Lege unter `Ermäßigungen` eine Geschwisterregel mit `Preis laut Preisliste` an.",
             "Kostet ein Modul an jedem Tag gleich viel, trage nur Montag ein. Wähle dann `Mo-Preise für alle Tage übernehmen`.",
@@ -12642,8 +12642,8 @@ export const traegerCareMonthsTopic =
             "Wähle bei `Schulen` die Schulen. Alle sind schon gewählt. Eine Schule, die schon in einem offenen Lauf dieses Monats ist, lässt sich nicht wählen.",
             "Wähle bei `Rechnungsdatum` das Datum, das auf jeder Rechnung steht, zum Beispiel den 30.10. für Oktober. Lässt du das Feld leer, gilt der Tag der Freigabe.",
             "Wähle `Vorschau öffnen`.",
-            "Prüfe die Rechnungen. Je Schule steht eine Karte. Jede Rechnung hat je Modul eine Zeile mit den gebuchten Wochentagen.",
-            "Steht oben `Ohne Preis`, fehlt für einen gebuchten Wochentag oder eine Zahl von Tagen je Woche ein Preis. Wähle `Preis eintragen`. Danach kommt das Kind in den Lauf.",
+            "Prüfe die Rechnungen. Pro Schule steht eine Karte. Jede Rechnung hat pro Modul eine Zeile mit den gebuchten Wochentagen.",
+            "Steht oben `Ohne Preis`, fehlt für einen gebuchten Wochentag oder eine Zahl von Tagen pro Woche ein Preis. Wähle `Preis eintragen`. Danach kommt das Kind in den Lauf.",
             "Steht oben `Doppelter Vertrag – bitte prüfen`, rechnen zwei Verträge eines Kindes am selben Tag dasselbe Modul ab. Die Freigabe rechnet dieses Kind mit allen seinen Verträgen nicht ab, alle anderen Kinder schon. Nach der Freigabe steht es unter `Nicht abgerechnet – Doppelter Vertrag`. Beende oder ändere einen der Verträge. Starte dann einen neuen Monatslauf für diesen Monat. Er rechnet nur dieses Kind ab.",
             "Steht `Ein Kind an zwei Schulen`, hat ein Kind die Schule gewechselt und an jeder Schule eine eigene Kinderakte. Name, Geburtstag und Familie sind gleich, die Verträge laufen nacheinander. moto rechnet beide Verträge darum ab wie die eines Kindes. Sind es doch zwei Kinder, gib den Lauf nicht frei und schreib dem moto-Support.",
             "Steht `Kind hat schon eine Rechnung – bitte prüfen`, ist der Monat für das Kind schon abgerechnet: durch eine Rechnung oder einen Jahresbescheid eines anderen Vertrags. Der Lauf stellt keine zweite Rechnung aus. Wähle `Rechnung öffnen`, `Bescheid öffnen` oder `Jahresbescheid öffnen` und prüfe das Dokument. Stimmt es, musst du nichts tun. Eine falsche Rechnung stornierst du. Einen falschen Jahresbescheid änderst du mit einem neuen Jahreslauf. Öffne danach den Monatslauf wieder. Er rechnet das Kind jetzt ab.",
@@ -12655,7 +12655,7 @@ export const traegerCareMonthsTopic =
           description:
             "Du kannst eine Rechnung aus diesem Lauf nehmen. Sie kommt im nächsten Lauf dieses Monats wieder. Hat ein Kind eine Rechnung für die Betreuung und eine eigene `Mensa-Rechnung`, schließe jede für sich aus.",
           steps: [
-            "Wähle bei `Monatslauf` den Knopf `Prüfliste` und dann `PDF`, `Excel` oder `CSV`. Die Liste hat je Position eine Zeile. Rechnungsnummern stehen noch nicht darin.",
+            "Wähle bei `Monatslauf` den Knopf `Prüfliste` und dann `PDF`, `Excel` oder `CSV`. Die Liste hat pro Position eine Zeile. Rechnungsnummern stehen noch nicht darin.",
             "Nach der Freigabe heißt der Knopf bei `Monatslauf` `Herunterladen`. Die Datei enthält alle Rechnungen des Laufs mit ihren Nummern.",
             "Stimmt eine Rechnung noch nicht, wähle in ihrer Zeile das Menü mit den drei Punkten und dann `Ausschließen`.",
             "Prüfe im Fenster, welche Rechnung du ausschließt. Dort steht zum Beispiel `Mensa-Rechnung` und darunter, ob die Betreuungsrechnung des Kindes im Lauf bleibt. Steht die Mensa auf der Rechnung der Betreuung, wird sie mit ausgeschlossen.",
@@ -12787,7 +12787,7 @@ export const traegerCareNoticesTopic =
       title: "Jahresbescheide ausstellen",
       question: "Wie stelle ich einen Gebührenbescheid für das Jahr aus?",
       summary:
-        "Ein Jahresbescheid setzt den Beitrag für mehrere Monate eines Jahres fest. Jede Familie bekommt je Vertrag einen Bescheid mit Monatsraten. Die Raten sind jeweils am 1. des Monats fällig. Für Monate mit Bescheid berechnet der Monatslauf keine Betreuung erneut. Essen rechnet er weiterhin ab.",
+        "Ein Jahresbescheid setzt den Beitrag für mehrere Monate eines Jahres fest. Jede Familie bekommt pro Vertrag einen Bescheid mit Monatsraten. Die Raten sind jeweils am 1. des Monats fällig. Für Monate mit Bescheid berechnet der Monatslauf keine Betreuung erneut. Essen rechnet er weiterhin ab.",
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "CalendarDays",
@@ -12815,9 +12815,9 @@ export const traegerCareNoticesTopic =
           description:
             "Vor der Ausstellung ändert sich nichts. Die Vorschau zeigt immer den Stand von heute.",
           steps: [
-            "Je Kind steht eine Zeile mit Zeitraum, Monatsrate und Jahresbetrag.",
+            "Pro Kind steht eine Zeile mit Zeitraum, Monatsrate und Jahresbetrag.",
             "Wähle eine Zeile. Du siehst Seite 1 des Bescheids so, wie die Familie ihn bekommt.",
-            "Unter `I. Berechnung` steht je Modul der Betrag im Monat und für den Zeitraum.",
+            "Unter `I. Berechnung` steht pro Modul der Betrag im Monat und für den Zeitraum.",
             "Unter `II. Abrechnung` stehen die Raten. Ein Monat, der schon begonnen hat, ist sofort fällig.",
           ],
         },
@@ -12850,7 +12850,7 @@ export const traegerCareNoticesTopic =
           steps: [
             "Starte für dasselbe Jahr einen neuen Jahreslauf, zum Beispiel ab dem Monat der Änderung.",
             "Die Vorschau zeigt nur Kinder, bei denen sich etwas geändert hat. Sie stehen als `Änderungsbescheid`.",
-            "Der Änderungsbescheid nennt den alten Bescheid. Je Zeile steht `bisher`, `neu` und `Zu-/Abgang`.",
+            "Der Änderungsbescheid nennt den alten Bescheid. Pro Zeile steht `bisher`, `neu` und `Zu-/Abgang`.",
             "Stelle die Bescheide aus. Von da an gilt für diese Monate der Änderungsbescheid.",
           ],
         },
@@ -12940,8 +12940,8 @@ export const traegerCareReductionsTopic =
             "`Alle Kinder der Familie` heißt: Ab einer Kinderzahl zahlt jedes Kind mit Vertrag weniger, auch das erste. Wähle bei `Ab so vielen Kindern` die Kinderzahl, zum Beispiel 2.",
             "Die Schulen der Regel zählen immer. Sollen auch Kinder an anderen Schulen mitzählen? Wähle diese Schulen bei `Geschwister zählen auch an`. Sonst lass das Feld leer.",
             "`Fester Preis` heißt: Das Kind zahlt genau diesen Betrag. `Betrag weniger` zieht den Betrag vom Preis ab.",
-            "`Preis laut Preisliste` heißt: Jedes weitere Kind zahlt je Modul und Tag den Preis unter `Jedes weitere Kind` der Preisliste. Die Zahl trägst du dort ein, nicht in der Regel. Bei `Alle Kinder der Familie` zahlt auch das erste Kind diesen Preis.",
-            "Sollen Geschwister an zwei Standorten getrennt zählen, lege je Standort eine eigene Regel an. Lass `Geschwister zählen auch an` leer.",
+            "`Preis laut Preisliste` heißt: Jedes weitere Kind zahlt pro Modul und Tag den Preis unter `Jedes weitere Kind` der Preisliste. Die Zahl trägst du dort ein, nicht in der Regel. Bei `Alle Kinder der Familie` zahlt auch das erste Kind diesen Preis.",
+            "Sollen Geschwister an zwei Standorten getrennt zählen, lege pro Standort eine eigene Regel an. Lass `Geschwister zählen auch an` leer.",
             "Sollen auch Geschwister ohne Betreuungsvertrag zählen? Schalte `Geschwister ohne Vertrag mitzählen` ein. Bei `Alle Kinder der Familie` zählt sonst nur, wie viele Kinder einen Vertrag haben.",
           ],
         },
@@ -12969,7 +12969,7 @@ export const traegerCareReductionsTopic =
             "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
             "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Hat die Datei keine Spalte für die Schule, wähle `Schule für alle Zeilen`.",
             "Wähle bei `Kinderzahl gilt ab` den Tag, ab dem die Zahlen der Datei belegt sind, zum Beispiel den Tag, an dem du die Liste erstellt hast. moto schlägt heute vor.",
-            "Nennt deine Datei den Tag je Kind? Ordne die Spalte `Gültig ab` zu. Eine Spalte mit dem Namen `Kinderzahl gilt ab` erkennt moto von selbst. Eine Zeile ohne Tag bekommt den Tag, den du für die ganze Datei gewählt hast. Nennen Geschwister verschiedene Tage, gilt der früheste Tag. moto zählt dabei nur Zeilen, die es übernimmt.",
+            "Nennt deine Datei den Tag pro Kind? Ordne die Spalte `Gültig ab` zu. Eine Spalte mit dem Namen `Kinderzahl gilt ab` erkennt moto von selbst. Eine Zeile ohne Tag bekommt den Tag, den du für die ganze Datei gewählt hast. Nennen Geschwister verschiedene Tage, gilt der früheste Tag. moto zählt dabei nur Zeilen, die es übernimmt.",
             "Der Tag darf höchstens neun Monate voraus liegen. Eine Zeile mit einem späteren Tag übernimmt moto nicht. Endet der Vertrag des Kindes, bevor die neue Kinderzahl gelten kann, übernimmt moto die Zeile auch nicht.",
             "Prüfe die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. Bei `Fehlerhaft` und `Widerspruch in der Datei` steht der Grund in der Spalte `Hinweis`.",
             "`Andere Zahl bestätigt` heißt: Für die Familie gilt schon eine andere Zahl. moto ändert sie nicht. Ändere sie in der Liste über `Kinderzahl ändern`.",
@@ -12981,7 +12981,7 @@ export const traegerCareReductionsTopic =
         {
           title: "Nachweis eintragen",
           description:
-            "Einkommensstufe und Ermäßigung für Alleinerziehende brauchen einen Nachweis je Kind.",
+            "Einkommensstufe und Ermäßigung für Alleinerziehende brauchen einen Nachweis pro Kind.",
           steps: [
             "Wähle `Familien und Zahlung` und dann den Reiter `Nachweise`.",
             "Wähle beim Kind das Menü und dann `Einkommensstufe eintragen` oder `Alleinerziehend eintragen`.",
@@ -13017,7 +13017,7 @@ export const traegerCareReductionsTopic =
         "Geschwister erkennt moto an derselben E-Mail-Adresse der Rechnung. Haben zwei Familien dieselbe Adresse, zählen ihre Kinder zusammen. Hat eine Familie zwei Adressen, zählen ihre Kinder nicht als Geschwister. Gleiche die Adresse dann im Vertrag an.",
         "Gilt ein Nachweis erst ab Mitte des Monats, zählt er für den ganzen Monat.",
         "Zählt eine Regel die Kinderzahl, gilt die bestätigte Zahl. Es zählen aber immer mindestens die Kinder mit Vertrag. Geschwister ohne Vertrag stehen in der Reihe vorn: Bei 3 Kindern und einem Kind mit Vertrag ist es das 3. Kind.",
-        "Geschwister zählen je Schule getrennt. Ein Kind mit Vertrag an einer anderen Schule zählt bei der Kinderzahl nur mit, wenn die Regel unter `Geschwister zählen auch an` diese Schule nennt. Geschwister ohne Vertrag zählen an jeder Schule mit.",
+        "Geschwister zählen pro Schule getrennt. Ein Kind mit Vertrag an einer anderen Schule zählt bei der Kinderzahl nur mit, wenn die Regel unter `Geschwister zählen auch an` diese Schule nennt. Geschwister ohne Vertrag zählen an jeder Schule mit.",
         "Wechselt ein Kind im Monat die Schule, zählt es in diesem Monat an jeder Schule mit, die die Regel zählt.",
         "Eine Angabe der Eltern, die du noch nicht bestätigt hast, zählt nicht. Ist die Zahl abgelaufen, zählen nur die Kinder mit Vertrag. Der Monatslauf nennt diese Kinder dann unter `Kinderzahl der Familie fehlt`.",
         "Ein Vertrag ohne E-Mail-Adresse der Eltern ist eine eigene Familie, zum Beispiel nach einem Import. Die Liste nennt sie nach dem Kind und zeigt `Vertrag Nr.`. Sie bekommt ihre eigene Kinderzahl.",
@@ -13045,12 +13045,12 @@ export const traegerCareTimeOverrunsTopic =
       title: "Länger als gebucht",
       question: "Welche Kinder waren länger da als gebucht?",
       summary:
-        "moto vergleicht die Zeiten im Vertrag mit dem Ein- und Auschecken. Du siehst je Schule, wie oft Kinder länger da waren.",
+        "moto vergleicht die Zeiten im Vertrag mit dem Ein- und Auschecken. Du siehst pro Schule, wie oft Kinder länger da waren.",
       group: "auswertung",
       audience: "traeger",
       icon: "Hourglass",
       requirements: [
-        "Für die Zahlen je Schule brauchst du das Recht `Berichte lesen`. Es gehört zu den Rollen `Verwaltung`, `Abrechnung`, `Personal` und `Nur lesen`.",
+        "Für die Zahlen pro Schule brauchst du das Recht `Berichte lesen`. Es gehört zu den Rollen `Verwaltung`, `Abrechnung`, `Personal` und `Nur lesen`.",
         "Für die Namen der Kinder brauchst du das Recht `Verträge verwalten`. Es gehört zur Rolle `Verwaltung`.",
       ],
       steps: [
@@ -13058,7 +13058,7 @@ export const traegerCareTimeOverrunsTopic =
         "Wähle oben den Monat. Am Anfang ist es der laufende Monat bis heute.",
         "Wähle bei Bedarf eine Schule. Sonst siehst du alle Schulen.",
         "Lies oben die Summen: `Kinder`, `Tage` und `Zusätzliche Zeit`.",
-        "Lies unter `Je Schule` die Zahlen jeder Schule. Tippe auf eine Spalte, um nach ihr zu sortieren.",
+        "Lies unter `Pro Schule` die Zahlen jeder Schule. Tippe auf eine Spalte, um nach ihr zu sortieren.",
         "Mit der Rolle `Verwaltung` siehst du unter `Kinder` jedes Kind mit Namen. Das Kind mit der meisten zusätzlichen Zeit steht oben.",
         "Jede Tabelle hat rechts oben `Herunterladen`. Wähle `PDF`, `Excel` oder `CSV`. Die Datei gilt für den Monat und die gewählte Schule.",
       ],
@@ -13066,7 +13066,7 @@ export const traegerCareTimeOverrunsTopic =
         "Rote Zahlen zeigen Überschreitungen. Sprich mit den Eltern, oder ändere die Buchung.",
       notes: [
         "Änderst du die Zeiten eines Zeitmodells? Die neuen Zeiten gelten ab dem Änderungstag. Vergangene gebuchte Tage behalten ihre bisherigen Zeiten. Auch nach Umbuchung oder Archivierung bleiben diese Zeiten erhalten.",
-        "Das Soll kommt aus dem versendeten Vertrag: je Wochentag die Module und die Endzeit. Ohne Vertrag gilt der Betreuungsplan der Schule.",
+        "Das Soll kommt aus dem versendeten Vertrag: pro Wochentag die Module und die Endzeit. Ohne Vertrag gilt der Betreuungsplan der Schule.",
         "An einem Tag mit bestätigter Ferienbuchung gilt die Ferienbuchung, nicht der Vertrag. Jeder Tag zählt nur einmal.",
         "Das Ist reicht vom ersten Einchecken bis zum letzten Auschecken des Tages.",
         "Eine Überschreitung ist mehr als 15 Minuten früher oder später als gebucht. Ein Tag ohne Buchung zählt ganz.",
@@ -13074,7 +13074,7 @@ export const traegerCareTimeOverrunsTopic =
         "Jedes Mal, wenn du Namen siehst oder herunterlädst, steht das im Zugriffsprotokoll der Schule.",
       ],
       differences: [
-        "Fehlt der Bereich mit den Namen? Deine Rolle hat das Recht `Verträge verwalten` nicht. Dann siehst du nur die Zahlen je Schule.",
+        "Fehlt der Bereich mit den Namen? Deine Rolle hat das Recht `Verträge verwalten` nicht. Dann siehst du nur die Zahlen pro Schule.",
         "Steht bei einer Schule `Check-ins erst ab` mit einem Datum? Die Schule bewahrt Check-ins nicht so lange auf. Verglichen wird ab diesem Tag.",
         "Steht bei einer Schule `–` und `Keine Check-ins im Zeitraum`? Die Schule hat in diesem Zeitraum keine Check-ins. Dann kann moto nicht vergleichen. Das heißt nicht, dass alle Zeiten passen.",
         "Steht bei einer Schule `Tage nicht verglichen`? An diesen Tagen war ein Kind da, aber es gab keinen Plan oder es ist noch nicht ausgecheckt. Diese Tage zählen nicht mit.",
@@ -13118,7 +13118,7 @@ export const traegerCatalogPhasesTopic =
             "Öffne die Anmeldephase.",
             "Wähle bei `Betreuungsangebote` `Angebot anlegen`.",
             "Trage `Name` und die `Wochentage` ein. Zählt das Angebot als Betreuungstag, trage für jeden Tag eine Gehzeit ein.",
-            "Trage die Preise ein. Wähle `Je Wochentag` oder `Nach Tagen je Woche`. In der Spalte `Jedes weitere Kind` steht der Preis für Geschwister. Leer heißt: derselbe Preis wie beim 1. Kind.",
+            "Trage die Preise ein. Wähle `Pro Wochentag` oder `Nach Tagen pro Woche`. In der Spalte `Jedes weitere Kind` steht der Preis für Geschwister. Leer heißt: derselbe Preis wie beim 1. Kind.",
             "Soll die Schule auch die Vertragsbedingungen bekommen? Schalte `Vertragsvorlage mitgeben` ein und fülle die Felder aus.",
             "Wähle `Angebot anlegen`.",
           ],
@@ -13137,7 +13137,7 @@ export const traegerCatalogPhasesTopic =
           steps: [
             "Öffne die Anmeldephase.",
             "Wähle oben `Vorschau ansehen`.",
-            "Prüfe je Schule, was passiert: `Wird neu angelegt`, `Wird geändert`, `Wird zurückgezogen` oder `Lehnt ab` mit dem Grund.",
+            "Prüfe pro Schule, was passiert: `Wird neu angelegt`, `Wird geändert`, `Wird zurückgezogen` oder `Lehnt ab` mit dem Grund.",
             "Wähle `Freigeben und übertragen`.",
             "Unter `Ergebnis` siehst du, welche Schule übernommen hat.",
           ],
@@ -13151,7 +13151,7 @@ export const traegerCatalogPhasesTopic =
         "Eine Schule darf eine Kopie nicht löschen. Entfernen geht nur hier mit `Zurückziehen`. Danach überträgst du noch einmal.",
         "Hat ein Kind ein zurückgezogenes Angebot schon gebucht, schaltet moto es in der Schule nur aus.",
         "Eine Phase dauert höchstens 2 Jahre. Ihr Ende liegt höchstens 5 Jahre in der Zukunft. Ältere Phasen außerhalb dieser Grenzen bleiben, wie sie sind, solange du Beginn und Ende nicht änderst.",
-        "Du ziehst das Ende einer Anmeldephase vor? Dann nennt die Vorschau je Schule, wie viele Kinder länger betreut werden. moto beendet keine Betreuung. Sage der Schule Bescheid.",
+        "Du ziehst das Ende einer Anmeldephase vor? Dann nennt die Vorschau pro Schule, wie viele Kinder länger betreut werden. moto beendet keine Betreuung. Sage der Schule Bescheid.",
       ],
       differences: [
         "Du siehst in der Navigation kein `Anmeldephasen`? Deine Rolle darf keine Anmeldungen verwalten. Frage im Träger-Büro nach der Rolle Verwaltung.",
@@ -13215,7 +13215,7 @@ export const traegerClosingDaysTopic =
             "Trägt eine Schule selbst einen Schließtag in eine gebuchte Ferienwoche ein, bekommen die Eltern nicht von selbst eine E-Mail. Das gilt auch, wenn die Schule ihn ändert oder löscht. Du oder die Schule löst den Versand aus.",
           steps: [
             "Wähle in der Navigation `Schließtage`.",
-            "Oben steht dann die Karte `Eltern noch nicht informiert`. Je Schließtag stehen dort Schule, Grund, Tage, Kinder und Familien.",
+            "Oben steht dann die Karte `Eltern noch nicht informiert`. Pro Schließtag stehen dort Schule, Grund, Tage, Kinder und Familien.",
             "Wähle in der Zeile `Eltern informieren`. Ein Klick genügt.",
             "Mehrere Schließtage auf einmal: Wähle oben `Alle Eltern informieren`.",
             "Die Zeile zeigt `Wird gesendet` und dann `Gesendet`.",
@@ -13278,10 +13278,10 @@ export const traegerDailyAttendanceTopic =
       title: "Tagesmeldung Mecklenburg-Vorpommern",
       question: "Wie melde ich die tägliche An- und Abwesenheit an das Land?",
       summary:
-        "Für Schulen in Mecklenburg-Vorpommern zeigt moto je Tag, wer da war und wer gefehlt hat. Die Datei für das Land lädst du mit einem Klick herunter.",
+        "Für Schulen in Mecklenburg-Vorpommern zeigt moto pro Tag, wer da war und wer gefehlt hat. Die Datei für das Land lädst du mit einem Klick herunter.",
       image: "/help/screens/tagesmeldung-mecklenburg-vorpommern.webp",
       imageAlt:
-        "Oben die Zahlen Kinder am Tag, Verweildauer, Längster Tag und Abwesend gemeldet. Darunter die Tabelle Je Tag mit einer Zeile je Tag.",
+        "Oben die Zahlen Kinder am Tag, Verweildauer, Längster Tag und Abwesend gemeldet. Darunter die Tabelle Pro Tag mit einer Zeile pro Tag.",
       group: "auswertung",
       audience: "traeger",
       icon: "SealCheck",
@@ -13293,12 +13293,12 @@ export const traegerDailyAttendanceTopic =
         "Wähle in der Navigation `Tagesmeldung`.",
         "Wähle oben den Zeitraum. Am Anfang ist es die letzte Woche bis gestern. Ein Zeitraum hat höchstens 31 Tage.",
         "Lies oben die Zahlen: `Kinder am Tag`, `Verweildauer`, `Längster Tag` und `Abwesend gemeldet`.",
-        "Lies unter `Je Tag`, wie viele Kinder an jedem Tag da waren und wie viele krank, entschuldigt oder auf Klassenfahrt waren.",
+        "Lies unter `Pro Tag`, wie viele Kinder an jedem Tag da waren und wie viele krank, entschuldigt oder auf Klassenfahrt waren.",
         "Wähle oben neben dem Zeitraum eine Schule, um nur sie zu sehen.",
         "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `CSV`. Diese Datei reichst du beim Land ein. `PDF` und `Excel` sind für deine eigene Ablage.",
       ],
       result:
-        "Du hast die Datei mit einer Zeile je Kind und Tag. Sie enthält keine Namen.",
+        "Du hast die Datei mit einer Zeile pro Kind und Tag. Sie enthält keine Namen.",
       notes: [
         "Die Pflicht steht in § 32 Absatz 1a KiföG M-V und gilt ab 2027.",
         "Das Land legt das genaue Format noch fest. Bis dahin enthält die Datei: Einrichtung, Ort, Datum, laufende Nummer, Status, Ankunft, Abholung und die Minuten dazwischen.",
@@ -13337,7 +13337,7 @@ export const traegerDashboardTopic =
         "Lies oben die Summe für alle Schulen.",
         "Prüfe unter `Auffälligkeiten`, an welcher Schule etwas deine Grenzen erreicht.",
         "Wähle dort `Zur Schule`, um die Schule anzusehen.",
-        "Lies unter `Zahlen je Schule` die Zahlen jeder Schule.",
+        "Lies unter `Zahlen pro Schule` die Zahlen jeder Schule.",
         "Wähle eine Schule, um ihre Zahlen und Stammdaten zu sehen.",
         "Öffne das Drei-Punkte-Menü rechts neben der Suche, bei nur einer Schule rechts neben dem Titel. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Hast du bei `Auffälligkeiten` eine Schule gewählt, enthält die Datei nur diese Schule.",
       ],
@@ -13415,7 +13415,7 @@ export const traegerDatevExportTopic =
             "Unter `Kostenstellen (KOST1)` steht jede Schule mit zwei Zeilen. Wähle bei `Monatsbeiträge und Mensa` `Neue Kostenstelle`. Wähle den Tag bei `Gilt ab` und trage die `Kostenstelle` ein.",
             "Bucht dein Steuerbüro die Ferienbetreuung einer Schule getrennt? Dann trägst du bei `Ferienbetreuung` dieser Schule eine eigene Kostenstelle ein. Ohne sie bucht eine Ferienwoche auf die Kostenstelle der Schule. Daneben steht dann `wie Monatsbeiträge`.",
             "Eine Ferienwoche bucht auf die Schule, an der sie stattfindet. Hat diese Schule keine Kostenstelle, gilt `Ersatz für die Ferienbetreuung` unter `Alle Schulen`. Daneben steht dann `Ersatz-Kostenstelle`.",
-            "Eine `Zweite Kostenstelle (KOST2)` je Angebot trägst du nur ein, wenn dein Steuerbüro sie braucht.",
+            "Eine `Zweite Kostenstelle (KOST2)` pro Angebot trägst du nur ein, wenn dein Steuerbüro sie braucht.",
           ],
         },
         {
@@ -13450,7 +13450,7 @@ export const traegerDatevExportTopic =
         "Die DATEV-Datei und die Sollstellung zählen in derselben Reihe von Dateinummern.",
         "Eine Rechnung über 0 € steht nicht in der DATEV-Datei. Sie bewegt kein Geld.",
         "Eine Rechnung hält Erlöskonto und Kostenstellen beim Ausstellen fest. Änderst du später ein Konto, gilt das nur für neue Rechnungen. Ein Storno bucht auf dieselben Konten wie seine Rechnung.",
-        "Hat eine Rechnung Positionen auf verschiedenen Konten, steht sie mit einer Zeile je Konto in der DATEV-Datei. Ermäßigungen verteilen sich anteilig auf diese Zeilen.",
+        "Hat eine Rechnung Positionen auf verschiedenen Konten, steht sie mit einer Zeile pro Konto in der DATEV-Datei. Ermäßigungen verteilen sich anteilig auf diese Zeilen.",
         "Eine Kostenstelle gilt ab ihrem Tag bis zur nächsten. Maßgeblich ist der erste Tag der Leistung, also der Monat oder die Ferienwoche.",
       ],
       differences: [
@@ -13489,7 +13489,7 @@ export const traegerDocumentKindsTopic =
       question:
         "Wie lege ich fest, ob Familien eine Rechnung oder einen Bescheid bekommen?",
       summary:
-        "Je Leistung wählst du das Schreiben: Rechnung, Gebührenbescheid oder bei den Ferien die Bestätigung und Rechnung. Ein Gebührenbescheid braucht deine Rechtsbehelfsbelehrung.",
+        "Pro Leistung wählst du das Schreiben: Rechnung, Gebührenbescheid oder bei den Ferien die Bestätigung und Rechnung. Ein Gebührenbescheid braucht deine Rechtsbehelfsbelehrung.",
       group: "konfiguration",
       audience: "traeger",
       icon: "ClipboardList",
@@ -13640,7 +13640,7 @@ export const traegerExportHandoverTopic =
       instructionGroups: [
         {
           title: "Empfänger eintragen",
-          description: "Das machst du einmal je Empfänger.",
+          description: "Das machst du einmal pro Empfänger.",
           steps: [
             "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
             "Wähle oben rechts das Menü mit den drei Punkten und dann `Empfänger der Exporte`. Wähle dort `Empfänger hinzufügen`.",
@@ -13702,7 +13702,7 @@ export const traegerFinanceExportsTopic =
       title: "Sollstellung für die Kämmerei",
       question: "Wie gebe ich die Rechnungen an die Kämmerei?",
       summary:
-        "Für jeden ausgestellten Lauf lädst du eine Sollstellung herunter. Das ist eine CSV-Datei mit einer Zeile je Rechnung. Welche Spalten sie hat, legst du selbst fest. Jede Datei bekommt eine laufende Nummer.",
+        "Für jeden ausgestellten Lauf lädst du eine Sollstellung herunter. Das ist eine CSV-Datei mit einer Zeile pro Rechnung. Welche Spalten sie hat, legst du selbst fest. Jede Datei bekommt eine laufende Nummer.",
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "Table",
@@ -13721,7 +13721,7 @@ export const traegerFinanceExportsTopic =
             "Wähle oben rechts das Menü mit den drei Punkten und dann `Feldzuordnung`.",
             "Wähle bei jeder Spalte den `Inhalt` und trage den `Spaltennamen` ein.",
             "Mit `Spalte` fügst du eine Spalte hinzu. Für einen Wert, der in jeder Zeile gleich ist, wähle `Fester Wert`, etwa ein Konto.",
-            "Für einen Text je Rechnung wähle `Buchungstext`. Schreibe feste Wörter selbst und füge Platzhalter wie `{Monat}` und `{Kind}` mit einem Klick ein. Aus `SKB {Monat} {Kind}` wird etwa `SKB 10/2026 Lia Müller`.",
+            "Für einen Text pro Rechnung wähle `Buchungstext`. Schreibe feste Wörter selbst und füge Platzhalter wie `{Monat}` und `{Kind}` mit einem Klick ein. Aus `SKB {Monat} {Kind}` wird etwa `SKB 10/2026 Lia Müller`.",
             "Will deine Buchhaltung Stornos und Gutschriften in einer eigenen Spalte? Dann wähle `Gutschrift`. Dort steht der Betrag ohne Minus. Die Spalte `Betrag` bleibt bei ihnen leer.",
             "Lege unter `Datei` Trennzeichen, Beträge, Datum, Zeichensatz und Dateinamen fest. `{NR}` im Dateinamen wird zur Dateinummer.",
             "Prüfe die `Vorschau` und wähle `Speichern`.",
@@ -13748,7 +13748,7 @@ export const traegerFinanceExportsTopic =
           title: "Läufe und Exportprotokoll herunterladen",
           steps: [
             "Wähle `Familien und Zahlung` und dann den Reiter `Exporte`.",
-            "Wähle bei `Dateien je Lauf` oder `Exportprotokoll` den Knopf `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Wähle bei `Dateien pro Lauf` oder `Exportprotokoll` den Knopf `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
           ],
         },
       ],
@@ -13760,7 +13760,7 @@ export const traegerFinanceExportsTopic =
         "Für dein Steuerbüro gibt es im Menü des Laufs auch `DATEV-Datei`. Wie das geht, steht unter „DATEV-Werte eintragen“.",
         "Die Debitorennummer der Familie trägst du bei `Empfänger und Zahlung` der Familie ein. Neue Monats- und Ferienrechnungen übernehmen sie. Hat eine Ferienanmeldung eine eigene Nummer, gilt bei der Ferienrechnung diese. Beim Import der Mandate übernimmt moto die Spalte `Debitorennummer`.",
         "Eine neue Feldzuordnung gilt für jede neue Datei. Frühere Dateien bleiben, wie sie waren.",
-        "Wählst du als Inhalt `Erlöskonto`, `Kostenstelle (KOST1)` oder `Zweite Kostenstelle (KOST2)`, hat die Datei eine Zeile je Konto einer Rechnung. Der `Betrag` ist dann der Teil der Rechnung auf diesem Konto. Die Konten legst du unter `Konten und Kostenstellen` fest.",
+        "Wählst du als Inhalt `Erlöskonto`, `Kostenstelle (KOST1)` oder `Zweite Kostenstelle (KOST2)`, hat die Datei eine Zeile pro Konto einer Rechnung. Der `Betrag` ist dann der Teil der Rechnung auf diesem Konto. Die Konten legst du unter `Konten und Kostenstellen` fest.",
       ],
       differences: [
         "Der Reiter `Exporte` fehlt? Dir fehlt das Recht `Finanz-Export`.",
@@ -13770,7 +13770,7 @@ export const traegerFinanceExportsTopic =
       troubleshootingDetails: [
         "Die Kämmerei sieht falsche Umlaute? Wähle bei `Zeichensatz` den Wert `Windows-1252`.",
         "In der Datei stehen alle Werte in einer Spalte? Das Trennzeichen passt nicht zum Programm der Kämmerei. Wähle ein anderes.",
-        "Beim Import einer Datei zeigt eine Zeile `Geschwister haben verschiedene Nummern`? moto führt eine Nummer je Familie. Trage die richtige Nummer bei der Familie ein.",
+        "Beim Import einer Datei zeigt eine Zeile `Geschwister haben verschiedene Nummern`? moto führt eine Nummer pro Familie. Trage die richtige Nummer bei der Familie ein.",
       ],
       related: [
         HELP_TOPICS.traegerExportHandover,
@@ -13826,7 +13826,7 @@ export const traegerHolidayAllocationTopic =
           title: "Plätze vergeben",
           steps: [
             "Öffne den Ferienzeitraum und wähle den Reiter `Vergabe`.",
-            "Je Woche stehen die offenen Anmeldungen in der Reihenfolge des Vorschlags. Die Zeile mit „ab hier schlägt moto die Warteliste vor“ zeigt, wo die freien Plätze enden.",
+            "Pro Woche stehen die offenen Anmeldungen in der Reihenfolge des Vorschlags. Die Zeile mit „ab hier schlägt moto die Warteliste vor“ zeigt, wo die freien Plätze enden.",
             "Wähle bei einem Kind `Platz geben` oder `Auf die Warteliste`. Weicht das vom Vorschlag ab, schreibe eine `Begründung`.",
             "Oder wähle bei der Woche `Vorschlag übernehmen`. Mit mehreren Wochen gibt es oben `Vorschlag für alle Wochen übernehmen`.",
             "Bestätige im Fenster.",
@@ -13846,7 +13846,7 @@ export const traegerHolidayAllocationTopic =
           steps: [
             "Öffne die Anmeldung.",
             "Wähle bei `Angaben für die Vergabe` den Knopf `Prüfen`.",
-            "Wähle je Kriterium `Trifft zu`, `Trifft nicht zu` oder `Nicht geprüft`.",
+            "Wähle pro Kriterium `Trifft zu`, `Trifft nicht zu` oder `Nicht geprüft`.",
             "Wähle `Prüfung speichern`.",
           ],
         },
@@ -13902,7 +13902,7 @@ export const traegerHolidayContributionTopic =
           title: "Preis festlegen",
           steps: [
             "Den Preis jeder Woche legst du im Ferienzeitraum fest. Jedes Zeitmodell hat einen `Preis in Euro`.",
-            "Wird eine Woche tageweise gebucht, ist es ein `Preis je Tag in Euro`. Der Beitrag ist dann der Tagespreis mal die gebuchten Tage. Danach rechnet moto Geschwister und Befreiung wie bei ganzen Wochen.",
+            "Wird eine Woche tageweise gebucht, ist es ein `Preis pro Tag in Euro`. Der Beitrag ist dann der Tagespreis mal die gebuchten Tage. Danach rechnet moto Geschwister und Befreiung wie bei ganzen Wochen.",
           ],
         },
         {
@@ -14013,7 +14013,7 @@ export const traegerHolidayFormTopic =
             "Wähle unter `Hinweise und Einwilligungen` die Aktion `Hinweis oder Einwilligung hinzufügen`.",
             "Trage `Titel` und `Text neben dem Häkchen oder Hinweis` ein.",
             "Ergänze den Text unter `Rechtstext / Erklärung`.",
-            "Für ein PDF wähle `PDFs hinzufügen`. Höchstens 10 MB je Datei.",
+            "Für ein PDF wähle `PDFs hinzufügen`. Höchstens 10 MB pro Datei.",
             "Trage unter `Bezeichnung für Eltern` einen passenden Namen ein.",
             "Müssen Eltern den Hinweis bestätigen? Wähle `Muss bestätigt werden`.",
             "Eine freiwillige Einwilligung lässt du ohne diese Pflicht.",
@@ -14134,7 +14134,7 @@ export const traegerHolidayPeriodTopic =
             "Trage `Anmeldebeginn` und `Anmeldeschluss` ein.",
             "Ist die Anmeldung verbindlich? Dann lass den Haken bei `Die Anmeldung ist verbindlich.`.",
             "Schreibe unter `Hinweise für Eltern`, was Eltern wissen müssen. Zum Beispiel, ob ein Lunchpaket nötig ist.",
-            "Soll ein Kind nur eine bestimmte Zahl an Tagen kommen? Trage die Zahl bei `Höchstens Tage je Kind` ein, zum Beispiel 5. Ohne Grenze lässt du das Feld leer.",
+            "Soll ein Kind nur eine bestimmte Zahl an Tagen kommen? Trage die Zahl bei `Höchstzahl an Tagen pro Kind` ein, zum Beispiel 5. Ohne Grenze lässt du das Feld leer.",
             "Wähle bei `Wie werden die Plätze vergeben?` die Karte `Nach Eingang` oder `Nach Kriterien`. Nach Eingang bekommt zuerst einen Platz, wer sich zuerst anmeldet. Nach Kriterien entscheidet dein Büro.",
           ],
         },
@@ -14145,10 +14145,10 @@ export const traegerHolidayPeriodTopic =
             "Wähle die `Ausrichtende OGS`. Dort findet die Betreuung in dieser Woche statt.",
             "Liegt ein Feiertag oder Schließtag der Schule in der Woche, zeigt moto einen Hinweis. Bei `Ganze Woche` wählst du dann andere Tage oder `Einzelne Tage`.",
             "Wähle bei `Buchung`, wie Eltern die Woche buchen: `Ganze Woche` oder `Einzelne Tage`. Bei einzelnen Tagen wählen Eltern Tage von Montag bis Freitag. Unter `Buchbare Tage` siehst du, welche Tage Eltern buchen können. Ein Tag ohne Betreuung zeigt „–“ und den Grund.",
-            "Trage die Zeitmodelle ein, zum Beispiel „bis 13 Uhr“ und „bis 16 Uhr“. Jedes Zeitmodell hat `Beginn`, `Ende` und einen Preis. Bei `Ganze Woche` ist es der `Preis in Euro` für die Woche, bei `Einzelne Tage` der `Preis je Tag in Euro`.",
+            "Trage die Zeitmodelle ein, zum Beispiel „bis 13 Uhr“ und „bis 16 Uhr“. Jedes Zeitmodell hat `Beginn`, `Ende` und einen Preis. Bei `Ganze Woche` ist es der `Preis in Euro` für die Woche, bei `Einzelne Tage` der `Preis pro Tag in Euro`.",
             "Gibt es in der Woche Mittagessen? Schalte `Mittagessen anbieten` ein. Trage den `Preis für ein Essen in Euro` ein, zum Beispiel 4,30.",
             "Weitere Wochen fügst du mit `Woche hinzufügen` hinzu.",
-            "Dieselben Tage an mehreren Schulen? Lege je Schule eine Woche mit denselben Tagen an. Eltern wählen dann für ihr Kind eine Schule. An derselben Schule dürfen sich Wochen nicht überschneiden.",
+            "Dieselben Tage an mehreren Schulen? Lege pro Schule eine Woche mit denselben Tagen an. Eltern wählen dann für ihr Kind eine Schule. An derselben Schule dürfen sich Wochen nicht überschneiden.",
             "Wähle `Speichern`.",
           ],
         },
@@ -14191,8 +14191,8 @@ export const traegerHolidayPeriodTopic =
         "Ein gespeicherter Ferienzeitraum ist zuerst ein Entwurf. Ein Entwurf ist nicht für die Anmeldung freigegeben.",
         "Ein veröffentlichter Ferienzeitraum wird nicht wieder zum Entwurf.",
         "Ein Zeitmodell mit Anmeldungen lässt sich nicht entfernen. Wähle dann `Archivieren`. Neu buchen kann es danach niemand mehr. Gebuchte Tage behalten es. Zurückholen lässt es sich nicht.",
-        "`Höchstens Tage je Kind` gilt für alle Wochen zusammen. Es gilt auch, wenn Eltern dasselbe Kind ein zweites Mal anmelden. moto erkennt das Kind an der E-Mail-Adresse der Eltern, am Namen und am Geburtsdatum. Eine ganze Woche zählt mit allen Tagen von Montag bis Freitag. Eltern dürfen die Tage auf mehrere Wochen verteilen. Senkst du die Zahl später, behalten Kinder ihre gebuchten Tage.",
-        "Bei `Einzelne Tage` zahlt die Familie den Preis je Tag mal die gebuchten Tage.",
+        "`Höchstzahl an Tagen pro Kind` gilt für alle Wochen zusammen. Es gilt auch, wenn Eltern dasselbe Kind ein zweites Mal anmelden. moto erkennt das Kind an der E-Mail-Adresse der Eltern, am Namen und am Geburtsdatum. Eine ganze Woche zählt mit allen Tagen von Montag bis Freitag. Eltern dürfen die Tage auf mehrere Wochen verteilen. Senkst du die Zahl später, behalten Kinder ihre gebuchten Tage.",
+        "Bei `Einzelne Tage` zahlt die Familie den Preis pro Tag mal die gebuchten Tage.",
         "Mit `Mittagessen anbieten` wählen Eltern das Essen für jedes Kind und jede Woche dazu. Das Kind isst an jedem gebuchten Tag. Bei einer ganzen Woche sind das die Tage von Montag bis Freitag. Unter dem Preis steht, was das zusammen kostet.",
         "Das Mittagessen steht als eigener Betrag im Beitrag und auf der Rechnung. Geschwisterermäßigung, Befreiung und Kostenübernahme gelten nur für die Betreuung, nicht für das Essen.",
         "Änderst du den Preis für ein Essen, gilt er für neue Anmeldungen. Bestätigte Anmeldungen behalten ihren Preis.",
@@ -14208,7 +14208,7 @@ export const traegerHolidayPeriodTopic =
         "`Veröffentlichen` lässt sich nicht wählen? Speichere zuerst deine Änderungen. Jede Woche braucht mindestens ein Zeitmodell, das nicht archiviert ist.",
         "Eine Schule fehlt bei `Ausrichtende OGS`? Das moto-Team ordnet die Schulen deinem Träger zu.",
         "Die Woche lässt sich nicht speichern, weil keine Betreuung ist? Eine ganze Woche mit Feiertag oder Schließtag kann niemand buchen. Wähle bei `Buchung` `Einzelne Tage`. Dann fällt nur dieser Tag weg. Oder lass den Tag aus der Woche.",
-        "Eine Woche lässt sich nicht verlängern? Ein Kind ist schon für die ganze Woche angemeldet. Mit mehr Tagen hätte es mehr als `Höchstens Tage je Kind`. Lass die Woche so oder erhöhe die Zahl.",
+        "Eine Woche lässt sich nicht verlängern? Ein Kind ist schon für die ganze Woche angemeldet. Mehr Tage würden die Höchstzahl pro Kind überschreiten. Lass die Woche so oder erhöhe die Zahl.",
       ],
       related: [
         HELP_TOPICS.traegerLogin,
@@ -14227,9 +14227,9 @@ export const traegerHolidayPlacesTopic =
     return {
       id: HELP_TOPICS.traegerHolidayPlaces,
       title: "Plätze und Warteliste in den Ferien",
-      question: "Wie lege ich Plätze je Ferienwoche fest?",
+      question: "Wie lege ich Plätze pro Ferienwoche fest?",
       summary:
-        "Du legst je Woche fest, wie viele Kinder mitmachen können. Plätze gehen in der Reihenfolge der Anmeldung. Ist eine Woche voll, kommt das Kind auf die Warteliste und rückt automatisch nach.",
+        "Du legst pro Woche fest, wie viele Kinder mitmachen können. Plätze gehen in der Reihenfolge der Anmeldung. Ist eine Woche voll, kommt das Kind auf die Warteliste und rückt automatisch nach.",
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "Hourglass",
@@ -14265,7 +14265,7 @@ export const traegerHolidayPlacesTopic =
           steps: [
             "Öffne den Ferienzeitraum und wähle den Reiter `Plätze`.",
             "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
-            "Die Datei enthält je Woche die Plätze und die Kinder auf der Warteliste.",
+            "Die Datei enthält pro Woche die Plätze und die Kinder auf der Warteliste.",
           ],
         },
         {
@@ -14282,7 +14282,7 @@ export const traegerHolidayPlacesTopic =
         "Das nächste Kind der Warteliste hat sofort einen Platz. Die Anmeldung gilt dann auch für diese Woche. Ist die Anmeldung verbindlich, ist es der Platz auch. Die Eltern bekommen eine E-Mail. Ist die Anmeldung bestätigt, rechnet moto den Ferienbeitrag mit der neuen Woche neu.",
       notes: [
         "Die Plätze gelten für alle Zeitmodelle einer Woche zusammen.",
-        "Bei einer Woche mit einzelnen Tagen gelten die Plätze an jedem Tag. Unter `Plätze je Tag` siehst du, wie voll jeder Tag ist. Ein Kind bekommt seinen Platz, wenn alle seine Tage frei sind. Sonst wartet es mit allen Tagen dieser Woche. Ein Kind mit anderen Tagen kann dann vor ihm einen Platz bekommen. Ein Feiertag oder Schließtag ist grau und nennt den Grund. An diesem Tag gibt es keine Plätze.",
+        "Bei einer Woche mit einzelnen Tagen gelten die Plätze an jedem Tag. Unter `Plätze pro Tag` siehst du, wie voll jeder Tag ist. Ein Kind bekommt seinen Platz, wenn alle seine Tage frei sind. Sonst wartet es mit allen Tagen dieser Woche. Ein Kind mit anderen Tagen kann dann vor ihm einen Platz bekommen. Ein Feiertag oder Schließtag ist grau und nennt den Grund. An diesem Tag gibt es keine Plätze.",
         "Eingegangene und bestätigte Anmeldungen zählen. Stornierte zählen nicht.",
         "Geschwister bekommen ihre Plätze einzeln. Ein Kind kann einen Platz haben und das andere auf der Warteliste stehen.",
         "Weniger Plätze nehmen niemandem den Platz weg. Neue Anmeldungen kommen dann auf die Warteliste.",
@@ -14354,7 +14354,7 @@ export const traegerHolidayRegistrationReviewTopic =
             "Wähle im Reiter `Übersicht` unter `Wer bezahlt den Beitrag?`: `Die Familie bezahlt`, `Von der Zahlung befreien (Leistungsbezug)` oder `Kosten übernimmt ein Kostenträger`. Beim Kostenträger wählst du darunter, welcher bezahlt. Im Reiter `Nachweise und Beitrag` zeigt der `Ferienbeitrag` sofort, was festgehalten wird.",
             "Fragt dein Träger die Debitorennummer ab, steht im Reiter `Übersicht` in der Karte `Status` das Feld `Debitorennummer`. Trage dort die Nummer der Familie bei der Kasse der Gemeinde ein. Ohne Nummer geht `Bestätigen` nicht. Hat dein Träger ein Format festgelegt, steht es unter dem Feld, zum Beispiel `Die Nummer hat 5 Ziffern`.",
             "Kennt moto die Nummer der Familie schon, steht unter dem Feld `Bekannte Nummer dieser Familie`. Prüfe die Nummer und wähle `Übernehmen`. Das Feld füllt sich, bestätigt ist aber noch nichts.",
-            "Wähle oben rechts `Bestätigen`. Bist du in einem anderen Reiter, zeigt moto zuerst die `Übersicht`. Wähle dann noch einmal `Bestätigen`. Damit ist der Beitrag festgehalten. moto merkt sich die Debitorennummer bei der Familie. Führt dein Träger die Nummer je Kind und hat die Anmeldung mehrere Kinder, steht unter `Debitorennummern der Kinder` ein Feld je Kind. Vorgeschlagen wird die Nummer, die das Kind schon hat. moto merkt sich jede Nummer beim Kind. Später änderst du sie im Menü mit den drei Punkten mit `Nummern der Kinder bearbeiten`.",
+            "Wähle oben rechts `Bestätigen`. Bist du in einem anderen Reiter, zeigt moto zuerst die `Übersicht`. Wähle dann noch einmal `Bestätigen`. Damit ist der Beitrag festgehalten. moto merkt sich die Debitorennummer bei der Familie. Führt dein Träger die Nummer pro Kind und hat die Anmeldung mehrere Kinder, steht unter `Debitorennummern der Kinder` ein Feld pro Kind. Vorgeschlagen wird die Nummer, die das Kind schon hat. moto merkt sich jede Nummer beim Kind. Später änderst du sie im Menü mit den drei Punkten mit `Nummern der Kinder bearbeiten`.",
             "Weicht die Nummer von der gemerkten ab, fragt moto `Welche Debitorennummer gilt?`. Wähle `Neue Nummer für die Familie merken` oder `Gemerkte Nummer behalten`. Mit deiner Auswahl bestätigst du die Anmeldung. Bei mehreren Familien nennt moto jede Familie und ihre bisherige Nummer. Deine Auswahl gilt für alle genannten Familien.",
             "Zum Stornieren wähle oben rechts das Menü mit den drei Punkten und dann `Stornieren`. Bestätige mit `Anmeldung stornieren`.",
           ],
@@ -14419,8 +14419,8 @@ export const traegerHolidayRegistrationReviewTopic =
           title: "Umbuchen",
           steps: [
             "Wähle im Reiter `Kind` beim Kind `Umbuchen`.",
-            "Wähle je Woche ein Zeitmodell oder `Nicht angemeldet`. Gibt es eine Woche an mehreren Schulen, wähle auch die Schule.",
-            "Wird die Woche tageweise gebucht, wähle darunter die Tage. Mehr Tage als `Höchstens Tage je Kind` nimmt moto nicht an.",
+            "Wähle pro Woche ein Zeitmodell oder `Nicht angemeldet`. Gibt es eine Woche an mehreren Schulen, wähle auch die Schule.",
+            "Wird die Woche tageweise gebucht, wähle darunter die Tage. Die Tage dürfen die `Höchstzahl an Tagen pro Kind` nicht überschreiten.",
             "Bietet die Woche Mittagessen an, steht darunter `Mit Mittagessen`. Setze oder entferne den Haken.",
             "Wähle `Speichern`.",
             "Eine Woche, die das Kind nicht mehr bucht, gibt ihren Platz frei. Das nächste Kind der Warteliste rückt sofort nach. Eine neue Woche bekommt einen Platz, wenn einer frei ist. Sonst kommt das Kind dort auf die Warteliste.",
@@ -14447,7 +14447,7 @@ export const traegerHolidayRegistrationReviewTopic =
           title: "Anmeldungen als PDF aufbewahren",
           steps: [
             "Über der Liste steht, wann moto die Anmeldungen löscht.",
-            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `Alle als PDF (ZIP)`. Du bekommst eine ZIP-Datei mit einem PDF je Anmeldung.",
+            "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `Alle als PDF (ZIP)`. Du bekommst eine ZIP-Datei mit einem PDF pro Anmeldung.",
             "Hast du Filter eingestellt? Dann heißt der Eintrag `Gefilterte als PDF (ZIP)`. Die ZIP-Datei enthält nur die gefilterten Anmeldungen.",
             "Für eine einzelne Anmeldung öffnest du die Anmeldung. Wähle oben rechts das Menü mit den drei Punkten und unter `Herunterladen` den Eintrag `PDF`.",
             "Speichere die Dateien bei deinem Träger. Für diese Kopien bist du selbst verantwortlich.",
@@ -14466,7 +14466,7 @@ export const traegerHolidayRegistrationReviewTopic =
         "Bei jeder Woche eines Kindes steht `Platz` oder `Warteliste`. Auf der Warteliste steht der Rang dabei, zum Beispiel `Warteliste, Platz 2`. Stornierst du eine Anmeldung, rückt das nächste Kind der Warteliste sofort nach.",
         "Eine eingefrorene Anmeldung kannst du bestätigen. Stornieren und Umbuchen gehen erst nach `Wieder öffnen`.",
         "Änderst du das Mittagessen einer bestätigten Anmeldung, berechnet moto den Beitrag neu. Ist die Rechnung schon verschickt, berechne den Unterschied als Korrektur in der Abrechnung.",
-        "Der Export hat eine Zeile je Kind und Woche. Gesundheitsangaben stehen nicht darin. Antworten auf eigene Fragen ohne Gesundheitsangabe haben eigene Spalten.",
+        "Der Export hat eine Zeile pro Kind und Woche. Gesundheitsangaben stehen nicht darin. Antworten auf eigene Fragen ohne Gesundheitsangabe haben eigene Spalten.",
         "Gesundheitsangaben sieht in der Einzelansicht nur die Rolle Verwaltung. Jedes Öffnen steht im `Zugriffsprotokoll` des Trägers.",
         "Eine `Zweite sorgeberechtigte Person` steht in der Einzelansicht, nicht in der Liste. Im Export stehen Name und Telefon.",
         "Fragt das Formular die Anschrift ab, steht sie in der Einzelansicht bei `Eltern` und im Export. In der Liste und bei der ausrichtenden OGS steht sie nicht.",
@@ -14499,10 +14499,10 @@ export const traegerHolidayRegistrationReviewTopic =
         "Beim Bestätigen gibt es kein Feld `Debitorennummer`? Dein Träger fragt sie nicht ab. Das legst du in den Einstellungen unter `Allgemein` im Bereich `Ferienbetreuung` fest.",
       ],
       troubleshootingDetails: [
-        "Eine Änderung führt zu zu vielen Tagen je Kind? Prüfe die Anmeldungen vor dem Speichern. Bei gleicher Eltern-E-Mail, gleichem Namen und Geburtsdatum zählen die Tage zusammen. Das gilt auch, wenn du diese Angaben änderst.",
+        "Eine Änderung führt zu zu vielen Tagen pro Kind? Prüfe die Anmeldungen vor dem Speichern. Bei gleicher Eltern-E-Mail, gleichem Namen und Geburtsdatum zählen die Tage zusammen. Das gilt auch, wenn du diese Angaben änderst.",
         "`Umbuchen` fehlt? Die Anmeldung ist eingefroren oder storniert. Eine eingefrorene Anmeldung öffnest du mit `Wieder öffnen`.",
         "Eine stornierte Anmeldung lässt sich nicht wieder öffnen. Die Eltern melden das Kind dann neu an.",
-        "Eine gemeinsame Rechnung bleibt auch nach dem Wechsel zu `Kind` gemeinsam. Nach dem Storno änderst du ihre Nummer mit `Debitorennummer bearbeiten`. Rechnungen je Kind nennen die Nummer des Kindes.",
+        "Eine gemeinsame Rechnung bleibt auch nach dem Wechsel zu `Kind` gemeinsam. Nach dem Storno änderst du ihre Nummer mit `Debitorennummer bearbeiten`. Rechnungen pro Kind nennen die Nummer des Kindes.",
         "Die Debitorennummer lässt sich nicht mehr ändern? Für die Anmeldung gibt es schon eine Rechnung. Die Rechnung behält die Nummer, mit der sie ausgestellt wurde.",
         "`Bearbeiten` fehlt? Die Anmeldung ist storniert. Dann lassen sich die Angaben nicht mehr ändern.",
         "`Trennen` fehlt oder Zusammenführen geht nicht? Für eine Anmeldung der Geschwister gibt es schon eine Rechnung. Geschwister kannst du dann nicht mehr ändern.",
@@ -14578,7 +14578,7 @@ export const traegerHolidayWishTopic =
       title: "Ferienwunsch aus der OGS-Anmeldung",
       question: "Wie bekommen Kinder mit Ferienwunsch Vorrang?",
       summary:
-        "Eltern geben in der OGS-Anmeldung an, ob ihr Kind in den Ferien Betreuung braucht. Du schaltest je Ferienzeitraum ein, dass dieser Ferienwunsch zählt.",
+        "Eltern geben in der OGS-Anmeldung an, ob ihr Kind in den Ferien Betreuung braucht. Du schaltest pro Ferienzeitraum ein, dass dieser Ferienwunsch zählt.",
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "Sun",
@@ -14857,7 +14857,7 @@ export const traegerOccupancyTopic =
       title: "Belegung der Schulen",
       question: "Wie viele Kinder hat jede Schule, Gruppe und Betreuungsform?",
       summary:
-        "Die Belegung zeigt, wie viele Kinder deine Schulen heute betreuen: je Schule, je OGS-Gruppe und je Betreuungsform.",
+        "Die Belegung zeigt, wie viele Kinder deine Schulen heute betreuen: pro Schule, pro OGS-Gruppe und pro Betreuungsform.",
       group: "einstieg",
       audience: "traeger",
       icon: "ChartLine",
@@ -14902,7 +14902,7 @@ export const traegerPayrollExportTopic =
       title: "Lohnexport und Zeitexport",
       question: "Wie bekomme ich die Lohndatei für DATEV?",
       summary:
-        "Du lädst die Lohndatei für alle Schulen herunter. Stellt eine Gemeinde oder ein Schulträger an, wählst du eine Datei oder eine je Arbeitgeber.",
+        "Du lädst die Lohndatei für alle Schulen herunter. Stellt eine Gemeinde oder ein Schulträger an, wählst du eine Datei oder eine pro Arbeitgeber.",
       group: "personal",
       audience: "traeger",
       icon: "Download",
@@ -14915,8 +14915,8 @@ export const traegerPayrollExportTopic =
           title: "Einmal: Lohnarten eintragen",
           steps: [
             "Wähle in der Navigation `Lohnexport` und den Reiter `Einrichtung`.",
-            "Trage bei `DATEV-Mandant des Trägers` die `Beraternummer` und `Mandantennummer` deines Lohnbüros ein. Lohn und Gehalt braucht sie nur bei einer Datei je Arbeitgeber.",
-            "Trage in der Tabelle je Art des Vertrags die Nummer der Lohnart aus deinem DATEV ein. Sie gilt für alle Arbeitgeber.",
+            "Trage bei `DATEV-Mandant des Trägers` die `Beraternummer` und `Mandantennummer` deines Lohnbüros ein. Lohn und Gehalt braucht sie nur bei einer Datei pro Arbeitgeber.",
+            "Trage in der Tabelle pro Art des Vertrags die Nummer der Lohnart aus deinem DATEV ein. Sie gilt für alle Arbeitgeber.",
             "Wähle bei `Krank`, `Urlaub` und `Fortbildung`, ob DATEV Stunden oder Tage erwartet.",
             "Wähle unten `Speichern`.",
           ],
@@ -14933,15 +14933,15 @@ export const traegerPayrollExportTopic =
           ],
         },
         {
-          title: "Fall 2: Eine Datei je Arbeitgeber",
+          title: "Fall 2: Eine Datei pro Arbeitgeber",
           description:
             "Für Träger, bei denen jede Gemeinde und jeder Schulträger ein eigener DATEV-Mandant ist.",
           steps: [
-            "Wähle im Reiter `Einrichtung` bei `Wie viele Lohndateien?` die Form `Eine Datei je Arbeitgeber`.",
-            "Trage unter `Andere Arbeitgeber` je Gemeinde und Schulträger die `Beraternummer` und die `Mandantennummer` ein. Die Nummern bekommst du vom Lohnbüro des Arbeitgebers.",
+            "Wähle im Reiter `Einrichtung` bei `Wie viele Lohndateien?` die Form `Eine Datei pro Arbeitgeber`.",
+            "Trage unter `Andere Arbeitgeber` pro Gemeinde und Schulträger die `Beraternummer` und die `Mandantennummer` ein. Die Nummern bekommst du vom Lohnbüro des Arbeitgebers.",
             "Wähle unten `Speichern`.",
             "Hat eine Person bei einer Gemeinde eine andere Personalnummer als beim Träger: Öffne ihre Personalakte, wähle bei `Personalnummer` den Knopf `Bearbeiten` und trage die Nummer bei der Gemeinde ein.",
-            "Wähle den Reiter `Lohndatei`. Unter `Dateien je Arbeitgeber` steht jede Datei mit ihren Schulen. Wähle bei jeder Datei `Herunterladen`.",
+            "Wähle den Reiter `Lohndatei`. Unter `Dateien pro Arbeitgeber` steht jede Datei mit ihren Schulen. Wähle bei jeder Datei `Herunterladen`.",
           ],
         },
         {
@@ -15054,7 +15054,7 @@ export const traegerReportsTopic = function traegerReportsTopic(): HelpTopic {
       "Wähle in der Navigation `Berichte`.",
       "Wähle oben eine Vorlage. Ohne Vorlage zeigt moto alle Abschnitte.",
       "Prüfe den Stichtag. moto schlägt den letzten 15. Oktober vor. Mit den Pfeilen springst du ein Jahr vor oder zurück.",
-      "Hat die Vorlage Sozialräume, wähle `Je Schule` oder `Je Sozialraum`.",
+      "Hat die Vorlage Sozialräume, wähle `Pro Schule` oder `Pro Sozialraum`.",
       "Wähle in der Tabelle der Kinder eine Zeile, um die Betreuungsformen zu sehen.",
       "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
     ],
@@ -15085,13 +15085,13 @@ export const traegerReportsTopic = function traegerReportsTopic(): HelpTopic {
       "Der Bericht enthält nur Zahlen, keine Namen von Kindern oder Personal.",
     ],
     differences: [
-      "Fehlt der Reiter `Je Sozialraum`, hat die Vorlage keine Sozialräume. Trage sie in der Vorlage ein.",
+      "Fehlt der Reiter `Pro Sozialraum`, hat die Vorlage keine Sozialräume. Trage sie in der Vorlage ein.",
       "Fehlt der Knopf `Neue Vorlage`, hast du nicht die Rolle Verwaltung. Du kannst Berichte trotzdem ansehen und herunterladen.",
       "Steht `Bei einer Schule gibt es Check-ins erst ab …`, hat die Schule für die Tage davor keine Check-ins. Dann zählt moto für diese Tage keine Anwesenheit.",
     ],
     image: "/help/screens/traeger-berichte.webp",
     imageAlt:
-      "Die Seite Berichte: oben Stichtag und Vorlage, darunter Kennzahlen und die Tabelle der Kinder je Schule.",
+      "Die Seite Berichte: oben Stichtag und Vorlage, darunter Kennzahlen und die Tabelle der Kinder pro Schule.",
     related: [HELP_TOPICS.traegerOccupancy, HELP_TOPICS.traegerUtilization],
   };
 } satisfies typeof authored_traegerReportsTopic;
@@ -15111,7 +15111,7 @@ export const traegerResponsibilitiesTopic =
       question:
         "Wie lege ich fest, wer Verträge schließt, abrechnet und Personal anstellt?",
       summary:
-        "Je Schule ist dein Träger, der Schulträger oder die Gemeinde zuständig. Du legst das für alle Schulen fest und trägst die Angaben der Stelle bei der Schule ein. Rechnet eine Stelle selbst ab, stellt sie ihre Schreiben mit eigener Gläubiger-ID aus.",
+        "Pro Schule ist dein Träger, der Schulträger oder die Gemeinde zuständig. Du legst das für alle Schulen fest und trägst die Angaben der Stelle bei der Schule ein. Rechnet eine Stelle selbst ab, stellt sie ihre Schreiben mit eigener Gläubiger-ID aus.",
       group: "konfiguration",
       audience: "traeger",
       icon: "Building2",
@@ -15123,8 +15123,8 @@ export const traegerResponsibilitiesTopic =
           description: "Ohne deine Wahl ist dein Träger für alles zuständig.",
           steps: [
             "Wähle unten in der Navigation `Einstellungen` und dann `Zuständigkeiten`.",
-            "In der Karte `Für alle Schulen` wählst du je Frage eine Stelle: `Träger`, `Schulträger` oder `Gemeinde`.",
-            "moto speichert die Wahl sofort. Unter `Je Schule` siehst du, wer an jeder Schule zuständig ist.",
+            "In der Karte `Für alle Schulen` wählst du pro Frage eine Stelle: `Träger`, `Schulträger` oder `Gemeinde`.",
+            "moto speichert die Wahl sofort. Unter `Pro Schule` siehst du, wer an jeder Schule zuständig ist.",
           ],
         },
         {
@@ -15132,7 +15132,7 @@ export const traegerResponsibilitiesTopic =
           description:
             "Eine Stelle ist erst zuständig, wenn ihr Name und ihre Anschrift bei der Schule stehen. Bis dahin bleibt dein Träger zuständig.",
           steps: [
-            "Wähle unter `Je Schule` die Schule. Der Reiter `Zuständigkeiten` der Schule öffnet sich.",
+            "Wähle unter `Pro Schule` die Schule. Der Reiter `Zuständigkeiten` der Schule öffnet sich.",
             "Wähle in der Karte `Schulträger` oder `Gemeinde` den Knopf `Angaben eintragen`.",
             "Trage Name, Straße, Postleitzahl und Ort ein. Die Ansprechperson ist freiwillig.",
             "Rechnet die Stelle mit den Eltern ab? Dann trage auch Gläubiger-ID und Bankverbindung ein.",
@@ -15145,9 +15145,9 @@ export const traegerResponsibilitiesTopic =
             "Die Stelle stellt Rechnungen und Bescheide in eigenem Namen aus und zieht Lastschriften mit ihrer eigenen Gläubiger-ID auf ihr eigenes Konto ein.",
           steps: [
             "Wähle bei `Wer rechnet mit den Eltern ab?` die Stelle: für alle Schulen hier, für eine Schule in der Schul-App.",
-            "Trage bei der Schule Name, Anschrift, Gläubiger-ID und Bankverbindung der Stelle ein. Erst dann rechnet sie ab. Unter `Je Schule` steht sonst `Bankdaten fehlen`.",
+            "Trage bei der Schule Name, Anschrift, Gläubiger-ID und Bankverbindung der Stelle ein. Erst dann rechnet sie ab. Unter `Pro Schule` steht sonst `Bankdaten fehlen`.",
             "Unter `Abrechnung durch …` siehst du, was der Stelle noch fehlt. Jede Zeile führt dorthin, wo du es einträgst.",
-            "Lege in `Einstellungen` › `Abrechnung` die Nummernkreise der Stelle fest, je einen für Ferien und Monatsbeiträge. Nimm ein eigenes Kürzel.",
+            "Lege in `Einstellungen` › `Abrechnung` die Nummernkreise der Stelle fest. Lege einen für Ferien und einen für Monatsbeiträge an. Nimm ein eigenes Kürzel.",
             "Prüfe in `Einstellungen` › `Dokumentarten` das Schreiben der Stelle. Ohne deine Wahl stellt sie einen Gebührenbescheid aus. Dafür braucht die Vorlage `Bescheid` eine Rechtsbehelfsbelehrung.",
             "Familien, die per Lastschrift zahlen, brauchen ein neues Mandat für die Stelle. Ein Mandat für deinen Träger gilt nicht für sie. Erfasse die neuen Mandate unter `Abrechnung` › `Lastschrift`.",
             "Gib den nächsten Lauf frei. Die Schreiben der Schule nennen die Stelle als Absender, mit ihrem Konto und ihrer Gläubiger-ID.",
@@ -15182,7 +15182,7 @@ export const traegerResponsibilitiesTopic =
         "Ein Wechsel gilt für Schreiben, die danach freigegeben werden. Ausgestellte Rechnungen, Bescheide und Lastschriften behalten ihren Absender und ihre Gläubiger-ID. Ein Storno nimmt den Absender seiner Rechnung.",
         "Haben Geschwister an zwei Schulen verschiedene Stellen, bekommt die Familie zwei Schreiben und braucht zwei Mandate. In den Ferien rechnet die Stelle der Schule ab, die das Kind besucht.",
         "Sollstellung und DATEV-Datei enthalten nur die Schreiben deines Trägers. Die Schreiben einer Stelle, die selbst abrechnet, bucht sie in ihrem eigenen Haushalt.",
-        "Stellt eine Gemeinde oder ein Schulträger an, wählst du unter `Lohnexport` > `Einrichtung`: eine Lohndatei für den ganzen Träger oder eine je Arbeitgeber.",
+        "Stellt eine Gemeinde oder ein Schulträger an, wählst du unter `Lohnexport` > `Einrichtung`: eine Lohndatei für den ganzen Träger oder eine pro Arbeitgeber.",
       ],
       troubleshootingDetails: [
         "Bei einer Schule steht `Angaben fehlen`? Die gewählte Stelle hat dort noch keinen Namen und keine Anschrift. Trage sie bei der Schule ein.",
@@ -15220,15 +15220,15 @@ export const traegerSchoolComparisonTopic =
         "Wähle oben den Zeitraum, zum Beispiel `Letzte 3 Monate`. Mit den Pfeilen springst du einen Zeitraum vor oder zurück.",
         "Wähle bei Bedarf rechts daneben die Schulen. Ohne Auswahl vergleicht moto alle Schulen.",
         "Wähle bei `Rangfolge` eine Kennzahl, zum Beispiel `Plätze belegt`. Die Schule mit der größten Zahl steht oben.",
-        "Wähle bei `Kennzahlen je Schule` die Spalten, die du vergleichen willst.",
+        "Wähle bei `Kennzahlen pro Schule` die Spalten, die du vergleichen willst.",
         "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält die gewählten Schulen und Kennzahlen.",
       ],
       result:
         "Du siehst, welche Schule voller oder leerer ist als die anderen und wie weit sie vom Schnitt entfernt ist.",
       notes: [
-        "„Ø“ ist der Durchschnitt je Tag. Bei „Kinder anwesend“ zählen nur Tage mit Check-ins.",
+        "„Ø“ ist der Durchschnitt pro Tag. Bei „Kinder anwesend“ zählen nur Tage mit Check-ins.",
         "Unter jeder Zahl steht der Abstand zum Schnitt der Schulen, zum Beispiel „12 Punkte über Schnitt“.",
-        "Unter den Schulen stehen zwei Zeilen: `Schnitt je Schule` und `Alle zusammen`.",
+        "Unter den Schulen stehen zwei Zeilen: `Schnitt pro Schule` und `Alle zusammen`.",
         "„Aktive Kinder am letzten Tag“ zählt die Kinder, die die Schule am letzten Tag des Zeitraums aktiv führt.",
         "Die Datei enthält genau die gewählten Schulen und Spalten.",
         "Den Verlauf über die Zeit siehst du unter `Auslastung`.",
@@ -15240,7 +15240,7 @@ export const traegerSchoolComparisonTopic =
       ],
       image: "/help/screens/traeger-standortvergleich.webp",
       imageAlt:
-        "Die Seite Standortvergleich: oben Zeitraum und Schulen, darunter vier Kennzahlen, die Rangfolge als liegende Balken und die Tabelle je Schule.",
+        "Die Seite Standortvergleich: oben Zeitraum und Schulen, darunter vier Kennzahlen, die Rangfolge als liegende Balken und die Tabelle pro Schule.",
       related: [HELP_TOPICS.traegerUtilization, HELP_TOPICS.traegerReports],
     };
   } satisfies typeof authored_traegerSchoolComparisonTopic;
@@ -15416,7 +15416,7 @@ export const traegerSepaDebitFileTopic =
         {
           title: "Raten aus dem Jahresbescheid",
           description:
-            "Für Raten aus dem Jahresbescheid gibt es eine Datei je Monat.",
+            "Für Raten aus dem Jahresbescheid gibt es eine Datei pro Monat.",
           steps: [
             "Wähle `Abrechnung`, dann den Reiter `Jahresbescheide`, und öffne den freigegebenen Lauf.",
             "Wähle oben rechts das Menü mit den drei Punkten und dann `Lastschrift der Raten`.",
@@ -15501,7 +15501,7 @@ export const traegerSepaMandatesTopic =
         {
           title: "Mandat einer Familie erfassen",
           description:
-            "Je Familie gilt ein Mandat. Es gilt auch für Geschwister mit derselben E-Mail-Adresse im Vertrag. Stehen Geschwister mit demselben Konto und derselben Mandatsreferenz in mehreren Zeilen, legt moto das Mandat einmal an. Die Vorschau zeigt die weiteren Zeilen als `Gleiches Mandat`.",
+            "Pro Familie gilt ein Mandat. Es gilt auch für Geschwister mit derselben E-Mail-Adresse im Vertrag. Stehen Geschwister mit demselben Konto und derselben Mandatsreferenz in mehreren Zeilen, legt moto das Mandat einmal an. Die Vorschau zeigt die weiteren Zeilen als `Gleiches Mandat`.",
           steps: [
             "Öffne den Vertrag des Kindes unter `Verträge`. Oder öffne im Monatslauf bei der Rechnung das Menü mit den drei Punkten und dann `Empfänger und Zahlung`.",
             "Wähle in der Karte `SEPA-Lastschriftmandat` den Knopf `Mandat erfassen`. Es öffnet sich die Seite des Mandats. Bei einem Entwurf fehlt die Karte: Sende den Vertrag zuerst. Ein verworfener Entwurf würde das Mandat mitlöschen.",
@@ -15529,7 +15529,7 @@ export const traegerSepaMandatesTopic =
             "Hast du die Mandate schon in einem anderen Programm, zum Beispiel OGS Connect? Dann übernimm alle auf einmal aus einer CSV-Datei. Referenz und Datum der Unterschrift bleiben gleich. moto bewahrt die Datei nicht auf.",
           steps: [
             "Speichere die Mandate im anderen Programm als CSV-Datei. Die erste Zeile enthält die Überschriften.",
-            "Aus OGS Connect nimm den Export der Stammdaten. Er hat eine Zeile je Kind. moto schlägt dort die Spalte `Debitor-Nr.` als Zahler vor. Dafür muss moto die Debitorennummern schon kennen, zum Beispiel aus `Verträge importieren` oder aus dem Reiter `Familien`.",
+            "Aus OGS Connect nimm den Export der Stammdaten. Er hat eine Zeile pro Kind. moto schlägt dort die Spalte `Debitor-Nr.` als Zahler vor. Dafür muss moto die Debitorennummern schon kennen, zum Beispiel aus `Verträge importieren` oder aus dem Reiter `Familien`.",
             "Öffne unter `Abrechnung` den Reiter `Lastschrift`. Wähle oben rechts das Menü mit den drei Punkten und dann `Mandate importieren`.",
             "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
             "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. moto schlägt passende Spalten vor.",
@@ -15567,7 +15567,7 @@ export const traegerSepaMandatesTopic =
         "`Verlauf ansehen` zeigt, wer das Mandat wann angesehen oder geändert hat. Bei importierten Mandaten stehen dort auch Dateiname und Zeile. Kontodaten stehen dort nicht.",
         "Für Zeilen ohne IBAN und ohne Mandatsreferenz legt moto kein Mandat an. Die Vorschau zählt sie als „ohne Mandat“. Das sind meist Kinder, deren Familie ohne Lastschrift zahlt. Eine fehlende Debitorennummer übernimmt moto trotzdem, solange es keinen Konflikt gibt. Konflikte zeigt die Vorschau mit der Zeilennummer.",
         "Mandate übernimmt moto nur mit dem Stand `Bereit`. Fehlende Debitorennummern kannst du auch bei vorhandenen Mandaten übernehmen. Die Vorschau zählt jede Familie einmal. Unterschiedliche Nummern werden nicht übernommen. Korrigiere die Datei und lade sie noch einmal.",
-        "Führt dein Träger die Debitorennummer je Kind, bekommt jedes Kind die Nummer seiner Zeile. Geschwister dürfen verschiedene Nummern haben. Damit moto das Kind erkennt, wähle als Zahler die Vertragsnummer oder die Debitorennummer. Mit der E-Mail erkennt moto das Kind nur, wenn die Familie ein Kind mit Vertrag hat.",
+        "Führt dein Träger die Debitorennummer pro Kind, bekommt jedes Kind die Nummer seiner Zeile. Geschwister dürfen verschiedene Nummern haben. Damit moto das Kind erkennt, wähle als Zahler die Vertragsnummer oder die Debitorennummer. Mit der E-Mail erkennt moto das Kind nur, wenn die Familie ein Kind mit Vertrag hat.",
         "Ein Mandat aus der Datei, mit dem schon abgebucht wurde, übernimmt moto als Folgelastschrift. Steht die letzte Abbuchung in der Datei, zählen die 36 Monate bis zum Verfall ab diesem Tag. Fehlt sie, zählen sie ab dem Import.",
         "Weißt du, dass die letzte Abbuchung lange her ist? Dann trage das Datum in der Datei ein oder hole ein neues Mandat ein. Ohne Datum geht moto davon aus, dass das Mandat bis kurz vor dem Import genutzt wurde.",
       ],
@@ -15623,7 +15623,7 @@ export const traegerSettingsTopic = function traegerSettingsTopic(): HelpTopic {
       "Darunter steht `Kontakt für Widerrufe`. Diese Telefonnummer und E-Mail-Adresse nennt die Widerrufsbelehrung jedes Betreuungsvertrags. Ein leeres Feld nimmt die Angabe der Ansprechperson. Die Vorschau zeigt den Satz so, wie Eltern ihn lesen. Nach einer Änderung kopiert die Schule die Widerrufsbelehrung neu ins Anmeldeformular.",
       "Mit `Zurück zur App` oben in der Navigation kommst du zur zuletzt geöffneten Seite zurück.",
       "Im Bereich `Ferienbetreuung` legst du fest, ob du beim Bestätigen einer Ferienanmeldung die Debitorennummer der Familie abfragst. Diese Einstellung gilt nur im Träger-Büro.",
-      "Ebenfalls dort wählst du bei `Debitorennummer gilt je`, wen eine Nummer meint. `Zahler (Rechnungsempfänger)` heißt: Jeder Empfänger von Rechnungen hat eine Nummer, Geschwister teilen sie. Zahlen die Eltern getrennt, hat jeder Elternteil seine Nummer. `Kind` heißt: Jedes Kind hat eine eigene Nummer. Wenn du umstellst, bleiben alle gespeicherten Nummern erhalten. Ausgestellte Rechnungen behalten ihre Nummer, neue Rechnungen nehmen die Nummer nach der neuen Einstellung.",
+      "Ebenfalls dort wählst du bei `Debitorennummer zuordnen`, wen eine Nummer meint. `Zahler (Rechnungsempfänger)` heißt: Jeder Empfänger von Rechnungen hat eine Nummer, Geschwister teilen sie. Zahlen die Eltern getrennt, hat jeder Elternteil seine Nummer. `Kind` heißt: Jedes Kind hat eine eigene Nummer. Wenn du umstellst, bleiben alle gespeicherten Nummern erhalten. Ausgestellte Rechnungen behalten ihre Nummer, neue Rechnungen nehmen die Nummer nach der neuen Einstellung.",
       "Hat deine Kasse ein festes Format, schalte dort `Debitorennummer: nur Ziffern` ein. Darunter trägst du bei `Länge` ein, von wie vielen bis wie vielen Ziffern eine Nummer hat. Für genau 5 Ziffern trägst du zweimal 5 ein. Das `Beispiel` zeigt eine passende Nummer.",
       "Das Format gilt für jede Nummer, die du danach einträgst: beim Bestätigen, beim Ändern einer Anmeldung und bei den Familien. Gespeicherte Nummern bleiben, wie sie sind.",
       "Ebenfalls unter `Ferienbetreuung` schreibst du bei `Zahlungstext im Schreiben` einen eigenen Satz, der um die Zahlung bittet. Erlaubte Platzhalter sind {Betrag}, {Zahlungsfrist}, {Rechnungsnummer} und {Debitorennummer}. Darunter zeigt die `Vorschau des Zahlungstexts` den Satz mit Beispielwerten. Ist das Feld leer, steht im Schreiben der eingebaute Satz.",
@@ -15752,7 +15752,7 @@ export const traegerStaffContractsTopic =
       title: "Arbeitsvertrag und Soll",
       question: "Wie trage ich Vertrag, Soll und Ferien-Soll ein?",
       summary:
-        "Im Arbeitsvertrag stehen die Stunden je Schule und Wochentag. Die Schulen rechnen damit in ihrer Zeiterfassung.",
+        "Im Arbeitsvertrag stehen die Stunden pro Schule und Wochentag. Die Schulen rechnen damit in ihrer Zeiterfassung.",
       group: "personal",
       audience: "traeger",
       icon: "Hourglass",
@@ -15769,7 +15769,7 @@ export const traegerStaffContractsTopic =
             "Wähle bei `Arbeitsverträge` den Knopf `Vertrag anlegen`.",
             "Wähle die Art: `Teilzeit`, `Vollzeit`, `Minijob`, `Übungsleiter` oder `Ehrenamt`.",
             "Wähle den `Ersten Tag`. Den `Letzten Tag` lässt du leer, wenn der Vertrag unbefristet ist.",
-            "Trage je Schule die Stunden von Montag bis Freitag ein. Ein leeres Feld ist ein freier Tag.",
+            "Trage pro Schule die Stunden von Montag bis Freitag ein. Ein leeres Feld ist ein freier Tag.",
             "Wähle `Vertrag anlegen`.",
           ],
         },
@@ -15889,7 +15889,7 @@ export const traegerStaffPlanningTopic =
           steps: [
             "Wähle die Woche mit den Pfeilen.",
             "Wähle oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
-            "Die Datei hat eine Zeile je Person und eine Spalte je Tag.",
+            "Die Datei hat eine Zeile pro Person und eine Spalte pro Tag.",
           ],
         },
         {
@@ -16147,7 +16147,7 @@ export const traegerStaffRecordsTopic =
           description:
             "Für den Start mit moto: du übernimmst dein Personal aus dem Lohnprogramm oder aus einer Liste. moto erkennt jede Person an der Personalnummer.",
           steps: [
-            "Speichere dein Personal als CSV-Datei. Eine Zeile je Person, Überschriften in der ersten Zeile. Pflicht sind Personalnummer, Vorname und Nachname. Eine Vorlage bekommst du mit `Beispieldatei`.",
+            "Speichere dein Personal als CSV-Datei. Eine Zeile pro Person, Überschriften in der ersten Zeile. Pflicht sind Personalnummer, Vorname und Nachname. Eine Vorlage bekommst du mit `Beispieldatei`.",
             "Wähle in der Navigation `Personalakten`. Wähle oben rechts das Menü mit den drei Punkten und dann `Personal importieren`.",
             "Wähle bei `Datei wählen` deine Datei.",
             "Prüfe bei `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt.",
@@ -16368,7 +16368,7 @@ export const traegerUtilizationTopic =
         "Wähle einen Reiter: `Schulen`, `Betreuungsformen` oder `Räume`.",
         "Wähle eine Zeile der Tabelle. Das Diagramm zeigt dann den Verlauf dieser Zeile.",
         "Wähle über dem Diagramm `Tage`, `Wochen` oder `Monate`.",
-        "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Zahlen je Tag. Mit einer gewählten Schule nur diese Schule.",
+        "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Zahlen pro Tag. Mit einer gewählten Schule nur diese Schule.",
       ],
       result:
         "Du siehst, wie voll die Plätze im Durchschnitt waren, an welchem Tag am meisten los war und welche Betreuungsformen voll waren.",
@@ -16875,7 +16875,7 @@ export const workTimeTemplatesTopic =
             "Wähle oben rechts `Vorlage`.",
             "Gib einen Namen ein, zum Beispiel `Teilzeit 30 Stunden`.",
             "Wähle bei `Rotation` zum Beispiel `Standard (1 Woche)` oder `A/B-Wochen (2 Wochen)`.",
-            "Trage je Wochentag die Stunden ein, zum Beispiel `6`.",
+            "Trage pro Wochentag die Stunden ein, zum Beispiel `6`.",
             "Wähle `Speichern`.",
           ],
         },

@@ -62,7 +62,7 @@ const INFO = (
     </p>
     <p>
       Stellt an einer Schule eine Gemeinde oder ein Schulträger an, wählst du
-      unter „Einrichtung“: eine Datei für den ganzen Träger oder eine Datei je
+      unter „Einrichtung“: eine Datei für den ganzen Träger oder eine Datei pro
       Arbeitgeber.
     </p>
     <p>

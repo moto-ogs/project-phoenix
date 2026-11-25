@@ -194,9 +194,9 @@ func carePositionFacts(positions []parentbilling.CarePosition, sign int64) []Let
 // daysPerWeekLabel names a scale step: „1 Tag je Woche“, „3 Tage je Woche“.
 func daysPerWeekLabel(days int) string {
 	if days == 1 {
-		return "1 Tag je Woche"
+		return "1 Tag pro Woche"
 	}
-	return fmt.Sprintf("%d Tage je Woche", days)
+	return fmt.Sprintf("%d Tage pro Woche", days)
 }
 
 func isMonthEnd(date calendar.Date) bool {
@@ -264,7 +264,7 @@ func careReductionReason(reduction parentbilling.CareReduction) string {
 			*reduction.ChildRank, *reduction.FamilyChildren, careRuleEffect(reduction))
 	case "cap":
 		if reduction.CapCents != nil {
-			return "Höchstbetrag " + formatEuro(*reduction.CapCents) + " je Familie und Monat erreicht"
+			return "Höchstbetrag " + formatEuro(*reduction.CapCents) + " pro Familie und Monat erreicht"
 		}
 	case "income_level":
 		return "Einkommensstufe, " + careRuleEffect(reduction)

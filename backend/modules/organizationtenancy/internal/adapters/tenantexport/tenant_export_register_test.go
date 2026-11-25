@@ -146,7 +146,7 @@ func returnRegisterHead(catalogVersion int, catalogSHA256 string) organizationte
 		TimeEstimate:         registerTimeEstimate,
 		Retrieval:            registerRetrieval,
 		Packages: []organizationtenancy.ReturnRegisterPackage{
-			{Kind: packageSchool, Description: "Alle Daten einer Schule und die Daten ihres Trägers. Eine Datei je Tabelle."},
+			{Kind: packageSchool, Description: "Alle Daten einer Schule und die Daten ihres Trägers. Eine Datei pro Tabelle."},
 			{Kind: packageOrganization, Description: "Die Daten eines Trägers: seine Tabellen, die Stammdaten seiner Schulen und die Konten der Geschäftsstelle. Was eine Schule hält, steht im Paket der Schule."},
 		},
 		Layout: registerLayout,
@@ -173,7 +173,7 @@ const registerRetrieval = "Wir erstellen und prüfen das Paket. Danach kannst du
 
 var registerStandards = []organizationtenancy.ReturnRegisterStandard{
 	{Name: "JSON", Reference: "RFC 8259", Use: "manifest.json, model.json, Zeilen der Tabellen"},
-	{Name: "JSON Lines", Reference: "https://jsonlines.org", Use: "Eine Datei <Schema>.<Tabelle>.jsonl je Tabelle, ein JSON-Objekt je Zeile"},
+	{Name: "JSON Lines", Reference: "https://jsonlines.org", Use: "Eine Datei <Schema>.<Tabelle>.jsonl pro Tabelle, ein JSON-Objekt pro Zeile"},
 	{Name: "UTF-8", Reference: "RFC 3629", Use: "Zeichenkodierung aller Text- und JSON-Dateien"},
 	{Name: "SHA-256", Reference: "FIPS 180-4", Use: "Prüfsumme jeder Datei in manifest.json und der Inhalt von COMPLETE"},
 	{Name: "Datum und Zeit", Reference: "ISO 8601 / RFC 3339", Use: "Zeitpunkte und Kalendertage in den Zeilen"},
@@ -186,11 +186,11 @@ var registerLayout = []organizationtenancy.ReturnRegisterPath{
 	{Path: "COMPLETE", Packages: []string{packageSchool, packageOrganization}, Description: "Entsteht zuletzt. Enthält die SHA-256-Prüfsumme von manifest.json. Ohne diese Datei ist das Paket unvollständig."},
 	{Path: "manifest.json", Packages: []string{packageSchool, packageOrganization}, Description: "Formatversion, Katalogversion, Zeitpunkt, jede Tabelle mit Anzahl der Zeilen oder dem Grund ihres Fehlens, jede Datei mit Prüfsumme und Größe."},
 	{Path: "model.json", Packages: []string{packageSchool, packageOrganization}, Description: "Felder, Typen, Nullbarkeit und Beziehungen der Tabellen dieses Pakets, wie in diesem Register."},
-	{Path: "<Schema>.<Tabelle>.jsonl", Packages: []string{packageSchool, packageOrganization}, Description: "Die Zeilen einer Tabelle. Ein JSON-Objekt je Zeile, die Schlüssel sind die Felder aus model.json."},
+	{Path: "<Schema>.<Tabelle>.jsonl", Packages: []string{packageSchool, packageOrganization}, Description: "Die Zeilen einer Tabelle. Ein JSON-Objekt pro Zeile, die Schlüssel sind die Felder aus model.json."},
 	{Path: "objects/<Nummer>", Packages: []string{packageSchool, packageOrganization}, Description: "Gespeicherte Dateien im Originalformat, zum Beispiel Fotos und Dokumente."},
 	{Path: "objects.jsonl", Packages: []string{packageSchool, packageOrganization}, Description: "Ordnet jede Datei unter objects/ ihrem ursprünglichen Speicherort zu."},
 	{Path: "DOKUMENTE/", Packages: []string{packageOrganization}, Description: "Gespeicherte Dokumente des Trägers als einzelne Dateien. index.jsonl nennt Tabelle, Zeile, Spalte, Medientyp, Prüfsumme und Größe."},
-	{Path: "SEPA-LASTSCHRIFTDATEIEN/", Packages: []string{packageOrganization}, Description: "Die eingereichten SEPA-Lastschriftdateien (PAIN.008), je Datei Original oder rekonstruiert."},
+	{Path: "SEPA-LASTSCHRIFTDATEIEN/", Packages: []string{packageOrganization}, Description: "Die eingereichten SEPA-Lastschriftdateien (PAIN.008). Jede Datei ist entweder das Original oder wurde rekonstruiert."},
 }
 
 var registerValues = []organizationtenancy.ReturnRegisterValue{

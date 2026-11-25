@@ -175,7 +175,7 @@ function Figures({
         hint={
           figures.averagePresent === null
             ? "Keine Check-ins im Zeitraum"
-            : "mit Check-in, je Tag"
+            : "mit Check-in, pro Tag"
         }
         tone="blue"
         icon={<MotoConceptIcon concept={childrenConcept} />}
@@ -411,12 +411,12 @@ function TraegerUtilizationContent() {
         <>
           Hier siehst du, wie voll die Plätze deiner Schulen über die Zeit
           waren. moto zählt die Wochentage im gewählten Zeitraum und zeigt den
-          Durchschnitt je Tag, Woche oder Monat. „Belegt“ sind die gebuchten
+          Durchschnitt pro Tag, Woche oder Monat. „Belegt“ sind die gebuchten
           Kinder der Betreuungsformen mit Platzgrenze. „Anwesend“ sind die
           Kinder mit Check-in. Ein Tag ohne Check-in, etwa in den Ferien, hat
           keine Zahl. Heute zählt erst, wenn der Tag vorbei ist. Die Kinder von
           heute stehen unter „Belegung“. Im Drei-Punkte-Menü unter
-          „Herunterladen“ bekommst du alle Zahlen je Tag als PDF, Excel oder
+          „Herunterladen“ bekommst du alle Zahlen pro Tag als PDF, Excel oder
           CSV.
         </>
       }
@@ -593,7 +593,7 @@ function TraegerUtilizationContent() {
         <>
           <DataTable
             heading={{
-              title: "Je Schule",
+              title: "Pro Schule",
               count: schoolTable.length,
               level: 2,
             }}
@@ -616,7 +616,7 @@ function TraegerUtilizationContent() {
       {view === "betreuungsformen" ? (
         <DataTable
           heading={{
-            title: "Je Betreuungsform",
+            title: "Pro Betreuungsform",
             count: offeringTable.length,
             level: 2,
           }}
@@ -639,7 +639,7 @@ function TraegerUtilizationContent() {
       ) : null}
       {view === "raeume" ? (
         <DataTable
-          heading={{ title: "Je Raum", count: roomTable.length, level: 2 }}
+          heading={{ title: "Pro Raum", count: roomTable.length, level: 2 }}
           columns={ROOM_COLUMNS}
           rows={roomTable}
           getRowKey={(row) => row.key}

@@ -435,7 +435,7 @@ describe("TraegerVertraegePage", () => {
     renderPage();
 
     const list = await screen.findByRole("list", {
-      name: "Abschluss je Schule",
+      name: "Abschluss pro Schule",
     });
     expect(list).toHaveTextContent("OGS Am LindenhofBei der Annahme");
     expect(list).toHaveTextContent("OGS NordSpäter verschicken");
@@ -474,7 +474,7 @@ describe("TraegerVertraegePage", () => {
     renderPage();
 
     const list = await screen.findByRole("list", {
-      name: "Abschluss je Schule",
+      name: "Abschluss pro Schule",
     });
     const [lindenhof, nord] = within(list).getAllByRole("listitem");
     expect(lindenhof).toHaveTextContent(

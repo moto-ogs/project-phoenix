@@ -6,7 +6,7 @@ import { TenantPage } from "~/components/ui/tenant-page";
 import { useRequirePermission } from "~/lib/hooks/use-require-permission";
 
 const ENROLLMENT_DETAIL_INFO =
-  "Hier prüfst du eine Anmeldung mit allen Angaben der Familie. Du entscheidest je Kind, zum Beispiel mit „Bestätigen“ oder „Ablehnen“.";
+  "Hier prüfst du eine Anmeldung mit allen Angaben der Familie. Du entscheidest pro Kind, zum Beispiel mit „Bestätigen“ oder „Ablehnen“.";
 
 interface PageProps {
   readonly params: Promise<{ tenant: string; id: string }>;
