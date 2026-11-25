@@ -6,6 +6,10 @@ import { RequestRecorder } from "./recorder";
 // body is written to the report. One warm-up leaves the Next dev compilation
 // out of the cold document / empty browser-cache measurement.
 test("Bestellsummen und erste geöffnete Schule", async ({ page }, info) => {
+  test.skip(
+    !process.env.PERF_SCHOOLS,
+    "Set PERF_SCHOOLS for the caterer measurement",
+  );
   const base = `http://caterer.localhost:${perfPort()}`;
   const email = process.env.PERF_CATERER_EMAIL;
   const password = process.env.PERF_CATERER_PASSWORD;

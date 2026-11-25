@@ -22,7 +22,7 @@ export default defineConfig({
   testMatch: [
     "react-scan.perf.ts",
     "time-tracking.perf.ts",
-    ...(process.env.PERF_SCHOOLS ? ["caterer-orders.perf.ts"] : []),
+    "caterer-orders.perf.ts",
   ],
   timeout: 240_000,
   workers: 1,
