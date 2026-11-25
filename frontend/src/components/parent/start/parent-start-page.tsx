@@ -199,7 +199,7 @@ export function ParentStartPage() {
     load,
   );
   const loading =
-    (!!failure && !loadError) ||
+    (data.children.length === 0 && !!failure && !loadError) ||
     (!childrenResource.data && !childrenResource.error) ||
     (!!childrenResource.data &&
       ((!featuresResource.data && !featuresResource.error) ||

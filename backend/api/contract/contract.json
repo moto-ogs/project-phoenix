@@ -10043,6 +10043,23 @@
     },
     {
       "method": "GET",
+      "pattern": "/parent/me/family-start",
+      "portals": [
+        "parent"
+      ],
+      "query": [
+        {
+          "name": "student_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "FamilyStartResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/parent/me/holiday-registration-entries",
       "portals": [
         "parent"
@@ -58370,6 +58387,71 @@
           "name": "contract_id",
           "schema": {
             "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FamilyStartCardResponse",
+      "go_type": "parent.FamilyStartCardResponse",
+      "fields": [
+        {
+          "name": "access_version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child",
+          "schema": {
+            "kind": "ref",
+            "ref": "ChildResponse"
+          }
+        },
+        {
+          "name": "features",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "ChildFeaturesResponse"
+          }
+        },
+        {
+          "name": "today",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "TodayStatusResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FamilyStartResponse",
+      "go_type": "parent.FamilyStartResponse",
+      "fields": [
+        {
+          "name": "day",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "day_remaining_seconds",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "cards",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FamilyStartCardResponse"
+            }
           }
         }
       ]

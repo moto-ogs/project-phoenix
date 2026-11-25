@@ -1,10 +1,10 @@
 import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { testClockDay, TEST_CLOCK_TODAY } from "~/test/clock";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
 import type { ServerSeed } from "~/lib/swr/server-seed";
 
-const { answers, calls, snapshot } = vi.hoisted(() => ({
-  calls: [] as string[],
+const { answers, requests, snapshot } = vi.hoisted(() => ({
+  requests: [] as string[],
   answers: new Map<string, { status: number; body: unknown }>(),
   snapshot: {
     current: null as null | {
@@ -18,7 +18,7 @@ const { answers, calls, snapshot } = vi.hoisted(() => ({
 vi.mock("~/lib/backend-client.server", async (original) => ({
   ...(await original<typeof import("~/lib/backend-client.server")>()),
   sendBackend: async (endpoint: string) => {
-    calls.push(endpoint);
+    requests.push(endpoint);
     const answer = answers.get(endpoint);
     if (!answer) throw new Error(`unrouted ${endpoint}`);
     return Response.json(answer.body, { status: answer.status });
@@ -28,15 +28,7 @@ vi.mock("~/lib/portal-session-snapshot.server", () => ({
   readPortalSessionSnapshot: async () => snapshot.current,
 }));
 
-import {
-  isProtectedParentPath,
-  loadParentPageSeed,
-  loadParentShellSeed,
-} from "./parent-seed.server";
-import {
-  parentInitialMealMonday,
-  parentShellSeedKeys,
-} from "~/lib/parent-page-seed-keys";
+import { isProtectedParentPath, parentSeedProps } from "./parent-seed.server";
 import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import { sessionGeneration } from "~/lib/swr/session-generation";
@@ -98,16 +90,15 @@ const ok = (data: unknown) => ({
   body: { status: "success", data },
 });
 
-function routeFamily() {
-  answers.set("/parent/me/children", ok(children));
-  for (const { student_id: id } of children) {
-    answers.set(`/parent/me/children/${id}/features`, ok(features));
-    answers.set(
-      `/parent/me/children/${id}/today`,
-      ok({ at_ogs: true, state: "present" }),
-    );
-  }
-}
+const endpoint = "/parent/me/family-start";
+const key = parentKeys.familyStart(TEST_CLOCK_TODAY);
+const cards = children.map((child) => ({
+  child,
+  access_version: "v1",
+  features,
+  today: { at_ogs: true, state: "present" },
+}));
+const response = { day: TEST_CLOCK_TODAY, day_remaining_seconds: 3600, cards };
 
 async function valuesOf(seed: ServerSeed | null) {
   expect(seed).not.toBeNull();
@@ -119,173 +110,62 @@ async function valuesOf(seed: ServerSeed | null) {
 }
 
 beforeEach(() => {
-  calls.length = 0;
   answers.clear();
   snapshot.current = { session: parent, accessToken: "t", notBooked: false };
-  routeFamily();
+  requests.length = 0;
+  answers.set(endpoint, ok(response));
 });
 
 describe("parent page seeds", () => {
-  it("seeds the start page per relationship under the readers' keys", async () => {
-    const seed = await loadParentPageSeed({ kind: "start" });
+  it.each([true, false])(
+    "offers one family read with render=%s, independent of the URL",
+    async (render) => {
+      const seed = await parentSeedProps(render, {
+        kind: "child",
+        studentId: "99",
+      }).seed;
+      expect(seed?.generation).toBe(sessionGeneration(parent));
+      expect(seed?.entries.map((entry) => [entry.key, entry.render])).toEqual([
+        [key, render],
+      ]);
+      expect((await valuesOf(seed))[key]).toMatchObject({
+        children,
+        features: { "7": features, "8": features },
+        confirmedToday: { "7": true, "8": true },
+      });
+      // No child from the URL, and no individual child read.
+      expect(requests).toEqual([endpoint]);
+    },
+  );
 
-    expect(seed?.generation).toBe(sessionGeneration(parent));
-    const values = await valuesOf(seed);
-    const featureKey = parentKeys.features(children, TEST_CLOCK_TODAY);
-    const todayKey = parentKeys.today(children, TEST_CLOCK_TODAY);
-    expect(values[featureKey]).toEqual({ "7": features, "8": features });
-    expect(
-      seed?.entries.filter((entry) => entry.render).map(({ key }) => key),
-    ).toEqual([parentKeys.shellChildren(), featureKey, todayKey]);
-  });
-
-  it("drops only a collection one relationship fails in", async () => {
-    // Permission for one relationship only: its status read is refused.
-    answers.set("/parent/me/children/8/today", {
-      status: 403,
-      body: { status: "error", code: "care.guardian_permission_denied" },
-    });
-
-    const values = await valuesOf(await loadParentPageSeed({ kind: "start" }));
-
-    expect(
-      values[parentKeys.today(children, TEST_CLOCK_TODAY)],
-    ).toBeUndefined();
-    expect(values[parentKeys.features(children, TEST_CLOCK_TODAY)]).toEqual({
-      "7": features,
-      "8": features,
-    });
-    expect(values[parentKeys.shellChildren()]).toEqual(children);
-  });
-
-  it("reads nothing beyond the list for a child the list does not name", async () => {
-    answers.delete("/parent/me/children/7/features");
-    answers.delete("/parent/me/children/8/features");
-    answers.delete("/parent/me/children/7/today");
-    answers.delete("/parent/me/children/8/today");
-
-    const seed = await loadParentPageSeed({ kind: "child", studentId: "99" });
-
-    expect(seed?.entries.map((entry) => entry.key)).toEqual([
-      parentKeys.shellChildren(),
-    ]);
-    expect(calls).toEqual(["/parent/me/children"]);
-  });
-
-  it("waits in the child page's server render for the list only", async () => {
-    const seed = await loadParentPageSeed({ kind: "child", studentId: "8" });
-
-    expect(
-      seed?.entries.filter((entry) => entry.render).map(({ key }) => key),
-    ).toEqual([parentKeys.shellChildren()]);
-    expect(seed?.entries.map(({ key }) => key)).toContain(
-      parentKeys.careSchedule("8", TEST_CLOCK_TODAY),
-    );
-  });
-
-  it("gives the shell the list and features without waiting", async () => {
-    const seed = await loadParentShellSeed();
-
-    expect(seed?.entries.map((entry) => entry.key)).toEqual([
-      ...parentShellSeedKeys,
-      parentKeys.features(children, TEST_CLOCK_TODAY),
-    ]);
-    expect(seed?.entries.some((entry) => entry.render)).toBe(false);
-  });
-
-  it("starts the selected child's first-display care reads, but not deferred reads", async () => {
-    const prefix = "/parent/me/children/8";
-    answers.set(`${prefix}/sick-note`, ok([]));
-    answers.set(`${prefix}/excused-requests`, {
-      status: 403,
-      body: { status: "error", code: "care.guardian_permission_denied" },
-    });
-    answers.set(`${prefix}/parent-conferences`, ok([]));
-
-    const seed = await loadParentPageSeed({ kind: "child", studentId: "8" });
-    const values = await valuesOf(seed);
-
-    expect(values[parentKeys.sickDays("8", TEST_CLOCK_TODAY)]).toEqual([]);
-    expect(values[parentKeys.conferences("8")]).toEqual([]);
-    expect(
-      values[parentKeys.excusedRequests("8", TEST_CLOCK_TODAY)],
-    ).toBeUndefined();
-    expect(calls).toEqual(
-      expect.arrayContaining([
-        `${prefix}/care-exception`,
-        `${prefix}/care-schedule`,
-        `${prefix}/pickup-change-requests`,
-        `${prefix}/care-offerings`,
-        `${prefix}/courses`,
-      ]),
-    );
-    expect(
-      calls.filter((path) => path.startsWith("/parent/me/children/7/")),
-    ).toEqual([
-      "/parent/me/children/7/features",
-      "/parent/me/children/7/today",
-    ]);
-    expect(calls).not.toContain(`${prefix}/guardians`);
-    expect(calls).not.toContain(`${prefix}/care-offerings/catalog`);
-  });
-
-  it("uses the authorized school's relationship and the selected Berlin week for the meal plan", async () => {
-    const monday = parentInitialMealMonday(TEST_CLOCK_TODAY, testClockDay(7));
-    const plan = "/parent/me/children/8/meal-plan?week_start=" + monday;
+  it("seeds successful siblings and serializable partial errors, not a second read", async () => {
     answers.set(
-      "/parent/me/children/8/features",
-      ok({ ...features, meal_plan_enabled: true }),
+      endpoint,
+      ok({ ...response, cards: [cards[0], { ...cards[1], today: null }] }),
     );
-    answers.set(plan, ok([]));
-
-    const seed = await loadParentPageSeed({
-      kind: "meal",
-      week: monday,
-      school: "99",
+    const values = await valuesOf(
+      await parentSeedProps(true, { kind: "child", studentId: "99" }).seed,
+    );
+    expect(values[key]).toMatchObject({
+      today: { "7": { state: "present" }, "8": { state: "unknown" } },
+      todayErrors: { "8": { status: 503, code: "general.unavailable" } },
+      features: { "7": features, "8": features },
+      confirmedToday: { "7": true, "8": false },
     });
-    const values = await valuesOf(seed);
-
-    expect(values[parentInboxKeys.mealPlan("8", monday)]).toEqual([]);
-    expect(calls.filter((path) => path.includes("/meal-plan"))).toEqual([plan]);
+    expect(JSON.parse(JSON.stringify(values[key]))).toEqual(values[key]);
+    expect(requests).toEqual([endpoint]);
   });
 
-  it("does not seed either message-opening GET that marks a thread read", async () => {
-    answers.set("/parent/me/messages/children/7/threads", ok([]));
-    const conversation = await valuesOf(
-      await loadParentPageSeed({ kind: "conversation", studentId: "7" }),
-    );
-    await valuesOf(await loadParentPageSeed({ kind: "groupThread" }));
-
-    expect(conversation[parentInboxKeys.childThreads("7")]).toEqual([]);
-    expect(calls).not.toContain("/parent/me/messages/children/7");
+  it("leaves a failed read unseeded rather than confirming an empty family", async () => {
+    answers.set(endpoint, { status: 503, body: { status: "error" } });
     expect(
-      calls.filter((path) =>
-        path.startsWith("/parent/me/messages/group-threads/"),
-      ),
-    ).toEqual([]);
-  });
-
-  it("keeps the document inbox on its partial-failure browser path", async () => {
-    answers.set("/parent/me/documents", ok([]));
-    answers.set("/parent/me/documents/contracts", ok([]));
-    answers.set("/parent/me/documents/shared", ok([]));
-
-    const success = await valuesOf(
-      await loadParentPageSeed({ kind: "documents" }),
-    );
-    const key = parentInboxKeys.documents();
-    expect(success[key]).toEqual({
-      documents: [],
-      shared: [],
-      failedSource: null,
-      error: null,
-    });
-
-    answers.set("/parent/me/documents/contracts", { status: 503, body: {} });
-    const partial = await valuesOf(
-      await loadParentPageSeed({ kind: "documents" }),
-    );
-    expect(partial[key]).toBeUndefined();
+      (
+        await valuesOf(
+          await parentSeedProps(true, { kind: "child", studentId: "99" }).seed,
+        )
+      )[key],
+    ).toBeUndefined();
+    expect(requests).toEqual([endpoint]);
   });
 
   it.each([
@@ -305,8 +185,84 @@ describe("parent page seeds", () => {
   ])("seeds nothing for %s", async (_, current) => {
     snapshot.current = current;
 
-    expect(await loadParentPageSeed({ kind: "start" })).toBeNull();
-    expect(await loadParentShellSeed()).toBeNull();
+    expect(
+      await parentSeedProps(true, { kind: "child", studentId: "99" }).seed,
+    ).toBeNull();
+    expect(await parentSeedProps(false).seed).toBeNull();
+    expect(requests).toEqual([]);
+  });
+
+  it("loads only the confirmed child's care keys and keeps independent successes", async () => {
+    const prefix = "/parent/me/children/8";
+    answers.set(`${prefix}/sick-note`, ok([]));
+    answers.set(`${prefix}/excused-requests`, {
+      status: 403,
+      body: { status: "error", code: "care.guardian_permission_denied" },
+    });
+    answers.set(`${prefix}/parent-conferences`, ok([]));
+
+    const values = await valuesOf(
+      await parentSeedProps(true, { kind: "child", studentId: "8" }).seed,
+    );
+    expect(values[parentKeys.sickDays("8", TEST_CLOCK_TODAY)]).toEqual([]);
+    expect(values[parentKeys.conferences("8")]).toEqual([]);
+    expect(
+      values[parentKeys.excusedRequests("8", TEST_CLOCK_TODAY)],
+    ).toBeUndefined();
+    expect(requests).toEqual(
+      expect.arrayContaining([
+        endpoint,
+        `${prefix}/care-exception`,
+        `${prefix}/care-schedule`,
+        `${prefix}/pickup-change-requests`,
+        `${prefix}/care-offerings`,
+        `${prefix}/courses`,
+      ]),
+    );
+    expect(
+      requests.some((path) => path.startsWith("/parent/me/children/7/")),
+    ).toBe(false);
+    expect(requests).not.toContain(`${prefix}/guardians`);
+    expect(requests).not.toContain(`${prefix}/care-offerings/catalog`);
+  });
+
+  it("selects the eligible family school's meal plan for the rendered week", async () => {
+    const monday = "2026-09-14";
+    const plan = `/parent/me/children/8/meal-plan?week_start=${monday}`;
+    answers.set(
+      endpoint,
+      ok({
+        ...response,
+        cards: [
+          cards[0],
+          { ...cards[1], features: { ...features, meal_plan_enabled: true } },
+        ],
+      }),
+    );
+    answers.set(plan, ok([]));
+
+    const values = await valuesOf(
+      await parentSeedProps(true, { kind: "meal", week: monday, school: "99" })
+        .seed,
+    );
+    expect(values[parentInboxKeys.mealPlan("8", monday)]).toEqual([]);
+    expect(requests).toEqual([endpoint, plan]);
+  });
+
+  it("loads conversation summaries without opening either thread", async () => {
+    answers.set("/parent/me/messages/children/7/threads", ok([]));
+    const conversation = await valuesOf(
+      await parentSeedProps(false, { kind: "conversation", studentId: "7" })
+        .seed,
+    );
+    await valuesOf(await parentSeedProps(false, { kind: "groupThread" }).seed);
+    expect(conversation[parentInboxKeys.childThreads("7")]).toEqual([]);
+    expect(requests).not.toContain("/parent/me/messages/children/7");
+    expect(
+      requests.some((path) =>
+        path.startsWith("/parent/me/messages/group-threads/"),
+      ),
+    ).toBe(false);
   });
 
   it("classifies the parents' public pages like the auth guard", () => {

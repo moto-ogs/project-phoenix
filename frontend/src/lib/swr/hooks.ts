@@ -429,6 +429,11 @@ type ScopedSWRResponse<T, E> = SWRResponse<T, E> & {
   readCurrent?(): { data: T | undefined; error: E | undefined };
 };
 
+// Unlike a normal SWR mount, mutate() deliberately skips deduplication.
+// A discarded seed or stale generation needs one recovery per cache/key,
+// not one per mounted projection of that key.
+const recoveringReads = new WeakMap<Cache, Set<string>>();
+
 function useScopedSWR<T, E>(
   key: string | null,
   fetcher: () => Promise<T>,
@@ -544,8 +549,13 @@ function useScopedSWR<T, E>(
   useEffect(() => {
     if (reload === null || reloaded.current === reload) return;
     reloaded.current = reload;
-    void revalidate();
-  }, [reload, revalidate]);
+    const active = recoveringReads.get(cache) ?? new Set<string>();
+    if (active.has(reload)) return;
+    recoveringReads.set(cache, active);
+    active.add(reload);
+    const release = () => active.delete(reload);
+    void revalidate().then(release, release);
+  }, [cache, reload, revalidate]);
 
   const mutationGeneration = fullKey === null ? 0 : dataGenerationOf(fullKey);
   const mutate = useMemo(

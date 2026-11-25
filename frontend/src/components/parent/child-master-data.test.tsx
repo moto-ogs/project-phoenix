@@ -1,3 +1,4 @@
+import { parentFamilyFixture } from "~/test/parent-family-fixture";
 import {
   act,
   fireEvent,
@@ -17,7 +18,6 @@ import { catalogText } from "~/test/error-catalog-text";
 
 import { ChildMasterDataView } from "./child-master-data";
 import {
-  getChildFeatures,
   getChildMasterData,
   getRequestSharing,
   getRequestSharingOptions,
@@ -26,6 +26,8 @@ import {
   updateMasterDataField,
 } from "~/lib/parent-api";
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
+
+const family = parentFamilyFixture();
 
 vi.unmock("swr");
 
@@ -71,10 +73,7 @@ vi.mock("~/lib/parent-api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/lib/parent-api")>();
   return {
     ...actual,
-    listMyChildren: vi
-      .fn()
-      .mockResolvedValue([{ student_id: "42", tenant_id: "1" }]),
-    getChildFeatures: vi.fn(),
+
     getChildMasterData: vi.fn(),
     getChildCareOfferings: vi.fn().mockResolvedValue({
       period_name: "Schuljahr 2026/27",
@@ -99,7 +98,7 @@ const unavailable = () =>
   new ApiError("diag", 503, { code: "general.unavailable" });
 const REQUEST_ERROR = catalogText("general.unavailable", "die Anfrage");
 
-const mockGetFeatures = vi.mocked(getChildFeatures);
+const mockGetFeatures = family.features;
 const mockGetMasterData = vi.mocked(getChildMasterData);
 const mockSubmit = vi.mocked(submitMasterDataRequest);
 const mockUpdateField = vi.mocked(updateMasterDataField);
@@ -189,6 +188,11 @@ function departureDayText(day: string, container: HTMLElement = document.body) {
 describe("ChildMasterDataView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    family.mockRead();
+    family.children.mockResolvedValue([
+      { student_id: "42", tenant_id: "1" } as parentMeContract.ChildResponse,
+    ]);
     mockGetFeatures.mockResolvedValue(features());
     mockGetMasterData.mockResolvedValue(masterData());
     mockUpdateField.mockResolvedValue(masterData({ health_info: "Neue Info" }));

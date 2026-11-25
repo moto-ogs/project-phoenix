@@ -4,13 +4,9 @@ import type { Session } from "next-auth";
 import { ParentPortalAnalyticsSession } from "~/components/analytics/parent-portal-analytics-session";
 import { PortalProviders } from "~/components/auth/portal-providers";
 import { PushSubscriptionSync } from "~/components/notifications/push-subscription-sync";
-import { ParentServerSeed } from "~/components/parent/parent-server-seed";
 import { ModulePortalProvider } from "~/lib/module-portal-context";
 import { ParentLocaleProvider } from "~/lib/parent-locale-context";
 import { KitLocaleFromIntl } from "~/components/ui/kit-locale-intl";
-import type { ServerSeedInput } from "~/lib/swr/server-seed";
-
-const SHELL_SEED_DETAILS = ["features"] as const;
 
 /**
  * Parent-scoped providers. No ProfileProvider or SupervisionProvider —
@@ -25,31 +21,19 @@ const SHELL_SEED_DETAILS = ["features"] as const;
 export function ParentProviders({
   children,
   session,
-  shellSeed,
-}: Readonly<{
-  children: React.ReactNode;
-  session?: Session | null;
-  shellSeed?: ServerSeedInput;
-}>) {
-  const localized = (
-    <ParentLocaleProvider>
-      {/* Kit-Standardtexte sind deutsch; andere Sprachen lassen sie weg. */}
-      <KitLocaleFromIntl>
-        <ModulePortalProvider portal="parent">{children}</ModulePortalProvider>
-      </KitLocaleFromIntl>
-    </ParentLocaleProvider>
-  );
+}: Readonly<{ children: React.ReactNode; session?: Session | null }>) {
   return (
     <PortalProviders portal="parent" session={session}>
       <PushSubscriptionSync portal="parent" />
       <ParentPortalAnalyticsSession />
-      {shellSeed ? (
-        <ParentServerSeed seed={shellSeed} details={SHELL_SEED_DETAILS}>
-          {localized}
-        </ParentServerSeed>
-      ) : (
-        localized
-      )}
+      <ParentLocaleProvider>
+        {/* Kit-Standardtexte sind deutsch; andere Sprachen lassen sie weg. */}
+        <KitLocaleFromIntl>
+          <ModulePortalProvider portal="parent">
+            {children}
+          </ModulePortalProvider>
+        </KitLocaleFromIntl>
+      </ParentLocaleProvider>
     </PortalProviders>
   );
 }

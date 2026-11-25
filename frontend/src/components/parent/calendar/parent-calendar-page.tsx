@@ -1,5 +1,6 @@
 "use client";
 
+import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import {
   type ReactNode,
   type RefObject,
@@ -56,12 +57,7 @@ import {
   useApiFormError,
   useToast,
 } from "~/contexts/ToastContext";
-import {
-  berlinTodayISO,
-  isValidISODate,
-  parseISODate,
-  toISODate,
-} from "~/lib/date-helpers";
+import { isValidISODate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
@@ -259,7 +255,7 @@ export function ParentCalendarPage() {
   const locale = useLocale();
   const toast = useToast();
   const searchParams = useSearchParams();
-  const today = useMemo(() => berlinTodayISO(), []);
+  const today = useBerlinToday();
   const rangeEnd = useMemo(
     () => addDays(today, MAX_CALENDAR_WINDOW_OFFSET),
     [today],

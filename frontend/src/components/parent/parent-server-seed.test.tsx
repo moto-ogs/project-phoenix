@@ -62,7 +62,7 @@ describe("parent inbox first display", () => {
       <ParentServerSeed
         seed={seed([{ key: messages, value: resolved, render: true }])}
         page={{ kind: "messages" }}
-        details={[]}
+        day="2026-09-09"
         render
       >
         <Reader browserMessages={browser} browserGroups={browser} />
@@ -81,7 +81,11 @@ describe("parent inbox first display", () => {
     });
 
     render(
-      <ParentServerSeed seed={pending} page={{ kind: "messages" }} details={[]}>
+      <ParentServerSeed
+        seed={pending}
+        page={{ kind: "messages" }}
+        day="2026-09-09"
+      >
         <Reader
           browserMessages={browserMessages}
           browserGroups={browserGroups}

@@ -15,6 +15,17 @@ Paths below are relative to `frontend/` except `.github/` and `docs/`.
 - **Render budget** (Vitest, blocking): `expectIdleRenderBudget` from `src/test/render-budget.tsx` counts `<Profiler>` commits over 5 s of fake-timer idle and caps them at 20; `mobile-bottom-nav.test.tsx` and `sidebar.test.tsx` use it. A new effect loop in the shell trips this regardless of runner speed. Keep the cap; fix the loop. Reuse the helper for any new always-mounted component.
 - **Nightly counters** (`.github/workflows/perf-nightly.yml`, non-blocking): runs `pnpm run perf:trace` and `pnpm run perf:render` against a seeded backend on weeknights and via `workflow_dispatch`; the report lands in the job summary and as a 30-day artifact. Compare counters (requests per screen, duplicates, longest chain, renders per interaction) with `docs/perf/frontend-baseline-2026.md`; runner timings are not comparable across machines. Timing-based numbers (LCP, Lighthouse) are deliberately not gates.
 
+## Parents: start cards
+
+Measure the children, feature flags and today's statuses together, separately
+from the profile, message counts and feeds. A cold, unseeded start reads
+`GET /parent/me/family-start` once at the browser and Go boundaries regardless
+of family size. On a seeded document navigation, the protected layout and page
+share one Go read; hydration uses that family snapshot without a browser GET.
+Public pages receive no family seed. A child event narrows that request by `student_id`; a reconnect
+or an unqualified event reloads the family. Compare response-body bytes on the
+same seeded families, not the number of children returned by unrelated feeds.
+
 ## Parents and public enrollment: message payload
 
 The request catalog is complete on the server, including the German fallback.

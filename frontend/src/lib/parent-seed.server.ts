@@ -21,6 +21,7 @@ import {
 import { calendarResponse } from "~/lib/personal-calendar-api";
 import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
+import { applyCards, familyCards } from "~/lib/parent-family-cards";
 import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
 import {
   readPortalSessionSnapshot,
@@ -32,75 +33,36 @@ import {
 } from "~/lib/portal-public-pages";
 import { readContract, seedOf, seedRead } from "~/lib/server-seed.server";
 import { parentKeys } from "~/lib/swr/parent-keys";
-import type { ServerSeed, ServerSeedEntry } from "~/lib/swr/server-seed";
+import type { ServerSeedEntry } from "~/lib/swr/server-seed";
 
-/**
- * The authorized children of the account, once per server render (#8077):
- * the layout's shell seed and the page's seed share this read. The backend
- * answers only the account's live relationships.
- */
-const loadChildren = cache((token: string) =>
-  seedRead("parentChildren", async (signal) => {
+// The shell and page share one authorized family read per server render.
+const loadFamily = cache((token: string) =>
+  seedRead("parentFamilyStart", async (signal) => {
     const response = await readContract(
-      parentMeContract.routes["GET /parent/me/children"],
+      parentMeContract.routes["GET /parent/me/family-start"],
       { token, signal },
     );
-    return response.data;
+    return applyCards(undefined, familyCards(response.data));
   }),
 );
+const renderDay = cache(() => berlinTodayISO());
 
-/**
- * One read per listed relationship, in parallel. The collection counts only
- * complete: when one child's read fails, the whole key stays unseeded and the
- * browser reader loads it with its partial-failure path.
- */
-async function perChild<T>(
-  children: readonly parentMeContract.ChildResponse[],
-  load: (studentId: string) => Promise<T | undefined>,
-): Promise<Record<string, T> | undefined> {
-  const values = await Promise.all(
-    children.map((child) => load(child.student_id)),
-  );
-  const result: Record<string, T> = {};
-  for (const [index, child] of children.entries()) {
-    const value = values[index];
-    if (value === undefined) return undefined;
-    result[child.student_id] = value;
-  }
-  return result;
+/** The server's Berlin day and the existing seed boundary travel with the HTML. */
+export function parentSeedProps(render: boolean, page?: ParentSeedPage) {
+  const day = renderDay();
+  const builtAt = Date.now();
+  const seed = parentSnapshot()
+    .then(async (snapshot) => {
+      if (!snapshot) return null;
+      const token = snapshot.accessToken;
+      const entries = page
+        ? await buildPageEntries(page, token, day, render)
+        : shellEntries(token, day);
+      return seedOf(snapshot, entries, builtAt);
+    })
+    .catch(() => null);
+  return { day, seed, render };
 }
-
-const readChildFeatures = cache((token: string, studentId: string) =>
-  seedRead("parentFeatures", async (signal) => {
-    const response = await readContract(
-      parentMeContract.routes["GET /parent/me/children/{studentId}/features"],
-      { token, signal, params: { studentId } },
-    );
-    return response.data;
-  }),
-);
-
-const loadFeatures = cache(async (token: string) => {
-  const children = await loadChildren(token);
-  if (!children) return undefined;
-  return perChild(children, (studentId) => readChildFeatures(token, studentId));
-});
-
-// The browser shows a 403/404 as "unknown" and handles the refusal; the
-// server seeds only answered states and leaves every failure to it.
-const loadToday = cache(async (token: string) => {
-  const children = await loadChildren(token);
-  if (!children) return undefined;
-  return perChild(children, (studentId) =>
-    seedRead("parentToday", async (signal) => {
-      const response = await readContract(
-        parentMeContract.routes["GET /parent/me/children/{studentId}/today"],
-        { token, signal, params: { studentId } },
-      );
-      return response.data;
-    }),
-  );
-});
 
 /** A parent snapshot that may carry personal data, else null. */
 async function parentSnapshot(): Promise<PortalSessionSnapshot | null> {
@@ -438,15 +400,9 @@ function pageEntries(
 }
 
 /** The protected shell starts only its own reads, without waiting for them. */
-export async function loadParentShellSeed(): Promise<ServerSeed | null> {
-  const builtAt = Date.now();
-  const snapshot = await parentSnapshot();
-  if (!snapshot) return null;
-  const { accessToken: token } = snapshot;
-  const day = berlinTodayISO();
-  const children = loadChildren(token);
-  const entries: ServerSeedEntry[] = [
-    { key: parentKeys.shellChildren(), value: children },
+function shellEntries(token: string, day: string): ServerSeedEntry[] {
+  return [
+    { key: parentKeys.familyStart(day), value: loadFamily(token) },
     { key: parentKeys.profile(), value: loadProfile(token) },
     {
       key: parentKeys.messagesUnreadCount(),
@@ -488,35 +444,29 @@ export async function loadParentShellSeed(): Promise<ServerSeed | null> {
       ),
     },
   ];
-  const linked = await children;
-  if (linked)
-    entries.push({
-      key: parentKeys.features(linked, day),
-      value: loadFeatures(token),
-    });
-  return seedOf(snapshot, entries, builtAt);
 }
 
 /** Start independent first-display reads before resolving child relationships. */
-export async function loadParentPageSeed(
+async function buildPageEntries(
   page: ParentSeedPage,
-): Promise<ServerSeed | null> {
-  const builtAt = Date.now();
-  const snapshot = await parentSnapshot();
-  if (!snapshot) return null;
-  const { accessToken: token } = snapshot;
-  const day = berlinTodayISO();
+  token: string,
+  day: string,
+  render: boolean,
+): Promise<ServerSeedEntry[]> {
   const entries = pageEntries(page, token, day);
-  if (!parentPageUsesChildren(page)) return seedOf(snapshot, entries, builtAt);
+  if (!parentPageUsesChildren(page)) return entries;
 
-  const childrenValue = loadChildren(token);
+  const familyValue = loadFamily(token);
   entries.push({
-    key: parentKeys.shellChildren(),
-    value: childrenValue,
-    render: true,
+    key: parentKeys.familyStart(day),
+    value: familyValue,
+    render,
   });
-  const children = await childrenValue;
-  if (!children) return seedOf(snapshot, entries, builtAt);
+  if (page.kind === "start" || page.kind === "groupThread") return entries;
+
+  const family = await familyValue;
+  if (!family) return entries;
+  const { children, features } = family;
 
   if (page.kind === "messages") {
     const withCarePlace = children.filter(
@@ -529,17 +479,9 @@ export async function loadParentPageSeed(
         render: true,
       });
     } else if (withCarePlace[0]) {
-      const child = withCarePlace[0];
-      entries.push(
-        {
-          key: parentKeys.features(withCarePlace, day),
-          value: perChild(withCarePlace, (id) => readChildFeatures(token, id)),
-        },
-        { key: parentKeys.today(children, day), value: loadToday(token) },
-      );
-      loadConversationOverview(entries, token, child, day);
+      loadConversationOverview(entries, token, withCarePlace[0], day);
     }
-    return seedOf(snapshot, entries, builtAt);
+    return entries;
   }
 
   const child = initialParentChild(
@@ -548,34 +490,9 @@ export async function loadParentPageSeed(
   );
   // An ID in a URL names a candidate, not a permission. The child's own
   // registered GET then checks its relationship and feature rights again.
-  if ("studentId" in page && !child) return seedOf(snapshot, entries, builtAt);
+  if ("studentId" in page && !child) return entries;
 
-  if (page.kind !== "proof") {
-    entries.push({
-      key: parentKeys.features(children, day),
-      value: loadFeatures(token),
-      render:
-        page.kind === "start" ||
-        page.kind === "conference" ||
-        page.kind === "meal",
-    });
-  }
-  if (
-    page.kind === "start" ||
-    page.kind === "children" ||
-    page.kind === "child" ||
-    page.kind === "conversation"
-  ) {
-    entries.push({
-      key: parentKeys.today(children, day),
-      value: loadToday(token),
-      render:
-        page.kind === "start" ||
-        (page.kind === "children" && children.length > 1),
-    });
-  }
   if (page.kind === "meal") {
-    const features = await loadFeatures(token);
     const eligible = children.filter(
       ({ student_id }) => features?.[student_id]?.meal_plan_enabled,
     );
@@ -632,5 +549,5 @@ export async function loadParentPageSeed(
       render: true,
     });
   }
-  return seedOf(snapshot, entries, builtAt);
+  return entries;
 }

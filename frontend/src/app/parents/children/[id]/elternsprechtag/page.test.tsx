@@ -1,3 +1,4 @@
+import { parentFamilyFixture } from "~/test/parent-family-fixture";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
@@ -9,8 +10,6 @@ import { ApiError } from "~/lib/api-error";
 import {
   bookChildParentConference,
   fetchChildParentConferences,
-  listMyChildren,
-  getChildFeatures,
 } from "~/lib/parent-api";
 import type { ParentConferenceOffer } from "~/lib/parent-conferences";
 import { catalogText } from "~/test/error-catalog-text";
@@ -18,10 +17,11 @@ import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import ParentConferencePage from "./conference-content";
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
+const family = parentFamilyFixture();
+
 vi.unmock("swr");
 vi.mock("~/lib/parent-api", () => ({
-  listMyChildren: vi.fn(),
-  getChildFeatures: vi.fn(),
+  getFamilyStart: vi.fn(),
   fetchChildParentConferences: vi.fn(),
   bookChildParentConference: vi.fn(),
   cancelChildParentConference: vi.fn(),
@@ -60,10 +60,12 @@ async function renderPage() {
 describe("Elternsprechtag in der Eltern-App (#4801)", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    vi.mocked(getChildFeatures).mockResolvedValue({
+
+    family.mockRead();
+    family.features.mockResolvedValue({
       conference_book_allowed: true,
     } as parentMeContract.ChildFeaturesResponse);
-    vi.mocked(listMyChildren).mockResolvedValue([
+    family.children.mockResolvedValue([
       { student_id: "42", first_name: "Mia" } as parentMeContract.ChildResponse,
     ]);
   });
@@ -102,7 +104,7 @@ describe("Elternsprechtag in der Eltern-App (#4801)", () => {
   it.each([false, true])(
     "shows times read-only without booking permission (booked=%s)",
     async (booked) => {
-      vi.mocked(getChildFeatures).mockResolvedValue({
+      family.features.mockResolvedValue({
         conference_book_allowed: false,
       } as parentMeContract.ChildFeaturesResponse);
       vi.mocked(fetchChildParentConferences).mockResolvedValue([
@@ -129,7 +131,7 @@ describe("Elternsprechtag in der Eltern-App (#4801)", () => {
       expect(
         screen.queryByRole("button", { name: "Termin absagen" }),
       ).not.toBeInTheDocument();
-      expect(getChildFeatures).toHaveBeenCalledWith("42");
+      expect(family.features).toHaveBeenCalledWith("42");
     },
   );
 
@@ -169,11 +171,11 @@ describe("Elternsprechtag in der Eltern-App (#4801)", () => {
   });
 
   it("keeps this child's page when only a sibling's features fail", async () => {
-    vi.mocked(listMyChildren).mockResolvedValue([
+    family.children.mockResolvedValue([
       { student_id: "42", first_name: "Mia" } as parentMeContract.ChildResponse,
       { student_id: "43", first_name: "Ben" } as parentMeContract.ChildResponse,
     ]);
-    vi.mocked(getChildFeatures).mockImplementation((studentId) =>
+    family.features.mockImplementation((studentId) =>
       studentId === "43"
         ? Promise.reject(
             new ApiError("offline", 503, { code: "general.unavailable" }),

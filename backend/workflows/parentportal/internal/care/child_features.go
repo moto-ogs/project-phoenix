@@ -16,11 +16,15 @@ func (s *Service) ChildFeatures(ctx context.Context, accountID, studentID int64)
 	if err != nil {
 		return ChildFeatureFlags{}, err
 	}
-	settings, err := s.resolveChildFeatureSettings(ctx, child.TenantID)
+	settings, err := s.resolveChildFeatureSettings(ctx, child.TenantID, s.now())
 	if err != nil {
 		return ChildFeatureFlags{}, err
 	}
 
+	return s.featuresForChild(ctx, accountID, studentID, child, settings), nil
+}
+
+func (s *Service) featuresForChild(ctx context.Context, accountID, studentID int64, child *Child, settings childFeatureSettings) ChildFeatureFlags {
 	// The child has left the OGS (#2487). Every WRITE capability goes off in
 	// this one place rather than in each screen: the portal builds its buttons
 	// from these flags, so a family sees a read-only profile instead of
@@ -37,14 +41,14 @@ func (s *Service) ChildFeatures(ctx context.Context, accountID, studentID int64)
 			MealRegistrationEnabled: false,
 			NewsEnabled:             settings.news,
 			CareFacilityTerm:        settings.careTerm,
-		}, nil
+		}
 	}
 
 	flags := settings.activeChildFlags(child, s.hasOpenChangeRequest(ctx, child.TenantID, accountID, studentID))
 	if child.WithoutCarePlace {
-		return withoutCarePlaceFlags(flags), nil
+		return withoutCarePlaceFlags(flags)
 	}
-	return flags, nil
+	return flags
 }
 
 // withoutCarePlaceFlags switches off every OGS function of a child without an

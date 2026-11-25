@@ -103,6 +103,10 @@ const fallbacks = new WeakMap<
 
 const subscribeNothing = () => () => {};
 
+function isFreshSeed(builtAt: number): boolean {
+  return Math.abs(Date.now() - builtAt) <= SERVER_SEED_MAX_AGE_MS;
+}
+
 function isThenable(value: unknown): value is PromiseLike<ServerSeed | null> {
   return (
     typeof value === "object" &&
@@ -130,8 +134,7 @@ async function seededValue(
     throw new DiscardedAnswer();
   }
   const entry =
-    resolved?.generation === generation &&
-    Math.abs(Date.now() - resolved.builtAt) <= SERVER_SEED_MAX_AGE_MS
+    resolved?.generation === generation && isFreshSeed(resolved.builtAt)
       ? resolved.entries.find((candidate) => candidate.key === key)
       : undefined;
   if (!entry) throw new DiscardedAnswer();
@@ -141,7 +144,12 @@ async function seededValue(
   } catch {
     throw new DiscardedAnswer();
   }
-  if (value === undefined || wasDroppedWithin(fullKey, SERVER_SEED_MAX_AGE_MS))
+  if (
+    value === undefined ||
+    !resolved ||
+    !isFreshSeed(resolved.builtAt) ||
+    wasDroppedWithin(fullKey, SERVER_SEED_MAX_AGE_MS)
+  )
     throw new DiscardedAnswer();
   return value;
 }
@@ -269,6 +277,7 @@ export function SWRServerSeed<T = never>({
       prefix !== null &&
       !left.current &&
       !invalidated &&
+      isFreshSeed(resolved.builtAt) &&
       resolved.generation === generation
     ) {
       const values: [string, unknown][] = [];
@@ -295,7 +304,9 @@ export function SWRServerSeed<T = never>({
   return (
     <SWRSeedBoundary seed={config}>
       <SeedHandoff
-        seed={current.fresh ? current.seed : null}
+        seed={
+          current.fresh && !invalidated && !left.current ? current.seed : null
+        }
         resolved={resolved}
         claims={claims}
         claimsFrom={claimsFrom as ServerSeedClaimsFrom<never> | undefined}

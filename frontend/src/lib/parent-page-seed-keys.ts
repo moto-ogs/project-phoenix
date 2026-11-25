@@ -19,7 +19,6 @@ export type ParentSeedPage =
   | { kind: "settings"; section: "notifications" | "signIn" };
 
 export const parentShellSeedKeys = [
-  parentKeys.shellChildren(),
   parentKeys.profile(),
   parentKeys.messagesUnreadCount(),
   parentKeys.newsUnreadCount(),
@@ -130,8 +129,6 @@ export function parentPageChildSeedKeys(
     if (!child) return [];
     const id = child.student_id;
     return [
-      parentKeys.features(withCarePlace, day),
-      parentKeys.today(children, day),
       parentInboxKeys.childThreads(id),
       ...Object.values(parentChildCareKeys(id, day)),
     ];

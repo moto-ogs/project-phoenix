@@ -35,16 +35,34 @@ func (s *Service) GetChildTodayStatus(ctx context.Context, accountID, studentID 
 	if err != nil {
 		return nil, err
 	}
+	status, err := s.todayForChild(ctx, studentID, child, s.now(), &schoolDayReads{})
+	if err != nil {
+		return &TodayStatus{State: DayStateUnknown}, nil
+	}
+	return status, nil
+}
+
+type schoolDayReads struct {
+	attendance schoolFact[bool]
+	weekend    schoolFact[bool]
+}
+
+func (s *Service) todayForChild(ctx context.Context, studentID int64, child *Child, now time.Time, school *schoolDayReads) (*TodayStatus, error) {
 	if child.WithoutCarePlace {
 		// A child without an OGS place (#4803) has no OGS day: no arrival,
 		// pickup or care day is read for it.
 		return &TodayStatus{State: DayStateNoCare}, nil
 	}
 
-	today := s.todayDate()
-	facts := todayStatusFacts{NowHHMM: berlinHHMM(s.now())}
+	today := calendar.DateFromTime(now)
+	facts := todayStatusFacts{NowHHMM: berlinHHMM(now)}
 
 	txErr := s.Runtime.WithinTenant(ctx, child.TenantID, func(txCtx context.Context) error {
+		// Calendar and schedule readers may consult the same weekend setting.
+		schoolCtx := txCtx
+		txCtx = calendar.WithWeekendPlan(txCtx, func(context.Context) (bool, error) {
+			return school.weekend.read(func() (bool, error) { return calendar.WeekendFollowsFriday(schoolCtx) })
+		})
 		absent, absErr := s.hasActiveAbsenceToday(txCtx, studentID, today)
 		if absErr != nil {
 			return absErr
@@ -63,8 +81,10 @@ func (s *Service) GetChildTodayStatus(ctx context.Context, accountID, studentID 
 		applyAttendanceRows(&facts, rows)
 
 		s.loadTodayPickup(txCtx, studentID, today, &facts)
-		tracks, trackErr := s.Attendance.HasAttendance(txCtx, AttendanceFilter{
-			FromDate: today.AddDays(-attendanceCultureLookbackDays).String(), UntilDate: today.String(),
+		tracks, trackErr := school.attendance.read(func() (bool, error) {
+			return s.Attendance.HasAttendance(txCtx, AttendanceFilter{
+				FromDate: today.AddDays(-attendanceCultureLookbackDays).String(), UntilDate: today.String(),
+			})
 		})
 		if trackErr != nil {
 			return trackErr
@@ -78,7 +98,7 @@ func (s *Service) GetChildTodayStatus(ctx context.Context, accountID, studentID 
 			"student_id", studentID,
 			"error", txErr.Error(),
 		)
-		return &TodayStatus{State: DayStateUnknown}, nil
+		return nil, txErr
 	}
 
 	status := deriveTodayStatus(facts)
