@@ -8,7 +8,7 @@ import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { messageKeys, weekProtocolKeys } from "~/lib/swr/portal-keys";
 import { groupKeys } from "~/lib/swr/groups-keys";
 import { roomKeys } from "~/lib/swr/rooms-keys";
-import type { ServerSeed } from "~/lib/swr/server-seed";
+import type { ServerSeed, ServerSeedInput } from "~/lib/swr/server-seed";
 import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock-instant";
 import { buildRoomResponse } from "~/test/fixtures/rooms";
 import { buildBackendStudent } from "~/test/fixtures/students";
@@ -136,7 +136,9 @@ describe("tenant route seeds", () => {
       params: Promise.resolve({ tenant: "school-a", id: "7" }),
       searchParams: Promise.resolve({}),
     });
-    const seed = await page.props.seed;
+    const seed = isValidElement<{ seed: ServerSeedInput }>(page)
+      ? await page.props.seed
+      : null;
     const roster = seed?.entries.find(
       ({ key }) => key === roomKeys.students("7"),
     );
