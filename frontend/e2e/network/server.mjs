@@ -26,24 +26,28 @@ const schools = ["school-a", "school-b"].map((subdomain, index) => ({
 
 // Only synthetic fixtures. This is not a backend/authentication test.
 const envelope = (data) => ({ status: "success", data });
-const claims = (scope = "") => ({
-  id: 1,
-  sub: "1",
-  scope,
-  tenant_id: scope === "parent" ? undefined : 1,
-  org_id: 1,
-  first_name: "Test",
-  last_name: "Fixture",
-  email: "fixture@example.invalid",
-  roles: [
-    scope === "school" ? "lehrkraft" : scope === "parent" ? "guardian" : "user",
-  ],
-  permissions: [],
-  exp:
-    Math.floor(
-      realClock("der Next-Server prüft exp gegen seine Wanduhr") / 1000,
-    ) + 3600,
-});
+function claims(scope = "") {
+  const issuedAt = Math.floor(
+    realClock("der Next-Server prüft exp gegen seine Wanduhr") / 1000,
+  );
+  return {
+    id: 1,
+    sub: "1",
+    scope,
+    tenant_id: scope === "parent" ? undefined : 1,
+    org_id: 1,
+    first_name: "Test",
+    last_name: "Fixture",
+    email: "fixture@example.invalid",
+    roles: [
+      scope === "school" ? "lehrkraft" : scope === "parent" ? "guardian" : "user",
+    ],
+    role_is_system: null,
+    permissions: [],
+    iat: issuedAt,
+    exp: issuedAt + 3600,
+  };
+}
 // Shared-cookie mode models the server-side session family (#5194): login
 // opens a family, logout revokes it, and session routes refuse a token whose
 // family is gone although it has not expired.
@@ -258,12 +262,14 @@ const api = createServer(async (req, res) => {
       : undefined;
     if (family) liveFamilies.add(family);
     const token = fixtureToken({ ...claims(scope), family_id: family });
-    const pair = { access_token: token, refresh_token: token };
+    const login = {
+      status: "authenticated",
+      access_token: token,
+      refresh_token: token,
+    };
     data = ["parent", "platform", "caterer"].includes(scope)
-      ? envelope(pair)
-      : scope === "school"
-        ? { status: "authenticated", ...pair }
-        : pair;
+      ? envelope(login)
+      : login;
   } else if (path === "/auth/session/validate") {
     let body = "";
     for await (const chunk of req) body += chunk;
@@ -288,8 +294,13 @@ const api = createServer(async (req, res) => {
       });
       return;
     }
+    const session = claims(portal === "tenant" ? "" : portal);
     data = {
-      ...claims(portal === "tenant" ? "" : portal),
+      ...session,
+      id: String(session.id),
+      tenant_id:
+        session.tenant_id === undefined ? undefined : String(session.tenant_id),
+      org_id: String(session.org_id),
       family_id: family,
     };
   } else if (path === "/api/me/profile") data = envelope(profile);

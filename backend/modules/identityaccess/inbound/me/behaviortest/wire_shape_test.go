@@ -20,8 +20,8 @@ import (
 // implementation: users.PersonAccount for GET /api/me, the profile map built
 // by the legacy user-context service for GET /api/me/profile, the embedded
 // education.Group plus via_substitution for GET /api/me/groups, and
-// usercontext.NavigationContext for GET /api/me/navigation, which since #4996
-// also carries the school switches of the signed-in app shell.
+// the staff profile and school switches of the signed-in app shell for
+// GET /api/me/navigation. The supervision projection has its own route.
 
 func sortedKeys(object map[string]any) []string {
 	keys := make([]string, 0, len(object))
