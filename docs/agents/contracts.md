@@ -955,6 +955,10 @@ Backend paths in this section are relative to `backend/`:
   caterer portal (`workflows/catererportal`) opens each supplied school's
   tenant transaction itself (ADR 0077). The `caterer scope matrix` contract in
   `TestFullProductionRouterGolden` checks both directions.
+- `GET /caterer/schools?from=YYYY-MM-DD&to=YYYY-MM-DD` returns the compact
+  order overview (at most seven days). An optional `school_id` retries one
+  supplied school. A failed row is not a zero; a revoked supply is absent.
+  Only the school detail route returns classes, names or individual changes.
 - The caterer's second factor (ADR 0077 addendum, #4497) is voluntary and
   bound to the caterer's account, never to a school's `mfa_mode`. Once it is
   on, `/caterer/auth/login` answers `mfa_required` with a `caterer`-scope

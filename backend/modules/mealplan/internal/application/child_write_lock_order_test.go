@@ -80,18 +80,18 @@ func (registrationSettings) MealOrderingSettings(context.Context) (ports.Orderin
 func TestChildWritesTakeTheStudentRowFirst(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 9, 7, 8, 0, 0, 0, calendar.Berlin)
-	writes := map[string]func(*Service) error{
-		"school schedule": func(s *Service) error {
+	writes := map[string]func(mealplan.Registration) error{
+		"school schedule": func(s mealplan.Registration) error {
 			_, err := s.ReplaceScheduleBySchool(context.Background(), mealplan.SchoolSchedule{StudentID: 7, StaffAccountID: 3, Weekdays: []mealplan.Weekday{mealplan.Monday}, EffectiveFrom: "2026-09-14", ExpectedVersion: "v"})
 			return err
 		},
-		"school day": func(s *Service) error {
+		"school day": func(s mealplan.Registration) error {
 			return s.SetParticipationBySchool(context.Background(), mealplan.SchoolChange{StudentID: 7, StaffAccountID: 3, Date: "2026-09-14", Participating: true})
 		},
-		"school day cleared": func(s *Service) error {
+		"school day cleared": func(s mealplan.Registration) error {
 			return s.ClearParticipationBySchool(context.Background(), mealplan.SchoolChange{StudentID: 7, StaffAccountID: 3, Date: "2026-09-14"})
 		},
-		"parent schedule": func(s *Service) error {
+		"parent schedule": func(s mealplan.Registration) error {
 			_, err := s.ReplaceParticipationSchedule(context.Background(), mealplan.ReplaceParticipationSchedule{StudentID: 7, GuardianAccountID: 3, Weekdays: []mealplan.Weekday{mealplan.Monday}, ExpectedVersion: "v"})
 			return err
 		},
@@ -101,7 +101,7 @@ func TestChildWritesTakeTheStudentRowFirst(t *testing.T) {
 			t.Parallel()
 			order := &lockOrder{}
 			service := New(lockOrderStore{order: order}, lockOrderDirectory{order: order}, lockOrderCalendar{}, registrationSettings{}, seamTransaction{}, func(ports.Observation) {}, func() time.Time { return now }, nil)
-			require.Error(t, write(service))
+			require.Error(t, write(service.Capability))
 			require.GreaterOrEqual(t, len(order.calls), 2, "the write reaches its own lock")
 			assert.Equal(t, "student", order.calls[0], "the student row comes before the meal plan's locks")
 		})

@@ -56,7 +56,7 @@ const seededEntrypoints = [
   ["school/tagesinformationen", "SWRServerSeed"],
   ["traeger", "SWRServerSeed"],
   ["operator/organizations", "SWRServerSeed"],
-  ["caterer", "CatererServerSeed"],
+  ["caterer", "SWRServerSeed"],
   ["parents", "ParentServerSeed"],
 ] as const;
 

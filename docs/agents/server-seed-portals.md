@@ -55,7 +55,7 @@ An audited GET stays on its prescribed browser/opening path even if its hook cur
 
 | Route under `/caterer` | Seeded or already server-side | Other first readers and intentional exclusions |
 |---|---|---|
-| `/` | Supplied schools, then the default Berlin orders window for precisely those school IDs. | The browser window key includes ordered bounds and the complete sorted school set. If one school refuses/fails, only the window falls back; the browser keeps its existing per-school retry and refusal behavior. Changed periods and exports remain actions. |
+| `/` | Compact order overview for the default Berlin date window, including all currently supplied schools. | No details are seeded. Opening a school reads its orders for this window and grant. A failed school can be retried individually; a revoked supply disappears. Exports remain actions. |
 | `/einladung/[schoolId]/[token]` | None. | Public acceptance is bound to the school and invitation token; no authenticated portal preload. |
 | `/konto` | Own MFA state and passkey summaries; remembered devices only if the factor is enabled. | Uses session e-mail already in the layout. Credential changes and confirmation steps are actions. |
 | `/login` | None. | Public sign-in, including account MFA/passkey challenge. |
@@ -178,4 +178,4 @@ An audited GET stays on its prescribed browser/opening path even if its hook cur
 | Operator | `/operator/organizations` | Träger-name cell in the organization table. Count/stat cards are a separate key. |
 | Caterer | `/caterer` | Seeded school row with a numeric order total and no loading state in the selected week. |
 
-Measure hard load, cold navigation with and without intent, then warm/back navigation. Count the identical BFF GET for the seeded key separately from ordinary focus/SSE/refusal reloads. For Caterer also refuse one supplied school after listing: keep the schools seed, retry the orders key through the established per-school path, and never show a refused school's old order values.
+Measure hard load, cold navigation with and without intent, then warm/back navigation. Count the identical BFF GET for the seeded key separately from ordinary focus/SSE/refusal reloads. For Caterer also fail one supplied school inside the compact read: the aggregate must be incomplete and only that school retried. Revoke a supply during refresh: its row and cached details must disappear.

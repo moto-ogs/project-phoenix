@@ -9,6 +9,7 @@ func RouteContracts() []common.RouteContract {
 		{
 			Method: "GET", Pattern: "/schools",
 			Portals:  []common.PortalScope{common.PortalCaterer},
+			Query:    []common.QueryParam{{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate}, {Name: "school_id", Kind: common.QueryID}},
 			Response: SchoolsResponse{},
 		},
 		{

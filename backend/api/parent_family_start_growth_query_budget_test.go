@@ -229,7 +229,7 @@ func familyStartGrowthRouter(t *testing.T, db *bun.DB, database transactionrunti
 	portal := portalCompose.New(portalCompose.Dependencies{
 		GuardianChanges: owners.ParentGuardianChanges(), DeparturePolicy: owners.ParentDeparturePolicy(), GuardianPolicy: owners.NewParentGuardianPolicy(), Fingerprints: owners.SecurityFingerprints{}, Declarations: owners.ParentDeclarationPolicy(), Locales: owners.ParentPortalLocales(), Runtime: owners.ParentPortalRuntime{}, Logger: slog.Default(), Now: now,
 		ChildRepo: repos.ParentChildReads(), StudentRepo: owners.NewParentStudentReads(people.Student), PersonRepo: owners.NewParentPersonReads(people.Person), GuardianProfileRepo: owners.NewParentGuardianProfileReads(people.GuardianProfile), StudentGuardianRepo: owners.NewParentStudentGuardianReads(people.StudentGuardian),
-		Memberships: owners.NewParentSchoolMembershipLock(database), Settings: owners.BindParentSettings(settings.Settings), MealPlan: meals,
+		Memberships: owners.NewParentSchoolMembershipLock(database), Settings: owners.BindParentSettings(settings.Settings), MealPlan: meals.Capability,
 		CareRequests: module.CareRequests, ChangeRequestRepo: owners.NewParentDataRequestReads(repos.CareExceptions), StatusDayRepo: repos.StudentStatusDay,
 		ArrivalSchedules: owners.NewParentArrivalSchedules(schedules.Arrivals), PickupSchedules: owners.NewParentPickupSchedules(schedules.Pickups),
 		Attendance:             owners.BindParentAttendance(presence),
