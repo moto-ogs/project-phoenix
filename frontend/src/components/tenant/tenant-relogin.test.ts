@@ -7,7 +7,13 @@ const { signOut, mutate, clearSessionCache, unsubscribePushSilently } =
     clearSessionCache: vi.fn(),
     unsubscribePushSilently: vi.fn(),
   }));
-vi.mock("~/lib/tenant-session-cookie", () => ({ signOutTenant: signOut }));
+vi.mock("~/lib/tenant-session-cookie", () => ({
+  signOutTenant: signOut,
+  tenantSessionReplaced: () => false,
+  sessionReplaced: () => false,
+  leaveReplacedSession: vi.fn(),
+  SessionReplaced: class SessionReplaced extends Error {},
+}));
 vi.mock("~/lib/swr", () => ({ mutate }));
 vi.mock("~/lib/session-cache", () => ({
   clearSessionCache,
@@ -70,6 +76,7 @@ describe("target-school reauthentication", () => {
     const second = reloginAtTenant("school-b");
     await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
     expect(fetch).toHaveBeenCalledWith("/api/auth/logout", {
+      headers: { "X-Moto-End-Session": "tenant -" },
       method: "POST",
       signal: expect.any(AbortSignal),
       credentials: "include",
@@ -84,6 +91,8 @@ describe("target-school reauthentication", () => {
       expect(signOut).toHaveBeenCalledWith(
         {
           callbackUrl: "http://school-b.mfa.localhost:13845/",
+          revoked: true,
+          mark: "",
         },
         expect.any(AbortSignal),
       ),
@@ -190,6 +199,8 @@ describe("target-school reauthentication", () => {
     expect(signOut).toHaveBeenCalledWith(
       {
         callbackUrl: "http://school-b.mfa.localhost:13845/",
+        revoked: true,
+        mark: "",
       },
       expect.any(AbortSignal),
     );

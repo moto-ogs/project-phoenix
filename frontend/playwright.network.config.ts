@@ -18,6 +18,8 @@ export default defineConfig({
     "tenant-mfa-switch.spec.ts",
     "late-session-cookie.spec.ts",
     "late-portal-cookie.spec.ts",
+    // The session boundary suite needs a production build of its own.
+    "session-tree.spec.ts",
   ],
   workers: 1,
   retries: 0,

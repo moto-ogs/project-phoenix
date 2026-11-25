@@ -5,7 +5,10 @@ import { SchoolProviders } from "./providers";
 import { SchoolAuthGuard } from "./auth-guard";
 import { schoolPageSeed, schoolNotices } from "~/lib/school/page-seed.server";
 import { SCHOOL_PUBLIC_PAGES } from "./public-pages";
-import { readPortalSessionSnapshot } from "~/lib/portal-session-snapshot.server";
+import {
+  readPortalSessionSnapshot,
+  readRenderedSessionMark,
+} from "~/lib/portal-session-snapshot.server";
 
 /**
  * Server layout for school routes ("moto schule", #2207).
@@ -44,7 +47,10 @@ export default async function SchoolLayout({
       : null;
 
   return (
-    <SchoolProviders session={snapshot?.session ?? null}>
+    <SchoolProviders
+      session={snapshot?.session ?? null}
+      sessionMark={await readRenderedSessionMark("school")}
+    >
       {shellReads ? (
         <SWRServerSeed seed={shellReads.seed} claims={shellReads.claims}>
           {guarded}

@@ -193,6 +193,7 @@ function ParentLoginForm() {
     const cleanup = signOutStaleSession({
       status,
       session,
+      portal: "parent",
       started: cleanupStartedRef,
       logger,
       // The stale session keeps the form locked: say so, and let
@@ -200,7 +201,10 @@ function ParentLoginForm() {
       onFailure: (cause) => {
         void showCleanupError(unavailableApiError(cause), {
           object: t("errorObject"),
-          retry: () => setCleanupAttempt((current) => current + 1),
+          retry: () => {
+            cleanupStartedRef.current = false;
+            setCleanupAttempt((current) => current + 1);
+          },
         });
       },
     });

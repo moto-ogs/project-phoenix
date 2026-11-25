@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { Session } from "next-auth";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import type { PortalKey } from "~/lib/portal-paths";
+import { reloadDocument } from "~/lib/session-tree";
 import { useLatest } from "~/lib/hooks/use-latest";
 import { hasSessionAccess } from "~/lib/session-access";
+import { signOutSession } from "~/lib/tenant-session-cookie";
 import {
   DELIBERATE_LOGOUT_KEY,
   LOGOUT_NOT_REVOKED_KEY,
@@ -115,6 +118,8 @@ interface StaleSessionSignOut {
   /** Set while a sign-out runs or is done, so one stale session ends once. */
   readonly started: { current: boolean };
   readonly logger: { warn: (event: string, data: { error: string }) => void };
+  /** The portal whose login page runs the cleanup. */
+  readonly portal: PortalKey;
   /** The sign-out failed; a later call tries again. */
   readonly onFailure?: (cause: unknown) => void;
 }
@@ -124,29 +129,44 @@ interface StaleSessionSignOut {
  * Without this the JWT callback keeps retrying the refused refresh, and the
  * stale cookie competes with the new sign-in. Answers null, at once, when
  * there is nothing to end or a sign-out already runs, so the page goes on
- * to its other checks in the same tick; otherwise the sign-out it started. Nothing is shown for a failure
- * unless the page asks for it: no one requested the cleanup.
+ * to its other checks in the same tick; otherwise the sign-out it started.
+ * Nothing is shown for a failure unless the page asks for it: no one
+ * requested the cleanup.
+ *
+ * Auth.js' signout protocol for the ended session only (#8082): a sign-in
+ * in another tab meanwhile stays. Then the document loads again with the
+ * cookie as it is.
  */
 export function signOutStaleSession({
   status,
   session,
   started,
   logger,
+  portal,
   onFailure,
 }: StaleSessionSignOut): Promise<void> | null {
   if (status !== "authenticated" || !session?.error || started.current) {
     return null;
   }
   started.current = true;
-  return signOut({ redirect: false }).then(
-    () => undefined,
-    (cause: unknown) => {
-      started.current = false;
-      logger.warn("stale_session_signout_failed", {
-        error: cause instanceof Error ? cause.message : String(cause),
-      });
-      onFailure?.(cause);
-    },
+  // The session the error belongs to (the one its answer describes): the
+  // exit of session cookies keeps another tab's sign-in that took the
+  // cookie meanwhile.
+  return (
+    signOutSession(portal, session.sessionMark ?? "")
+      // A new document reads the session the cookie holds now: none, or
+      // another tab's. The provider keeps an ended session until then.
+      .then(() => reloadDocument())
+      .then(
+        () => undefined,
+        (cause: unknown) => {
+          started.current = false;
+          logger.warn("stale_session_signout_failed", {
+            error: cause instanceof Error ? cause.message : String(cause),
+          });
+          onFailure?.(cause);
+        },
+      )
   );
 }
 
@@ -157,10 +177,12 @@ export function signOutStaleSession({
  */
 export function useLoginSessionCheck({
   logger,
+  portal,
   onAccess,
   paused = false,
 }: {
   readonly logger: StaleSessionSignOut["logger"];
+  readonly portal: PortalKey;
   readonly onAccess: () => void;
   readonly paused?: boolean;
 }): boolean {
@@ -170,7 +192,13 @@ export function useLoginSessionCheck({
   const onAccessRef = useLatest(onAccess);
 
   useEffect(() => {
-    const cleanup = signOutStaleSession({ status, session, started, logger });
+    const cleanup = signOutStaleSession({
+      status,
+      session,
+      started,
+      logger,
+      portal,
+    });
     if (cleanup) {
       void cleanup.then(() => setChecking(false));
       return;
@@ -183,7 +211,7 @@ export function useLoginSessionCheck({
       return;
     }
     if (status !== "loading") setChecking(false);
-  }, [status, session, paused, logger, onAccessRef]);
+  }, [status, session, paused, logger, portal, onAccessRef]);
 
   // Only the first answer counts: a later "loading" (useSession's update()
   // after a sign-in) must not unmount the step that is waiting for it.

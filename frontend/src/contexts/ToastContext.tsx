@@ -22,6 +22,7 @@ import { normalizeLocale, type AppLocale } from "~/i18n/locales";
 import { useErrorCareFacilityTerm } from "~/lib/care-facility-term-context";
 import { useLatest } from "~/lib/hooks/use-latest";
 import { useErrorContact } from "~/lib/error-contact";
+import { onSessionTreeDiscard, onSessionTreeHidden } from "~/lib/session-tree";
 import { useModulePortal } from "~/lib/module-portal-context";
 import {
   portalNotBookedExplanation,
@@ -243,6 +244,48 @@ export function prepareErrorPresenter(): void {
   void loadErrorPresenter().catch(() => undefined);
 }
 
+/**
+ * The toasts of one protected tree (#8082). Its readers raise their toasts
+ * through the provider above, until the tree is discarded: a write or read
+ * of the old session that answers later shows nothing, neither over the
+ * next session's tree nor over the lock screen. Mounted by
+ * SessionTreeBoundary inside every tree it renders.
+ */
+export function ToastSessionScope({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  const parent = useContext(ToastContext);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    // At the discard itself, not at the old tree's later unmount: a late
+    // answer in between raises nothing over the new tree or the lock.
+    const stop = onSessionTreeDiscard(() => {
+      alive.current = false;
+    });
+    return () => {
+      stop();
+      alive.current = false;
+    };
+  }, []);
+  const api = useMemo<ToastAPI | undefined>(() => {
+    if (!parent) return undefined;
+    const guard =
+      (show: ToastAPI["success"]): ToastAPI["success"] =>
+      (message, options) => {
+        if (alive.current) show(message, options);
+      };
+    return {
+      success: guard(parent.success),
+      error: guard(parent.error),
+      info: guard(parent.info),
+      warning: guard(parent.warning),
+      remove: parent.remove,
+    };
+  }, [parent]);
+  return <ToastContext.Provider value={api}>{children}</ToastContext.Provider>;
+}
+
 export function useToast() {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error("useToast must be used within ToastProvider");
@@ -450,6 +493,22 @@ export function ToastProvider({
 
   const remove = useCallback((id: string) => {
     setItems((prev) => prev.filter((it) => it.id !== id));
+  }, []);
+
+  // Toasts sit above the portals' session boundary, but they belong to the
+  // tree that raised them: names, counts, actions of that session (#8082).
+  useEffect(() => {
+    const clear = () => {
+      setItems([]);
+      actedOnRef.current.clear();
+      lastShownRef.current.clear();
+    };
+    const stopDiscard = onSessionTreeDiscard(clear);
+    const stopHidden = onSessionTreeHidden(clear);
+    return () => {
+      stopDiscard();
+      stopHidden();
+    };
   }, []);
 
   const push = useCallback(
