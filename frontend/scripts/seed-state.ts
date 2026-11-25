@@ -58,7 +58,7 @@ type SeedAccountRole = "admin" | "betreuer" | "lehrkraft";
  * Kontoart im Seed-Profil; ohne Angabe die Schul-Leitung (`admin`).
  * `school_admin` ist der Admin, den es nur in dieser Schule gibt.
  */
-type SeedRole = SeedAccountRole | "school_admin";
+export type SeedRole = SeedAccountRole | "school_admin";
 
 interface SeedState {
   base_url?: string;
