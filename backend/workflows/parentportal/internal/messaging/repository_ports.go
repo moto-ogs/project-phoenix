@@ -78,7 +78,7 @@ type MessageInboxReads interface {
 // inside the caller's tenant transaction.
 type RequestShareRecords interface {
 	Create(context.Context, *ParentRequestShareEvent) error
-	CurrentForStudent(context.Context, int64) ([]*ParentRequestShareEvent, error)
+	CurrentForStudents(context.Context, []int64) ([]*ParentRequestShareEvent, error)
 }
 
 // RequestEvents is the request history surface used by sharing: append a change

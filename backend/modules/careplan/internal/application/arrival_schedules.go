@@ -352,12 +352,12 @@ func (s *arrivalScheduleService) GetStudentArrivalExceptionByID(
 	return s.exceptionByID(ctx, exceptionID)
 }
 
-func (s *arrivalScheduleService) GetStudentArrivalExceptionForDate(
+func (s *arrivalScheduleService) GetStudentArrivalExceptionsForDate(
 	ctx context.Context,
-	studentID int64,
+	studentIDs []int64,
 	date calendar.Date,
-) (*careplan.ArrivalException, error) {
-	return s.exceptionForDate(ctx, studentID, date)
+) (map[int64]*careplan.ArrivalException, error) {
+	return s.exceptionsForDate(ctx, studentIDs, date)
 }
 
 func (s *arrivalScheduleService) GetStudentArrivalExceptions(

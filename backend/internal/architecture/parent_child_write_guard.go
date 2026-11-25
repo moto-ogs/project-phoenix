@@ -205,6 +205,7 @@ var portClasses = map[string]string{
 	"care.RequestEventWriter":                                       "write",
 	"care.RequestShareVisibility":                                   "read",
 	"care.RequestSharer.LoadRequestShareVisibility":                 "read",
+	"care.RequestSharer.LoadRequestShareVisibilities":               "read",
 	"care.RequestSharer.ShareRequestInTx":                           "write",
 	"care.Runtime":                                                  "read",
 	"care.SEPAMandates":                                             "read",

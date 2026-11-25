@@ -19,8 +19,8 @@ func BindParentRequestShareRecords(source directory.ParentRequestShares) parentp
 		}
 		return result0
 	},
-		CurrentForStudent: func(pA context.Context, pB int64) ([]*parentportal.ParentRequestShareEvent, error) {
-			result0, result1 := source.ParentRequestSharesForStudent(pA, pB)
+		CurrentForStudents: func(pA context.Context, pB []int64) ([]*parentportal.ParentRequestShareEvent, error) {
+			result0, result1 := source.ParentRequestSharesForStudents(pA, pB)
 			return ParentMessagingSlice(result0, func(row *directory.ParentRequestShareRecord) *parentportal.ParentRequestShareEvent {
 				return ParentMessagingPointer(row, parentMessagingFromOwnerParentRequestShareEvent)
 			}), result1

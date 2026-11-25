@@ -53,6 +53,25 @@ func (c *effectiveTimeCore[S, E, N, D]) exceptionForDate(
 	return row, nil
 }
 
+// exceptionsForDate is exceptionForDate for a set of children, in one read.
+func (c *effectiveTimeCore[S, E, N, D]) exceptionsForDate(
+	ctx context.Context,
+	studentIDs []int64,
+	date calendar.Date,
+) (map[int64]E, error) {
+	if len(studentIDs) == 0 {
+		return map[int64]E{}, nil
+	}
+	rows, err := c.exceptions.FindByStudentIDsAndDate(ctx, studentIDs, date)
+	if err != nil {
+		return nil, &careplan.ScheduleError{
+			Op:  c.operation("get student %s exceptions for date"),
+			Err: err,
+		}
+	}
+	return c.exceptionsByStudent(rows), nil
+}
+
 func (c *effectiveTimeCore[S, E, N, D]) loadExceptions(
 	ctx context.Context,
 	studentID int64,
