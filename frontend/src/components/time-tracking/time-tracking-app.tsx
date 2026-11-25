@@ -33,6 +33,8 @@ import {
   StatusBadge,
   type StatusBadgeTone,
 } from "~/components/ui/status-badge";
+import { DataField } from "~/components/ui/data-field";
+import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionCard } from "~/components/ui/section-card";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { SplitView } from "~/components/ui/split-view";
@@ -90,6 +92,8 @@ export interface AppClockPanelProps {
   readonly breakStepper: ReactNode;
   readonly breakSheetOpen: boolean;
   readonly onBreakSheetOpenChange: (open: boolean) => void;
+  /** Monat, Beginn des Stundenkontos und Herkunft des Solls. */
+  readonly footer?: ReactNode;
 }
 
 function formatClock(totalSecs: number): string {
@@ -267,6 +271,7 @@ export function AppClockPanel(props: AppClockPanelProps) {
             ))}
           </ul>
         ) : null}
+        {props.footer}
       </SectionCard>
 
       {portalBars(
@@ -563,6 +568,20 @@ interface DayEntry {
   readonly projection: DayProjection | undefined;
 }
 
+/**
+ * Die Angaben, die der Desktop je Tag in der Tabelle zeigt (Plan, Soll, Ist,
+ * Gutschrift, Saldo, Quelle). Am Telefon stehen sie oben im Blatt des Tages,
+ * damit die Zeile zweizeilig bleibt (#8070, Runde 7).
+ */
+export interface AppDayFacts {
+  readonly plan: string | null;
+  readonly projection: DayProjection | undefined;
+  /** Saldo erst, wenn der Tag zählt (vergangen oder heute abgeschlossen). */
+  readonly showBalance: boolean;
+  /** Woher der Block kommt: „App“, „NFC“ oder null (unbekannt). */
+  readonly source: string | null;
+}
+
 export interface AppDayListProps {
   readonly from: Date;
   readonly to: Date;
@@ -574,7 +593,11 @@ export interface AppDayListProps {
   readonly holidays: ReadonlyMap<string, string> | undefined;
   readonly closingDays: ReadonlyMap<string, string> | undefined;
   /** Tag oder Block bearbeiten (das Formular der Seite). */
-  readonly onEdit: (date: Date, session: WorkSessionHistory | null) => void;
+  readonly onEdit: (
+    date: Date,
+    session: WorkSessionHistory | null,
+    facts: AppDayFacts,
+  ) => void;
   /** Kopf der Karte: die Wahl von Woche oder Monat. */
   readonly header?: ReactNode;
 }
@@ -771,10 +794,18 @@ function DayBadge({ day, isToday }: { day: Date; isToday: boolean }) {
   );
 }
 
+function sourceLabel(session: WorkSessionHistory | null): string | null {
+  if (!session) return null;
+  const source = session.source ?? "app";
+  if (source === "nfc") return "NFC";
+  if (source === "unknown") return null;
+  return "App";
+}
+
 function dayRows(
   d: DayEntry,
   todayKey: string,
-  onEdit: (date: Date, session: WorkSessionHistory | null) => void,
+  onEdit: AppDayListProps["onEdit"],
 ): ReactNode[] {
   const isToday = d.key === todayKey;
   const isFuture = d.key > todayKey;
@@ -789,10 +820,17 @@ function dayRows(
       d.projection.creditMinutes > 0) &&
     !isFuture &&
     (!isToday || dayClosed(d));
-  const plannedText =
+  const plan =
     d.shifts.length > 0
-      ? `Geplant ${d.shifts.map((s) => `${s.startTime}–${s.endTime}`).join(", ")}`
+      ? d.shifts.map((s) => `${s.startTime}–${s.endTime}`).join(", ")
       : null;
+  const plannedText = plan ? `Geplant ${plan}` : null;
+  const facts = (session: WorkSessionHistory | null): AppDayFacts => ({
+    plan,
+    projection: d.projection,
+    showBalance: hasBalance,
+    source: sourceLabel(session),
+  });
 
   const meta = (ist: number | null, showBalance: boolean) => (
     <span className="flex flex-col items-end leading-5">
@@ -845,7 +883,7 @@ function dayRows(
         {...(isFuture || isToday || (d.special && !d.absence)
           ? {}
           : {
-              onClick: () => onEdit(d.day, null),
+              onClick: () => onEdit(d.day, null, facts(null)),
               "aria-label": `${WEEKDAY_SHORT[toIsoDayOfWeek(d.day)]} ${d.day.getDate()}.: ${title}`,
             })}
       />,
@@ -856,7 +894,8 @@ function dayRows(
     const open = s.checkOutTime === null;
     const times = `${formatTime(s.checkInTime)}–${open ? "läuft" : formatTime(s.checkOutTime)}`;
     const parts: string[] = [];
-    if (s.status === "home_office") parts.push("Unterwegs");
+    // Der Ort steht in jeder Zeile wie die Status-Spalte des Desktops.
+    parts.push(s.status === "home_office" ? "Unterwegs" : "OGS");
     if (s.breakMinutes > 0) parts.push(`Pause ${s.breakMinutes} min`);
     if (d.absence) parts.push(absenceDisplayLabel(d.absence));
     if (d.sessions.length > 1) parts.push(`Block ${index + 1}`);
@@ -871,13 +910,13 @@ function dayRows(
           index === 0 ? leading : <span className="w-9" aria-hidden="true" />
         }
         title={times}
-        subtitle={parts.length > 0 ? parts.join(" · ") : "In der OGS"}
+        subtitle={parts.join(" · ")}
         meta={
           d.sessions.length > 1 && !last
             ? meta(s.netMinutes, false)
             : meta(d.sessions.length > 1 ? dayIst : s.netMinutes, hasBalance)
         }
-        onClick={() => onEdit(d.day, s)}
+        onClick={() => onEdit(d.day, s, facts(s))}
         aria-label={`${WEEKDAY_SHORT[toIsoDayOfWeek(d.day)]} ${d.day.getDate()}.: ${times} bearbeiten`}
       />
     );
@@ -953,3 +992,44 @@ export function AppTimeTrackingLayout({
 /** Karten einer Spalte untereinander, jede so hoch wie ihr Inhalt. */
 const SPLIT_STACK =
   "flex min-w-0 flex-col gap-4 [&>*]:shrink-0 [&>section]:h-auto";
+
+// ─── Angaben des Tages (Blatt) ───────────────────────────────────────────────
+
+/**
+ * Plan, Soll, Ist, Gutschrift, Saldo und Quelle eines Tages: die Spalten der
+ * Desktop-Tabelle, oben im Blatt des Tages (#8070, Runde 7).
+ */
+export function AppDayFactsPanel({ facts }: { readonly facts: AppDayFacts }) {
+  const p = facts.projection;
+  const credit = p?.creditMinutes ?? 0;
+  return (
+    <InsetPanel
+      as="dl"
+      framed
+      padding="md"
+      className="grid grid-cols-3 gap-x-3 gap-y-2 text-sm tabular-nums"
+      data-app-day-facts=""
+    >
+      <DataField label="Plan">{facts.plan ?? "–"}</DataField>
+      <DataField label="Soll">
+        {p && p.targetMinutes > 0 ? formatDuration(p.targetMinutes) : "–"}
+      </DataField>
+      <DataField label="Ist">
+        {p && p.actualMinutes > 0 ? formatDuration(p.actualMinutes) : "–"}
+      </DataField>
+      <DataField label="Gutschrift">
+        {credit > 0 ? formatDuration(credit) : "–"}
+      </DataField>
+      <DataField label="Saldo">
+        {facts.showBalance && p ? (
+          <span className={balanceClass(p.balanceMinutes)}>
+            {formatSignedDuration(p.balanceMinutes)}
+          </span>
+        ) : (
+          "–"
+        )}
+      </DataField>
+      <DataField label="Quelle">{facts.source ?? "–"}</DataField>
+    </InsetPanel>
+  );
+}
