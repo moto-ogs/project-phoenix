@@ -10,6 +10,7 @@ jedes Abrufs. Ein fehlender Seed lässt den bestehenden Leser nachladen.
 | `active-supervisions` | Standard-Auswahl des Aufsichtsdashboards oder persönliche laufende, geplante und Tagesaufsichten | Kein abweichender Raum oder Termin unter dem Standardschlüssel |
 | `anfragen` | Aktueller Zugang zur Prüfung; erste Seite der sichtbaren offenen Anfragen mit ihren aktiven Quellen | Andere Tabs, Folgeseiten, Entscheidungsdetails und Vorschauen |
 | `home` | Gespeichertes Brett, Kennzahlen, Tagesablauf, eigene Dienste, sichtbare Karten sowie Hinweise zum Phasenende, zur Geräte-PIN und zu Ferien | Die aggregierten Hinweise, deren Antworten zusätzlich nicht benötigte Kindernamen liefern, werden nicht in den RSC-Payload übernommen |
+| `time-tracking` | Eigene Übersicht, laufende Berliner Woche und Urlaubsübersicht des laufenden Jahres über die drei Verträge aus #8104 | Andere Zeiträume, persönliche Bearbeitung sowie Downloads erst auf Aktion; Kalendertage bleiben bis zur Darstellung Strings |
 | `database` | Zähler für die Datenverwaltung | Keine Lesezugriffe der verlinkten Zielseiten |
 | `database/absence-types` | Abwesenheitsarten | Formulardaten bei Bearbeitung |
 | `database/activities` | Aktivitäten inklusive Systemaktivitäten, die Detailansicht für einen Eintrag der Liste bei URL-Auswahl und passendem Recht | Kein Detail für eine ID außerhalb der Liste; Schreibentwurf erst bei Öffnung |

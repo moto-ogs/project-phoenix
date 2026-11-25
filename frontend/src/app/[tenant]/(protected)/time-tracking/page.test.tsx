@@ -503,7 +503,7 @@ vi.mock("lucide-react", () => ({
 
 // ─── Imports after mocks ────────────────────────────────────────────────────
 
-import TimeTrackingPage from "./page";
+import TimeTrackingPage from "./page-content";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useSWRAuth } from "~/lib/swr";

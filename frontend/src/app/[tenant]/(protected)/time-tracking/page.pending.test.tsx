@@ -182,7 +182,7 @@ import type {
   StaffAbsence,
   WorkSessionHistory,
 } from "~/lib/time-tracking-helpers";
-import TimeTrackingPage from "./page";
+import TimeTrackingPage from "./page-content";
 
 vi.unmock("swr");
 

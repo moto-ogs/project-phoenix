@@ -1,5 +1,6 @@
 import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { loadTimeTrackingSeed } from "~/app/[tenant]/(protected)/time-tracking/page-seed.server";
 import { buildSupervisionDashboardWire } from "~/test/fixtures/supervision-dashboard";
 import { testClockDay } from "~/test/clock";
 import { loadActiveSupervisionsSeed } from "./active-supervisions-seed.server";
@@ -8,7 +9,12 @@ import { loadRequestInboxSeed } from "./request-inbox-seed.server";
 import { loadStudentSearchSeed } from "./student-search-seed.server";
 import { initialStudentSearch } from "./student-search-url";
 import type { TenantInfo } from "./tenant-api";
-import { homeKeys, homeLayoutKeys, studentKeys } from "./swr/portal-keys";
+import {
+  homeKeys,
+  homeLayoutKeys,
+  studentKeys,
+  timeTrackingKeys,
+} from "./swr/portal-keys";
 import { dashboardKeys, ownSupervisionKeys } from "./swr/shell-keys";
 import { tenantListKeys } from "./swr/tenant-list-keys";
 
@@ -83,6 +89,56 @@ beforeEach(() => {
 });
 
 describe("first tenant page reads", () => {
+  it("loads the three current time-tracking views independently, under their date keys", async () => {
+    authenticate(["time_tracking:own"]);
+    source.tenant = { ...source.tenant, bookedModules: ["zeiterfassung"] };
+    source.response.mockImplementation((url) => {
+      if (!url.pathname.endsWith("/period"))
+        return new Response(null, { status: 503 });
+      const start = url.searchParams.get("start");
+      return success({
+        staff_id: "12",
+        view: "week",
+        start,
+        end: start,
+        week_start: start,
+        week_end: start,
+        account_start: null,
+        sessions: null,
+        labor_days: null,
+        rest_hints: null,
+        weekly_summaries: null,
+        absences: null,
+        shifts: { state: "not_booked", rows: null },
+        holidays: null,
+        closing_days: null,
+        days: null,
+      });
+    });
+    const seed = await loadTimeTrackingSeed("school-a");
+    const today = testClockDay(0);
+    const calls = entries(source.send.mock.calls);
+    expect(calls.map(({ pathname }) => pathname)).toEqual([
+      "/api/time-tracking/overview",
+      "/api/time-tracking/period",
+      "/api/time-tracking/leave-overview",
+    ]);
+    const query = calls[1]!.searchParams;
+    expect(query.get("view")).toBe("week");
+    const start = query.get("start")!;
+    expect(seed?.entries.map(({ key }) => key)).toEqual([
+      timeTrackingKeys.overview(today),
+      timeTrackingKeys.period("week", start),
+      timeTrackingKeys.leaveOverview(Number(today.slice(0, 4))),
+    ]);
+    await expect(seed?.entries[0]?.value).resolves.toBeUndefined();
+    await expect(seed?.entries[1]?.value).resolves.toMatchObject({
+      from: start,
+      to: start,
+    });
+    await expect(seed?.entries[2]?.value).resolves.toBeUndefined();
+  });
+
   it.each([
     ["another school", "9", ""],
     ["another portal", "7", "school"],

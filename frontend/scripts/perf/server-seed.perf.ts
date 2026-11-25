@@ -42,7 +42,9 @@ const access = loadAccess();
 const port = perfPort();
 const quiet = { quietMs: 700, capMs: 8_000 };
 const repeats = Number(process.env.PERF_SEED_REPEATS ?? 3);
-const out = join(process.cwd(), "perf-results", "server-seed");
+const out =
+  process.env.PERF_SEED_OUT ??
+  join(process.cwd(), "perf-results", "server-seed");
 if (!Number.isSafeInteger(repeats) || repeats < 1) {
   throw new Error("PERF_SEED_REPEATS must be a positive integer.");
 }
@@ -149,7 +151,11 @@ const targets: readonly Target[] = [
         .first()
         .click();
     },
-    ready: (page) => page.getByText("OGS Sonnenhof", { exact: true }).first(),
+    ready: (page) =>
+      page
+        .getByRole("row", { name: /OGS Sonnenhof/ })
+        .getByRole("cell", { name: /^\d+$/ })
+        .first(),
     link: linkTo("/"),
   },
 ];
