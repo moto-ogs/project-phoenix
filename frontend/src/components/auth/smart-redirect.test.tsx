@@ -1,3 +1,4 @@
+import { deriveSupervision } from "~/lib/supervision-derive";
 import { render, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SmartRedirect } from "./smart-redirect";
@@ -63,6 +64,7 @@ describe("SmartRedirect", () => {
       update: vi.fn(),
     });
     vi.mocked(useSupervision).mockReturnValue({
+      ...deriveSupervision(),
       hasGroups: false,
       isLoadingGroups: false,
       isSupervising: false,
@@ -177,6 +179,7 @@ describe("SmartRedirect", () => {
   // mehr weiter.
   it("passes only the session to useSmartRedirectPath", () => {
     vi.mocked(useSupervision).mockReturnValue({
+      ...deriveSupervision(),
       hasGroups: true,
       isLoadingGroups: false,
       isSupervising: true,

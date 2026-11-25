@@ -16,53 +16,6 @@ const (
 	statusForbidden    = 403
 )
 
-// Navigation returns the identity projection with every available
-// navigation section. Group-derived sections are optional: omitting one on a
-// failed read is safer than failing unrelated navigation entirely.
-func (c *CallerContext) Navigation(ctx context.Context) (domain.CallerNavigation, error) {
-	unavailable := make([]string, 0, 3)
-
-	groups, err := c.MyGroupIDs(ctx)
-	if err != nil {
-		c.logger().Warn("navigation context groups unavailable",
-			slog.String("error", err.Error()),
-		)
-		unavailable = append(unavailable, "educational_groups")
-	}
-	substituted, err := c.SubstitutedGroupIDs(ctx)
-	if err != nil {
-		c.logger().Warn("navigation context substitutions unavailable",
-			slog.String("error", err.Error()),
-		)
-		substituted = make(map[int64]bool)
-		unavailable = append(unavailable, "substitutions")
-	}
-	supervised, err := c.MySupervisedSessionIDs(ctx)
-	if err != nil {
-		c.logger().Warn("navigation context supervision unavailable",
-			slog.String("error", err.Error()),
-		)
-		supervised = []int64{}
-		unavailable = append(unavailable, "supervised_groups")
-	}
-	staffID, err := c.StaffID(ctx)
-	if err != nil && !isNotStaff(err) {
-		return domain.CallerNavigation{}, err
-	}
-
-	educational := make([]domain.CallerGroup, 0, len(groups))
-	for _, id := range groups {
-		educational = append(educational, domain.CallerGroup{ID: id, ViaSubstitution: substituted[id]})
-	}
-	return domain.CallerNavigation{
-		Groups:               educational,
-		SupervisedSessionIDs: supervised,
-		StaffID:              staffID,
-		Incomplete:           len(unavailable) > 0,
-		UnavailableSections:  unavailable,
-	}, nil
-}
-
 // SSESubscription resolves the live-update topics of the caller. Effective
 // admins may have no staff record: they still receive broadcast events and,
 // when the school-wide overview covers them, every open session's events.

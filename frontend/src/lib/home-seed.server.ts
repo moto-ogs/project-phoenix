@@ -11,6 +11,7 @@ import * as dayChanges from "~/lib/contract/day-changes.generated";
 import * as enrollment from "~/lib/contract/enrollment.generated";
 import * as settings from "~/lib/contract/settings.generated";
 import * as staff from "~/lib/contract/staff.generated";
+import * as students from "~/lib/contract/students.generated";
 import * as timetable from "~/lib/contract/timetable.generated";
 import * as timeTracking from "~/lib/contract/time-tracking.generated";
 import { mapDashboardAnalyticsResponse } from "~/lib/dashboard-helpers";
@@ -22,6 +23,14 @@ import { resolveHomeLayout } from "~/lib/home-blocks";
 import { mapHomeLayout } from "~/lib/home-layout-api";
 import { isScopeBooked, PAGE_MODULES } from "~/lib/module-register";
 import {
+  mapHomeGroupRead,
+  mapOgsGroupLiveResponse,
+} from "~/lib/ogs-group-live-api";
+import {
+  mapPickupExtension,
+  mapPickupExtensionReminder,
+} from "~/lib/pickup-extension-api";
+import {
   getSmartRedirectPath,
   isSchoolPortalHandoffPath,
 } from "~/lib/redirect-utils";
@@ -30,6 +39,7 @@ import { mapSchoolVacationHints } from "~/lib/school-vacations-api";
 import { mapRosterDeviations } from "~/lib/roster-deviation";
 import { mapDevicePinSetupReason } from "~/lib/settings-api";
 import { mapOwnAssignment } from "~/lib/shift-helpers";
+import { loadSupervision } from "~/lib/shell-bootstrap.server";
 import { mapDashboardSummary } from "~/lib/staff-overview-api";
 import {
   databaseKeys,
@@ -104,6 +114,18 @@ export async function loadHomeSeed(slug: string) {
   }
   if (timetableEnabled && access.has("schedules:manage")) {
     entries.push({
+      key: tenantDailyKeys.pickupExtensionReminders(),
+      value: seedRead("homePickupExtensionReminders", async (signal) => {
+        const answer = await readContract(
+          timetable.routes["GET /api/timetable/pickup-extensions/"],
+          { token, signal },
+        );
+        return (answer.data.tasks ?? [])
+          .map(mapPickupExtension)
+          .map(mapPickupExtensionReminder);
+      }),
+    });
+    entries.push({
       key: timetableKeys.schoolVacationHints(today),
       value: seedRead("homeSchoolVacationHints", async (signal) =>
         mapSchoolVacationHints(
@@ -176,24 +198,47 @@ export async function loadHomeSeed(slug: string) {
   // change placement of the cards below.
   const saved = await layout;
   if (!saved) return seedOf(snapshot, entries, builtAt);
+  const board = {
+    access,
+    timetableEnabled,
+    detailed: tenant.presenceMode !== "binary",
+    openCareGroupMode: tenant.groupMode === "open_care",
+    bookedModules: tenant.bookedModules,
+    birthdaysEnabled: true,
+    remindersEnabled: true,
+    messagingEnabled:
+      tenant.messagingEnabled === true &&
+      isScopeBooked(PAGE_MODULES["/messages"], tenant.bookedModules),
+    staffMessagingEnabled: tenant.staffMessagingEnabled === true,
+  };
   const { placements } = resolveHomeLayout(
-    {
-      access,
-      timetableEnabled,
-      detailed: tenant.presenceMode !== "binary",
-      openCareGroupMode: tenant.groupMode === "open_care",
-      bookedModules: tenant.bookedModules,
-      birthdaysEnabled: true,
-      remindersEnabled: true,
-      messagingEnabled:
-        tenant.messagingEnabled === true &&
-        isScopeBooked(PAGE_MODULES["/messages"], tenant.bookedModules),
-      staffMessagingEnabled: tenant.staffMessagingEnabled === true,
-    },
+    board,
     saved.blocks,
     saved.overrides,
     saved.policies,
   );
+  const withOwnGroup = resolveHomeLayout(
+    { ...board, access: homeBlockAccess(session, true) },
+    saved.blocks,
+    saved.overrides,
+    saved.policies,
+  );
+  if (withOwnGroup.placements.some(({ key }) => key === "section.my_group")) {
+    entries.push({
+      key: homeKeys.ownGroup(session.user.id),
+      value: loadSupervision(token).then((navigation) => {
+        if (!navigation?.groups?.navigation?.some((group) => group.is_personal))
+          return undefined;
+        return seedRead("homeOwnGroup", async (signal) => {
+          const answer = await readContract(
+            students.routes["GET /api/students/ogs-group-live"],
+            { token, signal },
+          );
+          return mapHomeGroupRead(mapOgsGroupLiveResponse(answer.data));
+        });
+      }),
+    });
+  }
   const keys = new Set(placements.map(({ key }) => key));
   if (keys.has("section.day_changes")) {
     entries.push({

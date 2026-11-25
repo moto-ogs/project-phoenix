@@ -4,7 +4,8 @@ import { useSWRAuth } from "~/lib/swr/hooks";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import {
   fetchPickupExtensions,
-  type PickupExtension,
+  mapPickupExtensionReminder,
+  type PickupExtensionReminder,
 } from "~/lib/pickup-extension-api";
 
 /**
@@ -13,9 +14,11 @@ import {
  * empty list without a request.
  */
 export function usePickupExtensions(enabled: boolean) {
-  const { data, error, isLoading, mutate } = useSWRAuth<PickupExtension[]>(
-    enabled ? tenantDailyKeys.pickupExtensions() : null,
-    () => fetchPickupExtensions(),
+  const { data, error, isLoading, mutate } = useSWRAuth<
+    PickupExtensionReminder[]
+  >(
+    enabled ? tenantDailyKeys.pickupExtensionReminders() : null,
+    async () => (await fetchPickupExtensions()).map(mapPickupExtensionReminder),
     { revalidateOnFocus: true },
   );
   return {

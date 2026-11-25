@@ -73516,7 +73516,7 @@
     },
     {
       "name": "NavigationResponse",
-      "go_type": "identityaccess.NavigationResponse[github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff,*github.com/moto-ogs/project-phoenix/roots/owners.CallerGroupRow,*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.ActiveGroup]",
+      "go_type": "identityaccess.NavigationResponse[*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff]",
       "fields": [
         {
           "name": "current_staff",
@@ -73527,50 +73527,10 @@
           }
         },
         {
-          "name": "educational_groups",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "nullable": true,
-              "ref": "CallerGroupRow"
-            }
-          }
-        },
-        {
-          "name": "incomplete",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
           "name": "school_switches",
           "schema": {
             "kind": "ref",
             "ref": "SchoolSwitches"
-          }
-        },
-        {
-          "name": "supervised_groups",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "nullable": true,
-              "ref": "ActiveGroup"
-            }
-          }
-        },
-        {
-          "name": "unavailable_sections",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "string"
-            }
           }
         }
       ]

@@ -1,3 +1,4 @@
+import { deriveSupervision } from "~/lib/supervision-derive";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { activeService } from "~/lib/active-service";
@@ -18,6 +19,7 @@ import type { Room } from "~/lib/room-helpers";
 
 /** Default supervision context: no school-wide overview. */
 const EMPTY_SUPERVISION = {
+  ...deriveSupervision(),
   hasGroups: false,
   isLoadingGroups: false,
   groups: [],

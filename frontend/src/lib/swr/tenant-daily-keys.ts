@@ -225,6 +225,7 @@ export const tenantDailyKeys = {
   shiftTypes: () => "dienstplan-shift-types",
   /** Offene Entscheidungen über verlängerte Abholzeiten. */
   pickupExtensions: () => "pickup-extensions",
+  pickupExtensionReminders: () => "pickup-extensions-reminders",
   /** Aktivitäten, Kategorien und eigenes Personalprofil der Seite „Aktivitäten“. */
   activitiesOverview: () => "activities-page",
   /** Alle Ansichten und Zeiträume des Team-Kalenders (#7693). */

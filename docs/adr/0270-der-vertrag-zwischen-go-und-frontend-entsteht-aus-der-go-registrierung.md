@@ -534,3 +534,21 @@ Fehler wiederholbar. Ein 204 ersetzt keine zugesagten Daten.
    Demo-Route-Dateien lesen Status, Sitzung und Neustart über erzeugte
    Decoder. Die separate Website fordert den Link direkt an
    ([ADR 0316](0316-demo-link-anfrage-bleibt-ein-website-vertrag.md)).
+
+
+## Ergänzung: Aufsichtsfelder verlassen die Staff-Navigation (#8085)
+
+`GET /api/me/navigation` behält Personalprofil und Schulschalter. Seine vier
+Aufsichtsfelder (`educational_groups`, `supervised_groups`, `incomplete`,
+`unavailable_sections`) entfallen im selben Schnitt wie ihre Leser. Der
+Staff-Shell-Seed und der Browser lesen stattdessen
+[`GET /api/active/supervision-context`](../agents/contracts.md#staff-supervision-context-8084-8085).
+Die Auswertung des Lasttests liest keine dieser Eigenschaften; der Kiosk
+liest die Route nicht. Allgemeine Gruppen- und Aufsichtsabfragen für andere
+Leser bleiben unverändert.
+
+Die Vertragsprüfung erlaubt ausschließlich diese vier Feldentfernungen aus
+dem alten Go-Vertrag dieser Route. Der Schnitt setzt gemeinsam ausgelieferte
+Go- und Next-Versionen und danach neu geladene Staff-Tabs voraus. Ein alter
+Next-Decoder kann die kürzere Antwort nicht lesen. Die gewöhnliche
+Deprecation-Regel gilt für alle anderen Vertragsänderungen.

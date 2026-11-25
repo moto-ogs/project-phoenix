@@ -1,7 +1,7 @@
 {
   "scenario": "api.me.navigation.positive_growth",
-  "max": 20,
+  "max": 9,
   "exact": true,
-  "description": "GET /api/me/navigation: real caller, retained rows, tenant session/RLS, production host request memos and school settings; exact N3/N8 educational groups (including a real substitution) and supervised sessions. Serve-host family liveness excluded.",
+  "description": "GET /api/me/navigation: only current staff and school switches, constant while the caller's assigned groups and live sessions grow. Separate session family validation is asserted and excluded.",
   "route": "GET /api/me/navigation"
 }

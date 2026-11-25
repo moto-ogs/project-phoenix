@@ -41,7 +41,9 @@ export function HomeSeed({
     enrollmentKeys.phaseExpiryWarnings(),
     devicePinKeys.status(),
     timetableKeys.schoolVacationHints(today),
+    tenantDailyKeys.pickupExtensionReminders(),
     accountId ? homeKeys.dayChanges(accountId) : null,
+    accountId ? homeKeys.ownGroup(accountId) : null,
     homeKeys.birthdayOverview(),
     homeKeys.staffSummary(),
   ];

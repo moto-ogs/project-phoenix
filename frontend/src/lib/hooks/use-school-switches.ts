@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  IncompleteUserContextError,
-  useUserContext,
-} from "~/lib/hooks/use-user-context";
+import { useUserContext } from "~/lib/hooks/use-user-context";
 import type {
   ParentInviteMode,
   SchoolSwitches,
@@ -24,13 +21,9 @@ function useSchoolSwitches(enabled = true): {
 } {
   const { userContext, isLoading, error } = useUserContext(enabled);
   return {
-    switches: userContext?.schoolSwitches ?? undefined,
+    switches: userContext?.schoolSwitches,
     isLoading,
-    error:
-      error instanceof IncompleteUserContextError &&
-      error.userContext.schoolSwitches
-        ? undefined
-        : error,
+    error,
   };
 }
 

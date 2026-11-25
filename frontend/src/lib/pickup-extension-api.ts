@@ -34,7 +34,19 @@ export interface PickupExtension {
   readonly blocks: readonly PickupExtensionBlock[];
 }
 
-function mapPickupExtension(
+export type PickupExtensionReminder = Pick<
+  PickupExtension,
+  "studentName" | "kind" | "date" | "weekday" | "effectiveFrom" | "pickupTime"
+>;
+
+export function mapPickupExtensionReminder(
+  task: PickupExtension,
+): PickupExtensionReminder {
+  const { studentName, kind, date, weekday, effectiveFrom, pickupTime } = task;
+  return { studentName, kind, date, weekday, effectiveFrom, pickupTime };
+}
+
+export function mapPickupExtension(
   raw: timetableContract.pickupExtensionResponse,
 ): PickupExtension {
   return {

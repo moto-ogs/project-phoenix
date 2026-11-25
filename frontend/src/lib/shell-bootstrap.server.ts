@@ -1,16 +1,15 @@
 import * as staffNoticesContract from "~/lib/contract/staff-notices.generated";
 import * as staffMessagesContract from "~/lib/contract/staff-messages.generated";
 import * as staffContract from "~/lib/contract/staff.generated";
-import * as roomsContract from "~/lib/contract/rooms.generated";
 import * as remindersContract from "~/lib/contract/reminders.generated";
 import * as activeContract from "~/lib/contract/active.generated";
 import type { Session } from "next-auth";
+import { cache } from "react";
 import { mapAccountTenant } from "~/lib/account-tenants";
 import {
   hasEffectiveAdminScope,
   hasPermission,
   isAdmin,
-  isCaregiver,
 } from "~/lib/auth-utils";
 import {
   canReviewCareWithdrawals,
@@ -23,16 +22,13 @@ import { readContract, withRequestBudget } from "~/lib/server-seed.server";
 import * as authAccountContract from "~/lib/contract/auth-account.generated";
 import * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import * as meContract from "~/lib/contract/me.generated";
-import * as messagesContract from "~/lib/contract/messages.generated";
 import * as studentsContract from "~/lib/contract/students.generated";
+import * as messagesContract from "~/lib/contract/messages.generated";
 import * as platformContract from "~/lib/contract/platform.generated";
 import { toRemindersResult } from "~/lib/reminders-api";
 import { toStaffNotice } from "~/lib/staff-notices-api";
 import type { ShellBootstrap, ShellCounts } from "~/lib/shell-seed";
-import type {
-  SupervisedGroupPayload,
-  SupervisionSnapshot,
-} from "~/lib/supervision-derive";
+import { isCompleteSupervisionSeed } from "~/lib/supervision-derive";
 import type { TenantInfo } from "~/lib/tenant-api";
 import { loadUserContext } from "~/lib/user-context.server";
 
@@ -60,106 +56,18 @@ function optional<T>(
 
 const readShell = readContract;
 
-async function loadSupervision(
-  session: Session,
-  tenant: TenantInfo,
-  token: string,
-): Promise<SupervisionSnapshot | null> {
-  // Same gates as SupervisionProvider: the server answers every request
-  // itself, these only skip calls that are guaranteed to 403.
-  const adminScope = hasEffectiveAdminScope(session);
-  const canReadGroups =
-    adminScope ||
-    hasPermission(session, "groups:read") ||
-    (!Array.isArray(session.user.permissions) && isCaregiver(session));
-  const mayHaveOverview =
-    adminScope || tenant.operationalOverviewScope === "all_staff";
-
-  const loadSupervised = async (
-    signal: AbortSignal,
-  ): Promise<{
-    supervised: SupervisedGroupPayload[];
-    ownSupervised: SupervisedGroupPayload[] | null;
-    overviewOk: boolean;
-  }> => {
-    const loadOwn = () =>
-      readShell(meContract.routes["GET /api/me/groups/supervised"], {
-        token,
-        signal,
-      });
-    if (canReadGroups && mayHaveOverview) {
-      const [overview, own] = await Promise.allSettled([
-        readShell(activeContract.routes["GET /api/active/supervisors/all"], {
-          token,
-          signal,
-        }),
-        loadOwn(),
-      ]);
-      if (overview.status === "fulfilled") {
-        return {
-          supervised: overview.value.data ?? [],
-          ownSupervised:
-            own.status === "fulfilled" ? (own.value.data ?? []) : null,
-          overviewOk: true,
-        };
-      }
-      if (own.status === "fulfilled") {
-        return {
-          supervised: own.value.data ?? [],
-          ownSupervised: null,
-          overviewOk: false,
-        };
-      }
-      if (overview.status === "rejected") throw overview.reason;
-      throw own.reason;
-    }
-    const own = await loadOwn();
-    return {
-      supervised: own.data ?? [],
-      ownSupervised: null,
-      overviewOk: false,
-    };
-  };
-
-  const [groups, supervision, openRooms] = await Promise.all([
-    optional("groups", async (signal) => {
-      const response = await readShell(
-        studentsContract.routes["GET /api/students/ogs-group-navigation"],
-        { token, signal },
-      );
-      return response.data;
+/** Shared by the shell and a page that needs confirmed group membership in this request. */
+export const loadSupervision = cache(async function (token: string) {
+  const response = await optional("supervision", (signal) =>
+    readShell(activeContract.routes["GET /api/active/supervision-context"], {
+      token,
+      signal,
     }),
-    optional("supervised", loadSupervised),
-    // Released rooms come from the room list, by stable room id (#3065).
-    // rooms:read is the same permission every caregiver already holds for the
-    // rest of the navigation, so no extra gate is needed here.
-    optional("openRooms", async (signal) => {
-      const response = await readShell(
-        roomsContract.routes["GET /api/rooms/"],
-        { token, signal, query: { is_open_room: true } },
-      );
-      return response.data ?? [];
-    }),
-  ]);
-
-  // SupervisionProvider treats any snapshot as a complete initial load. Do
-  // not seed partial data: its ordinary browser request is the recovery path.
-  if (
-    groups === undefined ||
-    supervision === undefined ||
-    openRooms === undefined
-  ) {
-    return null;
-  }
-
-  return {
-    groups,
-    supervised: supervision.supervised,
-    ownSupervised: supervision.ownSupervised,
-    openRooms: openRooms ?? null,
-    overviewOk: supervision.overviewOk,
-  };
-}
+  );
+  return response && isCompleteSupervisionSeed(response.data)
+    ? response.data
+    : undefined;
+});
 
 async function loadCount(
   name: keyof ShellCounts,
@@ -298,12 +206,7 @@ export async function loadShellBootstrap(
     supervision,
     counts,
   ] = await Promise.all([
-    optional("userContext", async (signal) => {
-      const context = await loadUserContext(token, { signal });
-      // An incomplete projection is an error state for useUserContext (it
-      // retries); leave that path to the browser instead of caching it.
-      return context.incomplete ? undefined : context;
-    }),
+    optional("userContext", (signal) => loadUserContext(token, { signal })),
     // Through the decoder like the browser's profile read: the generated
     // type holds at runtime, IDs arrive as strings (#2353).
     optional("profile", async (signal) => {
@@ -349,7 +252,7 @@ export async function loadShellBootstrap(
       );
       return response.data ?? [];
     }),
-    loadSupervision(session, tenant, token),
+    loadSupervision(token),
     loadCounts(session, tenant, token),
   ]);
 
@@ -361,7 +264,7 @@ export async function loadShellBootstrap(
     reminders,
     staffNoticesToday,
     announcements,
-    supervision: supervision ?? undefined,
+    supervision,
     counts,
   };
 }

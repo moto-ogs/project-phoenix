@@ -17,6 +17,7 @@ const {
   toastErrorMock,
   exportPlanMock,
   showErrorMock,
+  refreshSupervisionMock,
   supervisionState,
   suspendSearchParamsState,
   weekendOpenState,
@@ -33,6 +34,7 @@ const {
   toastErrorMock: vi.fn(),
   exportPlanMock: vi.fn(() => Promise.resolve()),
   showErrorMock: vi.fn(() => Promise.resolve()),
+  refreshSupervisionMock: vi.fn(() => Promise.resolve()),
   supervisionState: { overviewEnabled: false },
   suspendSearchParamsState: { value: false },
   weekendOpenState: { value: false },
@@ -58,6 +60,7 @@ vi.mock("~/lib/tenant-router", () => ({
 vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: () => ({
     overviewEnabled: supervisionState.overviewEnabled,
+    refresh: refreshSupervisionMock,
   }),
 }));
 
@@ -138,9 +141,11 @@ vi.mock("~/components/rooms/room-detail-content", () => ({
 vi.mock("~/components/rooms/room-stammdaten-tab", () => ({
   RoomStammdatenTab: ({
     onSave,
+    room,
     showOccupancy,
   }: {
-    onSave: (data: { name: string }) => Promise<void>;
+    onSave: (data: { name?: string; isOpenRoom?: boolean }) => Promise<void>;
+    room: { isOpenRoom?: boolean };
     showOccupancy: boolean;
   }) => (
     <div
@@ -149,6 +154,12 @@ vi.mock("~/components/rooms/room-stammdaten-tab", () => ({
     >
       <button type="button" onClick={() => void onSave({ name: "Neu" })}>
         Speichern
+      </button>
+      <button
+        type="button"
+        onClick={() => void onSave({ isOpenRoom: !room.isOpenRoom })}
+      >
+        Freigabe ändern
       </button>
     </div>
   ),
@@ -450,7 +461,35 @@ describe("RoomDetailPage", () => {
     const cached = update({ room: { ...room, version: "v1" }, history: [] });
     expect(cached.room).toMatchObject({ name: "Neu", version: "v2" });
     expect(cached.room.isOccupied).toBe(true);
+    expect(refreshSupervisionMock).toHaveBeenCalledWith();
   });
+
+  it.each([true, false])(
+    "refreshes only released rooms after setting the release to %s",
+    async (isOpenRoom) => {
+      mockSession(["rooms:update"]);
+      useRoomDetailMock.mockReturnValue({
+        room: { ...room, isOpenRoom: !isOpenRoom },
+        history: [],
+        loading: false,
+        error: null,
+        historyDisabled: false,
+      });
+      serviceUpdateMock.mockResolvedValueOnce({ ...room, isOpenRoom });
+      render(<RoomDetailPage />);
+
+      fireEvent.click(screen.getByRole("tab", { name: "Stammdaten" }));
+      fireEvent.click(screen.getByRole("button", { name: "Freigabe ändern" }));
+
+      await waitFor(() =>
+        expect(refreshSupervisionMock).toHaveBeenCalledWith(["released-rooms"]),
+      );
+      expect(serviceUpdateMock).toHaveBeenCalledWith(
+        "7",
+        expect.objectContaining({ isOpenRoom }),
+      );
+    },
+  );
 
   it("keeps the referrer when switching room tabs", () => {
     mockSession(["rooms:update"]);
@@ -493,6 +532,7 @@ describe("RoomDetailPage", () => {
     await waitFor(() => {
       expect(pushMock).toHaveBeenCalledWith("/database/rooms?groupBy=floor");
     });
+    expect(refreshSupervisionMock).toHaveBeenCalledWith();
   });
 
   it("marks an archived room and offers neither editing nor removal", () => {
