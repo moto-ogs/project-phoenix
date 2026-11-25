@@ -47,8 +47,8 @@ import {
   type StaffAbsence,
   type WorkSessionHistory,
 } from "~/lib/time-tracking-helpers";
+import { useDeviceContext } from "~/lib/device-context";
 import { cn } from "~/lib/utils";
-import { Z_LAYER } from "~/components/ui/overlay-styles";
 
 // ─── Stempeluhr ──────────────────────────────────────────────────────────────
 
@@ -145,7 +145,14 @@ export function AppClockPanel(props: AppClockPanelProps) {
   let detail: string | null = planned;
   if (state === "working" && checkInTime) {
     headline = `Seit ${formatTime(checkInTime)}`;
-    detail = breakMinutes > 0 ? `Pause bisher ${breakMinutes} min` : planned;
+    // Kurz, damit es auch am kleinen Telefon in die Zeile passt.
+    const lastShift = plannedShifts[plannedShifts.length - 1];
+    detail =
+      breakMinutes > 0
+        ? `Pause bisher ${breakMinutes} min`
+        : lastShift
+          ? `Dienst bis ${lastShift.endTime}`
+          : null;
   } else if (state === "break") {
     headline =
       breakCountdownSecs === null
@@ -171,40 +178,55 @@ export function AppClockPanel(props: AppClockPanelProps) {
   }
 
   const pending = busy || saving;
+  // Telefon, noch nichts gestempelt: der Zustand steht in der Aktionsleiste
+  // („Dienst 08:00–16:30 · Einstempeln“), die Karte entfällt. Die Zeile von
+  // heute in der Liste nennt den Plan ebenfalls; so passen mehr Tage ins
+  // erste Bild. Mit Hinweisen, beim Speichern und am iPad bleibt die Karte.
+  const { layout } = useDeviceContext();
+  const foldIntoBar =
+    layout === "phone" &&
+    state === "idle" &&
+    todayMinutes === 0 &&
+    laborHints.length === 0 &&
+    !saving;
   const spinner = pending ? <SpinnerIcon className="mr-1.5 h-4 w-4" /> : null;
 
   return (
     <>
-      <SectionCard>
-        <div
-          className="flex items-center gap-3"
-          data-setup-tour="time-clock"
-          data-app-clock=""
-        >
-          <div className="min-w-0 flex-1">
-            <span role="status" className="block">
+      {/* Kompakt (#8070): Zustand und heutige Zeit in einer Zeile, Dienst
+          und Pause in der zweiten. So bleibt am kleinen Telefon Platz für
+          die Tage darunter. */}
+      <SectionCard
+        padding="none"
+        className={cn("px-4 py-3", foldIntoBar && "hidden")}
+      >
+        <div data-setup-tour="time-clock" data-app-clock="">
+          <div className="flex items-center justify-between gap-3">
+            <span role="status" className="min-w-0">
               <StatusBadge label={badge.label} tone={badge.tone} />
             </span>
-            <p
+            <p className="shrink-0 text-sm leading-6 text-gray-500 tabular-nums">
+              <span className="text-lg font-semibold text-gray-900">
+                {/* Gleich nach dem Einstempeln: nicht „0min“, die Zeit
+                    läuft schon (sie zählt alle 15 s weiter). */}
+                {state === "working" && todayMinutes < 1
+                  ? "<1min"
+                  : formatDuration(todayMinutes)}
+              </span>{" "}
+              heute
+            </p>
+          </div>
+          <p className="mt-1 truncate text-sm leading-5 tabular-nums">
+            <span
               className={cn(
-                "mt-1.5 truncate text-base leading-6 font-semibold tabular-nums",
+                "font-semibold",
                 state === "break" ? "text-moto-orange-strong" : "text-gray-900",
               )}
             >
               {headline}
-            </p>
-            {detail ? (
-              <p className="truncate text-sm leading-5 text-gray-500 tabular-nums">
-                {detail}
-              </p>
-            ) : null}
-          </div>
-          <div className="shrink-0 text-right">
-            <p className="text-2xl leading-8 font-light text-gray-900 tabular-nums">
-              {formatDuration(todayMinutes)}
-            </p>
-            <p className="text-sm leading-5 text-gray-500">heute</p>
-          </div>
+            </span>
+            {detail ? <span className="text-gray-500"> · {detail}</span> : null}
+          </p>
         </div>
         {laborHints.length > 0 ? (
           <ul className="mt-2 space-y-0.5">
@@ -221,7 +243,7 @@ export function AppClockPanel(props: AppClockPanelProps) {
       </SectionCard>
 
       {state === "idle" ? (
-        <ActionBar>
+        <ActionBar status={foldIntoBar ? headline : undefined}>
           <Button
             type="button"
             variant="success"
@@ -229,6 +251,8 @@ export function AppClockPanel(props: AppClockPanelProps) {
             disabled={disabled || pending}
             onClick={() => setStatusSheetOpen(true)}
             tooltip="Öffnet die Auswahl, wo du heute arbeitest."
+            // Ohne Karte zeigt die Einführung auf den Knopf.
+            data-setup-tour={foldIntoBar ? "time-clock" : undefined}
           >
             {spinner}
             Einstempeln
@@ -597,9 +621,11 @@ export function AppDayList({
             key={week}
             title={`KW ${week}`}
             meta={
+              // Der Saldo dieser Woche, beschriftet: er ist nicht das
+              // Stundenkonto im Kopf (das zählt alle Wochen zusammen).
               <span className="tabular-nums">
-                {formatDuration(ist)}
-                <span className={cn("ml-2", balanceClass(balance))}>
+                {formatDuration(ist)} · Wochensaldo{" "}
+                <span className={balanceClass(balance)}>
                   {formatSignedDuration(balance)}
                 </span>
               </span>
@@ -750,38 +776,49 @@ function dayRows(
 // ─── Aufbau ──────────────────────────────────────────────────────────────────
 
 /**
- * Telefon und iPad hoch: Stempeluhr, darunter die Tage. iPad quer (`split`): Stempeluhr links (⅓, klebt), Tage
- * rechts (⅔).
+ * Telefon und iPad hoch: Stempeluhr, die Tage, dann Heute geplant, Urlaub
+ * und Kontingente. iPad quer (`split`): links der Tag (Stempeluhr mit ihrer
+ * Aktionsleiste, Heute geplant, Urlaub), rechts die Tage und Kontingente.
+ * Die Aktionsleiste steht dort in der linken Spalte unter der Stempeluhr,
+ * statt mittig über der rechten Spalte zu schweben.
  */
 export function AppTimeTrackingLayout({
   split,
   errors,
   clock,
   days,
-  more,
+  today,
+  leave,
+  allowances,
 }: Readonly<{
   split: boolean;
   errors: ReactNode;
   clock: ReactNode;
   days: ReactNode;
-  more: ReactNode;
+  today: ReactNode;
+  leave: ReactNode;
+  allowances: ReactNode;
 }>) {
   if (split) {
     return (
       <div className="space-y-4" data-app-time-tracking="split">
         {errors}
-        <div className="grid grid-cols-[1fr_2fr] items-start gap-4">
-          {/* Eigene Ebene über der rechten Spalte: die ActionBar der
-              Stempeluhr liegt (fixed) in diesem klebenden Stapel. */}
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] items-start gap-4">
           <div
-            className={`sticky ${Z_LAYER.nav} flex flex-col gap-4 [&>[aria-hidden=true]:has(+[data-action-bar])]:hidden`}
-            style={{ top: "var(--app-sticky-offset, 1rem)" }}
+            className={cn(
+              "flex min-w-0 flex-col gap-4 [&>*]:shrink-0 [&>section]:h-auto",
+              // Die Leiste im Fluss der Spalte: kein Schweben, kein Polster.
+              "[&>[aria-hidden=true]:has(+[data-action-bar])]:hidden",
+              "[&>[data-action-bar]]:static [&>[data-action-bar]]:mx-0 [&>[data-action-bar]]:max-w-none [&>[data-action-bar]]:translate-y-0",
+            )}
           >
             {clock}
+            {today}
+            {leave}
           </div>
-          <div className="flex min-w-0 flex-col gap-4 pb-20 [&>*]:shrink-0 [&>section]:h-auto">
+          <div className="flex min-w-0 flex-col gap-4 [&>*]:shrink-0 [&>section]:h-auto">
             {days}
-            {more}
+            {allowances}
           </div>
         </div>
       </div>
@@ -797,7 +834,9 @@ export function AppTimeTrackingLayout({
       {errors}
       {clock}
       {days}
-      {more}
+      {today}
+      {leave}
+      {allowances}
     </div>
   );
 }

@@ -2294,10 +2294,13 @@ function EditSessionModal({
   canManage,
   ownStaffId,
   laborDay,
+  app = false,
 }: {
   readonly isOpen: boolean;
   readonly onClose: () => void;
   readonly session: WorkSessionHistory | null;
+  /** App (#8070): der Hinweis ohne Eintrag kommt als Blatt von unten. */
+  readonly app?: boolean;
   /** ArbZG-Sicht des gespeicherten Arbeitstags vom Server (#4804). */
   readonly laborDay?: WorkDayLaborHint;
   readonly date: Date | null;
@@ -2465,6 +2468,7 @@ function EditSessionModal({
         isOpen={isOpen}
         onClose={onClose}
         title="Kein Eintrag vorhanden"
+        mobileSheet={app}
         footer={<BackfillFooter onClose={onClose} onBackfill={onBackfill} />}
       >
         <MissingSessionHint date={date} canManage={onBackfill !== null} />
@@ -2848,10 +2852,17 @@ function EditSessionModal({
                       label="Pause (Min)"
                       value={breakMins}
                       onChange={setBreakMins}
-                      options={[0, 15, 30, 45, 60].map((m) => ({
-                        value: m.toString(),
-                        label: `${m} min`,
-                      }))}
+                      // Eine gestempelte Pause wie 38 min steht nicht in der
+                      // Auswahl; ohne eigene Option zeigte das Feld „Bitte
+                      // wählen“, obwohl die Pause gespeichert ist.
+                      options={[
+                        ...new Set([0, 15, 30, 45, 60, Number(breakMins) || 0]),
+                      ]
+                        .sort((a, b) => a - b)
+                        .map((m) => ({
+                          value: m.toString(),
+                          label: `${m} min`,
+                        }))}
                     />
                   )}
                 </div>
@@ -3270,6 +3281,11 @@ const NO_BREAKS: WorkSessionBreak[] = [];
 
 const TIME_TRACKING_INFO =
   "Hier erfasst du deine Arbeitszeit und deine Pausen. Wähle zuerst unter „Stempeluhr“ deinen Arbeitsort und dann „Einstempeln“. Oben siehst du deinen Stand, darunter deine erfassten Zeiten.";
+
+// Dieselbe Hilfe in der App (#8070): dort gibt es keine Stempeluhr-Karte,
+// gestempelt wird unten über die Leiste.
+const TIME_TRACKING_APP_INFO =
+  "Hier erfasst du deine Arbeitszeit und deine Pausen. Tippe unten auf „Einstempeln“ und wähle, wo du arbeitest. Oben steht dein Stundenkonto, darunter deine Woche Tag für Tag. Tippe auf einen Tag, um ihn anzusehen oder zu korrigieren.";
 
 function TimeTrackingContent() {
   const { data: authSession, status: authStatus } = useSession({
@@ -4121,7 +4137,7 @@ function TimeTrackingContent() {
   return (
     <TenantPage
       title="Zeiterfassung"
-      info={TIME_TRACKING_INFO}
+      info={app ? TIME_TRACKING_APP_INFO : TIME_TRACKING_INFO}
       statsLoading={metricsLoading}
       // Laden kommt aus dem Gerüst (Bauart 3, Regel 5) — kein eigenes
       // Seiten-Skelett neben den Zuständen der TenantPage.
@@ -4130,7 +4146,23 @@ function TimeTrackingContent() {
       stats={
         metricsLoad.error ? (
           <LoadErrorAlert error={metricsLoad.error} />
-        ) : metricsPending ? undefined : (
+        ) : metricsPending ? undefined : app ? (
+          // App (#8070): zwei Zahlen mit eindeutigem Namen. Die Woche steht
+          // als „Ist / Soll“, das Stundenkonto ist der Stand über alle
+          // Wochen. Der Wochensaldo steht an der Woche in der Liste.
+          <TenantPageStats
+            items={[
+              {
+                value: `${formatDuration(ownMetrics.week!.ist)} / ${formatDuration(ownMetrics.week!.soll)}`,
+                label: "Woche",
+              },
+              {
+                value: formatSignedDuration(ownMetrics.accountBalanceMinutes!),
+                label: "Stundenkonto",
+              },
+            ]}
+          />
+        ) : (
           <TenantPageStats
             items={[
               {
@@ -4243,6 +4275,7 @@ function TimeTrackingContent() {
             canManage={canManageTimeTracking}
             ownStaffId={ownStaffId}
             laborDay={editModal?.laborDay}
+            app={app}
           />
 
           {/* Create absence modal */}
@@ -4450,13 +4483,9 @@ function TimeTrackingContent() {
               }
             />
           }
-          more={
-            <>
-              <BetreuungsplanHeuteCard />
-              <LeaveRequestsCard />
-              <OwnAllowancesCard />
-            </>
-          }
+          today={<BetreuungsplanHeuteCard app />}
+          leave={<LeaveRequestsCard app />}
+          allowances={<OwnAllowancesCard app />}
         />
       ) : (
         <>

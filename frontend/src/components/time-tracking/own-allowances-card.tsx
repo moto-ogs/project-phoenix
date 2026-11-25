@@ -8,7 +8,8 @@ import {
 } from "~/components/staff/allowance-card";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
-import { ABSENCES_REFRESH_EVENT } from "~/lib/absence-helpers";
+import { ABSENCES_REFRESH_EVENT, formatDayCount } from "~/lib/absence-helpers";
+import type { OwnAbsenceAllowance } from "~/lib/time-tracking-api";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
 import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
@@ -18,7 +19,24 @@ import { timeTrackingService } from "~/lib/time-tracking-api";
 // Karten wie im Reiter „Abwesenheiten“ der Leitung, nur ohne „Anspruch ändern“.
 // Ohne Art mit Kontingent bleibt der Block weg; ein Ladefehler steht im Block,
 // damit er nicht als „0 Tage“ gelesen wird.
-export function OwnAllowancesCard() {
+// Bekannte Tarifbegriffe kurz erklärt (App, #8070). Die Namen legt die
+// Schule oder der Träger selbst an; nur wo der Name ein feststehender Begriff
+// aus dem Tarif für Erziehungsberufe ist, steht eine Erklärung darunter.
+const TERM_HINTS: Readonly<Record<string, string>> = {
+  regenerationstag: "Zusätzlicher freier Tag zur Erholung",
+  umwandlungstag: "Freier Tag statt eines Teils deiner Zulage",
+};
+
+function termHint(name: string): string | undefined {
+  return TERM_HINTS[name.trim().toLowerCase()];
+}
+
+export function OwnAllowancesCard({
+  app = false,
+}: {
+  /** App (#8070): eine Liste in der Karte statt Karten in der Karte. */
+  readonly app?: boolean;
+} = {}) {
   const {
     data: allowances,
     error,
@@ -40,6 +58,29 @@ export function OwnAllowancesCard() {
 
   if (!load.failure && (allowances === undefined || allowances.length === 0)) {
     return null;
+  }
+
+  if (app) {
+    return (
+      <SectionCard
+        title="Weitere freie Tage"
+        description="Den Anspruch trägt deine Leitung ein."
+        bodyClassName="mt-3"
+      >
+        {load.failure ? (
+          <LoadErrorAlert error={load.error} />
+        ) : (
+          <ul className="-mb-1 divide-y divide-gray-100">
+            {(allowances ?? []).map((entry) => (
+              <AppAllowanceRow
+                key={entry.summary.absenceTypeId}
+                entry={entry}
+              />
+            ))}
+          </ul>
+        )}
+      </SectionCard>
+    );
   }
 
   return (
@@ -71,5 +112,48 @@ export function OwnAllowancesCard() {
         </div>
       )}
     </SectionCard>
+  );
+}
+
+function AppAllowanceRow({ entry }: { readonly entry: OwnAbsenceAllowance }) {
+  const { summary } = entry;
+  const hint = termHint(entry.name);
+  const used = [
+    summary.takenDays > 0
+      ? `${formatDayCount(summary.takenDays)} genommen`
+      : "",
+    summary.reservedDays > 0
+      ? `${formatDayCount(summary.reservedDays)} beantragt`
+      : "",
+  ].filter(Boolean);
+  return (
+    <li className="flex items-start justify-between gap-3 py-3">
+      <div className="min-w-0">
+        <h3 className="text-base leading-6 font-medium text-gray-900">
+          {entry.name}
+        </h3>
+        {hint ? <p className="text-sm text-gray-500">{hint}</p> : null}
+        {used.length > 0 ? (
+          <p className="text-sm text-gray-500 tabular-nums">
+            {used.join(" · ")}
+          </p>
+        ) : null}
+        <div className="mt-0.5 empty:hidden">
+          <AllowanceExpiryNote summary={summary} />
+        </div>
+      </div>
+      <p className="shrink-0 text-right text-sm leading-6 text-gray-500 tabular-nums">
+        {summary.entitledDays > 0 ? (
+          <>
+            <span className="font-semibold text-gray-900">
+              {formatDayCount(summary.remainingDays)}
+            </span>{" "}
+            übrig
+          </>
+        ) : (
+          "Kein Anspruch"
+        )}
+      </p>
+    </li>
   );
 }
