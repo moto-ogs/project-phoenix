@@ -19,7 +19,6 @@ import {
   START_OWN_BLOCK_TOOLTIP,
   useStartOwnBlock,
 } from "~/components/home/use-start-own-block";
-import { blockStaffNames } from "~/components/timetable/block-row-parts";
 import { Button } from "~/components/ui/button";
 import {
   Collection,
@@ -242,18 +241,33 @@ function MyDayRow({
   const room =
     block.roomName ??
     (isDuty && block.roomId === "0" ? null : `Raum ${block.roomId}`);
+  // Eine Angabenzeile: Raum, Gruppe, Kinder, Personal kurz („Anna Müller
+  // +1“). Der Zustand steht als Abzeichen rechts, alle Namen samt
+  // Vertretung im Tagesplan, wohin die Zeile führt.
   const parts = cancelled
     ? [block.cancelReason ? `Fällt aus · ${block.cancelReason}` : "Fällt aus"]
     : [
-        block.status === "completed" ? "Beendet" : null,
-        ended && !isDuty ? "Nicht gestartet" : null,
-        ended && isDuty ? "Vorbei" : null,
         room,
         block.groupName,
         isDuty ? "Dienst" : blockChildrenLabel(block),
-        blockStaffNames(block),
+        shortStaff(block),
       ].filter((part): part is string => Boolean(part));
+  const overLabel =
+    block.status === "completed"
+      ? "Beendet"
+      : ended
+        ? isDuty
+          ? "Vorbei"
+          : "Nicht gestartet"
+        : null;
   const tone = over ? "text-gray-600" : "text-gray-900";
+  const state = startable ? null : block.isAbsent ? (
+    <StatusBadge tone="gray" label="Du fehlst" size="xs" />
+  ) : overLabel ? (
+    <StatusBadge tone="gray" label={overLabel} size="xs" />
+  ) : (
+    <BlockState block={block} now={now} size="xs" />
+  );
   return (
     <>
       {nowLine ? <NowLineRow now={now} /> : null}
@@ -294,6 +308,13 @@ function MyDayRow({
                 Vertretung
               </span>
             ) : null}
+            {/* Der Zustand steht hinter dem Titel, nicht rechts daneben:
+                so bleibt der Angabenzeile die ganze Breite. */}
+            {state ? (
+              <span className="ml-1.5 inline-flex align-[1px] font-normal no-underline">
+                {state}
+              </span>
+            ) : null}
           </span>
         }
         subtitle={
@@ -302,13 +323,6 @@ function MyDayRow({
               {parts.join(" · ")}
             </span>
           ) : undefined
-        }
-        meta={
-          startable ? undefined : block.isAbsent ? (
-            <StatusBadge tone="gray" label="Du fehlst" size="xs" />
-          ) : over ? undefined : (
-            <BlockState block={block} now={now} />
-          )
         }
         action={
           startable ? (
@@ -327,6 +341,17 @@ function MyDayRow({
       />
     </>
   );
+}
+
+/** Personal kurz: der erste Name, weitere als „+2“, wie im Tagesplan. */
+function shortStaff(block: PlannedTimetableInstance): string | null {
+  const names = block.staffNames ?? [];
+  const first = names[0];
+  if (!first) return null;
+  const name = first.isSubstitute
+    ? `${first.displayName} (Vertretung)`
+    : first.displayName;
+  return names.length > 1 ? `${name} +${names.length - 1}` : name;
 }
 
 // ─── Meine Gruppe ──────────────────────────────────────────────────────────

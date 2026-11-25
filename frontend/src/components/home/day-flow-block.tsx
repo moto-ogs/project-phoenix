@@ -206,30 +206,34 @@ export function DayFlowBlock() {
 export function BlockState({
   block,
   now,
+  size,
 }: {
   readonly block: PlannedTimetableInstance;
   readonly now: string;
+  /** App (#8070): kleines Abzeichen hinter dem Titel. */
+  readonly size?: "xs";
 }) {
   if (block.status === "cancelled") {
-    return <StatusBadge tone="red" label="Fällt aus" />;
+    return <StatusBadge size={size} tone="red" label="Fällt aus" />;
   }
   if (block.status === "active") {
-    return <StatusBadge tone="green" label="Läuft" />;
+    return <StatusBadge size={size} tone="green" label="Läuft" />;
   }
   if (block.status === "completed") {
-    return <StatusBadge tone="gray" label="Beendet" />;
+    return <StatusBadge size={size} tone="gray" label="Beendet" />;
   }
   // Ein Dienst (#3822) wird nie gestartet; "Nicht gestartet" wäre falsch.
   if (block.isDuty === true && (block.isOverdue || block.startTime <= now)) {
     return null;
   }
   if (block.isOverdue || (now !== "" && block.startTime <= now)) {
-    return <StatusBadge tone="warning" label="Nicht gestartet" />;
+    return <StatusBadge size={size} tone="warning" label="Nicht gestartet" />;
   }
   // Ohne Uhr (vor dem ersten Rendern im Browser) gibt es keinen Abstand.
   if (now === "") return null;
   return (
     <StatusBadge
+      size={size}
       tone="blue"
       label={formatMinutesAhead(minutesBetween(now, block.startTime))}
     />
