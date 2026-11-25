@@ -1,6 +1,6 @@
 import { Suspense } from "react";
-import { CatererOverviewPage } from "~/components/caterer/caterer-overview-page";
-import { loadCatererOverviewSeed } from "~/lib/caterer-overview-seed.server";
+import CatererOverviewPage from "./page-content";
+import { loadCatererOverviewSeed } from "~/lib/caterer/page-seed.server";
 import { defaultPeriod, periodDays } from "~/lib/caterer-period";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { SWRServerSeed } from "~/lib/swr/server-seed";
@@ -14,7 +14,7 @@ export default function CatererPage() {
   const key = catererKeys.overview(from, to);
   const seed = loadCatererOverviewSeed(from, to, key).catch(() => null);
   return (
-    <Suspense fallback={<CatererOverviewPage />}>
+    <Suspense fallback={null}>
       <SWRServerSeed seed={seed} claims={[key]} render>
         <CatererOverviewPage />
       </SWRServerSeed>

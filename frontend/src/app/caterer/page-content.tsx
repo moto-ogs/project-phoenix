@@ -4,16 +4,9 @@
 // school the caterer supplies, the days of the chosen period as columns,
 // with a sum per school and per day. Each school opens to its days with
 // classes, names (if the school shows them) and the confirmation. Each
-// school is read on its own; a school that ends the supply drops out.
+// period has one compact read; only an expanded card reads order details.
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { FileSpreadsheet, FileText, Printer } from "lucide-react";
 import { CatererSchoolOrders } from "~/components/caterer/caterer-school-orders";
 import { Button } from "~/components/ui/button";
@@ -31,18 +24,24 @@ import { SectionCard } from "~/components/ui/section-card";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import { isReadRefusal } from "~/lib/access-refusal";
 import { ApiError } from "~/lib/api-error";
 import { bffFile } from "~/lib/bff-fetch";
 import {
   downloadCatererDeliveries,
   confirmCatererOrder,
   fetchCatererOrders,
-  fetchCatererSchools,
-  type CatererOrderDay,
-  type CatererOrders,
-  type CatererSchool,
+  fetchCatererOverview,
   type DeliveryExportFormat,
 } from "~/lib/caterer-api";
+import {
+  sameSummaryDays,
+  summarizeOrderDay,
+  type CatererSchoolSummary,
+  type CatererSchools,
+  type CatererSummaryDay,
+  type CatererSchool,
+} from "~/lib/caterer-orders";
 import {
   defaultPeriod,
   periodDays,
@@ -52,15 +51,12 @@ import {
 import { parseISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { openBlobForPrint } from "~/lib/file-download";
-import { createLogger } from "~/lib/logger";
 import { useSession } from "next-auth/react";
 import { useSWRAuth, useInvalidateMatching, useSWRCacheKey } from "~/lib/swr";
 import { useDiscardRefusedEntity, useSWRRequestGuard } from "~/lib/swr/hooks";
 import { catererKeys } from "~/lib/swr/portal-keys";
 import { useOptimisticAction } from "~/lib/swr/optimistic";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-
-const logger = createLogger({ component: "CatererOverview" });
 
 function shortDay(iso: string): string {
   return parseISODate(iso).toLocaleDateString("de-DE", {
@@ -81,27 +77,13 @@ function berlinDateTime(instant: string): string {
   });
 }
 
-/** The children added and removed after the deadline, each counted. */
-function changeCounts(day: CatererOrderDay): {
-  added: number;
-  removed: number;
-} {
-  let added = 0;
-  let removed = 0;
-  for (const change of day.changes) {
-    if (change.delta > 0) added += change.delta;
-    else removed -= change.delta;
-  }
-  return { added, removed };
-}
-
-function counts(day: CatererOrderDay | undefined): number {
+function counts(day: CatererSummaryDay | undefined): number {
   if (!day || day.closed || day.status === "unordered") return 0;
   return day.total;
 }
 
 /** Where a school's orders of the period stand, in one badge. */
-function SchoolState({ orders }: Readonly<{ orders: CatererOrders }>) {
+function SchoolState({ orders }: Readonly<{ orders: CatererSchoolSummary }>) {
   const live = orders.days.filter(
     (day) => !day.closed && day.status !== "unordered",
   );
@@ -129,11 +111,11 @@ function SchoolState({ orders }: Readonly<{ orders: CatererOrders }>) {
  */
 function SchoolLoadError({
   school,
-  cause,
+  failure,
   onRetry,
 }: Readonly<{
   school: CatererSchool;
-  cause: unknown;
+  failure: NonNullable<CatererSchoolSummary["failure"]>;
   onRetry: () => Promise<void>;
 }>) {
   const { error, show } = useApiLoadError();
@@ -142,24 +124,178 @@ function SchoolLoadError({
     retryRef.current = onRetry;
   });
   useEffect(() => {
-    void show(cause, {
-      object: `die Bestellung von ${school.name}`,
-      retry: () => void retryRef.current(),
-    });
-  }, [cause, school.name, show]);
-  return <LoadErrorAlert error={error} />;
+    void show(
+      new ApiError(failure.code, failure.status, { code: failure.code }),
+      {
+        object: `die Bestellung von ${school.name}`,
+        retry: () => void retryRef.current(),
+      },
+    );
+  }, [failure.code, failure.status, school.name, show]);
+  const retryable = error && {
+    ...error,
+    retry: error.retry ?? {
+      label: "Wiederholen",
+      onClick: () => void onRetry(),
+    },
+  };
+  return <LoadErrorAlert error={retryable} />;
 }
 
-interface CatererOrderWindow {
-  orders: Record<string, CatererOrders | null>;
-  failures: Record<string, unknown>;
+type SchoolUpdate = (
+  row: CatererSchoolSummary,
+  freshDirectory: boolean,
+) => CatererSchoolSummary | null;
+interface RowChange {
+  id: string;
+  update: SchoolUpdate;
+}
+interface DirectoryRead {
+  details: Map<string, CatererSummaryDay[]>;
+  changes: RowChange[];
+}
+
+function applyRowChange(
+  directory: CatererSchools,
+  change: RowChange,
+  freshDirectory: boolean,
+) {
+  return {
+    ...directory,
+    schools: directory.schools.flatMap((row) =>
+      row.id === change.id ? (change.update(row, freshDirectory) ?? []) : row,
+    ),
+  };
 }
 
 interface OverviewRow {
   key: string;
-  school: CatererSchool | null;
-  orders: CatererOrders | null;
+  school: CatererSchoolSummary | null;
+  orders: CatererSchoolSummary | null;
   failed: boolean;
+}
+
+function confirmDays<
+  T extends {
+    days: { orderId: string | null; status: CatererSummaryDay["status"] }[];
+  },
+>(current: T, orderId: string): T {
+  return {
+    ...current,
+    days: current.days.map((day) =>
+      day.orderId === orderId ? { ...day, status: "confirmed" as const } : day,
+    ),
+  };
+}
+
+function SchoolDetails({
+  school,
+  from,
+  to,
+  onConfirmed,
+  onRefused,
+  onRefreshSummary,
+  onRead,
+}: Readonly<{
+  school: CatererSchoolSummary;
+  from: string;
+  to: string;
+  onConfirmed: (orderId: string) => void;
+  onRefused: (failure: ApiError) => void;
+  onRefreshSummary: () => void;
+  onRead: (days: CatererSummaryDay[]) => void;
+}>) {
+  const key = catererKeys.orders(school.id, school.grant, from, to);
+  const guard = useSWRRequestGuard();
+  const discard = useDiscardRefusedEntity();
+  const invalidate = useInvalidateMatching();
+  const matches = (candidate: string) =>
+    candidate.startsWith(catererKeys.schoolDetails(school.id));
+  function handleRefusal(cause: unknown) {
+    if (
+      cause instanceof ApiError &&
+      discard(cause, {
+        codes: [
+          "meals.not_supplied",
+          "general.permission",
+          "meals.plan_disabled",
+          "meals.registration_disabled",
+        ],
+        matches,
+      })
+    ) {
+      onRefused(cause);
+    }
+  }
+  const read = useSWRAuth(
+    key,
+    async () => {
+      const complete = guard(key);
+      try {
+        const detail = await fetchCatererOrders(school.id, from, to);
+        complete(() => onRead(detail.days.map(summarizeOrderDay)));
+        return detail;
+      } catch (cause) {
+        complete(() => handleRefusal(cause));
+        throw cause;
+      }
+    },
+    { keepPreviousData: false, revalidateIfStale: false },
+  );
+  const action = useOptimisticAction(key, read.data);
+  const { error } = useSwrResourceLoadError(
+    [read],
+    `die Bestellung von ${school.name}`,
+    read.mutate,
+  );
+  async function confirm(orderId: string) {
+    const result = await action.run({
+      optimistic: (current) => confirmDays(current, orderId),
+      request: async () => {
+        const complete = guard(key);
+        try {
+          await confirmCatererOrder(school.id, orderId);
+        } catch (cause) {
+          complete(() => handleRefusal(cause));
+          throw cause;
+        }
+      },
+      commit: () => {
+        void read.mutate(
+          (current) => current && confirmDays(current, orderId),
+          { revalidate: false },
+        );
+        void invalidate(
+          (candidate) => candidate !== key && matches(candidate),
+          { expireInactive: true },
+        );
+        onConfirmed(orderId);
+      },
+    });
+    if (result.status === "failed") {
+      if (
+        result.error instanceof ApiError &&
+        result.error.code === "meals.order_not_found"
+      )
+        void reconcile();
+      throw result.error;
+    }
+    if (result.status === "done") await reconcile();
+  }
+  async function reconcile() {
+    onRefreshSummary();
+    await read.mutate();
+  }
+  if (error) return <LoadErrorAlert error={error} />;
+  return action.data ? (
+    <CatererSchoolOrders
+      school={school}
+      orders={action.data}
+      onConfirm={confirm}
+    />
+  ) : (
+    <DataTableSkeleton rows={3} columns={5} />
+  );
 }
 
 export default function CatererOverviewPage() {
@@ -170,262 +306,243 @@ export default function CatererOverviewPage() {
   const to = days[days.length - 1]!;
   const { data: session } = useSession();
   const enabled = session?.user.scope === "caterer";
-  const schoolResponse = useSWRAuth(
-    enabled ? catererKeys.schools() : null,
-    fetchCatererSchools,
+  const key = enabled ? catererKeys.overview(from, to) : null;
+  const scoped = useSWRCacheKey();
+  const invalidate = useInvalidateMatching();
+  const guard = useSWRRequestGuard();
+  const retries = useRef(new Map<string, symbol>());
+  // Fold concurrent school reads/writes into the directory result. Mutating its
+  // SWR key mid-fetch would drop the whole directory, including revoked schools.
+  const reading = useRef(new Map<string, DirectoryRead>());
+  const response = useSWRAuth<CatererSchools>(
+    key,
+    async (): Promise<CatererSchools> => {
+      const complete = guard(key);
+      const window = scoped(key!)!;
+      const overlapping: DirectoryRead = { details: new Map(), changes: [] };
+      reading.current.set(window, overlapping);
+      retries.current.clear();
+      try {
+        const directory = await fetchCatererOverview(from, to);
+        const fresh = overlapping.changes.reduce(
+          (data, change) => applyRowChange(data, change, true),
+          directory,
+        );
+        complete(() => {
+          // An overview refresh can discover a changed order while its detail
+          // is open or cached. Refresh just that window of the changed school.
+          const previous = response.readCurrent?.().data;
+          const changed = new Set<string>();
+          for (const school of fresh.schools) {
+            const before = previous?.schools.find(
+              (row) => row.id === school.id,
+            );
+            const detailKey = catererKeys.orders(
+              school.id,
+              school.grant,
+              from,
+              to,
+            );
+            if (
+              !school.failure &&
+              !sameSummaryDays(
+                overlapping.details.get(detailKey) ?? before?.days,
+                school.days,
+              )
+            )
+              changed.add(detailKey);
+          }
+          if (changed.size)
+            void invalidate((candidate) => changed.has(candidate), {
+              expireInactive: true,
+            });
+        });
+        return fresh;
+      } catch (cause) {
+        if (isReadRefusal(cause)) {
+          complete(
+            () =>
+              void invalidate(
+                (candidate) =>
+                  candidate !== key &&
+                  (candidate.startsWith(catererKeys.overviewFamily) ||
+                    candidate.startsWith(catererKeys.detailFamily)),
+                { clear: true },
+              ),
+          );
+        }
+        if (
+          !isReadRefusal(cause) &&
+          overlapping.changes.length &&
+          reading.current.get(window) === overlapping
+        ) {
+          complete(() => {
+            void response.mutate(
+              (data) =>
+                data &&
+                overlapping.changes.reduce(
+                  (previous, change) => applyRowChange(previous, change, false),
+                  data,
+                ),
+              { revalidate: false },
+            );
+          });
+        }
+        throw cause;
+      } finally {
+        if (reading.current.get(window) === overlapping)
+          reading.current.delete(window);
+      }
+    },
     {
       keepPreviousData: false,
       revalidateOnFocus: true,
-      focusThrottleInterval: 60 * 1000,
+      focusThrottleInterval: 60_000,
     },
   );
-  const schools = schoolResponse.data ?? null;
-  const schoolIds = schools?.schools.map((school) => school.id) ?? [];
-  const ordersKey =
-    enabled && schools ? catererKeys.orders(schoolIds, from, to) : null;
-  const scopedKey = useSWRCacheKey()(ordersKey ?? "");
-  const orderSnapshot = useRef<{
-    scopedKey: string | null;
-    data?: CatererOrderWindow;
-  }>({ scopedKey: null });
-  const retries = useRef(new Map<string, number>());
-  const guardRequest = useSWRRequestGuard();
-  const discardRefused = useDiscardRefusedEntity();
-  const response = useSWRAuth<CatererOrderWindow>(
-    ordersKey,
-    async (): Promise<CatererOrderWindow> => {
-      const complete = guardRequest(ordersKey);
-      for (const schoolId of schoolIds) {
-        retries.current.set(schoolId, (retries.current.get(schoolId) ?? 0) + 1);
-      }
-      // This reader belongs to the requested key even if the visible period
-      // changes before its background requests settle.
-      const requestedSnapshot = response.data;
-      const results = await Promise.allSettled(
-        schoolIds.map((schoolId) => fetchCatererOrders(schoolId, from, to)),
-      );
-      const orders: Record<string, CatererOrders | null> = {};
-      const failures: Record<string, unknown> = {};
-      results.forEach((result, index) => {
-        const schoolId = schoolIds[index]!;
-        if (result.status === "fulfilled") orders[schoolId] = result.value;
-        else {
-          // Keep a warm snapshot only for this exact scoped window. A true
-          // supply refusal must never retain previously readable orders.
-          const refused =
-            result.reason instanceof ApiError &&
-            (result.reason.status === 401 ||
-              result.reason.code === "general.permission" ||
-              result.reason.code === "meals.not_supplied");
-          const previous =
-            orderSnapshot.current.scopedKey === scopedKey
-              ? orderSnapshot.current.data
-              : requestedSnapshot;
-          orders[schoolId] = refused
-            ? null
-            : (previous?.orders[schoolId] ?? null);
-          failures[schoolId] = result.reason;
-        }
-      });
-      // A supply refusal also applies to other windows while this one is
-      // no longer selected. Never run that effect after a scope/data bump.
-      complete(() => {
-        for (const [schoolId, cause] of Object.entries(failures)) {
-          logger.warn("caterer_orders_load_failed", {
-            school_id: schoolId,
-            error: cause instanceof Error ? cause.message : String(cause),
-          });
-          discardRefused(cause, {
-            codes: ["meals.not_supplied"],
-            matches: (key) =>
-              catererKeys.containsSchool(key, schoolId) && key !== ordersKey,
-          });
-        }
-      });
-      return { orders, failures };
-    },
-    { keepPreviousData: false },
-  );
-  useLayoutEffect(() => {
-    orderSnapshot.current = { scopedKey, data: response.data };
-  });
-  const currentWindow = useRef({
-    scopedKey,
-    key: ordersKey,
-    mutate: response.mutate,
-  });
-  useLayoutEffect(() => {
-    currentWindow.current = {
-      scopedKey,
-      key: ordersKey,
-      mutate: response.mutate,
-    };
-  });
-  const action = useOptimisticAction(ordersKey, response.data);
-  const orders = action.data?.orders ?? {};
-  const failures = action.data?.failures ?? {};
-  const loading = schoolResponse.isLoading || response.isLoading;
-  const { error: schoolsLoadError } = useSwrResourceLoadError(
-    [schoolResponse],
-    "Deine Schulen",
-    schoolResponse.mutate,
-  );
-  const { error: ordersLoadError } = useSwrResourceLoadError(
+  const schools = response.data ?? null;
+  const loading = !schools && response.isLoading;
+  const { error } = useSwrResourceLoadError(
     [response],
     "die Bestellungen",
     response.mutate,
   );
-  const error = schoolsLoadError ?? ordersLoadError;
-  const mutateOrders = response.mutate;
-  const [exporting, setExporting] = useState<string | null>(null);
   const { show: showActionError } = useApiErrorDisplay();
-  const invalidate = useInvalidateMatching();
-
-  const retrySchool = useCallback(
-    async (school: CatererSchool) => {
-      if (currentWindow.current.scopedKey !== scopedKey) return;
-      let complete: ReturnType<typeof guardRequest>;
-      try {
-        complete = guardRequest(ordersKey);
-      } catch {
-        // A handler from an obsolete session must not start a read.
-        return;
-      }
-      const ticket = (retries.current.get(school.id) ?? 0) + 1;
-      retries.current.set(school.id, ticket);
-      const isCurrent = () =>
-        complete.isCurrent() && retries.current.get(school.id) === ticket;
-      let loaded: CatererOrders;
-      try {
-        loaded = await fetchCatererOrders(school.id, from, to);
-      } catch (error) {
-        if (!isCurrent()) return;
-        if (
-          discardRefused(error, {
-            codes: ["meals.not_supplied"],
-            matches: (key) => catererKeys.containsSchool(key, school.id),
-          })
-        ) {
-          void showActionError(error, {
-            object: "die Bestellungen",
-            retry: () => void invalidate((key) => key === ordersKey),
-          });
-          return;
-        }
-        logger.warn("caterer_orders_load_failed", {
-          school_id: school.id,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        await mutateOrders(
-          (current) =>
-            current
-              ? {
-                  ...current,
-                  failures: { ...current.failures, [school.id]: error },
-                }
-              : current,
-          { revalidate: false },
-        );
-        return;
-      }
-      if (!isCurrent()) return;
-      // Merge after the GET so parallel reads of other schools survive.
-      await mutateOrders(
-        (current) =>
-          current
-            ? {
-                orders: { ...current.orders, [school.id]: loaded },
-                failures: { ...current.failures, [school.id]: undefined },
-              }
-            : current,
-        { revalidate: false },
-      );
-    },
-    [
-      from,
-      to,
-      mutateOrders,
-      guardRequest,
-      discardRefused,
-      scopedKey,
-      showActionError,
-      invalidate,
-      ordersKey,
-    ],
-  );
-
-  async function confirm(school: CatererSchool, orderId: string) {
-    const markConfirmed = (current: NonNullable<typeof response.data>) => {
-      const previous = current.orders[school.id];
-      if (!previous) return current;
-      return {
-        ...current,
-        orders: {
-          ...current.orders,
-          [school.id]: {
-            ...previous,
-            days: previous.days.map((day) =>
-              day.orderId === orderId
-                ? { ...day, status: "confirmed" as const }
-                : day,
-            ),
-          },
-        },
-      };
+  const [exporting, setExporting] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const current = useRef({
+    key,
+    scope: scoped(""),
+    mutate: response.mutate,
+    refresh: retrySchool,
+  });
+  const grants = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    current.current = {
+      key,
+      scope: scoped(""),
+      mutate: response.mutate,
+      refresh: retrySchool,
     };
-    const outcome = await action.run({
-      optimistic: markConfirmed,
-      request: () => confirmCatererOrder(school.id, orderId),
-      commit: () => {
-        // The successful POST confirms the status even if the subsequent GET fails.
-        void mutateOrders(
-          (current) => (current ? markConfirmed(current) : current),
-          { revalidate: false },
-        );
-        const visible = currentWindow.current;
-        if (visible.key !== null && visible.key !== ordersKey) {
-          // A period selected while the POST ran stays visible and gets the acknowledged status.
-          void visible.mutate(
-            (current) => (current ? markConfirmed(current) : current),
-            { revalidate: true },
-          );
-        }
-        // Inactive windows have no reader to refresh them: never leave stale action data there.
-        void invalidate(
-          (key) =>
-            catererKeys.containsSchool(key, school.id) &&
-            key !== ordersKey &&
-            key !== visible.key,
-          { clear: true },
-        );
-      },
-      refusal: {
-        codes: ["meals.not_supplied"],
-        matches: (key) => catererKeys.containsSchool(key, school.id),
-      },
-    });
-    if (outcome.status === "failed") {
-      if (
-        outcome.error instanceof ApiError &&
-        outcome.error.code === "meals.order_not_found"
-      ) {
-        // A missing order is not lost read access. Reconcile this school's
-        // current orders, then let the existing action path show the failure.
-        if (currentWindow.current.scopedKey === scopedKey)
-          void retrySchool(school);
-        void invalidate(
-          (key) =>
-            catererKeys.containsSchool(key, school.id) && key !== ordersKey,
-        );
-      }
-      throw outcome.error;
+    if (!schools) return;
+    const allowed = schools.schools
+      .filter((school) => !school.failure)
+      .map(
+        (school) => catererKeys.schoolDetails(school.id) + school.grant + ":",
+      )
+      .sort();
+    const signature = JSON.stringify([scoped(""), allowed]);
+    if (grants.current === signature) return;
+    grants.current = signature;
+    // A new supply or a narrower grant invalidates details in every window,
+    // including pending reads. No other overview may restore the old grant.
+    void invalidate(
+      (candidate) =>
+        (candidate !== key &&
+          candidate.startsWith(catererKeys.overviewFamily)) ||
+        (candidate.startsWith(catererKeys.detailFamily) &&
+          !allowed.some((prefix) => candidate.startsWith(prefix))),
+      { clear: true },
+    );
+  });
+
+  function applyToWindow(
+    windowKey: string | null,
+    mutate: typeof response.mutate,
+    change: RowChange,
+  ) {
+    if (!windowKey) return;
+    const pending = reading.current.get(scoped(windowKey)!);
+    if (pending) {
+      pending.changes.push(change);
+    } else {
+      void mutate((data) => data && applyRowChange(data, change, false), {
+        revalidate: false,
+      });
     }
-    if (outcome.status === "discarded") {
-      // The session/window no longer owns this action: no toast or reload.
+  }
+
+  function updateSchool(id: string, update: SchoolUpdate) {
+    const visible = current.current;
+    if (visible.scope !== scoped("")) return;
+    const change = { id, update };
+    applyToWindow(key, response.mutate, change);
+    if (visible.key !== key) applyToWindow(visible.key, visible.mutate, change);
+    void invalidate(
+      (candidate) =>
+        candidate.startsWith(catererKeys.overviewFamily) &&
+        candidate !== key &&
+        candidate !== visible.key,
+      { clear: true },
+    );
+  }
+
+  function reconcileDetail(
+    school: CatererSchoolSummary,
+    days: CatererSummaryDay[],
+  ) {
+    // Only this bound window and grant: a late read must not touch another
+    // period, restore an ended supply or put names into the overview cache.
+    const pending = reading.current.get(scoped(key!)!);
+    if (pending) {
+      pending.details.set(
+        catererKeys.orders(school.id, school.grant, from, to),
+        days,
+      );
+    }
+    const cached = response.readCurrent?.().data;
+    const previous = cached?.schools.find((row) => row.id === school.id);
+    if (
+      !previous ||
+      previous.failure ||
+      previous.grant !== school.grant ||
+      sameSummaryDays(previous.days, days)
+    )
+      return;
+    applyToWindow(key, response.mutate, {
+      id: school.id,
+      update: (row, freshDirectory) =>
+        freshDirectory || row.failure || row.grant !== school.grant
+          ? row
+          : { ...row, days },
+    });
+  }
+
+  async function retrySchool(school: CatererSchoolSummary) {
+    if (current.current.scope !== scoped("") || current.current.key !== key)
+      return;
+    let complete: ReturnType<typeof guard>;
+    try {
+      complete = guard(key);
+    } catch {
       return;
     }
-    if (currentWindow.current.scopedKey === scopedKey)
-      await retrySchool(school);
+    const ticket = Symbol();
+    retries.current.set(school.id, ticket);
+    const isCurrent = () =>
+      complete.isCurrent() && retries.current.get(school.id) === ticket;
+    try {
+      const result = await fetchCatererOverview(from, to, school.id);
+      const row = result.schools[0];
+      if (row?.id !== school.id || !isCurrent()) return;
+      applyToWindow(key, response.mutate, {
+        id: school.id,
+        // A concurrent directory's membership, new grant or refusal wins.
+        update: (previous, freshDirectory) =>
+          freshDirectory && (previous.failure || previous.grant !== row.grant)
+            ? previous
+            : row,
+      });
+    } catch (cause) {
+      if (!isCurrent()) return;
+      if (cause instanceof ApiError && cause.code === "meals.not_supplied")
+        updateSchool(school.id, () => null);
+      else
+        void showActionError(cause, {
+          object: `die Bestellung von ${school.name}`,
+          retry: () => void retrySchool(school),
+        });
+    }
   }
 
   async function download(format: DeliveryExportFormat) {
@@ -462,8 +579,8 @@ export default function CatererOverviewPage() {
     ...list.map((school) => ({
       key: school.id,
       school,
-      orders: orders[school.id] ?? null,
-      failed: orders[school.id] === null,
+      orders: school.failure ? null : school,
+      failed: Boolean(school.failure),
     })),
     ...(list.length > 1
       ? [{ key: "sum", school: null, orders: null, failed: false }]
@@ -471,12 +588,11 @@ export default function CatererOverviewPage() {
   ];
   const dayOf = (row: OverviewRow, date: string) =>
     row.orders?.days.find((day) => day.date === date);
-  const totalsComplete =
-    !loading && list.every((school) => orders[school.id] != null);
+  const totalsComplete = !loading && list.every((school) => !school.failure);
   const daySum = (date: string) =>
     list.reduce(
       (sum, school) =>
-        sum + counts(orders[school.id]?.days.find((day) => day.date === date)),
+        sum + counts(school.days.find((day) => day.date === date)),
       0,
     );
 
@@ -513,7 +629,7 @@ export default function CatererOverviewPage() {
           );
         const day = dayOf(row, date);
         if (!day || day.closed || day.status === "unordered") return "–";
-        const { added, removed } = changeCounts(day);
+        const { added, removed } = day;
         return (
           <span className="inline-flex items-center justify-end gap-1">
             {day.total}
@@ -643,32 +759,62 @@ export default function CatererOverviewPage() {
       {error || !schools
         ? null
         : list.map((school) => {
-            const schoolOrders = orders[school.id];
             return (
               <SectionCard
                 key={school.id}
                 title={school.name}
                 description={
-                  schoolOrders?.deliveryAddress
-                    ? `Lieferadresse: ${schoolOrders.deliveryAddress}`
+                  school.deliveryAddress
+                    ? `Lieferadresse: ${school.deliveryAddress}`
                     : undefined
                 }
                 collapsible
-                defaultCollapsed
+                collapsed={!expanded.has(scoped(school.id)!)}
+                onCollapsedChange={(collapsed) => {
+                  const id = scoped(school.id)!;
+                  setExpanded((previous) => {
+                    const next = new Set(previous);
+                    if (collapsed) next.delete(id);
+                    else next.add(id);
+                    return next;
+                  });
+                }}
               >
-                {schoolOrders === undefined ? (
-                  <DataTableSkeleton rows={3} columns={5} />
-                ) : schoolOrders ? (
-                  <CatererSchoolOrders
-                    school={school}
-                    orders={schoolOrders}
-                    onConfirm={(orderId) => confirm(school, orderId)}
-                  />
-                ) : (
+                {school.failure ? (
                   <SchoolLoadError
                     school={school}
-                    cause={failures[school.id]}
+                    failure={school.failure}
                     onRetry={() => retrySchool(school)}
+                  />
+                ) : (
+                  <SchoolDetails
+                    school={school}
+                    from={from}
+                    to={to}
+                    onConfirmed={(orderId) =>
+                      updateSchool(school.id, (row) =>
+                        confirmDays(row, orderId),
+                      )
+                    }
+                    onRefused={(cause) =>
+                      updateSchool(school.id, (row) =>
+                        cause.code === "meals.not_supplied"
+                          ? null
+                          : {
+                              ...row,
+                              failure: {
+                                code: cause.code!,
+                                status: cause.status!,
+                              },
+                              days: [],
+                            },
+                      )
+                    }
+                    onRead={(days) => reconcileDetail(school, days)}
+                    onRefreshSummary={() => {
+                      if (current.current.scope === scoped(""))
+                        void current.current.refresh(school);
+                    }}
                   />
                 )}
               </SectionCard>

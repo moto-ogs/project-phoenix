@@ -1,14 +1,10 @@
 import * as accountContract from "~/lib/contract/caterer-account.generated";
 import * as authContract from "~/lib/contract/caterer-auth.generated";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
-import { mapCatererOrders, mapCatererSchools } from "~/lib/caterer-api";
-import { defaultPeriod, periodDays } from "~/lib/caterer-period";
+import { mapCatererOverview } from "~/lib/caterer-orders";
 import * as schoolsContract from "~/lib/contract/caterer-schools.generated";
-import { berlinTodayISO } from "~/lib/date-helpers";
 import { readPortalSessionSnapshot } from "~/lib/portal-session-snapshot.server";
 import { readContract, seedOf, seedRead } from "~/lib/server-seed.server";
-import { catererKeys } from "~/lib/swr/portal-keys";
-import type { ServerSeedEntry } from "~/lib/swr/server-seed";
 
 async function catererSnapshot() {
   const snapshot = await readPortalSessionSnapshot("caterer");
@@ -22,54 +18,26 @@ async function catererSnapshot() {
   return snapshot;
 }
 
-export async function loadCatererPageSeed() {
-  const builtAt = Date.now();
-  const today = berlinTodayISO();
+export async function loadCatererOverviewSeed(
+  from: string,
+  to: string,
+  key: string,
+) {
   const snapshot = await catererSnapshot();
   if (!snapshot) return null;
-
-  const token = snapshot.accessToken;
-  const schools = seedRead("catererSchools", async (signal) => {
-    const { data } = await readContract(
+  const builtAt = Date.now();
+  const value = seedRead("catererOrderOverview", async (signal) => {
+    const response = await readContract(
       schoolsContract.routes["GET /caterer/schools"],
-      { token, signal },
+      {
+        token: snapshot.accessToken,
+        signal,
+        query: { from, to },
+      },
     );
-    return mapCatererSchools(data);
+    return mapCatererOverview(response.data);
   });
-  const entries: ServerSeedEntry[] = [
-    { key: catererKeys.schools(), value: schools, render: true },
-  ];
-  // Do not load a school the supply list did not authorize. Each orders
-  // request also checks that relationship, including changes since listing.
-  const supplied = await schools;
-  if (supplied) {
-    const days = periodDays(defaultPeriod(today), today);
-    const from = days[0]!;
-    const to = days[days.length - 1]!;
-    const schoolIds = supplied.schools.map(({ id }) => id);
-    const value = seedRead("catererOrders", async (signal) => {
-      const results = await Promise.all(
-        schoolIds.map(async (schoolId) => {
-          const { data } = await readContract(
-            schoolsContract.routes["GET /caterer/schools/{schoolId}/orders"],
-            { token, signal, params: { schoolId }, query: { from, to } },
-          );
-          if (data.school.id !== schoolId)
-            throw new Error("Order school mismatch");
-          return [schoolId, mapCatererOrders(data)] as const;
-        }),
-      );
-      return { orders: Object.fromEntries(results), failures: {} };
-    });
-    // The browser owns the existing per-school failure and refusal logic.
-    // Never cache an incomplete window or serialize a raw error.
-    entries.push({
-      key: catererKeys.orders(schoolIds, from, to),
-      value,
-      render: true,
-    });
-  }
-  return seedOf(snapshot, entries, builtAt);
+  return seedOf(snapshot, [{ key, value, render: true }], builtAt);
 }
 
 const FACTOR_KEY = tenantAdminKeys.emailCodeFactor();

@@ -21,7 +21,7 @@ vi.mock("~/lib/caterer-api", () => mocks);
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
-import { CatererOverviewPage } from "~/components/caterer/caterer-overview-page";
+import CatererOverviewPage from "./page-content";
 import { setTestClock, releaseFakeTimers } from "~/test/clock";
 
 function deferred<T>() {

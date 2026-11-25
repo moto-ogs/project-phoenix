@@ -75,7 +75,7 @@ test("Bestellsummen und erste geöffnete Schule", async ({ page }, info) => {
     () => page.reload({ waitUntil: "commit" }),
     ready,
   );
-  expect(cold).toHaveLength(baseline ? schools + 1 : 0);
+  expect(cold).toHaveLength(0); // Both versions seed the first document on the server.
   const next = page.getByRole("button", { name: "Morgen", exact: true });
   const window = await measure(
     "window",
