@@ -242,7 +242,11 @@ func summaryFailure(r *http.Request, school catererportal.SchoolSummary) *Summar
 		}
 	}
 	if status >= 500 {
-		slog.WarnContext(r.Context(), "school order overview failed", "school_id", school.ID, "code", code, "error", school.Failure)
+		slog.WarnContext(r.Context(), "school order overview failed",
+			"school_id", school.ID,
+			"code", code,
+			"error", school.Failure,
+		)
 	}
 	return &SummaryFailureResponse{Status: status, Code: code}
 }

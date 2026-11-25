@@ -77,6 +77,58 @@ export interface CatererOrders {
   days: CatererOrderDay[];
 }
 
+/** Die Kinder, die nach der Frist dazukamen oder abgemeldet wurden. */
+export function changeCounts(
+  day: CatererOrderDay,
+  schoolClass?: string,
+): { added: number; removed: number } {
+  let added = 0;
+  let removed = 0;
+  for (const change of day.changes) {
+    if (schoolClass !== undefined && change.child.schoolClass !== schoolClass)
+      continue;
+    if (change.delta > 0) added += change.delta;
+    else removed -= change.delta;
+  }
+  return { added, removed };
+}
+
+/** Only the compact fields may pass from a freshly opened detail into its overview. */
+export function summarizeOrderDay(day: CatererOrderDay): CatererSummaryDay {
+  const { date, closed, deadline, status, orderId, total } = day;
+  return {
+    date,
+    closed,
+    deadline,
+    status,
+    orderId,
+    total,
+    ...changeCounts(day),
+  };
+}
+
+export function sameSummaryDays(
+  left: CatererSummaryDay[] | undefined,
+  right: CatererSummaryDay[],
+) {
+  return (
+    left?.length === right.length &&
+    right.every((day, i) => {
+      const other = left[i]!;
+      return (
+        day.date === other.date &&
+        day.total === other.total &&
+        day.added === other.added &&
+        day.removed === other.removed &&
+        day.closed === other.closed &&
+        day.status === other.status &&
+        day.deadline === other.deadline &&
+        day.orderId === other.orderId
+      );
+    })
+  );
+}
+
 function mapChild(
   child: catererSchoolsContract.OrderChildResponse,
 ): CatererOrderChild {

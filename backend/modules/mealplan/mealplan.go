@@ -280,6 +280,13 @@ type Registration interface {
 	WeeklyList(context.Context, Date) (WeeklyList, error)
 }
 
+// Services exposes the school's Meal Plan facade and the independent compact
+// order projection. Consumers receive only the capability they use.
+type Services struct {
+	Capability Capability
+	Summaries  CatererSummaries
+}
+
 // CatererSummaries is the compact, read-only projection beside the Meal Plan facade.
 type CatererSummaries interface {
 	// CatererOrderSummary reads only daily totals, not class or child rows.

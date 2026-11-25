@@ -34,11 +34,13 @@ import {
   fetchCatererOverview,
   type DeliveryExportFormat,
 } from "~/lib/caterer-api";
-import type {
-  CatererSchoolSummary,
-  CatererSchools,
-  CatererSummaryDay,
-  CatererSchool,
+import {
+  sameSummaryDays,
+  summarizeOrderDay,
+  type CatererSchoolSummary,
+  type CatererSchools,
+  type CatererSummaryDay,
+  type CatererSchool,
 } from "~/lib/caterer-orders";
 import {
   defaultPeriod,
@@ -167,6 +169,7 @@ function SchoolDetails({
   onConfirmed,
   onRefused,
   onRefreshSummary,
+  onRead,
 }: Readonly<{
   school: CatererSchoolSummary;
   from: string;
@@ -174,6 +177,7 @@ function SchoolDetails({
   onConfirmed: (orderId: string) => void;
   onRefused: (failure: ApiError) => void;
   onRefreshSummary: () => void;
+  onRead: (days: CatererSummaryDay[]) => void;
 }>) {
   const key = catererKeys.orders(school.id, school.grant, from, to);
   const guard = useSWRRequestGuard();
@@ -202,7 +206,9 @@ function SchoolDetails({
     async () => {
       const complete = guard(key);
       try {
-        return await fetchCatererOrders(school.id, from, to);
+        const detail = await fetchCatererOrders(school.id, from, to);
+        complete(() => onRead(detail.days.map(summarizeOrderDay)));
+        return detail;
       } catch (cause) {
         complete(() => handleRefusal(cause));
         throw cause;
@@ -279,10 +285,16 @@ export function CatererOverviewPage() {
   const invalidate = useInvalidateMatching();
   const guard = useSWRRequestGuard();
   const retries = useRef(new Map<string, symbol>());
+  // A detail completing during a directory refresh must not mutate that SWR
+  // key: SWR would discard the pending directory, including revoked schools.
+  const reading = useRef(new Map<string, Map<string, CatererSummaryDay[]>>());
   const response = useSWRAuth<CatererSchools>(
     key,
     async (): Promise<CatererSchools> => {
       const complete = guard(key);
+      const window = scoped(key!)!;
+      const overlapping = new Map<string, CatererSummaryDay[]>();
+      reading.current.set(window, overlapping);
       retries.current.clear();
       try {
         const fresh = await fetchCatererOverview(from, to);
@@ -295,14 +307,20 @@ export function CatererOverviewPage() {
             const before = previous?.schools.find(
               (row) => row.id === school.id,
             );
+            const detailKey = catererKeys.orders(
+              school.id,
+              school.grant,
+              from,
+              to,
+            );
             if (
               !school.failure &&
-              JSON.stringify(before?.days) !== JSON.stringify(school.days)
-            ) {
-              changed.add(
-                catererKeys.orders(school.id, school.grant, from, to),
-              );
-            }
+              !sameSummaryDays(
+                overlapping.get(detailKey) ?? before?.days,
+                school.days,
+              )
+            )
+              changed.add(detailKey);
           }
           if (changed.size)
             void invalidate((candidate) => changed.has(candidate), {
@@ -323,7 +341,25 @@ export function CatererOverviewPage() {
               ),
           );
         }
+        if (
+          !isReadRefusal(cause) &&
+          overlapping.size &&
+          reading.current.get(window) === overlapping
+        ) {
+          reading.current.delete(window);
+          complete(() => {
+            for (const school of response.readCurrent?.().data?.schools ?? []) {
+              const days = overlapping.get(
+                catererKeys.orders(school.id, school.grant, from, to),
+              );
+              if (days) reconcileDetail(school, days);
+            }
+          });
+        }
         throw cause;
+      } finally {
+        if (reading.current.get(window) === overlapping)
+          reading.current.delete(window);
       }
     },
     {
@@ -399,6 +435,38 @@ export function CatererOverviewPage() {
         candidate !== key &&
         candidate !== visible.key,
       { clear: true },
+    );
+  }
+
+  function reconcileDetail(
+    school: CatererSchoolSummary,
+    days: CatererSummaryDay[],
+  ) {
+    // Only this bound window and grant: a late read must not touch another
+    // period, restore an ended supply or put names into the overview cache.
+    const pending = reading.current.get(scoped(key!)!);
+    if (pending) {
+      pending.set(catererKeys.orders(school.id, school.grant, from, to), days);
+      return;
+    }
+    const cached = response.readCurrent?.().data;
+    const previous = cached?.schools.find((row) => row.id === school.id);
+    if (
+      !cached ||
+      !previous ||
+      previous.failure ||
+      previous.grant !== school.grant ||
+      sameSummaryDays(previous.days, days)
+    )
+      return;
+    void response.mutate(
+      {
+        ...cached,
+        schools: cached.schools.map((row) =>
+          row === previous ? { ...row, days } : row,
+        ),
+      },
+      { revalidate: false },
     );
   }
 
@@ -706,6 +774,7 @@ export function CatererOverviewPage() {
                             },
                       )
                     }
+                    onRead={(days) => reconcileDetail(school, days)}
                     onRefreshSummary={() => {
                       if (current.current.scope === scoped(""))
                         void current.current.refresh(school);

@@ -46,6 +46,7 @@ import (
 	filestorageModule "github.com/moto-ogs/project-phoenix/modules/filestorage"
 	"github.com/moto-ogs/project-phoenix/modules/grouplive"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	mealplanModule "github.com/moto-ogs/project-phoenix/modules/mealplan"
 	mealplanCompose "github.com/moto-ogs/project-phoenix/modules/mealplan/compose"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
@@ -116,7 +117,7 @@ func composeServeRoot(
 		operatorAuditLog owners.OperatorAuditEntries
 		communication    communicationModule.Capability
 		mealPlanSettings *mealplanCompose.Settings
-		mealPlan         mealplanCompose.Plan
+		mealPlan         mealplanModule.Services
 		feedbackSettings *feedbackCompose.Settings
 		feedback         feedbackModule.Capability
 		structure        owners.StructureRows

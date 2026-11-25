@@ -151,6 +151,57 @@ describe("CatererOverviewPage (#3873)", () => {
     expect(within(north).getByText("+1")).toBeInTheDocument();
   });
 
+  it("reconciles totals and late changes from a newly opened detail without another GET", async () => {
+    mocks.fetchCatererOrders.mockResolvedValueOnce(
+      week([11, 10, 10, 10, 10], -2),
+    );
+    render(<CatererOverviewPage />);
+    await ready();
+    const table = within(screen.getAllByRole("table")[0]!);
+    expect(table.getByText("75")).toBeVisible();
+    openSchool();
+    await schoolCard().findAllByRole("button", { name: "Erhalten bestätigen" });
+    expect(await table.findByText("76")).toBeVisible();
+    const row = within(table.getByText(north.name).closest("tr")!);
+    expect(row.getByText("51")).toBeVisible();
+    expect(row.getByText("−2")).toBeVisible();
+    expect(row.queryByText("+1")).not.toBeInTheDocument();
+    expect(mocks.fetchCatererOverview).toHaveBeenCalledTimes(1);
+    expect(mocks.fetchCatererOrders).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a pending directory refresh when a newer detail arrives", async () => {
+    const signal: { refresh?: ReturnType<typeof useInvalidateMatching> } = {};
+    render(
+      <>
+        <Revalidation signal={signal} />
+        <CatererOverviewPage />
+      </>,
+    );
+    await ready();
+    const pending = deferred<ReturnType<typeof initialOverview>>();
+    mocks.fetchCatererOverview.mockReturnValueOnce(pending.promise);
+    act(() => {
+      void signal.refresh?.((candidate) =>
+        candidate.startsWith(catererKeys.overviewFamily),
+      );
+    });
+    await waitFor(() =>
+      expect(mocks.fetchCatererOverview).toHaveBeenCalledTimes(2),
+    );
+    mocks.fetchCatererOrders.mockResolvedValue(week([11, 11, 11, 11, 11]));
+    openSchool();
+    await schoolCard().findAllByRole("button", { name: "Erhalten bestätigen" });
+    await act(async () => pending.resolve(overview(summary(north, 11, 0))));
+    expect(
+      screen.queryByRole("heading", { name: south.name }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getAllByRole("table")[0]!).getByText("55"),
+    ).toBeVisible();
+    expect(mocks.fetchCatererOrders).toHaveBeenCalledTimes(1);
+  });
+
   it("loads the details once on first opening per school and window", async () => {
     render(<CatererOverviewPage />);
     await ready();
@@ -438,6 +489,10 @@ describe("CatererOverviewPage (#3873)", () => {
     });
     fireEvent.click(retry);
     fireEvent.click(retry);
+    // The open card reads its detail after the successful retry.
+    mocks.fetchCatererOrders.mockResolvedValueOnce(
+      week([12, 12, 12, 12, 12], 1),
+    );
     await act(async () => last.resolve(overview(summary(north, 12))));
     await act(async () => first.resolve(overview(summary(north, 99))));
     const table = screen.getAllByRole("table")[0]!;

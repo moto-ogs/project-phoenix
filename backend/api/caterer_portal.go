@@ -44,12 +44,7 @@ func mountCatererPortal(root, tenantRouter chi.Router, limiters authRateLimiters
 	if caterers == nil {
 		return errors.New("caterer portal: identity access composed no caterer flows")
 	}
-	portal, err := catererPortalCompose.New(catererPortalCompose.Dependencies{
-		Caterers:    caterers,
-		Orders:      mealPlan,
-		Summary:     summaries.CatererOrderSummary,
-		SchoolNames: schoolNames(schools),
-	})
+	portal, err := catererPortalCompose.New(caterers, mealPlan, summaries.CatererOrderSummary, schoolNames(schools))
 	if err != nil {
 		return err
 	}

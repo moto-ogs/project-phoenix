@@ -231,7 +231,7 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0261: the owner's clock, its nil default and imports (+16).
 	"modules/identityaccess/compose": 1379, // raised by ADR 0077
 	// ADR 0269: the clock of the participation history (+2).
-	"modules/mealplan/compose": 104, // raised by ADR 0078 and ADR 0168
+	"modules/mealplan/compose": 101, // raised by ADR 0078 and ADR 0168
 	// ADR 0097: the isolated tenant return constructor, no retained logic moved.
 	// Raised by ADR 0112: the Träger master data constructor (+13).
 	// Raised by ADR 0148: the demo school file erasure constructor (+10).
@@ -362,7 +362,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0253: the Springer exits after the last block (+6).
 	// ADR 0289: the seal constructor of the sick note and payslip files (+6).
 	"modules/workforce/compose":       942,
-	"workflows/catererportal/compose": 37, // added by ADR 0077
+	"workflows/catererportal/compose": 31, // added by ADR 0077
 	// Raised by ADR 0224: the class follow-up port (+2).
 	"workflows/gradetransition/compose": 51,
 	// Added by ADR 0209: the holiday allocation workflow and its joining
