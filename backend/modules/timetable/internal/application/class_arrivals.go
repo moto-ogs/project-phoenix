@@ -244,17 +244,10 @@ func (q classArrivalQueries) SchoolDayChanges(ctx context.Context, day calendar.
 	if !ok {
 		return timetable.SchoolDayChanges{}, timetable.ErrNoSchoolDayChanges
 	}
+	// The read runs in the caller's school transaction (the savepoint of
+	// "Heute anders"); it opens no boundary of its own.
 	started := time.Now()
-	var (
-		classes []timetable.ClassArrivalException
-		staff   []timetable.InstanceStaff
-		stats   domain.OperationStats
-	)
-	err := commands.tx.RunWrite(ctx, false, func(txCtx context.Context) error {
-		var err error
-		classes, staff, stats, err = records.SchoolDayChangeRecords(txCtx, day, staffID)
-		return err
-	})
+	classes, staff, stats, err := records.SchoolDayChangeRecords(ctx, day, staffID)
 	q.observe(internalports.Observation{Operation: "school_day_changes", Duration: time.Since(started), Stats: stats, Err: err})
 	if err != nil {
 		return timetable.SchoolDayChanges{}, err
