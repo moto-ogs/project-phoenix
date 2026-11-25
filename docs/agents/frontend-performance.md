@@ -22,8 +22,16 @@ Use that same machine and browser version for both sides of a performance compar
 a Mac run is a smoke test, not its counterpart. Use a private clone, its own native
 backend bound to loopback (`PORT=127.0.0.1:<port>` for the server), and separate
 loopback-only Postgres/Mailpit Compose ports. The benchmark binds Next to loopback.
+Use a new Compose project, free ports and fresh local configuration from
+`scripts/setup-dev.sh`; do not copy another checkout's credentials. On Linux the
+container's PostgreSQL user must be able to read the two public config files and
+own its private 0600 server key. For an exhausted Docker subnet pool use the
+[worktree-only network procedure](operations.md#new-managed-worktree).
+Start the native binary from the configured clone with
+`devbox run -- scripts/dev-native.sh backend sh -c 'mkdir -p ../tmp && go build -o ../tmp/revisit-api . && ../tmp/revisit-api migrate && PORT="127.0.0.1:$SERVER_HOST_PORT" exec ../tmp/revisit-api serve'`
+after its own Postgres and Mailpit are healthy.
 The reference browser is sandboxed Google Chrome for Testing 158.0.8127.88.
-If it is not installed globally, unpack the official Linux build under the
+If it is not installed globally, unpack the [official Linux build](https://storage.googleapis.com/chrome-for-testing-public/158.0.8127.88/linux64/chrome-linux64.zip) (SHA-256 `59e3b43f8b3aaa292238fbdcfb36a93127debd53e212510dcdc2cc8812b4b57e`) under the
 private checkout and expose it only inside the benchmark's mount namespace:
 `bwrap --dev-bind / / --tmpfs /opt --dir /opt/google --ro-bind "$CHROME_DIR" /opt/google/chrome devbox run -- scripts/perf-revisit.sh`.
 
@@ -32,7 +40,7 @@ Use the seeded `vollbetrieb` school and run
 once on the measurement day ([seed instructions](../getting-started.md)). This runs the full-day simulation without a clock override and records only its aggregate counts, bound to the seed timestamp and Berlin date. The benchmark requires that receipt. The seeder
 must have written the local Caterer login to its private v3 state. Do not copy
 credentials into environment examples or results. Leave the worktree frontend
-port free. Check `uptime` and `~/bin/agent-heavy --status` before measuring.
+port free. Check `uptime` and, if installed, `~/bin/agent-heavy --status` before measuring.
 
 From the repository root, **`devbox run -- scripts/perf-revisit.sh`** runs the
 existing `pnpm run perf:nav` Revisit test. Playwright builds and starts Next in
