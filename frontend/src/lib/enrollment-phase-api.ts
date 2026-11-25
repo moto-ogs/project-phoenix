@@ -481,3 +481,8 @@ export async function getPhaseResponseOverview(
     }),
   );
 }
+
+/** The first phase shown by the offering catalog, in the list's server order. */
+export function initialOfferingPhaseId(phases: readonly Phase[]): string {
+  return (phases.find((phase) => phase.is_active) ?? phases[0])?.id ?? "";
+}

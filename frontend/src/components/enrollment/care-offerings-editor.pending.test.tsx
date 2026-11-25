@@ -99,7 +99,7 @@ vi.mock("~/lib/care-offering-booking-stats", async (importOriginal) => ({
   fetchCareOfferingBookingStats: mocks.fetchCareOfferingBookingStats,
 }));
 vi.mock("~/lib/timetable-api", () => ({
-  timetableService: { getTemplates: mocks.getTemplates },
+  timetableService: { getOfferingTemplates: mocks.getTemplates },
 }));
 vi.mock("~/lib/calendar-period-api", () => ({
   calendarPeriodService: { list: mocks.listCalendarPeriods },

@@ -29,9 +29,7 @@ import {
 import type { AnnouncementKind } from "~/components/announcements/announcement-meta";
 import { useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
-import type { Group } from "~/lib/api";
 import { fetchActivities } from "~/lib/activity-api";
-import type { Activity } from "~/lib/activity-helpers";
 import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
 import { formatBerlinDate, formatDate } from "~/lib/date-helpers";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -190,14 +188,15 @@ function AnnouncementDetailPageContent() {
   // Die Nachschlagelisten für Zielgruppennamen starten parallel zum Detail.
   // Auch bei 404/Fehler dürfen diese unabhängigen, wiederverwendbaren Listen
   // laden: Ein Detail-Gate würde auf dem normalen Weg einen Wasserfall erzeugen.
-  const { data: groups } = useSWRAuth<Group[]>(
-    groupsKeys.key(),
-    groupsKeys.fetcher,
+  const { data: groups } = useSWRAuth(
+    parentAnnouncementKeys.detailGroupNames(),
+    async () =>
+      (await groupsKeys.fetcher()).map(({ id, name }) => ({ id, name })),
     { revalidateOnFocus: false },
   );
-  const { data: activities } = useSWRAuth<Activity[]>(
-    parentAnnouncementKeys.targetActivities(),
-    () => fetchActivities(),
+  const { data: activities } = useSWRAuth(
+    parentAnnouncementKeys.detailActivityNames(),
+    async () => (await fetchActivities()).map(({ id, name }) => ({ id, name })),
     { revalidateOnFocus: false },
   );
 

@@ -106,6 +106,12 @@ export async function fetchGroupThreadMails(id: string) {
       errorMessage: "Der Stand der E-Mails konnte nicht geladen werden",
     },
   );
+  return mapGroupThreadMails(data);
+}
+
+export function mapGroupThreadMails(
+  data: messagesContract.GroupThreadMailsResponse,
+) {
   const mails: Record<string, MailOutcomeCounts> = {};
   for (const [messageId, counts] of Object.entries(data.messages ?? {})) {
     const known: Partial<Record<MailOutcome, number>> = {};
@@ -115,7 +121,7 @@ export async function fetchGroupThreadMails(id: string) {
     }
     mails[messageId] = known;
   }
-  return { mails: mails, awaitingFeedback: data.awaiting_feedback };
+  return { mails, awaitingFeedback: data.awaiting_feedback };
 }
 
 export async function postGroupMessage(

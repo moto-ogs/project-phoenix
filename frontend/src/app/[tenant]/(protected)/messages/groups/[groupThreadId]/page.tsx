@@ -3,7 +3,7 @@ import { readContract, seedRead } from "~/lib/server-seed.server";
 import { routes } from "~/lib/contract/messages.generated";
 import { hasPermission } from "~/lib/auth-utils";
 import { messageKeys } from "~/lib/swr/portal-keys";
-import { withLists } from "~/lib/parent-group-threads-api";
+import { mapGroupThreadMails, withLists } from "~/lib/parent-group-threads-api";
 import PageContent from "./page-content";
 
 export default async function MessagesPage({
@@ -30,6 +30,21 @@ export default async function MessagesPage({
                   { token, signal, params: { groupThreadId } },
                 );
                 return withLists(data);
+              },
+            ),
+          },
+          {
+            key: messageKeys.groupMessageMails(groupThreadId),
+            value: seedRead(
+              "GET /api/messages/group-threads/{groupThreadId}/mails",
+              async (signal) => {
+                const { data } = await readContract(
+                  routes[
+                    "GET /api/messages/group-threads/{groupThreadId}/mails"
+                  ],
+                  { token, signal, params: { groupThreadId } },
+                );
+                return mapGroupThreadMails(data);
               },
             ),
           },

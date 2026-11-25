@@ -3,7 +3,11 @@ import { readContract, seedRead } from "~/lib/server-seed.server";
 import { routes } from "~/lib/contract/enrollment.generated";
 import { hasPermission } from "~/lib/auth-utils";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
-import { phaseFromContract } from "~/lib/enrollment-phase-api";
+import { careOfferingCountsByPhase } from "~/lib/care-offering-api";
+import {
+  mapPhaseExpiryWarning,
+  phaseFromContract,
+} from "~/lib/enrollment-phase-api";
 import { formSchemaFromContract } from "~/lib/enrollment-form-schema-api";
 import { toSettingsSchema } from "~/lib/settings-api";
 import { shellResourceKeys } from "~/lib/swr/shell-keys";
@@ -29,17 +33,48 @@ export default async function AdminEnrollmentsPage({
       load={({ token, session }) => {
         if (!hasPermission(session, "config:manage")) return [];
         const type = "enrollment_submitted";
+        const phases = seedRead(
+          "GET /api/enrollment/phases/",
+          async (signal) => {
+            const { data } = await readContract(
+              routes["GET /api/enrollment/phases/"],
+              { token, signal },
+            );
+            return data.map(phaseFromContract);
+          },
+        );
         return [
+          { key: enrollmentKeys.phases(), render: true, value: phases },
           {
-            key: enrollmentKeys.phases(),
+            key: enrollmentKeys.careOfferingCounts(),
             render: true,
-            value: seedRead("GET /api/enrollment/phases/", async (signal) => {
-              const { data } = await readContract(
-                routes["GET /api/enrollment/phases/"],
-                { token, signal },
-              );
-              return data.map(phaseFromContract);
-            }),
+            value: phases.then((items) =>
+              items?.length
+                ? seedRead(
+                    "GET /api/enrollment/care-offerings/",
+                    async (signal) => {
+                      const { data } = await readContract(
+                        routes["GET /api/enrollment/care-offerings/"],
+                        { token, signal },
+                      );
+                      return careOfferingCountsByPhase(data);
+                    },
+                  )
+                : undefined,
+            ),
+          },
+          {
+            key: enrollmentKeys.phaseExpiryWarnings(),
+            value: seedRead(
+              "GET /api/enrollment/phases/expiry-warnings",
+              async (signal) => {
+                const { data } = await readContract(
+                  routes["GET /api/enrollment/phases/expiry-warnings"],
+                  { token, signal },
+                );
+                return data.map(mapPhaseExpiryWarning);
+              },
+            ),
           },
           {
             key: enrollmentKeys.formSchemas(),

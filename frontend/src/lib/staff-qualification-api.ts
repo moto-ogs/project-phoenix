@@ -93,7 +93,9 @@ export function mapQualificationType(
   };
 }
 
-function mapEntry(data: QualificationEntryResponse): QualificationEntry {
+export function mapQualificationEntry(
+  data: QualificationEntryResponse,
+): QualificationEntry {
   return {
     staffId: data.staff_id,
     qualificationId: data.qualification_id,
@@ -110,7 +112,7 @@ export function mapQualificationOverviewRow(
   row: QualificationOverviewResponse,
 ): QualificationOverviewRow {
   return {
-    ...mapEntry(row),
+    ...mapQualificationEntry(row),
     firstName: row.first_name,
     lastName: row.last_name,
   };
@@ -184,7 +186,7 @@ class StaffQualificationService {
         errorMessage: "Nachweise konnten nicht geladen werden",
       },
     );
-    return entries.map(mapEntry);
+    return entries.map(mapQualificationEntry);
   }
 
   async traegerProofs(staffId: string): Promise<TraegerProofStatus[]> {
@@ -211,7 +213,7 @@ class StaffQualificationService {
         errorMessage: "Nachweise konnten nicht geladen werden",
       },
     );
-    return entries.map(mapEntry);
+    return entries.map(mapQualificationEntry);
   }
 }
 

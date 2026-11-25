@@ -1,7 +1,10 @@
 import { knownEnum } from "./contract/known-enum";
 import { ApiError } from "./api-error";
 import { bffJson } from "./bff-fetch";
-import type { DevicePINStatus } from "./contract/settings.generated";
+import type {
+  DevicePINStatus,
+  loginImageResponse,
+} from "./contract/settings.generated";
 import type * as wire from "./contract/shared.generated";
 import { createLogger } from "./logger";
 import { shellResourceKeys } from "./swr/shell-keys";
@@ -377,4 +380,11 @@ export async function fetchSchoolContactEmail(): Promise<string> {
     { errorMessage: "School contact address could not be loaded" },
   );
   return contact.email ?? "";
+}
+
+export function mapLoginImageSetting(data: loginImageResponse) {
+  return {
+    loginImageUrl: data.login_image_url ?? null,
+    canEdit: data.can_edit,
+  };
 }

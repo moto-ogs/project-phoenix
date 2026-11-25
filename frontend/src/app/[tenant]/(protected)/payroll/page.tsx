@@ -8,6 +8,7 @@ import {
   mapPayrollTargetCoverage,
 } from "~/lib/payroll-api";
 import { mapPayrollRules } from "~/lib/payroll-rules-api";
+import { mapSFTPStatus } from "~/lib/sftp-export-api";
 import { payrollKeys } from "~/lib/swr/portal-keys";
 import * as staffContract from "~/lib/contract/staff.generated";
 import PageContent from "./page-content";
@@ -24,21 +25,41 @@ export default async function PayrollPage({
       module="zeiterfassung"
       load={({ token, session }) => {
         if (!hasPermission(session, "config:manage")) return [];
-        return [
-          {
-            key: payrollKeys.status(),
-            render: true,
-            value: seedRead(
-              "GET /api/settings/payroll-status",
-              async (signal) => {
-                const { data } = await readContract(
-                  routes["GET /api/settings/payroll-status"],
-                  { token, signal },
-                );
-                return mapPayrollStatus(data);
-              },
-            ),
+        const status = seedRead(
+          "GET /api/settings/payroll-status",
+          async (signal) => {
+            const { data } = await readContract(
+              routes["GET /api/settings/payroll-status"],
+              { token, signal },
+            );
+            return mapPayrollStatus(data);
           },
+        );
+        return [
+          { key: payrollKeys.status(), render: true, value: status },
+          ...(hasPermission(session, "time_tracking:manage")
+            ? [
+                {
+                  key: payrollKeys.sftpStatus(),
+                  value: status.then((answer) =>
+                    answer?.dispatch.channel === "sftp"
+                      ? seedRead(
+                          "GET /api/staff/time-tracking/export/sftp-status",
+                          async (signal) => {
+                            const { data } = await readContract(
+                              staffContract.routes[
+                                "GET /api/staff/time-tracking/export/sftp-status"
+                              ],
+                              { token, signal },
+                            );
+                            return mapSFTPStatus(data);
+                          },
+                        )
+                      : undefined,
+                  ),
+                },
+              ]
+            : []),
           {
             key: payrollKeys.dispatch(),
             value: seedRead(

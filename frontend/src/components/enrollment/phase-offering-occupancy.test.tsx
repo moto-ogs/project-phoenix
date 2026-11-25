@@ -19,7 +19,8 @@ const mocks = vi.hoisted(() => ({
   fetchCareOfferingBookingStats: vi.fn(),
 }));
 
-vi.mock("~/lib/care-offering-api", () => ({
+vi.mock("~/lib/care-offering-api", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   listCareOfferings: mocks.listCareOfferings,
 }));
 

@@ -11,7 +11,7 @@ import {
 } from "@testing-library/react";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import "@testing-library/jest-dom/vitest";
-import ProfilePage from "./page";
+import ProfilePage from "./page-content";
 
 // Mock next-auth
 const mockUseSession = vi.fn();

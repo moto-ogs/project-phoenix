@@ -170,7 +170,7 @@ vi.mock("~/lib/care-offering-booking-stats", async (importOriginal) => {
 
 vi.mock("~/lib/timetable-api", () => ({
   timetableService: {
-    getTemplates: mocks.getTemplates,
+    getOfferingTemplates: mocks.getTemplates,
   },
 }));
 
@@ -976,7 +976,7 @@ describe("CareOfferingsEditor", () => {
     const aggregate = vi.fn().mockResolvedValue([]);
     function Counts() {
       const resource = useSWRAuth(
-        enrollmentKeys.allPhasesCareOfferings([phase().id]),
+        enrollmentKeys.careOfferingCounts(),
         aggregate,
       );
       return resource.data ? <p>Alle Phasen geladen</p> : null;

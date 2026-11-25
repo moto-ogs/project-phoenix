@@ -230,6 +230,12 @@ export async function fetchSurveyResults(id: string): Promise<SurveyResults> {
       errorMessage: "Auswertung konnte nicht geladen werden",
     },
   );
+  return mapSurveyResults(results);
+}
+
+export function mapSurveyResults(
+  results: surveysContract.surveyResultsResponse,
+): SurveyResults {
   return {
     ...results,
     status: results.status as SurveyStatus,
@@ -258,6 +264,12 @@ export async function fetchSurveyRespondents(
       errorMessage: "Antworten konnten nicht geladen werden",
     },
   );
+  return mapSurveyRespondents(respondents);
+}
+
+export function mapSurveyRespondents(
+  respondents: surveysContract.surveyRespondentResponse[],
+): SurveyRespondent[] {
   return respondents.map((respondent) => ({
     ...respondent,
     answers: (respondent.answers ?? []).map((answer) => ({

@@ -4,7 +4,10 @@ import { routes } from "~/lib/contract/enrollment.generated";
 import { hasPermission } from "~/lib/auth-utils";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { phaseFromContract } from "~/lib/enrollment-phase-api";
-import { formSchemaFromContract } from "~/lib/enrollment-form-schema-api";
+import {
+  formSchemaFromContract,
+  publicLegalTextsFromContract,
+} from "~/lib/enrollment-form-schema-api";
 import PageContent from "./page-content";
 
 export default async function EnrollmentFormPage({
@@ -30,6 +33,23 @@ export default async function EnrollmentFormPage({
               );
               return data.map(phaseFromContract);
             }),
+          },
+          {
+            key: enrollmentKeys.publicLegalTexts(tenant),
+            value: seedRead(
+              "GET /api/enrollment/legal/{tenantSlug}",
+              async (signal) => {
+                const { data } = await readContract(
+                  routes["GET /api/enrollment/legal/{tenantSlug}"],
+                  {
+                    token: null,
+                    signal,
+                    params: { tenantSlug: tenant },
+                  },
+                );
+                return publicLegalTextsFromContract(data);
+              },
+            ),
           },
           {
             key: enrollmentKeys.formSchemas(),

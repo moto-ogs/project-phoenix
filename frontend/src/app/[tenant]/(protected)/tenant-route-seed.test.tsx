@@ -1,11 +1,14 @@
 import type { Session } from "next-auth";
 import { isValidElement, type ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { PhaseResponse } from "~/lib/contract/enrollment.generated";
 import type { ModuleKey } from "~/lib/modules";
 import type { PortalSessionSnapshot } from "~/lib/portal-session-snapshot.server";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { messageKeys, weekProtocolKeys } from "~/lib/swr/portal-keys";
 import { groupKeys } from "~/lib/swr/groups-keys";
 import type { ServerSeed } from "~/lib/swr/server-seed";
+import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock-instant";
 
 const state = vi.hoisted(() => ({
   snapshot: null as PortalSessionSnapshot | null,
@@ -38,10 +41,12 @@ vi.mock("~/lib/backend-client.server", async (original) => ({
   ...(await original<typeof import("~/lib/backend-client.server")>()),
   sendBackend: state.send,
 }));
+vi.mock("./care-offerings/page-content", () => ({ default: () => null }));
 vi.mock("./messages/groups/page-content", () => ({ default: () => null }));
 vi.mock("./wochenprotokolle/page-content", () => ({ default: () => null }));
 vi.mock("./ogs-groups/page-content", () => ({ default: () => null }));
 
+import CareOfferingsPage from "./care-offerings/page";
 import GroupMessagesPage from "./messages/groups/page";
 import OGSGroupPage from "./ogs-groups/page";
 import { TenantRouteSeed } from "./tenant-route-seed";
@@ -172,5 +177,79 @@ describe("tenant route seeds", () => {
       "test",
       expect.objectContaining({ method: "GET" }),
     );
+  });
+});
+
+function phase(id: string, active: boolean): PhaseResponse {
+  return {
+    id,
+    name: id,
+    kind: "school_year",
+    service_start_date: TEST_CLOCK_TODAY,
+    service_end_date: testClockDay(30),
+    care_overflow_mode: "waitlist",
+    care_offering_selection_mode: "optional",
+    is_active: active,
+    eligible_school_classes: [],
+    eligible_grade_levels: [],
+    available_school_classes: [],
+    audience: "open",
+    require_school_class: false,
+    rollover_auto_approve: false,
+    rollover_bumps_grade: false,
+    show_status_reason_to_parent: false,
+    created_at: "",
+    updated_at: "",
+    version: "version",
+  };
+}
+
+describe("care-offering seed dependencies", () => {
+  it("starts only the first active phase's offering and booking reads, with independent fallback", async () => {
+    state.modules = ["online_anmeldung"];
+    setSession(["config:manage", "config:read"]);
+    state.send.mockImplementation(async (path: string) => {
+      if (path.startsWith("/api/enrollment/care-offerings/booking-stats")) {
+        return new Response(null, { status: 503 });
+      }
+      return Response.json({
+        status: "success",
+        data:
+          path === "/api/enrollment/phases/"
+            ? [phase("12", false), phase("42", true), phase("43", true)]
+            : [],
+      });
+    });
+
+    const page = await CareOfferingsPage({ params });
+    const seed: ServerSeed = await page.props.seed;
+    expect(seed.entries.map((entry) => entry.key)).toEqual([
+      enrollmentKeys.phases(),
+      enrollmentKeys.careOfferings("42"),
+      enrollmentKeys.bookingStats("42"),
+    ]);
+    expect(await seed.entries[1]?.value).toEqual([]);
+    expect(await seed.entries[2]?.value).toBeUndefined();
+    expect(state.send.mock.calls.map(([path]) => path)).toEqual([
+      "/api/enrollment/phases/",
+      "/api/enrollment/care-offerings/?phase_id=42",
+      "/api/enrollment/care-offerings/booking-stats?phase_id=42",
+    ]);
+  });
+
+  it("leaves every phase-dependent key to the browser when phases cannot be loaded", async () => {
+    state.modules = ["online_anmeldung"];
+    setSession(["config:manage", "config:read"]);
+    state.send.mockResolvedValue(new Response(null, { status: 503 }));
+
+    const page = await CareOfferingsPage({ params });
+    const seed: ServerSeed = await page.props.seed;
+    expect(seed.entries.map((entry) => entry.key)).toEqual([
+      enrollmentKeys.phases(),
+    ]);
+    expect(await seed.entries[0]?.value).toBeUndefined();
+    expect(state.send.mock.calls.map(([path]) => path)).toEqual([
+      "/api/enrollment/phases/",
+    ]);
   });
 });
