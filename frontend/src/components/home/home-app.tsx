@@ -10,6 +10,13 @@ import {
   GroupDetail,
   NoticeDetail,
 } from "~/components/home/home-app-details";
+import {
+  BirthdaysCard,
+  MyDayCard,
+  MyGroupCard,
+  OpenRequestsCard,
+  type OpenRequestRow,
+} from "~/components/home/home-app-cards";
 import { shownEntries } from "~/components/home/day-changes-block";
 import { useNoticeAcknowledge } from "~/components/home/day-notice-row";
 import { useBerlinClock } from "~/components/home/home-card-rows";
@@ -145,6 +152,7 @@ export function HomeApp({
   context,
   placed,
   birthdays,
+  birthdaysState,
   notices,
   renderBlock,
 }: {
@@ -153,6 +161,12 @@ export function HomeApp({
   /** Was auf der Fläche steht, in Lesereihenfolge. */
   readonly placed: readonly HomeBlockKey[];
   readonly birthdays: BirthdayOverview | undefined;
+  /** Ladezustand der laufenden Woche für die Karte „Geburtstage“. */
+  readonly birthdaysState?: {
+    readonly loading: boolean;
+    readonly error?: unknown;
+    readonly retry?: () => unknown;
+  };
   /** Feste Hinweise der Leitung (Phasenende, Geräte-PIN, Planungsaufgaben). */
   readonly notices: ReactNode;
   readonly renderBlock: (key: HomeBlockKey) => ReactNode;
@@ -189,13 +203,14 @@ export function HomeApp({
   const requests = useOpenRequestRows(has("section.open_requests"));
 
   // Kurzformen ersetzen diese Bausteine; alles andere bleibt als Karte.
+  // „Ablauf des Tages“ hat keine Kurzform: am Handy steht die Karte des
+  // Desktops, damit kein Block der anderen fehlt.
   const SHORT: readonly HomeBlockKey[] = [
     "section.day_changes",
     "section.my_day",
     "section.my_group",
     "section.open_requests",
     "section.birthdays",
-    "section.day_flow",
   ];
   const rest = placed.filter((key) => !SHORT.includes(key));
 
@@ -280,7 +295,9 @@ export function HomeApp({
         : dayPlanHref,
     });
   }
-  if (showGroup && group.group && !inlineDetails) {
+  // Am Telefon stehen Gruppe, Tag und Geburtstage als eigene Karten wie am
+  // Desktop (`placedCards`); die Kurzzeilen brauchen nur iPad-Ansichten.
+  if (showGroup && group.group && !inlineDetails && layout !== "phone") {
     overviewEntries.push({
       id: "gruppe",
       row: {
@@ -301,7 +318,7 @@ export function HomeApp({
         .filter((block) => block.isAssigned && !block.isDuty)
         .sort((a, b) => a.startTime.localeCompare(b.startTime))
     : [];
-  if (mine.length > 0 && !inlineDetails) {
+  if (mine.length > 0 && !inlineDetails && layout !== "phone") {
     // Der nächste Block steht schon in der Jetzt-Karte; die Zeile nennt
     // den ganzen Tag.
     const coming = mine.filter(
@@ -329,7 +346,7 @@ export function HomeApp({
   const todays = has("section.birthdays")
     ? (birthdays?.celebrations.filter((entry) => entry.isToday) ?? [])
     : [];
-  if (todays.length > 0) {
+  if (todays.length > 0 && layout !== "phone") {
     // Nur zur Information: Geburtstage haben keine eigene Seite.
     overviewEntries.push({
       id: "geburtstag",
@@ -424,13 +441,39 @@ export function HomeApp({
       </>
     );
   }
+  // Telefon: jeder Baustein des Desktops in seiner Reihenfolge, als Liste
+  // in einer Karte. „Heute anders“ steht schon oben in `lists`.
+  const placedCards = placed.map((key) => {
+    switch (key) {
+      case "section.day_changes":
+        return null;
+      case "section.my_day":
+        return <MyDayCard key={key} />;
+      case "section.my_group":
+        return <MyGroupCard key={key} />;
+      case "section.birthdays":
+        return (
+          <BirthdaysCard
+            key={key}
+            current={birthdays}
+            currentLoading={birthdaysState?.loading ?? false}
+            currentError={birthdaysState?.error}
+            onRetryCurrent={birthdaysState?.retry}
+          />
+        );
+      case "section.open_requests":
+        return <OpenRequestsCard key={key} rows={requests} />;
+      default:
+        return <div key={key}>{renderBlock(key)}</div>;
+    }
+  });
   return (
     <>
       <div className="space-y-4" data-home-app="">
         {nowCard}
         {notices}
-        {lists}
-        {extra}
+        <HomeLists {...listProps} withoutRequests />
+        {placedCards}
       </div>
       {actionBar}
     </>
@@ -468,7 +511,10 @@ function HomeLists({
   showTodo,
   onChanged,
   selection,
+  withoutRequests = false,
 }: ListProps & {
+  /** Telefon: „Offene Anfragen“ steht als eigene Karte an ihrem Platz. */
+  readonly withoutRequests?: boolean;
   readonly selection?: {
     readonly current: string | null;
     readonly select: (id: string) => void;
@@ -513,7 +559,7 @@ function HomeLists({
   const notices = todo.filter((entry) => entry.sheet?.kind === "notice");
   const requestRows = todo.filter((entry) => entry.sheet?.kind !== "notice");
   let requestBlock: ReactNode = null;
-  if (showTodo && requestRows.length > 0) {
+  if (showTodo && requestRows.length > 0 && !withoutRequests) {
     requestBlock = (
       <Collection label="Offene Anfragen">
         <CollectionGroup title="Offene Anfragen" count={requestRows.length}>
@@ -865,12 +911,7 @@ function NoticeSheet({
  * Dieselben Zähler wie „Offene Anfragen“ und die Seitenleiste; eine Zeile je
  * Art, die etwas offen hat.
  */
-function useOpenRequestRows(enabled: boolean): {
-  readonly key: string;
-  readonly label: string;
-  readonly count: number;
-  readonly href: string;
-}[] {
+function useOpenRequestRows(enabled: boolean): OpenRequestRow[] {
   const changeRequests = useChangeRequestsPending();
   const enrollmentRequests = useEnrollmentRequestsPending();
   const careWithdrawals = useCareWithdrawalsPending();
@@ -881,30 +922,36 @@ function useOpenRequestRows(enabled: boolean): {
     {
       key: "parent",
       label: "Wünsche von Eltern",
+      hint: "Stammdaten, Betreuungszeiten, Krankmeldungen",
       count: changeRequests.unreadCount,
       href: "/anfragen",
     },
     {
       key: "unread-enrollment",
       label: "Neue Anmeldungen",
+      hint: "Noch nicht gelesene Anmeldungen von Eltern",
+      badge: "ungelesen",
       count: unreadEnrollments.unreadCount,
       href: "/admin/enrollments",
     },
     {
       key: "enrollment",
       label: "Änderungen an Anmeldungen",
+      hint: "Eingereichte Änderungen zu laufenden Anmeldungen",
       count: enrollmentRequests.unreadCount,
       href: "/anfragen",
     },
     {
       key: "withdrawal",
       label: "Abmeldungen aus der Betreuung",
+      hint: "Angekündigte Komplett-Abmeldungen",
       count: careWithdrawals.unreadCount,
       href: "/anfragen",
     },
     {
       key: "staff",
       label: "Anträge des Teams",
+      hint: "Urlaub und Abwesenheiten von Mitarbeitenden",
       count: staffAbsences.unreadCount,
       href: "/anfragen",
     },

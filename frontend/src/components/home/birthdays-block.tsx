@@ -57,53 +57,26 @@ export function BirthdaysBlock({
   /** Lädt die laufende Woche neu (Wiederholen am Ladefehler). */
   readonly onRetryCurrent?: () => unknown;
 }) {
-  // null heißt: die laufende Woche.
-  const [weekStart, setWeekStart] = useState<string | null>(null);
   const [allOpen, setAllOpen] = useState(false);
-
-  const other = useSWRAuth<BirthdayOverview>(
-    weekStart ? homeKeys.birthdayOverview(weekStart) : null,
-    () => fetchBirthdayOverviewClient(weekStart),
-  );
-
-  // Ein Fehler beim Nachladen lässt die geladene Woche stehen; nur eine Woche
-  // ohne Daten zeigt den Ladefehler statt einer leeren Liste.
-  const failure = weekStart
-    ? other.data
-      ? undefined
-      : other.error
-    : current
-      ? undefined
-      : currentError;
-  const loadError = useSwrLoadError(failure, "die Liste der Geburtstage", () =>
-    weekStart ? other.mutate() : onRetryCurrent?.(),
-  );
-
-  const shown = weekStart ? other.data : current;
-  // Bis der Katalogtext des Ladefehlers da ist, bleibt das Skelett stehen:
-  // sonst blitzt „Keine Geburtstage in dieser Woche“ auf.
-  const isLoading =
-    (weekStart ? other.isLoading && !other.data : currentLoading) ||
-    failure !== undefined;
-  const bounds = shown ?? current;
-  const currentWeekStart = current?.weekStart ?? null;
-
-  const goTo = (target: string) => {
-    setWeekStart(target === currentWeekStart ? null : target);
-  };
-  const base = shown?.weekStart;
-  const previous =
-    base && bounds && base > bounds.earliestWeekStart
-      ? () => goTo(addDays(base, -7))
-      : undefined;
-  const next =
-    base && bounds && base < bounds.latestWeekStart
-      ? () => goTo(addDays(base, 7))
-      : undefined;
+  const {
+    shown,
+    loadError,
+    isLoading,
+    previous,
+    next,
+    isCurrentWeek,
+    weekLabel,
+    hasWeek,
+    showCurrent,
+  } = useBirthdayWeek({
+    current,
+    currentLoading,
+    currentError,
+    onRetryCurrent,
+  });
 
   const celebrations = shown?.celebrations ?? [];
   const today = shown?.today ?? "";
-  const isCurrentWeek = weekStart === null;
   // Passt die Woche nicht in die Karte, zählt in der laufenden Woche zuerst,
   // was heute ist und noch kommt: der heutige Geburtstag darf nie hinter
   // den Rest fallen. Die ganze Woche steht im Dialog.
@@ -113,21 +86,13 @@ export function BirthdaysBlock({
   );
   const hiddenCount = celebrations.length - rows.length;
 
-  // Ohne Wochenangabe (ein Server von vor #3777, etwa während eines
-  // Deploys) zeigt die Karte die Namen ohne Leiste zum Blättern.
-  const hasWeek = Boolean(shown?.weekStart && shown.weekEnd);
-  const weekLabel =
-    shown && hasWeek
-      ? `${relativeWeekLabel(shown.weekStart, currentWeekStart)} · ${rangeLabel(shown)}`
-      : undefined;
-
   return (
     <HomeCard
       title="Geburtstage"
       leading={<HomeCardIcon concept={birthdaysConcept} />}
     >
       <div className="flex h-full flex-col gap-3">
-        {(hasWeek || weekStart) && (
+        {(hasWeek || !isCurrentWeek) && (
           <PlanningContextBar
             dateLabel={weekLabel}
             onPrevious={previous}
@@ -135,7 +100,7 @@ export function BirthdaysBlock({
             previousLabel="Vorherige Woche"
             nextLabel="Nächste Woche"
             todayLabel="Diese Woche"
-            onToday={isCurrentWeek ? undefined : () => setWeekStart(null)}
+            onToday={isCurrentWeek ? undefined : showCurrent}
             withoutContextRow
           />
         )}
@@ -187,6 +152,86 @@ export function BirthdaysBlock({
       )}
     </HomeCard>
   );
+}
+
+/**
+ * Die gezeigte Woche der Geburtstage mit Blättern (#3777): dieselbe Logik
+ * für die Karte des Desktops und die Kurzform der App (#8070).
+ */
+export function useBirthdayWeek({
+  current,
+  currentLoading,
+  currentError,
+  onRetryCurrent,
+}: {
+  readonly current: BirthdayOverview | undefined;
+  readonly currentLoading: boolean;
+  readonly currentError?: unknown;
+  readonly onRetryCurrent?: () => unknown;
+}) {
+  // null heißt: die laufende Woche.
+  const [weekStart, setWeekStart] = useState<string | null>(null);
+
+  const other = useSWRAuth<BirthdayOverview>(
+    weekStart ? homeKeys.birthdayOverview(weekStart) : null,
+    () => fetchBirthdayOverviewClient(weekStart),
+  );
+
+  // Ein Fehler beim Nachladen lässt die geladene Woche stehen; nur eine Woche
+  // ohne Daten zeigt den Ladefehler statt einer leeren Liste.
+  const failure = weekStart
+    ? other.data
+      ? undefined
+      : other.error
+    : current
+      ? undefined
+      : currentError;
+  const loadError = useSwrLoadError(failure, "die Liste der Geburtstage", () =>
+    weekStart ? other.mutate() : onRetryCurrent?.(),
+  );
+
+  const shown = weekStart ? other.data : current;
+  // Bis der Katalogtext des Ladefehlers da ist, bleibt das Skelett stehen:
+  // sonst blitzt „Keine Geburtstage in dieser Woche“ auf.
+  const isLoading =
+    (weekStart ? other.isLoading && !other.data : currentLoading) ||
+    failure !== undefined;
+  const bounds = shown ?? current;
+  const currentWeekStart = current?.weekStart ?? null;
+
+  const goTo = (target: string) => {
+    setWeekStart(target === currentWeekStart ? null : target);
+  };
+  const base = shown?.weekStart;
+  const previous =
+    base && bounds && base > bounds.earliestWeekStart
+      ? () => goTo(addDays(base, -7))
+      : undefined;
+  const next =
+    base && bounds && base < bounds.latestWeekStart
+      ? () => goTo(addDays(base, 7))
+      : undefined;
+
+  const isCurrentWeek = weekStart === null;
+  // Ohne Wochenangabe (ein Server von vor #3777, etwa während eines
+  // Deploys) zeigt die Karte die Namen ohne Leiste zum Blättern.
+  const hasWeek = Boolean(shown?.weekStart && shown.weekEnd);
+  const weekLabel =
+    shown && hasWeek
+      ? `${relativeWeekLabel(shown.weekStart, currentWeekStart)} · ${rangeLabel(shown)}`
+      : undefined;
+  return {
+    shown,
+    loadError,
+    isLoading,
+    currentWeekStart,
+    previous,
+    next,
+    isCurrentWeek,
+    weekLabel,
+    hasWeek,
+    showCurrent: () => setWeekStart(null),
+  };
 }
 
 /**

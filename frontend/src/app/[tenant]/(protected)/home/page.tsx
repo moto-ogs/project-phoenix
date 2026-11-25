@@ -648,6 +648,11 @@ function HomeContent() {
               context={blockContext}
               placed={placements.map((placement) => placement.key)}
               birthdays={birthdays}
+              birthdaysState={{
+                loading: birthdaysLoading,
+                error: birthdaysError,
+                retry: () => mutateBirthdays(),
+              }}
               notices={
                 <>
                   {showsLeadershipNotices && !editing ? (
