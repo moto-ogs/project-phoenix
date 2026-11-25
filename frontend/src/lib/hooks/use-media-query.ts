@@ -29,7 +29,7 @@ const noSubscription = () => () => undefined;
 const unknownOnServer = () => null;
 
 interface MediaQueryStore {
-  readonly list: MediaQueryList;
+  getSnapshot(): boolean;
   subscribe(onChange: () => void): () => void;
 }
 
@@ -54,13 +54,20 @@ function mediaQueryStore(query: string): MediaQueryStore | null {
   const owner = stores;
   const list = matchMedia.call(window, query);
   const listeners = new Set<() => void>();
+  let matches = list.matches;
   const notify = () => {
+    const next = list.matches;
+    if (matches === next) return;
+    matches = next;
     for (const listener of listeners) listener();
   };
   const store: MediaQueryStore = {
-    list,
+    getSnapshot: () => matches,
     subscribe(onChange) {
-      if (listeners.size === 0) list.addEventListener("change", notify);
+      if (listeners.size === 0) {
+        list.addEventListener("change", notify);
+        matches = list.matches;
+      }
       listeners.add(onChange);
       return () => {
         listeners.delete(onChange);
@@ -89,7 +96,7 @@ export function useResolvedMediaQuery(query: string): boolean | null {
     [query],
   );
   const getSnapshot = useCallback(
-    () => mediaQueryStore(query)?.list.matches ?? null,
+    () => mediaQueryStore(query)?.getSnapshot() ?? null,
     [query],
   );
   return useSyncExternalStore(subscribe, getSnapshot, unknownOnServer);

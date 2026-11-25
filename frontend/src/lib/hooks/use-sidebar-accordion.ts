@@ -70,15 +70,17 @@ export function useSidebarAccordion(
   // the old section and forcing another sidebar render from an effect.
   const routeKey = pathname + "\0" + (fromParam ?? "");
   const routeSection = sectionFromPathname(pathname, fromParam);
-  const [selection, setSelection] = useState(() => ({
-    routeKey,
-    expanded: routeSection ?? defaultSection,
-  }));
-  let expanded = selection.expanded;
-  if (selection.routeKey !== routeKey) {
-    expanded = routeSection;
-    setSelection({ routeKey, expanded });
-  }
+  const [selection, setSelection] = useState<{
+    routeKey: string;
+    expanded: AccordionSection;
+  } | null>(() =>
+    routeSection === null && defaultSection !== null
+      ? { routeKey, expanded: defaultSection }
+      : null,
+  );
+  if (selection && selection.routeKey !== routeKey) setSelection(null);
+  const expanded =
+    selection?.routeKey === routeKey ? selection.expanded : routeSection;
 
   // Restore from localStorage on mount when pathname doesn't determine a section.
   // This runs client-only after hydration, avoiding SSR/client mismatches.
@@ -88,7 +90,7 @@ export function useSidebarAccordion(
     // Alte Werte aus der Zeit vor #2826 ("planning", "eltern",
     // "kommunikation") fallen hier durch: die Bereiche sind jetzt Gruppen.
     if (isAccordionSection(stored)) {
-      setSelection((current) => ({ ...current, expanded: stored }));
+      setSelection({ routeKey, expanded: stored });
     }
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -103,12 +105,16 @@ export function useSidebarAccordion(
     }
   }, [expanded]);
 
-  const toggle = useCallback((section: AccordionSection) => {
-    setSelection((current) => ({
-      ...current,
-      expanded: current.expanded === section ? null : section,
-    }));
-  }, []);
+  const toggle = useCallback(
+    (section: AccordionSection) => {
+      setSelection((current) => {
+        const shown =
+          current?.routeKey === routeKey ? current.expanded : routeSection;
+        return { routeKey, expanded: shown === section ? null : section };
+      });
+    },
+    [routeKey, routeSection],
+  );
 
   return { expanded, toggle };
 }
