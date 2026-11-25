@@ -884,6 +884,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/rooms/{id}/closures/{closureId}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/settings/enrollment/legal-agb-document",
       "portals": [
         "tenant"
@@ -4726,6 +4734,34 @@
         "elem": {
           "kind": "ref",
           "ref": "RoomResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/rooms/closures",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "room_id",
+          "kind": "id"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "RoomClosureResponse"
         }
       }
     },
@@ -15742,6 +15778,21 @@
         "ref": "roomSnapshotExportRequest"
       },
       "file": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/rooms/{id}/closures",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "RoomClosureRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "RoomClosureResponse"
+      }
     },
     {
       "method": "POST",
@@ -90824,6 +90875,80 @@
           "name": "incoming_students",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoomClosureRequest",
+      "go_type": "httpadapter.RoomClosureRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoomClosureResponse",
+      "go_type": "httpadapter.RoomClosureResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
           }
         }
       ]
