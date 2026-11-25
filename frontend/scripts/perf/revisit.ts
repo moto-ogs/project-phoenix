@@ -373,11 +373,13 @@ export async function measureRevisits(
   const switches: Awaited<ReturnType<typeof measureParentSwitch>>[] = [];
   const results: Observation[] = [];
   let permission: Awaited<ReturnType<typeof measurePermissionChange>> = [];
+  const admitTrial = () => waitForIdleWindow(simulation.day, accountWait);
+  const git = (...args: string[]) =>
+    execFileSync("git", args, { encoding: "utf8" }).trim();
+  const development = git("merge-base", "HEAD", "origin/development");
   const metadata = {
-    initialIdlePercent: await waitForIdleWindow(simulation.day, accountWait),
-    revision: execFileSync("git", ["rev-parse", "HEAD"], {
-      encoding: "utf8",
-    }).trim(),
+    initialIdlePercent: await admitTrial(),
+    revision: git("rev-parse", "HEAD"),
     browser: browser.version(),
     platform: process.platform,
     architecture: process.arch,
@@ -392,11 +394,7 @@ export async function measureRevisits(
     selection: selected ?? "all",
     seed: "vollbetrieb",
     simulation,
-    development: execFileSync(
-      "git",
-      ["merge-base", "HEAD", "origin/development"],
-      { encoding: "utf8" },
-    ).trim(),
+    development,
     seedCreatedAt: fixture.seedCreatedAt,
     seedStudents: fixture.seedStudents,
     viewport: {
@@ -404,14 +402,10 @@ export async function measureRevisits(
       mobile: devices["Pixel 7"]!.viewport,
     },
     uploadMbit: 1,
-    applicationTree: execFileSync("git", ["rev-parse", "HEAD:frontend/src"], {
-      encoding: "utf8",
-    }).trim(),
-    dirtyWorktree: Boolean(
-      execFileSync("git", ["status", "--porcelain"], {
-        encoding: "utf8",
-      }).trim(),
-    ),
+    applicationTree: git("rev-parse", "HEAD:frontend/src"),
+    baseApplicationTree: git("rev-parse", development + ":frontend/src"),
+    backendTree: git("rev-parse", "HEAD:backend"),
+    dirtyWorktree: Boolean(git("status", "--porcelain")),
     repeats: REPEATS,
   };
   const save = (complete = false) =>
@@ -443,10 +437,7 @@ export async function measureRevisits(
           const key = [role, journey.name, profile].join("/");
           if (failures.has(key)) continue;
           console.log(role, journey.name, profile, repeat);
-          const startIdlePercent = await waitForIdleWindow(
-            simulation.day,
-            accountWait,
-          );
+          const startIdlePercent = await admitTrial();
           const load = loadavg();
           const before = cpuTimes();
           let samples: Sample[];
@@ -466,6 +457,7 @@ export async function measureRevisits(
               ...sample,
               role,
               name: journey.name,
+              inPage: Boolean(journey.inPage),
               profile,
               repeat,
               load,
@@ -479,11 +471,13 @@ export async function measureRevisits(
     }
   }
   if (roleOrder.has("parents")) {
-    permission = await measurePermissionChange(browser, fixture);
+    permission = await measurePermissionChange(browser, fixture, admitTrial);
     save();
     for (let repeat = 1; repeat <= REPEATS; repeat++) {
-      for (const mobile of [false, true])
+      for (const mobile of [false, true]) {
+        await admitTrial();
         switches.push(await measureParentSwitch(browser, fixture, mobile));
+      }
       save();
     }
   }

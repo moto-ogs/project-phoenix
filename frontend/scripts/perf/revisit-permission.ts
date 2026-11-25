@@ -8,6 +8,7 @@ import {
   REPEATS,
   requestCost,
 } from "./navigation-probe";
+import { installContentProbe } from "./revisit-content";
 import { RequestRecorder } from "./recorder";
 import { openRevisitSession, type RevisitFixture } from "./revisit-access";
 
@@ -50,6 +51,7 @@ async function saveRole(
 export async function measurePermissionChange(
   browser: Browser,
   fixture: RevisitFixture,
+  admitTrial: () => Promise<number>,
 ) {
   const staffContext = await browser.newContext();
   const parentContext = await browser.newContext();
@@ -122,6 +124,7 @@ export async function measurePermissionChange(
       const results = [];
       for (let repeat = 1; repeat <= REPEATS; repeat++) {
         for (const mobile of [false, true]) {
+          const startIdlePercent = await admitTrial();
           const profile = mobile ? "Pixel 7" : "Desktop";
           const context = await browser.newContext({
             ...devices[mobile ? "Pixel 7" : "Desktop Chrome"],
@@ -132,6 +135,7 @@ export async function measurePermissionChange(
           });
           try {
             const page = await context.newPage();
+            await installContentProbe(page);
             const cdp = await context.newCDPSession(page);
             await cdp.send("Emulation.setCPUThrottlingRate", {
               rate: CPU_THROTTLE,
@@ -150,20 +154,19 @@ export async function measurePermissionChange(
             const ms = await page.evaluate(
               ({ sibling, current }) =>
                 new Promise<number>((resolve, reject) => {
+                  let matchedLastFrame = false;
                   const frame = () => {
-                    const a = document.querySelector(sibling);
-                    if (
-                      a?.checkVisibility({
-                        opacityProperty: true,
-                        visibilityProperty: true,
-                      }) &&
-                      !document.querySelector(current)
-                    ) {
-                      requestAnimationFrame(() =>
-                        resolve(Math.round(performance.now())),
-                      );
+                    const matched =
+                      window.__revisit.matches({
+                        path: "/",
+                        criterion: "Weiterhin zugängliches Geschwisterkind",
+                        markers: [{ css: sibling }],
+                      }) && !document.querySelector(current);
+                    if (matched && matchedLastFrame) {
+                      resolve(Math.round(performance.now()));
                       return;
                     }
+                    matchedLastFrame = matched;
                     if (performance.now() > 30000) {
                       reject(new Error("Verbleibendes Kind nicht bestätigt."));
                       return;
@@ -179,6 +182,7 @@ export async function measurePermissionChange(
             results.push({
               profile,
               repeat,
+              startIdlePercent,
               ms,
               settle,
               ...requestCost(requests),

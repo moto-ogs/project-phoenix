@@ -72,7 +72,10 @@ export CHROME_DIR="$PWD/chrome-linux64"
 On `rechenzentrum`, the single measurement command from the repository root is
 `bwrap --dev-bind / / --tmpfs /opt --dir /opt/google --ro-bind "$CHROME_DIR" /opt/google/chrome devbox run -- scripts/perf-revisit.sh`.
 The host's **bubblewrap** package exposes this Chrome only inside the benchmark
-process. Keep the same prepared fixture and browser for the two sides of #8083.
+process. For #8083, run flags off and on on **the same Berlin calendar day**,
+against the same prepared database and day receipt. If the comparison moves to
+a later day, start a new pair on a fresh seed and simulate once; do not append a
+second simulated day and compare it to the previous day's results.
 
 ### Prepare the fixture and repeat
 
@@ -96,7 +99,9 @@ existing `pnpm run perf:nav` Revisit test. Playwright builds and starts Next in
 production mode on the worktree port and stops it afterward. Do not substitute
 a dev server, a remote backend, a nightly trace or a CI runner. The test runs
 serially; allow time for all three rounds. `PERF_REVISIT` can select comma-separated
-journey names for diagnosis only. A partial result is not a baseline.
+journey names for diagnosis only. A partial result is not a baseline. The report identifies the measured checkout,
+its frontend and backend trees, its merge base and whether it was dirty.
+Page traversals, in-page actions and device/input variants have separate budget counts.
 
 ### What is timed
 

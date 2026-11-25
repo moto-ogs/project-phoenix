@@ -9,6 +9,7 @@ export type Step = "kalt" | "warm-1" | "zurück-1" | "warm-4" | "zurück-4";
 export interface Observation {
   role: RevisitRole;
   name: string;
+  inPage: boolean;
   profile: string;
   repeat: number;
   input: string;
@@ -62,6 +63,10 @@ export function writeReport(
     development: string;
     started: string;
     browser: string;
+    applicationTree: string;
+    baseApplicationTree: string;
+    backendTree: string;
+    dirtyWorktree: boolean;
     platform: string;
     architecture: string;
     cpu?: string;
@@ -86,15 +91,18 @@ export function writeReport(
   const lines = [
     "# Revisit: Fachinhalt nach Navigation",
     "",
-    "development@" +
+    "Git-Merge-Basis development@" +
       metadata.development +
-      " · Harness " +
+      " · Checkout " +
       metadata.revision +
+      (metadata.dirtyWorktree ? " (Arbeitsbaum geändert)" : " (sauber)") +
       " · " +
       metadata.started +
       " · Chromium " +
       metadata.browser +
       ` · ${metadata.platform}/${metadata.architecture}, ${metadata.cpu ?? "CPU unbekannt"} (${metadata.cores} logische CPUs)`,
+    "",
+    `Quellbäume des Checkouts: frontend/src ${metadata.applicationTree} (${metadata.applicationTree === metadata.baseApplicationTree ? "identisch mit Basis" : "abweichend von Basis"}), backend ${metadata.backendTree}.`,
     "",
     `CPU ×${metadata.cpuThrottle}, ${metadata.rttMs} ms RTT, Desktop ${metadata.desktopMbit} Mbit/s, Pixel 7 ${metadata.mobileMbit} Mbit/s. Abweichungen: „nah“ = Median 130–170 ms; „Last“ = mindestens ein Durchgang im Mittel unter 50 % freier Host-CPU. Kein kausaler Vergleich bei unterschiedlicher Last.`,
     "",
@@ -135,6 +143,11 @@ export function writeReport(
       );
       summary.push({
         role: first.role,
+        cohort: [
+          first.inPage ? "Seitenintern" : "Seitenwechsel",
+          first.profile,
+          first.input,
+        ].join(" · "),
         name: first.name,
         profile: first.profile,
         input: runs[0]!.input,
@@ -161,12 +174,24 @@ export function writeReport(
         " |",
     );
   }
-  lines.push("", "## Gültige Mediane unter 150 ms", "");
-  for (const step of steps.filter((s) => s !== "kalt")) {
-    const eligible = summary.filter((row) => row.step === step);
-    lines.push(
-      `- ${step}: ${eligible.filter((row) => row.median < 150).length}/${eligible.length}`,
-    );
+  const directions = steps.filter((step) => step !== "kalt");
+  lines.push(
+    "",
+    "## Mediane unter 150 ms nach Navigationsart, Gerät und Eingabe",
+    "",
+    "| Fall | Warm 1 | Zurück 1 | Warm 4 | Zurück 4 |",
+    "|---|---:|---:|---:|---:|",
+  );
+  for (const cohort of new Set(summary.map((row) => row.cohort))) {
+    const counts = directions.map((step) => {
+      const eligible = summary.filter(
+        (row) => row.cohort === cohort && row.step === step,
+      );
+      return eligible.length
+        ? `${eligible.filter((row) => row.median < 150).length}/${eligible.length}`
+        : "·";
+    });
+    lines.push("| " + [cohort, ...counts].join(" | ") + " |");
   }
   if (switches.length) {
     lines.push(
