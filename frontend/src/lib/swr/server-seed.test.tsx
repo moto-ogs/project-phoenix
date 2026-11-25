@@ -170,6 +170,39 @@ describe("SWRServerSeed", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
+  it("hands a claimed key the navigation seed when its prefetched promise never settles", async () => {
+    const fetcher = vi.fn(async () => "browser");
+    const shell = new Promise<ServerSeed>(() => {});
+    const navigation = seedOf([
+      { key: GRID, value: Promise.resolve("navigation") },
+    ]);
+    const reader = (seed: ServerSeed | Promise<ServerSeed>) => (
+      <SWRServerSeed seed={seed} claims={[GRID]}>
+        <Reader name="grid" resourceKey={GRID} fetcher={fetcher} />
+      </SWRServerSeed>
+    );
+    const { rerender } = render(reader(shell));
+    expect(screen.getByText("grid: loading")).toBeInTheDocument();
+    rerender(reader(navigation));
+    expect(await screen.findByText("grid: navigation")).toBeInTheDocument();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("releases a hanging claim when the seed handoff unmounts", async () => {
+    const fetcher = vi.fn(async () => "browser");
+    const shell = new Promise<ServerSeed>(() => {});
+    const reader = <Reader name="grid" resourceKey={GRID} fetcher={fetcher} />;
+    const { rerender } = render(
+      <SWRServerSeed seed={shell} claims={[GRID]}>
+        {reader}
+      </SWRServerSeed>,
+    );
+    expect(screen.getByText("grid: loading")).toBeInTheDocument();
+    rerender(reader);
+    expect(await screen.findByText("grid: browser")).toBeInTheDocument();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it("loads in the browser when a claimed seed expires while its value is in flight", async () => {
     const fetcher = vi.fn(async () => "browser grid");
     let resolveValue!: (value: string) => void;

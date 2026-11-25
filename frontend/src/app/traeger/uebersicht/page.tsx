@@ -1,4 +1,3 @@
-import { connection } from "next/server";
 import {
   schoolsAlerts,
   requiredDetails,
@@ -8,8 +7,7 @@ import { SWRServerSeed } from "~/lib/swr/server-seed";
 import { traegerPageSeed } from "~/lib/traeger/page-seed.server";
 import TraegerDashboardPage from "./page-content";
 
-export default async function Page() {
-  await connection();
+export default function Page() {
   const { seed, claims } = traegerPageSeed([schoolsAlerts, requiredDetails]);
   return (
     <Suspense fallback={null}>

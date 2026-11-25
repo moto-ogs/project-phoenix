@@ -96,6 +96,7 @@ interface StudentCardProps {
   readonly locationBadge: ReactNode;
   /** Optional extra content between name and click hint */
   readonly extraContent?: ReactNode;
+  readonly className?: string;
   /** Optional tracking indicators (right-aligned, below location badge) */
   readonly trackingIndicators?: ReactNode;
   /**
@@ -188,6 +189,7 @@ export function StudentCard({
   onClick,
   locationBadge,
   extraContent,
+  className,
   trackingIndicators,
   checkinMode = false,
   checkinState = "unknown",
@@ -267,10 +269,10 @@ export function StudentCard({
       data-checkin-selected={isSelectedCard || undefined}
       data-day-home-change={dayChangeKind}
       style={selectedRingStyle}
-      className={`${tileCardSurface({ padding: "none" })} flex cursor-pointer flex-col disabled:cursor-wait disabled:opacity-70 ${parentAttentionEnabled ? "h-full" : ""}`}
+      className={`${tileCardSurface({ padding: "none" })} flex cursor-pointer flex-col disabled:cursor-wait disabled:opacity-70 ${parentAttentionEnabled ? "h-full" : ""} ${className ?? ""}`}
     >
       <div
-        className={`relative [contain-intrinsic-block-size:auto_12rem] [content-visibility:auto] ${hasTapStrip || dayChangeLabel ? "p-3 pb-0 sm:p-5 sm:pb-0" : "p-3 sm:p-5"}`}
+        className={`relative ${hasTapStrip || dayChangeLabel ? "p-3 pb-0 sm:p-5 sm:pb-0" : "p-3 sm:p-5"}`}
       >
         {/* Card body content */}
         <div className="relative">

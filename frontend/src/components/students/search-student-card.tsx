@@ -218,6 +218,9 @@ function SearchStudentCardImpl({
 
   return (
     <StudentCard
+      // Long search results keep every card in the DOM for browser find and
+      // keyboard navigation, without laying out every off-screen card.
+      className="[contain-intrinsic-block-size:auto_12rem] [content-visibility:auto]"
       studentId={student.id}
       firstName={student.first_name}
       lastName={student.second_name}
