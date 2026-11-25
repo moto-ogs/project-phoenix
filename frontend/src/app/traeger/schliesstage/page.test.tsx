@@ -256,6 +256,24 @@ describe("TraegerClosingDaysPage (#4702)", () => {
         name: /1\. November: Feiertag in Nordrhein-Westfalen: Allerheiligen/,
       }),
     ).toBeInTheDocument();
+    // Die Jahresübersicht steht vorn, danach die Schließtage und die
+    // Feiertage (#8128).
+    expect(
+      screen
+        .getAllByRole("heading", {
+          name: /^(Jahresübersicht 2026|Schließtage des Trägers|Feiertage nach Bundesland)$/,
+        })
+        .map((heading) => heading.textContent),
+    ).toEqual([
+      "Jahresübersicht 2026",
+      "Schließtage des Trägers",
+      "Feiertage nach Bundesland",
+    ]);
+    expect(
+      screen.getByText(
+        "An diesen Tagen hat die OGS der genannten Schulen geschlossen.",
+      ),
+    ).toBeInTheDocument();
     const nrw = screen.getByRole("region", { name: "Nordrhein-Westfalen" });
     expect(within(nrw).getByText("Gilt für: OGS Iserlohn")).toBeInTheDocument();
     // Ohne das Recht „Einstellungen“ plant niemand Schließtage.
@@ -268,23 +286,61 @@ describe("TraegerClosingDaysPage (#4702)", () => {
   });
 
   it("lets the settings right plan a closing day and switches the year", async () => {
+    setTestClock("2026-09-09T12:00:00+02:00");
     session.permissions = ["traeger_overview:read", "traeger_settings:manage"];
     render(<TraegerClosingDaysPage />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "2027" }));
+    // Das Vorjahr, dieses Jahr und drei Jahre voraus (#8128).
+    const years = within(await screen.findByRole("group", { name: "Jahr" }));
+    expect(
+      years.getAllByRole("button").map((button) => button.textContent),
+    ).toEqual(["2025", "2026", "2027", "2028", "2029"]);
+    expect(years.getByRole("button", { name: "2026" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    fireEvent.click(years.getByRole("button", { name: "2029" }));
     expect(api.fetchTraegerCalendar).toHaveBeenLastCalledWith(
-      "2027-01-01",
-      "2027-12-31",
+      "2029-01-01",
+      "2029-12-31",
+    );
+    fireEvent.click(years.getByRole("button", { name: "2025" }));
+    expect(api.fetchTraegerCalendar).toHaveBeenLastCalledWith(
+      "2025-01-01",
+      "2025-12-31",
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Schließtag anlegen" }));
-    expect(
-      await screen.findByRole("dialog", { name: "Schließtag anlegen" }),
-    ).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog", {
+      name: "Schließtag anlegen",
+    });
+    // Im Vorjahr beginnt der Dialog heute, nicht am vergangenen 1. Januar.
+    expect(dialog.querySelector('input[name="start_date"]')).toHaveValue(
+      "2026-09-09",
+    );
     expect(
       screen.getByRole("checkbox", { name: "Alle Schulen" }),
     ).toBeChecked();
   });
+  it("points an empty year to the create button in the head (#8128)", async () => {
+    setTestClock("2026-09-09T12:00:00+02:00");
+    session.permissions = ["traeger_overview:read", "traeger_settings:manage"];
+    api.fetchTraegerCalendar.mockResolvedValue({
+      ...calendar,
+      closingDays: [],
+    });
+    render(<TraegerClosingDaysPage />);
+
+    expect(
+      await screen.findByText("Keine Schließtage in 2026"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Du kannst oben mit „Schließtag anlegen“ Schließtage planen, zum Beispiel Brückentage.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("keeps school scope and edit/delete actions on phones", async () => {
     setViewportWidth(PHONE_WIDTH);
     session.permissions = ["traeger_overview:read", "traeger_settings:manage"];
