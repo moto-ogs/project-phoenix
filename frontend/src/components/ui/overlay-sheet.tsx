@@ -13,6 +13,7 @@ import {
   DrawerTitle,
 } from "./drawer";
 import { Modal } from "./modal";
+import { APP_FOOTER_ROW } from "./overlay-styles";
 import { SCROLL_AREA_PROPS, SHEET_SCOPE_PROPS } from "./overlay-stack";
 
 /**
@@ -35,7 +36,10 @@ export interface OverlaySheetProps {
   readonly title: string;
   /** Eine Zeile unter dem Titel, nur wenn sie eine Entscheidung trägt. */
   readonly description?: ReactNode;
-  /** Telefon: Start in halber (Standard) oder voller Höhe. */
+  /**
+   * Telefon: so hoch wie der Inhalt (`fit`, Standard), oder mit Rastpunkten
+   * in halber bzw. voller Höhe – nur für lange Listen, die man aufzieht.
+   */
   readonly size?: OverlaySheetSize;
   /** Steht unten fest (Hauptaktion des Blatts). */
   readonly footer?: ReactNode;
@@ -99,7 +103,7 @@ function AppSheet({
   onOpenChange,
   title,
   description,
-  size = "half",
+  size = "fit",
   footer,
   children,
   closeLabel = "Blatt schließen",
@@ -185,7 +189,9 @@ function AppSheet({
           {children}
         </div>
         {footer ? (
-          <div className="flex shrink-0 gap-3 border-t border-gray-100 px-4 py-3">
+          <div
+            className={`flex shrink-0 gap-3 border-t border-gray-100 px-4 py-3 ${APP_FOOTER_ROW}`}
+          >
             {footer}
           </div>
         ) : null}
