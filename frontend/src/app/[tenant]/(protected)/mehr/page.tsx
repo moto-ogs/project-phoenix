@@ -89,26 +89,41 @@ interface MoreSection {
 }
 
 /**
- * Verteilt die Abschnitte der Reihe nach auf `columns` Spalten: jeder kommt
- * in die bisher kürzeste. So stehen die Spalten etwa gleich hoch, und die
- * Lesereihenfolge bleibt je Spalte erhalten.
+ * Teilt die Abschnitte in ihrer festen Reihenfolge auf `columns` Spalten
+ * auf: die erste Spalte von oben nach unten, dann die nächste. So liest man
+ * auf jedem Gerät in derselben Folge wie am Telefon, und die Spalten stehen
+ * trotzdem etwa gleich hoch.
  */
-function balanceColumns(
+function splitColumns(
   sections: readonly MoreSection[],
   columns: number,
 ): MoreSection[][] {
-  const result: MoreSection[][] = Array.from({ length: columns }, () => []);
-  const heights: number[] = Array.from({ length: columns }, () => 0);
-  for (const section of sections) {
-    let shortest = 0;
-    for (let index = 1; index < columns; index += 1) {
-      if ((heights[index] ?? 0) < (heights[shortest] ?? 0)) shortest = index;
+  // Der Gruppenkopf zählt wie eine knappe Zeile.
+  const weight = (section: MoreSection) => section.size + 0.7;
+  const total = sections.reduce((sum, section) => sum + weight(section), 0);
+  const result: MoreSection[][] = [];
+  let current: MoreSection[] = [];
+  let filled = 0;
+  sections.forEach((section, index) => {
+    const remainingColumns = columns - result.length;
+    const remainingSections = sections.length - index;
+    const target = (total * (result.length + 1)) / columns;
+    const half = weight(section) / 2;
+    // Neue Spalte, wenn der Abschnitt mehr als zur Hälfte über das Ziel der
+    // laufenden Spalte ragt — oder sonst eine Spalte leer bliebe.
+    if (
+      current.length > 0 &&
+      remainingColumns > 1 &&
+      (filled + half > target || remainingSections < remainingColumns)
+    ) {
+      result.push(current);
+      current = [];
     }
-    result[shortest]?.push(section);
-    // Der Gruppenkopf zählt wie eine knappe Zeile.
-    heights[shortest] = (heights[shortest] ?? 0) + section.size + 0.7;
-  }
-  return result.filter((column) => column.length > 0);
+    current.push(section);
+    filled += weight(section);
+  });
+  if (current.length > 0) result.push(current);
+  return result;
 }
 
 function MorePageContent() {
@@ -189,28 +204,35 @@ function MorePageContent() {
       rows: <MenuRows items={group.items} model={model} />,
     });
   }
-  sections.push({
-    key: "konto",
-    title: "Konto",
-    size: model.profileUrl ? 2 : 1,
-    rows: (
-      <>
-        {model.profileUrl ? (
-          <li>
-            <ListRowLink
-              href={model.tenantPath(model.profileUrl)}
-              className="min-h-14"
-              icon={
-                <MobileNavIcon
-                  item={{ iconKey: "profile" }}
-                  active={false}
-                  className={ROW_ICON}
-                />
-              }
-              title="Profil"
-            />
-          </li>
-        ) : null}
+  if (model.profileUrl) {
+    sections.push({
+      key: "konto",
+      title: "Konto",
+      size: 1,
+      rows: (
+        <li>
+          <ListRowLink
+            href={model.tenantPath(model.profileUrl)}
+            className="min-h-14"
+            icon={
+              <MobileNavIcon
+                item={{ iconKey: "profile" }}
+                active={false}
+                className={ROW_ICON}
+              />
+            }
+            title="Profil"
+          />
+        </li>
+      ),
+    });
+  }
+
+  // Abmelden ist kein Ziel, sondern beendet die Sitzung: eigene Karte mit
+  // Abstand am Ende, in Warnfarbe.
+  const logout = (
+    <Collection label="Abmelden">
+      <ul>
         <li>
           <ListRowLink
             onClick={() => setLogoutOpen(true)}
@@ -220,15 +242,15 @@ function MorePageContent() {
               <MobileNavIcon
                 item={{ iconKey: "profile", concept: logoutConcept }}
                 active={false}
-                className={ROW_ICON}
+                className="text-moto-red-strong h-5 w-5 shrink-0"
               />
             }
-            title="Abmelden"
+            title={<span className="text-moto-red-strong">Abmelden</span>}
           />
         </li>
-      </>
-    ),
-  });
+      </ul>
+    </Collection>
+  );
 
   const group = (section: MoreSection) => (
     <CollectionGroup key={section.key} title={section.title}>
@@ -244,24 +266,29 @@ function MorePageContent() {
   return (
     <TenantPage
       title="Mehr"
-      info="Hier findest du alles, was nicht unten in der Leiste steht: deine Aufgaben für den Tag, alle Bereiche von moto und dein Konto."
       overlays={
         <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} />
       }
     >
       {columns === 1 ? (
-        <Collection label="Mehr">{sections.map(group)}</Collection>
+        <div className="flex flex-col gap-6">
+          <Collection label="Mehr">{sections.map(group)}</Collection>
+          {logout}
+        </div>
       ) : (
         <div
           className={`grid items-start gap-4 ${columns === 3 ? "grid-cols-3" : "grid-cols-2"}`}
         >
-          {balanceColumns(sections, columns).map((column) => (
+          {splitColumns(sections, columns).map((column, index, all) => (
             <div key={column[0]?.key} className="flex flex-col gap-4">
               {column.map((section) => (
                 <Collection key={section.key} label={section.title}>
                   {group(section)}
                 </Collection>
               ))}
+              {index === all.length - 1 ? (
+                <div className="mt-2">{logout}</div>
+              ) : null}
             </div>
           ))}
         </div>
