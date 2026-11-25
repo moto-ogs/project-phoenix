@@ -246,6 +246,8 @@ The shell, start cards, navigation and child pages read projections of one
 account-scoped `parentKeys.familyStart(berlinDay)` snapshot. Cold entry needs
 one `GET /parent/me/family-start`. On a protected document navigation, the
 layout and page share the server read; the browser claims its result on mount.
+If a promised seed supplies no value, readers of the same scoped key share one
+recovery request, just as they do on a normal cold mount.
 The profile and unrelated feeds are independent. Warm mounts do not fetch
 again. The server authorizes each child separately.
 
