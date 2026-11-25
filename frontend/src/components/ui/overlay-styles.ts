@@ -120,3 +120,11 @@ export const Z_INDEX = {
    */
   tooltip: zLayerValue("tooltip"),
 } as const;
+
+/**
+ * Eine Fußleiste in der App (#8070): eine Reihe, Hauptaktion rechts, auf
+ * jedem Gerät gleich. Stapelt der Aufrufer seine Knöpfe am Telefon
+ * (`flex-col`), stellt die Regel sie wieder nebeneinander.
+ */
+export const APP_FOOTER_ROW =
+  "app:[&>div]:flex-row app:[&>div]:flex-nowrap app:[&>div>*]:flex-1";

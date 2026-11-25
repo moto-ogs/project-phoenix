@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { FocusScope } from "@radix-ui/react-focus-scope";
 import { useLatest } from "~/lib/hooks/use-latest";
 import {
+  APP_FOOTER_ROW,
   OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
   OVERLAY_PANEL_STYLE,
@@ -267,9 +268,10 @@ export function Modal({
   const frame = React.useMemo(
     () => ({
       isDismissDisabled,
-      stackedSheetFooter: mobileSheet && sheetFooter === "stacked",
+      // In der App steht die Fußleiste jedes Blatts als Reihe (#8070).
+      stackedSheetFooter: mobileSheet && !appSheet && sheetFooter === "stacked",
     }),
-    [isDismissDisabled, mobileSheet, sheetFooter],
+    [isDismissDisabled, mobileSheet, appSheet, sheetFooter],
   );
 
   // Keeps focus in the dialog while a busy footer is disabled (#6533).
@@ -485,9 +487,13 @@ export function Modal({
               {/* Footer if provided */}
               {footer && (
                 <div
-                  className={`flex shrink-0 gap-3 border-t border-gray-100 bg-gray-50/50 p-4 sm:p-6 ${getModalFooterClass(
-                    appSheet || mobileSheet ? sheetFooter : null,
-                  )}`}
+                  className={`flex shrink-0 gap-3 border-t border-gray-100 bg-gray-50/50 p-4 sm:p-6 ${
+                    // In der App eine Reihe, Hauptaktion rechts, auf jedem
+                    // Gerät gleich (#8070).
+                    appSheet
+                      ? `${getModalFooterClass("row")} ${APP_FOOTER_ROW}`
+                      : getModalFooterClass(mobileSheet ? sheetFooter : null)
+                  }`}
                 >
                   <ModalFrameContext.Provider value={frame}>
                     {footer}

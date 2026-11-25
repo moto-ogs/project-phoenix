@@ -73,7 +73,7 @@ import { DialogActions, DialogErrorSlot } from "./dialog-parts";
 import { useBusyFocus } from "./hooks/useBusyFocus";
 import { InOverlayContext } from "./in-overlay";
 import { useSheetAboveKeyboard } from "./hooks/useSheetAboveKeyboard";
-import { useIsApp } from "~/lib/device-context";
+import { APP_QUERY, useIsApp } from "~/lib/device-context";
 import {
   SheetSessionProvider,
   useParentSheetId,
@@ -83,6 +83,7 @@ import {
 import type { FormModalPending } from "./use-form-modal-pending";
 import type { FormErrorInput } from "./form-error";
 import {
+  APP_FOOTER_ROW,
   OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
   Z_LAYER,
@@ -90,6 +91,7 @@ import {
 import { isInsideModal, SHEET_SCOPE_PROPS, useOverlay } from "./overlay-stack";
 import { FOCUSABLE_SELECTOR, useScrollRegion } from "./hooks/useScrollRegion";
 import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
+import { SHEET_TABLET_CARD_CLASSES } from "./drawer";
 
 /**
  * Unter sm fährt das Panel von unten ein, darüber von rechts. Im Server-Render
@@ -105,8 +107,11 @@ function useSlideOverDirection(): {
   isResolved: boolean;
 } {
   const belowSm = useResolvedMediaQuery(BELOW_SM);
+  // In der App (auch iPad hoch und quer) ist das Panel das eine Blatt der
+  // App: von unten, am iPad als Karte (#8070). Der Desktop behält die Seite.
+  const app = useResolvedMediaQuery(APP_QUERY);
   return {
-    direction: belowSm === true ? "bottom" : "right",
+    direction: belowSm === true || app === true ? "bottom" : "right",
     isResolved: belowSm !== null,
   };
 }
@@ -463,7 +468,8 @@ const SlideOverContent = React.forwardRef<
             isSheet
               ? // Blatt von unten: an drei Kanten bündig, oben abgerundet, nie
                 // höher als 90vh — der Rest der Seite bleibt als Kontext sichtbar.
-                "inset-x-0 bottom-0 max-h-[90vh] rounded-t-2xl"
+                // Am iPad schwebt es als Karte wie jedes Blatt der App.
+                `inset-x-0 bottom-0 max-h-[90vh] rounded-t-2xl ${SHEET_TABLET_CARD_CLASSES}`
               : // `max-w-full` fängt den einen Frame vor dem matchMedia-Effect ab:
                 // ein per Deep-Link (?block=…) sofort offenes Panel würde sonst
                 // kurz mit 420px auf einem schmaleren Display stehen.
@@ -757,6 +763,7 @@ const SlideOverFooter = ({
       className={cn(
         "flex-row border-t border-slate-200 bg-slate-50 px-5 py-4",
         className,
+        APP_FOOTER_ROW,
       )}
     />
   );
