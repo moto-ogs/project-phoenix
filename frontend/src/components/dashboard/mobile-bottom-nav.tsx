@@ -1052,7 +1052,7 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
         barClassName="px-2"
         fade={false}
         // Dieselbe Karte wie die Aktionsleiste darüber (#8070).
-        look="card"
+        look={isApp ? "card" : "pill"}
         indicator={indicator}
         hidden={pillHidden}
         // Auf dem iPad quer so breit wie auf dem iPad hoch, mittig.

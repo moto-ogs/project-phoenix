@@ -33,37 +33,31 @@
  * stehen zwei Varianten-Regeln für dieselbe Eigenschaft nebeneinander und
  * welche gewinnt, hängt an der internen Sortierung von Tailwind.
  */
-@custom-variant compact (@media (width >= 48rem) and ((width < 64rem) or (max-height: 56.25rem)) and (not (pointer: coarse)));
+@custom-variant compact (@media (width >= 48rem) and ((width < 64rem) or (max-height: 56.25rem)));
 
 /*
  * Gerätekontext (Prototyp Mobile-Zielbild, #8070). Ein Begriff statt
  * verstreuter Breakpoints; JS-Gegenstück: `lib/device-context.tsx`.
  *
- *   - `app:`   App-Oberfläche: schmaler als `lg` ODER Finger als Hauptzeiger.
- *              Pill, Blätter, Seitenmuster. Telefon und iPad in beiden Lagen.
- *   - `desk:`  Desktop-Oberfläche: ab `lg` UND Maus/Trackpad. Heutiger Code.
- *   - `phone:` App unter `sm` (640 px).
- *   - `tablet:` App ab `sm` (iPad hoch und quer, schmale Fenster).
- *   - `split:` App ab `lg` mit Finger (iPad quer): Liste neben Detail.
+ *   - `app:`   App-Oberfläche: nur das Telefon (schmaler als `sm`, 640 px).
+ *              Pill, Blätter, Seitenmuster.
+ *   - `desk:`  Alles andere, also Desktop und iPad: der heutige Code.
+ *   - `phone:` gleich `app:`.
+ *   - `tablet:`, `split:` treffen nie zu. Das iPad behält die heutige
+ *              Oberfläche (Entscheid nach dem Prototyp); die Varianten
+ *              bleiben stehen, damit die Bausteine nicht umgebaut werden.
  *
- * Genau eine von `app:`/`desk:` trifft zu. Der Desktop sieht keine `app:`-
- * Regel, deshalb bleibt er pixelgleich. `compact` gilt nur ohne Finger: Das
- * iPad bekommt die App-Maße statt der dichten Desktop-Stufe.
+ * Genau eine von `app:`/`desk:` trifft zu. Desktop und iPad sehen keine
+ * `app:`-Regel, deshalb bleiben sie pixelgleich.
  */
-/* Blockform: In der Kurzform trennt Tailwind am Komma wie in einer
-   Selektorliste, das ergab ungültiges CSS. */
-@custom-variant app {
-  @media (width < 64rem), (pointer: coarse) {
-    @slot;
-  }
-}
+@custom-variant app (@media (width < 40rem));
 /* Im Fluss: nicht absolut, fest oder klebend positioniert. Die Trefferfläche
    (`TOUCH_HIT_AREA`) macht nur solche Knöpfe zum Bezugsrahmen. */
 @custom-variant in-flow (&:where(:not(.absolute, .fixed, .sticky)));
-@custom-variant desk (@media (width >= 64rem) and (not (pointer: coarse)));
+@custom-variant desk (@media (width >= 40rem));
 @custom-variant phone (@media (width < 40rem));
-@custom-variant tablet (@media (width >= 40rem) and ((width < 64rem) or (pointer: coarse)));
-@custom-variant split (@media (width >= 64rem) and (pointer: coarse));
+@custom-variant tablet (@media (width < 0px));
+@custom-variant split (@media (width < 0px));
 
 /*
  * moto brand tokens
@@ -986,7 +980,7 @@ html[data-chat-page-lock] body {
 /* Ohne Pill (#8070, `usePillHidden`, z. B. im Chat-Verlauf) hält `<main>`
    unten nur die Safe Area frei statt der Fläche der Pill. Nur in der App;
    der Desktop setzt das Attribut nie. */
-@media (width < 64rem), (pointer: coarse) {
+@media (width < 40rem) {
   html[data-pill-hidden] #hauptinhalt {
     padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
   }
@@ -1271,7 +1265,7 @@ html[data-chat-page-lock] body {
  * Selektoren auf vorhandene Elemente, damit der Desktop kein neues
  * Attribut und keine neue Klasse bekommt.
  */
-@media (width < 64rem), (pointer: coarse) {
+@media (width < 40rem) {
   @media (prefers-reduced-motion: no-preference) {
     nav.fixed.bottom-0 {
       view-transition-name: moto-pill;
@@ -1339,7 +1333,7 @@ html[data-chat-page-lock] body {
  * - Standalone: kein Gummiband-Überscrollen am Dokument (iOS wirkt nur am
  *   html); im Safari-Tab bleibt es.
  */
-@media (width < 64rem), (pointer: coarse) {
+@media (width < 40rem) {
   html[data-keyboard-open] nav.fixed.bottom-0 {
     display: none;
   }

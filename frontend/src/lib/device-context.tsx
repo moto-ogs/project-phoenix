@@ -6,12 +6,11 @@
  * Die Breite bestimmt den Aufbau, die Zeigerart die Bedienmaße. Daraus folgt
  * genau eine Oberfläche:
  *
- *   - `desktop`: ab 1024 px mit Maus/Trackpad. Der heutige Code, unverändert.
- *   - `tablet`:  App ab 640 px (iPad hoch, iPad quer, schmales Fenster).
- *   - `phone`:   App unter 640 px.
+ *   - `desktop`: ab 640 px, also Desktop und iPad. Der heutige Code, unverändert.
+ *   - `phone`:   App unter 640 px (Telefon).
  *
- * `split` meldet die App ab 1024 px mit Finger (iPad quer): Dort steht die
- * Liste neben dem Detail. CSS-Gegenstücke: `app:`, `desk:`, `phone:`,
+ * `tablet` und `split` kommen nicht mehr vor: Das iPad behält die heutige
+ * Oberfläche (Entscheid nach dem Prototyp). CSS-Gegenstücke: `app:`, `desk:`, `phone:`,
  * `tablet:`, `split:` in `styles/globals.css`.
  *
  * Vor der Hydration ist der Kontext unbekannt (`resolved: false`). Bausteine
@@ -50,9 +49,10 @@ function useResolvedMediaQuery(query: string): boolean | null {
   return useSyncExternalStore(subscribe, getSnapshot, unknownOnServer);
 }
 
-export const APP_QUERY = "(width < 64rem), (pointer: coarse)";
+export const APP_QUERY = "(width < 40rem)";
 const PHONE_QUERY = "(width < 40rem)";
-const SPLIT_QUERY = "(width >= 64rem) and (pointer: coarse)";
+// Das iPad behält die heutige Oberfläche: kein `split`, kein `tablet`.
+const SPLIT_QUERY = "(width < 0px)";
 export const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 type DeviceLayout = "phone" | "tablet" | "desktop";
