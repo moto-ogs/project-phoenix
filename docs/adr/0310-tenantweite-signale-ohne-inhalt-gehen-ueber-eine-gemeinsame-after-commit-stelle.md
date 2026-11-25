@@ -46,9 +46,10 @@ Variante 2.
    Ein neues Signal ist ein neuer Wert dort und ein Event in
    `realtime/events.go`, keine neue After-Commit-Stelle und kein neuer
    Registereintrag.
-3. Owner erreichen die Stelle über einen eigenen Port. Die Wurzel bindet ihn mit
-   `deliveryCompose.NewCalendarAppointmentsChanged(hub, logger)`, je Signal ein solcher Konstruktor; der Owner ruft ihn in
-   seiner Transaktion. Der Kalender ist der erste Nutzer:
+3. Owner erreichen die Stelle über einen eigenen Port. Die Wurzel bindet ihn
+   über `deliveryCompose.NewTenantSignal(hub, logger, event)`. Delivery prüft,
+   ob das Event als inhaltsloses Signal zugelassen ist. Der Owner ruft den Port
+   in seiner Transaktion. Der Kalender ist der erste Nutzer:
    `calendar_appointments_changed` nach jeder Termin-Schreibung
    (`withinAppointmentWrite`: Anlegen, Ändern, Absagen, Löschen, Absage eines
    einzelnen Termins einer Serie, Schultermine, Elternsprechtag-Buchungen).
@@ -73,3 +74,13 @@ Variante 2.
 - Die Signale sind verlustbehaftet (ADR 0145). Leser laden bei Fokus, nach
   erneuter Verbindung und über ihre Abfrage nach; ein verlorenes Event verzögert
   nur die Anzeige.
+
+## Nachtrag: Eigene Zeiterfassung (#8081)
+
+Workforce meldet Zeitbuchungen, Arbeitszeitmodelle und Monatsabschlüsse weiter
+mit `staff_time_tracking_changed`. Änderungen an Abwesenheiten melden jetzt
+`staff_leave_changed`. Beide Namen laufen über den bestehenden, unveränderten
+Callback in Delivery; der frühere eigene Callback für Zeiterfassungsänderungen
+und sein Registereintrag entfallen. Beide Signale tragen weiterhin keine IDs,
+Tage oder Inhalte. Das zweite Signal lässt die Urlaubsansicht bei reinen
+Zeitbuchungen unverändert.

@@ -28,7 +28,8 @@ vi.mock("~/lib/personal-calendar-api", () => ({
 vi.mock("~/lib/staff-api", () => ({
   staffAbsenceService: { decisionMails: read },
 }));
-vi.mock("~/lib/time-tracking-api", () => ({
+vi.mock("~/lib/time-tracking-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/time-tracking-api")>()),
   timeTrackingService: { getAbsenceRequestMails: read },
 }));
 
@@ -57,11 +58,6 @@ function Decision() {
   useAbsenceDecisionMails(["1"]);
   return null;
 }
-function OwnRequest() {
-  useOwnAbsenceRequestMails(["1"]);
-  return null;
-}
-
 const views = [
   {
     name: "enrollment",
@@ -87,15 +83,6 @@ const views = [
     fast: 30_000,
     result: (outcome: string, active: boolean) => ({
       mails: outcome ? { "1": outcome } : {},
-      awaitingFeedback: active,
-    }),
-  },
-  {
-    name: "notice",
-    View: OwnRequest,
-    fast: 30_000,
-    result: (outcome: string, active: boolean) => ({
-      mails: outcome ? { "1": { [outcome]: 1 } } : {},
       awaitingFeedback: active,
     }),
   },
@@ -165,6 +152,46 @@ describe.each(views)("$name mail reader", ({ View, fast, result }) => {
     await tick(600_000);
     expect(read).toHaveBeenCalledTimes(1);
     view.unmount();
+  });
+});
+
+describe("own request mail reader after the leave overview", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    read.mockReset();
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  });
+  afterEach(releaseFakeTimers);
+
+  it("uses the initial mail result, then polls only the small read until it settles", async () => {
+    read.mockResolvedValue({
+      mails: { "1": { delivered: 1 } },
+      awaitingFeedback: false,
+    });
+    const { result } = renderHook(
+      () =>
+        useOwnAbsenceRequestMails(["1-2026-11-25"], {
+          state: "ready",
+          awaiting_feedback: true,
+          absences: { "1": { accepted: 1 } },
+        }),
+      {
+        wrapper: ({ children }) => (
+          <SWRConfig value={{ provider: () => new Map() }}>
+            {children}
+          </SWRConfig>
+        ),
+      },
+    );
+
+    expect(result.current.mails["1"]).toEqual({ accepted: 1 });
+    await tick(29_999);
+    expect(read).not.toHaveBeenCalled();
+    await tick(1);
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(result.current.mails["1"]).toEqual({ delivered: 1 });
+    await tick(30_000);
+    expect(read).toHaveBeenCalledTimes(1);
   });
 });
 

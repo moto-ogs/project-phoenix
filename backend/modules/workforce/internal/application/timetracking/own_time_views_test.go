@@ -20,6 +20,23 @@ func (unavailableOwnTimeShifts) ListShifts(context.Context, workforce.ShiftRange
 	return nil, errors.New("shift read failed")
 }
 
+func TestOwnClockAdvanceUsesAccountStartMonthBoundary(t *testing.T) {
+	t.Parallel()
+	anchor := calendar.NewDate(2026, time.June, 10)
+	for _, tc := range []struct {
+		today calendar.Date
+		want  bool
+	}{
+		{calendar.NewDate(2026, time.May, 29), true},
+		{calendar.NewDate(2026, time.June, 9), false},
+		{anchor, true},
+	} {
+		facts := ownTimeFacts{now: tc.today.BerlinMidnight(), today: tc.today, targets: &dailyTargetResolver{}}
+		projected := facts.projectClock(wtmStaffID, nil, nil, ownChartDays(tc.today), anchor, &MonthSummary{})
+		require.Equal(t, tc.want, projected.TodayCountsInTotals, "%s", tc.today)
+	}
+}
+
 func TestOwnMonthSummaryDoesNotReportAnUnavailableShiftPlanAsEmpty(t *testing.T) {
 	t.Parallel()
 	var log bytes.Buffer

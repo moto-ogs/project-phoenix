@@ -12,7 +12,5 @@ import (
 // target working time. The root hands it to the work-time-model HTTP
 // adapter, which must not reach the realtime platform itself.
 func staffTimeTrackingNotifier(broadcaster realtime.Broadcaster) func(context.Context) {
-	return func(ctx context.Context) {
-		deliveryCompose.QueueStaffTimeTrackingChanged(ctx, broadcaster, nil)
-	}
+	return deliveryCompose.NewTenantSignal(broadcaster, nil, realtime.EventStaffTimeTrackingChanged).Announce
 }

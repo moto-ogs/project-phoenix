@@ -142,18 +142,6 @@ describe("usePeriodMetrics", () => {
     );
   });
 
-  it("uses own-portal keys when no staffId is passed", () => {
-    const swr = mockSWR({ summary: SUMMARY, projection: new Map() });
-
-    renderHook(() => usePeriodMetrics());
-
-    expect(swr.keys).toContain("time-tracking-month-summary-2026-8");
-    // Same key the own Zeiterfassung table uses → SWR dedupes the overlap.
-    expect(swr.keys).toContain(
-      "time-tracking-schedule-targets-2026-08-03-2026-08-09",
-    );
-  });
-
   // The week used to credit absences from the absence list itself and could
   // then disagree with the Monatskarte for the same days (#6847). It reads
   // only the server's day projection now, never sessions or absences.
@@ -214,10 +202,10 @@ describe("usePeriodMetrics", () => {
   it("polls the week projection like the month card", () => {
     const swr = mockSWR({ summary: SUMMARY, projection: new Map() });
 
-    renderHook(() => usePeriodMetrics());
+    renderHook(() => usePeriodMetrics("42"));
 
     expect(
-      swr.configs.get("time-tracking-schedule-targets-2026-08-03-2026-08-09")
+      swr.configs.get("staff-schedule-targets-42-2026-08-03-2026-08-09")
         ?.refreshInterval,
     ).toBe(60_000);
   });
@@ -243,14 +231,14 @@ describe("usePeriodMetrics", () => {
       { projection: error },
     );
 
-    const { result } = renderHook(() => usePeriodMetrics());
+    const { result } = renderHook(() => usePeriodMetrics("42"));
 
     expect(result.current.week).toBeNull();
     expect(result.current.error).toBe(error);
     expect(result.current.failed).toBe(true);
     await result.current.retry();
     expect(
-      swr.mutates.get("time-tracking-schedule-targets-2026-08-03-2026-08-09"),
+      swr.mutates.get("staff-schedule-targets-42-2026-08-03-2026-08-09"),
     ).toHaveBeenCalledTimes(1);
   });
 
@@ -261,14 +249,14 @@ describe("usePeriodMetrics", () => {
       { summary: error },
     );
 
-    const { result } = renderHook(() => usePeriodMetrics());
+    const { result } = renderHook(() => usePeriodMetrics("42"));
 
     expect(result.current.month).toBeNull();
     expect(result.current.error).toBe(error);
     expect(result.current.failed).toBe(true);
     await result.current.retry();
     expect(
-      swr.mutates.get("time-tracking-month-summary-2026-8"),
+      swr.mutates.get("staff-month-summary-42-2026-8"),
     ).toHaveBeenCalledTimes(1);
   });
 

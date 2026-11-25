@@ -453,7 +453,13 @@ export const schoolTraegerDocumentKeys = {
   list: () => "traeger-documents-school",
 } as const;
 export const timeTrackingKeys = {
-  current: () => "time-tracking-current",
+  overviewFamily: "time-tracking-overview-",
+  overview: (day: string) => `time-tracking-overview-${day}`,
+  periodFamily: "time-tracking-period-",
+  period: (view: "week" | "month", start: string) =>
+    `time-tracking-period-${view}-${start}`,
+  leaveOverviewFamily: "time-tracking-leave-overview-",
+  leaveOverview: (year: number) => `time-tracking-leave-overview-${year}`,
   // Eigene Schichten auf „Mein Dienstplan“ (#3821). Beide teilen das Präfix
   // `time-tracking-own-shifts-week-` aus PLAN_CACHE_KEY_PREFIXES und den
   // SSE-Präfixen: eine Planänderung frischt so auch die Suche nach der
@@ -469,30 +475,12 @@ export const timeTrackingKeys = {
     `time-tracking-holidays-${from}-${to}`,
   closingDays: (from: string, to: string) =>
     `time-tracking-closing-days-${from}-${to}`,
-  /** Eigene Einsätze von heute: Startseite und Zeiterfassung teilen sie. */
+  /** Eigene Einsätze von heute auf der Startseite. */
   ownAssignmentsToday: (today: string) =>
     `time-tracking-own-assignments-today-${today}`,
   /** Eigene Tagesprojektion im Zeitraum (#2443). */
   scheduleTargets: (from: string, to: string) =>
     `time-tracking-schedule-targets-${from}-${to}`,
-  /** Eigene Monatskarte. */
-  monthSummary: (year: number, month: number) =>
-    `time-tracking-month-summary-${year}-${month}`,
-  /** Eigener Arbeitszeitplan; Präfix „time-tracking-own-schedule-“ im SSE. */
-  ownSchedule: (staffId: string) => `time-tracking-own-schedule-${staffId}`,
-  /** Eigene Schichten eines Tages für die Stempeluhr. */
-  ownShiftsToday: (day: string) => `time-tracking-own-shifts-today-${day}`,
-  /** Eigene Arbeitsblöcke für das Wochendiagramm. */
-  history: (from: string, to: string) => `time-tracking-history-${from}-${to}`,
-  /**
-   * Eigene Arbeitsblöcke, Abwesenheiten und Schichten der Tabelle. Alle
-   * beginnen mit „time-tracking-table“, das ein Stempeln neu lädt.
-   */
-  table: (from: string, to: string) => `time-tracking-table-${from}-${to}`,
-  tableAbsences: (from: string, to: string) =>
-    `time-tracking-table-absences-${from}-${to}`,
-  tableShifts: (from: string, to: string) =>
-    `time-tracking-table-shifts-${from}-${to}`,
 } as const;
 
 /** Exact list identity shared with intent; preserve the SSE group segment. */

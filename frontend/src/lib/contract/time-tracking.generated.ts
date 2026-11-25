@@ -539,6 +539,7 @@ export interface OwnClockOverview {
   chart: OwnTimeChartPoint[] | null;
   completed_today_minutes: number;
   completed_week_minutes: number;
+  today_counts_in_totals: boolean;
   labor_days: WorkDayLaborHint[] | null;
   is_over_weekly_max: boolean;
   week: OwnTimeTotals;
@@ -558,6 +559,7 @@ export const OwnClockOverviewSchema: z.ZodType<OwnClockOverview, unknown> = obje
   chart: nullable(arr(OwnTimeChartPointSchema)),
   completed_today_minutes: safeInt,
   completed_week_minutes: safeInt,
+  today_counts_in_totals: bool,
   labor_days: nullable(arr(WorkDayLaborHintSchema)),
   is_over_weekly_max: bool,
   week: OwnTimeTotalsSchema,
@@ -701,6 +703,7 @@ export const OwnTimeMonthSummarySchema: z.ZodType<OwnTimeMonthSummary, unknown> 
 
 /** Go: workforce.OwnTimePeriod */
 export interface OwnTimePeriod {
+  staff_id: string;
   view: OpenEnum<OwnTimePeriodView>;
   start: string | null;
   end: string | null;
@@ -720,6 +723,7 @@ export interface OwnTimePeriod {
 }
 
 export const OwnTimePeriodSchema: z.ZodType<OwnTimePeriod, unknown> = object<OwnTimePeriod>({
+  staff_id: int64String,
   view: str,
   start: nullable(calendarDate),
   end: nullable(calendarDate),

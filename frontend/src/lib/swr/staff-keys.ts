@@ -151,12 +151,8 @@ export const staffAbsenceKeys = {
     value: string,
   ) =>
     `staff-absences-rebooking-preview-${encodeURIComponent(staffId)}-${absenceIds.join(",")}-${encodeURIComponent(value)}`,
-  /** Eigene Abwesenheiten im Zeitraum; derselbe Eintrag wie die Seite
-   *  „Zeiterfassung“. */
+  /** Abwesenheiten für die Überschneidungsprüfung im Urlaubsformular. */
   ownList: (from: string, to: string) => `time-tracking-absences-${from}-${to}`,
-  ownVacationQuota: (year: number) => `time-tracking-absences-quota-${year}`,
-  ownQuestioned: () => "time-tracking-absences-questioned",
-  ownAllowances: () => "time-tracking-absences-allowances",
   /** Abwesenheiten für das Stundenkonto einer Person (Reiter „Übersicht“). */
   accountListFamily: (staffId: string) => `staff-absences-account-${staffId}-`,
   accountList: (staffId: string, from: string, to: string): string =>

@@ -25879,6 +25879,7 @@
         "parent_message_read",
         "parent_message_unread_changed",
         "pickup_schedule_changed",
+        "staff_leave_changed",
         "staff_message",
         "staff_notices_changed",
         "staff_time_tracking_changed",
@@ -78928,6 +78929,12 @@
           }
         },
         {
+          "name": "today_counts_in_totals",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "labor_days",
           "schema": {
             "kind": "array",
@@ -79979,6 +79986,12 @@
       "name": "OwnTimePeriod",
       "go_type": "workforce.OwnTimePeriod",
       "fields": [
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
         {
           "name": "view",
           "schema": {

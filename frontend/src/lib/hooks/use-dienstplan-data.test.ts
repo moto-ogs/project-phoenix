@@ -339,10 +339,10 @@ describe("useDienstplanData", () => {
       "vertretung-gaps-",
       "staff-pending-absences-",
       "time-tracking-absences-",
-      "time-tracking-table-absences-",
-      "time-tracking-own-absences-",
+      "time-tracking-period-",
+      "time-tracking-overview-",
+      "time-tracking-leave-overview-",
       "staff-shifts-visible-",
-      "time-tracking-own-shifts-today-",
       // Eigener Dienstplan der Mitarbeitenden (#3821).
       "time-tracking-own-shifts-week-",
     ]);
