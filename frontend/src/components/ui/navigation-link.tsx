@@ -1,6 +1,5 @@
 "use client";
 
-import type { PrefetchResource } from "./data-prefetch-intent";
 // `.js`: Die Layouttests rendern ButtonLink in Node ohne Bundler (#6570).
 import NextLink from "next/link.js";
 import { forwardRef, type ComponentProps } from "react";
@@ -12,8 +11,6 @@ export type NavigationLinkProps = Omit<
   "href" | "prefetch"
 > & {
   readonly href: string;
-  /** Daten, die der Link bei Absicht zusätzlich zur Seite vorlädt. */
-  readonly resources?: readonly PrefetchResource[];
   /** `false` schaltet auch das Vorladen bei Absicht ab. */
   readonly prefetch?: false;
 };
@@ -27,8 +24,8 @@ export type NavigationLinkProps = Omit<
  * oder `onNavigate` den Klick abbricht.
  *
  * Vorladen erst bei Absicht (#2976, #4987): Ein sichtbarer Link lädt nichts.
- * Bleibt die Maus kurz auf ihm, bekommt er den Fokus oder beginnt eine
- * Berührung, schaltet er `prefetch` auf `true`. Next lädt dann die volle
+ * Bleibt der Zeiger kurz auf ihm oder bekommt er Tastaturfokus, schaltet er
+ * `prefetch` auf `true`. Eine Berührung beim Scrollen lädt nichts. Next lädt dann die volle
  * Zielseite samt ihrer JS-Module, nicht nur bis zur Ladehülle; der Klick
  * danach wartet nicht mehr auf den Code der Seite. Der Router hält diese
  * Daten nur im Speicher des Tabs; Logout und Schulwechsel laden die Seite
@@ -45,15 +42,11 @@ const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
       prefetch: allowPrefetch,
       onClick,
       onNavigate,
+      onPointerDown,
       onPointerEnter,
       onPointerLeave,
       onFocus,
-      onTouchStart,
-      onTouchMove,
-      onTouchEnd,
-      onTouchCancel,
       onBlur,
-      resources,
       ...anchorProps
     },
     ref,
@@ -63,16 +56,11 @@ const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
       href,
       target,
       prefetch: allowPrefetch,
-      onClick: progress.onClick,
+      onPointerDown,
       onPointerEnter,
       onPointerLeave,
       onFocus,
-      onTouchStart,
-      onTouchMove,
-      onTouchEnd,
-      onTouchCancel,
       onBlur,
-      resources,
     });
 
     // Jeder Handler steht hier genau einmal; `anchorProps` enthält keinen von
@@ -84,15 +72,12 @@ const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
         href={href}
         target={target}
         prefetch={intent.prefetch}
-        onClick={intent.onClick}
+        onClick={progress.onClick}
         onNavigate={progress.onNavigate}
+        onPointerDown={intent.onPointerDown}
         onPointerEnter={intent.onPointerEnter}
         onPointerLeave={intent.onPointerLeave}
         onFocus={intent.onFocus}
-        onTouchStart={intent.onTouchStart}
-        onTouchMove={intent.onTouchMove}
-        onTouchEnd={intent.onTouchEnd}
-        onTouchCancel={intent.onTouchCancel}
         onBlur={intent.onBlur}
       />
     );
