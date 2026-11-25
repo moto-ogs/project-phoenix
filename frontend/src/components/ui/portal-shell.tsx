@@ -66,7 +66,7 @@ export function PortalShell({
 }: PortalShellProps) {
   useFixedLayersFollowViewport();
   return (
-    <NavigationProgressProvider>
+    <NavigationProgressProvider manageScroll>
       <Suspense fallback={null}>
         <NavigationScrollPosition />
       </Suspense>

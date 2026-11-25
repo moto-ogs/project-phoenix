@@ -15,6 +15,8 @@ import { mapOgsGroupLiveResponse } from "~/lib/ogs-group-live-api";
 import { groupKeys } from "~/lib/swr/groups-keys";
 import PageContent from "./page-content";
 
+export const unstable_dynamicStaleTime = 60;
+
 export default async function OGSGroupPage({
   params,
   searchParams,

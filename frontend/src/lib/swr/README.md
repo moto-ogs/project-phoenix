@@ -332,6 +332,9 @@ BFF prefetch. Keep audited openings and any GET with a side effect out of
 that payload. When a page claims a key, the generation-locked handoff uses
 the same key as the browser reader and suppresses a duplicate browser load.
 A missing, failed or expired seed leaves the original retry path in charge.
+If the prefetched Flight payload supplies a promise that cannot settle, an
+open claim follows the real navigation's seed instead. Leaving the boundary
+or changing its session discards the claim through the same generation lock.
 
 `preload(key, fetcher, { intent: true })` is the speculative variant of the
 same locked writer. It skips an already current cached response and removes

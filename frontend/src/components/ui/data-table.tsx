@@ -1527,15 +1527,18 @@ export function DataTable<T>({
       );
       setOverflowStart(scroller.scrollLeft > 1);
     };
-    update();
     scroller.addEventListener("scroll", update, { passive: true });
     let observer: ResizeObserver | undefined;
     if (typeof ResizeObserver !== "undefined") {
+      // The first observer notification runs after layout. Measuring here
+      // synchronously would force the whole table's layout on every reveal.
       observer = new ResizeObserver(update);
       observer.observe(scroller);
       if (scroller.firstElementChild) {
         observer.observe(scroller.firstElementChild);
       }
+    } else {
+      update();
     }
     return () => {
       scroller.removeEventListener("scroll", update);

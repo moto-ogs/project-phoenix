@@ -8,6 +8,8 @@ import { SWRServerSeed } from "~/lib/swr/server-seed";
 import { schoolHomeSeed } from "~/lib/school/page-seed.server";
 import SchoolHomePage from "./page-content";
 
+export const unstable_dynamicStaleTime = 60;
+
 export default async function Page({
   searchParams,
 }: {

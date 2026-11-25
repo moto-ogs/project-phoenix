@@ -33,11 +33,6 @@ import { groups as groupKeys } from "~/lib/swr/groups";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import {
-  HANDOVER_ABSENT_WORDING,
-  handoverDetail,
-  handoverLine,
-} from "~/lib/class-handover";
-import {
   Suspense,
   useCallback,
   useEffect,
@@ -46,13 +41,7 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  CalendarRange,
-  Download,
-  FileText,
-  Search,
-  StickyNote,
-} from "lucide-react";
+import { CalendarRange, Download, FileText, Search } from "lucide-react";
 // SSE is handled globally by TenantAuthWrapper - real-time updates work automatically
 import { useSession } from "next-auth/react";
 import { hasSessionAccess } from "~/lib/session-access";
@@ -91,7 +80,6 @@ import type { Student } from "~/lib/student-helpers";
 import type { Group, Room } from "~/lib/api";
 import { Button } from "~/components/ui/button";
 import { DatePicker } from "~/components/ui/date-picker";
-import { DataTableStatusBadge } from "~/components/ui/data-table";
 import {
   berlinTodayISO,
   formatDate,
@@ -101,7 +89,6 @@ import {
 import { useOptionalSupervision } from "~/lib/supervision-context";
 import { schoolClassesLabel } from "~/lib/school-class-label";
 import { useHolidayGuestLabels } from "~/lib/hooks/use-holiday-guest-labels";
-import { StudentPresenceBadge } from "@/components/students/presence/student-presence-badge";
 import {
   LOCATION_STATUSES,
   parseLocation,
@@ -113,20 +100,9 @@ import {
   isTransitLocation,
 } from "~/lib/location-helper";
 import { countedDayStatus, dayStatusLabel } from "~/lib/presence-status";
-import { teacherHintKey, teacherHintText } from "~/lib/student-helpers";
 import { useMinuteClock } from "~/lib/pickup-helpers";
 import { useLatest } from "~/lib/hooks/use-latest";
-import {
-  StudentCard,
-  SchoolClassIcon,
-  GroupIcon,
-  DepartureModeIcon,
-  StudentInfoRow,
-  PickupTimeRow,
-  ArrivalTimeRow,
-  StudentAbsenceRow,
-  StudentPendingExcusedRow,
-} from "~/components/students/student-card";
+import { useAfterInitialPaint } from "~/lib/hooks/use-after-initial-paint";
 import {
   SearchStudentCard,
   SearchStudentStatusBadge,
@@ -213,14 +189,11 @@ import {
 } from "~/lib/multi-value-param";
 import { activeService } from "~/lib/active-api";
 import type { TrackingIndicatorsResponse } from "~/lib/active-helpers";
-import { TrackingIndicators } from "~/components/students/tracking-indicators";
 import {
-  getStudentAbsence,
   getStudentDayTimes,
   getStudentTimeStatus,
   getTimeStatusSortRank,
 } from "~/lib/student-time-status";
-import { getDayPlanningNotComingLabel } from "~/lib/day-planning-helper";
 import {
   matchesTrackingFilter,
   parseTrackingFilter,
@@ -2199,7 +2172,10 @@ function SearchPageContent() {
     },
     [effectiveAttendanceFilter, matchesNonStatusClientFilters],
   );
-  const filteredStudents: Student[] = students.filter(matchesClientFilters);
+  const filteredStudents = useMemo(
+    () => students.filter(matchesClientFilters),
+    [students, matchesClientFilters],
+  );
 
   // The answers of the registration form as one choice each (#6954):
   // "Seepferdchen vorhanden: Ja (12)". The number is the children the list
@@ -3304,6 +3280,15 @@ function SearchPageContent() {
     (student: Student) => checkinClickRef.current(student),
     [checkinClickRef],
   );
+  // Build the first viewport before the rest of a long card list on a
+  // client remount. The opening document still renders the complete list;
+  // grouping and bulk selection always use and render the complete result.
+  const allCards = useAfterInitialPaint();
+  const initialCardCount =
+    allCards || schoolCheckin.isActive
+      ? Infinity
+      : Math.max(1, Math.floor(window.innerWidth / 320)) *
+        Math.ceil(window.innerHeight / 112);
   const renderMemoizedStudentCard = (student: Student) => {
     const studentIdStr = student.id.toString();
     return (
@@ -3795,240 +3780,6 @@ function SearchPageContent() {
                 }
                 // Fehler und Leerzustand liegen im Gerüst (`error`/`empty`)
                 // und ersetzen den Inhalt dort.
-                const _renderStudentCard = (student: Student) => {
-                  const checkinState = deriveCheckinState(
-                    student.current_location,
-                  );
-                  const studentIdStr = student.id.toString();
-                  // Detailed-mode students sitting in a room get a confirmation
-                  // step; everyone else toggles straight away (#2220).
-                  const roomToConfirm = checkoutConfirmationRoom(
-                    student.current_location,
-                  );
-                  return (
-                    <StudentCard
-                      key={student.id}
-                      studentId={student.id}
-                      firstName={student.first_name}
-                      lastName={student.second_name}
-                      photoUrl={student.photo_url ?? null}
-                      onClick={() =>
-                        router.push(`/students/${student.id}?from=${fromParam}`)
-                      }
-                      checkinMode={
-                        checkinModeAvailable && schoolCheckin.isActive
-                      }
-                      checkinState={checkinState}
-                      checkinSelectMode={schoolCheckin.selectionActive}
-                      isCheckinSelected={schoolCheckin.selectedIds.has(
-                        studentIdStr,
-                      )}
-                      isCheckinPending={schoolCheckin.pendingIds.has(
-                        studentIdStr,
-                      )}
-                      checkinTargetName={checkinTarget.target?.roomName ?? null}
-                      onCheckinClick={() => {
-                        // Selection sub-mode (#2359): a tap only marks the child;
-                        // nothing is written until the bar's bulk action runs.
-                        if (schoolCheckin.selectionActive) {
-                          schoolCheckin.toggleSelected(studentIdStr);
-                          return;
-                        }
-                        if (roomToConfirm) {
-                          setPendingRoomCheckout({
-                            studentId: studentIdStr,
-                            studentName:
-                              `${student.first_name} ${student.second_name}`.trim(),
-                            room: roomToConfirm,
-                          });
-                          return;
-                        }
-                        void schoolCheckin.toggle(studentIdStr, checkinState);
-                      }}
-                      locationBadge={
-                        isToday ? (
-                          <StudentPresenceBadge
-                            student={student}
-                            displayMode="contextAware"
-                            userGroups={myGroups}
-                            groupRooms={myGroupRooms}
-                            supervisedRooms={mySupervisedRooms}
-                            variant="modern"
-                            size="md"
-                            showLocationSince={isInClassLocation(
-                              student.current_location,
-                            )}
-                          />
-                        ) : (
-                          // Non-today dates show the planned expectation, never the
-                          // live location (#1939). When the caller lacks full access
-                          // the backend skips day-planning enrichment and omits
-                          // day_planning_status; render an unknown state rather than
-                          // asserting "Kommt nicht" for a result that was never
-                          // calculated or disclosed.
-                          <DataTableStatusBadge
-                            active={
-                              student.day_planning_status === "comes_today"
-                            }
-                            unknown={student.day_planning_status === undefined}
-                            activeLabel="Kommt"
-                            inactiveLabel="Kommt nicht"
-                            unknownLabel="Keine Angabe"
-                          />
-                        )
-                      }
-                      extraContent={
-                        <>
-                          <StudentInfoRow icon={<SchoolClassIcon />}>
-                            {holidayGuestLabel(student) ??
-                              (student.school_class || "–")}
-                          </StudentInfoRow>
-                          <StudentInfoRow icon={<GroupIcon />}>
-                            Gruppe: {student.group_name || "–"}
-                          </StudentInfoRow>
-                          {student.has_full_access !== false && (
-                            <StudentInfoRow icon={<DepartureModeIcon />} wrap>
-                              Heimweg: {dailyDepartureLabelForStudent(student)}
-                            </StudentInfoRow>
-                          )}
-                          {student.has_full_access !== false &&
-                            student.pending_excused_note !== undefined && (
-                              <StudentPendingExcusedRow
-                                note={student.pending_excused_note}
-                              />
-                            )}
-                          {(student.teacher_hints ?? []).map((hint) => (
-                            <StudentInfoRow
-                              key={teacherHintKey(hint)}
-                              icon={
-                                <StickyNote
-                                  className="h-3.5 w-3.5 text-gray-500"
-                                  aria-hidden="true"
-                                />
-                              }
-                              wrap
-                            >
-                              {teacherHintText(hint)}
-                            </StudentInfoRow>
-                          ))}
-                          {student.has_full_access !== false &&
-                            student.class_handover &&
-                            (student.class_handover.absent ? (
-                              <StudentAbsenceRow
-                                wording={HANDOVER_ABSENT_WORDING}
-                                label={handoverDetail(student.class_handover)}
-                              />
-                            ) : (
-                              <StudentInfoRow icon={<SchoolClassIcon />}>
-                                {handoverLine(student.class_handover)}
-                              </StudentInfoRow>
-                            ))}
-                          {student.has_full_access !== false &&
-                            (() => {
-                              const absence = getStudentAbsence({
-                                sick: student.sick,
-                                classTrip: student.class_trip,
-                                excused: student.excused,
-                                currentLocation: isToday
-                                  ? student.current_location
-                                  : null,
-                              });
-                              const absenceWording = isToday
-                                ? undefined
-                                : "Kommt nicht";
-                              // Absence rows fill the arrival slot; a neutral
-                              // "Gehzeit: –" row (deliberately without the planned
-                              // time, so no overdue styling can fire for a child
-                              // who is not coming) keeps absent and present cards
-                              // at the same four-row height.
-                              const absencePickupRow = (
-                                <PickupTimeRow
-                                  isException={false}
-                                  now={planningNow}
-                                />
-                              );
-                              if (absence && !student.actual_pickup_time) {
-                                return (
-                                  <>
-                                    <StudentAbsenceRow
-                                      label={absence.label}
-                                      wording={absenceWording}
-                                      note={student.pickup_notes}
-                                    />
-                                    {absencePickupRow}
-                                  </>
-                                );
-                              }
-                              const dayPlanningNotComingLabel =
-                                getDayPlanningNotComingLabel(student, {
-                                  ignoreCurrentAttendance: !isToday,
-                                });
-                              if (
-                                dayPlanningNotComingLabel &&
-                                !student.actual_pickup_time
-                              ) {
-                                return (
-                                  <>
-                                    <StudentAbsenceRow
-                                      label={dayPlanningNotComingLabel}
-                                      wording={absenceWording}
-                                    />
-                                    {absencePickupRow}
-                                  </>
-                                );
-                              }
-                              return (
-                                <>
-                                  <ArrivalTimeRow
-                                    arrivalTime={student.arrival_time}
-                                    actualTime={student.actual_arrival_time}
-                                    isException={
-                                      student.arrival_is_exception ?? false
-                                    }
-                                    isAbsent={
-                                      (student.arrival_is_exception ?? false) &&
-                                      !student.arrival_time
-                                    }
-                                    notes={student.arrival_notes}
-                                    now={planningNow}
-                                    absentWording={absenceWording}
-                                    day={getStudentDayTimes(student, {
-                                      ignoreCurrentAttendance: !isToday,
-                                    })}
-                                  />
-                                  <PickupTimeRow
-                                    pickupTime={
-                                      student.pickup_time ?? undefined
-                                    }
-                                    actualTime={student.actual_pickup_time}
-                                    isException={
-                                      student.pickup_is_exception ?? false
-                                    }
-                                    notes={student.pickup_notes}
-                                    now={planningNow}
-                                    day={getStudentDayTimes(student, {
-                                      ignoreCurrentAttendance: !isToday,
-                                    })}
-                                  />
-                                </>
-                              );
-                            })()}
-                        </>
-                      }
-                      trackingIndicators={
-                        isToday &&
-                        trackingData?.labels?.length &&
-                        student.has_full_access !== false ? (
-                          <TrackingIndicators
-                            labels={trackingData.labels}
-                            results={trackingData.results[student.id] ?? []}
-                          />
-                        ) : undefined
-                      }
-                    />
-                  );
-                };
-
                 if (effectiveGroupMode !== "none") {
                   return (
                     <div className="space-y-6">
@@ -4059,7 +3810,9 @@ function SearchPageContent() {
 
                 return (
                   <CollectionGrid>
-                    {sortedStudents.map(renderMemoizedStudentCard)}
+                    {sortedStudents
+                      .slice(0, initialCardCount)
+                      .map(renderMemoizedStudentCard)}
                   </CollectionGrid>
                 );
               })()}

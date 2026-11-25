@@ -308,25 +308,8 @@ function getOgsStudentDay(
   };
 }
 
-// Content equality for the group list — used to keep a stable array
-// reference across sync-effect runs that change nothing.
-function areOgsGroupsEqual(a: OGSGroup[], b: OGSGroup[]): boolean {
-  if (a.length !== b.length) return false;
-  return a.every((group, i) => {
-    const other = b[i];
-    return (
-      !!other &&
-      group.id === other.id &&
-      group.name === other.name &&
-      group.roomId === other.roomId &&
-      group.roomName === other.roomName &&
-      group.studentCount === other.studentCount &&
-      group.presentCount === other.presentCount &&
-      group.viaSubstitution === other.viaSubstitution &&
-      group.isPersonal === other.isPersonal
-    );
-  });
-}
+const NO_ROOM_STATUS: Record<string, studentsContract.RoomStatus> = {};
+const NO_PICKUP_TIMES = new Map<string, OgsPickupInfo>();
 
 /**
  * Gruppenreiter für die Kopfkarte. Bis zu vier Gruppen stehen einzeln; ab der
@@ -358,7 +341,7 @@ function OGSGroupPageContent() {
   });
   const memory = useSidebarMemory();
 
-  const { setGroupAttendanceCount } = useGroupAttendanceCounts();
+  const { counts, setGroupAttendanceCount } = useGroupAttendanceCounts();
   const canAdministerGroups = hasEffectiveAdminScope(session);
 
   // Only binary-mode tenants expose the web check-in toggle; in detailed
@@ -394,12 +377,6 @@ function OGSGroupPageContent() {
     void schoolCheckin.toggle(studentId, "anwesend", note, reason);
   });
 
-  // Check if user has access to OGS groups
-  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
-
-  // State variables for multiple groups
-  const [allGroups, setAllGroups] = useState<OGSGroup[]>([]);
-
   // Pre-select group from URL param (?group=<id>)
   const groupParam = searchParams.get("group");
   const rememberedGroupKey = memory.key("sidebar-last-group");
@@ -418,22 +395,13 @@ function OGSGroupPageContent() {
     }
     return null;
   });
-  const [students, setStudents] = useState<Student[]>([]);
+  const [lastDisplayed, setLastDisplayed] = useState<OgsLiveViewData>();
   const [searchTerm, setSearchTerm] = useState("");
   const [attendanceFilter, setAttendanceFilter] = useState("all");
-  const [isLoading, setIsLoading] = useState(true);
-  const [roomStatus, setRoomStatus] = useState<
-    Record<string, studentsContract.RoomStatus>
-  >({});
 
   // State for desktop detection (die Gruppenreiter gibt es nur unterhalb lg)
   // Dieselbe Grenze wie die Seitenleiste (`lg:` in rem, folgt der Browserschrift).
   const isDesktop = useMediaQuery(AT_LEAST_LG);
-
-  // State for pickup times (part of the aggregated live response)
-  const [pickupTimes, setPickupTimes] = useState<Map<string, OgsPickupInfo>>(
-    new Map(),
-  );
 
   // Sort mode for student list
   const [sortMode, setSortMode] = useState<"default" | "pickup" | "arrival">(
@@ -452,7 +420,6 @@ function OGSGroupPageContent() {
   // only occurs on a cold start without URL param or persisted selection.
   const {
     data: liveData,
-    isLoading: isLiveLoading,
     error: liveError,
     mutate: reloadLive,
   } = useSWRAuth<OgsLiveViewData>(
@@ -488,66 +455,64 @@ function OGSGroupPageContent() {
   // running again just because the account changed.
   const liveDataOwner = useArrivalOwner(liveData, memory.owner);
   const memoryRef = useLatest(memory);
+  const liveNoAccess =
+    liveError instanceof ApiError &&
+    wireErrorCode(liveError.code) === "general.permission";
 
-  // Sync the aggregated live data with local state. The response is
-  // self-describing (groupId says which group its live sections belong to),
-  // so a snapshot kept alive by keepPreviousData during a group switch can
-  // never overwrite the newly selected group's view.
+  const dataGroupId = liveData?.groupId;
+  const mappedStudents = useMemo(
+    () => liveData?.students.map(mapStudentForOgsPage) ?? [],
+    [liveData],
+  );
+  const presentCount = useMemo(
+    () => countCheckedInStudents(mappedStudents),
+    [mappedStudents],
+  );
+  const allGroups = useMemo<OGSGroup[]>(
+    () =>
+      (liveData?.groups ?? [])
+        .map((group) => ({
+          ...group,
+          studentCount:
+            group.id === dataGroupId
+              ? mappedStudents.length
+              : counts[group.id]?.total,
+          presentCount:
+            group.id === dataGroupId ? presentCount : counts[group.id]?.present,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name, "de")),
+    [liveData, dataGroupId, mappedStudents.length, presentCount, counts],
+  );
+  const selectedGroupExists = allGroups.some(
+    (group) => group.id === selectedGroupId,
+  );
+  // A retained response can still supply the group tabs, but not another
+  // group's children while the requested group is loading.
+  const matching =
+    liveData && (!selectedGroupExists || selectedGroupId === dataGroupId)
+      ? liveData
+      : undefined;
+  const displayed =
+    matching ??
+    (lastDisplayed?.groupId === selectedGroupId ? lastDisplayed : undefined);
+  const students = useMemo(
+    () =>
+      matching
+        ? mappedStudents
+        : (displayed?.students.map(mapStudentForOgsPage) ?? []),
+    [matching, mappedStudents, displayed],
+  );
+  const roomStatus = displayed?.roomStatus ?? NO_ROOM_STATUS;
+  const pickupTimes = displayed?.pickupTimes ?? NO_PICKUP_TIMES;
+
   useEffect(() => {
-    if (!liveData) return;
-
-    if (liveData.groups.length === 0) {
-      setHasAccess(false);
-      setIsLoading(false);
-      return;
+    if (liveNoAccess || matching) {
+      setLastDisplayed(liveNoAccess ? undefined : matching);
     }
+  }, [liveNoAccess, matching]);
 
-    setHasAccess(true);
-
-    const dataGroupId = liveData.groupId;
-    const mappedStudents = liveData.students.map(mapStudentForOgsPage);
-    const presentCount = countCheckedInStudents(mappedStudents);
-
-    // Convert groups to OGSGroup format, sorted alphabetically by name.
-    // Counts for groups other than the loaded one are carried over from the
-    // previous state so tab labels don't flicker to "no count" on refresh.
-    const ogsGroups: OGSGroup[] = liveData.groups
-      .map((group) => ({
-        id: group.id,
-        name: group.name,
-        roomName: group.roomName,
-        roomId: group.roomId,
-        studentCount: undefined as number | undefined,
-        presentCount: undefined as number | undefined,
-        supervisorName: undefined,
-        viaSubstitution: group.viaSubstitution,
-        isPersonal: group.isPersonal,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name, "de"));
-
-    for (const group of ogsGroups) {
-      if (group.id === dataGroupId) {
-        group.studentCount = mappedStudents.length;
-        group.presentCount = presentCount;
-      }
-    }
-    setAllGroups((previousGroups) => {
-      const next = ogsGroups.map((group) => {
-        if (group.id === dataGroupId) return group;
-        const previous = previousGroups.find((p) => p.id === group.id);
-        return previous
-          ? {
-              ...group,
-              studentCount: previous.studentCount,
-              presentCount: previous.presentCount,
-            }
-          : group;
-      });
-      // Keep the previous array reference when nothing changed: the URL/
-      // localStorage restore effect depends on allGroups, and a fresh array
-      // per sync run would re-fire it on every revalidation.
-      return areOgsGroupsEqual(previousGroups, next) ? previousGroups : next;
-    });
+  useEffect(() => {
+    if (!liveData || liveNoAccess || allGroups.length === 0) return;
     if (dataGroupId) {
       setGroupAttendanceCount(dataGroupId, {
         present: presentCount,
@@ -561,8 +526,6 @@ function OGSGroupPageContent() {
     // group the response was resolved for. Persist it immediately so the
     // localStorage-restore effect below agrees with the adopted selection and
     // never "switches back" to a different default.
-    const selectedGroupExists =
-      !!selectedGroupId && ogsGroups.some((g) => g.id === selectedGroupId);
     if (!selectedGroupExists) {
       // The cold-start `auto` response already is the complete projection for
       // dataGroupId. Seed that group-specific key before changing state so the
@@ -577,9 +540,9 @@ function OGSGroupPageContent() {
           revalidate: true,
         });
       }
-      setSelectedGroupId(dataGroupId);
+      setSelectedGroupId(dataGroupId ?? null);
       if (dataGroupId) {
-        const resolvedGroup = ogsGroups.find(
+        const resolvedGroup = allGroups.find(
           (group) => group.id === dataGroupId,
         );
         const pageMemory = memoryRef.current;
@@ -594,19 +557,16 @@ function OGSGroupPageContent() {
         }
       }
     }
-
-    // Apply the live sections only when they describe the group being viewed.
-    if (!selectedGroupExists || selectedGroupId === dataGroupId) {
-      setStudents(mappedStudents);
-      setRoomStatus(liveData.roomStatus);
-      setPickupTimes(liveData.pickupTimes);
-      setIsLoading(false);
-    }
   }, [
     liveData,
+    allGroups,
+    dataGroupId,
     liveDataOwner,
+    liveNoAccess,
+    mappedStudents.length,
     memoryRef,
-    selectedGroupId,
+    presentCount,
+    selectedGroupExists,
     setGroupAttendanceCount,
     tenantMutate,
   ]);
@@ -656,27 +616,11 @@ function OGSGroupPageContent() {
   // degrading sections to empty arrays, so any error here means the page must
   // show an error state — never a plausible-looking empty view. A refusal
   // (no group led) is the page's own "no group" view, identified by its code.
-  const liveNoAccess =
-    liveError instanceof ApiError &&
-    wireErrorCode(liveError.code) === "general.permission";
   const error = useSwrLoadError(
     liveNoAccess ? null : liveError,
     "die Liste deiner OGS-Gruppe",
     () => reloadLive(),
   );
-  useEffect(() => {
-    if (liveError) {
-      if (liveNoAccess) setHasAccess(false);
-      setIsLoading(false);
-    }
-  }, [liveError, liveNoAccess]);
-
-  // Derive loading state from SWR
-  useEffect(() => {
-    if (isLiveLoading && !liveData) {
-      setIsLoading(true);
-    }
-  }, [isLiveLoading, liveData]);
 
   // Get current selected group — derived from ID, stable across re-sorts
   const currentGroup = useMemo(
@@ -715,23 +659,23 @@ function OGSGroupPageContent() {
   // Function to switch between groups (by ID — stable across re-sorts).
   // Changing the selection changes the SWR key; the aggregated fetcher then
   // loads everything (students, room status, pickup times, transfers) in one
-  // request and the sync effect applies it.
+  // request.
   const switchToGroup = (groupId: string) => {
     if (groupId === selectedGroupId) return;
     if (!allGroups.some((g) => g.id === groupId)) return;
 
-    setIsLoading(true);
     setSelectedGroupId(groupId);
-    setStudents([]); // Clear current students
-    setRoomStatus({}); // Clear room status
-    setPickupTimes(new Map());
+    setLastDisplayed(undefined);
   };
 
-  // Apply filters to students (ensure students is an array)
-  const filteredStudents = (Array.isArray(students) ? students : []).filter(
-    (student) =>
-      matchesSearchFilter(student, searchTerm) &&
-      matchesAttendanceFilter(student, attendanceFilter, roomStatus),
+  const filteredStudents = useMemo(
+    () =>
+      students.filter(
+        (student) =>
+          matchesSearchFilter(student, searchTerm) &&
+          matchesAttendanceFilter(student, attendanceFilter, roomStatus),
+      ),
+    [students, searchTerm, attendanceFilter, roomStatus],
   );
 
   // Sort students based on selected sort mode
@@ -1078,10 +1022,10 @@ function OGSGroupPageContent() {
   // actions) renders immediately and only the student-grid area
   // skeletonizes. Permission/access early-returns below only run once
   // showSkeleton clears.
-  const showSkeleton = isLoading || hasAccess === null;
+  const showSkeleton = !displayed && !liveError;
 
   // If user doesn't have access, show empty state
-  if (!showSkeleton && !hasAccess) {
+  if (liveNoAccess || (liveData && allGroups.length === 0 && !liveError)) {
     return (
       <TenantPage
         title={OGS_GROUPS_LABEL}

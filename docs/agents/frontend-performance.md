@@ -119,7 +119,10 @@ Page traversals, in-page actions and device/input variants have separate budget 
   load. The harness leaves the application's prefetch rules in place. Links
   can prefetch a reusable route shell on viewport entry. The authorized
   page seed starts on navigation; valid SWR data can render immediately
-  without waiting for it. The #8080 build instead started full route prefetch
+  without waiting for it. Where a route needs a request-bound payload,
+  a route-local stale time may reuse that payload in the same document;
+  it does not extend the seed's validity or change SWR revalidation.
+  The #8080 build instead started full route prefetch
   on keyboard focus or after an 80 ms hover hold. The direct click has no
   dwell. Compare like inputs, not click against keyboard.
 - Desktop: CPU ×4, 150 ms latency, 3 Mbit/s down, 1 Mbit/s up. Parents also use

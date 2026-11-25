@@ -323,6 +323,32 @@ test("returning from public help after another tab signs out never restores the 
   await context.close();
 });
 
+test("a same-session return retains the child-search filter", async ({
+  browser,
+}) => {
+  const context = await newContext(browser);
+  const app = await context.newPage();
+  await login(app, "b");
+  await app.goto(`${schoolA}/students/search`);
+  const input = app.getByPlaceholder("Name suchen…").filter({ visible: true });
+  await input.fill("Mira");
+  await expect(app).toHaveURL(/\/students\/search\?.*search=Mira/);
+  await app.evaluate(
+    () => (document.documentElement.dataset.filterTrip = "same"),
+  );
+
+  await app
+    .locator('a[href="/home"]')
+    .filter({ visible: true })
+    .first()
+    .click();
+  await expect(app).toHaveURL(`${schoolA}/home`);
+  await app.goBack();
+  await expect(input).toHaveValue("Mira");
+  await expect(app.locator("html")).toHaveAttribute("data-filter-trip", "same");
+  await context.close();
+});
+
 test("another account replaces a live session: A to B without a logout never shows A again", async ({
   browser,
 }) => {

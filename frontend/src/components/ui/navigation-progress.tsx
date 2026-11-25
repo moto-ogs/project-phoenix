@@ -16,9 +16,15 @@ import {
 } from "react";
 import {
   NavigationProgressContext,
+  PortalScrollContext,
   type NavigationProgressStore,
 } from "./navigation-progress-store";
-import { currentUrl, navigationTarget, normalizedUrl } from "./navigation-url";
+import {
+  currentUrl,
+  navigationTarget,
+  normalizedUrl,
+  portalManagesScroll,
+} from "./navigation-url";
 import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
 
 /**
@@ -219,15 +225,19 @@ function useNavigationProgressPending() {
  */
 export function NavigationProgressProvider({
   children,
+  manageScroll = false,
 }: {
   readonly children: ReactNode;
+  readonly manageScroll?: boolean;
 }) {
   const store = useMemo(createStore, []);
   return (
     <NavigationProgressContext.Provider value={store}>
-      <NavigationProgressRouter store={store}>
-        {children}
-      </NavigationProgressRouter>
+      <PortalScrollContext.Provider value={manageScroll}>
+        <NavigationProgressRouter store={store}>
+          {children}
+        </NavigationProgressRouter>
+      </PortalScrollContext.Provider>
     </NavigationProgressContext.Provider>
   );
 }
@@ -240,6 +250,7 @@ function NavigationProgressRouter({
   readonly store: NavigationProgressStore;
 }) {
   const router: AppRouterInstance | null = useContext(AppRouterContext);
+  const manageScroll = useContext(PortalScrollContext);
   // Alle Nachkommen erhalten einen gleichartigen Router. So deckt die
   // Fortschrittsanzeige bestehende router.push/replace-Aufrufe ab, ohne jede
   // Schaltfläche auf einen eigenen Navigationshelfer umzustellen. Back und
@@ -247,16 +258,27 @@ function NavigationProgressRouter({
   const progressRouter = useMemo(() => {
     if (router === null) return null;
 
+    const scrollOptions = (
+      args: Parameters<AppRouterInstance["push"]>,
+    ): Parameters<AppRouterInstance["push"]> =>
+      manageScroll &&
+      portalManagesScroll(args[0]) &&
+      args[1]?.scroll === undefined
+        ? [args[0], { ...args[1], scroll: false }]
+        : args;
+
     return {
       ...router,
       push: (...args: Parameters<AppRouterInstance["push"]>) => {
-        navigateTo(store, args[0], () => router.push(...args));
+        navigateTo(store, args[0], () => router.push(...scrollOptions(args)));
       },
       replace: (...args: Parameters<AppRouterInstance["replace"]>) => {
-        navigateTo(store, args[0], () => router.replace(...args));
+        navigateTo(store, args[0], () =>
+          router.replace(...scrollOptions(args)),
+        );
       },
     } satisfies AppRouterInstance;
-  }, [router, store]);
+  }, [manageScroll, router, store]);
 
   const content = (
     <>

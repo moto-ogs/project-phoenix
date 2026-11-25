@@ -2,9 +2,10 @@
 
 // `.js`: Die Layouttests rendern ButtonLink in Node ohne Bundler (#6570).
 import NextLink from "next/link.js";
-import { forwardRef, type ComponentProps } from "react";
+import { forwardRef, useContext, type ComponentProps } from "react";
+import { PortalScrollContext } from "./navigation-progress-store";
 import { useNavigationLinkProgress } from "./use-navigation-link-progress";
-import { isInternalPath } from "./navigation-url";
+import { isInternalPath, portalManagesScroll } from "./navigation-url";
 
 export type NavigationLinkProps = Omit<
   ComponentProps<typeof NextLink>,
@@ -32,6 +33,7 @@ const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
       target,
       prefetch,
       nativeAnchor,
+      scroll,
       onClick,
       onNavigate,
       children,
@@ -40,6 +42,7 @@ const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
     ref,
   ) {
     const progress = useNavigationLinkProgress(href, onClick, onNavigate);
+    const portalScroll = useContext(PortalScrollContext);
     if (nativeAnchor) {
       return (
         <a
@@ -65,6 +68,10 @@ const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
         ref={ref}
         href={href}
         target={target}
+        scroll={
+          scroll ??
+          (portalScroll && portalManagesScroll(href) ? false : undefined)
+        }
         prefetch={canPrefetch ? "auto" : false}
         onClick={progress.onClick}
         onNavigate={progress.onNavigate}
