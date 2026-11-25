@@ -76,7 +76,7 @@ export function ActionBar({
         {status ? (
           <span
             role="status"
-            className="min-w-0 flex-1 truncate px-2 text-sm font-medium text-gray-700"
+            className="tablet:text-base min-w-0 flex-1 truncate px-2 text-sm font-medium text-gray-700"
           >
             {status}
           </span>

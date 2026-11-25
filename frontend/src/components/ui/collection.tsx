@@ -73,7 +73,7 @@ export function CollectionGroup({
         className={`sticky ${Z_LAYER.sticky} app:bg-gray-50 flex min-h-9 items-center justify-between gap-3 border-b border-gray-100 bg-gray-50/95 px-4 py-1.5`}
         style={{ top: "var(--app-sticky-offset, 0px)" }}
       >
-        <h3 className="text-sm font-semibold text-gray-700">
+        <h3 className="tablet:text-[0.9375rem] text-sm font-semibold text-gray-700">
           {title}
           {count === undefined ? null : (
             <span className="ml-1.5 font-normal text-gray-500 tabular-nums">
@@ -141,7 +141,7 @@ export function CollectionRow({
   const stretch =
     "after:absolute after:inset-0 after:content-[''] focus-visible:outline-none";
   const titleNode = (
-    <span className="block truncate text-[0.9375rem] leading-5 font-medium text-gray-900">
+    <span className="tablet:text-base tablet:leading-6 block truncate text-[0.9375rem] leading-5 font-medium text-gray-900">
       {title}
     </span>
   );
@@ -191,13 +191,13 @@ export function CollectionRow({
       <span className="min-w-0 flex-1">
         {target}
         {subtitle ? (
-          <span className="mt-0.5 block truncate text-sm leading-5 text-gray-500">
+          <span className="tablet:text-[0.9375rem] mt-0.5 block truncate text-sm leading-5 text-gray-500">
             {subtitle}
           </span>
         ) : null}
       </span>
       {meta ? (
-        <span className="shrink-0 text-right text-sm text-gray-600 tabular-nums">
+        <span className="tablet:text-[0.9375rem] shrink-0 text-right text-sm text-gray-600 tabular-nums">
           {meta}
         </span>
       ) : null}

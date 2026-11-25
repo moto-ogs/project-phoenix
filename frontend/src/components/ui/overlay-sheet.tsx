@@ -148,7 +148,7 @@ function AppSheet({
       >
         <div className="flex items-start gap-3 px-4 pt-3 pb-2">
           <div className="min-w-0 flex-1">
-            <DrawerTitle className="truncate text-base leading-6">
+            <DrawerTitle className="tablet:text-lg truncate text-base leading-6">
               {title}
             </DrawerTitle>
             {description ? (
