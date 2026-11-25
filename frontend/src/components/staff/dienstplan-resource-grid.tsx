@@ -744,11 +744,17 @@ export function DienstplanResourceGrid({
   // liefe durch eine unsichtbare Kopie.
   const isCompact = useMediaQuery(BELOW_LG);
   const showAllRows = useAfterInitialPaint();
-  // The desktop row has a 64px cell and 8px of vertical padding. On a
-  // client remount finish the viewport before building the rest of the roster.
-  const visibleStaff = showAllRows
-    ? staff
-    : staff.slice(0, Math.ceil(window.innerHeight / (isCompact ? 64 : 72)));
+  // A desktop roster starts below the portal header, page heading, week
+  // controls and column headings. Even in compact density these occupy
+  // more than 160px, and each row needs at least 72px. On a fresh client
+  // mount, build the visible rows before the lower part of the roster.
+  const initialRows = showAllRows
+    ? staff.length
+    : isCompact
+      ? Math.ceil(window.innerHeight / 64)
+      : Math.max(1, Math.ceil((window.innerHeight - 160) / 72));
+  const showFooter = initialRows >= staff.length;
+  const visibleStaff = showFooter ? staff : staff.slice(0, initialRows);
   const mobileCare =
     mobileColumn && stripMarkers.has(mobileColumn.key)
       ? holidayCare?.get(mobileColumn.key)
@@ -851,24 +857,28 @@ export function DienstplanResourceGrid({
                 : (member, column) => openCell(member, column.key, null)
             }
             footer={
-              <CapacityStrip
-                rowLabel={
-                  <span title="Übergangslösung: Pausen sind in dieser Zahl nicht herausgerechnet.">
-                    Kapazität 12–16
-                  </span>
-                }
-                cells={weekDays.map((date) => ({
-                  key: date,
-                  content: capacityByDay.get(date) ?? 0,
-                }))}
-              />
+              showFooter ? (
+                <CapacityStrip
+                  rowLabel={
+                    <span title="Übergangslösung: Pausen sind in dieser Zahl nicht herausgerechnet.">
+                      Kapazität 12–16
+                    </span>
+                  }
+                  cells={weekDays.map((date) => ({
+                    key: date,
+                    content: capacityByDay.get(date) ?? 0,
+                  }))}
+                />
+              ) : null
             }
             ariaLabel="Dienstplan-Wochenansicht"
             legend={
-              <PlanLegend
-                entries={legendEntries}
-                aria-label="Legende Dienstarten und Zustände"
-              />
+              showFooter ? (
+                <PlanLegend
+                  entries={legendEntries}
+                  aria-label="Legende Dienstarten und Zustände"
+                />
+              ) : null
             }
           />
         </div>
