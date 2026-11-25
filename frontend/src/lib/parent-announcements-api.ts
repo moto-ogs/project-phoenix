@@ -373,7 +373,7 @@ export function withApiBase<T>(
   return base === undefined ? call(id) : call(id, base);
 }
 
-function toAnnouncement(
+export function toAnnouncement(
   announcement: sharedContract.announcementResponse,
 ): Announcement {
   // The backend writes the enum values listed above.
@@ -677,6 +677,12 @@ export async function fetchLetterStatus(
         { params, errorMessage },
       ),
   );
+  return mapLetterStatus(status);
+}
+
+export function mapLetterStatus(
+  status: sharedContract.letterStatusResponse,
+): LetterStatus {
   return {
     ...status,
     // The backend writes the enum values listed above.
@@ -710,6 +716,12 @@ export async function fetchDeclarationStatus(
         { params, errorMessage },
       ),
   );
+  return mapDeclarationStatus(status);
+}
+
+export function mapDeclarationStatus(
+  status: sharedContract.declarationStatusResponse,
+): DeclarationStatus {
   const summary = Object.fromEntries(
     DECLARATION_SUMMARY_KEYS.map((key) => [key, status.summary?.[key] ?? 0]),
   ) as Record<(typeof DECLARATION_SUMMARY_KEYS)[number], number>;

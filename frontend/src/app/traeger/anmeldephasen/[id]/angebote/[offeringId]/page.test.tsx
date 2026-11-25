@@ -32,7 +32,7 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 
-import TraegerCatalogOfferingPage from "./page";
+import TraegerCatalogOfferingPage from "./page-content";
 
 function render(ui: React.ReactElement) {
   return rtlRender(

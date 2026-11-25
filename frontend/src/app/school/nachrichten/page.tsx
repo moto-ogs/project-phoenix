@@ -1,13 +1,15 @@
-"use client";
+import { Suspense } from "react";
+import { SWRServerSeed } from "~/lib/swr/server-seed";
+import { schoolPageSeed, schoolInbox } from "~/lib/school/page-seed.server";
+import SchoolMessagesPage from "./page-content";
 
-// Nachrichten im Schul-Portal ("moto schule", #2208): der Team-Chat der OGS,
-// aus Sicht einer Lehrkraft. Dieselbe Oberfläche wie /team-chat im OGS-Portal,
-// gebunden an die school-Session.
-
-import { TeamChatInbox } from "~/components/messaging/team-chat-inbox";
-import { useSchoolTeamChatPortal } from "~/lib/hooks/use-school-team-chat-portal";
-
-export default function SchoolMessagesPage() {
-  const portal = useSchoolTeamChatPortal();
-  return <TeamChatInbox portal={portal} />;
+export default function Page() {
+  const { seed, claims } = schoolPageSeed([schoolInbox]);
+  return (
+    <Suspense fallback={null}>
+      <SWRServerSeed seed={seed} claims={claims} render>
+        <SchoolMessagesPage />
+      </SWRServerSeed>
+    </Suspense>
+  );
 }

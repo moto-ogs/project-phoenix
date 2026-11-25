@@ -36,7 +36,7 @@ vi.mock("~/components/settings/trusted-devices-section", () => ({
   ),
 }));
 
-import SchoolSettingsPage from "./page";
+import SchoolSettingsPage from "./page-content";
 
 describe("SchoolSettingsPage", () => {
   beforeEach(() => {

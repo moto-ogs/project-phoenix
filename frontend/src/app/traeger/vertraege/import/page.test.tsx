@@ -9,7 +9,7 @@ import type {
 } from "~/lib/traeger-care-contract-import-api";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
-import TraegerContractImportPage from "./page";
+import TraegerContractImportPage from "./page-content";
 
 const api = vi.hoisted(() => ({
   previewContractImport: vi.fn(),

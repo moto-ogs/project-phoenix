@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
-import TraegerFinanceExportsPage from "~/app/traeger/abrechnung/exporte/page";
+import TraegerFinanceExportsPage from "~/app/traeger/abrechnung/exporte/page-content";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type {

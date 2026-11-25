@@ -59,7 +59,7 @@ vi.mock("~/env.client", () => ({
   },
 }));
 
-import TraegerDashboardPage from "./page";
+import TraegerDashboardPage from "./page-content";
 
 const AS_OF = TEST_CLOCK_INSTANT.toISOString();
 

@@ -63,7 +63,7 @@ vi.mock("~/components/settings/trusted-devices-section", () => ({
 }));
 
 import { PASSWORD_CHANGED_KEY } from "~/lib/session-cache";
-import OperatorSettingsPage from "./page";
+import OperatorSettingsPage from "./page-content";
 
 function renderPage() {
   return render(

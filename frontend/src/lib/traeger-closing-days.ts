@@ -133,7 +133,7 @@ function mapTraegerClosingDay(
   };
 }
 
-function mapTraegerCalendar(
+export function mapTraegerCalendar(
   data: traegerClosingDaysContract.Calendar,
 ): TraegerCalendar {
   return {
@@ -282,7 +282,14 @@ export async function previewTraegerClosingDayHolidayBookings(
  * jeder beauftragte Hinweis mit seinem Versandstand.
  */
 export async function fetchPendingHolidayClosures(): Promise<PendingHolidayClosures> {
-  const data = await bffJson("org", "GET /traeger/holiday-closures/pending/");
+  return mapPendingHolidayClosures(
+    await bffJson("org", "GET /traeger/holiday-closures/pending/"),
+  );
+}
+
+export function mapPendingHolidayClosures(
+  data: traegerHolidayClosuresContract.Pending,
+): PendingHolidayClosures {
   return {
     ...mapHolidayClosureImpact(data),
     notices: (data.notices ?? []).map(mapTraegerNotice),

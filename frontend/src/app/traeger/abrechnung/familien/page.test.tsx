@@ -34,7 +34,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(nav.search),
 }));
 
-import TraegerBillingFamiliesPage from "./page";
+import TraegerBillingFamiliesPage from "./page-content";
 
 vi.unmock("swr");
 

@@ -13,7 +13,7 @@ import { ApiError } from "~/lib/api-error";
 import type { ImportResult } from "~/lib/traeger-sepa-import-api";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
-import TraegerSepaImportPage from "./page";
+import TraegerSepaImportPage from "./page-content";
 
 vi.unmock("swr");
 

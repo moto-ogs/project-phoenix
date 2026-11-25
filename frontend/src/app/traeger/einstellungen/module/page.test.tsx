@@ -26,7 +26,7 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 
-import TraegerModulesPage from "./page";
+import TraegerModulesPage from "./page-content";
 
 function renderPage() {
   return render(

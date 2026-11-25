@@ -65,7 +65,7 @@ vi.mock("~/env.client", () => ({
   },
 }));
 
-import TraegerComparisonPage from "./page";
+import TraegerComparisonPage from "./page-content";
 
 const SCHOOLS = [
   {

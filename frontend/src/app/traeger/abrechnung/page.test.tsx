@@ -41,7 +41,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(route.search),
 }));
 
-import TraegerAbrechnungPage from "./page";
+import TraegerAbrechnungPage from "./page-content";
 
 vi.unmock("swr");
 

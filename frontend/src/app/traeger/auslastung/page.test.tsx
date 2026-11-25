@@ -71,7 +71,7 @@ vi.mock("~/env.client", () => ({
   },
 }));
 
-import TraegerUtilizationPage from "./page";
+import TraegerUtilizationPage from "./page-content";
 
 /**
  * Die letzten drei Monate enden heute und beginnen am Tag nach demselben
