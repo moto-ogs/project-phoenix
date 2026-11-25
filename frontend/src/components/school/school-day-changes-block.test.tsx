@@ -140,6 +140,7 @@ describe("SchoolDayChangesBlock", () => {
   });
 
   it("sagt ohne Änderung, dass alles wie geplant läuft", () => {
+    state.permissions = ["class_day:read", "calendar:school"];
     state.overview = { date: "2026-09-09", failedSources: [], entries: [] };
     state.classes = {
       school_day: true,
@@ -149,6 +150,18 @@ describe("SchoolDayChangesBlock", () => {
     expect(
       screen.getByText("Heute läuft alles wie geplant."),
     ).toBeInTheDocument();
+  });
+
+  it("entwarnt ohne Zugang zum Schulkalender nicht", () => {
+    state.overview = { date: "2026-09-09", failedSources: [], entries: [] };
+    state.classes = {
+      school_day: true,
+      classes: [{ school_class: "3a", changes: 0 }],
+    };
+
+    const { container } = renderBlock();
+
+    expect(container.firstChild).toBeNull();
   });
 
   it("gibt bei einem Teilausfall nie Entwarnung", () => {

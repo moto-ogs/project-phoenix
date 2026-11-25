@@ -124,12 +124,16 @@ export function SchoolDayChangesBlock({
   const own = overview?.entries.filter((e) => e.section === "you") ?? [];
   const school = overview?.entries.filter((e) => e.section !== "you") ?? [];
   const failed = overview?.failedSources ?? [];
-  const nothing =
+  const noVisibleChanges =
     own.length === 0 &&
     school.length === 0 &&
     classLines.length === 0 &&
     failed.length === 0 &&
     !classesFailed;
+  // Ohne Schulkalender bleiben Schließtage absichtlich unsichtbar. Deshalb
+  // wäre eine Entwarnung über den ganzen Tag hier falsch.
+  const canReassure = hasPermission(session, "calendar:school");
+  if (!canReassure && overview && !loading && noVisibleChanges) return null;
 
   return (
     <SectionCard
@@ -161,7 +165,7 @@ export function SchoolDayChangesBlock({
             message="Die Kinder deiner Klassen konnten gerade nicht geladen werden."
           />
         ) : null}
-        {overview && !loading && nothing ? (
+        {overview && !loading && canReassure && noVisibleChanges ? (
           <p className="text-sm text-gray-600">
             Heute läuft alles wie geplant.
           </p>
