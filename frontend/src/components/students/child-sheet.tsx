@@ -134,6 +134,7 @@ export function ChildSummary({
   header = false,
   headerAction,
   replaceEntry = false,
+  actionsLast = false,
 }: Readonly<{
   student: Student;
   /** Ohne Adresse keine Schnellaktionen (sie öffnen die Akte). */
@@ -151,6 +152,11 @@ export function ChildSummary({
   headerAction?: ReactNode;
   /** Im Blatt: Die Akte ersetzt dessen Verlaufseintrag (siehe `ChildSheet`). */
   replaceEntry?: boolean;
+  /**
+   * Aktionen unter den Angaben statt darüber (Detail neben der Liste): Sie
+   * stehen dann wie im Blatt am Fuß, nahe der Aktionsleiste.
+   */
+  actionsLast?: boolean;
 }>) {
   const status =
     statusOverride === undefined
@@ -170,6 +176,18 @@ export function ChildSummary({
       ? [{ key: "pickup-notes", text: student.pickup_notes }]
       : []),
   ];
+  const actions = (
+    <>
+      {contextActions}
+      {isToday && quickActions && href ? (
+        <ChildQuickActions
+          student={student}
+          href={href}
+          replaceEntry={replaceEntry}
+        />
+      ) : null}
+    </>
+  );
   return (
     <div className="space-y-3">
       {header ? (
@@ -199,14 +217,7 @@ export function ChildSummary({
           tone={CHILD_DAY_TONE_BADGE[status.tone]}
         />
       ) : null}
-      {contextActions}
-      {isToday && quickActions && href ? (
-        <ChildQuickActions
-          student={student}
-          href={href}
-          replaceEntry={replaceEntry}
-        />
-      ) : null}
+      {actionsLast ? null : actions}
       <DataGrid columns={2} appRows>
         {room ? <DataField label="Raum">{room}</DataField> : null}
         <DataField label="Klasse">
@@ -232,6 +243,9 @@ export function ChildSummary({
             ))}
           </ul>
         </section>
+      ) : null}
+      {actionsLast ? (
+        <div className="space-y-2 border-t border-gray-100 pt-3">{actions}</div>
       ) : null}
     </div>
   );

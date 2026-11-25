@@ -229,6 +229,7 @@ export function StudentListApp({
                 isToday={isToday}
                 classLabel={classLabel(selectedStudent)}
                 header
+                actionsLast
                 headerAction={
                   <ButtonLink
                     href={studentHref(selectedStudent)}
