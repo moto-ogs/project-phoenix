@@ -313,13 +313,6 @@ export function WeeklyCalendarGrid({
         : next,
     );
   }, []);
-  useEffect(() => {
-    const scroller = scrollRef.current;
-    if (!scroller || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(updateScrollEdges);
-    observer.observe(scroller);
-    return () => observer.disconnect();
-  }, [updateScrollEdges]);
 
   // Liegt heute außerhalb des sichtbaren Ausschnitts (breite Tage davor),
   // rückt das Raster beim Öffnen einer Woche die heutige Spalte ins Bild;
@@ -348,28 +341,41 @@ export function WeeklyCalendarGrid({
       shownWeekRef.current = weekKey;
       userMovedRef.current = false;
     }
-    if (!userMovedRef.current) {
-      const todayColumn = scroller.querySelector<HTMLElement>(
-        "[data-today-column]",
-      );
-      const gutter = scroller.querySelector<HTMLElement>("[data-time-gutter]");
-      if (!todayColumn || todayColumn.offsetParent === null) {
-        scroller.scrollLeft = 0;
-      } else {
-        const left = todayColumn.offsetLeft - (gutter?.offsetWidth ?? 0);
-        const right = todayColumn.offsetLeft + todayColumn.offsetWidth;
-        if (
-          left < scroller.scrollLeft ||
-          right > scroller.scrollLeft + scroller.clientWidth
-        ) {
-          scroller.scrollLeft = Math.max(left, 0);
+    const alignWeek = () => {
+      if (!userMovedRef.current) {
+        const todayColumn = scroller.querySelector<HTMLElement>(
+          "[data-today-column]",
+        );
+        const gutter =
+          scroller.querySelector<HTMLElement>("[data-time-gutter]");
+        if (!todayColumn || todayColumn.offsetParent === null) {
+          scroller.scrollLeft = 0;
+        } else {
+          const left = todayColumn.offsetLeft - (gutter?.offsetWidth ?? 0);
+          const right = todayColumn.offsetLeft + todayColumn.offsetWidth;
+          if (
+            left < scroller.scrollLeft ||
+            right > scroller.scrollLeft + scroller.clientWidth
+          ) {
+            scroller.scrollLeft = Math.max(left, 0);
+          }
         }
+        // The browser clamps what was requested to the actual scroll width.
+        ownScrollLeftRef.current = scroller.scrollLeft;
       }
-      // Gelesen, nicht gesetzt: der Browser begrenzt den Wert auf die
-      // tatsächliche Scrollbreite.
-      ownScrollLeftRef.current = scroller.scrollLeft;
+      updateScrollEdges();
+    };
+    if (typeof ResizeObserver === "undefined") {
+      alignWeek();
+      return;
     }
-    updateScrollEdges();
+    // Observe the viewport and its inner width. Read geometry after the
+    // browser has laid out the revealed grid, instead of forcing layout.
+    const observer = new ResizeObserver(alignWeek);
+    observer.observe(scroller);
+    if (scroller.firstElementChild)
+      observer.observe(scroller.firstElementChild);
+    return () => observer.disconnect();
   }, [
     weekKey,
     todayISO,

@@ -1,6 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { setTestClock } from "~/test/clock";
+import {
+  DESKTOP_WIDTH,
+  PHONE_WIDTH,
+  setViewportWidth,
+} from "~/test/helpers/viewport";
 import { AppShell } from "./app-shell";
 
 vi.mock("next/navigation", () => ({
@@ -39,6 +44,7 @@ vi.mock("./mobile-bottom-nav", () => ({
 describe("AppShell", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setViewportWidth(DESKTOP_WIDTH);
   });
 
   it("renders children content", () => {
@@ -52,7 +58,7 @@ describe("AppShell", () => {
     expect(screen.getByText("Page Content")).toBeInTheDocument();
   });
 
-  it("renders header, sidebar, and mobile nav", () => {
+  it("renders header and sidebar, not the hidden mobile navigation on desktop", () => {
     render(
       <AppShell>
         <div>Content</div>
@@ -61,19 +67,20 @@ describe("AppShell", () => {
 
     expect(screen.getByTestId("header")).toBeInTheDocument();
     expect(screen.getByTestId("sidebar")).toBeInTheDocument();
-    expect(screen.getByTestId("mobile-nav")).toBeInTheDocument();
+    expect(screen.queryByTestId("mobile-nav")).not.toBeInTheDocument();
   });
 
-  it("hides sidebar on mobile via CSS class", () => {
+  it("renders the mobile navigation without desktop chrome on a phone", () => {
+    setViewportWidth(PHONE_WIDTH);
     render(
       <AppShell>
         <div>Content</div>
       </AppShell>,
     );
 
-    const sidebar = screen.getByTestId("sidebar");
-    expect(sidebar.className).toContain("hidden");
-    expect(sidebar.className).toContain("lg:block");
+    expect(screen.getByTestId("mobile-nav")).toBeInTheDocument();
+    expect(screen.queryByTestId("sidebar")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("header")).not.toBeInTheDocument();
   });
 
   it("renders main content area with correct classes", () => {
