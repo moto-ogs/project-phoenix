@@ -57,7 +57,7 @@ describe("ReportTemplateForm", () => {
       target: { value: "kommune" },
     });
     for (const label of [
-      "Kinder je Standort und Betreuungsform",
+      "Kinder pro Standort und Betreuungsform",
       "Personal",
       "Fehlzeiten",
       "Belegung und Nachfrage",

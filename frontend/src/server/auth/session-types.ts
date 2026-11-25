@@ -41,6 +41,19 @@ declare module "next-auth" {
      * the page.
      */
     notBooked?: true;
+    /**
+     * The session mark the request presented for this portal (#8082,
+     * ~/lib/session-mark): which session this answer describes, also after
+     * another tab changed the cookie meanwhile. An exit of an ended session
+     * names it.
+     */
+    sessionMark?: string;
+    /**
+     * Identity & Access answered the session's family as live for this
+     * answer (#8082): a resumed tab shows its tree only then, not on an
+     * answer the BFF gave without a confirmation (validation unavailable).
+     */
+    sessionConfirmed?: true;
   }
 
   // Importable from client code too, so it carries no token (#5005); the

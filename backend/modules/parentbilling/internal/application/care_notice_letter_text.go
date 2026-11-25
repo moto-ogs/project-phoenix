@@ -80,7 +80,7 @@ func careNoticeBlocks(notice parentbilling.CareNotice, head parentbilling.Letter
 	totals = append(totals, LetterFact{Label: "Gesamtbetrag", Value: formatEuro(notice.TotalCents), Bold: true})
 	blocks := []LetterBlock{
 		{Text: intro},
-		{Heading: "I. Berechnung", Text: "Je Berechnungsgrundlage und Zeitraum mit gleichem Monatsbetrag eine Zeile.",
+		{Heading: "I. Berechnung", Text: "Pro Berechnungsgrundlage und Zeitraum mit gleichem Monatsbetrag eine Zeile.",
 			Facts: append(careNoticeLineFacts(notice.Lines, change), totals...)},
 		{Heading: "II. Abrechnung", Text: "Der Gesamtbetrag ist in Monatsraten zum Monatsersten fällig. Raten für Monate, die schon begonnen haben, sind sofort fällig. " +
 			careNoticePaymentText(notice), Facts: careNoticeInstallmentFacts(notice.Installments, change)},

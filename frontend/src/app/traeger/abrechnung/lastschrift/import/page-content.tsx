@@ -328,7 +328,7 @@ export default function TraegerSepaImportPage() {
             <div ref={focusOn(0)}>
               <SectionCard
                 title="Datei wählen"
-                description="Eine CSV-Datei mit einer Zeile je Mandat und Überschriften in der ersten Zeile."
+                description="Eine CSV-Datei mit einer Zeile pro Mandat und Überschriften in der ersten Zeile."
               >
                 <Dropzone
                   accept=".csv,.txt,text/csv,text/plain"

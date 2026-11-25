@@ -142,7 +142,7 @@ export function useChildScopeTabs({
   if (enabled && showGroupEntry && !openCareGroupMode) {
     menuItems.push({
       label: "Zur Gruppenseite",
-      description: "Öffnet die Gruppenseite mit den Kindern je Gruppe.",
+      description: "Öffnet die Gruppenseite mit den Kindern pro Gruppe.",
       icon: <MotoConceptIcon concept={groupsConcept} size={16} />,
       href: tenantPath("/ogs-groups"),
       onClick: noop,

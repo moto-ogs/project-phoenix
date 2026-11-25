@@ -24,7 +24,8 @@ import (
 
 // Resource wires the class-day endpoints.
 type Resource struct {
-	ClassDay classday.ClassDay
+	ClassDay        classday.ClassDay
+	AssignedClasses classday.AssignedClasses
 	// DayHints writes the day hints (#4795); the capability serves both
 	// facades. Without it the day-hint routes answer "not configured".
 	DayHints classday.DayHints
@@ -54,13 +55,14 @@ func NewResource(capability classday.ClassDay, logger *slog.Logger, today func()
 	if logger == nil {
 		logger = slog.Default()
 	}
+	assigned, _ := capability.(classday.AssignedClasses)
 	hints, _ := capability.(classday.DayHints)
 	schoolDay, _ := capability.(classday.SchoolDay)
 	sharedNotes, _ := capability.(classday.SharedNotes)
 	reports, _ := capability.(classday.AbsenceReports)
 	absenceList, _ := capability.(classday.AbsenceList)
 	return &Resource{
-		ClassDay: capability, DayHints: hints, SchoolDay: schoolDay, SharedNotes: sharedNotes, AbsenceReports: reports, AbsenceList: absenceList, logger: logger,
+		ClassDay: capability, AssignedClasses: assigned, DayHints: hints, SchoolDay: schoolDay, SharedNotes: sharedNotes, AbsenceReports: reports, AbsenceList: absenceList, logger: logger,
 		today: today,
 	}
 }
@@ -85,6 +87,7 @@ func (rs *Resource) registerRoutes(r chi.Router, withTx common.Middleware) {
 	write := common.RequiresPermission(permissions.ClassDayArrivalExceptionWrite)
 
 	r.With(read, withTx).Get("/classes", rs.getMyClasses)
+	r.With(read, withTx).Get("/assigned-classes", rs.getAssignedClasses)
 	r.With(read, withTx).Get("/", rs.getClassDay)
 	// School-wide day overview (#4802): every class at once, only for the
 	// holders of class_day:all_classes (Schulverwaltung).
@@ -157,7 +160,7 @@ type ClassesResponse struct {
 	WeekendFollowsFriday bool `json:"weekend_follows_friday"`
 	// CanViewSchoolDay is true when the caller holds class_day:all_classes
 	// (#4802): the start page then loads the school-wide day overview once
-	// instead of one class report per class.
+	// with access to child lists.
 	CanViewSchoolDay bool `json:"can_view_school_day"`
 }
 

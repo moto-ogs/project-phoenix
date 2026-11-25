@@ -2,11 +2,10 @@
  * Tests for AccountsTable.
  *
  * Covers showSchool toggle, capability column variations, status badge
- * fallback, and the column sortValue callbacks (name, email, role,
- * pedagogic role, capability) that fire when headers are clicked.
+ * fallback, and server sorting triggered by the column headers.
  */
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import { AccountsTable } from "./accounts-table";
 import type {
@@ -91,55 +90,47 @@ describe("AccountsTable", () => {
     });
   });
 
-  it("sorts by Rolle when the header is clicked (covers roleName sortValue)", () => {
-    render(
-      <AccountsTable
-        accounts={[
-          makeSchoolAccount({
-            accountId: "1",
-            firstName: "Anna",
-            lastName: "A",
-            roleName: "Zett",
-          }),
-          makeSchoolAccount({
-            accountId: "2",
-            firstName: "Ben",
-            lastName: "B",
-            roleName: "Aaa",
-          }),
-        ]}
-      />,
-    );
+  it.each([
+    [/^Rolle – /, "roleName"],
+    [/^Päd\. Rolle – /, "pedagogicRole"],
+  ] as const)(
+    "requests server sorting for %s without reordering the page",
+    (name, key) => {
+      const onChange = vi.fn();
+      render(
+        <AccountsTable
+          serverSort={{ key: "name", direction: "asc", onChange }}
+          accounts={[
+            makeSchoolAccount({
+              accountId: "1",
+              firstName: "Anna",
+              lastName: "A",
+              roleName: "Z",
+              pedagogicRole: "Z",
+            }),
+            makeSchoolAccount({
+              accountId: "2",
+              firstName: "Ben",
+              lastName: "B",
+              roleName: "A",
+              pedagogicRole: "A",
+            }),
+          ]}
+        />,
+      );
 
-    fireEvent.click(screen.getByRole("button", { name: /^Rolle – / }));
+      fireEvent.click(screen.getByRole("button", { name }));
 
-    expect(screen.getByText("Anna A")).toBeInTheDocument();
-    expect(screen.getByText("Ben B")).toBeInTheDocument();
-  });
-
-  it("sorts by Päd. Rolle when the header is clicked (covers pedagogicRole sortValue)", () => {
-    render(
-      <AccountsTable
-        accounts={[
-          makeSchoolAccount({
-            accountId: "1",
-            firstName: "Anna",
-            lastName: "A",
-            pedagogicRole: "Zett-Rolle",
-          }),
-          makeSchoolAccount({
-            accountId: "2",
-            firstName: "Ben",
-            lastName: "B",
-            pedagogicRole: "Aaa-Rolle",
-          }),
-        ]}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: /^Päd\. Rolle – / }));
-
-    expect(screen.getByText("Anna A")).toBeInTheDocument();
-    expect(screen.getByText("Ben B")).toBeInTheDocument();
-  });
+      expect(onChange).toHaveBeenCalledWith({ key, direction: "asc" });
+      expect(
+        screen
+          .getAllByRole("row")
+          .slice(1)
+          .map((row) => row.textContent),
+      ).toEqual([
+        expect.stringContaining("Anna A"),
+        expect.stringContaining("Ben B"),
+      ]);
+    },
+  );
 });

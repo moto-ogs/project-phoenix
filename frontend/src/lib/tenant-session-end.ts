@@ -1,5 +1,6 @@
 import { onOtherTabOwnerChange } from "./personal-storage";
 import { sessionEndBarrier, type SessionEnd } from "./session-end-state";
+import { reloadDocument, sessionTreeState } from "./session-tree";
 import {
   allowConfirmedUnload,
   attemptNavigation,
@@ -45,7 +46,12 @@ export function runTenantSessionEnd(
   const stopOwnerListener = onOtherTabOwnerChange((owner) => {
     // A second tab echoes this logout by clearing its ended session's storage.
     // Only a newly bound owner supersedes the explicit exit, not that echo.
-    if (owner !== null) cancel();
+    if (owner === null) return;
+    const navigating = pending?.phase === "navigating";
+    cancel();
+    // A revoked exit dropped its tree already (#8082): this document shows
+    // the new session by loading it, never the old tree again.
+    if (!navigating && sessionTreeState().leaving) reloadDocument();
   });
   const dispose = () => {
     window.removeEventListener("pagehide", cancel);

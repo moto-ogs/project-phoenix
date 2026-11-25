@@ -145,15 +145,9 @@ export const tenantDailyKeys = {
    */
   planInstances: (view: string, from: string, to: string, filter: PlanFilter) =>
     `timetable-${view}-${from}-${to}${planFilterKey(filter)}`,
-  /** Die volle Fassung eines Tages für das Detailpanel. */
-  planInstanceDetail: (
-    view: string,
-    from: string,
-    to: string,
-    filter: PlanFilter,
-    date: string,
-  ): string =>
-    `${tenantDailyKeys.planInstances(view, from, to, filter)}-detail-${date}`,
+  /** Attendance belongs to a block and its planned care day, not to the grid filter. */
+  planInstanceDetail: (id: string, date: string) =>
+    `timetable-detail-${id}-${date}`,
   /** Lücken der Planung im Fenster (höchstens 14 Tage). */
   planGaps: (from: string, to: string) => `timetable-gaps-${from}-${to}`,
   /** Namen der Planpersonen ohne users:read (#3817). */

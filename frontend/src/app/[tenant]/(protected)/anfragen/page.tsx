@@ -23,9 +23,10 @@ import {
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
 import { TenantPage } from "~/components/ui/tenant-page";
-import type {
-  ActiveFilter,
-  FilterConfig,
+import {
+  restrictingFilterIds,
+  type ActiveFilter,
+  type FilterConfig,
 } from "~/components/ui/page-header/types";
 import type {
   AggregatedRequestStatus,
@@ -197,45 +198,6 @@ export default function AnfragenPage() {
     setTypeFilter([]);
   }, []);
 
-  // Stabil memoisiert: die Liste lädt bei jeder Identitätsänderung neu.
-  const filters: AggregatedRequestFilters = useMemo(
-    () => ({
-      search: deferredSearch,
-      includeAggregated: showAggregatedRequests,
-      includeEnrollment: showEnrollmentRequests,
-      includeCareWithdrawals: showCareWithdrawals,
-      canManageFamilyProtection: showEnrollmentRequests,
-      types:
-        view === "history"
-          ? typeFilter.filter((type) => type !== "care_withdrawal")
-          : typeFilter.filter((type) => type !== "direct_correction"),
-      statuses: view === "history" ? statusFilter : [],
-      from:
-        view === "history" && dateRange?.from
-          ? toISODate(dateRange.from)
-          : undefined,
-      to:
-        view === "history" && dateRange?.to
-          ? toISODate(dateRange.to)
-          : undefined,
-    }),
-    [
-      deferredSearch,
-      showAggregatedRequests,
-      showEnrollmentRequests,
-      showCareWithdrawals,
-      typeFilter,
-      statusFilter,
-      dateRange,
-      view,
-    ],
-  );
-
-  const staffFilters: StaffAbsenceRequestFilters = useMemo(
-    () => ({ search: deferredSearch, types: absenceTypeFilter }),
-    [deferredSearch, absenceTypeFilter],
-  );
-
   // Die im aktuellen Umschalter-Zustand wählbaren Anfragearten. Eine Quelle
   // für Filterknöpfe UND Filter-Chips: was hier fehlt, ist auch als Chip weg.
   const typeOptions = useMemo(
@@ -257,6 +219,16 @@ export default function AnfragenPage() {
     ],
   );
 
+  // Die Arten, die in dieser Ansicht gelten. Ein übrig gebliebener Wert der
+  // anderen Ansicht filtert hier nichts und zählt nicht als Filter.
+  const viewTypeFilter = useMemo(
+    () =>
+      view === "history"
+        ? typeFilter.filter((type) => type !== "care_withdrawal")
+        : typeFilter.filter((type) => type !== "direct_correction"),
+    [typeFilter, view],
+  );
+
   const filterConfigs = useMemo(() => {
     const typeConfig: FilterConfig[] = showTypeFilter
       ? [
@@ -265,7 +237,7 @@ export default function AnfragenPage() {
             label: "Anfrageart",
             type: "buttons",
             multiSelect: true,
-            value: typeFilter,
+            value: viewTypeFilter,
             onChange: (value) =>
               setTypeFilter(
                 (Array.isArray(value)
@@ -311,11 +283,58 @@ export default function AnfragenPage() {
           ]
         : [];
     return [...typeConfig, ...historyConfigs];
-  }, [showTypeFilter, view, typeOptions, typeFilter, statusFilter, dateRange]);
+  }, [
+    showTypeFilter,
+    view,
+    typeOptions,
+    viewTypeFilter,
+    statusFilter,
+    dateRange,
+  ]);
+
+  // Alle Werte eines Filters gewählt heißt „alle“ (#6734): kein Chip, kein
+  // Ring, und die Liste lädt ungefiltert, wie die leere Auswahl.
+  const restricting = useMemo(
+    () => restrictingFilterIds(filterConfigs),
+    [filterConfigs],
+  );
+
+  // Stabil memoisiert: die Liste lädt bei jeder Identitätsänderung neu.
+  const filters: AggregatedRequestFilters = useMemo(
+    () => ({
+      search: deferredSearch,
+      includeAggregated: showAggregatedRequests,
+      includeEnrollment: showEnrollmentRequests,
+      includeCareWithdrawals: showCareWithdrawals,
+      canManageFamilyProtection: showEnrollmentRequests,
+      types: restricting.has("art") ? viewTypeFilter : [],
+      statuses:
+        view === "history" && restricting.has("status") ? statusFilter : [],
+      from:
+        view === "history" && dateRange?.from
+          ? toISODate(dateRange.from)
+          : undefined,
+      to:
+        view === "history" && dateRange?.to
+          ? toISODate(dateRange.to)
+          : undefined,
+    }),
+    [
+      deferredSearch,
+      showAggregatedRequests,
+      showEnrollmentRequests,
+      showCareWithdrawals,
+      restricting,
+      viewTypeFilter,
+      statusFilter,
+      dateRange,
+      view,
+    ],
+  );
 
   const activeFilters = useMemo(() => {
     const chips: ActiveFilter[] = [];
-    for (const type of typeFilter) {
+    for (const type of restricting.has("art") ? viewTypeFilter : []) {
       // Eine Art, die in dieser Ansicht nicht wählbar ist, trägt auch keinen
       // Chip — in der Arbeitsliste betrifft das die Direkt-Korrekturen.
       const label = typeOptions.find((option) => option.value === type)?.label;
@@ -328,7 +347,7 @@ export default function AnfragenPage() {
       });
     }
     if (view === "history") {
-      for (const status of statusFilter) {
+      for (const status of restricting.has("status") ? statusFilter : []) {
         const label = STATUS_OPTIONS.find(
           (option) => option.value === status,
         )?.label;
@@ -349,7 +368,7 @@ export default function AnfragenPage() {
       }
     }
     return chips;
-  }, [typeOptions, typeFilter, statusFilter, dateRange, view]);
+  }, [restricting, typeOptions, viewTypeFilter, statusFilter, dateRange, view]);
 
   const staffFilterConfigs = useMemo<FilterConfig[]>(
     () => [
@@ -369,9 +388,22 @@ export default function AnfragenPage() {
     [absenceTypeFilter],
   );
 
+  const staffAbsenceTypes = useMemo(
+    () =>
+      restrictingFilterIds(staffFilterConfigs).has("abwesenheitsart")
+        ? absenceTypeFilter
+        : [],
+    [staffFilterConfigs, absenceTypeFilter],
+  );
+
+  const staffFilters: StaffAbsenceRequestFilters = useMemo(
+    () => ({ search: deferredSearch, types: staffAbsenceTypes }),
+    [deferredSearch, staffAbsenceTypes],
+  );
+
   const staffActiveFilters = useMemo<ActiveFilter[]>(
     () =>
-      absenceTypeFilter.map((type) => ({
+      staffAbsenceTypes.map((type) => ({
         id: `abwesenheitsart-${type}`,
         label:
           ABSENCE_TYPE_OPTIONS.find((option) => option.value === type)?.label ??
@@ -381,7 +413,7 @@ export default function AnfragenPage() {
             prev.filter((value) => value !== type),
           ),
       })),
-    [absenceTypeFilter],
+    [staffAbsenceTypes],
   );
 
   const clearAllFilters = () => {

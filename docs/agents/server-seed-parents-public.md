@@ -35,7 +35,7 @@ An authenticated parent's cache is not an authority for an invitation, enrollmen
 | Route | First display and disposition |
 | --- | --- |
 | `/parents/login` | **Unchanged:** sign-in form and portal session check. Credentials, reset and MFA happen on submit. No use of personal page-seed data. |
-| `/parents/invite` | **Unchanged:** invitation check for query token and account setup form; new account not yet authenticated. |
+| `/parents/invite` | **Unchanged:** the query token opens the account setup form. Validation supplies that form's current registration inputs, not a separate status view. |
 | `/parents/reset-password` | **Unchanged:** reset form from the link inputs; consumption/validation of the credential takes place with the password change, not in a seed. |
 | `/parents/demo` | **Unchanged:** demo entry progress; demo start/advance and sign-in create state and must not run on prefetch. |
 | `/parents/accept-guardian-invite/[token]` | **Already server-side:** invitation summary and school branding from `GET /auth/guardian-invitations/{token}` with same-token authorization. Accepting it is a distinct action. |
@@ -54,7 +54,7 @@ An authenticated parent's cache is not an authority for an invitation, enrollmen
 | `/` | **Server read:** the bare-domain school picker uses the registered public schools GET directly via `readContract` and `seedRead`, shipping only slug, school name and subdomain. No session or SWR key. On failure the existing browser reader retries; success (including an empty list) does not issue a browser GET. Canonical portal redirects are unchanged. |
 | `/start` | **Unchanged:** static intake prompts and local fields; submit opens a mail client. No initial data GET. |
 | `/onboarding` | **Already server-side:** redirect to `/start`; no data. |
-| `/invite` | **Unchanged:** token validation for the staff invitation and public account setup form; the token is checked on opening. |
+| `/invite` | **Unchanged:** opening the account setup form validates the staff invitation token and reads the current sign-in requirement and registration defaults. These are acceptance-form inputs, not a separate status view. |
 | `/reset-password` | **Unchanged:** link-based password reset form; the current link is consumed/validated by the write, not a display GET. |
 | `/demo` | **Unchanged:** demo creation/progress and sign-in are state changes, not display reads. |
 | `/help/[[...topic]]` | **Unchanged:** compiled help content selected by route/query; no backend GET. |

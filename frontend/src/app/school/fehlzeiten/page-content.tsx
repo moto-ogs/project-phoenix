@@ -239,13 +239,13 @@ export default function SchoolAbsenceListPage() {
   return (
     <TenantPage
       title="Fehlzeiten"
-      info={<p>Fehltage je Kind für Klassenbuch und Zeugnis.</p>}
+      info={<p>Fehltage pro Kind für Klassenbuch und Zeugnis.</p>}
       overlays={
         <ExportDialog
           isOpen={exportOpen && !!list}
           onClose={() => setExportOpen(false)}
           title="Fehlzeiten exportieren"
-          description="Fehltage je Kind der Klasse im gewählten Zeitraum."
+          description="Fehltage pro Kind der Klasse im gewählten Zeitraum."
           appliedFilters={
             list
               ? [

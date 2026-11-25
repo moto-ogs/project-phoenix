@@ -19052,6 +19052,26 @@
       "target_owner": "staff-directory-view"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffMembershipRepository.FindTimeTrackingManagerStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindTimeTrackingManagerStaffIDs",
+      "reason": "Read-only target added for terminal-only stamping (#8024): people-directory reaches modules/staffdirectoryview.Directory.ReachableStaffIDs (staff-directory-view) through roots/owners.StaffMembershipRepository.FindTimeTrackingManagerStaffIDs. Reads the school's setting or the staff accounts' effective permissions; no persistent, lock or scope effect.",
+      "source_owner": "people-directory",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.Directory.ReachableStaffIDs",
+      "target_owner": "staff-directory-view"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffMembershipRepository.FindTimeTrackingManagerStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindTimeTrackingManagerStaffIDs",
+      "reason": "Read-only target added for terminal-only stamping (#8024): people-directory reaches modules/staffdirectoryview.New (staff-directory-view) through roots/owners.StaffMembershipRepository.FindTimeTrackingManagerStaffIDs. Reads the school's setting or the staff accounts' effective permissions; no persistent, lock or scope effect.",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.New",
+      "target_owner": "staff-directory-view"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffMembershipRepository.FindWithPerson",
       "classification": "query",
       "effect": "query",

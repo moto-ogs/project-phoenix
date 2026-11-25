@@ -51,9 +51,7 @@ type AccountProvisioning interface {
 	InviteSchoolAdmin(ctx context.Context, schoolID, operatorID int64, clientIP net.IP, input SchoolAdminInvitationInput) (*SchoolAdminInvitation, error)
 	CreateSchoolAccount(ctx context.Context, schoolID, operatorID int64, clientIP net.IP, input SchoolAccountInput) (*CreatedAccount, error)
 	ListSystemRoles(ctx context.Context) ([]SystemRole, error)
-	ListSchoolAccounts(ctx context.Context, schoolID int64) ([]SchoolAccount, error)
-	ListOrganizationAccounts(ctx context.Context, organizationID int64) ([]OrganizationAccount, error)
-	ListAllAccounts(ctx context.Context) ([]OrganizationAccount, error)
+	AccountDirectory
 }
 
 // DeviceProvisioning manages devices across schools for operators.
@@ -223,6 +221,7 @@ type SystemRole struct {
 // SchoolAccount is one account with access to a school.
 type SchoolAccount struct {
 	AccountID           ident.ID `json:"account_id"`
+	InvitationID        ident.ID `json:"invitation_id,omitempty"`
 	Email               string   `json:"email"`
 	Active              bool     `json:"active"`
 	FirstName           string   `json:"first_name"`

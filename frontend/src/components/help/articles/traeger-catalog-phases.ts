@@ -35,7 +35,7 @@ export function traegerCatalogPhasesTopic(): HelpTopic {
           "Öffne die Anmeldephase.",
           "Wähle bei `Betreuungsangebote` `Angebot anlegen`.",
           "Trage `Name` und die `Wochentage` ein. Zählt das Angebot als Betreuungstag, trage für jeden Tag eine Gehzeit ein.",
-          "Trage die Preise ein. Wähle `Je Wochentag` oder `Nach Tagen je Woche`. In der Spalte `Jedes weitere Kind` steht der Preis für Geschwister. Leer heißt: derselbe Preis wie beim 1. Kind.",
+          "Trage die Preise ein. Wähle `Pro Wochentag` oder `Nach Tagen pro Woche`. In der Spalte `Jedes weitere Kind` steht der Preis für Geschwister. Leer heißt: derselbe Preis wie beim 1. Kind.",
           "Soll die Schule auch die Vertragsbedingungen bekommen? Schalte `Vertragsvorlage mitgeben` ein und fülle die Felder aus.",
           "Wähle `Angebot anlegen`.",
         ],
@@ -54,7 +54,7 @@ export function traegerCatalogPhasesTopic(): HelpTopic {
         steps: [
           "Öffne die Anmeldephase.",
           "Wähle oben `Vorschau ansehen`.",
-          "Prüfe je Schule, was passiert: `Wird neu angelegt`, `Wird geändert`, `Wird zurückgezogen` oder `Lehnt ab` mit dem Grund.",
+          "Prüfe pro Schule, was passiert: `Wird neu angelegt`, `Wird geändert`, `Wird zurückgezogen` oder `Lehnt ab` mit dem Grund.",
           "Wähle `Freigeben und übertragen`.",
           "Unter `Ergebnis` siehst du, welche Schule übernommen hat.",
         ],
@@ -68,7 +68,7 @@ export function traegerCatalogPhasesTopic(): HelpTopic {
       "Eine Schule darf eine Kopie nicht löschen. Entfernen geht nur hier mit `Zurückziehen`. Danach überträgst du noch einmal.",
       "Hat ein Kind ein zurückgezogenes Angebot schon gebucht, schaltet moto es in der Schule nur aus.",
       "Eine Phase dauert höchstens 2 Jahre. Ihr Ende liegt höchstens 5 Jahre in der Zukunft. Ältere Phasen außerhalb dieser Grenzen bleiben, wie sie sind, solange du Beginn und Ende nicht änderst.",
-      "Du ziehst das Ende einer Anmeldephase vor? Dann nennt die Vorschau je Schule, wie viele Kinder länger betreut werden. moto beendet keine Betreuung. Sage der Schule Bescheid.",
+      "Du ziehst das Ende einer Anmeldephase vor? Dann nennt die Vorschau pro Schule, wie viele Kinder länger betreut werden. moto beendet keine Betreuung. Sage der Schule Bescheid.",
     ],
     differences: [
       "Du siehst in der Navigation kein `Anmeldephasen`? Deine Rolle darf keine Anmeldungen verwalten. Frage im Träger-Büro nach der Rolle Verwaltung.",

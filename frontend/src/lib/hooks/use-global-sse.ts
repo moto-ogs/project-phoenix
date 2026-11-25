@@ -182,6 +182,8 @@ const PICKUP_TIME_CACHE_KEY_PARTS = [
   // templates, phases and staff lists don't change with a Gehzeit.
   "timetable-day-",
   "timetable-week-",
+  "timetable-month-",
+  "timetable-detail-",
   "timetable-roster-",
 ] as const;
 
@@ -220,6 +222,8 @@ const STUDENT_UPDATE_CACHE_KEY_PARTS = [
   // event, for the same reason.
   "timetable-day-",
   "timetable-week-",
+  "timetable-month-",
+  "timetable-detail-",
   "timetable-roster-",
 ] as const;
 

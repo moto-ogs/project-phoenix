@@ -2947,7 +2947,7 @@ describe("EnrollmentForm", () => {
       within(group).getByRole("checkbox", { name: uniformLabel }),
     );
     expect(
-      screen.getByText("Auswahl für alle Tage übernehmen?"),
+      screen.getByText("Gleiche Heimwege für alle Betreuungstage wählen?"),
     ).toBeInTheDocument();
     expect(
       within(group).getByRole("button", { name: "Mo" }),
@@ -3044,7 +3044,7 @@ describe("EnrollmentForm", () => {
       within(group).getByRole("checkbox", { name: uniformLabel }),
     );
     expect(
-      screen.queryByText("Auswahl für alle Tage übernehmen?"),
+      screen.queryByText("Gleiche Heimwege für alle Betreuungstage wählen?"),
     ).not.toBeInTheDocument();
     expect(within(group).getByRole("checkbox", { name: "Bus" })).toBeChecked();
   });

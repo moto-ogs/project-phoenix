@@ -143,7 +143,7 @@ func TestTraegerArrivalPickupTimesCountFirstArrivalAndLastPickupPerChildDay(t *t
 	assert.Contains(t, export.Header().Get("Content-Disposition"), "ankunft-und-abholung-2026-09-07-bis-2026-09-14.csv")
 	csv := strings.TrimPrefix(export.Body.String(), "\xEF\xBB\xBF")
 	for _, line := range []string{
-		"Von;Bis;Schule;Ort;Wochentag;Uhrzeit;Ankunft je Tag;Abholung je Tag;Tage",
+		"Von;Bis;Schule;Ort;Wochentag;Uhrzeit;Ankunft pro Tag;Abholung pro Tag;Tage",
 		"07.09.2026;14.09.2026;Alle Schulen;;Montag;07:30–08:00;1,0;0,0;2",
 		"07.09.2026;14.09.2026;OGS Am Bach;;Montag;15:00–15:30;0,0;0,5;2",
 		"07.09.2026;14.09.2026;OGS Lindenweg;;Montag;07:30–08:00;0,0;0,0;0",

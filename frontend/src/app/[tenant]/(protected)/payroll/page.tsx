@@ -1793,7 +1793,7 @@ function RateCell({
     <div className="relative w-full md:max-w-[11rem]">
       <div>
         <Input
-          aria-label={`Höhe ${SURCHARGE_KIND_LABELS[rule.kind]} in ${rule.rateType === "prozent" ? "Prozent" : "Euro je Stunde"}`}
+          aria-label={`Höhe ${SURCHARGE_KIND_LABELS[rule.kind]} in ${rule.rateType === "prozent" ? "Prozent" : "Euro pro Stunde"}`}
           value={text}
           onChange={(event) => setText(event.target.value)}
           onBlur={() => {
@@ -1811,7 +1811,7 @@ function RateCell({
         aria-hidden="true"
         className="pointer-events-none absolute top-0 right-4 flex h-10 items-center text-sm whitespace-nowrap text-gray-500"
       >
-        {rule.rateType === "prozent" ? "%" : "€ je Stunde"}
+        {rule.rateType === "prozent" ? "%" : "€ pro Stunde"}
       </span>
     </div>
   );

@@ -829,6 +829,18 @@
       "legacy": "work_session_overlap"
     },
     {
+      "code": "workforce.terminal_only_stamping",
+      "class": "permission",
+      "parameters": [],
+      "legacy": "workforce.terminal_only_stamping"
+    },
+    {
+      "code": "workforce.terminal_only_time_edit",
+      "class": "permission",
+      "parameters": [],
+      "legacy": "workforce.terminal_only_time_edit"
+    },
+    {
       "code": "workforce.work_time_model_archived",
       "class": "business_rejection",
       "parameters": [],

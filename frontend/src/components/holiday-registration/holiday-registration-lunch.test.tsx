@@ -111,7 +111,7 @@ describe("lunch in the holiday registration", () => {
     expect(boxes[0]).not.toBeChecked();
     expect(
       // The test catalog leaves the plural form as written; the sum is in it.
-      screen.getByText(/Essen zu je 4,30\s€, zusammen 21,50\s€/),
+      screen.getByText(/Essen für 4,30\s€ pro Essen, zusammen 21,50\s€/),
     ).toBeInTheDocument();
     fireEvent.click(boxes[0]!);
     expect(onChange).toHaveBeenCalledWith(
@@ -123,7 +123,7 @@ describe("lunch in the holiday registration", () => {
     renderCard({ ...child, bookings: { "12": "22" } });
     expect(
       screen.getByText(
-        /^4,30\s€ je Essen\. Dein Kind isst an jedem Tag, den du wählst\.$/,
+        /^4,30\s€ pro Essen\. Dein Kind isst an jedem Tag, den du wählst\.$/,
       ),
     ).toBeInTheDocument();
   });

@@ -22,6 +22,7 @@
     "audit:a11y": "playwright test -c playwright.a11y-audit.config.ts",
     "test:network": "playwright test -c playwright.network.config.ts",
     "test:tenant-switch": "playwright test -c playwright.tenant-switch.config.ts",
+    "test:session-tree": "playwright test -c playwright.session-tree.config.ts",
     "generate:locales": "node scripts/generate-locales.mjs",
     "generate:error-catalog": "node scripts/verify-error-catalog.mjs --write",
     "lint": "node scripts/lint.mjs",

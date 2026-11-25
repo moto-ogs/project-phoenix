@@ -131,7 +131,7 @@ vi.mock("~/lib/operator/provisioning-api", async () => {
       listOrganizationSummaries: mockListOrganizationSummaries,
       listOrganizationSchools: mockListOrganizationSchools,
       listSchoolSummaries: mockListSchoolSummaries,
-      listSchoolAccounts: mockListSchoolAccounts,
+      listAccountPage: mockListSchoolAccounts,
       listSchoolDevices: mockListSchoolDevices,
       listSchoolPersons: mockListSchoolPersons,
       listSystemRoles: vi.fn().mockResolvedValue([]),
@@ -304,9 +304,12 @@ function setupSWR(opts: SetupOpts = {}) {
           isLoading: false,
           mutate: mockMutateRequiredDetails,
         };
-      case operatorProvisioningKeys.schoolAccounts(mockSchool.id):
+      case operatorProvisioningKeys.accountPage(
+        { kind: "school", id: mockSchool.id },
+        { sort: "name", direction: "asc" },
+      ):
         return {
-          data: accounts,
+          data: { rows: accounts, total: accounts.length },
           error: accountsError,
           isLoading: false,
           mutate: mockMutateAccounts,

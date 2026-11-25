@@ -111,17 +111,19 @@ func RespondWithJSON(w http.ResponseWriter, r *http.Request, status int, data in
 
 // Pagination represents pagination metadata for responses
 type Pagination struct {
-	CurrentPage  int `json:"current_page"`
-	PageSize     int `json:"page_size"`
-	TotalPages   int `json:"total_pages"`
-	TotalRecords int `json:"total_records"`
+	CurrentPage  int    `json:"current_page"`
+	PageSize     int    `json:"page_size"`
+	TotalPages   int    `json:"total_pages"`
+	TotalRecords int    `json:"total_records"`
+	NextCursor   string `json:"next_cursor,omitempty"`
 }
 
 // PaginationParams groups parameters for paginated responses to reduce function parameter count
 type PaginationParams struct {
-	Page     int
-	PageSize int
-	Total    int
+	Page       int
+	PageSize   int
+	Total      int
+	NextCursor string
 }
 
 // PaginatedResponse is a response with pagination metadata
@@ -160,6 +162,7 @@ func (p *PaginatedResponse) Render(_ http.ResponseWriter, _ *http.Request) error
 // RespondPaginated sends a paginated response using PaginationParams struct
 func RespondPaginated(w http.ResponseWriter, r *http.Request, status int, data interface{}, params PaginationParams, message string) {
 	response := NewPaginatedResponse(data, params.Page, params.PageSize, params.Total, message)
+	response.Pagination.NextCursor = params.NextCursor
 	if !answerObserved(w, r, status, data, response) {
 		return
 	}

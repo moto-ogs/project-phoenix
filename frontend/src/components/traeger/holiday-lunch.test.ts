@@ -224,7 +224,7 @@ describe("lunch on the contribution and its account", () => {
 
   it("names the lunches and the price of one lunch", () => {
     expect(contributionLineLabel(line)).toContain(
-      "Mittagessen, 5 Essen zu je 4,30 €",
+      "Mittagessen, 5 Essen für 4,30 € pro Essen",
     );
     expect(contributionLineLabel(line)).toContain("12.07.");
     expect(lunchCountText({ amountCents: 430, bookedDays: 1 })).toBe(
@@ -232,7 +232,7 @@ describe("lunch on the contribution and its account", () => {
     );
     // A Storno negates the amount; the price of one lunch stays positive.
     expect(lunchCountText({ amountCents: -2150, bookedDays: 5 })).toBe(
-      "5 Essen zu je 4,30 €",
+      "5 Essen für 4,30 € pro Essen",
     );
     expect(lunchCountText({ amountCents: 2150, bookedDays: null })).toBe("");
   });

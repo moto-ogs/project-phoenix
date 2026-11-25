@@ -104,7 +104,7 @@ export function isStaleAfterSessionSave(
 const NO_EDITS: WorkSessionEdit[] = [];
 
 const multiBlockBoundsHint =
-  "Tagesgrenzen über alle Blöcke — die Zeit zwischen zwei Blöcken zählt nicht als Arbeitszeit. Die gearbeiteten Zeiten stehen je Block darunter.";
+  "Tagesgrenzen über alle Blöcke — die Zeit zwischen zwei Blöcken zählt nicht als Arbeitszeit. Die gearbeiteten Zeiten stehen pro Block darunter.";
 
 // Checkout des letzten Segments: der gespeicherte Wert, wenn er die gezeigten
 // Minuten deckt, sonst das gekappte Ende. Ein offener Block behält null und

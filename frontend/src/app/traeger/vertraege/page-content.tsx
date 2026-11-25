@@ -600,7 +600,7 @@ export default function TraegerVertraegePage() {
   return (
     <TenantPage
       title="Verträge"
-      info="Hier siehst du die Betreuungsverträge aus den angenommenen Anmeldungen deiner Schulen und die Verträge, die du aus einem anderen Programm importiert hast. moto übernimmt Kind, Eltern, Beginn und die gebuchten Module je Wochentag. Gilt der Vertrag bei der Annahme, entsteht er von selbst, wenn die Eltern im Anmeldeformular den Vertragsbedingungen zugestimmt haben. Sonst prüfst du den Entwurf und sendest ihn per Mail und in die Eltern-App."
+      info="Hier siehst du die Betreuungsverträge aus den angenommenen Anmeldungen deiner Schulen und die Verträge, die du aus einem anderen Programm importiert hast. moto übernimmt Kind, Eltern, Beginn und die gebuchten Module pro Wochentag. Gilt der Vertrag bei der Annahme, entsteht er von selbst, wenn die Eltern im Anmeldeformular den Vertragsbedingungen zugestimmt haben. Sonst prüfst du den Entwurf und sendest ihn per Mail und in die Eltern-App."
       tabs={careContractTabs("vertraege")}
       stats={
         total > 0 || waiting > 0 ? (
@@ -747,7 +747,7 @@ export default function TraegerVertraegePage() {
           }
         >
           <ul
-            aria-label="Abschluss je Schule"
+            aria-label="Abschluss pro Schule"
             className="divide-y divide-gray-100"
           >
             {data.modes.map((school) => {

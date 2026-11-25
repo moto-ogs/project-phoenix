@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 // eslint-disable-next-line no-restricted-imports -- operator routes are not tenant-scoped
-import { redirect, useRouter } from "next/navigation";
+import { redirect } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { signOutStaleSession } from "~/lib/login-session-notice";
 import type { MFAStep } from "~/lib/sign-in-answer";
@@ -36,10 +36,10 @@ export default function OperatorLoginPage() {
   const [mfaStep, setMfaStep] = useState<MFAStep | null>(null);
   const [enrollmentStep, setEnrollmentStep] =
     useState<MFAEnrollmentStep | null>(null);
-  const router = useRouter();
   const { data: session, status, update } = useSession();
   const cleanupStartedRef = useRef(false);
   const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const [cleanupFailed, setCleanupFailed] = useState(false);
   // Only the first answer counts: update() after a sign-in loads again and
   // must not unmount the step that waits for it.
   const [sessionKnown, setSessionKnown] = useState(false);
@@ -51,8 +51,12 @@ export default function OperatorLoginPage() {
     const cleanup = signOutStaleSession({
       status,
       session,
+      portal: "operator",
       started: cleanupStartedRef,
       logger,
+      // A refused cleanup leaves the form: a new sign-in replaces the ended
+      // cookie.
+      onFailure: () => setCleanupFailed(true),
     });
     if (!cleanup) return;
     setIsCleaningUp(true);
@@ -73,7 +77,9 @@ export default function OperatorLoginPage() {
   if (
     (status === "loading" && !sessionKnown) ||
     isCleaningUp ||
-    (status === "authenticated" && session?.error !== undefined)
+    (status === "authenticated" &&
+      session?.error !== undefined &&
+      !cleanupFailed)
   ) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-4">
@@ -82,11 +88,13 @@ export default function OperatorLoginPage() {
     );
   }
 
-  // The BFF has installed the cookie. Refresh only the safe provider snapshot.
+  // The BFF has installed the cookie. A new document, as in every portal:
+  // nothing of a session that ended in this one (its router cache) stays
+  // (#8082).
   const completeLogin = async () => {
     await update();
     setAwaitingRedirect(true);
-    router.push(operatorPath("/operator/organizations"));
+    window.location.assign(operatorPath("/operator/organizations"));
   };
 
   const submit = async (credentials: PasswordCredentials) => {

@@ -365,8 +365,8 @@ export function HolidayPeriodForm({
             <Input
               controlSize="compact"
               name="max_days_per_child"
-              label="Höchstens Tage je Kind"
-              hint="Gilt für alle Wochen zusammen. Eltern dürfen die Tage verteilen. Leer lassen, wenn es keine Grenze gibt."
+              label="Höchstzahl an Tagen pro Kind"
+              hint="Gilt für alle Wochen zusammen. Eltern dürfen die Tage verteilen. Wenn es keine Grenze gibt, lass das Feld leer."
               inputMode="numeric"
               placeholder="zum Beispiel 5"
               className="sm:max-w-xs"
@@ -380,8 +380,10 @@ export function HolidayPeriodForm({
               label="Ferienwunsch aus der OGS-Anmeldung berücksichtigen"
               description={
                 <>
-                  Kinder deiner Schulen ohne Ferienwunsch warten hinter den
-                  anderen. Was ohne Ferienwunsch gilt, legst du in den{" "}
+                  Eltern geben in der OGS-Anmeldung an, ob ihr Kind
+                  Ferienbetreuung braucht. Ist der Schalter an, haben Kinder mit
+                  diesem Ferienwunsch Vorrang, wenn eine Woche voll ist. Oder
+                  nur sie können sich anmelden: Das legst du in den{" "}
                   {/* In a form a link opens a new tab, so the unsaved
                       draft stays (Bauart 1 R9). */}
                   <ButtonLink
@@ -396,7 +398,7 @@ export function HolidayPeriodForm({
                   >
                     Einstellungen
                   </ButtonLink>{" "}
-                  fest. Feriengäste sind nicht betroffen.
+                  fest. Für Feriengäste ändert sich nichts.
                 </>
               }
               checked={draft.holidayWishRule}
@@ -434,7 +436,7 @@ export function HolidayPeriodForm({
               <SectionLabel as="h3">Wochen</SectionLabel>
               <p className="text-sm text-gray-600">
                 Jede Woche findet an einer Schule deines Trägers statt. Willst
-                du dieselben Tage an mehreren Schulen anbieten? Lege dafür je
+                du dieselben Tage an mehreren Schulen anbieten? Lege dafür pro
                 Schule eine Woche an. Eltern wählen dann eine Schule.
               </p>
               {/* What a booked time model allows is said only where one

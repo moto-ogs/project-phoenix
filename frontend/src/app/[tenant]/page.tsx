@@ -1,7 +1,7 @@
 "use client";
 
 import type { ErrorCode } from "~/lib/error-codes.generated";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { Alert } from "~/components/ui/alert";
@@ -17,6 +17,7 @@ import {
 } from "~/components/auth/password-login-form";
 import { useTenant } from "~/lib/tenant-context";
 import { loginImageSrc } from "~/lib/tenant-api";
+import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { parentsPortalLoginUrl } from "~/lib/parent-url";
 import { schoolPortalLoginUrl } from "~/lib/school-url";
@@ -95,7 +96,11 @@ export default function HomePage() {
     useState<MFAEnrollmentStep | null>(null);
   const [wrongPortalHint, setWrongPortalHint] =
     useState<WrongPortalHint | null>(null);
+  const tenantPath = useTenantAwarePath();
   const router = useTenantRouter();
+  const redirectedRef = useRef(false);
+  // A sign-in in this document: its target loads as a new document.
+  const signedInHereRef = useRef(false);
   const { tenantSlug, tenant } = useTenant();
   const { data: session, status, update } = useSession();
   const loginTitle = tenant?.name?.trim() ? tenant.name : "Willkommen bei moto";
@@ -110,6 +115,7 @@ export default function HomePage() {
   }, []);
   const isCheckingAuth = useLoginSessionCheck({
     logger,
+    portal: "tenant",
     paused: enrollmentStep !== null,
     onAccess: prepareSmartRedirect,
   });
@@ -131,13 +137,15 @@ export default function HomePage() {
     isSchoolPortalHandoffPath(getSmartRedirectPath(session));
 
   // The BFF has already set the httpOnly session cookie. Read only the
-  // browser-safe session to update the provider before SmartRedirect runs.
+  // browser-safe session to update the provider before SmartRedirect runs;
+  // it loads the target as a new document, so no refresh of this one runs
+  // beside it (a refresh in flight would abort that navigation).
   const completeLogin = async () => {
     const current = await update();
     if (!hasSessionAccess(current))
       throw new Error("Session was not established");
+    signedInHereRef.current = true;
     setAwaitingRedirect(true);
-    router.refresh();
   };
 
   // Hand the account over to the portal it belongs to. Done in an effect
@@ -351,12 +359,22 @@ export default function HomePage() {
         hasSessionAccess(session) && (
           <SmartRedirect
             onRedirect={(path) => {
+              // One document navigation: SmartRedirect calls again with every
+              // render, and a second assignment aborts the first.
+              if (redirectedRef.current) return;
+              redirectedRef.current = true;
               logger.info("redirecting based on user permissions", { path });
               if (isSchoolPortalHandoffPath(path)) {
                 window.location.href = schoolPortalLoginUrl(schoolHandoffQuery);
                 return;
               }
-              router.push(path);
+              // After a sign-in here a new document, as in every portal:
+              // nothing of a session that ended in this one (its router
+              // cache) stays (#8082). A visit of a signed-in person (back
+              // from the settings) stays in the document.
+              if (signedInHereRef.current)
+                window.location.assign(tenantPath(path));
+              else router.push(path);
             }}
           />
         )}

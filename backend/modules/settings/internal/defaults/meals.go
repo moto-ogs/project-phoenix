@@ -243,7 +243,7 @@ var mealDefinitions = []config.Definition{
 	{
 		Key:             config.KeyMealOrderDetail,
 		Label:           "Zahlen in der Bestellung",
-		Description:     "Nur die Gesamtzahl pro Tag oder zusätzlich die Zahl je Klasse.",
+		Description:     "Nur die Gesamtzahl pro Tag oder zusätzlich die Zahl pro Klasse.",
 		Type:            config.FieldSelect,
 		Default:         config.MealOrderDetailByClass,
 		ReadPermission:  "config:read",
@@ -254,7 +254,7 @@ var mealDefinitions = []config.Definition{
 		DependsOn:       config.DependsOnEq(config.KeyMealRegistrationEnabled, true),
 		Options: &config.SelectOptions{Static: []config.SelectOption{
 			{Label: "Gesamtzahl", Value: config.MealOrderDetailTotal},
-			{Label: "Je Klasse", Value: config.MealOrderDetailByClass},
+			{Label: "Pro Klasse", Value: config.MealOrderDetailByClass},
 		}},
 	},
 	{

@@ -5,7 +5,10 @@ import { ParentAuthGuard } from "./auth-guard";
 import { getLocale } from "next-intl/server";
 import { getParentAppMetadata } from "~/i18n/parent-app-metadata";
 import type { AppLocale } from "~/i18n/locales";
-import { readPortalSessionSnapshot } from "~/lib/portal-session-snapshot.server";
+import {
+  readPortalSessionSnapshot,
+  readRenderedSessionMark,
+} from "~/lib/portal-session-snapshot.server";
 import { ParentServerSeed } from "~/components/parent/parent-server-seed";
 import {
   isProtectedParentPath,
@@ -33,6 +36,8 @@ const ParentShellMessages = messageBoundary(
   "parentNotificationSetup",
   "pushNotifications",
   "parentCrash",
+  // The session boundary's lock and reload texts (#8082).
+  "sessionTree",
   "errorCatalog.actions.crash",
   "errorCatalog.actions.retry",
 );
@@ -91,7 +96,10 @@ export default async function ParentLayout({
   );
   return (
     <ParentShellMessages>
-      <ParentProviders session={snapshot?.session ?? null}>
+      <ParentProviders
+        session={snapshot?.session ?? null}
+        sessionMark={await readRenderedSessionMark("parent")}
+      >
         {/* The shell's family cards (#8077), started now and
             not awaited. A public page, also with a parent cookie, gets no
             personal seed and no extra read. */}

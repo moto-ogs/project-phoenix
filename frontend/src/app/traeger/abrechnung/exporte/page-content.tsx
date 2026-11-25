@@ -417,7 +417,7 @@ export default function TraegerFinanceExportsPage() {
             />
           ) : null}
           <SectionCard
-            title="Dateien je Lauf"
+            title="Dateien pro Lauf"
             description="Die Sollstellung ist für deine Kämmerei, die DATEV-Datei für dein Steuerbüro. Die DATEV-Datei enthält nur neue Buchungen."
             action={
               <TraegerListExportMenu

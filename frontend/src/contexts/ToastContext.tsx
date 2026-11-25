@@ -22,6 +22,7 @@ import { normalizeLocale, type AppLocale } from "~/i18n/locales";
 import { useErrorCareFacilityTerm } from "~/lib/care-facility-term-context";
 import { useLatest } from "~/lib/hooks/use-latest";
 import { useErrorContact } from "~/lib/error-contact";
+import { onSessionTreeDiscard, onSessionTreeHidden } from "~/lib/session-tree";
 import { useModulePortal } from "~/lib/module-portal-context";
 import {
   portalNotBookedExplanation,
@@ -238,6 +239,53 @@ function loadErrorPresenter() {
   return errorPresenterPromise;
 }
 
+/** Speculative load only. The first error retries a failed chunk request. */
+export function prepareErrorPresenter(): void {
+  void loadErrorPresenter().catch(() => undefined);
+}
+
+/**
+ * The toasts of one protected tree (#8082). Its readers raise their toasts
+ * through the provider above, until the tree is discarded: a write or read
+ * of the old session that answers later shows nothing, neither over the
+ * next session's tree nor over the lock screen. Mounted by
+ * SessionTreeBoundary inside every tree it renders.
+ */
+export function ToastSessionScope({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  const parent = useContext(ToastContext);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    // At the discard itself, not at the old tree's later unmount: a late
+    // answer in between raises nothing over the new tree or the lock.
+    const stop = onSessionTreeDiscard(() => {
+      alive.current = false;
+    });
+    return () => {
+      stop();
+      alive.current = false;
+    };
+  }, []);
+  const api = useMemo<ToastAPI | undefined>(() => {
+    if (!parent) return undefined;
+    const guard =
+      (show: ToastAPI["success"]): ToastAPI["success"] =>
+      (message, options) => {
+        if (alive.current) show(message, options);
+      };
+    return {
+      success: guard(parent.success),
+      error: guard(parent.error),
+      info: guard(parent.info),
+      warning: guard(parent.warning),
+      remove: parent.remove,
+    };
+  }, [parent]);
+  return <ToastContext.Provider value={api}>{children}</ToastContext.Provider>;
+}
+
 export function useToast() {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error("useToast must be used within ToastProvider");
@@ -447,6 +495,22 @@ export function ToastProvider({
     setItems((prev) => prev.filter((it) => it.id !== id));
   }, []);
 
+  // Toasts sit above the portals' session boundary, but they belong to the
+  // tree that raised them: names, counts, actions of that session (#8082).
+  useEffect(() => {
+    const clear = () => {
+      setItems([]);
+      actedOnRef.current.clear();
+      lastShownRef.current.clear();
+    };
+    const stopDiscard = onSessionTreeDiscard(clear);
+    const stopHidden = onSessionTreeHidden(clear);
+    return () => {
+      stopDiscard();
+      stopHidden();
+    };
+  }, []);
+
   const push = useCallback(
     (type: ToastType, message: string, options?: ToastOptions) => {
       if (!message) return;
@@ -621,6 +685,7 @@ function useApiErrorCore(
   formRef: RefObject<HTMLElement | null> | undefined,
   deliver: (shown: DisplayedError, locale: AppLocale) => void,
   surface: ErrorSurface,
+  preloadPresenter = true,
 ) {
   const markFields = surface !== "load";
   const contact = useErrorContact();
@@ -668,8 +733,8 @@ function useApiErrorCore(
     // Keep the catalog in its own chunk, but start loading it while the form
     // or action is mounted so a failed submit can mark and focus its fields
     // without waiting for that chunk first.
-    void loadErrorPresenter().catch(() => undefined);
-  }, []);
+    if (preloadPresenter) prepareErrorPresenter();
+  }, [preloadPresenter]);
 
   useEffect(() => {
     const failed = new Set(Object.keys(fieldErrors));
@@ -726,8 +791,7 @@ function useApiErrorCore(
       const readState = isReadStateRefusal(error);
       const reloaded =
         readState && options.reload ? settleReload(options.reload) : undefined;
-      // The presenter remains a separate chunk. The mounted error path starts
-      // its load ahead of time, and concurrent failures share that request.
+      // Concurrent failures share the same presenter request.
       let presenter: typeof import("~/lib/error-presentation");
       try {
         presenter = await loadErrorPresenter();
@@ -933,7 +997,10 @@ function moduleRefusalExplanation(
 }
 
 /** Opt-in display path for actions without a form (#2510). */
-export function useApiErrorDisplay(formRef?: RefObject<HTMLElement | null>) {
+export function useApiErrorDisplay(
+  formRef?: RefObject<HTMLElement | null>,
+  { preloadPresenter = true } = {},
+) {
   const toast = useToast();
   const seesLocked = useContext(ModuleBookingAudienceContext);
   const portal = useModulePortal();
@@ -979,7 +1046,7 @@ export function useApiErrorDisplay(formRef?: RefObject<HTMLElement | null>) {
     },
     [toast, seesLocked, portal, fixTarget, inOverlay],
   );
-  const core = useApiErrorCore(formRef, deliver, "toast");
+  const core = useApiErrorCore(formRef, deliver, "toast", preloadPresenter);
   /**
    * A failure the screen found itself, without an API answer: copying
    * failed, the file is too large, the browser blocked a window. The text is
@@ -1022,7 +1089,10 @@ function toFormErrorDetail(
  * to the form's `FormErrorAlert`, never to a toast; field errors stay at the
  * field. Render `error` in the alert and `fieldError(name)` at each field.
  */
-export function useApiFormError(formRef?: RefObject<HTMLElement | null>) {
+export function useApiFormError(
+  formRef?: RefObject<HTMLElement | null>,
+  { preloadPresenter = true } = {},
+) {
   const [error, setError] = useFormError();
   const deliver = useCallback(
     (shown: DisplayedError, locale: AppLocale) =>
@@ -1035,7 +1105,7 @@ export function useApiFormError(formRef?: RefObject<HTMLElement | null>) {
     clearFieldErrors,
     setFieldErrors,
     invalidatePendingShow,
-  } = useApiErrorCore(formRef, deliver, "form");
+  } = useApiErrorCore(formRef, deliver, "form", preloadPresenter);
   const clear = useCallback(() => {
     invalidatePendingShow();
     setError(null);
@@ -1077,7 +1147,7 @@ export function useApiFormError(formRef?: RefObject<HTMLElement | null>) {
  * `LoadErrorAlert` or pass it to `TenantPage error`. Fields of the
  * surrounding page are neither marked nor focused.
  */
-export function useApiLoadError() {
+export function useApiLoadError({ preloadPresenter = true } = {}) {
   const [error, setError] = useFormError();
   const deliver = useCallback(
     (shown: DisplayedError, locale: AppLocale) =>
@@ -1088,6 +1158,7 @@ export function useApiLoadError() {
     undefined,
     deliver,
     "load",
+    preloadPresenter,
   );
   const clear = useCallback(() => {
     invalidatePendingShow();

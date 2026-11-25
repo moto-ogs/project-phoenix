@@ -41,6 +41,12 @@ vi.mock("next-auth/react", () => ({
     status: "unauthenticated",
   })),
 }));
+// The login page ends a stale cookie through Auth.js' signout protocol,
+// bound to the session mark (#8082).
+vi.mock("~/lib/tenant-session-cookie", async (original) => ({
+  ...(await original<typeof import("~/lib/tenant-session-cookie")>()),
+  signOutSession: (...args: unknown[]) => mockSignOut(...args),
+}));
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -54,18 +60,19 @@ vi.mock("next/navigation", () => ({
 
 // Mock tenant-router
 const mockTenantPush = vi.fn();
-const mockTenantRefresh = vi.fn();
 vi.mock("~/lib/tenant-router", () => ({
-  useTenantRouter: () => ({ push: mockTenantPush, refresh: mockTenantRefresh }),
+  useTenantRouter: () => ({ push: mockTenantPush }),
 }));
 
 // Mock SmartRedirect
 vi.mock("~/components/auth/smart-redirect", () => ({
-  SmartRedirect: ({
-    onRedirect: _onRedirect,
-  }: {
-    onRedirect: (path: string) => void;
-  }) => <div data-testid="smart-redirect" />,
+  SmartRedirect: ({ onRedirect }: { onRedirect: (path: string) => void }) => (
+    <button
+      type="button"
+      data-testid="smart-redirect"
+      onClick={() => onRedirect("/home")}
+    />
+  ),
 }));
 
 // Mock PasswordResetModal
@@ -841,6 +848,26 @@ describe("HomePage (Login)", () => {
     expect(screen.queryByTestId("input-password")).not.toBeInTheDocument();
   });
 
+  // Back from the settings to the start: no session changed, so the way on
+  // stays in the document (#8082), as a warm visit.
+  it("leads a signed-in visit on within the document", async () => {
+    const assign = vi
+      .spyOn(window.location, "assign")
+      .mockImplementation(() => undefined);
+    vi.mocked(useSession).mockReturnValue({
+      data: browserSession,
+      status: "authenticated",
+      update: mockUpdateSession,
+    });
+    render(<HomePage />);
+
+    fireEvent.click(await screen.findByTestId("smart-redirect"));
+
+    expect(mockTenantPush).toHaveBeenCalledWith("/home");
+    expect(assign).not.toHaveBeenCalled();
+    assign.mockRestore();
+  });
+
   it("names moto schule as the target of a Lehrkraft-only session", async () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
@@ -962,7 +989,37 @@ describe("HomePage (Login)", () => {
       tenantSlug: "test-tenant",
     });
     expect(mockSignIn).not.toHaveBeenCalled();
-    await waitFor(() => expect(mockTenantRefresh).toHaveBeenCalled());
+    // The form stays busy until SmartRedirect loads the target document.
+    expect(
+      await screen.findByRole("button", { name: /Anmeldung läuft/ }),
+    ).toBeDisabled();
+  });
+
+  // A sign-in here: the target loads as a new document, nothing of the
+  // router's memory of an earlier session stays (#8082).
+  it("loads the target of a sign-in made here as a new document", async () => {
+    const assign = vi
+      .spyOn(window.location, "assign")
+      .mockImplementation(() => undefined);
+    mockIsPasskeySupported.mockReturnValueOnce(true);
+    mockLoginWithPasskey.mockResolvedValueOnce({ status: "authenticated" });
+    const view = render(<HomePage />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Mit Passkey anmelden" }),
+    );
+    await screen.findByRole("button", { name: /Anmeldung läuft/ });
+    vi.mocked(useSession).mockReturnValue({
+      data: browserSession,
+      status: "authenticated",
+      update: mockUpdateSession,
+    });
+    view.rerender(<HomePage />);
+
+    fireEvent.click(await screen.findByTestId("smart-redirect"));
+
+    expect(assign).toHaveBeenCalledWith(expect.stringContaining("/home"));
+    expect(mockTenantPush).not.toHaveBeenCalled();
+    assign.mockRestore();
   });
 
   it("disables submit button while loading", async () => {
@@ -1119,7 +1176,7 @@ describe("Stripped session", () => {
     render(<HomePage />);
 
     await waitFor(() => {
-      expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
+      expect(mockSignOut).toHaveBeenCalledWith("tenant", "");
     });
     expect(
       await screen.findByRole("button", { name: /anmelden/i }),

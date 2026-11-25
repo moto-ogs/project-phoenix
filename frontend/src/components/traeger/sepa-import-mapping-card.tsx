@@ -36,7 +36,7 @@ const PAYER_KEY_HINTS: Record<PayerKey, string> = {
   email: "Die E-Mail-Adresse aus dem Vertrag der Familie.",
   contract_id: "Die Nummer des Vertrags in moto, zum Beispiel 1042.",
   debtor_number:
-    "Die Debitorennummer, die moto schon kennt: je Kind oder je Zahler, wie in den Einstellungen.",
+    "Die Debitorennummer, die moto schon kennt: pro Kind oder pro Zahler, wie in den Einstellungen.",
 };
 
 export function SepaImportMappingCard({

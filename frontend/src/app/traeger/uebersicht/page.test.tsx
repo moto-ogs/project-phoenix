@@ -268,7 +268,7 @@ describe("TraegerDashboardPage", () => {
       ],
       [
         "Betreuungsschlüssel",
-        "Anwesende Kinder je anwesender Betreuungskraft.",
+        "Anwesende Kinder pro anwesender Betreuungskraft.",
       ],
     ] as const) {
       // Die Kachel trägt ihr Label als Absatz, die Tabelle als Spaltenkopf.

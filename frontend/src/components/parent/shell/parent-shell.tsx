@@ -51,24 +51,35 @@ export function ParentShell({
   const { unreadCount: newsOpen } = useParentNewsUnread(authenticated);
   const { unreadCount: noticesUnread } =
     useParentNotificationsUnread(authenticated);
-  const { data: linkedChildren } = useParentChildren(authenticated);
+  const { data: linkedChildren, accessVersions } =
+    useParentChildren(authenticated);
   const scoped = useSWRCacheKey();
   const identity = scoped("");
+  // Each child with its access, sorted: a new order of the roster (a name
+  // corrected) is no change, a swap of two children's access is.
   const relationships = linkedChildren
-    ? parentKeys.relationshipSet(linkedChildren)
+    ? `${parentKeys.relationshipSet(linkedChildren)}|${linkedChildren
+        .map(
+          (child) =>
+            `${child.student_id}=${accessVersions?.[child.student_id] ?? ""}`,
+        )
+        .sort()
+        .join(",")}`
     : null;
+  // A changed set of children (a relationship ended or began) or a changed
+  // access of one (a permission withdrawn while the child stays linked)
+  // discards the pages below, also those React keeps hidden, with their
+  // drafts. Account and school changes discard the whole portal tree
+  // (SessionTreeBoundary).
   const [contentEpoch, setContentEpoch] = useState({
-    identity,
     relationships,
     revision: 0,
   });
   if (
-    contentEpoch.identity !== identity ||
-    (contentEpoch.relationships !== null &&
-      contentEpoch.relationships !== relationships)
+    contentEpoch.relationships !== null &&
+    contentEpoch.relationships !== relationships
   ) {
     setContentEpoch({
-      identity,
       relationships,
       revision: contentEpoch.revision + 1,
     });
@@ -150,7 +161,7 @@ export function ParentShell({
             }
           >
             <ParentSettingsReturnPathMemory />
-            <Fragment key={`${identity}:${contentEpoch.revision}`}>
+            <Fragment key={contentEpoch.revision}>
               {identity === null ? <ParentPageSkeleton rows={2} /> : children}
             </Fragment>
           </PortalShell>

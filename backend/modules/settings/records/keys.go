@@ -279,7 +279,11 @@ const (
 	// window requires a reason; the tolerance is configurable per school.
 	KeyTimeTrackingRequireDeviationReason    = "operations.time_tracking_require_deviation_reason"
 	KeyTimeTrackingDeviationToleranceMinutes = "operations.time_tracking_deviation_tolerance_minutes"
-	KeyMealPlanEnabled                       = "operations.meal_plan_enabled"
+	// #8024: staff without the right to manage working time stamp only with
+	// their own chip at the NFC terminal; the app neither stamps for them nor
+	// lets them change recorded times. Defaults OFF.
+	KeyTimeTrackingTerminalOnlyStamping = "operations.time_tracking_terminal_only_stamping"
+	KeyMealPlanEnabled                  = "operations.meal_plan_enabled"
 	// KeyFederalState is the school's Bundesland (ISO 3166-2, e.g. DE-NW).
 	// Drives the public-holiday calendar in time tracking (#1418 3a).
 	KeyFederalState = "operations.federal_state"

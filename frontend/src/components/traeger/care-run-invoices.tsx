@@ -109,7 +109,7 @@ function PositionLine({
           {step !== null ? (
             <span>
               <span className="font-medium text-gray-700">
-                {daysLabel(step)} je Woche
+                {daysLabel(step)} pro Woche
               </span>{" "}
               (
               {position.weekdays
@@ -553,7 +553,7 @@ export function CareUnpricedCard({
                   {entries
                     .map((entry) =>
                       entry.weekday === ""
-                        ? `${entry.moduleName} mit ${daysLabel(entry.daysPerWeek ?? 0)} je Woche`
+                        ? `${entry.moduleName} mit ${daysLabel(entry.daysPerWeek ?? 0)} pro Woche`
                         : `${entry.moduleName} am ${labelOf(WEEKDAY_LONG, entry.weekday, "–")}`,
                     )
                     .join(", ")}

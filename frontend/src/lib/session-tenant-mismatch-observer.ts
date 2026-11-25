@@ -1,3 +1,8 @@
+import {
+  PRESENTED_MARK_HEADER,
+  SESSION_MARK_HEADER,
+  noteSessionAnswer,
+} from "./session-mark";
 import { isSessionRefusalCode, reportSessionTenantMismatch } from "./api-error";
 import type { ErrorCode } from "./error-codes.generated";
 import { sessionEndBarrier } from "./session-end-state";
@@ -74,6 +79,15 @@ export function installSessionTenantMismatchObserver(): () => void {
     const response = await (barrier
       ? barrier.fetchThroughSessionBarrier(originalFetch, input, sent)
       : originalFetch(input, sent));
+    // The session marks this answer wrote are this tab's own (#8082).
+    if (ownApi && isOwnApiUrl(response.url || requestUrl(input))) {
+      // The marks the answer wrote are this tab's own; the mark it carried
+      // is read against the tree's from before it (#8082).
+      noteSessionAnswer(
+        response.headers.get(SESSION_MARK_HEADER),
+        response.headers.get(PRESENTED_MARK_HEADER),
+      );
+    }
     const refusal =
       response.status === 409 && ownApi ? await refusalCode(response) : null;
     if (refusal) reportSessionTenantMismatch(refusal);

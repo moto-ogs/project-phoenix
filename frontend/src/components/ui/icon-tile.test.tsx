@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { childrenConcept } from "~/lib/concepts/children";
+import { TINT_CLASSES } from "~/lib/kit-palette";
 
 import { ConceptIconTile } from "./concept-icon-tile";
 import { IconTile } from "./icon-tile";
@@ -42,6 +43,22 @@ describe("IconTile", () => {
       "[&>svg]:size-7",
     );
   });
+
+  // Alle getönten Kacheln zeichnen das Symbol in derselben Stufe (#6666).
+  it.each(["blue", "green", "orange", "red"] as const)(
+    "färbt das Symbol bei %s in der Textstufe der Palette",
+    (tone) => {
+      render(
+        <IconTile
+          icon={<svg aria-hidden="true" />}
+          tone={tone}
+          data-testid="kachel"
+        />,
+      );
+
+      expect(screen.getByTestId("kachel")).toHaveClass(TINT_CLASSES[tone].text);
+    },
+  );
 });
 
 describe("ConceptIconTile", () => {

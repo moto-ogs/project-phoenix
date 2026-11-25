@@ -70,7 +70,7 @@ function TraegerKeptSummary({
       <DataGrid columns={2}>
         <DataField label="Kontingent">
           {type.allowanceEnabled
-            ? "Je Person über alle Schulen"
+            ? "Pro Person über alle Schulen"
             : "Ohne Kontingent"}
         </DataField>
         <DataField label="Verfall">
@@ -85,7 +85,7 @@ function TraegerKeptSummary({
         </DataField>
       </DataGrid>
       <p className="text-xs text-gray-600">
-        Name, Kontingent und Verfall legt dein Träger fest. Die Tage je Person
+        Name, Kontingent und Verfall legt dein Träger fest. Die Tage pro Person
         stehen in der Personalakte beim Träger.
       </p>
     </InsetPanel>
@@ -114,7 +114,8 @@ function traegerSections(type: AbsenceType): SectionConfig[] {
             fields: [
               {
                 name: "schoolLimitDays",
-                label: "Höchstens Tage je Person und Jahr an dieser Schule",
+                label:
+                  "Höchstzahl an Tagen pro Person und Jahr an dieser Schule",
                 type: "number" as const,
                 colSpan: 2 as const,
                 min: 0,
@@ -146,11 +147,11 @@ function sections(type: AbsenceType | null): SectionConfig[] {
         },
         {
           name: "allowanceEnabled",
-          label: "Tage je Person zählen (Kontingent)",
+          label: "Tage pro Person zählen (Kontingent)",
           type: "checkbox",
           colSpan: 2,
           helperText:
-            "Die Tage je Person trägst du unter Mitarbeitende im Reiter Abwesenheiten ein. Mehr als dort steht, lässt sich nicht eintragen.",
+            "Die Tage pro Person trägst du unter Mitarbeitende im Reiter Abwesenheiten ein. Mehr als dort steht, lässt sich nicht eintragen.",
         },
         {
           name: "carryoverUntil",

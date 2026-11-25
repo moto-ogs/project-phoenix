@@ -17,7 +17,7 @@ var traegerDashboardDefinitions = []config.Definition{
 	{
 		Key:             config.KeyTraegerAlertChildrenPerStaff,
 		Levels:          config.LevelTraeger,
-		Label:           "Höchstens so viele Kinder je Betreuungskraft",
+		Label:           "Höchstens so viele Kinder pro Betreuungskraft",
 		Description:     "Kommen auf eine anwesende Betreuungskraft mehr Kinder, zeigt das Dashboard „Zu wenig Personal“. Das gilt auch, wenn Kinder da sind, aber keine Betreuungskraft. 0 schaltet den Hinweis aus.",
 		Type:            config.FieldNumber,
 		Default:         20,

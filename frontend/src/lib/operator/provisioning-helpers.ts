@@ -237,6 +237,7 @@ export interface Invitation {
 // Account types for operator school accounts listing
 
 export interface SchoolAccount {
+  invitationId?: string;
   accountId: string;
   email: string;
   active: boolean;
@@ -256,6 +257,7 @@ export function mapSchoolAccount(
 ): SchoolAccount {
   return {
     accountId: data.account_id,
+    invitationId: data.invitation_id,
     email: data.email,
     active: data.active,
     firstName: data.first_name,

@@ -319,7 +319,7 @@ function ContractEnrollmentView() {
         <div ref={stepFocus} className="flex flex-col gap-6">
           <SectionCard
             title="Schule wählen"
-            description="moto trägt die Anmeldungen je Schule nach. Wähle die Schule, deren Verträge du prüfen willst."
+            description="moto trägt die Anmeldungen pro Schule nach. Wähle die Schule, deren Verträge du prüfen willst."
           >
             <FramedList>
               {schools.map((candidate) => (
@@ -527,7 +527,7 @@ function ConfirmText({
       ) : null}
       <p>
         Danach folgt jeder Vertrag den Buchungen seiner Anmeldung. Eltern
-        bekommen keine Nachricht. Rückgängig machen geht nur je Vertrag: über
+        bekommen keine Nachricht. Rückgängig machen geht nur pro Vertrag: über
         „Bindung an die Anmeldung lösen“. Die Anmeldung bleibt dann an der
         Schule.
       </p>

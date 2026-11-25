@@ -216,6 +216,10 @@ type OwnClockOverview struct {
 	Month               OwnTimeTotals       `json:"month"`
 	AccountStart        calendar.Date       `json:"account_start"`
 	AccountBalance      *int                `json:"account_balance_minutes"`
+	// TerminalOnlyStamping says the staff member stamps only with the own
+	// chip at the NFC terminal (#8024): the app offers no stamp and no edit
+	// of recorded times.
+	TerminalOnlyStamping bool `json:"terminal_only_stamping"`
 }
 
 type OwnLeaveCounts struct {

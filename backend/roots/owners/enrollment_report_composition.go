@@ -51,8 +51,8 @@ func NewEnrollmentReports(sources EnrollmentReportSources) enrollmentOwner.Repor
 
 type enrollmentRosterStudents struct{ repo enrollmentRosterStudentRows }
 
-func (b enrollmentRosterStudents) ListClassRoster(ctx context.Context, schoolClass string) ([]*enrollmentCompose.RosterStudent, error) {
-	students, err := b.repo.ListClassRoster(ctx, schoolClass)
+func (b enrollmentRosterStudents) ListClassRoster(ctx context.Context, classes []string) ([]*enrollmentCompose.RosterStudent, error) {
+	students, err := b.repo.ListClassRoster(ctx, classes)
 	if err != nil {
 		return nil, err
 	}

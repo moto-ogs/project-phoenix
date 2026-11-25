@@ -102,10 +102,10 @@ type ClassListEntry struct {
 // Reads of the other owners the class roster combines. The root binds them to
 // People Directory, School Structure, School Membership and Care Plan.
 type (
-	// RosterStudents lists the students of one class, or every student when
-	// schoolClass is empty.
+	// RosterStudents lists candidates for the selected classes (nil for the
+	// whole school; an empty selection matches no class).
 	RosterStudents interface {
-		ListClassRoster(ctx context.Context, schoolClass string) ([]*RosterStudent, error)
+		ListClassRoster(ctx context.Context, classes []string) ([]*RosterStudent, error)
 	}
 	// RosterPersons resolves person names by person id.
 	RosterPersons interface {
@@ -123,10 +123,10 @@ type (
 	RosterCompanions interface {
 		ListLinksForStudents(ctx context.Context, studentIDs []int64) (map[int64][]CompanionLink, error)
 	}
-	// ClassListEntries hands over the class-list-only entries of one class,
-	// or of every class when schoolClass is empty.
+	// ClassListEntries lists the class-list-only entries for the selected
+	// classes (nil for all; an empty selection matches no class).
 	ClassListEntries interface {
-		ListClassListEntries(ctx context.Context, schoolClass string) ([]ClassListEntry, error)
+		ListClassListEntries(ctx context.Context, classes []string) ([]ClassListEntry, error)
 	}
 	// PickupSchedules reads the recurring pickup plans in force on a date.
 	PickupSchedules interface {

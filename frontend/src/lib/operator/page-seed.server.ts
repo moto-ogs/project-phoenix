@@ -1,3 +1,9 @@
+import * as accountContract from "~/lib/contract/operator-accounts.generated";
+import {
+  accountPage,
+  initialAccountQuery,
+  type AccountScope,
+} from "./account-pages";
 import * as authContract from "~/lib/contract/operator-auth.generated";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { cache } from "react";
@@ -16,6 +22,9 @@ import { mapOperatorInvitations } from "~/lib/operator/operator-invitation-api";
 import {
   mapOperatorDevice,
   mapOrganization,
+  mapOrgAccount,
+  mapSchoolAccount,
+  mapSchoolSummary,
   mapOrganizationSummary,
   mapProvisioningStats,
   mapTraegerErasureOrder,
@@ -117,6 +126,61 @@ export const organizations = operatorRead(
       { token, signal },
     );
     return data.map(mapOrganization);
+  },
+);
+
+export function accountsForQuery(query: OperatorQuery) {
+  const schoolId = operatorQueryParam(query, "schoolId");
+  const organizationId = operatorQueryParam(query, "orgId");
+  return accountsAtScope(
+    schoolId
+      ? { kind: "school", id: schoolId }
+      : organizationId
+        ? { kind: "organization", id: organizationId }
+        : { kind: "all" },
+  );
+}
+
+export function accountsAtScope(scope: AccountScope) {
+  const query = initialAccountQuery(scope);
+  return operatorRead(
+    operatorProvisioningKeys.accountPage(scope, query),
+    "operatorAccountPage",
+    async (token, signal) => {
+      if (scope.kind === "school") {
+        const { data, pagination } = await readContract(
+          schoolsContract.routes["GET /operator/schools/{id}/accounts"],
+          { token, signal, params: { id: scope.id }, query },
+        );
+        return accountPage(data.map(mapSchoolAccount), pagination);
+      }
+      if (scope.kind === "organization") {
+        const { data, pagination } = await readContract(
+          organizationsContract.routes[
+            "GET /operator/organizations/{id}/accounts"
+          ],
+          { token, signal, params: { id: scope.id }, query },
+        );
+        return accountPage(data.map(mapOrgAccount), pagination);
+      }
+      const { data, pagination } = await readContract(
+        accountContract.routes["GET /operator/accounts"],
+        { token, signal, query },
+      );
+      return accountPage(data.map(mapOrgAccount), pagination);
+    },
+  );
+}
+
+export const schoolSummaries = operatorRead(
+  operatorProvisioningKeys.schoolSummaries(),
+  "operatorSchoolSummaries",
+  async (token, signal) => {
+    const { data } = await readContract(
+      schoolsContract.routes["GET /operator/schools/summaries"],
+      { token, signal },
+    );
+    return data.map(mapSchoolSummary);
   },
 );
 

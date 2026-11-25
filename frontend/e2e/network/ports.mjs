@@ -11,6 +11,10 @@ const suites = {
     frontend: { name: "TENANT_SWITCH_PORT", fallback: 13845 },
     api: { name: "TENANT_SWITCH_API_PORT", fallback: 18445 },
   },
+  sessionTree: {
+    frontend: { name: "SESSION_TREE_PORT", fallback: 13847 },
+    api: { name: "SESSION_TREE_API_PORT", fallback: 18447 },
+  },
 };
 
 /** @param {{ name: string, fallback: number }} variable */

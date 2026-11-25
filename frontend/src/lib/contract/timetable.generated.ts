@@ -450,6 +450,17 @@ export const editedInWindowResponseSchema: z.ZodType<editedInWindowResponse, unk
   occurrences: nullable(arr(editedOccurrenceItemSchema)),
 });
 
+/** Go: timetablehttp.instanceAttendanceResponse */
+export interface instanceAttendanceResponse {
+  instance_id: string;
+  students: instanceStudentSummary[] | null;
+}
+
+export const instanceAttendanceResponseSchema: z.ZodType<instanceAttendanceResponse, unknown> = object<instanceAttendanceResponse>({
+  instance_id: int64String,
+  students: nullable(arr(instanceStudentSummarySchema)),
+});
+
 /** Go: timetablehttp.GuardianNoticeReachResponse */
 export interface GuardianNoticeReachResponse {
   child_count: number;
@@ -2558,6 +2569,12 @@ export const routes = {
       "to": { kind: "date" },
     },
     response: success(editedInWindowResponseSchema),
+  },
+  "GET /api/timetable/instances/{id}/attendance": {
+    method: "GET",
+    pattern: "/api/timetable/instances/{id}/attendance",
+    portals: ["tenant"],
+    response: success(instanceAttendanceResponseSchema),
   },
   "GET /api/timetable/instances/{id}/guardian-notice": {
     method: "GET",

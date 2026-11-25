@@ -11,7 +11,6 @@ type AccountRoleQueryStore interface {
 	ListEffectiveAdminAccountIDs(context.Context, int64) ([]int64, domain.OperationStats, error)
 	FindActiveSchoolMemberships(context.Context, []int64, []int64) (map[int64][]int64, domain.OperationStats, error)
 	ListActiveTenantIDs(context.Context, int64) ([]int64, domain.OperationStats, error)
-	ListSchoolAccountListings(context.Context, []int64) ([]domain.SchoolAccountListing, domain.OperationStats, error)
 	FindActiveGuardianMemberships(context.Context, []int64) (map[int64][]int64, domain.OperationStats, error)
 	FindLoginReadyGuardianMemberships(context.Context, []int64) (map[int64][]int64, domain.OperationStats, error)
 	ClassifySchoolRoles(context.Context, int64, []int64) ([]domain.SchoolRoleClass, domain.OperationStats, error)

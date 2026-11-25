@@ -668,7 +668,7 @@ func buildManualSeedProfile(rt *Runtime, definition demoProfileDefinition, boots
 		},
 		Settings: cloneProfileSettings(definition.Settings),
 		Credentials: SeedStateCredentials{
-			Operator:    &SeedOperatorCredentials{Email: rt.OperatorEmail, Password: rt.OperatorPassword},
+			Operator:    &SeedPortalCredentials{Email: rt.OperatorEmail, Password: rt.OperatorPassword},
 			SchoolAdmin: makeBootstrapSeedState(bootstrap).SchoolAdmin,
 			DevicePIN:   rt.StaffPIN, Accounts: SeedStateAccounts{Admin: []AccountCredentials{shared}},
 		},

@@ -33,7 +33,7 @@ export function traegerSepaMandatesTopic(): HelpTopic {
       {
         title: "Mandat einer Familie erfassen",
         description:
-          "Je Familie gilt ein Mandat. Es gilt auch für Geschwister mit derselben E-Mail-Adresse im Vertrag. Stehen Geschwister mit demselben Konto und derselben Mandatsreferenz in mehreren Zeilen, legt moto das Mandat einmal an. Die Vorschau zeigt die weiteren Zeilen als `Gleiches Mandat`.",
+          "Pro Familie gilt ein Mandat. Es gilt auch für Geschwister mit derselben E-Mail-Adresse im Vertrag. Stehen Geschwister mit demselben Konto und derselben Mandatsreferenz in mehreren Zeilen, legt moto das Mandat einmal an. Die Vorschau zeigt die weiteren Zeilen als `Gleiches Mandat`.",
         steps: [
           "Öffne den Vertrag des Kindes unter `Verträge`. Oder öffne im Monatslauf bei der Rechnung das Menü mit den drei Punkten und dann `Empfänger und Zahlung`.",
           "Wähle in der Karte `SEPA-Lastschriftmandat` den Knopf `Mandat erfassen`. Es öffnet sich die Seite des Mandats. Bei einem Entwurf fehlt die Karte: Sende den Vertrag zuerst. Ein verworfener Entwurf würde das Mandat mitlöschen.",
@@ -61,7 +61,7 @@ export function traegerSepaMandatesTopic(): HelpTopic {
           "Hast du die Mandate schon in einem anderen Programm, zum Beispiel OGS Connect? Dann übernimm alle auf einmal aus einer CSV-Datei. Referenz und Datum der Unterschrift bleiben gleich. moto bewahrt die Datei nicht auf.",
         steps: [
           "Speichere die Mandate im anderen Programm als CSV-Datei. Die erste Zeile enthält die Überschriften.",
-          "Aus OGS Connect nimm den Export der Stammdaten. Er hat eine Zeile je Kind. moto schlägt dort die Spalte `Debitor-Nr.` als Zahler vor. Dafür muss moto die Debitorennummern schon kennen, zum Beispiel aus `Verträge importieren` oder aus dem Reiter `Familien`.",
+          "Aus OGS Connect nimm den Export der Stammdaten. Er hat eine Zeile pro Kind. moto schlägt dort die Spalte `Debitor-Nr.` als Zahler vor. Dafür muss moto die Debitorennummern schon kennen, zum Beispiel aus `Verträge importieren` oder aus dem Reiter `Familien`.",
           "Öffne unter `Abrechnung` den Reiter `Lastschrift`. Wähle oben rechts das Menü mit den drei Punkten und dann `Mandate importieren`.",
           "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
           "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. moto schlägt passende Spalten vor.",
@@ -99,7 +99,7 @@ export function traegerSepaMandatesTopic(): HelpTopic {
       "`Verlauf ansehen` zeigt, wer das Mandat wann angesehen oder geändert hat. Bei importierten Mandaten stehen dort auch Dateiname und Zeile. Kontodaten stehen dort nicht.",
       "Für Zeilen ohne IBAN und ohne Mandatsreferenz legt moto kein Mandat an. Die Vorschau zählt sie als „ohne Mandat“. Das sind meist Kinder, deren Familie ohne Lastschrift zahlt. Eine fehlende Debitorennummer übernimmt moto trotzdem, solange es keinen Konflikt gibt. Konflikte zeigt die Vorschau mit der Zeilennummer.",
       "Mandate übernimmt moto nur mit dem Stand `Bereit`. Fehlende Debitorennummern kannst du auch bei vorhandenen Mandaten übernehmen. Die Vorschau zählt jede Familie einmal. Unterschiedliche Nummern werden nicht übernommen. Korrigiere die Datei und lade sie noch einmal.",
-      "Führt dein Träger die Debitorennummer je Kind, bekommt jedes Kind die Nummer seiner Zeile. Geschwister dürfen verschiedene Nummern haben. Damit moto das Kind erkennt, wähle als Zahler die Vertragsnummer oder die Debitorennummer. Mit der E-Mail erkennt moto das Kind nur, wenn die Familie ein Kind mit Vertrag hat.",
+      "Führt dein Träger die Debitorennummer pro Kind, bekommt jedes Kind die Nummer seiner Zeile. Geschwister dürfen verschiedene Nummern haben. Damit moto das Kind erkennt, wähle als Zahler die Vertragsnummer oder die Debitorennummer. Mit der E-Mail erkennt moto das Kind nur, wenn die Familie ein Kind mit Vertrag hat.",
       "Ein Mandat aus der Datei, mit dem schon abgebucht wurde, übernimmt moto als Folgelastschrift. Steht die letzte Abbuchung in der Datei, zählen die 36 Monate bis zum Verfall ab diesem Tag. Fehlt sie, zählen sie ab dem Import.",
       "Weißt du, dass die letzte Abbuchung lange her ist? Dann trage das Datum in der Datei ein oder hole ein neues Mandat ein. Ohne Datum geht moto davon aus, dass das Mandat bis kurz vor dem Import genutzt wurde.",
     ],

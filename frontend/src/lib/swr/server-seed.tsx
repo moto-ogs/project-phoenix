@@ -91,8 +91,7 @@ const isServer = typeof window === "undefined";
 // navigation from the router cache, a remount after a scope change) offers
 // nothing again and shows no fallback.
 const offered = new WeakSet<object>();
-// The keys each seed offered: a key offers once, also when the page claims it
-// only later (a features key once the children list is known).
+// Static claims, derived claims and streamed entries offer each key only once.
 const offeredKeys = new WeakMap<object, Set<string>>();
 // The fallback built for a seed, per scope prefix, so every render of the
 // boundary hands SWR the same object.

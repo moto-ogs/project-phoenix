@@ -7796,6 +7796,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/timetable/instances/{id}/attendance",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "instanceAttendanceResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/timetable/instances/{id}/guardian-notice",
       "portals": [
         "tenant"
@@ -8770,6 +8781,20 @@
       "portals": [
         "caterer"
       ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "school_id",
+          "kind": "id"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
       "response": {
         "kind": "ref",
         "ref": "SchoolsResponse"
@@ -8819,6 +8844,25 @@
       "pattern": "/operator/accounts",
       "portals": [
         "platform"
+      ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "direction",
+          "kind": "string"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "sort",
+          "kind": "string"
+        }
       ],
       "response": {
         "kind": "array",
@@ -9088,6 +9132,25 @@
       "portals": [
         "platform"
       ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "direction",
+          "kind": "string"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "sort",
+          "kind": "string"
+        }
+      ],
       "response": {
         "kind": "array",
         "elem": {
@@ -9283,6 +9346,25 @@
       "pattern": "/operator/schools/{id}/accounts",
       "portals": [
         "platform"
+      ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "direction",
+          "kind": "string"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "sort",
+          "kind": "string"
+        }
       ],
       "response": {
         "kind": "array",
@@ -10606,6 +10688,23 @@
       "response": {
         "kind": "ref",
         "ref": "ArrivalExceptionBlockStartResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/class-day/assigned-classes",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AssignedClassesReport"
       }
     },
     {
@@ -32469,6 +32568,48 @@
       ]
     },
     {
+      "name": "AssignedClassesReport",
+      "go_type": "classday.AssignedClassesReport",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "weekday",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "enrollment_known",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ClassSummary"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "AssignmentRequest",
       "go_type": "exporttransferhttp.AssignmentRequest",
       "request": true,
@@ -46245,6 +46386,31 @@
               "kind": "ref",
               "ref": "ClassListImportError"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassSummary",
+      "go_type": "classday.ClassSummary",
+      "fields": [
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "totals",
+          "schema": {
+            "kind": "ref",
+            "ref": "DayTotals"
+          }
+        },
+        {
+          "name": "changes",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -78245,6 +78411,13 @@
           }
         },
         {
+          "name": "invitation_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
           "name": "email",
           "schema": {
             "kind": "string"
@@ -79019,6 +79192,12 @@
           "schema": {
             "kind": "int",
             "nullable": true
+          }
+        },
+        {
+          "name": "terminal_only_stamping",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -94226,6 +94405,13 @@
           }
         },
         {
+          "name": "invitation_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
           "name": "email",
           "schema": {
             "kind": "string"
@@ -96844,6 +97030,68 @@
       ]
     },
     {
+      "name": "SchoolSummaryResponse",
+      "go_type": "catererportalhttp.SchoolSummaryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delivery_address",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "started_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "names",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "by_class",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "failure",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "SummaryFailureResponse"
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SummaryDayResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolSupervisionsResponse",
       "go_type": "timetablehttp.SchoolSupervisionsResponse",
       "fields": [
@@ -97244,7 +97492,7 @@
             "nullable": true,
             "elem": {
               "kind": "ref",
-              "ref": "SchoolResponse"
+              "ref": "SchoolSummaryResponse"
             }
           }
         }
@@ -108726,6 +108974,79 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SummaryDayResponse",
+      "go_type": "catererportalhttp.SummaryDayResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "closed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "deadline",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "order_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "total",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "added",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "removed",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SummaryFailureResponse",
+      "go_type": "catererportalhttp.SummaryFailureResponse",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "code",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -127029,6 +127350,29 @@
             "elem": {
               "kind": "ref",
               "ref": "homeLayoutBlockRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "instanceAttendanceResponse",
+      "go_type": "timetablehttp.instanceAttendanceResponse",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "students",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "instanceStudentSummary"
             }
           }
         }

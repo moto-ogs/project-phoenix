@@ -30,7 +30,7 @@ const NOTICE_TEMPLATE_PATH =
   "/traeger/einstellungen/briefkopf/vorlagen/bescheid";
 
 const INFO =
-  "Hier legst du fest, welches Schreiben die Familien je Leistung bekommen. Die Wahl gilt ab der nächsten Freigabe. Schon ausgestellte Schreiben bleiben, wie sie sind.";
+  "Hier legst du fest, welches Schreiben die Familien pro Leistung bekommen. Die Wahl gilt ab der nächsten Freigabe. Schon ausgestellte Schreiben bleiben, wie sie sind.";
 
 export default function TraegerDocumentKindsPage() {
   const { data: session } = useSession();

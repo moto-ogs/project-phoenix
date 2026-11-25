@@ -207,6 +207,7 @@ vi.mock("~/components/timetable/bulk-cancel-appointments-modal", () => ({
 vi.mock("~/lib/timetable-api", () => ({
   timetableService: {
     getWeek: vi.fn(),
+    getInstanceAttendance: vi.fn(),
     getTemplates: vi.fn(),
     getTemplate: mockGetTemplate,
     getGaps: vi.fn(),
@@ -2117,30 +2118,19 @@ describe("BetreuungsplanView", () => {
     expect(urlParams().has("block")).toBe(false);
   });
 
-  // Die Woche kommt ohne Kinderzeilen (#4996): das Detailpanel bekommt sie aus
-  // dem vollständig nachgeladenen Tag des Termins.
-  it("loads the children of the open block with its whole day", async () => {
+  it("loads only the open block’s attendance", async () => {
     const { timetableService } = await import("~/lib/timetable-api");
     const base = mockUseSWRAuth.getMockImplementation()!;
     mockUseSWRAuth.mockImplementation((key: string | null) =>
       key?.includes("-detail-")
         ? {
-            data: {
-              from: instance.date,
-              to: instance.date,
-              instances: [
-                {
-                  ...instance,
-                  students: [
-                    {
-                      studentId: "21",
-                      status: "present",
-                      careDayStatus: "scheduled",
-                    },
-                  ],
-                },
-              ],
-            },
+            data: [
+              {
+                studentId: "21",
+                status: "present",
+                careDayStatus: "scheduled",
+              },
+            ],
           }
         : base(key),
     );
@@ -2151,15 +2141,10 @@ describe("BetreuungsplanView", () => {
     const detail = mockUseSWRAuth.mock.calls.find(
       ([key]) => typeof key === "string" && key.includes("-detail-"),
     ) as [string, () => Promise<unknown>] | undefined;
-    expect(detail?.[0]).toMatch(
-      new RegExp(`^timetable-week-.+-detail-${instance.date}$`),
-    );
-    void detail![1]();
-    expect(timetableService.getWeek).toHaveBeenLastCalledWith(
-      instance.date,
-      instance.date,
-      { groupId: null, staffId: null, roomId: null },
-    );
+    expect(detail?.[0]).toBe(`timetable-detail-42-${instance.date}`);
+    await detail![1]();
+    expect(timetableService.getInstanceAttendance).toHaveBeenCalledWith("42");
+    expect(timetableService.getWeek).not.toHaveBeenCalled();
   });
 
   it("refreshes the open block's notes even when the slim week is unchanged", async () => {
@@ -2175,23 +2160,15 @@ describe("BetreuungsplanView", () => {
       instances: [instance],
     };
     let note = "Alte Notiz";
-    vi.mocked(timetableService.getWeek).mockImplementation(
-      async (_from, _to, _filter, options) =>
-        options?.view === "slim"
-          ? week
-          : {
-              ...week,
-              instances: [
-                {
-                  ...instance,
-                  students: [{ studentId: "21", status: "absent", note }],
-                },
-              ],
-            },
+    vi.mocked(timetableService.getWeek).mockResolvedValue(week);
+    vi.mocked(timetableService.getInstanceAttendance).mockImplementation(
+      async () => [{ studentId: "21", status: "absent", note }],
     );
     mockUseSWRAuth.mockImplementation(
       function usePlanSWR(key, fetcher, options) {
-        const isPlan = key?.startsWith("timetable-week-");
+        const isPlan =
+          key?.startsWith("timetable-week-") ||
+          key?.startsWith("timetable-detail-");
         const response = useRealSWRAuth(isPlan ? key : null, fetcher, options);
         if (isPlan) revalidators.set(key, () => response.mutate());
         return isPlan ? response : base(key);
@@ -2230,7 +2207,7 @@ describe("BetreuungsplanView", () => {
     );
   });
 
-  it("shows the children as loading until the block's day arrives", () => {
+  it("shows the children as loading until the block's attendance arrives", () => {
     const base = mockUseSWRAuth.getMockImplementation()!;
     mockUseSWRAuth.mockImplementation((key: string | null) =>
       key?.includes("-detail-") ? { isLoading: true } : base(key),
@@ -2241,72 +2218,60 @@ describe("BetreuungsplanView", () => {
     expect(screen.getByTestId("detail-students")).toHaveTextContent("pending");
   });
 
-  it("does not reuse the previous day's children while the selected day loads", async () => {
-    const { useSWRAuth: useRealSWRAuth } =
-      await vi.importActual<typeof import("~/lib/swr")>("~/lib/swr");
-    const { SWRConfig } = await import("~/lib/swr/testing");
-    const { timetableService } = await import("~/lib/timetable-api");
-    const nextInstance = { ...instance, id: "43", date: "2026-05-05" };
-    setupSWR({ instances: [instance, nextInstance] });
-    const base = mockUseSWRAuth.getMockImplementation()!;
-    mockUseSWRAuth.mockImplementation(
-      function useDetailSWR(key, fetcher, options) {
-        const isDetail = key?.includes("-detail-");
-        const response = useRealSWRAuth(
-          isDetail ? key : null,
-          fetcher,
-          options,
-        );
-        return isDetail ? response : base(key);
-      },
-    );
-    let finishNextDay!: (
-      value: Awaited<ReturnType<typeof timetableService.getWeek>>,
-    ) => void;
-    vi.mocked(timetableService.getWeek)
-      .mockResolvedValueOnce({
-        from: instance.date,
-        to: instance.date,
-        instances: [
-          {
-            ...instance,
-            students: [
-              {
-                studentId: "21",
-                status: "present",
-                careDayStatus: "scheduled",
-              },
-            ],
-          },
-        ],
-      })
-      .mockImplementationOnce(
-        () =>
-          new Promise((resolve) => {
-            finishNextDay = resolve;
-          }),
+  it.each(["2026-05-05", instance.date])(
+    "does not reuse another block's children when switching to a block on %s",
+    async (date) => {
+      const { useSWRAuth: useRealSWRAuth } =
+        await vi.importActual<typeof import("~/lib/swr")>("~/lib/swr");
+      const { SWRConfig } = await import("~/lib/swr/testing");
+      const { timetableService } = await import("~/lib/timetable-api");
+      const nextInstance = { ...instance, id: "43", date };
+      setupSWR({ instances: [instance, nextInstance] });
+      const base = mockUseSWRAuth.getMockImplementation()!;
+      mockUseSWRAuth.mockImplementation(
+        function useDetailSWR(key, fetcher, options) {
+          const isDetail = key?.includes("-detail-");
+          const response = useRealSWRAuth(
+            isDetail ? key : null,
+            fetcher,
+            options,
+          );
+          return isDetail ? response : base(key);
+        },
       );
-    setUrl("view=woche&block=42");
-    render(
-      <SWRConfig value={{ provider: () => new Map() }}>
-        <BetreuungsplanView />
-      </SWRConfig>,
-    );
-    await waitFor(() =>
-      expect(screen.getByTestId("detail-students")).toHaveTextContent("1"),
-    );
+      let finishNext!: (
+        value: Awaited<
+          ReturnType<typeof timetableService.getInstanceAttendance>
+        >,
+      ) => void;
+      vi.mocked(timetableService.getInstanceAttendance)
+        .mockResolvedValueOnce([
+          { studentId: "21", status: "present", careDayStatus: "scheduled" },
+        ])
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              finishNext = resolve;
+            }),
+        );
+      setUrl("view=woche&block=42");
+      render(
+        <SWRConfig value={{ provider: () => new Map() }}>
+          <BetreuungsplanView />
+        </SWRConfig>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("detail-students")).toHaveTextContent("1"),
+      );
 
-    act(() => setUrl("view=woche&block=43"));
-    expect(screen.getByTestId("detail-students")).toHaveTextContent("pending");
-    await act(async () =>
-      finishNextDay({
-        from: nextInstance.date,
-        to: nextInstance.date,
-        instances: [nextInstance],
-      }),
-    );
-    expect(screen.getByTestId("detail-students")).toHaveTextContent("0");
-  });
+      act(() => setUrl("view=woche&block=43"));
+      expect(screen.getByTestId("detail-students")).toHaveTextContent(
+        "pending",
+      );
+      await act(async () => finishNext([]));
+      expect(screen.getByTestId("detail-students")).toHaveTextContent("0");
+    },
+  );
 
   it("names the children's list in the load error of an open block", async () => {
     const base = mockUseSWRAuth.getMockImplementation()!;

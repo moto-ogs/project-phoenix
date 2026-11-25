@@ -672,15 +672,9 @@ function TimetablesContent() {
         const selected = week.instances.find(
           (inst) => inst.id === selectedInstanceId,
         );
-        if (selected) {
+        if (selected && selected.activityType !== "duty") {
           void tenantMutate(
-            tenantDailyKeys.planInstanceDetail(
-              view,
-              fetchFromISO,
-              fetchToISO,
-              planFilter,
-              selected.date,
-            ),
+            tenantDailyKeys.planInstanceDetail(selected.id, selected.date),
           );
         }
       },
@@ -1405,27 +1399,18 @@ function TimetablesContent() {
         : undefined,
     [selectedInstance, templates],
   );
-  // Die Woche kommt ohne Kinderzeilen (#4996). Für den geöffneten Termin lädt
-  // die Ansicht seinen Tag vollständig nach; der Schlüssel beginnt wie der der
-  // Woche, damit Echtzeit-Aktualisierungen ihn mitnehmen.
-  const detailDateISO = selectedInstance?.date ?? null;
-  const detailSWRKey = detailDateISO
+  // Dienstblöcke haben keine Kinderliste. Namen lädt das Detailpanel separat.
+  const attendanceBlock =
+    selectedInstance?.activityType === "duty" ? null : selectedInstance;
+  const detailSWRKey = attendanceBlock
     ? tenantDailyKeys.planInstanceDetail(
-        view,
-        fetchFromISO,
-        fetchToISO,
-        planFilter,
-        detailDateISO,
+        attendanceBlock.id,
+        attendanceBlock.date,
       )
     : null;
-  const { data: detailData, error: detailError } = useSWRAuth(
-    status === "authenticated" && detailSWRKey ? detailSWRKey : null,
-    () =>
-      timetableService.getWeek(
-        detailDateISO ?? "",
-        detailDateISO ?? "",
-        planFilter,
-      ),
+  const { data: detailStudents, error: detailError } = useSWRAuth(
+    status === "authenticated" ? detailSWRKey : null,
+    () => timetableService.getInstanceAttendance(attendanceBlock!.id),
     { keepPreviousData: false },
   );
   const detailStudentsLoadError = useSwrLoadError(
@@ -1433,18 +1418,16 @@ function TimetablesContent() {
     "die Liste der Kinder",
     () => (detailSWRKey ? tenantMutate(detailSWRKey) : undefined),
   );
-  const detailInstance = useMemo(() => {
-    if (!selectedInstance) return null;
-    const full = detailData?.instances.find(
-      (inst) => inst.id === selectedInstance.id,
-    );
-    return full
-      ? { ...selectedInstance, students: full.students }
-      : selectedInstance;
-  }, [detailData, selectedInstance]);
+  const detailInstance = useMemo(
+    () =>
+      selectedInstance && detailStudents
+        ? { ...selectedInstance, students: detailStudents }
+        : selectedInstance,
+    [detailStudents, selectedInstance],
+  );
   const detailStudentsPending =
-    selectedInstance !== null &&
-    detailData === undefined &&
+    attendanceBlock !== null &&
+    detailStudents === undefined &&
     detailStudentsLoadError === null;
   const isInstanceDataLoading = shouldLoadInstances && isLoading && !data;
   const weekEmptyState = useMemo(() => {

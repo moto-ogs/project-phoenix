@@ -98,6 +98,12 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
     "SWRScopeBoundary",
     "SWRSeedBoundary",
     "authGeneration",
+    // Clears and resumes a paused session the server confirmed (#8082); it
+    // hands out neither cache nor mutate.
+    "confirmSWRSession",
+    // Drops the cache when the session cookie changed under the tab (#8082);
+    // it hands out neither cache nor mutate.
+    "dropSWRSession",
     "mutate",
     // A session boundary listener; it hands out neither cache nor mutate
     // (#4675: the tab-wide refusals of use-traeger-confirmed-resource).

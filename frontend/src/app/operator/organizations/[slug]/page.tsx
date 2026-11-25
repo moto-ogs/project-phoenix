@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import {
   operatorPageSeed,
+  accountsAtScope,
   operatorQueryParam,
   organizationDevices,
   organizationErasureOrder,
@@ -19,7 +20,10 @@ export default async function Page({
 }) {
   const [{ slug }, query] = await Promise.all([params, searchParams]);
   const tab = operatorQueryParam(query, "tab");
-  const preloadTab = tab === "geraete" || tab === "loeschauftrag" ? tab : null;
+  const preloadTab =
+    tab === "geraete" || tab === "loeschauftrag" || tab === "konten"
+      ? tab
+      : null;
   const { seed } = operatorPageSeed(
     [organizationSummaries],
     preloadTab
@@ -30,7 +34,9 @@ export default async function Page({
             ? [
                 preloadTab === "geraete"
                   ? organizationDevices(id)
-                  : organizationErasureOrder(id),
+                  : preloadTab === "konten"
+                    ? accountsAtScope({ kind: "organization", id })
+                    : organizationErasureOrder(id),
               ]
             : [];
         }

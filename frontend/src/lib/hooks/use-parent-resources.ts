@@ -275,7 +275,12 @@ function useParentFamily(enabled: boolean, keepRosterAcrossMidnight = false) {
 
 export function useParentChildren(enabled = true) {
   const family = useParentFamily(enabled, true);
-  return { ...family, data: enabled ? family.data?.children : undefined };
+  return {
+    ...family,
+    data: enabled ? family.data?.children : undefined,
+    /** Per child: school, care state and its guardian permissions (#8082). */
+    accessVersions: enabled ? family.data?.accessVersions : undefined,
+  };
 }
 
 const unavailable = new ApiError("Family start data unavailable", 503, {

@@ -273,12 +273,12 @@ func TestMealPositionNamesItsLunchesOnTheInvoice(t *testing.T) {
 	position := parentbilling.BillingPosition{Kind: parentbilling.LineMeal, AmountCents: 2150, WeekStartsOn: &monday, WeekEndsOn: &friday, BookedDays: &five}
 
 	line := invoiceLine(position)
-	assert.Equal(t, "Mittagessen, 5 Essen zu je 4,30 €", line.TimeModel)
+	assert.Equal(t, "Mittagessen, 5 Essen für 4,30 € pro Essen", line.TimeModel)
 	assert.Equal(t, "Woche 05.07. bis 09.07.2027", line.Week)
-	assert.Equal(t, "Woche 05.07.2027 bis 09.07.2027, Mittagessen, 5 Essen zu je 4,30 €", overviewPositionLabel(position))
+	assert.Equal(t, "Woche 05.07.2027 bis 09.07.2027, Mittagessen, 5 Essen für 4,30 € pro Essen", overviewPositionLabel(position))
 	assert.Equal(t, "Mittagessen, 1 Essen zu 4,30 €", mealLabel(parentbilling.BillingPosition{Kind: parentbilling.LineMeal, AmountCents: 430, BookedDays: &one}))
 	// A Storno negates the amount; the price of one lunch stays positive.
-	assert.Equal(t, "Mittagessen, 5 Essen zu je 4,30 €", mealLabel(parentbilling.BillingPosition{Kind: parentbilling.LineMeal, AmountCents: -2150, BookedDays: &five}))
+	assert.Equal(t, "Mittagessen, 5 Essen für 4,30 € pro Essen", mealLabel(parentbilling.BillingPosition{Kind: parentbilling.LineMeal, AmountCents: -2150, BookedDays: &five}))
 	assert.Equal(t, &five, billingPosition(parentbilling.HolidayContributionLine{Kind: parentbilling.LineMeal, BookedDays: &five}).BookedDays)
 	assert.Nil(t, billingPosition(parentbilling.HolidayContributionLine{Kind: parentbilling.LineBase, BookedDays: &five}).BookedDays,
 		"only a meal position names a number on the invoice")

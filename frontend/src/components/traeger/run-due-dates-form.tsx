@@ -162,7 +162,7 @@ export function RunDueDatesForm({
 
   return (
     <SectionCard
-      title="Fällig je Zahlungsweg"
+      title="Fällig pro Zahlungsweg"
       description="Bis zu diesem Tag zahlen die Familien die Rechnungen dieses Laufs. Ohne Datum gilt das Zahlungsziel der Leistung."
     >
       <form
