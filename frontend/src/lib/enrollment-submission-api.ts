@@ -104,7 +104,7 @@ export type PublicPhase = Omit<
   translations?: Translations;
 };
 
-function publicPhaseFromContract(
+export function publicPhaseFromContract(
   phase: sharedContract.PublicPhase,
 ): PublicPhase {
   const { translations, ...rest } = phase;

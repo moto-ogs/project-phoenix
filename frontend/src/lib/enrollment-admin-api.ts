@@ -208,7 +208,7 @@ export function fromImportedContract(request: {
   return request.submission_source === "contract_import";
 }
 
-function requestSummaryFromContract(
+export function requestSummaryFromContract(
   summary: enrollmentContract.AdminRequestSummary,
 ): AdminRequestSummary {
   const { children, ...rest } = summary;
@@ -231,7 +231,7 @@ export type AdminEnrollmentChangeRequest = Omit<
   request?: AdminRequestSummary;
 };
 
-function adminChangeRequestFromContract(
+export function adminChangeRequestFromContract(
   request: enrollmentContract.ChangeRequestResponse,
 ): AdminEnrollmentChangeRequest {
   const { request: summary, ...rest } = changeRequestFromContract(request);

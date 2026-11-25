@@ -167,6 +167,7 @@ export function TransitStudentsSection({
   }>(roomKeys.transitStudents(dayStatus), () =>
     fetchStudents({
       locationState: "transit",
+      view: "slim",
       ...(dayStatus ? { dayStatus } : {}),
       pageSize: 200,
     }),

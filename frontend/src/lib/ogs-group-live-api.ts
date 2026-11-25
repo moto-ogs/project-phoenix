@@ -59,6 +59,55 @@ export interface OgsLiveViewData {
   transfers: GroupTransfer[];
 }
 
+export type HomeGroupStudent = Pick<
+  studentsContract.Student,
+  | "id"
+  | "first_name"
+  | "last_name"
+  | "school_class"
+  | "current_location"
+  | "sick"
+  | "excused"
+  | "class_trip"
+  | "day_planning_status"
+  | "day_planning_label"
+  | "arrival_time"
+  | "arrival_notes"
+  | "actual_arrival_time"
+  | "actual_pickup_time"
+>;
+
+export interface HomeGroupRead extends Pick<
+  OgsLiveViewData,
+  "groups" | "groupId" | "pickupTimes"
+> {
+  students: HomeGroupStudent[];
+}
+
+export function mapHomeGroupRead(data: OgsLiveViewData): HomeGroupRead {
+  return {
+    groups: data.groups.filter((group) => group.id === data.groupId),
+    groupId: data.groupId,
+    pickupTimes: data.pickupTimes,
+    students: data.students.map((student) => ({
+      id: student.id,
+      first_name: student.first_name,
+      last_name: student.last_name,
+      school_class: student.school_class,
+      current_location: student.current_location,
+      sick: student.sick,
+      excused: student.excused,
+      class_trip: student.class_trip,
+      day_planning_status: student.day_planning_status,
+      day_planning_label: student.day_planning_label,
+      arrival_time: student.arrival_time,
+      arrival_notes: student.arrival_notes,
+      actual_arrival_time: student.actual_arrival_time,
+      actual_pickup_time: student.actual_pickup_time,
+    })),
+  };
+}
+
 /** Go writes an empty list as `null`; the cards read empty lists. */
 function mapTrackingIndicators(
   wire: studentsContract.TrackingIndicators,

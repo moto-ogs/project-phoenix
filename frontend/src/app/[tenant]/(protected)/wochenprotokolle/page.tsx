@@ -1,127 +1,48 @@
-"use client";
-
-import { Suspense, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
-import { RoleGuard } from "~/components/auth/role-guard";
-import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
-import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import {
-  WeekProtocolStatusBadge,
-  weekProtocolWeekLabel,
-} from "~/components/week-protocols/week-protocol-status";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import { ogsGroupHref } from "~/lib/ogs-groups-navigation";
-import { useSWRAuth } from "~/lib/swr";
+import { TenantRouteSeed } from "../tenant-route-seed";
+import { readContract, seedRead } from "~/lib/server-seed.server";
+import { routes } from "~/lib/contract/week-protocols.generated";
+import { hasPermission } from "~/lib/auth-utils";
 import { weekProtocolKeys } from "~/lib/swr/portal-keys";
-import { useTenantRouter } from "~/lib/tenant-router";
-import {
-  weekProtocolPath,
-  weekProtocolsService,
-  type WeekProtocol,
-} from "~/lib/week-protocols-api";
+import { mapWeekProtocol } from "~/lib/week-protocols-api";
+import PageContent from "./page-content";
 
-// Wochenprotokolle (#4769): die Protokolle der Gruppen, neueste Woche zuerst.
-// Ein Protokoll entsteht von selbst am ersten Abend der Woche; anlegen kann
-// man es nicht. Mit ?group= zeigt die Seite nur die Protokolle einer Gruppe,
-// so verlinkt sie die Gruppenseite.
-//
-// Bauart 1 (Sammlung): jede Zeile öffnet das Protokoll auf seiner Route.
-
-const columns: DataTableColumn<WeekProtocol>[] = [
-  {
-    key: "group",
-    header: "Gruppe",
-    stacked: "title",
-    className: "font-medium text-gray-800",
-    render: (protocol) => protocol.groupName,
-    sortValue: (protocol) => protocol.groupName,
-  },
-  {
-    key: "week",
-    header: "Woche",
-    render: weekProtocolWeekLabel,
-    // Neueste Woche zuerst; innerhalb der Woche bleibt die Reihenfolge des
-    // Backends (nach Gruppe), weil die Sortierung stabil ist.
-    sortValue: (protocol) => protocol.weekStart,
-  },
-  {
-    key: "status",
-    header: "Stand",
-    stacked: "meta",
-    render: (protocol) => <WeekProtocolStatusBadge protocol={protocol} />,
-  },
-];
-
-function WeekProtocolsContent() {
-  const groupId = useSearchParams().get("group");
-  const router = useTenantRouter();
-  const { data, error, isLoading, mutate } = useSWRAuth<WeekProtocol[]>(
-    weekProtocolKeys.list(groupId),
-    () => weekProtocolsService.list(groupId),
-  );
-  const loadError = useSwrLoadError(error, "die Wochenprotokolle", mutate);
-  const protocols = useMemo(() => data ?? [], [data]);
-  const groupName = groupId ? (protocols[0]?.groupName ?? null) : null;
-  const drafts = protocols.filter(
-    (protocol) => protocol.status === "draft",
-  ).length;
-
+export default async function WeekProtocolsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ tenant: string }>;
+  searchParams: Promise<{ group?: string | string[] }>;
+}) {
+  const { tenant } = await params;
+  const { group } = await searchParams;
   return (
-    <TenantPage
-      title="Wochenprotokolle"
-      back={Boolean(groupId)}
-      backHref={groupId ? ogsGroupHref(groupId) : undefined}
-      backLabel="Zurück zur Gruppe"
-      info="Jeden Abend hält moto den Tag jeder Gruppe fest. Ab Freitagabend ist die Woche ein Entwurf: Die Gruppenleitung ergänzt ihn und schließt ihn ab. Danach gibt es das Protokoll als PDF."
-      loading={isLoading && !data}
-      error={loadError}
-      stats={
-        protocols.length > 0 ? (
-          <TenantPageStats
-            items={[
-              ...(groupName ? [{ value: groupName, label: "" }] : []),
-              { value: drafts, label: drafts === 1 ? "Entwurf" : "Entwürfe" },
-            ]}
-          />
-        ) : undefined
-      }
-      empty={
-        data && protocols.length === 0
-          ? {
-              title: "Noch kein Wochenprotokoll",
-              description:
-                "moto legt das Protokoll am ersten Abend einer Woche an. Ab Freitagabend kannst du es ergänzen.",
-            }
-          : null
-      }
+    <TenantRouteSeed
+      slug={tenant}
+      load={({ token, session }) => {
+        if (
+          !hasPermission(session, "groups:update") &&
+          !hasPermission(session, "groups:manage")
+        )
+          return [];
+        const groupId = Array.isArray(group)
+          ? (group[0] ?? null)
+          : (group ?? null);
+        return [
+          {
+            key: weekProtocolKeys.list(groupId),
+            render: true,
+            value: seedRead("GET /api/week-protocols/", async (signal) => {
+              const { data } = await readContract(
+                routes["GET /api/week-protocols/"],
+                { token, signal, query: { group_id: groupId || undefined } },
+              );
+              return data.map(mapWeekProtocol);
+            }),
+          },
+        ];
+      }}
     >
-      <DataTable
-        columns={columns}
-        rows={protocols}
-        getRowKey={(protocol) => protocol.id}
-        onRowClick={(protocol) => router.push(weekProtocolPath(protocol.id))}
-        stackedLayout="row"
-        stackedDetailKey="week"
-        defaultSortKey="week"
-        defaultSortDirection="desc"
-        pageSize={20}
-      />
-    </TenantPage>
-  );
-}
-
-export default function WeekProtocolsPage() {
-  return (
-    <RoleGuard
-      variant="staffOrAdmin"
-      // Wochenprotokolle sind Arbeit an der Gruppe (#4769): Gäste mit nur
-      // groups:read sehen keine.
-      permission={["groups:update", "groups:manage"]}
-      fallback={<TenantPage title="Wochenprotokolle" loading />}
-    >
-      <Suspense fallback={<TenantPage title="Wochenprotokolle" loading />}>
-        <WeekProtocolsContent />
-      </Suspense>
-    </RoleGuard>
+      <PageContent />
+    </TenantRouteSeed>
   );
 }

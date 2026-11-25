@@ -339,6 +339,16 @@ function logLoadFailure(view: "open" | "history", error: unknown): void {
   });
 }
 
+export function mapAggregatedOpenPage(
+  page: studentsContract.Page,
+): AggregatedRequestPage<AggregatedOpenRequest> {
+  return {
+    items: (page.items ?? []).map(openRequest),
+    next_cursor: page.next_cursor,
+    review_access: knownEnum(REVIEW_ACCESS, page.review_access),
+  };
+}
+
 export async function listAggregatedOpenRequests(
   params: AggregatedRequestParams = {},
 ): Promise<AggregatedRequestPage<AggregatedOpenRequest>> {
@@ -347,11 +357,7 @@ export async function listAggregatedOpenRequests(
       query: listQuery(params),
       errorMessage: "change request list load failed",
     });
-    return {
-      items: (page.items ?? []).map(openRequest),
-      next_cursor: page.next_cursor,
-      review_access: knownEnum(REVIEW_ACCESS, page.review_access),
-    };
+    return mapAggregatedOpenPage(page);
   } catch (error) {
     logLoadFailure("open", error);
     throw error;
@@ -605,6 +611,23 @@ export async function fetchPendingEnrollmentChangeRequestCount(): Promise<number
   }
 }
 
+export function mapEnrollmentRequestPage(
+  page: enrollmentContract.ChangeRequestReviewPage,
+): AggregatedRequestPage<EnrollmentRequestItem> {
+  return {
+    items: (page.items ?? []).map((item) => ({
+      occurred_at: item.occurred_at,
+      request_type: requiredEnum(
+        ["enrollment"] as const,
+        item.request_type,
+        "request_type",
+      ),
+      data: item.data,
+    })),
+    next_cursor: page.next_cursor,
+  };
+}
+
 /**
  * Anmeldungsänderungen, offen oder in der Historie (#2435). Gleiche Antwort-
  * form wie oben, eigener Endpunkt hinter config:manage. Der Art-Filter wirkt
@@ -627,18 +650,7 @@ export async function listEnrollmentChangeRequests(
         errorMessage: "enrollment change request list load failed",
       },
     );
-    return {
-      items: (page.items ?? []).map((item) => ({
-        occurred_at: item.occurred_at,
-        request_type: requiredEnum(
-          ["enrollment"] as const,
-          item.request_type,
-          "request_type",
-        ),
-        data: item.data,
-      })),
-      next_cursor: page.next_cursor,
-    };
+    return mapEnrollmentRequestPage(page);
   } catch (error) {
     logger.warn("enrollment_change_request_list_load_failed", {
       view,

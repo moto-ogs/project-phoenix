@@ -257,7 +257,7 @@ function mapEntry(entry: Entry, day: string): DayChange {
   };
 }
 
-function mapDayChanges(overview: Overview): DayChangesOverview {
+export function mapDayChanges(overview: Overview): DayChangesOverview {
   return {
     date: overview.date ?? "",
     failedSources: (overview.sources ?? [])

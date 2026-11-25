@@ -9,7 +9,7 @@ import {
   setViewportWidth,
 } from "~/test/helpers/viewport";
 
-import TeachersPage from "./page";
+import TeachersPage from "./page-content";
 
 // #4573: externe Personen in der Personalverwaltung. Die echte Liste
 // (StaffList) und die echten Dialoge laufen; nur Daten, Sitzung und das

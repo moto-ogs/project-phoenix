@@ -376,7 +376,7 @@ import {
   useShowTimetableCounts,
 } from "~/lib/tenant-context";
 import { timetableOperationsApi } from "~/lib/timetable-operations-api";
-import MeinRaumPage from "./page";
+import MeinRaumPage from "./page-content";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";

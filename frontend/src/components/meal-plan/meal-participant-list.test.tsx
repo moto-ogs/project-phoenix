@@ -123,7 +123,9 @@ async function openChangeFromHead() {
   });
   await waitFor(() => expect(changeRegistration).toBeEnabled());
   fireEvent.click(changeRegistration);
-  return screen.findByRole("dialog");
+  const dialog = await screen.findByRole("dialog");
+  await within(dialog).findByRole("combobox", { name: "Kind" });
+  return dialog;
 }
 
 // The kit loads the calendar grid lazily; load it once up front so a cold
@@ -178,6 +180,8 @@ describe("MealParticipantList", () => {
         .mockResolvedValue({ weekdays: [1, 3], version: "v-first" });
       render(
         <MealRegistrationChangeModal
+          rosterLoading={false}
+          rosterError={null}
           isOpen
           date="2026-09-07"
           participants={[
@@ -264,6 +268,8 @@ describe("MealParticipantList", () => {
     mocks.getChildMealSchedule.mockReturnValueOnce(first.promise);
     render(
       <MealRegistrationChangeModal
+        rosterLoading={false}
+        rosterError={null}
         isOpen
         date="2026-09-07"
         participants={[
@@ -326,6 +332,8 @@ describe("MealParticipantList", () => {
     const onSaved = vi.fn();
     render(
       <MealRegistrationChangeModal
+        rosterLoading={false}
+        rosterError={null}
         isOpen
         date="2026-09-07"
         participants={[
@@ -392,6 +400,8 @@ describe("MealParticipantList", () => {
     render(
       <>
         <MealRegistrationChangeModal
+          rosterLoading={false}
+          rosterError={null}
           isOpen
           date="2026-09-07"
           participants={[
@@ -442,6 +452,8 @@ describe("MealParticipantList", () => {
     );
     render(
       <MealRegistrationChangeModal
+        rosterLoading={false}
+        rosterError={null}
         isOpen
         date="2026-09-07"
         participants={[
@@ -484,6 +496,8 @@ describe("MealParticipantList", () => {
       .mockResolvedValueOnce({ weekdays: [2], version: "v-new" });
     const modal = (isOpen: boolean) => (
       <MealRegistrationChangeModal
+        rosterLoading={false}
+        rosterError={null}
         isOpen={isOpen}
         date="2026-09-07"
         participants={[
@@ -558,6 +572,10 @@ describe("MealParticipantList", () => {
     expect((await screen.findAllByText("Muster, Mia"))[0]).toBeInTheDocument();
     expect(mocks.getDailyMealParticipants).toHaveBeenCalledWith(
       "2026-09-07",
+      false,
+    );
+    expect(mocks.getDailyMealParticipants).not.toHaveBeenCalledWith(
+      "2026-09-07",
       true,
     );
     expect(
@@ -579,7 +597,7 @@ describe("MealParticipantList", () => {
     await waitFor(() => {
       expect(mocks.getDailyMealParticipants).toHaveBeenCalledWith(
         "2026-09-07",
-        true,
+        false,
       );
     });
     const datePicker = screen.getByRole("button", {
@@ -604,7 +622,7 @@ describe("MealParticipantList", () => {
     await waitFor(() => {
       expect(mocks.getDailyMealParticipants).toHaveBeenCalledWith(
         "2026-09-07",
-        true,
+        false,
       );
     });
 
@@ -614,7 +632,7 @@ describe("MealParticipantList", () => {
     await waitFor(() => {
       expect(mocks.getDailyMealParticipants).toHaveBeenCalledWith(
         "2026-09-08",
-        true,
+        false,
       );
     });
     expect(
@@ -636,7 +654,7 @@ describe("MealParticipantList", () => {
     await waitFor(() => {
       expect(mocks.getDailyMealParticipants).toHaveBeenCalledWith(
         "2026-09-09",
-        true,
+        false,
       );
     });
 
@@ -648,6 +666,7 @@ describe("MealParticipantList", () => {
     ).toBeInTheDocument();
     expect(mocks.getDailyMealParticipants).not.toHaveBeenCalledWith(
       "2026-09-08",
+      false,
     );
   });
 
@@ -668,7 +687,7 @@ describe("MealParticipantList", () => {
     ).not.toBeInTheDocument();
     expect(mocks.getDailyMealParticipants).toHaveBeenCalledWith(
       "2026-09-07",
-      true,
+      false,
     );
     const datePicker = screen.getByRole("button", {
       name: "Datum: 07.09.2026",
@@ -688,7 +707,7 @@ describe("MealParticipantList", () => {
     await waitFor(() => {
       expect(mocks.getDailyMealParticipants).toHaveBeenCalledWith(
         "2026-09-08",
-        true,
+        false,
       );
     });
     expect(
@@ -796,6 +815,10 @@ describe("MealParticipantList", () => {
       const orders = renderWithOrderWeek();
 
       const dialog = await openChangeFromHead();
+      expect(mocks.getDailyMealParticipants).toHaveBeenCalledWith(
+        "2026-09-07",
+        true,
+      );
       fireEvent.click(within(dialog).getByRole("combobox", { name: "Kind" }));
       fireEvent.click(
         await screen.findByRole("option", {
@@ -823,7 +846,7 @@ describe("MealParticipantList", () => {
         ),
       );
       await waitFor(() =>
-        expect(mocks.getDailyMealParticipants).toHaveBeenCalledTimes(2),
+        expect(mocks.getDailyMealParticipants).toHaveBeenCalledTimes(3),
       );
       expect(
         await screen.findByText("Die Anmeldung von Ben Bauer ist geändert."),
@@ -1139,7 +1162,7 @@ describe("MealParticipantList", () => {
       await waitFor(() =>
         expect(mocks.getDailyMealParticipants).toHaveBeenCalledWith(
           "2026-09-07",
-          true,
+          false,
         ),
       );
       // Anker: die Zeile des vergangenen Tages ist geladen.

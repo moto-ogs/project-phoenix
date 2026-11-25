@@ -1,410 +1,98 @@
-"use client";
+import { TenantRouteSeed } from "../tenant-route-seed";
+import { hasPermission } from "~/lib/auth-utils";
+import * as mfa from "~/lib/contract/auth-mfa.generated";
+import * as passkeys from "~/lib/contract/auth-passkeys.generated";
+import * as birthdays from "~/lib/contract/birthdays.generated";
+import * as messages from "~/lib/contract/messages.generated";
+import * as notifications from "~/lib/contract/notifications.generated";
+import { mapNotificationPreferences } from "~/lib/notification-preferences-api";
+import { mapMessageCountSetting } from "~/lib/parent-messages-api";
+import { readContract, seedRead } from "~/lib/server-seed.server";
+import type { ServerSeedEntry } from "~/lib/swr/server-seed";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
+import PageContent from "./page-content";
 
-import {
-  Suspense,
-  useState,
-  useCallback,
-  useLayoutEffect,
-  useRef,
-} from "react";
-import { useSession } from "next-auth/react";
-import { hasSessionAccess } from "~/lib/session-access";
-import { redirect } from "next/navigation";
-import { Camera, Pencil } from "lucide-react";
-import {
-  useApiErrorDisplay,
-  useApiFormError,
-  useToast,
-} from "~/contexts/ToastContext";
-import { createLogger } from "~/lib/logger";
-import { updateProfile, uploadAvatar } from "~/lib/profile-api";
-import type { Profile } from "~/lib/profile-helpers";
-import { useProfile } from "~/lib/profile-context";
-import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
-import { useDraftOn } from "~/lib/swr/read-draft";
-import { compressAvatar } from "~/lib/image-utils";
-import { Avatar } from "~/components/ui/avatar";
-import { Button } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/data-field";
-import { Input } from "~/components/ui/input";
-import {
-  FormErrorAlert,
-  LoadErrorAlert,
-} from "~/components/ui/form-error-alert";
-import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
-import { TenantPasswordChangeModal } from "~/components/auth/tenant-password-change-modal";
-import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { TrustedDevicesSection } from "~/components/settings/trusted-devices-section";
-import { PasskeySettingsSection } from "~/components/settings/passkey-settings-section";
-import { NotificationPreferencesSection } from "~/components/settings/notification-preferences-section";
-import { TenantAnalyticsConsentSection } from "~/components/settings/analytics-consent-section";
-import { MessageCountSection } from "~/components/settings/message-count-section";
-import { BirthdayVisibilitySection } from "~/components/settings/birthday-visibility-section";
-import { PushNotificationSection } from "~/components/settings/push-notification-section";
-import { OwnQualificationsSection } from "~/components/settings/own-qualifications-section";
-
-const logger = createLogger({ component: "ProfilePage" });
-
-/** What the profile edit changes: the two names. */
-interface NameDraft {
-  readonly firstName: string;
-  readonly lastName: string;
-}
-
-// Der Ladezustand kommt aus dem Seitengeruest, nicht aus einem eigenen
-// Skelett: dieselbe Kopfkarte und dieselben Platzhalterflaechen wie auf jeder
-// anderen Flaeche des Portals. Der Vorlesetext benennt die Profilseite.
-// Info-Knopf am Titel (#7579), im Ladezustand und auf der fertigen Seite.
-const PROFILE_INFO =
-  "Hier stehen deine eigenen Angaben. Unter „Persönliche Daten“ änderst du deinen Namen. Weiter unten legst du fest, worüber moto dich benachrichtigt.";
-
-const profileLoadingFallback = (
-  <TenantPage
-    title="Profil"
-    info={PROFILE_INFO}
-    statsLoading
-    loading
-    loadingLabel="Profil wird geladen…"
-  />
-);
-
-function ProfileContent() {
-  const {
-    data: session,
-    status,
-    update: updateSession,
-  } = useSession({
-    required: true,
-  });
-  const { success: toastSuccess } = useToast();
-  const { profile, updateProfileData, refreshProfile, reloadProfile } =
-    useProfile();
-  const [isSaving, setIsSaving] = useState(false);
-  const profileAfterWrite = useRefreshAfterWrite(
-    "die Anzeige des Profils",
-    async (options: { sessionName?: string } = {}) => {
-      setIsSaving(true);
-      try {
-        await refreshProfile(true);
-        if ("sessionName" in options) {
-          await updateSession({ name: options.sessionName });
-        }
-      } finally {
-        setIsSaving(false);
-      }
-    },
-  );
-
-  const [isEditing, setIsEditing] = useState(false);
-  // Speicherfehler stehen oben im Bearbeiten-Bereich der Karte, nicht als
-  // Toast: Bauart 2 Regel 5. Katalogtext und Wiederholen (#2517).
-  const formRef = useRef<HTMLDivElement>(null);
-  const avatarInputRef = useRef<HTMLInputElement>(null);
-  const formErrors = useApiFormError(formRef);
-  // Das Profilbild wird ohne Formular gewechselt: ein Fehler kommt als Toast.
-  const { show: showAvatarError } = useApiErrorDisplay();
-  const latestSaveRef = useRef<() => void>(() => undefined);
-  const latestAvatarRef = useRef<(file: File) => void>(() => undefined);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  // Die Bearbeitung ruht auf dem gelesenen Profil (ADR 0311): ein neuerer
-  // Stand füllt sie nur, solange nichts getippt ist; Speichern sendet seine
-  // Version. Hat jemand den Namen seitdem geändert (etwa die Leitung in der
-  // Personalverwaltung), steht danach der gespeicherte Name da, und erst
-  // dann lässt sich erneut speichern.
-  const edit = useDraftOn<Profile, NameDraft, string | undefined, Profile>(
-    {
-      opening: isEditing ? "own-profile" : null,
-      data: profile ?? undefined,
-      reload: reloadProfile,
-    },
-    {
-      token: (stored) => stored.version,
-      toDraft: (stored) => ({
-        firstName: stored.firstName || "",
-        lastName: stored.lastName || "",
-      }),
-      answer: (saved) => saved,
-    },
-  );
-  const form = useReadDraftForm(edit, formErrors, "das Profil");
-  const draft = edit.draft;
-
-  const handleSaveProfile = async () => {
-    if (!hasSessionAccess(session) || !profile || isSaving || !draft) return;
-    if (!form.begin()) return;
-
-    setIsSaving(true);
-    const result = await edit.submit((version, names) =>
-      updateProfile({
-        firstName: names.firstName,
-        lastName: names.lastName,
-        expectedVersion: version,
-      }),
-    );
-    if (!result.ok) {
-      logger.error("profile_save_failed", {
-        error:
-          result.error instanceof Error
-            ? result.error.message
-            : String(result.error),
-      });
-      // Seit dem Lesen geändert: `reload` zeigt den gespeicherten Namen,
-      // ohne dasselbe Speichern noch einmal anzubieten.
-      void formErrors.show(
-        result.error,
-        result.refused
-          ? { object: "das Profil", reload: result.reload }
-          : { object: "das Profil", retry: () => latestSaveRef.current() },
-      );
-      setIsSaving(false);
-      return;
-    }
-
-    // Die Antwort ist das gespeicherte Profil mit seiner neuen Version.
-    updateProfileData(result.saved);
-    setIsEditing(false);
-    toastSuccess("Dein Profil ist gespeichert.");
-    // Profil und Sitzung laden nach dem Speichern; ein Fehler dabei ist ein
-    // Ladefehler, kein Fehler des Speicherns (#6652).
-    await profileAfterWrite.refresh({
-      sessionName: `${draft.firstName} ${draft.lastName}`.trim() || undefined,
-    });
-  };
-
-  const handleAvatarChange = async (file: File) => {
-    if (!hasSessionAccess(session) || isSaving) return;
-
-    try {
-      setIsSaving(true);
-      const compressedFile = await compressAvatar(file);
-      await uploadAvatar(compressedFile);
-    } catch (err) {
-      logger.error("avatar_upload_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void showAvatarError(err, {
-        object: "das Profilbild",
-        retry: () => latestAvatarRef.current(file),
-      });
-      setIsSaving(false);
-      return;
-    }
-    toastSuccess("Dein Profilbild ist gespeichert.");
-    await profileAfterWrite.refresh();
-  };
-
-  useLayoutEffect(() => {
-    latestSaveRef.current = () => void handleSaveProfile();
-    latestAvatarRef.current = (file) => void handleAvatarChange(file);
-  });
-
-  const handleClosePasswordModal = useCallback(() => {
-    setShowPasswordModal(false);
-  }, []);
-
-  if (status === "loading") {
-    return profileLoadingFallback;
-  }
-
-  if (!session?.user) {
-    redirect("/");
-  }
-
-  const firstName = profile?.firstName ?? "";
-  const lastName = profile?.lastName ?? "";
-  const email = profile?.email ?? "";
-  const fullName = `${firstName} ${lastName}`.trim();
-  const statsParts = [fullName, email].filter(Boolean);
-
+export default async function ProfilePage({
+  params,
+}: {
+  params: Promise<{ tenant: string }>;
+}) {
+  const { tenant: slug } = await params;
   return (
-    <TenantPage
-      title="Profil"
-      info={PROFILE_INFO}
-      stats={
-        statsParts.length > 1 ? (
-          <TenantPageStats items={statsParts.map((label) => ({ label }))} />
-        ) : (
-          statsParts.join("")
-        )
-      }
-      // Das Profilbild sitzt im Kopf der Seite, wie der Avatar auf jeder
-      // Detailseite. Ändern ist eine Aktion im Kopf: das frühere Hover-Overlay
-      // gab es auf Touch-Geräten gar nicht (#5599).
-      leading={<Avatar imageUrl={profile?.avatar} name={fullName} size="lg" />}
-      actions={
-        <>
-          <input
-            ref={avatarInputRef}
-            id="avatar-upload"
-            type="file"
-            accept="image/*"
-            aria-label="Profilbild auswählen"
-            disabled={isSaving}
-            hidden
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              e.target.value = "";
-              if (file) void handleAvatarChange(file);
-            }}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="md"
-            className="gap-2"
-            onClick={() => avatarInputRef.current?.click()}
-            disabled={isSaving}
-            tooltip="Ersetzt dein Profilbild sofort durch ein Bild von deinem Gerät."
-          >
-            <Camera className="h-4 w-4" aria-hidden="true" />
-            Profilbild ändern
-          </Button>
-        </>
-      }
+    <TenantRouteSeed
+      slug={slug}
+      load={({ token, session, tenant }) => {
+        const entries: ServerSeedEntry[] = [
+          {
+            key: tenantAdminKeys.notificationPreferences("tenant"),
+            value: seedRead(
+              "GET /api/notifications/preferences/",
+              async (signal) => {
+                const { data } = await readContract(
+                  notifications.routes["GET /api/notifications/preferences/"],
+                  { token, signal },
+                );
+                return mapNotificationPreferences(data);
+              },
+            ),
+          },
+          {
+            key: tenantAdminKeys.birthdayOptOut(),
+            value: seedRead("GET /api/birthdays/opt-out", async (signal) => {
+              const { data } = await readContract(
+                birthdays.routes["GET /api/birthdays/opt-out"],
+                { token, signal },
+              );
+              return data.opt_out;
+            }),
+          },
+          {
+            key: tenantAdminKeys.trustedDevices("tenant"),
+            value: seedRead(
+              "GET /auth/mfa/trusted-devices",
+              async (signal) =>
+                (
+                  await readContract(
+                    mfa.routes["GET /auth/mfa/trusted-devices"],
+                    { token, signal },
+                  )
+                ).data,
+            ),
+          },
+        ];
+        // The account passkey handler rejects Träger claims, including a
+        // session able to display a school through the Team portal.
+        if (session.user.scope !== "org") {
+          entries.push({
+            key: tenantAdminKeys.passkeys("tenant"),
+            value: seedRead(
+              "GET /auth/passkeys/",
+              async (signal) =>
+                (
+                  await readContract(passkeys.routes["GET /auth/passkeys/"], {
+                    token,
+                    signal,
+                  })
+                ).data,
+            ),
+          });
+        }
+        if (tenant.messagingEnabled && hasPermission(session, "users:read")) {
+          entries.push({
+            key: tenantAdminKeys.messageCountSetting(),
+            value: seedRead("GET /api/messages/count-scope", async (signal) => {
+              const { data } = await readContract(
+                messages.routes["GET /api/messages/count-scope"],
+                { token, signal },
+              );
+              return mapMessageCountSetting(data);
+            }),
+          });
+        }
+        return entries;
+      }}
     >
-      <LoadErrorAlert error={profileAfterWrite.error} />
-      <SectionCard
-        title="Persönliche Daten"
-        actions={
-          isEditing ? undefined : (
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              onClick={() => setIsEditing(true)}
-              disabled={isSaving}
-              className="gap-1.5"
-              tooltip="Zeigt Felder, um Vor- und Nachnamen zu ändern."
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              Bearbeiten
-            </Button>
-          )
-        }
-      >
-        {isEditing ? (
-          <div ref={formRef} className="space-y-4">
-            <FormErrorAlert message={formErrors.error} />
-            <LoadErrorAlert error={form.loadError} />
-            <Input
-              label="Vorname"
-              name="first_name"
-              type="text"
-              value={draft?.firstName ?? ""}
-              onChange={(e) => {
-                const value = e.target.value;
-                edit.setDraft((names) => ({ ...names, firstName: value }));
-              }}
-              error={formErrors.fieldError("first_name")}
-              maxLength={255}
-            />
-            <Input
-              label="Nachname"
-              name="last_name"
-              type="text"
-              value={draft?.lastName ?? ""}
-              onChange={(e) => {
-                const value = e.target.value;
-                edit.setDraft((names) => ({ ...names, lastName: value }));
-              }}
-              error={formErrors.fieldError("last_name")}
-              maxLength={255}
-            />
-            <DataGrid>
-              <DataField label="E-Mail" fullWidth>
-                {email || "–"}
-              </DataField>
-            </DataGrid>
-            <div className="flex justify-end gap-3 pt-1">
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                onClick={() => {
-                  setIsEditing(false);
-                  formErrors.clear();
-                }}
-                tooltip="Verwirft deine Änderungen am Namen."
-              >
-                Abbrechen
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                isLoading={isSaving}
-                loadingText="Speichern…"
-                onClick={() => void handleSaveProfile()}
-                noTooltip="Speichert nur Vor- und Nachnamen, ohne weitere Folgen."
-              >
-                Speichern
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <DataGrid>
-            <DataField label="Vorname">{firstName || "–"}</DataField>
-            <DataField label="Nachname">{lastName || "–"}</DataField>
-            <DataField label="E-Mail" fullWidth>
-              {email || "–"}
-            </DataField>
-          </DataGrid>
-        )}
-      </SectionCard>
-
-      <SectionCard
-        title="Passwort"
-        actions={
-          <Button
-            type="button"
-            variant="outline"
-            size="md"
-            onClick={() => setShowPasswordModal(true)}
-            tooltip="Öffnet ein Fenster, um dein Passwort zu ändern."
-          >
-            Ändern
-          </Button>
-        }
-      />
-
-      {/* Eigene Nachweise wie Erste Hilfe am Kind, mit Ablauf (#4808). */}
-      <OwnQualificationsSection />
-
-      {/* „Was" vor „wo": erst die Themen, dann das Gerät. */}
-      <NotificationPreferencesSection />
-      {/* Welche Elternnachrichten die eigene Zahl bei „Nachrichten" zählt
-          (#3673). Steht bei den Benachrichtigungen, weil beides nur die
-          eigene Person betrifft. */}
-      <MessageCountSection />
-      {/* Persönliche Geburtstagsanzeige (#1542) — steht bei den anderen
-          Sichtbarkeits- und Benachrichtigungsentscheidungen des eigenen Kontos. */}
-      <BirthdayVisibilitySection />
-      <PushNotificationSection />
-      <PasskeySettingsSection />
-      <TrustedDevicesSection />
-      {/* Eigene Einwilligung zur Nutzungsanalyse (#4901), mit Hinweis auf
-          Aufzeichnungen, solange die Schule die Analyse-Freigabe erteilt hat. */}
-      <TenantAnalyticsConsentSection />
-
-      {showPasswordModal && (
-        <TenantPasswordChangeModal
-          isOpen={showPasswordModal}
-          onClose={handleClosePasswordModal}
-          onSuccess={() => {
-            handleClosePasswordModal();
-            toastSuccess("Dein Passwort ist geändert.");
-          }}
-        />
-      )}
-    </TenantPage>
-  );
-}
-
-export default function ProfilePage() {
-  return (
-    <Suspense fallback={profileLoadingFallback}>
-      <ProfileContent />
-    </Suspense>
+      <PageContent />
+    </TenantRouteSeed>
   );
 }

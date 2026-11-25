@@ -59,7 +59,7 @@ vi.mock("~/components/enrollment/rollover-form", () => ({
   ),
 }));
 
-import MobileRolloverPage from "./page";
+import MobileRolloverPage from "./page-content";
 
 async function renderPage() {
   await act(async () => {

@@ -135,7 +135,9 @@ const MULTI_VALUE_KEYS = {
   gradeLevel: "grade_level",
 } as const;
 
-function studentQuery(filters: StudentFilters = {}): Record<string, string> {
+export function studentQuery(
+  filters: StudentFilters = {},
+): Record<string, string> {
   const query: Record<string, string> = {};
   for (const [key, param] of Object.entries(QUERY_KEYS)) {
     const value = filters[key as keyof typeof QUERY_KEYS];
@@ -272,7 +274,7 @@ export async function fetchCareOfferingOptions(): Promise<
 }
 
 /** A filter question of the contract, without the type the list needs not. */
-function mapEnrollmentAnswerFilter(
+export function mapEnrollmentAnswerFilter(
   filter: EnrollmentAnswerFilterResponse,
 ): EnrollmentAnswerFilter {
   return {

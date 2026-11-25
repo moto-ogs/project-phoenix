@@ -13,13 +13,14 @@ import { createLogger } from "~/lib/logger";
 import {
   resolvePickupExtension,
   type PickupExtension,
+  type PickupExtensionReminder,
 } from "~/lib/pickup-extension-api";
 import { getWeekdayLabel } from "~/lib/pickup-schedule-helpers";
 
 const logger = createLogger({ component: "PickupExtensionDialog" });
 
 /** "am Freitag, 18.09.2026" oder "ab Donnerstag, 18.09.2026". */
-export function pickupExtensionWhen(task: PickupExtension): string {
+export function pickupExtensionWhen(task: PickupExtensionReminder): string {
   if (task.kind === "day" && task.date) {
     return `am ${formatStatusDate(task.date)}`;
   }

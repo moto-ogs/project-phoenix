@@ -9,7 +9,7 @@ import {
 import { useState, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SWRConfig } from "~/lib/swr/testing";
-import ActivitiesPage from "./page";
+import ActivitiesPage from "./page-content";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 

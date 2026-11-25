@@ -4,6 +4,7 @@ import * as staffContract from "~/lib/contract/staff.generated";
 import * as remindersContract from "~/lib/contract/reminders.generated";
 import * as activeContract from "~/lib/contract/active.generated";
 import type { Session } from "next-auth";
+import { cache } from "react";
 import { mapAccountTenant } from "~/lib/account-tenants";
 import {
   hasEffectiveAdminScope,
@@ -55,7 +56,8 @@ function optional<T>(
 
 const readShell = readContract;
 
-async function loadSupervision(token: string) {
+/** Shared by the shell and a page that needs confirmed group membership in this request. */
+export const loadSupervision = cache(async function (token: string) {
   const response = await optional("supervision", (signal) =>
     readShell(activeContract.routes["GET /api/active/supervision-context"], {
       token,
@@ -65,7 +67,7 @@ async function loadSupervision(token: string) {
   return response && isCompleteSupervisionSeed(response.data)
     ? response.data
     : undefined;
-}
+});
 
 async function loadCount(
   name: keyof ShellCounts,

@@ -1,3 +1,4 @@
+import { parseISODate, toISODate } from "~/lib/date-helpers";
 import { compareIds } from "~/lib/compare-ids";
 // Calendar period (Kalenderperiode) — domain types and mappers.
 //
@@ -353,4 +354,39 @@ export function formatPeriodRange(p: CalendarPeriod): string {
 function germanDate(iso: string): string {
   const [y, m, d] = iso.split("-");
   return `${d}.${m}.${y}`;
+}
+
+export interface HolidayWindow {
+  readonly from: string;
+  readonly to: string;
+  /** Name des laufenden Schuljahres, null ohne laufendes Schuljahr. */
+  readonly schoolYearName: string | null;
+}
+
+/**
+ * Das Fenster der Liste: das laufende aktive Schuljahr. Ohne eines zeigt die
+ * Liste die nächsten zwölf Monate ab heute.
+ */
+export function holidayWindow(
+  periods: readonly CalendarPeriod[],
+  todayISO: string,
+): HolidayWindow {
+  const schoolYear = periods.find(
+    (period) =>
+      period.isActive &&
+      period.periodType === "school_year" &&
+      period.startDate <= todayISO &&
+      todayISO <= period.endDate,
+  );
+  if (schoolYear) {
+    return {
+      from: schoolYear.startDate,
+      to: schoolYear.endDate,
+      schoolYearName: schoolYear.name,
+    };
+  }
+  const end = parseISODate(todayISO);
+  end.setFullYear(end.getFullYear() + 1);
+  end.setDate(end.getDate() - 1);
+  return { from: todayISO, to: toISODate(end), schoolYearName: null };
 }

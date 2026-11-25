@@ -13,7 +13,7 @@ import {
   PHONE_WIDTH,
   setViewportWidth,
 } from "~/test/helpers/viewport";
-import DatabasePage from "./page";
+import DatabasePage from "./page-content";
 import { mockSessionData } from "~/test/mocks/next-auth";
 import { useSWR } from "~/lib/swr/testing";
 

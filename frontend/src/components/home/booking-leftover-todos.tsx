@@ -3,6 +3,7 @@
 import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
 import { calendarPeriodService } from "~/lib/calendar-period-api";
+import { countOpenBookingChildren } from "~/lib/booking-leftover";
 import { findPeriodForDate } from "~/lib/calendar-period-helpers";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { useSWRAuth } from "~/lib/swr";
@@ -30,18 +31,13 @@ export function BookingLeftoverTodos({
     () => calendarPeriodService.list(),
   );
   const period = periods ? findPeriodForDate(periods, berlinTodayISO()) : null;
-  // Same cache entry as the Betreuungsplan, so both show the same count.
-  const { data: leftovers } = useSWRAuth(
-    enabled && period ? timetableKeys.bookingLeftovers(period.id) : null,
-    () => timetableService.getBookingLeftovers(period?.id ?? ""),
+  const { data: count = 0 } = useSWRAuth(
+    enabled && period ? timetableKeys.bookingLeftoverCount(period.id) : null,
+    async () =>
+      countOpenBookingChildren(
+        await timetableService.getBookingLeftovers(period?.id ?? ""),
+      ),
   );
-
-  // One child with several Regeltermine or days counts once.
-  const count = new Set(
-    (leftovers ?? [])
-      .filter((leftover) => !leftover.kept)
-      .map((leftover) => leftover.studentId),
-  ).size;
   if (!enabled || count === 0) return null;
   return (
     <Alert

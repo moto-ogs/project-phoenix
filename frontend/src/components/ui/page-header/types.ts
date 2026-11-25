@@ -2,6 +2,7 @@
 // genau einmal; die Bausteine importieren sie, nicht umgekehrt.
 
 import type { ReactNode } from "react";
+import { sameSetMembers } from "~/lib/utils";
 
 /**
  * Zähler-Plakette in der Such- und Filterzeile, z. B. die Zahl der gefundenen
@@ -214,16 +215,10 @@ export function isMultiSelectRestricting(
   allOptions: readonly Pick<FilterOption, "value" | "outsideOptions">[],
 ): boolean {
   if (selectedValues.length === 0) return false;
-  const options = allOptions.filter((option) => option.outsideOptions !== true);
-  const optionValueSet = new Set(options.map((option) => option.value));
-  const selectedValueSet = new Set(selectedValues);
-  const allOptionsSelected = options.every((option) =>
-    selectedValueSet.has(option.value),
-  );
-  const hasHiddenSelection = selectedValues.some(
-    (value) => !optionValueSet.has(value),
-  );
-  return !allOptionsSelected || hasHiddenSelection;
+  const options = allOptions
+    .filter((option) => option.outsideOptions !== true)
+    .map((option) => option.value);
+  return !sameSetMembers(selectedValues, options);
 }
 
 /**

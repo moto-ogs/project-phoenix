@@ -59,7 +59,7 @@ import type { InfoDisplay } from "~/lib/display-helpers";
 import { SWRConfig } from "~/lib/swr/testing";
 import { SWRScopeBoundary } from "~/lib/swr/scope-boundary";
 import { resetSWRScope, resumeSWRSession } from "~/lib/swr/scope";
-import InfoDisplaysPage from "./page";
+import InfoDisplaysPage from "./page-content";
 
 const display: InfoDisplay = {
   id: "1",

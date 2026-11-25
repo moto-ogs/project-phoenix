@@ -48,14 +48,17 @@ import {
 } from "~/components/ui/page-skeletons";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { fetchStudents } from "~/lib/student-api";
-import type { Student } from "~/lib/student-helpers";
 import {
   activeService,
   summarizeStudentMoveResult,
 } from "~/lib/active-service";
 import type { ActiveGroup, Supervisor, Visit } from "~/lib/active-helpers";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
-import type { Room } from "~/lib/room-helpers";
+import {
+  roomStudentCard,
+  type Room,
+  type RoomStudent,
+} from "~/lib/room-helpers";
 import type { Staff } from "~/lib/usercontext-helpers";
 import { CompactStudentCard } from "~/components/students/compact-student-card";
 import { useStudentPhotosEnabled } from "~/lib/hooks/use-student-photos-enabled";
@@ -78,7 +81,7 @@ import {
 } from "~/lib/move-targets";
 
 const logger = createLogger({ component: "StudentsInRoomSection" });
-const EMPTY_STUDENTS: Student[] = [];
+const EMPTY_STUDENTS: RoomStudent[] = [];
 const NO_ACTIVE_GROUPS: ActiveGroup[] = [];
 const NO_SUPERVISIONS: Supervisor[] = [];
 const NO_ROOMS: Room[] = [];
@@ -155,14 +158,16 @@ export function StudentsInRoomSection({
     isLoading,
     mutate: reloadStudents,
   } = useSWRAuth<{
-    students: Student[];
+    students: RoomStudent[];
     pagination?: { total_records: number };
-  }>(roomKeys.students(roomId), async () =>
-    fetchStudents({
+  }>(roomKeys.students(roomId), async () => {
+    const { students, pagination } = await fetchStudents({
       roomId,
       pageSize: 200,
-    }),
-  );
+      view: "slim",
+    });
+    return { students: students.map(roomStudentCard), pagination };
+  });
   const {
     data: loadedActiveGroups,
     error: activeGroupsError,
@@ -789,7 +794,7 @@ interface StudentsInRoomBodyProps {
   readonly fromReferrer: string;
   readonly loading: boolean;
   readonly loadError: FormErrorInput;
-  readonly students: readonly Student[];
+  readonly students: readonly RoomStudent[];
   readonly selectable: boolean;
   readonly selectableStudentIds: ReadonlySet<string>;
   readonly selectedStudentIds: ReadonlySet<string>;
@@ -874,7 +879,7 @@ function SelectableStudentRow({
   onToggleSelection,
   onOpen,
 }: {
-  readonly student: Student;
+  readonly student: RoomStudent;
   readonly selectable: boolean;
   readonly isSelected: boolean;
   readonly onToggleSelection: () => void;

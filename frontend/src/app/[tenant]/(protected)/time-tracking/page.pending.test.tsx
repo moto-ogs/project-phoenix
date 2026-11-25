@@ -182,7 +182,7 @@ import type {
   StaffAbsence,
   WorkSessionHistory,
 } from "~/lib/time-tracking-helpers";
-import TimeTrackingPage from "./page";
+import TimeTrackingPage from "./page-content";
 
 vi.unmock("swr");
 
@@ -287,8 +287,8 @@ function mockData(absences: StaffAbsence[]) {
     if (key.startsWith("time-tracking-period-")) {
       return answer({
         staffId: "10",
-        from: new Date(2026, 8, 7),
-        to: new Date(2026, 8, 13),
+        from: "2026-09-07",
+        to: "2026-09-13",
         sessions: [session],
         rows: [adaptHistorySessionForMetrics(session)],
         absences,

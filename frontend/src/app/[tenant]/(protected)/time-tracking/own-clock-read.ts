@@ -1,5 +1,8 @@
 import { ApiError } from "~/lib/api-error";
-import type { OwnTimeTotals } from "~/lib/contract/time-tracking.generated";
+import type {
+  OwnClockOverview,
+  OwnTimeTotals,
+} from "~/lib/contract/time-tracking.generated";
 import { parseISODate } from "~/lib/date-helpers";
 import type { ClockSession } from "~/lib/own-time-tracking-view";
 import {
@@ -16,7 +19,10 @@ import {
 } from "~/lib/time-tracking-helpers";
 
 export async function readOwnClock(today: string) {
-  const overview = await timeTrackingService.getOverview();
+  return mapOwnClock(await timeTrackingService.getOverview(), today);
+}
+
+export function mapOwnClock(overview: OwnClockOverview, today: string) {
   if (overview.today !== today) {
     throw new ApiError("Own clock date changed", undefined, {
       code: "general.unavailable",
@@ -60,10 +66,7 @@ export async function readOwnClock(today: string) {
         : undefined,
     week: overview.week,
     month: overview.month,
-    accountStart:
-      overview.account_start === null
-        ? null
-        : parseISODate(overview.account_start),
+    accountStart: overview.account_start,
     accountBalanceMinutes: overview.account_balance_minutes,
     todayCountsInTotals: overview.today_counts_in_totals,
     // Die Schule lässt diese Person nur am NFC-Terminal stempeln (#8024).
@@ -87,7 +90,8 @@ export function clockMetrics(
   return {
     week: totals(data.week, accountingDelta),
     month: totals(data.month, accountingDelta),
-    accountStart: data.accountStart,
+    accountStart:
+      data.accountStart === null ? null : parseISODate(data.accountStart),
     accountBalanceMinutes:
       data.accountBalanceMinutes === null
         ? null

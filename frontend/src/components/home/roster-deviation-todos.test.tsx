@@ -15,7 +15,8 @@ vi.mock("~/lib/swr", () => ({
   useSWRAuth: (key: string | null) => {
     state.keys.push(key);
     if (key === null) return {};
-    if (key.startsWith("roster-deviations-")) return { data: state.deviations };
+    if (key.startsWith("roster-deviations-"))
+      return { data: state.deviations.length };
     return {
       data: [
         {
@@ -61,7 +62,7 @@ describe("RosterDeviationTodos (#5103)", () => {
     state.deviations = [deviation("1"), deviation("2")];
     render(<RosterDeviationTodos enabled />);
 
-    expect(state.keys).toContain("roster-deviations-4");
+    expect(state.keys).toContain("roster-deviations-4-count");
     expect(
       screen.getByText(
         "2 Regeltermine weichen von den Anmeldungen ab. Prüfe die Kinderlisten.",

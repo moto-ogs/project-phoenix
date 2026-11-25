@@ -5,7 +5,7 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 
-import TagesinformationenPage from "./page";
+import TagesinformationenPage from "./page-content";
 
 interface SwrSlot {
   data: unknown;

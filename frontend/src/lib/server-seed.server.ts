@@ -75,11 +75,7 @@ export function seedRead<T>(
 ): Promise<T | undefined> {
   return withRequestBudget(load, {
     timeout: () => logger.warn("page_seed_timeout", { field: name }),
-    failed: (error) =>
-      logger.debug("page_seed_skipped", {
-        field: name,
-        error: error instanceof Error ? error.message : String(error),
-      }),
+    failed: () => logger.debug("page_seed_skipped", { field: name }),
   });
 }
 

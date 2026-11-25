@@ -45,7 +45,12 @@ async function loadOverview(
 export async function fetchNotificationPreferences(
   portal: PreferencePortal = "tenant",
 ): Promise<NotificationPreferences> {
-  const overview = await loadOverview(portal);
+  return mapNotificationPreferences(await loadOverview(portal));
+}
+
+export function mapNotificationPreferences(
+  overview: sharedContract.PreferenceOverview,
+): NotificationPreferences {
   return { ...overview, types: overview.types ?? [] };
 }
 

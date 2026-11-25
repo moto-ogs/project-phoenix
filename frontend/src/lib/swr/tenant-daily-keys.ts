@@ -196,6 +196,8 @@ export const tenantDailyKeys = {
    */
   rosterDeviations: (periodId: string, freshReadID?: string | null) =>
     `roster-deviations-${periodId}${freshReadID ? `-connect-${freshReadID}` : ""}`,
+  rosterDeviationCount: (periodId: string) =>
+    `${tenantDailyKeys.rosterDeviations(periodId)}-count`,
   /** Vertretungsansicht: Termine, Lücken und Personal einer Woche. */
   vertretungWeekFamily: "vertretung-week-",
   vertretungWeek: (from: string, to: string): string =>
@@ -217,6 +219,7 @@ export const tenantDailyKeys = {
   shiftTypes: () => "dienstplan-shift-types",
   /** Offene Entscheidungen über verlängerte Abholzeiten. */
   pickupExtensions: () => "pickup-extensions",
+  pickupExtensionReminders: () => "pickup-extensions-reminders",
   /** Aktivitäten, Kategorien und eigenes Personalprofil der Seite „Aktivitäten“. */
   activitiesOverview: () => "activities-page",
   /** Alle Ansichten und Zeiträume des Team-Kalenders (#7693). */

@@ -92,6 +92,7 @@ import {
   mapCombinedOfferingCounts,
   mapOfferingSourceOptions,
   mapTemplates,
+  mapOfferingTemplates,
   mapWeeklyInstances,
 } from "./timetable-helpers";
 import {
@@ -253,6 +254,12 @@ class TimetableService {
       },
     );
     return mapCombinedOfferingCounts(raw);
+  }
+
+  async getOfferingTemplates() {
+    return mapOfferingTemplates(
+      await bffJson("tenant", "GET /api/timetable/templates"),
+    );
   }
 
   async getTemplates(periodId?: string | null): Promise<TemplatesResponse> {

@@ -46,7 +46,12 @@ type CareUsageRowOffering = Omit<
 /** A child of the report, with the lists Go may write as null read as empty. */
 export type CareUsageRow = Omit<
   enrollmentContract.careUsageRowResponse,
-  "status" | "offerings" | "effective_days" | "pickup_by_day"
+  | "status"
+  | "offerings"
+  | "effective_days"
+  | "pickup_by_day"
+  | "date_of_birth"
+  | "guardian_phone"
 > & {
   status: ChildStatus;
   offerings: CareUsageRowOffering[];
@@ -83,7 +88,7 @@ export type CareUsageReport = Omit<
   rows: CareUsageRow[];
 };
 
-function careUsageReportFromContract(
+export function careUsageReportFromContract(
   report: enrollmentContract.CareUsageReportResponse,
 ): CareUsageReport {
   return {
@@ -106,16 +111,18 @@ function careUsageReportFromContract(
       grade_levels: report.filter_options.grade_levels ?? [],
       pickup_times: report.filter_options.pickup_times ?? [],
     },
-    rows: (report.rows ?? []).map((row) => ({
-      ...row,
-      status: requiredEnum(CHILD_STATUSES, row.status, "CareUsageRow.status"),
-      offerings: (row.offerings ?? []).map((offering) => ({
-        ...offering,
-        days: offering.days ?? [],
-      })),
-      effective_days: row.effective_days ?? [],
-      pickup_by_day: row.pickup_by_day ?? {},
-    })),
+    rows: (report.rows ?? []).map(
+      ({ date_of_birth: _birthDate, guardian_phone: _phone, ...row }) => ({
+        ...row,
+        status: requiredEnum(CHILD_STATUSES, row.status, "CareUsageRow.status"),
+        offerings: (row.offerings ?? []).map((offering) => ({
+          ...offering,
+          days: offering.days ?? [],
+        })),
+        effective_days: row.effective_days ?? [],
+        pickup_by_day: row.pickup_by_day ?? {},
+      }),
+    ),
   };
 }
 

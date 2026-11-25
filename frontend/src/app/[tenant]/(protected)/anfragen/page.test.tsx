@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import AnfragenPage from "./page";
+import AnfragenPage from "./page-content";
 import type { AggregatedRequestFilters } from "~/components/students/aggregated-request-list";
 import { ApiError } from "~/lib/api-error";
 import { resolveChangeRequestAccess } from "~/lib/change-request-access";

@@ -49,7 +49,7 @@ export interface AbsenceType {
   readonly version: string;
 }
 
-function mapAbsenceType(data: AbsenceTypeResponse): AbsenceType {
+export function mapAbsenceType(data: AbsenceTypeResponse): AbsenceType {
   return {
     id: data.id,
     name: data.name,
@@ -262,7 +262,7 @@ export interface AbsenceTypeAllowanceSummary {
   readonly version: string;
 }
 
-function mapAllowance(
+export function mapAllowance(
   data: AllowanceSummaryResponse,
 ): AbsenceTypeAllowanceSummary {
   return {

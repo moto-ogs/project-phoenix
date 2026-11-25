@@ -68,6 +68,7 @@ import type {
   StartInstanceResult,
   TemplatesResponse,
   TimetableTemplate,
+  OfferingTemplate,
   WeeklyInstancesResponse,
 } from "./timetable-types";
 
@@ -1306,6 +1307,24 @@ export function mapTemplates(
   raw: timetableContract.listTemplatesResponse,
 ): TemplatesResponse {
   return { templates: (raw.templates ?? []).map(mapTemplate) };
+}
+
+export function mapOfferingTemplates(
+  raw: timetableContract.listTemplatesResponse,
+): { templates: OfferingTemplate[] } {
+  return {
+    templates: (raw.templates ?? []).map((template) => ({
+      id: template.id,
+      name: template.name,
+      calendarPeriodId: template.calendar_period_id,
+      schedules: (template.schedules ?? []).map((schedule) => ({
+        weekday: schedule.weekday,
+        startTime: schedule.start_time,
+        endTime: schedule.end_time,
+        calendarPeriodId: schedule.calendar_period_id,
+      })),
+    })),
+  };
 }
 
 /**

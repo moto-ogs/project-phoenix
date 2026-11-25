@@ -780,7 +780,7 @@ function coreRequirementsFromContract(
 }
 
 /** A form schema version; see `formFieldFromContract`. */
-function formSchemaFromContract(
+export function formSchemaFromContract(
   schema: enrollmentContract.FormSchemaResponse,
 ): FormSchema {
   const {

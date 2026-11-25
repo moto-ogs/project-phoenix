@@ -168,7 +168,7 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 
-import StaffCalendarPage from "./page";
+import StaffCalendarPage from "./page-content";
 
 function render(ui: ReactElement) {
   return rtlRender(ui, { wrapper: ToastProvider });

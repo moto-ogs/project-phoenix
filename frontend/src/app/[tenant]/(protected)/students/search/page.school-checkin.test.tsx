@@ -284,7 +284,7 @@ vi.mock("~/lib/swr", () => ({
 
 import { useSession } from "next-auth/react";
 import { useImmutableSWR, useSWRAuth } from "~/lib/swr";
-import StudentSearchPage from "./page";
+import StudentSearchPage from "./page-content";
 
 const mockStudents = [
   {

@@ -1,0 +1,67 @@
+"use client";
+
+import { useCallback, useState } from "react";
+import { CareOfferingsEditor } from "~/components/enrollment/care-offerings-editor";
+import { SkeletonRegion } from "~/components/ui/page-skeletons";
+import { DataTableSkeleton as TableSkeleton } from "~/components/ui/data-table";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { DesktopOnlyNotice } from "~/components/ui/desktop-only-notice";
+import { useRequirePermission } from "~/lib/hooks/use-require-permission";
+
+const CARE_OFFERINGS_INFO =
+  "Hier legst du fest, was Eltern bei der Anmeldung buchen können. Angebote gehören immer zu einer Anmeldephase. Wähle oben die Phase und dann „Neues Betreuungsangebot“.";
+
+export default function CareOfferingsPage() {
+  const { isReady } = useRequirePermission("config:manage");
+  // Statuszeile des Seitenkopfs: der Editor meldet die Zahlen seines
+  // Katalogs, damit die Kopfkarte ohne zweiten Request auskommt.
+  // "unavailable": der Katalog lädt nicht, der Kopf zählt dann nichts
+  // (#2517).
+  const [summary, setSummary] = useState<
+    { total: number; active: number } | "unavailable" | null
+  >(null);
+  const handleSummaryChange = useCallback(
+    (next: { total: number; active: number } | "unavailable" | null) =>
+      setSummary(next),
+    [],
+  );
+
+  return (
+    <TenantPage
+      title="Angebote"
+      info={CARE_OFFERINGS_INFO}
+      stats={
+        summary && summary !== "unavailable" ? (
+          <TenantPageStats
+            items={[
+              {
+                value: summary.total,
+                label: summary.total === 1 ? "Angebot" : "Angebote",
+              },
+              { value: summary.active, label: "aktiv" },
+            ]}
+          />
+        ) : null
+      }
+      statsLoading={summary === null}
+    >
+      {/* Der Editor darunter ist auf den Desktop beschränkt; die Kopfkarte
+          gilt auf allen Breakpoints. */}
+      <DesktopOnlyNotice />
+      {isReady ? (
+        // Flex-Spalte, damit die Tabelle des Editors als letzte Fläche bis
+        // zur Unterkante wächst (`.moto-tenant-body`).
+        <div className="hidden lg:flex lg:flex-col">
+          <CareOfferingsEditor onSummaryChange={handleSummaryChange} />
+        </div>
+      ) : (
+        <SkeletonRegion
+          label="Angebote werden geladen"
+          className="hidden w-full lg:block"
+        >
+          <TableSkeleton rows={5} columns={4} />
+        </SkeletonRegion>
+      )}
+    </TenantPage>
+  );
+}

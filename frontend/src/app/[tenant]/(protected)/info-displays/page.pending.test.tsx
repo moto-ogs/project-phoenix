@@ -67,7 +67,7 @@ vi.mock("~/lib/display-api", () => ({
   deleteDisplay: mocks.deleteDisplay,
 }));
 
-import InfoDisplaysPage from "./page";
+import InfoDisplaysPage from "./page-content";
 
 function render(ui: ReactElement) {
   return rtlRender(ui, { wrapper: ToastProvider });

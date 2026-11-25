@@ -6,7 +6,7 @@ import { ApiError } from "~/lib/api-error";
 import type { Survey, SurveyResults } from "~/lib/surveys-api";
 import { testClockDay } from "~/test/clock";
 
-import SurveyDetailPage from "./page";
+import SurveyDetailPage from "./page-content";
 
 const state = vi.hoisted(() => ({
   canManage: true,

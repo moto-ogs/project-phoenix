@@ -403,8 +403,16 @@ export function mapStaffRecord(staff: StaffRecordResponse): Staff {
   };
 }
 
+export function mapStaffList(
+  staff: readonly StaffRecord[],
+  activeGroups: readonly ActiveGroupResponse[],
+): Staff[] {
+  const staffGroupsMap = buildStaffGroupsMap(activeGroups);
+  return staff.map((entry) => mapStaffMember(entry, staffGroupsMap));
+}
+
 /** A former employment of the Ehemalige filter (#3403). */
-function mapFormerStaff(entry: FormerStaffResponse): FormerStaff {
+export function mapFormerStaff(entry: FormerStaffResponse): FormerStaff {
   return {
     id: entry.id,
     firstName: entry.first_name,
@@ -433,13 +441,7 @@ class StaffService {
       bffJson("tenant", "GET /api/staff/"),
       fetchActiveGroups(),
     ]);
-    const staffGroupsMap = buildStaffGroupsMap(activeGroups);
-
-    const mappedStaff = staffList.map((staff) =>
-      mapStaffMember(staff, staffGroupsMap),
-    );
-
-    return applyStaffFilters(mappedStaff, filters);
+    return applyStaffFilters(mapStaffList(staffList, activeGroups), filters);
   }
 
   // Records an external caregiver (#3823) with the chosen access (ADR 0091);
@@ -502,7 +504,7 @@ class StaffService {
   }
 }
 
-function minimalProfile(
+export function minimalProfile(
   profile: MinimalStaffProfileResponse,
   profileType: "financial" | "document",
 ): Staff {
@@ -568,7 +570,7 @@ function mapScheduleEntries(
   }));
 }
 
-function mapScheduleResponse(data: ScheduleResponse): StaffSchedule {
+export function mapScheduleResponse(data: ScheduleResponse): StaffSchedule {
   return {
     mode: knownEnum(SCHEDULE_MODES, data.mode) ?? "custom",
     model: data.model
@@ -701,7 +703,7 @@ function workTimeModelBody(input: WorkTimeModelInput) {
   };
 }
 
-function mapWorkTimeModel(m: ModelResponse): WorkTimeModel {
+export function mapWorkTimeModel(m: ModelResponse): WorkTimeModel {
   return {
     id: m.id,
     name: m.name,
@@ -901,6 +903,44 @@ export interface StaffHistoryDetails {
 const SESSION_STATUSES = ["present", "home_office"] as const;
 const SESSION_SOURCES = ["app", "nfc", "unknown"] as const;
 
+export function mapStaffHistoryDetails(
+  history: sharedContract.HistoryResponse,
+): StaffHistoryDetails {
+  return {
+    sessions: (history.sessions ?? []).map((row) => ({
+      id: row.id,
+      date: row.date,
+      status: knownEnum(SESSION_STATUSES, row.status),
+      source: knownEnum(SESSION_SOURCES, row.source),
+      check_in_time: row.check_in_time,
+      check_out_time: row.check_out_time ?? null,
+      notes: row.notes,
+      auto_checked_out: row.auto_checked_out,
+      break_minutes: row.break_minutes,
+      net_minutes: row.net_minutes,
+      breaks: (row.breaks ?? []).flatMap((item) =>
+        item === null
+          ? []
+          : [
+              {
+                id: item.id,
+                started_at: item.started_at,
+                ended_at: item.ended_at,
+                duration_minutes: item.duration_minutes,
+              },
+            ],
+      ),
+      edit_count: row.edit_count,
+      audit_count: row.audit_count,
+      pack_up_minutes: row.pack_up_minutes,
+      rounding_minutes: row.rounding_minutes,
+      version: row.version,
+    })),
+    weeklySummaries: mapWeeklySummaries(history.weekly_summaries),
+    laborDays: (history.labor_days ?? []).map(mapWorkDayLaborHint),
+  };
+}
+
 class StaffHistoryService {
   async getHistory(
     staffId: string,
@@ -922,17 +962,7 @@ class StaffHistoryService {
       "GET /api/staff/{id}/time-tracking/history",
       { params: { id: staffId }, query: { from, to } },
     );
-    return {
-      sessions: (history.sessions ?? []).map((row) => ({
-        ...row,
-        status: knownEnum(SESSION_STATUSES, row.status),
-        source: knownEnum(SESSION_SOURCES, row.source),
-        check_out_time: row.check_out_time ?? null,
-        breaks: (row.breaks ?? []).filter((item) => item !== null),
-      })),
-      weeklySummaries: mapWeeklySummaries(history.weekly_summaries),
-      laborDays: (history.labor_days ?? []).map(mapWorkDayLaborHint),
-    };
+    return mapStaffHistoryDetails(history);
   }
 }
 
@@ -965,6 +995,29 @@ export type StaffAbsenceRow = Pick<
       | "duration_days"
     >
   >;
+
+export function mapStaffAbsenceRow(
+  row: sharedContract.StaffAbsenceResponse,
+): StaffAbsenceRow {
+  return {
+    id: row.id,
+    staff_id: row.staff_id,
+    absence_type: row.absence_type,
+    absence_type_id: row.absence_type_id,
+    absence_type_label: row.absence_type_label,
+    date_start: row.date_start,
+    date_end: row.date_end,
+    half_day: row.half_day,
+    start_half_day: row.start_half_day,
+    end_half_day: row.end_half_day,
+    note: row.note,
+    status: row.status,
+    working_days: row.working_days,
+    decision_note: row.decision_note,
+    requested_at: row.requested_at,
+    duration_days: row.duration_days,
+  };
+}
 
 // Eine Zeile des Anfragen-Moduls (#2433): der Antrag plus die Namen, die die
 // Liste anzeigt. Leere Namen heißen "Unbekannt" (gelöschtes Konto).
@@ -1047,7 +1100,7 @@ class StaffAbsenceService {
       params: { id: staffId },
       query: { from, to },
     });
-    return absences ?? [];
+    return (absences ?? []).map(mapStaffAbsenceRow);
   }
 
   async getVacationQuota(
@@ -1403,40 +1456,53 @@ class StaffMonthSummaryService {
     from: string,
     to: string,
   ): Promise<ReadonlyMap<string, DayProjection>> {
-    // Windows are MAX_TARGET_RANGE_DAYS calendar days INCLUSIVE — one day
-    // inside the endpoint's cap, which counts the gap between the bounds
-    // rather than the days. Nothing rides on the last day of headroom, and a
-    // whole-window stride keeps the arithmetic obvious.
-    const windows: { from: string; to: string }[] = [];
-    const end = parseISODate(to);
-    for (
-      let cursor = parseISODate(from);
-      cursor <= end;
-      cursor = addDays(cursor, MAX_TARGET_RANGE_DAYS)
-    ) {
-      const windowEnd = addDays(cursor, MAX_TARGET_RANGE_DAYS - 1);
-      windows.push({
-        from: toISODate(cursor),
-        to: toISODate(windowEnd > end ? end : windowEnd),
-      });
-    }
-
-    // Bound the fan-out: a "Gesamt" range on a years-old account produces one
-    // window per ~year, and a plain Promise.all would fire them all at once —
-    // one overview render then opens dozens of simultaneous DB-backed requests
-    // per staff member. A small pool keeps the endpoint (and its RLS-scoped
-    // queries) from being hammered while still overlapping the round-trips.
-    const chunks = await mapWithConcurrency(
-      windows,
-      MAX_TARGET_RANGE_CONCURRENCY,
-      (w) => this.getDailyProjection(staffId, w.from, w.to),
+    return loadStaffProjectionRange(from, to, ({ from, to }) =>
+      this.getDailyProjection(staffId, from, to),
     );
-    const merged = new Map<string, DayProjection>();
-    for (const chunk of chunks) {
-      for (const [day, projection] of chunk) merged.set(day, projection);
-    }
-    return merged;
   }
+}
+
+export async function loadStaffProjectionRange(
+  from: string,
+  to: string,
+  read: (window: {
+    from: string;
+    to: string;
+  }) => Promise<ReadonlyMap<string, DayProjection>>,
+): Promise<ReadonlyMap<string, DayProjection>> {
+  // Windows are MAX_TARGET_RANGE_DAYS calendar days INCLUSIVE — one day
+  // inside the endpoint's cap, which counts the gap between the bounds
+  // rather than the days. Nothing rides on the last day of headroom, and a
+  // whole-window stride keeps the arithmetic obvious.
+  const windows: { from: string; to: string }[] = [];
+  const end = parseISODate(to);
+  for (
+    let cursor = parseISODate(from);
+    cursor <= end;
+    cursor = addDays(cursor, MAX_TARGET_RANGE_DAYS)
+  ) {
+    const windowEnd = addDays(cursor, MAX_TARGET_RANGE_DAYS - 1);
+    windows.push({
+      from: toISODate(cursor),
+      to: toISODate(windowEnd > end ? end : windowEnd),
+    });
+  }
+
+  // Bound the fan-out: a "Gesamt" range on a years-old account produces one
+  // window per ~year, and a plain Promise.all would fire them all at once —
+  // one overview render then opens dozens of simultaneous DB-backed requests
+  // per staff member. A small pool keeps the endpoint (and its RLS-scoped
+  // queries) from being hammered while still overlapping the round-trips.
+  const chunks = await mapWithConcurrency(
+    windows,
+    MAX_TARGET_RANGE_CONCURRENCY,
+    read,
+  );
+  const merged = new Map<string, DayProjection>();
+  for (const chunk of chunks) {
+    for (const [day, projection] of chunk) merged.set(day, projection);
+  }
+  return merged;
 }
 
 // Upper bound on projection windows fetched at once by
@@ -1683,6 +1749,16 @@ class StaffMonthCloseService {
 // Personalnummer (#1417): payroll identifier maintained on the Stammdaten
 // tab. time_tracking:manage backend-side — callers gate rendering on the
 // permission so no request fires without it.
+export function mapStaffPayrollNumber(
+  number: staffContract.PayrollNumberResponse,
+): StaffPayrollNumber {
+  return {
+    personnelNumber: number.personnel_number,
+    keptByTraeger: number.kept_by_traeger ?? false,
+    version: number.version,
+  };
+}
+
 class StaffPayrollNumberService {
   async get(staffId: string): Promise<StaffPayrollNumber> {
     const number = await bffJson(
@@ -1692,11 +1768,7 @@ class StaffPayrollNumberService {
         params: { id: staffId },
       },
     );
-    return {
-      personnelNumber: number.personnel_number,
-      keptByTraeger: number.kept_by_traeger ?? false,
-      version: number.version,
-    };
+    return mapStaffPayrollNumber(number);
   }
 
   /** Sends the version the form read (ADR 0311); answers the new one. */

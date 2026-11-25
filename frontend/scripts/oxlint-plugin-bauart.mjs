@@ -316,10 +316,10 @@ const ROW_ACTION_BASELINE = new Map(
       "aus Zielen entfernen@864",
       "aus Zielen entfernen@897",
     ],
-    "src/app/[tenant]/(protected)/meal-plan/page.tsx": [
+    "src/app/[tenant]/(protected)/meal-plan/page-content.tsx": [
       "Gericht entfernen@1006",
     ],
-    "src/app/[tenant]/(protected)/parent-announcements/page.tsx": [
+    "src/app/[tenant]/(protected)/parent-announcements/page-content.tsx": [
       "Antwort entfernen@1960",
       "Entfernen@2375",
     ],
@@ -1576,7 +1576,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
     // Abschlüsse („Als Entwurf speichern“ und „Veröffentlichen“) und behält
     // seinen eigenen Fuß (BAUARTEN-SPEC Bauart 2 Regel 4, #3115); die Anzeige
     // liegt auf der Route `parent-announcements/[id]`.
-    "src/app/[tenant]/(protected)/parent-announcements/page.tsx": [
+    "src/app/[tenant]/(protected)/parent-announcements/page-content.tsx": [
       "Umfrage bearbeiten Neue Umfrage Elternbrief bearbeiten Neuer Elternbrief Einverständnis bearbeiten Neues Einverständnis Elternmitteilung bearbeiten Neue Elternmitteilung@1853",
     ],
     // Einträge ohne eigene Objektansicht (Termin, Schließtag,
@@ -1584,11 +1584,11 @@ const EDIT_OVERLAY_BASELINE = new Map(
     // Anmeldephase, Betreuungsangebot, Ordner, Tagesinformation): die Spec
     // kennt für sie noch keine Bauart (Entscheidung in #3119 offen gelassen).
     // Bis sie eine bekommen, bleibt der Bestand stehen und wächst nicht.
-    "src/app/[tenant]/(protected)/calendar/page.tsx": [
+    "src/app/[tenant]/(protected)/calendar/page-content.tsx": [
       "Termin bearbeiten Termin erstellen@1065",
     ],
-    "src/app/[tenant]/(protected)/database/students/class-list/page.tsx": [
-      "edit Eintrag bearbeiten Klassenlisteneintrag anlegen@689",
+    "src/app/[tenant]/(protected)/database/students/class-list/page-content.tsx": [
+      "edit Eintrag bearbeiten Klassenlisteneintrag anlegen@651",
     ],
     // Seit #5604 gilt die Regel im Schul- und Operator-Portal. Diese Formulare
     // haben keine eigene Objektroute; ein Umbau geht über das Seitengerüst

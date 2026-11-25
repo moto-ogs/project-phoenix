@@ -329,7 +329,7 @@ import {
   useAttendanceWebEnabled,
   useShowTimetableCounts,
 } from "~/lib/tenant-context";
-import MeinRaumPage from "./page";
+import MeinRaumPage from "./page-content";
 
 const defaultPageHeader = vi
   .mocked(TenantPageSearchRow)

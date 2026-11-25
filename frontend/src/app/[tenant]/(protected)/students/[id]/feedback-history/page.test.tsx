@@ -15,7 +15,7 @@ import { useInvalidateFamily } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { SWRConfig } from "~/lib/swr/testing";
-import StudentFeedbackHistoryPage from "./page";
+import StudentFeedbackHistoryPage from "./page-content";
 import { ApiError } from "~/lib/api-error";
 import { fetchStudent } from "~/lib/student-api";
 import { fetchStudentFeedback } from "~/lib/feedback-api";

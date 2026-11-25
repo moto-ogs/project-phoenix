@@ -93,7 +93,7 @@ import { useDraftOn } from "~/lib/swr/read-draft";
 import { databaseKeys } from "~/lib/swr/portal-keys";
 import { createLogger } from "~/lib/logger";
 import { timetableService } from "~/lib/timetable-api";
-import type { TimetableTemplate } from "~/lib/timetable-types";
+import type { OfferingTemplate } from "~/lib/timetable-types";
 import {
   isSupportedGradeLevel,
   supportedGradeLevelMax,
@@ -124,7 +124,7 @@ const logger = createLogger({ component: "CareOfferingsEditor" });
 
 const NO_PHASES: Phase[] = [];
 const NO_OFFERINGS: CareOffering[] = [];
-const NO_TEMPLATES: TimetableTemplate[] = [];
+const NO_TEMPLATES: OfferingTemplate[] = [];
 const NO_PERIODS: CalendarPeriod[] = [];
 const NO_STATS: Record<
   string,
@@ -236,7 +236,7 @@ function formatDays(days: string[]): string {
   return visibleDays.map((day) => weekdayShortLabel(day)).join(", ");
 }
 
-function templateLabel(template: TimetableTemplate): string {
+function templateLabel(template: OfferingTemplate): string {
   const days = template.schedules
     .map((schedule) => schedule.weekday)
     .sort((a, b) => a - b)
@@ -248,7 +248,7 @@ function templateLabel(template: TimetableTemplate): string {
   return `${template.name} (${days || "keine Tage"}, ${time})`;
 }
 
-function singleTemplatePeriodID(template: TimetableTemplate): string | null {
+function singleTemplatePeriodID(template: OfferingTemplate): string | null {
   if (template.schedules.length === 0) return null;
 
   const periodIDs = new Set<string>();
@@ -262,7 +262,7 @@ function singleTemplatePeriodID(template: TimetableTemplate): string | null {
 }
 
 function templatePhaseCompatibility(
-  template: TimetableTemplate,
+  template: OfferingTemplate,
   phase: Phase,
   periods: CalendarPeriod[],
   requireActivePeriod: boolean,
@@ -281,7 +281,7 @@ function templatePhaseCompatibility(
 function draftTemplateCompatibility(
   draft: CareOfferingInput,
   phases: Phase[],
-  templates: TimetableTemplate[],
+  templates: OfferingTemplate[],
   periods: CalendarPeriod[],
   metadataStatus: PlannerMetadataStatus,
 ): TemplateCompatibility {
@@ -297,7 +297,7 @@ function draftTemplateCompatibility(
 
 function draftUsesInactiveTemplatePeriod(
   draft: CareOfferingInput,
-  templates: TimetableTemplate[],
+  templates: OfferingTemplate[],
   periods: CalendarPeriod[],
   metadataStatus: PlannerMetadataStatus,
 ): boolean {
@@ -319,7 +319,7 @@ function draftUsesInactiveTemplatePeriod(
 
 function linkedTemplateWeekdayError(
   draft: CareOfferingInput,
-  templates: TimetableTemplate[],
+  templates: OfferingTemplate[],
   metadataStatus: PlannerMetadataStatus,
 ): string | null {
   if (!draft.activity_group_id || metadataStatus !== "ready") return null;
@@ -381,7 +381,7 @@ function hasUnverifiableTemplateChange(
 
 function linkedTemplateWarnings(
   draft: CareOfferingInput,
-  templates: TimetableTemplate[],
+  templates: OfferingTemplate[],
 ): string[] {
   if (!draft.activity_group_id) return [];
   const template = templates.find(
@@ -454,8 +454,8 @@ export function CareOfferingsEditor({
   const { mutate: mutateOfferings } = offeringsRead;
   // Planner metadata and the phase's catalog are independent: a metadata
   // failure (SWR logs it) must never hide the catalog.
-  const templatesRead = useSWRAuth(enrollmentKeys.timetableTemplates(), () =>
-    timetableService.getTemplates(),
+  const templatesRead = useSWRAuth(enrollmentKeys.offeringTemplates(), () =>
+    timetableService.getOfferingTemplates(),
   );
   const periodsRead = useSWRAuth(databaseKeys.calendarPeriods(), () =>
     calendarPeriodService.list(),
@@ -1498,7 +1498,7 @@ interface CareOfferingFormProps {
   readonly editingId: string | null;
   readonly phases: Phase[];
   readonly offerings: CareOffering[];
-  readonly templates: TimetableTemplate[];
+  readonly templates: OfferingTemplate[];
   readonly periods: CalendarPeriod[];
   readonly metadataStatus: PlannerMetadataStatus;
   readonly originalActivityGroupID: string | null;
@@ -1540,7 +1540,7 @@ function phaseChangePatch({
   editingID: string | null;
   phases: Phase[];
   offerings: CareOffering[];
-  templates: TimetableTemplate[];
+  templates: OfferingTemplate[];
   periods: CalendarPeriod[];
   metadataStatus: PlannerMetadataStatus;
 }>): { patch: Partial<CareOfferingInput>; templateUnlinked: boolean } {
@@ -1621,7 +1621,7 @@ function CareOfferingTemplateField({
 }: Readonly<{
   draft: CareOfferingInput;
   phases: Phase[];
-  templates: TimetableTemplate[];
+  templates: OfferingTemplate[];
   periods: CalendarPeriod[];
   metadataStatus: PlannerMetadataStatus;
   /** The link changed while the planner data is unavailable. */

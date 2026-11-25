@@ -1,0 +1,90 @@
+"use client";
+
+import {
+  CalendarPeriodsActions,
+  CalendarPeriodsEditor,
+  useCalendarPeriods,
+} from "~/components/planning/calendar-periods-editor";
+import { ClosingDaysEditor } from "~/components/planning/closing-days-editor";
+import { SchoolHolidaysList } from "~/components/planning/school-holidays-list";
+import { SchoolVacationsList } from "~/components/planning/school-vacations-list";
+import { SchoolVacationHints } from "~/components/timetable/school-vacation-hints";
+import { TenantPage } from "~/components/ui/tenant-page";
+import { useRequirePermission } from "~/lib/hooks/use-require-permission";
+
+/**
+ * Bewusst KEIN timetable.enabled-Route-Gate wie auf den übrigen
+ * Planungsseiten: Kalenderzeiträume sind eine geteilte Ressource, die
+ * Anmeldephasen (Anmeldungen-Bereich) verknüpfen sich mit ihnen, auch wenn
+ * der Planungsbereich für die Schule abgeschaltet ist.
+ *
+ * Ebenso bewusst KEIN DesktopOnlyNotice wie im Anmeldungsbereich (#2033):
+ * beide Editoren sind Tabelle plus Modal und damit mobil bedienbar. Bei
+ * abgeschaltetem Planungsbereich ist dies zudem der einzige verbleibende
+ * Eintrag der Planungsgruppe, eine Desktop-Sperre wäre dort eine Sackgasse.
+ */
+// Info-Knopf am Titel (#7579): wofür die Seite da ist und was man zuerst tut.
+const CALENDAR_PERIODS_INFO =
+  "Hier legst du das Schuljahr, Halbjahre und Ferien als Zeiträume an. Hat die OGS geschlossen, trägst du unter „Schließtage“ einen Schließtag ein. Gesetzliche Feiertage musst du nicht eintragen.";
+
+export default function CalendarPeriodsPage() {
+  // Dasselbe Recht wie der Eintrag in der Planungsgruppe (#3469): Zeiträume
+  // und Schließtage pflegt, wer den Betreuungsplan verwaltet.
+  const { isReady } = useRequirePermission("schedules:manage");
+
+  // Solange die Rechteprüfung läuft, steht hier das Seitengerüst mit seinem
+  // Ladezustand; die Zeiträume werden erst danach abgerufen.
+  if (!isReady) {
+    return (
+      <TenantPage
+        title="Schuljahr und Kalender"
+        info={CALENDAR_PERIODS_INFO}
+        loading
+        testId="loading"
+      />
+    );
+  }
+
+  return <CalendarPeriodsPageContent />;
+}
+
+/**
+ * Der Kopf gehört der Seite: Titel, Statuszeile und die beiden
+ * Anlegen-Aktionen. Leer- und Fehlerzustand bleiben in den beiden
+ * Inhaltsblöcken, damit die Schließtage auch dann erreichbar sind, wenn die
+ * Zeiträume leer sind oder nicht geladen werden konnten.
+ */
+function CalendarPeriodsPageContent() {
+  const state = useCalendarPeriods();
+
+  return (
+    <TenantPage
+      title="Schuljahr und Kalender"
+      info={CALENDAR_PERIODS_INFO}
+      stats={state.statusLine}
+      statsLoading={state.loading}
+      actions={<CalendarPeriodsActions state={state} />}
+    >
+      {/* Regeltermine in den nächsten Ferien (#5345): die Schließtage
+          stehen auf dieser Seite, deshalb ohne Link dorthin. */}
+      <SchoolVacationHints
+        enabled
+        showClosingDaysLink={false}
+        onAppointmentsCancelled={() => void state.reload()}
+      />
+      <CalendarPeriodsEditor state={state} />
+      {/* Abgesagte Termine ändern die Spalte „Verwendung“ (#3594). */}
+      <ClosingDaysEditor onAppointmentsCancelled={() => void state.reload()} />
+      {/* Feiertage berechnet moto aus dem Bundesland der Schule (#4775). */}
+      <SchoolHolidaysList
+        periods={state.periods}
+        periodsLoading={state.loading}
+      />
+      {/* Schulferien des Bundeslands aus OpenHolidays (#5345). */}
+      <SchoolVacationsList
+        periods={state.periods}
+        periodsLoading={state.loading}
+      />
+    </TenantPage>
+  );
+}

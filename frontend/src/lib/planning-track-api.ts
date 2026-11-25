@@ -12,7 +12,9 @@ export interface PlanningTrack {
   version?: string;
 }
 
-function mapTrack(track: timetableContract.PlanningTrack): PlanningTrack {
+export function mapTrack(
+  track: timetableContract.PlanningTrack,
+): PlanningTrack {
   return {
     id: track.id,
     name: track.name,

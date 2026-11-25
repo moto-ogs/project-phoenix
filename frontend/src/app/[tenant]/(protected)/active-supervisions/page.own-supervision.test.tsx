@@ -142,7 +142,7 @@ import {
 import { timetableOperationsApi } from "~/lib/timetable-operations-api";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { TEST_CLOCK_INSTANT } from "~/test/clock";
-import MeinRaumPage from "./page";
+import MeinRaumPage from "./page-content";
 
 function render(ui: Parameters<typeof rtlRender>[0]) {
   return rtlRender(ui, { wrapper: ToastProvider });

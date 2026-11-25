@@ -83,7 +83,7 @@ vi.mock("~/lib/parent-group-threads-api", async (importOriginal) => ({
   postGroupMessage: mockPostGroupMessage,
 }));
 
-import GroupMessagePage from "./page";
+import GroupMessagePage from "./page-content";
 
 const detail = {
   thread: {
