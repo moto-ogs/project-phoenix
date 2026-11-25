@@ -155,7 +155,7 @@ describe("ParentNotificationsBell", () => {
     state.unread = 12;
     renderBell();
     const bell = await screen.findByRole("button", {
-      name: "9+: Hinweise: 12",
+      name: "9+ Hinweise, insgesamt 12",
     });
     expect(bell).toHaveTextContent("9+");
     expect(staffApi.fetchNotificationFeedUnreadCount).not.toHaveBeenCalled();

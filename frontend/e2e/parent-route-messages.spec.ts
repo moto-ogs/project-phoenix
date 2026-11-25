@@ -1,8 +1,5 @@
 import type { Page } from "@playwright/test";
-import {
-  readSeedEnrollmentToken,
-  readSeedParents,
-} from "../scripts/seed-state";
+import { readSeedEnrollment, readSeedParents } from "../scripts/seed-state";
 import { loginToLocalTenant } from "./local-tenant-login";
 import { MISSING_SEED_ACCESS, seedAccess, tenantBase } from "./tenant-session";
 import { expect, test } from "./a11y/scan";
@@ -13,8 +10,8 @@ const host =
   `eltern.localhost:${frontendPort}`;
 const base = `http://${host}`;
 const parent = readSeedParents().find((account) => account.children === 1);
-const statusToken = readSeedEnrollmentToken();
-if (process.env.CI && (!parent || !statusToken))
+const enrollment = readSeedEnrollment();
+if (process.env.CI && (!parent || !enrollment))
   throw new Error(
     "Der E2E-Seed braucht ein Elternkonto mit einem Kind und eine Anmeldung.",
   );
@@ -47,8 +44,8 @@ test("keeps login messages scoped on direct entry, language change and client na
   const html = await response!.text();
   expect(html).toContain("Willkommen im Eltern-Portal");
   expect(
-    ["careContractSigning", "parentChildDetail"].filter((key) =>
-      html.includes(key),
+    ["careContractSigning", "parentChildDetail", "enrollmentForm"].filter(
+      (key) => html.includes(key),
     ),
   ).toEqual([]);
 
@@ -109,7 +106,7 @@ test.describe("English public enrollment", () => {
   test("translates the picker, a submitted application and the staff preview", async ({
     page,
   }) => {
-    test.skip(!seedAccess || !statusToken, MISSING_SEED_ACCESS);
+    test.skip(!seedAccess || !enrollment, MISSING_SEED_ACCESS);
     const errors = collectIntlErrors(page);
     await page.goto(`${tenantBase}/anmeldung`);
     await expect(
@@ -117,7 +114,9 @@ test.describe("English public enrollment", () => {
         name: "What would you like to enroll your child for?",
       }),
     ).toBeVisible();
-    await page.goto(`${tenantBase}/anmeldung/status/${statusToken}`);
+    await page.goto(
+      `http://${enrollment!.slug}.localhost:${frontendPort}/anmeldung/status/${enrollment!.token}`,
+    );
     await expect(
       page.getByRole("heading", { name: "Status of your enrollment" }),
     ).toBeVisible();

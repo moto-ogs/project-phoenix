@@ -101,11 +101,13 @@ function readSeedProfile(
 }
 
 /** Stand einer im Seed vorhandenen Anmeldung, ohne eine Anmeldung im Test zu schreiben. */
-export function readSeedEnrollmentToken(): string | null {
-  const requests = readSeedProfile({})?.profile.entities?.enrollment?.requests;
-  return (
-    requests?.find((request) => request.status_token)?.status_token ?? null
-  );
+export function readSeedEnrollment(): { slug: string; token: string } | null {
+  const profile = readSeedProfile({})?.profile;
+  const slug = profile?.school?.tenant_slug;
+  const token = profile?.entities?.enrollment?.requests?.find(
+    (request) => request.status_token,
+  )?.status_token;
+  return slug && token ? { slug, token } : null;
 }
 
 /** Vollständige Eltern-Logins des Profils; leer ohne Seed-Datei. */

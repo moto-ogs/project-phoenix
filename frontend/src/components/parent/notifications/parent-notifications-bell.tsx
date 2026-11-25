@@ -52,11 +52,13 @@ export function ParentNotificationsBell() {
   );
   const close = useCallback(() => setIsOpen(false), []);
 
-  const countLabel = t("bellCount", { count: unreadCount });
   const bellLabel =
     unreadCount > NOTIFICATIONS_BADGE_MAX
-      ? `${NOTIFICATIONS_BADGE_MAX}+: ${countLabel}`
-      : countLabel;
+      ? t("bellCountCapped", {
+          max: NOTIFICATIONS_BADGE_MAX,
+          count: unreadCount,
+        })
+      : t("bellCount", { count: unreadCount });
 
   return (
     <AnchoredPopover
