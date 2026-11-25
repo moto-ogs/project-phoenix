@@ -730,49 +730,60 @@ function NowCard({
   const stampText = stampLabel(stamp.state);
   return (
     <SectionCard testId="home-now" padding="none">
-      <div className="space-y-3 p-4">
-        <div className="flex min-w-0 items-start gap-3">
-          <time
-            dateTime={`${now.today}T${now.now}`}
-            className="shrink-0 text-2xl leading-8 font-semibold text-gray-900 tabular-nums"
-          >
-            {now.now}
-          </time>
-          <span aria-hidden="true" className="h-8 w-px shrink-0 bg-gray-200" />
-          {now.loading ? (
-            <div className="min-w-0 flex-1 space-y-2" aria-hidden="true">
-              <Skeleton className="h-4 w-2/5" />
-              <Skeleton className="h-3 w-3/5" />
-            </div>
-          ) : (
-            <NowText
-              state={now.state}
-              analytics={now.analytics.data}
-              today={now.today}
-              wrap
-            />
-          )}
-        </div>
-        {now.presentCount !== undefined || stampText ? (
-          <div className="flex flex-wrap items-center gap-1.5">
-            {now.presentCount !== undefined ? (
-              <StatusBadge
-                tone="gray"
-                label={
-                  now.presentCount === 1
-                    ? "1 Kind da"
-                    : `${now.presentCount} Kinder da`
-                }
-              />
-            ) : null}
-            {stampText ? (
-              <StatusBadge
-                tone={stamp.state.kind === "in" ? "green" : "gray"}
-                label={stampText}
-              />
-            ) : null}
+      {/* Eine knappe Karte: Uhrzeit vor der Überschrift, Zustand, Ort und
+          Zähler in einer Zeile darunter. So beginnt „Zu erledigen“ auch am
+          kleinen Telefon im ersten Bild. Ob jemand eingestempelt ist, sagt
+          am Telefon schon der Knopf in der Leiste. */}
+      <div className="px-4 py-3">
+        {now.loading ? (
+          <div className="space-y-2" aria-hidden="true">
+            <Skeleton className="h-4 w-3/5" />
+            <Skeleton className="h-3 w-4/5" />
           </div>
-        ) : null}
+        ) : (
+          <NowText
+            state={now.state}
+            analytics={now.analytics.data}
+            today={now.today}
+            wrap
+            lead={
+              <time
+                dateTime={`${now.today}T${now.now}`}
+                className="shrink-0 font-semibold text-gray-500 tabular-nums"
+              >
+                {now.now}
+              </time>
+            }
+            extra={
+              now.presentCount !== undefined || stampText ? (
+                <>
+                  {now.presentCount !== undefined ? (
+                    <StatusBadge
+                      tone="gray"
+                      label={
+                        now.presentCount === 1
+                          ? "1 Kind da"
+                          : `${now.presentCount} Kinder da`
+                      }
+                    />
+                  ) : null}
+                  {stampText ? (
+                    <span
+                      className={
+                        stamp.state.kind === "in" ? undefined : "phone:hidden"
+                      }
+                    >
+                      <StatusBadge
+                        tone={stamp.state.kind === "in" ? "green" : "gray"}
+                        label={stampText}
+                      />
+                    </span>
+                  ) : null}
+                </>
+              ) : undefined
+            }
+          />
+        )}
       </div>
     </SectionCard>
   );

@@ -31,7 +31,7 @@ import { ICON_ONLY } from "~/components/ui/control-geometry";
 import { EmptyState } from "~/components/ui/empty-state";
 import { errorAlertActions } from "~/components/ui/form-error-alert";
 import { TenantPage } from "~/components/ui/tenant-page";
-import { DeviceSwitch } from "~/lib/device-context";
+import { DeviceSwitch, useDeviceContext } from "~/lib/device-context";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { getGreetingName, leadsSchool } from "~/lib/auth-utils";
 import { fetchBirthdayOverviewClient } from "~/lib/birthdays-api";
@@ -417,6 +417,11 @@ function HomeContent() {
     retryResetRef.current = () => void restoreDefault();
   });
 
+  // App (#8070): „Anpassen“ steht im „…“-Menü der Kopfkarte statt als
+  // umrandeter Symbolknopf neben dem flachen „…“.
+  const device = useDeviceContext();
+  const appHead = device.resolved && device.isApp;
+
   if (status === "authenticated" && session && !hasSessionAccess(session)) {
     logger.info("invalid session, redirecting to login");
     redirect(tenantPath("/"));
@@ -546,6 +551,21 @@ function HomeContent() {
       prominent
       statsLoading={isLoading}
       stats={editing ? undefined : headerStats}
+      overflowMenu={
+        appHead && !editing
+          ? [
+              {
+                label: "Startseite anpassen",
+                description: EDIT_HOME_TOOLTIP,
+                icon: (
+                  <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                ),
+                disabled: !homeLayoutReady,
+                onClick: startEditing,
+              },
+            ]
+          : undefined
+      }
       info={
         editing
           ? "Karte ziehen, um sie zu verschieben. Anklicken, um Breite zu ändern oder sie zu entfernen."
@@ -584,7 +604,7 @@ function HomeContent() {
               Fertig
             </Button>
           </>
-        ) : (
+        ) : appHead ? undefined : (
           // Auf allen Breiten nur das Symbol (#4346): als Textknopf war
           // „Anpassen" größer als alles, wofür man die Startseite öffnet.
           // Der Name sagt „Anpassen", der Tooltip die Folge (#6755). Die Kopfkarte gibt dem

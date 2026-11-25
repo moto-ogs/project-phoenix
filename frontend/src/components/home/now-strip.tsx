@@ -290,10 +290,16 @@ export function NowText({
   analytics,
   today,
   wrap = false,
+  lead,
+  extra,
 }: {
   readonly state: HomeNowState;
   readonly analytics: DashboardAnalytics | undefined;
   readonly today: string;
+  /** App: steht vor der Überschrift (die Uhrzeit). */
+  readonly lead?: ReactNode;
+  /** App: steht am Ende der Angabenzeile (Zähler). */
+  readonly extra?: ReactNode;
   /**
    * App (#8070): nie kürzen; die Angaben brechen nur zwischen den Teilen um
    * („Aula · Ende offen ·“ / „danach 12:00 Mittagessen“).
@@ -306,6 +312,8 @@ export function NowText({
       return (
         <Lines
           wrap={wrap}
+          lead={lead}
+          extra={extra}
           headline={block.title}
           badges={
             <>
@@ -348,6 +356,8 @@ export function NowText({
       return (
         <Lines
           wrap={wrap}
+          lead={lead}
+          extra={extra}
           headline={`Als Nächstes: ${block.title}`}
           badges={
             <>
@@ -380,6 +390,8 @@ export function NowText({
       return (
         <Lines
           wrap={wrap}
+          lead={lead}
+          extra={extra}
           headline="Für heute ist alles erledigt"
           detail={[
             state.count === 1
@@ -406,6 +418,8 @@ export function NowText({
       return (
         <Lines
           wrap={wrap}
+          lead={lead}
+          extra={extra}
           headline={headline}
           badges={
             notStarted > 0 ? (
@@ -429,6 +443,8 @@ export function NowText({
       return (
         <Lines
           wrap={wrap}
+          lead={lead}
+          extra={extra}
           headline={formatStatusDate(today)}
           detail={
             analytics
@@ -458,8 +474,12 @@ function Lines({
   badges,
   detail,
   wrap = false,
+  lead,
+  extra,
 }: {
   readonly wrap?: boolean;
+  readonly lead?: ReactNode;
+  readonly extra?: ReactNode;
   readonly headline: string;
   readonly badges?: ReactNode;
   // Raumangaben tragen ihr Symbol wie in den Blockzeilen (#4350).
@@ -469,14 +489,19 @@ function Lines({
   if (wrap) {
     return (
       <div className="min-w-0 flex-1">
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="text-base font-semibold text-gray-900">
-            {headline}
-          </span>
-          {badges}
+        <p className="flex min-w-0 items-baseline gap-2 text-base leading-6 font-semibold text-gray-900">
+          {lead}
+          <span className="min-w-0">{headline}</span>
         </p>
-        {parts.length > 0 ? (
-          <p className="text-sm text-gray-500">
+        {parts.length > 0 || badges || extra ? (
+          <p className="mt-0.5 text-sm leading-6 text-gray-500">
+            {/* Der Zustand steht vorn in der Angabenzeile, nicht als eigene
+                Zeile unter einer langen Überschrift. */}
+            {badges ? (
+              <span className="mr-1.5 inline-flex items-center gap-1 align-middle">
+                {badges}
+              </span>
+            ) : null}
             {parts.map((part, index) => (
               <Fragment key={index}>
                 {index > 0 ? " " : null}
@@ -486,6 +511,14 @@ function Lines({
                 </span>
               </Fragment>
             ))}
+            {extra ? (
+              <>
+                {" "}
+                <span className="inline-flex flex-wrap items-center gap-1 align-middle">
+                  {extra}
+                </span>
+              </>
+            ) : null}
           </p>
         ) : null}
       </div>
