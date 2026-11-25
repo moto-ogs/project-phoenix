@@ -1,3 +1,8 @@
+const refreshContext = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock("~/lib/supervision-context", () => ({
+  useOptionalSupervision: () => ({ refresh: refreshContext }),
+}));
+
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SSEEvent, SSEHookOptions, SSEHookState } from "~/lib/sse-types";
@@ -142,6 +147,7 @@ function reconnect(view: { rerender: () => void }) {
 }
 
 beforeEach(() => {
+  refreshContext.mockClear();
   vi.useFakeTimers();
   vi.spyOn(Math, "random").mockReturnValue(0);
   vi.mocked(mutate).mockClear();
@@ -247,7 +253,7 @@ describe("useGlobalSSE: reconcile after a reconnect (#5017)", () => {
     expect(invalidatedFamilies).toContain(OWN);
   });
 
-  it("refreshes the counters but spares form drafts, sidebar and subscription", () => {
+  it("refreshes the counters and supervision but spares form drafts and subscription", () => {
     const view = renderConnected();
     const reconnectKey = useSSESpy.lastReconnectKey;
     const formDrafts = vi.fn();
@@ -269,7 +275,7 @@ describe("useGlobalSSE: reconcile after a reconnect (#5017)", () => {
         "phoenix:reminders-stale",
       ]),
     );
-    expect(dispatched).not.toContain("phoenix:supervision-stale");
+    expect(refreshContext.mock.calls).toEqual([[undefined, "reconcile"]]);
     expect(formDrafts).not.toHaveBeenCalled();
     expect(useSSESpy.lastReconnectKey).toBe(reconnectKey);
     dispatch.mockRestore();
@@ -277,30 +283,26 @@ describe("useGlobalSSE: reconcile after a reconnect (#5017)", () => {
   });
 
   it.each(["activity_end", "group_access_changed"] as const)(
-    "preserves a queued %s sidebar notification during reconnect",
+    "folds a queued %s into the full read on recovery",
     (type) => {
       const view = renderConnected();
-      const dispatch = vi.spyOn(window, "dispatchEvent");
       fire(event(type));
-      // Reconnect before the event's debounce timer flushes.
       reconnect(view);
       expect(invalidatedFamilies).toContain(OWN);
-      const notifications = dispatch.mock.calls
-        .map(([e]) => e)
-        .filter((e) => e.type === "phoenix:supervision-stale");
-      expect(notifications).toHaveLength(1);
-      expect((notifications[0] as CustomEvent).detail).toEqual(
-        type === "activity_end" ? { groupsOnly: false } : null,
-      );
+      expect(refreshContext.mock.calls).toEqual([[undefined, undefined]]);
       act(() => vi.advanceTimersByTime(MAX_FLUSH_WAIT_MS));
-      expect(
-        dispatch.mock.calls.filter(
-          ([e]) => e.type === "phoenix:supervision-stale",
-        ),
-      ).toHaveLength(1);
-      dispatch.mockRestore();
+      expect(refreshContext).toHaveBeenCalledTimes(1);
     },
   );
+
+  it("unions mixed triggers without waking the identity navigation", () => {
+    renderConnected();
+    fire(event("activity_end"));
+    fire(event("group_access_changed"));
+    act(() => vi.advanceTimersByTime(MAX_FLUSH_WAIT_MS));
+    expect(refreshContext.mock.calls).toEqual([[["groups", "sessions"]]]);
+    expect(invalidatedFamilies).toContain(OWN);
+  });
 
   it("reconciles once, a moment after the first connection", () => {
     setStatus("idle");
@@ -502,24 +504,18 @@ describe("useGlobalSSE: events of another school or account (#5017)", () => {
   });
 
   it.each(["activity_end", "group_access_changed"] as const)(
-    "drops a queued %s sidebar notification after an account change",
+    "drops a queued %s after an account change, then reconciles the new stream",
     (type) => {
       const view = renderConnected();
-      const dispatch = vi.spyOn(window, "dispatchEvent");
       fire(event(type));
       session.current = { ...session.current, id: "account-8" };
       view.rerender();
+      act(() => vi.advanceTimersByTime(MAX_FLUSH_WAIT_MS));
+      expect(refreshContext).toHaveBeenCalledTimes(0);
       reconnect(view);
-      // Anker: a later reconnect reconciles the new account's caches.
       reconnect(view);
       expect(invalidatedFamilies).toContain(OWN);
-      act(() => vi.advanceTimersByTime(MAX_FLUSH_WAIT_MS));
-      expect(
-        dispatch.mock.calls.filter(
-          ([e]) => e.type === "phoenix:supervision-stale",
-        ),
-      ).toHaveLength(0);
-      dispatch.mockRestore();
+      expect(refreshContext.mock.calls).toEqual([[undefined, "reconcile"]]);
     },
   );
 

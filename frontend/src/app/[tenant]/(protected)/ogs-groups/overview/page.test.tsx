@@ -159,9 +159,6 @@ describe("GroupOverviewPage (#4351)", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("Keine Gruppe sichtbar")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Erneut versuchen" }));
-    expect(supervision.refresh).toHaveBeenCalledWith({
-      force: true,
-      groupsOnly: true,
-    });
+    expect(supervision.refresh).toHaveBeenCalledWith(["groups"]);
   });
 });

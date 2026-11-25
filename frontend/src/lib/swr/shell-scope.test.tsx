@@ -52,15 +52,13 @@ const session = mockSessionData({ user: { tenantId: "1" } });
 const shell: ShellBootstrap = {
   accountId: "1",
   userContext: {
-    educationalGroups: [],
-    supervisedGroups: [],
     currentStaff: null,
-    educationalGroupIds: [],
-    educationalGroupRoomNames: [],
-    supervisedRoomNames: [],
-    incomplete: false,
-    unavailableSections: [],
-    schoolSwitches: null,
+    schoolSwitches: {
+      parentNewsEnabled: true,
+      parentInviteMode: "direct",
+      timetableDayStartTime: "08:00",
+      timetableDayEndTime: "16:00",
+    },
   },
   reminders: { enabled: true, reminders: [], count: 7 },
   staffNoticesToday: [],
@@ -136,11 +134,14 @@ it("loads the server answer, not the seed, after a rights change under the same 
   // revalidation after the reset answered with the seed (#5006 review).
   mockUseSession.mockReturnValue({ data: session, status: "authenticated" });
   const fetcher = vi.fn(() =>
-    Promise.resolve({ ...shell.userContext!, educationalGroupIds: ["neu"] }),
+    Promise.resolve({
+      ...shell.userContext!,
+      currentStaff: { id: "neu", personId: "1" },
+    }),
   );
   function ContextReader() {
     const { data } = useImmutableSWR("user-context", fetcher);
-    return <p data-testid="context">{data?.educationalGroupIds.join(",")}</p>;
+    return <p data-testid="context">{data?.currentStaff?.id}</p>;
   }
   function RightsPage() {
     return (
@@ -151,7 +152,10 @@ it("loads the server answer, not the seed, after a rights change under the same 
         session={session}
         shell={{
           ...shell,
-          userContext: { ...shell.userContext!, educationalGroupIds: ["alt"] },
+          userContext: {
+            ...shell.userContext!,
+            currentStaff: { id: "alt", personId: "1" },
+          },
         }}
       >
         <ContextReader />

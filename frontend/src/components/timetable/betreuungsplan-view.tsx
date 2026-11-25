@@ -23,6 +23,7 @@
  * bleibt reiner Component-State.
  */
 
+import { useOptionalSupervision } from "~/lib/supervision-context";
 import { staff as staffKeys } from "~/lib/swr/staff";
 import {
   Suspense,
@@ -1501,6 +1502,7 @@ function TimetablesContent() {
   // Rückfrage ist dann schon zu, also meldet ein Toast den Fehler (#2516).
   // Der Katalog nennt volle Räume mit Namen und Belegung aus den Details
   // (#3633). Wiederholen trifft denselben Termin mit derselben Absage-Notiz.
+  const { refresh: refreshSupervision } = useOptionalSupervision();
   const latestLifecycleRef = useRef<
     (
       instanceId: string,
@@ -1548,8 +1550,6 @@ function TimetablesContent() {
             cancelledToast("Die Aktivität ist abgesagt.", res.guardianNotice),
           );
         }
-        await tenantMutate(swrKey);
-        await tenantMutate(gapsSWRKey);
       } catch (err) {
         logger.error("lifecycle_action_failed", {
           action,
@@ -1567,8 +1567,19 @@ function TimetablesContent() {
         });
         throw err;
       }
+
+      await refreshSupervision(["sessions"]);
+      await tenantMutate(swrKey);
+      await tenantMutate(gapsSWRKey);
     },
-    [gapsSWRKey, showActionError, swrKey, tenantMutate, toast],
+    [
+      gapsSWRKey,
+      refreshSupervision,
+      showActionError,
+      swrKey,
+      tenantMutate,
+      toast,
+    ],
   );
 
   useLayoutEffect(() => {

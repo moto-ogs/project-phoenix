@@ -1,9 +1,8 @@
-import type * as studentsContract from "~/lib/contract/students.generated";
+import type { ContextNavigationGroup } from "~/lib/contract/active.generated";
 import type * as meContract from "./contract/me.generated";
 import { describe, expect, it } from "vitest";
 import {
   mapActiveGroupResponse,
-  mapEducationalGroupResponse,
   mapNavigationEducationalGroupResponse,
   mapStaffResponse,
 } from "./usercontext-helpers";
@@ -19,45 +18,9 @@ const ROW = {
 };
 
 describe("usercontext-helpers", () => {
-  describe("mapEducationalGroupResponse", () => {
-    it("maps a group with its room", () => {
-      const group: meContract.CallerGroupRow = {
-        ...ROW,
-        id: "12345",
-        name: "Eulen",
-        room_id: "77",
-        room: { ...ROW, id: "77", name: "Blauer Raum" },
-        via_substitution: true,
-      };
-      expect(mapEducationalGroupResponse(group)).toEqual({
-        id: "12345",
-        name: "Eulen",
-        roomId: "77",
-        room: { id: "77", name: "Blauer Raum" },
-        viaSubstitution: true,
-      });
-    });
-
-    it("maps a group without room", () => {
-      const group: meContract.CallerGroupRow = {
-        ...ROW,
-        id: "3",
-        name: "Füchse",
-        via_substitution: false,
-      };
-      expect(mapEducationalGroupResponse(group)).toEqual({
-        id: "3",
-        name: "Füchse",
-        roomId: undefined,
-        room: undefined,
-        viaSubstitution: false,
-      });
-    });
-  });
-
   describe("mapNavigationEducationalGroupResponse", () => {
     it("preserves string IDs and builds room data from the navigation view", () => {
-      const navigationGroup: studentsContract.NavigationGroup = {
+      const navigationGroup: ContextNavigationGroup = {
         id: "12345",
         name: "Eulen",
         room_id: "77",

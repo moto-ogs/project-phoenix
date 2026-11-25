@@ -233,12 +233,13 @@ func checkSupervisionContextSessionsAndPortals(t *testing.T, api *goldenRuntime,
 	school.Scope = tenant.ScopeSchool
 	school.IsAdmin = true
 	school.Permissions = []string{"admin:*", permissions.GroupsRead}
+	schoolToken := testpkg.MintLiveSessionJWT(t, f.db, school)
 	parent := claims
 	parent.Scope, parent.TenantID = tenant.ScopeParent, 0
 	platform := claims
 	platform.Scope, platform.TenantID, platform.OrgID = tenant.ScopePlatform, 0, 0
 	for name, token := range map[string]string{
-		"no token": "", "expired family": testpkg.MintTestJWT(t, expired), "assignment-bound school": testpkg.MintLiveSessionJWT(t, f.db, school),
+		"no token": "", "expired family": testpkg.MintTestJWT(t, expired), "assignment-bound school": schoolToken,
 		"parent": testpkg.MintLiveSessionJWT(t, f.db, parent), "unbound operator": testpkg.MintTestJWT(t, platform),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -252,6 +253,10 @@ func checkSupervisionContextSessionsAndPortals(t *testing.T, api *goldenRuntime,
 				require.Empty(t, counter.Queries(), "the tenant gate alone would have delegated to the admin path")
 			}
 		})
+	}
+	for _, unauthorized := range []string{"", schoolToken} {
+		response := supervisionContextRequest(api, "/api/me/navigation", unauthorized)
+		require.Equal(t, http.StatusUnauthorized, response.Code, response.Body.String())
 	}
 	for _, query := range []string{"?section=", "?section=groups&section=invalid", "?section=groups,sessions", "?section=groups;section=sessions"} {
 		response := supervisionContextRequest(api, supervisionContextURL+query, testpkg.MintLiveSessionJWT(t, f.db, claims))
@@ -307,6 +312,15 @@ func checkSupervisionContextBudget(t *testing.T, api *goldenRuntime, f supervisi
 		}
 		for _, scope := range []string{settings.OverviewScopeOwn, settings.OverviewScopeAllStaff} {
 			setSupervisionOverview(t, f, scope)
+			// The navigation route keeps its budget even though supervision
+			// data moved out. Grow the same assignments for both readers.
+			_, navigationSQL := measure("/api/me/navigation")
+			navigationSQL = withoutSessionCheck(t, navigationSQL)
+			assertSupervisionSchoolTransaction(t, navigationSQL)
+			for _, op := range []string{"INSERT", "UPDATE", "DELETE", "MERGE"} {
+				require.Empty(t, counter.Operation(op))
+			}
+			querybudgets.AssertQueryBudget(t, "api.me.navigation.positive_growth", counter.Measurement(navigationSQL))
 			paths := legacyPaths[:3]
 			if scope == settings.OverviewScopeAllStaff {
 				paths = legacyPaths

@@ -91,7 +91,8 @@ void invalidateFamily(rooms.family);
    `SWRSeedBoundary` only `fallback` and `cacheData`. The hooks copy the
    allowed keys and throw on any other outside production; `use`,
    `provider`, `fallback`, `fetcher`, `compare` and `onErrorRetry` never
-   reach SWR. `onSuccess` and `onError` get the value or failure alone.
+   reach SWR. `onSuccess` and `onError` get the value or failure alone;
+   `onDiscarded` takes no arguments.
 
 Migrated direct readers explicitly retain SWR’s former `keepPreviousData: false`
 default unless they already opted in. Do not carry a previous child, thread or

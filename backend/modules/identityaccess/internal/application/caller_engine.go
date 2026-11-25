@@ -77,24 +77,6 @@ func (e CallerEngine) MySupervisedSessionIDs(ctx context.Context) ([]int64, erro
 	return ids, mapCallerError(err)
 }
 
-func (e CallerEngine) Navigation(ctx context.Context) (identityaccess.CallerNavigation, error) {
-	navigation, err := e.App.Navigation(ctx)
-	if err != nil {
-		return identityaccess.CallerNavigation{}, mapCallerError(err)
-	}
-	groups := make([]identityaccess.CallerGroup, 0, len(navigation.Groups))
-	for _, group := range navigation.Groups {
-		groups = append(groups, identityaccess.CallerGroup(group))
-	}
-	return identityaccess.CallerNavigation{
-		Groups:               groups,
-		SupervisedSessionIDs: navigation.SupervisedSessionIDs,
-		StaffID:              navigation.StaffID,
-		Incomplete:           navigation.Incomplete,
-		UnavailableSections:  navigation.UnavailableSections,
-	}, nil
-}
-
 func (e CallerEngine) SSESubscription(ctx context.Context) (identityaccess.SSESubscription, error) {
 	subscription, err := e.App.SSESubscription(ctx)
 	return identityaccess.SSESubscription(subscription), mapCallerError(err)

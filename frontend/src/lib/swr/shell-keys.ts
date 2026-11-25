@@ -15,13 +15,12 @@ export const dashboardKeys = {
 } as const;
 
 // „Aktuelle Aufsicht" without groups:read (#4573): the caller's own planned
-// blocks and running sessions. The SSE consumer invalidates the family on
+// blocks. The SSE consumer invalidates the family on
 // supervision, activity and timetable events (#5017).
 export const ownSupervisionKeys = {
   family: "active-supervisions-own-",
   day: () => "active-supervisions-own-day",
   plannedNow: () => "active-supervisions-own-planned-now",
-  sessions: () => "active-supervisions-own-sessions",
 } as const;
 
 // Resources of the always-mounted shell hooks: sidebar badges, bell, mode

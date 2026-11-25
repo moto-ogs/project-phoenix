@@ -249,6 +249,7 @@ export const READER_OPTION_KEYS = [
   "focusThrottleInterval",
   "isPaused",
   "keepPreviousData",
+  "onDiscarded",
   "onError",
   "onSuccess",
   "refreshInterval",
@@ -261,8 +262,12 @@ export const READER_OPTION_KEYS = [
 
 export type ReaderOptions<T, E = Error> = Pick<
   SWRConfiguration<T, E>,
-  Exclude<(typeof READER_OPTION_KEYS)[number], "onSuccess" | "onError">
+  Exclude<
+    (typeof READER_OPTION_KEYS)[number],
+    "onDiscarded" | "onSuccess" | "onError"
+  >
 > & {
+  onDiscarded?: () => void;
   onSuccess?: (data: T) => void;
   onError?: (error: E) => void;
 };
@@ -309,13 +314,14 @@ function copyAllowed(
 function readerConfig<T, E>(
   options: ReaderOptions<T, E> | undefined,
 ): SWRConfiguration<T, E> {
-  const { onSuccess, onError, ...rest } = copyAllowed(
+  const { onDiscarded, onSuccess, onError, ...rest } = copyAllowed(
     options,
     allowedReaderKeys,
     "reader",
   ) as ReaderOptions<T, E>;
   return {
     ...rest,
+    ...(onDiscarded ? { onDiscarded: () => onDiscarded() } : {}),
     ...(onSuccess ? { onSuccess: (data: T) => onSuccess(data) } : {}),
     ...(onError ? { onError: (error: E) => onError(error) } : {}),
   };
