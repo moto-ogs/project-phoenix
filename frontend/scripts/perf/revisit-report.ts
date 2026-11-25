@@ -183,10 +183,9 @@ export function writeReport(
     "|---|---:|---:|---:|---:|",
   );
   for (const cohort of new Set(summary.map((row) => row.cohort))) {
+    const cohortRows = summary.filter((row) => row.cohort === cohort);
     const counts = directions.map((step) => {
-      const eligible = summary.filter(
-        (row) => row.cohort === cohort && row.step === step,
-      );
+      const eligible = cohortRows.filter((row) => row.step === step);
       return eligible.length
         ? `${eligible.filter((row) => row.median < 150).length}/${eligible.length}`
         : "·";
