@@ -117,8 +117,9 @@ Page traversals, in-page actions and device/input variants have separate budget 
   stay out of the reports. The source page settles before the first action.
   “First” means first visit to the target from a running app, not a hard document
   load. The harness leaves the application's prefetch rules in place. Links
-  can prefetch a reusable route shell on viewport entry; SWR reads still
-  require data intent. The #8080 build instead started full route prefetch
+  can prefetch a reusable route shell on viewport entry. The authorized
+  page seed starts on navigation; valid SWR data can render immediately
+  without waiting for it. The #8080 build instead started full route prefetch
   on keyboard focus or after an 80 ms hover hold. The direct click has no
   dwell. Compare like inputs, not click against keyboard.
 - Desktop: CPU ×4, 150 ms latency, 3 Mbit/s down, 1 Mbit/s up. Parents also use

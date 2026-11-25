@@ -910,7 +910,10 @@ overlays and person-bound providers under one `SessionTreeBoundary`
 `PortalProviders` and `TenantProviders`. A document renders one tree for
 one session; when it ends (invariant 4) nothing of it renders again, also
 not of routes React keeps hidden (`Activity`), and a new document shows
-the next session.
+the next session. Portal links into and out of the public help load a new
+document: the help never keeps a protected portal tree mounted. If a
+router Activity reconnects a boundary, the boundary checks its mark
+before paint, just as it does after hydration.
 
 One mechanism decides which session an answer, a deletion and a tree
 belong to: the **session mark** (`frontend/src/lib/session-mark.ts`), an

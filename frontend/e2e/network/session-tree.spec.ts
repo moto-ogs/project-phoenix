@@ -718,6 +718,80 @@ test("staff preview: start and end leave nothing of the other view", async ({
   await context.close();
 });
 
+test("a warm parent return keeps its cards while changed data revalidates", async ({
+  browser,
+}) => {
+  const context = await newContext(browser);
+  const tab = await context.newPage();
+  await tab.goto(`${parents}/login`);
+  await tab.locator('input[type="email"]').fill(accounts.a.email);
+  await tab
+    .locator('input[type="password"]')
+    .fill(randomBytes(24).toString("hex"));
+  await tab.getByRole("button", { name: "Anmelden", exact: true }).click();
+  await tab.waitForURL((url) => url.pathname === "/");
+  const childName = (name: string) =>
+    tab
+      .locator("main")
+      .getByText(name, { exact: false })
+      .filter({ visible: true })
+      .first();
+  const profile = tab
+    .locator('main a[href="/children/11"]')
+    .filter({ visible: true })
+    .first();
+  await expect(childName("Mira")).toBeVisible();
+  await tab.evaluate(
+    () => (document.documentElement.dataset.warmReturn = "same"),
+  );
+  await profile.click();
+  await tab.waitForURL((url) => url.pathname === "/children/11");
+
+  let signalRequest!: () => void;
+  const requested = new Promise<void>((resolve) => (signalRequest = resolve));
+  let signalRelease!: () => void;
+  const released = new Promise<void>((resolve) => (signalRelease = resolve));
+  await tab.route("**/api/parent/me/family-start*", async (route) => {
+    const request = route.request();
+    const loopback = new URL(request.url());
+    const host = loopback.host;
+    loopback.hostname = "127.0.0.1";
+    const upstream = await route.fetch({
+      url: loopback.href,
+      headers: { ...(await request.allHeaders()), host },
+    });
+    const body = (await upstream.json()) as {
+      data: {
+        cards: Array<{ child: { student_id: string; first_name: string } }>;
+      };
+    };
+    const child = body.data.cards.find(
+      (entry) => entry.child.student_id === "11",
+    );
+    if (child) child.child.first_name = "Mila";
+    signalRequest();
+    await released;
+    await route.fulfill({ response: upstream, json: body });
+  });
+  try {
+    await tab.goBack();
+    await expect(tab.locator("html")).toHaveAttribute(
+      "data-warm-return",
+      "same",
+    );
+    await expect(childName("Mira")).toBeVisible();
+    await tab.evaluate(() =>
+      window.dispatchEvent(new Event("parent-child-status-refresh")),
+    );
+    await requested;
+    await expect(childName("Mira")).toBeVisible();
+  } finally {
+    signalRelease();
+  }
+  await expect(childName("Mila")).toBeVisible();
+  await context.close();
+});
+
 test("a revoked child relationship discards its detail, the other child stays", async ({
   browser,
   request,

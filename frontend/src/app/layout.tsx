@@ -5,6 +5,10 @@ import { RootDocument, generateMetadata } from "./root-document";
 
 export { generateMetadata };
 
+// The reusable shell must not execute host-, session- or seed-dependent
+// rendering. Those parts stream on navigation, not into a runtime shell.
+export const ensureStatic = "shell";
+
 /**
  * Kein maximumScale und kein userScalable: die App muss auf jedem Gerät
  * vergrößert werden können (#2267). Ein gesperrter Zoom sperrt genau die

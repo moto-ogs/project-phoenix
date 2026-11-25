@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { hasPermission } from "~/lib/auth-utils";
 import { canReviewCareWithdrawals } from "~/lib/change-request-access";
 import { mapCareWithdrawalPage } from "~/lib/care-exit-api";
@@ -15,14 +16,18 @@ import { readTenantPageContext } from "~/lib/tenant-page-seed.server";
 import StudentDetailContent from "./page-content";
 import { getStatusDayRange, type StatusDayRange } from "./status-day-range";
 
+// The cached payload does not carry the audited record. Its existing
+// session-scoped reader and all permission checks remain in charge.
+export const unstable_dynamicStaleTime = 60;
+
 async function loadStudentRecordSeed(
   slug: string,
   id: string,
   window: StatusDayRange,
 ) {
-  const builtAt = Date.now();
   const context = await readTenantPageContext(slug);
   if (!context || !isPositiveInt64Id(id)) return null;
+  const builtAt = Date.now();
   const { snapshot, session, token } = context;
   const entries: ServerSeedEntry[] = [];
   const canRead = hasPermission(session, "users:read");
@@ -118,6 +123,7 @@ export default async function StudentDetailPage({
   params: Promise<{ tenant: string; id: string }>;
 }) {
   const { tenant, id } = await params;
+  await connection();
   const window = getStatusDayRange();
   const seed = loadStudentRecordSeed(tenant, id, window).catch(() => null);
   const claims = [

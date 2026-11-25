@@ -9,11 +9,12 @@ import type { ServerSeedEntry } from "~/lib/swr/server-seed";
 import PageContent from "./page-content";
 import { ChangeRequestSeed } from "./page-seed";
 
-async function loadSeed(slug: string, id: string, builtAt: number) {
+async function loadSeed(slug: string, id: string) {
   const context = await readTenantPageContext(slug, "online_anmeldung").catch(
     () => null,
   );
   if (!context || !hasPermission(context.session, "config:manage")) return null;
+  const builtAt = Date.now();
   const { token, snapshot } = context;
   const request = seedRead(
     "GET /api/enrollment/admin/change-requests/{id}/",
@@ -63,7 +64,7 @@ export default async function AdminEnrollmentChangeRequestPage({
 }) {
   const { tenant, id } = await params;
   return (
-    <ChangeRequestSeed id={id} seed={loadSeed(tenant, id, Date.now())}>
+    <ChangeRequestSeed id={id} seed={loadSeed(tenant, id)}>
       <PageContent params={params} />
     </ChangeRequestSeed>
   );

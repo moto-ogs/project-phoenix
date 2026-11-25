@@ -23,10 +23,10 @@ export async function TenantRouteSeed({
   ) => readonly ServerSeedEntry[] | Promise<readonly ServerSeedEntry[]>;
   children: ReactNode;
 }) {
-  const builtAt = Date.now();
   const seed = readTenantPageContext(slug, module)
     .then(async (context) => {
       if (!context) return null;
+      const builtAt = Date.now();
       const entries = await load(context);
       return entries.length > 0
         ? seedOf(context.snapshot, entries, builtAt)

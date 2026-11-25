@@ -25,6 +25,7 @@ const state = vi.hoisted(() => ({
 vi.mock("next/headers", () => ({
   headers: async () => new Headers({ host: state.host }),
 }));
+vi.mock("next/server", () => ({ connection: async () => undefined }));
 vi.mock("~/lib/portal-session-snapshot.server", () => ({
   readPortalSessionSnapshot: async () => state.snapshot,
 }));

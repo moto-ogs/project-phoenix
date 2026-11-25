@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { connection } from "next/server";
 import { messageBoundary } from "~/i18n/scoped-messages";
 import { routes } from "~/lib/contract/enrollment.generated";
 import { publicPhaseFromContract } from "~/lib/enrollment-submission-api";
@@ -13,6 +14,7 @@ export default async function Page({
 }: {
   params: Promise<{ tenant: string }>;
 }) {
+  await connection();
   const [{ tenant }, requestHeaders] = await Promise.all([params, headers()]);
   const host =
     requestHeaders.get("x-moto-original-host") ??
