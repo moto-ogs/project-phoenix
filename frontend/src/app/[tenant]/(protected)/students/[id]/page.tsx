@@ -92,6 +92,7 @@ import {
 import { FamilyProtectionControl } from "~/components/students/family-protection-control";
 import { StudentConsentsReadOnly } from "~/components/students/student-consents-read-only";
 import { SectionCard } from "~/components/ui/section-card";
+import type { OverflowMenuEntry } from "~/components/ui/page-header/types";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useDeviceContext } from "~/lib/device-context";
 import { StudentAppActionBar } from "~/components/students/student-app-action-bar";
@@ -1545,17 +1546,58 @@ function StudentDetailPageContent() {
     />
   ) : undefined;
 
+  // App (#8070): Das „…“ im Kopf trägt die seltenen Wege der Akte, nicht
+  // nur Info und Hilfe. Die Tagesaktionen stehen in der Aktionsleiste.
+  const fullRecord = hasFullAccess && !isHolidayGuest;
+  const appMenuEntries: OverflowMenuEntry[] = [
+    ...(fullRecord && hasWriteAccess
+      ? [
+          {
+            label: "Angaben bearbeiten",
+            description: "Name, Klasse, Gruppe, Heimwege und Gesundheit.",
+            onClick: () => {
+              handleTabChange("stammdaten");
+              setShowPersonalInfoEdit(true);
+            },
+          },
+        ]
+      : []),
+    ...(fullRecord && attendanceLogEnabled
+      ? [
+          {
+            label: "Anwesenheit",
+            description: "Angebote und besuchte Räume, Tag für Tag.",
+            onClick: () =>
+              tenantRouter.push(`/students/${studentId}/room-history`),
+          },
+        ]
+      : []),
+    ...(fullRecord && hasWriteAccess
+      ? [
+          {
+            label: "Änderungen",
+            description: "Wer hat welche Angabe wann geändert.",
+            onClick: () =>
+              tenantRouter.push(`/students/${studentId}/change-history`),
+          },
+        ]
+      : []),
+  ];
+
   const page = (
     /* Der Entitätskopf IST die Kopfkarte der Seite: Foto, Name, Statuszeile
           mit Klasse, Gruppe und den Zeiten des heutigen Tages, der aktuelle
           Aufenthaltsort als Aktion und die Schnellaktionen darunter. */
     <TenantPage
-      back
+      // iPad quer (#8070): Die Liste steht daneben, ein Zurück-Pfeil führte
+      // nur zu ihr.
+      back={!(appHead && device.isSplit)}
       backHref={referrer}
       backLabel={backLabel}
       leading={<StudentHeaderAvatar student={student} />}
       title={studentHeaderTitle(student)}
       info={isHolidayGuest ? undefined : STUDENT_DETAIL_INFO}
+      overflowMenu={appHead ? appMenuEntries : undefined}
       actions={
         canManageRecord ? (
           <StudentRecordActions
@@ -1586,7 +1628,6 @@ function StudentDetailPageContent() {
             arrived={Boolean(student.actual_arrival_time)}
             pickup={student.actual_pickup_time ?? todayPickup.time}
             pickedUp={Boolean(student.actual_pickup_time)}
-            group={student.group_name}
           />
         ) : (
           // Der Aufenthaltsort ist Status, keine Aktion: er steht in der
@@ -2132,7 +2173,7 @@ function StudentQuickActions({
 
 /**
  * Kopf der Kindakte in der App (#8070): Aufenthaltsort und die Zeiten des
- * Tages als Chips, die umbrechen statt rechts abgeschnitten zu werden. Die
+ * Tages als eine Chip-Zeile, die bei Platzmangel seitlich scrollt. Die
  * Schnellaktionen stehen in der Aktionsleiste über der Pill.
  */
 function AppStudentHeadStatus({
@@ -2141,23 +2182,22 @@ function AppStudentHeadStatus({
   arrived,
   pickup,
   pickedUp,
-  group,
 }: Readonly<{
   location: ReactNode;
   arrival?: string;
   arrived: boolean;
   pickup?: string;
   pickedUp: boolean;
-  group?: string;
 }>) {
   const items: { label: string }[] = [];
   if (arrival)
     items.push({ label: `${arrived ? "Da seit" : "Kommt"} ${arrival}` });
   if (pickup)
     items.push({ label: `${pickedUp ? "Gegangen" : "Geht"} ${pickup}` });
-  if (group) items.push({ label: group });
+  // Die Gruppe steht in den Angaben, nicht im Kopf: sonst bricht die
+  // Chip-Zeile am Telefon um.
   return (
-    <span className="flex flex-wrap items-center gap-1.5 pt-0.5 [&_*]:whitespace-nowrap [&>span:last-child]:contents">
+    <span className="flex items-center gap-1.5 pt-0.5 [&_*]:whitespace-nowrap [&>span:last-child]:contents">
       <span className="shrink-0">{location}</span>
       {items.length > 0 ? <TenantPageStats items={items} /> : null}
     </span>

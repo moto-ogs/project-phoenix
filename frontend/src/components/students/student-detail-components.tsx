@@ -56,6 +56,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { SectionLabel } from "~/components/ui/section-label";
 import { SectionCard } from "~/components/ui/section-card";
 import {
   companionDisplayName,
@@ -840,6 +841,9 @@ export function PersonalInfoReadOnly({
 }: Readonly<PersonalInfoReadOnlyProps>) {
   const device = useDeviceContext();
   const appLayout = device.resolved && device.isApp;
+  // App ab iPad (#8070): lange Angaben im Zweierraster statt über die ganze
+  // Breite, sonst bleibt die rechte Hälfte leer.
+  const halfWidthFields = appLayout && device.layout !== "phone";
   const enrollmentExtraLoadError = useSwrLoadError(
     enrollmentExtraError,
     "die Angaben aus der Anmeldung",
@@ -905,8 +909,11 @@ export function PersonalInfoReadOnly({
 
   return (
     <SectionCard
-      title="Persönliche Informationen"
-      leading={<IconTile tone="green" icon={<PersonIcon />} />}
+      title={appLayout ? "Persönliches" : "Persönliche Informationen"}
+      // App (#8070): ohne Symbolkachel, der Kopf bleibt eine schmale Zeile.
+      leading={
+        appLayout ? undefined : <IconTile tone="green" icon={<PersonIcon />} />
+      }
       inlineActions={appLayout}
       action={
         showEditButton && onEditClick ? (
@@ -941,7 +948,7 @@ export function PersonalInfoReadOnly({
     >
       <ParentVisibilityLegend
         hint={PARENT_VISIBLE_DEFAULT_HINT}
-        className="mb-4"
+        className={appLayout ? "-mt-2 mb-3" : "mb-4"}
         appShort
       />
       {/* Feldgitter aus dem Kit (`DataGrid`/`DataField`), kein eigenes
@@ -970,16 +977,17 @@ export function PersonalInfoReadOnly({
           </ParentVisibleValue>
         </DataField>
         {addressDisplay && (
-          <DataField label="Adresse" fullWidth>
+          <DataField label="Adresse" fullWidth={!halfWidthFields}>
             {addressDisplay}
           </DataField>
         )}
         {student.without_care_place ? null : (
-          <DataField label="Erlaubte Heimwege" fullWidth>
+          <DataField label="Erlaubte Heimwege" fullWidth={!halfWidthFields}>
             <div className="flex items-start gap-1.5">
               <div className="min-w-0 flex-1">
                 <div className="inline-flex items-start gap-1.5">
                   <AllowedDepartureModesDisplay
+                    grouped={appLayout}
                     value={
                       student.allowed_departure_modes ??
                       allowedDepartureModesFromDeparture(
@@ -1041,7 +1049,10 @@ export function PersonalInfoReadOnly({
           </DataField>
         )}
         {student.health_info && (
-          <DataField label="Gesundheitsinformationen" fullWidth>
+          <DataField
+            label="Gesundheitsinformationen"
+            fullWidth={!halfWidthFields}
+          >
             <div className="flex items-start gap-1.5">
               <div className="min-w-0 flex-1">
                 <div className="inline-flex w-full max-w-full min-w-0 items-start gap-1.5">
@@ -1064,7 +1075,7 @@ export function PersonalInfoReadOnly({
           </DataField>
         )}
         {student.extra_info && (
-          <DataField label="Elternnotizen" fullWidth>
+          <DataField label="Elternnotizen" fullWidth={!halfWidthFields}>
             <span className="flex items-start gap-1.5">
               <span className="min-w-0 flex-1">{student.extra_info}</span>
               <FieldHistoryInfo
@@ -1074,14 +1085,37 @@ export function PersonalInfoReadOnly({
             </span>
           </DataField>
         )}
-        <EnrollmentExtraInfoItems groups={enrollmentExtraGroups} />
+        {appLayout ? null : (
+          <EnrollmentExtraInfoItems groups={enrollmentExtraGroups} />
+        )}
         {enrollmentExtraLoadError ? (
           <DataField label="Angaben aus der Anmeldung" fullWidth>
             <LoadErrorAlert error={enrollmentExtraLoadError} />
           </DataField>
         ) : null}
       </DataGrid>
+      {/* App (#8070): Antworten aus dem Anmeldeformular unter eigener
+          Überschrift. Ihre Beschriftungen sind Fragen der Schule an die
+          Eltern („Mein Kind darf schwimmen.“), keine Felder der Akte. */}
+      {appLayout && hasEnrollmentExtraValues(enrollmentExtraGroups) ? (
+        <section className="mt-4 space-y-2 border-t border-gray-100 pt-3">
+          <SectionLabel as="h3">Von den Eltern bei der Anmeldung</SectionLabel>
+          <DataGrid appRows>
+            <EnrollmentExtraInfoItems groups={enrollmentExtraGroups} />
+          </DataGrid>
+        </section>
+      ) : null}
     </SectionCard>
+  );
+}
+
+function hasEnrollmentExtraValues(
+  groups: StudentEnrollmentExtraFieldGroup[],
+): boolean {
+  return groups.some((group) =>
+    (group.fields ?? []).some(
+      (field) => formatCustomValue(field.value, field) !== null,
+    ),
   );
 }
 
@@ -1316,15 +1350,19 @@ export function StudentHistorySection({
     <>
       <HistoryButton
         concept={roomsConcept}
-        title="Anwesenheitsprotokoll"
+        title={appLayout ? "Anwesenheit" : "Anwesenheitsprotokoll"}
         description={
           readOnly
             ? "Nur für Gruppenbetreuer"
             : !attendanceLogEnabled
               ? "Für deine Schule deaktiviert"
               : stop.stopped
-                ? "Anwesenheit je Betreuungsangebot, ohne Räume"
-                : "Anwesenheit je Betreuungsangebot und besuchte Räume"
+                ? appLayout
+                  ? "Angebote, ohne Räume"
+                  : "Anwesenheit je Betreuungsangebot, ohne Räume"
+                : appLayout
+                  ? "Angebote und besuchte Räume"
+                  : "Anwesenheit je Betreuungsangebot und besuchte Räume"
         }
         disabled={attendanceDisabled}
         onClick={
@@ -1335,7 +1373,7 @@ export function StudentHistorySection({
       />
       <HistoryButton
         concept={feedbackConcept}
-        title="Feedbackhistorie"
+        title={appLayout ? "Feedback" : "Feedbackhistorie"}
         description={
           readOnly
             ? "Nur für Gruppenbetreuer"
@@ -1352,12 +1390,16 @@ export function StudentHistorySection({
             : undefined
         }
       />
-      <HistoryButton
-        concept={mealPlanConcept}
-        title="Mensaverlauf"
-        description="Mahlzeiten und Bestellungen"
-        disabled
-      />
+      {/* App (#8070): ohne die noch leere Zeile „Mensaverlauf“, die wie
+          ein Ziel aussieht, aber nichts öffnet. */}
+      {appLayout ? null : (
+        <HistoryButton
+          concept={mealPlanConcept}
+          title="Mensaverlauf"
+          description="Mahlzeiten und Bestellungen"
+          disabled
+        />
+      )}
       <HistoryButton
         concept={changeHistoryConcept}
         title="Änderungsverlauf"
