@@ -171,6 +171,16 @@ func buildListSetup(t *testing.T) *listSetup {
 	return &listSetup{res: res, db: db, ctx: ctx, roomID: room.ID, cleanupFn: cleanup}
 }
 
+func (s *listSetup) addEarlyPickup(t *testing.T, studentID int64, date calendar.Date, at string) {
+	t.Helper()
+	staff := testpkg.CreateTestStaff(t, s.db, "Pickup", "Schedule")
+	pickup := testpkg.CreateTestPickupException(t, s.db, studentID, date, staff.ID, at, "Pickup")
+	_, err := s.db.NewUpdate().TableExpr("schedule.student_pickup_exceptions").
+		Set("excused_auto = TRUE, excused_from = pickup_time").
+		Where("tenant_id = ? AND id = ?", testpkg.Tenant(t), pickup.ID).Exec(s.ctx)
+	require.NoError(t, err)
+}
+
 func listRouter(parentCtx context.Context, res *Resource) chi.Router {
 	tenantID := tenant.FromContext(parentCtx)
 	r := chi.NewRouter()
@@ -617,6 +627,7 @@ func TestListInstances_StatusDayAbsenceOnUnbookedDayReadsAsNotScheduled(t *testi
 	assert.Equal(t, 0, item.ExpectedStudentsCount)
 	assert.Equal(t, 0, item.PresentStudentsCount)
 
+	assert.Equal(t, item.Students, readTestAttendance(t, router, inst.ID))
 	careDayByStudent := map[int64]careplan.CareDayStatus{}
 	for _, row := range item.Students {
 		careDayByStudent[row.StudentID.Int64()] = row.CareDayStatus

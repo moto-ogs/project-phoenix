@@ -33,12 +33,7 @@ func TestListInstances_SlimViewDropsOnlyTheAttendanceRows(t *testing.T) {
 	testpkg.CreateTestInstanceStudent(t, s.db, inst.ID, student1.ID, timetable.SlotAttendanceExpected)
 	testpkg.CreateTestInstanceStudent(t, s.db, inst.ID, student2.ID, timetable.SlotAttendancePresent)
 
-	staff := testpkg.CreateTestStaff(t, s.db, "Pickup", "Schedule")
-	pickup := testpkg.CreateTestPickupException(t, s.db, student1.ID, fromDate, staff.ID, "13:45", "Pickup")
-	_, err := s.db.NewUpdate().TableExpr("schedule.student_pickup_exceptions").
-		Set("excused_auto = TRUE, excused_from = pickup_time").
-		Where("tenant_id = ? AND id = ?", testpkg.Tenant(t), pickup.ID).Exec(s.ctx)
-	require.NoError(t, err)
+	s.addEarlyPickup(t, student1.ID, fromDate, "13:45")
 
 	router := listRouter(s.ctx, s.res)
 	window := fmt.Sprintf("/instances?from=%s&to=%s", from, to)
