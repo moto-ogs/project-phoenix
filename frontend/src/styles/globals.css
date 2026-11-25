@@ -57,6 +57,9 @@
     @slot;
   }
 }
+/* Im Fluss: nicht absolut, fest oder klebend positioniert. Die Trefferfläche
+   (`TOUCH_HIT_AREA`) macht nur solche Knöpfe zum Bezugsrahmen. */
+@custom-variant in-flow (&:where(:not(.absolute, .fixed, .sticky)));
 @custom-variant desk (@media (width >= 64rem) and (not (pointer: coarse)));
 @custom-variant phone (@media (width < 40rem));
 @custom-variant tablet (@media (width >= 40rem) and ((width < 64rem) or (pointer: coarse)));

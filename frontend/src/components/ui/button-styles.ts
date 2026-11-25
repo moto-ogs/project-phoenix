@@ -32,7 +32,7 @@ export type ButtonSize =
  * und Zeilen, deren sichtbare Höhe kleiner bleiben soll.
  */
 export const TOUCH_HIT_AREA =
-  "pointer-coarse:[&:where(:not(.absolute,.fixed,.sticky))]:relative pointer-coarse:before:absolute pointer-coarse:before:top-1/2 pointer-coarse:before:left-1/2 pointer-coarse:before:size-full pointer-coarse:before:min-h-11 pointer-coarse:before:min-w-11 pointer-coarse:before:-translate-1/2 pointer-coarse:before:content-['']";
+  "pointer-coarse:in-flow:relative pointer-coarse:before:absolute pointer-coarse:before:top-1/2 pointer-coarse:before:left-1/2 pointer-coarse:before:size-full pointer-coarse:before:min-h-11 pointer-coarse:before:min-w-11 pointer-coarse:before:-translate-1/2 pointer-coarse:before:content-['']";
 
 /** Sichtbare Rückmeldung beim Antippen (#7794), ohne den iOS-Blitz. */
 export const TOUCH_FEEDBACK =
