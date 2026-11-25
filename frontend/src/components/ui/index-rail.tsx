@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 
 import { cn } from "~/lib/utils";
 import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
@@ -14,9 +14,16 @@ import { Z_LAYER } from "./overlay-styles";
  * Eine reine Finger-Abkürzung: Vorleseprogramme und Tastatur springen über
  * die Gruppenköpfe (Überschriften), darum ist die Leiste `aria-hidden`.
  * Sichtbar ist sie 20 px breit, ihre Fläche reicht 28 px weit. Sie steht
- * innen am rechten Rand der Listenkarte (Seitenrand 16 px), nicht auf dem
- * Kartenrahmen; die Liste lässt ihr rechts Platz.
+ * innen am rechten Rand der Listenkarte (Seitenrand 16 px), oben unter der
+ * Such- und Filterleiste, auf jedem Telefon an derselben Stelle.
+ *
+ * Wie ein Schnell-Scroller erscheint sie, sobald die Liste rollt, und
+ * verschwindet kurz danach wieder: In Ruhe hat die Liste rechts denselben
+ * Rand wie links, und kein Abzeichen liegt unter der Leiste.
  */
+/** So lange bleibt die Leiste nach dem letzten Rollen sichtbar, wie die Scroll-Anzeige des Systems. */
+const RAIL_LINGER_MS = 700;
+
 export function IndexRail({
   letters,
   onJump,
@@ -29,6 +36,21 @@ export function IndexRail({
   const railRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<number | null>(null);
   const last = useRef<number | null>(null);
+  const [scrolling, setScrolling] = useState(false);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onScroll = () => {
+      setScrolling(true);
+      clearTimeout(timer);
+      timer = setTimeout(() => setScrolling(false), RAIL_LINGER_MS);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      clearTimeout(timer);
+    };
+  }, []);
+  const shown = scrolling || active !== null;
 
   const pick = (clientY: number) => {
     const node = railRef.current;
@@ -66,7 +88,11 @@ export function IndexRail({
     <div
       aria-hidden="true"
       data-index-rail=""
-      className={`fixed right-4 ${Z_LAYER.raised} ${FIXED_LAYER_SHIFT} flex w-7 touch-none items-center justify-end select-none`}
+      data-shown={shown ? "" : undefined}
+      className={cn(
+        `fixed right-4 ${Z_LAYER.raised} ${FIXED_LAYER_SHIFT} flex w-7 touch-none items-start justify-end transition-opacity duration-200 select-none motion-reduce:transition-none`,
+        shown ? "opacity-100" : "pointer-events-none opacity-0",
+      )}
       style={{
         // Nie über der Such- und Filterleiste, auch solange die Seite oben steht.
         top: "max(calc(var(--app-sticky-offset, 1rem) + 0.5rem), 9.5rem)",
@@ -80,7 +106,7 @@ export function IndexRail({
         onPointerMove={onPointerMove}
         onPointerUp={end}
         onPointerCancel={end}
-        className="flex max-h-full w-7 flex-col items-center justify-center py-1 pr-1"
+        className="flex max-h-full w-7 flex-col items-center justify-start py-1 pr-1"
       >
         <div className="flex w-5 flex-col items-center rounded-full bg-white/85 py-1 shadow-sm ring-1 ring-gray-200">
           {letters.map((letter, index) => (

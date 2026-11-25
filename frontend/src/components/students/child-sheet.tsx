@@ -77,6 +77,11 @@ export interface ChildSheetProps {
   /** Eigener Status statt des Tagesstatus; `null` blendet ihn aus (lädt noch). */
   readonly status?: ChildDayStatus | null;
   /**
+   * Fertiges Abzeichen statt des Tagesstatus, etwa die Orts-Pille der Zeile
+   * („Zuhause“), damit Liste und Blatt dasselbe sagen (#8070).
+   */
+  readonly statusBadge?: ReactNode;
+  /**
    * Knöpfe der aufrufenden Liste in der Fußleiste, über „Ganze Akte öffnen“
    * (z. B. „Raum verlassen“). Dann ist die Akte der Nebenweg.
    */
@@ -105,6 +110,7 @@ export function ChildSheet({
   contextActions,
   quickActions = true,
   status,
+  statusBadge,
   footerActions,
   cardFacts,
 }: ChildSheetProps) {
@@ -166,6 +172,7 @@ export function ChildSheet({
           contextActions={contextActions}
           quickActions={false}
           status={status}
+          statusBadge={statusBadge}
           replaceEntry
           cardFacts={cardFacts}
         />
@@ -193,6 +200,7 @@ export function ChildSummary({
   contextActions,
   quickActions = true,
   status: statusOverride,
+  statusBadge,
   header = false,
   headerAction,
   replaceEntry = false,
@@ -209,6 +217,8 @@ export function ChildSummary({
   quickActions?: boolean;
   /** Eigener Status statt des Tagesstatus; `null` blendet ihn aus. */
   status?: ChildDayStatus | null;
+  /** Fertiges Abzeichen statt des Tagesstatus (siehe `ChildSheet`). */
+  statusBadge?: ReactNode;
   /** Name und Foto oben (Detail neben der Liste; das Blatt hat einen Titel). */
   header?: boolean;
   /** Rechts neben dem Namen, etwa „Ganze Akte öffnen“ (nur mit `header`). */
@@ -227,6 +237,14 @@ export function ChildSummary({
     statusOverride === undefined
       ? childDayStatus(student, isToday)
       : statusOverride;
+  const statusNode =
+    statusBadge ??
+    (status ? (
+      <StatusBadge
+        label={status.value}
+        tone={CHILD_DAY_TONE_BADGE[status.tone]}
+      />
+    ) : null);
   const fullAccess = student.has_full_access !== false;
   // Der Raum steht in der Liste nicht (dort zählt die Gehzeit), hier schon.
   const room = isToday
@@ -272,21 +290,13 @@ export function ChildSummary({
             <h2 className="truncate text-lg font-semibold text-gray-900">
               {studentName(student)}
             </h2>
-            {status ? (
-              <StatusBadge
-                label={status.value}
-                tone={CHILD_DAY_TONE_BADGE[status.tone]}
-              />
-            ) : null}
+            {statusNode}
           </div>
           {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
         </div>
-      ) : status ? (
-        <StatusBadge
-          label={status.value}
-          tone={CHILD_DAY_TONE_BADGE[status.tone]}
-        />
-      ) : null}
+      ) : (
+        statusNode
+      )}
       {dayChange ? (
         // Eigene Zeile unter dem Status, wie der Streifen unten an der Karte.
         <div>

@@ -84,7 +84,11 @@ export function SearchStudentStatusBadge({
   userGroups: string[];
   groupRooms: string[];
   supervisedRooms: string[];
-  /** Schmale Pille für die Zeilenliste der App (#8070). */
+  /**
+   * Schmale Pille für die Zeilenliste der App (#8070), ohne die Zeile
+   * darunter („Ungeplant anwesend“, „Krank“): die steht in der zweiten
+   * Zeile, damit sie den Namen nie kürzt.
+   */
   compact?: boolean;
 }>) {
   return isToday ? (
@@ -98,6 +102,7 @@ export function SearchStudentStatusBadge({
       size="md"
       // „seit“ nennt, wann das Kind zum Unterricht ging, wie in der Kindakte (#5710).
       showLocationSince={isInClassLocation(student.current_location)}
+      part={compact ? "pill" : "all"}
     />
   ) : (
     // Non-today dates show the planned expectation, never the live

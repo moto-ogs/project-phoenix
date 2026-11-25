@@ -6,6 +6,7 @@ import { usePresenceMode } from "~/lib/tenant-context";
 import type { DisplayMode } from "@/lib/location-helper";
 import type { PresenceStudent } from "@/lib/presence-status";
 import { LocationBadge } from "./location-badge";
+import type { PresenceBadgePart } from "./presence-badge-view";
 import { PresenceBadge } from "./presence-badge";
 
 /**
@@ -32,6 +33,8 @@ interface StudentPresenceBadgeProps {
   readonly variant?: "simple" | "modern";
   readonly size?: "sm" | "md" | "lg";
   readonly showLocationSince?: boolean;
+  /** Pill only, or pill and hint (default). */
+  readonly part?: PresenceBadgePart;
 }
 
 export function StudentPresenceBadge(props: StudentPresenceBadgeProps) {
@@ -44,6 +47,7 @@ export function StudentPresenceBadge(props: StudentPresenceBadgeProps) {
         variant={props.variant}
         size={props.size}
         showLocationSince={props.showLocationSince}
+        part={props.part}
       />
     );
   }
