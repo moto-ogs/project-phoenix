@@ -252,7 +252,7 @@ function MorePageContent() {
     </Collection>
   );
 
-  const group = (section: MoreSection, sticky = true) => (
+  const group = (section: MoreSection, sticky = false) => (
     <CollectionGroup key={section.key} title={section.title} sticky={sticky}>
       {section.rows}
     </CollectionGroup>

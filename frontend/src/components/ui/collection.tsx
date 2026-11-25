@@ -61,14 +61,14 @@ export function CollectionGroup({
   title,
   count,
   meta,
-  sticky = true,
+  sticky = false,
   children,
 }: Readonly<{
   title: ReactNode;
   /**
-   * Kopf klebt beim Scrollen (Standard). Aus für kurze Gruppen in eigenen
-   * Karten (iPad-Spalten von „Mehr“): Dort bliebe sonst nur ein Kopf mit
-   * Zeilenresten stehen.
+   * Kopf klebt beim Scrollen. Standard aus: Klebende Köpfe unter der
+   * schwebenden Kopfkarte schnitten die Zeilen hart ab; die Gruppen laufen
+   * wie der übrige Inhalt unter der Kopfkarte durch.
    */
   sticky?: boolean;
   /** Anzahl der Einträge, steht neben dem Namen. */
