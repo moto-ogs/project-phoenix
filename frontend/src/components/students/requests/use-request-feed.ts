@@ -61,7 +61,7 @@ import {
 import { requestFeedKeys, type RequestFeedName } from "~/lib/swr/portal-keys";
 import { useTenantSlugSafe } from "~/lib/tenant-context";
 import { itemKey, type AnyItem } from "./case-model";
-import type { AggregatedRequestFilters } from "./filters";
+import type { AggregatedRequestFilters } from "~/lib/request-feed-filters";
 import {
   PAGE_SIZE,
   WITHDRAWAL_PAGE_SIZE,

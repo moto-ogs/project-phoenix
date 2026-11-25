@@ -1,4 +1,8 @@
-import type { RequestReviewAccess } from "~/lib/change-request-list-api";
+import type {
+  AggregatedOpenRequest,
+  AggregatedHistoryRequest,
+  RequestReviewAccess,
+} from "~/lib/change-request-list-api";
 import {
   createFeedState,
   takeMergedPage,
@@ -6,8 +10,9 @@ import {
   type FeedSource,
   type FeedState,
 } from "~/lib/request-feed";
-import type { AnyItem } from "~/components/students/requests/case-model";
-import type { AggregatedRequestFilters } from "~/components/students/requests/filters";
+import type { AggregatedRequestFilters } from "~/lib/request-feed-filters";
+
+export type AnyItem = AggregatedOpenRequest | AggregatedHistoryRequest;
 
 export const PAGE_SIZE = 25;
 export const WITHDRAWAL_PAGE_SIZE = 25;
