@@ -22,7 +22,9 @@ function renderPanel() {
     />,
   );
   expect(screen.getByText("Spalten der Datei")).toBeInTheDocument();
-  const [columns] = screen.getAllByRole("list");
+  const columns = screen
+    .getByText("Personalnummer", { selector: "code" })
+    .closest("ul");
   if (!columns) throw new Error("no column list");
   return columns;
 }
@@ -61,7 +63,7 @@ describe("TimeExportPanel columns (#8126)", () => {
       "Abwesenheitsart",
     ]);
     for (const row of rows) {
-      const meaning = row.querySelector("[data-column-meaning]")?.textContent;
+      const meaning = row.children[2]?.textContent;
       expect(meaning).toBeTruthy();
       expect(meaning).not.toMatch(/^(Der|Die|Das|Ein|Eine) /);
     }
@@ -78,7 +80,7 @@ describe("TimeExportPanel columns (#8126)", () => {
   it("explains what a gap in the break minutes is", () => {
     const list = renderPanel();
     expect(columnRow(list, "Pause_Minuten")).toHaveTextContent(
-      "Eine Lücke ist die Zeit zwischen Ausstempeln und dem nächsten Einstempeln.",
+      "Eine Lücke ist die Zeit zwischen Ausstempeln und dem nächsten Einstempeln am selben Tag.",
     );
   });
 
@@ -91,16 +93,13 @@ describe("TimeExportPanel columns (#8126)", () => {
     expect(
       within(codes)
         .getAllByRole("listitem")
-        .map((item) => [
-          item.querySelector("code")?.textContent,
-          item.querySelector("span")?.textContent,
-        ]),
+        .map((item) => item.textContent),
     ).toEqual([
-      ["vacation", "Urlaub"],
-      ["sick", "Krank"],
-      ["training", "Fortbildung"],
-      ["comp_time", "Freizeitausgleich"],
-      ["other", "Sonstige Abwesenheit"],
+      "vacation bedeutet Urlaub",
+      "sick bedeutet Krank",
+      "training bedeutet Fortbildung",
+      "comp_time bedeutet Freizeitausgleich",
+      "other bedeutet Sonstige Abwesenheit",
     ]);
   });
 });

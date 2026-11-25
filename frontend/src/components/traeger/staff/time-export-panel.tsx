@@ -18,8 +18,18 @@ import {
   ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
+import type { AbsenceType } from "~/lib/time-tracking-helpers";
 import type { TimeReport } from "~/lib/traeger-staff-exports-api";
 import { traegerPath } from "~/lib/traeger-url";
+
+/** Die festen Codes der Spalte `Abwesenheit`, je Grundart einer. */
+const ABSENCE_CODE_MEANINGS = {
+  vacation: "Urlaub",
+  sick: "Krank",
+  training: "Fortbildung",
+  comp_time: "Freizeitausgleich",
+  other: "Sonstige Abwesenheit",
+} as const satisfies Record<AbsenceType, string>;
 
 /** Ein fester Wert einer Spalte und was er bedeutet. */
 interface ColumnValue {
@@ -51,7 +61,7 @@ const TIME_EXPORT_COLUMNS: readonly {
   {
     name: "Pause_Minuten",
     meaning:
-      "Pausen und Lücken, in Minuten. Eine Lücke ist die Zeit zwischen Ausstempeln und dem nächsten Einstempeln.",
+      "Pausen und Lücken, in Minuten. Eine Lücke ist die Zeit zwischen Ausstempeln und dem nächsten Einstempeln am selben Tag.",
   },
   {
     name: "Ist_Minuten",
@@ -60,13 +70,10 @@ const TIME_EXPORT_COLUMNS: readonly {
   {
     name: "Abwesenheit",
     meaning: "Fester Code der Abwesenheit. Leer an Tagen ohne Abwesenheit.",
-    values: [
-      { code: "vacation", meaning: "Urlaub" },
-      { code: "sick", meaning: "Krank" },
-      { code: "training", meaning: "Fortbildung" },
-      { code: "comp_time", meaning: "Freizeitausgleich" },
-      { code: "other", meaning: "Sonstige Abwesenheit" },
-    ],
+    values: Object.entries(ABSENCE_CODE_MEANINGS).map(([code, meaning]) => ({
+      code,
+      meaning,
+    })),
   },
   {
     name: "Abwesenheitsart",
@@ -184,10 +191,7 @@ export function TimeExportPanel({
               <code className="font-mono font-medium break-words text-gray-900">
                 {column.name}
               </code>
-              <div
-                data-column-meaning
-                className="col-start-2 text-gray-600 sm:col-start-3"
-              >
+              <div className="col-start-2 text-gray-600 sm:col-start-3">
                 {column.meaning}
                 {column.values ? (
                   <InsetPanel
@@ -201,6 +205,7 @@ export function TimeExportPanel({
                         <code className="w-24 shrink-0 font-mono text-gray-900">
                           {value.code}
                         </code>
+                        <span className="sr-only"> bedeutet </span>
                         <ArrowRightIcon
                           className="h-3.5 w-3.5 shrink-0 text-gray-400"
                           aria-hidden="true"
