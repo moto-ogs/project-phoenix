@@ -111,7 +111,7 @@ export function shownEntries(overview: DayChangesOverview): DayChange[] {
 }
 
 /** Eine Änderung mit Uhrzeit, deren Ende vorbei ist. */
-function isDone(entry: DayChange, now: number): boolean {
+export function isDone(entry: DayChange, now: number): boolean {
   if (!entry.endsAt || now === 0) return false;
   const end = Date.parse(entry.endsAt);
   return !Number.isNaN(end) && end <= now;
@@ -437,7 +437,7 @@ function dayChangeKeys(entries: readonly DayChange[]): string[] {
   });
 }
 
-function withKeys(
+export function withKeys(
   entries: readonly DayChange[],
 ): (readonly [string, DayChange])[] {
   const keys = dayChangeKeys(entries);

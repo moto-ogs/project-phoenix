@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
 
 import {
-  DayChangesContent,
-  shownEntries,
-} from "~/components/home/day-changes-block";
+  DayChangesList,
+  DayDetail,
+  GroupDetail,
+  NoticeDetail,
+} from "~/components/home/home-app-details";
+import { childSummaryCounts } from "~/components/home/day-changes-text";
+import { shownEntries } from "~/components/home/day-changes-block";
 import { useNoticeAcknowledge } from "~/components/home/day-notice-row";
 import { useBerlinClock } from "~/components/home/home-card-rows";
 import { NowText, useHomeNow } from "~/components/home/now-strip";
@@ -15,17 +19,20 @@ import {
   type HomeStampState,
 } from "~/components/home/use-home-stamp";
 import { START_OWN_BLOCK_TOOLTIP } from "~/components/home/use-start-own-block";
+import { ActionBar } from "~/components/ui/action-bar";
 import { Button, ButtonLink } from "~/components/ui/button";
 import {
   Collection,
   CollectionGroup,
   CollectionRow,
+  type CollectionRowProps,
 } from "~/components/ui/collection";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { OverlaySheet } from "~/components/ui/overlay-sheet";
 import { SectionCard } from "~/components/ui/section-card";
 import { Skeleton } from "~/components/ui/skeleton";
+import { SplitView, useSplitSelection } from "~/components/ui/split-view";
 import { StatusBadge } from "~/components/ui/status-badge";
 import type { BirthdayOverview } from "~/lib/birthdays-api";
 import { blockChildrenLabel } from "~/lib/block-children";
@@ -81,15 +88,76 @@ function openNotice(entry: DayChange): entry is DayChange & {
   );
 }
 
+/** Ein Kind der eigenen Gruppen, das heute anders ist (#7665). */
+function isChildChange(entry: DayChange): boolean {
+  return (
+    !openNotice(entry) && entry.section === "you" && CHILD_KINDS.has(entry.kind)
+  );
+}
+
+/** Alles Übrige aus „Heute anders“: Team, Räume, die Schule. */
+function isTeamOrSchool(entry: DayChange): boolean {
+  return !openNotice(entry) && !isChildChange(entry);
+}
+
+/** „1 krank, 2 mit anderer Abholzeit“: dieselben Wörter wie am Desktop. */
+function childCounts(entries: readonly DayChange[]): string {
+  const count = (kind: string, status?: string) =>
+    entries.filter(
+      (entry) =>
+        entry.kind === kind &&
+        (status === undefined || entry.child?.status === status),
+    ).length;
+  const absent = count("child_absent");
+  const sick = count("child_absent", "sick");
+  return childSummaryCounts({
+    schoolClass: "",
+    items: [],
+    counts: {
+      sick,
+      excused: absent - sick,
+      pickupChanged: count("child_pickup_changed"),
+      goesAlone: count("child_goes_alone"),
+      pickupNote: count("child_pickup_note"),
+    },
+  });
+}
+
+/**
+ * Ein Eintrag der Startseite: eine Zeile in „Zu erledigen“ oder „Überblick“
+ * und, wo es eins gibt, sein Detail. Das Detail steht am iPad quer rechts
+ * neben der Liste, am Telefon und iPad hoch im Blatt (`sheet`). Ein Eintrag
+ * mit `href` führt dort weiter statt ins Blatt.
+ */
+interface HomeEntry {
+  readonly id: string;
+  readonly row: Omit<CollectionRowProps, "href" | "onClick" | "selected">;
+  readonly href?: string;
+  readonly detail?: ReactNode;
+  /** Blatt am Telefon und iPad hoch; ohne `href` öffnet die Zeile es. */
+  readonly sheet?:
+    | { readonly kind: "notice"; readonly notice: DayChangeNotice }
+    | {
+        readonly kind: "list";
+        readonly title: string;
+        readonly body: ReactNode;
+      };
+}
+
 /**
  * Die Startseite in der App (#8070, Seitenmuster „Übersicht“, 4-staff-flows
  * „J. Startseite“): Was muss ich jetzt tun?
  *
- * 1. Jetzt-Leiste: laufender oder nächster Block mit der einen passenden
- *    Aktion, Kinder da, Stempelzustand.
- * 2. Zu erledigen: offene Kenntnisnahmen als Zeilen (der Hinweis öffnet im
- *    Blatt), offene Anfragen, „Heute anders“ zusammengefasst.
- * 3. Kurze Vorschauen mit Weg in den Reiter.
+ * 1. Jetzt: laufender oder nächster Block, Kinder da, Stempelzustand. Die
+ *    eine passende Aktion (Aufsicht, Stempeln) steht in der ActionBar über
+ *    der Pill, in Daumennähe.
+ * 2. Zu erledigen: offene Kenntnisnahmen, offene Anfragen, die Kinder, die
+ *    heute anders sind, und was sich im Team und in der Schule ändert.
+ * 3. Überblick: Aufsicht, Gruppe, als Nächstes, Geburtstage.
+ *
+ * Telefon: eine Spalte, Details im Blatt. iPad hoch: links die Liste, rechts
+ * die eigene Gruppe mit ihren Kindern und der Tag. iPad quer: Liste neben
+ * Detail.
  *
  * Dieselben Abfragen und Schlüssel wie die Bausteine des Desktops; was die
  * Fläche zeigt, entscheiden weiter Modul-Register, Rechte und Anordnung
@@ -117,11 +185,20 @@ export function HomeApp({
   const has = (key: HomeBlockKey) => placed.includes(key);
   const { data: session } = useSession();
   const accountId = session?.user?.id ?? "";
+  const tenantPath = useTenantAwarePath();
+  const dayPlanHref = useDayPlanHref();
+  const clock = useBerlinClock();
 
   const dayChanges = useSWRAuth<DayChangesOverview>(
     has("section.day_changes") ? homeKeys.dayChanges(accountId) : null,
     fetchDayChanges,
     { revalidateOnFocus: true },
+  );
+  const retry = () => dayChanges.mutate();
+  const loadError = useSwrLoadError(
+    dayChanges.error,
+    "die Übersicht „Heute anders“",
+    () => retry(),
   );
 
   const now = useHomeNow(access, context);
@@ -131,6 +208,9 @@ export function HomeApp({
       access.has("time_tracking:own") &&
       isScopeBooked(PAGE_MODULES["/time-tracking"], context.bookedModules),
   );
+  const showGroup = has("section.my_group");
+  const group = useHomeGroup(showGroup, clock);
+  const requests = useOpenRequestRows(has("section.open_requests"));
 
   // Kurzformen ersetzen diese Bausteine; alles andere bleibt als Karte.
   const SHORT: readonly HomeBlockKey[] = [
@@ -143,24 +223,174 @@ export function HomeApp({
   ];
   const rest = placed.filter((key) => !SHORT.includes(key));
 
+  // ── Zu erledigen ──
+  const overview = dayChanges.data;
+  const shown = overview ? shownEntries(overview) : [];
+  const openNotices = shown.filter(openNotice);
+  const children = shown.filter(isChildChange);
+  const teamAndSchool = shown.filter(isTeamOrSchool);
+  const teamMine = teamAndSchool.filter((entry) => entry.section === "you");
+  const todo: HomeEntry[] = [];
+  for (const entry of openNotices) {
+    todo.push({
+      id: `hinweis-${entry.notice.id}`,
+      row: {
+        leading: <Icon concept={announcementsConcept} />,
+        title: entry.notice.title,
+        subtitle: "Zur Kenntnis nehmen",
+        meta: entry.notice.important ? (
+          <StatusBadge label="Wichtig" tone="warning" size="xs" />
+        ) : undefined,
+      },
+      detail: <NoticeDetail notice={entry.notice} onChanged={retry} />,
+      sheet: { kind: "notice", notice: entry.notice },
+    });
+  }
+  for (const request of requests) {
+    todo.push({
+      id: `anfrage-${request.key}`,
+      row: {
+        leading: <Icon concept={requestsConcept} />,
+        title: request.label,
+        subtitle: "Wartet auf Entscheidung",
+        meta: (
+          <StatusBadge
+            tone="warning"
+            label={`${request.count} offen`}
+            size="xs"
+          />
+        ),
+      },
+      href: tenantPath(request.href),
+    });
+  }
+  if (overview && children.length > 0) {
+    // „Kinder heute anders“ und „Team und Schule“ teilen kein Wort: zwei
+    // Zeilen mit „Heute anders“ hielt man für dasselbe.
+    const list = (
+      <DayChangesList
+        overview={overview}
+        include={isChildChange}
+        label="Kinder heute anders"
+        mineTitle="Aus deinen Gruppen"
+      />
+    );
+    todo.push({
+      id: "kinder",
+      row: {
+        leading: <Icon concept={childrenConcept} />,
+        title: "Kinder heute anders",
+        subtitle: childCounts(children),
+        meta: <CountBadge count={children.length} />,
+      },
+      detail: list,
+      sheet: { kind: "list", title: "Kinder heute anders", body: list },
+    });
+  }
+  if (overview && teamAndSchool.length > 0) {
+    const school = teamAndSchool.length - teamMine.length;
+    const list = (
+      <DayChangesList
+        overview={overview}
+        include={isTeamOrSchool}
+        label="Team und Schule"
+      />
+    );
+    todo.push({
+      id: "team",
+      row: {
+        leading: <Icon concept={dayChangesConcept} />,
+        title: "Team und Schule",
+        subtitle: [
+          teamMine.length > 0 ? `${teamMine.length} für dich` : null,
+          school > 0 ? `${school} in der Schule` : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        meta: <CountBadge count={teamAndSchool.length} />,
+      },
+      detail: list,
+      sheet: { kind: "list", title: "Team und Schule", body: list },
+    });
+  }
+
+  // ── Überblick ──
+  const overviewEntries: HomeEntry[] = [];
+  const running = (now.dayBlocks ?? []).find(
+    (block) => block.isAssigned && block.status === "active",
+  );
+  if (running) {
+    overviewEntries.push({
+      id: "aufsicht",
+      row: {
+        leading: <Icon concept={supervisionConcept} />,
+        title: `Aufsicht: ${running.title}`,
+        subtitle: blockChildrenLabel(running),
+      },
+      href: now.ownSupervision
+        ? tenantPath("/active-supervisions")
+        : dayPlanHref,
+    });
+  }
+  if (showGroup && group.group) {
+    overviewEntries.push({
+      id: "gruppe",
+      row: {
+        leading: <Icon concept={groupsConcept} />,
+        title: `Meine Gruppe: ${group.present}/${group.total} da`,
+        subtitle:
+          group.missing.length > 0
+            ? `${group.group.name} · ${group.missing.length} fehlen noch`
+            : group.group.name,
+      },
+      href: tenantPath("/ogs-groups"),
+      detail: <GroupDetail snapshot={group} />,
+    });
+  }
+  const showDay = has("section.my_day") || has("section.day_flow");
+  const mine = showDay
+    ? (now.dayBlocks ?? [])
+        .filter((block) => block.isAssigned && !block.isDuty)
+        .sort((a, b) => a.startTime.localeCompare(b.startTime))
+    : [];
+  if (mine.length > 0) {
+    const next = mine.find(
+      (block) => block.status !== "active" && block.startTime > clock,
+    );
+    overviewEntries.push({
+      id: "tag",
+      row: {
+        leading: <Icon concept={carePlanConcept} />,
+        title: next
+          ? `Als Nächstes: ${next.startTime} ${next.title}`
+          : "Mein Tag",
+        subtitle: next
+          ? (next.roomName ?? undefined)
+          : mine.length === 1
+            ? "1 Einsatz heute, alle vorbei"
+            : `${mine.length} Einsätze heute, alle vorbei`,
+      },
+      href: dayPlanHref,
+      detail: <DayDetail blocks={mine} />,
+    });
+  }
+  const todays = has("section.birthdays")
+    ? (birthdays?.celebrations.filter((entry) => entry.isToday) ?? [])
+    : [];
+  if (todays.length > 0) {
+    // Nur zur Information: Geburtstage haben keine eigene Seite.
+    overviewEntries.push({
+      id: "geburtstag",
+      row: {
+        leading: <Icon concept={birthdaysConcept} />,
+        title: "Geburtstag heute",
+        subtitle: todays.map((entry) => entry.name).join(", "),
+      },
+    });
+  }
+
   const nowCard = <NowCard now={now} stamp={stamp} />;
-  const todo = (
-    <TodoList
-      overview={dayChanges.data}
-      error={dayChanges.error}
-      retry={() => dayChanges.mutate()}
-      showDayChanges={has("section.day_changes")}
-      showRequests={has("section.open_requests")}
-    />
-  );
-  const previews = (
-    <Previews
-      now={now}
-      showGroup={has("section.my_group")}
-      showDay={has("section.my_day") || has("section.day_flow")}
-      birthdays={has("section.birthdays") ? birthdays : undefined}
-    />
-  );
+  const actionBar = <HomeActionBar now={now} stamp={stamp} />;
   const extra =
     rest.length > 0 ? (
       <div className="space-y-4">
@@ -169,46 +399,298 @@ export function HomeApp({
         ))}
       </div>
     ) : null;
+  const todoLoading = has("section.day_changes") && !overview && !loadError;
+  const listProps = {
+    todo,
+    overviewEntries,
+    todoLoading,
+    loadError,
+    showTodo: has("section.day_changes") || has("section.open_requests"),
+    onChanged: retry,
+  };
 
   if (isSplit) {
-    // iPad quer: drei ruhige Spalten statt gestreckter Einzelkarten.
+    // iPad quer: links Jetzt, Zu erledigen und Überblick, rechts das Detail
+    // des gewählten Eintrags. Ohne Wahl steht der erste Eintrag mit Detail.
+    const fallback = (
+      <HomeSplit
+        {...listProps}
+        nowCard={nowCard}
+        notices={notices}
+        extra={extra}
+        selection={null}
+      />
+    );
     return (
-      <div className="grid grid-cols-3 items-start gap-4" data-home-app="">
-        <div className="space-y-4">
-          {nowCard}
-          {notices}
-        </div>
-        <div className="space-y-4">{todo}</div>
-        <div className="space-y-4">
-          {previews}
-          {extra}
-        </div>
-      </div>
+      <>
+        <Suspense fallback={fallback}>
+          <HomeSplitWithSelection
+            {...listProps}
+            nowCard={nowCard}
+            notices={notices}
+            extra={extra}
+          />
+        </Suspense>
+        {actionBar}
+      </>
     );
   }
+
+  const lists = <HomeLists {...listProps} />;
   if (layout === "tablet") {
-    // iPad hoch: Jetzt und Zu erledigen links, Vorschauen rechts.
+    // iPad hoch: links Jetzt und die Liste, rechts die eigene Gruppe mit
+    // ihren Kindern und der Tag – die Fläche trägt, was sonst erst ein
+    // Tipp zeigt.
+    const groupDetail =
+      showGroup && group.group ? <GroupDetail snapshot={group} /> : null;
+    const childList =
+      !groupDetail && overview && children.length > 0 ? (
+        <DayChangesList
+          overview={overview}
+          include={isChildChange}
+          label="Kinder heute anders"
+          mineTitle="Aus deinen Gruppen"
+        />
+      ) : null;
     return (
-      <div className="grid grid-cols-2 items-start gap-4" data-home-app="">
-        <div className="space-y-4">
-          {nowCard}
-          {notices}
-          {todo}
+      <>
+        <div className="grid grid-cols-2 items-start gap-4" data-home-app="">
+          <div className="space-y-4">
+            {nowCard}
+            {notices}
+            {lists}
+            <DayDetail blocks={mine} />
+          </div>
+          <div className="space-y-4">
+            {groupDetail}
+            {childList}
+            {extra}
+          </div>
         </div>
-        <div className="space-y-4">
-          {previews}
-          {extra}
-        </div>
-      </div>
+        {actionBar}
+      </>
     );
   }
   return (
-    <div className="space-y-4" data-home-app="">
-      {nowCard}
-      {notices}
-      {todo}
-      {previews}
-      {extra}
+    <>
+      <div className="space-y-4" data-home-app="">
+        {nowCard}
+        {notices}
+        {lists}
+        {extra}
+      </div>
+      {actionBar}
+    </>
+  );
+}
+
+// ─── Listen ────────────────────────────────────────────────────────────────
+
+interface ListProps {
+  readonly todo: readonly HomeEntry[];
+  readonly overviewEntries: readonly HomeEntry[];
+  readonly todoLoading: boolean;
+  readonly loadError: ReturnType<typeof useSwrLoadError>;
+  readonly showTodo: boolean;
+  /** Lädt „Heute anders“ neu, etwa nach einer Kenntnisnahme. */
+  readonly onChanged: () => Promise<unknown>;
+}
+
+/**
+ * „Zu erledigen“ und „Überblick“. Ohne `selection` (Telefon, iPad hoch)
+ * führt eine Zeile weiter oder öffnet ihr Blatt; mit `selection` (iPad quer)
+ * wählt sie das Detail rechts.
+ */
+function HomeLists({
+  todo,
+  overviewEntries,
+  todoLoading,
+  loadError,
+  showTodo,
+  onChanged,
+  selection,
+}: ListProps & {
+  readonly selection?: {
+    readonly current: string | null;
+    readonly select: (id: string) => void;
+  };
+}) {
+  const [sheetId, setSheetId] = useState<string | null>(null);
+  const all = [...todo, ...overviewEntries];
+  const sheetEntry = all.find((entry) => entry.id === sheetId);
+
+  const row = (entry: HomeEntry) => {
+    if (selection && entry.detail) {
+      return (
+        <CollectionRow
+          key={entry.id}
+          {...entry.row}
+          selected={selection.current === entry.id}
+          onClick={() => selection.select(entry.id)}
+        />
+      );
+    }
+    if (entry.href) {
+      return <CollectionRow key={entry.id} {...entry.row} href={entry.href} />;
+    }
+    if (entry.sheet) {
+      return (
+        <CollectionRow
+          key={entry.id}
+          {...entry.row}
+          onClick={() => setSheetId(entry.id)}
+        />
+      );
+    }
+    return <CollectionRow key={entry.id} {...entry.row} />;
+  };
+
+  let todoBlock: ReactNode = null;
+  if (loadError) {
+    todoBlock = <LoadErrorAlert error={loadError} />;
+  } else if (todoLoading) {
+    todoBlock = (
+      <Collection label="Zu erledigen">
+        <CollectionGroup title="Zu erledigen">
+          <li className="space-y-2 p-4" aria-hidden="true">
+            <Skeleton className="h-4 w-3/5" />
+            <Skeleton className="h-4 w-2/5" />
+          </li>
+        </CollectionGroup>
+      </Collection>
+    );
+  } else if (showTodo) {
+    todoBlock = (
+      <Collection label="Zu erledigen">
+        <CollectionGroup
+          title="Zu erledigen"
+          count={todo.length > 0 ? todo.length : undefined}
+        >
+          {todo.length > 0 ? (
+            todo.map(row)
+          ) : (
+            <CollectionRow
+              leading={<Icon concept={dayChangesConcept} />}
+              title="Nichts offen"
+              subtitle="Heute läuft alles wie geplant."
+            />
+          )}
+        </CollectionGroup>
+      </Collection>
+    );
+  }
+
+  return (
+    <>
+      {todoBlock}
+      {overviewEntries.length > 0 ? (
+        <Collection label="Überblick">
+          <CollectionGroup title="Überblick">
+            {overviewEntries.map(row)}
+          </CollectionGroup>
+        </Collection>
+      ) : null}
+      {sheetEntry?.sheet?.kind === "notice" ? (
+        <NoticeSheet
+          key={sheetEntry.id}
+          notice={sheetEntry.sheet.notice}
+          onClose={() => setSheetId(null)}
+          onChanged={onChanged}
+        />
+      ) : sheetEntry?.sheet?.kind === "list" ? (
+        <ListSheet
+          key={sheetEntry.id}
+          title={sheetEntry.sheet.title}
+          onClose={() => setSheetId(null)}
+        >
+          {sheetEntry.sheet.body}
+        </ListSheet>
+      ) : null}
+    </>
+  );
+}
+
+/** Eine Liste im Blatt, so hoch wie ihr Inhalt. */
+function ListSheet({
+  title,
+  onClose,
+  children,
+}: {
+  readonly title: string;
+  readonly onClose: () => void;
+  readonly children: ReactNode;
+}) {
+  return (
+    <OverlaySheet
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title={title}
+      size="fit"
+    >
+      {children}
+    </OverlaySheet>
+  );
+}
+
+/** Vorwahl am iPad quer, in dieser Reihenfolge. */
+const DEFAULT_ORDER = ["gruppe", "kinder", "team", "tag"];
+
+type SplitProps = ListProps & {
+  readonly nowCard: ReactNode;
+  readonly notices: ReactNode;
+  readonly extra: ReactNode;
+};
+
+function HomeSplitWithSelection(props: SplitProps) {
+  const { selected, select } = useSplitSelection("eintrag");
+  return <HomeSplit {...props} selection={{ selected, select }} />;
+}
+
+function HomeSplit({
+  nowCard,
+  notices,
+  extra,
+  selection,
+  ...listProps
+}: SplitProps & {
+  readonly selection: {
+    readonly selected: string | null;
+    readonly select: (id: string | null) => void;
+  } | null;
+}) {
+  const withDetail = [...listProps.todo, ...listProps.overviewEntries].filter(
+    (entry) => entry.detail,
+  );
+  // Ohne Wahl: die Liste, die die Fläche am besten füllt (die eigene
+  // Gruppe mit ihren Kindern), sonst der erste Eintrag mit Detail.
+  const current =
+    withDetail.find((entry) => entry.id === selection?.selected) ??
+    DEFAULT_ORDER.map((id) => withDetail.find((entry) => entry.id === id)).find(
+      Boolean,
+    ) ??
+    withDetail[0];
+  return (
+    <div data-home-app="">
+      <SplitView
+        list={
+          <div className="space-y-4">
+            {nowCard}
+            {notices}
+            <HomeLists
+              {...listProps}
+              selection={{
+                current: current?.id ?? null,
+                select: (id) => selection?.select(id),
+              }}
+            />
+            {extra}
+          </div>
+        }
+        detail={current?.detail ?? null}
+        empty="Heute ist nichts offen."
+      />
     </div>
   );
 }
@@ -230,6 +712,7 @@ function stampLabel(state: HomeStampState): string | null {
   }
 }
 
+/** Was gerade läuft: nur Information, die Aktionen stehen in der ActionBar. */
 function NowCard({
   now,
   stamp,
@@ -237,22 +720,14 @@ function NowCard({
   readonly now: ReturnType<typeof useHomeNow>;
   readonly stamp: ReturnType<typeof useHomeStamp>;
 }) {
-  // Nur die eine Aktion für jetzt: „Alle Kinder“ hat in der Pill ihren
-  // Reiter (Suche).
-  const action = now.actions.find(
-    (entry) => entry.kind === "start" || entry.label === "Zur Aufsicht",
-  );
   const stampText = stampLabel(stamp.state);
-  const canStampIn = stamp.state.kind === "out" || stamp.state.kind === "done";
-  const canStampOut = stamp.state.kind === "in";
-
   return (
     <SectionCard testId="home-now" padding="none">
       <div className="space-y-3 p-4">
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 items-start gap-3">
           <time
             dateTime={`${now.today}T${now.now}`}
-            className="shrink-0 text-2xl font-semibold text-gray-900 tabular-nums"
+            className="shrink-0 text-2xl leading-8 font-semibold text-gray-900 tabular-nums"
           >
             {now.now}
           </time>
@@ -267,6 +742,7 @@ function NowCard({
               state={now.state}
               analytics={now.analytics.data}
               today={now.today}
+              wrap
             />
           )}
         </div>
@@ -284,64 +760,9 @@ function NowCard({
             ) : null}
             {stampText ? (
               <StatusBadge
-                tone={canStampOut ? "green" : "gray"}
+                tone={stamp.state.kind === "in" ? "green" : "gray"}
                 label={stampText}
               />
-            ) : null}
-          </div>
-        ) : null}
-        {action || canStampIn || canStampOut ? (
-          <div className="flex gap-2">
-            {action?.kind === "start" ? (
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                className="flex-1 whitespace-nowrap"
-                disabled={now.busyId !== null}
-                onClick={() => void now.start(action.block)}
-                tooltip={START_OWN_BLOCK_TOOLTIP}
-              >
-                {now.busyId === action.block.id ? "Startet..." : action.label}
-              </Button>
-            ) : action?.kind === "link" ? (
-              <ButtonLink
-                href={action.href}
-                variant="primary"
-                size="md"
-                className="flex-1 whitespace-nowrap"
-                tooltip="Öffnet deine laufende Aufsicht."
-              >
-                Aufsicht öffnen
-              </ButtonLink>
-            ) : null}
-            {/* VORSCHLAG zu Produktentscheid 4 (Epic #8070): Stempeln als
-                neuer Einstieg auf der Startseite; Logik in `useHomeStamp`. */}
-            {canStampIn ? (
-              <Button
-                type="button"
-                variant={action ? "outline" : "primary"}
-                size="md"
-                className="flex-1 whitespace-nowrap"
-                disabled={stamp.disabled}
-                onClick={stamp.checkIn}
-                tooltip="Stempelt dich vor Ort ein. Homeoffice wählst du in der Zeiterfassung."
-              >
-                Einstempeln
-              </Button>
-            ) : null}
-            {canStampOut ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                className="flex-1 whitespace-nowrap"
-                disabled={stamp.disabled}
-                onClick={stamp.checkOut}
-                tooltip="Stempelt dich aus und beendet deine Arbeitszeit."
-              >
-                Ausstempeln
-              </Button>
             ) : null}
           </div>
         ) : null}
@@ -350,150 +771,85 @@ function NowCard({
   );
 }
 
-// ─── Zu erledigen ──────────────────────────────────────────────────────────
-
-function Icon({ concept }: { readonly concept: MotoConcept }) {
-  return <MotoConceptIcon concept={concept} size={20} />;
-}
-
-function TodoList({
-  overview,
-  error,
-  retry,
-  showDayChanges,
-  showRequests,
+/**
+ * Die eine Aktion für jetzt in Daumennähe: die Aufsicht öffnen oder starten,
+ * daneben Ein- oder Ausstempeln. Ohne Aufsicht ist Stempeln die Hauptaktion.
+ */
+function HomeActionBar({
+  now,
+  stamp,
 }: {
-  readonly overview: DayChangesOverview | undefined;
-  readonly error: unknown;
-  readonly retry: () => Promise<unknown>;
-  readonly showDayChanges: boolean;
-  readonly showRequests: boolean;
+  readonly now: ReturnType<typeof useHomeNow>;
+  readonly stamp: ReturnType<typeof useHomeStamp>;
 }) {
-  const [noticeId, setNoticeId] = useState<string | null>(null);
-  const [changesOpen, setChangesOpen] = useState(false);
-  const loadError = useSwrLoadError(error, "die Übersicht „Heute anders“", () =>
-    retry(),
+  // „Alle Kinder“ hat in der Pill ihren Reiter (Suche).
+  const action = now.actions.find(
+    (entry) => entry.kind === "start" || entry.label === "Zur Aufsicht",
   );
-  const requests = useOpenRequestRows(showRequests);
+  const canStampIn = stamp.state.kind === "out" || stamp.state.kind === "done";
+  const canStampOut = stamp.state.kind === "in";
 
-  const entries = overview ? shownEntries(overview) : [];
-  const notices = entries.filter(openNotice);
-  const rest = entries.filter((entry) => !openNotice(entry));
-  const mine = rest.filter((entry) => entry.section === "you");
-  const children = mine.filter((entry) => CHILD_KINDS.has(entry.kind));
-  const otherMine = mine.length - children.length;
-  const school = rest.length - mine.length;
-  const notice = notices.find((entry) => entry.notice.id === noticeId)?.notice;
+  const primary =
+    action?.kind === "start" ? (
+      <Button
+        type="button"
+        variant="primary"
+        size="md"
+        className="whitespace-nowrap"
+        disabled={now.busyId !== null}
+        onClick={() => void now.start(action.block)}
+        tooltip={START_OWN_BLOCK_TOOLTIP}
+      >
+        {now.busyId === action.block.id ? "Startet..." : action.label}
+      </Button>
+    ) : action?.kind === "link" ? (
+      <ButtonLink
+        href={action.href}
+        variant="primary"
+        size="md"
+        className="whitespace-nowrap"
+        tooltip="Öffnet deine laufende Aufsicht."
+      >
+        Aufsicht öffnen
+      </ButtonLink>
+    ) : null;
+  /* VORSCHLAG zu Produktentscheid 4 (Epic #8070): Stempeln als neuer
+     Einstieg auf der Startseite; Logik in `useHomeStamp`. */
+  const stampButton = canStampIn ? (
+    <Button
+      type="button"
+      variant={primary ? "outline" : "primary"}
+      size="md"
+      className="whitespace-nowrap"
+      disabled={stamp.disabled}
+      onClick={stamp.checkIn}
+      tooltip="Stempelt dich vor Ort ein. Homeoffice wählst du in der Zeiterfassung."
+    >
+      Einstempeln
+    </Button>
+  ) : canStampOut ? (
+    <Button
+      type="button"
+      variant="outline"
+      size="md"
+      className="whitespace-nowrap"
+      disabled={stamp.disabled}
+      onClick={stamp.checkOut}
+      tooltip="Stempelt dich aus und beendet deine Arbeitszeit."
+    >
+      Ausstempeln
+    </Button>
+  ) : null;
 
-  const rows: ReactNode[] = [];
-  for (const entry of notices) {
-    rows.push(
-      <CollectionRow
-        key={`notice-${entry.notice.id}`}
-        leading={<Icon concept={announcementsConcept} />}
-        title={entry.notice.title}
-        subtitle="Zur Kenntnis nehmen"
-        meta={
-          entry.notice.important ? (
-            <StatusBadge label="Wichtig" tone="warning" size="xs" />
-          ) : undefined
-        }
-        onClick={() => setNoticeId(entry.notice.id)}
-      />,
-    );
-  }
-  rows.push(...requests);
-  if (showDayChanges && children.length > 0) {
-    rows.push(
-      <CollectionRow
-        key="children"
-        leading={<Icon concept={childrenConcept} />}
-        title={
-          children.length === 1
-            ? "1 Kind heute anders"
-            : `${children.length} Kinder heute anders`
-        }
-        subtitle="Krank, Abholung, allein nach Hause"
-        onClick={() => setChangesOpen(true)}
-      />,
-    );
-  }
-  if (showDayChanges && (otherMine > 0 || school > 0)) {
-    rows.push(
-      <CollectionRow
-        key="changes"
-        leading={<Icon concept={dayChangesConcept} />}
-        title="Heute anders"
-        subtitle={[
-          otherMine > 0 ? `${otherMine} für dich` : null,
-          school > 0 ? `${school} in der Schule` : null,
-        ]
-          .filter(Boolean)
-          .join(" · ")}
-        onClick={() => setChangesOpen(true)}
-      />,
-    );
-  }
-
-  if (loadError) return <LoadErrorAlert error={loadError} />;
-  if (showDayChanges && !overview) {
-    return (
-      <Collection label="Zu erledigen">
-        <CollectionGroup title="Zu erledigen">
-          <li className="space-y-2 p-4" aria-hidden="true">
-            <Skeleton className="h-4 w-3/5" />
-            <Skeleton className="h-4 w-2/5" />
-          </li>
-        </CollectionGroup>
-      </Collection>
-    );
-  }
-  if (rows.length === 0) {
-    return (
-      <Collection label="Zu erledigen">
-        <CollectionGroup title="Zu erledigen">
-          <CollectionRow
-            leading={<Icon concept={dayChangesConcept} />}
-            title="Nichts offen"
-            subtitle="Heute läuft alles wie geplant."
-          />
-        </CollectionGroup>
-      </Collection>
-    );
-  }
-
+  if (!primary && !stampButton) return null;
   return (
-    <>
-      <Collection label="Zu erledigen">
-        <CollectionGroup title="Zu erledigen" count={rows.length}>
-          {rows}
-        </CollectionGroup>
-      </Collection>
-      {notice ? (
-        <NoticeSheet
-          notice={notice}
-          onClose={() => setNoticeId(null)}
-          onChanged={retry}
-        />
-      ) : null}
-      {overview ? (
-        <OverlaySheet
-          open={changesOpen}
-          onOpenChange={setChangesOpen}
-          title="Heute anders"
-          size="full"
-        >
-          <DayChangesContent
-            overview={overview}
-            onChanged={retry}
-            omit={openNotice}
-            capSchool={false}
-          />
-        </OverlaySheet>
-      ) : null}
-    </>
+    <ActionBar secondary={primary && stampButton ? stampButton : undefined}>
+      {primary ?? stampButton}
+    </ActionBar>
   );
 }
+
+// ─── Blätter und Anfragen ───────────────────────────────────────────────
 
 function NoticeSheet({
   notice,
@@ -516,6 +872,7 @@ function NoticeSheet({
         if (!open) onClose();
       }}
       title={notice.title}
+      size="fit"
       description={
         notice.important ? (
           <StatusBadge label="Wichtig" tone="warning" size="xs" />
@@ -550,7 +907,12 @@ function NoticeSheet({
  * Dieselben Zähler wie „Offene Anfragen“ und die Seitenleiste; eine Zeile je
  * Art, die etwas offen hat.
  */
-function useOpenRequestRows(enabled: boolean): ReactNode[] {
+function useOpenRequestRows(enabled: boolean): {
+  readonly key: string;
+  readonly label: string;
+  readonly count: number;
+  readonly href: string;
+}[] {
   const changeRequests = useChangeRequestsPending();
   const enrollmentRequests = useEnrollmentRequestsPending();
   const careWithdrawals = useCareWithdrawalsPending();
@@ -588,139 +950,16 @@ function useOpenRequestRows(enabled: boolean): ReactNode[] {
       count: staffAbsences.unreadCount,
       href: "/anfragen",
     },
-  ]
-    .filter((row) => row.count > 0)
-    .map((row) => (
-      <RequestRow
-        key={row.key}
-        label={row.label}
-        count={row.count}
-        href={row.href}
-      />
-    ));
+  ].filter((row) => row.count > 0);
 }
 
-function RequestRow({
-  label,
-  count,
-  href,
-}: {
-  readonly label: string;
-  readonly count: number;
-  readonly href: string;
-}) {
-  const tenantPath = useTenantAwarePath();
-  return (
-    <CollectionRow
-      leading={<Icon concept={requestsConcept} />}
-      title={label}
-      subtitle="Wartet auf Entscheidung"
-      meta={<StatusBadge tone="warning" label={`${count} offen`} size="xs" />}
-      href={tenantPath(href)}
-    />
-  );
+// ─── Bausteine ─────────────────────────────────────────────────────────────
+
+function Icon({ concept }: { readonly concept: MotoConcept }) {
+  return <MotoConceptIcon concept={concept} size={20} />;
 }
 
-// ─── Vorschauen ────────────────────────────────────────────────────────────
-
-function Previews({
-  now,
-  showGroup,
-  showDay,
-  birthdays,
-}: {
-  readonly now: ReturnType<typeof useHomeNow>;
-  readonly showGroup: boolean;
-  readonly showDay: boolean;
-  readonly birthdays: BirthdayOverview | undefined;
-}) {
-  const tenantPath = useTenantAwarePath();
-  const dayPlanHref = useDayPlanHref();
-  const clock = useBerlinClock();
-  const group = useHomeGroup(showGroup, clock);
-  const rows: ReactNode[] = [];
-
-  // Aufsicht: der eigene Block, der gerade läuft, mit seiner Kinderzahl.
-  const running = (now.dayBlocks ?? []).find(
-    (block) => block.isAssigned && block.status === "active",
-  );
-  if (running) {
-    rows.push(
-      <CollectionRow
-        key="supervision"
-        leading={<Icon concept={supervisionConcept} />}
-        title={`Aufsicht: ${running.title}`}
-        subtitle={blockChildrenLabel(running)}
-        href={
-          now.ownSupervision ? tenantPath("/active-supervisions") : dayPlanHref
-        }
-      />,
-    );
-  }
-  if (showGroup && group.group) {
-    rows.push(
-      <CollectionRow
-        key="group"
-        leading={<Icon concept={groupsConcept} />}
-        title={`Meine Gruppe: ${group.present}/${group.total} da`}
-        subtitle={
-          group.missing.length > 0
-            ? `${group.group.name} · ${group.missing.length} fehlen noch`
-            : group.group.name
-        }
-        href={tenantPath("/ogs-groups")}
-      />,
-    );
-  } else if (showGroup && group.isLoading) {
-    rows.push(
-      <li key="group-loading" className="p-4" aria-hidden="true">
-        <Skeleton className="h-4 w-3/5" />
-      </li>,
-    );
-  }
-  if (showDay) {
-    const mine = (now.dayBlocks ?? [])
-      .filter((block) => block.isAssigned && !block.isDuty)
-      .sort((a, b) => a.startTime.localeCompare(b.startTime));
-    const next = mine.find(
-      (block) => block.status !== "active" && block.startTime > clock,
-    );
-    if (mine.length > 0) {
-      rows.push(
-        <CollectionRow
-          key="day"
-          leading={<Icon concept={carePlanConcept} />}
-          title={
-            next ? `Als Nächstes: ${next.startTime} ${next.title}` : "Mein Tag"
-          }
-          subtitle={
-            next
-              ? (next.roomName ?? undefined)
-              : mine.length === 1
-                ? "1 Einsatz heute, alle vorbei"
-                : `${mine.length} Einsätze heute, alle vorbei`
-          }
-          href={dayPlanHref}
-        />,
-      );
-    }
-  }
-  const todays = birthdays?.celebrations.filter((entry) => entry.isToday) ?? [];
-  if (todays.length > 0) {
-    // Nur zur Information: Geburtstage haben keine eigene Seite.
-    rows.push(
-      <CollectionRow
-        key="birthdays"
-        leading={<Icon concept={birthdaysConcept} />}
-        title="Geburtstag heute"
-        subtitle={todays.map((entry) => entry.name).join(", ")}
-      />,
-    );
-  }
-  if (rows.length === 0) return null;
-  return (
-    <Collection label="Überblick">
-      <CollectionGroup title="Überblick">{rows}</CollectionGroup>
-    </Collection>
-  );
+/** Die Zahl einer Zeile, rechts: wie viele Einträge das Detail zeigt. */
+function CountBadge({ count }: { readonly count: number }) {
+  return <StatusBadge tone="gray" label={String(count)} size="xs" />;
 }

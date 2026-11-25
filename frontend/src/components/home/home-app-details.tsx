@@ -1,0 +1,350 @@
+"use client";
+
+import type { ReactNode } from "react";
+
+import { isDone, withKeys } from "~/components/home/day-changes-block";
+import {
+  childChangeText,
+  childSummaryTitle,
+  dayChangeHref,
+  dayChangeLinkHref,
+  dayChangeSpan,
+  dayChangeText,
+  sourceFailureText,
+} from "~/components/home/day-changes-text";
+import { useNoticeAcknowledge } from "~/components/home/day-notice-row";
+import { AwayBadge } from "~/components/home/my-group-block";
+import { Alert } from "~/components/ui/alert";
+import { Button } from "~/components/ui/button";
+import {
+  Collection,
+  CollectionGroup,
+  CollectionRow,
+} from "~/components/ui/collection";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { SectionCard } from "~/components/ui/section-card";
+import { StatusBadge } from "~/components/ui/status-badge";
+import { blockTimeRange } from "~/lib/block-children";
+import type {
+  DayChange,
+  DayChangeNotice,
+  DayChangesOverview,
+} from "~/lib/day-changes";
+import { useCurrentTimestamp } from "~/lib/hooks/use-current-timestamp";
+import { useDayPlanHref } from "~/lib/hooks/use-day-plan-href";
+import type { HomeGroupSnapshot } from "~/lib/hooks/use-home-group";
+import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
+import { useTenantAwarePath } from "~/lib/tenant-path";
+
+/**
+ * Detailflächen der App-Startseite (#8070): rechts neben der Liste (iPad
+ * quer), im Blatt (Telefon) oder als zweite Spalte (iPad hoch). Jede Fläche
+ * ist EINE Liste mit Trennlinien und nutzt die Daten, die die Startseite
+ * schon geladen hat.
+ */
+
+// ─── Heute anders als Liste ────────────────────────────────────────────────
+
+/**
+ * Die Einträge von „Heute anders“ als Zeilen: was dich betrifft, die übrige
+ * Schule, was schon vorbei ist. `include` wählt den Ausschnitt (Kinder oder
+ * Team und Schule).
+ */
+export function DayChangesList({
+  overview,
+  include,
+  label,
+  mineTitle = "Betrifft dich",
+}: {
+  readonly overview: DayChangesOverview;
+  readonly include: (entry: DayChange) => boolean;
+  /** Name der Liste für Vorleseprogramme. */
+  readonly label: string;
+  /** Kopf der eigenen Einträge (Standard „Betrifft dich“). */
+  readonly mineTitle?: string;
+}) {
+  const now = useCurrentTimestamp();
+  const entries = overview.entries.filter(
+    (entry) => dayChangeText(entry) !== null && include(entry),
+  );
+  const open = entries.filter((entry) => !isDone(entry, now));
+  const done = entries.filter((entry) => isDone(entry, now));
+  const mine = open.filter((entry) => entry.section === "you");
+  const school = open.filter((entry) => entry.section !== "you");
+  const failures = overview.failedSources.map((source) => (
+    <Alert
+      key={source}
+      type="warning"
+      size="compact"
+      message={sourceFailureText(source)}
+    />
+  ));
+
+  return (
+    <div className="space-y-3">
+      {failures}
+      {entries.length === 0 ? (
+        <Collection label={label}>
+          <CollectionGroup title={label}>
+            <CollectionRow title="Heute läuft hier alles wie geplant." />
+          </CollectionGroup>
+        </Collection>
+      ) : (
+        <Collection label={label}>
+          {mine.length > 0 ? (
+            <CollectionGroup title={mineTitle} count={mine.length}>
+              <DayChangeRows entries={mine} />
+            </CollectionGroup>
+          ) : null}
+          {school.length > 0 ? (
+            <CollectionGroup title="Schule" count={school.length}>
+              <DayChangeRows entries={school} />
+            </CollectionGroup>
+          ) : null}
+          {done.length > 0 ? (
+            <CollectionGroup title="Schon vorbei" count={done.length}>
+              <DayChangeRows entries={done} />
+            </CollectionGroup>
+          ) : null}
+        </Collection>
+      )}
+    </div>
+  );
+}
+
+function DayChangeRows({
+  entries,
+}: {
+  readonly entries: readonly DayChange[];
+}) {
+  const tenantPath = useTenantAwarePath();
+  const dayPlanHref = useDayPlanHref();
+  const rows: ReactNode[] = [];
+  for (const [key, entry] of withKeys(entries)) {
+    if (entry.notice) {
+      rows.push(
+        <CollectionRow
+          key={key}
+          wrap
+          title={entry.notice.title}
+          subtitle={entry.notice.body || undefined}
+          meta={
+            entry.notice.important ? (
+              <StatusBadge label="Wichtig" tone="warning" size="xs" />
+            ) : undefined
+          }
+          href={tenantPath("/tagesinformationen")}
+        />,
+      );
+      continue;
+    }
+    if (entry.childSummary) {
+      // Eine Gruppe oder Klasse außerhalb der eigenen: jedes Kind als Zeile,
+      // die Gruppe steht darunter.
+      const where = childSummaryTitle(entry);
+      for (const item of entry.childSummary.items) {
+        const text = childChangeText(item.kind, item.child);
+        if (!text) continue;
+        const href = dayChangeLinkHref(item.link);
+        rows.push(
+          <CollectionRow
+            key={`${key}:${item.kind}:${item.child.studentId}`}
+            wrap
+            title={text}
+            subtitle={where}
+            {...(href ? { href: tenantPath(href) } : {})}
+          />,
+        );
+      }
+      continue;
+    }
+    const path = dayChangeHref(entry);
+    const href =
+      path === null
+        ? null
+        : entry.link?.target === "day_plan"
+          ? dayPlanHref
+          : tenantPath(path);
+    rows.push(
+      <CollectionRow
+        key={key}
+        wrap
+        title={dayChangeText(entry) ?? ""}
+        subtitle={dayChangeSpan(entry) ?? undefined}
+        {...(href ? { href } : {})}
+      />,
+    );
+  }
+  return <>{rows}</>;
+}
+
+// ─── Hinweis der Leitung ───────────────────────────────────────────────────
+
+/** Ein Hinweis mit ganzem Text und „Zur Kenntnis nehmen“ (iPad quer). */
+export function NoticeDetail({
+  notice,
+  onChanged,
+}: {
+  readonly notice: DayChangeNotice;
+  readonly onChanged: () => Promise<unknown>;
+}) {
+  const { confirm, pending, error } = useNoticeAcknowledge(notice, onChanged);
+  return (
+    <SectionCard
+      title={notice.title}
+      titleBadge={
+        notice.important ? (
+          <StatusBadge label="Wichtig" tone="warning" size="xs" />
+        ) : undefined
+      }
+    >
+      {notice.body ? (
+        <p className="text-base whitespace-pre-line text-gray-800">
+          {notice.body}
+        </p>
+      ) : null}
+      <LoadErrorAlert error={error} className="mt-2" />
+      <Button
+        type="button"
+        variant="primary"
+        size="md"
+        className="mt-4"
+        disabled={pending}
+        aria-label={`${notice.title}: zur Kenntnis nehmen`}
+        tooltip="Bestätigt sofort, dass du den Hinweis gelesen hast."
+        onClick={() => void confirm()}
+      >
+        {pending ? "Wird gespeichert …" : "Zur Kenntnis nehmen"}
+      </Button>
+    </SectionCard>
+  );
+}
+
+// ─── Meine Gruppe ──────────────────────────────────────────────────────────
+
+/**
+ * Die eigene Gruppe mit ihren Kindern: wer fehlt noch, wer wird abgeholt,
+ * wer ist heute nicht da. Dieselben Daten und Wörter wie „Meine Gruppe
+ * heute“ auf dem Desktop; jede Zeile führt zur Gruppe.
+ */
+export function GroupDetail({
+  snapshot,
+}: {
+  readonly snapshot: HomeGroupSnapshot;
+}) {
+  const tenantPath = useTenantAwarePath();
+  const href = tenantPath("/ogs-groups");
+  const { group, present, total, missing, pickups, away } = snapshot;
+  if (!group) return null;
+  const missingIds = new Set(missing.map((entry) => entry.student.id));
+  const pickedIds = new Set(pickups.map((entry) => entry.student.id));
+  const awayRest = away.filter(
+    (student) => !missingIds.has(student.id) && !pickedIds.has(student.id),
+  );
+  const name = (student: HomeGroupSnapshot["away"][number]) =>
+    `${student.first_name} ${student.last_name}`;
+  const label = group.viaSubstitution
+    ? `${group.name} (Vertretung)`
+    : group.name;
+
+  return (
+    <Collection label={`Meine Gruppe: ${label}`}>
+      <CollectionGroup title={label} meta={`${present} von ${total} da`}>
+        {missing.length + pickups.length + awayRest.length === 0 ? (
+          <CollectionRow
+            title="Alle da, keine Abholung mehr heute"
+            href={href}
+          />
+        ) : null}
+      </CollectionGroup>
+      {missing.length > 0 ? (
+        <CollectionGroup title="Fehlt noch" count={missing.length}>
+          {missing.map(({ student, expected, note }) => (
+            <CollectionRow
+              key={`missing-${student.id}`}
+              title={name(student)}
+              subtitle={note ?? student.school_class ?? undefined}
+              meta={<StatusBadge tone="red" label={`erwartet ${expected}`} />}
+              href={href}
+            />
+          ))}
+        </CollectionGroup>
+      ) : null}
+      {pickups.length > 0 ? (
+        <CollectionGroup title="Abholungen" count={pickups.length}>
+          {pickups.map(({ student, time, note, isException }) => (
+            <CollectionRow
+              key={`pickup-${student.id}`}
+              title={name(student)}
+              subtitle={note ?? student.school_class ?? undefined}
+              meta={
+                <span className="flex items-center gap-1.5">
+                  {isException ? (
+                    <StatusBadge tone="warning" label="Ausnahme" size="xs" />
+                  ) : null}
+                  <span className="font-semibold text-gray-900">{time}</span>
+                </span>
+              }
+              href={href}
+            />
+          ))}
+        </CollectionGroup>
+      ) : null}
+      {awayRest.length > 0 ? (
+        <CollectionGroup title="Nicht da" count={awayRest.length}>
+          {awayRest.map((student) => (
+            <CollectionRow
+              key={`away-${student.id}`}
+              title={name(student)}
+              subtitle={student.school_class ?? undefined}
+              meta={
+                <AwayBadge
+                  student={student}
+                  onlyIfLessonCancelled={snapshot.onlyIfLessonCancelled.has(
+                    student.id,
+                  )}
+                />
+              }
+              href={href}
+            />
+          ))}
+        </CollectionGroup>
+      ) : null}
+    </Collection>
+  );
+}
+
+// ─── Mein Tag ──────────────────────────────────────────────────────────────
+
+/** Die eigenen Einsätze von heute in Reihenfolge, mit Zeit und Raum. */
+export function DayDetail({
+  blocks,
+}: {
+  readonly blocks: readonly PlannedTimetableInstance[];
+}) {
+  const dayPlanHref = useDayPlanHref();
+  if (blocks.length === 0) return null;
+  return (
+    <Collection label="Mein Tag">
+      <CollectionGroup title="Mein Tag" count={blocks.length}>
+        {blocks.map((block) => (
+          <CollectionRow
+            key={block.id}
+            title={`${block.startTime} ${block.title}`}
+            subtitle={[blockTimeRange(block), block.roomName]
+              .filter(Boolean)
+              .join(" · ")}
+            meta={
+              block.status === "active" ? (
+                <StatusBadge tone="green" label="Läuft" size="xs" />
+              ) : block.status === "completed" ? (
+                <StatusBadge tone="gray" label="Beendet" size="xs" />
+              ) : undefined
+            }
+            href={dayPlanHref}
+          />
+        ))}
+      </CollectionGroup>
+    </Collection>
+  );
+}
