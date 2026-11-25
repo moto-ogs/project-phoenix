@@ -627,6 +627,9 @@ export function MessageThreadContent({
       <Button
         type="button"
         variant="link"
+        // 44 px hoch: Die Zeile der Kopfkarte schneidet eine Trefferfläche
+        // über den Knopf hinaus ab.
+        touchTarget
         className="min-w-0 gap-1.5"
         onClick={() =>
           router.push(`/students/${thread.student_id}?from=/messages`)
