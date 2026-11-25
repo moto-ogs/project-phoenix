@@ -176,7 +176,7 @@ func newIoTResource(
 		SchoolName:              devicescanCompose.NewSchoolName(schoolName(organizations), DeviceScanPrincipal),
 		ErrorReports:            NewIoTErrorReporter(errorReports, deviceErrorReportQuota(limits)),
 		SessionEnd:              bindIoTHostSessionEnd(BindIoTSessionEnd(sessionEnd)),
-		SessionLifecycle:        scanBindings.NewSessionLifecycle(active, presence, scanBindings.NewSupervisionQuery(presence), NewDeviceScanPeople(users), iot, NewKioskSessionMirror(timetableRepos, activities, KioskMirrorPublisher(hub, logger), logger), logger, DeviceScanPrincipal, now),
+		SessionLifecycle:        scanBindings.NewSessionLifecycle(active, presence, scanBindings.NewSupervisionQuery(presence), NewDeviceScanPeople(users), iot, NewKioskSessionMirror(timetableRepos, activities, KioskMirrorPublisher(hub, logger), logger), rooms.Closures, logger, DeviceScanPrincipal, now),
 		Logger:                  logger.With("handler", "iot"),
 		DeviceAuthenticator:     gateDeviceAuthentication(deviceAuth.Device()),
 		DeviceOnlyAuthenticator: gateDeviceAuthentication(deviceAuth.DeviceOnly()),

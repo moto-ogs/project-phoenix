@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/devicescan"
 	scanCompose "github.com/moto-ogs/project-phoenix/modules/devicescan/compose"
 	"github.com/moto-ogs/project-phoenix/modules/devicescan/ports"
+	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
@@ -35,7 +36,7 @@ func (c clock) Now() time.Time                      { return c.now() }
 func (c clock) Day(instant time.Time) calendar.Date { return calendar.DateFromTime(instant) }
 func NewSessionLifecycle(active studentpresence.Presence, counts OpenVisitCounts, presence devicescan.SupervisionQuery, people scanCompose.PersonDirectory, heartbeat interface {
 	Fleet() devicefleet.Capability
-}, mirror scanCompose.SessionMirror, logger *slog.Logger, principal devicescan.DevicePrincipal, now func() time.Time) devicescan.SessionLifecycle {
+}, mirror scanCompose.SessionMirror, closures facilities.Closures, logger *slog.Logger, principal devicescan.DevicePrincipal, now func() time.Time) devicescan.SessionLifecycle {
 	fleet := heartbeat.Fleet()
-	return scanCompose.NewSessionLifecycle(lifecycleStore{OpenVisitCounts: counts, active: active, presence: presence, devices: fleet}, scanCompose.NewLifecyclePeople(people), fleet, mirror, logger, principal, now)
+	return scanCompose.NewSessionLifecycle(lifecycleStore{OpenVisitCounts: counts, active: active, presence: presence, devices: fleet}, scanCompose.NewLifecyclePeople(people), fleet, mirror, RoomClosures(closures), logger, principal, now)
 }

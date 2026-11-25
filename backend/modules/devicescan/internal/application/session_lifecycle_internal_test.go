@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/devicescan"
 	"github.com/moto-ogs/project-phoenix/modules/devicescan/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -68,8 +69,13 @@ func (p *lifecycleHeartbeatStub) RecordDeviceHeartbeat(context.Context, string) 
 }
 
 func lifecycleForTest(store *lifecycleStoreStub, people *lifecyclePeopleStub) *sessionLifecycle {
-	return &sessionLifecycle{store: store, people: people, principals: fakePrincipals{device: testDevice()}, heartbeat: &lifecycleHeartbeatStub{}, clock: fakeClock{now: time.Now()}, logger: slog.Default()}
+	return &sessionLifecycle{store: store, people: people, principals: fakePrincipals{device: testDevice()}, heartbeat: &lifecycleHeartbeatStub{}, closures: openRooms{}, clock: fakeClock{now: time.Now()}, logger: slog.Default()}
 }
+
+// openRooms closes no room.
+type openRooms struct{}
+
+func (openRooms) RoomClosedOn(context.Context, int64, calendar.Date) (bool, error) { return false, nil }
 
 // These cases migrate the old HTTP helper tests to the command that owns the
 // active-supervisor filtering and its one batch name lookup.

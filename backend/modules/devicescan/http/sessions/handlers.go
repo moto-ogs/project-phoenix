@@ -19,6 +19,9 @@ func (rs *Resource) startActivitySession(w http.ResponseWriter, r *http.Request)
 	}
 	response, err := rs.Lifecycle.StartSession(r.Context(), devicescan.StartSessionCommand{ActivityID: req.ActivityID, RoomID: req.RoomID, SupervisorIDs: req.SupervisorIDs, Force: req.Force})
 	if err != nil {
+		// A refused start may follow the session's write, as a closed room
+		// does (#7653): nothing of it may commit.
+		rs.runtime.MarkRollback(r.Context())
 		rs.renderError(w, r, err)
 		return
 	}

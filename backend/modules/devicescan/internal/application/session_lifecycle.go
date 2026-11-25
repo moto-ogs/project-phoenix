@@ -41,15 +41,19 @@ type sessionLifecycle struct {
 	principals devicescan.PrincipalReader
 	heartbeat  SessionHeartbeat
 	mirror     SessionMirror
+	closures   devicescan.RoomClosures
 	clock      ports.Clock
 	logger     *slog.Logger
 }
 
-func NewSessionLifecycle(store LifecycleStore, people LifecyclePeople, principals devicescan.PrincipalReader, heartbeat SessionHeartbeat, mirror SessionMirror, clock ports.Clock, logger *slog.Logger) devicescan.SessionLifecycle {
+func NewSessionLifecycle(store LifecycleStore, people LifecyclePeople, principals devicescan.PrincipalReader, heartbeat SessionHeartbeat, mirror SessionMirror, closures devicescan.RoomClosures, clock ports.Clock, logger *slog.Logger) devicescan.SessionLifecycle {
+	if closures == nil {
+		panic("kiosk session lifecycle: room closures are required")
+	}
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &sessionLifecycle{store: store, people: people, principals: principals, heartbeat: heartbeat, mirror: mirror, clock: clock, logger: logger}
+	return &sessionLifecycle{store: store, people: people, principals: principals, heartbeat: heartbeat, mirror: mirror, closures: closures, clock: clock, logger: logger}
 }
 
 func (s *sessionLifecycle) device(ctx context.Context) (*devicescan.PrincipalDevice, error) {
@@ -83,6 +87,12 @@ func (s *sessionLifecycle) StartSession(ctx context.Context, command devicescan.
 		}
 		return devicescan.SessionStartResponse{}, classifyPresenceFailure(err)
 	}
+	// The start resolved the session's room, the chosen or the planned one.
+	// A room closed today takes no session (#7653); the caller rolls the
+	// start back.
+	if err := s.refuseClosedRoom(ctx, group.RoomID); err != nil {
+		return devicescan.SessionStartResponse{}, err
+	}
 	if s.mirror != nil {
 		s.mirror.MirrorSession(ctx, group, command.SupervisorIDs)
 	}
@@ -91,6 +101,17 @@ func (s *sessionLifecycle) StartSession(ctx context.Context, command devicescan.
 		response.Supervisors = s.supervisorInfos(ctx, supervisors)
 	}
 	return response, nil
+}
+
+func (s *sessionLifecycle) refuseClosedRoom(ctx context.Context, roomID int64) error {
+	closed, err := s.closures.RoomClosedOn(ctx, roomID, s.clock.Day(s.clock.Now()))
+	if err != nil {
+		return devicescan.Internal("failed to check the room closure", err)
+	}
+	if closed {
+		return devicescan.InvalidRequestWithCode("the room is closed today", devicescan.CodeRoomClosed)
+	}
+	return nil
 }
 
 func (s *sessionLifecycle) supervisorInfos(ctx context.Context, supervisors []ports.LifecycleSupervisor) []devicescan.SupervisorInfo {
