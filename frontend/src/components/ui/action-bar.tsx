@@ -59,9 +59,11 @@ export function ActionBar({
       <div
         aria-hidden="true"
         data-action-bar-backdrop=""
-        className={`moto-app-backdrop app:block pointer-events-none fixed inset-x-0 bottom-0 hidden ${Z_LAYER.nav} ${FIXED_LAYER_SHIFT} [mask-image:linear-gradient(to_bottom,transparent,black_0.75rem)]`}
+        className={`moto-app-backdrop app:block pointer-events-none fixed inset-x-0 -bottom-8 hidden ${Z_LAYER.nav} ${FIXED_LAYER_SHIFT} [mask-image:linear-gradient(to_bottom,transparent,black_0.75rem)]`}
         style={{
-          height: `calc(${ABOVE_PILL} + var(${ACTION_BAR_SPACE_VAR}, 4.5rem) + 0.5rem)`,
+          // 2 rem unter den Rand: Die Zone reicht auch bei verschobenem
+          // Fenster (Tastatur, Ansicht) bis ganz unten.
+          height: `calc(${ABOVE_PILL} + var(${ACTION_BAR_SPACE_VAR}, 4.5rem) + 2.5rem)`,
         }}
       />
       <div
