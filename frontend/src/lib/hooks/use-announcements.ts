@@ -48,10 +48,18 @@ export function useAnnouncements() {
 
   // Revalidate on route change (since component stays mounted in layout)
   useEffect(() => {
-    if (previousPathname.current !== pathname) {
-      previousPathname.current = pathname;
-      void mutate();
-    }
+    if (previousPathname.current === pathname) return;
+    previousPathname.current = pathname;
+    // Route changes reuse this layout. Fetch after the next paint, so an
+    // unread notice cannot make the incoming page do another render first.
+    let task: ReturnType<typeof setTimeout> | undefined;
+    const frame = requestAnimationFrame(() => {
+      task = setTimeout(() => void mutate(), 0);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(task);
+    };
   }, [pathname, mutate]);
 
   const dismiss = async (id: string) => {
