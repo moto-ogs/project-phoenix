@@ -105,6 +105,12 @@ export interface TenantPageProps extends TenantPageSearchRowProps {
   /** Zeigt statt der Statuszeile ein Skelett. */
   readonly statsLoading?: boolean;
   /**
+   * App (#8070): Die Kennzahlen stehen in der Titelzeile statt in einer
+   * eigenen Zeile. Für Listen, die jede Zeile für Einträge brauchen; Titel
+   * und Chips müssen dann kurz sein.
+   */
+  readonly appStatsInline?: boolean;
+  /**
    * Erklärung der Seite, die man zum Kennenlernen braucht, aber nicht jeden
    * Tag liest. Sie liegt hinter einem Info-Knopf neben dem Titel und kostet
    * im Alltag keine Zeile (#4385). Per Tipp, Klick und Tastatur erreichbar,
@@ -635,6 +641,7 @@ function TenantPageView({
   title,
   stats,
   statsLoading = false,
+  appStatsInline = false,
   info,
   actions,
   leading,
@@ -891,6 +898,7 @@ function TenantPageView({
             actions={actions}
             overflowMenu={overflowMenu}
             statusLine={statusLine}
+            statsInline={appStatsInline}
             printHideHeader={printHideHeader}
             tabs={tabs ? <AppTenantTabs {...tabs} /> : undefined}
             toolbar={

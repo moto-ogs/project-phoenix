@@ -71,6 +71,8 @@ export interface AppHeadProps {
   readonly actions?: ReactNode;
   readonly overflowMenu?: readonly OverflowMenuEntry[];
   readonly statusLine?: ReactNode;
+  /** Kennzahlen in der Titelzeile statt darunter (`appStatsInline`). */
+  readonly statsInline?: boolean;
   /** Reiter als Chips. */
   readonly tabs?: ReactNode;
   /** Suche, Filter oder ein Bedienband (`searchSlot`). */
@@ -99,6 +101,7 @@ export function AppTenantHead({
   actions,
   overflowMenu,
   statusLine,
+  statsInline = false,
   tabs,
   toolbar,
   printHideHeader = false,
@@ -155,7 +158,8 @@ export function AppTenantHead({
           <h1
             suppressHydrationWarning
             className={cn(
-              "tablet:text-xl min-w-0 flex-1 truncate text-lg leading-7 font-semibold tracking-tight text-gray-900",
+              "tablet:text-xl min-w-0 truncate text-lg leading-7 font-semibold tracking-tight text-gray-900",
+              statsInline && statusLine != null ? "shrink-0" : "flex-1",
               // Bündig: ohne Zurück-Pfeil 16 px vom Rand wie die Chips, nach
               // dem Pfeil ohne zusätzlichen Einzug.
               backLink
@@ -165,10 +169,17 @@ export function AppTenantHead({
           >
             {title}
           </h1>
+          {statsInline && statusLine != null ? (
+            <AppHeadStatsContext.Provider value={true}>
+              <div className="flex min-w-0 flex-1 [scrollbar-width:none] overflow-x-auto text-sm text-gray-600">
+                {statusLine}
+              </div>
+            </AppHeadStatsContext.Provider>
+          ) : null}
           <div className={ICON_ACTIONS_ONLY}>{actions}</div>
           {menuButton}
         </div>
-        {statusLine != null && (
+        {statusLine != null && !statsInline && (
           <AppHeadStatsContext.Provider value={true}>
             {/* Chips beginnen an der Titelkante (ohne Pfeil 16 px, nach
                 dem Pfeil 52 px vom Kartenrand). */}
