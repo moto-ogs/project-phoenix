@@ -632,6 +632,14 @@ export function TimetableRosterApp({
     );
   }
 
+  const footer =
+    moreAdd.length > 0 || listFooter ? (
+      <div className="flex flex-col gap-3">
+        {moreAdd}
+        {listFooter}
+      </div>
+    ) : null;
+
   const notes = [
     viewOnly ? TIMETABLE_VIEW_ONLY_NOTICE : null,
     overbookedNote,
@@ -653,21 +661,22 @@ export function TimetableRosterApp({
         list={list}
         detail={
           splitRow ? (
-            <SupervisionChildDetail
-              row={splitRow}
-              href={studentProfileHref?.(splitRow)}
-              context={contextFor(splitRow, false)}
-            />
+            // Am iPad quer stehen die Karten vom Listenende (Kinder
+            // unterwegs, beendete Blöcke) unter dem Kind in der rechten
+            // Spalte statt unter der ganzen Fläche.
+            <div className="flex flex-col gap-4">
+              <SupervisionChildDetail
+                row={splitRow}
+                href={studentProfileHref?.(splitRow)}
+                context={contextFor(splitRow, false)}
+              />
+              {footer}
+            </div>
           ) : null
         }
         empty="Tippe links auf ein Kind, um es hier zu sehen."
       />
-      {moreAdd.length > 0 || listFooter ? (
-        <div className="flex flex-col gap-3">
-          {moreAdd}
-          {listFooter}
-        </div>
-      ) : null}
+      {isSplit && splitRow ? null : footer}
 
       <SupervisionChildSheet
         row={sheetRow}
