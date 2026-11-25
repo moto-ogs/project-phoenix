@@ -442,6 +442,29 @@ html[data-action-bar-column="all"] [data-split-view] > * {
   max-height: calc(100% - var(--app-action-bar-space, 0px));
 }
 
+/* Gruppenköpfe der Collection in der App (#8070): Der Kopf klebt nur in
+   seiner Gruppe. Nach dem Scrollen rastet die Liste an Zeilenkanten ein,
+   damit unter dem klebenden Kopf kein angeschnittener Zeilenrest steht und
+   kein Kopf über einer fremden Zeile. `proximity` lässt freie Stellen zu,
+   wenn keine Kante nah ist (Seitenende, Inhalt ohne Zeilen). */
+@media (width < 64rem), (pointer: coarse) {
+  html:has([data-collection-group]):not([data-split-page]),
+  [data-split-view] > [data-split-list]:has([data-collection-group]) {
+    scroll-snap-type: y proximity;
+  }
+
+  [data-collection-group] {
+    scroll-snap-align: start;
+    scroll-margin-top: var(--app-sticky-offset, 0px);
+  }
+
+  [data-collection-group] > ul > [data-collection-row] {
+    scroll-snap-align: start;
+    /* Unter dem Kopf der Gruppe (36 px hoch). */
+    scroll-margin-top: calc(var(--app-sticky-offset, 0px) + 2.25rem);
+  }
+}
+
 /* Deckende Zonen der App (#8070): hinter der schmalen Kopfkarte, der
    klebenden Leiste und zwischen ActionBar und Pill. Gleicher Grund wie die
    Seite; das Muster hängt am Fenster und läuft so mit dem Seitenmuster. */
