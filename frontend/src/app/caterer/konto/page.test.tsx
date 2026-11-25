@@ -64,7 +64,7 @@ vi.mock("~/lib/email-code-factor-api", () => ({
   }),
 }));
 
-import CatererAccountPage from "./page";
+import CatererAccountPage from "./page-content";
 
 const originalFetch = global.fetch;
 

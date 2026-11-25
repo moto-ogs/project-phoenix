@@ -38,7 +38,7 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 
-import TraegerDocumentKindsPage from "./page";
+import TraegerDocumentKindsPage from "./page-content";
 
 function overview(
   care: "invoice" | "fee_notice",

@@ -51,7 +51,7 @@ vi.mock("~/lib/parent-conferences", async (importOriginal) => ({
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { ParentConference } from "~/lib/parent-conferences";
 import { ApiError } from "~/lib/api-error";
-import SchoolParentConferencePage from "./page";
+import SchoolParentConferencePage from "./page-content";
 
 const day: ParentConference = {
   id: "5",

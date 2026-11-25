@@ -23,7 +23,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import TraegerAbsenceTypesPage from "./page";
+import TraegerAbsenceTypesPage from "./page-content";
 
 const REGENERATION: TraegerAbsenceType = {
   id: "7",

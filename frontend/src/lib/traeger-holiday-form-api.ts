@@ -43,7 +43,7 @@ export interface HolidayForm {
  * enum of a question or legal block fails the read when this build does
  * not know it; the page shows its load error instead of saving a guess.
  */
-function formFromBackend(
+export function formFromBackend(
   form: traegerHolidayPeriodsContract.HolidayFormEditor,
 ): HolidayForm {
   return {

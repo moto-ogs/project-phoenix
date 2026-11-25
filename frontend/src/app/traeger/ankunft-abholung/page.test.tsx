@@ -44,7 +44,7 @@ vi.mock("~/env.client", () => ({
   },
 }));
 
-import TraegerArrivalPickupPage from "./page";
+import TraegerArrivalPickupPage from "./page-content";
 import { testClockDay } from "~/test/clock";
 
 /** The last four weeks up to yesterday, relative to the test clock. */

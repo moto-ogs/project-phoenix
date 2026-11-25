@@ -707,7 +707,14 @@ export async function fetchCareContracts(
 }
 
 export async function fetchConclusionModes(): Promise<SchoolConclusionMode[]> {
-  const rows = await bffJson("org", "GET /traeger/contracts/conclusion-modes");
+  return mapConclusionModes(
+    await bffJson("org", "GET /traeger/contracts/conclusion-modes"),
+  );
+}
+
+export function mapConclusionModes(
+  rows: traegerContractsContract.SchoolConclusion[],
+): SchoolConclusionMode[] {
   return rows.map((row) => ({
     schoolId: row.school_id,
     schoolName: row.school_name,
@@ -851,7 +858,14 @@ async function downloadContractFile(
 }
 
 export async function fetchContractTemplates(): Promise<OfferingTemplate[]> {
-  const rows = await bffJson("org", "GET /traeger/contract-templates/");
+  return mapContractTemplates(
+    await bffJson("org", "GET /traeger/contract-templates/"),
+  );
+}
+
+export function mapContractTemplates(
+  rows: traegerContractTemplatesContract.OfferingTemplate[],
+): OfferingTemplate[] {
   return rows.map(offeringFromBackend);
 }
 

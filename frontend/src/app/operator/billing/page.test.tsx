@@ -87,7 +87,7 @@ vi.mock("~/lib/operator/provisioning-api", () => ({
   },
 }));
 
-import OperatorBillingPage from "./page";
+import OperatorBillingPage from "./page-content";
 
 const keyDay: BillingKeyDay = {
   keyDay: 15,

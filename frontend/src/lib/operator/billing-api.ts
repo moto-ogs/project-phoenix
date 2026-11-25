@@ -63,7 +63,7 @@ export interface BillingKeyDayOverride {
 export const BILLING_KEY_DAY_MIN = 1;
 export const BILLING_KEY_DAY_MAX = 28;
 
-function mapBillingKeyDay(
+export function mapBillingKeyDay(
   data: operatorBillingContract.billingKeyDayResponse,
 ): BillingKeyDay {
   return {

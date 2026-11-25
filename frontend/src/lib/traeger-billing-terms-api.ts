@@ -200,7 +200,7 @@ function invoiceMandateFromBackend(
 }
 
 // A service this build does not know has no form: its entry is left out.
-function termsFromBackend(
+export function termsFromBackend(
   body: traegerBillingTermsContract.BillingTermsResponse,
 ): BillingTerms {
   return {

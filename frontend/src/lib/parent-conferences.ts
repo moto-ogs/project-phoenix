@@ -71,15 +71,19 @@ export function mapParentConferenceOffer(
 
 export const SCHOOL_PARENT_CONFERENCES_ROUTE = "/school/elternsprechtag";
 
-export async function fetchSchoolParentConferences(): Promise<SchoolParentConferenceList> {
-  const data = await bffJson(
-    "school",
-    "GET /school/calendar/parent-conferences",
-  );
+export function mapSchoolParentConferences(
+  data: schoolCalendarContract.SchoolParentConferenceList,
+): SchoolParentConferenceList {
   return {
     conferences: (data.conferences ?? []).map(mapConference),
     classes: data.classes ?? [],
   };
+}
+
+export async function fetchSchoolParentConferences(): Promise<SchoolParentConferenceList> {
+  return mapSchoolParentConferences(
+    await bffJson("school", "GET /school/calendar/parent-conferences"),
+  );
 }
 
 export async function createSchoolParentConference(

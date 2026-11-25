@@ -17,7 +17,7 @@ vi.mock("~/components/settings/trusted-devices-section", () => ({
   ),
 }));
 
-import TraegerAccountPage from "./page";
+import TraegerAccountPage from "./page-content";
 
 const PROFILE = {
   accountId: "4",

@@ -13,7 +13,7 @@ import type {
   ContractCorrectionRow,
   ContractCorrectionRun,
 } from "~/lib/traeger-contract-correction-api";
-import TraegerContractCorrectionPage from "./page";
+import TraegerContractCorrectionPage from "./page-content";
 
 const api = vi.hoisted(() => ({
   previewContractCorrections: vi.fn(),

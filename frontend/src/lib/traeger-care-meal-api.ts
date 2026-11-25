@@ -158,7 +158,7 @@ export function mealUnbilledFromBackend(
   }));
 }
 
-function mealTariffsFromBackend(
+export function mealTariffsFromBackend(
   body: traegerCareMealTariffsContract.CareMealTariffs,
 ): CareMealTariffs {
   return {

@@ -37,7 +37,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import TraegerStaffProofsPage from "./page";
+import TraegerStaffProofsPage from "./page-content";
 
 const police = {
   id: "7",
