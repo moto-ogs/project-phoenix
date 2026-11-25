@@ -337,7 +337,13 @@ export function FilterPanel({
             testId={`filter-${filter.id}`}
             value={filter.value as string}
             onChange={(next) => filter.onChange(next)}
-            className="font-medium"
+            // App (#8070): Die neutrale Wahl („Alle Räume“) sieht aus wie
+            // der Platzhalter der Mehrfachauswahl daneben, nicht wie ein
+            // gesetzter Filter.
+            className={cn(
+              "font-medium",
+              isNeutralChoice(filter) && "app:[&_.text-gray-900]:text-gray-500",
+            )}
             wrapLabels={filter.wrapLabels}
             options={filter.options.map((option) => ({
               value: option.value,
@@ -568,5 +574,15 @@ function useAnchorButton(
       },
     }),
     [anchorRef],
+  );
+}
+
+/** Die erste Wahl „alle“ (Wert leer oder `all`) ist gewählt. */
+function isNeutralChoice(filter: FilterConfig): boolean {
+  const first = filter.options[0];
+  return (
+    first !== undefined &&
+    first.value === filter.value &&
+    (first.value === "" || first.value === "all")
   );
 }
