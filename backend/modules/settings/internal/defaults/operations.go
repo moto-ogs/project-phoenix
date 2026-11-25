@@ -379,7 +379,7 @@ var operations_init_zeiterfassung_7Definitions = []config.Definition{
 	{
 		Key:             config.KeyTimeTrackingTerminalOnlyStamping,
 		Label:           "Betreuer stempeln nur am NFC-Tablet",
-		Description:     "Wer keine Zeiten anderer verwalten darf, stempelt nur noch mit dem eigenen Armband am NFC-Tablet. In der App stempeln diese Personen nicht mehr und ändern ihre Zeiten nicht selbst. Die Leitung stempelt weiter in der App und korrigiert Zeiten. Jede Person braucht ein eigenes Armband. Zeiten für unterwegs trägt die Leitung nach.",
+		Description:     "Wer keine Zeiten anderer verwalten darf, stempelt nur mit dem eigenen Armband am NFC-Tablet. In der App stempeln und Zeiten ändern kann dann nur die Leitung. Sie trägt auch Zeiten für unterwegs nach. Jede Person braucht ein eigenes Armband.",
 		Type:            config.FieldBoolean,
 		Default:         false,
 		ReadPermission:  "config:read",

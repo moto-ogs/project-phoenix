@@ -840,7 +840,7 @@ function ClockInCard({
             tone="neutral"
             icon={<MotoConceptIcon concept={rfidConcept} />}
             title="Du stempelst am NFC-Tablet"
-            description="Halte dein Armband an das Tablet. In der App kannst du nicht stempeln."
+            description="Halte dein Armband an das Tablet. In der App geht das nicht."
             action={
               <Button
                 type="button"
@@ -1099,10 +1099,10 @@ function ClockInCard({
             </div>
 
             {terminalOnly && (
-              <p className="mb-5 flex items-center justify-center gap-1.5 text-center text-sm text-gray-500">
+              <p className="mb-5 text-center text-sm text-gray-500">
                 <MotoConceptIcon
                   concept={rfidConcept}
-                  className="h-4 w-4 shrink-0"
+                  className="mr-1.5 inline-block h-4 w-4 align-text-bottom"
                   aria-hidden
                 />
                 Pause und Ausstempeln machst du am NFC-Tablet.

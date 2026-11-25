@@ -110,6 +110,9 @@ const EDIT_REASON_PRESETS = [
   "Krankheit",
   "Ort-Änderung",
 ] as const;
+// Mit gesperrten Zeiten (#8024) bleibt nur der Ort zu ändern: Gründe für eine
+// Zeitänderung führen dort in die Irre.
+const LOCKED_TIMES_REASON_PRESETS = ["Ort-Änderung"] as const;
 
 function timeInputToMinutes(value: string): number | null {
   const [hoursRaw, minutesRaw] = value.split(":");
@@ -879,7 +882,10 @@ export function EditSessionModal({
                   Grund der Änderung
                 </FieldLabel>
                 <div className="mb-2 flex flex-wrap gap-1.5">
-                  {EDIT_REASON_PRESETS.map((reason) => (
+                  {(timesLocked
+                    ? LOCKED_TIMES_REASON_PRESETS
+                    : EDIT_REASON_PRESETS
+                  ).map((reason) => (
                     <ToggleChip
                       key={reason}
                       pressed={notes === reason}
