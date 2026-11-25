@@ -746,14 +746,8 @@ function NowCard({
             analytics={now.analytics.data}
             today={now.today}
             wrap
-            lead={
-              <time
-                dateTime={`${now.today}T${now.now}`}
-                className="shrink-0 font-semibold text-gray-500 tabular-nums"
-              >
-                {now.now}
-              </time>
-            }
+            // Ohne Uhrzeit davor: Sie stand unbeschriftet vor „Als
+            // Nächstes“, und die Uhr zeigt das Gerät ohnehin oben an.
             extra={
               now.presentCount !== undefined || stampText ? (
                 <>
