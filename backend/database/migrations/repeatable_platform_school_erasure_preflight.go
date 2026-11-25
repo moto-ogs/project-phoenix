@@ -214,6 +214,7 @@ AS $function$
     schedule.meal_participation_overrides,
     schedule.meal_participation_schedules,
     schedule.meal_plan_entries,
+    schedule.meal_cancellations,
     schedule.meal_sickness_status_history,
     schedule.pickup_extension_tasks,
     schedule.planning_tracks,
@@ -332,7 +333,7 @@ AS $function$
      WHERE f.contype='f' AND pn.nspname || '.' || pc.relname IN
       (SELECT item->>'name' FROM jsonb_array_elements(v_plan) AS item)
      GROUP BY f.oid,cn.nspname,cc.relname,f.conname,pn.nspname,pc.relname,f.confdeltype
-    ) AS edge) <> '6b46241e82dac28d05c6360467a0729ddd58ed085096b6b9ed693654d4335605' THEN
+    ) AS edge) <> 'b86f0d7ed5f163a2fd7cfef4e3a5c0e162f83958d7ae602e98af310d64351f89' THEN
     RAISE EXCEPTION 'school erasure foreign keys changed; review plan' USING ERRCODE = '55000';
    END IF;
    -- Generated incoming-FK scope checks. Never cascade into foreign rows.

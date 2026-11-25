@@ -3,6 +3,7 @@
   "description": "Lista tregon të gjithë fëmijët e regjistruar për drekë në këtë ditë.",
   "cutoff": "Afati i porosisë për këtë ditë: {date}.",
   "closedDay": "Në këtë ditë {careTerm} është e mbyllur. Nuk ka drekë.",
+  "mealCancelledDay": "Në këtë ditë dreka anulohet. Rezervimet për këtë ditë nuk vlejnë.",
   "child": "Fëmija",
   "class": "Klasa",
   "dateAria": "Data: {date}",

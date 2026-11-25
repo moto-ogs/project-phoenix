@@ -340,6 +340,32 @@ describe("MealOrderWeek", () => {
     );
   });
 
+  it("names a day without lunch apart from a closed day (#7656)", async () => {
+    mocks.getMealOrders.mockResolvedValue({
+      rhythm: "daily",
+      detail: "by_class",
+      days: [
+        {
+          date: "2026-09-07",
+          closed: true,
+          mealCancelled: true,
+          deadline: "2026-09-07T07:00:00Z",
+          status: "open",
+          confirmedAt: null,
+          total: 0,
+          classes: [],
+          changes: [],
+        },
+      ],
+    });
+    render(<MealOrderWeek mondayISO="2026-09-07" canExportMonth={false} />, {
+      wrapper: ToastProvider,
+    });
+
+    expect(await screen.findAllByText("Essen fällt aus")).not.toHaveLength(0);
+    expect(screen.queryByText(/geschlossen/)).not.toBeInTheDocument();
+  });
+
   it("marks past days without an order as not ordered", async () => {
     mocks.getMealOrders.mockResolvedValue({
       rhythm: "daily",

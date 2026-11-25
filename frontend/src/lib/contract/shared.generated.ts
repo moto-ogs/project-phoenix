@@ -937,6 +937,15 @@ export const DayAppointmentSchema: z.ZodType<DayAppointment, unknown> = object<D
   time_changed: bool,
 });
 
+/** Go: daychangesview.DayMealCancellation */
+export interface DayMealCancellation {
+  reason: string;
+}
+
+export const DayMealCancellationSchema: z.ZodType<DayMealCancellation, unknown> = object<DayMealCancellation>({
+  reason: str,
+});
+
 /** Go: daychangesview.Entry */
 export interface Entry {
   kind: OpenEnum<Kind>;
@@ -960,6 +969,7 @@ export interface Entry {
   previous_room: BlockRoom | null;
   class: DayClass | null;
   appointment: DayAppointment | null;
+  meal_cancellation: DayMealCancellation | null;
 }
 
 export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
@@ -984,6 +994,7 @@ export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
   previous_room: nullable(BlockRoomSchema),
   class: nullable(DayClassSchema),
   appointment: nullable(DayAppointmentSchema),
+  meal_cancellation: nullable(DayMealCancellationSchema),
 });
 
 /** Go: daychangesview.Overview */

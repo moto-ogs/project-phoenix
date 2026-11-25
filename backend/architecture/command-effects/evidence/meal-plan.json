@@ -2,7 +2,7 @@
   "entries": [
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "04786964149a6bb3b13e6b9659636245",
+      "binding_digest": "f93c38b71584a618bf98b4ca151d2542",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
@@ -10,7 +10,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "4412b926d60a09930ccb7426555663d9",
+      "binding_digest": "a7c4a6b2cb6b5fab6b40b6173a6a0a50",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentNamesByID",
@@ -18,7 +18,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "5678515767515103c216124cd1b633e2",
+      "binding_digest": "211b93a2a592ffdd56c737207b3c12d9",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentNamesByID",
@@ -26,7 +26,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "e0b5978367b9329a2b876b4bbbc97420",
+      "binding_digest": "9c4f82baa21901131e109f5ba2a59921",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
@@ -34,7 +34,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "af5bcc815a7c31ada2afd805e2051403",
+      "binding_digest": "fdddec7620921b2b5f7a6ef5c2162316",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
@@ -42,7 +42,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "a1ce08a07c178632505c56978da6a47f",
+      "binding_digest": "1761adb9f7cde4c5b0dba4464b70e39e",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
@@ -50,26 +50,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "2e4132b083f3c9b7817dd0246ef9270e",
+      "binding_digest": "b1c28014808ee334e386903f4b4947f2",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "c5c521334e171c8da91335bea1f3c046",
+      "binding_digest": "bfc8b3f91579313ec5a84396ac06a16b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "8b70d5e9c933dfd6d6be88b5be99a20a",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -98,7 +90,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "14450b3ac7dbe6abe98b17f40097be29",
+      "binding_digest": "832889c7853d220015d6a8ede310db22",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
@@ -130,7 +122,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "04786964149a6bb3b13e6b9659636245",
+      "binding_digest": "f93c38b71584a618bf98b4ca151d2542",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
@@ -138,7 +130,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "4412b926d60a09930ccb7426555663d9",
+      "binding_digest": "a7c4a6b2cb6b5fab6b40b6173a6a0a50",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentNamesByID",
@@ -146,7 +138,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "5678515767515103c216124cd1b633e2",
+      "binding_digest": "211b93a2a592ffdd56c737207b3c12d9",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentNamesByID",
@@ -154,7 +146,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "e0b5978367b9329a2b876b4bbbc97420",
+      "binding_digest": "9c4f82baa21901131e109f5ba2a59921",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
@@ -162,7 +154,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "af5bcc815a7c31ada2afd805e2051403",
+      "binding_digest": "fdddec7620921b2b5f7a6ef5c2162316",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
@@ -170,7 +162,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "a1ce08a07c178632505c56978da6a47f",
+      "binding_digest": "1761adb9f7cde4c5b0dba4464b70e39e",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
@@ -178,26 +170,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "2e4132b083f3c9b7817dd0246ef9270e",
+      "binding_digest": "b1c28014808ee334e386903f4b4947f2",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "c5c521334e171c8da91335bea1f3c046",
+      "binding_digest": "bfc8b3f91579313ec5a84396ac06a16b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "8b70d5e9c933dfd6d6be88b5be99a20a",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -226,7 +210,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "14450b3ac7dbe6abe98b17f40097be29",
+      "binding_digest": "832889c7853d220015d6a8ede310db22",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
@@ -282,26 +266,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.CatererOrders",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.CatererOrders",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.CatererOrders",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.CatererOrders",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.CatererOrders",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.CatererOrders",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -362,26 +338,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearParticipationBySchool",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearParticipationBySchool",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearParticipationBySchool",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationBySchool",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -442,26 +410,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearParticipationForDay",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationForDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearParticipationForDay",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationForDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearParticipationForDay",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationForDay",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -506,26 +466,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.DailyList",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.DailyList",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.DailyList",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.DailyList",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.DailyList",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.DailyList",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -594,26 +546,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.Orders",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.Orders",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.Orders",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.Orders",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.Orders",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.Orders",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -634,26 +578,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.Participation",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.Participation",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.Participation",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.Participation",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.Participation",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.Participation",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -674,26 +610,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ParticipationBySchool",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ParticipationBySchool",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ParticipationBySchool",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ParticipationBySchool",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -730,26 +658,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ReplaceDay",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ReplaceDay",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ReplaceDay",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceDay",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -810,26 +730,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ReplaceParticipationSchedule",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceParticipationSchedule",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ReplaceParticipationSchedule",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceParticipationSchedule",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ReplaceParticipationSchedule",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceParticipationSchedule",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -890,26 +802,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ReplaceScheduleBySchool",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceScheduleBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ReplaceScheduleBySchool",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceScheduleBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ReplaceScheduleBySchool",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceScheduleBySchool",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -970,26 +874,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationBySchool",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationBySchool",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationBySchool",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationBySchool",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -1050,26 +946,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationForDay",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationForDay",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationForDay",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForDay",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -1114,26 +1002,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationForWeek",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForWeek",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationForWeek",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForWeek",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationForWeek",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForWeek",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -1170,26 +1050,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SettleOrders",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SettleOrders",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SettleOrders",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SettleOrders",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SettleOrders",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SettleOrders",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -1234,26 +1106,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.WeeklyList",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.WeeklyList",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.WeeklyList",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.WeeklyList",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.WeeklyList",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.WeeklyList",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -1306,32 +1170,88 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.CatererOrderSummary",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.CatererSummaries.CatererOrderSummary",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.CatererOrderSummary",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.CatererSummaries.CatererOrderSummary",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.CatererOrderSummary",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.CatererSummaries.CatererOrderSummary",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.CatererOrderSummary",
       "binding_digest": "275d569f6676259283e27edd6fa3285f",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.CatererSummaries.CatererOrderSummary",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.cancellations.CancelMeal",
+      "binding_digest": "74988094176d6277ca72ef2fa7dd1d72",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MealCancellations.CancelMeal",
+      "source_owner": "meal-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.cancellations.CancelMeal",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MealCancellations.CancelMeal",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
+      "target_owner": "school-calendar"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.cancellations.CancelMeal",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MealCancellations.CancelMeal",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
+      "target_owner": "school-calendar"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.cancellations.CancelMeal",
+      "binding_digest": "275d569f6676259283e27edd6fa3285f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MealCancellations.CancelMeal",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.cancellations.MealCancellations",
+      "binding_digest": "74988094176d6277ca72ef2fa7dd1d72",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MealCancellations.MealCancellations",
+      "source_owner": "meal-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.cancellations.MealCancellations",
+      "binding_digest": "275d569f6676259283e27edd6fa3285f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MealCancellations.MealCancellations",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.cancellations.RestoreMeal",
+      "binding_digest": "74988094176d6277ca72ef2fa7dd1d72",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MealCancellations.RestoreMeal",
+      "source_owner": "meal-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.cancellations.RestoreMeal",
+      "binding_digest": "275d569f6676259283e27edd6fa3285f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MealCancellations.RestoreMeal",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -1409,9 +1329,9 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/adapters/postgres.MenuChanges.MenuChangedOn",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/adapters/postgres.MenuChanges.MenuDayOn",
       "binding_digest": "275d569f6676259283e27edd6fa3285f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChanges.MenuChangedOn",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChanges.MenuDayOn",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -1474,26 +1394,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationBySchool",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationBySchool",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationBySchool",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationBySchool",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -1554,26 +1466,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationForDay",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationForDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationForDay",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationForDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationForDay",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationForDay",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -1602,26 +1506,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.DailyList",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.DailyList",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.DailyList",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.DailyList",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.DailyList",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.DailyList",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -1642,26 +1538,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.Participation",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.Participation",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.Participation",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.Participation",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.Participation",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.Participation",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -1682,26 +1570,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ParticipationBySchool",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ParticipationBySchool",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ParticipationBySchool",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ParticipationBySchool",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -1770,26 +1650,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceParticipationSchedule",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceParticipationSchedule",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceParticipationSchedule",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceParticipationSchedule",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceParticipationSchedule",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceParticipationSchedule",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -1850,26 +1722,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceScheduleBySchool",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceScheduleBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceScheduleBySchool",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceScheduleBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceScheduleBySchool",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceScheduleBySchool",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -1930,26 +1794,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationBySchool",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationBySchool",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationBySchool",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationBySchool",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -2010,26 +1866,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForDay",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForDay",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForDay",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForDay",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -2074,26 +1922,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForWeek",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForWeek",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForWeek",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForWeek",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForWeek",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForWeek",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -2122,26 +1962,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.WeeklyList",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.WeeklyList",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.WeeklyList",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.WeeklyList",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.WeeklyList",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.WeeklyList",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
@@ -2194,27 +2026,51 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.schoolCalendar.Days",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
+      "binding_digest": "29f009533d5c1082e0e9437a4ac35d4b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.Calendar.Days",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.CareCalendarDays",
       "target_owner": "school-calendar"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.schoolCalendar.Days",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
+      "binding_digest": "9275f4751f7bcda0c64b5bac077a8712",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.Calendar.Days",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.TenantHolidayDates",
       "target_owner": "school-calendar"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.schoolCalendar.Days",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
+      "binding_digest": "275d569f6676259283e27edd6fa3285f",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.Calendar.Days",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
-      "target_owner": "school-calendar"
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/adapters/postgres.Cancellations.DeleteCancellation",
+      "binding_digest": "275d569f6676259283e27edd6fa3285f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.CancellationStore.DeleteCancellation",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/adapters/postgres.Cancellations.FindCancellations",
+      "binding_digest": "275d569f6676259283e27edd6fa3285f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.CancellationStore.FindCancellations",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/adapters/postgres.Cancellations.SaveCancellation",
+      "binding_digest": "275d569f6676259283e27edd6fa3285f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.CancellationStore.SaveCancellation",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.participantDirectory.FindCandidatesOnDates",

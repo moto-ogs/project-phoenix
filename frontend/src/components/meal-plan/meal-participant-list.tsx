@@ -297,7 +297,9 @@ export function MealParticipantList({
     isWeek || (!closed && !deadline)
       ? null
       : closed
-        ? t("closedDay")
+        ? dayList?.mealCancelled
+          ? t("mealCancelledDay")
+          : t("closedDay")
         : t("cutoff", {
             date: new Date(deadline).toLocaleString(locale, {
               weekday: "short",

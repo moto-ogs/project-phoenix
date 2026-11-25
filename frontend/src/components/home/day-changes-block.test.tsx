@@ -482,6 +482,27 @@ describe("DayChangesBlock: Speiseplan (#7666)", () => {
     });
   });
 
+  it("nennt das ausgefallene Mittagessen mit dem Grund der Schule (#7656)", () => {
+    serve({
+      entries: [
+        change({
+          kind: "meal_cancelled",
+          mealCancellation: { reason: "Der Caterer liefert nicht" },
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    expect(
+      screen.getByText(
+        "Das Mittagessen fällt heute aus: Der Caterer liefert nicht.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Heute läuft alles wie geplant."),
+    ).not.toBeInTheDocument();
+  });
+
   it("nennt eine ausgefallene Quelle Speiseplan und gibt keine Entwarnung", () => {
     serve({ failedSources: ["meal_plan"] });
     render(<DayChangesBlock />);

@@ -3,6 +3,7 @@
   "description": "Liste, o gün öğle yemeğine kayıtlı tüm çocukları gösterir.",
   "cutoff": "Bu günün sipariş son tarihi: {date}.",
   "closedDay": "{careTerm} bu gün kapalı. Öğle yemeği yok.",
+  "mealCancelledDay": "Bu gün öğle yemeği iptal. Bu günün rezervasyonları geçerli değil.",
   "child": "Çocuk",
   "class": "Sınıf",
   "dateAria": "Tarih: {date}",

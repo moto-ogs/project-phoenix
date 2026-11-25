@@ -1,0 +1,7 @@
+{
+  "scenario": "api.mealplan.cancellations",
+  "max": 8,
+  "exact": true,
+  "description": "Production Serve root, positive N=3/8 days without lunch (#7656); full route SQL excluding only independently budgeted session-family verification. One statement reads the window's cancellations. Fixed March 2080 meal fixture.",
+  "route": "GET /api/meal-plan/cancellations"
+}

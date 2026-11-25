@@ -90,6 +90,7 @@ var mealPlanErrorRules = []apiCommon.ErrorRule{
 	{Target: mealplanModule.ErrDisabled, Render: apiCommon.FixedCodedRenderer(apiCommon.ErrorForbiddenWithCode, errors.New(mealplanModule.ErrDisabled.Detail), apiCommon.CodeMealsPlanDisabled)},
 	{Target: mealplanModule.ErrInvalidMealDate, Render: apiCommon.FixedRenderer(apiCommon.ErrorInvalidRequest, errors.New(mealplanModule.ErrInvalidMealDate.Detail))},
 	{Target: mealplanModule.ErrInvalidDishes, Render: apiCommon.ErrorInvalidRequest},
+	{Target: mealplanModule.ErrInvalidMealCancellation, Render: apiCommon.FixedRenderer(apiCommon.ErrorInvalidRequest, errors.New(mealplanModule.ErrInvalidMealCancellation.Detail))},
 	{Target: mealplanModule.ErrInvalidAllergens, Render: apiCommon.FixedCodedRenderer(apiCommon.ErrorInvalidRequestWithCode, errors.New(mealplanModule.ErrInvalidAllergens.Detail), apiCommon.CodeMealsInvalidAllergens)},
 	{Target: mealplanModule.ErrRegistrationDisabled, Render: apiCommon.FixedCodedRenderer(apiCommon.ErrorForbiddenWithCode, errors.New(mealplanModule.ErrRegistrationDisabled.Detail), apiCommon.CodeMealsRegistrationDisabled)},
 	{Target: mealplanModule.ErrInvalidParticipation, Render: apiCommon.ErrorInvalidRequest},
@@ -106,6 +107,12 @@ func renderMealPlanFailure(w http.ResponseWriter, r *http.Request, err error, in
 }
 
 func newMealPlanResource(module mealplanModule.Capability, renderer SimpleListRenderer, menuChanged mealplanAPI.Middleware) *mealplanAPI.Resource {
+	return newMealPlanResourceWith(module, nil, renderer, menuChanged)
+}
+
+// newMealPlanResourceWith serves the Meal Plan with the school's days
+// without lunch (#7656); nil cancellations leave their routes out.
+func newMealPlanResourceWith(module mealplanModule.Capability, cancellations mealplanModule.MealCancellations, renderer SimpleListRenderer, menuChanged mealplanAPI.Middleware) *mealplanAPI.Resource {
 	return mealplanAPI.NewResource(module, mealplanAPI.Runtime{
 		Protected: func(router chi.Router, register func(chi.Router, mealplanAPI.Middleware)) {
 			ProtectedTenantRoutes(router, register)
@@ -127,6 +134,7 @@ func newMealPlanResource(module mealplanModule.Capability, renderer SimpleListRe
 		CurrentAccountID: func(ctx context.Context) int64 { return int64(sessiontoken.ClaimsFromCtx(ctx).ID) },
 		Allowed:          mealPlanAllowed,
 		MenuChanged:      menuChanged,
+		Cancellations:    cancellations,
 	})
 }
 

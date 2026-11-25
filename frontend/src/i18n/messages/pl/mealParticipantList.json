@@ -3,6 +3,7 @@
   "description": "Lista pokazuje wszystkie dzieci zapisane na obiad w tym dniu.",
   "cutoff": "Termin zamówienia na ten dzień: {date}.",
   "closedDay": "W tym dniu {careTerm} jest zamknięta. Nie ma obiadu.",
+  "mealCancelledDay": "W tym dniu obiad jest odwołany. Rezerwacje na ten dzień nie obowiązują.",
   "child": "Dziecko",
   "class": "Klasa",
   "dateAria": "Data: {date}",

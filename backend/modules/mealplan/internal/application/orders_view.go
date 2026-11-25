@@ -220,7 +220,7 @@ func buildOrderView(rules domain.OrderingRules, window orderWindow, current map[
 		if date.Weekday() == time.Saturday || date.Weekday() == time.Sunday {
 			continue
 		}
-		day := domain.OrderDay{Date: date, Closed: window.days.Closed[date], Deadline: rules.FreezeAt(date), Children: current[date].classes}
+		day := domain.OrderDay{Date: date, Closed: window.days.Closed[date], MealCancelled: window.days.Cancelled[date], Deadline: rules.FreezeAt(date), Children: current[date].classes}
 		if order, ordered := window.state.OrderFor(date); ordered {
 			day.Order, day.Deadline, day.Children = &order, order.DeadlineAt, window.state.OrderedChildren(date)
 			day.FrozenChildren = window.state.FrozenChildren(date)

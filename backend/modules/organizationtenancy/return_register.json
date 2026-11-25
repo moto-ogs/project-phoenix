@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "75d55452fe5d4975927d009c31ccf479d0b0e337a6bdea87d7c4bd73496b6e5b",
+  "catalogSHA256": "b32e0003728c096e9dc95c3be2da470942c2f6d59aa3233a19f00c19c1719e5b",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -30134,6 +30134,45 @@
           "column": "tenant_id",
           "targetTable": "users.student_profiles",
           "targetColumn": "tenant_id"
+        }
+      ],
+      "packages": [
+        "school"
+      ]
+    },
+    {
+      "name": "schedule.meal_cancellations",
+      "columns": [
+        {
+          "name": "tenant_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "tenant_id",
+          "targetTable": "platform.schools",
+          "targetColumn": "id"
         }
       ],
       "packages": [

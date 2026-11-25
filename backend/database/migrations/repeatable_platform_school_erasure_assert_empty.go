@@ -404,6 +404,8 @@ AS $function$
     UNION ALL
     SELECT 1 FROM schedule.meal_plan_entries AS r WHERE r.tenant_id = p_school_id
     UNION ALL
+    SELECT 1 FROM schedule.meal_cancellations AS r WHERE r.tenant_id = p_school_id
+    UNION ALL
     SELECT 1 FROM schedule.meal_sickness_status_history AS r WHERE r.tenant_id = p_school_id
     UNION ALL
     SELECT 1 FROM schedule.pickup_extension_tasks AS r WHERE r.tenant_id = p_school_id

@@ -2,7 +2,14 @@
 
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Copy, ClipboardPaste, Plus, Trash2, X } from "lucide-react";
+import {
+  Copy,
+  ClipboardPaste,
+  UtensilsCrossed,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 
 import { Button } from "~/components/ui/button";
 import { StickyActionBar } from "~/components/ui/sticky-action-bar";
@@ -56,6 +63,12 @@ import { MealParticipantList } from "~/components/meal-plan/meal-participant-lis
 import { MealCaterer } from "~/components/meal-plan/meal-caterer";
 import { MealBillingReleaseLink } from "~/components/meal-plan/meal-billing-release-link";
 import { MealOrderWeek } from "~/components/meal-plan/meal-order-week";
+import {
+  MealCancellationModal,
+  MealCancellationNotice,
+  useMealCancellations,
+  useRestoreMeal,
+} from "~/components/meal-plan/meal-cancellation";
 import {
   MealAllergenLegend,
   MealAllergenMarks,
@@ -323,6 +336,14 @@ export default function MealPlanPage() {
   }, [today, weekOffset]);
 
   const weekDates = useMemo(() => workWeekDates(mondayISO), [mondayISO]);
+  // Die Tage ohne Mittagessen (#7656); nur wer verwaltet, trägt sie ein.
+  const cancellations = useMealCancellations(
+    mondayISO,
+    weekDates[weekDates.length - 1] ?? mondayISO,
+    status === "authenticated" && canReadPlan && mealPlanEnabled === true,
+  );
+  const [cancelDate, setCancelDate] = useState<string | null>(null);
+  const restoreMeal = useRestoreMeal();
 
   const weekKey =
     status === "authenticated" && canReadPlan && mealPlanEnabled
@@ -897,6 +918,8 @@ export default function MealPlanPage() {
               const rows = drafts[date] ?? [];
               const isToday = date === today;
               const hasContent = dayHasContent(rows);
+              const cancelledReason = cancellations.get(date);
+              const dayName = `${weekdayLabel(date)}, ${shortDate(date)}`;
               return (
                 <div
                   key={date}
@@ -951,6 +974,42 @@ export default function MealPlanPage() {
                               destructive: true,
                               disabled: !hasContent || editingLocked,
                             },
+                            // Ein vergangener Tag bleibt, wie er war (#7656).
+                            ...(date < today
+                              ? []
+                              : cancelledReason === undefined
+                                ? [
+                                    {
+                                      label: "Essen fällt aus",
+                                      icon: (
+                                        <UtensilsCrossed className="h-4 w-4" />
+                                      ),
+                                      description:
+                                        "Trägt ein, dass es an diesem Tag kein Mittagessen gibt.",
+                                      onClick: () => setCancelDate(date),
+                                    },
+                                  ]
+                                : [
+                                    {
+                                      label: "Grund ändern",
+                                      icon: (
+                                        <UtensilsCrossed className="h-4 w-4" />
+                                      ),
+                                      description:
+                                        "Ändert den Grund, warum das Essen ausfällt.",
+                                      onClick: () => setCancelDate(date),
+                                    },
+                                    {
+                                      label: "Essen findet statt",
+                                      icon: (
+                                        <UtensilsCrossed className="h-4 w-4" />
+                                      ),
+                                      description:
+                                        "Nimmt den Ausfall sofort zurück. Die Buchungen gelten wieder.",
+                                      onClick: () =>
+                                        void restoreMeal(date, dayName),
+                                    },
+                                  ]),
                           ]}
                         />
                       )}
@@ -958,6 +1017,9 @@ export default function MealPlanPage() {
                   </div>
 
                   <div className="flex flex-1 flex-col gap-3 p-3">
+                    {cancelledReason !== undefined ? (
+                      <MealCancellationNotice reason={cancelledReason} />
+                    ) : null}
                     {rows.map((row, idx) => (
                       <InsetPanel
                         key={row.clientId}
@@ -1051,6 +1113,21 @@ export default function MealPlanPage() {
           ) : null}
         </div>
       </SectionCard>
+
+      {canEdit ? (
+        <MealCancellationModal
+          date={cancelDate}
+          dayLabel={
+            cancelDate
+              ? `${weekdayLabel(cancelDate)}, ${shortDate(cancelDate)}`
+              : ""
+          }
+          initialReason={
+            cancelDate ? (cancellations.get(cancelDate) ?? "") : ""
+          }
+          onClose={() => setCancelDate(null)}
+        />
+      ) : null}
 
       {canReadOrders ? (
         <MealOrderWeek

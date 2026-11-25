@@ -20,8 +20,8 @@ import (
 )
 
 // DayChangesMealPlanTestRig serves Meal Plan's staff routes under
-// /api/meal-plan (#7666), the write path whose change mark the overview
-// reads, with the Meal Plan's clock on the morning of today. Enable switches
+// /api/meal-plan (#7666), the write paths whose change mark and days without
+// lunch (#7656) the overview reads, with the Meal Plan's clock on the morning of today. Enable switches
 // the meal plan on for the school in ctx. Signals drains the
 // meal_plan_changed events a staff connection of each registered school
 // received, and whether any carried content.
@@ -41,7 +41,7 @@ func NewDayChangesMealPlanTestRig(db transactionruntime.Database, unit tenant.Un
 	}
 	people := NewPeopleRepositorySuiteFactory(db)
 	now := func() time.Time { return today.BerlinMidnight().Add(8 * time.Hour) }
-	meals, err := owners.BuildMealPlanAtForTests(db, settings.Settings, owners.NewStudentRootReads(people.Student), owners.MustNewPeopleDirectory(db), mealplanModule.MenuChangeNotices(nil), now)
+	meals, err := owners.BuildMealPlanServicesAtForTests(db, settings.Settings, owners.NewStudentRootReads(people.Student), owners.MustNewPeopleDirectory(db), mealplanModule.MenuChangeNotices(nil), now)
 	if err != nil {
 		return DayChangesMealPlanTestRig{}, err
 	}
@@ -49,7 +49,7 @@ func NewDayChangesMealPlanTestRig(db transactionruntime.Database, unit tenant.Un
 	connection := &realtime.Client{Channel: make(chan realtime.Event, 64), SubscribedGroups: map[string]bool{}}
 	router := chi.NewRouter()
 	router.Use(RequestIdentityCacheMiddleware)
-	router.Mount("/api/meal-plan", newMealPlanResource(meals, newMealPlanExportRenderer(), mealPlanChangeSignal(hub, slog.Default())).Router())
+	router.Mount("/api/meal-plan", newMealPlanResourceWith(meals.Capability, meals.Cancellations, newMealPlanExportRenderer(), mealPlanChangeSignal(hub, slog.Default())).Router())
 	return DayChangesMealPlanTestRig{
 		Router: router,
 		Enable: func(ctx context.Context) error {

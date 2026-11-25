@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -29,7 +30,28 @@ func (seedMealPlanChangeStep) Run(_ context.Context, rt *Runtime) error {
 		return fmt.Errorf("change meal plan %s: %w", day, err)
 	}
 	fmt.Printf("  meal plan of %s changed; the families with lunch booked that day are told\n", day)
+	if err := seedMealCancellation(rt, monday.AddDays(10)); err != nil {
+		return err
+	}
 	return seedTodaysMenuChange(rt, todaySeedDate())
+}
+
+// seedMealCancellation cancels lunch on Thursday next week (#7656): the
+// meal plan shows „Essen fällt aus“ with the reason, the kitchen list of the
+// day is empty. A closing day there is closed anyway and keeps no
+// cancellation.
+func seedMealCancellation(rt *Runtime, day seedDate) error {
+	_, err := rt.Client.Put("/api/meal-plan/days/"+day.String()+"/cancellation", map[string]any{"reason": "Der Caterer liefert an diesem Tag nicht."})
+	var refused *APIError
+	if errors.As(err, &refused) && refused.Code == "meals.day_closed" {
+		fmt.Printf("  %s is a closing day; no lunch to cancel\n", day)
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("cancel lunch on %s: %w", day, err)
+	}
+	fmt.Printf("  lunch on %s cancelled; the meal plan shows the reason\n", day)
+	return nil
 }
 
 // seedTodaysMenuChange changes today's published menu, so „Heute anders“

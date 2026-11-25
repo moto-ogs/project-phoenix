@@ -213,7 +213,9 @@ export function MealOrderWeek({
         key: "status",
         header: t("status"),
         render: (day) =>
-          day.closed ? (
+          day.mealCancelled ? (
+            <StatusBadge label={t("mealCancelled")} tone="gray" />
+          ) : day.closed ? (
             <StatusBadge label={t("closed")} tone="gray" />
           ) : day.status === "unordered" ? (
             <StatusBadge label={t("unordered")} tone="gray" />

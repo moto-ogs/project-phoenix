@@ -57,7 +57,7 @@ func captureMealRead(t *testing.T, api *goldenRuntime, counter *testpkg.QueryCou
 func prepareMealReadSnapshot(t *testing.T) func() map[string]string {
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
-	tables := []string{"meal_plan_entries", "meal_orders", "meal_order_days", "meal_order_lines", "meal_order_changes", "meal_order_change_counters", "meal_participation_schedules", "meal_participation_overrides", "meal_registration_changes", "meal_sickness_status_history"}
+	tables := []string{"meal_plan_entries", "meal_orders", "meal_order_days", "meal_order_lines", "meal_order_changes", "meal_order_change_counters", "meal_participation_schedules", "meal_participation_overrides", "meal_registration_changes", "meal_sickness_status_history", "meal_cancellations"}
 	queries := make(testpkg.SnapshotQueries, len(tables))
 	for _, table := range tables {
 		queries[table] = testpkg.TableSnapshotQuery(db, "schedule."+table, "r.tenant_id = $1")
@@ -128,6 +128,10 @@ func checkStaffMealPlanReadBudgets(t *testing.T, api *goldenRuntime) {
 			require.NoError(t, err)
 			_, err = db.ExecContext(ctx, `INSERT INTO schedule.meal_plan_entries (tenant_id,date,position,dish) VALUES (?,?,?,?)`, tenantID, monday, index, fmt.Sprintf("Gericht%02d", index))
 			require.NoError(t, err)
+			// One day without lunch per child (#7656), on the weekdays after
+			// the order windows below.
+			_, err = db.ExecContext(ctx, `INSERT INTO schedule.meal_cancellations (tenant_id,date,reason) VALUES (?,?,?)`, tenantID, cancellationDay(monday, index), fmt.Sprintf("Ausfall%02d", index))
+			require.NoError(t, err)
 		}
 	}
 	recorded := map[string]testpkg.QueryMeasurement{}
@@ -173,6 +177,21 @@ func checkStaffMealPlanReadBudgets(t *testing.T, api *goldenRuntime) {
 		}
 		counts["api.mealplan.days"] = len(queries.Statements)
 		recorded["api.mealplan.days"] = queries
+		response, queries = get(fmt.Sprintf("/api/meal-plan/cancellations?from=%s&to=%s", cancellationDay(monday, 0), cancellationDay(monday, 9)))
+		var cancellations struct {
+			Data []struct {
+				Date   string `json:"date"`
+				Reason string `json:"reason"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(response.Body.Bytes(), &cancellations))
+		require.Len(t, cancellations.Data, children)
+		for i, row := range cancellations.Data {
+			assert.Equal(t, cancellationDay(monday, i).String(), row.Date)
+			assert.Equal(t, fmt.Sprintf("Ausfall%02d", i), row.Reason)
+		}
+		counts["api.mealplan.cancellations"] = len(queries.Statements)
+		recorded["api.mealplan.cancellations"] = queries
 		response, queries = get("/api/meal-plan/participants?date=" + monday.String() + "&include=all")
 		var daily struct {
 			Data struct {
@@ -293,6 +312,7 @@ func checkStaffMealPlanReadBudgets(t *testing.T, api *goldenRuntime) {
 	assert.Equal(t, small, large, "children-N is separate from date-N")
 	querybudgets.AssertQueryBudget(t, "api.mealplan.week", recorded["api.mealplan.week"])
 	querybudgets.AssertQueryBudget(t, "api.mealplan.days", recorded["api.mealplan.days"])
+	querybudgets.AssertQueryBudget(t, "api.mealplan.cancellations", recorded["api.mealplan.cancellations"])
 	querybudgets.AssertQueryBudget(t, "api.mealplan.participants", recorded["api.mealplan.participants"])
 	querybudgets.AssertQueryBudget(t, "api.mealplan.child_participation", recorded["api.mealplan.child_participation"])
 	querybudgets.AssertQueryBudget(t, "api.mealplan.participants.export", recorded["api.mealplan.participants.export"])
@@ -352,4 +372,10 @@ func checkParentMealPlanReadBudget(t *testing.T, api *goldenRuntime) {
 	assert.Equal(t, counts[0], counts[1])
 	t.Logf("MEAL_BUDGET parent.mealplan.week %d", counts[1])
 	querybudgets.AssertQueryBudget(t, "parent.mealplan.week", captureRouteQueries)
+}
+
+// cancellationDay is the index-th weekday from the fifth week after monday
+// on, after every order window of the budget.
+func cancellationDay(monday calendar.Date, index int) calendar.Date {
+	return monday.AddDays(28 + index/5*7 + index%5)
 }

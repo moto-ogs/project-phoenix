@@ -3,6 +3,7 @@
   "description": "The list shows all children registered for lunch on this day.",
   "cutoff": "Order deadline for this day: {date}.",
   "closedDay": "The {careTerm} is closed on this day. There is no lunch.",
+  "mealCancelledDay": "Lunch is cancelled on this day. Bookings do not apply on this day.",
   "child": "Child",
   "class": "Class",
   "dateAria": "Date: {date}",

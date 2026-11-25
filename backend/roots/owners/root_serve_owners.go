@@ -276,20 +276,32 @@ func mealPlanStudentNames(names studentNames) mealplanModule.StudentNameFinder {
 
 // mealPlanCalendar binds the School Calendar for the Meal Plan: closing days
 // and public holidays close a day, school holiday periods suspend the weekly
-// registration pattern (#3873). The Meal Plan turns the periods into days.
+// registration pattern (#3873). It reads in two statements: the public
+// holidays of the school's federal state, and the closing days with the
+// holiday periods together (#5994), so the Meal Plan's own read of the days
+// without lunch (#7656) adds none to a request. The holiday periods arrive
+// as days.
 func mealPlanCalendar(records schoolcalendar.Days) mealplanModule.CalendarFinder {
 	return func(ctx context.Context, from, to string) (map[string]bool, []mealplanModule.HolidayPeriod, error) {
-		closed, err := records.NonWorkingDayDates(ctx, from, to)
+		closed, err := records.TenantHolidayDates(ctx, from, to)
 		if err != nil {
 			return nil, nil, err
 		}
-		periods, err := records.ListCalendarPeriods(ctx, schoolcalendar.HolidaysOverlapping(from, to))
+		start, startErr := timezone.ParseDate(from)
+		end, endErr := timezone.ParseDate(to)
+		if startErr != nil || endErr != nil {
+			return nil, nil, fmt.Errorf("meal plan calendar: window %q to %q: %w", from, to, errors.Join(startErr, endErr))
+		}
+		closing, holidayDays, err := records.CareCalendarDays(ctx, start, end)
 		if err != nil {
 			return nil, nil, err
 		}
-		holidays := make([]mealplanModule.HolidayPeriod, 0, len(periods))
-		for _, period := range periods {
-			holidays = append(holidays, mealplanModule.HolidayPeriod{Start: period.StartDate, End: period.EndDate})
+		for day := range closing {
+			closed[day.String()] = true
+		}
+		holidays := make([]mealplanModule.HolidayPeriod, 0, len(holidayDays))
+		for day := range holidayDays {
+			holidays = append(holidays, mealplanModule.HolidayPeriod{Start: day.String(), End: day.String()})
 		}
 		return closed, holidays, nil
 	}
