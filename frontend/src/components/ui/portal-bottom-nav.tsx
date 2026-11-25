@@ -239,6 +239,7 @@ export function PortalBottomNav({
   indicator,
   className = "",
   hidden = false,
+  look = "pill",
 }: {
   /** Die Felder (`PortalBottomNavLink`, `PortalBottomNavButton`), jedes in einem `<li>`. */
   readonly children: ReactNode;
@@ -258,8 +259,14 @@ export function PortalBottomNav({
    * etwa im Chat-Verlauf, wo das Schreibfeld unten klebt.
    */
   readonly hidden?: boolean;
+  /**
+   * `card`: die Leiste als Karte wie die `ActionBar` (#8070), mit demselben
+   * Rand, Radius und Schatten; sonst die runde Pille.
+   */
+  readonly look?: "pill" | "card";
 }) {
   if (hidden) return null;
+  const card = look === "card";
   return (
     <nav
       aria-label={label}
@@ -276,18 +283,22 @@ export function PortalBottomNav({
           className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-gray-50 via-gray-50/90 to-transparent"
         />
       ) : null}
-      <div className="relative px-4 pb-4">
+      <div className={card ? "relative px-3 pb-4" : "relative px-4 pb-4"}>
         <div
-          className={`rounded-full border border-gray-200/50 bg-white ${barClassName} py-2 shadow-[0_-2px_20px_rgba(0,0,0,0.08)]`}
+          className={
+            card
+              ? `moto-content-surface rounded-2xl border ${barClassName} py-2`
+              : `rounded-full border border-gray-200/50 bg-white ${barClassName} py-2 shadow-[0_-2px_20px_rgba(0,0,0,0.08)]`
+          }
         >
           <ul
             ref={indicator?.listRef}
-            className={`relative flex items-center justify-around ${listClassName}`}
+            className={`relative flex items-center justify-around ${card ? "[&_a]:rounded-xl [&_button]:rounded-xl" : ""} ${listClassName}`}
           >
             {indicator?.position ? (
               <li
                 aria-hidden="true"
-                className={`absolute top-0 left-0 h-full rounded-full bg-gray-100 ${
+                className={`absolute top-0 left-0 h-full ${card ? "rounded-xl" : "rounded-full"} bg-gray-100 ${
                   indicator.animated
                     ? "transition-transform duration-150 ease-out"
                     : ""

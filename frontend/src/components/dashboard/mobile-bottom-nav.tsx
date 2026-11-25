@@ -1051,10 +1051,12 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
         listClassName="gap-1"
         barClassName="px-2"
         fade={false}
+        // Dieselbe Karte wie die Aktionsleiste darüber (#8070).
+        look="card"
         indicator={indicator}
         hidden={pillHidden}
         // Auf dem iPad quer so breit wie auf dem iPad hoch, mittig.
-        className={`split:block split:px-[calc(50vw-22rem)] ${className}`}
+        className={`split:block tablet:px-[calc(50vw-22rem)] ${className}`}
         open={isOverflowMenuOpen}
         onOpenChange={setIsOverflowMenuOpen}
         // In der App ist „Mehr“ eine eigene Seite (#8070, Vorschlag); im
