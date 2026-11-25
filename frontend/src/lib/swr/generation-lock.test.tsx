@@ -1,4 +1,10 @@
-import { act, render, renderHook, screen } from "@testing-library/react";
+import {
+  act,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { Session } from "next-auth";
 import {
   cloneElement,
@@ -335,7 +341,8 @@ describe.each([
           answer.resolve("frisch");
           await flush();
           expect(screen.getByTestId(key)).toHaveTextContent("frisch");
-          expect(fetcher).toHaveBeenCalledTimes(2);
+          // The unrelated key revalidates its valid fallback after paint.
+          await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
           expect(isFallbackVisible(FULL(key))).toBe(true);
         },
       );
