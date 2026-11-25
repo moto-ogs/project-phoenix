@@ -13,6 +13,7 @@ import {
   useMediaQuery,
   useResolvedMediaQuery,
 } from "~/lib/hooks/use-media-query";
+import { MountOnFirstOpen } from "./mount-on-first-open";
 import { ResponsivePanelSheet } from "./responsive-panel-sheet";
 
 /**
@@ -106,16 +107,18 @@ export function ResponsivePanel({
     <>
       {trigger}
       {asSheet ? (
-        <ResponsivePanelSheet
-          id={dialogId}
-          open={sheetOpen}
-          onOpenChange={onOpenChange}
-          label={label}
-          returnFocusRef={returnFocusRef}
-          initialFocus={initialFocus}
-        >
-          {children(true)}
-        </ResponsivePanelSheet>
+        <MountOnFirstOpen open={sheetOpen}>
+          <ResponsivePanelSheet
+            id={dialogId}
+            open={sheetOpen}
+            onOpenChange={onOpenChange}
+            label={label}
+            returnFocusRef={returnFocusRef}
+            initialFocus={initialFocus}
+          >
+            {children(true)}
+          </ResponsivePanelSheet>
+        </MountOnFirstOpen>
       ) : open ? (
         children(false)
       ) : null}

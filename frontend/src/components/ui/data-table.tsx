@@ -1516,16 +1516,23 @@ export function DataTable<T>({
   // Columns that run past the card edge get a cue: a fade at the edge, or
   // the pinned column's shadow. Without it a cut column reads as missing.
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [overflowEnd, setOverflowEnd] = useState(false);
-  const [overflowStart, setOverflowStart] = useState(false);
   useEffect(() => {
     const scroller = scrollRef.current;
     if (!scroller) return;
     const update = () => {
-      setOverflowEnd(
-        scroller.scrollWidth - scroller.clientWidth - scroller.scrollLeft > 1,
-      );
-      setOverflowStart(scroller.scrollLeft > 1);
+      const { scrollWidth, clientWidth, scrollLeft } = scroller;
+      // Only the scroll cues depend on these measurements. Re-rendering all
+      // rows would compete with the first paint and with each horizontal swipe.
+      if (scrollWidth - clientWidth - scrollLeft > 1) {
+        scroller.dataset.overflowEnd = "true";
+      } else {
+        delete scroller.dataset.overflowEnd;
+      }
+      if (scrollLeft > 1) {
+        scroller.dataset.overflowStart = "true";
+      } else {
+        delete scroller.dataset.overflowStart;
+      }
     };
     scroller.addEventListener("scroll", update, { passive: true });
     let observer: ResizeObserver | undefined;
@@ -1640,9 +1647,7 @@ export function DataTable<T>({
               containing block here they escape it and widen the page. */}
             <div
               ref={scrollRef}
-              data-overflow-end={overflowEnd ? "true" : undefined}
-              data-overflow-start={overflowStart ? "true" : undefined}
-              className="group/tablescroll relative overflow-x-auto"
+              className="group/tablescroll peer/table relative overflow-x-auto"
             >
               <table className={tableClass}>
                 <thead>
@@ -1958,11 +1963,10 @@ export function DataTable<T>({
                 </tbody>
               </table>
             </div>
-            {overflowEnd &&
-            !shownColumns.some((col) => col.key === PINNED_COLUMN_KEY) ? (
+            {!shownColumns.some((col) => col.key === PINNED_COLUMN_KEY) ? (
               <div
                 aria-hidden
-                className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white to-transparent"
+                className="pointer-events-none absolute inset-y-0 right-0 hidden w-10 bg-gradient-to-l from-white to-transparent peer-data-[overflow-end=true]/table:block"
               />
             ) : null}
           </div>
