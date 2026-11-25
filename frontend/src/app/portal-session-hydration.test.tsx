@@ -17,20 +17,35 @@ import {
 // portal does (#4990). Each portal's reader is tested against real cookies in
 // src/lib/portal-session-snapshot.server.test.ts.
 
-const { passthrough, readers, auths } = vi.hoisted(() => ({
-  passthrough: ({ children }: { children?: ReactNode }) => children,
-  readers: {
-    school: vi.fn<() => Promise<Session | null>>(async () => null),
-    caterer: vi.fn<() => Promise<Session | null>>(async () => null),
-    operator: vi.fn<() => Promise<Session | null>>(async () => null),
-    traeger: vi.fn<() => Promise<Session | null>>(async () => null),
-  },
-  auths: {
-    school: vi.fn(async () => null),
-    caterer: vi.fn(async () => null),
-    operator: vi.fn(async () => null),
-    traeger: vi.fn(async () => null),
-  },
+const { passthrough, readers, auths, requestHeaders, schoolSeed, traegerSeed } =
+  vi.hoisted(() => ({
+    requestHeaders: vi.fn(async () => new Headers()),
+    schoolSeed: vi.fn(() => ({ seed: Promise.resolve(null), claims: [] })),
+    traegerSeed: vi.fn(() => ({ seed: Promise.resolve(null), claims: [] })),
+    passthrough: ({ children }: { children?: ReactNode }) => children,
+    readers: {
+      school: vi.fn<() => Promise<Session | null>>(async () => null),
+      caterer: vi.fn<() => Promise<Session | null>>(async () => null),
+      operator: vi.fn<() => Promise<Session | null>>(async () => null),
+      traeger: vi.fn<() => Promise<Session | null>>(async () => null),
+    },
+    auths: {
+      school: vi.fn(async () => null),
+      caterer: vi.fn(async () => null),
+      operator: vi.fn(async () => null),
+      traeger: vi.fn(async () => null),
+    },
+  }));
+
+vi.mock("next/headers", () => ({ headers: requestHeaders }));
+vi.mock("~/lib/school/page-seed.server", () => ({
+  schoolPageSeed: schoolSeed,
+  schoolNotices: {},
+}));
+vi.mock("~/lib/traeger/page-seed.server", () => ({
+  traegerPageSeed: traegerSeed,
+  organization: {},
+  profile: {},
 }));
 
 vi.mock("~/lib/portal-session-snapshot.server", () => ({
@@ -151,6 +166,9 @@ function sessionRequests(path: string) {
 
 beforeEach(() => {
   statuses.length = 0;
+  requestHeaders.mockReset().mockResolvedValue(new Headers());
+  schoolSeed.mockClear();
+  traegerSeed.mockClear();
   for (const reader of Object.values(readers)) {
     reader.mockReset();
     reader.mockResolvedValue(null);
@@ -188,6 +206,28 @@ describe.each(PORTALS)("$name layout", (portal) => {
     expect(auths[portal.name]).not.toHaveBeenCalled();
   });
 });
+
+it.each([
+  { name: "school", layout: SchoolLayout, seed: schoolSeed },
+  { name: "traeger", layout: TraegerLayout, seed: traegerSeed },
+] as const)(
+  "does not seed a public $name page even with a portal cookie",
+  async ({ name, layout, seed }) => {
+    const snapshot = PORTALS.find((portal) => portal.name === name)?.snapshot;
+    readers[name].mockResolvedValue(snapshot ?? null);
+    requestHeaders.mockResolvedValue(
+      new Headers({ "x-moto-original-path": "/login?next=%2F" }),
+    );
+    await layout({ children: null });
+    expect(seed).not.toHaveBeenCalled();
+
+    requestHeaders.mockResolvedValue(
+      new Headers({ "x-moto-original-path": "/" }),
+    );
+    await layout({ children: null });
+    expect(seed).toHaveBeenCalledOnce();
+  },
+);
 
 describe.each(PORTALS)("$name providers", (portal) => {
   const Providers = portal.providers;
