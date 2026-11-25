@@ -47,19 +47,24 @@ const sourceRoot = path.resolve(import.meta.dirname, "..");
 
 // These first displays are the rollout's critical paths. Their client
 // readers remain the recovery path, but cannot own the initial request again.
-const tenantEntrypoints = [
-  ["home", "HomeSeed"],
-  ["students/search", "StudentSearchSeed"],
-  ["active-supervisions", "ActiveSupervisionsSeed"],
-  ["anfragen", "AnfragenSeed"],
-  ["time-tracking", "TimeTrackingSeed"],
+const seededEntrypoints = [
+  ["[tenant]/(protected)/home", "HomeSeed"],
+  ["[tenant]/(protected)/students/search", "StudentSearchSeed"],
+  ["[tenant]/(protected)/active-supervisions", "ActiveSupervisionsSeed"],
+  ["[tenant]/(protected)/anfragen", "AnfragenSeed"],
+  ["[tenant]/(protected)/time-tracking", "TimeTrackingSeed"],
+  ["school/tagesinformationen", "SWRServerSeed"],
+  ["traeger", "SWRServerSeed"],
+  ["operator/organizations", "SWRServerSeed"],
+  ["caterer", "CatererServerSeed"],
+  ["parents", "ParentServerSeed"],
 ] as const;
 
-it.each(tenantEntrypoints)(
+it.each(seededEntrypoints)(
   "starts %s through its server seed",
   (route, boundary) => {
     const source = readFileSync(
-      path.join(sourceRoot, "app/[tenant]/(protected)", route, "page.tsx"),
+      path.join(sourceRoot, "app", route, "page.tsx"),
       "utf8",
     );
     expect(source).not.toMatch(/^["']use client["']/);

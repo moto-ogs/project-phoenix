@@ -71,6 +71,8 @@ function linkTo(path: string) {
 
 function tenantHop(hop: IntentHop): Target {
   const accordion = hop.accordion;
+  const studentCard = (page: Page) =>
+    page.getByRole("button", { name: /Details öffnen$/ }).first();
   return {
     ...hop,
     portal: "tenant",
@@ -81,11 +83,8 @@ function tenantHop(hop: IntentHop): Target {
               .getByRole("button", { name: "Aktuelle Aufsicht", exact: true })
               .first()
         : hop.link,
-    ready:
-      hop.name === "kindersuche"
-        ? (page) =>
-            page.getByRole("button", { name: /Details öffnen$/ }).first()
-        : hop.ready,
+    ready: hop.name === "kindersuche" ? studentCard : hop.ready,
+    fromReady: hop.from === "/students/search" ? studentCard : hop.fromReady,
     ...(accordion
       ? {
           prepare: async (page: Page) => {
@@ -278,6 +277,7 @@ async function measure(browser: Browser, target: Target, mode: Mode) {
     if (mode !== "document") {
       if (mode === "warm") {
         await target.warmDeparture?.(page);
+        recorder.start();
         await linkTo(target.from)(page).click();
       } else {
         await gotoTolerant(page, base + target.from);
