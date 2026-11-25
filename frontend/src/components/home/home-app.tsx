@@ -691,54 +691,58 @@ function NowCard({
   const stamped = stamp.state.kind === "in" || stamp.state.kind === "done";
   const stampText = stamped ? stampLabel(stamp.state) : null;
   const footer =
-    !now.loading &&
-    (now.presentCount !== undefined || start !== undefined || stamped);
+    !now.loading && (start !== undefined || stamp.state.kind === "in");
+  // Zwei Zeilen: Uhrzeit klein vor dem Blocktitel, darunter Zustand, Raum,
+  // Ende und die Kinder da. Keine eigene Zeile je Angabe.
+  const time = (
+    <time
+      dateTime={`${now.today}T${now.now}`}
+      className="shrink-0 font-semibold text-gray-900 tabular-nums"
+    >
+      {now.now}
+    </time>
+  );
+  const present =
+    now.presentCount !== undefined ? (
+      <span className="inline-flex items-center gap-1 whitespace-nowrap">
+        <MotoConceptIcon concept={presentConcept} size={14} />
+        <span className="font-semibold text-gray-700 tabular-nums">
+          {now.presentCount}
+        </span>
+        {now.presentCount === 1 ? "Kind da" : "Kinder da"}
+      </span>
+    ) : null;
   return (
     <SectionCard testId="home-now" padding="none">
-      <div className="p-4">
-        {/* Uhrzeit klein vor dem Block, auf Höhe seines Titels: wie heute
-            erkennbar, ohne dass die Karte eine halbe Bildschirmhöhe frisst. */}
-        <div className="flex items-start gap-3">
-          <time
-            dateTime={`${now.today}T${now.now}`}
-            className="shrink-0 rounded-lg bg-gray-100 px-2 py-0.5 text-base leading-6 font-semibold text-gray-900 tabular-nums"
-          >
-            {now.now}
-          </time>
-          {now.loading ? (
-            <div className="min-w-0 flex-1 space-y-2" aria-hidden="true">
-              <Skeleton className="h-4 w-3/5" />
-              <Skeleton className="h-3 w-4/5" />
-            </div>
-          ) : (
-            <NowText
-              state={now.state}
-              analytics={now.analytics.data}
-              today={now.today}
-              wrap
-              withoutDate
-            />
-          )}
-        </div>
+      <div className="px-4 py-3">
+        {now.loading ? (
+          <div className="space-y-2" aria-hidden="true">
+            <Skeleton className="h-4 w-3/5" />
+            <Skeleton className="h-3 w-4/5" />
+          </div>
+        ) : (
+          <NowText
+            state={now.state}
+            analytics={now.analytics.data}
+            today={now.today}
+            wrap
+            withoutDate
+            lead={time}
+            extra={
+              <>
+                {present}
+                {stampText ? (
+                  <StatusBadge
+                    tone={stamp.state.kind === "in" ? "green" : "gray"}
+                    label={stampText}
+                  />
+                ) : null}
+              </>
+            }
+          />
+        )}
         {footer ? (
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-            {now.presentCount !== undefined ? (
-              <p className="flex items-center gap-1.5 text-sm whitespace-nowrap text-gray-600">
-                <MotoConceptIcon concept={presentConcept} size={18} />
-                <span>
-                  <span className="font-semibold text-gray-900 tabular-nums">
-                    {now.presentCount}
-                  </span>{" "}
-                  {now.presentCount === 1 ? "Kind da" : "Kinder da"}
-                </span>
-              </p>
-            ) : null}
-            {stampText ? (
-              <StatusBadge
-                tone={stamp.state.kind === "in" ? "green" : "gray"}
-                label={stampText}
-              />
-            ) : null}
+          <div className="mt-3 flex items-center gap-3">
             {start?.kind === "start" ? (
               <Button
                 type="button"
@@ -751,7 +755,7 @@ function NowCard({
               >
                 {now.busyId === start.block.id ? "Startet..." : start.label}
               </Button>
-            ) : stamp.state.kind === "in" ? (
+            ) : (
               <Button
                 type="button"
                 variant="outline"
@@ -763,7 +767,7 @@ function NowCard({
               >
                 Ausstempeln
               </Button>
-            ) : null}
+            )}
           </div>
         ) : null}
       </div>

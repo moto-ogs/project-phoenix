@@ -352,7 +352,11 @@ export function NowText({
             blockEndLine(block),
             next
               ? `danach ${next.startTime} ${next.title}`
-              : "danach ist für heute nichts mehr geplant",
+              : // App: Ohne Folgeblock entfällt der Satz, die Karte bleibt
+                // zweizeilig. Der Desktop sagt ihn weiter.
+                wrap
+                ? null
+                : "danach ist für heute nichts mehr geplant",
           ]}
         />
       );
