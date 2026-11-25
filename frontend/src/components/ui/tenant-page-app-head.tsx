@@ -150,7 +150,7 @@ export function AppTenantHead({
           <h1
             suppressHydrationWarning
             className={cn(
-              "min-w-0 flex-1 truncate text-lg leading-7 font-semibold tracking-tight text-gray-900",
+              "tablet:text-xl min-w-0 flex-1 truncate text-lg leading-7 font-semibold tracking-tight text-gray-900",
               // Bündig: ohne Zurück-Pfeil 16 px vom Rand wie die Chips, nach
               // dem Pfeil ohne zusätzlichen Einzug.
               backLink && !leading ? "-ml-3" : !backLink && "pl-2",
@@ -226,7 +226,7 @@ export function AppTenantHead({
         {backLink ? <span className={ICON_BACK}>{backLink}</span> : null}
         <p
           className={cn(
-            "min-w-0 flex-1 truncate text-base font-semibold text-gray-900",
+            "tablet:text-lg min-w-0 flex-1 truncate text-base font-semibold text-gray-900",
             !backLink && "pl-2.5",
           )}
         >
@@ -255,7 +255,9 @@ export function AppTenantHead({
           {info != null && (
             <section className="space-y-1.5">
               <SectionLabel as="h3">Über diese Seite</SectionLabel>
-              <div className="text-sm leading-6 text-gray-700">{info}</div>
+              <div className="tablet:text-base text-sm leading-6 text-gray-700">
+                {info}
+              </div>
             </section>
           )}
           <div className="hidden items-center justify-between gap-3 text-sm font-medium text-gray-900 has-[a]:flex has-[button]:flex">
@@ -463,7 +465,9 @@ export function AppTenantTabs({
   return (
     <nav
       aria-label={label}
-      className="-mx-2 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-2 py-0.5"
+      // Der Scrollbereich schneidet auch senkrecht: 6 px Polster lassen die
+      // 44-px-Trefferfläche der 32-px-Chips ganz stehen, ohne die Höhe zu ändern.
+      className="-mx-2 -my-1 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-2 py-1.5"
     >
       {items.map((item) => {
         const active = item.value === value;
