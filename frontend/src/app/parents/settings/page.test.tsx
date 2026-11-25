@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import ParentSettingsPage from "./page";
+import ParentSettingsPage from "./settings-content";
 import type { ReactNode } from "react";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";

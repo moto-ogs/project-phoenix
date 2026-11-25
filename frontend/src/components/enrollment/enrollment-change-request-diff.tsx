@@ -4,12 +4,10 @@ import { useMemo } from "react";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { InfoSection } from "~/components/ui/info-section";
 import {
-  DEFAULT_ENROLLMENT_CHANGE_REQUEST_DIFF_COPY,
-  buildEnrollmentChangeRequestDiffGroups,
-  formatEnrollmentChangeRequestValue,
+  formatEnrollmentChangeRequestDiff,
   type EnrollmentChangeRequestDiffCopy,
-  type EnrollmentChangeRequestDiffGroup,
   type EnrollmentFormLabels,
+  type FormattedChangeRequestDiffGroup,
 } from "~/lib/enrollment-change-request-diff";
 import { SectionLabel } from "~/components/ui/section-label";
 import { cn } from "~/lib/utils";
@@ -40,7 +38,7 @@ export function EnrollmentChangeRequestDiff({
 }: EnrollmentChangeRequestDiffProps) {
   const groups = useMemo(
     () =>
-      buildEnrollmentChangeRequestDiffGroups({
+      formatEnrollmentChangeRequestDiff({
         baseSnapshot,
         proposedSnapshot,
         diff,
@@ -50,6 +48,30 @@ export function EnrollmentChangeRequestDiff({
     [baseSnapshot, proposedSnapshot, diff, copy, formLabels],
   );
 
+  return (
+    <EnrollmentChangeRequestDiffGroups
+      groups={groups}
+      beforeLabel={beforeLabel}
+      afterLabel={afterLabel}
+      emptyMessage={emptyMessage}
+      className={className}
+    />
+  );
+}
+
+export function EnrollmentChangeRequestDiffGroups({
+  groups,
+  beforeLabel,
+  afterLabel,
+  emptyMessage,
+  className,
+}: Readonly<{
+  groups: readonly FormattedChangeRequestDiffGroup[];
+  beforeLabel: string;
+  afterLabel: string;
+  emptyMessage: string;
+  className?: string;
+}>) {
   if (groups.length === 0) {
     return <p className="text-sm text-gray-600">{emptyMessage}</p>;
   }
@@ -62,10 +84,6 @@ export function EnrollmentChangeRequestDiff({
           group={group}
           beforeLabel={beforeLabel}
           afterLabel={afterLabel}
-          emptyLabel={
-            (copy ?? DEFAULT_ENROLLMENT_CHANGE_REQUEST_DIFF_COPY).emptyLabel
-          }
-          copy={copy}
         />
       ))}
     </div>
@@ -75,15 +93,11 @@ export function EnrollmentChangeRequestDiff({
 function DiffGroup({
   afterLabel,
   beforeLabel,
-  emptyLabel,
   group,
-  copy,
 }: {
-  readonly group: EnrollmentChangeRequestDiffGroup;
+  readonly group: FormattedChangeRequestDiffGroup;
   readonly beforeLabel: string;
   readonly afterLabel: string;
-  readonly emptyLabel: string;
-  readonly copy?: EnrollmentChangeRequestDiffCopy;
 }) {
   return (
     <InfoSection title={group.label}>
@@ -95,20 +109,8 @@ function DiffGroup({
             </SectionLabel>
             <div className="mt-2">
               <DataGrid>
-                <DataField label={beforeLabel}>
-                  {formatEnrollmentChangeRequestValue(
-                    row.before,
-                    emptyLabel,
-                    copy,
-                  )}
-                </DataField>
-                <DataField label={afterLabel}>
-                  {formatEnrollmentChangeRequestValue(
-                    row.after,
-                    emptyLabel,
-                    copy,
-                  )}
-                </DataField>
+                <DataField label={beforeLabel}>{row.before}</DataField>
+                <DataField label={afterLabel}>{row.after}</DataField>
               </DataGrid>
             </div>
           </div>

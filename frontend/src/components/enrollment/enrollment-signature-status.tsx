@@ -9,7 +9,7 @@ import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 import {
   downloadEnrollmentSignatureProof,
-  type EnrollmentSignature,
+  type EnrollmentStatusDisplay,
 } from "~/lib/enrollment-submission-api";
 
 /**
@@ -23,7 +23,7 @@ export function EnrollmentSignatureStatus({
   editable,
 }: Readonly<{
   token: string;
-  signature: EnrollmentSignature;
+  signature: NonNullable<EnrollmentStatusDisplay["signature"]>;
   /** The parents may still change the enrollment and then sign again. */
   editable: boolean;
 }>) {

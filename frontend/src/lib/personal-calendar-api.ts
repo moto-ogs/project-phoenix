@@ -177,7 +177,7 @@ function calendarEvents(
   return known;
 }
 
-function calendarResponse(
+export function calendarResponse(
   answer:
     | calendarContract.StaffCalendarResponse
     | parentMeContract.ParentCalendarResponse,
