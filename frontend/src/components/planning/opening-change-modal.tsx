@@ -162,6 +162,7 @@ export function OpeningChangeModal({
           name="reason"
           type="text"
           label="Anlass"
+          required
           value={form.reason}
           maxLength={255}
           onChange={(e) => setField("reason", e.target.value)}
@@ -173,6 +174,7 @@ export function OpeningChangeModal({
             id="opening-change-start"
             name="start_date"
             label="Von"
+            required
             controlSize="large"
             value={form.startDate}
             onChange={(value) =>
@@ -192,6 +194,7 @@ export function OpeningChangeModal({
             id="opening-change-end"
             name="end_date"
             label="Bis"
+            required
             controlSize="large"
             value={form.endDate}
             min={form.startDate || undefined}
