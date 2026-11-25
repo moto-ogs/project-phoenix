@@ -382,7 +382,8 @@ export function HolidayPeriodForm({
                 <>
                   Eltern geben in der OGS-Anmeldung an, ob ihr Kind
                   Ferienbetreuung braucht. Ist der Schalter an, haben Kinder mit
-                  diesem Ferienwunsch Vorrang, wenn eine Woche voll ist. In den{" "}
+                  diesem Ferienwunsch Vorrang, wenn eine Woche voll ist. Oder
+                  nur sie können sich anmelden: Das legst du in den{" "}
                   {/* In a form a link opens a new tab, so the unsaved
                       draft stays (Bauart 1 R9). */}
                   <ButtonLink
@@ -397,8 +398,7 @@ export function HolidayPeriodForm({
                   >
                     Einstellungen
                   </ButtonLink>{" "}
-                  kannst du festlegen, dass sich nur Kinder mit Ferienwunsch
-                  anmelden können. Für Feriengäste ändert sich nichts.
+                  fest. Für Feriengäste ändert sich nichts.
                 </>
               }
               checked={draft.holidayWishRule}

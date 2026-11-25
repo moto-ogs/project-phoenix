@@ -3642,7 +3642,7 @@ export const holidayGuestsTopic = function holidayGuestsTopic(): HelpTopic {
     title: "Feriengäste betreuen",
     question: "Wo sehe ich Notfall und Abholung eines Feriengasts?",
     summary:
-      "In den Ferien kommen Kinder anderer Schulen in deine OGS. Sie stehen in der Feriengruppe.",
+      "In den Ferien kommen Kinder in deine OGS, die sonst nicht hierher gehen. Sie stehen in der Feriengruppe.",
     group: "gruppen",
     audience: ["caregiver", "lead"],
     icon: "SunHorizon",
@@ -14186,7 +14186,7 @@ export const traegerHolidayPeriodTopic =
       notes: [
         "Der `Text der Annahme-Mail` ist freiwillig. Ohne Text bekommen Eltern die E-Mail ohne Hinweise. Du kannst den Text bis zum Bestätigen jederzeit ändern. Schon verschickte E-Mails ändern sich nicht.",
         "Eltern mit Elternkonto sehen in der Annahme-Mail den Knopf `In der Eltern-App ansehen`.",
-        "Mit `Ferienwunsch aus der OGS-Anmeldung berücksichtigen` haben Kinder mit Ferienwunsch Vorrang, wenn eine Woche voll ist. Für Feriengäste ändert sich nichts.",
+        "Mit `Ferienwunsch aus der OGS-Anmeldung berücksichtigen` haben Kinder mit Ferienwunsch Vorrang, wenn eine Woche voll ist. Oder nur sie können sich anmelden: Das legst du in den Einstellungen fest. Für Feriengäste ändert sich nichts.",
         "Änderst du die Zeiten eines Zeitmodells? Die neuen Zeiten gelten ab dem Änderungstag. Vergangene gebuchte Tage behalten ihre bisherigen Zeiten. Auch nach Umbuchung oder Archivierung bleiben diese Zeiten erhalten.",
         "Ein gespeicherter Ferienzeitraum ist zuerst ein Entwurf. Ein Entwurf ist nicht für die Anmeldung freigegeben.",
         "Ein veröffentlichter Ferienzeitraum wird nicht wieder zum Entwurf.",
@@ -14618,7 +14618,7 @@ export const traegerHolidayWishTopic =
         },
       ],
       result:
-        "Ist eine Woche voll, haben Kinder mit Ferienwunsch Vorrang. Kinder ohne Ferienwunsch stehen auf der Warteliste hinter den anderen. Im Reiter `Plätze` stehen sie mit `Ohne Ferienwunsch`.",
+        "Ist eine Woche voll, haben Kinder mit Ferienwunsch Vorrang. Kinder ohne Ferienwunsch stehen auf der Warteliste hinter allen anderen Kindern. Im Reiter `Plätze` stehen sie mit `Ohne Ferienwunsch`.",
       notes: [
         "Freie Plätze gehen weiter in der Reihenfolge der Anmeldung. Ein Platz, den ein Kind schon hat, bleibt.",
         "Eltern mit Elternkonto sehen den Ferienwunsch ihres Kindes vor dem Absenden. moto prüft ihn dann selbst. Bei `Nur Kinder mit Ferienwunsch können sich anmelden` geht das Absenden ohne Ferienwunsch nicht.",
